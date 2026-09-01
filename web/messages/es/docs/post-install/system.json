@@ -85,7 +85,7 @@
     "intro": "Instala <code>kexec-tools</code> y lo conecta para que puedas reiniciar el host directamente a un kernel nuevo <em>sin pasar por el firmware BIOS/UEFI</em>. En servidores grandes donde el POST tarda 45 – 90 segundos, esto convierte un reinicio de una pausa para el café en unos pocos segundos de downtime.",
     "installsTitle": "Qué instala ProxMenux",
     "installsItems": [
-      "Paquete <code>kexec-tools</code> (con debconf pre-respondido para que apt no pregunte durante la instalación).",
+      "Paquete <code>kexec-tools</code> (debconf pre-respondido con <code>kexec-tools/load_kexec boolean false</code> para que apt no pregunte y quede desactivado el auto-load al apagar).",
       "Unit systemd <code>/etc/systemd/system/kexec-pve.service</code> — carga el kernel de Proxmox y el initrd en memoria al arrancar, reutilizando la cmdline actual.",
       "Un alias en <code>/root/.bash_profile</code>: <code>reboot-quick</code> → <code>systemctl kexec</code>."
     ],

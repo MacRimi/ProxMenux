@@ -5,8 +5,8 @@
 # Author      : MacRimi
 # Copyright   : (c) 2024 MacRimi
 # License     : GPL-3.0
-# Version     : 1.0
-# Last Updated: 09/04/2026
+# Version     : 1.1
+# Last Updated: 26/08/2026
 # ==========================================================
 # This script is a hybrid version for ProxMenux Monitor.
 # It accepts parameters to skip GPU selection and uses
@@ -36,6 +36,9 @@ if [[ -f "$LOCAL_SCRIPTS_LOCAL/global/pci_passthrough_helpers.sh" ]]; then
   source "$LOCAL_SCRIPTS_LOCAL/global/pci_passthrough_helpers.sh"
 elif [[ -f "$LOCAL_SCRIPTS_DEFAULT/global/pci_passthrough_helpers.sh" ]]; then
   source "$LOCAL_SCRIPTS_DEFAULT/global/pci_passthrough_helpers.sh"
+else
+  echo "ProxMenux: pci_passthrough_helpers.sh is required; refusing to change GPU ownership." >&2
+  exit 1
 fi
 load_language
 initialize_cache
@@ -52,6 +55,8 @@ declare -a SELECTED_GPU_IDX=()
 
 declare -a SELECTED_IOMMU_IDS=()
 declare -a SELECTED_PCI_SLOTS=()
+declare -a SELECTED_NVIDIA_BDFS=()
+declare -a SELECTED_LEGACY_IOMMU_IDS=()
 
 declare -a LXC_AFFECTED_CTIDS=()
 declare -a LXC_AFFECTED_NAMES=()
@@ -145,12 +150,28 @@ _get_iommu_group_ids() {
   done
 }
 
+_get_iommu_group_bdfs() {
+  local pci_full="$1"
+  local group_link="/sys/bus/pci/devices/${pci_full}/iommu_group"
+  [[ -L "$group_link" ]] || return 0
+
+  local group_dir dev_path dev_class
+  group_dir="/sys/kernel/iommu_groups/$(basename "$(readlink "$group_link")")/devices"
+  for dev_path in "${group_dir}/"*; do
+    [[ -e "$dev_path" ]] || continue
+    dev_class=$(cat "$dev_path/class" 2>/dev/null)
+    [[ "$dev_class" == 0x0604* || "$dev_class" == 0x0600* ]] && continue
+    basename "$dev_path"
+  done
+}
+
 _read_vfio_ids() {
   local vfio_conf="/etc/modprobe.d/vfio.conf"
   local ids_line ids_part
   ids_line=$(grep "^options vfio-pci ids=" "$vfio_conf" 2>/dev/null | head -1)
   [[ -z "$ids_line" ]] && return
-  ids_part=$(echo "$ids_line" | grep -oE 'ids=[^[:space:]]+' | sed 's/ids=//')
+  ids_part=$(echo "$ids_line" | grep -oE 'ids=[^[:space:]]+' | sed 's/ids=//' \
+    | tr '[:upper:]' '[:lower:]')
   [[ -z "$ids_part" ]] && return
   tr ',' '\n' <<< "$ids_part" | sed '/^$/d'
 }
@@ -191,15 +212,10 @@ _remove_gpu_blacklist() {
   local changed=false
   case "$gpu_type" in
     nvidia)
-      grep -qE '^blacklist (nouveau|nvidia|nvidiafb|nvidia_drm|nvidia_modeset|nvidia_uvm|lbm-nouveau)$|^options nouveau modeset=0$' "$blacklist_file" 2>/dev/null && changed=true
-      sed -i '/^blacklist nouveau$/d' "$blacklist_file"
-      sed -i '/^blacklist nvidia$/d' "$blacklist_file"
-      sed -i '/^blacklist nvidiafb$/d' "$blacklist_file"
-      sed -i '/^blacklist nvidia_drm$/d' "$blacklist_file"
-      sed -i '/^blacklist nvidia_modeset$/d' "$blacklist_file"
-      sed -i '/^blacklist nvidia_uvm$/d' "$blacklist_file"
-      sed -i '/^blacklist lbm-nouveau$/d' "$blacklist_file"
-      sed -i '/^options nouveau modeset=0$/d' "$blacklist_file"
+      # NVIDIA ownership is per BDF. Never alter the global blacklist here:
+      # it may belong to the host-driver installer and another NVIDIA GPU may
+      # still need the native driver.
+      return 1
       ;;
     amd)
       grep -qE '^blacklist (radeon|amdgpu)$' "$blacklist_file" 2>/dev/null && changed=true
@@ -221,14 +237,8 @@ _add_gpu_blacklist() {
   touch "$blacklist_file"
   case "$gpu_type" in
     nvidia)
-      _add_line_if_missing "blacklist nouveau" "$blacklist_file"
-      _add_line_if_missing "blacklist nvidia" "$blacklist_file"
-      _add_line_if_missing "blacklist nvidiafb" "$blacklist_file"
-      _add_line_if_missing "blacklist nvidia_drm" "$blacklist_file"
-      _add_line_if_missing "blacklist nvidia_modeset" "$blacklist_file"
-      _add_line_if_missing "blacklist nvidia_uvm" "$blacklist_file"
-      _add_line_if_missing "blacklist lbm-nouveau" "$blacklist_file"
-      _add_line_if_missing "options nouveau modeset=0" "$blacklist_file"
+      # NVIDIA is handled exclusively by the shared per-BDF policy.
+      return 0
       ;;
     amd)
       _add_line_if_missing "blacklist radeon" "$blacklist_file"
@@ -241,170 +251,18 @@ _add_gpu_blacklist() {
 }
 
 _sanitize_nvidia_host_stack_for_vfio() {
-  local changed=false
-  local state_dir="/var/lib/proxmenux"
-  local state_file="${state_dir}/nvidia-host-services.state"
-  local svc
-  local -a services=(
-    "nvidia-persistenced.service"
-    "nvidia-powerd.service"
-    "nvidia-fabricmanager.service"
-  )
-
-  mkdir -p "$state_dir" >/dev/null 2>&1 || true
-  : > "$state_file"
-
-  for svc in "${services[@]}"; do
-    local was_enabled=0 was_active=0
-    if systemctl is-enabled --quiet "$svc" 2>/dev/null; then
-      was_enabled=1
-    fi
-    if systemctl is-active --quiet "$svc" 2>/dev/null; then
-      was_active=1
-    fi
-    if (( was_enabled == 1 || was_active == 1 )); then
-      echo "${svc} enabled=${was_enabled} active=${was_active}" >>"$state_file"
-    fi
-
-    if systemctl is-active --quiet "$svc" 2>/dev/null; then
-      systemctl stop "$svc" >>"$LOG_FILE" 2>&1 || true
-      changed=true
-    fi
-    if systemctl is-enabled --quiet "$svc" 2>/dev/null; then
-      systemctl disable "$svc" >>"$LOG_FILE" 2>&1 || true
-      changed=true
-    fi
-  done
-
-  [[ -s "$state_file" ]] || rm -f "$state_file"
-
-  if [[ -f /etc/modules-load.d/nvidia-vfio.conf ]]; then
-    mv /etc/modules-load.d/nvidia-vfio.conf /etc/modules-load.d/nvidia-vfio.conf.proxmenux-disabled-vfio >>"$LOG_FILE" 2>&1 || true
-    changed=true
-  fi
-
-  if grep -qE '^(nvidia|nvidia_uvm|nvidia_drm|nvidia_modeset)$' /etc/modules 2>/dev/null; then
-    sed -i '/^nvidia$/d;/^nvidia_uvm$/d;/^nvidia_drm$/d;/^nvidia_modeset$/d' /etc/modules
-    changed=true
-  fi
-
-  # Disable NVIDIA udev rules that trigger nvidia-smi (causes conflict with vfio-pci)
-  local udev_rules="/etc/udev/rules.d/70-nvidia.rules"
-  if [[ -f "$udev_rules" ]]; then
-    mv "$udev_rules" "${udev_rules}.proxmenux-disabled" >>"$LOG_FILE" 2>&1 || true
-    udevadm control --reload-rules >>"$LOG_FILE" 2>&1 || true
-    changed=true
-  fi
-
-  # Create hard blacklist to prevent ANY nvidia module loading (even via modprobe/nvidia-smi)
-  local nvidia_blacklist="/etc/modprobe.d/nvidia-blacklist.conf"
-  if [[ ! -f "$nvidia_blacklist" ]]; then
-    cat > "$nvidia_blacklist" <<'EOF'
-# ProxMenux: Hard blacklist to prevent ANY nvidia module loading in VFIO mode
-# This prevents nvidia-smi and other tools from triggering module load attempts
-install nvidia /bin/false
-install nvidia_uvm /bin/false
-install nvidia_drm /bin/false
-install nvidia_modeset /bin/false
-EOF
-    changed=true
-  fi
-
-  if $changed; then
-    HOST_CONFIG_CHANGED=true
-    msg_ok "$(translate 'NVIDIA host services/autoload disabled for VFIO mode')" | tee -a "$screen_capture"
-  else
-    msg_ok "$(translate 'NVIDIA host services/autoload already aligned for VFIO mode')" | tee -a "$screen_capture"
-  fi
-
-  # Sync components_status.json — the host driver stays on disk but is
-  # not in use because the GPU now belongs to a VM. Prevents the update
-  # notification path (and any future logic gated on nvidia_driver.status)
-  # from acting on a state that no longer matches reality.
-  if declare -F update_component_status >/dev/null 2>&1; then
-    local _nvd_ver
-    _nvd_ver=$(jq -r '.nvidia_driver.version // ""' \
-      /usr/local/share/proxmenux/components_status.json 2>/dev/null)
-    update_component_status "nvidia_driver" "vfio_passthrough" \
-      "${_nvd_ver:-}" "gpu" '{"patched":false}' >>"$LOG_FILE" 2>&1 || true
-  fi
+  _proxmenux_nvidia_vfio_policy_sync || true
 }
 
 _restore_nvidia_host_stack_for_lxc() {
-  local changed=false
-  local state_file="/var/lib/proxmenux/nvidia-host-services.state"
-  local disabled_file="/etc/modules-load.d/nvidia-vfio.conf.proxmenux-disabled-vfio"
-  local active_file="/etc/modules-load.d/nvidia-vfio.conf"
-
-  # New per-BDF model: drop every NVIDIA BDF from the initramfs binder so
-  # the nvidia module reclaims the GPU after the next reboot. Idempotent.
-  if declare -F _proxmenux_vfio_bind_purge_vendor >/dev/null 2>&1; then
-    _proxmenux_vfio_bind_purge_vendor "10de" && changed=true
-  fi
-
-  # Remove hard blacklist that was preventing nvidia module loading
-  local nvidia_blacklist="/etc/modprobe.d/nvidia-blacklist.conf"
-  if [[ -f "$nvidia_blacklist" ]]; then
-    rm -f "$nvidia_blacklist" >>"$LOG_FILE" 2>&1 || true
-    changed=true
-  fi
-
-  # Restore NVIDIA udev rules if they were disabled
-  local udev_disabled="/etc/udev/rules.d/70-nvidia.rules.proxmenux-disabled"
-  local udev_rules="/etc/udev/rules.d/70-nvidia.rules"
-  if [[ -f "$udev_disabled" ]]; then
-    mv "$udev_disabled" "$udev_rules" >>"$LOG_FILE" 2>&1 || true
-    udevadm control --reload-rules >>"$LOG_FILE" 2>&1 || true
-    changed=true
-  fi
-
-  if [[ -f "$disabled_file" ]]; then
-    mv "$disabled_file" "$active_file" >>"$LOG_FILE" 2>&1 || true
-    changed=true
-  fi
-
-  modprobe nvidia >/dev/null 2>&1 || true
-  modprobe nvidia_uvm >/dev/null 2>&1 || true
-  modprobe nvidia_modeset >/dev/null 2>&1 || true
-  modprobe nvidia_drm >/dev/null 2>&1 || true
-
-  if [[ -f "$state_file" ]]; then
-    while IFS= read -r line; do
-      [[ -z "$line" ]] && continue
-      local svc enabled active
-      svc=$(echo "$line" | awk '{print $1}')
-      enabled=$(echo "$line" | awk -F'enabled=' '{print $2}' | awk '{print $1}')
-      active=$(echo "$line" | awk -F'active=' '{print $2}' | awk '{print $1}')
-      [[ "$enabled" == "1" ]] && systemctl enable "$svc" >>"$LOG_FILE" 2>&1 || true
-      [[ "$active" == "1" ]] && systemctl start "$svc" >>"$LOG_FILE" 2>&1 || true
-    done <"$state_file"
-    rm -f "$state_file"
-    changed=true
-  fi
-
-  if $changed; then
-    HOST_CONFIG_CHANGED=true
-    msg_ok "$(translate 'NVIDIA host services/autoload restored for native mode')" | tee -a "$screen_capture"
-  else
-    msg_ok "$(translate 'NVIDIA host services/autoload already aligned for native mode')" | tee -a "$screen_capture"
-  fi
-
-  # Sync components_status.json back to installed — the host has reclaimed
-  # the GPU and the nvidia stack is being reloaded. Restores the state to
-  # what it was before the VFIO switch so the update notification path and
-  # the auto-reinstall gate see the driver as active on the host again.
-  if declare -F update_component_status >/dev/null 2>&1; then
-    local _nvd_ver
-    _nvd_ver=$(nvidia-smi --query-gpu=driver_version --format=csv,noheader 2>/dev/null | head -1)
-    if [[ -z "$_nvd_ver" ]]; then
-      _nvd_ver=$(jq -r '.nvidia_driver.version // ""' \
-        /usr/local/share/proxmenux/components_status.json 2>/dev/null)
-    fi
-    update_component_status "nvidia_driver" "installed" \
-      "${_nvd_ver:-}" "gpu" '{"patched":false}' >>"$LOG_FILE" 2>&1 || true
+  _proxmenux_nvidia_vfio_policy_sync || true
+  if ! _proxmenux_all_nvidia_in_vfio; then
+    modprobe nvidia >/dev/null 2>&1 || true
+    modprobe nvidia_uvm >/dev/null 2>&1 || true
+    modprobe nvidia_modeset >/dev/null 2>&1 || true
+    modprobe nvidia_drm >/dev/null 2>&1 || true
   fi
 }
-
 _add_amd_softdep() {
   local vfio_conf="/etc/modprobe.d/vfio.conf"
   _add_line_if_missing "softdep radeon pre: vfio-pci" "$vfio_conf"
@@ -442,6 +300,10 @@ _remove_vfio_modules_if_unused() {
   local vfio_count
   vfio_count=$(_read_vfio_ids | wc -l | tr -d '[:space:]')
   [[ "$vfio_count" != "0" ]] && return 1
+  if declare -F _proxmenux_vfio_bind_has_entries >/dev/null 2>&1 \
+     && _proxmenux_vfio_bind_has_entries; then
+    return 1
+  fi
   local modules_file="/etc/modules"
   [[ ! -f "$modules_file" ]] && return 1
   local had_any=false
@@ -632,25 +494,37 @@ validate_vm_mode_blocked_ids() {
 collect_selected_iommu_ids() {
   SELECTED_IOMMU_IDS=()
   SELECTED_PCI_SLOTS=()
+  SELECTED_NVIDIA_BDFS=()
+  SELECTED_LEGACY_IOMMU_IDS=()
 
-  local idx pci viddid slot
+  local idx pci viddid slot selected_type bdf vid did gid
   for idx in "${SELECTED_GPU_IDX[@]}"; do
     pci="${ALL_GPU_PCIS[$idx]}"
     viddid="${ALL_GPU_VIDDID[$idx]}"
+    selected_type="${ALL_GPU_TYPES[$idx]}"
     slot="${pci#0000:}"
     slot="${slot%.*}"
     SELECTED_PCI_SLOTS+=("$slot")
 
-    local -a group_ids=()
-    mapfile -t group_ids < <(_get_iommu_group_ids "$pci")
-    if [[ ${#group_ids[@]} -gt 0 ]]; then
-      local gid
-      for gid in "${group_ids[@]}"; do
+    local -a group_bdfs=()
+    mapfile -t group_bdfs < <(_get_iommu_group_bdfs "$pci")
+    [[ ${#group_bdfs[@]} -gt 0 ]] || group_bdfs=("$pci")
+
+    for bdf in "${group_bdfs[@]}"; do
+      [[ "$bdf" == 0000:* ]] || bdf="0000:${bdf}"
+      vid=$(cat "/sys/bus/pci/devices/${bdf}/vendor" 2>/dev/null | sed 's/^0x//')
+      did=$(cat "/sys/bus/pci/devices/${bdf}/device" 2>/dev/null | sed 's/^0x//')
+      gid="${vid}:${did}"
+      if [[ -n "$vid" && -n "$did" ]]; then
         _contains_in_array "$gid" "${SELECTED_IOMMU_IDS[@]}" || SELECTED_IOMMU_IDS+=("$gid")
-      done
-    elif [[ -n "$viddid" ]]; then
-      _contains_in_array "$viddid" "${SELECTED_IOMMU_IDS[@]}" || SELECTED_IOMMU_IDS+=("$viddid")
-    fi
+        if [[ "$selected_type" != "nvidia" ]]; then
+          _contains_in_array "$gid" "${SELECTED_LEGACY_IOMMU_IDS[@]}" || SELECTED_LEGACY_IOMMU_IDS+=("$gid")
+        fi
+      fi
+      if [[ "$selected_type" == "nvidia" ]]; then
+        _contains_in_array "$bdf" "${SELECTED_NVIDIA_BDFS[@]}" || SELECTED_NVIDIA_BDFS+=("$bdf")
+      fi
+    done
   done
 }
 
@@ -948,6 +822,9 @@ apply_vm_action_for_lxc_mode() {
                   if ! _contains_in_array "$_vd_id" "${SELECTED_IOMMU_IDS[@]}"; then
                     SELECTED_IOMMU_IDS+=("$_vd_id")
                   fi
+                  if ! _contains_in_array "$_vd_id" "${SELECTED_LEGACY_IOMMU_IDS[@]}"; then
+                    SELECTED_LEGACY_IOMMU_IDS+=("$_vd_id")
+                  fi
                 fi
               fi
             fi
@@ -1018,6 +895,12 @@ switch_to_vm_mode() {
 
   msg_info "$(translate 'Configuring host for GPU -> VM mode...')"
 
+  local -a selected_types=()
+  mapfile -t selected_types < <(_selected_types_unique)
+  if _contains_in_array "nvidia" "${selected_types[@]}"; then
+    _proxmenux_nvidia_migrate_legacy_blacklist
+  fi
+
   if declare -F _pci_is_iommu_active >/dev/null 2>&1 && _pci_is_iommu_active; then
     _register_iommu_tool
     msg_ok "$(translate 'IOMMU is already active on this system')" | tee -a "$screen_capture"
@@ -1044,24 +927,30 @@ switch_to_vm_mode() {
   local -a current_ids=()
   mapfile -t current_ids < <(_read_vfio_ids)
   local id
-  for id in "${SELECTED_IOMMU_IDS[@]}"; do
+  for id in "${SELECTED_LEGACY_IOMMU_IDS[@]}"; do
     _contains_in_array "$id" "${current_ids[@]}" || current_ids+=("$id")
   done
   _write_vfio_ids "${current_ids[@]}"
-  if [[ ${#SELECTED_IOMMU_IDS[@]} -gt 0 ]]; then
+  if [[ ${#SELECTED_LEGACY_IOMMU_IDS[@]} -gt 0 ]]; then
     local ids_label
-    ids_label=$(IFS=','; echo "${SELECTED_IOMMU_IDS[*]}")
+    ids_label=$(IFS=','; echo "${SELECTED_LEGACY_IOMMU_IDS[*]}")
     msg_ok "$(translate 'vfio-pci IDs configured') (${ids_label})" | tee -a "$screen_capture"
   fi
 
-  local -a selected_types=()
-  mapfile -t selected_types < <(_selected_types_unique)
-  local t
+  if [[ ${#SELECTED_NVIDIA_BDFS[@]} -gt 0 ]]; then
+    _proxmenux_vfio_bind_add_bdfs "${SELECTED_NVIDIA_BDFS[@]}"
+    msg_ok "$(translate 'NVIDIA per-BDF VFIO binding configured') (${SELECTED_NVIDIA_BDFS[*]})" | tee -a "$screen_capture"
+  fi
+
+  local t legacy_blacklist_configured=false
   for t in "${selected_types[@]}"; do
+    [[ "$t" == "nvidia" ]] && continue
     _add_gpu_blacklist "$t"
+    legacy_blacklist_configured=true
   done
-  msg_ok "$(translate 'GPU host driver blacklisted in /etc/modprobe.d/blacklist.conf')" | tee -a "$screen_capture"
-  _contains_in_array "nvidia" "${selected_types[@]}" && _sanitize_nvidia_host_stack_for_vfio
+  $legacy_blacklist_configured \
+    && msg_ok "$(translate 'GPU host driver blacklisted in /etc/modprobe.d/blacklist.conf')" | tee -a "$screen_capture"
+  _contains_in_array "nvidia" "${selected_types[@]}" && _proxmenux_nvidia_vfio_policy_sync || true
   _contains_in_array "amd" "${selected_types[@]}" && _add_amd_softdep
 
   if [[ "$HOST_CONFIG_CHANGED" == "true" ]]; then
@@ -1095,12 +984,20 @@ switch_to_lxc_mode() {
 
   msg_info "$(translate 'Removing VFIO ownership for selected GPU(s)...')"
 
+  local -a selected_types=()
+  mapfile -t selected_types < <(_selected_types_unique)
+  if _contains_in_array "nvidia" "${selected_types[@]}"; then
+    _proxmenux_nvidia_migrate_legacy_blacklist
+    [[ ${#SELECTED_NVIDIA_BDFS[@]} -gt 0 ]] \
+      && _proxmenux_vfio_bind_remove_bdfs "${SELECTED_NVIDIA_BDFS[@]}"
+  fi
+
   local -a current_ids=() remaining_ids=() removed_ids=()
   mapfile -t current_ids < <(_read_vfio_ids)
   local id remove
   for id in "${current_ids[@]}"; do
     remove=false
-    _contains_in_array "$id" "${SELECTED_IOMMU_IDS[@]}" && remove=true
+    _contains_in_array "$id" "${SELECTED_LEGACY_IOMMU_IDS[@]}" && remove=true
     if $remove; then
       removed_ids+=("$id")
     else
@@ -1114,16 +1011,15 @@ switch_to_lxc_mode() {
     msg_ok "$(translate 'VFIO device IDs removed from /etc/modprobe.d/vfio.conf') (${ids_label})" | tee -a "$screen_capture"
   fi
 
-  local -a selected_types=()
-  mapfile -t selected_types < <(_selected_types_unique)
   local t
   for t in "${selected_types[@]}"; do
+    if [[ "$t" == "nvidia" ]]; then
+      _proxmenux_nvidia_vfio_policy_sync || true
+      continue
+    fi
     if ! _type_has_remaining_vfio_ids "$t" "${remaining_ids[@]}"; then
       if _remove_gpu_blacklist "$t"; then
         msg_ok "$(translate 'Driver blacklist removed for') ${t}" | tee -a "$screen_capture"
-      fi
-      if [[ "$t" == "nvidia" ]]; then
-        _restore_nvidia_host_stack_for_lxc
       fi
     fi
   done
@@ -1257,6 +1153,39 @@ parse_arguments() {
 # ==========================================================
 # Main Entry Point
 # ==========================================================
+check_stale_vfio_config_switch_mode_direct() {
+  local vfio_conf="/etc/modprobe.d/vfio.conf"
+  [[ ! -f "$vfio_conf" ]] && return 0
+
+  local ids_line ids_part
+  ids_line=$(grep "^options vfio-pci ids=" "$vfio_conf" 2>/dev/null | head -1)
+  [[ -z "$ids_line" ]] && return 0
+  ids_part=$(echo "$ids_line" | grep -oE 'ids=[^[:space:]]+' | sed 's/ids=//')
+  [[ -z "$ids_part" ]] && return 0
+
+  local -a legacy_ids=()
+  local idx viddid drv
+  for idx in "${SELECTED_GPU_IDX[@]}"; do
+    viddid="${ALL_GPU_VIDDID[$idx]}"
+    drv="${ALL_GPU_DRIVERS[$idx]}"
+    [[ -z "$viddid" ]] && continue
+    [[ "$drv" == "vfio-pci" ]] && continue
+    if echo ",${ids_part}," | grep -q ",${viddid},"; then
+      legacy_ids+=("$viddid")
+    fi
+  done
+
+  [[ ${#legacy_ids[@]} -eq 0 ]] && return 0
+
+  msg_info "$(translate 'Removing stale VFIO entries from vfio.conf...')"
+  if declare -F _clean_vfio_conf_ids >/dev/null 2>&1 \
+     && _clean_vfio_conf_ids "${legacy_ids[@]}"; then
+    update-initramfs -u >/dev/null 2>&1 || true
+    HOST_CONFIG_CHANGED=true
+    msg_ok "$(translate 'Stale VFIO entries removed and initramfs rebuilt.')" | tee -a "$screen_capture"
+  fi
+}
+
 main() {
   : >"$LOG_FILE"
   : >"$screen_capture"
@@ -1322,6 +1251,10 @@ main() {
   local gpu_idx="${SELECTED_GPU_IDX[0]}"
   local gpu_name="${ALL_GPU_NAMES[$gpu_idx]}"
   local gpu_pci="${ALL_GPU_PCIS[$gpu_idx]}"
+
+  if [[ "$TARGET_MODE" == "lxc" ]]; then
+    check_stale_vfio_config_switch_mode_direct
+  fi
 
   # Execute the switch
   if [[ "$TARGET_MODE" == "vm" ]]; then

@@ -64,6 +64,7 @@ ORANGE="\033[38;5;208m"
 GN="\033[1;92m"
 YW="\033[33m"
 YWB="\033[1;33m"
+MG="\033[1;35m"
 RD="\033[01;31m"
 BL="\033[36m"
 CL="\033[m"
@@ -82,7 +83,7 @@ spinner() {
     local spin_i=0
     printf "\e[?25l"
     while true; do
-        printf "\r ${YW}%s${CL}" "${frames[spin_i]}"
+        printf "\r ${MG}%s${CL}" "${frames[spin_i]}"
         spin_i=$(( (spin_i + 1) % ${#frames[@]} ))
         sleep 0.1
     done
@@ -100,7 +101,7 @@ type_text() {
 
 msg_info() {
     local msg="$1"
-    echo -ne "${TAB}${YW}${HOLD}${msg}"
+    echo -ne "${TAB}${MG}${HOLD}${msg}"
     spinner &
     SPINNER_PID=$!
 }
@@ -558,7 +559,8 @@ select_language() {
         "fr" "French" \
         "de" "German" \
         "it" "Italian" \
-        "pt" "Portuguese" 3>&1 1>&2 2>&3)
+        "pt" "Portuguese" \
+        "sk" "Slovenčina" 3>&1 1>&2 2>&3)
 
     if [ -z "$LANGUAGE" ]; then
         msg_error "No language selected. Exiting."

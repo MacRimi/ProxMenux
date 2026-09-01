@@ -1,7 +1,7 @@
 "use client"
 
 import type React from "react"
-import { useState, useEffect, useRef, useCallback } from "react"
+import { useState, useEffect, useRef, useCallback, useMemo } from "react"
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import {
@@ -37,6 +37,7 @@ import { Dialog as SearchDialog, DialogContent as SearchDialogContent, DialogTit
 import "xterm/css/xterm.css"
 import { API_PORT, fetchApi } from "@/lib/api-config"
 import { getTicketedWsUrl } from "@/lib/terminal-ws"
+import { useT } from "@/lib/i18n/provider"
 
 interface LxcTerminalModalProps {
   open: boolean
@@ -51,33 +52,35 @@ interface CheatSheetResult {
   examples: string[]
 }
 
-const proxmoxCommands = [
-  { cmd: "ls -la", desc: "List all files with details" },
-  { cmd: "cd /path/to/dir", desc: "Change directory" },
-  { cmd: "cat filename", desc: "Display file contents" },
-  { cmd: "grep 'pattern' file", desc: "Search for pattern in file" },
-  { cmd: "find . -name 'file'", desc: "Find files by name" },
-  { cmd: "df -h", desc: "Show disk usage" },
-  { cmd: "du -sh *", desc: "Show directory sizes" },
-  { cmd: "free -h", desc: "Show memory usage" },
-  { cmd: "top", desc: "Show running processes" },
-  { cmd: "ps aux | grep process", desc: "Find running process" },
-  { cmd: "systemctl status service", desc: "Check service status" },
-  { cmd: "systemctl restart service", desc: "Restart a service" },
-  { cmd: "apt update && apt upgrade", desc: "Update packages" },
-  { cmd: "apt install package", desc: "Install package" },
-  { cmd: "tail -f /var/log/syslog", desc: "Follow log file" },
-  { cmd: "chmod 755 file", desc: "Change file permissions" },
-  { cmd: "chown user:group file", desc: "Change file owner" },
-  { cmd: "tar -xzf file.tar.gz", desc: "Extract tar.gz archive" },
-  { cmd: "docker ps", desc: "List running containers" },
-  { cmd: "docker images", desc: "List Docker images" },
-  { cmd: "ip addr show", desc: "Show IP addresses" },
-  { cmd: "ping host", desc: "Test network connectivity" },
-  { cmd: "curl -I url", desc: "Get HTTP headers" },
-  { cmd: "history", desc: "Show command history" },
-  { cmd: "clear", desc: "Clear terminal screen" },
-]
+const LXC_COMMANDS = [
+  { cmd: "ls -la", descKey: "listFiles" },
+  { cmd: "cd /path/to/dir", descKey: "changeDirectory" },
+  { cmd: "cat filename", descKey: "displayFile" },
+  { cmd: "grep 'pattern' file", descKey: "searchPattern" },
+  { cmd: "find . -name 'file'", descKey: "findFiles" },
+  { cmd: "df -h", descKey: "diskUsage" },
+  { cmd: "du -sh *", descKey: "directorySizes" },
+  { cmd: "free -h", descKey: "memoryUsage" },
+  { cmd: "top", descKey: "runningProcesses" },
+  { cmd: "ps aux | grep process", descKey: "findProcess" },
+  { cmd: "systemctl status service", descKey: "serviceStatus" },
+  { cmd: "systemctl restart service", descKey: "restartService" },
+  { cmd: "apt update && apt upgrade", descKey: "updatePackages" },
+  { cmd: "apt install package", descKey: "installPackage" },
+  { cmd: "tail -f /var/log/syslog", descKey: "followLog" },
+  { cmd: "chmod 755 file", descKey: "changePermissions" },
+  { cmd: "chown user:group file", descKey: "changeOwner" },
+  { cmd: "tar -xzf file.tar.gz", descKey: "extractArchive" },
+  { cmd: "docker ps", descKey: "listContainers" },
+  { cmd: "docker images", descKey: "listImages" },
+  { cmd: "ip addr show", descKey: "showIpAddresses" },
+  { cmd: "ping host", descKey: "testConnectivity" },
+  { cmd: "curl -I url", descKey: "httpHeaders" },
+  { cmd: "history", descKey: "commandHistory" },
+  { cmd: "clear", descKey: "clearScreen" },
+] as const
+
+type LocalCommand = { cmd: string; desc: string }
 
 function getWebSocketUrl(): string {
   if (typeof window === "undefined") {
@@ -101,6 +104,7 @@ export function LxcTerminalModal({
   vmid,
   vmName,
 }: LxcTerminalModalProps) {
+  const t = useT()
   const termRef = useRef<any>(null)
   const wsRef = useRef<WebSocket | null>(null)
   const fitAddonRef = useRef<any>(null)
@@ -121,12 +125,18 @@ export function LxcTerminalModal({
   // Search state
   const [searchModalOpen, setSearchModalOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState("")
-  const [filteredCommands, setFilteredCommands] = useState<Array<{ cmd: string; desc: string }>>(proxmoxCommands)
+  const localCommands = useMemo<LocalCommand[]>(
+    () => LXC_COMMANDS.map((item) => ({ cmd: item.cmd, desc: t(`lxcTerminal.commands.${item.descKey}`) })),
+    [t],
+  )
+  const [filteredCommands, setFilteredCommands] = useState<LocalCommand[]>([])
   const [isSearching, setIsSearching] = useState(false)
   const [searchResults, setSearchResults] = useState<CheatSheetResult[]>([])
   const [useOnline, setUseOnline] = useState(true)
 
-  
+  useEffect(() => {
+    setFilteredCommands(localCommands)
+  }, [localCommands])
 
   // Detect mobile/tablet
   useEffect(() => {
@@ -278,7 +288,7 @@ export function LxcTerminalModal({
           // through Number without losing fidelity.
           const id = Number(vmid)
           if (!Number.isInteger(id) || id <= 0 || id >= 1_000_000) {
-            term.writeln('\r\n\x1b[31m[ERROR] Invalid VMID — refusing to execute pct enter\x1b[0m')
+            term.writeln(`\r\n\x1b[31m[ERROR] ${t("lxcTerminal.errors.invalidVmid")}\x1b[0m`)
             return
           }
           ws.send(`pct enter ${id}\r`)
@@ -287,7 +297,7 @@ export function LxcTerminalModal({
 
       ws.onerror = () => {
         setConnectionStatus("offline")
-        term.writeln("\r\n\x1b[31m[ERROR] WebSocket connection error\x1b[0m")
+        term.writeln(`\r\n\x1b[31m[ERROR] ${t("terminal.websocketError")}\x1b[0m`)
       }
 
       ws.onclose = () => {
@@ -295,7 +305,7 @@ export function LxcTerminalModal({
         if (pingIntervalRef.current) {
           clearInterval(pingIntervalRef.current)
         }
-        term.writeln("\r\n\x1b[33m[INFO] Connection closed\x1b[0m")
+        term.writeln(`\r\n\x1b[33m[INFO] ${t("terminal.connectionClosed")}\x1b[0m`)
       }
 
       term.onData((data) => {
@@ -395,7 +405,7 @@ export function LxcTerminalModal({
         termRef.current.dispose()
       }
     }
-  }, [isOpen, vmid])
+  }, [isOpen, vmid, t])
 
   // Resize handling
   useEffect(() => {
@@ -478,7 +488,7 @@ export function LxcTerminalModal({
     const searchCheatSh = async (query: string) => {
       if (!query.trim()) {
         setSearchResults([])
-        setFilteredCommands(proxmoxCommands)
+        setFilteredCommands(localCommands)
         return
       }
 
@@ -491,7 +501,7 @@ export function LxcTerminalModal({
         })
 
         if (!data.success || !data.examples || data.examples.length === 0) {
-          throw new Error("No examples found")
+          throw new Error(t("terminal.noExamplesFound"))
         }
 
         const formattedResults: CheatSheetResult[] = data.examples.map((example: any) => ({
@@ -503,7 +513,7 @@ export function LxcTerminalModal({
         setUseOnline(true)
         setSearchResults(formattedResults)
       } catch (error) {
-        const filtered = proxmoxCommands.filter(
+        const filtered = localCommands.filter(
           (item) =>
             item.cmd.toLowerCase().includes(query.toLowerCase()) ||
             item.desc.toLowerCase().includes(query.toLowerCase()),
@@ -521,12 +531,12 @@ export function LxcTerminalModal({
         searchCheatSh(searchQuery)
       } else {
         setSearchResults([])
-        setFilteredCommands(proxmoxCommands)
+        setFilteredCommands(localCommands)
       }
     }, 800)
 
     return () => clearTimeout(debounce)
-  }, [searchQuery])
+  }, [searchQuery, localCommands, t])
 
   const handleClear = useCallback(() => {
     if (termRef.current) {
@@ -565,7 +575,7 @@ export function LxcTerminalModal({
         {/* Header */}
         <div className="flex items-center justify-between px-4 py-2 bg-zinc-900 border-b border-zinc-800">
           <DialogTitle className="text-sm font-medium text-white">
-            Terminal: {vmName} (ID: {vmid})
+            {t("lxcTerminal.title", { name: vmName, id: vmid })}
           </DialogTitle>
           <div className="flex gap-2">
             <Button
@@ -576,7 +586,7 @@ export function LxcTerminalModal({
               className="h-8 gap-2 bg-blue-600/20 hover:bg-blue-600/30 border-blue-600/50 text-blue-400 disabled:opacity-50"
             >
               <Search className="h-4 w-4" />
-              <span className="hidden sm:inline">Search</span>
+              <span className="hidden sm:inline">{t("terminal.search")}</span>
             </Button>
             <Button
               onClick={handleClear}
@@ -586,7 +596,7 @@ export function LxcTerminalModal({
               className="h-8 gap-2 bg-yellow-600/20 hover:bg-yellow-600/30 border-yellow-600/50 text-yellow-400 disabled:opacity-50"
             >
               <Trash2 className="h-4 w-4" />
-              <span className="hidden sm:inline">Clear</span>
+              <span className="hidden sm:inline">{t("terminal.clear")}</span>
             </Button>
           </div>
         </div>
@@ -673,29 +683,29 @@ export function LxcTerminalModal({
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-56">
-                  <DropdownMenuLabel className="text-xs text-muted-foreground">Control Sequences</DropdownMenuLabel>
+                  <DropdownMenuLabel className="text-xs text-muted-foreground">{t("scriptTerminal.controlSequences")}</DropdownMenuLabel>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onSelect={() => sendKey("\x03")}>
                     <span className="font-mono text-xs mr-2">Ctrl+C</span>
-                    <span className="text-muted-foreground text-xs">Cancel/Interrupt</span>
+                    <span className="text-muted-foreground text-xs">{t("scriptTerminal.cancelInterrupt")}</span>
                   </DropdownMenuItem>
                   <DropdownMenuItem onSelect={() => sendKey("\x18")}>
                     <span className="font-mono text-xs mr-2">Ctrl+X</span>
-                    <span className="text-muted-foreground text-xs">Exit (nano)</span>
+                    <span className="text-muted-foreground text-xs">{t("scriptTerminal.exitNano")}</span>
                   </DropdownMenuItem>
                   <DropdownMenuItem onSelect={() => sendKey("\x12")}>
                     <span className="font-mono text-xs mr-2">Ctrl+R</span>
-                    <span className="text-muted-foreground text-xs">Search history</span>
+                    <span className="text-muted-foreground text-xs">{t("scriptTerminal.searchHistory")}</span>
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
-                  <DropdownMenuLabel className="text-xs text-muted-foreground">Clipboard</DropdownMenuLabel>
+                  <DropdownMenuLabel className="text-xs text-muted-foreground">{t("scriptTerminal.clipboard")}</DropdownMenuLabel>
                   <DropdownMenuItem onSelect={() => { void handleCopy() }}>
                     <Copy className="h-3.5 w-3.5 mr-2" />
-                    <span className="text-xs">Copy selection</span>
+                    <span className="text-xs">{t("scriptTerminal.copySelection")}</span>
                   </DropdownMenuItem>
                   <DropdownMenuItem onSelect={() => { void handlePaste() }}>
                     <Clipboard className="h-3.5 w-3.5 mr-2" />
-                    <span className="text-xs">Paste</span>
+                    <span className="text-xs">{t("scriptTerminal.paste")}</span>
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
@@ -716,7 +726,7 @@ export function LxcTerminalModal({
                     : "bg-red-500"
               }`}
             />
-            <span className="text-xs text-zinc-400 capitalize">{connectionStatus}</span>
+            <span className="text-xs text-zinc-400">{t(`scriptTerminal.${connectionStatus}`)}</span>
           </div>
           <Button
             onClick={onClose}
@@ -725,7 +735,7 @@ export function LxcTerminalModal({
             className="h-8 gap-2 bg-red-600/20 hover:bg-red-600/30 border-red-600/50 text-red-400"
           >
             <X className="h-4 w-4" />
-            <span className="hidden sm:inline">Close</span>
+            <span className="hidden sm:inline">{t("actions.close")}</span>
           </Button>
         </div>
       </DialogContent>
@@ -734,22 +744,22 @@ export function LxcTerminalModal({
       <SearchDialog open={searchModalOpen} onOpenChange={setSearchModalOpen}>
         <SearchDialogContent className="max-w-3xl max-h-[85vh] overflow-hidden flex flex-col">
           <DialogHeader className="flex flex-row items-center justify-between space-y-0 pb-4 border-b border-zinc-800">
-            <SearchDialogTitle className="text-xl font-semibold">Search Commands</SearchDialogTitle>
+            <SearchDialogTitle className="text-xl font-semibold">{t("terminal.searchCommands")}</SearchDialogTitle>
             <div className="flex items-center gap-2">
               <div
                 className={`w-2 h-2 rounded-full ${useOnline ? "bg-green-500" : "bg-red-500"}`}
-                title={useOnline ? "Online - Using cheat.sh API" : "Offline - Using local commands"}
+                title={useOnline ? t("terminal.onlineSource") : t("terminal.offlineSource")}
               />
             </div>
           </DialogHeader>
 
-          <DialogDescription className="sr-only">Search for Linux commands</DialogDescription>
+          <DialogDescription className="sr-only">{t("terminal.searchDescription")}</DialogDescription>
 
           <div className="space-y-4">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
               <Input
-                placeholder="Search commands... (e.g., tar, docker, systemctl)"
+                placeholder={t("terminal.searchPlaceholder")}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="pl-10 bg-zinc-900 border-zinc-700 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 text-base"
@@ -763,7 +773,7 @@ export function LxcTerminalModal({
             {isSearching && (
               <div className="text-center py-4 text-zinc-400">
                 <div className="animate-spin inline-block w-6 h-6 border-2 border-current border-t-transparent rounded-full mb-2" />
-                <p className="text-sm">Searching cheat.sh...</p>
+                <p className="text-sm">{t("terminal.searchingCheatSh")}</p>
               </div>
             )}
 
@@ -790,7 +800,7 @@ export function LxcTerminalModal({
                   <div className="text-center py-2">
                     <p className="text-xs text-zinc-500">
                       <Lightbulb className="inline-block w-3 h-3 mr-1" />
-                      Powered by cheat.sh
+                      {t("terminal.poweredByCheatSh")}
                     </p>
                   </div>
                 </>
@@ -816,13 +826,13 @@ export function LxcTerminalModal({
                         className="shrink-0 h-7 px-2 text-xs"
                       >
                         <Send className="h-3 w-3 mr-1" />
-                        Send
+                        {t("terminal.send")}
                       </Button>
                     </div>
                   </div>
                 ))
               ) : !isSearching && !searchQuery && !useOnline ? (
-                proxmoxCommands.map((item, index) => (
+                localCommands.map((item, index) => (
                   <div
                     key={index}
                     onClick={() => sendToTerminal(item.cmd)}
@@ -843,7 +853,7 @@ export function LxcTerminalModal({
                         className="shrink-0 h-7 px-2 text-xs"
                       >
                         <Send className="h-3 w-3 mr-1" />
-                        Send
+                        {t("terminal.send")}
                       </Button>
                     </div>
                   </div>
@@ -854,17 +864,17 @@ export function LxcTerminalModal({
                     <>
                       <Search className="w-12 h-12 text-zinc-600 mx-auto" />
                       <div>
-                        <p className="text-zinc-400 font-medium">{"No results found for \""}{searchQuery}{"\""}</p>
-                        <p className="text-xs text-zinc-500 mt-1">Try a different command or check your spelling</p>
+                        <p className="text-zinc-400 font-medium">{t("terminal.noResults", { query: searchQuery })}</p>
+                        <p className="text-xs text-zinc-500 mt-1">{t("terminal.tryDifferentSearch")}</p>
                       </div>
                     </>
                   ) : (
                     <>
                       <Terminal className="w-12 h-12 text-zinc-600 mx-auto" />
                       <div>
-                        <p className="text-zinc-400 font-medium mb-2">Search for any command</p>
+                        <p className="text-zinc-400 font-medium mb-2">{t("terminal.searchAnyCommand")}</p>
                         <div className="text-sm text-zinc-500 space-y-1">
-                          <p>Try searching for:</p>
+                          <p>{t("terminal.trySearchingFor")}</p>
                           <div className="flex flex-wrap justify-center gap-2 mt-2">
                             {["tar", "grep", "docker", "systemctl", "curl"].map((cmd) => (
                               <code
@@ -881,7 +891,7 @@ export function LxcTerminalModal({
                       {useOnline && (
                         <div className="flex items-center justify-center gap-2 text-xs text-zinc-600 mt-4">
                           <Lightbulb className="w-3 h-3" />
-                          <span>Powered by cheat.sh</span>
+                          <span>{t("terminal.poweredByCheatSh")}</span>
                         </div>
                       )}
                     </>
@@ -890,13 +900,11 @@ export function LxcTerminalModal({
               ) : null}
             </div>
 
-            <div className="pt-2 border-t border-zinc-800 flex items-center justify-between text-xs text-zinc-500">
-              <div className="flex items-center gap-2">
-                <Lightbulb className="w-3 h-3" />
-                <span>Tip: Search for any Linux command</span>
+            {useOnline && searchResults.length > 0 && (
+              <div className="pt-2 border-t border-zinc-800 text-xs text-zinc-500 text-right">
+                <span className="text-zinc-600">{t("terminal.poweredByCheatSh")}</span>
               </div>
-              {useOnline && searchResults.length > 0 && <span className="text-zinc-600">Powered by cheat.sh</span>}
-            </div>
+            )}
           </div>
         </SearchDialogContent>
       </SearchDialog>

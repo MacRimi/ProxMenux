@@ -13,6 +13,9 @@ import { fetchApi } from "../lib/api-config"
 import { formatNetworkTraffic, getNetworkUnit } from "../lib/format-network"
 import { LatencyDetailModal } from "./latency-detail-modal"
 import { AreaChart, Area, LineChart, Line, ResponsiveContainer, YAxis } from "recharts"
+import { useT } from "../lib/i18n/provider"
+
+type TFunction = (key: string, params?: Record<string, string | number>) => string
 
 interface NetworkData {
   interfaces: NetworkInterface[]
@@ -141,22 +144,55 @@ function getInterfaceIcon(iface: NetworkInterface): React.ComponentType<{ classN
 
 // Match the dark blue badge tone the Storage card uses for the disk
 // type chip, but mapped to the actual interface class.
-function getInterfaceTypeChip(type: string) {
+function getInterfaceTypeLabel(type: string, t: TFunction) {
   switch ((type || "").toLowerCase()) {
     case "physical":
-      return { className: "bg-blue-500/10 text-blue-400 border-blue-500/20", label: "Physical" }
+      return t("network.interfaceTypes.physical")
     case "bridge":
-      return { className: "bg-green-500/10 text-green-400 border-green-500/20", label: "Bridge" }
+      return t("network.interfaceTypes.bridge")
     case "bond":
-      return { className: "bg-purple-500/10 text-purple-400 border-purple-500/20", label: "Bond" }
+      return t("network.interfaceTypes.bond")
     case "vlan":
-      return { className: "bg-cyan-500/10 text-cyan-400 border-cyan-500/20", label: "VLAN" }
+      return t("network.interfaceTypes.vlan")
     case "vm_lxc":
     case "virtual":
-      return { className: "bg-orange-500/10 text-orange-400 border-orange-500/20", label: "Virtual" }
+      return t("network.interfaceTypes.virtual")
     default:
-      return { className: "bg-gray-500/10 text-gray-400 border-gray-500/20", label: type || "Unknown" }
+      return type || t("common.unknown")
   }
+}
+
+function getInterfaceTypeChip(type: string, t: TFunction) {
+  switch ((type || "").toLowerCase()) {
+    case "physical":
+      return { className: "bg-blue-500/10 text-blue-400 border-blue-500/20", label: getInterfaceTypeLabel(type, t) }
+    case "bridge":
+      return { className: "bg-green-500/10 text-green-400 border-green-500/20", label: getInterfaceTypeLabel(type, t) }
+    case "bond":
+      return { className: "bg-purple-500/10 text-purple-400 border-purple-500/20", label: getInterfaceTypeLabel(type, t) }
+    case "vlan":
+      return { className: "bg-cyan-500/10 text-cyan-400 border-cyan-500/20", label: getInterfaceTypeLabel(type, t) }
+    case "vm_lxc":
+    case "virtual":
+      return { className: "bg-orange-500/10 text-orange-400 border-orange-500/20", label: getInterfaceTypeLabel(type, t) }
+    default:
+      return { className: "bg-gray-500/10 text-gray-400 border-gray-500/20", label: type || t("common.unknown") }
+  }
+}
+
+const formatInterfaceStatus = (status: string | undefined, t: TFunction): string => {
+  const normalized = (status || "").toLowerCase()
+  if (normalized === "up") return t("network.status.up")
+  if (normalized === "down") return t("network.status.down")
+  return status || t("common.unknown")
+}
+
+const formatDuplex = (duplex: string | undefined, t: TFunction): string => {
+  const normalized = (duplex || "").toLowerCase()
+  if (normalized === "full") return t("network.duplex.full")
+  if (normalized === "half") return t("network.duplex.half")
+  if (!duplex || normalized === "unknown") return t("common.unknown")
+  return duplex
 }
 
 // Per-interface card matching the Storage page's "Physical Disks"
@@ -166,18 +202,19 @@ function getInterfaceTypeChip(type: string) {
 function renderPhysicalInterfaceCardV2(
   iface: NetworkInterface,
   onOpen: (iface: NetworkInterface) => void,
+  t: TFunction,
 ) {
   const Icon = getInterfaceIcon(iface)
-  const chip = getInterfaceTypeChip(iface.type)
+  const chip = getInterfaceTypeChip(iface.type, t)
   const isUp = (iface.status || "").toLowerCase() === "up"
   const firstAddr = iface.addresses?.[0]?.ip || ""
   const extraAddrs = Math.max(0, (iface.addresses?.length || 0) - 1)
-  const speedStr = formatSpeed(iface.speed)
+  const speedStr = formatSpeed(iface.speed, t("common.notAvailable"))
   // Hardware max in Mbps from ethtool. Show only when it's different
   // from the negotiated speed (avoids "1 Gbps (max 1 Gbps)" noise).
   const maxSpeedStr =
     iface.max_speed && iface.max_speed !== iface.speed
-      ? formatSpeed(iface.max_speed)
+      ? formatSpeed(iface.max_speed, t("common.notAvailable"))
       : ""
   const bridgesUsing = iface.used_by_bridges || []
   const errIn = iface.errors_in ?? 0
@@ -206,7 +243,7 @@ function renderPhysicalInterfaceCardV2(
           }`}
         >
           <NetStatusDot tone={isUp ? "ok" : "fail"} />
-          {iface.status || "?"}
+          {formatInterfaceStatus(iface.status, t)}
         </span>
       </div>
 
@@ -217,11 +254,11 @@ function renderPhysicalInterfaceCardV2(
           {speedStr}
           {maxSpeedStr && (
             <span className="text-[11px] text-muted-foreground/70">
-              · max {maxSpeedStr}
+              · {t("network.labels.maxSpeed", { speed: maxSpeedStr })}
             </span>
           )}
         </span>
-        <span className="capitalize">{iface.duplex || "—"}</span>
+        <span>{formatDuplex(iface.duplex, t)}</span>
       </div>
 
       {/* Separator. */}
@@ -246,7 +283,7 @@ function renderPhysicalInterfaceCardV2(
         {bridgesUsing.length > 0 && (
           <div className="flex items-baseline justify-between gap-3">
             <span className="text-[11px] uppercase tracking-wider text-muted-foreground shrink-0">
-              Bridge
+              {t("network.interfaceTypes.bridge")}
             </span>
             <span className="font-medium text-right truncate font-mono text-xs text-cyan-400">
               {bridgesUsing.map((b) => `→ ${b}`).join("  ")}
@@ -260,7 +297,7 @@ function renderPhysicalInterfaceCardV2(
             has no previous sample to compute against. */}
         <div className="flex items-baseline justify-between gap-3">
           <span className="text-[11px] uppercase tracking-wider text-muted-foreground flex items-center gap-1">
-            <ArrowDown className="h-3 w-3 text-green-500" /> Received
+            <ArrowDown className="h-3 w-3 text-green-500" /> {t("network.labels.received")}
           </span>
           <span className="font-medium text-green-500 tabular-nums">
             {iface.rx_Bps !== undefined ? formatRate(iface.rx_Bps) : "—"}
@@ -268,7 +305,7 @@ function renderPhysicalInterfaceCardV2(
         </div>
         <div className="flex items-baseline justify-between gap-3">
           <span className="text-[11px] uppercase tracking-wider text-muted-foreground flex items-center gap-1">
-            <ArrowUp className="h-3 w-3 text-blue-400" /> Sent
+            <ArrowUp className="h-3 w-3 text-blue-400" /> {t("network.labels.sent")}
           </span>
           <span className="font-medium text-blue-400 tabular-nums">
             {iface.tx_Bps !== undefined ? formatRate(iface.tx_Bps) : "—"}
@@ -278,7 +315,7 @@ function renderPhysicalInterfaceCardV2(
           <>
             {totalErrors > 0 && (
               <div className="flex items-baseline justify-between gap-3">
-                <span className="text-[11px] uppercase tracking-wider text-muted-foreground">Errors</span>
+                <span className="text-[11px] uppercase tracking-wider text-muted-foreground">{t("network.labels.errors")}</span>
                 <span
                   className={`font-medium flex items-center gap-1.5 ${
                     netCounterTone(totalErrors) === "ok"
@@ -295,7 +332,7 @@ function renderPhysicalInterfaceCardV2(
             )}
             {totalDrops > 0 && (
               <div className="flex items-baseline justify-between gap-3">
-                <span className="text-[11px] uppercase tracking-wider text-muted-foreground">Drops</span>
+                <span className="text-[11px] uppercase tracking-wider text-muted-foreground">{t("network.labels.drops")}</span>
                 <span
                   className={`font-medium flex items-center gap-1.5 ${
                     netCounterTone(totalDrops) === "ok"
@@ -325,7 +362,7 @@ function renderPhysicalInterfaceCardV2(
         )}
         <span
           className="text-blue-400 hover:text-blue-300 transition-colors text-base leading-none shrink-0"
-          aria-label="View details"
+          aria-label={t("network.actions.viewDetails")}
         >
           →
         </span>
@@ -335,32 +372,32 @@ function renderPhysicalInterfaceCardV2(
 }
 
 
-const getInterfaceTypeBadge = (type: string) => {
+const getInterfaceTypeBadge = (type: string, t: TFunction) => {
   switch (type) {
     case "physical":
-      return { color: "bg-blue-500/10 text-blue-500 border-blue-500/20", label: "Physical" }
+      return { color: "bg-blue-500/10 text-blue-500 border-blue-500/20", label: t("network.interfaceTypes.physical") }
     case "bridge":
-      return { color: "bg-green-500/10 text-green-500 border-green-500/20", label: "Bridge" }
+      return { color: "bg-green-500/10 text-green-500 border-green-500/20", label: t("network.interfaceTypes.bridge") }
     case "bond":
-      return { color: "bg-purple-500/10 text-purple-500 border-purple-500/20", label: "Bond" }
+      return { color: "bg-purple-500/10 text-purple-500 border-purple-500/20", label: t("network.interfaceTypes.bond") }
     case "vlan":
-      return { color: "bg-cyan-500/10 text-cyan-500 border-cyan-500/20", label: "VLAN" }
+      return { color: "bg-cyan-500/10 text-cyan-500 border-cyan-500/20", label: t("network.interfaceTypes.vlan") }
     case "vm_lxc":
-      return { color: "bg-orange-500/10 text-orange-500 border-orange-500/20", label: "Virtual" }
+      return { color: "bg-orange-500/10 text-orange-500 border-orange-500/20", label: t("network.interfaceTypes.virtual") }
     case "virtual":
-      return { color: "bg-orange-500/10 text-orange-500 border-orange-500/20", label: "Virtual" }
+      return { color: "bg-orange-500/10 text-orange-500 border-orange-500/20", label: t("network.interfaceTypes.virtual") }
     default:
-      return { color: "bg-gray-500/10 text-gray-500 border-gray-500/20", label: "Unknown" }
+      return { color: "bg-gray-500/10 text-gray-500 border-gray-500/20", label: t("common.unknown") }
   }
 }
 
-const getVMTypeBadge = (vmType: string | undefined) => {
+const getVMTypeBadge = (vmType: string | undefined, t: TFunction) => {
   if (vmType === "lxc") {
     return { color: "bg-cyan-500/10 text-cyan-500 border-cyan-500/20", label: "LXC" }
   } else if (vmType === "vm") {
     return { color: "bg-purple-500/10 text-purple-500 border-purple-500/20", label: "VM" }
   }
-  return { color: "bg-gray-500/10 text-gray-500 border-gray-500/20", label: "Unknown" }
+  return { color: "bg-gray-500/10 text-gray-500 border-gray-500/20", label: t("common.unknown") }
 }
 
 // Format bytes/sec into the canonical network unit ladder.
@@ -396,8 +433,8 @@ const formatStorage = (bytes: number): string => {
   return `${value.toFixed(decimals)} ${sizes[i]}`
 }
 
-const formatSpeed = (speed: number): string => {
-  if (speed === 0) return "N/A"
+const formatSpeed = (speed: number, unavailable = "N/A"): string => {
+  if (speed === 0) return unavailable
   if (speed >= 1000) return `${(speed / 1000).toFixed(1)} Gbps`
   return `${speed} Mbps`
 }
@@ -408,6 +445,7 @@ const fetcher = async (url: string): Promise<NetworkData> => {
 
 
 export function NetworkMetrics() {
+  const t = useT()
   const {
     data: networkData,
     error,
@@ -469,8 +507,8 @@ export function NetworkMetrics() {
           <div className="h-12 w-12 rounded-full border-2 border-muted"></div>
           <div className="absolute inset-0 h-12 w-12 rounded-full border-2 border-transparent border-t-primary animate-spin"></div>
         </div>
-        <div className="text-sm font-medium text-foreground">Loading network data...</div>
-        <p className="text-xs text-muted-foreground">Scanning interfaces, bridges and traffic</p>
+        <div className="text-sm font-medium text-foreground">{t("network.loading.title")}</div>
+        <p className="text-xs text-muted-foreground">{t("network.loading.description")}</p>
       </div>
     )
   }
@@ -483,10 +521,10 @@ export function NetworkMetrics() {
             <div className="flex items-center gap-3 text-red-600">
               <AlertCircle className="h-6 w-6" />
               <div>
-                <div className="font-semibold text-lg mb-1">Flask Server Not Available</div>
+                <div className="font-semibold text-lg mb-1">{t("network.errors.serverUnavailableTitle")}</div>
                 <div className="text-sm">
                   {error?.message ||
-                    "Unable to connect to the Flask server. Please ensure the server is running and try again."}
+                    t("network.errors.serverUnavailableDescription")}
                 </div>
               </div>
             </div>
@@ -514,14 +552,14 @@ export function NetworkMetrics() {
   const avgPacketLoss = ((packetLossIn + packetLossOut) / 2).toFixed(2)
 
   // Determine health status
-  let healthStatus = "Healthy"
+  let healthStatusKey = "network.status.healthy"
   let healthColor = "bg-green-500/10 text-green-500 border-green-500/20"
 
   if (Number.parseFloat(avgPacketLoss) > 5 || totalErrors > 1000) {
-    healthStatus = "Critical"
+    healthStatusKey = "network.status.critical"
     healthColor = "bg-red-500/10 text-red-500 border-red-500/20"
   } else if (Number.parseFloat(avgPacketLoss) >= 1 || totalErrors >= 100) {
-    healthStatus = "Warning"
+    healthStatusKey = "network.status.warning"
     healthColor = "bg-yellow-500/10 text-yellow-500 border-yellow-500/20"
   }
 
@@ -545,24 +583,24 @@ export function NetworkMetrics() {
           const topTraffic = (top.bytes_recv || 0) + (top.bytes_sent || 0)
           return ifaceTraffic > topTraffic ? iface : top
         }, vmLxcInterfaces[0])
-      : { name: "No VM/LXC", type: "unknown", bytes_recv: 0, bytes_sent: 0, vm_name: "N/A" }
+      : { name: t("network.empty.noVmLxc"), type: "unknown", bytes_recv: 0, bytes_sent: 0, vm_name: t("common.notAvailable") }
 
   const topInterfaceTraffic = (topInterface.bytes_recv || 0) + (topInterface.bytes_sent || 0)
 
   const getTimeframeLabel = () => {
     switch (timeframe) {
       case "hour":
-        return "1 Hour"
+        return t("network.timeframes.hour")
       case "day":
-        return "24 Hours"
+        return t("network.timeframes.day")
       case "week":
-        return "7 Days"
+        return t("network.timeframes.week")
       case "month":
-        return "30 Days"
+        return t("network.timeframes.month")
       case "year":
-        return "1 Year"
+        return t("network.timeframes.year")
       default:
-        return "24 Hours"
+        return t("network.timeframes.day")
     }
   }
 
@@ -571,25 +609,42 @@ export function NetworkMetrics() {
   const getTimeframeShortLabel = () => {
     switch (timeframe) {
       case "hour":
-        return "Past 1 h"
+        return t("network.timeframes.short.hour")
       case "day":
-        return "Past 24 h"
+        return t("network.timeframes.short.day")
       case "week":
-        return "Past 7 d"
+        return t("network.timeframes.short.week")
       case "month":
-        return "Past 30 d"
+        return t("network.timeframes.short.month")
       case "year":
-        return "Past 1 y"
+        return t("network.timeframes.short.year")
       default:
-        return "Past 24 h"
+        return t("network.timeframes.short.day")
     }
   }
 
-  const hostname = networkData.hostname || "N/A"
-  const domain = networkData.domain || "N/A"
+  const getLastTimeframeLabel = (value: "hour" | "day" | "week" | "month" | "year") => {
+    switch (value) {
+      case "hour":
+        return t("network.timeframes.last.hour")
+      case "day":
+        return t("network.timeframes.last.day")
+      case "week":
+        return t("network.timeframes.last.week")
+      case "month":
+        return t("network.timeframes.last.month")
+      case "year":
+        return t("network.timeframes.last.year")
+      default:
+        return t("network.timeframes.last.day")
+    }
+  }
+
+  const hostname = networkData.hostname || t("common.notAvailable")
+  const domain = networkData.domain || t("common.notAvailable")
   const dnsServers = networkData.dns_servers || []
-  const primaryDNS = dnsServers[0] || "N/A"
-  const secondaryDNS = dnsServers[1] || "N/A"
+  const primaryDNS = dnsServers[0] || t("common.notAvailable")
+  const secondaryDNS = dnsServers[1] || t("common.notAvailable")
 
   return (
     <div className="space-y-6">
@@ -606,7 +661,7 @@ export function NetworkMetrics() {
             <Card className="bg-card border-border">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <div className="flex flex-col gap-0.5 min-w-0">
-                  <CardTitle className="text-sm font-medium text-muted-foreground">Network Traffic</CardTitle>
+                  <CardTitle className="text-sm font-medium text-muted-foreground">{t("network.cards.traffic")}</CardTitle>
                   <span className="text-[10px] text-muted-foreground/70 font-normal">{getTimeframeShortLabel()}</span>
                 </div>
                 <Activity className="h-4 w-4 text-muted-foreground flex-shrink-0" />
@@ -615,13 +670,13 @@ export function NetworkMetrics() {
                 <div className="grid grid-cols-2 gap-3 mb-3">
                   <div>
                     <div className="text-xs font-medium text-muted-foreground mb-1">
-                      <span className="text-green-500">↓</span> Down
+                      <span className="text-green-500">↓</span> {t("network.labels.down")}
                     </div>
                     <div className="text-xl lg:text-2xl font-bold leading-tight text-green-500">{trafficInFormatted}</div>
                   </div>
                   <div>
                     <div className="text-xs font-medium text-muted-foreground mb-1">
-                      <span className="text-blue-500">↑</span> Up
+                      <span className="text-blue-500">↑</span> {t("network.labels.up")}
                     </div>
                     <div className="text-xl lg:text-2xl font-bold leading-tight text-blue-500">{trafficOutFormatted}</div>
                   </div>
@@ -631,8 +686,8 @@ export function NetworkMetrics() {
                   <div style={{ width: `${upPct}%`, background: '#3b82f6' }}></div>
                 </div>
                 <div className="mt-2 flex justify-between text-xs text-muted-foreground">
-                  <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-green-500"></span>Down {Math.round(downPct)}%</span>
-                  <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-blue-500"></span>Up {Math.round(upPct)}%</span>
+                  <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-green-500"></span>{t("network.labels.down")} {Math.round(downPct)}%</span>
+                  <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-blue-500"></span>{t("network.labels.up")} {Math.round(upPct)}%</span>
                 </div>
               </CardContent>
             </Card>
@@ -642,7 +697,7 @@ export function NetworkMetrics() {
         {/* ── Active Interfaces (preview restyle v2: revertido al original con title uppercase) ── */}
         <Card className="bg-card border-border">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Active Interfaces</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground">{t("network.cards.activeInterfaces")}</CardTitle>
             <Network className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -651,14 +706,16 @@ export function NetworkMetrics() {
             </div>
             <div className="flex flex-wrap items-center gap-2 mt-2">
               <Badge variant="outline" className="bg-blue-500/10 text-blue-500 border-blue-500/20">
-                Physical: {networkData.physical_active_count ?? 0}/{networkData.physical_total_count ?? 0}
+                {t("network.interfaceTypes.physical")}: {networkData.physical_active_count ?? 0}/{networkData.physical_total_count ?? 0}
               </Badge>
               <Badge variant="outline" className="bg-green-500/10 text-green-500 border-green-500/20">
-                Bridges: {networkData.bridge_active_count ?? 0}/{networkData.bridge_total_count ?? 0}
+                {t("network.interfaceTypes.bridges")}: {networkData.bridge_active_count ?? 0}/{networkData.bridge_total_count ?? 0}
               </Badge>
             </div>
             <p className="text-xs text-muted-foreground mt-2">
-              {(networkData.physical_total_count ?? 0) + (networkData.bridge_total_count ?? 0)} total interfaces
+              {t("network.summary.totalInterfaces", {
+                count: (networkData.physical_total_count ?? 0) + (networkData.bridge_total_count ?? 0),
+              })}
             </p>
           </CardContent>
         </Card>
@@ -666,8 +723,8 @@ export function NetworkMetrics() {
         {/* ── Network Status (preview restyle: packet-loss highlight + 2x2 grid) ── */}
         <Card className="bg-card border-border">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Network Status</CardTitle>
-            <Badge variant="outline" className={`${healthColor}`}>{healthStatus === 'Healthy' ? '✓ ' : ''}{healthStatus}</Badge>
+            <CardTitle className="text-sm font-medium text-muted-foreground">{t("network.cards.status")}</CardTitle>
+            <Badge variant="outline" className={`${healthColor}`}>{healthStatusKey === "network.status.healthy" ? "✓ " : ""}{t(healthStatusKey)}</Badge>
           </CardHeader>
           <CardContent>
             {(() => {
@@ -680,13 +737,13 @@ export function NetworkMetrics() {
               return (
                 <div className={`mb-3 text-xl lg:text-2xl font-bold ${lossColor} leading-none`}>
                   {avgPacketLoss}<span className="text-sm font-normal text-muted-foreground">% </span>
-                  <span className="text-sm font-normal text-muted-foreground">Packet Loss</span>
+                  <span className="text-sm font-normal text-muted-foreground">{t("network.labels.packetLoss")}</span>
                 </div>
               )
             })()}
             <div className="grid grid-cols-2 gap-x-3 gap-y-3 pt-3 border-t border-border/50 text-sm">
               <div className="min-w-0">
-                <div className="text-muted-foreground">Hostname:</div>
+                <div className="text-muted-foreground">{t("network.labels.hostname")}:</div>
                 <div className="font-medium font-mono truncate">{hostname}</div>
               </div>
               <div className="min-w-0">
@@ -694,12 +751,12 @@ export function NetworkMetrics() {
                 <div className="font-medium font-mono truncate">{primaryDNS}</div>
               </div>
               <div className="min-w-0">
-                <div className="text-muted-foreground">Errors:</div>
+                <div className="text-muted-foreground">{t("network.labels.errors")}:</div>
                 <div className="font-medium font-mono">{totalErrors}</div>
               </div>
               <div className="min-w-0">
-                <div className="text-muted-foreground">Domain:</div>
-                <div className="font-medium font-mono truncate">{networkData.domain || '—'}</div>
+                <div className="text-muted-foreground">{t("network.labels.domain")}:</div>
+                <div className="font-medium font-mono truncate">{domain}</div>
               </div>
             </div>
           </CardContent>
@@ -711,7 +768,7 @@ export function NetworkMetrics() {
           onClick={() => setLatencyModalOpen(true)}
         >
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Network Latency</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground">{t("network.cards.latency")}</CardTitle>
             <div className="flex items-center gap-1 text-muted-foreground">
               <Timer className="h-4 w-4" />
               <ChevronRight className="h-4 w-4 opacity-60" />
@@ -734,9 +791,9 @@ export function NetworkMetrics() {
                     : "bg-red-500/10 text-red-500 border-red-500/20"
                 }
               >
-                {(latencyData?.stats?.current ?? 0) < 50 ? "Excellent" : 
-                 (latencyData?.stats?.current ?? 0) < 100 ? "Good" :
-                 (latencyData?.stats?.current ?? 0) < 200 ? "Fair" : "Poor"}
+                {(latencyData?.stats?.current ?? 0) < 50 ? t("network.latency.status.excellent") :
+                 (latencyData?.stats?.current ?? 0) < 100 ? t("network.latency.status.good") :
+                 (latencyData?.stats?.current ?? 0) < 200 ? t("network.latency.status.fair") : t("network.latency.status.poor")}
               </Badge>
             </div>
             {/* Sparkline */}
@@ -765,7 +822,7 @@ export function NetworkMetrics() {
               </div>
             )}
             <p className="text-xs text-muted-foreground mt-1">
-              Avg: {latencyData?.stats?.avg ?? 0}ms | Max: {latencyData?.stats?.max ?? 0}ms
+              {t("network.labels.avg")}: {latencyData?.stats?.avg ?? 0}ms | {t("network.labels.max")}: {latencyData?.stats?.max ?? 0}ms
             </p>
           </CardContent>
         </Card>
@@ -778,11 +835,11 @@ export function NetworkMetrics() {
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="hour">1 Hour</SelectItem>
-            <SelectItem value="day">24 Hours</SelectItem>
-            <SelectItem value="week">7 Days</SelectItem>
-            <SelectItem value="month">30 Days</SelectItem>
-            <SelectItem value="year">1 Year</SelectItem>
+            <SelectItem value="hour">{t("network.timeframes.hour")}</SelectItem>
+            <SelectItem value="day">{t("network.timeframes.day")}</SelectItem>
+            <SelectItem value="week">{t("network.timeframes.week")}</SelectItem>
+            <SelectItem value="month">{t("network.timeframes.month")}</SelectItem>
+            <SelectItem value="year">{t("network.timeframes.year")}</SelectItem>
           </SelectContent>
         </Select>
       </div>
@@ -792,7 +849,7 @@ export function NetworkMetrics() {
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
           <CardTitle className="text-foreground flex items-center">
             <Activity className="h-5 w-5 mr-2" />
-            Network Traffic
+            {t("network.cards.traffic")}
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -904,9 +961,12 @@ export function NetworkMetrics() {
         <CardHeader>
           <CardTitle className="text-foreground flex items-center">
             <Router className="h-5 w-5 mr-2" />
-            Physical Interfaces
+            {t("network.sections.physicalInterfaces")}
             <Badge variant="outline" className="ml-3 bg-blue-500/10 text-blue-500 border-blue-500/20">
-              {networkData.physical_active_count ?? 0}/{networkData.physical_total_count ?? 0} Active
+              {t("network.summary.activeCount", {
+                active: networkData.physical_active_count ?? 0,
+                total: networkData.physical_total_count ?? 0,
+              })}
             </Badge>
           </CardTitle>
         </CardHeader>
@@ -916,7 +976,7 @@ export function NetworkMetrics() {
               long interface names won't push others off-screen. */}
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
             {networkData.physical_interfaces.map((iface) =>
-              renderPhysicalInterfaceCardV2(iface, setSelectedInterface),
+              renderPhysicalInterfaceCardV2(iface, setSelectedInterface, t),
             )}
           </div>
         </CardContent>
@@ -927,16 +987,19 @@ export function NetworkMetrics() {
           <CardHeader>
             <CardTitle className="text-foreground flex items-center">
               <Network className="h-5 w-5 mr-2" />
-              Bridge Interfaces
+              {t("network.sections.bridgeInterfaces")}
               <Badge variant="outline" className="ml-3 bg-green-500/10 text-green-500 border-green-500/20">
-                {networkData.bridge_active_count ?? 0}/{networkData.bridge_total_count ?? 0} Active
+                {t("network.summary.activeCount", {
+                  active: networkData.bridge_active_count ?? 0,
+                  total: networkData.bridge_total_count ?? 0,
+                })}
               </Badge>
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
               {networkData.bridge_interfaces.map((interface_, index) => {
-                const typeBadge = getInterfaceTypeBadge(interface_.type)
+                const typeBadge = getInterfaceTypeBadge(interface_.type, t)
 
                 return (
                   <div
@@ -971,30 +1034,30 @@ export function NetworkMetrics() {
                             : "bg-red-500/10 text-red-500 border-red-500/20"
                         }
                       >
-                        {interface_.status.toUpperCase()}
+                        {formatInterfaceStatus(interface_.status, t)}
                       </Badge>
                     </div>
 
                     {/* Second row: Details - Responsive layout */}
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
                       <div>
-                        <div className="text-muted-foreground text-xs">IP Address</div>
+                        <div className="text-muted-foreground text-xs">{t("network.labels.ipAddress")}</div>
                         <div className="font-medium text-foreground font-mono text-sm truncate">
-                          {interface_.addresses.length > 0 ? interface_.addresses[0].ip : "N/A"}
+                          {interface_.addresses.length > 0 ? interface_.addresses[0].ip : t("common.notAvailable")}
                         </div>
                       </div>
 
                       <div>
-                        <div className="text-muted-foreground text-xs">Speed</div>
+                        <div className="text-muted-foreground text-xs">{t("network.labels.speed")}</div>
                         <div className="font-medium text-foreground flex items-center gap-1">
                           <Zap className="h-3 w-3" />
-                          {formatSpeed(interface_.speed)}
+                          {formatSpeed(interface_.speed, t("common.notAvailable"))}
                         </div>
                       </div>
 
                       <div>
-                        <div className="text-muted-foreground text-xs">Duplex</div>
-                        <div className="font-medium text-foreground text-xs capitalize">{interface_.duplex}</div>
+                        <div className="text-muted-foreground text-xs">{t("network.labels.duplex")}</div>
+                        <div className="font-medium text-foreground text-xs">{formatDuplex(interface_.duplex, t)}</div>
                       </div>
 
                       <div>
@@ -1025,16 +1088,19 @@ export function NetworkMetrics() {
           <CardHeader>
             <CardTitle className="text-foreground flex items-center">
               <Network className="h-5 w-5 mr-2" />
-              VM & LXC Network Interfaces
+              {t("network.sections.vmLxcInterfaces")}
               <Badge variant="outline" className="ml-3 bg-orange-500/10 text-orange-500 border-orange-500/20">
-                {networkData.vm_lxc_active_count ?? 0} / {networkData.vm_lxc_total_count ?? 0} Active
+                {t("network.summary.activeCount", {
+                  active: networkData.vm_lxc_active_count ?? 0,
+                  total: networkData.vm_lxc_total_count ?? 0,
+                })}
               </Badge>
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
               {vmLxcInterfaces.map((interface_, index) => {
-                const vmTypeBadge = getVMTypeBadge(interface_.vm_type)
+                const vmTypeBadge = getVMTypeBadge(interface_.vm_type, t)
 
                 return (
                   <div
@@ -1062,7 +1128,7 @@ export function NetworkMetrics() {
                             : "bg-red-500/10 text-red-500 border-red-500/20"
                         }
                       >
-                        {interface_.status.toUpperCase()}
+                        {formatInterfaceStatus(interface_.status, t)}
                       </Badge>
                     </div>
 
@@ -1070,20 +1136,20 @@ export function NetworkMetrics() {
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
                       <div>
                         <div className="text-sm text-muted-foreground">VMID</div>
-                        <div className="font-medium">{interface_.vmid ?? "N/A"}</div>
+                          <div className="font-medium">{interface_.vmid ?? t("common.notAvailable")}</div>
                       </div>
 
                       <div>
-                        <div className="text-sm text-muted-foreground">Speed</div>
+                        <div className="text-sm text-muted-foreground">{t("network.labels.speed")}</div>
                         <div className="font-medium text-foreground flex items-center gap-1">
                           <Zap className="h-3 w-3" />
-                          {formatSpeed(interface_.speed)}
+                          {formatSpeed(interface_.speed, t("common.notAvailable"))}
                         </div>
                       </div>
 
                       <div>
-                        <div className="text-sm text-muted-foreground">Duplex</div>
-                        <div className="font-medium text-foreground text-xs capitalize">{interface_.duplex}</div>
+                        <div className="text-sm text-muted-foreground">{t("network.labels.duplex")}</div>
+                        <div className="font-medium text-foreground text-xs">{formatDuplex(interface_.duplex, t)}</div>
                       </div>
 
                       <div>
@@ -1114,10 +1180,10 @@ export function NetworkMetrics() {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Router className="h-5 w-5" />
-              {selectedInterface?.name} - Interface Details
+              {selectedInterface?.name} - {t("network.interfaceDetails.title")}
             </DialogTitle>
             <DialogDescription>
-              View detailed information and network traffic statistics for this interface
+              {t("network.interfaceDetails.description")}
             </DialogDescription>
             {selectedInterface?.status.toLowerCase() === "up" && selectedInterface?.vm_type !== "vm" && (
               <div className="flex justify-end pt-2">
@@ -1126,11 +1192,11 @@ export function NetworkMetrics() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="hour">1 Hour</SelectItem>
-                    <SelectItem value="day">24 Hours</SelectItem>
-                    <SelectItem value="week">7 Days</SelectItem>
-                    <SelectItem value="month">30 Days</SelectItem>
-                    <SelectItem value="year">1 Year</SelectItem>
+                    <SelectItem value="hour">{t("network.timeframes.hour")}</SelectItem>
+                    <SelectItem value="day">{t("network.timeframes.day")}</SelectItem>
+                    <SelectItem value="week">{t("network.timeframes.week")}</SelectItem>
+                    <SelectItem value="month">{t("network.timeframes.month")}</SelectItem>
+                    <SelectItem value="year">{t("network.timeframes.year")}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -1156,21 +1222,21 @@ export function NetworkMetrics() {
                   <>
                     {/* Basic Information */}
                     <div>
-                      <h3 className="text-sm font-semibold text-muted-foreground mb-3">Basic Information</h3>
+                      <h3 className="text-sm font-semibold text-muted-foreground mb-3">{t("network.interfaceDetails.basicInformation")}</h3>
                       <div className="grid grid-cols-2 gap-4">
                         <div>
-                          <div className="text-sm text-muted-foreground">Interface Name</div>
+                          <div className="text-sm text-muted-foreground">{t("network.labels.interfaceName")}</div>
                           <div className="font-medium">{displayInterface.name}</div>
                         </div>
                         <div>
-                          <div className="text-sm text-muted-foreground">Type</div>
-                          <Badge variant="outline" className={getInterfaceTypeBadge(displayInterface.type).color}>
-                            {getInterfaceTypeBadge(displayInterface.type).label}
+                          <div className="text-sm text-muted-foreground">{t("network.labels.type")}</div>
+                          <Badge variant="outline" className={getInterfaceTypeBadge(displayInterface.type, t).color}>
+                            {getInterfaceTypeBadge(displayInterface.type, t).label}
                           </Badge>
                         </div>
                         {displayInterface.type === "bridge" && displayInterface.bridge_physical_interface && (
                           <div className="col-span-2">
-                            <div className="text-sm text-muted-foreground">Physical Interface</div>
+                            <div className="text-sm text-muted-foreground">{t("network.labels.physicalInterface")}</div>
                             <div className="font-medium text-blue-500 text-lg break-all">
                               {displayInterface.bridge_physical_interface}
                             </div>
@@ -1180,7 +1246,7 @@ export function NetworkMetrics() {
                                 there never matched. */}
                             {displayInterface.bridge_bond_slaves && displayInterface.bridge_bond_slaves.length > 0 && (
                               <div className="mt-2">
-                                <div className="text-sm text-muted-foreground mb-2">Bond Members</div>
+                                <div className="text-sm text-muted-foreground mb-2">{t("network.labels.bondMembers")}</div>
                                 <div className="flex flex-wrap gap-2">
                                   {displayInterface.bridge_bond_slaves.map((slave, idx) => (
                                     <Badge
@@ -1198,19 +1264,19 @@ export function NetworkMetrics() {
                         )}
                         {displayInterface.type === "vm_lxc" && displayInterface.vm_name && (
                           <div className="col-span-2">
-                            <div className="text-sm text-muted-foreground">VM/LXC Name</div>
+                            <div className="text-sm text-muted-foreground">{t("network.labels.vmLxcName")}</div>
                             <div className="font-medium text-orange-500 text-lg flex items-center gap-2">
                               {displayInterface.vm_name}
                               {displayInterface.vm_type && (
-                                <Badge variant="outline" className={getVMTypeBadge(displayInterface.vm_type).color}>
-                                  {getVMTypeBadge(displayInterface.vm_type).label}
+                                <Badge variant="outline" className={getVMTypeBadge(displayInterface.vm_type, t).color}>
+                                  {getVMTypeBadge(displayInterface.vm_type, t).label}
                                 </Badge>
                               )}
                             </div>
                           </div>
                         )}
                         <div>
-                          <div className="text-sm text-muted-foreground">Status</div>
+                          <div className="text-sm text-muted-foreground">{t("network.labels.status")}</div>
                           <Badge
                             variant="outline"
                             className={
@@ -1219,16 +1285,16 @@ export function NetworkMetrics() {
                                 : "bg-red-500/10 text-red-500 border-red-500/20"
                             }
                           >
-                            {displayInterface.status.toUpperCase()}
+                            {formatInterfaceStatus(displayInterface.status, t)}
                           </Badge>
                         </div>
                         <div>
-                          <div className="text-sm text-muted-foreground">Speed</div>
-                          <div className="font-medium">{formatSpeed(displayInterface.speed)}</div>
+                          <div className="text-sm text-muted-foreground">{t("network.labels.speed")}</div>
+                          <div className="font-medium">{formatSpeed(displayInterface.speed, t("common.notAvailable"))}</div>
                         </div>
                         <div>
-                          <div className="text-sm text-muted-foreground">Duplex</div>
-                          <div className="font-medium capitalize">{displayInterface.duplex}</div>
+                          <div className="text-sm text-muted-foreground">{t("network.labels.duplex")}</div>
+                          <div className="font-medium">{formatDuplex(displayInterface.duplex, t)}</div>
                         </div>
                         <div>
                           <div className="text-sm text-muted-foreground">MTU</div>
@@ -1236,7 +1302,7 @@ export function NetworkMetrics() {
                         </div>
                         {displayInterface.mac_address && (
                           <div className="col-span-2">
-                            <div className="text-sm text-muted-foreground">MAC Address</div>
+                            <div className="text-sm text-muted-foreground">{t("network.labels.macAddress")}</div>
                             <div className="font-medium font-mono">{displayInterface.mac_address}</div>
                           </div>
                         )}
@@ -1246,13 +1312,13 @@ export function NetworkMetrics() {
                     {/* IP Addresses */}
                     {displayInterface.addresses.length > 0 && (
                       <div>
-                        <h3 className="text-sm font-semibold text-muted-foreground mb-3">IP Addresses</h3>
+                        <h3 className="text-sm font-semibold text-muted-foreground mb-3">{t("network.interfaceDetails.ipAddresses")}</h3>
                         <div className="space-y-2">
                           {displayInterface.addresses.map((addr, idx) => (
                             <div key={idx} className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
                               <div>
                                 <div className="font-medium font-mono">{addr.ip}</div>
-                                <div className="text-sm text-muted-foreground">Netmask: {addr.netmask}</div>
+                                <div className="text-sm text-muted-foreground">{t("network.labels.netmask")}: {addr.netmask}</div>
                               </div>
                             </div>
                           ))}
@@ -1264,23 +1330,15 @@ export function NetworkMetrics() {
                     {displayInterface.status.toLowerCase() === "up" && displayInterface.vm_type !== "vm" ? (
                       <div>
                         <h3 className="text-sm font-semibold text-muted-foreground mb-4">
-                          Network Traffic Statistics (
-                          {modalTimeframe === "hour"
-                            ? "Last Hour"
-                            : modalTimeframe === "day"
-                              ? "Last 24 Hours"
-                              : modalTimeframe === "week"
-                                ? "Last 7 Days"
-                                : modalTimeframe === "month"
-                                  ? "Last 30 Days"
-                                  : "Last Year"}
-                          )
+                          {t("network.interfaceDetails.trafficStatistics", {
+                            timeframe: getLastTimeframeLabel(modalTimeframe),
+                          })}
                         </h3>
                         <div className="space-y-4">
                           <div className="grid grid-cols-2 gap-4">
                             <div>
                               <div className="text-sm text-muted-foreground">
-                                {networkUnit === "Bits" ? "Bits Received" : "Bytes Received"}
+                                {networkUnit === "Bits" ? t("network.labels.bitsReceived") : t("network.labels.bytesReceived")}
                               </div>
                               <div className="font-medium text-green-500 text-lg">
                                 {formatNetworkTraffic(
@@ -1292,7 +1350,7 @@ export function NetworkMetrics() {
                             </div>
                             <div>
                               <div className="text-sm text-muted-foreground">
-                                {networkUnit === "Bits" ? "Bits Sent" : "Bytes Sent"}
+                                {networkUnit === "Bits" ? t("network.labels.bitsSent") : t("network.labels.bytesSent")}
                               </div>
                               <div className="font-medium text-blue-500 text-lg">
                                 {formatNetworkTraffic(
@@ -1316,31 +1374,31 @@ export function NetworkMetrics() {
 
                           <div className="grid grid-cols-2 gap-4 pt-4 border-t border-border">
                             <div>
-                              <div className="text-sm text-muted-foreground">Packets Received</div>
+                              <div className="text-sm text-muted-foreground">{t("network.labels.packetsReceived")}</div>
                               <div className="font-medium">
-                                {displayInterface.packets_recv?.toLocaleString() || "N/A"}
+                                {displayInterface.packets_recv?.toLocaleString() || t("common.notAvailable")}
                               </div>
                             </div>
                             <div>
-                              <div className="text-sm text-muted-foreground">Packets Sent</div>
+                              <div className="text-sm text-muted-foreground">{t("network.labels.packetsSent")}</div>
                               <div className="font-medium">
-                                {displayInterface.packets_sent?.toLocaleString() || "N/A"}
+                                {displayInterface.packets_sent?.toLocaleString() || t("common.notAvailable")}
                               </div>
                             </div>
                             <div>
-                              <div className="text-sm text-muted-foreground">Errors In</div>
+                              <div className="text-sm text-muted-foreground">{t("network.labels.errorsIn")}</div>
                               <div className="font-medium text-red-500">{displayInterface.errors_in || 0}</div>
                             </div>
                             <div>
-                              <div className="text-sm text-muted-foreground">Errors Out</div>
+                              <div className="text-sm text-muted-foreground">{t("network.labels.errorsOut")}</div>
                               <div className="font-medium text-red-500">{displayInterface.errors_out || 0}</div>
                             </div>
                             <div>
-                              <div className="text-sm text-muted-foreground">Drops In</div>
+                              <div className="text-sm text-muted-foreground">{t("network.labels.dropsIn")}</div>
                               <div className="font-medium text-yellow-500">{displayInterface.drops_in || 0}</div>
                             </div>
                             <div>
-                              <div className="text-sm text-muted-foreground">Drops Out</div>
+                              <div className="text-sm text-muted-foreground">{t("network.labels.dropsOut")}</div>
                               <div className="font-medium text-yellow-500">{displayInterface.drops_out || 0}</div>
                             </div>
                           </div>
@@ -1348,11 +1406,11 @@ export function NetworkMetrics() {
                       </div>
                     ) : displayInterface.status.toLowerCase() === "up" && displayInterface.vm_type === "vm" ? (
                       <div>
-                        <h3 className="text-sm font-semibold text-muted-foreground mb-4">Traffic since last boot</h3>
+                        <h3 className="text-sm font-semibold text-muted-foreground mb-4">{t("network.interfaceDetails.trafficSinceBoot")}</h3>
                         <div className="grid grid-cols-2 gap-4">
                           <div>
                             <div className="text-sm text-muted-foreground">
-                              {networkUnit === "Bits" ? "Bits Received" : "Bytes Received"}
+                              {networkUnit === "Bits" ? t("network.labels.bitsReceived") : t("network.labels.bytesReceived")}
                             </div>
                             <div className="font-medium text-green-500 text-lg">
                               {formatNetworkTraffic(displayInterface.bytes_recv || 0, networkUnit)}
@@ -1360,38 +1418,38 @@ export function NetworkMetrics() {
                           </div>
                           <div>
                             <div className="text-sm text-muted-foreground">
-                              {networkUnit === "Bits" ? "Bits Sent" : "Bytes Sent"}
+                              {networkUnit === "Bits" ? t("network.labels.bitsSent") : t("network.labels.bytesSent")}
                             </div>
                             <div className="font-medium text-blue-500 text-lg">
                               {formatNetworkTraffic(displayInterface.bytes_sent || 0, networkUnit)}
                             </div>
                           </div>
                           <div>
-                            <div className="text-sm text-muted-foreground">Packets Received</div>
+                            <div className="text-sm text-muted-foreground">{t("network.labels.packetsReceived")}</div>
                             <div className="font-medium">
-                              {displayInterface.packets_recv?.toLocaleString() || "N/A"}
+                              {displayInterface.packets_recv?.toLocaleString() || t("common.notAvailable")}
                             </div>
                           </div>
                           <div>
-                            <div className="text-sm text-muted-foreground">Packets Sent</div>
+                            <div className="text-sm text-muted-foreground">{t("network.labels.packetsSent")}</div>
                             <div className="font-medium">
-                              {displayInterface.packets_sent?.toLocaleString() || "N/A"}
+                              {displayInterface.packets_sent?.toLocaleString() || t("common.notAvailable")}
                             </div>
                           </div>
                           <div>
-                            <div className="text-sm text-muted-foreground">Errors In</div>
+                            <div className="text-sm text-muted-foreground">{t("network.labels.errorsIn")}</div>
                             <div className="font-medium text-red-500">{displayInterface.errors_in || 0}</div>
                           </div>
                           <div>
-                            <div className="text-sm text-muted-foreground">Errors Out</div>
+                            <div className="text-sm text-muted-foreground">{t("network.labels.errorsOut")}</div>
                             <div className="font-medium text-red-500">{displayInterface.errors_out || 0}</div>
                           </div>
                           <div>
-                            <div className="text-sm text-muted-foreground">Drops In</div>
+                            <div className="text-sm text-muted-foreground">{t("network.labels.dropsIn")}</div>
                             <div className="font-medium text-yellow-500">{displayInterface.drops_in || 0}</div>
                           </div>
                           <div>
-                            <div className="text-sm text-muted-foreground">Drops Out</div>
+                            <div className="text-sm text-muted-foreground">{t("network.labels.dropsOut")}</div>
                             <div className="font-medium text-yellow-500">{displayInterface.drops_out || 0}</div>
                           </div>
                         </div>
@@ -1399,9 +1457,9 @@ export function NetworkMetrics() {
                     ) : (
                       <div className="bg-muted/30 rounded-lg p-6 text-center">
                         <AlertCircle className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
-                        <h3 className="text-lg font-semibold text-foreground mb-2">Interface Inactive</h3>
+                        <h3 className="text-lg font-semibold text-foreground mb-2">{t("network.interfaceDetails.inactiveTitle")}</h3>
                         <p className="text-sm text-muted-foreground">
-                          This interface is currently down. Network traffic statistics are not available.
+                          {t("network.interfaceDetails.inactiveDescription")}
                         </p>
                       </div>
                     )}
@@ -1409,12 +1467,12 @@ export function NetworkMetrics() {
                     {/* Bond Information */}
                     {displayInterface.type === "bond" && displayInterface.bond_slaves && (
                       <div>
-                        <h3 className="text-sm font-semibold text-muted-foreground mb-3">Bond Configuration</h3>
+                        <h3 className="text-sm font-semibold text-muted-foreground mb-3">{t("network.interfaceDetails.bondConfiguration")}</h3>
                         <div className="space-y-3">
                           <div>
-                            <div className="text-sm text-muted-foreground">Bonding Mode</div>
+                            <div className="text-sm text-muted-foreground">{t("network.labels.bondingMode")}</div>
                             <div className="font-medium">
-                              {displayInterface.bond_mode || "Unknown"}
+                              {displayInterface.bond_mode || t("common.unknown")}
                               {displayInterface.bond_mode_detail &&
                                 displayInterface.bond_mode_detail !== displayInterface.bond_mode && (
                                   <span className="text-muted-foreground font-normal">
@@ -1427,13 +1485,13 @@ export function NetworkMetrics() {
                           {displayInterface.bond_active_slave && (
                             <div>
                               <div className="text-sm text-muted-foreground">
-                                {displayInterface.bond_supports_failover ? "Active Slave" : "Primary Slave"}
+                                {displayInterface.bond_supports_failover ? t("network.labels.activeSlave") : t("network.labels.primarySlave")}
                               </div>
                               <div className="font-medium">{displayInterface.bond_active_slave}</div>
                             </div>
                           )}
                           <div>
-                            <div className="text-sm text-muted-foreground mb-2">Slave Interfaces</div>
+                            <div className="text-sm text-muted-foreground mb-2">{t("network.labels.slaveInterfaces")}</div>
                             <div className="flex flex-wrap gap-2">
                               {displayInterface.bond_slaves.map((slave, idx) => {
                                 // Only active-backup has a real standby. In every
@@ -1456,7 +1514,7 @@ export function NetworkMetrics() {
                                 return (
                                   <Badge key={idx} variant="outline" className={tone}>
                                     {slave}
-                                    {role && <span className="ml-1 opacity-70">· {role}</span>}
+                                    {role && <span className="ml-1 opacity-70">· {t(`network.roles.${role}`)}</span>}
                                   </Badge>
                                 )
                               })}
@@ -1469,9 +1527,9 @@ export function NetworkMetrics() {
                     {/* Bridge Information */}
                     {displayInterface.type === "bridge" && displayInterface.bridge_members && (
                       <div>
-                        <h3 className="text-sm font-semibold text-muted-foreground mb-3">Bridge Configuration</h3>
+                        <h3 className="text-sm font-semibold text-muted-foreground mb-3">{t("network.interfaceDetails.bridgeConfiguration")}</h3>
                         <div>
-                          <div className="text-sm text-muted-foreground mb-2">Virtual Member Interfaces</div>
+                          <div className="text-sm text-muted-foreground mb-2">{t("network.labels.virtualMemberInterfaces")}</div>
                           <div className="flex flex-wrap gap-2">
                             {displayInterface.bridge_members.length > 0 ? (
                               displayInterface.bridge_members
@@ -1494,7 +1552,7 @@ export function NetworkMetrics() {
                                   </Badge>
                                 ))
                             ) : (
-                              <div className="text-sm text-muted-foreground">No virtual members</div>
+                              <div className="text-sm text-muted-foreground">{t("network.empty.noVirtualMembers")}</div>
                             )}
                           </div>
                         </div>

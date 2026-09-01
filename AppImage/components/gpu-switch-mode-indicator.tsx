@@ -1,6 +1,7 @@
 "use client"
 
 import { cn } from "@/lib/utils"
+import { useT } from "../lib/i18n/provider"
 
 interface SriovInfo {
   role: "vf" | "pf-active" | "pf-idle"
@@ -26,6 +27,8 @@ export function GpuSwitchModeIndicator({
   className,
   sriovInfo,
 }: GpuSwitchModeIndicatorProps) {
+  const t = useT()
+
   // SR-IOV is a non-editable hardware state. Pending toggles don't apply here.
   const displayMode = mode === "sriov" ? "sriov" : (pendingMode ?? mode)
   const isLxcActive = displayMode === "lxc"
@@ -69,9 +72,11 @@ export function GpuSwitchModeIndicator({
   // exactly how many VFs are active; for a VF we show its parent PF.
   const sriovBadgeText = (() => {
     if (!isSriovActive) return ""
-    if (sriovInfo?.role === "vf") return "SR-IOV VF"
-    if (sriovInfo?.vfCount && sriovInfo.vfCount > 0) return `SR-IOV ×${sriovInfo.vfCount}`
-    return "SR-IOV"
+    if (sriovInfo?.role === "vf") return t("hardware.gpuSwitch.sriovVf")
+    if (sriovInfo?.vfCount && sriovInfo.vfCount > 0) {
+      return t("hardware.gpuSwitch.sriovCount", { count: sriovInfo.vfCount })
+    }
+    return t("hardware.gpuSwitch.sriov")
   })()
 
   return (
@@ -124,7 +129,7 @@ export function GpuSwitchModeIndicator({
             className="text-[14px] font-bold transition-all duration-300"
             style={{ fontFamily: 'system-ui, sans-serif' }}
           >
-            GPU
+            {t("hardware.gpuSwitch.gpu")}
           </text>
         </g>
 
@@ -268,7 +273,7 @@ export function GpuSwitchModeIndicator({
             )}
             style={{ fontFamily: 'system-ui, sans-serif' }}
           >
-            LXC
+            {t("hardware.gpuSwitch.lxc")}
           </text>
         )}
         {isSriovActive && (
@@ -279,7 +284,7 @@ export function GpuSwitchModeIndicator({
             className="text-[9px] font-medium"
             style={{ fontFamily: 'system-ui, sans-serif' }}
           >
-            LXC
+            {t("hardware.gpuSwitch.lxc")}
           </text>
         )}
 
@@ -332,7 +337,7 @@ export function GpuSwitchModeIndicator({
             )}
             style={{ fontFamily: 'system-ui, sans-serif' }}
           >
-            VM
+            {t("hardware.gpuSwitch.vm")}
           </text>
         )}
         {isSriovActive && (
@@ -343,7 +348,7 @@ export function GpuSwitchModeIndicator({
             className="text-[9px] font-medium"
             style={{ fontFamily: 'system-ui, sans-serif' }}
           >
-            VM
+            {t("hardware.gpuSwitch.vm")}
           </text>
         )}
       </svg>
@@ -363,34 +368,47 @@ export function GpuSwitchModeIndicator({
           )}
         >
           {isSriovActive
-            ? "SR-IOV active"
+            ? t("hardware.gpuSwitch.sriovActive")
             : isLxcActive
-              ? "Ready for LXC containers"
+              ? t("hardware.gpuSwitch.readyForLxc")
               : isVmActive
-                ? "Ready for VM passthrough"
-                : "Mode unknown"}
+                ? t("hardware.gpuSwitch.readyForVm")
+                : t("hardware.gpuSwitch.modeUnknown")}
         </span>
         <span className="text-sm text-muted-foreground">
           {isSriovActive
-            ? "Virtual Functions managed externally"
+            ? t("hardware.gpuSwitch.virtualFunctionsExternal")
             : isLxcActive
-              ? "Native driver active"
+              ? t("hardware.gpuSwitch.nativeDriverActive")
               : isVmActive
-                ? "VFIO-PCI driver active"
-                : "No driver detected"}
+                ? t("hardware.gpuSwitch.vfioDriverActive")
+                : t("hardware.gpuSwitch.noDriverDetected")}
         </span>
         {isSriovActive && sriovInfo && (
           <span className="text-xs font-mono text-teal-600/80 dark:text-teal-400/80">
             {sriovInfo.role === "vf"
-              ? `Virtual Function${sriovInfo.physfn ? ` · parent PF ${sriovInfo.physfn}` : ""}`
+              ? t(
+                  sriovInfo.physfn
+                    ? "hardware.gpuSwitch.virtualFunctionWithParent"
+                    : "hardware.gpuSwitch.virtualFunction",
+                  { parent: sriovInfo.physfn || "" },
+                )
               : sriovInfo.vfCount !== undefined
-                ? `1 PF + ${sriovInfo.vfCount} VF${sriovInfo.vfCount === 1 ? "" : "s"}${sriovInfo.totalvfs ? ` / ${sriovInfo.totalvfs} max` : ""}`
+                ? t(
+                    sriovInfo.totalvfs
+                      ? "hardware.gpuSwitch.physicalFunctionWithMax"
+                      : "hardware.gpuSwitch.physicalFunction",
+                    {
+                      count: sriovInfo.vfCount,
+                      max: sriovInfo.totalvfs || "",
+                    },
+                  )
                 : null}
           </span>
         )}
         {hasChanged && (
           <span className="text-sm text-amber-500 font-medium animate-pulse">
-            Change pending...
+            {t("hardware.gpuSwitch.changePending")}
           </span>
         )}
       </div>

@@ -52,6 +52,7 @@ export default async function PostInstallPerformancePage({
         title={t("header.title")}
         description={t("header.description")}
         section={t("header.section")}
+        estimatedMinutes={5}
       />
 
       <Callout variant="info" title={t("intro.title")}>
@@ -77,6 +78,10 @@ export default async function PostInstallPerformancePage({
 sed -i "s/#pigz:.*/pigz: 1/" /etc/vzdump.conf
 apt-get -y install pigz
 
+# The wrapper pins PATH so gzip resolves inside the script even under sudo,
+# and sets GZIP="-1" — fastest compression level, lowest ratio. The trade
+# is intentional: on multi-core hosts wall-clock time drops far more than
+# the archive grows.
 cat > /bin/pigzwrapper <<'EOF'
 #!/bin/sh
 PATH=/bin:$PATH
@@ -95,8 +100,8 @@ chmod +x /bin/pigzwrapper
         {t.rich("pigz.replacesBody", { code })}
       </Callout>
 
-      <Callout variant="danger" title={t("pigz.revertTitle")}>
-        {t.rich("pigz.revertBody", { strong })}
+      <Callout variant="tip" title={t("pigz.revertTitle")}>
+        {t.rich("pigz.revertBody", { strong, link: (chunks) => <Link href="/docs/post-install/uninstall" className="text-blue-600 hover:underline">{chunks}</Link>, code: (chunks) => <code>{chunks}</code> })}
       </Callout>
 
       <CopyableCode

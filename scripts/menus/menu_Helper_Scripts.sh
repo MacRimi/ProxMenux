@@ -387,7 +387,7 @@ search_and_filter_scripts() {
       local selected
       selected=$(dialog --colors --backtitle "ProxMenux" \
                  --title "$title" \
-                 --menu "$(translate "Select a script or action:"):" \
+                 --menu "$(translate "Select a script or action:")" \
                  22 75 15 "${menu_items[@]}" 3>&1 1>&2 2>&3)
 
       [[ $? -ne 0 ]] && return
@@ -402,7 +402,7 @@ search_and_filter_scripts() {
           count=$(echo "$filtered_json" | jq 'group_by(.slug) | length')
           continue
           ;;
-        "back"|"")
+        "")
           return
           ;;
         *)
@@ -439,10 +439,9 @@ while true; do
     MENU_ITEMS+=("$local_idx" "$padded_name $padded_count")
     ((local_idx++))
   done
-
   SELECTED_IDX=$(dialog --backtitle "ProxMenux" \
     --title "Proxmox VE Helper-Scripts" \
-    --menu "$(translate "Select a category or search for scripts:"):" \
+    --menu "$(translate "Select a category or search for scripts:")" \
     22 75 15 "${MENU_ITEMS[@]}" 3>&1 1>&2 2>&3) || {
       dialog --clear --title "ProxMenux" \
         --msgbox "\n\n$(translate "Visit the website to discover more scripts, stay updated with the latest updates, and support the project:")\n\nhttps://community-scripts.github.io/ProxmoxVE" 15 70

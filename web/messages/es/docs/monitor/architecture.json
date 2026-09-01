@@ -254,8 +254,8 @@
     "items": [
       "<strong>Los watchers</strong> empujan eventos: <code>JournalWatcher</code> sigue el journal del sistema, <code>TaskWatcher</code> hace polling de la lista de tareas Proxmox, <code>ProxmoxHookWatcher</code> reacciona a hooks de backup / replicación / snapshot y <code>PollingCollector</code> gestiona fuentes de datos lentas.",
       "<strong>Las templates</strong> convierten un evento en un par (título, cuerpo). La misma template puede pasar por el proveedor de IA configurado (OpenAI / Anthropic / Gemini / Groq / Ollama / OpenRouter) para producir una reescritura en lenguaje natural; ambas versiones se guardan en <code>notification_history</code>.",
-      "<strong>Los canales</strong> entregan los mensajes: Telegram, Discord, Email, Gotify y Apprise (multicanal). Cada uno está implementado en <code>notification_channels.py</code> detrás de la misma interfaz <code>create_channel()</code> / <code>send()</code>, así que añadir un canal nuevo es una sola clase.",
-      "<strong>Cifrado.</strong> Los ajustes sensibles (<code>telegram.token</code>, <code>discord.webhook_url</code>, <code>ai_api_key_*</code>, <code>email.password</code>) se cifran con XOR usando la clave en <code>.notification_key</code> antes de escribirse en la DB. El texto plano nunca toca disco."
+      "<strong>Los canales</strong> entregan los mensajes: Telegram, Discord, Email, Gotify, Pushover y Apprise (multicanal). Cada uno está implementado en <code>notification_channels.py</code> mediante la misma interfaz <code>create_channel()</code> / <code>send()</code>.",
+      "<strong>Cifrado.</strong> Los ajustes sensibles (<code>telegram.bot_token</code>, <code>discord.webhook_url</code>, <code>pushover.user_key</code>, <code>pushover.api_token</code>, <code>ai_api_key_*</code>, <code>email.password</code>) se cifran con la clave de <code>.notification_key</code> antes de escribirse en la base de datos y aparecen ocultos en la interfaz."
     ],
     "linksFooter": "Los toggles por evento, los overrides por canal y la configuración de IA se exponen en <notifLink>Settings → Notifications</notifLink> y <aiLink>Settings → AI Assistant</aiLink>."
   },

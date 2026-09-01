@@ -1,0 +1,138 @@
+name: Build i18n messages
+
+# Auto-translate missing keys in AppImage/messages/<locale>/common.json
+# against the English source whenever the source changes.
+#
+# The Monitor's i18n layer (AppImage/lib/i18n/provider.tsx) does its own
+# runtime fallback (locale → en → key), so this workflow doesn't break
+# anything if it misses a key: it just eliminates the visible-English
+# blocks in non-en locales.
+#
+# Guardrails baked into build_i18n_messages.py:
+#   - Never overwrites a key whose target value differs from EN (i.e.
+#     already translated by a human). This is what makes it safe to
+#     include sk in the default set: Vaso73's curated strings are
+#     protected end-to-end; auto only fills keys still on the EN
+#     fallback.
+#   - `{placeholder}` tokens are protected end-to-end.
+#
+# Triggers:
+#   - push to develop touching AppImage/messages/en/common.json
+#   - manual via workflow_dispatch
+
+on:
+  push:
+    branches: [develop]
+    paths:
+      # Only en/ triggers the run — it's the source of truth. Other
+      # locales are destinations, and the bot auto-commits them at
+      # the end of every run; if they were in the trigger too, each
+      # auto-commit would fire another (empty) run.
+      # Manual edits to a curated locale that empty a key for the
+      # workflow to refill are the exception — dispatch this
+      # workflow manually from Actions in that case, or piggy-back
+      # a trivial en/ change onto the commit.
+      - 'AppImage/messages/en/common.json'
+      - '.github/scripts/build_i18n_messages.py'
+      - '.github/workflows/build-i18n-messages.yml'
+  workflow_dispatch:
+    inputs:
+      refresh:
+        description: 'Re-translate every key (overwrites human translations!)'
+        type: boolean
+        default: false
+      languages:
+        description: 'Comma-separated locales. Default: es,de,fr,it,pt,sk,sv (guardrail protects Vaso73 sk).'
+        default: 'es,de,fr,it,pt,sk,sv'
+
+# Prevent two runs from racing on the same branch and fighting over the
+# auto-commit. cancel-in-progress:false because a full first-run may take
+# ~30 min for the initial bootstrap and interrupting mid-flight would
+# waste the calls already made.
+concurrency:
+  group: build-i18n-messages-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  translate:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write   # auto-commit AppImage/messages/*/common.json to develop
+    # First-run bootstrap of ~5 locales × 3.8k keys can take a while at
+    # 0.15s/call with rate-limit backoffs. 90 min headroom.
+    timeout-minutes: 90
+
+    steps:
+      - name: Checkout develop
+        uses: actions/checkout@v4
+        with:
+          ref: develop
+          # Full history so the auto-commit doesn't drift when another
+          # push landed between trigger and this job start.
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install googletrans
+        run: |
+          python -m pip install --upgrade pip
+          # Same pinning as build-translation-cache.yml so the two
+          # workflows share behavior. Bump both in lockstep.
+          pip install 'googletrans==4.0.0-rc1' 'httpx==0.13.3' 'httpcore==0.9.1' 'h11==0.9.0'
+
+      - name: Translate missing keys
+        run: |
+          REFRESH_FLAG=""
+          if [[ "${{ github.event.inputs.refresh }}" == "true" ]]; then
+            REFRESH_FLAG="--refresh"
+          fi
+          LANGS="${{ github.event.inputs.languages }}"
+          # Keep this fallback in sync with the workflow_dispatch input
+          # default above AND with DEFAULT_LANGUAGES in the Python script —
+          # `push` triggers hit this branch (inputs are empty on push).
+          LANGS="${LANGS:-es,de,fr,it,pt,sk,sv}"
+          python .github/scripts/build_i18n_messages.py \
+            --source AppImage/messages/en/common.json \
+            --messages-dir AppImage/messages \
+            --languages "$LANGS" \
+            --provider googletrans \
+            $REFRESH_FLAG
+
+      - name: Commit + push if changed
+        run: |
+          if git diff --quiet -- AppImage/messages/; then
+            echo "No translation changes — skipping commit."
+            exit 0
+          fi
+          git config user.name  "ProxMenuxBot"
+          git config user.email "bot@proxmenux.local"
+          git add AppImage/messages/
+          git commit -m "chore(i18n): auto-fill missing translations in messages/{locale}/common.json
+
+          Source: ${GITHUB_SHA::7}
+          Triggered by: ${{ github.event_name }}"
+          # Rebase-and-retry against develop: between the initial
+          # checkout and this push another workflow (e.g.
+          # build-translation-cache auto-commit) or a manual push can
+          # land on develop first, and a naked push fails with
+          # non-fast-forward — losing the freshly generated translation
+          # commit. Rebasing the local i18n commit on top of the newer
+          # HEAD is safe: paths don't overlap with cache/script
+          # workflows, and the same-branch collisions between two i18n
+          # runs are already blocked by the concurrency group above.
+          for attempt in 1 2 3 4 5; do
+            git fetch origin develop
+            if git rebase origin/develop && git push origin develop; then
+              echo "push succeeded on attempt ${attempt}"
+              exit 0
+            fi
+            echo "push attempt ${attempt} failed, retrying..."
+            git rebase --abort 2>/dev/null || true
+            sleep $(( attempt * 3 ))
+          done
+          echo "push failed after 5 attempts"
+          exit 1

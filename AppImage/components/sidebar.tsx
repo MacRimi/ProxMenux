@@ -1,6 +1,7 @@
 "use client"
 
 import { LayoutDashboard, HardDrive, Network, Server, Cpu, FileText, SettingsIcon, Terminal } from "lucide-react"
+import { useT } from "../lib/i18n/provider"
 
 const menuItems = [
   { name: "Overview", href: "/", icon: LayoutDashboard },
@@ -14,6 +15,8 @@ const menuItems = [
 ]
 
 const Sidebar = ({ currentPath, setOpen }) => {
+  const t = useT()
+
   const handleNavigation = (tabName: string) => {
     // Dispatch custom event to change tab in dashboard
     const event = new CustomEvent("changeTab", { detail: { tab: tabName } })
@@ -32,7 +35,7 @@ const Sidebar = ({ currentPath, setOpen }) => {
         }`}
       >
         <LayoutDashboard className="h-5 w-5" />
-        <span>Overview</span>
+        <span>{t("navigation.overview")}</span>
       </button>
 
       <button
@@ -44,7 +47,7 @@ const Sidebar = ({ currentPath, setOpen }) => {
         }`}
       >
         <HardDrive className="h-5 w-5" />
-        <span>Storage</span>
+        <span>{t("navigation.storage")}</span>
       </button>
 
       <button
@@ -56,7 +59,7 @@ const Sidebar = ({ currentPath, setOpen }) => {
         }`}
       >
         <Network className="h-5 w-5" />
-        <span>Network</span>
+        <span>{t("navigation.network")}</span>
       </button>
 
       <button
@@ -68,7 +71,7 @@ const Sidebar = ({ currentPath, setOpen }) => {
         }`}
       >
         <Server className="h-5 w-5" />
-        <span>VMs & LXCs</span>
+        <span>{t("navigation.virtualMachines")}</span>
       </button>
 
       <button
@@ -80,7 +83,7 @@ const Sidebar = ({ currentPath, setOpen }) => {
         }`}
       >
         <Cpu className="h-5 w-5" />
-        <span>Hardware</span>
+        <span>{t("navigation.hardware")}</span>
       </button>
 
       <button
@@ -92,7 +95,7 @@ const Sidebar = ({ currentPath, setOpen }) => {
         }`}
       >
         <FileText className="h-5 w-5" />
-        <span>System Logs</span>
+        <span>{t("navigation.systemLogs")}</span>
       </button>
 
       <button
@@ -104,7 +107,7 @@ const Sidebar = ({ currentPath, setOpen }) => {
         }`}
       >
         <Terminal className="h-5 w-5" />
-        <span>Terminal</span>
+        <span>{t("navigation.terminal")}</span>
       </button>
 
       <button
@@ -116,7 +119,7 @@ const Sidebar = ({ currentPath, setOpen }) => {
         }`}
       >
         <SettingsIcon className="h-5 w-5" />
-        <span>Settings</span>
+        <span>{t("navigation.settings")}</span>
       </button>
     </div>
   )

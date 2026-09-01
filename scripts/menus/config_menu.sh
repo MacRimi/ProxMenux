@@ -24,7 +24,7 @@
 #   - Change Language
 #       Only on the Translation install type (venv +
 #       config.json.language present). Languages: en / es / fr /
-#       de / it / pt.
+#       de / it / pt / sk.
 #
 #   - Show Version Information
 #       Always shown. Reports installed components, files,
@@ -64,6 +64,7 @@ fi
 
 load_language
 initialize_cache
+BACKTITLE="$(translate "$BACKTITLE")"
 
 # ==========================================================
 
@@ -377,29 +378,29 @@ toggle_monitor_service() {
     local status=$(check_monitor_status)
     
     if [ "$status" = "not_installed" ]; then
-        dialog --clear --backtitle "ProxMenux Configuration" \
+        dialog --clear --backtitle "$BACKTITLE" \
                --title "$(translate "ProxMenux Monitor")" \
                --msgbox "\n\n$(translate "ProxMenux Monitor is not installed.")" 10 50
         return
     fi
     
     if [ "$status" = "active" ]; then
-        if dialog --clear --backtitle "ProxMenux Configuration" \
+        if dialog --clear --backtitle "$BACKTITLE" \
                   --title "$(translate "Deactivate Monitor")" \
                   --yesno "\n$(translate "Do you want to deactivate ProxMenux Monitor?")" 8 60; then
             systemctl stop "$MONITOR_SERVICE" 2>/dev/null
             systemctl disable "$MONITOR_SERVICE" 2>/dev/null
-            dialog --clear --backtitle "ProxMenux Configuration" \
+            dialog --clear --backtitle "$BACKTITLE" \
                    --title "$(translate "Monitor Deactivated")" \
                    --msgbox "\n\n$(translate "ProxMenux Monitor has been deactivated.")" 10 50
         fi
     else
-        if dialog --clear --backtitle "ProxMenux Configuration" \
+        if dialog --clear --backtitle "$BACKTITLE" \
                   --title "$(translate "Activate Monitor")" \
                   --yesno "\n$(translate "Do you want to activate ProxMenux Monitor?")" 8 60; then
             systemctl enable "$MONITOR_SERVICE" 2>/dev/null
             systemctl start "$MONITOR_SERVICE" 2>/dev/null
-            dialog --clear --backtitle "ProxMenux Configuration" \
+            dialog --clear --backtitle "$BACKTITLE" \
                    --title "$(translate "Monitor Activated")" \
                    --msgbox "\n\n$(translate "ProxMenux Monitor has been activated.")" 10 50
         fi
@@ -597,7 +598,7 @@ show_config_menu() {
         option_actions[$option_num]="return_main"
         
         # Show menu
-        OPTION=$(dialog --clear --backtitle "ProxMenux Configuration" \
+        OPTION=$(dialog --clear --backtitle "$BACKTITLE" \
                         --title "$(translate "Configuration Menu")" \
                         --menu "$(translate "Select an option:")" 20 70 10 \
                         "${menu_options[@]}" 3>&1 1>&2 2>&3)
@@ -635,18 +636,20 @@ show_config_menu() {
 # ==========================================================
 change_language() {
     local new_language
-    new_language=$(dialog --clear --backtitle "ProxMenux Configuration" \
+    new_language=$(dialog --clear --backtitle "$BACKTITLE" \
                           --title "$(translate "Change Language")" \
-                          --menu "$(translate "Select a new language for the menu:")" 20 60 6 \
+                          --menu "$(translate "Select a new language for the menu:")" 22 60 8 \
                           "en" "$(translate "English")" \
+                          "de" "$(translate "German")" \
                           "es" "$(translate "Spanish")" \
                           "fr" "$(translate "French")" \
-                          "de" "$(translate "German")" \
                           "it" "$(translate "Italian")" \
-                          "pt" "$(translate "Portuguese")" 3>&1 1>&2 2>&3)
+                          "pt" "$(translate "Portuguese")" \
+                          "sk" "Slovenčina" \
+                          "sv" "Svenska" 3>&1 1>&2 2>&3)
     
     if [ -z "$new_language" ]; then
-        dialog --clear --backtitle "ProxMenux Configuration" \
+        dialog --clear --backtitle "$BACKTITLE" \
                --title "$(translate "Language Change")" \
                --msgbox "\n\n$(translate "No language selected.")" 10 50
         return
@@ -660,7 +663,7 @@ change_language() {
         echo "{\"language\": \"$new_language\"}" > "$CONFIG_FILE"
     fi
     
-    dialog --clear --backtitle "ProxMenux Configuration" \
+    dialog --clear --backtitle "$BACKTITLE" \
            --title "$(translate "Language Change")" \
            --msgbox "\n\n$(translate "Language changed to") $new_language" 10 50
     
@@ -738,7 +741,7 @@ show_version_info() {
     # Display information in a scrollable text box
     tmpfile=$(mktemp)
     echo -e "$info_message" > "$tmpfile"
-    dialog --clear --backtitle "ProxMenux Configuration" \
+    dialog --clear --backtitle "$BACKTITLE" \
            --title "$(translate "ProxMenux Information")" \
            --textbox "$tmpfile" 25 80
     rm -f "$tmpfile"
@@ -746,7 +749,7 @@ show_version_info() {
 
 # ==========================================================
 uninstall_proxmenu() {
-    if ! dialog --clear --backtitle "ProxMenux Configuration" \
+    if ! dialog --clear --backtitle "$BACKTITLE" \
                 --title "Uninstall ProxMenux" \
                 --yesno "\n$(translate "Are you sure you want to uninstall ProxMenux?")" 8 60; then
         return
@@ -754,7 +757,7 @@ uninstall_proxmenu() {
     
     local deps_to_remove=""
 
-    deps_to_remove=$(dialog --clear --backtitle "ProxMenux Configuration" \
+    deps_to_remove=$(dialog --clear --backtitle "$BACKTITLE" \
                            --title "Remove Dependencies" \
                            --checklist "Select dependencies to remove:" 12 60 2 \
                            "dialog" "Interactive dialog boxes" OFF \
@@ -803,7 +806,7 @@ uninstall_proxmenu() {
         echo "100" ; echo "Uninstallation complete!"
         sleep 1
         
-    ) | dialog --clear --backtitle "ProxMenux Configuration" \
+    ) | dialog --clear --backtitle "$BACKTITLE" \
                --title "Uninstalling ProxMenux" \
                --gauge "Starting uninstallation..." 10 60 0
     
@@ -814,7 +817,7 @@ uninstall_proxmenu() {
     fi
     final_message+="Thank you for using ProxMenux!"
     
-    dialog --clear --backtitle "ProxMenux Configuration" \
+    dialog --clear --backtitle "$BACKTITLE" \
            --title "Uninstallation Complete" \
            --msgbox "$final_message" 12 60
     clear    

@@ -49,7 +49,7 @@
   "prereqs": {
     "title": "Before you start",
     "assigned": "<strong>A GPU already assigned</strong> — either in a VM via VFIO or attached to at least one LXC. If you haven't assigned it yet, start from Add GPU to VM / LXC instead.",
-    "iommu": "<strong>IOMMU enabled on the host</strong> — only strictly required when switching <em>to</em> VM mode, but worth having on either way. The script warns if the kernel param is missing.",
+    "iommu": "<strong>IOMMU enabled on the host</strong> — only strictly required when switching <em>to</em> VM mode, but worth having on either way. If the kernel param is missing the script auto-adds <code>intel_iommu=on iommu=pt</code> or <code>amd_iommu=on</code> to the boot command line (via <code>proxmox-boot-tool refresh</code> on systemd-boot or <code>update-grub</code> on GRUB) and includes it in the reboot prompt at the end.",
     "iommuCheck": "dmesg | grep -i 'IOMMU enabled' | head -1",
     "reboot": "<strong>Be OK with a reboot.</strong> Switching GPU bindings at the kernel level means the host regenerates initramfs and you reboot to apply. The script prompts at the end.",
     "knowList": "<strong>Know which VMs / LXCs are using the GPU.</strong> The script will find them and ask what to do with each, but it's faster if you already know the list."
@@ -110,7 +110,7 @@
     },
     "apply": {
       "title": "Apply host + workload changes",
-      "body": "Once you confirm, the script writes the host-side changes — <code>vfio.conf</code>, blacklist, modules, and (for NVIDIA) the per-BDF udev rule at <code>/etc/udev/rules.d/10-proxmenux-vfio-bind.rules</code> plus the BDF state at <code>/etc/proxmenux/vfio-bind.bdfs</code>. It also applies the chosen conflict policy to each affected VM/LXC. If the host config actually changed, it runs <code>update-initramfs -u -k all</code> — otherwise it skips that step."
+      "body": "Once you confirm, the script writes the host-side changes — <code>vfio.conf</code>, blacklist, modules, and (for NVIDIA) the per-BDF udev rule at <code>/etc/udev/rules.d/10-proxmenux-vfio-bind.rules</code> plus the BDF state at <code>/etc/proxmenux/vfio-bind.bdfs</code>. It also applies the chosen conflict policy to each affected VM/LXC. If the host config actually changed, it runs <code>update-initramfs -u -k all</code> followed by <code>proxmox-boot-tool refresh</code>; otherwise both are skipped."
     },
     "reboot": {
       "title": "Reboot",

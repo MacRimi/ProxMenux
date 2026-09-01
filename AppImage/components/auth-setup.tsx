@@ -7,12 +7,14 @@ import { Input } from "./ui/input"
 import { Label } from "./ui/label"
 import { Shield, Lock, User, AlertCircle, Eye, EyeOff, Upload, Trash2 } from "lucide-react"
 import { getApiUrl } from "../lib/api-config"
+import { useT } from "../lib/i18n/provider"
 
 interface AuthSetupProps {
   onComplete: () => void
 }
 
 export function AuthSetup({ onComplete }: AuthSetupProps) {
+  const t = useT()
   const [open, setOpen] = useState(false)
   const [step, setStep] = useState<"choice" | "setup">("choice")
   const [username, setUsername] = useState("")
@@ -74,7 +76,7 @@ export function AuthSetup({ onComplete }: AuthSetupProps) {
       const data = await response.json()
 
       if (!response.ok) {
-        throw new Error(data.error || "Failed to skip authentication")
+        throw new Error(data.error || t("authSetup.skipFailed"))
       }
 
       if (data.auth_declined) {
@@ -86,7 +88,7 @@ export function AuthSetup({ onComplete }: AuthSetupProps) {
       onComplete()
     } catch (err) {
       console.error("Auth skip error:", err)
-      setError(err instanceof Error ? err.message : "Failed to save preference")
+      setError(err instanceof Error ? err.message : t("authSetup.savePreferenceFailed"))
     } finally {
       setLoading(false)
     }
@@ -108,17 +110,17 @@ export function AuthSetup({ onComplete }: AuthSetupProps) {
     setError("")
 
     if (!username || !password) {
-      setError("Please fill in all fields")
+      setError(t("authSetup.fillFields"))
       return
     }
 
     if (password !== confirmPassword) {
-      setError("Passwords do not match")
+      setError(t("authSetup.passwordMismatch"))
       return
     }
 
     if (password.length < 6) {
-      setError("Password must be at least 6 characters")
+      setError(t("authSetup.passwordTooShort"))
       return
     }
 
@@ -137,7 +139,7 @@ export function AuthSetup({ onComplete }: AuthSetupProps) {
       const data = await response.json()
 
       if (!response.ok) {
-        throw new Error(data.error || "Failed to setup authentication")
+        throw new Error(data.error || t("authSetup.setupFailed"))
       }
 
       if (data.token) {
@@ -204,7 +206,7 @@ export function AuthSetup({ onComplete }: AuthSetupProps) {
       onComplete()
     } catch (err) {
       console.error("Auth setup error:", err)
-      setError(err instanceof Error ? err.message : "Failed to setup authentication")
+      setError(err instanceof Error ? err.message : t("authSetup.setupFailed"))
     } finally {
       setLoading(false)
     }
@@ -214,7 +216,7 @@ export function AuthSetup({ onComplete }: AuthSetupProps) {
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
         <DialogTitle className="sr-only">
-          {step === "choice" ? "Setup Dashboard Protection" : "Create Password"}
+          {step === "choice" ? t("authSetup.choiceTitle") : t("authSetup.passwordTitle")}
         </DialogTitle>
         {step === "choice" ? (
           <div className="space-y-6 py-2">
@@ -222,16 +224,16 @@ export function AuthSetup({ onComplete }: AuthSetupProps) {
               <div className="mx-auto w-16 h-16 bg-blue-500/10 rounded-full flex items-center justify-center">
                 <Shield className="h-8 w-8 text-blue-500" />
               </div>
-              <h2 className="text-2xl font-bold">Protect Your Dashboard?</h2>
+              <h2 className="text-2xl font-bold">{t("authSetup.protectTitle")}</h2>
               <p className="text-muted-foreground text-sm">
-                Add an extra layer of security to protect your Proxmox data when accessing from non-private networks.
+                {t("authSetup.protectDescription")}
               </p>
             </div>
 
             <div className="space-y-3">
               <Button onClick={() => setStep("setup")} className="w-full bg-blue-500 hover:bg-blue-600" size="lg">
                 <Lock className="h-4 w-4 mr-2" />
-                Yes, Setup Password
+                {t("authSetup.setupPassword")}
               </Button>
               <Button
                 onClick={handleSkipAuth}
@@ -240,11 +242,11 @@ export function AuthSetup({ onComplete }: AuthSetupProps) {
                 size="lg"
                 disabled={loading}
               >
-                No, Continue Without Protection
+                {t("authSetup.skipProtection")}
               </Button>
             </div>
 
-            <p className="text-xs text-center text-muted-foreground">You can always enable this later in Settings</p>
+            <p className="text-xs text-center text-muted-foreground">{t("authSetup.enableLater")}</p>
           </div>
         ) : (
           <div className="space-y-6 py-2">
@@ -252,8 +254,8 @@ export function AuthSetup({ onComplete }: AuthSetupProps) {
               <div className="mx-auto w-16 h-16 bg-blue-500/10 rounded-full flex items-center justify-center">
                 <Lock className="h-8 w-8 text-blue-500" />
               </div>
-              <h2 className="text-2xl font-bold">Setup Authentication</h2>
-              <p className="text-muted-foreground text-sm">Create a username and password to protect your dashboard</p>
+              <h2 className="text-2xl font-bold">{t("authSetup.setupTitle")}</h2>
+              <p className="text-muted-foreground text-sm">{t("authSetup.setupDescription")}</p>
             </div>
 
             {error && (
@@ -266,14 +268,14 @@ export function AuthSetup({ onComplete }: AuthSetupProps) {
             <div className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="username" className="text-sm">
-                  Username
+                  {t("authSetup.username")}
                 </Label>
                 <div className="relative">
                   <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                   <Input
                     id="username"
                     type="text"
-                    placeholder="Enter username"
+                    placeholder={t("authSetup.usernamePlaceholder")}
                     value={username}
                     onChange={(e) => setUsername(e.target.value)}
                     className="pl-10 text-base"
@@ -285,14 +287,14 @@ export function AuthSetup({ onComplete }: AuthSetupProps) {
 
               <div className="space-y-2">
                 <Label htmlFor="password" className="text-sm">
-                  Password
+                  {t("authSetup.password")}
                 </Label>
                 <div className="relative">
                   <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                   <Input
                     id="password"
                     type={showPassword ? "text" : "password"}
-                    placeholder="Enter password"
+                    placeholder={t("authSetup.passwordPlaceholder")}
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     className="pl-10 text-base"
@@ -312,14 +314,14 @@ export function AuthSetup({ onComplete }: AuthSetupProps) {
 
               <div className="space-y-2">
                 <Label htmlFor="confirm-password" className="text-sm">
-                  Confirm Password
+                  {t("authSetup.confirmPassword")}
                 </Label>
                 <div className="relative">
                   <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                   <Input
                     id="confirm-password"
                     type={showConfirmPassword ? "text" : "password"}
-                    placeholder="Confirm password"
+                    placeholder={t("authSetup.confirmPasswordPlaceholder")}
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
                     className="pl-10 text-base"
@@ -345,19 +347,19 @@ export function AuthSetup({ onComplete }: AuthSetupProps) {
                   setup endpoint returns the JWT. */}
               <div className="pt-3 border-t border-border/60 space-y-4">
                 <p className="text-xs text-muted-foreground uppercase tracking-wider">
-                  Profile · optional
+                  {t("authSetup.profileOptional")}
                 </p>
 
                 <div className="space-y-2">
                   <Label htmlFor="display-name" className="text-sm">
-                    Display name
+                    {t("authSetup.displayName")}
                   </Label>
                   <div className="relative">
                     <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <Input
                       id="display-name"
                       type="text"
-                      placeholder="Shown above the username in the menu"
+                      placeholder={t("authSetup.displayNamePlaceholder")}
                       value={displayName}
                       onChange={(e) => setDisplayName(e.target.value)}
                       maxLength={64}
@@ -366,12 +368,12 @@ export function AuthSetup({ onComplete }: AuthSetupProps) {
                     />
                   </div>
                   <p className="text-[11px] text-muted-foreground">
-                    Leave empty to render the username itself. Up to 64 characters.
+                    {t("authSetup.displayNameHint")}
                   </p>
                 </div>
 
                 <div className="space-y-2">
-                  <Label className="text-sm">Avatar</Label>
+                  <Label className="text-sm">{t("authSetup.avatar")}</Label>
                   <div className="flex items-center gap-3">
                     {avatarPreviewUrl ? (
                       // eslint-disable-next-line @next/next/no-img-element
@@ -407,7 +409,7 @@ export function AuthSetup({ onComplete }: AuthSetupProps) {
                           className="h-7 text-xs"
                         >
                           <Upload className="h-3 w-3 mr-1.5" />
-                          {avatarFile ? "Change" : "Choose image"}
+                          {avatarFile ? t("authSetup.change") : t("authSetup.chooseImage")}
                         </Button>
                         {avatarFile && (
                           <Button
@@ -419,12 +421,12 @@ export function AuthSetup({ onComplete }: AuthSetupProps) {
                             className="h-7 text-xs text-red-500 hover:text-red-500 hover:bg-red-500/10"
                           >
                             <Trash2 className="h-3 w-3 mr-1.5" />
-                            Clear
+                            {t("authSetup.clear")}
                           </Button>
                         )}
                       </div>
                       <p className="text-[11px] text-muted-foreground">
-                        PNG, JPEG, WebP or GIF · up to 2 MB · pre-crop square for best results.
+                        {t("authSetup.avatarHint")}
                       </p>
                     </div>
                   </div>
@@ -434,10 +436,10 @@ export function AuthSetup({ onComplete }: AuthSetupProps) {
 
             <div className="space-y-2">
               <Button onClick={handleSetupAuth} className="w-full bg-blue-500 hover:bg-blue-600" disabled={loading}>
-                {loading ? "Setting up..." : "Setup Authentication"}
+                {loading ? t("authSetup.settingUp") : t("authSetup.setupAuthentication")}
               </Button>
               <Button onClick={() => setStep("choice")} variant="ghost" className="w-full" disabled={loading}>
-                Back
+                {t("authSetup.back")}
               </Button>
             </div>
           </div>

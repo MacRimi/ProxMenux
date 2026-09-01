@@ -27,7 +27,8 @@
   "language": {
     "switcher": "Idioma",
     "en": "English",
-    "es": "Español"
+    "es": "Español",
+    "sk": "Slovenčina"
   },
   "resources": {
     "documentation": {
@@ -58,14 +59,17 @@
       "accessAuth": "Acceso y autenticación",
       "dashboard": "Panel",
       "dashboardSystemOverview": "Pestaña Resumen del sistema",
+      "dashboardApps": "Pestaña Apps",
       "dashboardStorage": "Pestaña Almacenamiento",
       "dashboardNetwork": "Pestaña Red",
       "dashboardVmsLxcs": "Pestaña VMs y LXCs",
+      "dashboardVmsLxcsApp": "App",
+      "dashboardVmsLxcsUpdates": "Updates",
       "dashboardHardware": "Pestaña Hardware",
       "dashboardSystemLogs": "Pestaña Logs del sistema",
       "dashboardTerminal": "Pestaña Terminal",
       "dashboardSecurity": "Pestaña Seguridad",
-      "dashboardSettings": "Pestaña Settings",
+      "dashboardSettings": "Pestaña Ajustes",
       "healthMonitor": "Monitor de salud",
       "notifications": "Notificaciones",
       "aiAssistant": "Asistente de IA",

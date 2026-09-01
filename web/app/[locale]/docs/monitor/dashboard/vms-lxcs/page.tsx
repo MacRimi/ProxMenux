@@ -39,7 +39,6 @@ export default async function VmsLxcsTabPage({
         mountTypesItems: string[]
         mountStateItems: string[]
         backupsItems: string[]
-        updatesPanelItems: string[]
         firewallItems: string[]
         lifecycleRows: LifecycleRow[]
       }
@@ -56,7 +55,6 @@ export default async function VmsLxcsTabPage({
   const mountTypesItems = v.drillIn.mountTypesItems
   const mountStateItems = v.drillIn.mountStateItems
   const backupsItems = v.drillIn.backupsItems
-  const updatesPanelItems = v.drillIn.updatesPanelItems
   const firewallItems = v.drillIn.firewallItems
   const lifecycleRows = v.drillIn.lifecycleRows
   const dataRows = v.dataCollected.rows
@@ -227,6 +225,36 @@ export default async function VmsLxcsTabPage({
       <h4 className="text-base font-semibold mt-6 mb-2 text-gray-900">{t("drillIn.ipsTitle")}</h4>
       <p className="mb-6 text-gray-800 leading-relaxed">{t("drillIn.ipsBody")}</p>
 
+      <h3 className="text-lg font-semibold mt-8 mb-2 text-gray-900">{t("drillIn.appTitle")}</h3>
+      <p className="mb-4 text-gray-800 leading-relaxed">
+        {t.rich("drillIn.appIntro", { strong, em, code })}
+      </p>
+      <p className="mb-6 text-gray-800 leading-relaxed">
+        {t("drillIn.appLinkLead")}{" "}
+        <Link
+          href="/docs/monitor/dashboard/vms-lxcs/app"
+          className="text-blue-600 hover:underline"
+        >
+          {t("drillIn.appLinkLabel")}
+        </Link>{" "}
+        {t("drillIn.appLinkTail")}
+      </p>
+
+      <h3 className="text-lg font-semibold mt-8 mb-2 text-gray-900">{t("drillIn.updatesTitle")}</h3>
+      <p className="mb-4 text-gray-800 leading-relaxed">
+        {t.rich("drillIn.updatesIntro", { strong, em, code })}
+      </p>
+      <p className="mb-6 text-gray-800 leading-relaxed">
+        {t("drillIn.updatesLinkLead")}{" "}
+        <Link
+          href="/docs/monitor/dashboard/vms-lxcs/updates"
+          className="text-blue-600 hover:underline"
+        >
+          {t("drillIn.updatesLinkLabel")}
+        </Link>{" "}
+        {t("drillIn.updatesLinkTail")}
+      </p>
+
       <h3 className="text-lg font-semibold mt-8 mb-2 text-gray-900">{t("drillIn.mountsTitle")}</h3>
 
       <figure className="my-4">
@@ -285,45 +313,6 @@ export default async function VmsLxcsTabPage({
       </ul>
       <p className="mb-6 text-gray-800 leading-relaxed">
         {t.rich("drillIn.backupsOutro", { strong })}
-      </p>
-
-      <h3 className="text-lg font-semibold mt-8 mb-2 text-gray-900">{t("drillIn.updatesTitle")}</h3>
-
-      <figure className="my-4">
-        <img
-          src="/monitor/vms-modal-lxc-updates.png"
-          alt={t("drillIn.updatesImageAlt")}
-          className="rounded-lg border border-gray-200 shadow-sm w-full"
-        />
-        <figcaption className="text-sm text-gray-500 mt-2 text-center italic">
-          {t("drillIn.updatesImageCaption")}
-        </figcaption>
-      </figure>
-
-      <p className="mb-4 text-gray-800 leading-relaxed">
-        {t.rich("drillIn.updatesIntro", { strong, code })}
-      </p>
-
-      <h4 className="text-base font-semibold mt-6 mb-2 text-gray-900">{t("drillIn.updatesPanelTitle")}</h4>
-      <ul className="list-disc pl-6 mb-4 text-gray-800 leading-relaxed space-y-1">
-        {updatesPanelItems.map((_, idx) => (
-          <li key={idx}>{t.rich(`drillIn.updatesPanelItems.${idx}`, { strong })}</li>
-        ))}
-      </ul>
-
-      <h4 className="text-base font-semibold mt-6 mb-2 text-gray-900">{t("drillIn.updatesScopeTitle")}</h4>
-      <p className="mb-4 text-gray-800 leading-relaxed">
-        {t.rich("drillIn.updatesScopeBody", { strong, em, code })}
-      </p>
-
-      <h4 className="text-base font-semibold mt-6 mb-2 text-gray-900">{t("drillIn.updatesToggleTitle")}</h4>
-      <Callout variant="info" title={t("drillIn.updatesToggleCalloutTitle")}>
-        {t.rich("drillIn.updatesToggleCalloutBody", { strong, code })}
-      </Callout>
-
-      <h4 className="text-base font-semibold mt-6 mb-2 text-gray-900">{t("drillIn.updatesApplyTitle")}</h4>
-      <p className="mb-6 text-gray-800 leading-relaxed">
-        {t.rich("drillIn.updatesApplyBody", { code })}
       </p>
 
       <h3 className="text-lg font-semibold mt-8 mb-2 text-gray-900">{t("drillIn.firewallTitle")}</h3>

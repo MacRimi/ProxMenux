@@ -6,13 +6,14 @@
 # Copyright   : (c) 2024 MacRimi
 # License     : GPL-3.0
 #               https://github.com/MacRimi/ProxMenux/blob/main/LICENSE
-# Version     : 1.0
+# Version     : 1.1
 # ==========================================================
 # Description:
 # Applies a curated set of 14 safe optimizations to a fresh
-# Proxmox VE host without prompts. Every change is registered
-# in installed_tools.json so it can be reversed later from the
-# Uninstall Optimizations menu.
+# Proxmox VE host without prompts. Reversible changes are registered
+# in installed_tools.json so they can be restored later from the
+# Uninstall Optimizations menu; package upgrades are intentionally
+# excluded because they cannot be rolled back safely.
 #
 # Features:
 # - Zero-interaction baseline: repos, upgrade, banner, APT
@@ -158,6 +159,8 @@ apt_upgrade() {
 
 
 remove_subscription_banner() {
+    local FUNC_VERSION="1.0"
+    # description: Patch the Proxmox web UI to suppress the subscription dialog and register a successful patch.
     local pve_version
     pve_version=$(pveversion 2>/dev/null | grep -oP 'pve-manager/\K[0-9]+' | head -1)
 
@@ -176,15 +179,22 @@ remove_subscription_banner() {
             msg_warn "Banner removal cancelled by user."
             return 1
         fi
-        bash "$LOCAL_SCRIPTS/global/remove-banner-pve-v3.sh"
+        if ! bash "$LOCAL_SCRIPTS/global/remove-banner-pve-v3.sh"; then
+            msg_error "$(translate "Subscription banner removal failed")"
+            return 1
+        fi
     else
         if ! whiptail --title "Proxmox VE 8.x Subscription Banner Removal" \
         --yesno "Do you want to remove the Proxmox subscription banner from the web interface for PVE $pve_version?" 10 70; then
             msg_warn "Banner removal cancelled by user."
             return 1
         fi
-        bash "$LOCAL_SCRIPTS/global/remove-banner-pve8.sh"
+        if ! bash "$LOCAL_SCRIPTS/global/remove-banner-pve8.sh"; then
+            msg_error "$(translate "Subscription banner removal failed")"
+            return 1
+        fi
     fi
+    register_tool "subscription_banner" true "$FUNC_VERSION"
 }
 
 
@@ -441,8 +451,8 @@ EOF
 
 # ==========================================================
 optimize_memory_settings() {
-    local FUNC_VERSION="1.1"
-    # description: Tune swappiness, dirty page ratios, overcommit and compaction proactiveness for VM hosts.
+    local FUNC_VERSION="1.2"
+    # description: Tune swappiness, dirty page ratios and compaction proactiveness for VM hosts without overriding the kernel's memory-overcommit policy.
     msg_info "$(translate "Optimizing memory settings...")"
     NECESSARY_REBOOT=1
     
@@ -451,7 +461,6 @@ optimize_memory_settings() {
 vm.swappiness = 10
 vm.dirty_ratio = 15
 vm.dirty_background_ratio = 5
-vm.overcommit_memory = 1
 vm.max_map_count = 262144
 EOF
     
@@ -626,13 +635,29 @@ EOF
 
 # ==========================================================
 customize_bashrc() {
-    local FUNC_VERSION="1.0"
-    # description: Inject the ProxMenux core bashrc block (aliases, prompt, history) into root's .bashrc, idempotent via begin/end markers.
+    local FUNC_VERSION="1.1"
+    # description: Install the managed ProxMenux Bash prompt and aliases while preserving or selecting the short/full working-directory style.
     msg_info "$(translate "Customizing bashrc for root user...")"
     local bashrc="/root/.bashrc"
     local bash_profile="/root/.bash_profile"
     local marker_begin="# BEGIN PMX_CORE_BASHRC"
     local marker_end="# END PMX_CORE_BASHRC"
+    local prompt_path_escape='\W'
+
+    # Automated installs remain non-interactive. Preserve a previous
+    # ProxMenux choice on re-run and use the compact \W style on first use.
+    if sed -n "/^${marker_begin}$/,/^${marker_end}$/p" "$bashrc" 2>/dev/null | grep -Fq '\w'; then
+        prompt_path_escape='\w'
+    fi
+    case "${PMX_BASHRC_PATH_STYLE:-}" in
+        short) prompt_path_escape='\W' ;;
+        "") ;;
+        full) prompt_path_escape='\w' ;;
+        *)
+            msg_error "PMX_BASHRC_PATH_STYLE must be 'short' or 'full'."
+            return 1
+            ;;
+    esac
     
  
     [ -f "${bashrc}.bak" ] || cp "$bashrc" "${bashrc}.bak" > /dev/null 2>&1
@@ -647,7 +672,7 @@ customize_bashrc() {
 ${marker_begin}
 # ProxMenux core customizations
 export HISTTIMEFORMAT="%d/%m/%y %T "
-export PS1="\[\e[31m\][\[\e[m\]\[\e[38;5;172m\]\u\[\e[m\]@\[\e[38;5;153m\]\h\[\e[m\] \[\e[38;5;214m\]\W\[\e[m\]\[\e[31m\]]\[\e[m\]\\$ "
+export PS1="\[\e[31m\][\[\e[m\]\[\e[38;5;172m\]\u\[\e[m\]@\[\e[38;5;153m\]\h\[\e[m\] \[\e[38;5;214m\]${prompt_path_escape}\[\e[m\]\[\e[31m\]]\[\e[m\]\\$ "
 alias l='ls -CF'
 alias la='ls -A'
 alias ll='ls -alF'
@@ -665,6 +690,8 @@ EOF
     fi
     
     msg_ok "$(translate "Bashrc customization completed")"
+    msg_info "$(translate "The new prompt will be used in new terminal sessions.")"
+    msg_info "$(translate "To apply it to the current shell now, run:") source /root/.bashrc"
     register_tool "bashrc_custom" true "$FUNC_VERSION"
 }
 
@@ -680,7 +707,7 @@ EOF
 
 
 install_log2ram_auto() {
-    local FUNC_VERSION="1.3"
+    local FUNC_VERSION="1.4"
 
     # description: Install Log2RAM with size auto-tuned to host RAM (128M/256M/512M); SSD/M.2 detection skips on rotational disks.
 
@@ -885,9 +912,13 @@ if (( USED_BYTES > EMERGENCY_BYTES )); then
     if [[ -x /usr/sbin/logrotate && -f /etc/logrotate.d/proxmox-backup-api ]]; then
         /usr/sbin/logrotate -f /etc/logrotate.d/proxmox-backup-api >/dev/null 2>&1 || true
     fi
-    : > /var/log/pveproxy/access.log 2>/dev/null || true
-    : > /var/log/pveproxy/error.log 2>/dev/null || true
-    : > /var/log/pveam.log 2>/dev/null || true
+    # Only truncate if the file already exists. Creating one from
+    # this cron path (running as root, default umask) would leave
+    # it as root:root 644 — pveproxy runs as www-data and would then
+    # fail to reopen it on the next restart, taking :8006 down.
+    [ -e /var/log/pveproxy/access.log ] && : > /var/log/pveproxy/access.log 2>/dev/null || true
+    [ -e /var/log/pveproxy/error.log ]  && : > /var/log/pveproxy/error.log  2>/dev/null || true
+    [ -e /var/log/pveam.log ]           && : > /var/log/pveam.log           2>/dev/null || true
     "$L2R_BIN" write 2>/dev/null || true
 elif (( USED_BYTES > WARN_BYTES )); then
     SOFT_JOURNAL_MB=$(( SIZE_MiB * 30 / 100 ))
@@ -1093,7 +1124,7 @@ enable_zfs_autotrim() {
 
 
 setup_persistent_network() {
-    local FUNC_VERSION="1.1"
+    local FUNC_VERSION="1.2"
     # description: Pin NIC names to MAC addresses via systemd .link files so kernel updates don't shuffle interface names.
     local pve_version
     pve_version=$(pveversion 2>/dev/null | grep -oP 'pve-manager/\K[0-9]+' | head -1)

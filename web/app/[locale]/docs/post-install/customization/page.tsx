@@ -48,6 +48,7 @@ export default async function PostInstallCustomizationPage({
         title={t("header.title")}
         description={t("header.description")}
         section={t("header.section")}
+        estimatedMinutes={7}
       />
 
       <Callout variant="info" title={t("intro.title")}>
@@ -142,7 +143,7 @@ cat /etc/motd
       />
 
       <Callout variant="tip" title={t("verify.reversibleTitle")}>
-        {t.rich("verify.reversibleBody", { code, link: uninstallLink })}
+        {t.rich("verify.reversibleBody", { code, strong, link: uninstallLink })}
       </Callout>
 
       <h2 className="text-2xl font-semibold mt-10 mb-4 text-gray-900">{t("related.heading")}</h2>

@@ -11,6 +11,8 @@ import subprocess
 import re
 import fcntl
 import threading
+import ipaddress
+import tempfile
 from contextlib import contextmanager
 
 # =================================================================
@@ -80,6 +82,10 @@ def _is_pve_rule_line(stripped):
 # and quote/escape tricks. See audit Tier 1 #12b.
 _JAIL_NAME_RE = re.compile(r'^[A-Za-z0-9_][A-Za-z0-9_-]{0,63}$')
 
+FAIL2BAN_TRUSTED_NETWORKS_FILE = "/etc/fail2ban/jail.d/99-proxmenux-ignore.local"
+FAIL2BAN_LEGACY_GLOBAL_FILE = "/etc/fail2ban/jail.local"
+_FAIL2BAN_PROTECTED_NETWORKS = ("127.0.0.0/8", "::1")
+
 # Whitelist for the `level` argument to firewall functions. The audit flagged
 # that an unconstrained value here could one day be extended to `vm` and become
 # a path traversal sink. See audit Tier 1 #12d.
@@ -135,6 +141,25 @@ def _run_cmd(cmd, timeout=10):
         return -1, "", f"Command not found: {cmd[0]}"
     except Exception as e:
         return -1, "", str(e)
+
+
+def _pve_firewall_apply():
+    """
+    Recompile and apply pending firewall changes.
+
+    pve-firewall 6.x (shipped with PVE 9) dropped the `reload`
+    subcommand — only `restart` recompiles the ruleset and re-applies
+    it to iptables/nftables. Older releases accepted `reload`. Try
+    `reload` first for the cheap path; fall back to `restart` when
+    the subcommand is missing or returns an error. Without this
+    fallback, every mutating firewall call in this module was silently
+    a no-op on PVE 9 (the config file was updated but the kernel
+    ruleset never picked up the change until an unrelated restart).
+    """
+    rc, out, err = _run_cmd(["pve-firewall", "reload"])
+    if rc == 0:
+        return rc, out, err
+    return _run_cmd(["pve-firewall", "restart"])
 
 
 def get_firewall_status():
@@ -392,7 +417,7 @@ def add_firewall_rule(direction="IN", action="ACCEPT", protocol="tcp", dport="",
             with open(fw_file, 'w') as f:
                 f.write(content)
 
-        _run_cmd(["pve-firewall", "reload"])
+        _pve_firewall_apply()
 
         return True, f"Firewall rule added: {direction} {action} {protocol}{':' + dport if dport else ''}"
     except PermissionError:
@@ -509,7 +534,7 @@ def edit_firewall_rule(rule_index, level="host", direction="IN", action="ACCEPT"
             with open(fw_file, 'w') as f:
                 f.write("\n".join(new_lines) + "\n")
 
-        _run_cmd(["pve-firewall", "reload"])
+        _pve_firewall_apply()
 
         return True, f"Firewall rule updated: {direction} {action} {protocol}{':' + dport if dport else ''}"
     except PermissionError:
@@ -571,7 +596,7 @@ def delete_firewall_rule(rule_index, level="host"):
             with open(fw_file, 'w') as f:
                 f.write("\n".join(new_lines) + "\n")
 
-        _run_cmd(["pve-firewall", "reload"])
+        _pve_firewall_apply()
 
         return True, f"Firewall rule deleted: {removed_rule}"
     except PermissionError:
@@ -625,7 +650,7 @@ def add_monitor_port_rule():
             f.write(content)
 
         # Reload firewall
-        _run_cmd(["pve-firewall", "reload"])
+        _pve_firewall_apply()
 
         return True, "Firewall rule added: port 8008 (TCP) allowed for ProxMenux Monitor"
     except PermissionError:
@@ -662,7 +687,7 @@ def remove_monitor_port_rule():
         with open(host_fw, 'w') as f:
             f.writelines(new_lines)
 
-        _run_cmd(["pve-firewall", "reload"])
+        _pve_firewall_apply()
 
         return True, "ProxMenux Monitor firewall rule removed"
     except Exception as e:
@@ -673,9 +698,25 @@ def enable_firewall(level="host"):
     """
     Enable the Proxmox firewall at host or cluster level.
     Returns (success, message)
+
+    Safety net: whoever is calling this endpoint is reaching the Monitor
+    through port 8008. Enabling the firewall without an explicit ACCEPT
+    rule for that port drops the caller's own connection the instant
+    `pve-firewall reload` runs, and they lose the UI they need to fix it.
+    Ensure the rule is in host.fw first; if we can't place it, refuse
+    to enable rather than risk a lock-out.
     """
     if level not in _FIREWALL_LEVELS:
         return False, f"Invalid level: {level}. Must be one of {_FIREWALL_LEVELS}"
+
+    rule_ok, rule_msg = add_monitor_port_rule()
+    if not rule_ok:
+        return False, (
+            f"Refused to enable firewall: could not ensure port 8008 "
+            f"(ProxMenux Monitor) rule in host.fw — {rule_msg}. "
+            f"Add the rule manually and try again."
+        )
+
     if level == "cluster":
         return _set_firewall_enabled(CLUSTER_FW, True)
     else:
@@ -750,7 +791,7 @@ def _set_firewall_enabled(fw_file, enabled):
             _run_cmd(["systemctl", "enable", "pve-firewall"])
             _run_cmd(["systemctl", "start", "pve-firewall"])
         
-        _run_cmd(["pve-firewall", "reload"])
+        _pve_firewall_apply()
 
         state = "enabled" if enabled else "disabled"
         level = "cluster" if fw_file == CLUSTER_FW else "host"
@@ -887,6 +928,192 @@ def classify_ip(ip_address):
         return "local"
 
     return "external"
+
+
+def _normalise_ip_or_network(value):
+    """Return a canonical IP/CIDR string, or raise ValueError."""
+    if not isinstance(value, str):
+        raise ValueError("Enter an IP address or CIDR network")
+    candidate = value.strip()
+    if not candidate or len(candidate) > 128 or any(ch.isspace() for ch in candidate):
+        raise ValueError("Enter one IP address or CIDR network at a time")
+    try:
+        if "/" in candidate:
+            parsed = ipaddress.ip_network(candidate, strict=False)
+            if parsed.prefixlen == 0 or parsed.is_multicast or parsed.is_unspecified:
+                raise ValueError
+            return parsed.with_prefixlen
+        parsed = ipaddress.ip_address(candidate)
+        if parsed.is_multicast or parsed.is_unspecified:
+            raise ValueError
+        return str(parsed)
+    except ValueError:
+        raise ValueError("Invalid IP address or CIDR network")
+
+
+def _parse_default_ignoreip(path):
+    """Read ignoreip values from the [DEFAULT] section of one config file."""
+    if not os.path.isfile(path):
+        return []
+    values = []
+    in_default = False
+    try:
+        with open(path, "r") as config_file:
+            for raw_line in config_file:
+                stripped = raw_line.strip()
+                if stripped.startswith("[") and stripped.endswith("]"):
+                    in_default = stripped.upper() == "[DEFAULT]"
+                    continue
+                if not in_default or not stripped or stripped.startswith(("#", ";")):
+                    continue
+                match = re.match(r"^ignoreip\s*=\s*(.*)$", stripped, re.IGNORECASE)
+                if match:
+                    raw_values = re.split(r"[\s,]+", match.group(1).strip())
+                    values.extend(value for value in raw_values if value)
+    except OSError:
+        return []
+    return values
+
+
+def _trusted_network_entries():
+    source = (FAIL2BAN_TRUSTED_NETWORKS_FILE
+              if os.path.isfile(FAIL2BAN_TRUSTED_NETWORKS_FILE)
+              else FAIL2BAN_LEGACY_GLOBAL_FILE)
+    entries = []
+    for value in (*_FAIL2BAN_PROTECTED_NETWORKS, *_parse_default_ignoreip(source)):
+        try:
+            normalised = _normalise_ip_or_network(value)
+        except ValueError:
+            continue
+        if normalised not in entries:
+            entries.append(normalised)
+    return entries
+
+
+def get_fail2ban_trusted_networks():
+    """Return the global Fail2Ban IP/CIDR allowlist managed by the Monitor."""
+    protected = {_normalise_ip_or_network(value) for value in _FAIL2BAN_PROTECTED_NETWORKS}
+    return [
+        {"value": value, "protected": value in protected}
+        for value in _trusted_network_entries()
+    ]
+
+
+def _write_trusted_networks(entries):
+    target = FAIL2BAN_TRUSTED_NETWORKS_FILE
+    directory = os.path.dirname(target)
+    os.makedirs(directory, exist_ok=True)
+    content = (
+        "# Managed by ProxMenux Monitor. Use the Security page to edit.\n"
+        "[DEFAULT]\n"
+        f"ignoreip = {' '.join(entries)}\n"
+        "ignoreself = true\n"
+    )
+    temp_path = None
+    try:
+        with tempfile.NamedTemporaryFile(
+            mode="w", dir=directory, prefix=".proxmenux-ignore-", delete=False
+        ) as temp_file:
+            temp_file.write(content)
+            temp_path = temp_file.name
+        os.chmod(temp_path, 0o640)
+        os.replace(temp_path, target)
+    finally:
+        if temp_path and os.path.exists(temp_path):
+            os.unlink(temp_path)
+
+
+def _save_trusted_networks(entries):
+    """Persist and reload atomically; restore the previous file on failure."""
+    target = FAIL2BAN_TRUSTED_NETWORKS_FILE
+    lock_path = target + ".lock"
+    with _exclusive_file_lock(lock_path):
+        previous = None
+        existed = os.path.isfile(target)
+        if existed:
+            with open(target, "rb") as current_file:
+                previous = current_file.read()
+
+        _write_trusted_networks(entries)
+        rc, _, err = _run_cmd(["fail2ban-client", "reload"])
+        if rc == 0:
+            return True, "Fail2Ban trusted networks updated"
+
+        try:
+            if existed:
+                with open(target, "wb") as restore_file:
+                    restore_file.write(previous or b"")
+            elif os.path.exists(target):
+                os.unlink(target)
+            _run_cmd(["fail2ban-client", "reload"])
+        except OSError:
+            pass
+        return False, f"Fail2Ban rejected the configuration: {err or 'reload failed'}"
+
+
+def add_fail2ban_trusted_network(value):
+    try:
+        normalised = _normalise_ip_or_network(value)
+    except ValueError as exc:
+        return False, str(exc), None
+
+    entries = _trusted_network_entries()
+    candidate_network = ipaddress.ip_network(normalised, strict=False)
+    if any(
+        candidate_network.version == ipaddress.ip_network(entry, strict=False).version
+        and candidate_network.subnet_of(ipaddress.ip_network(entry, strict=False))
+        for entry in entries
+    ):
+        return False, "This IP address or network is already trusted", normalised
+    entries.append(normalised)
+    success, message = _save_trusted_networks(entries)
+    return success, message, normalised
+
+
+def remove_fail2ban_trusted_network(value):
+    try:
+        normalised = _normalise_ip_or_network(value)
+    except ValueError as exc:
+        return False, str(exc)
+
+    protected = {_normalise_ip_or_network(item) for item in _FAIL2BAN_PROTECTED_NETWORKS}
+    if normalised in protected:
+        return False, "Required local addresses cannot be removed"
+
+    entries = _trusted_network_entries()
+    if normalised not in entries:
+        return False, "Trusted IP address or network was not found"
+    entries.remove(normalised)
+    return _save_trusted_networks(entries)
+
+
+def update_fail2ban_trusted_network(old_value, new_value):
+    try:
+        old_normalised = _normalise_ip_or_network(old_value)
+        new_normalised = _normalise_ip_or_network(new_value)
+    except ValueError as exc:
+        return False, str(exc), None
+
+    protected = {_normalise_ip_or_network(item) for item in _FAIL2BAN_PROTECTED_NETWORKS}
+    if old_normalised in protected:
+        return False, "Required local addresses cannot be changed", None
+
+    entries = _trusted_network_entries()
+    if old_normalised not in entries:
+        return False, "Trusted IP address or network was not found", None
+
+    other_entries = [entry for entry in entries if entry != old_normalised]
+    candidate_network = ipaddress.ip_network(new_normalised, strict=False)
+    if any(
+        candidate_network.version == ipaddress.ip_network(entry, strict=False).version
+        and candidate_network.subnet_of(ipaddress.ip_network(entry, strict=False))
+        for entry in other_entries
+    ):
+        return False, "This IP address or network is already trusted", new_normalised
+
+    entries[entries.index(old_normalised)] = new_normalised
+    success, message = _save_trusted_networks(entries)
+    return success, message, new_normalised
 
 
 def update_jail_config(jail_name, maxretry=None, bantime=None, findtime=None):
@@ -1425,10 +1652,13 @@ def run_lynis_audit():
         global _lynis_audit_running, _lynis_audit_progress
         try:
             _lynis_audit_progress = "running"
-            # Remove old report so lynis creates a fresh one
-            report_file = "/var/log/lynis-report.dat"
-            if os.path.isfile(report_file):
-                os.remove(report_file)
+            # Remove old generated files so a failed or interrupted run does
+            # not get mixed with data from an earlier audit. Keep
+            # /var/log/lynis.log: Lynis owns that file and can use it as a
+            # fallback source when terminal capture is unavailable.
+            for report_path in ["/var/log/lynis-report.dat", "/var/log/lynis-output.log"]:
+                if os.path.isfile(report_path):
+                    os.remove(report_path)
 
             # Capture full formatted output. Lynis suppresses its nice
             # formatted output ([+] sections) when stdout is not a tty.
@@ -1538,6 +1768,7 @@ def parse_lynis_report():
     """
     report_file = "/var/log/lynis-report.dat"
     output_file = "/var/log/lynis-output.log"
+    lynis_log_file = "/var/log/lynis.log"
     # Need at least one data source
     if not os.path.isfile(report_file) and not os.path.isfile(output_file):
         return None
@@ -1559,6 +1790,8 @@ def parse_lynis_report():
         "kernel_version": "",
         "firewall_active": False,
         "malware_scanner": False,
+        "is_complete": False,
+        "parse_issue": "",
     }
 
     # Collect all raw key-value pairs first for flexible matching
@@ -1685,9 +1918,30 @@ def parse_lynis_report():
     # archivo entero a memoria 2 veces.
     report["sections"] = []
     output_file = "/var/log/lynis-output.log"
-    log_file = output_file if os.path.isfile(output_file) else "/var/log/lynis.log"
+    log_file = ""
     _log_lines = []
-    if os.path.isfile(log_file):
+
+    def _usable_lynis_log(path):
+        if not os.path.isfile(path):
+            return False
+        try:
+            if os.path.getsize(path) <= 0:
+                return False
+            # Avoid mixing a newly created sparse report with a stale log from
+            # an older run. A fresh Lynis log should be at least as recent as
+            # the current report, allowing a small clock/file-system margin.
+            if os.path.isfile(report_file):
+                return os.path.getmtime(path) >= os.path.getmtime(report_file) - 300
+            return True
+        except Exception:
+            return False
+
+    for candidate in [output_file, lynis_log_file]:
+        if _usable_lynis_log(candidate):
+            log_file = candidate
+            break
+
+    if log_file:
         try:
             with open(log_file, 'r') as f:
                 _log_lines = f.readlines()
@@ -1764,7 +2018,7 @@ def parse_lynis_report():
                 # Format: "Key:           value" or "Key : value"
                 if ":" in stripped:
                     if not report["hardening_index"] and "Hardening index" in stripped:
-                        m = re.search(r'Hardening index\s*:\s*(\d+)', stripped)
+                        m = re.search(r'Hardening index\s*:?\s*\[?(\d+)\]?', stripped)
                         if m:
                             report["hardening_index"] = int(m.group(1))
                     elif report["tests_performed"] == 0 and "Tests performed" in stripped:
@@ -1926,6 +2180,15 @@ def parse_lynis_report():
                             report["firewall_active"] = True
                         if "malware" in sw_name and sw_status == "V":
                             report["malware_scanner"] = True
+
+                # lynis.log does not contain the formatted "Software
+                # components" block, but it does log the underlying result
+                # lines. Use those as a fallback for the quick status cards.
+                s_lower = sstripped.lower()
+                if "host based firewall or packet filter is active" in s_lower:
+                    report["firewall_active"] = True
+                if "no malware scanner found" in s_lower:
+                    report["malware_scanner"] = False
 
                 # Parse warning lines: "! Warning text [TEST-ID]"
                 if in_warnings and sstripped.startswith('!'):
@@ -2175,10 +2438,12 @@ def parse_lynis_report():
     # Calculate Proxmox-adjusted score
     # Lynis score is based on total tests and findings.
     # We boost the score proportionally to the expected items.
-    raw_score = report["hardening_index"] or 0
+    raw_score = report["hardening_index"]
     total_findings = len(report["warnings"]) + len(report["suggestions"])
     expected_findings = pve_expected_warnings + pve_expected_suggestions
-    if total_findings > 0 and raw_score > 0:
+    if raw_score is None:
+        adjusted_score = None
+    elif total_findings > 0 and raw_score > 0:
         # Each finding roughly reduces the score. Expected findings should
         # not penalize. We estimate the boost proportionally.
         penalty_per_finding = (100 - raw_score) / max(total_findings, 1)
@@ -2191,6 +2456,9 @@ def parse_lynis_report():
     report["proxmox_expected_warnings"] = pve_expected_warnings
     report["proxmox_expected_suggestions"] = pve_expected_suggestions
     report["proxmox_context_applied"] = True
+    report["is_complete"] = report["hardening_index"] is not None and report["tests_performed"] > 0
+    if not report["is_complete"]:
+        report["parse_issue"] = "Lynis report is incomplete: hardening index or test count is missing."
 
     return report
 

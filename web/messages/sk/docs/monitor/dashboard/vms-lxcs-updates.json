@@ -1,0 +1,195 @@
+{
+  "meta": {
+    "title": "Aktualizácie LXC: OS, aplikácie a Docker | ProxMenux",
+    "description": "Nastavenie a spúšťanie aktualizácií operačného systému, aplikácií, Docker Engine a Docker obrazov v LXC kontajneri."
+  },
+  "header": {
+    "title": "Aktualizácie LXC: OS, aplikácie a Docker",
+    "description": "Skontrolujte každý cieľ samostatne alebo spojte presný výber do riadenej hromadnej aktualizácie."
+  },
+  "intro": {
+    "p1": "Karta <strong>Aktualizácie</strong> oddeľuje zisťovanie verzie od akcie, ktorá aktualizáciu nainštaluje. Registrácia a voliteľné sledovanie verzie sú na <link>karte Aplikácia</link>; spustiteľné metódy aktualizácie sa spravujú tu.",
+    "p2": "Uložená aplikácia sa zobrazí v Aktualizáciách aj vtedy, keď obsahuje iba webový odkaz. Sledovanie verzie je voliteľné a aktualizátor možno nastaviť nezávisle.",
+    "callout": "Akcia sa neurčuje iba podľa názvu aplikácie. ProxMenux spustí integrovanú metódu až po jej overení alebo výslovne uložený vlastný príkaz."
+  },
+  "overview": {
+    "heading": "Obsah karty",
+    "lead": "Každý dostupný cieľ má vlastnú sekciu a akciu:",
+    "items": [
+      "<strong>Balíky OS</strong> pre kontajnery Debian, Ubuntu a Alpine.",
+      "Samostatnú sekciu pre každú <strong>registrovanú aplikáciu</strong> vrátane záznamov iba s odkazom.",
+      "Sekciu <strong>Docker</strong> po registrácii Dockeru, v ktorej sú spolu Docker Engine a označené obrazy.",
+      "Nastaviteľnú <strong>Hromadnú aktualizáciu</strong>, za ktorou nasledujú možnosti zálohy, reštartu a plánovania."
+    ]
+  },
+  "mechanisms": {
+    "heading": "Výber metódy aktualizácie",
+    "lead": "Integrovaná cesta Proxmox VE Helper-Scripts používa oficiálny mechanizmus <helper>update-apps</helper>. Ostatné inštalácie používajú príslušnú metódu balíkov, Dockeru alebo vlastného príkazu.",
+    "officialReference": "Oficiálna referencia: <helper>dokumentácia update-apps od Proxmox VE Helper-Scripts</helper> opisuje interaktívny aj bezobslužný režim, zálohy, simuláciu, dočasné prostriedky na zostavenie, protokoly a návratové kódy.",
+    "colSource": "Zdroj",
+    "colAction": "Zobrazená akcia",
+    "colNotes": "Čo sa spustí",
+    "rows": [
+      {
+        "source": "Balíky APT alebo APK",
+        "action": "Použiť aktualizácie OS",
+        "notes": "Aktualizuje balíky kontajnera. Registrované aplikácie nainštalované ako dpkg alebo apk sú zahrnuté v rovnakom behu."
+      },
+      {
+        "source": "Proxmox VE Helper-Scripts",
+        "action": "Použiť aktualizáciu",
+        "notes": "Používa overený wrapper /usr/bin/update. Starý marker bez platného wrappera sa identifikuje, ale automaticky sa nespustí."
+      },
+      {
+        "source": "Vlastný príkaz",
+        "action": "Spustiť aktualizátor",
+        "notes": "Spustí uložený príkaz v LXC a nahradí integrovaný aktualizátor danej aplikácie."
+      },
+      {
+        "source": "Docker Engine",
+        "action": "Aktualizovať Docker Engine",
+        "notes": "Aktualizuje iba nainštalované balíky Dockeru a potrebné závislosti. Ostatné balíky ani kontajnery nemení."
+      },
+      {
+        "source": "Docker obraz",
+        "action": "Aktualizovať obraz",
+        "notes": "Stiahne vybraný obraz a znova vytvorí jeho skupinu služieb Compose alebo chránený samostatný kontajner."
+      }
+    ],
+    "callout": "Vlastný príkaz vždy <strong>nahrádza</strong> integrovaný aktualizátor Proxmox VE Helper-Scripts pre danú aplikáciu. Obe metódy sa nespúšťajú za sebou."
+  },
+  "docker": {
+    "heading": "Docker Engine a Docker obrazy",
+    "lead": "Po registrácii Dockeru na karte Aplikácia sa engine a inventár obrazov zobrazia v rovnakej sekcii <strong>Docker</strong>.",
+    "items": [
+      "Sledovanie verzie Docker Engine je oddelené od počítadla balíkov OS a má vlastné tlačidlo aktualizácie.",
+      "Označené lokálne obrazy sa porovnávajú s registrom pomocou nemenného digestu. <strong>Skontrolovať teraz</strong> obnoví inventár bez sťahovania obrazov alebo reštartu kontajnerov.",
+      "Služby Compose sa aktualizujú z deklarovaného projektu. Obrazy rovnakej skupiny sa spracujú spolu, aby sa projekt nevytváral opakovane.",
+      "Samostatný kontajner sa znova vytvorí z aktuálnej konfigurácie. Chránený postup uchová údaje na návrat a pri chybe obnoví pôvodný kontajner.",
+      "Každý obraz možno vybrať samostatne pre manuálne, hromadné aj plánované aktualizácie, okrem deklarovaných závislostí Compose, ktoré musia nasledovať hlavnú službu."
+    ],
+    "callout": "Kontajnery spustené v Dockeri sa nezobrazujú ako samostatné aplikácie LXC. Ich publikované webové porty možno uložiť ako odkazy Dockeru; aktualizácie obrazov zostávajú v sekcii Docker."
+  },
+  "actions": {
+    "heading": "Samostatné akcie a farby stavu",
+    "lead": "Každá sekcia zostáva samostatne ovládateľná aj po nastavení hromadnej aktualizácie.",
+    "items": [
+      "Tlačidlo <strong>Upraviť</strong> je vždy dostupné. Integrované metódy zobrazia aktuálny príkaz, ktorý možno skontrolovať, nahradiť alebo vymazať.",
+      "Ak je sledovanie verzie vypnuté, ale aktualizátor existuje, zobrazí sa neutrálna akcia <strong>Spustiť aktualizátor</strong>. ProxMenux netvrdí, že je dostupná aktualizácia.",
+      "Ak metóda neexistuje, <strong>Nastaviť</strong> otvorí editor vlastného príkazu.",
+      "Akcia <strong>Aktualizovať obraz</strong> ovplyvní iba vybranú jednotku Dockeru, nie Docker Engine ani nesúvisiace obrazy."
+    ],
+    "statusColState": "Známy stav",
+    "statusColAppearance": "Vzhľad",
+    "statusColMeaning": "Význam",
+    "statusRows": [
+      {
+        "state": "Overená dostupná aktualizácia",
+        "appearance": "Fialový text, ikona šípky nahor a fialová akcia",
+        "meaning": "Nainštalovaná a dostupná verzia alebo digesty obrazov sa líšia."
+      },
+      {
+        "state": "Overene aktuálne",
+        "appearance": "Zelená kontrola a zelená akcia Aktualizované",
+        "meaning": "Posledná dokončená kontrola potvrdila, že cieľ je aktuálny."
+      },
+      {
+        "state": "Neznáma verzia",
+        "appearance": "Neutrálny text a neutrálna akcia",
+        "meaning": "Aktualizátor sa dá spustiť, ale bez údajov o verzii nemožno určiť stav."
+      }
+    ]
+  },
+  "custom": {
+    "heading": "Vlastné aktualizačné príkazy",
+    "lead": "Vlastný príkaz pokrýva inštalácie bez overeného integrovaného aktualizátora a môže nahradiť bežný postup.",
+    "items": [
+      "Ak je pole prázdne, otvorte <strong>Nastaviť</strong>; ak metóda existuje, otvorte <strong>Upraviť</strong>.",
+      "Pri integrovanej aplikácii alebo Docker Engine editor zobrazí používaný príkaz. Uložením iného obsahu sa vytvorí výslovná náhrada pre daný záznam.",
+      "Úplný postup najprv otestujte v termináli LXC. Musí byť neinteraktívny, používať správny adresár a pri chybe vrátiť nenulový kód.",
+      "Nepridávajte <code>pct exec</code>; ProxMenux už vstupuje do kontajnera a príkaz spúšťa ako root."
+    ],
+    "exampleLead": "Príklad úplného postupu v kontajneri:",
+    "example": "cd /opt/moja-aplikacia && ./update.sh",
+    "callout": "Príkaz ako <code>myapp --version</code> iba číta verziu a nič neaktualizuje. Príkazy sa spúšťajú s oprávneniami správcu a musia sa kontrolovať ako príkazy shellu root."
+  },
+  "bulk": {
+    "heading": "Hromadná aktualizácia",
+    "lead": "Hromadná aktualizácia vytvorí jednu opakovane použiteľnú akciu pre presný súbor cieľov v LXC. Nachádza sa za sekciami aplikácií a Dockeru a pred <strong>Možnosťami</strong>.",
+    "items": [
+      "Balíky OS sú povinné. Musí byť vybraná aspoň jedna ďalšia aplikácia, Docker Engine alebo jednotka Docker obrazu.",
+      "Aplikácie a jednotky Dockeru sa vyberajú samostatne. Hlavná služba Compose zobrazuje závislosti, ktoré sa aktualizujú spolu s ňou.",
+      "Odstránené alebo nedostupné ciele sa označia ako neaktuálne a pred uložením ich treba odstrániť.",
+      "Tlačidlo <strong>Použiť aktualizácie</strong> je fialové, ak má niektorý vybraný cieľ overenú aktualizáciu, zelené, ak sú všetky overene aktuálne, a neutrálne pri neznámom výsledku.",
+      "Odstránenie hromadnej konfigurácie neodstráni samostatné metódy ani plánovanie."
+    ],
+    "callout": "Hromadná aktualizácia nenahrádza samostatné tlačidlá. Je to voliteľná skratka pre výber, ktorý sa má spustiť spolu."
+  },
+  "options": {
+    "heading": "Možnosti zálohy a reštartu",
+    "lead": "Rovnaké možnosti platia pre manuálne, hromadné aj plánované behy:",
+    "items": [
+      "<strong>Snímka pred použitím</strong> vytvorí zálohu vzdump vo vybranom úložisku. Ak požadovaná záloha zlyhá, aktualizácia sa nespustí.",
+      "<strong>Reštartovať po použití</strong> reštartuje LXC iba po úspešnom behu.",
+      "Voľby sa ukladajú pre každý LXC a sú nezávislé od zoznamu cieľov."
+    ]
+  },
+  "scheduled": {
+    "heading": "Plánované aktualizácie",
+    "lead": "Plán používa rovnaké spustiteľné ciele a bezpečnostné možnosti ako manuálne akcie.",
+    "items": [
+      "Vyberte predvoľbu alebo cron výraz a potom presné ciele: balíky OS, jednotlivé aplikácie, Docker Engine, samostatné jednotky Dockeru alebo skupiny služieb Compose.",
+      "Oneskorenie po vydaní platí iba pre vybrané aplikácie so sledovaním verzie. Aplikácie bez sledovania spustia aktualizátor pri každom termíne.",
+      "Stav posledného behu rozlišuje úspech, čiastočné dokončenie, zlyhanie, bezpečnostné pozdržanie a stav bez čakajúcich aktualizácií.",
+      "Zistené externé plány Proxmox VE Helper-Scripts sa zobrazia samostatne, aby bola viditeľná prekrývajúca sa automatizácia."
+    ],
+    "callout": "Pred zapnutím plánu otestujte každú vybranú metódu manuálne. Plánovaný príkaz nemôže odpovedať na interaktívne otázky."
+  },
+  "completion": {
+    "heading": "Čo sa stane po dokončení",
+    "lead": "Aktualizácia sa nepovažuje za dokončenú iba preto, že príkaz v termináli skončil.",
+    "items": [
+      "Rovnaký beh uloží konečný výsledok a podľa potreby obnoví stav balíkov OS, verzie aplikácií a inventár Dockeru.",
+      "Vyrovnávacia pamäť LXC sa nahradí overeným stavom po aktualizácii, takže odznaky a tlačidlá nezostanú v starom stave.",
+      "Po spustení zastaveného alebo obnoveného LXC existujúca udalosť životného cyklu znova obnoví tento LXC. Inventár Dockeru čaká na pripravenosť démona a dočasne prázdny výsledok nepovažuje za konečný.",
+      "Povolené upozornenia sa odošlú z dokončeného behu vrátane čiastočných zlyhaní a zoskupených výsledkov Docker obrazov."
+    ]
+  },
+  "troubleshooting": {
+    "heading": "Bežné situácie",
+    "colProblem": "Situácia",
+    "colResolution": "Riešenie",
+    "rows": [
+      {
+        "problem": "Nebola zistená metóda aktualizácie",
+        "resolution": "Otvorte Nastaviť, pridajte oficiálny neinteraktívny postup a pred plánovaním ho otestujte manuálne."
+      },
+      {
+        "problem": "Zobrazí sa identita Proxmox VE Helper-Scripts, ale nie akcia",
+        "resolution": "LXC obsahuje staré identifikačné údaje bez overeného wrappera /usr/bin/update. Vlastnú metódu pridajte až po potvrdení správneho postupu."
+      },
+      {
+        "problem": "Docker obrazy sú po štarte alebo obnovení dočasne prázdne",
+        "resolution": "Počkajte na pripravenosť Dockeru alebo stlačte Skontrolovať teraz. Inventár štart opakuje a dočasne prázdny výsledok nepovažuje za konečný."
+      },
+      {
+        "problem": "Uložený hromadný cieľ už nie je dostupný",
+        "resolution": "Upravte konfiguráciu, odstráňte neaktuálny cieľ a vyberte jeho aktuálnu náhradu, ak existuje."
+      },
+      {
+        "problem": "Vlastný príkaz zlyhá",
+        "resolution": "Spustite ho v termináli LXC a skontrolujte cestu, závislosti, neinteraktívne parametre a návratový kód."
+      }
+    ]
+  },
+  "figures": {
+    "osPending": {
+      "alt": "Sekcia balíkov operačného systému s počtom čakajúcich a bezpečnostných aktualizácií",
+      "caption": "Sekcia operačného systému udržiava balíky oddelené od akcií aplikácií a Dockeru."
+    },
+    "options": {
+      "alt": "Možnosti aktualizácie LXC so zálohou pred a reštartom po použití",
+      "caption": "Nastavenia zálohy a reštartu platia pre manuálne, hromadné aj plánované behy."
+    }
+  }
+}

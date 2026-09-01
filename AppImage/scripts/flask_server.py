@@ -33,6 +33,7 @@ except ImportError:
     pass
 
 import glob
+import hashlib
 import json
 import logging
 import math
@@ -50,6 +51,7 @@ import tempfile
 import time
 import threading
 import urllib.parse
+import uuid
 import hardware_monitor
 from health_persistence import health_persistence
 import xml.etree.ElementTree as ET
@@ -67,10 +69,23 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 if BASE_DIR not in sys.path:
     sys.path.insert(0, BASE_DIR)
 
+from smartctl_resolver import (  # noqa: E402
+    is_usb_disk as resolver_is_usb_disk,
+    probe_smartctl_json,
+    resolve_smartctl_probe,
+    smartctl_command,
+    smartctl_probe_types,
+    smartctl_type_args,
+)
+from temperature_sensor_resolver import get_storage_temperatures  # noqa: E402
 from flask_script_runner import script_runner
 import threading
-from proxmox_storage_monitor import proxmox_storage_monitor
-from flask_terminal_routes import terminal_bp, init_terminal_routes  # noqa: E402
+from proxmox_storage_monitor import classify_storage_state, proxmox_storage_monitor
+from flask_terminal_routes import (  # noqa: E402
+    terminal_bp,
+    init_terminal_routes,
+    set_script_completion_hook,
+)
 from flask_health_routes import health_bp  # noqa: E402
 from flask_auth_routes import auth_bp  # noqa: E402
 from flask_proxmenux_routes import proxmenux_bp  # noqa: E402
@@ -79,7 +94,7 @@ from flask_notification_routes import notification_bp  # noqa: E402
 from flask_oci_routes import oci_bp  # noqa: E402
 from notification_manager import notification_manager  # noqa: E402
 import post_install_versions  # noqa: E402  — Sprint 12A: detect post-install function updates
-from jwt_middleware import require_auth, require_auth_or_ticket  # noqa: E402
+from jwt_middleware import require_auth, require_auth_or_ticket, require_admin_scope  # noqa: E402
 import auth_manager  # noqa: E402
 
 # -------------------------------------------------------------------
@@ -403,6 +418,115 @@ def identify_gpu_type(name, vendor=None, bus=None, driver=None):
     return 'PCI'
 
 
+# ── Fast direct readers — replace `pvesh get` for VM/LXC config + status ──
+# `pvesh` forks a Perl client that authenticates and round-trips over
+# HTTPS to the local pveproxy — every call takes 1-3 s on an idle host
+# and can spike past 5 s under load. Reading the same information from
+# pmxcfs (`/etc/pve/*.conf`, tmpfs-backed) and the runtime PID/cgroup
+# markers is sub-millisecond and requires no privileges we don't already
+# have. The `pvesh` shape (JSON keys) is preserved so consumers of
+# these helpers see zero difference.
+
+_NUMERIC_CONF_KEYS = frozenset({
+    'cores', 'sockets', 'memory', 'balloon', 'numa',
+    'onboot', 'protection', 'tablet', 'agent', 'localtime',
+    'swap', 'cpulimit', 'cpuunits', 'kvm', 'hotplug',
+    'unprivileged', 'template', 'shares',
+})
+
+
+def _read_pve_conf_fast(path: str) -> dict:
+    """Parse a PVE guest config file into the same dict shape that
+    `pvesh get /nodes/<node>/{qemu,lxc}/<vmid>/config` returns.
+
+    * `# …` comments (URL-encoded per PVE convention) become
+      `description` after urldecoding.
+    * `[snapshot_name]` sections mark the end of the live config —
+      everything after belongs to stored snapshots and is skipped.
+    * Lines starting with `lxc.` are grouped into an `lxc` array of
+      `[key, value]` pairs (matches pvesh output for LXC extras).
+    * Known-numeric keys are coerced to int.
+    * The file's sha1 becomes `digest`, mirroring pvesh.
+    """
+    import hashlib
+    from urllib.parse import unquote
+
+    config: dict = {}
+    lxc_lines: list = []
+    description_lines: list = []
+    in_snapshot = False
+
+    try:
+        with open(path, 'rb') as f:
+            raw_bytes = f.read()
+    except (FileNotFoundError, PermissionError, OSError):
+        return {}
+
+    for line in raw_bytes.decode('utf-8', errors='replace').splitlines():
+        if line.startswith('[') and line.endswith(']'):
+            in_snapshot = True
+            continue
+        if in_snapshot:
+            continue
+        if line.startswith('#'):
+            description_lines.append(unquote(line[1:].lstrip(' ')))
+            continue
+        if ':' not in line:
+            continue
+
+        key, _, value = line.partition(':')
+        key = key.strip()
+        value = value.strip()
+
+        if key.startswith('lxc.'):
+            lxc_lines.append([key, value])
+            continue
+
+        if key in _NUMERIC_CONF_KEYS:
+            try:
+                value = int(value)
+            except ValueError:
+                pass
+
+        config[key] = value
+
+    if description_lines:
+        # pvesh appends a trailing newline; matching keeps downstream
+        # comparisons that split on '\n' behaving the same way.
+        config['description'] = '\n'.join(description_lines) + '\n'
+    if lxc_lines:
+        config['lxc'] = lxc_lines
+    if raw_bytes:
+        config['digest'] = hashlib.sha1(raw_bytes).hexdigest()
+
+    return config
+
+
+def _detect_vm_type_local(vmid: int) -> str | None:
+    """Return `'qemu'` / `'lxc'` / `None` by checking which config file
+    exists on this node. Sub-millisecond; no subprocess."""
+    if os.path.exists(f'/etc/pve/qemu-server/{vmid}.conf'):
+        return 'qemu'
+    if os.path.exists(f'/etc/pve/lxc/{vmid}.conf'):
+        return 'lxc'
+    return None
+
+
+def _fast_guest_status(vmid: int, vm_type: str) -> str:
+    """Return `'running'` / `'stopped'` without invoking pvesh/qm/pct.
+
+    * qemu: pveproxy writes `/run/qemu-server/<vmid>.pid` on start and
+      removes it on stop — presence is authoritative.
+    * lxc: pve-container creates the cgroup `/sys/fs/cgroup/lxc/<vmid>`
+      on start, systemd removes it on stop.
+    Both checks are pure `os.path` calls — microseconds — vs the
+    ~1.1 s that `pct status` / `qm status` need for the same answer.
+    """
+    if vm_type == 'qemu':
+        return 'running' if os.path.exists(f'/run/qemu-server/{vmid}.pid') else 'stopped'
+    return 'running' if os.path.isdir(f'/sys/fs/cgroup/lxc/{vmid}') else 'stopped'
+
+
 def parse_lxc_hardware_config(vmid, node):
     """Parse LXC configuration file to detect hardware passthrough"""
     hardware_info = {
@@ -483,6 +607,73 @@ def parse_lxc_hardware_config(vmid, node):
         pass
     
     return hardware_info
+
+
+def _get_lxc_primary_ip_cached(vmid):
+    """Return the LXC's primary non-Docker IP with an indefinite
+    cache. First read per CT spawns one `lxc-info` subprocess;
+    subsequent reads are free until the CT's lifecycle event drops
+    the entry via `_invalidate_lxc_ip`. A running CT's IP doesn't
+    change on its own — the invalidation on start/stop/reboot is the
+    only path that requires re-probing.
+    """
+    try:
+        vmid_int = int(vmid)
+    except (TypeError, ValueError):
+        return None
+    if vmid_int in _lxc_ip_cache:
+        return _lxc_ip_cache[vmid_int]
+    info = get_lxc_ip_from_lxc_info(vmid_int)
+    ip = None
+    if info:
+        ip = info.get('primary_ip') or (info.get('real_ips') or [None])[0]
+    _lxc_ip_cache[vmid_int] = ip
+    return ip
+
+
+def _invalidate_lxc_ip(vmid):
+    """Drop the cached IP so the next request re-probes `lxc-info`.
+    Fired from the guest lifecycle handler on start/stop/reboot."""
+    try:
+        _lxc_ip_cache.pop(int(vmid), None)
+    except (TypeError, ValueError):
+        pass
+
+
+def _warmup_lxc_ip_cache() -> int:
+    """Populate the LXC IP cache for every running CT at Monitor
+    startup. After this runs, /api/vms serves the IPs from memory
+    without spawning `lxc-info` on the request path — the cache only
+    changes when a CT's lifecycle event (start/stop/reboot) fires the
+    invalidator. Returns the count for the startup log line.
+    """
+    try:
+        result = subprocess.run(
+            ['/usr/sbin/pct', 'list'],
+            capture_output=True, text=True, timeout=10,
+        )
+    except (FileNotFoundError, OSError, subprocess.TimeoutExpired):
+        return 0
+    if result.returncode != 0:
+        return 0
+    count = 0
+    for line in result.stdout.splitlines()[1:]:
+        parts = line.split()
+        if len(parts) < 2:
+            continue
+        try:
+            vmid_int = int(parts[0])
+        except ValueError:
+            continue
+        if parts[1].lower() != 'running':
+            continue
+        info = get_lxc_ip_from_lxc_info(vmid_int)
+        ip = None
+        if info:
+            ip = info.get('primary_ip') or (info.get('real_ips') or [None])[0]
+        _lxc_ip_cache[vmid_int] = ip
+        count += 1
+    return count
 
 
 def get_lxc_ip_from_lxc_info(vmid):
@@ -1476,6 +1667,818 @@ _hardware_cache = {
     'lsblk_time': 0,
 }
 _HARDWARE_CACHE_TTL = 300  # 5 minutes - hardware doesn't change
+
+# VM guest-agent disk usage — refreshed by a daemon thread, read by
+# /api/vms and by the health monitor. Keeping the subprocess OUT of the
+# hot path is what makes this whole feature affordable: /api/vms is
+# polled every few seconds by the dashboard, and blocking it on a
+# per-VM `qm guest cmd` (200 ms – 3 s per VM depending on agent state)
+# would silently regress a previously instant endpoint. The refresher
+# absorbs that cost off-request and every reader gets a dict lookup.
+#
+# Cache stores the ALREADY-COMPUTED (used_bytes, total_bytes) tuple —
+# not the raw fsinfo — so readers never parse or filter, and the
+# expensive dedup / filesystem-type filtering runs at most once per
+# refresh cycle per VM.
+_vm_disk_cache = {}           # vmid -> (fetched_at, (used, total) or None)
+_VM_DISK_REFRESH_PERIOD = 60  # seconds between full refresh cycles
+_VM_DISK_STALE_AFTER = 300    # readers ignore entries older than this
+_VM_DISK_GA_TIMEOUT = 3       # per-VM `qm guest cmd` timeout (seconds)
+_VM_DISK_REFRESH_WORKERS = 6  # parallelism cap for the fsinfo pass
+
+# ── Per-VM modal caches ────────────────────────────────────────────
+# The VM/LXC modal fires several pvesh-backed calls the moment a user
+# opens it (config, backups, apps, schedule). Each was recomputing on
+# every open, so reopening the same guest re-paid all the latency and
+# the tabs showed "Loading…" every time. These caches memoise the
+# per-guest payloads and publish write results back into the same cache
+# so the client never sees stale data—or a cold loading state—after its
+# own edit. Guest lifecycle actions still invalidate because their new
+# state must be probed rather than inferred from an API response.
+_vm_details_cache: dict = {}      # vmid -> (ts, payload)
+_vm_backups_cache: dict = {}      # vmid -> (ts, payload)
+_vm_apps_cache: dict = {}         # vmid -> (ts, payload)
+_vm_app_suggestions_cache: dict = {}  # vmid -> (ts, payload)
+_vm_schedule_cache: dict = {}     # vmid -> (ts, payload)
+_vm_mounts_cache: dict = {}       # vmid -> (ts, payload) — LXC only
+# LXC primary IP cache — populated on first read, held indefinitely.
+# A running CT's IP doesn't change; the cache is invalidated only when
+# the CT's lifecycle event fires (start/stop/reboot), so no periodic
+# polling is needed. See `_handle_guest_lifecycle`.
+_lxc_ip_cache: dict = {}
+# Effective TTL is "indefinite": these caches are refreshed only
+# by explicit event-based invalidation (`_vm_cache_invalidate` calls
+# on start/stop/reboot, add/edit/delete app, apply update, edit
+# schedule, create backup). No periodic poll — the prewarmer runs
+# once at startup and then stays quiet. The rationale is that all
+# of these payloads are backed by files (.conf / sidecar JSON /
+# storage inventory) that only change through actions the Monitor
+# either performs itself (invalidates in-line) or that require a
+# guest restart (start/stop invalidates too). Runtime data that DOES
+# change without an invalidation event lives in a different path:
+#   - Live CPU/mem/disk/network per guest → served by /api/vms (SWR
+#     poll every 2.5 s from the client, no cache here).
+#   - Firewall log → served on-demand, no cache at all.
+#   - Mount points runtime (df/stat/ad-hoc) → to be split into a
+#     separate always-fresh endpoint (Fase 5).
+#   - Backups appearing outside Monitor (cron/scheduled/retention)
+#     → client passes ?fresh=1 when its own cache is older than 6 h
+#     (Fase 4).
+_VM_CACHE_INDEFINITE = 315_360_000   # 10 years — effectively infinite
+_VM_DETAILS_TTL   = _VM_CACHE_INDEFINITE
+_VM_BACKUPS_TTL   = _VM_CACHE_INDEFINITE
+_VM_APPS_TTL      = _VM_CACHE_INDEFINITE
+_VM_APP_SUGGESTIONS_TTL = _VM_CACHE_INDEFINITE
+_VM_SCHEDULE_TTL  = _VM_CACHE_INDEFINITE
+_VM_MOUNTS_TTL    = _VM_CACHE_INDEFINITE
+_vm_modal_cache_lock = threading.Lock()
+
+def _vm_cache_get(cache: dict, vmid: int, ttl: int):
+    """Return cached payload for vmid if still fresh, else None."""
+    with _vm_modal_cache_lock:
+        hit = cache.get(vmid)
+    if hit and (time.time() - hit[0]) < ttl:
+        return hit[1]
+    return None
+
+def _vm_cache_put(cache: dict, vmid: int, value) -> None:
+    with _vm_modal_cache_lock:
+        cache[vmid] = (time.time(), value)
+
+def _vm_cache_invalidate(vmid: int, *caches) -> None:
+    """Drop this vmid's entries from the given caches. With no argument
+    hits every per-VM modal cache — used by write actions that could
+    affect any of them (e.g. control start/stop flips status, which
+    lives in the details payload)."""
+    targets = caches or (
+        _vm_details_cache, _vm_backups_cache, _vm_apps_cache,
+        _vm_app_suggestions_cache, _vm_schedule_cache, _vm_mounts_cache,
+    )
+    with _vm_modal_cache_lock:
+        for c in targets:
+            c.pop(vmid, None)
+
+
+# Guest lifecycle cache refresh. A restored backup can roll an LXC/VM back
+# while ProxMenux still holds the pre-restore modal, version and Docker state.
+# Track stopped -> running transitions and rebuild only that guest's snapshot.
+_guest_lifecycle_lock = threading.RLock()
+_guest_refresh_inflight: set[int] = set()
+_guest_modal_cache_revision: dict[int, int] = {}
+_guest_modal_cache_epoch = int(time.time() * 1000)
+
+
+def _publish_guest_modal_cache_revision(vmid: int) -> int:
+    """Publish one completed cache stage for a guest.
+
+    A lifecycle rebuild has two useful completion points: the operational
+    snapshot (registered apps, update state and Docker inventory), followed by
+    the much slower catalog-wide application suggestion scan. Publishing a
+    revision at each point lets the browser consume Docker immediately instead
+    of waiting several minutes for unrelated discovery probes.
+    """
+    with _guest_lifecycle_lock:
+        revision = _guest_modal_cache_revision.get(
+            int(vmid), _guest_modal_cache_epoch
+        ) + 1
+        _guest_modal_cache_revision[int(vmid)] = revision
+        return revision
+
+
+def _wait_for_started_guest(vmid: int, vm_type: str) -> bool:
+    """Wait until the guest—and for LXC, pct exec—is actually usable."""
+    for attempt in range(12):
+        if _fast_guest_status(vmid, vm_type) == 'running':
+            if vm_type != 'lxc':
+                return True
+            try:
+                probe = subprocess.run(
+                    ['/usr/sbin/pct', 'exec', str(vmid), '--', 'true'],
+                    capture_output=True, text=True, timeout=5,
+                )
+                if probe.returncode == 0:
+                    return True
+            except (FileNotFoundError, OSError, subprocess.TimeoutExpired):
+                pass
+        time.sleep(min(1 + attempt, 5))
+    return False
+
+
+def _warm_started_guest_handler(vmid: int, route: str, handler) -> None:
+    """Run one cached Flask handler internally, matching the startup warmer."""
+    from flask import g as _flask_g
+    with app.test_request_context(route):
+        _flask_g._internal_call = True
+        handler(vmid)
+
+
+def _refresh_started_guest(vmid: int, vm_type: str) -> None:
+    """Rebuild the complete cache snapshot for one newly-started guest."""
+    refreshed = False
+    core_published = False
+    docker_refresh_pending = False
+    started_at = time.monotonic()
+    try:
+        if not _wait_for_started_guest(vmid, vm_type):
+            print(f'[ProxMenux] lifecycle refresh {vm_type} {vmid}: guest not ready',
+                  flush=True)
+            return
+
+        # Remove every indefinite modal entry first. If a user opens the modal
+        # during the refresh, handlers recompute instead of serving the state
+        # captured before a backup restore.
+        _vm_cache_invalidate(vmid)
+        _vm_disk_cache.pop(vmid, None)
+
+        if vm_type == 'lxc':
+            import lxc_apps
+            import managed_installs
+
+            lxc_apps.invalidate_suggestion_probes(vmid)
+
+            managed_installs.refresh_lxc(vmid)
+
+            sidecar = lxc_apps.check_all(vmid, force=True)
+            sidecar = sidecar or {'vmid': vmid, 'apps': []}
+            _vm_cache_put(_vm_apps_cache, vmid, sidecar)
+
+            docker_registered = any(
+                isinstance(item, dict) and item.get('helper_slug') == 'docker'
+                for item in (sidecar.get('apps') or [])
+            )
+            docker_present = False
+            docker_ready = False
+            try:
+                rc, _, _ = lxc_apps._pct_exec(
+                    vmid, ['test', '-x', '/usr/bin/docker'], timeout=5,
+                )
+                docker_present = rc == 0
+            except Exception:
+                docker_present = False
+            if docker_registered:
+                # A restored CT can need several minutes to reach
+                # network-online.target before Docker starts. Publish a
+                # truthful transition immediately, keeping only the previous
+                # update-unit identities so bulk selections do not turn into
+                # raw/stale IDs while the daemon is unavailable.
+                lxc_apps.mark_docker_inventory_refreshing(vmid)
+                if docker_present:
+                    try:
+                        rc, _, _ = lxc_apps._pct_exec(
+                            vmid,
+                            ['docker', 'version', '--format', '{{.Server.Version}}'],
+                            timeout=5,
+                        )
+                        docker_ready = rc == 0
+                    except Exception:
+                        docker_ready = False
+                    if docker_ready:
+                        inventory = lxc_apps.get_docker_inventory(vmid, force=True)
+                        docker_refresh_pending = not bool(inventory.get('available'))
+                    else:
+                        docker_refresh_pending = True
+                else:
+                    # The registered Docker app genuinely disappeared in the
+                    # restored snapshot; do not keep retrying a missing binary.
+                    lxc_apps.invalidate_docker_inventory(vmid)
+                    lxc_apps.get_docker_inventory(vmid, force=True)
+
+        handlers = [
+            (f'/api/vms/{vmid}', get_vm_config),
+            (f'/api/vms/{vmid}/backups', api_vm_backups),
+        ]
+        if vm_type == 'lxc':
+            handlers.extend([
+                (f'/api/vms/{vmid}/schedule', api_vm_apps_schedule),
+                (f'/api/lxc/{vmid}/mount-points', api_lxc_mount_points),
+            ])
+        for route, handler in handlers:
+            try:
+                _warm_started_guest_handler(vmid, route, handler)
+            except Exception as exc:
+                print(f'[ProxMenux] lifecycle refresh {vm_type} {vmid} '
+                      f'{route} failed: {exc}', flush=True)
+
+        refreshed = True
+        _publish_guest_modal_cache_revision(vmid)
+        core_published = True
+        print(f'[ProxMenux] lifecycle refresh {vm_type} {vmid}: core ready '
+              f'in {time.monotonic() - started_at:.1f}s', flush=True)
+
+        if vm_type == 'lxc':
+            # Catalog-based suggestion probing is the slowest part of a full
+            # CT rebuild. It is deliberately a second published stage: the
+            # registered-app and Docker snapshot above is already visible to
+            # the UI while discovery continues. A second revision refreshes
+            # only the App suggestions when this sweep eventually finishes.
+            try:
+                suggestions = dict(lxc_apps.get_suggestions(vmid, force=True))
+                suggestions['ready'] = True
+                _vm_cache_put(_vm_app_suggestions_cache, vmid, suggestions)
+                _publish_guest_modal_cache_revision(vmid)
+                print(f'[ProxMenux] lifecycle refresh {vm_type} {vmid}: '
+                      f'suggestions ready in '
+                      f'{time.monotonic() - started_at:.1f}s', flush=True)
+            except Exception as exc:
+                print(f'[ProxMenux] lifecycle refresh {vm_type} {vmid} '
+                      f'suggestions failed: {exc}', flush=True)
+
+            if docker_refresh_pending:
+                # Continue the *existing lifecycle refresh* until Docker is
+                # usable; this is bounded work caused by the start/restore
+                # event, not a new recurring monitor. Core/app data has already
+                # been published, so the UI remains instant while old LXCs
+                # finish a slow network-online boot. A strict `_pct_exec`
+                # deadline keeps every probe short.
+                docker_deadline = time.monotonic() + 7 * 60
+                while time.monotonic() < docker_deadline:
+                    if _fast_guest_status(vmid, vm_type) != 'running':
+                        break
+                    try:
+                        rc, _, _ = lxc_apps._pct_exec(
+                            vmid,
+                            ['docker', 'version', '--format', '{{.Server.Version}}'],
+                            timeout=4,
+                        )
+                    except Exception:
+                        rc = 1
+                    if rc == 0:
+                        try:
+                            inventory = lxc_apps.get_docker_inventory(
+                                vmid, force=True,
+                            )
+                        except Exception as exc:
+                            inventory = {'available': False, 'error': str(exc)}
+                        if inventory.get('available'):
+                            _publish_guest_modal_cache_revision(vmid)
+                            print(
+                                f'[ProxMenux] lifecycle refresh {vm_type} '
+                                f'{vmid}: Docker ready in '
+                                f'{time.monotonic() - started_at:.1f}s',
+                                flush=True,
+                            )
+                            docker_refresh_pending = False
+                            break
+                    time.sleep(5)
+                if docker_refresh_pending:
+                    print(
+                        f'[ProxMenux] lifecycle refresh {vm_type} {vmid}: '
+                        'Docker did not become ready before the deadline',
+                        flush=True,
+                    )
+
+        print(f'[ProxMenux] lifecycle refresh {vm_type} {vmid}: complete',
+              flush=True)
+    except Exception as exc:
+        print(f'[ProxMenux] lifecycle refresh {vm_type} {vmid} failed: {exc}',
+              flush=True)
+    finally:
+        with _guest_lifecycle_lock:
+            if refreshed and not core_published:
+                _guest_modal_cache_revision[vmid] = (
+                    _guest_modal_cache_revision.get(
+                        vmid, _guest_modal_cache_epoch
+                    ) + 1
+                )
+            _guest_refresh_inflight.discard(vmid)
+
+
+def _schedule_started_guest_refresh(vmid: int, vm_type: str) -> bool:
+    """Start at most one targeted refresh per guest."""
+    vmid = int(vmid)
+    with _guest_lifecycle_lock:
+        if vmid in _guest_refresh_inflight:
+            return False
+        _guest_refresh_inflight.add(vmid)
+    threading.Thread(
+        target=_refresh_started_guest,
+        args=(vmid, vm_type),
+        daemon=True,
+        name=f'guest-start-refresh-{vmid}',
+    ).start()
+    return True
+
+
+def _handle_guest_lifecycle(vmid: str, vm_type: str, action: str) -> None:
+    """Consume the VM/CT lifecycle transition already found by TaskWatcher."""
+    try:
+        guest_id = int(vmid)
+    except (TypeError, ValueError):
+        return
+    guest_type = 'lxc' if vm_type == 'lxc' else 'qemu'
+
+    # Make the next resource poll observe the completed PVE task and drop all
+    # indefinite server-side modal state. Starts/reboots repopulate it only
+    # after the guest is actually usable; stops publish an empty-cache
+    # revision immediately because no in-guest refresh is possible.
+    _pvesh_cache['cluster_resources_vm_time'] = 0
+    _vm_cache_invalidate(guest_id)
+    _vm_disk_cache.pop(guest_id, None)
+    # LXC IP can only change when the CT restarts (fresh DHCP lease)
+    # or stops; drop the cached IP so the next /api/vms poll re-reads
+    # it via `lxc-info`. QEMU guests do not touch this cache.
+    if guest_type == 'lxc':
+        _invalidate_lxc_ip(guest_id)
+    if action in ('start', 'reboot'):
+        _schedule_started_guest_refresh(guest_id, guest_type)
+        return
+    if action == 'stop':
+        _publish_guest_modal_cache_revision(guest_id)
+
+# Filesystem types that never count towards VM disk usage:
+# read-only image / CD formats, ram-backed pseudo-fs, kernel virtual
+# filesystems, and union / container overlays. Anything not on this
+# list is treated as real, persistent disk space.
+_VM_FS_SKIP_TYPES = frozenset({
+    # Read-only image / CD formats
+    'erofs', 'squashfs', 'iso9660', 'udf', 'cdfs', 'romfs',
+    # Ram-backed
+    'tmpfs', 'devtmpfs', 'ramfs', 'zram',
+    # Kernel virtual
+    'proc', 'sysfs', 'cgroup', 'cgroup2', 'nsfs', 'fusectl',
+    'binfmt_misc', 'bpf', 'hugetlbfs', 'mqueue', 'pstore',
+    'tracefs', 'debugfs', 'securityfs', 'configfs', 'efivarfs',
+    'rpc_pipefs', 'selinuxfs',
+    # Overlay / union
+    'overlay', 'overlayfs', 'aufs', 'autofs',
+})
+
+
+def _compute_vm_disk_from_fsinfo(fsinfo):
+    """Aggregate real filesystem usage from a QEMU guest agent fsinfo list.
+
+    Returns (used_bytes, total_bytes) when at least one persistent
+    filesystem is found, otherwise None. Filters non-persistent
+    filesystems and deduplicates bind-mounts by their backing block
+    device signature (bus, target, unit, dev) — a Home Assistant OS
+    layout with a dozen bind-mounts of /mnt/data is counted once,
+    Windows System-Reserved partitions of size 0 are dropped so C:\\
+    carries the value.
+    """
+    if not fsinfo:
+        return None
+
+    seen_disks = set()
+    total_used = 0
+    total_size = 0
+
+    for fs in fsinfo:
+        if not isinstance(fs, dict):
+            continue
+
+        fstype = (fs.get('type') or '').lower()
+        if not fstype or fstype in _VM_FS_SKIP_TYPES or fstype.startswith('fuse.'):
+            continue
+
+        # Must be backed by a real block device — bind-mounts to pseudo
+        # filesystems have an empty disk[] and are already accounted
+        # for through the mount that owns the underlying device.
+        disks = fs.get('disk') or []
+        if not disks or not isinstance(disks[0], dict):
+            continue
+
+        try:
+            total = int(fs.get('total-bytes') or 0)
+            used = int(fs.get('used-bytes') or 0)
+        except (TypeError, ValueError):
+            continue
+        if total <= 0:
+            continue
+
+        # Dedup by backing block device AFTER confirming the mount has
+        # a usable size. Windows exposes several partitions of the same
+        # `\\.\PhysicalDrive0` with identical disk[0] info; the
+        # System-Reserved partitions of size 0 often appear before the
+        # real C:\ mount, and marking their signature eagerly would
+        # suppress C:\ and yield None for the entire VM (bug reported
+        # for a Windows 11 VM at 166 GB used / 1965 GB total).
+        d = disks[0]
+        sig = (d.get('bus'), d.get('target'), d.get('unit'), d.get('dev'))
+        if sig in seen_disks:
+            continue
+        seen_disks.add(sig)
+
+        total_size += total
+        total_used += used
+
+    if total_size <= 0:
+        return None
+    return total_used, total_size
+
+
+def _fetch_vm_guest_fsinfo(vmid):
+    """One-shot `qm guest cmd <vmid> get-fsinfo` — invoked only by the
+    background refresher, never on a request path. Returns the parsed
+    JSON list or None on any error (timeout, absent agent, malformed
+    response). Callers must NOT invoke this from an endpoint handler:
+    it blocks for up to _VM_DISK_GA_TIMEOUT seconds per call, which is
+    exactly what the refresher is designed to shield /api/vms from.
+    """
+    try:
+        result = subprocess.run(
+            ['qm', 'guest', 'cmd', str(vmid), 'get-fsinfo'],
+            capture_output=True, text=True, timeout=_VM_DISK_GA_TIMEOUT,
+        )
+        if result.returncode != 0 or not result.stdout.strip():
+            return None
+        try:
+            parsed = json.loads(result.stdout)
+            return parsed if isinstance(parsed, list) else None
+        except (ValueError, TypeError):
+            return None
+    except (subprocess.TimeoutExpired, FileNotFoundError, OSError):
+        return None
+
+
+def get_cached_vm_disk(vmid):
+    """Read the pre-computed VM disk usage from cache — the ONLY function
+    request handlers should call. Returns (used, total) or None when
+    the VM isn't in the cache yet (fresh VM, refresher hasn't run yet)
+    or its data has aged past the staleness window. Never blocks and
+    never spawns subprocesses.
+    """
+    entry = _vm_disk_cache.get(vmid)
+    if entry is None:
+        return None
+    fetched_at, value = entry
+    if time.time() - fetched_at > _VM_DISK_STALE_AFTER:
+        return None
+    return value
+
+
+def _vm_disk_refresh_one(vmid):
+    """Refresh a single VMID's cache entry. Runs in a worker thread of
+    the refresher pool — never on the request path."""
+    fsinfo = _fetch_vm_guest_fsinfo(vmid)
+    computed = _compute_vm_disk_from_fsinfo(fsinfo)
+    _vm_disk_cache[vmid] = (time.time(), computed)
+
+
+def _vm_disk_refresher_loop():
+    """Daemon-thread body that keeps `_vm_disk_cache` warm.
+
+    Every ``_VM_DISK_REFRESH_PERIOD`` seconds, walks the running QEMU
+    VMs from the (already-cached) cluster resources snapshot and fires
+    a parallel `qm guest cmd get-fsinfo` per VM through a small thread
+    pool. Absorbs every subprocess cost off-request so /api/vms is
+    always a dict lookup. Also drops entries for VMs that no longer
+    exist so the cache doesn't leak.
+
+    Robust to transient exceptions in the resources probe — a single
+    bad cycle just delays the next one, it never crashes the thread.
+    """
+    # Small stagger so we don't compete with the request that started
+    # us for the very first cluster-resources fetch.
+    time.sleep(2)
+    while True:
+        cycle_started = time.time()
+        try:
+            resources = get_cached_pvesh_cluster_resources_vm() or []
+            live_vmids = set()
+            targets = []
+            for r in resources:
+                if r.get('type') not in ('qemu', 'vm'):
+                    continue
+                if r.get('status') != 'running':
+                    continue
+                vmid = r.get('vmid')
+                if vmid is None:
+                    continue
+                live_vmids.add(vmid)
+                targets.append(vmid)
+
+            if targets:
+                # Bounded parallelism — fsinfo calls per VM are IO-bound
+                # (waiting on the guest agent), so a small pool wins big
+                # over serial execution but doesn't stampede the host.
+                try:
+                    from concurrent.futures import ThreadPoolExecutor, wait
+                    with ThreadPoolExecutor(max_workers=_VM_DISK_REFRESH_WORKERS) as ex:
+                        futures = [ex.submit(_vm_disk_refresh_one, v) for v in targets]
+                        wait(futures, timeout=_VM_DISK_GA_TIMEOUT * 2)
+                except Exception:
+                    # Fallback to serial if the executor itself fails
+                    for v in targets:
+                        try:
+                            _vm_disk_refresh_one(v)
+                        except Exception:
+                            pass
+
+            # Evict entries for VMs no longer running / removed. Iterate
+            # over a snapshot so the concurrent updates from the workers
+            # above (already finished at this point) don't fight us.
+            for v in list(_vm_disk_cache.keys()):
+                if v not in live_vmids:
+                    _vm_disk_cache.pop(v, None)
+        except Exception:
+            pass
+
+        # Sleep the remainder of the cycle — never less than 5s even if
+        # the refresh took longer, to avoid a busy loop when everything
+        # times out at once.
+        elapsed = time.time() - cycle_started
+        remaining = _VM_DISK_REFRESH_PERIOD - elapsed
+        time.sleep(max(remaining, 5.0))
+
+
+_VM_DISK_REFRESHER_STARTED = False
+def _ensure_vm_disk_refresher():
+    global _VM_DISK_REFRESHER_STARTED
+    if _VM_DISK_REFRESHER_STARTED:
+        return
+    _VM_DISK_REFRESHER_STARTED = True
+    import threading
+    t = threading.Thread(target=_vm_disk_refresher_loop, daemon=True, name='vm-disk-refresher')
+    t.start()
+
+
+# ─── Actions API helpers ─────────────────────────────────────────────────
+#
+# Backing store for POST /api/system/... and POST /api/proxmenux/... —
+# transient systemd units. Doing it this way instead of `subprocess.Popen`
+# gives us four properties for free:
+#
+#   1. Persistence:  the unit outlives the Flask process, so the
+#                    self-update path (which restarts proxmenux-monitor
+#                    mid-install) doesn't lose track of the run.
+#   2. Concurrency:  systemd rejects `systemd-run --unit <name>` if that
+#                    unit is already active, so we return 409 Conflict
+#                    without needing our own flock.
+#   3. Cancellable:  `systemctl stop <unit>` from CLI or DELETE from API.
+#   4. State + log:  `systemctl show ... --property=...` gives us the
+#                    ActiveState / ExecMainStatus / timestamps, and the
+#                    unit's stdout/stderr lands in the journal.
+#
+# Every action gets a stable unit name (one per action, not per run) so
+# the GET .../status endpoint knows where to look without needing the
+# client to remember an opaque run-id.
+
+
+# Snapshot of the last terminal state for each action unit. systemd
+# reclaims transient units the instant they finish (or are stopped
+# explicitly); without this cache, `.../status` would jump back to
+# `idle` seconds after a run ends and callers would never see the
+# exit code / result they polled for. Every time `_action_state`
+# observes a terminal state we snapshot it here; when a later call
+# finds the unit gone from systemd, we serve the snapshot instead.
+_action_last_state = {}  # unit_name -> full state dict
+_ACTION_TERMINAL = ('success', 'failed', 'cancelled')
+
+
+def _action_run(unit_name, cmd_argv, description=None, extra_properties=None):
+    """Launch ``cmd_argv`` as a transient systemd oneshot unit.
+
+    Returns ``(True, {})`` on success or ``(False, {"error": ..., "status": <http>})``
+    on failure. The caller is responsible for mapping the error dict to
+    a jsonify() + status code.
+    """
+    if not unit_name.endswith('.service'):
+        unit_name = f'{unit_name}.service'
+
+    state = _action_state(unit_name)
+    if state.get('state') == 'running':
+        return False, {
+            'error': 'Action already in progress',
+            'unit': unit_name,
+            'state': state,
+            'status': 409,
+        }
+
+    # Starting a new run — clear any previous terminal snapshot so we
+    # don't serve stale exit-code data on the first `.../status` call
+    # after the new run completes.
+    _action_last_state.pop(unit_name, None)
+
+    # Any previous run may have left the unit in "active (exited)" via
+    # RemainAfterExit — reset it so systemd will accept the fresh start.
+    # Silent: reset-failed no-ops when the unit isn't in a failed state,
+    # and stop no-ops when it isn't loaded.
+    try:
+        subprocess.run(['systemctl', 'reset-failed', unit_name],
+                       capture_output=True, text=True, timeout=5)
+    except (subprocess.TimeoutExpired, FileNotFoundError, OSError):
+        pass
+
+    # Type=simple: systemd treats the first process as the main one and
+    # follows its lifecycle — correct for long-running scripts like
+    # `proxmox_update.sh` (minutes) or the self-update installer.
+    # RemainAfterExit=yes: after the main process exits, systemd keeps
+    # the unit in the "active (exited)" state so `.../status` remains
+    # informative (exit code, timestamps, result) instead of returning
+    # to `idle` the instant the run finishes. Without this, transient
+    # units disappear on termination and callers lose the last-run info.
+    run_argv = [
+        'systemd-run',
+        '--unit', unit_name,
+        '--property', 'Type=simple',
+        '--property', 'RemainAfterExit=yes',
+    ]
+    if description:
+        run_argv.extend(['--description', description])
+    for prop in (extra_properties or []):
+        run_argv.extend(['--property', prop])
+    run_argv.extend(cmd_argv)
+
+    try:
+        proc = subprocess.run(run_argv, capture_output=True, text=True, timeout=10)
+    except (subprocess.TimeoutExpired, FileNotFoundError, OSError) as e:
+        return False, {'error': f'systemd-run failed to launch: {e}', 'status': 500}
+
+    if proc.returncode != 0:
+        return False, {
+            'error': 'systemd-run refused to start the unit',
+            'stderr': (proc.stderr or '').strip(),
+            'status': 500,
+        }
+    return True, {}
+
+
+def _action_state(unit_name):
+    """Read the state of a transient action unit.
+
+    Returns a uniform dict — ALWAYS the same keys regardless of whether
+    the unit ever existed. Callers can jsonify() it directly.
+
+    ``state`` values:
+        ``idle``      – never run (or fully cleaned up)
+        ``running``   – currently executing
+        ``success``   – last run finished with exit 0
+        ``failed``    – last run finished with non-zero exit
+        ``cancelled`` – last run was stopped via DELETE / systemctl stop
+        ``unknown``   – systemctl responded with a shape we don't expect
+    """
+    if not unit_name.endswith('.service'):
+        unit_name = f'{unit_name}.service'
+
+    empty = {
+        'unit': unit_name,
+        'state': 'idle',
+        'started_at': None,
+        'finished_at': None,
+        'exit_code': None,
+        'result': None,
+    }
+
+    try:
+        proc = subprocess.run(
+            ['systemctl', 'show', unit_name,
+             '--property=LoadState,ActiveState,SubState,Result,ExecMainStatus,ExecMainStartTimestamp,ExecMainExitTimestamp'],
+            capture_output=True, text=True, timeout=5,
+        )
+    except (subprocess.TimeoutExpired, FileNotFoundError, OSError):
+        return empty
+
+    if proc.returncode != 0:
+        return empty
+
+    props = {}
+    for line in proc.stdout.splitlines():
+        if '=' in line:
+            k, _, v = line.partition('=')
+            props[k] = v
+
+    if props.get('LoadState') == 'not-found':
+        # systemd already reclaimed the transient unit. If we have a
+        # snapshot of its terminal state, serve that so the caller sees
+        # the exit code / result / timestamps of the last run.
+        snap = _action_last_state.get(unit_name)
+        return snap if snap else empty
+
+    active = props.get('ActiveState', '')
+    sub = props.get('SubState', '')
+    result = props.get('Result', '') or None
+
+    exit_code = props.get('ExecMainStatus')
+    try:
+        exit_code = int(exit_code) if exit_code not in (None, '') else None
+    except (TypeError, ValueError):
+        exit_code = None
+
+    # Type=simple + RemainAfterExit=yes semantics:
+    #   active/running  → process still executing
+    #   active/exited   → process finished cleanly (unit persists post-exit)
+    #   failed          → process died with non-zero or was killed by signal
+    if active == 'active' and sub == 'running':
+        state = 'running'
+    elif active == 'active' and sub == 'exited' and (result in (None, '', 'success')):
+        state = 'success'
+    elif active == 'inactive' and result == 'success':
+        # No RemainAfterExit (older units) — terminated cleanly then vanished.
+        state = 'success'
+    elif result == 'canceled':
+        state = 'cancelled'
+    # SIGTERM (exit 15) is the signal systemd sends when we DELETE the
+    # unit or when the operator runs `systemctl stop` — treat it as
+    # cancelled rather than failed, so the API surfaces intent, not
+    # only the signal that carried it. A hard SIGKILL (137) or any
+    # other signal still surfaces as `failed`.
+    elif result == 'signal' and exit_code == 15:
+        state = 'cancelled'
+    elif active == 'failed' or result in ('exit-code', 'signal', 'core-dump', 'timeout', 'oom-kill'):
+        state = 'failed'
+    elif active in ('activating', 'deactivating') or sub == 'start':
+        state = 'running'
+    else:
+        state = 'unknown'
+
+    def _ts(s):
+        # systemd emits either an empty string, "0" or a formatted date;
+        # we return it as-is (empty → None) so the frontend / client
+        # doesn't have to parse an ad-hoc format.
+        return s.strip() if s and s.strip() and s.strip() != '0' else None
+
+    result_dict = {
+        'unit': unit_name,
+        'state': state,
+        'started_at': _ts(props.get('ExecMainStartTimestamp', '')),
+        'finished_at': _ts(props.get('ExecMainExitTimestamp', '')),
+        'exit_code': exit_code,
+        'result': result,
+    }
+    # Cache terminal states so we can serve them after systemd garbage-
+    # collects the transient unit. Running / idle states are transient
+    # by definition and don't need snapshotting.
+    if state in _ACTION_TERMINAL:
+        _action_last_state[unit_name] = result_dict
+    return result_dict
+
+
+def _action_cancel(unit_name):
+    """Stop a running transient action unit. Idempotent — succeeds on
+    units that are not running (or don't exist).
+
+    Preserves the started-at timestamp of the run being cancelled and
+    manufactures a `cancelled` snapshot into ``_action_last_state`` so
+    that callers polling `.../status` after the cancel see the
+    cancellation intent, not the empty `idle` state that systemd
+    exposes once transient units get reclaimed. We snapshot BEFORE
+    calling `systemctl stop` because systemd releases the unit the
+    moment the stop returns — reading state afterwards would see
+    `not-found`.
+    """
+    if not unit_name.endswith('.service'):
+        unit_name = f'{unit_name}.service'
+
+    pre = _action_state(unit_name)
+    was_active = pre.get('state') in ('running',)
+
+    try:
+        subprocess.run(['systemctl', 'stop', unit_name],
+                       capture_output=True, text=True, timeout=10)
+    except (subprocess.TimeoutExpired, FileNotFoundError, OSError):
+        return False
+
+    if was_active:
+        import datetime
+        _action_last_state[unit_name] = {
+            'unit': unit_name,
+            'state': 'cancelled',
+            'started_at': pre.get('started_at'),
+            'finished_at': datetime.datetime.now().astimezone().strftime('%a %Y-%m-%d %H:%M:%S %Z'),
+            'exit_code': 15,
+            'result': 'signal',
+        }
+    return True
 
 
 def get_cached_pvesh_cluster_resources_vm():
@@ -2685,26 +3688,8 @@ def is_disk_removable(disk_name):
 
 
 def is_disk_usb(disk_name):
-    """Return True if the disk is attached via USB, using the sysfs device
-    path. Reliable for USB-attached HDDs and USB-NVMe bridges (which
-    both report `/sys/block/<disk>/removable = 0` even though they ARE
-    USB) — the previous heuristic based on the removable flag missed
-    them entirely, so snt* pass-through was never attempted and the
-    bridge's own identity + missing temperature/hours were cached.
-
-    Uses `os.path.realpath` (no subprocess) so it's cheap enough to be
-    called on every SMART probe.
-    """
-    try:
-        real = os.path.realpath(f'/sys/block/{disk_name}')
-        # sysfs path segment like `usb1`, `usb2`, ... always precedes a
-        # USB-attached block device. Match on the segment prefix rather
-        # than a substring so a directory happening to contain "usb" in
-        # its literal name can't false-positive.
-        return any(seg.startswith('usb') and (len(seg) == 3 or seg[3:].isdigit())
-                   for seg in real.split('/'))
-    except Exception:
-        return False
+    """Return True when sysfs places the disk behind a USB bus."""
+    return resolver_is_usb_disk(disk_name)
 
 
 def _is_system_mount(mountpoint):
@@ -3631,6 +4616,7 @@ def _smart_default_payload() -> dict:
         'family': None,
         'sata_version': None,
         'form_factor': None,
+        '_details_found': False,
         # Internal flag — True if smartctl confirmed the disk type
         # (HDD with RPM, or SSD via "Solid State Device" / JSON
         # rotation_rate=0). Stripped before the dict reaches the API.
@@ -3652,6 +4638,25 @@ def _smart_data_useful(d: dict) -> bool:
         or (d.get('temperature') or 0) > 0
         or d.get('smart_status', 'unknown') not in ('unknown', '')
     )
+
+
+def _smart_payload_score(data: dict) -> int:
+    return (
+        (100 if data.get('_details_found') else 0)
+        + (12 if (data.get('temperature') or 0) > 0 else 0)
+        + (8 if (data.get('power_on_hours') or 0) > 0 else 0)
+        + (5 if data.get('model', 'Unknown') != 'Unknown' else 0)
+        + (5 if data.get('serial', 'Unknown') != 'Unknown' else 0)
+        + (2 if data.get('smart_status', 'unknown') not in ('unknown', '') else 0)
+    )
+
+
+def _smart_probe_complete(disk_name: str, data: dict) -> bool:
+    if data.get('_details_found'):
+        return True
+    if is_disk_usb(disk_name):
+        return False
+    return data.get('model', 'Unknown') != 'Unknown' and data.get('serial', 'Unknown') != 'Unknown'
 
 
 _standby_cache: dict[str, tuple] = {}
@@ -3684,11 +4689,13 @@ def _hdd_in_standby(disk_name: str) -> bool:
         return False
     parked = False
     try:
-        r = subprocess.run(
-            ['smartctl', '-n', 'standby', '-i', f'/dev/{disk_name}'],
-            capture_output=True, text=True, timeout=_SMART_TIMEOUT,
+        result = probe_smartctl_json(
+            disk_name,
+            ('-n', 'standby', '-i', '-j'),
+            timeout=_SMART_TIMEOUT,
+            require_telemetry=False,
         )
-        parked = r.returncode == 2
+        parked = bool(result.get('standby'))
     except (subprocess.SubprocessError, OSError):
         parked = False
     _standby_cache[disk_name] = (now, parked)
@@ -3796,48 +4803,16 @@ def _get_smart_data_uncached(disk_name):
     `get_smart_data` for caching. Probe-cache lives inside this fn so a
     successful run also remembers which command worked."""
     smart_data = _smart_default_payload()
+    best_smart_data = dict(smart_data)
+    best_score = -1
 
 
     
     try:
-        all_commands = [
-            ['smartctl', '-a', '-j', f'/dev/{disk_name}'],  # JSON auto-detect (preferred)
-            ['smartctl', '-a', '-j', '-d', 'scsi', f'/dev/{disk_name}'],  # JSON SCSI/SAS (early for SAS disks)
-            ['smartctl', '-a', '-d', 'ata', f'/dev/{disk_name}'],  # JSON with ATA device type
-            ['smartctl', '-a', '-d', 'sat', f'/dev/{disk_name}'],  # JSON with SAT device type
-            ['smartctl', '-a', f'/dev/{disk_name}'],  # Text output (fallback)
-            ['smartctl', '-a', '-d', 'ata', f'/dev/{disk_name}'],  # Text with ATA device type
-            ['smartctl', '-a', '-d', 'sat', f'/dev/{disk_name}'],  # Text with SAT device type
-            ['smartctl', '-i', '-H', '-A', f'/dev/{disk_name}'],  # Info + Health + Attributes
-            ['smartctl', '-i', '-H', '-A', '-d', 'ata', f'/dev/{disk_name}'],  # With ATA
-            ['smartctl', '-i', '-H', '-A', '-d', 'sat', f'/dev/{disk_name}'],  # With SAT
-            ['smartctl', '-a', '-j', '-d', 'sat,12', f'/dev/{disk_name}'],  # SAT with 12-byte commands
-            ['smartctl', '-a', '-j', '-d', 'sat,16', f'/dev/{disk_name}'],  # SAT with 16-byte commands
-            ['smartctl', '-a', '-d', 'sat,12', f'/dev/{disk_name}'],  # Text SAT with 12-byte commands
-            ['smartctl', '-a', '-d', 'sat,16', f'/dev/{disk_name}'],  # Text SAT with 16-byte commands
-        ]
-
-        # USB-NVMe bridges (ASMedia ASM2362/ASM2464PD, JMicron JMS583/JMS586,
-        # Realtek RTL9210): the plain `-a` variant answers with the *bridge*
-        # identity (e.g. "ASMT 2462 NVME") and no temperature, because the
-        # bridge exposes itself as generic USB storage. Only `-d snt*`
-        # passes through to the actual NVMe controller and returns real
-        # model, serial, temperature and health.
-        #
-        # For USB-attached disks we prepend the three snt* variants so
-        # the cascade tries them FIRST — otherwise the plain variant
-        # "succeeds" (>50 chars of bridge chatter), the probe cache locks
-        # it in, and temperature is never seen. USB detection is by sysfs
-        # path (`is_disk_usb`) rather than the `removable` flag: USB-NVMe
-        # bridges and USB-HDDs both report `removable=0` even though they
-        # ARE USB, so the older `is_disk_removable` check missed them.
-        # For internal SATA/NVMe the cascade is unchanged (zero regression).
-        if is_disk_usb(disk_name) or is_disk_removable(disk_name):
-            all_commands = [
-                ['smartctl', '-a', '-j', '-d', 'sntasmedia', f'/dev/{disk_name}'],
-                ['smartctl', '-a', '-j', '-d', 'sntjmicron', f'/dev/{disk_name}'],
-                ['smartctl', '-a', '-j', '-d', 'sntrealtek', f'/dev/{disk_name}'],
-            ] + all_commands
+        probes = smartctl_probe_types(disk_name)
+        all_commands = [smartctl_command(disk_name, ('-a', '-j'), probe) for probe in probes]
+        all_commands += [smartctl_command(disk_name, ('-a',), probe) for probe in probes]
+        all_commands += [smartctl_command(disk_name, ('-i', '-H', '-A'), probe) for probe in probes]
 
         # Probe-cache: if we already know which command works for this
         # disk, try that first. The fallback chain is still kept after
@@ -3852,6 +4827,7 @@ def _get_smart_data_uncached(disk_name):
 
         process = None # Initialize process to None
         for cmd_index, cmd in enumerate(commands_to_try):
+            smart_data = _smart_default_payload()
             # print(f"[v0] Attempt {cmd_index + 1}/{len(commands_to_try)}: Running command: {' '.join(cmd)}")
             pass
             try:
@@ -3907,10 +4883,12 @@ def _get_smart_data_uncached(disk_name):
                             # Extract temperature
                             if 'temperature' in data and 'current' in data['temperature']:
                                 smart_data['temperature'] = data['temperature']['current']
+                                smart_data['_details_found'] = True
 
                             
                             # Parse NVMe SMART data
                             if 'nvme_smart_health_information_log' in data:
+                                smart_data['_details_found'] = True
 
                                 nvme_data = data['nvme_smart_health_information_log']
                                 if 'temperature' in nvme_data:
@@ -3940,6 +4918,7 @@ def _get_smart_data_uncached(disk_name):
                             # Parse SCSI/SAS SMART data (no ATA attribute IDs)
                             device_protocol = data.get('device', {}).get('protocol', '')
                             if device_protocol == 'SCSI' or 'scsi_error_counter_log' in data:
+                                smart_data['_details_found'] = True
                                 # Temperature
                                 if 'temperature' in data and 'current' in data['temperature']:
                                     smart_data['temperature'] = data['temperature']['current']
@@ -3969,6 +4948,7 @@ def _get_smart_data_uncached(disk_name):
 
                             # Parse ATA SMART attributes
                             elif 'ata_smart_attributes' in data and 'table' in data['ata_smart_attributes']:
+                                smart_data['_details_found'] = bool(data['ata_smart_attributes']['table'])
 
                                 for attr in data['ata_smart_attributes']['table']:
                                     attr_id = attr.get('id')
@@ -4053,13 +5033,6 @@ def _get_smart_data_uncached(disk_name):
                                                 except (ValueError, TypeError):
                                                     pass
                             
-                            # If we got good data, break out of the loop and
-                            # memoise this command so subsequent calls skip
-                            # straight to it instead of re-trying the chain.
-                            if smart_data['model'] != 'Unknown' and smart_data['serial'] != 'Unknown':
-                                _smart_probe_cache[disk_name] = list(cmd)
-                                break
-                                
                         except json.JSONDecodeError as e:
                             # print(f"[v0] JSON parse failed: {e}, trying text parsing...")
                             pass
@@ -4127,6 +5100,7 @@ def _get_smart_data_uncached(disk_name):
                                 try:
                                     temp_str = line.split(':')[1].strip().split()[0]
                                     smart_data['temperature'] = int(temp_str)
+                                    smart_data['_details_found'] = True
                                     # print(f"[v0] Found temperature: {smart_data['temperature']}°C")
                                     pass
                                 except (ValueError, IndexError):
@@ -4139,6 +5113,7 @@ def _get_smart_data_uncached(disk_name):
                             
                             if 'ID# ATTRIBUTE_NAME' in line or 'ID#' in line and 'ATTRIBUTE_NAME' in line:
                                 in_attributes = True
+                                smart_data['_details_found'] = True
                                 # print(f"[v0] Found SMART attributes table")
                                 pass
                                 continue
@@ -4229,14 +5204,15 @@ def _get_smart_data_uncached(disk_name):
                                         pass
                                         continue
 
-                        # If we got complete data, break and memoise the
-                        # winning command for the next call.
-                        if smart_data['model'] != 'Unknown' and smart_data['serial'] != 'Unknown':
-                            _smart_probe_cache[disk_name] = list(cmd)
-                            break
-                        elif smart_data['model'] != 'Unknown' or smart_data['serial'] != 'Unknown':
-                            # print(f"[v0] Extracted partial data from text output, continuing to next attempt...")
-                            pass
+                    score = _smart_payload_score(smart_data)
+                    if score > best_score:
+                        best_score = score
+                        best_smart_data = dict(smart_data)
+
+                    if _smart_probe_complete(disk_name, smart_data):
+                        _smart_probe_cache[disk_name] = list(cmd)
+                        best_smart_data = dict(smart_data)
+                        break
                 else:
                     # print(f"[v0] No usable output (return code {result_code}), trying next command...")
                     pass
@@ -4263,7 +5239,7 @@ def _get_smart_data_uncached(disk_name):
                     except Exception as kill_err:
                         # print(f"[v0] Error killing process: {kill_err}")
                         pass
-
+        smart_data = best_smart_data
 
         if smart_data['reallocated_sectors'] > 0 or smart_data['pending_sectors'] > 0:
             if smart_data['health'] == 'healthy':
@@ -4330,9 +5306,6 @@ def _get_smart_data_uncached(disk_name):
                             smart_data['rotation_rate'] = -1  # HDD, RPM unknown
             except Exception:
                 pass
-        smart_data.pop('_rotation_known', None)
-
-            
     except FileNotFoundError:
         # print(f"[v0] ERROR: smartctl not found - install smartmontools for disk monitoring.")
         pass
@@ -4343,6 +5316,10 @@ def _get_smart_data_uncached(disk_name):
         traceback.print_exc()
     
 
+    # These fields only guide transport selection internally.  Keep them out
+    # of the public API even when smartctl is missing or a probe raises.
+    smart_data.pop('_rotation_known', None)
+    smart_data.pop('_details_found', None)
     return smart_data
 
 # ─── Proxmox storage cache (Sprint 14 perf pass) ─────────────────────────────
@@ -4429,25 +5406,14 @@ def _get_proxmox_storage_uncached():
             used_gb = round(used / (1024**3), 2)
             available_gb = round(available / (1024**3), 2)
             
-            # Determine storage status. Sprint 11.6: a remote PBS where the
-            # user only has DatastoreAdmin on their own namespace reports
-            # `status=available` + `total=0` — the storage IS reachable, the
-            # ACL just hides the datastore size. Surface as
-            # 'namespace_restricted' so the UI can render INFO instead of
-            # CRITICAL. Real outages still flag (status != available).
-            if total == 0 and status.lower() == "available" and storage_type == 'pbs':
-                storage_status = 'namespace_restricted'
-            elif total == 0:
-                storage_status = 'error'
-            elif status.lower() != "available":
-                storage_status = 'error'
-            else:
-                storage_status = 'active'
+            storage_state = classify_storage_state(storage_type, status, total)
             
             storage_info = {
                 'name': name,
                 'type': storage_type,
-                'status': storage_status,  # Usar el status determinado (active o error)
+                'status': storage_state['status'],
+                'status_detail': storage_state['status_detail'],
+                'capacity_known': storage_state['capacity_known'],
                 'total': total_gb,
                 'used': used_gb,
                 'available': available_gb,
@@ -4646,6 +5612,17 @@ def _ensure_net_rate_sampler():
 # its own request to bootstrap the cache.
 try:
     _ensure_net_rate_sampler()
+except Exception:
+    pass
+
+# Same pattern for the VM guest-agent fsinfo refresher — kicks off a
+# daemon thread that keeps _vm_disk_cache warm so /api/vms and the
+# health check only ever do dict lookups. First cycle runs ~2s after
+# module load; running QEMU VMs report accurate disk usage as soon
+# as their first refresh completes, and fall back to the PVE value
+# in the meantime.
+try:
+    _ensure_vm_disk_refresher()
 except Exception:
     pass
 
@@ -5398,8 +6375,129 @@ def _get_lxc_update_status_map() -> dict:
             'error': update.get('error'),
             # Cap packages list shipped to UI — modal uses first 30 max
             'packages': (update.get('_packages') or [])[:30],
+            # OCI-image CTs: suppress apt/apk detection (managed_installs
+            # short-circuits the checker), UI hides the "N packages
+            # pending" badge and shows a dedicated OCI panel in the
+            # Updates modal instead.
+            'is_oci_lxc': bool(it.get('_is_oci')),
+            # Community-scripts convention: /usr/bin/update present in
+            # the CT AND the app is marked `updateable: true` in the
+            # helpers_cache. Only then does the modal offer the
+            # "Apply application update" button — 47/733 apps ship an
+            # updater that's known to fail, so blindly running
+            # /usr/bin/update on every CT would be a footgun.
+            'app_updater_present': bool(it.get('_has_app_updater')),
+            # App identity + updateable-known flag for the modal:
+            # when we detected /usr/bin/update but the slug wasn't in
+            # the cache, `app_updater_present` is False and
+            # `helper_updateable_known` is False — the modal renders a
+            # neutral "Unknown app" hint instead of the Apply button.
+            # When we know the slug but it's flagged updateable=false,
+            # `app_updater_present` is False and `helper_updateable_known`
+            # is True — the modal shows an explicit "This app doesn't
+            # support in-place updates" note so the user isn't left
+            # wondering why the button is missing.
+            'helper_slug': it.get('_helper_slug'),
+            # update_wrapper is executable evidence; tag_hostname is
+            # only a compatibility suggestion for older CTs.
+            'helper_slug_source': it.get('_helper_slug_source'),
+            'helper_app_name': it.get('_helper_app_name'),
+            'helper_updateable_known': bool(it.get('_helper_updateable_known')),
+            # ProxMenux-managed OCI apps (Secure Gateway / Tailscale etc)
+            # share the same underlying LXC. When set, the Updates modal
+            # redirects to the OCI dashboard's own updater instead of
+            # exposing our generic apt/apk flow — those apps carry
+            # per-package hooks (e.g. tailscale service restart) that
+            # the generic runner is blind to.
+            'managed_oci_app': it.get('_managed_oci_app'),
+            'os_family': it.get('_os_family'),
         }
     return out
+
+
+def _get_lxc_app_watch_map() -> dict:
+    """Read every /etc/proxmenux/apps/<vmid>.json sidecar into a
+    ``{vmid_str: summary}`` lookup, so `/api/vms` can decorate each
+    LXC row without a second frontend call. Never triggers a check —
+    that's the caller's responsibility (the daily poll or the modal's
+    "Check now" button).
+
+    For CTs managed by oci_manager (Secure Gateway etc.) we synthesise
+    a matching summary from that module's own state so the App tab
+    doesn't ask the user to "register" what ProxMenux itself
+    installed. The synthesised entry carries `managed_oci_app_id` so
+    the frontend renders a read-only view + wires the Update button
+    to /api/oci/installed/<app_id>/update instead of user CRUD.
+    Managed data always wins over any stale user sidecar for the same
+    vmid (rare, but possible if a CT was registered before it got
+    adopted by oci_manager).
+    """
+    # {vmid_str: [app_summary, ...]} — user-registered apps
+    out: dict = {}
+    try:
+        import lxc_apps
+        out.update(lxc_apps.get_active_apps() or {})
+    except Exception:
+        pass
+
+    # Overlay managed OCI-app state. Managed apps prepend a synthetic
+    # entry with `managed_oci_app_id` set — the frontend renders it
+    # read-only and never allows user CRUD on it.
+    try:
+        import managed_installs
+        items = managed_installs.get_active_items() or []
+        for it in items:
+            if it.get("type") != "oci_app":
+                continue
+            vmid = it.get("_vmid")
+            if vmid is None:
+                continue
+            uc = it.get("update_check") or {}
+            managed_entry = {
+                "id": f"managed:{it.get('_oci_app_id')}",
+                "name": it.get("name") or "Managed app",
+                "installed_via": "managed",
+                "ports": [],
+                "health_path": None,
+                "installed_version": it.get("current_version") or uc.get("current"),
+                "latest_version": uc.get("latest"),
+                "update_available": bool(uc.get("available")),
+                "error": uc.get("error"),
+                "checked_at": uc.get("last_check"),
+                "has_repo": False,
+                "managed_oci_app_id": it.get("_oci_app_id"),
+                # `packages` mirrors the Security page — a short list
+                # of "N other packages pending" alongside the primary
+                # tailscale bump.
+                "packages": (uc.get("_packages") or [])[:30],
+            }
+            existing = out.get(str(vmid)) or []
+            # Managed goes first; user-registered apps follow.
+            out[str(vmid)] = [managed_entry] + [a for a in existing
+                                                if not a.get("managed_oci_app_id")]
+    except Exception as e:
+        print(f"[ProxMenux] lxc_apps overlay for managed OCI failed: {e}")
+
+    return out
+
+
+def _get_lxc_docker_inventory_map() -> dict:
+    """Return the last read-only Docker image scan for each CT.
+
+    Never contacts a registry on the /api/vms request path.  On-demand and
+    daily scans populate the in-memory cache in lxc_apps; this projection
+    only lets badges and the Updates tab consume that existing state.
+    """
+    try:
+        import lxc_apps
+        cached = lxc_apps.get_cached_docker_inventories() or {}
+        return {
+            str(vmid): inventory
+            for vmid, inventory in cached.items()
+            if isinstance(inventory, dict) and inventory.get("available")
+        }
+    except Exception:
+        return {}
 
 
 def get_proxmox_vms():
@@ -5407,6 +6505,8 @@ def get_proxmox_vms():
     try:
         all_vms = []
         lxc_updates_map = _get_lxc_update_status_map()
+        lxc_app_map = _get_lxc_app_watch_map()
+        lxc_docker_map = _get_lxc_docker_inventory_map()
 
         try:
             # local_node = socket.gethostname()
@@ -5437,8 +6537,27 @@ def get_proxmox_vms():
                         'netout': resource.get('netout', 0),
                         'diskread': resource.get('diskread', 0),
                         'diskwrite': resource.get('diskwrite', 0),
-                        'maxcpu': resource.get('maxcpu', 0)
+                        'maxcpu': resource.get('maxcpu', 0),
+                        # PVE tags carried straight through — the string
+                        # comes back from `pvesh get /cluster/resources`
+                        # already in PVE's own canonical `tag1;tag2`
+                        # format; the client splits + colours them.
+                        'tags': resource.get('tags', ''),
                     }
+                    # The frontend keeps its own instant modal cache. A
+                    # lifecycle rebuild increments this per-guest token so
+                    # the browser drops only the restored/restarted guest's
+                    # old payload and consumes the newly warmed snapshot.
+                    try:
+                        revision_vmid = int(resource.get('vmid'))
+                    except (TypeError, ValueError):
+                        revision_vmid = 0
+                    with _guest_lifecycle_lock:
+                        vm_data['modal_cache_revision'] = (
+                            _guest_modal_cache_revision.get(
+                                revision_vmid, _guest_modal_cache_epoch
+                            )
+                        )
                     # Decorate LXC rows with the apt update status if the
                     # managed_installs registry has it. Absent key means
                     # either the user hasn't enabled the feature or the
@@ -5447,6 +6566,58 @@ def get_proxmox_vms():
                         upd = lxc_updates_map.get(str(resource.get('vmid')))
                         if upd is not None:
                             vm_data['update_check'] = upd
+                        # App Watch (Phase 2c) — list of registered
+                        # apps per CT (0..N). Populates header badge,
+                        # Updates modal connected row, and the App
+                        # tab. Absent key = no apps registered.
+                        # The list-card aggregate badge folds app
+                        # updates on the frontend side so the
+                        # OS-only `update_check.available` / `.count`
+                        # stay clean — the Updates tab reads them to
+                        # decide whether "OS packages pending" +
+                        # "Apply OS update" should show, and
+                        # inflating them with app pending was
+                        # producing a false "1 package pending"
+                        # every time a registered app had a newer
+                        # upstream version.
+                        app_list = lxc_app_map.get(str(resource.get('vmid')))
+                        if app_list:
+                            vm_data['app_watches'] = app_list
+                            # Apps dashboard reads this to build
+                            # weblinks. Only paid on CTs that have
+                            # registered apps; the IP is cached
+                            # indefinitely and invalidated by the
+                            # guest lifecycle hook on start/stop/reboot.
+                            if vm_type == 'lxc' and resource.get('status') == 'running':
+                                _ip = _get_lxc_primary_ip_cached(resource.get('vmid'))
+                                if _ip:
+                                    vm_data['ip'] = _ip
+                        docker_inventory = lxc_docker_map.get(str(resource.get('vmid')))
+                        # Docker image drift is an Updates-tab feature,
+                        # not an automatic app detection.  Do not attach
+                        # it to the VM payload until the user explicitly
+                        # registers Docker for this CT.
+                        docker_registered = bool(app_list) and any(
+                            app.get('helper_slug') == 'docker'
+                            for app in app_list
+                            if isinstance(app, dict)
+                        )
+                        if docker_registered and docker_inventory:
+                            vm_data['docker_inventory'] = docker_inventory
+
+                    # PVE's cluster resources API reports disk=0 for most
+                    # QEMU VMs — it can't see inside the guest filesystem
+                    # for the common storage backends. For running QEMU
+                    # VMs we override with the guest-agent-derived value
+                    # produced by the background refresher; readers only
+                    # do a dict lookup, no subprocess ever runs on the
+                    # request path. VMs not yet in the cache (fresh
+                    # boot, refresher hasn't run) keep the PVE value.
+                    if vm_type == 'qemu' and vm_data['status'] == 'running':
+                        computed = get_cached_vm_disk(vm_data['vmid'])
+                        if computed is not None:
+                            vm_data['disk'], vm_data['maxdisk'] = computed
+
                     all_vms.append(vm_data)
 
                 return all_vms
@@ -5823,6 +6994,30 @@ def identify_temperature_sensor(sensor_name, adapter, chip_name=None):
     return sensor_name
 
 
+def classify_temperature_sensor(sensor_name, adapter, chip_name=None, identified_name=None):
+    sensor_lower = sensor_name.lower()
+    adapter_lower = adapter.lower() if adapter else ""
+    chip_lower = chip_name.lower() if chip_name else ""
+    identified_lower = identified_name.lower() if identified_name else ""
+    combined = f"{sensor_lower} {adapter_lower} {chip_lower} {identified_lower}"
+
+    if "nvme" in chip_lower or "nvme" in sensor_lower or "composite" in sensor_lower or "nvme" in identified_lower:
+        return "nvme"
+    if "drivetemp" in chip_lower or "sata" in sensor_lower or "ata" in sensor_lower or "sata" in identified_lower:
+        return "storage"
+    if identified_lower.startswith("cpu") or any(
+        cpu_label in sensor_lower for cpu_label in ["cpu", "package", "tctl", "tccd", "core"]
+    ):
+        return "cpu"
+    if identified_lower.startswith("gpu") or any(
+        gpu_driver in combined for gpu_driver in ["nouveau", "amdgpu", "radeon", "i915"]
+    ):
+        return "gpu"
+    if identified_lower.startswith("pci") or ("pci" in adapter_lower and "temp" in sensor_lower):
+        return "pci"
+    return "other"
+
+
 def identify_fan(sensor_name, adapter, chip_name=None):
     """Identify what a fan sensor corresponds to, using hardware_monitor for GPU detection"""
     sensor_lower = sensor_name.lower()
@@ -5987,6 +7182,13 @@ def get_temperature_info():
     """Get detailed temperature information from sensors command"""
     temperatures = []
     power_meter = None
+    covered_storage_kinds = set()
+
+    try:
+        storage_temperatures, covered_storage_kinds = get_storage_temperatures()
+        temperatures.extend(storage_temperatures)
+    except Exception:
+        covered_storage_kinds = set()
     
     try:
         sensors_output = get_cached_sensors_output()
@@ -6035,6 +7237,13 @@ def get_temperature_info():
                     # Parse temperature sensors
                     elif '°C' in value_part or 'C' in value_part:
                         try:
+                            chip_lower = current_chip.lower() if current_chip else ""
+                            if (
+                                ("nvme" in chip_lower and "nvme" in covered_storage_kinds)
+                                or ("drivetemp" in chip_lower and "drivetemp" in covered_storage_kinds)
+                            ):
+                                continue
+
                             # Extract temperature value
                             temp_match = re.search(r'([+-]?[\d.]+)\s*°?C', value_part)
                             if temp_match:
@@ -6054,6 +7263,12 @@ def get_temperature_info():
                                         continue                                
                                 
                                 identified_name = identify_temperature_sensor(sensor_name, current_adapter, current_chip)
+                                sensor_type = classify_temperature_sensor(
+                                    sensor_name,
+                                    current_adapter,
+                                    current_chip,
+                                    identified_name,
+                                )
                                 
                                 temperatures.append({
                                     'name': identified_name,
@@ -6061,7 +7276,8 @@ def get_temperature_info():
                                     'current': temp_value,
                                     'high': high_value,
                                     'critical': crit_value,
-                                    'adapter': current_adapter
+                                    'adapter': current_adapter,
+                                    'type': sensor_type
                                 })
                         except ValueError:
                             pass
@@ -6204,12 +7420,16 @@ def get_detailed_gpu_info(gpu):
                 # print(f"[v0] Process started with PID: {process.pid}", flush=True)
                 pass
                 
-                # print(f"[v0] Waiting 1 second for intel_gpu_top to initialize and detect processes...", flush=True)
-                pass
-                time.sleep(1)
-                
+                # intel_gpu_top needs a small warmup for the first JSON
+                # object to hit stdout. 300 ms is enough on every host
+                # tested — the previous 1 s was tuned when the tool was
+                # slower to boot and doubled the modal open latency for
+                # no gain. Combined with the shorter read timeout below
+                # this halves the worst-case blocking time.
+                time.sleep(0.3)
+
                 start_time = time.time()
-                timeout = 3
+                timeout = 1.5
                 json_objects = []
                 buffer = ""
                 brace_count = 0
@@ -7821,16 +9041,18 @@ def _get_hardware_info_uncached():
                         # two separate calls that parsed the same output.
                         sata_version = None
                         form_factor = None
+                        model_family = None
                         try:
-                            result_smart = subprocess.run(
-                                ['smartctl', '-n', 'standby', '-i', f'/dev/{disk_name}'],
-                                capture_output=True, text=True, timeout=5)
-                            if result_smart.returncode == 0:
-                                for line in result_smart.stdout.split('\n'):
-                                    if 'SATA Version is:' in line:
-                                        sata_version = line.split(':', 1)[1].strip()
-                                    elif 'Form Factor:' in line:
-                                        form_factor = line.split(':', 1)[1].strip()
+                            identity_probe = probe_smartctl_json(
+                                disk_name,
+                                ('-n', 'standby', '-i', '-j'),
+                                timeout=5,
+                                require_telemetry=False,
+                            )
+                            identity_data = identity_probe.get('data', {})
+                            sata_version = identity_data.get('sata_version', {}).get('string')
+                            form_factor = identity_data.get('form_factor', {}).get('name')
+                            model_family = identity_data.get('model_family')
                         except:
                             pass
                         
@@ -7856,17 +9078,8 @@ def _get_hardware_info_uncached():
                         if pcie_info:
                             storage_device.update(pcie_info)
                         
-                        # Add family if available (from smartctl)
-                        try:
-                            result_smart = subprocess.run(['smartctl', '-i', f'/dev/{disk_name}'], 
-                                                        capture_output=True, text=True, timeout=5)
-                            if result_smart.returncode == 0:
-                                for line in result_smart.stdout.split('\n'):
-                                    if 'Model Family:' in line:
-                                        storage_device['family'] = line.split(':', 1)[1].strip()
-                                        break
-                        except:
-                            pass
+                        if model_family:
+                            storage_device['family'] = model_family
                         
                         storage_devices.append(storage_device)
                 
@@ -9027,12 +10240,16 @@ def api_smart_status(disk_name):
 
         # Get device identity via smartctl (works for both NVMe and SATA)
         _sctl_identity = {}
+        _sctl_data = {}
+        _sctl_probe = {}
         try:
-            _sctl_proc = subprocess.run(
-                ['smartctl', '-a', '--json=c', device],
-                capture_output=True, text=True, timeout=15
+            _sctl_probe = probe_smartctl_json(
+                disk_name,
+                ('-a', '--json=c'),
+                timeout=15,
+                require_telemetry=not is_nvme,
             )
-            _sctl_data = json.loads(_sctl_proc.stdout)
+            _sctl_data = _sctl_probe.get('data', {})
             _sctl_identity = {
                 'model': _sctl_data.get('model_name', ''),
                 'serial': _sctl_data.get('serial_number', ''),
@@ -9246,16 +10463,17 @@ def api_smart_status(disk_name):
                 result['nvme_error'] = str(e)
         else:
             # SATA/SAS/SSD: Single JSON call gives all data at once
-            proc = subprocess.run(
-                ['smartctl', '-a', '--json=c', device],
-                capture_output=True, text=True, timeout=30
-            )
-            # Parse JSON regardless of exit code — smartctl uses bit-flags for non-fatal conditions
-            data = {}
-            try:
-                data = json.loads(proc.stdout)
-            except (json.JSONDecodeError, ValueError):
-                pass
+            data = _sctl_data
+            resolved_type_args = smartctl_type_args(_sctl_probe.get('probe'))
+            if not data:
+                smart_probe = probe_smartctl_json(
+                    disk_name,
+                    ('-a', '--json=c'),
+                    timeout=30,
+                    require_telemetry=True,
+                )
+                data = smart_probe.get('data', {})
+                resolved_type_args = smartctl_type_args(smart_probe.get('probe'))
 
             # --- Detect device protocol (ATA vs SCSI/SAS) ---
             device_protocol = data.get('device', {}).get('protocol', '')
@@ -9289,7 +10507,12 @@ def api_smart_status(disk_name):
             # Fallback text detection in case JSON misses it
             if result['status'] != 'running':
                 try:
-                    cproc = subprocess.run(['smartctl', '-c', device], capture_output=True, text=True, timeout=10)
+                    cproc = subprocess.run(
+                        ['smartctl', '-c', *resolved_type_args, device],
+                        capture_output=True,
+                        text=True,
+                        timeout=10,
+                    )
                     if 'Self-test routine in progress' in cproc.stdout or '% of test remaining' in cproc.stdout:
                         result['status'] = 'running'
                         match = re.search(r'(\d+)% of test remaining', cproc.stdout)
@@ -9657,7 +10880,12 @@ def api_smart_status(disk_name):
                 # Fallback: if JSON gave no attributes, try text parser
                 if not attrs:
                     try:
-                        aproc = subprocess.run(['smartctl', '-A', device], capture_output=True, text=True, timeout=10)
+                        aproc = subprocess.run(
+                            ['smartctl', '-A', *resolved_type_args, device],
+                            capture_output=True,
+                            text=True,
+                            timeout=10,
+                        )
                         if aproc.returncode == 0:
                             attrs = _parse_smart_attributes(aproc.stdout.split('\n'))
                     except Exception:
@@ -9926,8 +11154,10 @@ def api_smart_run_test(disk_name):
                 return jsonify({'error': 'smartmontools not installed. Please run: apt-get install smartmontools'}), 400
             
             test_flag = '-t short' if test_type == 'short' else '-t long'
+            smart_probe = resolve_smartctl_probe(disk_name, timeout=10)
+            smart_type_args = smartctl_type_args(smart_probe)
             proc = subprocess.run(
-                ['smartctl'] + test_flag.split() + [device],
+                ['smartctl'] + test_flag.split() + smart_type_args + [device],
                 capture_output=True, text=True, timeout=30
             )
             
@@ -9950,13 +11180,16 @@ def api_smart_run_test(disk_name):
             
             # Start background monitor to save JSON when test completes
             sleep_interval = 10 if test_type == 'short' else 60
+            smart_check_cmd = shlex.join(['smartctl', '-c', *smart_type_args, device])
+            smart_report_cmd = shlex.join(['smartctl', '-a', '--json=c', *smart_type_args, device])
+            json_path_quoted = shlex.quote(json_path)
             subprocess.Popen(
                 f'''
                 sleep 5
-                while smartctl -c {device} 2>/dev/null | grep -qiE 'Self-test routine in progress|[1-9][0-9]?% of test remaining'; do
+                while {smart_check_cmd} 2>/dev/null | grep -qiE 'Self-test routine in progress|[1-9][0-9]?% of test remaining'; do
                     sleep {sleep_interval}
                 done
-                smartctl -a --json=c {device} > {json_path} 2>/dev/null
+                {smart_report_cmd} > {json_path_quoted} 2>/dev/null
                 ''',
                 shell=True, start_new_session=True,
                 stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
@@ -10048,7 +11281,12 @@ def _update_smart_cron():
         # scheduled tests in history" with no obvious clue why.
         cmd = f'/usr/local/share/proxmenux/scripts/storage/smart-scheduled-test.sh --schedule-id {schedule_id} --test-type {test_type} --retention {retention}'
         if disks != ['all']:
-            cmd += f" --disks '{','.join(disks)}'"
+            # Prepend /dev/ when the UI stored the disk as a basename
+            # (sdb, nvme0n1, …). The runner's `[[ -b "$disk" ]]` check
+            # only accepts full block-device paths, so basenames were
+            # silently skipped and no test ever ran.
+            disk_args = [d if d.startswith('/') else f'/dev/{d}' for d in disks]
+            cmd += f" --disks '{','.join(disk_args)}'"
         
         cron_lines.append(f'{cron_time} root {cmd} >> /var/log/proxmenux/smart-schedule.log 2>&1')
     
@@ -10561,7 +11799,14 @@ def api_vm_metrics(vmid):
 # on a per-minute cadence by PVE, so a 10-second cache is safe and the
 # UI experience is materially better.
 _NODE_METRICS_CACHE = {}
-_NODE_METRICS_TTL = 10.0  # seconds
+# TTL is 120 s because the prewarmer only refreshes the `hour`
+# timeframe (the Overview's default) every 90 s. The other four
+# timeframes get their first fetch lazily when the user picks them —
+# they then live in cache for 120 s, which covers back-and-forth
+# switching without paying pvesh cost. Pre-warming every timeframe
+# on a fast cadence (as the first version did) burned ~30 % of a
+# core continuously scanning data nobody was looking at.
+_NODE_METRICS_TTL = 120.0  # seconds
 
 
 def _node_metrics_cache_get(timeframe):
@@ -10575,6 +11820,254 @@ def _node_metrics_cache_get(timeframe):
 
 def _node_metrics_cache_set(timeframe, payload):
     _NODE_METRICS_CACHE[timeframe] = {'payload': payload, 'ts': time.monotonic()}
+
+
+def _compute_node_metrics_payload(timeframe: str) -> dict | None:
+    """Do the actual pvesh-backed RRD fetch + massaging that
+    `api_node_metrics` used to do inline. Returns the payload dict on
+    success (and populates the cache), None on any failure.
+    Extracted so the background prewarmer can call it without going
+    through HTTP + `@require_auth` — same code path as the handler,
+    zero duplication of the massaging logic."""
+    valid_timeframes = ('hour', 'day', 'week', 'month', 'year')
+    if timeframe not in valid_timeframes:
+        return None
+
+    local_node = get_proxmox_node_name()
+
+    zfs_arc_size = 0
+    try:
+        with open('/proc/spl/kstat/zfs/arcstats', 'r') as f:
+            for line in f:
+                if line.startswith('size'):
+                    parts = line.split()
+                    if len(parts) >= 3:
+                        zfs_arc_size = int(parts[2])
+                        break
+    except (FileNotFoundError, PermissionError, ValueError):
+        pass
+
+    try:
+        rrd_result = subprocess.run(
+            ['pvesh', 'get', f'/nodes/{local_node}/rrddata',
+             '--timeframe', timeframe, '--output-format', 'json'],
+            capture_output=True, text=True, timeout=10,
+        )
+    except (subprocess.SubprocessError, OSError):
+        return None
+    if rrd_result.returncode != 0:
+        return None
+    try:
+        rrd_data = json.loads(rrd_result.stdout)
+    except (json.JSONDecodeError, ValueError):
+        return None
+
+    for item in rrd_data:
+        if 'arcsize' in item:
+            item['zfsarc'] = item['arcsize']
+        elif zfs_arc_size > 0 and ('zfsarc' not in item or item.get('zfsarc', 0) == 0):
+            item['zfsarc'] = zfs_arc_size
+
+    def _values_from(items, field_key, scale=1.0):
+        return [item[field_key] * scale for item in items
+                if isinstance(item.get(field_key), (int, float))
+                and not isinstance(item[field_key], bool)
+                and item[field_key] is not None]
+
+    def _stats_native(field_key, scale=1.0):
+        values = _values_from(rrd_data, field_key, scale)
+        if not values:
+            return None
+        return {
+            'avg': sum(values) / len(values),
+            'max': max(values),
+            'min': min(values),
+        }
+
+    def _pvesh_rrd(cf):
+        try:
+            extra = subprocess.run(
+                ['pvesh', 'get', f'/nodes/{local_node}/rrddata',
+                 '--timeframe', timeframe, '--cf', cf,
+                 '--output-format', 'json'],
+                capture_output=True, text=True, timeout=10,
+            )
+            if extra.returncode == 0 and extra.stdout:
+                return json.loads(extra.stdout)
+        except (subprocess.SubprocessError, json.JSONDecodeError, OSError):
+            pass
+        return None
+
+    def _build_stats(field_key, scale=1.0):
+        native = _stats_native(field_key, scale)
+        if native is None:
+            return None
+        if timeframe in ('week', 'month'):
+            cf_max = _pvesh_rrd('MAX')
+            if cf_max:
+                vals = _values_from(cf_max, field_key, scale)
+                if vals:
+                    native['max'] = max(vals)
+            cf_min = _pvesh_rrd('MIN')
+            if cf_min:
+                vals = _values_from(cf_min, field_key, scale)
+                if vals:
+                    native['min'] = min(vals)
+        return native
+
+    period_stats = {
+        'cpu': _build_stats('cpu', scale=100.0),
+        'memory_used': _build_stats('memused', scale=1 / (1024 ** 3)),
+    }
+
+    if timeframe == 'day' and rrd_data:
+        bucket_seconds = 300
+        buckets = {}
+        for item in rrd_data:
+            t = item.get('time')
+            if t is None:
+                continue
+            bk = (int(t) // bucket_seconds) * bucket_seconds
+            if bk not in buckets:
+                buckets[bk] = {'_count': 0, '_sums': {}}
+            b = buckets[bk]
+            b['_count'] += 1
+            for k, v in item.items():
+                if k == 'time' or not isinstance(v, (int, float)) or isinstance(v, bool):
+                    continue
+                b['_sums'][k] = b['_sums'].get(k, 0) + v
+        rrd_data = []
+        for bk in sorted(buckets.keys()):
+            b = buckets[bk]
+            point = {'time': bk}
+            for k, total in b['_sums'].items():
+                point[k] = total / b['_count']
+            rrd_data.append(point)
+
+    payload = {
+        'node': local_node,
+        'timeframe': timeframe,
+        'data': rrd_data,
+        'period_stats': period_stats,
+    }
+    _node_metrics_cache_set(timeframe, payload)
+    return payload
+
+
+def _node_metrics_prewarmer_loop():
+    """Keep `_NODE_METRICS_CACHE['hour']` hot so the Overview page's
+    default view (CPU + Memory charts, 1-hour range) never waits on
+    `pvesh get rrddata`. Only `hour` is prewarmed — the other
+    timeframes (day/week/month/year) are lazy-cached on first click
+    and stick around for the 120 s TTL. Prewarming every timeframe
+    burned ~30 % of a core continuously against pvesh for data
+    nobody was looking at, and week/month each cost 3 pvesh calls
+    (base + MAX + MIN)."""
+    time.sleep(3)  # let the app finish importing before the first pass
+    while True:
+        try:
+            _compute_node_metrics_payload('hour')
+        except Exception as e:
+            print(f"[ProxMenux] node-metrics prewarmer error: {e}",
+                  file=sys.stderr, flush=True)
+        # Refresh well before the 120 s TTL expires so the user never
+        # hits a cold cache during a natural page open.
+        time.sleep(90)
+
+
+def _vm_modal_prewarmer_pass():
+    """One full sweep of every guest's modal caches. Called both
+    from the startup warm-up and from the recurring loop. Returns
+    the number of guests successfully touched.
+
+    The recurring loop is deliberately cheap: for each guest and
+    each cache we check the TTL FIRST and only invoke the handler
+    when the entry is actually stale. On steady state (all caches
+    fresh) a pass is O(guests) dict reads with no request contexts
+    created, no handlers entered, no pvesh spawned — the CPU cost
+    disappears until something genuinely expires."""
+    from flask import g as _flask_g
+    warmed = 0
+    resources = get_cached_pvesh_cluster_resources_vm() or []
+    for r in resources:
+        vmid = r.get('vmid')
+        vm_type = r.get('type')  # 'qemu' or 'lxc'
+        if vmid is None:
+            continue
+
+        endpoints = [
+            (_vm_details_cache, _VM_DETAILS_TTL, get_vm_config,
+             f'/api/vms/{vmid}', 'details'),
+            (_vm_backups_cache, _VM_BACKUPS_TTL, api_vm_backups,
+             f'/api/vms/{vmid}/backups', 'backups'),
+        ]
+        if vm_type == 'lxc':
+            endpoints.extend([
+                (_vm_apps_cache, _VM_APPS_TTL, api_vm_apps_get,
+                 f'/api/vms/{vmid}/apps', 'apps'),
+                (_vm_schedule_cache, _VM_SCHEDULE_TTL, api_vm_apps_schedule,
+                 f'/api/vms/{vmid}/schedule', 'schedule'),
+                (_vm_mounts_cache, _VM_MOUNTS_TTL, api_lxc_mount_points,
+                 f'/api/lxc/{vmid}/mount-points', 'mounts'),
+            ])
+            if str(r.get('status') or '').lower() == 'running':
+                endpoints.append((
+                    _vm_app_suggestions_cache, _VM_APP_SUGGESTIONS_TTL,
+                    api_vm_apps_suggestions,
+                    f'/api/vms/{vmid}/apps/suggestions', 'app suggestions',
+                ))
+
+        did_work = False
+        for cache, ttl, handler, route, label in endpoints:
+            if _vm_cache_get(cache, vmid, ttl) is not None:
+                continue  # still fresh — skip the request-context overhead
+            try:
+                with app.test_request_context(route):
+                    _flask_g._internal_call = True
+                    handler(vmid)
+                did_work = True
+            except Exception as e:
+                print(f"[ProxMenux] vm-modal prewarmer {label} {vmid}: {e}",
+                      file=sys.stderr, flush=True)
+        warmed += 1
+        if did_work:
+            time.sleep(0.2)  # breath only when we actually ran a handler
+    return warmed
+
+
+def _vm_modal_prewarmer_loop():
+    """One-shot warmup at service startup. Populates every per-VM
+    modal cache (details / backups / apps / schedule / mount points)
+    exactly once, then exits — no periodic refresh loop.
+
+    Rationale: every cache in this family is refreshed by explicit
+    event invalidation (see `_vm_cache_invalidate` calls scattered
+    across write endpoints). A periodic loop was double work and
+    lit up the CPU on hosts with many guests. The previous 5 min
+    tick meant ~500-1000 background subprocess/pvesh calls per hour
+    on a 25-guest host, entirely for data that hadn't changed.
+
+    Trade-offs handled elsewhere:
+      * Backups added out-of-band (cron / scheduled / retention)
+        → client passes `?fresh=1` on modal open when its local
+        cache is older than 6 h; server ignores the indefinite TTL
+        for that call and re-scans (Fase 4).
+      * Mount points runtime state (df/stat/ad-hoc) that changes
+        continuously → served by a separate always-fresh endpoint
+        the client fetches on modal open (Fase 5).
+
+    Called once from the startup section. Thread exits after the
+    initial pass — no `while True` loop."""
+    time.sleep(3)  # let Flask finish binding before we invoke handlers
+    try:
+        t0 = time.time()
+        n = _vm_modal_prewarmer_pass()
+        print(f"[ProxMenux] VM-modal prewarmer: warm-up complete "
+              f"({n} guests in {time.time()-t0:.1f}s) — no periodic refresh, "
+              f"caches held by event invalidation only", flush=True)
+    except Exception as e:
+        print(f"[ProxMenux] VM-modal prewarmer initial pass failed: {e}",
+              file=sys.stderr, flush=True)
 
 
 @app.route('/api/node/metrics', methods=['GET'])
@@ -11457,17 +12950,83 @@ def api_create_backup(vmid):
         if pbs_change_detection and pbs_change_detection != 'default' and vm_type == 'lxc':
             cmd.extend(['--pbs-change-detection-mode', pbs_change_detection])
         
-        # Execute pvesh command - this creates a task in Proxmox
-        result = subprocess.run(cmd, capture_output=True, text=True, timeout=60)
-        
-        if result.returncode != 0:
-            error_msg = result.stderr or result.stdout or 'Unknown error'
+        # Start vzdump detached from the Flask worker.
+        # subprocess.run(timeout=60) SIGKILLs pvesh (and vzdump with it)
+        # the moment a backup runs longer than 60s — a 100 GB VM easily
+        # needs 2+ min and lands as `interrupted by signal`, leaving
+        # `.tar.dat` orphans and vzdumptmp dirs on disk. GH #295.
+        # Instead spawn pvesh in its own session so this endpoint can
+        # return as soon as the UPID is on stdout, and let the backup
+        # run to completion on its own. The frontend can then poll
+        # /api/task-log/<upid> for progress.
+        try:
+            proc = subprocess.Popen(
+                cmd,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                text=True,
+                start_new_session=True,
+            )
+        except Exception as e:
             return jsonify({
                 'success': False,
-                'error': f'Backup failed: {error_msg}',
-                'command': ' '.join(cmd)
+                'error': f'Failed to spawn pvesh: {e}',
+                'command': ' '.join(cmd),
             }), 500
-        
+
+        # Wait up to 10s for the UPID line (typically appears in <1s).
+        # If pvesh exits with error before that, surface the real cause.
+        upid = None
+        buf = ''
+        deadline = time.time() + 10.0
+        upid_re = re.compile(
+            r'UPID:[^:\s]+:[^:\s]+:[^:\s]+:[^:\s]+:vzdump:[^:\s]+:[^:\s]+:'
+        )
+        while time.time() < deadline:
+            remaining = max(0.05, deadline - time.time())
+            rlist, _, _ = select.select([proc.stdout], [], [], min(remaining, 1.0))
+            if rlist:
+                chunk = proc.stdout.readline()
+                if not chunk:
+                    break
+                buf += chunk
+                m = upid_re.search(buf)
+                if m:
+                    upid = m.group(0).rstrip(':')
+                    break
+            elif proc.poll() is not None:
+                break
+
+        if upid is None and proc.poll() is not None and proc.returncode != 0:
+            tail = buf.strip() or 'pvesh exited without producing a UPID'
+            return jsonify({
+                'success': False,
+                'error': f'Backup failed: {tail}',
+                'command': ' '.join(cmd),
+            }), 500
+
+        # Drain stdout in the background so the pipe doesn't fill and
+        # stall pvesh once vzdump starts emitting progress lines. We
+        # don't wait() — the backup outlives this HTTP request; PVE
+        # cleans up the task itself.
+        def _drain(p):
+            try:
+                for _ in iter(p.stdout.readline, ''):
+                    pass
+            except Exception:
+                pass
+            finally:
+                try:
+                    p.stdout.close()
+                except Exception:
+                    pass
+        threading.Thread(target=_drain, args=(proc,), daemon=True).start()
+
+        # New task started — the backups list will change soon (either
+        # the new archive appears, or the task fails and something is
+        # cleaned up). Drop the cached list so the next open re-scans.
+        _vm_cache_invalidate(vmid, _vm_backups_cache)
+
         return jsonify({
             'success': True,
             'message': f'Backup task started for {vm_type.upper()} {vmid}',
@@ -11476,7 +13035,8 @@ def api_create_backup(vmid):
             'compress': compress,
             'protected': protected,
             'notes': notes,
-            'task': result.stdout.strip() if result.stdout else None
+            'upid': upid,
+            'task': upid,
         })
         
     except Exception as e:
@@ -11485,10 +13045,29 @@ def api_create_backup(vmid):
 @app.route('/api/vms/<int:vmid>/backups', methods=['GET'])
 @require_auth
 def api_vm_backups(vmid):
-    """Get list of backups for a specific VM/LXC"""
+    """Get list of backups for a specific VM/LXC.
+
+    The backend cache is indefinite (event-invalidated only). Out-of-
+    band backups — cron jobs, scheduled vzdump, PBS retention pruning
+    — never call `_vm_cache_invalidate`, so a naked GET would keep
+    serving the last snapshot for hours after a new file appeared.
+
+    To reconcile that without a background poll, the client tracks
+    the age of its own copy and, when older than its 6-hour gate,
+    calls this endpoint with `?fresh=1`. Server ignores the cached
+    entry for that call, re-scans every storage, writes the result
+    back into the cache and returns it. Subsequent openings within
+    the next 6 hours hit the freshened cache instantly.
+    """
     try:
+        force_fresh = request.args.get('fresh') in ('1', 'true', 'yes')
+        if not force_fresh:
+            cached = _vm_cache_get(_vm_backups_cache, vmid, _VM_BACKUPS_TTL)
+            if cached is not None:
+                return jsonify(cached)
+
         backups = []
-        
+
         # Get current node name
         node_result = subprocess.run(['hostname'], capture_output=True, text=True, timeout=5)
         node = node_result.stdout.strip() if node_result.returncode == 0 else 'localhost'
@@ -11496,61 +13075,80 @@ def api_vm_backups(vmid):
         # Get list of storage locations (shared 30s cache)
         storages = get_cached_pvesh_storage_list()
         if storages:
-            for storage in storages:
-                storage_id = storage.get('storage')
-                storage_type = storage.get('type')
-                content = storage.get('content', '')
+            # Only scan storages that can hold backups.
+            candidate_storages = [
+                s for s in storages
+                if 'backup' in s.get('content', '') or s.get('type') == 'pbs'
+            ]
 
-                # Only check storages that can contain backups
-                if 'backup' in content or storage_type == 'pbs':
-                    try:
-                        # Use --vmid filter to get only backups for this VM
-                        content_result = subprocess.run(
-                            ['pvesh', 'get', f'/nodes/{node}/storage/{storage_id}/content', 
-                             '--vmid', str(vmid), '--output-format', 'json'],
-                            capture_output=True, text=True, timeout=30
-                        )
-                        
-                        if content_result.returncode == 0:
-                            contents = json.loads(content_result.stdout)
-                            
-                            for item in contents:
-                                if item.get('content') == 'backup':
-                                    # Get backup type from subtype field (PBS) or parse volid (local)
-                                    backup_type = item.get('subtype', '')
-                                    if not backup_type:
-                                        volid = item.get('volid', '')
-                                        if 'vzdump-qemu-' in volid:
-                                            backup_type = 'qemu'
-                                        elif 'vzdump-lxc-' in volid:
-                                            backup_type = 'lxc'
-                                    
-                                    size = item.get('size', 0)
-                                    ctime = item.get('ctime', 0)
-                                    notes = item.get('notes', '')
-                                    
-                                    backups.append({
-                                        'volid': item.get('volid', ''),
-                                        'storage': storage_id,
-                                        'type': backup_type,
-                                        'size': size,
-                                        'size_human': format_bytes(size),
-                                        'timestamp': ctime,
-                                        'date': datetime.fromtimestamp(ctime).strftime('%Y-%m-%d %H:%M') if ctime else '',
-                                        'notes': notes
-                                    })
-                    except Exception as e:
-                        continue
+            def _scan_storage(storage: dict) -> list:
+                storage_id = storage.get('storage')
+                out: list = []
+                try:
+                    # `pvesh get storage/content --vmid X` still forks
+                    # a Perl client per call. Individually each is
+                    # ~0.7-2 s, so scanning 5+ storages sequentially
+                    # made the Backups tab spin 5-10 s. We keep the
+                    # command (its shape includes `notes` and `subtype`
+                    # that `pvesm list` drops) but fan them out in
+                    # parallel — tab load time collapses to the
+                    # slowest single storage.
+                    content_result = subprocess.run(
+                        ['pvesh', 'get', f'/nodes/{node}/storage/{storage_id}/content',
+                         '--vmid', str(vmid), '--output-format', 'json'],
+                        capture_output=True, text=True, timeout=15,
+                    )
+                    if content_result.returncode != 0:
+                        return out
+                    contents = json.loads(content_result.stdout)
+                    for item in contents:
+                        if item.get('content') != 'backup':
+                            continue
+                        backup_type = item.get('subtype', '')
+                        if not backup_type:
+                            volid = item.get('volid', '')
+                            if 'vzdump-qemu-' in volid:
+                                backup_type = 'qemu'
+                            elif 'vzdump-lxc-' in volid:
+                                backup_type = 'lxc'
+                        size = item.get('size', 0)
+                        ctime = item.get('ctime', 0)
+                        out.append({
+                            'volid': item.get('volid', ''),
+                            'storage': storage_id,
+                            'type': backup_type,
+                            'size': size,
+                            'size_human': format_bytes(size),
+                            'timestamp': ctime,
+                            'date': datetime.fromtimestamp(ctime).strftime('%Y-%m-%d %H:%M') if ctime else '',
+                            'notes': item.get('notes', ''),
+                        })
+                except Exception:
+                    pass
+                return out
+
+            if candidate_storages:
+                from concurrent.futures import ThreadPoolExecutor
+                # `min(8, N)` — capped so a wildly misconfigured host
+                # with 20 backup storages doesn't spawn 20 threads.
+                # PVE backup scans are IO/network-bound, so the GIL
+                # isn't a factor.
+                workers = min(8, len(candidate_storages))
+                with ThreadPoolExecutor(max_workers=workers, thread_name_prefix='vmbkp') as pool:
+                    for result in pool.map(_scan_storage, candidate_storages):
+                        backups.extend(result)
         
         # Sort by timestamp (newest first)
         backups.sort(key=lambda x: x['timestamp'], reverse=True)
-        
-        return jsonify({
+
+        payload = {
             'backups': backups,
             'vmid': vmid,
             'total': len(backups)
-        })
-        
+        }
+        _vm_cache_put(_vm_backups_cache, vmid, payload)
+        return jsonify(payload)
+
     except Exception as e:
         return jsonify({'error': str(e), 'backups': [], 'total': 0})
 
@@ -11842,6 +13440,898 @@ def api_lxc_updates_detection_set():
         })
     except Exception as e:
         return jsonify({'success': False, 'message': str(e)}), 500
+
+
+# ─── LXC App Watch (Phase 2c) ───────────────────────────────────────────────
+# Per-CT user-registered application metadata + upstream version tracking.
+# Sidecar at /etc/proxmenux/apps/<vmid>.json managed by the lxc_apps module.
+# Endpoints kept in the same "/api/vms/<vmid>/…" family so the UI's fetch
+# footprint stays symmetric with the rest of the per-CT resources.
+#
+# Notification (`app_update_available`) is fired from `check_app` — not from
+# here — so scheduled re-checks and on-demand /check both trigger it.
+
+# Per-CT App Watch CRUD. Multi-app: each sidecar is a list of apps.
+#   GET    /api/vms/<vmid>/apps              → list all apps for this CT
+#   POST   /api/vms/<vmid>/apps              → add a new app (server assigns id)
+#   POST   /api/vms/<vmid>/apps/test         → test an editor draft without saving
+#   PUT    /api/vms/<vmid>/apps/<app_id>     → update an existing app
+#   DELETE /api/vms/<vmid>/apps/<app_id>     → remove one app
+#   DELETE /api/vms/<vmid>/apps              → remove all apps for this CT
+#   POST   /api/vms/<vmid>/apps/<app_id>/check → force check one app
+#   POST   /api/vms/<vmid>/apps/check        → force check every app
+#   GET    /api/vms/<vmid>/apps/suggestions  → cached discovery result
+#   POST   /api/vms/<vmid>/apps/suggestions  → run discovery for this CT
+#   POST   /api/vms/<vmid>/apps/dismiss      → hide an auto-detected chip
+
+@app.route('/api/vms/<int:vmid>/apps', methods=['GET'])
+@require_auth
+def api_vm_apps_get(vmid):
+    try:
+        cached = _vm_cache_get(_vm_apps_cache, vmid, _VM_APPS_TTL)
+        if cached is not None:
+            return jsonify(cached)
+        import lxc_apps
+        sidecar = lxc_apps.load_sidecar(vmid)
+        payload = sidecar if sidecar else {'vmid': vmid, 'apps': []}
+        _vm_cache_put(_vm_apps_cache, vmid, payload)
+        return jsonify(payload)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/vms/<int:vmid>/apps', methods=['POST'])
+@require_auth
+def api_vm_apps_add(vmid):
+    payload = request.get_json(silent=True) or {}
+    try:
+        import lxc_apps
+        ok, result = lxc_apps.add_app(vmid, payload)
+        if not ok:
+            return jsonify({'error': result}), 400
+        _vm_cache_put(_vm_apps_cache, vmid, result)
+        return jsonify(result)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/vms/<int:vmid>/apps/test', methods=['POST'])
+@require_auth
+def api_vm_apps_test(vmid):
+    """Validate and run a tracking draft without writing a sidecar.
+
+    Keep this route above the dynamic ``/<app_id>`` route for clarity.
+    Flask's static-path precedence also ensures ``test`` is not treated
+    as an application id.
+    """
+    payload = request.get_json(silent=True) or {}
+    try:
+        import lxc_apps
+        ok, result = lxc_apps.test_config(vmid, payload)
+        if not ok:
+            return jsonify({'error': result}), 400
+        return jsonify(result)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/vms/<int:vmid>/apps/<app_id>', methods=['PUT'])
+@require_auth
+def api_vm_apps_update(vmid, app_id):
+    payload = request.get_json(silent=True) or {}
+    try:
+        import lxc_apps
+        ok, result = lxc_apps.update_app(vmid, app_id, payload)
+        if not ok:
+            code = 404 if 'not found' in str(result).lower() else 400
+            return jsonify({'error': result}), code
+        _vm_cache_put(_vm_apps_cache, vmid, result)
+        return jsonify(result)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/vms/<int:vmid>/apps/<app_id>', methods=['DELETE'])
+@require_auth
+def api_vm_apps_delete_one(vmid, app_id):
+    try:
+        import lxc_apps
+        ok = lxc_apps.delete_app(vmid, app_id)
+        sidecar = lxc_apps.load_sidecar(vmid) or {'vmid': vmid, 'apps': []}
+        _vm_cache_put(_vm_apps_cache, vmid, sidecar)
+        return jsonify({**sidecar, 'success': ok, 'app_id': app_id}), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/vms/<int:vmid>/apps', methods=['DELETE'])
+@require_auth
+def api_vm_apps_delete_all(vmid):
+    try:
+        import lxc_apps
+        ok = lxc_apps.delete_all(vmid)
+        sidecar = {'vmid': vmid, 'apps': []}
+        _vm_cache_put(_vm_apps_cache, vmid, sidecar)
+        return jsonify({**sidecar, 'success': ok}), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/vms/<int:vmid>/apps/<app_id>/check', methods=['POST'])
+@require_auth
+def api_vm_apps_check_one(vmid, app_id):
+    try:
+        import lxc_apps
+        sidecar = lxc_apps.check_app(vmid, app_id, force=True)
+        if not sidecar:
+            return jsonify({'error': 'app not found'}), 404
+        _vm_cache_put(_vm_apps_cache, vmid, sidecar)
+        return jsonify(sidecar)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/vms/<int:vmid>/apps/check', methods=['POST'])
+@require_auth
+def api_vm_apps_check_all(vmid):
+    try:
+        import lxc_apps
+        sidecar = lxc_apps.check_all(vmid, force=True)
+        if not sidecar:
+            sidecar = {'vmid': vmid, 'apps': []}
+        _vm_cache_put(_vm_apps_cache, vmid, sidecar)
+        return jsonify(sidecar)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/vms/<int:vmid>/schedule', methods=['GET', 'PUT', 'DELETE'])
+@require_auth
+def api_vm_apps_schedule(vmid):
+    """Scheduled update CRUD. GET returns the current schedule (or
+    {} if unset), PUT persists a new one, DELETE removes it entirely
+    (equivalent to setting enabled=false + wiping the cron). Handled
+    on the sidecar directly by lxc_apps — the scheduler thread reads
+    the same source of truth on its next tick."""
+    try:
+        import lxc_apps
+    except Exception as e:
+        return jsonify({'error': f'lxc_apps unavailable: {e}'}), 500
+    if request.method == 'GET':
+        cached = _vm_cache_get(_vm_schedule_cache, vmid, _VM_SCHEDULE_TTL)
+        if cached is not None:
+            return jsonify(cached)
+        sched = lxc_apps.get_schedule(vmid) or {}
+        # Enrich with detection of any host-level community-scripts
+        # update cron so the UI can render the "leverage what's
+        # already there" state without a second round-trip.
+        try:
+            ext = lxc_apps.detect_external_update_cron()
+        except Exception:
+            ext = None
+        if ext:
+            sched = dict(sched)
+            sched["external_cron"] = ext
+        _vm_cache_put(_vm_schedule_cache, vmid, sched)
+        return jsonify(sched)
+    if request.method == 'DELETE':
+        ok = lxc_apps.delete_schedule(vmid)
+        _vm_cache_invalidate(vmid, _vm_schedule_cache)
+        return jsonify({'success': bool(ok), 'vmid': vmid}), 200
+    payload = request.get_json(silent=True) or {}
+    ok, result = lxc_apps.update_schedule(vmid, payload)
+    if not ok:
+        return jsonify({'error': result}), 400
+    _vm_cache_invalidate(vmid, _vm_schedule_cache)
+    return jsonify(result)
+
+
+@app.route('/api/vms/<int:vmid>/bulk-update', methods=['GET', 'PUT', 'DELETE'])
+@require_auth
+def api_vm_bulk_update(vmid):
+    """CRUD for the reusable manual bulk-update selection.
+
+    The PUT path resolves every requested target before persisting it.  A
+    removed app, a stale Docker unit or a detector without an executable
+    updater therefore fails closed instead of saving a configuration that
+    would silently skip work later.
+    """
+    try:
+        import lxc_apps
+    except Exception as exc:
+        return jsonify({'error': f'lxc_apps unavailable: {exc}'}), 500
+    if request.method == 'GET':
+        return jsonify(lxc_apps.get_bulk_update(vmid) or {})
+    if request.method == 'DELETE':
+        ok = lxc_apps.delete_bulk_update(vmid)
+        return jsonify({'success': bool(ok), 'vmid': vmid}), 200
+    payload = request.get_json(silent=True) or {}
+    ok, normalised = lxc_apps.validate_bulk_update(payload)
+    if not ok:
+        return jsonify({'error': normalised}), 400
+    plan = _resolve_bulk_update_plan(vmid, normalised['targets'])
+    if not plan.get('ok'):
+        return jsonify({
+            'error': plan.get('error') or 'one or more update targets are unavailable',
+            'unavailable': plan.get('unavailable') or [],
+        }), 409
+    ok, result = lxc_apps.update_bulk_update(vmid, normalised)
+    if not ok:
+        return jsonify({'error': result}), 400
+    return jsonify((result.get('bulk_update') or normalised))
+
+
+@app.route('/api/vms/<int:vmid>/bulk-update/plan', methods=['POST'])
+@require_auth
+def api_vm_bulk_update_plan(vmid):
+    """Resolve the saved selection into the exact terminal-run parameters."""
+    try:
+        import lxc_apps
+        bulk = lxc_apps.get_bulk_update(vmid)
+    except Exception as exc:
+        return jsonify({'error': str(exc)}), 500
+    if not bulk:
+        return jsonify({'error': 'bulk update is not configured'}), 404
+    plan = _resolve_bulk_update_plan(vmid, bulk.get('targets') or [])
+    if not plan.get('ok'):
+        return jsonify({
+            'error': plan.get('error') or 'one or more update targets are unavailable',
+            'unavailable': plan.get('unavailable') or [],
+        }), 409
+    return jsonify(plan)
+
+
+@app.route('/api/vms/<int:vmid>/apps/suggestions', methods=['GET', 'POST'])
+@require_auth
+def api_vm_apps_suggestions(vmid):
+    try:
+        import lxc_apps
+        cached = _vm_cache_get(
+            _vm_app_suggestions_cache, vmid, _VM_APP_SUGGESTIONS_TTL,
+        )
+        if request.method == 'GET' and cached is not None:
+            return jsonify(cached)
+
+        from flask import g as _flask_g
+        internal_warmup = bool(getattr(_flask_g, '_internal_call', False))
+        if request.method == 'GET' and not internal_warmup:
+            return jsonify({
+                'ready': False,
+                'name_suggestion': None,
+                'helper_slug': None,
+                'port_suggestions': [],
+                'web_path_hint': None,
+                'tracking_suggestion': None,
+                'default_ports': [],
+                'logo_url': None,
+                'extras': [],
+                'docker_web_links': [],
+            })
+
+        payload = dict(lxc_apps.get_suggestions(vmid, force=True))
+        payload['ready'] = True
+        _vm_cache_put(_vm_app_suggestions_cache, vmid, payload)
+        return jsonify(payload)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/vms/<int:vmid>/docker/inventory', methods=['GET'])
+@require_auth
+def api_vm_docker_inventory(vmid):
+    """Read-only Docker image inventory + remote digest comparison.
+
+    ``?force=1`` bypasses the daily cache.  The implementation never
+    pulls an image and never restarts/recreates a container.
+    """
+    try:
+        import lxc_apps
+        force = str(request.args.get('force', '')).lower() in ('1', 'true', 'yes')
+        result = lxc_apps.get_docker_inventory(vmid, force=force)
+        return jsonify(result)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/apps/catalog', methods=['GET'])
+@require_auth
+def api_apps_catalog():
+    """Compact catalog of every registerable app the frontend picker
+    can offer — [{slug, name, logo, default_port, has_tracking}].
+    Cache-friendly: same content for every user, only changes when
+    helpers_cache.json or app_tracking_hints.json refresh."""
+    try:
+        import lxc_apps
+        return jsonify(lxc_apps.get_catalog())
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/lxc-apps/dockerhub-tag-preview', methods=['POST'])
+@require_auth
+def api_lxc_apps_dockerhub_tag_preview():
+    """Preview real Docker Hub tags for the App editor (no persistence)."""
+    payload = request.get_json(silent=True) or {}
+    try:
+        import lxc_apps
+        ok, result = lxc_apps.preview_docker_hub_tags(
+            payload.get('image') or '', payload.get('regex') or ''
+        )
+        if not ok:
+            return jsonify({'error': result}), 400
+        return jsonify(result)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+# ── Custom Web Links ─────────────────────────────────────────────
+# User-defined launcher entries (in the Apps dashboard) that don't
+# come from a registered LXC app. Backed by /etc/proxmenux/custom_links.json
+# — one small global sidecar. Full schema + validation lives in
+# custom_links.py; the endpoints here are thin CRUD wrappers.
+
+@app.route('/api/apps/custom-links', methods=['GET'])
+@require_auth
+def api_custom_links_list():
+    try:
+        import custom_links
+        return jsonify(custom_links.load_all())
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/apps/custom-links', methods=['POST'])
+@require_auth
+def api_custom_links_create():
+    payload = request.get_json(silent=True) or {}
+    try:
+        import custom_links
+        ok, result = custom_links.create(payload)
+        if not ok:
+            return jsonify({'error': result}), 400
+        return jsonify(result), 201
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/apps/custom-links/<link_id>', methods=['PUT'])
+@require_auth
+def api_custom_links_update(link_id):
+    payload = request.get_json(silent=True) or {}
+    try:
+        import custom_links
+        ok, result = custom_links.update(link_id, payload)
+        if not ok:
+            code = 404 if result == 'link not found' else 400
+            return jsonify({'error': result}), code
+        return jsonify(result)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/apps/custom-links/<link_id>', methods=['DELETE'])
+@require_auth
+def api_custom_links_delete(link_id):
+    try:
+        import custom_links
+        ok, result = custom_links.delete(link_id)
+        if not ok:
+            return jsonify({'error': result}), 400
+        return jsonify(result)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/apps/categories', methods=['GET'])
+@require_auth
+def api_apps_categories():
+    """List of category preset labels the Web Link editor offers in
+    its Categoría dropdown. Sourced from helpers_cache.category_names
+    so the taxonomy stays aligned with community-scripts, with a
+    small built-in fallback so the dropdown never renders empty."""
+    try:
+        import lxc_apps
+        return jsonify(lxc_apps.get_category_presets())
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/apps/suggest_category', methods=['GET'])
+@require_auth
+def api_apps_suggest_category():
+    """Auto-fill the Categoría field when the user types a Web Link
+    name that matches a helpers_cache entry (by slug or name). Returns
+    {"category": "<name>"} or {"category": null}."""
+    try:
+        import lxc_apps
+        name = (request.args.get('name') or '').strip()
+        return jsonify({'category': lxc_apps.suggest_category_for(name)})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/apps/catalog/<slug>', methods=['GET'])
+@require_auth
+def api_apps_catalog_slug(slug):
+    """Detail for a single catalog slug — used to seed the editor
+    after the user picks an app in the Name Combobox. Includes the
+    curated tracking_suggestion when we have one for the slug."""
+    try:
+        import lxc_apps
+        vmid_raw = request.args.get('vmid')
+        vmid = int(vmid_raw) if vmid_raw and vmid_raw.isdigit() else None
+        entry = lxc_apps.get_catalog_entry(slug, vmid=vmid)
+        if entry is None:
+            return jsonify({'error': 'not found'}), 404
+        return jsonify(entry)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/vms/<int:vmid>/apps/dismiss', methods=['POST'])
+@require_auth
+def api_vm_apps_dismiss(vmid):
+    """Persist a per-CT dismiss / un-dismiss for an auto-detected
+    slug. Body: ``{"slug": str, "dismissed": bool}``. Detected chips
+    hidden this way don't come back on future page loads.
+    """
+    try:
+        import lxc_apps
+        payload = request.get_json(silent=True) or {}
+        slug = payload.get('slug', '')
+        dismissed = bool(payload.get('dismissed', True))
+        ok, result = lxc_apps.set_dismissed_slug(vmid, slug, dismissed)
+        if not ok:
+            return jsonify({'error': result}), 400
+        _vm_cache_put(_vm_apps_cache, vmid, result)
+        return jsonify(result)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+# ─── LXC update finalization ────────────────────────────────────────────────
+
+_LXC_APPLY_UPDATES_SCRIPT = "/usr/local/share/proxmenux/scripts/lxc/apply_updates.sh"
+_LXC_UPDATE_RUN_ID_RE = re.compile(r'^[A-Za-z0-9._:-]{1,128}$')
+_LXC_UPDATE_TARGET_RE = re.compile(r'^[A-Za-z0-9._:-]{1,180}$')
+_lxc_update_finalization_lock = threading.RLock()
+_lxc_update_finalizations: dict[tuple[int, str], dict] = {}
+_LXC_UPDATE_FINALIZATION_TTL = 6 * 3600
+
+
+def _normalise_lxc_update_run_id(value, *, create: bool = True) -> str | None:
+    run_id = str(value or '').strip()
+    if _LXC_UPDATE_RUN_ID_RE.fullmatch(run_id):
+        return run_id
+    return uuid.uuid4().hex if create else None
+
+
+def _normalise_lxc_update_targets(values, fallback: str = 'os') -> list[str]:
+    if not isinstance(values, list):
+        values = []
+    result: list[str] = []
+    for value in values[:64]:
+        target = str(value or '').strip()
+        if _LXC_UPDATE_TARGET_RE.fullmatch(target) and target not in result:
+            result.append(target)
+    if result:
+        return result
+    coarse = str(fallback or 'os').lower()
+    if coarse == 'both':
+        return ['os', 'apps']
+    return ['apps'] if coarse == 'app' else ['os']
+
+
+def _normalise_lxc_update_labels(values) -> list[str]:
+    if not isinstance(values, list):
+        return []
+    result: list[str] = []
+    for value in values[:64]:
+        label = str(value or '').strip()
+        if not label or len(label) > 160 or re.search(r'[\x00-\x1f\x7f]', label):
+            continue
+        if label not in result:
+            result.append(label)
+    return result
+
+
+def _json_list(value) -> list:
+    if isinstance(value, list):
+        return value
+    if not isinstance(value, str) or not value.strip():
+        return []
+    try:
+        parsed = json.loads(value)
+    except (TypeError, ValueError, json.JSONDecodeError):
+        return []
+    return parsed if isinstance(parsed, list) else []
+
+
+def _lxc_update_snapshot(vmid: int) -> dict:
+    managed_item = None
+    sidecar: dict = {}
+    docker_inventory: dict = {}
+    try:
+        import managed_installs
+        managed_item = next(
+            (
+                item for item in (managed_installs.get_active_items() or [])
+                if item.get('type') == 'lxc'
+                and str(item.get('_vmid')) == str(vmid)
+            ),
+            None,
+        )
+    except Exception:
+        managed_item = None
+    try:
+        import lxc_apps
+        sidecar = lxc_apps._read_sidecar(vmid) or {}
+        docker_inventory = (
+            lxc_apps.get_cached_docker_inventories().get(str(vmid)) or {}
+        )
+    except Exception:
+        sidecar = {}
+        docker_inventory = {}
+
+    apps: dict[str, dict] = {}
+    for app_item in sidecar.get('apps') or []:
+        app_id = str(app_item.get('id') or '').strip()
+        if not app_id:
+            continue
+        state = app_item.get('state') or {}
+        apps[app_id] = {
+            'name': str(app_item.get('name') or app_id),
+            'helper_slug': app_item.get('helper_slug'),
+            'installed_version': state.get('installed_version'),
+            'latest_version': state.get('latest_version'),
+            'update_available': state.get('update_available'),
+        }
+
+    update_check = (managed_item or {}).get('update_check') or {}
+    os_pending = update_check.get('_count')
+    if os_pending is None and update_check.get('available') is False:
+        os_pending = 0
+    return {
+        'ct_name': (managed_item or {}).get('name'),
+        'os_pending': os_pending,
+        'apps': apps,
+        'docker_inventory': json.loads(json.dumps(docker_inventory, default=str)),
+    }
+
+
+def _lxc_update_target_labels(
+    targets: list[str], labels: list[str], snapshot: dict,
+) -> list[str]:
+    if labels:
+        return labels
+    apps = snapshot.get('apps') or {}
+    units = {
+        str(unit.get('id')): unit
+        for unit in (snapshot.get('docker_inventory') or {}).get('update_units') or []
+        if unit.get('id')
+    }
+    result: list[str] = []
+    for target in targets:
+        if target == 'os':
+            label = 'OS'
+        elif target == 'apps':
+            label = 'Applications'
+        elif target == 'docker-engine':
+            label = 'Docker Engine'
+        elif target.startswith('app:'):
+            app_item = apps.get(target.split(':', 1)[1]) or {}
+            label = str(app_item.get('name') or 'Application')
+        elif target.startswith('docker-unit:'):
+            unit = units.get(target) or {}
+            label = str(
+                unit.get('display_name')
+                or unit.get('primary_reference')
+                or 'Docker image'
+            )
+        elif target.startswith('docker-container:'):
+            label = target.split(':', 1)[1]
+        else:
+            label = target
+        if label and label not in result:
+            result.append(label)
+    return result
+
+
+def _lxc_update_details(
+    *,
+    status: str,
+    source: str,
+    targets: list[str],
+    labels: list[str],
+    deferred_targets: list[str],
+    duration: str,
+    reason: str | None,
+    before: dict,
+    after: dict,
+    verification_pending: bool,
+    verification_errors: list[str],
+) -> str:
+    lines = [
+        f"Source: {'Scheduled' if source == 'scheduled' else 'Manual'}",
+        f"Targets: {', '.join(labels) or ', '.join(targets)}",
+    ]
+    if 'os' in targets:
+        before_count = before.get('os_pending')
+        after_count = after.get('os_pending')
+        if isinstance(before_count, int) and isinstance(after_count, int):
+            lines.append(f'OS packages pending: {before_count} → {after_count}')
+        else:
+            lines.append('OS packages: update command executed; result not verified')
+
+    before_apps = before.get('apps') or {}
+    after_apps = after.get('apps') or {}
+    app_ids = {
+        target.split(':', 1)[1]
+        for target in targets if target.startswith('app:')
+    }
+    if 'apps' in targets:
+        app_ids.update(before_apps)
+        app_ids.update(after_apps)
+    app_lines = []
+    for app_id in sorted(app_ids):
+        old = before_apps.get(app_id) or {}
+        new = after_apps.get(app_id) or {}
+        old_version = old.get('installed_version')
+        new_version = new.get('installed_version')
+        if old_version and new_version and old_version != new_version:
+            app_lines.append(
+                f"{new.get('name') or old.get('name') or app_id}: "
+                f'{old_version} → {new_version}'
+            )
+    if app_lines:
+        lines.append('Applications: ' + '; '.join(app_lines[:8]))
+    elif app_ids:
+        lines.append('Applications: updater executed; no tracked version change was observed')
+
+    docker_requested = any(target.startswith('docker-') for target in targets)
+    before_docker = before.get('docker_inventory') or {}
+    after_docker = after.get('docker_inventory') or {}
+    if 'docker-engine' in targets:
+        old_engine = before_docker.get('engine_version')
+        new_engine = after_docker.get('engine_version')
+        if old_engine and new_engine and old_engine != new_engine:
+            lines.append(f'Docker Engine: {old_engine} → {new_engine}')
+        elif new_engine:
+            lines.append(f'Docker Engine: verified at {new_engine}')
+        else:
+            lines.append('Docker Engine: update command executed; version not verified')
+    if docker_requested and any(target != 'docker-engine' for target in targets):
+        before_pending = before_docker.get('update_count')
+        after_pending = after_docker.get('update_count')
+        if isinstance(before_pending, int) and isinstance(after_pending, int):
+            lines.append(f'Docker images pending: {before_pending} → {after_pending}')
+        changed_images = []
+        after_by_ref = {
+            str(item.get('reference')): item
+            for item in after_docker.get('images') or [] if item.get('reference')
+        }
+        for old_image in before_docker.get('images') or []:
+            reference = str(old_image.get('reference') or '')
+            new_image = after_by_ref.get(reference) or {}
+            if reference and old_image.get('local_digest') != new_image.get('local_digest'):
+                changed_images.append(reference)
+        if changed_images:
+            lines.append('Docker images changed: ' + ', '.join(changed_images[:8]))
+
+    if deferred_targets:
+        lines.append('Deferred targets: ' + ', '.join(deferred_targets))
+    if reason:
+        lines.append(f'Reason: {reason}')
+    if verification_pending:
+        lines.append('Verification pending until the container is running')
+    for error in verification_errors[:4]:
+        lines.append(f'Verification warning: {error}')
+    lines.append(f'Duration: {duration}')
+    return '\n'.join(lines)
+
+
+def _finalize_lxc_update(
+    vmid: int,
+    *,
+    run_id: str,
+    status: str,
+    source: str,
+    target: str,
+    duration_seconds=0,
+    ct_name: str | None = None,
+    requested_targets=None,
+    executed_targets=None,
+    deferred_targets=None,
+    target_labels=None,
+    reason: str | None = None,
+    refresh_docker_inventory: bool = False,
+    before_snapshot: dict | None = None,
+) -> dict:
+    safe_run_id = _normalise_lxc_update_run_id(run_id)
+    key = (int(vmid), safe_run_id)
+    now = time.time()
+    with _lxc_update_finalization_lock:
+        for old_key, record in list(_lxc_update_finalizations.items()):
+            if now - float(record.get('created_at') or now) > _LXC_UPDATE_FINALIZATION_TTL:
+                _lxc_update_finalizations.pop(old_key, None)
+        existing = _lxc_update_finalizations.get(key)
+        if existing:
+            if existing.get('state') == 'complete':
+                return dict(existing.get('result') or {})
+            return {'success': True, 'run_id': safe_run_id, 'finalization': 'in_progress'}
+        _lxc_update_finalizations[key] = {'state': 'running', 'created_at': now}
+
+    status = status if status in {'success', 'failure', 'partial', 'deferred', 'skipped'} else 'failure'
+    requested = _normalise_lxc_update_targets(requested_targets, target)
+    executed = _normalise_lxc_update_targets(executed_targets, target) if executed_targets else []
+    deferred = _normalise_lxc_update_targets(deferred_targets, target) if deferred_targets else []
+    labels = _normalise_lxc_update_labels(target_labels)
+    try:
+        secs = max(0, int(duration_seconds or 0))
+    except (TypeError, ValueError):
+        secs = 0
+    duration = f'{secs}s' if secs < 60 else f'{secs // 60}m {secs % 60}s'
+    verification_errors: list[str] = []
+    before = before_snapshot or _lxc_update_snapshot(vmid)
+    verification_pending = _fast_guest_status(vmid, 'lxc') != 'running'
+    docker_inventory = None
+
+    if not verification_pending:
+        try:
+            import managed_installs
+            managed_installs.refresh_lxc(vmid)
+        except Exception as exc:
+            verification_errors.append(f'OS refresh failed: {exc}')
+        try:
+            import lxc_apps
+            refreshed_sidecar = lxc_apps.check_all(vmid, force=True)
+            refreshed_sidecar = refreshed_sidecar or {'vmid': vmid, 'apps': []}
+            _vm_cache_put(_vm_apps_cache, vmid, refreshed_sidecar)
+        except Exception as exc:
+            _vm_cache_invalidate(vmid, _vm_apps_cache)
+            verification_errors.append(f'application refresh failed: {exc}')
+        docker_attempted = refresh_docker_inventory or any(
+            target_id.startswith('docker-') for target_id in requested
+        )
+        if docker_attempted:
+            try:
+                import lxc_apps
+                docker_inventory = lxc_apps.get_docker_inventory(vmid, force=True)
+            except Exception as exc:
+                verification_errors.append(f'Docker refresh failed: {exc}')
+        _publish_guest_modal_cache_revision(vmid)
+
+    after = _lxc_update_snapshot(vmid)
+    labels = _lxc_update_target_labels(requested, labels, before)
+    resolved_name = str(ct_name or before.get('ct_name') or f'CT-{vmid}').strip()
+    if not resolved_name or len(resolved_name) > 160 or re.search(r'[\x00-\x1f\x7f]', resolved_name):
+        resolved_name = f'CT-{vmid}'
+    result_words = {
+        'success': 'succeeded',
+        'failure': 'failed',
+        'partial': 'completed partially',
+        'deferred': 'deferred',
+        'skipped': 'skipped',
+    }
+    details = _lxc_update_details(
+        status=status,
+        source=source,
+        targets=executed,
+        labels=labels,
+        deferred_targets=deferred,
+        duration=duration,
+        reason=str(reason)[:500] if reason else None,
+        before=before,
+        after=after,
+        verification_pending=verification_pending,
+        verification_errors=verification_errors,
+    )
+    try:
+        notification_manager.emit_event(
+            event_type='lxc_update_applied',
+            severity='WARNING' if status in {'failure', 'partial'} else 'INFO',
+            data={
+                'hostname': get_proxmox_node_name(),
+                'vmid': vmid,
+                'ct_name': resolved_name,
+                'target': ', '.join(labels),
+                'result': result_words[status],
+                'duration': duration,
+                'details': details,
+            },
+            source=source,
+            entity='ct',
+            entity_id=f'{vmid}:{safe_run_id}',
+        )
+    except Exception as exc:
+        verification_errors.append(f'notification failed: {exc}')
+        print(f'[ProxMenux] lxc_update_applied notification failed: {exc}', flush=True)
+
+    result = {
+        'success': True,
+        'run_id': safe_run_id,
+        'status': status,
+        'finalization': 'complete',
+        'verification_pending': verification_pending,
+        'verification_errors': verification_errors,
+        'docker_inventory': docker_inventory,
+    }
+    with _lxc_update_finalization_lock:
+        _lxc_update_finalizations[key] = {
+            'state': 'complete',
+            'created_at': now,
+            'result': result,
+        }
+    return dict(result)
+
+
+def _terminal_lxc_update_completed(*, script_path, params, exit_code, duration_seconds):
+    if os.path.realpath(script_path) != os.path.realpath(_LXC_APPLY_UPDATES_SCRIPT):
+        return
+    run_id = _normalise_lxc_update_run_id(params.get('RUN_ID'), create=False)
+    if not run_id:
+        return
+    try:
+        vmid = int(params.get('VMID'))
+    except (TypeError, ValueError):
+        return
+    target = str(params.get('TARGET') or 'os').lower()
+    requested = _normalise_lxc_update_targets(
+        _json_list(params.get('REQUESTED_TARGETS_JSON')), target,
+    )
+    _finalize_lxc_update(
+        vmid,
+        run_id=run_id,
+        status='success' if int(exit_code) == 0 else 'failure',
+        source='manual',
+        target=target,
+        duration_seconds=duration_seconds,
+        ct_name=params.get('CT_NAME'),
+        requested_targets=requested,
+        executed_targets=requested,
+        target_labels=_json_list(params.get('TARGET_LABELS_JSON')),
+        reason=None if int(exit_code) == 0 else f'update runner exited with code {exit_code}',
+        refresh_docker_inventory=str(params.get('REFRESH_DOCKER_INVENTORY') or '') == '1',
+    )
+
+
+set_script_completion_hook(_terminal_lxc_update_completed)
+
+
+@app.route('/api/lxc-updates/<int:vmid>/applied', methods=['POST'])
+@require_auth
+def api_lxc_updates_applied(vmid):
+    payload = request.get_json(silent=True) or {}
+    target = str(payload.get('target') or 'os').lower()
+    requested = _normalise_lxc_update_targets(payload.get('requested_targets'), target)
+    run_id = _normalise_lxc_update_run_id(payload.get('run_id'))
+    kwargs = {
+        'run_id': run_id,
+        'status': 'success' if bool(payload.get('success')) else 'failure',
+        'source': 'manual',
+        'target': target,
+        'duration_seconds': payload.get('duration_seconds'),
+        'ct_name': payload.get('ct_name'),
+        'requested_targets': requested,
+        'executed_targets': requested,
+        'target_labels': payload.get('target_labels'),
+        'reason': None if bool(payload.get('success')) else str(payload.get('reason') or 'update runner failed'),
+        'refresh_docker_inventory': bool(payload.get('refresh_docker_inventory')),
+    }
+    if payload.get('run_id'):
+        threading.Thread(
+            target=_finalize_lxc_update,
+            args=(vmid,),
+            kwargs=kwargs,
+            daemon=True,
+            name=f'lxc-update-finalize-{vmid}',
+        ).start()
+        return jsonify({
+            'success': True,
+            'run_id': run_id,
+            'finalization': 'queued',
+        }), 202
+    return jsonify(_finalize_lxc_update(vmid, **kwargs))
 
 
 @app.route('/api/health/thresholds', methods=['GET'])
@@ -12307,30 +14797,40 @@ def api_hardware_live():
         return jsonify({'error': str(e)}), 500
 
 
+_gpu_realtime_cache: dict[str, tuple[float, dict]] = {}
+_gpu_realtime_cache_lock = threading.Lock()
+# Frontend polls this endpoint every 3 s per open GPU modal. For
+# Intel and AMD the underlying tool call (intel_gpu_top / rocm-smi)
+# blocks ~2 s per invocation, so a naked request-per-poll makes the
+# modal feel sluggish and stacks CPU. A 4 s TTL means the second and
+# third poll of any 4 s window serve straight from memory while the
+# first still pays the tool cost; NVIDIA (nvidia-smi ~200 ms) also
+# benefits by dropping the second nvidia-smi spawn.
+_GPU_REALTIME_TTL = 4.0
+
 @app.route('/api/gpu/<slot>/realtime', methods=['GET'])
 @require_auth
 def api_gpu_realtime(slot):
     """Get real-time GPU monitoring data for a specific GPU"""
     try:
-        # print(f"[v0] /api/gpu/{slot}/realtime - Getting GPU info...")
-        pass
-        
+        now = time.time()
+        with _gpu_realtime_cache_lock:
+            hit = _gpu_realtime_cache.get(slot)
+        if hit and (now - hit[0]) < _GPU_REALTIME_TTL:
+            return jsonify(hit[1])
+
         gpus = get_gpu_info()
-        
+
         gpu = None
         for g in gpus:
             # Match by slot or if the slot is a substring of the GPU's slot (e.g., '00:01.0' matching '00:01')
             if g.get('slot') == slot or slot in g.get('slot', ''):
                 gpu = g
                 break
-        
+
         if not gpu:
-            # print(f"[v0] GPU with slot matching '{slot}' not found")
-            pass
             return jsonify({'error': 'GPU not found'}), 404
-        
-        # print(f"[v0] Getting detailed monitoring data for GPU at slot {gpu.get('slot')}...")
-        pass
+
         detailed_info = get_detailed_gpu_info(gpu)
         gpu.update(detailed_info)
 
@@ -12374,13 +14874,76 @@ def api_gpu_realtime(slot):
             'sriov_consumer': gpu.get('sriov_consumer'),
         }
 
+        with _gpu_realtime_cache_lock:
+            _gpu_realtime_cache[slot] = (time.time(), realtime_data)
+
         return jsonify(realtime_data)
     except Exception as e:
-        # print(f"[v0] Error getting real-time GPU data: {e}")
-        pass
         import traceback
         traceback.print_exc()
         return jsonify({'error': str(e)}), 500
+
+@app.route('/api/vms/modal-cache-all', methods=['GET'])
+@require_auth
+def api_vms_modal_cache_all():
+    """Bulk modal cache: returns every guest's `details`, `backups`,
+    `apps` and `schedule` payloads in a single response. Lets the
+    frontend replace the current 84-request warm-up (4 endpoints ×
+    ~21 guests) with a single fetch on page load.
+
+    Reads **exclusively** from the in-memory caches populated by
+    the backend prewarmer (`_vm_modal_prewarmer_loop`). Never falls
+    through to a live handler call — that would let a single cold
+    guest block the whole bulk response for 10-20s. If a guest is
+    not yet cached the corresponding field is `null` and the client
+    fetches that one endpoint dirigido on demand.
+
+    Trade-off: for the ~20-70s window right after `systemctl
+    restart proxmenux-monitor` some fields come back `null`; the
+    client transparently falls back to per-endpoint fetches for
+    those. Once the initial warm-up finishes the entire response
+    is served from dict reads (<20ms even with 30+ guests).
+
+    Response shape:
+        {
+          "guests": [
+            {
+              "vmid": 100, "type": "lxc",
+              "details": {...} | null,
+              "backups": {...} | null,
+              "apps":    {...} | null,   # lxc only
+              "schedule":{...} | null    # lxc only
+            }, ...
+          ],
+          "ts": 1234567890
+        }"""
+    try:
+        resources = get_cached_pvesh_cluster_resources_vm() or []
+        guests = []
+        for r in resources:
+            vmid = r.get('vmid')
+            vm_type = r.get('type')  # 'qemu' or 'lxc'
+            if vmid is None:
+                continue
+            entry = {
+                'vmid': vmid,
+                'type': vm_type,
+                'details': _vm_cache_get(_vm_details_cache, vmid, _VM_DETAILS_TTL),
+                'backups': _vm_cache_get(_vm_backups_cache, vmid, _VM_BACKUPS_TTL),
+            }
+            if vm_type == 'lxc':
+                entry['apps'] = _vm_cache_get(_vm_apps_cache, vmid, _VM_APPS_TTL)
+                entry['suggestions'] = _vm_cache_get(
+                    _vm_app_suggestions_cache, vmid,
+                    _VM_APP_SUGGESTIONS_TTL,
+                )
+                entry['schedule'] = _vm_cache_get(_vm_schedule_cache, vmid, _VM_SCHEDULE_TTL)
+                entry['mount_points'] = _vm_cache_get(_vm_mounts_cache, vmid, _VM_MOUNTS_TTL)
+            guests.append(entry)
+        return jsonify({'guests': guests, 'ts': int(time.time())})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
 
 # CHANGE: Modificar el endpoint para incluir la información completa de IPs
 @app.route('/api/vms/<int:vmid>', methods=['GET'])
@@ -12388,117 +14951,131 @@ def api_gpu_realtime(slot):
 def get_vm_config(vmid):
     """Get detailed configuration for a specific VM/LXC"""
     try:
-        # Get VM/LXC configuration
-        # node = socket.gethostname() # Get node name
+        cached = _vm_cache_get(_vm_details_cache, vmid, _VM_DETAILS_TTL)
+        if cached is not None:
+            return jsonify(cached)
+
         node = get_proxmox_node_name()
-        
-        result = subprocess.run(
-            ['pvesh', 'get', f'/nodes/{node}/qemu/{vmid}/config', '--output-format', 'json'],
-            capture_output=True,
-            text=True,
-            timeout=10
+
+        # Fast local path — read .conf directly and derive status from
+        # runtime markers, no `pvesh` involved. `pvesh get config`
+        # takes 1-3 s per call even on an idle host; this path is
+        # sub-millisecond and eliminates the multi-second "Loading
+        # configuration…" state the modal used to show. GH #<todo>.
+        vm_type = _detect_vm_type_local(vmid)
+        if vm_type is None:
+            return jsonify({'error': 'VM/LXC not found'}), 404
+
+        conf_path = (
+            f'/etc/pve/qemu-server/{vmid}.conf' if vm_type == 'qemu'
+            else f'/etc/pve/lxc/{vmid}.conf'
         )
-        
-        vm_type = 'qemu'
-        if result.returncode != 0:
-            # Try LXC
-            result = subprocess.run(
-                ['pvesh', 'get', f'/nodes/{node}/lxc/{vmid}/config', '--output-format', 'json'],
-                capture_output=True,
-                text=True,
-                timeout=10
-            )
-            vm_type = 'lxc'
-        
-        if result.returncode == 0:
-            config = json.loads(result.stdout)
-            
-            # Get VM/LXC status to check if it's running
-            status_result = subprocess.run(
-                ['pvesh', 'get', f'/nodes/{node}/{vm_type}/{vmid}/status/current', '--output-format', 'json'],
-                capture_output=True,
-                text=True,
-                timeout=10
-            )
-            
-            status = 'stopped'
-            if status_result.returncode == 0:
-                status_data = json.loads(status_result.stdout)
-                status = status_data.get('status', 'stopped')
-            
-            response_data = {
-                'vmid': vmid,
-                'config': config,
-                'node': node,
-                'vm_type': vm_type
-            }
-            
-            # For LXC, try to get IP from lxc-info if running
-            if vm_type == 'lxc' and status == 'running':
-                lxc_ip_info = get_lxc_ip_from_lxc_info(vmid)
-                if lxc_ip_info:
-                    response_data['lxc_ip_info'] = lxc_ip_info
-            
-            # Get OS information for LXC
-            os_info = {}
-            if vm_type == 'lxc' and status == 'running':
-                try:
-                    os_release_result = subprocess.run(
-                        ['pct', 'exec', str(vmid), '--', 'cat', '/etc/os-release'],
-                        capture_output=True, text=True, timeout=5)
-                    
-                    if os_release_result.returncode == 0:
-                        for line in os_release_result.stdout.split('\n'):
-                            line = line.strip()
-                            if line.startswith('ID='):
-                                os_info['id'] = line.split('=', 1)[1].strip('"').strip("'")
-                            elif line.startswith('VERSION_ID='):
-                                os_info['version_id'] = line.split('=', 1)[1].strip('"').strip("'")
-                            elif line.startswith('NAME='):
-                                os_info['name'] = line.split('=', 1)[1].strip('"').strip("'")
-                            elif line.startswith('PRETTY_NAME='):
-                                os_info['pretty_name'] = line.split('=', 1)[1].strip('"').strip("'")
-                except Exception as e:
-                    pass # Silently handle errors
-            
-            # Get hardware information for LXC
-            hardware_info = {}
-            if vm_type == 'lxc':
-                hardware_info = parse_lxc_hardware_config(vmid, node)
-            
-            # Add OS info and hardware info to response
-            if os_info:
-                response_data['os_info'] = os_info
-            if hardware_info:
-                response_data['hardware_info'] = hardware_info
-            
-            return jsonify(response_data)
-        
-        return jsonify({'error': 'VM/LXC not found'}), 404
-        
+        config = _read_pve_conf_fast(conf_path)
+        if not config:
+            return jsonify({'error': 'VM/LXC not found'}), 404
+
+        status = _fast_guest_status(vmid, vm_type)
+
+        response_data = {
+            'vmid': vmid,
+            'config': config,
+            'node': node,
+            'vm_type': vm_type,
+        }
+
+        # For LXC, try to get IP from lxc-info if running
+        if vm_type == 'lxc' and status == 'running':
+            lxc_ip_info = get_lxc_ip_from_lxc_info(vmid)
+            if lxc_ip_info:
+                response_data['lxc_ip_info'] = lxc_ip_info
+
+        # Get OS information for LXC
+        os_info = {}
+        if vm_type == 'lxc' and status == 'running':
+            try:
+                os_release_result = subprocess.run(
+                    ['pct', 'exec', str(vmid), '--', 'cat', '/etc/os-release'],
+                    capture_output=True, text=True, timeout=5)
+                if os_release_result.returncode == 0:
+                    for line in os_release_result.stdout.split('\n'):
+                        line = line.strip()
+                        if line.startswith('ID='):
+                            os_info['id'] = line.split('=', 1)[1].strip('"').strip("'")
+                        elif line.startswith('VERSION_ID='):
+                            os_info['version_id'] = line.split('=', 1)[1].strip('"').strip("'")
+                        elif line.startswith('NAME='):
+                            os_info['name'] = line.split('=', 1)[1].strip('"').strip("'")
+                        elif line.startswith('PRETTY_NAME='):
+                            os_info['pretty_name'] = line.split('=', 1)[1].strip('"').strip("'")
+            except Exception:
+                pass
+
+        # Get hardware information for LXC — already reads the .conf
+        # directly (no pvesh), so it's cheap.
+        hardware_info = {}
+        if vm_type == 'lxc':
+            hardware_info = parse_lxc_hardware_config(vmid, node)
+
+        if os_info:
+            response_data['os_info'] = os_info
+        if hardware_info:
+            response_data['hardware_info'] = hardware_info
+
+        _vm_cache_put(_vm_details_cache, vmid, response_data)
+        return jsonify(response_data)
+
     except Exception as e:
-        # print(f"Error getting VM config: {e}")
-        pass
         return jsonify({'error': str(e)}), 500
 
 @app.route('/api/lxc/<int:vmid>/mount-points', methods=['GET'])
 @require_auth
 def api_lxc_mount_points(vmid):
-    """Sprint 13.29: per-LXC mount points enumeration.
+    """Static half of the per-LXC mount-points payload — parsed mp
+    entries, source/target, PVE storage classification, host source
+    existence flags. Runtime state (`df` capacity, `stat` health,
+    ad-hoc NFS/CIFS discovery, runtime_mounted flag) lives in the
+    sibling `/api/lxc/<vmid>/mount-points/runtime` endpoint that
+    the client fetches on demand every time the tab opens.
 
-    Returns the parsed ``mpX:`` entries from the container config plus,
-    when the container is running, runtime status (mounted/not, real
-    fstype, options, stale detection) and any ad-hoc NFS/CIFS/SMB the
-    user mounted from inside the CT. Capacity is always populated from
-    the host-side source (PVE storage or `df` of the host path) so the
-    info is meaningful even on stopped containers.
-    """
+    Backed by the indefinite `_vm_mounts_cache` (invalidated on
+    start/stop of the guest, since config-visible fields normally
+    only change through a guest reboot). The runtime endpoint is
+    NEVER cached — it must reflect the live state at click time."""
+    cached = _vm_cache_get(_vm_mounts_cache, vmid, _VM_MOUNTS_TTL)
+    if cached is not None:
+        return jsonify(cached)
     try:
         import lxc_mount_points
     except ImportError as e:
         return jsonify({"ok": False, "error": f"helper unavailable: {e}"}), 503
     try:
-        result = lxc_mount_points.get_lxc_mount_points(str(vmid))
+        result = lxc_mount_points.get_lxc_mount_points_static(str(vmid))
+        if not result.get("ok"):
+            return jsonify(result), 400
+        _vm_cache_put(_vm_mounts_cache, vmid, result)
+        return jsonify(result)
+    except Exception as e:
+        return jsonify({"ok": False, "error": str(e)}), 500
+
+
+@app.route('/api/lxc/<int:vmid>/mount-points/runtime', methods=['GET'])
+@require_auth
+def api_lxc_mount_points_runtime(vmid):
+    """Runtime half — always fresh, no cache. Returns per-target
+    runtime state + capacity, plus ad-hoc NFS/CIFS mounts detected
+    inside the running CT. Called by the client on every open of
+    the Mount Points tab so `df` usage and `stat` reachability are
+    real at click time; skips the whole prewarmer loop entirely.
+
+    Ad-hoc mounts and capacity are what the operator actually
+    watches (a stale NFS export shows here as `runtime_reachable
+    = false`), so caching them would defeat the point."""
+    try:
+        import lxc_mount_points
+    except ImportError as e:
+        return jsonify({"ok": False, "error": f"helper unavailable: {e}"}), 503
+    try:
+        result = lxc_mount_points.get_lxc_mount_points_runtime(str(vmid))
         if not result.get("ok"):
             return jsonify(result), 400
         return jsonify(result)
@@ -12653,6 +15230,109 @@ def api_vm_firewall_log(vmid):
         return jsonify({'error': str(e)}), 500
 
 
+@app.route('/api/vms/<int:vmid>/config', methods=['POST'])
+@require_auth
+def api_vm_config_set(vmid):
+    """Update a small allow-list of `.conf` fields on a VM or LXC.
+
+    Distinct from `api_vm_config_update` (PUT on the same path plus
+    /description) which is the legacy notes editor. Flask keys
+    endpoints by function name, so this one has its own.
+
+    Currently only `onboot` (start-with-host). Kept intentionally
+    narrow — the Status tab exposes one toggle for it and this
+    endpoint is what backs it. Adding a new field is one line in
+    ALLOWED + one line in the payload handler; every field must
+    map to a `qm set` / `pct set` --option that PVE applies
+    without a reboot.
+
+    Body: {"onboot": 0|1}   (bool accepted too, coerced)
+
+    Returns 200 with the applied value on success; the modal cache
+    is invalidated so the next open renders the fresh state.
+    """
+    ALLOWED = {'onboot', 'tags'}
+    try:
+        data = request.get_json(silent=True) or {}
+        updates = {k: v for k, v in data.items() if k in ALLOWED}
+        if not updates:
+            return jsonify({'error': f'No allowed fields in body. Allowed: {sorted(ALLOWED)}'}), 400
+
+        # Coerce onboot to strict 0/1
+        if 'onboot' in updates:
+            v = updates['onboot']
+            if isinstance(v, bool):
+                v = 1 if v else 0
+            try:
+                v = int(v)
+            except (TypeError, ValueError):
+                return jsonify({'error': 'onboot must be 0 or 1'}), 400
+            if v not in (0, 1):
+                return jsonify({'error': 'onboot must be 0 or 1'}), 400
+            updates['onboot'] = v
+
+        # tags: canonicalise to PVE's `tag1;tag2;tag3` form.
+        # Accepts either a list (client-friendly) or an already-joined
+        # string. Reject anything with characters PVE would refuse
+        # (whitespace, backslash) — spaces inside a tag are the
+        # commonest slip and PVE just drops them silently, so we
+        # fail loud instead. Empty string clears all tags.
+        if 'tags' in updates:
+            v = updates['tags']
+            if isinstance(v, list):
+                parts = [str(t).strip() for t in v]
+            elif isinstance(v, str):
+                # Accept both ';' and ',' as separators, same as PVE
+                parts = [t.strip() for t in re.split(r'[;,]', v)]
+            else:
+                return jsonify({'error': 'tags must be a list or a string'}), 400
+            parts = [p for p in parts if p]
+            for p in parts:
+                if not re.match(r'^[a-zA-Z0-9._\-+]+$', p):
+                    return jsonify({
+                        'error': f'Invalid tag "{p}": use letters, digits, and . _ - + only',
+                    }), 400
+            updates['tags'] = ';'.join(parts)
+
+        # Resolve VM type + node from cluster resources cache
+        resources = get_cached_pvesh_cluster_resources_vm()
+        if not resources:
+            return jsonify({'error': 'Failed to enumerate cluster VMs'}), 500
+        vm_info = next((r for r in resources if r.get('vmid') == vmid), None)
+        if not vm_info:
+            return jsonify({'error': f'VM/LXC {vmid} not found'}), 404
+        vm_type = 'lxc' if vm_info.get('type') == 'lxc' else 'qemu'
+        node = vm_info.get('node', 'pve')
+
+        # `qm set` / `pct set` — hot-applied for onboot, no reboot
+        # needed. Build the argv from the ALLOWED map so a future
+        # extension of the payload naturally lands here.
+        binary = '/usr/sbin/pct' if vm_type == 'lxc' else '/usr/sbin/qm'
+        argv = [binary, 'set', str(vmid)]
+        for k, v in updates.items():
+            argv.extend([f'--{k}', str(v)])
+
+        result = subprocess.run(argv, capture_output=True, text=True, timeout=15)
+        if result.returncode != 0:
+            stderr = (result.stderr or result.stdout or '').strip()
+            return jsonify({
+                'error': stderr[:500] or f'{binary} set failed with exit {result.returncode}',
+            }), 500
+
+        # Reflect the change in the modal cache immediately so the
+        # next open of the guest shows the new value without waiting
+        # for a natural refresh.
+        _vm_cache_invalidate(vmid, _vm_details_cache)
+
+        return jsonify({
+            'success': True,
+            'vmid': vmid,
+            'applied': updates,
+        })
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
 @app.route('/api/vms/<int:vmid>/control', methods=['POST'])
 @require_auth
 def api_vm_control(vmid):
@@ -12689,6 +15369,10 @@ def api_vm_control(vmid):
                 # Invalidate VM resources cache so the next /api/vms call
                 # returns fresh status instead of the pre-action snapshot.
                 _pvesh_cache['cluster_resources_vm_time'] = 0
+                # The details payload embeds status/running-only fields
+                # (lxc_ip_info, os_info) — a start/stop flips those, so
+                # drop the modal caches for this vmid.
+                _vm_cache_invalidate(vmid)
                 return jsonify({
                     'success': True,
                     'vmid': vmid,
@@ -12785,6 +15469,10 @@ def api_vm_config_update(vmid):
                 capture_output=True, text=True, timeout=30)
             
             if config_result.returncode == 0:
+                # Description lives inside the cached config payload —
+                # drop the details cache so the next open reflects the
+                # edit without waiting for the TTL.
+                _vm_cache_invalidate(vmid, _vm_details_cache, _vm_mounts_cache)
                 return jsonify({
                     'success': True,
                     'vmid': vmid,
@@ -18628,6 +21316,742 @@ def api_host_backups_archive_log(archive_id):
     })
 
 
+# ─── Actions API ─────────────────────────────────────────────────────────
+#
+# External-integration friendly endpoints (Home Assistant, Homepage,
+# Ansible, custom dashboards) to trigger the same actions the operator
+# would run from the Monitor UI or the shell menu. All mutating routes
+# require a token with `full_admin` scope; the read-only `.../status`
+# routes accept any authenticated caller. Every trigger returns 202
+# with the state at the moment of the call; clients poll `.../status`
+# to observe progress. See `_action_run` / `_action_state` for the
+# systemd-run backing that makes each of these persistent, cancellable
+# and single-instance without extra plumbing.
+
+# System power — reboot / shutdown of the Proxmox host
+
+@app.route('/api/system/power/reboot', methods=['POST'])
+@require_admin_scope
+def api_system_power_reboot():
+    """Reboot the Proxmox host. Fire-and-forget: the host will drop the
+    HTTP connection when the shutdown sequence starts."""
+    ok, err = _action_run(
+        'proxmenux-action-system-power-reboot',
+        ['/bin/systemctl', 'reboot'],
+        description='ProxMenux action: reboot host',
+    )
+    if not ok:
+        return jsonify({k: v for k, v in err.items() if k != 'status'}), err.get('status', 500)
+    return jsonify(_action_state('proxmenux-action-system-power-reboot')), 202
+
+
+@app.route('/api/system/power/reboot/status', methods=['GET'])
+@require_auth
+def api_system_power_reboot_status():
+    return jsonify(_action_state('proxmenux-action-system-power-reboot'))
+
+
+@app.route('/api/system/power/shutdown', methods=['POST'])
+@require_admin_scope
+def api_system_power_shutdown():
+    """Power off the Proxmox host."""
+    ok, err = _action_run(
+        'proxmenux-action-system-power-shutdown',
+        ['/bin/systemctl', 'poweroff'],
+        description='ProxMenux action: shutdown host',
+    )
+    if not ok:
+        return jsonify({k: v for k, v in err.items() if k != 'status'}), err.get('status', 500)
+    return jsonify(_action_state('proxmenux-action-system-power-shutdown')), 202
+
+
+@app.route('/api/system/power/shutdown/status', methods=['GET'])
+@require_auth
+def api_system_power_shutdown_status():
+    return jsonify(_action_state('proxmenux-action-system-power-shutdown'))
+
+
+# Proxmox VE update — same script the Update Now dashboard button runs
+
+_PVE_UPDATE_SCRIPT = '/usr/local/share/proxmenux/scripts/utilities/proxmox_update.sh'
+
+
+@app.route('/api/system/pve-update/run', methods=['POST'])
+@require_admin_scope
+def api_system_pve_update_run():
+    """Trigger the same safe PVE update flow the Health Monitor's
+    Update Now button invokes (delegates to `update-pve-safe.sh`)."""
+    if not os.path.exists(_PVE_UPDATE_SCRIPT):
+        return jsonify({'error': 'PVE update script not installed',
+                        'path': _PVE_UPDATE_SCRIPT}), 500
+    ok, err = _action_run(
+        'proxmenux-action-pve-update',
+        ['/bin/bash', _PVE_UPDATE_SCRIPT],
+        description='ProxMenux action: Proxmox VE update',
+    )
+    if not ok:
+        return jsonify({k: v for k, v in err.items() if k != 'status'}), err.get('status', 500)
+    return jsonify(_action_state('proxmenux-action-pve-update')), 202
+
+
+@app.route('/api/system/pve-update/status', methods=['GET'])
+@require_auth
+def api_system_pve_update_status():
+    return jsonify(_action_state('proxmenux-action-pve-update'))
+
+
+@app.route('/api/system/pve-update', methods=['DELETE'])
+@require_admin_scope
+def api_system_pve_update_cancel():
+    """Cancel a PVE update run in progress. No-op if no run is active."""
+    _action_cancel('proxmenux-action-pve-update')
+    return jsonify(_action_state('proxmenux-action-pve-update'))
+
+
+# ProxMenux self-update — pipes the canonical one-line installer.
+# Runs inside a systemd unit so it survives the proxmenux-monitor
+# service restart the installer performs mid-way.
+
+_PROXMENUX_STABLE_INSTALLER_URL = 'https://raw.githubusercontent.com/MacRimi/ProxMenux/main/install_proxmenux.sh'
+_PROXMENUX_BETA_INSTALLER_URL = 'https://raw.githubusercontent.com/MacRimi/ProxMenux/develop/install_proxmenux_beta.sh'
+_PROXMENUX_CONFIG_FILE = '/usr/local/share/proxmenux/config.json'
+
+
+def _proxmenux_self_update_installer_url():
+    """Pick stable vs beta installer based on the host's release channel.
+
+    A host with `beta_program.status == active` in config.json must be
+    updated with the beta installer so it stays on the beta channel.
+    Falling back to the stable installer would clone main, wipe
+    beta_version.txt, and silently drop the user off the beta program.
+    """
+    try:
+        with open(_PROXMENUX_CONFIG_FILE, 'r') as f:
+            cfg = json.load(f)
+        if (cfg.get('beta_program') or {}).get('status') == 'active':
+            return _PROXMENUX_BETA_INSTALLER_URL
+    except (OSError, ValueError, TypeError):
+        pass
+    return _PROXMENUX_STABLE_INSTALLER_URL
+
+
+@app.route('/api/proxmenux/self-update/run', methods=['POST'])
+@require_admin_scope
+def api_proxmenux_self_update_run():
+    """Update ProxMenux itself by piping the canonical installer.
+
+    The installer restarts `proxmenux-monitor.service` mid-way; because
+    the run lives in its own transient systemd unit (not a subprocess
+    of this Flask worker), the update completes even though the Monitor
+    process that accepted the call dies during the restart. Clients
+    can poll `.../status` to observe completion.
+    """
+    installer_url = _proxmenux_self_update_installer_url()
+    ok, err = _action_run(
+        'proxmenux-action-self-update',
+        ['/bin/bash', '-c', f'wget -qLO - {installer_url} | bash'],
+        description='ProxMenux action: self-update',
+    )
+    if not ok:
+        return jsonify({k: v for k, v in err.items() if k != 'status'}), err.get('status', 500)
+    return jsonify(_action_state('proxmenux-action-self-update')), 202
+
+
+@app.route('/api/proxmenux/self-update/status', methods=['GET'])
+@require_auth
+def api_proxmenux_self_update_status():
+    return jsonify(_action_state('proxmenux-action-self-update'))
+
+
+# ── Scheduled LXC updates ───────────────────────────────────────────
+#
+# Ticks every 60s. For every sidecar with an enabled schedule whose
+# cron matches the current minute, invokes `apply_updates.sh` in a
+# subprocess with the schedule's env vars, then records the outcome
+# back to the sidecar via `record_schedule_run`. UPDATE_COMMAND for
+# `target in (app, both)` chains each registered app's own
+# `update_command` with `&&` so a failure aborts the remaining custom
+# commands. Helper execution is passed explicitly as RUN_HELPER=1.
+#
+# Runs are dedup-guarded by minute+vmid so a schedule that fires at
+# `* * * * *` doesn't ever double-fire on the same minute inside
+# one process. The shell runner also holds a non-blocking per-CT lock,
+# so scheduled and manual applies cannot overlap.
+
+_APPLY_UPDATES_SCRIPT = _LXC_APPLY_UPDATES_SCRIPT
+_DOCKER_ENGINE_INTEGRATED_COMMAND = (
+    'python3 /usr/local/share/proxmenux/monitor-app/usr/bin/'
+    'update_docker_engine.py --vmid "$VMID"'
+)
+_scheduled_fired_this_minute: set = set()
+
+
+def _normalise_schedule_targets(sched: dict) -> list[str]:
+    targets = sched.get("targets")
+    if isinstance(targets, list) and targets:
+        return [str(item) for item in targets]
+    legacy = sched.get("target") or "both"
+    return (["os"] if legacy in ("os", "both") else []) + (["apps"] if legacy in ("app", "both") else [])
+
+
+def _compose_scheduled_update_command(vmid: int, target: str, targets: list[str]) -> str:
+    """Chain every registered app's own `update_command` for the
+    scheduled run. Returns empty string when target == "os" or when
+    no custom commands are registered. The helper `/usr/bin/update`
+    is handled internally by apply_updates.sh (invoked from host
+    with CTID env), so it does NOT belong in UPDATE_COMMAND."""
+    if target not in ("app", "both"):
+        return ""
+    try:
+        import lxc_apps
+        sidecar = lxc_apps._read_sidecar(vmid) or {}
+    except Exception:
+        return ""
+    apps = sidecar.get("apps") or []
+    select_all_apps = "apps" in targets
+    select_docker_engine = "docker-engine" in targets
+    selected_app_ids = {item.split(":", 1)[1] for item in targets if item.startswith("app:")}
+    parts: list = []
+    for a in apps:
+        if a.get("managed_oci_app_id"):
+            continue
+        selected_docker = select_docker_engine and a.get("helper_slug") == "docker"
+        if a.get("helper_slug") == "docker":
+            # Legacy "apps" schedules predate Docker lifecycle support and
+            # must not silently start updating Docker Engine. It requires its
+            # explicit target (or an explicit app:<id> retained for backwards
+            # compatibility).
+            if not selected_docker and a.get("id") not in selected_app_ids:
+                continue
+        elif not select_all_apps and a.get("id") not in selected_app_ids:
+            continue
+        cmd = (a.get("update_command") or "").strip()
+        is_integrated_docker_command = (
+            a.get("helper_slug") == "docker"
+            and cmd == _DOCKER_ENGINE_INTEGRATED_COMMAND
+        )
+        if cmd and not is_integrated_docker_command:
+            parts.append(cmd)
+    selected_projects = {
+        item.split(":", 1)[1]
+        for item in targets
+        if item.startswith("docker-compose:")
+    }
+    docker_registered = any(a.get("helper_slug") == "docker" for a in apps)
+    if selected_projects and docker_registered:
+        try:
+            inventory = lxc_apps.get_docker_inventory(vmid, force=True)
+        except Exception:
+            inventory = {}
+        commands_by_project: dict[str, str] = {}
+        compose_projects = inventory.get("compose_projects") or []
+        if not compose_projects:
+            compose_projects = lxc_apps._aggregate_docker_compose_projects(
+                inventory.get("images") or []
+            )
+        for docker_target in compose_projects:
+            project = docker_target.get("project")
+            command = (docker_target.get("update_command") or "").strip()
+            if project in selected_projects and command:
+                commands_by_project[project] = command
+        parts.extend(commands_by_project[project] for project in sorted(commands_by_project))
+    return " && ".join(parts)
+
+
+def _scheduled_helper_enabled(vmid: int, target: str, targets: list[str]) -> bool:
+    """Whether this schedule explicitly includes the helper updater.
+
+    A helper is eligible only with wrapper evidence and a registered
+    matching app. A custom command on that application always replaces
+    the Proxmox VE Helper-Scripts updater.
+    """
+    if target not in ("app", "both"):
+        return False
+    try:
+        import lxc_apps
+        import managed_installs as _mi
+        sidecar = lxc_apps._read_sidecar(vmid) or {}
+        item = next(
+            (it for it in (_mi.get_active_items() or [])
+             if it.get("type") == "lxc"
+             and str(it.get("_vmid")) == str(vmid)),
+            None,
+        )
+    except Exception:
+        return False
+    if not item or not item.get("_has_app_updater"):
+        return False
+    if item.get("_helper_slug_source") != "update_wrapper":
+        return False
+    helper_slug = item.get("_helper_slug")
+    # The current community-scripts AdGuard updater explicitly delegates
+    # Debian/Ubuntu upgrades to AdGuard's web UI; on Alpine it also performs
+    # a full OS upgrade. Neither behaviour is an app-only scheduled action.
+    if helper_slug == "adguard":
+        return False
+    select_all_apps = "apps" in targets
+    selected_app_ids = {value.split(":", 1)[1] for value in targets if value.startswith("app:")}
+    matching_apps = []
+    for app in sidecar.get("apps") or []:
+        if app.get("managed_oci_app_id") or app.get("helper_slug") != helper_slug:
+            continue
+        if not select_all_apps and app.get("id") not in selected_app_ids:
+            continue
+        matching_apps.append(app)
+    if not matching_apps:
+        return False
+    # A custom command on any selected registration for this CT-wide helper
+    # replaces the helper. This also handles accidental duplicate watches
+    # conservatively instead of running both methods for the same app.
+    if any((app.get("update_command") or "").strip() for app in matching_apps):
+        return False
+    return True
+
+
+def _resolve_bulk_update_plan(vmid: int, targets: list[str]) -> dict:
+    """Resolve a saved manual selection into one safe terminal-run plan.
+
+    IDs are only selectors; every method is rebuilt from the current sidecar,
+    verified helper evidence and fresh Docker provenance.  Nothing from the
+    browser is accepted as an update command.
+    """
+    try:
+        import lxc_apps
+        ok, normalised = lxc_apps.validate_bulk_update({'targets': targets})
+        if not ok:
+            return {'ok': False, 'error': normalised, 'unavailable': []}
+        targets = normalised['targets']
+        sidecar = lxc_apps._read_sidecar(vmid) or {}
+    except Exception as exc:
+        return {'ok': False, 'error': str(exc), 'unavailable': []}
+
+    apps = [
+        app for app in sidecar.get('apps') or []
+        if not app.get('managed_oci_app_id')
+    ]
+    apps_by_id = {str(app.get('id')): app for app in apps if app.get('id')}
+    selected_app_targets = [item for item in targets if item.startswith('app:')]
+    helper_enabled = _scheduled_helper_enabled(
+        vmid, 'app', selected_app_targets,
+    ) if selected_app_targets else False
+    unavailable: list[dict] = []
+    labels = ['OS']
+    commands: list[str] = []
+    run_helper = False
+    update_docker_engine = False
+    docker_refresh = False
+    standalone_containers: set[str] = set()
+    docker_unit_ids = {
+        item for item in targets if item.startswith('docker-unit:')
+    }
+    docker_app = next((app for app in apps if app.get('helper_slug') == 'docker'), None)
+
+    def add_command(command: str) -> None:
+        command = str(command or '').strip()
+        if command and command not in commands:
+            commands.append(command)
+
+    def select_docker_engine(target_id: str) -> None:
+        nonlocal update_docker_engine, docker_refresh
+        if not docker_app:
+            unavailable.append({'target': target_id, 'reason': 'Docker is no longer registered'})
+            return
+        saved = str(docker_app.get('update_command') or '').strip()
+        if saved and saved != _DOCKER_ENGINE_INTEGRATED_COMMAND:
+            add_command(saved)
+        else:
+            update_docker_engine = True
+        docker_refresh = True
+        if 'Docker Engine' not in labels:
+            labels.append('Docker Engine')
+
+    for target_id in targets:
+        if target_id == 'os' or target_id.startswith('docker-unit:'):
+            continue
+        if target_id == 'docker-engine':
+            select_docker_engine(target_id)
+            continue
+        if not target_id.startswith('app:'):
+            unavailable.append({'target': target_id, 'reason': 'unsupported target'})
+            continue
+        app_id = target_id.split(':', 1)[1]
+        app = apps_by_id.get(app_id)
+        if not app:
+            unavailable.append({'target': target_id, 'reason': 'application is no longer registered'})
+            continue
+        if app.get('helper_slug') == 'docker':
+            select_docker_engine(target_id)
+            continue
+        command = str(app.get('update_command') or '').strip()
+        if command:
+            add_command(command)
+        elif helper_enabled and app.get('helper_slug'):
+            run_helper = True
+        else:
+            unavailable.append({'target': target_id, 'reason': 'no executable update method is available'})
+            continue
+        label = str(app.get('name') or app_id).strip()
+        if label and label not in labels:
+            labels.append(label)
+
+    if docker_unit_ids:
+        if not docker_app:
+            unavailable.extend({
+                'target': target_id,
+                'reason': 'Docker is no longer registered',
+            } for target_id in sorted(docker_unit_ids))
+        else:
+            try:
+                inventory = lxc_apps.get_docker_inventory(vmid, force=True)
+            except Exception as exc:
+                inventory = {'available': False, 'error': str(exc), 'update_units': []}
+            if not inventory.get('available'):
+                reason = inventory.get('error') or 'Docker is not available'
+                unavailable.extend({
+                    'target': target_id, 'reason': reason,
+                } for target_id in sorted(docker_unit_ids))
+            else:
+                units_by_id = {
+                    str(unit.get('id')): unit
+                    for unit in inventory.get('update_units') or []
+                    if unit.get('id')
+                }
+                selected_units: list[dict] = []
+                for target_id in sorted(docker_unit_ids):
+                    unit = units_by_id.get(target_id)
+                    if not unit:
+                        unavailable.append({
+                            'target': target_id,
+                            'reason': 'Docker selection is stale; edit the bulk configuration',
+                        })
+                        continue
+                    selected_units.append(unit)
+                    label = str(
+                        unit.get('display_name')
+                        or unit.get('primary_reference')
+                        or target_id
+                    ).strip()
+                    if label and label not in labels:
+                        labels.append(label)
+
+                # Selecting two roots that share a dependency must recreate
+                # their Compose project once with the union of exact services.
+                compose_groups: dict[str, dict] = {}
+                for unit in selected_units:
+                    if unit.get('kind') == 'standalone':
+                        standalone_containers.update(
+                            str(name) for name in unit.get('standalone_containers') or []
+                            if re.match(r'^[A-Za-z0-9][A-Za-z0-9_.-]{0,127}$', str(name))
+                        )
+                        continue
+                    if unit.get('kind') != 'compose':
+                        unavailable.append({
+                            'target': unit.get('id'), 'reason': 'unsupported Docker update unit',
+                        })
+                        continue
+                    project = str(unit.get('project') or '').strip()
+                    working_dir = str(unit.get('working_dir') or '').strip()
+                    config_files = [str(path) for path in unit.get('config_files') or []]
+                    if not project or not working_dir or not config_files:
+                        unavailable.append({
+                            'target': unit.get('id'), 'reason': 'Compose provenance is incomplete',
+                        })
+                        continue
+                    group = compose_groups.get(project)
+                    if group and (
+                        group['working_dir'] != working_dir
+                        or group['config_files'] != config_files
+                    ):
+                        unavailable.append({
+                            'target': unit.get('id'), 'reason': 'Compose provenance conflicts',
+                        })
+                        continue
+                    group = compose_groups.setdefault(project, {
+                        'working_dir': working_dir,
+                        'config_files': config_files,
+                        'services': set(),
+                    })
+                    group['services'].update(str(service) for service in unit.get('services') or [])
+                for project in sorted(compose_groups):
+                    group = compose_groups[project]
+                    services = sorted(group['services'])
+                    if services:
+                        add_command(lxc_apps._docker_compose_update_command(
+                            group['working_dir'], group['config_files'], services,
+                        ))
+                docker_refresh = bool(selected_units)
+
+    if unavailable:
+        return {
+            'ok': False,
+            'error': 'one or more configured update targets are no longer available',
+            'unavailable': unavailable,
+        }
+    update_command = ' && '.join(commands)
+    if len(update_command) > 32768:
+        return {
+            'ok': False,
+            'error': 'the combined update command is too long',
+            'unavailable': [],
+        }
+    return {
+        'ok': True,
+        'target': 'both',
+        'targets': targets,
+        'labels': labels,
+        'update_command': update_command,
+        'app_name': ' · '.join(labels[1:]),
+        'run_helper': run_helper,
+        'allow_helper_with_custom': run_helper and bool(update_command),
+        'docker_standalone_targets': sorted(standalone_containers),
+        'update_docker_engine': update_docker_engine,
+        'refresh_docker_inventory': docker_refresh,
+        'unavailable': [],
+    }
+
+
+def _run_scheduled_update(vmid: int, sched: dict) -> dict:
+    """Run one scheduled update and finalize it through the shared path."""
+    started_at = time.monotonic()
+    run_id = f'scheduled-{uuid.uuid4().hex}'
+    requested_targets = _normalise_schedule_targets(sched)
+    targets = list(requested_targets)
+    before = _lxc_update_snapshot(vmid)
+    deferred_targets: list[str] = []
+    reasons: list[str] = []
+
+    def finish(status: str, actual_target: str, executed: list[str]) -> dict:
+        reason = '; '.join(dict.fromkeys(value for value in reasons if value)) or None
+        duration_seconds = max(0, int(time.monotonic() - started_at))
+        labels = _lxc_update_target_labels(requested_targets, [], before)
+        finalization = _finalize_lxc_update(
+            vmid,
+            run_id=run_id,
+            status=status,
+            source='scheduled',
+            target=actual_target,
+            duration_seconds=duration_seconds,
+            ct_name=before.get('ct_name'),
+            requested_targets=requested_targets,
+            executed_targets=executed,
+            deferred_targets=deferred_targets,
+            target_labels=labels,
+            reason=reason,
+            refresh_docker_inventory=any(
+                value.startswith('docker-') for value in requested_targets
+            ),
+            before_snapshot=before,
+        )
+        return {
+            'status': status,
+            'target': actual_target,
+            'reason': reason,
+            'run_id': run_id,
+            'requested_targets': requested_targets,
+            'executed_targets': list(executed),
+            'deferred_targets': list(deferred_targets),
+            'duration_seconds': duration_seconds,
+            'finalization': finalization,
+        }
+
+    requested_target = sched.get("target") or "both"
+    if not os.path.isfile(_APPLY_UPDATES_SCRIPT):
+        reasons.append('update runner is not installed')
+        return finish('skipped', requested_target, [])
+    registered_apps: list[dict] = []
+    try:
+        import lxc_apps
+        registered_apps = (lxc_apps._read_sidecar(vmid) or {}).get("apps") or []
+    except Exception:
+        registered_apps = []
+    if any(value.startswith("docker-") for value in targets):
+        docker_registered = any(app.get("helper_slug") == "docker" for app in registered_apps)
+        if not docker_registered:
+            unavailable_docker = [value for value in targets if value.startswith('docker-')]
+            deferred_targets.extend(unavailable_docker)
+            targets = [value for value in targets if not value.startswith("docker-")]
+            reasons.append('Docker targets are no longer registered')
+    if not targets:
+        return finish('skipped', 'app', [])
+    has_os_target = "os" in targets
+    has_app_targets = any(item != "os" for item in targets)
+    requested_target = "both" if has_os_target and has_app_targets else ("os" if has_os_target else "app")
+    target = requested_target
+    delay_days = int(sched.get("release_delay_days") or 0)
+    selected_app_ids = {value.split(":", 1)[1] for value in targets if value.startswith("app:")}
+    release_gated_ids: set[str] = set()
+    targets_without_gated_apps = list(targets)
+    try:
+        import lxc_apps
+        release_gated_ids, targets_without_gated_apps = lxc_apps.partition_scheduled_release_targets(
+            targets,
+            registered_apps,
+        )
+    except Exception:
+        release_gated_ids = {
+            str(app.get("id"))
+            for app in registered_apps
+            if app.get("id")
+            and app.get("installed_via")
+            and app.get("helper_slug") != "docker"
+            and ("apps" in targets or str(app.get("id")) in selected_app_ids)
+        }
+    if delay_days > 0 and requested_target in ("app", "both") and release_gated_ids:
+        try:
+            import lxc_apps
+            gate = lxc_apps.scheduled_app_release_gate(
+                vmid,
+                delay_days,
+                app_ids=release_gated_ids,
+            )
+        except Exception as exc:
+            gate = {"allowed": False, "status": "deferred", "reason": str(exc)}
+        if not gate.get("allowed"):
+            reasons.append(gate.get("reason") or "release hold active")
+            deferred_targets.extend(
+                f'app:{app_id}' for app_id in sorted(release_gated_ids)
+                if f'app:{app_id}' not in deferred_targets
+            )
+            # Do not let a tracked application's release hold block an
+            # unrelated Web-Link-only custom command, Docker target or OS
+            # update selected for the same schedule.
+            targets = targets_without_gated_apps
+            if not targets:
+                return finish(gate.get("status") or "deferred", "app", [])
+            has_os_target = "os" in targets
+            has_app_targets = any(item != "os" for item in targets)
+            target = "both" if has_os_target and has_app_targets else ("os" if has_os_target else "app")
+    env = dict(os.environ)
+    env["VMID"] = str(vmid)
+    env["TARGET"] = target
+    env["BACKUP"] = "1" if sched.get("backup") else "0"
+    env["BACKUP_STORAGE"] = sched.get("backup_storage") or ""
+    env["RESTART"] = "1" if sched.get("restart") else "0"
+    update_command = _compose_scheduled_update_command(vmid, target, targets)
+    docker_app = next(
+        (app for app in registered_apps if app.get("helper_slug") == "docker"),
+        None,
+    )
+    docker_saved_command = ((docker_app or {}).get("update_command") or "").strip()
+    docker_selected = (
+        "docker-engine" in targets
+        or bool(docker_app and f"app:{docker_app.get('id')}" in targets)
+    )
+    docker_engine_uses_canonical = (
+        docker_selected
+        and docker_saved_command == _DOCKER_ENGINE_INTEGRATED_COMMAND
+    )
+    docker_engine_uses_custom = (
+        docker_selected
+        and bool(docker_saved_command)
+        and not docker_engine_uses_canonical
+    )
+    env["UPDATE_COMMAND"] = update_command
+    env["APP_NAME"] = ""
+    run_helper = _scheduled_helper_enabled(vmid, target, targets)
+    env["RUN_HELPER"] = "1" if run_helper else "0"
+    env["ALLOW_HELPER_WITH_CUSTOM"] = "1" if run_helper and bool(update_command) else "0"
+    env["DOCKER_STANDALONE_TARGETS"] = ",".join(sorted(
+        value.split(":", 1)[1]
+        for value in targets
+        if value.startswith("docker-container:")
+    ))
+    env["UPDATE_DOCKER_ENGINE"] = (
+        "1" if docker_selected and not docker_engine_uses_custom else "0"
+    )
+    env["RUN_ID"] = run_id
+    env["CT_NAME"] = str(before.get('ct_name') or f'CT-{vmid}')
+    env["REQUESTED_TARGETS_JSON"] = json.dumps(requested_targets)
+    env["TARGET_LABELS_JSON"] = json.dumps(
+        _lxc_update_target_labels(requested_targets, [], before)
+    )
+    env["REFRESH_DOCKER_INVENTORY"] = (
+        "1" if any(value.startswith('docker-') for value in requested_targets) else "0"
+    )
+    try:
+        r = subprocess.run(
+            ["bash", _APPLY_UPDATES_SCRIPT],
+            env=env,
+            capture_output=True,
+            text=True,
+            timeout=60 * 60,  # 1h hard cap so a stuck run doesn't
+                              # block the queue forever
+        )
+        if r.returncode != 0:
+            reasons.append(f'update runner exited with code {r.returncode}')
+            return finish('failure', target, targets)
+        if deferred_targets:
+            return finish('partial', target, targets)
+        return finish('success', target, targets)
+    except subprocess.TimeoutExpired:
+        reasons.append('scheduled update timed out')
+        return finish('failure', target, targets)
+    except Exception as exc:
+        reasons.append(str(exc))
+        return finish('failure', target, targets)
+
+
+def _scheduler_loop():
+    """Every 60s, sweep every sidecar with an enabled schedule and
+    fire the ones whose cron matches the current minute. Each fire
+    runs in its own worker thread so a slow apply on one CT doesn't
+    delay the next tick or hold up other CTs' schedules."""
+    global _scheduled_fired_this_minute
+    # Wait a bit after startup so we don't race with the initial
+    # sidecar load / migration path.
+    time.sleep(30)
+    print("[ProxMenux] LXC update scheduler started (60s interval)")
+    last_minute_key = None
+    while True:
+        try:
+            now = datetime.now()
+            minute_key = now.strftime("%Y-%m-%d %H:%M")
+            if minute_key != last_minute_key:
+                _scheduled_fired_this_minute = set()
+                last_minute_key = minute_key
+            try:
+                import lxc_apps
+                items = lxc_apps.get_all_schedules() or []
+            except Exception as e:
+                print(f"[ProxMenux] scheduler: reading schedules failed: {e}")
+                items = []
+            for entry in items:
+                vmid = entry.get("vmid")
+                sched = entry.get("schedule") or {}
+                if not sched.get("enabled") or not sched.get("cron"):
+                    continue
+                if vmid in _scheduled_fired_this_minute:
+                    continue
+                try:
+                    if not lxc_apps.cron_matches(sched["cron"], now):
+                        continue
+                except Exception:
+                    continue
+                _scheduled_fired_this_minute.add(vmid)
+                # Fire in a worker so we don't block the loop.
+                def _worker(_vmid=vmid, _sched=dict(sched)):
+                    print(f"[ProxMenux] scheduler: firing update for CT {_vmid} "
+                          f"(target={_sched.get('target')}, backup={_sched.get('backup')})")
+                    outcome = _run_scheduled_update(_vmid, _sched)
+                    status = outcome.get('status') or 'failure'
+                    actual_target = outcome.get('target') or 'both'
+                    reason = outcome.get('reason')
+                    try:
+                        lxc_apps.record_schedule_run(_vmid, status, actual_target, reason)
+                    except Exception as e:
+                        print(f"[ProxMenux] scheduler: could not record run for {_vmid}: {e}")
+                    print(f"[ProxMenux] scheduler: CT {_vmid} finished with status={status}"
+                          f" target={actual_target} reason={reason or '-'}")
+                threading.Thread(target=_worker, daemon=True).start()
+        except Exception as e:
+            print(f"[ProxMenux] scheduler loop error: {e}")
+        # Sleep to the next minute boundary + a small offset so we
+        # tick predictably in phase with the wall clock's minute.
+        now = datetime.now()
+        secs_left = 60 - now.second
+        time.sleep(max(1, secs_left) + 2)
+
+
 if __name__ == '__main__':
     import sys
     import logging
@@ -18723,6 +22147,39 @@ if __name__ == '__main__':
                 print("[ProxMenux] Managed-installs registry initialised")
             except Exception as e:
                 print(f"[ProxMenux] managed_installs init failed: {e}")
+            # Docker inventories are derived runtime data and intentionally
+            # live only in process memory. Rebuild them once at startup after
+            # the LXC registry exists, just like the other startup caches.
+            # Subsequent guest starts reuse TaskWatcher's existing lifecycle
+            # event and refresh only that guest; no extra polling loop exists.
+            try:
+                import lxc_apps
+                docker_count = lxc_apps.refresh_docker_inventories(force=True)
+                print(f"[ProxMenux] Docker inventory cache initialised "
+                      f"({docker_count} CTs)", flush=True)
+            except Exception as e:
+                print(f"[ProxMenux] Docker inventory startup init failed: {e}",
+                      file=sys.stderr, flush=True)
+            # Warm the LXC IP cache once so the Apps dashboard renders
+            # instantly on first paint and /api/vms polls stay free of
+            # `lxc-info` subprocesses until a CT actually restarts.
+            try:
+                ip_count = _warmup_lxc_ip_cache()
+                print(f"[ProxMenux] LXC IP cache warmed ({ip_count} running CTs)",
+                      flush=True)
+            except Exception as e:
+                print(f"[ProxMenux] LXC IP warmup failed: {e}",
+                      file=sys.stderr, flush=True)
+            # Preload custom weblinks so the first Apps dashboard fetch
+            # is served straight from memory (0 disk I/O).
+            try:
+                import custom_links
+                cl_count = custom_links.warmup()
+                print(f"[ProxMenux] Custom links cache warmed ({cl_count} entries)",
+                      flush=True)
+            except Exception as e:
+                print(f"[ProxMenux] Custom links warmup failed: {e}",
+                      file=sys.stderr, flush=True)
         threading.Thread(target=_deferred_startup_inits, daemon=True).start()
 
         # Self-healing maintenance run on every startup. Two passes, both
@@ -18822,8 +22279,58 @@ if __name__ == '__main__':
     except Exception as e:
         print(f"[ProxMenux] Vital signs sampler failed to start: {e}")
 
+    # ── Fire pending app-update notifications on startup ──
+    # Piggy-backs on any pre-existing update_available flag in the
+    # sidecars so the user gets a notification without waiting for
+    # the 24 h PollingCollector cycle. Runs in a daemon thread with
+    # a delay so it doesn't block startup — notification_manager needs
+    # a moment to bind channels before we emit.
+    try:
+        def _startup_emit_pending_app_updates():
+            time.sleep(15)  # let channels bind + first metrics collect
+            try:
+                import lxc_apps
+                lxc_apps.emit_all_pending_updates()
+            except Exception as e:
+                print(f"[ProxMenux] startup emit_all_pending_updates failed: {e}",
+                      file=sys.stderr, flush=True)
+        threading.Thread(target=_startup_emit_pending_app_updates, daemon=True,
+                         name='app-updates-startup-emit').start()
+    except Exception as e:
+        print(f"[ProxMenux] app-updates startup emitter failed to arm: {e}")
+
+    # ── Node-metrics Prewarmer ──
+    # Keeps `_NODE_METRICS_CACHE` hot for every timeframe (hour / day /
+    # week / month / year) on a 30 s cadence, so the Overview page's
+    # CPU + memory charts never wait on `pvesh get rrddata` when the
+    # user opens the dashboard. Cache TTL is 60 s; the loop refreshes
+    # every 30 s, giving 30 s of headroom against transient pvesh
+    # latency.
+    try:
+        metrics_thread = threading.Thread(target=_node_metrics_prewarmer_loop, daemon=True, name='node-metrics-prewarmer')
+        metrics_thread.start()
+        print("[ProxMenux] Node-metrics prewarmer started (30s interval)")
+    except Exception as e:
+        print(f"[ProxMenux] Node-metrics prewarmer failed to start: {e}")
+
+    # ── VM/CT modal-cache prewarmer ──
+    # Keeps _vm_details_cache / _vm_backups_cache / _vm_apps_cache /
+    # _vm_schedule_cache warm from the backend so the "Loading
+    # configuration..." message never appears on modal open, even
+    # after the tab has been closed for minutes. The React-side
+    # prefetcher only ran while the page was open.
+    try:
+        vm_modal_thread = threading.Thread(target=_vm_modal_prewarmer_loop, daemon=True, name='vm-modal-prewarmer')
+        vm_modal_thread.start()
+        print("[ProxMenux] VM-modal prewarmer started (one-shot warm-up; caches refreshed by event invalidation only)")
+    except Exception as e:
+        print(f"[ProxMenux] VM-modal prewarmer failed to start: {e}")
+
     # ── Notification Service ──
     try:
+        # Cache refresh consumes the existing TaskWatcher lifecycle signal;
+        # it does not add another status poller or notification path.
+        notification_manager.set_guest_lifecycle_callback(_handle_guest_lifecycle)
         notification_manager.start()
         if notification_manager._enabled:
             print(f"[ProxMenux] Notification service started (channels: {list(notification_manager._channels.keys())})")
@@ -18831,6 +22338,18 @@ if __name__ == '__main__':
             print("[ProxMenux] Notification service loaded (disabled - configure in Settings)")
     except Exception as e:
         print(f"[ProxMenux] Notification service failed to start: {e}")
+
+    # ── Scheduled LXC update scheduler ──
+    # Ticks every minute, fires apply_updates.sh headless for CTs
+    # whose schedule cron matches. Runs go through the same shell
+    # script as the manual "Apply update" flow so behaviour stays
+    # identical (backup, restart, /usr/bin/update + custom command
+    # chain) between manual and scheduled invocations.
+    try:
+        scheduler_thread = threading.Thread(target=_scheduler_loop, daemon=True)
+        scheduler_thread.start()
+    except Exception as e:
+        print(f"[ProxMenux] LXC update scheduler failed to start: {e}")
 
     # Check for SSL configuration
     ssl_ctx = None
@@ -18880,8 +22399,7 @@ if __name__ == '__main__':
                 from gevent import pywsgi
                 import ssl
 
-                ssl_context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
-                ssl_context.load_cert_chain(ssl_cert, ssl_key)
+                ssl_context = auth_manager.create_reloadable_ssl_context(ssl_cert, ssl_key)
 
                 # Defensive: silence the ~30-line traceback that gevent
                 # prints whenever a client sends plain HTTP against this
@@ -18950,9 +22468,7 @@ if __name__ == '__main__':
             except ImportError as e:
                 print(f"[ProxMenux] gevent not available ({e})")
                 # Fallback: Flask dev server with SSL - flask-sock handles WebSockets
-                import ssl
-                ssl_context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
-                ssl_context.load_cert_chain(ssl_cert, ssl_key)
+                ssl_context = auth_manager.create_reloadable_ssl_context(ssl_cert, ssl_key)
                 print("[ProxMenux] Starting Flask server with SSL (using flask-sock for WebSockets)...")
                 app.run(host='::', port=8008, debug=False, ssl_context=ssl_context, threaded=True)
         else:

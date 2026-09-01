@@ -86,6 +86,8 @@ apt_upgrade() {
     # Single worker for both PVE 8 and 9 — it detects the version itself
     # and only performs operations safe on a production host.
     bash "$LOCAL_SCRIPTS/global/update-pve-safe.sh"
+    local worker_rc=$?
+    return "$worker_rc"
 
 
 }
@@ -162,11 +164,14 @@ check_reboot() {
 
 
 apt_upgrade
-check_reboot
+update_rc=$?
+if [[ "$update_rc" -eq 0 ]]; then
+    check_reboot
+else
+    exit "$update_rc"
+fi
 
     
-
-
 
 
 

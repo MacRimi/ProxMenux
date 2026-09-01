@@ -35,17 +35,20 @@ else
   exit 1
 fi
 
-load_language
-initialize_cache
-
-JOBS_DIR="/var/lib/proxmenux/backup-jobs"
-LOG_DIR="/var/log/proxmenux/backup-jobs"
+JOBS_DIR="${PMX_BACKUP_JOBS_DIR:-/var/lib/proxmenux/backup-jobs}"
+LOG_DIR="${PMX_BACKUP_LOG_DIR:-/var/log/proxmenux/backup-jobs}"
+SYSTEMD_DIR="${PMX_BACKUP_SYSTEMD_DIR:-/etc/systemd/system}"
 mkdir -p "$JOBS_DIR" "$LOG_DIR" >/dev/null 2>&1 || true
 
 _job_file() { echo "${JOBS_DIR}/$1.env"; }
 _job_paths_file() { echo "${JOBS_DIR}/$1.paths"; }
-_service_file() { echo "/etc/systemd/system/proxmenux-backup-$1.service"; }
-_timer_file() { echo "/etc/systemd/system/proxmenux-backup-$1.timer"; }
+_service_file() { echo "${SYSTEMD_DIR}/proxmenux-backup-$1.service"; }
+_timer_file() { echo "${SYSTEMD_DIR}/proxmenux-backup-$1.timer"; }
+
+_scheduler_systemctl() {
+  [[ "${PMX_BACKUP_NO_SYSTEMCTL:-0}" == "1" ]] && return 0
+  systemctl "$@"
+}
 
 _normalize_uint() {
   local v="${1:-0}"
@@ -95,10 +98,11 @@ _list_scheduled_jobs() {
 # timer — the trigger comes from the vzdump hook, matched by PVE_STORAGE
 # against $STOREID set by PVE for every backup phase).
 _job_is_attached() {
-  local id="$1" f
+  local id="$1" f storage
   f=$(_job_file "$id")
   [[ -f "$f" ]] || return 1
-  grep -q "^PVE_STORAGE=" "$f"
+  storage=$(_job_env_get "$id" "PVE_STORAGE" || echo "")
+  [[ -n "$storage" ]]
 }
 
 # Reads a key=val pair from the job .env file (handles `printf %q`
@@ -109,6 +113,21 @@ _job_env_get() {
   [[ -f "$f" ]] || return 1
   raw=$(grep -E "^${key}=" "$f" | head -1 | cut -d'=' -f2-)
   eval "echo $raw" 2>/dev/null || echo "$raw"
+}
+
+_set_job_enabled() {
+  local id="$1" value="$2" file tmp
+  file=$(_job_file "$id")
+  [[ -f "$file" ]] || return 1
+  tmp="${file}.tmp.$$"
+  awk -v value="$value" '
+    BEGIN { found=0 }
+    /^ENABLED=/ { print "ENABLED=" value; found=1; next }
+    { print }
+    END { if (!found) print "ENABLED=" value }
+  ' "$file" > "$tmp" || { rm -f "$tmp"; return 1; }
+  chmod --reference="$file" "$tmp" 2>/dev/null || chmod 600 "$tmp"
+  mv -f "$tmp" "$file"
 }
 
 _show_job_status() {
@@ -139,6 +158,7 @@ _write_job_units() {
   local on_calendar="$2"
   local runner="$LOCAL_SCRIPTS/backup_restore/run_scheduled_backup.sh"
   [[ ! -f "$runner" ]] && runner="$SCRIPT_DIR/run_scheduled_backup.sh"
+  mkdir -p "$SYSTEMD_DIR" || return 1
 
   cat > "$(_service_file "$id")" <<EOF
 [Unit]
@@ -168,7 +188,166 @@ Unit=proxmenux-backup-${id}.service
 WantedBy=timers.target
 EOF
 
-  systemctl daemon-reload >/dev/null 2>&1 || true
+  _scheduler_systemctl daemon-reload >/dev/null 2>&1 || true
+}
+
+_sanitize_restored_job() {
+  local env_file="$1" expected_id="$2" paths_file="$3"
+  command -v python3 >/dev/null 2>&1 || {
+    echo "Cannot validate restored backup job ${expected_id}: python3 is unavailable." >&2
+    return 1
+  }
+
+  python3 - "$env_file" "$expected_id" "$paths_file" <<'PY'
+import os
+import re
+import shlex
+import stat
+import sys
+import tempfile
+
+env_path, expected_id, paths_path = sys.argv[1:]
+allowed = {
+    'JOB_ID', 'BACKEND', 'PVE_PARENT_JOB', 'PVE_STORAGE', 'ON_CALENDAR',
+    'PROFILE_MODE', 'ENABLED', 'KEEP_LAST', 'KEEP_HOURLY', 'KEEP_DAILY',
+    'KEEP_WEEKLY', 'KEEP_MONTHLY', 'KEEP_YEARLY', 'LOCAL_DEST_DIR',
+    'LOCAL_ARCHIVE_EXT', 'BORG_REPO', 'BORG_PASSPHRASE',
+    'BORG_ENCRYPT_MODE', 'PBS_REPOSITORY', 'PBS_PASSWORD', 'PBS_BACKUP_ID',
+    'PBS_KEYFILE', 'PBS_ENCRYPTION_PASSWORD', 'PBS_FINGERPRINT', 'MANUAL_RUN',
+}
+key_re = re.compile(r'^[A-Z][A-Z0-9_]*$')
+id_re = re.compile(r'^[A-Za-z0-9_-]+$')
+values = {}
+order = []
+
+try:
+    env_stat = os.lstat(env_path)
+    paths_stat = os.lstat(paths_path)
+    if not stat.S_ISREG(env_stat.st_mode) or not stat.S_ISREG(paths_stat.st_mode):
+        raise ValueError('job definition and paths list must be regular files')
+    with open(env_path, encoding='utf-8') as handle:
+        for line_number, raw in enumerate(handle, 1):
+            line = raw.strip()
+            if not line or line.startswith('#'):
+                continue
+            if '=' not in line:
+                raise ValueError(f'line {line_number} is not KEY=value')
+            key, rhs = line.split('=', 1)
+            if not key_re.fullmatch(key) or key not in allowed:
+                raise ValueError(f'line {line_number} contains unsupported key {key!r}')
+            parsed = shlex.split(rhs, posix=True)
+            if len(parsed) != 1:
+                raise ValueError(f'line {line_number} does not contain one safely quoted value')
+            if key not in values:
+                order.append(key)
+            values[key] = parsed[0]
+
+    for required in ('JOB_ID', 'BACKEND', 'PROFILE_MODE', 'ENABLED'):
+        if required not in values:
+            raise ValueError(f'missing required key {required}')
+    if not id_re.fullmatch(expected_id) or values['JOB_ID'] != expected_id:
+        raise ValueError('JOB_ID does not match the file name')
+    if values['BACKEND'] not in {'local', 'borg', 'pbs'}:
+        raise ValueError('unsupported BACKEND')
+    if values['PROFILE_MODE'] not in {'default', 'custom'}:
+        raise ValueError('unsupported PROFILE_MODE')
+    if values['ENABLED'] not in {'0', '1'}:
+        raise ValueError('ENABLED must be 0 or 1')
+    if values.get('MANUAL_RUN', '0') not in {'0', '1'}:
+        raise ValueError('MANUAL_RUN must be 0 or 1')
+    if not values.get('PVE_STORAGE') and values.get('MANUAL_RUN') != '1' and not values.get('ON_CALENDAR'):
+        raise ValueError('standalone job has no ON_CALENDAR value')
+    if any(char in values.get('ON_CALENDAR', '') for char in ('\r', '\n', '\x00')):
+        raise ValueError('ON_CALENDAR contains invalid control characters')
+
+    with open(paths_path, encoding='utf-8') as handle:
+        paths = [line.strip() for line in handle if line.strip()]
+    if not paths or any(not path.startswith('/') or '\x00' in path for path in paths):
+        raise ValueError('paths file must contain at least one absolute path')
+
+    fd, temp_path = tempfile.mkstemp(prefix='.restore-', dir=os.path.dirname(env_path), text=True)
+    try:
+        with os.fdopen(fd, 'w', encoding='utf-8') as handle:
+            handle.write('# ProxMenux scheduled backup job\n')
+            for key in order:
+                handle.write(f'{key}={shlex.quote(values[key])}\n')
+        os.chmod(temp_path, 0o600)
+        os.replace(temp_path, env_path)
+    finally:
+        if os.path.exists(temp_path):
+            os.unlink(temp_path)
+except (OSError, ValueError) as exc:
+    print(f'{expected_id}: {exc}', file=sys.stderr)
+    raise SystemExit(1)
+PY
+}
+
+_reconcile_restored_jobs() {
+  local total=0 restored=0 invalid=0 attached=0 disabled=0 hook_needed=0
+  local env_file id paths_file manual enabled on_calendar
+
+  mkdir -p "$JOBS_DIR" "$SYSTEMD_DIR" || return 1
+  for env_file in "$JOBS_DIR"/*.env; do
+    [[ -f "$env_file" ]] || continue
+    total=$((total + 1))
+    id="$(basename "$env_file" .env)"
+    paths_file="$(_job_paths_file "$id")"
+
+    if [[ ! -f "$paths_file" ]] || ! _sanitize_restored_job "$env_file" "$id" "$paths_file"; then
+      invalid=$((invalid + 1))
+      continue
+    fi
+
+    manual=$(_job_env_get "$id" MANUAL_RUN || echo 0)
+    if [[ "$manual" == "1" ]]; then
+      rm -f "$(_service_file "$id")" "$(_timer_file "$id")"
+      continue
+    fi
+
+    enabled=$(_job_env_get "$id" ENABLED || echo 0)
+    if _job_is_attached "$id"; then
+      rm -f "$(_service_file "$id")" "$(_timer_file "$id")"
+      attached=$((attached + 1))
+      hook_needed=1
+      [[ "$enabled" == "1" ]] || disabled=$((disabled + 1))
+      restored=$((restored + 1))
+      continue
+    fi
+
+    on_calendar=$(_job_env_get "$id" ON_CALENDAR || echo "")
+    if [[ "${PMX_BACKUP_NO_SYSTEMCTL:-0}" != "1" ]] && command -v systemd-analyze >/dev/null 2>&1; then
+      if ! systemd-analyze calendar "$on_calendar" >/dev/null 2>&1; then
+        echo "${id}: invalid systemd OnCalendar expression." >&2
+        invalid=$((invalid + 1))
+        continue
+      fi
+    fi
+
+    if ! _write_job_units "$id" "$on_calendar"; then
+      echo "${id}: could not reconstruct systemd units." >&2
+      invalid=$((invalid + 1))
+      continue
+    fi
+    if [[ "$enabled" == "1" ]]; then
+      _scheduler_systemctl enable --now "proxmenux-backup-${id}.timer" >/dev/null 2>&1 || {
+        invalid=$((invalid + 1))
+        continue
+      }
+    else
+      _scheduler_systemctl disable --now "proxmenux-backup-${id}.timer" >/dev/null 2>&1 || true
+      disabled=$((disabled + 1))
+    fi
+    restored=$((restored + 1))
+  done
+
+  _scheduler_systemctl daemon-reload >/dev/null 2>&1 || true
+  if (( hook_needed )) && [[ "${PMX_BACKUP_NO_SYSTEMCTL:-0}" != "1" ]]; then
+    hb_install_vzdump_hook >/dev/null 2>&1 || invalid=$((invalid + 1))
+  fi
+
+  printf 'Backup jobs reconciled: total=%d restored=%d attached=%d disabled=%d invalid=%d\n' \
+    "$total" "$restored" "$attached" "$disabled" "$invalid"
+  (( invalid == 0 ))
 }
 
 _prompt_retention() {
@@ -620,18 +799,20 @@ _job_toggle() {
     f=$(_job_file "$id")
     current=$(_job_env_get "$id" "ENABLED")
     if [[ "$current" == "0" ]]; then
-      sed -i 's/^ENABLED=.*/ENABLED=1/' "$f"
+      _set_job_enabled "$id" 1
       action_label="enabled"
     else
-      sed -i 's/^ENABLED=.*/ENABLED=0/' "$f"
+      _set_job_enabled "$id" 0
       action_label="disabled"
     fi
   else
     if systemctl is-enabled --quiet "proxmenux-backup-${id}.timer" >/dev/null 2>&1; then
       systemctl disable --now "proxmenux-backup-${id}.timer" >/dev/null 2>&1 || true
+      _set_job_enabled "$id" 0
       action_label="disabled"
     else
       systemctl enable --now "proxmenux-backup-${id}.timer" >/dev/null 2>&1 || true
+      _set_job_enabled "$id" 1
       action_label="enabled"
     fi
   fi
@@ -786,4 +967,11 @@ main_menu() {
   done
 }
 
+if [[ "${1:-}" == "--reconcile-restored" ]]; then
+  _reconcile_restored_jobs
+  exit $?
+fi
+
+load_language
+initialize_cache
 main_menu

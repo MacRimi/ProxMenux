@@ -61,6 +61,7 @@ export default async function PostInstallStoragePage({
       <DocHeader
         title={t("header.title")}
         section={t("header.section")}
+        estimatedMinutes={12}
       />
 
       <Callout variant="info" title={t("intro.title")}>
@@ -75,8 +76,8 @@ export default async function PostInstallStoragePage({
         })}
       </Callout>
 
-      <Callout variant="warning" title={t("notTrackedTitle")}>
-        {t.rich("notTrackedBody", { strong })}
+      <Callout variant="tip" title={t("trackedTitle")}>
+        {t.rich("trackedBody", { strong, link: (chunks) => <Link href="/docs/post-install/uninstall" className="text-blue-600 hover:underline">{chunks}</Link>, code: (chunks) => <code>{chunks}</code> })}
       </Callout>
 
       <h2 className="text-2xl font-semibold mt-10 mb-4 text-gray-900">{t("arc.heading")}</h2>
@@ -286,8 +287,8 @@ ionice:  5      # Lower I/O priority (5 = best-effort class, lowest priority in 
         className="my-4"
       />
 
-      <Callout variant="warning" title={t("vzdump.noBackupTitle")}>
-        {t.rich("vzdump.noBackupBody", { strong, code, em })}
+      <Callout variant="tip" title={t("vzdump.backupTitle")}>
+        {t.rich("vzdump.backupBody", { strong, code })}
       </Callout>
 
       <Callout variant="tip" title={t("vzdump.skipTitle")}>

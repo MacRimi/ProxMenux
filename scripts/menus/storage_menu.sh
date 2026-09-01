@@ -40,7 +40,7 @@ while true; do
             ""  "\Zb\Z4                          LXC\Zn" \
             "4" "$(translate "Import Disk to LXC")" \
             ""  "" \
-            ""  "\Z4────────────────────── Utilities ───────────────────────\Zn" \
+            ""  "\Z4────────────────────── $(translate "Utilities") ───────────────────────\Zn" \
             "5" "$(translate "Format / Wipe Physical Disk (Safe)")" \
             "6" "$(translate "SMART Disk Health & Test")" \
             "7" "$(translate "Manual CLI Guide (Disk and Storage Manager)")" \

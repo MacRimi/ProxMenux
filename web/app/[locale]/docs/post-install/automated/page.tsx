@@ -120,7 +120,7 @@ export default async function AutomatedPage({
                 <td className="px-4 py-2 text-gray-500 font-mono">{i + 1}</td>
                 <td className="px-4 py-2 font-semibold">{o.tool}</td>
                 <td className="px-4 py-2 text-gray-700 leading-relaxed">
-                  {t.rich(`optimizations.${i}.what`, { link: log2ramLink })}
+                  {t.rich(`optimizations.${i}.what`, { link: log2ramLink, code: (chunks) => <code>{chunks}</code>, strong: (chunks) => <strong>{chunks}</strong>, em: (chunks) => <em>{chunks}</em> })}
                 </td>
                 <td className="px-4 py-2">
                   <Link

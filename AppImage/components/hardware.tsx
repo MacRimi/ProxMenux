@@ -15,6 +15,7 @@ import {
   type GPU,
   type PCIDevice,
   type StorageDevice,
+  type Temperature,
   type CoralTPU,
   type UsbDevice,
   fetcher as swrFetcher,
@@ -23,6 +24,10 @@ import { fetchApi } from "@/lib/api-config"
 import { ScriptTerminalModal } from "./script-terminal-modal"
 import { GpuSwitchModeIndicator } from "./gpu-switch-mode-indicator"
 import { Settings2, CheckCircle2 } from "lucide-react"
+import { useT } from "../lib/i18n/provider"
+import { cn } from "@/lib/utils"
+
+type TFunction = (key: string, params?: Record<string, string | number>) => string
 
 const parseLsblkSize = (sizeStr: string | undefined): number => {
   if (!sizeStr) return 0
@@ -52,10 +57,10 @@ const parseLsblkSize = (sizeStr: string | undefined): number => {
   }
 }
 
-const formatMemory = (memoryKB: number | string): string => {
+const formatMemory = (memoryKB: number | string, t?: TFunction): string => {
   const kb = typeof memoryKB === "string" ? Number.parseFloat(memoryKB) : memoryKB
 
-  if (isNaN(kb)) return "N/A"
+  if (isNaN(kb)) return t ? t("common.notAvailable") : "N/A"
 
   // Convert KB to MB
   const mb = kb / 1024
@@ -166,26 +171,84 @@ const getDeviceTypeColor = (type: string): string => {
   return "bg-gray-500/10 text-gray-500 border-gray-500/20"
 }
 
-const getMonitoringToolRecommendation = (vendor: string): string => {
+const getMonitoringToolRecommendation = (vendor: string, t: TFunction): string => {
   const lowerVendor = vendor.toLowerCase()
   if (lowerVendor.includes("intel")) {
-    return "To get extended GPU monitoring information, please install intel-gpu-tools or igt-gpu-tools package."
+    return t("hardware.recommendations.intel")
   }
   if (lowerVendor.includes("nvidia")) {
-    return "For NVIDIA GPUs, real-time monitoring requires the proprietary drivers (nvidia-driver package). Install them only if your GPU is used directly by the host."
+    return t("hardware.recommendations.nvidia")
   }
 
   if (lowerVendor.includes("amd") || lowerVendor.includes("ati")) {
-    return "To get extended GPU monitoring information for AMD GPUs, please install amdgpu_top. You can download it from: https://github.com/Umio-Yasuno/amdgpu_top"
+    return t("hardware.recommendations.amd")
   }
-  return "To get extended GPU monitoring information, please install the appropriate GPU monitoring tools for your hardware."
+  return t("hardware.recommendations.generic")
 }
 
-const groupAndSortTemperatures = (temperatures: any[]) => {
+const formatHardwareValue = (value: string | null | undefined, t: TFunction): string => {
+  const text = value?.trim()
+  if (!text) return t("common.notAvailable")
+
+  const normalized = text.toLowerCase()
+  if (
+    normalized === "not specified" ||
+    normalized === "not available" ||
+    normalized === "to be filled by o.e.m." ||
+    normalized === "to be filled by oem" ||
+    normalized === "default string"
+  ) {
+    return t("hardware.values.notSpecified")
+  }
+
+  return text
+}
+
+const translateDeviceType = (type: string | null | undefined, t: TFunction): string => {
+  const text = type?.trim()
+  if (!text) return t("common.unknown")
+
+  const normalized = text.toLowerCase()
+  const directMap: Record<string, string> = {
+    "graphics": "hardware.deviceTypes.graphics",
+    "graphics card": "hardware.deviceTypes.graphicsCard",
+    "vga compatible controller": "hardware.deviceTypes.graphicsCard",
+    "3d controller": "hardware.deviceTypes.graphicsCard",
+    "display controller": "hardware.deviceTypes.graphicsCard",
+    "usb": "hardware.deviceTypes.usb",
+    "usb controller": "hardware.deviceTypes.usbController",
+    "audio": "hardware.deviceTypes.audio",
+    "audio device": "hardware.deviceTypes.audio",
+    "audio controller": "hardware.deviceTypes.audioController",
+    "network": "hardware.deviceTypes.network",
+    "network controller": "hardware.deviceTypes.networkController",
+    "ethernet": "hardware.deviceTypes.ethernet",
+    "ethernet controller": "hardware.deviceTypes.ethernet",
+    "wireless": "hardware.deviceTypes.wireless",
+    "wireless controller": "hardware.deviceTypes.wirelessController",
+    "wi-fi": "hardware.deviceTypes.wifi",
+    "wifi": "hardware.deviceTypes.wifi",
+    "storage": "hardware.deviceTypes.storage",
+    "storage controller": "hardware.deviceTypes.storageController",
+    "mass storage": "hardware.deviceTypes.storage",
+    "hid": "hardware.deviceTypes.hid",
+    "vendor specific": "hardware.deviceTypes.vendorSpecific",
+    "communications": "hardware.deviceTypes.communications",
+    "integrated": "hardware.deviceTypes.integrated",
+    "discrete": "hardware.deviceTypes.discrete",
+  }
+
+  if (directMap[normalized]) return t(directMap[normalized])
+  return text
+}
+
+const groupAndSortTemperatures = (temperatures: Temperature[]) => {
   const groups = {
     CPU: [] as any[],
     GPU: [] as any[],
     NVME: [] as any[],
+    HDD: [] as any[],
+    SSD: [] as any[],
     PCI: [] as any[],
     OTHER: [] as any[],
   }
@@ -194,7 +257,21 @@ const groupAndSortTemperatures = (temperatures: any[]) => {
     const nameLower = temp.name.toLowerCase()
     const adapterLower = temp.adapter?.toLowerCase() || ""
 
-    if (nameLower.includes("cpu") || nameLower.includes("core") || nameLower.includes("package")) {
+    if (temp.type === "cpu") {
+      groups.CPU.push(temp)
+    } else if (temp.type === "gpu") {
+      groups.GPU.push(temp)
+    } else if (temp.type === "nvme") {
+      groups.NVME.push(temp)
+    } else if (temp.type === "hdd") {
+      groups.HDD.push(temp)
+    } else if (temp.type === "ssd") {
+      groups.SSD.push(temp)
+    } else if (temp.type === "pci") {
+      groups.PCI.push(temp)
+    } else if (temp.type) {
+      groups.OTHER.push(temp)
+    } else if (nameLower.includes("cpu") || nameLower.includes("core") || nameLower.includes("package")) {
       groups.CPU.push(temp)
     } else if (nameLower.includes("gpu") || adapterLower.includes("gpu")) {
       groups.GPU.push(temp)
@@ -210,7 +287,61 @@ const groupAndSortTemperatures = (temperatures: any[]) => {
   return groups
 }
 
+const StorageTemperatureGroup = ({ title, temperatures }: { title: string; temperatures: Temperature[] }) => {
+  if (temperatures.length === 0) return null
+
+  return (
+    <div className={temperatures.length > 1 ? "md:col-span-2" : ""}>
+      <div className="mb-3 flex items-center gap-2">
+        <HardDrive className="h-4 w-4 text-muted-foreground" />
+        <h3 className="text-sm font-semibold">{title}</h3>
+        <Badge variant="outline" className="text-xs">
+          {temperatures.length}
+        </Badge>
+      </div>
+      <div className={`grid gap-4 ${temperatures.length > 1 ? "md:grid-cols-2" : ""}`}>
+        {temperatures.map((temp, index) => {
+          const percentage = temp.critical && temp.critical > 0 ? (temp.current / temp.critical) * 100 : temp.current
+          const isHot = temp.current > (temp.high || 80)
+          const isCritical = temp.current > (temp.critical || 90)
+          const devices = temp.devices?.length ? temp.devices : temp.device ? [temp.device] : []
+
+          return (
+            <div key={`${temp.device || temp.name}-${index}`} className="space-y-2">
+              <div className="flex items-center justify-between gap-4">
+                <span className="truncate text-sm font-medium" title={temp.model || temp.name}>
+                  {temp.model || temp.name}
+                </span>
+                <span
+                  className={`shrink-0 text-sm font-semibold ${isCritical ? "text-red-500" : isHot ? "text-orange-500" : "text-green-500"}`}
+                >
+                  {temp.current.toFixed(1)}°C
+                </span>
+              </div>
+              <div className="h-2 w-full overflow-hidden rounded-full bg-secondary">
+                <div
+                  className="h-full bg-blue-500 transition-all"
+                  style={{ width: `${Math.min(percentage, 100)}%` }}
+                />
+              </div>
+              {devices.length > 0 ? (
+                <span className="block font-mono text-xs text-muted-foreground">
+                  {devices.map((device) => `/dev/${device}`).join(" · ")}
+                </span>
+              ) : (
+                temp.adapter && <span className="text-xs text-muted-foreground">{temp.adapter}</span>
+              )}
+            </div>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
 export default function Hardware() {
+  const t = useT()
+
   // Static data - loaded once on mount. Static fields (CPU, motherboard, memory
   // modules, PCI, disks, GPU list) don't change at runtime, so no auto-refresh.
   // `mutateStatic` is triggered explicitly after GPU switch-mode changes.
@@ -300,16 +431,16 @@ export default function Hardware() {
   const nvidiaInstall = managedInstalls.find((it) => it.type === "nvidia_xfree86")
 
   const formatLastChecked = (iso?: string | null): string => {
-    if (!iso) return "never"
+    if (!iso) return t("hardware.values.never")
     const d = new Date(iso)
-    if (isNaN(d.getTime())) return "unknown"
+    if (isNaN(d.getTime())) return t("common.unknown")
     const now = Date.now()
     const ageMs = now - d.getTime()
     const sameDay = new Date(now).toDateString() === d.toDateString()
     const yesterday = new Date(now - 86_400_000).toDateString() === d.toDateString()
     const time = d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
     if (sameDay) return time
-    if (yesterday) return `yesterday ${time}`
+    if (yesterday) return t("hardware.time.yesterdayAt", { time })
     if (ageMs < 7 * 86_400_000) {
       return d.toLocaleDateString([], { weekday: "short" }) + " " + time
     }
@@ -509,8 +640,8 @@ export default function Hardware() {
           <div className="h-12 w-12 rounded-full border-2 border-muted"></div>
           <div className="absolute inset-0 h-12 w-12 rounded-full border-2 border-transparent border-t-primary animate-spin"></div>
         </div>
-        <div className="text-sm font-medium text-foreground">Loading hardware data...</div>
-        <p className="text-xs text-muted-foreground">Detecting CPU, GPU, storage and PCI devices</p>
+        <div className="text-sm font-medium text-foreground">{t("hardware.loading.title")}</div>
+        <p className="text-xs text-muted-foreground">{t("hardware.loading.description")}</p>
       </div>
     )
   }
@@ -522,7 +653,7 @@ export default function Hardware() {
         <Card className="border-border/50 bg-card/50 p-6">
           <div className="mb-4 flex items-center gap-2">
             <Cpu className="h-5 w-5 text-primary" />
-            <h2 className="text-lg font-semibold">System Information</h2>
+            <h2 className="text-lg font-semibold">{t("hardware.sections.systemInformation")}</h2>
           </div>
 
           <div className="grid gap-6 md:grid-cols-2">
@@ -536,34 +667,34 @@ export default function Hardware() {
                 <div className="space-y-2">
                   {hardwareData.cpu.model && (
                     <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">Model</span>
+                      <span className="text-muted-foreground">{t("hardware.labels.model")}</span>
                       <span className="font-medium text-right">{hardwareData.cpu.model}</span>
                     </div>
                   )}
                   {hardwareData.cpu.cores_per_socket && hardwareData.cpu.sockets && (
                     <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">Cores</span>
+                      <span className="text-muted-foreground">{t("hardware.labels.cores")}</span>
                       <span className="font-medium">
                         {hardwareData.cpu.sockets} × {hardwareData.cpu.cores_per_socket} ={" "}
-                        {hardwareData.cpu.sockets * hardwareData.cpu.cores_per_socket} cores
+                        {t("hardware.values.cores", { count: hardwareData.cpu.sockets * hardwareData.cpu.cores_per_socket })}
                       </span>
                     </div>
                   )}
                   {hardwareData.cpu.total_threads && (
                     <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">Threads</span>
+                      <span className="text-muted-foreground">{t("hardware.labels.threads")}</span>
                       <span className="font-medium">{hardwareData.cpu.total_threads}</span>
                     </div>
                   )}
                   {hardwareData.cpu.l3_cache && (
                     <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">L3 Cache</span>
+                      <span className="text-muted-foreground">{t("hardware.labels.l3Cache")}</span>
                       <span className="font-medium">{hardwareData.cpu.l3_cache}</span>
                     </div>
                   )}
                   {hardwareData.cpu.virtualization && (
                     <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">Virtualization</span>
+                      <span className="text-muted-foreground">{t("hardware.labels.virtualization")}</span>
                       <span className="font-medium">{hardwareData.cpu.virtualization}</span>
                     </div>
                   )}
@@ -576,36 +707,36 @@ export default function Hardware() {
               <div>
                 <div className="mb-2 flex items-center gap-2">
                   <Cpu className="h-4 w-4 text-muted-foreground" />
-                  <h3 className="text-sm font-semibold">Motherboard</h3>
+                  <h3 className="text-sm font-semibold">{t("hardware.sections.motherboard")}</h3>
                 </div>
                 <div className="space-y-2">
                   {hardwareData.motherboard.manufacturer && (
                     <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">Manufacturer</span>
-                      <span className="font-medium text-right">{hardwareData.motherboard.manufacturer}</span>
+                      <span className="text-muted-foreground">{t("hardware.labels.manufacturer")}</span>
+                      <span className="font-medium text-right">{formatHardwareValue(hardwareData.motherboard.manufacturer, t)}</span>
                     </div>
                   )}
                   {hardwareData.motherboard.model && (
                     <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">Model</span>
-                      <span className="font-medium text-right">{hardwareData.motherboard.model}</span>
+                      <span className="text-muted-foreground">{t("hardware.labels.model")}</span>
+                      <span className="font-medium text-right">{formatHardwareValue(hardwareData.motherboard.model, t)}</span>
                     </div>
                   )}
                   {hardwareData.motherboard.bios?.vendor && (
                     <div className="flex justify-between text-sm">
                       <span className="text-muted-foreground">BIOS</span>
-                      <span className="font-medium text-right">{hardwareData.motherboard.bios.vendor}</span>
+                      <span className="font-medium text-right">{formatHardwareValue(hardwareData.motherboard.bios.vendor, t)}</span>
                     </div>
                   )}
                   {hardwareData.motherboard.bios?.version && (
                     <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">Version</span>
-                      <span className="font-medium">{hardwareData.motherboard.bios.version}</span>
+                      <span className="text-muted-foreground">{t("hardware.labels.version")}</span>
+                      <span className="font-medium">{formatHardwareValue(hardwareData.motherboard.bios.version, t)}</span>
                     </div>
                   )}
                   {hardwareData.motherboard.bios?.date && (
                     <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">Date</span>
+                      <span className="text-muted-foreground">{t("hardware.labels.date")}</span>
                       <span className="font-medium">{hardwareData.motherboard.bios.date}</span>
                     </div>
                   )}
@@ -621,9 +752,9 @@ export default function Hardware() {
         <Card className="border-border/50 bg-card/50 p-6">
           <div className="mb-4 flex items-center gap-2">
             <MemoryStick className="h-5 w-5 text-primary" />
-            <h2 className="text-lg font-semibold">Memory Modules</h2>
+            <h2 className="text-lg font-semibold">{t("hardware.sections.memoryModules")}</h2>
             <Badge variant="outline" className="ml-auto">
-              {hardwareData.memory_modules.length} installed
+              {t("hardware.counts.installed", { count: hardwareData.memory_modules.length })}
             </Badge>
           </div>
 
@@ -634,26 +765,26 @@ export default function Hardware() {
                 <div className="space-y-1">
                   {module.size && (
                     <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">Size</span>
-                      <span className="font-medium text-green-500">{formatMemory(module.size)}</span>
+                      <span className="text-muted-foreground">{t("hardware.labels.size")}</span>
+                      <span className="font-medium text-green-500">{formatMemory(module.size, t)}</span>
                     </div>
                   )}
                   {module.type && (
                     <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">Type</span>
+                      <span className="text-muted-foreground">{t("hardware.labels.type")}</span>
                       <span className="font-medium">{module.type}</span>
                     </div>
                   )}
                   {(module.configured_speed || module.max_speed) && (
                     <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">Speed</span>
+                      <span className="text-muted-foreground">{t("hardware.labels.speed")}</span>
                       <span className="font-medium">
                         {module.configured_speed && module.max_speed && module.configured_speed !== module.max_speed ? (
                           <span className="flex items-center gap-1.5">
                             <span className={module.configured_speed.replace(/[^0-9]/g, '') < module.max_speed.replace(/[^0-9]/g, '') ? "text-orange-500" : "text-blue-500"}>
                               {module.configured_speed}
                             </span>
-                            <span className="text-xs text-muted-foreground">(max: {module.max_speed})</span>
+                            <span className="text-xs text-muted-foreground">{t("hardware.values.max", { value: module.max_speed })}</span>
                           </span>
                         ) : (
                           <span>{module.configured_speed || module.max_speed}</span>
@@ -663,7 +794,7 @@ export default function Hardware() {
                   )}
                   {module.manufacturer && (
                     <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">Manufacturer</span>
+                      <span className="text-muted-foreground">{t("hardware.labels.manufacturer")}</span>
                       <span className="font-medium text-right">{module.manufacturer}</span>
                     </div>
                   )}
@@ -679,9 +810,9 @@ export default function Hardware() {
         <Card className="border-border/50 bg-card/50 p-6">
           <div className="mb-4 flex items-center gap-2">
             <Thermometer className="h-5 w-5 text-primary" />
-            <h2 className="text-lg font-semibold">Thermal Monitoring</h2>
+            <h2 className="text-lg font-semibold">{t("hardware.sections.thermalMonitoring")}</h2>
             <Badge variant="outline" className="ml-auto">
-              {hardwareData.temperatures.length} sensors
+              {t("hardware.counts.sensors", { count: hardwareData.temperatures.length })}
             </Badge>
           </div>
 
@@ -772,52 +903,18 @@ export default function Hardware() {
               </div>
             )}
 
-            {/* NVME Sensors */}
-            {groupAndSortTemperatures(hardwareData.temperatures).NVME.length > 0 && (
-              <div
-                className={
-                  groupAndSortTemperatures(hardwareData.temperatures).NVME.length > 1 ? "md:col-span-2" : ""
-                }
-              >
-                <div className="mb-3 flex items-center gap-2">
-                  <HardDrive className="h-4 w-4 text-muted-foreground" />
-                  <h3 className="text-sm font-semibold">NVME</h3>
-                  <Badge variant="outline" className="text-xs">
-                    {groupAndSortTemperatures(hardwareData.temperatures).NVME.length}
-                  </Badge>
-                </div>
-                <div
-                  className={`grid gap-4 ${groupAndSortTemperatures(hardwareData.temperatures).NVME.length > 1 ? "md:grid-cols-2" : ""}`}
-                >
-                  {groupAndSortTemperatures(hardwareData.temperatures).NVME.map((temp, index) => {
-                    const percentage =
-                      temp.critical > 0 ? (temp.current / temp.critical) * 100 : (temp.current / 100) * 100
-                    const isHot = temp.current > (temp.high || 80)
-                    const isCritical = temp.current > (temp.critical || 90)
-
-                    return (
-                      <div key={index} className="space-y-2">
-                        <div className="flex items-center justify-between">
-                          <span className="text-sm font-medium">{temp.name}</span>
-                          <span
-                            className={`text-sm font-semibold ${isCritical ? "text-red-500" : isHot ? "text-orange-500" : "text-green-500"}`}
-                          >
-                            {temp.current.toFixed(1)}°C
-                          </span>
-                        </div>
-                        <div className="h-2 w-full overflow-hidden rounded-full bg-secondary">
-                          <div
-                            className="h-full bg-blue-500 transition-all"
-                            style={{ width: `${Math.min(percentage, 100)}%` }}
-                          />
-                        </div>
-                        {temp.adapter && <span className="text-xs text-muted-foreground">{temp.adapter}</span>}
-                      </div>
-                    )
-                  })}
-                </div>
-              </div>
-            )}
+            <StorageTemperatureGroup
+              title="NVME"
+              temperatures={groupAndSortTemperatures(hardwareData.temperatures).NVME}
+            />
+            <StorageTemperatureGroup
+              title="HDD"
+              temperatures={groupAndSortTemperatures(hardwareData.temperatures).HDD}
+            />
+            <StorageTemperatureGroup
+              title="SSD"
+              temperatures={groupAndSortTemperatures(hardwareData.temperatures).SSD}
+            />
 
             {/* PCI Sensors */}
             {groupAndSortTemperatures(hardwareData.temperatures).PCI.length > 0 && (
@@ -873,7 +970,7 @@ export default function Hardware() {
               >
                 <div className="mb-3 flex items-center gap-2">
                   <Thermometer className="h-4 w-4 text-muted-foreground" />
-                  <h3 className="text-sm font-semibold">OTHER</h3>
+                  <h3 className="text-sm font-semibold">{t("hardware.sections.otherSensors")}</h3>
                   <Badge variant="outline" className="text-xs">
                     {groupAndSortTemperatures(hardwareData.temperatures).OTHER.length}
                   </Badge>
@@ -919,9 +1016,9 @@ export default function Hardware() {
         <Card className="border-border/50 bg-card/50 p-6">
           <div className="mb-4 flex items-center gap-2">
             <Gpu className="h-5 w-5 text-primary" />
-            <h2 className="text-lg font-semibold">Graphics Cards</h2>
+            <h2 className="text-lg font-semibold">{t("hardware.sections.graphicsCards")}</h2>
             <Badge variant="outline" className="ml-auto">
-              {hardwareData.gpus.length} GPU{hardwareData.gpus.length > 1 ? "s" : ""}
+              {t("hardware.counts.gpu", { count: hardwareData.gpus.length })}
             </Badge>
           </div>
 
@@ -952,27 +1049,27 @@ return (
 
                   <div className="space-y-2">
                     <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">Type</span>
-                      <span className="font-medium">{gpu.type}</span>
+                      <span className="text-muted-foreground">{t("hardware.labels.type")}</span>
+                      <span className="font-medium">{translateDeviceType(gpu.type, t)}</span>
                     </div>
 
                     {fullSlot && (
                       <div className="flex justify-between text-sm">
-                        <span className="text-muted-foreground">PCI Slot</span>
+                        <span className="text-muted-foreground">{t("hardware.labels.pciSlot")}</span>
                         <span className="font-mono text-xs">{fullSlot}</span>
                       </div>
                     )}
 
                     {gpu.pci_driver && (
                       <div className="flex justify-between text-sm">
-                        <span className="text-muted-foreground">Driver</span>
+                        <span className="text-muted-foreground">{t("hardware.labels.driver")}</span>
                         <span className="font-mono text-xs text-green-500">{gpu.pci_driver}</span>
                       </div>
                     )}
 
                     {gpu.pci_kernel_module && (
                       <div className="flex justify-between text-sm">
-                        <span className="text-muted-foreground">Kernel Module</span>
+                        <span className="text-muted-foreground">{t("hardware.labels.kernelModule")}</span>
                         <span className="font-mono text-xs">{gpu.pci_kernel_module}</span>
                       </div>
                     )}
@@ -986,23 +1083,24 @@ return (
                         {nvidiaInstall.update_check.available ? (
                           <>
                             <div className="text-xs text-muted-foreground">
-                              Last checked: {formatLastChecked(nvidiaInstall.update_check.last_check)} ·{" "}
+                              {t("hardware.labels.lastChecked")}: {formatLastChecked(nvidiaInstall.update_check.last_check)}
+                              {` · NVIDIA driver v${nvidiaInstall.current_version} · `}
                               <span className="text-purple-400 font-medium">
-                                NVIDIA driver v{nvidiaInstall.update_check.latest} available
+                                {t("hardware.values.nvidiaDriverAvailable", { version: nvidiaInstall.update_check.latest || "" })}
                               </span>
                             </div>
                             {nvidiaInstall.menu_label && (
                               <div className="text-[11px] text-muted-foreground mt-1">
-                                Reinstall via ProxMenux post-install: {nvidiaInstall.menu_label}
+                                {t("hardware.values.reinstallViaPostInstall", { label: nvidiaInstall.menu_label })}
                               </div>
                             )}
                           </>
                         ) : (
                           <div className="text-xs text-muted-foreground">
-                            Last checked: {formatLastChecked(nvidiaInstall.update_check.last_check)}
+                            {t("hardware.labels.lastChecked")}: {formatLastChecked(nvidiaInstall.update_check.last_check)}
                             {` · NVIDIA driver v${nvidiaInstall.current_version}`}
                             {" · "}
-                            <span className="text-green-500/80">No updates available</span>
+                            <span className="text-green-500/80">{t("hardware.values.noUpdatesAvailable")}</span>
                           </div>
                         )}
                       </div>
@@ -1013,7 +1111,7 @@ return (
   <div className="mt-3 pt-3 border-t border-border/30">
                       <div className="flex items-center justify-between mb-3">
                         <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                          Switch Mode
+                          {t("hardware.labels.switchMode")}
                         </span>
                         <div className="flex items-center gap-2">
                           {getGpuSwitchMode(gpu) === "sriov" ? (
@@ -1029,7 +1127,7 @@ return (
                                   handleSwitchModeCancel(fullSlot, e)
                                 }}
                               >
-                                Cancel
+                                {t("actions.cancel")}
                               </button>
                               <button
                                 className="h-7 px-3 text-xs rounded-md bg-blue-600 hover:bg-blue-700 text-white transition-colors flex items-center gap-1.5"
@@ -1039,7 +1137,7 @@ return (
                                 }}
                               >
                                 <CheckCircle2 className="h-3 w-3" />
-                                Save
+                                {t("actions.save")}
                               </button>
                             </>
                           ) : (
@@ -1051,7 +1149,7 @@ return (
                               }}
                             >
                               <Settings2 className="h-3 w-3" />
-                              Edit
+                              {t("actions.edit")}
                             </button>
                           )}
                         </div>
@@ -1088,32 +1186,32 @@ return (
             <>
               <DialogHeader className="pb-4 border-b border-border">
                 <DialogTitle>{selectedGPU.name}</DialogTitle>
-                <DialogDescription>GPU Real-Time Monitoring</DialogDescription>
+                <DialogDescription>{t("hardware.gpu.monitoringTitle")}</DialogDescription>
               </DialogHeader>
 
               <div className="space-y-6 py-4">
                 <div>
                   <h3 className="text-sm font-semibold text-muted-foreground mb-3 uppercase tracking-wide">
-                    Basic Information
+                    {t("hardware.sections.basicInformation")}
                   </h3>
                   <div className="grid gap-2">
                     <div className="flex justify-between border-b border-border/50 pb-2">
-                      <span className="text-sm text-muted-foreground">Vendor</span>
+                      <span className="text-sm text-muted-foreground">{t("hardware.labels.vendor")}</span>
                       <Badge className={getDeviceTypeColor("graphics")}>{selectedGPU.vendor}</Badge>
                     </div>
                     <div className="flex justify-between border-b border-border/50 pb-2">
-                      <span className="text-sm text-muted-foreground">Type</span>
-                      <span className="text-sm font-medium">{selectedGPU.type}</span>
+                      <span className="text-sm text-muted-foreground">{t("hardware.labels.type")}</span>
+                      <span className="text-sm font-medium">{translateDeviceType(selectedGPU.type, t)}</span>
                     </div>
                     <div className="flex justify-between border-b border-border/50 pb-2">
-                      <span className="text-sm text-muted-foreground">PCI Slot</span>
+                      <span className="text-sm text-muted-foreground">{t("hardware.labels.pciSlot")}</span>
                       <span className="font-mono text-sm">
                         {findPCIDeviceForGPU(selectedGPU)?.slot || selectedGPU.slot}
                       </span>
                     </div>
                     {(findPCIDeviceForGPU(selectedGPU)?.driver || selectedGPU.pci_driver) && (
                       <div className="flex justify-between border-b border-border/50 pb-2">
-                        <span className="text-sm text-muted-foreground">Driver</span>
+                        <span className="text-sm text-muted-foreground">{t("hardware.labels.driver")}</span>
                         {/* CHANGE: Added monitoring availability indicator */}
                         <div className="flex items-center gap-2">
                           <span className="font-mono text-sm text-green-500">
@@ -1129,7 +1227,7 @@ return (
                     )}
                     {(findPCIDeviceForGPU(selectedGPU)?.kernel_module || selectedGPU.pci_kernel_module) && (
                       <div className="flex justify-between border-b border-border/50 pb-2">
-                        <span className="text-sm text-muted-foreground">Kernel Module</span>
+                        <span className="text-sm text-muted-foreground">{t("hardware.labels.kernelModule")}</span>
                         <span className="font-mono text-sm">
                           {findPCIDeviceForGPU(selectedGPU)?.kernel_module || selectedGPU.pci_kernel_module}
                         </span>
@@ -1141,7 +1239,7 @@ return (
                 {detailsLoading ? (
                   <div className="text-center py-8 text-muted-foreground">
                     <Loader2 className="h-8 w-8 animate-spin mx-auto mb-2 text-primary" />
-                    <p className="text-sm">Loading real-time data...</p>
+                    <p className="text-sm">{t("hardware.loading.realtimeData")}</p>
                   </div>
                 ) : selectedGPU.sriov_role === "vf" ? (
                   // SR-IOV Virtual Function: per-VF telemetry is not exposed
@@ -1156,11 +1254,9 @@ return (
                           </svg>
                         </div>
                         <div className="flex-1">
-                          <h4 className="text-sm font-semibold text-teal-500 mb-1">SR-IOV Virtual Function</h4>
+                          <h4 className="text-sm font-semibold text-teal-500 mb-1">{t("hardware.gpu.sriovVirtualFunction")}</h4>
                           <p className="text-sm text-muted-foreground">
-                            This device is a Virtual Function spawned by a Physical Function. Per-VF
-                            telemetry (temperature, utilization, memory) is not exposed by the kernel —
-                            open the parent PF to see aggregate GPU metrics.
+                            {t("hardware.gpu.sriovVirtualFunctionDescription")}
                           </p>
                         </div>
                       </div>
@@ -1168,10 +1264,10 @@ return (
 
                     <div className="rounded-lg border border-border/50 p-4 space-y-3">
                       <h3 className="text-sm font-semibold text-muted-foreground mb-1 uppercase tracking-wide">
-                        Virtual Function Detail
+                        {t("hardware.gpu.virtualFunctionDetail")}
                       </h3>
                       <div className="flex justify-between items-center">
-                        <span className="text-sm text-muted-foreground">Parent Physical Function</span>
+                        <span className="text-sm text-muted-foreground">{t("hardware.gpu.parentPhysicalFunction")}</span>
                         {selectedGPU.sriov_physfn ? (
                           <button
                             className="font-mono text-sm text-teal-500 hover:underline"
@@ -1186,17 +1282,17 @@ return (
                             {selectedGPU.sriov_physfn}
                           </button>
                         ) : (
-                          <span className="font-mono text-sm text-muted-foreground">unknown</span>
+                          <span className="font-mono text-sm text-muted-foreground">{t("common.unknown")}</span>
                         )}
                       </div>
                       <div className="flex justify-between items-center">
-                        <span className="text-sm text-muted-foreground">Current Driver</span>
+                        <span className="text-sm text-muted-foreground">{t("hardware.labels.currentDriver")}</span>
                         <span className="font-mono text-sm">
-                          {selectedGPU.pci_driver || "none"}
+                          {selectedGPU.pci_driver || t("hardware.values.none")}
                         </span>
                       </div>
                       <div className="flex justify-between items-start">
-                        <span className="text-sm text-muted-foreground">Consumer</span>
+                        <span className="text-sm text-muted-foreground">{t("hardware.labels.consumer")}</span>
                         <div className="text-sm text-right">
                           {realtimeGPUData?.sriov_consumer ? (
                             <span className={cn(
@@ -1208,10 +1304,10 @@ return (
                               <span className="h-1.5 w-1.5 rounded-full bg-current" />
                               {realtimeGPUData.sriov_consumer.type.toUpperCase()} {realtimeGPUData.sriov_consumer.id}
                               {realtimeGPUData.sriov_consumer.name && ` · ${realtimeGPUData.sriov_consumer.name}`}
-                              {` · ${realtimeGPUData.sriov_consumer.running ? "running" : "stopped"}`}
+                              {` · ${realtimeGPUData.sriov_consumer.running ? t("hardware.values.running") : t("hardware.values.stopped")}`}
                             </span>
                           ) : (
-                            <span className="text-muted-foreground italic">unused</span>
+                            <span className="text-muted-foreground italic">{t("hardware.values.unused")}</span>
                           )}
                         </div>
                       </div>
@@ -1228,50 +1324,47 @@ return (
                         <div className="flex items-center gap-2 flex-wrap">
                           <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-teal-500/15 text-teal-500 text-xs font-semibold">
                             <span className="h-1.5 w-1.5 rounded-full bg-teal-500" />
-                            SR-IOV active
+                            {t("hardware.gpu.sriovActive")}
                           </span>
                           <span className="text-sm text-muted-foreground">
-                            Metrics below reflect the Physical Function (aggregate across
-                            {" "}
-                            <span className="font-semibold text-foreground">
-                              {realtimeGPUData?.sriov_vf_count ?? selectedGPU.sriov_vf_count ?? "N"}
-                            </span>
-                            {" "}VFs).
+                            {t("hardware.gpu.sriovMetricsDescription", {
+                              count: realtimeGPUData?.sriov_vf_count ?? selectedGPU.sriov_vf_count ?? "N",
+                            })}
                           </span>
                         </div>
                       </div>
                     )}
                     <div className="flex items-center gap-2 text-xs text-muted-foreground">
                       <div className="h-2 w-2 rounded-full bg-green-500 animate-pulse" />
-                      <span>Updating every 3 seconds</span>
+                      <span>{t("hardware.gpu.updatingEverySeconds", { seconds: 3 })}</span>
                     </div>
 
                     <div>
                       <h3 className="text-sm font-semibold text-muted-foreground mb-3 uppercase tracking-wide">
-                        Real-Time Metrics
+                        {t("hardware.gpu.realTimeMetrics")}
                       </h3>
                       <div className="grid gap-3 md:grid-cols-2">
                         {realtimeGPUData.clock_graphics && (
                           <div className="flex justify-between border-b border-border/50 pb-2">
-                            <span className="text-sm text-muted-foreground">Graphics Clock</span>
+                            <span className="text-sm text-muted-foreground">{t("hardware.labels.graphicsClock")}</span>
                             <span className="text-sm font-medium">{formatClock(realtimeGPUData.clock_graphics)}</span>
                           </div>
                         )}
                         {realtimeGPUData.clock_memory && (
                           <div className="flex justify-between border-b border-border/50 pb-2">
-                            <span className="text-sm text-muted-foreground">Memory Clock</span>
+                            <span className="text-sm text-muted-foreground">{t("hardware.labels.memoryClock")}</span>
                             <span className="text-sm font-medium">{formatClock(realtimeGPUData.clock_memory)}</span>
                           </div>
                         )}
                         {realtimeGPUData.power_draw && realtimeGPUData.power_draw !== "0.00 W" && (
                           <div className="flex justify-between border-b border-border/50 pb-2">
-                            <span className="text-sm text-muted-foreground">Power Draw</span>
+                            <span className="text-sm text-muted-foreground">{t("hardware.labels.powerDraw")}</span>
                             <span className="text-sm font-medium text-blue-500">{realtimeGPUData.power_draw}</span>
                           </div>
                         )}
                         {realtimeGPUData.temperature !== undefined && realtimeGPUData.temperature !== null && (
                           <div className="flex justify-between border-b border-border/50 pb-2">
-                            <span className="text-sm text-muted-foreground">Temperature</span>
+                            <span className="text-sm text-muted-foreground">{t("hardware.labels.temperature")}</span>
                             <span className="text-sm font-semibold text-green-500">
                               {realtimeGPUData.temperature}°C
                             </span>
@@ -1287,7 +1380,7 @@ return (
                       realtimeGPUData.engine_video_enhance !== undefined) && (
                       <div>
                         <h3 className="text-sm font-semibold text-muted-foreground mb-3 uppercase tracking-wide">
-                          Engine Utilization (Total)
+                          {t("hardware.gpu.engineUtilizationTotal")}
                         </h3>
                         <div className="grid gap-3">
                           {realtimeGPUData.engine_render !== undefined && (
@@ -1378,7 +1471,7 @@ return (
                     {realtimeGPUData.processes && realtimeGPUData.processes.length > 0 && (
                       <div>
                         <h3 className="text-sm font-semibold text-muted-foreground mb-3 uppercase tracking-wide">
-                          Active Processes ({realtimeGPUData.processes.length})
+                          {t("hardware.gpu.activeProcesses", { count: realtimeGPUData.processes.length })}
                         </h3>
                         <div className="space-y-3">
                           {realtimeGPUData.processes.map((proc: any, idx: number) => (
@@ -1396,15 +1489,15 @@ return (
                                     className="font-mono text-xs bg-green-500/10 text-green-500 border-green-500/20"
                                   >
                                     {typeof proc.memory === "object"
-                                      ? formatMemory(proc.memory.resident / 1024)
-                                      : formatMemory(proc.memory)}
+                                      ? formatMemory(proc.memory.resident / 1024, t)
+                                      : formatMemory(proc.memory, t)}
                                   </Badge>
                                 )}
                               </div>
 
                               {proc.engines && Object.keys(proc.engines).length > 0 && (
                                 <div className="space-y-2">
-                                  <p className="text-xs text-muted-foreground mb-1">Engine Utilization:</p>
+                                  <p className="text-xs text-muted-foreground mb-1">{t("hardware.gpu.engineUtilization")}:</p>
                                   {Object.entries(proc.engines).map(([engineName, engineData]: [string, any]) => {
                                     const utilization =
                                       typeof engineData === "object" ? engineData.busy || 0 : engineData
@@ -1433,7 +1526,7 @@ return (
 
                     {realtimeGPUData.processes && realtimeGPUData.processes.length === 0 && (
                       <div className="rounded-lg bg-muted/50 p-4 text-center">
-                        <p className="text-sm text-muted-foreground">No active processes using the GPU</p>
+                        <p className="text-sm text-muted-foreground">{t("hardware.gpu.noActiveProcesses")}</p>
                       </div>
                     )}
 
@@ -1441,25 +1534,25 @@ return (
                     {realtimeGPUData.memory_total && (
                       <div>
                         <h3 className="text-sm font-semibold text-muted-foreground mb-3 uppercase tracking-wide">
-                          Memory
+                          {t("hardware.labels.memory")}
                         </h3>
                         <div className="grid gap-2">
                           <div className="flex justify-between border-b border-border/50 pb-2">
-                            <span className="text-sm text-muted-foreground">Total</span>
+                            <span className="text-sm text-muted-foreground">{t("hardware.labels.total")}</span>
                             <span className="text-sm font-medium">{realtimeGPUData.memory_total}</span>
                           </div>
                           <div className="flex justify-between border-b border-border/50 pb-2">
-                            <span className="text-sm text-muted-foreground">Used</span>
+                            <span className="text-sm text-muted-foreground">{t("hardware.labels.used")}</span>
                             <span className="text-sm font-medium">{realtimeGPUData.memory_used}</span>
                           </div>
                           <div className="flex justify-between border-b border-border/50 pb-2">
-                            <span className="text-sm text-muted-foreground">Free</span>
+                            <span className="text-sm text-muted-foreground">{t("hardware.labels.free")}</span>
                             <span className="text-sm font-medium">{realtimeGPUData.memory_free}</span>
                           </div>
                           {realtimeGPUData.utilization_memory !== undefined && (
                             <div className="space-y-1">
                               <div className="flex justify-between">
-                                <span className="text-sm text-muted-foreground">Memory Utilization</span>
+                                <span className="text-sm text-muted-foreground">{t("hardware.labels.memoryUtilization")}</span>
                                 <span className="text-sm font-medium">{realtimeGPUData.utilization_memory}%</span>
                               </div>
                               <Progress
@@ -1480,7 +1573,7 @@ return (
                         // the guest is currently running, muted otherwise.
                         <div>
                           <h3 className="text-sm font-semibold text-muted-foreground mb-3 uppercase tracking-wide">
-                            Virtual Functions
+                            {t("hardware.gpu.virtualFunctions")}
                           </h3>
                           <div className="rounded-lg border border-border/50 divide-y divide-border/30 overflow-hidden">
                             {realtimeGPUData.sriov_vfs.map((vf: any) => (
@@ -1504,7 +1597,7 @@ return (
                                           : "bg-muted text-muted-foreground"
                                     )}
                                   >
-                                    {vf.driver || "unbound"}
+                                    {vf.driver || t("hardware.values.unbound")}
                                   </span>
                                   {vf.consumer ? (
                                     <span
@@ -1523,7 +1616,7 @@ return (
                                     </span>
                                   ) : (
                                     <span className="text-xs text-muted-foreground italic">
-                                      unused
+                                      {t("hardware.values.unused")}
                                     </span>
                                   )}
                                 </div>
@@ -1542,9 +1635,9 @@ return (
                         </svg>
                       </div>
                       <div className="flex-1">
-                        <h4 className="text-sm font-semibold text-purple-500 mb-1">GPU in Switch Mode VM</h4>
+                        <h4 className="text-sm font-semibold text-purple-500 mb-1">{t("hardware.gpu.switchModeVmTitle")}</h4>
                         <p className="text-sm text-muted-foreground">
-                          This GPU is assigned to a virtual machine via VFIO passthrough. Real-time monitoring is not available from the host because the GPU is controlled by the VM.
+                          {t("hardware.gpu.switchModeVmDescription")}
                         </p>
                       </div>
                     </div>
@@ -1562,9 +1655,9 @@ return (
                         </svg>
                       </div>
                       <div className="flex-1">
-                        <h4 className="text-sm font-semibold text-blue-500 mb-1">Extended Monitoring Not Available</h4>
+                        <h4 className="text-sm font-semibold text-blue-500 mb-1">{t("hardware.gpu.extendedMonitoringUnavailable")}</h4>
                         <p className="text-sm text-muted-foreground mb-3">
-                          {getMonitoringToolRecommendation(selectedGPU.vendor)}
+                          {getMonitoringToolRecommendation(selectedGPU.vendor, t)}
                         </p>
                         {selectedGPU.vendor.toLowerCase().includes("nvidia") && (
                           <Button
@@ -1573,7 +1666,7 @@ return (
                           >
                             <>
                               <Download className="mr-2 h-4 w-4" />
-                              Install NVIDIA Drivers
+                              {t("hardware.actions.installNvidiaDrivers")}
                             </>
                           </Button>
                         )}
@@ -1584,7 +1677,7 @@ return (
                           >
                             <>
                               <Download className="mr-2 h-4 w-4" />
-                              Install AMD GPU Tools
+                              {t("hardware.actions.installAmdGpuTools")}
                             </>
                           </Button>
                         )}
@@ -1595,7 +1688,7 @@ return (
                           >
                             <>
                               <Download className="mr-2 h-4 w-4" />
-                              Install Intel GPU Tools
+                              {t("hardware.actions.installIntelGpuTools")}
                             </>
                           </Button>
                         )}
@@ -1616,9 +1709,9 @@ return (
         <Card className="border-border/50 bg-card/50 p-6">
           <div className="mb-4 flex items-center gap-2">
             <BrainCircuit className="h-5 w-5 text-primary" />
-            <h2 className="text-lg font-semibold">Coral TPU / AI Accelerators</h2>
+            <h2 className="text-lg font-semibold">{t("hardware.sections.coralTpu")}</h2>
             <Badge variant="outline" className="ml-auto">
-              {hardwareData.coral_tpus.length} device{hardwareData.coral_tpus.length > 1 ? "s" : ""}
+              {t("hardware.counts.devices", { count: hardwareData.coral_tpus.length })}
             </Badge>
           </div>
 
@@ -1660,12 +1753,12 @@ return (
                   {coral.drivers_ready ? (
                     <>
                       <CheckCircle2 className="h-3.5 w-3.5 text-green-500" />
-                      <span className="text-green-500">Drivers ready</span>
+                      <span className="text-green-500">{t("hardware.values.driversReady")}</span>
                     </>
                   ) : (
                     <>
                       <AlertCircle className="h-3.5 w-3.5 text-yellow-500" />
-                      <span className="text-yellow-500">Drivers not installed</span>
+                      <span className="text-yellow-500">{t("hardware.values.driversNotInstalled")}</span>
                     </>
                   )}
                 </div>
@@ -1680,9 +1773,9 @@ return (
               <div className="flex items-start gap-3 flex-1">
                 <AlertCircle className="h-4 w-4 text-blue-500 mt-0.5 shrink-0" />
                 <div className="text-sm">
-                  <p className="font-medium text-blue-500">Install Coral TPU drivers</p>
+                  <p className="font-medium text-blue-500">{t("hardware.actions.installCoralDrivers")}</p>
                   <p className="text-xs text-muted-foreground">
-                    One or more detected Coral devices need drivers. A server reboot is required after installation.
+                    {t("hardware.coral.driversNeededDescription")}
                   </p>
                 </div>
               </div>
@@ -1691,7 +1784,7 @@ return (
                 className="bg-blue-600 hover:bg-blue-700 text-white shrink-0"
               >
                 <Download className="mr-2 h-4 w-4" />
-                Install Drivers
+                {t("hardware.actions.installDrivers")}
               </Button>
             </div>
           )}
@@ -1703,13 +1796,13 @@ return (
         <DialogContent className="max-w-2xl">
           <DialogHeader>
             <DialogTitle>{selectedCoral?.name}</DialogTitle>
-            <DialogDescription>Coral TPU Device Information</DialogDescription>
+            <DialogDescription>{t("hardware.coral.deviceInformation")}</DialogDescription>
           </DialogHeader>
 
           {selectedCoral && (
             <div className="space-y-3">
               <div className="flex justify-between border-b border-border/50 pb-2">
-                <span className="text-sm font-medium text-muted-foreground">Connection</span>
+                <span className="text-sm font-medium text-muted-foreground">{t("hardware.labels.connection")}</span>
                 <Badge
                   className={
                     selectedCoral.type === "usb"
@@ -1723,21 +1816,21 @@ return (
 
               {selectedCoral.form_factor && (
                 <div className="flex justify-between border-b border-border/50 pb-2">
-                  <span className="text-sm font-medium text-muted-foreground">Form Factor</span>
+                  <span className="text-sm font-medium text-muted-foreground">{t("hardware.labels.formFactor")}</span>
                   <span className="text-sm">{selectedCoral.form_factor}</span>
                 </div>
               )}
 
               {selectedCoral.interface_speed && (
                 <div className="flex justify-between border-b border-border/50 pb-2">
-                  <span className="text-sm font-medium text-muted-foreground">Link</span>
+                  <span className="text-sm font-medium text-muted-foreground">{t("hardware.labels.link")}</span>
                   <span className="font-mono text-sm">{selectedCoral.interface_speed}</span>
                 </div>
               )}
 
               <div className="flex justify-between border-b border-border/50 pb-2">
                 <span className="text-sm font-medium text-muted-foreground">
-                  {selectedCoral.type === "usb" ? "Bus:Device" : "PCI Slot"}
+                  {selectedCoral.type === "usb" ? t("hardware.labels.busDevice") : t("hardware.labels.pciSlot")}
                 </span>
                 <span className="font-mono text-sm">
                   {selectedCoral.type === "usb" ? selectedCoral.bus_device : selectedCoral.slot}
@@ -1745,20 +1838,20 @@ return (
               </div>
 
               <div className="flex justify-between border-b border-border/50 pb-2">
-                <span className="text-sm font-medium text-muted-foreground">Vendor / Product ID</span>
+                <span className="text-sm font-medium text-muted-foreground">{t("hardware.labels.vendorProductId")}</span>
                 <span className="font-mono text-sm">
                   {selectedCoral.vendor_id}:{selectedCoral.device_id}
                 </span>
               </div>
 
               <div className="flex justify-between border-b border-border/50 pb-2">
-                <span className="text-sm font-medium text-muted-foreground">Vendor</span>
+                <span className="text-sm font-medium text-muted-foreground">{t("hardware.labels.vendor")}</span>
                 <span className="text-sm">{selectedCoral.vendor}</span>
               </div>
 
               {selectedCoral.type === "pcie" && selectedCoral.kernel_driver && (
                 <div className="flex justify-between border-b border-border/50 pb-2">
-                  <span className="text-sm font-medium text-muted-foreground">Kernel Driver</span>
+                  <span className="text-sm font-medium text-muted-foreground">{t("hardware.labels.kernelDriver")}</span>
                   <span className={`font-mono text-sm ${selectedCoral.kernel_driver === "apex" ? "text-green-500" : "text-yellow-500"}`}>
                     {selectedCoral.kernel_driver}
                   </span>
@@ -1767,7 +1860,7 @@ return (
 
               {selectedCoral.kernel_modules && (
                 <div className="flex justify-between border-b border-border/50 pb-2">
-                  <span className="text-sm font-medium text-muted-foreground">Kernel Modules</span>
+                  <span className="text-sm font-medium text-muted-foreground">{t("hardware.labels.kernelModules")}</span>
                   <div className="flex gap-2">
                     <Badge variant="outline" className={selectedCoral.kernel_modules.gasket ? "text-green-500 border-green-500/20" : "text-red-500 border-red-500/20"}>
                       gasket {selectedCoral.kernel_modules.gasket ? "✓" : "✗"}
@@ -1781,7 +1874,7 @@ return (
 
               {selectedCoral.device_nodes && selectedCoral.device_nodes.length > 0 && (
                 <div className="flex justify-between border-b border-border/50 pb-2">
-                  <span className="text-sm font-medium text-muted-foreground">Device Nodes</span>
+                  <span className="text-sm font-medium text-muted-foreground">{t("hardware.labels.deviceNodes")}</span>
                   <span className="font-mono text-xs text-right">
                     {selectedCoral.device_nodes.join(", ")}
                   </span>
@@ -1790,17 +1883,17 @@ return (
 
               {selectedCoral.type === "usb" && (
                 <div className="flex justify-between border-b border-border/50 pb-2">
-                  <span className="text-sm font-medium text-muted-foreground">Runtime State</span>
+                  <span className="text-sm font-medium text-muted-foreground">{t("hardware.labels.runtimeState")}</span>
                   <span className="text-sm">
-                    {selectedCoral.programmed ? "Programmed (runtime loaded)" : "Unprogrammed (runtime not loaded)"}
+                    {selectedCoral.programmed ? t("hardware.values.programmed") : t("hardware.values.unprogrammed")}
                   </span>
                 </div>
               )}
 
               <div className="flex justify-between border-b border-border/50 pb-2">
-                <span className="text-sm font-medium text-muted-foreground">Edge TPU Runtime</span>
+                <span className="text-sm font-medium text-muted-foreground">{t("hardware.labels.edgeTpuRuntime")}</span>
                 <span className="text-sm text-right">
-                  {selectedCoral.edgetpu_runtime || <span className="text-muted-foreground/60">not installed</span>}
+                  {selectedCoral.edgetpu_runtime || <span className="text-muted-foreground/60">{t("hardware.values.notInstalled")}</span>}
                 </span>
               </div>
 
@@ -1825,14 +1918,14 @@ return (
                       : "text-green-500"
                 return (
                   <div className="flex justify-between border-b border-border/50 pb-2">
-                    <span className="text-sm font-medium text-muted-foreground">Temperature</span>
+                    <span className="text-sm font-medium text-muted-foreground">{t("hardware.labels.temperature")}</span>
                     <div className="text-right">
                       <span className={`text-sm font-semibold ${color}`}>
                         {selectedCoral.temperature.toFixed(1)} °C
                       </span>
                       {trips && trips.length > 0 && (
                         <div className="text-xs text-muted-foreground mt-0.5">
-                          Thresholds: {trips.map((t) => `${t.toFixed(0)}°C`).join(" · ")}
+                          {t("hardware.labels.thresholds")}: {trips.map((trip) => `${trip.toFixed(0)}°C`).join(" · ")}
                         </div>
                       )}
                     </div>
@@ -1842,7 +1935,7 @@ return (
 
               {selectedCoral.thermal_warnings && selectedCoral.thermal_warnings.length > 0 && (
                 <div className="flex justify-between items-start border-b border-border/50 pb-2">
-                  <span className="text-sm font-medium text-muted-foreground">Hardware Warnings</span>
+                  <span className="text-sm font-medium text-muted-foreground">{t("hardware.labels.hardwareWarnings")}</span>
                   <div className="flex flex-col gap-1 items-end">
                     {selectedCoral.thermal_warnings.map((w) => (
                       <div key={w.name} className="flex items-center gap-2">
@@ -1858,7 +1951,7 @@ return (
                               : "text-muted-foreground/70"
                           }
                         >
-                          {w.enabled ? "enabled" : "disabled"}
+                          {w.enabled ? t("status.active") : t("status.disabled")}
                         </Badge>
                       </div>
                     ))}
@@ -1875,7 +1968,7 @@ return (
                   className="w-full bg-blue-600 hover:bg-blue-700 text-white"
                 >
                   <Download className="mr-2 h-4 w-4" />
-                  Install Coral TPU Drivers
+                  {t("hardware.actions.installCoralDrivers")}
                 </Button>
               )}
             </div>
@@ -1888,7 +1981,7 @@ return (
         <Card className="border-border/50 bg-card/50 p-6">
           <div className="mb-4 flex items-center gap-2">
             <Zap className="h-5 w-5 text-blue-500" />
-            <h2 className="text-lg font-semibold">Power Consumption</h2>
+            <h2 className="text-lg font-semibold">{t("hardware.sections.powerConsumption")}</h2>
           </div>
 
           <div className="space-y-4">
@@ -1901,7 +1994,7 @@ return (
               </div>
               <div className="text-right">
                 <p className="text-2xl font-bold text-blue-500">{hardwareData.power_meter.watts.toFixed(1)} W</p>
-                <p className="text-xs text-muted-foreground">Current Draw</p>
+                <p className="text-xs text-muted-foreground">{t("hardware.labels.currentDraw")}</p>
               </div>
             </div>
           </div>
@@ -1913,9 +2006,9 @@ return (
         <Card className="border-border/50 bg-card/50 p-6">
           <div className="mb-4 flex items-center gap-2">
             <PowerIcon className="h-5 w-5 text-green-500" />
-            <h2 className="text-lg font-semibold">Power Supplies</h2>
+            <h2 className="text-lg font-semibold">{t("hardware.sections.powerSupplies")}</h2>
             <Badge variant="outline" className="ml-auto">
-              {hardwareData.power_supplies.length} PSUs
+              {t("hardware.counts.psus", { count: hardwareData.power_supplies.length })}
             </Badge>
           </div>
 
@@ -1929,7 +2022,7 @@ return (
                   )}
                 </div>
                 <p className="mt-2 text-2xl font-bold text-green-500">{psu.watts} W</p>
-                <p className="text-xs text-muted-foreground">Current Output</p>
+                <p className="text-xs text-muted-foreground">{t("hardware.labels.currentOutput")}</p>
               </div>
             ))}
           </div>
@@ -1941,9 +2034,9 @@ return (
         <Card className="border-border/50 bg-card/50 p-6">
           <div className="mb-4 flex items-center gap-2">
             <FanIcon className="h-5 w-5 text-primary" />
-            <h2 className="text-lg font-semibold">System Fans</h2>
+            <h2 className="text-lg font-semibold">{t("hardware.sections.systemFans")}</h2>
             <Badge variant="outline" className="ml-auto">
-              {hardwareData.fans.length} fans
+              {t("hardware.counts.fans", { count: hardwareData.fans.length })}
             </Badge>
           </div>
 
@@ -1957,7 +2050,7 @@ return (
                   <div className="flex items-center justify-between">
                     <span className="text-sm font-medium">{fan.name}</span>
                     <span className="text-sm font-semibold text-blue-500">
-                      {isPercentage ? `${fan.speed.toFixed(0)} percent` : `${fan.speed.toFixed(0)} ${fan.unit}`}
+                      {isPercentage ? `${fan.speed.toFixed(0)} %` : `${fan.speed.toFixed(0)} ${fan.unit}`}
                     </span>
                   </div>
                   <div className="h-2 w-full overflow-hidden rounded-full bg-secondary">
@@ -1976,9 +2069,9 @@ return (
         <Card className="border-border/50 bg-card/50 p-6">
           <div className="mb-4 flex items-center gap-2">
             <Battery className="h-5 w-5 text-primary" />
-            <h2 className="text-lg font-semibold">UPS Status</h2>
+            <h2 className="text-lg font-semibold">{t("hardware.sections.upsStatus")}</h2>
             <Badge variant="outline" className="ml-auto">
-              {hardwareData.ups.length} UPS
+              {t("hardware.counts.ups", { count: hardwareData.ups.length })}
             </Badge>
           </div>
 
@@ -2007,16 +2100,16 @@ return (
                   <div className="flex items-center justify-between mb-4">
                     <div className="flex-1 min-w-0">
                       <span className="text-sm font-medium block truncate">{ups.model || ups.name}</span>
-                      {ups.is_remote && <span className="text-xs text-muted-foreground">Remote: {ups.host}</span>}
+                      {ups.is_remote && <span className="text-xs text-muted-foreground">{t("hardware.labels.remote")}: {ups.host}</span>}
                     </div>
-                    <Badge className={getStatusColor(ups.status)}>{ups.status || "Unknown"}</Badge>
+                    <Badge className={getStatusColor(ups.status)}>{ups.status || t("common.unknown")}</Badge>
                   </div>
 
                   <div className="grid gap-3 md:grid-cols-2">
                     {ups.battery_charge && (
                       <div className="space-y-1">
                         <div className="flex items-center justify-between">
-                          <span className="text-xs text-muted-foreground">Battery Charge</span>
+                          <span className="text-xs text-muted-foreground">{t("hardware.labels.batteryCharge")}</span>
                           <span className="text-sm font-semibold text-green-500">{ups.battery_charge}</span>
                         </div>
                         <Progress value={batteryCharge} className="h-2 [&>div]:bg-blue-500" />
@@ -2026,7 +2119,7 @@ return (
                     {ups.load_percent && (
                       <div className="space-y-1">
                         <div className="flex items-center justify-between">
-                          <span className="text-xs text-muted-foreground">Load</span>
+                          <span className="text-xs text-muted-foreground">{t("hardware.labels.load")}</span>
                           <span className="text-sm font-semibold text-green-500">{ups.load_percent}</span>
                         </div>
                         <Progress value={loadPercent} className="h-2 [&>div]:bg-blue-500" />
@@ -2035,7 +2128,7 @@ return (
 
                     {ups.time_left && (
                       <div>
-                        <span className="text-xs text-muted-foreground">Runtime</span>
+                        <span className="text-xs text-muted-foreground">{t("hardware.labels.runtime")}</span>
                         <div className="mt-1">
                           <Badge className="bg-green-500/10 text-green-500 border-green-500/20">{ups.time_left}</Badge>
                         </div>
@@ -2044,7 +2137,7 @@ return (
 
                     {ups.input_voltage && (
                       <div>
-                        <span className="text-xs text-muted-foreground">Input Voltage</span>
+                        <span className="text-xs text-muted-foreground">{t("hardware.labels.inputVoltage")}</span>
                         <div className="mt-1">
                           <span className="text-sm font-medium text-green-500">{ups.input_voltage}</span>
                         </div>
@@ -2065,8 +2158,8 @@ return (
               <DialogHeader className="pb-4 border-b border-border">
                 <DialogTitle>{selectedUPS.model || selectedUPS.name}</DialogTitle>
                 <DialogDescription>
-                  UPS Detailed Information
-                  {selectedUPS.is_remote && ` • Remote: ${selectedUPS.host}`}
+                  {t("hardware.ups.detailedInformation")}
+                  {selectedUPS.is_remote && ` • ${t("hardware.labels.remote")}: ${selectedUPS.host}`}
                 </DialogDescription>
               </DialogHeader>
 
@@ -2074,11 +2167,11 @@ return (
                 {/* Status Overview */}
                 <div>
                   <h3 className="text-sm font-semibold text-muted-foreground mb-3 uppercase tracking-wide">
-                    Status Overview
+                    {t("hardware.sections.statusOverview")}
                   </h3>
                   <div className="grid gap-2">
                     <div className="flex justify-between border-b border-border/50 pb-2">
-                      <span className="text-sm text-muted-foreground">Status</span>
+                      <span className="text-sm text-muted-foreground">{t("hardware.labels.status")}</span>
                       <Badge
                         className={
                           selectedUPS.status?.includes("OL")
@@ -2090,16 +2183,16 @@ return (
                                 : "bg-blue-500/10 text-blue-500 border-blue-500/20"
                         }
                       >
-                        {selectedUPS.status || "Unknown"}
+                        {selectedUPS.status || t("common.unknown")}
                       </Badge>
                     </div>
                     <div className="flex justify-between border-b border-border/50 pb-2">
-                      <span className="text-sm text-muted-foreground">Connection</span>
+                      <span className="text-sm text-muted-foreground">{t("hardware.labels.connection")}</span>
                       <Badge variant="outline">{selectedUPS.connection_type}</Badge>
                     </div>
                     {selectedUPS.host && (
                       <div className="flex justify-between border-b border-border/50 pb-2">
-                        <span className="text-sm text-muted-foreground">Host</span>
+                        <span className="text-sm text-muted-foreground">{t("hardware.labels.host")}</span>
                         <span className="text-sm font-medium">{selectedUPS.host}</span>
                       </div>
                     )}
@@ -2109,13 +2202,13 @@ return (
                 {/* Battery Information */}
                 <div>
                   <h3 className="text-sm font-semibold text-muted-foreground mb-3 uppercase tracking-wide">
-                    Battery Information
+                    {t("hardware.sections.batteryInformation")}
                   </h3>
                   <div className="grid gap-3">
                     {selectedUPS.battery_charge && (
                       <div className="space-y-1">
                         <div className="flex justify-between">
-                          <span className="text-sm text-muted-foreground">Charge Level</span>
+                          <span className="text-sm text-muted-foreground">{t("hardware.labels.chargeLevel")}</span>
                           <span className="text-sm font-semibold text-green-500">{selectedUPS.battery_charge}</span>
                         </div>
                         <Progress
@@ -2129,7 +2222,7 @@ return (
                     )}
                     {selectedUPS.time_left && (
                       <div className="flex justify-between border-b border-border/50 pb-2">
-                        <span className="text-sm text-muted-foreground">Runtime Remaining</span>
+                        <span className="text-sm text-muted-foreground">{t("hardware.labels.runtimeRemaining")}</span>
                         <Badge className="bg-green-500/10 text-green-500 border-green-500/20">
                           {selectedUPS.time_left}
                         </Badge>
@@ -2137,13 +2230,13 @@ return (
                     )}
                     {selectedUPS.battery_voltage && (
                       <div className="flex justify-between border-b border-border/50 pb-2">
-                        <span className="text-sm text-muted-foreground">Battery Voltage</span>
+                        <span className="text-sm text-muted-foreground">{t("hardware.labels.batteryVoltage")}</span>
                         <span className="text-sm font-medium">{selectedUPS.battery_voltage}</span>
                       </div>
                     )}
                     {selectedUPS.battery_date && (
                       <div className="flex justify-between border-b border-border/50 pb-2">
-                        <span className="text-sm text-muted-foreground">Battery Date</span>
+                        <span className="text-sm text-muted-foreground">{t("hardware.labels.batteryDate")}</span>
                         <span className="text-sm font-medium">{selectedUPS.battery_date}</span>
                       </div>
                     )}
@@ -2153,37 +2246,37 @@ return (
                 {/* Input/Output Information */}
                 <div>
                   <h3 className="text-sm font-semibold text-muted-foreground mb-3 uppercase tracking-wide">
-                    Power Information
+                    {t("hardware.sections.powerInformation")}
                   </h3>
                   <div className="grid gap-2 md:grid-cols-2">
                     {selectedUPS.input_voltage && (
                       <div className="flex justify-between border-b border-border/50 pb-2">
-                        <span className="text-sm text-muted-foreground">Input Voltage</span>
+                        <span className="text-sm text-muted-foreground">{t("hardware.labels.inputVoltage")}</span>
                         <span className="text-sm font-medium text-green-500">{selectedUPS.input_voltage}</span>
                       </div>
                     )}
                     {selectedUPS.output_voltage && (
                       <div className="flex justify-between border-b border-border/50 pb-2">
-                        <span className="text-sm text-muted-foreground">Output Voltage</span>
+                        <span className="text-sm text-muted-foreground">{t("hardware.labels.outputVoltage")}</span>
                         <span className="text-sm font-medium text-green-500">{selectedUPS.output_voltage}</span>
                       </div>
                     )}
                     {selectedUPS.input_frequency && (
                       <div className="flex justify-between border-b border-border/50 pb-2">
-                        <span className="text-sm text-muted-foreground">Input Frequency</span>
+                        <span className="text-sm text-muted-foreground">{t("hardware.labels.inputFrequency")}</span>
                         <span className="text-sm font-medium">{selectedUPS.input_frequency}</span>
                       </div>
                     )}
                     {selectedUPS.output_frequency && (
                       <div className="flex justify-between border-b border-border/50 pb-2">
-                        <span className="text-sm text-muted-foreground">Output Frequency</span>
+                        <span className="text-sm text-muted-foreground">{t("hardware.labels.outputFrequency")}</span>
                         <span className="text-sm font-medium">{selectedUPS.output_frequency}</span>
                       </div>
                     )}
                     {selectedUPS.load_percent && (
                       <div className="md:col-span-2 space-y-1">
                         <div className="flex justify-between">
-                          <span className="text-sm text-muted-foreground">Load</span>
+                          <span className="text-sm text-muted-foreground">{t("hardware.labels.load")}</span>
                           <span className="text-sm font-semibold text-green-500">{selectedUPS.load_percent}</span>
                         </div>
                         <Progress
@@ -2196,13 +2289,13 @@ return (
                     )}
                     {selectedUPS.real_power && (
                       <div className="flex justify-between border-b border-border/50 pb-2">
-                        <span className="text-sm text-muted-foreground">Real Power</span>
+                        <span className="text-sm text-muted-foreground">{t("hardware.labels.realPower")}</span>
                         <span className="text-sm font-medium text-blue-500">{selectedUPS.real_power}</span>
                       </div>
                     )}
                     {selectedUPS.apparent_power && (
                       <div className="flex justify-between border-b border-border/50 pb-2">
-                        <span className="text-sm text-muted-foreground">Apparent Power</span>
+                        <span className="text-sm text-muted-foreground">{t("hardware.labels.apparentPower")}</span>
                         <span className="text-sm font-medium text-blue-500">{selectedUPS.apparent_power}</span>
                       </div>
                     )}
@@ -2212,36 +2305,36 @@ return (
                 {/* Device Information */}
                 <div>
                   <h3 className="text-sm font-semibold text-muted-foreground mb-3 uppercase tracking-wide">
-                    Device Information
+                    {t("hardware.sections.deviceInformation")}
                   </h3>
                   <div className="grid gap-2">
                     {selectedUPS.manufacturer && (
                       <div className="flex justify-between border-b border-border/50 pb-2">
-                        <span className="text-sm font-medium text-muted-foreground">Manufacturer</span>
+                        <span className="text-sm font-medium text-muted-foreground">{t("hardware.labels.manufacturer")}</span>
                         <span className="text-sm font-medium">{selectedUPS.manufacturer}</span>
                       </div>
                     )}
                     {selectedUPS.model && (
                       <div className="flex justify-between border-b border-border/50 pb-2">
-                        <span className="text-sm font-medium text-muted-foreground">Model</span>
+                        <span className="text-sm font-medium text-muted-foreground">{t("hardware.labels.model")}</span>
                         <span className="text-sm font-medium">{selectedUPS.model}</span>
                       </div>
                     )}
                     {selectedUPS.serial && (
                       <div className="flex justify-between border-b border-border/50 pb-2">
-                        <span className="text-sm font-medium text-muted-foreground">Serial Number</span>
+                        <span className="text-sm font-medium text-muted-foreground">{t("hardware.labels.serialNumber")}</span>
                         <span className="font-mono text-sm">{selectedUPS.serial}</span>
                       </div>
                     )}
                     {selectedUPS.firmware && (
                       <div className="flex justify-between border-b border-border/50 pb-2">
-                        <span className="text-sm font-medium text-muted-foreground">Firmware</span>
+                        <span className="text-sm font-medium text-muted-foreground">{t("hardware.labels.firmware")}</span>
                         <span className="text-sm font-medium">{selectedUPS.firmware}</span>
                       </div>
                     )}
                     {selectedUPS.driver && (
                       <div className="flex justify-between border-b border-border/50 pb-2">
-                        <span className="text-sm font-medium text-muted-foreground">Driver</span>
+                        <span className="text-sm font-medium text-muted-foreground">{t("hardware.labels.driver")}</span>
                         <span className="font-mono text-sm text-green-500">{selectedUPS.driver}</span>
                       </div>
                     )}
@@ -2258,9 +2351,9 @@ return (
         <Card className="border-border/50 bg-card/50 p-6">
           <div className="mb-4 flex items-center gap-2">
             <CpuIcon className="h-5 w-5 text-primary" />
-            <h2 className="text-lg font-semibold">PCI Devices</h2>
+            <h2 className="text-lg font-semibold">{t("hardware.sections.pciDevices")}</h2>
             <Badge variant="outline" className="ml-auto">
-              {hardwareData.pci_devices.length} devices
+              {t("hardware.counts.devices", { count: hardwareData.pci_devices.length })}
             </Badge>
           </div>
 
@@ -2272,13 +2365,13 @@ return (
                 className="cursor-pointer rounded-lg border border-white/10 sm:border-border bg-white/5 sm:bg-card sm:hover:bg-white/5 p-3 transition-colors"
               >
                 <div className="flex items-center justify-between gap-2 mb-2">
-                  <Badge className={`${getDeviceTypeColor(device.type)} text-xs shrink-0`}>{device.type}</Badge>
+                  <Badge className={`${getDeviceTypeColor(device.type)} text-xs shrink-0`}>{translateDeviceType(device.type, t)}</Badge>
                   <span className="font-mono text-xs text-muted-foreground shrink-0">{device.slot}</span>
                 </div>
                 <p className="font-medium text-sm line-clamp-2 break-words">{device.device}</p>
                 <p className="text-xs text-muted-foreground truncate">{device.vendor}</p>
                 {device.driver && (
-                  <p className="mt-1 font-mono text-xs text-green-500 truncate">Driver: {device.driver}</p>
+                  <p className="mt-1 font-mono text-xs text-green-500 truncate">{t("hardware.labels.driver")}: {device.driver}</p>
                 )}
               </div>
             ))}
@@ -2291,53 +2384,53 @@ return (
         <DialogContent className="max-w-2xl">
           <DialogHeader>
             <DialogTitle>{selectedPCIDevice?.device}</DialogTitle>
-            <DialogDescription>PCI Device Information</DialogDescription>
+            <DialogDescription>{t("hardware.pci.deviceInformation")}</DialogDescription>
           </DialogHeader>
 
           {selectedPCIDevice && (
             <div className="space-y-3">
               <div className="flex justify-between border-b border-border/50 pb-2">
-                <span className="text-sm font-medium text-muted-foreground">Device Type</span>
-                <Badge className={getDeviceTypeColor(selectedPCIDevice.type)}>{selectedPCIDevice.type}</Badge>
+                <span className="text-sm font-medium text-muted-foreground">{t("hardware.labels.deviceType")}</span>
+                <Badge className={getDeviceTypeColor(selectedPCIDevice.type)}>{translateDeviceType(selectedPCIDevice.type, t)}</Badge>
               </div>
 
               <div className="flex justify-between border-b border-border/50 pb-2">
-                <span className="text-sm font-medium text-muted-foreground">PCI Slot</span>
+                <span className="text-sm font-medium text-muted-foreground">{t("hardware.labels.pciSlot")}</span>
                 <span className="font-mono text-sm">{selectedPCIDevice.slot}</span>
               </div>
 
               <div className="flex justify-between border-b border-border/50 pb-2">
-                <span className="text-sm font-medium text-muted-foreground">Device Name</span>
+                <span className="text-sm font-medium text-muted-foreground">{t("hardware.labels.deviceName")}</span>
                 <span className="text-sm text-right">{selectedPCIDevice.device}</span>
               </div>
 
               {selectedPCIDevice.sdevice && (
                 <div className="flex justify-between border-b border-border/50 pb-2">
-                  <span className="text-sm font-medium text-muted-foreground">Product Name</span>
+                  <span className="text-sm font-medium text-muted-foreground">{t("hardware.labels.productName")}</span>
                   <span className="text-sm text-right text-blue-400">{selectedPCIDevice.sdevice}</span>
                 </div>
               )}
 
               <div className="flex justify-between border-b border-border/50 pb-2">
-                <span className="text-sm font-medium text-muted-foreground">Vendor</span>
+                <span className="text-sm font-medium text-muted-foreground">{t("hardware.labels.vendor")}</span>
                 <span className="text-sm">{selectedPCIDevice.vendor}</span>
               </div>
 
               <div className="flex justify-between border-b border-border/50 pb-2">
-                <span className="text-sm font-medium text-muted-foreground">Class</span>
+                <span className="text-sm font-medium text-muted-foreground">{t("hardware.labels.class")}</span>
                 <span className="font-mono text-sm">{selectedPCIDevice.class}</span>
               </div>
 
               {selectedPCIDevice.driver && (
                 <div className="flex justify-between border-b border-border/50 pb-2">
-                  <span className="text-sm font-medium text-muted-foreground">Driver</span>
+                  <span className="text-sm font-medium text-muted-foreground">{t("hardware.labels.driver")}</span>
                   <span className="font-mono text-sm text-green-500">{selectedPCIDevice.driver}</span>
                 </div>
               )}
 
               {selectedPCIDevice.kernel_module && (
                 <div className="flex justify-between border-b border-border/50 pb-2">
-                  <span className="text-sm font-medium text-muted-foreground">Kernel Module</span>
+                  <span className="text-sm font-medium text-muted-foreground">{t("hardware.labels.kernelModule")}</span>
                   <span className="font-mono text-sm">{selectedPCIDevice.kernel_module}</span>
                 </div>
               )}
@@ -2352,9 +2445,11 @@ return (
           <Card className="border-border/50 bg-card/50 p-6">
             <div className="mb-4 flex items-center gap-2">
               <Network className="h-5 w-5 text-primary" />
-              <h2 className="text-lg font-semibold">Network Summary</h2>
+              <h2 className="text-lg font-semibold">{t("hardware.sections.networkSummary")}</h2>
               <Badge variant="outline" className="ml-auto">
-                {hardwareData.pci_devices.filter((d) => d.type.toLowerCase().includes("network")).length} interfaces
+                {t("hardware.counts.interfaces", {
+                  count: hardwareData.pci_devices.filter((d) => d.type.toLowerCase().includes("network")).length,
+                })}
               </Badge>
             </div>
 
@@ -2376,12 +2471,12 @@ return (
                             : "bg-blue-500/10 text-blue-500 border-blue-500/20 px-2.5 py-0.5 shrink-0"
                         }
                       >
-                        {device.network_subtype || "Ethernet"}
+                        {translateDeviceType(device.network_subtype || "Ethernet", t)}
                       </Badge>
                     </div>
                     <p className="text-xs text-muted-foreground truncate">{device.vendor}</p>
                     {device.driver && (
-                      <p className="mt-1 font-mono text-xs text-green-500 truncate">Driver: {device.driver}</p>
+                      <p className="mt-1 font-mono text-xs text-green-500 truncate">{t("hardware.labels.driver")}: {device.driver}</p>
                     )}
                   </div>
                 ))}
@@ -2394,41 +2489,41 @@ return (
         <DialogContent className="max-w-2xl">
           <DialogHeader>
             <DialogTitle>{selectedNetwork?.device}</DialogTitle>
-            <DialogDescription>Network Interface Information</DialogDescription>
+            <DialogDescription>{t("hardware.network.interfaceInformation")}</DialogDescription>
           </DialogHeader>
 
           {selectedNetwork && (
             <div className="space-y-3">
               <div className="flex justify-between border-b border-border/50 pb-2">
-                <span className="text-sm font-medium text-muted-foreground">Device Type</span>
-                <Badge className={getDeviceTypeColor(selectedNetwork.type)}>{selectedNetwork.type}</Badge>
+                <span className="text-sm font-medium text-muted-foreground">{t("hardware.labels.deviceType")}</span>
+                <Badge className={getDeviceTypeColor(selectedNetwork.type)}>{translateDeviceType(selectedNetwork.type, t)}</Badge>
               </div>
 
               <div className="flex justify-between border-b border-border/50 pb-2">
-                <span className="text-sm font-medium text-muted-foreground">PCI Slot</span>
+                <span className="text-sm font-medium text-muted-foreground">{t("hardware.labels.pciSlot")}</span>
                 <span className="font-mono text-sm">{selectedNetwork.slot}</span>
               </div>
 
               <div className="flex justify-between border-b border-border/50 pb-2">
-                <span className="text-sm font-medium text-muted-foreground">Vendor</span>
+                <span className="text-sm font-medium text-muted-foreground">{t("hardware.labels.vendor")}</span>
                 <span className="text-sm">{selectedNetwork.vendor}</span>
               </div>
 
               <div className="flex justify-between border-b border-border/50 pb-2">
-                <span className="text-sm font-medium text-muted-foreground">Class</span>
+                <span className="text-sm font-medium text-muted-foreground">{t("hardware.labels.class")}</span>
                 <span className="font-mono text-sm">{selectedNetwork.class}</span>
               </div>
 
               {selectedNetwork.driver && (
                 <div className="flex justify-between border-b border-border/50 pb-2">
-                  <span className="text-sm font-medium text-muted-foreground">Driver</span>
+                  <span className="text-sm font-medium text-muted-foreground">{t("hardware.labels.driver")}</span>
                   <span className="font-mono text-sm text-green-500">{selectedNetwork.driver}</span>
                 </div>
               )}
 
               {selectedNetwork.kernel_module && (
                 <div className="flex justify-between border-b border-border/50 pb-2">
-                  <span className="text-sm font-medium text-muted-foreground">Kernel Module</span>
+                  <span className="text-sm font-medium text-muted-foreground">{t("hardware.labels.kernelModule")}</span>
                   <span className="font-mono text-sm">{selectedNetwork.kernel_module}</span>
                 </div>
               )}
@@ -2442,15 +2537,14 @@ return (
         <Card className="border-border/50 bg-card/50 p-6">
           <div className="mb-4 flex items-center gap-2">
             <HardDrive className="h-5 w-5 text-primary" />
-            <h2 className="text-lg font-semibold">Storage Summary</h2>
+            <h2 className="text-lg font-semibold">{t("hardware.sections.storageSummary")}</h2>
             <Badge variant="outline" className="ml-auto">
-              {
-                hardwareData.storage_devices.filter(
+              {t("hardware.counts.devices", {
+                count: hardwareData.storage_devices.filter(
                   (device) =>
                     device.type === "disk" && !device.name.startsWith("zd") && !device.name.startsWith("loop"),
-                ).length
-              }{" "}
-              devices
+                ).length,
+              })}
             </Badge>
           </div>
 
@@ -2549,7 +2643,7 @@ return (
                       <span className="text-sm font-medium truncate flex-1">{device.name}</span>
                       <Badge className={`${diskBadge.className} px-2.5 py-0.5 shrink-0`}>{diskBadge.label}</Badge>
                     </div>
-                    {device.size && <p className="text-sm font-medium">{formatMemory(parseLsblkSize(device.size))}</p>}
+                    {device.size && <p className="text-sm font-medium">{formatMemory(parseLsblkSize(device.size), t)}</p>}
                     {device.model && (
                       <p className="text-xs text-muted-foreground line-clamp-2 break-words">{device.model}</p>
                     )}
@@ -2557,7 +2651,7 @@ return (
                       <div className="mt-1 flex items-center gap-1">
                         <span className={`text-xs font-medium ${linkSpeed.color}`}>{linkSpeed.text}</span>
                         {linkSpeed.maxText && linkSpeed.isWarning && (
-                          <span className="text-xs font-medium text-blue-500">(max: {linkSpeed.maxText})</span>
+                          <span className="text-xs font-medium text-blue-500">{t("hardware.values.max", { value: linkSpeed.maxText })}</span>
                         )}
                       </div>
                     )}
@@ -2573,18 +2667,18 @@ return (
         <DialogContent className="max-w-2xl">
           <DialogHeader>
             <DialogTitle>{selectedDisk?.name}</DialogTitle>
-            <DialogDescription>Storage Device Hardware Information</DialogDescription>
+            <DialogDescription>{t("hardware.storage.deviceHardwareInformation")}</DialogDescription>
           </DialogHeader>
 
           {selectedDisk && (
             <div className="space-y-3">
               <div className="flex justify-between border-b border-border/50 pb-2">
-                <span className="text-sm font-medium text-muted-foreground">Device Name</span>
+                <span className="text-sm font-medium text-muted-foreground">{t("hardware.labels.deviceName")}</span>
                 <span className="font-mono text-sm">{selectedDisk.name}</span>
               </div>
 
               <div className="flex justify-between border-b border-border/50 pb-2">
-                <span className="text-sm font-medium text-muted-foreground">Type</span>
+                <span className="text-sm font-medium text-muted-foreground">{t("hardware.labels.type")}</span>
                 {(() => {
                   const diskType = getDiskType(selectedDisk.name, selectedDisk.rotation_rate)
                   const badgeStyles: Record<string, { className: string; label: string }> = {
@@ -2608,14 +2702,14 @@ return (
 
               {selectedDisk.size && (
                 <div className="flex justify-between border-b border-border/50 pb-2">
-                  <span className="text-sm font-medium text-muted-foreground">Capacity</span>
-                  <span className="text-sm font-medium">{formatMemory(parseLsblkSize(selectedDisk.size))}</span>
+                  <span className="text-sm font-medium text-muted-foreground">{t("hardware.labels.capacity")}</span>
+                  <span className="text-sm font-medium">{formatMemory(parseLsblkSize(selectedDisk.size), t)}</span>
                 </div>
               )}
 
               <div className="pt-2">
                 <h3 className="text-sm font-semibold text-muted-foreground mb-2 uppercase tracking-wide">
-                  Interface Information
+                  {t("hardware.sections.interfaceInformation")}
                 </h3>
               </div>
 
@@ -2625,7 +2719,7 @@ return (
                   {selectedDisk.pcie_gen || selectedDisk.pcie_width ? (
                     <>
                       <div className="flex justify-between border-b border-border/50 pb-2">
-                        <span className="text-sm font-medium text-muted-foreground">Current Link Speed</span>
+                        <span className="text-sm font-medium text-muted-foreground">{t("hardware.labels.currentLinkSpeed")}</span>
                         <span
                           className={`text-sm font-medium ${
                             selectedDisk.pcie_max_gen &&
@@ -2641,7 +2735,7 @@ return (
                       </div>
                       {selectedDisk.pcie_max_gen && selectedDisk.pcie_max_width && (
                         <div className="flex justify-between border-b border-border/50 pb-2">
-                          <span className="text-sm font-medium text-muted-foreground">Maximum Link Speed</span>
+                          <span className="text-sm font-medium text-muted-foreground">{t("hardware.labels.maximumLinkSpeed")}</span>
                           <span className="text-sm font-medium text-blue-500">
                             {selectedDisk.pcie_max_gen} {selectedDisk.pcie_max_width}
                           </span>
@@ -2650,8 +2744,8 @@ return (
                     </>
                   ) : (
                     <div className="flex justify-between border-b border-border/50 pb-2">
-                      <span className="text-sm font-medium text-muted-foreground">PCIe Link Speed</span>
-                      <span className="text-sm text-muted-foreground italic">Detecting...</span>
+                      <span className="text-sm font-medium text-muted-foreground">{t("hardware.labels.pcieLinkSpeed")}</span>
+                      <span className="text-sm text-muted-foreground italic">{t("hardware.values.detecting")}</span>
                     </div>
                   )}
                 </>
@@ -2660,7 +2754,7 @@ return (
               {/* SATA Information */}
               {!selectedDisk.name.startsWith("nvme") && selectedDisk.sata_version && (
                 <div className="flex justify-between border-b border-border/50 pb-2">
-                  <span className="text-sm font-medium text-muted-foreground">SATA Version</span>
+                  <span className="text-sm font-medium text-muted-foreground">{t("hardware.labels.sataVersion")}</span>
                   <span className="text-sm font-medium text-blue-500">{selectedDisk.sata_version}</span>
                 </div>
               )}
@@ -2668,13 +2762,13 @@ return (
               {/* SAS Information */}
               {!selectedDisk.name.startsWith("nvme") && selectedDisk.sas_version && (
                 <div className="flex justify-between border-b border-border/50 pb-2">
-                  <span className="text-sm font-medium text-muted-foreground">SAS Version</span>
+                  <span className="text-sm font-medium text-muted-foreground">{t("hardware.labels.sasVersion")}</span>
                   <span className="text-sm font-medium text-blue-500">{selectedDisk.sas_version}</span>
                 </div>
               )}
               {!selectedDisk.name.startsWith("nvme") && selectedDisk.sas_speed && (
                 <div className="flex justify-between border-b border-border/50 pb-2">
-                  <span className="text-sm font-medium text-muted-foreground">SAS Speed</span>
+                  <span className="text-sm font-medium text-muted-foreground">{t("hardware.labels.sasSpeed")}</span>
                   <span className="text-sm font-medium text-blue-500">{selectedDisk.sas_speed}</span>
                 </div>
               )}
@@ -2686,71 +2780,71 @@ return (
                 !selectedDisk.sata_version &&
                 !selectedDisk.sas_version && (
                   <div className="flex justify-between border-b border-border/50 pb-2">
-                    <span className="text-sm font-medium text-muted-foreground">Link Speed</span>
+                    <span className="text-sm font-medium text-muted-foreground">{t("hardware.labels.linkSpeed")}</span>
                     <span className="text-sm font-medium text-blue-500">{selectedDisk.link_speed}</span>
                   </div>
                 )}
 
               {selectedDisk.model && (
                 <div className="flex justify-between border-b border-border/50 pb-2">
-                  <span className="text-sm font-medium text-muted-foreground">Model</span>
+                  <span className="text-sm font-medium text-muted-foreground">{t("hardware.labels.model")}</span>
                   <span className="text-sm text-right">{selectedDisk.model}</span>
                 </div>
               )}
 
               {selectedDisk.family && (
                 <div className="flex justify-between border-b border-border/50 pb-2">
-                  <span className="text-sm font-medium text-muted-foreground">Family</span>
+                  <span className="text-sm font-medium text-muted-foreground">{t("hardware.labels.family")}</span>
                   <span className="text-sm text-right">{selectedDisk.family}</span>
                 </div>
               )}
 
               {selectedDisk.serial && (
                 <div className="flex justify-between border-b border-border/50 pb-2">
-                  <span className="text-sm font-medium text-muted-foreground">Serial Number</span>
+                  <span className="text-sm font-medium text-muted-foreground">{t("hardware.labels.serialNumber")}</span>
                   <span className="font-mono text-sm">{selectedDisk.serial}</span>
                 </div>
               )}
 
               {selectedDisk.firmware && (
                 <div className="flex justify-between border-b border-border/50 pb-2">
-                  <span className="text-sm font-medium text-muted-foreground">Firmware</span>
+                  <span className="text-sm font-medium text-muted-foreground">{t("hardware.labels.firmware")}</span>
                   <span className="font-mono text-sm">{selectedDisk.firmware}</span>
                 </div>
               )}
 
               {selectedDisk.interface && (
                 <div className="flex justify-between border-b border-border/50 pb-2">
-                  <span className="text-sm font-medium text-muted-foreground">Interface</span>
+                  <span className="text-sm font-medium text-muted-foreground">{t("hardware.labels.interface")}</span>
                   <span className="text-sm font-medium">{selectedDisk.interface}</span>
                 </div>
               )}
 
               {selectedDisk.driver && (
                 <div className="flex justify-between border-b border-border/50 pb-2">
-                  <span className="text-sm font-medium text-muted-foreground">Driver</span>
+                  <span className="text-sm font-medium text-muted-foreground">{t("hardware.labels.driver")}</span>
                   <span className="font-mono text-sm text-green-500">{selectedDisk.driver}</span>
                 </div>
               )}
 
               {selectedDisk.rotation_rate !== undefined && selectedDisk.rotation_rate !== null && (
                 <div className="flex justify-between border-b border-border/50 pb-2">
-                  <span className="text-sm font-medium text-muted-foreground">Rotation Rate</span>
+                  <span className="text-sm font-medium text-muted-foreground">{t("hardware.labels.rotationRate")}</span>
                   <div className="text-sm">
                     {typeof selectedDisk.rotation_rate === "number" && selectedDisk.rotation_rate === -1
-                      ? "N/A"
+                      ? t("common.notAvailable")
                       : typeof selectedDisk.rotation_rate === "number" && selectedDisk.rotation_rate > 0
                         ? `${selectedDisk.rotation_rate} rpm`
                         : typeof selectedDisk.rotation_rate === "string"
                           ? selectedDisk.rotation_rate
-                          : "Solid State Device"}
+                          : t("hardware.values.solidStateDevice")}
                   </div>
                 </div>
               )}
 
               {selectedDisk.form_factor && (
                 <div className="flex justify-between border-b border-border/50 pb-2">
-                  <span className="text-sm font-medium text-muted-foreground">Form Factor</span>
+                  <span className="text-sm font-medium text-muted-foreground">{t("hardware.labels.formFactor")}</span>
                   <span className="text-sm">{selectedDisk.form_factor}</span>
                 </div>
               )}
@@ -2766,9 +2860,9 @@ return (
         <Card className="border-border/50 bg-card/50 p-6">
           <div className="mb-4 flex items-center gap-2">
             <Usb className="h-5 w-5 text-primary" />
-            <h2 className="text-lg font-semibold">USB Devices</h2>
+            <h2 className="text-lg font-semibold">{t("hardware.sections.usbDevices")}</h2>
             <Badge variant="outline" className="ml-auto">
-              {hardwareData.usb_devices.length} device{hardwareData.usb_devices.length > 1 ? "s" : ""}
+              {t("hardware.counts.devices", { count: hardwareData.usb_devices.length })}
             </Badge>
           </div>
 
@@ -2784,7 +2878,7 @@ return (
                     {usb.name}
                   </span>
                   <Badge className={getDeviceTypeColor(usb.class_label)}>
-                    {usb.class_label}
+                    {translateDeviceType(usb.class_label, t)}
                   </Badge>
                 </div>
                 <div className="space-y-0.5 text-xs text-muted-foreground">
@@ -2793,7 +2887,7 @@ return (
                     {usb.bus_device} · {usb.vendor_id}:{usb.product_id}
                   </div>
                   {usb.driver && (
-                    <div className="font-mono text-green-500/80">Driver: {usb.driver}</div>
+                    <div className="font-mono text-green-500/80">{t("hardware.labels.driver")}: {usb.driver}</div>
                   )}
                 </div>
               </div>
@@ -2807,37 +2901,37 @@ return (
         <DialogContent className="max-w-2xl">
           <DialogHeader>
             <DialogTitle>{selectedUsbDevice?.name}</DialogTitle>
-            <DialogDescription>USB Device Information</DialogDescription>
+            <DialogDescription>{t("hardware.usb.deviceInformation")}</DialogDescription>
           </DialogHeader>
 
           {selectedUsbDevice && (
             <div className="space-y-3">
               <div className="flex justify-between border-b border-border/50 pb-2">
-                <span className="text-sm font-medium text-muted-foreground">Class</span>
+                <span className="text-sm font-medium text-muted-foreground">{t("hardware.labels.class")}</span>
                 <Badge className={getDeviceTypeColor(selectedUsbDevice.class_label)}>
-                  {selectedUsbDevice.class_label}
+                  {translateDeviceType(selectedUsbDevice.class_label, t)}
                 </Badge>
               </div>
 
               <div className="flex justify-between border-b border-border/50 pb-2">
-                <span className="text-sm font-medium text-muted-foreground">Bus:Device</span>
+                <span className="text-sm font-medium text-muted-foreground">{t("hardware.labels.busDevice")}</span>
                 <span className="font-mono text-sm">{selectedUsbDevice.bus_device}</span>
               </div>
 
               <div className="flex justify-between border-b border-border/50 pb-2">
-                <span className="text-sm font-medium text-muted-foreground">Device Name</span>
+                <span className="text-sm font-medium text-muted-foreground">{t("hardware.labels.deviceName")}</span>
                 <span className="text-sm text-right">{selectedUsbDevice.name}</span>
               </div>
 
               {selectedUsbDevice.vendor && (
                 <div className="flex justify-between border-b border-border/50 pb-2">
-                  <span className="text-sm font-medium text-muted-foreground">Vendor</span>
+                  <span className="text-sm font-medium text-muted-foreground">{t("hardware.labels.vendor")}</span>
                   <span className="text-sm">{selectedUsbDevice.vendor}</span>
                 </div>
               )}
 
               <div className="flex justify-between border-b border-border/50 pb-2">
-                <span className="text-sm font-medium text-muted-foreground">Vendor / Product ID</span>
+                <span className="text-sm font-medium text-muted-foreground">{t("hardware.labels.vendorProductId")}</span>
                 <span className="font-mono text-sm">
                   {selectedUsbDevice.vendor_id}:{selectedUsbDevice.product_id}
                 </span>
@@ -2845,7 +2939,7 @@ return (
 
               {selectedUsbDevice.speed_label && (
                 <div className="flex justify-between border-b border-border/50 pb-2">
-                  <span className="text-sm font-medium text-muted-foreground">Speed</span>
+                  <span className="text-sm font-medium text-muted-foreground">{t("hardware.labels.speed")}</span>
                   <span className="text-sm">
                     {selectedUsbDevice.speed_label}
                     {selectedUsbDevice.speed_mbps > 0 && (
@@ -2856,20 +2950,20 @@ return (
               )}
 
               <div className="flex justify-between border-b border-border/50 pb-2">
-                <span className="text-sm font-medium text-muted-foreground">Class Code</span>
+                <span className="text-sm font-medium text-muted-foreground">{t("hardware.labels.classCode")}</span>
                 <span className="font-mono text-sm">0x{selectedUsbDevice.class_code}</span>
               </div>
 
               {selectedUsbDevice.driver && (
                 <div className="flex justify-between border-b border-border/50 pb-2">
-                  <span className="text-sm font-medium text-muted-foreground">Driver</span>
+                  <span className="text-sm font-medium text-muted-foreground">{t("hardware.labels.driver")}</span>
                   <span className="font-mono text-sm text-green-500">{selectedUsbDevice.driver}</span>
                 </div>
               )}
 
               {selectedUsbDevice.serial && (
                 <div className="flex justify-between border-b border-border/50 pb-2">
-                  <span className="text-sm font-medium text-muted-foreground">Serial</span>
+                  <span className="text-sm font-medium text-muted-foreground">{t("hardware.labels.serial")}</span>
                   <span className="font-mono text-sm text-right break-all">{selectedUsbDevice.serial}</span>
                 </div>
               )}
@@ -2881,8 +2975,8 @@ return (
       {/* NVIDIA Installation Monitor */}
       {/* <HybridScriptMonitor
         sessionId={nvidiaSessionId}
-        title="NVIDIA Driver Installation"
-        description="Installing NVIDIA proprietary drivers for GPU monitoring..."
+        title={t("hardware.scripts.nvidiaTitle")}
+        description={t("hardware.scripts.nvidiaDescription")}
         onClose={() => {
           setNvidiaSessionId(null)
           mutateStatic()
@@ -2904,8 +2998,8 @@ return (
         params={{
           EXECUTION_MODE: "web",
         }}
-        title="NVIDIA Driver Installation"
-        description="Installing NVIDIA proprietary drivers for GPU monitoring..."
+        title={t("hardware.scripts.nvidiaTitle")}
+        description={t("hardware.scripts.nvidiaDescription")}
       />
       <ScriptTerminalModal
         open={showAmdInstaller}
@@ -2918,8 +3012,8 @@ return (
         params={{
           EXECUTION_MODE: "web",
         }}
-title="AMD GPU Tools Installation"
-  description="Installing amdgpu_top for AMD GPU monitoring..."
+title={t("hardware.scripts.amdTitle")}
+  description={t("hardware.scripts.amdDescription")}
   />
   <ScriptTerminalModal
   open={showIntelInstaller}
@@ -2932,8 +3026,8 @@ title="AMD GPU Tools Installation"
   params={{
   EXECUTION_MODE: "web",
   }}
-  title="Intel GPU Tools Installation"
-  description="Installing intel-gpu-tools for Intel GPU monitoring..."
+  title={t("hardware.scripts.intelTitle")}
+  description={t("hardware.scripts.intelDescription")}
   />
   <ScriptTerminalModal
     open={showCoralInstaller}
@@ -2946,8 +3040,8 @@ title="AMD GPU Tools Installation"
     params={{
       EXECUTION_MODE: "web",
     }}
-    title="Coral TPU Driver Installation"
-    description="Installing gasket + apex kernel modules and Edge TPU runtime..."
+    title={t("hardware.scripts.coralTitle")}
+    description={t("hardware.scripts.coralDescription")}
   />
   
   {/* GPU Switch Mode Modal */}
@@ -2961,8 +3055,13 @@ title="AMD GPU Tools Installation"
         EXECUTION_MODE: "web",
         GPU_SWITCH_PARAMS: `${switchModeParams.gpuSlot}|${switchModeParams.targetMode}`,
       }}
-      title={`GPU Switch Mode → ${switchModeParams.targetMode.toUpperCase()}`}
-      description={`Switching GPU ${switchModeParams.gpuSlot} to ${switchModeParams.targetMode === "vm" ? "VM (VFIO passthrough)" : "LXC (native driver)"} mode...`}
+      title={t("hardware.scripts.switchModeTitle", { mode: switchModeParams.targetMode.toUpperCase() })}
+      description={t("hardware.scripts.switchModeDescription", {
+        slot: switchModeParams.gpuSlot,
+        mode: switchModeParams.targetMode === "vm"
+          ? t("hardware.scripts.switchModeVm")
+          : t("hardware.scripts.switchModeLxc"),
+      })}
     />
   )}
   </div>

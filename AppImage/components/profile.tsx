@@ -19,6 +19,7 @@ import { Button } from "./ui/button"
 import { Input } from "./ui/input"
 import { Label } from "./ui/label"
 import { fetchApi, getApiUrl, getAuthToken } from "../lib/api-config"
+import { useT } from "../lib/i18n/provider"
 
 interface ProfileData {
   success: boolean
@@ -51,6 +52,7 @@ interface ProfileProps {
  * the operator hits Edit to start typing.
  */
 export function Profile({ onOpenSecurity }: ProfileProps) {
+  const t = useT()
   const [profile, setProfile] = useState<ProfileData | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -146,7 +148,7 @@ export function Profile({ onOpenSecurity }: ProfileProps) {
         body: JSON.stringify({ display_name: displayDraft }),
       })
       if (!data.success) {
-        setError(data.message || "Failed to save display name")
+        setError(data.message || t("profilePage.errors.saveDisplayNameFailed"))
         return
       }
       setProfile(data)
@@ -182,7 +184,7 @@ export function Profile({ onOpenSecurity }: ProfileProps) {
       })
       const data: ProfileData = await r.json().catch(() => ({ success: false }))
       if (!r.ok || !data.success) {
-        setAvatarError(data.message || `Upload failed (${r.status})`)
+        setAvatarError(data.message || t("profilePage.errors.uploadFailed", { status: r.status }))
         return
       }
       setProfile(data)
@@ -212,7 +214,7 @@ export function Profile({ onOpenSecurity }: ProfileProps) {
       })
       const data: ProfileData = await r.json().catch(() => ({ success: false }))
       if (!r.ok || !data.success) {
-        setAvatarError(data.message || `Delete failed (${r.status})`)
+        setAvatarError(data.message || t("profilePage.errors.deleteFailed", { status: r.status }))
         return
       }
       setProfile(data)
@@ -232,7 +234,7 @@ export function Profile({ onOpenSecurity }: ProfileProps) {
         <Card>
           <CardContent className="p-8 flex items-center justify-center text-muted-foreground">
             <Loader2 className="h-4 w-4 animate-spin mr-2" />
-            Loading profile…
+            {t("profilePage.loading")}
           </CardContent>
         </Card>
       </div>
@@ -247,7 +249,7 @@ export function Profile({ onOpenSecurity }: ProfileProps) {
             <div className="flex items-start gap-2 text-red-500">
               <AlertCircle className="h-5 w-5 shrink-0 mt-0.5" />
               <div>
-                <div className="font-medium">Failed to load profile</div>
+                <div className="font-medium">{t("profilePage.loadFailed")}</div>
                 <div className="text-xs text-muted-foreground mt-1 break-all">{error}</div>
               </div>
             </div>
@@ -268,13 +270,13 @@ export function Profile({ onOpenSecurity }: ProfileProps) {
           <div className="flex items-center justify-between gap-2 flex-wrap">
             <div className="flex items-center gap-2">
               <UserIcon className="h-5 w-5 text-cyan-500" />
-              <CardTitle>User Profile</CardTitle>
+              <CardTitle>{t("profilePage.title")}</CardTitle>
             </div>
             <div className="flex items-center gap-2">
               {savedDisplay && (
                 <span className="flex items-center gap-1 text-xs text-green-500">
                   <Check className="h-3.5 w-3.5" />
-                  Saved
+                  {t("status.saved")}
                 </span>
               )}
               {displayEditMode ? (
@@ -286,7 +288,7 @@ export function Profile({ onOpenSecurity }: ProfileProps) {
                     disabled={savingDisplay}
                     className="h-7 text-xs"
                   >
-                    Cancel
+                    {t("actions.cancel")}
                   </Button>
                   <Button
                     size="sm"
@@ -299,7 +301,7 @@ export function Profile({ onOpenSecurity }: ProfileProps) {
                     ) : (
                       <CheckCircle2 className="h-3 w-3 mr-1.5" />
                     )}
-                    Save
+                    {t("actions.save")}
                   </Button>
                 </>
               ) : (
@@ -310,14 +312,13 @@ export function Profile({ onOpenSecurity }: ProfileProps) {
                   className="h-7 text-xs"
                 >
                   <Settings2 className="h-3 w-3 mr-1.5" />
-                  Edit
+                  {t("actions.edit")}
                 </Button>
               )}
             </div>
           </div>
           <CardDescription>
-            Personal details rendered in the header avatar menu. None of this is required —
-            the username already covers identity. Display name and avatar are decorative.
+            {t("profilePage.description")}
           </CardDescription>
         </CardHeader>
 
@@ -327,7 +328,7 @@ export function Profile({ onOpenSecurity }: ProfileProps) {
               image they uploaded. `object-cover` keeps the aspect
               ratio and crops to fit the circle. */}
           <div>
-            <Label className="text-sm">Avatar</Label>
+            <Label className="text-sm">{t("profilePage.avatar.label")}</Label>
             <div className="flex flex-col sm:flex-row items-start gap-6 mt-3">
               <div className="relative shrink-0">
                 {avatarBlobUrl ? (
@@ -367,7 +368,7 @@ export function Profile({ onOpenSecurity }: ProfileProps) {
                   className="justify-start"
                 >
                   <Upload className="h-3.5 w-3.5 mr-2" />
-                  {profile?.has_avatar ? "Replace avatar" : "Upload avatar"}
+                  {profile?.has_avatar ? t("profilePage.avatar.replace") : t("profilePage.avatar.upload")}
                 </Button>
                 {profile?.has_avatar && (
                   <Button
@@ -378,12 +379,11 @@ export function Profile({ onOpenSecurity }: ProfileProps) {
                     className="justify-start text-red-500 hover:text-red-500 hover:bg-red-500/10"
                   >
                     <Trash2 className="h-3.5 w-3.5 mr-2" />
-                    Remove avatar
+                    {t("profilePage.avatar.remove")}
                   </Button>
                 )}
                 <p className="text-[11px] text-muted-foreground leading-relaxed max-w-xs">
-                  PNG, JPEG, WebP or GIF. Up to 2 MB. The image isn&apos;t resized —
-                  render it square or pre-crop for best results in the header.
+                  {t("profilePage.avatar.hint")}
                 </p>
               </div>
             </div>
@@ -397,7 +397,7 @@ export function Profile({ onOpenSecurity }: ProfileProps) {
 
           {/* ─── Username (read-only) ─── */}
           <div>
-            <Label className="text-sm" htmlFor="profile-username">Username</Label>
+            <Label className="text-sm" htmlFor="profile-username">{t("profilePage.username.label")}</Label>
             <Input
               id="profile-username"
               value={profile?.username || ""}
@@ -405,28 +405,26 @@ export function Profile({ onOpenSecurity }: ProfileProps) {
               className="mt-2 max-w-sm disabled:opacity-100 disabled:cursor-default"
             />
             <p className="text-[11px] text-muted-foreground mt-1">
-              The login name. To change it, disable authentication and reconfigure from
-              Security.
+              {t("profilePage.username.help")}
             </p>
           </div>
 
           {/* ─── Display name (Edit controls live in the card header) ─── */}
           <div>
             <Label className="text-sm" htmlFor="profile-display">
-              Display name <span className="text-muted-foreground font-normal">(optional)</span>
+              {t("profilePage.displayName.label")} <span className="text-muted-foreground font-normal">{t("profilePage.displayName.optional")}</span>
             </Label>
             <Input
               id="profile-display"
               value={displayDraft}
               onChange={(e) => setDisplayDraft(e.target.value)}
-              placeholder={profile?.username || "Display name"}
+              placeholder={profile?.username || t("profilePage.displayName.placeholder")}
               maxLength={64}
               disabled={!displayEditMode || savingDisplay}
               className="mt-2 max-w-sm disabled:opacity-100 disabled:cursor-default"
             />
             <p className="text-[11px] text-muted-foreground mt-1">
-              Shown above the username inside the avatar menu. Leave empty to show the
-              username itself. Up to 64 characters.
+              {t("profilePage.displayName.help")}
             </p>
             {error && displayEditMode && (
               <div className="mt-2 text-xs text-red-500 flex items-start gap-1.5">
@@ -443,21 +441,21 @@ export function Profile({ onOpenSecurity }: ProfileProps) {
         <CardHeader>
           <div className="flex items-center gap-2">
             <Shield className="h-5 w-5 text-orange-500" />
-            <CardTitle>Account security</CardTitle>
+            <CardTitle>{t("profilePage.accountSecurity.title")}</CardTitle>
           </div>
           <CardDescription>
-            Password, two-factor authentication and API tokens live in the Security panel.
+            {t("profilePage.accountSecurity.description")}
           </CardDescription>
         </CardHeader>
         <CardContent>
           {onOpenSecurity ? (
             <Button variant="outline" onClick={onOpenSecurity}>
               <Lock className="h-4 w-4 mr-2" />
-              Open Security settings
+              {t("profilePage.accountSecurity.openSecurity")}
             </Button>
           ) : (
             <p className="text-xs text-muted-foreground">
-              Open the Security tab from the navigation.
+              {t("profilePage.accountSecurity.fallback")}
             </p>
           )}
         </CardContent>

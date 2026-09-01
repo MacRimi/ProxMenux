@@ -21,6 +21,7 @@ Thank you for your interest in contributing to **ProxMenux**! This document cove
 8. [Variable & Style Conventions](#8-variable--style-conventions)
 9. [Do's and Don'ts](#9-dos-and-donts)
 10. [Submitting a Contribution](#10-submitting-a-contribution)
+11. [Contributing to the Monitor](#11-contributing-to-the-monitor)
 
 ---
 
@@ -89,8 +90,10 @@ initialize_cache
 
 ## 2. Project Structure
 
+ProxMenux is split into two main trees: the **shell scripts** (menu-driven CLI, covered by this guide) and the **Monitor** (Next.js + Flask web dashboard, covered in [§11](#11-contributing-to-the-monitor)).
+
 ```
-scripts/
+scripts/                # Shell scripts — CLI tree (this guide, sections 1–10)
 ├── menus/              # Top-level menu scripts (entry points)
 ├── storage/            # Disk, storage and passthrough scripts
 ├── share/              # NFS, Samba, local share scripts
@@ -102,9 +105,19 @@ scripts/
 ├── global/             # Shared helper libraries (sourced by other scripts)
 ├── utils.sh            # Shared utility functions and message helpers
 └── help_info_menu.sh   # Interactive help and command reference
+
+AppImage/               # Monitor — web dashboard (§11)
+├── app/                # Next.js app routes
+├── components/         # React components (shadcn + Tailwind)
+├── lib/i18n/           # i18n provider + language registry
+├── messages/<lang>/    # Per-locale JSON catalogs (Monitor UI strings)
+├── scripts/            # Flask backend, health monitor, notification manager
+└── scripts/build_appimage.sh  # AppImage build script
+
+lang/<lang>.json        # Per-locale translation cache — CLI shell strings
 ```
 
-Every script sources `utils.sh` to get access to the message functions, spinner, color variables, and translation system.
+Every shell script sources `utils.sh` to get access to the message functions, spinner, color variables, and translation system.
 
 **Shared helper libraries** (in `scripts/global/`) must be sourced explicitly:
 
@@ -667,7 +680,19 @@ if [[ "$VM_SWITCH_ACTION" == "keep_gpu_disable_onboot" ]]; then   # WRONG — di
 
 ## 10. Submitting a Contribution
 
-Code is submitted via a standard branch-based GitHub workflow.
+Code is submitted via a standard branch-based GitHub workflow. Before touching code, take a minute to signal intent — it makes coordination easier and prevents parallel work on the same thing.
+
+### Where to look and where to signal
+
+ProxMenux has three coordination surfaces, each with a clear purpose:
+
+- **[ProxMenux Roadmap project](https://github.com/users/MacRimi/projects/1)** — the strategic direction. Six pillars (multi-node, workload authoring, multi-user & clustering, operational maturity, domain expansion, and in-flight items) group the work the project is investing in. Cards on the board show what's being worked on right now and by whom.
+- **[Issues](https://github.com/MacRimi/ProxMenux/issues)** — bug reports and specific feature requests. Any issue with an assignee is already being worked on by that person.
+- **[Discussions → Contributor Coordination](https://github.com/MacRimi/ProxMenux/discussions/categories/contributor-coordination)** — the room where contributors announce they're picking up a piece of work, ask for input before opening a PR, or coordinate around larger changes. The [pinned "How we coordinate work"](https://github.com/MacRimi/ProxMenux/discussions/286) thread is the living guide.
+
+Rule of thumb: **any contribution likely to take more than an hour is worth a short heads-up in Contributor Coordination** — even one sentence saying you're on it. That way nobody else picks up the same work in parallel.
+
+For general questions (not bug reports, not coordination), use [Discussions → Q&A](https://github.com/MacRimi/ProxMenux/discussions/categories/q-a).
 
 ### Branch model
 
@@ -729,6 +754,74 @@ Your PR will be reviewed against this guide. Once approved, it is merged into `d
 
 For security issues, see [SECURITY.md](./SECURITY.md).
 
+### Documentation
+
+Bug fixes usually don't need doc changes — the release notes cover the visible impact. But when your PR adds a new feature (a script, a Monitor view, an API endpoint, a workflow), you're in the best position to explain what it does — you built it. If you can, adding a page or paragraph to the [docs site](https://proxmenux.com/en/docs/introduction) alongside the code lands the whole thing in one PR. If you'd rather focus on the code, that's fine too — just flag it in the PR description so the docs pass is picked up separately.
+
+The docs site lives in `/web/` and follows its own conventions — see [`web/CONTRIBUTING-TRANSLATIONS.md`](web/CONTRIBUTING-TRANSLATIONS.md) for structure and the translation flow.
+
 ---
 
-*For questions, open an Issue or reach us at proxmenux@macrimi.pro*
+## 11. Contributing to the Monitor
+
+The Monitor is the web dashboard shipped as a self-contained AppImage. It has a different architecture from the shell scripts, so contributions to that side of the project follow different conventions. The coordination flow ([§10 — Where to look and where to signal](#where-to-look-and-where-to-signal)) is the same.
+
+### Architecture
+
+- **Frontend** — Next.js 15 with static export, TypeScript, React, [shadcn/ui](https://ui.shadcn.com/) components on top of Tailwind. Code lives in `AppImage/app/` (routes) and `AppImage/components/`.
+- **Backend** — Flask, exposed on port 8008 on the Proxmox host. Route modules live in `AppImage/scripts/flask_*_routes.py`; the main server is `AppImage/scripts/flask_server.py`. Persistence is SQLite (`health_monitor.db`).
+- **Packaging** — everything gets bundled into a single `ProxMenux-<version>.AppImage` by `AppImage/scripts/build_appimage.sh` and runs as a systemd service (`proxmenux-monitor.service`).
+
+### UI conventions
+
+- **All user-visible strings go through the i18n hook** — never hard-code labels. Use `useT()` when the component only needs the translation function (`const t = useT()`), or `useI18n()` when it also needs the current language / setter (`const { language, setLanguage, t } = useI18n()`). Both are exported from `lib/i18n/provider.tsx`. Missing keys fall back to English at runtime.
+- **shadcn components** are the baseline (Card, Badge, Select, Switch, Dialog, etc.). Do not roll custom equivalents when a shadcn one exists.
+- **Design tokens** live in Tailwind config; use them (`bg-blue-600`, `border-border`) rather than raw hex values.
+- **Dark + light theme** must both work. Use tokens that respond to `data-theme` and `prefers-color-scheme`; don't hard-code palette values.
+
+### Backend conventions
+
+- **Authentication** — every mutating route (`POST` / `PUT` / `DELETE`) must be decorated with `@require_auth`. Read-only routes accept any authenticated caller. Never expose an admin endpoint without the decorator.
+- **Notifications** — new notification event types are registered in `AppImage/scripts/notification_templates.py` (add to the `TEMPLATES` dict, pick a group, set `default_enabled`). Channel dispatch, filtering, and Quiet Hours handling are already handled by `notification_manager.py`.
+- **Health checks** — `AppImage/scripts/health_monitor.py` is the single entry point for background checks. New checks slot into the existing scheduler cadence, respect the per-category thresholds in `settings.healthThresholds`, and emit through the notification manager when they cross a level.
+
+### Adding a new locale
+
+1. Add the locale code to `LanguageCode` and to `SUPPORTED_LANGUAGES` in `AppImage/lib/i18n/languages.ts`.
+2. Import the JSON in `AppImage/lib/i18n/provider.tsx` and add it to `MESSAGE_CATALOG` (order: EN first, then alphabetical by native name).
+3. Add `AppImage/messages/<lang>/common.json` — copy the structure from `en/common.json` and translate the values. Placeholders like `{vmid}`, `{count}` must stay unchanged.
+4. Rebuild the AppImage and verify the language appears in Settings → Interface language.
+
+For CLI shell strings, the translation cache lives in `lang/<lang>.json` — see [§7 (Translation Policy)](#7-translation-policy).
+
+### Local dev
+
+The AppImage builds on any Debian/Ubuntu host with Node 20+ and Python 3.11+ installed, but is normally built on a Proxmox host so the packaged Python matches the target runtime:
+
+```bash
+cd /path/to/ProxMenux
+bash AppImage/scripts/build_appimage.sh
+# → produces AppImage/dist/ProxMenux-<version>.AppImage
+```
+
+The practical iteration cycle for most changes is: edit code → `build_appimage.sh` → deploy the resulting AppImage to a Proxmox test host → restart `proxmenux-monitor.service` → refresh the browser. Rebuild + deploy takes a few minutes on a normal host.
+
+For cosmetic UI-only iteration you can run the Next.js dev server directly:
+
+```bash
+cd AppImage
+npm install
+npm run dev  # → http://localhost:3000
+```
+
+Note that the dev server has no Flask backend on the same host by default: the app is a static export (`output: 'export'`) with relative `/api/*` calls, so the UI renders but all data endpoints fail unless you set up a proxy to a running Monitor. For anything beyond isolated styling / component work, the full build + deploy cycle above is the honest path.
+
+### Testing
+
+- **Python tests** — under `AppImage/scripts/tests/`. Run with `python3 -m unittest discover -s AppImage/scripts/tests`. Add a test file when you add non-trivial backend logic (auth, notifications, background checks).
+- **UI smoke test** — deploy the built AppImage to a test host, restart `proxmenux-monitor.service`, and walk through the affected views in the browser. There is no formal e2e suite yet; a real-host smoke pass is expected for any UI change.
+- **JSON parse** — after editing any i18n catalog, verify it parses: `python3 -c "import json; json.load(open('AppImage/messages/<lang>/common.json'))"`.
+
+---
+
+*For general questions use [Discussions → Q&A](https://github.com/MacRimi/ProxMenux/discussions/categories/q-a). For bug reports open an Issue. Direct contact: proxmenux@macrimi.pro*

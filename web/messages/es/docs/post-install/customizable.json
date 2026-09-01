@@ -1,26 +1,26 @@
 {
   "meta": {
     "title": "Script Personalizable post-instalación | ProxMenux Documentation",
-    "description": "Elige exactamente qué optimizaciones aplicar a un host Proxmox VE con ProxMenux. 10 categorías, ~30 herramientas individuales, UI de checklist. Incluye todo lo que hace el script Automatizado, más funcionalidades opt-in (IOMMU, Fastfetch, Figurine, Ceph, HA, fixes de AMD…).",
+    "description": "Elige exactamente qué optimizaciones aplicar a un host Proxmox VE con ProxMenux. 10 categorías, ~35 herramientas individuales, UI de selección. Incluye todo lo que hace el script Automatizado, más funcionalidades opcionales (IOMMU, Fastfetch, Figurine, Ceph, HA, ajustes de AMD…).",
     "ogTitle": "Script Personalizable post-instalación | ProxMenux Documentation",
-    "ogDescription": "10 categorías, ~30 optimizaciones individuales. Elige exactamente qué quieres en un host Proxmox VE. Totalmente reversible."
+    "ogDescription": "10 categorías, ~35 optimizaciones individuales. Elige exactamente qué quieres en un host Proxmox VE. Los cambios reversibles quedan registrados."
   },
   "header": {
     "title": "Script Personalizable post-instalación",
-    "description": "Elige exactamente qué optimizaciones aplicar a un host Proxmox VE. ProxMenux agrupa ~30 herramientas individuales en 10 categorías, cada una con su propio diálogo de checklist. Mismo motor que el Automatizado, pero con control total sobre qué se aplica.",
+    "description": "Elige exactamente qué optimizaciones aplicar a un host Proxmox VE. ProxMenux agrupa ~35 herramientas individuales en 10 categorías, cada una con su propio diálogo de selección. Mismo motor que el Automatizado, pero con control total sobre qué se aplica.",
     "section": "Post-Install · Customizable"
   },
   "intro": {
     "title": "Cuándo elegir Personalizable",
-    "body": "Elige esta ruta cuando ya sabes qué tweaks quieres en el host — o cuáles definitivamente no quieres. El script presenta un checklist por categoría para que puedas preseleccionar, deseleccionar o mezclar optimizaciones. Cada item puede aplicarse otra vez más tarde (es idempotente) o revertirse desde <link>Uninstall Optimizations</link>."
+    "body": "Elige esta ruta cuando ya sabes qué ajustes quieres en el host — o cuáles definitivamente no quieres. El script presenta una selección por categoría para que puedas combinar optimizaciones. Las opciones se pueden volver a aplicar y los cambios de configuración reversibles quedan registrados para <link>Uninstall Optimizations</link>. Las actualizaciones de paquetes no se presentan como reversibles."
   },
   "compare": {
     "heading": "Comparación con el Automatizado",
-    "body": "Personalizable es un superset del <link>script Automatizado</link>. Cubre las mismas 13 optimizaciones de baseline más una larga lista de opt-ins que el Automatizado se salta a propósito — cosas que solo son útiles en hardware específico (fixes de AMD), hosting específico (OVH RTM), o cargas específicas (IOMMU/VFIO, repo de Ceph, High Availability, Fastfetch, Figurine, tuning del ARC de ZFS, pigz, ZFS auto-snapshot, límites de velocidad de vzdump, Open vSwitch, TCP BBR…)."
+    "body": "Personalizable es un superset del <link>script Automatizado</link>. Cubre las mismas 14 optimizaciones de baseline más una larga lista de opt-ins que el Automatizado se salta a propósito — cosas que solo son útiles en hardware específico (fixes de AMD), hosting específico (OVH RTM), o cargas específicas (IOMMU/VFIO, repo de Ceph, High Availability, Fastfetch, Figurine, tuning del ARC de ZFS, pigz, ZFS auto-snapshot, límites de velocidad de vzdump, Open vSwitch, TCP BBR + TCP Fast Open, refresco del índice del PVE Appliance Manager…)."
   },
   "categoriesSection": {
     "heading": "Las 10 categorías",
-    "body": "El script Personalizable agrupa optimizaciones en 10 categorías. Cada categoría tiene su propio diálogo de checklist y su propia página de documentación — abre una de las tarjetas de abajo para ver el razonamiento, los valores por defecto y los pasos de verificación por opción."
+    "body": "El script Personalizable agrupa optimizaciones en 10 categorías. Cada categoría tiene su propio diálogo de selección y su propia página de documentación — abre una de las tarjetas para consultar el razonamiento, los valores predeterminados y los pasos de verificación."
   },
   "categories": [
     {
@@ -37,11 +37,11 @@
     },
     {
       "name": "Network",
-      "description": "Endurece y afina la pila de red del host. Fuerza APT sobre IPv4, aplica sysctl con hardening y tuning de buffers TCP, ofrece Open vSwitch y BBR, y fija nombres persistentes de interfaces por MAC."
+      "description": "Endurece y afina la pila de red del host. Fuerza APT sobre IPv4, aplica sysctl con hardening y tuning de buffers TCP, ofrece Open vSwitch, TCP BBR + TCP Fast Open, y fija nombres persistentes de interfaces por MAC."
     },
     {
       "name": "Storage",
-      "description": "Configura los subsistemas de almacenamiento habituales de Proxmox: ARC de ZFS, auto-snapshots y límites de velocidad de vzdump para evitar saturar el disco durante backups."
+      "description": "Configura los subsistemas de almacenamiento habituales de Proxmox: ARC de ZFS, auto-snapshots, ZFS autotrim para pools SSD/NVMe y límites de velocidad de vzdump para evitar saturar el disco durante backups."
     },
     {
       "name": "Security",
@@ -61,7 +61,7 @@
     },
     {
       "name": "Optional",
-      "description": "Piezas de nicho que no todo host necesita: fixes de CPU AMD, banner Fastfetch, hostname 3D con Figurine, repositorio de Ceph, servicios de Alta Disponibilidad y Log2RAM para reducir el desgaste del SSD."
+      "description": "Opciones que no necesita todo host: ajustes de CPU AMD, banner Fastfetch, nombre 3D con Figurine, actualización del índice de PVE Appliance Manager, repositorio Ceph, servicios de alta disponibilidad y Log2RAM para reducir el desgaste del SSD."
     }
   ],
   "mixTip": {

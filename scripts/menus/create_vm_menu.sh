@@ -138,14 +138,14 @@ while true; do
   OS_TYPE=$(dialog --colors --backtitle "ProxMenux" \
     --title "$(translate "Select System Type")" \
     --menu "\n$(translate "Choose the type of virtual system to install:")" 20 70 10 \
-    1 "$(translate "Create") VM System NAS" \
-    2 "$(translate "Create") VM System Windows" \
-    3 "$(translate "Create") VM System Linux" \
+    1 "$(translate "Create VM System NAS")" \
+    2 "$(translate "Create VM System Windows")" \
+    3 "$(translate "Create VM System Linux")" \
     ""          "" \
-    ""  "\Z4───────────────── Community Scripts ─────────────────\Zn" \
+    ""  "\Z4───────────────── $(translate "Community Scripts") ─────────────────\Zn" \
     ""          "" \
-    4 "$(translate "Create") VM System macOS (OSX-PROXMOX)" \
-    5 "$(translate "Create") VM System Others (based Linux)" \
+    4 "$(translate "Create VM System macOS (OSX-PROXMOX)")" \
+    5 "$(translate "Create VM System Others (based Linux)")" \
     ""          "" \
     6 "$(translate "Return to Main Menu")" \
     3>&1 1>&2 2>&3)

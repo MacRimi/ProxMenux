@@ -2,13 +2,14 @@
 
 import type React from "react"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { Button } from "./ui/button"
 import { Input } from "./ui/input"
 import { Label } from "./ui/label"
 import { Checkbox } from "./ui/checkbox"
 import { Lock, User, AlertCircle, Server, Shield, Eye, EyeOff } from "lucide-react"
 import { getApiUrl } from "../lib/api-config"
+import { useT } from "../lib/i18n/provider"
 import Image from "next/image"
 
 interface LoginProps {
@@ -16,6 +17,7 @@ interface LoginProps {
 }
 
 export function Login({ onLogin }: LoginProps) {
+  const t = useT()
   const [username, setUsername] = useState("")
   const [password, setPassword] = useState("")
   const [totpCode, setTotpCode] = useState("")
@@ -24,6 +26,7 @@ export function Login({ onLogin }: LoginProps) {
   const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState("")
   const [loading, setLoading] = useState(false)
+  const lastAutoSubmittedTotp = useRef("")
 
   useEffect(() => {
     // The Login screen is, by construction, the recovery path from any
@@ -51,17 +54,18 @@ export function Login({ onLogin }: LoginProps) {
     }
   }, [])
 
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault()
+  const submitLogin = async (totpOverride?: string) => {
     setError("")
 
+    const token = totpOverride ?? totpCode
+
     if (!username || !password) {
-      setError("Please enter username and password")
+      setError(t("login.missingCredentials"))
       return
     }
 
-    if (requiresTotp && !totpCode) {
-      setError("Please enter your 2FA code")
+    if (requiresTotp && !token) {
+      setError(t("login.missingTotp"))
       return
     }
 
@@ -74,20 +78,26 @@ export function Login({ onLogin }: LoginProps) {
         body: JSON.stringify({
           username,
           password,
-          totp_token: totpCode || undefined, // Include 2FA code if provided
+          totp_token: token || undefined, // Include 2FA code if provided
         }),
       })
 
       const data = await response.json()
 
-      if (data.requires_totp) {
+      if (response.ok && data.requires_totp) {
         setRequiresTotp(true)
         setLoading(false)
         return
       }
 
       if (!response.ok) {
-        throw new Error(data.message || "Login failed")
+        if (response.status === 429) {
+          throw new Error(t("login.tooManyAttempts"))
+        }
+        if (response.status === 401) {
+          throw new Error(data.requires_totp ? t("login.invalidTotp") : t("login.invalidCredentials"))
+        }
+        throw new Error(t("login.loginFailed"))
       }
 
       localStorage.setItem("proxmenux-auth-token", data.token)
@@ -107,11 +117,27 @@ export function Login({ onLogin }: LoginProps) {
 
       onLogin()
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Login failed")
+      setError(err instanceof Error ? err.message : t("login.loginFailed"))
     } finally {
       setLoading(false)
     }
   }
+
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault()
+    await submitLogin()
+  }
+
+  useEffect(() => {
+    if (!requiresTotp || loading || !/^\d{6}$/.test(totpCode)) {
+      return
+    }
+    if (lastAutoSubmittedTotp.current === totpCode) {
+      return
+    }
+    lastAutoSubmittedTotp.current = totpCode
+    void submitLogin(totpCode)
+  }, [requiresTotp, totpCode, loading])
 
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-4">
@@ -139,8 +165,8 @@ export function Login({ onLogin }: LoginProps) {
             </div>
           </div>
           <div>
-            <h1 className="text-3xl font-bold">ProxMenux Monitor</h1>
-            <p className="text-muted-foreground mt-2">Sign in to access your dashboard</p>
+            <h1 className="text-3xl font-bold">{t("app.title")}</h1>
+            <p className="text-muted-foreground mt-2">{t("login.subtitle")}</p>
           </div>
         </div>
 
@@ -157,14 +183,14 @@ export function Login({ onLogin }: LoginProps) {
               <>
                 <div className="space-y-2">
                   <Label htmlFor="login-username" className="text-sm">
-                    Username
+                    {t("login.username")}
                   </Label>
                   <div className="relative">
                     <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <Input
                       id="login-username"
                       type="text"
-                      placeholder="Enter your username"
+                      placeholder={t("login.usernamePlaceholder")}
                       value={username}
                       onChange={(e) => setUsername(e.target.value)}
                       className="pl-10 text-base"
@@ -176,14 +202,14 @@ export function Login({ onLogin }: LoginProps) {
 
                 <div className="space-y-2">
                   <Label htmlFor="login-password" className="text-sm">
-                    Password
+                    {t("login.password")}
                   </Label>
                   <div className="relative">
                     <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <Input
                       id="login-password"
                       type={showPassword ? "text" : "password"}
-                      placeholder="Enter your password"
+                      placeholder={t("login.passwordPlaceholder")}
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                       className="pl-10 pr-10 text-base"
@@ -214,7 +240,7 @@ export function Login({ onLogin }: LoginProps) {
                     disabled={loading}
                   />
                   <Label htmlFor="remember-me" className="text-sm font-normal cursor-pointer select-none">
-                    Remember me
+                    {t("login.rememberMe")}
                   </Label>
                 </div>
               </>
@@ -223,29 +249,29 @@ export function Login({ onLogin }: LoginProps) {
                 <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-3 flex items-start gap-2">
                   <Shield className="h-5 w-5 text-blue-500 flex-shrink-0 mt-0.5" />
                   <div>
-                    <p className="text-sm font-medium text-blue-500">Two-Factor Authentication</p>
-                    <p className="text-xs text-blue-500 mt-1">Enter the 6-digit code from your authentication app</p>
+                    <p className="text-sm font-medium text-blue-500">{t("login.twoFactorTitle")}</p>
+                    <p className="text-xs text-blue-500 mt-1">{t("login.twoFactorDescription")}</p>
                   </div>
                 </div>
 
                 <div className="space-y-2">
                   <Label htmlFor="totp-code" className="text-sm">
-                    Authentication Code
+                    {t("login.authenticationCode")}
                   </Label>
                   <Input
                     id="totp-code"
                     type="text"
                     placeholder="000000"
                     value={totpCode}
-                    onChange={(e) => setTotpCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                    onChange={(e) => setTotpCode(e.target.value.toUpperCase().replace(/[^A-Z0-9-]/g, "").slice(0, 9))}
                     className="text-center text-lg tracking-widest font-mono text-base"
-                    maxLength={6}
+                    maxLength={9}
                     disabled={loading}
                     autoComplete="one-time-code"
                     autoFocus
                   />
                   <p className="text-xs text-muted-foreground text-center">
-                    You can also use a backup code (format: XXXX-XXXX)
+                    {t("login.backupCodeHint")}
                   </p>
                 </div>
 
@@ -260,18 +286,18 @@ export function Login({ onLogin }: LoginProps) {
                   }}
                   className="w-full"
                 >
-                  Back to login
+                  {t("login.backToLogin")}
                 </Button>
               </div>
             )}
 
             <Button type="submit" className="w-full bg-blue-500 hover:bg-blue-600" disabled={loading}>
-              {loading ? "Signing in..." : requiresTotp ? "Verify Code" : "Sign In"}
+              {loading ? t("login.signingIn") : requiresTotp ? t("login.verifyCode") : t("login.signIn")}
             </Button>
           </form>
         </div>
 
-        <p className="text-center text-sm text-muted-foreground">ProxMenux Monitor v1.2.4</p>
+        <p className="text-center text-sm text-muted-foreground">{t("login.version")}</p>
       </div>
     </div>
   )

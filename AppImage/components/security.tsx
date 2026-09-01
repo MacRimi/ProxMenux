@@ -16,6 +16,7 @@ import { getApiUrl, fetchApi } from "../lib/api-config"
 import { TwoFactorSetup } from "./two-factor-setup"
 import { ScriptTerminalModal } from "./script-terminal-modal"
 import { SecureGatewaySetup } from "./secure-gateway-setup"
+import { useI18n } from "../lib/i18n/provider"
 
 interface ApiTokenEntry {
   id: string
@@ -45,9 +46,9 @@ const _OBVIOUS_PASSWORDS = new Set([
   "admin", "administrator", "root", "proxmox", "proxmenux",
   "changeme", "abcdefgh",
 ])
-function validatePasswordStrength(pw: string): string | null {
+function validatePasswordStrength(pw: string, t: (key: string) => string): string | null {
   if (pw.length < 10) {
-    return "Password must be at least 10 characters"
+    return t("securityPage.errors.passwordMinLength")
   }
   const categories = [
     /[a-z]/.test(pw),
@@ -56,15 +57,35 @@ function validatePasswordStrength(pw: string): string | null {
     /[^A-Za-z0-9]/.test(pw),
   ].filter(Boolean).length
   if (categories < 3) {
-    return "Password must mix at least 3 of: lowercase, uppercase, digits, symbols"
+    return t("securityPage.errors.passwordComplexity")
   }
   if (_OBVIOUS_PASSWORDS.has(pw.toLowerCase())) {
-    return "That password is in the common-passwords list — pick something else"
+    return t("securityPage.errors.passwordCommon")
   }
   return null
 }
 
 export function Security() {
+  const { language, t } = useI18n()
+  const st = (key: string, params?: Record<string, string | number>) => t(`securityPage.${key}`, params)
+  const interfaceTypeLabel = (type: string) =>
+    ["physical", "bridge", "bond", "vlan", "virtual"].includes(type)
+      ? t(`network.interfaceTypes.${type}`)
+      : type
+  const authErrorText = (message: unknown, fallbackKey: string) => {
+    const raw = typeof message === "string" ? message : ""
+    const normalized = raw.toLowerCase()
+    if (normalized.includes("authentication is already configured")) {
+      return st("errors.authAlreadyConfigured")
+    }
+    if (normalized.includes("invalid 2fa code")) {
+      return st("errors.invalid2faCode")
+    }
+    if (normalized.includes("invalid password")) {
+      return st("errors.invalidPassword")
+    }
+    return raw || st(fallbackKey)
+  }
   const [authEnabled, setAuthEnabled] = useState(false)
   const [totpEnabled, setTotpEnabled] = useState(false)
   const [loading, setLoading] = useState(false)
@@ -101,7 +122,7 @@ export function Security() {
   const [existingTokens, setExistingTokens] = useState<ApiTokenEntry[]>([])
   const [loadingTokens, setLoadingTokens] = useState(false)
   const [revokingTokenId, setRevokingTokenId] = useState<string | null>(null)
-  const [tokenName, setTokenName] = useState("API Token")
+  const [tokenName, setTokenName] = useState("")
 
   // Proxmox Firewall state
   const [firewallLoading, setFirewallLoading] = useState(true)
@@ -171,10 +192,12 @@ export function Security() {
     installed_packages: number; kernel_version: string
     firewall_active: boolean; malware_scanner: boolean
     sections: LynisSection[]
-    proxmox_adjusted_score?: number
+    proxmox_adjusted_score?: number | null
     proxmox_expected_warnings?: number
     proxmox_expected_suggestions?: number
     proxmox_context_applied?: boolean
+    is_complete?: boolean
+    parse_issue?: string
   }
   const [lynisAuditRunning, setLynisAuditRunning] = useState(false)
   const [lynisReport, setLynisReport] = useState<LynisReport | null>(null)
@@ -228,6 +251,15 @@ export function Security() {
   })
   const [f2bSavingConfig, setF2bSavingConfig] = useState(false)
   const [f2bApplyingJails, setF2bApplyingJails] = useState(false)
+  const [f2bTrustedNetworks, setF2bTrustedNetworks] = useState<Array<{value: string; protected: boolean}>>([])
+  const [f2bDetectedIp, setF2bDetectedIp] = useState("")
+  const [f2bTrustedInput, setF2bTrustedInput] = useState("")
+  const [f2bSavingTrusted, setF2bSavingTrusted] = useState(false)
+  const [f2bRemovingTrusted, setF2bRemovingTrusted] = useState<string | null>(null)
+  const [f2bShowTrustedForm, setF2bShowTrustedForm] = useState(false)
+  const [f2bEditingTrusted, setF2bEditingTrusted] = useState<string | null>(null)
+  const [f2bTrustedEditInput, setF2bTrustedEditInput] = useState("")
+  const [f2bTrustedNotice, setF2bTrustedNotice] = useState<{type: "success" | "error"; text: string} | null>(null)
 
   // SSL/HTTPS state
   const [sslEnabled, setSslEnabled] = useState(false)
@@ -238,6 +270,7 @@ export function Security() {
   const [proxmoxCertInfo, setProxmoxCertInfo] = useState<{subject?: string; expires?: string; issuer?: string; is_self_signed?: boolean} | null>(null)
   const [loadingSsl, setLoadingSsl] = useState(true)
   const [configuringSsl, setConfiguringSsl] = useState(false)
+  const [reloadingSsl, setReloadingSsl] = useState(false)
   const [sslRestarting, setSslRestarting] = useState(false)
   const [showCustomCertForm, setShowCustomCertForm] = useState(false)
   const [customCertPath, setCustomCertPath] = useState("")
@@ -318,14 +351,14 @@ export function Security() {
         method: "POST",
       })
       if (data.success) {
-        setSuccess(data.message || "Fail2Ban has been uninstalled")
+        setSuccess(st("messages.fail2banUninstalled"))
         loadSecurityTools()
         setF2bDetails(null)
       } else {
-        setError(data.message || "Failed to uninstall Fail2Ban")
+        setError(data.message || st("errors.fail2banUninstallFailed"))
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to uninstall Fail2Ban")
+      setError(err instanceof Error ? err.message : st("errors.fail2banUninstallFailed"))
     } finally {
       setUninstallingFail2ban(false)
     }
@@ -341,14 +374,14 @@ export function Security() {
         method: "POST",
       })
       if (data.success) {
-        setSuccess(data.message || "Lynis has been uninstalled")
+        setSuccess(st("messages.lynisUninstalled"))
         loadSecurityTools()
         setLynisReport(null)
       } else {
-        setError(data.message || "Failed to uninstall Lynis")
+        setError(data.message || st("errors.lynisUninstallFailed"))
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to uninstall Lynis")
+      setError(err instanceof Error ? err.message : st("errors.lynisUninstallFailed"))
     } finally {
       setUninstallingLynis(false)
     }
@@ -357,9 +390,10 @@ export function Security() {
   const loadFail2banDetails = async () => {
     try {
       setF2bDetailsLoading(true)
-      const [detailsRes, activityRes] = await Promise.all([
+      const [detailsRes, activityRes, trustedRes] = await Promise.all([
         fetchApi("/api/security/fail2ban/details"),
         fetchApi("/api/security/fail2ban/activity"),
+        fetchApi("/api/security/fail2ban/trusted-networks"),
       ])
       if (detailsRes.success) {
         setF2bDetails({
@@ -372,10 +406,94 @@ export function Security() {
       if (activityRes.success) {
         setF2bActivity(activityRes.events || [])
       }
+      if (trustedRes.success) {
+        setF2bTrustedNetworks(trustedRes.entries || [])
+        setF2bDetectedIp(trustedRes.detected_ip || "")
+      }
     } catch {
       // Silently fail
     } finally {
       setF2bDetailsLoading(false)
+    }
+  }
+
+  const trustedNetworkError = (message?: string) => {
+    if (message?.includes("already trusted")) return st("errors.trustedNetworkExists")
+    if (message?.includes("Invalid IP") || message?.includes("Enter one IP")) return st("errors.invalidTrustedNetwork")
+    return st("errors.updateTrustedNetworksFailed")
+  }
+
+  const handleAddTrustedNetwork = async (value?: string) => {
+    const candidate = (value || f2bTrustedInput).trim()
+    if (!candidate) {
+      setF2bTrustedNotice({ type: "error", text: st("errors.invalidTrustedNetwork") })
+      return
+    }
+    setF2bSavingTrusted(true)
+    setF2bTrustedNotice(null)
+    try {
+      const data = await fetchApi("/api/security/fail2ban/trusted-networks", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ value: candidate }),
+      })
+      if (data.success) {
+        setF2bTrustedNotice({ type: "success", text: st("messages.trustedNetworkAdded", { value: data.value || candidate }) })
+        setF2bTrustedInput("")
+        setF2bShowTrustedForm(false)
+        await loadFail2banDetails()
+      } else {
+        setF2bTrustedNotice({ type: "error", text: trustedNetworkError(data.message) })
+      }
+    } catch (err) {
+      setF2bTrustedNotice({ type: "error", text: trustedNetworkError(err instanceof Error ? err.message : undefined) })
+    } finally {
+      setF2bSavingTrusted(false)
+    }
+  }
+
+  const handleRemoveTrustedNetwork = async (value: string) => {
+    setF2bRemovingTrusted(value)
+    setF2bTrustedNotice(null)
+    try {
+      const data = await fetchApi("/api/security/fail2ban/trusted-networks", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ value }),
+      })
+      if (data.success) {
+        setF2bTrustedNotice({ type: "success", text: st("messages.trustedNetworkRemoved", { value }) })
+        await loadFail2banDetails()
+      } else {
+        setF2bTrustedNotice({ type: "error", text: st("errors.updateTrustedNetworksFailed") })
+      }
+    } catch {
+      setF2bTrustedNotice({ type: "error", text: st("errors.updateTrustedNetworksFailed") })
+    } finally {
+      setF2bRemovingTrusted(null)
+    }
+  }
+
+  const handleUpdateTrustedNetwork = async () => {
+    if (!f2bEditingTrusted || !f2bTrustedEditInput.trim()) return
+    setF2bSavingTrusted(true)
+    setF2bTrustedNotice(null)
+    try {
+      const data = await fetchApi("/api/security/fail2ban/trusted-networks", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ old_value: f2bEditingTrusted, new_value: f2bTrustedEditInput.trim() }),
+      })
+      if (data.success) {
+        setF2bTrustedNotice({ type: "success", text: st("messages.trustedNetworkUpdated", { value: data.value }) })
+        setF2bEditingTrusted(null)
+        setF2bTrustedEditInput("")
+        await loadFail2banDetails()
+      }
+    } catch (err) {
+      setF2bTrustedNotice({ type: "error", text: trustedNetworkError(err instanceof Error ? err.message : undefined) })
+    } finally {
+      setF2bSavingTrusted(false)
     }
   }
 
@@ -391,14 +509,14 @@ export function Security() {
         body: JSON.stringify({ jail, ip }),
       })
       if (data.success) {
-        setSuccess(data.message || `IP ${ip} unbanned from ${jail}`)
+        setSuccess(st("messages.ipUnbanned", { ip, jail: fail2banProtectionLabel(jail) }))
         loadFail2banDetails()
         loadSecurityTools()
       } else {
-        setError(data.message || "Failed to unban IP")
+        setError(data.message || st("errors.unbanIpFailed"))
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to unban IP")
+      setError(err instanceof Error ? err.message : st("errors.unbanIpFailed"))
     } finally {
       setF2bUnbanning(null)
     }
@@ -413,15 +531,15 @@ export function Security() {
         method: "POST",
       })
       if (data.success) {
-        setSuccess(data.message || "Missing jails applied successfully")
+        setSuccess(st("messages.missingJailsApplied"))
         // Reload to see the new jails
         await loadFail2banDetails()
         loadSecurityTools()
       } else {
-        setError(data.message || "Failed to apply missing jails")
+        setError(data.message || st("errors.applyMissingJailsFailed"))
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to apply missing jails")
+      setError(err instanceof Error ? err.message : st("errors.applyMissingJailsFailed"))
     } finally {
       setF2bApplyingJails(false)
     }
@@ -449,11 +567,11 @@ export function Security() {
               }
               setLynisAuditRunning(false)
               if (status.progress === "completed") {
-                setSuccess("Security audit completed successfully")
+                setSuccess(st("messages.auditCompleted"))
                 loadSecurityTools()
                 loadLynisReport()
               } else {
-                setError(status.progress || "Audit failed")
+                setError(status.progress || st("errors.auditFailed"))
               }
             }
           } catch {
@@ -465,11 +583,11 @@ export function Security() {
           }
         }, 3000)
       } else {
-        setError(data.message || "Failed to start audit")
+        setError(data.message || st("errors.startAuditFailed"))
         setLynisAuditRunning(false)
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to start audit")
+      setError(err instanceof Error ? err.message : st("errors.startAuditFailed"))
       setLynisAuditRunning(false)
     }
   }
@@ -528,14 +646,14 @@ export function Security() {
         body: JSON.stringify(payload),
       })
       if (data.success) {
-        setSuccess(data.message || "Jail configuration updated")
+        setSuccess(st("messages.jailConfigUpdated"))
         setF2bEditingJail(null)
         loadFail2banDetails()
       } else {
-        setError(data.message || "Failed to update jail config")
+        setError(data.message || st("errors.updateJailConfigFailed"))
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to update jail config")
+      setError(err instanceof Error ? err.message : st("errors.updateJailConfigFailed"))
     } finally {
       setF2bSavingConfig(false)
     }
@@ -550,7 +668,7 @@ export function Security() {
 
   const formatBanTime = (seconds: string) => {
     const s = parseInt(seconds, 10)
-    if (s === -1) return "Permanent"
+    if (s === -1) return st("values.permanent")
     if (isNaN(s) || s <= 0) return seconds
     if (s < 60) return `${s}s`
     if (s < 3600) return `${Math.floor(s / 60)}m`
@@ -558,9 +676,33 @@ export function Security() {
     return `${Math.floor(s / 86400)}d`
   }
 
+  const fail2banProtectionLabel = (name: string) => {
+    const normalized = name.toLowerCase()
+    if (normalized === "sshd" || normalized === "proxmox" || normalized === "proxmenux") {
+      return st(`fail2ban.jailLabels.${normalized}`)
+    }
+    return name
+  }
+
+  const fail2banProtectionDescription = (name: string) => {
+    const normalized = name.toLowerCase()
+    if (normalized === "sshd" || normalized === "proxmox" || normalized === "proxmenux") {
+      return st(`fail2ban.jailDescriptions.${normalized}`)
+    }
+    return ""
+  }
+
+  const fail2banActivityLabel = (action: string) => {
+    const normalized = action.toLowerCase()
+    if (normalized === "ban") return st("fail2ban.activity.ban")
+    if (normalized === "unban") return st("fail2ban.activity.unban")
+    if (normalized === "fail") return st("fail2ban.activity.fail")
+    return action
+  }
+
   const handleAddRule = async () => {
     if (!newRule.dport && !newRule.source) {
-      setError("Please specify at least a destination port or source address")
+      setError(st("errors.ruleNeedsPortOrSource"))
       return
     }
     setAddingRule(true)
@@ -573,15 +715,15 @@ export function Security() {
         body: JSON.stringify(newRule),
       })
       if (data.success) {
-        setSuccess(data.message || "Rule added successfully")
+        setSuccess(st("messages.ruleAdded"))
         setShowAddRule(false)
         setNewRule({ direction: "IN", action: "ACCEPT", protocol: "tcp", dport: "", sport: "", source: "", iface: "", comment: "", level: "host" })
         loadFirewallStatus()
       } else {
-        setError(data.message || "Failed to add rule")
+        setError(data.message || st("errors.addRuleFailed"))
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to add rule")
+      setError(err instanceof Error ? err.message : st("errors.addRuleFailed"))
     } finally {
       setAddingRule(false)
     }
@@ -598,13 +740,13 @@ export function Security() {
         body: JSON.stringify({ rule_index: ruleIndex, level }),
       })
       if (data.success) {
-        setSuccess(data.message || "Rule deleted")
+        setSuccess(st("messages.ruleDeleted"))
         loadFirewallStatus()
       } else {
-        setError(data.message || "Failed to delete rule")
+        setError(data.message || st("errors.deleteRuleFailed"))
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to delete rule")
+      setError(err instanceof Error ? err.message : st("errors.deleteRuleFailed"))
     } finally {
       setDeletingRuleIdx(null)
     }
@@ -642,14 +784,14 @@ export function Security() {
         }),
       })
       if (data.success) {
-        setSuccess(data.message || "Rule updated successfully")
+        setSuccess(st("messages.ruleUpdated"))
         setEditingRuleKey(null)
         loadFirewallStatus()
       } else {
-        setError(data.message || "Failed to update rule")
+        setError(data.message || st("errors.updateRuleFailed"))
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to update rule")
+      setError(err instanceof Error ? err.message : st("errors.updateRuleFailed"))
     } finally {
       setSavingRule(false)
     }
@@ -667,13 +809,16 @@ export function Security() {
         body: JSON.stringify({ level }),
       })
       if (data.success) {
-        setSuccess(data.message || `Firewall ${enable ? "enabled" : "disabled"} at ${level} level`)
+        setSuccess(st("messages.firewallUpdated", {
+          state: enable ? st("values.enabledLower") : st("values.disabledLower"),
+          level: level === "cluster" ? st("values.clusterLower") : st("values.hostLower"),
+        }))
         loadFirewallStatus()
       } else {
-        setError(data.message || "Failed to update firewall")
+        setError(data.message || st("errors.updateFirewallFailed"))
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to update firewall")
+      setError(err instanceof Error ? err.message : st("errors.updateFirewallFailed"))
     } finally {
       setFirewallAction(false)
     }
@@ -688,13 +833,13 @@ export function Security() {
         method: add ? "POST" : "DELETE",
       })
       if (data.success) {
-        setSuccess(data.message || `Monitor port rule ${add ? "added" : "removed"}`)
+        setSuccess(st(add ? "messages.monitorPortAdded" : "messages.monitorPortRemoved"))
         loadFirewallStatus()
       } else {
-        setError(data.message || "Failed to update monitor port rule")
+        setError(data.message || st("errors.updateMonitorPortFailed"))
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to update monitor port rule")
+      setError(err instanceof Error ? err.message : st("errors.updateMonitorPortFailed"))
     } finally {
       setFirewallAction(false)
     }
@@ -723,16 +868,16 @@ export function Security() {
     setSuccess("")
 
     if (!username || !password) {
-      setError("Please fill in all fields")
+      setError(st("errors.fillAllFields"))
       return
     }
 
     if (password !== confirmPassword) {
-      setError("Passwords do not match")
+      setError(st("errors.passwordsDoNotMatch"))
       return
     }
 
-    const pwError = validatePasswordStrength(password)
+    const pwError = validatePasswordStrength(password, t)
     if (pwError) {
       setError(pwError)
       return
@@ -754,20 +899,20 @@ export function Security() {
       const data = await response.json()
 
       if (!response.ok) {
-        throw new Error(data.error || "Failed to enable authentication")
+        throw new Error(authErrorText(data.error || data.message, "errors.enableAuthFailed"))
       }
 
       localStorage.setItem("proxmenux-auth-token", data.token)
       localStorage.setItem("proxmenux-auth-setup-complete", "true")
 
-      setSuccess("Authentication enabled successfully!")
+      setSuccess(st("messages.authEnabled"))
       setAuthEnabled(true)
       setShowSetupForm(false)
       setUsername("")
       setPassword("")
       setConfirmPassword("")
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to enable authentication")
+      setError(err instanceof Error ? err.message : st("errors.enableAuthFailed"))
     } finally {
       setLoading(false)
     }
@@ -776,7 +921,7 @@ export function Security() {
   const handleDisableAuth = async () => {
     if (
       !confirm(
-        "Are you sure you want to disable authentication? This will remove password protection from your dashboard.",
+        st("confirm.disableAuth"),
       )
     ) {
       return
@@ -799,19 +944,19 @@ export function Security() {
       const data = await response.json()
 
       if (!response.ok) {
-        throw new Error(data.message || "Failed to disable authentication")
+        throw new Error(authErrorText(data.message || data.error, "errors.disableAuthFailed"))
       }
 
       localStorage.removeItem("proxmenux-auth-token")
       localStorage.removeItem("proxmenux-auth-setup-complete")
 
-      setSuccess("Authentication disabled successfully! Reloading...")
+      setSuccess(st("messages.authDisabledReloading"))
 
       setTimeout(() => {
         window.location.reload()
       }, 1000)
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to disable authentication. Please try again.")
+      setError(err instanceof Error ? err.message : st("errors.disableAuthRetry"))
     } finally {
       setLoading(false)
     }
@@ -822,16 +967,16 @@ export function Security() {
     setSuccess("")
 
     if (!currentPassword || !newPassword) {
-      setError("Please fill in all fields")
+      setError(st("errors.fillAllFields"))
       return
     }
 
     if (newPassword !== confirmNewPassword) {
-      setError("New passwords do not match")
+      setError(st("errors.newPasswordsDoNotMatch"))
       return
     }
 
-    const pwError = validatePasswordStrength(newPassword)
+    const pwError = validatePasswordStrength(newPassword, t)
     if (pwError) {
       setError(pwError)
       return
@@ -855,20 +1000,20 @@ export function Security() {
       const data = await response.json()
 
       if (!response.ok) {
-        throw new Error(data.error || "Failed to change password")
+        throw new Error(authErrorText(data.error || data.message, "errors.changePasswordFailed"))
       }
 
       if (data.token) {
         localStorage.setItem("proxmenux-auth-token", data.token)
       }
 
-      setSuccess("Password changed successfully!")
+      setSuccess(st("messages.passwordChanged"))
       setShowChangePassword(false)
       setCurrentPassword("")
       setNewPassword("")
       setConfirmNewPassword("")
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to change password")
+      setError(err instanceof Error ? err.message : st("errors.changePasswordFailed"))
     } finally {
       setLoading(false)
     }
@@ -879,14 +1024,14 @@ export function Security() {
     setSuccess("")
 
     if (!disable2FAPassword) {
-      setError("Please enter your password")
+      setError(st("errors.enterPassword"))
       return
     }
     // Mirror backend hardening (auth_manager.disable_totp): turning 2FA off must
     // require the second factor — otherwise an attacker who phished the password
     // could strip the protection. Accepts a 6-digit TOTP code or a backup code.
     if (!disable2FATotpCode) {
-      setError("Please enter your 2FA code (or a backup code)")
+      setError(st("errors.enter2faOrBackup"))
       return
     }
 
@@ -909,17 +1054,17 @@ export function Security() {
       const data = await response.json()
 
       if (!response.ok) {
-        throw new Error(data.message || "Failed to disable 2FA")
+        throw new Error(authErrorText(data.message || data.error, "errors.disable2faFailed"))
       }
 
-      setSuccess("2FA disabled successfully!")
+      setSuccess(st("messages.twoFactorDisabled"))
       setTotpEnabled(false)
       setShow2FADisable(false)
       setDisable2FAPassword("")
       setDisable2FATotpCode("")
       checkAuthStatus()
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to disable 2FA")
+      setError(err instanceof Error ? err.message : st("errors.disable2faFailed"))
     } finally {
       setLoading(false)
     }
@@ -943,7 +1088,7 @@ export function Security() {
   }
 
   const handleRevokeToken = async (tokenId: string) => {
-    if (!confirm("Are you sure you want to revoke this token? Any integration using it will stop working immediately.")) {
+    if (!confirm(st("confirm.revokeToken"))) {
       return
     }
 
@@ -957,13 +1102,13 @@ export function Security() {
       })
 
       if (data.success) {
-        setSuccess("Token revoked successfully")
+        setSuccess(st("messages.tokenRevoked"))
         setExistingTokens((prev) => prev.filter((t) => t.id !== tokenId))
       } else {
-        setError(data.message || "Failed to revoke token")
+        setError(data.message || st("errors.revokeTokenFailed"))
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to revoke token")
+      setError(err instanceof Error ? err.message : st("errors.revokeTokenFailed"))
     } finally {
       setRevokingTokenId(null)
     }
@@ -974,12 +1119,12 @@ export function Security() {
     setSuccess("")
 
     if (!tokenPassword) {
-      setError("Please enter your password")
+      setError(st("errors.enterPassword"))
       return
     }
 
     if (totpEnabled && !tokenTotpCode) {
-      setError("Please enter your 2FA code")
+      setError(st("errors.enter2fa"))
       return
     }
 
@@ -992,28 +1137,28 @@ export function Security() {
         body: JSON.stringify({
           password: tokenPassword,
           totp_token: totpEnabled ? tokenTotpCode : undefined,
-          token_name: tokenName || "API Token",
+          token_name: tokenName || st("apiTokens.defaultName"),
         }),
       })
 
       if (!data.success) {
-        setError(data.message || data.error || "Failed to generate API token")
+        setError(authErrorText(data.message || data.error, "errors.generateTokenFailed"))
         return
       }
 
       if (!data.token) {
-        setError("No token received from server")
+        setError(st("errors.noTokenReceived"))
         return
       }
 
       setApiToken(data.token)
-      setSuccess("API token generated successfully! Make sure to copy it now as you won't be able to see it again.")
+      setSuccess(st("messages.apiTokenGenerated"))
       setTokenPassword("")
       setTokenTotpCode("")
-      setTokenName("API Token")
+      setTokenName("")
       loadApiTokens()
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to generate API token. Please try again.")
+      setError(err instanceof Error ? err.message : st("errors.generateTokenRetry"))
     } finally {
       setGeneratingToken(false)
     }
@@ -1058,6 +1203,40 @@ export function Security() {
     }
   }
 
+  const isNumber = (value: unknown): value is number => (
+    typeof value === "number" && Number.isFinite(value)
+  )
+
+  const getLynisScoreState = (report: LynisReport | null | undefined, fallbackScore?: number | null) => {
+    const rawScore = report ? report.hardening_index : fallbackScore
+    const adjustedScore = report?.proxmox_adjusted_score
+    const reportHasScore = isNumber(rawScore) || isNumber(adjustedScore)
+    const reportComplete = report
+      ? report.is_complete !== false && report.tests_performed > 0 && reportHasScore
+      : isNumber(fallbackScore)
+    const displayScore = reportComplete ? (isNumber(adjustedScore) ? adjustedScore : rawScore) : null
+    const hasAdjustment = reportComplete && isNumber(adjustedScore) && isNumber(rawScore) && adjustedScore !== rawScore
+
+    return { rawScore, adjustedScore, displayScore, reportComplete, hasAdjustment }
+  }
+
+  const getActionableCount = (total: number, expected = 0) => Math.max(0, total - expected)
+
+  const getPluralForm = (count: number) => {
+    const value = Math.abs(count)
+    if (language === "sk") {
+      if (value === 1) return "one"
+      if (value >= 2 && value <= 4) return "few"
+      return "many"
+    }
+    return value === 1 ? "one" : "many"
+  }
+
+  const lynisCountText = (
+    key: "tests" | "warnings" | "suggestions" | "testsExecuted" | "actionableWarnings" | "actionableSuggestions",
+    count: number,
+  ) => st(`lynis.counts.${key}.${getPluralForm(count)}`, { count })
+
   const generatePrintableReport = (report: LynisReport) => {
     // Escape user/server-controlled strings before they land in the printable
     // HTML. Without this, any Lynis check name / description / solution that
@@ -1075,31 +1254,29 @@ export function Security() {
         .replace(/'/g, "&#39;")
     }
 
-    const adjScore = report.proxmox_adjusted_score ?? report.hardening_index
-    const rawScore = report.hardening_index
-    const displayScore = adjScore ?? rawScore
-    const hasAdjustment = adjScore != null && rawScore != null && adjScore !== rawScore
-    const scoreColor = displayScore === null ? "#888"
+    const { rawScore, adjustedScore: adjScore, displayScore, reportComplete, hasAdjustment } = getLynisScoreState(report)
+    const scoreColor = displayScore == null ? "#64748b"
       : displayScore >= 70 ? "#16a34a"
       : displayScore >= 50 ? "#ca8a04"
       : "#dc2626"
-    const scoreLabel = displayScore === null ? "N/A"
-      : displayScore >= 70 ? "GOOD"
-      : displayScore >= 50 ? "MODERATE"
-      : "CRITICAL"
+    const scoreLabel = displayScore == null ? st("lynis.report.scoreUnavailable")
+      : displayScore >= 70 ? st("lynis.report.scoreGood")
+      : displayScore >= 50 ? st("lynis.report.scoreModerate")
+      : st("lynis.report.scoreCritical")
     const now = new Date().toLocaleString()
     const logoUrl = `${window.location.origin}/images/proxmenux-logo.png`
+    const reportLang = document.documentElement.lang || "en"
 
-    const actionableWarnings = report.warnings.length - (report.proxmox_expected_warnings ?? 0)
-    const actionableSuggestions = report.suggestions.length - (report.proxmox_expected_suggestions ?? 0)
+    const actionableWarnings = getActionableCount(report.warnings.length, report.proxmox_expected_warnings ?? 0)
+    const actionableSuggestions = getActionableCount(report.suggestions.length, report.proxmox_expected_suggestions ?? 0)
     const totalExpected = (report.proxmox_expected_warnings ?? 0) + (report.proxmox_expected_suggestions ?? 0)
 
     return `<!DOCTYPE html>
-<html lang="en">
+<html lang="${esc(reportLang)}">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Security Audit Report - ${esc(report.hostname || "ProxMenux")}</title>
+<title>${st("lynis.report.title")} - ${esc(report.hostname || "ProxMenux")}</title>
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
   body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; color: #1a1a2e; background: #fff; font-size: 13px; line-height: 1.5; }
@@ -1272,16 +1449,16 @@ function pmxPrint(){
     // Fallback hint
     var isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
     var el = document.getElementById('pmx-print-hint');
-    if(el) el.textContent = isMac ? 'Use Cmd+P to save as PDF' : 'Use Ctrl+P to save as PDF';
+    if(el) el.textContent = isMac ? ${JSON.stringify(st("lynis.report.useCmdP"))} : ${JSON.stringify(st("lynis.report.useCtrlP"))};
   }
 }
 </script>
 <div class="top-bar no-print">
   <div style="display:flex;align-items:center;gap:12px;">
-    <strong>ProxMenux Security Audit Report</strong>
-    <span id="pmx-print-hint" class="hide-mobile" style="font-size:11px;opacity:0.7;">Review the report, then print or save as PDF</span>
+    <strong>${st("lynis.report.brandTitle")}</strong>
+    <span id="pmx-print-hint" class="hide-mobile" style="font-size:11px;opacity:0.7;">${st("lynis.report.reviewHint")}</span>
   </div>
-  <button onclick="pmxPrint()">Print / Save as PDF</button>
+  <button onclick="pmxPrint()">${st("lynis.printSavePdf")}</button>
 </div>
 
 <!-- Header -->
@@ -1289,45 +1466,49 @@ function pmxPrint(){
   <div class="rpt-header-left">
     <img src="${logoUrl}" alt="ProxMenux" onerror="this.style.display='none'" />
     <div>
-      <h1>Security Audit Report</h1>
-      <p>ProxMenux Monitor - Lynis System Audit</p>
+      <h1>${st("lynis.report.title")}</h1>
+      <p>${st("lynis.report.subtitle")}</p>
     </div>
   </div>
   <div class="rpt-header-right">
-    <div><strong>Date:</strong> ${esc(now)}</div>
-    <div><strong>Auditor:</strong> Lynis ${esc(report.lynis_version || "")}</div>
+    <div><strong>${st("lynis.report.date")}:</strong> ${esc(now)}</div>
+    <div><strong>${st("lynis.report.auditor")}:</strong> Lynis ${esc(report.lynis_version || "")}</div>
     <div class="rid">ID: PMXA-${Date.now().toString(36).toUpperCase()}</div>
   </div>
 </div>
 
 <!-- 1. Executive Summary -->
 <div class="section">
-  <div class="section-title">1. Executive Summary</div>
+  <div class="section-title">1. ${st("lynis.report.executiveSummary")}</div>
   <div class="exec-box">
     <div class="score-ring" style="border-color:${scoreColor};color:${scoreColor};">
       <div class="score-num">${displayScore ?? "N/A"}</div>
       <div class="score-lbl">${scoreLabel}</div>
     </div>
     <div class="exec-text">
-      <h3>System Hardening Assessment${hasAdjustment ? " (Proxmox Adjusted)" : ""}</h3>
+      <h3>${st("lynis.report.hardeningAssessment")}${hasAdjustment ? ` ${st("lynis.proxmoxAdjustedParen")}` : ""}</h3>
+      ${reportComplete ? `
       <p>
-        Audit of <strong>${esc(report.hostname || "Unknown")}</strong>
-        running <strong>${esc(report.os_fullname || `${report.os_name} ${report.os_version}`.trim() || "Unknown OS")}</strong> (Proxmox VE).
-        ${report.tests_performed} tests executed.
-        ${actionableWarnings > 0 ? `<strong style="color:#dc2626;">${actionableWarnings} actionable warning(s)</strong>` : '<strong style="color:#16a34a;">No actionable warnings</strong>'}
-        and <strong style="color:${actionableSuggestions > 0 ? '#ca8a04' : '#16a34a'};">${actionableSuggestions} actionable suggestion(s)</strong>.
-        ${totalExpected > 0 ? `<span style="color:#0891b2;">${totalExpected} findings are expected behavior in Proxmox VE.</span>` : ""}
-      </p>
+        ${st("lynis.report.auditOf")} <strong>${esc(report.hostname || t("common.unknown"))}</strong>
+        ${st("lynis.report.running")} <strong>${esc(report.os_fullname || `${report.os_name} ${report.os_version}`.trim() || st("lynis.report.unknownOs"))}</strong> (Proxmox VE).
+        ${lynisCountText("testsExecuted", report.tests_performed)}
+        ${actionableWarnings > 0 ? `<strong style="color:#dc2626;">${lynisCountText("actionableWarnings", actionableWarnings)}</strong>` : `<strong style="color:#16a34a;">${st("lynis.report.noActionableWarnings")}</strong>`}
+        ${st("lynis.report.and")} <strong style="color:${actionableSuggestions > 0 ? '#ca8a04' : '#16a34a'};">${lynisCountText("actionableSuggestions", actionableSuggestions)}</strong>.
+        ${totalExpected > 0 ? `<span style="color:#0891b2;">${st("lynis.report.expectedBehavior", { count: totalExpected })}</span>` : ""}
+      </p>` : `
+      <p style="color:#ca8a04;">
+        ${st("lynis.report.incompleteDescription")}
+      </p>`}
       ${hasAdjustment ? `
       <div class="score-bar-wrap">
         <div style="display:flex;justify-content:space-between;font-size:10px;margin-bottom:3px;">
-          <span style="color:#64748b;">Lynis raw: ${rawScore}/100</span>
-          <span style="color:${scoreColor};font-weight:700;">PVE adjusted: ${displayScore}/100</span>
+          <span style="color:#64748b;">${st("lynis.report.lynisRaw")}: ${rawScore}/100</span>
+          <span style="color:${scoreColor};font-weight:700;">${st("lynis.report.pveAdjusted")}: ${displayScore}/100</span>
         </div>
         <div class="score-bar-bg">
           <div class="score-bar-fill" style="width:${displayScore}%;background:${scoreColor};"></div>
         </div>
-        <div class="score-bar-labels"><span>0 - Critical</span><span>50 - Moderate</span><span>70 - Good</span><span>100</span></div>
+        <div class="score-bar-labels"><span>${st("lynis.report.rangeCritical")}</span><span>${st("lynis.report.rangeModerate")}</span><span>${st("lynis.report.rangeGood")}</span><span>100</span></div>
       </div>` : ""}
     </div>
   </div>
@@ -1335,52 +1516,52 @@ function pmxPrint(){
 
 <!-- 2. System Information -->
 <div class="section">
-  <div class="section-title">2. System Information</div>
+  <div class="section-title">2. ${st("lynis.report.systemInformation")}</div>
   <div class="grid-3">
-    <div class="card"><div class="card-label">Hostname</div><div class="card-value">${esc(report.hostname || "N/A")}</div></div>
-    <div class="card"><div class="card-label">Operating System</div><div class="card-value">${esc(report.os_fullname || `${report.os_name} ${report.os_version}`.trim() || "N/A")}</div></div>
-    <div class="card"><div class="card-label">Kernel</div><div class="card-value">${esc(report.kernel_version || "N/A")}</div></div>
-    <div class="card"><div class="card-label">Lynis Version</div><div class="card-value">${esc(report.lynis_version || "N/A")}</div></div>
-    <div class="card"><div class="card-label">Report Date</div><div class="card-value">${esc(report.datetime_start ? report.datetime_start.replace("T", " ").substring(0, 16) : "N/A")}</div></div>
-    <div class="card"><div class="card-label">Tests Performed</div><div class="card-value">${report.tests_performed}</div></div>
+    <div class="card"><div class="card-label">${st("lynis.hostname")}</div><div class="card-value">${esc(report.hostname || "N/A")}</div></div>
+    <div class="card"><div class="card-label">${st("lynis.report.operatingSystem")}</div><div class="card-value">${esc(report.os_fullname || `${report.os_name} ${report.os_version}`.trim() || "N/A")}</div></div>
+    <div class="card"><div class="card-label">${esc(st("lynis.kernel"))}</div><div class="card-value">${esc(report.kernel_version || "N/A")}</div></div>
+    <div class="card"><div class="card-label">${st("lynis.report.lynisVersion")}</div><div class="card-value">${esc(report.lynis_version || "N/A")}</div></div>
+    <div class="card"><div class="card-label">${st("lynis.report.reportDate")}</div><div class="card-value">${esc(report.datetime_start ? report.datetime_start.replace("T", " ").substring(0, 16) : "N/A")}</div></div>
+    <div class="card"><div class="card-label">${st("lynis.report.testsPerformed")}</div><div class="card-value">${reportComplete ? report.tests_performed : "N/A"}</div></div>
   </div>
 </div>
 
 <!-- 3. Security Posture -->
 <div class="section">
-  <div class="section-title">3. Security Posture Overview</div>
+  <div class="section-title">3. ${st("lynis.report.securityPosture")}</div>
   <div class="grid-4">
     <div class="card card-c">
-      <div class="card-value" style="color:${scoreColor};">${displayScore ?? "N/A"}<span style="font-size:10px;color:#64748b;">/100</span></div>
-      <div class="card-label">PVE Score (${scoreLabel})</div>
-      ${hasAdjustment ? `<div class="card-sub">Lynis raw: ${rawScore}</div>` : ""}
+      <div class="card-value" style="color:${scoreColor};">${displayScore ?? "N/A"}${displayScore == null ? "" : `<span style="font-size:10px;color:#64748b;">/100</span>`}</div>
+      <div class="card-label">${st("lynis.report.proxmoxScoreWithLabel", { label: scoreLabel })}</div>
+      ${hasAdjustment ? `<div class="card-sub">${st("lynis.report.lynisRaw")}: ${rawScore}</div>` : ""}
     </div>
     <div class="card card-c">
       <div class="card-value" style="color:${actionableWarnings > 0 ? "#dc2626" : "#16a34a"};">${actionableWarnings}</div>
-      <div class="card-label">Actionable Warnings</div>
-      ${(report.proxmox_expected_warnings ?? 0) > 0 ? `<div class="card-sub pve">+${report.proxmox_expected_warnings} PVE expected</div>` : ""}
+      <div class="card-label">${st("lynis.report.actionableWarningsLabel")}</div>
+      ${(report.proxmox_expected_warnings ?? 0) > 0 ? `<div class="card-sub pve">${st("lynis.pveExpectedPlus", { count: report.proxmox_expected_warnings ?? 0 })}</div>` : ""}
     </div>
     <div class="card card-c">
       <div class="card-value" style="color:${actionableSuggestions > 0 ? "#ca8a04" : "#16a34a"};">${actionableSuggestions}</div>
-      <div class="card-label">Actionable Suggestions</div>
-      ${(report.proxmox_expected_suggestions ?? 0) > 0 ? `<div class="card-sub pve">+${report.proxmox_expected_suggestions} PVE expected</div>` : ""}
+      <div class="card-label">${st("lynis.report.actionableSuggestionsLabel")}</div>
+      ${(report.proxmox_expected_suggestions ?? 0) > 0 ? `<div class="card-sub pve">${st("lynis.pveExpectedPlus", { count: report.proxmox_expected_suggestions ?? 0 })}</div>` : ""}
     </div>
     <div class="card card-c">
-      <div class="card-value">${report.tests_performed}</div>
-      <div class="card-label">Tests Performed</div>
+      <div class="card-value">${reportComplete ? report.tests_performed : "N/A"}</div>
+      <div class="card-label">${st("lynis.report.testsPerformed")}</div>
     </div>
   </div>
   <div class="grid-3">
     <div class="card card-c">
-      <div class="card-label">Firewall</div>
-      <div class="card-value" style="color:${report.firewall_active ? "#16a34a" : "#dc2626"};font-size:13px;">${report.firewall_active ? "Active" : "Inactive"}</div>
+      <div class="card-label">${st("lynis.firewall")}</div>
+      <div class="card-value" style="color:${report.firewall_active ? "#16a34a" : "#dc2626"};font-size:13px;">${report.firewall_active ? st("values.active") : st("values.inactive")}</div>
     </div>
     <div class="card card-c">
-      <div class="card-label">Malware Scanner</div>
-      <div class="card-value" style="color:${report.malware_scanner ? "#16a34a" : "#ca8a04"};font-size:13px;">${report.malware_scanner ? "Installed" : "Not Found"}</div>
+      <div class="card-label">${st("lynis.malwareScanner")}</div>
+      <div class="card-value" style="color:${report.malware_scanner ? "#16a34a" : "#ca8a04"};font-size:13px;">${report.malware_scanner ? st("values.installed") : st("lynis.malwareScannerNotInstalled")}</div>
     </div>
     <div class="card card-c">
-      <div class="card-label">Installed Packages</div>
+      <div class="card-label">${st("lynis.packages")}</div>
       <div class="card-value" style="font-size:13px;">${esc(report.installed_packages || "N/A")}</div>
     </div>
   </div>
@@ -1388,42 +1569,42 @@ function pmxPrint(){
 
 <!-- Warnings -->
 <div class="section page-break">
-  <div class="section-title">4. Warnings (${report.warnings.length}${(report.proxmox_expected_warnings ?? 0) > 0 ? ` - ${actionableWarnings} actionable` : ""})</div>
-  <p style="font-size:11px;color:#64748b;margin-bottom:10px;">Issues that require attention and may represent security vulnerabilities.</p>
+  <div class="section-title">4. ${st("lynis.warnings")} (${report.warnings.length}${(report.proxmox_expected_warnings ?? 0) > 0 ? ` - ${st("lynis.actionableCount", { count: actionableWarnings })}` : ""})</div>
+  <p style="font-size:11px;color:#64748b;margin-bottom:10px;">${st("lynis.report.warningsDescription")}</p>
   ${report.warnings.length === 0 ?
-    '<div style="padding:16px;text-align:center;color:#16a34a;background:#f0fdf4;border-radius:6px;border:1px solid #bbf7d0;">No warnings detected. System appears to be well-configured.</div>' :
+    `<div style="padding:16px;text-align:center;color:#16a34a;background:#f0fdf4;border-radius:6px;border:1px solid #bbf7d0;">${st("lynis.report.noWarningsDetected")}</div>` :
     report.warnings.map((w, i) => `
     <div class="finding ${w.proxmox_expected ? 'f-pve' : 'f-warn'}">
       <div class="f-hdr">
         <span class="f-num">#${i + 1}</span>
         <span class="f-id${w.proxmox_expected ? ' pve' : ''}">${esc(w.test_id)}</span>
-        ${w.proxmox_expected ? '<span class="f-tag f-tag-pve">PVE Expected</span>' : ''}
-        ${!w.proxmox_expected && w.proxmox_severity === "low" ? '<span class="f-tag f-tag-low">Low Risk</span>' : ''}
+        ${w.proxmox_expected ? `<span class="f-tag f-tag-pve">${st("lynis.pveExpected")}</span>` : ''}
+        ${!w.proxmox_expected && w.proxmox_severity === "low" ? `<span class="f-tag f-tag-low">${st("lynis.lowRisk")}</span>` : ''}
         ${!w.proxmox_expected && !w.proxmox_severity && w.severity ? `<span class="f-tag f-tag-sev">${esc(w.severity)}</span>` : ""}
       </div>
       <div class="f-desc">${esc(w.description)}</div>
       ${w.proxmox_context ? `<div class="f-ctx"><strong>Proxmox:</strong> ${esc(w.proxmox_context)}</div>` : ""}
-      ${w.solution ? `<div class="f-sol"><strong>Recommendation:</strong> ${esc(w.solution)}</div>` : ""}
+      ${w.solution ? `<div class="f-sol"><strong>${st("lynis.report.recommendation")}:</strong> ${esc(w.solution)}</div>` : ""}
     </div>`).join("")}
 </div>
 
 <!-- Suggestions -->
 <div class="section page-break">
-  <div class="section-title">5. Suggestions (${report.suggestions.length}${(report.proxmox_expected_suggestions ?? 0) > 0 ? ` - ${actionableSuggestions} actionable` : ""})</div>
-  <p style="font-size:11px;color:#64748b;margin-bottom:10px;">Recommended improvements to strengthen your system's security posture.${(report.proxmox_expected_suggestions ?? 0) > 0 ? ` <span style="color:#0891b2;">${report.proxmox_expected_suggestions} items are expected behavior in Proxmox VE.</span>` : ""}</p>
+  <div class="section-title">5. ${st("lynis.suggestions")} (${report.suggestions.length}${(report.proxmox_expected_suggestions ?? 0) > 0 ? ` - ${st("lynis.actionableCount", { count: actionableSuggestions })}` : ""})</div>
+  <p style="font-size:11px;color:#64748b;margin-bottom:10px;">${st("lynis.report.suggestionsDescription")}${(report.proxmox_expected_suggestions ?? 0) > 0 ? ` <span style="color:#0891b2;">${st("lynis.report.expectedBehavior", { count: report.proxmox_expected_suggestions ?? 0 })}</span>` : ""}</p>
   ${report.suggestions.length === 0 ?
-    '<div style="padding:16px;text-align:center;color:#16a34a;background:#f0fdf4;border-radius:6px;border:1px solid #bbf7d0;">No suggestions. System is fully hardened.</div>' :
+    `<div style="padding:16px;text-align:center;color:#16a34a;background:#f0fdf4;border-radius:6px;border:1px solid #bbf7d0;">${st("lynis.noSuggestions")}</div>` :
     report.suggestions.map((s, i) => `
     <div class="finding ${s.proxmox_expected ? 'f-pve' : 'f-sugg'}">
       <div class="f-hdr">
         <span class="f-num">#${i + 1}</span>
         <span class="f-id${s.proxmox_expected ? ' pve' : ''}">${esc(s.test_id)}</span>
-        ${s.proxmox_expected ? '<span class="f-tag f-tag-pve">PVE Expected</span>' : ''}
-        ${!s.proxmox_expected && s.proxmox_severity === "low" ? '<span class="f-tag f-tag-low">Low Priority</span>' : ''}
+        ${s.proxmox_expected ? `<span class="f-tag f-tag-pve">${st("lynis.pveExpected")}</span>` : ''}
+        ${!s.proxmox_expected && s.proxmox_severity === "low" ? `<span class="f-tag f-tag-low">${st("lynis.lowPriority")}</span>` : ''}
       </div>
       <div class="f-desc">${esc(s.description)}</div>
       ${s.proxmox_context ? `<div class="f-ctx"><strong>Proxmox:</strong> ${esc(s.proxmox_context)}</div>` : ""}
-      ${s.solution ? `<div class="f-sol"><strong>Recommendation:</strong> ${esc(s.solution)}</div>` : ""}
+      ${s.solution ? `<div class="f-sol"><strong>${st("lynis.report.recommendation")}:</strong> ${esc(s.solution)}</div>` : ""}
       ${s.details ? `<div class="f-det">${esc(s.details)}</div>` : ""}
     </div>`).join("")}
 </div>
@@ -1431,17 +1612,17 @@ function pmxPrint(){
 <!-- Detailed Checks -->
 ${(report.sections && report.sections.length > 0) ? `
 <div class="section page-break">
-  <div class="section-title">6. Detailed Security Checks (${report.sections.length} categories)</div>
-  <p style="font-size:11px;color:#64748b;margin-bottom:12px;">Complete list of all security checks performed during the audit, organized by category.</p>
+  <div class="section-title">6. ${st("lynis.report.detailedChecks")} (${st("lynis.report.categoriesCount", { count: report.sections.length })})</div>
+  <p style="font-size:11px;color:#64748b;margin-bottom:12px;">${st("lynis.report.detailedChecksDescription")}</p>
   ${report.sections.map((section, sIdx) => `
   <div style="margin-bottom:10px;page-break-inside:avoid;">
     <div class="cat-head">
       <span class="cat-num">${sIdx + 1}</span>
       <span class="cat-name">${esc(section.name)}</span>
-      <span class="cat-cnt">${section.checks.length} checks</span>
+      <span class="cat-cnt">${st("lynis.checksCount", { count: section.checks.length })}</span>
     </div>
     <table class="chk-tbl">
-      <thead><tr><th>Check</th><th>Status</th></tr></thead>
+      <thead><tr><th>${st("lynis.report.check")}</th><th>${st("lynis.report.status")}</th></tr></thead>
       <tbody>
         ${section.checks.map(check => {
           const st = check.status.toUpperCase()
@@ -1462,9 +1643,9 @@ ${(report.sections && report.sections.length > 0) ? `
 
 <!-- Footer -->
 <div class="rpt-footer">
-  <div>Generated by ProxMenux Monitor / Lynis ${esc(report.lynis_version || "")}</div>
+  <div>${st("lynis.report.generatedBy")} ProxMenux Monitor / Lynis ${esc(report.lynis_version || "")}</div>
   <div>${esc(now)}</div>
-  <div style="font-style:italic;">Confidential</div>
+  <div style="font-style:italic;">${st("lynis.report.confidential")}</div>
 </div>
 
 </body>
@@ -1552,20 +1733,20 @@ ${(report.sections && report.sections.length > 0) ? `
         setCustomKeyPath("")
         setConfiguringSsl(false)
         setSslRestarting(true)
-        setSuccess("SSL enabled. Restarting service and switching to HTTPS...")
+        setSuccess(st("messages.sslEnabledRestarting"))
         await waitForServiceAndRedirect("https")
       } else {
-        setError(data.message || "Failed to configure SSL")
+        setError(data.message || st("errors.configureSslFailed"))
         setConfiguringSsl(false)
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to configure SSL")
+      setError(err instanceof Error ? err.message : st("errors.configureSslFailed"))
       setConfiguringSsl(false)
     }
   }
 
   const handleDisableSsl = async () => {
-    if (!confirm("Are you sure you want to disable HTTPS? The monitor will switch to HTTP.")) {
+    if (!confirm(st("confirm.disableHttps"))) {
       return
     }
 
@@ -1587,23 +1768,52 @@ ${(report.sections && report.sections.length > 0) ? `
         setSslKeyPath("")
         setConfiguringSsl(false)
         setSslRestarting(true)
-        setSuccess("SSL disabled. Restarting service and switching to HTTP...")
+        setSuccess(st("messages.sslDisabledRestarting"))
         await waitForServiceAndRedirect("http")
       } else {
-        setError(data.message || "Failed to disable SSL")
+        setError(data.message || st("errors.disableSslFailed"))
         setConfiguringSsl(false)
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to disable SSL")
+      setError(err instanceof Error ? err.message : st("errors.disableSslFailed"))
       setConfiguringSsl(false)
+    }
+  }
+
+  const handleReloadSsl = async () => {
+    setReloadingSsl(true)
+    setError("")
+    setSuccess("")
+
+    try {
+      const data = await fetchApi("/api/ssl/reload", {
+        method: "POST",
+      })
+
+      if (data.success) {
+        setSslCertPath(data.cert_path || sslCertPath)
+        setSslKeyPath(data.key_path || sslKeyPath)
+        if (data.cert_info) {
+          setProxmoxCertInfo(data.cert_info)
+        }
+        setSuccess(data.changed
+          ? st("messages.sslCertificateReloaded")
+          : st("messages.sslCertificateUnchanged"))
+      } else {
+        setError(data.message || st("errors.reloadSslFailed"))
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : st("errors.reloadSslFailed"))
+    } finally {
+      setReloadingSsl(false)
     }
   }
 
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold">Security</h1>
-        <p className="text-muted-foreground mt-2">Manage authentication, encryption, and access control</p>
+        <h1 className="text-3xl font-bold">{st("title")}</h1>
+        <p className="text-muted-foreground mt-2">{st("description")}</p>
       </div>
 
       {/* ── ProxMenux Monitor Security Group ── */}
@@ -1617,9 +1827,9 @@ ${(report.sections && report.sections.length > 0) ? `
         <CardHeader>
           <div className="flex items-center gap-2">
             <Shield className="h-5 w-5 text-blue-500" />
-            <CardTitle>Authentication</CardTitle>
+            <CardTitle>{st("auth.title")}</CardTitle>
           </div>
-          <CardDescription>Protect your dashboard with username and password authentication</CardDescription>
+          <CardDescription>{st("auth.description")}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           {error && (
@@ -1644,16 +1854,16 @@ ${(report.sections && report.sections.length > 0) ? `
                 <Lock className={`h-5 w-5 ${authEnabled ? "text-green-500" : "text-gray-500"}`} />
               </div>
               <div>
-                <p className="font-medium">Authentication Status</p>
+                <p className="font-medium">{st("auth.statusTitle")}</p>
                 <p className="text-sm text-muted-foreground">
-                  {authEnabled ? "Password protection is enabled" : "No password protection"}
+                  {authEnabled ? st("auth.passwordEnabled") : st("auth.noPasswordProtection")}
                 </p>
               </div>
             </div>
             <div
               className={`px-3 py-1 rounded-full text-sm font-medium ${authEnabled ? "bg-green-500/10 text-green-500" : "bg-gray-500/10 text-gray-500"}`}
             >
-              {authEnabled ? "Enabled" : "Disabled"}
+              {authEnabled ? st("values.enabled") : st("values.disabled")}
             </div>
           </div>
 
@@ -1662,28 +1872,28 @@ ${(report.sections && report.sections.length > 0) ? `
               <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-3 flex items-start gap-2">
                 <Info className="h-5 w-5 text-blue-500 flex-shrink-0 mt-0.5" />
                 <p className="text-sm text-blue-500">
-                  Enable authentication to protect your dashboard when accessing from non-private networks.
+                  {st("auth.enableHint")}
                 </p>
               </div>
               <Button onClick={() => setShowSetupForm(true)} className="bg-blue-500 hover:bg-blue-600">
                 <Shield className="h-4 w-4 mr-2" />
-                Enable Authentication
+                {st("auth.enable")}
               </Button>
             </div>
           )}
 
           {!authEnabled && showSetupForm && (
             <div className="space-y-4 border border-border rounded-lg p-4">
-              <h3 className="font-semibold">Setup Authentication</h3>
+              <h3 className="font-semibold">{st("auth.setupTitle")}</h3>
 
               <div className="space-y-2">
-                <Label htmlFor="setup-username">Username</Label>
+                <Label htmlFor="setup-username">{st("auth.username")}</Label>
                 <div className="relative">
                   <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                   <Input
                     id="setup-username"
                     type="text"
-                    placeholder="Enter username"
+                    placeholder={st("auth.usernamePlaceholder")}
                     value={username}
                     onChange={(e) => setUsername(e.target.value)}
                     className="pl-10"
@@ -1693,13 +1903,13 @@ ${(report.sections && report.sections.length > 0) ? `
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="setup-password">Password</Label>
+                <Label htmlFor="setup-password">{st("auth.password")}</Label>
                 <div className="relative">
                   <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                   <Input
                     id="setup-password"
                     type="password"
-                    placeholder="Enter password (min 6 characters)"
+                    placeholder={st("auth.passwordPlaceholder")}
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     className="pl-10"
@@ -1709,13 +1919,13 @@ ${(report.sections && report.sections.length > 0) ? `
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="setup-confirm-password">Confirm Password</Label>
+                <Label htmlFor="setup-confirm-password">{st("auth.confirmPassword")}</Label>
                 <div className="relative">
                   <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                   <Input
                     id="setup-confirm-password"
                     type="password"
-                    placeholder="Confirm password"
+                    placeholder={st("auth.confirmPasswordPlaceholder")}
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
                     className="pl-10"
@@ -1726,10 +1936,10 @@ ${(report.sections && report.sections.length > 0) ? `
 
               <div className="flex gap-2">
                 <Button onClick={handleEnableAuth} className="flex-1 bg-blue-500 hover:bg-blue-600" disabled={loading}>
-                  {loading ? "Enabling..." : "Enable"}
+                  {loading ? st("auth.enabling") : st("auth.enableShort")}
                 </Button>
                 <Button onClick={() => setShowSetupForm(false)} variant="outline" className="flex-1" disabled={loading}>
-                  Cancel
+                  {t("actions.cancel")}
                 </Button>
               </div>
             </div>
@@ -1746,22 +1956,22 @@ ${(report.sections && report.sections.length > 0) ? `
               {!showChangePassword && (
                 <Button onClick={() => setShowChangePassword(true)} variant="outline">
                   <Lock className="h-4 w-4 mr-2" />
-                  Change Password
+                  {st("auth.changePassword")}
                 </Button>
               )}
 
               {showChangePassword && (
                 <div className="space-y-4 border border-border rounded-lg p-4">
-                  <h3 className="font-semibold">Change Password</h3>
+                  <h3 className="font-semibold">{st("auth.changePassword")}</h3>
 
                   <div className="space-y-2">
-                    <Label htmlFor="current-password">Current Password</Label>
+                    <Label htmlFor="current-password">{st("auth.currentPassword")}</Label>
                     <div className="relative">
                       <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                       <Input
                         id="current-password"
                         type="password"
-                        placeholder="Enter current password"
+                        placeholder={st("auth.currentPasswordPlaceholder")}
                         value={currentPassword}
                         onChange={(e) => setCurrentPassword(e.target.value)}
                         className="pl-10"
@@ -1771,13 +1981,13 @@ ${(report.sections && report.sections.length > 0) ? `
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="new-password">New Password</Label>
+                    <Label htmlFor="new-password">{st("auth.newPassword")}</Label>
                     <div className="relative">
                       <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                       <Input
                         id="new-password"
                         type="password"
-                        placeholder="Enter new password (min 6 characters)"
+                        placeholder={st("auth.newPasswordPlaceholder")}
                         value={newPassword}
                         onChange={(e) => setNewPassword(e.target.value)}
                         className="pl-10"
@@ -1787,13 +1997,13 @@ ${(report.sections && report.sections.length > 0) ? `
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="confirm-new-password">Confirm New Password</Label>
+                    <Label htmlFor="confirm-new-password">{st("auth.confirmNewPassword")}</Label>
                     <div className="relative">
                       <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                       <Input
                         id="confirm-new-password"
                         type="password"
-                        placeholder="Confirm new password"
+                        placeholder={st("auth.confirmNewPasswordPlaceholder")}
                         value={confirmNewPassword}
                         onChange={(e) => setConfirmNewPassword(e.target.value)}
                         className="pl-10"
@@ -1808,7 +2018,7 @@ ${(report.sections && report.sections.length > 0) ? `
                       className="flex-1 bg-blue-500 hover:bg-blue-600"
                       disabled={loading}
                     >
-                      {loading ? "Changing..." : "Change Password"}
+                      {loading ? st("auth.changing") : st("auth.changePassword")}
                     </Button>
                     <Button
                       onClick={() => setShowChangePassword(false)}
@@ -1816,7 +2026,7 @@ ${(report.sections && report.sections.length > 0) ? `
                       className="flex-1"
                       disabled={loading}
                     >
-                      Cancel
+                      {t("actions.cancel")}
                     </Button>
                   </div>
                 </div>
@@ -1827,17 +2037,16 @@ ${(report.sections && report.sections.length > 0) ? `
                   <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-3 flex items-start gap-2">
                     <Info className="h-5 w-5 text-blue-500 flex-shrink-0 mt-0.5" />
                     <div className="text-sm text-blue-400">
-                      <p className="font-medium mb-1">Two-Factor Authentication (2FA)</p>
+                      <p className="font-medium mb-1">{st("twoFactor.title")}</p>
                       <p className="text-blue-300">
-                        Add an extra layer of security by requiring a code from your authenticator app in addition to
-                        your password.
+                        {st("twoFactor.hint")}
                       </p>
                     </div>
                   </div>
 
                   <Button onClick={() => setShow2FASetup(true)} variant="outline">
                     <Shield className="h-4 w-4 mr-2" />
-                    Enable Two-Factor Authentication
+                    {st("twoFactor.enable")}
                   </Button>
                 </div>
               )}
@@ -1846,31 +2055,31 @@ ${(report.sections && report.sections.length > 0) ? `
                 <div className="space-y-3">
                   <div className="bg-green-500/10 border border-green-500/20 rounded-lg p-3 flex items-center gap-2">
                     <CheckCircle className="h-5 w-5 text-green-500" />
-                    <p className="text-sm text-green-500 font-medium">2FA is enabled</p>
+                    <p className="text-sm text-green-500 font-medium">{st("twoFactor.enabled")}</p>
                   </div>
 
                   {!show2FADisable && (
                     <Button onClick={() => setShow2FADisable(true)} variant="outline">
                       <Shield className="h-4 w-4 mr-2" />
-                      Disable 2FA
+                      {st("twoFactor.disable")}
                     </Button>
                   )}
 
                   {show2FADisable && (
                     <div className="space-y-4 border border-border rounded-lg p-4">
-                      <h3 className="font-semibold">Disable Two-Factor Authentication</h3>
+                      <h3 className="font-semibold">{st("twoFactor.disableTitle")}</h3>
                       <p className="text-sm text-muted-foreground">
-                        Enter your password and a current 2FA code (or one of your backup codes) to confirm.
+                        {st("twoFactor.disableDescription")}
                       </p>
 
                       <div className="space-y-2">
-                        <Label htmlFor="disable-2fa-password">Password</Label>
+                        <Label htmlFor="disable-2fa-password">{st("auth.password")}</Label>
                         <div className="relative">
                           <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                           <Input
                             id="disable-2fa-password"
                             type="password"
-                            placeholder="Enter your password"
+                            placeholder={st("auth.enterYourPassword")}
                             value={disable2FAPassword}
                             onChange={(e) => setDisable2FAPassword(e.target.value)}
                             className="pl-10"
@@ -1880,13 +2089,13 @@ ${(report.sections && report.sections.length > 0) ? `
                       </div>
 
                       <div className="space-y-2">
-                        <Label htmlFor="disable-2fa-totp">2FA code or backup code</Label>
+                        <Label htmlFor="disable-2fa-totp">{st("twoFactor.codeOrBackup")}</Label>
                         <Input
                           id="disable-2fa-totp"
                           type="text"
                           inputMode="numeric"
                           autoComplete="one-time-code"
-                          placeholder="6-digit code or backup code"
+                          placeholder={st("twoFactor.codeOrBackupPlaceholder")}
                           value={disable2FATotpCode}
                           onChange={(e) => setDisable2FATotpCode(e.target.value)}
                           disabled={loading}
@@ -1895,7 +2104,7 @@ ${(report.sections && report.sections.length > 0) ? `
 
                       <div className="flex gap-2">
                         <Button onClick={handleDisable2FA} variant="destructive" className="flex-1" disabled={loading}>
-                          {loading ? "Disabling..." : "Disable 2FA"}
+                          {loading ? st("twoFactor.disabling") : st("twoFactor.disable")}
                         </Button>
                         <Button
                           onClick={() => {
@@ -1908,7 +2117,7 @@ ${(report.sections && report.sections.length > 0) ? `
                           className="flex-1"
                           disabled={loading}
                         >
-                          Cancel
+                          {t("actions.cancel")}
                         </Button>
                       </div>
                     </div>
@@ -1917,7 +2126,7 @@ ${(report.sections && report.sections.length > 0) ? `
               )}
 
               <Button onClick={handleDisableAuth} variant="destructive" disabled={loading}>
-                Disable Authentication
+                {st("auth.disable")}
               </Button>
             </div>
           )}
@@ -1929,10 +2138,10 @@ ${(report.sections && report.sections.length > 0) ? `
         <CardHeader>
           <div className="flex items-center gap-2">
             <ShieldCheck className="h-5 w-5 text-green-500" />
-            <CardTitle>SSL / HTTPS</CardTitle>
+            <CardTitle>{st("ssl.title")}</CardTitle>
           </div>
           <CardDescription>
-            Serve ProxMenux Monitor over HTTPS using your Proxmox host certificate or a custom certificate
+            {st("ssl.description")}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -1950,12 +2159,12 @@ ${(report.sections && report.sections.length > 0) ? `
                   </div>
                   <div>
                     <p className="font-medium">
-                      {sslEnabled ? "HTTPS Enabled" : "HTTP (No SSL)"}
+                      {sslEnabled ? st("ssl.httpsEnabled") : st("ssl.httpNoSsl")}
                     </p>
                     <p className="text-sm text-muted-foreground">
                       {sslEnabled
-                        ? `Using ${sslSource === "proxmox" ? "Proxmox host" : "custom"} certificate`
-                        : "Monitor is served over unencrypted HTTP"}
+                        ? st("ssl.usingCertificate", { source: sslSource === "proxmox" ? st("ssl.proxmoxHost") : st("ssl.custom") })
+                        : st("ssl.unencryptedHttp")}
                     </p>
                   </div>
                 </div>
@@ -1969,21 +2178,32 @@ ${(report.sections && report.sections.length > 0) ? `
                 <div className="space-y-2 p-3 bg-green-500/5 border border-green-500/20 rounded-lg">
                   <div className="flex items-center gap-2 text-sm font-medium text-green-500">
                     <FileKey className="h-4 w-4" />
-                    Active Certificate
+                    {st("ssl.activeCertificate")}
                   </div>
                   <div className="grid gap-1 text-sm text-muted-foreground">
-                    <p><span className="font-medium text-foreground">Cert:</span> <code className="text-xs">{sslCertPath}</code></p>
-                    <p><span className="font-medium text-foreground">Key:</span> <code className="text-xs">{sslKeyPath}</code></p>
+                    <p><span className="font-medium text-foreground">{st("ssl.cert")}:</span> <code className="text-xs">{sslCertPath}</code></p>
+                    <p><span className="font-medium text-foreground">{st("ssl.key")}:</span> <code className="text-xs">{sslKeyPath}</code></p>
                   </div>
-                  <Button
-                    onClick={handleDisableSsl}
-                    variant="outline"
-                    size="sm"
-                    disabled={configuringSsl || sslRestarting}
-                    className="mt-2 text-red-500 border-red-500/30 hover:bg-red-500/10 bg-transparent"
-                  >
-                    {configuringSsl ? "Disabling..." : sslRestarting ? "Restarting..." : "Disable HTTPS"}
-                  </Button>
+                  <div className="flex flex-wrap gap-2 pt-2">
+                    <Button
+                      onClick={handleReloadSsl}
+                      variant="outline"
+                      size="sm"
+                      disabled={configuringSsl || reloadingSsl || sslRestarting}
+                    >
+                      <RefreshCw className={`h-4 w-4 mr-2 ${reloadingSsl ? "animate-spin" : ""}`} />
+                      {reloadingSsl ? st("ssl.updatingCertificate") : st("ssl.updateCertificate")}
+                    </Button>
+                    <Button
+                      onClick={handleDisableSsl}
+                      variant="outline"
+                      size="sm"
+                      disabled={configuringSsl || reloadingSsl || sslRestarting}
+                      className="text-red-500 border-red-500/30 hover:bg-red-500/10 bg-transparent"
+                    >
+                      {configuringSsl ? st("ssl.disabling") : sslRestarting ? st("ssl.restarting") : st("ssl.disableHttps")}
+                    </Button>
+                  </div>
                 </div>
               )}
 
@@ -1992,24 +2212,24 @@ ${(report.sections && report.sections.length > 0) ? `
                 <div className="space-y-3 p-4 border border-border rounded-lg">
                   <div className="flex items-center gap-2">
                     <ShieldCheck className="h-4 w-4 text-green-500" />
-                    <h3 className="font-semibold text-sm">Proxmox Host Certificate Detected</h3>
+                    <h3 className="font-semibold text-sm">{st("ssl.proxmoxCertDetected")}</h3>
                   </div>
 
                   {proxmoxCertInfo && (
                     <div className="grid gap-1 text-sm text-muted-foreground bg-muted/50 p-3 rounded">
                       {proxmoxCertInfo.subject && (
-                        <p><span className="font-medium text-foreground">Subject:</span> {proxmoxCertInfo.subject}</p>
+                        <p><span className="font-medium text-foreground">{st("ssl.subject")}:</span> {proxmoxCertInfo.subject}</p>
                       )}
                       {proxmoxCertInfo.issuer && (
-                        <p><span className="font-medium text-foreground">Issuer:</span> {proxmoxCertInfo.issuer}</p>
+                        <p><span className="font-medium text-foreground">{st("ssl.issuer")}:</span> {proxmoxCertInfo.issuer}</p>
                       )}
                       {proxmoxCertInfo.expires && (
-                        <p><span className="font-medium text-foreground">Expires:</span> {proxmoxCertInfo.expires}</p>
+                        <p><span className="font-medium text-foreground">{st("ssl.expires")}:</span> {proxmoxCertInfo.expires}</p>
                       )}
                       {proxmoxCertInfo.is_self_signed && (
                         <div className="flex items-center gap-1.5 mt-1 text-yellow-500">
                           <AlertTriangle className="h-3.5 w-3.5" />
-                          <span className="text-xs">Self-signed certificate (browsers will show a security warning)</span>
+                          <span className="text-xs">{st("ssl.selfSignedWarning")}</span>
                         </div>
                       )}
                     </div>
@@ -2023,12 +2243,12 @@ ${(report.sections && report.sections.length > 0) ? `
                     {configuringSsl ? (
                       <div className="flex items-center gap-2">
                         <div className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full" />
-                        Configuring...
+                        {st("ssl.configuring")}
                       </div>
                     ) : (
                       <>
                         <ShieldCheck className="h-4 w-4 mr-2" />
-                        Use Proxmox Certificate
+                        {st("ssl.useProxmoxCertificate")}
                       </>
                     )}
                   </Button>
@@ -2039,7 +2259,7 @@ ${(report.sections && report.sections.length > 0) ? `
                 <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-lg p-3 flex items-start gap-2">
                   <AlertTriangle className="h-5 w-5 text-yellow-500 flex-shrink-0 mt-0.5" />
                   <p className="text-sm text-yellow-500">
-                    No Proxmox host certificate detected. You can configure a custom certificate below.
+                    {st("ssl.noProxmoxCertificate")}
                   </p>
                 </div>
               )}
@@ -2053,17 +2273,17 @@ ${(report.sections && report.sections.length > 0) ? `
                       variant="outline"
                     >
                       <FileKey className="h-4 w-4 mr-2" />
-                      Use Custom Certificate
+                      {st("ssl.useCustomCertificate")}
                     </Button>
                   ) : (
                     <div className="space-y-4 border border-border rounded-lg p-4">
-                      <h3 className="font-semibold text-sm">Custom Certificate Paths</h3>
+                      <h3 className="font-semibold text-sm">{st("ssl.customPaths")}</h3>
                       <p className="text-xs text-muted-foreground">
-                        Enter the absolute paths to your SSL certificate and private key files on the Proxmox server.
+                        {st("ssl.customPathsDescription")}
                       </p>
 
                       <div className="space-y-2">
-                        <Label htmlFor="ssl-cert-path">Certificate Path (.pem / .crt)</Label>
+                        <Label htmlFor="ssl-cert-path">{st("ssl.certificatePath")}</Label>
                         <Input
                           id="ssl-cert-path"
                           type="text"
@@ -2075,7 +2295,7 @@ ${(report.sections && report.sections.length > 0) ? `
                       </div>
 
                       <div className="space-y-2">
-                        <Label htmlFor="ssl-key-path">Private Key Path (.key / .pem)</Label>
+                        <Label htmlFor="ssl-key-path">{st("ssl.privateKeyPath")}</Label>
                         <Input
                           id="ssl-key-path"
                           type="text"
@@ -2092,7 +2312,7 @@ ${(report.sections && report.sections.length > 0) ? `
                         className="flex-1 bg-green-600 hover:bg-green-700 text-white"
                         disabled={configuringSsl || sslRestarting || !customCertPath || !customKeyPath}
                         >
-                          {configuringSsl ? "Configuring..." : "Enable HTTPS"}
+                          {configuringSsl ? st("ssl.configuring") : st("ssl.enableHttps")}
                         </Button>
                         <Button
                           onClick={() => {
@@ -2104,7 +2324,7 @@ ${(report.sections && report.sections.length > 0) ? `
                           className="flex-1"
                           disabled={configuringSsl}
                         >
-                          Cancel
+                          {t("actions.cancel")}
                         </Button>
                       </div>
                     </div>
@@ -2118,10 +2338,10 @@ ${(report.sections && report.sections.length > 0) ? `
                   <div className="h-5 w-5 border-2 border-amber-500 border-t-transparent rounded-full animate-spin flex-shrink-0" />
                   <div>
                     <p className="text-sm font-medium text-amber-500">
-                      Restarting monitor service...
+                      {st("ssl.restartTitle")}
                     </p>
                     <p className="text-xs text-amber-400 mt-0.5">
-                      The page will automatically redirect to the new address.
+                      {st("ssl.restartDescription")}
                     </p>
                   </div>
                 </div>
@@ -2129,7 +2349,7 @@ ${(report.sections && report.sections.length > 0) ? `
                 <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-3 flex items-start gap-2">
                   <Info className="h-5 w-5 text-blue-500 flex-shrink-0 mt-0.5" />
                   <p className="text-sm text-blue-500">
-                    SSL changes will automatically restart the monitor service and redirect to the new address.
+                    {st("ssl.changesRestart")}
                   </p>
                 </div>
               )}
@@ -2144,10 +2364,10 @@ ${(report.sections && report.sections.length > 0) ? `
           <CardHeader>
             <div className="flex items-center gap-2">
               <Key className="h-5 w-5 text-purple-500" />
-              <CardTitle>API Access Tokens</CardTitle>
+              <CardTitle>{st("apiTokens.title")}</CardTitle>
             </div>
             <CardDescription>
-              Generate long-lived API tokens for external integrations like Homepage and Home Assistant
+              {st("apiTokens.description")}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -2169,23 +2389,23 @@ ${(report.sections && report.sections.length > 0) ? `
               <div className="flex items-start gap-3">
                 <Info className="h-5 w-5 text-blue-500 flex-shrink-0 mt-0.5" />
                 <div className="space-y-2 text-sm text-blue-400">
-                  <p className="font-medium">About API Tokens</p>
+                  <p className="font-medium">{st("apiTokens.aboutTitle")}</p>
                   <ul className="list-disc list-inside space-y-1 text-blue-300">
-                    <li>Tokens are valid for 1 year</li>
-                    <li>Use them to access APIs from external services</li>
-                    <li>{'Include in Authorization header: Bearer YOUR_TOKEN'}</li>
+                    <li>{st("apiTokens.validFor")}</li>
+                    <li>{st("apiTokens.externalServices")}</li>
+                    <li>{st("apiTokens.authorizationHeader")}</li>
                     <li>
-                      See the{" "}
+                      {st("apiTokens.seeGuideBefore")}{" "}
                       <a
                         href="https://proxmenux.com/docs/monitor/integrations"
                         target="_blank"
                         rel="noopener noreferrer"
                         className="inline-flex items-center gap-1 text-blue-200 hover:text-blue-100 underline underline-offset-2"
                       >
-                        integrations guide
+                        {st("apiTokens.integrationsGuide")}
                         <ExternalLink className="h-3 w-3" />
                       </a>{" "}
-                      for complete examples
+                      {st("apiTokens.seeGuideAfter")}
                     </li>
                   </ul>
                 </div>
@@ -2195,25 +2415,25 @@ ${(report.sections && report.sections.length > 0) ? `
             {!showApiTokenSection && !apiToken && (
               <Button onClick={() => setShowApiTokenSection(true)} className="bg-purple-500 hover:bg-purple-600">
                 <Key className="h-4 w-4 mr-2" />
-                Generate New API Token
+                {st("apiTokens.generateNew")}
               </Button>
             )}
 
             {showApiTokenSection && !apiToken && (
               <div className="space-y-4 border border-border rounded-lg p-4">
-                <h3 className="font-semibold">Generate API Token</h3>
+                <h3 className="font-semibold">{st("apiTokens.generateTitle")}</h3>
                 <p className="text-sm text-muted-foreground">
-                  Enter your credentials to generate a new long-lived API token
+                  {st("apiTokens.generateDescription")}
                 </p>
 
                 <div className="space-y-2">
-                  <Label htmlFor="token-name">Token Name</Label>
+                  <Label htmlFor="token-name">{st("apiTokens.tokenName")}</Label>
                   <div className="relative">
                     <Key className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <Input
                       id="token-name"
                       type="text"
-                      placeholder="e.g. Homepage, Home Assistant"
+                      placeholder={st("apiTokens.tokenNamePlaceholder")}
                       value={tokenName}
                       onChange={(e) => setTokenName(e.target.value)}
                       className="pl-10"
@@ -2223,13 +2443,13 @@ ${(report.sections && report.sections.length > 0) ? `
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="token-password">Password</Label>
+                  <Label htmlFor="token-password">{st("auth.password")}</Label>
                   <div className="relative">
                     <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <Input
                       id="token-password"
                       type="password"
-                      placeholder="Enter your password"
+                      placeholder={st("auth.enterYourPassword")}
                       value={tokenPassword}
                       onChange={(e) => setTokenPassword(e.target.value)}
                       className="pl-10"
@@ -2240,13 +2460,13 @@ ${(report.sections && report.sections.length > 0) ? `
 
                 {totpEnabled && (
                   <div className="space-y-2">
-                    <Label htmlFor="token-totp">2FA Code</Label>
+                    <Label htmlFor="token-totp">{st("twoFactor.code")}</Label>
                     <div className="relative">
                       <Shield className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                       <Input
                         id="token-totp"
                         type="text"
-                        placeholder="Enter 6-digit code"
+                        placeholder={st("twoFactor.codePlaceholder")}
                         value={tokenTotpCode}
                         onChange={(e) => setTokenTotpCode(e.target.value)}
                         className="pl-10"
@@ -2263,21 +2483,21 @@ ${(report.sections && report.sections.length > 0) ? `
                     className="flex-1 bg-purple-500 hover:bg-purple-600"
                     disabled={generatingToken}
                   >
-                    {generatingToken ? "Generating..." : "Generate Token"}
+                    {generatingToken ? st("apiTokens.generating") : st("apiTokens.generate")}
                   </Button>
                   <Button
                     onClick={() => {
                       setShowApiTokenSection(false)
                       setTokenPassword("")
                       setTokenTotpCode("")
-                      setTokenName("API Token")
+                      setTokenName("")
                       setError("")
                     }}
                     variant="outline"
                     className="flex-1"
                     disabled={generatingToken}
                   >
-                    Cancel
+                    {t("actions.cancel")}
                   </Button>
                 </div>
               </div>
@@ -2287,23 +2507,23 @@ ${(report.sections && report.sections.length > 0) ? `
               <div className="space-y-4 border border-green-500/20 bg-green-500/5 rounded-lg p-4">
                 <div className="flex items-center gap-2 text-green-500">
                   <CheckCircle className="h-5 w-5" />
-                  <h3 className="font-semibold">Your API Token</h3>
+                  <h3 className="font-semibold">{st("apiTokens.yourToken")}</h3>
                 </div>
 
                 <div className="bg-amber-500/10 border border-amber-500/30 rounded-lg p-3 flex items-start gap-2">
                   <AlertCircle className="h-5 w-5 text-amber-500 flex-shrink-0 mt-0.5" />
                   <div className="space-y-1">
                     <p className="text-sm text-amber-600 dark:text-amber-400 font-semibold">
-                      Important: Save this token now!
+                      {st("apiTokens.saveTokenNow")}
                     </p>
                     <p className="text-xs text-amber-600/80 dark:text-amber-400/80">
-                      {"You won't be able to see it again. Store it securely."}
+                      {st("apiTokens.tokenOnlyShownOnce")}
                     </p>
                   </div>
                 </div>
 
                 <div className="space-y-2">
-                  <Label>Token</Label>
+                  <Label>{st("apiTokens.token")}</Label>
                   <div className="relative">
                     <Input
                       value={apiToken}
@@ -2328,19 +2548,19 @@ ${(report.sections && report.sections.length > 0) ? `
                   {tokenCopied && (
                     <p className="text-xs text-green-500 flex items-center gap-1">
                       <CheckCircle className="h-3 w-3" />
-                      Copied to clipboard!
+                      {st("apiTokens.copied")}
                     </p>
                   )}
                 </div>
 
                 <div className="space-y-2">
-                  <p className="text-sm font-medium">How to use this token:</p>
+                  <p className="text-sm font-medium">{st("apiTokens.howToUse")}</p>
                   <div className="bg-muted/50 rounded p-3 text-xs font-mono">
-                    <p className="text-muted-foreground mb-2"># Add to request headers:</p>
-                    <p>{'Authorization: Bearer YOUR_TOKEN_HERE'}</p>
+                    <p className="text-muted-foreground mb-2"># {st("apiTokens.addToHeaders")}</p>
+                    <p>{st("apiTokens.authorizationHeaderExample")}</p>
                   </div>
                   <p className="text-xs text-muted-foreground">
-                    See the README documentation for complete integration examples with Homepage and Home Assistant.
+                    {st("apiTokens.readmeExamples")}
                   </p>
                 </div>
 
@@ -2351,7 +2571,7 @@ ${(report.sections && report.sections.length > 0) ? `
                 }}
                 variant="outline"
               >
-                  Done
+                  {st("apiTokens.done")}
                 </Button>
               </div>
             )}
@@ -2360,7 +2580,7 @@ ${(report.sections && report.sections.length > 0) ? `
             {!loadingTokens && existingTokens.length > 0 && (
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
-                  <h3 className="text-sm font-semibold text-muted-foreground">Active Tokens</h3>
+                  <h3 className="text-sm font-semibold text-muted-foreground">{st("apiTokens.activeTokens")}</h3>
                   <Button
                     variant="ghost"
                     size="sm"
@@ -2368,7 +2588,7 @@ ${(report.sections && report.sections.length > 0) ? `
                     className="h-7 px-2 text-xs text-muted-foreground hover:text-foreground"
                   >
                     <RefreshCw className="h-3 w-3 mr-1" />
-                    Refresh
+                    {t("actions.refresh")}
                   </Button>
                 </div>
 
@@ -2396,12 +2616,12 @@ ${(report.sections && report.sections.length > 0) ? `
                             <p className="text-sm font-medium truncate">{token.name}</p>
                             {isInvalid && (
                               <span className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-red-500/15 text-red-500 border border-red-500/30 whitespace-nowrap">
-                                Invalid — regenerate
+                                {st("apiTokens.invalidRegenerate")}
                               </span>
                             )}
                             {isLegacy && (
                               <span className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-amber-500/15 text-amber-500 border border-amber-500/30 whitespace-nowrap">
-                                Legacy
+                                {st("apiTokens.legacy")}
                               </span>
                             )}
                           </div>
@@ -2411,7 +2631,7 @@ ${(report.sections && report.sections.length > 0) ? `
                               <Clock className="h-3 w-3" />
                               {token.created_at
                                 ? new Date(token.created_at).toLocaleDateString()
-                                : "Unknown"}
+                                : t("common.unknown")}
                             </span>
                           </div>
                           {isInvalid && token.invalidation_reason && (
@@ -2433,7 +2653,7 @@ ${(report.sections && report.sections.length > 0) ? `
                         ) : (
                           <Trash2 className="h-4 w-4" />
                         )}
-                        <span className="ml-1 text-xs hidden sm:inline">Revoke</span>
+                        <span className="ml-1 text-xs hidden sm:inline">{st("apiTokens.revoke")}</span>
                       </Button>
                     </div>
                     )
@@ -2445,13 +2665,13 @@ ${(report.sections && report.sections.length > 0) ? `
             {loadingTokens && (
               <div className="flex items-center justify-center py-4">
                 <div className="animate-spin h-5 w-5 border-2 border-blue-500 border-t-transparent rounded-full" />
-                <span className="ml-2 text-sm text-muted-foreground">Loading tokens...</span>
+                <span className="ml-2 text-sm text-muted-foreground">{st("apiTokens.loading")}</span>
               </div>
             )}
 
             {!loadingTokens && existingTokens.length === 0 && !showApiTokenSection && !apiToken && (
               <div className="text-center py-4 text-sm text-muted-foreground">
-                No API tokens created yet
+                {st("apiTokens.empty")}
               </div>
             )}
           </CardContent>
@@ -2470,7 +2690,7 @@ ${(report.sections && report.sections.length > 0) ? `
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <Flame className="h-5 w-5 text-orange-500" />
-              <CardTitle>Proxmox Firewall</CardTitle>
+              <CardTitle>{st("firewall.title")}</CardTitle>
             </div>
             {firewallData?.pve_firewall_installed && (
               <Button
@@ -2480,12 +2700,12 @@ ${(report.sections && report.sections.length > 0) ? `
                 className="h-7 px-2 text-xs text-muted-foreground hover:text-foreground"
               >
                 <RefreshCw className="h-3 w-3 mr-1" />
-                Refresh
+                {t("actions.refresh")}
               </Button>
             )}
           </div>
           <CardDescription>
-            Manage the Proxmox VE built-in firewall: enable/disable, configure rules, and protect your services
+            {st("firewall.description")}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -2497,9 +2717,9 @@ ${(report.sections && report.sections.length > 0) ? `
             <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-lg p-4 flex items-start gap-3">
               <AlertTriangle className="h-5 w-5 text-yellow-500 flex-shrink-0 mt-0.5" />
               <div>
-                <p className="text-sm font-medium text-yellow-500">Proxmox Firewall Not Detected</p>
+                <p className="text-sm font-medium text-yellow-500">{st("firewall.notDetectedTitle")}</p>
                 <p className="text-sm text-muted-foreground mt-1">
-                  The pve-firewall service was not found on this system. It should be included with Proxmox VE by default.
+                  {st("firewall.notDetectedDescription")}
                 </p>
               </div>
             </div>
@@ -2514,9 +2734,9 @@ ${(report.sections && report.sections.length > 0) ? `
                       <Globe className={`h-5 w-5 ${firewallData.cluster_fw_enabled ? "text-green-500" : "text-gray-500"}`} />
                     </div>
                     <div>
-                      <p className="font-medium text-sm">Cluster Firewall</p>
+                      <p className="font-medium text-sm">{st("firewall.clusterTitle")}</p>
                       <p className="text-xs text-muted-foreground">
-                        {firewallData.cluster_fw_enabled ? "Active - Required for host rules to work" : "Disabled - Must be enabled first"}
+                        {firewallData.cluster_fw_enabled ? st("firewall.clusterActive") : st("firewall.clusterDisabled")}
                       </p>
                     </div>
                   </div>
@@ -2531,9 +2751,9 @@ ${(report.sections && report.sections.length > 0) ? `
                     }
                   >
                     {firewallData.cluster_fw_enabled ? (
-                      <><PowerOff className="h-3.5 w-3.5 mr-1" /> Disable</>
+                      <><PowerOff className="h-3.5 w-3.5 mr-1" /> {st("values.disable")}</>
                     ) : (
-                      <><Power className="h-3.5 w-3.5 mr-1" /> Enable</>
+                      <><Power className="h-3.5 w-3.5 mr-1" /> {st("values.enable")}</>
                     )}
                   </Button>
                 </div>
@@ -2545,9 +2765,9 @@ ${(report.sections && report.sections.length > 0) ? `
                       <Shield className={`h-5 w-5 ${firewallData.host_fw_enabled ? "text-green-500" : "text-gray-500"}`} />
                     </div>
                     <div>
-                      <p className="font-medium text-sm">Host Firewall</p>
+                      <p className="font-medium text-sm">{st("firewall.hostTitle")}</p>
                       <p className="text-xs text-muted-foreground">
-                        {firewallData.host_fw_enabled ? "Active - Rules are being enforced" : "Disabled"}
+                        {firewallData.host_fw_enabled ? st("firewall.hostActive") : st("values.disabled")}
                       </p>
                     </div>
                   </div>
@@ -2562,9 +2782,9 @@ ${(report.sections && report.sections.length > 0) ? `
                     }
                   >
                     {firewallData.host_fw_enabled ? (
-                      <><PowerOff className="h-3.5 w-3.5 mr-1" /> Disable</>
+                      <><PowerOff className="h-3.5 w-3.5 mr-1" /> {st("values.disable")}</>
                     ) : (
-                      <><Power className="h-3.5 w-3.5 mr-1" /> Enable</>
+                      <><Power className="h-3.5 w-3.5 mr-1" /> {st("values.enable")}</>
                     )}
                   </Button>
                 </div>
@@ -2574,14 +2794,14 @@ ${(report.sections && report.sections.length > 0) ? `
                 <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-3 flex items-start gap-2">
                   <Info className="h-5 w-5 text-blue-500 flex-shrink-0 mt-0.5" />
                   <p className="text-sm text-blue-500">
-                    The Cluster Firewall must be enabled for any host-level firewall rules to take effect. Enable it first, then configure your host rules.
+                    {st("firewall.clusterRequiredHint")}
                   </p>
                 </div>
               )}
 
               {/* Quick Presets */}
               <div className="space-y-2">
-                <h3 className="text-sm font-semibold text-muted-foreground">Quick Access Rules</h3>
+                <h3 className="text-sm font-semibold text-muted-foreground">{st("firewall.quickAccessRules")}</h3>
                 <div className="grid gap-2 sm:grid-cols-2">
                   {/* Monitor Port 8008 */}
                   <div className="flex items-center justify-between p-3 bg-muted/30 rounded-lg border border-border">
@@ -2589,7 +2809,7 @@ ${(report.sections && report.sections.length > 0) ? `
                       <div className={`w-2.5 h-2.5 rounded-full ${firewallData.monitor_port_open ? "bg-green-500" : "bg-yellow-500"}`} />
                       <div>
                         <p className="text-sm font-medium">ProxMenux Monitor</p>
-                        <p className="text-xs text-muted-foreground">Port 8008/TCP</p>
+                        <p className="text-xs text-muted-foreground">{st("firewall.port8008")}</p>
                       </div>
                     </div>
                     <Button
@@ -2602,7 +2822,7 @@ ${(report.sections && report.sections.length > 0) ? `
                         : "text-green-500 border-green-500/30 hover:bg-green-500/10 bg-transparent"
                       }`}
                     >
-                      {firewallData.monitor_port_open ? "Remove" : "Allow"}
+                      {firewallData.monitor_port_open ? st("values.remove") : st("values.allow")}
                     </Button>
                   </div>
 
@@ -2612,10 +2832,10 @@ ${(report.sections && report.sections.length > 0) ? `
                       <div className="w-2.5 h-2.5 rounded-full bg-green-500" />
                       <div>
                         <p className="text-sm font-medium">Proxmox Web UI</p>
-                        <p className="text-xs text-muted-foreground">Port 8006/TCP (always allowed)</p>
+                        <p className="text-xs text-muted-foreground">{st("firewall.port8006AlwaysAllowed")}</p>
                       </div>
                     </div>
-                    <span className="text-xs text-muted-foreground px-2 py-1 bg-muted/50 rounded">Built-in</span>
+                    <span className="text-xs text-muted-foreground px-2 py-1 bg-muted/50 rounded">{st("firewall.builtIn")}</span>
                   </div>
                 </div>
 
@@ -2623,7 +2843,7 @@ ${(report.sections && report.sections.length > 0) ? `
                   <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-lg p-3 flex items-start gap-2">
                     <AlertTriangle className="h-5 w-5 text-yellow-500 flex-shrink-0 mt-0.5" />
                     <p className="text-sm text-yellow-500">
-                      The firewall is active but port 8008 is not allowed. ProxMenux Monitor may be inaccessible from other devices.
+                      {st("firewall.monitorPortWarning")}
                     </p>
                   </div>
                 )}
@@ -2648,23 +2868,23 @@ ${(report.sections && report.sections.length > 0) ? `
 
                 return (
                   <div className="space-y-2">
-                    <h3 className="text-sm font-semibold text-muted-foreground">Rules Overview</h3>
+                    <h3 className="text-sm font-semibold text-muted-foreground">{st("firewall.rulesOverview")}</h3>
                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                       <div className="p-3 bg-muted/50 rounded-lg border border-border text-center">
                         <p className="text-lg font-bold text-foreground">{total}</p>
-                        <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Total Rules</p>
+                        <p className="text-[10px] text-muted-foreground uppercase tracking-wider">{st("firewall.totalRules")}</p>
                       </div>
                       <div className="p-3 bg-green-500/5 rounded-lg border border-green-500/20 text-center">
                         <p className="text-lg font-bold text-green-500">{acceptCount}</p>
-                        <p className="text-[10px] text-green-500/70 uppercase tracking-wider">Accept</p>
+                        <p className="text-[10px] text-green-500/70 uppercase tracking-wider">{st("firewall.accept")}</p>
                       </div>
                       <div className="p-3 bg-red-500/5 rounded-lg border border-red-500/20 text-center">
                         <p className="text-lg font-bold text-red-500">{blockCount}</p>
-                        <p className="text-[10px] text-red-500/70 uppercase tracking-wider">Block / Reject</p>
+                        <p className="text-[10px] text-red-500/70 uppercase tracking-wider">{st("firewall.blockReject")}</p>
                       </div>
                       <div className="p-3 bg-muted/50 rounded-lg border border-border text-center">
                         <p className="text-lg font-bold text-foreground">{protectedPorts.size}</p>
-                        <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Ports Covered</p>
+                        <p className="text-[10px] text-muted-foreground uppercase tracking-wider">{st("firewall.portsCovered")}</p>
                       </div>
                     </div>
                     {/* Visual bar */}
@@ -2682,24 +2902,24 @@ ${(report.sections && report.sections.length > 0) ? `
                           )}
                         </div>
                         <div className="hidden sm:flex items-center gap-3 text-[10px] text-muted-foreground flex-shrink-0">
-                          <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-green-500" />Accept</span>
-                          <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-red-500" />Drop</span>
-                          <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-orange-500" />Reject</span>
+                          <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-green-500" />{st("firewall.accept")}</span>
+                          <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-red-500" />{st("firewall.drop")}</span>
+                          <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-orange-500" />{st("firewall.reject")}</span>
                         </div>
                       </div>
                       <div className="flex sm:hidden items-center gap-3 text-[10px] text-muted-foreground">
-                        <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-green-500" />Accept</span>
-                        <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-red-500" />Drop</span>
-                        <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-orange-500" />Reject</span>
+                        <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-green-500" />{st("firewall.accept")}</span>
+                        <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-red-500" />{st("firewall.drop")}</span>
+                        <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-orange-500" />{st("firewall.reject")}</span>
                       </div>
                     </div>
                     {/* Scope breakdown */}
                     <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
                       <span className="flex items-center gap-1.5">
-                        <Globe className="h-3 w-3 text-blue-400" /> Cluster: {clusterCount}
+                        <Globe className="h-3 w-3 text-blue-400" /> {st("firewall.cluster")}: {clusterCount}
                       </span>
                       <span className="flex items-center gap-1.5">
-                        <Shield className="h-3 w-3 text-purple-400" /> Host: {hostCount}
+                        <Shield className="h-3 w-3 text-purple-400" /> {st("firewall.host")}: {hostCount}
                       </span>
                       <span className="text-border">|</span>
                       <span className="flex items-center gap-1.5">
@@ -2717,7 +2937,7 @@ ${(report.sections && report.sections.length > 0) ? `
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
                   <h3 className="text-sm font-semibold text-muted-foreground">
-                    Firewall Rules ({firewallData.rules_count})
+                    {st("firewall.rules", { count: firewallData.rules_count })}
                   </h3>
                   <Button
                     variant="outline"
@@ -2726,7 +2946,7 @@ ${(report.sections && report.sections.length > 0) ? `
                     className="h-7 text-xs text-orange-500 border-orange-500/30 hover:bg-orange-500/10 bg-transparent"
                   >
                     <Plus className="h-3 w-3 mr-1" />
-                    Add Rule
+                    {st("firewall.addRule")}
                   </Button>
                 </div>
 
@@ -2735,22 +2955,22 @@ ${(report.sections && report.sections.length > 0) ? `
                   <div className="border border-orange-500/30 rounded-lg p-4 bg-orange-500/5 space-y-4">
                     <div className="flex items-center gap-2 mb-1">
                       <Plus className="h-4 w-4 text-orange-500" />
-                      <p className="text-sm font-semibold text-orange-500">New Firewall Rule</p>
+                      <p className="text-sm font-semibold text-orange-500">{st("firewall.newRule")}</p>
                     </div>
 
                     {/* Service Presets */}
                     <div className="space-y-1.5">
-                      <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Quick Presets</p>
+                      <p className="text-[10px] text-muted-foreground uppercase tracking-wider">{st("firewall.quickPresets")}</p>
                       <div className="flex flex-wrap gap-1.5">
                         {[
-                          { label: "HTTP", port: "80", proto: "tcp", comment: "HTTP Web" },
-                          { label: "HTTPS", port: "443", proto: "tcp", comment: "HTTPS Web" },
-                          { label: "SSH", port: "22", proto: "tcp", comment: "SSH Remote Access" },
+                          { label: "HTTP", port: "80", proto: "tcp", comment: st("firewall.presets.httpWeb") },
+                          { label: "HTTPS", port: "443", proto: "tcp", comment: st("firewall.presets.httpsWeb") },
+                          { label: "SSH", port: "22", proto: "tcp", comment: st("firewall.presets.sshRemoteAccess") },
                           { label: "DNS", port: "53", proto: "udp", comment: "DNS" },
-                          { label: "SMTP", port: "25", proto: "tcp", comment: "SMTP Mail" },
+                          { label: "SMTP", port: "25", proto: "tcp", comment: st("firewall.presets.smtpMail") },
                           { label: "NFS", port: "2049", proto: "tcp", comment: "NFS" },
                           { label: "SMB", port: "445", proto: "tcp", comment: "SMB/CIFS" },
-                          { label: "Ping", port: "", proto: "icmp", comment: "ICMP Ping" },
+                          { label: "Ping", port: "", proto: "icmp", comment: st("firewall.presets.icmpPing") },
                         ].map((preset) => (
                           <Button
                             key={preset.label}
@@ -2776,30 +2996,30 @@ ${(report.sections && report.sections.length > 0) ? `
 
                     <div className="grid gap-3 sm:grid-cols-3">
                       <div className="space-y-1.5">
-                        <Label className="text-xs text-muted-foreground">Direction</Label>
+                        <Label className="text-xs text-muted-foreground">{st("firewall.fields.direction")}</Label>
                         <select
                           value={newRule.direction}
                           onChange={(e) => setNewRule({...newRule, direction: e.target.value})}
                           className="w-full h-9 rounded-md border border-border bg-card px-3 text-sm"
                         >
-                          <option value="IN">IN (incoming)</option>
-                          <option value="OUT">OUT (outgoing)</option>
+                          <option value="IN">IN ({st("firewall.incomingLower")})</option>
+                          <option value="OUT">OUT ({st("firewall.outgoingLower")})</option>
                         </select>
                       </div>
                       <div className="space-y-1.5">
-                        <Label className="text-xs text-muted-foreground">Action</Label>
+                        <Label className="text-xs text-muted-foreground">{st("firewall.fields.action")}</Label>
                         <select
                           value={newRule.action}
                           onChange={(e) => setNewRule({...newRule, action: e.target.value})}
                           className="w-full h-9 rounded-md border border-border bg-card px-3 text-sm"
                         >
-                          <option value="ACCEPT">ACCEPT (allow)</option>
-                          <option value="DROP">DROP (block silently)</option>
-                          <option value="REJECT">REJECT (block with response)</option>
+                          <option value="ACCEPT">ACCEPT ({st("firewall.allowLower")})</option>
+                          <option value="DROP">DROP ({st("firewall.blockSilentlyLower")})</option>
+                          <option value="REJECT">REJECT ({st("firewall.blockWithResponseLower")})</option>
                         </select>
                       </div>
                       <div className="space-y-1.5">
-                        <Label className="text-xs text-muted-foreground">Protocol</Label>
+                        <Label className="text-xs text-muted-foreground">{st("firewall.fields.protocol")}</Label>
                         <select
                           value={newRule.protocol}
                           onChange={(e) => setNewRule({...newRule, protocol: e.target.value})}
@@ -2814,60 +3034,60 @@ ${(report.sections && report.sections.length > 0) ? `
 
                     <div className="grid gap-3 sm:grid-cols-2">
                       <div className="space-y-1.5">
-                        <Label className="text-xs text-muted-foreground">Destination Port</Label>
+                        <Label className="text-xs text-muted-foreground">{st("firewall.fields.destinationPort")}</Label>
                         <Input
-                          placeholder="e.g. 80, 443, 8000:9000"
+                          placeholder={st("firewall.placeholders.destinationPort")}
                           value={newRule.dport}
                           onChange={(e) => setNewRule({...newRule, dport: e.target.value})}
                           className="h-9 text-sm"
                         />
-                        <p className="text-[10px] text-muted-foreground">Single port, comma-separated, or range (8000:9000)</p>
+                        <p className="text-[10px] text-muted-foreground">{st("firewall.destinationPortHint")}</p>
                       </div>
                       <div className="space-y-1.5">
-                        <Label className="text-xs text-muted-foreground">Source Address (optional)</Label>
+                        <Label className="text-xs text-muted-foreground">{st("firewall.fields.sourceAddress")}</Label>
                         <Input
-                          placeholder="e.g. 192.168.1.0/24"
+                          placeholder={st("firewall.placeholders.sourceAddress")}
                           value={newRule.source}
                           onChange={(e) => setNewRule({...newRule, source: e.target.value})}
                           className="h-9 text-sm"
                         />
-                        <p className="text-[10px] text-muted-foreground">IP, CIDR, or leave empty for any source</p>
+                        <p className="text-[10px] text-muted-foreground">{st("firewall.sourceAddressHint")}</p>
                       </div>
                     </div>
 
                     <div className="grid gap-3 sm:grid-cols-2">
                       <div className="space-y-1.5">
-                        <Label className="text-xs text-muted-foreground">Interface (optional)</Label>
+                        <Label className="text-xs text-muted-foreground">{st("firewall.fields.interfaceOptional")}</Label>
                         <select
                           value={newRule.iface}
                           onChange={(e) => setNewRule({...newRule, iface: e.target.value})}
                           className="w-full h-9 rounded-md border border-border bg-card px-3 text-sm"
                         >
-                          <option value="">Any interface</option>
+                          <option value="">{st("firewall.anyInterface")}</option>
                           {networkInterfaces.map((iface) => (
                             <option key={iface.name} value={iface.name}>
-                              {iface.name} ({iface.type}{iface.status === "up" ? ", up" : ", down"})
+                              {iface.name} ({interfaceTypeLabel(iface.type)}{iface.status === "up" ? `, ${st("values.up")}` : `, ${st("values.down")}`})
                             </option>
                           ))}
                         </select>
                       </div>
                       <div className="space-y-1.5">
-                        <Label className="text-xs text-muted-foreground">Apply to</Label>
+                        <Label className="text-xs text-muted-foreground">{st("firewall.fields.applyTo")}</Label>
                         <select
                           value={newRule.level}
                           onChange={(e) => setNewRule({...newRule, level: e.target.value})}
                           className="w-full h-9 rounded-md border border-border bg-card px-3 text-sm"
                         >
-                          <option value="host">Host firewall (this node)</option>
-                          <option value="cluster">Cluster firewall (all nodes)</option>
+                          <option value="host">{st("firewall.hostFirewallThisNode")}</option>
+                          <option value="cluster">{st("firewall.clusterFirewallAllNodes")}</option>
                         </select>
                       </div>
                     </div>
 
                     <div className="space-y-1.5">
-                      <Label className="text-xs text-muted-foreground">Comment (optional)</Label>
+                      <Label className="text-xs text-muted-foreground">{st("firewall.fields.commentOptional")}</Label>
                       <Input
-                        placeholder="e.g. Allow web traffic"
+                        placeholder={st("firewall.placeholders.comment")}
                         value={newRule.comment}
                         onChange={(e) => setNewRule({...newRule, comment: e.target.value})}
                         className="h-9 text-sm"
@@ -2881,7 +3101,7 @@ ${(report.sections && report.sections.length > 0) ? `
                         onClick={() => setShowAddRule(false)}
                         className="text-muted-foreground"
                       >
-                        Cancel
+                        {t("actions.cancel")}
                       </Button>
                       <Button
                         size="sm"
@@ -2894,7 +3114,7 @@ ${(report.sections && report.sections.length > 0) ? `
                         ) : (
                           <Plus className="h-3.5 w-3.5 mr-1" />
                         )}
-                        Add Rule
+                        {st("firewall.addRule")}
                       </Button>
                     </div>
                   </div>
@@ -2906,12 +3126,12 @@ ${(report.sections && report.sections.length > 0) ? `
                     {/* Table header */}
                     <div className="hidden sm:grid grid-cols-[2rem_4.5rem_2rem_3rem_5rem_1fr_3.5rem_2rem] gap-2 px-3 py-2 bg-muted/50 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider items-center">
                       <span />
-                      <span>Action</span>
+                      <span>{st("firewall.fields.action")}</span>
                       <span />
-                      <span>Proto</span>
-                      <span>Port</span>
-                      <span>Source</span>
-                      <span>Level</span>
+                      <span>{st("firewall.fields.proto")}</span>
+                      <span>{st("firewall.fields.port")}</span>
+                      <span>{st("firewall.fields.source")}</span>
+                      <span>{st("firewall.fields.level")}</span>
                       <span />
                     </div>
 
@@ -2988,7 +3208,7 @@ ${(report.sections && report.sections.length > 0) ? `
                                   <div className="py-3 space-y-3">
                                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                                       <div>
-                                        <Label className="text-[10px] text-muted-foreground uppercase">Direction</Label>
+                                        <Label className="text-[10px] text-muted-foreground uppercase">{st("firewall.fields.direction")}</Label>
                                         <select value={editRule.direction} onChange={(e) => setEditRule({ ...editRule, direction: e.target.value })}
                                           className="w-full h-8 text-xs rounded-md border border-border bg-background px-2 mt-0.5">
                                           <option value="IN">IN</option>
@@ -2996,7 +3216,7 @@ ${(report.sections && report.sections.length > 0) ? `
                                         </select>
                                       </div>
                                       <div>
-                                        <Label className="text-[10px] text-muted-foreground uppercase">Action</Label>
+                                        <Label className="text-[10px] text-muted-foreground uppercase">{st("firewall.fields.action")}</Label>
                                         <select value={editRule.action} onChange={(e) => setEditRule({ ...editRule, action: e.target.value })}
                                           className="w-full h-8 text-xs rounded-md border border-border bg-background px-2 mt-0.5">
                                           <option value="ACCEPT">ACCEPT</option>
@@ -3005,7 +3225,7 @@ ${(report.sections && report.sections.length > 0) ? `
                                         </select>
                                       </div>
                                       <div>
-                                        <Label className="text-[10px] text-muted-foreground uppercase">Protocol</Label>
+                                        <Label className="text-[10px] text-muted-foreground uppercase">{st("firewall.fields.protocol")}</Label>
                                         <select value={editRule.protocol} onChange={(e) => setEditRule({ ...editRule, protocol: e.target.value })}
                                           className="w-full h-8 text-xs rounded-md border border-border bg-background px-2 mt-0.5">
                                           <option value="tcp">TCP</option>
@@ -3014,40 +3234,40 @@ ${(report.sections && report.sections.length > 0) ? `
                                         </select>
                                       </div>
                                       <div>
-                                        <Label className="text-[10px] text-muted-foreground uppercase">Port</Label>
+                                        <Label className="text-[10px] text-muted-foreground uppercase">{st("firewall.fields.port")}</Label>
                                         <Input value={editRule.dport} onChange={(e) => setEditRule({ ...editRule, dport: e.target.value })}
-                                          placeholder="e.g. 80,443" className="h-8 text-xs mt-0.5" />
+                                          placeholder={st("firewall.placeholders.shortPort")} className="h-8 text-xs mt-0.5" />
                                       </div>
                                     </div>
                                     <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                                       <div>
-                                        <Label className="text-[10px] text-muted-foreground uppercase">Source</Label>
+                                        <Label className="text-[10px] text-muted-foreground uppercase">{st("firewall.fields.source")}</Label>
                                         <Input value={editRule.source} onChange={(e) => setEditRule({ ...editRule, source: e.target.value })}
-                                          placeholder="IP or CIDR" className="h-8 text-xs mt-0.5" />
+                                          placeholder={st("firewall.placeholders.ipOrCidr")} className="h-8 text-xs mt-0.5" />
                                       </div>
                                       <div>
-                                        <Label className="text-[10px] text-muted-foreground uppercase">Interface</Label>
+                                        <Label className="text-[10px] text-muted-foreground uppercase">{st("firewall.fields.interface")}</Label>
                                         <select value={editRule.iface} onChange={(e) => setEditRule({ ...editRule, iface: e.target.value })}
                                           className="w-full h-8 text-xs rounded-md border border-border bg-background px-2 mt-0.5">
-                                          <option value="">Any</option>
+                                          <option value="">{st("firewall.any")}</option>
                                           {networkInterfaces.map((iface) => (
                                             <option key={iface.name} value={iface.name}>
-                                              {iface.name} ({iface.type})
+                                              {iface.name} ({interfaceTypeLabel(iface.type)})
                                             </option>
                                           ))}
                                         </select>
                                       </div>
                                       <div className="col-span-2 sm:col-span-1">
-                                        <Label className="text-[10px] text-muted-foreground uppercase">Comment</Label>
+                                        <Label className="text-[10px] text-muted-foreground uppercase">{st("firewall.fields.comment")}</Label>
                                         <Input value={editRule.comment} onChange={(e) => setEditRule({ ...editRule, comment: e.target.value })}
-                                          placeholder="Description" className="h-8 text-xs mt-0.5" />
+                                          placeholder={st("firewall.placeholders.description")} className="h-8 text-xs mt-0.5" />
                                       </div>
                                     </div>
                                     <div className="flex items-center justify-end gap-2 pt-1">
                                       <Button variant="ghost" size="sm"
                                         onClick={(e) => { e.stopPropagation(); setEditingRuleKey(null) }}
                                         className="h-7 text-xs text-muted-foreground">
-                                        <X className="h-3 w-3 mr-1" /> Cancel
+                                        <X className="h-3 w-3 mr-1" /> {t("actions.cancel")}
                                       </Button>
                                       <Button variant="outline" size="sm"
                                         onClick={(e) => { e.stopPropagation(); handleSaveEditRule(rule.rule_index, rule.source_file || "host") }}
@@ -3058,7 +3278,7 @@ ${(report.sections && report.sections.length > 0) ? `
                                         ) : (
                                           <Check className="h-3 w-3 mr-1" />
                                         )}
-                                        Save Changes
+                                        {st("firewall.saveChanges")}
                                       </Button>
                                     </div>
                                   </div>
@@ -3067,40 +3287,40 @@ ${(report.sections && report.sections.length > 0) ? `
                                   <>
                                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 py-3">
                                       <div>
-                                        <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-0.5">Direction</p>
+                                        <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-0.5">{st("firewall.fields.direction")}</p>
                                         <p className="text-xs font-medium flex items-center gap-1">
                                           {direction === "IN" ? <ArrowDownLeft className="h-3 w-3 text-blue-400" /> : <ArrowUpRight className="h-3 w-3 text-amber-400" />}
-                                          {direction === "IN" ? "Incoming" : "Outgoing"}
+                                          {direction === "IN" ? st("firewall.incoming") : st("firewall.outgoing")}
                                         </p>
                                       </div>
                                       <div>
-                                        <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-0.5">Protocol</p>
-                                        <p className="text-xs font-medium font-mono">{rule.p || "any"}</p>
+                                        <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-0.5">{st("firewall.fields.protocol")}</p>
+                                        <p className="text-xs font-medium font-mono">{rule.p || st("firewall.anyLower")}</p>
                                       </div>
                                       <div>
-                                        <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-0.5">Port</p>
-                                        <p className="text-xs font-medium font-mono">{rule.dport || "any"}</p>
+                                        <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-0.5">{st("firewall.fields.port")}</p>
+                                        <p className="text-xs font-medium font-mono">{rule.dport || st("firewall.anyLower")}</p>
                                       </div>
                                       <div>
-                                        <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-0.5">Source</p>
-                                        <p className="text-xs font-medium font-mono">{rule.source || "any"}</p>
+                                        <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-0.5">{st("firewall.fields.source")}</p>
+                                        <p className="text-xs font-medium font-mono">{rule.source || st("firewall.anyLower")}</p>
                                       </div>
                                       {rule.i && (
                                         <div>
-                                          <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-0.5">Interface</p>
+                                          <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-0.5">{st("firewall.fields.interface")}</p>
                                           <p className="text-xs font-medium font-mono">{rule.i}</p>
                                         </div>
                                       )}
                                       <div>
-                                        <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-0.5">Scope</p>
+                                        <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-0.5">{st("firewall.fields.scope")}</p>
                                         <p className="text-xs font-medium flex items-center gap-1">
                                           {rule.source_file === "cluster" ? <Globe className="h-3 w-3 text-blue-400" /> : <Shield className="h-3 w-3 text-purple-400" />}
-                                          {rule.source_file === "cluster" ? "Cluster" : "Host"}
+                                          {rule.source_file === "cluster" ? st("firewall.cluster") : st("firewall.host")}
                                         </p>
                                       </div>
                                       {comment && (
                                         <div className="col-span-2">
-                                          <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-0.5">Comment</p>
+                                          <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-0.5">{st("firewall.fields.comment")}</p>
                                           <p className="text-xs text-muted-foreground">{comment}</p>
                                         </div>
                                       )}
@@ -3115,7 +3335,7 @@ ${(report.sections && report.sections.length > 0) ? `
                                           className="h-7 text-xs text-blue-400 border-blue-400/30 hover:bg-blue-400/10 bg-transparent"
                                         >
                                           <Pencil className="h-3 w-3 mr-1" />
-                                          Edit
+                                          {t("actions.edit")}
                                         </Button>
                                         <Button
                                           variant="outline"
@@ -3129,7 +3349,7 @@ ${(report.sections && report.sections.length > 0) ? `
                                           ) : (
                                             <Trash2 className="h-3 w-3 mr-1" />
                                           )}
-                                          Delete
+                                          {st("values.delete")}
                                         </Button>
                                       </div>
                                     </div>
@@ -3145,8 +3365,8 @@ ${(report.sections && report.sections.length > 0) ? `
                 ) : (
                   <div className="text-center py-6 border border-dashed border-border rounded-lg">
                     <Shield className="h-8 w-8 text-muted-foreground/30 mx-auto mb-2" />
-                    <p className="text-sm text-muted-foreground">No firewall rules configured yet</p>
-                    <p className="text-xs text-muted-foreground/60 mt-1">Click "Add Rule" above to create your first rule</p>
+                    <p className="text-sm text-muted-foreground">{st("firewall.noRules")}</p>
+                    <p className="text-xs text-muted-foreground/60 mt-1">{st("firewall.noRulesHint")}</p>
                   </div>
                 )}
               </div>
@@ -3176,7 +3396,7 @@ ${(report.sections && report.sections.length > 0) ? `
                     className="h-7 px-2 text-xs text-muted-foreground hover:text-foreground"
                   >
                     <RefreshCw className="h-3 w-3 mr-1" />
-                    Refresh
+                    {t("actions.refresh")}
                   </Button>
                 )}
                 <Button
@@ -3191,13 +3411,13 @@ ${(report.sections && report.sections.length > 0) ? `
                   ) : (
                     <Trash2 className="h-4 w-4 mr-2" />
                   )}
-                  Uninstall
+                  {st("values.uninstall")}
                 </Button>
               </div>
             )}
           </div>
           <CardDescription>
-            Intrusion prevention system that bans IPs after repeated failed login attempts
+            {st("fail2ban.description")}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -3213,8 +3433,8 @@ ${(report.sections && report.sections.length > 0) ? `
   <Bug className="h-5 w-5 text-gray-500" />
   </div>
   <div>
-  <p className="font-medium">Fail2Ban Not Installed</p>
-  <p className="text-sm text-muted-foreground">Protect SSH, Proxmox web interface, and ProxMenux Monitor from brute force attacks</p>
+  <p className="font-medium">{st("fail2ban.notInstalled")}</p>
+  <p className="text-sm text-muted-foreground">{st("fail2ban.notInstalledDescription")}</p>
   </div>
   </div>
 
@@ -3222,14 +3442,14 @@ ${(report.sections && report.sections.length > 0) ? `
                 <div className="flex items-start gap-3">
                   <Info className="h-5 w-5 text-blue-500 flex-shrink-0 mt-0.5" />
                   <div className="space-y-2 text-sm text-blue-400">
-                    <p className="font-medium">What Fail2Ban will configure:</p>
+                    <p className="font-medium">{st("fail2ban.configureTitle")}</p>
                     <ul className="list-disc list-inside space-y-1 text-blue-300">
-                      <li>SSH protection (max 2 retries, 9h ban)</li>
-                      <li>Proxmox web interface protection (port 8006, max 3 retries, 1h ban)</li>
-                      <li>ProxMenux Monitor protection (port 8008 + reverse proxy, max 3 retries, 1h ban)</li>
-                      <li>Global settings with nftables backend</li>
+                      <li>{st("fail2ban.configureSsh")}</li>
+                      <li>{st("fail2ban.configureProxmox")}</li>
+                      <li>{st("fail2ban.configureMonitor")}</li>
+                      <li>{st("fail2ban.configureGlobal")}</li>
                     </ul>
-                    <p className="text-xs text-blue-300/70 mt-1">All settings can be customized after installation. You can change retries, ban time, or set permanent bans.</p>
+                    <p className="text-xs text-blue-300/70 mt-1">{st("fail2ban.customizeAfterInstall")}</p>
                   </div>
                 </div>
               </div>
@@ -3239,7 +3459,7 @@ ${(report.sections && report.sections.length > 0) ? `
                 className="bg-red-600 hover:bg-red-700 text-white"
               >
                 <Download className="h-4 w-4 mr-2" />
-                Install and Configure Fail2Ban
+                {st("fail2ban.installConfigure")}
               </Button>
             </div>
           ) : (
@@ -3254,58 +3474,167 @@ ${(report.sections && report.sections.length > 0) ? `
                   <div>
                     <p className="font-medium">{fail2banInfo.version}</p>
                     <p className="text-sm text-muted-foreground">
-                      {fail2banInfo.active ? "Service is running" : "Service is not running"}
+                      {fail2banInfo.active ? st("values.serviceRunning") : st("values.serviceNotRunning")}
                     </p>
                   </div>
                 </div>
                 <div className={`px-3 py-1 rounded-full text-sm font-medium ${fail2banInfo.active ? "bg-green-500/10 text-green-500" : "bg-yellow-500/10 text-yellow-500"}`}>
-                  {fail2banInfo.active ? "Active" : "Inactive"}
+                  {fail2banInfo.active ? st("values.active") : st("values.inactive")}
                 </div>
               </div>
 
               {fail2banInfo.active && f2bDetails && (
                 <>
-                  {/* Summary stats - inline */}
-                  <div className="flex items-center gap-4 flex-wrap px-3 py-2.5 bg-muted/30 rounded-lg border border-border">
-                    <div className="flex items-center gap-1.5 text-sm">
-                      <span className="text-muted-foreground">Jails:</span>
-                      <span className="font-bold">{f2bDetails.jails.length}</span>
+                  {/* Global Fail2Ban allowlist */}
+                  <div className="rounded-lg border border-green-500/15 overflow-hidden shadow-sm">
+                    <div className="flex items-start justify-between gap-3 p-3 bg-gradient-to-r from-green-500/[0.07] via-green-500/[0.03] to-transparent border-l-2 border-green-500/60">
+                      <div className="flex items-start gap-2.5 min-w-0">
+                        <div className="w-8 h-8 rounded-md bg-green-500/10 flex items-center justify-center shrink-0">
+                          <Network className="h-4 w-4 text-green-500" />
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-sm font-semibold">{st("fail2ban.trustedNetworks.title")}</p>
+                          <p className="text-xs text-muted-foreground mt-0.5">{st("fail2ban.trustedNetworks.description")}</p>
+                        </div>
+                      </div>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => { setF2bShowTrustedForm(!f2bShowTrustedForm); setF2bTrustedNotice(null) }}
+                        className="h-7 text-xs text-orange-500 border-orange-500/30 hover:bg-orange-500/10 bg-transparent shrink-0"
+                      >
+                        <Plus className="h-3 w-3 mr-1" />
+                        {st("fail2ban.trustedNetworks.addRule")}
+                      </Button>
                     </div>
-                    <div className="w-px h-4 bg-border" />
-                    <div className="flex items-center gap-1.5 text-sm">
-                      <span className="text-muted-foreground">Banned IPs:</span>
-                      <span className={`font-bold ${f2bDetails.jails.reduce((a, j) => a + j.currently_banned, 0) > 0 ? "text-red-500" : "text-green-500"}`}>
-                        {f2bDetails.jails.reduce((a, j) => a + j.currently_banned, 0)}
-                      </span>
+
+                    {f2bTrustedNotice && (
+                      <div className={`mx-3 mt-3 rounded-md border px-3 py-2 text-xs ${f2bTrustedNotice.type === "success" ? "border-green-500/20 bg-green-500/10 text-green-500" : "border-red-500/20 bg-red-500/10 text-red-500"}`}>
+                        {f2bTrustedNotice.text}
+                      </div>
+                    )}
+
+                    {f2bShowTrustedForm && (
+                      <div className="m-3 rounded-lg border border-border bg-muted/20 p-3 space-y-3">
+                        <div>
+                          <Label className="text-[10px] text-muted-foreground uppercase">{st("fail2ban.trustedNetworks.addressOrNetwork")}</Label>
+                          <Input
+                            value={f2bTrustedInput}
+                            onChange={(event) => setF2bTrustedInput(event.target.value)}
+                            onKeyDown={(event) => { if (event.key === "Enter") { event.preventDefault(); handleAddTrustedNetwork() } }}
+                            placeholder={st("fail2ban.trustedNetworks.placeholder")}
+                            className="h-8 font-mono text-xs mt-1"
+                          />
+                          <p className="mt-1.5 text-[10px] text-muted-foreground">{st("fail2ban.trustedNetworks.example")}</p>
+                        </div>
+                        <div className="flex flex-wrap items-center justify-between gap-2">
+                          {f2bDetectedIp && !f2bTrustedNetworks.some((entry) => entry.value === f2bDetectedIp) ? (
+                            <Button variant="ghost" size="sm" onClick={() => setF2bTrustedInput(f2bDetectedIp)} className="h-7 text-xs text-blue-400">
+                              {st("fail2ban.trustedNetworks.useCurrent", { ip: f2bDetectedIp })}
+                            </Button>
+                          ) : <span />}
+                          <div className="flex gap-2 ml-auto">
+                            <Button variant="ghost" size="sm" onClick={() => { setF2bShowTrustedForm(false); setF2bTrustedInput("") }} className="h-7 text-xs text-muted-foreground">
+                              {t("actions.cancel")}
+                            </Button>
+                            <Button size="sm" onClick={() => handleAddTrustedNetwork()} disabled={f2bSavingTrusted || !f2bTrustedInput.trim()} className="h-7 text-xs bg-orange-600 hover:bg-orange-700 text-white">
+                              {f2bSavingTrusted ? <span className="h-3 w-3 animate-spin rounded-full border-2 border-white border-t-transparent mr-1" /> : <Plus className="h-3 w-3 mr-1" />}
+                              {st("fail2ban.trustedNetworks.add")}
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    <div className="hidden sm:grid grid-cols-[1.1fr_0.65fr_2fr_1.5fr] gap-3 border-t border-border bg-muted/20 px-3 py-2 text-[9px] font-medium uppercase tracking-wider text-muted-foreground">
+                      <span>{st("fail2ban.trustedNetworks.columns.status")}</span>
+                      <span>{st("fail2ban.trustedNetworks.columns.type")}</span>
+                      <span>{st("fail2ban.trustedNetworks.columns.address")}</span>
+                      <span className="text-right">{st("fail2ban.trustedNetworks.columns.actions")}</span>
                     </div>
-                    <div className="w-px h-4 bg-border" />
-                    <div className="flex items-center gap-1.5 text-sm">
-                      <span className="text-muted-foreground">Total Bans:</span>
-                      <span className="font-bold text-orange-500">
-                        {f2bDetails.jails.reduce((a, j) => a + j.total_banned, 0)}
-                      </span>
+
+                    <div className="divide-y divide-border border-t border-border sm:border-t-0">
+                      {f2bTrustedNetworks.map((entry) => (
+                        <div key={entry.value} className="px-3 py-2.5 transition-colors hover:bg-muted/20">
+                          {f2bEditingTrusted === entry.value ? (
+                            <div className="flex flex-col sm:flex-row gap-2 items-end">
+                              <div className="flex-1 w-full">
+                                <Label className="text-[10px] text-muted-foreground uppercase">{st("fail2ban.trustedNetworks.addressOrNetwork")}</Label>
+                                <Input value={f2bTrustedEditInput} onChange={(event) => setF2bTrustedEditInput(event.target.value)} className="h-8 font-mono text-xs mt-1" />
+                              </div>
+                              <Button variant="ghost" size="sm" onClick={() => setF2bEditingTrusted(null)} className="h-7 text-xs text-muted-foreground">{t("actions.cancel")}</Button>
+                              <Button variant="outline" size="sm" onClick={handleUpdateTrustedNetwork} disabled={f2bSavingTrusted || !f2bTrustedEditInput.trim()} className="h-7 text-xs text-green-500 border-green-500/30 hover:bg-green-500/10 bg-transparent">
+                                <Check className="h-3 w-3 mr-1" />{st("fail2ban.trustedNetworks.save")}
+                              </Button>
+                            </div>
+                          ) : (
+                            <div className="grid grid-cols-1 sm:grid-cols-[1.1fr_0.65fr_2fr_1.5fr] gap-2 sm:gap-3 items-center">
+                              <div className="flex items-center gap-2">
+                                <span className={`inline-flex items-center rounded px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide ${entry.protected ? "bg-slate-500/15 text-slate-400 border border-slate-500/20" : "bg-green-500/15 text-green-500 border border-green-500/20"}`}>
+                                  {entry.protected ? st("fail2ban.trustedNetworks.system") : st("fail2ban.trustedNetworks.trusted")}
+                                </span>
+                              </div>
+                              <div>
+                                <span className={`inline-flex rounded px-1.5 py-0.5 text-[9px] font-bold uppercase ${entry.value.includes("/") ? "bg-purple-500/15 text-purple-400" : "bg-blue-500/15 text-blue-400"}`}>
+                                  {entry.value.includes("/") ? "CIDR" : "IP"}
+                                </span>
+                              </div>
+                              <code className="text-xs text-muted-foreground font-mono break-all">{entry.value}</code>
+                              <div className="flex gap-2 sm:justify-end shrink-0">
+                                {!entry.protected ? (
+                                  <>
+                                  <Button variant="outline" size="sm" onClick={() => { setF2bEditingTrusted(entry.value); setF2bTrustedEditInput(entry.value); setF2bTrustedNotice(null) }} className="h-7 text-xs text-blue-400 border-blue-400/30 hover:bg-blue-400/10 bg-transparent">
+                                    <Pencil className="h-3 w-3 mr-1" />{st("fail2ban.trustedNetworks.edit")}
+                                  </Button>
+                                  <Button variant="outline" size="sm" onClick={() => handleRemoveTrustedNetwork(entry.value)} disabled={f2bRemovingTrusted === entry.value} className="h-7 text-xs text-red-500 border-red-500/30 hover:bg-red-500/10 bg-transparent">
+                                    {f2bRemovingTrusted === entry.value ? <span className="h-3 w-3 animate-spin rounded-full border-2 border-current border-t-transparent mr-1" /> : <Trash2 className="h-3 w-3 mr-1" />}
+                                    {st("fail2ban.trustedNetworks.delete")}
+                                  </Button>
+                                  </>
+                                ) : (
+                                  <span className="inline-flex items-center text-[10px] text-muted-foreground"><Lock className="h-3 w-3 mr-1" />{st("fail2ban.trustedNetworks.required")}</span>
+                                )}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      ))}
                     </div>
-                    <div className="w-px h-4 bg-border" />
-                    <div className="flex items-center gap-1.5 text-sm">
-                      <span className="text-muted-foreground">Failed Attempts:</span>
-                      <span className="font-bold text-yellow-500">
-                        {f2bDetails.jails.reduce((a, j) => a + j.total_failed, 0)}
-                      </span>
+
+                    <div className="flex items-start gap-2 border-t border-border bg-amber-500/5 px-3 py-2 text-[11px] text-amber-500">
+                      <AlertTriangle className="h-3.5 w-3.5 mt-0.5 shrink-0" />
+                      <p>{st("fail2ban.trustedNetworks.warning")}</p>
                     </div>
                   </div>
 
-                  {/* Missing jails warning */}
+                  {/* Summary stats */}
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                    <div className="p-3 bg-muted/50 rounded-lg border border-border text-center">
+                      <p className="text-lg font-bold text-foreground">{f2bDetails.jails.length}</p>
+                      <p className="text-[10px] text-muted-foreground uppercase tracking-wider">{st("fail2ban.jails")}</p>
+                    </div>
+                    <div className={`p-3 rounded-lg border text-center ${f2bDetails.jails.reduce((a, j) => a + j.currently_banned, 0) > 0 ? "bg-red-500/5 border-red-500/20" : "bg-muted/50 border-border"}`}>
+                      <p className={`text-lg font-bold ${f2bDetails.jails.reduce((a, j) => a + j.currently_banned, 0) > 0 ? "text-red-500" : "text-foreground"}`}>
+                        {f2bDetails.jails.reduce((a, j) => a + j.currently_banned, 0)}
+                      </p>
+                      <p className={`text-[10px] uppercase tracking-wider ${f2bDetails.jails.reduce((a, j) => a + j.currently_banned, 0) > 0 ? "text-red-500/70" : "text-muted-foreground"}`}>{st("fail2ban.bannedIps")}</p>
+                    </div>
+                    <div className="p-3 bg-orange-500/5 rounded-lg border border-orange-500/20 text-center">
+                      <p className="text-lg font-bold text-orange-500">{f2bDetails.jails.reduce((a, j) => a + j.total_banned, 0)}</p>
+                      <p className="text-[10px] text-orange-500/70 uppercase tracking-wider">{st("fail2ban.totalBans")}</p>
+                    </div>
+                    <div className="p-3 bg-yellow-500/5 rounded-lg border border-yellow-500/20 text-center">
+                      <p className="text-lg font-bold text-yellow-500">{f2bDetails.jails.reduce((a, j) => a + j.total_failed, 0)}</p>
+                      <p className="text-[10px] text-yellow-500/70 uppercase tracking-wider">{st("fail2ban.failedAttempts")}</p>
+                    </div>
+                  </div>
+
+                  {/* Missing protections warning */}
                   {(() => {
                     const expectedJails = ["sshd", "proxmox", "proxmenux"]
                     const currentNames = f2bDetails.jails.map(j => j.name.toLowerCase())
                     const missing = expectedJails.filter(j => !currentNames.includes(j))
                     if (missing.length === 0) return null
-
-                    const jailLabels: Record<string, string> = {
-                      sshd: "SSH (sshd)",
-                      proxmox: "Proxmox UI (port 8006)",
-                      proxmenux: "ProxMenux Monitor (port 8008)",
-                    }
 
                     return (
                       <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-lg p-4">
@@ -3313,10 +3642,10 @@ ${(report.sections && report.sections.length > 0) ? `
                           <div className="flex items-start gap-3">
                             <AlertTriangle className="h-5 w-5 text-yellow-500 flex-shrink-0 mt-0.5" />
                             <div className="space-y-1">
-                              <p className="text-sm font-medium text-yellow-500">Missing protections detected</p>
+                              <p className="text-sm font-medium text-yellow-500">{st("fail2ban.missingProtectionsTitle")}</p>
                               <p className="text-xs text-yellow-400/80">
-                                The following jails are not configured:{" "}
-                                {missing.map(j => jailLabels[j] || j).join(", ")}
+                                {st("fail2ban.missingProtectionsBefore")}{" "}
+                                {missing.map(j => fail2banProtectionLabel(j)).join(", ")}
                               </p>
                             </div>
                           </div>
@@ -3331,7 +3660,7 @@ ${(report.sections && report.sections.length > 0) ? `
                             ) : (
                               <Shield className="h-3.5 w-3.5 mr-1.5" />
                             )}
-                            Apply Missing Jails
+                            {st("fail2ban.applyMissingJails")}
                           </Button>
                         </div>
                       </div>
@@ -3349,7 +3678,7 @@ ${(report.sections && report.sections.length > 0) ? `
                       }`}
                     >
                       <Shield className="h-3.5 w-3.5" />
-                      Jails & Banned IPs
+                      {st("fail2ban.tabs.jails")}
                     </button>
                     <button
                       onClick={() => setF2bActiveTab("activity")}
@@ -3360,40 +3689,40 @@ ${(report.sections && report.sections.length > 0) ? `
                       }`}
                     >
                       <Clock className="h-3.5 w-3.5" />
-                      Recent Activity
+                      {st("fail2ban.tabs.activity")}
                     </button>
                   </div>
 
-                  {/* JAILS TAB */}
+                  {/* PROTECTIONS TAB */}
                   {f2bActiveTab === "jails" && (
                     <div className="space-y-3">
                       {f2bDetails.jails.map((jail) => (
                         <div key={jail.name} className="border border-border rounded-lg overflow-hidden">
-                          {/* Jail header */}
+                          {/* Protection header */}
                           <div className="flex items-center justify-between p-3 bg-muted/40">
                             <div className="flex items-center gap-2.5">
                               <div className={`w-2.5 h-2.5 rounded-full ${jail.currently_banned > 0 ? "bg-red-500 animate-pulse" : "bg-green-500"}`} />
-                              <span className="font-semibold text-sm">{jail.name}</span>
+                              <span className="font-semibold text-sm">{fail2banProtectionLabel(jail.name)}</span>
+                              {fail2banProtectionLabel(jail.name) !== jail.name && (
+                                <span className="text-[10px] text-muted-foreground font-mono">{jail.name}</span>
+                              )}
                               <span className="text-[10px] text-muted-foreground">
-                                {jail.name === "sshd" ? "SSH Remote Access" :
-                                 jail.name === "proxmox" ? "Proxmox UI :8006" :
-                                 jail.name === "proxmenux" ? "ProxMenux Monitor :8008" :
-                                 ""}
+                                {fail2banProtectionDescription(jail.name)}
                               </span>
                               {parseInt(jail.bantime, 10) === -1 && (
-                                <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-red-500/10 text-red-500">PERMANENT BAN</span>
+                                <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-red-500/10 text-red-500">{st("fail2ban.permanentBan")}</span>
                               )}
                             </div>
                             <div className="flex items-center gap-2">
                               <div className="hidden sm:flex items-center gap-3 text-xs text-muted-foreground mr-2">
-                                <span title="Max retries before ban">
-                                  Retries: <span className="text-foreground font-medium">{jail.maxretry}</span>
+                                <span title={st("fail2ban.maxRetriesTitle")}>
+                                  {st("fail2ban.retries")}: <span className="text-foreground font-medium">{jail.maxretry}</span>
                                 </span>
-                                <span title="Ban duration">
-                                  Ban: <span className="text-foreground font-medium">{parseInt(jail.bantime, 10) === -1 ? "Permanent" : formatBanTime(jail.bantime)}</span>
+                                <span title={st("fail2ban.banDurationTitle")}>
+                                  {st("fail2ban.ban")}: <span className="text-foreground font-medium">{parseInt(jail.bantime, 10) === -1 ? st("values.permanent") : formatBanTime(jail.bantime)}</span>
                                 </span>
-                                <span title="Time window for counting failures">
-                                  Window: <span className="text-foreground font-medium">{formatBanTime(jail.findtime)}</span>
+                                <span title={st("fail2ban.findTimeTitle")}>
+                                  {st("fail2ban.window")}: <span className="text-foreground font-medium">{formatBanTime(jail.findtime)}</span>
                                 </span>
                               </div>
                               <Button
@@ -3401,43 +3730,45 @@ ${(report.sections && report.sections.length > 0) ? `
                                 size="sm"
                                 onClick={() => f2bEditingJail === jail.name ? setF2bEditingJail(null) : openJailConfig(jail)}
                                 className={`h-7 w-7 p-0 ${f2bEditingJail === jail.name ? "text-red-500 bg-red-500/10" : "text-muted-foreground hover:text-foreground"}`}
-                                title="Configure jail settings"
+                                title={st("fail2ban.configureJailSettings")}
                               >
                                 <Settings className="h-3.5 w-3.5" />
                               </Button>
                             </div>
                           </div>
 
-                          {/* Jail config editor */}
+                          {/* Protection config editor */}
                           {f2bEditingJail === jail.name && (
                             <div className="border-t border-border bg-muted/20 p-4 space-y-4">
                               <div className="flex items-center gap-2 mb-1">
                                 <Settings className="h-4 w-4 text-red-500" />
-                                <p className="text-sm font-semibold text-red-500">Configure {jail.name}</p>
+                                <p className="text-sm font-semibold text-red-500">
+                                  {st("fail2ban.configureJail", { jail: fail2banProtectionLabel(jail.name) })}
+                                </p>
                               </div>
 
                               <div className="grid gap-3 sm:grid-cols-3">
                                 <div className="space-y-1.5">
-                                  <Label className="text-xs text-muted-foreground">Max Retries</Label>
+                                  <Label className="text-xs text-muted-foreground">{st("fail2ban.maxRetries")}</Label>
                                   <Input
                                     type="number"
                                     min="1"
                                     value={f2bJailConfig.maxretry}
                                     onChange={(e) => setF2bJailConfig({...f2bJailConfig, maxretry: e.target.value})}
                                     className="h-9 text-sm"
-                                    placeholder="e.g. 3"
+                                    placeholder={st("fail2ban.placeholders.maxRetries")}
                                   />
-                                  <p className="text-[10px] text-muted-foreground">Failed attempts before ban</p>
+                                  <p className="text-[10px] text-muted-foreground">{st("fail2ban.failedAttemptsBeforeBan")}</p>
                                 </div>
                                 <div className="space-y-1.5">
-                                  <Label className="text-xs text-muted-foreground">Ban Time (seconds)</Label>
+                                  <Label className="text-xs text-muted-foreground">{st("fail2ban.banTimeSeconds")}</Label>
                                   <Input
                                     type="number"
                                     min="60"
                                     value={f2bJailConfig.permanent ? "" : f2bJailConfig.bantime}
                                     onChange={(e) => setF2bJailConfig({...f2bJailConfig, bantime: e.target.value, permanent: false})}
                                     className="h-9 text-sm"
-                                    placeholder={f2bJailConfig.permanent ? "Permanent" : "e.g. 3600 = 1h"}
+                                    placeholder={f2bJailConfig.permanent ? st("values.permanent") : st("fail2ban.placeholders.banTime")}
                                     disabled={f2bJailConfig.permanent}
                                   />
                                   <div className="flex items-center gap-2 mt-1">
@@ -3449,28 +3780,28 @@ ${(report.sections && report.sections.length > 0) ? `
                                       className="rounded border-border"
                                     />
                                     <label htmlFor={`permanent-${jail.name}`} className="text-[10px] text-red-500 font-medium cursor-pointer">
-                                      Permanent ban (never expires)
+                                      {st("fail2ban.permanentBanNeverExpires")}
                                     </label>
                                   </div>
                                 </div>
                                 <div className="space-y-1.5">
-                                  <Label className="text-xs text-muted-foreground">Find Time (seconds)</Label>
+                                  <Label className="text-xs text-muted-foreground">{st("fail2ban.findTimeSeconds")}</Label>
                                   <Input
                                     type="number"
                                     min="60"
                                     value={f2bJailConfig.findtime}
                                     onChange={(e) => setF2bJailConfig({...f2bJailConfig, findtime: e.target.value})}
                                     className="h-9 text-sm"
-                                    placeholder="e.g. 600 = 10m"
+                                    placeholder={st("fail2ban.placeholders.findTime")}
                                   />
-                                  <p className="text-[10px] text-muted-foreground">Time window for counting retries</p>
+                                  <p className="text-[10px] text-muted-foreground">{st("fail2ban.timeWindowHint")}</p>
                                 </div>
                               </div>
 
                               <div className="bg-blue-500/10 border border-blue-500/20 rounded p-2.5 flex items-start gap-2">
                                 <Info className="h-4 w-4 text-blue-500 flex-shrink-0 mt-0.5" />
                                 <p className="text-[11px] text-blue-400">
-                                  Common values: 600s = 10min, 3600s = 1h, 32400s = 9h, 86400s = 24h. Set ban to permanent if you want blocked IPs to stay blocked until you manually unban them.
+                                  {st("fail2ban.commonValuesHint")}
                                 </p>
                               </div>
 
@@ -3481,7 +3812,7 @@ ${(report.sections && report.sections.length > 0) ? `
                                   onClick={() => setF2bEditingJail(null)}
                                   className="text-muted-foreground"
                                 >
-                                  Cancel
+                                  {t("actions.cancel")}
                                 </Button>
                                 <Button
                                   size="sm"
@@ -3494,7 +3825,7 @@ ${(report.sections && report.sections.length > 0) ? `
                                   ) : (
                                     <CheckCircle className="h-3.5 w-3.5 mr-1" />
                                   )}
-                                  Save Configuration
+                                  {st("fail2ban.saveConfiguration")}
                                 </Button>
                               </div>
                             </div>
@@ -3502,42 +3833,42 @@ ${(report.sections && report.sections.length > 0) ? `
 
                           {/* Mobile config summary (visible only on small screens) */}
                           <div className="sm:hidden flex items-center justify-around p-2 bg-muted/20 border-t border-border text-xs text-muted-foreground">
-                            <span>Retries: <span className="text-foreground font-medium">{jail.maxretry}</span></span>
-                            <span>Ban: <span className="text-foreground font-medium">{parseInt(jail.bantime, 10) === -1 ? "Perm" : formatBanTime(jail.bantime)}</span></span>
-                            <span>Window: <span className="text-foreground font-medium">{formatBanTime(jail.findtime)}</span></span>
+                            <span>{st("fail2ban.retries")}: <span className="text-foreground font-medium">{jail.maxretry}</span></span>
+                            <span>{st("fail2ban.ban")}: <span className="text-foreground font-medium">{parseInt(jail.bantime, 10) === -1 ? st("values.perm") : formatBanTime(jail.bantime)}</span></span>
+                            <span>{st("fail2ban.window")}: <span className="text-foreground font-medium">{formatBanTime(jail.findtime)}</span></span>
                           </div>
 
-                          {/* Jail stats - inline */}
+                          {/* Protection stats - inline */}
                           <div className="flex items-center gap-4 flex-wrap px-3 py-2 border-t border-border">
                             <div className="flex items-center gap-1.5 text-sm">
-                              <span className="text-muted-foreground">Banned:</span>
+                              <span className="text-muted-foreground">{st("fail2ban.banned")}:</span>
                               <span className={`font-bold ${jail.currently_banned > 0 ? "text-red-500" : "text-green-500"}`}>
                                 {jail.currently_banned}
                               </span>
                             </div>
                             <div className="w-px h-4 bg-border" />
                             <div className="flex items-center gap-1.5 text-sm">
-                              <span className="text-muted-foreground">Total Bans:</span>
+                              <span className="text-muted-foreground">{st("fail2ban.totalBans")}:</span>
                               <span className="font-bold text-orange-500">{jail.total_banned}</span>
                             </div>
                             <div className="w-px h-4 bg-border" />
                             <div className="flex items-center gap-1.5 text-sm">
-                              <span className="text-muted-foreground">Failed Now:</span>
+                              <span className="text-muted-foreground">{st("fail2ban.failedNow")}:</span>
                               <span className="font-bold text-yellow-500">{jail.currently_failed}</span>
                             </div>
                             <div className="w-px h-4 bg-border" />
                             <div className="flex items-center gap-1.5 text-sm">
-                              <span className="text-muted-foreground">Total Failed:</span>
+                              <span className="text-muted-foreground">{st("fail2ban.totalFailed")}:</span>
                               <span className="font-bold text-muted-foreground">{jail.total_failed}</span>
                             </div>
                           </div>
 
-                          {/* Banned IPs list */}
+                          {/* Blocked IPs list */}
                           {jail.banned_ips.length > 0 && (
                             <div className="border-t border-border">
                               <div className="px-3 py-2 bg-red-500/5">
                                 <p className="text-xs font-semibold text-red-500 mb-2">
-                                  Banned IPs ({jail.banned_ips.length})
+                                  {st("fail2ban.bannedIpsWithCount", { count: jail.banned_ips.length })}
                                 </p>
                                 <div className="space-y-1.5">
                                   {jail.banned_ips.map((entry) => (
@@ -3552,7 +3883,7 @@ ${(report.sections && report.sections.length > 0) ? `
                                             ? "bg-orange-500/10 text-orange-400 border border-orange-500/20"
                                             : "bg-gray-500/10 text-gray-400 border border-gray-500/20"
                                         }`}>
-                                          {entry.type === "local" ? "LAN" : entry.type === "external" ? "External" : "Unknown"}
+                                          {entry.type === "local" ? "LAN" : entry.type === "external" ? st("values.external") : t("common.unknown")}
                                         </span>
                                       </div>
                                       <Button
@@ -3567,7 +3898,7 @@ ${(report.sections && report.sections.length > 0) ? `
                                         ) : (
                                           <>
                                             <ShieldCheck className="h-3 w-3 mr-1" />
-                                            Unban
+                                            {st("fail2ban.unban")}
                                           </>
                                         )}
                                       </Button>
@@ -3580,7 +3911,7 @@ ${(report.sections && report.sections.length > 0) ? `
 
                           {jail.currently_banned === 0 && (
                             <div className="px-3 py-2 border-t border-border text-center">
-                              <p className="text-xs text-muted-foreground">No IPs currently banned in this jail</p>
+                              <p className="text-xs text-muted-foreground">{st("fail2ban.noBannedIps")}</p>
                             </div>
                           )}
                         </div>
@@ -3588,7 +3919,7 @@ ${(report.sections && report.sections.length > 0) ? `
 
                       {f2bDetails.jails.length === 0 && (
                         <div className="text-center py-6 text-muted-foreground text-sm">
-                          No jails configured
+                          {st("fail2ban.noJails")}
                         </div>
                       )}
                     </div>
@@ -3599,7 +3930,7 @@ ${(report.sections && report.sections.length > 0) ? `
                     <div className="space-y-1.5 max-h-80 overflow-y-auto">
                       {f2bActivity.length === 0 ? (
                         <div className="text-center py-6 text-muted-foreground text-sm">
-                          No recent activity in the Fail2Ban log
+                          {st("fail2ban.noActivity")}
                         </div>
                       ) : (
                         f2bActivity.map((event, idx) => (
@@ -3614,10 +3945,10 @@ ${(report.sections && report.sections.length > 0) ? `
                               event.action === "unban" ? "bg-green-500/10 text-green-500" :
                               "bg-yellow-500/10 text-yellow-500"
                             }`}>
-                              {event.action}
+                              {fail2banActivityLabel(event.action)}
                             </div>
                             <code className="text-xs font-mono text-foreground flex-shrink-0">{event.ip}</code>
-                            <span className="text-xs text-muted-foreground">{event.jail}</span>
+                            <span className="text-xs text-muted-foreground">{fail2banProtectionLabel(event.jail)}</span>
                             <span className="text-[10px] text-muted-foreground/70 ml-auto flex-shrink-0">{event.timestamp}</span>
                           </div>
                         ))
@@ -3643,7 +3974,7 @@ ${(report.sections && report.sections.length > 0) ? `
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <Search className="h-5 w-5 text-cyan-500" />
-              <CardTitle>Lynis Security Audit</CardTitle>
+              <CardTitle>{st("lynis.title")}</CardTitle>
             </div>
             {lynisInfo?.installed && (
               <Button
@@ -3658,12 +3989,12 @@ ${(report.sections && report.sections.length > 0) ? `
                 ) : (
                   <Trash2 className="h-4 w-4 mr-2" />
                 )}
-                Uninstall
+                {st("values.uninstall")}
               </Button>
             )}
           </div>
           <CardDescription>
-            System security auditing tool that performs comprehensive security scans
+            {st("lynis.description")}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -3678,8 +4009,8 @@ ${(report.sections && report.sections.length > 0) ? `
   <Search className="h-5 w-5 text-gray-500" />
   </div>
   <div>
-  <p className="font-medium">Lynis Not Installed</p>
-  <p className="text-sm text-muted-foreground">Comprehensive security auditing and hardening tool</p>
+  <p className="font-medium">{st("lynis.notInstalled")}</p>
+  <p className="text-sm text-muted-foreground">{st("lynis.notInstalledDescription")}</p>
   </div>
   </div>
 
@@ -3687,12 +4018,12 @@ ${(report.sections && report.sections.length > 0) ? `
                 <div className="flex items-start gap-3">
                   <Info className="h-5 w-5 text-blue-500 flex-shrink-0 mt-0.5" />
                   <div className="space-y-2 text-sm text-blue-400">
-                    <p className="font-medium">Lynis features:</p>
+                    <p className="font-medium">{st("lynis.featuresTitle")}</p>
                     <ul className="list-disc list-inside space-y-1 text-blue-300">
-                      <li>System hardening scoring (0-100)</li>
-                      <li>Vulnerability detection and suggestions</li>
-                      <li>Compliance checking (PCI-DSS, HIPAA, etc.)</li>
-                      <li>Installed from latest GitHub source</li>
+                      <li>{st("lynis.featureScoring")}</li>
+                      <li>{st("lynis.featureVulnerabilities")}</li>
+                      <li>{st("lynis.featureCompliance")}</li>
+                      <li>{st("lynis.featureGithub")}</li>
                     </ul>
                   </div>
                 </div>
@@ -3703,7 +4034,7 @@ ${(report.sections && report.sections.length > 0) ? `
                 className="bg-cyan-600 hover:bg-cyan-700 text-white"
               >
                 <Download className="h-4 w-4 mr-2" />
-                Install Lynis
+                {st("lynis.install")}
               </Button>
             </div>
           ) : (
@@ -3716,39 +4047,42 @@ ${(report.sections && report.sections.length > 0) ? `
                   </div>
                   <div>
                     <p className="font-medium">Lynis {lynisInfo.version}</p>
-                    <p className="text-sm text-muted-foreground">Security auditing tool installed</p>
+                    <p className="text-sm text-muted-foreground">{st("lynis.installedDescription")}</p>
                   </div>
                 </div>
                 <div className="px-3 py-1 rounded-full text-sm font-medium bg-green-500/10 text-green-500">
-                  Installed
+                  {st("values.installed")}
                 </div>
               </div>
 
               {/* Summary stats */}
               <div className="grid gap-3 grid-cols-2 sm:grid-cols-4">
                 <div className="p-3 bg-muted/30 rounded-lg border border-border text-center">
-                  <p className="text-xs text-muted-foreground mb-1">Last Scan</p>
+                  <p className="text-xs text-muted-foreground mb-1">{st("lynis.lastScan")}</p>
                   <p className="text-sm font-medium">
-                    {lynisInfo.last_scan ? lynisInfo.last_scan.replace("T", " ").substring(0, 16) : "Never"}
+                    {lynisInfo.last_scan ? lynisInfo.last_scan.replace("T", " ").substring(0, 16) : st("values.never")}
                   </p>
                 </div>
                 <div className="p-3 bg-muted/30 rounded-lg border border-border text-center">
-                  <p className="text-xs text-muted-foreground mb-1">Hardening Index</p>
+                  <p className="text-xs text-muted-foreground mb-1">{st("lynis.hardeningIndex")}</p>
                   {(() => {
-                    const rawScore = lynisReport?.hardening_index ?? lynisInfo.hardening_index
-                    const adjScore = lynisReport?.proxmox_adjusted_score
-                    const displayScore = adjScore ?? rawScore
+                    const { rawScore, adjustedScore: adjScore, displayScore, reportComplete, hasAdjustment } = getLynisScoreState(lynisReport, lynisInfo.hardening_index)
                     const scoreColorClass = displayScore === null || displayScore === undefined ? "text-muted-foreground" :
                       displayScore >= 70 ? "text-green-500" :
                       displayScore >= 50 ? "text-yellow-500" : "text-red-500"
                     return (
                       <div>
                         <p className={`text-xl font-bold ${scoreColorClass}`}>
-                          {displayScore !== null && displayScore !== undefined ? displayScore : "N/A"}
+                          {displayScore !== null && displayScore !== undefined ? displayScore : "—"}
                         </p>
-                        {adjScore != null && rawScore != null && adjScore !== rawScore && (
+                        {hasAdjustment && (
                           <p className="text-[10px] text-muted-foreground mt-0.5">
-                            Lynis: {rawScore} | PVE: {adjScore}
+                            {st("lynis.scoreBreakdown", { raw: rawScore ?? "N/A", adjusted: adjScore ?? "N/A" })}
+                          </p>
+                        )}
+                        {!reportComplete && lynisReport && (
+                          <p className="text-[10px] text-yellow-500 mt-0.5">
+                            {st("lynis.reportIncompleteShort")}
                           </p>
                         )}
                       </div>
@@ -3756,12 +4090,12 @@ ${(report.sections && report.sections.length > 0) ? `
                   })()}
                 </div>
                 <div className="p-3 bg-muted/30 rounded-lg border border-border text-center">
-                  <p className="text-xs text-muted-foreground mb-1">Warnings</p>
+                  <p className="text-xs text-muted-foreground mb-1">{st("lynis.warnings")}</p>
                   {(() => {
                     if (!lynisReport) return <p className="text-xl font-bold text-muted-foreground">-</p>
                     const total = lynisReport.warnings.length
                     const expected = lynisReport.proxmox_expected_warnings ?? 0
-                    const real = total - expected
+                    const real = getActionableCount(total, expected)
                     return (
                       <div>
                         <p className={`text-xl font-bold ${real > 0 ? "text-red-500" : total > 0 ? "text-yellow-500" : "text-green-500"}`}>
@@ -3769,7 +4103,7 @@ ${(report.sections && report.sections.length > 0) ? `
                         </p>
                         {expected > 0 && (
                           <p className="text-[10px] text-muted-foreground mt-0.5">
-                            +{expected} PVE expected
+                            {st("lynis.pveExpectedPlus", { count: expected })}
                           </p>
                         )}
                       </div>
@@ -3777,12 +4111,12 @@ ${(report.sections && report.sections.length > 0) ? `
                   })()}
                 </div>
                 <div className="p-3 bg-muted/30 rounded-lg border border-border text-center">
-                  <p className="text-xs text-muted-foreground mb-1">Suggestions</p>
+                  <p className="text-xs text-muted-foreground mb-1">{st("lynis.suggestions")}</p>
                   {(() => {
                     if (!lynisReport) return <p className="text-xl font-bold text-muted-foreground">-</p>
                     const total = lynisReport.suggestions.length
                     const expected = lynisReport.proxmox_expected_suggestions ?? 0
-                    const real = total - expected
+                    const real = getActionableCount(total, expected)
                     return (
                       <div>
                         <p className={`text-xl font-bold ${real > 0 ? "text-yellow-500" : "text-green-500"}`}>
@@ -3790,7 +4124,7 @@ ${(report.sections && report.sections.length > 0) ? `
                         </p>
                         {expected > 0 && (
                           <p className="text-[10px] text-muted-foreground mt-0.5">
-                            +{expected} PVE expected
+                            {st("lynis.pveExpectedPlus", { count: expected })}
                           </p>
                         )}
                       </div>
@@ -3801,16 +4135,21 @@ ${(report.sections && report.sections.length > 0) ? `
 
               {/* Hardening bar */}
               {(() => {
-                const rawScore = lynisReport?.hardening_index ?? lynisInfo.hardening_index
-                const adjScore = lynisReport?.proxmox_adjusted_score
-                if (rawScore === null || rawScore === undefined) return null
-                const displayScore = adjScore ?? rawScore
-                const hasAdjustment = adjScore != null && adjScore !== rawScore
+                const { rawScore, displayScore, reportComplete, hasAdjustment } = getLynisScoreState(lynisReport, lynisInfo.hardening_index)
+                if (!reportComplete || displayScore === null || displayScore === undefined || rawScore === null || rawScore === undefined) {
+                  if (!lynisReport) return null
+                  return (
+                    <div className="rounded-lg border border-yellow-500/30 bg-yellow-500/10 p-3 text-sm text-yellow-200">
+                      <p className="font-medium">{st("lynis.reportIncompleteTitle")}</p>
+                      <p className="text-xs text-yellow-200/80 mt-1">{st("lynis.reportIncompleteDescription")}</p>
+                    </div>
+                  )
+                }
                 return (
                   <div className="space-y-1.5">
                     <div className="flex items-center justify-between text-xs">
                       <span className="text-muted-foreground">
-                        Security Hardening Score {hasAdjustment && <span className="text-cyan-400/70">(Proxmox Adjusted)</span>}
+                        {st("lynis.securityHardeningScore")} {hasAdjustment && <span className="text-cyan-400/70">{st("lynis.proxmoxAdjustedParen")}</span>}
                       </span>
                       <span className={`font-bold ${
                         displayScore >= 70 ? "text-green-500" : displayScore >= 50 ? "text-yellow-500" : "text-red-500"
@@ -3844,13 +4183,13 @@ ${(report.sections && report.sections.length > 0) ? `
                       </div>
                     )}
                     <div className="flex justify-between text-[10px] text-muted-foreground">
-                      <span>Critical (0-49)</span>
-                      <span>Moderate (50-69)</span>
-                      <span>Good (70-100)</span>
+                      <span>{st("lynis.scoreCritical")}</span>
+                      <span>{st("lynis.scoreModerate")}</span>
+                      <span>{st("lynis.scoreGood")}</span>
                     </div>
                     {hasAdjustment && (
                       <p className="text-[10px] text-cyan-400/70 text-center">
-                        Lynis raw score: {rawScore}/100 | {(lynisReport?.proxmox_expected_warnings ?? 0) + (lynisReport?.proxmox_expected_suggestions ?? 0)} findings are expected in Proxmox VE
+                        {st("lynis.rawScorePrefix")} {rawScore}/100 | {st("lynis.expectedFindings", { count: (lynisReport?.proxmox_expected_warnings ?? 0) + (lynisReport?.proxmox_expected_suggestions ?? 0) })}
                       </p>
                     )}
                   </div>
@@ -3863,8 +4202,8 @@ ${(report.sections && report.sections.length > 0) ? `
                   <div className="flex items-center gap-3">
                     <div className="animate-spin h-5 w-5 border-2 border-cyan-500 border-t-transparent rounded-full" />
                     <div>
-                      <p className="text-sm font-medium text-cyan-500">Security audit in progress...</p>
-                      <p className="text-xs text-cyan-400/70">This may take 2-5 minutes. Lynis is scanning your system for vulnerabilities, misconfigurations, and hardening opportunities.</p>
+                      <p className="text-sm font-medium text-cyan-500">{st("lynis.auditInProgress")}</p>
+                      <p className="text-xs text-cyan-400/70">{st("lynis.auditInProgressDescription")}</p>
                     </div>
                   </div>
                 </div>
@@ -3873,7 +4212,7 @@ ${(report.sections && report.sections.length > 0) ? `
               {/* Reports list */}
               {lynisReport && (
                 <div className="space-y-2">
-                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Audit Reports</p>
+                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">{st("lynis.auditReports")}</p>
 
                   {/* Report row - clickable to expand */}
                   <div className="border border-border rounded-lg overflow-hidden">
@@ -3885,21 +4224,35 @@ ${(report.sections && report.sections.length > 0) ? `
                         <FileText className="h-4 w-4 text-cyan-500 flex-shrink-0" />
                         <div>
                           <p className="text-sm font-medium">
-                            Security Audit - {lynisReport.datetime_start
+                            {st("lynis.auditReportTitle")} - {lynisReport.datetime_start
                               ? lynisReport.datetime_start.replace("T", " ").substring(0, 16)
-                              : lynisInfo.last_scan?.replace("T", " ").substring(0, 16) || "Unknown date"}
+                              : lynisInfo.last_scan?.replace("T", " ").substring(0, 16) || st("values.unknownDate")}
                           </p>
                           <p className="text-[11px] text-muted-foreground">
-                            {lynisReport.hostname || "System"} - {lynisReport.tests_performed} tests - PVE Score: {lynisReport.proxmox_adjusted_score ?? lynisReport.hardening_index ?? "N/A"}/100 - {lynisReport.warnings.length - (lynisReport.proxmox_expected_warnings ?? 0)} warnings - {lynisReport.suggestions.length - (lynisReport.proxmox_expected_suggestions ?? 0)} suggestions
+                            {(() => {
+                              const { displayScore, reportComplete } = getLynisScoreState(lynisReport)
+                              if (!reportComplete) return st("lynis.reportIncompleteShort")
+                              return st("lynis.reportSummary", {
+                                host: lynisReport.hostname || st("values.system"),
+                                tests: lynisCountText("tests", lynisReport.tests_performed),
+                                score: displayScore ?? "N/A",
+                                warnings: lynisCountText("warnings", getActionableCount(lynisReport.warnings.length, lynisReport.proxmox_expected_warnings ?? 0)),
+                                suggestions: lynisCountText("suggestions", getActionableCount(lynisReport.suggestions.length, lynisReport.proxmox_expected_suggestions ?? 0)),
+                              })
+                            })()}
                           </p>
                         </div>
                       </div>
                       <div className="flex items-center gap-2">
+                        {(() => {
+                          const { reportComplete } = getLynisScoreState(lynisReport)
+                          return (
                         <Button
                           variant="outline"
                           size="sm"
                           onClick={(e) => {
                             e.stopPropagation()
+                            if (!reportComplete) return
                             const html = generatePrintableReport(lynisReport)
                             // Use Blob URL for Safari-safe preview (avoids document.write issues)
                             const blob = new Blob([html], { type: "text/html" })
@@ -3908,12 +4261,15 @@ ${(report.sections && report.sections.length > 0) ? `
                             // Revoke after a delay so it loads first
                             if (w) setTimeout(() => URL.revokeObjectURL(url), 60000)
                           }}
+                          disabled={!reportComplete}
                           className="h-7 gap-1.5 px-2.5 text-xs border-cyan-500/30 text-cyan-500 hover:text-cyan-400 hover:bg-cyan-500/10"
-                          title="Print / Save as PDF"
+                          title={reportComplete ? st("lynis.printSavePdf") : st("lynis.reportIncompleteShort")}
                         >
                           <Printer className="h-3.5 w-3.5" />
                           <span className="hidden sm:inline">PDF</span>
                         </Button>
+                          )
+                        })()}
                         <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform ${lynisShowReport ? "rotate-180" : ""}`} />
                         {/* Delete button separated with divider to prevent accidental clicks */}
                         <div className="hidden sm:block w-px h-5 bg-border mx-1" />
@@ -3922,19 +4278,19 @@ ${(report.sections && report.sections.length > 0) ? `
                           size="sm"
                           onClick={(e) => {
                             e.stopPropagation()
-                            if (confirm("Delete this audit report? The report file will be removed from the server.")) {
+                            if (confirm(st("confirm.deleteAuditReport"))) {
                               fetchApi("/api/security/lynis/report", { method: "DELETE" })
                                 .then(() => {
                                   setLynisReport(null)
                                   setLynisShowReport(false)
-                                  setSuccess("Report deleted")
+                                  setSuccess(st("messages.reportDeleted"))
                                   loadSecurityTools()
                                 })
-                                .catch(() => setError("Failed to delete report"))
+                                .catch(() => setError(st("errors.deleteReportFailed")))
                             }
                           }}
                           className="h-7 px-2 text-xs text-red-500 hover:text-red-400 hover:bg-red-500/10 ml-2 sm:ml-0"
-                          title="Delete report"
+                          title={st("lynis.deleteReport")}
                         >
                           <Trash2 className="h-3.5 w-3.5" />
                         </Button>
@@ -3947,7 +4303,7 @@ ${(report.sections && report.sections.length > 0) ? `
                         {/* System info strip */}
                         <div className="grid grid-cols-2 sm:grid-cols-4 gap-px bg-border">
                           <div className="p-2.5 bg-card text-center">
-                            <p className="text-[10px] text-muted-foreground uppercase">Hostname</p>
+                            <p className="text-[10px] text-muted-foreground uppercase">{st("lynis.hostname")}</p>
                             <p className="text-xs font-medium truncate">{lynisReport.hostname || "N/A"}</p>
                           </div>
                           <div className="p-2.5 bg-card text-center">
@@ -3955,11 +4311,11 @@ ${(report.sections && report.sections.length > 0) ? `
                             <p className="text-xs font-medium truncate">{lynisReport.os_fullname || `${lynisReport.os_name} ${lynisReport.os_version}`.trim() || "N/A"}</p>
                           </div>
                           <div className="p-2.5 bg-card text-center">
-                            <p className="text-[10px] text-muted-foreground uppercase">Kernel</p>
+                            <p className="text-[10px] text-muted-foreground uppercase">{st("lynis.kernel")}</p>
                             <p className="text-xs font-medium truncate">{lynisReport.kernel_version || "N/A"}</p>
                           </div>
                           <div className="p-2.5 bg-card text-center">
-                            <p className="text-[10px] text-muted-foreground uppercase">Tests</p>
+                            <p className="text-[10px] text-muted-foreground uppercase">{st("lynis.tests")}</p>
                             <p className="text-xs font-medium">{lynisReport.tests_performed}</p>
                           </div>
                         </div>
@@ -3981,10 +4337,10 @@ ${(report.sections && report.sections.length > 0) ? `
                               {tab === "warnings" && <TriangleAlert className="h-3 w-3 shrink-0" />}
                               {tab === "suggestions" && <Info className="h-3 w-3 shrink-0" />}
                               <span className="hidden sm:inline">
-                                {tab === "overview" ? "Overview"
-                                  : tab === "checks" ? `Checks (${lynisReport.sections?.length || 0})`
-                                  : tab === "warnings" ? `Warnings (${lynisReport.warnings.length})`
-                                  : `Suggestions (${lynisReport.suggestions.length})`}
+                                {tab === "overview" ? st("lynis.tabs.overview")
+                                  : tab === "checks" ? st("lynis.tabs.checksWithCount", { count: lynisReport.sections?.length || 0 })
+                                  : tab === "warnings" ? st("lynis.tabs.warningsWithCount", { count: lynisReport.warnings.length })
+                                  : st("lynis.tabs.suggestionsWithCount", { count: lynisReport.suggestions.length })}
                               </span>
                               <span className="sm:hidden">
                                 {tab === "overview" ? ""
@@ -4001,56 +4357,57 @@ ${(report.sections && report.sections.length > 0) ? `
                           <div className="p-4 space-y-3">
                             <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                               <div className="p-3 rounded-lg border border-border bg-muted/20 text-center">
-                                <p className="text-[10px] text-muted-foreground uppercase mb-1">Packages</p>
+                                <p className="text-[10px] text-muted-foreground uppercase mb-1">{st("lynis.packages")}</p>
                                 <p className="text-lg font-bold">{lynisReport.installed_packages || "N/A"}</p>
                               </div>
                               <div className="p-3 rounded-lg border border-border bg-muted/20 text-center">
-                                <p className="text-[10px] text-muted-foreground uppercase mb-1">Firewall</p>
+                                <p className="text-[10px] text-muted-foreground uppercase mb-1">{st("lynis.firewall")}</p>
                                 <p className={`text-lg font-bold ${lynisReport.firewall_active ? "text-green-500" : "text-red-500"}`}>
-                                  {lynisReport.firewall_active ? "Active" : "Inactive"}
+                                  {lynisReport.firewall_active ? st("values.active") : st("values.inactive")}
                                 </p>
                               </div>
                               <div className="p-3 rounded-lg border border-border bg-muted/20 text-center">
-                                <p className="text-[10px] text-muted-foreground uppercase mb-1">Malware Scanner</p>
+                                <p className="text-[10px] text-muted-foreground uppercase mb-1">{st("lynis.malwareScanner")}</p>
                                 <p className={`text-lg font-bold ${lynisReport.malware_scanner ? "text-green-500" : "text-yellow-500"}`}>
-                                  {lynisReport.malware_scanner ? "Installed" : "Not Found"}
+                                  {lynisReport.malware_scanner ? st("values.installed") : st("lynis.malwareScannerNotInstalled")}
                                 </p>
                               </div>
                             </div>
 
                             {/* Security checklist */}
                             <div className="space-y-1.5">
-                              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Quick Status</p>
+                              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">{st("lynis.quickStatus")}</p>
                               {(() => {
-                                const adjScore = lynisReport.proxmox_adjusted_score ?? lynisReport.hardening_index ?? 0
-                                const realWarnings = lynisReport.warnings.length - (lynisReport.proxmox_expected_warnings ?? 0)
+                                const { displayScore, reportComplete } = getLynisScoreState(lynisReport)
+                                const adjScore = displayScore ?? 0
+                                const realWarnings = getActionableCount(lynisReport.warnings.length, lynisReport.proxmox_expected_warnings ?? 0)
                                 return [
                                 {
-                                  label: "Firewall",
+                                  label: st("lynis.firewall"),
                                   ok: lynisReport.firewall_active,
-                                  passText: "Active",
-                                  failText: "Inactive",
+                                  passText: st("values.active"),
+                                  failText: st("values.inactive"),
                                 },
                                 {
-                                  label: "Malware Scanner",
+                                  label: st("lynis.malwareScanner"),
                                   ok: lynisReport.malware_scanner,
-                                  passText: "Installed",
-                                  failText: "Not Installed",
+                                  passText: st("values.installed"),
+                                  failText: st("values.notInstalled"),
                                   isWarning: true,
                                 },
                                 {
-                                  label: "Warnings",
+                                  label: st("lynis.warnings"),
                                   ok: realWarnings <= 0,
-                                  passText: lynisReport.warnings.length === 0 ? "None" : `${lynisReport.warnings.length} (all PVE expected)`,
-                                  failText: `${realWarnings} actionable` + (lynisReport.proxmox_expected_warnings ? ` + ${lynisReport.proxmox_expected_warnings} PVE` : ""),
+                                  passText: lynisReport.warnings.length === 0 ? st("values.none") : st("lynis.allPveExpected", { count: lynisReport.warnings.length }),
+                                  failText: st("lynis.actionableCount", { count: realWarnings }) + (lynisReport.proxmox_expected_warnings ? ` ${st("lynis.expectedWarningsSuffix", { count: lynisReport.proxmox_expected_warnings })}` : ""),
                                   isWarning: realWarnings > 0 && realWarnings <= 5,
                                 },
                                 {
-                                  label: "Hardening Score (PVE)",
-                                  ok: adjScore >= 70,
+                                  label: st("lynis.hardeningScorePve"),
+                                  ok: reportComplete && adjScore >= 70,
                                   passText: `${adjScore}/100`,
-                                  failText: `${adjScore}/100 (< 70)`,
-                                  isWarning: adjScore >= 50,
+                                  failText: reportComplete ? `${adjScore}/100 (< 70)` : st("lynis.reportIncompleteShort"),
+                                  isWarning: !reportComplete || adjScore >= 50,
                                 },
                               ].map((item) => {
                                 const color = item.ok ? "green" : item.isWarning ? "yellow" : "red"
@@ -4073,7 +4430,7 @@ ${(report.sections && report.sections.length > 0) ? `
                           <div className="max-h-[500px] overflow-y-auto">
                             {(!lynisReport.sections || lynisReport.sections.length === 0) ? (
                               <div className="p-6 text-center text-sm text-muted-foreground">
-                                No check details available. Run an audit to generate detailed results.
+                                {st("lynis.noCheckDetails")}
                               </div>
                             ) : (
                               <div className="divide-y divide-border">
@@ -4082,7 +4439,7 @@ ${(report.sections && report.sections.length > 0) ? `
                                     <div className="px-3 py-2 bg-muted/30 flex items-center gap-2">
                                       <span className="text-[10px] font-bold text-cyan-500 bg-cyan-500/10 px-1.5 py-0.5 rounded">{sIdx + 1}</span>
                                       <span className="text-xs font-semibold">{section.name}</span>
-                                      <span className="text-[10px] text-muted-foreground ml-auto">{section.checks.length} checks</span>
+                                      <span className="text-[10px] text-muted-foreground ml-auto">{st("lynis.checksCount", { count: section.checks.length })}</span>
                                     </div>
                                     <div className="divide-y divide-border/50">
                                       {section.checks.map((check, cIdx) => {
@@ -4114,7 +4471,7 @@ ${(report.sections && report.sections.length > 0) ? `
                           <div className="max-h-96 overflow-y-auto">
                             {lynisReport.warnings.length === 0 ? (
                               <div className="p-6 text-center text-sm text-muted-foreground">
-                                No warnings found. Your system is well configured.
+                                {st("lynis.noWarnings")}
                               </div>
                             ) : (
                               <div className="divide-y divide-border">
@@ -4131,10 +4488,10 @@ ${(report.sections && report.sections.length > 0) ? `
                                             w.proxmox_expected ? "bg-cyan-500/10 text-cyan-400" : "bg-red-500/10 text-red-500"
                                           }`}>{w.test_id}</code>
                                           {w.proxmox_expected && (
-                                            <span className="text-[10px] px-1.5 py-0.5 rounded bg-cyan-500/10 text-cyan-400">PVE Expected</span>
+                                            <span className="text-[10px] px-1.5 py-0.5 rounded bg-cyan-500/10 text-cyan-400">{st("lynis.pveExpected")}</span>
                                           )}
                                           {!w.proxmox_expected && w.proxmox_severity === "low" && (
-                                            <span className="text-[10px] px-1.5 py-0.5 rounded bg-yellow-500/10 text-yellow-500">Low Risk</span>
+                                            <span className="text-[10px] px-1.5 py-0.5 rounded bg-yellow-500/10 text-yellow-500">{st("lynis.lowRisk")}</span>
                                           )}
                                           {!w.proxmox_expected && !w.proxmox_severity && w.severity && (
                                             <span className="text-[10px] text-red-400">{w.severity}</span>
@@ -4148,7 +4505,7 @@ ${(report.sections && report.sections.length > 0) ? `
                                         )}
                                         {w.solution && (
                                           <p className="text-xs text-muted-foreground mt-1">
-                                            Solution: {w.solution}
+                                            {st("lynis.solution")}: {w.solution}
                                           </p>
                                         )}
                                       </div>
@@ -4165,7 +4522,7 @@ ${(report.sections && report.sections.length > 0) ? `
                           <div className="max-h-96 overflow-y-auto">
                             {lynisReport.suggestions.length === 0 ? (
                               <div className="p-6 text-center text-sm text-muted-foreground">
-                                No suggestions. System is fully hardened.
+                                {st("lynis.noSuggestions")}
                               </div>
                             ) : (
                               <div className="divide-y divide-border">
@@ -4182,10 +4539,10 @@ ${(report.sections && report.sections.length > 0) ? `
                                             s.proxmox_expected ? "bg-cyan-500/10 text-cyan-400" : "bg-yellow-500/10 text-yellow-500"
                                           }`}>{s.test_id}</code>
                                           {s.proxmox_expected && (
-                                            <span className="text-[10px] px-1.5 py-0.5 rounded bg-cyan-500/10 text-cyan-400">PVE Expected</span>
+                                            <span className="text-[10px] px-1.5 py-0.5 rounded bg-cyan-500/10 text-cyan-400">{st("lynis.pveExpected")}</span>
                                           )}
                                           {!s.proxmox_expected && s.proxmox_severity === "low" && (
-                                            <span className="text-[10px] px-1.5 py-0.5 rounded bg-muted text-muted-foreground">Low Priority</span>
+                                            <span className="text-[10px] px-1.5 py-0.5 rounded bg-muted text-muted-foreground">{st("lynis.lowPriority")}</span>
                                           )}
                                         </div>
                                         <p className="text-sm text-foreground">{s.description}</p>
@@ -4196,7 +4553,7 @@ ${(report.sections && report.sections.length > 0) ? `
                                         )}
                                         {s.solution && (
                                           <p className="text-xs text-muted-foreground mt-1">
-                                            Solution: {s.solution}
+                                            {st("lynis.solution")}: {s.solution}
                                           </p>
                                         )}
                                         {s.details && (
@@ -4225,12 +4582,12 @@ ${(report.sections && report.sections.length > 0) ? `
                 {lynisAuditRunning ? (
                   <>
                     <div className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full mr-2" />
-                    Running Audit...
+                    {st("lynis.runningAudit")}
                   </>
                 ) : (
                   <>
                     <Play className="h-4 w-4 mr-2" />
-                    Run Security Audit
+                    {st("lynis.runAudit")}
                   </>
                 )}
               </Button>
@@ -4249,8 +4606,8 @@ ${(report.sections && report.sections.length > 0) ? `
         scriptPath="/usr/local/share/proxmenux/scripts/security/fail2ban_installer.sh"
         scriptName="fail2ban_installer"
         params={{ EXECUTION_MODE: "web" }}
-        title="Fail2Ban Installation"
-        description="Installing and configuring Fail2Ban for SSH and Proxmox protection..."
+        title={st("fail2ban.installationTitle")}
+        description={st("fail2ban.installationDescription")}
       />
       <ScriptTerminalModal
         open={showLynisInstaller}
@@ -4261,8 +4618,8 @@ ${(report.sections && report.sections.length > 0) ? `
         scriptPath="/usr/local/share/proxmenux/scripts/security/lynis_installer.sh"
         scriptName="lynis_installer"
         params={{ EXECUTION_MODE: "web" }}
-        title="Lynis Installation"
-        description="Installing Lynis security auditing tool from GitHub..."
+        title={st("lynis.installationTitle")}
+        description={st("lynis.installationDescription")}
       />
 
       {/* Uninstall Confirmation Dialogs */}
@@ -4274,26 +4631,26 @@ ${(report.sections && report.sections.length > 0) ? `
                 <AlertTriangle className="h-5 w-5 text-red-500" />
               </div>
               <div>
-                <h3 className="font-semibold text-lg">Uninstall Fail2Ban?</h3>
-                <p className="text-sm text-muted-foreground">This action cannot be undone</p>
+                <h3 className="font-semibold text-lg">{st("fail2ban.uninstallConfirmTitle")}</h3>
+                <p className="text-sm text-muted-foreground">{st("confirm.cannotBeUndone")}</p>
               </div>
             </div>
             <p className="text-sm text-muted-foreground mb-6">
-              This will completely remove Fail2Ban and all its configuration, including:
+              {st("fail2ban.uninstallConfirmDescription")}
             </p>
             <ul className="text-sm text-muted-foreground mb-6 list-disc list-inside space-y-1">
-              <li>SSH protection jail</li>
-              <li>Proxmox web interface protection</li>
-              <li>ProxMenux Monitor protection</li>
-              <li>All custom jail configurations</li>
-              <li>Auth logger services</li>
+              <li>{st("fail2ban.removeSshJail")}</li>
+              <li>{st("fail2ban.removeProxmoxProtection")}</li>
+              <li>{st("fail2ban.removeMonitorProtection")}</li>
+              <li>{st("fail2ban.removeCustomJails")}</li>
+              <li>{st("fail2ban.removeAuthLogger")}</li>
             </ul>
             <div className="flex justify-end gap-3">
               <Button
                 variant="outline"
                 onClick={() => setShowFail2banUninstallConfirm(false)}
               >
-                Cancel
+                {t("actions.cancel")}
               </Button>
               <Button
                 variant="destructive"
@@ -4303,12 +4660,12 @@ ${(report.sections && report.sections.length > 0) ? `
                 {uninstallingFail2ban ? (
                   <>
                     <div className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full mr-2" />
-                    Uninstalling...
+                    {st("values.uninstalling")}
                   </>
                 ) : (
                   <>
                     <Trash2 className="h-4 w-4 mr-2" />
-                    Uninstall
+                    {st("values.uninstall")}
                   </>
                 )}
               </Button>
@@ -4325,24 +4682,24 @@ ${(report.sections && report.sections.length > 0) ? `
                 <AlertTriangle className="h-5 w-5 text-red-500" />
               </div>
               <div>
-                <h3 className="font-semibold text-lg">Uninstall Lynis?</h3>
-                <p className="text-sm text-muted-foreground">This action cannot be undone</p>
+                <h3 className="font-semibold text-lg">{st("lynis.uninstallConfirmTitle")}</h3>
+                <p className="text-sm text-muted-foreground">{st("confirm.cannotBeUndone")}</p>
               </div>
             </div>
             <p className="text-sm text-muted-foreground mb-6">
-              This will completely remove Lynis and all audit data, including:
+              {st("lynis.uninstallConfirmDescription")}
             </p>
             <ul className="text-sm text-muted-foreground mb-6 list-disc list-inside space-y-1">
-              <li>Lynis installation (/opt/lynis)</li>
-              <li>Wrapper script (/usr/local/bin/lynis)</li>
-              <li>All audit reports and logs</li>
+              <li>{st("lynis.removeInstallation")}</li>
+              <li>{st("lynis.removeWrapper")}</li>
+              <li>{st("lynis.removeReports")}</li>
             </ul>
             <div className="flex justify-end gap-3">
               <Button
                 variant="outline"
                 onClick={() => setShowLynisUninstallConfirm(false)}
               >
-                Cancel
+                {t("actions.cancel")}
               </Button>
               <Button
                 variant="destructive"
@@ -4352,12 +4709,12 @@ ${(report.sections && report.sections.length > 0) ? `
                 {uninstallingLynis ? (
                   <>
                     <div className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full mr-2" />
-                    Uninstalling...
+                    {st("values.uninstalling")}
                   </>
                 ) : (
                   <>
                     <Trash2 className="h-4 w-4 mr-2" />
-                    Uninstall
+                    {st("values.uninstall")}
                   </>
                 )}
               </Button>
@@ -4370,7 +4727,7 @@ ${(report.sections && report.sections.length > 0) ? `
         open={show2FASetup}
         onClose={() => setShow2FASetup(false)}
         onSuccess={() => {
-          setSuccess("2FA enabled successfully!")
+          setSuccess(st("messages.twoFactorEnabled"))
           checkAuthStatus()
         }}
       />

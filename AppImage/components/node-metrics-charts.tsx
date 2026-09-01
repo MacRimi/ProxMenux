@@ -7,12 +7,13 @@ import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 import { Loader2, TrendingUp, MemoryStick } from "lucide-react"
 import { useIsMobile } from "../hooks/use-mobile"
 import { fetchApi } from "@/lib/api-config"
+import { useI18n } from "../lib/i18n/provider"
 
 const TIMEFRAME_OPTIONS = [
-  { value: "hour", label: "1 Hour" },
-  { value: "day", label: "24 Hours" },
-  { value: "week", label: "7 Days" },
-  { value: "month", label: "30 Days" },
+  { value: "hour", labelKey: "overview.timeframes.hour" },
+  { value: "day", labelKey: "overview.timeframes.day" },
+  { value: "week", labelKey: "overview.timeframes.week" },
+  { value: "month", labelKey: "overview.timeframes.month" },
 ]
 
 interface NodeMetricsData {
@@ -90,9 +91,11 @@ type PeriodStat = { avg: number; max: number; min: number } | null
 function ChartStatsHeader({
   stats,
   suffix = "",
+  labels,
 }: {
   stats: PeriodStat
   suffix?: string
+  labels: { avg: string; max: string; min: string }
 }) {
   if (!stats) return null
   const fmt = (n: number) => (n >= 100 ? n.toFixed(0) : n.toFixed(1))
@@ -100,15 +103,15 @@ function ChartStatsHeader({
     <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1 text-sm tabular-nums">
       <span>
         <span className="font-semibold text-foreground">{fmt(stats.avg)}{suffix}</span>
-        <span className="ml-1 text-xs uppercase tracking-wide text-muted-foreground">avg</span>
+        <span className="ml-1 text-xs uppercase tracking-wide text-muted-foreground">{labels.avg}</span>
       </span>
       <span>
         <span className="font-semibold text-foreground">{fmt(stats.max)}{suffix}</span>
-        <span className="ml-1 text-xs uppercase tracking-wide text-muted-foreground">max</span>
+        <span className="ml-1 text-xs uppercase tracking-wide text-muted-foreground">{labels.max}</span>
       </span>
       <span>
         <span className="font-semibold text-foreground">{fmt(stats.min)}{suffix}</span>
-        <span className="ml-1 text-xs uppercase tracking-wide text-muted-foreground">min</span>
+        <span className="ml-1 text-xs uppercase tracking-wide text-muted-foreground">{labels.min}</span>
       </span>
     </div>
   )
@@ -116,6 +119,7 @@ function ChartStatsHeader({
 
 
 export function NodeMetricsCharts() {
+  const { language, t } = useI18n()
   const [timeframe, setTimeframe] = useState("day")
   const [data, setData] = useState<NodeMetricsData[]>([])
   // period_stats from the backend — computed over the raw RRD points
@@ -141,7 +145,7 @@ export function NodeMetricsCharts() {
 
   useEffect(() => {
     fetchMetrics()
-  }, [timeframe])
+  }, [timeframe, language])
 
   const fetchMetrics = async () => {
     setLoading(true)
@@ -153,7 +157,7 @@ export function NodeMetricsCharts() {
 
       if (!result.data || !Array.isArray(result.data)) {
         console.error("Invalid data format - data is not an array:", result)
-        throw new Error("Invalid data format received from server")
+        throw new Error(t("overview.invalidMetricsData"))
       }
 
       if (result.data.length === 0) {
@@ -171,26 +175,26 @@ export function NodeMetricsCharts() {
         let timeLabel = ""
 
         if (timeframe === "hour") {
-          timeLabel = date.toLocaleString("en-US", {
+          timeLabel = date.toLocaleString(language, {
             hour: "2-digit",
             minute: "2-digit",
             hour12: false,
           })
         } else if (timeframe === "day") {
-          timeLabel = date.toLocaleString("en-US", {
+          timeLabel = date.toLocaleString(language, {
             hour: "2-digit",
             minute: "2-digit",
             hour12: false,
           })
         } else if (timeframe === "week") {
-          timeLabel = date.toLocaleString("en-US", {
+          timeLabel = date.toLocaleString(language, {
             month: "short",
             day: "numeric",
             hour: "2-digit",
             hour12: false,
           })
         } else {
-          timeLabel = date.toLocaleString("en-US", {
+          timeLabel = date.toLocaleString(language, {
             month: "short",
             day: "numeric",
           })
@@ -224,7 +228,7 @@ export function NodeMetricsCharts() {
       // the user sees actionable text instead of a bare "503".
       const body = err?.body
       setError({
-        headline: body?.error || err?.message || "Error loading metrics",
+        headline: body?.error || err?.message || t("overview.metricsLoadError"),
         details: body?.details,
         suggestion: body?.suggestion,
       })
@@ -311,7 +315,7 @@ export function NodeMetricsCharts() {
             {error.suggestion && (
               <div className="w-full mt-2">
                 <p className="text-[10px] uppercase tracking-wide text-muted-foreground mb-1">
-                  Suggested fix on the Proxmox host
+                  {t("overview.suggestedFix")}
                 </p>
                 <code className="block text-xs bg-background/60 border border-border rounded px-2 py-1.5 font-mono break-all">
                   {error.suggestion}
@@ -336,14 +340,14 @@ export function NodeMetricsCharts() {
         <Card className="bg-card border-border">
           <CardContent className="p-6">
             <div className="flex items-center justify-center h-[300px]">
-              <p className="text-muted-foreground text-sm">No metrics data available</p>
+              <p className="text-muted-foreground text-sm">{t("overview.noMetricsData")}</p>
             </div>
           </CardContent>
         </Card>
         <Card className="bg-card border-border">
           <CardContent className="p-6">
             <div className="flex items-center justify-center h-[300px]">
-              <p className="text-muted-foreground text-sm">No metrics data available</p>
+              <p className="text-muted-foreground text-sm">{t("overview.noMetricsData")}</p>
             </div>
           </CardContent>
         </Card>
@@ -363,7 +367,7 @@ export function NodeMetricsCharts() {
           <SelectContent>
             {TIMEFRAME_OPTIONS.map((option) => (
               <SelectItem key={option.value} value={option.value}>
-                {option.label}
+                {t(option.labelKey)}
               </SelectItem>
             ))}
           </SelectContent>
@@ -378,9 +382,17 @@ export function NodeMetricsCharts() {
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
               <CardTitle className="text-foreground flex items-center">
                 <TrendingUp className="h-5 w-5 mr-2" />
-                CPU Usage & Load Average
+                {t("overview.cpuUsageLoadAverage")}
               </CardTitle>
-              <ChartStatsHeader stats={periodStats.cpu ?? null} suffix="%" />
+              <ChartStatsHeader
+                stats={periodStats.cpu ?? null}
+                suffix="%"
+                labels={{
+                  avg: t("overview.stats.avg"),
+                  max: t("overview.stats.max"),
+                  min: t("overview.stats.min"),
+                }}
+              />
             </div>
           </CardHeader>
           <CardContent className="px-0 md:px-6">
@@ -414,7 +426,7 @@ export function NodeMetricsCharts() {
                   className="text-foreground"
                   tick={{ fill: "currentColor", fontSize: 12 }}
                   label={
-                    isMobile ? undefined : { value: "Load", angle: 90, position: "insideRight", fill: "currentColor" }
+                    isMobile ? undefined : { value: t("overview.loadAxis"), angle: 90, position: "insideRight", fill: "currentColor" }
                   }
                   domain={[0, "dataMax"]}
                 />
@@ -428,7 +440,7 @@ export function NodeMetricsCharts() {
                   strokeWidth={2}
                   fill="#3b82f6"
                   fillOpacity={0.3}
-                  name="CPU %"
+                  name={t("overview.cpuPercent")}
                   hide={!visibleLines.cpu.cpu}
                 />
                 <Area
@@ -439,7 +451,7 @@ export function NodeMetricsCharts() {
                   strokeWidth={2}
                   fill="#10b981"
                   fillOpacity={0.3}
-                  name="Load Avg"
+                  name={t("overview.loadAverage")}
                   hide={!visibleLines.cpu.load}
                 />
               </AreaChart>
@@ -453,9 +465,17 @@ export function NodeMetricsCharts() {
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
               <CardTitle className="text-foreground flex items-center">
                 <MemoryStick className="h-5 w-5 mr-2" />
-                Memory Usage
+                {t("overview.memoryUsage")}
               </CardTitle>
-              <ChartStatsHeader stats={periodStats.memory_used ?? null} suffix=" GB" />
+              <ChartStatsHeader
+                stats={periodStats.memory_used ?? null}
+                suffix=" GB"
+                labels={{
+                  avg: t("overview.stats.avg"),
+                  max: t("overview.stats.max"),
+                  min: t("overview.stats.min"),
+                }}
+              />
             </div>
           </CardHeader>
           <CardContent className="px-0 pr-2 md:px-6">
@@ -490,7 +510,7 @@ export function NodeMetricsCharts() {
                   strokeWidth={2}
                   fill="#3b82f6"
                   fillOpacity={0.1}
-                  name="Total"
+                  name={t("overview.total")}
                   hide={!visibleLines.memory.memoryTotal}
                 />
                 <Area
@@ -500,7 +520,7 @@ export function NodeMetricsCharts() {
                   strokeWidth={2}
                   fill="#10b981"
                   fillOpacity={0.3}
-                  name="Used"
+                  name={t("overview.used")}
                   hide={!visibleLines.memory.memoryUsed}
                 />
                 {/* Only show ZFS ARC if there's data */}
@@ -525,7 +545,7 @@ export function NodeMetricsCharts() {
                     strokeWidth={2}
                     fill="#06b6d4"
                     fillOpacity={0.3}
-                    name="Free"
+                    name={t("overview.free")}
                     hide={!visibleLines.memory.memoryFree}
                   />
                 )}

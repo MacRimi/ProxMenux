@@ -163,7 +163,7 @@ export default async function PostInstallPage({
       />
 
       <h2 className="text-2xl font-semibold mt-10 mb-4 text-gray-900">{t("threeWays.heading")}</h2>
-      <p className="mb-6 text-gray-800 leading-relaxed">{t("threeWays.body")}</p>
+      <p className="mb-6 text-gray-800 leading-relaxed">{t.rich("threeWays.body", { em: (chunks) => <em>{chunks}</em> })}</p>
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-8 not-prose">
         {ROUTE_CONFIG.map(({ key, href, Icon, accent, iconBg }, idx) => {

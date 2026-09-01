@@ -22,7 +22,6 @@ export async function generateMetadata({
   }
 }
 
-type MatrixRow = { kernel: string; pve: string; minCode: string; minTail: string }
 type StringItem = string
 type RelatedItem = { label: string; href: string; tail?: string }
 
@@ -38,7 +37,6 @@ export default async function NvidiaHostPage({
   const messages = (await getMessages({ locale })) as unknown as {
     docs: { hardware: { nvidiaHost: {
       walkthrough: {
-        version: { rows: MatrixRow[] }
         prepare: { items: StringItem[] }
       }
       reinstallUninstall: { uninstallItems: StringItem[] }
@@ -46,7 +44,6 @@ export default async function NvidiaHostPage({
       related: { items: RelatedItem[] }
     } } }
   }
-  const matrixRows = messages.docs.hardware.nvidiaHost.walkthrough.version.rows
   const prepareItems = messages.docs.hardware.nvidiaHost.walkthrough.prepare.items
   const uninstallItems = messages.docs.hardware.nvidiaHost.reinstallUninstall.uninstallItems
   const kindsItems = messages.docs.hardware.nvidiaHost.updates.kindsItems
@@ -254,29 +251,6 @@ export default async function NvidiaHostPage({
         <Steps.Step title={t("walkthrough.version.title")}>
           <p className="mb-3 text-gray-800">{t.rich("walkthrough.version.body1", { strong, em })}</p>
           <p className="mb-3 text-gray-800">{t("walkthrough.version.body2")}</p>
-
-          <div className="my-4 overflow-x-auto">
-            <table className="min-w-full border border-gray-200 text-sm">
-              <thead className="bg-gray-100">
-                <tr>
-                  <th className="border border-gray-200 px-3 py-2 text-left text-gray-900">{t("walkthrough.version.headerKernel")}</th>
-                  <th className="border border-gray-200 px-3 py-2 text-left text-gray-900">{t("walkthrough.version.headerPve")}</th>
-                  <th className="border border-gray-200 px-3 py-2 text-left text-gray-900">{t("walkthrough.version.headerMin")}</th>
-                </tr>
-              </thead>
-              <tbody className="text-gray-800">
-                {matrixRows.map((row, idx) => (
-                  <tr key={idx}>
-                    <td className="border border-gray-200 px-3 py-2">{row.kernel}</td>
-                    <td className="border border-gray-200 px-3 py-2">{row.pve}</td>
-                    <td className="border border-gray-200 px-3 py-2">
-                      <code>{row.minCode}</code>{row.minTail}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
 
           <Callout variant="tip" title={t("walkthrough.version.whyTitle")}>
             {t("walkthrough.version.whyBody")}

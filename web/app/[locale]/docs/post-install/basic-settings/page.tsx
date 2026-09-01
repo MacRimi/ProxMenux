@@ -66,6 +66,7 @@ export default async function PostInstallBasicSettingsPage({
       <DocHeader
         title={t("header.title")}
         section={t("header.section")}
+        estimatedMinutes={10}
       />
 
       <Callout variant="info" title={t("intro.title")}>
@@ -229,8 +230,7 @@ Acquire::Languages "none";`}
 
       <CopyableCode
         code={`# Remove a utility you no longer want
-apt purge htop
-apt autoremove --purge`}
+apt purge htop`}
         className="my-4"
       />
 

@@ -190,6 +190,215 @@ cleanup_broken_gasket_dkms() {
   esac
 }
 
+
+# ============================================================
+# Orphan gasket-dkms detection and assisted cleanup
+# ============================================================
+# The legacy Coral installer (`scripts/install_coral_pve.sh`, retired
+# in April 2026) unconditionally installed the gasket-dkms .deb even
+# on USB-only hosts. On modern kernels (6.12+) the upstream `gasket
+# 1.0` source no longer compiles, so DKMS autoinstall fails, dpkg
+# leaves the package half-configured, and every subsequent apt-get
+# call errors out.
+#
+# On hosts without Coral PCIe/M.2 hardware, this package is pure
+# residue with no functional purpose — the Coral USB path uses
+# libedgetpu1 in userspace and does not need the kernel driver.
+# We detect that combination (gasket-dkms present + no PCIe device
+# on the bus) and offer explicit, opt-in cleanup.
+#
+# Design guardrails:
+#   * Only offered when CORAL_PCIE_COUNT == 0. Never runs on hosts
+#     with a Coral PCIe/M.2 device present, even if the package is
+#     broken — those users need the package, and the fix is a
+#     rebuild (via `install_gasket_apex_dkms`), not a purge.
+#   * User confirmation always required — nothing removes silently.
+#   * The Coral USB path (libedgetpu1-std / -max) is never touched.
+
+# Set by `detect_orphan_gasket_dkms`. Empty when no orphan state
+# is present; otherwise one of "healthy_orphan" (package installed
+# cleanly but hardware absent) or "broken_orphan" (package in a
+# half-configured / half-installed / unpacked state and hardware
+# absent — this is DavidOliMar's case and blocks apt).
+GASKET_ORPHAN_STATE=""
+
+detect_orphan_gasket_dkms() {
+  GASKET_ORPHAN_STATE=""
+
+  # Hardware present -> not orphan, never touched by this flow.
+  [[ "$CORAL_PCIE_COUNT" -gt 0 ]] && return 0
+
+  local pkg_status
+  pkg_status=$(dpkg-query -W -f='${Status}' gasket-dkms 2>/dev/null || echo "")
+  [[ -z "$pkg_status" ]] && return 0  # package not installed at all
+
+  if [[ "$pkg_status" == *"ok installed"* ]]; then
+    GASKET_ORPHAN_STATE="healthy_orphan"
+  elif [[ "$pkg_status" == *"half-configured"* \
+       || "$pkg_status" == *"half-installed"* \
+       || "$pkg_status" == *"unpacked"* \
+       || "$pkg_status" == *"failed-config"* \
+       || "$pkg_status" == *"reinst-required"* ]]; then
+    GASKET_ORPHAN_STATE="broken_orphan"
+  fi
+}
+
+cleanup_orphan_gasket_dkms() {
+  # Return codes:
+  #   0 cleanup completed and every final verification passed
+  #   1 operator cancelled before any change was made
+  #   2 cleanup ran, but dpkg/DKMS could not be verified as healthy
+  local msg=""
+  msg+="\n$(translate 'A legacy gasket-dkms package was found on this host, but no Coral M.2 / PCIe hardware is present.')\n\n"
+  msg+="$(translate 'This package was installed by older versions of the ProxMenux Coral installer that placed the M.2 kernel driver on every system, including USB-only setups. It is not needed for Coral USB devices, which use libedgetpu1-std / libedgetpu1-max only.')\n\n"
+
+  if [[ "$GASKET_ORPHAN_STATE" == "broken_orphan" ]]; then
+    msg+="\Z1\Zb$(translate 'The package is currently in a broken state and is blocking apt updates on this system.')\Zn\n\n"
+  fi
+
+  msg+="\Zb$(translate 'This cleanup will:')\Zn\n"
+  msg+="  • $(translate 'Purge the gasket-dkms package')\n"
+  msg+="  • $(translate 'Remove every registered gasket DKMS version')\n"
+  msg+="  • $(translate 'Run apt-get install -f to complete any pending package configurations')\n\n"
+
+  if [[ "$CORAL_USB_COUNT" -gt 0 || "$CORAL_USB_INSTALLED" == "true" ]]; then
+    msg+="\Z2$(translate 'Your Coral USB device and its runtime (libedgetpu1) will NOT be affected.')\Zn\n\n"
+  fi
+
+  msg+="$(translate 'If you have a Coral M.2 / PCIe device that is physically installed but not detected by lspci, cancel here and check your hardware first before proceeding.')\n\n"
+  msg+="\Zb$(translate 'Do you want to proceed with the cleanup?')\Zn"
+
+  if ! dialog --backtitle "ProxMenux" --colors \
+        --title "$(translate 'Legacy gasket-dkms detected')" \
+        --defaultno --yesno "$msg" 24 84; then
+    return 1
+  fi
+
+  show_proxmenux_logo
+  msg_title "$(translate 'Cleanup legacy gasket-dkms')"
+  export DEBIAN_FRONTEND=noninteractive
+
+  msg_info "$(translate 'Purging gasket-dkms package...')"
+  # Try the clean apt path first; fall back to dpkg force flags if the
+  # package state prevents apt from resolving the removal itself.
+  if ! apt-get remove --purge -y gasket-dkms >>"$LOG_FILE" 2>&1; then
+    dpkg --remove --force-remove-reinstreq gasket-dkms >>"$LOG_FILE" 2>&1 || true
+    dpkg --purge --force-all gasket-dkms >>"$LOG_FILE" 2>&1 || true
+  fi
+
+  # A host can retain more than the historical gasket/1.0 entry. Read
+  # every version known by DKMS and also include stale version trees
+  # that a broken package configuration may have left behind.
+  local versions=""
+  local version=""
+  local dkms_remove_failed=0
+  if command -v dkms >/dev/null 2>&1; then
+    versions=$({
+      dkms status 2>/dev/null \
+        | awk -F'[,/ ]+' '/^gasket/ {print $2}'
+      if [[ -d /var/lib/dkms/gasket ]]; then
+        find /var/lib/dkms/gasket -mindepth 1 -maxdepth 1 -type d \
+          -exec basename {} \; 2>/dev/null
+      fi
+    } | sed '/^$/d' | sort -u)
+
+    if [[ -n "$versions" ]]; then
+      msg_info "$(translate 'Removing every registered gasket DKMS version...')"
+      while IFS= read -r version; do
+        [[ -z "$version" ]] && continue
+        if ! dkms remove -m gasket -v "$version" --all >>"$LOG_FILE" 2>&1; then
+          dkms_remove_failed=1
+        fi
+      done <<<"$versions"
+
+      if [[ "$dkms_remove_failed" -eq 0 ]]; then
+        msg_ok "$(translate 'DKMS registrations removed.')"
+      else
+        msg_warn "$(translate 'Some DKMS removals reported errors; final verification will determine the result.')"
+      fi
+    fi
+  fi
+
+  local repair_failed=0
+  msg_info "$(translate 'Completing pending package configurations...')"
+  if apt-get install -f -y >>"$LOG_FILE" 2>&1; then
+    msg_ok "$(translate 'Package configurations completed.')"
+  else
+    repair_failed=1
+    msg_warn "$(translate 'Some packages still need attention; review') ${LOG_FILE}"
+  fi
+
+  # Final verification is authoritative. Any dpkg state whose second
+  # character is not "n" (not installed) or "c" (only config files)
+  # still represents package payload or unfinished package work.
+  local package_state=""
+  local package_remnant=""
+  local dkms_remnant=""
+  local audit_output=""
+  package_state=$(dpkg -l gasket-dkms 2>/dev/null \
+    | awk '$2 == "gasket-dkms" {print $1; exit}')
+  if [[ -n "$package_state" && ! "$package_state" =~ ^.[nc] ]]; then
+    package_remnant="$package_state"
+  fi
+
+  if command -v dkms >/dev/null 2>&1; then
+    dkms_remnant=$(dkms status 2>/dev/null \
+      | grep -E '^gasket([,/ ]|$)' \
+      | head -n1)
+  fi
+
+  audit_output=$(dpkg --audit 2>&1 || true)
+  if [[ -n "$audit_output" ]]; then
+    {
+      echo "---- dpkg --audit after legacy gasket-dkms cleanup ----"
+      printf '%s\n' "$audit_output"
+    } >>"$LOG_FILE"
+  fi
+
+  if [[ -n "$package_remnant" ]]; then
+    repair_failed=1
+    msg_warn "$(translate 'gasket-dkms is still reported by dpkg in state:') ${package_remnant}. $(translate 'Manual review is required.')"
+  else
+    msg_ok "$(translate 'gasket-dkms has been fully removed from this system.')"
+  fi
+
+  if [[ -n "$dkms_remnant" ]]; then
+    repair_failed=1
+    msg_warn "$(translate 'A gasket DKMS registration is still present:') ${dkms_remnant}"
+  else
+    msg_ok "$(translate 'No gasket DKMS registrations remain.')"
+  fi
+
+  if [[ -n "$audit_output" ]]; then
+    repair_failed=1
+    msg_warn "$(translate 'dpkg still reports unfinished package work; review') ${LOG_FILE}"
+  else
+    msg_ok "$(translate 'The dpkg package database is clean.')"
+  fi
+
+  # Clear the component marker only after gasket itself is confirmed
+  # absent. A separate dpkg audit problem must still make the overall
+  # operation fail, but should not leave a false Coral PCIe component.
+  if [[ -z "$package_remnant" && -z "$dkms_remnant" ]]; then
+    if declare -f update_component_status >/dev/null 2>&1; then
+      update_component_status "coral_driver" "removed" "" "gpu" '{}' >/dev/null 2>&1 || true
+    fi
+    rm -f /var/lib/proxmenux/coral_gasket_version 2>/dev/null || true
+  fi
+
+  if [[ "$repair_failed" -ne 0 ]]; then
+    echo
+    msg_error "$(translate 'Legacy gasket-dkms cleanup could not be verified as complete.')"
+    msg_warn "$(translate 'No reboot was started. Review the log before retrying:') ${LOG_FILE}"
+    return 2
+  fi
+
+  echo
+  msg_success "$(translate 'Cleanup completed. A reboot is recommended to fully apply pending kernel package configurations.')"
+  restart_prompt
+  return 0
+}
+
 clone_gasket_sources() {
   # Primary:  feranick/gasket-driver  — community fork, actively maintained,
   #                                     carries patches for kernel 6.10/6.12/6.13.
@@ -655,16 +864,36 @@ restart_prompt() {
 # Main orchestrator
 # ============================================================
 main() {
+  local cleanup_rc=0
   : >"$LOG_FILE"
 
   detect_coral_hardware
   detect_coral_install_state
+  detect_orphan_gasket_dkms
 
   # No hardware AND no leftover install → nothing to do.
   if [[ "$CORAL_PCIE_COUNT" -eq 0 && "$CORAL_USB_COUNT" -eq 0 ]] \
       && ! $CORAL_PCIE_INSTALLED && ! $CORAL_USB_INSTALLED; then
     no_hardware_dialog
     exit 0
+  fi
+
+  # Legacy gasket-dkms package left behind by the retired installer
+  # (see detect_orphan_gasket_dkms header). Offer explicit cleanup
+  # before the normal action menu so the user sees a curated fix
+  # instead of a broken install/remove flow. If the operator cancels,
+  # we still fall through to the standard menu (they may want to act
+  # on the USB runtime independently).
+  if [[ -n "$GASKET_ORPHAN_STATE" ]]; then
+    if cleanup_orphan_gasket_dkms; then
+      exit 0
+    else
+      cleanup_rc=$?
+      # Return 1 means the operator cancelled and may still use the
+      # standard menu. A failed repair must stop here instead of
+      # continuing as though the package manager were healthy.
+      [[ "$cleanup_rc" -eq 1 ]] || exit "$cleanup_rc"
+    fi
   fi
 
   # If something is already installed, offer reinstall/uninstall choice.

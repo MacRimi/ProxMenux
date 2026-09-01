@@ -539,18 +539,233 @@ def _stat_via_host(host_pid: str, ct_target: str,
 # ---------------------------------------------------------------------------
 
 
-def get_lxc_mount_points(vmid: str) -> dict[str, Any]:
-    """Top-level entry point used by the Flask route.
+def get_lxc_mount_points_static(vmid: str) -> dict[str, Any]:
+    """Static half of the mount-points payload — safe to cache
+    indefinitely because it only reads config and classifies against
+    PVE's storage inventory.
 
     Returns:
       - ``ok`` (bool)
+      - ``vmid`` (str)
+      - ``mount_points`` — list of configured mp0/mp1/... entries with
+        source / target / type / origin classification / host source
+        existence flags. No `df`, no `stat`, no ad-hoc detection.
+
+    The runtime enrichment (capacity, health, ad-hoc mounts,
+    runtime_mounted flag) lives in `get_lxc_mount_points_runtime`
+    and is fetched fresh on every modal open by the client. That
+    split lets the backend cache this half indefinitely (with event
+    invalidation on start/stop) while still giving the user real-
+    time capacity when they actually look."""
+    if not re.match(r"^\d+$", vmid):
+        return {"ok": False, "error": "invalid vmid"}
+
+    config_entries = _read_lxc_config(vmid)
+    pve_storages = _list_pve_storages()
+
+    out: list[dict[str, Any]] = []
+    for entry in config_entries:
+        source = entry.get("source", "")
+        target = entry.get("target", "")
+        cls = _classify(source, pve_storages)
+        host_src = _host_source_state(source)
+        out.append({
+            "mp_index": entry.get("mp_index", ""),
+            "source": source,
+            "target": target,
+            "type": cls["type"],
+            "origin_storage": cls.get("origin_storage", ""),
+            "origin_storage_type": cls.get("origin_storage_type", ""),
+            "origin_label": cls.get("origin_label", source),
+            "config_options": entry.get("config_options", {}),
+            "config_flags": entry.get("config_flags", []),
+            "host_source_exists": host_src["exists"],
+            "host_source_is_mountpoint": host_src["is_mountpoint"],
+        })
+
+    # Cheap hint so the client can render the Mount Points tab
+    # immediately for CTs that ONLY have ad-hoc NFS/CIFS mounts done
+    # from inside the container (nothing in .conf, so `out` is
+    # empty). Without this hint the tab appears only after the
+    # runtime endpoint returns 200-500 ms later, pushing the other
+    # tabs sideways. Reading /proc/<pid>/mounts is a pure file read
+    # (~1 ms, no subprocess), filter by remote fs family so only
+    # storage counts — plain bind mounts of /dev/* passthrough
+    # devices don't inflate the count.
+    #
+    # IMPORTANT: exclude runtime targets that match a declared mp.
+    # When a host mp source is itself a remote share (e.g. mp0 binds
+    # /mnt/pve/Piblic which is a CIFS mount on the host), the same
+    # mount surfaces in /proc/<pid>/mounts with an `nfs`/`cifs`
+    # fstype from the CT's perspective. Without the filter the hint
+    # double-counted it, so the badge showed mp+1 when the tab really
+    # only had `mp` cards to render.
+    ad_hoc_hint_count = 0
+    running, host_pid = _ct_status(vmid)
+    if running and host_pid:
+        try:
+            config_targets = {
+                entry.get("target", "")
+                for entry in config_entries
+                if entry.get("target")
+            }
+            for rt in _read_ct_proc_mounts(host_pid):
+                if not _REMOTE_FS_RE.match(rt.get("rt_fstype", "")):
+                    continue
+                if rt.get("rt_target") in config_targets:
+                    continue
+                ad_hoc_hint_count += 1
+        except Exception:
+            pass
+
+    return {
+        "ok": True,
+        "vmid": vmid,
+        "mount_points": out,
+        "ad_hoc_hint_count": ad_hoc_hint_count,
+    }
+
+
+def get_lxc_mount_points_runtime(vmid: str) -> dict[str, Any]:
+    """Runtime half — always fresh, no cache. Fetched by the client
+    every time the Mount Points tab is opened so the operator sees
+    live capacity + reachability, plus any ad-hoc NFS/CIFS mounts
+    the container itself has made since the last static snapshot.
+
+    Returns:
+      - ``ok`` (bool)
+      - ``vmid`` (str)
       - ``running`` (bool)
-      - ``mount_points`` — list of configured mp0/mp1/... entries
-      - ``ad_hoc`` — list of NFS/CIFS/SMB mounts found inside the running
-        CT that aren't backed by an mp config line
-    """
-    # Validate vmid format — the value comes from a URL parameter, so
-    # we keep it strict to avoid path-traversal weirdness.
+      - ``runtime`` — dict keyed by target, containing runtime state
+        + capacity per configured mount point
+      - ``ad_hoc`` — list of NFS/CIFS/SMB mounts done inside the CT
+        that aren't backed by an mp config line
+
+    The client merges `runtime[target]` onto the matching card from
+    the static payload; ad-hoc mounts render as their own cards
+    under a "Mounted inside container" divider. If the CT is down
+    or the client had no static payload for a target, the tab still
+    renders whatever runtime info is available (never blanks)."""
+    if not re.match(r"^\d+$", vmid):
+        return {"ok": False, "error": "invalid vmid"}
+
+    config_entries = _read_lxc_config(vmid)
+    pve_storages = _list_pve_storages()
+    running, host_pid = _ct_status(vmid)
+    rt_mounts = _read_ct_proc_mounts(host_pid) if running else []
+
+    # Same parallelisation as the pre-split path: `df`/`stat` per
+    # mount point are I/O-bound. Serialised, a CT with 5+ binds
+    # tripped Caddy's 3s reverse-proxy timeout.
+    from concurrent.futures import ThreadPoolExecutor
+    rt_by_target: dict[str, dict[str, Any]] = {m["rt_target"]: m for m in rt_mounts}
+
+    runtime_by_target: dict[str, dict[str, Any]] = {}
+    matched_targets: set[str] = set()
+
+    def _gather_one(entry):
+        src = entry.get("source", "")
+        tgt = entry.get("target", "")
+        classification = _classify(src, pve_storages)
+        capacity = _capacity_for(
+            src, classification, pve_storages,
+            config_options=entry.get("config_options", {}),
+            host_pid=host_pid if running else "",
+            target=tgt,
+        )
+        live_target = bool(running and tgt and tgt in rt_by_target)
+        health = _stat_via_host(host_pid, tgt) if live_target else None
+        return entry, capacity, live_target, health
+
+    if config_entries:
+        max_workers = max(2, min(8, len(config_entries)))
+        with ThreadPoolExecutor(max_workers=max_workers) as pool:
+            gathered = list(pool.map(_gather_one, config_entries))
+    else:
+        gathered = []
+
+    for entry, cap, live_target, health in gathered:
+        target = entry.get("target", "")
+        rt_item: dict[str, Any] = {**cap}
+        if live_target:
+            rt = rt_by_target[target]
+            rt_item.update({
+                "runtime_mounted": True,
+                "runtime_source": rt["rt_source"],
+                "runtime_fstype": rt["rt_fstype"],
+                "runtime_options": rt["rt_options"],
+                "runtime_readonly": rt["rt_readonly"],
+                "runtime_reachable": health["reachable"],
+                "runtime_error": health["error"],
+            })
+            matched_targets.add(target)
+        elif running:
+            rt_item["runtime_mounted"] = False
+            rt_item["runtime_error"] = "configured but not mounted"
+        else:
+            rt_item["runtime_mounted"] = None  # CT down
+        runtime_by_target[target] = rt_item
+
+    # Ad-hoc remote mounts inside the running CT — same logic and
+    # parallelisation as before.
+    ad_hoc: list[dict[str, Any]] = []
+    if running:
+        ad_hoc_candidates = [
+            rt for rt in rt_mounts
+            if rt["rt_target"] not in matched_targets
+            and _REMOTE_FS_RE.match(rt["rt_fstype"])
+        ]
+        if ad_hoc_candidates:
+            max_workers = max(2, min(8, len(ad_hoc_candidates)))
+            with ThreadPoolExecutor(max_workers=max_workers) as pool:
+                def _gather_adhoc(rt):
+                    h = _stat_via_host(host_pid, rt["rt_target"])
+                    if h.get("reachable"):
+                        cap = _df_via_pct_exec(vmid, rt["rt_target"])
+                    else:
+                        cap = {"total_bytes": None, "used_bytes": None,
+                               "available_bytes": None}
+                    return rt, h, cap
+                results = list(pool.map(_gather_adhoc, ad_hoc_candidates))
+            for rt, health, cap in results:
+                ad_hoc.append({
+                    "mp_index": "",
+                    "source": rt["rt_source"],
+                    "target": rt["rt_target"],
+                    "type": "ad_hoc",
+                    "origin_storage": "",
+                    "origin_storage_type": "",
+                    "origin_label": rt["rt_source"],
+                    "config_options": {},
+                    "config_flags": [],
+                    "total_bytes": cap["total_bytes"],
+                    "used_bytes": cap["used_bytes"],
+                    "available_bytes": cap["available_bytes"],
+                    "runtime_mounted": True,
+                    "runtime_source": rt["rt_source"],
+                    "runtime_fstype": rt["rt_fstype"],
+                    "runtime_options": rt["rt_options"],
+                    "runtime_readonly": rt["rt_readonly"],
+                    "runtime_reachable": health["reachable"],
+                    "runtime_error": health["error"],
+                })
+
+    return {
+        "ok": True,
+        "vmid": vmid,
+        "running": running,
+        "runtime": runtime_by_target,
+        "ad_hoc": ad_hoc,
+    }
+
+
+def get_lxc_mount_points(vmid: str) -> dict[str, Any]:
+    """Legacy combined entry point — kept for backwards compatibility
+    with any caller that still wants the pre-split shape. New code
+    should hit the static/runtime pair separately.
+
+    Merges the two halves so the returned dict matches what the
+    single-endpoint route used to return before the split."""
     if not re.match(r"^\d+$", vmid):
         return {"ok": False, "error": "invalid vmid"}
 

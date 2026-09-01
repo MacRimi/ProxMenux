@@ -7,7 +7,7 @@
 # Copyright   : (c) 2024 MacRimi
 # License     : GPL-3.0
 #               https://github.com/MacRimi/ProxMenux/blob/main/LICENSE
-# Version     : 1.3
+# Version     : 1.4
 # ==========================================================
 # Description:
 # Interactive post-installation configurator for Proxmox VE.
@@ -15,8 +15,9 @@
 # System, Virtualization, Network, Storage, Security,
 # Customization, Monitoring, Performance, Optional) and presents
 # a checklist per category so the user picks exactly what to
-# apply. Every change is registered in installed_tools.json for
-# later reversal from Uninstall Optimizations.
+# apply. Reversible changes are registered in installed_tools.json
+# for later restoration from Uninstall Optimizations; package upgrades
+# are intentionally excluded because they cannot be rolled back safely.
 #
 # Features:
 # - Checklist UI per category (10 categories, ~30 tools total).
@@ -24,8 +25,8 @@
 #   optimizations plus opt-in items (IOMMU/VFIO, Fastfetch,
 #   Figurine, Ceph repo, HA, AMD fixes, pigz, ZFS ARC, …).
 # - Idempotent: safe to run repeatedly.
-# - Registration + rollback: every tool has a reverse function
-#   in uninstall-tools.sh.
+# - Registration + rollback: every registered tool has a reverse
+#   function in uninstall-tools.sh.
 #
 # Credits:
 # Incorporates ideas and snippets originally published under BSD
@@ -155,7 +156,7 @@ $(translate "Do you want to continue anyway?")" 13 70
 
 
 enable_kexec() {
-    local FUNC_VERSION="1.0"
+    local FUNC_VERSION="1.1"
     # description: Install kexec-tools and add a Ctrl+Alt+K hotkey + systemd unit for fast reboots that skip BIOS/POST.
     msg_info2 "$(translate "Configuring kexec for quick reboots...")"
     NECESSARY_REBOOT=1
@@ -169,7 +170,7 @@ enable_kexec() {
         /usr/bin/env DEBIAN_FRONTEND=noninteractive apt-get -y -o Dpkg::Options::='--force-confdef' install kexec-tools > /dev/null 2>&1
         msg_ok "$(translate "kexec-tools installed successfully")"
     else
-        msg_ok "$(translate "kexec-tools installed successfully")"
+        msg_ok "$(translate "kexec-tools is already installed")"
     fi
 
     # Create systemd service file
@@ -194,7 +195,7 @@ WantedBy=default.target
 EOF
         msg_ok "$(translate "kexec-pve service file created")"
     else
-        msg_ok "$(translate "kexec-pve service file created")"
+        msg_ok "$(translate "kexec-pve service file is already configured")"
     fi
 
     # Enable the service
@@ -202,7 +203,7 @@ EOF
         systemctl enable kexec-pve.service > /dev/null 2>&1
         msg_ok "$(translate "kexec-pve service enabled")"
     else
-        msg_ok "$(translate "kexec-pve service enabled")"
+        msg_ok "$(translate "kexec-pve service is already enabled")"
     fi
     
     if [ ! -f /root/.bash_profile ]; then
@@ -213,7 +214,7 @@ EOF
         echo "alias reboot-quick='systemctl kexec'" >> /root/.bash_profile
         msg_ok "$(translate "reboot-quick alias added")"
     else
-        msg_ok "$(translate "reboot-quick alias added")"
+        msg_ok "$(translate "reboot-quick alias is already configured")"
     fi
 
     msg_success "$(translate "kexec configured successfully. Use the command: reboot-quick")"
@@ -778,7 +779,7 @@ force_apt_ipv4() {
 
 
 apply_network_optimizations() {
-    local FUNC_VERSION="1.1"
+    local FUNC_VERSION="1.2"
     # description: Tune TCP buffers, somaxconn, IPv4 hardening and disable rp_filter on fw bridges (PVE 9 compatible).
     msg_info "$(translate "Optimizing network settings...")"
     NECESSARY_REBOOT=1
@@ -885,14 +886,16 @@ RemainAfterExit=yes
 WantedBy=multi-user.target
 EOF
 
-    cat > /etc/udev/rules.d/99-proxmenux-fwbr-tune.rules <<'EOF'
+    rm -f /etc/udev/rules.d/99-proxmenux-fwbr-tune.rules
+
+    cat > /etc/udev/rules.d/99-zz-proxmenux-fwbr-tune.rules <<'EOF'
 ACTION=="add", SUBSYSTEM=="net", KERNEL=="fwbr*", RUN+="/usr/local/sbin/proxmenux-fwbr-tune %k"
 ACTION=="add", SUBSYSTEM=="net", KERNEL=="fwln*", RUN+="/usr/local/sbin/proxmenux-fwbr-tune %k"
 ACTION=="add", SUBSYSTEM=="net", KERNEL=="fwpr*", RUN+="/usr/local/sbin/proxmenux-fwbr-tune %k"
 ACTION=="add", SUBSYSTEM=="net", KERNEL=="tap*",  RUN+="/usr/local/sbin/proxmenux-fwbr-tune %k"
 EOF
-    chmod 0644 /etc/udev/rules.d/99-proxmenux-fwbr-tune.rules
-    chown root:root /etc/udev/rules.d/99-proxmenux-fwbr-tune.rules
+    chmod 0644 /etc/udev/rules.d/99-zz-proxmenux-fwbr-tune.rules
+    chown root:root /etc/udev/rules.d/99-zz-proxmenux-fwbr-tune.rules
 
     systemctl daemon-reload >/dev/null 2>&1 || true
     udevadm control --reload-rules >/dev/null 2>&1 || true
@@ -1024,7 +1027,7 @@ EOF
 
 
 install_ceph() {
-    local FUNC_VERSION="1.0"
+    local FUNC_VERSION="1.1"
     # description: Install Ceph (client + server packages) for distributed RBD/CephFS storage; PVE 8/9 aware repo selection.
     msg_info2 "$(translate "Installing Ceph support...")"
     
@@ -1053,6 +1056,11 @@ install_ceph() {
         return 0
     fi
     
+    if [[ ! -r /usr/share/keyrings/proxmox-archive-keyring.gpg ]]; then
+        msg_error "$(translate "The Proxmox archive keyring is missing; Ceph installation cannot continue safely")"
+        return 1
+    fi
+
     # Configure Ceph repository based on version
     msg_info "$(translate "Configuring Ceph repository for PVE") $pve_version..."
     
@@ -1084,10 +1092,10 @@ EOF
         
         # Use legacy format for PVE 8
         msg_info "$(translate "Creating Ceph repository for PVE 8 (legacy format)...")"
-        echo "deb https://download.proxmox.com/debian/ceph-${ceph_version} ${target_codename} no-subscription" > /etc/apt/sources.list.d/ceph-${ceph_version}.list
+        echo "deb [signed-by=/usr/share/keyrings/proxmox-archive-keyring.gpg] https://download.proxmox.com/debian/ceph-${ceph_version} ${target_codename} no-subscription" > /etc/apt/sources.list.d/ceph-${ceph_version}.list
         msg_ok "$(translate "Ceph repository configured for PVE 8")"
     fi
-    
+
  
     msg_info "$(translate "Updating package lists...")"
     
@@ -1100,16 +1108,9 @@ EOF
         msg_warn "$(translate "Package update had issues, checking details...")"
         
 
-        if echo "$update_output" | grep -q "NO_PUBKEY\|GPG error"; then
-            msg_info "$(translate "Fixing GPG key issues...")"
-
-            apt-key adv --keyserver keyserver.ubuntu.com --recv-keys $(echo "$update_output" | grep "NO_PUBKEY" | sed 's/.*NO_PUBKEY //' | head -1) 2>/dev/null
-
-            if apt-get update > /dev/null 2>&1; then
-                msg_ok "$(translate "Package lists updated after GPG fix")"
-            else
-                msg_warn "$(translate "Package update still has issues, continuing anyway...")"
-            fi
+        if echo "$update_output" | grep -Eqi 'NO_PUBKEY|GPG error|EXPKEYSIG|BADSIG|not signed|signatures? (could not|couldn.t) be verified'; then
+            msg_error "$(translate "Ceph repository signature verification failed; installation has been stopped")"
+            return 1
         elif echo "$update_output" | grep -q "404\|Failed to fetch"; then
             msg_warn "$(translate "Some repositories are not available, continuing with available ones...")"
         else
@@ -1206,11 +1207,77 @@ EOF
 
 
 
+_reconcile_external_zfs_arc_settings() {
+    local managed_conf="$1"
+    local backup_dir="$BASE_DIR/backups/zfs_arc"
+    local manifest="$backup_dir/manifest.tsv"
+    local conf_file backup_file tmp_file tmp_manifest post_hash
+
+    while IFS= read -r -d '' conf_file; do
+        [[ "$conf_file" == "$managed_conf" ]] && continue
+
+        if ! grep -Eq \
+            '^[[:space:]]*options[[:space:]]+zfs([[:space:]]|$).*zfs_arc_(min|max)=' \
+            "$conf_file" 2>/dev/null; then
+            continue
+        fi
+
+        msg_warn "$(translate "Conflicting ZFS ARC settings detected in:") $conf_file"
+        mkdir -p "$backup_dir" || return 1
+        touch "$manifest" || return 1
+        backup_file="$backup_dir/$(basename "$conf_file").before-proxmenux"
+        if [[ ! -f "$backup_file" ]]; then
+            cp -p "$conf_file" "$backup_file" || return 1
+        fi
+
+        tmp_file=$(mktemp "${conf_file}.proxmenux.XXXXXX") || return 1
+        cp -p "$conf_file" "$tmp_file" || {
+            rm -f "$tmp_file"
+            return 1
+        }
+
+        # Remove only zfs_arc_min/max tokens from active `options zfs`
+        # directives. Other ZFS module options and comments stay untouched.
+        awk '
+            /^[[:space:]]*options[[:space:]]+zfs([[:space:]]|$)/ {
+                line = $0
+                gsub(/[[:space:]]+zfs_arc_(min|max)=[^[:space:]#]+/, "", line)
+                if (line ~ /^[[:space:]]*options[[:space:]]+zfs[[:space:]]*$/) {
+                    next
+                }
+                if (line ~ /^[[:space:]]*options[[:space:]]+zfs[[:space:]]*#/) {
+                    sub(/^[[:space:]]*options[[:space:]]+zfs[[:space:]]*/, "", line)
+                }
+                print line
+                next
+            }
+            { print }
+        ' "$conf_file" > "$tmp_file" || {
+            rm -f "$tmp_file"
+            return 1
+        }
+
+        mv -f "$tmp_file" "$conf_file" || return 1
+        post_hash=$(sha256sum "$conf_file" | awk '{print $1}')
+
+        tmp_manifest=$(mktemp "${manifest}.XXXXXX") || return 1
+        awk -F '\t' -v path="$conf_file" '$1 != path' "$manifest" > "$tmp_manifest"
+        printf '%s\t%s\t%s\n' "$conf_file" "$backup_file" "$post_hash" >> "$tmp_manifest"
+        mv -f "$tmp_manifest" "$manifest" || return 1
+
+        msg_ok "$(translate "Conflicting ZFS ARC settings backed up and reconciled:") $conf_file"
+    done < <(find /etc/modprobe.d -maxdepth 1 -type f -name '*.conf' -print0 2>/dev/null)
+}
+
+
 optimize_zfs_arc() {
-    local FUNC_VERSION="1.1"
-    # description: Cap ZFS ARC max to a sensible fraction of host RAM so VMs don't fight the kernel for memory. Only sets zfs_arc_max; other OpenZFS tunables stay at their defaults.
+    local FUNC_VERSION="1.3"
+    # description: Cap ZFS ARC max using Proxmox VE's 10%-of-RAM policy (16 GiB ceiling), safely reconcile conflicting module settings and report the pool-size guideline before applying it.
     local zfs_conf="/etc/modprobe.d/99-zfsarc.conf"
-    local ram_bytes arc_max
+    local gib=$((1024 * 1024 * 1024))
+    local tib=$((1024 * 1024 * 1024 * 1024))
+    local ram_kib ram_bytes arc_max current_arc_max pool_bytes=0 pool_size
+    local pool_tib pool_guideline arc_max_human current_arc_max_human pool_guideline_human
 
     msg_info2 "$(translate "Optimizing ZFS ARC maximum size...")"
 
@@ -1223,20 +1290,51 @@ optimize_zfs_arc() {
         return 0
     fi
 
-    ram_bytes=$(awk '/MemTotal:/ { print $2 * 1024 }' /proc/meminfo)
-    if [[ -z "$ram_bytes" || "$ram_bytes" -le 0 ]]; then
+    ram_kib=$(awk '/MemTotal:/ { print $2; exit }' /proc/meminfo)
+    if [[ ! "$ram_kib" =~ ^[0-9]+$ || "$ram_kib" -le 0 ]]; then
         msg_error "$(translate "Unable to determine the installed memory.")"
         return 1
     fi
+    ram_bytes=$((ram_kib * 1024))
 
-    if (( ram_bytes <= 16 * 1024 * 1024 * 1024 )); then
-        arc_max=$((512 * 1024 * 1024))
-    elif (( ram_bytes <= 32 * 1024 * 1024 * 1024 )); then
-        arc_max=$((1024 * 1024 * 1024))
-    else
-        arc_max=$((ram_bytes / 8))
+    arc_max=$((ram_bytes / 10))
+    (( arc_max > 16 * gib )) && arc_max=$((16 * gib))
+    (( arc_max < 64 * 1024 * 1024 )) && arc_max=$((64 * 1024 * 1024))
+
+    while read -r pool_size; do
+        [[ "$pool_size" =~ ^[0-9]+$ ]] || continue
+        pool_bytes=$((pool_bytes + pool_size))
+    done < <(zpool list -H -p -o size 2>/dev/null)
+
+    pool_tib=$(((pool_bytes + tib - 1) / tib))
+    pool_guideline=$((2 * gib + pool_tib * gib))
+    current_arc_max=$(awk '$1 == "c_max" { print $3; exit }' /proc/spl/kstat/zfs/arcstats 2>/dev/null || true)
+    if [[ ! "$current_arc_max" =~ ^[0-9]+$ ]]; then
+        current_arc_max=$(cat /sys/module/zfs/parameters/zfs_arc_max 2>/dev/null || true)
     fi
-    (( arc_max < 512 * 1024 * 1024 )) && arc_max=$((512 * 1024 * 1024))
+
+    if command -v numfmt >/dev/null 2>&1; then
+        arc_max_human=$(numfmt --to=iec-i --suffix=B "$arc_max")
+        pool_guideline_human=$(numfmt --to=iec-i --suffix=B "$pool_guideline")
+        if [[ "$current_arc_max" =~ ^[0-9]+$ ]]; then
+            current_arc_max_human=$(numfmt --to=iec-i --suffix=B "$current_arc_max")
+        fi
+    fi
+    arc_max_human=${arc_max_human:-"$arc_max bytes"}
+    pool_guideline_human=${pool_guideline_human:-"$pool_guideline bytes"}
+    current_arc_max_human=${current_arc_max_human:-${current_arc_max:-unknown}}
+
+    msg_info "$(translate "Current effective ZFS ARC maximum:") $current_arc_max_human"
+    msg_info "$(translate "Proposed ZFS ARC maximum:") $arc_max_human"
+    if (( arc_max < pool_guideline )); then
+        msg_warn "$(translate "The proposed ARC maximum is below Proxmox VE's pool-size guideline:") $pool_guideline_human"
+        msg_info2 "$(translate "Consider adding RAM or reducing the host workload if ZFS performance is insufficient.")"
+    fi
+
+    if ! _reconcile_external_zfs_arc_settings "$zfs_conf"; then
+        msg_error "$(translate "Failed to reconcile conflicting ZFS ARC settings.")"
+        return 1
+    fi
 
     if [[ -f "$zfs_conf" && ! -f "${zfs_conf}.bak" ]]; then
         cp -p "$zfs_conf" "${zfs_conf}.bak"
@@ -1258,7 +1356,7 @@ EOF
     fi
 
     NECESSARY_REBOOT=1
-    msg_ok "$(translate "ZFS ARC maximum configured:") $arc_max $(translate "bytes")"
+    msg_ok "$(translate "ZFS ARC maximum configured:") $arc_max_human"
     msg_success "$(translate "ZFS ARC optimization completed")"
     register_tool "zfs_arc" true "$FUNC_VERSION"
 }
@@ -1445,17 +1543,55 @@ update_snapshot_schedule() {
 
 
 disable_rpc() {
+    local FUNC_VERSION="1.1"
+    # description: Disable rpcbind service/socket while preserving their exact previous systemd state for rollback.
+    local state_file="$BASE_DIR/rpcbind.state"
+    local state_tmp="${state_file}.tmp.$$"
+    local unit load_state enabled_state active_state
+
     msg_info2 "$(translate "Disabling portmapper/rpcbind for security...")"
 
-    msg_info "$(translate "Disabling and stopping rpcbind service...")"
+    mkdir -p "$BASE_DIR"
+    if [[ ! -s "$state_file" ]]; then
+        : > "$state_tmp"
+        for unit in rpcbind.socket rpcbind.service; do
+            load_state="$(systemctl show -p LoadState --value "$unit" 2>/dev/null || true)"
+            [[ -z "$load_state" || "$load_state" == "not-found" ]] && continue
+            enabled_state="$(systemctl is-enabled "$unit" 2>/dev/null || true)"
+            active_state="$(systemctl is-active "$unit" 2>/dev/null || true)"
+            printf '%s|%s|%s\n' "$unit" "${enabled_state:-unknown}" "${active_state:-unknown}" >> "$state_tmp"
+        done
 
-    # Disable and stop rpcbind
-    systemctl disable rpcbind > /dev/null 2>&1
-    systemctl stop rpcbind > /dev/null 2>&1
+        if [[ ! -s "$state_tmp" ]]; then
+            rm -f "$state_tmp"
+            msg_warn "$(translate "rpcbind units were not found; no changes were made")"
+            return 0
+        fi
+        mv "$state_tmp" "$state_file"
+    fi
 
-    msg_ok "$(translate "rpcbind service has been disabled and stopped")"
+    # Register as soon as the original state is safely persisted. If a
+    # later systemd operation fails, Uninstall Optimizations must still
+    # expose the recovery path instead of leaving a hidden partial change.
+    register_tool "rpc" true "$FUNC_VERSION"
 
-    msg_success "$(translate "portmapper/rpcbind has been disabled and removed")"
+    msg_info "$(translate "Disabling and stopping rpcbind service and socket...")"
+
+    systemctl disable --now rpcbind.socket rpcbind.service > /dev/null 2>&1 || true
+
+    for unit in rpcbind.socket rpcbind.service; do
+        active_state="$(systemctl is-active "$unit" 2>/dev/null || true)"
+        enabled_state="$(systemctl is-enabled "$unit" 2>/dev/null || true)"
+        if [[ "$active_state" == "active" || "$active_state" == "activating" ||
+              "$enabled_state" == "enabled" || "$enabled_state" == "enabled-runtime" ]]; then
+            msg_error "$(translate "rpcbind could not be disabled completely")"
+            return 1
+        fi
+    done
+
+    msg_ok "$(translate "rpcbind service and socket have been disabled and stopped")"
+
+    msg_success "$(translate "portmapper/rpcbind has been disabled")"
 }
 
 
@@ -1811,8 +1947,8 @@ enable_vfio_iommu() {
 
 
 customize_bashrc() {
-    local FUNC_VERSION="1.0"
-    # description: Inject the ProxMenux core bashrc block (aliases, prompt, history) into root's .bashrc, idempotent via begin/end markers.
+    local FUNC_VERSION="1.1"
+    # description: Install the managed ProxMenux Bash prompt and aliases while preserving or selecting the short/full working-directory style.
     msg_info2 "$(translate "Customizing bashrc for root user...")"
     
     msg_info "$(translate "Customizing bashrc for root user...")"
@@ -1820,6 +1956,47 @@ customize_bashrc() {
     local bash_profile="/root/.bash_profile"
     local marker_begin="# BEGIN PMX_CORE_BASHRC"
     local marker_end="# END PMX_CORE_BASHRC"
+    local prompt_path_escape='\W'
+    local prompt_path_style="${PMX_BASHRC_PATH_STYLE:-}"
+    local short_state="on"
+    local full_state="off"
+    local choice=""
+
+    # Preserve an existing ProxMenux-managed choice when the function is
+    # re-run. \W shows only the current directory; \w shows the full path.
+    if sed -n "/^${marker_begin}$/,/^${marker_end}$/p" "$bashrc" 2>/dev/null | grep -Fq '\w'; then
+        prompt_path_escape='\w'
+        short_state="off"
+        full_state="on"
+    fi
+
+    case "$prompt_path_style" in
+        short)
+            prompt_path_escape='\W'
+            ;;
+        full)
+            prompt_path_escape='\w'
+            ;;
+        "")
+            if [[ -t 0 && -t 1 ]] && command -v whiptail >/dev/null 2>&1; then
+                if ! choice=$(whiptail \
+                    --title "$(translate "Bash prompt path")" \
+                    --radiolist "$(translate "Choose how the current directory is shown in the Bash prompt:")" \
+                    14 76 2 \
+                    "short" "$(translate "Current directory only") (\\W)" "$short_state" \
+                    "full" "$(translate "Full path") (\\w)" "$full_state" \
+                    3>&1 1>&2 2>&3); then
+                    msg_warn "$(translate "Cancelled by user.")"
+                    return 1
+                fi
+                [[ "$choice" == "full" ]] && prompt_path_escape='\w' || prompt_path_escape='\W'
+            fi
+            ;;
+        *)
+            msg_error "PMX_BASHRC_PATH_STYLE must be 'short' or 'full'."
+            return 1
+            ;;
+    esac
     
  
     [ -f "${bashrc}.bak" ] || cp "$bashrc" "${bashrc}.bak" > /dev/null 2>&1
@@ -1834,7 +2011,7 @@ customize_bashrc() {
 ${marker_begin}
 # ProxMenux core customizations
 export HISTTIMEFORMAT="%d/%m/%y %T "
-export PS1="\[\e[31m\][\[\e[m\]\[\e[38;5;172m\]\u\[\e[m\]@\[\e[38;5;153m\]\h\[\e[m\] \[\e[38;5;214m\]\W\[\e[m\]\[\e[31m\]]\[\e[m\]\\$ "
+export PS1="\[\e[31m\][\[\e[m\]\[\e[38;5;172m\]\u\[\e[m\]@\[\e[38;5;153m\]\h\[\e[m\] \[\e[38;5;214m\]${prompt_path_escape}\[\e[m\]\[\e[31m\]]\[\e[m\]\\$ "
 alias l='ls -CF'
 alias la='ls -A'
 alias ll='ls -alF'
@@ -1852,6 +2029,8 @@ EOF
     fi
     
     msg_ok "$(translate "Bashrc customization completed")"
+    msg_info "$(translate "The new prompt will be used in new terminal sessions.")"
+    msg_info "$(translate "To apply it to the current shell now, run:") source /root/.bashrc"
     register_tool "bashrc_custom" true "$FUNC_VERSION"
 }
 
@@ -1866,26 +2045,49 @@ EOF
 
 
 setup_motd() {
+    local FUNC_VERSION="1.0"
+    # description: Add the ProxMenux MOTD banner while preserving the original file contents or absence for rollback.
     msg_info2 "$(translate "Configuring MOTD (Message of the Day) banner...")"
 
-    local motd_file="/etc/motd"
+    local motd_file="${PROXMENUX_MOTD_FILE:-/etc/motd}"
     local custom_message="    This system is optimised by: ProxMenux"
+    local state_file="$BASE_DIR/motd.state"
+    local original_file="$BASE_DIR/motd.original"
     local changes_made=false
 
     msg_info "$(translate "Checking MOTD configuration...")"
 
-    # Check if the custom message already exists
-    if grep -q "$custom_message" "$motd_file"; then
-        msg_ok "$(translate "Custom message added to MOTD")"
-    else
-        # Create a backup of the original MOTD file
-        if [ ! -f "${motd_file}.bak" ]; then
-            cp "$motd_file" "${motd_file}.bak"
-            msg_ok "$(translate "Backup of original MOTD created")"
+    mkdir -p "$BASE_DIR"
+    if [[ ! -f "$state_file" ]]; then
+        if grep -Fqx "$custom_message" "$motd_file" 2>/dev/null; then
+            if [[ -f "${motd_file}.bak" ]]; then
+                cp -a "${motd_file}.bak" "$original_file"
+                printf 'present\n' > "$state_file"
+            else
+                printf 'legacy-marker\n' > "$state_file"
+            fi
+        elif [[ -e "$motd_file" ]]; then
+            cp -a "$motd_file" "$original_file"
+            printf 'present\n' > "$state_file"
+        else
+            printf 'absent\n' > "$state_file"
         fi
+    fi
 
+    # Check if the custom message already exists
+    if grep -Fqx "$custom_message" "$motd_file" 2>/dev/null; then
+        msg_ok "$(translate "Custom MOTD message is already configured")"
+    else
         # Add the custom message at the beginning of the file
-        echo -e "$custom_message\n\n$(cat $motd_file)" > "$motd_file"
+        touch "$motd_file"
+        local motd_tmp
+        motd_tmp="$(mktemp)"
+        {
+            printf '%s\n\n' "$custom_message"
+            cat "$motd_file"
+        } > "$motd_tmp"
+        cat "$motd_tmp" > "$motd_file"
+        rm -f "$motd_tmp"
         changes_made=true
         msg_ok "$(translate "Custom message added to MOTD")"
     fi
@@ -1895,8 +2097,9 @@ setup_motd() {
     if $changes_made; then
         msg_success "$(translate "MOTD configuration updated successfully")"
     else
-        msg_success "$(translate "MOTD configuration updated successfully")"
+        msg_success "$(translate "MOTD configuration was already up to date")"
     fi
+    register_tool "motd" true "$FUNC_VERSION"
 }
 
 
@@ -1952,7 +2155,7 @@ EOF
 
 
 remove_subscription_banner() {
-    local FUNC_VERSION="1.0"
+    local FUNC_VERSION="1.1"
     # description: Patch the Proxmox web UI to suppress the "no valid subscription" dialog (PVE 8 + 9 variants supported).
     local pve_version
     pve_version=$(pveversion 2>/dev/null | grep -oP 'pve-manager/\K[0-9]+' | head -1)
@@ -1963,11 +2166,15 @@ remove_subscription_banner() {
     fi
 
     if [[ "$pve_version" -ge 9 ]]; then
-
-        bash "$LOCAL_SCRIPTS/global/remove-banner-pve-v3.sh"
+        if ! bash "$LOCAL_SCRIPTS/global/remove-banner-pve-v3.sh"; then
+            msg_error "$(translate "Subscription banner removal failed")"
+            return 1
+        fi
     else
-
-        bash "$LOCAL_SCRIPTS/global/remove-banner-pve8.sh"
+        if ! bash "$LOCAL_SCRIPTS/global/remove-banner-pve8.sh"; then
+            msg_error "$(translate "Subscription banner removal failed")"
+            return 1
+        fi
     fi
     register_tool "subscription_banner" true "$FUNC_VERSION"
 }
@@ -1983,8 +2190,8 @@ remove_subscription_banner() {
 
 
 optimize_memory_settings() {
-    local FUNC_VERSION="1.1"
-    # description: Tune swappiness, dirty page ratios, overcommit and compaction proactiveness for VM hosts.
+    local FUNC_VERSION="1.2"
+    # description: Tune swappiness, dirty page ratios and compaction proactiveness for VM hosts without overriding the kernel's memory-overcommit policy.
     msg_info2 "$(translate "Optimizing memory settings...")"
     NECESSARY_REBOOT=1
 
@@ -2007,9 +2214,6 @@ vm.swappiness = 10
 # Lower dirty memory thresholds to free memory faster
 vm.dirty_ratio = 15
 vm.dirty_background_ratio = 5
-
-# Allow memory overcommit to reduce allocation issues
-vm.overcommit_memory = 1
 
 # Avoid excessive virtual memory areas (safe for most applications)
 vm.max_map_count = 262144
@@ -2836,7 +3040,7 @@ EOF
 
 
 setup_persistent_network() {
-    local FUNC_VERSION="1.1"
+    local FUNC_VERSION="1.2"
     # description: Pin NIC names to MAC addresses via systemd .link files so kernel updates don't shuffle interface names.
     local pve_version
     pve_version=$(pveversion 2>/dev/null | grep -oP 'pve-manager/\K[0-9]+' | head -1)
@@ -2917,6 +3121,10 @@ setup_persistent_network() {
 
 
 install_system_utils() {
+    local FUNC_VERSION="1.1"
+    # description: Install selected system utilities and track only packages that were newly added by ProxMenux.
+    local state_file="$BASE_DIR/system_utils.packages"
+    local new_packages_tmp=""
     msg_info2 "$(translate "Installing system utilities...")"
 
     # Build checklist from global PROXMENUX_UTILS array
@@ -2948,6 +3156,8 @@ install_system_utils() {
         return 1
     fi
 
+    new_packages_tmp="$(mktemp)"
+
     local success=0 failed=0 warning=0
     local selected_array
     IFS=' ' read -ra selected_array <<< "$selected"
@@ -2955,6 +3165,10 @@ install_system_utils() {
     for util in "${selected_array[@]}"; do
         util=$(echo "$util" | tr -d '"')
         local pkg_cmd="$util" pkg_desc="$util"
+        local was_installed=false
+        if dpkg-query -W -f='${Status}' "$util" 2>/dev/null | grep -q '^install ok installed$'; then
+            was_installed=true
+        fi
         for util_entry in "${PROXMENUX_UTILS[@]}"; do
             IFS=':' read -r epkg ecmd edesc <<< "$util_entry"
             if [[ "$epkg" == "$util" ]]; then
@@ -2964,12 +3178,28 @@ install_system_utils() {
             fi
         done
         install_single_package "$util" "$pkg_cmd" "$pkg_desc"
-        case $? in
+        local install_result=$?
+        case $install_result in
             0) success=$((success + 1)) ;;
             1) failed=$((failed + 1)) ;;
             2) warning=$((warning + 1)) ;;
         esac
+
+        if [[ "$was_installed" == false ]] &&
+           dpkg-query -W -f='${Status}' "$util" 2>/dev/null | grep -q '^install ok installed$'; then
+            printf '%s\n' "$util" >> "$new_packages_tmp"
+        fi
     done
+
+    if [[ -s "$new_packages_tmp" ]]; then
+        mkdir -p "$BASE_DIR"
+        {
+            [[ -f "$state_file" ]] && cat "$state_file"
+            cat "$new_packages_tmp"
+        } | sort -u > "${state_file}.tmp"
+        mv "${state_file}.tmp" "$state_file"
+    fi
+    rm -f "$new_packages_tmp"
 
     hash -r 2>/dev/null
     echo
@@ -2977,6 +3207,9 @@ install_system_utils() {
     [[ $success -gt 0 ]] && msg_ok "$(translate "Successful"): $success"
     [[ $warning -gt 0 ]] && msg_warn "$(translate "With warnings"): $warning"
     [[ $failed -gt 0 ]] && msg_error "$(translate "Failed"): $failed"
+    if [[ -s "$state_file" ]]; then
+        register_tool "system_utils" true "$FUNC_VERSION"
+    fi
     msg_success "$(translate "Utilities installation completed")"
 }
 
@@ -2987,7 +3220,6 @@ custom_post_category_label() {
   case "$1" in
     "Basic Settings") translate "Basic Settings" ;;
     "System") translate "System" ;;
-    "Hardware") translate "Hardware" ;;
     "Virtualization") translate "Virtualization" ;;
     "Network") translate "Network" ;;
     "Storage") translate "Storage" ;;
@@ -3116,9 +3348,9 @@ main_menu() {
   HEADER="$(translate "Choose options to configure:")\n\n${header_line}"
 
   declare -A category_order=(
-    ["Basic Settings"]=1 ["System"]=2 ["Hardware"]=3 ["Virtualization"]=4
-    ["Network"]=5 ["Storage"]=6 ["Security"]=7 ["Customization"]=8
-    ["Monitoring"]=9 ["Performance"]=10 ["Optional"]=11
+    ["Basic Settings"]=1 ["System"]=2 ["Virtualization"]=3
+    ["Network"]=4 ["Storage"]=5 ["Security"]=6 ["Customization"]=7
+    ["Monitoring"]=8 ["Performance"]=9 ["Optional"]=10
   )
 
   local options=(

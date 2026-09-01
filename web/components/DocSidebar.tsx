@@ -60,9 +60,18 @@ export const sidebarItems: MenuItem[] = [
         href: "/docs/monitor/dashboard",
         submenu: [
           { title: "System Overview tab", i18nKey: "dashboardSystemOverview", href: "/docs/monitor/dashboard/system-overview" },
+          { title: "Apps tab", i18nKey: "dashboardApps", href: "/docs/monitor/dashboard/apps" },
           { title: "Storage tab", i18nKey: "dashboardStorage", href: "/docs/monitor/dashboard/storage" },
           { title: "Network tab", i18nKey: "dashboardNetwork", href: "/docs/monitor/dashboard/network" },
-          { title: "VMs & LXCs tab", i18nKey: "dashboardVmsLxcs", href: "/docs/monitor/dashboard/vms-lxcs" },
+          {
+            title: "VMs & LXCs tab",
+            i18nKey: "dashboardVmsLxcs",
+            href: "/docs/monitor/dashboard/vms-lxcs",
+            submenu: [
+              { title: "App", i18nKey: "dashboardVmsLxcsApp", href: "/docs/monitor/dashboard/vms-lxcs/app" },
+              { title: "Updates", i18nKey: "dashboardVmsLxcsUpdates", href: "/docs/monitor/dashboard/vms-lxcs/updates" },
+            ],
+          },
           { title: "Hardware tab", i18nKey: "dashboardHardware", href: "/docs/monitor/dashboard/hardware" },
           { title: "System Logs tab", i18nKey: "dashboardSystemLogs", href: "/docs/monitor/dashboard/system-logs" },
           { title: "Terminal tab", i18nKey: "dashboardTerminal", href: "/docs/monitor/dashboard/terminal" },

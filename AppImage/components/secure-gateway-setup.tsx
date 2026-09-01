@@ -20,6 +20,7 @@ import {
   ArrowUpCircle,
 } from "lucide-react"
 import { fetchApi } from "../lib/api-config"
+import { useT } from "../lib/i18n/provider"
 
 interface NetworkInfo {
   interface: string
@@ -77,6 +78,20 @@ interface WizardStep {
 }
 
 export function SecureGatewaySetup() {
+  const t = useT()
+  const sg = (key: string, params?: Record<string, string | number>) => t(`securityPage.secureGateway.${key}`, params)
+  const maybeSg = (key: string, fallback?: string) => {
+    const fullKey = `securityPage.secureGateway.${key}`
+    const value = t(fullKey)
+    return value === fullKey ? fallback || "" : value
+  }
+  const fieldText = (fieldName: string, part: string, fallback?: string) =>
+    maybeSg(`schema.${fieldName}.${part}`, fallback)
+  const optionText = (fieldName: string, value: string, part: string, fallback?: string) =>
+    maybeSg(`schema.${fieldName}.options.${value}.${part}`, fallback)
+  const stepText = (step: WizardStep, part: "title" | "description") =>
+    maybeSg(`steps.${step.id}.${part}`, step[part])
+
   // State
   const [loading, setLoading] = useState(true)
   const [runtimeAvailable, setRuntimeAvailable] = useState(false)
@@ -207,7 +222,7 @@ export function SecureGatewaySetup() {
       }
     } catch (err) {
       console.error("Failed to load data:", err)
-      setLoadError(err instanceof Error ? err.message : "Failed to load wizard data")
+      setLoadError(err instanceof Error ? err.message : sg("errors.loadWizardFailed"))
     } finally {
       setLoading(false)
     }
@@ -265,7 +280,7 @@ export function SecureGatewaySetup() {
         method: "POST",
       })
       if (res?.success) {
-        setUpdateResultMsg(res.message || "Update applied")
+        setUpdateResultMsg(res.message || sg("messages.updateApplied"))
         // Re-probe with force=true so the panel flips back to "No
         // updates available" immediately, bypassing the 24h server
         // cache which may still hold the pre-apply "available" entry.
@@ -274,10 +289,10 @@ export function SecureGatewaySetup() {
         // refresh that too so the action buttons render the right state.
         await loadStatus()
       } else {
-        setUpdateError(res?.message || "Update failed")
+        setUpdateError(res?.message || sg("errors.updateFailed"))
       }
     } catch (err) {
-      setUpdateError(err instanceof Error ? err.message : "Network error during update")
+      setUpdateError(err instanceof Error ? err.message : sg("errors.networkUpdateFailed"))
     } finally {
       setUpdateApplying(false)
     }
@@ -293,7 +308,7 @@ export function SecureGatewaySetup() {
     if (deploying) return
     setDeploying(true)
     setDeployError("")
-    setDeployProgress("Preparing deployment...")
+    setDeployProgress(sg("messages.preparingDeployment"))
 
     try {
       // Validate required fields
@@ -302,7 +317,7 @@ export function SecureGatewaySetup() {
         for (const fieldName of step.fields) {
           const field = configSchema?.[fieldName]
           if (field?.required && !config[fieldName]) {
-            setDeployError(`${field.label} is required`)
+            setDeployError(sg("errors.fieldRequired", { field: fieldText(fieldName, "label", field.label) }))
             setDeploying(false)
             return
           }
@@ -326,7 +341,7 @@ export function SecureGatewaySetup() {
       }
       // For "custom", the user has already selected networks manually
 
-      setDeployProgress("Creating LXC container...")
+      setDeployProgress(sg("messages.creatingLxc"))
       
       const result = await fetchApi("/api/oci/deploy", {
         method: "POST",
@@ -338,16 +353,16 @@ export function SecureGatewaySetup() {
 
       if (!result.success) {
         // Make runtime errors more user-friendly
-        let errorMsg = result.message || "Deployment failed"
+        let errorMsg = result.message || sg("errors.deploymentFailed")
         if (errorMsg.includes("9.1") || errorMsg.includes("OCI") || errorMsg.includes("not supported")) {
-          errorMsg = "OCI containers require Proxmox VE 9.1 or later. Please upgrade your Proxmox installation to use this feature."
+          errorMsg = sg("errors.ociRequiresPve")
         }
         setDeployError(errorMsg)
         setDeploying(false)
         return
       }
 
-      setDeployProgress("Gateway deployed successfully!")
+      setDeployProgress(sg("messages.gatewayDeployed"))
 
       // Wipe the Tailscale auth_key from React state so it's no longer
       // reachable from a future XSS / state-inspection. The key only needs
@@ -376,7 +391,7 @@ export function SecureGatewaySetup() {
       }, 2000)
 
     } catch (err: any) {
-      setDeployError(err.message || "Deployment failed")
+      setDeployError(err.message || sg("errors.deploymentFailed"))
       setDeploying(false)
     }
   }
@@ -400,7 +415,7 @@ export function SecureGatewaySetup() {
 
   const handleUpdateAuthKey = async () => {
     if (!newAuthKey.trim()) {
-      setUpdateAuthKeyError("Auth Key is required")
+      setUpdateAuthKeyError(sg("errors.authKeyRequired"))
       return
     }
     
@@ -417,7 +432,7 @@ export function SecureGatewaySetup() {
       })
       
       if (!result.success) {
-        setUpdateAuthKeyError(result.message || "Failed to update auth key")
+        setUpdateAuthKeyError(result.message || sg("errors.updateAuthKeyFailed"))
         setUpdateAuthKeyLoading(false)
         return
       }
@@ -427,7 +442,7 @@ export function SecureGatewaySetup() {
       setNewAuthKey("")
       await loadStatus()
     } catch (err: any) {
-      setUpdateAuthKeyError(err.message || "Failed to update auth key")
+      setUpdateAuthKeyError(err.message || sg("errors.updateAuthKeyFailed"))
     } finally {
       setUpdateAuthKeyLoading(false)
     }
@@ -456,10 +471,10 @@ export function SecureGatewaySetup() {
     try {
       const result = await fetchApi("/api/oci/installed/secure-gateway/logs?lines=100")
       if (result.success) {
-        setLogs(result.logs || "No logs available")
+        setLogs(result.logs || sg("logs.empty"))
       }
     } catch (err) {
-      setLogs("Failed to load logs")
+      setLogs(sg("logs.failed"))
     } finally {
       setLogsLoading(false)
     }
@@ -476,16 +491,16 @@ export function SecureGatewaySetup() {
   // date-only string. Used in the Updates panel — the user wants to know
   // "how stale is this number" without seeing the raw 2026-05-09T10:23Z.
   const formatLastChecked = (iso?: string): string => {
-    if (!iso) return "never"
+    if (!iso) return sg("values.never")
     const d = new Date(iso)
-    if (isNaN(d.getTime())) return "unknown"
+    if (isNaN(d.getTime())) return t("common.unknown")
     const now = Date.now()
     const ageMs = now - d.getTime()
     const sameDay = new Date(now).toDateString() === d.toDateString()
     const yesterday = new Date(now - 86_400_000).toDateString() === d.toDateString()
     const time = d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
     if (sameDay) return time
-    if (yesterday) return `yesterday ${time}`
+    if (yesterday) return sg("values.yesterdayAt", { time })
     if (ageMs < 7 * 86_400_000) {
       return d.toLocaleDateString([], { weekday: "short" }) + " " + time
     }
@@ -495,6 +510,11 @@ export function SecureGatewaySetup() {
   const renderField = (fieldName: string) => {
     const field = configSchema?.[fieldName]
     if (!field) return null
+    const translatedLabel = fieldText(fieldName, "label", field.label)
+    const translatedDescription = fieldText(fieldName, "description", field.description)
+    const translatedPlaceholder = fieldText(fieldName, "placeholder", field.placeholder)
+    const translatedWarning = fieldText(fieldName, "warning", field.warning)
+    const translatedHelpText = fieldText(fieldName, "helpText", field.help_text)
 
     // Check depends_on
     if (field.depends_on) {
@@ -511,7 +531,7 @@ export function SecureGatewaySetup() {
         return (
           <div key={fieldName} className="space-y-2">
             <Label htmlFor={fieldName} className="text-sm font-medium">
-              {field.label}
+              {translatedLabel}
               {field.required && <span className="text-red-500 ml-1">*</span>}
             </Label>
             <div className="relative">
@@ -520,7 +540,7 @@ export function SecureGatewaySetup() {
                 type={isVisible ? "text" : "password"}
                 value={config[fieldName] || ""}
                 onChange={(e) => setConfig({ ...config, [fieldName]: e.target.value })}
-                placeholder={field.placeholder}
+                placeholder={translatedPlaceholder}
                 className="pr-10 bg-background border-border"
               />
               <button
@@ -536,7 +556,7 @@ export function SecureGatewaySetup() {
                 {isVisible ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
               </button>
             </div>
-            <p className="text-xs text-muted-foreground">{field.description}</p>
+            <p className="text-xs text-muted-foreground">{translatedDescription}</p>
             {field.help_url && (
               <a
                 href={field.help_url}
@@ -544,7 +564,7 @@ export function SecureGatewaySetup() {
                 rel="noopener noreferrer"
                 className="text-xs text-cyan-500 hover:text-cyan-400 inline-flex items-center gap-1"
               >
-                {field.help_text || "Learn more"} <ExternalLink className="h-3 w-3" />
+                {translatedHelpText || sg("learnMore")} <ExternalLink className="h-3 w-3" />
               </a>
             )}
           </div>
@@ -554,7 +574,7 @@ export function SecureGatewaySetup() {
         return (
           <div key={fieldName} className="space-y-2">
             <Label htmlFor={fieldName} className="text-sm font-medium">
-              {field.label}
+              {translatedLabel}
               {field.required && <span className="text-red-500 ml-1">*</span>}
             </Label>
             <Input
@@ -562,10 +582,10 @@ export function SecureGatewaySetup() {
               type="text"
               value={config[fieldName] || ""}
               onChange={(e) => setConfig({ ...config, [fieldName]: e.target.value })}
-              placeholder={field.placeholder}
+              placeholder={translatedPlaceholder}
               className="bg-background border-border"
             />
-            <p className="text-xs text-muted-foreground">{field.description}</p>
+            <p className="text-xs text-muted-foreground">{translatedDescription}</p>
           </div>
         )
 
@@ -596,7 +616,7 @@ export function SecureGatewaySetup() {
         return (
           <div key={fieldName} className="space-y-3">
             <Label className="text-sm font-medium">
-              {field.label}
+              {translatedLabel}
               {field.required && <span className="text-red-500 ml-1">*</span>}
             </Label>
             <div className="space-y-2">
@@ -619,15 +639,15 @@ export function SecureGatewaySetup() {
                       )}
                     </div>
                     <div className="flex-1">
-                      <p className="font-medium text-sm">{opt.label}</p>
+                      <p className="font-medium text-sm">{optionText(fieldName, opt.value, "label", opt.label)}</p>
                       {opt.description && (
-                        <p className="text-xs text-muted-foreground">{opt.description}</p>
+                        <p className="text-xs text-muted-foreground">{optionText(fieldName, opt.value, "description", opt.description)}</p>
                       )}
                       {/* Show selected network for proxmox_network */}
                       {fieldName === "access_mode" && opt.value === "proxmox_network" && config[fieldName] === "proxmox_network" && (
                         <p className="text-xs text-cyan-400 mt-1 flex items-center gap-1">
                           <Network className="h-3 w-3" />
-                          {networks.find((n) => n.recommended)?.subnet || networks[0]?.subnet || "No network detected"}
+                          {networks.find((n) => n.recommended)?.subnet || networks[0]?.subnet || sg("noNetworkDetected")}
                         </p>
                       )}
                     </div>
@@ -642,13 +662,13 @@ export function SecureGatewaySetup() {
         return (
           <div key={fieldName} className="space-y-3">
             <Label className="text-sm font-medium">
-              {field.label}
+              {translatedLabel}
             </Label>
-            <p className="text-xs text-muted-foreground">{field.description}</p>
+            <p className="text-xs text-muted-foreground">{translatedDescription}</p>
             <div className="space-y-2 max-h-48 overflow-y-auto">
               {networks.length === 0 ? (
                 <p className="text-sm text-muted-foreground p-3 bg-muted/30 rounded">
-                  No networks detected
+                  {sg("noNetworksDetected")}
                 </p>
               ) : (
                 networks.map((net) => {
@@ -676,7 +696,7 @@ export function SecureGatewaySetup() {
                           <span className="font-mono text-sm">{net.subnet}</span>
                           {net.recommended && (
                             <span className="text-[10px] px-1.5 py-0.5 rounded bg-green-500/10 text-green-500">
-                              Recommended
+                              {sg("recommended")}
                             </span>
                           )}
                         </div>
@@ -705,12 +725,12 @@ export function SecureGatewaySetup() {
             >
               <Checkbox checked={config[fieldName] || false} className="pointer-events-none mt-0.5" />
               <div>
-                <p className="font-medium text-sm">{field.label}</p>
-                <p className="text-xs text-muted-foreground">{field.description}</p>
+                <p className="font-medium text-sm">{translatedLabel}</p>
+                <p className="text-xs text-muted-foreground">{translatedDescription}</p>
                 {field.warning && config[fieldName] && (
                   <p className="text-xs text-cyan-400 mt-2 flex items-start gap-1.5 bg-cyan-500/10 p-2 rounded">
                     <Info className="h-3 w-3 mt-0.5 flex-shrink-0" />
-                    {field.warning}
+                    {translatedWarning}
                   </p>
                 )}
               </div>
@@ -736,40 +756,40 @@ export function SecureGatewaySetup() {
             </div>
           </div>
           <div className="text-center space-y-2">
-            <h3 className="text-lg font-semibold">Secure Remote Access</h3>
+            <h3 className="text-lg font-semibold">{sg("wizard.introTitle")}</h3>
             <p className="text-sm text-muted-foreground max-w-md mx-auto">
-              Deploy a VPN gateway using Tailscale for secure, zero-trust access to your Proxmox infrastructure without opening ports.
+              {sg("wizard.introDescription")}
             </p>
           </div>
           <div className="bg-muted/30 rounded-lg p-4 space-y-3">
-            <h4 className="text-sm font-medium">What you{"'"}ll get:</h4>
+            <h4 className="text-sm font-medium">{sg("wizard.whatYouGet")}</h4>
             <ul className="space-y-2 text-sm text-muted-foreground">
               <li className="flex items-center gap-2">
                 <CheckCircle className="h-4 w-4 text-green-500 flex-shrink-0" />
-                Access ProxMenux Monitor from anywhere
+                {sg("wizard.benefitMonitorAnywhere")}
               </li>
               <li className="flex items-center gap-2">
                 <CheckCircle className="h-4 w-4 text-green-500 flex-shrink-0" />
-                Secure access to Proxmox web UI
+                {sg("wizard.benefitProxmoxUi")}
               </li>
               <li className="flex items-center gap-2">
                 <CheckCircle className="h-4 w-4 text-green-500 flex-shrink-0" />
-                Optionally expose VMs and LXC containers
+                {sg("wizard.benefitVmLxc")}
               </li>
               <li className="flex items-center gap-2">
                 <CheckCircle className="h-4 w-4 text-green-500 flex-shrink-0" />
-                End-to-end encryption
+                {sg("wizard.benefitEncryption")}
               </li>
               <li className="flex items-center gap-2">
                 <CheckCircle className="h-4 w-4 text-green-500 flex-shrink-0" />
-                No port forwarding required
+                {sg("wizard.benefitNoPorts")}
               </li>
             </ul>
           </div>
           <div className="bg-cyan-500/10 border border-cyan-500/20 rounded-lg p-3">
             <p className="text-xs text-cyan-400 flex items-start gap-2">
               <Info className="h-4 w-4 flex-shrink-0 mt-0.5" />
-              You{"'"}ll need a free Tailscale account. If you don{"'"}t have one, you can create it at{" "}
+              {sg("wizard.tailscaleAccountBefore")}{" "}
               <a href="https://tailscale.com" target="_blank" rel="noopener noreferrer" className="underline hover:text-cyan-300">
                 tailscale.com
               </a>
@@ -783,17 +803,17 @@ export function SecureGatewaySetup() {
       return (
         <div className="space-y-6">
           <div className="text-center space-y-2">
-            <h3 className="text-lg font-semibold">Review & Deploy</h3>
+            <h3 className="text-lg font-semibold">{sg("wizard.reviewDeploy")}</h3>
             <p className="text-sm text-muted-foreground">
-              Review your configuration before deploying the gateway.
+              {sg("wizard.reviewDescription")}
             </p>
           </div>
           
           {/* Storage selector */}
           {storages.length > 1 && (
             <div className="space-y-3">
-              <Label className="text-sm font-medium">Storage Location</Label>
-              <p className="text-xs text-muted-foreground">Select where to create the container disk.</p>
+              <Label className="text-sm font-medium">{sg("wizard.storageLocation")}</Label>
+              <p className="text-xs text-muted-foreground">{sg("wizard.storageDescription")}</p>
               <div className="space-y-2">
                 {storages.filter(s => s.active && s.enabled).map((storage) => (
                   <div
@@ -819,12 +839,12 @@ export function SecureGatewaySetup() {
                           <span className="text-xs text-muted-foreground">({storage.type})</span>
                           {storage.recommended && (
                             <span className="text-[10px] px-1.5 py-0.5 rounded bg-green-500/10 text-green-500">
-                              Recommended
+                              {sg("recommended")}
                             </span>
                           )}
                         </div>
                         <p className="text-xs text-muted-foreground">
-                          {(storage.avail / 1024 / 1024 / 1024).toFixed(1)} GB available
+                          {sg("wizard.gbAvailable", { amount: (storage.avail / 1024 / 1024 / 1024).toFixed(1) })}
                         </p>
                       </div>
                     </div>
@@ -835,41 +855,41 @@ export function SecureGatewaySetup() {
           )}
 
           <div className="bg-muted/30 rounded-lg p-4 space-y-3">
-            <h4 className="text-sm font-medium">Configuration Summary</h4>
+            <h4 className="text-sm font-medium">{sg("wizard.configurationSummary")}</h4>
             <div className="space-y-2 text-sm">
               <div className="flex justify-between">
-                <span className="text-muted-foreground">Hostname:</span>
+                <span className="text-muted-foreground">{sg("wizard.hostname")}:</span>
                 <span className="font-mono">{config.hostname || "proxmox-gateway"}</span>
               </div>
               {storages.length > 1 && (
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">Storage:</span>
+                  <span className="text-muted-foreground">{sg("wizard.storage")}:</span>
                   <span className="font-mono">{config.storage || storages[0]?.name}</span>
                 </div>
               )}
               <div className="flex justify-between">
-                <span className="text-muted-foreground">Access Mode:</span>
-                <span>{config.access_mode === "host_only" ? "Host Only" : config.access_mode === "proxmox_network" ? "Proxmox Network" : "Custom Networks"}</span>
+                <span className="text-muted-foreground">{sg("wizard.accessMode")}:</span>
+                <span>{config.access_mode === "host_only" ? sg("wizard.accessModes.hostOnly") : config.access_mode === "proxmox_network" ? sg("wizard.accessModes.proxmoxNetwork") : sg("wizard.accessModes.customNetworks")}</span>
               </div>
               {config.access_mode === "host_only" && hostIp && (
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">Host Access:</span>
+                  <span className="text-muted-foreground">{sg("wizard.hostAccess")}:</span>
                   <span className="text-right font-mono text-xs">{hostIp}/32</span>
                 </div>
               )}
               {(config.access_mode === "proxmox_network" || config.access_mode === "custom") && config.advertise_routes?.length > 0 && (
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">Networks:</span>
+                  <span className="text-muted-foreground">{sg("wizard.networks")}:</span>
                   <span className="text-right font-mono text-xs">{config.advertise_routes.join(", ")}</span>
                 </div>
               )}
               <div className="flex justify-between">
-                <span className="text-muted-foreground">Exit Node:</span>
-                <span>{config.exit_node ? "Yes" : "No"}</span>
+                <span className="text-muted-foreground">{sg("wizard.exitNode")}:</span>
+                <span>{config.exit_node ? sg("values.yes") : sg("values.no")}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-muted-foreground">Accept Routes:</span>
-                <span>{config.accept_routes ? "Yes" : "No"}</span>
+                <span className="text-muted-foreground">{sg("wizard.acceptRoutes")}:</span>
+                <span>{config.accept_routes ? sg("values.yes") : sg("values.no")}</span>
               </div>
             </div>
           </div>
@@ -880,12 +900,12 @@ export function SecureGatewaySetup() {
               <p className="text-xs text-cyan-400 flex items-start gap-2">
                 <Info className="h-4 w-4 flex-shrink-0 mt-0.5" />
                 <span>
-                  <strong>Important:</strong> After deployment, you must approve the subnet route in Tailscale Admin for remote access to work.
-                  {config.exit_node && <span> You{"'"}ll also need to approve the exit node.</span>}
+                  <strong>{sg("wizard.important")}:</strong> {sg("wizard.approvalRequired")}
+                  {config.exit_node && <span> {sg("wizard.exitNodeApprovalRequired")}</span>}
                 </span>
               </p>
               <p className="text-xs text-muted-foreground ml-6">
-                We{"'"}ll show you exactly what to do after the gateway is deployed.
+                {sg("wizard.showAfterDeploy")}
               </p>
             </div>
           )}
@@ -915,8 +935,8 @@ export function SecureGatewaySetup() {
     return (
       <div className="space-y-6">
         <div className="text-center space-y-2">
-          <h3 className="text-lg font-semibold">{step.title}</h3>
-          <p className="text-sm text-muted-foreground">{step.description}</p>
+          <h3 className="text-lg font-semibold">{stepText(step, "title")}</h3>
+          <p className="text-sm text-muted-foreground">{stepText(step, "description")}</p>
         </div>
         <div className="space-y-4">
           {step.fields?.map((fieldName) => renderField(fieldName))}
@@ -932,7 +952,7 @@ export function SecureGatewaySetup() {
         <CardHeader className="pb-3">
           <div className="flex items-center gap-2">
             <ShieldCheck className="h-5 w-5 text-cyan-500" />
-            <CardTitle className="text-base">Secure Gateway</CardTitle>
+            <CardTitle className="text-base">{sg("title")}</CardTitle>
           </div>
         </CardHeader>
         <CardContent>
@@ -953,14 +973,14 @@ export function SecureGatewaySetup() {
         <CardHeader className="pb-3">
           <div className="flex items-center gap-2">
             <ShieldCheck className="h-5 w-5 text-cyan-500" />
-            <CardTitle className="text-base">Secure Gateway</CardTitle>
+            <CardTitle className="text-base">{sg("title")}</CardTitle>
           </div>
         </CardHeader>
         <CardContent>
           <div className="space-y-3 py-2">
-            <p className="text-sm text-red-500">Could not load setup data: {loadError}</p>
+            <p className="text-sm text-red-500">{sg("errors.couldNotLoadSetupData")} {loadError}</p>
             <Button size="sm" variant="outline" onClick={() => loadInitialData()}>
-              Retry
+              {sg("retry")}
             </Button>
           </div>
         </CardContent>
@@ -981,7 +1001,7 @@ export function SecureGatewaySetup() {
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <ShieldCheck className="h-5 w-5 text-cyan-500" />
-                <CardTitle className="text-base">Secure Gateway</CardTitle>
+                <CardTitle className="text-base">{sg("title")}</CardTitle>
               </div>
               <div className={`flex items-center gap-1.5 px-2 py-1 rounded-full text-xs font-medium ${
                 isRunning ? "bg-green-500/10 text-green-500" :
@@ -991,16 +1011,16 @@ export function SecureGatewaySetup() {
                 {isRunning ? <Wifi className="h-3 w-3" /> :
                  isStopped ? <Square className="h-3 w-3" /> :
                  <XCircle className="h-3 w-3" />}
-                {isRunning ? "Connected" : isStopped ? "Stopped" : "Error"}
+                {isRunning ? sg("status.connected") : isStopped ? sg("status.stopped") : sg("status.error")}
               </div>
             </div>
-            <CardDescription>Tailscale VPN Gateway</CardDescription>
+            <CardDescription>{sg("installed.description")}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             {/* Status info */}
             {isRunning && appStatus.uptime_seconds > 0 && (
               <div className="text-xs text-muted-foreground">
-                Uptime: {formatUptime(appStatus.uptime_seconds)}
+                {sg("installed.uptime")}: {formatUptime(appStatus.uptime_seconds)}
               </div>
             )}
 
@@ -1018,7 +1038,7 @@ export function SecureGatewaySetup() {
                   ) : (
                     <Play className="h-4 w-4 mr-1" />
                   )}
-                  Start
+                  {sg("actions.start")}
                 </Button>
               )}
               {isRunning && (
@@ -1034,7 +1054,7 @@ export function SecureGatewaySetup() {
                     ) : (
                       <Square className="h-4 w-4 mr-1" />
                     )}
-                    Stop
+                    {sg("actions.stop")}
                   </Button>
                   <Button
                     size="sm"
@@ -1047,7 +1067,7 @@ export function SecureGatewaySetup() {
                     ) : (
                       <RotateCw className="h-4 w-4 mr-1" />
                     )}
-                    Restart
+                    {sg("actions.restart")}
                   </Button>
                 </>
               )}
@@ -1060,7 +1080,7 @@ export function SecureGatewaySetup() {
                 }}
               >
                 <FileText className="h-4 w-4 mr-1" />
-                Logs
+                {sg("actions.logs")}
               </Button>
               <Button
                 size="sm"
@@ -1070,7 +1090,7 @@ export function SecureGatewaySetup() {
                 disabled={actionLoading !== null}
               >
                 <Trash2 className="h-4 w-4 mr-1" />
-                Remove
+                {sg("actions.remove")}
               </Button>
             </div>
 
@@ -1083,9 +1103,9 @@ export function SecureGatewaySetup() {
                   <>
                     <div className="flex items-center justify-between gap-2">
                       <div className="text-xs text-muted-foreground">
-                        Last checked: {formatLastChecked(updateInfo.last_checked_iso)} ·{" "}
+                        {sg("updates.lastChecked")}: {formatLastChecked(updateInfo.last_checked_iso)} ·{" "}
                         <span className="text-purple-400 font-medium">
-                          Tailscale v{updateInfo.latest_version} available
+                          {sg("updates.tailscaleAvailable", { version: updateInfo.latest_version || "" })}
                         </span>
                       </div>
                     </div>
@@ -1101,24 +1121,23 @@ export function SecureGatewaySetup() {
                         <ArrowUpCircle className="h-4 w-4 mr-1.5" />
                       )}
                       {updateApplying
-                        ? "Updating…"
-                        : `Update to v${updateInfo.latest_version}`}
+                        ? sg("updates.updating")
+                        : sg("updates.updateToVersion", { version: updateInfo.latest_version || "" })}
                     </Button>
                     {updateInfo.packages && updateInfo.packages.length > 1 && (
                       <div className="text-[11px] text-muted-foreground">
-                        +{updateInfo.packages.length - 1} other package
-                        {updateInfo.packages.length > 2 ? "s" : ""} pending in the container
+                        {sg("updates.otherPackagesPending", { count: updateInfo.packages.length - 1 })}
                       </div>
                     )}
                   </>
                 ) : (
                   <div className="text-xs text-muted-foreground">
-                    Last checked: {formatLastChecked(updateInfo.last_checked_iso)}
+                    {sg("updates.lastChecked")}: {formatLastChecked(updateInfo.last_checked_iso)}
                     {updateInfo.current_version
                       ? ` · Tailscale v${updateInfo.current_version}`
                       : ""}
                     {" · "}
-                    <span className="text-green-500/80">No updates available</span>
+                    <span className="text-green-500/80">{sg("updates.noneAvailable")}</span>
                   </div>
                 )}
                 {updateError && (
@@ -1146,7 +1165,7 @@ export function SecureGatewaySetup() {
                 className="text-xs h-7 px-2"
               >
                 <Key className="h-3 w-3 mr-1" />
-                Update Auth Key
+                {sg("authKey.update")}
               </Button>
               <a
                 href="https://login.tailscale.com/admin/machines"
@@ -1154,7 +1173,7 @@ export function SecureGatewaySetup() {
                 rel="noopener noreferrer"
                 className="text-xs text-cyan-500 hover:text-cyan-400 inline-flex items-center gap-1"
               >
-                Open Tailscale Admin <ExternalLink className="h-3 w-3" />
+                {sg("tailscale.openAdmin")} <ExternalLink className="h-3 w-3" />
               </a>
             </div>
           </CardContent>
@@ -1164,8 +1183,8 @@ export function SecureGatewaySetup() {
         <Dialog open={showLogs} onOpenChange={setShowLogs}>
           <DialogContent className="max-w-2xl">
             <DialogHeader>
-              <DialogTitle>Secure Gateway Logs</DialogTitle>
-              <DialogDescription>Recent container logs</DialogDescription>
+              <DialogTitle>{sg("logs.title")}</DialogTitle>
+              <DialogDescription>{sg("logs.description")}</DialogDescription>
             </DialogHeader>
             <div className="bg-black/50 rounded-lg p-4 max-h-96 overflow-auto">
               {logsLoading ? (
@@ -1174,14 +1193,14 @@ export function SecureGatewaySetup() {
                 </div>
               ) : (
                 <pre className="text-xs font-mono text-green-400 whitespace-pre-wrap">
-                  {logs || "No logs available"}
+                  {logs || sg("logs.empty")}
                 </pre>
               )}
             </div>
             <div className="flex justify-end">
               <Button variant="outline" size="sm" onClick={loadLogs}>
                 <RotateCw className="h-4 w-4 mr-1" />
-                Refresh
+                {t("actions.refresh")}
               </Button>
             </div>
           </DialogContent>
@@ -1191,14 +1210,14 @@ export function SecureGatewaySetup() {
         <Dialog open={showRemoveConfirm} onOpenChange={setShowRemoveConfirm}>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Remove Secure Gateway?</DialogTitle>
+              <DialogTitle>{sg("remove.title")}</DialogTitle>
               <DialogDescription>
-                This will stop and remove the gateway container. Your Tailscale state will be preserved for re-deployment.
+                {sg("remove.description")}
               </DialogDescription>
             </DialogHeader>
             <div className="flex justify-end gap-2">
               <Button variant="outline" onClick={() => setShowRemoveConfirm(false)}>
-                Cancel
+                {t("actions.cancel")}
               </Button>
               <Button
                 variant="destructive"
@@ -1210,7 +1229,7 @@ export function SecureGatewaySetup() {
                 ) : (
                   <Trash2 className="h-4 w-4 mr-1" />
                 )}
-                Remove
+                {sg("actions.remove")}
               </Button>
             </div>
           </DialogContent>
@@ -1228,16 +1247,16 @@ export function SecureGatewaySetup() {
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
                 <Key className="h-5 w-5 text-cyan-500" />
-                Update Auth Key
+                {sg("authKey.update")}
               </DialogTitle>
               <DialogDescription>
-                Enter a new Tailscale auth key to re-authenticate the gateway. This is useful if your previous key has expired.
+                {sg("authKey.description")}
               </DialogDescription>
             </DialogHeader>
             
             <div className="space-y-4">
               <div className="space-y-2">
-                <label className="text-sm font-medium">New Auth Key</label>
+                <label className="text-sm font-medium">{sg("authKey.newKey")}</label>
                 <Input
                   type="password"
                   value={newAuthKey}
@@ -1246,14 +1265,14 @@ export function SecureGatewaySetup() {
                   className="font-mono text-sm"
                 />
                 <p className="text-xs text-muted-foreground">
-                  Generate a new key at{" "}
+                  {sg("authKey.generateAt")}{" "}
                   <a
                     href="https://login.tailscale.com/admin/settings/keys"
                     target="_blank"
                     rel="noopener noreferrer"
                     className="text-cyan-500 hover:text-cyan-400 underline"
                   >
-                    Tailscale Admin &gt; Settings &gt; Keys
+                    {sg("authKey.adminKeys")}
                   </a>
                 </p>
               </div>
@@ -1267,7 +1286,7 @@ export function SecureGatewaySetup() {
             
             <div className="flex justify-end gap-2 pt-2">
               <Button variant="outline" onClick={() => setShowUpdateAuthKey(false)}>
-                Cancel
+                {t("actions.cancel")}
               </Button>
               <Button
                 onClick={handleUpdateAuthKey}
@@ -1279,7 +1298,7 @@ export function SecureGatewaySetup() {
                 ) : (
                   <Key className="h-4 w-4 mr-2" />
                 )}
-                Update Key
+                {sg("authKey.updateKey")}
               </Button>
             </div>
           </DialogContent>
@@ -1291,10 +1310,10 @@ export function SecureGatewaySetup() {
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
                 <CheckCircle className="h-5 w-5 text-green-500" />
-                Gateway Deployed Successfully
+                {sg("postDeploy.title")}
               </DialogTitle>
               <DialogDescription>
-                One more step to complete the setup
+                {sg("postDeploy.description")}
               </DialogDescription>
             </DialogHeader>
             
@@ -1302,17 +1321,17 @@ export function SecureGatewaySetup() {
               <div className="bg-cyan-500/10 border border-cyan-500/20 rounded-lg p-4">
                 <p className="text-sm font-medium text-cyan-400 flex items-center gap-2 mb-2">
                   <Info className="h-4 w-4" />
-                  Next Step: Approve in Tailscale Admin
+                  {sg("postDeploy.nextStep")}
                 </p>
                 <p className="text-sm text-muted-foreground mb-3">
-                  You need to approve the following settings in your Tailscale admin console for them to take effect:
+                  {sg("postDeploy.approveDescription")}
                 </p>
                 <ul className="space-y-2 text-sm">
                   {deployedConfig.advertise_routes?.length > 0 && (
                     <li className="flex items-start gap-2">
                       <Network className="h-4 w-4 text-cyan-500 mt-0.5 flex-shrink-0" />
                       <div>
-                        <span className="font-medium">Subnet Routes:</span>
+                        <span className="font-medium">{sg("postDeploy.subnetRoutes")}:</span>
                         <span className="text-muted-foreground ml-1">
                           {deployedConfig.advertise_routes.join(", ")}
                         </span>
@@ -1323,9 +1342,9 @@ export function SecureGatewaySetup() {
                     <li className="flex items-start gap-2">
                       <Globe className="h-4 w-4 text-cyan-500 mt-0.5 flex-shrink-0" />
                       <div>
-                        <span className="font-medium">Exit Node:</span>
+                        <span className="font-medium">{sg("postDeploy.exitNode")}:</span>
                         <span className="text-muted-foreground ml-1">
-                          Route all internet traffic
+                          {sg("postDeploy.routeAllTraffic")}
                         </span>
                       </div>
                     </li>
@@ -1334,30 +1353,30 @@ export function SecureGatewaySetup() {
               </div>
               
               <div className="bg-muted/30 rounded-lg p-4 space-y-2">
-                <p className="text-sm font-medium">How to approve:</p>
+                <p className="text-sm font-medium">{sg("postDeploy.howToApprove")}</p>
                 <ol className="text-sm text-muted-foreground space-y-2 list-decimal list-inside">
-                  <li>Click the button below to open Tailscale Admin</li>
-                  <li>Find <span className="font-mono text-cyan-400">{deployedConfig.hostname || "proxmox-gateway"}</span> in the machines list</li>
-                  <li>Click on it to open machine details</li>
-                  <li>In the <strong>Subnets</strong> section, click <strong>Edit</strong> and enable the route</li>
+                  <li>{sg("postDeploy.stepOpenAdmin")}</li>
+                  <li>{sg("postDeploy.stepFindBefore")} <span className="font-mono text-cyan-400">{deployedConfig.hostname || "proxmox-gateway"}</span> {sg("postDeploy.stepFindAfter")}</li>
+                  <li>{sg("postDeploy.stepOpenDetails")}</li>
+                  <li>{sg("postDeploy.stepSubnetsBefore")} <strong>Subnets</strong> {sg("postDeploy.stepSubnetsMiddle")} <strong>Edit</strong> {sg("postDeploy.stepSubnetsAfter")}</li>
                   {deployedConfig.exit_node && (
-                    <li>In <strong>Routing Settings</strong>, enable <strong>Exit Node</strong></li>
+                    <li>{sg("postDeploy.stepRoutingBefore")} <strong>Routing Settings</strong>, {sg("postDeploy.stepRoutingMiddle")} <strong>Exit Node</strong></li>
                   )}
                 </ol>
               </div>
               
               <div className="bg-green-500/10 border border-green-500/20 rounded-lg p-3">
                 <p className="text-xs text-green-400">
-                  Once approved, you can access your Proxmox host at{" "}
-                  <span className="font-mono">{deployedConfig.advertise_routes?.[0]?.replace("/32", "") || hostIp}:8006</span> (Proxmox UI) or{" "}
-                  <span className="font-mono">{deployedConfig.advertise_routes?.[0]?.replace("/32", "") || hostIp}:8008</span> (ProxMenux Monitor) from any device with Tailscale.
+                  {sg("postDeploy.accessAfterApproval")}{" "}
+                  <span className="font-mono">{deployedConfig.advertise_routes?.[0]?.replace("/32", "") || hostIp}:8006</span> (Proxmox UI) {sg("postDeploy.or")}{" "}
+                  <span className="font-mono">{deployedConfig.advertise_routes?.[0]?.replace("/32", "") || hostIp}:8008</span> (ProxMenux Monitor) {sg("postDeploy.fromAnyDevice")}
                 </p>
               </div>
             </div>
             
             <div className="flex justify-end gap-2 pt-2">
               <Button variant="outline" onClick={() => setShowPostDeployInfo(false)}>
-                I{"'"}ll do it later
+                {sg("postDeploy.doLater")}
               </Button>
               <Button
                 onClick={() => {
@@ -1366,7 +1385,7 @@ export function SecureGatewaySetup() {
                 }}
                 className="bg-cyan-600 hover:bg-cyan-700"
               >
-                Open Tailscale Admin
+                {sg("tailscale.openAdmin")}
                 <ExternalLink className="h-4 w-4 ml-2" />
               </Button>
             </div>
@@ -1383,13 +1402,13 @@ export function SecureGatewaySetup() {
         <CardHeader className="pb-3">
           <div className="flex items-center gap-2">
             <ShieldCheck className="h-5 w-5 text-cyan-500" />
-            <CardTitle className="text-base">Secure Gateway</CardTitle>
+            <CardTitle className="text-base">{sg("title")}</CardTitle>
           </div>
-          <CardDescription>VPN access without opening ports</CardDescription>
+          <CardDescription>{sg("notInstalled.subtitle")}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <p className="text-sm text-muted-foreground">
-            Deploy a Tailscale VPN gateway for secure remote access to your Proxmox infrastructure. No port forwarding required.
+            {sg("notInstalled.description")}
           </p>
 
           <Button
@@ -1397,7 +1416,7 @@ export function SecureGatewaySetup() {
             className="bg-cyan-600 hover:bg-cyan-700"
           >
             <ShieldCheck className="h-4 w-4 mr-2" />
-            Deploy Secure Gateway
+            {sg("notInstalled.deploy")}
           </Button>
         </CardContent>
       </Card>
@@ -1418,7 +1437,7 @@ export function SecureGatewaySetup() {
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
                 <ShieldCheck className="h-5 w-5 text-cyan-500" />
-                Secure Gateway Setup
+                {sg("wizard.setupTitle")}
               </DialogTitle>
             </DialogHeader>
 
@@ -1465,7 +1484,7 @@ export function SecureGatewaySetup() {
               }}
               disabled={currentStep === 0 || deploying}
             >
-              Back
+              {sg("actions.back")}
             </Button>
             
             {currentStep < wizardSteps.length - 1 ? (
@@ -1480,7 +1499,7 @@ export function SecureGatewaySetup() {
                 }}
                 className="bg-cyan-600 hover:bg-cyan-700"
               >
-                Continue
+                {sg("actions.continue")}
                 <ChevronRight className="h-4 w-4 ml-1" />
               </Button>
             ) : (
@@ -1492,12 +1511,12 @@ export function SecureGatewaySetup() {
                 {deploying ? (
                   <>
                     <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                    Deploying...
+                    {sg("actions.deploying")}
                   </>
                 ) : (
                   <>
                     <Play className="h-4 w-4 mr-2" />
-                    Deploy Gateway
+                    {sg("actions.deployGateway")}
                   </>
                 )}
               </Button>

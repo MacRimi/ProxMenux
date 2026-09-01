@@ -107,7 +107,7 @@
       },
       {
         "title": "Notifications",
-        "description": "Telegram, Discord, Email, Gotify and Apprise (multi-channel) — with deduplication, cooldown, burst aggregation, quiet hours and a complete history.",
+        "description": "Telegram, Discord, Email, Gotify, Pushover and Apprise (multi-channel) — with deduplication, cooldown, burst aggregation, quiet hours and a complete history.",
         "icon": "Bell",
         "href": "/docs/monitor/notifications"
       },

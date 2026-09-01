@@ -808,12 +808,21 @@ def send_notification():
         if not _validate_severity(severity):
             return _bad_request('Invalid severity')
 
+        # Accept `title`/`message` either at the root of the payload
+        # or nested under `data` — the public docs show the nested
+        # form (`data.message`) as the primary example, so falling
+        # back to it prevents "empty title/message" custom events
+        # (issue #297).
+        payload_body = data.get('data') if isinstance(data.get('data'), dict) else {}
+        title = data.get('title') or payload_body.get('title') or ''
+        message = data.get('message') or payload_body.get('message') or ''
+
         result = notification_manager.send_notification(
             event_type=event_type,
             severity=severity,
-            title=data.get('title', ''),
-            message=data.get('message', ''),
-            data=data.get('data', {}),
+            title=title,
+            message=message,
+            data=payload_body,
             source='api'
         )
         return jsonify(result)
@@ -1212,9 +1221,13 @@ def setup_pve_webhook_core() -> dict:
         # `could not decode UTF8 string from base64, key 'X-Webhook-Secret' (500)`
         # whenever `token_urlsafe` produced `-` or `_` chars (GH #198).
         secret_b64 = base64.b64encode(secret.encode()).decode()
+        # PVE parses /etc/pve/*.cfg TAB-strict. The endpoint_block above
+        # indents with `\t`; the priv_block MUST too, or PVE silently
+        # ignores the `secret` line and never sends `X-Webhook-Secret`,
+        # so every remote delivery lands as 401 invalid_secret. GH #294.
         priv_block = (
             f"webhook: {_PVE_ENDPOINT_ID}\n"
-            f"        secret name=X-Webhook-Secret,value={secret_b64}\n"
+            f"\tsecret name=X-Webhook-Secret,value={secret_b64}\n"
         )
         
         if priv_text is not None:
@@ -1234,9 +1247,14 @@ def setup_pve_webhook_core() -> dict:
             result['error'] = f'Permission denied writing {_PVE_PRIV_CFG}'
             result['fallback_commands'] = _build_webhook_fallback()
             return result
-        except Exception:
-            pass
-        
+        except Exception as e:
+            # Silently swallowing this here would report configured:True
+            # while PVE has no valid secret — exactly the failure mode of
+            # GH #294. Surface it so the caller can flag the setup.
+            result['error'] = f'Failed writing {_PVE_PRIV_CFG}: {e}'
+            result['fallback_commands'] = _build_webhook_fallback()
+            return result
+
         result['configured'] = True
         result['secret'] = secret
         return result
@@ -1489,19 +1507,37 @@ def proxmox_webhook():
             if not hmac.compare_digest(configured_secret, request_secret):
                 return _reject(401, 'invalid_secret', 401)
         
-        # Layer 3: Anti-replay timestamp
+        # Layer 3: Anti-replay timestamp.
+        # PVE's webhook notification target can only send a static secret
+        # header + a Handlebars-templated body; it cannot inject a custom
+        # dynamic header, so `X-ProxMenux-Timestamp` never arrives from a
+        # PVE-origin delivery (GH #294). Our own PVE endpoint template
+        # already embeds `"timestamp":"{{ timestamp }}"` (Unix epoch), so
+        # accept the body value as a fallback when the header is absent.
+        # The replay cache in Layer 4 still binds every accepted request
+        # to (timestamp, raw_body), so this widens the source of the
+        # timestamp without weakening the anti-replay guarantee.
+        raw_body = request.get_data(as_text=True) or ''
         ts_header = request.headers.get('X-ProxMenux-Timestamp', '')
-        if not ts_header:
+        ts_value = None
+        if ts_header:
+            try:
+                ts_value = int(ts_header)
+            except (ValueError, TypeError):
+                return _reject(401, 'invalid_timestamp', 401)
+        elif raw_body:
+            try:
+                body_ts = json.loads(raw_body).get('timestamp')
+                if body_ts is not None:
+                    ts_value = int(str(body_ts).strip())
+            except (ValueError, TypeError, json.JSONDecodeError, AttributeError):
+                ts_value = None
+        if ts_value is None:
             return _reject(401, 'missing_timestamp', 401)
-        try:
-            ts_value = int(ts_header)
-        except (ValueError, TypeError):
-            return _reject(401, 'invalid_timestamp', 401)
         if abs(time.time() - ts_value) > _TIMESTAMP_MAX_DRIFT:
             return _reject(401, 'timestamp_expired', 401)
-        
+
         # Layer 4: Replay cache
-        raw_body = request.get_data(as_text=True) or ''
         signature = hashlib.sha256(f"{ts_value}:{raw_body}".encode(errors='replace')).hexdigest()
         if _replay_cache.check_and_record(signature):
             return _reject(409, 'replay_detected', 409)
@@ -1548,11 +1584,15 @@ def proxmox_webhook():
             return _reject(400, 'missing_title', 400)
         if not isinstance(message, str):
             message = str(message) if message is not None else ''
-        # Bound runaway sizes — webhooks shouldn't exceed a few KB of text.
+        # Keep the full webhook body for downstream parsers. PVE vzdump
+        # reports can legitimately exceed Telegram's 4096-character delivery
+        # limit when a job covers many VM/CT guests. Truncating here can cut a
+        # table row in half before notification_templates._parse_vzdump_message
+        # sees it, which makes a successful backup look like a failed one.
+        # Channel-specific senders (for example TelegramChannel._split_message)
+        # are responsible for splitting the final formatted notification.
         if len(title) > 256:
             payload['title'] = title[:256]
-        if len(message) > 4096:
-            payload['message'] = message[:4096]
         # Severity normalisation: accept the canonical set, default to 'info'.
         sev = (payload.get('severity') or '').lower()
         if sev not in {'info', 'warning', 'critical', 'error', 'notice'}:

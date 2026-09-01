@@ -510,6 +510,43 @@ TEMPLATES = {
         'group': 'vm_ct',
         'default_enabled': False,
     },
+    'lxc_update_applied': {
+        'title': '{hostname}: LXC {ct_name} ({vmid}) update {result}',
+        'body': '{details}',
+        'label': 'LXC update applied',
+        'group': 'vm_ct',
+        'default_enabled': True,
+    },
+    'app_update_available': {
+        'title': '{hostname}: {app_name} update available on CT {vmid}',
+        'body': (
+            '{app_name} on CT {vmid} ({ct_name}) has a new version:\n'
+            '    {installed} → {latest}'
+        ),
+        'label': 'App update available',
+        # Grouped under `updates` (not `vm_ct`) so the user can toggle
+        # per-app upstream notifications independently from VM/CT
+        # lifecycle events (start/stop/reboot). Sitting alongside the
+        # other update templates keeps the Settings UI consistent and
+        # leaves the group ready for future OCI-image notifications
+        # that share the same "an upstream release is available"
+        # semantics.
+        'group': 'updates',
+        # Every other update template ships enabled by default; leaving
+        # this one off meant users who registered apps in the App tab
+        # never received the notification they explicitly asked for.
+        'default_enabled': True,
+    },
+    'docker_stack_update_available': {
+        'title': '{hostname}: Docker updates available on CT {vmid}',
+        'body': (
+            'Container {ct_name} (CT {vmid}) has {count} Docker update(s):\n'
+            '{details}'
+        ),
+        'label': 'Docker updates available',
+        'group': 'updates',
+        'default_enabled': True,
+    },
     'vm_start': {
         'title': '{hostname}: VM {vmname} ({vmid}) started',
         'body': 'Virtual machine {vmname} (ID: {vmid}) is now running.',
@@ -996,6 +1033,17 @@ TEMPLATES = {
         # /etc/aliases or removing MAILTO from the cron job. Audit Tier 6
         # — `system_mail` toggle no visible en UI / reportado por usuario.
     },
+    'apt_listchanges': {
+        'title': '{hostname}: {pve_title}',
+        'body': (
+            'Upstream package information forwarded by Proxmox VE through '
+            'apt-listchanges. The following text comes from the package '
+            'maintainer and is not a ProxMenux recommendation.\n\n{reason}'
+        ),
+        'label': 'apt-listchanges package notices',
+        'group': 'updates',
+        'default_enabled': True,
+    },
     'webhook_test': {
         'title': '{hostname}: Webhook test received',
         'body': 'PVE webhook connectivity test successful.\n{reason}',
@@ -1055,7 +1103,7 @@ TEMPLATES = {
             'Kernel updates: {kernel_count}\n'
             'Important packages:\n{important_list}'
         ),
-        'label': 'Updates available',
+        'label': 'Host package updates',
         'group': 'updates',
         'default_enabled': True,
     },
@@ -1069,7 +1117,7 @@ TEMPLATES = {
     'update_complete': {
         'title': '{hostname}: System update completed',
         'body': 'System packages have been successfully updated.\n{details}',
-        'label': 'Update completed',
+        'label': 'Host update completed',
         'group': 'updates',
         'default_enabled': False,
     },
@@ -1157,6 +1205,27 @@ TEMPLATES = {
         'default_enabled': True,
     },
 
+    # Aggregate filesystem usage reported by the QEMU guest agent for a
+    # running VM. Fires when the guest is filling up regardless of
+    # whether the storage is a virtual disk or a PCI-passthrough drive
+    # (TrueNAS-style appliances included) — the metric is "how full is
+    # the guest", not "how full is the disk PVE knows about".
+    'vm_disk_low': {
+        'title': '{hostname}: VM {vmid} filesystems at {usage_percent}%',
+        'body': (
+            'VM {vmid} ({name}) guest filesystems are at {usage_percent}% '
+            '({disk_bytes_human} / {maxdisk_bytes_human}).\n\n'
+            'Reported by the QEMU guest agent. Includes every persistent '
+            'filesystem the guest mounts on a block device — virtual disks '
+            'and PCI-passthrough drives alike. Free up space inside the '
+            'guest or expand the affected storage before writes start to '
+            'fail.'
+        ),
+        'label': 'VM filesystems near full',
+        'group': 'storage',
+        'default_enabled': True,
+    },
+
     # ── Phase 3 capacity events (Sprint 14.5) ─────────────────────────
     # Three new events that complete the storage-monitoring picture.
     # Each fires at the user-configured warning/critical thresholds
@@ -1214,9 +1283,9 @@ TEMPLATES = {
     'post_install_update': {
         'title': '{hostname}: {count} ProxMenux optimization update(s) available',
         'body': (
-            '{count} optimization update(s) detected on this host.\n\n'
-            '🛠️ Tools:\n{tool_list}\n\n'
-            '💡 How to apply:\n'
+            '{count} ProxMenux optimization update(s) available on this host.\n\n'
+            '🛠️ Available versions:\n{tool_list}\n\n'
+            '💡 Apply from:\n'
             '  • ProxMenux Monitor → Settings → ProxMenux Optimizations\n'
             '  • Or run the post-install menu (option 2) → "Apply available updates"'
         ),
@@ -1260,7 +1329,7 @@ TEMPLATES = {
     'nvidia_driver_update_available': {
         'title': '{hostname}: NVIDIA driver update available — v{latest_version}',
         'body': (
-            'A newer NVIDIA driver compatible with kernel {kernel} is available.\n'
+            'A newer maintenance release is available for the installed NVIDIA driver branch.\n'
             '🔹 Currently installed: v{current_version}\n'
             '🟢 Latest available:    v{latest_version}\n\n'
             '{upgrade_reason}\n\n'
@@ -1675,6 +1744,10 @@ CATEGORY_EMOJI = {
 EVENT_EMOJI = {
     # VM / CT
     'lxc_updates_available': '\U0001F4E6',     # \uD83D\uDCE6 package \u2014 pending CT updates
+    'apt_listchanges': '\U0001F4E6',           # package-maintainer NEWS via PVE mail
+    'lxc_update_applied':   '\u2705',           # \u2705 check \u2014 update applied
+    'app_update_available': '\U0001F195',  # \ud83c\udd95 NEW \u2014 upstream app release
+    'docker_stack_update_available': '\U0001F433',
     'vm_start':             '\u25B6\uFE0F',    # play button
     'vm_start_warning':     '\u26A0\uFE0F',     # warning sign - started with warnings
     'vm_stop':              '\u23F9\uFE0F',     # stop button
@@ -1716,6 +1789,7 @@ EVENT_EMOJI = {
     'mount_stale':          '\U0001F517',         # link (broken connection feel)
     'mount_readonly':       '\U0001F512',         # lock
     'lxc_disk_low':         '\U0001F4BE',         # floppy disk (near-full)
+    'vm_disk_low':          '\U0001F4BE',         # floppy disk — same shape as LXC counterpart
     'lxc_mount_low':        '\U0001F4C2',         # 📂 folder near-full
     'pve_storage_full':     '\U0001F4E6',         # 📦 package (running out)
     'zfs_pool_full':        '\U0001F30A',         # 🌊 wave (pool is full)
@@ -1954,6 +2028,7 @@ def enrich_with_emojis(event_type: str, title: str, body: str,
 # Supported languages for AI translation
 AI_LANGUAGES = {
     'en': 'English',
+    'sk': 'Slovak',
     'es': 'Spanish',
     'fr': 'French',
     'de': 'German',
@@ -2354,7 +2429,20 @@ class AIEnhancer:
         if title_match and body_match:
             title_content = title_match.group(1).strip()
             body_content = body_match.group(1).strip()
-            
+
+            # Strip stray `[TITLE]` / `[BODY]` markers the AI may
+            # have echoed back inside the content itself (issue #297
+            # "additional note": PVE events arriving in Telegram
+            # with a literal `[TITLE]` in the title). The parser
+            # regex above splits on the FIRST occurrence, so any
+            # extra marker the model dropped into its title/body
+            # ends up inside the extracted string. Users see the
+            # markers verbatim in Telegram because they are only
+            # supposed to be structural separators, never content.
+            marker_re = re.compile(r'\[\s*(?:TITLE|BODY)\s*\]', re.IGNORECASE)
+            title_content = marker_re.sub('', title_content).strip()
+            body_content = marker_re.sub('', body_content).strip()
+
             # Remove any "Original message/text" sections the AI might have added.
             # Anchored at start-of-line (`(?:^|\n)\s*`) so legitimate prose
             # like "we received the original message earlier" mid-paragraph

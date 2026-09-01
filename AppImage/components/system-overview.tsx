@@ -13,6 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from ".
 import { fetchApi } from "../lib/api-config"
 import { formatNetworkTraffic, getNetworkUnit } from "../lib/format-network"
 import { formatStorage } from "../lib/utils"
+import { useT } from "../lib/i18n/provider"
 import { Area, AreaChart, ResponsiveContainer } from "recharts"
 
 interface TempDataPoint {
@@ -171,6 +172,7 @@ const getUnitsSettings = (): "Bytes" | "Bits" => {
 }
 
 export function SystemOverview() {
+  const t = useT()
   const [systemData, setSystemData] = useState<SystemData | null>(null)
   const [vmData, setVmData] = useState<VMData[]>([])
   const [storageData, setStorageData] = useState<StorageData | null>(null)
@@ -205,7 +207,7 @@ export function SystemOverview() {
       setHasAttemptedLoad(true)
 
       if (!systemResult) {
-        setError("Flask server not available. Please ensure the server is running.")
+        setError(t("overview.errors.serverUnavailableDescription"))
         return
       }
 
@@ -261,7 +263,7 @@ export function SystemOverview() {
       clearInterval(networkInterval)
       window.removeEventListener("networkUnitChanged" as any, handleUnitChange)
     }
-  }, [])
+  }, [t])
 
   if (!hasAttemptedLoad || loadingStates.system) {
     return (
@@ -270,8 +272,8 @@ export function SystemOverview() {
           <div className="h-12 w-12 rounded-full border-2 border-muted"></div>
           <div className="absolute inset-0 h-12 w-12 rounded-full border-2 border-transparent border-t-primary animate-spin"></div>
         </div>
-        <div className="text-sm font-medium text-foreground">Loading system overview...</div>
-        <p className="text-xs text-muted-foreground">Fetching system status and metrics</p>
+        <div className="text-sm font-medium text-foreground">{t("overview.loadingTitle")}</div>
+        <p className="text-xs text-muted-foreground">{t("overview.loadingDescription")}</p>
       </div>
     )
   }
@@ -284,9 +286,9 @@ export function SystemOverview() {
             <div className="flex items-center gap-3 text-red-600">
               <AlertCircle className="h-6 w-6" />
               <div>
-                <div className="font-semibold text-lg mb-1">Flask Server Not Available</div>
+                <div className="font-semibold text-lg mb-1">{t("overview.errors.serverUnavailableTitle")}</div>
                 <div className="text-sm">
-                  {error || "Unable to connect to the Flask server. Please ensure the server is running and try again."}
+                  {error || t("overview.errors.serverUnavailableDescription")}
                 </div>
               </div>
             </div>
@@ -305,14 +307,14 @@ export function SystemOverview() {
   }
 
   const getTemperatureStatus = (temp: number) => {
-    if (temp === 0) return { status: "N/A", color: "bg-gray-500/10 text-gray-500 border-gray-500/20" }
-    if (temp < 60) return { status: "Normal", color: "bg-green-500/10 text-green-500 border-green-500/20" }
-    if (temp < 75) return { status: "Warm", color: "bg-yellow-500/10 text-yellow-500 border-yellow-500/20" }
-    return { status: "Hot", color: "bg-red-500/10 text-red-500 border-red-500/20" }
+    if (temp === 0) return { status: t("app.notAvailable"), color: "bg-gray-500/10 text-gray-500 border-gray-500/20" }
+    if (temp < 60) return { status: t("status.normal"), color: "bg-green-500/10 text-green-500 border-green-500/20" }
+    if (temp < 75) return { status: t("status.warm"), color: "bg-yellow-500/10 text-yellow-500 border-yellow-500/20" }
+    return { status: t("status.hot"), color: "bg-red-500/10 text-red-500 border-red-500/20" }
   }
 
   const formatUptime = (seconds: number) => {
-    if (!seconds || seconds === 0) return "Stopped"
+    if (!seconds || seconds === 0) return t("status.stopped")
     const days = Math.floor(seconds / 86400)
     const hours = Math.floor((seconds % 86400) / 3600)
     const minutes = Math.floor((seconds % 3600) / 60)
@@ -320,6 +322,19 @@ export function SystemOverview() {
     if (days > 0) return `${days}d ${hours}h`
     if (hours > 0) return `${hours}h ${minutes}m`
     return `${minutes}m`
+  }
+
+  const formatSystemUptime = (uptime: string) => {
+    const trimmed = uptime?.trim()
+    if (!trimmed) return t("app.unknown")
+
+    const dayMatch = trimmed.match(/^(\d+)\s+days?,\s*(.+)$/)
+    if (!dayMatch) return trimmed
+
+    const days = Number(dayMatch[1])
+    const dayKey = days === 1 ? "dayOne" : days >= 2 && days <= 4 ? "dayFew" : "dayMany"
+
+    return `${t(`overview.uptimeDuration.${dayKey}`, { count: days })}, ${dayMatch[2]}`
   }
 
   const formatBytes = (bytes: number) => {
@@ -346,38 +361,12 @@ export function SystemOverview() {
 
   const getLoadStatus = (load: number, cores: number) => {
     if (load < cores) {
-      return { status: "Normal", color: "bg-green-500/10 text-green-500 border-green-500/20" }
+      return { status: t("status.normal"), color: "bg-green-500/10 text-green-500 border-green-500/20" }
     } else if (load < cores * 1.5) {
-      return { status: "Moderate", color: "bg-yellow-500/10 text-yellow-500 border-yellow-500/20" }
+      return { status: t("status.moderate"), color: "bg-yellow-500/10 text-yellow-500 border-yellow-500/20" }
     } else {
-      return { status: "High", color: "bg-red-500/10 text-red-500 border-red-500/20" }
+      return { status: t("status.high"), color: "bg-red-500/10 text-red-500 border-red-500/20" }
     }
-  }
-
-  const systemAlerts = []
-  if (systemData.available_updates && systemData.available_updates > 0) {
-    systemAlerts.push({
-      type: "warning",
-      message: `${systemData.available_updates} updates available`,
-    })
-  }
-  if (vmStats.stopped > 0) {
-    systemAlerts.push({
-      type: "info",
-      message: `${vmStats.stopped} VM${vmStats.stopped > 1 ? "s" : ""} stopped`,
-    })
-  }
-  if (systemData.temperature > 75) {
-    systemAlerts.push({
-      type: "warning",
-      message: "High temperature detected",
-    })
-  }
-  if (localStorage && localStorage.percent > 90) {
-    systemAlerts.push({
-      type: "warning",
-      message: "System storage almost full",
-    })
   }
 
   const loadStatus = getLoadStatus(systemData.load_average[0], systemData.cpu_cores || 8)
@@ -406,10 +395,10 @@ export function SystemOverview() {
         <Card
           className="bg-card border-border cursor-pointer hover:bg-white/5 transition-colors"
           onClick={() => setCpuProcModalOpen(true)}
-          title="View top processes by CPU"
+          title={t("overview.topProcessesCpu")}
         >
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">CPU Usage</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground">{t("overview.cpuUsage")}</CardTitle>
             <div className="flex items-center gap-1 text-muted-foreground">
               <Cpu className="h-4 w-4" />
               <ChevronRight className="h-4 w-4 opacity-60" />
@@ -427,7 +416,7 @@ export function SystemOverview() {
               <div className="flex-1 space-y-2 min-w-0">
                 <div>
                   <div className="flex items-center justify-between text-sm">
-                  <span className="text-muted-foreground">User</span>
+                  <span className="text-muted-foreground">{t("overview.user")}</span>
                   <span className="font-medium font-mono whitespace-nowrap">{systemData.cpu_user !== undefined ? `${Math.round(systemData.cpu_user)}%` : '—'}</span>
                   </div>
                   <div className="mt-1 h-1.5 bg-muted rounded-full overflow-hidden">
@@ -436,7 +425,7 @@ export function SystemOverview() {
                 </div>
                 <div>
                   <div className="flex items-center justify-between text-sm">
-                  <span className="text-muted-foreground">System</span>
+                  <span className="text-muted-foreground">{t("overview.system")}</span>
                   <span className="font-medium font-mono whitespace-nowrap">{systemData.cpu_system !== undefined ? `${Math.round(systemData.cpu_system)}%` : '—'}</span>
                   </div>
                   <div className="mt-1 h-1.5 bg-muted rounded-full overflow-hidden">
@@ -444,7 +433,7 @@ export function SystemOverview() {
                   </div>
                 </div>
                 <div className="flex items-center justify-between text-sm">
-                  <span className="text-muted-foreground">Cores</span>
+                  <span className="text-muted-foreground">{t("overview.cores")}</span>
                   <span className="font-medium font-mono whitespace-nowrap">{systemData.cpu_cores ?? '—'}{systemData.cpu_threads ? `/${systemData.cpu_threads}` : ''}</span>
                 </div>
               </div>
@@ -456,10 +445,10 @@ export function SystemOverview() {
         <Card
           className="bg-card border-border cursor-pointer hover:bg-white/5 transition-colors"
           onClick={() => setMemProcModalOpen(true)}
-          title="View top processes by memory"
+          title={t("overview.topProcessesMemory")}
         >
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Memory</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground">{t("overview.memory")}</CardTitle>
             <div className="flex items-center gap-1 text-muted-foreground">
               <MemoryStick className="h-4 w-4" />
               <ChevronRight className="h-4 w-4 opacity-60" />
@@ -477,7 +466,7 @@ export function SystemOverview() {
               <div className="flex-1 space-y-2 min-w-0">
                 <div>
                   <div className="flex items-center justify-between text-sm">
-                  <span className="text-muted-foreground">Used</span>
+                  <span className="text-muted-foreground">{t("overview.used")}</span>
                   <span className="font-medium font-mono whitespace-nowrap">{systemData.memory_used.toFixed(1)}</span>
                   </div>
                   <div className="mt-1 h-1.5 bg-muted rounded-full overflow-hidden">
@@ -486,7 +475,7 @@ export function SystemOverview() {
                 </div>
                 <div>
                   <div className="flex items-center justify-between text-sm">
-                  <span className="text-muted-foreground">Cached</span>
+                  <span className="text-muted-foreground">{t("overview.cached")}</span>
                   <span className="font-medium font-mono whitespace-nowrap">{systemData.memory_cached !== undefined ? systemData.memory_cached.toFixed(1) : '—'}</span>
                   </div>
                   <div className="mt-1 h-1.5 bg-muted rounded-full overflow-hidden">
@@ -494,7 +483,7 @@ export function SystemOverview() {
                   </div>
                 </div>
                 <div className="flex items-center justify-between text-sm">
-                  <span className="text-muted-foreground">Total</span>
+                  <span className="text-muted-foreground">{t("overview.total")}</span>
                   <span className="font-medium font-mono whitespace-nowrap">{systemData.memory_total.toFixed(0)} GB</span>
                 </div>
               </div>
@@ -505,7 +494,7 @@ export function SystemOverview() {
         {/* ── Active VM & LXC (preview restyle v2: pills mismo tamaño que "X running") ── */}
         <Card className="bg-card border-border">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Active VM &amp; LXC</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground">{t("overview.activeVmLxc")}</CardTitle>
             <Server className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -521,13 +510,19 @@ export function SystemOverview() {
                     <span className="text-4xl font-bold leading-none text-foreground">{vmStats.running}</span>
                     <span className="text-lg font-medium ml-1 text-muted-foreground">/ {vmStats.vms + vmStats.lxc}</span>
                   </div>
-                  <Badge variant="outline" className="bg-green-500/10 text-green-500 border-green-500/20">{vmStats.running} running</Badge>
+                  <Badge variant="outline" className="bg-green-500/10 text-green-500 border-green-500/20">
+                    {t("overview.runningCount", { count: vmStats.running })}
+                  </Badge>
                 </div>
                 <div className="mt-3 flex gap-1 flex-wrap">
-                  <Badge variant="outline" className="bg-green-500/10 text-green-500 border-green-500/20">{vmStats.vms} VMs</Badge>
+                  <Badge variant="outline" className="bg-green-500/10 text-green-500 border-green-500/20">
+                    {t("overview.vmsCount", { count: vmStats.vms })}
+                  </Badge>
                   <Badge variant="outline" className="bg-blue-500/10 text-blue-500 border-blue-500/20">{vmStats.lxc} LXC</Badge>
                   {vmStats.stopped > 0 && (
-                    <Badge variant="outline" className="bg-muted text-muted-foreground border-border">{vmStats.stopped} stopped</Badge>
+                    <Badge variant="outline" className="bg-muted text-muted-foreground border-border">
+                      {t("overview.stoppedCount", { count: vmStats.stopped })}
+                    </Badge>
                   )}
                 </div>
               </>
@@ -540,7 +535,7 @@ export function SystemOverview() {
           onClick={() => systemData.temperature > 0 && setTempModalOpen(true)}
         >
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Temperature</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground">{t("overview.temperature")}</CardTitle>
             <div className="flex items-center gap-1 text-muted-foreground">
               <Thermometer className="h-4 w-4" />
               {systemData.temperature > 0 && (
@@ -551,7 +546,7 @@ export function SystemOverview() {
           <CardContent>
             <div className="flex items-center justify-between">
               <span className="text-xl lg:text-2xl font-bold text-foreground">
-                {systemData.temperature === 0 ? "N/A" : `${Math.round(systemData.temperature * 10) / 10}°C`}
+                {systemData.temperature === 0 ? t("app.notAvailable") : `${Math.round(systemData.temperature * 10) / 10}°C`}
               </span>
               <Badge variant="outline" className={`${tempStatus.color}`}>
                 {tempStatus.status}
@@ -581,7 +576,7 @@ export function SystemOverview() {
               </div>
             ) : (
               <p className="text-xs text-muted-foreground mt-2">
-                {systemData.temperature === 0 ? "No sensor available" : "Collecting data..."}
+                {systemData.temperature === 0 ? t("overview.noSensorAvailable") : t("overview.collectingData")}
               </p>
             )}
           </CardContent>
@@ -613,7 +608,7 @@ export function SystemOverview() {
           <CardHeader>
             <CardTitle className="text-foreground flex items-center">
               <HardDrive className="h-5 w-5 mr-2" />
-              Storage Overview
+              {t("overview.storageOverview")}
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -634,7 +629,7 @@ export function SystemOverview() {
                   return totalCapacity > 0 ? (
                     <div className="space-y-2 pb-4 border-b-2 border-border">
                       <div className="flex justify-between items-center">
-                        <span className="text-sm font-medium text-foreground">Total Node Capacity:</span>
+                        <span className="text-sm font-medium text-foreground">{t("overview.totalNodeCapacity")}</span>
                         <span className="text-lg font-bold text-foreground">
                           {formatStorage(totalCapacity)}
                         </span>
@@ -646,13 +641,13 @@ export function SystemOverview() {
                       <div className="flex justify-between items-center mt-1">
                         <div className="flex items-center gap-3">
                           <span className="text-xs text-muted-foreground">
-                            Used:{" "}
+                            {t("overview.used")}:{" "}
                             <span className="font-semibold text-foreground">
                               {formatStorage(totalUsed)}
                             </span>
                           </span>
                           <span className="text-xs text-muted-foreground">
-                            Free:{" "}
+                            {t("overview.free")}:{" "}
                             <span className="font-semibold text-green-500">
                               {formatStorage(totalAvailable)}
                             </span>
@@ -666,28 +661,28 @@ export function SystemOverview() {
 
                 <div className="space-y-2 pb-3 border-b border-border">
                   <div className="flex justify-between items-center">
-                    <span className="text-sm text-muted-foreground">Total Capacity:</span>
+                    <span className="text-sm text-muted-foreground">{t("overview.totalCapacity")}</span>
                     <span className="text-lg font-semibold text-foreground">{storageData.total} TB</span>
                   </div>
                   <div className="flex justify-between items-center">
-                    <span className="text-sm text-muted-foreground">Physical Disks:</span>
+                    <span className="text-sm text-muted-foreground">{t("overview.physicalDisks")}</span>
                     <span className="text-sm font-semibold text-foreground">
-                      {storageData.disk_count} disk{storageData.disk_count !== 1 ? "s" : ""}
+                      {storageData.disk_count} {storageData.disk_count === 1 ? t("overview.diskSingular") : t("overview.diskPlural")}
                     </span>
                   </div>
                 </div>
 
                 {vmLxcStorages && vmLxcStorages.length > 0 ? (
                   <div className="space-y-2 pb-3 border-b border-border">
-                    <div className="text-xs font-medium text-muted-foreground mb-2">VM/LXC Storage</div>
+                    <div className="text-xs font-medium text-muted-foreground mb-2">{t("overview.vmLxcStorage")}</div>
                     <div className="flex justify-between items-center">
-                      <span className="text-xs text-muted-foreground">Used:</span>
+                      <span className="text-xs text-muted-foreground">{t("overview.used")}:</span>
                       <span className="text-sm font-semibold text-foreground">
                         {formatStorage(vmLxcStorageUsed)}
                       </span>
                     </div>
                     <div className="flex justify-between items-center">
-                      <span className="text-xs text-muted-foreground">Available:</span>
+                      <span className="text-xs text-muted-foreground">{t("overview.available")}:</span>
                       <span className="text-sm font-semibold text-green-500">
                         {formatStorage(vmLxcStorageAvailable)}
                       </span>
@@ -702,28 +697,28 @@ export function SystemOverview() {
                     </div>
                     {vmLxcStorages.length > 1 && (
                       <div className="text-xs text-muted-foreground mt-1">
-                        {vmLxcStorages.length} storage volume{vmLxcStorages.length > 1 ? "s" : ""}
+                        {vmLxcStorages.length} {vmLxcStorages.length === 1 ? t("overview.storageVolumeSingular") : t("overview.storageVolumePlural")}
                       </div>
                     )}
                   </div>
                 ) : (
                   <div className="space-y-2 pb-3 border-b border-border">
-                    <div className="text-xs font-medium text-muted-foreground mb-2">VM/LXC Storage</div>
-                    <div className="text-center py-4 text-muted-foreground text-sm">No VM/LXC storage configured</div>
+                    <div className="text-xs font-medium text-muted-foreground mb-2">{t("overview.vmLxcStorage")}</div>
+                    <div className="text-center py-4 text-muted-foreground text-sm">{t("overview.noVmLxcStorage")}</div>
                   </div>
                 )}
 
                 {localStorage && (
                   <div className="space-y-2">
-                    <div className="text-xs font-medium text-muted-foreground mb-2">Local Storage (System)</div>
+                    <div className="text-xs font-medium text-muted-foreground mb-2">{t("overview.localStorageSystem")}</div>
                     <div className="flex justify-between items-center">
-                      <span className="text-xs text-muted-foreground">Used:</span>
+                      <span className="text-xs text-muted-foreground">{t("overview.used")}:</span>
                       <span className="text-sm font-semibold text-foreground">
                         {formatStorage(localStorage.used)}
                       </span>
                     </div>
                     <div className="flex justify-between items-center">
-                      <span className="text-xs text-muted-foreground">Available:</span>
+                      <span className="text-xs text-muted-foreground">{t("overview.available")}:</span>
                       <span className="text-sm font-semibold text-green-500">
                         {formatStorage(localStorage.available)}
                       </span>
@@ -740,7 +735,7 @@ export function SystemOverview() {
                 )}
               </div>
             ) : (
-              <div className="text-center py-8 text-muted-foreground">Storage data not available</div>
+              <div className="text-center py-8 text-muted-foreground">{t("overview.storageDataUnavailable")}</div>
             )}
           </CardContent>
         </Card>
@@ -750,18 +745,18 @@ export function SystemOverview() {
             <CardTitle className="text-foreground flex items-center justify-between">
               <div className="flex items-center">
                 <Network className="h-5 w-5 mr-2" />
-                Network Overview
+                {t("overview.networkOverview")}
               </div>
               <Select value={networkTimeframe} onValueChange={setNetworkTimeframe}>
                 <SelectTrigger className="w-28 h-8 text-xs">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="hour">1 Hour</SelectItem>
-                  <SelectItem value="day">24 Hours</SelectItem>
-                  <SelectItem value="week">7 Days</SelectItem>
-                  <SelectItem value="month">30 Days</SelectItem>
-                  <SelectItem value="year">1 Year</SelectItem>
+                  <SelectItem value="hour">{t("overview.timeframes.hour")}</SelectItem>
+                  <SelectItem value="day">{t("overview.timeframes.day")}</SelectItem>
+                  <SelectItem value="week">{t("overview.timeframes.week")}</SelectItem>
+                  <SelectItem value="month">{t("overview.timeframes.month")}</SelectItem>
+                  <SelectItem value="year">{t("overview.timeframes.year")}</SelectItem>
                 </SelectContent>
               </Select>
             </CardTitle>
@@ -776,7 +771,7 @@ export function SystemOverview() {
             ) : networkData ? (
               <div className="space-y-4">
                 <div className="flex justify-between items-center pb-3 border-b border-border">
-                  <span className="text-sm text-muted-foreground">Active Interfaces:</span>
+                  <span className="text-sm text-muted-foreground">{t("overview.activeInterfaces")}</span>
                   <span className="text-lg font-semibold text-foreground">
                     {(networkData.physical_active_count || 0) + (networkData.bridge_active_count || 0)}
                   </span>
@@ -818,7 +813,7 @@ export function SystemOverview() {
 
                 <div className="pt-2 border-t border-border space-y-2">
                   <div className="flex justify-between items-center">
-                    <span className="text-sm text-muted-foreground">Received:</span>
+                    <span className="text-sm text-muted-foreground">{t("overview.received")}</span>
                     <span className="text-lg font-semibold text-green-500 flex items-center gap-1">
                       ↓{" "}
                       {networkUnit === "Bytes"
@@ -828,7 +823,7 @@ export function SystemOverview() {
                     </span>
                   </div>
                   <div className="flex justify-between items-center">
-                    <span className="text-sm text-muted-foreground">Sent:</span>
+                    <span className="text-sm text-muted-foreground">{t("overview.sent")}</span>
                     <span className="text-lg font-semibold text-blue-500 flex items-center gap-1">
                       ↑{" "}
                       {networkUnit === "Bytes"
@@ -848,7 +843,7 @@ export function SystemOverview() {
                 </div>
               </div>
             ) : (
-              <div className="text-center py-8 text-muted-foreground">Network data not available</div>
+              <div className="text-center py-8 text-muted-foreground">{t("overview.networkDataUnavailable")}</div>
             )}
           </CardContent>
         </Card>
@@ -859,27 +854,27 @@ export function SystemOverview() {
           <CardHeader>
             <CardTitle className="text-foreground flex items-center">
               <Server className="h-5 w-5 mr-2" />
-              System Information
+              {t("overview.systemInformation")}
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
             <div className="flex justify-between">
-              <span className="text-muted-foreground">Uptime:</span>
-              <span className="text-foreground">{systemData.uptime}</span>
+              <span className="text-muted-foreground">{t("overview.uptime")}</span>
+              <span className="text-foreground">{formatSystemUptime(systemData.uptime)}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-muted-foreground">Proxmox Version:</span>
+              <span className="text-muted-foreground">{t("overview.proxmoxVersion")}</span>
               <span className="text-foreground">{systemData.proxmox_version || "N/A"}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-muted-foreground">Kernel:</span>
+              <span className="text-muted-foreground">{t("overview.kernel")}</span>
               <span className="text-foreground font-mono text-sm">{systemData.kernel_version || "Linux"}</span>
             </div>
             {systemData.available_updates !== undefined && systemData.available_updates > 0 && (
               <div className="flex justify-between">
-                <span className="text-muted-foreground">Available Updates:</span>
+                <span className="text-muted-foreground">{t("overview.availableUpdates")}</span>
                 <Badge variant="outline" className="bg-yellow-500/10 text-yellow-500 border-yellow-500/20">
-                  {systemData.available_updates} packages
+                  {systemData.available_updates} {t("overview.packages")}
                 </Badge>
               </div>
             )}
@@ -890,13 +885,13 @@ export function SystemOverview() {
           <CardHeader>
             <CardTitle className="text-foreground flex items-center">
               <Zap className="h-5 w-5 mr-2" />
-              System Overview
+              {t("overview.systemOverview")}
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="flex justify-between items-center pb-3 border-b border-border">
               <div className="flex flex-col">
-                <span className="text-sm text-muted-foreground">Load Average (1m):</span>
+                <span className="text-sm text-muted-foreground">{t("overview.loadAverage1m")}</span>
               </div>
               <div className="flex items-center gap-2">
                 <span className="text-lg font-semibold text-foreground font-mono">
@@ -909,17 +904,17 @@ export function SystemOverview() {
             </div>
 
             <div className="flex justify-between items-center pb-3 border-b border-border">
-              <span className="text-sm text-muted-foreground">CPU Threads:</span>
+              <span className="text-sm text-muted-foreground">{t("overview.cpuThreads")}</span>
               <span className="text-lg font-semibold text-foreground">{systemData.cpu_threads || "N/A"}</span>
             </div>
 
             <div className="flex justify-between items-center pb-3 border-b border-border">
-              <span className="text-sm text-muted-foreground">Physical Disks:</span>
+              <span className="text-sm text-muted-foreground">{t("overview.physicalDisks")}</span>
               <span className="text-lg font-semibold text-foreground">{storageData?.disk_count || "N/A"}</span>
             </div>
 
             <div className="flex justify-between items-center">
-              <span className="text-sm text-muted-foreground">Network Interfaces:</span>
+              <span className="text-sm text-muted-foreground">{t("overview.networkInterfaces")}</span>
               <span className="text-lg font-semibold text-foreground">
                 {networkData?.physical_total_count || networkData?.physical_interfaces?.length || "N/A"}
               </span>

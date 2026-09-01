@@ -20,11 +20,12 @@ import {
 } from "lucide-react"
 import Image from "next/image"
 import { Checkbox } from "./ui/checkbox"
+import { useT } from "../lib/i18n/provider"
 
 interface OnboardingSlide {
   id: number
-  title: string
-  description: string
+  titleKey: string
+  descriptionKey: string
   image?: string
   icon: React.ReactNode
   gradient: string
@@ -33,77 +34,70 @@ interface OnboardingSlide {
 const slides: OnboardingSlide[] = [
   {
     id: 0,
-    title: "Welcome to ProxMenux Monitor!",
-    description:
-      "Your new monitoring tool for Proxmox. Discover all the features that will help you manage and supervise your infrastructure efficiently.",
+    titleKey: "onboarding.slides.welcome.title",
+    descriptionKey: "onboarding.slides.welcome.description",
     icon: <Sparkles className="h-16 w-16" />,
     gradient: "from-blue-500 via-purple-500 to-pink-500",
   },
   {
     id: 1,
-    title: "System Overview",
-    description:
-      "Monitor your server's status in real-time: CPU, memory, temperature, system load and more. Everything in an intuitive and easy-to-understand dashboard.",
+    titleKey: "onboarding.slides.overview.title",
+    descriptionKey: "onboarding.slides.overview.description",
     image: "/images/onboarding/imagen1.png",
     icon: <LayoutDashboard className="h-12 w-12" />,
     gradient: "from-blue-500 to-cyan-500",
   },
   {
     id: 2,
-    title: "Storage Management",
-    description:
-      "Visualize the status of all your disks and volumes. Detailed information on capacity, usage, SMART health, temperature and performance of each storage device.",
+    titleKey: "onboarding.slides.storage.title",
+    descriptionKey: "onboarding.slides.storage.description",
     image: "/images/onboarding/imagen2.png",
     icon: <HardDrive className="h-12 w-12" />,
     gradient: "from-cyan-500 to-teal-500",
   },
   {
     id: 3,
-    title: "Network Metrics",
-    description:
-      "Monitor network traffic in real-time. Bandwidth statistics, active interfaces, transfer speeds and historical usage graphs.",
+    titleKey: "onboarding.slides.network.title",
+    descriptionKey: "onboarding.slides.network.description",
     image: "/images/onboarding/imagen3.png",
     icon: <Network className="h-12 w-12" />,
     gradient: "from-teal-500 to-green-500",
   },
   {
     id: 4,
-    title: "Virtual Machines & Containers",
-    description:
-      "Manage all your VMs and LXC containers from one place. Status, allocated resources, current usage and quick controls for each virtual machine.",
+    titleKey: "onboarding.slides.virtualMachines.title",
+    descriptionKey: "onboarding.slides.virtualMachines.description",
     image: "/images/onboarding/imagen4.png",
     icon: <Box className="h-12 w-12" />,
     gradient: "from-green-500 to-emerald-500",
   },
   {
     id: 5,
-    title: "Hardware Information",
-    description:
-      "Complete details of your server hardware: CPU, RAM, GPU, disks, network, UPS and more. Technical specifications, models, serial numbers and status of each component.",
+    titleKey: "onboarding.slides.hardware.title",
+    descriptionKey: "onboarding.slides.hardware.description",
     image: "/images/onboarding/imagen5.png",
     icon: <Cpu className="h-12 w-12" />,
     gradient: "from-emerald-500 to-blue-500",
   },
   {
     id: 6,
-    title: "System Logs",
-    description:
-      "Access system logs in real-time. Filter by event type, search for specific errors and keep complete track of your server activity. Download the displayed logs for further analysis.",
+    titleKey: "onboarding.slides.logs.title",
+    descriptionKey: "onboarding.slides.logs.description",
     image: "/images/onboarding/imagen6.png",
     icon: <FileText className="h-12 w-12" />,
     gradient: "from-blue-500 to-indigo-500",
   },
   {
     id: 7,
-    title: "Ready for the Future!",
-    description:
-      "ProxMenux Monitor is prepared to receive updates and improvements that will be added gradually, improving the user experience and being able to execute ProxMenux functions from the web panel.",
+    titleKey: "onboarding.slides.future.title",
+    descriptionKey: "onboarding.slides.future.description",
     icon: <Rocket className="h-16 w-16" />,
     gradient: "from-indigo-500 via-purple-500 to-pink-500",
   },
 ]
 
 export function OnboardingCarousel() {
+  const t = useT()
   const [open, setOpen] = useState(false)
   const [currentSlide, setCurrentSlide] = useState(0)
   const [direction, setDirection] = useState<"next" | "prev">("next")
@@ -155,11 +149,13 @@ export function OnboardingCarousel() {
   }
 
   const slide = slides[currentSlide]
+  const slideTitle = t(slide.titleKey)
+  const slideDescription = t(slide.descriptionKey)
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent className="max-w-4xl p-0 gap-0 overflow-hidden border-0 bg-transparent">
-        <DialogTitle className="sr-only">ProxMenux Onboarding</DialogTitle>
+        <DialogTitle className="sr-only">{t("onboarding.dialogTitle")}</DialogTitle>
         <div className="relative bg-card rounded-lg overflow-hidden shadow-2xl">
           <Button
             variant="ghost"
@@ -181,7 +177,7 @@ export function OnboardingCarousel() {
                 <div className="relative w-full h-36 md:h-48 flex items-center justify-center px-4">
                   <Image
                     src={slide.image || "/placeholder.svg"}
-                    alt={slide.title}
+                    alt={slideTitle}
                     width={600}
                     height={400}
                     className="rounded-lg shadow-2xl object-cover max-h-36 md:max-h-48"
@@ -207,9 +203,9 @@ export function OnboardingCarousel() {
 
           <div className="p-4 md:p-8 space-y-3 md:space-y-6 max-h-[60vh] md:max-h-none overflow-y-auto">
             <div className="space-y-2 md:space-y-3">
-              <h2 className="text-xl md:text-3xl font-bold text-foreground text-balance">{slide.title}</h2>
+              <h2 className="text-xl md:text-3xl font-bold text-foreground text-balance">{slideTitle}</h2>
               <p className="text-sm md:text-lg text-muted-foreground leading-relaxed text-pretty">
-                {slide.description}
+                {slideDescription}
               </p>
             </div>
 
@@ -223,7 +219,7 @@ export function OnboardingCarousel() {
                       ? "w-8 h-2.5 bg-blue-500 shadow-lg shadow-blue-500/50"
                       : "w-2.5 h-2.5 bg-muted-foreground/60 hover:bg-muted-foreground/80 border border-muted-foreground/40"
                   }`}
-                  aria-label={`Go to slide ${index + 1}`}
+                  aria-label={t("onboarding.goToSlide", { number: index + 1 })}
                 />
               ))}
             </div>
@@ -236,7 +232,7 @@ export function OnboardingCarousel() {
                 className="gap-2 w-full sm:w-auto text-sm"
               >
                 <ChevronLeft className="h-4 w-4" />
-                Previous
+                {t("onboarding.previous")}
               </Button>
 
               <div className="flex gap-2 w-full sm:w-auto">
@@ -247,13 +243,13 @@ export function OnboardingCarousel() {
                       onClick={handleSkip}
                       className="flex-1 sm:flex-none bg-transparent text-sm"
                     >
-                      Skip
+                      {t("onboarding.skip")}
                     </Button>
                     <Button
                       onClick={handleNext}
                       className="gap-2 bg-blue-500 hover:bg-blue-600 flex-1 sm:flex-none text-sm"
                     >
-                      Next
+                      {t("onboarding.next")}
                       <ChevronRight className="h-4 w-4" />
                     </Button>
                   </>
@@ -262,7 +258,7 @@ export function OnboardingCarousel() {
                     onClick={handleNext}
                     className="gap-2 bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 w-full sm:w-auto text-sm"
                   >
-                    Get Started!
+                    {t("onboarding.getStarted")}
                     <Sparkles className="h-4 w-4" />
                   </Button>
                 )}
@@ -279,7 +275,7 @@ export function OnboardingCarousel() {
                 htmlFor="dont-show-again"
                 className="text-xs md:text-sm text-muted-foreground hover:text-foreground transition-colors cursor-pointer select-none"
               >
-                Don't show this again
+                {t("onboarding.dontShowAgain")}
               </label>
             </div>
           </div>

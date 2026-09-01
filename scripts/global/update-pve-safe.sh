@@ -104,8 +104,26 @@ update_pve_safe() {
         return 1
     fi
 
-    if ! ping -c 1 download.proxmox.com >/dev/null 2>&1; then
-        msg_error "$(translate "Cannot reach Proxmox repositories")"
+    # Reachability check: probe the public Proxmox repository over the
+    # transport apt is most likely to use. Many PVE installs use the
+    # official HTTP apt URI, while HTTPS may fail before apt ever runs
+    # if the CDN presents a certificate for another Proxmox hostname.
+    # Accept either transport and let apt-get update report repo-specific
+    # errors in the next step.
+    _repo_reachable() {
+        local url attempt
+        for url in "http://download.proxmox.com/" "https://download.proxmox.com/"; do
+            for attempt in 1 2; do
+                if curl -sfI --connect-timeout 5 --max-time 10 -o /dev/null "$url"; then
+                    return 0
+                fi
+                [[ $attempt -eq 1 ]] && sleep 1
+            done
+        done
+        return 1
+    }
+    if ! _repo_reachable; then
+        msg_error "$(translate "Cannot reach download.proxmox.com. Check network, proxy or DNS.")"
         echo -e
         msg_success "$(translate "Press Enter to return to menu...")"
         read -r
@@ -247,6 +265,7 @@ update_pve_safe() {
     fi
 
     # ── 10. Final cleanup ──
+    msg_info "$(translate "Running cleanup")"
     apt-get -y autoremove >/dev/null 2>&1 || true
     apt-get -y autoclean >/dev/null 2>&1 || true
     msg_ok "$(translate "Cleanup finished")"

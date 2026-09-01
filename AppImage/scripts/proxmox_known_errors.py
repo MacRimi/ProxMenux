@@ -18,6 +18,121 @@ Each entry includes:
 import re
 from typing import Optional, Dict, Any, List
 
+
+def analyze_oom_event(text: str) -> Optional[Dict[str, Any]]:
+    """Extract the scope and victim from a complete Linux OOM block.
+
+    The process on the ``invoked oom-killer`` line is only the allocation
+    trigger.  The authoritative scope is carried by ``constraint`` and
+    ``oom_memcg``; the actual victim is carried by ``Killed process``.
+    """
+    if not text or not re.search(
+        r'invoked oom-killer|oom-kill:|memory cgroup out of memory|out of memory: killed process',
+        text,
+        re.IGNORECASE,
+    ):
+        return None
+
+    result: Dict[str, Any] = {
+        'scope': 'unknown',
+        'constraint': '',
+        'cgroup_path': '',
+        'ctid': '',
+        'invoker': '',
+        'victim_process': '',
+        'victim_pid': '',
+        'memory_usage_kib': None,
+        'memory_limit_kib': None,
+        'swap_usage_kib': None,
+        'swap_limit_kib': None,
+    }
+
+    constraint = re.search(r'constraint=([A-Z0-9_]+)', text, re.IGNORECASE)
+    if constraint:
+        result['constraint'] = constraint.group(1).upper()
+
+    cgroup = re.search(r'oom_memcg=([^,\s]+)', text, re.IGNORECASE)
+    if not cgroup:
+        cgroup = re.search(r'Memory cgroup stats for\s+([^:\s]+)', text, re.IGNORECASE)
+    if cgroup:
+        result['cgroup_path'] = cgroup.group(1)
+
+    ctid = re.search(r'/lxc/(\d+)\b', result['cgroup_path'] or text, re.IGNORECASE)
+    if ctid:
+        result['ctid'] = ctid.group(1)
+        result['scope'] = 'lxc'
+    elif result['constraint'] == 'CONSTRAINT_MEMCG' or re.search(
+        r'memory cgroup out of memory', text, re.IGNORECASE
+    ):
+        result['scope'] = 'memory_cgroup'
+    elif result['constraint']:
+        result['scope'] = 'host'
+
+    invoker = re.search(r'\b([A-Za-z0-9_.+/-]+)\s+invoked oom-killer', text, re.IGNORECASE)
+    if invoker:
+        result['invoker'] = invoker.group(1)
+
+    victim = re.search(r'Killed process\s+(\d+)\s+\(([^)]+)\)', text, re.IGNORECASE)
+    if victim:
+        result['victim_pid'] = victim.group(1)
+        result['victim_process'] = victim.group(2)
+
+    memory = re.search(
+        r'memory:\s+usage\s+(\d+)kB,\s+limit\s+(\d+)kB', text, re.IGNORECASE
+    )
+    if memory:
+        result['memory_usage_kib'] = int(memory.group(1))
+        result['memory_limit_kib'] = int(memory.group(2))
+
+    swap = re.search(
+        r'swap:\s+usage\s+(\d+)kB,\s+limit\s+(\d+)kB', text, re.IGNORECASE
+    )
+    if swap:
+        result['swap_usage_kib'] = int(swap.group(1))
+        result['swap_limit_kib'] = int(swap.group(2))
+
+    return result
+
+
+def format_oom_diagnosis(analysis: Optional[Dict[str, Any]]) -> str:
+    """Return a concise evidence-based diagnosis for an OOM analysis."""
+    if not analysis:
+        return ''
+
+    lines: List[str] = []
+    scope = analysis.get('scope')
+    ctid = analysis.get('ctid')
+    if scope == 'lxc' and ctid:
+        lines.append(f'OOM scope: LXC {ctid} memory cgroup (not a host-wide OOM)')
+    elif scope == 'memory_cgroup':
+        path = analysis.get('cgroup_path') or 'unknown cgroup'
+        lines.append(f'OOM scope: memory cgroup {path} (not a host-wide OOM)')
+    elif scope == 'host':
+        lines.append('OOM scope: host/kernel memory scope')
+    else:
+        lines.append('OOM scope: not established from the available log lines')
+
+    usage = analysis.get('memory_usage_kib')
+    limit = analysis.get('memory_limit_kib')
+    if usage is not None and limit is not None:
+        lines.append(f'Cgroup memory: {usage / 1024:.1f} MiB used of {limit / 1024:.1f} MiB')
+
+    swap_usage = analysis.get('swap_usage_kib')
+    swap_limit = analysis.get('swap_limit_kib')
+    if swap_usage is not None and swap_limit is not None:
+        lines.append(f'Cgroup swap: {swap_usage / 1024:.1f} MiB used of {swap_limit / 1024:.1f} MiB')
+
+    victim = analysis.get('victim_process')
+    victim_pid = analysis.get('victim_pid')
+    if victim:
+        lines.append(f'Killed process: {victim}' + (f' (PID {victim_pid})' if victim_pid else ''))
+
+    invoker = analysis.get('invoker')
+    if invoker and invoker != victim:
+        lines.append(f'Allocation trigger: {invoker} (not necessarily the largest consumer)')
+
+    return '\n'.join(lines)
+
 # Known error patterns with causes and solutions
 PROXMOX_KNOWN_ERRORS: List[Dict[str, Any]] = [
     # ==================== SUBSCRIPTION/LICENSE ====================
@@ -169,11 +284,11 @@ PROXMOX_KNOWN_ERRORS: List[Dict[str, Any]] = [
     },
     {
         "pattern": r"out of memory|OOM.*kill|cannot allocate memory|memory.*exhausted",
-        "cause": "System or VM ran out of memory",
-        "cause_detailed": "The Linux OOM (Out Of Memory) killer terminated a process to free memory. This indicates memory pressure from overcommitment or memory leaks.",
+        "cause": "The kernel invoked the OOM killer under memory pressure",
+        "cause_detailed": "Linux could not satisfy a memory allocation in the relevant host, cgroup, cpuset or NUMA scope. The process named as having invoked the OOM killer only triggered the allocation; it is not necessarily the largest consumer or the process that was killed. The complete OOM block is required to identify the scope, victim and likely cause.",
         "severity": "critical",
-        "solution": "Increase memory allocation or reduce VM memory usage",
-        "solution_detailed": "1. Check what was killed: dmesg | grep -i oom\n2. Review memory usage: free -h\n3. Check balloon driver status for VMs\n4. Consider adding swap or RAM\n5. Review VM memory allocations for overcommitment",
+        "solution": "Inspect the complete OOM event and current host/cgroup memory before changing allocations",
+        "solution_detailed": "1. Read the complete kernel OOM block, including 'Killed process', 'Mem-Info' and task rows\n2. Determine whether it was a host-wide or memory-cgroup OOM\n3. Review free -h, swap, CommitLimit/Committed_AS and active VM/LXC allocations\n4. On ZFS hosts, compare ARC size and c_max with the configured zfs_arc_max\n5. Adjust the confirmed consumer, ARC cap or workload only after identifying the exhausted scope",
         "category": "memory"
     },
     
@@ -316,6 +431,10 @@ def get_error_context(text: str, category: Optional[str] = None, detail_level: s
     error = find_matching_error(text, category)
     if not error:
         return None
+
+    oom_diagnosis = ''
+    if error.get('category') == 'memory':
+        oom_diagnosis = format_oom_diagnosis(analyze_oom_event(text))
     
     # NOTE: we intentionally do NOT emit a "Severity:" line here.
     # The catalogue's severity is the *typical* severity of a class
@@ -329,7 +448,10 @@ def get_error_context(text: str, category: Optional[str] = None, detail_level: s
     # carried by the notification's own severity field; repeating a
     # different value here is noise at best, misinformation at worst.
     if detail_level == "minimal":
-        return f"Known issue: {error['cause']}"
+        result = f"Known issue: {error['cause']}"
+        if oom_diagnosis:
+            result += f"\n{oom_diagnosis}"
+        return result
 
     elif detail_level == "standard":
         lines = [
@@ -339,6 +461,9 @@ def get_error_context(text: str, category: Optional[str] = None, detail_level: s
         ]
         if error.get("url"):
             lines.append(f"  Docs: {error['url']}")
+        if oom_diagnosis:
+            lines.append("  Event analysis:")
+            lines.extend(f"    {line}" for line in oom_diagnosis.splitlines())
         return "\n".join(lines)
 
     else:  # detailed
@@ -349,6 +474,9 @@ def get_error_context(text: str, category: Optional[str] = None, detail_level: s
         ]
         if error.get("url"):
             lines.append(f"  Documentation: {error['url']}")
+        if oom_diagnosis:
+            lines.append("  Event analysis:")
+            lines.extend(f"    {line}" for line in oom_diagnosis.splitlines())
         return "\n".join(lines)
 
 

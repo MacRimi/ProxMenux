@@ -1,16 +1,41 @@
 {
   "meta": {
     "title": "ProxMenux Monitor — Dashboard: Settings tab | ProxMenux Documentation",
-    "description": "The Settings tab groups dashboard preferences (network units, suppression durations, storage / interface exclusions), the embedded notification + AI panel, and a transparent inventory of every ProxMenux post-install optimization currently active on the host with click-through to its source code."
+    "description": "The Settings tab controls the Monitor language, navigation order, dashboard preferences, health thresholds and exclusions, notifications, AI and the post-install optimization inventory."
   },
   "header": {
     "title": "Dashboard: Settings tab",
-    "description": "Dashboard preferences, monitoring exclusions, the embedded notification + AI configuration panel, and a live inventory of the ProxMenux post-install optimizations currently active on the host.",
+    "description": "Monitor language, navigation order, dashboard preferences, monitoring exclusions, notifications, AI configuration and the live ProxMenux optimization inventory.",
     "section": "ProxMenux Monitor · Dashboard"
   },
   "intro": {
     "title": "Where each setting actually lives",
     "body": "The Settings tab is a single surface for several distinct concerns: how the dashboard renders, what gets watched by the Health Monitor, how alerts go out, and what ProxMenux has already changed on the host. Cards that have their own deep documentation page link out rather than duplicating content here — Settings is the entry point, not the manual."
+  },
+  "interfaceLanguage": {
+    "heading": "Interface Language",
+    "intro": "Choose the language used by the <strong>web Monitor</strong>. The change is applied immediately to the current interface; it does not restart the service and does not alter the language used by ProxMenux shell menus.",
+    "items": [
+      "ProxMenux Monitor currently offers English, German, Spanish, French, Italian, Portuguese, Slovak and Swedish.",
+      "On the first visit, the Monitor uses the browser language when it is supported; otherwise it falls back to English.",
+      "Changing the selection updates the page language and synchronizes other open tabs from the same browser profile.",
+      "If a translated key is missing, only that text falls back to English instead of rendering a broken placeholder."
+    ],
+    "scopeTitle": "Browser-local preference",
+    "scopeBody": "The selection is stored in <code>localStorage</code> under <code>proxmenux-ui-language</code>. It is therefore specific to this browser profile and device, not a node-wide setting. Each operator can choose a different Monitor language."
+  },
+  "navigationOrder": {
+    "heading": "Navigation order",
+    "intro": "Use this card to arrange the seven top-level navigation slots: <strong>Overview, Apps, VMs & LXCs, Node, Backup, Terminal and Admin</strong>. Press <strong>Edit</strong>, drag the rows, then save the result.",
+    "items": [
+      "Mouse dragging starts on press. Touch uses a short 250 ms long-press so normal scrolling is not mistaken for a reorder.",
+      "The grouped <strong>Node</strong> and <strong>Admin</strong> entries move as complete units; their internal pages keep their canonical order.",
+      "The mobile menu follows the same saved order.",
+      "<strong>Restore default</strong> resets the draft order. Save to make the reset permanent.",
+      "A new top-level tab introduced by a future release is appended to an existing custom order rather than deleting the user's arrangement."
+    ],
+    "landingTitle": "The first item becomes the landing tab",
+    "landingBody": "The first saved slot is what the Monitor opens after loading. If <strong>Node</strong> is first, the landing page is Storage; if <strong>Admin</strong> is first, it is System Logs. The order is stored only in this browser under <code>proxmenux-nav-order</code>, so different devices can use different workflows."
   },
   "networkUnits": {
     "heading": "Network Units",
@@ -258,6 +283,16 @@
     "headerSource": "Source",
     "rows": [
       {
+        "card": "Interface Language",
+        "endpoint": "localStorage",
+        "source": "Browser preference <code>proxmenux-ui-language</code>, initially derived from the browser locale when no saved choice exists."
+      },
+      {
+        "card": "Navigation order",
+        "endpoint": "localStorage",
+        "source": "Browser preference <code>proxmenux-nav-order</code>; it also determines the landing tab."
+      },
+      {
         "card": "Network Units",
         "endpoint": "/api/settings",
         "source": "Persisted in the dashboard's SQLite settings table."
@@ -292,6 +327,11 @@
   "whereNext": {
     "heading": "Where to next",
     "items": [
+      {
+        "label": "Apps tab",
+        "href": "/docs/monitor/dashboard/apps",
+        "tail": " — the launcher whose top-level position can be changed with Navigation order."
+      },
       {
         "label": "Notifications",
         "href": "/docs/monitor/notifications",

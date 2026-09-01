@@ -1,0 +1,127 @@
+{
+  "meta": {
+    "title": "Panel Apps: un lanzador para todos los enlaces web | ProxMenux",
+    "description": "Utiliza el panel Apps para abrir enlaces web registrados en LXCs y enlaces personalizados, organizarlos por categoría y acceder al sistema invitado que aloja cada servicio."
+  },
+  "header": {
+    "title": "Panel: pestaña Apps",
+    "description": "Un único lanzador para las interfaces web que utilizas en el nodo, tanto si proceden de una aplicación registrada en un LXC como de un enlace web personalizado.",
+    "section": "ProxMenux Monitor · Panel"
+  },
+  "intro": {
+    "title": "Un lanzador, no un instalador de aplicaciones",
+    "body": "La pestaña <strong>Apps</strong> no instala software ni descubre servicios por sí sola. Convierte los enlaces web guardados en una cuadrícula con búsqueda. Los enlaces que pertenecen a un LXC se configuran en la <appTabLink>pestaña App</appTabLink> del contenedor; los enlaces personalizados permiten incluir servicios de VMs, proxies inversos y paneles externos."
+  },
+  "sources": {
+    "heading": "Qué aparece en Apps",
+    "intro": "Cada URL que se puede abrir genera su propia tarjeta. El origen determina dónde se edita, pero no cambia su aspecto durante el uso normal.",
+    "colSource": "Origen",
+    "colAppears": "Qué aparece",
+    "colManagedFrom": "Dónde se gestiona",
+    "rows": [
+      {
+        "source": "Aplicación registrada en un LXC",
+        "appears": "Una tarjeta por cada enlace web guardado en el registro de la aplicación.",
+        "managedFrom": "VMs y LXCs → modal del LXC → App"
+      },
+      {
+        "source": "Enlace personalizado asociado a un invitado",
+        "appears": "La URL de un servicio asociado a una VM o un LXC concretos.",
+        "managedFrom": "Apps → Editar"
+      },
+      {
+        "source": "Enlace personalizado sin asociación",
+        "appears": "Cualquier destino HTTP(S), incluido un servicio externo o publicado mediante proxy inverso.",
+        "managedFrom": "Apps → Editar"
+      }
+    ],
+    "relationshipTitle": "Apps y la pestaña App del LXC tienen funciones diferentes",
+    "relationshipBody": "La <appTabLink>pestaña App</appTabLink> del LXC gestiona la identidad de la aplicación, sus enlaces web y el seguimiento opcional de versión. La pestaña principal <strong>Apps</strong> utiliza esos enlaces para ofrecer un acceso rápido. Por eso, al editar una tarjeta que pertenece a un LXC se vuelve a su registro original en lugar de crear una segunda configuración."
+  },
+  "cards": {
+    "heading": "Cómo utilizar una tarjeta",
+    "intro": "La tarjeta completa abre el servicio; sus controles pequeños aportan contexto sin abrir la URL.",
+    "items": [
+      "Pulsa la tarjeta para abrir su URL en una pestaña nueva del navegador.",
+      "El logotipo utiliza primero el definido para el enlace web y, cuando corresponde, recurre al logotipo general de la aplicación.",
+      "La etiqueta de categoría utiliza el mismo color y nombre que el enlace correspondiente en la pestaña App del LXC.",
+      "La etiqueta del invitado identifica la VM o el LXC asociado. Púlsala para abrir su modal; los enlaces de LXC abren directamente <strong>App</strong> y los de VM abren <strong>Estado</strong>.",
+      "La flecha morada hacia arriba indica que existe una actualización para esa aplicación o imagen Docker concreta. No representa el total de actualizaciones del invitado."
+    ]
+  },
+  "toolbar": {
+    "heading": "Buscar, filtrar y ordenar",
+    "intro": "La barra de herramientas permite reducir una colección grande sin modificar los registros guardados.",
+    "items": [
+      "La búsqueda tiene en cuenta el nombre de la aplicación, el nombre del invitado, el VMID y la categoría.",
+      "El filtro de categoría permite mostrar una categoría concreta o todas las aplicaciones.",
+      "Se puede ordenar por <strong>Nombre</strong>, <strong>ID</strong> o <strong>Categoría</strong>. Al ordenar por categoría se insertan encabezados entre los grupos de tarjetas.",
+      "El orden seleccionado se recuerda en este navegador. El texto de búsqueda y el filtro de categoría se restablecen al volver a la página.",
+      "La pestaña Apps permanece disponible aunque la cuadrícula esté vacía, de modo que se pueda añadir el primer enlace personalizado sin registrar antes una aplicación LXC."
+    ]
+  },
+  "customLinks": {
+    "heading": "Añadir y editar enlaces web personalizados",
+    "intro": "Utiliza un enlace personalizado cuando el servicio no esté representado por una aplicación registrada en un LXC.",
+    "steps": [
+      "Pulsa <strong>Añadir enlace</strong> en la barra de herramientas o en el estado vacío.",
+      "Introduce un nombre y una URL completa que empiece por <code>http://</code> o <code>https://</code>.",
+      "Opcionalmente, añade un logotipo, elige o crea una categoría y asocia el enlace a una VM o un LXC.",
+      "Guarda el enlace. La nueva tarjeta se añade a la cuadrícula de inmediato.",
+      "Para modificar o eliminar un enlace personalizado, pulsa <strong>Editar</strong> y utiliza el lápiz de su tarjeta."
+    ],
+    "colField": "Campo",
+    "colRequired": "Obligatorio",
+    "colPurpose": "Finalidad",
+    "fields": [
+      { "field": "Nombre", "required": "Sí", "purpose": "Título de la tarjeta y término de búsqueda." },
+      { "field": "URL", "required": "Sí", "purpose": "Destino HTTP(S) completo que abre la tarjeta." },
+      { "field": "URL del logotipo", "required": "No", "purpose": "Imagen remota que se muestra en la tarjeta." },
+      { "field": "Categoría", "required": "No", "purpose": "Añade una etiqueta común y permite filtrar por categoría." },
+      { "field": "Asociación a invitado", "required": "No", "purpose": "Vincula el enlace a una VM o un LXC y activa su acceso directo." }
+    ],
+    "editTitle": "Edita la fuente original",
+    "editBody": "El modo de edición solo muestra lápices en los enlaces personalizados. Para cambiar una tarjeta generada desde una aplicación LXC registrada, abre la <appTabLink>pestaña App</appTabLink> de ese contenedor y edita allí el enlace web guardado."
+  },
+  "categories": {
+    "heading": "Categorías y señales de actualización",
+    "intro": "Las categorías organizan los enlaces; las señales de actualización informan del estado del software. Son conceptos independientes.",
+    "items": [
+      "El registro asistido por catálogo puede proponer una categoría para una aplicación LXC, pero el usuario siempre puede modificarla.",
+      "Desde el mismo selector se pueden crear categorías propias y reutilizarlas después en el filtro.",
+      "Los colores de las categorías son estables y se adaptan al tema claro u oscuro. El morado y el rojo se reservan para actualizaciones y estados de peligro.",
+      "En los enlaces web de Docker, ProxMenux relaciona la tarjeta con su contenedor o imagen y muestra el estado de actualización de esa imagen. Las actualizaciones de Docker Engine permanecen en la <updatesLink>pestaña Updates</updatesLink> del LXC."
+    ]
+  },
+  "persistence": {
+    "heading": "Persistencia y comportamiento de la caché",
+    "intro": "El panel está diseñado para abrirse con los datos ya disponibles en el Monitor, sin volver a analizar todos los invitados.",
+    "items": [
+      "Los enlaces personalizados se guardan de forma atómica en <code>/etc/proxmenux/custom_links.json</code> y se cargan en memoria al iniciar el Monitor.",
+      "Los enlaces registrados en LXCs siguen formando parte del registro guardado de cada aplicación; el panel Apps no los duplica en el archivo de enlaces personalizados.",
+      "Al crear, editar o eliminar un enlace personalizado, la lista en memoria se actualiza de inmediato.",
+      "La preferencia de ordenación se guarda solo en el navegador. No se sincroniza entre dispositivos ni usuarios.",
+      "La posición de Apps en la navegación principal se configura por separado en <settingsLink>Ajustes → Orden de navegación</settingsLink>."
+    ]
+  },
+  "troubleshooting": {
+    "heading": "Situaciones habituales",
+    "colProblem": "Situación",
+    "colResolution": "Solución",
+    "rows": [
+      { "problem": "Una aplicación LXC está registrada, pero no aparece ninguna tarjeta", "resolution": "Abre su pestaña App y añade al menos un enlace web. El seguimiento de versión por sí solo no crea una tarjeta en el lanzador." },
+      { "problem": "La URL o el logotipo son incorrectos", "resolution": "Edita el enlace personalizado desde Apps o modifica el enlace web en la pestaña App del LXC correspondiente." },
+      { "problem": "Falta un servicio Docker", "resolution": "Edita la aplicación Docker registrada y guarda el puerto web publicado por el servicio como enlace web." },
+      { "problem": "La flecha morada corresponde a otra actualización Docker", "resolution": "Revisa el nombre y la descripción del enlace web para que se puedan relacionar con el contenedor o la imagen correctos." },
+      { "problem": "Apps se abre antes que Resumen del sistema", "resolution": "El primer elemento guardado en Ajustes → Orden de navegación se convierte en la pestaña inicial. Restaura el orden predeterminado o mueve Resumen a la primera posición." }
+    ]
+  },
+  "whereNext": {
+    "heading": "Por dónde seguir",
+    "items": [
+      { "label": "Pestaña App del LXC", "href": "/docs/monitor/dashboard/vms-lxcs/app", "tail": " — registrar aplicaciones, enlaces web y seguimiento opcional de versión." },
+      { "label": "Pestaña Updates del LXC", "href": "/docs/monitor/dashboard/vms-lxcs/updates", "tail": " — configurar y ejecutar actualizaciones de aplicaciones, Docker Engine e imágenes." },
+      { "label": "Pestaña Ajustes", "href": "/docs/monitor/dashboard/settings#navigation-order", "tail": " — cambiar el orden de navegación y la pestaña inicial." }
+    ]
+  }
+}

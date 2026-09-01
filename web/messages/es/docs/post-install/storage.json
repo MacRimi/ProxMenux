@@ -9,10 +9,10 @@
   },
   "intro": {
     "title": "Qué cubre esta categoría",
-    "body": "Tres optimizaciones relacionadas con almacenamiento: tunear el tamaño de la caché <strong>ARC de ZFS</strong> a una fracción sensata de la RAM del host, instalar y programar <strong>auto-snapshots de ZFS</strong>, y eliminar throttles de <strong>vzdump</strong> para que los backups corran a máxima velocidad. Las tres son independientes — elige las que se ajusten a tu setup. Una cuarta optimización cercana al almacenamiento, <link>Log2RAM</link>, reduce el desgaste del SSD/NVMe moviendo <code>/var/log</code> a una ramdisk — vive en la página Optional porque el menú Personalizable de ProxMenux la agrupa allí."
+    "body": "Cuatro optimizaciones relacionadas con almacenamiento: tunear el tamaño de la caché <strong>ARC de ZFS</strong> a una fracción sensata de la RAM del host, instalar y programar <strong>auto-snapshots de ZFS</strong>, activar <strong>autotrim de ZFS</strong> en pools SSD/NVMe y eliminar throttles de <strong>vzdump</strong> para que los backups corran a máxima velocidad. Las cuatro son independientes — elige las que se ajusten a tu setup. Una quinta optimización cercana al almacenamiento, <link>Log2RAM</link>, reduce el desgaste del SSD/NVMe moviendo <code>/var/log</code> a una ramdisk — vive en la página Optional porque el menú Personalizable de ProxMenux la agrupa allí."
   },
-  "notTrackedTitle": "Ninguna de estas está en el menú Uninstall",
-  "notTrackedBody": "A diferencia de la mayoría de optimizaciones post-instalación, las tres opciones de Almacenamiento <strong>no se registran actualmente</strong> en el flujo Uninstall Optimizations. Si las aplicas y más tarde quieres revertir, tendrás que hacerlo a mano. Los comandos manuales de rollback se muestran bajo cada sección.",
+  "trackedTitle": "Las cuatro están registradas en el menú Uninstall",
+  "trackedBody": "Cada una de estas opciones registra un tool en <code>installed_tools.json</code>, así que aparecen en <link>Uninstall Optimizations</link>. Revertir <code>zfs_arc</code> elimina <code>/etc/modprobe.d/99-zfsarc.conf</code> y reconstruye initramfs; <code>zfs_auto_snapshot</code> revierte la programación cron y ofrece purgar el paquete; <code>zfs_autotrim</code> pone <code>autotrim=off</code> en los pools que activó; <code>vzdump_speed</code> restaura <code>/etc/vzdump.conf</code> desde el <code>.bak</code> que la instalación creó.",
   "arc": {
     "heading": "Optimizar el tamaño del ARC de ZFS",
     "intro": "El <strong>Adaptive Replacement Cache (ARC)</strong> es la caché de lectura en memoria de ZFS. Sin tuning explícito, ZFS coge alegremente hasta la mitad de la RAM del host para sí mismo, lo que es excesivo en un host Proxmox que también necesita memoria para VMs y LXCs. Esta opción limita el ARC a una fracción sensata de la RAM total según el tamaño de la máquina.",
@@ -21,19 +21,27 @@
     "headerMax": "Cap ARC",
     "rows": [
       {
-        "ram": "≤ 16 GB",
-        "max": "512 MiB"
+        "ram": "Fórmula",
+        "max": "RAM / 10, tope de 16 GiB, mínimo 64 MiB"
       },
       {
-        "ram": "17 – 32 GB",
-        "max": "1 GiB"
+        "ram": "Host de 8 GB",
+        "max": "≈ 819 MiB (RAM/10)"
       },
       {
-        "ram": "> 32 GB",
-        "max": "RAM / 8 (mínimo 512 MiB)"
+        "ram": "Host de 16 GB",
+        "max": "≈ 1,6 GiB (RAM/10)"
+      },
+      {
+        "ram": "Host de 64 GB",
+        "max": "≈ 6,4 GiB (RAM/10)"
+      },
+      {
+        "ram": "Host ≥ 160 GB",
+        "max": "16 GiB (tope)"
       }
     ],
-    "after": "En un host de 64 GB, eso se traduce en un cap de 8 GB para el ARC. El archivo <code>/etc/modprobe.d/99-zfsarc.conf</code> contiene una única directiva — <code>options zfs zfs_arc_max=…</code>. El resto de parámetros del módulo (<code>zfs_arc_min</code>, prefetch/write throttle de L2ARC, timeout de TXG) se dejan en los valores por defecto de OpenZFS. Tras escribir el archivo, ProxMenux ejecuta <code>update-initramfs -u -k all</code> y, cuando corresponde, <code>proxmox-boot-tool refresh</code>, para que el cap llegue también al initramfs que usan las instalaciones con ZFS-on-root.",
+    "after": "El archivo <code>/etc/modprobe.d/99-zfsarc.conf</code> contiene una única directiva — <code>options zfs zfs_arc_max=…</code>. El resto de parámetros del módulo (<code>zfs_arc_min</code>, prefetch/write throttle de L2ARC, timeout de TXG) se dejan en los valores por defecto de OpenZFS. Antes de escribir, un paso de reconciliación escanea otros <code>*.conf</code> en <code>/etc/modprobe.d/</code> que definan <code>zfs_arc_min</code> / <code>zfs_arc_max</code>, los respalda a <code>/usr/local/share/proxmenux/backups/zfs_arc/</code> con un manifest, y elimina las líneas en conflicto para que solo quede activo el fichero de ProxMenux. Tras escribir el archivo, ProxMenux ejecuta <code>update-initramfs -u -k all</code> y, cuando corresponde, <code>proxmox-boot-tool refresh</code>, para que el cap llegue también al initramfs que usan las instalaciones con ZFS-on-root.",
     "rebootTitle": "Requiere reinicio para surtir efecto",
     "rebootBody": "Los ajustes del ARC se leen cuando se carga el módulo del kernel <code>zfs</code>. Para que el cap se aplique en hosts ZFS-on-root, ProxMenux regenera el initramfs con <code>update-initramfs -u -k all</code> y, cuando corresponde, refresca el cargador de arranque con <code>proxmox-boot-tool refresh</code>. Un reinicio sigue siendo necesario para que el módulo relea el parámetro; el flag de \"se requiere reinicio\" se activa automáticamente.",
     "safeTitle": "Seguro en hosts sin ZFS",
@@ -115,8 +123,8 @@
     "heading": "Aumentar la velocidad de backup de vzdump",
     "intro": "Por defecto, vzdump de Proxmox throttlea los backups para proteger las VMs/CTs en ejecución de inanición de IO. En muchos setups ese throttle es más conservador de lo necesario. Esta opción quita el cap de ancho de banda y baja la prioridad de I/O para que vzdump pueda saturar el path de almacenamiento durante las ventanas de backup.",
     "changedTitle": "Qué se cambia en /etc/vzdump.conf",
-    "noBackupTitle": "Sin backup de vzdump.conf",
-    "noBackupBody": "El script <strong>edita <code>/etc/vzdump.conf</code> in place</strong> sin crear un <code>.bak</code> primero. Si tenías valores custom ahí (bwlimit, ionice, compress, pigz, tmpdir, exclude-path, etc.), los cambios a <em>esas dos líneas</em> se hacen con <code>sed</code> — la config circundante se preserva — pero no hay snapshot de \"undo\". Haz un backup manual si tu config no es trivial: <code>cp /etc/vzdump.conf /etc/vzdump.conf.pre-proxmenux</code>.",
+    "backupTitle": "La primera ejecución crea un .bak de vzdump.conf",
+    "backupBody": "La primera vez que se ejecuta esta opción, ProxMenux copia <code>/etc/vzdump.conf</code> a <code>/etc/vzdump.conf.bak</code> antes de tocarlo. Las ejecuciones siguientes reutilizan ese backup y no lo sobrescriben, para que una configuración editada a mano previa a la primera aplicación se pueda recuperar. Los cambios sobre <code>bwlimit</code> y <code>ionice</code> se hacen con <code>sed</code>, y cualquier otra opción del fichero (compress, pigz, tmpdir, exclude-path, etc.) se preserva.",
     "skipTitle": "Cuándo saltárselo",
     "skipBody": "En un host con almacenamiento local lento y VMs sensibles a la latencia, quitar el cap de ancho de banda puede causar ralentizaciones notables durante los backups. Si previamente has puesto un <code>bwlimit</code> específico por esa razón, mantenlo — sáltate esta opción.",
     "verifyTitle": "Verificación y rollback manual"

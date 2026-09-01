@@ -5,18 +5,18 @@
 # Author      : MacRimi
 # Copyright   : (c) 2024 MacRimi
 # License     : GPL-3.0
-# Version     : 1.2
-# Last Updated: 26/03/2026
+# Version     : 1.3
+# Last Updated: 26/08/2026
 # ==========================================================
 # Description:
 # Installs and manages the NVIDIA proprietary driver on a
-# Proxmox VE host. Detects hardware, picks a kernel-compatible
-# driver version and handles the full lifecycle
+# Proxmox VE host. Detects hardware, filters NVIDIA branches by
+# the installed GPU PCI IDs and handles the full lifecycle
 # (install / update / remove).
 #
 # Features:
 #  - GPU detection + VFIO passthrough safety check
-#  - Kernel-aware driver version filter (5.15 → 6.17+)
+#  - GPU PCI-ID-aware branch filtering from NVIDIA supportedchips
 #  - Nouveau blacklist + module unload
 #  - DKMS-backed install (survives kernel upgrades)
 #  - udev rules + nvidia-persistenced service
@@ -36,6 +36,10 @@ screen_capture="/tmp/proxmenux_nvidia_screen_capture_$$.txt"
 
 NVIDIA_BASE_URL="https://download.nvidia.com/XFree86/Linux-x86_64"
 NVIDIA_WORKDIR="/opt/nvidia"
+NVIDIA_NOUVEAU_BLACKLIST="/etc/modprobe.d/proxmenux-nouveau-blacklist.conf"
+NVIDIA_NOUVEAU_STATE="${BASE_DIR}/nvidia-nouveau-blacklist.state"
+NVIDIA_NOUVEAU_LEGACY_BLACKLIST="/etc/modprobe.d/nouveau-blacklist.conf"
+NVIDIA_GLOBAL_BLACKLIST="/etc/modprobe.d/blacklist.conf"
 
 # LXC post-install update constants (used only when NVIDIA LXC passthrough
 # containers are detected and the user confirms updating them after the host
@@ -49,6 +53,11 @@ export COMPONENTS_STATUS_FILE
 if [[ -f "$UTILS_FILE" ]]; then
   source "$UTILS_FILE"
 fi
+if [[ -f "$LOCAL_SCRIPTS/global/pci_passthrough_helpers.sh" ]]; then
+  source "$LOCAL_SCRIPTS/global/pci_passthrough_helpers.sh"
+elif [[ -f "$(cd "$(dirname "${BASH_SOURCE[0]}")"/.. && pwd)/global/pci_passthrough_helpers.sh" ]]; then
+  source "$(cd "$(dirname "${BASH_SOURCE[0]}")"/.. && pwd)/global/pci_passthrough_helpers.sh"
+fi
 
 if [[ ! -f "$COMPONENTS_STATUS_FILE" ]]; then
   echo "{}" > "$COMPONENTS_STATUS_FILE"
@@ -60,21 +69,38 @@ initialize_cache
 # ==========================================================
 # GPU detection and current status
 # ==========================================================
+# Populated by detect_nvidia_gpus. Holds every video-controller PCI
+# Device ID (lowercase, 4-hex) so the version filter can drop branches
+# whose supportedchips.html doesn't list every card on this host.
+NVIDIA_HOST_GPU_IDS=()
+
 detect_nvidia_gpus() {
-  # Only video controllers (not audio)
+  # Video controllers only — the paired HDA audio functions (10de:xxxx
+  # under class 0403) are not what the display driver ships support for.
   local lspci_output
-  lspci_output=$(lspci | grep -i "NVIDIA" \
+  lspci_output=$(lspci -nn | grep -i "NVIDIA" \
     | grep -Ei "VGA compatible controller|3D controller|Display controller" || true)
 
   if [[ -z "$lspci_output" ]]; then
     NVIDIA_GPU_PRESENT=false
     DETECTED_GPUS_TEXT="$(translate 'No NVIDIA GPU detected on this system.')"
+    NVIDIA_HOST_GPU_IDS=()
   else
     NVIDIA_GPU_PRESENT=true
     DETECTED_GPUS_TEXT=""
+    NVIDIA_HOST_GPU_IDS=()
     local i=1
     while IFS= read -r line; do
       DETECTED_GPUS_TEXT+="  ${i}. ${line}\n"
+      # Extract [10de:XXXX] — Vendor:Device pair. We keep only the
+      # Device half (4-hex) lowercased, which is what NVIDIA lists in
+      # each version's README/supportedchips.html.
+      local dev_id
+      dev_id=$(echo "$line" | grep -oiE '\[10de:[0-9a-f]{4}\]' | head -1 \
+        | sed -E 's/^\[10de:([0-9a-f]{4})\]$/\1/i' | tr 'A-F' 'a-f')
+      if [[ -n "$dev_id" ]]; then
+        NVIDIA_HOST_GPU_IDS+=("$dev_id")
+      fi
       ((i++))
     done <<< "$lspci_output"
   fi
@@ -105,6 +131,54 @@ check_gpu_not_in_vm_passthrough() {
     --title "$(translate "GPU in VM Passthrough Mode")" \
     --msgbox "$msg" 16 78
   exit 0
+}
+
+check_stale_vfio_config_for_nvidia() {
+  local vfio_conf="/etc/modprobe.d/vfio.conf"
+  [[ ! -f "$vfio_conf" ]] && return 0
+
+  local ids_line ids_part
+  ids_line=$(grep "^options vfio-pci ids=" "$vfio_conf" 2>/dev/null | head -1)
+  [[ -z "$ids_line" ]] && return 0
+  ids_part=$(echo "$ids_line" | grep -oE 'ids=[^[:space:]]+' | sed 's/ids=//')
+  [[ -z "$ids_part" ]] && return 0
+
+  local dev vendor did vid_did
+  local -a legacy_ids=()
+  local legacy_list=""
+
+  for dev in /sys/bus/pci/devices/*; do
+    vendor=$(cat "$dev/vendor" 2>/dev/null)
+    [[ "$vendor" != "0x10de" ]] && continue
+    did=$(cat "$dev/device" 2>/dev/null)
+    [[ -z "$did" ]] && continue
+    vid_did="10de:${did#0x}"
+    if echo ",${ids_part}," | grep -q ",${vid_did},"; then
+      legacy_ids+=("$vid_did")
+      legacy_list+="  • $(basename "$dev")  [${vid_did}]\n"
+    fi
+  done
+
+  [[ ${#legacy_ids[@]} -eq 0 ]] && return 0
+
+  local msg
+  msg="\n$(translate 'A previous VFIO passthrough configuration was detected for the following NVIDIA GPU(s):')\n\n"
+  msg+="${legacy_list}\n"
+  msg+="$(translate 'The active kernel driver is not vfio-pci, but the entry in') /etc/modprobe.d/vfio.conf $(translate 'will rebind the GPU to vfio-pci on the next reboot, breaking the driver that is about to be installed.')\n\n"
+  msg+="\Z1\Zb$(translate 'Do you want to remove the stale entry from vfio.conf and continue?')\Zn"
+
+  dialog --colors --backtitle "ProxMenux" \
+    --title "$(translate 'Stale VFIO Config Detected')" \
+    --yesno "$msg" 18 78 || exit 0
+
+  if declare -F _clean_vfio_conf_ids >/dev/null 2>&1 \
+     && _clean_vfio_conf_ids "${legacy_ids[@]}"; then
+    msg_info "$(translate 'Rebuilding initramfs after vfio.conf cleanup...')"
+    update-initramfs -u >/dev/null 2>&1 || true
+    msg_ok "$(translate 'Stale VFIO entries removed and initramfs rebuilt.')" | tee -a "$screen_capture"
+  else
+    msg_ok "$(translate 'No changes were needed in vfio.conf.')" | tee -a "$screen_capture"
+  fi
 }
 
 detect_driver_status() {
@@ -471,16 +545,65 @@ ensure_repos_and_headers() {
   msg_ok "$(translate 'Kernel headers and build tools verified.')" | tee -a "$screen_capture"
 }
 
+_nouveau_legacy_file_is_proxmenux_shape() {
+  [[ -f "$NVIDIA_NOUVEAU_LEGACY_BLACKLIST" ]] || return 1
+  local content
+  content=$(sed '/^[[:space:]]*$/d' "$NVIDIA_NOUVEAU_LEGACY_BLACKLIST" 2>/dev/null)
+  [[ "$content" == $'blacklist nouveau\noptions nouveau modeset=0' ]]
+}
+
+_nouveau_state_set() {
+  local key="$1"
+  mkdir -p "$(dirname "$NVIDIA_NOUVEAU_STATE")"
+  touch "$NVIDIA_NOUVEAU_STATE"
+  grep -qFx "${key}=1" "$NVIDIA_NOUVEAU_STATE" 2>/dev/null \
+    || echo "${key}=1" >> "$NVIDIA_NOUVEAU_STATE"
+}
+
+restore_nouveau_after_uninstall() {
+  local remove_global_line=false
+
+  if [[ -f "$NVIDIA_NOUVEAU_STATE" ]] \
+     && grep -qFx 'blacklist_conf_line_added=1' "$NVIDIA_NOUVEAU_STATE" 2>/dev/null; then
+    remove_global_line=true
+  fi
+
+  # Migration for installations made by older ProxMenux versions. That
+  # version overwrote this exact two-line file and added the matching line
+  # to blacklist.conf, but had no ownership state yet.
+  if _nouveau_legacy_file_is_proxmenux_shape; then
+    rm -f "$NVIDIA_NOUVEAU_LEGACY_BLACKLIST"
+    remove_global_line=true
+  fi
+
+  rm -f "$NVIDIA_NOUVEAU_BLACKLIST"
+  if $remove_global_line && [[ -f "$NVIDIA_GLOBAL_BLACKLIST" ]]; then
+    sed -i '/^blacklist nouveau$/d' "$NVIDIA_GLOBAL_BLACKLIST"
+  fi
+  rm -f "$NVIDIA_NOUVEAU_STATE"
+}
+
 blacklist_nouveau() {
   msg_info "$(translate 'Blacklisting nouveau driver...')"
 
-  # Write blacklist config files
-  if ! grep -q '^blacklist nouveau' /etc/modprobe.d/blacklist.conf 2>/dev/null; then
-    echo "blacklist nouveau" >> /etc/modprobe.d/blacklist.conf
+  local legacy_owned=false
+  if _nouveau_legacy_file_is_proxmenux_shape; then
+    rm -f "$NVIDIA_NOUVEAU_LEGACY_BLACKLIST"
+    legacy_owned=true
+    _nouveau_state_set "legacy_migrated"
   fi
 
-  # Also write explicit options file to ensure it's fully disabled
-  cat > /etc/modprobe.d/nouveau-blacklist.conf <<'EOF'
+  if ! grep -q '^blacklist nouveau$' "$NVIDIA_GLOBAL_BLACKLIST" 2>/dev/null; then
+    echo "blacklist nouveau" >> "$NVIDIA_GLOBAL_BLACKLIST"
+    _nouveau_state_set "blacklist_conf_line_added"
+  elif $legacy_owned; then
+    # The legacy ProxMenux file proves ownership of the companion line.
+    _nouveau_state_set "blacklist_conf_line_added"
+  fi
+
+  # ProxMenux-owned file: uninstall can now remove only what we created.
+  cat > "$NVIDIA_NOUVEAU_BLACKLIST" <<'EOF'
+# Managed by ProxMenux NVIDIA installer.
 blacklist nouveau
 options nouveau modeset=0
 EOF
@@ -514,12 +637,8 @@ EOF
 }
 
 ensure_modules_config() {
-  msg_info "$(translate 'Configuring NVIDIA and VFIO modules...')"
+  msg_info "$(translate 'Configuring NVIDIA modules...')"
   cat > /etc/modules-load.d/nvidia-vfio.conf <<'EOF'
-vfio
-vfio_iommu_type1
-vfio_pci
-vfio_virqfd
 nvidia
 nvidia_uvm
 EOF
@@ -612,6 +731,7 @@ complete_nvidia_uninstall() {
   rm -f /etc/udev/rules.d/70-nvidia.rules
   rm -rf /usr/lib/modprobe.d/nvidia*.conf
   rm -rf /etc/modprobe.d/nvidia*.conf
+  restore_nouveau_after_uninstall
   
   if [[ -d "$NVIDIA_WORKDIR" ]]; then
     find "$NVIDIA_WORKDIR" -type d -name "nvidia-persistenced" -exec rm -rf {} + 2>/dev/null || true
@@ -643,106 +763,14 @@ ensure_workdir() {
 }
 
 # ==========================================================
-# Kernel compatibility detection
+# System detection
 # ==========================================================
-get_kernel_compatibility_info() {
-  local kernel_version
-  kernel_version=$(uname -r)
-  
-  # Determine Proxmox and kernel version
+get_system_info() {
   if [[ -f /etc/pve/.version ]]; then
     PVE_VERSION=$(cat /etc/pve/.version)
   else
     PVE_VERSION="unknown"
   fi
-  
-  # Extract kernel major version (6.x, 5.x, etc)
-  KERNEL_MAJOR=$(echo "$kernel_version" | cut -d. -f1)
-  KERNEL_MINOR=$(echo "$kernel_version" | cut -d. -f2)
-  
-  # Define minimum compatible versions based on kernel.
-  # Floor bumped from 580.82.07 → 580.105.08 for kernel 6.17+ after a
-  # user report (issue tracked as Sprint 11.4) that 580.82-580.95 builds
-  # fail on kernel 6.17.13 (DKMS module compile errors with the newer
-  # toolchain shipped with PVE 9.1). 580.105.08 is verified working on
-  # the test host. Future kernel 7.x falls into the same bucket — the
-  # `KERNEL_MAJOR -ge 7` branch was previously missing and routed 7.x
-  # kernels to MIN=535 incorrectly.
-  if { [[ "$KERNEL_MAJOR" -ge 7 ]]; } || \
-     { [[ "$KERNEL_MAJOR" -eq 6 ]] && [[ "$KERNEL_MINOR" -ge 17 ]]; }; then
-    # Kernel 6.17+ / 7.x (Proxmox 9.x +) - Requires 580.105.08 or higher
-    MIN_DRIVER_VERSION="580.105.08"
-    RECOMMENDED_BRANCH="580"
-    COMPATIBILITY_NOTE="Kernel $kernel_version requires NVIDIA driver 580.105.08 or newer (older 580.x builds fail to compile)"
-  elif [[ "$KERNEL_MAJOR" -ge 6 ]] && [[ "$KERNEL_MINOR" -ge 8 ]]; then
-    # Kernel 6.8-6.16 (Proxmox 8.2+) - Works with 550.x or higher
-    MIN_DRIVER_VERSION="550"
-    RECOMMENDED_BRANCH="580"
-    COMPATIBILITY_NOTE="Kernel $kernel_version works best with NVIDIA driver 550.x or newer"
-  elif [[ "$KERNEL_MAJOR" -ge 6 ]]; then
-    # Kernel 6.2-6.7 (Proxmox 8.x initial) - Works with 535.x or higher
-    MIN_DRIVER_VERSION="535"
-    RECOMMENDED_BRANCH="550"
-    COMPATIBILITY_NOTE="Kernel $kernel_version works with NVIDIA driver 535.x or newer"
-  elif [[ "$KERNEL_MAJOR" -eq 5 ]] && [[ "$KERNEL_MINOR" -ge 15 ]]; then
-    # Kernel 5.15+ (Proxmox 7.x, 8.x legacy) - Works with 470.x or higher
-    MIN_DRIVER_VERSION="470"
-    RECOMMENDED_BRANCH="535"
-    COMPATIBILITY_NOTE="Kernel $kernel_version works with NVIDIA driver 470.x or newer"
-  else
-    # Old kernels
-    MIN_DRIVER_VERSION="450"
-    RECOMMENDED_BRANCH="470"
-    COMPATIBILITY_NOTE="For older kernels, compatibility may vary"
-  fi
-}
-
-is_version_compatible() {
-  local version="$1"
-  local ver_major ver_minor ver_patch
-  
-  # Extract version components (major.minor.patch)
-  ver_major=$(echo "$version" | cut -d. -f1)
-  ver_minor=$(echo "$version" | cut -d. -f2)
-  ver_patch=$(echo "$version" | cut -d. -f3)
-  
-  # Full-version comparison when MIN is dotted (e.g. "580.105.08").
-  # Strips the dotted threshold from MIN_DRIVER_VERSION and reuses the
-  # existing `version_le` helper. The previous code had a hardcoded
-  # branch only for "580.82.07" — bumping the floor required editing two
-  # places. Sprint 11.4.
-  case "$MIN_DRIVER_VERSION" in
-    *.*.*)
-      # Dotted threshold: compare full triple.
-      local _min_major _min_minor _min_patch
-      IFS='.' read -r _min_major _min_minor _min_patch <<<"$MIN_DRIVER_VERSION"
-      _min_major=${_min_major:-0}
-      _min_minor=${_min_minor:-0}
-      _min_patch=${_min_patch:-0}
-      ver_minor=${ver_minor:-0}
-      ver_patch=${ver_patch:-0}
-      if (( 10#$ver_major > 10#$_min_major )); then
-        return 0
-      elif (( 10#$ver_major == 10#$_min_major )); then
-        if (( 10#$ver_minor > 10#$_min_minor )); then
-          return 0
-        elif (( 10#$ver_minor == 10#$_min_minor )); then
-          if (( 10#${ver_patch:-0} >= 10#$_min_patch )); then
-            return 0
-          fi
-        fi
-      fi
-      return 1
-      ;;
-    *)
-      # Single-major threshold (e.g. "550", "535"): compare major only.
-      if [[ ${ver_major} -ge ${MIN_DRIVER_VERSION} ]]; then
-        return 0
-      else
-        return 1
-      fi
-      ;;
-  esac
 }
 
 
@@ -758,6 +786,213 @@ is_current_nvidia_patched() {
 KEYLASE_PATCH_CACHE="/var/cache/proxmenux/keylase_patch_versions.txt"
 KEYLASE_PATCH_TTL_SECONDS=$((7 * 86400))
 KEYLASE_PATCH_URL="https://raw.githubusercontent.com/keylase/nvidia-patch/master/patch.sh"
+
+# NVIDIA branch classification comes from the vendor's own Unix drivers
+# page, not the CDN — the CDN publishes every branch (production, new
+# feature, vulkan-beta, developer) in the same flat directory, whereas
+# the vendor page carries the current heads clearly labelled "Production
+# Branch", "New Feature Branch" and "Legacy GPU version". Extracting the
+# majors from those three lines gives us the set of branches NVIDIA
+# currently endorses for end users, with zero manual maintenance on our
+# side — when NVIDIA promotes a new rama the cache picks it up on the
+# next 24 h refresh. Cache is fail-open: if the fetch is blocked or the
+# page layout changes, we skip the branch filter rather than emptying
+# the picker.
+NVIDIA_BRANCHES_CACHE="/var/cache/proxmenux/nvidia_stable_branches.txt"
+NVIDIA_PRODUCTION_HEAD_CACHE="/var/cache/proxmenux/nvidia_production_head.txt"
+NVIDIA_BRANCH_HEADS_CACHE="/var/cache/proxmenux/nvidia_branch_heads.txt"
+NVIDIA_GPU_SUPPORT_CACHE_PREFIX="/var/cache/proxmenux/nvidia_gpu_support_"
+NVIDIA_BRANCHES_TTL_SECONDS=$((24 * 3600))
+NVIDIA_BRANCHES_URL="https://www.nvidia.com/en-us/drivers/unix/"
+
+refresh_nvidia_branches_cache() {
+  local now ts age
+  now=$(date +%s)
+  if [[ -f "$NVIDIA_BRANCHES_CACHE" ]]; then
+    ts=$(stat -c '%Y' "$NVIDIA_BRANCHES_CACHE" 2>/dev/null || echo 0)
+    age=$(( now - ts ))
+    if (( age < NVIDIA_BRANCHES_TTL_SECONDS )) && [[ -s "$NVIDIA_BRANCHES_CACHE" ]]; then
+      return 0
+    fi
+  fi
+  mkdir -p "$(dirname "$NVIDIA_BRANCHES_CACHE")" 2>/dev/null || return 1
+  local html tmp
+  html=$(curl -fsSL -A "Mozilla/5.0" --max-time 15 "$NVIDIA_BRANCHES_URL" 2>/dev/null) || return 1
+  [[ -z "$html" ]] && return 1
+  local clean tmp_full
+  clean=$(echo "$html" | perl -0777 -pe 's/<!--.*?-->//gs' 2>/dev/null)
+  tmp=$(mktemp)
+  tmp_full=$(mktemp)
+  # Two label shapes on the page:
+  #   • Production / New Feature → "… Branch Version:" then <a>full</a>.
+  #   • Legacy                   → "Legacy GPU version (NNN.xx series):"
+  #                                then <a>full</a> — the word "Version"
+  #                                lives inside the parenthesised label
+  #                                so the Production/Feature regex misses
+  #                                it (separate alternative below).
+  # HTML comments are stripped first so vestigial `<!-- Beta Version …
+  # 387.34 -->` blocks in older ia32 rows don't leak stale majors.
+  # Perl one-liner because we want to keep the label text next to the
+  # version — shell greps can only give us one or the other, and we
+  # need the label to tag each head as production / feature / legacy.
+  echo "$clean" \
+    | perl -ne '
+        while (/(Production Branch Version|New Feature Branch Version|Legacy GPU version \(([0-9]+)\.xx series\)):[^<]*(?:<\/span>)?\s*<a[^>]*>([0-9]+\.[0-9]+(?:\.[0-9]+)?)/gi) {
+          my $label = lc($1);
+          my $ver   = $3;
+          my ($maj) = split(/\./, $ver);
+          my $type  = "unknown";
+          if    ($label =~ /production branch/)  { $type = "production" }
+          elsif ($label =~ /new feature branch/) { $type = "feature" }
+          elsif ($label =~ /legacy gpu version/) { $type = "legacy" }
+          print "$type|$maj|$ver\n";
+        }' \
+    | sort -u -t'|' -k1,1 -k2,2n > "$tmp_full"
+  if [[ ! -s "$tmp_full" ]]; then
+    rm -f "$tmp" "$tmp_full"
+    return 1
+  fi
+  # Derive the majors-only file from the same source, but ONLY for
+  # production + legacy — New Feature Branch heads (610.x today) are
+  # intentionally NOT in the endorsed whitelist because they carry
+  # kernel/driver features still under stabilisation. Superseded
+  # production branches still qualify via the release-count heuristic
+  # in filter_option_c_branch, so operators on 580 / 570 / 550 / 535
+  # keep bugfix upgrade options.
+  awk -F'|' '$1 == "production" || $1 == "legacy" { print $2 }' \
+    "$tmp_full" | sort -un > "$tmp"
+  if [[ ! -s "$tmp" ]]; then
+    rm -f "$tmp" "$tmp_full"
+    return 1
+  fi
+  mv "$tmp" "$NVIDIA_BRANCHES_CACHE"
+  mv "$tmp_full" "$NVIDIA_BRANCH_HEADS_CACHE"
+
+  # Extra pass: capture the full Production Branch head so the picker
+  # can default to it instead of the highest numeric available (which
+  # could be a New Feature Branch head — NVIDIA doesn't recommend those
+  # as the general-purpose default). Best-effort.
+  local prod_head
+  prod_head=$(echo "$clean" \
+    | grep -oiE 'Production Branch Version:[^<]*(</span>)?\s*<a[^>]*>[0-9]+\.[0-9]+(\.[0-9]+)?' \
+    | grep -oE '>[0-9]+\.[0-9]+(\.[0-9]+)?' \
+    | tr -d '>' \
+    | head -n1)
+  if [[ -n "$prod_head" ]]; then
+    echo "$prod_head" > "$NVIDIA_PRODUCTION_HEAD_CACHE"
+  else
+    rm -f "$NVIDIA_PRODUCTION_HEAD_CACHE" 2>/dev/null || true
+  fi
+  return 0
+}
+
+# Return the full head version associated with a major from the
+# branch-heads cache (e.g. `get_nvidia_branch_head 595` → 595.91.07).
+# Cache lines are `type|major|version` — filter by major, print
+# version. Used to know which release inside a branch to hit for the
+# PCI-ID supported-GPUs list.
+get_nvidia_branch_head() {
+  local major="$1"
+  [[ -f "$NVIDIA_BRANCH_HEADS_CACHE" && -s "$NVIDIA_BRANCH_HEADS_CACHE" ]] || return 1
+  awk -F'|' -v m="$major" '$2 == m { print $3; exit }' "$NVIDIA_BRANCH_HEADS_CACHE"
+}
+
+# Refresh the per-branch supported-GPU cache. Uses the branch head as
+# the "sample release" for the whole branch — NVIDIA rarely drops chip
+# support inside a live branch, so this is a solid proxy that also
+# minimises fetch count (~3 heads total instead of one per release).
+# Written to nvidia_gpu_support_MAJOR.txt with one lowercase hex device
+# id per line. Same 24h TTL as the branches cache.
+refresh_nvidia_gpu_support_for_major() {
+  local major="$1"
+  [[ -z "$major" ]] && return 1
+  local cache="${NVIDIA_GPU_SUPPORT_CACHE_PREFIX}${major}.txt"
+  local now ts age
+  now=$(date +%s)
+  if [[ -f "$cache" ]]; then
+    ts=$(stat -c '%Y' "$cache" 2>/dev/null || echo 0)
+    age=$(( now - ts ))
+    if (( age < NVIDIA_BRANCHES_TTL_SECONDS )) && [[ -s "$cache" ]]; then
+      return 0
+    fi
+  fi
+  local head_ver
+  head_ver=$(get_nvidia_branch_head "$major") || return 1
+  [[ -z "$head_ver" ]] && return 1
+  local url="https://download.nvidia.com/XFree86/Linux-x86_64/${head_ver}/README/supportedchips.html"
+  local html tmp
+  html=$(curl -fsSL -A "Mozilla/5.0" --max-time 20 "$url" 2>/dev/null) || return 1
+  [[ -z "$html" ]] && return 1
+  mkdir -p "$(dirname "$cache")" 2>/dev/null || return 1
+  tmp=$(mktemp)
+  # NVIDIA's supportedchips.html lays out each GPU row as a <td> with
+  # the PCI Device ID in 4-char hex. Anchor on the surrounding tag so
+  # we don't sweep up unrelated 4-hex strings elsewhere in the page.
+  echo "$html" \
+    | grep -oiE '<td>[0-9A-F]{4}</td>' \
+    | grep -oiE '[0-9A-F]{4}' \
+    | tr 'A-F' 'a-f' \
+    | sort -u > "$tmp"
+  if [[ -s "$tmp" ]]; then
+    mv "$tmp" "$cache"
+    return 0
+  fi
+  rm -f "$tmp"
+  return 1
+}
+
+# True if every detected NVIDIA GPU on this host has its device id in
+# the branch's supported list. Fail-open when the cache is missing so
+# a network hiccup never locks the picker out.
+is_branch_compatible_with_host_gpus() {
+  local major="$1"
+  local cache="${NVIDIA_GPU_SUPPORT_CACHE_PREFIX}${major}.txt"
+  [[ -f "$cache" && -s "$cache" ]] || return 0
+  [[ ${#NVIDIA_HOST_GPU_IDS[@]} -eq 0 ]] && return 0
+  local id
+  for id in "${NVIDIA_HOST_GPU_IDS[@]}"; do
+    grep -qFx "$id" "$cache" || return 1
+  done
+  return 0
+}
+
+# Reject Vulkan-beta / short-lived / developer branches by counting
+# how many releases NVIDIA actually shipped inside that major on the
+# CDN. Production and long-lived New Feature branches accumulate many
+# release rows (470=17, 535=20, 550=14, 570=12, 580=14 …); Vulkan-beta
+# and developer branches only ever get 1-4 releases before being
+# superseded (590=2, 565=2, 530=2, 555=4 …). Threshold 5 separates the
+# two groups cleanly at time of writing.
+# Fail-open: if the release-count map hasn't been built for whatever
+# reason, the branch passes (kernel + GPU-compat + curated whitelist
+# are still enforced upstream). The map is populated once per
+# `filter_option_c_branch` invocation, so no repeated CDN scraping.
+NVIDIA_BRANCH_MIN_RELEASES=5
+declare -A NVIDIA_BRANCH_RELEASE_COUNT=()
+
+is_branch_release_count_sufficient() {
+  local major="$1"
+  [[ -z "$major" ]] && return 1
+  [[ ${#NVIDIA_BRANCH_RELEASE_COUNT[@]} -eq 0 ]] && return 0
+  local n="${NVIDIA_BRANCH_RELEASE_COUNT[$major]:-0}"
+  (( n >= NVIDIA_BRANCH_MIN_RELEASES ))
+}
+
+get_nvidia_production_head() {
+  [[ -f "$NVIDIA_PRODUCTION_HEAD_CACHE" && -s "$NVIDIA_PRODUCTION_HEAD_CACHE" ]] || return 1
+  local v
+  v=$(head -n1 "$NVIDIA_PRODUCTION_HEAD_CACHE" | tr -d '[:space:]')
+  [[ -z "$v" ]] && return 1
+  printf '%s\n' "$v"
+}
+
+is_nvidia_stable_branch() {
+  local major="$1"
+  [[ -z "$major" ]] && return 1
+  # Fail-open: no cache → don't filter (upstream behaviour preserved).
+  [[ -f "$NVIDIA_BRANCHES_CACHE" && -s "$NVIDIA_BRANCHES_CACHE" ]] || return 0
+  grep -qFx "$major" "$NVIDIA_BRANCHES_CACHE"
+}
 
 refresh_keylase_patch_cache() {
   local now ts age
@@ -803,39 +1038,79 @@ filter_keylase_supported() {
 filter_option_c_branch() {
   local versions_in="$1"
   local current="$2"
-  local recommended_branch="$3"
+  local _unused_recommended_branch="$3"
+
+  refresh_nvidia_branches_cache 2>/dev/null || true
+
   local target_branch=""
-
-  if [[ -n "$current" && "$current" =~ ^([0-9]+)\. ]]; then
-    local current_branch="${BASH_REMATCH[1]}"
-    if is_version_compatible "$current"; then
-      target_branch="$current_branch"
+  if [[ -f "$NVIDIA_BRANCHES_CACHE" && -s "$NVIDIA_BRANCHES_CACHE" ]]; then
+    target_branch=$(head -n1 "$NVIDIA_BRANCHES_CACHE")
+  fi
+  # Build a majors→count map from the incoming version list. This is
+  # what backs `is_branch_release_count_sufficient` — done once per
+  # call so the tight loop below stays local-arithmetic only.
+  NVIDIA_BRANCH_RELEASE_COUNT=()
+  while IFS= read -r _v; do
+    [[ -z "$_v" ]] && continue
+    local _m="${_v%%.*}"
+    NVIDIA_BRANCH_RELEASE_COUNT[$_m]=$(( ${NVIDIA_BRANCH_RELEASE_COUNT[$_m]:-0} + 1 ))
+  done <<< "$versions_in"
+  # Grab the head (highest version) of every major so we know which
+  # release to sample for supportedchips.html. We use the CDN listing
+  # directly for this — the branch-heads cache only carries the
+  # endorsed heads, not the superseded ones.
+  declare -A _major_head=()
+  while IFS= read -r _v; do
+    [[ -z "$_v" ]] && continue
+    local _m="${_v%%.*}"
+    [[ -z "${_major_head[$_m]:-}" ]] && _major_head[$_m]="$_v"
+  done < <(printf '%s\n' "$versions_in")
+  # Warm the supported-GPU cache for every stable major (whitelist
+  # heads: head already known → normal path; superseded heads: seed the
+  # cache-file's head-version by directly writing a lightweight lookup).
+  # For endorsed majors we can use refresh_nvidia_gpu_support_for_major
+  # as-is (it looks up NVIDIA_BRANCH_HEADS_CACHE). For non-endorsed
+  # majors we need to fetch supportedchips.html against the highest
+  # release we saw in the CDN listing.
+  local _m _head _cache _now _ts _age _html _tmp
+  _now=$(date +%s)
+  for _m in "${!_major_head[@]}"; do
+    _head="${_major_head[$_m]}"
+    _cache="${NVIDIA_GPU_SUPPORT_CACHE_PREFIX}${_m}.txt"
+    if [[ -f "$_cache" ]]; then
+      _ts=$(stat -c '%Y' "$_cache" 2>/dev/null || echo 0)
+      _age=$(( _now - _ts ))
+      if (( _age < NVIDIA_BRANCHES_TTL_SECONDS )) && [[ -s "$_cache" ]]; then
+        continue
+      fi
     fi
-  fi
-
-  if [[ -z "$target_branch" ]]; then
-    target_branch="$recommended_branch"
-  fi
-
-  if [[ -z "$target_branch" ]]; then
-    printf '%s\n' "$versions_in"
-    return 0
-  fi
-
-  # Accept the target branch AND any newer branch (major ≥ target).
-  # Historical behaviour was an exact-major match, which locked kernel
-  # 7.x users to 580.x only. When a 580.x build happens to fail to
-  # compile on a very recent kernel + toolchain combo (reproduced on
-  # kernel 7.0.14-4-pve — see issue #248), the operator had no
-  # in-menu escape. `MIN_DRIVER_VERSION` from get_kernel_compatibility_info
-  # still gates the floor, so this only opens the ceiling: newer stable
-  # branches like 590 / 595 / 600 that satisfy the min version become
-  # selectable, while ancient branches remain filtered out.
+    _html=$(curl -fsSL -A "Mozilla/5.0" --max-time 20 \
+      "https://download.nvidia.com/XFree86/Linux-x86_64/${_head}/README/supportedchips.html" \
+      2>/dev/null) || continue
+    [[ -z "$_html" ]] && continue
+    mkdir -p "$(dirname "$_cache")" 2>/dev/null || continue
+    _tmp=$(mktemp)
+    echo "$_html" \
+      | grep -oiE '<td>[0-9A-F]{4}</td>' \
+      | grep -oiE '[0-9A-F]{4}' \
+      | tr 'A-F' 'a-f' \
+      | sort -u > "$_tmp"
+    if [[ -s "$_tmp" ]]; then
+      mv "$_tmp" "$_cache"
+    else
+      rm -f "$_tmp"
+    fi
+  done
   while IFS= read -r ver; do
     [[ -z "$ver" ]] && continue
     local ver_major="${ver%%.*}"
-    if (( 10#$ver_major >= 10#$target_branch )); then
-      printf '%s\n' "$ver"
+    if [[ -n "$target_branch" ]] && (( 10#$ver_major < 10#$target_branch )); then
+      continue
+    fi
+    if is_nvidia_stable_branch "$ver_major" || is_branch_release_count_sufficient "$ver_major"; then
+      if is_branch_compatible_with_host_gpus "$ver_major"; then
+        printf '%s\n' "$ver"
+      fi
     fi
   done <<< "$versions_in"
 }
@@ -1267,7 +1542,7 @@ show_action_menu_if_installed() {
     "remove"  "$(translate 'Uninstall NVIDIA drivers and configuration')"
   )
 
-  ACTION=$(hybrid_menu "ProxMenux" "$(translate 'NVIDIA Actions')\n\n$(translate 'Choose an action:')" 14 80 8 "${menu_choices[@]}") || ACTION="cancel"
+  ACTION=$(hybrid_menu "ProxMenux" "$(translate 'NVIDIA Actions')\n\n$(translate 'Choose an action:')" 26 80 16 "${menu_choices[@]}") || ACTION="cancel"
 }
 
 show_install_overview() {
@@ -1308,15 +1583,16 @@ show_version_menu() {
   local latest versions_list
   local kernel_version
   kernel_version=$(uname -r)
-  
+
+  show_proxmenux_logo
+  msg_title "$(translate 'NVIDIA GPU Driver Installation')"
+  msg_info "$(translate 'Fetching NVIDIA driver versions supported by your GPU...')"
 
   latest=$(download_latest_version 2>/dev/null)
-  
-
   versions_list=$(list_available_versions 2>/dev/null)
-  
 
   if [[ -z "$latest" ]] && [[ -z "$versions_list" ]]; then
+    stop_spinner
     hybrid_msgbox "$(translate 'Error')" \
       "$(translate 'Could not retrieve versions list from NVIDIA. Please check your internet connection.')\n\nURL: ${NVIDIA_BASE_URL}" 10 80
     DRIVER_VERSION="cancel"
@@ -1337,38 +1613,21 @@ show_version_menu() {
   latest=$(echo "$latest" | tr -d '[:space:]')
   
   local current_list="$versions_list"
-  
-  # Apply kernel compatibility filter if needed
-  if [[ -n "$MIN_DRIVER_VERSION" ]]; then
-    local filtered_list=""
-    while IFS= read -r ver; do
-      [[ -z "$ver" ]] && continue
-      if is_version_compatible "$ver"; then
-        filtered_list+="$ver"$'\n'
-      fi
-    done <<< "$current_list"
-    current_list="$filtered_list"
-  fi
 
-  # Option C: kernel-compat alone is too permissive (e.g. kernel 6.14
-  # accepts ≥ 550 so 595.x shows up — but 595.x has historically broken
-  # builds on this kernel). Restrict the offered list to the user's
-  # current branch when their installed driver still works, otherwise
-  # fall back to the recommended branch for the kernel.
   if [[ -n "$current_list" ]]; then
-    current_list=$(filter_option_c_branch "$current_list" "$CURRENT_DRIVER_VERSION" "$RECOMMENDED_BRANCH")
+    current_list=$(filter_option_c_branch "$current_list" "$CURRENT_DRIVER_VERSION" "")
   fi
 
-  if [[ -n "$latest" ]]; then
-    local filtered_max_list=""
-    while IFS= read -r ver; do
-      [[ -z "$ver" ]] && continue
-      if version_le "$ver" "$latest"; then
-        filtered_max_list+="$ver"$'\n'
-      fi
-    done <<< "$current_list"
-    current_list="$filtered_max_list"
-  fi
+  # Historically the picker capped candidates at `latest` (from the
+  # CDN's `latest.txt`) so users never saw versions newer than the
+  # global "latest". But latest.txt lags the Production Branch head
+  # (595.91.07 today vs 595.84 in latest.txt) and also hides the New
+  # Feature Branch head (610.x) that is a legitimate option once
+  # kernel + GPU compat pass. Kernel floor, endorsement whitelist,
+  # release-count heuristic and GPU-compat filter already narrow the
+  # list to safe candidates; the Production head still stands out in
+  # the "Latest available" recommendation, so an artificial ceiling
+  # only masked valid options.
 
   # If the user has the keylase NVENC patch applied, only offer versions
   # that the patch supports — picking an unsupported version reinstalls
@@ -1391,16 +1650,50 @@ show_version_menu() {
     fi
   fi
 
-  # Recompute "latest" as the highest version still in the filtered list
-  # so the menu's "Latest available" label matches what we actually offer
-  # rather than the global upstream latest (which may have been filtered
-  # out by Option C / kernel-compat / patch awareness).
-  if [[ -n "$current_list" ]]; then
+  # Pick the default "Recommended" version. Three-tier priority so the
+  # picker stays consistent with what the Monitor's driver-update
+  # notification promised the user:
+  #   1. If a driver is already installed AND its branch is still
+  #      offered in the filtered list, recommend the highest release
+  #      of that same branch (bugfix upgrade in place). Matches the
+  #      Monitor's Hardware card, which surfaces "v580.178.04
+  #      available" for a 580.x install — the user hitting Actualizar
+  #      then expects to land on 580.178.04, not a cross-branch jump
+  #      to Production. Cross-branch is still one row away in the
+  #      list.
+  #   2. Fresh install (no current driver) → Production Branch head
+  #      from NVIDIA's Unix drivers page, when present in the list.
+  #   3. Fallback → highest numeric in the list (Production may have
+  #      been filtered out by maintained-branch / GPU PCI-ID / patch
+  #      awareness).
+  latest=""
+  if [[ -n "$CURRENT_DRIVER_VERSION" && -n "$current_list" ]]; then
+    local _cur_branch="${CURRENT_DRIVER_VERSION%%.*}"
+    if [[ -n "$_cur_branch" ]]; then
+      local _same_branch_head
+      _same_branch_head=$(printf '%s\n' "$current_list" \
+        | awk -F. -v b="$_cur_branch" '$1 == b { print; exit }' \
+        | tr -d '[:space:]')
+      if [[ -n "$_same_branch_head" ]]; then
+        latest="$_same_branch_head"
+      fi
+    fi
+  fi
+  if [[ -z "$latest" ]]; then
+    local prod_head=""
+    prod_head=$(get_nvidia_production_head 2>/dev/null) || prod_head=""
+    if [[ -n "$prod_head" && -n "$current_list" ]]; then
+      if printf '%s\n' "$current_list" | grep -qFx "$prod_head"; then
+        latest="$prod_head"
+      fi
+    fi
+  fi
+  if [[ -z "$latest" && -n "$current_list" ]]; then
     latest=$(printf '%s\n' "$current_list" | head -n1 | tr -d '[:space:]')
   fi
 
   local menu_text="$(translate 'Select the NVIDIA driver version to install:')\n\n"
-  menu_text+="$(translate 'Versions shown are compatible with your kernel. Latest available is recommended in most cases.')"
+  menu_text+="$(translate 'Versions shown belong to maintained NVIDIA branches that list your GPU PCI ID. DKMS compilation is the final validation against the running kernel. The recommended version keeps the current branch, or uses the NVIDIA Production Branch on a fresh install.')"
   if $patch_filtered; then
     menu_text+="\n\n$(translate 'NVENC patch detected — list narrowed to versions supported by keylase/nvidia-patch.')"
   elif [[ -n "$patch_filter_note" ]]; then
@@ -1408,7 +1701,11 @@ show_version_menu() {
   fi
 
   local choices=()
-  choices+=("latest" "$(translate 'Latest available') (${latest:-unknown})")
+  if [[ -n "$latest" ]]; then
+    choices+=("$latest" "$latest — $(translate 'Recommended')")
+  else
+    choices+=("" "$(translate 'Recommended')")
+  fi
   choices+=("" "")
 
   if [[ -n "$current_list" ]]; then
@@ -1420,9 +1717,10 @@ show_version_menu() {
       choices+=("$ver" "$ver")
     done <<< "$current_list"
   else
-    choices+=("" "$(translate 'No compatible versions found for your kernel')")
+    choices+=("" "$(translate 'No supported NVIDIA versions found for this GPU')")
   fi
 
+  stop_spinner
   local selection=$(hybrid_menu "$(translate 'NVIDIA Driver Version')" "$menu_text" 26 90 16 "${choices[@]}") || { DRIVER_VERSION="cancel"; return 1; }
 
   case "$selection" in
@@ -1430,14 +1728,8 @@ show_version_menu() {
       DRIVER_VERSION="cancel"
       return 1
       ;;
-    latest)
-      DRIVER_VERSION="$latest"
-      DRIVER_VERSION=$(echo "$DRIVER_VERSION" | tr -d '[:space:]')
-      return 0
-      ;;
     *)
-      DRIVER_VERSION="$selection"
-      DRIVER_VERSION=$(echo "$DRIVER_VERSION" | tr -d '[:space:]')
+      DRIVER_VERSION=$(echo "$selection" | tr -d '[:space:]')
       return 0
       ;;
   esac
@@ -1461,6 +1753,7 @@ main() {
   detect_nvidia_gpus
   detect_driver_status
   check_gpu_not_in_vm_passthrough
+  check_stale_vfio_config_for_nvidia
 
   if ! $NVIDIA_GPU_PRESENT; then
     dialog --backtitle "ProxMenux" --title "$(translate 'NVIDIA GPU Driver Installation')" --msgbox \
@@ -1476,7 +1769,7 @@ main() {
         exit 0
       fi
 
-      get_kernel_compatibility_info
+      get_system_info
 
       show_version_menu
       if [[ "$DRIVER_VERSION" == "cancel" || -z "$DRIVER_VERSION" ]]; then

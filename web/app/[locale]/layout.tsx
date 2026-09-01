@@ -1,6 +1,5 @@
 import { Suspense } from "react"
 import Navbar from "@/components/navbar"
-import MouseMoveEffect from "@/components/mouse-move-effect"
 import { PagefindHighlighter } from "@/components/pagefind-highlighter"
 import { LocaleHtmlSync } from "@/components/locale-html-sync"
 import type React from "react"
@@ -175,7 +174,6 @@ export default async function LocaleLayout({
         }}
       />
       <Navbar />
-      <MouseMoveEffect />
       <div className="pt-16 md:pt-16">{children}</div>
       <script src="/pagefind/pagefind-highlight.js" type="module" defer />
       <Suspense fallback={null}>

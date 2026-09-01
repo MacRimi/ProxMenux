@@ -19,6 +19,12 @@ from collections import defaultdict
 import re
 
 from health_persistence import health_persistence, disk_base_name
+from proxmox_known_errors import analyze_oom_event, format_oom_diagnosis
+from smartctl_resolver import (
+    is_usb_disk as resolver_is_usb_disk,
+    probe_smartctl_json,
+    smart_json_has_telemetry,
+)
 
 try:
     from proxmox_storage_monitor import proxmox_storage_monitor
@@ -100,14 +106,6 @@ def _fmt_entity_and_summary(items, singular: str, plural: str, limit: int = _NAM
     return title_entity, reason
 
 
-# USB-NVMe bridges (ASMedia, JMicron, Realtek) answer plain smartctl with
-# the *bridge* identity — model shows as "ASMT 2462 NVME" and there is no
-# temperature. Only `-d snt*` passes through to the actual NVMe controller
-# behind the bridge. For removable disks we try the snt* variants first
-# so both identity and health reflect the drive, not the enclosure.
-_USB_NVME_DRIVERS = ('sntasmedia', 'sntjmicron', 'sntrealtek')
-
-
 def _disk_base_for_sysfs(name: str) -> str:
     """Normalize `/dev/sda` / `sda` to just `sda` for `/sys/block/<name>` lookups."""
     if name.startswith('/dev/'):
@@ -142,10 +140,13 @@ def _hdd_in_standby(disk_name: str) -> bool:
         return False
     parked = False
     try:
-        r = subprocess.run(
-            ['smartctl', '-n', 'standby', '-i', f'/dev/{base}'],
-            capture_output=True, text=True, timeout=5)
-        parked = r.returncode == 2
+        result = probe_smartctl_json(
+            base,
+            ('-n', 'standby', '-i', '-j'),
+            timeout=5,
+            require_telemetry=False,
+        )
+        parked = bool(result.get('standby'))
     except Exception:
         parked = False
     _standby_cache[base] = (now, parked)
@@ -195,19 +196,8 @@ def _is_disk_removable(disk_name: str) -> bool:
 
 
 def _is_disk_usb(disk_name: str) -> bool:
-    """True if the disk sits behind a USB bus. Reads the resolved sysfs
-    device path — reliable for USB-NVMe bridges and USB-attached HDDs
-    that report `removable=0` even though they ARE USB (so the older
-    `_is_disk_removable` heuristic skipped snt* driver probes and left
-    NVMe-behind-a-bridge disks with the bridge's own chatter cached
-    forever)."""
-    try:
-        base = _disk_base_for_sysfs(disk_name)
-        real = os.path.realpath(f'/sys/block/{base}')
-        return any(seg.startswith('usb') and (len(seg) == 3 or seg[3:].isdigit())
-                   for seg in real.split('/'))
-    except Exception:
-        return False
+    """True when sysfs places the disk behind a USB bus."""
+    return resolver_is_usb_disk(disk_name)
 
 class HealthMonitor:
     """
@@ -229,7 +219,12 @@ class HealthMonitor:
     MEMORY_CRITICAL = 95
     MEMORY_DURATION = 300  # 5 minutes sustained (aligned with CPU)
     SWAP_WARNING_DURATION = 300
-    SWAP_CRITICAL_PERCENT = 5
+    # Swap CRITICAL now requires BOTH: swap file nearly full AND RAM
+    # genuinely tight. Alerting on just one of them fired constantly on
+    # healthy Proxmox hosts where the kernel proactively swaps out
+    # inactive pages while RAM remains plentifully available.
+    SWAP_HIGH_PERCENT = 80        # % of swap file in use
+    AVAILABLE_MIN_PERCENT = 15    # % of RAM that must stay available
     SWAP_CRITICAL_DURATION = 120
     
     # Storage Thresholds
@@ -445,7 +440,8 @@ class HealthMonitor:
                 (("cpu", "critical"), "CPU_CRITICAL"),
                 (("memory", "warning"), "MEMORY_WARNING"),
                 (("memory", "critical"), "MEMORY_CRITICAL"),
-                (("memory", "swap_critical"), "SWAP_CRITICAL_PERCENT"),
+                (("memory", "swap_high"), "SWAP_HIGH_PERCENT"),
+                (("memory", "available_min"), "AVAILABLE_MIN_PERCENT"),
                 (("host_storage", "warning"), "STORAGE_WARNING"),
                 (("host_storage", "critical"), "STORAGE_CRITICAL"),
                 (("cpu_temperature", "warning"), "TEMP_WARNING"),
@@ -635,12 +631,12 @@ class HealthMonitor:
             current_time = time.time()
             mem_percent = memory.percent
             swap_percent = swap.percent if swap.total > 0 else 0
-            swap_vs_ram = (swap.used / memory.total * 100) if memory.total > 0 else 0
+            available_percent = (memory.available / memory.total * 100) if memory.total > 0 else 100
             state_key = 'memory_usage'
             self.state_history[state_key].append({
                 'mem_percent': mem_percent,
                 'swap_percent': swap_percent,
-                'swap_vs_ram': swap_vs_ram,
+                'available_percent': available_percent,
                 'time': current_time
             })
             # Prune entries older than 10 minutes
@@ -963,6 +959,20 @@ class HealthMonitor:
                 critical_issues.append(lxc_disk_result.get('reason', 'LXC rootfs near full'))
             elif lxc_disk_result.get('status') == 'WARNING':
                 warning_issues.append(lxc_disk_result.get('reason', 'LXC rootfs filling up'))
+
+        # QEMU VM filesystem usage via guest agent — mirrors the LXC
+        # rootfs check but reads from the guest agent because pvesh
+        # reports disk=0 for most QEMU storage backends. VMs without
+        # a responsive agent are silently skipped (no signal ≠ OK).
+        _t = time.time()
+        vm_disk_result = self._check_vm_disk_usage()
+        _perf_log("vm_disk_usage", (time.time() - _t) * 1000)
+        if vm_disk_result:
+            details['vm_disk'] = vm_disk_result
+            if vm_disk_result.get('status') == 'CRITICAL':
+                critical_issues.append(vm_disk_result.get('reason', 'VM filesystems near full'))
+            elif vm_disk_result.get('status') == 'WARNING':
+                warning_issues.append(vm_disk_result.get('reason', 'VM filesystems filling up'))
 
         # Phase 3 capacity checks added on top of the existing storage
         # ones. Each is independently configurable via Settings →
@@ -1601,30 +1611,36 @@ class HealthMonitor:
     def _check_memory_comprehensive(self) -> Dict[str, Any]:
         """
         Check memory including RAM and swap with realistic thresholds.
-        Only alerts on truly problematic memory situations.
+
+        Swap CRITICAL requires the memory-pressure AND-clause: swap is
+        called out only when the swap file is nearly full AND RAM is
+        genuinely tight (available memory below the configured floor).
+        Alerting on swap size alone fires constantly on healthy hosts
+        where Linux proactively swaps out inactive pages — the user
+        can't act on that signal and it drowns real pressure events.
         """
         try:
             memory = psutil.virtual_memory()
             swap = psutil.swap_memory()
             current_time = time.time()
-            
+
             mem_percent = memory.percent
             swap_percent = swap.percent if swap.total > 0 else 0
-            swap_vs_ram = (swap.used / memory.total * 100) if memory.total > 0 else 0
-            
+            available_percent = (memory.available / memory.total * 100) if memory.total > 0 else 100
+
             state_key = 'memory_usage'
             self.state_history[state_key].append({
                 'mem_percent': mem_percent,
                 'swap_percent': swap_percent,
-                'swap_vs_ram': swap_vs_ram,
+                'available_percent': available_percent,
                 'time': current_time
             })
-            
+
             self.state_history[state_key] = [
                 entry for entry in self.state_history[state_key]
                 if current_time - entry['time'] < 600
             ]
-            
+
             mem_critical_samples = [
                 entry for entry in self.state_history[state_key]
                 if entry['mem_percent'] >= 90 and
@@ -1637,10 +1653,15 @@ class HealthMonitor:
                 current_time - entry['time'] <= self.MEMORY_DURATION
             ]
 
+            # Swap CRITICAL requires BOTH conditions sustained. Older
+            # samples predating the new `available_percent` field are
+            # skipped rather than defaulted to a passing value so the
+            # transition period never manufactures a false positive.
             swap_critical = sum(
                 1 for entry in self.state_history[state_key]
-                if entry['swap_vs_ram'] > 20 and
-                current_time - entry['time'] <= self.SWAP_CRITICAL_DURATION
+                if entry['swap_percent'] > self.SWAP_HIGH_PERCENT
+                and entry.get('available_percent', 100) < self.AVAILABLE_MIN_PERCENT
+                and current_time - entry['time'] <= self.SWAP_CRITICAL_DURATION
             )
 
             # Require sustained high usage across most of the 300s window.
@@ -1659,7 +1680,8 @@ class HealthMonitor:
                 reason = f'RAM >90% sustained for {actual_duration}s'
             elif swap_critical >= 2:
                 status = 'CRITICAL'
-                reason = f'Swap >20% of RAM ({swap_vs_ram:.1f}%)'
+                reason = (f'Memory pressure: swap {swap_percent:.0f}% used '
+                          f'and only {available_percent:.0f}% RAM available')
             elif mem_warning_count >= MEM_WARNING_MIN_SAMPLES:
                 oldest = min(s['time'] for s in mem_warning_samples)
                 actual_duration = int(current_time - oldest)
@@ -1668,12 +1690,12 @@ class HealthMonitor:
             else:
                 status = 'OK'
                 reason = None
-            
+
             ram_avail_gb = round(memory.available / (1024**3), 2)
             ram_total_gb = round(memory.total / (1024**3), 2)
             swap_used_gb = round(swap.used / (1024**3), 2)
             swap_total_gb = round(swap.total / (1024**3), 2)
-            
+
             # Determine per-sub-check status
             ram_status = 'CRITICAL' if mem_percent >= 90 and mem_critical_count >= MEM_CRITICAL_MIN_SAMPLES else ('WARNING' if mem_percent >= self.MEMORY_WARNING and mem_warning_count >= MEM_WARNING_MIN_SAMPLES else 'OK')
             swap_status = 'CRITICAL' if swap_critical >= 2 else 'OK'
@@ -1687,11 +1709,16 @@ class HealthMonitor:
                 'checks': {
                     'ram_usage': {
                         'status': ram_status,
-                        'detail': 'High RAM usage sustained' if ram_status != 'OK' else 'Normal'
+                        'detail': 'High RAM usage sustained' if ram_status != 'OK' else 'Normal',
+                        'dismissable': True,
                     },
                     'swap_usage': {
                         'status': swap_status,
-                        'detail': 'Excessive swap usage' if swap_status != 'OK' else ('Normal' if swap.total > 0 else 'No swap configured')
+                        'detail': (
+                            'Swap nearly full with RAM tight' if swap_status != 'OK'
+                            else ('Normal' if swap.total > 0 else 'No swap configured')
+                        ),
+                        'dismissable': True,
                     }
                 }
             }
@@ -2043,21 +2070,9 @@ class HealthMonitor:
                         is_usb = tran == 'USB'
                         is_nvme = disk_name.startswith('nvme')
                         
-                        # Get serial from smartctl
-                        serial = ''
-                        model = ''
-                        try:
-                            smart_result = subprocess.run(
-                                ['smartctl', '-i', '-j', f'/dev/{disk_name}'],
-                                capture_output=True, text=True, timeout=5
-                            )
-                            if smart_result.returncode in (0, 4):  # 4 = SMART not available but info OK
-                                import json
-                                smart_data = json.loads(smart_result.stdout)
-                                serial = smart_data.get('serial_number', '')
-                                model = smart_data.get('model_name', '') or smart_data.get('model_family', '')
-                        except Exception:
-                            pass
+                        identity = self._get_disk_identity(disk_name)
+                        serial = identity.get('serial', '')
+                        model = identity.get('model', '')
                         
                         physical_disks[disk_name] = {
                             'serial': serial,
@@ -2568,35 +2583,15 @@ class HealthMonitor:
         try:
             dev_path = f'/dev/{disk_name}' if not disk_name.startswith('/') else disk_name
 
-            # USB-attached disks may sit behind an NVMe bridge: try the
-            # snt* driver variants first so identity reflects the drive
-            # (Samsung 990 PRO) rather than the enclosure (ASMT 2462 NVME).
-            # If all snt* fail, fall through to the plain call — that's
-            # still correct for USB-SATA sticks and non-USB devices.
-            # USB detection is by sysfs path (`_is_disk_usb`) rather than
-            # the `removable` flag, since USB-NVMe and USB-HDD both report
-            # `removable=0` even though they ARE USB.
-            attempts = []
-            if _is_disk_usb(disk_name) or _is_disk_removable(disk_name):
-                for drv in _USB_NVME_DRIVERS:
-                    attempts.append(['smartctl', '-i', '-j', '-d', drv, dev_path])
-            attempts.append(['smartctl', '-i', '-j', dev_path])
-
-            import json as _json
-            for cmd in attempts:
-                proc = subprocess.run(cmd, capture_output=True, text=True, timeout=5)
-                if proc.returncode not in (0, 4):
-                    continue
-                try:
-                    data = _json.loads(proc.stdout)
-                except Exception:
-                    continue
-                serial = data.get('serial_number', '')
-                model = data.get('model_name', '') or data.get('model_family', '')
-                if serial or model:
-                    result['serial'] = serial
-                    result['model'] = model
-                    break
+            probe = probe_smartctl_json(
+                dev_path,
+                ('-i', '-j'),
+                timeout=5,
+                require_telemetry=False,
+            )
+            data = probe.get('data', {})
+            result['serial'] = data.get('serial_number', '')
+            result['model'] = data.get('model_name', '') or data.get('model_family', '')
         except Exception:
             pass
 
@@ -2629,49 +2624,24 @@ class HealthMonitor:
         
         try:
             dev_path = f'/dev/{disk_name}' if not disk_name.startswith('/') else disk_name
-            # `-n standby` skips the command (exit code 2, no disk I/O)
-            # when the drive is parked, preventing the health poller
-            # from spinning up HDDs that hdparm / hd-idle just put to
-            # sleep — issue #232. The "UNKNOWN" branch below correctly
-            # keeps the previous cached result alive on exit code 2.
-            #
-            # USB-attached disks may sit behind an NVMe bridge: try snt*
-            # drivers first so health reflects the actual NVMe controller.
-            # A bridge that fakes "PASSED" while the drive behind it is
-            # failing is exactly the false-negative we want to avoid.
-            # USB detection uses the sysfs path so USB-NVMe bridges (which
-            # report removable=0) are caught too.
-            attempts = []
-            if _is_disk_usb(disk_name) or _is_disk_removable(disk_name):
-                for drv in _USB_NVME_DRIVERS:
-                    attempts.append(['smartctl', '-n', 'standby', '--health', '-j', '-d', drv, dev_path])
-            attempts.append(['smartctl', '-n', 'standby', '--health', '-j', dev_path])
+            probe = probe_smartctl_json(
+                dev_path,
+                ('-n', 'standby', '-a', '-j'),
+                timeout=5,
+                require_telemetry=True,
+            )
+            if probe.get('standby'):
+                return cached['result'] if cached else 'UNKNOWN'
 
-            import json as _json
-            smart_result = None
-            for cmd in attempts:
-                result = subprocess.run(cmd, capture_output=True, text=True, timeout=5)
-                if result.returncode == 2:
-                    # Drive in standby — reuse the previous health state
-                    # if we have one, otherwise report UNKNOWN. Either way,
-                    # don't refresh the cache TTL so we retry on the next
-                    # cycle (a drive can come out of standby at any time).
-                    if cached:
-                        return cached['result']
-                    return 'UNKNOWN'
-                try:
-                    data = _json.loads(result.stdout)
-                except Exception:
-                    continue
-                passed = data.get('smart_status', {}).get('passed', None)
-                if passed is True:
-                    smart_result = 'PASSED'
-                    break
-                if passed is False:
-                    smart_result = 'FAILED'
-                    break
-                # No opinion yet — next attempt (fallthrough to plain).
-            if smart_result is None:
+            data = probe.get('data', {})
+            passed = data.get('smart_status', {}).get('passed')
+            if _is_disk_usb(disk_name) and not smart_json_has_telemetry(data):
+                smart_result = 'UNKNOWN'
+            elif passed is True:
+                smart_result = 'PASSED'
+            elif passed is False:
+                smart_result = 'FAILED'
+            else:
                 smart_result = 'UNKNOWN'
 
             # Cache the result with the device fingerprint for hot-swap invalidation
@@ -4081,10 +4051,21 @@ class HealthMonitor:
             return reason
         
         # Out of memory
-        if 'out of memory' in line_lower or 'oom_kill' in line_lower:
-            m = re.search(r'Killed process\s+\d+\s+\(([^)]+)\)', line)
-            process = m.group(1) if m else 'unknown'
-            return f'Out of memory - system killed process "{process}" to free RAM'
+        if any(token in line_lower for token in (
+            'out of memory', 'oom_kill', 'oom-kill', 'invoked oom-killer', 'oom_reaper'
+        )):
+            victim = re.search(r'Killed process\s+\d+\s+\(([^)]+)\)', line, re.IGNORECASE)
+            if victim:
+                return f'Memory pressure - kernel killed process "{victim.group(1)}"'
+
+            invoker = re.search(r'(?:kernel:\s*)?([^\s:]+)\s+invoked oom-killer', line, re.IGNORECASE)
+            if invoker:
+                return (
+                    f'Memory pressure triggered the OOM killer while "{invoker.group(1)}" '
+                    'requested memory; this process is not necessarily the main consumer'
+                )
+
+            return 'Memory pressure triggered the OOM killer; inspect the complete kernel OOM block'
         
         # Kernel panic
         if 'kernel panic' in line_lower:
@@ -4206,6 +4187,9 @@ class HealthMonitor:
             if result_recent.returncode == 0:
                 recent_lines = result_recent.stdout.strip().split('\n')
                 previous_lines = result_previous.stdout.strip().split('\n') if result_previous.returncode == 0 else []
+                recent_oom_analysis = analyze_oom_event(result_recent.stdout)
+                recent_oom_reason = format_oom_diagnosis(recent_oom_analysis)
+                processed_oom_patterns = set()
                 
                 recent_patterns = defaultdict(int)
                 previous_patterns = defaultdict(int)
@@ -4226,7 +4210,22 @@ class HealthMonitor:
                         continue
                     
                     # Normalize to a pattern for grouping
-                    pattern = self._normalize_log_pattern(line)
+                    is_oom_line = any(token in line.lower() for token in (
+                        'out of memory', 'oom_kill', 'oom-kill',
+                        'invoked oom-killer', 'oom_reaper'
+                    ))
+                    if is_oom_line and recent_oom_analysis:
+                        scope = recent_oom_analysis.get('scope') or 'unknown'
+                        scope_id = recent_oom_analysis.get('ctid') \
+                            or recent_oom_analysis.get('cgroup_path') \
+                            or 'unknown'
+                        victim = recent_oom_analysis.get('victim_process') or 'unknown'
+                        pattern = f'oom_event_{scope}_{scope_id}_{victim}'
+                        if pattern in processed_oom_patterns:
+                            continue
+                        processed_oom_patterns.add(pattern)
+                    else:
+                        pattern = self._normalize_log_pattern(line)
                     
                     if severity == 'CRITICAL':
                         pattern_hash = hashlib.md5(pattern.encode()).hexdigest()[:8]
@@ -4267,7 +4266,10 @@ class HealthMonitor:
                             if severity == 'CRITICAL':
                                 critical_errors_found[pattern] = line
                             # Build a human-readable reason from the raw log line
-                            enriched_reason = self._enrich_critical_log_reason(line)
+                            if is_oom_line and recent_oom_reason:
+                                enriched_reason = recent_oom_reason
+                            else:
+                                enriched_reason = self._enrich_critical_log_reason(line)
                             
                             # Append SMART context to the reason if we checked it
                             if smart_status_for_log == 'PASSED':
@@ -4284,9 +4286,13 @@ class HealthMonitor:
                                     category='logs',
                                     severity=severity,
                                     reason=enriched_reason,
-                                    details={'pattern': pattern, 'raw_line': line[:200],
-                                             'smart_status': smart_status_for_log,
-                                             'dismissable': True}
+                                    details={
+                                        'pattern': pattern,
+                                        'raw_line': line[:200],
+                                        'smart_status': smart_status_for_log,
+                                        'oom_analysis': recent_oom_analysis if is_oom_line else None,
+                                        'dismissable': True,
+                                    }
                                 )
                             
                             # Cross-reference: filesystem errors also belong in the disks category
@@ -4334,14 +4340,8 @@ class HealthMonitor:
                                 try:
                                     obs_serial = None
                                     try:
-                                        sm = subprocess.run(
-                                            ['smartctl', '-i', f'/dev/{base_device}'],
-                                            capture_output=True, text=True, timeout=3)
-                                        if sm.returncode in (0, 4):
-                                            for sline in sm.stdout.split('\n'):
-                                                if 'Serial Number' in sline or 'Serial number' in sline:
-                                                    obs_serial = sline.split(':')[-1].strip()
-                                                    break
+                                        identity = self._get_disk_identity(base_device)
+                                        obs_serial = identity.get('serial') or None
                                     except Exception:
                                         pass
                                     health_persistence.record_disk_observation(
@@ -6259,6 +6259,149 @@ class HealthMonitor:
         return {
             'status': 'OK',
             'reason': f'{len(checks)} running CT(s) within safe rootfs usage',
+            'checks': checks,
+        }
+
+    def _check_vm_disk_usage(self) -> Optional[Dict[str, Any]]:
+        """QEMU VM filesystem usage via the guest agent.
+
+        Sibling of ``_check_lxc_disk_usage`` that closes the analogous
+        gap for VMs: ``pvesh cluster resources`` reports ``disk=0`` for
+        most QEMU storage backends (PVE can't see inside the guest),
+        so this check asks the guest agent directly for every running
+        QEMU VM and emits WARNING at 85% / CRITICAL at 95% — same
+        defaults as the LXC counterpart. The aggregated total includes
+        every persistent filesystem the guest reports as backed by a
+        block device, PCI-passthrough drives included: the metric is
+        "how full is the guest", not "how full is the virtual disk
+        PVE knows about", which is intentionally more useful for
+        appliances like TrueNAS or a Synology VM.
+
+        VMs whose agent is absent, unreachable, times out, or reports
+        no usable data are skipped — no false OK, no false alert.
+        Reads the pre-computed cache maintained by the daemon refresher
+        in ``flask_server``; never spawns a subprocess on the check
+        path, so a slow / dead guest agent can't stretch the health
+        cycle.
+        """
+        try:
+            import flask_server  # deferred — avoids circular import
+            resources = flask_server.get_cached_pvesh_cluster_resources_vm() or []
+        except Exception as e:
+            print(f"[HealthMonitor] VM disk check failed: {e}")
+            return None
+
+        # Cheap short-circuit: no running QEMU VMs on this node.
+        if not any(
+            r.get('type') in ('qemu', 'vm') and r.get('status') == 'running'
+            for r in resources
+        ):
+            return None
+
+        WARN_PCT, CRIT_PCT = self._read_capacity_thresholds('vm_disk', fb_warn=85, fb_crit=95)
+
+        checks: Dict[str, Dict[str, Any]] = {}
+        critical_vms: list[str] = []
+        warning_vms: list[str] = []
+        emitted_keys: set[str] = set()
+
+        for r in resources:
+            if r.get('type') not in ('qemu', 'vm'):
+                continue
+            if r.get('status') != 'running':
+                continue
+
+            vmid = r.get('vmid')
+            if vmid is None:
+                continue
+
+            try:
+                computed = flask_server.get_cached_vm_disk(vmid)
+            except Exception:
+                computed = None
+
+            if computed is None:
+                continue
+
+            used, total = computed
+            if total <= 0:
+                continue
+            pct = (used / total) * 100
+            vmid_str = str(vmid)
+            name = r.get('name', '') or ''
+            label = f'VM {vmid_str}' + (f' ({name})' if name else '')
+
+            entry: Dict[str, Any] = {
+                'detail': f'guest filesystems {pct:.1f}% used ({used // (1024**2)} MB / {total // (1024**2)} MB)',
+                'usage_percent': round(pct, 1),
+                'disk_bytes': used,
+                'maxdisk_bytes': total,
+                'vmid': vmid_str,
+                'name': name,
+            }
+            error_key = f'vm_disk_{vmid_str}'
+
+            if pct >= CRIT_PCT:
+                entry['status'] = 'CRITICAL'
+                entry['error_key'] = error_key
+                entry['dismissable'] = True
+                checks[label] = entry
+                critical_vms.append(label)
+                emitted_keys.add(error_key)
+                health_persistence.record_error(
+                    error_key=error_key,
+                    category='storage',
+                    severity='CRITICAL',
+                    reason=f'{label} filesystems at {pct:.1f}% ({used // (1024**2)} MB / {total // (1024**2)} MB)',
+                    details=entry,
+                )
+            elif pct >= WARN_PCT:
+                entry['status'] = 'WARNING'
+                entry['error_key'] = error_key
+                entry['dismissable'] = True
+                checks[label] = entry
+                warning_vms.append(label)
+                emitted_keys.add(error_key)
+                health_persistence.record_error(
+                    error_key=error_key,
+                    category='storage',
+                    severity='WARNING',
+                    reason=f'{label} filesystems at {pct:.1f}% ({used // (1024**2)} MB / {total // (1024**2)} MB)',
+                    details=entry,
+                )
+            else:
+                entry['status'] = 'OK'
+                checks[label] = entry
+
+        # Clear stale VM disk errors (VM stopped, agent lost, freed up).
+        for err in (health_persistence.get_active_errors() or []):
+            ek = err.get('error_key', '')
+            if not ek.startswith('vm_disk_'):
+                continue
+            if ek not in emitted_keys:
+                health_persistence.clear_error(ek)
+
+        if not checks:
+            return None
+        if critical_vms:
+            entity, _ = _fmt_entity_and_summary(critical_vms, 'x', 'x')
+            return {
+                'status': 'CRITICAL',
+                'reason': f'{len(critical_vms)} VM(s) at >{CRIT_PCT}% filesystems: {_fmt_name_list(critical_vms)}',
+                'entity': entity,
+                'checks': checks,
+            }
+        if warning_vms:
+            entity, _ = _fmt_entity_and_summary(warning_vms, 'x', 'x')
+            return {
+                'status': 'WARNING',
+                'reason': f'{len(warning_vms)} VM(s) at >{WARN_PCT}% filesystems: {_fmt_name_list(warning_vms)}',
+                'entity': entity,
+                'checks': checks,
+            }
+        return {
+            'status': 'OK',
+            'reason': f'{len(checks)} running VM(s) within safe filesystem usage',
             'checks': checks,
         }
 

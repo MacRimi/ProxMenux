@@ -1,13 +1,13 @@
 {
   "meta": {
     "title": "Automated Post-Install Script | ProxMenux Documentation",
-    "description": "The ProxMenux Automated post-install script applies a curated set of 13 safe, hardware-aware optimizations to a fresh Proxmox VE host with zero prompts. Every change is registered for later reversal via Uninstall Optimizations.",
+    "description": "The ProxMenux Automated post-install script applies a curated set of 14 safe, hardware-aware optimizations to a fresh Proxmox VE host with zero prompts. Reversible configuration changes are registered for later restoration.",
     "ogTitle": "Automated Post-Install Script | ProxMenux Documentation",
-    "ogDescription": "13 curated optimizations applied to a fresh Proxmox VE host with zero prompts. Hardware-aware (SSD/NVMe auto-detect) and fully reversible."
+    "ogDescription": "14 curated optimizations applied to a fresh Proxmox VE host with zero prompts. Hardware-aware, with reversible configuration changes tracked."
   },
   "header": {
     "title": "Automated Post-Install Script",
-    "description": "One click, zero prompts — ProxMenux applies a curated set of 13 safe optimizations that almost every Proxmox host benefits from. Every change is registered in the tools JSON so you can undo any of them later from Uninstall Optimizations.",
+    "description": "One click, zero prompts — ProxMenux applies a curated set of 14 safe optimizations that almost every Proxmox host benefits from. Reversible configuration changes are registered for Uninstall Optimizations; package upgrades are not described as reversible.",
     "section": "Post-Install · Automated"
   },
   "intro": {
@@ -55,7 +55,7 @@
     },
     {
       "tool": "Memory tuning",
-      "what": "Sets vm.swappiness=10, balanced dirty ratios, vm.overcommit_memory=1, vm.max_map_count=262144 and compaction proactiveness when supported.",
+      "what": "Sets vm.swappiness=10, balanced dirty ratios, vm.max_map_count=262144 and compaction proactiveness when supported. The kernel's memory-overcommit policy is left at the Proxmox default.",
       "category": "System",
       "categorySlug": "system"
     },
@@ -103,7 +103,7 @@
     },
     {
       "tool": "Persistent interface names",
-      "what": "Writes one /etc/systemd/network/10-proxmenux-<iface>.link per physical NIC (each starting with a 'Managed by ProxMenux' header) that pins the MAC to the current name, so eth0 / enp… names stay stable across reboots and new NIC additions.",
+      "what": "Writes one <code>/etc/systemd/network/10-proxmenux-&lt;iface&gt;.link</code> per physical NIC (each starting with a 'Managed by ProxMenux' header) that pins the MAC to the current name, so <code>eth0</code> / <code>enp…</code> names stay stable across reboots and new NIC additions.",
       "category": "Network",
       "categorySlug": "network"
     }

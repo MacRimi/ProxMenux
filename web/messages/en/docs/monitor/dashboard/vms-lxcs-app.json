@@ -1,0 +1,185 @@
+{
+  "meta": {
+    "title": "LXC App tab: discovery, links and version tracking | ProxMenux",
+    "description": "Discover and register LXC applications, create web links and optionally track installed and available versions."
+  },
+  "header": {
+    "title": "LXC App tab: discovery, links and version tracking",
+    "description": "Give each LXC application a persistent identity, web access and optional version evidence without coupling registration to updates."
+  },
+  "intro": {
+    "p1": "The <strong>App</strong> tab records which applications belong to an LXC. A registration can contain only a name and web link, or also include an installed-version detector and an upstream source.",
+    "p2": "The procedure that changes software is configured separately on the <link>Updates tab</link>. Saving an app never runs an installer or updater.",
+    "callout": "Registration, version tracking and updating are three independent capabilities. Any one can be used without requiring the other two.",
+    "dashboardTitle": "From registration to the Apps launcher",
+    "dashboard": "Every Web Link saved here is also presented as a card in the top-level <appsLink>Apps tab</appsLink>. This LXC page remains the source of truth for the application's name, logo, links and version tracking."
+  },
+  "overview": {
+    "heading": "What an application record can provide",
+    "lead": "A single saved record can include:",
+    "items": [
+      "A display name and a theme-aware logo.",
+      "One or more clickable web links built from the LXC address, scheme and saved port.",
+      "An optional detector for the version currently installed inside the LXC.",
+      "An optional GitHub, HTTP JSON or Docker Hub source for the latest available version.",
+      "Per-application release notifications and update-counter inclusion preferences.",
+      "A corresponding section on the Updates tab, even when version tracking is disabled."
+    ]
+  },
+  "discovery": {
+    "heading": "Cached discovery and Find applications",
+    "lead": "Application suggestions are part of the per-LXC modal cache. The startup scan prepares them in the background so opening the App tab can show cached results immediately.",
+    "items": [
+      "Opening the App tab does <strong>not</strong> start a new catalog scan and does not repeatedly query the LXC.",
+      "<strong>Find applications</strong> explicitly runs a fresh discovery pass for that LXC. Use it after installing new software while ProxMenux is already running.",
+      "The previous list remains visible while the explicit scan runs. New matches are added when it finishes.",
+      "If no new match is found, the result is stated beside the actions and <strong>Register application</strong> remains available for manual entry.",
+      "Saving, removing or restoring an app updates the same cache immediately. Starting or restoring an LXC refreshes only that guest through its existing lifecycle event."
+    ],
+    "callout": "A suggestion is not a registration. It stays read-only until <strong>Register</strong> is pressed and the form is saved."
+  },
+  "registration": {
+    "heading": "Registering an application",
+    "lead": "A detected suggestion and a manual record use the same editor:",
+    "steps": [
+      "Press <strong>Register</strong> on a suggestion or <strong>Register application</strong> to choose from the catalog or enter a custom name.",
+      "Review the name and logo proposed by the catalog.",
+      "Add the required web links. Detected listening ports are offered as shortcuts, but none is saved automatically.",
+      "Leave <strong>Track upstream version</strong> disabled for a link-only record, or enable it and review the installed-version detector and upstream source.",
+      "Use <strong>Test detector</strong> when tracking is enabled, then save the record.",
+      "Press <strong>Done</strong> after editing. The App and Updates tabs reuse the updated cached record."
+    ]
+  },
+  "catalog": {
+    "heading": "Catalog-assisted registration",
+    "lead": "The catalog supplies defaults, but the saved record remains editable.",
+    "items": [
+      "Search results can prefill the canonical name, logo and common web ports.",
+      "Known version detectors are based on real package names, binaries, files, Python distributions, OCI labels or commands rather than a universal <code>/root/.app</code> assumption.",
+      "Verified runtime overrides take precedence when an installation uses a path that differs from its installer metadata.",
+      "Proxmox VE Helper-Scripts markers such as <code>/root/.slug</code> remain one compatibility signal for newer helper installations, not the only detector.",
+      "Every proposed value can be edited before saving to cover official installers and manual installations."
+    ]
+  },
+  "docker": {
+    "heading": "How Docker LXCs are represented",
+    "lead": "For an LXC whose primary platform is Docker, <strong>Docker</strong> is the application registered at LXC level.",
+    "items": [
+      "A containerized workload such as Portainer, Frigate or Vaultwarden is not suggested as an independent native LXC application.",
+      "Running Docker services with published TCP ports are offered inside the Docker editor as optional web links.",
+      "Each suggested link shows the service, host port and container port. Only links that provide a web interface should be saved.",
+      "The global Docker logo is used when a link has no specific logo. A per-link logo overrides it when one is configured.",
+      "After Docker is registered, Docker Engine and image updates are shown together in its section on the Updates tab."
+    ],
+    "callout": "This structure prevents a Docker workload from looking like software installed directly in the LXC while preserving quick links to its interfaces."
+  },
+  "webLinks": {
+    "heading": "Web links and logos",
+    "lead": "Web links work with or without version tracking.",
+    "items": [
+      "Each link stores a scheme, port, optional description and optional logo URL.",
+      "The displayed URL uses the current address already detected for the LXC; the address is not duplicated in every app record.",
+      "A link without its own logo falls back to the app-level logo.",
+      "Several links can represent an admin interface, API, secondary UI or another endpoint of the same app.",
+      "A saved link-only app also appears on Updates, where a custom updater can be configured later."
+    ]
+  },
+  "tracking": {
+    "heading": "Optional version tracking",
+    "lead": "Tracking combines an installed-version detector with an optional upstream source. The two sides are checked independently.",
+    "colMethod": "Installed-version method",
+    "colUse": "Use",
+    "detectorRows": [
+      { "method": "dpkg / apk", "use": "Reads the installed package version from Debian, Ubuntu or Alpine package metadata." },
+      { "method": "binary", "use": "Runs an absolute binary path or a command name with version arguments." },
+      { "method": "file + regex", "use": "Reads a real file and extracts the version with one capture group." },
+      { "method": "docker label / docker exec", "use": "Reads an OCI version label or runs a version command inside a Docker container." },
+      { "method": "python distribution", "use": "Uses importlib.metadata through the selected Python interpreter." },
+      { "method": "command", "use": "Runs an advanced argv-style command without a shell and extracts the version from its output." },
+      { "method": "manual", "use": "Stores a version entered manually; it must be changed after upgrading the app." }
+    ],
+    "sourcesHeading": "Available-version sources",
+    "sources": [
+      "<strong>GitHub repository</strong>: latest release or tag from a public <code>owner/name</code> repository.",
+      "<strong>HTTP JSON</strong>: a public endpoint plus a dotted path such as <code>data.version</code> or <code>releases[0].tag_name</code>.",
+      "<strong>Docker Hub</strong>: versioned tags filtered by a regular expression. A live preview shows real matching tags before the record is saved.",
+      "Moving tags such as <code>latest</code>, <code>stable</code> or <code>lts</code> do not contain a version. Track those images by digest from Docker image updates instead."
+    ],
+    "regexHeading": "Writing the capture expression",
+    "regexLead": "A detector regular expression must return the version in its <strong>first capture group</strong>.",
+    "regexRules": [
+      "Match the text emitted by the selected binary, file, command or tag source; do not guess a generic path.",
+      "Escape literal dots as <code>\\.</code> so they cannot match arbitrary characters.",
+      "Allow a leading <code>v</code> only when the source can include it.",
+      "Include suffixes such as prerelease or distro revisions only when they are meaningful for the comparison.",
+      "Use <strong>Test detector</strong> before saving and verify that the displayed installed version matches the LXC."
+    ],
+    "regexExampleLead": "Common semantic-version capture:",
+    "regexExample": "v?(\\d+\\.\\d+\\.\\d+)",
+    "regexCallout": "A successful regex match is not proof that the detector path is correct. The path or package must also exist in the real installation being registered."
+  },
+  "updater": {
+    "heading": "Version tracking and updating are independent",
+    "lead": "The <link>Updates tab</link> creates an app section as soon as any application record is saved.",
+    "items": [
+      "A link-only record shows that version tracking is not configured, but can still receive a custom update command.",
+      "An app with tracking but without an executable method shows a neutral message asking for a custom command.",
+      "An app with a verified Proxmox VE Helper-Scripts wrapper can use that integrated updater even when the registration began from a web link.",
+      "Adding or editing an updater does not change the detector or upstream source stored on the App tab."
+    ]
+  },
+  "states": {
+    "heading": "Version states on the App card",
+    "colState": "State",
+    "colDisplay": "Display",
+    "colMeaning": "Meaning",
+    "rows": [
+      { "state": "Update available", "display": "Available version in purple with an upward-arrow icon", "meaning": "The installed and upstream versions differ." },
+      { "state": "Current", "display": "Installed and latest versions without the purple alert", "meaning": "The last check found no newer upstream version." },
+      { "state": "Tracking pending", "display": "Checking or pending state", "meaning": "The record is configured but has not completed both checks yet." },
+      { "state": "Tracking disabled", "display": "Web links only; no version comparison block", "meaning": "The record remains valid and can still have an updater." },
+      { "state": "Check error", "display": "Amber explanation inside the card", "meaning": "The previous saved state remains visible while the detector or upstream error is reported." }
+    ]
+  },
+  "management": {
+    "heading": "Managing saved and suggested apps",
+    "lead": "The actions at the bottom of the tab have distinct roles:",
+    "items": [
+      "<strong>Find applications</strong> refreshes discovery for this LXC only.",
+      "<strong>Register another application</strong> opens the catalog and manual editor without rescanning the LXC.",
+      "<strong>Edit</strong> reveals per-card Remove, Check, notification and Edit fields actions.",
+      "<strong>Hide</strong> removes an unwanted suggestion. Hidden detections can be restored from the registration browser.",
+      "<strong>Check</strong> refreshes the selected saved app's version evidence; it does not search for new apps."
+    ]
+  },
+  "troubleshooting": {
+    "heading": "Common situations",
+    "colProblem": "Situation",
+    "colResolution": "Resolution",
+    "rows": [
+      { "problem": "Software was installed after ProxMenux started", "resolution": "Press Find applications. The explicit scan updates cached suggestions for that LXC." },
+      { "problem": "No application was detected", "resolution": "Register it manually. A name and one web link are sufficient; tracking can be added later." },
+      { "problem": "The suggested detector returns the wrong version", "resolution": "Open Edit fields, select the real package, binary or file path and test the detector before saving." },
+      { "problem": "A Docker workload is not offered as an LXC app", "resolution": "Register Docker and add the workload's published interface as a Docker web link. Image updates remain in the Docker section." },
+      { "problem": "A saved app has no update button", "resolution": "Open the Updates tab and configure its update method. Version tracking alone does not define how an update is installed." }
+    ]
+  },
+  "figures": {
+    "catalog": {
+      "alt": "Application registration catalog with search results, logos, ports and detector fields",
+      "caption": "Catalog metadata accelerates registration while every proposed value remains editable."
+    },
+    "webLinks": {
+      "alt": "Saved LXC application card containing a clickable web link",
+      "caption": "A link-only record is valid: version tracking can stay disabled and an updater can be added independently."
+    },
+    "tracking": {
+      "alt": "Optional installed-version detector and upstream source fields",
+      "caption": "Installed-version detection and the upstream source are configured and tested separately."
+    },
+    "card": {
+      "alt": "Saved application card with installed and available versions plus a web link",
+      "caption": "The card combines identity, version evidence and web access without running update actions from this tab."
+    }
+  }
+}

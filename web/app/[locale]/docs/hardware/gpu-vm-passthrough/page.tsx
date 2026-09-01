@@ -169,16 +169,9 @@ export default async function GpuVmPassthroughPage({
   ├─ Not in SR-IOV
   ├─ Not D3cold (AMD)
   ├─ Has FLR or equivalent reset
+  ├─ Not on the block-list (Intel Arc, Apollo Lake)
   ├─ Warn if single-GPU host
   └─ Resolve IOMMU group
-      │
-      ▼
-  Audio companion
-      ├─ Has .1 sibling?  (dGPU: NVIDIA/AMD HDMI)
-      │      → auto-include (never used by host)
-      └─ No .1 sibling?   (Intel iGPU, split audio)
-             → checklist of host audio controllers,
-               default = none (user opts in)
       │
       ▼
   User selects VM
@@ -190,12 +183,22 @@ export default async function GpuVmPassthroughPage({
       ▼
   GPU already assigned elsewhere?
       │
-      ├─ To LXC     → offer to remove it from LXC
-      ├─ To other VM → offer to remove it there
-      │               + clean up orphan audio
-      │                 (skips audio whose
-      │                 display sibling stays)
+      ├─ To LXC     → menu: keep + disable onboot
+      │               OR remove GPU lines + keep onboot
+      ├─ To other VM (running) → abort
+      ├─ To other VM (stopped) → menu: keep + disable onboot
+      │               OR remove GPU lines + keep onboot
+      │               (fast-path: already vfio-pci → no
+      │                host reconfig, no reboot needed)
       └─ Free        → continue
+      │
+      ▼
+  Audio companion
+      ├─ Has .1 sibling?  (dGPU: NVIDIA/AMD HDMI)
+      │      → auto-include (never used by host)
+      └─ No .1 sibling?   (Intel iGPU, split audio)
+             → checklist of host audio controllers,
+               default = none (user opts in)
       │
       ▼
   Show confirmation summary
@@ -209,12 +212,17 @@ export default async function GpuVmPassthroughPage({
                                         ▼
                           Host:
                           ├─ /etc/modules (vfio_*)
-                          ├─ /etc/modprobe.d/vfio.conf (ids=...)
-                          ├─ /etc/modprobe.d/blacklist.conf
+                          ├─ /etc/modprobe.d/vfio.conf (ids=... disable_vga=1)
+                          ├─ /etc/modprobe.d/blacklist.conf (vendor drivers only)
                           ├─ kernel cmdline (IOMMU if missing)
-                          ├─ NVIDIA: disable udev rule + hard blacklist
-                          ├─ AMD: dump ROM → /usr/share/kvm/*.bin
+                          ├─ NVIDIA: per-BDF udev rule at
+                          │          10-proxmenux-vfio-bind.rules
+                          │          + BDF state at vfio-bind.bdfs
+                          │          (blacklist nvidia only when
+                          │           every NVIDIA GPU is in VFIO)
+                          ├─ AMD: dump ROM → vbios_<vendor>_<device>.bin
                           └─ update-initramfs -u -k all
+                             + proxmox-boot-tool refresh
 
                           VM config (qm set <vmid>):
                           ├─ hostpci0 = GPU (x-vga=1 unless Intel iGPU)
@@ -336,7 +344,7 @@ export default async function GpuVmPassthroughPage({
             code={`# Example — what ends up in the VM config after a GPU + audio passthrough
 # (you don't type this, ProxMenux does it for you)
 
-hostpci0: 0000:01:00.0,pcie=1,x-vga=1[,romfile=vbios_card.bin]   # GPU video
+hostpci0: 0000:01:00.0,pcie=1,x-vga=1[,romfile=vbios_1002_15dd.bin]   # GPU video (AMD ROM file named vbios_<vendor>_<device>.bin)
 hostpci1: 0000:01:00.1,pcie=1                                    # GPU audio
 vga: std
 
@@ -455,9 +463,9 @@ qm set <vmid> --delete hostpci0
 # Release the GPU back to the host driver:
 rm -f /etc/modprobe.d/vfio.conf
 rm -f /etc/modprobe.d/blacklist.conf         # careful — this file may have other blacklists
-# NVIDIA only — re-enable the udev rule + unpin the hard blacklist
+# NVIDIA only — re-enable the udev rule + drop the all-NVIDIA-in-VFIO blacklist (if present)
 mv /etc/udev/rules.d/70-nvidia.rules.proxmenux-disabled /etc/udev/rules.d/70-nvidia.rules 2>/dev/null
-rm -f /etc/modprobe.d/nvidia-blacklist.conf
+rm -f /etc/modprobe.d/proxmenux-nvidia-vfio-blacklist.conf
 
 update-initramfs -u -k all
 reboot`}

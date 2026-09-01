@@ -1,6 +1,7 @@
 "use client"
 
-import { useState, useEffect, useMemo, useCallback } from "react"
+import React, { useState, useEffect, useMemo, useCallback } from "react"
+import useSWR from "swr"
 import { Badge } from "./ui/badge"
 import { Button } from "./ui/button"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs"
@@ -8,6 +9,7 @@ import { SystemOverview } from "./system-overview"
 import { StorageOverview } from "./storage-overview"
 import { NetworkMetrics } from "./network-metrics"
 import { VirtualMachines } from "./virtual-machines"
+import { AppsDashboard } from "./apps-dashboard"
 import Hardware from "./hardware"
 import { SystemLogs } from "./system-logs"
 import { Settings } from "./settings"
@@ -32,6 +34,7 @@ import {
   HardDrive,
   NetworkIcon,
   Boxes,
+  Grid3x3,
   Cpu,
   ScrollText,
   SettingsIcon,
@@ -51,6 +54,9 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "./ui/dropdown-menu"
+import { useT } from "../lib/i18n/provider"
+import { APP_VERSION } from "../lib/version"
+import { useTabOrder, firstActualTab, type TabId } from "../lib/tab-order"
 
 interface SystemStatus {
   status: "healthy" | "warning" | "critical"
@@ -79,7 +85,19 @@ interface FlaskSystemInfo {
   }
 }
 
+// Prefetch on dashboard mount: SWR caches by key across all
+// `useSWR` calls, so firing these here means the Apps tab finds the
+// data already resolved when it opens. Without this, the tab pays a
+// visible roundtrip on first render because VirtualMachines has been
+// warming /api/vms since page load but nobody was warming the custom
+// links endpoint.
+const _dashboardPrefetchFetcher = (url: string) => fetchApi(url)
+
 export function ProxmoxDashboard() {
+  const t = useT()
+  useSWR("/api/apps/custom-links", _dashboardPrefetchFetcher, { revalidateOnFocus: false })
+  useSWR("/api/apps/categories",   _dashboardPrefetchFetcher, { revalidateOnFocus: false })
+  const { order: tabOrder } = useTabOrder()
   const [systemStatus, setSystemStatus] = useState<SystemStatus>({
     status: "healthy",
     uptime: "Loading...",
@@ -92,12 +110,21 @@ export function ProxmoxDashboard() {
   const [componentKey, setComponentKey] = useState(0)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [activeTab, setActiveTab] = useState("overview")
+  // On first mount, land on whatever the user's custom order says is
+  // the leading tab. localStorage isn't available during SSR so this
+  // runs post-hydration; the tiny flash is acceptable and matches the
+  // pattern next-themes uses for the same reason.
+  useEffect(() => {
+    setActiveTab(firstActualTab())
+  }, [])
   const [infoCount, setInfoCount] = useState(0)
   const [updateAvailable, setUpdateAvailable] = useState(false)
   const [showNavigation, setShowNavigation] = useState(true)
   const [lastScrollY, setLastScrollY] = useState(0)
   const [showHealthModal, setShowHealthModal] = useState(false)
   const { showReleaseNotes, setShowReleaseNotes } = useVersionCheck()
+  const displayServerName = systemStatus.serverName === "Loading..." ? t("app.loading") : systemStatus.serverName
+  const displayUptime = systemStatus.uptime === "Loading..." ? t("app.loading") : systemStatus.uptime || t("app.notAvailable")
 
   // Category keys for health info count calculation
   const HEALTH_CATEGORY_KEYS = [
@@ -168,7 +195,7 @@ export function ProxmoxDashboard() {
       const data: FlaskSystemInfo = await fetchApi("/api/system-info")
 
       const uptimeValue =
-        data.uptime && typeof data.uptime === "string" && data.uptime.trim() !== "" ? data.uptime : "N/A"
+        data.uptime && typeof data.uptime === "string" && data.uptime.trim() !== "" ? data.uptime : t("app.notAvailable")
 
       const backendStatus = data.health?.status?.toUpperCase() || "OK"
       let healthStatus: "healthy" | "warning" | "critical"
@@ -185,8 +212,8 @@ export function ProxmoxDashboard() {
         status: healthStatus,
         uptime: uptimeValue,
         lastUpdate: new Date().toLocaleTimeString("en-US", { hour12: false }),
-        serverName: data.hostname || "Unknown",
-        nodeId: data.node_id || "Unknown",
+        serverName: data.hostname || t("app.unknown"),
+        nodeId: data.node_id || t("app.unknown"),
       })
       setIsServerConnected(true)
     } catch (error) {
@@ -196,13 +223,13 @@ export function ProxmoxDashboard() {
       setSystemStatus((prev) => ({
         ...prev,
         status: "critical",
-        serverName: "Server Offline",
-        nodeId: "Server Offline",
-        uptime: "N/A",
+        serverName: t("app.serverOffline"),
+        nodeId: t("app.serverOffline"),
+        uptime: t("app.notAvailable"),
         lastUpdate: new Date().toLocaleTimeString("en-US", { hour12: false }),
       }))
     }
-  }, [])
+  }, [t])
 
   useEffect(() => {
   // Siempre fetch inicial
@@ -294,13 +321,13 @@ export function ProxmoxDashboard() {
     if (
       systemStatus.serverName &&
       systemStatus.serverName !== "Loading..." &&
-      systemStatus.serverName !== "Server Offline"
+      systemStatus.serverName !== t("app.serverOffline")
     ) {
       document.title = `${systemStatus.serverName} - ProxMenux Monitor`
     } else {
       document.title = "ProxMenux Monitor"
     }
-  }, [systemStatus.serverName])
+  }, [systemStatus.serverName, t])
 
   useEffect(() => {
     let hideTimeout: ReturnType<typeof setTimeout> | null = null
@@ -362,19 +389,20 @@ export function ProxmoxDashboard() {
 
   const getActiveTabLabel = () => {
     switch (activeTab) {
-      case "overview":  return "Overview"
-      case "vms":       return "VMs & LXCs"
-      case "storage":   return "Storage"
-      case "network":   return "Network"
-      case "hardware":  return "Hardware"
-      case "backup":    return "Backup"
-      case "terminal":  return "Terminal"
-      case "logs":      return "System Logs"
-      case "security":  return "Security"
-      case "settings":  return "Settings"
-      case "about":     return "About"
-      case "profile":   return "Profile"
-      default:          return "Navigation Menu"
+      case "overview":  return t("navigation.overview")
+      case "apps":      return t("navigation.apps")
+      case "vms":       return t("navigation.virtualMachines")
+      case "storage":   return t("navigation.storage")
+      case "network":   return t("navigation.network")
+      case "hardware":  return t("navigation.hardware")
+      case "backup":    return t("navigation.backup")
+      case "terminal":  return t("navigation.terminal")
+      case "logs":      return t("navigation.systemLogs")
+      case "security":  return t("navigation.security")
+      case "settings":  return t("navigation.settings")
+      case "about":     return t("navigation.about")
+      case "profile":   return t("navigation.profile")
+      default:          return t("navigation.menu")
     }
   }
 
@@ -388,13 +416,13 @@ export function ProxmoxDashboard() {
           <div className="container mx-auto">
             <div className="flex items-center space-x-2 text-red-500 mb-2">
               <XCircle className="h-5 w-5" />
-              <span className="font-medium">ProxMenux Server Connection Failed</span>
+              <span className="font-medium">{t("status.connectionFailed")}</span>
             </div>
             <div className="text-sm text-red-500/80 space-y-1 ml-7">
-              <p>• Check that the monitor.service is running correctly.</p>
-              <p>• The ProxMenux server should start automatically on port 8008</p>
+              <p>&bull; {t("status.checkService")}</p>
+              <p>&bull; {t("status.serverPort")}</p>
               <p>
-                • Try accessing:{" "}
+                &bull; {t("status.tryAccessing")}{" "}
                 <a href={getApiUrl("/api/health")} target="_blank" rel="noopener noreferrer" className="underline">
                   {getApiUrl("/api/health")}
                 </a>
@@ -433,11 +461,11 @@ export function ProxmoxDashboard() {
                 <Server className="h-8 w-8 md:h-6 md:w-6 text-primary absolute fallback-icon hidden" />
               </div>
               <div className="min-w-0">
-                <h1 className="text-lg md:text-xl font-semibold text-foreground truncate">ProxMenux Monitor</h1>
-                <p className="text-xs md:text-sm text-muted-foreground">Proxmox System Dashboard</p>
+                <h1 className="text-lg md:text-xl font-semibold text-foreground truncate">{t("app.title")}</h1>
+                <p className="text-xs md:text-sm text-muted-foreground">{t("app.description")}</p>
                 <div className="lg:hidden flex items-center gap-1 text-xs text-muted-foreground mt-0.5">
                   <Server className="h-3 w-3" />
-                  <span className="truncate">Node: {systemStatus.serverName}</span>
+                  <span className="truncate">{t("status.node", { node: displayServerName })}</span>
                 </div>
               </div>
             </div>
@@ -447,14 +475,14 @@ export function ProxmoxDashboard() {
               <div className="flex items-center space-x-2">
                 <Server className="h-4 w-4 text-muted-foreground" />
                 <div className="text-sm">
-                  <div className="font-medium text-foreground">Node: {systemStatus.serverName}</div>
+                  <div className="font-medium text-foreground">{t("status.node", { node: displayServerName })}</div>
                 </div>
               </div>
 
               <div className="flex items-center gap-2">
                 <Badge variant="outline" className={statusColor}>
                   {statusIcon}
-                  <span className="ml-1 capitalize">{systemStatus.status}</span>
+                  <span className="ml-1">{t(`status.${systemStatus.status}`)}</span>
                 </Badge>
                 {systemStatus.status === "healthy" && infoCount > 0 && (
                   <Badge variant="outline" className="bg-blue-500/10 text-blue-500 border-blue-500/20">
@@ -465,7 +493,7 @@ export function ProxmoxDashboard() {
               </div>
 
               <div className="text-sm text-muted-foreground whitespace-nowrap">
-                Uptime: {systemStatus.uptime || "N/A"}
+                {t("status.uptime", { uptime: displayUptime })}
               </div>
 
               <Button
@@ -479,7 +507,7 @@ export function ProxmoxDashboard() {
                 className="border-border/50 bg-transparent hover:bg-secondary"
               >
                 <RefreshCw className={`h-4 w-4 mr-2 ${isRefreshing ? "animate-spin" : ""}`} />
-                Refresh
+                {t("actions.refresh")}
               </Button>
 
               <div onClick={(e) => e.stopPropagation()}>
@@ -513,7 +541,7 @@ export function ProxmoxDashboard() {
                 }}
                 disabled={isRefreshing}
                 className="h-8 w-8 p-0 border-border/50 bg-transparent hover:bg-secondary"
-                aria-label="Refresh"
+                aria-label={t("actions.refresh")}
               >
                 <RefreshCw className={`h-4 w-4 ${isRefreshing ? "animate-spin" : ""}`} />
               </Button>
@@ -541,7 +569,7 @@ export function ProxmoxDashboard() {
             <div className="flex items-center gap-1.5">
               <Badge variant="outline" className={`${statusColor} text-xs px-2`}>
                 {statusIcon}
-                <span className="ml-1 capitalize">{systemStatus.status}</span>
+                <span className="ml-1">{t(`status.${systemStatus.status}`)}</span>
               </Badge>
               {systemStatus.status === "healthy" && infoCount > 0 && (
                 <Badge variant="outline" className="bg-blue-500/10 text-blue-500 border-blue-500/20 text-xs px-2">
@@ -551,7 +579,7 @@ export function ProxmoxDashboard() {
               )}
             </div>
             <span className="text-xs text-muted-foreground whitespace-nowrap">
-              Uptime: {systemStatus.uptime || "N/A"}
+              {t("status.uptime", { uptime: displayUptime })}
             </span>
           </div>
         </div>
@@ -583,15 +611,15 @@ export function ProxmoxDashboard() {
               // crumb shows where you are, the chevron tells you the
               // siblings are one click away.
               const NODE_ITEMS = [
-                { value: "storage",  label: "Storage",  Icon: HardDrive,   default: false },
-                { value: "network",  label: "Network",  Icon: NetworkIcon, default: false },
-                { value: "hardware", label: "Hardware", Icon: Cpu,         default: false },
+                { value: "storage",  label: t("navigation.storage"),  Icon: HardDrive,   default: false },
+                { value: "network",  label: t("navigation.network"),  Icon: NetworkIcon, default: false },
+                { value: "hardware", label: t("navigation.hardware"), Icon: Cpu,         default: false },
               ]
               const ADMIN_ITEMS = [
-                { value: "logs",     label: "System Logs", Icon: ScrollText,  default: false },
-                { value: "security", label: "Security",    Icon: ShieldCheck, default: false },
-                { value: "settings", label: "Settings",    Icon: SettingsIcon, default: false },
-                { value: "about",    label: "About",       Icon: Info,        default: false },
+                { value: "logs",     label: t("navigation.systemLogs"), Icon: ScrollText,  default: false },
+                { value: "security", label: t("navigation.security"),   Icon: ShieldCheck, default: false },
+                { value: "settings", label: t("navigation.settings"),   Icon: SettingsIcon, default: false },
+                { value: "about",    label: t("navigation.about"),      Icon: Info,        default: false },
               ]
               const activeNodeItem  = NODE_ITEMS.find(i => i.value === activeTab)
               const activeAdminItem = ADMIN_ITEMS.find(i => i.value === activeTab)
@@ -600,9 +628,9 @@ export function ProxmoxDashboard() {
               // The trigger label + icon shown on the bar. When a child
               // is active we surface IT; otherwise the group default.
               const NodeTriggerIcon  = activeNodeItem ? activeNodeItem.Icon  : Server
-              const NodeTriggerLabel = activeNodeItem ? activeNodeItem.label : "Node"
+              const NodeTriggerLabel = activeNodeItem ? activeNodeItem.label : t("navigation.node")
               const AdminTriggerIcon  = activeAdminItem ? activeAdminItem.Icon  : Settings2
-              const AdminTriggerLabel = activeAdminItem ? activeAdminItem.label : "Admin"
+              const AdminTriggerLabel = activeAdminItem ? activeAdminItem.label : t("navigation.admin")
               // Dropdown trigger styling: parity with TabsTrigger so the
               // parent visibly carries the "I'm the selected section"
               // signal when any of its children is the active tab —
@@ -616,75 +644,62 @@ export function ProxmoxDashboard() {
                     : "text-muted-foreground hover:text-foreground rounded-sm"
                 }`
 
+              // Data-driven TabsList: iterate over the user's saved
+              // top-level order. Each slot is either a direct tab or a
+              // dropdown group (Node/Admin). The internal items of a
+              // dropdown are never reordered by the user — a grouped
+              // slot moves as a unit.
+              const renderDirect = (
+                value: string,
+                Icon: React.ComponentType<{ className?: string }>,
+                label: string,
+              ) => (
+                <TabsTrigger key={value} value={value} className={triggerActiveClass}>
+                  <Icon className="mr-2 h-4 w-4" />
+                  {label}
+                </TabsTrigger>
+              )
+              const renderDropdown = (
+                key: string,
+                items: { value: string; label: string; Icon: React.ComponentType<{ className?: string }> }[],
+                active: boolean,
+                TriggerIcon: React.ComponentType<{ className?: string }>,
+                triggerLabel: string,
+              ) => (
+                <DropdownMenu key={key}>
+                  <DropdownMenuTrigger className={dropdownBtnClass(active)}>
+                    <TriggerIcon className="mr-2 h-4 w-4" />
+                    {triggerLabel}
+                    <ChevronDown className="ml-1.5 h-3 w-3 opacity-70" />
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="center" className="min-w-[180px]">
+                    {items.map(({ value, label, Icon }) => (
+                      <DropdownMenuItem
+                        key={value}
+                        onClick={() => setActiveTab(value)}
+                        className={activeTab === value ? "bg-blue-500/10 text-blue-500" : ""}
+                      >
+                        <Icon className="mr-2 h-4 w-4" />
+                        {label}
+                      </DropdownMenuItem>
+                    ))}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              )
+              const renderTop = (id: TabId) => {
+                switch (id) {
+                  case "overview": return renderDirect("overview", LayoutDashboard, t("navigation.overview"))
+                  case "apps":     return renderDirect("apps",     Grid3x3,         t("navigation.apps"))
+                  case "vms":      return renderDirect("vms",      Boxes,           t("navigation.virtualMachines"))
+                  case "backup":   return renderDirect("backup",   DatabaseBackup,  t("navigation.backup"))
+                  case "terminal": return renderDirect("terminal", Terminal,        t("navigation.terminal"))
+                  case "node":     return renderDropdown("node",  NODE_ITEMS,  isNodeActive,  NodeTriggerIcon,  NodeTriggerLabel)
+                  case "admin":    return renderDropdown("admin", ADMIN_ITEMS, isAdminActive, AdminTriggerIcon, AdminTriggerLabel)
+                }
+              }
               return (
-                <TabsList className="hidden lg:grid w-full grid-cols-6 bg-card border border-border">
-                  {/* Direct: Overview */}
-                  <TabsTrigger value="overview" className={triggerActiveClass}>
-                    <LayoutDashboard className="mr-2 h-4 w-4" />
-                    Overview
-                  </TabsTrigger>
-
-                  {/* Direct: VMs & LXCs — first-class because Proxmox IS
-                      a hypervisor; workloads belong at top level. */}
-                  <TabsTrigger value="vms" className={triggerActiveClass}>
-                    <Boxes className="mr-2 h-4 w-4" />
-                    VMs &amp; LXCs
-                  </TabsTrigger>
-
-                  {/* Dropdown: Node (Storage / Network / Hardware) */}
-                  <DropdownMenu>
-                    <DropdownMenuTrigger className={dropdownBtnClass(isNodeActive)}>
-                      <NodeTriggerIcon className="mr-2 h-4 w-4" />
-                      {NodeTriggerLabel}
-                      <ChevronDown className="ml-1.5 h-3 w-3 opacity-70" />
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="center" className="min-w-[180px]">
-                      {NODE_ITEMS.map(({ value, label, Icon }) => (
-                        <DropdownMenuItem
-                          key={value}
-                          onClick={() => setActiveTab(value)}
-                          className={activeTab === value ? "bg-blue-500/10 text-blue-500" : ""}
-                        >
-                          <Icon className="mr-2 h-4 w-4" />
-                          {label}
-                        </DropdownMenuItem>
-                      ))}
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-
-                  {/* Direct: Backup (today: Host Backup only). When VM/LXC
-                      backup ships this becomes a dropdown. */}
-                  <TabsTrigger value="backup" className={triggerActiveClass}>
-                    <DatabaseBackup className="mr-2 h-4 w-4" />
-                    Backup
-                  </TabsTrigger>
-
-                  {/* Direct: Terminal */}
-                  <TabsTrigger value="terminal" className={triggerActiveClass}>
-                    <Terminal className="mr-2 h-4 w-4" />
-                    Terminal
-                  </TabsTrigger>
-
-                  {/* Dropdown: Admin (System Logs / Security / Settings / About) */}
-                  <DropdownMenu>
-                    <DropdownMenuTrigger className={dropdownBtnClass(isAdminActive)}>
-                      <AdminTriggerIcon className="mr-2 h-4 w-4" />
-                      {AdminTriggerLabel}
-                      <ChevronDown className="ml-1.5 h-3 w-3 opacity-70" />
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="center" className="min-w-[180px]">
-                      {ADMIN_ITEMS.map(({ value, label, Icon }) => (
-                        <DropdownMenuItem
-                          key={value}
-                          onClick={() => setActiveTab(value)}
-                          className={activeTab === value ? "bg-blue-500/10 text-blue-500" : ""}
-                        >
-                          <Icon className="mr-2 h-4 w-4" />
-                          {label}
-                        </DropdownMenuItem>
-                      ))}
-                    </DropdownMenuContent>
-                  </DropdownMenu>
+                <TabsList className="hidden lg:grid w-full grid-cols-7 bg-card border border-border">
+                  {tabOrder.map(renderTop)}
                 </TabsList>
               )
             })()}
@@ -719,56 +734,52 @@ export function ProxmoxDashboard() {
                         ? "bg-blue-500/10 text-blue-500 border-l-4 border-blue-500 rounded-l-none"
                         : ""
                     }`
-                  // Mobile sheet is a flat list (no section headers).
-                  // The desktop layout uses dropdowns to express the
-                  // Node/Admin grouping; here we just enumerate items
-                  // in the same visual order.
+                  // Mobile sheet honours the same user-defined
+                  // top-level order as the desktop TabsList. Grouped
+                  // slots (Node/Admin) expand their child items
+                  // inline right after their position — the group
+                  // still moves as a unit, but children stay grouped.
+                  const btn = (
+                    value: string,
+                    Icon: React.ComponentType<{ className?: string }>,
+                    label: string,
+                  ) => (
+                    <Button
+                      key={value}
+                      variant="ghost"
+                      onClick={() => select(value)}
+                      className={itemClass(activeTab === value)}
+                    >
+                      <Icon className="h-5 w-5" />
+                      <span>{label}</span>
+                    </Button>
+                  )
                   return (
                     <div className="flex flex-col gap-1 mt-4">
-                      <Button variant="ghost" onClick={() => select("overview")} className={itemClass(activeTab === "overview")}>
-                        <LayoutDashboard className="h-5 w-5" />
-                        <span>Overview</span>
-                      </Button>
-                      <Button variant="ghost" onClick={() => select("vms")} className={itemClass(activeTab === "vms")}>
-                        <Boxes className="h-5 w-5" />
-                        <span>VMs &amp; LXCs</span>
-                      </Button>
-                      <Button variant="ghost" onClick={() => select("storage")} className={itemClass(activeTab === "storage")}>
-                        <HardDrive className="h-5 w-5" />
-                        <span>Storage</span>
-                      </Button>
-                      <Button variant="ghost" onClick={() => select("network")} className={itemClass(activeTab === "network")}>
-                        <NetworkIcon className="h-5 w-5" />
-                        <span>Network</span>
-                      </Button>
-                      <Button variant="ghost" onClick={() => select("hardware")} className={itemClass(activeTab === "hardware")}>
-                        <Cpu className="h-5 w-5" />
-                        <span>Hardware</span>
-                      </Button>
-                      <Button variant="ghost" onClick={() => select("backup")} className={itemClass(activeTab === "backup")}>
-                        <DatabaseBackup className="h-5 w-5" />
-                        <span>Backup</span>
-                      </Button>
-                      <Button variant="ghost" onClick={() => select("terminal")} className={itemClass(activeTab === "terminal")}>
-                        <Terminal className="h-5 w-5" />
-                        <span>Terminal</span>
-                      </Button>
-                      <Button variant="ghost" onClick={() => select("logs")} className={itemClass(activeTab === "logs")}>
-                        <ScrollText className="h-5 w-5" />
-                        <span>System Logs</span>
-                      </Button>
-                      <Button variant="ghost" onClick={() => select("security")} className={itemClass(activeTab === "security")}>
-                        <ShieldCheck className="h-5 w-5" />
-                        <span>Security</span>
-                      </Button>
-                      <Button variant="ghost" onClick={() => select("settings")} className={itemClass(activeTab === "settings")}>
-                        <SettingsIcon className="h-5 w-5" />
-                        <span>Settings</span>
-                      </Button>
-                      <Button variant="ghost" onClick={() => select("about")} className={itemClass(activeTab === "about")}>
-                        <Info className="h-5 w-5" />
-                        <span>About</span>
-                      </Button>
+                      {tabOrder.map((id): React.ReactNode => {
+                        switch (id) {
+                          case "overview": return btn("overview", LayoutDashboard, t("navigation.overview"))
+                          case "apps":     return btn("apps",     Grid3x3,         t("navigation.apps"))
+                          case "vms":      return btn("vms",      Boxes,           t("navigation.virtualMachines"))
+                          case "backup":   return btn("backup",   DatabaseBackup,  t("navigation.backup"))
+                          case "terminal": return btn("terminal", Terminal,        t("navigation.terminal"))
+                          case "node": return (
+                            <React.Fragment key="node">
+                              {btn("storage",  HardDrive,   t("navigation.storage"))}
+                              {btn("network",  NetworkIcon, t("navigation.network"))}
+                              {btn("hardware", Cpu,         t("navigation.hardware"))}
+                            </React.Fragment>
+                          )
+                          case "admin": return (
+                            <React.Fragment key="admin">
+                              {btn("logs",     ScrollText,  t("navigation.systemLogs"))}
+                              {btn("security", ShieldCheck, t("navigation.security"))}
+                              {btn("settings", SettingsIcon, t("navigation.settings"))}
+                              {btn("about",    Info,         t("navigation.about"))}
+                            </React.Fragment>
+                          )
+                        }
+                      })}
                     </div>
                   )
                 })()}
@@ -779,9 +790,28 @@ export function ProxmoxDashboard() {
       </div>
 
       <div className="container mx-auto px-4 md:px-6 py-4 md:py-6">
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4 md:space-y-6">
-          <TabsContent value="overview" className="space-y-4 md:space-y-6 mt-0">
+        {/* No `space-y-*` here: only one TabsContent is visible at a
+            time, but Overview stays force-mounted (hidden) as the
+            first child, so every OTHER active tab used to inherit an
+            extra top margin from the space-y utility — pushing the
+            page content further from the nav than on Overview.
+            Vertical spacing INSIDE each tab lives on its own
+            TabsContent's `space-y-*`. */}
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-0">
+          {/* forceMount so SystemOverview mounts at dashboard load and
+              never gets torn down when the user visits another tab.
+              Without this, every return to Overview re-fires ~7 fetches
+              (system, vms, storage, proxmox-storage, network, node
+              metrics, network chart) and the user waited for the
+              cascade to complete each time. With forceMount, the
+              5 s / 59 s refresh intervals keep the data fresh in the
+              background — reopening the tab is instant. */}
+          <TabsContent value="overview" forceMount className="space-y-4 md:space-y-6 mt-0 data-[state=inactive]:hidden">
             <SystemOverview key={`overview-${componentKey}`} />
+          </TabsContent>
+
+          <TabsContent value="apps" className="space-y-4 md:space-y-6 mt-0">
+            <AppsDashboard key={`apps-${componentKey}`} />
           </TabsContent>
 
           <TabsContent value="storage" className="space-y-4 md:space-y-6 mt-0">
@@ -792,7 +822,13 @@ export function ProxmoxDashboard() {
             <NetworkMetrics key={`network-${componentKey}`} />
           </TabsContent>
 
-          <TabsContent value="vms" className="space-y-4 md:space-y-6 mt-0">
+          {/* forceMount so the modal-data prefetcher (inside VirtualMachines)
+              starts warming caches from the moment the dashboard loads,
+              not the first time the user clicks the VMs tab. Kept
+              visually hidden with data-attribute selector when the tab
+              is inactive — mount cost is ~zero (no polling loop that
+              other components run). */}
+          <TabsContent value="vms" forceMount className="space-y-4 md:space-y-6 mt-0 data-[state=inactive]:hidden">
             <VirtualMachines key={`vms-${componentKey}`} />
           </TabsContent>
 
@@ -836,7 +872,7 @@ export function ProxmoxDashboard() {
         </Tabs>
 
         <footer className="mt-8 md:mt-12 pt-4 md:pt-6 border-t border-border text-center text-xs md:text-sm text-muted-foreground">
-          <p className="font-medium mb-2">ProxMenux Monitor v1.2.4</p>
+          <p className="font-medium mb-2">ProxMenux Monitor v{APP_VERSION}</p>
           <p>
             <a
               href="https://ko-fi.com/macrimi"
@@ -844,7 +880,7 @@ export function ProxmoxDashboard() {
               rel="noopener noreferrer"
               className="text-blue-500 hover:text-blue-600 hover:underline transition-colors"
             >
-              Support and contribute to the project
+              {t("app.supportProject")}
             </a>
           </p>
         </footer>

@@ -3,10 +3,10 @@
 import { useState, useEffect } from "react"
 import { Button } from "./ui/button"
 import { Dialog, DialogContent, DialogTitle } from "./ui/dialog"
-import { X, Sparkles, Thermometer, Activity, HardDrive, Shield, Globe, Cpu, Zap, Sliders, Wrench, RefreshCw, Server, BellOff, Bell, Calendar, DatabaseBackup } from "lucide-react"
+import { X, Sparkles, Thermometer, Activity, HardDrive, Shield, Globe, Cpu, Zap, Sliders, Wrench, RefreshCw, Server, BellOff, Bell, Calendar, DatabaseBackup, Smartphone, Languages } from "lucide-react"
 import { Checkbox } from "./ui/checkbox"
-
-const APP_VERSION = "1.2.4" // Sync with AppImage/package.json
+import { useT } from "../lib/i18n/provider"
+import { APP_VERSION } from "../lib/version"
 
 interface ReleaseNote {
   date: string
@@ -18,6 +18,57 @@ interface ReleaseNote {
 }
 
 export const CHANGELOG: Record<string, ReleaseNote> = {
+  "1.2.5": {
+    date: "September 1, 2026",
+    changes: {
+      added: [
+        "New top-level Apps dashboard — a single launcher for every Web Link across the node. LXC-registered apps and user-defined Custom Web Links share the same grid with category badges, search, sort by name/id/category, and one-click deep-links back to the guest modal (LXC cards land on App, VM cards on Status).",
+        "Application detection catalog with over 380 tracked workloads, generated live from the community-scripts source across seven detector methods (file, binary, dpkg, apk, Python, Docker exec, Docker label). Primary and fallback detectors cover both new and historical LXC layouts.",
+        "App tab inside every VM & LXC modal — register the apps installed in a container, capture their weblinks, and get notifications when a new upstream version ships. Cold-start Docker detection now correctly promotes Docker as the parent workload before the daemon finishes booting.",
+        "Reworked LXC Updates tab — apply OS packages and registered-app updates from a single button, schedule a recurring auto-update job, and cover Docker end to end (Engine + per-image on the same 24-hour rolling cycle as OS packages, with a 'Check now' action for on-demand digest comparison).",
+        "The Monitor now speaks 8 languages: English, Spanish, German, French, Italian, Portuguese, Swedish and Slovak. Thanks to @vaso73 for building the i18n scaffolding.",
+        "Navigation order — a new Settings card lets each user reorder the seven top-level tabs by drag and drop. Grouped slots (Node, Admin) move as a single unit; the first slot in the saved order becomes the tab the Monitor opens on. Mouse and touch supported.",
+        "Custom Web Links — persistent sidecar at /etc/proxmenux/custom_links.json for URLs that don't live inside a registered LXC app. Editor takes name, URL, optional logo, category and optional binding to a specific VM or LXC.",
+        "NVIDIA — multi-GPU passthrough by exact BDF ownership so a multi-GPU host can pass one card to a VM and keep the other operational on the host or in LXCs. Kernel + branch + GPU-aware version picker (#298).",
+        "Pushover joins Telegram, Gotify, Discord, Email and Apprise as a native notification channel — user/API key, device and sound selectors, priority 0 for regular messages, optional priority 1 for CRITICAL events. Suggested by @benginx (#308).",
+        "Host backup/restore continuity — ProxMenux configuration and independent backups survive a full Proxmox restore (#317, reported by @tropicaljoe).",
+        "Hardware temperature sensor identity — storage temperatures now identify the physical drive (NVMe namespace, model, serial) instead of the generic hwmon label. HDD/SSD classification follows the block device rotational flag (#315, suggested by @Dark-Witcher).",
+        "Post-install — precise rollback for every registered flow and Debian 13 readiness.",
+        "First-time visitors on Android and iOS Safari now see an in-app install prompt for adding the Monitor to their home screen as a PWA.",
+      ],
+      changed: [
+        "Memory & Swap health check now signals real memory pressure — CRITICAL fires only when swap file is nearly full AND available RAM is genuinely tight (both editable in Settings → Health thresholds). The old swap-only signal was noisy on hosts where Linux proactively swaps out inactive pages.",
+        "Faster page loads and smoother navigation across the dashboard. Overview opens instantly and the VMs & LXCs page never flashes 'Loading…' between guest modals again.",
+        "Long backup jobs no longer time out. VM and LXC backups launched from the Monitor now run in the background until they naturally finish, so a 30-minute PBS backup completes the same as a 10-second local one.",
+        "VMs running the QEMU Guest Agent now report real used / total disk figures on the dashboard, instead of the '0 GB' that PVE returns for guest-managed filesystems.",
+        "App tab cache stays warm across every action. Successful add / edit / check / dismiss / delete operations write the returned sidecar directly into both backend and shared frontend caches; post-update scans revalidate in the background while the last valid content stays visible.",
+        "Docker cards on the Apps dashboard resolve their update state per image, not per Docker Engine. The purple update arrow only lights up when that specific image has an upstream update.",
+        "ZFS ARC sizing under memory pressure and OOM diagnostics reworked (credit: LeidenSpain).",
+      ],
+      fixed: [
+        "Fix #309 — Proxmox storage availability: false critical alerts for iSCSI storages with maxdisk=0.",
+        "HID USB device class no longer reads as 'escondido' (past tense of 'to hide') in Spanish, German, French, Italian and Portuguese — the acronym is now preserved.",
+        "The Memory & Swap health card is dismissable like every other category (RAM usage and Swap usage sub-checks carry the dismissable flag).",
+        "Regenerated Proxmox VE Helper-Scripts updaters remain available after an app update (both historical wrappers and the current generated entrypoint are recognised).",
+      ],
+    },
+  },
+  "1.2.4.1-beta": {
+    date: "August 17, 2026",
+    changes: {
+      added: [
+        "The Monitor now speaks 8 languages: English, Spanish, German, French, Italian, Portuguese, Swedish and Slovak. Huge thanks to @vaso73 for building the i18n scaffolding that made this possible.",
+        "New App tab inside the VM & LXC modal — especially for LXCs. Register the apps installed in a container, capture their weblinks, and get notifications when a new upstream version ships.",
+        "Reworked Updates tab for LXCs: apply OS packages and registered-app updates from a single button, and schedule a recurring auto-update job that checks the container's OS and its tracked app on every run.",
+        "First-time visitors on Android and iOS Safari now see an in-app install prompt with clear steps for adding the Monitor to their home screen as a PWA.",
+      ],
+      changed: [
+        "Faster page loads and smoother navigation across the dashboard. Overview opens instantly and the VMs & LXCs page never flashes 'Loading…' between guest modals again.",
+        "Long backup jobs no longer time out. VM and LXC backups launched from the Monitor now run in the background until they naturally finish, so a 30-minute PBS backup completes the same as a 10-second local one.",
+        "VMs running the QEMU Guest Agent (qemu-guest-agent) now report real used / total disk figures on the dashboard, instead of the '0 GB' that PVE returns for guest-managed filesystems.",
+      ],
+    },
+  },
   "1.2.3": {
     date: "July 15, 2026",
     changes: {
@@ -230,16 +281,70 @@ export const CHANGELOG: Record<string, ReleaseNote> = {
   },
 }
 
+// Each feature carries an i18n key so translations live in the
+// common.json catalogs and the modal renders in the user's chosen
+// locale. `text` is the English source of truth — it's what the
+// build-i18n-messages workflow feeds to Google Translate for locales
+// that haven't been curated by hand.
 const CURRENT_VERSION_FEATURES = [
   {
-    icon: <RefreshCw className="h-5 w-5" />,
-    text: "One-click host update from the Health Monitor — new Update Now button in the System Updates section runs the Proxmox update flow in an in-dashboard terminal, without leaving the browser.",
+    icon: <Sparkles className="h-5 w-5" />,
+    key: "releaseNotes.currentFeatures.appsDashboard",
+    text: "New top-level Apps dashboard — a single launcher for every Web Link across the node. LXC-registered apps and user-defined Custom Web Links share the same grid with category badges, search, and one-click deep-links back to the guest modal.",
   },
   {
-    icon: <Sparkles className="h-5 w-5" />,
-    text: "In-app Install prompt for mobile — first-time visitors on Android and iOS Safari now see a bottom-sheet with clear steps for adding the Monitor to their home screen as a PWA.",
+    icon: <Cpu className="h-5 w-5" />,
+    key: "releaseNotes.currentFeatures.lxcAppsUpdates",
+    text: "App tab inside every LXC modal registers installed apps, captures weblinks and tracks upstream versions. Reworked Updates tab applies OS packages and app updates from a single button; Docker Engine and per-image tracking follow the same 24-hour cycle, with a 'Check now' action on demand.",
+  },
+  {
+    icon: <Zap className="h-5 w-5" />,
+    key: "releaseNotes.currentFeatures.appCatalog",
+    text: "New application detection catalog with over 380 tracked workloads, generated live from community-scripts across seven detector methods (file, binary, dpkg, apk, Python, Docker exec, Docker label). Primary and fallback detectors cover both new and historical LXC layouts.",
+  },
+  {
+    icon: <Languages className="h-5 w-5" />,
+    key: "releaseNotes.currentFeatures.multilingual",
+    text: "The Monitor now speaks 8 languages: English, Spanish, German, French, Italian, Portuguese, Swedish and Slovak. Huge thanks to @vaso73 for building the i18n scaffolding that made this possible.",
+  },
+  {
+    icon: <Server className="h-5 w-5" />,
+    key: "releaseNotes.currentFeatures.nvidiaMultiGpu",
+    text: "NVIDIA driver lifecycle moves to per-BDF ownership so a multi-GPU host can pass one card to a VM and keep the other operational on the host or in LXCs, plus a kernel + branch + GPU-aware version picker (#298).",
   },
 ]
+
+// Turn any "@handle" mention inside a release-notes string into a
+// link to that GitHub profile. Applied to every feature bullet so a
+// contributor shout-out reads as a real link without needing rich
+// i18n formatting. Only matches `@` followed by a valid GitHub
+// username (letters/digits/hyphen, no consecutive hyphens, 1-39
+// chars) so unrelated punctuation stays untouched.
+function linkifyGithubMentions(text: string): (string | JSX.Element)[] {
+  const parts: (string | JSX.Element)[] = []
+  const re = /@([A-Za-z0-9](?:[A-Za-z0-9-]{0,37}[A-Za-z0-9])?)/g
+  let cursor = 0
+  let m: RegExpExecArray | null
+  let idx = 0
+  while ((m = re.exec(text)) !== null) {
+    if (m.index > cursor) parts.push(text.slice(cursor, m.index))
+    const handle = m[1]
+    parts.push(
+      <a
+        key={`gh-${idx++}`}
+        href={`https://github.com/${handle}`}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="text-orange-500 hover:text-orange-400 underline underline-offset-2"
+      >
+        @{handle}
+      </a>,
+    )
+    cursor = m.index + m[0].length
+  }
+  if (cursor < text.length) parts.push(text.slice(cursor))
+  return parts
+}
 
 interface ReleaseNotesModalProps {
   open: boolean
@@ -247,6 +352,7 @@ interface ReleaseNotesModalProps {
 }
 
 export function ReleaseNotesModal({ open, onClose }: ReleaseNotesModalProps) {
+  const t = useT()
   const [dontShowAgain, setDontShowAgain] = useState(false)
 
   const handleClose = () => {
@@ -259,7 +365,7 @@ export function ReleaseNotesModal({ open, onClose }: ReleaseNotesModalProps) {
   return (
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent className="max-w-2xl max-h-[85vh] p-0 gap-0 border-0 bg-transparent">
-        <DialogTitle className="sr-only">Release Notes - Version {APP_VERSION}</DialogTitle>
+        <DialogTitle className="sr-only">{t("releaseNotes.dialogTitle", { version: APP_VERSION })}</DialogTitle>
         <div className="relative bg-card rounded-lg shadow-2xl h-full flex flex-col max-h-[85vh]">
           <Button
             variant="ghost"
@@ -285,10 +391,10 @@ export function ReleaseNotesModal({ open, onClose }: ReleaseNotesModalProps) {
           <div className="flex-1 overflow-y-auto p-6 md:p-8 space-y-4 md:space-y-6 min-h-0">
             <div className="space-y-2">
               <h2 className="text-xl md:text-2xl font-bold text-foreground text-balance">
-                What's New in Version {APP_VERSION}
+                {t("releaseNotes.title", { version: APP_VERSION })}
               </h2>
               <p className="text-sm text-muted-foreground leading-relaxed">
-                We've added exciting new features and improvements to make ProxMenux Monitor even better!
+                {t("releaseNotes.intro")}
               </p>
             </div>
 
@@ -299,7 +405,9 @@ export function ReleaseNotesModal({ open, onClose }: ReleaseNotesModalProps) {
                   className="flex items-start gap-2 md:gap-3 p-3 rounded-lg bg-muted/50 border border-border/50 hover:bg-muted/70 transition-colors"
                 >
                   <div className="text-orange-500 mt-0.5 flex-shrink-0">{feature.icon}</div>
-                  <p className="text-xs md:text-sm text-foreground leading-relaxed">{feature.text}</p>
+                  <p className="text-xs md:text-sm text-foreground leading-relaxed">
+                    {linkifyGithubMentions(t(feature.key))}
+                  </p>
                 </div>
               ))}
             </div>
@@ -312,7 +420,7 @@ export function ReleaseNotesModal({ open, onClose }: ReleaseNotesModalProps) {
                 className="w-full bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600"
               >
                 <Sparkles className="h-4 w-4 mr-2" />
-                Got it!
+                {t("releaseNotes.gotIt")}
               </Button>
 
               <div className="flex items-center justify-center gap-2">
@@ -325,7 +433,7 @@ export function ReleaseNotesModal({ open, onClose }: ReleaseNotesModalProps) {
                   htmlFor="dont-show-version-again"
                   className="text-xs md:text-sm text-muted-foreground hover:text-foreground transition-colors cursor-pointer select-none"
                 >
-                  Don't show again for this version
+                  {t("releaseNotes.dontShowAgain")}
                 </label>
               </div>
             </div>

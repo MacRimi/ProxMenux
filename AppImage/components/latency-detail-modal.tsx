@@ -9,19 +9,22 @@ import { Activity, TrendingDown, TrendingUp, Minus, RefreshCw, Wifi, FileText, S
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line } from "recharts"
 import { useIsMobile } from "../hooks/use-mobile"
 import { fetchApi } from "@/lib/api-config"
+import { useT } from "../lib/i18n/provider"
+
+type TFunction = (key: string, params?: Record<string, string | number>) => string
 
 const TIMEFRAME_OPTIONS = [
-  { value: "hour", label: "1 Hour" },
-  { value: "6hour", label: "6 Hours" },
-  { value: "day", label: "24 Hours" },
-  { value: "3day", label: "3 Days" },
-  { value: "week", label: "7 Days" },
+  { value: "hour", labelKey: "network.latency.timeframes.hour" },
+  { value: "6hour", labelKey: "network.latency.timeframes.sixHours" },
+  { value: "day", labelKey: "network.latency.timeframes.day" },
+  { value: "3day", labelKey: "network.latency.timeframes.threeDays" },
+  { value: "week", labelKey: "network.latency.timeframes.week" },
 ]
 
 const TARGET_OPTIONS = [
-  { value: "gateway", label: "Gateway (Router)", shortLabel: "Gateway", realtime: false },
-  { value: "cloudflare", label: "Cloudflare (1.1.1.1)", shortLabel: "Cloudflare", realtime: true },
-  { value: "google", label: "Google DNS (8.8.8.8)", shortLabel: "Google DNS", realtime: true },
+  { value: "gateway", labelKey: "network.latency.targets.gateway", shortLabelKey: "network.latency.targets.gatewayShort", realtime: false },
+  { value: "cloudflare", labelKey: "network.latency.targets.cloudflare", shortLabelKey: "network.latency.targets.cloudflareShort", realtime: true },
+  { value: "google", labelKey: "network.latency.targets.google", shortLabelKey: "network.latency.targets.googleShort", realtime: true },
   ]
 
 // Realtime test configuration
@@ -60,7 +63,22 @@ interface LatencyDetailModalProps {
   currentLatency?: number
 }
 
-const CustomTooltip = ({ active, payload, label }: any) => {
+const getLatencyTimeframeLabel = (value: string, t: TFunction): string =>
+  TIMEFRAME_OPTIONS.find((option) => option.value === value)
+    ? t(TIMEFRAME_OPTIONS.find((option) => option.value === value)!.labelKey)
+    : value
+
+const getLatencyTargetLabel = (value: string, t: TFunction): string =>
+  TARGET_OPTIONS.find((option) => option.value === value)
+    ? t(TARGET_OPTIONS.find((option) => option.value === value)!.labelKey)
+    : value
+
+const getLatencyTargetShortLabel = (value: string, t: TFunction): string =>
+  TARGET_OPTIONS.find((option) => option.value === value)
+    ? t(TARGET_OPTIONS.find((option) => option.value === value)!.shortLabelKey)
+    : value
+
+const CustomTooltip = ({ active, payload, label, t }: any) => {
   if (active && payload && payload.length) {
     const entry = payload[0]
     const data = entry?.payload
@@ -76,17 +94,17 @@ const CustomTooltip = ({ active, payload, label }: any) => {
             <>
               <div className="flex items-center gap-2">
                 <div className="w-2.5 h-2.5 rounded-full flex-shrink-0 bg-green-500" />
-                <span className="text-xs text-gray-300 min-w-[60px]">Min:</span>
+                <span className="text-xs text-gray-300 min-w-[60px]">{t("network.labels.min")}:</span>
                 <span className="text-sm font-semibold text-green-400">{data.min} ms</span>
               </div>
               <div className="flex items-center gap-2">
                 <div className="w-2.5 h-2.5 rounded-full flex-shrink-0 bg-blue-500" />
-                <span className="text-xs text-gray-300 min-w-[60px]">Avg:</span>
+                <span className="text-xs text-gray-300 min-w-[60px]">{t("network.labels.avg")}:</span>
                 <span className="text-sm font-semibold text-white">{data.value} ms</span>
               </div>
               <div className="flex items-center gap-2">
                 <div className="w-2.5 h-2.5 rounded-full flex-shrink-0 bg-red-500" />
-                <span className="text-xs text-gray-300 min-w-[60px]">Max:</span>
+                <span className="text-xs text-gray-300 min-w-[60px]">{t("network.labels.max")}:</span>
                 <span className="text-sm font-semibold text-red-400">{data.max} ms</span>
               </div>
             </>
@@ -94,14 +112,14 @@ const CustomTooltip = ({ active, payload, label }: any) => {
             // Simple latency display for single data points
             <div className="flex items-center gap-2">
               <div className="w-2.5 h-2.5 rounded-full flex-shrink-0 bg-blue-500" />
-              <span className="text-xs text-gray-300 min-w-[60px]">Latency:</span>
+              <span className="text-xs text-gray-300 min-w-[60px]">{t("network.labels.latency")}:</span>
               <span className="text-sm font-semibold text-white">{entry.value} ms</span>
             </div>
           )}
           {packetLoss !== undefined && packetLoss > 0 && (
             <div className="flex items-center gap-2">
               <div className="w-2.5 h-2.5 rounded-full flex-shrink-0 bg-orange-500" />
-              <span className="text-xs text-gray-300 min-w-[60px]">Pkt Loss:</span>
+              <span className="text-xs text-gray-300 min-w-[60px]">{t("network.labels.packetLossShort")}:</span>
               <span className="text-sm font-semibold text-orange-400">{packetLoss}%</span>
             </div>
           )}
@@ -118,20 +136,38 @@ const getStatusColor = (latency: number) => {
   return "#22c55e"
 }
 
-const getStatusInfo = (latency: number | null) => {
-  if (latency === null || latency === 0) return { status: "N/A", color: "bg-gray-500/10 text-gray-500 border-gray-500/20" }
-  if (latency < 50) return { status: "Excellent", color: "bg-green-500/10 text-green-500 border-green-500/20" }
-  if (latency < 100) return { status: "Good", color: "bg-green-500/10 text-green-500 border-green-500/20" }
-  if (latency < 200) return { status: "Fair", color: "bg-yellow-500/10 text-yellow-500 border-yellow-500/20" }
-  return { status: "Poor", color: "bg-red-500/10 text-red-500 border-red-500/20" }
+const getStatusInfo = (latency: number | null, t: TFunction) => {
+  if (latency === null || latency === 0) return { status: t("common.notAvailable"), color: "bg-gray-500/10 text-gray-500 border-gray-500/20" }
+  if (latency < 50) return { status: t("network.latency.status.excellent"), color: "bg-green-500/10 text-green-500 border-green-500/20" }
+  if (latency < 100) return { status: t("network.latency.status.good"), color: "bg-green-500/10 text-green-500 border-green-500/20" }
+  if (latency < 200) return { status: t("network.latency.status.fair"), color: "bg-yellow-500/10 text-yellow-500 border-yellow-500/20" }
+  return { status: t("network.latency.status.poor"), color: "bg-red-500/10 text-red-500 border-red-500/20" }
 }
 
-const getStatusText = (latency: number | null): string => {
-  if (latency === null || latency === 0) return "N/A"
-  if (latency < 50) return "Excellent"
-  if (latency < 100) return "Good"
-  if (latency < 200) return "Fair"
-  return "Poor"
+const getStatusKey = (latency: number | null): "na" | "excellent" | "good" | "fair" | "poor" => {
+  if (latency === null || latency === 0) return "na"
+  if (latency < 50) return "excellent"
+  if (latency < 100) return "good"
+  if (latency < 200) return "fair"
+  return "poor"
+}
+
+const getStatusText = (latency: number | null, t: TFunction): string => {
+  const key = getStatusKey(latency)
+  return key === "na" ? t("common.notAvailable") : t(`network.latency.status.${key}`)
+}
+
+const formatReportDuration = (seconds: number | undefined, t: TFunction, compact = false): string => {
+  if (!seconds || seconds <= 0) {
+    return compact ? t("network.latency.report.realTime") : t("network.latency.report.testPeriod")
+  }
+
+  if (seconds < 60) {
+    return t(compact ? "network.latency.report.secondsShort" : "network.latency.report.seconds", { count: seconds })
+  }
+
+  const minutes = Math.max(1, Math.round(seconds / 60))
+  return t(compact ? "network.latency.report.minutesShort" : "network.latency.report.minutes", { count: minutes })
 }
 
 interface ReportData {
@@ -145,9 +181,10 @@ interface ReportData {
   testDuration?: number
 }
 
-const generateLatencyReport = (report: ReportData) => {
+const generateLatencyReport = (report: ReportData, t: TFunction) => {
   const now = new Date().toLocaleString()
   const logoUrl = `${window.location.origin}/images/proxmenux-logo.png`
+  const htmlLang = document.documentElement.lang || "en"
   
   // Calculate stats for realtime results - all values are individual ping measurements in latency_avg
   const validRealtimeValues = report.realtimeResults.filter(r => r.latency_avg !== null).map(r => r.latency_avg!)
@@ -160,29 +197,57 @@ const generateLatencyReport = (report: ReportData) => {
   } : null
 
   const statusText = report.isRealtime 
-    ? getStatusText(realtimeStats?.current ?? null)
-    : getStatusText(report.stats.current)
+    ? getStatusText(realtimeStats?.current ?? null, t)
+    : getStatusText(report.stats.current, t)
   
   // Colors matching Lynis report
   const statusColorMap: Record<string, string> = {
-    "Excellent": "#16a34a",
-    "Good": "#16a34a", 
-    "Fair": "#ca8a04",
-    "Poor": "#dc2626",
-    "N/A": "#64748b"
+    excellent: "#16a34a",
+    good: "#16a34a",
+    fair: "#ca8a04",
+    poor: "#dc2626",
+    na: "#64748b",
   }
-  const statusColor = statusColorMap[statusText] || "#64748b"
+  const statusKey = report.isRealtime
+    ? getStatusKey(realtimeStats?.current ?? null)
+    : getStatusKey(report.stats.current)
+  const statusColor = statusColorMap[statusKey] || "#64748b"
 
-  const timeframeLabel = TIMEFRAME_OPTIONS.find(t => t.value === report.timeframe)?.label || report.timeframe
+  const timeframeLabel = getLatencyTimeframeLabel(report.timeframe, t)
+  const reportId = `PMXL-${Date.now().toString(36).toUpperCase()}`
+  const notAvailable = t("common.notAvailable")
+  const modeLabel = report.isRealtime
+    ? t("network.latency.report.realTimeTest")
+    : t("network.latency.report.historicalAnalysis")
+  const realtimeDurationText = formatReportDuration(report.testDuration, t)
+  const realtimePacketLossText =
+    realtimeStats && realtimeStats.avgPacketLoss > 0
+      ? `<span style="color:#dc2626">${t("network.latency.report.averagePacketLoss", {
+          value: realtimeStats.avgPacketLoss.toFixed(1),
+        })}</span>`
+      : `<span style="color:#16a34a">${t("network.latency.report.noPacketLoss")}</span>`
+  const testPeriodValue = report.isRealtime
+    ? formatReportDuration(report.testDuration, t, true)
+    : timeframeLabel
+  const targetIpLabel =
+    report.target === "gateway"
+      ? t("network.latency.report.defaultGateway")
+      : report.target === "cloudflare"
+        ? "1.1.1.1"
+        : "8.8.8.8"
+  const detailSectionNumber =
+    (report.isRealtime && report.realtimeResults.length > 0) || (!report.isRealtime && report.data.length > 0)
+      ? "6"
+      : "5"
 
   // Build test results table for realtime mode - each row is now an individual ping measurement
   const realtimeTableRows = report.realtimeResults.map((r, i) => `
     <tr${r.packet_loss > 0 ? ' class="warn"' : ''}>
       <td>${i + 1}</td>
       <td>${new Date(r.timestamp || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}</td>
-      <td style="font-weight:600;color:${statusColorMap[getStatusText(r.latency_avg)] || '#64748b'}">${r.latency_avg !== null ? r.latency_avg.toFixed(1) + ' ms' : 'Failed'}</td>
+      <td style="font-weight:600;color:${statusColorMap[getStatusKey(r.latency_avg)] || '#64748b'}">${r.latency_avg !== null ? r.latency_avg.toFixed(1) + ' ms' : t("network.latency.report.failed")}</td>
       <td${r.packet_loss > 0 ? ' style="color:#dc2626;font-weight:600;"' : ''}>${r.packet_loss}%</td>
-      <td><span class="f-tag" style="background:${statusColorMap[getStatusText(r.latency_avg)] || '#64748b'}15;color:${statusColorMap[getStatusText(r.latency_avg)] || '#64748b'}">${getStatusText(r.latency_avg)}</span></td>
+      <td><span class="f-tag" style="background:${statusColorMap[getStatusKey(r.latency_avg)] || '#64748b'}15;color:${statusColorMap[getStatusKey(r.latency_avg)] || '#64748b'}">${getStatusText(r.latency_avg, t)}</span></td>
     </tr>
   `).join('')
 
@@ -199,9 +264,9 @@ const generateLatencyReport = (report: ReportData) => {
     <tr${d.packet_loss && d.packet_loss > 0 ? ' class="warn"' : ''}>
       <td>${i + 1}</td>
       <td>${new Date(d.timestamp * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</td>
-      <td style="font-weight:600;color:${statusColorMap[getStatusText(d.value)] || '#64748b'}">${d.value !== null ? d.value.toFixed(1) + ' ms' : 'Failed'}</td>
+      <td style="font-weight:600;color:${statusColorMap[getStatusKey(d.value)] || '#64748b'}">${d.value !== null ? d.value.toFixed(1) + ' ms' : t("network.latency.report.failed")}</td>
       <td${d.packet_loss && d.packet_loss > 0 ? ' style="color:#dc2626;font-weight:600;"' : ''}>${d.packet_loss?.toFixed(1) ?? 0}%</td>
-      <td><span class="f-tag" style="background:${statusColorMap[getStatusText(d.value)] || '#64748b'}15;color:${statusColorMap[getStatusText(d.value)] || '#64748b'}">${getStatusText(d.value)}</span></td>
+      <td><span class="f-tag" style="background:${statusColorMap[getStatusKey(d.value)] || '#64748b'}15;color:${statusColorMap[getStatusKey(d.value)] || '#64748b'}">${getStatusText(d.value, t)}</span></td>
     </tr>
   `).join('')
 
@@ -210,7 +275,7 @@ const generateLatencyReport = (report: ReportData) => {
     ? report.realtimeResults.filter(r => r.latency_avg !== null).map(r => r.latency_avg!)
     : report.data.map(d => d.value || 0)
   
-  let chartSvg = '<p style="text-align:center;color:#64748b;padding:20px;">Not enough data points for chart</p>'
+  let chartSvg = `<p style="text-align:center;color:#64748b;padding:20px;">${t("network.latency.report.notEnoughData")}</p>`
   if (chartData.length >= 2) {
     const rawMin = Math.min(...chartData)
     const rawMax = Math.max(...chartData)
@@ -253,17 +318,17 @@ const generateLatencyReport = (report: ReportData) => {
         <text x="${padding - 5}" y="${height - padding + 4}" font-size="9" fill="#64748b" text-anchor="end">${Math.round(minVal)}ms</text>
         <polygon points="${areaPoints}" fill="url(#areaGrad)"/>
         <polyline points="${points}" fill="none" stroke="#3b82f6" stroke-width="2"/>
-        <text x="${width / 2}" y="${height - 5}" font-size="9" fill="#64748b" text-anchor="middle">${chartData.length} samples</text>
+        <text x="${width / 2}" y="${height - 5}" font-size="9" fill="#64748b" text-anchor="middle">${t("network.latency.report.samples", { count: chartData.length })}</text>
       </svg>
     `
   }
 
   const html = `<!DOCTYPE html>
-<html lang="en">
+<html lang="${htmlLang}">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Network Latency Report - ${report.targetLabel}</title>
+<title>${t("network.latency.report.title")} - ${report.targetLabel}</title>
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
   body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; color: #1a1a2e; background: #fff; font-size: 13px; line-height: 1.5; }
@@ -463,11 +528,11 @@ const generateLatencyReport = (report: ReportData) => {
 <div class="top-bar no-print">
   <div class="top-bar-left">
     <div>
-      <div class="top-bar-title">ProxMenux Network Latency Report</div>
-      <div class="top-bar-subtitle">Review the report, then print or save as PDF</div>
+      <div class="top-bar-title">${t("network.latency.report.topBarTitle")}</div>
+      <div class="top-bar-subtitle">${t("network.latency.report.topBarSubtitle")}</div>
     </div>
   </div>
-  <button onclick="window.print()">Print / Save as PDF</button>
+  <button onclick="window.print()">${t("network.latency.report.printSavePdf")}</button>
 </div>
 
 <!-- Header -->
@@ -475,21 +540,21 @@ const generateLatencyReport = (report: ReportData) => {
   <div class="rpt-header-left">
     <img src="${logoUrl}" alt="ProxMenux" onerror="this.style.display='none'" />
     <div>
-      <h1>Network Latency Report</h1>
-      <p>ProxMenux Monitor - Network Performance Analysis</p>
+      <h1>${t("network.latency.report.title")}</h1>
+      <p>${t("network.latency.report.subtitle")}</p>
     </div>
   </div>
   <div class="rpt-header-right">
-    <div><strong>Date:</strong> ${now}</div>
-    <div><strong>Target:</strong> ${report.targetLabel}</div>
-    <div><strong>Mode:</strong> ${report.isRealtime ? 'Real-time Test' : 'Historical Analysis'}</div>
-    <div class="rid">ID: PMXL-${Date.now().toString(36).toUpperCase()}</div>
+    <div><strong>${t("network.latency.report.date")}:</strong> ${now}</div>
+    <div><strong>${t("network.latency.report.target")}:</strong> ${report.targetLabel}</div>
+    <div><strong>${t("network.latency.report.mode")}:</strong> ${modeLabel}</div>
+    <div class="rid">ID: ${reportId}</div>
   </div>
 </div>
 
 <!-- 1. Executive Summary -->
 <div class="section">
-  <div class="section-title">1. Executive Summary</div>
+  <div class="section-title">1. ${t("network.latency.report.executiveSummary")}</div>
   <div class="exec-box">
     <div class="latency-gauge">
       <svg viewBox="0 0 120 90" width="160" height="120">
@@ -508,35 +573,41 @@ const generateLatencyReport = (report: ReportData) => {
         <text x="98" y="87" font-size="7" fill="#64748b">300+</text>
       </svg>
       <div class="gauge-value" style="color:${statusColor};">
-        <span class="gauge-num">${report.isRealtime ? (realtimeStats?.avg?.toFixed(0) ?? 'N/A') : report.stats.avg}</span>
+        <span class="gauge-num">${report.isRealtime ? (realtimeStats?.avg?.toFixed(0) ?? notAvailable) : report.stats.avg}</span>
         <span class="gauge-unit">ms</span>
       </div>
       <div class="gauge-status" style="color:${statusColor};">${statusText}</div>
     </div>
     <div class="exec-text">
-      <h3>Network Latency Assessment${report.isRealtime ? ' (Real-time)' : ''}</h3>
+      <h3>${t("network.latency.report.assessmentTitle")}${report.isRealtime ? ` (${t("network.latency.report.realTime")})` : ""}</h3>
       <p>
         ${report.isRealtime 
-          ? `Real-time latency test to <strong>${report.targetLabel}</strong> with <strong>${report.realtimeResults.length} samples</strong> collected over ${report.testDuration ? Math.round(report.testDuration / 60) + ' minute(s)' : 'the test period'}. 
-             Average latency: <strong style="color:${statusColor}">${realtimeStats?.avg?.toFixed(1) ?? 'N/A'} ms</strong>.
-             ${realtimeStats && realtimeStats.avgPacketLoss > 0 ? `<span style="color:#dc2626">Average packet loss: ${realtimeStats.avgPacketLoss.toFixed(1)}%.</span>` : '<span style="color:#16a34a">No packet loss detected.</span>'}`
-          : `Historical latency analysis to <strong>Gateway</strong> over <strong>${timeframeLabel.toLowerCase()}</strong>.
-             <strong>${report.data.length} samples</strong> analyzed.
-             Average latency: <strong style="color:${statusColor}">${report.stats.avg} ms</strong>.`
+          ? `${t("network.latency.report.realtimeSummary", {
+              target: `<strong>${report.targetLabel}</strong>`,
+              count: `<strong>${report.realtimeResults.length}</strong>`,
+              duration: realtimeDurationText,
+              avg: `<strong style="color:${statusColor}">${realtimeStats?.avg?.toFixed(1) ?? notAvailable} ms</strong>`,
+            })} ${realtimePacketLossText}`
+          : `${t("network.latency.report.historicalSummary", {
+              target: t("network.latency.targets.gatewayShort"),
+              timeframe: timeframeLabel.toLowerCase(),
+              count: report.data.length,
+              avg: report.stats.avg,
+            })}`
         }
       </p>
       <div class="latency-range">
         <div class="range-item">
-          <span class="range-label">Minimum</span>
-          <span class="range-value" style="color:#16a34a;">${report.isRealtime ? (realtimeStats?.min?.toFixed(1) ?? 'N/A') : report.stats.min} ms</span>
+          <span class="range-label">${t("network.labels.minimum")}</span>
+          <span class="range-value" style="color:#16a34a;">${report.isRealtime ? (realtimeStats?.min?.toFixed(1) ?? notAvailable) : report.stats.min} ms</span>
         </div>
         <div class="range-item">
-          <span class="range-label">Average</span>
-          <span class="range-value" style="color:${statusColor};">${report.isRealtime ? (realtimeStats?.avg?.toFixed(1) ?? 'N/A') : report.stats.avg} ms</span>
+          <span class="range-label">${t("network.labels.average")}</span>
+          <span class="range-value" style="color:${statusColor};">${report.isRealtime ? (realtimeStats?.avg?.toFixed(1) ?? notAvailable) : report.stats.avg} ms</span>
         </div>
         <div class="range-item">
-          <span class="range-label">Maximum</span>
-          <span class="range-value" style="color:#dc2626;">${report.isRealtime ? (realtimeStats?.max?.toFixed(1) ?? 'N/A') : report.stats.max} ms</span>
+          <span class="range-label">${t("network.labels.maximum")}</span>
+          <span class="range-value" style="color:#dc2626;">${report.isRealtime ? (realtimeStats?.max?.toFixed(1) ?? notAvailable) : report.stats.max} ms</span>
         </div>
       </div>
     </div>
@@ -545,42 +616,40 @@ const generateLatencyReport = (report: ReportData) => {
 
 <!-- 2. Statistics -->
 <div class="section">
-  <div class="section-title">2. Latency Statistics</div>
+  <div class="section-title">2. ${t("network.latency.report.latencyStatistics")}</div>
   <div class="grid-4">
     <div class="card card-c">
-      <div class="card-value" style="color:${statusColor};">${report.isRealtime ? (realtimeStats?.current?.toFixed(1) ?? 'N/A') : report.stats.current}<span style="font-size:10px;color:#64748b;"> ms</span></div>
-      <div class="card-label">Current</div>
+      <div class="card-value" style="color:${statusColor};">${report.isRealtime ? (realtimeStats?.current?.toFixed(1) ?? notAvailable) : report.stats.current}<span style="font-size:10px;color:#64748b;"> ms</span></div>
+      <div class="card-label">${t("network.labels.current")}</div>
     </div>
     <div class="card card-c">
-      <div class="card-value" style="color:#16a34a;">${report.isRealtime ? (realtimeStats?.min?.toFixed(1) ?? 'N/A') : report.stats.min}<span style="font-size:10px;color:#64748b;"> ms</span></div>
-      <div class="card-label">Minimum</div>
+      <div class="card-value" style="color:#16a34a;">${report.isRealtime ? (realtimeStats?.min?.toFixed(1) ?? notAvailable) : report.stats.min}<span style="font-size:10px;color:#64748b;"> ms</span></div>
+      <div class="card-label">${t("network.labels.minimum")}</div>
     </div>
     <div class="card card-c">
-      <div class="card-value">${report.isRealtime ? (realtimeStats?.avg?.toFixed(1) ?? 'N/A') : report.stats.avg}<span style="font-size:10px;color:#64748b;"> ms</span></div>
-      <div class="card-label">Average</div>
+      <div class="card-value">${report.isRealtime ? (realtimeStats?.avg?.toFixed(1) ?? notAvailable) : report.stats.avg}<span style="font-size:10px;color:#64748b;"> ms</span></div>
+      <div class="card-label">${t("network.labels.average")}</div>
     </div>
     <div class="card card-c">
-      <div class="card-value" style="color:#dc2626;">${report.isRealtime ? (realtimeStats?.max?.toFixed(1) ?? 'N/A') : report.stats.max}<span style="font-size:10px;color:#64748b;"> ms</span></div>
-      <div class="card-label">Maximum</div>
+      <div class="card-value" style="color:#dc2626;">${report.isRealtime ? (realtimeStats?.max?.toFixed(1) ?? notAvailable) : report.stats.max}<span style="font-size:10px;color:#64748b;"> ms</span></div>
+      <div class="card-label">${t("network.labels.maximum")}</div>
     </div>
   </div>
   <div class="grid-3">
     <div class="card">
-      <div class="card-label">Sample Count</div>
+      <div class="card-label">${t("network.latency.report.sampleCount")}</div>
       <div class="card-value">${report.isRealtime ? report.realtimeResults.length : report.data.length}</div>
     </div>
     <div class="card">
-      <div class="card-label">Packet Loss (Avg)</div>
+      <div class="card-label">${t("network.latency.report.packetLossAvg")}</div>
       <div class="card-value" style="color:${(report.isRealtime ? (realtimeStats?.avgPacketLoss ?? 0) : parseFloat(historyStats?.avgPacketLoss ?? '0')) > 0 ? '#dc2626' : '#16a34a'};">
         ${report.isRealtime ? (realtimeStats?.avgPacketLoss?.toFixed(1) ?? '0') : (historyStats?.avgPacketLoss ?? '0')}%
       </div>
     </div>
     <div class="card">
-      <div class="card-label">Test Period</div>
+      <div class="card-label">${t("network.latency.report.testPeriodLabel")}</div>
       <div class="card-value" style="font-size:11px;">
-        ${report.isRealtime 
-          ? (report.testDuration ? Math.round(report.testDuration / 60) + ' min' : 'Real-time')
-          : timeframeLabel}
+        ${testPeriodValue}
       </div>
     </div>
   </div>
@@ -588,7 +657,7 @@ const generateLatencyReport = (report: ReportData) => {
 
 <!-- 3. Latency Graph (always section 3) -->
 <div class="section">
-  <div class="section-title">3. Latency Graph</div>
+  <div class="section-title">3. ${t("network.latency.report.latencyGraph")}</div>
   <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:16px;">
     ${chartSvg}
   </div>
@@ -596,37 +665,37 @@ const generateLatencyReport = (report: ReportData) => {
 
 <!-- 4. Performance Thresholds (always section 4) -->
 <div class="section">
-  <div class="section-title">4. Performance Thresholds</div>
+  <div class="section-title">4. ${t("network.latency.report.performanceThresholds")}</div>
   <div class="threshold-item">
     <div class="threshold-dot" style="background:#16a34a;"></div>
-    <p><strong>Excellent (&lt; 50ms):</strong> Optimal for real-time applications, gaming, and video calls.</p>
+    <p><strong>${t("network.latency.status.excellent")} (&lt; 50ms):</strong> ${t("network.latency.report.thresholdExcellent")}</p>
   </div>
   <div class="threshold-item">
     <div class="threshold-dot" style="background:#16a34a;"></div>
-    <p><strong>Good (50-100ms):</strong> Acceptable for most applications with minimal impact.</p>
+    <p><strong>${t("network.latency.status.good")} (50-100ms):</strong> ${t("network.latency.report.thresholdGood")}</p>
   </div>
   <div class="threshold-item">
     <div class="threshold-dot" style="background:#ca8a04;"></div>
-    <p><strong>Fair (100-200ms):</strong> Noticeable delay. May affect VoIP and interactive applications.</p>
+    <p><strong>${t("network.latency.status.fair")} (100-200ms):</strong> ${t("network.latency.report.thresholdFair")}</p>
   </div>
   <div class="threshold-item">
     <div class="threshold-dot" style="background:#dc2626;"></div>
-    <p><strong>Poor (&gt; 200ms):</strong> Significant latency. Investigation recommended.</p>
+    <p><strong>${t("network.latency.status.poor")} (&gt; 200ms):</strong> ${t("network.latency.report.thresholdPoor")}</p>
   </div>
 </div>
 
   ${report.isRealtime && report.realtimeResults.length > 0 ? `
   <!-- 5. Detailed Test Results (for Cloudflare / Google DNS) -->
   <div class="section">
-  <div class="section-title">5. Detailed Test Results</div>
+  <div class="section-title">5. ${t("network.latency.report.detailedTestResults")}</div>
   <table class="chk-tbl">
   <thead>
   <tr>
   <th>#</th>
-  <th>Time</th>
-  <th>Latency</th>
-  <th>Packet Loss</th>
-  <th>Status</th>
+  <th>${t("network.labels.time")}</th>
+  <th>${t("network.labels.latency")}</th>
+  <th>${t("network.labels.packetLoss")}</th>
+  <th>${t("network.labels.status")}</th>
   </tr>
   </thead>
   <tbody>
@@ -639,15 +708,15 @@ const generateLatencyReport = (report: ReportData) => {
 ${!report.isRealtime && report.data.length > 0 ? `
 <!-- 5. Detailed History (for Gateway) -->
 <div class="section">
-  <div class="section-title">5. Latency History (Last ${Math.min(20, report.data.length)} Records)</div>
+  <div class="section-title">5. ${t("network.latency.report.latencyHistory", { count: Math.min(20, report.data.length) })}</div>
   <table class="chk-tbl">
   <thead>
   <tr>
   <th>#</th>
-  <th>Time</th>
-  <th>Latency</th>
-  <th>Packet Loss</th>
-  <th>Status</th>
+  <th>${t("network.labels.time")}</th>
+  <th>${t("network.labels.latency")}</th>
+  <th>${t("network.labels.packetLoss")}</th>
+  <th>${t("network.labels.status")}</th>
   </tr>
   </thead>
   <tbody>
@@ -659,41 +728,41 @@ ${!report.isRealtime && report.data.length > 0 ? `
 
 <!-- Methodology -->
 <div class="section">
-  <div class="section-title">${(report.isRealtime && report.realtimeResults.length > 0) || (!report.isRealtime && report.data.length > 0) ? '6' : '5'}. Methodology</div>
+  <div class="section-title">${detailSectionNumber}. ${t("network.latency.report.methodology")}</div>
   <div class="grid-2">
     <div class="card">
-      <div class="card-label">Test Method</div>
-      <div class="card-value" style="font-size:12px;">ICMP Echo Request (Ping)</div>
+      <div class="card-label">${t("network.latency.report.testMethod")}</div>
+      <div class="card-value" style="font-size:12px;">${t("network.latency.report.icmpEchoRequest")}</div>
     </div>
     <div class="card">
-      <div class="card-label">Samples per Test</div>
-      <div class="card-value" style="font-size:12px;">3 consecutive pings</div>
+      <div class="card-label">${t("network.latency.report.samplesPerTest")}</div>
+      <div class="card-value" style="font-size:12px;">${t("network.latency.report.threeConsecutivePings")}</div>
     </div>
     <div class="card">
-      <div class="card-label">Target</div>
+      <div class="card-label">${t("network.latency.report.target")}</div>
       <div class="card-value" style="font-size:12px;">${report.targetLabel}</div>
     </div>
     <div class="card">
-      <div class="card-label">Target IP</div>
-      <div class="card-value" style="font-size:12px;">${report.target === 'gateway' ? 'Default Gateway' : report.target === 'cloudflare' ? '1.1.1.1' : '8.8.8.8'}</div>
+      <div class="card-label">${t("network.latency.report.targetIp")}</div>
+      <div class="card-value" style="font-size:12px;">${targetIpLabel}</div>
     </div>
   </div>
   <div class="info-box">
-    <h4>Performance Assessment</h4>
+    <h4>${t("network.latency.report.performanceAssessment")}</h4>
     <p>${
-      statusText === 'Excellent' ? 'Network latency is excellent. No action required.' :
-      statusText === 'Good' ? 'Network latency is within acceptable parameters.' :
-      statusText === 'Fair' ? 'Network latency is elevated. Consider investigating network congestion or routing issues.' :
-      statusText === 'Poor' ? 'Network latency is critically high. Immediate investigation recommended.' :
-      'Unable to determine network status.'
+      statusKey === 'excellent' ? t("network.latency.report.assessmentExcellent") :
+      statusKey === 'good' ? t("network.latency.report.assessmentGood") :
+      statusKey === 'fair' ? t("network.latency.report.assessmentFair") :
+      statusKey === 'poor' ? t("network.latency.report.assessmentPoor") :
+      t("network.latency.report.assessmentUnknown")
     }</p>
   </div>
 </div>
 
 <!-- Footer -->
 <div class="rpt-footer">
-  <div>ProxMenux Monitor - Network Performance Report</div>
-  <div>Generated: ${now} | Report ID: PMXL-${Date.now().toString(36).toUpperCase()}</div>
+  <div>${t("network.latency.report.footerTitle")}</div>
+  <div>${t("network.latency.report.generated")}: ${now} | ${t("network.latency.report.reportId")}: ${reportId}</div>
 </div>
 
 </body>
@@ -706,6 +775,7 @@ ${!report.isRealtime && report.data.length > 0 ? `
 }
 
 export function LatencyDetailModal({ open, onOpenChange, currentLatency }: LatencyDetailModalProps) {
+  const t = useT()
   const [timeframe, setTimeframe] = useState("hour")
   const [target, setTarget] = useState("gateway")
   const [data, setData] = useState<LatencyHistoryPoint[]>([])
@@ -882,7 +952,7 @@ export function LatencyDetailModal({ open, onOpenChange, currentLatency }: Laten
     avg: Math.round((realtimeStats?.avg ?? 0) * 10) / 10,
   } : stats
 
-  const statusInfo = getStatusInfo(displayStats.current)
+  const statusInfo = getStatusInfo(displayStats.current, t)
 
   // Calculate test duration for report based on first and last result timestamps
   const testDuration = realtimeResults.length >= 2 
@@ -897,20 +967,20 @@ export function LatencyDetailModal({ open, onOpenChange, currentLatency }: Laten
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-foreground">
             <Wifi className="h-5 w-5 text-blue-500" />
-            Network Latency
+            {t("network.cards.latency")}
           </DialogTitle>
         </DialogHeader>
         <div className="flex items-center gap-2 mt-1 flex-nowrap">
           <Select value={target} onValueChange={setTarget}>
             <SelectTrigger className="w-[140px] sm:w-[180px] h-8 text-xs shrink-0">
               <span className="truncate">
-                {TARGET_OPTIONS.find(t => t.value === target)?.shortLabel || target}
+                {getLatencyTargetShortLabel(target, t)}
               </span>
             </SelectTrigger>
             <SelectContent>
               {TARGET_OPTIONS.map(opt => (
                 <SelectItem key={opt.value} value={opt.value} className="text-xs">
-                  {opt.label}
+                  {t(opt.labelKey)}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -923,7 +993,7 @@ export function LatencyDetailModal({ open, onOpenChange, currentLatency }: Laten
               <SelectContent>
                 {TIMEFRAME_OPTIONS.map(opt => (
                   <SelectItem key={opt.value} value={opt.value} className="text-xs">
-                    {opt.label}
+                    {t(opt.labelKey)}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -938,7 +1008,7 @@ export function LatencyDetailModal({ open, onOpenChange, currentLatency }: Laten
                 className="gap-1.5 text-red-500 border-red-500/30 hover:bg-red-500/10 shrink-0 h-8 px-3"
               >
                 <Square className="h-3 w-3 fill-current" />
-                Stop
+                {t("network.latency.actions.stop")}
               </Button>
             ) : (
               <Button
@@ -948,7 +1018,7 @@ export function LatencyDetailModal({ open, onOpenChange, currentLatency }: Laten
                 className="gap-1.5 shrink-0 h-8 px-3"
               >
                 <RefreshCw className="h-3 w-3" />
-                Test Again
+                {t("network.latency.actions.testAgain")}
               </Button>
             )
           )}
@@ -957,19 +1027,19 @@ export function LatencyDetailModal({ open, onOpenChange, currentLatency }: Laten
             size="sm"
             onClick={() => generateLatencyReport({
               target,
-              targetLabel: TARGET_OPTIONS.find(t => t.value === target)?.label || target,
+              targetLabel: getLatencyTargetLabel(target, t),
               isRealtime,
               stats,
               realtimeResults,
               data,
               timeframe,
               testDuration: isRealtime ? testDuration : undefined,
-            })}
+            }, t)}
             disabled={isRealtime ? realtimeResults.length === 0 : data.length === 0}
             className="gap-1.5 shrink-0 h-8 px-3"
           >
             <FileText className="h-3.5 w-3.5" />
-            Report
+            {t("network.latency.actions.report")}
           </Button>
         </div>
 
@@ -977,8 +1047,8 @@ export function LatencyDetailModal({ open, onOpenChange, currentLatency }: Laten
         {isRealtime && realtimeTesting && (
           <div className="mb-4">
             <div className="flex items-center justify-between text-xs text-muted-foreground mb-1">
-              <span>Testing... {Math.round(testProgress)}%</span>
-              <span>{Math.round((REALTIME_TEST_DURATION * (1 - testProgress / 100)))}s remaining</span>
+              <span>{t("network.latency.testingProgress", { percent: Math.round(testProgress) })}</span>
+              <span>{t("network.latency.secondsRemaining", { seconds: Math.round((REALTIME_TEST_DURATION * (1 - testProgress / 100))) })}</span>
             </div>
             <div className="h-1.5 bg-muted rounded-full overflow-hidden">
               <div 
@@ -992,7 +1062,7 @@ export function LatencyDetailModal({ open, onOpenChange, currentLatency }: Laten
         {/* Stats Cards - Compact single row */}
         <div className="flex items-center justify-between gap-1 mb-2 py-2 px-1 bg-muted/20 rounded-lg">
           <div className="flex items-center gap-1 min-w-0">
-            <span className="text-[10px] text-muted-foreground">Current</span>
+            <span className="text-[10px] text-muted-foreground">{t("network.labels.current")}</span>
             <span className="text-base font-bold" style={{ color: getStatusColor(displayStats.current || 0) }}>
               {displayStats.current || '-'}
             </span>
@@ -1000,19 +1070,19 @@ export function LatencyDetailModal({ open, onOpenChange, currentLatency }: Laten
           </div>
           <div className="flex items-center gap-1 min-w-0">
             <TrendingDown className="h-3 w-3 text-green-500 shrink-0" />
-            <span className="text-[10px] text-muted-foreground">Min</span>
+            <span className="text-[10px] text-muted-foreground">{t("network.labels.min")}</span>
             <span className="text-base font-bold text-green-500">{displayStats.min || '-'}</span>
             <span className="text-[10px] text-muted-foreground">ms</span>
           </div>
           <div className="flex items-center gap-1 min-w-0">
             <Minus className="h-3 w-3 shrink-0" />
-            <span className="text-[10px] text-muted-foreground">Avg</span>
+            <span className="text-[10px] text-muted-foreground">{t("network.labels.avg")}</span>
             <span className="text-base font-bold">{displayStats.avg || '-'}</span>
             <span className="text-[10px] text-muted-foreground">ms</span>
           </div>
           <div className="flex items-center gap-1 min-w-0">
             <TrendingUp className="h-3 w-3 text-red-500 shrink-0" />
-            <span className="text-[10px] text-muted-foreground">Max</span>
+            <span className="text-[10px] text-muted-foreground">{t("network.labels.max")}</span>
             <span className="text-base font-bold text-red-500">{displayStats.max || '-'}</span>
             <span className="text-[10px] text-muted-foreground">ms</span>
           </div>
@@ -1025,8 +1095,8 @@ export function LatencyDetailModal({ open, onOpenChange, currentLatency }: Laten
           </Badge>
           {isRealtime && (
             <span className="text-xs text-muted-foreground">
-              {realtimeResults.length} sample{realtimeResults.length !== 1 ? 's' : ''} collected
-              {realtimeStats?.packetLoss ? ` | ${realtimeStats.packetLoss}% packet loss` : ''}
+              {t("network.latency.samplesCollected", { count: realtimeResults.length })}
+              {realtimeStats?.packetLoss ? ` | ${t("network.latency.packetLossValue", { value: realtimeStats.packetLoss })}` : ""}
             </span>
           )}
         </div>
@@ -1058,7 +1128,7 @@ export function LatencyDetailModal({ open, onOpenChange, currentLatency }: Laten
                     domain={['dataMin - 1', 'dataMax + 2']}
                     tickFormatter={(v) => `${Number(v).toFixed(1)}ms`}
                   />
-                  <Tooltip content={<CustomTooltip />} />
+                  <Tooltip content={<CustomTooltip t={t} />} />
                   <Area
                     type="monotone"
                     dataKey="value"
@@ -1075,7 +1145,7 @@ export function LatencyDetailModal({ open, onOpenChange, currentLatency }: Laten
               <div className="h-full flex flex-col items-center justify-center text-muted-foreground">
                 <Activity className="h-12 w-12 mb-3 opacity-30" />
                 <p className="text-sm">
-                  {realtimeTesting ? 'Collecting data...' : 'No data yet. Click "Test Again" to start.'}
+                  {realtimeTesting ? t("network.latency.collectingData") : t("network.latency.noRealtimeData")}
                 </p>
               </div>
             )
@@ -1107,7 +1177,7 @@ export function LatencyDetailModal({ open, onOpenChange, currentLatency }: Laten
                   domain={['dataMin - 1', 'dataMax + 2']}
                   tickFormatter={(v) => `${Number(v).toFixed(1)}ms`}
                 />
-                <Tooltip content={<CustomTooltip />} />
+                <Tooltip content={<CustomTooltip t={t} />} />
                 {/* For longer timeframes (6h+), show max values to preserve spikes.
                     For 1 hour view, show avg values since there's no downsampling */}
                 <Area
@@ -1123,8 +1193,8 @@ export function LatencyDetailModal({ open, onOpenChange, currentLatency }: Laten
           ) : (
             <div className="h-full flex flex-col items-center justify-center text-muted-foreground">
               <Activity className="h-12 w-12 mb-3 opacity-30" />
-              <p className="text-sm">No latency data available for this period</p>
-              <p className="text-xs mt-1">Data is collected every 60 seconds</p>
+              <p className="text-sm">{t("network.latency.noDataForPeriod")}</p>
+              <p className="text-xs mt-1">{t("network.latency.collectionInterval")}</p>
             </div>
           )}
         </div>
@@ -1133,8 +1203,7 @@ export function LatencyDetailModal({ open, onOpenChange, currentLatency }: Laten
         {isRealtime && (
           <div className="mt-4 p-3 bg-blue-500/10 border border-blue-500/20 rounded-lg">
             <p className="text-xs text-blue-400">
-              <strong>Real-time Mode:</strong> Tests run for 2 minutes with readings every 5 seconds. 
-              Click "Test Again" to add more samples. All data is included in the report.
+              <strong>{t("network.latency.realTimeMode")}:</strong> {t("network.latency.realTimeModeDescription")}
             </p>
           </div>
         )}

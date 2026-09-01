@@ -23,11 +23,11 @@
     "nfsTitle": "Don't disable this if you use NFS",
     "nfsBody": "NFS server <strong>and</strong> NFS client rely on <code>rpcbind</code> to negotiate the ports used by <code>mountd</code>, <code>statd</code>, <code>lockd</code>, etc. If your Proxmox host either <em>exports</em> NFS shares to other machines or <em>mounts</em> NFS shares from a NAS, do not apply this option. Mounts will fail with <code>mount.nfs: rpc.statd is not running</code> or similar.",
     "runsTitle": "What ProxMenux runs",
-    "runsOutro": "The package stays installed (so you or another tool can re-enable it later). The service unit is disabled so the service does not come back on reboot.",
+    "runsOutro": "The package stays installed. ProxMenux records the original enabled/active state of both rpcbind.service and rpcbind.socket, then disables and stops both units so socket activation cannot bring the service back.",
     "verifyTitle": "Verification",
     "verifyBody": "After applying, confirm <code>rpcbind</code> is off and nothing is listening on port 111:",
-    "reversibleTitle": "Reversible from the Uninstall menu",
-    "reversibleBody": "This change is tracked. Open <link>Uninstall Optimizations</link> and pick <em>RPC Disable</em> to restore it. Nothing is purged from the system — just re-enable the service and it starts again."
+    "reversibleTitle": "Restores the original service state",
+    "reversibleBody": "This change is registered in <code>installed_tools.json</code>. <link>Uninstall Optimizations</link> restores each rpcbind unit to the enabled/disabled and active/inactive state captured before ProxMenux changed it; it does not assume that rpcbind was enabled on every host."
   },
   "related": {
     "heading": "Related",

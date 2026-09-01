@@ -1,19 +1,19 @@
 {
   "meta": {
     "title": "ProxMenux Monitor — Dashboard | ProxMenux Documentation",
-    "description": "The dashboard is the main UI of ProxMenux Monitor: nine tabs (System Overview, Storage, Network, VMs & LXCs, Hardware, System Logs, Terminal, Security, Settings) plus the global header with the Health Monitor status pill."
+    "description": "The dashboard is the main UI of ProxMenux Monitor: ten content tabs including the Apps launcher, plus the global header and a configurable top-level navigation order."
   },
   "header": {
     "title": "Dashboard",
-    "description": "The dashboard is the everyday view of ProxMenux Monitor — nine tabs each focused on one slice of the host plus a global header with the Health Monitor status pill, the node identity and the quick-refresh control.",
+    "description": "The dashboard is the everyday view of ProxMenux Monitor — ten content tabs, including the Apps launcher, plus a global header and a configurable top-level navigation order.",
     "section": "ProxMenux Monitor"
   },
   "oneHeader": {
-    "title": "One header, nine tabs",
+    "title": "One header, ten tabs",
     "body": "The header (logo, node name, status pill, uptime, refresh, theme toggle) stays visible everywhere. The active tab below it changes the entire content area. The status pill colour mirrors the worst category of the <link>Health Monitor</link> — it's the same data point seen from the dashboard."
   },
   "tabs": {
-    "heading": "The nine tabs",
+    "heading": "The ten tabs",
     "intro": "Each tab has its own dedicated page. Pages are added incrementally as the documentation is filled in; below is the full list and what each one is responsible for.",
     "headerTab": "Tab",
     "headerOwns": "What it owns",
@@ -21,7 +21,12 @@
       {
         "name": "System Overview",
         "linksTo": "/docs/monitor/dashboard/system-overview",
-        "owns": "CPU / memory / temperature widgets, active VM & LXC count, historical metrics charts, storage and network summaries. Default landing tab."
+        "owns": "CPU / memory / temperature widgets, active VM & LXC count, historical metrics charts, storage and network summaries. Default landing tab until Navigation order is customized."
+      },
+      {
+        "name": "Apps",
+        "linksTo": "/docs/monitor/dashboard/apps",
+        "owns": "Unified launcher for registered LXC Web Links and custom links, with categories, search, guest shortcuts and per-application update signals."
       },
       {
         "name": "Storage",
@@ -53,7 +58,7 @@
       },
       {
         "name": "Settings",
-        "owns": "Notification channels, AI provider, suppression durations, branding, advanced flags."
+        "owns": "Monitor language, navigation order, notification channels, AI provider, health thresholds, exclusions and post-install optimization inventory."
       }
     ]
   },
@@ -71,6 +76,11 @@
   "whereNext": {
     "heading": "Where to next",
     "items": [
+      {
+        "label": "Apps tab",
+        "href": "/docs/monitor/dashboard/apps",
+        "tail": " — the unified Web Link launcher and its relationship with registered LXC applications."
+      },
       {
         "label": "System Overview tab",
         "href": "/docs/monitor/dashboard/system-overview",

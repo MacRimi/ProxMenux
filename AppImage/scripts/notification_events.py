@@ -22,8 +22,10 @@ import sqlite3
 import subprocess
 import threading
 from queue import Queue
-from typing import Optional, Dict, Any, Tuple
+from typing import Optional, Dict, Any, Tuple, Callable
 from pathlib import Path
+
+from proxmox_known_errors import analyze_oom_event, format_oom_diagnosis
 
 
 # ─── Shared State for Cross-Watcher Coordination ──────────────────
@@ -192,6 +194,20 @@ def _hostname() -> str:
     _HOSTNAME_CACHE['value'] = resolved
     _HOSTNAME_CACHE['ts'] = now
     return resolved
+
+
+def _new_post_install_update_versions(
+    updates: list[dict[str, Any]],
+    notified_versions: dict[str, set[str]],
+) -> dict[str, str]:
+    """Return only optimization versions that have never been announced."""
+    available: dict[str, str] = {}
+    for update in updates:
+        key = str(update.get('key', '') or '').strip()
+        version = str(update.get('available_version', '') or '').strip()
+        if key and version and version not in notified_versions.get(key, set()):
+            available[key] = version
+    return available
 
 
 def capture_journal_context(keywords: list, lines: int = 30,
@@ -419,7 +435,9 @@ def is_apt_active_on_host() -> bool:
     Sources checked, in order:
       1. `/var/run/proxmenux-update-in-progress` — created by
          `scripts/utilities/proxmox_update.sh` around its full-upgrade
-         call so ProxMenux-driven updates are always covered.
+         call, and by `scripts/post_install/update_post_install_function.sh`
+         around the per-tool re-run wrapper (log2ram, chrony…), so any
+         ProxMenux-driven maintenance is covered.
       2. `fuser` on `/var/lib/dpkg/lock-frontend` — covers a manual
          `apt`/`dpkg`/`apt-get` invocation by the operator, or any
          other tool holding the lock.
@@ -488,6 +506,12 @@ class JournalWatcher:
         # Dedup: track recent events to avoid duplicates
         self._recent_events: Dict[str, float] = {}
         self._dedup_window = 30  # seconds
+
+        # Linux emits an OOM diagnosis as a multi-line kernel block. Buffer it
+        # until the authoritative `Killed process` line arrives so the alert
+        # can distinguish a host OOM from a memory-cgroup/LXC limit.
+        self._oom_lines = []
+        self._oom_started_at = 0.0
 
         # 24h anti-cascade for disk I/O + filesystem errors. The dict
         # key includes a tier suffix (`sdh:warning`, `sdh:critical`)
@@ -830,6 +854,57 @@ class JournalWatcher:
         # Only process messages from kernel or systemd (not app-level logs)
         if syslog_id and syslog_id not in ('kernel', 'systemd', 'systemd-coredump', ''):
             return
+
+        now = time.time()
+        if self._oom_lines and now - self._oom_started_at > 15:
+            self._oom_lines = []
+            self._oom_started_at = 0.0
+
+        starts_oom_block = bool(re.search(
+            r'invoked oom-killer|oom-kill:constraint=', msg, re.IGNORECASE
+        ))
+        ends_oom_block = bool(re.search(
+            r'(?:Memory cgroup )?Out of memory:\s+Killed process', msg, re.IGNORECASE
+        ))
+
+        if starts_oom_block and not self._oom_lines:
+            self._oom_lines = [msg]
+            self._oom_started_at = now
+            return
+
+        if self._oom_lines:
+            self._oom_lines.append(msg)
+            if len(self._oom_lines) > 500:
+                self._oom_lines = self._oom_lines[-500:]
+
+            if ends_oom_block:
+                analysis = analyze_oom_event('\n'.join(self._oom_lines))
+                reason = format_oom_diagnosis(analysis)
+                if not reason:
+                    reason = f'Out of memory killer activated\n{msg[:300]}'
+
+                ctid = analysis.get('ctid') if analysis else ''
+                victim = analysis.get('victim_process') if analysis else ''
+                entity_id = f'lxc_{ctid}' if ctid else f'oom_{victim or "unknown"}'
+                self._emit(
+                    'system_problem',
+                    'CRITICAL',
+                    {
+                        'reason': reason,
+                        'hostname': self._hostname,
+                        'oom_analysis': analysis or {},
+                    },
+                    entity='node',
+                    entity_id=entity_id,
+                )
+                self._oom_lines = []
+                self._oom_started_at = 0.0
+                return
+
+            # `Call Trace:` is part of the buffered OOM evidence, not a second
+            # independent kernel fault requiring another notification.
+            if re.search(r'^Call Trace:', msg, re.IGNORECASE):
+                return
         
         # Filter out normal kernel messages that are NOT problems
         _KERNEL_NOISE = [
@@ -1939,8 +2014,16 @@ class TaskWatcher:
         'vzmigrate':  ('migration_start', 'INFO'),
     }
     
-    def __init__(self, event_queue: Queue):
+    def __init__(
+        self,
+        event_queue: Queue,
+        guest_lifecycle_callback: Optional[Callable[[str, str, str], None]] = None,
+    ):
         self._queue = event_queue
+        # Reuse the exact PVE task transition already responsible for
+        # VM/CT lifecycle notifications. Consumers such as the modal cache
+        # can subscribe without introducing a second status poller.
+        self._guest_lifecycle_callback = guest_lifecycle_callback
         self._running = False
         self._thread: Optional[threading.Thread] = None
         # `_hostname` is exposed as a @property below so every read returns
@@ -2250,6 +2333,31 @@ class TaskWatcher:
         
         # Determine entity type from task type
         entity = 'ct' if task_type.startswith('vz') else 'vm'
+
+        # A completed PVE lifecycle task is the existing source of truth for
+        # start/stop/restart notifications. Publish the same transition to
+        # the optional cache listener before notification-only suppression
+        # (backup/startup aggregation, disabled channels, cooldowns) so cache
+        # correctness never depends on whether a message is delivered.
+        lifecycle_actions = {
+            'qmstart': ('qemu', 'start'),
+            'qmstop': ('qemu', 'stop'),
+            'qmshutdown': ('qemu', 'stop'),
+            'qmreboot': ('qemu', 'reboot'),
+            'qmreset': ('qemu', 'reboot'),
+            'vzstart': ('lxc', 'start'),
+            'vzstop': ('lxc', 'stop'),
+            'vzshutdown': ('lxc', 'stop'),
+            'vzreboot': ('lxc', 'reboot'),
+        }
+        lifecycle = lifecycle_actions.get(task_type)
+        if (lifecycle and self._guest_lifecycle_callback
+                and not is_error and (status == 'OK' or is_warning)):
+            try:
+                self._guest_lifecycle_callback(vmid, lifecycle[0], lifecycle[1])
+            except Exception as exc:
+                print(f'[TaskWatcher] guest lifecycle callback failed for '
+                      f'{lifecycle[0]} {vmid}: {exc}', flush=True)
         
         # Backup completion/failure and replication events are handled
         # EXCLUSIVELY by the PVE webhook, which delivers richer data (full
@@ -2475,11 +2583,9 @@ class PollingCollector:
         self._last_ai_model_check = 0
         # Sprint 12D: post-install function updates check, on the same
         # 24h cooldown as the Proxmox/ProxMenux update checks. Notify
-        # once per *changed set* of update keys — repeating the same
-        # notification every 24h forever would be noisy, so we de-dupe
-        # against the previously-notified set.
+        # once for each genuinely new available version. The persistent
+        # history is stored in updates_available.json beside the scan.
         self._last_post_install_check = 0
-        self._notified_post_install_keys: set[str] = set()
         # Sprint 14.7: fingerprint (item_id → latest_version) of the
         # last managed-installs update notification, across all types
         # in the registry. A new notification fires when the
@@ -2772,6 +2878,8 @@ class PollingCollector:
             if category == 'storage':
                 if error_key.startswith('lxc_disk_'):
                     event_type = 'lxc_disk_low'
+                elif error_key.startswith('vm_disk_'):
+                    event_type = 'vm_disk_low'
                 elif error_key.startswith('lxc_mount_'):
                     event_type = 'lxc_mount_low'
                 elif error_key.startswith('pve_storage_full_'):
@@ -3409,11 +3517,9 @@ class PollingCollector:
         Sprint 12A's detector runs at AppImage startup and writes
         ``updates_available.json``. This check refreshes the snapshot
         every 24h (matching the other update channels), and emits a
-        single ``post_install_update`` event the first time the *set* of
-        available updates changes. Repeating the same notification every
-        24h forever would be noisy, so we de-dupe against the previously
-        notified set of tool keys: only when a new tool joins the list
-        (or an existing one disappears) does a fresh notification fire.
+        single ``post_install_update`` event when a tool exposes an available
+        version that has never been announced. Applying one item merely
+        shrinks the pending set and must not produce a second notification.
         """
         now = time.time()
         if now - self._last_post_install_check < self.UPDATE_CHECK_INTERVAL:
@@ -3429,16 +3535,12 @@ class PollingCollector:
             return
 
         if not updates:
-            # All caught up. Reset so a future bump triggers a fresh
-            # notification instead of being suppressed by stale state.
-            self._notified_post_install_keys = set()
             return
 
-        new_keys = {u.get('key', '') for u in updates if u.get('key')}
-        if new_keys == self._notified_post_install_keys:
-            return  # already notified about this exact set
-
-        self._notified_post_install_keys = new_keys
+        notified_versions = post_install_versions.load_notified_versions()
+        new_versions = _new_post_install_update_versions(updates, notified_versions)
+        if not new_versions:
+            return
 
         # Pre-format the bullet list here so the template can drop it
         # straight in with `{tool_list}` (the renderer is plain
@@ -3473,6 +3575,9 @@ class PollingCollector:
             'post_install_update', 'INFO', data,
             source='polling', entity='node', entity_id='',
         ))
+        for key, version in new_versions.items():
+            notified_versions.setdefault(key, set()).add(version)
+        post_install_versions.save_notified_versions(notified_versions)
 
     # ── Managed-installs update check (Sprint 14.7) ─────────────────
 
@@ -3505,6 +3610,38 @@ class PollingCollector:
         except Exception as e:
             print(f"[PollingCollector] managed_installs update run failed: {e}")
             return
+
+        # Piggy-back on the same 24 h cycle to refresh every
+        # user-registered app watch. Keeps the header badge accurate
+        # in the VMs list without needing a dedicated timer. Errors
+        # are absorbed inside refresh_all_apps — one broken CT never
+        # blocks the others.
+        try:
+            import lxc_apps
+            lxc_apps.refresh_all_apps(force=False)
+            # Docker images have an independent lifecycle from both the OS
+            # packages and the Docker engine.  Refresh their read-only
+            # registry digest inventory on the same daily cadence; this never
+            # pulls or recreates containers.
+            # This is the single automatic Docker registry comparison. Force
+            # the rolling pass itself so a user-triggered check shortly after
+            # yesterday's cycle cannot postpone the next automatic scan by an
+            # additional day. Normal UI reads remain cache-only for 24 hours.
+            lxc_apps.refresh_docker_inventories(force=True)
+            # After the refresh, emit `app_update_available` for every
+            # sidecar entry currently flagged with a pending upstream
+            # release. `check_app(force=False)` short-circuits on a
+            # fresh `checked_at` and never reaches the emit path, so
+            # without this call the notification only ever fired on
+            # the exact tick where a new version was FIRST observed —
+            # missed forever if the user had the toggle off at that
+            # moment. `notification_manager` dedups by entity_id
+            # (vmid + app_id + latest_version) so repeated calls only
+            # deliver one notification per release.
+            lxc_apps.emit_all_pending_docker_stacks()
+            lxc_apps.emit_all_pending_updates()
+        except Exception as e:
+            print(f"[PollingCollector] lxc_apps refresh failed: {e}")
 
         # Split LXC updates out of the per-item event stream — they get
         # one grouped notification per cycle instead of one per CT, to
@@ -3691,21 +3828,13 @@ class PollingCollector:
             return 'secure_gateway_update_available', data
 
         if item_type == 'nvidia_xfree86':
-            kind = update.get('_upgrade_kind')
-            if kind == 'branch_upgrade':
-                upgrade_reason = (
-                    "Your current driver branch is no longer compatible with "
-                    f"kernel {update.get('_kernel') or 'this kernel'}. "
-                    "Switch to the recommended branch — the installer will "
-                    "rebuild against the running kernel."
-                )
-            else:
-                upgrade_reason = (
-                    "Same-branch maintenance update with bug/security fixes."
-                )
+            upgrade_reason = (
+                "Same-branch maintenance update with bug/security fixes. "
+                "The installer validates the selected release by rebuilding "
+                "its DKMS module against the running kernel."
+            )
             data = {
                 **common,
-                'kernel': update.get('_kernel') or '',
                 'upgrade_reason': upgrade_reason,
             }
             return 'nvidia_driver_update_available', data
@@ -4060,26 +4189,33 @@ class ProxmoxHookWatcher:
         # smartd and other system mail contains verbose boilerplate.
         # Extract just the actionable warning/error lines.
         if pve_type == 'system-mail' and message:
-            clean_lines = []
-            for line in message.split('\n'):
-                stripped = line.strip()
-                # Skip boilerplate lines
-                if not stripped:
-                    continue
-                if stripped.startswith('This message was generated'):
-                    continue
-                if stripped.startswith('For details see'):
-                    continue
-                if stripped.startswith('You can also use'):
-                    continue
-                if stripped.startswith('The original message'):
-                    continue
-                if stripped.startswith('Another message will'):
-                    continue
-                if stripped.startswith('host name:') or stripped.startswith('DNS domain:'):
-                    continue
-                clean_lines.append(stripped)
-            data['reason'] = '\n'.join(clean_lines).strip() if clean_lines else message.strip()[:500]
+            # apt-listchanges is package-maintainer NEWS, not diagnostic
+            # boilerplate. Preserve it verbatim (including paragraphs and
+            # signatures) so ProxMenux only attributes the source and never
+            # silently edits or truncates the upstream notice.
+            if event_type == 'apt_listchanges':
+                data['reason'] = message.strip()
+            else:
+                clean_lines = []
+                for line in message.split('\n'):
+                    stripped = line.strip()
+                    # Skip boilerplate lines
+                    if not stripped:
+                        continue
+                    if stripped.startswith('This message was generated'):
+                        continue
+                    if stripped.startswith('For details see'):
+                        continue
+                    if stripped.startswith('You can also use'):
+                        continue
+                    if stripped.startswith('The original message'):
+                        continue
+                    if stripped.startswith('Another message will'):
+                        continue
+                    if stripped.startswith('host name:') or stripped.startswith('DNS domain:'):
+                        continue
+                    clean_lines.append(stripped)
+                data['reason'] = '\n'.join(clean_lines).strip() if clean_lines else message.strip()[:500]
         
         # Extract VMID and VM name from message for vzdump events
         if pve_type == 'vzdump' and message:
@@ -4200,6 +4336,14 @@ class ProxmoxHookWatcher:
             # Settings → Notifications.
             msg_lower = (message or '').lower()
             title_lower_sm = (title or '').lower()
+
+            # apt-listchanges forwards legitimate upstream package NEWS through
+            # PVE's generic system-mail bucket. Keep it, but classify it as an
+            # update notice of its own so the template can identify the source
+            # clearly instead of making package-maintainer prose look like a
+            # recommendation written by ProxMenux.
+            if 'apt-listchanges' in title_lower_sm or 'apt-listchanges' in msg_lower[:500]:
+                return 'apt_listchanges', 'node', ''
 
             # ── Record disk observation regardless of noise filter ──
             # Even "noise" events are recorded as observations so the user

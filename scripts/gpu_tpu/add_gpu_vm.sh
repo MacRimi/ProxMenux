@@ -5,8 +5,8 @@
 # Author      : MacRimi
 # Copyright   : (c) 2024 MacRimi
 # License     : GPL-3.0
-# Version     : 1.0
-# Last Updated: 03/04/2026
+# Version     : 1.1
+# Last Updated: 26/08/2026
 # ==========================================================
 # Description:
 # Automates full GPU passthrough (VFIO) from Proxmox host to a VM.
@@ -323,25 +323,40 @@ evaluate_host_reboot_requirement() {
         _file_has_exact_line "$mod" "$modules_file" || needs_change=true
     done
 
-    # vfio-pci ids
+    # VFIO ownership. NVIDIA uses exact BDFs so another GPU with the same
+    # vendor:device ID can remain native; AMD/Intel keep the legacy IDs list.
     local vfio_conf="/etc/modprobe.d/vfio.conf"
     local ids_line ids_part
-    ids_line=$(grep "^options vfio-pci ids=" "$vfio_conf" 2>/dev/null | head -1)
-    if [[ -z "$ids_line" ]]; then
-        needs_change=true
-    else
-        [[ "$ids_line" == *"disable_vga=1"* ]] || needs_change=true
-        ids_part=$(echo "$ids_line" | grep -oE 'ids=[^[:space:]]+' | sed 's/ids=//')
-        local existing_ids=()
-        IFS=',' read -ra existing_ids <<< "$ids_part"
-        local required found existing
-        for required in "${IOMMU_VFIO_IDS[@]}"; do
-            found=false
-            for existing in "${existing_ids[@]}"; do
-                [[ "$existing" == "$required" ]] && found=true && break
-            done
-            $found || needs_change=true
+    if [[ "$SELECTED_GPU" == "nvidia" ]]; then
+        local required_bdf
+        for required_bdf in "${IOMMU_DEVICES[@]}"; do
+            if ! declare -F _proxmenux_vfio_bind_has_bdf >/dev/null 2>&1 \
+               || ! _proxmenux_vfio_bind_has_bdf "$required_bdf"; then
+                needs_change=true
+            fi
         done
+        _file_has_exact_line "softdep nvidia pre: vfio-pci" "$vfio_conf" || needs_change=true
+        _file_has_exact_line "softdep nvidia_drm pre: vfio-pci" "$vfio_conf" || needs_change=true
+        _file_has_exact_line "softdep nvidia_modeset pre: vfio-pci" "$vfio_conf" || needs_change=true
+        _file_has_exact_line "softdep nvidia_uvm pre: vfio-pci" "$vfio_conf" || needs_change=true
+    else
+        ids_line=$(grep "^options vfio-pci ids=" "$vfio_conf" 2>/dev/null | head -1)
+        if [[ -z "$ids_line" ]]; then
+            needs_change=true
+        else
+            [[ "$ids_line" == *"disable_vga=1"* ]] || needs_change=true
+            ids_part=$(echo "$ids_line" | grep -oE 'ids=[^[:space:]]+' | sed 's/ids=//')
+            local existing_ids=()
+            IFS=',' read -ra existing_ids <<< "$ids_part"
+            local required found existing
+            for required in "${IOMMU_VFIO_IDS[@]}"; do
+                found=false
+                for existing in "${existing_ids[@]}"; do
+                    [[ "$existing" == "$required" ]] && found=true && break
+                done
+                $found || needs_change=true
+            done
+        fi
     fi
 
     # modprobe options files
@@ -362,21 +377,16 @@ evaluate_host_reboot_requirement() {
     case "$SELECTED_GPU" in
         nvidia)
             _file_has_exact_line "blacklist nouveau" "$blacklist_file" || needs_change=true
-            _file_has_exact_line "blacklist nvidia" "$blacklist_file" || needs_change=true
-            _file_has_exact_line "blacklist nvidia_drm" "$blacklist_file" || needs_change=true
-            _file_has_exact_line "blacklist nvidia_modeset" "$blacklist_file" || needs_change=true
-            _file_has_exact_line "blacklist nvidia_uvm" "$blacklist_file" || needs_change=true
-            _file_has_exact_line "blacklist nvidiafb" "$blacklist_file" || needs_change=true
             _file_has_exact_line "blacklist lbm-nouveau" "$blacklist_file" || needs_change=true
             _file_has_exact_line "options nouveau modeset=0" "$blacklist_file" || needs_change=true
-            [[ -f /etc/modules-load.d/nvidia-vfio.conf ]] && needs_change=true
-            grep -qE '^(nvidia|nvidia_uvm|nvidia_drm|nvidia_modeset)$' /etc/modules 2>/dev/null && needs_change=true
-            local svc
-            for svc in nvidia-persistenced.service nvidia-persistenced nvidia-powerd.service nvidia-fabricmanager.service; do
-                if systemctl is-active --quiet "$svc" 2>/dev/null || systemctl is-enabled --quiet "$svc" 2>/dev/null; then
-                    needs_change=true
-                fi
-            done
+            # The managed global NVIDIA blacklist is required only when
+            # every NVIDIA GPU is in VFIO. On a mixed host it must be absent.
+            if declare -F _proxmenux_all_nvidia_in_vfio >/dev/null 2>&1 \
+               && _proxmenux_all_nvidia_in_vfio; then
+                [[ -f /etc/modprobe.d/proxmenux-nvidia-vfio-blacklist.conf ]] || needs_change=true
+            else
+                [[ -f /etc/modprobe.d/proxmenux-nvidia-vfio-blacklist.conf ]] && needs_change=true
+            fi
             ;;
         amd)
             _file_has_exact_line "blacklist radeon" "$blacklist_file" || needs_change=true
@@ -1611,8 +1621,8 @@ configure_vfio_pci_ids() {
     # NVIDIA: per-BDF binding (multi-GPU safe). The `options vfio-pci
     # ids=VENDOR:DEVICE` approach captures EVERY GPU with the same
     # vendor:device ID — fatal when two NVIDIA GPUs share a model.
-    # Instead, we list the exact BDF(s) of the target GPU in the
-    # initramfs hook, and add `softdep nvidia pre: vfio-pci` so vfio
+    # Instead, we list the exact BDF(s) of the target GPU in an early
+    # udev driver_override rule, and add `softdep nvidia pre: vfio-pci` so vfio
     # has a chance to claim the BDF before nvidia loads.
     # ────────────────────────────────────────────────────────────────
     if [[ "$SELECTED_GPU" == "nvidia" ]]; then
@@ -1649,7 +1659,7 @@ configure_vfio_pci_ids() {
         _add_line_if_missing "softdep nvidia_modeset pre: vfio-pci" "$vfio_conf"
         _add_line_if_missing "softdep nvidia_uvm pre: vfio-pci"    "$vfio_conf"
 
-        # Per-BDF binder hook. IOMMU_DEVICES has the BDFs for the GPU
+        # Per-BDF binder rule. IOMMU_DEVICES has the BDFs for the GPU
         # we're passing (and any same-group functions like the audio
         # function). Add all of them so the whole IOMMU group goes to
         # vfio-pci as Proxmox expects.
@@ -1755,85 +1765,15 @@ blacklist_gpu_drivers() {
 }
 
 sanitize_nvidia_host_stack_for_vfio() {
-    # In the new per-BDF model we only stop systemd services that could
-    # actively probe / lock GPUs at boot (persistenced) — but we DO NOT:
-    #   - blacklist the nvidia kernel module
-    #   - remove nvidia entries from /etc/modules
-    #   - rename /etc/modules-load.d/nvidia-vfio.conf
-    #   - rename /etc/udev/rules.d/70-nvidia.rules
-    #   - create /etc/modprobe.d/nvidia-blacklist.conf with install /bin/false
-    # All of those were global and broke multi-GPU NVIDIA scenarios where
-    # one GPU goes to a VM (vfio-pci) and another stays on the host
-    # (nvidia driver). VFIO binding is now per-BDF via driver_override in
-    # an initramfs hook — the nvidia module stays usable for any GPU not
-    # explicitly targeted.
+    # Host-wide NVIDIA services and module blacklisting are derived from
+    # the complete per-BDF state. With two NVIDIA GPUs, assigning only one
+    # to a VM keeps the native driver and services available for the other.
     msg_info "$(translate 'Sanitizing NVIDIA host services for VFIO mode...')"
-    local changed=false
-    local state_dir="/var/lib/proxmenux"
-    local state_file="${state_dir}/nvidia-host-services.state"
-    local svc
-    local -a services=(
-        "nvidia-persistenced.service"
-        "nvidia-powerd.service"
-        "nvidia-fabricmanager.service"
-    )
-
-    mkdir -p "$state_dir" >/dev/null 2>&1 || true
-    : > "$state_file"
-
-    for svc in "${services[@]}"; do
-        local was_enabled=0 was_active=0
-        if systemctl is-enabled --quiet "$svc" 2>/dev/null; then
-            was_enabled=1
-        fi
-        if systemctl is-active --quiet "$svc" 2>/dev/null; then
-            was_active=1
-        fi
-        if (( was_enabled == 1 || was_active == 1 )); then
-            echo "${svc} enabled=${was_enabled} active=${was_active}" >>"$state_file"
-        fi
-
-        if systemctl is-active --quiet "$svc" 2>/dev/null; then
-            systemctl stop "$svc" >>"$LOG_FILE" 2>&1 || true
-            changed=true
-        fi
-        if systemctl is-enabled --quiet "$svc" 2>/dev/null; then
-            systemctl disable "$svc" >>"$LOG_FILE" 2>&1 || true
-            changed=true
-        fi
-    done
-
-    [[ -s "$state_file" ]] || rm -f "$state_file"
-
-    if $changed; then
-        HOST_CONFIG_CHANGED=true
+    _proxmenux_nvidia_vfio_policy_sync || true
+    if _proxmenux_all_nvidia_in_vfio; then
         msg_ok "$(translate 'NVIDIA host services disabled for VFIO mode')" | tee -a "$screen_capture"
     else
-        msg_ok "$(translate 'NVIDIA host services already aligned for VFIO mode')" | tee -a "$screen_capture"
-    fi
-
-    # Sync components_status.json — the host driver stays on disk but is
-    # not in use for this GPU because it now belongs to a VM. Per-BDF
-    # model: on multi-GPU hosts where another NVIDIA card still uses the
-    # nvidia driver, keep the status as "installed" — the driver is
-    # genuinely in use elsewhere. Only flip to "vfio_passthrough" when no
-    # NVIDIA GPU is bound to the host driver anymore.
-    if declare -F update_component_status >/dev/null 2>&1; then
-        local _nvd_ver _nvd_new_status
-        _nvd_ver=$(jq -r '.nvidia_driver.version // ""' \
-            /usr/local/share/proxmenux/components_status.json 2>/dev/null)
-        _nvd_new_status="vfio_passthrough"
-        # Any NVIDIA PCI device still using the nvidia driver on the host?
-        if lspci -nnk 2>/dev/null | awk '
-            /NVIDIA/{gpu=1; next}
-            gpu && /Kernel driver in use: nvidia$/ {found=1; exit}
-            /^[^\t]/{gpu=0}
-            END{exit !found}
-        '; then
-            _nvd_new_status="installed"
-        fi
-        update_component_status "nvidia_driver" "$_nvd_new_status" \
-            "${_nvd_ver:-}" "gpu" '{"patched":false}' >>"$LOG_FILE" 2>&1 || true
+        msg_ok "$(translate 'NVIDIA host services/autoload already aligned for native mode')" | tee -a "$screen_capture"
     fi
 }
 

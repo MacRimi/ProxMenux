@@ -34,7 +34,7 @@
       },
       {
         "area": "Seguridad de routing",
-        "settings": "<code>accept_redirects=0</code>, <code>accept_source_route=0</code>, <code>secure_redirects=0</code>, <code>send_redirects=0</code>"
+        "settings": "<code>accept_redirects=0</code>, <code>accept_source_route=0</code>, <code>secure_redirects=0</code>, <code>send_redirects=0</code>, <code>log_martians=0</code>"
       },
       {
         "area": "Reverse path filter",
@@ -55,7 +55,7 @@
     ],
     "sourceOutro": "También añade <code>source /etc/network/interfaces.d/*</code> a <code>/etc/network/interfaces</code> si no está ya presente — práctica estándar para que puedas dejar snippets modulares de interfaz sin editar el archivo principal.",
     "fwbrTitle": "Ajuste automático de los bridges de firewall virtual",
-    "fwbrBody": "Junto al perfil sysctl, ProxMenux instala un helper en <code>/usr/local/sbin/proxmenux-fwbr-tune</code> que aplica <code>rp_filter=0</code> y <code>log_martians=0</code> a las interfaces <code>fwbr*</code> / <code>fwln*</code> / <code>fwpr*</code> / <code>tap*</code> que Proxmox crea alrededor de VMs y contenedores. El helper lo lanza la unit oneshot <code>proxmenux-fwbr-tune.service</code> al arranque y la regla <code>/etc/udev/rules.d/99-proxmenux-fwbr-tune.rules</code> en cada evento <code>net add</code> que coincida con esos prefijos — cubriendo las interfaces que Proxmox recrea al iniciar/parar VMs, en reinicios y en migraciones en vivo.",
+    "fwbrBody": "Junto al perfil sysctl, ProxMenux instala un helper en <code>/usr/local/sbin/proxmenux-fwbr-tune</code> que aplica <code>rp_filter=0</code> y <code>log_martians=0</code> a las interfaces <code>fwbr*</code> / <code>fwln*</code> / <code>fwpr*</code> / <code>tap*</code> que Proxmox crea alrededor de VMs y contenedores. El helper lo lanza la unit oneshot <code>proxmenux-fwbr-tune.service</code> al arranque y la regla <code>/etc/udev/rules.d/99-zz-proxmenux-fwbr-tune.rules</code> en cada evento <code>net add</code> que coincida con esos prefijos — cubriendo las interfaces que Proxmox recrea al iniciar/parar VMs, en reinicios y en migraciones en vivo. Además el helper se ejecuta inmediatamente al terminar la instalación para barrer las interfaces ya presentes.",
     "rpFilterTitle": "Por qué rp_filter=2 (loose) en lugar de 1 (strict)",
     "rpFilterBody": "El reverse-path filtering strict descarta paquetes cuya fuente se rutearía por una interfaz <em>distinta</em>. Es el valor por defecto correcto en una máquina cliente, pero rompe gravemente en un host Proxmox donde el tráfico de VMs a menudo llega por un bridge y sale por un uplink con rutas asimétricas. <code>rp_filter=2</code> (loose) solo descarta paquetes con fuentes verdaderamente no enrutables. Es un trade-off pragmático — ligera reducción en la detección de spoofing de IP local a cambio de no romper tu red de VMs."
   },
@@ -64,8 +64,8 @@
     "intro": "Instala <code>openvswitch-switch</code> + <code>openvswitch-common</code>. Estos paquetes añaden OVS como implementación alternativa de bridges a los bridges Linux estándar que Proxmox usa por defecto. La instalación por sí sola no cambia ninguna configuración de red — los bridges <code>vmbrX</code> existentes siguen funcionando. OVS pasa a estar disponible en la UI de Proxmox cuando <em>creas</em> un bridge nuevo y lo eliges del desplegable de tipo.",
     "tipTitle": "Cuándo tiene sentido OVS",
     "tipBody": "Considera OVS si necesitas <strong>trunking VLAN con IDs de VLAN no contiguos</strong>, <strong>LACP con LLDP en modos específicos</strong>, <strong>programación de flujos granular</strong> (OpenFlow), o interoperación con controladores SDN. Para un home lab con un par de VLANs y un único uplink LACP, los bridges Linux estándar + <code>vmbrX.VID</code> son más simples y van perfectamente bien.",
-    "revertTitle": "No reversible desde el menú Uninstall",
-    "revertBody": "La instalación de OVS no se registra en Uninstall Optimizations. Si decides que no lo quieres, elimínalo a mano — pero solo después de migrar cualquier bridge de vuelta a bridges Linux:"
+    "revertTitle": "Reversible desde el menú Uninstall",
+    "revertBody": "OVS está registrado. <link>Uninstall Optimizations</link> ejecuta <code>apt purge</code> sobre <code>openvswitch-switch</code> y <code>openvswitch-common</code>. Migra cualquier bridge OVS de vuelta a bridges Linux <em>antes</em> de desinstalar, si no las VMs sobre esos bridges pierden red en el próximo arranque. Equivalente manual:"
   },
   "bbr": {
     "heading": "Activar TCP BBR + TCP Fast Open",
@@ -73,8 +73,8 @@
     "verifyTitle": "Verificación",
     "impactTitle": "El impacto depende de la carga",
     "impactBody": "BBR brilla en enlaces de alta latencia o con pérdidas (replicación intercontinental, túneles VPN, clientes móviles). En una LAN entre dos máquinas en el mismo switch, la diferencia a menudo está dentro del ruido. TFO ayuda más a conexiones HTTP cortas y repetidas.",
-    "revertTitle": "No reversible desde el menú Uninstall",
-    "revertBody": "BBR/TFO no se registran. Para revertir, quita los dos archivos sysctl y recarga:"
+    "revertTitle": "Reversible desde el menú Uninstall",
+    "revertBody": "BBR/TFO están registrados. <link>Uninstall Optimizations</link> elimina los dos ficheros sysctl (<code>/etc/sysctl.d/99-tcp-bbr.conf</code> y <code>99-tcp-fastopen.conf</code>) y recarga sysctl para que el kernel vuelva a <code>cubic</code> y a <code>tcp_fastopen=1</code>. Equivalente manual:"
   },
   "names": {
     "heading": "Nombres de interfaz (persistentes)",

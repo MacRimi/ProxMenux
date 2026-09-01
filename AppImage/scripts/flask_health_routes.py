@@ -454,6 +454,7 @@ def get_remote_storages():
                 'used': storage.get('used', 0),
                 'available': storage.get('available', 0),
                 'percent': storage.get('percent', 0),
+                'capacity_known': storage.get('capacity_known', storage.get('total', 0) > 0),
                 'exclude_health': exclusion.get('exclude_health', 0) == 1,
                 'exclude_notifications': exclusion.get('exclude_notifications', 0) == 1,
                 'excluded_at': exclusion.get('excluded_at'),

@@ -1,0 +1,127 @@
+{
+  "meta": {
+    "title": "Apps dashboard: one launcher for every Web Link | ProxMenux",
+    "description": "Use the Apps dashboard to open registered LXC Web Links and custom links, organize them by category, and jump back to the guest that owns each service."
+  },
+  "header": {
+    "title": "Dashboard: Apps tab",
+    "description": "A single launcher for the web interfaces you use across the node, whether they come from a registered LXC application or a custom Web Link.",
+    "section": "ProxMenux Monitor · Dashboard"
+  },
+  "intro": {
+    "title": "A launcher, not an application installer",
+    "body": "The <strong>Apps</strong> tab does not install software or discover services by itself. It turns saved Web Links into one searchable grid. LXC-owned links are configured in the guest's <appTabLink>App tab</appTabLink>; custom links let you include VM services, reverse proxies and external dashboards."
+  },
+  "sources": {
+    "heading": "What appears in Apps",
+    "intro": "Each launchable URL becomes its own card. The source determines where that card is edited, but not how it looks during normal use.",
+    "colSource": "Source",
+    "colAppears": "What appears",
+    "colManagedFrom": "Where it is managed",
+    "rows": [
+      {
+        "source": "Registered LXC application",
+        "appears": "One card for every Web Link saved on the application record.",
+        "managedFrom": "VMs & LXCs → LXC modal → App"
+      },
+      {
+        "source": "Custom link bound to a guest",
+        "appears": "A service URL associated with a specific VM or LXC.",
+        "managedFrom": "Apps → Edit"
+      },
+      {
+        "source": "Unbound custom link",
+        "appears": "Any HTTP(S) destination, including an external or reverse-proxied service.",
+        "managedFrom": "Apps → Edit"
+      }
+    ],
+    "relationshipTitle": "Apps and the LXC App tab have different jobs",
+    "relationshipBody": "The LXC <appTabLink>App tab</appTabLink> owns application identity, Web Links and optional version tracking. The top-level <strong>Apps</strong> tab consumes those links and makes them easy to launch. Editing an LXC-owned card therefore takes you back to its guest record rather than creating a second copy of the configuration."
+  },
+  "cards": {
+    "heading": "How to use a card",
+    "intro": "The whole card is the launch target, while its smaller controls provide context without opening the service.",
+    "items": [
+      "Click the card to open its URL in a new browser tab.",
+      "The logo uses the Web Link logo first and falls back to the application logo when appropriate.",
+      "The category chip uses the same colour and label as the corresponding Web Link in the LXC App tab.",
+      "A guest pill identifies the bound VM or LXC. Click it to open that guest's modal; LXC links land directly on <strong>App</strong>, while VM links open <strong>Status</strong>.",
+      "A purple upward arrow means the specific application or Docker image has an available update. It is not a general update count for the whole guest."
+    ]
+  },
+  "toolbar": {
+    "heading": "Search, filter and sort",
+    "intro": "The toolbar narrows a large application collection without changing the saved records.",
+    "items": [
+      "Search matches the application name, guest name, VMID and category.",
+      "The category filter shows one category at a time or all applications.",
+      "Sort by <strong>Name</strong>, <strong>ID</strong> or <strong>Category</strong>. Category sorting inserts group headings between card groups.",
+      "The selected sort order is remembered in this browser. Search text and category filtering reset when the page is revisited.",
+      "The Apps tab remains available when the grid is empty, so the first custom link can be added without registering an LXC application first."
+    ]
+  },
+  "customLinks": {
+    "heading": "Adding and editing custom Web Links",
+    "intro": "Use a custom link when the service is not represented by a registered LXC application.",
+    "steps": [
+      "Press <strong>Add link</strong> from the toolbar or the empty state.",
+      "Enter a name and a complete <code>http://</code> or <code>https://</code> URL.",
+      "Optionally add a logo, choose or create a category, and bind the link to a VM or LXC.",
+      "Save it. The new card is inserted into the grid immediately.",
+      "To change or remove a custom link, press <strong>Edit</strong> and use the pencil on its card."
+    ],
+    "colField": "Field",
+    "colRequired": "Required",
+    "colPurpose": "Purpose",
+    "fields": [
+      { "field": "Name", "required": "Yes", "purpose": "The card title and search term." },
+      { "field": "URL", "required": "Yes", "purpose": "The complete HTTP(S) destination opened by the card." },
+      { "field": "Logo URL", "required": "No", "purpose": "A remote image shown on the card." },
+      { "field": "Category", "required": "No", "purpose": "Adds a shared badge and enables category filtering." },
+      { "field": "Guest binding", "required": "No", "purpose": "Associates the link with a VM or LXC and enables the guest shortcut." }
+    ],
+    "editTitle": "Edit the source of truth",
+    "editBody": "Edit mode only exposes pencils for custom links. To change a card generated from a registered LXC application, open that guest's <appTabLink>App tab</appTabLink> and edit the saved Web Link there."
+  },
+  "categories": {
+    "heading": "Categories and update signals",
+    "intro": "Categories organize links; update signals report software state. They are intentionally separate.",
+    "items": [
+      "Catalog-assisted LXC registration can prefill a category, but it remains editable.",
+      "Custom category names can be created from the same selector and then reused by the filter.",
+      "Category colours are deterministic and adapt to the light or dark theme. Purple and red ranges are reserved for update and danger states.",
+      "For Docker Web Links, ProxMenux matches the card to its container or image and reports that image's update state. A Docker Engine update remains in the LXC <updatesLink>Updates tab</updatesLink>."
+    ]
+  },
+  "persistence": {
+    "heading": "Persistence and cache behaviour",
+    "intro": "The dashboard is designed to open from already available Monitor data rather than rescan every guest.",
+    "items": [
+      "Custom links are stored atomically in <code>/etc/proxmenux/custom_links.json</code> and warmed into memory when the Monitor starts.",
+      "Registered LXC links remain part of their application's saved Monitor record; the Apps dashboard does not duplicate them into the custom-link file.",
+      "Creating, editing or deleting a custom link refreshes the in-memory list immediately.",
+      "The sort preference is browser-local. It is not synchronized between devices or users.",
+      "The top-level position of Apps is controlled separately by <settingsLink>Settings → Navigation order</settingsLink>."
+    ]
+  },
+  "troubleshooting": {
+    "heading": "Common situations",
+    "colProblem": "Situation",
+    "colResolution": "Resolution",
+    "rows": [
+      { "problem": "An LXC application is registered but no card appears", "resolution": "Open its App tab and add at least one Web Link. Version tracking alone does not create a launcher card." },
+      { "problem": "The URL or logo is wrong", "resolution": "Edit the custom link in Apps, or edit the Web Link in the owning LXC App tab." },
+      { "problem": "A Docker service is missing", "resolution": "Edit the registered Docker application and save the service's published web port as a Web Link." },
+      { "problem": "The purple arrow refers to the wrong Docker update", "resolution": "Review the Web Link name and description so they can be matched to the intended container or image." },
+      { "problem": "Apps opens first instead of System Overview", "resolution": "The first saved item in Settings → Navigation order becomes the landing tab. Restore the default order or move Overview first." }
+    ]
+  },
+  "whereNext": {
+    "heading": "Where to next",
+    "items": [
+      { "label": "LXC App tab", "href": "/docs/monitor/dashboard/vms-lxcs/app", "tail": " — register applications, Web Links and optional version tracking." },
+      { "label": "LXC Updates tab", "href": "/docs/monitor/dashboard/vms-lxcs/updates", "tail": " — configure and run application, Docker Engine and image updates." },
+      { "label": "Settings tab", "href": "/docs/monitor/dashboard/settings#navigation-order", "tail": " — change the navigation order and landing tab." }
+    ]
+  }
+}

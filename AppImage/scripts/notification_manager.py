@@ -3,7 +3,8 @@ ProxMenux Notification Manager
 Central orchestrator for the notification service.
 
 Connects:
-- notification_channels.py  (transport: Telegram, Gotify, Discord)
+- notification_channels.py  (transport: Telegram, Gotify, Discord, Email,
+                              Pushover, Apprise)
 - notification_templates.py (message formatting + optional AI)
 - notification_events.py    (event detection: Journal, Task, Polling watchers)
 - health_persistence.py     (DB: config storage, notification_history)
@@ -79,6 +80,8 @@ SENSITIVE_KEYS = {
     'gotify.token',
     'discord.webhook_url',
     'email.password',
+    'pushover.user_key',
+    'pushover.api_token',
     'apprise.url',
     'webhook_secret',
 }
@@ -398,7 +401,13 @@ GROUP_RATE_LIMITS = {
     'backup':    {'max_per_minute': 5,  'max_per_hour': 30},
     'services':  {'max_per_minute': 5,  'max_per_hour': 30},
     'health':    {'max_per_minute': 3,  'max_per_hour': 20},
-    'updates':   {'max_per_minute': 3,  'max_per_hour': 15},
+    # Bumped from 3/min-15/hour: startup reset re-fires every update
+    # event (app_update x N + nvidia + secure_gateway + post_install
+    # + summary…) in a single burst; a 3/min ceiling silently dropped
+    # everything past the third. Steady-state update noise is very
+    # low (one event per upstream release), so a wider window costs
+    # nothing.
+    'updates':   {'max_per_minute': 15, 'max_per_hour': 60},
     'other':     {'max_per_minute': 5,  'max_per_hour': 30},
 }
 
@@ -507,6 +516,15 @@ _DEFAULT_AGGREGATION = {'window': 60, 'min_count': 2, 'burst_type': 'burst_gener
 # recovery is per-event; collapsing them adds zero information.
 _AGGREGATION_EXEMPT_EVENTS = frozenset({
     'error_resolved',
+    # Per-app upstream update. Each event carries a distinct app name,
+    # version and CT id — collapsing "5 app updates burst" into a
+    # summary hides exactly the information the user wants (which
+    # apps, which versions). Startup emit fires all pending updates
+    # at once, so without this exemption only the first 1-2 land and
+    # the rest get buffered into a useless summary.
+    'app_update_available',
+    'docker_stack_update_available',
+    'lxc_update_applied',
 })
 
 
@@ -778,6 +796,7 @@ class NotificationManager:
         self._task_watcher: Optional[TaskWatcher] = None
         self._polling_collector: Optional[PollingCollector] = None
         self._dispatch_thread: Optional[threading.Thread] = None
+        self._guest_lifecycle_callback = None
         
         # Webhook receiver (no thread, passive)
         self._hook_watcher: Optional[ProxmoxHookWatcher] = None
@@ -895,6 +914,40 @@ class NotificationManager:
             self._config[key] = value
         except Exception as e:
             print(f"[NotificationManager] Failed to save setting {key}: {e}")
+
+    def _active_ai_model(self, provider_name: str) -> str:
+        """Return the model selected for the active provider.
+
+        `ai_model` is the legacy global key. Newer settings persist
+        provider-specific models as `ai_model_<provider>`, and those must win
+        whenever present so custom endpoints keep their opaque aliases.
+        """
+        return (
+            self._config.get(f'ai_model_{provider_name}', '')
+            or self._config.get('ai_model', '')
+        )
+
+    def _build_ai_config(self) -> Dict[str, Any]:
+        """Build the shared AI config passed to notification rewriters."""
+        ai_provider = self._config.get('ai_provider', 'groq')
+        ai_api_key = self._config.get(f'ai_api_key_{ai_provider}', '') or self._config.get('ai_api_key', '')
+        return {
+            'ai_enabled': self._config.get('ai_enabled', 'false'),
+            'ai_provider': ai_provider,
+            'ai_api_key': ai_api_key,
+            'ai_model': self._active_ai_model(ai_provider),
+            'ai_language': self._config.get('ai_language', 'en'),
+            'ai_ollama_url': self._config.get('ai_ollama_url', ''),
+            # `ai_openai_base_url` was previously dropped from this dict and
+            # the downstream `notification_templates.AIRewriter` read it from
+            # the dict — meaning a user who configured LiteLLM / Azure as a
+            # custom base_url passed the "Test AI" check (which DOES pass it)
+            # but every real notification silently went to api.openai.com.
+            # Privacy + UX deception bug. Audit Tier 3.2 #1.
+            'ai_openai_base_url': self._config.get('ai_openai_base_url', ''),
+            'ai_prompt_mode': self._config.get('ai_prompt_mode', 'default'),
+            'ai_custom_prompt': self._config.get('ai_custom_prompt', ''),
+        }
     
     def _rebuild_channels(self):
         """Rebuild channel instances from current config.
@@ -934,6 +987,17 @@ class NotificationManager:
         with self._lock:
             self._load_config()
         return {'success': True, 'channels': list(self._channels.keys())}
+
+    def set_guest_lifecycle_callback(self, callback) -> None:
+        """Attach a consumer to the existing PVE task lifecycle watcher.
+
+        Detection stays in TaskWatcher—the same source that emits VM/CT
+        start/stop notifications. This setter only lets Flask invalidate and
+        rebuild its guest caches when that already-detected event completes.
+        """
+        self._guest_lifecycle_callback = callback
+        if self._task_watcher is not None:
+            self._task_watcher._guest_lifecycle_callback = callback
     
     # ─── Server Mode (Background) ──────────────────────────────
     
@@ -970,7 +1034,10 @@ class NotificationManager:
         # polling collector keep the managed_installs registry, the
         # error history, and the task state up to date.
         self._journal_watcher = JournalWatcher(self._event_queue)
-        self._task_watcher = TaskWatcher(self._event_queue)
+        self._task_watcher = TaskWatcher(
+            self._event_queue,
+            guest_lifecycle_callback=self._guest_lifecycle_callback,
+        )
         self._polling_collector = PollingCollector(self._event_queue)
 
         self._journal_watcher.start()
@@ -1216,26 +1283,7 @@ class NotificationManager:
         default_event_enabled = 'true' if template.get('default_enabled', True) else 'false'
         
         # Build AI config once (shared across channels, detail_level varies)
-        # Use per-provider API key
-        ai_provider = self._config.get('ai_provider', 'groq')
-        ai_api_key = self._config.get(f'ai_api_key_{ai_provider}', '') or self._config.get('ai_api_key', '')
-        ai_config = {
-            'ai_enabled': self._config.get('ai_enabled', 'false'),
-            'ai_provider': ai_provider,
-            'ai_api_key': ai_api_key,
-            'ai_model': self._config.get('ai_model', ''),
-            'ai_language': self._config.get('ai_language', 'en'),
-            'ai_ollama_url': self._config.get('ai_ollama_url', ''),
-            # `ai_openai_base_url` was previously dropped from this dict and
-            # the downstream `notification_templates.AIRewriter` read it from
-            # the dict — meaning a user who configured LiteLLM / Azure as a
-            # custom base_url passed the "Test AI" check (which DOES pass it)
-            # but every real notification silently went to api.openai.com.
-            # Privacy + UX deception bug. Audit Tier 3.2 #1.
-            'ai_openai_base_url': self._config.get('ai_openai_base_url', ''),
-            'ai_prompt_mode': self._config.get('ai_prompt_mode', 'default'),
-            'ai_custom_prompt': self._config.get('ai_custom_prompt', ''),
-        }
+        ai_config = self._build_ai_config()
         
         # Get journal context if available (will be enriched per-channel based on detail_level)
         raw_journal_context = data.get('_journal_context', '')
@@ -1302,6 +1350,20 @@ class NotificationManager:
                 # If AI is enabled AND rich_format is on, AI will include emojis directly
                 # Pass channel_type so AI knows whether to append original (email only)
                 channel_ai_config = {**ai_config, 'channel_type': ch_name}
+                # Availability notices are factual inventories, not advice.
+                # Even when the user enables experimental AI suggestions for
+                # diagnostic alerts, update announcements must only translate
+                # and format the versions/actions already supplied by the
+                # deterministic template.
+                if event_type in {
+                    'update_available', 'update_summary', 'pve_update',
+                    'proxmenux_update', 'post_install_update', 'apt_listchanges',
+                    'lxc_updates_available', 'secure_gateway_update_available',
+                    'nvidia_driver_update_available',
+                    'coral_driver_update_available', 'app_update_available',
+                    'docker_stack_update_available',
+                }:
+                    channel_ai_config['ai_allow_suggestions'] = False
 
                 # Isolate the AI/enrich block in its own try so a failure
                 # here (raised from enrich_context_for_ai or any other
@@ -1925,14 +1987,19 @@ class NotificationManager:
     # (log_critical_*, disk errors, smart_*, …) — preserves the
     # anti-flood guarantee for sources that can burst.
     _EVENT_TYPES_RESET_ON_START = (
-        # Update-status reports
+        # Update-status reports — re-fire on Monitor restart so the
+        # user gets a fresh "here's what's pending" as a health check
+        # that the notification pipeline is alive. Steady-state 24 h
+        # cooldown resumes after that first post-restart send.
         'update_summary',
         'proxmenux_update',
-        'post_install_update',
         'pve_update',
         'update_available',
         'nvidia_driver_update_available',
+        'coral_driver_update_available',
         'secure_gateway_update_available',
+        'app_update_available',
+        'docker_stack_update_available',
         # Security events that must not be silenced by stale cooldowns
         # following a Monitor reinstall (Pedro Rico, 19/05).
         'auth_fail',
@@ -2163,26 +2230,8 @@ class NotificationManager:
             message = rendered['body']
             severity = severity or rendered['severity']
         
-        # AI config for enhancement - use per-provider API key
-        ai_provider = self._config.get('ai_provider', 'groq')
-        ai_api_key = self._config.get(f'ai_api_key_{ai_provider}', '') or self._config.get('ai_api_key', '')
-        ai_config = {
-            'ai_enabled': self._config.get('ai_enabled', 'false'),
-            'ai_provider': ai_provider,
-            'ai_api_key': ai_api_key,
-            'ai_model': self._config.get('ai_model', ''),
-            'ai_language': self._config.get('ai_language', 'en'),
-            'ai_ollama_url': self._config.get('ai_ollama_url', ''),
-            # `ai_openai_base_url` was previously dropped from this dict and
-            # the downstream `notification_templates.AIRewriter` read it from
-            # the dict — meaning a user who configured LiteLLM / Azure as a
-            # custom base_url passed the "Test AI" check (which DOES pass it)
-            # but every real notification silently went to api.openai.com.
-            # Privacy + UX deception bug. Audit Tier 3.2 #1.
-            'ai_openai_base_url': self._config.get('ai_openai_base_url', ''),
-            'ai_prompt_mode': self._config.get('ai_prompt_mode', 'default'),
-            'ai_custom_prompt': self._config.get('ai_custom_prompt', ''),
-        }
+        # AI config for enhancement
+        ai_config = self._build_ai_config()
         
         results = {}
         channels_sent = []
@@ -2268,26 +2317,9 @@ class NotificationManager:
             else:
                 return {'success': False, 'error': f'Channel {channel_name} not configured'}
         
-        # AI config for enhancement - use per-provider API key
-        ai_provider = self._config.get('ai_provider', 'groq')
-        ai_api_key = self._config.get(f'ai_api_key_{ai_provider}', '') or self._config.get('ai_api_key', '')
-        ai_config = {
-            'ai_enabled': self._config.get('ai_enabled', 'false'),
-            'ai_provider': ai_provider,
-            'ai_api_key': ai_api_key,
-            'ai_model': self._config.get('ai_model', ''),
-            'ai_language': self._config.get('ai_language', 'en'),
-            'ai_ollama_url': self._config.get('ai_ollama_url', ''),
-            # `ai_openai_base_url` was previously dropped from this dict and
-            # the downstream `notification_templates.AIRewriter` read it from
-            # the dict — meaning a user who configured LiteLLM / Azure as a
-            # custom base_url passed the "Test AI" check (which DOES pass it)
-            # but every real notification silently went to api.openai.com.
-            # Privacy + UX deception bug. Audit Tier 3.2 #1.
-            'ai_openai_base_url': self._config.get('ai_openai_base_url', ''),
-            'ai_prompt_mode': self._config.get('ai_prompt_mode', 'default'),
-            'ai_custom_prompt': self._config.get('ai_custom_prompt', ''),
-        }
+        # AI config for enhancement
+        ai_config = self._build_ai_config()
+        ai_provider = ai_config.get('ai_provider', 'groq')
         
         ai_enabled = self._config.get('ai_enabled', 'false')
         if isinstance(ai_enabled, str):
@@ -2504,9 +2536,10 @@ class NotificationManager:
         channels_info = {}
         for ch_type, info in CHANNEL_TYPES.items():
             enabled = self._config.get(f'{ch_type}.enabled', 'false') == 'true'
+            required_keys = info.get('required_keys', info['config_keys'])
             configured = all(
                 bool(self._config.get(f'{ch_type}.{k}', ''))
-                for k in info['config_keys']
+                for k in required_keys
             )
             channels_info[ch_type] = {
                 'name': info['name'],
@@ -2718,7 +2751,7 @@ class NotificationManager:
             'ai_provider': current_provider,
             'ai_api_keys': ai_api_keys,
             'ai_models': ai_models,
-            'ai_model': self._config.get('ai_model', ''),
+            'ai_model': self._active_ai_model(current_provider),
             'ai_language': self._config.get('ai_language', 'en'),
             'ai_ollama_url': self._config.get('ai_ollama_url', 'http://localhost:11434'),
             'ai_openai_base_url': self._config.get('ai_openai_base_url', ''),
@@ -2789,7 +2822,7 @@ class NotificationManager:
                 # injection lands in the system prompt verbatim. Audit Tier 3.2 #4.
                 _ALLOWED_DETAIL_LEVELS = ('brief', 'standard', 'detailed')
                 _ALLOWED_AI_LANGUAGES = (
-                    'en', 'es', 'fr', 'de', 'it', 'pt', 'ru',
+                    'en', 'sk', 'es', 'fr', 'de', 'it', 'pt', 'ru',
                     'ja', 'zh', 'ko', 'pl', 'nl', 'tr', 'ar',
                 )
                 if short_key.endswith('.ai_detail_level') or short_key == 'ai_detail_level':
@@ -2893,7 +2926,7 @@ class NotificationManager:
             return {'checked': False, 'migrated': False, 'message': 'AI not enabled'}
         
         provider_name = self._config.get('ai_provider', 'groq')
-        current_model = self._config.get('ai_model', '')
+        current_model = self._active_ai_model(provider_name)
         
         # Skip Ollama - user manages their own models
         if provider_name == 'ollama':
@@ -2927,7 +2960,13 @@ class NotificationManager:
                 print(f"[NotificationManager] Failed to load verified models: {e}")
             
             from ai_providers import get_provider
-            provider = get_provider(provider_name, api_key=api_key, model=current_model)
+            provider_kwargs = {
+                'api_key': api_key,
+                'model': current_model,
+            }
+            if provider_name == 'openai':
+                provider_kwargs['base_url'] = self._config.get('ai_openai_base_url', '')
+            provider = get_provider(provider_name, **provider_kwargs)
             
             if not provider:
                 return {'checked': False, 'migrated': False, 'message': f'Unknown provider: {provider_name}'}
@@ -2935,8 +2974,24 @@ class NotificationManager:
             # Get available models from API
             api_models = provider.list_models()
             
-            # Combine: use verified models that are also in API (or all verified if API fails)
-            if api_models and verified_models:
+            # Combine: official providers intersect the API list with the
+            # verified catalogue. Custom OpenAI-compatible endpoints are
+            # authoritative for their own opaque aliases, so do not intersect
+            # them with ProxMenux's bundled official OpenAI IDs.
+            openai_custom_endpoint = (
+                provider_name == 'openai'
+                and bool(self._config.get('ai_openai_base_url', '').strip())
+            )
+            if openai_custom_endpoint:
+                if not api_models:
+                    return {
+                        'checked': True,
+                        'migrated': False,
+                        'new_model': current_model,
+                        'message': 'Could not retrieve custom endpoint model list'
+                    }
+                available_models = api_models
+            elif api_models and verified_models:
                 available_models = [m for m in verified_models if m in api_models]
             elif verified_models:
                 available_models = verified_models
@@ -2970,13 +3025,16 @@ class NotificationManager:
             try:
                 conn = sqlite3.connect(str(DB_PATH), timeout=10)
                 cursor = conn.cursor()
-                cursor.execute('''
-                    INSERT OR REPLACE INTO user_settings (setting_key, setting_value, updated_at)
-                    VALUES (?, ?, ?)
-                ''', (f'{SETTINGS_PREFIX}ai_model', recommended, datetime.now().isoformat()))
+                now_iso = datetime.now().isoformat()
+                for model_key in ('ai_model', f'ai_model_{provider_name}'):
+                    cursor.execute('''
+                        INSERT OR REPLACE INTO user_settings (setting_key, setting_value, updated_at)
+                        VALUES (?, ?, ?)
+                    ''', (f'{SETTINGS_PREFIX}{model_key}', recommended, now_iso))
                 conn.commit()
                 conn.close()
                 self._config['ai_model'] = recommended
+                self._config[f'ai_model_{provider_name}'] = recommended
                 
                 print(f"[NotificationManager] AI model migrated: {old_model} -> {recommended}")
                 

@@ -105,6 +105,22 @@ ensure_flow_loaded() {
     esac
 }
 
+# Suppress the Monitor's `service_fail` notifications while this
+# wrapper runs. Tools like log2ram or chrony stop and reinstall their
+# systemd units, and systemd flags the transient "failed" state
+# before the fresh unit starts — same class of noise as PVE services
+# restarting during an apt full-upgrade. Shared markers with
+# scripts/utilities/proxmox_update.sh; consumed by
+# AppImage/scripts/notification_events.py::is_apt_active_on_host.
+_PROXMENUX_UPDATE_MARKER="/var/run/proxmenux-update-in-progress"
+_PROXMENUX_UPDATE_FINISHED_MARKER="/var/run/proxmenux-update-just-finished"
+_proxmenux_postinstall_cleanup() {
+    rm -f "$_PROXMENUX_UPDATE_MARKER"
+    touch "$_PROXMENUX_UPDATE_FINISHED_MARKER"
+}
+trap _proxmenux_postinstall_cleanup EXIT
+touch "$_PROXMENUX_UPDATE_MARKER"
+
 # ----------------------------------------------------------------------
 # Run each tool. We don't bail on the first failure — the user marked a
 # multi-select, they expect every chosen tool to be attempted. RCs are

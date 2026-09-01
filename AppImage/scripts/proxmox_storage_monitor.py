@@ -12,6 +12,33 @@ import time
 from typing import Dict, List, Any, Optional
 
 
+def classify_storage_state(storage_type: str, status: str, total: int) -> Dict[str, Any]:
+    """Classify reachability independently from reported capacity."""
+    normalized_status = str(status or 'unknown').strip().lower()
+    normalized_type = str(storage_type or 'unknown').strip().lower()
+    capacity_known = total > 0
+
+    if normalized_status != 'available':
+        return {
+            'status': 'error',
+            'status_detail': normalized_status or 'unknown',
+            'capacity_known': capacity_known,
+        }
+
+    if not capacity_known and normalized_type == 'pbs':
+        return {
+            'status': 'namespace_restricted',
+            'status_detail': 'namespace_restricted',
+            'capacity_known': False,
+        }
+
+    return {
+        'status': 'active',
+        'status_detail': 'available' if capacity_known else 'capacity_unreported',
+        'capacity_known': capacity_known,
+    }
+
+
 class ProxmoxStorageMonitor:
     """Monitor Proxmox storage configuration and status"""
     
@@ -177,28 +204,13 @@ class ProxmoxStorageMonitor:
                     'percent': round(percent, 2),
                     'node': node
                 }
-                
-                # Check if storage is available.
-                #
-                # "jc-pbs-friendly" mode (Sprint 11.6): a remote PBS where
-                # the user only has DatastoreAdmin on their own namespace
-                # reports `status=available` + `total=0` — the storage IS
-                # reachable, the user just can't list the datastore size.
-                # Treat that combination as INFO (namespace-restricted)
-                # instead of CRITICAL so we don't spam the operator with
-                # "almacenamiento no disponible" every poll. Real outages
-                # still flag because they come back with `status != available`.
-                if total == 0 and status.lower() == "available" and storage_type == 'pbs':
-                    storage_info['status'] = 'namespace_restricted'
-                    storage_info['status_detail'] = 'namespace_restricted'
+
+                state = classify_storage_state(storage_type, status, total)
+                storage_info.update(state)
+                if state['status'] in ('active', 'namespace_restricted'):
                     available_storages.append(storage_info)
-                elif total == 0 or status.lower() != "available":
-                    storage_info['status'] = 'error'
-                    storage_info['status_detail'] = 'unavailable' if total == 0 else status
-                    unavailable_storages.append(storage_info)
                 else:
-                    storage_info['status'] = 'active'
-                    available_storages.append(storage_info)
+                    unavailable_storages.append(storage_info)
             
             # Check for configured storages that are completely missing
             for storage_name, storage_config in self.configured_storages.items():
@@ -212,6 +224,7 @@ class ProxmoxStorageMonitor:
                         'used': 0,
                         'available': 0,
                         'percent': 0,
+                        'capacity_known': False,
                         'node': local_node
                     })
             

@@ -6,7 +6,7 @@
 # Copyright   : (c) 2024 MacRimi
 # License     : GPL-3.0
 #               https://github.com/MacRimi/ProxMenux/blob/main/LICENSE
-# Version     : 1.0
+# Version     : 1.1
 # ==========================================================
 # Description:
 # Reverses post-install optimizations previously applied by
@@ -17,8 +17,8 @@
 #
 # Features:
 # - Registry-driven: only shows tools currently applied.
-# - Per-tool reverse functions (one for each entry in the
-#   auto / customizable scripts).
+# - Per-tool reverse functions for each registered reversible entry
+#   in the auto / customizable scripts.
 # - Restores /etc configs from .bak backups when they exist.
 # - Reboot prompt for changes that require it (VFIO, kernel
 #   cmdline, persistent NIC names, …).
@@ -112,34 +112,6 @@ uninstall_kexec() {
 
 ################################################################
 
-uninstall_apt_upgrade() {
-    msg_info "$(translate "Restoring enterprise repositories...")"
-    
-    # Re-enable enterprise repos
-    if [ -f /etc/apt/sources.list.d/pve-enterprise.list ]; then
-        sed -i "s/^#deb/deb/g" /etc/apt/sources.list.d/pve-enterprise.list
-    fi
-    
-    if [ -f /etc/apt/sources.list.d/ceph.list ]; then
-        sed -i "s/^#deb/deb/g" /etc/apt/sources.list.d/ceph.list
-    fi
-    
-    # Remove public repo
-    rm -f /etc/apt/sources.list.d/pve-public-repo.list
-    
-    # Remove firmware warning config
-    rm -f /etc/apt/apt.conf.d/no-bookworm-firmware.conf
-    
-    apt-get update > /dev/null 2>&1
-    
-    msg_ok "$(translate "Enterprise repositories restored")"
-    register_tool "apt_upgrade" false
-}
-
-################################################################
-
-
-
 uninstall_subscription_banner() {
     msg_info "$(translate "Restoring subscription banner...")"
     
@@ -226,9 +198,8 @@ uninstall_subscription_banner() {
 
     #systemctl restart pveproxy pvedaemon pvestatd 2>/dev/null || true
     
-    register_tool "subscription_banner" false
-    
     if [[ "$restored" == true ]]; then
+        register_tool "subscription_banner" false
         msg_ok "$(translate "Subscription banner restored successfully (desktop and mobile)")"
         msg_ok "$(translate "Refresh your browser to see changes (server restart may be required)")"
     else
@@ -240,6 +211,147 @@ uninstall_subscription_banner() {
 
 
 
+
+################################################################
+
+uninstall_rpc() {
+    local state_file="$BASE_DIR/rpcbind.state"
+    local unit enabled_state active_state
+    local failed=0
+
+    if [[ ! -s "$state_file" ]]; then
+        msg_error "$(translate "The original rpcbind state is unavailable; no service state was changed")"
+        return 1
+    fi
+
+    msg_info2 "$(translate "Restoring the original rpcbind service state...")"
+    while IFS='|' read -r unit enabled_state active_state; do
+        [[ "$unit" != "rpcbind.service" && "$unit" != "rpcbind.socket" ]] && continue
+
+        case "$enabled_state" in
+            enabled)
+                systemctl enable "$unit" >/dev/null 2>&1 || failed=1
+                ;;
+            enabled-runtime)
+                systemctl enable --runtime "$unit" >/dev/null 2>&1 || failed=1
+                ;;
+            masked)
+                systemctl mask "$unit" >/dev/null 2>&1 || failed=1
+                ;;
+            masked-runtime)
+                systemctl mask --runtime "$unit" >/dev/null 2>&1 || failed=1
+                ;;
+            *)
+                systemctl disable "$unit" >/dev/null 2>&1 || true
+                ;;
+        esac
+
+        case "$active_state" in
+            active|activating|reloading)
+                systemctl start "$unit" >/dev/null 2>&1 || failed=1
+                ;;
+            *)
+                systemctl stop "$unit" >/dev/null 2>&1 || true
+                ;;
+        esac
+    done < "$state_file"
+
+    if [[ "$failed" -ne 0 ]]; then
+        msg_error "$(translate "The original rpcbind state could not be restored completely")"
+        return 1
+    fi
+
+    rm -f "$state_file"
+    register_tool "rpc" false
+    msg_ok "$(translate "The original rpcbind service state has been restored")"
+}
+
+################################################################
+
+uninstall_motd() {
+    local state_file="$BASE_DIR/motd.state"
+    local original_file="$BASE_DIR/motd.original"
+    local motd_file="${PROXMENUX_MOTD_FILE:-/etc/motd}"
+    local custom_message="    This system is optimised by: ProxMenux"
+    local original_state
+
+    if [[ ! -f "$state_file" ]]; then
+        msg_error "$(translate "The original MOTD state is unavailable; no changes were made")"
+        return 1
+    fi
+
+    original_state="$(head -n 1 "$state_file" 2>/dev/null)"
+    case "$original_state" in
+        present)
+            if [[ ! -f "$original_file" ]]; then
+                msg_error "$(translate "The original MOTD backup is unavailable; no changes were made")"
+                return 1
+            fi
+            cp -a "$original_file" "$motd_file"
+            ;;
+        absent)
+            rm -f "$motd_file"
+            ;;
+        legacy-marker)
+            if [[ -f "$motd_file" ]]; then
+                sed -i "\|^${custom_message}$|d" "$motd_file"
+                sed -i '/./,$!d' "$motd_file"
+            fi
+            ;;
+        *)
+            msg_error "$(translate "The saved MOTD state is invalid; no changes were made")"
+            return 1
+            ;;
+    esac
+
+    rm -f "$state_file" "$original_file"
+    register_tool "motd" false
+    msg_ok "$(translate "The original MOTD configuration has been restored")"
+}
+
+################################################################
+
+uninstall_system_utils() {
+    local state_file="$BASE_DIR/system_utils.packages"
+    local remaining_file="${state_file}.remaining.$$"
+    local package
+    local packages=()
+
+    if [[ ! -s "$state_file" ]]; then
+        msg_error "$(translate "No ProxMenux-installed utility package list is available")"
+        return 1
+    fi
+
+    while IFS= read -r package; do
+        [[ "$package" =~ ^[a-z0-9][a-z0-9+.-]*(:[a-z0-9]+)?$ ]] || continue
+        packages+=("$package")
+    done < "$state_file"
+
+    if [[ ${#packages[@]} -eq 0 ]]; then
+        msg_error "$(translate "The saved utility package list is invalid; no packages were removed")"
+        return 1
+    fi
+
+    msg_info2 "$(translate "Removing utilities installed by ProxMenux...")"
+    /usr/bin/env DEBIAN_FRONTEND=noninteractive apt-get purge -y "${packages[@]}" >/dev/null 2>&1 || true
+
+    : > "$remaining_file"
+    for package in "${packages[@]}"; do
+        if dpkg-query -W -f='${Status}' "$package" 2>/dev/null | grep -q '^install ok installed$'; then
+            printf '%s\n' "$package" >> "$remaining_file"
+        fi
+    done
+
+    if [[ -s "$remaining_file" ]]; then
+        mv "$remaining_file" "$state_file"
+        msg_error "$(translate "Some utility packages could not be removed; the remaining list has been preserved")"
+        return 1
+    fi
+
+    rm -f "$remaining_file" "$state_file"
+    register_tool "system_utils" false
+    msg_ok "$(translate "Utilities installed by ProxMenux have been removed")"
+}
 
 ################################################################
 
@@ -456,7 +568,8 @@ uninstall_network_optimization() {
     systemctl disable --now proxmenux-fwbr-tune.service >/dev/null 2>&1 || true
     rm -f /etc/systemd/system/proxmenux-fwbr-tune.service
     rm -f /usr/local/sbin/proxmenux-fwbr-tune
-    rm -f /etc/udev/rules.d/99-proxmenux-fwbr-tune.rules
+    rm -f /etc/udev/rules.d/99-proxmenux-fwbr-tune.rules \
+        /etc/udev/rules.d/99-zz-proxmenux-fwbr-tune.rules
     udevadm control --reload-rules >/dev/null 2>&1 || true
 
     systemctl daemon-reload >/dev/null 2>&1 || true
@@ -834,7 +947,9 @@ uninstall_ceph() {
         apt-get purge -y 'ceph-*' 'librados*' 'librbd*' 'libcephfs*' 'python3-ceph*' >/dev/null 2>&1 || true
         apt-get autoremove -y >/dev/null 2>&1 || true
     fi
-    rm -f /etc/apt/sources.list.d/ceph.list /etc/apt/sources.list.d/ceph.sources 2>/dev/null
+    rm -f /etc/apt/sources.list.d/ceph.list \
+          /etc/apt/sources.list.d/ceph-squid.list \
+          /etc/apt/sources.list.d/ceph.sources 2>/dev/null
     rm -f /etc/apt/trusted.gpg.d/ceph.asc /etc/apt/trusted.gpg.d/ceph-release.gpg 2>/dev/null
     apt-get update -qq >/dev/null 2>&1 || true
     msg_ok "$(translate 'Ceph packages and repository removed')"
@@ -907,6 +1022,11 @@ uninstall_pigz() {
 }
 
 uninstall_zfs_arc() {
+    local backup_dir="$BASE_DIR/backups/zfs_arc"
+    local manifest="$backup_dir/manifest.tsv"
+    local remaining_manifest=""
+    local original backup post_hash current_hash
+
     msg_info2 "$(translate 'Reverting ZFS ARC tuning...')"
     if [[ -f /etc/modprobe.d/99-zfsarc.conf.bak ]]; then
         mv -f /etc/modprobe.d/99-zfsarc.conf.bak /etc/modprobe.d/99-zfsarc.conf
@@ -915,6 +1035,43 @@ uninstall_zfs_arc() {
         rm -f /etc/modprobe.d/99-zfsarc.conf
         msg_ok "$(translate 'ZFS ARC config removed (kernel defaults will apply on reboot)')"
     fi
+
+    if [[ -s "$manifest" ]]; then
+        remaining_manifest=$(mktemp "${manifest}.XXXXXX") || remaining_manifest=""
+        while IFS=$'\t' read -r original backup post_hash; do
+            [[ -n "$original" && -n "$backup" ]] || continue
+
+            current_hash=""
+            if [[ -f "$original" ]]; then
+                current_hash=$(sha256sum "$original" 2>/dev/null | awk '{print $1}')
+            fi
+
+            if [[ ! -e "$original" || "$current_hash" == "$post_hash" ]]; then
+                if [[ -f "$backup" ]] && cp -p "$backup" "$original"; then
+                    rm -f "$backup"
+                    msg_ok "$(translate 'External ZFS ARC settings restored:') $original"
+                elif [[ -n "$remaining_manifest" ]]; then
+                    printf '%s\t%s\t%s\n' "$original" "$backup" "$post_hash" >> "$remaining_manifest"
+                fi
+            else
+                msg_warn "$(translate 'External ZFS configuration changed after the ProxMenux migration; current file and backup preserved:') $original"
+                if [[ -n "$remaining_manifest" ]]; then
+                    printf '%s\t%s\t%s\n' "$original" "$backup" "$post_hash" >> "$remaining_manifest"
+                fi
+            fi
+        done < "$manifest"
+
+        if [[ -n "$remaining_manifest" ]]; then
+            if [[ -s "$remaining_manifest" ]]; then
+                mv -f "$remaining_manifest" "$manifest"
+            else
+                rm -f "$remaining_manifest" "$manifest"
+            fi
+        fi
+        rmdir "$backup_dir" 2>/dev/null || true
+        rmdir "$BASE_DIR/backups" 2>/dev/null || true
+    fi
+
     update-initramfs -u -k all >/dev/null 2>&1 || true
     if command -v proxmox-boot-tool >/dev/null 2>&1; then
         proxmox-boot-tool refresh >/dev/null 2>&1 || true
@@ -984,7 +1141,7 @@ show_uninstall_menu() {
     ensure_tools_json
     migrate_installed_tools
     
-    mapfile -t tools_installed < <(jq -r 'to_entries | map(select(.value==true or .value.installed==true)) | .[].key' "$TOOLS_JSON")
+    mapfile -t tools_installed < <(jq -r 'to_entries | map(select(.value==true or .value.installed?==true)) | .[].key' "$TOOLS_JSON")
     
     if [[ ${#tools_installed[@]} -eq 0 ]]; then
         dialog --backtitle "ProxMenux" --title "ProxMenux" \
@@ -995,10 +1152,10 @@ show_uninstall_menu() {
     local menu_options=()
     for tool in "${tools_installed[@]}"; do
         case "$tool" in
-            lvm_repair) desc="LVM PV Headers Repair";;
-            repo_cleanup) desc="Repository Cleanup";;
-            #apt_upgrade) desc="APT Upgrade & Repository Config";;
             subscription_banner) desc="Subscription Banner Removal";;
+            rpc) desc="RPC / rpcbind Disable";;
+            motd) desc="Custom MOTD Banner";;
+            system_utils) desc="System Utilities installed by ProxMenux";;
             time_sync) desc="Time Synchronization";;
             apt_languages) desc="APT Language Skip";;
             journald) desc="Journald Optimization";;

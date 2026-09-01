@@ -7,6 +7,11 @@ export interface Temperature {
   high?: number
   critical?: number
   adapter?: string
+  type?: "cpu" | "gpu" | "nvme" | "hdd" | "ssd" | "storage" | "pci" | "other"
+  device?: string
+  devices?: string[]
+  model?: string
+  serial?: string
 }
 
 export interface PowerMeter {

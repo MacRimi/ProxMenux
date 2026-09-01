@@ -1,0 +1,195 @@
+{
+  "meta": {
+    "title": "LXC updates: OS, apps and Docker | ProxMenux",
+    "description": "Configure and run operating-system, application, Docker Engine and Docker image updates from an LXC container."
+  },
+  "header": {
+    "title": "LXC updates: OS, apps and Docker",
+    "description": "Review every update target in one place, run it independently, or combine selected targets in a controlled bulk action."
+  },
+  "intro": {
+    "p1": "The <strong>Updates</strong> tab separates version detection from the action that installs an update. Registration and optional version tracking live on the <link>App tab</link>; executable update methods live here.",
+    "p2": "A saved application appears in Updates even when it contains only a web link. Version tracking is optional, and an updater can be configured independently.",
+    "callout": "No action is inferred from an application name alone. ProxMenux runs an integrated method only after verifying it, or a custom command that has been explicitly saved."
+  },
+  "overview": {
+    "heading": "What the tab contains",
+    "lead": "Each available target has its own section and action:",
+    "items": [
+      "<strong>OS packages</strong> for Debian, Ubuntu and Alpine containers.",
+      "One section for every <strong>registered application</strong>, including link-only records.",
+      "A <strong>Docker</strong> section when Docker is registered, with Docker Engine and tagged images grouped together.",
+      "A configurable <strong>Bulk update</strong> section, followed by backup, restart and scheduling options."
+    ]
+  },
+  "mechanisms": {
+    "heading": "How an update method is selected",
+    "lead": "The integrated Proxmox VE Helper-Scripts path follows the official <helper>update-apps mechanism</helper>. Other install types use the matching package, Docker or custom path.",
+    "officialReference": "Official reference: the <helper>Proxmox VE Helper-Scripts update-apps documentation</helper> covers interactive and unattended modes, backups, dry runs, temporary build resources, logs and exit codes.",
+    "colSource": "Source",
+    "colAction": "Displayed action",
+    "colNotes": "What runs",
+    "rows": [
+      {
+        "source": "APT or APK packages",
+        "action": "Apply OS updates",
+        "notes": "Updates the container packages. Registered apps installed as dpkg or apk packages are covered by this same pass."
+      },
+      {
+        "source": "Proxmox VE Helper-Scripts",
+        "action": "Apply update",
+        "notes": "Uses the verified /usr/bin/update wrapper. A legacy marker without a valid wrapper is identified, but never executed automatically."
+      },
+      {
+        "source": "Custom command",
+        "action": "Run updater",
+        "notes": "Runs the saved command inside the LXC and replaces any integrated app updater for that record."
+      },
+      {
+        "source": "Docker Engine",
+        "action": "Update Docker Engine",
+        "notes": "Updates only installed Docker packages and their required dependencies. Other OS packages and containers are not changed."
+      },
+      {
+        "source": "Docker image",
+        "action": "Update image",
+        "notes": "Pulls the selected image and recreates its Compose service group or protected standalone container."
+      }
+    ],
+    "callout": "A custom command always <strong>replaces</strong> the integrated Proxmox VE Helper-Scripts updater for that application. The two methods are not run one after the other."
+  },
+  "docker": {
+    "heading": "Docker Engine and Docker images",
+    "lead": "After Docker is registered on the App tab, its engine and image inventory appear inside the same <strong>Docker</strong> section.",
+    "items": [
+      "Docker Engine version tracking is separate from the OS package counter and has its own update button.",
+      "Tagged local images are compared with their registry by immutable digest. <strong>Check now</strong> refreshes this inventory without pulling images or restarting containers.",
+      "Compose services are updated from their declared project. Images that belong to the same service group are handled together so the project is not recreated repeatedly.",
+      "A standalone container is recreated from its current configuration. The protected flow keeps rollback data and restores the previous container if recreation fails.",
+      "Every image can be selected separately in manual, bulk and scheduled updates, except declared Compose dependencies that must follow their parent service."
+    ],
+    "callout": "Containers running inside Docker are not shown as independent LXC applications. Their published web ports can be saved as links under the Docker registration, while image updates remain in the Docker section."
+  },
+  "actions": {
+    "heading": "Individual actions and status colours",
+    "lead": "Every section remains independently actionable, whether or not a bulk update is configured.",
+    "items": [
+      "The <strong>Edit</strong> button is always available. Integrated methods open with their current command, which can be reviewed, replaced or cleared.",
+      "When version tracking is disabled but an updater exists, the neutral <strong>Run updater</strong> action is shown. ProxMenux does not claim that an update is pending.",
+      "When no method is available, <strong>Configure</strong> opens the custom-command editor.",
+      "The <strong>Update image</strong> action applies only to the selected Docker unit; it does not update Docker Engine or unrelated images."
+    ],
+    "statusColState": "Known state",
+    "statusColAppearance": "Appearance",
+    "statusColMeaning": "Meaning",
+    "statusRows": [
+      {
+        "state": "Verified update available",
+        "appearance": "Purple text, upward-arrow icon and purple action",
+        "meaning": "Installed and available versions or image digests differ."
+      },
+      {
+        "state": "Verified current",
+        "appearance": "Green check and green Updated action",
+        "meaning": "The latest completed check confirms that the target is current."
+      },
+      {
+        "state": "Version unknown",
+        "appearance": "Neutral text and neutral action",
+        "meaning": "An updater can run, but no version evidence exists to label it pending or current."
+      }
+    ]
+  },
+  "custom": {
+    "heading": "Custom update commands",
+    "lead": "Use a custom command when the installation has no verified integrated updater, or when its normal procedure must be replaced.",
+    "items": [
+      "Open <strong>Configure</strong> when the field is empty, or <strong>Edit</strong> when a method already exists.",
+      "For an integrated app or Docker Engine, the editor shows the command currently used. Saving different content turns it into the explicit override for that record.",
+      "Test the complete procedure in the LXC terminal first. It must be non-interactive, use the correct working directory and return a non-zero exit status on failure.",
+      "Do not include <code>pct exec</code>; ProxMenux already enters the container and runs the command as root."
+    ],
+    "exampleLead": "Example of a complete in-container procedure:",
+    "example": "cd /opt/my-app && ./update.sh",
+    "callout": "A version command such as <code>myapp --version</code> only reads a version; it is not an updater. Commands run with administrative privileges, so stored content must be reviewed with the same care as a root shell command."
+  },
+  "bulk": {
+    "heading": "Bulk update",
+    "lead": "Bulk update creates one reusable action for an exact set of targets in the LXC. It is placed after the individual app and Docker sections and before <strong>Options</strong>.",
+    "items": [
+      "OS packages are mandatory. At least one additional app, Docker Engine or Docker image unit must be selected.",
+      "Applications and Docker units are selected individually. A Compose parent shows the dependencies that will be updated with it.",
+      "Unavailable or removed targets are marked as stale and must be removed before the configuration can be saved.",
+      "The <strong>Apply updates</strong> button is purple when any selected target has a verified update, green when all selected targets are verified current, and neutral when the result is unknown.",
+      "Removing the bulk configuration does not remove individual update methods or scheduled-update settings."
+    ],
+    "callout": "Bulk update does not replace the individual buttons. It is an optional shortcut for a selection that should run together."
+  },
+  "options": {
+    "heading": "Backup and restart options",
+    "lead": "The same options apply to manual, bulk and scheduled runs:",
+    "items": [
+      "<strong>Snapshot before applying</strong> creates a vzdump backup on the selected storage. If the required backup fails, the update does not start.",
+      "<strong>Restart after applying</strong> restarts the LXC only after a successful run.",
+      "The selections are stored per LXC and remain independent from the target list."
+    ]
+  },
+  "scheduled": {
+    "heading": "Scheduled updates",
+    "lead": "Scheduled updates use the same executable targets and safety options as manual actions.",
+    "items": [
+      "Choose a preset or cron expression, then select exact targets: OS packages, individual apps, Docker Engine, standalone Docker units or Compose service groups.",
+      "A release hold applies only to selected applications with version tracking. Apps without tracking run their updater whenever their schedule is due.",
+      "The last-run state distinguishes success, partial completion, failure, safety hold and a run with nothing pending.",
+      "External host schedules detected from Proxmox VE Helper-Scripts are shown separately so overlapping automation is visible."
+    ],
+    "callout": "Run every selected method manually before enabling a schedule. Scheduled commands cannot answer prompts."
+  },
+  "completion": {
+    "heading": "What happens after an update",
+    "lead": "The update is not considered finished when the terminal command merely exits.",
+    "items": [
+      "The same run records its final result and refreshes OS package state, registered app versions and Docker inventory as applicable.",
+      "The LXC cache is replaced with the verified post-update state, so badges and buttons do not retain the previous result.",
+      "If a stopped or restored LXC starts, the existing lifecycle event refreshes that LXC again. Docker inventory waits for the daemon to become ready instead of caching an empty startup result as final.",
+      "Enabled notifications are emitted from the finalized run, including partial failures and grouped Docker image results."
+    ]
+  },
+  "troubleshooting": {
+    "heading": "Common situations",
+    "colProblem": "Situation",
+    "colResolution": "Resolution",
+    "rows": [
+      {
+        "problem": "No update method has been identified",
+        "resolution": "Open Configure, add the official non-interactive procedure and test it manually before scheduling it."
+      },
+      {
+        "problem": "A Proxmox VE Helper-Scripts identity is shown but no action exists",
+        "resolution": "The LXC has legacy identification data but no verified /usr/bin/update wrapper. Add a custom method only after confirming the correct procedure."
+      },
+      {
+        "problem": "Docker images are temporarily empty after startup or restore",
+        "resolution": "Wait for Docker to become ready or press Check now. The inventory retries startup and does not treat a transient empty result as final."
+      },
+      {
+        "problem": "A saved bulk target is no longer available",
+        "resolution": "Edit the bulk configuration, remove the stale target and select its current replacement if one exists."
+      },
+      {
+        "problem": "A custom command fails",
+        "resolution": "Run it in the LXC terminal and review its path, dependencies, non-interactive flags and exit code."
+      }
+    ]
+  },
+  "figures": {
+    "osPending": {
+      "alt": "Operating-system packages section with pending and security update counts",
+      "caption": "The operating-system section keeps package updates independent from application and Docker actions."
+    },
+    "options": {
+      "alt": "LXC update options with pre-update backup and post-update restart",
+      "caption": "Backup and restart preferences apply to manual, bulk and scheduled executions."
+    }
+  }
+}

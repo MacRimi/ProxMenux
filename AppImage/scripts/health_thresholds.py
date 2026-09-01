@@ -65,13 +65,28 @@ DEFAULTS: dict[str, Any] = {
     "memory": {
         "warning": {"value": 85, "unit": "%", "min": 1, "max": 100, "step": 1},
         "critical": {"value": 95, "unit": "%", "min": 1, "max": 100, "step": 1},
-        "swap_critical": {"value": 5, "unit": "%", "min": 1, "max": 100, "step": 1},
+        # Swap CRITICAL requires BOTH to hold: swap_high AND
+        # available_min. Alerting on swap alone was too noisy on
+        # Proxmox hosts where Linux proactively swaps inactive pages
+        # while RAM stays plentifully available.
+        "swap_high": {"value": 80, "unit": "%", "min": 1, "max": 100, "step": 1},
+        "available_min": {"value": 15, "unit": "%", "min": 1, "max": 100, "step": 1},
     },
     "host_storage": {
         "warning": {"value": 85, "unit": "%", "min": 1, "max": 100, "step": 1},
         "critical": {"value": 95, "unit": "%", "min": 1, "max": 100, "step": 1},
     },
     "lxc_rootfs": {
+        "warning": {"value": 85, "unit": "%", "min": 1, "max": 100, "step": 1},
+        "critical": {"value": 95, "unit": "%", "min": 1, "max": 100, "step": 1},
+    },
+    "vm_disk": {
+        # Aggregate guest-filesystem usage for running QEMU VMs, read
+        # from the guest agent (mirrors `lxc_rootfs` for VMs). Includes
+        # every persistent filesystem the guest reports on a block
+        # device, so PCI-passthrough drives and add-on storage count
+        # towards the threshold — the metric is "how full is the
+        # guest", not "how full is the disk PVE knows about".
         "warning": {"value": 85, "unit": "%", "min": 1, "max": 100, "step": 1},
         "critical": {"value": 95, "unit": "%", "min": 1, "max": 100, "step": 1},
     },

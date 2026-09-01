@@ -105,7 +105,7 @@
     "body1": "Inside the dashboard, the <strong>Health Monitor</strong> runs continuously in the background and produces a structured stream of events: high CPU temperature, disk SMART warnings, ZFS pool degradation, OOM kills, VM/CT failures, security incidents, and so on. Each event has a category, a severity (INFO / WARNING / CRITICAL) and a stable <code>error_key</code> so duplicates collapse instead of flooding the screen.",
     "feedsIntro": "Events feed three things at the same time:",
     "feedsHealth": "The <strong>Health Monitor view</strong> in the dashboard (active + dismissed lists).",
-    "feedsChannels": "The <strong>notification engine</strong> — Telegram, Discord, Email, Gotify and Apprise (multi-channel). Each channel is configured independently and per-event categories can be silenced.",
+    "feedsChannels": "The <strong>notification engine</strong> — Telegram, Discord, Email, Gotify, Pushover and Apprise (multi-channel). Each channel is configured independently and per-event categories can be silenced.",
     "feedsAI": "The optional <strong>AI assistant</strong> — when enabled, the configured provider (OpenAI, Anthropic, Gemini, Groq, Ollama or OpenRouter) explains incoming events in plain language and, if enabled in the AI settings, proposes next steps.",
     "suppressionTitle": "Suppression instead of mute-all",
     "suppressionBody": "Each category has its own <em>Suppression Duration</em>: once you dismiss an alert, the same alert is silenced for that window (default 24 hours, configurable per category up to permanent). Real escalations — e.g. CPU temperature crossing the critical threshold — always re-trigger regardless of suppression."

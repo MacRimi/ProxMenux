@@ -16,6 +16,8 @@ from __future__ import annotations
 
 import argparse
 import ast
+import asyncio
+import inspect
 import json
 import os
 import subprocess
@@ -28,12 +30,75 @@ from urllib.parse import quote
 from urllib.request import Request, urlopen
 
 
-DEFAULT_LANGUAGES = ("es", "fr", "de", "it", "pt")
+DEFAULT_LANGUAGES = ("es", "fr", "de", "it", "pt", "sk", "sv")
 DEFAULT_CONTEXT = "Context: Technical message for Proxmox and IT. Translate:"
+# googletrans and the public Google endpoint used by this workflow do not
+# support Cloud Translation glossaries. Protect product names, package names
+# and command identifiers with opaque tokens before sending text to any
+# provider, then restore the exact source spelling afterwards. Keep longer
+# terms first so ``gasket`` cannot consume part of ``gasket-dkms``.
+PROTECTED_TECHNICAL_TERMS = (
+    "google/gasket-driver",
+    "feranick/gasket-driver",
+    "libedgetpu1-std",
+    "Proxmox VE Helper-Scripts",
+    "Docker Compose",
+    "gasket-driver",
+    "gasket-dkms",
+    "libedgetpu1",
+    "libedgetpu",
+    "Google Coral",
+    "Edge TPU",
+    "ProxMenux",
+    "Proxmox",
+    "AppImage",
+    "smartctl",
+    "systemctl",
+    "pveproxy",
+    "apt-get",
+    "Frigate",
+    "Docker",
+    "Coral",
+    "gasket",
+    "apex",
+    "lspci",
+    "dpkg",
+    "DKMS",
+    "QEMU",
+    "LXC",
+    "ZFS",
+    "SSH",
+    "fork",
+)
+TECHNICAL_TERM_RE = re.compile(
+    "|".join(
+        rf"(?<![A-Za-z0-9_]){re.escape(term)}(?![A-Za-z0-9_])"
+        for term in sorted(PROTECTED_TECHNICAL_TERMS, key=len, reverse=True)
+    ),
+    re.IGNORECASE,
+)
 TRANSLATE_CALL_RE = re.compile(
     r"""translate\s+(?P<quote>["'])(?P<text>(?:\\.|(?! (?P=quote) ).)*?)(?P=quote)""",
     re.VERBOSE | re.DOTALL,
 )
+
+
+def protect_technical_terms(text: str) -> tuple[str, list[str]]:
+    """Replace glossary terms with stable tokens before translation."""
+    protected: list[str] = []
+
+    def _swap(match: re.Match[str]) -> str:
+        protected.append(match.group(0))
+        return f"__PMX_TERM_{len(protected) - 1}__"
+
+    return TECHNICAL_TERM_RE.sub(_swap, text), protected
+
+
+def restore_technical_terms(text: str, protected: list[str]) -> str:
+    """Restore glossary terms exactly as they appeared in the source."""
+    for index, original in enumerate(protected):
+        text = text.replace(f"__PMX_TERM_{index}__", original)
+    return text
 
 
 def iter_script_files(
@@ -97,7 +162,10 @@ def translate_googletrans(text: str, dest_lang: str, context: str) -> str:
 
     translator = Translator()
     full_text = f"{context} {text}".strip()
-    return translator.translate(full_text, dest=dest_lang).text
+    result = translator.translate(full_text, dest=dest_lang)
+    if inspect.isawaitable(result):
+        result = asyncio.run(result)
+    return result.text
 
 
 def translate_google_web(text: str, dest_lang: str, context: str, timeout: int) -> str:
@@ -163,8 +231,23 @@ def translate_appimage(
 
 def clean_translation(value: str) -> str:
     separator = r"[\s\u00a0]*[:：]"
-    translate_labels = "Translate|Traducir|Traduire|Übersetzen|Tradurre|Traduci|Traduzir"
-    context_labels = "Context|Contexto|Contexte|Kontext|Contesto"
+    # `Translate` pivot in every locale currently supported. Without
+    # the target-language variant here, the cleaner can't locate the
+    # boundary between the context prompt and the real translation,
+    # and the whole payload leaks through as the translated context.
+    # Caught on the 2026-08-14 workflow run — every sk / sv key ended
+    # up as "Technický text používateľského rozhrania…" or
+    # "Teknisk gränssnittstext för en Proxmox-hanteringspanel.Övers"
+    # because Preložiť / Översätt / Översätta were missing.
+    translate_labels = (
+        "Translate|Traducir|Traduire|Übersetzen|Tradurre|Traduci|Traduzir"
+        "|Preložiť|Prelož|Preloz"          # sk
+        "|Översätta|Översätt"              # sv
+    )
+    context_labels = (
+        "Context|Contexto|Contexte|Kontext|Contesto"
+        "|Sammanhang"                      # sv alternate
+    )
     value = re.sub(
         rf"^.*?({translate_labels}){separator}",
         "",
@@ -194,15 +277,19 @@ def translate_text(
     timeout: int,
     appimage_path: Path,
 ) -> str:
+    protected_text, protected_terms = protect_technical_terms(text)
     if provider == "googletrans":
-        translated = translate_googletrans(text, dest_lang, context)
+        translated = translate_googletrans(protected_text, dest_lang, context)
     elif provider == "google-web":
-        translated = translate_google_web(text, dest_lang, context, timeout)
+        translated = translate_google_web(protected_text, dest_lang, context, timeout)
     elif provider == "appimage":
-        translated = translate_appimage(text, dest_lang, context, timeout, appimage_path)
+        translated = translate_appimage(
+            protected_text, dest_lang, context, timeout, appimage_path
+        )
     else:
         raise ValueError(f"Unknown provider: {provider}")
-    return clean_translation(translated) or text
+    translated = restore_technical_terms(clean_translation(translated), protected_terms)
+    return translated or text
 
 
 def load_language_cache(path: Path) -> dict[str, str]:
@@ -260,7 +347,7 @@ def build_arg_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--languages",
         default=",".join(DEFAULT_LANGUAGES),
-        help="Comma-separated destination languages. Default: es,fr,de,it,pt",
+        help="Comma-separated destination languages. Default: es,fr,de,it,pt,sk",
     )
     parser.add_argument(
         "--provider",
@@ -373,12 +460,20 @@ def main() -> int:
         write_language_cache(output_dir / f"{lang}.json", cache)
 
     if failures:
-        print(f"Completed with {len(failures)} translation failures.", file=sys.stderr, flush=True)
+        print(
+            f"Completed with {len(failures)} translation failures "
+            f"(partial progress persisted, next run will retry).",
+            file=sys.stderr, flush=True,
+        )
         for text, lang, error in failures[:20]:
             print(f"- {lang}: {text[:80]} -> {error}", file=sys.stderr, flush=True)
         if len(failures) > 20:
             print(f"... and {len(failures) - 20} more.", file=sys.stderr, flush=True)
-        return 2
+        # Exit 0 on partial failure so the workflow's Commit + push
+        # step still runs. Otherwise a couple of transient googletrans
+        # timeouts would fail the whole workflow and discard every
+        # successful translation from the same batch.
+        return 0
 
     print("Translation cache generated successfully.", flush=True)
     return 0

@@ -33,11 +33,13 @@
     "memoryTitle": "Memory Modules",
     "memoryBody": "One row per populated slot from <code>dmidecode</code>: slot label, module size, type (DDR4 / DDR5 / ECC variants), speed (configured and rated), manufacturer, part number and serial. Empty slots are listed greyed-out so you can see the upgrade headroom at a glance.",
     "thermalTitle": "Thermal Monitoring",
-    "thermalIntro": "Five sub-blocks, each fed by <code>lm-sensors</code> + tool-specific scrapers. A block hides itself when no sensors are reported in that category.",
+    "thermalIntro": "Seven sub-blocks, fed by <code>lm-sensors</code>, <code>sysfs</code> and tool-specific scrapers. Storage hwmon sensors are correlated with the physical block device, so each detected drive includes its model and <code>/dev/...</code> path. A block hides itself when no sensors are reported in that category.",
     "thermalItems": [
       "<strong>CPU</strong> — package and per-core temperatures.",
       "<strong>GPU</strong> — discrete-GPU sensors via <code>nvidia-smi</code> / <code>amdgpu_top</code> / Intel iGPU. Includes hot-spot and memory-junction when the driver exposes them.",
-      "<strong>NVME</strong> — composite + per-sensor temperatures from <code>nvme</code>.",
+      "<strong>NVME</strong> — controller composite temperature associated with its exact NVMe namespace.",
+      "<strong>HDD</strong> — <code>drivetemp</code> readings for rotational block devices.",
+      "<strong>SSD</strong> — <code>drivetemp</code> readings for non-rotational SATA/SAS block devices.",
       "<strong>PCI</strong> — sensors that surface as PCI-attached devices (HBAs, network cards with internal sensors).",
       "<strong>OTHER</strong> — chipset, VRM, ambient sensors that don't fit elsewhere."
     ]
@@ -182,7 +184,7 @@
       {
         "section": "Live sensor values",
         "endpoint": "/api/hardware/live",
-        "source": "<code>sensors</code> (lm-sensors), package temperatures, fan RPM. Refreshed each request."
+        "source": "<code>sensors</code> (lm-sensors) plus <code>/sys/class/hwmon</code> and <code>/sys/block</code> for storage-device identity. Temperature values remain live; only the hwmon-to-device topology is cached for 60 seconds."
       },
       {
         "section": "CPU temperature history",

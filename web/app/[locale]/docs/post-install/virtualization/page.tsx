@@ -61,6 +61,7 @@ export default async function PostInstallVirtualizationPage({
       <DocHeader
         title={t("header.title")}
         section={t("header.section")}
+        estimatedMinutes={9}
       />
 
       <Callout variant="info" title={t("intro.title")}>
@@ -145,6 +146,10 @@ iommu=pt
 pcie_acs_override=downstream,multifunction`}
         className="my-4"
       />
+
+      <Callout variant="warning" title={t("vfio.acsTitle")}>
+        {t.rich("vfio.acsBody", { code, strong })}
+      </Callout>
 
       <p className="mb-3 text-gray-800 leading-relaxed">
         {t.rich("vfio.modulesIntro", { code })}

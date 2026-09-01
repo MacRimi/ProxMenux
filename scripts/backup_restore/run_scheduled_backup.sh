@@ -532,6 +532,58 @@ _sb_hydrate_attached_retention() {
   done < <(hb_pve_prune_to_keep_env "$prune")
 }
 
+# Safe replacement for `source <env>`. The job .env is DATA (credentials
+# + parameters), not code. Sourcing it as bash produces two failure modes
+# reported from the field:
+#   - a value with spaces (e.g. `ON_CALENDAR=*-*-* 01:00:00`) is parsed
+#     as "assign first token, then run the rest as a command" — the
+#     scheduled runner dies with `01:00:00: command not found` before
+#     doing any work.
+#   - a value containing a bare `$word` under `set -u` triggers an
+#     unbound-variable expansion during sourcing and aborts.
+# It also opens a code-execution vector (backticks / `$(...)` in a
+# password would run as root at source time).
+# The API (shlex.quote) and CLI (printf %q) both quote on write, so
+# jobs created by current code are safe under source. Legacy jobs on
+# disk are not — hence this parser.
+_sb_load_env_file() {
+  local file="$1"
+  [[ -f "$file" ]] || return 1
+  local line key value_raw prev_u prev_f
+  case $- in *u*) prev_u=1 ;; *) prev_u=0 ;; esac
+  case $- in *f*) prev_f=1 ;; *) prev_f=0 ;; esac
+  while IFS= read -r line || [[ -n "$line" ]]; do
+    [[ -z "$line" || "$line" == \#* ]] && continue
+    [[ "$line" == *=* ]] || continue
+    key="${line%%=*}"
+    [[ "$key" =~ ^[A-Za-z_][A-Za-z0-9_]*$ ]] || continue
+    value_raw="${line#*=}"
+    unset "$key"
+    # Refuse command substitution — no legitimate reason for `$(...)`
+    # or backticks in a data file; treating them as literal is safer
+    # than evaluating them as root.
+    # shellcheck disable=SC2016  # matching literal `$(` and backtick, not expanding
+    if [[ "$value_raw" == *'$('* || "$value_raw" == *'`'* ]]; then
+      declare -gx "$key=$value_raw"
+      continue
+    fi
+    # Try a shell-quoted parse (handles printf %q backslash escapes and
+    # shlex.quote surrounding quotes). Guards: set +u so `$FOO` in an
+    # unquoted value doesn't abort; set -f so `*` doesn't glob-expand
+    # against files on disk. If eval fails (legacy unquoted value with
+    # spaces, unbalanced quotes, etc.), fall through to a raw literal
+    # assignment.
+    set +u
+    set -f
+    if ! eval "declare -gx $key=$value_raw" 2>/dev/null; then
+      unset "$key"
+      declare -gx "$key=$value_raw"
+    fi
+    (( prev_u )) && set -u
+    (( prev_f )) || set +f
+  done <"$file"
+}
+
 main() {
   local job_id="${1:-}"
   [[ -z "$job_id" ]] && { echo "Usage: $0 <job_id>" >&2; exit 1; }
@@ -539,27 +591,61 @@ main() {
   local job_file="${JOBS_DIR}/${job_id}.env"
   [[ -f "$job_file" ]] || { echo "Job not found: $job_id" >&2; exit 1; }
 
-  # shellcheck source=/dev/null
-  source "$job_file"
+  _sb_load_env_file "$job_file"
 
   # Attached jobs: re-read retention from the PVE parent live (see
   # _sb_hydrate_attached_retention above for the why). Standalone
   # jobs keep whatever KEEP_* the .env has.
   _sb_hydrate_attached_retention
 
-  local lock_file="${LOCK_DIR}/proxmenux-backup-${job_id}.lock"
-  if command -v flock >/dev/null 2>&1; then
-    exec 9>"$lock_file" || exit 1
-    if ! flock -n 9; then
-      echo "Another run is active for job ${job_id}" >&2
-      exit 1
-    fi
-  fi
-
+  # Create log_file and summary_file BEFORE the flock so any early
+  # failure (lock contention, missing tools, unreadable env) surfaces
+  # in the runner log the Monitor polls, instead of being lost to
+  # stderr/DEVNULL and leaving the UI stuck on "Waiting for runner
+  # to start…" forever.
   local ts log_file stage_root summary_file
   ts="$(date +%Y%m%d_%H%M%S)"
   log_file="${LOG_DIR}/${job_id}-${ts}.log"
   summary_file="${LOG_DIR}/${job_id}-last.status"
+
+  local lock_file="${LOCK_DIR}/proxmenux-backup-${job_id}.lock"
+  if command -v flock >/dev/null 2>&1; then
+    if ! exec 9>"$lock_file"; then
+      {
+        echo "=== Scheduled backup job ${job_id} aborted at $(date -Iseconds) ==="
+        echo "Cannot open lock file: $lock_file"
+        echo "Check that ${LOCK_DIR} exists and is writable by root."
+      } >"$log_file"
+      {
+        echo "JOB_ID=${job_id}"
+        echo "RUN_AT=$(date -Iseconds)"
+        echo "RESULT=failed"
+        echo "REASON=lock_open_failed"
+      } >"$summary_file"
+      exit 1
+    fi
+    if ! flock -n 9; then
+      {
+        echo "=== Scheduled backup job ${job_id} aborted at $(date -Iseconds) ==="
+        echo "Another run is already active for this job (lock held: $lock_file)."
+        echo ""
+        echo "Possible causes:"
+        echo "  - A previous run is still in progress (check with: ps auxf | grep run_scheduled_backup)."
+        echo "  - A previous run hung and left the lock behind. Kill the stale"
+        echo "    process (if any) and remove the lock: rm $lock_file"
+        echo ""
+        echo "This run did NOT execute a backup."
+      } >"$log_file"
+      {
+        echo "JOB_ID=${job_id}"
+        echo "RUN_AT=$(date -Iseconds)"
+        echo "RESULT=failed"
+        echo "REASON=another_run_active"
+      } >"$summary_file"
+      exit 1
+    fi
+  fi
+
   stage_root="$(mktemp -d /tmp/proxmenux-sched-stage.XXXXXX)"
 
   {
@@ -627,7 +713,17 @@ main() {
     echo "Paths to back up: ${#paths[@]}"
     echo "Preparing staging area at $stage_root ..."
   } >>"$log_file"
-  hb_prepare_staging "$stage_root" "${paths[@]}" >>"$log_file" 2>&1
+  if ! hb_prepare_staging "$stage_root" "${paths[@]}" >>"$log_file" 2>&1; then
+    echo "RESULT=failed" >>"$summary_file"
+    echo "LOG_FILE=${log_file}" >>"$summary_file"
+    echo "=== Job aborted: one or more selected paths could not be copied ===" >>"$log_file"
+    export HB_NOTIFY_REASON="One or more selected backup paths could not be copied"
+    export HB_NOTIFY_DURATION="0s"
+    hb_notify_lifecycle "fail"
+    rm -rf "$stage_root"
+    (( TTY )) && msg_error "$(translate "Backup failed. See log:") $log_file"
+    exit 1
+  fi
   local staged_files staged_size
   staged_files=$(find "$stage_root/rootfs" -type f 2>/dev/null | wc -l)
   staged_size=$(hb_file_size "$stage_root/rootfs" 2>/dev/null || echo "?")

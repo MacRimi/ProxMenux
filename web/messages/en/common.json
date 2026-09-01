@@ -27,7 +27,8 @@
   "language": {
     "switcher": "Language",
     "en": "English",
-    "es": "Español"
+    "es": "Español",
+    "sk": "Slovenčina"
   },
   "resources": {
     "documentation": {
@@ -58,9 +59,12 @@
       "accessAuth": "Access & Authentication",
       "dashboard": "Dashboard",
       "dashboardSystemOverview": "System Overview tab",
+      "dashboardApps": "Apps tab",
       "dashboardStorage": "Storage tab",
       "dashboardNetwork": "Network tab",
       "dashboardVmsLxcs": "VMs & LXCs tab",
+      "dashboardVmsLxcsApp": "App",
+      "dashboardVmsLxcsUpdates": "Updates",
       "dashboardHardware": "Hardware tab",
       "dashboardSystemLogs": "System Logs tab",
       "dashboardTerminal": "Terminal tab",

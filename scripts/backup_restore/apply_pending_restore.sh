@@ -3,6 +3,7 @@
 # ProxMenux - Apply Pending Restore On Boot
 # ==========================================================
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PENDING_BASE="${PMX_RESTORE_PENDING_BASE:-/var/lib/proxmenux/restore-pending}"
 CURRENT_LINK="${PENDING_BASE}/current"
 LOG_DIR="${PMX_RESTORE_LOG_DIR:-/var/log/proxmenux}"
@@ -82,6 +83,7 @@ cluster_recovery_root=""
 applied=0
 skipped=0
 failed=0
+jobs_restored=0
 
 while IFS= read -r rel; do
     [[ -z "$rel" ]] && continue
@@ -168,12 +170,14 @@ while IFS= read -r rel; do
         if [[ ${#RSYNC_EXCLUDES[@]} -gt 0 ]]; then
             if rsync -aAXH "${RSYNC_EXCLUDES[@]}" "$src/" "$dst/" >/dev/null 2>&1; then
                 ((applied++))
+                [[ "$rel" == "var/lib/proxmenux/backup-jobs" || "$rel" == "var/lib/proxmenux/backup-jobs/"* ]] && jobs_restored=1
             else
                 ((failed++))
             fi
         else
             if rsync -aAXH --delete "$src/" "$dst/" >/dev/null 2>&1; then
                 ((applied++))
+                [[ "$rel" == "var/lib/proxmenux/backup-jobs" || "$rel" == "var/lib/proxmenux/backup-jobs/"* ]] && jobs_restored=1
             else
                 ((failed++))
             fi
@@ -182,13 +186,36 @@ while IFS= read -r rel; do
         mkdir -p "$(dirname "$dst")" >/dev/null 2>&1 || true
         if cp -a "$src" "$dst" >/dev/null 2>&1; then
             ((applied++))
+            [[ "$rel" == "var/lib/proxmenux/backup-jobs/"* ]] && jobs_restored=1
         else
             ((failed++))
         fi
     fi
 done <"$APPLY_LIST"
 
-systemctl daemon-reload >/dev/null 2>&1 || true
+if (( jobs_restored )); then
+    scheduler_script="$SCRIPT_DIR/backup_scheduler.sh"
+    [[ -f "$scheduler_script" ]] || scheduler_script="/usr/local/share/proxmenux/scripts/backup_restore/backup_scheduler.sh"
+    jobs_dir="${DEST_PREFIX%/}/var/lib/proxmenux/backup-jobs"
+    systemd_dir="${DEST_PREFIX%/}/etc/systemd/system"
+    if [[ -f "$scheduler_script" ]]; then
+        if [[ "$DEST_PREFIX" == "/" ]]; then
+            bash "$scheduler_script" --reconcile-restored || ((failed++))
+        else
+            PMX_BACKUP_JOBS_DIR="$jobs_dir" \
+            PMX_BACKUP_SYSTEMD_DIR="$systemd_dir" \
+            PMX_BACKUP_NO_SYSTEMCTL=1 \
+                bash "$scheduler_script" --reconcile-restored || ((failed++))
+        fi
+    else
+        echo "Backup scheduler script not found; restored jobs were not reconciled."
+        ((failed++))
+    fi
+fi
+
+if [[ "$DEST_PREFIX" == "/" ]]; then
+    systemctl daemon-reload >/dev/null 2>&1 || true
+fi
 
 # `update-initramfs -u -k all` and `update-grub` used to live here
 # but: (a) they take 5-10 minutes for 3 kernels, hanging early-boot
@@ -248,7 +275,7 @@ EOF
     # without restarting anything. That second unit is gated by
     # ConditionPathExists on the marker file we drop here, so on
     # a normal boot (no marker) it's a no-op.
-    if [[ "${cluster_live_apply:-0}" == "1" ]]; then
+    if [[ "${cluster_live_apply:-0}" == "1" && "$DEST_PREFIX" == "/" ]]; then
         echo "Installing post-boot cluster apply unit..."
 
         # Decide whether the post-boot script needs to run
@@ -353,7 +380,9 @@ restore_id="$(basename "$PENDING_DIR")"
 mv "$PENDING_DIR" "${PENDING_BASE}/completed/${restore_id}" >/dev/null 2>&1 || true
 rm -f "$CURRENT_LINK" >/dev/null 2>&1 || true
 
-systemctl disable proxmenux-restore-onboot.service >/dev/null 2>&1 || true
+if [[ "$DEST_PREFIX" == "/" ]]; then
+    systemctl disable proxmenux-restore-onboot.service >/dev/null 2>&1 || true
+fi
 
 echo "=== ProxMenux pending restore finished at $(date -Iseconds) ==="
 echo "Log file: $LOG_FILE"

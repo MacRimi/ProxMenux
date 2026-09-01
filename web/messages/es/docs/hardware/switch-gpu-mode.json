@@ -49,7 +49,7 @@
   "prereqs": {
     "title": "Antes de empezar",
     "assigned": "<strong>Una GPU ya asignada</strong> — o bien en una VM vía VFIO o adjuntada al menos a un LXC. Si aún no la has asignado, empieza desde Añadir GPU a VM / LXC en su lugar.",
-    "iommu": "<strong>IOMMU habilitado en el host</strong> — solo estrictamente necesario al cambiar <em>a</em> modo VM, pero vale la pena tenerlo en cualquier caso. El script avisa si falta el parámetro del kernel.",
+    "iommu": "<strong>IOMMU habilitado en el host</strong> — solo estrictamente necesario al cambiar <em>a</em> modo VM, pero vale la pena tenerlo en cualquier caso. Si falta el parámetro del kernel, el script lo añade automáticamente al command line de arranque (<code>intel_iommu=on iommu=pt</code> o <code>amd_iommu=on</code>, vía <code>proxmox-boot-tool refresh</code> en systemd-boot o <code>update-grub</code> en GRUB) y lo incluye en el aviso de reinicio final.",
     "iommuCheck": "dmesg | grep -i 'IOMMU enabled' | head -1",
     "reboot": "<strong>Asume un reinicio.</strong> Cambiar bindings de GPU a nivel de kernel significa que el host regenera initramfs y reinicias para aplicar. El script lo pide al final.",
     "knowList": "<strong>Saber qué VMs / LXCs están usando la GPU.</strong> El script las encontrará y preguntará qué hacer con cada una, pero es más rápido si ya conoces la lista."

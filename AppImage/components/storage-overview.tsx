@@ -12,12 +12,53 @@ import { formatStorage as sharedFormatStorage } from "../lib/utils"
 import { DiskTemperatureDetailModal } from "./disk-temperature-detail-modal"
 import { DiskTemperatureCard } from "./disk-temperature-card"
 import { getDiskType as resolveDiskType } from "../lib/disk-type"
+import { APP_VERSION } from "../lib/version"
+import { useT } from "@/lib/i18n/provider"
 import {
   useDiskTempThresholds,
   loadDiskTempThresholds,
   getDiskTempThresholdsSync,
   type DiskTempMap,
 } from "../lib/health-thresholds"
+
+// Raw smartctl names are shared by the compact SMART tab and the full
+// report. Keep one canonical mapping so both views use the same labels
+// and explanations instead of drifting into separate translations.
+const NVME_SMART_ATTRIBUTE_KEYS: Record<string, string> = {
+  "Critical Warning": "criticalWarning",
+  "Temperature": "nvmeTemperature",
+  "Temperature Sensor 1": "temperatureSensor1",
+  "Temperature Sensor 2": "temperatureSensor2",
+  "Temperature Sensor 3": "temperatureSensor3",
+  "Available Spare": "availableSpare",
+  "Available Spare Threshold": "availableSpareThreshold",
+  "Percentage Used": "percentageUsed",
+  "Percent Used": "percentageUsed",
+  "Endurance Group Warning": "enduranceGroupWarning",
+  "Media Errors": "mediaErrors",
+  "Media and Data Integrity Errors": "mediaIntegrityErrors",
+  "Unsafe Shutdowns": "unsafeShutdowns",
+  "Power Cycles": "nvmePowerCycles",
+  "Power On Hours": "nvmePowerOnHours",
+  "Data Units Read": "dataUnitsRead",
+  "Data Units Written": "dataUnitsWritten",
+  "Host Read Commands": "hostReadCommands",
+  "Host Write Commands": "hostWriteCommands",
+  "Controller Busy Time": "controllerBusyTime",
+  "Error Log Entries": "errorLogEntries",
+  "Error Information Log Entries": "errorLogEntries",
+  "Warning Temp Time": "warningTempTime",
+  "Critical Temp Time": "criticalTempTime",
+  "Warning Composite Temperature Time": "warningCompositeTemperatureTime",
+  "Critical Composite Temperature Time": "criticalCompositeTemperatureTime",
+  "Thermal Management T1 Trans Count": "thermalManagementT1TransCount",
+  "Thermal Management T2 Trans Count": "thermalManagementT2TransCount",
+  "Thermal Management T1 Total Time": "thermalManagementT1TotalTime",
+  "Thermal Management T2 Total Time": "thermalManagementT2TotalTime",
+}
+
+const getNvmeSmartAttributeKey = (name: string): string | undefined =>
+  NVME_SMART_ATTRIBUTE_KEYS[name.replace(/_/g, " ")] || NVME_SMART_ATTRIBUTE_KEYS[name]
 
 interface DiskInfo {
   name: string
@@ -108,6 +149,7 @@ interface ProxmoxStorage {
   used: number
   available: number
   percent: number
+  capacity_known?: boolean
   node: string // Added node property for detailed debug logging
 }
 
@@ -159,19 +201,19 @@ const formatStorage = sharedFormatStorage
 // SMART report can render a friendlier line under the raw message
 // without round-tripping to the backend. Returns null when no recognised
 // code is present, so the caller hides the extra line for non-ATA rows.
-function translateAtaError(raw: string): string | null {
+function translateAtaError(raw: string, t: (key: string) => string): string | null {
   if (!raw) return null
   const ATA_CODES: Record<string, string> = {
-    IDNF: 'Sector address not found — possible bad sector or cable issue',
-    UNC: 'Uncorrectable read error — bad sector',
-    ABRT: 'Command aborted by drive',
-    AMNF: 'Address mark not found — surface damage',
-    TK0NF: 'Track 0 not found — drive hardware failure',
-    BBK: 'Bad block detected',
-    ICRC: 'Interface CRC error — cable or connector issue',
-    MC: 'Media changed',
-    MCR: 'Media change requested',
-    WP: 'Write protected',
+    IDNF: "storage.ataErrors.idnf",
+    UNC: "storage.ataErrors.unc",
+    ABRT: "storage.ataErrors.abrt",
+    AMNF: "storage.ataErrors.amnf",
+    TK0NF: "storage.ataErrors.tk0nf",
+    BBK: "storage.ataErrors.bbk",
+    ICRC: "storage.ataErrors.icrc",
+    MC: "storage.ataErrors.mc",
+    MCR: "storage.ataErrors.mcr",
+    WP: "storage.ataErrors.wp",
   }
   const m = raw.match(/\{\s*([A-Z0-9 ]+)\s*\}/)
   if (!m) return null
@@ -179,16 +221,18 @@ function translateAtaError(raw: string): string | null {
   const seen = new Set<string>()
   const out: string[] = []
   for (const c of codes) {
-    const desc = ATA_CODES[c]
-    if (desc && !seen.has(c)) {
+    const key = ATA_CODES[c]
+    if (key && !seen.has(c)) {
       seen.add(c)
-      out.push(desc)
+      out.push(t(key))
     }
   }
   return out.length ? out.join('; ') : null
 }
 
 export function StorageOverview() {
+  const t = useT()
+
   // User-configurable disk temperature thresholds (Settings → Health
   // Monitor Thresholds). Until the API responds the hook returns
   // sensible defaults from `lib/health-thresholds`, so first paint
@@ -208,6 +252,23 @@ export function StorageOverview() {
   const [diskObservations, setDiskObservations] = useState<DiskObservation[]>([])
   const [loadingObservations, setLoadingObservations] = useState(false)
   const [activeModalTab, setActiveModalTab] = useState<"overview" | "smart" | "history" | "schedule">("overview")
+  // Detect PWA / standalone display so the disk modal gets the same
+  // adaptive height the VM/LXC modal uses (95/90 vh in standalone,
+  // 85 vh capped by the visual viewport otherwise). Keeps every
+  // detail modal at a matching size across the app.
+  const [isStandalone, setIsStandalone] = useState(false)
+
+  useEffect(() => {
+    const checkStandalone = () => {
+      const standalone = window.matchMedia("(display-mode: standalone)").matches ||
+        (window.navigator as Navigator & { standalone?: boolean }).standalone === true
+      setIsStandalone(standalone)
+    }
+    checkStandalone()
+    const mediaQuery = window.matchMedia("(display-mode: standalone)")
+    mediaQuery.addEventListener("change", checkStandalone)
+    return () => mediaQuery.removeEventListener("change", checkStandalone)
+  }, [])
   const [smartJsonData, setSmartJsonData] = useState<{
     has_data: boolean
     data?: Record<string, unknown>
@@ -244,6 +305,62 @@ export function StorageOverview() {
     return () => clearInterval(interval)
   }, [])
 
+  const diskCountLabel = (count: number) => (count === 1 ? t("storage.diskSingular") : t("storage.diskPlural"))
+
+  const healthLabel = (health?: string) => {
+    switch ((health || "").toLowerCase()) {
+      case "healthy":
+        return t("storage.health.healthy")
+      case "passed":
+      case "ok":
+        return t("storage.health.passed")
+      case "online":
+        return t("storage.health.online")
+      case "warning":
+        return t("storage.health.warning")
+      case "critical":
+        return t("storage.health.critical")
+      case "failed":
+        return t("storage.health.failed")
+      case "degraded":
+        return t("storage.health.degraded")
+      default:
+        return t("storage.health.unknown")
+    }
+  }
+
+  const storageStatusLabel = (status?: string) => {
+    switch ((status || "").toLowerCase()) {
+      case "active":
+        return t("storage.status.active")
+      case "inactive":
+        return t("storage.status.inactive")
+      case "offline":
+        return t("storage.status.offline")
+      case "error":
+        return t("storage.status.error")
+      case "failed":
+        return t("storage.status.failed")
+      case "namespace_restricted":
+        return t("storage.namespaceRestricted")
+      default:
+        return status || t("storage.health.unknown")
+    }
+  }
+
+  const remoteMountStatusLabel = (status?: string) => {
+    switch ((status || "").toLowerCase()) {
+      case "stale":
+        return t("storage.stale")
+      case "readonly":
+        return t("storage.readOnly")
+      default:
+        return t("storage.reachable")
+    }
+  }
+
+  const ioErrorLabel = (count: number) => t(count === 1 ? "storage.ioErrorOne" : "storage.ioErrorMany", { count })
+
   const getHealthIcon = (health: string) => {
     switch (health.toLowerCase()) {
       case "healthy":
@@ -266,15 +383,15 @@ export function StorageOverview() {
       case "healthy":
       case "passed":
       case "online":
-        return <Badge className="bg-green-500/10 text-green-500 border-green-500/20">Healthy</Badge>
+        return <Badge className="bg-green-500/10 text-green-500 border-green-500/20">{healthLabel(health)}</Badge>
       case "warning":
-        return <Badge className="bg-yellow-500/10 text-yellow-500 border-yellow-500/20">Warning</Badge>
+        return <Badge className="bg-yellow-500/10 text-yellow-500 border-yellow-500/20">{healthLabel(health)}</Badge>
       case "critical":
       case "failed":
       case "degraded":
-        return <Badge className="bg-red-500/10 text-red-500 border-red-500/20">Critical</Badge>
+        return <Badge className="bg-red-500/10 text-red-500 border-red-500/20">{healthLabel(health)}</Badge>
       default:
-        return <Badge className="bg-gray-500/10 text-gray-500 border-gray-500/20">Unknown</Badge>
+        return <Badge className="bg-gray-500/10 text-gray-500 border-gray-500/20">{healthLabel()}</Badge>
     }
   }
 
@@ -322,10 +439,10 @@ export function StorageOverview() {
       return (
         <Badge
           className="bg-blue-500/10 text-blue-300 border-blue-500/30 gap-1"
-          title="Drive is in standby — smartctl skipped to keep it spun down"
+          title={t("storage.standbyTitle")}
         >
           <Power className="h-3 w-3" />
-          Standby
+          {t("storage.standby")}
         </Badge>
       )
     }
@@ -387,7 +504,7 @@ export function StorageOverview() {
             {disk.is_system_disk && (
               <Badge className="bg-orange-500/10 text-orange-500 border-orange-500/20 gap-1">
                 <Server className="h-3 w-3" />
-                System
+                {t("storage.system")}
               </Badge>
             )}
             {disk.connection_type === "usb" && (
@@ -408,7 +525,7 @@ export function StorageOverview() {
               }`}
             >
               <StatusDot tone={smartStatusTone(disk.smart_status)} />
-              {disk.smart_status}
+              {healthLabel(disk.smart_status)}
             </span>
           )}
         </div>
@@ -419,10 +536,10 @@ export function StorageOverview() {
           {disk.standby ? (
             <Badge
               className="bg-blue-500/10 text-blue-300 border-blue-500/30 gap-1"
-              title="Drive is in standby — smartctl skipped to keep it spun down"
+              title={t("storage.standbyTitle")}
             >
               <Power className="h-3 w-3" />
-              Standby
+              {t("storage.standby")}
             </Badge>
           ) : disk.temperature > 0 ? (
             <span
@@ -449,10 +566,8 @@ export function StorageOverview() {
             <AlertTriangle className="h-3.5 w-3.5 flex-shrink-0 mt-0.5" />
             <span>
               {disk.io_errors.error_type === "filesystem"
-                ? "Filesystem corruption detected"
-                : `${disk.io_errors.count} I/O error${
-                    disk.io_errors.count !== 1 ? "s" : ""
-                  } in 5 min`}
+                ? t("storage.filesystemCorruption")
+                : ioErrorLabel(disk.io_errors.count)}
             </span>
           </div>
         )}
@@ -466,7 +581,7 @@ export function StorageOverview() {
           {disk.model && disk.model !== "Unknown" && (
             <div className="flex items-baseline justify-between gap-3">
               <span className="text-[11px] uppercase tracking-wider text-muted-foreground shrink-0">
-                Model
+                {t("storage.model")}
               </span>
               <span className="font-medium text-right truncate font-mono text-xs">{disk.model}</span>
             </div>
@@ -475,7 +590,7 @@ export function StorageOverview() {
             <div>
               <div className="flex items-baseline justify-between gap-3 mb-1">
                 <span className="text-[11px] uppercase tracking-wider text-muted-foreground">
-                  Wear Level
+                  {t("storage.wearLevel")}
                 </span>
                 <span className="font-medium">{wearPct}%</span>
               </div>
@@ -490,7 +605,7 @@ export function StorageOverview() {
           {disk.power_cycles !== undefined && disk.power_cycles > 0 && (
             <div className="flex items-baseline justify-between gap-3">
               <span className="text-[11px] uppercase tracking-wider text-muted-foreground">
-                Power Cycles
+                {t("storage.powerCycles")}
               </span>
               <span className="font-medium">{disk.power_cycles.toLocaleString()}</span>
             </div>
@@ -498,7 +613,7 @@ export function StorageOverview() {
           {disk.power_on_hours !== undefined && disk.power_on_hours > 0 && (
             <div className="flex items-baseline justify-between gap-3">
               <span className="text-[11px] uppercase tracking-wider text-muted-foreground">
-                Power On
+                {t("storage.powerOn")}
               </span>
               <span className="font-medium">{formatHours(disk.power_on_hours)}</span>
             </div>
@@ -506,7 +621,7 @@ export function StorageOverview() {
           {disk.crc_errors !== undefined && (
             <div className="flex items-baseline justify-between gap-3">
               <span className="text-[11px] uppercase tracking-wider text-muted-foreground">
-                CRC Errors
+                {t("storage.crcErrors")}
               </span>
               <span
                 className={`font-medium flex items-center gap-1.5 ${
@@ -526,7 +641,7 @@ export function StorageOverview() {
           {disk.reallocated_sectors !== undefined && (disk.rotation_rate ?? 0) > 0 && (
             <div className="flex items-baseline justify-between gap-3">
               <span className="text-[11px] uppercase tracking-wider text-muted-foreground">
-                Realloc. Sectors
+                {t("storage.reallocatedShort")}
               </span>
               <span
                 className={`font-medium flex items-center gap-1.5 ${
@@ -549,7 +664,7 @@ export function StorageOverview() {
         <div className="border-t border-border/60 mt-auto pt-3 flex items-center justify-between gap-3">
           {cleanSerial && cleanSerial !== "Unknown" ? (
             <span className="text-[11px] text-foreground font-mono truncate min-w-0">
-              <span className="text-muted-foreground">S/N:</span> {cleanSerial}
+              <span className="text-muted-foreground">{t("storage.serialShort")}</span> {cleanSerial}
             </span>
           ) : (
             <span />
@@ -563,7 +678,7 @@ export function StorageOverview() {
             )}
             <span
               className="text-blue-400 hover:text-blue-300 transition-colors text-base leading-none"
-              aria-label="View details"
+              aria-label={t("storage.viewDetails")}
             >
               →
             </span>
@@ -592,25 +707,27 @@ export function StorageOverview() {
   }
 
   const formatHours = (hours: number) => {
-    if (hours === 0) return "N/A"
+    if (hours === 0) return t("common.notAvailable")
     // Render in years + months when ≥1 year (e.g. "2y 6m" instead of
     // "2y 189d" — months are easier to picture than triple-digit
     // residual days). Months use 30.44 d/mo average to round cleanly.
     // <30 days: keep days. 30 d–1 yr: months + residual days when both
     // values are meaningful.
     const totalDays = Math.floor(hours / 24)
-    if (totalDays < 30) return `${totalDays}d`
+    if (totalDays < 30) return t("storage.duration.daysShort", { days: totalDays })
     const years = Math.floor(totalDays / 365)
     const remainingAfterYears = totalDays - years * 365
     const months = Math.floor(remainingAfterYears / 30)
     if (years > 0) {
-      return months > 0 ? `${years}y ${months}m` : `${years}y`
+      return months > 0
+        ? t("storage.duration.yearsMonthsShort", { years, months })
+        : t("storage.duration.yearsShort", { years })
     }
     // Sub-year: show months + residual days if both are non-trivial.
     const residualDays = remainingAfterYears - months * 30
-    if (months > 0 && residualDays > 0) return `${months}m ${residualDays}d`
-    if (months > 0) return `${months}m`
-    return `${totalDays}d`
+    if (months > 0 && residualDays > 0) return t("storage.duration.monthsDaysShort", { months, days: residualDays })
+    if (months > 0) return t("storage.duration.monthsShort", { months })
+    return t("storage.duration.daysShort", { days: totalDays })
   }
 
   const formatRotationRate = (rpm: number | undefined) => {
@@ -691,7 +808,7 @@ export function StorageOverview() {
   }
 
   const formatObsDate = (iso: string) => {
-    if (!iso) return 'N/A'
+    if (!iso) return t("common.notAvailable")
     try {
       const d = new Date(iso)
       const day = d.getDate().toString().padStart(2, '0')
@@ -703,8 +820,22 @@ export function StorageOverview() {
     } catch { return iso }
   }
 
-  const obsTypeLabel = (t: string) =>
-    ({ smart_error: 'SMART Error', io_error: 'I/O Error', filesystem_error: 'Filesystem Error', zfs_pool_error: 'ZFS Pool Error', connection_error: 'Connection Error' }[t] || t)
+  const obsTypeLabel = (type: string) => {
+    switch (type) {
+      case "smart_error":
+        return t("storage.observationTypes.smart_error")
+      case "io_error":
+        return t("storage.observationTypes.io_error")
+      case "filesystem_error":
+        return t("storage.observationTypes.filesystem_error")
+      case "zfs_pool_error":
+        return t("storage.observationTypes.zfs_pool_error")
+      case "connection_error":
+        return t("storage.observationTypes.connection_error")
+      default:
+        return type
+    }
+  }
 
   const getStorageTypeBadge = (type: string) => {
     const typeColors: Record<string, string> = {
@@ -749,19 +880,19 @@ export function StorageOverview() {
     const diskType = getDiskType(disk.name, disk.rotation_rate)
 
     if (diskType === "NVMe" && disk.percentage_used !== undefined && disk.percentage_used !== null) {
-      return { value: disk.percentage_used, label: "Percentage Used" }
+      return { value: disk.percentage_used, label: t("storage.wear.percentageUsed") }
     }
 
     if (diskType === "SSD") {
       // Prioridad: Media Wearout Indicator > Wear Leveling Count > SSD Life Left
       if (disk.media_wearout_indicator !== undefined && disk.media_wearout_indicator !== null) {
-        return { value: disk.media_wearout_indicator, label: "Media Wearout" }
+        return { value: disk.media_wearout_indicator, label: t("storage.wear.mediaWearout") }
       }
       if (disk.wear_leveling_count !== undefined && disk.wear_leveling_count !== null) {
-        return { value: disk.wear_leveling_count, label: "Wear Level" }
+        return { value: disk.wear_leveling_count, label: t("storage.wear.wearLevel") }
       }
       if (disk.ssd_life_left !== undefined && disk.ssd_life_left !== null) {
-        return { value: 100 - disk.ssd_life_left, label: "Life Used" }
+        return { value: 100 - disk.ssd_life_left, label: t("storage.wear.lifeUsed") }
       }
     }
 
@@ -788,7 +919,7 @@ export function StorageOverview() {
     // which users mistook for "the monitor is broken". A new drive can sit at
     // 0% wear for hundreds of hours before the first measurable tick.
     if (wearPercent === 0) {
-      return "No wear detected yet"
+      return t("storage.noWearDetected")
     }
 
     // Calcular horas totales estimadas: hoursUsed / (wearPercent / 100)
@@ -800,10 +931,10 @@ export function StorageOverview() {
 
     if (remainingYears < 1) {
       const remainingMonths = Math.round(remainingYears * 12)
-      return `~${remainingMonths} months`
+      return `~${remainingMonths} ${t("storage.months")}`
     }
 
-    return `~${remainingYears.toFixed(1)} years`
+    return `~${remainingYears.toFixed(1)} ${t("storage.years")}`
   }
 
   const getDiskHealthBreakdown = () => {
@@ -970,8 +1101,8 @@ export function StorageOverview() {
           <div className="h-12 w-12 rounded-full border-2 border-muted"></div>
           <div className="absolute inset-0 h-12 w-12 rounded-full border-2 border-transparent border-t-primary animate-spin"></div>
         </div>
-        <div className="text-sm font-medium text-foreground">Loading storage data...</div>
-        <p className="text-xs text-muted-foreground">Scanning disks, partitions and storage pools</p>
+        <div className="text-sm font-medium text-foreground">{t("storage.loadingTitle")}</div>
+        <p className="text-xs text-muted-foreground">{t("storage.loadingDescription")}</p>
       </div>
     )
   }
@@ -979,7 +1110,9 @@ export function StorageOverview() {
   if (!storageData || storageData.error) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="text-red-500">Error loading storage data: {storageData?.error || "Unknown error"}</div>
+        <div className="text-red-500">
+          {t("storage.loadingError", { error: storageData?.error || t("common.unknown") })}
+        </div>
       </div>
     )
   }
@@ -997,7 +1130,7 @@ export function StorageOverview() {
           return (
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground">Storage Used</CardTitle>
+                <CardTitle className="text-sm font-medium text-muted-foreground">{t("storage.storageUsed")}</CardTitle>
                 <HardDrive className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
@@ -1010,26 +1143,28 @@ export function StorageOverview() {
                         <span className="text-3xl font-bold leading-none">{usedStr.split(' ')[0]}</span>
                         <span className="text-base font-medium ml-1 text-muted-foreground">{usedStr.split(' ')[1]}</span>
                       </div>
-                      <Badge variant="outline" className="bg-muted text-muted-foreground border-border">{storageData.disk_count} disks</Badge>
+                      <Badge variant="outline" className="bg-muted text-muted-foreground border-border">
+                        {storageData.disk_count} {diskCountLabel(storageData.disk_count)}
+                      </Badge>
                     </div>
                   )
                 })()}
                 <div className="flex h-1.5 rounded-full overflow-hidden gap-[2px]">
-                  <div style={{ width: `${localPct}%`, background: '#3b82f6' }} title={`Local ${formatStorage(totalLocalUsed)}`}></div>
-                  <div style={{ width: `${remotePct}%`, background: '#06b6d4' }} title={`Remote ${formatStorage(totalRemoteUsed)}`}></div>
-                  <div style={{ flex: 1, background: 'rgba(99,102,241,0.15)' }} title={`Free ${formatStorage(freeGB)}`}></div>
+                  <div style={{ width: `${localPct}%`, background: '#3b82f6' }} title={`${t("storage.local")} ${formatStorage(totalLocalUsed)}`}></div>
+                  <div style={{ width: `${remotePct}%`, background: '#06b6d4' }} title={`${t("storage.remote")} ${formatStorage(totalRemoteUsed)}`}></div>
+                  <div style={{ flex: 1, background: 'rgba(99,102,241,0.15)' }} title={`${t("storage.free")} ${formatStorage(freeGB)}`}></div>
                 </div>
                 <div className="mt-2 space-y-1 text-sm">
                   <div className="flex items-center justify-between">
-                    <span className="flex items-center gap-1.5 text-muted-foreground"><span className="w-1.5 h-1.5 rounded-full" style={{ background: '#3b82f6' }}></span>Local</span>
+                    <span className="flex items-center gap-1.5 text-muted-foreground"><span className="w-1.5 h-1.5 rounded-full" style={{ background: '#3b82f6' }}></span>{t("storage.local")}</span>
                     <span className="font-medium font-mono whitespace-nowrap">{formatStorage(totalLocalUsed)}</span>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className="flex items-center gap-1.5 text-muted-foreground"><span className="w-1.5 h-1.5 rounded-full" style={{ background: '#06b6d4' }}></span>Remote</span>
+                    <span className="flex items-center gap-1.5 text-muted-foreground"><span className="w-1.5 h-1.5 rounded-full" style={{ background: '#06b6d4' }}></span>{t("storage.remote")}</span>
                     <span className="font-medium font-mono whitespace-nowrap">{formatStorage(totalRemoteUsed)}</span>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className="flex items-center gap-1.5 text-muted-foreground"><span className="w-1.5 h-1.5 rounded-full opacity-50" style={{ background: 'currentColor' }}></span>Free</span>
+                    <span className="flex items-center gap-1.5 text-muted-foreground"><span className="w-1.5 h-1.5 rounded-full opacity-50" style={{ background: 'currentColor' }}></span>{t("storage.free")}</span>
                     <span className="font-medium font-mono whitespace-nowrap">{formatStorage(freeGB)}</span>
                   </div>
                 </div>
@@ -1046,7 +1181,7 @@ export function StorageOverview() {
           return (
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground">Local Used</CardTitle>
+                <CardTitle className="text-sm font-medium text-muted-foreground">{t("storage.localUsed")}</CardTitle>
                 <Database className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
@@ -1061,7 +1196,7 @@ export function StorageOverview() {
                   <div className="flex-1 space-y-2">
                     <div>
                       <div className="flex items-center justify-between text-sm">
-                      <span className="text-muted-foreground">Used</span>
+                      <span className="text-muted-foreground">{t("storage.used")}</span>
                       <span className="font-medium font-mono whitespace-nowrap">{formatStorage(totalLocalUsed)}</span>
                       </div>
                       <div className="mt-1 h-1.5 bg-muted rounded-full overflow-hidden">
@@ -1070,7 +1205,7 @@ export function StorageOverview() {
                     </div>
                     <div>
                       <div className="flex items-center justify-between text-sm">
-                      <span className="text-muted-foreground">Free</span>
+                      <span className="text-muted-foreground">{t("storage.free")}</span>
                       <span className="font-medium font-mono whitespace-nowrap">{formatStorage(freeGB)}</span>
                       </div>
                       <div className="mt-1 h-1.5 bg-muted rounded-full overflow-hidden">
@@ -1078,7 +1213,7 @@ export function StorageOverview() {
                       </div>
                     </div>
                     <div className="flex items-center justify-between text-sm">
-                      <span className="text-muted-foreground">Total</span>
+                      <span className="text-muted-foreground">{t("storage.total")}</span>
                       <span className="font-medium font-mono whitespace-nowrap">{formatStorage(totalLocalCapacity)}</span>
                     </div>
                   </div>
@@ -1097,7 +1232,7 @@ export function StorageOverview() {
           return (
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground">Remote Used</CardTitle>
+                <CardTitle className="text-sm font-medium text-muted-foreground">{t("storage.remoteUsed")}</CardTitle>
                 <Archive className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
@@ -1113,7 +1248,7 @@ export function StorageOverview() {
                     <div className="flex-1 space-y-2">
                       <div>
                         <div className="flex items-center justify-between text-sm">
-                        <span className="text-muted-foreground">Used</span>
+                        <span className="text-muted-foreground">{t("storage.used")}</span>
                         <span className="font-medium font-mono whitespace-nowrap">{formatStorage(totalRemoteUsed)}</span>
                         </div>
                         <div className="mt-1 h-1.5 bg-muted rounded-full overflow-hidden">
@@ -1122,7 +1257,7 @@ export function StorageOverview() {
                       </div>
                       <div>
                         <div className="flex items-center justify-between text-sm">
-                        <span className="text-muted-foreground">Free</span>
+                        <span className="text-muted-foreground">{t("storage.free")}</span>
                         <span className="font-medium font-mono whitespace-nowrap">{formatStorage(freeGB)}</span>
                         </div>
                         <div className="mt-1 h-1.5 bg-muted rounded-full overflow-hidden">
@@ -1130,15 +1265,15 @@ export function StorageOverview() {
                         </div>
                       </div>
                       <div className="flex items-center justify-between text-sm">
-                        <span className="text-muted-foreground">Total</span>
+                        <span className="text-muted-foreground">{t("storage.total")}</span>
                         <span className="font-medium font-mono whitespace-nowrap">{formatStorage(totalRemoteCapacity)}</span>
                       </div>
                     </div>
                   </div>
                 ) : (
                   <div className="text-center py-4">
-                    <div className="text-2xl font-bold text-muted-foreground">None</div>
-                    <p className="text-xs text-muted-foreground mt-1">No remote storage</p>
+                    <div className="text-2xl font-bold text-muted-foreground">{t("storage.none")}</div>
+                    <p className="text-xs text-muted-foreground mt-1">{t("storage.noRemoteStorage")}</p>
                   </div>
                 )}
               </CardContent>
@@ -1152,10 +1287,10 @@ export function StorageOverview() {
           const seg = 100 / total
           const allHealthy = diskHealthBreakdown.warning === 0 && diskHealthBreakdown.critical === 0
           const healthBadge = allHealthy
-            ? <Badge variant="outline" className="bg-green-500/10 text-green-500 border-green-500/20">✓ all healthy</Badge>
+            ? <Badge variant="outline" className="bg-green-500/10 text-green-500 border-green-500/20">✓ {t("storage.allHealthy")}</Badge>
             : diskHealthBreakdown.critical > 0
-              ? <Badge variant="outline" className="bg-red-500/10 text-red-500 border-red-500/20">{diskHealthBreakdown.critical} critical</Badge>
-              : <Badge variant="outline" className="bg-yellow-500/10 text-yellow-500 border-yellow-500/20">{diskHealthBreakdown.warning} warning</Badge>
+              ? <Badge variant="outline" className="bg-red-500/10 text-red-500 border-red-500/20">{t("storage.criticalCount", { count: diskHealthBreakdown.critical })}</Badge>
+              : <Badge variant="outline" className="bg-yellow-500/10 text-yellow-500 border-yellow-500/20">{t("storage.warningCount", { count: diskHealthBreakdown.warning })}</Badge>
           const seg_purple = '#a855f7'
           const seg_cyan = '#06b6d4'
           const seg_blue = '#3b82f6'
@@ -1168,14 +1303,14 @@ export function StorageOverview() {
           return (
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground">Physical Disks</CardTitle>
+                <CardTitle className="text-sm font-medium text-muted-foreground">{t("storage.physicalDisks")}</CardTitle>
                 <HardDrive className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
                 <div className="flex items-end justify-between mb-3">
                   <div>
                     <span className="text-3xl font-bold leading-none">{storageData.disk_count}</span>
-                    <span className="text-base font-medium ml-1 text-muted-foreground">disks</span>
+                    <span className="text-base font-medium ml-1 text-muted-foreground">{diskCountLabel(storageData.disk_count)}</span>
                   </div>
                   {healthBadge}
                 </div>
@@ -1201,7 +1336,7 @@ export function StorageOverview() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Database className="h-5 w-5" />
-              Proxmox Storage
+              {t("storage.proxmoxStorage")}
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -1213,6 +1348,7 @@ export function StorageOverview() {
                   // Check if storage is excluded from monitoring
                   const isExcluded = storage.excluded === true
                   const hasError = storage.status === "error" && !isExcluded
+                  const capacityKnown = storage.capacity_known ?? storage.total > 0
                   
                   return (
                   <div
@@ -1240,12 +1376,12 @@ export function StorageOverview() {
                             shrunken next to them. */}
                         {/^(nfs|cifs|smb)/i.test(storage.type) && (
                           <Badge className="bg-cyan-500/10 text-cyan-400 border-cyan-500/20">
-                            remote mount
+                            {t("storage.remoteMount")}
                           </Badge>
                         )}
                         {isExcluded && (
                           <Badge className="bg-purple-500/10 text-purple-400 border-purple-500/20">
-                            excluded
+                            {t("storage.excluded")}
                           </Badge>
                         )}
                       </div>
@@ -1255,13 +1391,13 @@ export function StorageOverview() {
                         <Badge className={getStorageTypeBadge(storage.type)}>{storage.type}</Badge>
                         {/^(nfs|cifs|smb)/i.test(storage.type) && (
                           <Badge className="bg-cyan-500/10 text-cyan-400 border-cyan-500/20">
-                            remote
+                            {t("storage.remote")}
                           </Badge>
                         )}
                         <h3 className="font-semibold text-base flex-1 min-w-0 truncate">{storage.name}</h3>
                         {isExcluded ? (
                           <Badge className="bg-purple-500/10 text-purple-400 border-purple-500/20 text-[10px]">
-                            excluded
+                            {t("storage.excluded")}
                           </Badge>
                         ) : (
                           getStatusIcon(storage.status)
@@ -1284,56 +1420,58 @@ export function StorageOverview() {
                           }
                           title={
                             storage.status === "namespace_restricted"
-                              ? "Storage reachable; datastore size hidden by ACL (e.g. PBS DatastoreAdmin on a single namespace)"
+                              ? t("storage.namespaceRestrictedTitle")
                               : undefined
                           }
                         >
                           {isExcluded
-                            ? "not monitored"
-                            : storage.status === "namespace_restricted"
-                              ? "namespace-restricted"
-                              : storage.status}
+                            ? t("storage.notMonitored")
+                            : storageStatusLabel(storage.status)}
                         </Badge>
-                        <span className="text-sm font-medium">{storage.percent}%</span>
+                        {capacityKnown && <span className="text-sm font-medium">{storage.percent}%</span>}
                       </div>
                     </div>
 
-                    <div className="space-y-2">
-                      <Progress
-                        value={storage.percent}
-                        className={`h-2 ${
-                          storage.percent > 90
-                            ? "[&>div]:bg-red-500"
-                            : storage.percent > 75
-                              ? "[&>div]:bg-yellow-500"
-                              : "[&>div]:bg-blue-500"
-                        }`}
-                      />
-                      <div className="grid grid-cols-3 gap-4 text-sm">
-                        <div>
-                          <p className="text-muted-foreground">Total</p>
-                          <p className="font-medium">{formatStorage(storage.total)}</p>
-                        </div>
-                        <div>
-                          <p className="text-muted-foreground">Used</p>
-                          <p
-                            className={`font-medium ${
-                              storage.percent > 90
-                                ? "text-red-400"
-                                : storage.percent > 75
-                                  ? "text-yellow-400"
-                                  : "text-blue-400"
-                            }`}
-                          >
-                            {formatStorage(storage.used)}
-                          </p>
-                        </div>
-                        <div>
-                          <p className="text-muted-foreground">Available</p>
-                          <p className="font-medium text-green-400">{formatStorage(storage.available)}</p>
+                    {capacityKnown ? (
+                      <div className="space-y-2">
+                        <Progress
+                          value={storage.percent}
+                          className={`h-2 ${
+                            storage.percent > 90
+                              ? "[&>div]:bg-red-500"
+                              : storage.percent > 75
+                                ? "[&>div]:bg-yellow-500"
+                                : "[&>div]:bg-blue-500"
+                          }`}
+                        />
+                        <div className="grid grid-cols-3 gap-4 text-sm">
+                          <div>
+                            <p className="text-muted-foreground">{t("storage.total")}</p>
+                            <p className="font-medium">{formatStorage(storage.total)}</p>
+                          </div>
+                          <div>
+                            <p className="text-muted-foreground">{t("storage.used")}</p>
+                            <p
+                              className={`font-medium ${
+                                storage.percent > 90
+                                  ? "text-red-400"
+                                  : storage.percent > 75
+                                    ? "text-yellow-400"
+                                    : "text-blue-400"
+                              }`}
+                            >
+                              {formatStorage(storage.used)}
+                            </p>
+                          </div>
+                          <div>
+                            <p className="text-muted-foreground">{t("storage.available")}</p>
+                            <p className="font-medium text-green-400">{formatStorage(storage.available)}</p>
+                          </div>
                         </div>
                       </div>
-                    </div>
+                    ) : (
+                      <p className="text-sm text-muted-foreground">{t("storage.capacityNotReported")}</p>
+                    )}
                   </div>
                   )
                 })}
@@ -1352,7 +1490,7 @@ export function StorageOverview() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Database className="h-5 w-5" />
-              Remote Mounts
+              {t("storage.remoteMounts")}
               <Badge variant="outline" className="ml-2 text-[10px]">
                 {remoteMounts.length}
               </Badge>
@@ -1393,12 +1531,12 @@ export function StorageOverview() {
                               adjacent type badge. */}
                           {mount.proxmox_managed && (
                             <Badge className="bg-blue-500/10 text-blue-400 border-blue-500/20">
-                              managed by Proxmox
+                              {t("storage.managedByProxmox")}
                             </Badge>
                           )}
                           {mount.readonly && (
                             <Badge className="bg-amber-500/10 text-amber-500 border-amber-500/20">
-                              ro
+                              {t("storage.readOnlyShort")}
                             </Badge>
                           )}
                         </div>
@@ -1411,11 +1549,11 @@ export function StorageOverview() {
                                 : "bg-green-500/10 text-green-500 border-green-500/20"
                           }
                         >
-                          {isStale ? "stale" : isReadonly ? "read-only" : "reachable"}
+                          {remoteMountStatusLabel(mount.status)}
                         </Badge>
                       </div>
                       <div className="text-xs text-muted-foreground mt-2 truncate">
-                        <span className="font-medium text-foreground">Source:</span>{" "}
+                        <span className="font-medium text-foreground">{t("storage.source")}:</span>{" "}
                         <span className="font-mono">{mount.source || "—"}</span>
                       </div>
                       {isStale && mount.error && (
@@ -1485,7 +1623,7 @@ export function StorageOverview() {
                             : "bg-green-500/10 text-green-500 border-green-500/20"
                       }
                     >
-                      {isStale ? "stale" : isReadonly ? "read-only" : "reachable"}
+                      {remoteMountStatusLabel(m.status)}
                     </Badge>
                   </DialogTitle>
                   <DialogDescription>
@@ -1499,7 +1637,7 @@ export function StorageOverview() {
                     <Badge className={getStorageTypeBadge(m.fstype)}>{m.fstype}</Badge>
                     {m.proxmox_managed && (
                       <Badge className="bg-blue-500/10 text-blue-400 border-blue-500/20">
-                        managed by Proxmox
+                        {t("storage.managedByProxmox")}
                       </Badge>
                     )}
                     {m.lxc_id && (
@@ -1522,7 +1660,7 @@ export function StorageOverview() {
                       lines up — the body inherits text-base from the
                       Dialog content, not text-sm. */}
                   <div>
-                    <h4 className="font-semibold mb-3">Capacity</h4>
+                    <h4 className="font-semibold mb-3">{t("storage.capacity")}</h4>
                     {m.reachable && m.total_bytes ? (
                       <div className="space-y-2">
                         <Progress
@@ -1537,24 +1675,24 @@ export function StorageOverview() {
                         />
                         <div className="grid grid-cols-3 gap-4">
                           <div>
-                            <p className="text-sm text-muted-foreground">Total</p>
+                            <p className="text-sm text-muted-foreground">{t("storage.total")}</p>
                             <p className="font-medium">{fmtBytes(m.total_bytes)}</p>
                           </div>
                           <div>
-                            <p className="text-sm text-muted-foreground">Used</p>
+                            <p className="text-sm text-muted-foreground">{t("storage.used")}</p>
                             <p className="font-medium">
                               {fmtBytes(m.used_bytes)} {usedPct != null && `(${usedPct}%)`}
                             </p>
                           </div>
                           <div>
-                            <p className="text-sm text-muted-foreground">Available</p>
+                            <p className="text-sm text-muted-foreground">{t("storage.available")}</p>
                             <p className="font-medium">{fmtBytes(m.available_bytes)}</p>
                           </div>
                         </div>
                       </div>
                     ) : (
                       <p className="text-muted-foreground">
-                        {isStale ? "df skipped: mount is stale." : "n/a"}
+                        {isStale ? t("storage.mountStaleSkipped") : t("storage.notApplicable")}
                       </p>
                     )}
                   </div>
@@ -1564,7 +1702,7 @@ export function StorageOverview() {
                       doesn't have to scan a 200-char string. */}
                   {keyValues.length > 0 && (
                     <div>
-                      <h4 className="font-semibold mb-3">Mount options</h4>
+                      <h4 className="font-semibold mb-3">{t("storage.mountOptions")}</h4>
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1.5">
                         {keyValues.map((kv) => (
                           <div key={kv.key} className="flex items-baseline gap-2 min-w-0">
@@ -1579,7 +1717,7 @@ export function StorageOverview() {
                   {/* Error — only renders when something is wrong. */}
                   {m.error && (
                     <div className="rounded-lg border border-red-500/30 bg-red-500/5 p-3">
-                      <h4 className="font-semibold text-red-400 mb-2">Error</h4>
+                      <h4 className="font-semibold text-red-400 mb-2">{t("storage.error")}</h4>
                       <p className="text-red-300 font-mono whitespace-pre-wrap break-all">
                         {m.error}
                       </p>
@@ -1598,7 +1736,7 @@ export function StorageOverview() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Database className="h-5 w-5" />
-              ZFS Pools
+              {t("storage.zfsPools")}
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -1614,15 +1752,15 @@ export function StorageOverview() {
                   </div>
                   <div className="grid grid-cols-3 gap-4 text-sm">
                     <div>
-                      <p className="text-sm text-muted-foreground">Size</p>
+                      <p className="text-sm text-muted-foreground">{t("storage.size")}</p>
                       <p className="font-medium">{pool.size}</p>
                     </div>
                     <div>
-                      <p className="text-sm text-muted-foreground">Allocated</p>
+                      <p className="text-sm text-muted-foreground">{t("storage.allocated")}</p>
                       <p className="font-medium">{pool.allocated}</p>
                     </div>
                     <div>
-                      <p className="text-sm text-muted-foreground">Free</p>
+                      <p className="text-sm text-muted-foreground">{t("storage.free")}</p>
                       <p className="font-medium">{pool.free}</p>
                     </div>
                   </div>
@@ -1638,7 +1776,7 @@ export function StorageOverview() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <HardDrive className="h-5 w-5" />
-            Physical Disks & SMART Status
+            {t("storage.physicalDisksSmart")}
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -1656,7 +1794,7 @@ export function StorageOverview() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Usb className="h-5 w-5" />
-              External Storage (USB)
+              {t("storage.externalStorageUsb")}
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -1678,7 +1816,13 @@ export function StorageOverview() {
           setSmartJsonData(null)
         }
       }}>
-        <DialogContent className="max-w-4xl max-h-[80vh] sm:max-h-[85vh] overflow-hidden flex flex-col p-0">
+        <DialogContent
+          className={`max-w-4xl flex flex-col p-0 overflow-hidden ${
+            isStandalone
+              ? "h-[95vh] sm:h-[90vh]"
+              : "h-[85vh] sm:h-[85vh] max-h-[calc(100dvh-env(safe-area-inset-top)-env(safe-area-inset-bottom)-40px)]"
+          }`}
+        >
           <DialogHeader className="px-6 pt-6 pb-0">
             <DialogTitle className="flex items-center gap-2">
               {selectedDisk?.connection_type === 'usb' ? (
@@ -1686,95 +1830,111 @@ export function StorageOverview() {
               ) : (
                 <HardDrive className="h-5 w-5" />
               )}
-              Disk Details: /dev/{selectedDisk?.name}
+              {t("storage.diskDetails", { name: selectedDisk?.name || "" })}
               {selectedDisk?.connection_type === 'usb' && (
                 <Badge className="bg-orange-500/10 text-orange-400 border-orange-500/20 text-[10px] px-1.5">USB</Badge>
               )}
               {selectedDisk?.is_system_disk && (
                 <Badge className="bg-orange-500/10 text-orange-500 border-orange-500/20 gap-1">
                   <Server className="h-3 w-3" />
-                  System
+                  {t("storage.system")}
                 </Badge>
               )}
             </DialogTitle>
             <DialogDescription>
-              {selectedDisk?.model !== "Unknown" ? selectedDisk?.model : "Physical disk"} - {selectedDisk?.size_formatted}
+              {selectedDisk?.model !== "Unknown" ? selectedDisk?.model : t("storage.physicalDisk")} - {selectedDisk?.size_formatted}
             </DialogDescription>
           </DialogHeader>
           
-          {/* Tab Navigation */}
-          <div className="flex border-b border-border px-6 overflow-x-auto">
+          {/* Tab Navigation.
+              Mobile pattern (same as the VM/LXC modal): each tab
+              shows only its icon; the active tab additionally
+              reveals its label. That keeps all four tabs on-screen
+              on narrow viewports without horizontal scroll. */}
+          <div className="flex border-b border-border px-3 sm:px-6 overflow-x-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
             <button
               onClick={() => setActiveModalTab("overview")}
-              className={`flex items-center gap-1.5 px-3 py-2.5 text-sm font-medium transition-colors border-b-2 -mb-px whitespace-nowrap ${
+              className={`flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-4 py-2.5 text-sm font-medium transition-colors border-b-2 -mb-px whitespace-nowrap shrink-0 ${
                 activeModalTab === "overview"
                   ? "border-blue-500 text-blue-500"
                   : "border-transparent text-muted-foreground hover:text-foreground"
               }`}
             >
               <Info className="h-4 w-4" />
-              Overview
+              <span className={activeModalTab === "overview" ? "" : "hidden sm:inline"}>
+                {t("storage.overview")}
+              </span>
             </button>
             <button
               onClick={() => setActiveModalTab("smart")}
-              className={`flex items-center gap-1.5 px-3 py-2.5 text-sm font-medium transition-colors border-b-2 -mb-px whitespace-nowrap ${
+              className={`flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-4 py-2.5 text-sm font-medium transition-colors border-b-2 -mb-px whitespace-nowrap shrink-0 ${
                 activeModalTab === "smart"
                   ? "border-green-500 text-green-500"
                   : "border-transparent text-muted-foreground hover:text-foreground"
               }`}
             >
               <Activity className="h-4 w-4" />
-              SMART
+              <span className={activeModalTab === "smart" ? "" : "hidden sm:inline"}>
+                {t("storage.smart")}
+              </span>
             </button>
             <button
               onClick={() => setActiveModalTab("history")}
-              className={`flex items-center gap-1.5 px-3 py-2.5 text-sm font-medium transition-colors border-b-2 -mb-px whitespace-nowrap ${
+              className={`flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-4 py-2.5 text-sm font-medium transition-colors border-b-2 -mb-px whitespace-nowrap shrink-0 ${
                 activeModalTab === "history"
                   ? "border-orange-500 text-orange-500"
                   : "border-transparent text-muted-foreground hover:text-foreground"
               }`}
             >
               <Archive className="h-4 w-4" />
-              History
+              <span className={activeModalTab === "history" ? "" : "hidden sm:inline"}>
+                {t("storage.history")}
+              </span>
             </button>
             <button
               onClick={() => setActiveModalTab("schedule")}
-              className={`flex items-center gap-1.5 px-3 py-2.5 text-sm font-medium transition-colors border-b-2 -mb-px whitespace-nowrap ${
+              className={`flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-4 py-2.5 text-sm font-medium transition-colors border-b-2 -mb-px whitespace-nowrap shrink-0 ${
                 activeModalTab === "schedule"
                   ? "border-purple-500 text-purple-500"
                   : "border-transparent text-muted-foreground hover:text-foreground"
               }`}
             >
               <Clock className="h-4 w-4" />
-              Schedule
+              <span className={activeModalTab === "schedule" ? "" : "hidden sm:inline"}>
+                {t("storage.schedule")}
+              </span>
             </button>
           </div>
           
-          {/* Tab Content */}
-          <div className="flex-1 overflow-y-auto px-6 py-4 min-h-0">
+          {/* Tab Content — the wrapper is a flex-col so each tab
+              can either scroll its own content (Overview) or keep
+              a sticky footer while an inner area grows/scrolls
+              (SMART, History, Schedule). Removing the wrapper's
+              own `overflow-y-auto` is what makes that possible. */}
+          <div className="flex-1 flex flex-col min-h-0 px-6 py-4">
           {selectedDisk && activeModalTab === "overview" && (
-            <div className="space-y-4">
+            <div className="space-y-4 flex-1 overflow-y-auto min-h-0 pr-1 -mr-1">
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <p className="text-sm text-muted-foreground">Model</p>
+                  <p className="text-sm text-muted-foreground">{t("storage.model")}</p>
                   <p className="font-medium">{selectedDisk.model}</p>
                 </div>
                 <div>
-                  <p className="text-sm text-muted-foreground">Serial Number</p>
-                  <p className="font-medium">{selectedDisk.serial?.replace(/\\x[0-9a-fA-F]{2}/g, '') || 'Unknown'}</p>
+                  <p className="text-sm text-muted-foreground">{t("storage.serialNumber")}</p>
+                  <p className="font-medium">{selectedDisk.serial?.replace(/\\x[0-9a-fA-F]{2}/g, '') || t("common.unknown")}</p>
                 </div>
                 <div>
-                  <p className="text-sm text-muted-foreground">Capacity</p>
+                  <p className="text-sm text-muted-foreground">{t("storage.capacity")}</p>
                   <p className="font-medium">{selectedDisk.size_formatted}</p>
                 </div>
                 <div>
-                  <p className="text-sm text-muted-foreground">Health Status</p>
+                  <p className="text-sm text-muted-foreground">{t("storage.healthStatus")}</p>
                   <div className="flex items-center gap-2 mt-1">
                     {getHealthBadge(selectedDisk.health)}
                     {(selectedDisk.observations_count ?? 0) > 0 && (
 <Badge className="bg-blue-500/10 text-blue-400 border-blue-500/20 gap-1">
                       <Info className="h-3 w-3" />
-                      {selectedDisk.observations_count} obs.
+                      {selectedDisk.observations_count} {t("storage.observationShort")}
                     </Badge>
                     )}
                   </div>
@@ -1859,7 +2019,9 @@ export function StorageOverview() {
                         const used = 100 - lifeRemaining
                         if (used > 0) {
                           const ry = ((poh / (used / 100)) - poh) / (24 * 365)
-                          estimatedLife = ry >= 1 ? `~${ry.toFixed(1)} years` : `~${(ry * 12).toFixed(0)} months`
+                          estimatedLife = ry >= 1
+                            ? t("storage.duration.estimatedYears", { value: ry.toFixed(1) })
+                            : t("storage.duration.estimatedMonths", { value: (ry * 12).toFixed(0) })
                         }
                       }
                     }
@@ -1882,11 +2044,11 @@ export function StorageOverview() {
                   return (
                     <div className="border-t pt-4">
                       <h4 className="font-semibold mb-3 flex items-center gap-2">
-                        Wear & Lifetime
+                        {t("storage.wearLifetime")}
                       </h4>
                       <div className="grid grid-cols-2 gap-3">
                         <div>
-                          <p className="text-xs text-muted-foreground">Data Written</p>
+                          <p className="text-xs text-muted-foreground">{t("storage.dataWritten")}</p>
                           <p className="text-sm font-medium">{dataWritten}</p>
                         </div>
                       </div>
@@ -1901,9 +2063,9 @@ export function StorageOverview() {
                 return (
                   <div className="border-t pt-4">
                     <h4 className="font-semibold mb-3 flex items-center gap-2">
-                      Wear & Lifetime
+                      {t("storage.wearLifetime")}
                       {smartJsonData?.has_data && !wi && (
-                        <Badge className="bg-green-500/10 text-green-400 border-green-500/20 text-[10px] px-1.5">Real Test</Badge>
+                        <Badge className="bg-green-500/10 text-green-400 border-green-500/20 text-[10px] px-1.5">{t("storage.realTest")}</Badge>
                       )}
                     </h4>
                     <div className="flex gap-5 items-start">
@@ -1914,7 +2076,7 @@ export function StorageOverview() {
                               strokeDasharray={`${lifeRemaining * 2.199} 219.9`}
                               strokeLinecap="round" transform="rotate(-90 44 44)" />
                             <text x="44" y="40" textAnchor="middle" fill={lifeColor} fontSize="20" fontWeight="700">{lifeRemaining}%</text>
-                            <text x="44" y="56" textAnchor="middle" fill="currentColor" fontSize="12" className="text-muted-foreground">life</text>
+                            <text x="44" y="56" textAnchor="middle" fill="currentColor" fontSize="12" className="text-muted-foreground">{t("storage.life")}</text>
                           </svg>
                         </div>
                       )}
@@ -1931,7 +2093,7 @@ export function StorageOverview() {
                         {wearUsed !== null && wearUsed > 0 && (
                           <div>
                             <div className="flex items-center justify-between mb-1.5">
-                              <p className="text-xs text-muted-foreground">Wear</p>
+                              <p className="text-xs text-muted-foreground">{t("storage.wear.label")}</p>
                               <p className="text-sm font-medium text-blue-400">{wearUsed}%</p>
                             </div>
                             <Progress value={wearUsed} className="h-2 [&>div]:bg-blue-500" />
@@ -1940,19 +2102,19 @@ export function StorageOverview() {
                         <div className="grid grid-cols-2 gap-3">
                           {estimatedLife && wearUsed !== null && wearUsed > 0 && (
                             <div>
-                              <p className="text-xs text-muted-foreground">Est. Life</p>
+                              <p className="text-xs text-muted-foreground">{t("storage.estimatedLife")}</p>
                               <p className="text-sm font-medium">{estimatedLife}</p>
                             </div>
                           )}
                           {dataWritten && (
                             <div>
-                              <p className="text-xs text-muted-foreground">Data Written</p>
+                              <p className="text-xs text-muted-foreground">{t("storage.dataWritten")}</p>
                               <p className="text-sm font-medium">{dataWritten}</p>
                             </div>
                           )}
                           {spare !== undefined && (
                             <div>
-                              <p className="text-xs text-muted-foreground">Avail. Spare</p>
+                              <p className="text-xs text-muted-foreground">{t("storage.availableSpare")}</p>
                               <p className={`text-sm font-medium ${spare < 20 ? 'text-red-400' : 'text-blue-400'}`}>{spare}%</p>
                             </div>
                           )}
@@ -1964,7 +2126,7 @@ export function StorageOverview() {
               })()}
 
               <div className="border-t pt-4">
-                <h4 className="font-semibold mb-3">SMART Attributes</h4>
+                <h4 className="font-semibold mb-3">{t("storage.smartAttributes")}</h4>
                 {/*
                   Sprint 14: temperature lives in its own full-width card
                   with an inline 1-hour mini chart. The remaining attributes
@@ -1982,27 +2144,27 @@ export function StorageOverview() {
                 )}
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <p className="text-sm text-muted-foreground">Power On Hours</p>
+                    <p className="text-sm text-muted-foreground">{t("storage.powerOnHours")}</p>
                     <p className="font-medium">
                       {selectedDisk.power_on_hours && selectedDisk.power_on_hours > 0
                         ? `${selectedDisk.power_on_hours.toLocaleString()}h (${formatHours(selectedDisk.power_on_hours)})`
-                        : "N/A"}
+                        : t("common.notAvailable")}
                     </p>
                   </div>
                   <div>
-                    <p className="text-sm text-muted-foreground">Rotation Rate</p>
+                    <p className="text-sm text-muted-foreground">{t("storage.rotationRate")}</p>
                     <p className="font-medium">{formatRotationRate(selectedDisk.rotation_rate)}</p>
                   </div>
                   <div>
-                    <p className="text-sm text-muted-foreground">Power Cycles</p>
+                    <p className="text-sm text-muted-foreground">{t("storage.powerCycles")}</p>
                     <p className="font-medium">
                       {selectedDisk.power_cycles && selectedDisk.power_cycles > 0
                         ? selectedDisk.power_cycles.toLocaleString()
-                        : "N/A"}
+                        : t("common.notAvailable")}
                     </p>
                   </div>
                   <div>
-                    <p className="text-sm text-muted-foreground">SMART Status</p>
+                    <p className="text-sm text-muted-foreground">{t("storage.smartStatus")}</p>
                     <p className={`font-medium capitalize flex items-center gap-1.5 ${
                       smartStatusTone(selectedDisk.smart_status) === "ok"
                         ? "text-green-500"
@@ -2011,11 +2173,11 @@ export function StorageOverview() {
                           : ""
                     }`}>
                       <StatusDot tone={smartStatusTone(selectedDisk.smart_status)} />
-                      {selectedDisk.smart_status}
+                      {healthLabel(selectedDisk.smart_status)}
                     </p>
                   </div>
                   <div>
-                    <p className="text-sm text-muted-foreground">Reallocated Sectors</p>
+                    <p className="text-sm text-muted-foreground">{t("storage.reallocatedSectors")}</p>
                     <p className={`font-medium flex items-center gap-1.5 ${
                       counterTone(selectedDisk.reallocated_sectors) === "ok"
                         ? "text-green-500"
@@ -2028,7 +2190,7 @@ export function StorageOverview() {
                     </p>
                   </div>
                   <div>
-                    <p className="text-sm text-muted-foreground">Pending Sectors</p>
+                    <p className="text-sm text-muted-foreground">{t("storage.pendingSectors")}</p>
                     <p className={`font-medium flex items-center gap-1.5 ${
                       counterTone(selectedDisk.pending_sectors) === "ok"
                         ? "text-green-500"
@@ -2041,7 +2203,7 @@ export function StorageOverview() {
                     </p>
                   </div>
                   <div>
-                    <p className="text-sm text-muted-foreground">CRC Errors</p>
+                    <p className="text-sm text-muted-foreground">{t("storage.crcErrors")}</p>
                     <p className={`font-medium flex items-center gap-1.5 ${
                       counterTone(selectedDisk.crc_errors) === "ok"
                         ? "text-green-500"
@@ -2056,201 +2218,32 @@ export function StorageOverview() {
                   {/* USB drives lose the chart card; show plain temperature here. */}
                   {selectedDisk.connection_type === 'usb' && (
                     <div>
-                      <p className="text-sm text-muted-foreground">Temperature</p>
+                      <p className="text-sm text-muted-foreground">{t("storage.temperature")}</p>
                       <p className={`font-medium ${getTempColor(selectedDisk.temperature, selectedDisk.name, selectedDisk.rotation_rate)}`}>
-                        {selectedDisk.temperature > 0 ? `${selectedDisk.temperature}°C` : "N/A"}
+                        {selectedDisk.temperature > 0 ? `${selectedDisk.temperature}°C` : t("common.notAvailable")}
                       </p>
                     </div>
                   )}
                 </div>
               </div>
 
-              {/* OLD SMART Test Data section removed — now unified in Wear & Lifetime above */}
-              {false && (
-                <div className="border-t pt-4">
-                  <h4 className="font-semibold mb-3 flex items-center gap-2">
-                    <Activity className="h-4 w-4 text-green-400" />
-                    {(() => {
-                      // Check if this is SSD without Proxmox wear data - show as "Wear & Lifetime"
-                      const isNvme = selectedDisk.name?.includes('nvme')
-                      const hasProxmoxWear = getWearIndicator(selectedDisk) !== null
-                      if (!isNvme && !hasProxmoxWear && smartJsonData?.has_data) {
-                        return 'Wear & Lifetime'
-                      }
-                      return 'SMART Test Data'
-                    })()}
-                    {smartJsonData?.has_data && (
-                      <Badge className="bg-green-500/10 text-green-400 border-green-500/20 text-[10px] px-1.5">
-                        Real Test
-                      </Badge>
-                    )}
-                  </h4>
-                  {loadingSmartJson ? (
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground py-2">
-                      <div className="h-4 w-4 rounded-full border-2 border-transparent border-t-green-400 animate-spin" />
-                      Loading SMART test data...
-                    </div>
-                  ) : smartJsonData?.has_data && smartJsonData.data ? (
-                    <div className="space-y-3">
-                      {/* SSD/NVMe Life Estimation from JSON - Uniform style */}
-                      {(() => {
-                        const data = smartJsonData.data as Record<string, unknown>
-                        const ataAttrs = data?.ata_smart_attributes as { table?: Array<{ id: number; name: string; value: number; raw?: { value: number } }> }
-                        const table = ataAttrs?.table || []
-                        
-                        // Look for wear-related attributes for SSD
-                        const wearAttr = table.find(a => 
-                          a.name?.toLowerCase().includes('wear_leveling') ||
-                          a.name?.toLowerCase().includes('media_wearout') ||
-                          a.name?.toLowerCase().includes('percent_lifetime') ||
-                          a.name?.toLowerCase().includes('ssd_life_left') ||
-                          a.id === 177 || a.id === 231 || a.id === 233
-                        )
-                        
-                        // Look for total LBAs written
-                        const lbasAttr = table.find(a => 
-                          a.name?.toLowerCase().includes('total_lbas_written') ||
-                          a.id === 241
-                        )
-                        
-                        // Look for power on hours from SMART data
-                        const pohAttr = table.find(a => 
-                          a.name?.toLowerCase().includes('power_on_hours') ||
-                          a.id === 9
-                        )
-                        
-                        // For NVMe, check nvme_smart_health_information_log
-                        const nvmeHealth = data?.nvme_smart_health_information_log as Record<string, unknown>
-                        
-                        // Calculate data written
-                        let dataWrittenTB = 0
-                        let dataWrittenLabel = ''
-                        if (lbasAttr && lbasAttr.raw?.value) {
-                          dataWrittenTB = (lbasAttr.raw.value * 512) / (1024 ** 4)
-                          dataWrittenLabel = dataWrittenTB >= 1 
-                            ? `${dataWrittenTB.toFixed(2)} TB`
-                            : `${(dataWrittenTB * 1024).toFixed(2)} GB`
-                        } else if (nvmeHealth?.data_units_written) {
-                          const units = nvmeHealth.data_units_written as number
-                          dataWrittenTB = (units * 512000) / (1024 ** 4)
-                          dataWrittenLabel = dataWrittenTB >= 1 
-                            ? `${dataWrittenTB.toFixed(2)} TB`
-                            : `${(dataWrittenTB * 1024).toFixed(2)} GB`
-                        }
-                        
-                        // Get wear percentage (life remaining %)
-                        let wearPercent: number | null = null
-                        let wearLabel = 'Life Remaining'
-                        if (wearAttr) {
-                          if (wearAttr.id === 230) {
-                            // Media_Wearout_Indicator (WD/SanDisk): value = endurance used %
-                            wearPercent = 100 - wearAttr.value
-                          } else {
-                            // Standard: value = normalized life remaining %
-                            wearPercent = wearAttr.value
-                          }
-                          wearLabel = 'Life Remaining'
-                        } else if (nvmeHealth?.percentage_used !== undefined) {
-                          wearPercent = 100 - (nvmeHealth.percentage_used as number)
-                          wearLabel = 'Life Remaining'
-                        }
-                        
-                        // Calculate estimated life remaining
-                        let estimatedLife = ''
-                        const powerOnHours = pohAttr?.raw?.value || selectedDisk.power_on_hours || 0
-                        if (wearPercent !== null && wearPercent > 0 && wearPercent < 100 && powerOnHours > 0) {
-                          const usedPercent = 100 - wearPercent
-                          if (usedPercent > 0) {
-                            const totalEstimatedHours = powerOnHours / (usedPercent / 100)
-                            const remainingHours = totalEstimatedHours - powerOnHours
-                            const remainingYears = remainingHours / (24 * 365)
-                            if (remainingYears >= 1) {
-                              estimatedLife = `~${remainingYears.toFixed(1)} years`
-                            } else {
-                              const remainingMonths = remainingYears * 12
-                              estimatedLife = `~${remainingMonths.toFixed(0)} months`
-                            }
-                          }
-                        }
-                        
-                        // Available spare for NVMe
-                        const availableSpare = nvmeHealth?.available_spare as number | undefined
-                        
-                        if (wearPercent !== null || dataWrittenLabel) {
-                          return (
-                            <>
-                              {/* Wear Progress Bar - Blue style matching NVMe */}
-                              {wearPercent !== null && (
-                                <div>
-                                  <div className="flex items-center justify-between mb-2">
-                                    <p className="text-sm text-muted-foreground">{wearLabel}</p>
-                                    <p className="font-medium text-blue-400">
-                                      {wearPercent}%
-                                    </p>
-                                  </div>
-                                  <Progress
-                                    value={wearPercent}
-                                    className={`h-2 ${wearPercent < 20 ? '[&>div]:bg-red-500' : '[&>div]:bg-blue-500'}`}
-                                  />
-                                </div>
-                              )}
-                              
-                              {/* Stats Grid - Same layout as NVMe Wear & Lifetime */}
-                              <div className="grid grid-cols-2 gap-4">
-                                {estimatedLife && (
-                                  <div>
-                                    <p className="text-sm text-muted-foreground">Estimated Life Remaining</p>
-                                    <p className="font-medium">{estimatedLife}</p>
-                                  </div>
-                                )}
-                                {dataWrittenLabel && (
-                                  <div>
-                                    <p className="text-sm text-muted-foreground">Total Data Written</p>
-                                    <p className="font-medium">{dataWrittenLabel}</p>
-                                  </div>
-                                )}
-                                {availableSpare !== undefined && (
-                                  <div>
-                                    <p className="text-sm text-muted-foreground">Available Spare</p>
-                                    <p className={`font-medium ${availableSpare < 20 ? 'text-red-400' : availableSpare < 50 ? 'text-yellow-400' : 'text-green-400'}`}>
-                                      {availableSpare}%
-                                    </p>
-                                  </div>
-                                )}
-                              </div>
-                            </>
-                          )
-                        }
-                        return null
-                      })()}
-                      
-                    </div>
-                  ) : (
-                    <div className="text-sm text-muted-foreground">
-                      <p>No SMART test data available for this disk.</p>
-                      <p className="text-xs mt-1">Run a SMART test in the SMART Test tab to get detailed health information.</p>
-                    </div>
-                  )}
-                </div>
-              )}
-
               {/* Observations Section */}
               {(diskObservations.length > 0 || loadingObservations) && (
                 <div className="border-t pt-4">
                   <h4 className="font-semibold mb-2 flex items-center gap-2">
                     <Info className="h-4 w-4 text-blue-400" />
-                    Observations
+                    {t("storage.observations")}
                     <Badge className="bg-blue-500/10 text-blue-400 border-blue-500/20">
                       {diskObservations.length}
                     </Badge>
                   </h4>
                   <p className="text-xs text-muted-foreground mb-3">
-                    The following observations have been recorded for this disk:
+                    {t("storage.observationsDescription")}
                   </p>
                   {loadingObservations ? (
                     <div className="flex items-center gap-2 text-sm text-muted-foreground py-2">
                       <div className="h-4 w-4 rounded-full border-2 border-transparent border-t-blue-400 animate-spin" />
-                      Loading observations...
+                      {t("storage.loadingObservations")}
                     </div>
                   ) : (
                     <div className="space-y-3">
@@ -2276,9 +2269,9 @@ export function StorageOverview() {
                           <p className="text-xs whitespace-pre-wrap break-words opacity-90 font-mono leading-relaxed mb-1">
                             {obs.raw_message}
                           </p>
-                          {translateAtaError(obs.raw_message) && (
+                          {translateAtaError(obs.raw_message, t) && (
                             <p className="text-xs italic opacity-75 mb-3 break-words">
-                              ↳ {translateAtaError(obs.raw_message)}
+                              ↳ {translateAtaError(obs.raw_message, t)}
                             </p>
                           )}
                           
@@ -2286,17 +2279,17 @@ export function StorageOverview() {
                           <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3 text-[10px] text-muted-foreground border-t border-white/5 pt-2">
                             <span className="flex items-center gap-1">
                               <Clock className="h-3 w-3 flex-shrink-0" />
-                              <span className="break-words">First: {formatObsDate(obs.first_occurrence)}</span>
+                              <span className="break-words">{t("storage.firstSeen")}: {formatObsDate(obs.first_occurrence)}</span>
                             </span>
                             <span className="flex items-center gap-1">
                               <Clock className="h-3 w-3 flex-shrink-0" />
-                              <span className="break-words">Last: {formatObsDate(obs.last_occurrence)}</span>
+                              <span className="break-words">{t("storage.lastSeen")}: {formatObsDate(obs.last_occurrence)}</span>
                             </span>
                           </div>
                           
                           {/* Occurrences count */}
                           <div className="text-[10px] text-muted-foreground mt-1">
-                            Occurrences: <span className="font-medium text-foreground">{obs.occurrence_count}</span>
+                            {t("storage.occurrences")}: <span className="font-medium text-foreground">{obs.occurrence_count}</span>
                           </div>
                         </div>
                       ))}
@@ -2361,10 +2354,12 @@ async function fetchTempHistoryForReport(diskName: string): Promise<DiskTempHist
   return undefined
 }
 
-function openSmartReport(disk: DiskInfo, testStatus: SmartTestStatus, smartAttributes: SmartAttribute[], observations: DiskObservation[] = [], lastTestDate?: string, targetWindow?: Window, isHistorical = false, tempHistory?: DiskTempHistoryPayload) {
+function openSmartReport(disk: DiskInfo, testStatus: SmartTestStatus, smartAttributes: SmartAttribute[], observations: DiskObservation[] = [], lastTestDate?: string, targetWindow?: Window, isHistorical = false, tempHistory?: DiskTempHistoryPayload, t: (key: string, params?: Record<string, string | number>) => string) {
   const now = new Date().toLocaleString()
   const logoUrl = `${window.location.origin}/images/proxmenux-logo.png`
   const reportId = `SMART-${Date.now().toString(36).toUpperCase()}`
+  const tSmart = (key: string, params?: Record<string, string | number>) => t(`storage.smartReport.${key}`, params)
+  const na = t("common.notAvailable")
 
   // --- Enriched device fields from smart_data ---
   const sd = testStatus.smart_data
@@ -2397,7 +2392,7 @@ function openSmartReport(disk: DiskInfo, testStatus: SmartTestStatus, smartAttri
     const testDate = new Date(lastTestDate)
     testAgeDays = Math.floor((Date.now() - testDate.getTime()) / (1000 * 60 * 60 * 24))
     if (testAgeDays > 90) {
-      testAgeWarning = `This report is based on a SMART test performed ${testAgeDays} days ago (${testDate.toLocaleDateString()}). Disk health may have changed since then. We recommend running a new SMART test for up-to-date results.`
+      testAgeWarning = t("storage.smartReport.testAgeWarning", { days: testAgeDays, date: testDate.toLocaleDateString() })
     }
   }
 
@@ -2413,10 +2408,28 @@ function openSmartReport(disk: DiskInfo, testStatus: SmartTestStatus, smartAttri
   }
   
   // Health status styling
-  const healthStatus = testStatus.smart_status || (testStatus.smart_data?.smart_status) || 'unknown'
-  const isHealthy = healthStatus.toLowerCase() === 'passed'
-  const healthColor = isHealthy ? '#16a34a' : healthStatus.toLowerCase() === 'failed' ? '#dc2626' : '#ca8a04'
-  const healthLabel = isHealthy ? 'PASSED' : healthStatus.toUpperCase()
+  const healthStatus = String(testStatus.smart_status || (testStatus.smart_data?.smart_status) || 'unknown')
+  const healthStatusKey = healthStatus.toLowerCase()
+  const isHealthy = healthStatusKey === 'passed'
+  const healthColor = isHealthy ? '#16a34a' : healthStatusKey === 'failed' ? '#dc2626' : '#ca8a04'
+  const healthLabel = (() => {
+    switch (healthStatusKey) {
+      case "passed":
+        return t("storage.smartReport.passedUpper")
+      case "failed":
+        return tSmart("statusValues.failed")
+      case "ok":
+        return tSmart("statusValues.ok")
+      case "warning":
+        return tSmart("statusValues.warning")
+      case "critical":
+        return tSmart("statusValues.critical")
+      case "unknown":
+        return t("common.unknown")
+      default:
+        return healthStatus || t("common.unknown")
+    }
+  })()
   
   // Format power on time — force 'en' locale for consistent comma separator
   const fmtNum = (n: number) => n.toLocaleString('en-US')
@@ -2425,202 +2438,224 @@ function openSmartReport(disk: DiskInfo, testStatus: SmartTestStatus, smartAttri
   const powerOnYears = Math.floor(powerOnHours / 8760)
   const powerOnRemainingDays = Math.floor((powerOnHours % 8760) / 24)
   const powerOnFormatted = powerOnYears > 0
-    ? `${powerOnYears}y ${powerOnRemainingDays}d (${fmtNum(powerOnHours)}h)`
-    : `${powerOnDays}d (${fmtNum(powerOnHours)}h)`
+    ? tSmart("duration.yearDayHours", { years: powerOnYears, days: powerOnRemainingDays, hours: fmtNum(powerOnHours) })
+    : tSmart("duration.dayHours", { days: powerOnDays, hours: fmtNum(powerOnHours) })
   
   // Build attributes table - format differs for NVMe vs SATA
   const isNvmeForTable = diskType === 'NVMe'
   
-  // Explanations for NVMe metrics
-  const nvmeExplanations: Record<string, string> = {
-    'Critical Warning': 'Active alert flags from the NVMe controller. Any non-zero value requires immediate investigation.',
-    'Temperature': 'Composite temperature reported by the controller. Sustained high temps cause thermal throttling and reduce NAND lifespan.',
-    'Temperature Sensor 1': 'Primary temperature sensor, usually the NAND flash. Most representative of flash health.',
-    'Temperature Sensor 2': 'Secondary sensor, often the controller die. Typically runs hotter than Sensor 1.',
-    'Temperature Sensor 3': 'Tertiary sensor, if present. Location varies by manufacturer.',
-    'Available Spare': 'Percentage of spare NAND blocks remaining for bad-block replacement. Alert triggers below threshold.',
-    'Available Spare Threshold': 'Manufacturer-set minimum for Available Spare. Below this, the drive flags a critical warning.',
-    'Percentage Used': "Drive's own estimate of endurance consumed based on actual vs. rated write cycles. 100% = rated TBW reached; drive may continue working beyond this.",
-    'Percent Used': "Drive's own estimate of endurance consumed based on actual vs. rated write cycles. 100% = rated TBW reached; drive may continue working beyond this.",
-    'Media Errors': 'Unrecoverable read/write errors on the NAND flash. Any non-zero value indicates permanent cell damage. Growing count = replace soon.',
-    'Media and Data Integrity Errors': 'Unrecoverable errors detected by the controller. Non-zero means data corruption risk.',
-    'Unsafe Shutdowns': 'Power losses without proper flush/shutdown. Very high counts risk metadata corruption and firmware issues.',
-    'Power Cycles': 'Total on/off cycles. Frequent cycling increases connector and capacitor wear.',
-    'Power On Hours': 'Total cumulative hours the drive has been powered on since manufacture.',
-    'Data Units Read': 'Total data read in 512KB units. Multiply by 512,000 for bytes. Useful for calculating daily read workload.',
-    'Data Units Written': 'Total data written in 512KB units. Compare with TBW rating to estimate remaining endurance.',
-    'Host Read Commands': 'Total read commands issued by the host. High ratio vs. write commands indicates read-heavy workload.',
-    'Host Write Commands': 'Total write commands issued by the host. Includes filesystem metadata writes.',
-    'Controller Busy Time': 'Total minutes the controller spent processing I/O commands. High values indicate sustained heavy workload.',
-    'Error Log Entries': 'Number of entries in the error information log. Often includes benign self-test artifacts; cross-check with Media Errors.',
-    'Error Information Log Entries': 'Number of entries in the error information log. Often includes benign self-test artifacts.',
-    'Warning Temp Time': 'Total minutes spent above the warning temperature threshold. Causes performance throttling. Zero is ideal.',
-    'Critical Temp Time': 'Total minutes spent above the critical temperature threshold. Drive may shut down to prevent damage. Should always be zero.',
-    'Warning Composite Temperature Time': 'Total minutes the composite temperature exceeded the warning threshold.',
-    'Critical Composite Temperature Time': 'Total minutes the composite temperature exceeded the critical threshold. Must be zero.',
-    'Thermal Management T1 Trans Count': 'Number of times the drive entered light thermal throttling (T1). Indicates cooling issues.',
-    'Thermal Management T2 Trans Count': 'Number of times the drive entered heavy thermal throttling (T2). Significant performance impact.',
-    'Thermal Management T1 Total Time': 'Total seconds spent in light thermal throttling. Indicates sustained cooling problems.',
-    'Thermal Management T2 Total Time': 'Total seconds spent in heavy thermal throttling. Severe performance degradation.',
+  const sataExplanationKeys: Record<string, string> = {
+    'Raw Read Error Rate': 'rawReadErrorRate',
+    'Write Error Rate': 'writeErrorRate',
+    'Multi Zone Error Rate': 'multiZoneErrorRate',
+    'Soft Read Error Rate': 'softReadErrorRate',
+    'Read Error Retry Rate': 'readErrorRetryRate',
+    'Reported Uncorrect': 'reportedUncorrect',
+    'Reported Uncorrectable Errors': 'reportedUncorrectableErrors',
+    'Reallocated Sector Ct': 'reallocatedSectorCount',
+    'Reallocated Sector Count': 'reallocatedSectorCount',
+    'Reallocated Sectors': 'reallocatedSectorCount',
+    'Retired Block Count': 'retiredBlockCount',
+    'Reallocated Event Count': 'reallocatedEventCount',
+    'Current Pending Sector': 'currentPendingSector',
+    'Current Pending Sector Count': 'currentPendingSector',
+    'Pending Sectors': 'pendingSectors',
+    'Offline Uncorrectable': 'offlineUncorrectable',
+    'Offline Uncorrectable Sector Count': 'offlineUncorrectableSectorCount',
+    'Temperature': 'sataTemperature',
+    'Temperature Celsius': 'temperatureCelsius',
+    'Airflow Temperature Cel': 'airflowTemperatureCel',
+    'Temperature Case': 'temperatureCase',
+    'Temperature Internal': 'temperatureInternal',
+    'Power On Hours': 'sataPowerOnHours',
+    'Power On Hours and Msec': 'powerOnHoursAndMsec',
+    'Power Cycle Count': 'powerCycleCount',
+    'Power Off Retract Count': 'powerOffRetractCount',
+    'Unexpected Power Loss Ct': 'unexpectedPowerLossCt',
+    'Unsafe Shutdown Count': 'unsafeShutdownCount',
+    'Start Stop Count': 'startStopCount',
+    'Spin Up Time': 'spinUpTime',
+    'Spin Retry Count': 'spinRetryCount',
+    'Calibration Retry Count': 'calibrationRetryCount',
+    'Seek Error Rate': 'seekErrorRate',
+    'Seek Time Performance': 'seekTimePerformance',
+    'Load Cycle Count': 'loadCycleCount',
+    'Load Unload Cycle Count': 'loadUnloadCycleCount',
+    'Head Flying Hours': 'headFlyingHours',
+    'High Fly Writes': 'highFlyWrites',
+    'G Sense Error Rate': 'gSenseErrorRate',
+    'Disk Shift': 'diskShift',
+    'Loaded Hours': 'loadedHours',
+    'Load In Time': 'loadInTime',
+    'Torque Amplification Count': 'torqueAmplificationCount',
+    'Flying Height': 'flyingHeight',
+    'Load Friction': 'loadFriction',
+    'Load Unload Retry Count': 'loadUnloadRetryCount',
+    'UDMA CRC Error Count': 'udmaCrcErrorCount',
+    'CRC Errors': 'crcErrors',
+    'CRC Error Count': 'crcErrorCount',
+    'Command Timeout': 'commandTimeout',
+    'Interface CRC Error Count': 'interfaceCrcErrorCount',
+    'Hardware ECC Recovered': 'hardwareEccRecovered',
+    'ECC Error Rate': 'eccErrorRate',
+    'End to End Error': 'endToEndError',
+    'End to End Error Detection Count': 'endToEndErrorDetectionCount',
+    'Wear Leveling Count': 'wearLevelingCount',
+    'Wear Range Delta': 'wearRangeDelta',
+    'Media Wearout Indicator': 'mediaWearoutIndicator',
+    'SSD Life Left': 'ssdLifeLeft',
+    'Percent Lifetime Remain': 'percentLifetimeRemain',
+    'Percent Lifetime Used': 'percentLifetimeUsed',
+    'Available Reservd Space': 'availableReservedSpace',
+    'Available Reserved Space': 'availableReservedSpace',
+    'Used Rsvd Blk Cnt Tot': 'usedReservedBlockCount',
+    'Used Reserved Block Count': 'usedReservedBlockCount',
+    'Unused Rsvd Blk Cnt Tot': 'unusedReservedBlockCount',
+    'Unused Reserve Block Count': 'unusedReservedBlockCount',
+    'Program Fail Cnt Total': 'programFailCount',
+    'Program Fail Count': 'programFailCount',
+    'Program Fail Count Chip': 'programFailCountChip',
+    'Erase Fail Count': 'eraseFailCount',
+    'Erase Fail Count Total': 'eraseFailCountTotal',
+    'Erase Fail Count Chip': 'eraseFailCountChip',
+    'Runtime Bad Block': 'runtimeBadBlock',
+    'Runtime Bad Blocks': 'runtimeBadBlock',
+    'Total LBAs Written': 'totalLbasWritten',
+    'Total LBAs Read': 'totalLbasRead',
+    'Lifetime Writes GiB': 'lifetimeWritesGib',
+    'Lifetime Reads GiB': 'lifetimeReadsGib',
+    'Total Writes GiB': 'totalWritesGib',
+    'Total Reads GiB': 'totalReadsGib',
+    'NAND Writes GiB': 'nandWritesGib',
+    'Host Writes 32MiB': 'hostWrites32Mib',
+    'Host Reads 32MiB': 'hostReads32Mib',
+    'Host Writes MiB': 'hostWritesMib',
+    'Host Reads MiB': 'hostReadsMib',
+    'NAND GB Written TLC': 'nandGbWrittenTlc',
+    'NAND GiB Written': 'nandGibWritten',
+    'Ave Block Erase Count': 'averageBlockEraseCount',
+    'Average Erase Count': 'averageEraseCount',
+    'Max Erase Count': 'maxEraseCount',
+    'Total Erase Count': 'totalEraseCount',
+    'Power Loss Cap Test': 'powerLossCapTest',
+    'Power Loss Protection': 'powerLossProtection',
+    'Successful RAIN Recov Cnt': 'successfulRainRecovCnt',
+    'SSD Erase Fail Count': 'ssdEraseFailCount',
+    'SSD Program Fail Count': 'ssdProgramFailCount',
+    'Throughput Performance': 'throughputPerformance',
+    'Unknown Attribute': 'unknownAttribute',
+    'Free Fall Sensor': 'freeFallSensor',
   }
-  
-  // Explanations for SATA/SSD attributes — covers HDD, SSD, and mixed-use attributes
-  const sataExplanations: Record<string, string> = {
-    // === Read/Write Errors ===
-    'Raw Read Error Rate': 'Hardware read errors detected. High raw values on Seagate/Samsung drives are normal (proprietary formula where VALUE, not raw, matters).',
-    'Write Error Rate': 'Errors encountered during write operations. Growing count may indicate head or media issues.',
-    'Multi Zone Error Rate': 'Errors when writing to multi-zone regions. Manufacturer-specific; rising trend is concerning.',
-    'Soft Read Error Rate': 'Read errors corrected by firmware without data loss. High values may indicate degrading media.',
-    'Read Error Retry Rate': 'Number of read retries needed. Occasional retries are normal; persistent growth indicates wear.',
-    'Reported Uncorrect': 'Errors that ECC could not correct. Any non-zero value means data was lost or unreadable.',
-    'Reported Uncorrectable Errors': 'Errors that ECC could not correct. Non-zero = data loss risk.',
 
-    // === Reallocated / Pending / Offline ===
-    'Reallocated Sector Ct': 'Bad sectors replaced by spare sectors from the reserve pool. Growing count = drive degradation.',
-    'Reallocated Sector Count': 'Bad sectors replaced by spare sectors. Growing count indicates drive degradation.',
-    'Reallocated Sectors': 'Bad sectors replaced by spare sectors. Growing count indicates drive degradation.',
-    'Retired Block Count': 'NAND blocks retired due to wear or failure (SSD). Similar to Reallocated Sector Count for HDDs.',
-    'Reallocated Event Count': 'Number of remap operations performed. Each event means a bad sector was replaced.',
-    'Current Pending Sector': 'Unstable sectors waiting to be remapped on next write. May resolve or become permanently reallocated.',
-    'Current Pending Sector Count': 'Unstable sectors waiting to be remapped on next write. Non-zero warrants monitoring.',
-    'Pending Sectors': 'Sectors waiting to be remapped. May resolve or become reallocated.',
-    'Offline Uncorrectable': 'Sectors that failed during offline scan and could not be corrected. Indicates potential data loss.',
-    'Offline Uncorrectable Sector Count': 'Uncorrectable sectors found during background scan. Data on these sectors is lost.',
-
-    // === Temperature ===
-    'Temperature': 'Current drive temperature. Sustained high temps accelerate wear and reduce lifespan.',
-    'Temperature Celsius': 'Current drive temperature in Celsius. HDDs: keep below 45°C; SSDs: below 60°C.',
-    'Airflow Temperature Cel': 'Temperature measured by the airflow sensor. Usually slightly lower than the main temp sensor.',
-    'Temperature Case': 'Temperature of the drive casing. Useful for monitoring enclosure ventilation.',
-    'Temperature Internal': 'Internal temperature sensor. May read higher than case temperature.',
-
-    // === Power & Uptime ===
-    'Power On Hours': 'Total cumulative hours the drive has been powered on. Used to estimate age and plan replacements.',
-    'Power On Hours and Msec': 'Total powered-on time with millisecond precision.',
-    'Power Cycle Count': 'Total number of complete power on/off cycles. Frequent cycling stresses electronics.',
-    'Power Off Retract Count': 'Times the heads were retracted due to power loss (HDD). High values indicate unstable power supply.',
-    'Unexpected Power Loss Ct': 'Unexpected power losses (SSD). Can cause metadata corruption if write-cache was active.',
-    'Unsafe Shutdown Count': 'Power losses without proper shutdown (SSD). High values risk firmware corruption.',
-    'Start Stop Count': 'Spindle motor start/stop cycles (HDD). Each cycle causes mechanical wear.',
-
-    // === Mechanical (HDD-specific) ===
-    'Spin Up Time': 'Time for platters to reach full operating speed (HDD). Increasing values may indicate motor bearing wear.',
-    'Spin Retry Count': 'Failed attempts to spin up the motor (HDD). Non-zero usually indicates power supply or motor issues.',
-    'Calibration Retry Count': 'Number of head calibration retries (HDD). Non-zero may indicate mechanical issues.',
-    'Seek Error Rate': 'Errors during head positioning (HDD). High raw values on Seagate are often normal (proprietary formula).',
-    'Seek Time Performance': 'Average seek operation performance (HDD). Declining values suggest mechanical degradation.',
-    'Load Cycle Count': 'Head load/unload cycles (HDD). Rated for 300K-600K cycles on most drives.',
-    'Load Unload Cycle Count': 'Head load/unload cycles (HDD). Each cycle causes micro-wear on the ramp mechanism.',
-    'Head Flying Hours': 'Hours the read/write heads have been positioned over the platters (HDD).',
-    'High Fly Writes': 'Writes where the head flew higher than expected (HDD). Data may not be written correctly.',
-    'G Sense Error Rate': 'Shock/vibration events detected by the accelerometer (HDD). High values indicate physical disturbance.',
-    'Disk Shift': 'Distance the disk has shifted from its original position (HDD). Temperature or shock-related.',
-    'Loaded Hours': 'Hours spent with heads loaded over the platters (HDD).',
-    'Load In Time': 'Time of the head loading process. Manufacturer-specific diagnostic metric.',
-    'Torque Amplification Count': 'Times the drive needed extra torque to spin up. May indicate stiction or motor issues.',
-    'Flying Height': 'Head-to-platter distance during operation (HDD). Critical for read/write reliability.',
-    'Load Friction': 'Friction detected during head loading (HDD). Increasing values suggest ramp mechanism wear.',
-    'Load Unload Retry Count': 'Failed head load/unload attempts (HDD). Non-zero indicates mechanical issues.',
-
-    // === Interface Errors ===
-    'UDMA CRC Error Count': 'Data transfer checksum errors on the SATA cable. Usually caused by a bad cable, loose connection, or port issue.',
-    'CRC Errors': 'Interface communication errors. Usually caused by cable or connection issues.',
-    'CRC Error Count': 'Data transfer checksum errors. Replace the SATA cable if this value grows.',
-    'Command Timeout': 'Commands that took too long and timed out. May indicate controller or connection issues.',
-    'Interface CRC Error Count': 'CRC errors on the interface link. Cable or connector problem.',
-
-    // === ECC & Data Integrity ===
-    'Hardware ECC Recovered': 'Read errors corrected by hardware ECC. Non-zero is normal; rapid growth warrants attention.',
-    'ECC Error Rate': 'Rate of ECC-corrected errors. Proprietary formula; VALUE matters more than raw count.',
-    'End to End Error': 'Data corruption detected between the controller cache and host interface. Should always be zero.',
-    'End to End Error Detection Count': 'Number of parity errors in the data path. Non-zero indicates controller issues.',
-
-    // === SSD Wear & Endurance ===
-    'Wear Leveling Count': 'Average erase cycles per NAND block (SSD). Lower VALUE = more wear consumed.',
-    'Wear Range Delta': 'Difference between most-worn and least-worn blocks (SSD). High values indicate uneven wear.',
-    'Media Wearout Indicator': 'Intel SSD life remaining estimate. Starts at 100, decreases to 0 as endurance is consumed.',
-    'SSD Life Left': 'Estimated remaining SSD lifespan percentage based on NAND wear.',
-    'Percent Lifetime Remain': 'Estimated remaining lifespan percentage. 100 = new; 0 = end of rated life.',
-    'Percent Lifetime Used': 'Percentage of rated endurance consumed. Inverse of Percent Lifetime Remain.',
-    'Available Reservd Space': 'Remaining spare blocks as a percentage of total reserves (SSD). Similar to NVMe Available Spare.',
-    'Available Reserved Space': 'Remaining spare blocks as a percentage (SSD). Low values reduce the drive\'s ability to handle bad blocks.',
-    'Used Rsvd Blk Cnt Tot': 'Total reserve blocks consumed for bad-block replacement (SSD). Growing = aging.',
-    'Used Reserved Block Count': 'Number of reserve blocks used for bad-block replacement (SSD).',
-    'Unused Rsvd Blk Cnt Tot': 'Remaining reserve blocks available (SSD). Zero = no more bad-block replacement possible.',
-    'Unused Reserve Block Count': 'Reserve blocks still available for bad-block replacement (SSD).',
-    'Program Fail Cnt Total': 'Total NAND program (write) failures (SSD). Non-zero indicates flash cell degradation.',
-    'Program Fail Count': 'NAND write failures (SSD). Growing count means flash cells are wearing out.',
-    'Program Fail Count Chip': 'Program failures at chip level (SSD). Non-zero indicates NAND degradation.',
-    'Erase Fail Count': 'NAND erase operation failures (SSD). Non-zero indicates severe flash wear.',
-    'Erase Fail Count Total': 'Total NAND erase failures (SSD). Combined with Program Fail Count shows overall NAND health.',
-    'Erase Fail Count Chip': 'Erase failures at chip level (SSD). Non-zero = NAND degradation.',
-    'Runtime Bad Block': 'Bad blocks discovered during normal operation (SSD). Different from factory-mapped bad blocks.',
-    'Runtime Bad Blocks': 'Blocks that failed during use (SSD). Growing count = flash wearing out.',
-
-    // === Data Volume ===
-    'Total LBAs Written': 'Total logical block addresses written. Multiply by 512 bytes for total data volume.',
-    'Total LBAs Read': 'Total logical block addresses read. Useful for calculating daily workload.',
-    'Lifetime Writes GiB': 'Total data written in GiB over the drive\'s lifetime.',
-    'Lifetime Reads GiB': 'Total data read in GiB over the drive\'s lifetime.',
-    'Total Writes GiB': 'Total data written in GiB. Compare with TBW rating for endurance estimate.',
-    'Total Reads GiB': 'Total data read in GiB.',
-    'NAND Writes GiB': 'Raw NAND writes in GiB. Higher than host writes due to write amplification.',
-    'Host Writes 32MiB': 'Total data written by the host in 32MiB units.',
-    'Host Reads 32MiB': 'Total data read by the host in 32MiB units.',
-    'Host Writes MiB': 'Total data written by the host in MiB.',
-    'Host Reads MiB': 'Total data read by the host in MiB.',
-    'NAND GB Written TLC': 'Total data written to TLC NAND cells in GB. Includes write amplification overhead.',
-    'NAND GiB Written': 'Total NAND writes in GiB. Higher than host writes due to write amplification and garbage collection.',
-
-    // === SSD-Specific Advanced ===
-    'Ave Block Erase Count': 'Average number of erase cycles per NAND block (SSD). Drives are typically rated for 3K-100K cycles.',
-    'Average Erase Count': 'Average erase cycles per block. Compare with rated endurance for remaining life estimate.',
-    'Max Erase Count': 'Maximum erase cycles on any single block. Large gap with average indicates uneven wear.',
-    'Total Erase Count': 'Sum of all erase cycles across all blocks. Overall NAND write volume indicator.',
-    'Power Loss Cap Test': 'Result of the power-loss protection capacitor self-test (SSD). Failed = risk of data loss on power failure.',
-    'Power Loss Protection': 'Status of the power-loss protection mechanism. Enterprise SSDs use capacitors to flush cache on power loss.',
-    'Successful RAIN Recov Cnt': 'Successful recoveries using RAIN (Redundant Array of Independent NAND). Shows NAND parity is working.',
-    'SSD Erase Fail Count': 'Total erase failures across the SSD. Indicates overall NAND degradation.',
-    'SSD Program Fail Count': 'Total write failures across the SSD. Indicates flash cell reliability issues.',
-
-    // === Throughput ===
-    'Throughput Performance': 'Overall throughput performance rating (HDD). Declining values indicate degradation.',
-
-    // === Other / Vendor-specific ===
-    'Unknown Attribute': 'Vendor-specific attribute not defined in the SMART standard. Check manufacturer documentation.',
-    'Free Fall Sensor': 'Free-fall events detected (laptop HDD). The heads are parked to prevent damage during drops.',
-  }
-  
-  // Explanations for SAS/SCSI metrics
-  const sasExplanations: Record<string, string> = {
-    'Grown Defect List': 'Sectors remapped due to defects found during operation. Equivalent to Reallocated Sectors on SATA. Growing count = drive degradation.',
-    'Read Errors Corrected': 'Read errors corrected by ECC. Normal for enterprise drives under heavy workload — only uncorrected errors are critical.',
-    'Read ECC Fast': 'Errors corrected by fast (on-the-fly) ECC during read operations. Normal in SAS drives.',
-    'Read ECC Delayed': 'Errors requiring delayed (offline) ECC correction during reads. Non-zero is acceptable but should not grow rapidly.',
-    'Read Uncorrected Errors': 'Read errors that ECC could not correct. Non-zero means data was lost or unreadable. Critical metric.',
-    'Read Data Processed': 'Total data read by the drive. Useful for calculating daily workload.',
-    'Write Errors Corrected': 'Write errors corrected by ECC. Normal for enterprise drives.',
-    'Write Uncorrected Errors': 'Write errors that ECC could not correct. Non-zero = potential data loss. Critical.',
-    'Write Data Processed': 'Total data written to the drive. Useful for workload analysis.',
-    'Verify Errors Corrected': 'Verification errors corrected during background verify operations.',
-    'Verify Uncorrected Errors': 'Verify errors that could not be corrected. Non-zero indicates media degradation.',
-    'Non-Medium Errors': 'Controller/bus errors not related to the media itself. High count may indicate backplane or cable issues.',
-    'Temperature': 'Current drive temperature. Enterprise SAS drives tolerate up to 55-60°C under sustained load.',
-    'Power On Hours': 'Total hours the drive has been powered on. Enterprise drives are rated for 24/7 operation.',
-    'Start-Stop Cycles': 'Motor start/stop cycles. Enterprise SAS drives are rated for 50,000+ cycles.',
-    'Load-Unload Cycles': 'Head load/unload cycles. Enterprise drives are rated for 600,000+ cycles.',
-    'Background Scan Status': 'Status of the SCSI background media scan. Runs continuously to detect surface defects.',
+  const sasExplanationKeys: Record<string, string> = {
+    'Grown Defect List': 'grownDefectList',
+    'Read Errors Corrected': 'readErrorsCorrected',
+    'Read ECC Fast': 'readEccFast',
+    'Read ECC Delayed': 'readEccDelayed',
+    'Read Uncorrected Errors': 'readUncorrectedErrors',
+    'Read Data Processed': 'readDataProcessed',
+    'Write Errors Corrected': 'writeErrorsCorrected',
+    'Write Uncorrected Errors': 'writeUncorrectedErrors',
+    'Write Data Processed': 'writeDataProcessed',
+    'Verify Errors Corrected': 'verifyErrorsCorrected',
+    'Verify Uncorrected Errors': 'verifyUncorrectedErrors',
+    'Non-Medium Errors': 'nonMediumErrors',
+    'Temperature': 'sasTemperature',
+    'Power On Hours': 'sasPowerOnHours',
+    'Start-Stop Cycles': 'startStopCycles',
+    'Load-Unload Cycles': 'loadUnloadCycles',
+    'Background Scan Status': 'backgroundScanStatus',
   }
 
   const getAttrExplanation = (name: string, diskKind: string): string => {
     const cleanName = name.replace(/_/g, ' ')
+    const keyPrefix = 'storage.smartReport.attributeExplanations.'
     if (diskKind === 'NVMe') {
-      return nvmeExplanations[cleanName] || nvmeExplanations[name] || ''
+      const key = getNvmeSmartAttributeKey(cleanName)
+      return key ? t(`${keyPrefix}${key}`) : ''
     }
     if (diskKind === 'SAS') {
-      return sasExplanations[cleanName] || sasExplanations[name] || ''
+      const key = sasExplanationKeys[cleanName] || sasExplanationKeys[name]
+      return key ? t(`${keyPrefix}${key}`) : ''
     }
-    return sataExplanations[cleanName] || sataExplanations[name] || ''
+    const key = sataExplanationKeys[cleanName] || sataExplanationKeys[name]
+    return key ? t(`${keyPrefix}${key}`) : ''
+  }
+
+  const getAttrLabel = (name: string, diskKind: string): string => {
+    if (diskKind !== 'NVMe') return name.replace(/_/g, ' ')
+    const key = getNvmeSmartAttributeKey(name)
+    return key ? t(`storage.smartReport.attributeLabels.${key}`) : name.replace(/_/g, ' ')
+  }
+
+  const attrStatusText = (status?: string) => {
+    const s = (status || '').toLowerCase()
+    if (s === 'ok') return tSmart("statusValues.ok")
+    if (s === 'warning') return tSmart("statusValues.warning")
+    if (s === 'critical') return tSmart("statusValues.critical")
+    if (s === 'failed') return tSmart("statusValues.failed")
+    if (s === 'passed') return tSmart("statusValues.passed")
+    return status ? status.toUpperCase() : na
+  }
+
+  const testStatusText = (status?: string) => {
+    const s = (status || '').toLowerCase()
+    if (s === 'passed') return tSmart("statusValues.passed")
+    if (s === 'failed') return tSmart("statusValues.failed")
+    if (s === 'ok') return tSmart("statusValues.ok")
+    if (s === 'warning') return tSmart("statusValues.warning")
+    if (s === 'critical') return tSmart("statusValues.critical")
+    return status || na
+  }
+
+  const selfTestStatusText = (status?: string, statusStr?: string) => {
+    const raw = String(statusStr || '').trim()
+    const normalized = raw.toLowerCase()
+    if (normalized === 'completed without error') return tSmart("selfTestStatus.completedWithoutError")
+    if (normalized.includes('read failure')) return tSmart("selfTestStatus.completedWithReadFailure")
+    if (normalized.includes('write failure')) return tSmart("selfTestStatus.completedWithWriteFailure")
+    if (normalized.includes('unknown failure')) return tSmart("selfTestStatus.completedWithUnknownFailure")
+    if (normalized.includes('interrupted')) return tSmart("selfTestStatus.interrupted")
+    if (normalized.includes('aborted')) return tSmart("selfTestStatus.aborted")
+    if (normalized.includes('in progress')) return tSmart("selfTestStatus.inProgress")
+    return raw || testStatusText(status)
+  }
+
+  const selfTestCompletedText = (test?: { status?: string; timestamp?: string }) => {
+    const raw = String(test?.timestamp || '').trim()
+    if (!raw) return na
+    const normalized = raw.toLowerCase()
+    if (
+      normalized.includes('completed') ||
+      normalized.includes('failure') ||
+      normalized.includes('interrupted') ||
+      normalized.includes('aborted') ||
+      normalized.includes('in progress')
+    ) {
+      return selfTestStatusText(test?.status, raw)
+    }
+    return raw
+  }
+
+  const testTypeText = (type?: string) => {
+    const s = (type || '').toLowerCase()
+    if (s === 'short') return tSmart("testTypes.short")
+    if (s === 'long' || s === 'extended') return tSmart("testTypes.extended")
+    return type || na
+  }
+
+  const observationTypeText = (type: string, plural = false) => {
+    if (type === 'io_error') return tSmart(plural ? "observationTypes.ioPlural" : "observationTypes.io")
+    if (type === 'smart_error') return tSmart(plural ? "observationTypes.smartPlural" : "observationTypes.smart")
+    if (type === 'filesystem_error') return tSmart(plural ? "observationTypes.filesystemPlural" : "observationTypes.filesystem")
+    return type.replace(/_/g, ' ')
+  }
+
+  const severityText = (severity?: string) => {
+    if (severity === 'critical') return tSmart("statusValues.critical")
+    if (severity === 'warning') return tSmart("statusValues.warning")
+    if (severity === 'info') return tSmart("statusValues.info")
+    return severity ? severity.charAt(0).toUpperCase() + severity.slice(1) : tSmart("statusValues.info")
   }
 
   // SAS and NVMe use simplified table format (Metric | Value | Status)
@@ -2639,9 +2674,9 @@ function openSmartReport(disk: DiskInfo, testStatus: SmartTestStatus, smartAttri
     const displayValue = isSasDisk ? attr.raw_value : attr.value
     return `
     <tr>
-      <td class="col-name" style="font-weight:500;${explanation ? 'border-bottom:none;padding-bottom:2px;' : ''}">${attr.name}</td>
+      <td class="col-name" style="font-weight:500;${explanation ? 'border-bottom:none;padding-bottom:2px;' : ''}">${getAttrLabel(attr.name, diskType)}</td>
       <td style="text-align:center;font-family:monospace;${explanation ? 'border-bottom:none;' : ''}">${displayValue}</td>
-      <td style="${explanation ? 'border-bottom:none;' : ''}"><span class="f-tag" style="background:${statusBg};color:${statusColor}">${attr.status === 'ok' ? 'OK' : attr.status.toUpperCase()}</span></td>
+      <td style="${explanation ? 'border-bottom:none;' : ''}"><span class="f-tag" style="background:${statusBg};color:${statusColor}">${attrStatusText(attr.status)}</span></td>
     </tr>
     ${explainRow}`
   } else {
@@ -2654,7 +2689,7 @@ function openSmartReport(disk: DiskInfo, testStatus: SmartTestStatus, smartAttri
       <td style="text-align:center;${explanation ? 'border-bottom:none;' : ''}">${attr.worst}</td>
       <td style="text-align:center;${explanation ? 'border-bottom:none;' : ''}">${attr.threshold}</td>
       <td class="col-raw" style="${explanation ? 'border-bottom:none;' : ''}">${attr.raw_value}</td>
-      <td style="${explanation ? 'border-bottom:none;' : ''}"><span class="f-tag" style="background:${statusBg};color:${statusColor}">${attr.status === 'ok' ? 'OK' : attr.status.toUpperCase()}</span></td>
+      <td style="${explanation ? 'border-bottom:none;' : ''}"><span class="f-tag" style="background:${statusBg};color:${statusColor}">${attrStatusText(attr.status)}</span></td>
     </tr>
     ${explainRow}`
   }
@@ -2708,20 +2743,20 @@ function openSmartReport(disk: DiskInfo, testStatus: SmartTestStatus, smartAttri
   const nvmeDataWrittenTB = (nvmeDataWritten * 512 * 1024) / (1024 * 1024 * 1024 * 1024)
   
   // Calculate estimated life remaining for NVMe
-  let nvmeEstimatedLife = 'N/A'
+  let nvmeEstimatedLife = na
   if (nvmePercentUsed > 0 && disk.power_on_hours && disk.power_on_hours > 0) {
     const totalEstimatedHours = disk.power_on_hours / (nvmePercentUsed / 100)
     const remainingHours = totalEstimatedHours - disk.power_on_hours
     const remainingYears = remainingHours / (24 * 365)
     if (remainingYears >= 1) {
-      nvmeEstimatedLife = `~${remainingYears.toFixed(1)} years`
+      nvmeEstimatedLife = tSmart("estimatedLife.years", { value: remainingYears.toFixed(1) })
     } else if (remainingHours >= 24) {
-      nvmeEstimatedLife = `~${Math.floor(remainingHours / 24)} days`
+      nvmeEstimatedLife = tSmart("estimatedLife.days", { value: Math.floor(remainingHours / 24) })
     } else {
-      nvmeEstimatedLife = `~${Math.floor(remainingHours)} hours`
+      nvmeEstimatedLife = tSmart("estimatedLife.hours", { value: Math.floor(remainingHours) })
     }
   } else if (nvmePercentUsed === 0) {
-    nvmeEstimatedLife = 'Excellent'
+    nvmeEstimatedLife = tSmart("estimatedLife.excellent")
   }
   
   // Wear color based on percentage
@@ -2742,25 +2777,25 @@ function openSmartReport(disk: DiskInfo, testStatus: SmartTestStatus, smartAttri
   // Build recommendations
   const recommendations: string[] = []
   if (isHealthy) {
-    recommendations.push('<div class="rec-item rec-ok"><div class="rec-icon">&#10003;</div><div><strong>Disk is Healthy</strong><p>All SMART attributes are within normal ranges. Continue regular monitoring.</p></div></div>')
+    recommendations.push(`<div class="rec-item rec-ok"><div class="rec-icon">&#10003;</div><div><strong>${t("storage.smartReport.recommendations.healthyTitle")}</strong><p>${t("storage.smartReport.recommendations.healthyText")}</p></div></div>`)
   } else {
-    recommendations.push('<div class="rec-item rec-critical"><div class="rec-icon">&#10007;</div><div><strong>Critical: Disk Health Issue Detected</strong><p>SMART has reported a health issue. Backup all data immediately and plan for disk replacement.</p></div></div>')
+    recommendations.push(`<div class="rec-item rec-critical"><div class="rec-icon">&#10007;</div><div><strong>${t("storage.smartReport.recommendations.criticalTitle")}</strong><p>${t("storage.smartReport.recommendations.criticalText")}</p></div></div>`)
   }
   
   if ((disk.reallocated_sectors ?? 0) > 0) {
-    recommendations.push(`<div class="rec-item rec-warn"><div class="rec-icon">&#9888;</div><div><strong>Reallocated Sectors Detected (${disk.reallocated_sectors})</strong><p>The disk has bad sectors that have been remapped. Monitor closely and consider replacement if count increases.</p></div></div>`)
+    recommendations.push(`<div class="rec-item rec-warn"><div class="rec-icon">&#9888;</div><div><strong>${t("storage.smartReport.recommendations.reallocatedTitle", { count: disk.reallocated_sectors })}</strong><p>${t("storage.smartReport.recommendations.reallocatedText")}</p></div></div>`)
   }
   
   if ((disk.pending_sectors ?? 0) > 0) {
-    recommendations.push(`<div class="rec-item rec-warn"><div class="rec-icon">&#9888;</div><div><strong>Pending Sectors (${disk.pending_sectors})</strong><p>There are sectors waiting to be reallocated. This may indicate impending failure.</p></div></div>`)
+    recommendations.push(`<div class="rec-item rec-warn"><div class="rec-icon">&#9888;</div><div><strong>${t("storage.smartReport.recommendations.pendingTitle", { count: disk.pending_sectors })}</strong><p>${t("storage.smartReport.recommendations.pendingText")}</p></div></div>`)
   }
   
   if (disk.temperature > 55 && diskType === 'HDD') {
-    recommendations.push(`<div class="rec-item rec-warn"><div class="rec-icon">&#9888;</div><div><strong>High Temperature (${disk.temperature}°C)</strong><p>HDD is running hot. Improve case airflow or add cooling.</p></div></div>`)
+    recommendations.push(`<div class="rec-item rec-warn"><div class="rec-icon">&#9888;</div><div><strong>${t("storage.smartReport.recommendations.highTemperature", { temperature: disk.temperature })}</strong><p>${t("storage.smartReport.recommendations.hotHdd")}</p></div></div>`)
   } else if (disk.temperature > 70 && diskType === 'SSD') {
-    recommendations.push(`<div class="rec-item rec-warn"><div class="rec-icon">&#9888;</div><div><strong>High Temperature (${disk.temperature}°C)</strong><p>SSD is running hot. Check airflow around the drive.</p></div></div>`)
+    recommendations.push(`<div class="rec-item rec-warn"><div class="rec-icon">&#9888;</div><div><strong>${t("storage.smartReport.recommendations.highTemperature", { temperature: disk.temperature })}</strong><p>${t("storage.smartReport.recommendations.hotSsd")}</p></div></div>`)
   } else if (disk.temperature > 80 && diskType === 'NVMe') {
-    recommendations.push(`<div class="rec-item rec-warn"><div class="rec-icon">&#9888;</div><div><strong>High Temperature (${disk.temperature}°C)</strong><p>NVMe is overheating. Consider adding a heatsink or improving case airflow.</p></div></div>`)
+    recommendations.push(`<div class="rec-item rec-warn"><div class="rec-icon">&#9888;</div><div><strong>${t("storage.smartReport.recommendations.highTemperature", { temperature: disk.temperature })}</strong><p>${t("storage.smartReport.recommendations.hotNvme")}</p></div></div>`)
   }
   
   // NVMe critical warning
@@ -2769,13 +2804,13 @@ function openSmartReport(disk: DiskInfo, testStatus: SmartTestStatus, smartAttri
     const mediaErrVal = testStatus.smart_data?.nvme_raw?.media_errors ?? 0
     const unsafeVal   = testStatus.smart_data?.nvme_raw?.unsafe_shutdowns ?? 0
     if (critWarnVal !== 0) {
-      recommendations.push(`<div class="rec-item rec-critical"><div class="rec-icon">&#10007;</div><div><strong>NVMe Critical Warning Active (0x${critWarnVal.toString(16).toUpperCase()})</strong><p>The NVMe controller has raised an alert flag. Back up data immediately and investigate further.</p></div></div>`)
+      recommendations.push(`<div class="rec-item rec-critical"><div class="rec-icon">&#10007;</div><div><strong>${t("storage.smartReport.recommendations.nvmeWarningTitle", { value: critWarnVal.toString(16).toUpperCase() })}</strong><p>${t("storage.smartReport.recommendations.nvmeWarningText")}</p></div></div>`)
     }
     if (mediaErrVal > 0) {
-      recommendations.push(`<div class="rec-item rec-critical"><div class="rec-icon">&#10007;</div><div><strong>NVMe Media Errors Detected (${mediaErrVal})</strong><p>Unrecoverable errors in NAND flash cells. Any non-zero value indicates physical flash damage. Back up data and plan for replacement.</p></div></div>`)
+      recommendations.push(`<div class="rec-item rec-critical"><div class="rec-icon">&#10007;</div><div><strong>${t("storage.smartReport.recommendations.nvmeMediaTitle", { count: mediaErrVal })}</strong><p>${t("storage.smartReport.recommendations.nvmeMediaText")}</p></div></div>`)
     }
     if (unsafeVal > 200) {
-      recommendations.push(`<div class="rec-item rec-warn"><div class="rec-icon">&#9888;</div><div><strong>High Unsafe Shutdown Count (${unsafeVal})</strong><p>Frequent power losses without proper shutdown increase the risk of firmware corruption. Ensure stable power supply or use a UPS.</p></div></div>`)
+      recommendations.push(`<div class="rec-item rec-warn"><div class="rec-icon">&#9888;</div><div><strong>${t("storage.smartReport.recommendations.unsafeTitle", { count: unsafeVal })}</strong><p>${t("storage.smartReport.recommendations.unsafeText")}</p></div></div>`)
     }
   }
 
@@ -2783,18 +2818,18 @@ function openSmartReport(disk: DiskInfo, testStatus: SmartTestStatus, smartAttri
   if (isSeagate) {
     const hasRawReadAttr = smartAttributes.some(a => a.name === 'Raw_Read_Error_Rate' || a.id === 1)
     if (hasRawReadAttr) {
-      recommendations.push('<div class="rec-item rec-info"><div class="rec-icon">&#9432;</div><div><strong>Seagate Raw_Read_Error_Rate — Normal Behavior</strong><p>Seagate drives report very large raw values for attribute #1 (Raw_Read_Error_Rate). This is expected and uses a proprietary formula — a high raw number does NOT indicate errors. Only the normalized value (column Val) matters, and it should remain at 100.</p></div></div>')
+      recommendations.push(`<div class="rec-item rec-info"><div class="rec-icon">&#9432;</div><div><strong>${t("storage.smartReport.recommendations.seagateTitle")}</strong><p>${t("storage.smartReport.recommendations.seagateText")}</p></div></div>`)
     }
   }
 
   // SMR disk note
   if (isSMR) {
-    recommendations.push('<div class="rec-item rec-info"><div class="rec-icon">&#9432;</div><div><strong>SMR Drive Detected — Write Limitations</strong><p>This appears to be a Shingled Magnetic Recording (SMR) disk. SMR drives have slower random-write performance and may stall during heavy mixed workloads. They are suitable for sequential workloads (backups, archives) but not recommended as primary Proxmox storage or ZFS vdevs.</p></div></div>')
+    recommendations.push(`<div class="rec-item rec-info"><div class="rec-icon">&#9432;</div><div><strong>${t("storage.smartReport.recommendations.smrTitle")}</strong><p>${t("storage.smartReport.recommendations.smrText")}</p></div></div>`)
   }
 
   if (recommendations.length === 1 && isHealthy) {
-    recommendations.push('<div class="rec-item rec-info"><div class="rec-icon">&#9432;</div><div><strong>Regular Maintenance</strong><p>Schedule periodic extended SMART tests (monthly) to catch issues early.</p></div></div>')
-    recommendations.push('<div class="rec-item rec-info"><div class="rec-icon">&#9432;</div><div><strong>Backup Strategy</strong><p>Ensure critical data is backed up regularly regardless of disk health status.</p></div></div>')
+    recommendations.push(`<div class="rec-item rec-info"><div class="rec-icon">&#9432;</div><div><strong>${t("storage.smartReport.recommendations.maintenanceTitle")}</strong><p>${t("storage.smartReport.recommendations.maintenanceText")}</p></div></div>`)
+    recommendations.push(`<div class="rec-item rec-info"><div class="rec-icon">&#9432;</div><div><strong>${t("storage.smartReport.recommendations.backupTitle")}</strong><p>${t("storage.smartReport.recommendations.backupText")}</p></div></div>`)
   }
   
   // Build observations HTML separately to avoid nested template literal issues
@@ -2812,7 +2847,7 @@ function openSmartReport(disk: DiskInfo, testStatus: SmartTestStatus, smartAttri
     
     let groupsHtml = ''
     Object.entries(groupedObs).forEach(([type, obsList]) => {
-      const typeLabel = type === 'io_error' ? 'I/O Errors' : type === 'smart_error' ? 'SMART Errors' : type === 'filesystem_error' ? 'Filesystem Errors' : type.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())
+      const typeLabel = observationTypeText(type, true)
       const groupOccurrences = obsList.reduce((sum, o) => sum + o.occurrence_count, 0)
       
       let obsItemsHtml = ''
@@ -2822,11 +2857,11 @@ function openSmartReport(disk: DiskInfo, testStatus: SmartTestStatus, smartAttri
         const infoBg = '#3b82f615'
         // Severity badge color based on actual severity
         const severityBadgeColor = obs.severity === 'critical' ? '#dc2626' : obs.severity === 'warning' ? '#ca8a04' : '#3b82f6'
-        const severityLabel = obs.severity ? obs.severity.charAt(0).toUpperCase() + obs.severity.slice(1) : 'Info'
-        const firstDate = obs.first_occurrence ? new Date(obs.first_occurrence).toLocaleString() : 'N/A'
-        const lastDate = obs.last_occurrence ? new Date(obs.last_occurrence).toLocaleString() : 'N/A'
-        const dismissedBadge = obs.dismissed ? '<span style="background:#16a34a20;color:#16a34a;padding:2px 6px;border-radius:4px;font-size:10px;margin-left:4px;">Dismissed</span>' : ''
-        const errorTypeLabel = type === 'io_error' ? 'I/O Error' : type === 'smart_error' ? 'SMART Error' : type === 'filesystem_error' ? 'Filesystem Error' : type.replace(/_/g, ' ')
+        const severityLabel = severityText(obs.severity)
+        const firstDate = obs.first_occurrence ? new Date(obs.first_occurrence).toLocaleString() : na
+        const lastDate = obs.last_occurrence ? new Date(obs.last_occurrence).toLocaleString() : na
+        const dismissedBadge = obs.dismissed ? `<span style="background:#16a34a20;color:#16a34a;padding:2px 6px;border-radius:4px;font-size:10px;margin-left:4px;">${t("storage.smartReport.dismissed")}</span>` : ''
+        const errorTypeLabel = observationTypeText(type)
         
         obsItemsHtml += `
         <div style="background:${infoBg};border:1px solid ${infoColor}30;border-radius:8px;padding:16px;">
@@ -2834,40 +2869,40 @@ function openSmartReport(disk: DiskInfo, testStatus: SmartTestStatus, smartAttri
             <span style="background:${infoColor}20;color:${infoColor};padding:2px 8px;border-radius:4px;font-size:11px;font-weight:600;">${errorTypeLabel}</span>
             <span style="background:${severityBadgeColor}20;color:${severityBadgeColor};padding:2px 8px;border-radius:4px;font-size:11px;font-weight:600;">${severityLabel}</span>
             <span style="background:#64748b20;color:#475569;padding:2px 8px;border-radius:4px;font-size:11px;">ID: #${obs.id}</span>
-            <span style="background:#64748b20;color:#475569;padding:2px 8px;border-radius:4px;font-size:11px;">Occurrences: <strong>${obs.occurrence_count}</strong></span>
+            <span style="background:#64748b20;color:#475569;padding:2px 8px;border-radius:4px;font-size:11px;">${t("storage.smartReport.occurrences")}: <strong>${obs.occurrence_count}</strong></span>
             ${dismissedBadge}
           </div>
           
           <div style="margin-bottom:10px;">
-            <div style="font-size:10px;color:#475569;margin-bottom:4px;">Error Signature:</div>
+            <div style="font-size:10px;color:#475569;margin-bottom:4px;">${t("storage.smartReport.errorSignature")}:</div>
             <div style="font-family:monospace;font-size:11px;color:#1e293b;background:#f1f5f9;padding:8px;border-radius:4px;word-break:break-all;">${obs.error_signature}</div>
           </div>
           
           <div style="margin-bottom:12px;">
-            <div style="font-size:10px;color:#475569;margin-bottom:4px;">Raw Message:</div>
-            <div style="font-family:monospace;font-size:11px;color:#1e293b;background:#f8fafc;padding:10px;border-radius:4px;white-space:pre-wrap;word-break:break-all;max-height:120px;overflow-y:auto;">${obs.raw_message || 'N/A'}</div>
-            ${translateAtaError(obs.raw_message || '') ? `<div style="font-size:11px;color:#475569;font-style:italic;margin-top:6px;padding-left:4px;">↳ ${translateAtaError(obs.raw_message || '')}</div>` : ''}
+            <div style="font-size:10px;color:#475569;margin-bottom:4px;">${t("storage.smartReport.rawMessage")}:</div>
+            <div style="font-family:monospace;font-size:11px;color:#1e293b;background:#f8fafc;padding:10px;border-radius:4px;white-space:pre-wrap;word-break:break-all;max-height:120px;overflow-y:auto;">${obs.raw_message || na}</div>
+            ${translateAtaError(obs.raw_message || '', t) ? `<div style="font-size:11px;color:#475569;font-style:italic;margin-top:6px;padding-left:4px;">↳ ${translateAtaError(obs.raw_message || '', t)}</div>` : ''}
           </div>
           
           <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(140px, 1fr));gap:10px;font-size:11px;padding-top:10px;border-top:1px solid ${infoColor}20;">
             <div>
-              <span style="color:#475569;">Device:</span>
+              <span style="color:#475569;">${t("storage.smartReport.device")}:</span>
               <strong style="color:#1e293b;margin-left:4px;">${obs.device_name || disk.name}</strong>
             </div>
             <div>
-              <span style="color:#475569;">Serial:</span>
-              <strong style="color:#1e293b;margin-left:4px;">${obs.serial || disk.serial || 'N/A'}</strong>
+              <span style="color:#475569;">${t("storage.smartReport.labels.serial")}:</span>
+              <strong style="color:#1e293b;margin-left:4px;">${obs.serial || disk.serial || na}</strong>
             </div>
             <div>
-              <span style="color:#475569;">Model:</span>
-              <strong style="color:#1e293b;margin-left:4px;">${obs.model || disk.model || 'N/A'}</strong>
+              <span style="color:#475569;">${t("storage.smartReport.labels.model")}:</span>
+              <strong style="color:#1e293b;margin-left:4px;">${obs.model || disk.model || na}</strong>
             </div>
             <div>
-              <span style="color:#475569;">First Seen:</span>
+              <span style="color:#475569;">${t("storage.smartReport.firstSeen")}:</span>
               <strong style="color:#1e293b;margin-left:4px;">${firstDate}</strong>
             </div>
             <div>
-              <span style="color:#475569;">Last Seen:</span>
+              <span style="color:#475569;">${t("storage.smartReport.lastSeen")}:</span>
               <strong style="color:#1e293b;margin-left:4px;">${lastDate}</strong>
             </div>
           </div>
@@ -2879,7 +2914,7 @@ function openSmartReport(disk: DiskInfo, testStatus: SmartTestStatus, smartAttri
       <div style="margin-bottom:20px;">
         <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid #e2e8f0;">
           <span style="font-weight:600;color:#1e293b;">${typeLabel}</span>
-          <span style="background:#64748b15;color:#475569;padding:2px 8px;border-radius:4px;font-size:11px;">${obsList.length} unique, ${groupOccurrences} total</span>
+          <span style="background:#64748b15;color:#475569;padding:2px 8px;border-radius:4px;font-size:11px;">${tSmart("observationSummary", { unique: obsList.length, total: groupOccurrences })}</span>
         </div>
         <div style="display:flex;flex-direction:column;gap:12px;">
           ${obsItemsHtml}
@@ -2890,10 +2925,10 @@ function openSmartReport(disk: DiskInfo, testStatus: SmartTestStatus, smartAttri
     
   const obsSecNum = isNvmeDisk ? '6' : '5'
   observationsHtml = `
-  <!-- ${obsSecNum}. Observations & Events -->
+  <!-- ${obsSecNum}. Observations -->
   <div class="section">
-  <div class="section-title">${obsSecNum}. Observations & Events (${observations.length} recorded, ${totalOccurrences} total occurrences)</div>
-      <p style="color:#475569;font-size:12px;margin-bottom:16px;">The following events have been detected and logged for this disk. These observations may indicate potential issues that require attention.</p>
+  <div class="section-title">${obsSecNum}. ${tSmart("observationsTitle", { count: observations.length, total: totalOccurrences })}</div>
+      <p style="color:#475569;font-size:12px;margin-bottom:16px;">${t("storage.smartReport.observationsIntro")}</p>
       ${groupsHtml}
     </div>
     `
@@ -2979,13 +3014,13 @@ function openSmartReport(disk: DiskInfo, testStatus: SmartTestStatus, smartAttri
   <div style="margin-top:14px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:14px 16px;">
     <div style="display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap;margin-bottom:8px;">
       <div>
-        <div style="font-size:11px;font-weight:700;color:#0f172a;text-transform:uppercase;letter-spacing:0.04em;">Temperature history</div>
-        <div style="font-size:10px;color:#64748b;margin-top:2px;">${samples} samples · ${formatXLabel(ts0)} → ${formatXLabel(ts1)}</div>
+        <div style="font-size:11px;font-weight:700;color:#0f172a;text-transform:uppercase;letter-spacing:0.04em;">${t("storage.smartReport.temperatureHistory")}</div>
+        <div style="font-size:10px;color:#64748b;margin-top:2px;">${tSmart("temperatureSamples", { count: samples })} · ${formatXLabel(ts0)} → ${formatXLabel(ts1)}</div>
       </div>
       <div style="display:flex;gap:14px;font-size:11px;">
-        <div><span style="color:#64748b;">Min</span> <strong style="color:#16a34a;">${stats.min}°C</strong></div>
-        <div><span style="color:#64748b;">Avg</span> <strong style="color:#1e293b;">${stats.avg}°C</strong></div>
-        <div><span style="color:#64748b;">Max</span> <strong style="color:#dc2626;">${stats.max}°C</strong></div>
+        <div><span style="color:#64748b;">${tSmart("labels.min")}</span> <strong style="color:#16a34a;">${stats.min}°C</strong></div>
+        <div><span style="color:#64748b;">${tSmart("labels.avg")}</span> <strong style="color:#1e293b;">${stats.avg}°C</strong></div>
+        <div><span style="color:#64748b;">${tSmart("labels.max")}</span> <strong style="color:#dc2626;">${stats.max}°C</strong></div>
       </div>
     </div>
     <svg viewBox="0 0 ${W} ${H}" width="100%" preserveAspectRatio="none" style="display:block;max-height:200px;">
@@ -3012,16 +3047,16 @@ function openSmartReport(disk: DiskInfo, testStatus: SmartTestStatus, smartAttri
       <path d="${areaPath}" fill="${lineColor}" fill-opacity="0.12"/>
       <path d="${linePath}" fill="none" stroke="${lineColor}" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"/>
     </svg>
-    <div style="font-size:9px;color:#94a3b8;margin-top:4px;">Bands: amber = warn (≥${warnAt}°C), red = critical (≥${hotAt}°C). Sampled every 60s.</div>
+    <div style="font-size:9px;color:#94a3b8;margin-top:4px;">${tSmart("temperatureBands", { warn: warnAt, hot: hotAt })}</div>
   </div>`
   }
 
   const html = `<!DOCTYPE html>
-<html lang="en">
+<html lang="${tSmart("htmlLang")}">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>SMART Health Report - /dev/${disk.name}</title>
+<title>${tSmart("title")} - /dev/${disk.name}</title>
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
   body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; color: #1a1a2e; background: #fff; font-size: 13px; line-height: 1.5; }
@@ -3093,10 +3128,12 @@ function openSmartReport(disk: DiskInfo, testStatus: SmartTestStatus, smartAttri
   .top-bar-title { font-weight: 600; }
   .top-bar-subtitle { font-size: 11px; color: #94a3b8; }
   .top-bar button {
-    background: #06b6d4; color: #fff; border: none; padding: 10px 20px; border-radius: 6px;
-    font-size: 14px; font-weight: 600; cursor: pointer;
+    background: #06b6d4; color: #fff; border: none; padding: 8px 12px; border-radius: 6px;
+    font-size: 14px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; justify-content: center;
   }
   .top-bar button:hover { background: #0891b2; }
+  .top-bar .btn-group { display: flex; gap: 8px; }
+  .top-bar button svg { width: 18px; height: 18px; display: block; }
 
   /* Header */
   .rpt-header {
@@ -3190,18 +3227,30 @@ function pmxPrint(){
   catch(e) {
     var isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
     var el = document.getElementById('pmx-print-hint');
-    if(el) el.textContent = isMac ? 'Use Cmd+P to save as PDF' : 'Use Ctrl+P to save as PDF';
+    if(el) el.textContent = isMac ? ${JSON.stringify(tSmart("printHintMac"))} : ${JSON.stringify(tSmart("printHintCtrl"))};
   }
 }
 </script>
 
-<!-- Top bar (screen only) -->
+<!-- Top bar (screen only).
+     Print / Save as PDF actions replaced by icon-only buttons —
+     both call the same window.print() dialog (the browser's print
+     dialog exposes 'Save as PDF' as a destination), so labels
+     don't need to be translated. aria-label carries the intent
+     for screen readers. -->
 <div class="top-bar no-print">
   <div style="display:flex;align-items:center;gap:12px;">
-    <strong>SMART Health Report</strong>
+    <strong>${t("storage.smartReport.title")}</strong>
     <span id="pmx-print-hint" style="font-size:11px;opacity:0.7;">/dev/${disk.name}</span>
   </div>
-  <button onclick="pmxPrint()">Print / Save as PDF</button>
+  <div class="btn-group">
+    <button onclick="pmxPrint()" title="Print" aria-label="Print">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+    </button>
+    <button onclick="pmxPrint()" title="Save as PDF" aria-label="Save as PDF">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><line x1="10" y1="9" x2="8" y2="9"/></svg>
+    </button>
+  </div>
 </div>
 
 <!-- Header -->
@@ -3209,34 +3258,34 @@ function pmxPrint(){
   <div class="rpt-header-left">
     <img src="${logoUrl}" alt="ProxMenux" onerror="this.style.display='none'">
     <div>
-      <h1>SMART Health Report</h1>
-      <p>ProxMenux Monitor - Disk Health Analysis</p>
+      <h1>${t("storage.smartReport.title")}</h1>
+      <p>${t("storage.smartReport.subtitle")}</p>
     </div>
   </div>
   <div class="rpt-header-right">
-    <div>Date: ${now}</div>
-    <div>Device: /dev/${disk.name}</div>
+    <div>${t("storage.smartReport.date")}: ${now}</div>
+    <div>${t("storage.smartReport.device")}: /dev/${disk.name}</div>
     <div class="rid">ID: ${reportId}</div>
   </div>
 </div>
 
 <!-- 1. Executive Summary -->
 <div class="section">
-  <div class="section-title">1. Executive Summary</div>
+  <div class="section-title">1. ${t("storage.smartReport.executiveSummary")}</div>
   <div class="exec-box">
     <div style="display:flex;flex-direction:column;align-items:center;gap:4px;">
       <div class="health-ring" style="border-color:${healthColor};color:${healthColor}">
         <div class="health-icon">${isHealthy ? '&#10003;' : '&#10007;'}</div>
         <div class="health-lbl">${healthLabel}</div>
       </div>
-      <div style="font-size:10px;color:#475569;font-weight:600;">SMART Status</div>
+      <div style="font-size:10px;color:#475569;font-weight:600;">${t("storage.smartReport.smartStatus")}</div>
     </div>
     <div class="exec-text">
-      <h3>Disk Health Assessment</h3>
+      <h3>${t("storage.smartReport.healthAssessment")}</h3>
       <p>
         ${isHealthy 
-          ? `This disk is operating within normal parameters. All SMART attributes are within acceptable thresholds. The disk has been powered on for approximately ${powerOnFormatted} and is currently operating at ${disk.temperature > 0 ? disk.temperature + '°C' : 'N/A'}. ${(disk.reallocated_sectors ?? 0) === 0 ? 'No bad sectors have been detected.' : `${disk.reallocated_sectors} reallocated sector(s) detected - monitor closely.`}`
-          : `This disk has reported a SMART health failure. Immediate action is required. Backup all critical data and plan for disk replacement.`
+          ? t("storage.smartReport.healthyAssessment", { uptime: powerOnFormatted, temperature: disk.temperature > 0 ? disk.temperature + '°C' : na, sectors: (disk.reallocated_sectors ?? 0) === 0 ? t("storage.smartReport.noBadSectors") : t("storage.smartReport.reallocatedSectors", { count: disk.reallocated_sectors ?? 0 }) })
+          : t("storage.smartReport.failedAssessment")
         }
       </p>
     </div>
@@ -3245,23 +3294,23 @@ function pmxPrint(){
   <!-- Simple Explanation for Non-Technical Users -->
   <div style="background:${isHealthy ? '#dcfce7' : (hasCritical ? '#fee2e2' : '#fef3c7')};border:1px solid ${isHealthy ? '#86efac' : (hasCritical ? '#fca5a5' : '#fcd34d')};border-radius:8px;padding:16px;margin-top:12px;">
     <div style="font-weight:700;font-size:14px;color:${isHealthy ? '#166534' : (hasCritical ? '#991b1b' : '#92400e')};margin-bottom:8px;">
-      ${isHealthy ? 'What does this mean? Your disk is healthy!' : (hasCritical ? 'ATTENTION REQUIRED: Problems detected' : 'Some issues need monitoring')}
+      ${isHealthy ? t("storage.smartReport.healthyMeaningTitle") : (hasCritical ? t("storage.smartReport.attentionTitle") : t("storage.smartReport.monitorTitle"))}
     </div>
     <p style="color:${isHealthy ? '#166534' : (hasCritical ? '#991b1b' : '#92400e')};font-size:12px;margin:0 0 8px 0;">
       ${isHealthy 
-        ? 'In simple terms: This disk is working properly. You can continue using it normally. We recommend running periodic SMART tests (monthly) to catch any issues early.'
+        ? t("storage.smartReport.healthyMeaning")
         : (hasCritical 
-          ? 'In simple terms: This disk has problems that could cause data loss. You should back up your important files immediately and consider replacing the disk soon.'
-          : 'In simple terms: The disk is working but shows some signs of wear. It is not critical yet, but you should monitor it closely and ensure your backups are up to date.'
+          ? t("storage.smartReport.criticalMeaning")
+          : t("storage.smartReport.warningMeaning")
         )
       }
     </p>
     ${!isHealthy && criticalAttrs.length > 0 ? `
     <div style="margin-top:8px;padding-top:8px;border-top:1px solid ${hasCritical ? '#fca5a5' : '#fcd34d'};">
-      <div style="font-size:11px;font-weight:600;color:#475569;margin-bottom:4px;">Issues found:</div>
+      <div style="font-size:11px;font-weight:600;color:#475569;margin-bottom:4px;">${t("storage.smartReport.issuesFound")}:</div>
       <ul style="margin:0;padding-left:20px;font-size:11px;color:${hasCritical ? '#991b1b' : '#92400e'};">
-        ${criticalAttrs.slice(0, 3).map(a => `<li>${a.name.replace(/_/g, ' ')}: ${a.status === 'critical' ? 'Critical - requires immediate attention' : 'Warning - should be monitored'}</li>`).join('')}
-        ${criticalAttrs.length > 3 ? `<li>...and ${criticalAttrs.length - 3} more issues (see details below)</li>` : ''}
+        ${criticalAttrs.slice(0, 3).map(a => `<li>${a.name.replace(/_/g, ' ')}: ${a.status === 'critical' ? t("storage.smartReport.criticalStatus") : t("storage.smartReport.warningStatus")}</li>`).join('')}
+        ${criticalAttrs.length > 3 ? `<li>${t("storage.smartReport.moreIssues", { count: criticalAttrs.length - 3 })}</li>` : ''}
       </ul>
     </div>
     ` : ''}
@@ -3270,19 +3319,19 @@ function pmxPrint(){
   <!-- Test Information -->
   <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(150px, 1fr));gap:8px;margin-top:12px;">
     <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:6px;padding:10px 12px;">
-      <div style="font-size:10px;color:#475569;font-weight:600;text-transform:uppercase;">Report Generated</div>
+      <div style="font-size:10px;color:#475569;font-weight:600;text-transform:uppercase;">${tSmart("labels.reportGenerated")}</div>
       <div style="font-size:12px;font-weight:600;color:#1e293b;">${now}</div>
     </div>
     <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:6px;padding:10px 12px;">
-      <div style="font-size:10px;color:#475569;font-weight:600;text-transform:uppercase;">${isHistorical ? 'Test Type' : 'Last Test Type'}</div>
-      <div style="font-size:12px;font-weight:600;color:#1e293b;">${testStatus.last_test?.type || 'N/A'}</div>
+      <div style="font-size:10px;color:#475569;font-weight:600;text-transform:uppercase;">${isHistorical ? tSmart("labels.testType") : tSmart("labels.lastTestType")}</div>
+      <div style="font-size:12px;font-weight:600;color:#1e293b;">${testTypeText(testStatus.last_test?.type)}</div>
     </div>
     <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:6px;padding:10px 12px;">
-      <div style="font-size:10px;color:#475569;font-weight:600;text-transform:uppercase;">Test Result</div>
-      <div style="font-size:12px;font-weight:600;color:${testStatus.last_test?.status?.toLowerCase() === 'passed' ? '#16a34a' : testStatus.last_test?.status?.toLowerCase() === 'failed' ? '#dc2626' : '#64748b'};">${testStatus.last_test?.status || 'N/A'}</div>
+      <div style="font-size:10px;color:#475569;font-weight:600;text-transform:uppercase;">${tSmart("labels.testResult")}</div>
+      <div style="font-size:12px;font-weight:600;color:${testStatus.last_test?.status?.toLowerCase() === 'passed' ? '#16a34a' : testStatus.last_test?.status?.toLowerCase() === 'failed' ? '#dc2626' : '#64748b'};">${testStatusText(testStatus.last_test?.status)}</div>
     </div>
     <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:6px;padding:10px 12px;">
-      <div style="font-size:10px;color:#475569;font-weight:600;text-transform:uppercase;">Attributes Checked</div>
+      <div style="font-size:10px;color:#475569;font-weight:600;text-transform:uppercase;">${tSmart("labels.attributesChecked")}</div>
       <div style="font-size:12px;font-weight:600;color:#1e293b;">${smartAttributes.length}</div>
     </div>
   </div>
@@ -3290,7 +3339,7 @@ function pmxPrint(){
   <div style="background:#fef3c7;border:1px solid #fcd34d;border-radius:8px;padding:12px 16px;margin-top:12px;display:flex;align-items:flex-start;gap:10px;">
     <span style="font-size:18px;flex-shrink:0;">&#9888;</span>
     <div>
-      <div style="font-weight:700;font-size:12px;color:#92400e;margin-bottom:4px;">Outdated Test Data (${testAgeDays} days old)</div>
+      <div style="font-weight:700;font-size:12px;color:#92400e;margin-bottom:4px;">${tSmart("outdatedTestTitle", { days: testAgeDays })}</div>
       <p style="font-size:11px;color:#92400e;margin:0;">${testAgeWarning}</p>
     </div>
   </div>
@@ -3299,67 +3348,67 @@ function pmxPrint(){
 
 <!-- 2. Disk Information -->
 <div class="section">
-  <div class="section-title">2. Disk Information</div>
+  <div class="section-title">2. ${tSmart("diskInformation")}</div>
   <div class="grid-4">
     <div class="card">
-      <div class="card-label">Model</div>
-      <div class="card-value" style="font-size:11px;">${disk.model || sd?.model || 'Unknown'}</div>
+      <div class="card-label">${tSmart("labels.model")}</div>
+      <div class="card-value" style="font-size:11px;">${disk.model || sd?.model || t("app.unknown")}</div>
     </div>
     <div class="card">
-      <div class="card-label">Serial</div>
-      <div class="card-value" style="font-size:11px;font-family:monospace;">${disk.serial || sd?.serial || 'Unknown'}</div>
+      <div class="card-label">${tSmart("labels.serial")}</div>
+      <div class="card-value" style="font-size:11px;font-family:monospace;">${disk.serial || sd?.serial || t("app.unknown")}</div>
     </div>
     <div class="card">
-      <div class="card-label">Capacity</div>
-      <div class="card-value" style="font-size:11px;">${disk.size_formatted || 'Unknown'}</div>
+      <div class="card-label">${tSmart("labels.capacity")}</div>
+      <div class="card-value" style="font-size:11px;">${disk.size_formatted || t("app.unknown")}</div>
     </div>
     <div class="card">
-      <div class="card-label">Type</div>
+      <div class="card-label">${tSmart("labels.type")}</div>
       <div class="card-value" style="font-size:11px;">${diskType === 'SAS' ? (disk.rotation_rate ? `SAS ${disk.rotation_rate} RPM` : 'SAS SSD') : diskType === 'HDD' && disk.rotation_rate ? `HDD ${disk.rotation_rate} RPM` : diskType}</div>
     </div>
   </div>
   ${(modelFamily || formFactor || sataVersion || ifaceSpeed) ? `
   <div class="grid-4" style="margin-top:8px;">
-    ${modelFamily ? `<div class="card"><div class="card-label">Family</div><div class="card-value" style="font-size:11px;">${modelFamily}</div></div>` : ''}
-    ${formFactor ? `<div class="card"><div class="card-label">Form Factor</div><div class="card-value" style="font-size:11px;">${formFactor}</div></div>` : ''}
-    ${sataVersion ? `<div class="card"><div class="card-label">Interface</div><div class="card-value" style="font-size:11px;">${sataVersion}${ifaceSpeed ? ` · ${ifaceSpeed}` : ''}</div></div>` : (ifaceSpeed ? `<div class="card"><div class="card-label">${isSasDisk ? 'Transport' : 'Link Speed'}</div><div class="card-value" style="font-size:11px;">${ifaceSpeed}</div></div>` : '')}
-    ${!isNvmeDisk && !isSasDisk ? `<div class="card"><div class="card-label">TRIM</div><div class="card-value" style="font-size:11px;color:${trimSupported ? '#16a34a' : '#94a3b8'};">${trimSupported ? 'Supported' : 'Not supported'}${physBlockSize === 4096 ? ' · 4K AF' : ''}</div></div>` : ''}
-    ${isSasDisk && sd?.logical_block_size ? `<div class="card"><div class="card-label">Block Size</div><div class="card-value" style="font-size:11px;">${sd.logical_block_size} bytes</div></div>` : ''}
+    ${modelFamily ? `<div class="card"><div class="card-label">${tSmart("labels.family")}</div><div class="card-value" style="font-size:11px;">${modelFamily}</div></div>` : ''}
+    ${formFactor ? `<div class="card"><div class="card-label">${tSmart("labels.formFactor")}</div><div class="card-value" style="font-size:11px;">${formFactor}</div></div>` : ''}
+    ${sataVersion ? `<div class="card"><div class="card-label">${tSmart("labels.interface")}</div><div class="card-value" style="font-size:11px;">${sataVersion}${ifaceSpeed ? ` · ${ifaceSpeed}` : ''}</div></div>` : (ifaceSpeed ? `<div class="card"><div class="card-label">${isSasDisk ? tSmart("labels.transport") : tSmart("labels.linkSpeed")}</div><div class="card-value" style="font-size:11px;">${ifaceSpeed}</div></div>` : '')}
+    ${!isNvmeDisk && !isSasDisk ? `<div class="card"><div class="card-label">TRIM</div><div class="card-value" style="font-size:11px;color:${trimSupported ? '#16a34a' : '#94a3b8'};">${trimSupported ? tSmart("statusValues.supported") : tSmart("statusValues.notSupported")}${physBlockSize === 4096 ? ' · 4K AF' : ''}</div></div>` : ''}
+    ${isSasDisk && sd?.logical_block_size ? `<div class="card"><div class="card-label">${tSmart("labels.blockSize")}</div><div class="card-value" style="font-size:11px;">${sd.logical_block_size} ${tSmart("units.bytes")}</div></div>` : ''}
   </div>
   ` : ''}
   <div class="grid-4">
     <div class="card card-c">
-      <div class="card-value" style="color:${getTempColorForReport(disk.temperature)}">${disk.temperature > 0 ? disk.temperature + '°C' : 'N/A'}</div>
-      <div class="card-label">Temperature</div>
-      <div style="font-size:9px;color:#475569;margin-top:2px;">Optimal: ${tempThresholds.optimal}</div>
+      <div class="card-value" style="color:${getTempColorForReport(disk.temperature)}">${disk.temperature > 0 ? disk.temperature + '°C' : na}</div>
+      <div class="card-label">${tSmart("labels.temperature")}</div>
+      <div style="font-size:9px;color:#475569;margin-top:2px;">${tSmart("labels.optimal")}: ${tempThresholds.optimal}</div>
     </div>
     <div class="card card-c">
       <div class="card-value">${fmtNum(powerOnHours)}h</div>
-      <div class="card-label">Power On Time</div>
-      <div style="font-size:9px;color:#475569;margin-top:2px;">${powerOnYears}y ${powerOnRemainingDays}d</div>
+      <div class="card-label">${tSmart("labels.powerOnTime")}</div>
+      <div style="font-size:9px;color:#475569;margin-top:2px;">${tSmart("duration.yearDay", { years: powerOnYears, days: powerOnRemainingDays })}</div>
     </div>
     <div class="card card-c">
       <div class="card-value">${fmtNum(disk.power_cycles ?? 0)}</div>
-      <div class="card-label">Power Cycles</div>
+      <div class="card-label">${tSmart("labels.powerCycles")}</div>
     </div>
     <div class="card card-c">
-      <div class="card-value" style="color:${disk.smart_status?.toLowerCase() === 'passed' ? '#16a34a' : (disk.smart_status?.toLowerCase() === 'failed' ? '#dc2626' : '#64748b')}">${disk.smart_status || 'N/A'}</div>
-      <div class="card-label">SMART Status</div>
+      <div class="card-value" style="color:${disk.smart_status?.toLowerCase() === 'passed' ? '#16a34a' : (disk.smart_status?.toLowerCase() === 'failed' ? '#dc2626' : '#64748b')}">${testStatusText(disk.smart_status)}</div>
+      <div class="card-label">${tSmart("labels.smartStatus")}</div>
     </div>
   </div>
   ${!isNvmeDisk ? `
   <div class="grid-3" style="margin-top:8px;">
     <div class="card card-c">
       <div class="card-value" style="color:${(disk.pending_sectors ?? 0) > 0 ? '#dc2626' : '#16a34a'}">${disk.pending_sectors ?? 0}</div>
-      <div class="card-label">${isSasDisk ? 'Uncorrected Errors' : 'Pending Sectors'}</div>
+      <div class="card-label">${isSasDisk ? tSmart("labels.uncorrectedErrors") : tSmart("labels.pendingSectors")}</div>
     </div>
     <div class="card card-c">
-      <div class="card-value" style="color:${isSasDisk ? '#94a3b8' : (disk.crc_errors ?? 0) > 0 ? '#ca8a04' : '#16a34a'}">${isSasDisk ? 'N/A' : (disk.crc_errors ?? 0)}</div>
-      <div class="card-label">CRC Errors</div>
+      <div class="card-value" style="color:${isSasDisk ? '#94a3b8' : (disk.crc_errors ?? 0) > 0 ? '#ca8a04' : '#16a34a'}">${isSasDisk ? na : (disk.crc_errors ?? 0)}</div>
+      <div class="card-label">${tSmart("labels.crcErrors")}</div>
     </div>
     <div class="card card-c">
       <div class="card-value" style="color:${(disk.reallocated_sectors ?? 0) > 0 ? '#dc2626' : '#16a34a'}">${disk.reallocated_sectors ?? 0}</div>
-      <div class="card-label">${isSasDisk ? 'Grown Defects' : 'Reallocated Sectors'}</div>
+      <div class="card-label">${isSasDisk ? tSmart("labels.grownDefects") : tSmart("labels.reallocatedSectors")}</div>
     </div>
   </div>
   ` : ''}
@@ -3371,11 +3420,11 @@ function pmxPrint(){
 ${isNvmeDisk && hasNvmeWearData ? `
 <!-- NVMe Wear & Lifetime (Special Section) -->
 <div class="section">
-  <div class="section-title">3. NVMe Wear & Lifetime</div>
+  <div class="section-title">3. ${tSmart("sections.nvmeWearLifetime")}</div>
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:20px;">
     <!-- Life Remaining Gauge -->
     <div style="background:linear-gradient(135deg,#f8fafc 0%,#f1f5f9 100%);border:1px solid #e2e8f0;border-radius:12px;padding:20px;text-align:center;">
-      <div style="font-size:12px;color:#475569;margin-bottom:8px;font-weight:600;">LIFE REMAINING</div>
+      <div style="font-size:12px;color:#475569;margin-bottom:8px;font-weight:600;">${tSmart("labels.lifeRemaining")}</div>
       <div style="position:relative;width:120px;height:120px;margin:0 auto;">
         <svg viewBox="0 0 120 120" style="transform:rotate(-90deg);">
           <circle cx="60" cy="60" r="50" fill="none" stroke="#e2e8f0" stroke-width="12"/>
@@ -3386,16 +3435,16 @@ ${isNvmeDisk && hasNvmeWearData ? `
           <div style="font-size:28px;font-weight:700;color:${getLifeColorHex(nvmePercentUsed)};">${100 - nvmePercentUsed}%</div>
         </div>
       </div>
-      <div style="margin-top:12px;font-size:13px;color:#475569;">Estimated: <strong>${nvmeEstimatedLife}</strong></div>
+      <div style="margin-top:12px;font-size:13px;color:#475569;">${tSmart("labels.estimated")}: <strong>${nvmeEstimatedLife}</strong></div>
     </div>
     
     <!-- Usage Statistics -->
     <div style="background:linear-gradient(135deg,#f8fafc 0%,#f1f5f9 100%);border:1px solid #e2e8f0;border-radius:12px;padding:20px;">
-      <div style="font-size:12px;color:#475569;margin-bottom:12px;font-weight:600;">USAGE STATISTICS</div>
+      <div style="font-size:12px;color:#475569;margin-bottom:12px;font-weight:600;">${tSmart("labels.usageStatistics")}</div>
       
       <div style="margin-bottom:16px;">
         <div style="display:flex;justify-content:space-between;margin-bottom:6px;">
-          <span style="font-size:12px;color:#475569;">Percentage Used</span>
+          <span style="font-size:12px;color:#475569;">${tSmart("labels.percentageUsed")}</span>
           <span style="font-size:14px;font-weight:600;color:#3b82f6;">${nvmePercentUsed}%</span>
         </div>
         <div style="background:#e2e8f0;border-radius:4px;height:8px;overflow:hidden;">
@@ -3405,7 +3454,7 @@ ${isNvmeDisk && hasNvmeWearData ? `
       
       <div style="margin-bottom:16px;">
         <div style="display:flex;justify-content:space-between;margin-bottom:6px;">
-          <span style="font-size:12px;color:#475569;">Available Spare</span>
+          <span style="font-size:12px;color:#475569;">${tSmart("labels.availableSpare")}</span>
           <span style="font-size:14px;font-weight:600;color:${nvmeAvailSpare >= 50 ? '#16a34a' : nvmeAvailSpare >= 20 ? '#ca8a04' : '#dc2626'};">${nvmeAvailSpare}%</span>
         </div>
         <div style="background:#e2e8f0;border-radius:4px;height:8px;overflow:hidden;">
@@ -3415,12 +3464,12 @@ ${isNvmeDisk && hasNvmeWearData ? `
       
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:16px;padding-top:12px;border-top:1px solid #e2e8f0;">
         <div>
-          <div style="font-size:11px;color:#475569;">Data Written</div>
+          <div style="font-size:11px;color:#475569;">${tSmart("labels.dataWritten")}</div>
           <div style="font-size:15px;font-weight:600;color:#1e293b;">${nvmeDataWrittenTB >= 1 ? nvmeDataWrittenTB.toFixed(2) + ' TB' : (nvmeDataWrittenTB * 1024).toFixed(1) + ' GB'}</div>
         </div>
         <div>
-          <div style="font-size:11px;color:#475569;">Power Cycles</div>
-          <div style="font-size:15px;font-weight:600;color:#1e293b;">${testStatus.smart_data?.nvme_raw?.power_cycles != null ? fmtNum(testStatus.smart_data.nvme_raw.power_cycles) : (disk.power_cycles ? fmtNum(disk.power_cycles) : 'N/A')}</div>
+          <div style="font-size:11px;color:#475569;">${tSmart("labels.powerCycles")}</div>
+          <div style="font-size:15px;font-weight:600;color:#1e293b;">${testStatus.smart_data?.nvme_raw?.power_cycles != null ? fmtNum(testStatus.smart_data.nvme_raw.power_cycles) : (disk.power_cycles ? fmtNum(disk.power_cycles) : na)}</div>
         </div>
       </div>
     </div>
@@ -3448,24 +3497,24 @@ ${isNvmeDisk && hasNvmeWearData ? `
 
     return `
     <div style="margin-top:16px;padding-top:16px;border-top:1px solid #e2e8f0;">
-      <div style="font-size:11px;font-weight:600;color:#475569;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:10px;">Extended NVMe Health</div>
+      <div style="font-size:11px;font-weight:600;color:#475569;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:10px;">${tSmart("sections.extendedNvmeHealth")}</div>
       <div class="grid-4">
-        ${metricCard('Critical Warning', critWarn === 0 ? 'None' : `0x${critWarn.toString(16).toUpperCase()}`, critWarn === 0 ? '#16a34a' : '#dc2626', 'Controller alert flags')}
-        ${metricCard('Media Errors', fmtNum(mediaErr), mediaErr === 0 ? '#16a34a' : '#dc2626', 'Flash cell damage')}
-        ${metricCard('Unsafe Shutdowns', fmtNum(unsafeSd), unsafeSd < 50 ? '#16a34a' : unsafeSd < 200 ? '#ca8a04' : '#dc2626', 'Power loss without flush')}
-        ${metricCard('Endurance Warning', endGrpWarn === 0 ? 'None' : `0x${endGrpWarn.toString(16).toUpperCase()}`, endGrpWarn === 0 ? '#16a34a' : '#ca8a04', 'Group endurance alert')}
+        ${metricCard(tSmart("metrics.criticalWarning"), critWarn === 0 ? tSmart("statusValues.none") : `0x${critWarn.toString(16).toUpperCase()}`, critWarn === 0 ? '#16a34a' : '#dc2626', tSmart("metricNotes.controllerAlertFlags"))}
+        ${metricCard(tSmart("metrics.mediaErrors"), fmtNum(mediaErr), mediaErr === 0 ? '#16a34a' : '#dc2626', tSmart("metricNotes.flashCellDamage"))}
+        ${metricCard(tSmart("metrics.unsafeShutdowns"), fmtNum(unsafeSd), unsafeSd < 50 ? '#16a34a' : unsafeSd < 200 ? '#ca8a04' : '#dc2626', tSmart("metricNotes.powerLossWithoutFlush"))}
+        ${metricCard(tSmart("metrics.enduranceWarning"), endGrpWarn === 0 ? tSmart("statusValues.none") : `0x${endGrpWarn.toString(16).toUpperCase()}`, endGrpWarn === 0 ? '#16a34a' : '#ca8a04', tSmart("metricNotes.groupEnduranceAlert"))}
       </div>
       <div class="grid-4" style="margin-top:8px;">
-        ${metricCard('Controller Busy', `${fmtNum(ctrlBusy)} min`, '#1e293b', 'Total busy time')}
-        ${metricCard('Error Log Entries', fmtNum(errLog), errLog === 0 ? '#16a34a' : '#ca8a04', 'May include benign artifacts')}
-        ${metricCard('Warning Temp Time', `${fmtNum(warnTempMin)} min`, warnTempMin === 0 ? '#16a34a' : '#ca8a04', 'Minutes in warning range')}
-        ${metricCard('Critical Temp Time', `${fmtNum(critTempMin)} min`, critTempMin === 0 ? '#16a34a' : '#dc2626', 'Minutes in critical range')}
+        ${metricCard(tSmart("metrics.controllerBusy"), tSmart("duration.minutes", { minutes: fmtNum(ctrlBusy) }), '#1e293b', tSmart("metricNotes.totalBusyTime"))}
+        ${metricCard(tSmart("metrics.errorLogEntries"), fmtNum(errLog), errLog === 0 ? '#16a34a' : '#ca8a04', tSmart("metricNotes.mayIncludeBenignArtifacts"))}
+        ${metricCard(tSmart("metrics.warningTempTime"), tSmart("duration.minutes", { minutes: fmtNum(warnTempMin) }), warnTempMin === 0 ? '#16a34a' : '#ca8a04', tSmart("metricNotes.minutesInWarningRange"))}
+        ${metricCard(tSmart("metrics.criticalTempTime"), tSmart("duration.minutes", { minutes: fmtNum(critTempMin) }), critTempMin === 0 ? '#16a34a' : '#dc2626', tSmart("metricNotes.minutesInCriticalRange"))}
       </div>
       <div class="grid-4" style="margin-top:8px;">
-        ${metricCard('Data Read', dataReadTB >= 1 ? dataReadTB.toFixed(2) + ' TB' : (dataReadTB * 1024).toFixed(1) + ' GB', '#1e293b', 'Total host reads')}
-        ${metricCard('Host Read Cmds', fmtNum(hostReads), '#1e293b', 'Total read commands')}
-        ${metricCard('Host Write Cmds', fmtNum(hostWrites), '#1e293b', 'Total write commands')}
-        ${sensors.length >= 2 ? metricCard('Hotspot Temp', `${sensors[1]}°C`, sensors[1] > 80 ? '#dc2626' : sensors[1] > 70 ? '#ca8a04' : '#16a34a', 'Sensor[1] hotspot') : '<div class="card"><div class="card-label">Sensors</div><div class="card-value" style="font-size:11px;color:#94a3b8;">N/A</div></div>'}
+        ${metricCard(tSmart("metrics.dataRead"), dataReadTB >= 1 ? dataReadTB.toFixed(2) + ' TB' : (dataReadTB * 1024).toFixed(1) + ' GB', '#1e293b', tSmart("metricNotes.totalHostReads"))}
+        ${metricCard(tSmart("metrics.hostReadCommands"), fmtNum(hostReads), '#1e293b', tSmart("metricNotes.totalReadCommands"))}
+        ${metricCard(tSmart("metrics.hostWriteCommands"), fmtNum(hostWrites), '#1e293b', tSmart("metricNotes.totalWriteCommands"))}
+        ${sensors.length >= 2 ? metricCard(tSmart("metrics.hotspotTemp"), `${sensors[1]}°C`, sensors[1] > 80 ? '#dc2626' : sensors[1] > 70 ? '#ca8a04' : '#16a34a', tSmart("metricNotes.sensorHotspot")) : `<div class="card"><div class="card-label">${tSmart("metrics.sensors")}</div><div class="card-value" style="font-size:11px;color:#94a3b8;">${na}</div></div>`}
       </div>
     </div>`
   })()}
@@ -3484,15 +3533,15 @@ ${isNvmeDisk && !hasNvmeWearData ? (() => {
   return `
 <!-- NVMe wear-not-reported fallback -->
 <div class="section">
-  <div class="section-title">3. NVMe Wear &amp; Lifetime</div>
+  <div class="section-title">3. ${tSmart("sections.nvmeWearLifetime")}</div>
   <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:14px 16px;">
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
       <div>
-        <div style="font-size:10px;color:#475569;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;">Data Written</div>
+        <div style="font-size:10px;color:#475569;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;">${tSmart("labels.dataWritten")}</div>
         <div style="font-size:18px;font-weight:700;color:#1e293b;margin-top:4px;">${dwLabel}</div>
       </div>
       ${pCycles !== null ? `<div>
-        <div style="font-size:10px;color:#475569;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;">Power Cycles</div>
+        <div style="font-size:10px;color:#475569;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;">${tSmart("labels.powerCycles")}</div>
         <div style="font-size:18px;font-weight:700;color:#1e293b;margin-top:4px;">${fmtNum(pCycles as number)}</div>
       </div>` : ''}
     </div>
@@ -3546,11 +3595,11 @@ ${!isNvmeDisk && diskType === 'SSD' ? (() => {
     return `
 <!-- SSD Wear & Lifetime -->
 <div class="section">
-  <div class="section-title">3. SSD Wear & Lifetime</div>
+  <div class="section-title">3. ${tSmart("sections.ssdWearLifetime")}</div>
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:20px;">
     <!-- Life Remaining Gauge -->
     <div style="background:linear-gradient(135deg,#f8fafc 0%,#f1f5f9 100%);border:1px solid #e2e8f0;border-radius:12px;padding:20px;text-align:center;">
-      <div style="font-size:12px;color:#475569;margin-bottom:8px;font-weight:600;">LIFE REMAINING</div>
+      <div style="font-size:12px;color:#475569;margin-bottom:8px;font-weight:600;">${tSmart("labels.lifeRemaining")}</div>
       <div style="position:relative;width:120px;height:120px;margin:0 auto;">
         <svg viewBox="0 0 120 120" style="transform:rotate(-90deg);">
           <circle cx="60" cy="60" r="50" fill="none" stroke="#e2e8f0" stroke-width="12"/>
@@ -3562,17 +3611,17 @@ ${!isNvmeDisk && diskType === 'SSD' ? (() => {
         </div>
       </div>
       <div style="margin-top:12px;font-size:11px;color:#475569;">
-        Source: ${wearAttr?.name?.replace(/_/g, ' ') || 'SSD Life Indicator'}
+        ${tSmart("labels.source")}: ${wearAttr?.name?.replace(/_/g, ' ') || tSmart("labels.ssdLifeIndicator")}
       </div>
     </div>
     
     <!-- Usage Statistics -->
     <div style="background:linear-gradient(135deg,#f8fafc 0%,#f1f5f9 100%);border:1px solid #e2e8f0;border-radius:12px;padding:20px;">
-      <div style="font-size:12px;color:#475569;margin-bottom:12px;font-weight:600;">USAGE STATISTICS</div>
+      <div style="font-size:12px;color:#475569;margin-bottom:12px;font-weight:600;">${tSmart("labels.usageStatistics")}</div>
       
       <div style="margin-bottom:16px;">
         <div style="display:flex;justify-content:space-between;margin-bottom:6px;">
-          <span style="font-size:12px;color:#475569;">Wear Level</span>
+          <span style="font-size:12px;color:#475569;">${tSmart("labels.wearLevel")}</span>
           <span style="font-size:14px;font-weight:600;color:#3b82f6;">${lifeUsed}%</span>
         </div>
         <div style="background:#e2e8f0;border-radius:4px;height:8px;overflow:hidden;">
@@ -3583,19 +3632,18 @@ ${!isNvmeDisk && diskType === 'SSD' ? (() => {
       ${dataWrittenTB > 0 ? `
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:16px;padding-top:12px;border-top:1px solid #e2e8f0;">
         <div>
-          <div style="font-size:11px;color:#475569;">Data Written</div>
+          <div style="font-size:11px;color:#475569;">${tSmart("labels.dataWritten")}</div>
           <div style="font-size:15px;font-weight:600;color:#1e293b;">${dataWrittenTB >= 1 ? dataWrittenTB.toFixed(2) + ' TB' : (dataWrittenTB * 1024).toFixed(1) + ' GB'}</div>
         </div>
         <div>
-          <div style="font-size:11px;color:#475569;">Power On Hours</div>
+          <div style="font-size:11px;color:#475569;">${tSmart("labels.powerOnHours")}</div>
           <div style="font-size:15px;font-weight:600;color:#1e293b;">${fmtNum(powerOnHours)}h</div>
         </div>
       </div>
       ` : ''}
       
       <div style="margin-top:12px;padding:8px;background:#f1f5f9;border-radius:6px;font-size:11px;color:#475569;">
-        <strong>Note:</strong> SSD life estimates are based on manufacturer-reported wear indicators. 
-        Actual lifespan may vary based on workload and usage patterns.
+        <strong>${tSmart("labels.note")}:</strong> ${tSmart("ssdWearNote")}
       </div>
     </div>
   </div>
@@ -3607,72 +3655,72 @@ ${!isNvmeDisk && diskType === 'SSD' ? (() => {
 
 <!-- SMART Attributes / NVMe Health Metrics / SAS Error Counters -->
 <div class="section">
-  <div class="section-title">${isNvmeDisk ? '4' : (diskType === 'SSD' && (disk.wear_leveling_count !== undefined || disk.ssd_life_left !== undefined || smartAttributes.some(a => a.name?.toLowerCase().includes('wear'))) ? '4' : '3')}. ${isNvmeDisk ? 'NVMe Health Metrics' : isSasDisk ? 'SAS/SCSI Health Metrics' : 'SMART Attributes'} (${smartAttributes.length} total${hasCritical ? `, ${criticalAttrs.length} warning(s)` : ''})</div>
+  <div class="section-title">${isNvmeDisk ? '4' : (diskType === 'SSD' && (disk.wear_leveling_count !== undefined || disk.ssd_life_left !== undefined || smartAttributes.some(a => a.name?.toLowerCase().includes('wear'))) ? '4' : '3')}. ${isNvmeDisk ? tSmart("sections.nvmeHealthMetrics") : isSasDisk ? tSmart("sections.sasHealthMetrics") : tSmart("sections.smartAttributes")} (${hasCritical ? tSmart("attributeCountWithWarnings", { total: smartAttributes.length, warnings: criticalAttrs.length }) : tSmart("attributeCount", { total: smartAttributes.length })})</div>
   <table class="attr-tbl">
     <thead>
       <tr>
         ${useSimpleTable ? '' : '<th style="width:28px;">ID</th>'}
-        <th class="col-name">${isNvmeDisk ? 'Metric' : isSasDisk ? 'Metric' : 'Attribute'}</th>
-        <th style="text-align:center;width:${useSimpleTable ? '80px' : '40px'};">Value</th>
-        ${useSimpleTable ? '' : '<th style="text-align:center;width:40px;">Worst</th>'}
-        ${useSimpleTable ? '' : '<th style="text-align:center;width:40px;">Thr</th>'}
-        ${useSimpleTable ? '' : '<th class="col-raw" style="width:60px;">Raw</th>'}
+        <th class="col-name">${isNvmeDisk ? tSmart("labels.metric") : isSasDisk ? tSmart("labels.metric") : tSmart("labels.attribute")}</th>
+        <th style="text-align:center;width:${useSimpleTable ? '80px' : '40px'};">${tSmart("labels.value")}</th>
+        ${useSimpleTable ? '' : `<th style="text-align:center;width:40px;">${tSmart("labels.worst")}</th>`}
+        ${useSimpleTable ? '' : `<th style="text-align:center;width:40px;">${tSmart("labels.thresholdShort")}</th>`}
+        ${useSimpleTable ? '' : `<th class="col-raw" style="width:60px;">${tSmart("labels.raw")}</th>`}
         <th style="width:36px;"></th>
       </tr>
     </thead>
     <tbody>
-      ${attributeRows || '<tr><td colspan="' + (useSimpleTable ? '3' : '7') + '" style="text-align:center;color:#64748b;padding:20px;">No ' + (isNvmeDisk ? 'NVMe metrics' : isSasDisk ? 'SAS metrics' : 'SMART attributes') + ' available</td></tr>'}
+      ${attributeRows || '<tr><td colspan="' + (useSimpleTable ? '3' : '7') + '" style="text-align:center;color:#64748b;padding:20px;">' + (isNvmeDisk ? tSmart("empty.nvmeMetrics") : isSasDisk ? tSmart("empty.sasMetrics") : tSmart("empty.smartAttributes")) + '</td></tr>'}
     </tbody>
   </table>
 </div>
   
   <!-- 5. Last Test Result -->
 <div class="section">
-  <div class="section-title">${isNvmeDisk ? '5' : '4'}. ${isHistorical ? 'Self-Test Result' : 'Last Self-Test Result'}</div>
+  <div class="section-title">${isNvmeDisk ? '5' : '4'}. ${isHistorical ? tSmart("sections.selfTestResult") : tSmart("sections.lastSelfTestResult")}</div>
   ${testStatus.last_test ? `
     <div class="grid-4">
       <div class="card">
-        <div class="card-label">Test Type</div>
-        <div class="card-value" style="text-transform:capitalize;">${testStatus.last_test.type}</div>
+        <div class="card-label">${tSmart("labels.testType")}</div>
+        <div class="card-value" style="text-transform:capitalize;">${testTypeText(testStatus.last_test.type)}</div>
       </div>
       <div class="card">
-        <div class="card-label">Result</div>
-        <div class="card-value" style="color:${testStatus.last_test.status === 'passed' ? '#16a34a' : '#dc2626'};text-transform:capitalize;">${testStatus.last_test.status}</div>
+        <div class="card-label">${tSmart("labels.result")}</div>
+        <div class="card-value" style="color:${testStatus.last_test.status === 'passed' ? '#16a34a' : '#dc2626'};text-transform:capitalize;">${testStatusText(testStatus.last_test.status)}</div>
       </div>
       <div class="card">
-        <div class="card-label">Completed</div>
-        <div class="card-value" style="font-size:11px;">${testStatus.last_test.timestamp || 'N/A'}</div>
+        <div class="card-label">${tSmart("labels.completed")}</div>
+        <div class="card-value" style="font-size:11px;">${selfTestCompletedText(testStatus.last_test)}</div>
       </div>
       <div class="card">
-        <div class="card-label">At Power-On Hours</div>
-        <div class="card-value">${testStatus.last_test.lifetime_hours ? fmtNum(testStatus.last_test.lifetime_hours) + 'h' : 'N/A'}</div>
+        <div class="card-label">${tSmart("labels.atPowerOnHours")}</div>
+        <div class="card-value">${testStatus.last_test.lifetime_hours ? fmtNum(testStatus.last_test.lifetime_hours) + 'h' : na}</div>
       </div>
     </div>
     ${(pollingShort || pollingExt) ? `
     <div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap;">
-      ${pollingShort ? `<div style="background:#f1f5f9;border:1px solid #e2e8f0;border-radius:6px;padding:6px 12px;font-size:11px;color:#475569;"><strong>Short test:</strong> ~${pollingShort} min</div>` : ''}
-      ${pollingExt ? `<div style="background:#f1f5f9;border:1px solid #e2e8f0;border-radius:6px;padding:6px 12px;font-size:11px;color:#475569;"><strong>Extended test:</strong> ~${pollingExt} min</div>` : ''}
-      ${errorLogCount > 0 ? `<div style="background:#fef3c7;border:1px solid #fcd34d;border-radius:6px;padding:6px 12px;font-size:11px;color:#92400e;"><strong>ATA error log:</strong> ${errorLogCount} entr${errorLogCount === 1 ? 'y' : 'ies'}</div>` : ''}
+      ${pollingShort ? `<div style="background:#f1f5f9;border:1px solid #e2e8f0;border-radius:6px;padding:6px 12px;font-size:11px;color:#475569;"><strong>${tSmart("testTypes.short")}:</strong> ${tSmart("duration.approxMinutes", { minutes: pollingShort })}</div>` : ''}
+      ${pollingExt ? `<div style="background:#f1f5f9;border:1px solid #e2e8f0;border-radius:6px;padding:6px 12px;font-size:11px;color:#475569;"><strong>${tSmart("testTypes.extended")}:</strong> ${tSmart("duration.approxMinutes", { minutes: pollingExt })}</div>` : ''}
+      ${errorLogCount > 0 ? `<div style="background:#fef3c7;border:1px solid #fcd34d;border-radius:6px;padding:6px 12px;font-size:11px;color:#92400e;"><strong>${tSmart("labels.ataErrorLog")}:</strong> ${tSmart("entriesCount", { count: errorLogCount })}</div>` : ''}
     </div>` : ''}
     ${selfTestHistory.length > 1 ? `
     <div style="margin-top:14px;">
-      <div style="font-size:11px;font-weight:600;color:#475569;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:8px;">Full Self-Test History (${selfTestHistory.length} entries)</div>
+      <div style="font-size:11px;font-weight:600;color:#475569;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:8px;">${tSmart("fullSelfTestHistory", { count: selfTestHistory.length })}</div>
       <table class="attr-tbl">
         <thead>
           <tr>
             <th>#</th>
-            <th>Type</th>
-            <th>Status</th>
-            <th>At POH</th>
+            <th>${tSmart("labels.type")}</th>
+            <th>${tSmart("labels.status")}</th>
+            <th>${tSmart("labels.atPoh")}</th>
           </tr>
         </thead>
         <tbody>
           ${selfTestHistory.map((e, i) => `
           <tr>
             <td style="color:#94a3b8;">${i + 1}</td>
-            <td style="text-transform:capitalize;">${e.type_str || e.type}</td>
-            <td><span class="f-tag" style="background:${e.status === 'passed' ? '#16a34a15' : '#dc262615'};color:${e.status === 'passed' ? '#16a34a' : '#dc2626'};">${e.status_str || e.status}</span></td>
-            <td style="font-family:monospace;">${e.lifetime_hours != null ? fmtNum(e.lifetime_hours) + 'h' : 'N/A'}</td>
+            <td style="text-transform:capitalize;">${e.type_str || testTypeText(e.type)}</td>
+            <td><span class="f-tag" style="background:${e.status === 'passed' ? '#16a34a15' : '#dc262615'};color:${e.status === 'passed' ? '#16a34a' : '#dc2626'};">${selfTestStatusText(e.status, e.status_str)}</span></td>
+            <td style="font-family:monospace;">${e.lifetime_hours != null ? fmtNum(e.lifetime_hours) + 'h' : na}</td>
           </tr>`).join('')}
         </tbody>
       </table>
@@ -3680,28 +3728,28 @@ ${!isNvmeDisk && diskType === 'SSD' ? (() => {
   ` : lastTestDate ? `
     <div class="grid-4">
       <div class="card">
-        <div class="card-label">${isHistorical ? 'Test Type' : 'Last Test Type'}</div>
-        <div class="card-value" style="text-transform:capitalize;">${testStatus.test_type || 'Extended'}</div>
+        <div class="card-label">${isHistorical ? tSmart("labels.testType") : tSmart("labels.lastTestType")}</div>
+        <div class="card-value" style="text-transform:capitalize;">${testTypeText(testStatus.test_type || 'extended')}</div>
       </div>
       <div class="card">
-        <div class="card-label">Result</div>
-        <div class="card-value" style="color:#16a34a;">Passed</div>
+        <div class="card-label">${tSmart("labels.result")}</div>
+        <div class="card-value" style="color:#16a34a;">${tSmart("statusValues.passed")}</div>
       </div>
       <div class="card">
-        <div class="card-label">Date</div>
+        <div class="card-label">${tSmart("labels.date")}</div>
         <div class="card-value" style="font-size:11px;">${new Date(lastTestDate).toLocaleString()}</div>
       </div>
       <div class="card">
-        <div class="card-label">At Power-On Hours</div>
+        <div class="card-label">${tSmart("labels.atPowerOnHours")}</div>
         <div class="card-value">${fmtNum(powerOnHours)}h</div>
       </div>
     </div>
     <div style="margin-top:8px;padding:8px 12px;background:#f1f5f9;border:1px solid #e2e8f0;border-radius:6px;font-size:11px;color:#475569;">
-      <strong>Note:</strong> This disk's firmware does not maintain an internal self-test log. Test results are tracked by ProxMenux Monitor.
+      <strong>${tSmart("labels.note")}:</strong> ${tSmart("firmwareNoSelfTestLog")}
     </div>
   ` : `
     <div style="text-align:center;padding:20px;color:#64748b;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;">
-      No self-test history available. Run a SMART self-test to see results here.
+      ${tSmart("empty.selfTestHistory")}
     </div>
   `}
 </div>
@@ -3710,14 +3758,14 @@ ${observationsHtml}
 
 <!-- Recommendations -->
 <div class="section">
-  <div class="section-title">${observations.length > 0 ? (isNvmeDisk ? '7' : '6') : (isNvmeDisk ? '6' : '5')}. Recommendations</div>
+  <div class="section-title">${observations.length > 0 ? (isNvmeDisk ? '7' : '6') : (isNvmeDisk ? '6' : '5')}. ${tSmart("sections.recommendations")}</div>
   ${recommendations.join('')}
 </div>
   
   <!-- Footer -->
 <div class="rpt-footer">
-  <div>Report generated by ProxMenux Monitor</div>
-  <div>ProxMenux Monitor v1.2.4</div>
+  <div>${tSmart("footer.generatedBy")}</div>
+  <div>ProxMenux Monitor v${APP_VERSION}</div>
 </div>
 
 </body>
@@ -3831,12 +3879,18 @@ interface SmartTestStatus {
 }
 
 function SmartTestTab({ disk, observations = [], lastTestDate }: SmartTestTabProps) {
+  const t = useT()
   const [testStatus, setTestStatus] = useState<SmartTestStatus>({ status: 'idle' })
   const [loading, setLoading] = useState(true)
   const [runningTest, setRunningTest] = useState<'short' | 'long' | null>(null)
   
   // Extract SMART attributes from testStatus for the report
   const smartAttributes = testStatus.smart_data?.attributes || []
+  const smartAttributeLabel = (name: string): string => {
+    if (!disk.name.startsWith("nvme")) return name.replace(/_/g, " ")
+    const key = getNvmeSmartAttributeKey(name)
+    return key ? t(`storage.smartReport.attributeLabels.${key}`) : name.replace(/_/g, " ")
+  }
   
   const fetchSmartStatus = async () => {
   try {
@@ -3893,6 +3947,18 @@ function SmartTestTab({ disk, observations = [], lastTestDate }: SmartTestTabPro
   const toolsAvailable = testStatus.tools_installed 
     ? (isNvme ? testStatus.tools_installed.nvme : testStatus.tools_installed.smartctl)
     : true // Assume true until we get the status
+
+  const smartTestTypeLabel = (type?: string | null) =>
+    type === 'short' ? t("storage.smartTest.short") : t("storage.smartTest.extended")
+
+  const smartTestStatusLabel = (status?: string | null) => {
+    const s = String(status || '').toLowerCase()
+    if (s === 'passed') return t("storage.smartTest.statusValues.passed")
+    if (s === 'failed') return t("storage.smartTest.statusValues.failed")
+    if (s === 'running') return t("storage.smartTest.statusValues.running")
+    if (s === 'aborted') return t("storage.smartTest.statusValues.aborted")
+    return status || t("storage.smartTest.statusValues.unknown")
+  }
   
   const installSmartTools = async () => {
     try {
@@ -3905,11 +3971,11 @@ function SmartTestTab({ disk, observations = [], lastTestDate }: SmartTestTabPro
       if (data.success) {
         fetchSmartStatus()
       } else {
-        setTestError(data.error || 'Installation failed. Try manually: apt-get install smartmontools nvme-cli')
+        setTestError(data.error || t("storage.smartTest.installFailedManual"))
       }
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to install tools'
-      setTestError(`${message}. Try manually: apt-get install smartmontools nvme-cli`)
+      const message = err instanceof Error ? err.message : t("storage.smartTest.installFailed")
+      setTestError(`${message}. ${t("storage.smartTest.installToolsManual")}`)
     } finally {
       setInstalling(false)
     }
@@ -3960,7 +4026,7 @@ function SmartTestTab({ disk, observations = [], lastTestDate }: SmartTestTabPro
       }, 5000)
       
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to start test'
+      const message = err instanceof Error ? err.message : t("storage.smartTest.startFailed")
       setTestError(message)
       setRunningTest(null)
     }
@@ -3970,7 +4036,7 @@ function SmartTestTab({ disk, observations = [], lastTestDate }: SmartTestTabPro
     return (
       <div className="flex flex-col items-center justify-center py-12 gap-3">
         <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-        <p className="text-sm text-muted-foreground">Loading SMART data...</p>
+        <p className="text-sm text-muted-foreground">{t("storage.smartTest.loading")}</p>
       </div>
     )
   }
@@ -3983,11 +4049,11 @@ function SmartTestTab({ disk, observations = [], lastTestDate }: SmartTestTabPro
           <div className="flex items-start gap-3 p-4 rounded-lg bg-amber-500/10 border border-amber-500/20">
             <AlertTriangle className="h-5 w-5 text-amber-500 mt-0.5 flex-shrink-0" />
             <div className="flex-1">
-              <p className="font-medium text-amber-500">SMART Tools Not Installed</p>
+              <p className="font-medium text-amber-500">{t("storage.smartTest.toolsMissing")}</p>
               <p className="text-sm text-muted-foreground mt-1">
                 {isNvme 
-                  ? 'nvme-cli is required to run SMART tests on NVMe disks.'
-                  : 'smartmontools is required to run SMART tests on this disk.'}
+                  ? t("storage.smartTest.nvmeToolRequired")
+                  : t("storage.smartTest.smartctlRequired")}
               </p>
             </div>
           </div>
@@ -4002,14 +4068,14 @@ function SmartTestTab({ disk, observations = [], lastTestDate }: SmartTestTabPro
             ) : (
               <Download className="h-4 w-4" />
             )}
-            {installing ? 'Installing SMART Tools...' : 'Install SMART Tools'}
+            {installing ? t("storage.smartTest.installingTools") : t("storage.smartTest.installTools")}
           </Button>
           
           {testError && (
             <div className="flex items-start gap-2 p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400">
               <AlertTriangle className="h-4 w-4 mt-0.5 flex-shrink-0" />
               <div>
-                <p className="text-sm font-medium">Installation Failed</p>
+                <p className="text-sm font-medium">{t("storage.smartTest.installFailed")}</p>
                 <p className="text-xs opacity-80">{testError}</p>
               </div>
             </div>
@@ -4020,12 +4086,17 @@ function SmartTestTab({ disk, observations = [], lastTestDate }: SmartTestTabPro
   }
   
   return (
-    <div className="space-y-6">
+    <div className="flex flex-col h-full min-h-0">
+      {/* Scrollable body — Run test controls, progress, last test,
+          and the SMART Attributes summary. When the attributes list
+          is long, THIS is what scrolls; the "View full SMART report"
+          footer stays pinned at the bottom of the tab. */}
+      <div className="flex-1 overflow-y-auto min-h-0 pr-1 -mr-1 space-y-6">
       {/* Quick Actions */}
       <div className="space-y-3">
         <h4 className="font-semibold flex items-center gap-2">
           <Play className="h-4 w-4" />
-          Run SMART Test
+          {t("storage.smartTest.runTest")}
         </h4>
         
         <div className="flex flex-wrap gap-3">
@@ -4041,7 +4112,7 @@ function SmartTestTab({ disk, observations = [], lastTestDate }: SmartTestTabPro
             ) : (
               <Activity className="h-4 w-4" />
             )}
-            Short Test (~2 min)
+            {t("storage.smartTest.shortTest")}
           </Button>
           <Button
             variant="outline"
@@ -4055,12 +4126,11 @@ function SmartTestTab({ disk, observations = [], lastTestDate }: SmartTestTabPro
             ) : (
               <Activity className="h-4 w-4" />
             )}
-            Extended Test (background)
+            {t("storage.smartTest.extendedTest")}
           </Button>
         </div>
         <p className="text-xs text-muted-foreground">
-          Short test takes ~2 minutes. Extended test runs in the background and can take several hours for large disks.
-          You will receive a notification when the test completes.
+          {t("storage.smartTest.testHelp")}
         </p>
         
         {/* Error Message */}
@@ -4068,7 +4138,7 @@ function SmartTestTab({ disk, observations = [], lastTestDate }: SmartTestTabPro
           <div className="flex items-start gap-2 p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400">
             <AlertTriangle className="h-4 w-4 mt-0.5 flex-shrink-0" />
             <div className="flex-1">
-              <p className="text-sm font-medium">Failed to start test</p>
+              <p className="text-sm font-medium">{t("storage.smartTest.startFailed")}</p>
               <p className="text-xs opacity-80">{testError}</p>
             </div>
           </div>
@@ -4082,10 +4152,10 @@ function SmartTestTab({ disk, observations = [], lastTestDate }: SmartTestTabPro
             <Loader2 className="h-5 w-5 animate-spin text-blue-500" />
             <div className="flex-1">
               <p className="font-medium text-blue-500">
-                {(runningTest || testStatus.test_type) === 'short' ? 'Short' : 'Extended'} test in progress
+                {t("storage.smartTest.testInProgress", { type: smartTestTypeLabel(runningTest || testStatus.test_type) })}
               </p>
               <p className="text-xs text-muted-foreground">
-                Please wait while the test completes. Buttons will unlock when it finishes.
+                {t("storage.smartTest.testWait")}
               </p>
             </div>
           </div>
@@ -4100,7 +4170,7 @@ function SmartTestTab({ disk, observations = [], lastTestDate }: SmartTestTabPro
               </div>
               <p className="text-[11px] text-muted-foreground mt-2 flex items-center gap-1">
                 <Info className="h-3 w-3 flex-shrink-0" />
-                This disk&apos;s firmware does not support progress reporting. The test is running in the background.
+                {t("storage.smartTest.noProgress")}
               </p>
             </>
           )}
@@ -4118,13 +4188,13 @@ function SmartTestTab({ disk, observations = [], lastTestDate }: SmartTestTabPro
             <XCircle className="h-4 w-4 text-red-500 flex-shrink-0" />
           )}
           <span className="text-sm font-medium">
-            Last Test: {testStatus.last_test.type === 'short' ? 'Short' : 'Extended'}
+            {t("storage.smartTest.lastTest")}: {smartTestTypeLabel(testStatus.last_test.type)}
           </span>
           <Badge className={testStatus.last_test.status === 'passed'
             ? 'bg-green-500/10 text-green-500 border-green-500/20'
             : 'bg-red-500/10 text-red-500 border-red-500/20'
           }>
-            {testStatus.last_test.status}
+            {smartTestStatusLabel(testStatus.last_test.status)}
           </Badge>
           <span className="text-xs text-muted-foreground">
             {new Date(lastTestDate).toLocaleString()}
@@ -4137,21 +4207,21 @@ function SmartTestTab({ disk, observations = [], lastTestDate }: SmartTestTabPro
         <div className="space-y-3">
           <h4 className="font-semibold flex items-center gap-2">
             <Activity className="h-4 w-4" />
-            {isNvme ? 'NVMe Health Metrics' : testStatus.smart_data?.is_sas ? 'SAS/SCSI Health Metrics' : 'SMART Attributes'}
+            {isNvme ? t("storage.smartTest.nvmeMetrics") : testStatus.smart_data?.is_sas ? t("storage.smartTest.sasMetrics") : t("storage.smartAttributes")}
           </h4>
           <div className="border rounded-lg overflow-hidden">
             <div className={`grid ${(isNvme || testStatus.smart_data?.is_sas) ? 'grid-cols-10' : 'grid-cols-12'} gap-2 p-3 bg-muted/30 text-xs font-medium text-muted-foreground`}>
-              {!isNvme && !testStatus.smart_data?.is_sas && <div className="col-span-1">ID</div>}
-              <div className={(isNvme || testStatus.smart_data?.is_sas) ? 'col-span-5' : 'col-span-5'}>Attribute</div>
-              <div className={(isNvme || testStatus.smart_data?.is_sas) ? 'col-span-3 text-center' : 'col-span-2 text-center'}>Value</div>
-              {!isNvme && !testStatus.smart_data?.is_sas && <div className="col-span-2 text-center">Worst</div>}
-              <div className="col-span-2 text-center">Status</div>
+              {!isNvme && !testStatus.smart_data?.is_sas && <div className="col-span-1">{t("storage.smartTest.id")}</div>}
+              <div className={(isNvme || testStatus.smart_data?.is_sas) ? 'col-span-5' : 'col-span-5'}>{t("storage.smartTest.attribute")}</div>
+              <div className={(isNvme || testStatus.smart_data?.is_sas) ? 'col-span-3 text-center' : 'col-span-2 text-center'}>{t("storage.smartTest.value")}</div>
+              {!isNvme && !testStatus.smart_data?.is_sas && <div className="col-span-2 text-center">{t("storage.smartTest.worst")}</div>}
+              <div className="col-span-2 text-center">{t("storage.smartTest.status")}</div>
             </div>
-            <div className="divide-y divide-border max-h-[200px] overflow-y-auto">
-              {testStatus.smart_data.attributes.slice(0, 15).map((attr) => (
+            <div className="divide-y divide-border">
+              {testStatus.smart_data.attributes.map((attr) => (
                 <div key={attr.id} className={`grid ${(isNvme || testStatus.smart_data?.is_sas) ? 'grid-cols-10' : 'grid-cols-12'} gap-2 p-3 text-sm items-center`}>
                   {!isNvme && !testStatus.smart_data?.is_sas && <div className="col-span-1 text-muted-foreground">{attr.id}</div>}
-                  <div className={`${(isNvme || testStatus.smart_data?.is_sas) ? 'col-span-5' : 'col-span-5'} truncate`} title={attr.name}>{attr.name}</div>
+                  <div className={`${(isNvme || testStatus.smart_data?.is_sas) ? 'col-span-5' : 'col-span-5'} truncate`} title={smartAttributeLabel(attr.name)}>{smartAttributeLabel(attr.name)}</div>
                   <div className={`${(isNvme || testStatus.smart_data?.is_sas) ? 'col-span-3' : 'col-span-2'} text-center font-mono`}>{testStatus.smart_data?.is_sas ? attr.raw_value : attr.value}</div>
                   {!isNvme && !testStatus.smart_data?.is_sas && <div className="col-span-2 text-center font-mono text-muted-foreground">{attr.worst}</div>}
                   <div className="col-span-2 text-center">
@@ -4170,8 +4240,14 @@ function SmartTestTab({ disk, observations = [], lastTestDate }: SmartTestTabPro
         </div>
       )}
       
-      {/* View Full Report Button */}
-      <div className="pt-4 border-t">
+      </div>
+      {/* View Full Report Button — sticky footer of the tab.
+          Sits outside the scrollable body so it's always reachable
+          without hunting for it at the end of a long attribute
+          list. The helper subtitle was dropped — the button label
+          already explains the action, and the extra sentence was
+          eating vertical space we now give back to attributes. */}
+      <div className="pt-4 mt-4 border-t shrink-0">
         <Button
           variant="outline"
           className="w-full gap-2 bg-blue-500/10 border-blue-500/30 text-blue-500 hover:bg-blue-500/20 hover:text-blue-400"
@@ -4181,7 +4257,7 @@ function SmartTestTab({ disk, observations = [], lastTestDate }: SmartTestTabPro
             // the populated tempHistory + targetWindow to openSmartReport.
             const reportWindow = window.open('about:blank', '_blank')
             if (reportWindow) {
-              reportWindow.document.write('<html><body style="background:#0f172a;color:#e2e8f0;font-family:sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;margin:0"><div style="text-align:center"><div style="border:3px solid transparent;border-top-color:#06b6d4;border-radius:50%;width:40px;height:40px;animation:spin 1s linear infinite;margin:0 auto"></div><p style="margin-top:16px">Loading report...</p><style>@keyframes spin{to{transform:rotate(360deg)}}</style></div></body></html>')
+              reportWindow.document.write(`<html><body style="background:#0f172a;color:#e2e8f0;font-family:sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;margin:0"><div style="text-align:center"><div style="border:3px solid transparent;border-top-color:#06b6d4;border-radius:50%;width:40px;height:40px;animation:spin 1s linear infinite;margin:0 auto"></div><p style="margin-top:16px">${t("storage.smartTest.loadingReport")}</p><style>@keyframes spin{to{transform:rotate(360deg)}}</style></div></body></html>`)
             }
             // Warm the disk-temp threshold cache in parallel with the
             // history fetch so openSmartReport's sync read picks up
@@ -4190,18 +4266,13 @@ function SmartTestTab({ disk, observations = [], lastTestDate }: SmartTestTabPro
               fetchTempHistoryForReport(disk.name),
               loadDiskTempThresholds(),
             ])
-            openSmartReport(disk, testStatus, smartAttributes, observations, lastTestDate, reportWindow || undefined, false, tempHistory)
+            openSmartReport(disk, testStatus, smartAttributes, observations, lastTestDate, reportWindow || undefined, false, tempHistory, t)
           }}
         >
           <FileText className="h-4 w-4" />
-          View Full SMART Report
+          {t("storage.smartTest.viewFullReport")}
         </Button>
-        <p className="text-xs text-muted-foreground text-center mt-2">
-          Generate a comprehensive professional report with detailed analysis and recommendations.
-        </p>
       </div>
-      
-
     </div>
   )
 }
@@ -4217,10 +4288,20 @@ interface SmartHistoryEntry {
 }
 
 function HistoryTab({ disk }: { disk: DiskInfo }) {
+  const t = useT()
   const [history, setHistory] = useState<SmartHistoryEntry[]>([])
   const [loading, setLoading] = useState(true)
   const [deleting, setDeleting] = useState<string | null>(null)
   const [viewingReport, setViewingReport] = useState<string | null>(null)
+
+  const historyTestTypeLabel = (type: string) =>
+    type === 'long' ? t("storage.smartTest.extended") : t("storage.smartTest.short")
+
+  const relativeAgeLabel = (days: number) => {
+    if (days === 0) return t("storage.historyTab.today")
+    if (days === 1) return t("storage.historyTab.yesterday")
+    return t("storage.historyTab.daysAgo", { count: days })
+  }
 
   const fetchHistory = async () => {
     try {
@@ -4267,7 +4348,7 @@ function HistoryTab({ disk }: { disk: DiskInfo }) {
     // Open window IMMEDIATELY on user click (before async) to avoid popup blocker
     const reportWindow = window.open('about:blank', '_blank')
     if (reportWindow) {
-      reportWindow.document.write('<html><body style="background:#0f172a;color:#e2e8f0;font-family:sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;margin:0"><div style="text-align:center"><div style="border:3px solid transparent;border-top-color:#06b6d4;border-radius:50%;width:40px;height:40px;animation:spin 1s linear infinite;margin:0 auto"></div><p style="margin-top:16px">Loading report...</p><style>@keyframes spin{to{transform:rotate(360deg)}}</style></div></body></html>')
+      reportWindow.document.write(`<html><body style="background:#0f172a;color:#e2e8f0;font-family:sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;margin:0"><div style="text-align:center"><div style="border:3px solid transparent;border-top-color:#06b6d4;border-radius:50%;width:40px;height:40px;animation:spin 1s linear infinite;margin:0 auto"></div><p style="margin-top:16px">${t("storage.smartTest.loadingReport")}</p><style>@keyframes spin{to{transform:rotate(360deg)}}</style></div></body></html>`)
     }
 
     try {
@@ -4281,10 +4362,10 @@ function HistoryTab({ disk }: { disk: DiskInfo }) {
         loadDiskTempThresholds(),
       ])
 
-      openSmartReport(disk, fullStatus, attrs, [], entry.timestamp, reportWindow || undefined, true, tempHistory)
+      openSmartReport(disk, fullStatus, attrs, [], entry.timestamp, reportWindow || undefined, true, tempHistory, t)
     } catch {
       if (reportWindow && !reportWindow.closed) {
-        reportWindow.document.body.innerHTML = '<p style="color:#ef4444;text-align:center;margin-top:40vh">Failed to load report data.</p>'
+        reportWindow.document.body.innerHTML = `<p style="color:#ef4444;text-align:center;margin-top:40vh">${t("storage.smartTest.reportLoadFailed")}</p>`
       }
     } finally {
       setViewingReport(null)
@@ -4293,36 +4374,40 @@ function HistoryTab({ disk }: { disk: DiskInfo }) {
 
   if (loading) {
     return (
-      <div className="flex flex-col items-center justify-center py-12 gap-3">
+      <div className="flex flex-col items-center justify-center h-full min-h-0 gap-3">
         <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-        <p className="text-sm text-muted-foreground">Loading test history...</p>
+        <p className="text-sm text-muted-foreground">{t("storage.historyTab.loading")}</p>
       </div>
     )
   }
 
   if (history.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center py-8 text-muted-foreground">
+      <div className="flex flex-col items-center justify-center h-full min-h-0 text-muted-foreground">
         <Archive className="h-12 w-12 mb-3 opacity-30" />
-        <span className="text-sm">No test history</span>
-        <span className="text-xs mt-1">Run a SMART test to start building history for this disk.</span>
+        <span className="text-sm">{t("storage.historyTab.empty")}</span>
+        <span className="text-xs mt-1">{t("storage.historyTab.emptyHint")}</span>
       </div>
     )
   }
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
+    <div className="flex flex-col h-full min-h-0">
+      {/* Header stays pinned; the list scrolls; the retention note
+          sits pinned at the bottom. Same "sticky footer / growing
+          middle" layout as the other tabs so the modal never wastes
+          space no matter how many history entries the disk has. */}
+      <div className="flex items-center justify-between shrink-0 pb-3">
         <h4 className="font-semibold flex items-center gap-2">
           <Archive className="h-4 w-4" />
-          Test History
+          {t("storage.historyTab.title")}
           <Badge className="bg-orange-500/10 text-orange-400 border-orange-500/20 text-[10px] px-1.5">
             {history.length}
           </Badge>
         </h4>
       </div>
 
-      <div className="space-y-2">
+      <div className="space-y-2 flex-1 overflow-y-auto min-h-0 pr-1 -mr-1">
         {history.map((entry, i) => {
           const isLatest = i === 0
           const testDate = new Date(entry.timestamp)
@@ -4346,17 +4431,17 @@ function HistoryTab({ disk }: { disk: DiskInfo }) {
                     ? 'bg-orange-500/10 text-orange-400 border-orange-500/20'
                     : 'bg-blue-500/10 text-blue-400 border-blue-500/20'
                 }`}>
-                  {entry.test_type === 'long' ? 'Extended' : 'Short'}
+                  {historyTestTypeLabel(entry.test_type)}
                 </Badge>
               )}
 
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium truncate">
                   {testDate.toLocaleString()}
-                  {isLatest && <span className="text-[10px] text-orange-400 ml-2">latest</span>}
+                  {isLatest && <span className="text-[10px] text-orange-400 ml-2">{t("storage.historyTab.latest")}</span>}
                 </p>
                 <p className="text-xs text-muted-foreground">
-                  {ageDays === 0 ? 'Today' : ageDays === 1 ? 'Yesterday' : `${ageDays} days ago`}
+                  {relativeAgeLabel(ageDays)}
                 </p>
               </div>
 
@@ -4365,16 +4450,16 @@ function HistoryTab({ disk }: { disk: DiskInfo }) {
                   variant="ghost" size="sm"
                   className="h-7 w-7 p-0 text-muted-foreground hover:text-blue-400"
                   onClick={(e: unknown) => { (e as MouseEvent).stopPropagation(); handleDownload(entry.filename) }}
-                  title="Download JSON"
+                  title={t("storage.historyTab.downloadJson")}
                 >
                   <Download className="h-3.5 w-3.5" />
                 </Button>
                 <Button
                   variant="ghost" size="sm"
                   className="h-7 w-7 p-0 text-muted-foreground hover:text-red-400"
-                  onClick={(e: unknown) => { (e as MouseEvent).stopPropagation(); if (confirm('Delete this test record?')) handleDelete(entry.filename) }}
+                  onClick={(e: unknown) => { (e as MouseEvent).stopPropagation(); if (confirm(t("storage.historyTab.confirmDelete"))) handleDelete(entry.filename) }}
                   disabled={isDeleting}
-                  title="Delete"
+                  title={t("storage.historyTab.delete")}
                 >
                   {isDeleting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
                 </Button>
@@ -4384,8 +4469,8 @@ function HistoryTab({ disk }: { disk: DiskInfo }) {
         })}
       </div>
 
-      <p className="text-xs text-muted-foreground text-center pt-2">
-        Test results are stored locally and used to generate detailed SMART reports.
+      <p className="text-xs text-muted-foreground text-center pt-3 mt-2 border-t shrink-0">
+        {t("storage.historyTab.note")}
       </p>
     </div>
   )
@@ -4414,6 +4499,7 @@ interface ScheduleConfig {
 }
 
 function ScheduleTab({ disk }: { disk: DiskInfo }) {
+  const t = useT()
   const [config, setConfig] = useState<ScheduleConfig>({ enabled: true, schedules: [] })
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -4528,31 +4614,45 @@ function ScheduleTab({ disk }: { disk: DiskInfo }) {
     setShowForm(true)
   }
 
-  const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
+  const dayNames = [
+    t("storage.scheduleTab.days.sunday"),
+    t("storage.scheduleTab.days.monday"),
+    t("storage.scheduleTab.days.tuesday"),
+    t("storage.scheduleTab.days.wednesday"),
+    t("storage.scheduleTab.days.thursday"),
+    t("storage.scheduleTab.days.friday"),
+    t("storage.scheduleTab.days.saturday"),
+  ]
+
+  const scheduleTestTypeLabel = (type: string) =>
+    type === 'long' ? t("storage.smartTest.extended") : t("storage.smartTest.short")
+
+  const retentionLabel = (retention: number) =>
+    retention === 0 ? t("storage.scheduleTab.keepAll") : t("storage.scheduleTab.keepResults", { count: retention })
   
   const formatScheduleTime = (schedule: SmartSchedule) => {
     const time = `${schedule.hour.toString().padStart(2, '0')}:${schedule.minute.toString().padStart(2, '0')}`
-    if (schedule.frequency === 'daily') return `Daily at ${time}`
-    if (schedule.frequency === 'weekly') return `${dayNames[schedule.day_of_week]}s at ${time}`
-    return `Day ${schedule.day_of_month} of month at ${time}`
+    if (schedule.frequency === 'daily') return t("storage.scheduleTab.dailyAt", { time })
+    if (schedule.frequency === 'weekly') return t("storage.scheduleTab.weeklyAt", { day: dayNames[schedule.day_of_week], time })
+    return t("storage.scheduleTab.monthlyAt", { day: schedule.day_of_month, time })
   }
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center py-8">
+      <div className="flex items-center justify-center h-full min-h-0">
         <div className="h-6 w-6 rounded-full border-2 border-transparent border-t-purple-400 animate-spin" />
-        <span className="ml-2 text-muted-foreground">Loading schedules...</span>
+        <span className="ml-2 text-muted-foreground">{t("storage.scheduleTab.loading")}</span>
       </div>
     )
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 h-full min-h-0 overflow-y-auto pr-1 -mr-1">
       {/* Global Toggle */}
       <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
         <div>
-          <p className="font-medium">Automatic SMART Tests</p>
-          <p className="text-xs text-muted-foreground">Enable or disable all scheduled tests</p>
+          <p className="font-medium">{t("storage.scheduleTab.automaticTests")}</p>
+          <p className="text-xs text-muted-foreground">{t("storage.scheduleTab.toggleHelp")}</p>
         </div>
         <Button
           variant={config.enabled ? "default" : "outline"}
@@ -4561,14 +4661,14 @@ function ScheduleTab({ disk }: { disk: DiskInfo }) {
           disabled={saving}
           className={config.enabled ? "bg-purple-600 hover:bg-purple-700" : ""}
         >
-          {config.enabled ? 'Enabled' : 'Disabled'}
+          {config.enabled ? t("storage.scheduleTab.enabled") : t("storage.scheduleTab.disabled")}
         </Button>
       </div>
 
       {/* Schedules List */}
       {config.schedules.length > 0 ? (
         <div className="space-y-2">
-          <h4 className="font-semibold text-sm">Configured Schedules</h4>
+          <h4 className="font-semibold text-sm">{t("storage.scheduleTab.configured")}</h4>
           {config.schedules.map(schedule => (
             <div 
               key={schedule.id}
@@ -4578,13 +4678,13 @@ function ScheduleTab({ disk }: { disk: DiskInfo }) {
                 <div>
                   <div className="flex items-center gap-2">
                     <Badge className={schedule.test_type === 'long' ? 'bg-orange-500/10 text-orange-400 border-orange-500/20' : 'bg-blue-500/10 text-blue-400 border-blue-500/20'}>
-                      {schedule.test_type}
+                      {scheduleTestTypeLabel(schedule.test_type)}
                     </Badge>
                     <span className="text-sm font-medium">{formatScheduleTime(schedule)}</span>
                   </div>
                   <div className="text-xs text-muted-foreground mt-1">
-                    Disks: {schedule.disks.includes('all') ? 'All disks' : schedule.disks.join(', ')} | 
-                    Keep {schedule.retention} results
+                    {t("storage.scheduleTab.disks")}: {schedule.disks.includes('all') ? t("storage.scheduleTab.allDisks") : schedule.disks.join(', ')} |
+                    {retentionLabel(schedule.retention)}
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
@@ -4613,45 +4713,45 @@ function ScheduleTab({ disk }: { disk: DiskInfo }) {
       ) : (
         <div className="text-center py-6 text-muted-foreground">
           <Clock className="h-8 w-8 mx-auto mb-2 opacity-50" />
-          <p>No scheduled tests configured</p>
-          <p className="text-xs mt-1">Create a schedule to automatically run SMART tests</p>
+          <p>{t("storage.scheduleTab.empty")}</p>
+          <p className="text-xs mt-1">{t("storage.scheduleTab.emptyHint")}</p>
         </div>
       )}
 
       {/* Add/Edit Form */}
       {showForm ? (
         <div className="border rounded-lg p-4 space-y-4">
-          <h4 className="font-semibold">{editingSchedule ? 'Edit Schedule' : 'New Schedule'}</h4>
+          <h4 className="font-semibold">{editingSchedule ? t("storage.scheduleTab.edit") : t("storage.scheduleTab.new")}</h4>
           
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="text-sm text-muted-foreground">Test Type</label>
+              <label className="text-sm text-muted-foreground">{t("storage.scheduleTab.testType")}</label>
               <select
                 value={formData.test_type}
                 onChange={e => setFormData(prev => ({ ...prev, test_type: e.target.value as 'short' | 'long' }))}
                 className="w-full mt-1 p-2 rounded-md bg-background border border-input text-sm"
               >
-                <option value="short">Short Test (~2 min)</option>
-                <option value="long">Long Test (1-4 hours)</option>
+                <option value="short">{t("storage.smartTest.shortTest")}</option>
+                <option value="long">{t("storage.smartTest.longTest")}</option>
               </select>
             </div>
             
             <div>
-              <label className="text-sm text-muted-foreground">Frequency</label>
+              <label className="text-sm text-muted-foreground">{t("storage.scheduleTab.frequency")}</label>
               <select
                 value={formData.frequency}
                 onChange={e => setFormData(prev => ({ ...prev, frequency: e.target.value as 'daily' | 'weekly' | 'monthly' }))}
                 className="w-full mt-1 p-2 rounded-md bg-background border border-input text-sm"
               >
-                <option value="daily">Daily</option>
-                <option value="weekly">Weekly</option>
-                <option value="monthly">Monthly</option>
+                <option value="daily">{t("storage.scheduleTab.daily")}</option>
+                <option value="weekly">{t("storage.scheduleTab.weekly")}</option>
+                <option value="monthly">{t("storage.scheduleTab.monthly")}</option>
               </select>
             </div>
             
             {formData.frequency === 'weekly' && (
               <div>
-                <label className="text-sm text-muted-foreground">Day of Week</label>
+                <label className="text-sm text-muted-foreground">{t("storage.scheduleTab.dayOfWeek")}</label>
                 <select
                   value={formData.day_of_week}
                   onChange={e => setFormData(prev => ({ ...prev, day_of_week: parseInt(e.target.value) }))}
@@ -4666,7 +4766,7 @@ function ScheduleTab({ disk }: { disk: DiskInfo }) {
             
             {formData.frequency === 'monthly' && (
               <div>
-                <label className="text-sm text-muted-foreground">Day of Month</label>
+                <label className="text-sm text-muted-foreground">{t("storage.scheduleTab.dayOfMonth")}</label>
                 <select
                   value={formData.day_of_month}
                   onChange={e => setFormData(prev => ({ ...prev, day_of_month: parseInt(e.target.value) }))}
@@ -4680,7 +4780,7 @@ function ScheduleTab({ disk }: { disk: DiskInfo }) {
             )}
             
             <div>
-              <label className="text-sm text-muted-foreground">Time (Hour)</label>
+              <label className="text-sm text-muted-foreground">{t("storage.scheduleTab.timeHour")}</label>
               <select
                 value={formData.hour}
                 onChange={e => setFormData(prev => ({ ...prev, hour: parseInt(e.target.value) }))}
@@ -4693,17 +4793,17 @@ function ScheduleTab({ disk }: { disk: DiskInfo }) {
             </div>
             
             <div>
-              <label className="text-sm text-muted-foreground">Keep Results</label>
+              <label className="text-sm text-muted-foreground">{t("storage.scheduleTab.retention")}</label>
               <select
                 value={formData.retention}
                 onChange={e => setFormData(prev => ({ ...prev, retention: parseInt(e.target.value) }))}
                 className="w-full mt-1 p-2 rounded-md bg-background border border-input text-sm"
               >
-                <option value={5}>Last 5</option>
-                <option value={10}>Last 10</option>
-                <option value={20}>Last 20</option>
-                <option value={50}>Last 50</option>
-                <option value={0}>Keep All</option>
+                <option value={5}>{t("storage.scheduleTab.lastN", { count: 5 })}</option>
+                <option value={10}>{t("storage.scheduleTab.lastN", { count: 10 })}</option>
+                <option value={20}>{t("storage.scheduleTab.lastN", { count: 20 })}</option>
+                <option value={50}>{t("storage.scheduleTab.lastN", { count: 50 })}</option>
+                <option value={0}>{t("storage.scheduleTab.keepAll")}</option>
               </select>
             </div>
           </div>
@@ -4714,7 +4814,7 @@ function ScheduleTab({ disk }: { disk: DiskInfo }) {
               disabled={saving}
               className="bg-purple-600 hover:bg-purple-700 text-white"
             >
-              {saving ? 'Saving...' : 'Save Schedule'}
+              {saving ? t("storage.scheduleTab.saving") : t("storage.scheduleTab.save")}
             </Button>
             <Button
               variant="outline"
@@ -4724,7 +4824,7 @@ function ScheduleTab({ disk }: { disk: DiskInfo }) {
                 resetForm()
               }}
             >
-              Cancel
+              {t("storage.scheduleTab.cancel")}
             </Button>
           </div>
         </div>
@@ -4735,12 +4835,12 @@ function ScheduleTab({ disk }: { disk: DiskInfo }) {
           className="w-full"
         >
           <Plus className="h-4 w-4 mr-2" />
-          Add Schedule
+          {t("storage.scheduleTab.add")}
         </Button>
       )}
       
       <p className="text-xs text-muted-foreground text-center">
-        Scheduled tests run automatically via cron. Results are saved to the SMART history.
+        {t("storage.scheduleTab.note")}
       </p>
     </div>
   )

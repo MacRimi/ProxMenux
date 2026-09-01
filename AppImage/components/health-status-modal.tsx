@@ -32,7 +32,7 @@ import {
   FileText,
   RefreshCw,
   Shield,
-  Download,
+  ArrowUpCircle,
   X,
   Clock,
   BellOff,
@@ -41,6 +41,7 @@ import {
   HelpCircle,
 } from "lucide-react"
 import { ScriptTerminalModal } from "./script-terminal-modal"
+import { useT } from "@/lib/i18n/provider"
 
 interface CategoryCheck {
   status: string
@@ -104,19 +105,20 @@ interface HealthStatusModalProps {
 }
 
 const CATEGORIES = [
-  { key: "cpu", category: "temperature", label: "CPU Usage & Temperature", Icon: Cpu },
-  { key: "memory", category: "memory", label: "Memory & Swap", Icon: MemoryStick },
-  { key: "storage", category: "storage", label: "Storage Mounts & Space", Icon: HardDrive },
-  { key: "disks", category: "disks", label: "Disk I/O & Errors", Icon: Disc },
-  { key: "network", category: "network", label: "Network Interfaces", Icon: Network },
-  { key: "vms", category: "vms", label: "VMs & Containers", Icon: Box },
-  { key: "services", category: "pve_services", label: "PVE Services", Icon: Settings },
-  { key: "logs", category: "logs", label: "System Logs", Icon: FileText },
-  { key: "updates", category: "updates", label: "System Updates", Icon: RefreshCw },
-  { key: "security", category: "security", label: "Security & Certificates", Icon: Shield },
+  { key: "cpu", category: "temperature", Icon: Cpu },
+  { key: "memory", category: "memory", Icon: MemoryStick },
+  { key: "storage", category: "storage", Icon: HardDrive },
+  { key: "disks", category: "disks", Icon: Disc },
+  { key: "network", category: "network", Icon: Network },
+  { key: "vms", category: "vms", Icon: Box },
+  { key: "services", category: "pve_services", Icon: Settings },
+  { key: "logs", category: "logs", Icon: FileText },
+  { key: "updates", category: "updates", Icon: RefreshCw },
+  { key: "security", category: "security", Icon: Shield },
 ]
 
 export function HealthStatusModal({ open, onOpenChange, getApiUrl }: HealthStatusModalProps) {
+  const t = useT()
   const [loading, setLoading] = useState(true)
   const [healthData, setHealthData] = useState<HealthDetails | null>(null)
   const [dismissedItems, setDismissedItems] = useState<DismissedError[]>([])
@@ -146,7 +148,7 @@ export function HealthStatusModal({ open, onOpenChange, getApiUrl }: HealthStatu
       if (!response.ok) {
         // Fallback to legacy endpoint
         const legacyResponse = await fetch(getApiUrl("/api/health/details"), { headers: authHeaders })
-        if (!legacyResponse.ok) throw new Error("Failed to fetch health details")
+        if (!legacyResponse.ok) throw new Error(t("healthStatus.errors.fetchFailed"))
         const data = await legacyResponse.json()
         setHealthData(data)
         setDismissedItems([])
@@ -203,11 +205,11 @@ export function HealthStatusModal({ open, onOpenChange, getApiUrl }: HealthStatu
       })
       window.dispatchEvent(event)
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Unknown error")
+      setError(err instanceof Error ? err.message : t("healthStatus.errors.unknown"))
     } finally {
       setLoading(false)
     }
-  }, [getApiUrl])
+  }, [getApiUrl, t])
 
   // Tick counter to force re-render every 30s so "X minutes ago" stays current
   const [, setTick] = useState(0)
@@ -277,21 +279,96 @@ export function HealthStatusModal({ open, onOpenChange, getApiUrl }: HealthStatu
   }
 
   const getStatusBadge = (status: string) => {
-    const statusUpper = status?.toUpperCase()
-    switch (statusUpper) {
-      case "OK":
-        return <Badge className="bg-green-500 text-white hover:bg-green-500">OK</Badge>
-      case "INFO":
-        return <Badge className="bg-blue-500 text-white hover:bg-blue-500">Info</Badge>
-      case "WARNING":
-        return <Badge className="bg-yellow-500 text-white hover:bg-yellow-500">Warning</Badge>
-      case "CRITICAL":
-        return <Badge className="bg-red-500 text-white hover:bg-red-500">Critical</Badge>
-      case "UNKNOWN":
-        return <Badge className="bg-amber-500 text-white hover:bg-amber-500">UNKNOWN</Badge>
-      default:
-        return <Badge>Unknown</Badge>
+    const s = status?.toUpperCase()
+    const label =
+      s === "OK" ? t("healthStatus.status.ok") :
+      s === "INFO" ? t("healthStatus.status.info") :
+      s === "WARNING" ? t("healthStatus.status.warning") :
+      s === "CRITICAL" ? t("healthStatus.status.critical") :
+      t("healthStatus.status.unknown")
+    return <Badge variant="outline" className={getOutlineBadgeStyle(status)}>{label}</Badge>
+  }
+
+  const formatStatus = (status: string) => {
+    const key = status?.toLowerCase()
+    return ["ok", "info", "warning", "critical", "unknown"].includes(key)
+      ? t(`healthStatus.status.${key}`)
+      : status
+  }
+
+  const translateHealthText = (value?: string): string => {
+    if (!value) return ""
+    const exact: Record<string, string> = {
+      "All systems operational": t("healthStatus.details.allOperational"),
+      "Normal": t("healthStatus.details.normal"),
+      "No I/O errors in dmesg": t("healthStatus.details.noIoErrors"),
+      "Mounted read-write, space OK": t("healthStatus.details.rootFilesystemOk"),
+      "No SMART warnings in journal": t("healthStatus.details.noSmartWarnings"),
+      "No critical errors": t("healthStatus.details.noCriticalErrors"),
+      "No cascading errors": t("healthStatus.details.noCascadingErrors"),
+      "No error spikes": t("healthStatus.details.noErrorSpikes"),
+      "No persistent patterns": t("healthStatus.details.noPersistentPatterns"),
+      "Certificate valid": t("healthStatus.details.certificateValid"),
+      "Cluster detected (corosync.conf present)": t("healthStatus.details.clusterDetected"),
+      "Active": t("healthStatus.details.active"),
+      "UP": t("healthStatus.details.up"),
+      "Kernel/PVE up to date": t("healthStatus.details.kernelUpToDate"),
+      "Proxmox VE is up to date": t("healthStatus.details.proxmoxUpToDate"),
+      "No security updates pending": t("healthStatus.details.noSecurityUpdates"),
+      "No container startup errors": t("healthStatus.details.noContainerErrors"),
+      "No OOM events detected": t("healthStatus.details.noOomEvents"),
+      "No QMP timeouts detected": t("healthStatus.details.noQmpTimeouts"),
+      "No VM startup failures": t("healthStatus.details.noVmFailures"),
+      "Dismissed by user": t("healthStatus.details.dismissedByUser"),
     }
+    if (exact[value]) return exact[value]
+
+    let match = value.match(/^Latency ([\d.]+)ms to gateway$/)
+    if (match) return t("healthStatus.details.gatewayLatency", { latency: match[1] })
+    match = value.match(/^(\d+) failed login attempts in 24h$/)
+    if (match) return t("healthStatus.details.failedLogins", { count: match[1] })
+    match = value.match(/^(\d+) IP\(s\) currently banned by Fail2Ban \(jails: (.+)\)$/)
+    if (match) return t("healthStatus.details.fail2banBannedIps", { count: match[1], jails: match[2] })
+    match = value.match(/^Uptime (\d+) days?$/)
+    if (match) return t("healthStatus.details.uptimeDays", { count: match[1] })
+    match = value.match(/^(\d+) package\(s\) pending$/)
+    if (match) return t("healthStatus.details.pendingPackages", { count: match[1] })
+    match = value.match(/^Last updated (\d+) day\(s\) ago$/)
+    if (match) return t("healthStatus.details.updatedDaysAgo", { count: match[1] })
+    match = value.match(/^Storage: \d+ Proxmox storages unavailable: (.+) \(startup\)$/)
+    if (match) return t("healthStatus.details.startupStoragesChecking", { storages: match[1] })
+    match = value.match(/^Storage: (.+) not yet available \(startup\)$/)
+    if (match) return t("healthStatus.details.startupStorageChecking", { storage: match[1] })
+    match = value.match(/^(.+) not yet available \(startup\)$/)
+    if (match) return t("healthStatus.details.startupStorageChecking", { storage: match[1] })
+    match = value.match(/^\[Startup\] Storage '(.+)' is configured but not found on the server\. \(checking\.\.\.\)$/)
+    if (match) return t("healthStatus.details.startupStorageNotFound", { storage: match[1] })
+    match = value.match(/^\[Startup\] Storage '(.+)' is not available \(connection error or backend issue\)\. \(checking\.\.\.\)$/)
+    if (match) return t("healthStatus.details.startupStorageUnavailable", { storage: match[1] })
+    match = value.match(/^\[Startup\] Storage '(.+)' has status: (.+)\. \(checking\.\.\.\)$/)
+    if (match) return t("healthStatus.details.startupStorageStatus", { storage: match[1], status: match[2] })
+    match = value.match(/^(.+) storage available$/)
+    if (match) return t("healthStatus.details.storageAvailable", { type: match[1] })
+    match = value.match(/^(.+) mount reachable$/)
+    if (match) return t("healthStatus.details.mountReachable", { type: match[1] })
+    match = value.match(/^rootfs ([\d.]+)% used \((.+)\)$/)
+    if (match) return t("healthStatus.details.rootfsUsed", { percent: match[1], size: match[2] })
+    match = value.match(/^(\d+) running CT\(s\) within safe rootfs usage$/)
+    if (match) return t("healthStatus.details.runningCtsSafe", { count: match[1] })
+    match = value.match(/^(\d+) PVE block storage\(s\) within safe usage$/)
+    if (match) return t("healthStatus.details.pveStorageSafe", { count: match[1] })
+    match = value.match(/^(\d+) remote mount\(s\) healthy$/)
+    if (match) return t("healthStatus.details.remoteMountsHealthy", { count: match[1] })
+    return value
+  }
+
+  const formatDuration = (hours: number) => {
+    if (hours === -1) return t("healthStatus.permanent")
+    if (hours >= 8760) return t("healthStatus.duration.years", { count: Math.floor(hours / 8760) })
+    if (hours >= 720) return t("healthStatus.duration.months", { count: Math.floor(hours / 720) })
+    if (hours >= 168) return t("healthStatus.duration.weeks", { count: Math.floor(hours / 168) })
+    if (hours >= 24) return t("healthStatus.duration.days", { count: Math.floor(hours / 24) })
+    return t("healthStatus.duration.hours", { count: Math.round(hours) })
   }
 
   // Get categories that have dismissed items (to show as INFO)
@@ -444,11 +521,11 @@ export function HealthStatusModal({ open, onOpenChange, getApiUrl }: HealthStatu
     const now = new Date()
     const diffMs = now.getTime() - checkTime.getTime()
     const diffMin = Math.floor(diffMs / 60000)
-    if (diffMin < 1) return "just now"
-    if (diffMin === 1) return "1 minute ago"
-    if (diffMin < 60) return `${diffMin} minutes ago`
+    if (diffMin < 1) return t("healthStatus.time.justNow")
+    if (diffMin === 1) return t("healthStatus.time.oneMinuteAgo")
+    if (diffMin < 60) return t("healthStatus.time.minutesAgo", { count: diffMin })
     const diffHours = Math.floor(diffMin / 60)
-    return `${diffHours}h ${diffMin % 60}m ago`
+    return t("healthStatus.time.hoursMinutesAgo", { hours: diffHours, minutes: diffMin % 60 })
   }
 
   const getCategoryRowStyle = (status: string) => {
@@ -471,49 +548,15 @@ export function HealthStatusModal({ open, onOpenChange, getApiUrl }: HealthStatu
   }
 
   const formatCheckLabel = (key: string): string => {
-    const labels: Record<string, string> = {
-      // CPU
-      cpu_usage: "CPU Usage",
-      cpu_temperature: "Temperature",
-      // Memory
-      ram_usage: "RAM Usage",
-      swap_usage: "Swap Usage",
-      // Disk I/O
-      root_filesystem: "Root Filesystem",
-      smart_health: "SMART Health",
-      io_errors: "I/O Errors",
-      zfs_pools: "ZFS Pools",
-      lvm_volumes: "LVM Volumes",
-      lvm_check: "LVM Status",
-      // Network
-      connectivity: "Connectivity",
-      // VMs & CTs
-      qmp_communication: "QMP Communication",
-      container_startup: "Container Startup",
-      vm_startup: "VM Startup",
-      oom_killer: "OOM Killer",
-      // Services
-      cluster_mode: "Cluster Mode",
-      // Logs (prefixed with log_)
-      log_error_cascade: "Error Cascade",
-      log_error_spike: "Error Spike",
-      log_persistent_errors: "Persistent Errors",
-      log_critical_errors: "Critical Errors",
-      // Updates
-      pve_version: "Proxmox VE Version",
-      security_updates: "Security Updates",
-      system_age: "System Age",
-      pending_updates: "Pending Updates",
-      kernel_pve: "Kernel / PVE",
-      // Security
-      uptime: "Uptime",
-      certificates: "Certificates",
-      login_attempts: "Login Attempts",
-      fail2ban: "Fail2Ban",
-      // Storage (Proxmox)
-      proxmox_storages: "Proxmox Storages",
-    }
-    if (labels[key]) return labels[key]
+    const knownKeys = new Set([
+      "cpu_usage", "cpu_temperature", "ram_usage", "swap_usage", "root_filesystem",
+      "smart_health", "io_errors", "zfs_pools", "lvm_volumes", "lvm_check", "connectivity",
+      "qmp_communication", "container_startup", "vm_startup", "oom_killer", "cluster_mode",
+      "log_error_cascade", "log_error_spike", "log_persistent_errors", "log_critical_errors",
+      "pve_version", "security_updates", "system_age", "pending_updates", "kernel_pve", "uptime",
+      "certificates", "login_attempts", "fail2ban", "proxmox_storages",
+    ])
+    if (knownKeys.has(key)) return t(`healthStatus.checks.${key}`)
     // Convert snake_case or camelCase to Title Case
     return key
       .replace(/_/g, " ")
@@ -543,15 +586,15 @@ export function HealthStatusModal({ open, onOpenChange, getApiUrl }: HealthStatu
               <div className="flex items-start gap-1.5 sm:gap-2 min-w-0 flex-1">
                 <span className="mt-0.5 shrink-0">{getStatusIcon(checkData.dismissed ? "INFO" : checkData.status, "sm")}</span>
                 <span className="font-medium shrink-0">{formatCheckLabel(checkKey)}</span>
-                <span className="text-muted-foreground break-words whitespace-pre-wrap min-w-0">{checkData.detail}</span>
+                <span className="text-muted-foreground break-words whitespace-pre-wrap min-w-0">{translateHealthText(checkData.detail)}</span>
                 {checkData.dismissed && (
                   checkData.permanent ? (
                     <Badge variant="outline" className="text-[9px] px-1 py-0 h-4 shrink-0 text-amber-400 border-amber-400/40">
-                      Permanent
+                      {t("healthStatus.permanent")}
                     </Badge>
                   ) : (
                     <Badge variant="outline" className="text-[9px] px-1 py-0 h-4 shrink-0 text-blue-400 border-blue-400/30">
-                      Dismissed
+                      {t("healthStatus.dismissed")}
                     </Badge>
                   )
                 )}
@@ -563,6 +606,7 @@ export function HealthStatusModal({ open, onOpenChange, getApiUrl }: HealthStatu
                       handleAcknowledge(checkData.error_key || checkKey, hours)
                     }
                     busy={dismissingKey === (checkData.error_key || checkKey)}
+                    t={t}
                   />
                 )}
               </div>
@@ -582,12 +626,12 @@ export function HealthStatusModal({ open, onOpenChange, getApiUrl }: HealthStatu
           <div className="flex items-center justify-between gap-3">
             <DialogTitle className="flex items-center gap-2 flex-1 min-w-0">
               <Activity className="h-5 w-5 sm:h-6 sm:w-6 shrink-0" />
-              <span className="truncate text-base sm:text-lg">System Health Status</span>
+              <span className="truncate text-base sm:text-lg">{t("healthStatus.title")}</span>
               {healthData && <div className="shrink-0">{getStatusBadge(healthData.overall)}</div>}
             </DialogTitle>
           </div>
           <DialogDescription className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs sm:text-sm">
-            <span>Detailed health checks for all system components</span>
+            <span>{t("healthStatus.description")}</span>
             {getTimeSinceCheck() && (
               <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
                 <Clock className="h-3 w-3" />
@@ -605,7 +649,7 @@ export function HealthStatusModal({ open, onOpenChange, getApiUrl }: HealthStatu
 
         {error && (
           <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-red-800 dark:bg-red-950 dark:border-red-800 dark:text-red-200">
-            <p className="font-medium">Error loading health status</p>
+            <p className="font-medium">{t("healthStatus.errors.loading")}</p>
             <p className="text-sm">{error}</p>
           </div>
         )}
@@ -616,47 +660,47 @@ export function HealthStatusModal({ open, onOpenChange, getApiUrl }: HealthStatu
             <div className={`grid gap-2 sm:gap-3 p-3 sm:p-4 rounded-lg bg-muted/30 border ${stats.info > 0 ? "grid-cols-5" : "grid-cols-4"}`}>
               <div className="text-center">
                 <div className="text-lg sm:text-2xl font-bold">{stats.total}</div>
-                <div className="text-[10px] sm:text-xs text-muted-foreground">Total</div>
+                <div className="text-[10px] sm:text-xs text-muted-foreground">{t("healthStatus.stats.total")}</div>
               </div>
               <div className="text-center">
                 <div className="text-lg sm:text-2xl font-bold text-green-500">{stats.healthy}</div>
-                <div className="text-[10px] sm:text-xs text-muted-foreground">Healthy</div>
+                <div className="text-[10px] sm:text-xs text-muted-foreground">{t("healthStatus.stats.healthy")}</div>
               </div>
               {stats.info > 0 && (
                 <div className="text-center">
                   <div className="text-lg sm:text-2xl font-bold text-blue-500">{stats.info}</div>
-                  <div className="text-[10px] sm:text-xs text-muted-foreground">Info</div>
+                  <div className="text-[10px] sm:text-xs text-muted-foreground">{t("healthStatus.stats.info")}</div>
                 </div>
               )}
               <div className="text-center">
                 <div className="text-lg sm:text-2xl font-bold text-yellow-500">{stats.warnings}</div>
-                <div className="text-[10px] sm:text-xs text-muted-foreground">Warn</div>
+                <div className="text-[10px] sm:text-xs text-muted-foreground">{t("healthStatus.stats.warning")}</div>
               </div>
               <div className="text-center">
                 <div className="text-lg sm:text-2xl font-bold text-red-500">{stats.critical}</div>
-                <div className="text-[10px] sm:text-xs text-muted-foreground">Critical</div>
+                <div className="text-[10px] sm:text-xs text-muted-foreground">{t("healthStatus.stats.critical")}</div>
               </div>
               {stats.unknown > 0 && (
               <div className="text-center">
                 <div className="text-lg sm:text-2xl font-bold text-amber-400">{stats.unknown}</div>
-                <div className="text-[10px] sm:text-xs text-muted-foreground">Unknown</div>
+                <div className="text-[10px] sm:text-xs text-muted-foreground">{t("healthStatus.stats.unknown")}</div>
               </div>
               )}
             </div>
 
             {healthData.summary && healthData.summary !== "All systems operational" && (
               <div className="text-xs sm:text-sm p-3 rounded-lg bg-muted/20 border overflow-hidden max-w-full">
-                <p className="font-medium text-foreground break-words whitespace-pre-wrap">{healthData.summary}</p>
+                <p className="font-medium text-foreground break-words whitespace-pre-wrap">{translateHealthText(healthData.summary)}</p>
               </div>
             )}
 
             {/* Category List */}
             <div className="space-y-2">
-              {CATEGORIES.map(({ key, label, Icon }) => {
+              {CATEGORIES.map(({ key, Icon }) => {
                 const categoryData = healthData.details[key as keyof typeof healthData.details]
                 const originalStatus = categoryData?.status || "UNKNOWN"
                 const status = getEffectiveStatus(key, originalStatus)
-                const reason = categoryData?.reason
+                const reason = translateHealthText(categoryData?.reason)
                 const checks = categoryData?.checks
                 const isExpanded = expandedCategories.has(key)
                 const hasChecks = checks && Object.keys(checks).length > 0
@@ -677,7 +721,7 @@ export function HealthStatusModal({ open, onOpenChange, getApiUrl }: HealthStatu
                       </div>
                       <div className="flex-1 min-w-0 overflow-hidden">
                         <div className="flex items-center gap-1.5 sm:gap-2">
-                          <p className="font-medium text-xs sm:text-sm truncate">{label}</p>
+                          <p className="font-medium text-xs sm:text-sm truncate">{t(`healthStatus.categories.${key}`)}</p>
                           {hasChecks && (
                             <span className="text-[10px] text-muted-foreground shrink-0">
                               ({Object.values(checks).filter(c => c.installed !== false).length})
@@ -690,7 +734,7 @@ export function HealthStatusModal({ open, onOpenChange, getApiUrl }: HealthStatu
                       </div>
                       <div className="flex items-center gap-1 sm:gap-2 shrink-0">
                         <Badge variant="outline" className={`text-[10px] sm:text-xs px-1.5 sm:px-2.5 ${getOutlineBadgeStyle(status)}`}>
-                          {status}
+                          {formatStatus(status)}
                         </Badge>
                         <ChevronRight
                           className={`h-3.5 w-3.5 sm:h-4 sm:w-4 text-muted-foreground transition-transform duration-200 ${
@@ -713,6 +757,7 @@ export function HealthStatusModal({ open, onOpenChange, getApiUrl }: HealthStatu
                                   handleAcknowledge(`category_${key}_unknown`, hours)
                                 }
                                 busy={dismissingKey === `category_${key}_unknown`}
+                                t={t}
                               />
                             )}
                           </div>
@@ -722,7 +767,7 @@ export function HealthStatusModal({ open, onOpenChange, getApiUrl }: HealthStatu
                         ) : (
                           <div className="flex items-center gap-2 text-xs text-muted-foreground px-3 py-2">
                             <CheckCircle2 className="h-3.5 w-3.5 text-green-500" />
-                            No issues detected
+                            {t("healthStatus.noIssues")}
                           </div>
                         )}
                         {/* Only offer "Update Now" when the category is not
@@ -737,8 +782,8 @@ export function HealthStatusModal({ open, onOpenChange, getApiUrl }: HealthStatu
                               onClick={() => setShowUpdateTerminal(true)}
                               className="bg-purple-600/15 hover:bg-purple-600/25 border border-purple-500/40 text-purple-300 hover:text-purple-200"
                             >
-                              <Download className="h-4 w-4 mr-1.5" />
-                              Update Now
+                              <ArrowUpCircle className="h-4 w-4 mr-1.5" />
+                              {t("healthStatus.updateNow")}
                             </Button>
                           </div>
                         )}
@@ -758,12 +803,12 @@ export function HealthStatusModal({ open, onOpenChange, getApiUrl }: HealthStatu
               <div className="space-y-2">
                 <div className="flex items-center gap-2 text-xs sm:text-sm font-medium text-muted-foreground pt-2">
                   <BellOff className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-                  Dismissed Items ({filteredDismissed.length})
+                  {t("healthStatus.dismissedItems", { count: filteredDismissed.length })}
                 </div>
                 {filteredDismissed.map((item) => {
                   const catMeta = CATEGORIES.find(c => c.category === item.category || c.key === item.category)
                   const CatIcon = catMeta?.Icon || BellOff
-                  const catLabel = catMeta?.label || item.category
+                  const catLabel = catMeta ? t(`healthStatus.categories.${catMeta.key}`) : item.category
                   const isPermanent = item.permanent || item.suppression_remaining_hours === -1
                   
                   return (
@@ -778,34 +823,28 @@ export function HealthStatusModal({ open, onOpenChange, getApiUrl }: HealthStatu
                         <div className="flex items-start justify-between gap-2 mb-1">
                           <div className="min-w-0 flex-1 overflow-hidden">
                             <p className="font-medium text-xs sm:text-sm text-muted-foreground truncate">{catLabel}</p>
-                            <p className="text-[10px] sm:text-xs text-muted-foreground/70 break-words line-clamp-2">{item.reason}</p>
+                            <p className="text-[10px] sm:text-xs text-muted-foreground/70 break-words line-clamp-2">{translateHealthText(item.reason)}</p>
                           </div>
                           <div className="flex items-center gap-1.5 shrink-0">
                             {isPermanent ? (
                               <Badge variant="outline" className="text-[9px] sm:text-xs border-amber-500/50 text-amber-500/70 bg-transparent whitespace-nowrap">
-                                Permanent
+                                {t("healthStatus.permanent")}
                               </Badge>
                             ) : (
                               <Badge variant="outline" className="text-[9px] sm:text-xs border-blue-500/50 text-blue-500/70 bg-transparent whitespace-nowrap">
-                                Dismissed
+                                {t("healthStatus.dismissed")}
                               </Badge>
                             )}
                             <Badge variant="outline" className={`text-[9px] sm:text-xs whitespace-nowrap ${getOutlineBadgeStyle(item.severity)}`}>
-                              was {item.severity}
+                              {t("healthStatus.wasStatus", { status: formatStatus(item.severity) })}
                             </Badge>
                           </div>
                         </div>
                         <p className="text-[10px] sm:text-xs text-muted-foreground flex items-center gap-1">
                           <Clock className="h-3 w-3" />
                           {isPermanent
-                            ? "Permanently suppressed"
-                            : `Suppressed for ${
-                                item.suppression_remaining_hours < 24
-                                  ? `${Math.round(item.suppression_remaining_hours)}h`
-                                  : item.suppression_remaining_hours < 720
-                                    ? `${Math.round(item.suppression_remaining_hours / 24)} days`
-                                    : `${Math.round(item.suppression_remaining_hours / 720)} month(s)`
-                              } more`
+                            ? t("healthStatus.permanentlySuppressed")
+                            : t("healthStatus.suppressedForMore", { duration: formatDuration(item.suppression_remaining_hours) })
                           }
                         </p>
                       </div>
@@ -821,30 +860,20 @@ export function HealthStatusModal({ open, onOpenChange, getApiUrl }: HealthStatu
               <div className="space-y-2 pt-2">
                 <div className="flex items-center gap-2 text-xs sm:text-sm font-medium text-muted-foreground">
                   <Settings2 className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-                  Custom Suppression Settings
+                  {t("healthStatus.customSuppressionSettings")}
                 </div>
                 <div className="rounded-lg border border-blue-500/20 bg-blue-500/5 p-2.5 sm:p-3">
                   <div className="space-y-1.5">
                     {customSuppressions.map((cs) => {
-                      const catMeta = CATEGORIES.find(c => c.category === cs.category || c.key === cs.category || c.label === cs.label)
+                      const catMeta = CATEGORIES.find(c => c.category === cs.category || c.key === cs.category)
                       const CatIcon = catMeta?.Icon || Settings2
-                      const durationLabel = cs.hours === -1
-                        ? "Permanent"
-                        : cs.hours >= 8760
-                          ? `${Math.floor(cs.hours / 8760)} year(s)`
-                          : cs.hours >= 720
-                            ? `${Math.floor(cs.hours / 720)} month(s)`
-                            : cs.hours >= 168
-                              ? `${Math.floor(cs.hours / 168)} week(s)`
-                              : cs.hours >= 72
-                                ? `${Math.floor(cs.hours / 24)} days`
-                                : `${cs.hours}h`
+                      const durationLabel = formatDuration(cs.hours)
                       
                       return (
                         <div key={cs.key} className="flex items-center justify-between gap-2">
                           <div className="flex items-center gap-2 min-w-0">
                             <CatIcon className="h-3 w-3 sm:h-3.5 sm:w-3.5 text-blue-400/70 shrink-0" />
-                            <span className="text-[11px] sm:text-xs text-blue-400/80 truncate">{cs.label}</span>
+                            <span className="text-[11px] sm:text-xs text-blue-400/80 truncate">{catMeta ? t(`healthStatus.categories.${catMeta.key}`) : cs.label}</span>
                           </div>
                           <Badge variant="outline" className="text-[9px] sm:text-[10px] border-blue-500/30 text-blue-400/80 bg-transparent shrink-0">
                             {durationLabel}
@@ -854,7 +883,7 @@ export function HealthStatusModal({ open, onOpenChange, getApiUrl }: HealthStatu
                     })}
                   </div>
                   <p className="text-[10px] text-muted-foreground/60 mt-2 pt-1.5 border-t border-blue-500/10">
-                    Alerts in these categories are auto-suppressed when detected.
+                    {t("healthStatus.autoSuppressedHint")}
                   </p>
                 </div>
               </div>
@@ -862,7 +891,7 @@ export function HealthStatusModal({ open, onOpenChange, getApiUrl }: HealthStatu
 
             {healthData.timestamp && (
               <div className="text-xs text-muted-foreground text-center pt-2">
-                Last updated: {new Date(healthData.timestamp).toLocaleString()}
+                {t("healthStatus.lastUpdated", { date: new Date(healthData.timestamp).toLocaleString(document.documentElement.lang) })}
               </div>
             )}
           </div>
@@ -882,8 +911,8 @@ export function HealthStatusModal({ open, onOpenChange, getApiUrl }: HealthStatu
         params={{
           EXECUTION_MODE: "web",
         }}
-        title="Proxmox System Update"
-        description="Runs apt-get update + dist-upgrade and post-update cleanup on the host."
+        title={t("healthStatus.updateTerminalTitle")}
+        description={t("healthStatus.updateTerminalDescription")}
       />
     </Dialog>
   )
@@ -896,9 +925,11 @@ export function HealthStatusModal({ open, onOpenChange, getApiUrl }: HealthStatu
 function DismissDropdown({
   onSelect,
   busy,
+  t,
 }: {
   onSelect: (suppressionHours: number) => void
   busy: boolean
+  t: ReturnType<typeof useT>
 }) {
   return (
     <DropdownMenu>
@@ -915,27 +946,27 @@ function DismissDropdown({
           ) : (
             <>
               <X className="h-3 w-3 sm:mr-0.5" />
-              <span className="hidden sm:inline">Dismiss</span>
+              <span className="hidden sm:inline">{t("healthStatus.dismiss")}</span>
             </>
           )}
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-44" onClick={(e) => e.stopPropagation()}>
         <DropdownMenuLabel className="text-[10px] uppercase tracking-wide text-muted-foreground">
-          Silence this alert for
+          {t("healthStatus.silenceFor")}
         </DropdownMenuLabel>
         <DropdownMenuItem onSelect={() => onSelect(24)} className="text-xs">
-          <Clock className="h-3 w-3 mr-2 text-muted-foreground" /> 24 hours
+          <Clock className="h-3 w-3 mr-2 text-muted-foreground" /> {t("healthStatus.duration.24hours")}
         </DropdownMenuItem>
         <DropdownMenuItem onSelect={() => onSelect(168)} className="text-xs">
-          <Clock className="h-3 w-3 mr-2 text-muted-foreground" /> 7 days
+          <Clock className="h-3 w-3 mr-2 text-muted-foreground" /> {t("healthStatus.duration.7days")}
         </DropdownMenuItem>
         <DropdownMenuSeparator />
         <DropdownMenuItem
           onSelect={() => onSelect(-1)}
           className="text-xs text-red-500 focus:text-red-500 focus:bg-red-500/10"
         >
-          <BellOff className="h-3 w-3 mr-2" /> Permanently
+          <BellOff className="h-3 w-3 mr-2" /> {t("healthStatus.permanently")}
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

@@ -66,8 +66,14 @@
       {
         "title": "Sin reinicio salvo que la función lo diga",
         "body": "La mayoría de las actualizaciones surten efecto inmediatamente. Las actualizaciones que tocan módulos del kernel, nombres de interfaz persistentes o VFIO muestran el mismo prompt de reinicio que una instalación recién hecha."
+      },
+      {
+        "title": "Refresco del registro enviado al Monitor",
+        "body": "Al terminar el batch, el menú hace POST a <code>http://127.0.0.1:8008/api/updates/post-install/scan</code> para reconstruir <code>/usr/local/share/proxmenux/updates_available.json</code>. Eso hace que la tarjeta de Optimizations del Monitor y la entrada del menú de shell desaparezcan inmediatamente tras la actualización, sin esperar al siguiente escaneo programado."
       }
-    ]
+    ],
+    "jqTitle": "jq es obligatorio",
+    "jqBody": "La checklist de la Ruta A depende de <code>jq</code> para parsear el JSON de actualizaciones pendientes. Si <code>jq</code> no está, el flujo termina en silencio — verías la entrada del menú con contador pero al elegir filas no ocurriría nada. En cualquier instalación moderna de Proxmox <code>jq</code> está presente; si tienes dudas ejecuta <code>apt install -y jq</code>."
   },
   "differs": {
     "heading": "En qué se diferencia de las otras rutas",
