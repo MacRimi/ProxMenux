@@ -22613,7 +22613,8 @@
       "Operating Systems & Appliances"
     ],
     "notes": [
-      "This VM boots an installer image. Open the console after creation and complete the installation there."
+      "This VM boots an installer image. Open the console after creation and complete the installation there.",
+      "See this guide for some specifics: https://github.com/community-scripts/ProxmoxVE/discussions/11344"
     ],
     "warnings": [],
     "port": 0,
