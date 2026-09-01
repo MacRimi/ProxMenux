@@ -3940,7 +3940,7 @@
       "Show password: `cat ~/crafty-controller.creds`"
     ],
     "warnings": [
-      "Servers of type bedrock-server won't  work on arm64. Yoou can use Java server (paper) with Geyser plugin for bedrock."
+      "Servers of type bedrock-server won't  work on arm64. You can use Java server (paper) with Geyser plugin for bedrock."
     ],
     "port": 8443,
     "website": "https://craftycontrol.com/",
