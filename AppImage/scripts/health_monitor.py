@@ -219,7 +219,12 @@ class HealthMonitor:
     MEMORY_CRITICAL = 95
     MEMORY_DURATION = 300  # 5 minutes sustained (aligned with CPU)
     SWAP_WARNING_DURATION = 300
-    SWAP_CRITICAL_PERCENT = 5
+    # Swap CRITICAL now requires BOTH: swap file nearly full AND RAM
+    # genuinely tight. Alerting on just one of them fired constantly on
+    # healthy Proxmox hosts where the kernel proactively swaps out
+    # inactive pages while RAM remains plentifully available.
+    SWAP_HIGH_PERCENT = 80        # % of swap file in use
+    AVAILABLE_MIN_PERCENT = 15    # % of RAM that must stay available
     SWAP_CRITICAL_DURATION = 120
     
     # Storage Thresholds
@@ -435,7 +440,8 @@ class HealthMonitor:
                 (("cpu", "critical"), "CPU_CRITICAL"),
                 (("memory", "warning"), "MEMORY_WARNING"),
                 (("memory", "critical"), "MEMORY_CRITICAL"),
-                (("memory", "swap_critical"), "SWAP_CRITICAL_PERCENT"),
+                (("memory", "swap_high"), "SWAP_HIGH_PERCENT"),
+                (("memory", "available_min"), "AVAILABLE_MIN_PERCENT"),
                 (("host_storage", "warning"), "STORAGE_WARNING"),
                 (("host_storage", "critical"), "STORAGE_CRITICAL"),
                 (("cpu_temperature", "warning"), "TEMP_WARNING"),
@@ -625,12 +631,12 @@ class HealthMonitor:
             current_time = time.time()
             mem_percent = memory.percent
             swap_percent = swap.percent if swap.total > 0 else 0
-            swap_vs_ram = (swap.used / memory.total * 100) if memory.total > 0 else 0
+            available_percent = (memory.available / memory.total * 100) if memory.total > 0 else 100
             state_key = 'memory_usage'
             self.state_history[state_key].append({
                 'mem_percent': mem_percent,
                 'swap_percent': swap_percent,
-                'swap_vs_ram': swap_vs_ram,
+                'available_percent': available_percent,
                 'time': current_time
             })
             # Prune entries older than 10 minutes
@@ -1605,30 +1611,36 @@ class HealthMonitor:
     def _check_memory_comprehensive(self) -> Dict[str, Any]:
         """
         Check memory including RAM and swap with realistic thresholds.
-        Only alerts on truly problematic memory situations.
+
+        Swap CRITICAL requires the memory-pressure AND-clause: swap is
+        called out only when the swap file is nearly full AND RAM is
+        genuinely tight (available memory below the configured floor).
+        Alerting on swap size alone fires constantly on healthy hosts
+        where Linux proactively swaps out inactive pages — the user
+        can't act on that signal and it drowns real pressure events.
         """
         try:
             memory = psutil.virtual_memory()
             swap = psutil.swap_memory()
             current_time = time.time()
-            
+
             mem_percent = memory.percent
             swap_percent = swap.percent if swap.total > 0 else 0
-            swap_vs_ram = (swap.used / memory.total * 100) if memory.total > 0 else 0
-            
+            available_percent = (memory.available / memory.total * 100) if memory.total > 0 else 100
+
             state_key = 'memory_usage'
             self.state_history[state_key].append({
                 'mem_percent': mem_percent,
                 'swap_percent': swap_percent,
-                'swap_vs_ram': swap_vs_ram,
+                'available_percent': available_percent,
                 'time': current_time
             })
-            
+
             self.state_history[state_key] = [
                 entry for entry in self.state_history[state_key]
                 if current_time - entry['time'] < 600
             ]
-            
+
             mem_critical_samples = [
                 entry for entry in self.state_history[state_key]
                 if entry['mem_percent'] >= 90 and
@@ -1641,10 +1653,15 @@ class HealthMonitor:
                 current_time - entry['time'] <= self.MEMORY_DURATION
             ]
 
+            # Swap CRITICAL requires BOTH conditions sustained. Older
+            # samples predating the new `available_percent` field are
+            # skipped rather than defaulted to a passing value so the
+            # transition period never manufactures a false positive.
             swap_critical = sum(
                 1 for entry in self.state_history[state_key]
-                if entry['swap_vs_ram'] > 20 and
-                current_time - entry['time'] <= self.SWAP_CRITICAL_DURATION
+                if entry['swap_percent'] > self.SWAP_HIGH_PERCENT
+                and entry.get('available_percent', 100) < self.AVAILABLE_MIN_PERCENT
+                and current_time - entry['time'] <= self.SWAP_CRITICAL_DURATION
             )
 
             # Require sustained high usage across most of the 300s window.
@@ -1663,7 +1680,8 @@ class HealthMonitor:
                 reason = f'RAM >90% sustained for {actual_duration}s'
             elif swap_critical >= 2:
                 status = 'CRITICAL'
-                reason = f'Swap >20% of RAM ({swap_vs_ram:.1f}%)'
+                reason = (f'Memory pressure: swap {swap_percent:.0f}% used '
+                          f'and only {available_percent:.0f}% RAM available')
             elif mem_warning_count >= MEM_WARNING_MIN_SAMPLES:
                 oldest = min(s['time'] for s in mem_warning_samples)
                 actual_duration = int(current_time - oldest)
@@ -1672,12 +1690,12 @@ class HealthMonitor:
             else:
                 status = 'OK'
                 reason = None
-            
+
             ram_avail_gb = round(memory.available / (1024**3), 2)
             ram_total_gb = round(memory.total / (1024**3), 2)
             swap_used_gb = round(swap.used / (1024**3), 2)
             swap_total_gb = round(swap.total / (1024**3), 2)
-            
+
             # Determine per-sub-check status
             ram_status = 'CRITICAL' if mem_percent >= 90 and mem_critical_count >= MEM_CRITICAL_MIN_SAMPLES else ('WARNING' if mem_percent >= self.MEMORY_WARNING and mem_warning_count >= MEM_WARNING_MIN_SAMPLES else 'OK')
             swap_status = 'CRITICAL' if swap_critical >= 2 else 'OK'
@@ -1691,11 +1709,16 @@ class HealthMonitor:
                 'checks': {
                     'ram_usage': {
                         'status': ram_status,
-                        'detail': 'High RAM usage sustained' if ram_status != 'OK' else 'Normal'
+                        'detail': 'High RAM usage sustained' if ram_status != 'OK' else 'Normal',
+                        'dismissable': True,
                     },
                     'swap_usage': {
                         'status': swap_status,
-                        'detail': 'Excessive swap usage' if swap_status != 'OK' else ('Normal' if swap.total > 0 else 'No swap configured')
+                        'detail': (
+                            'Swap nearly full with RAM tight' if swap_status != 'OK'
+                            else ('Normal' if swap.total > 0 else 'No swap configured')
+                        ),
+                        'dismissable': True,
                     }
                 }
             }

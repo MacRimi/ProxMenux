@@ -98,7 +98,10 @@ _bk_pbs() {
     echo -e ""
 
     msg_info "$(translate "Preparing files for backup...")"
-    hb_prepare_staging "$staging_root" "${paths[@]}"
+    if ! hb_prepare_staging "$staging_root" "${paths[@]}" >"$log_file" 2>&1; then
+        msg_error "$(translate "Backup failed. See log:") $log_file"
+        return 1
+    fi
     staged_size=$(hb_file_size "$staging_root/rootfs")
     msg_ok "$(translate "Staging ready.") $(translate "Data size:") $staged_size"
 
@@ -242,7 +245,10 @@ _bk_borg() {
     echo -e ""
 
     msg_info "$(translate "Preparing files for backup...")"
-    hb_prepare_staging "$staging_root" "${paths[@]}"
+    if ! hb_prepare_staging "$staging_root" "${paths[@]}" >"$log_file" 2>&1; then
+        msg_error "$(translate "Backup failed. See log:") $log_file"
+        return 1
+    fi
     staged_size=$(hb_file_size "$staging_root/rootfs")
     msg_ok "$(translate "Staging ready.") $(translate "Data size:") $staged_size"
 
@@ -376,7 +382,10 @@ _bk_local() {
     echo -e ""
 
     msg_info "$(translate "Preparing files for backup...")"
-    hb_prepare_staging "$staging_root" "${paths[@]}"
+    if ! hb_prepare_staging "$staging_root" "${paths[@]}" >"$log_file" 2>&1; then
+        msg_error "$(translate "Backup failed. See log:") $log_file"
+        return 1
+    fi
     staged_size=$(hb_file_size "$staging_root/rootfs")
     msg_ok "$(translate "Staging ready.") $(translate "Data size:") $staged_size"
 
@@ -1681,7 +1690,7 @@ _rs_apply() {
     backup_root="/var/lib/proxmenux/pre-restore/$(date +%Y%m%d_%H%M%S)"
     mkdir -p "$backup_root"
 
-    local applied=0 skipped=0 t_start elapsed
+    local applied=0 skipped=0 t_start elapsed jobs_restored=0 jobs_reconcile_failed=0
     local cluster_recovery_root="" CLUSTER_DATA_EXTRACTED=""
     t_start=$SECONDS
 
@@ -1774,12 +1783,30 @@ _rs_apply() {
                     --exclude "restore-pending/"
                 )
             fi
-            rsync -aAXH --delete "${rsync_extra[@]}" "$src/" "$dst/" 2>/dev/null && ((applied++)) || ((skipped++))
+            if rsync -aAXH --delete "${rsync_extra[@]}" "$src/" "$dst/" 2>/dev/null; then
+                ((applied++))
+                [[ "$rel" == "var/lib/proxmenux/backup-jobs" || "$rel" == "var/lib/proxmenux/backup-jobs/"* ]] && jobs_restored=1
+            else
+                ((skipped++))
+            fi
         else
             mkdir -p "$(dirname "$dst")"
-            cp -a "$src" "$dst" 2>/dev/null && ((applied++)) || ((skipped++))
+            if cp -a "$src" "$dst" 2>/dev/null; then
+                ((applied++))
+                [[ "$rel" == "var/lib/proxmenux/backup-jobs/"* ]] && jobs_restored=1
+            else
+                ((skipped++))
+            fi
         fi
     done
+
+    if (( jobs_restored )); then
+        local scheduler_script="$SCRIPT_DIR/backup_scheduler.sh"
+        [[ -f "$scheduler_script" ]] || scheduler_script="$LOCAL_SCRIPTS_DEFAULT/backup_restore/backup_scheduler.sh"
+        if [[ ! -f "$scheduler_script" ]] || ! bash "$scheduler_script" --reconcile-restored; then
+            jobs_reconcile_failed=1
+        fi
+    fi
 
     elapsed=$((SECONDS - t_start))
     # Skip `systemctl daemon-reload` when invoked from the Monitor
@@ -1808,6 +1835,14 @@ _rs_apply() {
         msg_warn "$(translate "Changes applied. A system reboot is recommended for them to take full effect.")"
     fi
 
+    if (( jobs_restored )); then
+        if (( jobs_reconcile_failed )); then
+            msg_warn "$(translate "Scheduled backup jobs")"
+        else
+            msg_ok "$(translate "Scheduled backup jobs")"
+        fi
+    fi
+
     if [[ -n "$CLUSTER_DATA_EXTRACTED" ]]; then
         export HB_CLUSTER_DATA_EXTRACTED="$CLUSTER_DATA_EXTRACTED"
         _rs_write_cluster_recovery_helper "$CLUSTER_DATA_EXTRACTED"
@@ -1816,6 +1851,8 @@ _rs_apply() {
     else
         unset HB_CLUSTER_DATA_EXTRACTED
     fi
+
+    (( jobs_reconcile_failed == 0 ))
 }
 
 _rs_collect_plan_stats() {

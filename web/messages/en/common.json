@@ -59,6 +59,7 @@
       "accessAuth": "Access & Authentication",
       "dashboard": "Dashboard",
       "dashboardSystemOverview": "System Overview tab",
+      "dashboardApps": "Apps tab",
       "dashboardStorage": "Storage tab",
       "dashboardNetwork": "Network tab",
       "dashboardVmsLxcs": "VMs & LXCs tab",

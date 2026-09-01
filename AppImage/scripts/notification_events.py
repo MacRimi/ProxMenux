@@ -435,7 +435,9 @@ def is_apt_active_on_host() -> bool:
     Sources checked, in order:
       1. `/var/run/proxmenux-update-in-progress` — created by
          `scripts/utilities/proxmox_update.sh` around its full-upgrade
-         call so ProxMenux-driven updates are always covered.
+         call, and by `scripts/post_install/update_post_install_function.sh`
+         around the per-tool re-run wrapper (log2ram, chrony…), so any
+         ProxMenux-driven maintenance is covered.
       2. `fuser` on `/var/lib/dpkg/lock-frontend` — covers a manual
          `apt`/`dpkg`/`apt-get` invocation by the operator, or any
          other tool holding the lock.

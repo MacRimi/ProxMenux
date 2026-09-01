@@ -81,7 +81,7 @@ interface ThresholdLeaf {
 
 interface ThresholdsTree {
   cpu: { warning: ThresholdLeaf; critical: ThresholdLeaf }
-  memory: { warning: ThresholdLeaf; critical: ThresholdLeaf; swap_critical: ThresholdLeaf }
+  memory: { warning: ThresholdLeaf; critical: ThresholdLeaf; swap_high: ThresholdLeaf; available_min: ThresholdLeaf }
   host_storage: { warning: ThresholdLeaf; critical: ThresholdLeaf }
   lxc_rootfs: { warning: ThresholdLeaf; critical: ThresholdLeaf }
   cpu_temperature: { warning: ThresholdLeaf; critical: ThresholdLeaf }
@@ -150,7 +150,8 @@ const SECTIONS: SectionDef[] = [
     fields: [
       { path: ["memory", "warning"], label: "Memory warning" },
       { path: ["memory", "critical"], label: "Memory critical" },
-      { path: ["memory", "swap_critical"], label: "Swap critical" },
+      { path: ["memory", "swap_high"], label: "Swap high" },
+      { path: ["memory", "available_min"], label: "Memory available minimum" },
     ],
   },
   // ── Heat ────────────────────────────────────────────────────────
@@ -812,20 +813,36 @@ export function HealthThresholds() {
                       ))
                     ) : section.id === "memory" ? (
                       // Memory & Swap is special: warn/crit pair for
-                      // RAM, plus a single Swap threshold that has no
-                      // companion (it's a "critical only" metric).
-                      // Both use sliders so the section reads as one
-                      // visual language end to end.
+                      // RAM, plus the swap-pressure pair. Swap
+                      // CRITICAL fires only when both conditions hold
+                      // — swap file above `swap_high` AND available
+                      // RAM below `available_min`. Rendering the two
+                      // sliders one under the other under a shared
+                      // header reads as "the two knobs of one signal".
                       <>
                         <div className="text-[11px] uppercase tracking-wider text-muted-foreground px-1">
                           {t("settings.healthThresholds.ram")}
                         </div>
                         {renderThresholdRange(["memory"])}
-                        <div className="border-t border-border/40">
-                          <div className="text-[11px] uppercase tracking-wider text-muted-foreground px-1 pt-1.5">
-                            {t("settings.healthThresholds.swapCriticalOnly")}
+                        <div className="border-t border-border/40 pt-1.5 mt-1.5">
+                          <div className="text-[11px] uppercase tracking-wider text-muted-foreground px-1">
+                            {t("settings.healthThresholds.swapPressure")}
                           </div>
-                          {renderSingleThresholdSlider(["memory", "swap_critical"], "critical")}
+                          <p className="text-[11px] text-muted-foreground px-1 pt-1 pb-1 leading-snug">
+                            {t("settings.healthThresholds.swapPressureHint")}
+                          </p>
+                          <div>
+                            <div className="text-[10px] uppercase tracking-wider text-muted-foreground/80 px-1 pt-1">
+                              {t("settings.healthThresholds.swapHighLabel")}
+                            </div>
+                            {renderSingleThresholdSlider(["memory", "swap_high"], "critical")}
+                          </div>
+                          <div>
+                            <div className="text-[10px] uppercase tracking-wider text-muted-foreground/80 px-1">
+                              {t("settings.healthThresholds.availableMinLabel")}
+                            </div>
+                            {renderSingleThresholdSlider(["memory", "available_min"], "warning")}
+                          </div>
                         </div>
                       </>
                     ) : section.fields.length === 2 &&

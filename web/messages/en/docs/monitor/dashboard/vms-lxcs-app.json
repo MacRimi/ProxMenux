@@ -10,7 +10,9 @@
   "intro": {
     "p1": "The <strong>App</strong> tab records which applications belong to an LXC. A registration can contain only a name and web link, or also include an installed-version detector and an upstream source.",
     "p2": "The procedure that changes software is configured separately on the <link>Updates tab</link>. Saving an app never runs an installer or updater.",
-    "callout": "Registration, version tracking and updating are three independent capabilities. Any one can be used without requiring the other two."
+    "callout": "Registration, version tracking and updating are three independent capabilities. Any one can be used without requiring the other two.",
+    "dashboardTitle": "From registration to the Apps launcher",
+    "dashboard": "Every Web Link saved here is also presented as a card in the top-level <appsLink>Apps tab</appsLink>. This LXC page remains the source of truth for the application's name, logo, links and version tracking."
   },
   "overview": {
     "heading": "What an application record can provide",

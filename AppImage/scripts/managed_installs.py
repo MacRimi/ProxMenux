@@ -673,6 +673,11 @@ def _fetch_helpers_cache() -> dict:
                     "updateable": bool(entry.get("updateable")),
                     "default_port": entry.get("port") or 0,
                     "logo": entry.get("logo") or "",
+                    # community-scripts taxonomy — powers the Categoría
+                    # dropdown in the Web Link editor and the auto-fill
+                    # on Registrar. Keep only the human-readable labels
+                    # (ignore the parallel `categories` id list).
+                    "category_names": entry.get("category_names") or [],
                 }
             _helpers_cache = index
             _helpers_cache_ts = now

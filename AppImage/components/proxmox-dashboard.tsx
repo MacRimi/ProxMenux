@@ -1,6 +1,7 @@
 "use client"
 
-import { useState, useEffect, useMemo, useCallback } from "react"
+import React, { useState, useEffect, useMemo, useCallback } from "react"
+import useSWR from "swr"
 import { Badge } from "./ui/badge"
 import { Button } from "./ui/button"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs"
@@ -8,6 +9,7 @@ import { SystemOverview } from "./system-overview"
 import { StorageOverview } from "./storage-overview"
 import { NetworkMetrics } from "./network-metrics"
 import { VirtualMachines } from "./virtual-machines"
+import { AppsDashboard } from "./apps-dashboard"
 import Hardware from "./hardware"
 import { SystemLogs } from "./system-logs"
 import { Settings } from "./settings"
@@ -32,6 +34,7 @@ import {
   HardDrive,
   NetworkIcon,
   Boxes,
+  Grid3x3,
   Cpu,
   ScrollText,
   SettingsIcon,
@@ -53,6 +56,7 @@ import {
 } from "./ui/dropdown-menu"
 import { useT } from "../lib/i18n/provider"
 import { APP_VERSION } from "../lib/version"
+import { useTabOrder, firstActualTab, type TabId } from "../lib/tab-order"
 
 interface SystemStatus {
   status: "healthy" | "warning" | "critical"
@@ -81,8 +85,19 @@ interface FlaskSystemInfo {
   }
 }
 
+// Prefetch on dashboard mount: SWR caches by key across all
+// `useSWR` calls, so firing these here means the Apps tab finds the
+// data already resolved when it opens. Without this, the tab pays a
+// visible roundtrip on first render because VirtualMachines has been
+// warming /api/vms since page load but nobody was warming the custom
+// links endpoint.
+const _dashboardPrefetchFetcher = (url: string) => fetchApi(url)
+
 export function ProxmoxDashboard() {
   const t = useT()
+  useSWR("/api/apps/custom-links", _dashboardPrefetchFetcher, { revalidateOnFocus: false })
+  useSWR("/api/apps/categories",   _dashboardPrefetchFetcher, { revalidateOnFocus: false })
+  const { order: tabOrder } = useTabOrder()
   const [systemStatus, setSystemStatus] = useState<SystemStatus>({
     status: "healthy",
     uptime: "Loading...",
@@ -95,6 +110,13 @@ export function ProxmoxDashboard() {
   const [componentKey, setComponentKey] = useState(0)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [activeTab, setActiveTab] = useState("overview")
+  // On first mount, land on whatever the user's custom order says is
+  // the leading tab. localStorage isn't available during SSR so this
+  // runs post-hydration; the tiny flash is acceptable and matches the
+  // pattern next-themes uses for the same reason.
+  useEffect(() => {
+    setActiveTab(firstActualTab())
+  }, [])
   const [infoCount, setInfoCount] = useState(0)
   const [updateAvailable, setUpdateAvailable] = useState(false)
   const [showNavigation, setShowNavigation] = useState(true)
@@ -368,6 +390,7 @@ export function ProxmoxDashboard() {
   const getActiveTabLabel = () => {
     switch (activeTab) {
       case "overview":  return t("navigation.overview")
+      case "apps":      return t("navigation.apps")
       case "vms":       return t("navigation.virtualMachines")
       case "storage":   return t("navigation.storage")
       case "network":   return t("navigation.network")
@@ -621,75 +644,62 @@ export function ProxmoxDashboard() {
                     : "text-muted-foreground hover:text-foreground rounded-sm"
                 }`
 
+              // Data-driven TabsList: iterate over the user's saved
+              // top-level order. Each slot is either a direct tab or a
+              // dropdown group (Node/Admin). The internal items of a
+              // dropdown are never reordered by the user — a grouped
+              // slot moves as a unit.
+              const renderDirect = (
+                value: string,
+                Icon: React.ComponentType<{ className?: string }>,
+                label: string,
+              ) => (
+                <TabsTrigger key={value} value={value} className={triggerActiveClass}>
+                  <Icon className="mr-2 h-4 w-4" />
+                  {label}
+                </TabsTrigger>
+              )
+              const renderDropdown = (
+                key: string,
+                items: { value: string; label: string; Icon: React.ComponentType<{ className?: string }> }[],
+                active: boolean,
+                TriggerIcon: React.ComponentType<{ className?: string }>,
+                triggerLabel: string,
+              ) => (
+                <DropdownMenu key={key}>
+                  <DropdownMenuTrigger className={dropdownBtnClass(active)}>
+                    <TriggerIcon className="mr-2 h-4 w-4" />
+                    {triggerLabel}
+                    <ChevronDown className="ml-1.5 h-3 w-3 opacity-70" />
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="center" className="min-w-[180px]">
+                    {items.map(({ value, label, Icon }) => (
+                      <DropdownMenuItem
+                        key={value}
+                        onClick={() => setActiveTab(value)}
+                        className={activeTab === value ? "bg-blue-500/10 text-blue-500" : ""}
+                      >
+                        <Icon className="mr-2 h-4 w-4" />
+                        {label}
+                      </DropdownMenuItem>
+                    ))}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              )
+              const renderTop = (id: TabId) => {
+                switch (id) {
+                  case "overview": return renderDirect("overview", LayoutDashboard, t("navigation.overview"))
+                  case "apps":     return renderDirect("apps",     Grid3x3,         t("navigation.apps"))
+                  case "vms":      return renderDirect("vms",      Boxes,           t("navigation.virtualMachines"))
+                  case "backup":   return renderDirect("backup",   DatabaseBackup,  t("navigation.backup"))
+                  case "terminal": return renderDirect("terminal", Terminal,        t("navigation.terminal"))
+                  case "node":     return renderDropdown("node",  NODE_ITEMS,  isNodeActive,  NodeTriggerIcon,  NodeTriggerLabel)
+                  case "admin":    return renderDropdown("admin", ADMIN_ITEMS, isAdminActive, AdminTriggerIcon, AdminTriggerLabel)
+                }
+              }
               return (
-                <TabsList className="hidden lg:grid w-full grid-cols-6 bg-card border border-border">
-                  {/* Direct: Overview */}
-                  <TabsTrigger value="overview" className={triggerActiveClass}>
-                    <LayoutDashboard className="mr-2 h-4 w-4" />
-                    {t("navigation.overview")}
-                  </TabsTrigger>
-
-                  {/* Direct: VMs & LXCs — first-class because Proxmox IS
-                      a hypervisor; workloads belong at top level. */}
-                  <TabsTrigger value="vms" className={triggerActiveClass}>
-                    <Boxes className="mr-2 h-4 w-4" />
-                    {t("navigation.virtualMachines")}
-                  </TabsTrigger>
-
-                  {/* Dropdown: Node (Storage / Network / Hardware) */}
-                  <DropdownMenu>
-                    <DropdownMenuTrigger className={dropdownBtnClass(isNodeActive)}>
-                      <NodeTriggerIcon className="mr-2 h-4 w-4" />
-                      {NodeTriggerLabel}
-                      <ChevronDown className="ml-1.5 h-3 w-3 opacity-70" />
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="center" className="min-w-[180px]">
-                      {NODE_ITEMS.map(({ value, label, Icon }) => (
-                        <DropdownMenuItem
-                          key={value}
-                          onClick={() => setActiveTab(value)}
-                          className={activeTab === value ? "bg-blue-500/10 text-blue-500" : ""}
-                        >
-                          <Icon className="mr-2 h-4 w-4" />
-                          {label}
-                        </DropdownMenuItem>
-                      ))}
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-
-                  {/* Direct: Backup (today: Host Backup only). When VM/LXC
-                      backup ships this becomes a dropdown. */}
-                  <TabsTrigger value="backup" className={triggerActiveClass}>
-                    <DatabaseBackup className="mr-2 h-4 w-4" />
-                    {t("navigation.backup")}
-                  </TabsTrigger>
-
-                  {/* Direct: Terminal */}
-                  <TabsTrigger value="terminal" className={triggerActiveClass}>
-                    <Terminal className="mr-2 h-4 w-4" />
-                    {t("navigation.terminal")}
-                  </TabsTrigger>
-
-                  {/* Dropdown: Admin (System Logs / Security / Settings / About) */}
-                  <DropdownMenu>
-                    <DropdownMenuTrigger className={dropdownBtnClass(isAdminActive)}>
-                      <AdminTriggerIcon className="mr-2 h-4 w-4" />
-                      {AdminTriggerLabel}
-                      <ChevronDown className="ml-1.5 h-3 w-3 opacity-70" />
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="center" className="min-w-[180px]">
-                      {ADMIN_ITEMS.map(({ value, label, Icon }) => (
-                        <DropdownMenuItem
-                          key={value}
-                          onClick={() => setActiveTab(value)}
-                          className={activeTab === value ? "bg-blue-500/10 text-blue-500" : ""}
-                        >
-                          <Icon className="mr-2 h-4 w-4" />
-                          {label}
-                        </DropdownMenuItem>
-                      ))}
-                    </DropdownMenuContent>
-                  </DropdownMenu>
+                <TabsList className="hidden lg:grid w-full grid-cols-7 bg-card border border-border">
+                  {tabOrder.map(renderTop)}
                 </TabsList>
               )
             })()}
@@ -724,56 +734,52 @@ export function ProxmoxDashboard() {
                         ? "bg-blue-500/10 text-blue-500 border-l-4 border-blue-500 rounded-l-none"
                         : ""
                     }`
-                  // Mobile sheet is a flat list (no section headers).
-                  // The desktop layout uses dropdowns to express the
-                  // Node/Admin grouping; here we just enumerate items
-                  // in the same visual order.
+                  // Mobile sheet honours the same user-defined
+                  // top-level order as the desktop TabsList. Grouped
+                  // slots (Node/Admin) expand their child items
+                  // inline right after their position — the group
+                  // still moves as a unit, but children stay grouped.
+                  const btn = (
+                    value: string,
+                    Icon: React.ComponentType<{ className?: string }>,
+                    label: string,
+                  ) => (
+                    <Button
+                      key={value}
+                      variant="ghost"
+                      onClick={() => select(value)}
+                      className={itemClass(activeTab === value)}
+                    >
+                      <Icon className="h-5 w-5" />
+                      <span>{label}</span>
+                    </Button>
+                  )
                   return (
                     <div className="flex flex-col gap-1 mt-4">
-                      <Button variant="ghost" onClick={() => select("overview")} className={itemClass(activeTab === "overview")}>
-                        <LayoutDashboard className="h-5 w-5" />
-                        <span>{t("navigation.overview")}</span>
-                      </Button>
-                      <Button variant="ghost" onClick={() => select("vms")} className={itemClass(activeTab === "vms")}>
-                        <Boxes className="h-5 w-5" />
-                        <span>{t("navigation.virtualMachines")}</span>
-                      </Button>
-                      <Button variant="ghost" onClick={() => select("storage")} className={itemClass(activeTab === "storage")}>
-                        <HardDrive className="h-5 w-5" />
-                        <span>{t("navigation.storage")}</span>
-                      </Button>
-                      <Button variant="ghost" onClick={() => select("network")} className={itemClass(activeTab === "network")}>
-                        <NetworkIcon className="h-5 w-5" />
-                        <span>{t("navigation.network")}</span>
-                      </Button>
-                      <Button variant="ghost" onClick={() => select("hardware")} className={itemClass(activeTab === "hardware")}>
-                        <Cpu className="h-5 w-5" />
-                        <span>{t("navigation.hardware")}</span>
-                      </Button>
-                      <Button variant="ghost" onClick={() => select("backup")} className={itemClass(activeTab === "backup")}>
-                        <DatabaseBackup className="h-5 w-5" />
-                        <span>{t("navigation.backup")}</span>
-                      </Button>
-                      <Button variant="ghost" onClick={() => select("terminal")} className={itemClass(activeTab === "terminal")}>
-                        <Terminal className="h-5 w-5" />
-                        <span>{t("navigation.terminal")}</span>
-                      </Button>
-                      <Button variant="ghost" onClick={() => select("logs")} className={itemClass(activeTab === "logs")}>
-                        <ScrollText className="h-5 w-5" />
-                        <span>{t("navigation.systemLogs")}</span>
-                      </Button>
-                      <Button variant="ghost" onClick={() => select("security")} className={itemClass(activeTab === "security")}>
-                        <ShieldCheck className="h-5 w-5" />
-                        <span>{t("navigation.security")}</span>
-                      </Button>
-                      <Button variant="ghost" onClick={() => select("settings")} className={itemClass(activeTab === "settings")}>
-                        <SettingsIcon className="h-5 w-5" />
-                        <span>{t("navigation.settings")}</span>
-                      </Button>
-                      <Button variant="ghost" onClick={() => select("about")} className={itemClass(activeTab === "about")}>
-                        <Info className="h-5 w-5" />
-                        <span>{t("navigation.about")}</span>
-                      </Button>
+                      {tabOrder.map((id): React.ReactNode => {
+                        switch (id) {
+                          case "overview": return btn("overview", LayoutDashboard, t("navigation.overview"))
+                          case "apps":     return btn("apps",     Grid3x3,         t("navigation.apps"))
+                          case "vms":      return btn("vms",      Boxes,           t("navigation.virtualMachines"))
+                          case "backup":   return btn("backup",   DatabaseBackup,  t("navigation.backup"))
+                          case "terminal": return btn("terminal", Terminal,        t("navigation.terminal"))
+                          case "node": return (
+                            <React.Fragment key="node">
+                              {btn("storage",  HardDrive,   t("navigation.storage"))}
+                              {btn("network",  NetworkIcon, t("navigation.network"))}
+                              {btn("hardware", Cpu,         t("navigation.hardware"))}
+                            </React.Fragment>
+                          )
+                          case "admin": return (
+                            <React.Fragment key="admin">
+                              {btn("logs",     ScrollText,  t("navigation.systemLogs"))}
+                              {btn("security", ShieldCheck, t("navigation.security"))}
+                              {btn("settings", SettingsIcon, t("navigation.settings"))}
+                              {btn("about",    Info,         t("navigation.about"))}
+                            </React.Fragment>
+                          )
+                        }
+                      })}
                     </div>
                   )
                 })()}
@@ -784,7 +790,14 @@ export function ProxmoxDashboard() {
       </div>
 
       <div className="container mx-auto px-4 md:px-6 py-4 md:py-6">
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4 md:space-y-6">
+        {/* No `space-y-*` here: only one TabsContent is visible at a
+            time, but Overview stays force-mounted (hidden) as the
+            first child, so every OTHER active tab used to inherit an
+            extra top margin from the space-y utility — pushing the
+            page content further from the nav than on Overview.
+            Vertical spacing INSIDE each tab lives on its own
+            TabsContent's `space-y-*`. */}
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-0">
           {/* forceMount so SystemOverview mounts at dashboard load and
               never gets torn down when the user visits another tab.
               Without this, every return to Overview re-fires ~7 fetches
@@ -795,6 +808,10 @@ export function ProxmoxDashboard() {
               background — reopening the tab is instant. */}
           <TabsContent value="overview" forceMount className="space-y-4 md:space-y-6 mt-0 data-[state=inactive]:hidden">
             <SystemOverview key={`overview-${componentKey}`} />
+          </TabsContent>
+
+          <TabsContent value="apps" className="space-y-4 md:space-y-6 mt-0">
+            <AppsDashboard key={`apps-${componentKey}`} />
           </TabsContent>
 
           <TabsContent value="storage" className="space-y-4 md:space-y-6 mt-0">

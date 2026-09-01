@@ -79,6 +79,12 @@ interface LxcAppPort {
   scheme?: "http" | "https"
   web_path?: string
   logo_url?: string | null
+  // Free-text category shown in the Apps dashboard. Present on every
+  // Web Link the user assigned one to; absent otherwise.
+  category?: string
+  // Overrides ip:port composition — used for apps served behind a
+  // reverse-proxy domain (e.g. https://vault.example.com).
+  custom_url?: string
 }
 interface LxcAppWatch {
   id: string
@@ -208,6 +214,8 @@ interface VMData {
 }
 
 function buildRegisteredAppUrl(vm: VMData, port?: LxcAppPort): string | null {
+  const custom = (port?.custom_url || "").trim()
+  if (custom) return custom
   const rawIp = (vm.ip || "").trim().split("/")[0]
   if (!rawIp || rawIp === "DHCP" || !port?.port) return null
   const host = rawIp.includes(":") && !rawIp.startsWith("[") ? `[${rawIp}]` : rawIp
@@ -847,6 +855,8 @@ export function VirtualMachines() {
   const [updatesRefreshing, setUpdatesRefreshing] = useState(false)
   const [updatesResult, setUpdatesResult] = useState<{ pendingAfter: number; appliedCount: number } | null>(null)
   const [updatesBaselineCount, setUpdatesBaselineCount] = useState<number | null>(null)
+  const selectedVMRef = useRef<VMData | null>(null)
+  const updatesBaselineCountRef = useRef<number | null>(null)
   const [terminalOpen, setTerminalOpen] = useState(false)
   const [terminalVmid, setTerminalVmid] = useState<number | null>(null)
   const [terminalVmName, setTerminalVmName] = useState<string>("")
@@ -1007,6 +1017,44 @@ export function VirtualMachines() {
     }
   }, [])
 
+  // Deep-link from the Apps dashboard: when the user clicks the CT
+  // ref inside a launcher card, that component dispatches
+  // `openLxcAppModal` with the target vmid. We resolve it against the
+  // current /api/vms cache and open the modal on the "App" tab so the
+  // user lands exactly where the weblink was registered.
+  useEffect(() => {
+    const handler = (ev: Event) => {
+      const detail = (ev as CustomEvent).detail || {}
+      const targetVmid = Number(detail.vmid)
+      if (!Number.isFinite(targetVmid)) return
+      const vm = (vmData || []).find((v) => v.vmid === targetVmid)
+      if (!vm) return
+      handleVMClick(vm)
+      // handleVMClick resets the inner tab to "status"; override to
+      // "app" in the same render tick — React batches these and the
+      // last setActiveModalTab wins.
+      setActiveModalTab("app")
+    }
+    window.addEventListener("openLxcAppModal", handler as EventListener)
+    return () => window.removeEventListener("openLxcAppModal", handler as EventListener)
+  }, [vmData])
+
+  // Same deep-link but for QEMU guests. VMs don't have the App tab,
+  // so we land on Status (which is what handleVMClick already
+  // defaults to — no override needed).
+  useEffect(() => {
+    const handler = (ev: Event) => {
+      const detail = (ev as CustomEvent).detail || {}
+      const targetVmid = Number(detail.vmid)
+      if (!Number.isFinite(targetVmid)) return
+      const vm = (vmData || []).find((v) => v.vmid === targetVmid)
+      if (!vm) return
+      handleVMClick(vm)
+    }
+    window.addEventListener("openVmStatusModal", handler as EventListener)
+    return () => window.removeEventListener("openVmStatusModal", handler as EventListener)
+  }, [vmData])
+
   // Keep the open modal's VM in sync with the /api/vms poll so CPU/RAM/I-O values
   // don't stay frozen at click-time. Single data source (/cluster/resources) shared
   // with the list — no source mismatch, no flicker.
@@ -1048,39 +1096,50 @@ export function VirtualMachines() {
     }
   }, [vmData])
 
+  useEffect(() => {
+    selectedVMRef.current = selectedVM
+  }, [selectedVM])
+
+  useEffect(() => {
+    updatesBaselineCountRef.current = updatesBaselineCount
+  }, [updatesBaselineCount])
+
   // Settle the Updates-tab "Comprobando resultado…" state as soon as
   // the /api/vms poll delivers a post-apply count that differs from
-  // the baseline captured when the terminal closed. Also drops the
-  // spinner after 15 s of no observed change (backend hook already
-  // force-refreshed managed_installs, so a still-equal count at that
-  // point means either everything was a no-op or the scan hasn't
-  // finished — either way the user shouldn't keep staring at a
-  // loader). Sets `updatesResult` for the transient banner: green if
-  // count is now 0, amber if some packages remain.
+  // the baseline captured when the terminal closed. Sets
+  // `updatesResult` for the transient banner: green if count is now
+  // 0, amber if some packages remain.
   useEffect(() => {
     if (!updatesRefreshing) return
     if (!selectedVM) return
     const currentCount = selectedVM.update_check?.count ?? 0
-    // A change from baseline (or landing at 0) means the fresh
-    // post-apply snapshot is in.
     if (updatesBaselineCount !== null && currentCount !== updatesBaselineCount) {
       const applied = Math.max(0, updatesBaselineCount - currentCount)
       setUpdatesResult({ pendingAfter: currentCount, appliedCount: applied })
       setUpdatesRefreshing(false)
       setUpdatesBaselineCount(null)
-      return
     }
-    // Safety timeout — never leave the spinner spinning forever.
+  }, [selectedVM, updatesRefreshing, updatesBaselineCount])
+
+  // Safety timeout — never leave the spinner spinning forever. Armed
+  // once when `updatesRefreshing` flips to true; a still-equal count
+  // 15 s later means either everything was a no-op or the scan hasn't
+  // caught up. Dependency stays scoped to `updatesRefreshing` so the
+  // 2.5 s SWR poll on `selectedVM` cannot keep resetting the timer.
+  useEffect(() => {
+    if (!updatesRefreshing) return
     const safety = setTimeout(() => {
+      const currentCount = selectedVMRef.current?.update_check?.count ?? 0
+      const baseline = updatesBaselineCountRef.current
       setUpdatesResult({
         pendingAfter: currentCount,
-        appliedCount: Math.max(0, (updatesBaselineCount ?? 0) - currentCount),
+        appliedCount: Math.max(0, (baseline ?? 0) - currentCount),
       })
       setUpdatesRefreshing(false)
       setUpdatesBaselineCount(null)
     }, 15000)
     return () => clearTimeout(safety)
-  }, [selectedVM, updatesRefreshing, updatesBaselineCount])
+  }, [updatesRefreshing])
 
   // Auto-dismiss the post-apply banner after 6 s so it doesn't
   // clutter the tab forever.
@@ -4824,7 +4883,8 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                     {!selectedVM.update_check?.managed_oci_app &&
                       !selectedVM.update_check?.is_oci_lxc && (() => {
                         const uc = selectedVM.update_check
-                        const hasOsUpdates = !!uc?.available
+                        const osUpdateStatusKnown = !!uc && !uc.error
+                        const hasOsUpdates = osUpdateStatusKnown && !!uc.available
                         const dockerAppWatch = (selectedVM.app_watches || []).find((a) => a.helper_slug === "docker")
                         const dockerRegistered = !!dockerAppWatch
                         const dockerEngineInstalledVersion = selectedVM.docker_inventory?.engine_version
@@ -5081,7 +5141,15 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                                       <> · {t("vmLxc.updates.familyLabel")} <code className="text-foreground/80">{uc.os_family}</code></>
                                     )}
                                   </div>
-                                  {hasOsUpdates ? (() => {
+                                  {!osUpdateStatusKnown ? (
+                                    <div
+                                      className="text-sm text-muted-foreground flex items-center gap-2"
+                                      title={uc?.error || undefined}
+                                    >
+                                      <AlertTriangle className="h-4 w-4 text-amber-400 flex-shrink-0" />
+                                      {t("vmLxc.updates.osStatusUnavailable")}
+                                    </div>
+                                  ) : hasOsUpdates ? (() => {
                                     const stored = uc!.packages?.length || 0
                                     const total = uc!.count || 0
                                     const sec = uc!.security_count || 0
@@ -5131,10 +5199,17 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                                     <Button
                                       size="sm"
                                       onClick={() => openApplyTerminal(selectedVM.vmid, "os")}
-                                      className={hasOsUpdates ? pendingBtnCls : upToDateBtnCls}
+                                      className={hasOsUpdates
+                                        ? pendingBtnCls
+                                        : osUpdateStatusKnown
+                                          ? upToDateBtnCls
+                                          : neutralBtnCls}
                                     >
                                       {hasOsUpdates && <ArrowUpCircle className="h-4 w-4 mr-1.5" />}
-                                      {hasOsUpdates ? t("vmLxc.updates.applyOsUpdate") : t("vmLxc.updates.osUpToDate")}
+                                      {!hasOsUpdates && !osUpdateStatusKnown && <RefreshCw className="h-4 w-4 mr-1.5" />}
+                                      {hasOsUpdates || !osUpdateStatusKnown
+                                        ? t("vmLxc.updates.applyOsUpdate")
+                                        : t("vmLxc.updates.osUpToDate")}
                                     </Button>
                                   </div>
                                 </div>

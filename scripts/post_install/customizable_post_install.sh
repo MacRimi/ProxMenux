@@ -2045,7 +2045,7 @@ EOF
 
 
 setup_motd() {
-    local FUNC_VERSION="1.1"
+    local FUNC_VERSION="1.0"
     # description: Add the ProxMenux MOTD banner while preserving the original file contents or absence for rollback.
     msg_info2 "$(translate "Configuring MOTD (Message of the Day) banner...")"
 

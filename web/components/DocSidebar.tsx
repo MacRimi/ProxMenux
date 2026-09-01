@@ -60,6 +60,7 @@ export const sidebarItems: MenuItem[] = [
         href: "/docs/monitor/dashboard",
         submenu: [
           { title: "System Overview tab", i18nKey: "dashboardSystemOverview", href: "/docs/monitor/dashboard/system-overview" },
+          { title: "Apps tab", i18nKey: "dashboardApps", href: "/docs/monitor/dashboard/apps" },
           { title: "Storage tab", i18nKey: "dashboardStorage", href: "/docs/monitor/dashboard/storage" },
           { title: "Network tab", i18nKey: "dashboardNetwork", href: "/docs/monitor/dashboard/network" },
           {

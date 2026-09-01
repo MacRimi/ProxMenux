@@ -713,7 +713,17 @@ main() {
     echo "Paths to back up: ${#paths[@]}"
     echo "Preparing staging area at $stage_root ..."
   } >>"$log_file"
-  hb_prepare_staging "$stage_root" "${paths[@]}" >>"$log_file" 2>&1
+  if ! hb_prepare_staging "$stage_root" "${paths[@]}" >>"$log_file" 2>&1; then
+    echo "RESULT=failed" >>"$summary_file"
+    echo "LOG_FILE=${log_file}" >>"$summary_file"
+    echo "=== Job aborted: one or more selected paths could not be copied ===" >>"$log_file"
+    export HB_NOTIFY_REASON="One or more selected backup paths could not be copied"
+    export HB_NOTIFY_DURATION="0s"
+    hb_notify_lifecycle "fail"
+    rm -rf "$stage_root"
+    (( TTY )) && msg_error "$(translate "Backup failed. See log:") $log_file"
+    exit 1
+  fi
   local staged_files staged_size
   staged_files=$(find "$stage_root/rootfs" -type f 2>/dev/null | wc -l)
   staged_size=$(hb_file_size "$stage_root/rootfs" 2>/dev/null || echo "?")

@@ -262,6 +262,11 @@ _LOGO_URL_RE = re.compile(r"^https?://[\w\-._~:/?#\[\]@!$&'()*+,;=%]{1,510}$")
 # Community-scripts slug — lowercase letters/digits/dashes/underscores/dots.
 # Same shape helpers_cache uses for its own slug field.
 _HELPER_SLUG_RE = re.compile(r"^[a-z0-9][a-z0-9._-]{0,63}$")
+# Web Link category — free-text label the user picks from the presets
+# built from helpers_cache.category_names, or types freely. Keep the
+# charset permissive enough for community-scripts labels ("Media &
+# Streaming", "*Arr Suite", "AI / Coding & Dev-Tools").
+_CATEGORY_RE = re.compile(r"^[\w\s&/,.\-*+()]{1,60}$", re.UNICODE)
 # OCI label key (e.g. org.opencontainers.image.version) — reverse-DNS
 # style dot-separated identifiers.
 _OCI_LABEL_RE = re.compile(r"^[a-zA-Z][a-zA-Z0-9._\-]{0,127}$")
@@ -463,6 +468,24 @@ def _validate_ports(ports_in: Any) -> tuple[bool, Any]:
             if not _LOGO_URL_RE.match(link_logo):
                 return _err(f"ports[{i}].logo_url must be an http(s) URL (max 512 chars)")
             entry["logo_url"] = link_logo
+        # Per-link category — optional free-text label the user picks
+        # from the presets sourced from helpers_cache.category_names.
+        # Powers the Apps dashboard (filter/group by category).
+        category = (item.get("category") or "").strip()
+        if category:
+            if not _CATEGORY_RE.match(category):
+                return _err(f"ports[{i}].category has invalid characters or is too long")
+            entry["category"] = category
+        # Optional custom URL — takes precedence over the ip:port
+        # composition when present. Used for apps reached through a
+        # reverse-proxy domain (e.g. https://vault.example.com) so the
+        # Apps dashboard opens the public URL instead of the internal
+        # ip:port. Same http(s) allow-list as the app-level logo.
+        custom_url = (item.get("custom_url") or "").strip()
+        if custom_url:
+            if not _LOGO_URL_RE.match(custom_url):
+                return _err(f"ports[{i}].custom_url must be an http(s) URL (max 512 chars)")
+            entry["custom_url"] = custom_url
         out.append(entry)
     return True, out
 
@@ -2135,6 +2158,13 @@ def _docker_inventory_from_ct(vmid) -> dict:
                 == image_id.removeprefix("sha256:")
             )
         })
+        if not used_by:
+            # Skip orphan images (no container — running or stopped —
+            # references them). They are residual `docker pull` artifacts
+            # that would report bogus "update available" entries for tags
+            # no live workload uses. The user manages orphan cleanup with
+            # `docker image prune` / `docker rmi` outside of ProxMenux.
+            continue
         used_containers = [item for item in containers if item.get("name") in used_by]
         compose_targets: dict[str, dict] = {}
         standalone_containers: list[str] = []
@@ -3427,6 +3457,62 @@ def _summarise_app(app: dict) -> dict:
     }
 
 
+def get_category_presets() -> list:
+    """Return the sorted list of unique category names sourced from
+    helpers_cache. Powers the "Categoría" dropdown in the Web Link
+    editor and the Apps dashboard filter. If the cache is missing or
+    empty, returns a short built-in fallback so the UI never shows an
+    empty preset list.
+    """
+    fallback = [
+        "Adblock & DNS", "Authentication & Security", "Automation & Scheduling",
+        "Backup & Recovery", "Containers & Docker", "Databases",
+        "Documents & Notes", "Files & Downloads", "Media & Streaming",
+        "Miscellaneous", "Monitoring & Analytics", "Network & Firewall",
+    ]
+    try:
+        import managed_installs
+        cache = managed_installs._fetch_helpers_cache() or {}
+    except Exception:
+        return fallback
+    seen: set = set()
+    for entry in cache.values():
+        if not isinstance(entry, dict):
+            continue
+        for name in entry.get("category_names") or []:
+            if isinstance(name, str) and name.strip():
+                seen.add(name.strip())
+    return sorted(seen) if seen else fallback
+
+
+def suggest_category_for(name_or_slug: str) -> Optional[str]:
+    """Look up a category preset by app name/slug against helpers_cache.
+    Powers the auto-fill in the Web Link editor — when the user types
+    a name that matches a catalog entry, the category dropdown
+    pre-selects the first category_names value. Returns None when the
+    name has no match or the cache is unavailable.
+    """
+    if not name_or_slug:
+        return None
+    needle = name_or_slug.strip().lower()
+    if not needle:
+        return None
+    try:
+        import managed_installs
+        cache = managed_installs._fetch_helpers_cache() or {}
+    except Exception:
+        return None
+    for slug, entry in cache.items():
+        if not isinstance(entry, dict):
+            continue
+        if slug == needle or (entry.get("name") or "").lower() == needle:
+            cats = entry.get("category_names") or []
+            if cats and isinstance(cats[0], str) and cats[0].strip():
+                return cats[0].strip()
+            return None
+    return None
+
+
 def get_catalog() -> list:
     """Return a compact catalog of registerable apps for the frontend
     picker. Sourced from helpers_cache.json (community-scripts, ~700
@@ -3519,6 +3605,13 @@ def get_catalog_entry(slug: str, vmid=None) -> Optional[dict]:
         except (TypeError, ValueError):
             pass
 
+    # First category name from helpers_cache — auto-fills the port's
+    # Categoría field when the user picks this app from the catalog.
+    category = None
+    cat_names = catalog.get("category_names") or []
+    if cat_names and isinstance(cat_names[0], str) and cat_names[0].strip():
+        category = cat_names[0].strip()
+
     return {
         "slug": slug,
         "name": catalog.get("name") or (hint.get("name") if isinstance(hint, dict) else None) or slug,
@@ -3528,6 +3621,7 @@ def get_catalog_entry(slug: str, vmid=None) -> Optional[dict]:
         ) or None,
         "website": catalog.get("website") or "",
         "default_ports": default_ports,
+        "category": category,
         "tracking_suggestion": tracking,
     }
 
@@ -4300,11 +4394,18 @@ def get_suggestions(vmid, force: bool = False) -> dict:
                     det_ports.append(n)
             except (TypeError, ValueError):
                 pass
+        # Auto-fill Categoría preset from helpers_cache for extras too
+        # so the Register button pre-selects the category on the port.
+        det_category = None
+        det_cat_names = det_catalog.get("category_names") or []
+        if det_cat_names and isinstance(det_cat_names[0], str) and det_cat_names[0].strip():
+            det_category = det_cat_names[0].strip()
         extras.append({
             "slug": det_slug,
             "name": det_name,
             "logo_url": det_logo or None,
             "default_ports": det_ports,
+            "category": det_category,
             "tracking_suggestion": det_tracking,
         })
 
@@ -4316,6 +4417,9 @@ def get_suggestions(vmid, force: bool = False) -> dict:
         "tracking_suggestion": tracking,
         "default_ports": default_ports,
         "logo_url": logo_url or None,
+        # Categoría preset for the primary detection — same lookup as
+        # get_catalog_entry so the Register button pre-selects it.
+        "category": suggest_category_for(slug),
         "extras": extras,
         "docker_web_links": docker_web_links,
     }

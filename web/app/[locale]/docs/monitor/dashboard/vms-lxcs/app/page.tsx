@@ -62,6 +62,11 @@ export default async function AppTabPage({
       {chunks}
     </Link>
   )
+  const linkApps = (chunks: React.ReactNode) => (
+    <Link href="/docs/monitor/dashboard/apps" className="text-blue-600 hover:underline">
+      {chunks}
+    </Link>
+  )
   const richList = (base: string, items: string[]) => (
     <ul className="mt-2 list-disc space-y-2 pl-6 text-gray-800">
       {items.map((_, idx) => (
@@ -77,6 +82,9 @@ export default async function AppTabPage({
       <p className="mt-6 text-gray-800">{t.rich("intro.p1", { strong, em, code })}</p>
       <p className="mt-4 text-gray-800">{t.rich("intro.p2", { strong, em, code, link: linkUpdates })}</p>
       <Callout variant="info">{t.rich("intro.callout", { strong, em, code })}</Callout>
+      <Callout variant="tip" title={t("intro.dashboardTitle")}>
+        {t.rich("intro.dashboard", { strong, appsLink: linkApps })}
+      </Callout>
 
       <h2 className="mt-10 mb-4 text-2xl font-semibold text-gray-900">{t("overview.heading")}</h2>
       <p className="text-gray-800">{t("overview.lead")}</p>

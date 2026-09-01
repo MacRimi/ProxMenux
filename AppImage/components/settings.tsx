@@ -16,6 +16,7 @@ import { getNetworkUnit } from "../lib/format-network"
 import { fetchApi } from "../lib/api-config"
 import { SUPPORTED_LANGUAGES, useI18n } from "../lib/i18n/provider"
 import type { LanguageCode } from "../lib/i18n/languages"
+import { NavTabOrderCard } from "./nav-tab-order-card"
 
 // GitHub Dark color palette for bash syntax highlighting
 const BASH_KEYWORDS = new Set([
@@ -1051,6 +1052,9 @@ export function Settings() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Navigation Tab Order — user-orderable top-level tabs */}
+      <NavTabOrderCard />
 
       {/* Network Units Settings */}
       <Card>

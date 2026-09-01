@@ -16,6 +16,7 @@
 }
 
 HB_STATE_DIR="/usr/local/share/proxmenux"
+HB_BACKUP_JOBS_DIR="${PMX_BACKUP_JOBS_DIR:-/var/lib/proxmenux/backup-jobs}"
 HB_BORG_VERSION="1.2.8"
 HB_BORG_LINUX64_SHA256="cfa50fb704a93d3a4fa258120966345fddb394f960dca7c47fcb774d0172f40b"
 HB_BORG_LINUX64_URL="https://github.com/borgbackup/borg/releases/download/${HB_BORG_VERSION}/borg-linux64"
@@ -130,6 +131,7 @@ hb_default_profile_paths() {
         "/usr/local/bin"
         "/usr/local/sbin"
         "/usr/local/share/proxmenux"
+        "$HB_BACKUP_JOBS_DIR"
 
         # ── Root home (rsync excludes volatile dirs) ─────────
         "/root"
@@ -411,6 +413,31 @@ hb_del_extra_path() {
     chmod 600 "$f"
 }
 
+# Returns 0 when a path is operator-added and therefore must be copied
+# verbatim. Persisted extra paths always win, even when their value is also
+# present in the built-in profile (for example /root). A path supplied by an
+# API or a restored custom job is also operator-added when it is not one of
+# the exact built-in profile entries.
+hb_path_is_operator_added() {
+    local candidate="${1%/}"
+    [[ -z "$candidate" ]] && candidate="/"
+
+    local configured normalized
+    while IFS= read -r configured; do
+        normalized="${configured%/}"
+        [[ -z "$normalized" ]] && normalized="/"
+        [[ "$candidate" == "$normalized" ]] && return 0
+    done < <(hb_load_extra_paths)
+
+    while IFS= read -r configured; do
+        normalized="${configured%/}"
+        [[ -z "$normalized" ]] && normalized="/"
+        [[ "$candidate" == "$normalized" ]] && return 1
+    done < <(hb_default_profile_paths)
+
+    return 0
+}
+
 hb_select_profile_paths() {
     local mode="$1"
     local __out_var="$2"
@@ -513,17 +540,67 @@ hb_select_profile_paths() {
 # ==========================================================
 # STAGING OPERATIONS
 # ==========================================================
+hb_snapshot_backup_job_states() {
+    local staging_root="$1"
+    local jobs_root="$staging_root/rootfs/${HB_BACKUP_JOBS_DIR#/}"
+    [[ -d "$jobs_root" ]] || return 0
+    [[ "${PMX_BACKUP_NO_SYSTEMCTL:-0}" == "1" ]] && return 0
+
+    local env_file job_id enabled tmp_file
+    for env_file in "$jobs_root"/*.env; do
+        [[ -f "$env_file" ]] || continue
+        grep -q '^MANUAL_RUN=1$' "$env_file" 2>/dev/null && continue
+        grep -q '^PVE_STORAGE=' "$env_file" 2>/dev/null && continue
+
+        job_id="$(basename "$env_file" .env)"
+        [[ "$job_id" =~ ^[A-Za-z0-9_-]+$ ]] || continue
+        enabled=0
+        systemctl is-enabled --quiet "proxmenux-backup-${job_id}.timer" >/dev/null 2>&1 && enabled=1
+
+        tmp_file="${env_file}.tmp.$$"
+        awk -v value="$enabled" '
+            BEGIN { found=0 }
+            /^ENABLED=/ { print "ENABLED=" value; found=1; next }
+            { print }
+            END { if (!found) print "ENABLED=" value }
+        ' "$env_file" > "$tmp_file" || { rm -f "$tmp_file"; return 1; }
+        chmod --reference="$env_file" "$tmp_file" 2>/dev/null || chmod 600 "$tmp_file"
+        mv -f "$tmp_file" "$env_file" || return 1
+    done
+}
+
 hb_prepare_staging() {
     local staging_root="$1"; shift
     local paths=("$@")
+    local -a built_in_paths=() operator_paths=()
+    mapfile -t built_in_paths < <(hb_default_profile_paths)
+    mapfile -t operator_paths < <(hb_load_extra_paths)
+
+    # Job definitions are control-plane state. Include them even in a
+    # custom payload so the restored host can reconstruct its schedules.
+    if [[ -e "$HB_BACKUP_JOBS_DIR" ]]; then
+        local jobs_covered=0 candidate normalized
+        for candidate in "${paths[@]}"; do
+            normalized="${candidate%/}"
+            [[ -z "$normalized" ]] && normalized="/"
+            if [[ "$HB_BACKUP_JOBS_DIR" == "$normalized" || "$HB_BACKUP_JOBS_DIR" == "$normalized"/* ]]; then
+                jobs_covered=1
+                break
+            fi
+        done
+        (( jobs_covered )) || paths+=("$HB_BACKUP_JOBS_DIR")
+    fi
 
     rm -rf "$staging_root"
     mkdir -p "$staging_root/rootfs" "$staging_root/metadata"
 
     local selected_file="$staging_root/metadata/selected_paths.txt"
     local missing_file="$staging_root/metadata/missing_paths.txt"
+    local failed_file="$staging_root/metadata/failed_paths.txt"
+    local copy_failed=0
     : > "$selected_file"
     : > "$missing_file"
+    : > "$failed_file"
 
     # pmxcfs (/etc/pve) is served from this SQLite DB with pve-cluster
     # running. A plain rsync of the raw file can catch it mid-WAL
@@ -538,31 +615,57 @@ hb_prepare_staging() {
                 ".backup '$staging_root/rootfs/var/lib/pve-cluster/config.db'" 2>/dev/null; then
                 echo "pmxcfs_config_db=sqlite_backup" >> "$staging_root/metadata/run_info.env.tmp"
             else
-                cp -a /var/lib/pve-cluster/config.db \
-                    "$staging_root/rootfs/var/lib/pve-cluster/config.db.raw-fallback" 2>/dev/null || true
-                echo "pmxcfs_config_db=raw_fallback" >> "$staging_root/metadata/run_info.env.tmp"
+                if cp -a /var/lib/pve-cluster/config.db \
+                    "$staging_root/rootfs/var/lib/pve-cluster/config.db.raw-fallback"; then
+                    echo "pmxcfs_config_db=raw_fallback" >> "$staging_root/metadata/run_info.env.tmp"
+                else
+                    echo "/var/lib/pve-cluster/config.db" >> "$failed_file"
+                    copy_failed=1
+                fi
             fi
         else
-            cp -a /var/lib/pve-cluster/config.db \
-                "$staging_root/rootfs/var/lib/pve-cluster/config.db.raw-fallback" 2>/dev/null || true
-            echo "pmxcfs_config_db=raw_fallback" >> "$staging_root/metadata/run_info.env.tmp"
+            if cp -a /var/lib/pve-cluster/config.db \
+                "$staging_root/rootfs/var/lib/pve-cluster/config.db.raw-fallback"; then
+                echo "pmxcfs_config_db=raw_fallback" >> "$staging_root/metadata/run_info.env.tmp"
+            else
+                echo "/var/lib/pve-cluster/config.db" >> "$failed_file"
+                copy_failed=1
+            fi
         fi
     fi
 
-    local p rel target
+    local p rel target operator_added configured normalized built_in_match
     for p in "${paths[@]}"; do
         rel="${p#/}"
-        echo "$rel" >> "$selected_file"
+        operator_added=0
+        normalized="${p%/}"
+        [[ -z "$normalized" ]] && normalized="/"
+        for configured in "${operator_paths[@]}"; do
+            configured="${configured%/}"
+            [[ -z "$configured" ]] && configured="/"
+            if [[ "$normalized" == "$configured" ]]; then
+                operator_added=1
+                break
+            fi
+        done
+        if (( ! operator_added )); then
+            built_in_match=0
+            for configured in "${built_in_paths[@]}"; do
+                configured="${configured%/}"
+                [[ -z "$configured" ]] && configured="/"
+                if [[ "$normalized" == "$configured" ]]; then
+                    built_in_match=1
+                    break
+                fi
+            done
+            (( built_in_match )) || operator_added=1
+        fi
         [[ -e "$p" ]] || { echo "$p" >> "$missing_file"; continue; }
         target="$staging_root/rootfs/$rel"
         if [[ -d "$p" ]]; then
             mkdir -p "$target"
             local -a rsync_opts=(
                 -aAXH --numeric-ids
-                --exclude "images/"
-                --exclude "dump/"
-                --exclude "tmp/"
-                --exclude "*.log"
             )
 
             # /var/lib/pve-cluster: skip the raw config.db and its WAL/SHM
@@ -570,7 +673,7 @@ hb_prepare_staging() {
             # sqlite3 .backup (or as raw-fallback when sqlite3 isn't
             # available). Everything else in the directory (backup subdir,
             # auxiliary state) is safe to rsync live.
-            if [[ "$rel" == "var/lib/pve-cluster" || "$rel" == "var/lib/pve-cluster/"* ]]; then
+            if (( ! operator_added )) && [[ "$rel" == "var/lib/pve-cluster" ]]; then
                 rsync_opts+=(
                     --exclude "config.db"
                     --exclude "config.db-wal"
@@ -579,7 +682,7 @@ hb_prepare_staging() {
             fi
 
             # /root is included by default for easier recovery, but avoid volatile/sensitive noise.
-            if [[ "$rel" == "root" || "$rel" == "root/"* ]]; then
+            if (( ! operator_added )) && [[ "$rel" == "root" ]]; then
                 rsync_opts+=(
                     --exclude ".bash_history"
                     --exclude ".cache/"
@@ -595,7 +698,7 @@ hb_prepare_staging() {
             # the destination's fresh install silently regresses the apply_cluster_postboot
             # dispatcher and the *_installer.sh --auto-reinstall hooks, breaking the
             # "user reinstalls nothing" promise.
-            if [[ "$rel" == "usr/local/share/proxmenux" || "$rel" == "usr/local/share/proxmenux/"* ]]; then
+            if (( ! operator_added )) && [[ "$rel" == "usr/local/share/proxmenux" ]]; then
                 rsync_opts+=(
                     --exclude "restore-pending/"
                     --exclude "scripts/"
@@ -612,12 +715,29 @@ hb_prepare_staging() {
                 )
             fi
 
-            rsync "${rsync_opts[@]}" "$p/" "$target/" 2>/dev/null || true
+            if rsync "${rsync_opts[@]}" "$p/" "$target/"; then
+                echo "$rel" >> "$selected_file"
+            else
+                echo "$p" >> "$failed_file"
+                copy_failed=1
+                rm -rf "$target"
+            fi
         else
             mkdir -p "$(dirname "$target")"
-            cp -a "$p" "$target" 2>/dev/null || true
+            if cp -a "$p" "$target"; then
+                echo "$rel" >> "$selected_file"
+            else
+                echo "$p" >> "$failed_file"
+                copy_failed=1
+                rm -f "$target"
+            fi
         fi
     done
+
+    if ! hb_snapshot_backup_job_states "$staging_root"; then
+        echo "$HB_BACKUP_JOBS_DIR (timer state)" >> "$failed_file"
+        copy_failed=1
+    fi
 
     # Metadata snapshot
     local meta="$staging_root/metadata"
@@ -696,6 +816,8 @@ hb_prepare_staging() {
         # parse_manifest doesn't read a 0-byte JSON downstream.
         [[ -s "$staging_root/manifest.json" ]] || rm -f "$staging_root/manifest.json"
     fi
+
+    return "$copy_failed"
 }
 
 hb_load_restore_paths() {

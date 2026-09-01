@@ -1,19 +1,19 @@
 {
   "meta": {
     "title": "ProxMenux Monitor — Panel | ProxMenux Documentation",
-    "description": "El panel es la UI principal de ProxMenux Monitor: nueve pestañas (Resumen del sistema, Almacenamiento, Red, VMs y LXCs, Hardware, Logs del sistema, Terminal, Seguridad, Settings) más la cabecera global con la información de estado del Monitor de salud."
+    "description": "El panel es la interfaz principal de ProxMenux Monitor: diez pestañas de contenido, incluido el lanzador Apps, además de la cabecera global y un orden de navegación configurable."
   },
   "header": {
     "title": "Panel",
-    "description": "El panel es la vista del día a día de ProxMenux Monitor — nueve pestañas, cada una centrada en una parte del host, más una cabecera global con la información de estado del Monitor de salud, la identidad del nodo y el control de refresco rápido.",
+    "description": "El panel es la vista diaria de ProxMenux Monitor: diez pestañas de contenido, incluido el lanzador Apps, además de una cabecera global y un orden de navegación configurable.",
     "section": "ProxMenux Monitor"
   },
   "oneHeader": {
-    "title": "Una cabecera, nueve pestañas",
+    "title": "Una cabecera, diez pestañas",
     "body": "La cabecera (logo, nombre del nodo, información de estado, uptime, refresco, conmutador de tema) permanece visible en todo momento. La pestaña activa que hay debajo cambia el área de contenido entera. El color de la información de estado refleja la peor categoría del <link>Monitor de salud</link> — es el mismo dato visto desde el panel."
   },
   "tabs": {
-    "heading": "Las nueve pestañas",
+    "heading": "Las diez pestañas",
     "intro": "Cada pestaña tiene su propia página dedicada. Las páginas se añaden de forma incremental a medida que se completa la documentación; abajo está la lista completa con lo que cubre cada una.",
     "headerTab": "Pestaña",
     "headerOwns": "De qué se encarga",
@@ -21,7 +21,12 @@
       {
         "name": "Resumen del sistema",
         "linksTo": "/docs/monitor/dashboard/system-overview",
-        "owns": "Widgets de CPU / memoria / temperatura, contador de VMs y LXCs activos, gráficas de métricas históricas, resúmenes de almacenamiento y red. Pestaña por defecto al entrar."
+        "owns": "Widgets de CPU, memoria y temperatura; contador de VMs y LXCs activos; gráficas históricas y resúmenes de almacenamiento y red. Es la pestaña inicial mientras no se personalice el orden de navegación."
+      },
+      {
+        "name": "Apps",
+        "linksTo": "/docs/monitor/dashboard/apps",
+        "owns": "Lanzador unificado para enlaces web registrados en LXCs y enlaces personalizados, con categorías, búsqueda, acceso al invitado y señales de actualización por aplicación."
       },
       {
         "name": "Almacenamiento",
@@ -52,8 +57,8 @@
         "owns": "Configuración de autenticación, contraseña / 2FA / tokens API, log de auditoría, panel opcional de Fail2Ban, despliegue de Secure Gateway."
       },
       {
-        "name": "Settings",
-        "owns": "Canales de notificación, proveedor de IA, duraciones de supresión, branding, flags avanzados."
+        "name": "Ajustes",
+        "owns": "Idioma del Monitor, orden de navegación, canales de notificación, proveedor de IA, umbrales de salud, exclusiones e inventario de optimizaciones."
       }
     ]
   },
@@ -72,9 +77,14 @@
     "heading": "Por dónde seguir",
     "items": [
       {
+        "label": "Pestaña Apps",
+        "href": "/docs/monitor/dashboard/apps",
+        "tail": " — el lanzador unificado de enlaces web y su relación con las aplicaciones registradas en LXCs."
+      },
+      {
         "label": "Pestaña Resumen del sistema",
         "href": "/docs/monitor/dashboard/system-overview",
-        "tail": " — la pestaña por defecto, documentada al completo."
+        "tail": " — la pestaña inicial predeterminada, documentada al completo."
       },
       {
         "label": "Monitor de salud",

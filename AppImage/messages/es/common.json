@@ -31,6 +31,7 @@
   },
   "navigation": {
     "overview": "General",
+    "apps": "Apps",
     "storage": "Almacenamiento",
     "network": "Red",
     "virtualMachines": "VM y LXC",
@@ -1211,6 +1212,7 @@
       "familyLabel": "Familia:",
       "applyOsUpdate": "Aplicar actualizaciones de SO",
       "osUpToDate": "SO actualizado",
+      "osStatusUnavailable": "No se ha podido determinar el estado de las actualizaciones del SO.",
       "installedByHelperPrefix": "Instalado por",
       "helperScriptsName": "Proxmox VE Helper-Scripts",
       "helperUpdatesRun": "Instalado por Proxmox Helper-Scripts.",
@@ -1369,7 +1371,7 @@
       "methodApk": "paquete apk (alpino)",
       "methodBinary": "Binario (ruta absoluta o nombre simple)",
       "methodFile": "archivo + expresión regular",
-      "methodDockerLabel": "inspección acoplable (etiqueta OCI)",
+      "methodDockerLabel": "docker inspect (etiqueta OCI)",
       "methodDockerExec": "docker exec (binario en contenedor)",
       "methodPython": "distribución de Python (importlib.metadata)",
       "methodCommand": "comando (avanzado - argv)",
@@ -1438,7 +1440,12 @@
       "portHttps": "https",
       "portLogoLabel": "URL del logotipo para este enlace (opcional)",
       "portLogoPlaceholder": "por ejemplo, https://example.com/logo.webp",
-      "removePortTooltip": "Quitar puerto",
+      "portCategoryPlaceholder": "Categoría para el dashboard de Apps (opcional)",
+      "portCategoryNone": "Sin categoría",
+      "portCategoryAddNew": "+ Añadir nueva categoría…",
+      "portCategoryCustomPlaceholder": "Escribe una categoría y pulsa Enter (Esc para cancelar)",
+      "portCustomUrlPlaceholder": "URL personalizada (p.ej. https://vault.example.com) — sustituye IP:puerto",
+      "removePortTooltip": "Eliminar puerto",
       "detectMethodDpkg": "dp kg ·",
       "detectMethodApk": "aplicación ·",
       "detectMethodBinary": "binario ·",
@@ -1487,7 +1494,7 @@
       "managedApp": "aplicación administrada",
       "managedStatus": "administrado",
       "checkedAt": "Marcado {date}",
-      "latestUpstream": "Última versión disponible",
+      "latestUpstream": "Última",
       "loadingApplications": "Cargando aplicaciones…",
       "nameSearchPlaceholder": "Escribe para buscar más de 700 aplicaciones o escribe la tuya propia",
       "matchCount": "{count} coincidencias",
@@ -2045,7 +2052,18 @@
           "title": "Capacidad del grupo ZFS",
           "description": "Grupos ZFS a nivel de host, independientes del registro PVE, por lo que también se monitorean el rpool y los grupos de respaldo dedicados."
         }
-      }
+      },
+      "swapPressure": "Presión de memoria",
+      "swapPressureHint": "Marca un evento crítico solo cuando se cumplen AMBAS condiciones a la vez: uso del archivo de swap por encima del primer umbral Y RAM disponible por debajo del segundo. Alertar solo por swap era ruidoso en Proxmox porque Linux swapea páginas inactivas mientras la RAM sigue disponible.",
+      "swapHighLabel": "Uso del archivo de swap",
+      "availableMinLabel": "RAM disponible mínima"
+    },
+    "navOrder": {
+      "title": "Orden de navegación",
+      "description": "Personaliza el orden de las pestañas principales. Las pestañas agrupadas (Node, Admin) se mueven como una unidad; sus elementos internos mantienen el orden por defecto.",
+      "reset": "Restaurar por defecto",
+      "hint": "Arrastra para reordenar · En táctil, mantén pulsado primero",
+      "customActive": "Usando orden de navegación personalizado."
     }
   },
   "login": {
@@ -2069,7 +2087,7 @@
     "backupCodeHint": "También puedes utilizar un código de respaldo (formato: XXXX-XXXX)",
     "backToLogin": "Volver a iniciar sesión",
     "verifyCode": "Verificar código",
-    "version": "ProxMenux Monitor v1.2.4.1-beta"
+    "version": "ProxMenux Monitor v1.2.5"
   },
   "account": {
     "signedIn": "Iniciado sesión",
@@ -3120,8 +3138,12 @@
     "currentFeatures": {
       "appDetection": "Detección de apps más inteligente en la pestaña App: Docker se identifica correctamente como la aplicación principal durante el arranque en frío (Portainer/SearXNG ya no aparecen brevemente como apps nativas), las sugerencias sin registrar viven en el cache de inicio y 'Find applications' lanza un escaneo desde el catálogo bajo demanda.",
       "dockerUpdates": "La pestaña Updates ahora cubre Docker de principio a fin: Docker Engine y el seguimiento de actualizaciones por imagen siguen el mismo ciclo de 24 horas que los paquetes del SO, con una acción 'Check now' para comparar digests bajo demanda — sin esperar al collector diario.",
-      "appCatalog": "Nuevo catálogo de detección de aplicaciones con más de 380 workloads reconocidos, construido en directo desde community-scripts con evidencia independiente por script. Detectores primarios y de fallback (fichero, binario, dpkg, apk, Python, Docker exec, Docker label) cubren layouts LXC nuevos e históricos.",
-      "pushover": "Pushover se une a Telegram, Gotify, Discord, Email y Apprise como canal de notificación nativo — clave user/API, selectores de dispositivo y sonido, prioridad 0 para mensajes normales, prioridad 1 opcional para eventos CRITICAL. Sugerido por @benginx (#308)."
+      "appCatalog": "Nuevo catálogo de detección de aplicaciones con más de 380 workloads, generado en vivo desde community-scripts con siete métodos de detección (archivo, binario, dpkg, apk, Python, Docker exec, Docker label). Detectores principales y de reserva cubren tanto los nuevos como los históricos layouts de LXC.",
+      "pushover": "Pushover se une a Telegram, Gotify, Discord, Email y Apprise como canal de notificación nativo — clave user/API, selectores de dispositivo y sonido, prioridad 0 para mensajes normales, prioridad 1 opcional para eventos CRITICAL. Sugerido por @benginx (#308).",
+      "appsDashboard": "Nueva pestaña Apps de nivel superior — un lanzador único para cada enlace web del nodo. Las aplicaciones registradas en LXC y los enlaces web personalizados comparten la misma cuadrícula con etiquetas de categoría, búsqueda y acceso directo al modal del invitado.",
+      "lxcAppsUpdates": "La pestaña App dentro del modal de cada LXC registra las aplicaciones instaladas, captura sus enlaces web y realiza seguimiento de versiones. La pestaña Updates rediseñada aplica actualizaciones de paquetes del sistema y de aplicaciones desde un solo botón; Docker Engine y cada imagen siguen el mismo ciclo de 24 horas, con acción 'Comprobar ahora' bajo demanda.",
+      "multilingual": "El Monitor ahora habla 8 idiomas: inglés, español, alemán, francés, italiano, portugués, sueco y eslovaco. Un enorme agradecimiento a @vaso73 por construir la base de i18n que lo hizo posible.",
+      "nvidiaMultiGpu": "El ciclo de vida del driver NVIDIA pasa a propiedad por BDF exacto, de modo que un host multi-GPU puede pasar una tarjeta a una VM y mantener la otra operativa en el host o en LXCs, junto con un selector de versión sensible al kernel, la rama y la GPU (#298)."
     }
   },
   "network": {
@@ -3525,7 +3547,7 @@
       "wifi": "wifi",
       "storage": "Almacenamiento",
       "storageController": "Controlador de almacenamiento",
-      "hid": "escondido",
+      "hid": "HID",
       "vendorSpecific": "Específico del proveedor",
       "communications": "Comunicaciones",
       "integrated": "Integrado",
@@ -4733,5 +4755,43 @@
     "yourInput": "Su entrada:",
     "submit": "Entregar",
     "ok": "OK"
+  },
+  "apps": {
+    "searchPlaceholder": "Buscar app o CT…",
+    "searchAriaLabel": "Buscar",
+    "filterAll": "Todas las categorías",
+    "filterAriaLabel": "Filtrar por categoría",
+    "sortAriaLabel": "Ordenar por",
+    "sortName": "Nombre",
+    "sortId": "ID",
+    "sortCategory": "Categoría",
+    "countOne": "1 app",
+    "countMany": "{n} apps",
+    "uncategorized": "Sin categoría",
+    "openAriaLabel": "Abrir {name} en una pestaña nueva",
+    "openGuestAriaLabel": "Abrir {name} ({type} {id})",
+    "emptyTitle": "Todavía no hay apps con enlace web.",
+    "emptyHint": "Registra un enlace web en la pestaña App de cualquier CT para verlo aquí.",
+    "customLinkAdd": "Añadir enlace",
+    "editModeToggle": "Editar",
+    "editModeDone": "Hecho",
+    "customLinkNewTitle": "Nuevo enlace web",
+    "customLinkEditTitle": "Editar enlace web",
+    "customLinkEditAria": "Editar el enlace personalizado {name}",
+    "customLinkName": "Nombre",
+    "customLinkNamePlaceholder": "p. ej. Mi app",
+    "customLinkUrl": "URL",
+    "customLinkLogo": "URL del logo (opcional)",
+    "customLinkLogoPlaceholder": "por ejemplo, https://example.com/logo.webp",
+    "customLinkCategory": "Categoría (opcional)",
+    "customLinkBinding": "Asociado a",
+    "customLinkBindingNone": "Sin asociar a ningún guest",
+    "customLinkBindingHelp": "Asocia el enlace a una VM o LXC para que la card muestre su ID + nombre y puedas saltar al guest con un click.",
+    "customLinkSave": "Guardar",
+    "customLinkCreate": "Crear",
+    "customLinkCancel": "Cancelar",
+    "customLinkDelete": "Eliminar",
+    "customLinkSaveError": "Error al guardar",
+    "customLinkDeleteError": "Error al eliminar"
   }
 }

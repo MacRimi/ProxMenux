@@ -30,6 +30,7 @@
   },
   "navigation": {
     "overview": "Overview",
+    "apps": "Apps",
     "storage": "Storage",
     "network": "Network",
     "virtualMachines": "VMs & LXCs",
@@ -1210,6 +1211,7 @@
       "familyLabel": "Family:",
       "applyOsUpdate": "Apply OS update",
       "osUpToDate": "OS up to date",
+      "osStatusUnavailable": "The OS update status could not be determined.",
       "installedByHelperPrefix": "Installed by",
       "helperScriptsName": "Proxmox VE Helper-Scripts",
       "helperUpdatesRun": "Installed by Proxmox Helper-Scripts.",
@@ -1437,6 +1439,11 @@
       "portHttps": "https",
       "portLogoLabel": "Logo URL for this link (optional)",
       "portLogoPlaceholder": "e.g., https://example.com/logo.webp",
+      "portCategoryPlaceholder": "Category for the Apps dashboard (optional)",
+      "portCategoryNone": "No category",
+      "portCategoryAddNew": "+ Add new category…",
+      "portCategoryCustomPlaceholder": "Type a category and press Enter (Esc to cancel)",
+      "portCustomUrlPlaceholder": "Custom URL (e.g. https://vault.example.com) — overrides IP:port",
       "removePortTooltip": "Remove port",
       "detectMethodDpkg": "dpkg ·",
       "detectMethodApk": "apk ·",
@@ -1486,7 +1493,7 @@
       "managedApp": "Managed app",
       "managedStatus": "managed",
       "checkedAt": "Checked {date}",
-      "latestUpstream": "Latest upstream",
+      "latestUpstream": "Latest",
       "loadingApplications": "Loading applications…",
       "nameSearchPlaceholder": "Type to search 700+ apps, or type your own",
       "matchCount": "{count} matches",
@@ -2044,7 +2051,18 @@
           "title": "ZFS pool capacity",
           "description": "ZFS pools at host level, independent of PVE registration, so rpool and dedicated backup pools are also monitored."
         }
-      }
+      },
+      "swapPressure": "Swap pressure",
+      "swapPressureHint": "Marks a critical event only when BOTH conditions hold at the same time — swap file usage above the first threshold AND available RAM below the second. Alerting on swap alone is noisy on Proxmox hosts where Linux swaps out inactive pages while RAM is still plentifully available.",
+      "swapHighLabel": "Swap file usage",
+      "availableMinLabel": "Minimum available RAM"
+    },
+    "navOrder": {
+      "title": "Navigation order",
+      "description": "Personalize the order of the top-level tabs. Grouped tabs (Node, Admin) move as a single unit; their internal items keep their default order.",
+      "reset": "Restore default",
+      "hint": "Drag to reorder · On touch, long-press first",
+      "customActive": "Using custom navigation order."
     }
   },
   "login": {
@@ -2068,7 +2086,7 @@
     "backupCodeHint": "You can also use a backup code (format: XXXX-XXXX)",
     "backToLogin": "Back to login",
     "verifyCode": "Verify Code",
-    "version": "ProxMenux Monitor v1.2.4.1-beta"
+    "version": "ProxMenux Monitor v1.2.5"
   },
   "account": {
     "signedIn": "Signed in",
@@ -3119,8 +3137,12 @@
     "currentFeatures": {
       "appDetection": "Smarter app detection in the App tab: Docker is correctly promoted as the parent workload during cold start (Portainer/SearXNG no longer briefly show up as native apps), unregistered suggestions live in the startup cache, and 'Find applications' runs a fresh catalog-backed scan on demand.",
       "dockerUpdates": "The Updates tab now covers Docker end-to-end: Docker Engine and per-image update tracking follow the same 24-hour rolling cycle as OS packages, with a 'Check now' action for on-demand digest comparison — no more waiting for the daily collector.",
-      "appCatalog": "New application detection catalog with over 380 tracked workloads, built from the live community-scripts source with independent script evidence. Primary and fallback detectors (file, binary, dpkg, apk, Python, Docker exec, Docker label) cover both new and historical LXC layouts.",
-      "pushover": "Pushover joins Telegram, Gotify, Discord, Email and Apprise as a native notification channel — user/API key, device and sound selectors, priority 0 for regular messages, optional priority 1 for CRITICAL events. Suggested by @benginx (#308)."
+      "appCatalog": "New application detection catalog with over 380 tracked workloads, generated live from community-scripts across seven detector methods (file, binary, dpkg, apk, Python, Docker exec, Docker label). Primary and fallback detectors cover both new and historical LXC layouts.",
+      "pushover": "Pushover joins Telegram, Gotify, Discord, Email and Apprise as a native notification channel — user/API key, device and sound selectors, priority 0 for regular messages, optional priority 1 for CRITICAL events. Suggested by @benginx (#308).",
+      "appsDashboard": "New top-level Apps dashboard — a single launcher for every Web Link across the node. LXC-registered apps and user-defined Custom Web Links share the same grid with category badges, search, and one-click deep-links back to the guest modal.",
+      "lxcAppsUpdates": "App tab inside every LXC modal registers installed apps, captures weblinks and tracks upstream versions. Reworked Updates tab applies OS packages and app updates from a single button; Docker Engine and per-image tracking follow the same 24-hour cycle, with a 'Check now' action on demand.",
+      "multilingual": "The Monitor now speaks 8 languages: English, Spanish, German, French, Italian, Portuguese, Swedish and Slovak. Huge thanks to @vaso73 for building the i18n scaffolding that made this possible.",
+      "nvidiaMultiGpu": "NVIDIA driver lifecycle moves to per-BDF ownership so a multi-GPU host can pass one card to a VM and keep the other operational on the host or in LXCs, plus a kernel + branch + GPU-aware version picker (#298)."
     }
   },
   "network": {
@@ -4799,5 +4821,43 @@
     "yourInput": "Your input:",
     "submit": "Submit",
     "ok": "OK"
+  },
+  "apps": {
+    "searchPlaceholder": "Search app or CT…",
+    "searchAriaLabel": "Search",
+    "filterAll": "All categories",
+    "filterAriaLabel": "Filter by category",
+    "sortAriaLabel": "Sort by",
+    "sortName": "Name",
+    "sortId": "ID",
+    "sortCategory": "Category",
+    "countOne": "1 app",
+    "countMany": "{n} apps",
+    "uncategorized": "Uncategorized",
+    "openAriaLabel": "Open {name} in a new tab",
+    "openGuestAriaLabel": "Open {name} ({type} {id})",
+    "emptyTitle": "No apps with a web link yet.",
+    "emptyHint": "Register a Web Link for any app (App tab of a CT) to see it here.",
+    "customLinkAdd": "Add link",
+    "editModeToggle": "Edit",
+    "editModeDone": "Done",
+    "customLinkNewTitle": "New web link",
+    "customLinkEditTitle": "Edit web link",
+    "customLinkEditAria": "Edit custom link {name}",
+    "customLinkName": "Name",
+    "customLinkNamePlaceholder": "e.g. My app",
+    "customLinkUrl": "URL",
+    "customLinkLogo": "Logo URL (optional)",
+    "customLinkLogoPlaceholder": "e.g., https://example.com/logo.webp",
+    "customLinkCategory": "Category (optional)",
+    "customLinkBinding": "Bound to",
+    "customLinkBindingNone": "Not bound to any guest",
+    "customLinkBindingHelp": "Bind this link to a VM or CT to add its ID + name to the card and jump to the guest with one click.",
+    "customLinkSave": "Save",
+    "customLinkCreate": "Create",
+    "customLinkCancel": "Cancel",
+    "customLinkDelete": "Delete",
+    "customLinkSaveError": "Save failed",
+    "customLinkDeleteError": "Delete failed"
   }
 }

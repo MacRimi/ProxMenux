@@ -34,6 +34,7 @@ import { Badge } from "./ui/badge"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select"
 import { fetchApi } from "../lib/api-config"
 import { fetchLxcApps, getLxcAppsCached, setLxcAppsCached } from "../lib/lxc-apps-cache"
+import { categoryChipStyle, useIsLightTheme } from "../lib/category-color"
 import { useT } from "@/lib/i18n/provider"
 
 // installed_via is optional now — an empty value means "register only,
@@ -50,6 +51,14 @@ interface PortEntry {
   scheme?: "http" | "https"
   web_path?: string
   logo_url?: string
+  // Free-text label picked from the presets sourced by
+  // /api/apps/categories (built from helpers_cache.category_names) or
+  // typed manually. Powers the Apps dashboard filter/group.
+  category?: string
+  // Overrides ip:port composition when present — used for apps that
+  // sit behind a reverse-proxy domain. The Apps dashboard opens this
+  // URL as-is instead of `${scheme}://${ip}:${port}${path}`.
+  custom_url?: string
 }
 
 interface AppConfig {
@@ -102,6 +111,9 @@ interface DetectedApp {
   name: string
   logo_url?: string | null
   default_ports?: number[]
+  // Categoría preset from helpers_cache.category_names[0] — used to
+  // auto-fill the Web Link editor when the user clicks "Register".
+  category?: string | null
   tracking_suggestion?: TrackingSuggestion | null
 }
 
@@ -206,6 +218,7 @@ interface Suggestions {
   tracking_suggestion?: TrackingSuggestion | null
   default_ports?: number[]
   logo_url?: string | null
+  category?: string | null
   extras?: DetectedApp[]
   docker_web_links?: DockerWebLinkSuggestion[]
 }
@@ -230,6 +243,9 @@ interface CatalogDetail {
   logo_url: string | null
   website: string
   default_ports: number[]
+  // First helpers_cache.category_names value for this slug — auto-fills
+  // the Categoría field on each port when seeded.
+  category?: string | null
   tracking_suggestion?: TrackingSuggestion | null
 }
 
@@ -319,7 +335,9 @@ const HTTPS_HINT_PORTS = new Set([443, 4443, 8443, 9443])
 const defaultSchemeFor = (port: number | ""): "http" | "https" =>
   HTTPS_HINT_PORTS.has(Number(port)) ? "https" : "http"
 
-function buildWebUrl(ip: string | undefined | null, port: number | "", scheme?: "http" | "https") {
+function buildWebUrl(ip: string | undefined | null, port: number | "", scheme?: "http" | "https", customUrl?: string) {
+  const custom = (customUrl || "").trim()
+  if (custom) return custom
   if (!ip || ip === "DHCP" || !port) return null
   return `${scheme || defaultSchemeFor(port)}://${ip}:${port}`
 }
@@ -339,6 +357,7 @@ function suggestPackageName(name: string) {
 
 export function LxcAppPanel({ vmid, ctIp, onChange, managed, initialData }: Props) {
   const t = useT()
+  const isLightTheme = useIsLightTheme()
   // Seed from `initialData` first, then fall back to the shared cache
   // module. Together those two sources cover every reopen scenario
   // without flashing a spinner — see lxc-apps-cache.ts for the dedup
@@ -370,6 +389,16 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed, initialData }: Prop
   // endpoter to seed name / logo / ports / tracking_suggestion at once.
   const [catalog, setCatalog] = useState<CatalogEntry[]>([])
   const [pickerOpen, setPickerOpen] = useState(false)
+  // Preset categories exposed by /api/apps/categories (built from
+  // helpers_cache.category_names). Feeds the Categoría <Select> in
+  // the Web Link editor. Cached client-side for the session — the
+  // endpoint is static per app version so no revalidation needed.
+  const [categoryPresets, setCategoryPresets] = useState<string[]>([])
+  // Ports where the user picked "+ Add new" and is typing a custom
+  // category. Tracked by port index; cleared once they blur the
+  // input or come back to a preset. Also auto-inferred when the
+  // stored category isn't in the presets (freshly-loaded sidecar).
+  const [customCategoryPorts, setCustomCategoryPorts] = useState<Set<number>>(new Set())
 
   // "Register a different app" browse panel: when the user has hidden
   // some detections we surface them here with a Restore button before
@@ -489,6 +518,17 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed, initialData }: Prop
     return () => { cancelled = true }
   }, [editorOpen, catalog.length])
 
+  useEffect(() => {
+    if (!editorOpen || categoryPresets.length > 0) return
+    let cancelled = false
+    fetchApi<string[]>("/api/apps/categories")
+      .then((data: string[]) => {
+        if (!cancelled && Array.isArray(data)) setCategoryPresets(data)
+      })
+      .catch(() => { /* non-fatal — datalist stays empty, user still types freely */ })
+    return () => { cancelled = true }
+  }, [editorOpen, categoryPresets.length])
+
   // Derived state — computed here BEFORE any conditional early
   // return so React sees the same hook order on every render.
   // Rules of Hooks: `useMemo` after an `if (loading) return …`
@@ -508,6 +548,7 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed, initialData }: Prop
         name: suggestions.name_suggestion,
         logo_url: suggestions.logo_url,
         default_ports: suggestions.default_ports,
+        category: suggestions.category,
         tracking_suggestion: suggestions.tracking_suggestion,
       })
     }
@@ -659,6 +700,10 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed, initialData }: Prop
             port,
             scheme: defaultSchemeFor(port),
             web_path: s?.web_path_hint || "",
+            // Auto-fill Categoría from helpers_cache.category_names[0]
+            // when the catalog entry carries one. User can still change
+            // it in the editor before saving.
+            ...(p.category ? { category: p.category } : {}),
           }))
         }
         if (opts.withTracking && p.tracking_suggestion) {
@@ -1081,12 +1126,28 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed, initialData }: Prop
         logo_url: link.logo_url || "",
       }
       const last = draft.ports[draft.ports.length - 1]
-      if (last && last.port === "" && !last.description) {
-        const ports = [...draft.ports]
-        ports[ports.length - 1] = entry
-        setField({ ports })
-      } else {
+      const indexAfterAdd = (last && last.port === "" && !last.description)
+        ? draft.ports.length - 1
+        : draft.ports.length
+      if (indexAfterAdd === draft.ports.length) {
         setField({ ports: [...draft.ports, entry] })
+      } else {
+        const ports = [...draft.ports]
+        ports[indexAfterAdd] = entry
+        setField({ ports })
+      }
+      // Ask the backend whether this service_name has a known catalog
+      // category and, if so, patch the just-inserted port so the user
+      // finds it pre-selected instead of having to open the dropdown.
+      // Non-blocking — the port is already visible either way.
+      const q = (link.service_name || "").trim()
+      if (q) {
+        fetchApi<{ category: string | null }>(`/api/apps/suggest_category?name=${encodeURIComponent(q)}`)
+          .then((r) => {
+            if (!r?.category) return
+            setPort(indexAfterAdd, { category: r.category })
+          })
+          .catch(() => { /* non-fatal — user can pick manually */ })
       }
     }
     const removePort = (i: number) =>
@@ -1323,6 +1384,7 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed, initialData }: Prop
                 </div>
               )}
 
+
               <div className="space-y-3">
                 {draft.ports.map((entry, i) => (
                   <div
@@ -1373,9 +1435,79 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed, initialData }: Prop
                       onChange={(e) => setPort(i, { logo_url: e.target.value })}
                       placeholder={t("vmLxc.appEditor.portLogoLabel")}
                       maxLength={512}
-                      className="col-start-1 col-end-4 text-xs font-mono h-8 opacity-70 focus:opacity-100"
+                      className="col-start-1 col-end-4 text-xs font-mono h-8"
                       type="url"
                     />
+                    {/* Category + custom URL — stacked on mobile so
+                        each field gets full width; side-by-side on
+                        tablet+ (≥sm) to save vertical space. Both
+                        span cols 1-3 via the outer wrapper. */}
+                    <div className="col-start-1 col-end-4 flex flex-col sm:flex-row gap-2">
+                      {/* Per-link category — <Select> for presets +
+                          "+ Add new" option that flips to a text
+                          input. Matches the "Installed via" Select
+                          look elsewhere in this editor. */}
+                      <div className="flex-1 min-w-0">
+                        {(customCategoryPorts.has(i) ||
+                          (entry.category && !categoryPresets.includes(entry.category))) ? (
+                          <Input
+                            autoFocus={customCategoryPorts.has(i)}
+                            value={entry.category || ""}
+                            onChange={(e) => setPort(i, { category: e.target.value })}
+                            onBlur={() => {
+                              if (!(entry.category || "").trim()) {
+                                setCustomCategoryPorts((s) => { const n = new Set(s); n.delete(i); return n })
+                              }
+                            }}
+                            onKeyDown={(e) => {
+                              if (e.key === "Escape") {
+                                setPort(i, { category: "" })
+                                setCustomCategoryPorts((s) => { const n = new Set(s); n.delete(i); return n })
+                              }
+                            }}
+                            placeholder={t("vmLxc.appEditor.portCategoryCustomPlaceholder")}
+                            maxLength={60}
+                            className="text-xs h-8"
+                          />
+                        ) : (
+                          <Select
+                            value={entry.category || "__none__"}
+                            onValueChange={(v) => {
+                              if (v === "__add__") {
+                                setCustomCategoryPorts((s) => new Set(s).add(i))
+                                setPort(i, { category: "" })
+                              } else if (v === "__none__") {
+                                setPort(i, { category: "" })
+                              } else {
+                                setPort(i, { category: v })
+                              }
+                            }}
+                          >
+                            <SelectTrigger className="text-xs h-8">
+                              <SelectValue placeholder={t("vmLxc.appEditor.portCategoryPlaceholder")} />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="__none__">{t("vmLxc.appEditor.portCategoryNone")}</SelectItem>
+                              {categoryPresets.map((c) => (
+                                <SelectItem key={c} value={c}>{c}</SelectItem>
+                              ))}
+                              <SelectItem value="__add__">{t("vmLxc.appEditor.portCategoryAddNew")}</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        )}
+                      </div>
+                      {/* Per-link custom URL — takes precedence over
+                          ip:port when the app lives behind a reverse
+                          proxy on a public domain. */}
+                      <Input
+                        value={entry.custom_url || ""}
+                        onChange={(e) => setPort(i, { custom_url: e.target.value })}
+                        placeholder={t("vmLxc.appEditor.portCustomUrlPlaceholder")}
+                        maxLength={512}
+                        className="flex-1 min-w-0 text-xs font-mono h-8"
+                        type="url"
+                      />
+                    </div>
                   </div>
                 ))}
               </div>
@@ -1434,7 +1566,7 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed, initialData }: Prop
                           <SelectItem value="binary">{t("vmLxc.appEditor.binaryVersionHint")}</SelectItem>
                           <SelectItem value="file">{t("vmLxc.appEditor.methodFile")}</SelectItem>
                           <SelectItem value="python_dist">{t("vmLxc.appEditor.methodPython")}</SelectItem>
-                          <SelectItem value="docker_label">{t("vmLxc.appEditor.methodDockerLabel")}</SelectItem>
+                          <SelectItem value="docker_label" disabled>{t("vmLxc.appEditor.methodDockerLabel")}</SelectItem>
                           <SelectItem value="docker_exec">{t("vmLxc.appEditor.methodDockerExec")}</SelectItem>
                           <SelectItem value="command">{t("vmLxc.appEditor.methodCommand")}</SelectItem>
                           <SelectItem value="manual">{t("vmLxc.appEditor.methodManual")}</SelectItem>
@@ -2281,7 +2413,7 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed, initialData }: Prop
               {app.ports && app.ports.length > 0 && (
                 <div className="mb-3 space-y-4">
                   {app.ports.map((p) => {
-                    const url = buildWebUrl(ctIp, p.port, p.scheme)
+                    const url = buildWebUrl(ctIp, p.port, p.scheme, p.custom_url)
                     if (!url) return null
                     const label = p.description || app.name
                     return (
@@ -2292,18 +2424,34 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed, initialData }: Prop
                             className="h-14 w-14 flex-shrink-0 rounded-md object-contain"
                           />
                         )}
-                        <div className="min-w-0 flex flex-col">
+                        <div className="min-w-0 flex flex-col gap-1 flex-1">
                           <span className="text-sm font-medium text-foreground truncate">{label}</span>
-                          <a
-                            href={url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-blue-400 hover:text-blue-300 inline-flex items-center gap-1.5 min-w-0"
-                            title={url}
-                          >
-                            <ExternalLink className="h-3.5 w-3.5 flex-shrink-0" />
-                            <span className="font-mono text-sm truncate">{url}</span>
-                          </a>
+                          <div className="flex items-center gap-2 min-w-0">
+                            <a
+                              href={url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-blue-400 hover:text-blue-300 inline-flex items-center gap-1.5 min-w-0 flex-1"
+                              title={url}
+                            >
+                              <ExternalLink className="h-3.5 w-3.5 flex-shrink-0" />
+                              <span className="font-mono text-sm truncate">{url}</span>
+                            </a>
+                            {/* Category chip — same OKLCH deterministic
+                                colour as the Apps dashboard. Anchored
+                                right end of the weblink row so the URL
+                                gets `flex-1` (truncates when long)
+                                while the chip keeps its full width. */}
+                            {p.category && (
+                              <span
+                                style={categoryChipStyle(p.category, isLightTheme)}
+                                className="flex-shrink-0 px-1.5 py-0.5 border rounded text-[10px] font-medium truncate max-w-[40%]"
+                                title={p.category}
+                              >
+                                {p.category}
+                              </span>
+                            )}
+                          </div>
                         </div>
                       </div>
                     )
@@ -2402,40 +2550,55 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed, initialData }: Prop
           detections, so the user gets one-click Restore before hand-
           typing a custom app. */}
       {apps.length > 0 && (
-        <div className="flex flex-col items-stretch gap-2 max-w-xs mx-auto sm:flex-row sm:flex-wrap sm:justify-end sm:items-center sm:max-w-none sm:mx-0">
+        // Mobile: three buttons in one row, aligned right. Order is
+        // Search → Register → Edit (Edit rightmost, matches desktop).
+        // All three share the same width — a min-w that fits the
+        // widest translated label of the Edit button ("Bearbeiten" in
+        // DE, 10 chars) so the icon-only Search and Register buttons
+        // line up as neat equal squares next to the labelled Edit.
+        // Desktop: no min-width — each button auto-sizes to its text.
+        <div className="flex flex-row flex-wrap justify-end items-center gap-2">
           <Button
             variant="outline"
             size="sm"
             onClick={searchInstalledApplications}
             disabled={searchingApplications || editMode}
-            className="w-full sm:w-auto order-2 sm:order-1"
-          >
-            {searchingApplications
-              ? <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />
-              : <Search className="h-4 w-4 mr-1.5" />}
-            {searchingApplications
+            className="min-w-[7rem] sm:min-w-0 px-2.5 sm:px-3"
+            aria-label={searchingApplications
               ? t("vmLxc.appEditor.searchingApplications")
               : t("vmLxc.appEditor.searchApplications")}
+          >
+            {searchingApplications
+              ? <Loader2 className="h-4 w-4 sm:mr-1.5 animate-spin" />
+              : <Search className="h-4 w-4 sm:mr-1.5" />}
+            <span className="hidden sm:inline">
+              {searchingApplications
+                ? t("vmLxc.appEditor.searchingApplications")
+                : t("vmLxc.appEditor.searchApplications")}
+            </span>
           </Button>
           <Button
             variant="outline"
             size="sm"
             onClick={openBrowseOrEditor}
             disabled={editMode}
-            className="w-full sm:w-auto order-3 sm:order-2"
+            className="min-w-[7rem] sm:min-w-0 px-2.5 sm:px-3"
+            aria-label={t("vmLxc.appEditor.addAnotherApplication")}
           >
-            <PlusCircle className="h-4 w-4 mr-1.5" />
-            {t("vmLxc.appEditor.addAnotherApplication")}
-            {hiddenDetections.length > 0 && (
-              <span className="ml-2 text-[10px] opacity-70">
-                · {t("vmLxc.appEditor.hiddenSuffix", { count: hiddenDetections.length })}
-              </span>
-            )}
+            <PlusCircle className="h-4 w-4 sm:mr-1.5" />
+            <span className="hidden sm:inline">
+              {t("vmLxc.appEditor.addAnotherApplication")}
+              {hiddenDetections.length > 0 && (
+                <span className="ml-2 text-[10px] opacity-70">
+                  · {t("vmLxc.appEditor.hiddenSuffix", { count: hiddenDetections.length })}
+                </span>
+              )}
+            </span>
           </Button>
           <button
             type="button"
             onClick={() => setEditMode((v) => !v)}
-            className="h-9 px-3 text-sm rounded-md border border-border bg-background hover:bg-muted transition-colors inline-flex items-center justify-center gap-1.5 w-full sm:w-auto order-1 sm:order-3"
+            className="h-9 px-3 text-sm rounded-md border border-border bg-background hover:bg-muted transition-colors inline-flex items-center justify-center gap-1.5 min-w-[7rem] sm:min-w-0"
           >
             {editMode ? (
               <>

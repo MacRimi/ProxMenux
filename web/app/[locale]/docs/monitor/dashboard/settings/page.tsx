@@ -31,6 +31,8 @@ export default async function SettingsTabPage({
 
   const messages = (await getMessages({ locale })) as unknown as {
     docs: { monitor: { dashboard: { settings: {
+      interfaceLanguage: { items: string[] }
+      navigationOrder: { items: string[] }
       health: { items: string[]; activeItems: string[] }
       thresholds: {
         whatForItems: string[]
@@ -47,6 +49,8 @@ export default async function SettingsTabPage({
     } } } }
   }
   const s = messages.docs.monitor.dashboard.settings
+  const interfaceLanguageItems = s.interfaceLanguage.items
+  const navigationOrderItems = s.navigationOrder.items
   const healthItems = s.health.items
   const activeSuppressionItems = s.health.activeItems
   const whatForItems = s.thresholds.whatForItems
@@ -99,11 +103,37 @@ export default async function SettingsTabPage({
         title={t("header.title")}
         description={t("header.description")}
         section={t("header.section")}
-        estimatedMinutes={9}
+        estimatedMinutes={10}
       />
 
       <Callout variant="info" title={t("intro.title")}>
         {t("intro.body")}
+      </Callout>
+
+      <h2 id="interface-language" className="text-2xl font-semibold mt-10 mb-4 text-gray-900">{t("interfaceLanguage.heading")}</h2>
+      <p className="mb-4 text-gray-800 leading-relaxed">
+        {t.rich("interfaceLanguage.intro", { strong, code })}
+      </p>
+      <ul className="list-disc pl-6 mb-4 text-gray-800 leading-relaxed space-y-1">
+        {interfaceLanguageItems.map((_, idx) => (
+          <li key={idx}>{t.rich(`interfaceLanguage.items.${idx}`, { strong, code })}</li>
+        ))}
+      </ul>
+      <Callout variant="tip" title={t("interfaceLanguage.scopeTitle")}>
+        {t.rich("interfaceLanguage.scopeBody", { strong, code })}
+      </Callout>
+
+      <h2 id="navigation-order" className="text-2xl font-semibold mt-10 mb-4 text-gray-900">{t("navigationOrder.heading")}</h2>
+      <p className="mb-4 text-gray-800 leading-relaxed">
+        {t.rich("navigationOrder.intro", { strong, code })}
+      </p>
+      <ul className="list-disc pl-6 mb-4 text-gray-800 leading-relaxed space-y-1">
+        {navigationOrderItems.map((_, idx) => (
+          <li key={idx}>{t.rich(`navigationOrder.items.${idx}`, { strong, code })}</li>
+        ))}
+      </ul>
+      <Callout variant="info" title={t("navigationOrder.landingTitle")}>
+        {t.rich("navigationOrder.landingBody", { strong, code })}
       </Callout>
 
       <h2 className="text-2xl font-semibold mt-10 mb-4 text-gray-900">{t("networkUnits.heading")}</h2>

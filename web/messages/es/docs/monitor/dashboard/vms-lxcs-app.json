@@ -10,7 +10,9 @@
   "intro": {
     "p1": "La pestaña <strong>App</strong> registra qué aplicaciones pertenecen a un LXC. Un registro puede contener solo un nombre y un enlace web o incluir también un detector de la versión instalada y una fuente para la versión disponible.",
     "p2": "El procedimiento que modifica el software se configura por separado en la <link>pestaña Actualizaciones</link>. Guardar una app nunca ejecuta un instalador ni un actualizador.",
-    "callout": "El registro, el seguimiento de versiones y la actualización son tres capacidades independientes. Cada una puede utilizarse sin exigir las otras dos."
+    "callout": "El registro, el seguimiento de versiones y la actualización son tres capacidades independientes. Cada una puede utilizarse sin exigir las otras dos.",
+    "dashboardTitle": "Del registro al lanzador Apps",
+    "dashboard": "Cada enlace web guardado aquí también se muestra como una tarjeta en la <appsLink>pestaña Apps</appsLink> principal. Esta página del LXC sigue siendo la fuente original para el nombre, el logotipo, los enlaces y el seguimiento de versión de la aplicación."
   },
   "overview": {
     "heading": "Qué puede contener un registro",

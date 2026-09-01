@@ -8,4 +8,4 @@
 //   3. beta_version.txt              ← bash pipeline (build_appimage.sh)
 //
 // Keep the three in sync on every bump.
-export const APP_VERSION = "1.2.4.2-beta"
+export const APP_VERSION = "1.2.5"

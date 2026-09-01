@@ -156,13 +156,12 @@ UI translations ship as pre-built JSON files per language (English, Spanish, Fre
 
 ProxMenux is an open, collaborative project — contributions of every shape are very welcome, no matter your background. Every PR, bug report, idea, translation or kind word helps move the project forward.
 
-> 📖 **Before sending code**, please read the [**Contributing Guide**](CONTRIBUTING.md) — it explains **where to coordinate**, the project structure, the UI design policy (the two-phase `dialog` / `whiptail` flow), message helpers and submission conventions.
+> 📖 **Before sending code**, please read the [**Contributing Guide**](CONTRIBUTING.md). It covers the project structure, the UI design policy (the two-phase `dialog` / `whiptail` flow), message helpers, translation policy and submission conventions — what reviewers will look for in your PR.
 
 **Ways to help:**
 
 - 💻 **Code** — fix a bug, polish a script, add a feature. Read the [Contributing Guide](CONTRIBUTING.md) first, then [open a pull request](https://github.com/MacRimi/ProxMenux/pulls).
 - 🐛 **Bug reports** — found something broken? [Open an issue](https://github.com/MacRimi/ProxMenux/issues/new) with steps to reproduce, and the Monitor logs if relevant (`journalctl -u proxmenux-monitor -n 50`).
-- 🗺️ **Follow the direction** — see what's being worked on and where the project is heading on the [Roadmap project board](https://github.com/users/MacRimi/projects/1). Coordination happens in [Contributor Coordination](https://github.com/MacRimi/ProxMenux/discussions/categories/contributor-coordination).
 - 💡 **Ideas & feedback** — share suggestions in [GitHub Discussions](https://github.com/MacRimi/ProxMenux/discussions). Every idea is welcome.
 - 🌍 **Translations** — the documentation site already supports English and Spanish; help expand it to more languages following the [translation guide](web/CONTRIBUTING-TRANSLATIONS.md) (one page per PR).
 - 🧪 **Beta testing** — run the [beta build](#-beta-program) and let us know what you find.

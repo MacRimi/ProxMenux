@@ -1,16 +1,41 @@
 {
   "meta": {
-    "title": "ProxMenux Monitor — Panel: pestaña Settings | ProxMenux Documentation",
-    "description": "La pestaña Settings agrupa las preferencias del panel (unidades de red, duraciones de supresión, exclusiones de almacenamiento / interfaz), el panel embebido de notificaciones + IA y un inventario transparente de cada optimización post-instalación de ProxMenux actualmente activa en el host con acceso al código fuente."
+    "title": "ProxMenux Monitor — Panel: pestaña Ajustes | Documentación de ProxMenux",
+    "description": "La pestaña Ajustes controla el idioma del Monitor, el orden de navegación, las preferencias del panel, los umbrales y exclusiones de salud, las notificaciones, la IA y el inventario de optimizaciones."
   },
   "header": {
-    "title": "Panel: pestaña Settings",
-    "description": "Preferencias del panel, exclusiones de monitorización, el panel embebido de configuración de notificaciones + IA y un inventario en vivo de las optimizaciones post-instalación de ProxMenux actualmente activas en el host.",
+    "title": "Panel: pestaña Ajustes",
+    "description": "Idioma del Monitor, orden de navegación, preferencias del panel, exclusiones de monitorización, notificaciones, configuración de IA e inventario de optimizaciones de ProxMenux.",
     "section": "ProxMenux Monitor · Panel"
   },
   "intro": {
     "title": "Dónde vive realmente cada setting",
-    "body": "La pestaña Settings es una superficie única para varias preocupaciones distintas: cómo renderiza el panel, qué vigila el Monitor de salud, cómo salen las alertas y qué ha cambiado ya ProxMenux en el host. Las tarjetas que tienen su propia página de documentación profunda enlazan en lugar de duplicar el contenido aquí — Settings es el punto de entrada, no el manual."
+    "body": "La pestaña Ajustes reúne varias funciones distintas: cómo se muestra el panel, qué vigila el Monitor de salud, cómo se envían las alertas y qué cambios ha aplicado ProxMenux en el host. Las tarjetas que tienen su propia página de documentación enlazan a ella en lugar de duplicar el contenido: Ajustes es el punto de entrada."
+  },
+  "interfaceLanguage": {
+    "heading": "Idioma de la interfaz",
+    "intro": "Selecciona el idioma de la <strong>interfaz web del Monitor</strong>. El cambio se aplica de inmediato; no reinicia el servicio ni modifica el idioma de los menús de ProxMenux ejecutados en la terminal.",
+    "items": [
+      "ProxMenux Monitor ofrece actualmente inglés, alemán, español, francés, italiano, portugués, eslovaco y sueco.",
+      "En la primera visita, el Monitor utiliza el idioma del navegador si está disponible; en caso contrario, utiliza inglés.",
+      "Al cambiar la selección, se actualiza el idioma de la página y también el de otras pestañas abiertas con el mismo perfil del navegador.",
+      "Si falta una cadena traducida, solo ese texto se muestra en inglés en lugar de presentar una clave rota."
+    ],
+    "scopeTitle": "Preferencia local del navegador",
+    "scopeBody": "La selección se guarda en <code>localStorage</code> con la clave <code>proxmenux-ui-language</code>. Por tanto, pertenece a este perfil de navegador y dispositivo; no es un ajuste global del nodo. Cada administrador puede utilizar un idioma distinto."
+  },
+  "navigationOrder": {
+    "heading": "Orden de navegación",
+    "intro": "Esta tarjeta permite ordenar los siete elementos principales: <strong>Resumen, Apps, VMs y LXCs, Nodo, Copias, Terminal y Administración</strong>. Pulsa <strong>Editar</strong>, arrastra las filas y guarda el resultado.",
+    "items": [
+      "Con el ratón, el arrastre comienza al pulsar. En una pantalla táctil se utiliza una pulsación mantenida de 250 ms para no confundir el desplazamiento normal con una reordenación.",
+      "Los grupos <strong>Nodo</strong> y <strong>Administración</strong> se mueven como unidades completas; sus páginas internas conservan el orden establecido por ProxMenux.",
+      "El menú móvil respeta el mismo orden guardado.",
+      "<strong>Restaurar valores predeterminados</strong> restablece el borrador. Es necesario guardar para aplicar el cambio.",
+      "Si una versión futura añade una nueva pestaña principal, esta se incorpora al final del orden personalizado sin borrar la organización del usuario."
+    ],
+    "landingTitle": "El primer elemento se convierte en la pestaña inicial",
+    "landingBody": "El primer elemento guardado es la página que abre el Monitor al cargar. Si <strong>Nodo</strong> ocupa la primera posición, se abre Almacenamiento; si la ocupa <strong>Administración</strong>, se abren los Logs del sistema. El orden se guarda solo en este navegador con la clave <code>proxmenux-nav-order</code>, por lo que cada dispositivo puede utilizar una organización distinta."
   },
   "networkUnits": {
     "heading": "Network Units",
@@ -258,6 +283,16 @@
     "headerSource": "Fuente",
     "rows": [
       {
+        "card": "Idioma de la interfaz",
+        "endpoint": "localStorage",
+        "source": "Preferencia del navegador <code>proxmenux-ui-language</code>, obtenida inicialmente del idioma del navegador cuando todavía no existe una selección guardada."
+      },
+      {
+        "card": "Orden de navegación",
+        "endpoint": "localStorage",
+        "source": "Preferencia del navegador <code>proxmenux-nav-order</code>; también determina la pestaña inicial."
+      },
+      {
         "card": "Network Units",
         "endpoint": "/api/settings",
         "source": "Persistido en la tabla SQLite de settings del panel."
@@ -292,6 +327,11 @@
   "whereNext": {
     "heading": "Por dónde seguir",
     "items": [
+      {
+        "label": "Pestaña Apps",
+        "href": "/docs/monitor/dashboard/apps",
+        "tail": " — el lanzador cuya posición se puede cambiar desde Orden de navegación."
+      },
       {
         "label": "Notificaciones",
         "href": "/docs/monitor/notifications",

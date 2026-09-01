@@ -31,6 +31,7 @@
   },
   "navigation": {
     "overview": "Översikt",
+    "apps": "Apps",
     "storage": "Lagring",
     "network": "Nätverk",
     "virtualMachines": "VM och LXC",
@@ -1211,6 +1212,7 @@
       "familyLabel": "Familj:",
       "applyOsUpdate": "Använd OS-uppdatering",
       "osUpToDate": "OS uppdaterat",
+      "osStatusUnavailable": "Statusen för operativsystemets uppdateringar kunde inte fastställas.",
       "installedByHelperPrefix": "Installerad av",
       "helperScriptsName": "Proxmox VE Helper-Scripts",
       "helperUpdatesRun": "Installerad av Proxmox Helper-Scripts.",
@@ -1369,7 +1371,7 @@
       "methodApk": "apk-paket (alpint)",
       "methodBinary": "Binär (absolut sökväg eller bara namn)",
       "methodFile": "fil + regex",
-      "methodDockerLabel": "hamnarbesiktning (OCI-etikett)",
+      "methodDockerLabel": "docker inspect (OCI-etikett)",
       "methodDockerExec": "docker exec (binär i container)",
       "methodPython": "pythondistribution (importlib.metadata)",
       "methodCommand": "kommando (avancerat — argv)",
@@ -1435,6 +1437,11 @@
       "portHttps": "https",
       "portLogoLabel": "Logotyp URL för denna länk (valfritt)",
       "portLogoPlaceholder": "t.ex. https://example.com/logo.webp",
+      "portCategoryPlaceholder": "Category for the Apps dashboard (optional)",
+      "portCategoryNone": "No category",
+      "portCategoryAddNew": "+ Add new category…",
+      "portCategoryCustomPlaceholder": "Type a category and press Enter (Esc to cancel)",
+      "portCustomUrlPlaceholder": "Custom URL (e.g. https://vault.example.com) — overrides IP:port",
       "removePortTooltip": "Ta bort porten",
       "detectMethodDpkg": "dpkg ·",
       "detectMethodApk": "apk ·",
@@ -1484,7 +1491,7 @@
       "managedApp": "Hanterad app",
       "managedStatus": "lyckades",
       "checkedAt": "Markerade {date}",
-      "latestUpstream": "Senaste tillgängliga version",
+      "latestUpstream": "Senaste",
       "loadingApplications": "Laddar appar...",
       "nameSearchPlaceholder": "Skriv för att söka efter 700+ appar, eller skriv din egen",
       "matchCount": "{count} matchar",
@@ -2045,7 +2052,18 @@
           "title": "ZFS poolkapacitet",
           "description": "ZFS-pooler på värdnivå, oberoende av PVE-registrering, så rpool och dedikerade backuppooler övervakas också."
         }
-      }
+      },
+      "swapPressure": "Minnestryck",
+      "swapPressureHint": "Markerar en kritisk händelse endast när BÅDA villkoren är sanna samtidigt — swap-filanvändning över första tröskeln OCH tillgängligt RAM under andra. Att larma enbart på swap var störande på Proxmox-värdar där Linux växlar ut inaktiva sidor medan RAM förblir rikligt tillgängligt.",
+      "swapHighLabel": "Swap-filanvändning",
+      "availableMinLabel": "Minsta tillgängliga RAM"
+    },
+    "navOrder": {
+      "title": "Navigeringsordning",
+      "description": "Anpassa ordningen på huvudflikarna. Grupperade flikar (Node, Admin) flyttas som en enhet; deras interna objekt behåller sin standardordning.",
+      "reset": "Återställ standard",
+      "hint": "Dra för att ändra ordning · På touch, håll länge först",
+      "customActive": "Anpassad navigeringsordning aktiv."
     }
   },
   "login": {
@@ -2069,7 +2087,7 @@
     "backupCodeHint": "Du kan också använda en reservkod (format: XXXX-XXXX)",
     "backToLogin": "Tillbaka till inloggning",
     "verifyCode": "Verifiera koden",
-    "version": "ProxMenux Monitor v1.2.4.1-beta"
+    "version": "ProxMenux Monitor v1.2.5"
   },
   "account": {
     "signedIn": "Inloggad",
@@ -3120,8 +3138,12 @@
     "currentFeatures": {
       "appDetection": "Smarter app detection in the App tab: Docker is correctly promoted as the parent workload during cold start (Portainer/SearXNG no longer briefly show up as native apps), unregistered suggestions live in the startup cache, and 'Find applications' runs a fresh catalog-backed scan on demand.",
       "dockerUpdates": "The Updates tab now covers Docker end-to-end: Docker Engine and per-image update tracking follow the same 24-hour rolling cycle as OS packages, with a 'Check now' action for on-demand digest comparison — no more waiting for the daily collector.",
-      "appCatalog": "New application detection catalog with over 380 tracked workloads, built from the live community-scripts source with independent script evidence. Primary and fallback detectors (file, binary, dpkg, apk, Python, Docker exec, Docker label) cover both new and historical LXC layouts.",
-      "pushover": "Pushover joins Telegram, Gotify, Discord, Email and Apprise as a native notification channel — user/API key, device and sound selectors, priority 0 for regular messages, optional priority 1 for CRITICAL events. Suggested by @benginx (#308)."
+      "appCatalog": "Ny katalog för appdetektering med över 380 spårade arbetsuppgifter, genererad live från community-scripts via sju detektionsmetoder (fil, binär, dpkg, apk, Python, Docker exec, Docker label). Primära och reservdetektorer täcker både nya och historiska LXC-layouter.",
+      "pushover": "Pushover joins Telegram, Gotify, Discord, Email and Apprise as a native notification channel — user/API key, device and sound selectors, priority 0 for regular messages, optional priority 1 for CRITICAL events. Suggested by @benginx (#308).",
+      "appsDashboard": "Ny huvudflik Apps — en enda startpunkt för varje webblänk på noden. LXC-registrerade appar och användardefinierade Custom Web Links delar samma rutnät med kategori-taggar, sökning och direktlänk till gästens modal.",
+      "lxcAppsUpdates": "App-fliken inuti varje LXC-modal registrerar installerade appar, fångar webblänkar och spårar uppströmsversioner. Omarbetad Updates-flik applicerar OS-paket och appuppdateringar med en enda knapp; Docker Engine och per-image följer samma 24-timmarscykel med en 'Kontrollera nu'-åtgärd på begäran.",
+      "multilingual": "Monitorn talar nu 8 språk: engelska, spanska, tyska, franska, italienska, portugisiska, svenska och slovakiska. Ett stort tack till @vaso73 för att ha byggt i18n-grunden.",
+      "nvidiaMultiGpu": "NVIDIA-driverns livscykel går över till ägarskap per exakt BDF, så att en multi-GPU-värd kan skicka ett kort till en VM och behålla det andra operativt på värden eller i LXC, plus en versionsväljare som är medveten om kärna, gren och GPU (#298)."
     }
   },
   "network": {
@@ -4734,5 +4756,43 @@
     "yourInput": "Din inmatning:",
     "submit": "Skicka",
     "ok": "OK"
+  },
+  "apps": {
+    "searchPlaceholder": "Search app or CT…",
+    "searchAriaLabel": "Search",
+    "filterAll": "All categories",
+    "filterAriaLabel": "Filter by category",
+    "sortAriaLabel": "Sort by",
+    "sortName": "Name",
+    "sortId": "ID",
+    "sortCategory": "Category",
+    "countOne": "1 app",
+    "countMany": "{n} apps",
+    "uncategorized": "Uncategorized",
+    "openAriaLabel": "Open {name} in a new tab",
+    "openGuestAriaLabel": "Öppna {name} ({type} {id})",
+    "emptyTitle": "No apps with a web link yet.",
+    "emptyHint": "Register a Web Link for any app (App tab of a CT) to see it here.",
+    "customLinkAdd": "Add link",
+    "editModeToggle": "Edit",
+    "editModeDone": "Done",
+    "customLinkNewTitle": "New web link",
+    "customLinkEditTitle": "Edit web link",
+    "customLinkEditAria": "Redigera den anpassade länken {name}",
+    "customLinkName": "Name",
+    "customLinkNamePlaceholder": "e.g. My app",
+    "customLinkUrl": "URL",
+    "customLinkLogo": "Logo URL (optional)",
+    "customLinkLogoPlaceholder": "e.g., https://example.com/logo.webp",
+    "customLinkCategory": "Category (optional)",
+    "customLinkBinding": "Bound to",
+    "customLinkBindingNone": "Not bound to any guest",
+    "customLinkBindingHelp": "Bind this link to a VM or CT to add its ID + name to the card and jump to the guest with one click.",
+    "customLinkSave": "Save",
+    "customLinkCreate": "Create",
+    "customLinkCancel": "Cancel",
+    "customLinkDelete": "Delete",
+    "customLinkSaveError": "Save failed",
+    "customLinkDeleteError": "Delete failed"
   }
 }

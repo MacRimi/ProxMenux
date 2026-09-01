@@ -31,6 +31,7 @@
   },
   "navigation": {
     "overview": "Aperçu",
+    "apps": "Apps",
     "storage": "Stockage",
     "network": "Réseau",
     "virtualMachines": "VM et LXC",
@@ -1211,6 +1212,7 @@
       "familyLabel": "Famille:",
       "applyOsUpdate": "Appliquer la mise à jour du système d'exploitation",
       "osUpToDate": "OS à jour",
+      "osStatusUnavailable": "Impossible de déterminer l’état des mises à jour du système d’exploitation.",
       "installedByHelperPrefix": "Installé par",
       "helperScriptsName": "Proxmox VE Helper-Scripts",
       "helperUpdatesRun": "Installé par Proxmox Helper-Scripts.",
@@ -1435,6 +1437,11 @@
       "portHttps": "https",
       "portLogoLabel": "URL du logo pour ce lien (facultatif)",
       "portLogoPlaceholder": "par exemple, https://example.com/logo.webp",
+      "portCategoryPlaceholder": "Category for the Apps dashboard (optional)",
+      "portCategoryNone": "No category",
+      "portCategoryAddNew": "+ Add new category…",
+      "portCategoryCustomPlaceholder": "Type a category and press Enter (Esc to cancel)",
+      "portCustomUrlPlaceholder": "Custom URL (e.g. https://vault.example.com) — overrides IP:port",
       "removePortTooltip": "Supprimer le port",
       "detectMethodDpkg": "dpkg ·",
       "detectMethodApk": "apk ·",
@@ -1484,7 +1491,7 @@
       "managedApp": "Application gérée",
       "managedStatus": "géré",
       "checkedAt": "Vérifié {date}",
-      "latestUpstream": "Dernière version disponible",
+      "latestUpstream": "Dernière",
       "loadingApplications": "Chargement des applications…",
       "nameSearchPlaceholder": "Tapez pour rechercher plus de 700 applications ou tapez la vôtre",
       "matchCount": "{count} correspondances",
@@ -2045,7 +2052,18 @@
           "title": "Capacité du pool ZFS",
           "description": "Pools ZFS au niveau de l'hôte, indépendamment de l'enregistrement PVE, de sorte que les pools rpool et de sauvegarde dédiés sont également surveillés."
         }
-      }
+      },
+      "swapPressure": "Pression mémoire",
+      "swapPressureHint": "Marque un événement critique uniquement quand LES DEUX conditions sont vraies en même temps — utilisation du fichier swap au-dessus du premier seuil ET RAM disponible en-dessous du second. Alerter uniquement sur le swap était bruyant sur les hôtes Proxmox où Linux échange des pages inactives alors que la RAM reste abondamment disponible.",
+      "swapHighLabel": "Utilisation du fichier swap",
+      "availableMinLabel": "RAM disponible minimale"
+    },
+    "navOrder": {
+      "title": "Ordre de navigation",
+      "description": "Personnalisez l'ordre des onglets principaux. Les onglets groupés (Node, Admin) se déplacent comme une unité ; leurs éléments internes conservent l'ordre par défaut.",
+      "reset": "Restaurer par défaut",
+      "hint": "Glissez pour réorganiser · Sur tactile, appui long d'abord",
+      "customActive": "Ordre de navigation personnalisé actif."
     }
   },
   "login": {
@@ -2069,7 +2087,7 @@
     "backupCodeHint": "Vous pouvez également utiliser un code de secours (format : XXXX-XXXX)",
     "backToLogin": "Retour à la connexion",
     "verifyCode": "Vérifier le code",
-    "version": "ProxMenux Monitor v1.2.4.1-bêta"
+    "version": "ProxMenux Monitor v1.2.5"
   },
   "account": {
     "signedIn": "Connecté",
@@ -3120,8 +3138,12 @@
     "currentFeatures": {
       "appDetection": "Smarter app detection in the App tab: Docker is correctly promoted as the parent workload during cold start (Portainer/SearXNG no longer briefly show up as native apps), unregistered suggestions live in the startup cache, and 'Find applications' runs a fresh catalog-backed scan on demand.",
       "dockerUpdates": "The Updates tab now covers Docker end-to-end: Docker Engine and per-image update tracking follow the same 24-hour rolling cycle as OS packages, with a 'Check now' action for on-demand digest comparison — no more waiting for the daily collector.",
-      "appCatalog": "New application detection catalog with over 380 tracked workloads, built from the live community-scripts source with independent script evidence. Primary and fallback detectors (file, binary, dpkg, apk, Python, Docker exec, Docker label) cover both new and historical LXC layouts.",
-      "pushover": "Pushover joins Telegram, Gotify, Discord, Email and Apprise as a native notification channel — user/API key, device and sound selectors, priority 0 for regular messages, optional priority 1 for CRITICAL events. Suggested by @benginx (#308)."
+      "appCatalog": "New application detection catalog with over 380 tracked workloads, generated live from community-scripts across seven detector methods (file, binary, dpkg, apk, Python, Docker exec, Docker label). Primary and fallback detectors cover both new and historical LXC layouts.",
+      "pushover": "Pushover joins Telegram, Gotify, Discord, Email and Apprise as a native notification channel — user/API key, device and sound selectors, priority 0 for regular messages, optional priority 1 for CRITICAL events. Suggested by @benginx (#308).",
+      "appsDashboard": "New top-level Apps dashboard — a single launcher for every Web Link across the node. LXC-registered apps and user-defined Custom Web Links share the same grid with category badges, search, and one-click deep-links back to the guest modal.",
+      "lxcAppsUpdates": "App tab inside every LXC modal registers installed apps, captures weblinks and tracks upstream versions. Reworked Updates tab applies OS packages and app updates from a single button; Docker Engine and per-image tracking follow the same 24-hour cycle, with a 'Check now' action on demand.",
+      "multilingual": "The Monitor now speaks 8 languages: English, Spanish, German, French, Italian, Portuguese, Swedish and Slovak. Huge thanks to @vaso73 for building the i18n scaffolding that made this possible.",
+      "nvidiaMultiGpu": "NVIDIA driver lifecycle moves to per-BDF ownership so a multi-GPU host can pass one card to a VM and keep the other operational on the host or in LXCs, plus a kernel + branch + GPU-aware version picker (#298)."
     }
   },
   "network": {
@@ -3525,7 +3547,7 @@
       "wifi": "Wi-Fi",
       "storage": "Stockage",
       "storageController": "Contrôleur de stockage",
-      "hid": "CACHÉ",
+      "hid": "HID",
       "vendorSpecific": "Spécifique au fournisseur",
       "communications": "Communications",
       "integrated": "Intégré",
@@ -4733,5 +4755,43 @@
     "yourInput": "Votre contribution :",
     "submit": "Soumettre",
     "ok": "OK"
+  },
+  "apps": {
+    "searchPlaceholder": "Search app or CT…",
+    "searchAriaLabel": "Search",
+    "filterAll": "All categories",
+    "filterAriaLabel": "Filter by category",
+    "sortAriaLabel": "Sort by",
+    "sortName": "Name",
+    "sortId": "ID",
+    "sortCategory": "Category",
+    "countOne": "1 app",
+    "countMany": "{n} apps",
+    "uncategorized": "Uncategorized",
+    "openAriaLabel": "Open {name} in a new tab",
+    "openGuestAriaLabel": "Ouvrir {name} ({type} {id})",
+    "emptyTitle": "No apps with a web link yet.",
+    "emptyHint": "Register a Web Link for any app (App tab of a CT) to see it here.",
+    "customLinkAdd": "Add link",
+    "editModeToggle": "Edit",
+    "editModeDone": "Done",
+    "customLinkNewTitle": "New web link",
+    "customLinkEditTitle": "Edit web link",
+    "customLinkEditAria": "Modifier le lien personnalisé {name}",
+    "customLinkName": "Name",
+    "customLinkNamePlaceholder": "e.g. My app",
+    "customLinkUrl": "URL",
+    "customLinkLogo": "Logo URL (optional)",
+    "customLinkLogoPlaceholder": "e.g., https://example.com/logo.webp",
+    "customLinkCategory": "Category (optional)",
+    "customLinkBinding": "Bound to",
+    "customLinkBindingNone": "Not bound to any guest",
+    "customLinkBindingHelp": "Bind this link to a VM or CT to add its ID + name to the card and jump to the guest with one click.",
+    "customLinkSave": "Save",
+    "customLinkCreate": "Create",
+    "customLinkCancel": "Cancel",
+    "customLinkDelete": "Delete",
+    "customLinkSaveError": "Save failed",
+    "customLinkDeleteError": "Delete failed"
   }
 }

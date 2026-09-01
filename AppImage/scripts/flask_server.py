@@ -609,6 +609,73 @@ def parse_lxc_hardware_config(vmid, node):
     return hardware_info
 
 
+def _get_lxc_primary_ip_cached(vmid):
+    """Return the LXC's primary non-Docker IP with an indefinite
+    cache. First read per CT spawns one `lxc-info` subprocess;
+    subsequent reads are free until the CT's lifecycle event drops
+    the entry via `_invalidate_lxc_ip`. A running CT's IP doesn't
+    change on its own — the invalidation on start/stop/reboot is the
+    only path that requires re-probing.
+    """
+    try:
+        vmid_int = int(vmid)
+    except (TypeError, ValueError):
+        return None
+    if vmid_int in _lxc_ip_cache:
+        return _lxc_ip_cache[vmid_int]
+    info = get_lxc_ip_from_lxc_info(vmid_int)
+    ip = None
+    if info:
+        ip = info.get('primary_ip') or (info.get('real_ips') or [None])[0]
+    _lxc_ip_cache[vmid_int] = ip
+    return ip
+
+
+def _invalidate_lxc_ip(vmid):
+    """Drop the cached IP so the next request re-probes `lxc-info`.
+    Fired from the guest lifecycle handler on start/stop/reboot."""
+    try:
+        _lxc_ip_cache.pop(int(vmid), None)
+    except (TypeError, ValueError):
+        pass
+
+
+def _warmup_lxc_ip_cache() -> int:
+    """Populate the LXC IP cache for every running CT at Monitor
+    startup. After this runs, /api/vms serves the IPs from memory
+    without spawning `lxc-info` on the request path — the cache only
+    changes when a CT's lifecycle event (start/stop/reboot) fires the
+    invalidator. Returns the count for the startup log line.
+    """
+    try:
+        result = subprocess.run(
+            ['/usr/sbin/pct', 'list'],
+            capture_output=True, text=True, timeout=10,
+        )
+    except (FileNotFoundError, OSError, subprocess.TimeoutExpired):
+        return 0
+    if result.returncode != 0:
+        return 0
+    count = 0
+    for line in result.stdout.splitlines()[1:]:
+        parts = line.split()
+        if len(parts) < 2:
+            continue
+        try:
+            vmid_int = int(parts[0])
+        except ValueError:
+            continue
+        if parts[1].lower() != 'running':
+            continue
+        info = get_lxc_ip_from_lxc_info(vmid_int)
+        ip = None
+        if info:
+            ip = info.get('primary_ip') or (info.get('real_ips') or [None])[0]
+        _lxc_ip_cache[vmid_int] = ip
+        count += 1
+    return count
+
+
 def get_lxc_ip_from_lxc_info(vmid):
     """Get LXC IP addresses using lxc-info command (for DHCP containers)
     Returns a dict with all IPs and classification"""
@@ -1634,6 +1701,11 @@ _vm_apps_cache: dict = {}         # vmid -> (ts, payload)
 _vm_app_suggestions_cache: dict = {}  # vmid -> (ts, payload)
 _vm_schedule_cache: dict = {}     # vmid -> (ts, payload)
 _vm_mounts_cache: dict = {}       # vmid -> (ts, payload) — LXC only
+# LXC primary IP cache — populated on first read, held indefinitely.
+# A running CT's IP doesn't change; the cache is invalidated only when
+# the CT's lifecycle event fires (start/stop/reboot), so no periodic
+# polling is needed. See `_handle_guest_lifecycle`.
+_lxc_ip_cache: dict = {}
 # Effective TTL is "indefinite": these caches are refreshed only
 # by explicit event-based invalidation (`_vm_cache_invalidate` calls
 # on start/stop/reboot, add/edit/delete app, apply update, edit
@@ -1942,6 +2014,11 @@ def _handle_guest_lifecycle(vmid: str, vm_type: str, action: str) -> None:
     _pvesh_cache['cluster_resources_vm_time'] = 0
     _vm_cache_invalidate(guest_id)
     _vm_disk_cache.pop(guest_id, None)
+    # LXC IP can only change when the CT restarts (fresh DHCP lease)
+    # or stops; drop the cached IP so the next /api/vms poll re-reads
+    # it via `lxc-info`. QEMU guests do not touch this cache.
+    if guest_type == 'lxc':
+        _invalidate_lxc_ip(guest_id)
     if action in ('start', 'reboot'):
         _schedule_started_guest_refresh(guest_id, guest_type)
         return
@@ -6506,6 +6583,15 @@ def get_proxmox_vms():
                         app_list = lxc_app_map.get(str(resource.get('vmid')))
                         if app_list:
                             vm_data['app_watches'] = app_list
+                            # Apps dashboard reads this to build
+                            # weblinks. Only paid on CTs that have
+                            # registered apps; the IP is cached
+                            # indefinitely and invalidated by the
+                            # guest lifecycle hook on start/stop/reboot.
+                            if vm_type == 'lxc' and resource.get('status') == 'running':
+                                _ip = _get_lxc_primary_ip_cached(resource.get('vmid'))
+                                if _ip:
+                                    vm_data['ip'] = _ip
                         docker_inventory = lxc_docker_map.get(str(resource.get('vmid')))
                         # Docker image drift is an Updates-tab feature,
                         # not an automatic app detection.  Do not attach
@@ -13674,6 +13760,92 @@ def api_lxc_apps_dockerhub_tag_preview():
         if not ok:
             return jsonify({'error': result}), 400
         return jsonify(result)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+# ── Custom Web Links ─────────────────────────────────────────────
+# User-defined launcher entries (in the Apps dashboard) that don't
+# come from a registered LXC app. Backed by /etc/proxmenux/custom_links.json
+# — one small global sidecar. Full schema + validation lives in
+# custom_links.py; the endpoints here are thin CRUD wrappers.
+
+@app.route('/api/apps/custom-links', methods=['GET'])
+@require_auth
+def api_custom_links_list():
+    try:
+        import custom_links
+        return jsonify(custom_links.load_all())
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/apps/custom-links', methods=['POST'])
+@require_auth
+def api_custom_links_create():
+    payload = request.get_json(silent=True) or {}
+    try:
+        import custom_links
+        ok, result = custom_links.create(payload)
+        if not ok:
+            return jsonify({'error': result}), 400
+        return jsonify(result), 201
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/apps/custom-links/<link_id>', methods=['PUT'])
+@require_auth
+def api_custom_links_update(link_id):
+    payload = request.get_json(silent=True) or {}
+    try:
+        import custom_links
+        ok, result = custom_links.update(link_id, payload)
+        if not ok:
+            code = 404 if result == 'link not found' else 400
+            return jsonify({'error': result}), code
+        return jsonify(result)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/apps/custom-links/<link_id>', methods=['DELETE'])
+@require_auth
+def api_custom_links_delete(link_id):
+    try:
+        import custom_links
+        ok, result = custom_links.delete(link_id)
+        if not ok:
+            return jsonify({'error': result}), 400
+        return jsonify(result)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/apps/categories', methods=['GET'])
+@require_auth
+def api_apps_categories():
+    """List of category preset labels the Web Link editor offers in
+    its Categoría dropdown. Sourced from helpers_cache.category_names
+    so the taxonomy stays aligned with community-scripts, with a
+    small built-in fallback so the dropdown never renders empty."""
+    try:
+        import lxc_apps
+        return jsonify(lxc_apps.get_category_presets())
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/apps/suggest_category', methods=['GET'])
+@require_auth
+def api_apps_suggest_category():
+    """Auto-fill the Categoría field when the user types a Web Link
+    name that matches a helpers_cache entry (by slug or name). Returns
+    {"category": "<name>"} or {"category": null}."""
+    try:
+        import lxc_apps
+        name = (request.args.get('name') or '').strip()
+        return jsonify({'category': lxc_apps.suggest_category_for(name)})
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
@@ -21987,6 +22159,26 @@ if __name__ == '__main__':
                       f"({docker_count} CTs)", flush=True)
             except Exception as e:
                 print(f"[ProxMenux] Docker inventory startup init failed: {e}",
+                      file=sys.stderr, flush=True)
+            # Warm the LXC IP cache once so the Apps dashboard renders
+            # instantly on first paint and /api/vms polls stay free of
+            # `lxc-info` subprocesses until a CT actually restarts.
+            try:
+                ip_count = _warmup_lxc_ip_cache()
+                print(f"[ProxMenux] LXC IP cache warmed ({ip_count} running CTs)",
+                      flush=True)
+            except Exception as e:
+                print(f"[ProxMenux] LXC IP warmup failed: {e}",
+                      file=sys.stderr, flush=True)
+            # Preload custom weblinks so the first Apps dashboard fetch
+            # is served straight from memory (0 disk I/O).
+            try:
+                import custom_links
+                cl_count = custom_links.warmup()
+                print(f"[ProxMenux] Custom links cache warmed ({cl_count} entries)",
+                      flush=True)
+            except Exception as e:
+                print(f"[ProxMenux] Custom links warmup failed: {e}",
                       file=sys.stderr, flush=True)
         threading.Thread(target=_deferred_startup_inits, daemon=True).start()
 

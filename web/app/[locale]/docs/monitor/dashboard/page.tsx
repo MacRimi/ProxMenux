@@ -55,7 +55,7 @@ export default async function DashboardIndexPage({
         title={t("header.title")}
         description={t("header.description")}
         section={t("header.section")}
-        estimatedMinutes={3}
+        estimatedMinutes={4}
       />
 
       <Callout variant="info" title={t("oneHeader.title")}>

@@ -30,6 +30,7 @@
   },
   "navigation": {
     "overview": "Prehľad",
+    "apps": "Apps",
     "storage": "Úložiská",
     "network": "Sieť",
     "virtualMachines": "VM a LXC",
@@ -1210,6 +1211,7 @@
       "familyLabel": "Systém:",
       "applyOsUpdate": "Aktualizovať systém",
       "osUpToDate": "Systém je aktuálny",
+      "osStatusUnavailable": "Stav aktualizácií operačného systému sa nepodarilo zistiť.",
       "installedByHelperPrefix": "Nainštalované cez",
       "helperScriptsName": "Proxmox VE Helper-Scripts",
       "helperUpdatesRun": "Inštalované pomocou Proxmox Helper-Scripts.",
@@ -1434,6 +1436,11 @@
       "portHttps": "https",
       "portLogoLabel": "URL loga pre tento odkaz (voliteľné)",
       "portLogoPlaceholder": "napr. https://example.com/logo.webp",
+      "portCategoryPlaceholder": "Category for the Apps dashboard (optional)",
+      "portCategoryNone": "No category",
+      "portCategoryAddNew": "+ Add new category…",
+      "portCategoryCustomPlaceholder": "Type a category and press Enter (Esc to cancel)",
+      "portCustomUrlPlaceholder": "Custom URL (e.g. https://vault.example.com) — overrides IP:port",
       "removePortTooltip": "Odstrániť port",
       "detectMethodDpkg": "dpkg ·",
       "detectMethodApk": "apk ·",
@@ -1483,7 +1490,7 @@
       "managedApp": "Spravovaná aplikácia",
       "managedStatus": "spravované",
       "checkedAt": "Skontrolované {date}",
-      "latestUpstream": "Najnovšia dostupná",
+      "latestUpstream": "Najnovšia",
       "loadingApplications": "Načítavam aplikácie…",
       "nameSearchPlaceholder": "Vyhľadajte medzi viac ako 700 aplikáciami alebo zadajte vlastný názov",
       "matchCount": "Počet výsledkov: {count}",
@@ -2044,7 +2051,18 @@
           "title": "Kapacita ZFS poolov",
           "description": "ZFS pooly na úrovni hosta, nezávisle od registrácie v PVE. Sleduje sa teda aj rpool a samostatné zálohovacie pooly."
         }
-      }
+      },
+      "swapPressure": "Tlak na pamäť",
+      "swapPressureHint": "Označí kritickú udalosť len keď platia OBIDVE podmienky súčasne — využitie súboru swap nad prvým limitom A dostupná RAM pod druhým. Upozorňovanie iba na swap bolo hlučné na hostiteľoch Proxmox, kde Linux odsúva neaktívne stránky, kým RAM zostáva dostatočne dostupná.",
+      "swapHighLabel": "Využitie súboru swap",
+      "availableMinLabel": "Minimálna dostupná RAM"
+    },
+    "navOrder": {
+      "title": "Poradie navigácie",
+      "description": "Prispôsobte poradie hlavných záložiek. Zoskupené záložky (Node, Admin) sa presúvajú ako jedna jednotka; ich vnútorné položky si zachovávajú predvolené poradie.",
+      "reset": "Obnoviť predvolené",
+      "hint": "Presúvajte pre zmenu poradia · Na dotyku najprv podržte",
+      "customActive": "Používa sa vlastné poradie navigácie."
     }
   },
   "login": {
@@ -2068,7 +2086,7 @@
     "backupCodeHint": "Môžete použiť aj záložný kód vo formáte XXXX-XXXX",
     "backToLogin": "Späť na prihlásenie",
     "verifyCode": "Overiť kód",
-    "version": "ProxMenux Monitor v1.2.4.1-beta"
+    "version": "ProxMenux Monitor v1.2.5"
   },
   "account": {
     "signedIn": "Prihlásený",
@@ -3119,8 +3137,12 @@
     "currentFeatures": {
       "appDetection": "Inteligentnejšie rozpoznávanie aplikácií na karte Aplikácie: pri štarte sa Docker správne rozpozná ako nadradené prostredie (Portainer/SearXNG sa už na chvíľu nezobrazia ako samostatné aplikácie), neregistrované návrhy ostávajú vo vyrovnávacej pamäti po štarte a tlačidlo „Nájsť aplikácie“ spustí nový sken podľa katalógu.",
       "dockerUpdates": "Karta Aktualizácie teraz naplno podporuje Docker: Docker Engine aj jednotlivé obrazy sa kontrolujú v rovnakom 24-hodinovom cykle ako balíky systému. Tlačidlo „Skontrolovať teraz“ overí aktuálne digesty hneď, bez čakania na dennú kontrolu.",
-      "appCatalog": "Nový katalóg na rozpoznávanie aplikácií sleduje viac ako 380 služieb a vychádza priamo z community-scripts, overených nezávislými údajmi zo skriptov. Hlavné aj záložné metódy rozpoznania (súbor, binárka, dpkg, apk, Python, Docker exec, Docker label) pokrývajú nové aj staršie rozloženia LXC.",
-      "pushover": "Pushover je teraz natívny kanál upozornení spolu s Telegramom, Gotify, Discordom, e-mailom a Apprise — nastavíte kľúč používateľa/API, zariadenie a zvuk; bežné správy majú prioritu 0, pri CRITICAL udalostiach môžete zapnúť prioritu 1. Navrhol @benginx (#308)."
+      "appCatalog": "Nový katalóg detekcie aplikácií s viac ako 380 sledovanými pracovnými záťažami, generovaný naživo z community-scripts pomocou siedmich detekčných metód (súbor, binárka, dpkg, apk, Python, Docker exec, Docker label). Primárne a záložné detektory pokrývajú nové aj historické rozloženia LXC.",
+      "pushover": "Pushover je teraz natívny kanál upozornení spolu s Telegramom, Gotify, Discordom, e-mailom a Apprise — nastavíte kľúč používateľa/API, zariadenie a zvuk; bežné správy majú prioritu 0, pri CRITICAL udalostiach môžete zapnúť prioritu 1. Navrhol @benginx (#308).",
+      "appsDashboard": "Nová hlavná karta Apps — jednotný spúšťač pre každý webový odkaz v uzle. Aplikácie zaregistrované v LXC a používateľské vlastné webové odkazy zdieľajú rovnakú mriežku s kategóriami, vyhľadávaním a priamym prístupom do modálu hostiteľa.",
+      "lxcAppsUpdates": "Karta App v modáli každého LXC registruje nainštalované aplikácie, zachytáva webové odkazy a sleduje verzie. Prepracovaná karta Updates aplikuje aktualizácie OS a aplikácií jediným tlačidlom; Docker Engine a jednotlivé image sledujú rovnaký 24-hodinový cyklus s akciou 'Skontrolovať teraz' na požiadanie.",
+      "multilingual": "Monitor teraz hovorí 8 jazykmi: angličtina, španielčina, nemčina, francúzština, taliančina, portugalčina, švédčina a slovenčina. Veľká vďaka patrí @vaso73 za vybudovanie i18n základov.",
+      "nvidiaMultiGpu": "Životný cyklus NVIDIA driverov prechádza na vlastníctvo podľa presného BDF, takže multi-GPU hostiteľ môže odovzdať jednu kartu do VM a druhú nechať funkčnú v hostiteľovi alebo v LXC, plus výber verzie citlivý na kernel, vetvu a GPU (#298)."
     }
   },
   "network": {
@@ -4733,5 +4755,43 @@
     "yourInput": "Tvoj vstup:",
     "submit": "Odoslať",
     "ok": "OK"
+  },
+  "apps": {
+    "searchPlaceholder": "Search app or CT…",
+    "searchAriaLabel": "Search",
+    "filterAll": "All categories",
+    "filterAriaLabel": "Filter by category",
+    "sortAriaLabel": "Sort by",
+    "sortName": "Name",
+    "sortId": "ID",
+    "sortCategory": "Category",
+    "countOne": "1 app",
+    "countMany": "{n} apps",
+    "uncategorized": "Uncategorized",
+    "openAriaLabel": "Open {name} in a new tab",
+    "openGuestAriaLabel": "Otvoriť {name} ({type} {id})",
+    "emptyTitle": "No apps with a web link yet.",
+    "emptyHint": "Register a Web Link for any app (App tab of a CT) to see it here.",
+    "customLinkAdd": "Add link",
+    "editModeToggle": "Edit",
+    "editModeDone": "Done",
+    "customLinkNewTitle": "New web link",
+    "customLinkEditTitle": "Edit web link",
+    "customLinkEditAria": "Upraviť vlastný odkaz {name}",
+    "customLinkName": "Name",
+    "customLinkNamePlaceholder": "e.g. My app",
+    "customLinkUrl": "URL",
+    "customLinkLogo": "Logo URL (optional)",
+    "customLinkLogoPlaceholder": "e.g., https://example.com/logo.webp",
+    "customLinkCategory": "Category (optional)",
+    "customLinkBinding": "Bound to",
+    "customLinkBindingNone": "Not bound to any guest",
+    "customLinkBindingHelp": "Bind this link to a VM or CT to add its ID + name to the card and jump to the guest with one click.",
+    "customLinkSave": "Save",
+    "customLinkCreate": "Create",
+    "customLinkCancel": "Cancel",
+    "customLinkDelete": "Delete",
+    "customLinkSaveError": "Save failed",
+    "customLinkDeleteError": "Delete failed"
   }
 }

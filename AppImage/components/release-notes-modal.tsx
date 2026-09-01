@@ -18,6 +18,41 @@ interface ReleaseNote {
 }
 
 export const CHANGELOG: Record<string, ReleaseNote> = {
+  "1.2.5": {
+    date: "September 1, 2026",
+    changes: {
+      added: [
+        "New top-level Apps dashboard — a single launcher for every Web Link across the node. LXC-registered apps and user-defined Custom Web Links share the same grid with category badges, search, sort by name/id/category, and one-click deep-links back to the guest modal (LXC cards land on App, VM cards on Status).",
+        "Application detection catalog with over 380 tracked workloads, generated live from the community-scripts source across seven detector methods (file, binary, dpkg, apk, Python, Docker exec, Docker label). Primary and fallback detectors cover both new and historical LXC layouts.",
+        "App tab inside every VM & LXC modal — register the apps installed in a container, capture their weblinks, and get notifications when a new upstream version ships. Cold-start Docker detection now correctly promotes Docker as the parent workload before the daemon finishes booting.",
+        "Reworked LXC Updates tab — apply OS packages and registered-app updates from a single button, schedule a recurring auto-update job, and cover Docker end to end (Engine + per-image on the same 24-hour rolling cycle as OS packages, with a 'Check now' action for on-demand digest comparison).",
+        "The Monitor now speaks 8 languages: English, Spanish, German, French, Italian, Portuguese, Swedish and Slovak. Thanks to @vaso73 for building the i18n scaffolding.",
+        "Navigation order — a new Settings card lets each user reorder the seven top-level tabs by drag and drop. Grouped slots (Node, Admin) move as a single unit; the first slot in the saved order becomes the tab the Monitor opens on. Mouse and touch supported.",
+        "Custom Web Links — persistent sidecar at /etc/proxmenux/custom_links.json for URLs that don't live inside a registered LXC app. Editor takes name, URL, optional logo, category and optional binding to a specific VM or LXC.",
+        "NVIDIA — multi-GPU passthrough by exact BDF ownership so a multi-GPU host can pass one card to a VM and keep the other operational on the host or in LXCs. Kernel + branch + GPU-aware version picker (#298).",
+        "Pushover joins Telegram, Gotify, Discord, Email and Apprise as a native notification channel — user/API key, device and sound selectors, priority 0 for regular messages, optional priority 1 for CRITICAL events. Suggested by @benginx (#308).",
+        "Host backup/restore continuity — ProxMenux configuration and independent backups survive a full Proxmox restore (#317, reported by @tropicaljoe).",
+        "Hardware temperature sensor identity — storage temperatures now identify the physical drive (NVMe namespace, model, serial) instead of the generic hwmon label. HDD/SSD classification follows the block device rotational flag (#315, suggested by @Dark-Witcher).",
+        "Post-install — precise rollback for every registered flow and Debian 13 readiness.",
+        "First-time visitors on Android and iOS Safari now see an in-app install prompt for adding the Monitor to their home screen as a PWA.",
+      ],
+      changed: [
+        "Memory & Swap health check now signals real memory pressure — CRITICAL fires only when swap file is nearly full AND available RAM is genuinely tight (both editable in Settings → Health thresholds). The old swap-only signal was noisy on hosts where Linux proactively swaps out inactive pages.",
+        "Faster page loads and smoother navigation across the dashboard. Overview opens instantly and the VMs & LXCs page never flashes 'Loading…' between guest modals again.",
+        "Long backup jobs no longer time out. VM and LXC backups launched from the Monitor now run in the background until they naturally finish, so a 30-minute PBS backup completes the same as a 10-second local one.",
+        "VMs running the QEMU Guest Agent now report real used / total disk figures on the dashboard, instead of the '0 GB' that PVE returns for guest-managed filesystems.",
+        "App tab cache stays warm across every action. Successful add / edit / check / dismiss / delete operations write the returned sidecar directly into both backend and shared frontend caches; post-update scans revalidate in the background while the last valid content stays visible.",
+        "Docker cards on the Apps dashboard resolve their update state per image, not per Docker Engine. The purple update arrow only lights up when that specific image has an upstream update.",
+        "ZFS ARC sizing under memory pressure and OOM diagnostics reworked (credit: LeidenSpain).",
+      ],
+      fixed: [
+        "Fix #309 — Proxmox storage availability: false critical alerts for iSCSI storages with maxdisk=0.",
+        "HID USB device class no longer reads as 'escondido' (past tense of 'to hide') in Spanish, German, French, Italian and Portuguese — the acronym is now preserved.",
+        "The Memory & Swap health card is dismissable like every other category (RAM usage and Swap usage sub-checks carry the dismissable flag).",
+        "Regenerated Proxmox VE Helper-Scripts updaters remain available after an app update (both historical wrappers and the current generated entrypoint are recognised).",
+      ],
+    },
+  },
   "1.2.4.1-beta": {
     date: "August 17, 2026",
     changes: {
@@ -254,23 +289,28 @@ export const CHANGELOG: Record<string, ReleaseNote> = {
 const CURRENT_VERSION_FEATURES = [
   {
     icon: <Sparkles className="h-5 w-5" />,
-    key: "releaseNotes.currentFeatures.appDetection",
-    text: "Smarter app detection in the App tab: Docker is correctly promoted as the parent workload during cold start (Portainer/SearXNG no longer briefly show up as native apps), unregistered suggestions live in the startup cache, and 'Find applications' runs a fresh catalog-backed scan on demand.",
+    key: "releaseNotes.currentFeatures.appsDashboard",
+    text: "New top-level Apps dashboard — a single launcher for every Web Link across the node. LXC-registered apps and user-defined Custom Web Links share the same grid with category badges, search, and one-click deep-links back to the guest modal.",
   },
   {
-    icon: <RefreshCw className="h-5 w-5" />,
-    key: "releaseNotes.currentFeatures.dockerUpdates",
-    text: "The Updates tab now covers Docker end-to-end: Docker Engine and per-image update tracking follow the same 24-hour rolling cycle as OS packages, with a 'Check now' action for on-demand digest comparison — no more waiting for the daily collector.",
+    icon: <Cpu className="h-5 w-5" />,
+    key: "releaseNotes.currentFeatures.lxcAppsUpdates",
+    text: "App tab inside every LXC modal registers installed apps, captures weblinks and tracks upstream versions. Reworked Updates tab applies OS packages and app updates from a single button; Docker Engine and per-image tracking follow the same 24-hour cycle, with a 'Check now' action on demand.",
   },
   {
     icon: <Zap className="h-5 w-5" />,
     key: "releaseNotes.currentFeatures.appCatalog",
-    text: "New application detection catalog with over 380 tracked workloads, built from the live community-scripts source with independent script evidence. Primary and fallback detectors (file, binary, dpkg, apk, Python, Docker exec, Docker label) cover both new and historical LXC layouts.",
+    text: "New application detection catalog with over 380 tracked workloads, generated live from community-scripts across seven detector methods (file, binary, dpkg, apk, Python, Docker exec, Docker label). Primary and fallback detectors cover both new and historical LXC layouts.",
   },
   {
-    icon: <Bell className="h-5 w-5" />,
-    key: "releaseNotes.currentFeatures.pushover",
-    text: "Pushover joins Telegram, Gotify, Discord, Email and Apprise as a native notification channel — user/API key, device and sound selectors, priority 0 for regular messages, optional priority 1 for CRITICAL events. Suggested by @benginx (#308).",
+    icon: <Languages className="h-5 w-5" />,
+    key: "releaseNotes.currentFeatures.multilingual",
+    text: "The Monitor now speaks 8 languages: English, Spanish, German, French, Italian, Portuguese, Swedish and Slovak. Huge thanks to @vaso73 for building the i18n scaffolding that made this possible.",
+  },
+  {
+    icon: <Server className="h-5 w-5" />,
+    key: "releaseNotes.currentFeatures.nvidiaMultiGpu",
+    text: "NVIDIA driver lifecycle moves to per-BDF ownership so a multi-GPU host can pass one card to a VM and keep the other operational on the host or in LXCs, plus a kernel + branch + GPU-aware version picker (#298).",
   },
 ]
 
