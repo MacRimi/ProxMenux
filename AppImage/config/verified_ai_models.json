@@ -1,85 +1,137 @@
 {
   "_description": "Verified AI models for ProxMenux notifications. Only models listed here will be shown to users. Models are tested to work with the chat/completions API format.",
-  "_updated": "2026-07-14",
+  "_updated": "2026-09-02",
   "_verifier": "Refreshed with tools/ai-models-verifier (private). Re-run before each ProxMenux release to keep the list current. The verifier and ProxMenux share the same reasoning/thinking-model handlers so their verdicts stay aligned with runtime behaviour.",
-
   "groq": {
     "models": [
-      "llama-3.3-70b-versatile",
-      "llama-3.1-8b-instant",
-      "meta-llama/llama-4-scout-17b-16e-instruct",
-      "openai/gpt-oss-120b",
-      "openai/gpt-oss-20b"
+      "allam-2-7b",
+      "qwen/qwen3.8-27b",
+      "groq/compound-mini",
+      "groq/compound"
     ],
-    "recommended": "llama-3.3-70b-versatile",
+    "recommended": "allam-2-7b",
     "_note": "Verified functionally 2026-07-14 with the Groq API (15 models discovered, 9 passed). Legacy llama-3.1-70b-versatile / llama3-70b-8192 / llama3-8b-8192 / mixtral-8x7b-32768 / gemma2-9b-it removed (retired upstream). llama-4-scout added (current-gen Llama 4, 0.47s). openai/gpt-oss-120b / gpt-oss-20b confirmed. Passing but excluded: allam-2-7b (Arabic-focused), qwen/qwen3-32b (Chinese-first, unreliable Spanish output), openai/gpt-oss-safeguard-20b (safety-classifier variant), groq/compound-mini (agentic system, wrong fit for notification translation)."
   },
-
   "gemini": {
     "models": [
-      "gemini-flash-lite-latest",
       "gemini-2.5-flash-lite",
-      "gemini-2.5-flash",
       "gemini-3.1-flash-lite",
+      "gemini-3.1-flash-lite-preview",
+      "gemini-2.5-flash",
+      "gemini-3.5-flash-lite",
+      "gemini-flash-lite-latest",
       "gemini-3-flash-preview",
-      "gemini-3.5-flash"
+      "gemini-3.5-flash",
+      "gemini-3.7-flash"
     ],
     "recommended": "gemini-2.5-flash-lite",
     "_note": "Verified 2026-07-13. gemini-flash-lite-latest now passes consistently (1.6s) and is fastest, but gemini-2.5-flash-lite remains recommended because 'latest' aliases can drift over time. gemini-3.1-flash-lite is the stable successor to 3-flash-preview. Pro variants continue to reject thinkingBudget=0 and are overkill for notification translation.",
-    "_deprecated": ["gemini-2.0-flash", "gemini-2.0-flash-lite", "gemini-1.5-flash", "gemini-1.0-pro", "gemini-pro"]
+    "_deprecated": [
+      "gemini-2.0-flash",
+      "gemini-2.0-flash-lite",
+      "gemini-1.5-flash",
+      "gemini-1.0-pro",
+      "gemini-pro"
+    ]
   },
-
   "openai": {
     "models": [
       "gpt-4.1-nano",
-      "gpt-4.1-mini",
-      "gpt-4o-mini",
+      "gpt-4.1-nano-2025-04-14",
+      "gpt-4.1-2025-04-14",
+      "gpt-5-nano-2025-08-07",
       "gpt-4.1",
-      "gpt-4o",
-      "gpt-5-chat-latest",
-      "gpt-5-nano"
+      "gpt-4o-2024-11-20",
+      "gpt-4o-2024-05-13",
+      "gpt-5-nano",
+      "gpt-4.1-mini",
+      "gpt-4.1-mini-2025-04-14",
+      "gpt-4o-mini",
+      "gpt-4o-mini-2024-07-18",
+      "gpt-3.5-turbo-0125",
+      "gpt-3.5-turbo-16k",
+      "gpt-3.5-turbo-1106",
+      "gpt-5",
+      "gpt-3.5-turbo",
+      "gpt-4",
+      "gpt-4-0613",
+      "gpt-4o-2024-08-06",
+      "gpt-4-turbo-2024-04-09",
+      "gpt-4-turbo",
+      "gpt-4o"
     ],
     "recommended": "gpt-4.1-nano",
     "_note": "Verified 2026-07-13. gpt-5.4-nano / gpt-5.4-mini removed (HTTP 400 — provider params rejected). gpt-5-nano added (2.0s, current-gen fast). Reasoning models (o-series, gpt-5/5.1/5.2 non-chat variants) are supported by openai_provider.py via max_completion_tokens + reasoning_effort=minimal, but not listed here: their latency is higher and they do not improve translation quality for notifications. Add specific reasoning IDs to this list only if a user explicitly wants them."
   },
-
   "anthropic": {
     "models": [
-      "claude-haiku-4-5",
-      "claude-sonnet-5",
+      "claude-haiku-4-5-20251001",
       "claude-opus-4-8",
+      "claude-opus-4-5-20251101",
+      "claude-opus-4-7",
+      "claude-fable-5",
+      "claude-sonnet-4-5-20250929",
       "claude-sonnet-4-6",
-      "claude-opus-4-6",
-      "claude-fable-5"
+      "claude-fable-5-1",
+      "claude-opus-4-6"
     ],
-    "recommended": "claude-haiku-4-5",
+    "recommended": "claude-haiku-4-5-20251001",
     "_note": "Verified 2026-07-13 with all 10 discovered models passing after aligning the verifier with anthropic_provider.py (temperature omitted — newest generations reject it with 'temperature is deprecated for this model'). Legacy claude-3-5-haiku-latest / claude-3-5-sonnet-latest / claude-3-opus-latest removed (deprecated upstream, not in the Models API). haiku-4-5 is the sweet spot for notification translation (3.6s, $1/$5 per MTok); sonnet-5 for slightly richer output (3.1s, $3/$15); opus-4-8 / fable-5 for demanding cases."
   },
-
   "openrouter": {
     "models": [
-      "meta-llama/llama-3.3-70b-instruct",
-      "meta-llama/llama-3.1-70b-instruct",
-      "meta-llama/llama-3.1-8b-instruct",
-      "meta-llama/llama-4-scout",
-      "anthropic/claude-haiku-4.5",
-      "anthropic/claude-sonnet-4.6",
-      "google/gemini-2.5-flash-lite",
-      "google/gemini-2.5-flash",
-      "openai/gpt-4o-mini",
-      "mistralai/mistral-small-3.2-24b-instruct",
+      "tencent/hy-mt2-1.8b",
+      "amazon/nova-2-lite-v1",
+      "google/gemini-3.1-flash-lite-preview",
+      "inclusionai/ling-3.0-flash",
+      "rekaai/reka-edge",
+      "tencent/hy-mt2-7b",
+      "google/gemini-3.5-flash-lite",
+      "tencent/hy-mt2-30b-a3b",
+      "google/gemini-3.1-flash-lite",
+      "~openai/gpt-mini-latest",
+      "openai/gpt-5.4-nano",
+      "mistralai/mistral-small-2603",
+      "poolside/laguna-s-2.1",
+      "ibm-granite/granite-4.1-8b",
+      "deepseek/deepseek-v4-flash-vision-exp",
+      "nex-agi/nex-n2-pro",
+      "x-ai/grok-4.20",
+      "openai/gpt-5.6-terra",
+      "google/gemma-4-26b-a4b-it",
+      "google/gemma-4-31b-it",
       "nvidia/nemotron-3-super-120b-a12b:free",
-      "google/gemma-4-26b-a4b-it:free",
-      "nvidia/nemotron-nano-12b-v2-vl:free",
-      "nvidia/nemotron-3-nano-30b-a3b:free",
+      "liquid/lfm-2.5-2.6b:free",
+      "~openai/gpt-latest",
+      "openai/gpt-5.6-luna",
+      "inclusionai/ling-3.0-flash-fin:free",
+      "~anthropic/claude-haiku-latest",
+      "z-ai/glm-5.3",
+      "openai/gpt-5.6-sol",
+      "~anthropic/claude-sonnet-latest",
+      "anthropic/claude-opus-5",
+      "perceptron/perceptron-mk1",
+      "aion-labs/aion-3.0-mini",
+      "x-ai/grok-4.3",
+      "anthropic/claude-fable-5.1",
+      "minimax/minimax-m2.7",
       "poolside/laguna-s-2.1:free",
+      "openai/gpt-5.6-luna-pro",
+      "openai/gpt-5.6-terra-pro",
+      "minimax/minimax-m3:free",
+      "openai/gpt-5.6-sol-pro",
       "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free",
-      "openai/gpt-oss-20b:free"
+      "x-ai/grok-4.6",
+      "upstage/solar-pro4",
+      "deepseek/deepseek-v4-flash",
+      "qwen/qwen3.8-27b",
+      "x-ai/grok-4.20-multi-agent",
+      "x-ai/grok-build-0.1",
+      "qwen/qwen3.6-max-preview"
     ],
-    "recommended": "meta-llama/llama-3.3-70b-instruct",
+    "recommended": "tencent/hy-mt2-1.8b",
     "_note": "Paid tier verified functionally 2026-07-14 with the OpenRouter API — all 10 curated candidates pass the Spanish-translation notification test. Fastest: llama-4-scout (0.51s), gemini-2.5-flash-lite (1.14s), gemini-2.5-flash (1.94s), llama-3.3-70b-instruct (2.29s), claude-haiku-4.5 (2.71s). Free tier verified 2026-08-17 — 7 :free models pass and are appended, ordered by latency: nemotron-3-super-120b-a12b (3.5s), gemma-4-26b-a4b-it (4.1s), nemotron-nano-12b-v2-vl (5.3s), nemotron-3-nano-30b-a3b (5.8s), laguna-s-2.1 (8.3s), nemotron-3-nano-omni-30b-a3b-reasoning (10.7s), gpt-oss-20b (12.2s). Free-tier rate limits (~20 req/min shared across all OpenRouter free users on that model) may cause 429 in high-traffic windows — usable for occasional notification translation, not for high-volume automation. recommended kept as llama-3.3-70b for capability/latency balance; llama-4-scout is a faster alternative worth considering as recommended after a broader release."
   },
-
   "ollama": {
     "_note": "Ollama models are local, we don't filter them. User manages their own models.",
     "models": [],
