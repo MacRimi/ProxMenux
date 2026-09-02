@@ -3962,7 +3962,8 @@
       "vmsLxcs": "VMs/LXCs",
       "when": "Wann",
       "whenLabel": "Wann",
-      "zfsPools": "ZFS-Pools"
+      "zfsPools": "ZFS-Pools",
+      "sshPort": "SSH-Port"
     },
     "jobs": {
       "attachDescriptionAfter": "Backups.",

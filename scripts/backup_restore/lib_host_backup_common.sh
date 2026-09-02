@@ -2163,6 +2163,12 @@ hb_borg_generate_and_install_key() {
     local borg_user="$1" host="$2" rpath="$3" mode="$4"
     local _out_var="$5"
     local -n _out_ref="$_out_var"
+    # Custom SSH port arrives via env var so the callers (this file
+    # itself, in 7+ places) don't have to change their signature. When
+    # unset or 22, ssh uses its default and no `-p` flag is injected.
+    local _port="${HB_BORG_INSTALL_PORT:-22}"
+    local _p_flag=()
+    [[ "$_port" != "22" ]] && _p_flag=(-p "$_port")
 
     local key_file="$HOME/.ssh/borg_proxmenux_$(echo "$host" | tr './:' '___')_ed25519"
     local pub_file="${key_file}.pub"
@@ -2346,6 +2352,7 @@ hb_borg_generate_and_install_key() {
         -o StrictHostKeyChecking=accept-new \
         -o PreferredAuthentications=password -o PubkeyAuthentication=no \
         -o NumberOfPasswordPrompts=1 -o ConnectTimeout=10 \
+        "${_p_flag[@]}" \
         "$admin_user@$host" "true" 2>&1) || true
     if echo "$_probe" | grep -qiE "permission denied[[:space:]]*\(publickey"; then
         # SSH password auth refused by the server — common when the Borg
@@ -2402,6 +2409,7 @@ hb_borg_generate_and_install_key() {
     local push_rc
     SSHPASS="$admin_pass" sshpass -e ssh -o StrictHostKeyChecking=accept-new \
         -o PreferredAuthentications=password -o PubkeyAuthentication=no \
+        "${_p_flag[@]}" \
         "$admin_user@$host" "$install_cmd" <<<"$authorized_line" >/tmp/proxmenux-borg-keypush.log 2>&1
     push_rc=$?
 
@@ -2509,6 +2517,22 @@ hb_configure_borg_manual() {
                 12 78 "borg" 3>&1 1>&2 2>&3) || return 1
             host=$(dialog --backtitle "ProxMenux" --inputbox "$(hb_translate "SSH host or IP:")" \
                 "$HB_UI_INPUT_H" "$HB_UI_INPUT_W" "" 3>&1 1>&2 2>&3) || return 1
+            # Custom SSH port (defaults to 22). NAS-style hosts often
+            # move SSH off 22 to keep their intrusion warnings quiet.
+            # Accepted range: 1-65535; anything else re-prompts.
+            local port
+            while :; do
+                port=$(dialog --backtitle "ProxMenux" \
+                    --inputbox "$(hb_translate "SSH port (default 22):")" \
+                    "$HB_UI_INPUT_H" "$HB_UI_INPUT_W" "22" 3>&1 1>&2 2>&3) || return 1
+                port="${port//[[:space:]]/}"
+                [[ -z "$port" ]] && port=22
+                if [[ "$port" =~ ^[0-9]+$ ]] && (( port >= 1 && port <= 65535 )); then
+                    break
+                fi
+                dialog --backtitle "ProxMenux" \
+                    --msgbox "$(hb_translate "Port must be a number between 1 and 65535.")" 8 60
+            done
             rpath=$(dialog --backtitle "ProxMenux" \
                 --inputbox "$(hb_translate "Remote repository path:")" \
                 "$HB_UI_INPUT_H" "$HB_UI_INPUT_W" "/backup/borgbackup" \
@@ -2598,7 +2622,12 @@ hb_configure_borg_manual() {
                     fi
                     ;;
                 generate-auto|generate-manual|generate-pct)
-                    if ! hb_borg_generate_and_install_key "$user" "$host" "$rpath" "$key_mode" ssh_key; then
+                    # Thread the custom port to the key-install helper
+                    # via env var so the sshpass probe and the actual
+                    # push both hit the right port on the Borg server.
+                    HB_BORG_INSTALL_PORT="${port:-22}" \
+                        hb_borg_generate_and_install_key "$user" "$host" "$rpath" "$key_mode" ssh_key
+                    if (( $? != 0 )); then
                         return 1
                     fi
                     ;;
@@ -2606,7 +2635,15 @@ hb_configure_borg_manual() {
                     ssh_key=""
                     ;;
             esac
-            repo="ssh://$user@$host/$rpath"
+            # Custom SSH port is embedded in the URL — Borg's ssh://
+            # scheme natively supports `ssh://user@host:port/path`. Port
+            # 22 is left out for backwards compatibility with existing
+            # borg-targets.txt entries that never carried the port.
+            if [[ "${port:-22}" == "22" ]]; then
+                repo="ssh://$user@$host/$rpath"
+            else
+                repo="ssh://$user@$host:$port/$rpath"
+            fi
             ;;
     esac
 
@@ -2635,7 +2672,13 @@ hb_configure_borg_manual() {
 
     _borg_repo_ref_new="$repo"
     if [[ -n "$ssh_key" ]]; then
-        export BORG_RSH="ssh -i $ssh_key -o StrictHostKeyChecking=accept-new"
+        local rsh_cmd="ssh -i $ssh_key -o StrictHostKeyChecking=accept-new"
+        [[ -n "${port:-}" && "$port" != "22" ]] && rsh_cmd="$rsh_cmd -p $port"
+        export BORG_RSH="$rsh_cmd"
+    elif [[ -n "${port:-}" && "$port" != "22" ]]; then
+        # No custom key but non-default port — still need to tell ssh
+        # which port to hit so `borg` doesn't fall back to 22.
+        export BORG_RSH="ssh -o StrictHostKeyChecking=accept-new -p $port"
     else
         unset BORG_RSH
     fi

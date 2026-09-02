@@ -3962,7 +3962,8 @@
       "vmsLxcs": "VM/LXC",
       "when": "Quand",
       "whenLabel": "Quand",
-      "zfsPools": "Pools ZFS"
+      "zfsPools": "Pools ZFS",
+      "sshPort": "Port SSH"
     },
     "jobs": {
       "attachDescriptionAfter": "sauvegardes.",

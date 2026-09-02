@@ -3962,7 +3962,8 @@
       "vmsLxcs": "VM/LXC",
       "when": "Kedy",
       "whenLabel": "Kedy",
-      "zfsPools": "ZFS pooly"
+      "zfsPools": "ZFS pooly",
+      "sshPort": "SSH port"
     },
     "jobs": {
       "attachDescriptionAfter": "zálohy.",

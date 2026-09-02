@@ -355,6 +355,15 @@ function suggestPackageName(name: string) {
     .replace(/^-+|-+$/g, "")
 }
 
+// The argv editors use a comma-separated display value, while the API stores
+// each argument as an array item. Keep this conversion separate from the text
+// shown in the controlled input: normalising the visible value on every
+// keystroke would remove a newly typed comma or trailing space before the user
+// can enter the next argument.
+function parseArgvInput(value: string): string[] {
+  return value.split(",").map((item) => item.trim()).filter(Boolean)
+}
+
 export function LxcAppPanel({ vmid, ctIp, onChange, managed, initialData }: Props) {
   const t = useT()
   const isLightTheme = useIsLightTheme()
@@ -371,6 +380,8 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed, initialData }: Prop
   const [detectionNotice, setDetectionNotice] = useState<{ found: boolean; text: string } | null>(null)
   // Editor state
   const [editing, setEditing] = useState<{ appId: string | null; draft: AppConfig } | null>(null)
+  const [binaryArgsInput, setBinaryArgsInput] = useState("")
+  const [commandArgvInput, setCommandArgvInput] = useState("")
   const [saving, setSaving] = useState(false)
   const [testingDetector, setTestingDetector] = useState(false)
   const [detectorTest, setDetectorTest] = useState<DetectorTestResult | null>(null)
@@ -742,6 +753,8 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed, initialData }: Prop
         setShowAdvanced(false)
       }
     }
+    setBinaryArgsInput((seed.binary_args || []).join(", "))
+    setCommandArgvInput((seed.command_argv || []).join(", "))
     setEditing({ appId: existing?.id || null, draft: seed })
     setDetectorTest(null)
     setError(null)
@@ -749,6 +762,8 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed, initialData }: Prop
 
   const closeEditor = () => {
     setEditing(null)
+    setBinaryArgsInput("")
+    setCommandArgvInput("")
     setDetectorTest(null)
     setError(null)
   }
@@ -771,6 +786,8 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed, initialData }: Prop
       setSidecar(r)
       setLxcAppsCached(vmid, r, suggestions)
       setEditing(null)
+      setBinaryArgsInput("")
+      setCommandArgvInput("")
       onChange?.()
     } catch (e: any) {
       setError(e?.message || t("vmLxc.appEditor.saveFailed"))
@@ -1241,6 +1258,7 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed, initialData }: Prop
                               patch.distribution = t.distribution || ""
                               patch.container_name = t.container_name || ""
                               patch.label = t.label || ""
+                              patch.command_argv = t.command_argv || []
                               patch.installed_regex = t.installed_regex || ""
                               patch.upstream_type = (t as any).upstream_type || (t.repo ? "github" : "")
                               patch.repo = t.repo || ""
@@ -1249,6 +1267,8 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed, initialData }: Prop
                               patch.upstream_json_path = (t as any).upstream_json_path || ""
                               patch.docker_image = (t as any).docker_image || ""
                               patch.tag_regex = t.tag_regex || "v?(\\d+\\.\\d+\\.\\d+)"
+                              setBinaryArgsInput((t.binary_args || []).join(", "))
+                              setCommandArgvInput((t.command_argv || []).join(", "))
                               setShowAdvanced(true)
                             }
                             setEditing((prev) => prev ? { ...prev, draft: { ...prev.draft, ...patch } } : prev)
@@ -1713,10 +1733,12 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed, initialData }: Prop
                         <Label htmlFor="app-de-args">{t("vmLxc.appEditor.binaryArgsLabel")}</Label>
                         <Input
                           id="app-de-args"
-                          value={(draft.binary_args || []).join(", ")}
-                          onChange={(e) => setField({
-                            binary_args: e.target.value.split(",").map(s => s.trim()).filter(Boolean),
-                          })}
+                          value={binaryArgsInput}
+                          onChange={(e) => {
+                            const value = e.target.value
+                            setBinaryArgsInput(value)
+                            setField({ binary_args: parseArgvInput(value) })
+                          }}
                           placeholder={t("vmLxc.appEditor.binaryArgsPlaceholder")}
                           className="font-mono text-xs"
                         />
@@ -1732,10 +1754,12 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed, initialData }: Prop
                       <Label htmlFor="app-cmd-argv">{t("vmLxc.appEditor.commandLabel")}</Label>
                       <Input
                         id="app-cmd-argv"
-                        value={(draft.command_argv || []).join(", ")}
-                        onChange={(e) => setField({
-                          command_argv: e.target.value.split(",").map(s => s.trim()).filter(Boolean),
-                        })}
+                        value={commandArgvInput}
+                        onChange={(e) => {
+                          const value = e.target.value
+                          setCommandArgvInput(value)
+                          setField({ command_argv: parseArgvInput(value) })
+                        }}
                         placeholder={t("vmLxc.appEditor.commandPlaceholder")}
                         className="font-mono text-xs"
                       />

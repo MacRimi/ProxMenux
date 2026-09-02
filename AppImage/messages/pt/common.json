@@ -3962,7 +3962,8 @@
       "vmsLxcs": "VMs/LXCs",
       "when": "Quando",
       "whenLabel": "Quando",
-      "zfsPools": "Conjuntos ZFS"
+      "zfsPools": "Conjuntos ZFS",
+      "sshPort": "Porta SSH"
     },
     "jobs": {
       "attachDescriptionAfter": "cópias de segurança.",

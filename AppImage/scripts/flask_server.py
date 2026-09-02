@@ -16380,11 +16380,29 @@ def _list_borg_destinations() -> list:
                 encrypt_mode = (parts[3] if len(parts) > 3 else '').strip() or 'repokey'
                 pass_file = f'{_BACKUP_STATE_DIR}/borg-pass-{name}.txt'
                 has_passphrase = os.path.isfile(pass_file)
+                # Parse ssh://user@host[:port]/path so the frontend can
+                # display the port without having to re-parse the URL.
+                # Non-ssh targets (local paths) leave ssh_port at 0.
+                ssh_port = 0
+                if repo.startswith('ssh://'):
+                    after_scheme = repo[len('ssh://'):]
+                    at_split = after_scheme.split('@', 1)
+                    if len(at_split) == 2:
+                        host_and_path = at_split[1]
+                        host_part = host_and_path.split('/', 1)[0]
+                        if ':' in host_part:
+                            try:
+                                ssh_port = int(host_part.rsplit(':', 1)[1])
+                            except (ValueError, IndexError):
+                                ssh_port = 0
+                    if ssh_port == 0:
+                        ssh_port = 22
                 targets.append({
                     'name': name,
                     'repository': repo,
                     'ssh_key': ssh_key,
                     'ssh_key_path': ssh_key,
+                    'ssh_port': ssh_port,
                     'encrypt_mode': encrypt_mode,
                     'has_passphrase': has_passphrase,
                     'jobs_using': _jobs_using_borg(repo),
@@ -16649,15 +16667,21 @@ def _capacity_local(path: str) -> dict:
     }
 
 
-def _capacity_borg_ssh(host: str, user: str, remote_path: str, key_path: str = '') -> dict:
+def _capacity_borg_ssh(host: str, user: str, remote_path: str, key_path: str = '',
+                        port: int = 22) -> dict:
     """Run `df -B1 --output=size,used,avail` over ssh against the
     remote borg repo path. Times out fast — failure is just rendered
-    as a missing capacity badge in the UI, not a hard error."""
+    as a missing capacity badge in the UI, not a hard error.
+
+    ``port`` defaults to 22 (standard SSH); pass a different value for
+    NAS-style hosts that expose SSH on a custom port."""
     if not host or not user or not remote_path:
         return {'error': 'incomplete ssh target'}
     ssh_target = f'{user}@{host}'
     cmd = ['ssh', '-o', 'BatchMode=yes', '-o', 'ConnectTimeout=5',
            '-o', 'StrictHostKeyChecking=accept-new']
+    if port and port != 22:
+        cmd += ['-p', str(int(port))]
     if key_path:
         cmd += ['-i', key_path]
     cmd += [ssh_target, f'df -B1 --output=size,used,avail {shlex.quote(remote_path)}']
@@ -18017,11 +18041,17 @@ def api_host_backups_dest_capacity():
         if kind == 'local' or kind == 'borg-local':
             cap = _capacity_local((t.get('path') or '').strip())
         elif kind == 'borg-ssh':
+            port_raw = t.get('port')
+            try:
+                port = int(port_raw) if port_raw not in (None, '', 0, '0') else 22
+            except (TypeError, ValueError):
+                port = 22
             cap = _capacity_borg_ssh(
                 (t.get('host') or '').strip(),
                 (t.get('user') or '').strip(),
                 (t.get('remote_path') or '').strip(),
                 (t.get('key_path') or '').strip(),
+                port=port,
             )
         elif kind == 'pbs':
             cap = _capacity_pbs(
@@ -19219,7 +19249,23 @@ def api_host_backups_dest_borg_add():
         rpath = (payload.get('ssh_remote_path') or '').strip().lstrip('/')
         if not user or not host or not rpath:
             return jsonify({'error': 'ssh_user, ssh_host and ssh_remote_path are required for ssh mode'}), 400
-        repo = f'ssh://{user}@{host}/{rpath}'
+        # Optional custom SSH port — NAS-style hosts often expose SSH on
+        # a non-standard port to reduce noise from bots. Empty / missing
+        # means default 22, which we leave out of the URL so existing
+        # targets stay byte-identical to how the shell installer writes them.
+        raw_port = payload.get('ssh_port')
+        ssh_port = 22
+        if raw_port not in (None, '', 0, '0'):
+            try:
+                ssh_port = int(raw_port)
+            except (TypeError, ValueError):
+                return jsonify({'error': 'ssh_port must be an integer between 1 and 65535'}), 400
+            if not (1 <= ssh_port <= 65535):
+                return jsonify({'error': 'ssh_port must be an integer between 1 and 65535'}), 400
+        if ssh_port == 22:
+            repo = f'ssh://{user}@{host}/{rpath}'
+        else:
+            repo = f'ssh://{user}@{host}:{ssh_port}/{rpath}'
         ssh_key = (payload.get('ssh_key_path') or '').strip()
     elif mode == 'local':
         repo = (payload.get('repo') or '').strip()
