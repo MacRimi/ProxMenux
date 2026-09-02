@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/card"
-import { Wrench, Package, Ruler, HeartPulse, Cpu, MemoryStick, HardDrive, CircleDot, Network, Server, Settings2, FileText, RefreshCw, Shield, AlertTriangle, Info, Loader2, Check, Database, CloudOff, Code, X, Copy, Sparkles, ArrowUpCircle, BellOff, Globe2 } from "lucide-react"
+import { Wrench, Package, Ruler, HeartPulse, Cpu, MemoryStick, HardDrive, CircleDot, Network, Server, Settings2, FileText, RefreshCw, Shield, AlertTriangle, Info, Loader2, Check, Database, CloudOff, Code, X, Copy, Sparkles, ArrowUpCircle, BellOff, Globe2, Github } from "lucide-react"
 import { Badge } from "./ui/badge"
 import { Button } from "./ui/button"
 import { NotificationSettings } from "./notification-settings"
@@ -392,6 +392,17 @@ export function Settings() {
   const [loadingInterfaces, setLoadingInterfaces] = useState(true)
   const [savingInterface, setSavingInterface] = useState<string | null>(null)
 
+  // Optional GitHub API authentication for app release/tag checks. The
+  // backend only returns whether a token exists; the secret itself never
+  // leaves the host after it has been saved.
+  const [githubTokenConfigured, setGithubTokenConfigured] = useState(false)
+  const [githubTokenLoading, setGithubTokenLoading] = useState(true)
+  const [githubTokenEditMode, setGithubTokenEditMode] = useState(false)
+  const [githubTokenDraft, setGithubTokenDraft] = useState("")
+  const [githubTokenSaving, setGithubTokenSaving] = useState(false)
+  const [githubTokenSaved, setGithubTokenSaved] = useState(false)
+  const [githubTokenError, setGithubTokenError] = useState("")
+
   // Active Suppressions panel — lists every error currently dismissed
   // (time-limited or permanent) so the user can re-enable individual
   // alerts. Mirrors what /api/health/full returns under `dismissed`.
@@ -451,6 +462,63 @@ export function Settings() {
     }
   }
 
+  const loadGithubTokenStatus = async () => {
+    setGithubTokenLoading(true)
+    try {
+      const data = await fetchApi<{ configured: boolean }>("/api/apps/github-token")
+      setGithubTokenConfigured(!!data.configured)
+      setGithubTokenError("")
+    } catch (err) {
+      console.error("Failed to load GitHub API token status:", err)
+      setGithubTokenError(t("settings.githubApi.loadFailed"))
+    } finally {
+      setGithubTokenLoading(false)
+    }
+  }
+
+  const saveGithubToken = async () => {
+    const token = githubTokenDraft.trim()
+    if (!token) return
+    setGithubTokenSaving(true)
+    setGithubTokenError("")
+    try {
+      await fetchApi<{ success: boolean; configured: boolean }>("/api/apps/github-token", {
+        method: "PUT",
+        body: JSON.stringify({ token }),
+      })
+      setGithubTokenConfigured(true)
+      setGithubTokenDraft("")
+      setGithubTokenEditMode(false)
+      setGithubTokenSaved(true)
+      window.setTimeout(() => setGithubTokenSaved(false), 2500)
+    } catch (err) {
+      console.error("Failed to save GitHub API token:", err)
+      setGithubTokenError(t("settings.githubApi.saveFailed"))
+    } finally {
+      setGithubTokenSaving(false)
+    }
+  }
+
+  const removeGithubToken = async () => {
+    setGithubTokenSaving(true)
+    setGithubTokenError("")
+    try {
+      await fetchApi<{ success: boolean; configured: boolean }>("/api/apps/github-token", {
+        method: "DELETE",
+      })
+      setGithubTokenConfigured(false)
+      setGithubTokenDraft("")
+      setGithubTokenEditMode(false)
+      setGithubTokenSaved(true)
+      window.setTimeout(() => setGithubTokenSaved(false), 2500)
+    } catch (err) {
+      console.error("Failed to remove GitHub API token:", err)
+      setGithubTokenError(t("settings.githubApi.removeFailed"))
+    } finally {
+      setGithubTokenSaving(false)
+    }
+  }
+
   useEffect(() => {
   loadProxmenuxTools()
   getUnitsSettings()
@@ -459,6 +527,7 @@ export function Settings() {
   loadActiveSuppressions()
   loadNetworkInterfaces()
   loadSnippetsStorage()
+  loadGithubTokenStatus()
   }, [])
 
   // Refresh the Active Suppressions list whenever:
@@ -1802,6 +1871,113 @@ export function Settings() {
           preference is preserved in the DB and reappears when detection
           is re-enabled). */}
       <LxcUpdateDetection />
+
+      {/* GitHub API — optional authentication for app upstream checks. */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2">
+              <Github className="h-5 w-5 text-foreground" />
+              <CardTitle>{t("settings.githubApi.title")}</CardTitle>
+            </div>
+            {!githubTokenLoading && (
+              <div className="flex items-center gap-2">
+                {githubTokenSaved && (
+                  <span className="flex items-center gap-1 text-xs text-green-500">
+                    <Check className="h-3.5 w-3.5" />
+                    {t("status.saved")}
+                  </span>
+                )}
+                {githubTokenEditMode ? (
+                  <>
+                    <button
+                      className="h-7 px-3 text-xs rounded-md border border-border bg-background hover:bg-muted transition-colors text-muted-foreground"
+                      onClick={() => {
+                        setGithubTokenDraft("")
+                        setGithubTokenError("")
+                        setGithubTokenEditMode(false)
+                      }}
+                      disabled={githubTokenSaving}
+                    >
+                      {t("actions.cancel")}
+                    </button>
+                    <button
+                      className="h-7 px-3 text-xs rounded-md bg-blue-600 hover:bg-blue-700 text-white transition-colors disabled:opacity-50 flex items-center gap-1.5"
+                      onClick={saveGithubToken}
+                      disabled={githubTokenSaving || !githubTokenDraft.trim()}
+                    >
+                      {githubTokenSaving ? <Loader2 className="h-3 w-3 animate-spin" /> : <Check className="h-3 w-3" />}
+                      {t("actions.save")}
+                    </button>
+                  </>
+                ) : (
+                  <button
+                    className="h-7 px-3 text-xs rounded-md border border-border bg-background hover:bg-muted transition-colors flex items-center gap-1.5"
+                    onClick={() => {
+                      setGithubTokenError("")
+                      setGithubTokenEditMode(true)
+                    }}
+                  >
+                    <Settings2 className="h-3 w-3" />
+                    {githubTokenConfigured ? t("actions.edit") : t("settings.githubApi.configure")}
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
+          <CardDescription>{t("settings.githubApi.description")}</CardDescription>
+        </CardHeader>
+        <CardContent className={githubTokenEditMode ? "bg-accent [&_input]:bg-background" : undefined}>
+          {githubTokenLoading ? (
+            <div className="flex items-center justify-center py-6">
+              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+            </div>
+          ) : githubTokenEditMode ? (
+            <div className="space-y-3">
+              <div className="space-y-1.5">
+                <label htmlFor="github-api-token" className="text-sm font-medium text-foreground">
+                  {t("settings.githubApi.tokenLabel")}
+                </label>
+                <Input
+                  id="github-api-token"
+                  type="password"
+                  autoComplete="new-password"
+                  value={githubTokenDraft}
+                  onChange={(event) => setGithubTokenDraft(event.target.value)}
+                  placeholder={githubTokenConfigured ? "••••••••••••" : t("settings.githubApi.tokenPlaceholder")}
+                  disabled={githubTokenSaving}
+                />
+                <p className="text-xs text-muted-foreground">{t("settings.githubApi.tokenHelp")}</p>
+              </div>
+              {githubTokenConfigured && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="border-red-500/40 text-red-400 hover:bg-red-500/10 hover:text-red-300"
+                  onClick={removeGithubToken}
+                  disabled={githubTokenSaving}
+                >
+                  <X className="h-4 w-4 mr-2" />
+                  {t("settings.githubApi.removeToken")}
+                </Button>
+              )}
+            </div>
+          ) : (
+            <div className="flex items-center gap-2 text-sm">
+              <span className={`h-2 w-2 rounded-full ${githubTokenConfigured ? "bg-green-500" : "bg-muted-foreground/60"}`} />
+              <span className={githubTokenConfigured ? "text-green-500" : "text-muted-foreground"}>
+                {githubTokenConfigured ? t("settings.githubApi.configured") : t("settings.githubApi.notConfigured")}
+              </span>
+            </div>
+          )}
+          {githubTokenError && (
+            <div className="mt-3 flex items-start gap-2 text-sm text-red-400">
+              <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" />
+              <span>{githubTokenError}</span>
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       {/* Notification Settings */}
       <NotificationSettings />

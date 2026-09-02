@@ -1432,6 +1432,7 @@
       "updateAvailableBadge": "Update available",
       "upstreamErrorTimeout": "Network timeout while contacting upstream",
       "upstreamErrorNetwork": "Network error: {detail}",
+      "upstreamErrorGithubRateLimit": "GitHub's request limit has been reached. Configure an optional token in Settings → GitHub API, or try again later.",
       "upstreamErrorGeneric": "Upstream check failed: {detail}",
       "portDescriptionPlaceholder": "Description (e.g. Web UI, go2rtc, admin)",
       "portPortPlaceholder": "port",
@@ -1646,6 +1647,20 @@
       "loadFailed": "Could not load the LXC update detection setting.",
       "saveFailed": "Could not save the LXC update detection setting.",
       "purgedMessage": "{count} LXC entries removed from the registry. Re-enabling detection will repopulate them on the next scan cycle."
+    },
+    "githubApi": {
+      "title": "GitHub API",
+      "description": "Optional authentication for the release and tag checks used by registered applications.",
+      "configure": "Configure",
+      "tokenLabel": "Personal access token",
+      "tokenPlaceholder": "github_pat_...",
+      "tokenHelp": "The token is stored encrypted. ProxMenux uses it only for read-only GitHub API requests and never displays it again.",
+      "configured": "Token configured",
+      "notConfigured": "Using GitHub's anonymous request quota",
+      "removeToken": "Remove token",
+      "loadFailed": "Could not load the GitHub API setting.",
+      "saveFailed": "Could not save the GitHub API token.",
+      "removeFailed": "Could not remove the GitHub API token."
     },
     "notifications": {
       "title": "Notifications",

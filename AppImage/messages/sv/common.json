@@ -1527,6 +1527,7 @@
       "editButton": "Redigera",
       "upstreamErrorTimeout": "Nätverkstimeout vid kontakt uppströms",
       "upstreamErrorNetwork": "Nätverksfel: {detail}",
+      "upstreamErrorGithubRateLimit": "GitHubs förfrågningsgräns har nåtts. Konfigurera en valfri token under Inställningar → GitHub API eller försök igen senare.",
       "upstreamErrorGeneric": "Uppströmskontroll misslyckades: {detail}",
       "notificationsEnabled": "Uppströmsuppdateringsmeddelanden PÅ – klicka för att stänga av ljudet",
       "notificationsMuted": "Uppströmsuppdateringsmeddelanden AVSTÄLLD – klicka för att aktivera",
@@ -1647,6 +1648,20 @@
       "loadFailed": "Det gick inte att ladda inställningen för LXC-uppdateringsdetektering.",
       "saveFailed": "Det gick inte att spara inställningen för upptäckt av LXC-uppdatering.",
       "purgedMessage": "{count} LXC-poster har tagits bort från registret. Om detektering återaktiveras kommer de att fyllas på igen vid nästa skanningscykel."
+    },
+    "githubApi": {
+      "title": "GitHub API",
+      "description": "Valfri autentisering för kontroller av utgåvor och taggar för registrerade appar.",
+      "configure": "Konfigurera",
+      "tokenLabel": "Personlig åtkomsttoken",
+      "tokenPlaceholder": "github_pat_...",
+      "tokenHelp": "Token lagras krypterad. ProxMenux använder den endast för skrivskyddade anrop till GitHub API och visar den inte igen efter att den har sparats.",
+      "configured": "Token konfigurerad",
+      "notConfigured": "GitHubs anonyma förfrågningskvot används",
+      "removeToken": "Ta bort token",
+      "loadFailed": "Det gick inte att läsa in GitHub API-inställningen.",
+      "saveFailed": "Det gick inte att spara GitHub API-token.",
+      "removeFailed": "Det gick inte att ta bort GitHub API-token."
     },
     "notifications": {
       "title": "Aviseringar",

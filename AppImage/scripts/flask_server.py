@@ -13747,6 +13747,54 @@ def api_apps_catalog():
         return jsonify({'error': str(e)}), 500
 
 
+@app.route('/api/apps/github-token', methods=['GET'])
+@require_auth
+def api_apps_github_token_status():
+    """Return whether the optional GitHub API token is configured.
+
+    The token itself is deliberately never returned to the client.
+    """
+    try:
+        if not notification_manager._config:
+            notification_manager._load_config()
+        value = notification_manager._config.get('github_pat', '')
+        return jsonify({'configured': bool(isinstance(value, str) and value.strip())})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/apps/github-token', methods=['PUT'])
+@require_admin_scope
+def api_apps_github_token_save():
+    """Store the GitHub API token in the existing encrypted settings store."""
+    payload = request.get_json(silent=True) or {}
+    token = payload.get('token')
+    if not isinstance(token, str):
+        return jsonify({'error': 'token must be a string'}), 400
+    token = token.strip()
+    if not token:
+        return jsonify({'error': 'token is required'}), 400
+    if len(token) > 512:
+        return jsonify({'error': 'token exceeds the 512 character limit'}), 400
+    if any(ch.isspace() or ord(ch) < 33 or ord(ch) == 127 for ch in token):
+        return jsonify({'error': 'token contains whitespace or control characters'}), 400
+
+    result = notification_manager.save_settings({'github_pat': token})
+    if not result.get('success'):
+        return jsonify({'error': result.get('error', 'failed to save token')}), 500
+    return jsonify({'success': True, 'configured': True})
+
+
+@app.route('/api/apps/github-token', methods=['DELETE'])
+@require_admin_scope
+def api_apps_github_token_remove():
+    """Clear the optional GitHub API token without exposing its old value."""
+    result = notification_manager.save_settings({'github_pat': ''})
+    if not result.get('success'):
+        return jsonify({'error': result.get('error', 'failed to remove token')}), 500
+    return jsonify({'success': True, 'configured': False})
+
+
 @app.route('/api/lxc-apps/dockerhub-tag-preview', methods=['POST'])
 @require_auth
 def api_lxc_apps_dockerhub_tag_preview():

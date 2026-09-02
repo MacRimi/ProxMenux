@@ -512,6 +512,9 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed, initialData }: Prop
       }
       return t("vmLxc.appEditor.upstreamErrorNetwork", { detail })
     }
+    if (lower.includes("github rate limited")) {
+      return t("vmLxc.appEditor.upstreamErrorGithubRateLimit")
+    }
     return msg
   }
 

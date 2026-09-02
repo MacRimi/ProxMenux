@@ -64,6 +64,10 @@ ENCRYPTION_KEY_FILE = Path('/usr/local/share/proxmenux/.notification_key')
 
 # Keys that contain sensitive data and should be encrypted
 SENSITIVE_KEYS = {
+    # Optional GitHub API token used by the LXC app version tracker.
+    # It lives in the shared settings store so it benefits from the same
+    # ENC2 encryption and never needs a second secrets file.
+    'github_pat',
     'ai_api_key',  # Legacy - kept for migration
     'ai_api_key_groq',
     'ai_api_key_gemini',

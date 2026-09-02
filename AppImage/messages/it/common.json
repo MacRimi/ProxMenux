@@ -1527,6 +1527,7 @@
       "editButton": "Modificare",
       "upstreamErrorTimeout": "timeout della rete durante il contatto a monte",
       "upstreamErrorNetwork": "errore di rete: {detail}",
+      "upstreamErrorGithubRateLimit": "È stato raggiunto il limite di richieste GitHub. Configura un token facoltativo in Impostazioni → API GitHub oppure riprova più tardi.",
       "upstreamErrorGeneric": "controllo upstream non riuscito: {detail}",
       "notificationsEnabled": "notifiche di aggiornamento upstream attivate: fai clic per disattivare l'audio",
       "notificationsMuted": "notifiche di aggiornamento upstream MUTED: fare clic per abilitare",
@@ -1647,6 +1648,20 @@
       "loadFailed": "Impossibile caricare l'impostazione di rilevamento degli aggiornamenti LXC.",
       "saveFailed": "Impossibile salvare l'impostazione di rilevamento degli aggiornamenti LXC.",
       "purgedMessage": "{count} Voci LXC rimosse dal registro. La riattivazione del rilevamento li ripopolarà al ciclo di scansione successivo."
+    },
+    "githubApi": {
+      "title": "API GitHub",
+      "description": "Autenticazione facoltativa per controllare release e tag delle applicazioni registrate.",
+      "configure": "Configura",
+      "tokenLabel": "Token di accesso personale",
+      "tokenPlaceholder": "github_pat_...",
+      "tokenHelp": "Il token viene archiviato in forma cifrata. ProxMenux lo utilizza solo per richieste di sola lettura all'API GitHub e non lo mostra più dopo il salvataggio.",
+      "configured": "Token configurato",
+      "notConfigured": "Utilizzo della quota di richieste anonime di GitHub",
+      "removeToken": "Rimuovi token",
+      "loadFailed": "Impossibile caricare l'impostazione dell'API GitHub.",
+      "saveFailed": "Impossibile salvare il token dell'API GitHub.",
+      "removeFailed": "Impossibile rimuovere il token dell'API GitHub."
     },
     "notifications": {
       "title": "Notifiche",

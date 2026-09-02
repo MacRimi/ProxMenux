@@ -1526,6 +1526,7 @@
       "editButton": "Upraviť",
       "upstreamErrorTimeout": "Časový limit siete pri kontaktovaní upstream",
       "upstreamErrorNetwork": "Chyba siete: {detail}",
+      "upstreamErrorGithubRateLimit": "Bol dosiahnutý limit požiadaviek GitHubu. V časti Nastavenia → GitHub API nakonfigurujte voliteľný token alebo to skúste znova neskôr.",
       "upstreamErrorGeneric": "Kontrola proti prúdu zlyhala: {detail}",
       "notificationsEnabled": "Upozornenia na upstream aktualizácie sú ZAPNUTÉ – kliknutím ich stlmíte",
       "notificationsMuted": "Upstream upozornenia na aktualizácie MUTED – kliknutím aktivujete",
@@ -1646,6 +1647,20 @@
       "loadFailed": "Nastavenie kontroly aktualizácií LXC sa nepodarilo načítať.",
       "saveFailed": "Nastavenie kontroly aktualizácií LXC sa nepodarilo uložiť.",
       "purgedMessage": "Z registra bolo odstránených {count} LXC záznamov. Po opätovnom zapnutí kontroly sa doplnia pri ďalšom skenovaní."
+    },
+    "githubApi": {
+      "title": "GitHub API",
+      "description": "Voliteľné overenie pre kontrolu vydaní a značiek registrovaných aplikácií.",
+      "configure": "Nastaviť",
+      "tokenLabel": "Osobný prístupový token",
+      "tokenPlaceholder": "github_pat_...",
+      "tokenHelp": "Token sa ukladá šifrovane. ProxMenux ho používa iba na požiadavky GitHub API určené na čítanie a po uložení ho už nezobrazí.",
+      "configured": "Token je nastavený",
+      "notConfigured": "Používa sa anonymná kvóta požiadaviek GitHubu",
+      "removeToken": "Odstrániť token",
+      "loadFailed": "Nastavenie GitHub API sa nepodarilo načítať.",
+      "saveFailed": "Token GitHub API sa nepodarilo uložiť.",
+      "removeFailed": "Token GitHub API sa nepodarilo odstrániť."
     },
     "notifications": {
       "title": "Notifikácie",

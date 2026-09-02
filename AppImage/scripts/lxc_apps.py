@@ -1285,16 +1285,13 @@ def _select_working_hint_detector(vmid, hint: dict) -> tuple[dict, Optional[str]
 def _github_pat() -> Optional[str]:
     try:
         from notification_manager import notification_manager
-        pat = notification_manager._config.get("github_pat") if notification_manager._config else None
-        if not pat:
-            return None
-        try:
-            from notification_manager import decrypt_sensitive_value
-            if isinstance(pat, str) and pat.startswith("encrypted:"):
-                return decrypt_sensitive_value(pat)
-        except Exception:
-            pass
-        return pat if isinstance(pat, str) else None
+        # The notification manager owns the shared encrypted settings store.
+        # During very early calls its runtime cache may not have been loaded
+        # yet, so initialise it before reading the optional GitHub token.
+        if not notification_manager._config:
+            notification_manager._load_config()
+        pat = notification_manager._config.get("github_pat")
+        return pat.strip() if isinstance(pat, str) and pat.strip() else None
     except Exception:
         return None
 
@@ -1365,7 +1362,7 @@ def _fetch_github_latest_details(config: dict) -> tuple[Optional[str], Optional[
         if e.code == 403:
             remaining = e.headers.get("X-RateLimit-Remaining", "1")
             if remaining == "0":
-                return None, "github rate limited — configure a PAT in Settings", None
+                return None, "github rate limited — configure a PAT in Settings → GitHub API", None
             return None, "github rejected the request (403)", None
         return None, f"github error {e.code}", None
     except (urllib.error.URLError, TimeoutError, OSError) as e:

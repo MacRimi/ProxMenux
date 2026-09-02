@@ -1527,6 +1527,7 @@
       "editButton": "Bearbeiten",
       "upstreamErrorTimeout": "Netzwerk-Timeout beim Kontaktieren des Upstreams",
       "upstreamErrorNetwork": "Netzwerkfehler: {detail}",
+      "upstreamErrorGithubRateLimit": "Das GitHub-Anfragelimit wurde erreicht. Konfigurieren Sie unter Einstellungen → GitHub API ein optionales Token oder versuchen Sie es später erneut.",
       "upstreamErrorGeneric": "Upstream-Prüfung fehlgeschlagen: {detail}",
       "notificationsEnabled": "Upstream-Update-Benachrichtigungen EIN – zum Stummschalten klicken",
       "notificationsMuted": "Upstream-Update-Benachrichtigungen stummgeschaltet – zum Aktivieren klicken",
@@ -1647,6 +1648,20 @@
       "loadFailed": "Die Einstellung für die LXC-Update-Erkennung konnte nicht geladen werden.",
       "saveFailed": "Die Einstellung für die LXC-Update-Erkennung konnte nicht gespeichert werden.",
       "purgedMessage": "{count} LXC-Einträge aus der Registrierung entfernt. Durch erneutes Aktivieren der Erkennung werden sie beim nächsten Scan-Zyklus neu aufgefüllt."
+    },
+    "githubApi": {
+      "title": "GitHub API",
+      "description": "Optionale Authentifizierung für die Release- und Tag-Prüfungen registrierter Anwendungen.",
+      "configure": "Konfigurieren",
+      "tokenLabel": "Persönliches Zugriffstoken",
+      "tokenPlaceholder": "github_pat_...",
+      "tokenHelp": "Das Token wird verschlüsselt gespeichert. ProxMenux verwendet es ausschließlich für schreibgeschützte GitHub-API-Anfragen und zeigt es danach nicht erneut an.",
+      "configured": "Token konfiguriert",
+      "notConfigured": "Anonymes GitHub-Anfragekontingent wird verwendet",
+      "removeToken": "Token entfernen",
+      "loadFailed": "Die GitHub-API-Einstellung konnte nicht geladen werden.",
+      "saveFailed": "Das GitHub-API-Token konnte nicht gespeichert werden.",
+      "removeFailed": "Das GitHub-API-Token konnte nicht entfernt werden."
     },
     "notifications": {
       "title": "Benachrichtigungen",

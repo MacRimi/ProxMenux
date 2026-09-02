@@ -1527,6 +1527,7 @@
       "editButton": "Modifier",
       "upstreamErrorTimeout": "expiration du délai d'attente du réseau lors du contact en amont",
       "upstreamErrorNetwork": "Erreur réseau : {detail}",
+      "upstreamErrorGithubRateLimit": "La limite de requêtes GitHub a été atteinte. Configurez un jeton facultatif dans Paramètres → API GitHub ou réessayez plus tard.",
       "upstreamErrorGeneric": "Échec de la vérification en amont : {detail}",
       "notificationsEnabled": "Notifications de mise à jour en amont activées – cliquez pour désactiver le son",
       "notificationsMuted": "Notifications de mise à jour en amont MUTED – cliquez pour activer",
@@ -1647,6 +1648,20 @@
       "loadFailed": "Impossible de charger le paramètre de détection de mise à jour LXC.",
       "saveFailed": "Impossible d'enregistrer le paramètre de détection de mise à jour LXC.",
       "purgedMessage": "{count} Entrées LXC supprimées du registre. La réactivation de la détection les repeuplera lors du prochain cycle d'analyse."
+    },
+    "githubApi": {
+      "title": "API GitHub",
+      "description": "Authentification facultative pour vérifier les versions et les étiquettes des applications enregistrées.",
+      "configure": "Configurer",
+      "tokenLabel": "Jeton d'accès personnel",
+      "tokenPlaceholder": "github_pat_...",
+      "tokenHelp": "Le jeton est stocké sous forme chiffrée. ProxMenux l'utilise uniquement pour des requêtes en lecture seule vers l'API GitHub et ne l'affiche plus ensuite.",
+      "configured": "Jeton configuré",
+      "notConfigured": "Utilisation du quota de requêtes anonymes de GitHub",
+      "removeToken": "Supprimer le jeton",
+      "loadFailed": "Impossible de charger le paramètre de l'API GitHub.",
+      "saveFailed": "Impossible d'enregistrer le jeton de l'API GitHub.",
+      "removeFailed": "Impossible de supprimer le jeton de l'API GitHub."
     },
     "notifications": {
       "title": "Notifications",
