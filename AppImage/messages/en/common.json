@@ -1163,6 +1163,16 @@
       "targetApp": "Application",
       "targetBoth": "OS + application",
       "lastRun": "Last run: {date}",
+      "rebootRequired": "A restart is required to complete the update.",
+      "rebootPackages": "Packages: {packages}",
+      "viewLog": "View log",
+      "logTitle": "Update log",
+      "logDescription": "Output from the latest scheduled update of {name} (LXC {vmid}).",
+      "logLoading": "Loading log…",
+      "logEmpty": "This run produced no output.",
+      "logFailed": "The update log could not be loaded.",
+      "logTruncated": "Only the end of the log is shown because it exceeds the display limit.",
+      "closeLog": "Close",
       "runSuccess": "✓ success",
       "runPartial": "completed partially",
       "runFailed": "✗ failed",
@@ -1936,7 +1946,8 @@
           "gemini": "A free tier is available, with a good quality-to-price ratio.",
           "ollama": "Uses models on your Ollama server. Fully local, private and free to run.",
           "openrouter": "Access to more than 100 models through one API key."
-        }
+        },
+        "loadModelsFailed": "Failed to load models — check the API key or endpoint URL."
       },
       "telegramGuide": {
         "title": "Telegram bot setup guide",
@@ -2101,7 +2112,7 @@
     "backupCodeHint": "You can also use a backup code (format: XXXX-XXXX)",
     "backToLogin": "Back to login",
     "verifyCode": "Verify Code",
-    "version": "ProxMenux Monitor v1.2.5"
+    "version": "ProxMenux Monitor v1.2.6"
   },
   "account": {
     "signedIn": "Signed in",
@@ -3157,7 +3168,13 @@
       "appsDashboard": "New top-level Apps dashboard — a single launcher for every Web Link across the node. LXC-registered apps and user-defined Custom Web Links share the same grid with category badges, search, and one-click deep-links back to the guest modal.",
       "lxcAppsUpdates": "App tab inside every LXC modal registers installed apps, captures weblinks and tracks upstream versions. Reworked Updates tab applies OS packages and app updates from a single button; Docker Engine and per-image tracking follow the same 24-hour cycle, with a 'Check now' action on demand.",
       "multilingual": "The Monitor now speaks 8 languages: English, Spanish, German, French, Italian, Portuguese, Swedish and Slovak. Huge thanks to @vaso73 for building the i18n scaffolding that made this possible.",
-      "nvidiaMultiGpu": "NVIDIA driver lifecycle moves to per-BDF ownership so a multi-GPU host can pass one card to a VM and keep the other operational on the host or in LXCs, plus a kernel + branch + GPU-aware version picker (#298)."
+      "nvidiaMultiGpu": "NVIDIA driver lifecycle moves to per-BDF ownership so a multi-GPU host can pass one card to a VM and keep the other operational on the host or in LXCs, plus a kernel + branch + GPU-aware version picker (#298).",
+      "aiCustomEndpoint": "AI Assistant custom OpenAI endpoint — LiteLLM, LM Studio, LocalAI, vLLM, OmniRoute and any self-hosted proxy on private IPs, loopback or Docker networks are recognised when loading the model catalogue. The dropdown surfaces the server's error (or the underlying network reason) directly under the Load button (#325, reported by @jorgeffonte).",
+      "secureGatewayArch": "Secure Gateway wizard — the Alpine template download, local template selection and pct create all match the host's real architecture, so x86_64 hosts receive amd64 containers and arm64 hosts receive arm64 containers (#324, reported by @N0X4DD0).",
+      "atomicNotifications": "Notification events reserve their deduplication fingerprint atomically before AI processing and channel delivery, so concurrent collectors, completion callbacks or parallel Monitor processes cannot send the same event twice. The reservation is released when no channel succeeds, preserving retries.",
+      "borgSshPort": "Borg remote target — the Add Borg destination dialog and the shell TUI accept a custom SSH port. BORG_RSH, the auto key install flow and the capacity probe all honour it. Fully backwards compatible with existing entries created without an explicit port (suggested by @songochain in discussion #236).",
+      "githubToken": "Settings → GitHub API accepts an optional personal access token for release and tag checks when the anonymous quota is exhausted. The token is encrypted at rest and never returned to the browser; the rate-limit error is translated in every Monitor language (suggested by @SystemIdleProcess in discussion #306).",
+      "replicationContext": "Native Proxmox replication failure notifications resolve the replication job ID, affected VM/LXC ID and guest name; the exact error block from Proxmox is preserved as the reason, and each replication job deduplicates independently (reported by Ale R.)."
     }
   },
   "network": {

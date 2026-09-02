@@ -1163,6 +1163,16 @@
       "targetApp": "Aplikácia",
       "targetBoth": "Systém + aplikácia",
       "lastRun": "Posledné spustenie: {date}",
+      "rebootRequired": "Na dokončenie aktualizácie je potrebný reštart.",
+      "rebootPackages": "Balíky: {packages}",
+      "viewLog": "Zobraziť záznam",
+      "logTitle": "Záznam aktualizácie",
+      "logDescription": "Výstup poslednej naplánovanej aktualizácie {name} (LXC {vmid}).",
+      "logLoading": "Načítava sa záznam…",
+      "logEmpty": "Toto spustenie nevytvorilo žiadny výstup.",
+      "logFailed": "Záznam aktualizácie sa nepodarilo načítať.",
+      "logTruncated": "Zobrazuje sa iba koniec záznamu, pretože prekračuje limit zobrazenia.",
+      "closeLog": "Zavrieť",
       "runSuccess": "✓ úspešné",
       "runPartial": "čiastočne dokončené",
       "runFailed": "✗ zlyhalo",
@@ -1936,7 +1946,8 @@
           "gemini": "Ponúka bezplatnú úroveň a dobrý pomer kvality a ceny.",
           "ollama": "Používa modely na vašom Ollama serveri. Beží lokálne, súkromne a bez poplatkov.",
           "openrouter": "Prístup k viac než 100 modelom cez jeden API kľúč."
-        }
+        },
+        "loadModelsFailed": "Modely sa nepodarilo načítať — skontroluj API kľúč alebo URL endpointu."
       },
       "telegramGuide": {
         "title": "Nastavenie Telegram bota",
@@ -2101,7 +2112,7 @@
     "backupCodeHint": "Môžete použiť aj záložný kód vo formáte XXXX-XXXX",
     "backToLogin": "Späť na prihlásenie",
     "verifyCode": "Overiť kód",
-    "version": "ProxMenux Monitor v1.2.5"
+    "version": "ProxMenux Monitor v1.2.6"
   },
   "account": {
     "signedIn": "Prihlásený",
@@ -3157,7 +3168,13 @@
       "appsDashboard": "Nová hlavná karta Apps — jednotný spúšťač pre každý webový odkaz v uzle. Aplikácie zaregistrované v LXC a používateľské vlastné webové odkazy zdieľajú rovnakú mriežku s kategóriami, vyhľadávaním a priamym prístupom do modálu hostiteľa.",
       "lxcAppsUpdates": "Karta App v modáli každého LXC registruje nainštalované aplikácie, zachytáva webové odkazy a sleduje verzie. Prepracovaná karta Updates aplikuje aktualizácie OS a aplikácií jediným tlačidlom; Docker Engine a jednotlivé image sledujú rovnaký 24-hodinový cyklus s akciou 'Skontrolovať teraz' na požiadanie.",
       "multilingual": "Monitor teraz hovorí 8 jazykmi: angličtina, španielčina, nemčina, francúzština, taliančina, portugalčina, švédčina a slovenčina. Veľká vďaka patrí @vaso73 za vybudovanie i18n základov.",
-      "nvidiaMultiGpu": "Životný cyklus NVIDIA driverov prechádza na vlastníctvo podľa presného BDF, takže multi-GPU hostiteľ môže odovzdať jednu kartu do VM a druhú nechať funkčnú v hostiteľovi alebo v LXC, plus výber verzie citlivý na kernel, vetvu a GPU (#298)."
+      "nvidiaMultiGpu": "Životný cyklus NVIDIA driverov prechádza na vlastníctvo podľa presného BDF, takže multi-GPU hostiteľ môže odovzdať jednu kartu do VM a druhú nechať funkčnú v hostiteľovi alebo v LXC, plus výber verzie citlivý na kernel, vetvu a GPU (#298).",
+      "aiCustomEndpoint": "AI Assistant custom OpenAI endpoint — LiteLLM, LM Studio, LocalAI, vLLM, OmniRoute and any self-hosted proxy on private IPs, loopback or Docker networks are recognised when loading the model catalogue. The dropdown surfaces the server's error (or the underlying network reason) directly under the Load button (#325, reported by @jorgeffonte).",
+      "secureGatewayArch": "Secure Gateway wizard — the Alpine template download, local template selection and pct create all match the host's real architecture, so x86_64 hosts receive amd64 containers and arm64 hosts receive arm64 containers (#324, reported by @N0X4DD0).",
+      "atomicNotifications": "Notification events reserve their deduplication fingerprint atomically before AI processing and channel delivery, so concurrent collectors, completion callbacks or parallel Monitor processes cannot send the same event twice. The reservation is released when no channel succeeds, preserving retries.",
+      "borgSshPort": "Borg remote target — the Add Borg destination dialog and the shell TUI accept a custom SSH port. BORG_RSH, the auto key install flow and the capacity probe all honour it. Fully backwards compatible with existing entries created without an explicit port (suggested by @songochain in discussion #236).",
+      "githubToken": "Settings → GitHub API accepts an optional personal access token for release and tag checks when the anonymous quota is exhausted. The token is encrypted at rest and never returned to the browser; the rate-limit error is translated in every Monitor language (suggested by @SystemIdleProcess in discussion #306).",
+      "replicationContext": "Native Proxmox replication failure notifications resolve the replication job ID, affected VM/LXC ID and guest name; the exact error block from Proxmox is preserved as the reason, and each replication job deduplicates independently (reported by Ale R.)."
     }
   },
   "network": {

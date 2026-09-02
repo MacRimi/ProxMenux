@@ -140,7 +140,10 @@
     "items": [
       "Selecciona una frecuencia o expresión cron y después objetivos exactos: paquetes del SO, apps individuales, Docker Engine, unidades Docker independientes o grupos de servicios Compose.",
       "La espera tras una versión solo se aplica a las apps seleccionadas con seguimiento. Las apps sin seguimiento ejecutan su actualizador cuando vence la programación.",
-      "El estado de la última ejecución diferencia entre éxito, finalización parcial, error, retención de seguridad y ausencia de elementos pendientes.",
+      "El estado de la última ejecución diferencia entre éxito, finalización parcial, error, retención de seguridad y ausencia de elementos pendientes. Después de la primera ejecución programada, <strong>Actualizaciones → Actualizaciones programadas → Ver log</strong> abre la salida completa capturada del actualizador y de los scripts secundarios que haya ejecutado.",
+      "Después de cada ejecución, ProxMenux comprueba el marcador estándar de Debian que indica si es necesario reiniciar. Cuando hace falta, la pestaña Actualizaciones y la notificación de finalización lo indican; el aviso se elimina cuando ese LXC se inicia o reinicia.",
+      "En el host Proxmox, los logs de las ejecuciones programadas se guardan en <code>/usr/local/share/proxmenux/logs/lxc-updates/</code> con el nombre <code>&lt;VMID&gt;-scheduled-&lt;id-de-ejecución&gt;.log</code>. Se conservan los diez últimos logs de cada LXC y los archivos más antiguos se eliminan automáticamente.",
+      "Este historial corresponde a las actualizaciones programadas. Una actualización manual muestra su salida en tiempo real en la ventana de ejecución del Monitor y no crea un log de ejecución programada en ese directorio.",
       "Las programaciones externas detectadas de Proxmox VE Helper-Scripts se muestran aparte para hacer visible cualquier automatización coincidente."
     ],
     "callout": "Cada método seleccionado debe probarse manualmente antes de programarlo. Una tarea programada no puede responder a preguntas interactivas."
@@ -150,6 +153,7 @@
     "lead": "La actualización no se considera terminada únicamente porque el comando del terminal haya finalizado.",
     "items": [
       "La misma ejecución guarda el resultado final y actualiza, según corresponda, los paquetes del SO, las versiones de las apps y el inventario Docker.",
+      "Las ejecuciones programadas conservan la salida del terminal e indican si todavía es necesario reiniciar para terminar de aplicar los cambios de los paquetes.",
       "La caché del LXC se reemplaza con el estado verificado tras la actualización para que insignias y botones no conserven el resultado anterior.",
       "Si arranca un LXC parado o restaurado, el evento de ciclo de vida existente vuelve a actualizar ese LXC. El inventario Docker espera a que el daemon esté disponible en lugar de guardar como definitivo un resultado vacío del arranque.",
       "Las notificaciones activadas se emiten desde la ejecución finalizada e incluyen fallos parciales y resultados agrupados de imágenes Docker."
@@ -179,6 +183,10 @@
       {
         "problem": "Falla un comando personalizado",
         "resolution": "Ejecútalo en el terminal del LXC y revisa la ruta, las dependencias, los parámetros no interactivos y el código de salida."
+      },
+      {
+        "problem": "Una actualización programada indica que es necesario reiniciar",
+        "resolution": "Abre <strong>Ver log</strong> para revisar la ejecución completada y reinicia ese LXC. ProxMenux elimina el aviso mediante el evento de ciclo de vida existente cuando el contenedor vuelve a arrancar."
       }
     ]
   },

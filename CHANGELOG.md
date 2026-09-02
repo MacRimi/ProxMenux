@@ -1,4 +1,77 @@
 
+## 2026-09-02
+
+### New version ProxMenux v1.2.6
+
+A focused release that restores AI Assistant support for OpenAI-compatible endpoints hosted on private IPs, loopback and Docker networks, aligns the Secure Gateway wizard with the host's real architecture, and consolidates several improvements landing on develop: atomic notification delivery, custom SSH ports for Borg remote targets, an optional GitHub API token for app version tracking, and richer replication failure notifications.
+
+---
+
+## 🛠 AI Assistant custom OpenAI endpoint — LAN / Docker / localhost URLs
+
+- Custom OpenAI-compatible endpoints reachable on private IPs, loopback or Docker networks (LiteLLM, LM Studio, LocalAI, vLLM, OmniRoute, self-hosted proxies…) are now accepted by the Notifications API when loading the model catalogue and validating the AI configuration.
+- The dropdown surfaces the reason returned by the server (or the underlying network error) directly under the *Load* button, so misconfigurations are visible instead of silent.
+- Translated into every Monitor language.
+
+Reported in [#325](https://github.com/MacRimi/ProxMenux/issues/325) by [@jorgeffonte](https://github.com/jorgeffonte).
+
+---
+
+## 🛠 Secure Gateway wizard — LXC template matches host architecture
+
+- Alpine template download filters `pveam available` results by the host's architecture (via `dpkg --print-architecture`, falling back to `uname -m`), so an x86_64 Proxmox host receives the `amd64` template and an arm64 host receives the `arm64` template.
+- Local template selection applies the same architecture filter when reusing a previously downloaded Alpine template.
+- `pct create` is invoked with an explicit `--arch <host>` so the container metadata matches the host's real architecture.
+
+Reported in [#324](https://github.com/MacRimi/ProxMenux/issues/324) by [@N0X4DD0](https://github.com/N0X4DD0).
+
+---
+
+## 🔔 Atomic notification delivery
+
+- Notification events reserve their deduplication fingerprint atomically before AI processing and channel delivery, so concurrent collectors, completion callbacks or accidental parallel Monitor processes cannot send the same event twice.
+- The reservation is shared through SQLite, expires safely if an execution is interrupted and is released when no channel succeeds, preserving retries after temporary transport failures.
+
+---
+
+## 🗄 Borg remote target — custom SSH port
+
+- The *Add Borg destination* dialog in the Monitor and the shell TUI (`menu` → *Host Backup* → *New Borg target*) accept a custom SSH port. The default stays at `22`; any value between 1 and 65535 is embedded in the persisted `ssh://user@host:port/path` URL.
+- `BORG_RSH` honours the custom port at backup time, so scheduled jobs and manual runs reach the correct port.
+- The auto key install flow (`generate-auto`) targets the custom port too.
+- Fully backwards compatible with existing `borg-targets.txt` entries created without an explicit port.
+- Capacity probes over SSH also honour the custom port, so the *Available* badge stays accurate on non-standard ports.
+
+Reported in [discussion #236](https://github.com/MacRimi/ProxMenux/discussions/236) by [@songochain](https://github.com/songochain).
+
+---
+
+## 🎯 App version tracking — optional GitHub API token
+
+- **Settings → GitHub API** accepts an optional personal access token for release and tag checks when GitHub's anonymous quota is exhausted.
+- The token is encrypted at rest, is never returned to the browser and can be replaced or removed independently of the Notifications service.
+- The anonymous GitHub flow remains the default; a token is not required while the shared quota is available.
+- The rate-limit error points to the actual setting and is translated in every Monitor language.
+
+Reported in [discussion #306](https://github.com/MacRimi/ProxMenux/discussions/306) by [@SystemIdleProcess](https://github.com/SystemIdleProcess).
+
+---
+
+## 🔁 Replication failure notifications — complete job context
+
+- Native Proxmox replication webhooks resolve the replication job ID, affected VM/LXC ID and guest name before rendering the notification.
+- The exact error block supplied by Proxmox is preserved as the reason, including multiline failures, with the complete message retained as a safe fallback when the block is absent.
+- Replication notifications are identified by their complete job ID, keeping failures from different replication jobs independent during deduplication.
+
+Reported by Ale R.
+
+---
+
+For the full history of changes, see [Releases](https://github.com/MacRimi/ProxMenux/releases).
+
+---
+
+
 ## 2026-09-01
 
 ### New version ProxMenux v1.2.5

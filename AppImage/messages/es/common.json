@@ -1164,6 +1164,16 @@
       "targetApp": "Solicitud",
       "targetBoth": "SO + aplicación",
       "lastRun": "Última ejecución: {date}",
+      "rebootRequired": "Es necesario reiniciar para completar la actualización.",
+      "rebootPackages": "Paquetes: {packages}",
+      "viewLog": "Ver log",
+      "logTitle": "Log de actualización",
+      "logDescription": "Salida de la última actualización programada de {name} (LXC {vmid}).",
+      "logLoading": "Cargando log…",
+      "logEmpty": "Esta ejecución no produjo ninguna salida.",
+      "logFailed": "No se pudo cargar el log de actualización.",
+      "logTruncated": "Solo se muestra el final del log porque supera el límite de visualización.",
+      "closeLog": "Cerrar",
       "runSuccess": "✓ éxito",
       "runPartial": "completada parcialmente",
       "runFailed": "✗ falló",
@@ -1937,7 +1947,8 @@
           "gemini": "Hay disponible un nivel gratuito, con una buena relación calidad-precio.",
           "ollama": "Utiliza modelos en su servidor Ollama. Totalmente local, privado y gratuito.",
           "openrouter": "Acceso a más de 100 modelos a través de una clave API."
-        }
+        },
+        "loadModelsFailed": "No se pudieron cargar los modelos — comprueba la API key o la URL del endpoint."
       },
       "telegramGuide": {
         "title": "Guía de configuración del bot de Telegram",
@@ -2102,7 +2113,7 @@
     "backupCodeHint": "También puedes utilizar un código de respaldo (formato: XXXX-XXXX)",
     "backToLogin": "Volver a iniciar sesión",
     "verifyCode": "Verificar código",
-    "version": "ProxMenux Monitor v1.2.5"
+    "version": "ProxMenux Monitor v1.2.6"
   },
   "account": {
     "signedIn": "Iniciado sesión",
@@ -3158,7 +3169,13 @@
       "appsDashboard": "Nueva pestaña Apps de nivel superior — un lanzador único para cada enlace web del nodo. Las aplicaciones registradas en LXC y los enlaces web personalizados comparten la misma cuadrícula con etiquetas de categoría, búsqueda y acceso directo al modal del invitado.",
       "lxcAppsUpdates": "La pestaña App dentro del modal de cada LXC registra las aplicaciones instaladas, captura sus enlaces web y realiza seguimiento de versiones. La pestaña Updates rediseñada aplica actualizaciones de paquetes del sistema y de aplicaciones desde un solo botón; Docker Engine y cada imagen siguen el mismo ciclo de 24 horas, con acción 'Comprobar ahora' bajo demanda.",
       "multilingual": "El Monitor ahora habla 8 idiomas: inglés, español, alemán, francés, italiano, portugués, sueco y eslovaco. Un enorme agradecimiento a @vaso73 por construir la base de i18n que lo hizo posible.",
-      "nvidiaMultiGpu": "El ciclo de vida del driver NVIDIA pasa a propiedad por BDF exacto, de modo que un host multi-GPU puede pasar una tarjeta a una VM y mantener la otra operativa en el host o en LXCs, junto con un selector de versión sensible al kernel, la rama y la GPU (#298)."
+      "nvidiaMultiGpu": "El ciclo de vida del driver NVIDIA pasa a propiedad por BDF exacto, de modo que un host multi-GPU puede pasar una tarjeta a una VM y mantener la otra operativa en el host o en LXCs, junto con un selector de versión sensible al kernel, la rama y la GPU (#298).",
+      "aiCustomEndpoint": "Endpoint OpenAI personalizado del Asistente IA — LiteLLM, LM Studio, LocalAI, vLLM, OmniRoute y cualquier proxy autoalojado en IPs privadas, loopback o redes Docker se reconocen al cargar el catálogo de modelos. El desplegable muestra el error devuelto por el servidor (o el motivo de red subyacente) justo debajo del botón Cargar (#325, reportado por @jorgeffonte).",
+      "secureGatewayArch": "Asistente Secure Gateway — la descarga de plantilla Alpine, la selección de plantilla local y pct create coinciden con la arquitectura real del host, de modo que los hosts x86_64 reciben contenedores amd64 y los hosts arm64 reciben contenedores arm64 (#324, reportado por @N0X4DD0).",
+      "atomicNotifications": "Los eventos de notificación reservan su huella de deduplicación de forma atómica antes del procesado por IA y del envío por canal, así que colectores concurrentes, callbacks de finalización o procesos Monitor paralelos no pueden enviar el mismo evento dos veces. La reserva se libera cuando ningún canal tiene éxito, preservando los reintentos.",
+      "borgSshPort": "Destino remoto Borg — el diálogo Añadir destino Borg y el TUI del shell aceptan un puerto SSH personalizado. BORG_RSH, el flujo de instalación automática de clave y la sonda de capacidad lo respetan. Totalmente retrocompatible con las entradas existentes creadas sin un puerto explícito (sugerido por @songochain en la discusión #236).",
+      "githubToken": "Settings → GitHub API acepta un token de acceso personal opcional para las comprobaciones de releases y tags cuando se agota la cuota anónima. El token se guarda cifrado y nunca se devuelve al navegador; el error de rate limit está traducido en todos los idiomas del Monitor (sugerido por @SystemIdleProcess en la discusión #306).",
+      "replicationContext": "Las notificaciones nativas de fallo de replicación de Proxmox ahora resuelven el ID del trabajo de replicación, el ID de la VM/LXC afectada y el nombre del guest; el bloque de error exacto de Proxmox se conserva como motivo, y cada trabajo de replicación deduplica de forma independiente (reportado por Ale R.)."
     }
   },
   "network": {

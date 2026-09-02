@@ -3018,7 +3018,16 @@ def scheduled_app_release_gate(
     return {"allowed": True, "status": "ready", "reason": None}
 
 
-def record_schedule_run(vmid, status: str, target: str, reason: Optional[str] = None) -> bool:
+def record_schedule_run(
+    vmid,
+    status: str,
+    target: str,
+    reason: Optional[str] = None,
+    *,
+    log_name: Optional[str] = None,
+    reboot_required: Optional[bool] = None,
+    reboot_packages: Optional[list[str]] = None,
+) -> bool:
     """Called by the scheduler after a fired run completes. Updates
     the schedule with last_run_at + last_run_status so the UI can show
     the outcome. `status` is one of "success" | "failure" |
@@ -3034,6 +3043,38 @@ def record_schedule_run(vmid, status: str, target: str, reason: Optional[str] = 
             sidecar["schedule"]["last_run_reason"] = str(reason)[:300]
         else:
             sidecar["schedule"].pop("last_run_reason", None)
+        if log_name:
+            sidecar["schedule"]["last_run_log"] = os.path.basename(str(log_name))[:220]
+        else:
+            sidecar["schedule"].pop("last_run_log", None)
+        if reboot_required is None:
+            sidecar["schedule"].pop("last_run_reboot_required", None)
+        else:
+            sidecar["schedule"]["last_run_reboot_required"] = bool(reboot_required)
+        packages = [
+            str(package).strip()[:160]
+            for package in (reboot_packages or [])[:32]
+            if str(package).strip()
+        ]
+        if reboot_required and packages:
+            sidecar["schedule"]["last_run_reboot_packages"] = packages
+        else:
+            sidecar["schedule"].pop("last_run_reboot_packages", None)
+        sidecar["updated_at"] = _now_iso()
+        return _write_sidecar(vmid, sidecar)
+
+
+def clear_schedule_reboot_required(vmid) -> bool:
+    """Clear a persisted reboot warning after the CT starts or reboots."""
+    with _cache_lock:
+        sidecar = _read_sidecar(vmid)
+        schedule = (sidecar or {}).get("schedule")
+        if not isinstance(schedule, dict):
+            return False
+        if schedule.get("last_run_reboot_required") is not True:
+            return True
+        schedule["last_run_reboot_required"] = False
+        schedule.pop("last_run_reboot_packages", None)
         sidecar["updated_at"] = _now_iso()
         return _write_sidecar(vmid, sidecar)
 
