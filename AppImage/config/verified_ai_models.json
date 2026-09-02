@@ -2,16 +2,13 @@
   "_description": "Verified AI models for ProxMenux notifications. Only models listed here will be shown to users. Models are tested to work with the chat/completions API format.",
   "_updated": "2026-09-02",
   "_verifier": "Refreshed by .github/workflows/verify-ai-models.yml (daily). The workflow runs .github/scripts/ai-models-verifier/verify.py against every provider whose API key is configured in repository Secrets, then applies the report via apply.py — which honours per-provider `_exclude` lists. `_exclude` is intentionally minimal: it only drops models that are technically incapable of generating a chat completion for a normal prompt (safety classifiers, agentic-only endpoints, meta-routers, wrong modalities). Everything else the verifier passes is surfaced — including language-specialised models (Arabic, Chinese, ...), reasoning models, legacy families and dated snapshots — so a user with a specific need can still pick the model that fits. Manually re-run from the Actions tab (any branch) when a new model needs to be picked up out of cycle.",
-
   "groq": {
     "models": [
-      "llama-3.3-70b-versatile",
-      "llama-3.1-8b-instant",
-      "meta-llama/llama-4-scout-17b-16e-instruct",
-      "openai/gpt-oss-120b",
-      "openai/gpt-oss-20b"
+      "allam-2-7b",
+      "qwen/qwen3.8-27b",
+      "openai/gpt-oss-120b"
     ],
-    "recommended": "llama-3.3-70b-versatile",
+    "recommended": "allam-2-7b",
     "_exclude": [
       "openai/gpt-oss-safeguard-*",
       "groq/compound",
@@ -19,15 +16,17 @@
     ],
     "_note": "`_exclude` covers models the verifier may technically pass but that do not produce a usable chat completion: openai/gpt-oss-safeguard-* is a safety classifier (returns a category, not free text); groq/compound* is an agentic system that expects multi-step tool use, not a plain prompt."
   },
-
   "gemini": {
     "models": [
-      "gemini-flash-lite-latest",
       "gemini-2.5-flash-lite",
-      "gemini-2.5-flash",
+      "gemini-3.1-flash-lite-preview",
       "gemini-3.1-flash-lite",
+      "gemini-flash-lite-latest",
+      "gemini-3.5-flash-lite",
+      "gemini-2.5-flash",
+      "gemini-3.5-flash",
       "gemini-3-flash-preview",
-      "gemini-3.5-flash"
+      "gemma-4-26b-a4b-it"
     ],
     "recommended": "gemini-2.5-flash-lite",
     "_exclude": [
@@ -35,19 +34,39 @@
       "gemini-*-pro*",
       "gemini-*-thinking*"
     ],
-    "_deprecated": ["gemini-2.0-flash", "gemini-2.0-flash-lite", "gemini-1.5-flash", "gemini-1.0-pro", "gemini-pro"],
+    "_deprecated": [
+      "gemini-2.0-flash",
+      "gemini-2.0-flash-lite",
+      "gemini-1.5-flash",
+      "gemini-1.0-pro",
+      "gemini-pro"
+    ],
     "_note": "`_exclude` drops embeddings (wrong modality) and Pro / thinking variants that reject `thinkingConfig.thinkingBudget: 0` and therefore never return a visible completion within a reasonable token budget — technical failure with our current provider config."
   },
-
   "openai": {
     "models": [
+      "gpt-4.1-nano-2025-04-14",
       "gpt-4.1-nano",
-      "gpt-4.1-mini",
-      "gpt-4o-mini",
+      "gpt-4.1-2025-04-14",
       "gpt-4.1",
+      "gpt-4o-2024-05-13",
+      "gpt-4o-2024-11-20",
+      "gpt-5-nano",
+      "gpt-5-nano-2025-08-07",
+      "gpt-3.5-turbo-1106",
+      "gpt-3.5-turbo-0125",
+      "gpt-4o-mini-2024-07-18",
+      "gpt-4.1-mini-2025-04-14",
+      "gpt-4o-mini",
+      "gpt-3.5-turbo-16k",
+      "gpt-4.1-mini",
+      "gpt-3.5-turbo",
       "gpt-4o",
-      "gpt-5-chat-latest",
-      "gpt-5-nano"
+      "gpt-4",
+      "gpt-4-0613",
+      "gpt-4-turbo",
+      "gpt-4-turbo-2024-04-09",
+      "gpt-4o-2024-08-06"
     ],
     "recommended": "gpt-4.1-nano",
     "_exclude": [
@@ -64,42 +83,28 @@
     ],
     "_note": "`_exclude` covers wrong-modality variants (audio, realtime, search, transcribe, tts) that cannot handle a plain notification-translation prompt, plus computer-use which requires an agent loop. All other OpenAI chat/completion models are surfaced — including legacy families (gpt-3.5, gpt-4), reasoning models (o-series, gpt-5.x non-chat) and dated snapshots — so users can pick by their own criteria (cost, quality, reproducibility). openai_provider.py already handles reasoning models via max_completion_tokens + reasoning_effort=minimal."
   },
-
   "anthropic": {
     "models": [
-      "claude-haiku-4-5",
-      "claude-sonnet-5",
+      "claude-haiku-4-5-20251001",
       "claude-opus-4-8",
-      "claude-sonnet-4-6",
+      "claude-opus-4-5-20251101",
+      "claude-opus-4-7",
+      "claude-fable-5",
+      "claude-sonnet-4-5-20250929",
+      "claude-fable-5-1",
       "claude-opus-4-6",
-      "claude-fable-5"
+      "claude-sonnet-4-6"
     ],
-    "recommended": "claude-haiku-4-5",
+    "recommended": "claude-haiku-4-5-20251001",
     "_exclude": [],
     "_note": "No technical exclusions — every Claude generation returns free-text completions for a plain prompt. The verifier tests each model listed under `models`; if a specific ID stops working upstream it simply drops out of the passing set. Anthropic does not expose a public models-list API, so new models must be added to `models` manually before the verifier can test them."
   },
-
   "openrouter": {
     "models": [
-      "meta-llama/llama-3.3-70b-instruct",
-      "meta-llama/llama-3.1-70b-instruct",
-      "meta-llama/llama-3.1-8b-instruct",
-      "meta-llama/llama-4-scout",
-      "anthropic/claude-haiku-4.5",
-      "anthropic/claude-sonnet-4.6",
-      "google/gemini-2.5-flash-lite",
-      "google/gemini-2.5-flash",
-      "openai/gpt-4o-mini",
-      "mistralai/mistral-small-3.2-24b-instruct",
-      "nvidia/nemotron-3-super-120b-a12b:free",
-      "google/gemma-4-26b-a4b-it:free",
-      "nvidia/nemotron-nano-12b-v2-vl:free",
-      "nvidia/nemotron-3-nano-30b-a3b:free",
-      "poolside/laguna-s-2.1:free",
-      "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free",
-      "openai/gpt-oss-20b:free"
+      "minimax/minimax-m3:free",
+      "poolside/laguna-s-2.1:free"
     ],
-    "recommended": "meta-llama/llama-3.3-70b-instruct",
+    "recommended": "minimax/minimax-m3:free",
     "_exclude": [
       "openrouter/*",
       "*/*-audio*",
@@ -113,7 +118,6 @@
     ],
     "_note": "OpenRouter aggregates hundreds of models; the free-tier variants (:free suffix) are intentionally supported per user request and never blocked. `_exclude` covers only meta-routers (`openrouter/free`, `openrouter/auto` — they route dynamically to something else, so their behaviour is not the model the user picked) and wrong-modality models (audio, tts, whisper, embeddings, image, vision-only). Everything else — chat models across every family, language and price tier — is surfaced so the user can pick the fit."
   },
-
   "ollama": {
     "_note": "Ollama models are local, we don't filter them. User manages their own models.",
     "models": [],
