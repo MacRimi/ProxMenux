@@ -83,6 +83,19 @@
     "tag_regex": "v?(\\d+(?:\\.\\d+){3})",
     "website": "https://www.ispyconnect.com/"
   },
+  "airtrail": {
+    "default_ports": [
+      3000
+    ],
+    "file_path": "/root/.airtrail",
+    "file_regex": "(?i)(?:v|release[-_/]?)?(\\d+(?:\\.\\d+){1,3}(?:[-+._][0-9A-Za-z.-]+)?)",
+    "github_source": "releases",
+    "installed_via": "file",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/airtrail.webp",
+    "repo": "johanohly/AirTrail",
+    "tag_regex": "(?i)(?:v|release[-_/]?)?(\\d+(?:\\.\\d+){1,3}(?:[-+._][0-9A-Za-z.-]+)?)",
+    "website": "https://airtrail.johan.ohly.dk/"
+  },
   "alpine-cinny": {
     "default_ports": [
       8080
@@ -154,6 +167,19 @@
     "repo": "advplyr/audiobookshelf",
     "tag_regex": "(?i)(?:v|release[-_/]?)?(\\d+(?:\\.\\d+){1,3}(?:[-+._][0-9A-Za-z.-]+)?)",
     "website": "https://www.audiobookshelf.org/"
+  },
+  "aurral": {
+    "default_ports": [
+      3001
+    ],
+    "file_path": "/root/.aurral",
+    "file_regex": "(?i)(?:v|release[-_/]?)?(\\d+(?:\\.\\d+){1,3}(?:[-+._][0-9A-Za-z.-]+)?)",
+    "github_source": "releases",
+    "installed_via": "file",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/aurral.webp",
+    "repo": "lklynet/aurral",
+    "tag_regex": "(?i)(?:v|release[-_/]?)?(\\d+(?:\\.\\d+){1,3}(?:[-+._][0-9A-Za-z.-]+)?)",
+    "website": "https://aurral.org"
   },
   "authelia": {
     "default_ports": [
@@ -402,6 +428,19 @@
     "tag_regex": "(?i)(?:v|release[-_/]?)?(\\d+(?:\\.\\d+){1,3}(?:[-+._][0-9A-Za-z.-]+)?)",
     "website": "https://www.bookstackapp.com/"
   },
+  "budget-board": {
+    "default_ports": [
+      80
+    ],
+    "file_path": "/root/.budget-board",
+    "file_regex": "(?i)(?:v|release[-_/]?)?(\\d+(?:\\.\\d+){1,3}(?:[-+._][0-9A-Za-z.-]+)?)",
+    "github_source": "releases",
+    "installed_via": "file",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/budget-board.webp",
+    "repo": "teelur/budget-board",
+    "tag_regex": "(?i)(?:v|release[-_/]?)?(\\d+(?:\\.\\d+){1,3}(?:[-+._][0-9A-Za-z.-]+)?)",
+    "website": "https://budgetboard.net"
+  },
   "byparr": {
     "default_ports": [
       8191
@@ -465,7 +504,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/certimate.webp",
     "repo": "certimate-go/certimate",
     "tag_regex": "(?i)(?:v|release[-_/]?)?(\\d+(?:\\.\\d+){1,3}(?:[-+._][0-9A-Za-z.-]+)?)",
-    "website": "https://certimate.me/"
+    "website": "https://docs.certimate.me/en-US/"
   },
   "checkmate": {
     "default_ports": [
@@ -725,6 +764,19 @@
     "tag_regex": "(?i)(?:v|release[-_/]?)?(\\d+(?:\\.\\d+){1,3}(?:[-+._][0-9A-Za-z.-]+)?)",
     "website": "https://github.com/fccview/degoog"
   },
+  "directus": {
+    "default_ports": [
+      8055
+    ],
+    "file_path": "/root/.directus",
+    "file_regex": "(?i)(?:v|release[-_/]?)?(\\d+(?:\\.\\d+){1,3}(?:[-+._][0-9A-Za-z.-]+)?)",
+    "github_source": "releases",
+    "installed_via": "file",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/directus.webp",
+    "repo": "directus/directus",
+    "tag_regex": "(?i)(?:v|release[-_/]?)?(\\d+(?:\\.\\d+){1,3}(?:[-+._][0-9A-Za-z.-]+)?)",
+    "website": "https://directus.com/"
+  },
   "discopanel": {
     "default_ports": [
       8080
@@ -861,12 +913,17 @@
     "website": "https://www.drawio.com/"
   },
   "droppedneedle": {
+    "default_ports": [
+      8688
+    ],
     "file_path": "/root/.droppedneedle",
     "file_regex": "(?i)(?:v|release[-_/]?)?(\\d+(?:\\.\\d+){1,3}(?:[-+._][0-9A-Za-z.-]+)?)",
     "github_source": "releases",
     "installed_via": "file",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/droppedneedle.webp",
     "repo": "DroppedNeedle/DroppedNeedle",
-    "tag_regex": "(?i)(?:v|release[-_/]?)?(\\d+(?:\\.\\d+){1,3}(?:[-+._][0-9A-Za-z.-]+)?)"
+    "tag_regex": "(?i)(?:v|release[-_/]?)?(\\d+(?:\\.\\d+){1,3}(?:[-+._][0-9A-Za-z.-]+)?)",
+    "website": "https://github.com/droppedneedle/droppedneedle"
   },
   "duplicati": {
     "default_ports": [
@@ -1111,6 +1168,19 @@
     "tag_regex": "(?i)(?:v|release[-_/]?)?(\\d+(?:\\.\\d+){1,3}(?:[-+._][0-9A-Za-z.-]+)?)",
     "website": "https://github.com/dullage/flatnotes"
   },
+  "fleet": {
+    "default_ports": [
+      8080
+    ],
+    "file_path": "/root/.fleet",
+    "file_regex": "(?i)(?:v|release[-_/]?)?(\\d+(?:\\.\\d+){1,3}(?:[-+._][0-9A-Za-z.-]+)?)",
+    "github_source": "releases",
+    "installed_via": "file",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/fleet-dm.webp",
+    "repo": "fleetdm/fleet",
+    "tag_regex": "(?i)(?:v|release[-_/]?)?(\\d+(?:\\.\\d+){1,3}(?:[-+._][0-9A-Za-z.-]+)?)",
+    "website": "https://fleetdm.com/"
+  },
   "fluid-calendar": {
     "default_ports": [
       3000
@@ -1281,6 +1351,19 @@
     "repo": "AlexxIT/go2rtc",
     "tag_regex": "(?i)(?:v|release[-_/]?)?(\\d+(?:\\.\\d+){1,3}(?:[-+._][0-9A-Za-z.-]+)?)",
     "website": "https://github.com/AlexxIT/go2rtc"
+  },
+  "godoxy": {
+    "default_ports": [
+      443
+    ],
+    "file_path": "/root/.godoxy",
+    "file_regex": "(?i)(?:v|release[-_/]?)?(\\d+(?:\\.\\d+){1,3}(?:[-+._][0-9A-Za-z.-]+)?)",
+    "github_source": "releases",
+    "installed_via": "file",
+    "logo": "https://cdn.jsdelivr.net/gh/yusing/godoxy@main/assets/godoxy.png",
+    "repo": "yusing/godoxy",
+    "tag_regex": "(?i)(?:v|release[-_/]?)?(\\d+(?:\\.\\d+){1,3}(?:[-+._][0-9A-Za-z.-]+)?)",
+    "website": "https://github.com/yusing/godoxy"
   },
   "gogs": {
     "default_ports": [
@@ -1592,6 +1675,19 @@
     "repo": "hyperion-project/hyperion.ng",
     "tag_regex": "(?i)(?:v|release[-_/]?)?(\\d+(?:\\.\\d+){1,3}(?:[-+._][0-9A-Za-z.-]+)?)",
     "website": "https://hyperion-project.org/forum/"
+  },
+  "ignis": {
+    "default_ports": [
+      443
+    ],
+    "file_path": "/root/.ignis",
+    "file_regex": "(?i)(?:v|release[-_/]?)?(\\d+(?:\\.\\d+){1,3}(?:[-+._][0-9A-Za-z.-]+)?)",
+    "github_source": "releases",
+    "installed_via": "file",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/obsidian.webp",
+    "repo": "Nystik-gh/ignis",
+    "tag_regex": "(?i)(?:v|release[-_/]?)?(\\d+(?:\\.\\d+){1,3}(?:[-+._][0-9A-Za-z.-]+)?)",
+    "website": "https://github.com/Nystik-gh/ignis"
   },
   "igotify": {
     "default_ports": [
@@ -2238,6 +2334,32 @@
     "tag_regex": "(?i)(?:v|release[-_/]?)?(\\d+(?:\\.\\d+){1,3}(?:[-+._][0-9A-Za-z.-]+)?)",
     "website": "https://github.com/s1t5/mail-archiver"
   },
+  "mailpit": {
+    "default_ports": [
+      8025
+    ],
+    "file_path": "/root/.mailpit",
+    "file_regex": "(?i)(?:v|release[-_/]?)?(\\d+(?:\\.\\d+){1,3}(?:[-+._][0-9A-Za-z.-]+)?)",
+    "github_source": "releases",
+    "installed_via": "file",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/mailpit.webp",
+    "repo": "axllent/mailpit",
+    "tag_regex": "(?i)(?:v|release[-_/]?)?(\\d+(?:\\.\\d+){1,3}(?:[-+._][0-9A-Za-z.-]+)?)",
+    "website": "https://mailpit.axllent.org/"
+  },
+  "maintainerr": {
+    "default_ports": [
+      6246
+    ],
+    "file_path": "/root/.maintainerr",
+    "file_regex": "(?i)(?:v|release[-_/]?)?(\\d+(?:\\.\\d+){1,3}(?:[-+._][0-9A-Za-z.-]+)?)",
+    "github_source": "releases",
+    "installed_via": "file",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/maintainerr.webp",
+    "repo": "Maintainerr/Maintainerr",
+    "tag_regex": "(?i)(?:v|release[-_/]?)?(\\d+(?:\\.\\d+){1,3}(?:[-+._][0-9A-Za-z.-]+)?)",
+    "website": "https://maintainerr.info"
+  },
   "managemydamnlife": {
     "default_ports": [
       3000
@@ -2416,6 +2538,19 @@
     "tag_regex": "(?i)(?:v|release[-_/]?)?(\\d+(?:\\.\\d+){1,3}(?:[-+._][0-9A-Za-z.-]+)?)",
     "website": "https://www.monicahq.com/"
   },
+  "mumble": {
+    "default_ports": [
+      64738
+    ],
+    "file_path": "/root/.mumble",
+    "file_regex": "(?i)(?:v|release[-_/]?)?(\\d+(?:\\.\\d+){1,3}(?:[-+._][0-9A-Za-z.-]+)?)",
+    "github_source": "releases",
+    "installed_via": "file",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/mumble.webp",
+    "repo": "mumble-voip/mumble",
+    "tag_regex": "(?i)(?:v|release[-_/]?)?(\\d+(?:\\.\\d+){1,3}(?:[-+._][0-9A-Za-z.-]+)?)",
+    "website": "https://www.mumble.info/"
+  },
   "myip": {
     "default_ports": [
       18966
@@ -2553,6 +2688,29 @@
     "repo": "netbox-community/netbox",
     "tag_regex": "(?i)(?:v|release[-_/]?)?(\\d+(?:\\.\\d+){1,3}(?:[-+._][0-9A-Za-z.-]+)?)",
     "website": "https://netboxlabs.com/products/netbox/"
+  },
+  "networkoptimizer": {
+    "default_ports": [
+      8042
+    ],
+    "file_path": "/root/.networkoptimizer",
+    "file_regex": "(?i)(?:v|release[-_/]?)?(\\d+(?:\\.\\d+){1,3}(?:[-+._][0-9A-Za-z.-]+)?)",
+    "github_source": "releases",
+    "installed_via": "file",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/network-optimizer.webp",
+    "repo": "Ozark-Connect/NetworkOptimizer",
+    "tag_regex": "(?i)(?:v|release[-_/]?)?(\\d+(?:\\.\\d+){1,3}(?:[-+._][0-9A-Za-z.-]+)?)",
+    "website": "https://ozarkconnect.net/network-optimizer"
+  },
+  "newt": {
+    "file_path": "/root/.newt",
+    "file_regex": "(?i)(?:v|release[-_/]?)?(\\d+(?:\\.\\d+){1,3}(?:[-+._][0-9A-Za-z.-]+)?)",
+    "github_source": "releases",
+    "installed_via": "file",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/pangolin.webp",
+    "repo": "fosrl/newt",
+    "tag_regex": "(?i)(?:v|release[-_/]?)?(\\d+(?:\\.\\d+){1,3}(?:[-+._][0-9A-Za-z.-]+)?)",
+    "website": "https://pangolin.net"
   },
   "nextexplorer": {
     "default_ports": [
@@ -2818,6 +2976,19 @@
     "repo": "LogicLabs-OU/OpenArchiver",
     "tag_regex": "(?i)(?:v|release[-_/]?)?(\\d+(?:\\.\\d+){1,3}(?:[-+._][0-9A-Za-z.-]+)?)",
     "website": "https://openarchiver.com/"
+  },
+  "openbao": {
+    "default_ports": [
+      8200
+    ],
+    "file_path": "/root/.openbao",
+    "file_regex": "(?i)(?:v|release[-_/]?)?(\\d+(?:\\.\\d+){1,3}(?:[-+._][0-9A-Za-z.-]+)?)",
+    "github_source": "releases",
+    "installed_via": "file",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/openbao.webp",
+    "repo": "openbao/openbao",
+    "tag_regex": "(?i)(?:v|release[-_/]?)?(\\d+(?:\\.\\d+){1,3}(?:[-+._][0-9A-Za-z.-]+)?)",
+    "website": "https://openbao.org/"
   },
   "opencloud": {
     "default_ports": [
@@ -3094,12 +3265,17 @@
     "website": "https://paymenter.org/"
   },
   "pegaprox": {
+    "default_ports": [
+      5000
+    ],
     "file_path": "/root/.pegaprox",
     "file_regex": "(?i)(?:v|release[-_/]?)?(\\d+(?:\\.\\d+){1,3}(?:[-+._][0-9A-Za-z.-]+)?)",
     "github_source": "releases",
     "installed_via": "file",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/pegaprox.webp",
     "repo": "PegaProx/project-pegaprox",
-    "tag_regex": "(?i)(?:v|release[-_/]?)?(\\d+(?:\\.\\d+){1,3}(?:[-+._][0-9A-Za-z.-]+)?)"
+    "tag_regex": "(?i)(?:v|release[-_/]?)?(\\d+(?:\\.\\d+){1,3}(?:[-+._][0-9A-Za-z.-]+)?)",
+    "website": "https://pegaprox.com/"
   },
   "pelican-panel": {
     "default_ports": [
@@ -3436,6 +3612,19 @@
     "tag_regex": "(?i)(?:v|release[-_/]?)?(\\d+(?:\\.\\d+){1,3}(?:[-+._][0-9A-Za-z.-]+)?)",
     "website": "https://github.com/rcourtman/Pulse"
   },
+  "pve-ups": {
+    "default_ports": [
+      8080
+    ],
+    "file_path": "/root/.pve-usv",
+    "file_regex": "(?i)(?:v|release[-_/]?)?(\\d+(?:\\.\\d+){1,3}(?:[-+._][0-9A-Za-z.-]+)?)",
+    "github_source": "releases",
+    "installed_via": "file",
+    "logo": "https://github.com/ffind-dev/pve-ups/raw/refs/heads/main/Screenshots/logo/favicon.svg",
+    "repo": "ffind-dev/pve-ups",
+    "tag_regex": "(?i)(?:v|release[-_/]?)?(\\d+(?:\\.\\d+){1,3}(?:[-+._][0-9A-Za-z.-]+)?)",
+    "website": "https://github.com/ffind-dev/pve-ups"
+  },
   "qbittorrent": {
     "binary_path": "/opt/qbittorrent/qbittorrent-nox",
     "default_ports": [
@@ -3491,7 +3680,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/rackula.webp",
     "repo": "RackulaLives/Rackula",
     "tag_regex": "(?i)(?:v|release[-_/]?)?(\\d+(?:\\.\\d+){1,3}(?:[-+._][0-9A-Za-z.-]+)?)",
-    "website": "https://count.racku.la"
+    "website": "https://www.racku.la/"
   },
   "radarr": {
     "default_ports": [
@@ -3556,7 +3745,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/reactive-resume.webp",
     "repo": "amruthpillai/reactive-resume",
     "tag_regex": "(?i)(?:v|release[-_/]?)?(\\d+(?:\\.\\d+){1,3}(?:[-+._][0-9A-Za-z.-]+)?)",
-    "website": "https://rxresume.org"
+    "website": "https://rxresu.me/"
   },
   "recyclarr": {
     "file_path": "/root/.recyclarr",
@@ -3615,6 +3804,19 @@
     "repo": "rommapp/romm",
     "tag_regex": "(?i)(?:v|release[-_/]?)?(\\d+(?:\\.\\d+){1,3}(?:[-+._][0-9A-Za-z.-]+)?)",
     "website": "https://romm.app/"
+  },
+  "rss-bridge": {
+    "default_ports": [
+      80
+    ],
+    "file_path": "/root/.rss-bridge",
+    "file_regex": "(?i)(?:v|release[-_/]?)?(\\d+(?:\\.\\d+){1,3}(?:[-+._][0-9A-Za-z.-]+)?)",
+    "github_source": "releases",
+    "installed_via": "file",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/rss-bridge.webp",
+    "repo": "RSS-Bridge/rss-bridge",
+    "tag_regex": "(?i)(?:v|release[-_/]?)?(\\d+(?:\\.\\d+){1,3}(?:[-+._][0-9A-Za-z.-]+)?)",
+    "website": "https://rss-bridge.org/"
   },
   "rustdeskserver": {
     "default_ports": [
@@ -3678,6 +3880,19 @@
     "tag_regex": "(?i)(?:v|release[-_/]?)?(\\d+(?:\\.\\d+){1,3}(?:[-+._][0-9A-Za-z.-]+)?)",
     "website": "https://scanopy.net"
   },
+  "seanime": {
+    "default_ports": [
+      43211
+    ],
+    "file_path": "/root/.seanime",
+    "file_regex": "(?i)(?:v|release[-_/]?)?(\\d+(?:\\.\\d+){1,3}(?:[-+._][0-9A-Za-z.-]+)?)",
+    "github_source": "releases",
+    "installed_via": "file",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/seanime.webp",
+    "repo": "5rahim/seanime",
+    "tag_regex": "(?i)(?:v|release[-_/]?)?(\\d+(?:\\.\\d+){1,3}(?:[-+._][0-9A-Za-z.-]+)?)",
+    "website": "https://seanime.app/"
+  },
   "searxng": {
     "default_ports": [
       8888
@@ -3701,6 +3916,19 @@
     "repo": "seaweedfs/seaweedfs",
     "tag_regex": "(?i)(?:v|release[-_/]?)?(\\d+(?:\\.\\d+){1,3}(?:[-+._][0-9A-Za-z.-]+)?)",
     "website": "https://seaweedfs.com/"
+  },
+  "securo": {
+    "default_ports": [
+      443
+    ],
+    "file_path": "/root/.securo",
+    "file_regex": "(?i)(?:v|release[-_/]?)?(\\d+(?:\\.\\d+){1,3}(?:[-+._][0-9A-Za-z.-]+)?)",
+    "github_source": "releases",
+    "installed_via": "file",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/securo.webp",
+    "repo": "securo-finance/securo",
+    "tag_regex": "(?i)(?:v|release[-_/]?)?(\\d+(?:\\.\\d+){1,3}(?:[-+._][0-9A-Za-z.-]+)?)",
+    "website": "https://www.usesecuro.com"
   },
   "seelf": {
     "default_ports": [
@@ -3879,6 +4107,19 @@
     "tag_regex": "(?i)(?:v|release[-_/]?)?(\\d+(?:\\.\\d+){1,3}(?:[-+._][0-9A-Za-z.-]+)?)",
     "website": "https://github.com/TuroYT/snowshare"
   },
+  "solidinvoice": {
+    "default_ports": [
+      8765
+    ],
+    "file_path": "/root/.solidinvoice",
+    "file_regex": "(?i)(?:v|release[-_/]?)?(\\d+(?:\\.\\d+){1,3}(?:[-+._][0-9A-Za-z.-]+)?)",
+    "github_source": "releases",
+    "installed_via": "file",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/solidinvoice.webp",
+    "repo": "SolidInvoice/SolidInvoice",
+    "tag_regex": "(?i)(?:v|release[-_/]?)?(\\d+(?:\\.\\d+){1,3}(?:[-+._][0-9A-Za-z.-]+)?)",
+    "website": "https://solidinvoice.co"
+  },
   "solidtime": {
     "default_ports": [
       80
@@ -4021,6 +4262,19 @@
     "tag_regex": "(?i)(?:SQUID_)?(\\d+(?:[._]\\d+){1,3})",
     "website": "https://www.squid-cache.org/"
   },
+  "stalwart": {
+    "default_ports": [
+      8080
+    ],
+    "file_path": "/root/.stalwart",
+    "file_regex": "(?i)(?:v|release[-_/]?)?(\\d+(?:\\.\\d+){1,3}(?:[-+._][0-9A-Za-z.-]+)?)",
+    "github_source": "releases",
+    "installed_via": "file",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/stalwart.webp",
+    "repo": "stalwartlabs/stalwart",
+    "tag_regex": "(?i)(?:v|release[-_/]?)?(\\d+(?:\\.\\d+){1,3}(?:[-+._][0-9A-Za-z.-]+)?)",
+    "website": "https://stalw.art/"
+  },
   "step-ca": {
     "default_ports": [
       443
@@ -4071,6 +4325,32 @@
     "repo": "mmastrac/stylus",
     "tag_regex": "(?i)(?:v|release[-_/]?)?(\\d+(?:\\.\\d+){1,3}(?:[-+._][0-9A-Za-z.-]+)?)",
     "website": "https://github.com/mmastrac/stylus"
+  },
+  "suggestarr": {
+    "default_ports": [
+      5000
+    ],
+    "file_path": "/root/.suggestarr",
+    "file_regex": "(?i)(?:v|release[-_/]?)?(\\d+(?:\\.\\d+){1,3}(?:[-+._][0-9A-Za-z.-]+)?)",
+    "github_source": "releases",
+    "installed_via": "file",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/suggestarr.webp",
+    "repo": "giuseppe99barchetta/SuggestArr",
+    "tag_regex": "(?i)(?:v|release[-_/]?)?(\\d+(?:\\.\\d+){1,3}(?:[-+._][0-9A-Za-z.-]+)?)",
+    "website": "https://github.com/giuseppe99barchetta/SuggestArr"
+  },
+  "super-productivity": {
+    "default_ports": [
+      80
+    ],
+    "file_path": "/root/.super-productivity",
+    "file_regex": "(?i)(?:v|release[-_/]?)?(\\d+(?:\\.\\d+){1,3}(?:[-+._][0-9A-Za-z.-]+)?)",
+    "github_source": "releases",
+    "installed_via": "file",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/super-productivity.webp",
+    "repo": "super-productivity/super-productivity",
+    "tag_regex": "(?i)(?:v|release[-_/]?)?(\\d+(?:\\.\\d+){1,3}(?:[-+._][0-9A-Za-z.-]+)?)",
+    "website": "https://super-productivity.com/"
   },
   "sure": {
     "default_ports": [
@@ -4202,6 +4482,19 @@
     "tag_regex": "(?i)(?:v|release[-_/]?)?(\\d+(?:\\.\\d+){1,3}(?:[-+._][0-9A-Za-z.-]+)?)",
     "website": "https://termix.site/"
   },
+  "teslamate": {
+    "default_ports": [
+      4000
+    ],
+    "file_path": "/root/.teslamate",
+    "file_regex": "(?i)(?:v|release[-_/]?)?(\\d+(?:\\.\\d+){1,3}(?:[-+._][0-9A-Za-z.-]+)?)",
+    "github_source": "releases",
+    "installed_via": "file",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/teslamate.webp",
+    "repo": "teslamate-org/teslamate",
+    "tag_regex": "(?i)(?:v|release[-_/]?)?(\\d+(?:\\.\\d+){1,3}(?:[-+._][0-9A-Za-z.-]+)?)",
+    "website": "https://github.com/teslamate-org/teslamate"
+  },
   "the-lounge": {
     "default_ports": [
       9000
@@ -4253,6 +4546,19 @@
     "repo": "msgbyte/tianji",
     "tag_regex": "(?i)(?:v|release[-_/]?)?(\\d+(?:\\.\\d+){1,3}(?:[-+._][0-9A-Za-z.-]+)?)",
     "website": "https://tianji.msgbyte.com/"
+  },
+  "tinyauth": {
+    "default_ports": [
+      3000
+    ],
+    "file_path": "/root/.tinyauth",
+    "file_regex": "(?i)(?:v|release[-_/]?)?(\\d+(?:\\.\\d+){1,3}(?:[-+._][0-9A-Za-z.-]+)?)",
+    "github_source": "releases",
+    "installed_via": "file",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/tinyauth.webp",
+    "repo": "tinyauthapp/tinyauth",
+    "tag_regex": "(?i)(?:v|release[-_/]?)?(\\d+(?:\\.\\d+){1,3}(?:[-+._][0-9A-Za-z.-]+)?)",
+    "website": "https://tinyauth.app"
   },
   "tolgee": {
     "default_ports": [
@@ -4840,6 +5146,19 @@
     "repo": "FuzzyGrim/Yamtrack",
     "tag_regex": "(?i)(?:v|release[-_/]?)?(\\d+(?:\\.\\d+){1,3}(?:[-+._][0-9A-Za-z.-]+)?)",
     "website": "https://github.com/FuzzyGrim/Yamtrack"
+  },
+  "yopass": {
+    "default_ports": [
+      1337
+    ],
+    "file_path": "/root/.yopass",
+    "file_regex": "(?i)(?:v|release[-_/]?)?(\\d+(?:\\.\\d+){1,3}(?:[-+._][0-9A-Za-z.-]+)?)",
+    "github_source": "releases",
+    "installed_via": "file",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/yopass.webp",
+    "repo": "jhaals/yopass",
+    "tag_regex": "(?i)(?:v|release[-_/]?)?(\\d+(?:\\.\\d+){1,3}(?:[-+._][0-9A-Za-z.-]+)?)",
+    "website": "https://yopass.se/"
   },
   "yourls": {
     "default_ports": [
