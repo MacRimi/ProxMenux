@@ -1,123 +1,85 @@
 {
   "_description": "Verified AI models for ProxMenux notifications. Only models listed here will be shown to users. Models are tested to work with the chat/completions API format.",
-  "_updated": "2026-09-02",
-  "_verifier": "Refreshed by .github/workflows/verify-ai-models.yml (daily). The workflow runs .github/scripts/ai-models-verifier/verify.py against every provider whose API key is configured in repository Secrets, then applies the report via apply.py — which honours per-provider `_exclude` lists. `_exclude` is intentionally minimal: it only drops models that are technically incapable of generating a chat completion for a normal prompt (safety classifiers, agentic-only endpoints, meta-routers, wrong modalities). Everything else the verifier passes is surfaced — including language-specialised models (Arabic, Chinese, ...), reasoning models, legacy families and dated snapshots — so a user with a specific need can still pick the model that fits. Manually re-run from the Actions tab (any branch) when a new model needs to be picked up out of cycle.",
+  "_updated": "2026-07-14",
+  "_verifier": "Refreshed with tools/ai-models-verifier (private). Re-run before each ProxMenux release to keep the list current. The verifier and ProxMenux share the same reasoning/thinking-model handlers so their verdicts stay aligned with runtime behaviour.",
+
   "groq": {
     "models": [
-      "allam-2-7b",
-      "qwen/qwen3.8-27b",
-      "openai/gpt-oss-120b"
+      "llama-3.3-70b-versatile",
+      "llama-3.1-8b-instant",
+      "meta-llama/llama-4-scout-17b-16e-instruct",
+      "openai/gpt-oss-120b",
+      "openai/gpt-oss-20b"
     ],
-    "recommended": "allam-2-7b",
-    "_exclude": [
-      "openai/gpt-oss-safeguard-*",
-      "groq/compound",
-      "groq/compound-*"
-    ],
-    "_note": "`_exclude` covers models the verifier may technically pass but that do not produce a usable chat completion: openai/gpt-oss-safeguard-* is a safety classifier (returns a category, not free text); groq/compound* is an agentic system that expects multi-step tool use, not a plain prompt."
+    "recommended": "llama-3.3-70b-versatile",
+    "_note": "Verified functionally 2026-07-14 with the Groq API (15 models discovered, 9 passed). Legacy llama-3.1-70b-versatile / llama3-70b-8192 / llama3-8b-8192 / mixtral-8x7b-32768 / gemma2-9b-it removed (retired upstream). llama-4-scout added (current-gen Llama 4, 0.47s). openai/gpt-oss-120b / gpt-oss-20b confirmed. Passing but excluded: allam-2-7b (Arabic-focused), qwen/qwen3-32b (Chinese-first, unreliable Spanish output), openai/gpt-oss-safeguard-20b (safety-classifier variant), groq/compound-mini (agentic system, wrong fit for notification translation)."
   },
+
   "gemini": {
     "models": [
-      "gemini-2.5-flash-lite",
-      "gemini-3.1-flash-lite-preview",
-      "gemini-3.1-flash-lite",
       "gemini-flash-lite-latest",
-      "gemini-3.5-flash-lite",
+      "gemini-2.5-flash-lite",
       "gemini-2.5-flash",
-      "gemini-3.5-flash",
+      "gemini-3.1-flash-lite",
       "gemini-3-flash-preview",
-      "gemma-4-26b-a4b-it"
+      "gemini-3.5-flash"
     ],
     "recommended": "gemini-2.5-flash-lite",
-    "_exclude": [
-      "gemini-embedding-*",
-      "gemini-*-pro*",
-      "gemini-*-thinking*"
-    ],
-    "_deprecated": [
-      "gemini-2.0-flash",
-      "gemini-2.0-flash-lite",
-      "gemini-1.5-flash",
-      "gemini-1.0-pro",
-      "gemini-pro"
-    ],
-    "_note": "`_exclude` drops embeddings (wrong modality) and Pro / thinking variants that reject `thinkingConfig.thinkingBudget: 0` and therefore never return a visible completion within a reasonable token budget — technical failure with our current provider config."
+    "_note": "Verified 2026-07-13. gemini-flash-lite-latest now passes consistently (1.6s) and is fastest, but gemini-2.5-flash-lite remains recommended because 'latest' aliases can drift over time. gemini-3.1-flash-lite is the stable successor to 3-flash-preview. Pro variants continue to reject thinkingBudget=0 and are overkill for notification translation.",
+    "_deprecated": ["gemini-2.0-flash", "gemini-2.0-flash-lite", "gemini-1.5-flash", "gemini-1.0-pro", "gemini-pro"]
   },
+
   "openai": {
     "models": [
-      "gpt-4.1-nano-2025-04-14",
       "gpt-4.1-nano",
-      "gpt-4.1-2025-04-14",
-      "gpt-4.1",
-      "gpt-4o-2024-05-13",
-      "gpt-4o-2024-11-20",
-      "gpt-5-nano",
-      "gpt-5-nano-2025-08-07",
-      "gpt-3.5-turbo-1106",
-      "gpt-3.5-turbo-0125",
-      "gpt-4o-mini-2024-07-18",
-      "gpt-4.1-mini-2025-04-14",
-      "gpt-4o-mini",
-      "gpt-3.5-turbo-16k",
       "gpt-4.1-mini",
-      "gpt-3.5-turbo",
+      "gpt-4o-mini",
+      "gpt-4.1",
       "gpt-4o",
-      "gpt-4",
-      "gpt-4-0613",
-      "gpt-4-turbo",
-      "gpt-4-turbo-2024-04-09",
-      "gpt-4o-2024-08-06"
+      "gpt-5-chat-latest",
+      "gpt-5-nano"
     ],
     "recommended": "gpt-4.1-nano",
-    "_exclude": [
-      "gpt-4o-audio*",
-      "gpt-4o-realtime*",
-      "gpt-4o-search*",
-      "gpt-4o-transcribe*",
-      "gpt-4o-mini-audio*",
-      "gpt-4o-mini-realtime*",
-      "gpt-4o-mini-search*",
-      "gpt-4o-mini-transcribe*",
-      "gpt-4o-mini-tts",
-      "computer-use-*"
-    ],
-    "_note": "`_exclude` covers wrong-modality variants (audio, realtime, search, transcribe, tts) that cannot handle a plain notification-translation prompt, plus computer-use which requires an agent loop. All other OpenAI chat/completion models are surfaced — including legacy families (gpt-3.5, gpt-4), reasoning models (o-series, gpt-5.x non-chat) and dated snapshots — so users can pick by their own criteria (cost, quality, reproducibility). openai_provider.py already handles reasoning models via max_completion_tokens + reasoning_effort=minimal."
+    "_note": "Verified 2026-07-13. gpt-5.4-nano / gpt-5.4-mini removed (HTTP 400 — provider params rejected). gpt-5-nano added (2.0s, current-gen fast). Reasoning models (o-series, gpt-5/5.1/5.2 non-chat variants) are supported by openai_provider.py via max_completion_tokens + reasoning_effort=minimal, but not listed here: their latency is higher and they do not improve translation quality for notifications. Add specific reasoning IDs to this list only if a user explicitly wants them."
   },
+
   "anthropic": {
     "models": [
-      "claude-haiku-4-5-20251001",
+      "claude-haiku-4-5",
+      "claude-sonnet-5",
       "claude-opus-4-8",
-      "claude-opus-4-5-20251101",
-      "claude-opus-4-7",
-      "claude-fable-5",
-      "claude-sonnet-4-5-20250929",
-      "claude-fable-5-1",
+      "claude-sonnet-4-6",
       "claude-opus-4-6",
-      "claude-sonnet-4-6"
+      "claude-fable-5"
     ],
-    "recommended": "claude-haiku-4-5-20251001",
-    "_exclude": [],
-    "_note": "No technical exclusions — every Claude generation returns free-text completions for a plain prompt. The verifier tests each model listed under `models`; if a specific ID stops working upstream it simply drops out of the passing set. Anthropic does not expose a public models-list API, so new models must be added to `models` manually before the verifier can test them."
+    "recommended": "claude-haiku-4-5",
+    "_note": "Verified 2026-07-13 with all 10 discovered models passing after aligning the verifier with anthropic_provider.py (temperature omitted — newest generations reject it with 'temperature is deprecated for this model'). Legacy claude-3-5-haiku-latest / claude-3-5-sonnet-latest / claude-3-opus-latest removed (deprecated upstream, not in the Models API). haiku-4-5 is the sweet spot for notification translation (3.6s, $1/$5 per MTok); sonnet-5 for slightly richer output (3.1s, $3/$15); opus-4-8 / fable-5 for demanding cases."
   },
+
   "openrouter": {
     "models": [
-      "minimax/minimax-m3:free",
-      "poolside/laguna-s-2.1:free"
+      "meta-llama/llama-3.3-70b-instruct",
+      "meta-llama/llama-3.1-70b-instruct",
+      "meta-llama/llama-3.1-8b-instruct",
+      "meta-llama/llama-4-scout",
+      "anthropic/claude-haiku-4.5",
+      "anthropic/claude-sonnet-4.6",
+      "google/gemini-2.5-flash-lite",
+      "google/gemini-2.5-flash",
+      "openai/gpt-4o-mini",
+      "mistralai/mistral-small-3.2-24b-instruct",
+      "nvidia/nemotron-3-super-120b-a12b:free",
+      "google/gemma-4-26b-a4b-it:free",
+      "nvidia/nemotron-nano-12b-v2-vl:free",
+      "nvidia/nemotron-3-nano-30b-a3b:free",
+      "poolside/laguna-s-2.1:free",
+      "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free",
+      "openai/gpt-oss-20b:free"
     ],
-    "recommended": "minimax/minimax-m3:free",
-    "_exclude": [
-      "openrouter/*",
-      "*/*-audio*",
-      "*/*-audio-*",
-      "*/*-tts*",
-      "*/*-whisper*",
-      "*/*-embed*",
-      "*/*-embedding*",
-      "*/*-image*",
-      "*/*-vision-only*"
-    ],
-    "_note": "OpenRouter aggregates hundreds of models; the free-tier variants (:free suffix) are intentionally supported per user request and never blocked. `_exclude` covers only meta-routers (`openrouter/free`, `openrouter/auto` — they route dynamically to something else, so their behaviour is not the model the user picked) and wrong-modality models (audio, tts, whisper, embeddings, image, vision-only). Everything else — chat models across every family, language and price tier — is surfaced so the user can pick the fit."
+    "recommended": "meta-llama/llama-3.3-70b-instruct",
+    "_note": "Paid tier verified functionally 2026-07-14 with the OpenRouter API — all 10 curated candidates pass the Spanish-translation notification test. Fastest: llama-4-scout (0.51s), gemini-2.5-flash-lite (1.14s), gemini-2.5-flash (1.94s), llama-3.3-70b-instruct (2.29s), claude-haiku-4.5 (2.71s). Free tier verified 2026-08-17 — 7 :free models pass and are appended, ordered by latency: nemotron-3-super-120b-a12b (3.5s), gemma-4-26b-a4b-it (4.1s), nemotron-nano-12b-v2-vl (5.3s), nemotron-3-nano-30b-a3b (5.8s), laguna-s-2.1 (8.3s), nemotron-3-nano-omni-30b-a3b-reasoning (10.7s), gpt-oss-20b (12.2s). Free-tier rate limits (~20 req/min shared across all OpenRouter free users on that model) may cause 429 in high-traffic windows — usable for occasional notification translation, not for high-volume automation. recommended kept as llama-3.3-70b for capability/latency balance; llama-4-scout is a faster alternative worth considering as recommended after a broader release."
   },
+
   "ollama": {
     "_note": "Ollama models are local, we don't filter them. User manages their own models.",
     "models": [],

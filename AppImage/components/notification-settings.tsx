@@ -341,16 +341,6 @@ export function NotificationSettings() {
   const [aiTestResult, setAiTestResult] = useState<{ success: boolean; message: string; model?: string } | null>(null)
   const [providerModels, setProviderModels] = useState<string[]>([])
   const [loadingProviderModels, setLoadingProviderModels] = useState(false)
-  // Metadata returned by the backend after the catalog refresh — used
-  // to render the "Last update" line and toast the diff.
-  const [catalogMeta, setCatalogMeta] = useState<{
-    success: boolean
-    message: string
-    changed: boolean
-    previous_updated: string | null
-    new_updated: string | null
-    diff: Record<string, { added: string[]; removed: string[] }>
-  } | null>(null)
   const [showCustomPromptInfo, setShowCustomPromptInfo] = useState(false)
   const [editingCustomPrompt, setEditingCustomPrompt] = useState(false)
   const [customPromptDraft, setCustomPromptDraft] = useState("")
@@ -1003,38 +993,16 @@ export function NotificationSettings() {
     
     setLoadingProviderModels(true)
     try {
-      const data = await fetchApi<{
-        success: boolean
-        models: string[]
-        recommended: string
-        message: string
-        catalog_meta?: {
-          success: boolean
-          message: string
-          changed: boolean
-          previous_updated: string | null
-          new_updated: string | null
-          diff: Record<string, { added: string[]; removed: string[] }>
-        } | null
-      }>("/api/notifications/provider-models", {
+      const data = await fetchApi<{ success: boolean; models: string[]; recommended: string; message: string }>("/api/notifications/provider-models", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
+        body: JSON.stringify({ 
           provider,
           api_key: apiKey,
           ollama_url: config.ai_ollama_url,
           openai_base_url: config.ai_openai_base_url,
-          // Every click pulls the latest verified catalog from GitHub
-          // before the intersection runs, so a user with an outdated
-          // AppImage still sees today's model list. The backend keeps
-          // the local file when the fetch fails, so an offline node
-          // simply doesn't refresh but still resolves models.
-          refresh_catalog: true,
         }),
       })
-      if (data.catalog_meta) {
-        setCatalogMeta(data.catalog_meta)
-      }
       if (data.success && data.models && data.models.length > 0) {
         setProviderModels(data.models)
         // Auto-select recommended model if current selection is empty or not in the list
@@ -2441,7 +2409,7 @@ export function NotificationSettings() {
                             className="h-9 px-3 shrink-0"
                             onClick={() => fetchProviderModels()}
                             disabled={
-                              loadingProviderModels ||
+                              loadingProviderModels || 
                               (config.ai_provider === 'ollama' && !config.ai_ollama_url) ||
                               (config.ai_provider !== 'ollama' && config.ai_provider !== 'anthropic' && !config.ai_api_keys?.[config.ai_provider])
                             }
@@ -2451,44 +2419,13 @@ export function NotificationSettings() {
                             ) : (
                               <>
                                 <RefreshCw className="h-4 w-4 mr-1" />
-                                {/* Label swaps once we have models loaded — "Load" reads
-                                    right on the empty state, "Update" reads right after
-                                    the first pull. Same action underneath either way. */}
-                                {t(providerModels.length === 0
-                                  ? "settings.notifications.ai.load"
-                                  : "settings.notifications.ai.updateModels")}
+                                {t("settings.notifications.ai.load")}
                               </>
                             )}
                           </Button>
                         </div>
                         {providerModels.length > 0 && (
                           <p className="text-xs text-green-500">{t("settings.notifications.ai.modelsAvailable", { count: providerModels.length })}</p>
-                        )}
-                        {/* Catalog freshness line — surfaces the `_updated` date of the
-                            verified_ai_models.json currently in use, plus a compact diff
-                            summary from the most recent GitHub pull so the user knows
-                            what just happened without opening a modal. */}
-                        {catalogMeta && (
-                          <div className="text-[11px] text-muted-foreground space-y-0.5">
-                            <div>
-                              {t("settings.notifications.ai.catalogLastUpdated", {
-                                date: catalogMeta.new_updated || catalogMeta.previous_updated || "—",
-                              })}
-                            </div>
-                            {catalogMeta.changed && catalogMeta.success && Object.keys(catalogMeta.diff).length > 0 && (
-                              <div className="text-blue-400">
-                                {t("settings.notifications.ai.catalogChanged", {
-                                  added: Object.values(catalogMeta.diff).reduce((n, d) => n + d.added.length, 0),
-                                  removed: Object.values(catalogMeta.diff).reduce((n, d) => n + d.removed.length, 0),
-                                })}
-                              </div>
-                            )}
-                            {!catalogMeta.success && catalogMeta.message && (
-                              <div className="text-amber-400">
-                                {t("settings.notifications.ai.catalogFetchFailed", { reason: catalogMeta.message })}
-                              </div>
-                            )}
-                          </div>
                         )}
                       </div>
                       

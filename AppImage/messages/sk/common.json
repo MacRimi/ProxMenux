@@ -1921,11 +1921,7 @@
           "gemini": "Ponúka bezplatnú úroveň a dobrý pomer kvality a ceny.",
           "ollama": "Používa modely na vašom Ollama serveri. Beží lokálne, súkromne a bez poplatkov.",
           "openrouter": "Prístup k viac než 100 modelom cez jeden API kľúč."
-        },
-        "updateModels": "Aktualizovať",
-        "catalogLastUpdated": "Posledná aktualizácia overeného katalógu: {date}",
-        "catalogChanged": "Katalóg aktualizovaný — {added} pridaných, {removed} odstránených",
-        "catalogFetchFailed": "Katalóg nebolo možné aktualizovať: {reason}. Používa sa lokálna kópia."
+        }
       },
       "telegramGuide": {
         "title": "Nastavenie Telegram bota",
