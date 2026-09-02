@@ -140,7 +140,10 @@
     "items": [
       "Choose a preset or cron expression, then select exact targets: OS packages, individual apps, Docker Engine, standalone Docker units or Compose service groups.",
       "A release hold applies only to selected applications with version tracking. Apps without tracking run their updater whenever their schedule is due.",
-      "The last-run state distinguishes success, partial completion, failure, safety hold and a run with nothing pending.",
+      "The last-run state distinguishes success, partial completion, failure, safety hold and a run with nothing pending. After the first scheduled run, <strong>Updates → Scheduled updates → View log</strong> opens the complete output captured from the updater and any child scripts it invoked.",
+      "After each run, ProxMenux checks the standard Debian reboot-required marker. When a restart is needed, the Updates tab and the completion notification say so; the warning is cleared when that LXC starts or restarts.",
+      "On the Proxmox host, scheduled-run logs are stored in <code>/usr/local/share/proxmenux/logs/lxc-updates/</code> using the name <code>&lt;VMID&gt;-scheduled-&lt;run-id&gt;.log</code>. The latest ten logs are retained per LXC and older files are removed automatically.",
+      "This retained history applies to scheduled updates. A manual update displays its output live in the Monitor execution window and does not create a scheduled-run log in that directory.",
       "External host schedules detected from Proxmox VE Helper-Scripts are shown separately so overlapping automation is visible."
     ],
     "callout": "Run every selected method manually before enabling a schedule. Scheduled commands cannot answer prompts."
@@ -150,6 +153,7 @@
     "lead": "The update is not considered finished when the terminal command merely exits.",
     "items": [
       "The same run records its final result and refreshes OS package state, registered app versions and Docker inventory as applicable.",
+      "Scheduled runs retain their terminal output and report whether a restart is still required to finish applying package changes.",
       "The LXC cache is replaced with the verified post-update state, so badges and buttons do not retain the previous result.",
       "If a stopped or restored LXC starts, the existing lifecycle event refreshes that LXC again. Docker inventory waits for the daemon to become ready instead of caching an empty startup result as final.",
       "Enabled notifications are emitted from the finalized run, including partial failures and grouped Docker image results."
@@ -179,6 +183,10 @@
       {
         "problem": "A custom command fails",
         "resolution": "Run it in the LXC terminal and review its path, dependencies, non-interactive flags and exit code."
+      },
+      {
+        "problem": "A scheduled update says that a restart is required",
+        "resolution": "Open View log to review the completed run, then restart that LXC. ProxMenux clears the warning from the existing lifecycle event after the container starts again."
       }
     ]
   },

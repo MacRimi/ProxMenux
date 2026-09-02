@@ -4147,6 +4147,17 @@ class ProxmoxHookWatcher:
             'job_id': pve_job_id,
         }
 
+        if pve_type == 'replication':
+            replication = self._extract_replication_context(
+                fields, title, message
+            )
+            data.update(replication)
+            entity_id = (
+                replication.get('job_id')
+                or replication.get('vmid')
+                or entity_id
+            )
+
         # `system_problem` is the generic fallback of `_classify_pve` for
         # unknown/empty pve_type. Without a populated `reason`, the template
         # renders "Reason: " (empty) and `_summarize_event` falls back to
@@ -4274,6 +4285,73 @@ class ProxmoxHookWatcher:
         
         self._queue.put(event)
         return {'accepted': True, 'event_type': event_type, 'event_id': event.event_id}
+
+    def _extract_replication_context(self, fields: dict, title: str,
+                                     message: str) -> dict:
+        """Map a native PVE replication notice to template fields."""
+        raw_job_id = fields.get('job-id') or fields.get('job_id') or ''
+        job_id = str(raw_job_id).strip()
+        if not re.fullmatch(r'\d+(?:-\d+)?', job_id):
+            combined = f'{title or ""}\n{message or ""}'
+            match = re.search(
+                r'\breplication(?:\s+job)?(?:\s*:\s*|\s+)'
+                r'[\'\"]?(\d+(?:-\d+)?)\b',
+                combined,
+                re.IGNORECASE,
+            )
+            if not match:
+                match = re.search(r'\b(\d+-\d+)\b', combined)
+            job_id = match.group(1) if match else ''
+
+        vmid_match = re.fullmatch(r'(\d+)(?:-\d+)?', job_id)
+        vmid = vmid_match.group(1) if vmid_match else ''
+        vmname = self._resolve_replication_guest_name(vmid)
+        if not vmname and vmid:
+            vmname = 'VM/CT'
+
+        target = str(
+            fields.get('job-target') or fields.get('target') or ''
+        ).strip()
+        if not target:
+            target_match = re.search(
+                r'\bwith\s+target\s+[\'\"]([^\'\"\n]+)[\'\"]',
+                message or '',
+                re.IGNORECASE,
+            )
+            if target_match:
+                target = target_match.group(1).strip()
+
+        reason_match = re.search(
+            r'^\s*Error:\s*(.*?)\s*\Z',
+            message or '',
+            re.IGNORECASE | re.MULTILINE | re.DOTALL,
+        )
+        reason = reason_match.group(1).strip() if reason_match else ''
+        if not reason:
+            reason = (message or title or '').strip()
+
+        return {
+            'job_id': job_id,
+            'vmid': vmid,
+            'vmname': vmname,
+            'target_node': target,
+            'reason': reason,
+        }
+
+    @staticmethod
+    def _resolve_replication_guest_name(vmid: str) -> str:
+        """Resolve the replicated guest name from the cluster config."""
+        if not vmid or not vmid.isdigit():
+            return ''
+        for base in ('/etc/pve/qemu-server', '/etc/pve/lxc'):
+            try:
+                with open(f'{base}/{vmid}.conf', encoding='utf-8') as config:
+                    for line in config:
+                        if line.startswith(('name:', 'hostname:')):
+                            return line.split(':', 1)[1].strip()
+            except OSError:
+                continue
+        return ''
     
     def _classify_pve(self, pve_type: str, severity: str,
                       title: str, message: str) -> tuple:

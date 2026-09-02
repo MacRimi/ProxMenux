@@ -1,3 +1,76 @@
+## 2026-09-02
+
+### Nueva versión ProxMenux v1.2.6
+
+Una versión centrada en restaurar el soporte del Asistente IA para endpoints compatibles con OpenAI alojados en IPs privadas, loopback y redes Docker, alinear el asistente de Secure Gateway con la arquitectura real del host, y consolidar varias mejoras que ya venían acumulándose en develop: entrega atómica de notificaciones, puerto SSH personalizado para destinos remotos Borg, token opcional de la API de GitHub para el seguimiento de versiones de aplicaciones y notificaciones de fallo de replicación con contexto completo.
+
+---
+
+## 🛠 Endpoint OpenAI personalizado del Asistente IA — URLs de LAN / Docker / localhost
+
+- Los endpoints compatibles con OpenAI accesibles en IPs privadas, loopback o redes Docker (LiteLLM, LM Studio, LocalAI, vLLM, OmniRoute, proxies autoalojados…) se aceptan al cargar el catálogo de modelos y al validar la configuración de IA.
+- El desplegable muestra el motivo devuelto por el servidor (o el error de red subyacente) justo debajo del botón *Cargar*, así una configuración incorrecta deja de aparecer como una lista vacía y silenciosa.
+- Traducido a todos los idiomas del Monitor.
+
+Reportado en la [issue #325](https://github.com/MacRimi/ProxMenux/issues/325) por [@jorgeffonte](https://github.com/jorgeffonte).
+
+---
+
+## 🛠 Asistente Secure Gateway — la plantilla LXC coincide con la arquitectura del host
+
+- La descarga de la plantilla Alpine filtra los resultados de `pveam available` por la arquitectura del host (mediante `dpkg --print-architecture`, con fallback a `uname -m`), así un host Proxmox x86_64 recibe la plantilla `amd64` y un host arm64 recibe la plantilla `arm64`.
+- La selección de plantilla local aplica el mismo filtro de arquitectura al reutilizar una plantilla Alpine ya descargada.
+- `pct create` se invoca con `--arch <host>` explícito para que los metadatos del contenedor reflejen la arquitectura real del host.
+
+Reportado en la [issue #324](https://github.com/MacRimi/ProxMenux/issues/324) por [@N0X4DD0](https://github.com/N0X4DD0).
+
+---
+
+## 🔔 Entrega atómica de notificaciones
+
+- Los eventos de notificación reservan su huella de deduplicación de forma atómica antes del procesado por IA y del envío por canal, de modo que colectores concurrentes, callbacks de finalización o procesos Monitor paralelos accidentales no pueden enviar el mismo evento dos veces.
+- La reserva se comparte a través de SQLite, expira de forma segura si una ejecución se interrumpe y se libera cuando ningún canal tiene éxito, preservando los reintentos ante fallos transitorios de transporte.
+
+---
+
+## 🗄 Destino remoto Borg — puerto SSH personalizado
+
+- El diálogo *Añadir destino Borg* del Monitor y el TUI del shell (`menu` → *Host Backup* → *New Borg target*) aceptan un puerto SSH personalizado. El valor por defecto sigue siendo `22`; cualquier valor entre 1 y 65535 se incrusta en la URL `ssh://user@host:port/path` persistida.
+- `BORG_RSH` respeta el puerto personalizado en el momento del backup, así los jobs programados y las ejecuciones manuales alcanzan el puerto correcto.
+- El flujo de instalación automática de clave (`generate-auto`) también apunta al puerto personalizado.
+- Totalmente retrocompatible con las entradas existentes en `borg-targets.txt` creadas sin puerto explícito.
+- Las sondas de capacidad sobre SSH también respetan el puerto personalizado, así la insignia *Available* permanece precisa en puertos no estándar.
+
+Reportado en la [discusión #236](https://github.com/MacRimi/ProxMenux/discussions/236) por [@songochain](https://github.com/songochain).
+
+---
+
+## 🎯 Seguimiento de versiones de aplicaciones — token opcional de la API de GitHub
+
+- **Settings → GitHub API** acepta un token de acceso personal opcional para las comprobaciones de releases y tags cuando se agota la cuota anónima de GitHub.
+- El token se guarda cifrado, nunca se devuelve al navegador y puede sustituirse o eliminarse de forma independiente del servicio de Notificaciones.
+- El flujo anónimo de GitHub sigue siendo el predeterminado; no se requiere un token mientras la cuota compartida sin autenticar esté disponible.
+- El error de límite de tasa apunta al ajuste real y está traducido en todos los idiomas del Monitor.
+
+Reportado en la [discusión #306](https://github.com/MacRimi/ProxMenux/discussions/306) por [@SystemIdleProcess](https://github.com/SystemIdleProcess).
+
+---
+
+## 🔁 Notificaciones de fallo de replicación — contexto completo del job
+
+- Los webhooks nativos de replicación de Proxmox resuelven el ID del trabajo de replicación, el ID de la VM/LXC afectada y el nombre del guest antes de renderizar la notificación.
+- El bloque de error exacto proporcionado por Proxmox se conserva como motivo, incluyendo fallos multilínea, con el mensaje completo como fallback seguro cuando el bloque no está presente.
+- Las notificaciones de replicación se identifican por su ID de job completo, así los fallos de trabajos de replicación distintos permanecen independientes durante la deduplicación.
+
+Reportado por Ale R.
+
+---
+
+Para el historial completo de cambios, consulta [Releases](https://github.com/MacRimi/ProxMenux/releases).
+
+---
+
+
 ## 2026-09-01
 
 ### Nueva versión ProxMenux v1.2.5

@@ -340,6 +340,12 @@ export function NotificationSettings() {
   const [testingAI, setTestingAI] = useState(false)
   const [aiTestResult, setAiTestResult] = useState<{ success: boolean; message: string; model?: string } | null>(null)
   const [providerModels, setProviderModels] = useState<string[]>([])
+  // Surfaces the message the backend returns when the models fetch
+  // fails (bad key, unreachable endpoint, SSRF guard blocking the URL,
+  // network error). Cleared on the next successful fetch, on provider
+  // change and on unmount. Without this the dropdown just goes empty
+  // and the user has no clue why (issue #325).
+  const [providerModelsError, setProviderModelsError] = useState<string | null>(null)
   const [loadingProviderModels, setLoadingProviderModels] = useState(false)
   const [showCustomPromptInfo, setShowCustomPromptInfo] = useState(false)
   const [editingCustomPrompt, setEditingCustomPrompt] = useState(false)
@@ -992,11 +998,12 @@ export function NotificationSettings() {
     }
     
     setLoadingProviderModels(true)
+    setProviderModelsError(null)
     try {
       const data = await fetchApi<{ success: boolean; models: string[]; recommended: string; message: string }>("/api/notifications/provider-models", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ 
+        body: JSON.stringify({
           provider,
           api_key: apiKey,
           ollama_url: config.ai_ollama_url,
@@ -1009,8 +1016,8 @@ export function NotificationSettings() {
         updateConfig(prev => {
           if (!prev.ai_model || !data.models.includes(prev.ai_model)) {
             const modelToSelect = data.recommended || data.models[0]
-            return { 
-              ...prev, 
+            return {
+              ...prev,
               ai_model: modelToSelect,
               ai_models: { ...prev.ai_models, [provider]: modelToSelect }
             }
@@ -1019,9 +1026,13 @@ export function NotificationSettings() {
         })
       } else {
         setProviderModels([])
+        // Surface the backend's error message so the user can act on
+        // it (bad key, SSRF-blocked URL, unreachable endpoint …).
+        setProviderModelsError(data.message || t("settings.notifications.ai.loadModelsFailed"))
       }
-    } catch {
+    } catch (err) {
       setProviderModels([])
+      setProviderModelsError(err instanceof Error ? err.message : t("settings.notifications.ai.loadModelsFailed"))
     } finally {
       setLoadingProviderModels(false)
     }
@@ -2426,6 +2437,12 @@ export function NotificationSettings() {
                         </div>
                         {providerModels.length > 0 && (
                           <p className="text-xs text-green-500">{t("settings.notifications.ai.modelsAvailable", { count: providerModels.length })}</p>
+                        )}
+                        {/* Surface the backend's error message when a Load attempt
+                            returns empty — silent dropdown was invisible to the user
+                            (issue #325). Cleared when the next successful load lands. */}
+                        {providerModels.length === 0 && providerModelsError && !loadingProviderModels && (
+                          <p className="text-xs text-red-400">{providerModelsError}</p>
                         )}
                       </div>
                       

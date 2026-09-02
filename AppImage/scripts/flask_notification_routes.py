@@ -471,7 +471,14 @@ def get_provider_models():
             if not ok:
                 return jsonify({'success': False, 'models': [], 'message': f'Invalid ollama_url: {err}'}), 400
         if provider == 'openai' and openai_base_url:
-            ok, err = validate_external_url(openai_base_url, allow_loopback=False)
+            # OpenAI-compatible endpoints (LiteLLM, LM Studio, Ollama-proxy,
+            # LocalAI, vLLM, OmniRoute, opencode.ai, …) are LOCAL by design:
+            # documented deployments run on localhost, on the same LAN or
+            # inside a Docker network — all of which use loopback or
+            # RFC1918 addresses. Blocking them made the "Custom Base URL"
+            # feature unusable in practice (issue #325). The AWS metadata
+            # host stays blocked via _SSRF_BLOCKED_HOSTS regardless.
+            ok, err = validate_external_url(openai_base_url, allow_loopback=True)
             if not ok:
                 return jsonify({'success': False, 'models': [], 'message': f'Invalid openai_base_url: {err}'}), 400
         
@@ -665,7 +672,14 @@ def test_ai_connection():
             if not ok:
                 return jsonify({'success': False, 'message': f'Invalid ollama_url: {err}', 'model': ''}), 400
         if provider == 'openai' and openai_base_url:
-            ok, err = validate_external_url(openai_base_url, allow_loopback=False)
+            # OpenAI-compatible endpoints (LiteLLM, LM Studio, Ollama-proxy,
+            # LocalAI, vLLM, OmniRoute, opencode.ai, …) are LOCAL by design:
+            # documented deployments run on localhost, on the same LAN or
+            # inside a Docker network — all of which use loopback or
+            # RFC1918 addresses. Blocking them made the "Custom Base URL"
+            # feature unusable in practice (issue #325). The AWS metadata
+            # host stays blocked via _SSRF_BLOCKED_HOSTS regardless.
+            ok, err = validate_external_url(openai_base_url, allow_loopback=True)
             if not ok:
                 return jsonify({'success': False, 'message': f'Invalid openai_base_url: {err}', 'model': ''}), 400
 

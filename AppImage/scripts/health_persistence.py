@@ -221,6 +221,14 @@ class HealthPersistence:
         ''')
 
         cursor.execute('''
+            CREATE TABLE IF NOT EXISTS notification_delivery_claims (
+                fingerprint TEXT PRIMARY KEY,
+                claim_token TEXT NOT NULL,
+                claimed_at INTEGER NOT NULL
+            )
+        ''')
+
+        cursor.execute('''
             CREATE TABLE IF NOT EXISTS digest_pending (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 channel TEXT NOT NULL,
@@ -287,6 +295,7 @@ class HealthPersistence:
         cursor.execute('CREATE INDEX IF NOT EXISTS idx_notif_sent_at ON notification_history(sent_at)')
         cursor.execute('CREATE INDEX IF NOT EXISTS idx_notif_severity ON notification_history(severity)')
         cursor.execute('CREATE INDEX IF NOT EXISTS idx_nls_ts ON notification_last_sent(last_sent_ts)')
+        cursor.execute('CREATE INDEX IF NOT EXISTS idx_notification_claimed_at ON notification_delivery_claims(claimed_at)')
         
         # ── Disk Observations System ──
         # Registry of all physical disks seen by the system
@@ -419,7 +428,7 @@ class HealthPersistence:
         cursor.execute("SELECT name FROM sqlite_master WHERE type='table'")
         tables = {row[0] for row in cursor.fetchall()}
         required_tables = {'errors', 'events', 'system_capabilities', 'user_settings', 
-                          'notification_history', 'notification_last_sent', 
+                          'notification_history', 'notification_last_sent', 'notification_delivery_claims',
                           'disk_registry', 'disk_observations', 
                           'excluded_storages', 'excluded_interfaces'}
         missing = required_tables - tables

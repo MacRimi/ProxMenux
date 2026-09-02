@@ -1164,6 +1164,16 @@
       "targetApp": "Tillämpningen",
       "targetBoth": "OS + applikation",
       "lastRun": "Senaste körningen: {date}",
+      "rebootRequired": "En omstart krävs för att slutföra uppdateringen.",
+      "rebootPackages": "Paket: {packages}",
+      "viewLog": "Visa logg",
+      "logTitle": "Uppdateringslogg",
+      "logDescription": "Utdata från den senaste schemalagda uppdateringen av {name} (LXC {vmid}).",
+      "logLoading": "Läser in loggen…",
+      "logEmpty": "Den här körningen gav ingen utdata.",
+      "logFailed": "Det gick inte att läsa in uppdateringsloggen.",
+      "logTruncated": "Endast slutet av loggen visas eftersom den överskrider visningsgränsen.",
+      "closeLog": "Stäng",
       "runSuccess": "✓ framgång",
       "runPartial": "delvis slutförd",
       "runFailed": "✗ misslyckades",
@@ -1527,6 +1537,7 @@
       "editButton": "Redigera",
       "upstreamErrorTimeout": "Nätverkstimeout vid kontakt uppströms",
       "upstreamErrorNetwork": "Nätverksfel: {detail}",
+      "upstreamErrorGithubRateLimit": "GitHubs förfrågningsgräns har nåtts. Konfigurera en valfri token under Inställningar → GitHub API eller försök igen senare.",
       "upstreamErrorGeneric": "Uppströmskontroll misslyckades: {detail}",
       "notificationsEnabled": "Uppströmsuppdateringsmeddelanden PÅ – klicka för att stänga av ljudet",
       "notificationsMuted": "Uppströmsuppdateringsmeddelanden AVSTÄLLD – klicka för att aktivera",
@@ -1647,6 +1658,20 @@
       "loadFailed": "Det gick inte att ladda inställningen för LXC-uppdateringsdetektering.",
       "saveFailed": "Det gick inte att spara inställningen för upptäckt av LXC-uppdatering.",
       "purgedMessage": "{count} LXC-poster har tagits bort från registret. Om detektering återaktiveras kommer de att fyllas på igen vid nästa skanningscykel."
+    },
+    "githubApi": {
+      "title": "GitHub API",
+      "description": "Valfri autentisering för kontroller av utgåvor och taggar för registrerade appar.",
+      "configure": "Konfigurera",
+      "tokenLabel": "Personlig åtkomsttoken",
+      "tokenPlaceholder": "github_pat_...",
+      "tokenHelp": "Token lagras krypterad. ProxMenux använder den endast för skrivskyddade anrop till GitHub API och visar den inte igen efter att den har sparats.",
+      "configured": "Token konfigurerad",
+      "notConfigured": "GitHubs anonyma förfrågningskvot används",
+      "removeToken": "Ta bort token",
+      "loadFailed": "Det gick inte att läsa in GitHub API-inställningen.",
+      "saveFailed": "Det gick inte att spara GitHub API-token.",
+      "removeFailed": "Det gick inte att ta bort GitHub API-token."
     },
     "notifications": {
       "title": "Aviseringar",
@@ -1922,7 +1947,8 @@
           "gemini": "En gratis nivå är tillgänglig, med ett bra förhållande mellan kvalitet och pris.",
           "ollama": "Använder modeller på din Ollama-server. Helt lokalt, privat och gratis att köra.",
           "openrouter": "Tillgång till mer än 100 modeller via en API-nyckel."
-        }
+        },
+        "loadModelsFailed": "Kunde inte ladda modeller — kontrollera API-nyckeln eller endpoint-URL:en."
       },
       "telegramGuide": {
         "title": "Installationsguide för Telegram bot",
@@ -2087,7 +2113,7 @@
     "backupCodeHint": "Du kan också använda en reservkod (format: XXXX-XXXX)",
     "backToLogin": "Tillbaka till inloggning",
     "verifyCode": "Verifiera koden",
-    "version": "ProxMenux Monitor v1.2.5"
+    "version": "ProxMenux Monitor v1.2.6"
   },
   "account": {
     "signedIn": "Inloggad",
@@ -3143,7 +3169,13 @@
       "appsDashboard": "Ny huvudflik Apps — en enda startpunkt för varje webblänk på noden. LXC-registrerade appar och användardefinierade Custom Web Links delar samma rutnät med kategori-taggar, sökning och direktlänk till gästens modal.",
       "lxcAppsUpdates": "App-fliken inuti varje LXC-modal registrerar installerade appar, fångar webblänkar och spårar uppströmsversioner. Omarbetad Updates-flik applicerar OS-paket och appuppdateringar med en enda knapp; Docker Engine och per-image följer samma 24-timmarscykel med en 'Kontrollera nu'-åtgärd på begäran.",
       "multilingual": "Monitorn talar nu 8 språk: engelska, spanska, tyska, franska, italienska, portugisiska, svenska och slovakiska. Ett stort tack till @vaso73 för att ha byggt i18n-grunden.",
-      "nvidiaMultiGpu": "NVIDIA-driverns livscykel går över till ägarskap per exakt BDF, så att en multi-GPU-värd kan skicka ett kort till en VM och behålla det andra operativt på värden eller i LXC, plus en versionsväljare som är medveten om kärna, gren och GPU (#298)."
+      "nvidiaMultiGpu": "NVIDIA-driverns livscykel går över till ägarskap per exakt BDF, så att en multi-GPU-värd kan skicka ett kort till en VM och behålla det andra operativt på värden eller i LXC, plus en versionsväljare som är medveten om kärna, gren och GPU (#298).",
+      "aiCustomEndpoint": "AI Assistant custom OpenAI endpoint — LiteLLM, LM Studio, LocalAI, vLLM, OmniRoute and any self-hosted proxy on private IPs, loopback or Docker networks are recognised when loading the model catalogue. The dropdown surfaces the server's error (or the underlying network reason) directly under the Load button (#325, reported by @jorgeffonte).",
+      "secureGatewayArch": "Secure Gateway wizard — the Alpine template download, local template selection and pct create all match the host's real architecture, so x86_64 hosts receive amd64 containers and arm64 hosts receive arm64 containers (#324, reported by @N0X4DD0).",
+      "atomicNotifications": "Notification events reserve their deduplication fingerprint atomically before AI processing and channel delivery, so concurrent collectors, completion callbacks or parallel Monitor processes cannot send the same event twice. The reservation is released when no channel succeeds, preserving retries.",
+      "borgSshPort": "Borg remote target — the Add Borg destination dialog and the shell TUI accept a custom SSH port. BORG_RSH, the auto key install flow and the capacity probe all honour it. Fully backwards compatible with existing entries created without an explicit port (suggested by @songochain in discussion #236).",
+      "githubToken": "Settings → GitHub API accepts an optional personal access token for release and tag checks when the anonymous quota is exhausted. The token is encrypted at rest and never returned to the browser; the rate-limit error is translated in every Monitor language (suggested by @SystemIdleProcess in discussion #306).",
+      "replicationContext": "Native Proxmox replication failure notifications resolve the replication job ID, affected VM/LXC ID and guest name; the exact error block from Proxmox is preserved as the reason, and each replication job deduplicates independently (reported by Ale R.)."
     }
   },
   "network": {
@@ -3963,7 +3995,8 @@
       "vmsLxcs": "virtuella datorer/LXC:er",
       "when": "När",
       "whenLabel": "När",
-      "zfsPools": "ZFS pooler"
+      "zfsPools": "ZFS pooler",
+      "sshPort": "SSH-port"
     },
     "jobs": {
       "attachDescriptionAfter": "säkerhetskopior.",

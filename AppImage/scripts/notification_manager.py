@@ -64,6 +64,10 @@ ENCRYPTION_KEY_FILE = Path('/usr/local/share/proxmenux/.notification_key')
 
 # Keys that contain sensitive data and should be encrypted
 SENSITIVE_KEYS = {
+    # Optional GitHub API token used by the LXC app version tracker.
+    # It lives in the shared settings store so it benefits from the same
+    # ENC2 encryption and never needs a second secrets file.
+    'github_pat',
     'ai_api_key',  # Legacy - kept for migration
     'ai_api_key_groq',
     'ai_api_key_gemini',
@@ -387,6 +391,8 @@ DEFAULT_COOLDOWNS = {
     'resources': 86400,
     'updates':  86400,
 }
+
+_DELIVERY_CLAIM_TTL = 900
 
 
 # ─── Storm Protection ────────────────────────────────────────────
@@ -803,6 +809,8 @@ class NotificationManager:
         
         # Cooldown tracking: {fingerprint: last_sent_timestamp}
         self._cooldowns: Dict[str, float] = {}
+        self._delivery_claims: Dict[str, str] = {}
+        self._delivery_claim_lock = threading.Lock()
         
         # Storm protection
         self._group_limiter = GroupRateLimiter()
@@ -1213,50 +1221,37 @@ class NotificationManager:
                 except Exception:
                     pass  # Continue if check fails
         
-        # Cooldown check (does NOT stamp yet — see audit Tier 6, cooldown order).
-        # If we stamped here, a rate-limit hit or a "no channel enabled for this
-        # event_type" situation would burn a 24h cooldown on a delivery that
-        # never reached anyone.
-        if not self._passes_cooldown(event):
+        claim_token = self._claim_delivery(event)
+        if claim_token is None:
             return
+        delivered = False
+        try:
+            template = TEMPLATES.get(event.event_type, {})
+            group = template.get('group', 'other')
+            if not self._group_limiter.allow(group):
+                return
 
-        # Group rate limit check.
-        template = TEMPLATES.get(event.event_type, {})
-        group = template.get('group', 'other')
-        if not self._group_limiter.allow(group):
-            return
-        
-        # Use the properly mapped severity from the event, not from template defaults.
-        # event.severity was set by _map_severity which normalises to CRITICAL/WARNING/INFO.
-        severity = event.severity
-        
-        # Inject the canonical severity into data so templates see it too.
-        event.data['severity'] = severity
-        
-        # Render message from template (structured output)
-        rendered = render_template(event.event_type, event.data)
-        
-        # Enrich data with structured fields for channels that support them
-        enriched_data = dict(event.data)
-        enriched_data['_rendered_fields'] = rendered.get('fields', [])
-        enriched_data['_body_html'] = rendered.get('body_html', '')
-        enriched_data['_event_type'] = event.event_type
-        enriched_data['_group'] = TEMPLATES.get(event.event_type, {}).get('group', 'other')
-        
-        # Pass journal context if available (for AI enrichment)
-        if '_journal_context' in event.data:
-            enriched_data['_journal_context'] = event.data['_journal_context']
-        
-        # Send through all active channels (AI applied per-channel with detail_level).
-        # Stamp cooldown only if at least one channel actually delivered — otherwise
-        # a misconfigured per-channel toggle would silently lock the event under a
-        # 24h cooldown until someone re-enables it. Audit Tier 6.
-        delivered = self._dispatch_to_channels(
-            rendered['title'], rendered['body'], severity,
-            event.event_type, enriched_data, event.source
-        )
-        if delivered:
-            self._record_cooldown(event.fingerprint)
+            severity = event.severity
+            event.data['severity'] = severity
+            rendered = render_template(event.event_type, event.data)
+
+            enriched_data = dict(event.data)
+            enriched_data['_rendered_fields'] = rendered.get('fields', [])
+            enriched_data['_body_html'] = rendered.get('body_html', '')
+            enriched_data['_event_type'] = event.event_type
+            enriched_data['_group'] = TEMPLATES.get(event.event_type, {}).get('group', 'other')
+
+            if '_journal_context' in event.data:
+                enriched_data['_journal_context'] = event.data['_journal_context']
+
+            delivered = self._dispatch_to_channels(
+                rendered['title'], rendered['body'], severity,
+                event.event_type, enriched_data, event.source
+            )
+        finally:
+            self._finish_delivery_claim(
+                event.fingerprint, claim_token, delivered=delivered,
+            )
     
     def _dispatch_to_channels(self, title: str, body: str, severity: str,
                                event_type: str, data: Dict, source: str) -> bool:
@@ -1884,17 +1879,7 @@ class NotificationManager:
             print(f"[NotificationManager] quiet cleanup failed for "
                   f"{ch_name}: {e}")
 
-    def _passes_cooldown(self, event: NotificationEvent) -> bool:
-        """Check if the event passes cooldown rules WITHOUT stamping.
-
-        Splits the historical `_check_cooldown` into a pure predicate plus
-        `_record_cooldown` (separate stamp). Lets the caller check rate-limit
-        and per-channel filters first — if any of those drop the event, we
-        avoid burning a 24h cooldown on a delivery that never happened.
-        Audit Tier 6 (Notification stack #4 + cooldown/per-channel interaction).
-        """
-        now = time.time()
-        
+    def _cooldown_seconds(self, event: NotificationEvent) -> int:
         # Determine cooldown period
         template = TEMPLATES.get(event.event_type, {})
         group = template.get('group', 'system')
@@ -1958,14 +1943,111 @@ class NotificationManager:
         _URGENT_EVENTS = {'system_shutdown', 'system_reboot'}
         if event.event_type in _URGENT_EVENTS and cooldown_str is None:
             cooldown = 5
-        
-        # Check against last sent time using stable fingerprint. Stamp is
-        # deferred to `_record_cooldown()` — only invoked once the event has
-        # passed rate-limit AND at least one channel actually delivered it.
+
+        return cooldown
+
+    def _passes_cooldown(self, event: NotificationEvent) -> bool:
+        """Check the in-memory cooldown without reserving a delivery."""
+        now = time.time()
+        cooldown = self._cooldown_seconds(event)
         last_sent = self._cooldowns.get(event.fingerprint, 0)
         if now - last_sent < cooldown:
             return False
         return True
+
+    def _claim_delivery(self, event: NotificationEvent) -> Optional[str]:
+        """Reserve an event fingerprint before any slow channel work begins."""
+        fingerprint = event.fingerprint
+        now = time.time()
+        token = f'{os.getpid()}:{threading.get_ident()}:{time.time_ns()}'
+
+        with self._delivery_claim_lock:
+            if fingerprint in self._delivery_claims:
+                return None
+            if not self._passes_cooldown(event):
+                return None
+            self._delivery_claims[fingerprint] = token
+
+        allowed = True
+        conn = None
+        try:
+            conn = sqlite3.connect(str(DB_PATH), timeout=10)
+            conn.execute('PRAGMA journal_mode=WAL')
+            conn.execute('PRAGMA busy_timeout=5000')
+            conn.execute('BEGIN IMMEDIATE')
+            conn.execute('''
+                CREATE TABLE IF NOT EXISTS notification_delivery_claims (
+                    fingerprint TEXT PRIMARY KEY,
+                    claim_token TEXT NOT NULL,
+                    claimed_at INTEGER NOT NULL
+                )
+            ''')
+            conn.execute(
+                'DELETE FROM notification_delivery_claims WHERE claimed_at < ?',
+                (int(now - _DELIVERY_CLAIM_TTL),),
+            )
+            row = conn.execute(
+                'SELECT last_sent_ts FROM notification_last_sent WHERE fingerprint = ?',
+                (fingerprint,),
+            ).fetchone()
+            if row and now - float(row[0]) < self._cooldown_seconds(event):
+                self._cooldowns[fingerprint] = float(row[0])
+                allowed = False
+            else:
+                cursor = conn.execute('''
+                    INSERT OR IGNORE INTO notification_delivery_claims
+                    (fingerprint, claim_token, claimed_at) VALUES (?, ?, ?)
+                ''', (fingerprint, token, int(now)))
+                allowed = cursor.rowcount == 1
+            conn.commit()
+        except Exception as exc:
+            print(f'[NotificationManager] Delivery claim fallback: {exc}')
+        finally:
+            if conn is not None:
+                conn.close()
+
+        if not allowed:
+            with self._delivery_claim_lock:
+                if self._delivery_claims.get(fingerprint) == token:
+                    self._delivery_claims.pop(fingerprint, None)
+            return None
+        return token
+
+    def _finish_delivery_claim(self, fingerprint: str, token: str,
+                               *, delivered: bool) -> None:
+        """Commit a delivered cooldown or release an unsuccessful claim."""
+        now = time.time()
+        conn = None
+        try:
+            conn = sqlite3.connect(str(DB_PATH), timeout=10)
+            conn.execute('PRAGMA journal_mode=WAL')
+            conn.execute('PRAGMA busy_timeout=5000')
+            conn.execute('BEGIN IMMEDIATE')
+            if delivered:
+                conn.execute('''
+                    INSERT OR REPLACE INTO notification_last_sent
+                    (fingerprint, last_sent_ts, count)
+                    VALUES (?, ?, COALESCE(
+                        (SELECT count + 1 FROM notification_last_sent WHERE fingerprint = ?), 1
+                    ))
+                ''', (fingerprint, int(now), fingerprint))
+            conn.execute('''
+                DELETE FROM notification_delivery_claims
+                WHERE fingerprint = ? AND claim_token = ?
+            ''', (fingerprint, token))
+            conn.commit()
+        except Exception as exc:
+            print(f'[NotificationManager] Delivery claim completion fallback: {exc}')
+            if delivered:
+                self._persist_cooldown(fingerprint, now)
+        finally:
+            if conn is not None:
+                conn.close()
+            with self._delivery_claim_lock:
+                if delivered:
+                    self._cooldowns[fingerprint] = now
+                if self._delivery_claims.get(fingerprint) == token:
+                    self._delivery_claims.pop(fingerprint, None)
 
     def _record_cooldown(self, fingerprint: str):
         """Stamp the cooldown for a fingerprint that was actually delivered."""

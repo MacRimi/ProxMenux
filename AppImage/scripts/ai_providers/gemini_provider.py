@@ -19,8 +19,8 @@ class GeminiProvider(AIProvider):
     
     # Patterns to exclude from model list (experimental, preview, specialized)
     EXCLUDED_PATTERNS = [
-        'preview', 'exp', 'experimental', 'computer-use', 
-        'deep-research', 'image', 'embedding', 'aqa', 'tts',
+        'computer-use', 'deep-research',
+        'image', 'embedding', 'aqa', 'tts',
         'learnlm', 'imagen', 'veo'
     ]
     

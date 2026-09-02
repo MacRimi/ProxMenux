@@ -1087,6 +1087,9 @@ export function VirtualMachines() {
       cache.firewall.delete(vm.vmid)
       dockerInventoryRequestedRef.current.delete(vm.vmid)
       invalidateLxcApps(vm.vmid)
+      if (selectedVMRef.current?.vmid === vm.vmid) {
+        setScheduleLoaded(null)
+      }
       setVmConfigs((existing) => {
         if (!(vm.vmid in existing)) return existing
         const next = { ...existing }
@@ -1830,6 +1833,14 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
   const [scheduleLastRunAt, setScheduleLastRunAt] = useState<string | null>(null)
   const [scheduleLastRunStatus, setScheduleLastRunStatus] = useState<string | null>(null)
   const [scheduleLastRunReason, setScheduleLastRunReason] = useState<string | null>(null)
+  const [scheduleLastRunLog, setScheduleLastRunLog] = useState<string | null>(null)
+  const [scheduleLastRunRebootRequired, setScheduleLastRunRebootRequired] = useState(false)
+  const [scheduleLastRunRebootPackages, setScheduleLastRunRebootPackages] = useState<string[]>([])
+  const [scheduleLogOpen, setScheduleLogOpen] = useState(false)
+  const [scheduleLogLoading, setScheduleLogLoading] = useState(false)
+  const [scheduleLogContent, setScheduleLogContent] = useState("")
+  const [scheduleLogError, setScheduleLogError] = useState<string | null>(null)
+  const [scheduleLogTruncated, setScheduleLogTruncated] = useState(false)
   const [scheduleSaving, setScheduleSaving] = useState(false)
   const [scheduleError, setScheduleError] = useState<string | null>(null)
   const [externalCron, setExternalCron] = useState<{
@@ -1897,6 +1908,11 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
     setScheduleLastRunAt(s.last_run_at || null)
     setScheduleLastRunStatus(s.last_run_status || null)
     setScheduleLastRunReason(s.last_run_reason || null)
+    setScheduleLastRunLog(s.last_run_log || null)
+    setScheduleLastRunRebootRequired(s.last_run_reboot_required === true)
+    setScheduleLastRunRebootPackages(Array.isArray(s.last_run_reboot_packages)
+      ? s.last_run_reboot_packages.map((value: any) => String(value))
+      : [])
     setExternalCron(s.external_cron || null)
   }
 
@@ -1940,6 +1956,23 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
       setBulkError(e?.message || "Could not load bulk update")
     } finally {
       setBulkLoaded(vmid)
+    }
+  }
+
+  const openScheduleLog = async (vmid: number) => {
+    setScheduleLogOpen(true)
+    setScheduleLogLoading(true)
+    setScheduleLogContent("")
+    setScheduleLogError(null)
+    setScheduleLogTruncated(false)
+    try {
+      const payload: any = await fetchApi(`/api/vms/${vmid}/schedule/log`)
+      setScheduleLogContent(String(payload?.content || ""))
+      setScheduleLogTruncated(payload?.truncated === true)
+    } catch (e: any) {
+      setScheduleLogError(e?.message || t("vmLxc.scheduled.logFailed"))
+    } finally {
+      setScheduleLogLoading(false)
     }
   }
 
@@ -2094,6 +2127,9 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
       setScheduleLastRunAt(null)
       setScheduleLastRunStatus(null)
       setScheduleLastRunReason(null)
+      setScheduleLastRunLog(null)
+      setScheduleLastRunRebootRequired(false)
+      setScheduleLastRunRebootPackages([])
       setScheduleReleaseDelayDays(0)
     } catch (e: any) {
       setScheduleError(e?.message || "Delete failed")
@@ -2127,6 +2163,59 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
     return expr
   }
 
+  const renderScheduleRunDetails = (indented = false) => {
+    if (!scheduleLastRunAt || !selectedVM) return null
+    const spacing = indented ? "pl-4" : ""
+    return (
+      <div className={`space-y-1.5 ${spacing}`}>
+        <div className="text-xs text-muted-foreground">
+          {t("vmLxc.scheduled.lastRun", { date: new Date(scheduleLastRunAt).toLocaleString() })}
+          {scheduleLastRunStatus && (
+            <> · <span className={scheduleLastRunStatus === "success" ? "text-green-400" : scheduleLastRunStatus === "partial" || scheduleLastRunStatus === "deferred" || scheduleLastRunStatus === "skipped" ? "text-amber-400" : "text-red-400"}>
+              {scheduleLastRunStatus === "success"
+                ? t("vmLxc.scheduled.runSuccess")
+                : scheduleLastRunStatus === "partial"
+                  ? t("vmLxc.scheduled.runPartial")
+                  : scheduleLastRunStatus === "deferred"
+                    ? t("vmLxc.scheduled.runDeferred")
+                    : scheduleLastRunStatus === "skipped"
+                      ? t("vmLxc.scheduled.runSkipped")
+                      : t("vmLxc.scheduled.runFailed")}
+            </span></>
+          )}
+        </div>
+        {scheduleLastRunReason && (
+          <div className="text-xs text-muted-foreground break-words">
+            {scheduleLastRunReason}
+          </div>
+        )}
+        {scheduleLastRunRebootRequired && (
+          <div className="text-xs text-amber-400 flex items-start gap-1.5">
+            <AlertTriangle className="h-3.5 w-3.5 mt-0.5 flex-shrink-0" />
+            <div>
+              <div>{t("vmLxc.scheduled.rebootRequired")}</div>
+              {scheduleLastRunRebootPackages.length > 0 && (
+                <div className="text-muted-foreground mt-0.5 break-words">
+                  {t("vmLxc.scheduled.rebootPackages", { packages: scheduleLastRunRebootPackages.join(", ") })}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+        {scheduleLastRunLog && (
+          <button
+            type="button"
+            onClick={() => void openScheduleLog(selectedVM.vmid)}
+            className="h-8 px-3 text-xs rounded-md border border-border bg-background hover:bg-muted transition-colors inline-flex items-center gap-1.5"
+          >
+            <FileText className="h-3.5 w-3.5" />
+            {t("vmLxc.scheduled.viewLog")}
+          </button>
+        )}
+      </div>
+    )
+  }
+
   // Load the schedule once whenever the user opens the Updates tab
   // of a specific LXC. Keying on vmid keeps us from re-fetching on
   // every render but also refetches after switching CTs.
@@ -2134,9 +2223,15 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
     if (activeModalTab !== "updates") return
     if (!selectedVM || selectedVM.type !== "lxc") return
     if (scheduleLoaded !== selectedVM.vmid) loadSchedule(selectedVM.vmid)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeModalTab, selectedVM?.vmid, selectedVM?.modal_cache_revision, scheduleLoaded])
+
+  useEffect(() => {
+    if (activeModalTab !== "updates") return
+    if (!selectedVM || selectedVM.type !== "lxc") return
     if (bulkLoaded !== selectedVM.vmid) loadBulkUpdate(selectedVM.vmid)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeModalTab, selectedVM?.vmid])
+  }, [activeModalTab, selectedVM?.vmid, bulkLoaded])
 
   // Docker drift is opt-in: read it only after Docker has been registered and
   // only when the user opens Updates. This request deliberately DOES NOT use
@@ -6198,29 +6293,7 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                                           <> · {t("vmLxc.scheduled.releaseDelaySummary", { days: scheduleReleaseDelayDays })}</>
                                         )}
                                       </div>
-                                      {scheduleLastRunAt && (
-                                        <div className="text-xs text-muted-foreground pl-4">
-                                          {t("vmLxc.scheduled.lastRun", { date: new Date(scheduleLastRunAt).toLocaleString() })}
-                                          {scheduleLastRunStatus && (
-                                            <> · <span className={scheduleLastRunStatus === "success" ? "text-green-400" : scheduleLastRunStatus === "partial" || scheduleLastRunStatus === "deferred" || scheduleLastRunStatus === "skipped" ? "text-amber-400" : "text-red-400"}>
-                                              {scheduleLastRunStatus === "success"
-                                                ? t("vmLxc.scheduled.runSuccess")
-                                                : scheduleLastRunStatus === "partial"
-                                                  ? t("vmLxc.scheduled.runPartial")
-                                                  : scheduleLastRunStatus === "deferred"
-                                                    ? t("vmLxc.scheduled.runDeferred")
-                                                    : scheduleLastRunStatus === "skipped"
-                                                      ? t("vmLxc.scheduled.runSkipped")
-                                                      : t("vmLxc.scheduled.runFailed")}
-                                            </span></>
-                                          )}
-                                        </div>
-                                      )}
-                                      {scheduleLastRunReason && (
-                                        <div className="text-xs text-muted-foreground pl-4 break-words">
-                                          {scheduleLastRunReason}
-                                        </div>
-                                      )}
+                                      {renderScheduleRunDetails(true)}
                                     </div>
                                   )}
                                   {!optionsEditMode && !scheduleConfigured && !externalCron && (
@@ -6351,25 +6424,7 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                                           </div>
                                         </div>
                                       )}
-                                      {scheduleLastRunAt && (
-                                        <div className="text-xs text-muted-foreground">
-                                          {t("vmLxc.scheduled.lastRun", { date: new Date(scheduleLastRunAt).toLocaleString() })}
-                                          {scheduleLastRunStatus && (
-                                            <> · <span className={scheduleLastRunStatus === "success" ? "text-green-400" : scheduleLastRunStatus === "partial" || scheduleLastRunStatus === "deferred" || scheduleLastRunStatus === "skipped" ? "text-amber-400" : "text-red-400"}>
-                                              {scheduleLastRunStatus === "success"
-                                                ? t("vmLxc.scheduled.runSuccess")
-                                                : scheduleLastRunStatus === "partial"
-                                                  ? t("vmLxc.scheduled.runPartial")
-                                                  : scheduleLastRunStatus === "deferred"
-                                                    ? t("vmLxc.scheduled.runDeferred")
-                                                    : scheduleLastRunStatus === "skipped"
-                                                      ? t("vmLxc.scheduled.runSkipped")
-                                                      : t("vmLxc.scheduled.runFailed")}
-                                            </span></>
-                                          )}
-                                          {scheduleLastRunReason && <div className="mt-1 break-words">{scheduleLastRunReason}</div>}
-                                        </div>
-                                      )}
+                                      {renderScheduleRunDetails()}
                                     </div>
                                   )}
 
@@ -6993,6 +7048,51 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
               )}
             </Button>
           </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={scheduleLogOpen} onOpenChange={setScheduleLogOpen}>
+        <DialogContent className="sm:max-w-4xl max-h-[85vh] flex flex-col">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <FileText className="h-5 w-5" />
+              {t("vmLxc.scheduled.logTitle")}
+            </DialogTitle>
+            <DialogDescription>
+              {t("vmLxc.scheduled.logDescription", {
+                name: selectedVM?.name || "LXC",
+                vmid: selectedVM?.vmid || "—",
+              })}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="min-h-0 flex-1">
+            {scheduleLogLoading ? (
+              <div className="flex items-center justify-center py-12 text-sm text-muted-foreground">
+                <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                {t("vmLxc.scheduled.logLoading")}
+              </div>
+            ) : scheduleLogError ? (
+              <div className="rounded-md border border-red-500/30 bg-red-500/10 p-3 text-sm text-red-400">
+                {scheduleLogError}
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {scheduleLogTruncated && (
+                  <div className="rounded-md border border-amber-500/30 bg-amber-500/10 p-2 text-xs text-amber-400">
+                    {t("vmLxc.scheduled.logTruncated")}
+                  </div>
+                )}
+                <pre className="max-h-[58vh] overflow-auto whitespace-pre-wrap break-words rounded-md border border-border bg-background p-4 text-xs font-mono text-foreground">
+                  {scheduleLogContent || t("vmLxc.scheduled.logEmpty")}
+                </pre>
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setScheduleLogOpen(false)}>
+              {t("vmLxc.scheduled.closeLog")}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 

@@ -361,32 +361,73 @@ def get_available_storages() -> List[Dict[str, Any]]:
     return storages
 
 
+def _host_arch() -> str:
+    """Return the host's dpkg architecture (`amd64`, `arm64`, ...).
+
+    Falls back to mapping `uname -m` when `dpkg --print-architecture` is
+    unavailable — the Alpine LXC template filenames use the dpkg style
+    (`amd64`, `arm64`), so `uname -m`'s `x86_64` / `aarch64` gets
+    translated to that form.
+    """
+    try:
+        rc, out, _ = _run_pve_cmd(["dpkg", "--print-architecture"], timeout=5)
+        arch = out.strip()
+        if rc == 0 and arch:
+            return arch
+    except Exception:
+        pass
+    try:
+        machine = os.uname().machine.lower()
+    except Exception:
+        machine = ''
+    return {
+        'x86_64': 'amd64', 'amd64': 'amd64',
+        'aarch64': 'arm64', 'arm64': 'arm64',
+        'armv7l': 'armhf', 'armhf': 'armhf',
+        'i686': 'i386', 'i386': 'i386',
+    }.get(machine, 'amd64')
+
+
 def _download_alpine_template(storage: str = DEFAULT_STORAGE) -> bool:
-    """Download the latest Alpine LXC template using pveam."""
+    """Download the latest Alpine LXC template using pveam.
+
+    Filters by the host's architecture so an x86_64 host does not end up
+    with an arm64 template — the previous naive `for line in out` loop
+    kept the last match and could pick any arch that `pveam available`
+    happened to list (issue #324).
+    """
     print("[*] Downloading Alpine Linux template...")
     logger.info("Downloading Alpine template via pveam")
-    
+
+    host_arch = _host_arch()
+    logger.info(f"Host architecture detected: {host_arch}")
+
     # Update template list first
     rc, out, err = _run_pve_cmd(["pveam", "update"], timeout=60)
     if rc != 0:
         logger.warning(f"Failed to update template list: {err}")
-    
+
     # Get available Alpine templates
     rc, out, err = _run_pve_cmd(["pveam", "available", "--section", "system"], timeout=30)
     if rc != 0:
         logger.error(f"Failed to list available templates: {err}")
         return False
-    
-    # Find latest Alpine template
+
+    # Find latest Alpine template FOR THIS HOST'S ARCH. Template names
+    # follow `alpine-<ver>-default_<date>_<arch>.tar.xz`; we require the
+    # arch token to match the host before considering the candidate.
     alpine_template = None
+    arch_token = f"_{host_arch}."
     for line in out.strip().split('\n'):
-        if 'alpine-' in line.lower():
-            parts = line.split()
-            if len(parts) >= 2:
-                alpine_template = parts[1]  # Template name is usually second column
-    
+        low = line.lower()
+        if 'alpine-' not in low or arch_token not in low:
+            continue
+        parts = line.split()
+        if len(parts) >= 2:
+            alpine_template = parts[1]  # Template name is usually second column
+
     if not alpine_template:
-        logger.error("No Alpine template found in available templates")
+        logger.error(f"No Alpine template found for architecture {host_arch}")
         return False
     
     # Download the template
@@ -410,11 +451,22 @@ def _find_alpine_template(storage: str = DEFAULT_STORAGE, auto_download: bool = 
     if rc == 0 and out.strip():
         template_dir = os.path.dirname(out.strip())
     
-    # Look for Alpine templates
+    # Look for Alpine templates matching the host architecture. Without
+    # this filter, a host that happened to have an arm64 Alpine template
+    # sitting in its cache from a previous experiment would be handed
+    # that template — resulting in `arch: arm64` on the container and
+    # the `Exec format error` from issue #324.
+    host_arch = _host_arch()
+    arch_token = f"_{host_arch}."
     try:
         templates = os.listdir(template_dir)
-        alpine_templates = [t for t in templates if t.startswith("alpine-") and t.endswith((".tar.xz", ".tar.gz", ".tar"))]
-        
+        alpine_templates = [
+            t for t in templates
+            if t.startswith("alpine-")
+            and t.endswith((".tar.xz", ".tar.gz", ".tar"))
+            and arch_token in t.lower()
+        ]
+
         if alpine_templates:
             # Sort to get latest version
             alpine_templates.sort(reverse=True)
@@ -882,6 +934,7 @@ def deploy_app(app_id: str, config: Dict[str, Any], installed_by: str = "web") -
     
     pct_cmd = [
         "pct", "create", str(vmid), template,
+        "--arch", _host_arch(),
         "--hostname", hostname,
         "--memory", str(container_def.get("memory", 512)),
         "--cores", str(container_def.get("cores", 1)),

@@ -1285,16 +1285,13 @@ def _select_working_hint_detector(vmid, hint: dict) -> tuple[dict, Optional[str]
 def _github_pat() -> Optional[str]:
     try:
         from notification_manager import notification_manager
-        pat = notification_manager._config.get("github_pat") if notification_manager._config else None
-        if not pat:
-            return None
-        try:
-            from notification_manager import decrypt_sensitive_value
-            if isinstance(pat, str) and pat.startswith("encrypted:"):
-                return decrypt_sensitive_value(pat)
-        except Exception:
-            pass
-        return pat if isinstance(pat, str) else None
+        # The notification manager owns the shared encrypted settings store.
+        # During very early calls its runtime cache may not have been loaded
+        # yet, so initialise it before reading the optional GitHub token.
+        if not notification_manager._config:
+            notification_manager._load_config()
+        pat = notification_manager._config.get("github_pat")
+        return pat.strip() if isinstance(pat, str) and pat.strip() else None
     except Exception:
         return None
 
@@ -1365,7 +1362,7 @@ def _fetch_github_latest_details(config: dict) -> tuple[Optional[str], Optional[
         if e.code == 403:
             remaining = e.headers.get("X-RateLimit-Remaining", "1")
             if remaining == "0":
-                return None, "github rate limited — configure a PAT in Settings", None
+                return None, "github rate limited — configure a PAT in Settings → GitHub API", None
             return None, "github rejected the request (403)", None
         return None, f"github error {e.code}", None
     except (urllib.error.URLError, TimeoutError, OSError) as e:
@@ -3021,7 +3018,16 @@ def scheduled_app_release_gate(
     return {"allowed": True, "status": "ready", "reason": None}
 
 
-def record_schedule_run(vmid, status: str, target: str, reason: Optional[str] = None) -> bool:
+def record_schedule_run(
+    vmid,
+    status: str,
+    target: str,
+    reason: Optional[str] = None,
+    *,
+    log_name: Optional[str] = None,
+    reboot_required: Optional[bool] = None,
+    reboot_packages: Optional[list[str]] = None,
+) -> bool:
     """Called by the scheduler after a fired run completes. Updates
     the schedule with last_run_at + last_run_status so the UI can show
     the outcome. `status` is one of "success" | "failure" |
@@ -3037,6 +3043,38 @@ def record_schedule_run(vmid, status: str, target: str, reason: Optional[str] = 
             sidecar["schedule"]["last_run_reason"] = str(reason)[:300]
         else:
             sidecar["schedule"].pop("last_run_reason", None)
+        if log_name:
+            sidecar["schedule"]["last_run_log"] = os.path.basename(str(log_name))[:220]
+        else:
+            sidecar["schedule"].pop("last_run_log", None)
+        if reboot_required is None:
+            sidecar["schedule"].pop("last_run_reboot_required", None)
+        else:
+            sidecar["schedule"]["last_run_reboot_required"] = bool(reboot_required)
+        packages = [
+            str(package).strip()[:160]
+            for package in (reboot_packages or [])[:32]
+            if str(package).strip()
+        ]
+        if reboot_required and packages:
+            sidecar["schedule"]["last_run_reboot_packages"] = packages
+        else:
+            sidecar["schedule"].pop("last_run_reboot_packages", None)
+        sidecar["updated_at"] = _now_iso()
+        return _write_sidecar(vmid, sidecar)
+
+
+def clear_schedule_reboot_required(vmid) -> bool:
+    """Clear a persisted reboot warning after the CT starts or reboots."""
+    with _cache_lock:
+        sidecar = _read_sidecar(vmid)
+        schedule = (sidecar or {}).get("schedule")
+        if not isinstance(schedule, dict):
+            return False
+        if schedule.get("last_run_reboot_required") is not True:
+            return True
+        schedule["last_run_reboot_required"] = False
+        schedule.pop("last_run_reboot_packages", None)
         sidecar["updated_at"] = _now_iso()
         return _write_sidecar(vmid, sidecar)
 

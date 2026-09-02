@@ -2020,6 +2020,20 @@ def _handle_guest_lifecycle(vmid: str, vm_type: str, action: str) -> None:
     if guest_type == 'lxc':
         _invalidate_lxc_ip(guest_id)
     if action in ('start', 'reboot'):
+        if guest_type == 'lxc':
+            # TaskWatcher already owns the authoritative lifecycle event.
+            # Reuse it to retire a reboot-required warning left by the last
+            # scheduled update instead of adding another polling loop.
+            try:
+                import lxc_apps
+                lxc_apps.clear_schedule_reboot_required(guest_id)
+                _vm_cache_invalidate(guest_id, _vm_schedule_cache)
+            except Exception as exc:
+                print(
+                    f'[ProxMenux] could not clear scheduled-update reboot state '
+                    f'for CT {guest_id}: {exc}',
+                    flush=True,
+                )
         _schedule_started_guest_refresh(guest_id, guest_type)
         return
     if action == 'stop':
@@ -13626,6 +13640,42 @@ def api_vm_apps_schedule(vmid):
     return jsonify(result)
 
 
+@app.route('/api/vms/<int:vmid>/schedule/log', methods=['GET'])
+@require_auth
+def api_vm_apps_schedule_log(vmid):
+    """Return the bounded tail of the latest scheduled-update log."""
+    try:
+        import lxc_apps
+        schedule = lxc_apps.get_schedule(vmid) or {}
+    except Exception as exc:
+        return jsonify({'error': f'lxc_apps unavailable: {exc}'}), 500
+    name = os.path.basename(str(schedule.get('last_run_log') or ''))
+    if not _LXC_UPDATE_LOG_RE.fullmatch(name) or not name.startswith(f'{vmid}-'):
+        return jsonify({'error': 'no scheduled update log is available'}), 404
+    path = os.path.join(_LXC_UPDATE_LOG_DIR, name)
+    if not os.path.isfile(path):
+        return jsonify({'error': 'scheduled update log was not found'}), 404
+    try:
+        size = os.path.getsize(path)
+        offset = max(0, size - _LXC_UPDATE_LOG_READ_LIMIT)
+        with open(path, 'rb') as stream:
+            stream.seek(offset)
+            content = stream.read(_LXC_UPDATE_LOG_READ_LIMIT).decode('utf-8', errors='replace')
+        if offset:
+            newline = content.find('\n')
+            if newline >= 0:
+                content = content[newline + 1:]
+        return jsonify({
+            'content': content,
+            'size': size,
+            'truncated': bool(offset),
+            'run_at': schedule.get('last_run_at'),
+            'status': schedule.get('last_run_status'),
+        })
+    except OSError as exc:
+        return jsonify({'error': str(exc)}), 500
+
+
 @app.route('/api/vms/<int:vmid>/bulk-update', methods=['GET', 'PUT', 'DELETE'])
 @require_auth
 def api_vm_bulk_update(vmid):
@@ -13745,6 +13795,54 @@ def api_apps_catalog():
         return jsonify(lxc_apps.get_catalog())
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/apps/github-token', methods=['GET'])
+@require_auth
+def api_apps_github_token_status():
+    """Return whether the optional GitHub API token is configured.
+
+    The token itself is deliberately never returned to the client.
+    """
+    try:
+        if not notification_manager._config:
+            notification_manager._load_config()
+        value = notification_manager._config.get('github_pat', '')
+        return jsonify({'configured': bool(isinstance(value, str) and value.strip())})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/apps/github-token', methods=['PUT'])
+@require_admin_scope
+def api_apps_github_token_save():
+    """Store the GitHub API token in the existing encrypted settings store."""
+    payload = request.get_json(silent=True) or {}
+    token = payload.get('token')
+    if not isinstance(token, str):
+        return jsonify({'error': 'token must be a string'}), 400
+    token = token.strip()
+    if not token:
+        return jsonify({'error': 'token is required'}), 400
+    if len(token) > 512:
+        return jsonify({'error': 'token exceeds the 512 character limit'}), 400
+    if any(ch.isspace() or ord(ch) < 33 or ord(ch) == 127 for ch in token):
+        return jsonify({'error': 'token contains whitespace or control characters'}), 400
+
+    result = notification_manager.save_settings({'github_pat': token})
+    if not result.get('success'):
+        return jsonify({'error': result.get('error', 'failed to save token')}), 500
+    return jsonify({'success': True, 'configured': True})
+
+
+@app.route('/api/apps/github-token', methods=['DELETE'])
+@require_admin_scope
+def api_apps_github_token_remove():
+    """Clear the optional GitHub API token without exposing its old value."""
+    result = notification_manager.save_settings({'github_pat': ''})
+    if not result.get('success'):
+        return jsonify({'error': result.get('error', 'failed to remove token')}), 500
+    return jsonify({'success': True, 'configured': False})
 
 
 @app.route('/api/lxc-apps/dockerhub-tag-preview', methods=['POST'])
@@ -14050,6 +14148,8 @@ def _lxc_update_details(
     after: dict,
     verification_pending: bool,
     verification_errors: list[str],
+    reboot_required: bool | None,
+    reboot_packages: list[str],
 ) -> str:
     lines = [
         f"Source: {'Scheduled' if source == 'scheduled' else 'Manual'}",
@@ -14122,6 +14222,12 @@ def _lxc_update_details(
         lines.append('Deferred targets: ' + ', '.join(deferred_targets))
     if reason:
         lines.append(f'Reason: {reason}')
+    if reboot_required is True:
+        lines.append('Restart required: yes')
+        if reboot_packages:
+            lines.append('Restart-triggering packages: ' + ', '.join(reboot_packages[:12]))
+    elif reboot_required is False:
+        lines.append('Restart required: no')
     if verification_pending:
         lines.append('Verification pending until the container is running')
     for error in verification_errors[:4]:
@@ -14146,6 +14252,8 @@ def _finalize_lxc_update(
     reason: str | None = None,
     refresh_docker_inventory: bool = False,
     before_snapshot: dict | None = None,
+    reboot_required: bool | None = None,
+    reboot_packages=None,
 ) -> dict:
     safe_run_id = _normalise_lxc_update_run_id(run_id)
     key = (int(vmid), safe_run_id)
@@ -14225,6 +14333,8 @@ def _finalize_lxc_update(
         after=after,
         verification_pending=verification_pending,
         verification_errors=verification_errors,
+        reboot_required=reboot_required,
+        reboot_packages=list(reboot_packages or []),
     )
     try:
         notification_manager.emit_event(
@@ -14255,6 +14365,8 @@ def _finalize_lxc_update(
         'verification_pending': verification_pending,
         'verification_errors': verification_errors,
         'docker_inventory': docker_inventory,
+        'reboot_required': reboot_required,
+        'reboot_packages': list(reboot_packages or []),
     }
     with _lxc_update_finalization_lock:
         _lxc_update_finalizations[key] = {
@@ -16380,11 +16492,29 @@ def _list_borg_destinations() -> list:
                 encrypt_mode = (parts[3] if len(parts) > 3 else '').strip() or 'repokey'
                 pass_file = f'{_BACKUP_STATE_DIR}/borg-pass-{name}.txt'
                 has_passphrase = os.path.isfile(pass_file)
+                # Parse ssh://user@host[:port]/path so the frontend can
+                # display the port without having to re-parse the URL.
+                # Non-ssh targets (local paths) leave ssh_port at 0.
+                ssh_port = 0
+                if repo.startswith('ssh://'):
+                    after_scheme = repo[len('ssh://'):]
+                    at_split = after_scheme.split('@', 1)
+                    if len(at_split) == 2:
+                        host_and_path = at_split[1]
+                        host_part = host_and_path.split('/', 1)[0]
+                        if ':' in host_part:
+                            try:
+                                ssh_port = int(host_part.rsplit(':', 1)[1])
+                            except (ValueError, IndexError):
+                                ssh_port = 0
+                    if ssh_port == 0:
+                        ssh_port = 22
                 targets.append({
                     'name': name,
                     'repository': repo,
                     'ssh_key': ssh_key,
                     'ssh_key_path': ssh_key,
+                    'ssh_port': ssh_port,
                     'encrypt_mode': encrypt_mode,
                     'has_passphrase': has_passphrase,
                     'jobs_using': _jobs_using_borg(repo),
@@ -16649,15 +16779,21 @@ def _capacity_local(path: str) -> dict:
     }
 
 
-def _capacity_borg_ssh(host: str, user: str, remote_path: str, key_path: str = '') -> dict:
+def _capacity_borg_ssh(host: str, user: str, remote_path: str, key_path: str = '',
+                        port: int = 22) -> dict:
     """Run `df -B1 --output=size,used,avail` over ssh against the
     remote borg repo path. Times out fast — failure is just rendered
-    as a missing capacity badge in the UI, not a hard error."""
+    as a missing capacity badge in the UI, not a hard error.
+
+    ``port`` defaults to 22 (standard SSH); pass a different value for
+    NAS-style hosts that expose SSH on a custom port."""
     if not host or not user or not remote_path:
         return {'error': 'incomplete ssh target'}
     ssh_target = f'{user}@{host}'
     cmd = ['ssh', '-o', 'BatchMode=yes', '-o', 'ConnectTimeout=5',
            '-o', 'StrictHostKeyChecking=accept-new']
+    if port and port != 22:
+        cmd += ['-p', str(int(port))]
     if key_path:
         cmd += ['-i', key_path]
     cmd += [ssh_target, f'df -B1 --output=size,used,avail {shlex.quote(remote_path)}']
@@ -18017,11 +18153,17 @@ def api_host_backups_dest_capacity():
         if kind == 'local' or kind == 'borg-local':
             cap = _capacity_local((t.get('path') or '').strip())
         elif kind == 'borg-ssh':
+            port_raw = t.get('port')
+            try:
+                port = int(port_raw) if port_raw not in (None, '', 0, '0') else 22
+            except (TypeError, ValueError):
+                port = 22
             cap = _capacity_borg_ssh(
                 (t.get('host') or '').strip(),
                 (t.get('user') or '').strip(),
                 (t.get('remote_path') or '').strip(),
                 (t.get('key_path') or '').strip(),
+                port=port,
             )
         elif kind == 'pbs':
             cap = _capacity_pbs(
@@ -19219,7 +19361,23 @@ def api_host_backups_dest_borg_add():
         rpath = (payload.get('ssh_remote_path') or '').strip().lstrip('/')
         if not user or not host or not rpath:
             return jsonify({'error': 'ssh_user, ssh_host and ssh_remote_path are required for ssh mode'}), 400
-        repo = f'ssh://{user}@{host}/{rpath}'
+        # Optional custom SSH port — NAS-style hosts often expose SSH on
+        # a non-standard port to reduce noise from bots. Empty / missing
+        # means default 22, which we leave out of the URL so existing
+        # targets stay byte-identical to how the shell installer writes them.
+        raw_port = payload.get('ssh_port')
+        ssh_port = 22
+        if raw_port not in (None, '', 0, '0'):
+            try:
+                ssh_port = int(raw_port)
+            except (TypeError, ValueError):
+                return jsonify({'error': 'ssh_port must be an integer between 1 and 65535'}), 400
+            if not (1 <= ssh_port <= 65535):
+                return jsonify({'error': 'ssh_port must be an integer between 1 and 65535'}), 400
+        if ssh_port == 22:
+            repo = f'ssh://{user}@{host}/{rpath}'
+        else:
+            repo = f'ssh://{user}@{host}:{ssh_port}/{rpath}'
         ssh_key = (payload.get('ssh_key_path') or '').strip()
     elif mode == 'local':
         repo = (payload.get('repo') or '').strip()
@@ -21484,6 +21642,97 @@ _DOCKER_ENGINE_INTEGRATED_COMMAND = (
     'update_docker_engine.py --vmid "$VMID"'
 )
 _scheduled_fired_this_minute: set = set()
+_LXC_UPDATE_LOG_DIR = "/usr/local/share/proxmenux/logs/lxc-updates"
+_LXC_UPDATE_LOG_RE = re.compile(r'^[1-9][0-9]*-scheduled-[a-f0-9]{32}\.log$')
+_LXC_UPDATE_LOG_KEEP_PER_CT = 10
+_LXC_UPDATE_LOG_READ_LIMIT = 2 * 1024 * 1024
+
+
+def _create_lxc_update_log(vmid: int, run_id: str) -> tuple[str | None, str | None]:
+    """Create a private, persistent log for one scheduled LXC run."""
+    name = f'{int(vmid)}-{run_id}.log'
+    if not _LXC_UPDATE_LOG_RE.fullmatch(name):
+        return None, None
+    try:
+        os.makedirs(_LXC_UPDATE_LOG_DIR, mode=0o700, exist_ok=True)
+        path = os.path.join(_LXC_UPDATE_LOG_DIR, name)
+        fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+        with os.fdopen(fd, 'w', encoding='utf-8', errors='replace') as stream:
+            stream.write(f'=== ProxMenux scheduled LXC update — CT {vmid} ===\n')
+            stream.write(f'Run ID: {run_id}\n')
+            stream.write(f'Started: {datetime.now().astimezone().isoformat()}\n\n')
+        return name, path
+    except OSError as exc:
+        print(f'[ProxMenux] scheduler: could not create update log for CT {vmid}: {exc}',
+              flush=True)
+        return None, None
+
+
+def _append_lxc_update_log(path: str | None, text: str) -> None:
+    if not path:
+        return
+    try:
+        with open(path, 'a', encoding='utf-8', errors='replace') as stream:
+            stream.write(text)
+    except OSError as exc:
+        print(f'[ProxMenux] scheduler: could not append update log: {exc}', flush=True)
+
+
+def _prune_lxc_update_logs(vmid: int) -> None:
+    try:
+        candidates = sorted(
+            glob.glob(os.path.join(_LXC_UPDATE_LOG_DIR, f'{int(vmid)}-scheduled-*.log')),
+            key=os.path.getmtime,
+            reverse=True,
+        )
+        for path in candidates[_LXC_UPDATE_LOG_KEEP_PER_CT:]:
+            if _LXC_UPDATE_LOG_RE.fullmatch(os.path.basename(path)):
+                os.unlink(path)
+    except OSError as exc:
+        print(f'[ProxMenux] scheduler: update-log retention failed for CT {vmid}: {exc}',
+              flush=True)
+
+
+def _inspect_lxc_reboot_requirement(
+    vmid: int,
+    *,
+    update_succeeded: bool,
+    restart_requested: bool,
+    originally_running: bool,
+) -> tuple[bool | None, list[str], str | None]:
+    """Read Debian's reboot marker without installing extra guest tools."""
+    if update_succeeded and (restart_requested or not originally_running):
+        return False, [], None
+    if _fast_guest_status(vmid, 'lxc') != 'running':
+        return None, [], 'container is not running; reboot marker could not be checked'
+    try:
+        marker = subprocess.run(
+            ['/usr/sbin/pct', 'exec', str(vmid), '--',
+             'test', '-f', '/var/run/reboot-required'],
+            capture_output=True, text=True, timeout=8,
+        )
+    except (FileNotFoundError, OSError, subprocess.TimeoutExpired) as exc:
+        return None, [], str(exc)
+    if marker.returncode == 1:
+        return False, [], None
+    if marker.returncode != 0:
+        return None, [], (marker.stderr or marker.stdout or 'reboot marker check failed').strip()[:300]
+    packages: list[str] = []
+    try:
+        result = subprocess.run(
+            ['/usr/sbin/pct', 'exec', str(vmid), '--',
+             'cat', '/var/run/reboot-required.pkgs'],
+            capture_output=True, text=True, timeout=8,
+        )
+        if result.returncode == 0:
+            packages = list(dict.fromkeys(
+                line.strip()[:160]
+                for line in result.stdout.splitlines()
+                if line.strip()
+            ))[:32]
+    except (FileNotFoundError, OSError, subprocess.TimeoutExpired):
+        pass
+    return True, packages, None
 
 
 def _normalise_schedule_targets(sched: dict) -> list[str]:
@@ -21814,16 +22063,40 @@ def _run_scheduled_update(vmid: int, sched: dict) -> dict:
     """Run one scheduled update and finalize it through the shared path."""
     started_at = time.monotonic()
     run_id = f'scheduled-{uuid.uuid4().hex}'
+    log_name, log_path = _create_lxc_update_log(vmid, run_id)
+    originally_running = _fast_guest_status(vmid, 'lxc') == 'running'
     requested_targets = _normalise_schedule_targets(sched)
     targets = list(requested_targets)
     before = _lxc_update_snapshot(vmid)
     deferred_targets: list[str] = []
     reasons: list[str] = []
+    reboot_required: bool | None = None
+    reboot_packages: list[str] = []
+    reboot_check_error: str | None = None
 
     def finish(status: str, actual_target: str, executed: list[str]) -> dict:
         reason = '; '.join(dict.fromkeys(value for value in reasons if value)) or None
         duration_seconds = max(0, int(time.monotonic() - started_at))
         labels = _lxc_update_target_labels(requested_targets, [], before)
+        footer = [
+            '',
+            '=== ProxMenux result ===',
+            f'Finished: {datetime.now().astimezone().isoformat()}',
+            f'Status: {status}',
+            f'Duration: {duration_seconds}s',
+        ]
+        if reason:
+            footer.append(f'Reason: {reason}')
+        if reboot_required is True:
+            footer.append('Restart required: yes')
+            if reboot_packages:
+                footer.append('Restart-triggering packages: ' + ', '.join(reboot_packages))
+        elif reboot_required is False:
+            footer.append('Restart required: no')
+        elif reboot_check_error:
+            footer.append(f'Restart check unavailable: {reboot_check_error}')
+        _append_lxc_update_log(log_path, '\n'.join(footer) + '\n')
+        _prune_lxc_update_logs(vmid)
         finalization = _finalize_lxc_update(
             vmid,
             run_id=run_id,
@@ -21841,6 +22114,8 @@ def _run_scheduled_update(vmid: int, sched: dict) -> dict:
                 value.startswith('docker-') for value in requested_targets
             ),
             before_snapshot=before,
+            reboot_required=reboot_required,
+            reboot_packages=reboot_packages,
         )
         return {
             'status': status,
@@ -21851,6 +22126,9 @@ def _run_scheduled_update(vmid: int, sched: dict) -> dict:
             'executed_targets': list(executed),
             'deferred_targets': list(deferred_targets),
             'duration_seconds': duration_seconds,
+            'log_name': log_name,
+            'reboot_required': reboot_required,
+            'reboot_packages': list(reboot_packages),
             'finalization': finalization,
         }
 
@@ -21969,13 +22247,32 @@ def _run_scheduled_update(vmid: int, sched: dict) -> dict:
         "1" if any(value.startswith('docker-') for value in requested_targets) else "0"
     )
     try:
-        r = subprocess.run(
-            ["bash", _APPLY_UPDATES_SCRIPT],
-            env=env,
-            capture_output=True,
-            text=True,
-            timeout=60 * 60,  # 1h hard cap so a stuck run doesn't
-                              # block the queue forever
+        if log_path:
+            with open(log_path, 'a', encoding='utf-8', errors='replace') as log_stream:
+                r = subprocess.run(
+                    ["bash", _APPLY_UPDATES_SCRIPT],
+                    env=env,
+                    stdout=log_stream,
+                    stderr=subprocess.STDOUT,
+                    text=True,
+                    timeout=60 * 60,  # 1h hard cap so a stuck run doesn't
+                                      # block the queue forever
+                )
+        else:
+            r = subprocess.run(
+                ["bash", _APPLY_UPDATES_SCRIPT],
+                env=env,
+                capture_output=True,
+                text=True,
+                timeout=60 * 60,
+            )
+        reboot_required, reboot_packages, reboot_check_error = (
+            _inspect_lxc_reboot_requirement(
+                vmid,
+                update_succeeded=r.returncode == 0,
+                restart_requested=bool(sched.get("restart")),
+                originally_running=originally_running,
+            )
         )
         if r.returncode != 0:
             reasons.append(f'update runner exited with code {r.returncode}')
@@ -21984,6 +22281,14 @@ def _run_scheduled_update(vmid: int, sched: dict) -> dict:
             return finish('partial', target, targets)
         return finish('success', target, targets)
     except subprocess.TimeoutExpired:
+        reboot_required, reboot_packages, reboot_check_error = (
+            _inspect_lxc_reboot_requirement(
+                vmid,
+                update_succeeded=False,
+                restart_requested=False,
+                originally_running=originally_running,
+            )
+        )
         reasons.append('scheduled update timed out')
         return finish('failure', target, targets)
     except Exception as exc:
@@ -22037,7 +22342,17 @@ def _scheduler_loop():
                     actual_target = outcome.get('target') or 'both'
                     reason = outcome.get('reason')
                     try:
-                        lxc_apps.record_schedule_run(_vmid, status, actual_target, reason)
+                        lxc_apps.record_schedule_run(
+                            _vmid,
+                            status,
+                            actual_target,
+                            reason,
+                            log_name=outcome.get('log_name'),
+                            reboot_required=outcome.get('reboot_required'),
+                            reboot_packages=outcome.get('reboot_packages'),
+                        )
+                        _vm_cache_invalidate(_vmid, _vm_schedule_cache)
+                        _publish_guest_modal_cache_revision(_vmid)
                     except Exception as e:
                         print(f"[ProxMenux] scheduler: could not record run for {_vmid}: {e}")
                     print(f"[ProxMenux] scheduler: CT {_vmid} finished with status={status}"

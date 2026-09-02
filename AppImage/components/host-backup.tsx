@@ -2717,6 +2717,11 @@ interface BorgRepo {
   name: string
   repository: string
   ssh_key_path?: string
+  // Parsed from `ssh://user@host[:port]/path`; 22 for URLs without an
+  // explicit port and 0 for local-mode targets. Newer backends ship
+  // this; older ones don't and the frontend falls back to re-parsing
+  // the URL on the fly.
+  ssh_port?: number
   // Encryption + saved-passphrase metadata. Newer backends ship these;
   // older deployments without the fields default to "repokey" (the
   // shell installer's historical default) and unknown-passphrase.
@@ -6092,6 +6097,11 @@ function AddDestinationDialog({
   const [borgMode, setBorgMode] = useState<"local" | "ssh">("local")
   const [borgSshUser, setBorgSshUser] = useState("borg")
   const [borgSshHost, setBorgSshHost] = useState("")
+  // Custom SSH port for NAS-style hosts that expose SSH on non-22.
+  // Kept as string in state so the input can start empty; converted to
+  // integer at submit time. Empty / "22" means "use the default port"
+  // and is omitted from the ssh:// URL by the backend.
+  const [borgSshPort, setBorgSshPort] = useState("22")
   const [borgSshRemotePath, setBorgSshRemotePath] = useState("")
   const [borgSshKeyPath, setBorgSshKeyPath] = useState("/root/.ssh/proxmenux_borg")
   const [generatedKey, setGeneratedKey] = useState<{ public_key: string; authorized_keys_line: string } | null>(null)
@@ -6148,26 +6158,32 @@ function AddDestinationDialog({
       setUsername(editing.username || "root@pam")
       setFingerprint(editing.fingerprint || "")
       setBorgRepo(""); setBorgMode("local"); setBorgSshUser("borg")
-      setBorgSshHost(""); setBorgSshRemotePath("")
+      setBorgSshHost(""); setBorgSshPort("22"); setBorgSshRemotePath("")
       setBorgSshKeyPath("/root/.ssh/proxmenux_borg")
       setBorgEncryptionEnabled(true); setLocalPath("")
       return
     }
     if (editing && editing.kind === "borg") {
       const repo = editing.repository || ""
-      const ssh = repo.match(/^ssh:\/\/([^@]+)@([^/]+)\/(.+)$/)
+      // Match ssh://user@host[:port]/path — the port group is optional.
+      // Group 3 captures the numeric port when present, group 4 the path.
+      const ssh = repo.match(/^ssh:\/\/([^@]+)@([^/:]+)(?::(\d+))?\/(.+)$/)
       setName(editing.name)
       if (ssh) {
         setBorgMode("ssh")
         setBorgSshUser(ssh[1])
         setBorgSshHost(ssh[2])
-        setBorgSshRemotePath(`/${ssh[3]}`)
+        // Prefer the port already parsed by the backend (ssh_port); fall
+        // back to the URL match; default 22 when neither is set.
+        const port = editing.ssh_port ?? (ssh[3] ? Number(ssh[3]) : 22)
+        setBorgSshPort(String(port || 22))
+        setBorgSshRemotePath(`/${ssh[4]}`)
         setBorgSshKeyPath(editing.ssh_key_path || "/root/.ssh/proxmenux_borg")
         setBorgRepo("")
       } else {
         setBorgMode("local")
         setBorgRepo(repo)
-        setBorgSshUser("borg"); setBorgSshHost(""); setBorgSshRemotePath("")
+        setBorgSshUser("borg"); setBorgSshHost(""); setBorgSshPort("22"); setBorgSshRemotePath("")
         setBorgSshKeyPath("/root/.ssh/proxmenux_borg")
       }
       const mode = editing.encrypt_mode || "repokey"
@@ -6186,6 +6202,7 @@ function AddDestinationDialog({
     setBorgMode("local")
     setBorgSshUser("borg")
     setBorgSshHost("")
+    setBorgSshPort("22")
     setBorgSshRemotePath("")
     setBorgSshKeyPath("/root/.ssh/proxmenux_borg")
     setBorgEncryptionEnabled(true)
@@ -6274,6 +6291,12 @@ function AddDestinationDialog({
           body.ssh_host = borgSshHost.trim()
           body.ssh_remote_path = borgSshRemotePath.trim()
           if (borgSshKeyPath.trim()) body.ssh_key_path = borgSshKeyPath.trim()
+          // Only send port when it's non-default; the backend leaves 22
+          // out of the persisted URL so existing targets stay identical.
+          const portNum = parseInt(borgSshPort.trim(), 10)
+          if (Number.isFinite(portNum) && portNum > 0 && portNum !== 22) {
+            body.ssh_port = portNum
+          }
         }
         const resp = await fetchApi<{ repo?: string }>("/api/host-backups/destinations/borg", {
           method: "POST",
@@ -6409,9 +6432,23 @@ function AddDestinationDialog({
                       {t("backup.destinations.sshUserHelpBefore")} <code className="font-mono">borg serve</code>. {t("backup.destinations.sshUserHelpAfter")} <code className="font-mono">borg</code>, {t("backup.destinations.not")} <code className="font-mono">root</code>.
                     </p>
                   </div>
-                  <div>
-                    <Label htmlFor="borgSshHost">{t("backup.fields.sshHostOrIp")}</Label>
-                    <Input id="borgSshHost" value={borgSshHost} onChange={(e) => setBorgSshHost(e.target.value)} className="font-mono mt-1" placeholder="backup.example.com" />
+                  <div className="grid grid-cols-[1fr_100px] gap-3">
+                    <div>
+                      <Label htmlFor="borgSshHost">{t("backup.fields.sshHostOrIp")}</Label>
+                      <Input id="borgSshHost" value={borgSshHost} onChange={(e) => setBorgSshHost(e.target.value)} className="font-mono mt-1" placeholder="backup.example.com" />
+                    </div>
+                    <div>
+                      <Label htmlFor="borgSshPort">{t("backup.fields.sshPort")}</Label>
+                      <Input
+                        id="borgSshPort"
+                        value={borgSshPort}
+                        onChange={(e) => setBorgSshPort(e.target.value.replace(/[^\d]/g, ""))}
+                        className="font-mono mt-1"
+                        placeholder="22"
+                        inputMode="numeric"
+                        maxLength={5}
+                      />
+                    </div>
                   </div>
                   <div>
                     <Label htmlFor="borgSshPath">{t("backup.fields.remoteRepositoryPath")}</Label>

@@ -18,6 +18,23 @@ interface ReleaseNote {
 }
 
 export const CHANGELOG: Record<string, ReleaseNote> = {
+  "1.2.6": {
+    date: "September 2, 2026",
+    changes: {
+      added: [
+        "Borg remote target — the Add Borg destination dialog in the Monitor and the shell TUI (menu → Host Backup → New Borg target) accept a custom SSH port; the default stays at 22 and existing entries created without a port keep working. BORG_RSH, the auto key install flow and the capacity probe all honour the custom port (suggested by @songochain in discussion #236).",
+        "GitHub API — Settings → GitHub API accepts an optional personal access token for release and tag checks when GitHub's anonymous quota is exhausted. The token is encrypted at rest and never returned to the browser (suggested by @SystemIdleProcess in discussion #306).",
+      ],
+      changed: [
+        "Notification delivery is atomic — events reserve their deduplication fingerprint before AI processing and channel delivery, so concurrent collectors or parallel Monitor processes cannot send the same event twice. The reservation is shared through SQLite and released when no channel succeeds, preserving retries after temporary transport failures.",
+        "Native Proxmox replication failure notifications now resolve the replication job ID, affected VM/LXC ID and guest name; the exact error block from Proxmox is preserved as the reason, and each replication job's failures deduplicate independently (reported by Ale R.).",
+      ],
+      fixed: [
+        "AI Assistant custom OpenAI endpoint — endpoints reachable on private IPs, loopback or Docker networks (LiteLLM, LM Studio, LocalAI, vLLM, OmniRoute, self-hosted proxies…) are accepted when loading the model catalogue and validating the AI configuration. The dropdown surfaces the reason returned by the server (or the underlying network error) directly under the Load button, in every Monitor language (#325, reported by @jorgeffonte).",
+        "Secure Gateway wizard — Alpine template download and local template selection filter by the host's real architecture (via dpkg --print-architecture, falling back to uname -m); pct create is invoked with an explicit --arch so container metadata matches the host on both x86_64 and arm64 (#324, reported by @N0X4DD0).",
+      ],
+    },
+  },
   "1.2.5": {
     date: "September 1, 2026",
     changes: {
@@ -289,28 +306,33 @@ export const CHANGELOG: Record<string, ReleaseNote> = {
 const CURRENT_VERSION_FEATURES = [
   {
     icon: <Sparkles className="h-5 w-5" />,
-    key: "releaseNotes.currentFeatures.appsDashboard",
-    text: "New top-level Apps dashboard — a single launcher for every Web Link across the node. LXC-registered apps and user-defined Custom Web Links share the same grid with category badges, search, and one-click deep-links back to the guest modal.",
+    key: "releaseNotes.currentFeatures.aiCustomEndpoint",
+    text: "AI Assistant custom OpenAI endpoint — LiteLLM, LM Studio, LocalAI, vLLM, OmniRoute and any self-hosted proxy on private IPs, loopback or Docker networks are recognised when loading the model catalogue. The dropdown surfaces the server's error (or the underlying network reason) directly under the Load button (#325, reported by @jorgeffonte).",
   },
   {
-    icon: <Cpu className="h-5 w-5" />,
-    key: "releaseNotes.currentFeatures.lxcAppsUpdates",
-    text: "App tab inside every LXC modal registers installed apps, captures weblinks and tracks upstream versions. Reworked Updates tab applies OS packages and app updates from a single button; Docker Engine and per-image tracking follow the same 24-hour cycle, with a 'Check now' action on demand.",
+    icon: <Wrench className="h-5 w-5" />,
+    key: "releaseNotes.currentFeatures.secureGatewayArch",
+    text: "Secure Gateway wizard — the Alpine template download, local template selection and pct create all match the host's real architecture, so x86_64 hosts receive amd64 containers and arm64 hosts receive arm64 containers (#324, reported by @N0X4DD0).",
   },
   {
-    icon: <Zap className="h-5 w-5" />,
-    key: "releaseNotes.currentFeatures.appCatalog",
-    text: "New application detection catalog with over 380 tracked workloads, generated live from community-scripts across seven detector methods (file, binary, dpkg, apk, Python, Docker exec, Docker label). Primary and fallback detectors cover both new and historical LXC layouts.",
+    icon: <Bell className="h-5 w-5" />,
+    key: "releaseNotes.currentFeatures.atomicNotifications",
+    text: "Notification events reserve their deduplication fingerprint atomically before AI processing and channel delivery, so concurrent collectors, completion callbacks or parallel Monitor processes cannot send the same event twice. The reservation is released when no channel succeeds, preserving retries.",
   },
   {
-    icon: <Languages className="h-5 w-5" />,
-    key: "releaseNotes.currentFeatures.multilingual",
-    text: "The Monitor now speaks 8 languages: English, Spanish, German, French, Italian, Portuguese, Swedish and Slovak. Huge thanks to @vaso73 for building the i18n scaffolding that made this possible.",
+    icon: <DatabaseBackup className="h-5 w-5" />,
+    key: "releaseNotes.currentFeatures.borgSshPort",
+    text: "Borg remote target — the Add Borg destination dialog and the shell TUI accept a custom SSH port. BORG_RSH, the auto key install flow and the capacity probe all honour it. Fully backwards compatible with existing entries created without an explicit port (suggested by @songochain in discussion #236).",
   },
   {
-    icon: <Server className="h-5 w-5" />,
-    key: "releaseNotes.currentFeatures.nvidiaMultiGpu",
-    text: "NVIDIA driver lifecycle moves to per-BDF ownership so a multi-GPU host can pass one card to a VM and keep the other operational on the host or in LXCs, plus a kernel + branch + GPU-aware version picker (#298).",
+    icon: <Shield className="h-5 w-5" />,
+    key: "releaseNotes.currentFeatures.githubToken",
+    text: "Settings → GitHub API accepts an optional personal access token for release and tag checks when the anonymous quota is exhausted. The token is encrypted at rest and never returned to the browser; the rate-limit error is translated in every Monitor language (suggested by @SystemIdleProcess in discussion #306).",
+  },
+  {
+    icon: <RefreshCw className="h-5 w-5" />,
+    key: "releaseNotes.currentFeatures.replicationContext",
+    text: "Native Proxmox replication failure notifications resolve the replication job ID, affected VM/LXC ID and guest name; the exact error block from Proxmox is preserved as the reason, and each replication job deduplicates independently (reported by Ale R.).",
   },
 ]
 
