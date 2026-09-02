@@ -1922,7 +1922,11 @@
           "gemini": "En gratis nivå är tillgänglig, med ett bra förhållande mellan kvalitet och pris.",
           "ollama": "Använder modeller på din Ollama-server. Helt lokalt, privat och gratis att köra.",
           "openrouter": "Tillgång till mer än 100 modeller via en API-nyckel."
-        }
+        },
+        "updateModels": "Uppdatera",
+        "catalogLastUpdated": "Verifierad katalog senast uppdaterad: {date}",
+        "catalogChanged": "Katalog uppdaterad — {added} tillagda, {removed} borttagna",
+        "catalogFetchFailed": "Katalogen kunde inte uppdateras: {reason}. Använder lokal kopia."
       },
       "telegramGuide": {
         "title": "Installationsguide för Telegram bot",

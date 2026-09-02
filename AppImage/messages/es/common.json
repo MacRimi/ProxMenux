@@ -1922,7 +1922,11 @@
           "gemini": "Hay disponible un nivel gratuito, con una buena relación calidad-precio.",
           "ollama": "Utiliza modelos en su servidor Ollama. Totalmente local, privado y gratuito.",
           "openrouter": "Acceso a más de 100 modelos a través de una clave API."
-        }
+        },
+        "updateModels": "Actualizar",
+        "catalogLastUpdated": "Última actualización del catálogo verificado: {date}",
+        "catalogChanged": "Catálogo actualizado — {added} añadidos, {removed} retirados",
+        "catalogFetchFailed": "No se pudo actualizar el catálogo: {reason}. Se usa la copia local."
       },
       "telegramGuide": {
         "title": "Guía de configuración del bot de Telegram",
