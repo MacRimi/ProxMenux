@@ -2,18 +2,32 @@
 """Apply a verifier report to ``AppImage/config/verified_ai_models.json``.
 
 Reads the machine-readable report emitted by ``verify.py --json-out`` and
-merges the passing models into the on-disk catalog:
+merges the passing models into the on-disk catalog. Preserves the
+maintainer's editorial curation across three axes:
 
-* Passing models per provider replace the existing ``models`` list.
-* ``recommended`` is set to the fastest passing model.
-* Existing ``_note`` / ``_deprecated`` / provider metadata is preserved
-  when unchanged so the file's manual annotations survive the automated
-  refresh.
-* Providers absent from the report (e.g. no API key configured in the
-  GitHub Action for that run) are left untouched — the goal is
-  additive maintenance, not silent removal.
-* ``_updated`` bumps to today's date only when the model set actually
-  changes; a no-op run leaves the file byte-identical.
+* ``_exclude``: per-provider list of model IDs (exact match) that must
+  never appear in the surfaced ``models`` list even when the verifier
+  passes them. Meant for models that respond correctly to the technical
+  test but are the wrong fit for notification translation — Arabic-only
+  bases, Chinese-first fine-tunes, safety-classifier variants,
+  agentic-only endpoints, legacy dated snapshots, etc.
+* ``recommended``: if the current recommendation is still in the
+  passing (and non-excluded) set, it is preserved. Only when the
+  previous recommendation disappears (deprecated upstream, or newly
+  excluded) is a fallback chosen — the fastest passing model.
+* ``_note`` / ``_deprecated``: never touched. Those are maintainer
+  annotations that outlive any single verifier run.
+
+Fail-safe rules:
+* Providers absent from the report (no API key configured in the
+  Action for that run) are left untouched.
+* Providers whose report carries an error are left untouched.
+* If the ``_exclude`` filter drops every passing model, the block is
+  left untouched — an empty models list would silently kill the
+  provider in the UI; keeping the previous list is more forgiving
+  than shipping "nothing works".
+* ``_updated`` bumps to today's date only when the merge actually
+  changed something. A no-op run leaves the file byte-identical.
 
 Exits 0 when the file is unchanged, 10 when it was updated. The
 workflow uses that exit code to decide whether to commit.
@@ -22,8 +36,8 @@ from __future__ import annotations
 
 import argparse
 import datetime as dt
+import fnmatch
 import json
-import os
 import sys
 from pathlib import Path
 
@@ -41,9 +55,23 @@ def _save_json(path: Path, data: dict) -> None:
     tmp.replace(path)
 
 
-def _passing_models(provider_report: dict) -> list[str]:
-    """Return the passing models for one provider, fastest first."""
-    passing = [r for r in provider_report.get("results", []) if r.get("verdict") == "pass"]
+def _is_excluded(model: str, patterns: list[str]) -> bool:
+    """Match a model against the ``_exclude`` list. Supports exact
+    matches and shell-style globs (``gpt-4o-*``, ``*-2024-*``, ...) so
+    a provider that periodically publishes dated snapshots can be
+    covered by a single pattern instead of one entry per date."""
+    for pat in patterns:
+        if pat == model or fnmatch.fnmatchcase(model, pat):
+            return True
+    return False
+
+
+def _passing_models(provider_report: dict, exclude: list[str]) -> list[str]:
+    """Passing models minus the editorial exclusion list, fastest first."""
+    passing = [
+        r for r in provider_report.get("results", [])
+        if r.get("verdict") == "pass" and not _is_excluded(r.get("model", ""), exclude)
+    ]
     passing.sort(key=lambda r: r.get("latency_s", 999))
     return [r["model"] for r in passing]
 
@@ -62,21 +90,32 @@ def apply_report(report_path: Path, catalog_path: Path, today: str) -> bool:
             print(f"[{name}] skipped — verifier reported error: {provider_report['error']}",
                   file=sys.stderr)
             continue
-        passing = _passing_models(provider_report)
+
+        block = catalog.setdefault(name, {})
+        exclude = list(block.get("_exclude", []))
+        passing = _passing_models(provider_report, exclude)
+
         if not passing:
-            print(f"[{name}] no passing models this run — leaving catalog untouched",
+            # Either the verifier returned no passes for this provider,
+            # or every pass got filtered by _exclude. Both cases mean
+            # "no signal we can trust to overwrite the curated list";
+            # leaving the block alone is safer than blanking it.
+            print(f"[{name}] skipped — no passing models after exclude filter",
                   file=sys.stderr)
             continue
 
-        block = catalog.setdefault(name, {})
         prev_models = list(block.get("models", []))
         prev_recommended = block.get("recommended", "")
+        # Preserve the maintainer's choice of recommended when it is
+        # still valid. Only fall back to fastest when the previous
+        # value disappeared from the passing set.
+        recommended = prev_recommended if prev_recommended in passing else passing[0]
 
-        if sorted(prev_models) != sorted(passing) or prev_recommended != passing[0]:
+        if sorted(prev_models) != sorted(passing) or prev_recommended != recommended:
             block["models"] = passing
-            block["recommended"] = passing[0]
+            block["recommended"] = recommended
             changed = True
-            print(f"[{name}] updated — {len(passing)} models, recommended={passing[0]}")
+            print(f"[{name}] updated — {len(passing)} models, recommended={recommended}")
         else:
             print(f"[{name}] unchanged — {len(passing)} models")
 
