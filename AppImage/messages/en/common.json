@@ -1921,7 +1921,11 @@
           "gemini": "A free tier is available, with a good quality-to-price ratio.",
           "ollama": "Uses models on your Ollama server. Fully local, private and free to run.",
           "openrouter": "Access to more than 100 models through one API key."
-        }
+        },
+        "updateModels": "Update",
+        "catalogLastUpdated": "Verified catalog last updated: {date}",
+        "catalogChanged": "Catalog refreshed — {added} added, {removed} removed",
+        "catalogFetchFailed": "Could not refresh catalog: {reason}. Using local copy."
       },
       "telegramGuide": {
         "title": "Telegram bot setup guide",
