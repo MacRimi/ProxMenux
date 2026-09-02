@@ -402,188 +402,30 @@ def test_notification():
         return jsonify({'error': f'Internal error ({type(e).__name__})'}), 500
 
 
-_VERIFIED_MODELS_REMOTE_URL = (
-    "https://raw.githubusercontent.com/MacRimi/ProxMenux/main/"
-    "AppImage/config/verified_ai_models.json"
-)
-
-
-def _resolve_verified_models_path() -> Path:
-    """Locate the on-disk verified_ai_models.json used at runtime.
-
-    AppImage layout keeps scripts and config under /usr/bin/; the dev
-    tree has them one level apart. We probe both and return whichever
-    exists so `load_verified_models` and the refresh helper agree on the
-    same file — otherwise a refresh writing to one path and a read
-    hitting the other would silently do nothing.
-    """
-    script_dir = Path(__file__).parent
-    candidate = script_dir / 'config' / 'verified_ai_models.json'
-    if candidate.exists():
-        return candidate
-    dev_candidate = script_dir.parent / 'config' / 'verified_ai_models.json'
-    if dev_candidate.exists():
-        return dev_candidate
-    # No file exists yet — return the AppImage-shaped path so a fresh
-    # refresh has somewhere to write. The parent dir is created if needed.
-    candidate.parent.mkdir(parents=True, exist_ok=True)
-    return candidate
-
-
 def load_verified_models():
     """Load verified models from config file.
-
-    Returns {} if the file is missing or unreadable; callers already
-    handle the empty case by returning provider defaults or the API's
-    unfiltered list.
+    
+    Checks multiple paths:
+    1. Same directory as script (AppImage: /usr/bin/config/)
+    2. Parent directory config folder (dev: AppImage/config/)
     """
     try:
-        path = _resolve_verified_models_path()
-        if path.exists():
-            with open(path, 'r') as f:
+        # Try AppImage path first (scripts and config both in /usr/bin/)
+        script_dir = Path(__file__).parent
+        config_path = script_dir / 'config' / 'verified_ai_models.json'
+        
+        if not config_path.exists():
+            # Try development path (AppImage/scripts/ -> AppImage/config/)
+            config_path = script_dir.parent / 'config' / 'verified_ai_models.json'
+        
+        if config_path.exists():
+            with open(config_path, 'r') as f:
                 return json.load(f)
-        print(f"[flask_notification_routes] Config not found at {path}")
+        else:
+            print(f"[flask_notification_routes] Config not found at {config_path}")
     except Exception as e:
         print(f"[flask_notification_routes] Failed to load verified models: {e}")
     return {}
-
-
-def _catalog_signature(catalog: dict) -> dict:
-    """Reduce a catalog to `{provider: [sorted models]}`.
-
-    Used to diff the local vs the remote catalog without dragging the
-    unrelated `_note` / `_deprecated` / `_updated` metadata into the
-    comparison.
-    """
-    sig = {}
-    for provider, block in catalog.items():
-        if isinstance(block, dict) and isinstance(block.get('models'), list):
-            sig[provider] = sorted(str(m) for m in block['models'])
-    return sig
-
-
-def refresh_verified_models_from_github() -> dict:
-    """Fetch the canonical catalog from the main branch and overwrite the
-    local copy in-place.
-
-    Returns a dict shaped for the API response:
-      {
-        'success': True|False,
-        'message': '...',
-        'changed': bool,
-        'previous_updated': 'YYYY-MM-DD' | None,
-        'new_updated': 'YYYY-MM-DD' | None,
-        'diff': { <provider>: {'added': [...], 'removed': [...]} },
-      }
-
-    Never touches the local file when the remote fetch fails — the
-    installed catalog remains authoritative in the offline / degraded
-    case, which is the deliberate behaviour the UI relies on to show
-    'the catalog is still active' after a failed refresh.
-    """
-    import urllib.request
-    import urllib.error
-
-    result = {
-        'success': False,
-        'message': '',
-        'changed': False,
-        'previous_updated': None,
-        'new_updated': None,
-        'diff': {},
-    }
-
-    try:
-        req = urllib.request.Request(_VERIFIED_MODELS_REMOTE_URL, method='GET')
-        req.add_header('User-Agent', 'ProxMenux-Monitor/1.1')
-        req.add_header('Accept', 'application/json')
-        with urllib.request.urlopen(req, timeout=15) as resp:
-            raw = resp.read().decode('utf-8')
-            remote = json.loads(raw)
-    except urllib.error.HTTPError as e:
-        result['message'] = f'GitHub returned HTTP {e.code}'
-        return result
-    except urllib.error.URLError as e:
-        result['message'] = f'Could not reach GitHub: {e.reason}'
-        return result
-    except (json.JSONDecodeError, ValueError) as e:
-        result['message'] = f'Remote catalog is not valid JSON: {e}'
-        return result
-    except Exception as e:
-        result['message'] = f'Refresh failed: {type(e).__name__}: {e}'
-        return result
-
-    if not isinstance(remote, dict) or not any(
-        isinstance(remote.get(k), dict) and 'models' in remote[k]
-        for k in remote.keys()
-        if not k.startswith('_')
-    ):
-        result['message'] = 'Remote catalog has an unexpected shape'
-        return result
-
-    local = load_verified_models() or {}
-    prev_sig = _catalog_signature(local)
-    new_sig = _catalog_signature(remote)
-
-    diff = {}
-    for provider in sorted(set(prev_sig) | set(new_sig)):
-        prev_models = set(prev_sig.get(provider, []))
-        new_models = set(new_sig.get(provider, []))
-        added = sorted(new_models - prev_models)
-        removed = sorted(prev_models - new_models)
-        if added or removed:
-            diff[provider] = {'added': added, 'removed': removed}
-
-    result['previous_updated'] = local.get('_updated')
-    result['new_updated'] = remote.get('_updated')
-    result['changed'] = bool(diff) or (result['previous_updated'] != result['new_updated'])
-    result['diff'] = diff
-
-    # Only touch disk when something actually changed to keep mtimes
-    # meaningful and avoid a spurious modification in backup diffs.
-    if result['changed']:
-        try:
-            path = _resolve_verified_models_path()
-            tmp = path.with_suffix(path.suffix + '.tmp')
-            with open(tmp, 'w') as f:
-                json.dump(remote, f, indent=2, ensure_ascii=False)
-                f.write('\n')
-            tmp.replace(path)
-            result['success'] = True
-            result['message'] = 'Catalog updated'
-        except Exception as e:
-            result['success'] = False
-            result['message'] = f'Downloaded but failed to save: {type(e).__name__}: {e}'
-            return result
-    else:
-        result['success'] = True
-        result['message'] = 'Catalog already up to date'
-    return result
-
-
-@notification_bp.route('/api/notifications/refresh-model-catalog', methods=['POST'])
-@require_auth
-def refresh_model_catalog():
-    """Pull the verified_ai_models.json from ProxMenux/main on GitHub and
-    overwrite the local copy. Returns the diff so the UI can toast a
-    meaningful summary (added / removed models per provider) instead of a
-    generic 'refreshed' message.
-
-    Standalone endpoint so an admin can refresh without also fetching
-    provider models; the provider-models call carries a shortcut flag
-    for the common 'refresh + load' click from the Notifications UI.
-    """
-    try:
-        return jsonify(refresh_verified_models_from_github())
-    except Exception as e:
-        return jsonify({
-            'success': False,
-            'message': f'Refresh failed: {type(e).__name__}: {e}',
-            'changed': False,
-            'previous_updated': None,
-            'new_updated': None,
-            'diff': {},
-        }), 500
 
 
 @notification_bp.route('/api/notifications/provider-models', methods=['POST'])
@@ -617,25 +459,9 @@ def get_provider_models():
         api_key = _resolve_masked_api_key(provider, data.get('api_key', ''))
         ollama_url = data.get('ollama_url', 'http://localhost:11434')
         openai_base_url = data.get('openai_base_url', '')
-        # `refresh_catalog=true` in the request body triggers a GitHub
-        # pull of verified_ai_models.json before the intersection runs.
-        # The Notifications UI passes this on every Load / Update click
-        # so the catalog stays fresh without a separate button.
-        refresh_catalog = bool(data.get('refresh_catalog', False))
-        catalog_meta = None
-        if refresh_catalog:
-            catalog_meta = refresh_verified_models_from_github()
-
-        def _reply(payload, status=200):
-            # Every response from this endpoint carries `catalog_meta`
-            # when a refresh was requested, so the UI can render the
-            # diff toast + "last updated" line from a single roundtrip.
-            if catalog_meta is not None:
-                payload = {**payload, 'catalog_meta': catalog_meta}
-            return jsonify(payload), status
 
         if not provider:
-            return _reply({'success': False, 'models': [], 'message': 'Provider not specified'})
+            return jsonify({'success': False, 'models': [], 'message': 'Provider not specified'})
 
         # SSRF guard before we touch the URL. Ollama is local-by-design so
         # loopback is allowed there; OpenAI base URL must be a real external
@@ -643,11 +469,11 @@ def get_provider_models():
         if provider == 'ollama':
             ok, err = validate_external_url(ollama_url, allow_loopback=True)
             if not ok:
-                return _reply({'success': False, 'models': [], 'message': f'Invalid ollama_url: {err}'}, 400)
+                return jsonify({'success': False, 'models': [], 'message': f'Invalid ollama_url: {err}'}), 400
         if provider == 'openai' and openai_base_url:
             ok, err = validate_external_url(openai_base_url, allow_loopback=False)
             if not ok:
-                return _reply({'success': False, 'models': [], 'message': f'Invalid openai_base_url: {err}'}, 400)
+                return jsonify({'success': False, 'models': [], 'message': f'Invalid openai_base_url: {err}'}), 400
         
         # Load verified models config
         verified_config = load_verified_models()
@@ -668,13 +494,13 @@ def get_provider_models():
                 result = json.loads(resp.read().decode('utf-8'))
                 models = [m.get('name', '') for m in result.get('models', []) if m.get('name')]
                 models = sorted(models)
-                return _reply({
+                return jsonify({
                     'success': True,
                     'models': models,
                     'recommended': models[0] if models else '',
                     'message': f'Found {len(models)} local models'
                 })
-
+        
         # Handle Anthropic - no models list API, return verified models directly
         if provider == 'anthropic':
             models = list(verified_models) if verified_models else [
@@ -682,31 +508,31 @@ def get_provider_models():
                 'claude-3-5-sonnet-latest',
                 'claude-3-opus-latest',
             ]
-            return _reply({
+            return jsonify({
                 'success': True,
                 'models': sorted(models),
                 'recommended': recommended or models[0],
                 'message': f'{len(models)} verified models'
             })
-
+        
         # For other providers, fetch from API and filter by verified list.
         # Custom OpenAI-compatible endpoints (LiteLLM, opencode.ai, vLLM,
         # LocalAI…) often expose `/v1/models` without authentication, so
         # we only require an api_key when there's no custom base URL to
         # consult. Issue #11.5 — OpenCode provider Custom Base URL fetch.
         if not api_key and not (provider == 'openai' and openai_base_url):
-            return _reply({'success': False, 'models': [], 'message': 'API key required'})
-
+            return jsonify({'success': False, 'models': [], 'message': 'API key required'})
+        
         from ai_providers import get_provider
         ai_provider = get_provider(
-            provider,
-            api_key=api_key,
-            model='',
+            provider, 
+            api_key=api_key, 
+            model='', 
             base_url=openai_base_url if provider == 'openai' else None
         )
-
+        
         if not ai_provider:
-            return _reply({'success': False, 'models': [], 'message': f'Unknown provider: {provider}'})
+            return jsonify({'success': False, 'models': [], 'message': f'Unknown provider: {provider}'})
         
         # Get all models from provider API
         api_models = ai_provider.list_models()
@@ -725,13 +551,13 @@ def get_provider_models():
             # so "gpt-4o-mini" as a fallback would be misleading).
             if verified_models and not is_openai_compat:
                 models = sorted(verified_models)
-                return _reply({
+                return jsonify({
                     'success': True,
                     'models': models,
                     'recommended': recommended or models[0],
                     'message': f'{len(models)} verified models (API unavailable)'
                 })
-            return _reply({
+            return jsonify({
                 'success': False,
                 'models': [],
                 'message': 'Could not retrieve models. Check your API key and endpoint URL.'
@@ -741,7 +567,7 @@ def get_provider_models():
             # Custom OpenAI-compatible endpoint: surface every model the
             # endpoint reports. No verified-list intersection.
             models = sorted(api_models)
-            return _reply({
+            return jsonify({
                 'success': True,
                 'models': models,
                 'recommended': models[0] if models else '',
@@ -768,29 +594,20 @@ def get_provider_models():
         else:
             # No verified list for this provider, return all from API
             models = sorted(api_models)
-
-        return _reply({
+        
+        return jsonify({
             'success': True,
             'models': models,
             'recommended': recommended if recommended in models else (models[0] if models else ''),
             'message': f'{len(models)} verified models available'
         })
-
+        
     except Exception as e:
-        # Outside the _reply closure — build the payload manually so the
-        # catch-all still carries catalog_meta when a refresh was
-        # attempted before the crash.
-        payload = {
+        return jsonify({
             'success': False,
             'models': [],
-            'message': f'Error: {str(e)}',
-        }
-        try:
-            if catalog_meta is not None:
-                payload['catalog_meta'] = catalog_meta
-        except UnboundLocalError:
-            pass
-        return jsonify(payload)
+            'message': f'Error: {str(e)}'
+        })
 
 
 @notification_bp.route('/api/notifications/test-ai', methods=['POST'])
