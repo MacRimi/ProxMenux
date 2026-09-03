@@ -8,7 +8,29 @@ APPDIR="$(dirname "$(readlink -f "${0}")")"
 
 export PATH="${APPDIR}/usr/bin:${PATH}"
 export LD_LIBRARY_PATH="${APPDIR}/usr/lib/x86_64-linux-gnu:${APPDIR}/usr/lib:${APPDIR}/lib/x86_64-linux-gnu:${APPDIR}/lib:${LD_LIBRARY_PATH}"
-export PYTHONPATH="${APPDIR}/usr/lib/python3/dist-packages:${APPDIR}/usr/lib/python3/site-packages:${PYTHONPATH}"
+
+# Select the native dependency tree matching the host interpreter.  PVE 8
+# uses CPython 3.11 and PVE 9 uses CPython 3.13; both runtimes are bundled in
+# the same AppImage so its gevent HTTPS/WSS server is independent of the
+# Python version used by the GitHub Actions build runner.
+PYTHON_ABI="$(python3 -c 'import sys; print(f"cp{sys.version_info.major}{sys.version_info.minor}")' 2>/dev/null || true)"
+PYTHON_ABI_DIR="${APPDIR}/usr/lib/python3/vendor/${PYTHON_ABI}"
+PYTHON_COMMON_DIRS="${APPDIR}/usr/lib/python3/dist-packages:${APPDIR}/usr/lib/python3/site-packages"
+
+case "$PYTHON_ABI" in
+    cp311|cp313)
+        if [ -d "$PYTHON_ABI_DIR" ]; then
+            export PYTHONPATH="${PYTHON_ABI_DIR}:${PYTHON_COMMON_DIRS}${PYTHONPATH:+:${PYTHONPATH}}"
+        else
+            echo "⚠️  Bundled Python runtime ${PYTHON_ABI} is missing; HTTPS/WSS may be unavailable" >&2
+            export PYTHONPATH="${PYTHON_COMMON_DIRS}${PYTHONPATH:+:${PYTHONPATH}}"
+        fi
+        ;;
+    *)
+        echo "⚠️  Unsupported host Python ABI '${PYTHON_ABI:-unknown}'; expected cp311 (PVE 8) or cp313 (PVE 9)" >&2
+        export PYTHONPATH="${PYTHON_COMMON_DIRS}${PYTHONPATH:+:${PYTHONPATH}}"
+        ;;
+esac
 
 # Change to the AppImage directory
 cd "${APPDIR}"

@@ -11,6 +11,18 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 DIST_DIR="$SCRIPT_DIR/../dist"
 APPIMAGE_ROOT="$SCRIPT_DIR/.."
 
+# Native Python dependencies are selected explicitly for the two Python ABIs
+# used by supported Proxmox VE hosts.  GitHub Actions currently builds on
+# Ubuntu 22.04 (CPython 3.10), while PVE 8 and PVE 9 execute the AppImage with
+# the host's CPython 3.11 and 3.13 respectively.  Installing gevent with the
+# builder's interpreter therefore creates an AppImage that cannot import its
+# C extensions on either supported host (issue #331).
+GEVENT_VERSION="26.8.0"
+GREENLET_VERSION="3.5.5"
+ZOPE_INTERFACE_VERSION="8.6"
+ZOPE_EVENT_VERSION="6.2"
+GEVENT_WEBSOCKET_VERSION="0.10.1"
+
 VERSION=$(node -p "require('$APPIMAGE_ROOT/package.json').version")
 APPIMAGE_NAME="ProxMenux-${VERSION}.AppImage"
 
@@ -58,6 +70,7 @@ fi
 # Create directory structure
 mkdir -p "$APP_DIR/usr/bin"
 mkdir -p "$APP_DIR/usr/lib/python3/dist-packages"
+mkdir -p "$APP_DIR/usr/lib/python3/vendor"
 mkdir -p "$APP_DIR/usr/share/applications"
 mkdir -p "$APP_DIR/usr/share/icons/hicolor/256x256/apps"
 mkdir -p "$APP_DIR/web"
@@ -319,11 +332,59 @@ pip3 install --target "$APP_DIR/usr/lib/python3/dist-packages" --upgrade \
     simple-websocket>=0.10.0 \
     flask-sock>=0.6.0
 
-# Phase 3b: Install gevent for SSL+WebSocket support (WSS)
-pip3 install --target "$APP_DIR/usr/lib/python3/dist-packages" --upgrade \
-    gevent>=24.2.1 \
-    gevent-websocket>=0.10.1 \
-    greenlet>=3.0.0
+# Phase 3b: Install the complete gevent/WSS runtime separately for every
+# supported host ABI.  Keeping each dependency tree isolated avoids mixing
+# CPython-specific modules from the build runner with those loaded by PVE.
+# The two --platform values allow gevent's manylinux_2_28 wheels and the
+# backwards-compatible manylinux2014 zope.interface wheels to be resolved in
+# one deterministic installation.
+install_gevent_runtime() {
+    local python_version="$1"
+    local abi="$2"
+    local target="$APP_DIR/usr/lib/python3/vendor/$abi"
+
+    echo "📦 Installing gevent runtime for ${abi} (Python ${python_version})..."
+    mkdir -p "$target"
+    python3 -m pip install \
+        --disable-pip-version-check \
+        --target "$target" \
+        --upgrade \
+        --only-binary=:all: \
+        --platform manylinux_2_28_x86_64 \
+        --platform manylinux2014_x86_64 \
+        --implementation cp \
+        --python-version "$python_version" \
+        --abi "$abi" \
+        --no-deps \
+        "gevent==${GEVENT_VERSION}" \
+        "greenlet==${GREENLET_VERSION}" \
+        "zope.interface==${ZOPE_INTERFACE_VERSION}" \
+        "zope.event==${ZOPE_EVENT_VERSION}" \
+        "gevent-websocket==${GEVENT_WEBSOCKET_VERSION}"
+}
+
+install_gevent_runtime "3.11" "cp311"
+install_gevent_runtime "3.13" "cp313"
+
+echo "🔍 Verifying bundled Python ABI extensions..."
+for abi in cp311 cp313; do
+    abi_digits="${abi#cp}"
+    abi_dir="$APP_DIR/usr/lib/python3/vendor/$abi"
+    for extension in \
+        "gevent/_gevent_c_hub_local.cpython-${abi_digits}-*.so" \
+        "greenlet/_greenlet.cpython-${abi_digits}-*.so" \
+        "zope/interface/_zope_interface_coptimizations.cpython-${abi_digits}-*.so"; do
+        if ! compgen -G "$abi_dir/$extension" >/dev/null; then
+            echo "❌ Missing ${abi} extension: ${extension}" >&2
+            exit 1
+        fi
+    done
+    if [ ! -f "$abi_dir/geventwebsocket/__init__.py" ]; then
+        echo "❌ Missing gevent-websocket runtime for ${abi}" >&2
+        exit 1
+    fi
+    echo "  ✅ ${abi} runtime complete"
+done
 
 # Phase 3c: Apprise notification hub (issue #207). One library handles
 # ~80 notification services behind a single URL scheme (`tgram://`,

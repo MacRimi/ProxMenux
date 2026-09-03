@@ -40,6 +40,26 @@ jobs:
     - name: Build AppImage
       working-directory: AppImage
       run: ./scripts/build_appimage.sh
+
+    - name: Set up Python 3.11 validation runtime
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+
+    - name: Verify bundled Python 3.11 runtime
+      env:
+        PYTHONPATH: /tmp/proxmenux_build/ProxMenux.AppDir/usr/lib/python3/vendor/cp311:/tmp/proxmenux_build/ProxMenux.AppDir/usr/lib/python3/dist-packages
+      run: python -c 'import gevent, greenlet, geventwebsocket, zope.interface; from gevent import pywsgi; print(gevent.__version__)'
+
+    - name: Set up Python 3.13 validation runtime
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.13'
+
+    - name: Verify bundled Python 3.13 runtime
+      env:
+        PYTHONPATH: /tmp/proxmenux_build/ProxMenux.AppDir/usr/lib/python3/vendor/cp313:/tmp/proxmenux_build/ProxMenux.AppDir/usr/lib/python3/dist-packages
+      run: python -c 'import gevent, greenlet, geventwebsocket, zope.interface; from gevent import pywsgi; print(gevent.__version__)'
       
     - name: Get version from package.json
       id: version

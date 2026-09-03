@@ -634,19 +634,150 @@ EOF
 
 
 # ==========================================================
+_migrate_proxmenux_bashrc() {
+    local bashrc="$1"
+    local mode="${2:-migrate}"
+
+    # Releases up to v1.1.3 appended an unmarked block. A later release
+    # accidentally wrote the marker variable names literally because its
+    # heredoc was quoted. Remove only those ProxMenux-owned shapes, together
+    # with the current marked block, before writing one canonical block.
+    python3 - "$bashrc" "$mode" <<'PY'
+import os
+import stat
+import sys
+import tempfile
+from pathlib import Path
+
+path = Path(sys.argv[1])
+mode = sys.argv[2] if len(sys.argv) > 2 else "migrate"
+if mode not in {"inspect", "migrate"}:
+    raise SystemExit(f"invalid Bashrc migration mode: {mode}")
+lines = path.read_text(encoding="utf-8", errors="surrogateescape").splitlines(keepends=True)
+
+
+def content(line: str) -> str:
+    return line.rstrip("\r\n")
+
+
+def prompt_style(block: list[str]) -> str:
+    for line in block:
+        if content(line).startswith("export PS1=") and r"\w" in content(line):
+            return "full"
+    return "short"
+
+
+legacy_tail = [
+    "alias l='ls -CF'",
+    "alias la='ls -A'",
+    "alias ll='ls -alF'",
+    "alias ls='ls --color=auto'",
+    "alias grep='grep --color=auto'",
+    "alias fgrep='fgrep --color=auto'",
+    "alias egrep='egrep --color=auto'",
+    "source /etc/profile.d/bash_completion.sh",
+]
+marker_pairs = (
+    ("# BEGIN PMX_CORE_BASHRC", "# END PMX_CORE_BASHRC"),
+    ("${marker_begin}", "${marker_end}"),
+)
+
+result: list[str] = []
+detected_style = "short"
+changed = False
+i = 0
+while i < len(lines):
+    current = content(lines[i])
+
+    removed = False
+    for marker_begin, marker_end in marker_pairs:
+        if current != marker_begin:
+            continue
+        end_index = next(
+            (j for j in range(i + 1, len(lines)) if content(lines[j]) == marker_end),
+            None,
+        )
+        # Preserve incomplete ranges rather than risk consuming user content.
+        if end_index is None or end_index - i > 32:
+            continue
+        block = lines[i:end_index + 1]
+        if prompt_style(block) == "full":
+            detected_style = "full"
+        i = end_index + 1
+        changed = True
+        removed = True
+        break
+    if removed:
+        continue
+
+    # Exact legacy signature: ProxMenux header, history format, coloured
+    # prompt, seven stock aliases and bash-completion. Unrelated user blocks
+    # cannot match this complete sequence.
+    if current == "# ProxMenux customizations" and i + 10 < len(lines):
+        candidate = lines[i:i + 11]
+        candidate_text = [content(line) for line in candidate]
+        ps1 = candidate_text[2]
+        if (
+            candidate_text[1] == 'export HISTTIMEFORMAT="%d/%m/%y %T "'
+            and ps1.startswith('export PS1="')
+            and r"\e[38;5;172m" in ps1
+            and r"\e[38;5;153m" in ps1
+            and r"\e[38;5;214m" in ps1
+            and candidate_text[3:] == legacy_tail
+        ):
+            if prompt_style(candidate) == "full":
+                detected_style = "full"
+            i += len(candidate)
+            changed = True
+            continue
+
+    result.append(lines[i])
+    i += 1
+
+if changed and mode == "migrate":
+    original_stat = path.stat()
+    fd, temporary = tempfile.mkstemp(prefix=".bashrc.proxmenux.", dir=str(path.parent))
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8", errors="surrogateescape", newline="") as handle:
+            handle.write("".join(result))
+            handle.flush()
+            os.fsync(handle.fileno())
+        os.chmod(temporary, stat.S_IMODE(original_stat.st_mode))
+        try:
+            os.chown(temporary, original_stat.st_uid, original_stat.st_gid)
+        except PermissionError:
+            pass
+        os.replace(temporary, path)
+    finally:
+        if os.path.exists(temporary):
+            os.unlink(temporary)
+
+print(detected_style)
+PY
+}
+
+
 customize_bashrc() {
-    local FUNC_VERSION="1.1"
-    # description: Install the managed ProxMenux Bash prompt and aliases while preserving or selecting the short/full working-directory style.
+    local FUNC_VERSION="1.2"
+    # description: Install and safely migrate the managed ProxMenux Bash prompt and aliases while preserving or selecting the short/full working-directory style.
     msg_info "$(translate "Customizing bashrc for root user...")"
     local bashrc="/root/.bashrc"
     local bash_profile="/root/.bash_profile"
     local marker_begin="# BEGIN PMX_CORE_BASHRC"
     local marker_end="# END PMX_CORE_BASHRC"
     local prompt_path_escape='\W'
+    local detected_path_style="short"
+
+    [[ -f "$bashrc" ]] || touch "$bashrc"
+    if ! detected_path_style="$(_migrate_proxmenux_bashrc "$bashrc" inspect)"; then
+        msg_error "$(translate "Failed to inspect the existing ProxMenux Bash configuration.")"
+        return 1
+    fi
 
     # Automated installs remain non-interactive. Preserve a previous
-    # ProxMenux choice on re-run and use the compact \W style on first use.
-    if sed -n "/^${marker_begin}$/,/^${marker_end}$/p" "$bashrc" 2>/dev/null | grep -Fq '\w'; then
+    # ProxMenux choice on re-run, including legacy blocks, and use the compact
+    # \W style on first use.
+    if [[ "$detected_path_style" == "full" ]]; then
         prompt_path_escape='\w'
     fi
     case "${PMX_BASHRC_PATH_STYLE:-}" in
@@ -658,13 +789,11 @@ customize_bashrc() {
             return 1
             ;;
     esac
-    
- 
-    [ -f "${bashrc}.bak" ] || cp "$bashrc" "${bashrc}.bak" > /dev/null 2>&1
-    
 
-    if grep -q "^${marker_begin}$" "$bashrc" 2>/dev/null; then
-        sed -i "/^${marker_begin}$/,/^${marker_end}$/d" "$bashrc"  
+    [ -f "${bashrc}.bak" ] || cp "$bashrc" "${bashrc}.bak" > /dev/null 2>&1
+    if ! _migrate_proxmenux_bashrc "$bashrc" migrate >/dev/null; then
+        msg_error "$(translate "Failed to migrate the existing ProxMenux Bash configuration.")"
+        return 1
     fi
     
  
@@ -706,13 +835,152 @@ EOF
 
 
 
+_update_existing_log2ram_auto() {
+    local func_version="$1"
+    local log2ram_bin=""
+    local candidate resolved tmp_file
+
+    msg_ok "$(translate "Log2RAM already registered — updating to latest configuration")"
+
+    for candidate in \
+        "$(command -v log2ram 2>/dev/null)" \
+        /usr/local/bin/log2ram \
+        /usr/sbin/log2ram \
+        /usr/bin/log2ram
+    do
+        [[ -n "$candidate" && -f "$candidate" ]] || continue
+        resolved="$(readlink -f "$candidate" 2>/dev/null || printf '%s' "$candidate")"
+        [[ -f "$resolved" ]] || continue
+        log2ram_bin="$resolved"
+        break
+    done
+
+    if [[ -z "$log2ram_bin" || ! -f /etc/log2ram.conf ]]; then
+        msg_error "$(translate "Log2RAM installation verification failed. Check /tmp/log2ram_install.log")"
+        return 1
+    fi
+
+    if grep -q 'rsync -aAXv ' "$log2ram_bin" 2>/dev/null; then
+        [[ -e "${log2ram_bin}.proxmenux.bak" ]] || cp -a "$log2ram_bin" "${log2ram_bin}.proxmenux.bak"
+        tmp_file="$(mktemp "${log2ram_bin}.proxmenux.XXXXXX")" || return 1
+        cp -a "$log2ram_bin" "$tmp_file"
+        sed -i 's/rsync -aAXv /rsync -aXv --no-acls /g' "$tmp_file"
+        mv -f "$tmp_file" "$log2ram_bin"
+    fi
+
+    if dpkg-query -W -f='${Status}' proxmox-backup-server 2>/dev/null \
+        | grep -q 'install ok installed'; then
+        tmp_file="$(mktemp /etc/logrotate.d/.proxmox-backup-api.XXXXXX)" || return 1
+        cat > "$tmp_file" <<'EOF'
+/var/log/proxmox-backup/api/access.log /var/log/proxmox-backup/api/auth.log {
+    size 20M
+    rotate 3
+    compress
+    delaycompress
+    missingok
+    notifempty
+    copytruncate
+}
+EOF
+        chmod 0644 "$tmp_file"
+        chown root:root "$tmp_file"
+        mv -f "$tmp_file" /etc/logrotate.d/proxmox-backup-api
+
+        tmp_file="$(mktemp /etc/cron.hourly/.proxmox-backup-logrotate.XXXXXX)" || return 1
+        cat > "$tmp_file" <<'EOF'
+#!/bin/sh
+/usr/sbin/logrotate /etc/logrotate.d/proxmox-backup-api >/dev/null 2>&1
+EOF
+        chmod 0755 "$tmp_file"
+        chown root:root "$tmp_file"
+        mv -f "$tmp_file" /etc/cron.hourly/proxmox-backup-logrotate
+        msg_ok "$(translate "PBS API log rotation configured (hourly, size-based)")"
+    fi
+
+    tmp_file="$(mktemp /usr/local/bin/.log2ram-check.XXXXXX)" || return 1
+    cat > "$tmp_file" <<'EOF'
+#!/usr/bin/env bash
+# Watch /var/log usage on Log2RAM's tmpfs and act at two thresholds:
+#   > 80% → vacuum journald down to ~30% of SIZE, then log2ram write
+#   > 92% → aggressive: journal to ~5%, rotate PBS API logs if present,
+#           truncate existing pveproxy/pveam logs, then log2ram write
+PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+
+CONF_FILE="/etc/log2ram.conf"
+L2R_BIN="$(command -v log2ram || true)"
+[[ -z "$L2R_BIN" && -x /usr/sbin/log2ram ]] && L2R_BIN="/usr/sbin/log2ram"
+[[ -z "$L2R_BIN" ]] && exit 0
+
+SIZE_MiB="$(grep -E '^SIZE=' "$CONF_FILE" 2>/dev/null | cut -d'=' -f2 | tr -dc '0-9')"
+[[ -z "$SIZE_MiB" ]] && SIZE_MiB=128
+LIMIT_BYTES=$(( SIZE_MiB * 1024 * 1024 ))
+WARN_BYTES=$(( LIMIT_BYTES * 80 / 100 ))
+EMERGENCY_BYTES=$(( LIMIT_BYTES * 92 / 100 ))
+
+USED_BYTES="$(df -B1 --output=used /var/log 2>/dev/null | tail -1 | tr -dc '0-9')"
+[[ -z "$USED_BYTES" ]] && exit 0
+
+LOCK="/run/log2ram-check.lock"
+exec 9>"$LOCK" 2>/dev/null || exit 0
+flock -n 9 || exit 0
+
+if (( USED_BYTES > EMERGENCY_BYTES )); then
+    SAFE_JOURNAL_MB=$(( SIZE_MiB * 5 / 100 ))
+    [[ "$SAFE_JOURNAL_MB" -lt 16 ]] && SAFE_JOURNAL_MB=16
+    journalctl --vacuum-size="${SAFE_JOURNAL_MB}M" >/dev/null 2>&1 || true
+    if [[ -x /usr/sbin/logrotate && -f /etc/logrotate.d/proxmox-backup-api ]]; then
+        /usr/sbin/logrotate -f /etc/logrotate.d/proxmox-backup-api >/dev/null 2>&1 || true
+    fi
+    [ -e /var/log/pveproxy/access.log ] && : > /var/log/pveproxy/access.log 2>/dev/null || true
+    [ -e /var/log/pveproxy/error.log ]  && : > /var/log/pveproxy/error.log  2>/dev/null || true
+    [ -e /var/log/pveam.log ]           && : > /var/log/pveam.log           2>/dev/null || true
+    "$L2R_BIN" write 2>/dev/null || true
+elif (( USED_BYTES > WARN_BYTES )); then
+    SOFT_JOURNAL_MB=$(( SIZE_MiB * 30 / 100 ))
+    [[ "$SOFT_JOURNAL_MB" -lt 32 ]] && SOFT_JOURNAL_MB=32
+    journalctl --vacuum-size="${SOFT_JOURNAL_MB}M" >/dev/null 2>&1 || true
+    "$L2R_BIN" write 2>/dev/null || true
+fi
+EOF
+    chmod 0755 "$tmp_file"
+    chown root:root "$tmp_file"
+    bash -n "$tmp_file" || return 1
+    mv -f "$tmp_file" /usr/local/bin/log2ram-check.sh
+
+    tmp_file="$(mktemp /etc/cron.d/.log2ram-auto-sync.XXXXXX)" || return 1
+    cat > "$tmp_file" <<'EOF'
+# Log2RAM auto-sync based on /var/log usage - Created by ProxMenux
+SHELL=/bin/bash
+PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+MAILTO=""
+# nice/ionice keep the check off the priority queue for scheduled tasks.
+3-59/10 * * * * root nice -n 19 ionice -c 3 /usr/local/bin/log2ram-check.sh >/dev/null 2>&1
+EOF
+    chmod 0644 "$tmp_file"
+    chown root:root "$tmp_file"
+    mv -f "$tmp_file" /etc/cron.d/log2ram-auto-sync
+
+    register_tool "log2ram" true "$func_version"
+    msg_success "$(translate "Log2RAM installation and configuration completed successfully.")"
+}
+
+
 install_log2ram_auto() {
-    local FUNC_VERSION="1.4"
+    local FUNC_VERSION="1.5"
+    local existing_log2ram_bin=""
 
     # description: Install Log2RAM with size auto-tuned to host RAM (128M/256M/512M); SSD/M.2 detection skips on rotational disks.
 
+    existing_log2ram_bin="$(command -v log2ram 2>/dev/null || true)"
+    if [[ -f /etc/log2ram.conf || -n "$existing_log2ram_bin" \
+        || -e /etc/systemd/system/log2ram.service \
+        || -d /var/hdd.log || -d /var/log.hdd ]]; then
+        _update_existing_log2ram_auto "$FUNC_VERSION"
+        return $?
+    fi
+
     if [[ -f "$TOOLS_JSON" ]] && jq -e '.log2ram == true or .log2ram.installed == true' "$TOOLS_JSON" >/dev/null 2>&1; then
-        msg_ok "$(translate "Log2RAM already registered — updating to latest configuration")"
+        msg_info2 "$(translate "Preparing Log2RAM configuration")"
     else
     # ── First-time install: detect SSD/M.2 ─────────────────────────────────
     msg_info "$(translate "Checking if system disk is SSD or M.2...")"
@@ -784,7 +1052,7 @@ install_log2ram_auto() {
     fi
 
     rm -rf /tmp/log2ram 2>/dev/null || true
-    if ! git clone https://github.com/azlux/log2ram.git /tmp/log2ram >/dev/null 2>>/tmp/log2ram_install.log; then
+    if ! git clone --depth 1 https://github.com/azlux/log2ram.git /tmp/log2ram >/dev/null 2>>/tmp/log2ram_install.log; then
         msg_error "$(translate "Failed to clone log2ram repository. Check /tmp/log2ram_install.log")"
         return 1
     fi
@@ -842,7 +1110,6 @@ EOF
         msg_ok "$(translate "PBS API log rotation configured (hourly, size-based)")"
     fi
 
-    systemctl enable --now log2ram >/dev/null 2>&1 || true
     systemctl daemon-reload >/dev/null 2>&1 || true
 
     if [[ -f /etc/log2ram.conf ]] && command -v log2ram >/dev/null 2>&1; then
@@ -997,15 +1264,15 @@ EOF
     chown -R www-data:www-data /var/log.hdd/pveproxy
     chmod 0750 /var/log.hdd/pveproxy
 
-    systemctl restart systemd-journald >/dev/null 2>&1 || true
     #msg_ok "$(translate "Backup created:") /etc/systemd/journald.conf.bak.$(date +%Y%m%d-%H%M%S)"
     msg_ok "$(translate "Journald configuration adjusted to") ${USE_MB}M (Log2RAM ${LOG2RAM_SIZE})"
 
     systemctl daemon-reload >/dev/null 2>&1 || true
-    systemctl restart log2ram >/dev/null 2>&1 || true
-    log2ram clean >/dev/null 2>&1 || true
-    log2ram write >/dev/null 2>&1 || true
-    systemctl restart rsyslog >/dev/null 2>&1 || true
+    if ! systemctl enable log2ram >/dev/null 2>&1; then
+        msg_error "$(translate "Log2RAM installation verification failed. Check /tmp/log2ram_install.log")"
+        return 1
+    fi
+    NECESSARY_REBOOT=1
 
     register_tool "log2ram" true "$FUNC_VERSION"
 }
