@@ -153,7 +153,10 @@
     "errors": {
       "serverUnavailableTitle": "Der Monitorserver ist nicht verfügbar",
       "serverUnavailableDescription": "Es kann keine Verbindung zum Monitor-Server hergestellt werden. Stellen Sie sicher, dass der Dienst ausgeführt wird, und versuchen Sie es erneut."
-    }
+    },
+    "runningCountOne": "{count} läuft",
+    "runningCountFew": "{count} läuft",
+    "runningCountMany": "{count} läuft"
   },
   "storage": {
     "loadingTitle": "Speicherdaten werden geladen...",
@@ -1093,7 +1096,12 @@
       "unknown": "Unbekannter Fehler",
       "backupStartFailed": "Sicherung konnte nicht gestartet werden: {message}",
       "controlFailed": "Fehler bei {action} VM {vmid}: {message}",
-      "saveNotesFailed": "Fehler beim Speichern der Notizen. Bitte versuchen Sie es erneut."
+      "saveNotesFailed": "Fehler beim Speichern der Notizen. Bitte versuchen Sie es erneut.",
+      "appNotFound": "Diese Anwendung ist nicht mehr verfügbar.Aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "saveCustomCommandFailed": "Der benutzerdefinierte Aktualisierungsbefehl konnte nicht gespeichert werden: {message}",
+      "removeCustomCommandConfirm": "Den benutzerdefinierten Aktualisierungsbefehl für „{name}“ entfernen?",
+      "removeCustomCommandFailed": "Der benutzerdefinierte Aktualisierungsbefehl konnte nicht entfernt werden: {message}",
+      "hideNoticeFailed": "Dieser Hinweis konnte nicht ausgeblendet werden: {message}"
     },
     "backupModal": {
       "title": "Sicherung {type} {vmid} ({name})",
@@ -1198,7 +1206,15 @@
       "noTargets": "Keine Ziele ausgewählt",
       "selectAtLeastOne": "Wählen Sie mindestens ein Aktualisierungsziel aus.",
       "deleteButton": "Zeitplan löschen",
-      "deleteConfirm": "Geplante Updates für diesen Container entfernen? Die Standardeinstellungen (Sicherung + Neustart) werden beibehalten."
+      "deleteConfirm": "Geplante Updates für diesen Container entfernen? Die Standardeinstellungen (Sicherung + Neustart) werden beibehalten.",
+      "loadFailed": "Die geplanten Updates konnten nicht geladen werden.",
+      "saveFailed": "Die geplanten Updates konnten nicht gespeichert werden.",
+      "deleteFailed": "Die geplanten Updates konnten nicht entfernt werden.",
+      "humanDaily": "Täglich um {time}",
+      "humanWeekly": "Wöchentlich ({day} {time})",
+      "humanMonthly": "Monatlich (Tag {day} um {time})",
+      "humanHourly": "Stündlich",
+      "weekdays": "['Sonntag', 'Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag']"
     },
     "cronChip": {
       "detected": "Host-Cron erkannt",
@@ -1344,7 +1360,8 @@
       "deleteConfirm": "Diese Sammelaktualisierungskonfiguration entfernen?",
       "saveFailed": "Die Sammelaktualisierungskonfiguration konnte nicht gespeichert werden.",
       "deleteFailed": "Die Sammelaktualisierungskonfiguration konnte nicht entfernt werden.",
-      "planFailed": "Die Sammelaktualisierung konnte nicht vorbereitet werden. Prüfen Sie die nicht verfügbaren Methoden."
+      "planFailed": "Die Sammelaktualisierung konnte nicht vorbereitet werden. Prüfen Sie die nicht verfügbaren Methoden.",
+      "loadFailed": "Die Massenaktualisierungskonfiguration konnte nicht geladen werden."
     },
     "appEditor": {
       "closePanel": "Panel schließen",
@@ -1545,6 +1562,13 @@
       "notifyUpstreamHelp": "Sendet „app_update_available“ an die Kanäle, die in Einstellungen → Benachrichtigungen aktiviert sind.Deaktivieren Sie diese Option, wenn diese App auf Ihrer Box nicht aktualisiert werden kann.",
       "excludeFromBadgeLabel": "Vom LXC-Aktualisierungszähler ausschließen",
       "excludeFromBadgeHelp": "Zählen Sie diese App nicht im Abzeichen „Aggregate Updates“ auf der LXC-Listenkarte.Nützlich, wenn Sie absichtlich an eine bestimmte Version gebunden sind (Tracker-Anforderung, Kompatibilitätsstopp).Hat keinen Einfluss auf den eigenen Status der App-Registerkarte oder die ausgehende Benachrichtigung."
+    },
+    "statusFilter": {
+      "ariaLabel": "Virtuelle Maschinen und Container nach Status filtern",
+      "all": "Alle",
+      "running": "Laufen",
+      "stopped": "Gestoppt",
+      "empty": "Keine virtuellen Maschinen oder Container mit dem Status „{status}“"
     }
   },
   "settings": {

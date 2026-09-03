@@ -153,7 +153,10 @@
     "errors": {
       "serverUnavailableTitle": "Il server di monitoraggio non è disponibile",
       "serverUnavailableDescription": "Impossibile connettersi al server di monitoraggio. Assicurati che il servizio sia in esecuzione e riprova."
-    }
+    },
+    "runningCountOne": "{count} in esecuzione",
+    "runningCountFew": "{count} in esecuzione",
+    "runningCountMany": "{count} in esecuzione"
   },
   "storage": {
     "loadingTitle": "Caricamento dati di archiviazione...",
@@ -1093,7 +1096,12 @@
       "unknown": "Errore sconosciuto",
       "backupStartFailed": "Impossibile avviare il backup: {message}",
       "controlFailed": "Impossibile eseguire {action} VM {vmid}: {message}",
-      "saveNotesFailed": "Errore durante il salvataggio delle note. Per favore riprova."
+      "saveNotesFailed": "Errore durante il salvataggio delle note. Per favore riprova.",
+      "appNotFound": "questa applicazione non è più disponibile.Aggiorna la pagina e riprova.",
+      "saveCustomCommandFailed": "impossibile salvare il comando di aggiornamento personalizzato: {message}",
+      "removeCustomCommandConfirm": "rimuovere il comando di aggiornamento personalizzato per \"{name}\"?",
+      "removeCustomCommandFailed": "impossibile rimuovere il comando di aggiornamento personalizzato: {message}",
+      "hideNoticeFailed": "impossibile nascondere questo avviso: {message}"
     },
     "backupModal": {
       "title": "Backup {type} {vmid} ({name})",
@@ -1198,7 +1206,15 @@
       "noTargets": "Nessun obiettivo selezionato",
       "selectAtLeastOne": "Seleziona almeno un obiettivo di aggiornamento.",
       "deleteButton": "Elimina pianificazione",
-      "deleteConfirm": "Rimuovere gli aggiornamenti pianificati per questo contenitore? Le impostazioni predefinite di applicazione (backup + riavvio) vengono mantenute."
+      "deleteConfirm": "Rimuovere gli aggiornamenti pianificati per questo contenitore? Le impostazioni predefinite di applicazione (backup + riavvio) vengono mantenute.",
+      "loadFailed": "impossibile caricare gli aggiornamenti pianificati.",
+      "saveFailed": "impossibile salvare gli aggiornamenti pianificati.",
+      "deleteFailed": "impossibile rimuovere gli aggiornamenti pianificati.",
+      "humanDaily": "tutti i giorni alle {time}",
+      "humanWeekly": "testo tecnico dell'interfaccia utente per una dashboard di gestione Proxmox.Traduzione: settimanale ({day} {time})",
+      "humanMonthly": "testo tecnico dell'interfaccia utente per una dashboard di gestione Proxmox.Traduzione: mensile (giorno {day} alle {time})",
+      "humanHourly": "ogni ora",
+      "weekdays": "['Domenica', 'Lunedì', 'Martedì', 'Mercoledì', 'Giovedì', 'Venerdì', 'Sabato']"
     },
     "cronChip": {
       "detected": "rilevato il cron dell'host",
@@ -1344,7 +1360,8 @@
       "deleteConfirm": "Rimuovere questa configurazione di aggiornamento in blocco?",
       "saveFailed": "Impossibile salvare la configurazione di aggiornamento in blocco.",
       "deleteFailed": "Impossibile rimuovere la configurazione di aggiornamento in blocco.",
-      "planFailed": "Impossibile preparare l’aggiornamento in blocco. Controlla i metodi non disponibili."
+      "planFailed": "Impossibile preparare l’aggiornamento in blocco. Controlla i metodi non disponibili.",
+      "loadFailed": "impossibile caricare la configurazione dell'aggiornamento collettivo."
     },
     "appEditor": {
       "closePanel": "Chiudi pannello",
@@ -1545,6 +1562,13 @@
       "notifyUpstreamHelp": "invia `app_update_available` ai canali abilitati in Impostazioni → Notifiche.Disattiva se questa app non può essere aggiornata sul tuo box.",
       "excludeFromBadgeLabel": "esclusione dal contatore degli aggiornamenti LXC",
       "excludeFromBadgeHelp": "non contare questa app nel badge degli aggiornamenti aggregati sulla scheda dell'elenco LXC.Utile quando sei bloccato di proposito su una versione specifica (requisito del tracker, blocco della compatibilità).Non influisce sullo stato della scheda App o sulla notifica in uscita."
+    },
+    "statusFilter": {
+      "ariaLabel": "filtra macchine virtuali e contenitori in base allo stato",
+      "all": "tutto",
+      "running": "Correre",
+      "stopped": "fermato",
+      "empty": "nessuna macchina virtuale o contenitore con stato \"{status}\""
     }
   },
   "settings": {

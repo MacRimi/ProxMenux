@@ -153,7 +153,10 @@
     "errors": {
       "serverUnavailableTitle": "El servidor de monitor no está disponible",
       "serverUnavailableDescription": "No se puede conectar con el servidor Monitor. Asegúrese de que el servicio se esté ejecutando y vuelva a intentarlo."
-    }
+    },
+    "runningCountOne": "{count} en ejecución",
+    "runningCountFew": "{count} en ejecución",
+    "runningCountMany": "{count} en ejecución"
   },
   "storage": {
     "loadingTitle": "Cargando datos de almacenamiento...",
@@ -1093,7 +1096,12 @@
       "unknown": "Error desconocido",
       "backupStartFailed": "No se pudo iniciar la copia de seguridad: {message}",
       "controlFailed": "Error en {action} VM {vmid}: {message}",
-      "saveNotesFailed": "Error al guardar notas. Por favor inténtalo de nuevo."
+      "saveNotesFailed": "Error al guardar notas. Por favor inténtalo de nuevo.",
+      "appNotFound": "Esta aplicación ya no está disponible.Actualiza la página y vuelve a intentarlo.",
+      "saveCustomCommandFailed": "No se pudo guardar el comando de actualización personalizado: {message}",
+      "removeCustomCommandConfirm": "¿Eliminar el comando de actualización personalizado para \"{name}\"?",
+      "removeCustomCommandFailed": "No se pudo eliminar el comando de actualización personalizado: {message}",
+      "hideNoticeFailed": "No se pudo ocultar este aviso: {message}"
     },
     "backupModal": {
       "title": "Copia de seguridad {type} {vmid} ({name})",
@@ -1198,7 +1206,15 @@
       "noTargets": "Ningún objetivo seleccionado",
       "selectAtLeastOne": "Seleccione al menos un objetivo de actualización.",
       "deleteButton": "Eliminar horario",
-      "deleteConfirm": "¿Eliminar las actualizaciones programadas para este contenedor? Se mantienen los valores predeterminados de aplicación (copia de seguridad + reinicio)."
+      "deleteConfirm": "¿Eliminar las actualizaciones programadas para este contenedor? Se mantienen los valores predeterminados de aplicación (copia de seguridad + reinicio).",
+      "loadFailed": "No se pudieron cargar las actualizaciones programadas.",
+      "saveFailed": "no se pudieron guardar las actualizaciones programadas.",
+      "deleteFailed": "no se pudieron eliminar las actualizaciones programadas.",
+      "humanDaily": "Diariamente a las {time}",
+      "humanWeekly": "Semanal ({day} {time})",
+      "humanMonthly": "Mensual (día {day} a las {time})",
+      "humanHourly": "cada hora",
+      "weekdays": "['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado']"
     },
     "cronChip": {
       "detected": "cron del host detectado",
@@ -1344,7 +1360,8 @@
       "deleteConfirm": "¿Eliminar esta configuración de actualización en bloque?",
       "saveFailed": "No se pudo guardar la configuración de actualización en bloque.",
       "deleteFailed": "No se pudo eliminar la configuración de actualización en bloque.",
-      "planFailed": "No se pudo preparar la actualización en bloque. Edite la configuración y revise los métodos no disponibles."
+      "planFailed": "No se pudo preparar la actualización en bloque. Edite la configuración y revise los métodos no disponibles.",
+      "loadFailed": "no se pudo cargar la configuración de actualización masiva."
     },
     "appEditor": {
       "closePanel": "Cerrar panel",
@@ -1545,6 +1562,13 @@
       "notifyUpstreamHelp": "Envía `app_update_available` a los canales activos en Ajustes → Notificaciones. Desactívalo si esta app no se puede actualizar en tu instalación.",
       "excludeFromBadgeLabel": "Excluir del contador de actualizaciones del LXC",
       "excludeFromBadgeHelp": "No sumar esta app al contador agregado de actualizaciones del card del LXC. Útil cuando mantienes una versión concreta a propósito (requisito de tracker, compatibilidad). No afecta al estado que se muestra en la pestaña App ni al envío de la notificación."
+    },
+    "statusFilter": {
+      "ariaLabel": "filtrar máquinas virtuales y contenedores por estado",
+      "all": "Todos",
+      "running": "corriendo",
+      "stopped": "detenido",
+      "empty": "No hay máquinas virtuales ni contenedores con estado \"{status}\""
     }
   },
   "settings": {

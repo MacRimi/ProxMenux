@@ -153,7 +153,10 @@
     "errors": {
       "serverUnavailableTitle": "Le serveur de surveillance n'est pas disponible",
       "serverUnavailableDescription": "Impossible de se connecter au serveur Monitor. Assurez-vous que le service est en cours d'exécution et réessayez."
-    }
+    },
+    "runningCountOne": "{count} en cours d'exécution",
+    "runningCountFew": "{count} en cours d'exécution",
+    "runningCountMany": "{count} en cours d'exécution"
   },
   "storage": {
     "loadingTitle": "Chargement des données de stockage...",
@@ -1093,7 +1096,12 @@
       "unknown": "Erreur inconnue",
       "backupStartFailed": "Échec du démarrage de la sauvegarde : {message}",
       "controlFailed": "Échec sur {action} VM {vmid} : {message}",
-      "saveNotesFailed": "Erreur lors de l'enregistrement des notes. Veuillez réessayer."
+      "saveNotesFailed": "Erreur lors de l'enregistrement des notes. Veuillez réessayer.",
+      "appNotFound": "Cette application n'est plus disponible.Actualisez la page et réessayez.",
+      "saveCustomCommandFailed": "Impossible d'enregistrer la commande de mise à jour personnalisée : {message}",
+      "removeCustomCommandConfirm": "Supprimer la commande de mise à jour personnalisée pour \"{name}\" ?",
+      "removeCustomCommandFailed": "Impossible de supprimer la commande de mise à jour personnalisée : {message}",
+      "hideNoticeFailed": "Impossible de masquer cet avis : {message}"
     },
     "backupModal": {
       "title": "Sauvegarde {type} {vmid} ({name})",
@@ -1198,7 +1206,15 @@
       "noTargets": "Aucune cible sélectionnée",
       "selectAtLeastOne": "Sélectionnez au moins une cible de mise à jour.",
       "deleteButton": "Supprimer le planning",
-      "deleteConfirm": "Supprimer les mises à jour planifiées pour ce conteneur ? Les valeurs par défaut appliquées (sauvegarde + redémarrage) sont conservées."
+      "deleteConfirm": "Supprimer les mises à jour planifiées pour ce conteneur ? Les valeurs par défaut appliquées (sauvegarde + redémarrage) sont conservées.",
+      "loadFailed": "Impossible de charger les mises à jour planifiées.",
+      "saveFailed": "Impossible d'enregistrer les mises à jour planifiées.",
+      "deleteFailed": "Impossible de supprimer les mises à jour planifiées.",
+      "humanDaily": "tous les jours à {time}",
+      "humanWeekly": "hebdomadaire ({day} {time})",
+      "humanMonthly": "mensuel (jour {day} à {time})",
+      "humanHourly": "Horaire",
+      "weekdays": "['Dimanche', 'Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi']"
     },
     "cronChip": {
       "detected": "cron hôte détecté",
@@ -1344,7 +1360,8 @@
       "deleteConfirm": "Supprimer cette configuration de mise à jour groupée ?",
       "saveFailed": "Impossible d’enregistrer la configuration de mise à jour groupée.",
       "deleteFailed": "Impossible de supprimer la configuration de mise à jour groupée.",
-      "planFailed": "Impossible de préparer la mise à jour groupée. Vérifiez les méthodes indisponibles."
+      "planFailed": "Impossible de préparer la mise à jour groupée. Vérifiez les méthodes indisponibles.",
+      "loadFailed": "Impossible de charger la configuration de la mise à jour groupée."
     },
     "appEditor": {
       "closePanel": "Fermer le panneau",
@@ -1545,6 +1562,13 @@
       "notifyUpstreamHelp": "envoie `app_update_available` aux canaux activés dans Paramètres → Notifications.Désactivez-la si cette application ne peut pas être mise à jour sur votre box.",
       "excludeFromBadgeLabel": "exclure du compteur de mises à jour LXC",
       "excludeFromBadgeHelp": "Ne comptez pas cette application dans le badge de mises à jour globales sur la carte de liste LXC.Utile lorsque vous êtes volontairement épinglé à une version spécifique (exigence de suivi, gel de la compatibilité).N'affecte pas l'état de l'onglet Application ni la notification sortante."
+    },
+    "statusFilter": {
+      "ariaLabel": "filtrer les machines virtuelles et les conteneurs par statut",
+      "all": "Tous",
+      "running": "Courir",
+      "stopped": "Arrêté",
+      "empty": "Aucune machine virtuelle ou conteneur avec le statut \"{status}\""
     }
   },
   "settings": {

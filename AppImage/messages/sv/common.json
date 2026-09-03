@@ -153,7 +153,10 @@
     "errors": {
       "serverUnavailableTitle": "Övervakningsservern är inte tillgänglig",
       "serverUnavailableDescription": "Det går inte att ansluta till monitorservern. Se till att tjänsten körs och försök igen."
-    }
+    },
+    "runningCountOne": "{count} körs",
+    "runningCountFew": "{count} körs",
+    "runningCountMany": "{count} körs"
   },
   "storage": {
     "loadingTitle": "Laddar lagringsdata...",
@@ -1093,7 +1096,12 @@
       "unknown": "Okänt fel",
       "backupStartFailed": "Det gick inte att starta säkerhetskopiering: {message}",
       "controlFailed": "Det gick inte att {action} VM {vmid}: {message}",
-      "saveNotesFailed": "Det gick inte att spara anteckningar. Försök igen."
+      "saveNotesFailed": "Det gick inte att spara anteckningar. Försök igen.",
+      "appNotFound": "Denna applikation är inte längre tillgänglig.Uppdatera sidan och försök igen.",
+      "saveCustomCommandFailed": "Kunde inte spara det anpassade uppdateringskommandot: {message}",
+      "removeCustomCommandConfirm": "Ta bort det anpassade uppdateringskommandot för \"{name}\"?",
+      "removeCustomCommandFailed": "Kunde inte ta bort det anpassade uppdateringskommandot: {message}",
+      "hideNoticeFailed": "Kunde inte dölja detta meddelande: {message}"
     },
     "backupModal": {
       "title": "Säkerhetskopiera {type} {vmid} ({name})",
@@ -1198,7 +1206,15 @@
       "noTargets": "Inga mål valda",
       "selectAtLeastOne": "Välj minst ett uppdateringsmål.",
       "deleteButton": "Ta bort schema",
-      "deleteConfirm": "Vill du ta bort de schemalagda uppdateringarna för den här behållaren? Tillämpa standardvärden (säkerhetskopiering + omstart) behålls."
+      "deleteConfirm": "Vill du ta bort de schemalagda uppdateringarna för den här behållaren? Tillämpa standardvärden (säkerhetskopiering + omstart) behålls.",
+      "loadFailed": "Det gick inte att ladda de schemalagda uppdateringarna.",
+      "saveFailed": "Det gick inte att spara de schemalagda uppdateringarna.",
+      "deleteFailed": "Det gick inte att ta bort de schemalagda uppdateringarna.",
+      "humanDaily": "dagligen kl. {time}",
+      "humanWeekly": "Varje vecka ({day} {time})",
+      "humanMonthly": "Varje månad (dag {day} kl. {time})",
+      "humanHourly": "Varje timme",
+      "weekdays": "['söndag', 'måndag', 'tisdag', 'onsdag', 'torsdag', 'fredag', 'lördag']"
     },
     "cronChip": {
       "detected": "host cron upptäckt",
@@ -1344,7 +1360,8 @@
       "deleteConfirm": "Ta bort den här gruppuppdateringskonfigurationen?",
       "saveFailed": "Det gick inte att spara gruppuppdateringskonfigurationen.",
       "deleteFailed": "Det gick inte att ta bort gruppuppdateringskonfigurationen.",
-      "planFailed": "Det gick inte att förbereda gruppuppdateringen. Kontrollera otillgängliga metoder."
+      "planFailed": "Det gick inte att förbereda gruppuppdateringen. Kontrollera otillgängliga metoder.",
+      "loadFailed": "Det gick inte att läsa in massuppdateringskonfigurationen."
     },
     "appEditor": {
       "closePanel": "Stäng panelen",
@@ -1545,6 +1562,13 @@
       "notifyUpstreamHelp": "Skickar `app_update_available` till de kanaler som är aktiverade i Inställningar → Aviseringar.Stäng av om den här appen inte kan uppdateras på din box.",
       "excludeFromBadgeLabel": "Uteslut från LXC-uppdateringsräknaren",
       "excludeFromBadgeHelp": "Räkna inte den här appen i det samlade uppdateringsmärket på LXC-listkortet.Användbart när du är fäst till en specifik version med avsikt (spårningskrav, frysning av kompatibilitet).Påverkar inte appflikens eget tillstånd eller det utgående meddelandet."
+    },
+    "statusFilter": {
+      "ariaLabel": "Filtrera virtuella maskiner och behållare efter status",
+      "all": "Alla",
+      "running": "Löpning",
+      "stopped": "Stoppad",
+      "empty": "Inga virtuella maskiner eller behållare med status \"{status}\""
     }
   },
   "settings": {

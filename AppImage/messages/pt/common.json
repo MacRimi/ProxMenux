@@ -153,7 +153,10 @@
     "errors": {
       "serverUnavailableTitle": "O servidor monitor não está disponível",
       "serverUnavailableDescription": "Não é possível conectar-se ao servidor Monitor. Certifique-se de que o serviço esteja em execução e tente novamente."
-    }
+    },
+    "runningCountOne": "{count} em execução",
+    "runningCountFew": "{count} em execução",
+    "runningCountMany": "{count} em execução"
   },
   "storage": {
     "loadingTitle": "Carregando dados de armazenamento...",
@@ -1093,7 +1096,12 @@
       "unknown": "Erro desconhecido",
       "backupStartFailed": "Falha ao iniciar o backup: {message}",
       "controlFailed": "Falha ao {action} VM {vmid}: {message}",
-      "saveNotesFailed": "Erro ao salvar notas. Por favor, tente novamente."
+      "saveNotesFailed": "Erro ao salvar notas. Por favor, tente novamente.",
+      "appNotFound": "Este aplicativo não está mais disponível.Atualize a página e tente novamente.",
+      "saveCustomCommandFailed": "Não foi possível salvar o comando de atualização personalizado: {message}",
+      "removeCustomCommandConfirm": "Remover o comando de atualização personalizado para \"{name}\"?",
+      "removeCustomCommandFailed": "não foi possível remover o comando de atualização personalizado: {message}",
+      "hideNoticeFailed": "Não foi possível ocultar este aviso: {message}"
     },
     "backupModal": {
       "title": "Backup {type} {vmid} ({name})",
@@ -1198,7 +1206,15 @@
       "noTargets": "Nenhum alvo selecionado",
       "selectAtLeastOne": "Selecione pelo menos um alvo de atualização.",
       "deleteButton": "Excluir programação",
-      "deleteConfirm": "Remover as atualizações agendadas para este contêiner? Os padrões de aplicação (backup + reinicialização) são mantidos."
+      "deleteConfirm": "Remover as atualizações agendadas para este contêiner? Os padrões de aplicação (backup + reinicialização) são mantidos.",
+      "loadFailed": "não foi possível carregar as atualizações agendadas.",
+      "saveFailed": "não foi possível salvar as atualizações agendadas.",
+      "deleteFailed": "não foi possível remover as atualizações agendadas.",
+      "humanDaily": "diariamente às {time}",
+      "humanWeekly": "Semanal ({day} {time})",
+      "humanMonthly": "Mensalmente (dia {day} às {time})",
+      "humanHourly": "de hora em hora",
+      "weekdays": "['Domingo', 'Segunda-feira', 'Terça-feira', 'Quarta-feira', 'Quinta-feira', 'Sexta-feira', 'Sábado']"
     },
     "cronChip": {
       "detected": "cron do host detectado",
@@ -1344,7 +1360,8 @@
       "deleteConfirm": "Remover esta configuração de atualização em bloco?",
       "saveFailed": "Não foi possível guardar a configuração de atualização em bloco.",
       "deleteFailed": "Não foi possível remover a configuração de atualização em bloco.",
-      "planFailed": "Não foi possível preparar a atualização em bloco. Reveja os métodos indisponíveis."
+      "planFailed": "Não foi possível preparar a atualização em bloco. Reveja os métodos indisponíveis.",
+      "loadFailed": "não foi possível carregar a configuração de atualização em massa."
     },
     "appEditor": {
       "closePanel": "Fechar painel",
@@ -1545,6 +1562,13 @@
       "notifyUpstreamHelp": "Envia `app_update_available` para os canais habilitados em Configurações → Notificações.Desligue se este aplicativo não puder ser atualizado em sua caixa.",
       "excludeFromBadgeLabel": "Excluir do contador de atualizações LXC",
       "excludeFromBadgeHelp": "não conte este aplicativo no selo de atualizações agregadas no cartão de lista LXC.Útil quando você está fixado em uma versão específica propositalmente (requisito do rastreador, congelamento de compatibilidade).Não afeta o próprio estado da guia Aplicativo ou a notificação de saída."
+    },
+    "statusFilter": {
+      "ariaLabel": "Filtre máquinas virtuais e contêineres por status",
+      "all": "Todos",
+      "running": "Correndo",
+      "stopped": "Parado",
+      "empty": "Nenhuma máquina virtual ou contêiner com status \"{status}\""
     }
   },
   "settings": {
