@@ -132,4 +132,18 @@ export function useT() {
   return useI18n().t
 }
 
+export function getCountFormKey(language: LanguageCode, key: string, count: number): string {
+  if (language !== "sk") return key
+
+  const absoluteCount = Math.abs(count)
+  const lastDigit = absoluteCount % 10
+  const lastTwoDigits = absoluteCount % 100
+
+  if (lastDigit === 1 && lastTwoDigits !== 11) return `${key}One`
+  if (lastDigit >= 2 && lastDigit <= 4 && !(lastTwoDigits >= 12 && lastTwoDigits <= 14)) {
+    return `${key}Few`
+  }
+  return `${key}Many`
+}
+
 export { SUPPORTED_LANGUAGES }

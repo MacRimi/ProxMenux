@@ -27,7 +27,7 @@ import { formatNetworkTraffic, getNetworkUnit } from "../lib/format-network"
 import { fetchApi } from "../lib/api-config"
 import DOMPurify from "dompurify"
 import { marked } from "marked"
-import { useT } from "@/lib/i18n/provider"
+import { getCountFormKey, useI18n, useT } from "@/lib/i18n/provider"
 
 // Sent by /api/vms only for LXC rows, only when the user has enabled
 // `lxc_updates_available` notifications. The Monitor populates this
@@ -753,6 +753,7 @@ function MountPointCard({ mp }: { mp: LxcMountPoint }) {
 
 export function VirtualMachines() {
   const t = useT()
+  const { language } = useI18n()
   const {
     data: vmData,
     error,
@@ -1929,7 +1930,7 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
         applySchedulePayload(s)
       }
     } catch (e: any) {
-      setScheduleError(e?.message || "Could not load schedule")
+      setScheduleError(e?.message || t("vmLxc.scheduled.loadFailed"))
     } finally {
       setScheduleLoaded(vmid)
     }
@@ -1953,7 +1954,7 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
       setBulkConfigured(false)
       setBulkTargets(["os"])
       setBulkPersistedTargets(["os"])
-      setBulkError(e?.message || "Could not load bulk update")
+      setBulkError(e?.message || t("vmLxc.bulkUpdate.loadFailed"))
     } finally {
       setBulkLoaded(vmid)
     }
@@ -2073,7 +2074,7 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
       })
       if (cronToSave.trim()) setScheduleConfigured(true)
     } catch (e: any) {
-      setScheduleError(e?.message || "Save failed")
+      setScheduleError(e?.message || t("vmLxc.scheduled.saveFailed"))
     } finally {
       setScheduleSaving(false)
     }
@@ -2132,13 +2133,13 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
       setScheduleLastRunRebootPackages([])
       setScheduleReleaseDelayDays(0)
     } catch (e: any) {
-      setScheduleError(e?.message || "Delete failed")
+      setScheduleError(e?.message || t("vmLxc.scheduled.deleteFailed"))
     } finally {
       setScheduleSaving(false)
     }
   }
 
-  // Turn a 5-field cron into a plain-English label — mirrors the
+  // Turn a 5-field cron into a localized label — mirrors the
   // backend's _humanise_cron so view mode matches the picker's
   // preset labels.
   const humanCron = (expr: string): string => {
@@ -2151,15 +2152,14 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
       if (isNaN(hn) || isNaN(mn)) return `${h}:${m}`
       return `${String(hn).padStart(2, "0")}:${String(mn).padStart(2, "0")}`
     }
-    if (d === "*" && mo === "*" && w === "*" && /^\d+$/.test(m) && /^\d+$/.test(h)) return `Daily at ${hhmm()}`
+    if (d === "*" && mo === "*" && w === "*" && /^\d+$/.test(m) && /^\d+$/.test(h)) return t("vmLxc.scheduled.humanDaily", { time: hhmm() })
     if (d === "*" && mo === "*" && /^\d+$/.test(w) && /^\d+$/.test(m) && /^\d+$/.test(h)) {
-      const wdays = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"]
       const wn = parseInt(w, 10)
-      const wname = (wn >= 0 && wn <= 6) ? wdays[wn] : w
-      return `Weekly (${wname} ${hhmm()})`
+      const wname = wn >= 0 && wn <= 6 ? t(`vmLxc.scheduled.weekdays.${wn}`) : w
+      return t("vmLxc.scheduled.humanWeekly", { day: wname, time: hhmm() })
     }
-    if (mo === "*" && w === "*" && /^\d+$/.test(d) && /^\d+$/.test(m) && /^\d+$/.test(h)) return `Monthly (day ${parseInt(d, 10)} at ${hhmm()})`
-    if (h === "*" && d === "*" && mo === "*" && w === "*" && m === "0") return "Hourly"
+    if (mo === "*" && w === "*" && /^\d+$/.test(d) && /^\d+$/.test(m) && /^\d+$/.test(h)) return t("vmLxc.scheduled.humanMonthly", { day: parseInt(d, 10), time: hhmm() })
+    if (h === "*" && d === "*" && mo === "*" && w === "*" && m === "0") return t("vmLxc.scheduled.humanHourly")
     return expr
   }
 
@@ -2296,7 +2296,7 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
     // record and would drop any field we omitted.
     const full: any = await fetchApi(`/api/vms/${vmid}/apps`)
     const current = (full?.apps || []).find((a: any) => a.id === app.id)
-    if (!current) throw new Error("app not found in sidecar")
+    if (!current) throw new Error(t("vmLxc.errors.appNotFound"))
     const { id: _id, state: _state, created_at: _created, ...rest } = current
     const payload = { ...rest, ...patch }
     const updated: any = await fetchApi(`/api/vms/${vmid}/apps/${app.id}`, {
@@ -2321,19 +2321,19 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
       })
       closeCustomCmdEditor()
     } catch (e) {
-      alert(`Could not save custom command: ${(e as any)?.message || e}`)
+      alert(t("vmLxc.errors.saveCustomCommandFailed", { message: (e as any)?.message || String(e) }))
     } finally {
       setCustomCmdSaving(false)
     }
   }
   const removeCustomCommand = async (vmid: number, app: LxcAppWatch) => {
-    if (!confirm(`Remove the custom update command for "${app.name}"?`)) return
+    if (!confirm(t("vmLxc.errors.removeCustomCommandConfirm", { name: app.name }))) return
     setCustomCmdSaving(true)
     try {
       await patchAppWatch(vmid, app, { update_command: "" })
       closeCustomCmdEditor()
     } catch (e) {
-      alert(`Could not remove custom command: ${(e as any)?.message || e}`)
+      alert(t("vmLxc.errors.removeCustomCommandFailed", { message: (e as any)?.message || String(e) }))
     } finally {
       setCustomCmdSaving(false)
     }
@@ -2342,7 +2342,7 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
     try {
       await patchAppWatch(vmid, app, { hide_no_updater_notice: true })
     } catch (e) {
-      alert(`Could not hide notice: ${(e as any)?.message || e}`)
+      alert(t("vmLxc.errors.hideNoticeFailed", { message: (e as any)?.message || String(e) }))
     }
   }
 
@@ -2363,10 +2363,10 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
               ? ["docker-images"]
               : ["apps"]
     const fallbackLabels = target === "os"
-      ? ["OS"]
+      ? [t("vmLxc.bulkUpdate.osTarget")]
       : target === "both"
-        ? ["OS", "Applications"]
-        : [opts?.appName || (opts?.dockerEngine ? "Docker Engine" : "Application")]
+        ? [t("vmLxc.bulkUpdate.osTarget"), t("vmLxc.scheduled.targetApp")]
+        : [opts?.appName || (opts?.dockerEngine ? "Docker Engine" : t("vmLxc.scheduled.targetApp"))]
     const runId = typeof window !== "undefined" && typeof window.crypto?.randomUUID === "function"
       ? window.crypto.randomUUID()
       : `manual-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`
@@ -2817,7 +2817,7 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                     <span className="text-lg font-medium ml-1 text-muted-foreground">/ {total}</span>
                   </div>
                   <Badge variant="outline" className="bg-green-500/10 text-green-500 border-green-500/20">
-                    {t("overview.runningCount", { count: running })}
+                    {t(getCountFormKey(language, "overview.runningCount", running), { count: running })}
                   </Badge>
                 </div>
                 <div className="mt-3 flex gap-1 flex-wrap">
@@ -2987,12 +2987,12 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
           </CardTitle>
           <div
             role="tablist"
-            aria-label="Filter by status"
+            aria-label={t("vmLxc.statusFilter.ariaLabel")}
             className="inline-flex w-full sm:w-auto rounded-lg border border-border bg-muted/40 p-1 gap-1"
           >
             {(["all", "running", "stopped"] as const).map((key) => {
               const active = statusFilter === key
-              const label = key === "all" ? "All" : key === "running" ? "Running" : "Stopped"
+              const label = t(`vmLxc.statusFilter.${key}`)
               // Icon color: white when the tab is active (over the blue fill);
               // green / red on inactive tabs so the state mapping stays legible
               // before selection. The black-text variant was tested and dropped
@@ -3031,7 +3031,7 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
             <div className="text-center py-8 text-muted-foreground">{t("vmLxc.empty")}</div>
           ) : filteredVMs.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground">
-              No {statusFilter === "running" ? "running" : "stopped"} virtual machines
+              {t("vmLxc.statusFilter.empty", { status: t(`vmLxc.statusFilter.${statusFilter}`) })}
             </div>
           ) : (
             <div className="space-y-3">

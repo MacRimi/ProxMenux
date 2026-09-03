@@ -96,7 +96,10 @@
     "total": "Spolu",
     "free": "Voľné",
     "activeVmLxc": "Aktívne VM a LXC",
-    "runningCount": "{count} beží",
+    "runningCount": "{count} spustené",
+    "runningCountOne": "{count} spustený",
+    "runningCountFew": "{count} spustené",
+    "runningCountMany": "{count} spustených",
     "vmsCount": "{count} VM",
     "stoppedCount": "{count} vypnuté",
     "temperature": "Teplota",
@@ -901,7 +904,7 @@
     "totalCpuAllocated": "Pridelené CPU spolu",
     "totalMemory": "Pamäť spolu",
     "totalDisk": "Disk spolu",
-    "running": "beží",
+    "running": "spustené",
     "stopped": "vypnuté",
     "vms": "VM",
     "used": "Použité",
@@ -913,6 +916,13 @@
     "idle": "Voľné",
     "listTitle": "Virtuálne stroje a kontajnery",
     "empty": "Nenašli sa žiadne virtuálne stroje",
+    "statusFilter": {
+      "ariaLabel": "Filtrovať virtuálne stroje a kontajnery podľa stavu",
+      "all": "Všetky",
+      "running": "Spustené",
+      "stopped": "Vypnuté",
+      "empty": "Žiadne virtuálne stroje ani kontajnery so stavom „{status}“"
+    },
     "uptime": "Beží: {uptime}",
     "cpuUsage": "Využitie CPU",
     "memory": "Pamäť",
@@ -1092,7 +1102,12 @@
       "unknown": "Neznáma chyba",
       "backupStartFailed": "Zálohu sa nepodarilo spustiť: {message}",
       "controlFailed": "Akcia {action} pre VM {vmid} zlyhala: {message}",
-      "saveNotesFailed": "Poznámky sa nepodarilo uložiť. Skúste to znova."
+      "saveNotesFailed": "Poznámky sa nepodarilo uložiť. Skúste to znova.",
+      "appNotFound": "Táto aplikácia už nie je dostupná. Obnovte stránku a skúste to znova.",
+      "saveCustomCommandFailed": "Vlastný príkaz na aktualizáciu sa nepodarilo uložiť: {message}",
+      "removeCustomCommandConfirm": "Odstrániť vlastný príkaz na aktualizáciu pre „{name}“?",
+      "removeCustomCommandFailed": "Vlastný príkaz na aktualizáciu sa nepodarilo odstrániť: {message}",
+      "hideNoticeFailed": "Toto upozornenie sa nepodarilo skryť: {message}"
     },
     "backupModal": {
       "title": "Záloha {type} {vmid} ({name})",
@@ -1197,7 +1212,15 @@
       "noTargets": "Nie sú vybrané žiadne ciele",
       "selectAtLeastOne": "Vyberte aspoň jeden cieľ aktualizácie.",
       "deleteButton": "Odstrániť plán",
-      "deleteConfirm": "Odstrániť plánované aktualizácie tohto kontajnera? Predvolené nastavenia (záloha a reštart) zostanú zachované."
+      "deleteConfirm": "Odstrániť plánované aktualizácie tohto kontajnera? Predvolené nastavenia (záloha a reštart) zostanú zachované.",
+      "loadFailed": "Plánované aktualizácie sa nepodarilo načítať.",
+      "saveFailed": "Plánované aktualizácie sa nepodarilo uložiť.",
+      "deleteFailed": "Plánované aktualizácie sa nepodarilo odstrániť.",
+      "humanDaily": "Denne o {time}",
+      "humanWeekly": "Týždenne ({day} o {time})",
+      "humanMonthly": "Mesačne ({day}. deň o {time})",
+      "humanHourly": "Každú hodinu",
+      "weekdays": ["nedeľa", "pondelok", "utorok", "streda", "štvrtok", "piatok", "sobota"]
     },
     "cronChip": {
       "detected": "zistený cron na serveri",
@@ -1343,7 +1366,8 @@
       "deleteConfirm": "Odstrániť túto konfiguráciu hromadnej aktualizácie?",
       "saveFailed": "Konfiguráciu hromadnej aktualizácie sa nepodarilo uložiť.",
       "deleteFailed": "Konfiguráciu hromadnej aktualizácie sa nepodarilo odstrániť.",
-      "planFailed": "Hromadnú aktualizáciu sa nepodarilo pripraviť. Skontrolujte nedostupné metódy."
+      "planFailed": "Hromadnú aktualizáciu sa nepodarilo pripraviť. Skontrolujte nedostupné metódy.",
+      "loadFailed": "Konfiguráciu hromadnej aktualizácie sa nepodarilo načítať."
     },
     "appEditor": {
       "closePanel": "Zavrieť panel",

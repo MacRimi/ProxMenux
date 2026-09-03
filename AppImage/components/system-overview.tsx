@@ -13,7 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from ".
 import { fetchApi } from "../lib/api-config"
 import { formatNetworkTraffic, getNetworkUnit } from "../lib/format-network"
 import { formatStorage } from "../lib/utils"
-import { useT } from "../lib/i18n/provider"
+import { getCountFormKey, useI18n, useT } from "../lib/i18n/provider"
 import { Area, AreaChart, ResponsiveContainer } from "recharts"
 
 interface TempDataPoint {
@@ -173,6 +173,7 @@ const getUnitsSettings = (): "Bytes" | "Bits" => {
 
 export function SystemOverview() {
   const t = useT()
+  const { language } = useI18n()
   const [systemData, setSystemData] = useState<SystemData | null>(null)
   const [vmData, setVmData] = useState<VMData[]>([])
   const [storageData, setStorageData] = useState<StorageData | null>(null)
@@ -511,7 +512,7 @@ export function SystemOverview() {
                     <span className="text-lg font-medium ml-1 text-muted-foreground">/ {vmStats.vms + vmStats.lxc}</span>
                   </div>
                   <Badge variant="outline" className="bg-green-500/10 text-green-500 border-green-500/20">
-                    {t("overview.runningCount", { count: vmStats.running })}
+                    {t(getCountFormKey(language, "overview.runningCount", vmStats.running), { count: vmStats.running })}
                   </Badge>
                 </div>
                 <div className="mt-3 flex gap-1 flex-wrap">
