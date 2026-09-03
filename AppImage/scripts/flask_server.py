@@ -14292,6 +14292,16 @@ def _finalize_lxc_update(
             verification_errors.append(f'OS refresh failed: {exc}')
         try:
             import lxc_apps
+            # Per-app custom commands may update software that uses a
+            # manually typed version.  Their successful exit does not prove
+            # a new version, so invalidate that old claim before the forced
+            # refresh.  The UI then stays honest instead of showing a stale
+            # "update available" result.
+            if status == 'success':
+                lxc_apps.mark_manual_versions_unverified(
+                    vmid,
+                    [item[4:] for item in requested if item.startswith('app:')],
+                )
             refreshed_sidecar = lxc_apps.check_all(vmid, force=True)
             refreshed_sidecar = refreshed_sidecar or {'vmid': vmid, 'apps': []}
             _vm_cache_put(_vm_apps_cache, vmid, refreshed_sidecar)

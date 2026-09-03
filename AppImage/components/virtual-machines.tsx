@@ -5887,6 +5887,8 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                                                   {
                                                     updateCommand: aw.update_command!,
                                                     appName: aw.name || "",
+                                                    targetIds: [`app:${aw.id}`],
+                                                    targetLabels: [aw.name || t("vmLxc.updates.applicationDefaultName")],
                                                   },
                                                 )}
                                                 className={hasUpdate ? pendingBtnCls : upToDate ? upToDateBtnCls : neutralBtnCls}
