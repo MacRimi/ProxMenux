@@ -1049,13 +1049,13 @@
     },
     "actions": {
       "start": "Iniciar",
-      "shutdown": "Cerrar",
+      "shutdown": "Apagar",
       "reboot": "Reiniciar",
-      "forceStop": "Forzar parada",
-      "working": "Laboral..."
+      "forceStop": "Parar",
+      "working": "Procesando..."
     },
     "confirm": {
-      "forceStopTitle": "Forzar parada",
+      "forceStopTitle": "Parar",
       "rebootTitle": "Reiniciar",
       "forceStopDescription": "Esto omite la secuencia de apagado del sistema operativo invitado y puede dañar las bases de datos o sistemas de archivos en ejecución. El huésped muere inmediatamente.",
       "rebootDescription": "Esto fuerza un reinicio sin esperar a que el sistema operativo invitado borre las escrituras pendientes. Utilice un Apagado elegante cuando sea posible.",

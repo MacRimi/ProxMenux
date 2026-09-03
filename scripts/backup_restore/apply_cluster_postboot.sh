@@ -17,6 +17,118 @@
 
 set +u
 
+_pmx_command_available() {
+    local candidate="$1"
+    if [[ "$candidate" == */* ]]; then
+        [[ -x "$candidate" ]]
+    else
+        command -v "$candidate" >/dev/null 2>&1
+    fi
+}
+
+_restore_pveproxy_certificate() {
+    local source_node_dir="$1"
+    local source_cert="$source_node_dir/pveproxy-ssl.pem"
+    local source_key="$source_node_dir/pveproxy-ssl.key"
+    local active_cert="${PMX_PVEPROXY_CERT_PATH:-/etc/pve/local/pveproxy-ssl.pem}"
+    local active_key="${PMX_PVEPROXY_KEY_PATH:-/etc/pve/local/pveproxy-ssl.key}"
+    local openssl_bin="${PMX_OPENSSL_BIN:-openssl}"
+    local pvenode_bin="${PMX_PVENODE_BIN:-pvenode}"
+    local systemctl_bin="${PMX_SYSTEMCTL_BIN:-systemctl}"
+    local tmp_dir source_fp active_fp service_active verify_attempts
+    local had_previous=0
+
+    if [[ ! -f "$source_cert" && ! -f "$source_key" ]]; then
+        echo "  (no custom pveproxy certificate in this backup)"
+        return 0
+    fi
+    if [[ ! -f "$source_cert" || ! -f "$source_key" ]]; then
+        echo "  ✗ custom pveproxy certificate is incomplete; current certificate kept"
+        return 1
+    fi
+    if ! _pmx_command_available "$openssl_bin" || ! _pmx_command_available "$pvenode_bin"; then
+        echo "  ✗ openssl or pvenode is unavailable; current certificate kept"
+        return 1
+    fi
+
+    tmp_dir=$(mktemp -d /tmp/proxmenux-pveproxy-cert.XXXXXX) || {
+        echo "  ✗ could not create the certificate validation workspace"
+        return 1
+    }
+    chmod 700 "$tmp_dir"
+
+    if [[ -f "$active_cert" && -f "$active_key" ]] \
+        && cp -p "$active_cert" "$tmp_dir/previous.pem" \
+        && cp -p "$active_key" "$tmp_dir/previous.key"; then
+        had_previous=1
+    fi
+
+    if ! "$openssl_bin" x509 -in "$source_cert" -noout >/dev/null 2>&1 \
+        || ! "$openssl_bin" pkey -in "$source_key" -passin pass: -noout >/dev/null 2>&1 \
+        || ! "$openssl_bin" x509 -in "$source_cert" -pubkey -noout > "$tmp_dir/cert.pub.pem" 2>/dev/null \
+        || ! "$openssl_bin" pkey -pubin -in "$tmp_dir/cert.pub.pem" -outform DER -out "$tmp_dir/cert.pub.der" 2>/dev/null \
+        || ! "$openssl_bin" pkey -in "$source_key" -passin pass: -pubout -outform DER -out "$tmp_dir/key.pub.der" 2>/dev/null; then
+        echo "  ✗ custom pveproxy certificate or key is invalid; current certificate kept"
+        rm -rf "$tmp_dir"
+        return 1
+    fi
+    if ! cmp -s "$tmp_dir/cert.pub.der" "$tmp_dir/key.pub.der"; then
+        echo "  ✗ custom pveproxy certificate and key do not match; current certificate kept"
+        rm -rf "$tmp_dir"
+        return 1
+    fi
+
+    if ! "$pvenode_bin" cert set "$source_cert" "$source_key" --force 1 --restart 1; then
+        echo "  ✗ Proxmox rejected the custom pveproxy certificate; restoring previous state"
+        if (( had_previous )); then
+            "$pvenode_bin" cert set "$tmp_dir/previous.pem" "$tmp_dir/previous.key" --force 1 --restart 1 >/dev/null 2>&1 \
+                || echo "  ⚠ automatic certificate rollback failed"
+        else
+            "$pvenode_bin" cert delete 1 >/dev/null 2>&1 \
+                || echo "  ⚠ automatic certificate rollback failed"
+        fi
+        rm -rf "$tmp_dir"
+        return 1
+    fi
+
+    source_fp=$("$openssl_bin" x509 -in "$source_cert" -noout -sha256 -fingerprint 2>/dev/null)
+    active_fp=$("$openssl_bin" x509 -in "$active_cert" -noout -sha256 -fingerprint 2>/dev/null)
+    service_active=1
+    if _pmx_command_available "$systemctl_bin"; then
+        service_active=0
+        verify_attempts="${PMX_PVEPROXY_VERIFY_ATTEMPTS:-15}"
+        [[ "$verify_attempts" =~ ^[1-9][0-9]*$ ]] || verify_attempts=15
+        for ((_attempt = 1; _attempt <= verify_attempts; _attempt++)); do
+            if "$systemctl_bin" is-active --quiet pveproxy.service; then
+                service_active=1
+                break
+            fi
+            sleep 1
+        done
+    fi
+
+    if [[ -n "$source_fp" && "$active_fp" == "$source_fp" && "$service_active" == "1" ]]; then
+        echo "  ✓ custom pveproxy certificate restored and verified"
+        rm -rf "$tmp_dir"
+        return 0
+    fi
+
+    echo "  ✗ custom pveproxy certificate could not be verified; restoring previous state"
+    if (( had_previous )); then
+        "$pvenode_bin" cert set "$tmp_dir/previous.pem" "$tmp_dir/previous.key" --force 1 --restart 1 >/dev/null 2>&1 \
+            || echo "  ⚠ automatic certificate rollback failed"
+    else
+        "$pvenode_bin" cert delete 1 >/dev/null 2>&1 \
+            || echo "  ⚠ automatic certificate rollback failed"
+    fi
+    rm -rf "$tmp_dir"
+    return 1
+}
+
+if [[ "${PMX_CERT_HELPER_ONLY:-0}" == "1" ]]; then
+    return 0 2>/dev/null || exit 0
+fi
+
 MARKER="${PMX_CLUSTER_APPLY_MARKER:-/var/lib/proxmenux/cluster-apply-pending}"
 LOG_DIR="${PMX_LOG_DIR:-/var/log/proxmenux}"
 # State file the Monitor Web polls to show a live progress card on
@@ -254,6 +366,7 @@ if [[ -z "$SRC_NODE" && -d "$SOURCE_PVE/nodes" ]]; then
 fi
 CUR_NODE=$(hostname)
 echo "Source node: ${SRC_NODE:-(unknown)} / Current node: ${CUR_NODE}"
+CERTIFICATE_RESTORE_WARNING=""
 
 # ── Apply EVERY top-level file in /etc/pve ────────────────
 # Anything that's a regular file at the root of /etc/pve
@@ -307,13 +420,21 @@ for subdir in firewall sdn mapping virtual-guest priv ha; do
     echo "  ✓ $subdir/ (subtree)"
 done
 
-# ── Apply guest configs into THIS node's dir ──────────────
-# This is the bit that makes `pct list` / `qm list` show
-# the restored guests. We deliberately copy from the
-# source's node dir into the current host's node dir, so
-# cross-host restores Just Work without renaming anything.
+# ── Restore the node-local pveproxy certificate ────────
+# Restore only Proxmox's supported node-local web certificate override.
+echo ""
+echo "── Custom pveproxy certificate ──"
+if [[ -n "$SRC_NODE" && -d "$SOURCE_PVE/nodes/$SRC_NODE" ]]; then
+    if ! _restore_pveproxy_certificate "$SOURCE_PVE/nodes/$SRC_NODE"; then
+        CERTIFICATE_RESTORE_WARNING="custom Proxmox certificate was not restored; current certificate kept"
+    fi
+else
+    echo "  (source node unavailable; no custom certificate to restore)"
+fi
+
 echo ""
 echo "── Guest configs (LXC + QEMU) ──"
+# Map the source guest definitions to the current PVE node.
 copied_guests=0
 skipped_guests=0
 if [[ -n "$SRC_NODE" ]] && [[ -d "$SOURCE_PVE/nodes/$SRC_NODE" ]]; then
@@ -604,6 +725,8 @@ _sanity_warn() {
         SANITY_WARNINGS="${SANITY_WARNINGS}; $1"
     fi
 }
+
+[[ -n "$CERTIFICATE_RESTORE_WARNING" ]] && _sanity_warn "$CERTIFICATE_RESTORE_WARNING"
 
 if command -v proxmox-boot-tool >/dev/null 2>&1; then
     if ! proxmox-boot-tool status 2>/dev/null | grep -q 'configured with'; then
