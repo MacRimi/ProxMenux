@@ -2495,7 +2495,7 @@
   {
     "name": "Borg-UI",
     "slug": "borg-ui",
-    "desc": "Borg-UI is a web frontend for BorgBackup. It replaces the borg command line for everyday work: creating and browsing repositories, scheduling backups, inspecting archives and restoring files, all from the browser. BorgBackup itself is installed alongside it.",
+    "desc": "Borg-UI is a web frontend for BorgBackup. It replaces the borg command line for everyday work: creating and browsing repositories, scheduling backups, inspecting archives and restoring files, all from the browser. Borg 1 and Borg 2 are installed alongside it, at the versions the upstream release pins.",
     "script": "ct/borg-ui.sh",
     "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/borg-ui.sh",
     "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/borg-ui.sh",
@@ -2508,17 +2508,18 @@
       "Backup & Recovery"
     ],
     "notes": [
-      "Create your account through the web UI at http://<IP>:8081 on first visit.",
+      "Borg 1 and Borg 2 are both installed, as 'borg' and 'borg2'. Their versions are not chosen by this script: they are read from docker/runtime-base.env in the upstream repository, which is Borg-UI's declared single source of truth, so an update follows whatever the release pins. rclone is installed from the same file for rclone:// repositories and cloud mirroring.",
       "ENABLE_STARTUP_LICENSE_SYNC is set to false in /opt/borg-ui/.env so the container does not contact the upstream licence service on every start. Set it to true if you use a paid licence.",
       "Application data lives in /opt/borg-ui_data. The Borg repositories themselves are wherever you point them - those are the ones that actually matter for backups."
     ],
     "warnings": [
+      "Log in with admin / admin123 and change the password immediately - the UI prompts for it on first login.",
       "This container backs up what it can see. Mount the directories you want to protect into the LXC, and for remote repositories deploy an SSH key from the UI to the target host."
     ],
     "port": 8081,
     "website": "https://github.com/karanhudia/borg-ui",
     "documentation": "https://github.com/karanhudia/borg-ui#readme",
-    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/borg-ui.webp",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/borgbackup.webp",
     "updateable": true,
     "privileged": false,
     "has_arm": true,
