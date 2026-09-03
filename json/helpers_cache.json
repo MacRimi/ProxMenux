@@ -15,7 +15,7 @@
       "Authentication & Security"
     ],
     "notes": [
-      "Database credentials: `cat ~/2FAuth.creds`",
+      "Database credentials: `cat ~/2fauth.creds`",
       "The very first account created is automatically set up as an administrator account.",
       "Users should register with http://<LXC_IP>/register"
     ],
@@ -16382,7 +16382,7 @@
       "Besides port 5000 (web), PegaProx also uses port 5001 (VNC WebSocket) and port 5002 (SSH WebSocket) for the in-browser consoles."
     ],
     "warnings": [
-      "PegaProx is pre-1.0 BETA software with frequent, sometimes breaking releases. This script lives in the experimental ProxmoxVED repo - snapshot/back up before updating."
+      "Hardened Proxmox hosts (e.g. PegaProx CIS umask 027) can break installs — run `umask 022` first. See #16745"
     ],
     "port": 5000,
     "website": "https://pegaprox.com/",
