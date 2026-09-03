@@ -97,6 +97,9 @@
     "free": "Free",
     "activeVmLxc": "Active VM & LXC",
     "runningCount": "{count} running",
+    "runningCountOne": "{count} running",
+    "runningCountFew": "{count} running",
+    "runningCountMany": "{count} running",
     "vmsCount": "{count} VMs",
     "stoppedCount": "{count} stopped",
     "temperature": "Temperature",
@@ -913,6 +916,13 @@
     "idle": "Idle",
     "listTitle": "Virtual Machines & Containers",
     "empty": "No virtual machines found",
+    "statusFilter": {
+      "ariaLabel": "Filter virtual machines and containers by status",
+      "all": "All",
+      "running": "Running",
+      "stopped": "Stopped",
+      "empty": "No virtual machines or containers with status \"{status}\""
+    },
     "uptime": "Uptime: {uptime}",
     "cpuUsage": "CPU Usage",
     "memory": "Memory",
@@ -1092,7 +1102,12 @@
       "unknown": "Unknown error",
       "backupStartFailed": "Failed to start backup: {message}",
       "controlFailed": "Failed to {action} VM {vmid}: {message}",
-      "saveNotesFailed": "Error saving notes. Please try again."
+      "saveNotesFailed": "Error saving notes. Please try again.",
+      "appNotFound": "This application is no longer available. Refresh the page and try again.",
+      "saveCustomCommandFailed": "Could not save the custom update command: {message}",
+      "removeCustomCommandConfirm": "Remove the custom update command for \"{name}\"?",
+      "removeCustomCommandFailed": "Could not remove the custom update command: {message}",
+      "hideNoticeFailed": "Could not hide this notice: {message}"
     },
     "backupModal": {
       "title": "Backup {type} {vmid} ({name})",
@@ -1197,7 +1212,15 @@
       "noTargets": "No targets selected",
       "selectAtLeastOne": "Select at least one update target.",
       "deleteButton": "Delete schedule",
-      "deleteConfirm": "Remove the scheduled updates for this container? Apply defaults (backup + restart) are kept."
+      "deleteConfirm": "Remove the scheduled updates for this container? Apply defaults (backup + restart) are kept.",
+      "loadFailed": "Could not load the scheduled updates.",
+      "saveFailed": "Could not save the scheduled updates.",
+      "deleteFailed": "Could not remove the scheduled updates.",
+      "humanDaily": "Daily at {time}",
+      "humanWeekly": "Weekly ({day} {time})",
+      "humanMonthly": "Monthly (day {day} at {time})",
+      "humanHourly": "Hourly",
+      "weekdays": ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"]
     },
     "cronChip": {
       "detected": "host cron detected",
@@ -1343,7 +1366,8 @@
       "deleteConfirm": "Remove this bulk update configuration?",
       "saveFailed": "Could not save the bulk update configuration.",
       "deleteFailed": "Could not remove the bulk update configuration.",
-      "planFailed": "Could not prepare the bulk update. Edit the configuration and review unavailable methods."
+      "planFailed": "Could not prepare the bulk update. Edit the configuration and review unavailable methods.",
+      "loadFailed": "Could not load the bulk update configuration."
     },
     "appEditor": {
       "closePanel": "Close panel",
