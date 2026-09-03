@@ -213,6 +213,28 @@
         }
       ]
     },
+    "traefik": {
+      "operational": true,
+      "name": "Traefik",
+      "install_scope": [
+        "community-script",
+        "manual-if-same-path"
+      ],
+      "evidence": [
+        "community-confirmed: native Traefik binary reports its installed version"
+      ],
+      "detector": {
+        "installed_via": "binary",
+        "binary_path": "/usr/bin/traefik",
+        "binary_args": [
+          "version"
+        ],
+        "installed_regex": "(?m)^Version:\\s*(\\d+(?:\\.\\d+){1,3}(?:[-+._][0-9A-Za-z.-]+)?)",
+        "repo": "traefik/traefik",
+        "github_source": "releases",
+        "tag_regex": "(?i)(?:v|release[-_/]?)?(\\d+(?:\\.\\d+){1,3}(?:[-+._][0-9A-Za-z.-]+)?)"
+      }
+    },
     "vaultwarden": {
       "detector": {
         "installed_via": "binary",

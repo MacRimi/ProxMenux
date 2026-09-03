@@ -147,6 +147,7 @@ chmod +x "$APP_DIR/usr/bin/recreate_docker_container.py" 2>/dev/null || true
 cp "$SCRIPT_DIR/update_docker_engine.py" "$APP_DIR/usr/bin/" 2>/dev/null || echo "⚠️  update_docker_engine.py not found"
 chmod +x "$APP_DIR/usr/bin/update_docker_engine.py" 2>/dev/null || true
 cp "$APPIMAGE_ROOT/../json/app_tracking_hints.json" "$APP_DIR/usr/bin/" 2>/dev/null || echo "⚠️  app_tracking_hints.json not found"
+cp "$APPIMAGE_ROOT/../json/runtime_verified_overrides.json" "$APP_DIR/usr/bin/" 2>/dev/null || echo "⚠️  runtime_verified_overrides.json not found"
 cp "$SCRIPT_DIR/flask_terminal_routes.py" "$APP_DIR/usr/bin/" 2>/dev/null || echo "⚠️  flask_terminal_routes.py not found"
 cp "$SCRIPT_DIR/hardware_monitor.py" "$APP_DIR/usr/bin/" 2>/dev/null || echo "⚠️  hardware_monitor.py not found"
 cp "$SCRIPT_DIR/temperature_sensor_resolver.py" "$APP_DIR/usr/bin/" 2>/dev/null || echo "⚠️  temperature_sensor_resolver.py not found"

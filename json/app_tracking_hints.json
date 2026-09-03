@@ -4613,13 +4613,23 @@
     "website": "https://github.com/javedh-dev/tracktor"
   },
   "traefik": {
+    "binary_args": [
+      "version"
+    ],
+    "binary_path": "/usr/bin/traefik",
     "default_ports": [
       8080
     ],
-    "file_path": "/root/.traefik",
-    "file_regex": "(?i)(?:v|release[-_/]?)?(\\d+(?:\\.\\d+){1,3}(?:[-+._][0-9A-Za-z.-]+)?)",
+    "file_fallbacks": [
+      {
+        "path": "/root/.traefik",
+        "regex": "(?i)(?:v|release[-_/]?)?(\\d+(?:\\.\\d+){1,3}(?:[-+._][0-9A-Za-z.-]+)?)",
+        "source": "helper_marker"
+      }
+    ],
     "github_source": "releases",
-    "installed_via": "file",
+    "installed_regex": "(?m)^Version:\\s*(\\d+(?:\\.\\d+){1,3}(?:[-+._][0-9A-Za-z.-]+)?)",
+    "installed_via": "binary",
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/traefik.webp",
     "repo": "traefik/traefik",
     "tag_regex": "(?i)(?:v|release[-_/]?)?(\\d+(?:\\.\\d+){1,3}(?:[-+._][0-9A-Za-z.-]+)?)",

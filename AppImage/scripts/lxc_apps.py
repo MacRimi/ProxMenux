@@ -136,6 +136,14 @@ _TRACKING_HINTS_BUNDLED = os.path.join(
     os.path.dirname(os.path.abspath(__file__)),
     "app_tracking_hints.json",
 )
+# Runtime-verified detector overrides ship with the AppImage.  Unlike the
+# regular catalog, they are deliberately not fetched from main: an installed
+# Monitor may otherwise download an older catalog entry that resurrects a
+# stale helper marker over a detector verified on a real container.
+_RUNTIME_VERIFIED_OVERRIDES_BUNDLED = os.path.join(
+    os.path.dirname(os.path.abspath(__file__)),
+    "runtime_verified_overrides.json",
+)
 _tracking_hints_lock = threading.RLock()
 _tracking_hints_cache: Optional[dict] = None
 _tracking_hints_ts: float = 0.0
@@ -189,16 +197,109 @@ def _load_bundled_hints() -> dict:
         return {}
 
 
+def _load_runtime_verified_overrides() -> dict:
+    """Load optional live-detector promotions packaged with the Monitor."""
+    try:
+        with open(_RUNTIME_VERIFIED_OVERRIDES_BUNDLED) as f:
+            data = json.load(f)
+        apps = data.get("apps") if isinstance(data, dict) else None
+        return apps if isinstance(apps, dict) else {}
+    except (OSError, json.JSONDecodeError):
+        return {}
+
+
+def _is_helper_marker_detector(detector: dict) -> bool:
+    return (
+        detector.get("installed_via") == "file"
+        and bool(re.fullmatch(
+            r"/root/\.[A-Za-z0-9_.-]+", str(detector.get("file_path") or "")
+        ))
+    )
+
+
+def _apply_runtime_verified_overrides(hints: dict, overrides: dict) -> dict:
+    """Promote packaged, runtime-proven detectors over a remote catalog.
+
+    The remote catalog remains the normal no-rebuild update channel.  Entries
+    marked non-operational are skipped; all other runtime-verified entries
+    replace detector fields. Presentation metadata and non-conflicting
+    fallbacks remain intact. A legacy ``/root/.<app>`` primary is retained as
+    a fallback so older helper layouts do not lose their only version source.
+    """
+    result = {
+        slug: dict(hint) for slug, hint in (hints or {}).items()
+        if isinstance(slug, str) and isinstance(hint, dict)
+    }
+    for slug, spec in (overrides or {}).items():
+        if not isinstance(slug, str) or not isinstance(spec, dict):
+            continue
+        detector = spec.get("detector")
+        if not bool(spec.get("operational", True)) or not isinstance(detector, dict):
+            continue
+        method = detector.get("installed_via")
+        if method not in _VALID_METHODS:
+            continue
+
+        current = dict(result.get(slug) or {})
+        marker_fallbacks = []
+        if _is_helper_marker_detector(current):
+            marker_fallbacks.append({
+                "path": current["file_path"],
+                "regex": current.get("file_regex") or current.get("installed_regex") or "",
+                "source": "helper_marker",
+            })
+
+        # Detector and upstream fields must be replaced as one coherent set;
+        # retaining e.g. an old file_path next to a binary detector is what
+        # previously kept stale helper marker versions alive.
+        for key in _DETECTOR_FIELDS + (
+            "installed_via", "repo", "github_source", "tag_regex",
+            "installed_regex", "upstream_type", "upstream_url",
+            "upstream_json_path", "docker_image",
+        ):
+            current.pop(key, None)
+        current.update(detector)
+
+        fallbacks = []
+        for candidate in (current.get("file_fallbacks") or []):
+            if isinstance(candidate, dict) and candidate.get("path"):
+                fallbacks.append(dict(candidate))
+        spec_fallbacks = spec.get("file_fallbacks")
+        if not isinstance(spec_fallbacks, list):
+            spec_fallbacks = []
+        for candidate in spec_fallbacks + marker_fallbacks:
+            if isinstance(candidate, dict) and candidate.get("path"):
+                fallbacks.append(dict(candidate))
+        if fallbacks:
+            unique_fallbacks = []
+            known_paths = set()
+            for candidate in fallbacks:
+                path = candidate.get("path")
+                if path in known_paths:
+                    continue
+                known_paths.add(path)
+                unique_fallbacks.append(candidate)
+            current["file_fallbacks"] = unique_fallbacks
+
+        # These optional fields are explicitly allowed to update runtime
+        # behavior too, while ordinary catalog presentation remains untouched.
+        for key in ("alt_detectors", "default_ports", "logo", "website"):
+            if key in spec:
+                current[key] = spec[key]
+        result[slug] = current
+    return result
+
+
 def _fetch_tracking_hints() -> dict:
     """Return the curated tracking-hint map (slug → hint dict).
 
     Fetch order: memory cache (fresh) → GitHub raw merged with the bundled
-    catalog → on-disk cache → bundled JSON. A newly built AppImage can contain
-    a larger catalog than ``main`` while a phase is being validated; in that
-    case the smaller remote file must not erase bundled detectors. When the
-    remote catalog has equal or greater coverage it wins per entry, preserving
-    the no-rebuild update path. Never raises — a total failure returns an empty
-    dict so callers can just ``.get(slug)``.
+    catalog → on-disk cache → bundled JSON.  Packaged runtime-verified
+    overrides are then applied to every source.  They prevent a stale remote
+    catalog from downgrading a detector already proven live, while all normal
+    catalog updates continue to arrive without an AppImage rebuild. Never
+    raises — a total failure returns an empty dict so callers can just
+    ``.get(slug)``.
     """
     global _tracking_hints_cache, _tracking_hints_ts
     with _tracking_hints_lock:
@@ -206,6 +307,7 @@ def _fetch_tracking_hints() -> dict:
         if _tracking_hints_cache is not None and (now - _tracking_hints_ts) < _TRACKING_HINTS_TTL:
             return _tracking_hints_cache
         bundled = _load_bundled_hints()
+        runtime_overrides = _load_runtime_verified_overrides()
         try:
             req = urllib.request.Request(
                 _TRACKING_HINTS_URL,
@@ -220,6 +322,7 @@ def _fetch_tracking_hints() -> dict:
             else:
                 hints = dict(remote)
                 hints.update(bundled)
+            hints = _apply_runtime_verified_overrides(hints, runtime_overrides)
             _tracking_hints_cache = hints
             _tracking_hints_ts = now
             try:
@@ -237,11 +340,15 @@ def _fetch_tracking_hints() -> dict:
             try:
                 with open(_TRACKING_HINTS_DISK) as f:
                     disk = json.load(f)
-                _tracking_hints_cache = disk.get("hints") or {}
+                _tracking_hints_cache = _apply_runtime_verified_overrides(
+                    disk.get("hints") or {}, runtime_overrides
+                )
                 _tracking_hints_ts = float(disk.get("ts") or 0)
                 return _tracking_hints_cache
             except (OSError, json.JSONDecodeError):
-                _tracking_hints_cache = bundled
+                _tracking_hints_cache = _apply_runtime_verified_overrides(
+                    bundled, runtime_overrides
+                )
                 _tracking_hints_ts = now  # avoid re-hammering
                 return _tracking_hints_cache
 
@@ -2580,6 +2687,40 @@ def update_app(vmid, app_id: str, payload: dict) -> tuple[bool, Any]:
     return True, _read_sidecar(vmid)
 
 
+def mark_manual_versions_unverified(vmid, app_ids) -> int:
+    """Invalidate manual version claims after their own updater succeeds.
+
+    A custom update command is intentionally arbitrary shell owned by the
+    operator.  Its exit code says that the command completed, not which
+    version is now installed.  For manually tracked applications, retaining
+    the old typed value would create a false update warning (or a false
+    "current" result).  Mark only explicitly targeted manual apps so a
+    helper-wide update never changes unrelated registrations.
+    """
+    wanted = {
+        str(app_id).strip()
+        for app_id in (app_ids or [])
+        if isinstance(app_id, str) and str(app_id).strip()
+    }
+    if not wanted:
+        return 0
+    with _cache_lock:
+        sidecar = _read_sidecar(vmid)
+        if not sidecar:
+            return 0
+        changed = 0
+        for app in sidecar.get("apps") or []:
+            if app.get("id") not in wanted or app.get("installed_via") != "manual":
+                continue
+            if not app.get("manual_version_needs_confirmation"):
+                app["manual_version_needs_confirmation"] = True
+                changed += 1
+        if changed:
+            sidecar["updated_at"] = _now_iso()
+            _write_sidecar(vmid, sidecar)
+        return changed
+
+
 def delete_app(vmid, app_id: str) -> bool:
     with _cache_lock:
         sidecar = _read_sidecar(vmid)
@@ -3239,13 +3380,55 @@ def _detect_with_alt_healing(vmid, app: dict) -> tuple:
     ``healed_bool`` is True when the working detector was an alt and
     the app dict was rewritten.
     """
+    slug = app.get("helper_slug")
+    hint = (_fetch_tracking_hints() or {}).get(slug) or {}
+
+    # A modern Community Scripts marker (/root/.<app>) is a useful
+    # fallback, but it is not a live process probe.  It can stay behind when
+    # an operator upgrades an application outside the helper script.  When a
+    # later runtime-verified catalog entry promotes a non-marker primary
+    # detector, migrate existing marker-backed registrations to that stronger
+    # detector on their next check.  This is deliberately generic: adding a
+    # verified runtime override for another helper app automatically repairs
+    # its already-saved sidecars too.
+    is_helper_marker = (
+        app.get("installed_via") == "file"
+        and re.fullmatch(r"/root/\.[A-Za-z0-9_.-]+", str(app.get("file_path") or ""))
+    )
+    if is_helper_marker and isinstance(hint, dict):
+        primary = {"installed_via": hint.get("installed_via")}
+        for key in _DETECTOR_FIELDS:
+            if key in hint:
+                primary[key] = hint[key]
+        primary_probe = _detector_probe_config(hint, primary)
+        primary_is_marker = (
+            primary_probe.get("installed_via") == "file"
+            and re.fullmatch(r"/root/\.[A-Za-z0-9_.-]+", str(primary_probe.get("file_path") or ""))
+        )
+        if primary_probe.get("installed_via") and not primary_is_marker:
+            primary_installed, _primary_error = detect_installed_version(vmid, primary_probe)
+            if primary_installed:
+                # Keep user-owned presentation and updater fields, replacing
+                # only the detector configuration that was previously a stale
+                # helper marker.  The hint continues to supply its marker as
+                # a fallback if the live probe disappears on an older layout.
+                for key in _DETECTOR_FIELDS:
+                    app.pop(key, None)
+                app.update(primary_probe)
+                return primary_installed, None, True
+
+    if app.get("installed_via") == "manual" and app.get("manual_version_needs_confirmation"):
+        # A successful arbitrary user command does not prove what version it
+        # installed.  Never present the previously typed manual value as a
+        # fresh observation; the user can save the app again once they have a
+        # trustworthy version source or value.
+        return None, None, False
+
     installed, err = detect_installed_version(vmid, app)
     if installed or not err:
         return installed, err, False
-    slug = app.get("helper_slug")
     if not slug:
         return installed, err, False
-    hint = (_fetch_tracking_hints() or {}).get(slug) or {}
     # Build a unified fallback list from both:
     #   • alt_detectors — cross-method (file→binary, file→dpkg, …)
     #   • file_fallbacks — same-method secondary file paths (legacy
