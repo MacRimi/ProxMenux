@@ -917,11 +917,22 @@
     "listTitle": "Virtual Machines & Containers",
     "empty": "No virtual machines found",
     "statusFilter": {
-      "ariaLabel": "Filter virtual machines and containers by status",
+      "ariaLabel": "Filter virtual machines and containers",
       "all": "All",
       "running": "Running",
       "stopped": "Stopped",
       "empty": "No virtual machines or containers with status \"{status}\""
+    },
+    "filters": {
+      "searchPlaceholder": "Search name, ID, tag, or note…",
+      "searchAriaLabel": "Search virtual machines and containers",
+      "clearSearch": "Clear search",
+      "updates": "Updates",
+      "resultCount": "{shown} of {total} machines",
+      "noMatches": "No VMs or LXCs match your search.",
+      "noRunning": "No running VMs or LXCs.",
+      "noStopped": "No stopped VMs or LXCs.",
+      "noUpdates": "No LXC with available updates."
     },
     "uptime": "Uptime: {uptime}",
     "cpuUsage": "CPU Usage",

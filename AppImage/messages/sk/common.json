@@ -917,11 +917,22 @@
     "listTitle": "Virtuálne stroje a kontajnery",
     "empty": "Nenašli sa žiadne virtuálne stroje",
     "statusFilter": {
-      "ariaLabel": "Filtrovať virtuálne stroje a kontajnery podľa stavu",
+      "ariaLabel": "Filtrovať virtuálne stroje a kontajnery",
       "all": "Všetky",
       "running": "Spustené",
       "stopped": "Vypnuté",
       "empty": "Žiadne virtuálne stroje ani kontajnery so stavom „{status}“"
+    },
+    "filters": {
+      "searchPlaceholder": "Hľadať podľa názvu, ID, značky alebo poznámky…",
+      "searchAriaLabel": "Hľadať virtuálne stroje a kontajnery",
+      "clearSearch": "Vymazať hľadanie",
+      "updates": "Aktualizácie",
+      "resultCount": "{shown} z {total} strojov",
+      "noMatches": "Žiadne VM ani LXC nezodpovedajú hľadaniu.",
+      "noRunning": "Nie sú tu žiadne spustené VM ani LXC.",
+      "noStopped": "Nie sú tu žiadne vypnuté VM ani LXC.",
+      "noUpdates": "Žiadne LXC nemá dostupné aktualizácie."
     },
     "uptime": "Beží: {uptime}",
     "cpuUsage": "Využitie CPU",

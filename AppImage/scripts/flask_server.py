@@ -1701,6 +1701,14 @@ _vm_apps_cache: dict = {}         # vmid -> (ts, payload)
 _vm_app_suggestions_cache: dict = {}  # vmid -> (ts, payload)
 _vm_schedule_cache: dict = {}     # vmid -> (ts, payload)
 _vm_mounts_cache: dict = {}       # vmid -> (ts, payload) — LXC only
+# Searchable guest notes are intentionally separate from the modal cache.
+# The list is polled every few seconds, so reading every PVE config for every
+# response would make a simple name/ID search unexpectedly expensive on a
+# busy host.  A short shared cache keeps note search responsive without
+# delaying normal list refreshes.
+_VM_LIST_SEARCH_NOTES_TTL = 30
+_vm_list_search_notes_cache: dict = {"ts": 0.0, "signature": (), "notes": {}}
+_vm_list_search_notes_lock = threading.Lock()
 # LXC primary IP cache — populated on first read, held indefinitely.
 # A running CT's IP doesn't change; the cache is invalidated only when
 # the CT's lifecycle event fires (start/stop/reboot), so no periodic
@@ -1732,6 +1740,64 @@ _VM_APP_SUGGESTIONS_TTL = _VM_CACHE_INDEFINITE
 _VM_SCHEDULE_TTL  = _VM_CACHE_INDEFINITE
 _VM_MOUNTS_TTL    = _VM_CACHE_INDEFINITE
 _vm_modal_cache_lock = threading.Lock()
+
+
+def _collapse_guest_note(value) -> str:
+    """Return a compact, search-only form of a guest description."""
+    return " ".join(str(value or "").split())
+
+
+def _get_cached_vm_list_search_notes(resources, local_node: str) -> dict:
+    """Return local guest descriptions for list search without hot-path I/O.
+
+    PVE notes live in the individual guest configs, not in the cluster resource
+    summary behind ``/api/vms``.  Cache the small ID → description map so the
+    dashboard can search notes without fetching every guest detail or parsing
+    every config on each polling cycle.
+    """
+    guests = []
+    for resource in resources or []:
+        if resource.get("node") != local_node:
+            continue
+        try:
+            vmid = int(resource.get("vmid"))
+        except (TypeError, ValueError):
+            continue
+        vm_type = "lxc" if resource.get("type") == "lxc" else "qemu"
+        guests.append((vm_type, vmid))
+    signature = tuple(sorted(guests))
+    now = time.time()
+    with _vm_list_search_notes_lock:
+        cached = _vm_list_search_notes_cache
+        if cached["signature"] == signature and now - cached["ts"] < _VM_LIST_SEARCH_NOTES_TTL:
+            return cached["notes"]
+
+        notes = {}
+        for vm_type, vmid in guests:
+            config_path = (
+                f"/etc/pve/lxc/{vmid}.conf"
+                if vm_type == "lxc"
+                else f"/etc/pve/qemu-server/{vmid}.conf"
+            )
+            try:
+                note = _collapse_guest_note(
+                    _read_pve_conf_fast(config_path).get("description", "")
+                )
+            except Exception:
+                note = ""
+            if note:
+                notes[(vm_type, vmid)] = note
+
+        cached["ts"] = now
+        cached["signature"] = signature
+        cached["notes"] = notes
+        return notes
+
+
+def _invalidate_vm_list_search_notes() -> None:
+    """Make edited guest notes searchable immediately on the next list poll."""
+    with _vm_list_search_notes_lock:
+        _vm_list_search_notes_cache["ts"] = 0.0
 
 def _vm_cache_get(cache: dict, vmid: int, ttl: int):
     """Return cached payload for vmid if still fresh, else None."""
@@ -6529,6 +6595,7 @@ def get_proxmox_vms():
 
             resources = get_cached_pvesh_cluster_resources_vm()
             if resources:
+                search_notes = _get_cached_vm_list_search_notes(resources, local_node)
                 for resource in resources:
                     node = resource.get('node', '')
                     if node != local_node:
@@ -6558,6 +6625,14 @@ def get_proxmox_vms():
                         # format; the client splits + colours them.
                         'tags': resource.get('tags', ''),
                     }
+                    try:
+                        search_vmid = int(resource.get('vmid'))
+                    except (TypeError, ValueError):
+                        search_vmid = None
+                    if search_vmid is not None:
+                        vm_data['description'] = search_notes.get(
+                            (vm_type, search_vmid), ''
+                        )
                     # The frontend keeps its own instant modal cache. A
                     # lifecycle rebuild increments this per-guest token so
                     # the browser drops only the restored/restarted guest's
@@ -15595,6 +15670,7 @@ def api_vm_config_update(vmid):
                 # drop the details cache so the next open reflects the
                 # edit without waiting for the TTL.
                 _vm_cache_invalidate(vmid, _vm_details_cache, _vm_mounts_cache)
+                _invalidate_vm_list_search_notes()
                 return jsonify({
                     'success': True,
                     'vmid': vmid,
