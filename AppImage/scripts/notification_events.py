@@ -2586,6 +2586,11 @@ class PollingCollector:
         # once for each genuinely new available version. The persistent
         # history is stored in updates_available.json beside the scan.
         self._last_post_install_check = 0
+        # Re-open that announcement once per service start, so a host
+        # carrying optimizations it never applied surfaces them again
+        # after a ProxMenux update or a node reboot instead of staying
+        # silent forever. Consumed by the first check cycle.
+        self._post_install_startup_reset_pending = True
         # Sprint 14.7: fingerprint (item_id → latest_version) of the
         # last managed-installs update notification, across all types
         # in the registry. A new notification fires when the
@@ -3511,6 +3516,22 @@ class PollingCollector:
 
     # ── Post-install function updates check (Sprint 12D) ────────────
 
+    def _reset_post_install_announcements(self):
+        """Re-open the optimization announcement after a service start.
+
+        ``post_install_update`` sits behind a second gate the other
+        update events don't have: a per-version history that keeps a
+        pending optimization from being announced twice. The manager's
+        ``_EVENT_TYPES_RESET_ON_START`` already clears the delivery
+        cooldown, so only that history has to be dropped here for the
+        first cycle to report whatever is still pending.
+        """
+        try:
+            import post_install_versions
+            post_install_versions.reset_notified_versions()
+        except Exception as e:
+            print(f"[PollingCollector] post-install history reset failed: {e}")
+
     def _check_post_install_updates(self):
         """Notify the operator when post-install functions have new versions.
 
@@ -3522,6 +3543,9 @@ class PollingCollector:
         shrinks the pending set and must not produce a second notification.
         """
         now = time.time()
+        if self._post_install_startup_reset_pending:
+            self._post_install_startup_reset_pending = False
+            self._reset_post_install_announcements()
         if now - self._last_post_install_check < self.UPDATE_CHECK_INTERVAL:
             return
         self._last_post_install_check = now

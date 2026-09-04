@@ -327,7 +327,7 @@
       "statusValues": {
         "passed": "Superato",
         "failed": "Fallito",
-        "running": "Corsa",
+        "running": "In esecuzione",
         "aborted": "Abortito",
         "unknown": "Sconosciuto"
       }
@@ -882,10 +882,10 @@
         "executable": "Eseguibile",
         "workingDir": "Dir. di lavoro",
         "started": "Iniziato",
-        "runningFor": "Correre per"
+        "runningFor": "In esecuzione da"
       },
       "states": {
-        "running": "Corsa",
+        "running": "In esecuzione",
         "sleeping": "Dormire",
         "diskWait": "Attendere il disco",
         "zombie": "Zombie",
@@ -905,7 +905,7 @@
     "totalCpuAllocated": "CPU totale allocata",
     "totalMemory": "Memoria totale",
     "totalDisk": "Disco totale",
-    "running": "corsa",
+    "running": "in esecuzione",
     "stopped": "fermato",
     "vms": "VM",
     "used": "Usato",
@@ -1032,7 +1032,7 @@
       "tagsPlaceholder": "aggiungi tag…",
       "tagsNone": "nessun tag",
       "mountErrors": {
-        "configuredButNotMounted": "configurato ma non montato"
+        "configuredButNotMounted": "Configurato ma non montato"
       }
     },
     "logs": {
@@ -1217,7 +1217,7 @@
       "humanWeekly": "testo tecnico dell'interfaccia utente per una dashboard di gestione Proxmox.Traduzione: settimanale ({day} {time})",
       "humanMonthly": "testo tecnico dell'interfaccia utente per una dashboard di gestione Proxmox.Traduzione: mensile (giorno {day} alle {time})",
       "humanHourly": "ogni ora",
-      "weekdays": "['Domenica', 'Lunedì', 'Martedì', 'Mercoledì', 'Giovedì', 'Venerdì', 'Sabato']"
+      "weekdays": ["Domenica", "Lunedì", "Martedì", "Mercoledì", "Giovedì", "Venerdì", "Sabato"]
     },
     "cronChip": {
       "detected": "rilevato il cron dell'host",
@@ -1567,22 +1567,26 @@
       "excludeFromBadgeHelp": "non contare questa app nel badge degli aggiornamenti aggregati sulla scheda dell'elenco LXC.Utile quando sei bloccato di proposito su una versione specifica (requisito del tracker, blocco della compatibilità).Non influisce sullo stato della scheda App o sulla notifica in uscita."
     },
     "statusFilter": {
-      "ariaLabel": "filtra macchine virtuali e contenitori in base allo stato",
-      "all": "tutto",
-      "running": "Correre",
-      "stopped": "fermato",
-      "empty": "nessuna macchina virtuale o contenitore con stato \"{status}\""
+      "ariaLabel": "Filtra macchine virtuali e container",
+      "all": "Tutti",
+      "running": "In esecuzione",
+      "stopped": "Arrestato",
+      "empty": "Nessuna macchina virtuale o container con stato \"{status}\""
     },
     "filters": {
-      "searchPlaceholder": "cerca nome, ID, tag o nota...",
-      "searchAriaLabel": "cerca macchine virtuali e contenitori",
-      "clearSearch": "cancella la ricerca",
+      "searchPlaceholder": "Cerca per nome, ID, tag o nota…",
+      "searchAriaLabel": "Cerca macchine virtuali e container",
+      "clearSearch": "Cancella ricerca",
       "updates": "Aggiornamenti",
       "resultCount": "{shown} di {total} macchine",
-      "noMatches": "nessuna VM o LXC corrisponde alla tua ricerca.",
-      "noRunning": "nessuna VM o LXC in esecuzione.",
-      "noStopped": "nessuna VM o LXC interrotta.",
-      "noUpdates": "No LXC con aggiornamenti disponibili."
+      "noMatches": "Nessuna VM o LXC corrisponde alla ricerca.",
+      "noRunning": "Nessuna VM o LXC in esecuzione.",
+      "noStopped": "Nessuna VM o LXC arrestata.",
+      "noUpdates": "Nessun LXC con aggiornamenti disponibili.",
+      "typeSynonyms": {
+        "lxc": "contenitore contenitori container",
+        "qemu": "vm macchina virtuale macchine virtuali"
+      }
     }
   },
   "settings": {
@@ -2717,7 +2721,7 @@
         "executiveSummary": "Sintesi",
         "hardeningAssessment": "Valutazione dell'indurimento",
         "auditOf": "Revisione di",
-        "running": "correndo",
+        "running": "in esecuzione su",
         "unknownOs": "sistema operativo sconosciuto",
         "noActionableWarnings": "Nessun avviso utilizzabile",
         "and": "E",
@@ -3580,7 +3584,7 @@
       "reinstallViaPostInstall": "Reinstallare tramite ProxMenux dopo l'installazione: {label}",
       "noUpdatesAvailable": "Nessun aggiornamento disponibile",
       "none": "nessuno",
-      "running": "corsa",
+      "running": "in esecuzione",
       "stopped": "fermato",
       "unused": "inutilizzato",
       "unbound": "non vincolato",
@@ -3990,7 +3994,7 @@
       "name": "Nome",
       "nameLabel": "Nome",
       "newRecoveryPassphrase": "Nuova passphrase di ripristino",
-      "nextRun": "Prossima corsa",
+      "nextRun": "Prossima esecuzione",
       "normalizedLabel": "Normalizzato",
       "onCalendarExpression": "Espressione OnCalendar",
       "ownerLabel": "Proprietario",
@@ -4058,19 +4062,19 @@
       "jobNameHelpAnd": "E",
       "jobNameHelpBefore": "Utilizzato nei nomi e nei registri dei timer. Sono inclusi anche i caratteri consentiti",
       "jobNameLocked": "Il nome del lavoro viene bloccato dopo la creazione.",
-      "lastRun": "Ultima corsa",
-      "lastRunLabel": "Ultima corsa",
+      "lastRun": "Ultima esecuzione",
+      "lastRunLabel": "Ultima esecuzione",
       "liveLogSize": "dal vivo · {size}",
       "loadFailed": "Impossibile caricare i lavori",
       "loadingJob": "Caricamento lavoro...",
       "manualOneShot": "manuale/one-shot",
       "manualOneShotDescription": "Backup one-shot: acquisito al momento dell'attivazione. Non può essere rieseguito o modificato.",
-      "neverRun": "non correre mai",
+      "neverRun": "mai eseguito",
       "newScheduledJob": "Nuovo lavoro programmato",
       "newScheduledJobDescription": "Creare un processo di backup dell'host ricorrente.",
-      "nextRun": "Prossima corsa",
-      "nextRunLabel": "Prossima corsa",
-      "nextRunTitle": "Prossima corsa programmata",
+      "nextRun": "Prossima esecuzione",
+      "nextRunLabel": "Prossima esecuzione",
+      "nextRunTitle": "Prossima esecuzione pianificata",
       "noCompatiblePveJob": "Nessun processo di backup PVE compatibile trovato",
       "noCompatiblePveJobDescriptionAfter": "Primo.",
       "noCompatiblePveJobDescriptionBefore": "Crea o abilita un processo di backup PVE per",
@@ -4196,7 +4200,7 @@
       "inProgress": "Backup manuale in corso",
       "oneShotDescription": "I backup one-shot vengono conservati come processi congelati in modo da poterne controllare il registro in un secondo momento.",
       "reopenLogTitle": "Riapri registro",
-      "run": "Correre",
+      "run": "Esegui",
       "runBackup": "Esegui il backup",
       "runOneShotBackup": "Esegui il backup one-shot",
       "title": "Backup manuale",
@@ -4372,7 +4376,7 @@
       "manual": "manuale",
       "manualOneShot": "manuale/one-shot",
       "ok": "OK",
-      "running": "corsa",
+      "running": "in esecuzione",
       "scheduled": "programmato"
     },
     "taskStates": {
@@ -4381,7 +4385,7 @@
       "packing": "imballaggio",
       "queued": "in coda",
       "restoring": "ripristino",
-      "running": "corsa"
+      "running": "in esecuzione"
     },
     "usb": {
       "description": "Monta le unità USB in modo che possano essere scelte come destinazione locale o Borg. Le unità che già disponevano di un filesystem possono essere rimontate così come sono; è possibile cancellare e formattare le unità raw (nessuna tabella delle partizioni).",

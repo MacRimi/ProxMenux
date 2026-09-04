@@ -882,7 +882,7 @@
         "executable": "Exécutable",
         "workingDir": "Répertoire de travail",
         "started": "Commencé",
-        "runningFor": "Courir pour"
+        "runningFor": "En cours d'exécution depuis"
       },
       "states": {
         "running": "En cours d'exécution",
@@ -1032,7 +1032,7 @@
       "tagsPlaceholder": "Ajouter une balise…",
       "tagsNone": "Aucune balise",
       "mountErrors": {
-        "configuredButNotMounted": "configuré mais non monté"
+        "configuredButNotMounted": "Configuré mais non monté"
       }
     },
     "logs": {
@@ -1217,7 +1217,7 @@
       "humanWeekly": "hebdomadaire ({day} {time})",
       "humanMonthly": "mensuel (jour {day} à {time})",
       "humanHourly": "Horaire",
-      "weekdays": "['Dimanche', 'Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi']"
+      "weekdays": ["Dimanche", "Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi"]
     },
     "cronChip": {
       "detected": "cron hôte détecté",
@@ -1567,22 +1567,26 @@
       "excludeFromBadgeHelp": "Ne comptez pas cette application dans le badge de mises à jour globales sur la carte de liste LXC.Utile lorsque vous êtes volontairement épinglé à une version spécifique (exigence de suivi, gel de la compatibilité).N'affecte pas l'état de l'onglet Application ni la notification sortante."
     },
     "statusFilter": {
-      "ariaLabel": "filtrer les machines virtuelles et les conteneurs par statut",
+      "ariaLabel": "Filtrer les machines virtuelles et les conteneurs",
       "all": "Tous",
-      "running": "Courir",
+      "running": "En cours d'exécution",
       "stopped": "Arrêté",
       "empty": "Aucune machine virtuelle ou conteneur avec le statut \"{status}\""
     },
     "filters": {
-      "searchPlaceholder": "rechercher un nom, un identifiant, une étiquette ou une note…",
+      "searchPlaceholder": "Rechercher par nom, ID, étiquette ou note…",
       "searchAriaLabel": "Rechercher des machines virtuelles et des conteneurs",
       "clearSearch": "Effacer la recherche",
-      "updates": "mises à jour",
-      "resultCount": "{shown} sur {total} machines",
-      "noMatches": "Aucune machine virtuelle ou LXC ne correspond à votre recherche.",
-      "noRunning": "Aucune machine virtuelle ou LXC en cours d’exécution.",
-      "noStopped": "Aucune machine virtuelle ou LXC arrêtée.",
-      "noUpdates": "Non LXC avec les mises à jour disponibles."
+      "updates": "Mises à jour",
+      "resultCount": "{shown} sur {total} machines",
+      "noMatches": "Aucune VM ni LXC ne correspond à la recherche.",
+      "noRunning": "Aucune VM ni LXC en cours d'exécution.",
+      "noStopped": "Aucune VM ni LXC arrêtée.",
+      "noUpdates": "Aucun LXC avec des mises à jour disponibles.",
+      "typeSynonyms": {
+        "lxc": "conteneur conteneurs",
+        "qemu": "vm machine virtuelle machines virtuelles"
+      }
     }
   },
   "settings": {
@@ -2717,7 +2721,7 @@
         "executiveSummary": "Résumé exécutif",
         "hardeningAssessment": "Évaluation du durcissement",
         "auditOf": "Vérification de",
-        "running": "courir sur",
+        "running": "exécuté sur",
         "unknownOs": "système d'exploitation inconnu",
         "noActionableWarnings": "Aucun avertissement exploitable",
         "and": "et",
@@ -4058,14 +4062,14 @@
       "jobNameHelpAnd": "et",
       "jobNameHelpBefore": "Utilisé dans les noms de minuterie et les journaux. Les caractères autorisés incluent également",
       "jobNameLocked": "Le nom du travail est verrouillé après la création.",
-      "lastRun": "Dernière course",
-      "lastRunLabel": "Dernière course",
+      "lastRun": "Dernière exécution",
+      "lastRunLabel": "Dernière exécution",
       "liveLogSize": "en direct · {size}",
       "loadFailed": "Impossible de charger les tâches",
       "loadingJob": "Chargement du travail...",
       "manualOneShot": "manuel / one-shot",
       "manualOneShotDescription": "Sauvegarde ponctuelle : capturée au moment du déclenchement. Ne peut pas être réexécuté ou modifié.",
-      "neverRun": "ne jamais courir",
+      "neverRun": "jamais exécuté",
       "newScheduledJob": "Nouveau travail planifié",
       "newScheduledJobDescription": "Créez une tâche de sauvegarde d'hôte récurrente.",
       "nextRun": "Prochaine exécution",
@@ -4196,7 +4200,7 @@
       "inProgress": "Sauvegarde manuelle en cours",
       "oneShotDescription": "Les sauvegardes ponctuelles sont conservées sous forme de tâches gelées afin que vous puissiez inspecter leur journal ultérieurement.",
       "reopenLogTitle": "Rouvrir le journal",
-      "run": "Courir",
+      "run": "Exécuter",
       "runBackup": "Exécuter une sauvegarde",
       "runOneShotBackup": "Exécuter une sauvegarde ponctuelle",
       "title": "Sauvegarde manuelle",

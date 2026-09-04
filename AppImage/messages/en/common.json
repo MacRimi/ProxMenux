@@ -932,7 +932,11 @@
       "noMatches": "No VMs or LXCs match your search.",
       "noRunning": "No running VMs or LXCs.",
       "noStopped": "No stopped VMs or LXCs.",
-      "noUpdates": "No LXC with available updates."
+      "noUpdates": "No LXC with available updates.",
+      "typeSynonyms": {
+        "lxc": "container containers",
+        "qemu": "vm vms virtual machine virtual machines"
+      }
     },
     "uptime": "Uptime: {uptime}",
     "cpuUsage": "CPU Usage",
@@ -1234,7 +1238,15 @@
       "humanWeekly": "Weekly ({day} {time})",
       "humanMonthly": "Monthly (day {day} at {time})",
       "humanHourly": "Hourly",
-      "weekdays": ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"]
+      "weekdays": [
+        "Sunday",
+        "Monday",
+        "Tuesday",
+        "Wednesday",
+        "Thursday",
+        "Friday",
+        "Saturday"
+      ]
     },
     "cronChip": {
       "detected": "host cron detected",

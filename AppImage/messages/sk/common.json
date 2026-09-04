@@ -932,7 +932,11 @@
       "noMatches": "Žiadne VM ani LXC nezodpovedajú hľadaniu.",
       "noRunning": "Nie sú tu žiadne spustené VM ani LXC.",
       "noStopped": "Nie sú tu žiadne vypnuté VM ani LXC.",
-      "noUpdates": "Žiadne LXC nemá dostupné aktualizácie."
+      "noUpdates": "Žiadne LXC nemá dostupné aktualizácie.",
+      "typeSynonyms": {
+        "lxc": "kontajner kontajnery",
+        "qemu": "vm virtuálny stroj virtuálne stroje"
+      }
     },
     "uptime": "Beží: {uptime}",
     "cpuUsage": "Využitie CPU",
@@ -1234,7 +1238,15 @@
       "humanWeekly": "Týždenne ({day} o {time})",
       "humanMonthly": "Mesačne ({day}. deň o {time})",
       "humanHourly": "Každú hodinu",
-      "weekdays": ["nedeľa", "pondelok", "utorok", "streda", "štvrtok", "piatok", "sobota"]
+      "weekdays": [
+        "nedeľa",
+        "pondelok",
+        "utorok",
+        "streda",
+        "štvrtok",
+        "piatok",
+        "sobota"
+      ]
     },
     "cronChip": {
       "detected": "zistený cron na serveri",

@@ -223,13 +223,21 @@ function normalizeVmSearchValue(value: unknown): string {
     .toLocaleLowerCase()
 }
 
-function matchesVmSearch(vm: VMData, terms: string[]): boolean {
+// Type synonyms come from the active locale so a user can search by the
+// word they'd naturally use ("contenedor", "machine virtuelle", …) rather
+// than only the internal type token. "lxc" / "qemu" already match through
+// vm.type, so the catalog entries only carry the natural-language terms.
+function matchesVmSearch(
+  vm: VMData,
+  terms: string[],
+  typeSynonyms: { lxc: string; qemu: string },
+): boolean {
   if (terms.length === 0) return true
   const searchable = normalizeVmSearchValue([
     vm.name,
     vm.vmid,
     vm.type,
-    vm.type === "lxc" ? "container kontajner" : "virtual machine virtualny stroj",
+    vm.type === "lxc" ? typeSynonyms.lxc : typeSynonyms.qemu,
     vm.tags,
     vm.description,
     vm.ip,
@@ -1806,15 +1814,20 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
     updates: safeVMData.filter(hasLxcPendingUpdates).length,
   }), [safeVMData])
 
+  const vmTypeSynonyms = useMemo(() => ({
+    lxc: t("vmLxc.filters.typeSynonyms.lxc"),
+    qemu: t("vmLxc.filters.typeSynonyms.qemu"),
+  }), [t])
+
   const filteredVMs = useMemo(() => {
     const statusMatched = statusFilter === "all"
       ? safeVMData
       : safeVMData.filter((vm) => vm.status === statusFilter)
     return statusMatched.filter((vm) => (
       (!updatesOnly || hasLxcPendingUpdates(vm))
-      && matchesVmSearch(vm, vmSearchTerms)
+      && matchesVmSearch(vm, vmSearchTerms, vmTypeSynonyms)
     ))
-  }, [safeVMData, statusFilter, updatesOnly, vmSearchTerms])
+  }, [safeVMData, statusFilter, updatesOnly, vmSearchTerms, vmTypeSynonyms])
 
   // ── LXC update apply flow (Phase 2a/b) ────────────────────────────
   // Users pick a target (OS, App, both) + backup / restart options,

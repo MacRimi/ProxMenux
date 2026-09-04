@@ -1217,7 +1217,7 @@
       "humanWeekly": "Varje vecka ({day} {time})",
       "humanMonthly": "Varje månad (dag {day} kl. {time})",
       "humanHourly": "Varje timme",
-      "weekdays": "['söndag', 'måndag', 'tisdag', 'onsdag', 'torsdag', 'fredag', 'lördag']"
+      "weekdays": ["söndag", "måndag", "tisdag", "onsdag", "torsdag", "fredag", "lördag"]
     },
     "cronChip": {
       "detected": "host cron upptäckt",
@@ -1567,22 +1567,26 @@
       "excludeFromBadgeHelp": "Räkna inte den här appen i det samlade uppdateringsmärket på LXC-listkortet.Användbart när du är fäst till en specifik version med avsikt (spårningskrav, frysning av kompatibilitet).Påverkar inte appflikens eget tillstånd eller det utgående meddelandet."
     },
     "statusFilter": {
-      "ariaLabel": "Filtrera virtuella maskiner och behållare efter status",
+      "ariaLabel": "Filtrera virtuella maskiner och containrar",
       "all": "Alla",
-      "running": "Löpning",
+      "running": "Körs",
       "stopped": "Stoppad",
-      "empty": "Inga virtuella maskiner eller behållare med status \"{status}\""
+      "empty": "Inga virtuella maskiner eller containrar med status \"{status}\""
     },
     "filters": {
-      "searchPlaceholder": "Sök efter namn, ID, tagg eller anteckning...",
-      "searchAriaLabel": "Sök i virtuella maskiner och behållare",
+      "searchPlaceholder": "Sök på namn, ID, tagg eller anteckning…",
+      "searchAriaLabel": "Sök virtuella maskiner och containrar",
       "clearSearch": "Rensa sökning",
       "updates": "Uppdateringar",
       "resultCount": "{shown} av {total} maskiner",
-      "noMatches": "Inga virtuella datorer eller LXC:er matchar din sökning.",
-      "noRunning": "Inga virtuella datorer eller LXC:er som körs.",
-      "noStopped": "Inga stoppade virtuella datorer eller LXC:er.",
-      "noUpdates": "Inga LXC med tillgängliga uppdateringar."
+      "noMatches": "Inga VM:ar eller LXC:er matchar sökningen.",
+      "noRunning": "Inga VM:ar eller LXC:er körs.",
+      "noStopped": "Inga stoppade VM:ar eller LXC:er.",
+      "noUpdates": "Inga LXC:er har tillgängliga uppdateringar.",
+      "typeSynonyms": {
+        "lxc": "container containrar",
+        "qemu": "vm virtuell maskin virtuella maskiner"
+      }
     }
   },
   "settings": {
@@ -4066,7 +4070,7 @@
       "loadingJob": "Laddar jobb...",
       "manualOneShot": "manuell / one-shot",
       "manualOneShotDescription": "Säkerhetskopiering i ett skott — fångad vid tidpunkten för utlösningen. Kan inte köras om eller redigeras.",
-      "neverRun": "aldrig springa",
+      "neverRun": "aldrig körd",
       "newScheduledJob": "Nytt schemalagt jobb",
       "newScheduledJobDescription": "Skapa ett återkommande värdbackupjobb.",
       "nextRun": "Nästa körning",

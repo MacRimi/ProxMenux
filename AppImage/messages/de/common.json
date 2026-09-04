@@ -882,7 +882,7 @@
         "executable": "Ausführbar",
         "workingDir": "Arbeitsverzeichnis",
         "started": "Begonnen",
-        "runningFor": "Laufen für"
+        "runningFor": "Läuft seit"
       },
       "states": {
         "running": "Läuft",
@@ -1217,7 +1217,7 @@
       "humanWeekly": "Wöchentlich ({day} {time})",
       "humanMonthly": "Monatlich (Tag {day} um {time})",
       "humanHourly": "Stündlich",
-      "weekdays": "['Sonntag', 'Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag']"
+      "weekdays": ["Sonntag", "Montag", "Dienstag", "Mittwoch", "Donnerstag", "Freitag", "Samstag"]
     },
     "cronChip": {
       "detected": "Host-Cron erkannt",
@@ -1567,22 +1567,26 @@
       "excludeFromBadgeHelp": "Zählen Sie diese App nicht im Abzeichen „Aggregate Updates“ auf der LXC-Listenkarte.Nützlich, wenn Sie absichtlich an eine bestimmte Version gebunden sind (Tracker-Anforderung, Kompatibilitätsstopp).Hat keinen Einfluss auf den eigenen Status der App-Registerkarte oder die ausgehende Benachrichtigung."
     },
     "statusFilter": {
-      "ariaLabel": "Virtuelle Maschinen und Container nach Status filtern",
+      "ariaLabel": "Virtuelle Maschinen und Container filtern",
       "all": "Alle",
-      "running": "Laufen",
+      "running": "Läuft",
       "stopped": "Gestoppt",
       "empty": "Keine virtuellen Maschinen oder Container mit dem Status „{status}“"
     },
     "filters": {
-      "searchPlaceholder": "Nach Name, ID, Tag oder Notiz suchen …",
-      "searchAriaLabel": "Durchsuchen Sie virtuelle Maschinen und Container",
+      "searchPlaceholder": "Name, ID, Tag oder Notiz suchen…",
+      "searchAriaLabel": "Virtuelle Maschinen und Container durchsuchen",
       "clearSearch": "Suche löschen",
-      "updates": "Aktualisierungen",
+      "updates": "Updates",
       "resultCount": "{shown} von {total} Maschinen",
-      "noMatches": "Keine VMs oder LXCs entsprechen Ihrer Suche.",
+      "noMatches": "Keine VMs oder LXCs entsprechen der Suche.",
       "noRunning": "Keine laufenden VMs oder LXCs.",
       "noStopped": "Keine gestoppten VMs oder LXCs.",
-      "noUpdates": "Nein LXC mit verfügbaren Updates."
+      "noUpdates": "Kein LXC mit verfügbaren Updates.",
+      "typeSynonyms": {
+        "lxc": "container",
+        "qemu": "vm virtuelle maschine virtuelle maschinen"
+      }
     }
   },
   "settings": {
@@ -4065,7 +4069,7 @@
       "loadingJob": "Job wird geladen...",
       "manualOneShot": "manuell / One-Shot",
       "manualOneShotDescription": "One-Shot-Backup – zum Zeitpunkt des Auslösers erfasst. Kann nicht erneut ausgeführt oder bearbeitet werden.",
-      "neverRun": "niemals laufen",
+      "neverRun": "nie ausgeführt",
       "newScheduledJob": "Neuer geplanter Auftrag",
       "newScheduledJobDescription": "Erstellen Sie einen wiederkehrenden Host-Sicherungsauftrag.",
       "nextRun": "Nächster Lauf",
@@ -4196,7 +4200,7 @@
       "inProgress": "Manuelle Sicherung läuft",
       "oneShotDescription": "One-Shot-Backups werden als eingefrorene Jobs aufbewahrt, sodass Sie ihr Protokoll später überprüfen können.",
       "reopenLogTitle": "Protokoll erneut öffnen",
-      "run": "Laufen",
+      "run": "Ausführen",
       "runBackup": "Führen Sie ein Backup aus",
       "runOneShotBackup": "Führen Sie ein One-Shot-Backup durch",
       "title": "Manuelle Sicherung",
@@ -4352,7 +4356,7 @@
       "hourlyHelpBefore": "Im Moment",
       "hourlyHelpMiddle": "der Timer",
       "hourlyOption": "Stündlich",
-      "howToSchedule": "Wie soll es laufen?",
+      "howToSchedule": "Wie soll es ausgeführt werden?",
       "janFirst": "Jedes Jahr am 1. Januar",
       "modeHelp": "Wählen Sie einen einfachen Zeitplan oder geben Sie einen systemd-OnCalendar-Ausdruck ein.",
       "monthlyOption": "Monatlich",

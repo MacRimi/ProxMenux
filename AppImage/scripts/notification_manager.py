@@ -1608,7 +1608,7 @@ class NotificationManager:
         showed zero digest entries even when the schedule was firing
         (issue #233).
         """
-        host = _hostname(self._config)
+        host = _resolve_display_hostname(self._config)
         summary_title = (
             f"{host}: 24h summary ({now.strftime('%Y-%m-%d %H:%M')})"
         )
@@ -1847,23 +1847,44 @@ class NotificationManager:
         if not rows:
             return
 
-        host = _hostname(self._config)
+        host = _resolve_display_hostname(self._config)
         summary_title = (
             f"{host}: {len(rows)} events buffered during Quiet Hours"
         )
         summary_body = self._compose_digest_body(rows)
 
+        result: dict = {'success': False, 'error': ''}
         try:
-            channel.send(summary_title, summary_body, severity='INFO',
-                         data={'_quiet_hours_summary': True, '_count': len(rows)})
+            result = channel.send(
+                summary_title, summary_body, severity='INFO',
+                data={'_quiet_hours_summary': True, '_count': len(rows)},
+            ) or result
         except Exception as e:
             print(f"[NotificationManager] quiet send failed for "
                   f"{ch_name}: {e}")
-            return
+            result = {'success': False, 'error': str(e)}
+
+        if result.get('success'):
+            self._stats['total_sent'] += 1
+            self._stats['last_sent_at'] = datetime.now().isoformat()
+        else:
+            self._stats['total_errors'] += 1
+        # Mirrors the digest path: the release is a real delivery, so it
+        # belongs in the history and the counters the operator reads.
+        self._record_history(
+            'quiet_hours', ch_name, summary_title, summary_body, 'INFO',
+            result.get('success', False), result.get('error', '') or '',
+            'quiet_scheduler',
+        )
 
         # Only drop the rows after a successful send so a transient
         # transport failure (Telegram timeout, SMTP outage) doesn't
-        # lose the user's overnight context.
+        # lose the user's overnight context. A channel reporting failure
+        # without raising counts as a failure here too — otherwise the
+        # buffer is wiped for a summary the operator never received.
+        if not result.get('success'):
+            return
+
         try:
             ids = [r[0] for r in rows]
             conn = sqlite3.connect(str(DB_PATH), timeout=10)
@@ -2082,6 +2103,7 @@ class NotificationManager:
         'secure_gateway_update_available',
         'app_update_available',
         'docker_stack_update_available',
+        'post_install_update',
         # Security events that must not be silenced by stale cooldowns
         # following a Monitor reinstall (Pedro Rico, 19/05).
         'auth_fail',

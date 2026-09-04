@@ -882,7 +882,7 @@
         "executable": "Ejecutable",
         "workingDir": "Directorio de trabajo",
         "started": "Comenzó",
-        "runningFor": "Corriendo por"
+        "runningFor": "En ejecución desde"
       },
       "states": {
         "running": "En ejecución",
@@ -1032,7 +1032,7 @@
       "tagsPlaceholder": "Añadir etiqueta…",
       "tagsNone": "Sin etiquetas",
       "mountErrors": {
-        "configuredButNotMounted": "configurado pero no montado"
+        "configuredButNotMounted": "Configurado pero no montado"
       }
     },
     "logs": {
@@ -1217,7 +1217,7 @@
       "humanWeekly": "Semanal ({day} {time})",
       "humanMonthly": "Mensual (día {day} a las {time})",
       "humanHourly": "cada hora",
-      "weekdays": "['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado']"
+      "weekdays": ["domingo", "lunes", "martes", "miércoles", "jueves", "viernes", "sábado"]
     },
     "cronChip": {
       "detected": "cron del host detectado",
@@ -1567,22 +1567,26 @@
       "excludeFromBadgeHelp": "No sumar esta app al contador agregado de actualizaciones del card del LXC. Útil cuando mantienes una versión concreta a propósito (requisito de tracker, compatibilidad). No afecta al estado que se muestra en la pestaña App ni al envío de la notificación."
     },
     "statusFilter": {
-      "ariaLabel": "filtrar máquinas virtuales y contenedores por estado",
+      "ariaLabel": "Filtrar máquinas virtuales y contenedores",
       "all": "Todos",
-      "running": "corriendo",
-      "stopped": "detenido",
+      "running": "En ejecución",
+      "stopped": "Detenido",
       "empty": "No hay máquinas virtuales ni contenedores con estado \"{status}\""
     },
     "filters": {
-      "searchPlaceholder": "buscar nombre, ID, etiqueta o nota...",
-      "searchAriaLabel": "buscar máquinas virtuales y contenedores",
+      "searchPlaceholder": "Buscar por nombre, ID, etiqueta o nota…",
+      "searchAriaLabel": "Buscar máquinas virtuales y contenedores",
       "clearSearch": "Borrar búsqueda",
       "updates": "Actualizaciones",
       "resultCount": "{shown} de {total} máquinas",
-      "noMatches": "Ninguna VM o LXC coincide con su búsqueda.",
-      "noRunning": "No se ejecutan VM ni LXC.",
-      "noStopped": "No hay máquinas virtuales ni LXC detenidos.",
-      "noUpdates": "No LXC con actualizaciones disponibles."
+      "noMatches": "Ninguna VM ni LXC coincide con la búsqueda.",
+      "noRunning": "No hay VM ni LXC en ejecución.",
+      "noStopped": "No hay VM ni LXC detenidas.",
+      "noUpdates": "Ningún LXC tiene actualizaciones disponibles.",
+      "typeSynonyms": {
+        "lxc": "contenedor contenedores",
+        "qemu": "vm máquina virtual máquinas virtuales"
+      }
     }
   },
   "settings": {
@@ -2717,7 +2721,7 @@
         "executiveSummary": "Resumen ejecutivo",
         "hardeningAssessment": "Evaluación de endurecimiento",
         "auditOf": "Auditoría de",
-        "running": "corriendo",
+        "running": "ejecutándose en",
         "unknownOs": "sistema operativo desconocido",
         "noActionableWarnings": "Sin advertencias procesables",
         "and": "y",
