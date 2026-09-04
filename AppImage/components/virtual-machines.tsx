@@ -10,7 +10,7 @@ import { Badge } from "./ui/badge"
 import { Progress } from "./ui/progress"
 import { Button } from "./ui/button"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "./ui/dialog"
-import { Server, Play, Square, Cpu, MemoryStick, HardDrive, Network, Power, RotateCcw, StopCircle, Container, ChevronDown, ChevronUp, ChevronRight, Terminal, Archive, Plus, PlusCircle, Loader2, Clock, Database, Shield, Bell, FileText, Settings2, Activity, Package, RefreshCw, EthernetPort, ArrowUpCircle, Info, CheckCircle2, EyeOff, Eye, Trash2, Check, X, AlertTriangle, AlertCircle, ExternalLink, Tag as TagIcon } from 'lucide-react'
+import { Server, Play, Square, Cpu, MemoryStick, HardDrive, Network, Power, RotateCcw, StopCircle, Container, ChevronDown, ChevronUp, ChevronRight, Terminal, Archive, Plus, PlusCircle, Loader2, Clock, Database, Shield, Bell, FileText, Settings2, Activity, Package, RefreshCw, EthernetPort, ArrowUpCircle, Info, CheckCircle2, EyeOff, Eye, Trash2, Check, X, AlertTriangle, AlertCircle, ExternalLink, Search, Tag as TagIcon } from 'lucide-react'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select"
 import { Checkbox } from "./ui/checkbox"
 import { Switch } from "./ui/switch"
@@ -182,6 +182,9 @@ interface LxcDockerInventory {
 interface VMData {
   vmid: number
   name: string
+  // Compact PVE description included only for list search. The full notes
+  // remain in the guest detail modal.
+  description?: string
   status: string
   type: string
   cpu: number
@@ -211,6 +214,39 @@ interface VMData {
   // Incremented by the server after it has rebuilt this guest's complete
   // modal/app/Docker snapshot following a start, reboot or restore.
   modal_cache_revision?: number
+}
+
+function normalizeVmSearchValue(value: unknown): string {
+  return String(value ?? "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLocaleLowerCase()
+}
+
+function matchesVmSearch(vm: VMData, terms: string[]): boolean {
+  if (terms.length === 0) return true
+  const searchable = normalizeVmSearchValue([
+    vm.name,
+    vm.vmid,
+    vm.type,
+    vm.type === "lxc" ? "container kontajner" : "virtual machine virtualny stroj",
+    vm.tags,
+    vm.description,
+    vm.ip,
+    ...(vm.app_watches || []).map((app) => app.name || ""),
+  ].join(" "))
+  return terms.every((term) => searchable.includes(term))
+}
+
+function hasLxcPendingUpdates(vm: VMData): boolean {
+  if (vm.type !== "lxc") return false
+  const osUpdates = vm.update_check?.count ?? 0
+  const appUpdates = (vm.app_watches || []).filter(
+    (app) => app.update_available === true && !app.exclude_from_badge,
+  ).length
+  const dockerRegistered = (vm.app_watches || []).some((app) => app.helper_slug === "docker")
+  const dockerUpdates = dockerRegistered ? (vm.docker_inventory?.update_count ?? 0) : 0
+  return osUpdates + appUpdates + dockerUpdates > 0
 }
 
 function buildRegisteredAppUrl(vm: VMData, port?: LxcAppPort): string | null {
@@ -1744,17 +1780,38 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
       window.localStorage.setItem("proxmenux.vmListFilter", statusFilter)
     }
   }, [statusFilter])
+  const [updatesOnly, setUpdatesOnly] = useState(() => {
+    if (typeof window === "undefined") return false
+    return window.localStorage.getItem("proxmenux.vmListUpdatesOnly") === "true"
+  })
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      window.localStorage.setItem("proxmenux.vmListUpdatesOnly", String(updatesOnly))
+    }
+  }, [updatesOnly])
+  const [vmSearchQuery, setVmSearchQuery] = useState("")
+
+  const vmSearchTerms = useMemo(
+    () => normalizeVmSearchValue(vmSearchQuery).trim().split(/\s+/).filter(Boolean),
+    [vmSearchQuery],
+  )
 
   const statusCounts = useMemo(() => ({
     all: safeVMData.length,
     running: safeVMData.filter((vm) => vm.status === "running").length,
     stopped: safeVMData.filter((vm) => vm.status === "stopped").length,
+    updates: safeVMData.filter(hasLxcPendingUpdates).length,
   }), [safeVMData])
 
   const filteredVMs = useMemo(() => {
-    if (statusFilter === "all") return safeVMData
-    return safeVMData.filter((vm) => vm.status === statusFilter)
-  }, [safeVMData, statusFilter])
+    const statusMatched = statusFilter === "all"
+      ? safeVMData
+      : safeVMData.filter((vm) => vm.status === statusFilter)
+    return statusMatched.filter((vm) => (
+      (!updatesOnly || hasLxcPendingUpdates(vm))
+      && matchesVmSearch(vm, vmSearchTerms)
+    ))
+  }, [safeVMData, statusFilter, updatesOnly, vmSearchTerms])
 
   // ── LXC update apply flow (Phase 2a/b) ────────────────────────────
   // Users pick a target (OS, App, both) + backup / restart options,
@@ -2980,50 +3037,99 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
       </div>
 
       <Card className="bg-card border-border">
-        <CardHeader className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <CardHeader className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
           <CardTitle className="flex items-center gap-2 text-xl lg:text-2xl font-bold text-foreground">
             <Server className="h-6 w-6" />
             {t("vmLxc.listTitle")}
           </CardTitle>
-          <div
-            role="tablist"
-            aria-label={t("vmLxc.statusFilter.ariaLabel")}
-            className="inline-flex w-full sm:w-auto rounded-lg border border-border bg-muted/40 p-1 gap-1"
-          >
-            {(["all", "running", "stopped"] as const).map((key) => {
-              const active = statusFilter === key
-              const label = t(`vmLxc.statusFilter.${key}`)
-              // Icon color: white when the tab is active (over the blue fill);
-              // green / red on inactive tabs so the state mapping stays legible
-              // before selection. The black-text variant was tested and dropped
-              // — white reads cleaner alongside the sidebar/nav blue treatment.
-              const iconClass = active
-                ? "h-3.5 w-3.5 text-white"
-                : key === "running"
-                  ? "h-3.5 w-3.5 text-green-500 fill-green-500/25"
-                  : "h-3.5 w-3.5 text-red-500 fill-red-500/25"
-              return (
-                <button
-                  key={key}
-                  type="button"
-                  role="tab"
-                  aria-selected={active}
-                  onClick={() => setStatusFilter(key)}
-                  className={`flex-1 sm:flex-none inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
-                    active
-                      ? "bg-blue-500 text-white shadow-sm"
-                      : "text-muted-foreground hover:text-foreground hover:bg-background/60"
-                  }`}
-                >
-                  {key === "running" && <Play className={iconClass} />}
-                  {key === "stopped" && <Square className={iconClass} />}
-                  <span>{label}</span>
-                  <span className={`ml-0.5 text-xs tabular-nums ${active ? "text-white/80" : "opacity-70"}`}>
-                    {statusCounts[key]}
-                  </span>
-                </button>
-              )
-            })}
+          <div className="flex w-full flex-col gap-2 xl:w-auto xl:items-end">
+            <div className="flex w-full flex-col gap-2 md:flex-row md:flex-wrap md:items-center xl:flex-nowrap">
+              <div className="relative w-full md:w-72">
+                <Search className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <input
+                  type="text"
+                  inputMode="search"
+                  value={vmSearchQuery}
+                  onChange={(event) => setVmSearchQuery(event.target.value)}
+                  placeholder={t("vmLxc.filters.searchPlaceholder")}
+                  aria-label={t("vmLxc.filters.searchAriaLabel")}
+                  className="h-9 w-full rounded-md border border-border bg-card py-2 pl-8 pr-8 text-sm text-foreground placeholder:text-muted-foreground focus:border-border/80 focus:outline-none focus:ring-1 focus:ring-ring"
+                />
+                {vmSearchQuery && (
+                  <button
+                    type="button"
+                    onClick={() => setVmSearchQuery("")}
+                    aria-label={t("vmLxc.filters.clearSearch")}
+                    className="absolute right-1.5 top-1/2 inline-flex h-6 w-6 -translate-y-1/2 items-center justify-center rounded text-muted-foreground hover:bg-muted hover:text-foreground"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                )}
+              </div>
+               <div
+                 role="group"
+                 aria-label={t("vmLxc.statusFilter.ariaLabel")}
+                 className="grid w-full grid-cols-2 gap-1 rounded-lg border border-border bg-muted/40 p-1 md:inline-flex md:w-auto"
+               >
+                {(["all", "running", "stopped"] as const).map((key) => {
+                  const active = statusFilter === key
+                  const label = t(`vmLxc.statusFilter.${key}`)
+                  // Icon color: white when the tab is active (over the blue fill);
+                  // green / red on inactive tabs so the state mapping stays legible
+                  // before selection. The black-text variant was tested and dropped
+                  // — white reads cleaner alongside the sidebar/nav blue treatment.
+                  const iconClass = active
+                    ? "h-3.5 w-3.5 text-white"
+                    : key === "running"
+                      ? "h-3.5 w-3.5 text-green-500 fill-green-500/25"
+                      : "h-3.5 w-3.5 text-red-500 fill-red-500/25"
+                  return (
+                    <button
+                      key={key}
+                      type="button"
+                       aria-pressed={active}
+                       onClick={() => setStatusFilter(key)}
+                      className={`inline-flex w-full items-center justify-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-colors md:w-auto ${
+                        active
+                          ? "bg-blue-500 text-white shadow-sm"
+                          : "text-muted-foreground hover:text-foreground hover:bg-background/60"
+                      }`}
+                    >
+                      {key === "running" && <Play className={iconClass} />}
+                      {key === "stopped" && <Square className={iconClass} />}
+                      <span>{label}</span>
+                      <span className={`ml-0.5 text-xs tabular-nums ${active ? "text-white/80" : "opacity-70"}`}>
+                        {statusCounts[key]}
+                      </span>
+                    </button>
+                  )
+                 })}
+                 <button
+                   type="button"
+                   aria-pressed={updatesOnly}
+                   onClick={() => setUpdatesOnly((current) => !current)}
+                   className={`inline-flex w-full items-center justify-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-colors md:w-auto ${
+                     updatesOnly
+                       ? "bg-violet-500/80 text-white shadow-sm"
+                       : "text-muted-foreground hover:text-foreground hover:bg-background/60"
+                   }`}
+                 >
+                   <ArrowUpCircle className="h-3.5 w-3.5" />
+                   <span>{t("vmLxc.filters.updates")}</span>
+                   <span className={`ml-0.5 text-xs tabular-nums ${updatesOnly ? "text-white/80" : "opacity-70"}`}>
+                     {statusCounts.updates}
+                   </span>
+                 </button>
+               </div>
+             </div>
+            {vmSearchTerms.length > 0 && (
+              <span className="text-xs text-muted-foreground">
+                {t("vmLxc.filters.resultCount", {
+                  shown: filteredVMs.length,
+                  total: safeVMData.length,
+                })}
+              </span>
+             )}
           </div>
         </CardHeader>
         <CardContent>
@@ -3031,7 +3137,13 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
             <div className="text-center py-8 text-muted-foreground">{t("vmLxc.empty")}</div>
           ) : filteredVMs.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground">
-              {t("vmLxc.statusFilter.empty", { status: t(`vmLxc.statusFilter.${statusFilter}`) })}
+               {vmSearchTerms.length > 0
+                 ? t("vmLxc.filters.noMatches")
+                 : updatesOnly
+                   ? t("vmLxc.filters.noUpdates")
+                 : statusFilter === "running"
+                   ? t("vmLxc.filters.noRunning")
+                   : t("vmLxc.filters.noStopped")}
             </div>
           ) : (
             <div className="space-y-3">
