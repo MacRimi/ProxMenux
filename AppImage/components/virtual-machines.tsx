@@ -90,6 +90,15 @@ interface LxcAppWatch {
   id: string
   name: string | null
   installed_via?: string | null
+  // Set when the app runs inside Docker: its update is the image's, so it
+  // reports identity and installed version and nothing else.
+  update_via?: string | null
+  container_name?: string | null
+  // Resolved server-side from the image this app delegates to. Kept apart
+  // from latest_version/update_available so the CT badge counts the release
+  // once, through the image.
+  docker_available_version?: string | null
+  docker_update_available?: boolean | null
   ports?: LxcAppPort[]
   logo_url?: string | null
   health_path?: string | null
@@ -246,7 +255,16 @@ function hasLxcPendingUpdates(vm: VMData): boolean {
   ).length
   const dockerRegistered = (vm.app_watches || []).some((app) => app.helper_slug === "docker")
   const dockerUpdates = dockerRegistered ? (vm.docker_inventory?.update_count ?? 0) : 0
-  return osUpdates + appUpdates + dockerUpdates > 0
+  // An app that delegates to Docker has no update flag of its own, so its
+  // pending release reaches this count through the image — but only while
+  // Docker is registered. Registering just the application is now a
+  // supported choice, and it must not leave the CT looking up to date.
+  // Counted only when the image is not already counted, so one release
+  // stays one number.
+  const delegatedUpdates = dockerRegistered ? 0 : (vm.app_watches || []).filter(
+    (app) => app.update_via === "docker" && app.docker_update_available === true && !app.exclude_from_badge,
+  ).length
+  return osUpdates + appUpdates + dockerUpdates + delegatedUpdates > 0
 }
 
 function buildRegisteredAppUrl(vm: VMData, port?: LxcAppPort): string | null {
@@ -2532,14 +2550,47 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
     ).length
     const dockerRegistered = (vm.app_watches || []).some((a) => a.helper_slug === "docker")
     const dockerCount = dockerRegistered ? (vm.docker_inventory?.update_count ?? 0) : 0
+    // See hasLxcPendingUpdates: a delegated app counts only while its image
+    // is not already being counted through the Docker section.
+    const delegatedCount = dockerRegistered ? 0 : (vm.app_watches || []).filter(
+      (a) => a.update_via === "docker" && a.docker_update_available === true && !a.exclude_from_badge,
+    ).length
     const osCount = uc?.count ?? 0
-    const total = osCount + appCount + dockerCount
-    if (!uc && appCount === 0 && dockerCount === 0) return undefined
+    const total = osCount + appCount + dockerCount + delegatedCount
+    if (!uc && appCount === 0 && dockerCount === 0 && delegatedCount === 0) return undefined
     if (total === 0) return uc
+    // The badge names what is pending, and until now it could only name OS
+    // packages — so a container whose only pending update was an application
+    // showed a number that explained nothing. Applications and images join
+    // that list under the same names they carry everywhere else.
+    const pendingNames: LxcPackageUpdate[] = []
+    for (const a of vm.app_watches || []) {
+      if (a.exclude_from_badge) continue
+      const isDelegatedPending = a.update_via === "docker" && a.docker_update_available === true && !dockerRegistered
+      if (a.update_available !== true && !isDelegatedPending) continue
+      pendingNames.push({
+        name: a.name || "",
+        current: a.installed_version || "",
+        latest: (isDelegatedPending ? a.docker_available_version : a.latest_version) || "",
+        security: false,
+      })
+    }
+    if (dockerRegistered) {
+      for (const image of vm.docker_inventory?.images || []) {
+        if (image.update_available !== true) continue
+        pendingNames.push({
+          name: image.display_name || image.reference,
+          current: image.installed_version || "",
+          latest: image.available_version || "",
+          security: false,
+        })
+      }
+    }
     return {
       ...(uc || {}),
       count: total,
       available: true,
+      packages: [...(uc?.packages || []), ...pendingNames],
       last_check: uc?.last_check ?? new Date().toISOString(),
     } as LxcUpdateCheck
   }
@@ -5159,7 +5210,13 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                         }).map((app) => ({ id: `app:${app.id}`, label: app.name }))
                         const versionTrackedScheduleAppIds = new Set(
                           registeredApps
-                            .filter((app) => !!app.installed_via && app.helper_slug !== "docker")
+                            .filter((app) => (
+                              !!app.installed_via
+                              && app.helper_slug !== "docker"
+                              // A delegated app never resolves a release date;
+                              // holding the schedule on it would defer forever.
+                              && app.update_via !== "docker"
+                            ))
                             .map((app) => `app:${app.id}`),
                         )
                         const scheduleHasVersionTrackedApps = scheduleTargets.includes("apps")
@@ -5265,6 +5322,9 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                         const bulkActionAppIds = new Set(bulkAppChoices.map((choice) => choice.id))
                         const bulkUnavailableApps = registeredApps.filter((app) => (
                           app.helper_slug !== "docker"
+                          // Not "unavailable": it updates through the Docker
+                          // unit listed right above in this same section.
+                          && app.update_via !== "docker"
                           && !bulkActionAppIds.has(`app:${app.id}`)
                         ))
                         const pendingDockerBulkTargets = bulkTargets.filter((target) => (
@@ -5613,9 +5673,23 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                                                   )}
                                                 </div>
                                                 <div className="min-w-0">
-                                                  <span className="font-mono text-foreground/90 block truncate" title={image.reference}>
-                                                    {image.reference}
-                                                  </span>
+                                                  {image.display_name ? (
+                                                    <>
+                                                      <span className="text-foreground block truncate" title={image.display_name}>
+                                                        {image.display_name}
+                                                      </span>
+                                                      <span
+                                                        className="font-mono text-xs text-muted-foreground block truncate"
+                                                        title={image.reference}
+                                                      >
+                                                        {image.reference}
+                                                      </span>
+                                                    </>
+                                                  ) : (
+                                                    <span className="font-mono text-foreground/90 block truncate" title={image.reference}>
+                                                      {image.reference}
+                                                    </span>
+                                                  )}
                                                   <div className="mt-1 text-xs text-muted-foreground flex items-center gap-1.5">
                                                     <Package className="h-3.5 w-3.5 flex-shrink-0" />
                                                     {image.installed_version ? (
@@ -5977,11 +6051,38 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                                                 <Package className="h-4 w-4 flex-shrink-0" />
                                                 <span>{t("vmLxc.updates.installedLabel")} <code className="text-foreground/80">{aw.installed_version}</code></span>
                                               </div>
-                                              <div>{t("vmLxc.updates.versionTrackingPendingShort")}</div>
+                                              {/* "Pending" is a promise that a number is on its way. For a
+                                                  delegated app it never is, by design: the image row carries
+                                                  the available version. Saying nothing here is the honest
+                                                  option — the delegation notice below explains where to look. */}
+                                              {aw.update_via === "docker" ? (
+                                                aw.docker_update_available === true && aw.docker_available_version ? (
+                                                  <div className="flex items-center gap-2 text-purple-400">
+                                                    <ArrowUpCircle className="h-4 w-4 flex-shrink-0" />
+                                                    <span>
+                                                      {t("vmLxc.updates.upstreamAvailable", { version: aw.docker_available_version })}
+                                                    </span>
+                                                  </div>
+                                                ) : aw.docker_update_available === true ? (
+                                                  <div className="flex items-center gap-2 text-purple-400">
+                                                    <ArrowUpCircle className="h-4 w-4 flex-shrink-0" />
+                                                    <span>{t("vmLxc.updates.imageUpdateAvailable")}</span>
+                                                  </div>
+                                                ) : aw.docker_update_available === false ? (
+                                                  <div className="flex items-center gap-2 text-green-500">
+                                                    <CheckCircle2 className="h-4 w-4 flex-shrink-0" />
+                                                    <span>{t("vmLxc.updates.imageUpToDate")}</span>
+                                                  </div>
+                                                ) : null
+                                              ) : (
+                                                <div>{t("vmLxc.updates.versionTrackingPendingShort")}</div>
+                                              )}
                                             </div>
                                           ) : tracksVersion ? (
                                             <div className="text-sm text-muted-foreground">
-                                              {t("vmLxc.updates.versionTrackingPendingShort")}
+                                              {aw.update_via === "docker"
+                                                ? t("vmLxc.updates.updatedWithDockerImage")
+                                                : t("vmLxc.updates.versionTrackingPendingShort")}
                                             </div>
                                           ) : hasCmd ? (
                                             <div className="text-sm text-muted-foreground">
@@ -6016,9 +6117,11 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                                             </div>
                                           ) : (
                                             <p className={`text-xs text-muted-foreground leading-relaxed min-w-0 ${tracksVersion ? "mt-3" : ""}`}>
-                                              {managedByOs
-                                                ? t("vmLxc.updates.managedByOsPackages")
-                                                : t("vmLxc.updates.noUpdateMethodBody")}
+                                              {aw.update_via === "docker"
+                                                ? t("vmLxc.updates.updatedWithDockerImage")
+                                                : managedByOs
+                                                  ? t("vmLxc.updates.managedByOsPackages")
+                                                  : t("vmLxc.updates.noUpdateMethodBody")}
                                             </p>
                                           )}
                                         </>

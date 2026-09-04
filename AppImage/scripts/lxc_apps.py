@@ -184,6 +184,22 @@ _DOCKER_MANIFEST_ACCEPT = ", ".join((
     "application/vnd.docker.distribution.manifest.list.v2+json",
     "application/vnd.docker.distribution.manifest.v2+json",
 ))
+# Reading the remote image config is content-addressed: every document is
+# requested BY DIGEST and verified against it, so the answer cannot be
+# swapped for another image. A digest never changes content, so the cache
+# has no TTL — only a bound.
+_DOCKER_REMOTE_CONFIG_MAX_BYTES = 1 << 20
+_DOCKER_REMOTE_CONFIG_CACHE_MAX = 500
+_DOCKER_INDEX_MEDIA_TYPES = {
+    "application/vnd.oci.image.index.v1+json",
+    "application/vnd.docker.distribution.manifest.list.v2+json",
+}
+_DOCKER_IMAGE_CONFIG_MEDIA_TYPES = {
+    "application/vnd.oci.image.config.v1+json",
+    "application/vnd.docker.container.image.v1+json",
+}
+_docker_remote_config_lock = threading.RLock()
+_docker_remote_config_cache: dict[tuple, dict] = {}
 _docker_inventory_lock = threading.RLock()
 _docker_inventory_cache: dict[str, dict] = {}
 
@@ -1034,6 +1050,26 @@ def validate_config(payload: dict) -> tuple[bool, Any]:
             return _err("helper_slug must be a lowercase slug (letters/digits/._-)")
         conf["helper_slug"] = hs
 
+    # Optional update delegation. An application running inside Docker is a
+    # real application — it has a name, a logo, links and an installed
+    # version — but it is not updated on its own: the update is a pull and a
+    # recreate of the image it comes from, which the Docker inventory already
+    # knows how to do. Marking it here keeps ONE update path for one fact:
+    # this app reports its identity and its installed version, and the image
+    # row reports whether there is a new one. Upstream fields are rejected
+    # rather than stripped, so nobody registers an app that silently checks
+    # GitHub behind a delegation that says it will not.
+    uv = (payload.get("update_via") or "").strip().lower()
+    if uv:
+        if uv != "docker":
+            return _err("update_via only accepts 'docker'")
+        if method not in ("docker_label", "docker_exec"):
+            return _err("update_via=docker requires a docker_label or docker_exec detector")
+        for field in ("repo", "upstream_type", "upstream_url", "docker_image"):
+            if (payload.get(field) or "").strip():
+                return _err(f"update_via=docker cannot be combined with {field}")
+        conf["update_via"] = uv
+
     # Optional user-defined update command. Freeform bash that runs
     # under `pct exec vmid -- sh -c "$command"` when the user hits
     # "Apply {app} update" from the Updates tab. This is deliberately
@@ -1653,6 +1689,22 @@ def _normalise_docker_display_version(value: Any) -> Optional[str]:
     return match.group(1) if match else None
 
 
+def _docker_version_from_labels(
+    labels: dict,
+    keys: tuple = ("Version", "version", "org.opencontainers.image.version"),
+) -> tuple[Optional[str], Optional[str]]:
+    """Resolve a version from image labels, in the caller's order of trust.
+
+    Shared by the local image inspect and by the remote image config so both
+    sides of the comparison read the same labels through the same filter.
+    """
+    for key in keys:
+        version = _normalise_docker_display_version((labels or {}).get(key))
+        if version:
+            return version, f"image_label:{key}"
+    return None, None
+
+
 def _docker_version_from_image_inspect(parsed: dict, inspected: dict) -> tuple[Optional[str], Optional[str]]:
     """Resolve an installed image version from local, immutable evidence."""
     direct_tag = _normalise_docker_display_version(parsed.get("tag"))
@@ -1662,10 +1714,9 @@ def _docker_version_from_image_inspect(parsed: dict, inspected: dict) -> tuple[O
     labels = ((inspected.get("Config") or {}).get("Labels") or {})
     # Application-specific labels take precedence over OCI labels because a
     # few publishers put the base distribution version in the latter.
-    for key in ("Version", "version"):
-        version = _normalise_docker_display_version(labels.get(key))
-        if version:
-            return version, f"image_label:{key}"
+    version, source = _docker_version_from_labels(labels, ("Version", "version"))
+    if version:
+        return version, source
 
     # A moving tag often shares an image ID with an explicit release tag
     # already present locally (for example frigate:stable + frigate:0.17.2).
@@ -1686,10 +1737,7 @@ def _docker_version_from_image_inspect(parsed: dict, inspected: dict) -> tuple[O
         alternate_versions.sort(key=_docker_tag_semver_key, reverse=True)
         return alternate_versions[0], "local_equivalent_tag"
 
-    version = _normalise_docker_display_version(labels.get("org.opencontainers.image.version"))
-    if version:
-        return version, "image_label:org.opencontainers.image.version"
-    return None, None
+    return _docker_version_from_labels(labels, ("org.opencontainers.image.version",))
 
 
 def _docker_hub_version_for_digest(records: list[dict], digest: Optional[str]) -> Optional[str]:
@@ -1835,45 +1883,124 @@ def _parse_bearer_challenge(value: str) -> Optional[dict]:
     return params
 
 
-def _registry_digest_request(url: str, headers: dict) -> tuple[Optional[str], Optional[str]]:
-    req = urllib.request.Request(url, headers=headers, method="HEAD")
+class _DockerNoRedirect(urllib.request.HTTPRedirectHandler):
+    """Surface 3xx instead of following it.
+
+    urllib re-sends ``Authorization`` to the redirect target; registries hand
+    blobs off to signed-URL storage that rejects a second auth mechanism, and
+    the official Docker client drops the header on a host change. Following
+    the hop by hand is the only way to drop it.
+    """
+
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        return None
+
+
+_docker_no_redirect_opener = urllib.request.build_opener(_DockerNoRedirect)
+
+
+def _registry_bearer_token(challenge: dict) -> tuple[Optional[str], Optional[str]]:
+    """Exchange a parsed ``WWW-Authenticate`` challenge for a pull token."""
+    query = {
+        key: challenge[key]
+        for key in ("service", "scope") if challenge.get(key)
+    }
+    token_url = challenge["realm"]
+    if query:
+        token_url += ("&" if "?" in token_url else "?") + urllib.parse.urlencode(query)
+    token_req = urllib.request.Request(
+        token_url,
+        headers={"User-Agent": "ProxMenux-Monitor", "Accept": "application/json"},
+    )
     try:
-        with urllib.request.urlopen(req, timeout=_DOCKER_REGISTRY_TIMEOUT_SEC) as response:
-            return response.headers.get("Docker-Content-Digest"), None
+        with urllib.request.urlopen(token_req, timeout=_DOCKER_REGISTRY_TIMEOUT_SEC) as response:
+            token_payload = json.loads(response.read().decode("utf-8"))
     except urllib.error.HTTPError as exc:
-        if exc.code != 401:
-            return None, f"registry HTTP {exc.code}"
-        challenge = _parse_bearer_challenge(exc.headers.get("WWW-Authenticate", ""))
-        if not challenge:
-            return None, "registry authentication required"
-        query = {
-            key: challenge[key]
-            for key in ("service", "scope") if challenge.get(key)
-        }
-        token_url = challenge["realm"]
-        if query:
-            token_url += ("&" if "?" in token_url else "?") + urllib.parse.urlencode(query)
-        token_req = urllib.request.Request(
-            token_url,
-            headers={"User-Agent": "ProxMenux-Monitor", "Accept": "application/json"},
-        )
-        try:
-            with urllib.request.urlopen(token_req, timeout=_DOCKER_REGISTRY_TIMEOUT_SEC) as response:
-                token_payload = json.loads(response.read().decode("utf-8"))
-            token = token_payload.get("token") or token_payload.get("access_token")
-            if not token:
-                return None, "registry token response was empty"
-            auth_headers = dict(headers)
-            auth_headers["Authorization"] = f"Bearer {token}"
-            auth_req = urllib.request.Request(url, headers=auth_headers, method="HEAD")
-            with urllib.request.urlopen(auth_req, timeout=_DOCKER_REGISTRY_TIMEOUT_SEC) as response:
-                return response.headers.get("Docker-Content-Digest"), None
-        except urllib.error.HTTPError as auth_exc:
-            return None, f"registry HTTP {auth_exc.code}"
-        except (urllib.error.URLError, TimeoutError, OSError, json.JSONDecodeError) as auth_exc:
-            return None, f"registry network error: {auth_exc}"
-    except (urllib.error.URLError, TimeoutError, OSError) as exc:
+        return None, f"registry HTTP {exc.code}"
+    except (urllib.error.URLError, TimeoutError, OSError, json.JSONDecodeError) as exc:
         return None, f"registry network error: {exc}"
+    token = token_payload.get("token") or token_payload.get("access_token")
+    if not token:
+        return None, "registry token response was empty"
+    return token, None
+
+
+def _registry_open(url: str, headers: dict, method: str, max_bytes: int):
+    """One registry request. Returns (headers, body, status, location, error)."""
+    req = urllib.request.Request(url, headers=headers, method=method)
+    try:
+        with _docker_no_redirect_opener.open(req, timeout=_DOCKER_REGISTRY_TIMEOUT_SEC) as response:
+            body = None
+            if max_bytes > 0:
+                body = response.read(max_bytes + 1)
+                if len(body) > max_bytes:
+                    return None, None, None, None, "registry response exceeded the size limit"
+            return response.headers, body, 200, None, None
+    except urllib.error.HTTPError as exc:
+        if exc.code in (301, 302, 303, 307, 308):
+            return exc.headers, None, exc.code, exc.headers.get("Location"), None
+        if exc.code == 401:
+            return exc.headers, None, 401, None, None
+        return None, None, exc.code, None, f"registry HTTP {exc.code}"
+    except (urllib.error.URLError, TimeoutError, OSError) as exc:
+        return None, None, None, None, f"registry network error: {exc}"
+
+
+def _registry_request(url: str, headers: dict, method: str = "HEAD",
+                      token: Optional[str] = None, max_bytes: int = 0,
+                      follow_redirect: bool = True):
+    """Registry request resolving a Bearer challenge once.
+
+    Returns (headers, body, token, error). The token is returned so a caller
+    walking manifest -> manifest -> blob pays for a single challenge.
+    """
+    attempt_headers = dict(headers)
+    if token:
+        attempt_headers["Authorization"] = f"Bearer {token}"
+    response_headers, body, status, location, error = _registry_open(
+        url, attempt_headers, method, max_bytes,
+    )
+    if error:
+        return None, None, token, error
+    if status == 401:
+        challenge = _parse_bearer_challenge((response_headers or {}).get("WWW-Authenticate", ""))
+        if not challenge:
+            return None, None, token, "registry authentication required"
+        token, token_error = _registry_bearer_token(challenge)
+        if token_error:
+            return None, None, None, token_error
+        attempt_headers["Authorization"] = f"Bearer {token}"
+        response_headers, body, status, location, error = _registry_open(
+            url, attempt_headers, method, max_bytes,
+        )
+        if error:
+            return None, None, token, error
+        if status == 401:
+            return None, None, token, "registry HTTP 401"
+    if location:
+        if not follow_redirect:
+            return None, None, token, "registry redirected unexpectedly"
+        if not location.startswith("https://"):
+            return None, None, token, "registry redirect was not https"
+        cdn_headers = {
+            key: value for key, value in headers.items()
+            if key.lower() != "authorization"
+        }
+        response_headers, body, status, location, error = _registry_open(
+            location, cdn_headers, method, max_bytes,
+        )
+        if error:
+            return None, None, token, error
+        if location:
+            return None, None, token, "registry redirected more than once"
+    return response_headers, body, token, None
+
+
+def _registry_digest_request(url: str, headers: dict) -> tuple[Optional[str], Optional[str]]:
+    response_headers, _body, _token, error = _registry_request(url, headers, method="HEAD")
+    if error:
+        return None, error
+    return (response_headers or {}).get("Docker-Content-Digest"), None
 
 
 def _fetch_registry_manifest_digest(parsed: dict) -> tuple[Optional[str], Optional[str]]:
@@ -1884,6 +2011,166 @@ def _fetch_registry_manifest_digest(parsed: dict) -> tuple[Optional[str], Option
         "User-Agent": "ProxMenux-Monitor",
         "Accept": _DOCKER_MANIFEST_ACCEPT,
     })
+
+
+def _verify_content_digest(body: bytes, digest: str) -> bool:
+    """Every registry document is named by its own sha256; check it."""
+    algorithm, _, want = str(digest or "").partition(":")
+    if algorithm != "sha256" or not want or body is None:
+        return False
+    return hashlib.sha256(body).hexdigest() == want
+
+
+def _select_platform_manifest(index: dict, platform: dict) -> Optional[str]:
+    """Return the manifest digest matching the locally installed platform.
+
+    Multi-arch indexes also carry attestation manifests, which advertise
+    ``unknown/unknown``: their config is an SLSA provenance document, not an
+    image. Picking "the first entry" would read that instead. A missing match
+    yields None rather than a fallback — if the index has no build for this
+    host, a pull would fail and there is no version to report.
+    """
+    def _norm(entry: dict) -> tuple:
+        os_name = str(entry.get("os") or "").lower()
+        architecture = str(entry.get("architecture") or "").lower()
+        variant = str(entry.get("variant") or "").lower()
+        # arm64/v8 and bare arm64 name the same build.
+        if architecture == "arm64" and variant == "v8":
+            variant = ""
+        return os_name, architecture, variant
+
+    want = _norm(platform or {})
+    if not want[0] or not want[1]:
+        return None
+    for entry in (index or {}).get("manifests") or []:
+        if not isinstance(entry, dict):
+            continue
+        if (entry.get("annotations") or {}).get("vnd.docker.reference.type"):
+            continue
+        candidate = _norm(entry.get("platform") or {})
+        if candidate[0] in ("", "unknown") or candidate[1] in ("", "unknown"):
+            continue
+        if candidate != want:
+            continue
+        digest = str(entry.get("digest") or "")
+        if digest.startswith("sha256:"):
+            return digest
+    return None
+
+
+def _registry_get_document(base: str, digest: str, headers: dict, token: Optional[str],
+                           ) -> tuple[Optional[dict], Optional[str], Optional[str]]:
+    """GET a registry document by digest and verify it. Returns (json, token, error)."""
+    _response, body, token, error = _registry_request(
+        f"{base}/manifests/{urllib.parse.quote(digest, safe=':')}", headers,
+        method="GET", token=token, max_bytes=_DOCKER_REMOTE_CONFIG_MAX_BYTES,
+    )
+    if error:
+        return None, token, error
+    if not _verify_content_digest(body, digest):
+        return None, token, "remote manifest digest mismatch"
+    try:
+        return json.loads(body.decode("utf-8")), token, None
+    except (UnicodeDecodeError, json.JSONDecodeError):
+        return None, token, "remote manifest was not valid JSON"
+
+
+def _remote_image_config_labels(parsed: dict, remote_digest: str, platform: dict,
+                                ) -> tuple[Optional[dict], Optional[str]]:
+    base = f"https://{parsed.get('api_host')}/v2/{urllib.parse.quote(parsed.get('repository') or '', safe='/')}"
+    headers = {"User-Agent": "ProxMenux-Monitor", "Accept": _DOCKER_MANIFEST_ACCEPT}
+
+    manifest, token, error = _registry_get_document(base, remote_digest, headers, None)
+    if error:
+        return None, error
+    media_type = str(manifest.get("mediaType") or "")
+    if media_type in _DOCKER_INDEX_MEDIA_TYPES or "manifests" in manifest:
+        platform_digest = _select_platform_manifest(manifest, platform)
+        if not platform_digest:
+            return None, "remote_platform_missing"
+        manifest, token, error = _registry_get_document(base, platform_digest, headers, token)
+        if error:
+            return None, error
+    config = manifest.get("config") or {}
+    config_digest = str(config.get("digest") or "")
+    if (str(config.get("mediaType") or "") not in _DOCKER_IMAGE_CONFIG_MEDIA_TYPES
+            or not config_digest.startswith("sha256:")):
+        # Schema v1 manifests and non-image OCI artifacts (Helm charts,
+        # signatures) have no image config to read.
+        return None, "remote_unsupported_manifest"
+    _response, body, _token, error = _registry_request(
+        f"{base}/blobs/{urllib.parse.quote(config_digest, safe=':')}",
+        {"User-Agent": "ProxMenux-Monitor", "Accept": "*/*"},
+        method="GET", token=token, max_bytes=_DOCKER_REMOTE_CONFIG_MAX_BYTES,
+    )
+    if error:
+        return None, error
+    if not _verify_content_digest(body, config_digest):
+        return None, "remote config digest mismatch"
+    try:
+        payload = json.loads(body.decode("utf-8"))
+    except (UnicodeDecodeError, json.JSONDecodeError):
+        return None, "remote config was not valid JSON"
+    return ((payload.get("config") or {}).get("Labels") or {}), None
+
+
+def _fetch_remote_image_config_labels(parsed: dict, remote_digest: str, platform: dict,
+                                      ) -> tuple[Optional[dict], Optional[str]]:
+    """Cached read of the labels carried by the image a pull would install."""
+    cache_key = (
+        str(parsed.get("api_host") or ""),
+        str(parsed.get("repository") or ""),
+        str(remote_digest or ""),
+        str((platform or {}).get("architecture") or ""),
+    )
+    with _docker_remote_config_lock:
+        cached = _docker_remote_config_cache.get(cache_key)
+    if cached is not None:
+        return cached.get("labels"), cached.get("error")
+    labels, error = _remote_image_config_labels(parsed, remote_digest, platform)
+    with _docker_remote_config_lock:
+        if len(_docker_remote_config_cache) >= _DOCKER_REMOTE_CONFIG_CACHE_MAX:
+            _docker_remote_config_cache.clear()
+        _docker_remote_config_cache[cache_key] = {"labels": labels, "error": error}
+    return labels, error
+
+
+_DOCKER_AVAILABLE_VERSION_REASONS = {
+    "remote_platform_missing", "remote_unsupported_manifest", "remote_no_labels",
+}
+
+
+def _docker_available_version_from_registry(item: dict) -> tuple[Optional[str], str]:
+    """Version of the image that pulling this same tag would install.
+
+    This is deliberately not "the latest upstream release": the update action
+    this project generates re-pulls the SAME tag, so the honest number is the
+    one the registry is serving for it right now. Anything that cannot be
+    established returns no version and a reason, keeping the existing contract
+    that a new digest is reported without claiming a version number.
+    """
+    remote_digest = item.get("remote_digest")
+    if not remote_digest:
+        return None, "remote_fetch_error"
+    labels, error = _fetch_remote_image_config_labels(
+        item, remote_digest, item.get("platform") or {},
+    )
+    if error:
+        return None, error if error in _DOCKER_AVAILABLE_VERSION_REASONS else "remote_fetch_error"
+    version, source = _docker_version_from_labels(labels or {})
+    if not version:
+        return None, "remote_no_labels"
+    installed_source = str(item.get("installed_version_source") or "")
+    if installed_source.startswith("image_label:") and installed_source != source:
+        # Comparing one publisher's label against a different one invents a
+        # difference that is not there.
+        return None, "version_source_mismatch"
+    installed = item.get("installed_version")
+    if installed and compare(installed, version) is not True:
+        # Same version rebuilt, retagged, or an unusable pair: the digest
+        # already says there is a new image; no number is the honest answer.
+        return None, "version_not_comparable"
+    return version, f"remote_{source}"
 
 
 def _parse_compose_depends_on(value: Any) -> list[str]:
@@ -2073,6 +2360,64 @@ def _build_docker_update_units(images: list[dict]) -> list[dict]:
     return sorted(units, key=lambda unit: (
         str(unit.get("display_name") or "").lower(), unit["id"],
     ))
+
+
+def resolve_docker_image_for_app(app: dict, inventory: dict) -> dict:
+    """Find the Docker image that owns a delegated app.
+
+    The bridge is the container the app declares, not its name or its image:
+    Immich's compose service and image are both "immich-server" while the
+    application is "immich", and matching on names would also let a container
+    that merely shares a word with a catalog entry claim it. The inventory is
+    backed by ``docker ps -a``, so a stopped container still resolves.
+
+    Returns ``{image_reference, error}`` with ``error`` naming the reason when
+    it cannot be resolved, so the UI can say why instead of silently showing
+    nothing.
+    """
+    container = str(app.get("container_name") or "").strip()
+    if not container:
+        return {"image_reference": None, "error": "no_container_declared"}
+    if not inventory or not inventory.get("available"):
+        return {"image_reference": None, "error": "inventory_unavailable"}
+    for image in inventory.get("images") or []:
+        if container in (image.get("used_by") or []):
+            return {"image_reference": image.get("reference"), "error": None}
+    return {"image_reference": None, "error": "container_not_in_inventory"}
+
+
+def annotate_delegated_apps(apps: list, docker_inventory: dict) -> None:
+    """Attach the image-resolved version to apps that delegate to Docker.
+
+    Decoration only, and deliberately fail-safe: this adds a version number
+    to an app card and must never be able to cost the caller its response.
+    The fields are namespaced so they cannot feed the CT badge or the update
+    counters, where the image already contributes.
+    """
+    if not apps or not docker_inventory:
+        return
+    try:
+        for app in apps:
+            if not isinstance(app, dict) or app.get('update_via') != 'docker':
+                continue
+            # Cleared before every resolution, not only written on success:
+            # these dicts live in caches invalidated by events rather than
+            # time, so a container renamed or removed would otherwise keep
+            # showing the version of an image it no longer runs.
+            app['docker_available_version'] = None
+            app['docker_update_available'] = None
+            link = resolve_docker_image_for_app(app, docker_inventory)
+            reference = link.get('image_reference')
+            if not reference:
+                continue
+            for image in docker_inventory.get('images') or []:
+                if image.get('reference') != reference:
+                    continue
+                app['docker_available_version'] = image.get('available_version')
+                app['docker_update_available'] = image.get('update_available')
+                break
+    except Exception:
+        pass
 
 
 def _aggregate_docker_compose_projects(images: list[dict]) -> list[dict]:
@@ -2321,7 +2666,16 @@ def _docker_inventory_from_ct(vmid) -> dict:
             "logo_url": display_meta.get("logo_url"),
             "installed_version": installed_version,
             "installed_version_source": installed_version_source,
+            # The platform of the image actually installed here. A multi-arch
+            # index must be resolved to this exact build before its config can
+            # be read; anything else would describe a different binary.
+            "platform": {
+                "os": str(inspected_image.get("Os") or ""),
+                "architecture": str(inspected_image.get("Architecture") or ""),
+                "variant": str(inspected_image.get("Variant") or ""),
+            },
             "available_version": None,
+            "available_version_source": None,
             "update_available": None,
             "error": None,
         })
@@ -2370,6 +2724,30 @@ def _docker_inventory_from_ct(vmid) -> dict:
                     item["installed_version_source"] = "docker_hub_digest_tag"
             if item.get("update_available") is True:
                 available_version = _docker_hub_version_for_digest(records, item.get("remote_digest"))
+                if available_version and available_version != item.get("installed_version"):
+                    item["available_version"] = available_version
+                    item["available_version_source"] = "docker_hub_digest_tag"
+
+        # The shortcut above only covers docker.io, and only when a version
+        # tag happens to share the digest. Everywhere else — ghcr.io, lscr.io,
+        # quay.io — an available update had no version number at all. The
+        # image a pull would install carries its own version label, so read it
+        # from the registry by digest, over the same protocol and Bearer
+        # challenge the digest comparison already uses. Hub keeps priority on
+        # docker.io because its tag API is not a pull and does not consume the
+        # anonymous pull-rate budget, and because official images carry no
+        # labels at all.
+        pending = [
+            item for item in images
+            if item.get("update_available") is True
+            and not item.get("available_version")
+            and item.get("remote_digest")
+        ]
+        if pending:
+            with concurrent.futures.ThreadPoolExecutor(max_workers=min(4, len(pending))) as pool:
+                resolved = list(pool.map(_docker_available_version_from_registry, pending))
+            for item, (available_version, source) in zip(pending, resolved):
+                item["available_version_source"] = source
                 if available_version and available_version != item.get("installed_version"):
                     item["available_version"] = available_version
 
@@ -3049,7 +3427,12 @@ def partition_scheduled_release_targets(
     eligible_apps: list[dict] = []
     for app in apps or []:
         app_id = str(app.get("id") or "").strip()
-        if not app_id or app.get("managed_oci_app_id") or app.get("helper_slug") == "docker":
+        # A delegated app has no updater of its own and never resolves a
+        # release date, so including it would hold the whole schedule back
+        # waiting for a date that will never arrive.
+        if (not app_id or app.get("managed_oci_app_id")
+                or app.get("helper_slug") == "docker"
+                or app.get("update_via") == "docker"):
             continue
         if not select_all_apps and app_id not in selected_app_ids:
             continue
@@ -3229,6 +3612,11 @@ def _fire_update_notification(vmid, app: dict) -> None:
         return
     if app.get("helper_slug") == "docker":
         return
+    # Delegated apps are announced by their Docker image's own event; a
+    # second one for the same release would land in a different event type
+    # and therefore escape deduplication.
+    if app.get("update_via") == "docker":
+        return
     try:
         from notification_manager import notification_manager
         import socket
@@ -3296,12 +3684,19 @@ def _docker_stack_notification_payload(
         lines.append(f'• Docker Engine: {installed} → {latest}')
     for image in pending_images[:12]:
         reference = image.get('reference') or 'Docker image'
+        # Lead with the application when the catalog resolved one: the alert
+        # is read on a phone, where "vaultwarden/server:latest" is a worse
+        # answer to "what needs updating" than "Vaultwarden". The reference
+        # stays, because it is what the user acts on. The deduplication
+        # signature above keeps using the reference alone.
+        display_name = str(image.get('display_name') or '').strip()
+        label = f'{display_name} ({reference})' if display_name and display_name != reference else reference
         installed = image.get('installed_version')
         available = image.get('available_version')
         if installed and available and installed != available:
-            lines.append(f'• {reference}: {installed} → {available}')
+            lines.append(f'• {label}: {installed} → {available}')
         else:
-            lines.append(f'• {reference}: new registry digest')
+            lines.append(f'• {label}: new registry digest')
     if len(pending_images) > 12:
         lines.append(f'• +{len(pending_images) - 12} additional image update(s)')
     return {
@@ -3382,6 +3777,14 @@ def _detect_with_alt_healing(vmid, app: dict) -> tuple:
     """
     slug = app.get("helper_slug")
     hint = (_fetch_tracking_hints() or {}).get(slug) or {}
+
+    # An app whose updates are delegated to its Docker image must keep its
+    # docker detector. Healing it onto a leftover /root/.<app> marker would
+    # silently turn it into a native app that then checks its own upstream —
+    # the exact duplication the delegation exists to prevent.
+    if app.get("update_via") == "docker":
+        version, error = detect_installed_version(vmid, app)
+        return version, error, False
 
     # A modern Community Scripts marker (/root/.<app>) is a useful
     # fallback, but it is not a live process probe.  It can stay behind when
@@ -3643,6 +4046,8 @@ def _summarise_app(app: dict) -> dict:
         "id": app.get("id"),
         "name": app.get("name"),
         "installed_via": app.get("installed_via"),
+        "update_via": app.get("update_via"),
+        "container_name": app.get("container_name"),
         "ports": app.get("ports") or [],
         # Keep the application-level logo in the compact /api/vms
         # projection. Consumers can prefer a per-link logo and fall
@@ -4221,6 +4626,24 @@ def _probe_listening_ports(vmid) -> list[int]:
     return result
 
 
+def _docker_container_slug_index() -> dict:
+    """Map a declared ``container_name`` to the catalog slug that declares it.
+
+    Only detectors carrying curated runtime evidence appear here, which keeps
+    the mapping conservative: a container merely called "postgres" is not
+    claimed by an app, because no verified detector says it is.
+    """
+    index: dict = {}
+    for slug, hint in (_fetch_tracking_hints() or {}).items():
+        for detector in _iter_hint_detectors(hint):
+            if detector.get("installed_via") not in ("docker_label", "docker_exec"):
+                continue
+            name = str(detector.get("container_name") or "").strip().lower()
+            if name:
+                index.setdefault(name, slug)
+    return index
+
+
 def _docker_service_catalog_meta(service: str, container: str, image: str) -> dict:
     """Best-effort display metadata for a Docker workload.
 
@@ -4231,6 +4654,13 @@ def _docker_service_catalog_meta(service: str, container: str, image: str) -> di
     image_base = image.split("@", 1)[0].rsplit("/", 1)[-1].split(":", 1)[0]
     raw_candidates = [service, container, image_base]
     candidates: list[str] = []
+    # A curated docker detector names the container it runs in, which is the
+    # only reliable bridge from a container to its catalog entry: Immich's
+    # service is "immich-server" and its image is "immich-server", but the
+    # application is "immich". Heuristic name matching never gets there.
+    declared = _docker_container_slug_index().get(str(container or "").strip().lower())
+    if declared:
+        candidates.append(declared)
     for raw in raw_candidates:
         candidate = re.sub(r"[^a-z0-9._-]+", "-", str(raw or "").strip().lower()).strip("-._")
         if candidate and candidate not in candidates:
@@ -4546,6 +4976,12 @@ def get_suggestions(vmid, force: bool = False) -> dict:
     )
     docker_web_links = _probe_docker_web_links(vmid) if docker_host_detected else []
     extras: list = []
+    # Applications proven to run inside Docker are not registrable apps — see
+    # the skip below — but discarding them entirely made the panel answer "no
+    # applications detected" for a container whose version had just been read
+    # successfully. They are reported separately so the UI can show what is in
+    # there without offering a second, competing update path.
+    docker_workloads: list = []
     for det_slug in sorted(detected_map):
         if slug and det_slug == slug:
             continue
@@ -4570,6 +5006,45 @@ def get_suggestions(vmid, force: bool = False) -> dict:
                 for d in matched_detectors
             )
             if all_docker:
+                workload_name = det_catalog.get("name") or det_hint.get("name") or det_slug
+                workload_logo = ""
+                for candidate in (det_hint.get("logo"), det_catalog.get("logo")):
+                    if isinstance(candidate, str) and candidate.startswith(("http://", "https://")):
+                        workload_logo = candidate
+                        break
+                workload_container = (working or {}).get("container_name") or ""
+                # The detector that actually matched, minus everything that
+                # would make this app check an upstream of its own: the image
+                # it runs on is what says whether there is a new version.
+                workload_tracking = {
+                    key: value for key, value in (working or {}).items()
+                    if key in _DETECTOR_FIELDS or key == "installed_via"
+                }
+                workload_tracking["installed_regex"] = (
+                    (working or {}).get("installed_regex")
+                    or det_hint.get("installed_regex")
+                    or det_hint.get("tag_regex")
+                    or ""
+                )
+                workload_tracking["detector_verified"] = True
+                workload_tracking["detector_source"] = "runtime_probe"
+                workload_tracking["detected_version"] = (working or {}).get("detected_version") or ""
+                workload_tracking["update_via"] = "docker"
+                docker_workloads.append({
+                    "slug": det_slug,
+                    "name": workload_name,
+                    "logo_url": workload_logo or None,
+                    "container_name": workload_container,
+                    "installed_version": (working or {}).get("detected_version") or None,
+                    "installed_via": (working or {}).get("installed_via") or None,
+                    "tracking_suggestion": workload_tracking,
+                    "default_ports": sorted({
+                        link["host_port"] for link in docker_web_links
+                        if link.get("container_name") == workload_container
+                        and isinstance(link.get("host_port"), int)
+                    }),
+                    "category": suggest_category_for(det_slug),
+                })
                 continue
         det_tracking = dict(det_hint)
         if working:
@@ -4642,5 +5117,6 @@ def get_suggestions(vmid, force: bool = False) -> dict:
         # get_catalog_entry so the Register button pre-selects it.
         "category": suggest_category_for(slug),
         "extras": extras,
+        "docker_workloads": sorted(docker_workloads, key=lambda item: item["name"].lower()),
         "docker_web_links": docker_web_links,
     }

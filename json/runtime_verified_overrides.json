@@ -248,6 +248,15 @@
           "installed_via": "file",
           "file_path": "/root/.vaultwarden",
           "file_regex": "v?(\\d+\\.\\d+\\.\\d+)"
+        },
+        {
+          "installed_via": "docker_exec",
+          "container_name": "vaultwarden",
+          "binary_path": "/vaultwarden",
+          "binary_args": [
+            "--version"
+          ],
+          "installed_regex": "(?im)^Vaultwarden\\s+v?(\\d+\\.\\d+\\.\\d+)"
         }
       ]
     },
@@ -361,6 +370,52 @@
         "distribution": "searxng",
         "installed_regex": "(\\d+\\.\\d+\\.\\d+\\+[0-9a-f]+)"
       }
+    },
+    "technitiumdns": {
+      "name": "Technitium DNS Server",
+      "detector": {
+        "installed_via": "file",
+        "file_path": "/root/.technitium",
+        "file_regex": "(\\d+(?:\\.\\d+){1,3})",
+        "upstream_type": "http_json",
+        "upstream_url": "https://go.technitium.com/?id=42",
+        "upstream_json_path": "updateVersion"
+      },
+      "default_ports": [
+        5380
+      ],
+      "website": "https://technitium.com/dns/"
+    },
+    "netalertx": {
+      "name": "NetAlertX",
+      "install_scope": [
+        "docker"
+      ],
+      "detector": {
+        "installed_via": "docker_label",
+        "container_name": "netalertx",
+        "label": "org.opencontainers.image.version",
+        "repo": "netalertx/NetAlertX",
+        "github_source": "releases",
+        "tag_regex": "v?(\\d+(?:\\.\\d+){1,3})"
+      }
+    },
+    "immich": {
+      "detector": {
+        "installed_via": "file",
+        "file_path": "/root/.immich",
+        "file_regex": "(?i)(?:v|release[-_/]?)?(\\d+(?:\\.\\d+){1,3}(?:[-+._][0-9A-Za-z.-]+)?)",
+        "repo": "immich-app/immich",
+        "github_source": "releases",
+        "tag_regex": "(?i)(?:v|release[-_/]?)?(\\d+(?:\\.\\d+){1,3}(?:[-+._][0-9A-Za-z.-]+)?)"
+      },
+      "alt_detectors": [
+        {
+          "installed_via": "docker_label",
+          "container_name": "immich_server",
+          "label": "org.opencontainers.image.version"
+        }
+      ]
     }
   }
 }

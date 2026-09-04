@@ -92,6 +92,9 @@ interface AppConfig {
   health_path?: string
   logo_url?: string
   helper_slug?: string
+  // Set when the application runs inside Docker: registered for its identity
+  // and installed version, updated by the image it comes from.
+  update_via?: string
   // Preserved here even though this editor does not execute updates.
   // The backend uses full-record replacement, so omitting these when
   // editing ports/tracking would silently erase the Updates-tab setup.
@@ -130,6 +133,11 @@ interface AppEntry extends AppConfig {
   id: string
   state?: AppState
   created_at?: string
+  // Resolved server-side from the image a delegated app updates with. It is
+  // not the app's own upstream — the app deliberately has none — so it is
+  // kept in its own field rather than folded into state.latest_version.
+  docker_available_version?: string | null
+  docker_update_available?: boolean | null
 }
 
 interface SidecarResponse {
@@ -220,7 +228,23 @@ interface Suggestions {
   logo_url?: string | null
   category?: string | null
   extras?: DetectedApp[]
+  docker_workloads?: DockerWorkload[]
   docker_web_links?: DockerWebLinkSuggestion[]
+}
+
+// An application proven to run inside Docker. Shown beneath the Docker
+// detection, never as a registrable app: its update path is the Docker
+// image it comes from, and offering a second one would contradict it.
+interface DockerWorkload {
+  slug: string
+  name: string
+  logo_url?: string | null
+  container_name?: string
+  installed_version?: string | null
+  installed_via?: string | null
+  tracking_suggestion?: TrackingSuggestion | null
+  default_ports?: number[]
+  category?: string | null
 }
 
 // Compact catalog entry — one row for every registerable app the
@@ -594,6 +618,13 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed, initialData }: Prop
   )
   // Alias for pre-existing consumers (post-registration chip strip).
   const unregisteredDetected = visibleDetected
+  // Applications running inside Docker. They are filtered the same way, and
+  // deliberately NOT nested inside the Docker chip: that chip disappears the
+  // moment Docker is registered, which is exactly when these become
+  // registrable.
+  const visibleWorkloads = (suggestions?.docker_workloads || []).filter(
+    (w) => !registeredSlugs.has(w.slug) && !dismissedSlugs.has(w.slug),
+  )
   // Detections the user hid and could restore from the Register-a-
   // different-app panel. Not affected by registration state.
   const hiddenDetections = detectedList.filter((d) => dismissedSlugs.has(d.slug))
@@ -623,6 +654,16 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed, initialData }: Prop
         setDetectionNotice({
           found: true,
           text: t("vmLxc.appEditor.newApplicationsDetected", { count: newCount }),
+        })
+      } else if ((result.docker_workloads || []).length > 0) {
+        // Saying "nothing found" while the panel is listing containerised
+        // applications it just read versions from is the one answer that is
+        // certainly wrong.
+        setDetectionNotice({
+          found: true,
+          text: t("vmLxc.appEditor.dockerDetectedWithWorkloads", {
+            count: (result.docker_workloads || []).length,
+          }),
         })
       } else {
         setDetectionNotice({
@@ -680,6 +721,10 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed, initialData }: Prop
         health_path: existing.health_path || "",
         logo_url: existing.logo_url || "",
         helper_slug: existing.helper_slug || "",
+        // Preserved explicitly: saving replaces the whole record, so dropping
+        // it here would silently un-delegate the app the first time someone
+        // edits one of its ports.
+        update_via: (existing as { update_via?: string }).update_via || "",
         update_command: existing.update_command || "",
         hide_no_updater_notice: existing.hide_no_updater_notice === true,
         notifications_enabled: existing.notifications_enabled !== false,
@@ -744,6 +789,20 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed, initialData }: Prop
             upstream_json_path: (t as any).upstream_json_path || "",
             docker_image: (t as any).docker_image || "",
             tag_regex: t.tag_regex || "v?(\\d+\\.\\d+\\.\\d+)",
+          }
+          // A containerised workload delegates its update to its image, and
+          // the backend refuses a delegation that also carries an upstream —
+          // so the upstream fields seeded above are cleared, not just ignored.
+          if ((t as { update_via?: string }).update_via === "docker") {
+            seed = {
+              ...seed,
+              update_via: "docker",
+              upstream_type: "",
+              repo: "",
+              upstream_url: "",
+              upstream_json_path: "",
+              docker_image: "",
+            }
           }
           setShowAdvanced(true)
         } else {
@@ -1825,6 +1884,22 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed, initialData }: Prop
                       if (!t) patch.tag_regex = ""
                       setField(patch)
                     }
+                    // A delegated app has no upstream of its own on purpose:
+                    // the image it runs on resolves the available version.
+                    // Showing an empty "none" dropdown reads as a setting the
+                    // user forgot, so say what is happening instead.
+                    if (editing.draft.update_via === "docker") {
+                      return (
+                        <div className="rounded-md border border-border/60 bg-background/40 p-3">
+                          <div className="text-xs font-medium text-foreground">
+                            {t("vmLxc.appEditor.upstreamDelegatedTitle")}
+                          </div>
+                          <div className="text-[10px] text-muted-foreground mt-1 leading-relaxed">
+                            {t("vmLxc.appEditor.upstreamDelegatedHelp")}
+                          </div>
+                        </div>
+                      )
+                    }
                     return (
                       <>
                         <div>
@@ -2227,6 +2302,67 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed, initialData }: Prop
     </div>
   )
 
+  // A containerised application. Same chip language as a native detection,
+  // with the update path spelled out: it is registered for what it is, not
+  // for an updater it does not have.
+  const renderWorkloadChip = (w: DockerWorkload) => (
+    <div key={`workload-${w.slug}`} className="p-3 rounded-md border border-border/60 bg-background/40">
+      <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+        <div className="flex items-center gap-3 min-w-0 flex-1">
+          {w.logo_url && (
+            <ThemeAwareLogo
+              src={w.logo_url}
+              className="h-14 w-14 flex-shrink-0 rounded-md object-contain"
+            />
+          )}
+          <div className="min-w-0">
+            <div className="text-sm font-semibold text-foreground truncate">{w.name}</div>
+            <div className="text-xs text-emerald-400/90">
+              {w.installed_version
+                ? t("vmLxc.appEditor.versionDetected", { version: w.installed_version })
+                : t("vmLxc.appEditor.detectedInContainer")}
+            </div>
+            <div className="text-[10px] text-muted-foreground mt-0.5 truncate">
+              {t("vmLxc.appEditor.runsInsideDocker")}
+              {w.container_name ? ` · ${w.container_name}` : ""}
+            </div>
+          </div>
+        </div>
+        <div className="flex flex-row gap-2 flex-shrink-0 sm:justify-end w-full sm:w-auto">
+          <Button
+            size="sm"
+            onClick={() => openEditor(undefined, {
+              withTracking: !!w.tracking_suggestion,
+              preset: {
+                slug: w.slug,
+                name: w.name,
+                logo_url: w.logo_url || "",
+                default_ports: w.default_ports || [],
+                category: w.category || null,
+                tracking_suggestion: w.tracking_suggestion || null,
+              } as unknown as DetectedApp,
+            })}
+            className="flex-[3] sm:flex-none bg-blue-500 hover:bg-blue-600 text-white"
+          >
+            <PlusCircle className="h-3.5 w-3.5 mr-1" />
+            {t("vmLxc.appEditor.registerButton")}
+          </Button>
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={() => dismissDetection(w.slug, w.name)}
+            aria-label={`Hide ${w.name} detection`}
+            title={t("vmLxc.appEditor.hidePermanentlyTooltip")}
+            className="flex-1 sm:flex-none bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 text-red-400 hover:text-red-300"
+          >
+            <EyeOff className="h-3.5 w-3.5 sm:mr-1" />
+            <span className="hidden sm:inline">{t("vmLxc.appEditor.hideButton")}</span>
+          </Button>
+        </div>
+      </div>
+    </div>
+  )
+
   return (
     <div className="space-y-4">
       {/* Browse panel — surfaces hidden detections with Restore
@@ -2288,9 +2424,10 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed, initialData }: Prop
             <p className="text-xs text-muted-foreground max-w-md mx-auto leading-relaxed text-center">
               {t("vmLxc.appEditor.noAppsBody")}
             </p>
-            {visibleDetected.length > 0 && (
+            {(visibleDetected.length > 0 || visibleWorkloads.length > 0) && (
               <div className="space-y-2 pt-2">
                 {visibleDetected.map(renderDetectionChip)}
+                {visibleWorkloads.map(renderWorkloadChip)}
               </div>
             )}
             <div className="pt-1 flex flex-wrap justify-center gap-2">
@@ -2394,8 +2531,14 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed, initialData }: Prop
               </div>
 
               {(() => {
-                const hasUpstream = !!(app.repo || app.upstream_type)
-                const hasUpdate = st?.update_available === true
+                // A delegated app has no upstream of its own; the version to
+                // compare against comes from the image it updates with.
+                const delegated = app.update_via === "docker"
+                const hasUpstream = !!(app.repo || app.upstream_type) || (delegated && !!app.docker_available_version)
+                const hasUpdate = delegated
+                  ? app.docker_update_available === true
+                  : st?.update_available === true
+                const latestVersion = delegated ? app.docker_available_version : st?.latest_version
                 if (!tracking || !(st?.installed_version || hasUpstream)) return null
                 return (
                   <div className={"mb-3 grid gap-3 " + (st?.installed_version && hasUpstream ? "grid-cols-2" : "grid-cols-1")}>
@@ -2413,8 +2556,8 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed, initialData }: Prop
                           {t("vmLxc.appEditor.latestUpstream")}
                         </div>
                         <div className={"text-lg font-semibold font-mono flex items-center gap-2 " + (hasUpdate ? "text-purple-400" : "text-foreground")}>
-                          {st?.latest_version || <span className="text-muted-foreground text-base font-normal">{t("vmLxc.appEditor.checkingStatus")}</span>}
-                          {hasUpdate && st?.latest_version && (
+                          {latestVersion || <span className="text-muted-foreground text-base font-normal">{t("vmLxc.appEditor.checkingStatus")}</span>}
+                          {hasUpdate && latestVersion && (
                             <ArrowUpCircle className="h-5 w-5 text-purple-400 flex-shrink-0" aria-label={t("vmLxc.appEditor.updateAvailableBadge")} />
                           )}
                         </div>
@@ -2561,12 +2704,13 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed, initialData }: Prop
           hasn't been registered yet is shown as a chip with a
           one-click Register button. Filtered against the sidecar's
           `helper_slug` field so a registered app never re-appears. */}
-      {apps.length > 0 && unregisteredDetected.length > 0 && (
+      {apps.length > 0 && (unregisteredDetected.length > 0 || visibleWorkloads.length > 0) && (
         <div className="space-y-2">
           <div className="text-xs uppercase tracking-wider text-muted-foreground">
             {t("vmLxc.appEditor.alsoDetectedContainer")}
           </div>
           {unregisteredDetected.map(renderDetectionChip)}
+          {visibleWorkloads.map(renderWorkloadChip)}
         </div>
       )}
 
