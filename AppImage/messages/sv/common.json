@@ -1569,6 +1569,17 @@
       "running": "Löpning",
       "stopped": "Stoppad",
       "empty": "Inga virtuella maskiner eller behållare med status \"{status}\""
+    },
+    "filters": {
+      "searchPlaceholder": "Sök efter namn, ID, tagg eller anteckning...",
+      "searchAriaLabel": "Sök i virtuella maskiner och behållare",
+      "clearSearch": "Rensa sökning",
+      "updates": "Uppdateringar",
+      "resultCount": "{shown} av {total} maskiner",
+      "noMatches": "Inga virtuella datorer eller LXC:er matchar din sökning.",
+      "noRunning": "Inga virtuella datorer eller LXC:er som körs.",
+      "noStopped": "Inga stoppade virtuella datorer eller LXC:er.",
+      "noUpdates": "Inga LXC med tillgängliga uppdateringar."
     }
   },
   "settings": {

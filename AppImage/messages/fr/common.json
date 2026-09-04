@@ -1569,6 +1569,17 @@
       "running": "Courir",
       "stopped": "Arrêté",
       "empty": "Aucune machine virtuelle ou conteneur avec le statut \"{status}\""
+    },
+    "filters": {
+      "searchPlaceholder": "rechercher un nom, un identifiant, une étiquette ou une note…",
+      "searchAriaLabel": "Rechercher des machines virtuelles et des conteneurs",
+      "clearSearch": "Effacer la recherche",
+      "updates": "mises à jour",
+      "resultCount": "{shown} sur {total} machines",
+      "noMatches": "Aucune machine virtuelle ou LXC ne correspond à votre recherche.",
+      "noRunning": "Aucune machine virtuelle ou LXC en cours d’exécution.",
+      "noStopped": "Aucune machine virtuelle ou LXC arrêtée.",
+      "noUpdates": "Non LXC avec les mises à jour disponibles."
     }
   },
   "settings": {

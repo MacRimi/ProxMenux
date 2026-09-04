@@ -1569,6 +1569,17 @@
       "running": "Laufen",
       "stopped": "Gestoppt",
       "empty": "Keine virtuellen Maschinen oder Container mit dem Status „{status}“"
+    },
+    "filters": {
+      "searchPlaceholder": "Nach Name, ID, Tag oder Notiz suchen …",
+      "searchAriaLabel": "Durchsuchen Sie virtuelle Maschinen und Container",
+      "clearSearch": "Suche löschen",
+      "updates": "Aktualisierungen",
+      "resultCount": "{shown} von {total} Maschinen",
+      "noMatches": "Keine VMs oder LXCs entsprechen Ihrer Suche.",
+      "noRunning": "Keine laufenden VMs oder LXCs.",
+      "noStopped": "Keine gestoppten VMs oder LXCs.",
+      "noUpdates": "Nein LXC mit verfügbaren Updates."
     }
   },
   "settings": {
