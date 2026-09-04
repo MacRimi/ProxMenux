@@ -1044,6 +1044,9 @@
         "stopped": "vypnuté",
         "mounted": "pripojené"
       },
+      "mountErrors": {
+        "configuredButNotMounted": "Nastavené, ale nepripojené"
+      },
       "startOnBoot": "Spúšťať pri štarte",
       "tags": "Značky",
       "tagsPlaceholder": "Pridať značku…",

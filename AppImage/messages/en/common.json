@@ -1044,6 +1044,9 @@
         "stopped": "stopped",
         "mounted": "mounted"
       },
+      "mountErrors": {
+        "configuredButNotMounted": "Configured but not mounted"
+      },
       "startOnBoot": "Start at boot",
       "tags": "Tags",
       "tagsPlaceholder": "Add tag…",

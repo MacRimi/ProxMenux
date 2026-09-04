@@ -123,6 +123,20 @@ def _read_lxc_config(vmid: str) -> list[dict[str, Any]]:
     return out
 
 
+def _mount_target_key(target: str) -> str:
+    """Return a stable comparison key for a CT-side mount target.
+
+    Proxmox config accepts a trailing slash in ``mp=/path/`` while
+    ``/proc/<pid>/mounts`` reports the realised target as ``/path``.
+    They name the same mount point, so comparisons must not treat the
+    spelling difference as a runtime divergence. Keep the root path
+    intact: stripping its only slash would turn it into an empty key.
+    """
+    if target == "/":
+        return target
+    return target.rstrip("/")
+
+
 # ---------------------------------------------------------------------------
 # Type classification + source resolution
 # ---------------------------------------------------------------------------
@@ -605,14 +619,14 @@ def get_lxc_mount_points_static(vmid: str) -> dict[str, Any]:
     if running and host_pid:
         try:
             config_targets = {
-                entry.get("target", "")
+                _mount_target_key(entry.get("target", ""))
                 for entry in config_entries
                 if entry.get("target")
             }
             for rt in _read_ct_proc_mounts(host_pid):
                 if not _REMOTE_FS_RE.match(rt.get("rt_fstype", "")):
                     continue
-                if rt.get("rt_target") in config_targets:
+                if _mount_target_key(rt.get("rt_target", "")) in config_targets:
                     continue
                 ad_hoc_hint_count += 1
         except Exception:
@@ -658,7 +672,9 @@ def get_lxc_mount_points_runtime(vmid: str) -> dict[str, Any]:
     # mount point are I/O-bound. Serialised, a CT with 5+ binds
     # tripped Caddy's 3s reverse-proxy timeout.
     from concurrent.futures import ThreadPoolExecutor
-    rt_by_target: dict[str, dict[str, Any]] = {m["rt_target"]: m for m in rt_mounts}
+    rt_by_target: dict[str, dict[str, Any]] = {
+        _mount_target_key(m["rt_target"]): m for m in rt_mounts
+    }
 
     runtime_by_target: dict[str, dict[str, Any]] = {}
     matched_targets: set[str] = set()
@@ -673,9 +689,10 @@ def get_lxc_mount_points_runtime(vmid: str) -> dict[str, Any]:
             host_pid=host_pid if running else "",
             target=tgt,
         )
-        live_target = bool(running and tgt and tgt in rt_by_target)
+        target_key = _mount_target_key(tgt)
+        live_target = bool(running and tgt and target_key in rt_by_target)
         health = _stat_via_host(host_pid, tgt) if live_target else None
-        return entry, capacity, live_target, health
+        return entry, capacity, target_key, live_target, health
 
     if config_entries:
         max_workers = max(2, min(8, len(config_entries)))
@@ -684,11 +701,11 @@ def get_lxc_mount_points_runtime(vmid: str) -> dict[str, Any]:
     else:
         gathered = []
 
-    for entry, cap, live_target, health in gathered:
+    for entry, cap, target_key, live_target, health in gathered:
         target = entry.get("target", "")
         rt_item: dict[str, Any] = {**cap}
         if live_target:
-            rt = rt_by_target[target]
+            rt = rt_by_target[target_key]
             rt_item.update({
                 "runtime_mounted": True,
                 "runtime_source": rt["rt_source"],
@@ -698,7 +715,7 @@ def get_lxc_mount_points_runtime(vmid: str) -> dict[str, Any]:
                 "runtime_reachable": health["reachable"],
                 "runtime_error": health["error"],
             })
-            matched_targets.add(target)
+            matched_targets.add(target_key)
         elif running:
             rt_item["runtime_mounted"] = False
             rt_item["runtime_error"] = "configured but not mounted"
@@ -712,7 +729,7 @@ def get_lxc_mount_points_runtime(vmid: str) -> dict[str, Any]:
     if running:
         ad_hoc_candidates = [
             rt for rt in rt_mounts
-            if rt["rt_target"] not in matched_targets
+            if _mount_target_key(rt["rt_target"]) not in matched_targets
             and _REMOTE_FS_RE.match(rt["rt_fstype"])
         ]
         if ad_hoc_candidates:
@@ -776,7 +793,9 @@ def get_lxc_mount_points(vmid: str) -> dict[str, Any]:
 
     # Index runtime mounts by their CT-side target path so we can
     # match a config entry to its current realised state in O(1).
-    rt_by_target: dict[str, dict[str, Any]] = {m["rt_target"]: m for m in rt_mounts}
+    rt_by_target: dict[str, dict[str, Any]] = {
+        _mount_target_key(m["rt_target"]): m for m in rt_mounts
+    }
 
     out: list[dict[str, Any]] = []
     matched_targets: set[str] = set()
@@ -801,15 +820,16 @@ def get_lxc_mount_points(vmid: str) -> dict[str, Any]:
             target=tgt,
         )
         host_src = _host_source_state(src)
-        live_target = bool(running and tgt and tgt in rt_by_target)
+        target_key = _mount_target_key(tgt)
+        live_target = bool(running and tgt and target_key in rt_by_target)
         health = _stat_via_host(host_pid, tgt) if live_target else None
-        return entry, classification, capacity, host_src, live_target, health
+        return entry, classification, capacity, host_src, target_key, live_target, health
 
     max_workers = max(2, min(8, len(config_entries) or 1))
     with ThreadPoolExecutor(max_workers=max_workers) as pool:
         gathered = list(pool.map(_gather_one, config_entries))
 
-    for entry, cls, cap, host_src, live_target, health in gathered:
+    for entry, cls, cap, host_src, target_key, live_target, health in gathered:
         source = entry.get("source", "")
         target = entry.get("target", "")
 
@@ -830,7 +850,7 @@ def get_lxc_mount_points(vmid: str) -> dict[str, Any]:
 
         # Runtime enrichment when CT is up.
         if live_target:
-            rt = rt_by_target[target]
+            rt = rt_by_target[target_key]
             item.update({
                 "runtime_mounted": True,
                 "runtime_source": rt["rt_source"],
@@ -840,7 +860,7 @@ def get_lxc_mount_points(vmid: str) -> dict[str, Any]:
                 "runtime_reachable": health["reachable"],
                 "runtime_error": health["error"],
             })
-            matched_targets.add(target)
+            matched_targets.add(target_key)
         elif running:
             # CT is running but the configured mount isn't in
             # /proc/<pid>/mounts — divergence. Could be a startup
@@ -860,7 +880,7 @@ def get_lxc_mount_points(vmid: str) -> dict[str, Any]:
     if running:
         ad_hoc_candidates = [
             rt for rt in rt_mounts
-            if rt["rt_target"] not in matched_targets
+            if _mount_target_key(rt["rt_target"]) not in matched_targets
             and _REMOTE_FS_RE.match(rt["rt_fstype"])
         ]
         # Same parallelisation as the configured-mp loop: stat'ing
