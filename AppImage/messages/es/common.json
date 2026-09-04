@@ -1030,7 +1030,10 @@
       "startOnBoot": "Iniciar al arrancar",
       "tags": "Etiquetas",
       "tagsPlaceholder": "Añadir etiqueta…",
-      "tagsNone": "Sin etiquetas"
+      "tagsNone": "Sin etiquetas",
+      "mountErrors": {
+        "configuredButNotMounted": "configurado pero no montado"
+      }
     },
     "logs": {
       "header": "Registros para {name} (VMID: {vmid})",

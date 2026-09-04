@@ -1030,7 +1030,10 @@
       "startOnBoot": "Börja vid start",
       "tags": "Taggar",
       "tagsPlaceholder": "Lägg till tagg...",
-      "tagsNone": "Inga taggar"
+      "tagsNone": "Inga taggar",
+      "mountErrors": {
+        "configuredButNotMounted": "Konfigurerad men inte monterad"
+      }
     },
     "logs": {
       "header": "Loggar för {name} (VMID: {vmid})",

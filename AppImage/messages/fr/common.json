@@ -1030,7 +1030,10 @@
       "startOnBoot": "Démarrer au démarrage",
       "tags": "balises",
       "tagsPlaceholder": "Ajouter une balise…",
-      "tagsNone": "Aucune balise"
+      "tagsNone": "Aucune balise",
+      "mountErrors": {
+        "configuredButNotMounted": "configuré mais non monté"
+      }
     },
     "logs": {
       "header": "Journaux pour {name} (VMID : {vmid})",
