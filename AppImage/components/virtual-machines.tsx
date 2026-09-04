@@ -606,6 +606,9 @@ function MountPointCard({ mp }: { mp: LxcMountPoint }) {
     })
   const flags = optsEntries.filter((o) => o.value === null).map((o) => o.key)
   const keyValues = optsEntries.filter((o) => o.value !== null) as Array<{ key: string; value: string }>
+  const runtimeError = mp.runtime_error === "configured but not mounted"
+    ? t("vmLxc.details.mountErrors.configuredButNotMounted")
+    : mp.runtime_error
 
   return (
     <div className={`rounded-lg p-4 ${cardClasses}`}>
@@ -774,13 +777,13 @@ function MountPointCard({ mp }: { mp: LxcMountPoint }) {
       )}
 
       {/* Error / divergence note. */}
-      {mp.runtime_error && (
+      {runtimeError && (
         <p
           className={`mt-3 text-sm ${
             isStale ? "text-red-400" : "text-amber-400"
           }`}
         >
-          {mp.runtime_error}
+          {runtimeError}
         </p>
       )}
     </div>
