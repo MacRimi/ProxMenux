@@ -39,6 +39,17 @@ function withObservedStates(vmid: number, sidecar: any): any {
   const apps = sidecar.apps.map((app: any) => {
     const observed = observations.get(app.id)
     if (!observed || observed.managed_oci_app_id) return app
+    if (observed.state_revision && sidecar._revision && observed.state_revision < sidecar._revision) return app
+    // Docker metadata can finish after the app's version probe. It arrives
+    // on the same VM feed but must not wait for a new sidecar revision.
+    if (app.update_via === "docker" && observed.update_via === "docker" && app.container_name === observed.container_name) {
+      for (const field of ["docker_available_version", "docker_update_available", "docker_image_reference", "docker_binding_error"]) {
+        if (field in observed && observed[field] !== app[field]) {
+          app = { ...app, [field]: observed[field] }
+          changed = true
+        }
+      }
+    }
     if (observed.state_revision && sidecar._revision) {
       if (observed.state_revision < sidecar._revision) return app
     } else if (!observed.checked_at || (app.state?.checked_at && observed.checked_at < app.state.checked_at)) {

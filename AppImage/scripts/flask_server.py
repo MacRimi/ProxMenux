@@ -6691,8 +6691,11 @@ def get_proxmox_vms():
                             for app in app_list
                             if isinstance(app, dict)
                         )
-                        if docker_registered and docker_inventory:
-                            vm_data['docker_inventory'] = docker_inventory
+                        if docker_inventory and (docker_registered or any(
+                            item.get('update_via') == 'docker' for item in app_list
+                        )):
+                            import lxc_apps as _docker_apps
+                            vm_data['docker_inventory'] = _docker_apps.docker_inventory_for_apps(app_list, docker_inventory)
                         # An app delegating its updates to Docker has no version
                         # of its own to offer. Resolve its image here, once, so
                         # it can show the number that image already resolved.
@@ -13404,8 +13407,6 @@ def api_vm_apps_get(vmid):
         import lxc_apps
         sidecar = lxc_apps.load_sidecar(vmid)
         payload = sidecar if sidecar else {'vmid': vmid, 'apps': []}
-        # Read the shared, file-versioned snapshot; annotate only on the way
-        # out so asynchronously collected Docker metadata remains current.
         lxc_apps.annotate_delegated_apps(payload.get('apps') or [], _get_lxc_docker_inventory_map().get(str(vmid)))
         return jsonify(payload)
     except Exception as e:
@@ -21708,10 +21709,10 @@ def _compose_scheduled_update_command(vmid: int, target: str, targets: list[str]
         for item in targets
         if item.startswith("docker-compose:")
     }
-    docker_registered = any(a.get("helper_slug") == "docker" for a in apps)
+    docker_registered = any(a.get("helper_slug") == "docker" or a.get('update_via') == 'docker' for a in apps)
     if selected_projects and docker_registered:
         try:
-            inventory = lxc_apps.get_docker_inventory(vmid, force=True)
+            inventory = lxc_apps.docker_inventory_for_apps(apps, lxc_apps.get_docker_inventory(vmid, force=True))
         except Exception:
             inventory = {}
         commands_by_project: dict[str, str] = {}
@@ -21868,14 +21869,14 @@ def _resolve_bulk_update_plan(vmid: int, targets: list[str]) -> dict:
             labels.append(label)
 
     if docker_unit_ids:
-        if not docker_app:
+        if not docker_app and not any(app.get('update_via') == 'docker' for app in apps):
             unavailable.extend({
                 'target': target_id,
                 'reason': 'Docker is no longer registered',
             } for target_id in sorted(docker_unit_ids))
         else:
             try:
-                inventory = lxc_apps.get_docker_inventory(vmid, force=True)
+                inventory = lxc_apps.docker_inventory_for_apps(apps, lxc_apps.get_docker_inventory(vmid, force=True))
             except Exception as exc:
                 inventory = {'available': False, 'error': str(exc), 'update_units': []}
             if not inventory.get('available'):
@@ -22098,11 +22099,22 @@ def _run_scheduled_update(vmid: int, sched: dict) -> dict:
     targets = list(dict.fromkeys(filtered_targets))
     if any(value.startswith("docker-") for value in targets):
         docker_registered = any(app.get("helper_slug") == "docker" for app in registered_apps)
+        delegated = any(app.get('update_via') == 'docker' for app in registered_apps)
         if not docker_registered:
-            unavailable_docker = [value for value in targets if value.startswith('docker-')]
+            allowed = set()
+            if delegated:
+                import lxc_apps
+                inventory = lxc_apps.docker_inventory_for_apps(
+                    registered_apps, lxc_apps.get_docker_inventory(vmid, force=True))
+                if inventory.get('available'):
+                    allowed.update(f"docker-compose:{p['project']}" for p in inventory.get('compose_projects') or [])
+                    allowed.update(f"docker-container:{name}" for image in inventory.get('images') or []
+                                   for name in image.get('standalone_containers') or [])
+            unavailable_docker = [value for value in targets if value.startswith('docker-') and value not in allowed]
             deferred_targets.extend(unavailable_docker)
-            targets = [value for value in targets if not value.startswith("docker-")]
-            reasons.append('Docker targets are no longer registered')
+            targets = [value for value in targets if value not in unavailable_docker]
+            if unavailable_docker:
+                reasons.append('Docker targets are no longer registered')
     if not targets:
         return finish('skipped', 'app', [])
     has_os_target = "os" in targets

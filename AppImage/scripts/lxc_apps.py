@@ -201,6 +201,12 @@ _DOCKER_IMAGE_CONFIG_MEDIA_TYPES = {
 }
 _docker_remote_config_lock = threading.RLock()
 _docker_remote_config_cache: dict[tuple, dict] = {}
+_docker_remote_config_flights = [threading.Lock() for _ in range(16)]
+# Optional labels must never hold up the usable local/digest inventory.
+_docker_metadata_pool = concurrent.futures.ThreadPoolExecutor(max_workers=4)
+_docker_metadata_slots = threading.BoundedSemaphore(64)
+_docker_metadata_context = threading.local()
+_docker_slug_index_cache = (None, {})
 _docker_inventory_lock = threading.RLock()
 _docker_inventory_cache: dict[str, dict] = {}
 
@@ -1223,6 +1229,8 @@ def validate_config(payload: dict) -> tuple[bool, Any]:
     if method == "helper" and (not hs or hs in ("docker", "adguard")):
         return _err("a supported helper_slug is required for update_method=helper")
     conf["update_method"] = method
+    if conf.get("update_via") == "docker" and method != "none":
+        return _err("Docker-delegated apps update through their image, not a separate app updater")
 
     # Optional per-app dismiss flag for the "no update method defined"
     # notice shown in the Updates tab. Only affects the notice card;
@@ -1400,9 +1408,19 @@ def detect_installed_version(vmid, config: dict) -> tuple[Optional[str], Optiona
         return version, None
 
     if method == "docker_label":
-        # docker inspect --format '{{index .Config.Labels "<label>"}}' <container>
         fmt = '{{index .Config.Labels "' + config["label"] + '"}}'
-        rc, out, err = _pct_exec(vmid, ["docker", "inspect", "--format", fmt, config["container_name"]])
+        if config.get('update_via') == 'docker':
+            # A protected recreation preserves user container labels. Those
+            # can include the previous image's version, so delegated apps
+            # must read the immutable image actually used by the container.
+            rc, image_id, err = _pct_exec(vmid, ["docker", "inspect", "--format", "{{.Image}}", config["container_name"]])
+            image_id = image_id.strip()
+            if rc != 0 or not re.fullmatch(r'sha256:[a-f0-9]{64}', image_id):
+                return None, "could not resolve the container's installed image"
+            argv = ["docker", "image", "inspect", "--format", fmt, image_id]
+        else:
+            argv = ["docker", "inspect", "--format", fmt, config["container_name"]]
+        rc, out, err = _pct_exec(vmid, argv)
         if rc != 0:
             return None, (err or out).strip()[:200] or "docker inspect failed"
         text = (out or "").strip()
@@ -2003,6 +2021,16 @@ def _normalise_docker_container_reference(reference: str) -> str:
     return reference
 
 
+def _docker_reference_identity(reference: str) -> Optional[tuple]:
+    """Canonical mutable tag, not another alias sharing the same image ID."""
+    reference = _normalise_docker_container_reference(reference)
+    if not reference or '@' in reference or reference.startswith('sha256:'):
+        return None
+    repository, tag = reference.rsplit(':', 1)
+    parsed = _parse_docker_reference(repository, tag)
+    return (parsed['registry'], parsed['repository'], parsed['tag']) if parsed else None
+
+
 def _parse_bearer_challenge(value: str) -> Optional[dict]:
     if not isinstance(value, str) or not value.lower().startswith("bearer "):
         return None
@@ -2045,23 +2073,38 @@ def _registry_bearer_token(challenge: dict) -> tuple[Optional[str], Optional[str
         headers={"User-Agent": "ProxMenux-Monitor", "Accept": "application/json"},
     )
     try:
-        with urllib.request.urlopen(token_req, timeout=_DOCKER_REGISTRY_TIMEOUT_SEC) as response:
-            token_payload = json.loads(response.read().decode("utf-8"))
+        with urllib.request.urlopen(token_req, timeout=_docker_registry_timeout()) as response:
+            body = response.read(65537)
+            if len(body) > 65536:
+                return None, "registry token response exceeded the size limit"
+            token_payload = json.loads(body.decode("utf-8"))
     except urllib.error.HTTPError as exc:
         return None, f"registry HTTP {exc.code}"
-    except (urllib.error.URLError, TimeoutError, OSError, json.JSONDecodeError) as exc:
+    except (urllib.error.URLError, TimeoutError, OSError, ValueError) as exc:
         return None, f"registry network error: {exc}"
+    if not isinstance(token_payload, dict):
+        return None, "registry token response was not an object"
     token = token_payload.get("token") or token_payload.get("access_token")
-    if not token:
+    if not isinstance(token, str) or not token:
         return None, "registry token response was empty"
     return token, None
+
+
+def _docker_registry_timeout():
+    deadline = getattr(_docker_metadata_context, 'deadline', None)
+    if deadline is None:
+        return _DOCKER_REGISTRY_TIMEOUT_SEC
+    remaining = deadline - time.monotonic()
+    if remaining <= 0:
+        raise TimeoutError('registry metadata budget exhausted')
+    return min(_DOCKER_REGISTRY_TIMEOUT_SEC, remaining)
 
 
 def _registry_open(url: str, headers: dict, method: str, max_bytes: int):
     """One registry request. Returns (headers, body, status, location, error)."""
     req = urllib.request.Request(url, headers=headers, method=method)
     try:
-        with _docker_no_redirect_opener.open(req, timeout=_DOCKER_REGISTRY_TIMEOUT_SEC) as response:
+        with _docker_no_redirect_opener.open(req, timeout=_docker_registry_timeout()) as response:
             body = None
             if max_bytes > 0:
                 body = response.read(max_bytes + 1)
@@ -2125,6 +2168,8 @@ def _registry_request(url: str, headers: dict, method: str = "HEAD",
             return None, None, token, error
         if location:
             return None, None, token, "registry redirected more than once"
+        if status == 401:
+            return None, None, token, "registry HTTP 401"
     return response_headers, body, token, None
 
 
@@ -2163,6 +2208,8 @@ def _select_platform_manifest(index: dict, platform: dict) -> Optional[str]:
     host, a pull would fail and there is no version to report.
     """
     def _norm(entry: dict) -> tuple:
+        if not isinstance(entry, dict):
+            return '', '', ''
         os_name = str(entry.get("os") or "").lower()
         architecture = str(entry.get("architecture") or "").lower()
         variant = str(entry.get("variant") or "").lower()
@@ -2177,7 +2224,8 @@ def _select_platform_manifest(index: dict, platform: dict) -> Optional[str]:
     for entry in (index or {}).get("manifests") or []:
         if not isinstance(entry, dict):
             continue
-        if (entry.get("annotations") or {}).get("vnd.docker.reference.type"):
+        annotations = entry.get("annotations") or {}
+        if not isinstance(annotations, dict) or annotations.get("vnd.docker.reference.type"):
             continue
         candidate = _norm(entry.get("platform") or {})
         if candidate[0] in ("", "unknown") or candidate[1] in ("", "unknown"):
@@ -2202,7 +2250,10 @@ def _registry_get_document(base: str, digest: str, headers: dict, token: Optiona
     if not _verify_content_digest(body, digest):
         return None, token, "remote manifest digest mismatch"
     try:
-        return json.loads(body.decode("utf-8")), token, None
+        document = json.loads(body.decode("utf-8"))
+        if not isinstance(document, dict):
+            return None, token, "remote manifest was not an object"
+        return document, token, None
     except (UnicodeDecodeError, json.JSONDecodeError):
         return None, token, "remote manifest was not valid JSON"
 
@@ -2224,6 +2275,8 @@ def _remote_image_config_labels(parsed: dict, remote_digest: str, platform: dict
         if error:
             return None, error
     config = manifest.get("config") or {}
+    if not isinstance(config, dict):
+        return None, "remote_unsupported_manifest"
     config_digest = str(config.get("digest") or "")
     if (str(config.get("mediaType") or "") not in _DOCKER_IMAGE_CONFIG_MEDIA_TYPES
             or not config_digest.startswith("sha256:")):
@@ -2243,7 +2296,12 @@ def _remote_image_config_labels(parsed: dict, remote_digest: str, platform: dict
         payload = json.loads(body.decode("utf-8"))
     except (UnicodeDecodeError, json.JSONDecodeError):
         return None, "remote config was not valid JSON"
-    return ((payload.get("config") or {}).get("Labels") or {}), None
+    if not isinstance(payload, dict) or not isinstance(payload.get("config"), dict):
+        return None, "remote config was not an image config object"
+    labels = payload['config'].get('Labels') or {}
+    if not isinstance(labels, dict) or any(not isinstance(v, str) for v in labels.values()):
+        return None, "remote labels were not a string map"
+    return labels, None
 
 
 def _fetch_remote_image_config_labels(parsed: dict, remote_digest: str, platform: dict,
@@ -2253,18 +2311,27 @@ def _fetch_remote_image_config_labels(parsed: dict, remote_digest: str, platform
         str(parsed.get("api_host") or ""),
         str(parsed.get("repository") or ""),
         str(remote_digest or ""),
+        str((platform or {}).get("os") or ""),
         str((platform or {}).get("architecture") or ""),
+        str((platform or {}).get("variant") or ""),
     )
-    with _docker_remote_config_lock:
-        cached = _docker_remote_config_cache.get(cache_key)
-    if cached is not None:
-        return cached.get("labels"), cached.get("error")
-    labels, error = _remote_image_config_labels(parsed, remote_digest, platform)
-    with _docker_remote_config_lock:
-        if len(_docker_remote_config_cache) >= _DOCKER_REMOTE_CONFIG_CACHE_MAX:
-            _docker_remote_config_cache.clear()
-        _docker_remote_config_cache[cache_key] = {"labels": labels, "error": error}
-    return labels, error
+    with _docker_remote_config_flights[hash(cache_key) % len(_docker_remote_config_flights)]:
+        with _docker_remote_config_lock:
+            cached = _docker_remote_config_cache.get(cache_key)
+        if cached is not None:
+            return cached.get("labels"), cached.get("error")
+        try:
+            labels, error = _remote_image_config_labels(parsed, remote_digest, platform)
+        except Exception as exc:
+            return None, f"remote metadata unavailable: {type(exc).__name__}"
+        # Errors are retryable at the next explicit/lifecycle/daily refresh.
+        # Successful content is immutable because the key contains its digest.
+        if error is None:
+            with _docker_remote_config_lock:
+                if len(_docker_remote_config_cache) >= _DOCKER_REMOTE_CONFIG_CACHE_MAX:
+                    _docker_remote_config_cache.clear()
+                _docker_remote_config_cache[cache_key] = {"labels": labels, "error": None}
+        return labels, error
 
 
 _DOCKER_AVAILABLE_VERSION_REASONS = {
@@ -2518,6 +2585,23 @@ def resolve_docker_image_for_app(app: dict, inventory: dict) -> dict:
     return {"image_reference": None, "error": "container_not_in_inventory"}
 
 
+def docker_inventory_for_apps(apps: list, inventory: dict) -> dict:
+    """Expose only Docker workloads the user registered (or the whole Docker stack)."""
+    if not inventory or any(app.get('helper_slug') == 'docker' for app in apps):
+        return inventory or {}
+    references = {
+        image.get('reference') for image in inventory.get('images') or []
+        if any(app.get('update_via') == 'docker'
+               and app.get('container_name') in (image.get('used_by') or []) for app in apps)
+    }
+    images = [image for image in inventory.get('images') or [] if image.get('reference') in references]
+    return {**inventory, 'images': images,
+            'update_count': sum(image.get('update_available') is True for image in images),
+            'update_units': [unit for unit in inventory.get('update_units') or []
+                             if references.intersection(unit.get('references') or [])],
+            'compose_projects': _aggregate_docker_compose_projects(images)}
+
+
 def annotate_delegated_apps(apps: list, docker_inventory: dict) -> None:
     """Attach the image-resolved version to apps that delegate to Docker.
 
@@ -2526,7 +2610,7 @@ def annotate_delegated_apps(apps: list, docker_inventory: dict) -> None:
     The fields are namespaced so they cannot feed the CT badge or the update
     counters, where the image already contributes.
     """
-    if not apps or not docker_inventory:
+    if not apps:
         return
     try:
         for app in apps:
@@ -2539,6 +2623,8 @@ def annotate_delegated_apps(apps: list, docker_inventory: dict) -> None:
             app['docker_available_version'] = None
             app['docker_update_available'] = None
             link = resolve_docker_image_for_app(app, docker_inventory)
+            app['docker_image_reference'] = link.get('image_reference')
+            app['docker_binding_error'] = link.get('error')
             reference = link.get('image_reference')
             if not reference:
                 continue
@@ -2703,7 +2789,10 @@ def _docker_inventory_from_ct(vmid) -> dict:
             raw_image_rows.append(tuple(part.strip() for part in parts))
 
     inspected_images: dict[str, dict] = {}
-    unique_image_ids = list(dict.fromkeys(row[3] for row in raw_image_rows if row[3]))
+    unique_image_ids = list(dict.fromkeys([
+        *(row[3] for row in raw_image_rows if row[3]),
+        *(item['image_id'] for item in containers if item.get('image_id')),
+    ]))
     if unique_image_ids:
         rc_image_inspect, image_inspect_out, _ = _pct_exec(
             vmid,
@@ -2730,14 +2819,8 @@ def _docker_inventory_from_ct(vmid) -> dict:
         seen.add(parsed["reference"])
         used_by = sorted({
             item["name"] for item in containers
-            if (
-                _normalise_docker_container_reference(str(item.get("image_reference") or item.get("image") or ""))
-                == parsed["reference"]
-                or str(item.get("image_id") or item.get("image") or "")
-                in (image_id, image_id.removeprefix("sha256:"))
-                or str(item.get("image_id") or "").removeprefix("sha256:")
-                == image_id.removeprefix("sha256:")
-            )
+            if _docker_reference_identity(str(item.get("image_reference") or item.get("image") or ""))
+            == (parsed['registry'], parsed['repository'], parsed['tag'])
         })
         if not used_by:
             # Skip orphan images (no container — running or stopped —
@@ -2747,6 +2830,20 @@ def _docker_inventory_from_ct(vmid) -> dict:
             # `docker image prune` / `docker rmi` outside of ProxMenux.
             continue
         used_containers = [item for item in containers if item.get("name") in used_by]
+        # A pull can move the local tag before its containers are recreated.
+        # Inspect the image actually used by the container, not that new tag.
+        running_ids = [str(item.get('image_id') or '') for item in used_containers if item.get('image_id')]
+        actual_id = next((value for value in running_ids if value != image_id), None)
+        if actual_id:
+            image_id = actual_id
+            digest = ''
+            actual_image = inspected_images.get(actual_id) or {}
+            for repo_digest in actual_image.get('RepoDigests') or []:
+                repository_name, _, candidate_digest = repo_digest.partition('@')
+                candidate = _parse_docker_reference(repository_name, tag)
+                if candidate and (candidate['registry'], candidate['repository']) == (parsed['registry'], parsed['repository']):
+                    digest = candidate_digest
+                    break
         compose_targets: dict[str, dict] = {}
         standalone_containers: list[str] = []
         for container in used_containers:
@@ -2875,13 +2972,8 @@ def _docker_inventory_from_ct(vmid) -> dict:
             and not item.get("available_version")
             and item.get("remote_digest")
         ]
-        if pending:
-            with concurrent.futures.ThreadPoolExecutor(max_workers=min(4, len(pending))) as pool:
-                resolved = list(pool.map(_docker_available_version_from_registry, pending))
-            for item, (available_version, source) in zip(pending, resolved):
-                item["available_version_source"] = source
-                if available_version and available_version != item.get("installed_version"):
-                    item["available_version"] = available_version
+        for item in pending:
+            item["available_version_source"] = "remote_metadata_pending"
 
     return {
         "vmid": int(vmid),
@@ -2939,7 +3031,52 @@ def get_docker_inventory(vmid, force: bool = False) -> dict:
         result = pending
     with _docker_inventory_lock:
         _docker_inventory_cache[key] = result
+    _queue_docker_metadata(key, result)
     return dict(result)
+
+
+def _queue_docker_metadata(key: str, snapshot: dict) -> None:
+    """Enrich a published snapshot, never an inventory from a later CT boot.
+
+    Only a real inventory refresh schedules work. Reading a tab/cache does
+    not contact registries. Queue and concurrency are bounded globally.
+    """
+    def enrich(index, item):
+        try:
+            _docker_metadata_context.deadline = time.monotonic() + 20
+            version, source = _docker_available_version_from_registry(item)
+            with _docker_inventory_lock:
+                if _docker_inventory_cache.get(key) is not snapshot:
+                    return
+                images = list(snapshot['images'])
+                images[index] = {**images[index], 'available_version_source': source}
+                if version and version != item.get('installed_version'):
+                    images[index]['available_version'] = version
+                snapshot['images'] = images
+        except Exception:
+            # Optional metadata cannot turn a successful digest scan into an error.
+            with _docker_inventory_lock:
+                if _docker_inventory_cache.get(key) is snapshot:
+                    images = list(snapshot['images'])
+                    images[index] = {**images[index], 'available_version_source': 'remote_fetch_error'}
+                    snapshot['images'] = images
+        finally:
+            _docker_metadata_context.deadline = None
+            _docker_metadata_slots.release()
+
+    if not snapshot.get('available'):
+        return
+    for index, item in enumerate(snapshot.get('images') or []):
+        if item.get('available_version_source') != 'remote_metadata_pending':
+            continue
+        if not _docker_metadata_slots.acquire(blocking=False):
+            item['available_version_source'] = 'remote_metadata_deferred'
+            continue
+        try:
+            _docker_metadata_pool.submit(enrich, index, dict(item))
+        except Exception:
+            _docker_metadata_slots.release()
+            item['available_version_source'] = 'remote_metadata_deferred'
 
 
 def mark_docker_inventory_refreshing(vmid) -> dict:
@@ -3801,7 +3938,6 @@ def _docker_stack_notification_payload(
             {
                 'reference': image.get('reference'),
                 'remote_digest': image.get('remote_digest'),
-                'available_version': image.get('available_version'),
             }
             for image in pending_images
         ],
@@ -3871,8 +4007,25 @@ def emit_all_pending_docker_stacks() -> int:
             ),
             None,
         )
-        if not docker_app or docker_app.get('notifications_enabled', True) is False:
-            continue
+        if docker_app:
+            if docker_app.get('notifications_enabled', True) is False:
+                continue
+        else:
+            # No automatic Docker registration: notify only images explicitly
+            # followed by delegated apps, honoring each app's notification choice.
+            references = {
+                resolve_docker_image_for_app(app, inventory).get('image_reference')
+                for app in sidecar.get('apps') or []
+                if app.get('update_via') == 'docker'
+                and app.get('notifications_enabled', True) is not False
+            } - {None}
+            if not references:
+                continue
+            inventory = {**inventory, 'images': [
+                image for image in inventory.get('images') or []
+                if image.get('reference') in references
+            ]}
+            docker_app = {}
         payload = _docker_stack_notification_payload(
             vmid, docker_app, inventory, names.get(vmid) or f'CT-{vmid}',
         )
@@ -3908,7 +4061,6 @@ def _detect_with_alt_healing(vmid, app: dict) -> tuple:
     the app dict was rewritten.
     """
     slug = app.get("helper_slug")
-    hint = (_fetch_tracking_hints() or {}).get(slug) or {}
 
     # An app whose updates are delegated to its Docker image must keep its
     # docker detector. Healing it onto a leftover /root/.<app> marker would
@@ -3917,6 +4069,8 @@ def _detect_with_alt_healing(vmid, app: dict) -> tuple:
     if app.get("update_via") == "docker":
         version, error = detect_installed_version(vmid, app)
         return version, error, False
+
+    hint = (_fetch_tracking_hints() or {}).get(slug) or {}
 
     # A modern Community Scripts marker (/root/.<app>) is a useful
     # fallback, but it is not a live process probe.  It can stay behind when
@@ -4770,14 +4924,22 @@ def _docker_container_slug_index() -> dict:
     the mapping conservative: a container merely called "postgres" is not
     claimed by an app, because no verified detector says it is.
     """
-    index: dict = {}
-    for slug, hint in (_fetch_tracking_hints() or {}).items():
+    global _docker_slug_index_cache
+    hints = _fetch_tracking_hints()
+    with _docker_remote_config_lock:
+        previous, index = _docker_slug_index_cache
+        if previous is hints:
+            return index
+    index = {}
+    for slug, hint in (hints or {}).items():
         for detector in _iter_hint_detectors(hint):
             if detector.get("installed_via") not in ("docker_label", "docker_exec"):
                 continue
             name = str(detector.get("container_name") or "").strip().lower()
             if name:
                 index.setdefault(name, slug)
+    with _docker_remote_config_lock:
+        _docker_slug_index_cache = (hints, index)
     return index
 
 

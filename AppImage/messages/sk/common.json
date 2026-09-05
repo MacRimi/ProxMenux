@@ -1268,6 +1268,8 @@
       "custom": "Vlastný cron…"
     },
     "updates": {
+      "updatedWithDockerImage": "Aktualizuje sa spolu so svojím obrazom Docker.",
+      "dockerBindingUnavailable": "Zatiaľ nie je priradený žiadny obraz. Skontrolujte názov kontajnera a obnovte inventár obrazov.",
       "osPackagesTitle": "Balíky systému",
       "lastCheckedPrefix": "Naposledy skontrolované:",
       "familyLabel": "Systém:",
@@ -1428,6 +1430,11 @@
       "loadFailed": "Konfiguráciu hromadnej aktualizácie sa nepodarilo načítať."
     },
     "appEditor": {
+      "dockerDetectedWithWorkloads": "Zistený Docker s {count} aplikáciami v kontajneroch",
+      "dockerWorkloadsHeading": "Aplikácie v Dockeri",
+      "runsInsideDocker": "Aktualizuje sa spolu s obrazom Docker",
+      "upstreamDelegatedTitle": "Dostupná verzia pochádza z jej obrazu Docker",
+      "upstreamDelegatedHelp": "Táto aplikácia beží v kontajneri. Dostupná verzia sa zisťuje z jeho obrazu bez samostatnej kontroly alebo duplicitných upozornení. Obraz aktualizujte na karte Aktualizácie.",
       "closePanel": "Zavrieť panel",
       "cancelButton": "Zrušiť",
       "saveButton": "Uložiť",

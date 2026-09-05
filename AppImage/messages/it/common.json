@@ -1247,6 +1247,8 @@
       "custom": "Cronologia personalizzata..."
     },
     "updates": {
+      "updatedWithDockerImage": "Si aggiorna con la sua immagine Docker.",
+      "dockerBindingUnavailable": "Nessuna immagine ancora associata. Controlla il nome del container e aggiorna l’inventario delle immagini.",
       "osPackagesTitle": "Pacchetti del sistema operativo",
       "lastCheckedPrefix": "Ultimo controllo:",
       "familyLabel": "Famiglia:",
@@ -1407,6 +1409,11 @@
       "loadFailed": "impossibile caricare la configurazione dell'aggiornamento collettivo."
     },
     "appEditor": {
+      "dockerDetectedWithWorkloads": "Docker rilevato con {count} applicazioni in container",
+      "dockerWorkloadsHeading": "Applicazioni in Docker",
+      "runsInsideDocker": "Si aggiorna con la sua immagine Docker",
+      "upstreamDelegatedTitle": "La versione disponibile proviene dalla sua immagine Docker",
+      "upstreamDelegatedHelp": "Questa applicazione viene eseguita in un container. La versione disponibile viene ricavata dalla sua immagine, senza controlli separati né notifiche duplicate. Aggiorna l’immagine nella scheda Aggiornamenti.",
       "closePanel": "Chiudi pannello",
       "cancelButton": "Cancellare",
       "saveButton": "Salva",

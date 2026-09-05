@@ -1247,6 +1247,8 @@
       "custom": "Cron personalizado..."
     },
     "updates": {
+      "updatedWithDockerImage": "Se actualiza con su imagen Docker.",
+      "dockerBindingUnavailable": "Aún no hay una imagen vinculada. Comprueba el nombre del contenedor y actualiza el inventario de imágenes.",
       "osPackagesTitle": "Paquetes de sistema operativo",
       "lastCheckedPrefix": "Última comprobación:",
       "familyLabel": "Familia:",
@@ -1407,6 +1409,11 @@
       "loadFailed": "no se pudo cargar la configuración de actualización masiva."
     },
     "appEditor": {
+      "dockerDetectedWithWorkloads": "Docker detectado con {count} aplicaciones en contenedores",
+      "dockerWorkloadsHeading": "Aplicaciones en Docker",
+      "runsInsideDocker": "Se actualiza con su imagen Docker",
+      "upstreamDelegatedTitle": "La versión disponible proviene de su imagen Docker",
+      "upstreamDelegatedHelp": "Esta aplicación se ejecuta en un contenedor. La versión disponible se obtiene de su imagen, sin otra consulta independiente ni avisos duplicados. Actualízala desde su imagen en la pestaña Actualizaciones.",
       "closePanel": "Cerrar panel",
       "cancelButton": "Cancelar",
       "saveButton": "Guardar",

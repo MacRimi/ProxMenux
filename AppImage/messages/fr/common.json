@@ -1247,6 +1247,8 @@
       "custom": "Cron personnalisé…"
     },
     "updates": {
+      "updatedWithDockerImage": "Mise à jour avec son image Docker.",
+      "dockerBindingUnavailable": "Aucune image associée pour le moment. Vérifiez le nom du conteneur et actualisez l’inventaire des images.",
       "osPackagesTitle": "Packages de système d'exploitation",
       "lastCheckedPrefix": "Dernière vérification :",
       "familyLabel": "Famille:",
@@ -1407,6 +1409,11 @@
       "loadFailed": "Impossible de charger la configuration de la mise à jour groupée."
     },
     "appEditor": {
+      "dockerDetectedWithWorkloads": "Docker détecté avec {count} applications conteneurisées",
+      "dockerWorkloadsHeading": "Applications dans Docker",
+      "runsInsideDocker": "Mise à jour avec son image Docker",
+      "upstreamDelegatedTitle": "La version disponible provient de son image Docker",
+      "upstreamDelegatedHelp": "Cette application s’exécute dans un conteneur. La version disponible est déterminée par son image, sans vérification séparée ni notifications en double. Mettez son image à jour dans l’onglet Mises à jour.",
       "closePanel": "Fermer le panneau",
       "cancelButton": "Annuler",
       "saveButton": "Sauvegarder",

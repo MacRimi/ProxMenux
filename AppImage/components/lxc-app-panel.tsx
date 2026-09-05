@@ -233,9 +233,8 @@ interface Suggestions {
   docker_web_links?: DockerWebLinkSuggestion[]
 }
 
-// An application proven to run inside Docker. Shown beneath the Docker
-// detection, never as a registrable app: its update path is the Docker
-// image it comes from, and offering a second one would contradict it.
+// A registrable application inside Docker. Its image remains the updater;
+// registration adds identity and version tracking, not a second update path.
 interface DockerWorkload {
   slug: string
   name: string
@@ -636,10 +635,11 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed, initialData }: Prop
   )
   // Detections the user hid and could restore from the Register-a-
   // different-app panel. Not affected by registration state.
-  const hiddenDetections = detectedList.filter((d) => dismissedSlugs.has(d.slug))
+  const hiddenDetections = [...detectedList, ...(suggestions?.docker_workloads || [])]
+    .filter((d, index, items) => dismissedSlugs.has(d.slug) && items.findIndex(item => item.slug === d.slug) === index)
 
   const searchInstalledApplications = async () => {
-    const before = new Set(visibleDetected.map((item) => item.slug))
+    const before = new Set([...visibleDetected, ...visibleWorkloads].map((item) => item.slug))
     setSearchingApplications(true)
     setDetectionNotice(null)
     setError(null)
@@ -653,6 +653,7 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed, initialData }: Prop
       const detected = new Set<string>()
       if (result.helper_slug) detected.add(result.helper_slug)
       for (const item of result.extras || []) detected.add(item.slug)
+      for (const item of result.docker_workloads || []) detected.add(item.slug)
       const visible = [...detected].filter(
         (slug) => !registeredSlugs.has(slug) && !dismissedSlugs.has(slug),
       )
@@ -663,16 +664,6 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed, initialData }: Prop
         setDetectionNotice({
           found: true,
           text: t("vmLxc.appEditor.newApplicationsDetected", { count: newCount }),
-        })
-      } else if ((result.docker_workloads || []).length > 0) {
-        // Saying "nothing found" while the panel is listing containerised
-        // applications it just read versions from is the one answer that is
-        // certainly wrong.
-        setDetectionNotice({
-          found: true,
-          text: t("vmLxc.appEditor.dockerDetectedWithWorkloads", {
-            count: (result.docker_workloads || []).length,
-          }),
         })
       } else {
         setDetectionNotice({
@@ -2361,7 +2352,7 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed, initialData }: Prop
             size="sm"
             variant="ghost"
             onClick={() => dismissDetection(w.slug, w.name)}
-            aria-label={`Hide ${w.name} detection`}
+            aria-label={`${t("vmLxc.appEditor.hideButton")}: ${w.name}`}
             title={t("vmLxc.appEditor.hidePermanentlyTooltip")}
             className="flex-1 sm:flex-none bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 text-red-400 hover:text-red-300"
           >
