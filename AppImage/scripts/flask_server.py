@@ -6693,6 +6693,20 @@ def get_proxmox_vms():
                         )
                         if docker_registered and docker_inventory:
                             vm_data['docker_inventory'] = docker_inventory
+                        # An app delegating its updates to Docker has no version
+                        # of its own to offer. Resolve its image here, once, so
+                        # it can show the number that image already resolved.
+                        # This runs even when Docker itself is not registered:
+                        # the gate above governs the Docker SECTION, and a user
+                        # who registered this application asked precisely to be
+                        # told about this application.
+                        try:
+                            import lxc_apps as _lxc_apps
+                            _lxc_apps.annotate_delegated_apps(app_list, docker_inventory)
+                        except Exception:
+                            # Decoration only: a failure here must never cost
+                            # the caller its VM and LXC inventory.
+                            pass
 
                     # PVE's cluster resources API reports disk=0 for most
                     # QEMU VMs — it can't see inside the guest filesystem
@@ -13390,6 +13404,9 @@ def api_vm_apps_get(vmid):
         import lxc_apps
         sidecar = lxc_apps.load_sidecar(vmid)
         payload = sidecar if sidecar else {'vmid': vmid, 'apps': []}
+        # Read the shared, file-versioned snapshot; annotate only on the way
+        # out so asynchronously collected Docker metadata remains current.
+        lxc_apps.annotate_delegated_apps(payload.get('apps') or [], _get_lxc_docker_inventory_map().get(str(vmid)))
         return jsonify(payload)
     except Exception as e:
         return jsonify({'error': str(e)}), 500
