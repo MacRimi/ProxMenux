@@ -1220,15 +1220,7 @@
       "humanWeekly": "Varje vecka ({day} {time})",
       "humanMonthly": "Varje månad (dag {day} kl. {time})",
       "humanHourly": "Varje timme",
-      "weekdays": [
-        "söndag",
-        "måndag",
-        "tisdag",
-        "onsdag",
-        "torsdag",
-        "fredag",
-        "lördag"
-      ]
+      "weekdays": "['söndag', 'måndag', 'tisdag', 'onsdag', 'torsdag', 'fredag', 'lördag']"
     },
     "cronChip": {
       "detected": "host cron upptäckt",
@@ -1379,7 +1371,8 @@
       "postApplyAllOk": "{count} paket(en) har tillämpats framgångsrikt — inget väntande.",
       "postApplyNothingPending": "Inget väntande — allt är uppdaterat.",
       "postApplyPartial": "{pending} paket som fortfarande väntar efter körningen.",
-      "postApplyPartialSubline": "{applied} tillämpas.Vissa uppdateringar slutfördes inte – granska terminalutgången ovan."
+      "postApplyPartialSubline": "{applied} tillämpas.Vissa uppdateringar slutfördes inte – granska terminalutgången ovan.",
+      "updatedWithDockerImage": "Uppdaterad med dess Docker-bild."
     },
     "bulkUpdate": {
       "title": "Gruppuppdatering",
@@ -1604,7 +1597,12 @@
       "notifyUpstreamLabel": "Meddela mig när en ny uppströmsversion är tillgänglig",
       "notifyUpstreamHelp": "Skickar `app_update_available` till de kanaler som är aktiverade i Inställningar → Aviseringar.Stäng av om den här appen inte kan uppdateras på din box.",
       "excludeFromBadgeLabel": "Uteslut från LXC-uppdateringsräknaren",
-      "excludeFromBadgeHelp": "Räkna inte den här appen i det samlade uppdateringsmärket på LXC-listkortet.Användbart när du är fäst till en specifik version med avsikt (spårningskrav, frysning av kompatibilitet).Påverkar inte appflikens eget tillstånd eller det utgående meddelandet."
+      "excludeFromBadgeHelp": "Räkna inte den här appen i det samlade uppdateringsmärket på LXC-listkortet.Användbart när du är fäst till en specifik version med avsikt (spårningskrav, frysning av kompatibilitet).Påverkar inte appflikens eget tillstånd eller det utgående meddelandet.",
+      "dockerDetectedWithWorkloads": "Docker upptäckt med {count} containeriserade applikationer",
+      "dockerWorkloadsHeading": "Kör inuti Docker",
+      "runsInsideDocker": "Uppdaterad med dess Docker-bild",
+      "upstreamDelegatedTitle": "Tillgänglig version kommer från dess Docker-bild",
+      "upstreamDelegatedHelp": "Den här applikationen körs i en behållare, så den tillgängliga versionen är vad dess bild än löser – ingen separat uppströmskontroll och en uppdatering rapporteras en gång.Uppdatera den från dess bild på fliken Uppdateringar."
     },
     "statusFilter": {
       "ariaLabel": "Filtrera virtuella maskiner och containrar",

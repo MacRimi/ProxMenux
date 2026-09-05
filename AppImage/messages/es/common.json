@@ -1220,15 +1220,7 @@
       "humanWeekly": "Semanal ({day} {time})",
       "humanMonthly": "Mensual (día {day} a las {time})",
       "humanHourly": "cada hora",
-      "weekdays": [
-        "domingo",
-        "lunes",
-        "martes",
-        "miércoles",
-        "jueves",
-        "viernes",
-        "sábado"
-      ]
+      "weekdays": "['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado']"
     },
     "cronChip": {
       "detected": "cron del host detectado",
@@ -1379,7 +1371,8 @@
       "postApplyAllOk": "{count} paquete(s) aplicados correctamente — nada pendiente.",
       "postApplyNothingPending": "Nada pendiente — todo actualizado.",
       "postApplyPartial": "{pending} paquete(s) siguen pendientes tras la ejecución.",
-      "postApplyPartialSubline": "{applied} aplicados. Algunas actualizaciones no finalizaron — revisa la salida del terminal."
+      "postApplyPartialSubline": "{applied} aplicados. Algunas actualizaciones no finalizaron — revisa la salida del terminal.",
+      "updatedWithDockerImage": "actualizado con su imagen Docker."
     },
     "bulkUpdate": {
       "title": "Actualización en bloque",
@@ -1604,7 +1597,12 @@
       "notifyUpstreamLabel": "Notificarme cuando haya una nueva versión disponible",
       "notifyUpstreamHelp": "Envía `app_update_available` a los canales activos en Ajustes → Notificaciones. Desactívalo si esta app no se puede actualizar en tu instalación.",
       "excludeFromBadgeLabel": "Excluir del contador de actualizaciones del LXC",
-      "excludeFromBadgeHelp": "No sumar esta app al contador agregado de actualizaciones del card del LXC. Útil cuando mantienes una versión concreta a propósito (requisito de tracker, compatibilidad). No afecta al estado que se muestra en la pestaña App ni al envío de la notificación."
+      "excludeFromBadgeHelp": "No sumar esta app al contador agregado de actualizaciones del card del LXC. Útil cuando mantienes una versión concreta a propósito (requisito de tracker, compatibilidad). No afecta al estado que se muestra en la pestaña App ni al envío de la notificación.",
+      "dockerDetectedWithWorkloads": "Docker detectado con {count} aplicaciones en contenedores",
+      "dockerWorkloadsHeading": "Ejecutando dentro de Docker",
+      "runsInsideDocker": "actualizado con su imagen Docker",
+      "upstreamDelegatedTitle": "La versión disponible proviene de su imagen Docker",
+      "upstreamDelegatedHelp": "esta aplicación se ejecuta en un contenedor, por lo que la versión disponible es cualquiera que resuelva su imagen: no hay verificación ascendente por separado y se informa una actualización una vez.Actualízalo desde su imagen en la pestaña Actualizaciones."
     },
     "statusFilter": {
       "ariaLabel": "Filtrar máquinas virtuales y contenedores",

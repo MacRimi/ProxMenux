@@ -1220,15 +1220,7 @@
       "humanWeekly": "hebdomadaire ({day} {time})",
       "humanMonthly": "mensuel (jour {day} à {time})",
       "humanHourly": "Horaire",
-      "weekdays": [
-        "Dimanche",
-        "Lundi",
-        "Mardi",
-        "Mercredi",
-        "Jeudi",
-        "Vendredi",
-        "Samedi"
-      ]
+      "weekdays": "['Dimanche', 'Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi']"
     },
     "cronChip": {
       "detected": "cron hôte détecté",
@@ -1379,7 +1371,8 @@
       "postApplyAllOk": "{count} package(s) appliqué(s) avec succès – rien en attente.",
       "postApplyNothingPending": "Rien en attente – tout est à jour.",
       "postApplyPartial": "{pending} package(s) toujours en attente après l'exécution.",
-      "postApplyPartialSubline": "{applied} appliqué.Certaines mises à jour n'ont pas été terminées – consultez la sortie du terminal ci-dessus."
+      "postApplyPartialSubline": "{applied} appliqué.Certaines mises à jour n'ont pas été terminées – consultez la sortie du terminal ci-dessus.",
+      "updatedWithDockerImage": "mis à jour avec son image Docker."
     },
     "bulkUpdate": {
       "title": "Mise à jour groupée",
@@ -1604,7 +1597,12 @@
       "notifyUpstreamLabel": "Me prévenir lorsqu'une nouvelle version en amont est disponible",
       "notifyUpstreamHelp": "envoie `app_update_available` aux canaux activés dans Paramètres → Notifications.Désactivez-la si cette application ne peut pas être mise à jour sur votre box.",
       "excludeFromBadgeLabel": "exclure du compteur de mises à jour LXC",
-      "excludeFromBadgeHelp": "Ne comptez pas cette application dans le badge de mises à jour globales sur la carte de liste LXC.Utile lorsque vous êtes volontairement épinglé à une version spécifique (exigence de suivi, gel de la compatibilité).N'affecte pas l'état de l'onglet Application ni la notification sortante."
+      "excludeFromBadgeHelp": "Ne comptez pas cette application dans le badge de mises à jour globales sur la carte de liste LXC.Utile lorsque vous êtes volontairement épinglé à une version spécifique (exigence de suivi, gel de la compatibilité).N'affecte pas l'état de l'onglet Application ni la notification sortante.",
+      "dockerDetectedWithWorkloads": "Docker détecté avec {count} application(s) conteneurisée(s)",
+      "dockerWorkloadsHeading": "Exécution à l'intérieur de Docker",
+      "runsInsideDocker": "mis à jour avec son image Docker",
+      "upstreamDelegatedTitle": "la version disponible provient de son image Docker",
+      "upstreamDelegatedHelp": "Cette application s'exécute dans un conteneur, donc la version disponible est celle que son image résout : pas de vérification distincte en amont et une mise à jour signalée une fois.Mettez-le à jour à partir de son image dans l'onglet Mises à jour."
     },
     "statusFilter": {
       "ariaLabel": "Filtrer les machines virtuelles et les conteneurs",

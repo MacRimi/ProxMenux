@@ -1220,15 +1220,7 @@
       "humanWeekly": "Wöchentlich ({day} {time})",
       "humanMonthly": "Monatlich (Tag {day} um {time})",
       "humanHourly": "Stündlich",
-      "weekdays": [
-        "Sonntag",
-        "Montag",
-        "Dienstag",
-        "Mittwoch",
-        "Donnerstag",
-        "Freitag",
-        "Samstag"
-      ]
+      "weekdays": "['Sonntag', 'Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag']"
     },
     "cronChip": {
       "detected": "Host-Cron erkannt",
@@ -1379,7 +1371,8 @@
       "postApplyAllOk": "{count} Paket(e) erfolgreich angewendet – nichts ausstehend.",
       "postApplyNothingPending": "Nichts ausstehend – alles ist auf dem neuesten Stand.",
       "postApplyPartial": "{pending} Paket(e) stehen nach der Ausführung noch aus.",
-      "postApplyPartialSubline": "{applied} angewendet.Einige Aktualisierungen wurden nicht abgeschlossen – sehen Sie sich die Terminalausgabe oben an."
+      "postApplyPartialSubline": "{applied} angewendet.Einige Aktualisierungen wurden nicht abgeschlossen – sehen Sie sich die Terminalausgabe oben an.",
+      "updatedWithDockerImage": "Aktualisiert mit seinem Docker-Bild."
     },
     "bulkUpdate": {
       "title": "Sammelaktualisierung",
@@ -1604,7 +1597,12 @@
       "notifyUpstreamLabel": "Benachrichtigen Sie mich, wenn eine neue Upstream-Version verfügbar ist",
       "notifyUpstreamHelp": "Sendet „app_update_available“ an die Kanäle, die in Einstellungen → Benachrichtigungen aktiviert sind.Deaktivieren Sie diese Option, wenn diese App auf Ihrer Box nicht aktualisiert werden kann.",
       "excludeFromBadgeLabel": "Vom LXC-Aktualisierungszähler ausschließen",
-      "excludeFromBadgeHelp": "Zählen Sie diese App nicht im Abzeichen „Aggregate Updates“ auf der LXC-Listenkarte.Nützlich, wenn Sie absichtlich an eine bestimmte Version gebunden sind (Tracker-Anforderung, Kompatibilitätsstopp).Hat keinen Einfluss auf den eigenen Status der App-Registerkarte oder die ausgehende Benachrichtigung."
+      "excludeFromBadgeHelp": "Zählen Sie diese App nicht im Abzeichen „Aggregate Updates“ auf der LXC-Listenkarte.Nützlich, wenn Sie absichtlich an eine bestimmte Version gebunden sind (Tracker-Anforderung, Kompatibilitätsstopp).Hat keinen Einfluss auf den eigenen Status der App-Registerkarte oder die ausgehende Benachrichtigung.",
+      "dockerDetectedWithWorkloads": "Docker mit {count} Containeranwendung(en) erkannt",
+      "dockerWorkloadsHeading": "Läuft innerhalb von Docker",
+      "runsInsideDocker": "Aktualisiert mit seinem Docker-Bild",
+      "upstreamDelegatedTitle": "Die verfügbare Version stammt aus dem Bild Docker",
+      "upstreamDelegatedHelp": "Diese Anwendung wird in einem Container ausgeführt, sodass die verfügbare Version unabhängig davon ist, was ihr Image auflöst – keine separate Upstream-Prüfung und ein Update wird einmal gemeldet.Aktualisieren Sie es über sein Image auf der Registerkarte „Updates“."
     },
     "statusFilter": {
       "ariaLabel": "Virtuelle Maschinen und Container filtern",

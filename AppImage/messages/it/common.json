@@ -1220,15 +1220,7 @@
       "humanWeekly": "testo tecnico dell'interfaccia utente per una dashboard di gestione Proxmox.Traduzione: settimanale ({day} {time})",
       "humanMonthly": "testo tecnico dell'interfaccia utente per una dashboard di gestione Proxmox.Traduzione: mensile (giorno {day} alle {time})",
       "humanHourly": "ogni ora",
-      "weekdays": [
-        "Domenica",
-        "Lunedì",
-        "Martedì",
-        "Mercoledì",
-        "Giovedì",
-        "Venerdì",
-        "Sabato"
-      ]
+      "weekdays": "['Domenica', 'Lunedì', 'Martedì', 'Mercoledì', 'Giovedì', 'Venerdì', 'Sabato']"
     },
     "cronChip": {
       "detected": "rilevato il cron dell'host",
@@ -1379,7 +1371,8 @@
       "postApplyAllOk": "pacchetto/i {count} applicato correttamente: nulla in sospeso.",
       "postApplyNothingPending": "nulla in sospeso: tutto è aggiornato.",
       "postApplyPartial": "{pending} pacchetto/i ancora in sospeso dopo l'esecuzione.",
-      "postApplyPartialSubline": "{applied} applicato.Alcuni aggiornamenti non sono stati completati: esamina l'output del terminale sopra."
+      "postApplyPartialSubline": "{applied} applicato.Alcuni aggiornamenti non sono stati completati: esamina l'output del terminale sopra.",
+      "updatedWithDockerImage": "aggiornato con la sua immagine Docker."
     },
     "bulkUpdate": {
       "title": "Aggiornamento in blocco",
@@ -1604,7 +1597,12 @@
       "notifyUpstreamLabel": "avvisami quando è disponibile una nuova versione upstream",
       "notifyUpstreamHelp": "invia `app_update_available` ai canali abilitati in Impostazioni → Notifiche.Disattiva se questa app non può essere aggiornata sul tuo box.",
       "excludeFromBadgeLabel": "esclusione dal contatore degli aggiornamenti LXC",
-      "excludeFromBadgeHelp": "non contare questa app nel badge degli aggiornamenti aggregati sulla scheda dell'elenco LXC.Utile quando sei bloccato di proposito su una versione specifica (requisito del tracker, blocco della compatibilità).Non influisce sullo stato della scheda App o sulla notifica in uscita."
+      "excludeFromBadgeHelp": "non contare questa app nel badge degli aggiornamenti aggregati sulla scheda dell'elenco LXC.Utile quando sei bloccato di proposito su una versione specifica (requisito del tracker, blocco della compatibilità).Non influisce sullo stato della scheda App o sulla notifica in uscita.",
+      "dockerDetectedWithWorkloads": "Docker rilevato con {count} applicazioni containerizzate",
+      "dockerWorkloadsHeading": "correre all'interno di Docker",
+      "runsInsideDocker": "aggiornato con la sua immagine Docker",
+      "upstreamDelegatedTitle": "la versione disponibile proviene dalla sua immagine Docker",
+      "upstreamDelegatedHelp": "questa applicazione viene eseguita in un contenitore, quindi la versione disponibile è qualunque cosa risolva la sua immagine: nessun controllo upstream separato e un aggiornamento segnalato una volta.Aggiornalo dalla sua immagine nella scheda Aggiornamenti."
     },
     "statusFilter": {
       "ariaLabel": "Filtra macchine virtuali e container",

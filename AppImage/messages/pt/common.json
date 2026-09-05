@@ -1220,15 +1220,7 @@
       "humanWeekly": "Semanal ({day} {time})",
       "humanMonthly": "Mensalmente (dia {day} às {time})",
       "humanHourly": "de hora em hora",
-      "weekdays": [
-        "Domingo",
-        "Segunda-feira",
-        "Terça-feira",
-        "Quarta-feira",
-        "Quinta-feira",
-        "Sexta-feira",
-        "Sábado"
-      ]
+      "weekdays": "['Domingo', 'Segunda-feira', 'Terça-feira', 'Quarta-feira', 'Quinta-feira', 'Sexta-feira', 'Sábado']"
     },
     "cronChip": {
       "detected": "cron do host detectado",
@@ -1379,7 +1371,8 @@
       "postApplyAllOk": "{count} pacote(s) aplicado(s) com sucesso — nada pendente.",
       "postApplyNothingPending": "Nada pendente — tudo está atualizado.",
       "postApplyPartial": "{pending} pacote(s) ainda pendente(s) após a execução.",
-      "postApplyPartialSubline": "{applied} aplicado.Algumas atualizações não foram concluídas – revise a saída do terminal acima."
+      "postApplyPartialSubline": "{applied} aplicado.Algumas atualizações não foram concluídas – revise a saída do terminal acima.",
+      "updatedWithDockerImage": "Atualizado com sua imagem Docker."
     },
     "bulkUpdate": {
       "title": "Atualização em bloco",
@@ -1604,7 +1597,12 @@
       "notifyUpstreamLabel": "Notifique-me quando uma nova versão upstream estiver disponível",
       "notifyUpstreamHelp": "Envia `app_update_available` para os canais habilitados em Configurações → Notificações.Desligue se este aplicativo não puder ser atualizado em sua caixa.",
       "excludeFromBadgeLabel": "Excluir do contador de atualizações LXC",
-      "excludeFromBadgeHelp": "não conte este aplicativo no selo de atualizações agregadas no cartão de lista LXC.Útil quando você está fixado em uma versão específica propositalmente (requisito do rastreador, congelamento de compatibilidade).Não afeta o próprio estado da guia Aplicativo ou a notificação de saída."
+      "excludeFromBadgeHelp": "não conte este aplicativo no selo de atualizações agregadas no cartão de lista LXC.Útil quando você está fixado em uma versão específica propositalmente (requisito do rastreador, congelamento de compatibilidade).Não afeta o próprio estado da guia Aplicativo ou a notificação de saída.",
+      "dockerDetectedWithWorkloads": "Docker detectado com {count} aplicativos em contêineres",
+      "dockerWorkloadsHeading": "Executando dentro de Docker",
+      "runsInsideDocker": "Atualizado com sua imagem Docker",
+      "upstreamDelegatedTitle": "a versão disponível vem de sua imagem Docker",
+      "upstreamDelegatedHelp": "Este aplicativo é executado em um contêiner, portanto, a versão disponível é aquela que sua imagem resolve – nenhuma verificação upstream separada e uma atualização relatada uma vez.Atualize-o a partir de sua imagem na guia Atualizações."
     },
     "statusFilter": {
       "ariaLabel": "Filtrar máquinas virtuais e contêineres",
