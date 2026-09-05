@@ -8,6 +8,7 @@ import { Loader2, TrendingUp, MemoryStick } from "lucide-react"
 import { useIsMobile } from "../hooks/use-mobile"
 import { fetchApi } from "@/lib/api-config"
 import { useI18n } from "../lib/i18n/provider"
+import { MetricsCacheNotice } from "./metrics-cache-notice"
 
 const TIMEFRAME_OPTIONS = [
   { value: "hour", labelKey: "overview.timeframes.hour" },
@@ -132,6 +133,7 @@ export function NodeMetricsCharts() {
   }>({})
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<MetricsError | null>(null)
+  const [staleAt, setStaleAt] = useState<number | null>(null)
   const isMobile = useIsMobile()
 
   const [visibleLines, setVisibleLines] = useState({
@@ -144,98 +146,124 @@ export function NodeMetricsCharts() {
   const hasMemoryFree = data.some(d => d.memoryFree > 0)
 
   useEffect(() => {
-    fetchMetrics()
-  }, [timeframe, language])
-
-  const fetchMetrics = async () => {
+    let active = true
+    let hasData = false
+    let lastChecked: number | null = null
+    let retryTimer: ReturnType<typeof setTimeout> | undefined
     setLoading(true)
     setError(null)
+    setStaleAt(null)
 
-    try {
-      const result = await fetchApi<any>(`/api/node/metrics?timeframe=${timeframe}`)
+    const fetchMetrics = async () => {
+      let retry = false
+
+      try {
+        const result = await fetchApi<any>(`/api/node/metrics?timeframe=${timeframe}`)
+        if (!active) return
 
 
-      if (!result.data || !Array.isArray(result.data)) {
-        console.error("Invalid data format - data is not an array:", result)
-        throw new Error(t("overview.invalidMetricsData"))
-      }
-
-      if (result.data.length === 0) {
-        console.warn("No data points received")
-        setData([])
-        setLoading(false)
-        return
-      }
-
-      if (result.data[0]?.loadavg) {
-      }
-
-      const transformedData = result.data.map((item: any) => {
-        const date = new Date(item.time * 1000)
-        let timeLabel = ""
-
-        if (timeframe === "hour") {
-          timeLabel = date.toLocaleString(language, {
-            hour: "2-digit",
-            minute: "2-digit",
-            hour12: false,
-          })
-        } else if (timeframe === "day") {
-          timeLabel = date.toLocaleString(language, {
-            hour: "2-digit",
-            minute: "2-digit",
-            hour12: false,
-          })
-        } else if (timeframe === "week") {
-          timeLabel = date.toLocaleString(language, {
-            month: "short",
-            day: "numeric",
-            hour: "2-digit",
-            hour12: false,
-          })
-        } else {
-          timeLabel = date.toLocaleString(language, {
-            month: "short",
-            day: "numeric",
-          })
+        if (!result.data || !Array.isArray(result.data)) {
+          console.error("Invalid data format - data is not an array:", result)
+          throw new Error(t("overview.invalidMetricsData"))
         }
 
-        return {
-          time: timeLabel,
-          timestamp: item.time,
-          cpu: item.cpu ? Number((item.cpu * 100).toFixed(2)) : 0,
-          load: item.loadavg
-            ? typeof item.loadavg === "number"
-              ? Number(item.loadavg.toFixed(2))
-              : Array.isArray(item.loadavg) && item.loadavg.length > 0
-                ? Number(item.loadavg[0].toFixed(2))
-                : 0
-            : 0,
-          memoryTotal: item.memtotal ? Number((item.memtotal / 1024 / 1024 / 1024).toFixed(2)) : 0,
-          memoryUsed: item.memused ? Number((item.memused / 1024 / 1024 / 1024).toFixed(2)) : 0,
-          memoryFree: item.memfree ? Number((item.memfree / 1024 / 1024 / 1024).toFixed(2)) : 0,
-          memoryZfsArc: item.zfsarc ? Number((item.zfsarc / 1024 / 1024 / 1024).toFixed(2)) : 0,
-        }
-      })
+        setError(null)
+        lastChecked = result.last_checked || Date.now() / 1000
+        hasData = result.data.length > 0
+        setStaleAt(result.cache_status === "stale" ? lastChecked : null)
+        retry = result.cache_status === "stale"
 
-      setData(transformedData)
-      setPeriodStats(result.period_stats || {})
-    } catch (err: any) {
-      console.error("Error fetching node metrics:", err)
-      // fetchApi attaches the parsed JSON body to err.body. The metrics
-      // endpoint enriches 503 responses with `details` (Proxmox-side
-      // diagnostic) and `suggestion` (how to fix). Pull them through so
-      // the user sees actionable text instead of a bare "503".
-      const body = err?.body
-      setError({
-        headline: body?.error || err?.message || t("overview.metricsLoadError"),
-        details: body?.details,
-        suggestion: body?.suggestion,
-      })
-    } finally {
-      setLoading(false)
+        if (result.data.length === 0) {
+          console.warn("No data points received")
+          setData([])
+          setLoading(false)
+          return
+        }
+
+        const transformedData = result.data.map((item: any) => {
+          const date = new Date(item.time * 1000)
+          let timeLabel = ""
+
+          if (timeframe === "hour") {
+            timeLabel = date.toLocaleString(language, {
+              hour: "2-digit",
+              minute: "2-digit",
+              hour12: false,
+            })
+          } else if (timeframe === "day") {
+            timeLabel = date.toLocaleString(language, {
+              hour: "2-digit",
+              minute: "2-digit",
+              hour12: false,
+            })
+          } else if (timeframe === "week") {
+            timeLabel = date.toLocaleString(language, {
+              month: "short",
+              day: "numeric",
+              hour: "2-digit",
+              hour12: false,
+            })
+          } else {
+            timeLabel = date.toLocaleString(language, {
+              month: "short",
+              day: "numeric",
+            })
+          }
+
+          return {
+            time: timeLabel,
+            timestamp: item.time,
+            cpu: item.cpu ? Number((item.cpu * 100).toFixed(2)) : 0,
+            load: item.loadavg
+              ? typeof item.loadavg === "number"
+                ? Number(item.loadavg.toFixed(2))
+                : Array.isArray(item.loadavg) && item.loadavg.length > 0
+                  ? Number(item.loadavg[0].toFixed(2))
+                  : 0
+              : 0,
+            memoryTotal: item.memtotal ? Number((item.memtotal / 1024 / 1024 / 1024).toFixed(2)) : 0,
+            memoryUsed: item.memused ? Number((item.memused / 1024 / 1024 / 1024).toFixed(2)) : 0,
+            memoryFree: item.memfree ? Number((item.memfree / 1024 / 1024 / 1024).toFixed(2)) : 0,
+            memoryZfsArc: item.zfsarc ? Number((item.zfsarc / 1024 / 1024 / 1024).toFixed(2)) : 0,
+          }
+        })
+
+        setData(transformedData)
+        setPeriodStats(result.period_stats || {})
+      } catch (err: any) {
+        if (!active) return
+        retry = true
+        console.error("Error fetching node metrics:", err)
+        if (hasData) {
+          setStaleAt(lastChecked)
+          return
+        }
+        // fetchApi attaches the parsed JSON body to err.body. The metrics
+        // endpoint enriches 503 responses with `details` (Proxmox-side
+        // diagnostic) and `suggestion` (how to fix). Pull them through so
+        // the user sees actionable text instead of a bare "503".
+        const body = err?.body
+        setError({
+          headline: body?.code === "metrics_timeout"
+            ? t("overview.metricsTimeout")
+            : body?.error || err?.message || t("overview.metricsLoadError"),
+          details: body?.code === "metrics_timeout" ? undefined : body?.details,
+          suggestion: body?.suggestion,
+        })
+      } finally {
+        if (active) {
+          setLoading(false)
+          if (retry) retryTimer = setTimeout(fetchMetrics, 60000)
+        }
+      }
     }
-  }
+
+    void fetchMetrics()
+    return () => {
+      active = false
+      clearTimeout(retryTimer)
+    }
+  }, [timeframe, language])
 
   const tickInterval = Math.ceil(data.length / 8)
 
@@ -358,6 +386,7 @@ export function NodeMetricsCharts() {
 
   return (
     <div className="space-y-6">
+      <MetricsCacheNotice lastChecked={staleAt} />
       {/* Timeframe Selector */}
       <div className="flex justify-end">
         <Select value={timeframe} onValueChange={setTimeframe}>

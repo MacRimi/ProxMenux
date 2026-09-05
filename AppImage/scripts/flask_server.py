@@ -92,6 +92,7 @@ from flask_proxmenux_routes import proxmenux_bp  # noqa: E402
 from flask_security_routes import security_bp  # noqa: E402
 from flask_notification_routes import notification_bp  # noqa: E402
 from flask_oci_routes import oci_bp  # noqa: E402
+from flask_audit_routes import audit_bp  # noqa: E402
 from notification_manager import notification_manager  # noqa: E402
 import post_install_versions  # noqa: E402  — Sprint 12A: detect post-install function updates
 from jwt_middleware import require_auth, require_auth_or_ticket, require_admin_scope  # noqa: E402
@@ -227,6 +228,7 @@ app.register_blueprint(proxmenux_bp)
 app.register_blueprint(security_bp)
 app.register_blueprint(notification_bp)
 app.register_blueprint(oci_bp)
+app.register_blueprint(audit_bp)
 
 # Initialize terminal / WebSocket routes
 init_terminal_routes(app)
@@ -1697,7 +1699,7 @@ _VM_DISK_REFRESH_WORKERS = 6  # parallelism cap for the fsinfo pass
 # state must be probed rather than inferred from an API response.
 _vm_details_cache: dict = {}      # vmid -> (ts, payload)
 _vm_backups_cache: dict = {}      # vmid -> (ts, payload)
-_vm_apps_cache: dict = {}         # vmid -> (ts, payload)
+# Registered apps use lxc_apps' shared, file-versioned snapshot cache.
 _vm_app_suggestions_cache: dict = {}  # vmid -> (ts, payload)
 _vm_schedule_cache: dict = {}     # vmid -> (ts, payload)
 _vm_mounts_cache: dict = {}       # vmid -> (ts, payload) — LXC only
@@ -1735,7 +1737,6 @@ _lxc_ip_cache: dict = {}
 _VM_CACHE_INDEFINITE = 315_360_000   # 10 years — effectively infinite
 _VM_DETAILS_TTL   = _VM_CACHE_INDEFINITE
 _VM_BACKUPS_TTL   = _VM_CACHE_INDEFINITE
-_VM_APPS_TTL      = _VM_CACHE_INDEFINITE
 _VM_APP_SUGGESTIONS_TTL = _VM_CACHE_INDEFINITE
 _VM_SCHEDULE_TTL  = _VM_CACHE_INDEFINITE
 _VM_MOUNTS_TTL    = _VM_CACHE_INDEFINITE
@@ -1817,7 +1818,7 @@ def _vm_cache_invalidate(vmid: int, *caches) -> None:
     affect any of them (e.g. control start/stop flips status, which
     lives in the details payload)."""
     targets = caches or (
-        _vm_details_cache, _vm_backups_cache, _vm_apps_cache,
+        _vm_details_cache, _vm_backups_cache,
         _vm_app_suggestions_cache, _vm_schedule_cache, _vm_mounts_cache,
     )
     with _vm_modal_cache_lock:
@@ -1906,7 +1907,6 @@ def _refresh_started_guest(vmid: int, vm_type: str) -> None:
 
             sidecar = lxc_apps.check_all(vmid, force=True)
             sidecar = sidecar or {'vmid': vmid, 'apps': []}
-            _vm_cache_put(_vm_apps_cache, vmid, sidecar)
 
             docker_registered = any(
                 isinstance(item, dict) and item.get('helper_slug') == 'docker'
@@ -11877,51 +11877,69 @@ def api_vm_metrics(vmid):
 
         return jsonify({'error': str(e)}), 500
 
-# Per-process cache for the RRD payload of /api/node/metrics. Two unrelated
-# dashboard components (`network-traffic-chart` for the network panel and
-# `node-metrics-charts` for the CPU/memory panel) mount in parallel on the
-# Overview page and each fires this endpoint independently with the same
-# `?timeframe=` argument. The underlying `pvesh get rrddata` call takes
-# ~1 second; without a cache, the second fetch blocks behind the first
-# (especially under gevent), occasionally surfacing as a transient 502
-# while gevent is single-threaded for blocking calls. RRD data is updated
-# on a per-minute cadence by PVE, so a 10-second cache is safe and the
-# UI experience is materially better.
+# Shared RRD snapshots and single-flight locks, one per supported timeframe.
+_NODE_METRICS_TTL = 120.0
+_NODE_METRICS_TIMEOUT = 30.0
+_NODE_METRICS_RETRY_DELAY = 30.0
 _NODE_METRICS_CACHE = {}
-# TTL is 120 s because the prewarmer only refreshes the `hour`
-# timeframe (the Overview's default) every 90 s. The other four
-# timeframes get their first fetch lazily when the user picks them —
-# they then live in cache for 120 s, which covers back-and-forth
-# switching without paying pvesh cost. Pre-warming every timeframe
-# on a fast cadence (as the first version did) burned ~30 % of a
-# core continuously scanning data nobody was looking at.
-_NODE_METRICS_TTL = 120.0  # seconds
+_NODE_METRICS_FAILURES = {}
+_NODE_METRICS_LOCKS = {
+    timeframe: threading.Lock()
+    for timeframe in ('hour', 'day', 'week', 'month', 'year')
+}
 
 
-def _node_metrics_cache_get(timeframe):
-    entry = _NODE_METRICS_CACHE.get(timeframe)
-    if not entry:
-        return None
-    if time.monotonic() - entry['ts'] > _NODE_METRICS_TTL:
-        return None
-    return entry['payload']
+class _NodeMetricsError(Exception):
+    def __init__(self, payload):
+        super().__init__(payload['error'])
+        self.payload = payload
 
 
-def _node_metrics_cache_set(timeframe, payload):
-    _NODE_METRICS_CACHE[timeframe] = {'payload': payload, 'ts': time.monotonic()}
+def _node_metrics_fallback(timeframe, error):
+    cached = _NODE_METRICS_CACHE.get(timeframe)
+    if cached is not None:
+        return {**cached['payload'], 'cache_status': 'stale', 'refresh_error': error}
+    raise _NodeMetricsError(error)
 
 
-def _compute_node_metrics_payload(timeframe: str) -> dict | None:
-    """Do the actual pvesh-backed RRD fetch + massaging that
-    `api_node_metrics` used to do inline. Returns the payload dict on
-    success (and populates the cache), None on any failure.
-    Extracted so the background prewarmer can call it without going
-    through HTTP + `@require_auth` — same code path as the handler,
-    zero duplication of the massaging logic."""
+def _get_node_metrics_payload(timeframe, max_age=_NODE_METRICS_TTL):
+    lock = _NODE_METRICS_LOCKS[timeframe]
+    if not lock.acquire(timeout=_NODE_METRICS_TIMEOUT + 5):
+        return _node_metrics_fallback(timeframe, {
+            'error': 'A metrics query is still in progress', 'code': 'metrics_busy',
+        })
+    try:
+        now = time.monotonic()
+        cached = _NODE_METRICS_CACHE.get(timeframe)
+        failure = _NODE_METRICS_FAILURES.get(timeframe)
+        if failure is not None and now - failure['ts'] < _NODE_METRICS_RETRY_DELAY:
+            return _node_metrics_fallback(timeframe, failure['error'])
+        if cached is not None and now - cached['ts'] < max_age:
+            return cached['payload']
+        try:
+            payload = _compute_node_metrics_payload(timeframe)
+        except Exception as exc:
+            error = exc.payload if isinstance(exc, _NodeMetricsError) else {
+                'error': 'Unable to load Proxmox metrics', 'code': 'metrics_unavailable',
+            }
+            _NODE_METRICS_FAILURES[timeframe] = {'error': error, 'ts': time.monotonic()}
+            print(f"[ProxMenux] node metrics ({timeframe}): {exc}", file=sys.stderr, flush=True)
+            return _node_metrics_fallback(timeframe, error)
+        payload = {**payload, 'last_checked': int(time.time()), 'cache_status': 'fresh'}
+        _NODE_METRICS_CACHE[timeframe] = {'payload': payload, 'ts': time.monotonic()}
+        _NODE_METRICS_FAILURES.pop(timeframe, None)
+        return payload
+    finally:
+        lock.release()
+
+
+def _compute_node_metrics_payload(timeframe: str) -> dict:
+    """Fetch and shape one node RRD snapshot within a bounded query budget."""
     valid_timeframes = ('hour', 'day', 'week', 'month', 'year')
     if timeframe not in valid_timeframes:
-        return None
+        raise ValueError('Invalid timeframe')
 
+    deadline = time.monotonic() + _NODE_METRICS_TIMEOUT
     local_node = get_proxmox_node_name()
 
     zfs_arc_size = 0
@@ -11940,16 +11958,70 @@ def _compute_node_metrics_payload(timeframe: str) -> dict | None:
         rrd_result = subprocess.run(
             ['pvesh', 'get', f'/nodes/{local_node}/rrddata',
              '--timeframe', timeframe, '--output-format', 'json'],
-            capture_output=True, text=True, timeout=10,
+            capture_output=True, text=True, timeout=_NODE_METRICS_TIMEOUT,
         )
-    except (subprocess.SubprocessError, OSError):
-        return None
+    except subprocess.TimeoutExpired:
+        raise _NodeMetricsError({
+            'error': 'Proxmox metrics query timed out',
+            'code': 'metrics_timeout',
+            'details': 'The metrics query exceeded the 30-second limit. It can be retried without restarting any services.',
+        })
+    except (subprocess.SubprocessError, OSError) as exc:
+        raise _NodeMetricsError({'error': 'Proxmox metrics command failed', 'raw': str(exc)[:500]})
     if rrd_result.returncode != 0:
-        return None
+        stderr_str = (rrd_result.stderr or '') + (rrd_result.stdout or '')
+        stderr_lower = stderr_str.lower()
+        if 'mmaping file' in stderr_lower and 'invalid argument' in stderr_lower:
+            raise _NodeMetricsError({
+                'error': 'Proxmox RRD database is corrupt',
+                'details': (
+                    'The host metrics file Proxmox keeps under '
+                    '/var/lib/rrdcached/db/pve-node-9.0/ failed to '
+                    'memory-map (Invalid argument). This is a Proxmox-side '
+                    'data-store issue, not a Monitor bug.'
+                ),
+                'suggestion': (
+                    'Stop pvestatd + pve-cluster + rrdcached, move the '
+                    'broken RRD aside, restart the services. Proxmox will '
+                    'rebuild the RRD from scratch (history is lost).'
+                ),
+                'raw': stderr_str.strip()[:500],
+            })
+        if 'no such file' in stderr_lower or 'no such node' in stderr_lower or 'does not exist' in stderr_lower:
+            raise _NodeMetricsError({
+                'error': 'Proxmox node name mismatch',
+                'details': (
+                    f"pvesh could not find node '{local_node}'. The "
+                    'usual cause is that the host was renamed after '
+                    'Proxmox was installed, so /etc/pve/nodes/ still '
+                    'carries the old name. This is a Proxmox-side '
+                    'config issue, not a Monitor bug.'
+                ),
+                'suggestion': 'Compare `hostname` with `ls /etc/pve/nodes/` — they must match.',
+                'raw': stderr_str.strip()[:500],
+            })
+        if 'rrd' in stderr_lower or 'empty' in stderr_lower:
+            raise _NodeMetricsError({
+                'error': 'Proxmox RRD data not available',
+                'details': 'The RRD database appears empty. Proxmox may not have collected metrics yet (fresh install) or rrdcached was down at boot.',
+                'suggestion': 'systemctl restart rrdcached pvestatd ; wait ~5 min and reload this page.',
+                'raw': stderr_str.strip()[:500],
+            })
+        raise _NodeMetricsError({
+            'error': 'Proxmox metrics command failed',
+            'details': 'pvesh exited non-zero. Check Proxmox host status.',
+            'raw': stderr_str.strip()[:500],
+        })
+
     try:
         rrd_data = json.loads(rrd_result.stdout)
+        if not isinstance(rrd_data, list) or any(not isinstance(item, dict) for item in rrd_data):
+            raise ValueError('Expected an array of RRD points')
     except (json.JSONDecodeError, ValueError):
-        return None
+        raise _NodeMetricsError({
+            'error': 'Proxmox returned invalid metrics data',
+            'code': 'metrics_invalid_data',
+        })
 
     for item in rrd_data:
         if 'arcsize' in item:
@@ -11974,34 +12046,35 @@ def _compute_node_metrics_payload(timeframe: str) -> dict | None:
         }
 
     def _pvesh_rrd(cf):
+        remaining = deadline - time.monotonic()
+        if remaining <= 0:
+            return None
         try:
             extra = subprocess.run(
                 ['pvesh', 'get', f'/nodes/{local_node}/rrddata',
                  '--timeframe', timeframe, '--cf', cf,
                  '--output-format', 'json'],
-                capture_output=True, text=True, timeout=10,
+                capture_output=True, text=True, timeout=remaining,
             )
             if extra.returncode == 0 and extra.stdout:
-                return json.loads(extra.stdout)
+                points = json.loads(extra.stdout)
+                if isinstance(points, list) and all(isinstance(item, dict) for item in points):
+                    return points
         except (subprocess.SubprocessError, json.JSONDecodeError, OSError):
             pass
         return None
+
+    # PVE supports AVERAGE and MAX, not MIN. Share MAX across both charts.
+    cf_max = _pvesh_rrd('MAX') if timeframe in ('week', 'month') else None
 
     def _build_stats(field_key, scale=1.0):
         native = _stats_native(field_key, scale)
         if native is None:
             return None
-        if timeframe in ('week', 'month'):
-            cf_max = _pvesh_rrd('MAX')
-            if cf_max:
-                vals = _values_from(cf_max, field_key, scale)
-                if vals:
-                    native['max'] = max(vals)
-            cf_min = _pvesh_rrd('MIN')
-            if cf_min:
-                vals = _values_from(cf_min, field_key, scale)
-                if vals:
-                    native['min'] = min(vals)
+        if cf_max:
+            vals = _values_from(cf_max, field_key, scale)
+            if vals:
+                native['max'] = max(vals)
         return native
 
     period_stats = {
@@ -12039,28 +12112,17 @@ def _compute_node_metrics_payload(timeframe: str) -> dict | None:
         'data': rrd_data,
         'period_stats': period_stats,
     }
-    _node_metrics_cache_set(timeframe, payload)
     return payload
 
 
 def _node_metrics_prewarmer_loop():
-    """Keep `_NODE_METRICS_CACHE['hour']` hot so the Overview page's
-    default view (CPU + Memory charts, 1-hour range) never waits on
-    `pvesh get rrddata`. Only `hour` is prewarmed — the other
-    timeframes (day/week/month/year) are lazy-cached on first click
-    and stick around for the 120 s TTL. Prewarming every timeframe
-    burned ~30 % of a core continuously against pvesh for data
-    nobody was looking at, and week/month each cost 3 pvesh calls
-    (base + MAX + MIN)."""
-    time.sleep(3)  # let the app finish importing before the first pass
+    """Prewarm the Overview's default range using the same single-flight cache."""
+    time.sleep(3)
     while True:
         try:
-            _compute_node_metrics_payload('hour')
-        except Exception as e:
-            print(f"[ProxMenux] node-metrics prewarmer error: {e}",
-                  file=sys.stderr, flush=True)
-        # Refresh well before the 120 s TTL expires so the user never
-        # hits a cold cache during a natural page open.
+            _get_node_metrics_payload('day', max_age=90.0)
+        except _NodeMetricsError:
+            pass  # The shared fetch path already records the failure.
         time.sleep(90)
 
 
@@ -12091,9 +12153,9 @@ def _vm_modal_prewarmer_pass():
              f'/api/vms/{vmid}/backups', 'backups'),
         ]
         if vm_type == 'lxc':
+            import lxc_apps
+            lxc_apps.load_sidecar(vmid)
             endpoints.extend([
-                (_vm_apps_cache, _VM_APPS_TTL, api_vm_apps_get,
-                 f'/api/vms/{vmid}/apps', 'apps'),
                 (_vm_schedule_cache, _VM_SCHEDULE_TTL, api_vm_apps_schedule,
                  f'/api/vms/{vmid}/schedule', 'schedule'),
                 (_vm_mounts_cache, _VM_MOUNTS_TTL, api_lxc_mount_points,
@@ -12162,249 +12224,17 @@ def _vm_modal_prewarmer_loop():
 @app.route('/api/node/metrics', methods=['GET'])
 @require_auth
 def api_node_metrics():
-    """Get historical metrics (RRD data) for the node.
-
-    Per-timeframe cached for ~10 s so the two dashboard panels that mount
-    together don't hit `pvesh` twice; see `_NODE_METRICS_CACHE` comment.
-    """
+    """Share one cached RRD snapshot across the dashboard's charts."""
+    timeframe = request.args.get('timeframe', 'week')
+    if timeframe not in _NODE_METRICS_LOCKS:
+        return jsonify({'error': 'Invalid timeframe. Must be one of: hour, day, week, month, year'}), 400
     try:
-        timeframe = request.args.get('timeframe', 'week')  # hour, day, week, month, year
-
-        # Validate timeframe
-        valid_timeframes = ['hour', 'day', 'week', 'month', 'year']
-        if timeframe not in valid_timeframes:
-            return jsonify({'error': f'Invalid timeframe. Must be one of: {", ".join(valid_timeframes)}'}), 400
-
-        # Serve from cache when fresh — completely skips the pvesh call.
-        cached = _node_metrics_cache_get(timeframe)
-        if cached is not None:
-            return jsonify(cached)
-        
-        # Get local node name
-        # local_node = socket.gethostname()
-        local_node = get_proxmox_node_name()
-
-        # print(f"[v0] Local node: {local_node}")
-        pass
-        
-
-        zfs_arc_size = 0
-        try:
-            with open('/proc/spl/kstat/zfs/arcstats', 'r') as f:
-                for line in f:
-                    if line.startswith('size'):
-                        parts = line.split()
-                        if len(parts) >= 3:
-                            zfs_arc_size = int(parts[2])
-                            break
-        except (FileNotFoundError, PermissionError, ValueError):
-            # ZFS not available or no access
-            pass
-
-        # Get RRD data for the node
-
-        rrd_result = subprocess.run(['pvesh', 'get', f'/nodes/{local_node}/rrddata', 
-                                    '--timeframe', timeframe, '--output-format', 'json'],
-                                   capture_output=True, text=True, timeout=10)
-        
-        # Detect well-known Proxmox-side failures BEFORE trying to parse
-        # the JSON. These are PVE host problems (rrdcached down, RRD file
-        # corrupt, node-name mismatch). None of them are caused by the
-        # Monitor itself — surface a specific message so the operator
-        # doesn't blame ProxMenux for a Proxmox-host data-store issue.
-        if rrd_result.returncode != 0:
-            stderr_str = (rrd_result.stderr or '') + (rrd_result.stdout or '')
-            stderr_lower = stderr_str.lower()
-            if 'mmaping file' in stderr_lower and 'invalid argument' in stderr_lower:
-                # Corrupt RRD file on disk. Operator must recreate it.
-                return jsonify({
-                    'error': 'Proxmox RRD database is corrupt',
-                    'details': (
-                        'The host metrics file Proxmox keeps under '
-                        '/var/lib/rrdcached/db/pve-node-9.0/ failed to '
-                        'memory-map (Invalid argument). This is a Proxmox-side '
-                        'data-store issue, not a Monitor bug.'
-                    ),
-                    'suggestion': (
-                        'Stop pvestatd + pve-cluster + rrdcached, move the '
-                        'broken RRD aside, restart the services. Proxmox will '
-                        'rebuild the RRD from scratch (history is lost).'
-                    ),
-                    'raw': stderr_str.strip()[:500],
-                }), 503
-            if 'no such file' in stderr_lower or 'no such node' in stderr_lower or 'does not exist' in stderr_lower:
-                return jsonify({
-                    'error': 'Proxmox node name mismatch',
-                    'details': (
-                        f"pvesh could not find node '{local_node}'. The "
-                        'usual cause is that the host was renamed after '
-                        'Proxmox was installed, so /etc/pve/nodes/ still '
-                        'carries the old name. This is a Proxmox-side '
-                        'config issue, not a Monitor bug.'
-                    ),
-                    'suggestion': 'Compare `hostname` with `ls /etc/pve/nodes/` — they must match.',
-                    'raw': stderr_str.strip()[:500],
-                }), 503
-            if 'rrd' in stderr_lower or 'empty' in stderr_lower:
-                return jsonify({
-                    'error': 'Proxmox RRD data not available',
-                    'details': 'The RRD database appears empty. Proxmox may not have collected metrics yet (fresh install) or rrdcached was down at boot.',
-                    'suggestion': 'systemctl restart rrdcached pvestatd ; wait ~5 min and reload this page.',
-                    'raw': stderr_str.strip()[:500],
-                }), 503
-            return jsonify({
-                'error': 'Proxmox metrics command failed',
-                'details': 'pvesh exited non-zero. Check Proxmox host status.',
-                'raw': stderr_str.strip()[:500],
-            }), 503
-
-        if rrd_result.returncode == 0:
-            rrd_data = json.loads(rrd_result.stdout)
-
-            # PVE 9.x exposes the actual ARC history as `arcsize` in RRD;
-            # the previous code ignored it and stamped every point with
-            # the live ARC size, producing a flat band at the current
-            # value (issue: ZFS ARC line painted full-bar). Use the real
-            # series when present so the chart matches Proxmox's own
-            # Summary view. On older PVE that doesn't expose `arcsize`,
-            # fall back to the live value as a constant placeholder.
-            for item in rrd_data:
-                if 'arcsize' in item:
-                    item['zfsarc'] = item['arcsize']
-                elif zfs_arc_size > 0 and ('zfsarc' not in item or item.get('zfsarc', 0) == 0):
-                    item['zfsarc'] = zfs_arc_size
-
-            # Period stats — computed BEFORE downsampling so the
-            # AVG/MAX/MIN header in the chart reflects real per-minute
-            # extremes instead of averages.
-            #
-            # Three sources depending on the timeframe:
-            #
-            #   - hour/day  → PVE returns 1-min raw points. AVG/MAX/MIN
-            #     of the in-memory list IS the truth.
-            #
-            #   - week/month → PVE already downsamples to 30-min /
-            #     ~1-hour points using consolidation function AVG, so
-            #     the in-memory points are already averages. Taking
-            #     max() of them gives "max of averages", NOT the real
-            #     peak. We issue two extra pvesh calls per request
-            #     (`--cf MAX` and `--cf MIN`) to recover the real
-            #     extremes from PVE's own RRD consolidation. The
-            #     extra calls add ~150 ms — only on week/month and
-            #     only when the chart loads, so the overhead is small.
-            def _values_from(items, field_key, scale=1.0):
-                return [item[field_key] * scale for item in items
-                        if isinstance(item.get(field_key), (int, float))
-                        and not isinstance(item[field_key], bool)
-                        and item[field_key] is not None]
-
-            def _stats_native(field_key, scale=1.0):
-                values = _values_from(rrd_data, field_key, scale)
-                if not values:
-                    return None
-                return {
-                    'avg': sum(values) / len(values),
-                    'max': max(values),
-                    'min': min(values),
-                }
-
-            def _pvesh_rrd(cf):
-                """One extra pvesh call with a non-default CF.
-                Returns the parsed list or None on any failure — caller
-                falls back to the AVG-based numbers."""
-                try:
-                    extra = subprocess.run(
-                        ['pvesh', 'get', f'/nodes/{local_node}/rrddata',
-                         '--timeframe', timeframe, '--cf', cf,
-                         '--output-format', 'json'],
-                        capture_output=True, text=True, timeout=10,
-                    )
-                    if extra.returncode == 0 and extra.stdout:
-                        return json.loads(extra.stdout)
-                except (subprocess.SubprocessError, json.JSONDecodeError, OSError):
-                    pass
-                return None
-
-            def _build_stats(field_key, scale=1.0):
-                native = _stats_native(field_key, scale)
-                if native is None:
-                    return None
-                # On week/month, the points we already have are AVG.
-                # Try to upgrade max/min to the real RRD extremes.
-                if timeframe in ('week', 'month'):
-                    cf_max = _pvesh_rrd('MAX')
-                    if cf_max:
-                        vals = _values_from(cf_max, field_key, scale)
-                        if vals:
-                            native['max'] = max(vals)
-                    cf_min = _pvesh_rrd('MIN')
-                    if cf_min:
-                        vals = _values_from(cf_min, field_key, scale)
-                        if vals:
-                            native['min'] = min(vals)
-                return native
-
-            period_stats = {
-                # cpu: RRD stores fraction 0-1, surface as %.
-                'cpu': _build_stats('cpu', scale=100.0),
-                # memory_used: bytes → GB so units match the chart.
-                'memory_used': _build_stats('memused', scale=1 / (1024 ** 3)),
-            }
-
-            # 24h downsampling: RRD returns ~1440 minute-level points which
-            # plots as a dense thicket of vertical spikes. Group into 5-min
-            # buckets and average each numeric field — same shape that
-            # `get_temperature_history` uses for its 24h view so the look
-            # is consistent across the dashboard's 24h charts.
-            if timeframe == 'day' and rrd_data:
-                bucket_seconds = 300  # 5-min
-                buckets = {}
-                for item in rrd_data:
-                    t = item.get('time')
-                    if t is None:
-                        continue
-                    bk = (int(t) // bucket_seconds) * bucket_seconds
-                    if bk not in buckets:
-                        buckets[bk] = {'_count': 0, '_sums': {}}
-                    b = buckets[bk]
-                    b['_count'] += 1
-                    for k, v in item.items():
-                        if k == 'time' or not isinstance(v, (int, float)) or isinstance(v, bool):
-                            continue
-                        b['_sums'][k] = b['_sums'].get(k, 0) + v
-                rrd_data = []
-                for bk in sorted(buckets.keys()):
-                    b = buckets[bk]
-                    point = {'time': bk}
-                    for k, total in b['_sums'].items():
-                        point[k] = total / b['_count']
-                    rrd_data.append(point)
-
-            payload = {
-                'node': local_node,
-                'timeframe': timeframe,
-                'data': rrd_data,
-                # AVG/MAX/MIN computed over the raw (pre-downsampling)
-                # points so the chart header captures real per-minute
-                # extremes even on multi-day timeframes.
-                'period_stats': period_stats,
-            }
-            _node_metrics_cache_set(timeframe, payload)
-            return jsonify(payload)
-        # Note: the old `else` branch that handled rrd_result.returncode != 0
-        # was removed — the early-return block above now catches every
-        # non-zero exit BEFORE we ever attempt json.loads(), so reaching
-        # this point with returncode != 0 is impossible.
-
-    except json.JSONDecodeError:
-        # pvesh returned invalid JSON - likely empty RRD
-        return jsonify({
-            'error': 'Proxmox RRD data not available',
-            'details': 'pvesh returned non-JSON output. The RRD database is likely empty (fresh install where pvestatd has not run yet) or the rrdcached daemon is down.',
-            'suggestion': 'systemctl restart rrdcached pvestatd ; wait ~5 min and reload.',
-        }), 503
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        return jsonify(_get_node_metrics_payload(timeframe))
+    except _NodeMetricsError as exc:
+        response = jsonify(exc.payload)
+        response.status_code = 503
+        response.headers['Retry-After'] = str(int(_NODE_METRICS_RETRY_DELAY))
+        return response
 
 @app.route('/api/logs/counts', methods=['GET'])
 @require_auth
@@ -13557,13 +13387,9 @@ def api_lxc_updates_detection_set():
 @require_auth
 def api_vm_apps_get(vmid):
     try:
-        cached = _vm_cache_get(_vm_apps_cache, vmid, _VM_APPS_TTL)
-        if cached is not None:
-            return jsonify(cached)
         import lxc_apps
         sidecar = lxc_apps.load_sidecar(vmid)
         payload = sidecar if sidecar else {'vmid': vmid, 'apps': []}
-        _vm_cache_put(_vm_apps_cache, vmid, payload)
         return jsonify(payload)
     except Exception as e:
         return jsonify({'error': str(e)}), 500
@@ -13578,7 +13404,6 @@ def api_vm_apps_add(vmid):
         ok, result = lxc_apps.add_app(vmid, payload)
         if not ok:
             return jsonify({'error': result}), 400
-        _vm_cache_put(_vm_apps_cache, vmid, result)
         return jsonify(result)
     except Exception as e:
         return jsonify({'error': str(e)}), 500
@@ -13614,7 +13439,6 @@ def api_vm_apps_update(vmid, app_id):
         if not ok:
             code = 404 if 'not found' in str(result).lower() else 400
             return jsonify({'error': result}), code
-        _vm_cache_put(_vm_apps_cache, vmid, result)
         return jsonify(result)
     except Exception as e:
         return jsonify({'error': str(e)}), 500
@@ -13627,7 +13451,6 @@ def api_vm_apps_delete_one(vmid, app_id):
         import lxc_apps
         ok = lxc_apps.delete_app(vmid, app_id)
         sidecar = lxc_apps.load_sidecar(vmid) or {'vmid': vmid, 'apps': []}
-        _vm_cache_put(_vm_apps_cache, vmid, sidecar)
         return jsonify({**sidecar, 'success': ok, 'app_id': app_id}), 200
     except Exception as e:
         return jsonify({'error': str(e)}), 500
@@ -13640,7 +13463,6 @@ def api_vm_apps_delete_all(vmid):
         import lxc_apps
         ok = lxc_apps.delete_all(vmid)
         sidecar = {'vmid': vmid, 'apps': []}
-        _vm_cache_put(_vm_apps_cache, vmid, sidecar)
         return jsonify({**sidecar, 'success': ok}), 200
     except Exception as e:
         return jsonify({'error': str(e)}), 500
@@ -13654,7 +13476,6 @@ def api_vm_apps_check_one(vmid, app_id):
         sidecar = lxc_apps.check_app(vmid, app_id, force=True)
         if not sidecar:
             return jsonify({'error': 'app not found'}), 404
-        _vm_cache_put(_vm_apps_cache, vmid, sidecar)
         return jsonify(sidecar)
     except Exception as e:
         return jsonify({'error': str(e)}), 500
@@ -13668,7 +13489,6 @@ def api_vm_apps_check_all(vmid):
         sidecar = lxc_apps.check_all(vmid, force=True)
         if not sidecar:
             sidecar = {'vmid': vmid, 'apps': []}
-        _vm_cache_put(_vm_apps_cache, vmid, sidecar)
         return jsonify(sidecar)
     except Exception as e:
         return jsonify({'error': str(e)}), 500
@@ -14056,7 +13876,6 @@ def api_vm_apps_dismiss(vmid):
         ok, result = lxc_apps.set_dismissed_slug(vmid, slug, dismissed)
         if not ok:
             return jsonify({'error': result}), 400
-        _vm_cache_put(_vm_apps_cache, vmid, result)
         return jsonify(result)
     except Exception as e:
         return jsonify({'error': str(e)}), 500
@@ -14377,11 +14196,8 @@ def _finalize_lxc_update(
                     vmid,
                     [item[4:] for item in requested if item.startswith('app:')],
                 )
-            refreshed_sidecar = lxc_apps.check_all(vmid, force=True)
-            refreshed_sidecar = refreshed_sidecar or {'vmid': vmid, 'apps': []}
-            _vm_cache_put(_vm_apps_cache, vmid, refreshed_sidecar)
+            lxc_apps.check_all(vmid, force=True)
         except Exception as exc:
-            _vm_cache_invalidate(vmid, _vm_apps_cache)
             verification_errors.append(f'application refresh failed: {exc}')
         docker_attempted = refresh_docker_inventory or any(
             target_id.startswith('docker-') for target_id in requested
@@ -15088,18 +14904,19 @@ def api_vms_modal_cache_all():
     frontend replace the current 84-request warm-up (4 endpoints ×
     ~21 guests) with a single fetch on page load.
 
-    Reads **exclusively** from the in-memory caches populated by
+    Reads modal caches populated by
     the backend prewarmer (`_vm_modal_prewarmer_loop`). Never falls
     through to a live handler call — that would let a single cold
-    guest block the whole bulk response for 10-20s. If a guest is
-    not yet cached the corresponding field is `null` and the client
-    fetches that one endpoint dirigido on demand.
+    guest block the whole bulk response for 10-20s. Registered apps use
+    the shared sidecar snapshot, checking only local file metadata for changes.
+    If a guest's other modal data is not yet cached, that field is `null`
+    and the client fetches the corresponding endpoint on demand.
 
     Trade-off: for the ~20-70s window right after `systemctl
     restart proxmenux-monitor` some fields come back `null`; the
     client transparently falls back to per-endpoint fetches for
-    those. Once the initial warm-up finishes the entire response
-    is served from dict reads (<20ms even with 30+ guests).
+    those. Once the initial warm-up finishes, registered apps reuse their
+    parsed snapshots and the other fields are served from dict reads.
 
     Response shape:
         {
@@ -15129,7 +14946,8 @@ def api_vms_modal_cache_all():
                 'backups': _vm_cache_get(_vm_backups_cache, vmid, _VM_BACKUPS_TTL),
             }
             if vm_type == 'lxc':
-                entry['apps'] = _vm_cache_get(_vm_apps_cache, vmid, _VM_APPS_TTL)
+                import lxc_apps
+                entry['apps'] = lxc_apps.load_sidecar(vmid) or {'vmid': vmid, 'apps': []}
                 entry['suggestions'] = _vm_cache_get(
                     _vm_app_suggestions_cache, vmid,
                     _VM_APP_SUGGESTIONS_TTL,
@@ -21866,7 +21684,8 @@ def _compose_scheduled_update_command(vmid: int, target: str, targets: list[str]
             and cmd == _DOCKER_ENGINE_INTEGRATED_COMMAND
         )
         if cmd and not is_integrated_docker_command:
-            parts.append(cmd)
+            # Protect each legacy launcher before joining the multi-app plan.
+            parts.append(lxc_apps.protect_download_update_command(cmd))
     selected_projects = {
         item.split(":", 1)[1]
         for item in targets
@@ -21940,7 +21759,7 @@ def _scheduled_helper_enabled(vmid: int, target: str, targets: list[str]) -> boo
     # conservatively instead of running both methods for the same app.
     if any((app.get("update_command") or "").strip() for app in matching_apps):
         return False
-    return True
+    return lxc_apps.helper_update_selected(vmid, helper_slug, targets)
 
 
 def _resolve_bulk_update_plan(vmid: int, targets: list[str]) -> dict:
@@ -21983,6 +21802,7 @@ def _resolve_bulk_update_plan(vmid: int, targets: list[str]) -> dict:
 
     def add_command(command: str) -> None:
         command = str(command or '').strip()
+        command = lxc_apps.protect_download_update_command(command)
         if command and command not in commands:
             commands.append(command)
 
@@ -22020,7 +21840,8 @@ def _resolve_bulk_update_plan(vmid: int, targets: list[str]) -> dict:
         command = str(app.get('update_command') or '').strip()
         if command:
             add_command(command)
-        elif helper_enabled and app.get('helper_slug'):
+        elif (helper_enabled and app.get('update_method') == 'helper'
+              and _scheduled_helper_enabled(vmid, 'app', [target_id])):
             run_helper = True
         else:
             unavailable.append({'target': target_id, 'reason': 'no executable update method is available'})
@@ -22228,6 +22049,36 @@ def _run_scheduled_update(vmid: int, sched: dict) -> dict:
         registered_apps = (lxc_apps._read_sidecar(vmid) or {}).get("apps") or []
     except Exception:
         registered_apps = []
+    # A saved schedule can outlive an application's updater choice. Keep
+    # its configuration, but explicitly report unavailable targets instead
+    # of silently treating an OS-only/no-op run as a complete app update.
+    helper_ready = _scheduled_helper_enabled(vmid, 'app', targets)
+    available_app_ids = {
+        str(app.get('id')) for app in registered_apps
+        if not app.get('managed_oci_app_id') and (
+            (app.get('update_command') or '').strip()
+            or app.get('helper_slug') == 'docker'
+            or (helper_ready and app.get('update_method') == 'helper'
+                and _scheduled_helper_enabled(vmid, 'app', [f"app:{app.get('id')}"]))
+        )
+    }
+    filtered_targets = []
+    for value in targets:
+        if value == 'apps':
+            eligible = [f"app:{app.get('id')}" for app in registered_apps
+                        if str(app.get('id')) in available_app_ids
+                        and app.get('helper_slug') != 'docker']
+            if eligible:
+                filtered_targets.extend(eligible)
+            else:
+                deferred_targets.append(value)
+                reasons.append('no application update method has been selected or is available')
+        elif value.startswith('app:') and value.split(':', 1)[1] not in available_app_ids:
+            deferred_targets.append(value)
+            reasons.append(f'{value}: update method is not selected or no longer available')
+        else:
+            filtered_targets.append(value)
+    targets = list(dict.fromkeys(filtered_targets))
     if any(value.startswith("docker-") for value in targets):
         docker_registered = any(app.get("helper_slug") == "docker" for app in registered_apps)
         if not docker_registered:
@@ -22700,22 +22551,16 @@ if __name__ == '__main__':
     except Exception as e:
         print(f"[ProxMenux] app-updates startup emitter failed to arm: {e}")
 
-    # ── Node-metrics Prewarmer ──
-    # Keeps `_NODE_METRICS_CACHE` hot for every timeframe (hour / day /
-    # week / month / year) on a 30 s cadence, so the Overview page's
-    # CPU + memory charts never wait on `pvesh get rrddata` when the
-    # user opens the dashboard. Cache TTL is 60 s; the loop refreshes
-    # every 30 s, giving 30 s of headroom against transient pvesh
-    # latency.
+    # Prewarm only the Overview's default day range; other ranges are lazy.
     try:
         metrics_thread = threading.Thread(target=_node_metrics_prewarmer_loop, daemon=True, name='node-metrics-prewarmer')
         metrics_thread.start()
-        print("[ProxMenux] Node-metrics prewarmer started (30s interval)")
+        print("[ProxMenux] Node-metrics prewarmer started (day range, 90s interval)")
     except Exception as e:
         print(f"[ProxMenux] Node-metrics prewarmer failed to start: {e}")
 
     # ── VM/CT modal-cache prewarmer ──
-    # Keeps _vm_details_cache / _vm_backups_cache / _vm_apps_cache /
+    # Keeps _vm_details_cache / _vm_backups_cache / app snapshots /
     # _vm_schedule_cache warm from the backend so the "Loading
     # configuration..." message never appears on modal open, even
     # after the tab has been closed for minutes. The React-side

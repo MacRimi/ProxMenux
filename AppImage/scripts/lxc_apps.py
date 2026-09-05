@@ -26,6 +26,7 @@
 from __future__ import annotations
 
 import datetime
+import copy
 import concurrent.futures
 import hashlib
 import json
@@ -402,15 +403,43 @@ def _now_iso() -> str:
     return datetime.datetime.utcnow().replace(microsecond=0).isoformat() + "Z"
 
 
+_sidecar_cache: dict = {}
+_sidecar_cache_lock = threading.RLock()
+_sidecar_revision = 0
+
+
+def _sidecar_signature(stat) -> tuple:
+    return (stat.st_dev, stat.st_ino, stat.st_mtime_ns, stat.st_ctime_ns, stat.st_size)
+
+
+def _publish_sidecar_snapshot(path: str, data: dict, signature: tuple) -> dict:
+    """Publish under _sidecar_cache_lock; revisions exist only in memory."""
+    global _sidecar_revision
+    _sidecar_revision = max(_sidecar_revision + 1, int(time.time() * 1000))
+    snapshot = _migrate_legacy(copy.deepcopy(data))
+    _migrate_update_methods(snapshot)
+    snapshot['_revision'] = _sidecar_revision
+    _sidecar_cache[path] = (signature, snapshot)
+    return snapshot
+
+
 def _read_sidecar(vmid) -> Optional[dict]:
     path = _sidecar_path(vmid)
-    try:
-        with open(path) as f:
-            data = json.load(f)
-        if isinstance(data, dict):
-            return _migrate_legacy(data)
-    except (FileNotFoundError, json.JSONDecodeError, OSError):
-        pass
+    with _sidecar_cache_lock:
+        try:
+            signature = _sidecar_signature(os.stat(path))
+            cached = _sidecar_cache.get(path)
+            if cached is not None and cached[0] == signature:
+                return copy.deepcopy(cached[1])
+            with open(path) as f:
+                data = json.load(f)
+                signature = _sidecar_signature(os.fstat(f.fileno()))
+            if isinstance(data, dict):
+                snapshot = _publish_sidecar_snapshot(path, data, signature)
+                return copy.deepcopy(snapshot)
+        except (FileNotFoundError, json.JSONDecodeError, OSError):
+            pass
+        _sidecar_cache.pop(path, None)
     return None
 
 
@@ -450,15 +479,107 @@ def _migrate_legacy(data: dict) -> dict:
             "updated_at": data.get("updated_at") or _now_iso()}
 
 
+def _migrate_update_methods(data: dict) -> None:
+    """Preserve saved choices, never turn detection into updater consent.
+
+    Old commands and explicitly saved bulk/enabled schedule selections keep
+    working. New registrations always carry update_method, so an old `apps`
+    wildcard cannot opt newly registered applications into Helper-Scripts.
+    Projection is read-only; the next normal sidecar write persists it.
+    """
+    schedule = data.get("schedule") or {}
+    selected = set((data.get("bulk_update") or {}).get("targets") or [])
+    if schedule.get("enabled"):
+        targets = schedule.get("targets")
+        if not targets:
+            targets = ["apps"] if schedule.get("target", "both") in ("app", "both") else []
+        selected.update(targets)
+    for app in data.get("apps") or []:
+        if "update_method" in app:
+            continue
+        if (app.get("update_command") or "").strip():
+            app["update_method"] = "custom"
+        elif (app.get("helper_slug") and app.get("helper_slug") not in ("docker", "adguard")
+              and ("apps" in selected or f"app:{app.get('id')}" in selected)):
+            app["update_method"] = "helper"
+        else:
+            app["update_method"] = "none"
+
+
+def protect_download_update_command(command: str) -> str:
+    """Guard the historical downloaded-shell launcher at execution time.
+
+    Only a literal, standalone wget/curl + shell -c launcher is recognised.
+    Other custom commands are returned byte-for-byte, never evaluated here.
+    Saved configuration is not rewritten. Grouping preserves && composition.
+    """
+    launcher = re.fullmatch(
+        r'''\s*(?P<prefix>PHS_SILENT=[01][ \t]+)?(?P<shell>(?:/bin/|/usr/bin/)?(?:bash|sh))[ \t]+-c[ \t]+"\$\((?P<fetch>[^\n]+)\)"\s*''',
+        command,
+    )
+    if not launcher:
+        return command
+    fetch = re.fullmatch(
+        r'''(?P<tool>wget|curl)[ \t]+(?P<flags>-qLO[ \t]+-|-qO[ \t]+-|-qO-|-fsSL|-fSL)[ \t]+(?P<quote>['"]?)(?P<url>https?://[A-Za-z0-9_./:%?=&+#@,~!;-]+)(?P=quote)''',
+        launcher['fetch'],
+    )
+    if not fetch:
+        return command
+    # Require the original shell token to be literal too. Unquoted shell
+    # operators or glob patterns are not this known launcher format.
+    if not fetch['quote'] and any(c in fetch['url'] for c in '&;?'):
+        return command
+    flags = fetch['flags'].split()
+    if ((fetch['tool'] == 'wget' and flags not in (['-qLO', '-'], ['-qO', '-'], ['-qO-']))
+            or (fetch['tool'] == 'curl' and flags not in (['-fsSL'], ['-fSL']))):
+        return command
+    fetch_command = shlex.join([fetch['tool'], *flags, fetch['url']])
+    invocation = (launcher['prefix'] or '') + launcher['shell']
+    return (
+        '(\n'
+        f'_proxmenux_updater=$({fetch_command}) || {{\n'
+        '  echo "ERROR: updater download failed; nothing was executed." >&2\n'
+        '  exit 1\n'
+        '}\n'
+        '[ -n "$_proxmenux_updater" ] || {\n'
+        '  echo "ERROR: downloaded updater is empty; nothing was executed." >&2\n'
+        '  exit 1\n'
+        '}\n'
+        f'{invocation} -c "$_proxmenux_updater"\n'
+        ')'
+    )
+
+
+def helper_update_selected(vmid, slug: str, targets=None) -> bool:
+    """Execution-time consent check, shared with the shell runner.
+
+    Wrapper provenance is independently verified by the caller. Duplicate
+    registrations with different choices must not run a CT-wide helper.
+    """
+    apps = (_read_sidecar(vmid) or {}).get("apps") or []
+    matching = [app for app in apps if app.get("helper_slug") == slug
+                and not app.get("managed_oci_app_id")]
+    if not matching or any(app.get("update_method") != "helper"
+                           or (app.get("update_command") or "").strip() for app in matching):
+        return False
+    if targets is None or "apps" in targets:
+        return True
+    return any(f"app:{app.get('id')}" in targets for app in matching)
+
+
 def _write_sidecar(vmid, data: dict) -> bool:
+    _migrate_update_methods(data)
     _ensure_dir()
     path = _sidecar_path(vmid)
     tmp = f"{path}.tmp.{os.getpid()}"
     try:
         with open(tmp, "w") as f:
-            json.dump(data, f, indent=2, sort_keys=True)
+            json.dump({k: v for k, v in data.items() if k != '_revision'}, f, indent=2, sort_keys=True)
         os.chmod(tmp, 0o600)
-        os.replace(tmp, path)
+        with _sidecar_cache_lock:
+            os.replace(tmp, path)
+            snapshot = _publish_sidecar_snapshot(path, data, _sidecar_signature(os.stat(path)))
+            data['_revision'] = snapshot['_revision']
         return True
     except OSError as e:
         print(f"[ProxMenux] lxc_apps: could not write sidecar {path}: {e}")
@@ -1055,6 +1176,17 @@ def validate_config(payload: dict) -> tuple[bool, Any]:
             # replaces /usr/bin/update for that same app. Ignore legacy
             # two-step strategy payloads and normalize them on write.
             conf["update_strategy"] = "custom_override"
+
+    method = payload.get("update_method", "custom" if conf.get("update_command") else "none")
+    if method not in ("none", "helper", "custom"):
+        return _err("update_method must be none, helper or custom")
+    if method == "custom" and not conf.get("update_command"):
+        return _err("update_command is required for update_method=custom")
+    if method != "custom" and conf.get("update_command"):
+        return _err("update_command is only allowed for update_method=custom")
+    if method == "helper" and (not hs or hs in ("docker", "adguard")):
+        return _err("a supported helper_slug is required for update_method=helper")
+    conf["update_method"] = method
 
     # Optional per-app dismiss flag for the "no update method defined"
     # notice shown in the Updates tab. Only affects the notice card;
@@ -3652,6 +3784,7 @@ def _summarise_app(app: dict) -> dict:
         "health_path": app.get("health_path"),
         "installed_version": state.get("installed_version"),
         "latest_version": state.get("latest_version"),
+        "latest_published_at": state.get("latest_published_at"),
         "update_available": state.get("update_available"),
         "error": state.get("error"),
         "checked_at": state.get("checked_at"),
@@ -3661,6 +3794,7 @@ def _summarise_app(app: dict) -> dict:
         # it) and whether the "no method" notice is suppressed for
         # this app.
         "update_command": app.get("update_command") or "",
+        "update_method": app.get("update_method", "custom" if app.get("update_command") else "none"),
         # Compatibility field for older clients. The only supported
         # strategy is now replacement; legacy sidecars are normalized
         # in the API even before their next write.
@@ -3868,7 +4002,10 @@ def get_active_apps() -> dict:
         apps = sidecar.get("apps") or []
         if not apps:
             continue
-        out[str(vmid)] = [_summarise_app(a) for a in apps]
+        out[str(vmid)] = [
+            {**_summarise_app(a), 'state_revision': sidecar.get('_revision')}
+            for a in apps
+        ]
     return out
 
 

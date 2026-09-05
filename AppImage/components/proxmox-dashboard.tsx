@@ -12,6 +12,7 @@ import { VirtualMachines } from "./virtual-machines"
 import { AppsDashboard } from "./apps-dashboard"
 import Hardware from "./hardware"
 import { SystemLogs } from "./system-logs"
+import { AuditReport } from "./audit-report"
 import { Settings } from "./settings"
 import { Security } from "./security"
 import { Profile } from "./profile"
@@ -41,6 +42,7 @@ import {
   Settings2,
   Terminal,
   ShieldCheck,
+  ClipboardCheck,
   Info,
   DatabaseBackup,
   ChevronDown,
@@ -399,6 +401,7 @@ export function ProxmoxDashboard() {
       case "terminal":  return t("navigation.terminal")
       case "logs":      return t("navigation.systemLogs")
       case "security":  return t("navigation.security")
+      case "audit":     return t("navigation.audit")
       case "settings":  return t("navigation.settings")
       case "about":     return t("navigation.about")
       case "profile":   return t("navigation.profile")
@@ -618,6 +621,7 @@ export function ProxmoxDashboard() {
               const ADMIN_ITEMS = [
                 { value: "logs",     label: t("navigation.systemLogs"), Icon: ScrollText,  default: false },
                 { value: "security", label: t("navigation.security"),   Icon: ShieldCheck, default: false },
+                { value: "audit",    label: t("navigation.audit"),      Icon: ClipboardCheck, default: false },
                 { value: "settings", label: t("navigation.settings"),   Icon: SettingsIcon, default: false },
                 { value: "about",    label: t("navigation.about"),      Icon: Info,        default: false },
               ]
@@ -838,6 +842,10 @@ export function ProxmoxDashboard() {
 
           <TabsContent value="logs" className="space-y-4 md:space-y-6 mt-0">
             <SystemLogs key={`logs-${componentKey}`} />
+          </TabsContent>
+
+          <TabsContent value="audit" className="space-y-4 md:space-y-6 mt-0">
+            <AuditReport key={`audit-${componentKey}`} />
           </TabsContent>
 
           <TabsContent value="backup" className="space-y-4 md:space-y-6 mt-0">

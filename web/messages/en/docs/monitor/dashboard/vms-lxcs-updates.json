@@ -10,7 +10,7 @@
   "intro": {
     "p1": "The <strong>Updates</strong> tab separates version detection from the action that installs an update. Registration and optional version tracking live on the <link>App tab</link>; executable update methods live here.",
     "p2": "A saved application appears in Updates even when it contains only a web link. Version tracking is optional, and an updater can be configured independently.",
-    "callout": "No action is inferred from an application name alone. ProxMenux runs an integrated method only after verifying it, or a custom command that has been explicitly saved."
+    "callout": "Registering an application does not select an updater. If a matching Helper-Scripts updater is detected, choose and save <strong>Helper-Scripts</strong> or <strong>Custom command</strong>. Detection is not a compatibility guarantee. The choice belongs to each application, even when several apps share one LXC."
   },
   "overview": {
     "heading": "What the tab contains",
@@ -38,7 +38,7 @@
       {
         "source": "Proxmox VE Helper-Scripts",
         "action": "Apply update",
-        "notes": "Uses the verified /usr/bin/update wrapper. A legacy marker without a valid wrapper is identified, but never executed automatically."
+        "notes": "After Helper-Scripts is explicitly selected, runs the official application script identified by the validated /usr/bin/update wrapper. A marker or catalogue match alone never enables execution."
       },
       {
         "source": "Custom command",
@@ -56,7 +56,7 @@
         "notes": "Pulls the selected image and recreates its Compose service group or protected standalone container."
       }
     ],
-    "callout": "A custom command always <strong>replaces</strong> the integrated Proxmox VE Helper-Scripts updater for that application. The two methods are not run one after the other."
+    "callout": "A custom command <strong>replaces</strong> Helper-Scripts for that application. Manual, bulk and scheduled runs all respect the saved choice. Existing custom commands and legacy explicitly saved bulk/enabled schedule selections are retained; newly registered applications are never opted in by an old schedule."
   },
   "docker": {
     "heading": "Docker Engine and Docker images",
@@ -74,9 +74,9 @@
     "heading": "Individual actions and status colours",
     "lead": "Every section remains independently actionable, whether or not a bulk update is configured.",
     "items": [
-      "The <strong>Edit</strong> button is always available. Integrated methods open with their current command, which can be reviewed, replaced or cleared.",
+      "<strong>Configure</strong> opens the updater selector when no method is selected; <strong>Edit</strong> changes a saved choice. The information buttons explain each option, link to official documentation and show a custom-script example. Selecting an option does not execute it.",
       "When version tracking is disabled but an updater exists, the neutral <strong>Run updater</strong> action is shown. ProxMenux does not claim that an update is pending.",
-      "When no method is available, <strong>Configure</strong> opens the custom-command editor.",
+      "Without an available Helper-Scripts updater, configure a custom command. Disabling a method does not silently select another one; existing plan/schedule selections remain saved and unavailable targets are reported.",
       "The <strong>Update image</strong> action applies only to the selected Docker unit; it does not update Docker Engine or unrelated images."
     ],
     "statusColState": "Known state",

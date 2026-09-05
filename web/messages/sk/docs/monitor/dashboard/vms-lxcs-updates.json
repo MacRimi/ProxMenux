@@ -10,7 +10,7 @@
   "intro": {
     "p1": "Karta <strong>Aktualizácie</strong> oddeľuje zisťovanie verzie od akcie, ktorá aktualizáciu nainštaluje. Registrácia a voliteľné sledovanie verzie sú na <link>karte Aplikácia</link>; spustiteľné metódy aktualizácie sa spravujú tu.",
     "p2": "Uložená aplikácia sa zobrazí v Aktualizáciách aj vtedy, keď obsahuje iba webový odkaz. Sledovanie verzie je voliteľné a aktualizátor možno nastaviť nezávisle.",
-    "callout": "Akcia sa neurčuje iba podľa názvu aplikácie. ProxMenux spustí integrovanú metódu až po jej overení alebo výslovne uložený vlastný príkaz."
+    "callout": "Registrácia aplikácie nevyberá aktualizátor. Ak sa zistí zodpovedajúci aktualizátor Helper-Scripts, vyberte a uložte <strong>Helper-Scripts</strong> alebo <strong>Vlastný príkaz</strong>. Zistenie nezaručuje kompatibilitu. Výber patrí každej aplikácii samostatne, aj keď viac aplikácií zdieľa jeden LXC."
   },
   "overview": {
     "heading": "Obsah karty",
@@ -38,7 +38,7 @@
       {
         "source": "Proxmox VE Helper-Scripts",
         "action": "Použiť aktualizáciu",
-        "notes": "Používa overený wrapper /usr/bin/update. Starý marker bez platného wrappera sa identifikuje, ale automaticky sa nespustí."
+        "notes": "Po výslovnom výbere Helper-Scripts spustí oficiálny skript aplikácie identifikovaný pomocou overeného wrappera /usr/bin/update. Samotný marker ani zhoda v katalógu spustenie nepovoľujú."
       },
       {
         "source": "Vlastný príkaz",
@@ -56,7 +56,7 @@
         "notes": "Stiahne vybraný obraz a znova vytvorí jeho skupinu služieb Compose alebo chránený samostatný kontajner."
       }
     ],
-    "callout": "Vlastný príkaz vždy <strong>nahrádza</strong> integrovaný aktualizátor Proxmox VE Helper-Scripts pre danú aplikáciu. Obe metódy sa nespúšťajú za sebou."
+    "callout": "Vlastný príkaz <strong>nahrádza</strong> Helper-Scripts pre danú aplikáciu. Ručné, hromadné aj naplánované spustenia rešpektujú uložený výber. Existujúce príkazy a staršie výslovne uložené výbery v plánoch alebo aktívnych naplánovaných úlohách sa zachovajú; starší plán nikdy neaktivuje aktualizátor novo registrovanej aplikácie."
   },
   "docker": {
     "heading": "Docker Engine a Docker obrazy",
@@ -74,9 +74,9 @@
     "heading": "Samostatné akcie a farby stavu",
     "lead": "Každá sekcia zostáva samostatne ovládateľná aj po nastavení hromadnej aktualizácie.",
     "items": [
-      "Tlačidlo <strong>Upraviť</strong> je vždy dostupné. Integrované metódy zobrazia aktuálny príkaz, ktorý možno skontrolovať, nahradiť alebo vymazať.",
+      "<strong>Nastaviť</strong> otvorí výber aktualizátora, ak nebol vybraný žiadny spôsob; <strong>Upraviť</strong> umožní zmeniť uložený výber. Informačné tlačidlá vysvetľujú možnosti, odkazujú na oficiálnu dokumentáciu a zobrazujú príklad vlastného skriptu. Výber možnosti ju nespustí.",
       "Ak je sledovanie verzie vypnuté, ale aktualizátor existuje, zobrazí sa neutrálna akcia <strong>Spustiť aktualizátor</strong>. ProxMenux netvrdí, že je dostupná aktualizácia.",
-      "Ak metóda neexistuje, <strong>Nastaviť</strong> otvorí editor vlastného príkazu.",
+      "Ak aktualizátor Helper-Scripts nie je dostupný, možno nastaviť vlastný príkaz. Deaktivovanie spôsobu nevyberie potichu iný; plány a naplánované úlohy si zachovajú výber a nedostupné ciele sa oznámia.",
       "Akcia <strong>Aktualizovať obraz</strong> ovplyvní iba vybranú jednotku Dockeru, nie Docker Engine ani nesúvisiace obrazy."
     ],
     "statusColState": "Známy stav",

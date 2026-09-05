@@ -45,7 +45,8 @@
     "profile": "Profil",
     "node": "Nod",
     "admin": "Administration",
-    "menu": "Navigationsmeny"
+    "menu": "Navigationsmeny",
+    "audit": "Granskning och rapporter"
   },
   "status": {
     "healthy": "Hälsosam",
@@ -72,6 +73,8 @@
     "networkErrorWhileSaving": "Nätverksfel vid lagring"
   },
   "overview": {
+    "metricsTimeout": "Mätvärdesfrågan tog längre än 30 sekunder. ProxMenux försöker igen automatiskt.",
+    "metricsCachedWarning": "Mätvärdena kunde inte uppdateras. Data hämtade {time} visas.",
     "loadingTitle": "Laddar systemöversikt...",
     "loadingDescription": "Hämtar systemstatus och mätvärden",
     "topProcessesCpu": "Visa toppprocesser efter CPU",
@@ -1217,7 +1220,15 @@
       "humanWeekly": "Varje vecka ({day} {time})",
       "humanMonthly": "Varje månad (dag {day} kl. {time})",
       "humanHourly": "Varje timme",
-      "weekdays": ["söndag", "måndag", "tisdag", "onsdag", "torsdag", "fredag", "lördag"]
+      "weekdays": [
+        "söndag",
+        "måndag",
+        "tisdag",
+        "onsdag",
+        "torsdag",
+        "fredag",
+        "lördag"
+      ]
     },
     "cronChip": {
       "detected": "host cron upptäckt",
@@ -1244,6 +1255,35 @@
       "osStatusUnavailable": "Statusen för operativsystemets uppdateringar kunde inte fastställas.",
       "installedByHelperPrefix": "Installerad av",
       "helperScriptsName": "Proxmox VE Helper-Scripts",
+      "helperCommandEditHint": "Om du ändrar det här startkommandot sparas det som ett eget kommando.",
+      "customOnlineDescription": "Eller använd ett onlineskript från utvecklaren:",
+      "customOnlineExampleNote": "Ersätt exempeladressen med adressen till appens officiella skript.",
+      "customExamplesHeading": "Exempel att anpassa:",
+      "updaterChoiceHint": "Välj och spara en uppdateringsmetod.",
+      "updaterMethodLabel": "Uppdateringsmetod",
+      "helperMethod": "Helper-Scripts",
+      "customMethod": "Eget kommando",
+      "helperMethodHelp": "Om Helper-Scripts",
+      "customMethodHelp": "Om egna kommandon",
+      "helperDetectedChoice": "En Helper-Scripts-uppdaterare har identifierats för den här appen.",
+      "helperUnavailableChoice": "Den valda Helper-Scripts-uppdateraren är inte längre tillgänglig.",
+      "disableUpdater": "Inaktivera",
+      "disableUpdaterConfirm": "Inaktivera uppdateringsmetoden för {name}? Sparade planer och scheman behåller sina val, men den här appen körs inte förrän en metod har konfigurerats igen.",
+      "noUpdaterSelected": "Du har inte valt någon uppdateringsmetod.",
+      "helperMethodDescription": "ProxMenux kör den identifierade uppdateraren i denna LXC och visar dess logg och resultat. Uppdateraren underhålls av Proxmox VE Helper-Scripts.",
+      "customMethodDescription": "Du kan använda appens egen uppdaterare, en pakethanterare eller en ny binärfil. Kommandot körs i denna LXC med administratörsbehörighet.",
+      "updaterInstructions": "Läs uppdaterarens anvisningar.",
+      "helperDocumentation": "Uppdateringsdokumentation",
+      "helperSource": "Appens skript",
+      "customMethodExample": "Anpassa namn, sökvägar och tjänst till din app. Endast kommandot du sparar kommer att köras.",
+      "helperCommandLabel": "Kommando i LXC",
+      "helperCommandFallback": "Om wget inte är tillgängligt använder ProxMenux curl -fsSL för att hämta samma skript.",
+      "customScriptTitle": "Uppdateringsskript",
+      "customScriptDescription": "Kör ett uppdateringsskript för appen som redan finns i LXC.",
+      "customPackageTitle": "Debian/Ubuntu-paket",
+      "customPackageDescription": "Ersätt my-package med paketet du vill uppdatera.",
+      "customBinaryTitle": "Binärfil",
+      "customBinaryDescription": "Hämta och verifiera först den officiella binärfilen för rätt version och arkitektur på /tmp/my-app.new. Det här exemplet sparar en kopia av den tidigare binärfilen och startar om dess tjänst.",
       "helperUpdatesRun": "Installerad av Proxmox Helper-Scripts.",
       "installedPrefix": "installerat",
       "upstreamAvailable": "version {version} tillgänglig",
@@ -4869,5 +4909,134 @@
     "customLinkDelete": "Delete",
     "customLinkSaveError": "Save failed",
     "customLinkDeleteError": "Delete failed"
+  },
+  "audit": {
+    "title": "Audit & Report",
+    "loading": "Loading assessment…",
+    "run": "Run assessment",
+    "running": "Assessing…",
+    "neverRun": "This host has not been assessed yet.",
+    "lastRun": "Last assessed on {when}",
+    "stale": "{days} days ago",
+    "readOnlyNotice": "The assessment only reads the host. It makes no changes.",
+    "noFindings": "No findings match the current filter.",
+    "showPassing": "Show passing checks",
+    "hidePassing": "Hide passing checks",
+    "affectedCount": "{count} affected",
+    "acceptedNotice": "{count} accepted risk(s) recorded on this host.",
+    "states": {
+      "fail": "Failed",
+      "warn": "Warning",
+      "accepted": "Accepted risk",
+      "pass": "Passed",
+      "not_applicable": "Not applicable"
+    },
+    "areas": {
+      "all": "All",
+      "system": "System",
+      "storage": "Storage",
+      "network": "Network",
+      "security": "Security",
+      "backup": "Backup",
+      "guests": "Guests",
+      "hardware": "Hardware"
+    },
+    "detail": {
+      "why": "Context",
+      "evidence": "Evidence",
+      "affected": "Affected",
+      "acceptedRisk": "Accepted risk"
+    },
+    "errors": {
+      "runFailed": "The assessment could not be started."
+    },
+    "checks": {
+      "backup": {
+        "guest_coverage": {
+          "title": "Backup coverage",
+          "rationale": "Compares the guest inventory against what each backup job selects. A job selects by VMID list, by pool, or with `all 1`, minus its `exclude` list. Jobs carrying `enabled 0` are not considered.",
+          "summary": {
+            "noJobs": "No backup job is defined on this node",
+            "covered": "All {total} guests are covered by a backup job",
+            "uncovered": "{count} of {total} guests are not covered by any enabled backup job"
+          }
+        }
+      },
+      "system": {
+        "pending_reboot": {
+          "title": "Restart state",
+          "rationale": "Checks for `/var/run/reboot-required` and, when present, the packages listed in `/var/run/reboot-required.pkgs`. Also reports the running kernel.",
+          "summary": {
+            "none": "No restart is pending",
+            "pending": "The host has a pending restart"
+          }
+        },
+        "enterprise_repo_without_subscription": {
+          "title": "Enterprise repository",
+          "rationale": "Looks for references to `enterprise.proxmox.com` in `/etc/apt/sources.list` and `sources.list.d`, and contrasts the result with the status returned by `pvesubscription get`.",
+          "summary": {
+            "notEnabled": "The enterprise repository is not enabled",
+            "subscribed": "The enterprise repository is backed by a subscription",
+            "unsubscribed": "The enterprise repository is enabled without an active subscription"
+          }
+        }
+      },
+      "guests": {
+        "privileged_containers": {
+          "title": "Container privileges",
+          "rationale": "Reviews each container configuration. Proxmox marks unprivileged containers with `unprivileged: 1`; its absence indicates a privileged container, which shares the host user namespace.",
+          "summary": {
+            "allUnprivileged": "All {total} containers are unprivileged",
+            "privileged": "{count} of {total} containers run privileged"
+          }
+        },
+        "qemu_without_agent": {
+          "title": "Guest agent on virtual machines",
+          "rationale": "Reviews each virtual machine configuration for `agent: 1`. The guest agent enables ordered shutdown, filesystem quiescing for snapshots and real disk usage reporting.",
+          "summary": {
+            "allHaveAgent": "All {total} virtual machines declare the guest agent",
+            "missingAgent": "{count} of {total} virtual machines do not declare the guest agent"
+          }
+        }
+      },
+      "security": {
+        "host_firewall_enabled": {
+          "title": "Firewall state",
+          "rationale": "Checks `enable: 1` in `/etc/pve/firewall/cluster.fw` and in the node's `host.fw`. Proxmox applies node rules only while the datacenter switch is on.",
+          "summary": {
+            "bothEnabled": "The firewall is enabled at datacenter and node level",
+            "datacenterOff": "The firewall is disabled at datacenter level, so node rules are not applied",
+            "nodeOff": "The firewall is enabled at datacenter level but not on this node"
+          }
+        }
+      },
+      "storage": {
+        "orphaned_volumes": {
+          "title": "Volume assignment",
+          "rationale": "Compares the volumes returned by `pvesm list` against the existing guest configurations. Only non-shared storage is examined: on shared storage a volume may belong to a guest running on another node.",
+          "summary": {
+            "none": "No orphaned volumes were found",
+            "found": "{count} volume(s) belong to no existing guest"
+          }
+        }
+      }
+    },
+    "summaryFallback": "The check could not be evaluated",
+    "acceptRisk": {
+      "action": "Accept risk",
+      "revoke": "Return to active",
+      "title": "Accept this risk",
+      "reasonLabel": "Reason",
+      "reasonHelp": "Required. It is recorded together with the author and the date.",
+      "reasonPlaceholder": "e.g. Lab containers, not covered on purpose",
+      "expiryLabel": "Review after",
+      "expiryHelp": "When the period ends the finding becomes active again.",
+      "expiryNever": "Does not expire",
+      "expiry90": "90 days",
+      "expiry180": "180 days",
+      "expiry365": "1 year",
+      "cancel": "Cancel",
+      "confirm": "Accept risk"
+    }
   }
 }

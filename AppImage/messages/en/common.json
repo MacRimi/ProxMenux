@@ -44,7 +44,8 @@
     "profile": "Profile",
     "node": "Node",
     "admin": "Admin",
-    "menu": "Navigation Menu"
+    "menu": "Navigation Menu",
+    "audit": "Audit & Report"
   },
   "status": {
     "healthy": "Healthy",
@@ -71,6 +72,8 @@
     "networkErrorWhileSaving": "Network error while saving"
   },
   "overview": {
+    "metricsTimeout": "The metrics query exceeded 30 seconds. ProxMenux will retry automatically.",
+    "metricsCachedWarning": "Could not refresh metrics. Showing data retrieved at {time}.",
     "loadingTitle": "Loading system overview...",
     "loadingDescription": "Fetching system status and metrics",
     "topProcessesCpu": "View top processes by CPU",
@@ -1273,6 +1276,35 @@
       "osStatusUnavailable": "The OS update status could not be determined.",
       "installedByHelperPrefix": "Installed by",
       "helperScriptsName": "Proxmox VE Helper-Scripts",
+      "helperCommandEditHint": "If you edit this launcher, it will be saved as a custom command.",
+      "customOnlineDescription": "Or use an online script provided by the developer:",
+      "customOnlineExampleNote": "Replace the example URL with the official script URL for your application.",
+      "customExamplesHeading": "Examples to adapt:",
+      "updaterChoiceHint": "Choose and save an update method.",
+      "updaterMethodLabel": "Update method",
+      "helperMethod": "Helper-Scripts",
+      "customMethod": "Custom command",
+      "helperMethodHelp": "About Helper-Scripts",
+      "customMethodHelp": "About custom commands",
+      "helperDetectedChoice": "Helper-Scripts updater detected for this application.",
+      "helperUnavailableChoice": "The selected Helper-Scripts updater is no longer available.",
+      "disableUpdater": "Disable",
+      "disableUpdaterConfirm": "Disable the update method for {name}? Saved plans and schedules will keep their selections, but this application will not run until a method is configured again.",
+      "noUpdaterSelected": "You have not selected an update method.",
+      "helperMethodDescription": "ProxMenux runs the detected updater inside this LXC and displays its log and result. The updater is maintained by Proxmox VE Helper-Scripts.",
+      "customMethodDescription": "You can use the application's own updater, a package manager or a new binary. The command runs inside this LXC with administrator privileges.",
+      "updaterInstructions": "Review the updater's instructions.",
+      "helperDocumentation": "Update documentation",
+      "helperSource": "Application script",
+      "customMethodExample": "Adapt the names, paths and service to your application. Only the command you save will run.",
+      "helperCommandLabel": "Command inside the LXC",
+      "helperCommandFallback": "If wget is unavailable, ProxMenux uses curl -fsSL to download the same script.",
+      "customScriptTitle": "Update script",
+      "customScriptDescription": "Run an existing application update script inside the LXC.",
+      "customPackageTitle": "Debian/Ubuntu package",
+      "customPackageDescription": "Replace my-package with the package you want to update.",
+      "customBinaryTitle": "Binary",
+      "customBinaryDescription": "First download and verify the official binary for the correct version and architecture at /tmp/my-app.new. This example keeps a backup of the previous binary and restarts its service.",
       "helperUpdatesRun": "Installed by Proxmox Helper-Scripts.",
       "installedPrefix": "installed",
       "upstreamAvailable": "upstream {version} available",
@@ -4942,5 +4974,134 @@
     "customLinkDelete": "Delete",
     "customLinkSaveError": "Save failed",
     "customLinkDeleteError": "Delete failed"
+  },
+  "audit": {
+    "title": "Audit & Report",
+    "loading": "Loading assessment…",
+    "run": "Run assessment",
+    "running": "Assessing…",
+    "neverRun": "This host has not been assessed yet.",
+    "lastRun": "Last assessed on {when}",
+    "stale": "{days} days ago",
+    "readOnlyNotice": "The assessment only reads the host. It makes no changes.",
+    "noFindings": "No findings match the current filter.",
+    "showPassing": "Show passing checks",
+    "hidePassing": "Hide passing checks",
+    "affectedCount": "{count} affected",
+    "acceptedNotice": "{count} accepted risk(s) recorded on this host.",
+    "states": {
+      "fail": "Failed",
+      "warn": "Warning",
+      "accepted": "Accepted risk",
+      "pass": "Passed",
+      "not_applicable": "Not applicable"
+    },
+    "areas": {
+      "all": "All",
+      "system": "System",
+      "storage": "Storage",
+      "network": "Network",
+      "security": "Security",
+      "backup": "Backup",
+      "guests": "Guests",
+      "hardware": "Hardware"
+    },
+    "detail": {
+      "why": "Context",
+      "evidence": "Evidence",
+      "affected": "Affected",
+      "acceptedRisk": "Accepted risk"
+    },
+    "errors": {
+      "runFailed": "The assessment could not be started."
+    },
+    "checks": {
+      "backup": {
+        "guest_coverage": {
+          "title": "Backup coverage",
+          "rationale": "Compares the guest inventory against what each backup job selects. A job selects by VMID list, by pool, or with `all 1`, minus its `exclude` list. Jobs carrying `enabled 0` are not considered.",
+          "summary": {
+            "noJobs": "No backup job is defined on this node",
+            "covered": "All {total} guests are covered by a backup job",
+            "uncovered": "{count} of {total} guests are not covered by any enabled backup job"
+          }
+        }
+      },
+      "system": {
+        "pending_reboot": {
+          "title": "Restart state",
+          "rationale": "Checks for `/var/run/reboot-required` and, when present, the packages listed in `/var/run/reboot-required.pkgs`. Also reports the running kernel.",
+          "summary": {
+            "none": "No restart is pending",
+            "pending": "The host has a pending restart"
+          }
+        },
+        "enterprise_repo_without_subscription": {
+          "title": "Enterprise repository",
+          "rationale": "Looks for references to `enterprise.proxmox.com` in `/etc/apt/sources.list` and `sources.list.d`, and contrasts the result with the status returned by `pvesubscription get`.",
+          "summary": {
+            "notEnabled": "The enterprise repository is not enabled",
+            "subscribed": "The enterprise repository is backed by a subscription",
+            "unsubscribed": "The enterprise repository is enabled without an active subscription"
+          }
+        }
+      },
+      "guests": {
+        "privileged_containers": {
+          "title": "Container privileges",
+          "rationale": "Reviews each container configuration. Proxmox marks unprivileged containers with `unprivileged: 1`; its absence indicates a privileged container, which shares the host user namespace.",
+          "summary": {
+            "allUnprivileged": "All {total} containers are unprivileged",
+            "privileged": "{count} of {total} containers run privileged"
+          }
+        },
+        "qemu_without_agent": {
+          "title": "Guest agent on virtual machines",
+          "rationale": "Reviews each virtual machine configuration for `agent: 1`. The guest agent enables ordered shutdown, filesystem quiescing for snapshots and real disk usage reporting.",
+          "summary": {
+            "allHaveAgent": "All {total} virtual machines declare the guest agent",
+            "missingAgent": "{count} of {total} virtual machines do not declare the guest agent"
+          }
+        }
+      },
+      "security": {
+        "host_firewall_enabled": {
+          "title": "Firewall state",
+          "rationale": "Checks `enable: 1` in `/etc/pve/firewall/cluster.fw` and in the node's `host.fw`. Proxmox applies node rules only while the datacenter switch is on.",
+          "summary": {
+            "bothEnabled": "The firewall is enabled at datacenter and node level",
+            "datacenterOff": "The firewall is disabled at datacenter level, so node rules are not applied",
+            "nodeOff": "The firewall is enabled at datacenter level but not on this node"
+          }
+        }
+      },
+      "storage": {
+        "orphaned_volumes": {
+          "title": "Volume assignment",
+          "rationale": "Compares the volumes returned by `pvesm list` against the existing guest configurations. Only non-shared storage is examined: on shared storage a volume may belong to a guest running on another node.",
+          "summary": {
+            "none": "No orphaned volumes were found",
+            "found": "{count} volume(s) belong to no existing guest"
+          }
+        }
+      }
+    },
+    "summaryFallback": "The check could not be evaluated",
+    "acceptRisk": {
+      "action": "Accept risk",
+      "revoke": "Return to active",
+      "title": "Accept this risk",
+      "reasonLabel": "Reason",
+      "reasonHelp": "Required. It is recorded together with the author and the date.",
+      "reasonPlaceholder": "e.g. Lab containers, not covered on purpose",
+      "expiryLabel": "Review after",
+      "expiryHelp": "When the period ends the finding becomes active again.",
+      "expiryNever": "Does not expire",
+      "expiry90": "90 days",
+      "expiry180": "180 days",
+      "expiry365": "1 year",
+      "cancel": "Cancel",
+      "confirm": "Accept risk"
+    }
   }
 }

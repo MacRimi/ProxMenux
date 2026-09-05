@@ -44,7 +44,8 @@
     "profile": "Profil",
     "node": "Server",
     "admin": "Správa",
-    "menu": "Navigačné menu"
+    "menu": "Navigačné menu",
+    "audit": "Audit a správy"
   },
   "status": {
     "healthy": "V poriadku",
@@ -71,6 +72,8 @@
     "networkErrorWhileSaving": "Chyba siete pri ukladaní"
   },
   "overview": {
+    "metricsTimeout": "Načítanie metrík trvalo dlhšie ako 30 sekúnd. ProxMenux to automaticky skúsi znova.",
+    "metricsCachedWarning": "Metriky sa nepodarilo obnoviť. Zobrazujú sa údaje načítané {time}.",
     "loadingTitle": "Načítava sa prehľad systému...",
     "loadingDescription": "Zisťujem stav servera a základné údaje",
     "topProcessesCpu": "Zobraziť procesy s najvyšším využitím CPU",
@@ -1273,6 +1276,35 @@
       "osStatusUnavailable": "Stav aktualizácií operačného systému sa nepodarilo zistiť.",
       "installedByHelperPrefix": "Nainštalované cez",
       "helperScriptsName": "Proxmox VE Helper-Scripts",
+      "helperCommandEditHint": "Ak upravíte tento spúšťací príkaz, uloží sa ako vlastný príkaz.",
+      "customOnlineDescription": "Alebo použite online skript poskytnutý vývojárom:",
+      "customOnlineExampleNote": "Nahraďte vzorovú URL adresu adresou oficiálneho skriptu vašej aplikácie.",
+      "customExamplesHeading": "Príklady na prispôsobenie:",
+      "updaterChoiceHint": "Vyberte a uložte spôsob aktualizácie.",
+      "updaterMethodLabel": "Spôsob aktualizácie",
+      "helperMethod": "Helper-Scripts",
+      "customMethod": "Vlastný príkaz",
+      "helperMethodHelp": "O Helper-Scripts",
+      "customMethodHelp": "O vlastných príkazoch",
+      "helperDetectedChoice": "Pre túto aplikáciu bol zistený aktualizátor Helper-Scripts.",
+      "helperUnavailableChoice": "Vybraný aktualizátor Helper-Scripts už nie je dostupný.",
+      "disableUpdater": "Deaktivovať",
+      "disableUpdaterConfirm": "Deaktivovať spôsob aktualizácie pre {name}? Uložené plány a naplánované úlohy si zachovajú svoj výber, ale táto aplikácia sa nespustí, kým znova nenastavíte spôsob aktualizácie.",
+      "noUpdaterSelected": "Nevybrali ste spôsob aktualizácie.",
+      "helperMethodDescription": "ProxMenux spustí zistený aktualizátor v tomto LXC a zobrazí jeho protokol a výsledok. Aktualizátor spravuje Proxmox VE Helper-Scripts.",
+      "customMethodDescription": "Môžete použiť aktualizátor aplikácie, správcu balíkov alebo nový binárny súbor. Príkaz sa spustí v tomto LXC s oprávneniami správcu.",
+      "updaterInstructions": "Prečítajte si pokyny aktualizátora.",
+      "helperDocumentation": "Dokumentácia aktualizácií",
+      "helperSource": "Skript aplikácie",
+      "customMethodExample": "Prispôsobte názvy, cesty a službu svojej aplikácii. Spustí sa iba príkaz, ktorý uložíte.",
+      "helperCommandLabel": "Príkaz v LXC",
+      "helperCommandFallback": "Ak wget nie je dostupný, ProxMenux použije curl -fsSL na stiahnutie rovnakého skriptu.",
+      "customScriptTitle": "Aktualizačný skript",
+      "customScriptDescription": "Spustite aktualizačný skript aplikácie, ktorý už existuje v LXC.",
+      "customPackageTitle": "Balík Debian/Ubuntu",
+      "customPackageDescription": "Nahraďte my-package balíkom, ktorý chcete aktualizovať.",
+      "customBinaryTitle": "Binárny súbor",
+      "customBinaryDescription": "Najprv stiahnite a overte oficiálny binárny súbor správnej verzie a architektúry v /tmp/my-app.new. Tento príklad zachová kópiu predchádzajúceho binárneho súboru a reštartuje príslušnú službu.",
       "helperUpdatesRun": "Inštalované pomocou Proxmox Helper-Scripts.",
       "installedPrefix": "nainštalovaná verzia",
       "upstreamAvailable": "dostupná verzia {version}",
@@ -4942,5 +4974,134 @@
     "customLinkDelete": "Odstrániť",
     "customLinkSaveError": "Odkaz sa nepodarilo uložiť",
     "customLinkDeleteError": "Odkaz sa nepodarilo odstrániť"
+  },
+  "audit": {
+    "title": "Audit & Report",
+    "loading": "Loading assessment…",
+    "run": "Run assessment",
+    "running": "Assessing…",
+    "neverRun": "This host has not been assessed yet.",
+    "lastRun": "Last assessed on {when}",
+    "stale": "{days} days ago",
+    "readOnlyNotice": "The assessment only reads the host. It makes no changes.",
+    "noFindings": "No findings match the current filter.",
+    "showPassing": "Show passing checks",
+    "hidePassing": "Hide passing checks",
+    "affectedCount": "{count} affected",
+    "acceptedNotice": "{count} accepted risk(s) recorded on this host.",
+    "states": {
+      "fail": "Failed",
+      "warn": "Warning",
+      "accepted": "Accepted risk",
+      "pass": "Passed",
+      "not_applicable": "Not applicable"
+    },
+    "areas": {
+      "all": "All",
+      "system": "System",
+      "storage": "Storage",
+      "network": "Network",
+      "security": "Security",
+      "backup": "Backup",
+      "guests": "Guests",
+      "hardware": "Hardware"
+    },
+    "detail": {
+      "why": "Context",
+      "evidence": "Evidence",
+      "affected": "Affected",
+      "acceptedRisk": "Accepted risk"
+    },
+    "errors": {
+      "runFailed": "The assessment could not be started."
+    },
+    "checks": {
+      "backup": {
+        "guest_coverage": {
+          "title": "Backup coverage",
+          "rationale": "Compares the guest inventory against what each backup job selects. A job selects by VMID list, by pool, or with `all 1`, minus its `exclude` list. Jobs carrying `enabled 0` are not considered.",
+          "summary": {
+            "noJobs": "No backup job is defined on this node",
+            "covered": "All {total} guests are covered by a backup job",
+            "uncovered": "{count} of {total} guests are not covered by any enabled backup job"
+          }
+        }
+      },
+      "system": {
+        "pending_reboot": {
+          "title": "Restart state",
+          "rationale": "Checks for `/var/run/reboot-required` and, when present, the packages listed in `/var/run/reboot-required.pkgs`. Also reports the running kernel.",
+          "summary": {
+            "none": "No restart is pending",
+            "pending": "The host has a pending restart"
+          }
+        },
+        "enterprise_repo_without_subscription": {
+          "title": "Enterprise repository",
+          "rationale": "Looks for references to `enterprise.proxmox.com` in `/etc/apt/sources.list` and `sources.list.d`, and contrasts the result with the status returned by `pvesubscription get`.",
+          "summary": {
+            "notEnabled": "The enterprise repository is not enabled",
+            "subscribed": "The enterprise repository is backed by a subscription",
+            "unsubscribed": "The enterprise repository is enabled without an active subscription"
+          }
+        }
+      },
+      "guests": {
+        "privileged_containers": {
+          "title": "Container privileges",
+          "rationale": "Reviews each container configuration. Proxmox marks unprivileged containers with `unprivileged: 1`; its absence indicates a privileged container, which shares the host user namespace.",
+          "summary": {
+            "allUnprivileged": "All {total} containers are unprivileged",
+            "privileged": "{count} of {total} containers run privileged"
+          }
+        },
+        "qemu_without_agent": {
+          "title": "Guest agent on virtual machines",
+          "rationale": "Reviews each virtual machine configuration for `agent: 1`. The guest agent enables ordered shutdown, filesystem quiescing for snapshots and real disk usage reporting.",
+          "summary": {
+            "allHaveAgent": "All {total} virtual machines declare the guest agent",
+            "missingAgent": "{count} of {total} virtual machines do not declare the guest agent"
+          }
+        }
+      },
+      "security": {
+        "host_firewall_enabled": {
+          "title": "Firewall state",
+          "rationale": "Checks `enable: 1` in `/etc/pve/firewall/cluster.fw` and in the node's `host.fw`. Proxmox applies node rules only while the datacenter switch is on.",
+          "summary": {
+            "bothEnabled": "The firewall is enabled at datacenter and node level",
+            "datacenterOff": "The firewall is disabled at datacenter level, so node rules are not applied",
+            "nodeOff": "The firewall is enabled at datacenter level but not on this node"
+          }
+        }
+      },
+      "storage": {
+        "orphaned_volumes": {
+          "title": "Volume assignment",
+          "rationale": "Compares the volumes returned by `pvesm list` against the existing guest configurations. Only non-shared storage is examined: on shared storage a volume may belong to a guest running on another node.",
+          "summary": {
+            "none": "No orphaned volumes were found",
+            "found": "{count} volume(s) belong to no existing guest"
+          }
+        }
+      }
+    },
+    "summaryFallback": "The check could not be evaluated",
+    "acceptRisk": {
+      "action": "Accept risk",
+      "revoke": "Return to active",
+      "title": "Accept this risk",
+      "reasonLabel": "Reason",
+      "reasonHelp": "Required. It is recorded together with the author and the date.",
+      "reasonPlaceholder": "e.g. Lab containers, not covered on purpose",
+      "expiryLabel": "Review after",
+      "expiryHelp": "When the period ends the finding becomes active again.",
+      "expiryNever": "Does not expire",
+      "expiry90": "90 days",
+      "expiry180": "180 days",
+      "expiry365": "1 year",
+      "cancel": "Cancel",
+      "confirm": "Accept risk"
+    }
   }
 }

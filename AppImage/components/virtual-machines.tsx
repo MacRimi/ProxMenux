@@ -3,7 +3,7 @@
 import type React from "react"
 
 import { useState, useMemo, useEffect, useRef } from "react"
-import { fetchLxcApps, getLxcAppsCached, invalidateLxcApps, seedLxcAppsCache, setLxcAppsCached } from "../lib/lxc-apps-cache"
+import { fetchLxcApps, getLxcAppsCached, invalidateLxcApps, seedLxcAppsCache, setLxcAppsCached, syncLxcAppsState } from "../lib/lxc-apps-cache"
 import { parseTags, stringifyTags, tagToColor } from "../lib/pve-tag-color"
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card"
 import { Badge } from "./ui/badge"
@@ -22,6 +22,7 @@ import { MetricsView } from "./metrics-dialog"
 import { LxcTerminalModal } from "./lxc-terminal-modal"
 import { ScriptTerminalModal } from "./script-terminal-modal"
 import { LxcAppPanel, ThemeAwareLogo } from "./lxc-app-panel"
+import { AppUpdaterEditor, type AppUpdateMethod } from "./app-updater-editor"
 import { formatStorage } from "../lib/utils"
 import { formatNetworkTraffic, getNetworkUnit } from "../lib/format-network"
 import { fetchApi } from "../lib/api-config"
@@ -95,6 +96,8 @@ interface LxcAppWatch {
   health_path?: string | null
   installed_version: string | null
   latest_version: string | null
+  latest_published_at?: string | null
+  state_revision?: number
   update_available: boolean | null
   error: string | null
   checked_at: string | null
@@ -108,6 +111,7 @@ interface LxcAppWatch {
   // update method. When set, the Updates tab renders an "Apply {app}"
   // button that runs `pct exec vmid -- sh -c "$update_command"`.
   update_command?: string
+  update_method?: AppUpdateMethod
   // Updates tab: per-app dismiss for the "no update method defined"
   // notice. Only hides the notice — the App tab still shows purple ⬆
   // when an update is available upstream.
@@ -1113,6 +1117,12 @@ export function VirtualMachines() {
     setSelectedVM(updated)
   }, [vmData])
 
+  useEffect(() => {
+    for (const vm of vmData || []) {
+      if (vm.type === "lxc") syncLxcAppsState(vm.vmid, vm.app_watches || [])
+    }
+  }, [vmData])
+
   // Backend lifecycle refreshes are asynchronous: a start response returns
   // immediately, then the server waits for the guest (and Docker, for LXCs)
   // before publishing a complete new snapshot. When its revision changes,
@@ -1870,14 +1880,9 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
   // Case-3a "no method" cards the user previously dismissed.
   const [customCmdEditingApp, setCustomCmdEditingApp] = useState<string | null>(null)
   const [customCmdDraft, setCustomCmdDraft] = useState<string>("")
+  const [updaterMethodDraft, setUpdaterMethodDraft] = useState<AppUpdateMethod>("none")
   const [customCmdSaving, setCustomCmdSaving] = useState(false)
   const [showHiddenNotices, setShowHiddenNotices] = useState(false)
-
-  const canonicalHelperUpdateCommand = (slug?: string | null) => {
-    const cleanSlug = (slug || "").trim()
-    if (!/^[A-Za-z0-9._-]+$/.test(cleanSlug)) return ""
-    return `PHS_SILENT=1 bash -c "$(curl -fsSL https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/${cleanSlug}.sh)"`
-  }
 
   // Docker Engine is updated by a protected host-side runner rather
   // than by an arbitrary command inside the CT. Surface the exact
@@ -1888,6 +1893,7 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
   const openCustomCmdEditor = (app: LxcAppWatch, initialCommand = "") => {
     setCustomCmdEditingApp(app.id)
     setCustomCmdDraft(app.update_command || initialCommand)
+    setUpdaterMethodDraft(app.update_method || (app.update_command || initialCommand ? "custom" : "none"))
   }
 
   // ── Options card unified state ──────────────────────────────────
@@ -2387,7 +2393,8 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
     setCustomCmdSaving(true)
     try {
       await patchAppWatch(vmid, app, {
-        update_command: customCmdDraft.trim(),
+        update_command: updaterMethodDraft === "helper" ? "" : customCmdDraft.trim(),
+        update_method: app.helper_slug === "docker" ? "custom" : updaterMethodDraft,
         // Saving a command implicitly re-enables the notice (moot —
         // the notice only shows when there is no command).
         hide_no_updater_notice: false,
@@ -2400,10 +2407,13 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
     }
   }
   const removeCustomCommand = async (vmid: number, app: LxcAppWatch) => {
-    if (!confirm(t("vmLxc.errors.removeCustomCommandConfirm", { name: app.name }))) return
+    const confirmKey = app.helper_slug === "docker"
+      ? "vmLxc.errors.removeCustomCommandConfirm"
+      : "vmLxc.updates.disableUpdaterConfirm"
+    if (!confirm(t(confirmKey, { name: app.name || "" }))) return
     setCustomCmdSaving(true)
     try {
-      await patchAppWatch(vmid, app, { update_command: "" })
+      await patchAppWatch(vmid, app, { update_command: "", update_method: "none" })
       closeCustomCmdEditor()
     } catch (e) {
       alert(t("vmLxc.errors.removeCustomCommandFailed", { message: (e as any)?.message || String(e) }))
@@ -5171,7 +5181,7 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                         const scheduledAppChoices = registeredApps.filter((app) => {
                           if (app.helper_slug === "docker" || app.helper_slug === "adguard") return false
                           if (app.update_command?.trim()) return true
-                          return helperExists && app.helper_slug === uc?.helper_slug
+                          return helperExists && app.update_method === "helper" && app.helper_slug === uc?.helper_slug
                         }).map((app) => ({ id: `app:${app.id}`, label: app.name }))
                         const versionTrackedScheduleAppIds = new Set(
                           registeredApps
@@ -5234,6 +5244,7 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                           if (app.helper_slug === "docker") return false
                           if (app.update_command?.trim()) return true
                           return helperExists
+                            && app.update_method === "helper"
                             && app.helper_slug === uc?.helper_slug
                             && app.helper_slug !== "adguard"
                         }).map((app) => {
@@ -5743,9 +5754,7 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                                 {helperSectionDetected && (() => {
                                   const matchApp = helperOnlyApps[0] || null
                                   if (!matchApp || customCmdEditingApp === matchApp.id) return null
-                                  const helperEditorCommand = helperExists && !helperUsesWebUpdater
-                                    ? canonicalHelperUpdateCommand(uc?.helper_slug)
-                                    : ""
+                                  const helperSelected = matchApp.update_method === "helper"
                                   const appWebUrl = helperUsesWebUpdater
                                     ? buildRegisteredAppUrl(selectedVM, matchApp.ports?.[0])
                                     : null
@@ -5765,12 +5774,11 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                                           type="button"
                                           onClick={() => openCustomCmdEditor(
                                             matchApp,
-                                            helperEditorCommand,
                                           )}
                                           className="h-8 px-3 text-xs rounded-md border border-border bg-background hover:bg-muted transition-colors inline-flex items-center gap-1.5 flex-shrink-0"
                                         >
                                           <Settings2 className="h-3.5 w-3.5" />
-                                          {helperEditorCommand
+                                          {helperSelected
                                             ? t("vmLxc.updates.editApp")
                                             : t("vmLxc.updates.configureUpdater")}
                                         </button>
@@ -5829,7 +5837,10 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                                           {t("vmLxc.updates.versionTrackingNotConfigured")}
                                         </p>
                                       ) : null}
-                                      {helperExists && !helperUsesWebUpdater && (() => {
+                                      {helperExists && !helperUsesWebUpdater && !helperSelected && (
+                                        <p className="mt-3 text-xs text-muted-foreground">{t("vmLxc.updates.noUpdaterSelected")}</p>
+                                      )}
+                                      {helperExists && !helperUsesWebUpdater && helperSelected && (() => {
                                         // Button state uses the matched
                                         // App Watch entry when present.
                                         // Without it we DON'T know the
@@ -5846,7 +5857,7 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                                         const label = hasUpd ? t("vmLxc.updates.applyUpdate") : upToD ? t("vmLxc.updates.upToDate") : t("vmLxc.updates.runUpdater")
                                         return (
                                           <div className="mt-3 flex justify-end">
-                                            <Button size="sm" onClick={() => openApplyTerminal(selectedVM.vmid, "app", { runHelper: true, appName: helperName || "" })} className={cls}>
+                                            <Button size="sm" onClick={() => openApplyTerminal(selectedVM.vmid, "app", { runHelper: true, appName: helperName || "", targetIds: [`app:${matchApp.id}`] })} className={cls}>
                                               {hasUpd && <ArrowUpCircle className="h-4 w-4 mr-1.5" />}
                                               {noState && <RefreshCw className="h-4 w-4 mr-1.5" />}
                                               {label}
@@ -5907,7 +5918,7 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                                             className="h-8 px-3 text-xs rounded-md border border-border bg-background hover:bg-muted transition-colors inline-flex items-center gap-1.5 flex-shrink-0"
                                           >
                                             <Settings2 className="h-3.5 w-3.5" />
-                                            {hasCmd
+                                            {hasCmd || aw.update_method === "helper"
                                               ? t("vmLxc.updates.editApp")
                                               : t("vmLxc.updates.configureUpdater")}
                                           </button>
@@ -5919,56 +5930,22 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                                         </div>
                                       )}
                                       {editing ? (
-                                        <div className="space-y-3">
-                                          <div>
-                                            <Label className="text-xs uppercase tracking-wider text-muted-foreground">
-                                              {t("vmLxc.updates.customCommandLabel")}
-                                            </Label>
-                                            <Textarea
-                                              value={customCmdDraft}
-                                              onChange={(e) => setCustomCmdDraft(e.target.value)}
-                                              placeholder={t("vmLxc.updates.customCommandPlaceholder")}
-                                              className="font-mono text-xs mt-2 min-h-[100px]"
-                                              maxLength={4096}
-                                            />
-                                          </div>
-                                          <div className="flex items-center justify-between gap-2">
-                                            <div>
-                                              {hasCmd && (
-                                                <button
-                                                  type="button"
-                                                  onClick={() => removeCustomCommand(selectedVM.vmid, aw)}
-                                                  disabled={customCmdSaving}
-                                                  className="h-8 px-3 text-xs rounded-md border border-red-500/30 bg-red-500/10 hover:bg-red-500/20 text-red-400 transition-colors inline-flex items-center gap-1.5 disabled:opacity-60"
-                                                >
-                                                  <Trash2 className="h-3.5 w-3.5" />
-                                                  {t("vmLxc.updates.removeButton")}
-                                                </button>
-                                              )}
-                                            </div>
-                                            <div className="flex items-center gap-2">
-                                              <button
-                                                type="button"
-                                                onClick={closeCustomCmdEditor}
-                                                disabled={customCmdSaving}
-                                                className="h-8 px-3 text-xs rounded-md border border-border bg-background hover:bg-muted transition-colors inline-flex items-center gap-1.5 disabled:opacity-60"
-                                              >
-                                                {t("vmLxc.updates.cancelButton")}
-                                              </button>
-                                              <button
-                                                type="button"
-                                                onClick={() => saveCustomCommand(selectedVM.vmid, aw)}
-                                                disabled={customCmdSaving || !customCmdDraft.trim() || (
-                                                  customCmdDraft.trim() === (aw.update_command || "").trim()
-                                                )}
-                                                className="h-8 px-3 text-xs rounded-md bg-blue-600 hover:bg-blue-700 text-white transition-colors disabled:opacity-40 disabled:cursor-not-allowed inline-flex items-center gap-1.5"
-                                              >
-                                                {customCmdSaving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5" />}
-                                                {t("vmLxc.updates.saveButton")}
-                                              </button>
-                                            </div>
-                                          </div>
-                                        </div>
+                                        <AppUpdaterEditor
+                                          method={updaterMethodDraft}
+                                          command={customCmdDraft}
+                                          helperAvailable={helperExists && !helperUsesWebUpdater && aw.helper_slug === uc?.helper_slug}
+                                          helperSlug={aw.helper_slug}
+                                          configured={hasCmd || aw.update_method === "helper"}
+                                          saving={customCmdSaving}
+                                          changed={updaterMethodDraft !== (aw.update_method || (hasCmd ? "custom" : "none")) || (
+                                            updaterMethodDraft === "custom" && customCmdDraft.trim() !== (aw.update_command || "").trim()
+                                          )}
+                                          onMethodChange={setUpdaterMethodDraft}
+                                          onCommandChange={setCustomCmdDraft}
+                                          onSave={() => saveCustomCommand(selectedVM.vmid, aw)}
+                                          onCancel={closeCustomCmdEditor}
+                                          onRemove={() => removeCustomCommand(selectedVM.vmid, aw)}
+                                        />
                                       ) : (
                                         <>
                                           {hasUpdate ? (
