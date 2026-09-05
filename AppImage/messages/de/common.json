@@ -45,7 +45,8 @@
     "profile": "Profil",
     "node": "Knoten",
     "admin": "Admin",
-    "menu": "Navigationsmenü"
+    "menu": "Navigationsmenü",
+    "audit": "Audit & Report"
   },
   "status": {
     "healthy": "Gesund",
@@ -72,6 +73,8 @@
     "networkErrorWhileSaving": "Netzwerkfehler beim Speichern"
   },
   "overview": {
+    "metricsTimeout": "Die Metrikabfrage hat länger als 30 Sekunden gedauert. ProxMenux versucht es automatisch erneut.",
+    "metricsCachedWarning": "Die Metriken konnten nicht aktualisiert werden. Angezeigt werden die am {time} abgerufenen Daten.",
     "loadingTitle": "Systemübersicht wird geladen...",
     "loadingDescription": "Systemstatus und -metriken abrufen",
     "topProcessesCpu": "Top-Prozesse nach CPU anzeigen",
@@ -882,7 +885,7 @@
         "executable": "Ausführbar",
         "workingDir": "Arbeitsverzeichnis",
         "started": "Begonnen",
-        "runningFor": "Laufen für"
+        "runningFor": "Läuft seit"
       },
       "states": {
         "running": "Läuft",
@@ -1030,7 +1033,10 @@
       "startOnBoot": "Beim Booten beginnen",
       "tags": "Tags",
       "tagsPlaceholder": "Tag hinzufügen…",
-      "tagsNone": "Keine Tags"
+      "tagsNone": "Keine Tags",
+      "mountErrors": {
+        "configuredButNotMounted": "Konfiguriert, aber nicht gemountet"
+      }
     },
     "logs": {
       "header": "Protokolle für {name} (VMID: {vmid})",
@@ -1214,7 +1220,15 @@
       "humanWeekly": "Wöchentlich ({day} {time})",
       "humanMonthly": "Monatlich (Tag {day} um {time})",
       "humanHourly": "Stündlich",
-      "weekdays": "['Sonntag', 'Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag']"
+      "weekdays": [
+        "Sonntag",
+        "Montag",
+        "Dienstag",
+        "Mittwoch",
+        "Donnerstag",
+        "Freitag",
+        "Samstag"
+      ]
     },
     "cronChip": {
       "detected": "Host-Cron erkannt",
@@ -1241,6 +1255,35 @@
       "osStatusUnavailable": "Der Status der Betriebssystemaktualisierungen konnte nicht ermittelt werden.",
       "installedByHelperPrefix": "Installiert von",
       "helperScriptsName": "Proxmox VE Helper-Scripts",
+      "helperCommandEditHint": "Wenn du diesen Aufruf bearbeitest, wird er als benutzerdefinierter Befehl gespeichert.",
+      "customOnlineDescription": "Oder verwende ein vom Entwickler bereitgestelltes Online-Skript:",
+      "customOnlineExampleNote": "Ersetze die Beispiel-URL durch die URL des offiziellen Skripts deiner Anwendung.",
+      "customExamplesHeading": "Beispiele zum Anpassen:",
+      "updaterChoiceHint": "Wähle eine Aktualisierungsmethode und speichere sie.",
+      "updaterMethodLabel": "Aktualisierungsmethode",
+      "helperMethod": "Helper-Scripts",
+      "customMethod": "Eigener Befehl",
+      "helperMethodHelp": "Über Helper-Scripts",
+      "customMethodHelp": "Über eigene Befehle",
+      "helperDetectedChoice": "Helper-Scripts-Updater für diese Anwendung erkannt.",
+      "helperUnavailableChoice": "Der ausgewählte Helper-Scripts-Updater ist nicht mehr verfügbar.",
+      "disableUpdater": "Deaktivieren",
+      "disableUpdaterConfirm": "Aktualisierungsmethode für {name} deaktivieren? Gespeicherte Pläne und Zeitpläne behalten ihre Auswahl, führen diese Anwendung aber erst wieder aus, wenn eine Methode konfiguriert ist.",
+      "noUpdaterSelected": "Du hast keine Aktualisierungsmethode ausgewählt.",
+      "helperMethodDescription": "ProxMenux führt den erkannten Updater in diesem LXC aus und zeigt dessen Protokoll und Ergebnis. Der Updater wird von Proxmox VE Helper-Scripts gepflegt.",
+      "customMethodDescription": "Du kannst den Updater der Anwendung, einen Paketmanager oder eine neue Binärdatei verwenden. Der Befehl wird in diesem LXC mit Administratorrechten ausgeführt.",
+      "updaterInstructions": "Lies die Hinweise des Updaters.",
+      "helperDocumentation": "Aktualisierungsdokumentation",
+      "helperSource": "Anwendungsskript",
+      "customMethodExample": "Passe Namen, Pfade und Dienst an deine Anwendung an. Nur der gespeicherte Befehl wird ausgeführt.",
+      "helperCommandLabel": "Befehl innerhalb des LXC",
+      "helperCommandFallback": "Wenn wget nicht verfügbar ist, lädt ProxMenux dasselbe Skript mit curl -fsSL herunter.",
+      "customScriptTitle": "Aktualisierungsskript",
+      "customScriptDescription": "Führe ein bereits im LXC vorhandenes Aktualisierungsskript der Anwendung aus.",
+      "customPackageTitle": "Debian/Ubuntu-Paket",
+      "customPackageDescription": "Ersetze my-package durch das Paket, das du aktualisieren möchtest.",
+      "customBinaryTitle": "Binärdatei",
+      "customBinaryDescription": "Lade zuerst die offizielle Binärdatei für die richtige Version und Architektur nach /tmp/my-app.new herunter und überprüfe sie. Dieses Beispiel sichert die bisherige Binärdatei und startet den zugehörigen Dienst neu.",
       "helperUpdatesRun": "Installiert von Proxmox Helper-Scripts.",
       "installedPrefix": "installiert",
       "upstreamAvailable": "Version {version} verfügbar",
@@ -1564,22 +1607,26 @@
       "excludeFromBadgeHelp": "Zählen Sie diese App nicht im Abzeichen „Aggregate Updates“ auf der LXC-Listenkarte.Nützlich, wenn Sie absichtlich an eine bestimmte Version gebunden sind (Tracker-Anforderung, Kompatibilitätsstopp).Hat keinen Einfluss auf den eigenen Status der App-Registerkarte oder die ausgehende Benachrichtigung."
     },
     "statusFilter": {
-      "ariaLabel": "Virtuelle Maschinen und Container nach Status filtern",
+      "ariaLabel": "Virtuelle Maschinen und Container filtern",
       "all": "Alle",
-      "running": "Laufen",
+      "running": "Läuft",
       "stopped": "Gestoppt",
       "empty": "Keine virtuellen Maschinen oder Container mit dem Status „{status}“"
     },
     "filters": {
-      "searchPlaceholder": "Nach Name, ID, Tag oder Notiz suchen …",
-      "searchAriaLabel": "Durchsuchen Sie virtuelle Maschinen und Container",
+      "searchPlaceholder": "Name, ID, Tag oder Notiz suchen…",
+      "searchAriaLabel": "Virtuelle Maschinen und Container durchsuchen",
       "clearSearch": "Suche löschen",
-      "updates": "Aktualisierungen",
+      "updates": "Updates",
       "resultCount": "{shown} von {total} Maschinen",
-      "noMatches": "Keine VMs oder LXCs entsprechen Ihrer Suche.",
+      "noMatches": "Keine VMs oder LXCs entsprechen der Suche.",
       "noRunning": "Keine laufenden VMs oder LXCs.",
       "noStopped": "Keine gestoppten VMs oder LXCs.",
-      "noUpdates": "Nein LXC mit verfügbaren Updates."
+      "noUpdates": "Kein LXC mit verfügbaren Updates.",
+      "typeSynonyms": {
+        "lxc": "container",
+        "qemu": "vm virtuelle maschine virtuelle maschinen"
+      }
     }
   },
   "settings": {
@@ -4062,7 +4109,7 @@
       "loadingJob": "Job wird geladen...",
       "manualOneShot": "manuell / One-Shot",
       "manualOneShotDescription": "One-Shot-Backup – zum Zeitpunkt des Auslösers erfasst. Kann nicht erneut ausgeführt oder bearbeitet werden.",
-      "neverRun": "niemals laufen",
+      "neverRun": "nie ausgeführt",
       "newScheduledJob": "Neuer geplanter Auftrag",
       "newScheduledJobDescription": "Erstellen Sie einen wiederkehrenden Host-Sicherungsauftrag.",
       "nextRun": "Nächster Lauf",
@@ -4193,7 +4240,7 @@
       "inProgress": "Manuelle Sicherung läuft",
       "oneShotDescription": "One-Shot-Backups werden als eingefrorene Jobs aufbewahrt, sodass Sie ihr Protokoll später überprüfen können.",
       "reopenLogTitle": "Protokoll erneut öffnen",
-      "run": "Laufen",
+      "run": "Ausführen",
       "runBackup": "Führen Sie ein Backup aus",
       "runOneShotBackup": "Führen Sie ein One-Shot-Backup durch",
       "title": "Manuelle Sicherung",
@@ -4349,7 +4396,7 @@
       "hourlyHelpBefore": "Im Moment",
       "hourlyHelpMiddle": "der Timer",
       "hourlyOption": "Stündlich",
-      "howToSchedule": "Wie soll es laufen?",
+      "howToSchedule": "Wie soll es ausgeführt werden?",
       "janFirst": "Jedes Jahr am 1. Januar",
       "modeHelp": "Wählen Sie einen einfachen Zeitplan oder geben Sie einen systemd-OnCalendar-Ausdruck ein.",
       "monthlyOption": "Monatlich",
@@ -4861,5 +4908,134 @@
     "customLinkDelete": "Delete",
     "customLinkSaveError": "Save failed",
     "customLinkDeleteError": "Delete failed"
+  },
+  "audit": {
+    "title": "Audit & Report",
+    "loading": "Loading assessment…",
+    "run": "Run assessment",
+    "running": "Assessing…",
+    "neverRun": "This host has not been assessed yet.",
+    "lastRun": "Last assessed on {when}",
+    "stale": "{days} days ago",
+    "readOnlyNotice": "The assessment only reads the host. It makes no changes.",
+    "noFindings": "No findings match the current filter.",
+    "showPassing": "Show passing checks",
+    "hidePassing": "Hide passing checks",
+    "affectedCount": "{count} affected",
+    "acceptedNotice": "{count} accepted risk(s) recorded on this host.",
+    "states": {
+      "fail": "Failed",
+      "warn": "Warning",
+      "accepted": "Accepted risk",
+      "pass": "Passed",
+      "not_applicable": "Not applicable"
+    },
+    "areas": {
+      "all": "All",
+      "system": "System",
+      "storage": "Storage",
+      "network": "Network",
+      "security": "Security",
+      "backup": "Backup",
+      "guests": "Guests",
+      "hardware": "Hardware"
+    },
+    "detail": {
+      "why": "Context",
+      "evidence": "Evidence",
+      "affected": "Affected",
+      "acceptedRisk": "Accepted risk"
+    },
+    "errors": {
+      "runFailed": "The assessment could not be started."
+    },
+    "checks": {
+      "backup": {
+        "guest_coverage": {
+          "title": "Backup coverage",
+          "rationale": "Compares the guest inventory against what each backup job selects. A job selects by VMID list, by pool, or with `all 1`, minus its `exclude` list. Jobs carrying `enabled 0` are not considered.",
+          "summary": {
+            "noJobs": "No backup job is defined on this node",
+            "covered": "All {total} guests are covered by a backup job",
+            "uncovered": "{count} of {total} guests are not covered by any enabled backup job"
+          }
+        }
+      },
+      "system": {
+        "pending_reboot": {
+          "title": "Restart state",
+          "rationale": "Checks for `/var/run/reboot-required` and, when present, the packages listed in `/var/run/reboot-required.pkgs`. Also reports the running kernel.",
+          "summary": {
+            "none": "No restart is pending",
+            "pending": "The host has a pending restart"
+          }
+        },
+        "enterprise_repo_without_subscription": {
+          "title": "Enterprise repository",
+          "rationale": "Looks for references to `enterprise.proxmox.com` in `/etc/apt/sources.list` and `sources.list.d`, and contrasts the result with the status returned by `pvesubscription get`.",
+          "summary": {
+            "notEnabled": "The enterprise repository is not enabled",
+            "subscribed": "The enterprise repository is backed by a subscription",
+            "unsubscribed": "The enterprise repository is enabled without an active subscription"
+          }
+        }
+      },
+      "guests": {
+        "privileged_containers": {
+          "title": "Container privileges",
+          "rationale": "Reviews each container configuration. Proxmox marks unprivileged containers with `unprivileged: 1`; its absence indicates a privileged container, which shares the host user namespace.",
+          "summary": {
+            "allUnprivileged": "All {total} containers are unprivileged",
+            "privileged": "{count} of {total} containers run privileged"
+          }
+        },
+        "qemu_without_agent": {
+          "title": "Guest agent on virtual machines",
+          "rationale": "Reviews each virtual machine configuration for `agent: 1`. The guest agent enables ordered shutdown, filesystem quiescing for snapshots and real disk usage reporting.",
+          "summary": {
+            "allHaveAgent": "All {total} virtual machines declare the guest agent",
+            "missingAgent": "{count} of {total} virtual machines do not declare the guest agent"
+          }
+        }
+      },
+      "security": {
+        "host_firewall_enabled": {
+          "title": "Firewall state",
+          "rationale": "Checks `enable: 1` in `/etc/pve/firewall/cluster.fw` and in the node's `host.fw`. Proxmox applies node rules only while the datacenter switch is on.",
+          "summary": {
+            "bothEnabled": "The firewall is enabled at datacenter and node level",
+            "datacenterOff": "The firewall is disabled at datacenter level, so node rules are not applied",
+            "nodeOff": "The firewall is enabled at datacenter level but not on this node"
+          }
+        }
+      },
+      "storage": {
+        "orphaned_volumes": {
+          "title": "Volume assignment",
+          "rationale": "Compares the volumes returned by `pvesm list` against the existing guest configurations. Only non-shared storage is examined: on shared storage a volume may belong to a guest running on another node.",
+          "summary": {
+            "none": "No orphaned volumes were found",
+            "found": "{count} volume(s) belong to no existing guest"
+          }
+        }
+      }
+    },
+    "summaryFallback": "The check could not be evaluated",
+    "acceptRisk": {
+      "action": "Accept risk",
+      "revoke": "Return to active",
+      "title": "Accept this risk",
+      "reasonLabel": "Reason",
+      "reasonHelp": "Required. It is recorded together with the author and the date.",
+      "reasonPlaceholder": "e.g. Lab containers, not covered on purpose",
+      "expiryLabel": "Review after",
+      "expiryHelp": "When the period ends the finding becomes active again.",
+      "expiryNever": "Does not expire",
+      "expiry90": "90 days",
+      "expiry180": "180 days",
+      "expiry365": "1 year",
+      "cancel": "Cancel",
+      "confirm": "Accept risk"
+    }
   }
 }

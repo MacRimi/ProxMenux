@@ -6,6 +6,7 @@ import { Loader2 } from 'lucide-react'
 import { fetchApi } from "../lib/api-config"
 import { getNetworkUnit } from "../lib/format-network"
 import { useT } from "../lib/i18n/provider"
+import { MetricsCacheNotice } from "./metrics-cache-notice"
 
 interface NetworkMetricsData {
   time: string
@@ -55,12 +56,13 @@ export function NetworkTrafficChart({
   const [data, setData] = useState<NetworkMetricsData[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [staleAt, setStaleAt] = useState<number | null>(null)
   const [isInitialLoad, setIsInitialLoad] = useState(true)
   const [visibleLines, setVisibleLines] = useState({
     netIn: true,
     netOut: true,
   })
-  
+
   const [networkUnit, setNetworkUnit] = useState<"Bytes" | "Bits">(
     networkUnitProp || getNetworkUnit()
   )
@@ -87,133 +89,147 @@ export function NetworkTrafficChart({
   }, [networkUnitProp])
 
   useEffect(() => {
+    let active = true
+    let hasData = false
+    let lastChecked: number | null = null
+    let refreshTimer: ReturnType<typeof setTimeout> | undefined
     setIsInitialLoad(true)
-    fetchMetrics()
-  }, [timeframe, interfaceName, networkUnit])
-
-  useEffect(() => {
-    if (refreshInterval > 0) {
-      const interval = setInterval(() => {
-        fetchMetrics()
-      }, refreshInterval)
-
-      return () => clearInterval(interval)
-    }
-  }, [timeframe, interfaceName, refreshInterval, networkUnit]) // Added networkUnit to dependencies
-
-  const fetchMetrics = async () => {
-    if (isInitialLoad) {
-      setLoading(true)
-    }
+    setLoading(true)
     setError(null)
+    setStaleAt(null)
+    setData([])
 
-    try {
-      const apiPath = interfaceName
-        ? `/api/network/${interfaceName}/metrics?timeframe=${timeframe}`
-        : `/api/node/metrics?timeframe=${timeframe}`
+    const fetchMetrics = async () => {
+
+      try {
+        const apiPath = interfaceName
+          ? `/api/network/${interfaceName}/metrics?timeframe=${timeframe}`
+          : `/api/node/metrics?timeframe=${timeframe}`
 
 
-      const result = await fetchApi<any>(apiPath)
+        const result = await fetchApi<any>(apiPath)
+        if (!active) return
 
-      if (!result.data || !Array.isArray(result.data)) {
-        throw new Error(t("network.chart.invalidDataFormat"))
-      }
-
-      if (result.data.length === 0) {
-        setData([])
-        setLoading(false)
-        return
-      }
-
-      const transformedData = result.data.map((item: any, index: number) => {
-        const date = new Date(item.time * 1000)
-        let timeLabel = ""
-
-        if (timeframe === "hour") {
-          timeLabel = date.toLocaleString("en-US", {
-            hour: "2-digit",
-            minute: "2-digit",
-            hour12: false,
-          })
-        } else if (timeframe === "day") {
-          timeLabel = date.toLocaleString("en-US", {
-            hour: "2-digit",
-            minute: "2-digit",
-            hour12: false,
-          })
-        } else if (timeframe === "week") {
-          timeLabel = date.toLocaleString("en-US", {
-            month: "short",
-            day: "numeric",
-            hour: "2-digit",
-            hour12: false,
-          })
-        } else if (timeframe === "year") {
-          timeLabel = date.toLocaleString("en-US", {
-            month: "short",
-            day: "numeric",
-            year: "numeric",
-          })
-        } else {
-          timeLabel = date.toLocaleString("en-US", {
-            month: "short",
-            day: "numeric",
-          })
+        if (!result.data || !Array.isArray(result.data)) {
+          throw new Error(t("network.chart.invalidDataFormat"))
         }
 
-        let intervalSeconds = 60
-        if (index > 0) {
-          intervalSeconds = item.time - result.data[index - 1].time
+        setError(null)
+        lastChecked = result.last_checked || Date.now() / 1000
+        setStaleAt(result.cache_status === "stale" ? lastChecked : null)
+        hasData = result.data.length > 0
+
+        if (result.data.length === 0) {
+          setData([])
+          setLoading(false)
+          return
         }
 
-        const netInBytes = (item.netin || 0) * intervalSeconds
-        const netOutBytes = (item.netout || 0) * intervalSeconds
+        const transformedData = result.data.map((item: any, index: number) => {
+          const date = new Date(item.time * 1000)
+          let timeLabel = ""
 
-        if (networkUnit === "Bits") {
+          if (timeframe === "hour") {
+            timeLabel = date.toLocaleString("en-US", {
+              hour: "2-digit",
+              minute: "2-digit",
+              hour12: false,
+            })
+          } else if (timeframe === "day") {
+            timeLabel = date.toLocaleString("en-US", {
+              hour: "2-digit",
+              minute: "2-digit",
+              hour12: false,
+            })
+          } else if (timeframe === "week") {
+            timeLabel = date.toLocaleString("en-US", {
+              month: "short",
+              day: "numeric",
+              hour: "2-digit",
+              hour12: false,
+            })
+          } else if (timeframe === "year") {
+            timeLabel = date.toLocaleString("en-US", {
+              month: "short",
+              day: "numeric",
+              year: "numeric",
+            })
+          } else {
+            timeLabel = date.toLocaleString("en-US", {
+              month: "short",
+              day: "numeric",
+            })
+          }
+
+          let intervalSeconds = 60
+          if (index > 0) {
+            intervalSeconds = item.time - result.data[index - 1].time
+          }
+
+          const netInBytes = (item.netin || 0) * intervalSeconds
+          const netOutBytes = (item.netout || 0) * intervalSeconds
+
+          if (networkUnit === "Bits") {
+            return {
+              time: timeLabel,
+              timestamp: item.time,
+              netIn: Number(((netInBytes * 8) / 1024 / 1024 / 1024).toFixed(4)),
+              netOut: Number(((netOutBytes * 8) / 1024 / 1024 / 1024).toFixed(4)),
+            }
+          }
+
           return {
             time: timeLabel,
             timestamp: item.time,
-            netIn: Number(((netInBytes * 8) / 1024 / 1024 / 1024).toFixed(4)),
-            netOut: Number(((netOutBytes * 8) / 1024 / 1024 / 1024).toFixed(4)),
+            netIn: Number((netInBytes / 1024 / 1024 / 1024).toFixed(4)),
+            netOut: Number((netOutBytes / 1024 / 1024 / 1024).toFixed(4)),
           }
+        })
+
+        setData(transformedData)
+
+        const totalReceivedGB = result.data.reduce((sum: number, item: any, index: number) => {
+          const intervalSeconds = index > 0 ? item.time - result.data[index - 1].time : 60
+          const netInBytes = (item.netin || 0) * intervalSeconds
+          return sum + (netInBytes / 1024 / 1024 / 1024)
+        }, 0)
+
+        const totalSentGB = result.data.reduce((sum: number, item: any, index: number) => {
+          const intervalSeconds = index > 0 ? item.time - result.data[index - 1].time : 60
+          const netOutBytes = (item.netout || 0) * intervalSeconds
+          return sum + (netOutBytes / 1024 / 1024 / 1024)
+        }, 0)
+
+        if (onTotalsCalculated) {
+          onTotalsCalculated({ received: totalReceivedGB, sent: totalSentGB })
         }
 
-        return {
-          time: timeLabel,
-          timestamp: item.time,
-          netIn: Number((netInBytes / 1024 / 1024 / 1024).toFixed(4)),
-          netOut: Number((netOutBytes / 1024 / 1024 / 1024).toFixed(4)),
+
+      } catch (err: any) {
+        if (!active) return
+        console.error("Error fetching network metrics:", err)
+        if (hasData) {
+          setStaleAt(lastChecked)
+        } else {
+          setError(err?.body?.code === "metrics_timeout"
+            ? t("overview.metricsTimeout")
+            : err.message || t("network.chart.loadError"))
         }
-      })
-
-      setData(transformedData)
-
-      const totalReceivedGB = result.data.reduce((sum: number, item: any, index: number) => {
-        const intervalSeconds = index > 0 ? item.time - result.data[index - 1].time : 60
-        const netInBytes = (item.netin || 0) * intervalSeconds
-        return sum + (netInBytes / 1024 / 1024 / 1024)
-      }, 0)
-      
-      const totalSentGB = result.data.reduce((sum: number, item: any, index: number) => {
-        const intervalSeconds = index > 0 ? item.time - result.data[index - 1].time : 60
-        const netOutBytes = (item.netout || 0) * intervalSeconds
-        return sum + (netOutBytes / 1024 / 1024 / 1024)
-      }, 0)
-
-      if (onTotalsCalculated) {
-        onTotalsCalculated({ received: totalReceivedGB, sent: totalSentGB })
+      } finally {
+        if (active) {
+          setLoading(false)
+          setIsInitialLoad(false)
+          if (refreshInterval > 0) refreshTimer = setTimeout(fetchMetrics, refreshInterval)
+        }
       }
-
-      if (isInitialLoad) {
-        setIsInitialLoad(false)
-      }
-    } catch (err: any) {
-      console.error("Error fetching network metrics:", err)
-      setError(err.message || t("network.chart.loadError"))
-    } finally {
-      setLoading(false)
     }
-  }
+
+    void fetchMetrics()
+    return () => {
+      active = false
+      clearTimeout(refreshTimer)
+    }
+  }, [timeframe, interfaceName, refreshInterval, networkUnit])
 
   const tickInterval = Math.ceil(data.length / 8)
 
@@ -272,6 +288,8 @@ export function NetworkTrafficChart({
   }
 
   return (
+    <>
+    <MetricsCacheNotice lastChecked={staleAt} />
     <ResponsiveContainer width="100%" height={300}>
       <AreaChart data={data} margin={{ bottom: 80 }}>
         <CartesianGrid strokeDasharray="3 3" stroke="currentColor" className="text-border" />
@@ -327,5 +345,6 @@ export function NetworkTrafficChart({
         />
       </AreaChart>
     </ResponsiveContainer>
+    </>
   )
 }

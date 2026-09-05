@@ -10,7 +10,7 @@
   "intro": {
     "p1": "La pestaña <strong>Actualizaciones</strong> separa la detección de versiones de la acción que instala una actualización. El registro y el seguimiento opcional viven en la <link>pestaña App</link>; los métodos ejecutables se gestionan aquí.",
     "p2": "Una aplicación guardada aparece en Actualizaciones aunque solo contenga un enlace web. El seguimiento de versiones es opcional y el actualizador se puede configurar de forma independiente.",
-    "callout": "No se deduce una acción únicamente por el nombre de una aplicación. ProxMenux solo ejecuta un método integrado después de verificarlo o un comando personalizado guardado expresamente."
+    "callout": "Registrar una aplicación no selecciona su actualizador. Si se detecta un actualizador de Helper-Scripts correspondiente a esa app, elige y guarda <strong>Helper-Scripts</strong> o <strong>Comando personalizado</strong>. Detectarlo no garantiza su compatibilidad. La elección pertenece a cada aplicación, aunque varias compartan un LXC."
   },
   "overview": {
     "heading": "Contenido de la pestaña",
@@ -38,7 +38,7 @@
       {
         "source": "Proxmox VE Helper-Scripts",
         "action": "Aplicar actualización",
-        "notes": "Usa el wrapper /usr/bin/update verificado. Un marcador antiguo sin wrapper válido se identifica, pero nunca se ejecuta automáticamente."
+        "notes": "Tras seleccionar expresamente Helper-Scripts, ejecuta el script oficial de la aplicación identificado mediante el wrapper /usr/bin/update validado. Un marcador o una coincidencia del catálogo no habilitan la ejecución."
       },
       {
         "source": "Comando personalizado",
@@ -56,7 +56,7 @@
         "notes": "Descarga la imagen seleccionada y recrea su grupo de servicios Compose o su contenedor independiente protegido."
       }
     ],
-    "callout": "Un comando personalizado siempre <strong>reemplaza</strong> al actualizador integrado de Proxmox VE Helper-Scripts para esa aplicación. Los dos métodos no se ejecutan uno detrás de otro."
+    "callout": "El comando personalizado <strong>reemplaza</strong> a Helper-Scripts para esa aplicación. Las ejecuciones manuales, en bloque y programadas respetan la elección guardada. Se conservan los comandos existentes y las selecciones antiguas guardadas en planes o programaciones activadas; una programación antigua nunca activa el actualizador de una app recién registrada."
   },
   "docker": {
     "heading": "Docker Engine e imágenes Docker",
@@ -74,9 +74,9 @@
     "heading": "Acciones individuales y colores de estado",
     "lead": "Cada sección conserva su propia acción aunque exista una actualización en bloque configurada.",
     "items": [
-      "El botón <strong>Editar</strong> está siempre disponible. Los métodos integrados muestran su comando actual para poder revisarlo, reemplazarlo o borrarlo.",
+      "<strong>Configurar</strong> abre el selector cuando no hay un método elegido; <strong>Editar</strong> permite cambiar una elección guardada. Los botones de información explican cada opción, enlazan la documentación oficial y muestran un ejemplo de script personalizado. Seleccionar una opción no la ejecuta.",
       "Si el seguimiento de versiones está desactivado pero existe un actualizador, aparece la acción neutra <strong>Ejecutar actualizador</strong>. ProxMenux no afirma que exista una actualización pendiente.",
-      "Si no existe ningún método, <strong>Configurar</strong> abre el editor del comando personalizado.",
+      "Sin un actualizador de Helper-Scripts disponible, se puede configurar un comando personalizado. Desactivar un método no selecciona otro silenciosamente; los planes y las programaciones conservan sus selecciones y se informa de los objetivos no disponibles.",
       "La acción <strong>Actualizar imagen</strong> solo afecta a la unidad Docker seleccionada; no actualiza Docker Engine ni imágenes no relacionadas."
     ],
     "statusColState": "Estado conocido",

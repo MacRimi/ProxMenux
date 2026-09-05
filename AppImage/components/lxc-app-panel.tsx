@@ -33,7 +33,7 @@ import { Label } from "./ui/label"
 import { Badge } from "./ui/badge"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select"
 import { fetchApi } from "../lib/api-config"
-import { fetchLxcApps, getLxcAppsCached, setLxcAppsCached } from "../lib/lxc-apps-cache"
+import { fetchLxcApps, getLxcAppsCached, setLxcAppsCached, subscribeLxcApps } from "../lib/lxc-apps-cache"
 import { categoryChipStyle, useIsLightTheme } from "../lib/category-color"
 import { useT } from "@/lib/i18n/provider"
 
@@ -99,6 +99,7 @@ interface AppConfig {
   // The backend uses full-record replacement, so omitting these when
   // editing ports/tracking would silently erase the Updates-tab setup.
   update_command?: string
+  update_method?: "none" | "helper" | "custom"
   hide_no_updater_notice?: boolean
   // Per-app opt-out for the `app_update_available` notification.
   // Absent / true = notify; false = silenced. Set from the bell
@@ -481,6 +482,14 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed, initialData }: Prop
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [vmid, managed])
 
+  useEffect(() => {
+    if (managed) return
+    return subscribeLxcApps(vmid, bundle => {
+      setSidecar(bundle.sidecar)
+      setSuggestions(bundle.suggestions)
+    })
+  }, [vmid, managed])
+
   useEffect(() => { load() }, [load])
 
   // Live Docker Hub preview. Debounced so typing an image/regex does not
@@ -726,6 +735,7 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed, initialData }: Prop
         // edits one of its ports.
         update_via: (existing as { update_via?: string }).update_via || "",
         update_command: existing.update_command || "",
+        update_method: existing.update_method || (existing.update_command ? "custom" : "none"),
         hide_no_updater_notice: existing.hide_no_updater_notice === true,
         notifications_enabled: existing.notifications_enabled !== false,
         exclude_from_badge: existing.exclude_from_badge === true,

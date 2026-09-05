@@ -21,7 +21,8 @@
 #                       intentionally use sh -c with a variable
 #                       payload — the threat model matches "user
 #                       typed it via pct exec themselves"; ProxMenux
-#                       does not compose or interpret the command.
+#                       preserves arbitrary commands. Historical downloaded
+#                       shell launchers get an explicit download failure guard.
 #   ALLOW_HELPER_WITH_CUSTOM — "1" only for an explicit multi-app plan
 #                       where RUN_HELPER belongs to one registered app and
 #                       UPDATE_COMMAND contains other registered apps. The
@@ -38,7 +39,7 @@
 #   1  CT not found on this node
 #   2  CT could not be started
 #   3  pre-update backup failed (abort so the user still has a rollback)
-#   4  OS update failed OR OS family not supported for automated updates
+#   4  OS/app update failed OR OS family not supported for automated updates
 #   5  TARGET=app requested but no update method (neither UPDATE_COMMAND
 #      nor explicitly-enabled verified helper) available in the CT
 #   6  post-update restart failed
@@ -273,6 +274,25 @@ if [[ "$TARGET" == "app" || "$TARGET" == "both" ]]; then
         APP_FAILED=1
       fi
     else
+      # Detection is not consent. Recheck the saved per-app choice here too,
+      # so a stale browser/plan cannot run a helper after it was deselected.
+      if ! python3 - "$VMID" "$RESOLVED_SLUG" <<'PY'
+import json
+import os
+import sys
+sys.path.insert(0, '/usr/local/share/proxmenux/monitor-app/usr/bin')
+import lxc_apps
+targets = json.loads(os.environ.get('REQUESTED_TARGETS_JSON') or '[]')
+if not isinstance(targets, list):
+    raise SystemExit(1)
+raise SystemExit(0 if lxc_apps.helper_update_selected(
+    sys.argv[1], sys.argv[2], targets or None,
+) else 1)
+PY
+      then
+        echo "ERROR: Helper-Scripts has not been selected for this application. Configure its update method first." >&2
+        exit 5
+      fi
       # Never execute the arbitrary URL embedded in the CT. The slug is
       # constrained by the parser; fetch the canonical upstream path.
       UPDATE_URL="https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/${RESOLVED_SLUG}.sh"
@@ -295,7 +315,18 @@ if [[ "$TARGET" == "app" || "$TARGET" == "both" ]]; then
       echo "ERROR: CT $VMID has neither wget nor curl — cannot fetch the helper." >&2
       APP_FAILED=1
     else
-      if ! pct exec "$VMID" -- bash -c "PHS_SILENT=1 bash -c \"\$($IN_CT_FETCH)\""; then
+      # Check the download before invoking bash: bash -c "$(failed wget)"
+      # otherwise executes an empty string and falsely returns success.
+      if ! pct exec "$VMID" -- bash -c "
+_proxmenux_updater=\$($IN_CT_FETCH) || {
+  echo 'ERROR: updater download failed; nothing was executed.' >&2
+  exit 1
+}
+[ -n \"\$_proxmenux_updater\" ] || {
+  echo 'ERROR: downloaded updater is empty; nothing was executed.' >&2
+  exit 1
+}
+PHS_SILENT=1 bash -c \"\$_proxmenux_updater\""; then
         echo "ERROR: community-scripts helper returned non-zero." >&2
         APP_FAILED=1
       fi
@@ -307,7 +338,19 @@ if [[ "$TARGET" == "app" || "$TARGET" == "both" ]]; then
   if [[ -n "$UPDATE_COMMAND" ]]; then
     echo "--- Running user-defined update command ---"
     echo "\$ $UPDATE_COMMAND"
-    if ! pct exec "$VMID" -- sh -c "$UPDATE_COMMAND"; then
+    # Also covers a legacy command submitted by a browser opened before the
+    # upgrade. Bulk/scheduled plans protect each constituent command upstream.
+    if ! PREPARED_COMMAND=$(UPDATE_COMMAND="$UPDATE_COMMAND" python3 - protect-update-command <<'PY'
+import os
+import sys
+sys.path.insert(0, '/usr/local/share/proxmenux/monitor-app/usr/bin')
+from lxc_apps import protect_download_update_command
+sys.stdout.write(protect_download_update_command(os.environ['UPDATE_COMMAND']))
+PY
+    ); then
+      echo "ERROR: could not prepare the update command; nothing was executed." >&2
+      APP_FAILED=1
+    elif ! pct exec "$VMID" -- sh -c "$PREPARED_COMMAND"; then
       echo "ERROR: user-defined update command returned non-zero." >&2
       APP_FAILED=1
     fi
