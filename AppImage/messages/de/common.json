@@ -1239,6 +1239,8 @@
       "custom": "Benutzerdefinierte Cron…"
     },
     "updates": {
+      "updatedWithDockerImage": "Wird zusammen mit dem Docker-Image aktualisiert.",
+      "dockerBindingUnavailable": "Noch kein Image zugeordnet. Prüfen Sie den Containernamen und aktualisieren Sie das Image-Inventar.",
       "osPackagesTitle": "Betriebssystempakete",
       "lastCheckedPrefix": "Zuletzt überprüft:",
       "familyLabel": "Familie:",
@@ -1400,6 +1402,11 @@
       "loadFailed": "Die Massenaktualisierungskonfiguration konnte nicht geladen werden."
     },
     "appEditor": {
+      "dockerDetectedWithWorkloads": "Docker mit {count} Anwendungen in Containern erkannt",
+      "dockerWorkloadsHeading": "Anwendungen in Docker",
+      "runsInsideDocker": "Wird mit dem Docker-Image aktualisiert",
+      "upstreamDelegatedTitle": "Die verfügbare Version stammt aus dem Docker-Image",
+      "upstreamDelegatedHelp": "Diese Anwendung läuft in einem Container. Die verfügbare Version wird aus dessen Image ermittelt, ohne separate Abfrage oder doppelte Benachrichtigungen. Aktualisieren Sie das Image im Tab Aktualisierungen.",
       "closePanel": "Panel schließen",
       "cancelButton": "Stornieren",
       "saveButton": "Speichern",

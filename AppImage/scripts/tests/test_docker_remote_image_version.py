@@ -257,10 +257,6 @@ class RegistryRedirectTests(unittest.TestCase):
         self.assertIsNone(error)
 
 
-if __name__ == "__main__":
-    unittest.main()
-
-
 class ContainerIdentityTests(unittest.TestCase):
     """A container's catalog identity comes from a detector that declares it."""
 
@@ -338,3 +334,7 @@ class UpdateNotificationWordingTests(unittest.TestCase):
             "immich",
         )
         self.assertIn("• valkey/valkey:8-bookworm: new registry digest", payload["details"])
+
+
+if __name__ == "__main__":
+    unittest.main()

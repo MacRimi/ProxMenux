@@ -1239,6 +1239,8 @@
       "custom": "Anpassad cron..."
     },
     "updates": {
+      "updatedWithDockerImage": "Uppdateras med sin Docker-avbildning.",
+      "dockerBindingUnavailable": "Ingen avbildning är kopplad ännu. Kontrollera containerns namn och uppdatera avbildningsinventeringen.",
       "osPackagesTitle": "OS-paket",
       "lastCheckedPrefix": "Senast kontrollerad:",
       "familyLabel": "Familj:",
@@ -1400,6 +1402,11 @@
       "loadFailed": "Det gick inte att läsa in massuppdateringskonfigurationen."
     },
     "appEditor": {
+      "dockerDetectedWithWorkloads": "Docker hittades med {count} applikationer i containrar",
+      "dockerWorkloadsHeading": "Applikationer i Docker",
+      "runsInsideDocker": "Uppdateras med sin Docker-avbildning",
+      "upstreamDelegatedTitle": "Den tillgängliga versionen hämtas från dess Docker-avbildning",
+      "upstreamDelegatedHelp": "Den här applikationen körs i en container. Den tillgängliga versionen hämtas från dess avbildning, utan separat kontroll eller dubbla aviseringar. Uppdatera avbildningen på fliken Uppdateringar.",
       "closePanel": "Stäng panelen",
       "cancelButton": "Avbryt",
       "saveButton": "Spara",

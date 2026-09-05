@@ -100,6 +100,8 @@ interface LxcAppWatch {
   // once, through the image.
   docker_available_version?: string | null
   docker_update_available?: boolean | null
+  docker_image_reference?: string | null
+  docker_binding_error?: string | null
   ports?: LxcAppPort[]
   logo_url?: string | null
   health_path?: string | null
@@ -263,7 +265,7 @@ function hasLxcPendingUpdates(vm: VMData): boolean {
   if (vm.type !== "lxc") return false
   const osUpdates = vm.update_check?.count ?? 0
   const appUpdates = (vm.app_watches || []).filter(
-    (app) => app.update_available === true && !app.exclude_from_badge,
+    (app) => app.update_via !== "docker" && app.update_available === true && !app.exclude_from_badge,
   ).length
   const dockerRegistered = (vm.app_watches || []).some((app) => app.helper_slug === "docker")
   const dockerUpdates = dockerRegistered ? (vm.docker_inventory?.update_count ?? 0) : 0
@@ -273,9 +275,9 @@ function hasLxcPendingUpdates(vm: VMData): boolean {
   // supported choice, and it must not leave the CT looking up to date.
   // Counted only when the image is not already counted, so one release
   // stays one number.
-  const delegatedUpdates = dockerRegistered ? 0 : (vm.app_watches || []).filter(
+  const delegatedUpdates = dockerRegistered ? 0 : new Set((vm.app_watches || []).filter(
     (app) => app.update_via === "docker" && app.docker_update_available === true && !app.exclude_from_badge,
-  ).length
+  ).map(app => app.docker_image_reference || app.id)).size
   return osUpdates + appUpdates + dockerUpdates + delegatedUpdates > 0
 }
 
@@ -2572,15 +2574,15 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
   const getAggregateUpdateCheck = (vm: VMData): LxcUpdateCheck | undefined => {
     const uc = vm.update_check
     const appCount = (vm.app_watches || []).filter(
-      (a) => a.update_available === true && !a.exclude_from_badge,
+      (a) => a.update_via !== "docker" && a.update_available === true && !a.exclude_from_badge,
     ).length
     const dockerRegistered = (vm.app_watches || []).some((a) => a.helper_slug === "docker")
     const dockerCount = dockerRegistered ? (vm.docker_inventory?.update_count ?? 0) : 0
     // See hasLxcPendingUpdates: a delegated app counts only while its image
     // is not already being counted through the Docker section.
-    const delegatedCount = dockerRegistered ? 0 : (vm.app_watches || []).filter(
+    const delegatedCount = dockerRegistered ? 0 : new Set((vm.app_watches || []).filter(
       (a) => a.update_via === "docker" && a.docker_update_available === true && !a.exclude_from_badge,
-    ).length
+    ).map(app => app.docker_image_reference || app.id)).size
     const osCount = uc?.count ?? 0
     const total = osCount + appCount + dockerCount + delegatedCount
     if (!uc && appCount === 0 && dockerCount === 0 && delegatedCount === 0) return undefined
@@ -2590,10 +2592,17 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
     // showed a number that explained nothing. Applications and images join
     // that list under the same names they carry everywhere else.
     const pendingNames: LxcPackageUpdate[] = []
+    const namedImages = new Set<string>()
     for (const a of vm.app_watches || []) {
       if (a.exclude_from_badge) continue
       const isDelegatedPending = a.update_via === "docker" && a.docker_update_available === true && !dockerRegistered
+      if (a.update_via === "docker" && !isDelegatedPending) continue
       if (a.update_available !== true && !isDelegatedPending) continue
+      if (isDelegatedPending) {
+        const reference = a.docker_image_reference || a.id
+        if (namedImages.has(reference)) continue
+        namedImages.add(reference)
+      }
       pendingNames.push({
         name: a.name || "",
         current: a.installed_version || "",
@@ -5171,6 +5180,7 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                         const hasOsUpdates = osUpdateStatusKnown && !!uc.available
                         const dockerAppWatch = (selectedVM.app_watches || []).find((a) => a.helper_slug === "docker")
                         const dockerRegistered = !!dockerAppWatch
+                        const dockerWorkloadsRegistered = dockerRegistered || (selectedVM.app_watches || []).some(a => a.update_via === "docker")
                         const dockerEngineInstalledVersion = selectedVM.docker_inventory?.engine_version
                           || dockerAppWatch?.installed_version
                           || ""
@@ -5187,7 +5197,11 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                           || canonicalDockerEngineUpdateCommand
                         const dockerInventoryRefreshing = selectedVM.docker_inventory?.refreshing === true
                         const dockerInventoryAvailable = selectedVM.docker_inventory?.available === true
-                        const dockerImages = dockerRegistered ? (selectedVM.docker_inventory?.images || []) : []
+                        const delegatedContainers = new Set((selectedVM.app_watches || [])
+                          .filter(a => a.update_via === "docker").map(a => a.container_name))
+                        const dockerImages = (selectedVM.docker_inventory?.images || []).filter(image =>
+                          dockerRegistered || (image.used_by || []).some(name => delegatedContainers.has(name)))
+                        const followedImageReferences = new Set(dockerImages.map(image => image.reference))
                         const dockerPending = dockerImages.filter((image) => image.update_available === true)
                         const helperExists = !!uc?.app_updater_present && uc?.helper_slug_source === "update_wrapper"
                         const helperName = uc?.helper_app_name || null
@@ -5250,7 +5264,9 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                           : scheduleTargets.some((target) => versionTrackedScheduleAppIds.has(target))
                         const composeProjects = new Map<string, LxcDockerComposeTarget>()
                         for (const target of selectedVM.docker_inventory?.compose_projects || []) {
-                          composeProjects.set(`docker-compose:${target.project}`, target)
+                          if (dockerRegistered || dockerImages.some(image => (image.update_targets || []).some(item => item.project === target.project))) {
+                            composeProjects.set(`docker-compose:${target.project}`, target)
+                          }
                         }
                         const standaloneContainers = new Set<string>()
                         for (const image of dockerImages) {
@@ -5315,8 +5331,9 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                             logoUrl: webLinkLogo || app.logo_url?.trim() || "",
                           }
                         })
-                        const dockerUpdateUnits = dockerRegistered
-                          ? (selectedVM.docker_inventory?.update_units || [])
+                        const dockerUpdateUnits = dockerWorkloadsRegistered
+                          ? (selectedVM.docker_inventory?.update_units || []).filter(unit =>
+                              dockerRegistered || (unit.references || []).some(ref => followedImageReferences.has(ref)))
                           : []
                         const bulkActionChoices = [
                           ...bulkAppChoices,
@@ -5513,8 +5530,9 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                                     standalone containers. Keep all three in
                                     one registered-app section while exposing
                                     a concrete action for each target. */}
-                                {dockerRegistered && dockerAppWatch && (
+                                {dockerWorkloadsRegistered && (
                                   <div className={dockerEditing ? "py-4 -mx-4 px-4 bg-accent [&_textarea]:bg-background" : "py-4"}>
+                                    {dockerAppWatch && (<>
                                     <div className="flex items-center justify-between gap-3 mb-3 min-w-0">
                                       <div className="flex items-center gap-2 min-w-0">
                                         <Container className="h-4 w-4 text-muted-foreground flex-shrink-0" />
@@ -5649,8 +5667,9 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                                         </div>
                                       </div>
                                     )}
+                                    </>)}
                                     {selectedVM.docker_inventory && (<>
-                                    <div className="border-t border-border/50 pt-4 mb-1 flex items-center justify-between gap-3">
+                                    <div id={`docker-images-${selectedVM.vmid}`} className="border-t border-border/50 pt-4 mb-1 flex items-center justify-between gap-3">
                                       <div className="text-[10px] uppercase tracking-wider text-muted-foreground">
                                         {t("vmLxc.updates.dockerImagesSubheading")}
                                       </div>
@@ -5985,7 +6004,7 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                                             {aw.name}
                                           </h3>
                                         </div>
-                                        {!editing && (
+                                        {!editing && aw.update_via !== "docker" && (
                                           <button
                                             type="button"
                                             onClick={() => openCustomCmdEditor(aw)}
@@ -6074,7 +6093,12 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                                           ) : tracksVersion ? (
                                             <div className="text-sm text-muted-foreground">
                                               {aw.update_via === "docker"
-                                                ? t("vmLxc.updates.updatedWithDockerImage")
+                                                ? <>{aw.docker_binding_error
+                                                  ? t("vmLxc.updates.dockerBindingUnavailable")
+                                                  : t("vmLxc.updates.updatedWithDockerImage")}{" "}
+                                                  <a className="text-blue-400 hover:underline" href={`#docker-images-${selectedVM.vmid}`}>
+                                                    {t("vmLxc.updates.dockerImagesSubheading")}
+                                                  </a></>
                                                 : t("vmLxc.updates.versionTrackingPendingShort")}
                                             </div>
                                           ) : hasCmd ? (

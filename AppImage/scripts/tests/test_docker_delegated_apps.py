@@ -125,10 +125,6 @@ class SchedulingExclusionTests(unittest.TestCase):
         self.assertIn("a2", gated_ids)
 
 
-if __name__ == "__main__":
-    unittest.main()
-
-
 class AnnotationTests(unittest.TestCase):
     """The annotation writes into dicts that live in event-invalidated caches."""
 

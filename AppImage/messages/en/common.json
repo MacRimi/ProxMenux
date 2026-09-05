@@ -1325,6 +1325,7 @@
       "noUpdateMethodTitle": "No update method available",
       "noUpdateMethodBody": "No update method has been identified for this application. Add a custom update command.",
       "updatedWithDockerImage": "Updated with its Docker image.",
+      "dockerBindingUnavailable": "No image is linked yet. Check the container name and refresh the image inventory.",
       "ociImmutableTitle": "OCI image container",
       "ociImmutableBody": "OS packages are baked in at image build time and cannot be updated in place. Apply updates manually or reinstall with a newer image.",
       "hideNoticeButton": "Hide this notice for this app",

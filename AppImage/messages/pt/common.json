@@ -1239,6 +1239,8 @@
       "custom": "Cronograma personalizado…"
     },
     "updates": {
+      "updatedWithDockerImage": "Atualizada através da sua imagem Docker.",
+      "dockerBindingUnavailable": "Ainda não existe uma imagem associada. Verifique o nome do contentor e atualize o inventário de imagens.",
       "osPackagesTitle": "Pacotes de sistema operacional",
       "lastCheckedPrefix": "Última verificação:",
       "familyLabel": "Família:",
@@ -1400,6 +1402,11 @@
       "loadFailed": "não foi possível carregar a configuração de atualização em massa."
     },
     "appEditor": {
+      "dockerDetectedWithWorkloads": "Docker detetado com {count} aplicações em contentores",
+      "dockerWorkloadsHeading": "Aplicações no Docker",
+      "runsInsideDocker": "Atualizada através da sua imagem Docker",
+      "upstreamDelegatedTitle": "A versão disponível provém da sua imagem Docker",
+      "upstreamDelegatedHelp": "Esta aplicação é executada num contentor. A versão disponível é obtida da sua imagem, sem uma consulta separada nem notificações duplicadas. Atualize a imagem no separador Atualizações.",
       "closePanel": "Fechar painel",
       "cancelButton": "Cancelar",
       "saveButton": "Salvar",
