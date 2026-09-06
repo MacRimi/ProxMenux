@@ -719,9 +719,17 @@ main() {
         # even when nothing was actually wiped. Capture the failure and
         # continue but report it. Audit Tier 6 — `format-disk.sh` wipefs
         # `|| true` silencia fallos.
+        # blkid -k lists filesystem/RAID signatures, not partition tables.
+        # Use a positive filter so GPT/MBR (including nested tables) survive.
+        local _wipefs_types
+        if ! _wipefs_types=$(blkid -k) || [[ -z "$_wipefs_types" ]]; then
+            msg_error "$(translate "Could not determine filesystem signature types. Aborting.")"
+            return 1
+        fi
+        _wipefs_types=$(paste -sd, <<< "$_wipefs_types")
         local _wipefs_errs=0
         local _wipefs_err_out
-        if ! _wipefs_err_out=$(wipefs -af "$SELECTED_DISK" 2>&1); then
+        if ! _wipefs_err_out=$(wipefs -af --types "$_wipefs_types" "$SELECTED_DISK" 2>&1); then
             _wipefs_errs=$((_wipefs_errs + 1))
             msg_warn "$(translate "wipefs failed on") $SELECTED_DISK: $_wipefs_err_out"
         fi
@@ -730,7 +738,7 @@ main() {
             [[ -z "$pname" ]] && continue
             [[ "/dev/$pname" == "$SELECTED_DISK" ]] && continue
             if [[ -b "/dev/$pname" ]]; then
-                if ! _wipefs_err_out=$(wipefs -af "/dev/$pname" 2>&1); then
+                if ! _wipefs_err_out=$(wipefs -af --types "$_wipefs_types" "/dev/$pname" 2>&1); then
                     _wipefs_errs=$((_wipefs_errs + 1))
                     msg_warn "$(translate "wipefs failed on") /dev/$pname: $_wipefs_err_out"
                 fi
