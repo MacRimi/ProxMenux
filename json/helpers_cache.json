@@ -21862,7 +21862,8 @@
       "Remote Access & VPN"
     ],
     "notes": [
-      "Guacamole (guacd) is running at 127.0.0.1:4822. If RDP/VNC connections fail, verify the Guacamole URL in Termix Admin Settings is set to 127.0.0.1:4822."
+      "Guacamole (guacd) is running at 127.0.0.1:4822. If RDP/VNC connections fail, verify the Guacamole URL in Termix Admin Settings is set to 127.0.0.1:4822.",
+      "You can install the specific one certbot you prefer. Important: This script does not install Certbot, as some require additional, external system dependencies (like specific packages for certain DNS providers). These external dependencies must be manually installed within the LXC container before you can successfully install and use the corresponding Certbot plugin. Consult the plugin's documentation for required packages."
     ],
     "warnings": [],
     "port": 80,
