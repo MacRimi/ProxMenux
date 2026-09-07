@@ -3029,7 +3029,8 @@
       "Communication & Community"
     ],
     "notes": [
-      "Create the first account with `cd /opt/chatto && ./chatto operator user create --login admin` (the operator API is enabled by default), or register via the web UI at http://IP:4000.",
+      "Create the first account with `cd /opt/chatto && ./chatto operator user create --login <yourname>` (the operator API is enabled by default), or register via the web UI at http://IP:4000. Pick your own login: root, admin, superuser, op, operator and support are blocked by default and fail with 'this username is not available'.",
+      "Uploads go through the embedded NATS/JetStream store, which gets slow with many or large files. Testers report it becomes noticeably more usable with more CPU cores assigned to the container.",
       "Voice and video calls require a separately deployed LiveKit server; configure the [livekit] section in chatto.toml to enable them."
     ],
     "warnings": [
@@ -3080,7 +3081,7 @@
     "updateable": true,
     "privileged": false,
     "has_arm": false,
-    "is_dev": true,
+    "is_dev": false,
     "execute_in": [
       "lxc"
     ],
@@ -9967,7 +9968,7 @@
     "updateable": true,
     "privileged": false,
     "has_arm": true,
-    "is_dev": true,
+    "is_dev": false,
     "execute_in": [
       "lxc"
     ],
@@ -10877,7 +10878,7 @@
       "Models download on demand — increase disk size if you plan to run large models."
     ],
     "warnings": [
-      "Remote access is configured with `host=0.0.0.0`. Set `LEMONADE_API_KEY` via a systemd override at `/etc/systemd/system/lemond.service.d/override.conf` before exposing the service."
+      "Remote access is configured with `host=0.0.0.0`, which also exposes the internal control endpoints (`/internal/*`, including shutdown and config). Secure it before use: run `systemctl edit lemond.service`, add `[Service]` followed by `Environment=\"LEMONADE_API_KEY=<random>\"`, then `systemctl restart lemond`. `LEMONADE_API_KEY` protects every endpoint; `LEMONADE_ADMIN_API_KEY` alone only protects `/internal/*` and leaves `/api`, `/v0` and `/v1` open."
     ],
     "port": 13305,
     "website": "https://lemonade-server.ai/",
@@ -12190,7 +12191,7 @@
     "updateable": true,
     "privileged": false,
     "has_arm": true,
-    "is_dev": true,
+    "is_dev": false,
     "execute_in": [
       "lxc"
     ],
@@ -24370,7 +24371,7 @@
     "updateable": true,
     "privileged": false,
     "has_arm": true,
-    "is_dev": true,
+    "is_dev": false,
     "execute_in": [
       "lxc"
     ],
