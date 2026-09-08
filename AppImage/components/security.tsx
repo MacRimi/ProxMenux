@@ -81,6 +81,12 @@ export function Security() {
     if (normalized.includes("invalid 2fa code")) {
       return st("errors.invalid2faCode")
     }
+    if (normalized.includes("2fa code required")) {
+      return st("errors.enter2faOrBackup")
+    }
+    if (normalized.includes("current password is incorrect")) {
+      return st("errors.invalidPassword")
+    }
     if (normalized.includes("invalid password")) {
       return st("errors.invalidPassword")
     }
@@ -103,6 +109,7 @@ export function Security() {
   const [currentPassword, setCurrentPassword] = useState("")
   const [newPassword, setNewPassword] = useState("")
   const [confirmNewPassword, setConfirmNewPassword] = useState("")
+  const [changePasswordTotpCode, setChangePasswordTotpCode] = useState("")
 
   const [show2FASetup, setShow2FASetup] = useState(false)
   const [show2FADisable, setShow2FADisable] = useState(false)
@@ -976,6 +983,11 @@ export function Security() {
       return
     }
 
+    if (totpEnabled && !changePasswordTotpCode.trim()) {
+      setError(st("errors.enter2faOrBackup"))
+      return
+    }
+
     const pwError = validatePasswordStrength(newPassword, t)
     if (pwError) {
       setError(pwError)
@@ -992,8 +1004,9 @@ export function Security() {
           Authorization: `Bearer ${localStorage.getItem("proxmenux-auth-token")}`,
         },
         body: JSON.stringify({
-          current_password: currentPassword,
+          old_password: currentPassword,
           new_password: newPassword,
+          ...(totpEnabled ? { totp_code: changePasswordTotpCode.trim() } : {}),
         }),
       })
 
@@ -1012,6 +1025,7 @@ export function Security() {
       setCurrentPassword("")
       setNewPassword("")
       setConfirmNewPassword("")
+      setChangePasswordTotpCode("")
     } catch (err) {
       setError(err instanceof Error ? err.message : st("errors.changePasswordFailed"))
     } finally {
@@ -2012,6 +2026,22 @@ ${(report.sections && report.sections.length > 0) ? `
                     </div>
                   </div>
 
+                  {totpEnabled && (
+                    <div className="space-y-2">
+                      <Label htmlFor="change-password-totp">{st("twoFactor.codeOrBackup")}</Label>
+                      <Input
+                        id="change-password-totp"
+                        type="text"
+                        inputMode="text"
+                        autoComplete="one-time-code"
+                        placeholder={st("twoFactor.codeOrBackupPlaceholder")}
+                        value={changePasswordTotpCode}
+                        onChange={(e) => setChangePasswordTotpCode(e.target.value)}
+                        disabled={loading}
+                      />
+                    </div>
+                  )}
+
                   <div className="flex gap-2">
                     <Button
                       onClick={handleChangePassword}
@@ -2021,7 +2051,13 @@ ${(report.sections && report.sections.length > 0) ? `
                       {loading ? st("auth.changing") : st("auth.changePassword")}
                     </Button>
                     <Button
-                      onClick={() => setShowChangePassword(false)}
+                      onClick={() => {
+                        setShowChangePassword(false)
+                        setCurrentPassword("")
+                        setNewPassword("")
+                        setConfirmNewPassword("")
+                        setChangePasswordTotpCode("")
+                      }}
                       variant="outline"
                       className="flex-1"
                       disabled={loading}

@@ -17,8 +17,8 @@
 #   update_app(vmid, app_id, config) -> (bool, …)
 #   delete_app(vmid, app_id) -> bool
 #   delete_all(vmid) -> bool
-#   check_app(vmid, app_id, force=False) -> dict|None
-#   check_all(vmid, force=False) -> dict|None
+#   check_app(vmid, app_id, force=False, notify=True) -> dict|None
+#   check_all(vmid, force=False, notify=True) -> dict|None
 #   get_active_apps() -> {str(vmid): [summary, …]}
 #   get_suggestions(vmid) -> {name, port_suggestions[], web_path_hint}
 # ==========================================================
@@ -3872,43 +3872,69 @@ def clear_schedule_reboot_required(vmid) -> bool:
         return _write_sidecar(vmid, sidecar)
 
 
-def _fire_update_notification(vmid, app: dict) -> None:
+def _app_update_notification_payload(vmid, app: dict) -> Optional[dict]:
+    """Return the notification payload for one pending app update.
+
+    The same eligibility rules are used by direct/manual checks and by the
+    scheduled batch so per-app opt-outs and Docker-owned updates cannot drift
+    between the two paths.
+    """
     # Per-app opt-out: user flipped the bell icon off for this specific
     # app (because they know it can't be updated on their box or they
     # just don't care). Field defaults to True — an app registered
     # before this feature landed keeps receiving notifications.
     if app.get("notifications_enabled", True) is False:
-        return
+        return None
     if app.get("helper_slug") == "docker":
-        return
+        return None
     # Delegated apps are announced by their Docker image's own event; a
     # second one for the same release would land in a different event type
     # and therefore escape deduplication.
     if app.get("update_via") == "docker":
-        return
+        return None
+    state = app.get("state") or {}
+    latest = state.get("latest_version")
+    if not state.get("update_available") or not latest:
+        return None
+    return {
+        "vmid": int(vmid),
+        "ct_name": app.get("name") or f"CT-{vmid}",
+        "app_name": app.get("name") or "app",
+        "installed": state.get("installed_version") or "unknown",
+        "latest": latest,
+        "app_id": str(app.get("id") or ""),
+    }
+
+
+def _emit_app_update_event(data: dict, entity: str, entity_id: str) -> bool:
     try:
         from notification_manager import notification_manager
-        import socket
-        state = app.get("state") or {}
         notification_manager.emit_event(
             event_type='app_update_available',
             severity='INFO',
-            data={
-                'hostname': socket.gethostname(),
-                'vmid': int(vmid),
-                'ct_name': app.get('name') or f'CT-{vmid}',
-                'app_name': app.get('name') or 'app',
-                'installed': state.get('installed_version') or 'unknown',
-                'latest': state.get('latest_version') or 'unknown',
-            },
+            data={"hostname": socket.gethostname(), **data},
             source='app_watch',
-            entity='ct',
-            # vmid + app_id + latest so multi-app CTs don't dedup and
-            # subsequent upstream releases still fire.
-            entity_id=f"{vmid}:{app.get('id')}:{state.get('latest_version') or ''}",
+            entity=entity,
+            entity_id=entity_id,
         )
+        return True
     except Exception as e:
-        print(f"[ProxMenux] lxc_apps: notif emit failed for CT {vmid}: {e}")
+        print(f"[ProxMenux] lxc_apps: app update notification failed: {e}")
+        return False
+
+
+def _fire_update_notification(vmid, app: dict) -> bool:
+    payload = _app_update_notification_payload(vmid, app)
+    if payload is None:
+        return False
+    app_id = payload.pop("app_id")
+    return _emit_app_update_event(
+        payload,
+        entity="ct",
+        # vmid + app_id + latest so multi-app CTs don't dedup and
+        # subsequent upstream releases still fire.
+        entity_id=f"{vmid}:{app_id}:{payload['latest']}",
+    )
 
 
 def _docker_stack_notification_payload(
@@ -4166,7 +4192,9 @@ def _detect_with_alt_healing(vmid, app: dict) -> tuple:
     return installed, err, False
 
 
-def check_app(vmid, app_id: str, force: bool = False) -> Optional[dict]:
+def check_app(
+    vmid, app_id: str, force: bool = False, notify: bool = True,
+) -> Optional[dict]:
     with _cache_lock:
         sidecar = _read_sidecar(vmid)
         if not sidecar:
@@ -4230,18 +4258,20 @@ def check_app(vmid, app_id: str, force: bool = False) -> Optional[dict]:
         # (vmid + app_id + latest_version) with its cooldown, and only
         # a genuinely new upstream release changes the entity_id and
         # triggers a fresh delivery.
-        if update_available and latest:
+        if notify and update_available and latest:
             _fire_update_notification(vmid, app)
 
         return sidecar
 
 
 def emit_all_pending_updates() -> int:
-    """Walk every sidecar and emit `app_update_available` for each
-    app currently marked with a pending upstream release. Safe to
-    call repeatedly — `notification_manager` dedups by entity_id
-    (vmid + app_id + latest_version), so a given release only sends
-    once until a newer version appears.
+    """Emit pending registered-app updates as one scheduled summary.
+
+    A single pending app retains the original per-app notification. Multiple
+    apps are grouped into one event, ordered by CT and app, while preserving
+    every installed/latest version pair. Safe to call repeatedly: the batch
+    entity id is derived from the exact pending set and notification_manager
+    applies its normal cooldown.
 
     Needed because `check_app(force=False)` short-circuits on a fresh
     `checked_at` and never reaches the emit path. The 24 h
@@ -4249,14 +4279,14 @@ def emit_all_pending_updates() -> int:
     this helper the notification only ever fired on the exact tick
     where a new upstream version was FIRST observed — and even that
     was silenced when the user's setting was OFF at the time.
-    Returns the number of emits attempted (delivery still depends on
-    channel enablement + cooldown + rate limit)."""
+    Returns the number of eligible pending apps represented by the event
+    (delivery still depends on channel enablement + cooldown + rate limit)."""
     try:
         entries = sorted(os.listdir(_APPS_DIR))
     except (FileNotFoundError, OSError):
         print("[ProxMenux] emit_all_pending_updates: _APPS_DIR missing", flush=True)
         return 0
-    n = 0
+    pending_payloads: list[dict] = []
     print(f"[ProxMenux] emit_all_pending_updates: scanning {len(entries)} sidecar file(s)", flush=True)
     for name in entries:
         if not name.endswith(".json"):
@@ -4271,36 +4301,81 @@ def emit_all_pending_updates() -> int:
                 print(f"[ProxMenux] emit_all_pending_updates: CT {vmid} sidecar empty", flush=True)
                 continue
             apps = sidecar.get("apps") or []
-            pending = [a for a in apps
-                       if (a.get("state") or {}).get("update_available")
-                       and (a.get("state") or {}).get("latest_version")]
+            pending = [
+                app for app in apps
+                if (app.get("state") or {}).get("update_available")
+                and (app.get("state") or {}).get("latest_version")
+            ]
             print(f"[ProxMenux] emit_all_pending_updates: CT {vmid} apps={len(apps)} pending={len(pending)}", flush=True)
             for app in pending:
-                try:
-                    _fire_update_notification(vmid, app)
-                    n += 1
-                    print(f"[ProxMenux] emit_all_pending_updates: CT {vmid} emit '{app.get('name')}'", flush=True)
-                except Exception as inner:
-                    print(f"[ProxMenux] emit_all_pending_updates: CT {vmid} emit '{app.get('name')}' FAILED: {inner}", flush=True)
+                payload = _app_update_notification_payload(vmid, app)
+                if payload is not None:
+                    pending_payloads.append(payload)
         except Exception as e:
             print(f"[ProxMenux] emit_all_pending_updates: CT {vmid} outer failure: {e}", flush=True)
-    print(f"[ProxMenux] emit_all_pending_updates: {n} emit(s) attempted total", flush=True)
-    return n
+    pending_payloads.sort(
+        key=lambda item: (
+            item["vmid"],
+            item["app_name"].casefold(),
+            item["app_id"],
+        )
+    )
+    count = len(pending_payloads)
+    if count == 0:
+        print("[ProxMenux] emit_all_pending_updates: no eligible pending apps", flush=True)
+        return 0
+
+    if count == 1:
+        payload = dict(pending_payloads[0])
+        app_id = payload.pop("app_id")
+        _emit_app_update_event(
+            payload,
+            entity="ct",
+            entity_id=f"{payload['vmid']}:{app_id}:{payload['latest']}",
+        )
+        print("[ProxMenux] emit_all_pending_updates: 1 app in 1 notification", flush=True)
+        return 1
+
+    signature = "|".join(
+        f"{item['vmid']}:{item['app_id']}:{item['latest']}"
+        for item in pending_payloads
+    )
+    updates = [
+        {key: value for key, value in item.items() if key != "app_id"}
+        for item in pending_payloads
+    ]
+    container_count = len({item["vmid"] for item in pending_payloads})
+    _emit_app_update_event(
+        {
+            "count": count,
+            "container_count": container_count,
+            "updates": updates,
+        },
+        entity="node",
+        entity_id=f"batch:{hashlib.sha256(signature.encode()).hexdigest()[:20]}",
+    )
+    print(
+        f"[ProxMenux] emit_all_pending_updates: {count} apps in 1 notification",
+        flush=True,
+    )
+    return count
 
 
-def check_all(vmid, force: bool = False) -> Optional[dict]:
+def check_all(
+    vmid, force: bool = False, notify: bool = True,
+) -> Optional[dict]:
     sidecar = _read_sidecar(vmid)
     if not sidecar:
         return None
     for app in (sidecar.get("apps") or []):
         try:
-            check_app(vmid, app.get("id"), force=force)
+            check_app(vmid, app.get("id"), force=force, notify=notify)
         except Exception as e:
             print(f"[ProxMenux] lxc_apps.check_all: CT {vmid} app {app.get('id')} failed: {e}")
     return _read_sidecar(vmid)
 
 
-def refresh_all_apps(force: bool = False) -> int:
+def refresh_all_apps(force: bool = False, notify: bool = True) -> int:
     """Called from the polling collector's daily cycle so header
     badges stay fresh without needing to open every modal."""
     try:
@@ -4316,7 +4391,7 @@ def refresh_all_apps(force: bool = False) -> int:
         except ValueError:
             continue
         try:
-            check_all(vmid, force=force)
+            check_all(vmid, force=force, notify=notify)
             n += 1
         except Exception as e:
             print(f"[ProxMenux] lxc_apps refresh_all: CT {vmid} failed: {e}")
@@ -4985,12 +5060,14 @@ def _docker_service_catalog_meta(service: str, container: str, image: str) -> di
 
 
 def _probe_docker_web_links(vmid) -> list[dict]:
-    """Return running Docker workloads that publish TCP ports on the LXC.
+    """Return Docker workloads that publish TCP ports on the LXC.
 
     The result is suggestion-only.  No sidecar entry is written and no port is
     assumed to be HTTP until the user explicitly adds it in the editor.  IPv4
     and IPv6 bindings of the same host port are deduplicated; loopback-only
     bindings are omitted because they cannot form a usable remote LXC link.
+    Stopped containers are included from their persistent HostConfig bindings,
+    so their links remain registrable before the workload is started again.
     """
     key = str(vmid)
     now = time.time()
@@ -4999,7 +5076,7 @@ def _probe_docker_web_links(vmid) -> list[dict]:
         if cached and (now - cached[0]) < _PORT_PROBE_TTL_SEC:
             return [dict(item) for item in cached[1]]
 
-    rc, out, _ = _pct_exec(vmid, ["docker", "ps", "-q"], timeout=10)
+    rc, out, _ = _pct_exec(vmid, ["docker", "ps", "-aq"], timeout=10)
     if rc != 0:
         result: list[dict] = []
     else:
@@ -5023,7 +5100,18 @@ def _probe_docker_web_links(vmid) -> list[dict]:
                     labels = config.get("Labels") or {}
                     service = str(labels.get("com.docker.compose.service") or container).strip()
                     meta = _docker_service_catalog_meta(service, container, image)
-                    ports = (obj.get("NetworkSettings") or {}).get("Ports") or {}
+                    # NetworkSettings.Ports is populated while a container is
+                    # running, but Docker empties it after the container stops.
+                    # HostConfig.PortBindings retains the declared mapping and
+                    # is therefore the fallback needed to keep those web-link
+                    # suggestions available. Prefer live bindings whenever
+                    # Docker provides them.
+                    ports = dict((obj.get("HostConfig") or {}).get("PortBindings") or {})
+                    for endpoint, bindings in (
+                        (obj.get("NetworkSettings") or {}).get("Ports") or {}
+                    ).items():
+                        if bindings:
+                            ports[endpoint] = bindings
                     seen_host_ports: set[int] = set()
                     for container_endpoint, bindings in ports.items():
                         if not str(container_endpoint).endswith("/tcp") or not isinstance(bindings, list):

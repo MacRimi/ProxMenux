@@ -34,6 +34,9 @@ TOOLS_JSON="$BASE_DIR/installed_tools.json"
 if [[ -f "$UTILS_FILE" ]]; then
     source "$UTILS_FILE"
 fi
+if [[ -f "$LOCAL_SCRIPTS/global/pmx_journal.sh" ]]; then
+    source "$LOCAL_SCRIPTS/global/pmx_journal.sh"
+fi
 
 load_language
 initialize_cache
@@ -53,18 +56,28 @@ register_tool() {
 ################################################################
 
 uninstall_fastfetch() {
+    local FUNC_VERSION="1.0"
+    pmx_journal_context "uninstall_fastfetch" "$FUNC_VERSION"
     if ! command -v fastfetch &>/dev/null && [[ ! -f /usr/local/bin/fastfetch ]]; then
         msg_warn "$(translate "Fastfetch is not installed.")"
         return 0
     fi
 
     msg_info2 "$(translate "Uninstalling Fastfetch...")"
-    rm -f /usr/local/bin/fastfetch /usr/bin/fastfetch
+    pmx_remove_file /usr/local/bin/fastfetch
+    pmx_remove_file /usr/bin/fastfetch
+    pmx_record_execution "Remove Fastfetch configuration directory" "rm -rf $HOME/.config/fastfetch"
     rm -rf "$HOME/.config/fastfetch"
+    pmx_record_execution "Remove shared Fastfetch files" "rm -rf /usr/local/share/fastfetch"
     rm -rf /usr/local/share/fastfetch
-    sed -i '/fastfetch/d' "$HOME/.bashrc" "$HOME/.profile" /etc/profile 2>/dev/null
-    sed -i '/# BEGIN FASTFETCH/,/# END FASTFETCH/d' "$HOME/.bashrc"
-    rm -f /etc/profile.d/fastfetch.sh /etc/update-motd.d/99-fastfetch
+    local profile_file
+    for profile_file in "$HOME/.bashrc" "$HOME/.profile" /etc/profile; do
+        pmx_edit_file "$profile_file" '/fastfetch/d' 2>/dev/null || true
+    done
+    pmx_edit_file "$HOME/.bashrc" '/# BEGIN FASTFETCH/,/# END FASTFETCH/d'
+    pmx_remove_file /etc/profile.d/fastfetch.sh
+    pmx_remove_file /etc/update-motd.d/99-fastfetch
+    pmx_record_execution "Remove Fastfetch package" "dpkg -r fastfetch"
     dpkg -r fastfetch &>/dev/null
 
     msg_ok "$(translate "Fastfetch removed from system")"
@@ -74,18 +87,23 @@ uninstall_fastfetch() {
 ################################################################
 
 uninstall_figurine() {
+    local FUNC_VERSION="1.0"
+    pmx_journal_context "uninstall_figurine" "$FUNC_VERSION"
     if ! command -v figurine &>/dev/null; then
         msg_warn "$(translate "Figurine is not installed.")"
         return 0
     fi
 
     msg_info2 "$(translate "Uninstalling Figurine...")"
-    rm -f /usr/local/bin/figurine
-    rm -f /etc/profile.d/figurine.sh
+    pmx_remove_file /usr/local/bin/figurine
+    pmx_remove_file /etc/profile.d/figurine.sh
 
-    sed -i '/lxcclean/d;/lxcupdate/d;/kernelclean/d;/cpugov/d;/updatecerts/d;/seqwrite/d;/seqread/d;/ranwrite/d;/ranread/d' "$HOME/.bashrc" "$HOME/.profile" 2>/dev/null
-    sed -i '/# ProxMenux Figurine aliases and tools/,+20d' "$HOME/.bashrc" "$HOME/.profile" 2>/dev/null
-    sed -i '/# BEGIN PROXMENUX ALIASES/,/# END PROXMENUX ALIASES/d' "$HOME/.bashrc" "$HOME/.profile" 2>/dev/null
+    local profile_file
+    for profile_file in "$HOME/.bashrc" "$HOME/.profile"; do
+        pmx_edit_file "$profile_file" '/lxcclean/d;/lxcupdate/d;/kernelclean/d;/cpugov/d;/updatecerts/d;/seqwrite/d;/seqread/d;/ranwrite/d;/ranread/d' 2>/dev/null || true
+        pmx_edit_file "$profile_file" '/# ProxMenux Figurine aliases and tools/,+20d' 2>/dev/null || true
+        pmx_edit_file "$profile_file" '/# BEGIN PROXMENUX ALIASES/,/# END PROXMENUX ALIASES/d' 2>/dev/null || true
+    done
 
     msg_ok "$(translate "Figurine removed from system")"
     register_tool "figurine" false
@@ -95,15 +113,18 @@ uninstall_figurine() {
 ################################################################
 
 uninstall_kexec() {
+    local FUNC_VERSION="1.0"
+    pmx_journal_context "uninstall_kexec" "$FUNC_VERSION"
     if ! dpkg -s kexec-tools >/dev/null 2>&1 && [ ! -f /etc/systemd/system/kexec-pve.service ]; then
         msg_warn "$(translate "kexec-tools is not installed or already removed.")"
         return 0
     fi
 
     msg_info2 "$(translate "Uninstalling kexec-tools and removing custom service...")"
-    systemctl disable --now kexec-pve.service &>/dev/null
-    rm -f /etc/systemd/system/kexec-pve.service
-    sed -i "/alias reboot-quick='systemctl kexec'/d" /root/.bash_profile
+    pmx_disable_service kexec-pve.service
+    pmx_remove_file /etc/systemd/system/kexec-pve.service
+    pmx_edit_file /root/.bash_profile "/alias reboot-quick='systemctl kexec'/d"
+    pmx_record_execution "Purge kexec-tools package" "apt-get purge -y kexec-tools"
     apt-get purge -y kexec-tools >/dev/null 2>&1
 
     msg_ok "$(translate "kexec-tools and related settings removed")"
@@ -269,6 +290,8 @@ uninstall_rpc() {
 ################################################################
 
 uninstall_motd() {
+    local FUNC_VERSION="1.0"
+    pmx_journal_context "uninstall_motd" "$FUNC_VERSION"
     local state_file="$BASE_DIR/motd.state"
     local original_file="$BASE_DIR/motd.original"
     local motd_file="${PROXMENUX_MOTD_FILE:-/etc/motd}"
@@ -287,15 +310,15 @@ uninstall_motd() {
                 msg_error "$(translate "The original MOTD backup is unavailable; no changes were made")"
                 return 1
             fi
-            cp -a "$original_file" "$motd_file"
+            pmx_write_file "$motd_file" < "$original_file"
             ;;
         absent)
-            rm -f "$motd_file"
+            pmx_remove_file "$motd_file"
             ;;
         legacy-marker)
             if [[ -f "$motd_file" ]]; then
-                sed -i "\|^${custom_message}$|d" "$motd_file"
-                sed -i '/./,$!d' "$motd_file"
+                pmx_edit_file "$motd_file" "\|^${custom_message}$|d"
+                pmx_edit_file "$motd_file" '/./,$!d'
             fi
             ;;
         *)
@@ -304,7 +327,8 @@ uninstall_motd() {
             ;;
     esac
 
-    rm -f "$state_file" "$original_file"
+    pmx_remove_file "$state_file"
+    pmx_remove_file "$original_file"
     register_tool "motd" false
     msg_ok "$(translate "The original MOTD configuration has been restored")"
 }
@@ -380,10 +404,12 @@ uninstall_apt_languages() {
 ################################################################
 
 uninstall_journald() {
+    local FUNC_VERSION="1.0"
+    pmx_journal_context "uninstall_journald" "$FUNC_VERSION"
     msg_info "$(translate "Restoring default journald configuration...")"
     
     # Restore default journald configuration
-    cat > /etc/systemd/journald.conf << 'EOF'
+    pmx_write_file /etc/systemd/journald.conf << 'EOF'
 #  This file is part of systemd.
 #
 #  systemd is free software; you can redistribute it and/or modify it
@@ -425,6 +451,7 @@ uninstall_journald() {
 #MaxLevelWall=emerg
 EOF
     
+    pmx_record_execution "Restart systemd-journald" "systemctl restart systemd-journald.service"
     systemctl restart systemd-journald.service >/dev/null 2>&1
     
     msg_ok "$(translate "Default journald configuration restored")"
@@ -452,37 +479,40 @@ uninstall_logrotate() {
 ################################################################
 
 uninstall_system_limits() {
+    local FUNC_VERSION="1.0"
+    pmx_journal_context "uninstall_system_limits" "$FUNC_VERSION"
     msg_info "$(translate "Removing system limits optimizations...")"
     
     # Remove ProxMenux sysctl configurations
-    rm -f /etc/sysctl.d/99-maxwatches.conf
-    rm -f /etc/sysctl.d/99-maxkeys.conf
-    rm -f /etc/sysctl.d/99-swap.conf
-    rm -f /etc/sysctl.d/99-fs.conf
+    pmx_remove_file /etc/sysctl.d/99-maxwatches.conf
+    pmx_remove_file /etc/sysctl.d/99-maxkeys.conf
+    pmx_remove_file /etc/sysctl.d/99-swap.conf
+    pmx_remove_file /etc/sysctl.d/99-fs.conf
     
     # Remove ProxMenux limits configuration
-    rm -f /etc/security/limits.d/99-limits.conf
+    pmx_remove_file /etc/security/limits.d/99-limits.conf
     
     # Remove systemd limits (restore defaults)
     for file in /etc/systemd/system.conf /etc/systemd/user.conf; do
         if [ -f "$file" ]; then
-            sed -i '/^DefaultLimitNOFILE=256000/d' "$file"
+            pmx_edit_file "$file" '/^DefaultLimitNOFILE=256000/d'
         fi
     done
     
     # Remove PAM limits
     for file in /etc/pam.d/common-session /etc/pam.d/runuser-l; do
         if [ -f "$file" ]; then
-            sed -i '/^session required pam_limits.so/d' "$file"
+            pmx_edit_file "$file" '/^session required pam_limits.so/d'
         fi
     done
     
     # Remove ulimit from profile
     if [ -f /root/.profile ]; then
-        sed -i '/ulimit -n 256000/d' /root/.profile
+        pmx_edit_file /root/.profile '/ulimit -n 256000/d'
     fi
     
     # Reload sysctl
+    pmx_record_execution "Apply sysctl configuration" "sysctl --system"
     sysctl --system >/dev/null 2>&1
     
     msg_ok "$(translate "System limits optimizations removed")"
@@ -553,26 +583,31 @@ uninstall_apt_ipv4() {
 ################################################################
 
 uninstall_network_optimization() {
+    local FUNC_VERSION="1.0"
+    pmx_journal_context "uninstall_network_optimization" "$FUNC_VERSION"
     msg_info "$(translate "Removing network optimizations...")"
     
-    rm -f /etc/sysctl.d/99-network.conf
+    pmx_remove_file /etc/sysctl.d/99-network.conf
 
     local interfaces_file="/etc/network/interfaces"
     if [ -f "$interfaces_file" ]; then
-        sed -i '/^source \/etc\/network\/interfaces\.d\/\*/d' "$interfaces_file"
+        pmx_edit_file "$interfaces_file" '/^source \/etc\/network\/interfaces\.d\/\*/d'
     fi
     
-    rm -f /etc/sysctl.d/97-proxmenux-fwbr.conf \
-        /etc/sysctl.d/98-proxmenux-rpf.conf
+    pmx_remove_file /etc/sysctl.d/97-proxmenux-fwbr.conf
+    pmx_remove_file /etc/sysctl.d/98-proxmenux-rpf.conf
 
-    systemctl disable --now proxmenux-fwbr-tune.service >/dev/null 2>&1 || true
-    rm -f /etc/systemd/system/proxmenux-fwbr-tune.service
-    rm -f /usr/local/sbin/proxmenux-fwbr-tune
-    rm -f /etc/udev/rules.d/99-proxmenux-fwbr-tune.rules \
-        /etc/udev/rules.d/99-zz-proxmenux-fwbr-tune.rules
+    pmx_disable_service proxmenux-fwbr-tune.service || true
+    pmx_remove_file /etc/systemd/system/proxmenux-fwbr-tune.service
+    pmx_remove_file /usr/local/sbin/proxmenux-fwbr-tune
+    pmx_remove_file /etc/udev/rules.d/99-proxmenux-fwbr-tune.rules
+    pmx_remove_file /etc/udev/rules.d/99-zz-proxmenux-fwbr-tune.rules
+    pmx_record_execution "Reload udev rules" "udevadm control --reload-rules"
     udevadm control --reload-rules >/dev/null 2>&1 || true
 
+    pmx_record_execution "Reload systemd configuration" "systemctl daemon-reload"
     systemctl daemon-reload >/dev/null 2>&1 || true
+    pmx_record_execution "Apply sysctl configuration" "sysctl --system"
     sysctl --system >/dev/null 2>&1 || true
 
 
@@ -585,24 +620,27 @@ uninstall_network_optimization() {
 ################################################################
 
 uninstall_bashrc_custom() {
+    local FUNC_VERSION="1.0"
+    pmx_journal_context "uninstall_bashrc_custom" "$FUNC_VERSION"
     msg_info "$(translate "Restoring original bashrc...")"
     
     # Restore original bashrc from backup
     if [ -f /root/.bashrc.bak ]; then
-        mv /root/.bashrc.bak /root/.bashrc
+        pmx_write_file /root/.bashrc < /root/.bashrc.bak
+        pmx_remove_file /root/.bashrc.bak
         msg_ok "$(translate "Original bashrc restored")"
     else
         # Remove ProxMenux customizations manually
         if [ -f /root/.bashrc ]; then
             # Remove the customization block using the markers written by customize_bashrc
-            sed -i '/# BEGIN PMX_CORE_BASHRC/,/# END PMX_CORE_BASHRC/d' /root/.bashrc
+            pmx_edit_file /root/.bashrc '/# BEGIN PMX_CORE_BASHRC/,/# END PMX_CORE_BASHRC/d'
         fi
         msg_ok "$(translate "ProxMenux customizations removed from bashrc")"
     fi
     
     # Remove bash_profile source line if we added it
     if [ -f /root/.bash_profile ]; then
-        sed -i '/source \/root\/\.bashrc/d' /root/.bash_profile
+        pmx_edit_file /root/.bash_profile '/source \/root\/\.bashrc/d'
     fi
     
     register_tool "bashrc_custom" false
@@ -718,21 +756,23 @@ uninstall_persistent_network() {
 
 
 uninstall_vfio_iommu() {
+    local FUNC_VERSION="1.0"
+    pmx_journal_context "uninstall_vfio_iommu" "$FUNC_VERSION"
     msg_info2 "$(translate "Reverting IOMMU/VFIO configuration...")"
     NECESSARY_REBOOT=1
 
     # Remove VFIO modules from /etc/modules
     local modules_file="/etc/modules"
     if [ -f "$modules_file" ]; then
-        sed -i '/^vfio$/d;/^vfio_iommu_type1$/d;/^vfio_pci$/d;/^vfio_virqfd$/d' "$modules_file"
+        pmx_edit_file "$modules_file" '/^vfio$/d;/^vfio_iommu_type1$/d;/^vfio_pci$/d;/^vfio_virqfd$/d'
         msg_ok "$(translate "VFIO modules removed from /etc/modules")"
     fi
 
     # Remove driver blacklists added by ProxMenux
     local blacklist_file="/etc/modprobe.d/blacklist.conf"
     if [ -f "$blacklist_file" ]; then
-        sed -i '/^blacklist nouveau$/d;/^blacklist lbm-nouveau$/d;/^blacklist radeon$/d;/^blacklist nvidia$/d;/^blacklist nvidiafb$/d;/^options nouveau modeset=0$/d' "$blacklist_file"
-        [ ! -s "$blacklist_file" ] && rm -f "$blacklist_file"
+        pmx_edit_file "$blacklist_file" '/^blacklist nouveau$/d;/^blacklist lbm-nouveau$/d;/^blacklist radeon$/d;/^blacklist nvidia$/d;/^blacklist nvidiafb$/d;/^options nouveau modeset=0$/d'
+        [ ! -s "$blacklist_file" ] && pmx_remove_file "$blacklist_file"
         msg_ok "$(translate "Driver blacklist entries removed")"
     fi
 
@@ -742,9 +782,12 @@ uninstall_vfio_iommu() {
         # systemd-boot / ZFS
         if grep -qE 'intel_iommu=on|amd_iommu=on|iommu=pt|pcie_acs_override=' "$cmdline_file"; then
             cp "$cmdline_file" "${cmdline_file}.bak.$(date +%Y%m%d_%H%M%S)"
-            sed -i -E 's/\b(intel_iommu=on|amd_iommu=on|iommu=pt|pcie_acs_override=[^ ]*)\b//g' "$cmdline_file"
-            sed -i -E 's/[[:space:]]+/ /g; s/^ //; s/ $//' "$cmdline_file"
-            command -v proxmox-boot-tool >/dev/null 2>&1 && proxmox-boot-tool refresh >/dev/null 2>&1 || true
+            pmx_edit_file "$cmdline_file" -E 's/\b(intel_iommu=on|amd_iommu=on|iommu=pt|pcie_acs_override=[^ ]*)\b//g'
+            pmx_edit_file "$cmdline_file" -E 's/[[:space:]]+/ /g; s/^ //; s/ $//'
+            if command -v proxmox-boot-tool >/dev/null 2>&1; then
+                pmx_record_execution "Refresh Proxmox boot configuration" "proxmox-boot-tool refresh"
+                proxmox-boot-tool refresh >/dev/null 2>&1 || true
+            fi
             msg_ok "$(translate "IOMMU parameters removed from /etc/kernel/cmdline")"
         fi
     else
@@ -752,9 +795,10 @@ uninstall_vfio_iommu() {
         local grub_file="/etc/default/grub"
         if [[ -f "$grub_file" ]] && grep -qE 'intel_iommu=on|amd_iommu=on|iommu=pt|pcie_acs_override=' "$grub_file"; then
             cp "$grub_file" "${grub_file}.bak.$(date +%Y%m%d_%H%M%S)"
-            sed -i -E 's/\b(intel_iommu=on|amd_iommu=on|iommu=pt|pcie_acs_override=[^ "]*)\b//g' "$grub_file"
+            pmx_edit_file "$grub_file" -E 's/\b(intel_iommu=on|amd_iommu=on|iommu=pt|pcie_acs_override=[^ "]*)\b//g'
             awk -F\" 'BEGIN{OFS="\""} /GRUB_CMDLINE_LINUX_DEFAULT=/{gsub(/[[:space:]]+/," ",$2);sub(/^ /,"",$2);sub(/ $/,"",$2)}1' \
-                "$grub_file" > "${grub_file}.tmp" && mv "${grub_file}.tmp" "$grub_file"
+                "$grub_file" | pmx_write_file "$grub_file"
+            pmx_record_execution "Regenerate GRUB configuration" "update-grub"
             update-grub >/dev/null 2>&1 || true
             msg_ok "$(translate "IOMMU parameters removed from GRUB")"
         fi
@@ -762,7 +806,9 @@ uninstall_vfio_iommu() {
     
     msg_info "$(translate 'Updating initramfs (this may take a minute)...')"
 
+    pmx_record_execution "Regenerate initramfs" "update-initramfs -u -k all"
     update-initramfs -u -k all >/dev/null 2>&1 || true
+    pmx_record_execution "Refresh Proxmox boot configuration" "proxmox-boot-tool refresh"
     proxmox-boot-tool refresh >/dev/null 2>&1 || true
 
     msg_ok "$(translate "IOMMU/VFIO configuration reverted")"
@@ -772,6 +818,8 @@ uninstall_vfio_iommu() {
 ################################################################
 
 uninstall_amd_fixes() {
+    local FUNC_VERSION="1.0"
+    pmx_journal_context "uninstall_amd_fixes" "$FUNC_VERSION"
     msg_info2 "$(translate "Reverting AMD (Ryzen/EPYC) fixes...")"
     NECESSARY_REBOOT=1
 
@@ -785,9 +833,10 @@ uninstall_amd_fixes() {
                 return 1
             }
 
-            sed -i 's/\bidle=nomwait\b//g; s/[[:space:]]\+/ /g; s/^ //; s/ $//' "$cmdline_file"
+            pmx_edit_file "$cmdline_file" 's/\bidle=nomwait\b//g; s/[[:space:]]\+/ /g; s/^ //; s/ $//'
 
             if command -v proxmox-boot-tool >/dev/null 2>&1; then
+                pmx_record_execution "Refresh Proxmox boot configuration" "proxmox-boot-tool refresh"
                 proxmox-boot-tool refresh >/dev/null 2>&1 || {
                     msg_error "$(translate "Failed to refresh boot configuration")"
                     return 1
@@ -805,14 +854,15 @@ uninstall_amd_fixes() {
                     return 1
                 }
 
-                sed -i -E 's/(GRUB_CMDLINE_LINUX_DEFAULT=")/\1/; s/\bidle=nomwait\b//g' "$grub_file"
+                pmx_edit_file "$grub_file" -E 's/(GRUB_CMDLINE_LINUX_DEFAULT=")/\1/; s/\bidle=nomwait\b//g'
 
                 awk -F\" '
                   $1=="GRUB_CMDLINE_LINUX_DEFAULT=" {
                     gsub(/[[:space:]]+/," ",$2); sub(/^ /,"",$2); sub(/ $/,"",$2)
                   }1
-                ' OFS="\"" "$grub_file" > "${grub_file}.tmp" && mv "${grub_file}.tmp" "$grub_file"
+                ' OFS="\"" "$grub_file" | pmx_write_file "$grub_file"
 
+                pmx_record_execution "Regenerate GRUB configuration" "update-grub"
                 update-grub >/dev/null 2>&1 || {
                     msg_error "$(translate "Failed to update GRUB configuration")"
                     return 1
@@ -830,17 +880,19 @@ uninstall_amd_fixes() {
                 msg_error "$(translate "Failed to backup $kvm_conf")"
                 return 1
             }
-            sed -i -E '/ignore_msrs|report_ignored_msrs/d' "$kvm_conf"
+            pmx_edit_file "$kvm_conf" -E '/ignore_msrs|report_ignored_msrs/d'
 
             if [[ ! -s "$kvm_conf" ]]; then
-                rm -f "$kvm_conf"
+                pmx_remove_file "$kvm_conf"
                 msg_ok "$(translate "Removed empty KVM configuration file")"
             else
                 msg_ok "$(translate "Removed KVM MSR options from configuration")"
             fi
 
+            pmx_record_execution "Regenerate initramfs" "update-initramfs -u -k all"
             update-initramfs -u -k all >/dev/null 2>&1 || true
-    proxmox-boot-tool refresh >/dev/null 2>&1 || true
+            pmx_record_execution "Refresh Proxmox boot configuration" "proxmox-boot-tool refresh"
+            proxmox-boot-tool refresh >/dev/null 2>&1 || true
         else
             msg_ok "$(translate "KVM MSR options not present, nothing to revert")"
         fi
@@ -957,8 +1009,12 @@ uninstall_ceph() {
 }
 
 uninstall_ha() {
+    local FUNC_VERSION="1.0"
+    pmx_journal_context "uninstall_ha" "$FUNC_VERSION"
     msg_info2 "$(translate 'Disabling High Availability services...')"
-    systemctl disable --now pve-ha-lrm pve-ha-crm corosync >/dev/null 2>&1 || true
+    pmx_disable_service pve-ha-lrm || true
+    pmx_disable_service pve-ha-crm || true
+    pmx_disable_service corosync || true
     msg_ok "$(translate 'HA services disabled (configs preserved)')"
     register_tool "ha" false
 }
@@ -1009,13 +1065,17 @@ uninstall_ovh_rtm() {
 }
 
 uninstall_pigz() {
+    local FUNC_VERSION="1.0"
+    pmx_journal_context "uninstall_pigz" "$FUNC_VERSION"
     msg_info2 "$(translate 'Reverting pigz wrapper...')"
     if [[ -f /bin/gzip.original ]]; then
-        mv -f /bin/gzip.original /bin/gzip
+        pmx_write_file /bin/gzip < /bin/gzip.original
+        pmx_remove_file /bin/gzip.original
         msg_ok "$(translate 'Restored original /bin/gzip')"
     fi
-    rm -f /bin/pigzwrapper
-    sed -i 's/^pigz: 1/#pigz: 1/' /etc/vzdump.conf 2>/dev/null || true
+    pmx_remove_file /bin/pigzwrapper
+    pmx_edit_file /etc/vzdump.conf 's/^pigz: 1/#pigz: 1/' 2>/dev/null || true
+    pmx_record_execution "Purge pigz package" "apt-get purge -y pigz"
     apt-get purge -y pigz >/dev/null 2>&1 || true
     msg_ok "$(translate 'pigz removed')"
     register_tool "pigz" false
@@ -1124,12 +1184,15 @@ uninstall_zfs_autotrim() {
 }
 
 uninstall_vzdump_speed() {
+    local FUNC_VERSION="1.0"
+    pmx_journal_context "uninstall_vzdump_speed" "$FUNC_VERSION"
     msg_info2 "$(translate 'Reverting vzdump speed tuning...')"
     if [[ -f /etc/vzdump.conf.bak ]]; then
-        mv -f /etc/vzdump.conf.bak /etc/vzdump.conf
+        pmx_write_file /etc/vzdump.conf < /etc/vzdump.conf.bak
+        pmx_remove_file /etc/vzdump.conf.bak
         msg_ok "$(translate 'Restored original /etc/vzdump.conf from .bak')"
     else
-        sed -i '/^bwlimit: 0$/d;/^ionice: 5$/d' /etc/vzdump.conf 2>/dev/null
+        pmx_edit_file /etc/vzdump.conf '/^bwlimit: 0$/d;/^ionice: 5$/d' 2>/dev/null
         msg_ok "$(translate 'Removed bwlimit/ionice tuning (no .bak found)')"
     fi
     register_tool "vzdump_speed" false

@@ -179,7 +179,15 @@ def translate_google_web(text: str, dest_lang: str, context: str, timeout: int) 
     req = Request(url, headers={"User-Agent": "ProxMenux translation cache builder"})
     with urlopen(req, timeout=timeout) as response:
         payload = json.loads(response.read().decode("utf-8"))
-    return "".join(part[0] for part in payload[0] if part and part[0])
+    parts = [part[0] for part in payload[0] if part and part[0]]
+    # The endpoint returns one segment per sentence and drops the blank that
+    # separated them, so joining verbatim glues a period to the next word.
+    joined = ""
+    for part in parts:
+        if joined and joined[-1] in ".?!" and part[:1].isalpha() and part[:1].isupper():
+            joined += " "
+        joined += part
+    return joined
 
 
 def translate_appimage(

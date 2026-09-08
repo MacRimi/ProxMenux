@@ -17,6 +17,9 @@ TOOLS_JSON="/usr/local/share/proxmenux/installed_tools.json"
 if [[ -f "$UTILS_FILE" ]]; then
     source "$UTILS_FILE"
 fi
+if [[ -f /usr/local/share/proxmenux/scripts/global/pmx_journal.sh ]]; then
+    source /usr/local/share/proxmenux/scripts/global/pmx_journal.sh
+fi
 
 load_language
 initialize_cache
@@ -77,7 +80,9 @@ create_backup() {
 
 # Create the patch script that will be called by APT hook
 create_patch_script() {
-    cat > "$PATCH_BIN" <<'EOFPATCH'
+    local FUNC_VERSION="1.0"
+    pmx_journal_context "create_patch_script" "$FUNC_VERSION"
+    pmx_write_file "$PATCH_BIN" <<'EOFPATCH'
 #!/usr/bin/env bash
 # ==========================================================
 # Proxmox Subscription Banner Patch (v3 - Minimal)

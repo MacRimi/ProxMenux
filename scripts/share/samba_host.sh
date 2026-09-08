@@ -44,6 +44,10 @@ if [[ -f "$UTILS_FILE" ]]; then
     source "$UTILS_FILE"
 fi
 
+if [[ -f "$LOCAL_SCRIPTS/global/pmx_journal.sh" ]]; then
+    source "$LOCAL_SCRIPTS/global/pmx_journal.sh"
+fi
+
 load_language
 initialize_cache
 
@@ -70,6 +74,9 @@ get_storage_config() {
 # ==========================================================
 
 discover_samba_servers() {
+    local FUNC_VERSION="1.0"
+    pmx_journal_context "discover_samba_servers" "$FUNC_VERSION"
+
     show_proxmenux_logo
     msg_title "$(translate "Add Samba Share as Proxmox Storage")"
     msg_info "$(translate "Scanning network for Samba servers...")"
@@ -79,7 +86,7 @@ discover_samba_servers() {
 
     for pkg in nmap samba-common-bin; do
         if ! which "${pkg%%-*}" >/dev/null 2>&1; then
-            apt-get install -y "$pkg" &>/dev/null
+            pmx_install_pkg "$pkg" &>/dev/null
         fi
     done
 
@@ -274,6 +281,8 @@ add_proxmox_cifs_storage() {
     local server="$2"
     local share="$3"
     local content="${4:-import}"
+    local FUNC_VERSION="1.0"
+    pmx_journal_context "add_proxmox_cifs_storage" "$FUNC_VERSION"
 
     if ! command -v pvesm >/dev/null 2>&1; then
         msg_error "$(translate "pvesm command not found. This should not happen on Proxmox.")"
@@ -288,6 +297,8 @@ add_proxmox_cifs_storage() {
             8 60 --title "$(translate "Storage Exists")"; then
             return 0
         fi
+        pmx_record_execution "remove Proxmox CIFS storage ${storage_id}" \
+            "pvesm remove ${storage_id}"
         pvesm remove "$storage_id" 2>/dev/null || true
     fi
 
@@ -295,6 +306,8 @@ add_proxmox_cifs_storage() {
     msg_info "$(translate "Adding CIFS storage to Proxmox...")"
 
     local pvesm_result pvesm_output
+    pmx_record_execution "add Proxmox CIFS storage ${storage_id}" \
+        "pvesm add cifs ${storage_id} --server ${server} --share ${share} --content ${content}"
     if [[ "$USE_GUEST" == "true" ]]; then
         pvesm_output=$(pvesm add cifs "$storage_id" \
             --server "$server" \
@@ -414,15 +427,20 @@ select_cifs_mount_options() {
 # Write a root-only credentials file for the fstab mount.
 # Sets HOST_CRED_FILE on success, or empty string for guest mode.
 write_host_credentials_file() {
+    local FUNC_VERSION="1.0"
+    pmx_journal_context "write_host_credentials_file" "$FUNC_VERSION"
+
     if [[ "$USE_GUEST" == "true" ]]; then
         HOST_CRED_FILE=""
         return 0
     fi
     local creds_dir="/etc/samba/credentials"
+    pmx_record_execution "create Samba credentials directory ${creds_dir}" \
+        "mkdir -p ${creds_dir}; chmod 0700 ${creds_dir}"
     mkdir -p "$creds_dir"
     chmod 0700 "$creds_dir"
     HOST_CRED_FILE="${creds_dir}/$(echo "${SAMBA_SERVER}_${SAMBA_SHARE}" | tr -c 'A-Za-z0-9._-' '_').cred"
-    cat > "$HOST_CRED_FILE" <<EOF
+    pmx_write_file "$HOST_CRED_FILE" <<EOF
 username=${USERNAME}
 password=${PASSWORD}
 EOF
@@ -440,10 +458,14 @@ mount_cifs_via_fstab() {
     local replace="$5"
     local cred_file="$6"
     local use_guest="$7"
+    local FUNC_VERSION="1.0"
+    pmx_journal_context "mount_cifs_via_fstab" "$FUNC_VERSION"
 
     msg_info "$(translate "Preparing host mount...")"
 
     if [[ ! -d "$mount_path" ]]; then
+        pmx_record_execution "create CIFS mount point ${mount_path}" \
+            "mkdir -p ${mount_path}"
         if ! mkdir -p "$mount_path" 2>/dev/null; then
             msg_error "$(translate "Failed to create mount point:") $mount_path"
             return 1
@@ -459,6 +481,8 @@ mount_cifs_via_fstab() {
     fi
 
     msg_info "$(translate "Mounting CIFS share...")"
+    pmx_record_execution "mount CIFS share //${server}/${share} at ${mount_path}" \
+        "mount -t cifs //${server}/${share} ${mount_path}"
     if ! mount -t cifs -o "$mount_opts" "//${server}/${share}" "$mount_path" >/dev/null 2>&1; then
         msg_error "$(translate "Failed to mount CIFS share on host.")"
         return 1
@@ -474,11 +498,12 @@ mount_cifs_via_fstab() {
 
     # Persist in /etc/fstab.
     if [[ "$replace" == "1" ]]; then
-        sed -i "\|[[:space:]]${mount_path}[[:space:]]|d" /etc/fstab
+        pmx_edit_file /etc/fstab "\|[[:space:]]${mount_path}[[:space:]]|d"
     fi
-    echo "//${server}/${share} $mount_path cifs $mount_opts 0 0" >> /etc/fstab
+    echo "//${server}/${share} $mount_path cifs $mount_opts 0 0" | pmx_append_file /etc/fstab
     msg_ok "$(translate "Added to /etc/fstab.")"
 
+    pmx_record_execution "reload systemd after CIFS fstab update" "systemctl daemon-reload"
     systemctl daemon-reload 2>/dev/null || true
 
     echo -e ""
@@ -535,10 +560,13 @@ select_cifs_mount_methods() {
 # ==========================================================
 
 mount_cifs_share() {
+    local FUNC_VERSION="1.0"
+    pmx_journal_context "mount_cifs_share" "$FUNC_VERSION"
+
     if ! which smbclient >/dev/null 2>&1; then
         msg_info "$(translate "Installing Samba client tools...")"
         apt-get update &>/dev/null
-        apt-get install -y cifs-utils smbclient &>/dev/null
+        pmx_install_pkg cifs-utils smbclient &>/dev/null
         msg_ok "$(translate "Samba client tools installed")"
     fi
 
@@ -721,6 +749,9 @@ view_cifs_storages() {
 }
 
 remove_cifs_storage() {
+    local FUNC_VERSION="1.0"
+    pmx_journal_context "remove_cifs_storage" "$FUNC_VERSION"
+
     local OPTIONS=()
     local has_pvesm=0
     local has_fstab=0
@@ -784,6 +815,8 @@ remove_cifs_storage() {
                 show_proxmenux_logo
                 msg_title "$(translate "Remove CIFS Storage")"
 
+                pmx_record_execution "remove Proxmox CIFS storage ${target}" \
+                    "pvesm remove ${target}"
                 if pvesm remove "$target" 2>/dev/null; then
                     msg_ok "$(translate "Storage") $target $(translate "removed successfully from Proxmox.")"
                 else
@@ -817,6 +850,8 @@ remove_cifs_storage() {
                 msg_title "$(translate "Remove CIFS fstab Mount")"
 
                 if mount | grep -q " on ${mount_path} type "; then
+                    pmx_record_execution "unmount CIFS path ${mount_path}" \
+                        "umount ${mount_path}"
                     if umount "$mount_path" 2>/dev/null; then
                         msg_ok "$(translate "Unmounted:") $mount_path"
                     else
@@ -831,17 +866,18 @@ remove_cifs_storage() {
                 if awk -v mp="$mount_path" '
                     $2 == mp && $3 == "cifs" { next }
                     { print }
-                ' /etc/fstab > /etc/fstab.tmp && mv /etc/fstab.tmp /etc/fstab; then
+                ' /etc/fstab > /etc/fstab.tmp && pmx_write_file /etc/fstab < /etc/fstab.tmp; then
                     msg_ok "$(translate "Removed entry from /etc/fstab")  ($(translate "backup at /etc/fstab.proxmenux.bak"))"
                 else
                     msg_error "$(translate "Failed to edit /etc/fstab — remove the line manually.")"
                 fi
 
+                pmx_record_execution "reload systemd after CIFS fstab removal" "systemctl daemon-reload"
                 systemctl daemon-reload 2>/dev/null || true
 
                 # Remove credentials file if it's under the standard ProxMenux dir
                 if [[ -n "$cred_file" && -f "$cred_file" && "$cred_file" == /etc/samba/credentials/* ]]; then
-                    rm -f "$cred_file"
+                    pmx_remove_file "$cred_file"
                     msg_ok "$(translate "Removed credentials file:") $cred_file"
                 fi
 
@@ -858,6 +894,9 @@ remove_cifs_storage() {
 }
 
 test_samba_connectivity() {
+    local FUNC_VERSION="1.0"
+    pmx_journal_context "test_samba_connectivity" "$FUNC_VERSION"
+
     show_proxmenux_logo
     msg_title "$(translate "Test Samba Connectivity")"
 
@@ -869,7 +908,7 @@ test_samba_connectivity() {
     else
         msg_warn "$(translate "CIFS Client Tools: NOT AVAILABLE - installing...")"
         apt-get update &>/dev/null
-        apt-get install -y cifs-utils smbclient &>/dev/null
+        pmx_install_pkg cifs-utils smbclient &>/dev/null
         msg_ok "$(translate "CIFS client tools installed.")"
     fi
 

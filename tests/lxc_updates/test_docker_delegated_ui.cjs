@@ -33,6 +33,16 @@ assert.equal(cache.getLxcAppsCached(101).sidecar.apps[0].docker_available_versio
 assert.equal(requests, 0)
 
 const source = fs.readFileSync(path.join(root, 'components/virtual-machines.tsx'), 'utf8')
+assert.match(
+  source,
+  /const independentlyUpdatedApps = registeredApps\.filter\(\s*\(a\) => a\.update_via !== "docker",\s*\)/,
+  'Docker-delegated apps must not render a second Updates section',
+)
+assert.match(
+  source,
+  /image\.update_available === false \? "text-green-500" : "text-foreground\/80"/,
+  'a current Docker image must show its installed version in green',
+)
 const tree = ts.createSourceFile('vm.tsx', source, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX)
 const pieces = []
 function walk(node) {

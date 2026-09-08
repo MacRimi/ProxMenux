@@ -49,6 +49,9 @@ INSTALL_HELPERS="$LOCAL_SCRIPTS/global/utils-install-functions.sh"
 
 [[ -f "$UTILS_FILE" ]] && source "$UTILS_FILE"
 [[ -f "$INSTALL_HELPERS" ]] && source "$INSTALL_HELPERS"
+if [[ -f "$LOCAL_SCRIPTS/global/pmx_journal.sh" ]]; then
+    source "$LOCAL_SCRIPTS/global/pmx_journal.sh"
+fi
 load_language
 initialize_cache
 
@@ -87,6 +90,9 @@ BRIDGE="vmbr0"
 # with "syntax error at or near ,". Returns 0 on success, 1 if install
 # fails (caller is expected to abort with a clear error).
 ensure_gawk() {
+    local FUNC_VERSION="1.0"
+    pmx_journal_context "ensure_gawk" "$FUNC_VERSION"
+
     if command -v gawk >/dev/null 2>&1; then
         return 0
     fi
@@ -111,7 +117,7 @@ ensure_gawk() {
     # Fallback when utils-install-functions.sh was not sourced.
     # Here we own the spinner: msg_info opens it, msg_ok / msg_error closes it.
     msg_info "$(translate "Installing gawk (required for OVF parsing)...")"
-    if apt-get update -qq >/dev/null 2>&1 && apt-get install -y gawk >/dev/null 2>&1; then
+    if apt-get update -qq >/dev/null 2>&1 && pmx_install_pkg gawk; then
         msg_ok "$(translate "gawk installed")"
         return 0
     fi
@@ -478,6 +484,9 @@ confirm_import() {
 # -------------------------------------------------------
 
 run_import() {
+    local FUNC_VERSION="1.0"
+    pmx_journal_context "run_import" "$FUNC_VERSION"
+
     show_proxmenux_logo
     msg_title "$(translate "Import VM from OVA or OVF")"
 
@@ -488,6 +497,8 @@ run_import() {
 
     # 1. Create VM shell
     msg_info "$(translate "Creating VM...")"
+    pmx_record_execution "import ${SOURCE_FILE} as VM ${NEW_VMID} on storage ${STORAGE}" \
+        "qm create ${NEW_VMID}; qm importdisk for ${#OVF_DISK_FILES[@]} disk(s); attach disks and configure boot"
     if ! qm create "$NEW_VMID" \
             --name "$NEW_VM_NAME" \
             --memory "$OVF_MEMORY_MB" \
@@ -624,6 +635,7 @@ print_import_result() {
 # -------------------------------------------------------
 
 main() {
+    local FUNC_VERSION="1.0"
     if ! command -v pveversion >/dev/null 2>&1; then
         dialog --backtitle "$BACKTITLE" --title "$(translate "Error")" \
             --msgbox "$(translate "This script must be run on a Proxmox host.")" 8 60
@@ -694,6 +706,9 @@ main() {
             --yesno "$(translate "Remove the partial VM ($NEW_VMID) and its imported disks?")" 8 60; then
             clear
             msg_info "$(translate "Removing partial VM") $NEW_VMID..."
+            pmx_journal_context "main" "$FUNC_VERSION"
+            pmx_record_execution "remove partial imported VM ${NEW_VMID}" \
+                "qm destroy ${NEW_VMID} --destroy-unreferenced-disks 1"
             if qm destroy "$NEW_VMID" --destroy-unreferenced-disks 1 &>/dev/null; then
                 msg_ok "$(translate "Partial VM removed")"
             else

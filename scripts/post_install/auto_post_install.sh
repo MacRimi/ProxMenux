@@ -48,6 +48,11 @@ fi
 if [[ -f "$LOCAL_SCRIPTS/global/utils-install-functions.sh" ]]; then
     source "$LOCAL_SCRIPTS/global/utils-install-functions.sh"
 fi
+# Recording is part of writing: sourced before any function runs so a
+# change made without it is a mistake we can find, not one we can make.
+if [[ -f "$LOCAL_SCRIPTS/global/pmx_journal.sh" ]]; then
+    source "$LOCAL_SCRIPTS/global/pmx_journal.sh"
+fi
 
 load_language
 initialize_cache
@@ -92,6 +97,16 @@ register_tool() {
     local state="$2"
     local version="${3:-1.0}"
     local source="${4:-${SCRIPT_SOURCE:-unknown}}"
+    # Same as in the customizable script: the one call every function
+    # already makes, so an applied tool reaches the journal even where
+    # the function itself still writes directly.
+    if declare -F pmx_record_applied >/dev/null 2>&1; then
+        PMX_JOURNAL_FUNCTION="${FUNCNAME[1]:-$tool}" \
+        PMX_JOURNAL_VERSION="$version" \
+        PMX_JOURNAL_SOURCE="$source" \
+            pmx_record_applied "$tool" "$version" \
+              "$([[ "$state" == "true" ]] && echo applied || echo removed)"
+    fi
     ensure_tools_json
     if [[ "$state" == "true" ]]; then
         jq --arg t "$tool" --arg ver "$version" --arg src "$source" \
@@ -290,9 +305,10 @@ configure_time_sync() {
 
 skip_apt_languages() {
   local FUNC_VERSION="1.0"
+  pmx_journal_context "skip_apt_languages" "$FUNC_VERSION"
   # description: Stop APT from downloading translation files to speed up updates.
   msg_info "$(translate "Configuring APT to skip downloading additional languages...")"
-  cat > /etc/apt/apt.conf.d/99-disable-translations <<'EOF'
+  pmx_write_file /etc/apt/apt.conf.d/99-disable-translations <<'EOF'
 Acquire::Languages "none";
 EOF
   msg_ok "$(translate "APT configured to skip additional languages")"
@@ -302,6 +318,7 @@ EOF
 # ==========================================================
 optimize_journald() {
     local FUNC_VERSION="1.0"
+    pmx_journal_context "optimize_journald" "$FUNC_VERSION"
     # description: Cap journald size, raise rate limit and force info-level logging so the log viewer and Fail2Ban work.
     if [ -f /etc/log2ram.conf ] || [ -d /var/log.hdd ]; then
     return 0
@@ -314,7 +331,7 @@ optimize_journald() {
         cp -a "$jf" "${jf}.bak" 2>/dev/null || true
     fi
     
-    cat <<EOF > /etc/systemd/journald.conf
+    pmx_write_file /etc/systemd/journald.conf <<EOF
 [Journal]
 Storage=persistent
 SplitMode=none
@@ -337,8 +354,11 @@ MaxLevelConsole=notice
 MaxLevelWall=crit
 EOF
     
+    pmx_record_execution "Restart systemd-journald" "systemctl restart systemd-journald.service"
     systemctl restart systemd-journald.service > /dev/null 2>&1
+    pmx_record_execution "Vacuum system journal" "journalctl --vacuum-size=64M --vacuum-time=1d"
     journalctl --vacuum-size=64M --vacuum-time=1d > /dev/null 2>&1
+    pmx_record_execution "Rotate system journal" "journalctl --rotate"
     journalctl --rotate > /dev/null 2>&1
     
     msg_ok "$(translate "Journald optimized - Max size: 64M")"
@@ -348,6 +368,7 @@ EOF
 # ==========================================================
 optimize_logrotate() {
     local FUNC_VERSION="1.1"
+    pmx_journal_context "optimize_logrotate" "$FUNC_VERSION"
     # description: Replace logrotate.conf with a Log2RAM-friendly profile (daily rotation, copytruncate).
     msg_info "$(translate "Optimizing logrotate configuration...")"
     local logrotate_conf="/etc/logrotate.conf"
@@ -355,7 +376,7 @@ optimize_logrotate() {
 
     cp -n "$logrotate_conf" "$backup_conf" 2>/dev/null || true
 
-    cat <<EOF > "$logrotate_conf"
+    pmx_write_file "$logrotate_conf" <<EOF
 # ProxMenux optimized configuration (Log2RAM-friendly)
 daily
 su root adm
@@ -369,6 +390,7 @@ create 0640 root adm
 copytruncate
 include /etc/logrotate.d
 EOF
+    pmx_record_execution "Restart logrotate" "systemctl restart logrotate"
     systemctl restart logrotate > /dev/null 2>&1
 
     msg_ok "$(translate "Logrotate optimization completed")"
@@ -378,12 +400,13 @@ EOF
 # ==========================================================
 increase_system_limits() {
     local FUNC_VERSION="1.1"
+    pmx_journal_context "increase_system_limits" "$FUNC_VERSION"
     # description: Raise inotify watches, file descriptors, process keys and PID limits to enterprise levels.
     msg_info "$(translate "Increasing various system limits...")"
     NECESSARY_REBOOT=1
     
 
-    cat > /etc/sysctl.d/99-maxwatches.conf << EOF
+    pmx_write_file /etc/sysctl.d/99-maxwatches.conf << EOF
 # ProxMenux configuration
 fs.inotify.max_user_watches = 1048576
 fs.inotify.max_user_instances = 1048576
@@ -391,7 +414,7 @@ fs.inotify.max_queued_events = 1048576
 EOF
     
  
-    cat > /etc/security/limits.d/99-limits.conf << EOF
+    pmx_write_file /etc/security/limits.d/99-limits.conf << EOF
 # ProxMenux configuration
 * soft     nproc          1048576
 * hard     nproc          1048576
@@ -404,7 +427,7 @@ root hard     nofile         unlimited
 EOF
     
  
-    cat > /etc/sysctl.d/99-maxkeys.conf << EOF
+    pmx_write_file /etc/sysctl.d/99-maxkeys.conf << EOF
 # ProxMenux configuration
 kernel.keys.root_maxkeys=1000000
 kernel.keys.maxkeys=1000000
@@ -413,32 +436,32 @@ EOF
    
     for file in /etc/systemd/system.conf /etc/systemd/user.conf; do
         if ! grep -q "^DefaultLimitNOFILE=" "$file"; then
-            echo "DefaultLimitNOFILE=1048576" >> "$file"
+            echo "DefaultLimitNOFILE=1048576" | pmx_append_file "$file"
         fi
     done
     
 
     for file in /etc/pam.d/common-session /etc/pam.d/runuser-l; do
         if ! grep -q "^session required pam_limits.so" "$file"; then
-            echo 'session required pam_limits.so' >> "$file"
+            echo 'session required pam_limits.so' | pmx_append_file "$file"
         fi
     done
     
 
     if ! grep -q "ulimit -n 1048576" /root/.profile; then
-        sed -i '/ulimit -n 256000/d' /root/.profile 2>/dev/null
-        echo "ulimit -n 1048576" >> /root/.profile
+        pmx_edit_file /root/.profile '/ulimit -n 256000/d' 2>/dev/null || true
+        echo "ulimit -n 1048576" | pmx_append_file /root/.profile
     fi
     
 
-    cat > /etc/sysctl.d/99-swap.conf << EOF
+    pmx_write_file /etc/sysctl.d/99-swap.conf << EOF
 # ProxMenux configuration
 vm.swappiness = 10
 vm.vfs_cache_pressure = 100
 EOF
     
  
-    cat > /etc/sysctl.d/99-fs.conf << EOF
+    pmx_write_file /etc/sysctl.d/99-fs.conf << EOF
 # ProxMenux configuration
 fs.nr_open = 2097152
 fs.file-max = 2097152
@@ -452,21 +475,25 @@ EOF
 # ==========================================================
 optimize_memory_settings() {
     local FUNC_VERSION="1.2"
+    pmx_journal_context "optimize_memory_settings" "$FUNC_VERSION"
     # description: Tune swappiness, dirty page ratios and compaction proactiveness for VM hosts without overriding the kernel's memory-overcommit policy.
     msg_info "$(translate "Optimizing memory settings...")"
     NECESSARY_REBOOT=1
     
-    cat <<EOF > /etc/sysctl.d/99-memory.conf
+    local memory_settings
+    memory_settings="$(cat <<EOF
 # Balanced Memory Optimization
 vm.swappiness = 10
 vm.dirty_ratio = 15
 vm.dirty_background_ratio = 5
 vm.max_map_count = 262144
 EOF
-    
+)"
+
     if [ -f /proc/sys/vm/compaction_proactiveness ]; then
-        echo "vm.compaction_proactiveness = 20" >> /etc/sysctl.d/99-memory.conf
+        memory_settings+=$'\n''vm.compaction_proactiveness = 20'
     fi
+    printf '%s\n' "$memory_settings" | pmx_write_file /etc/sysctl.d/99-memory.conf
     
     msg_ok "$(translate "Memory optimization completed.")"
     register_tool "memory_settings" true "$FUNC_VERSION"
@@ -475,11 +502,12 @@ EOF
 # ==========================================================
 configure_kernel_panic() {
     local FUNC_VERSION="1.0"
+    pmx_journal_context "configure_kernel_panic" "$FUNC_VERSION"
     # description: Auto-reboot on kernel panic / oops / hardlockup; write crash dumps to /var/crash.
     msg_info "$(translate "Configuring kernel panic behavior")"
     NECESSARY_REBOOT=1
     
-    cat <<EOF > /etc/sysctl.d/99-kernelpanic.conf
+    pmx_write_file /etc/sysctl.d/99-kernelpanic.conf <<EOF
 # Enable restart on kernel panic, kernel oops and hardlockup
 kernel.core_pattern = /var/crash/core.%t.%p
 kernel.panic = 10
@@ -507,11 +535,12 @@ force_apt_ipv4() {
 
 apply_network_optimizations() {
   local FUNC_VERSION="1.1"
+  pmx_journal_context "apply_network_optimizations" "$FUNC_VERSION"
   # description: Tune TCP buffers, somaxconn, IPv4 hardening and disable rp_filter on fw bridges (PVE 9 compatible).
   msg_info "$(translate "Optimizing network settings...")"
   NECESSARY_REBOOT=1
 
-  cat <<'EOF' > /etc/sysctl.d/99-network.conf
+  pmx_write_file /etc/sysctl.d/99-network.conf <<'EOF'
 # ==========================================================
 # ProxMenux - Network tuning (PVE 9 compatible)
 # ==========================================================
@@ -555,9 +584,10 @@ net.ipv4.tcp_wmem = 8192 65536 16777216
 net.unix.max_dgram_qlen = 4096
 EOF
 
+  pmx_record_execution "Apply network sysctl configuration" "sysctl --system"
   sysctl --system > /dev/null 2>&1
 
-  cat > /usr/local/sbin/proxmenux-fwbr-tune <<'EOF'
+  pmx_write_file /usr/local/sbin/proxmenux-fwbr-tune <<'EOF'
 #!/usr/bin/env bash
 # Set rp_filter=0 and log_martians=0 on Proxmox fw bridge interfaces.
 # No arg → sweep every interface currently under /proc/sys/net/ipv4/conf/.
@@ -588,7 +618,7 @@ EOF
   chmod 0755 /usr/local/sbin/proxmenux-fwbr-tune
   chown root:root /usr/local/sbin/proxmenux-fwbr-tune
 
-  cat > /etc/systemd/system/proxmenux-fwbr-tune.service <<'EOF'
+  pmx_write_file /etc/systemd/system/proxmenux-fwbr-tune.service <<'EOF'
 [Unit]
 Description=ProxMenux - Tune rp_filter/log_martians on virtual fw bridges
 After=network-online.target
@@ -603,7 +633,7 @@ RemainAfterExit=yes
 WantedBy=multi-user.target
 EOF
 
-  cat > /etc/udev/rules.d/99-proxmenux-fwbr-tune.rules <<'EOF'
+  pmx_write_file /etc/udev/rules.d/99-proxmenux-fwbr-tune.rules <<'EOF'
 ACTION=="add", SUBSYSTEM=="net", KERNEL=="fwbr*", RUN+="/usr/local/sbin/proxmenux-fwbr-tune %k"
 ACTION=="add", SUBSYSTEM=="net", KERNEL=="fwln*", RUN+="/usr/local/sbin/proxmenux-fwbr-tune %k"
 ACTION=="add", SUBSYSTEM=="net", KERNEL=="fwpr*", RUN+="/usr/local/sbin/proxmenux-fwbr-tune %k"
@@ -612,15 +642,18 @@ EOF
   chmod 0644 /etc/udev/rules.d/99-proxmenux-fwbr-tune.rules
   chown root:root /etc/udev/rules.d/99-proxmenux-fwbr-tune.rules
 
+  pmx_record_execution "Reload systemd configuration" "systemctl daemon-reload"
   systemctl daemon-reload >/dev/null 2>&1 || true
+  pmx_record_execution "Reload udev rules" "udevadm control --reload-rules"
   udevadm control --reload-rules >/dev/null 2>&1 || true
-  systemctl enable --now proxmenux-fwbr-tune.service >/dev/null 2>&1 || true
+  pmx_enable_service proxmenux-fwbr-tune.service || true
+  pmx_record_execution "Tune existing Proxmox firewall bridge interfaces" "/usr/local/sbin/proxmenux-fwbr-tune"
   /usr/local/sbin/proxmenux-fwbr-tune >/dev/null 2>&1 || true
 
 
   local interfaces_file="/etc/network/interfaces"
   if ! grep -q 'source /etc/network/interfaces.d/*' "$interfaces_file"; then
-      echo "source /etc/network/interfaces.d/*" >> "$interfaces_file"
+      echo "source /etc/network/interfaces.d/*" | pmx_append_file "$interfaces_file"
   fi
 
   msg_ok "$(translate "Network optimization completed")"
@@ -759,6 +792,7 @@ PY
 
 customize_bashrc() {
     local FUNC_VERSION="1.2"
+    pmx_journal_context "customize_bashrc" "$FUNC_VERSION"
     # description: Install and safely migrate the managed ProxMenux Bash prompt and aliases while preserving or selecting the short/full working-directory style.
     msg_info "$(translate "Customizing bashrc for root user...")"
     local bashrc="/root/.bashrc"
@@ -768,7 +802,7 @@ customize_bashrc() {
     local prompt_path_escape='\W'
     local detected_path_style="short"
 
-    [[ -f "$bashrc" ]] || touch "$bashrc"
+    [[ -f "$bashrc" ]] || pmx_write_file "$bashrc" < /dev/null
     if ! detected_path_style="$(_migrate_proxmenux_bashrc "$bashrc" inspect)"; then
         msg_error "$(translate "Failed to inspect the existing ProxMenux Bash configuration.")"
         return 1
@@ -791,13 +825,19 @@ customize_bashrc() {
     esac
 
     [ -f "${bashrc}.bak" ] || cp "$bashrc" "${bashrc}.bak" > /dev/null 2>&1
-    if ! _migrate_proxmenux_bashrc "$bashrc" migrate >/dev/null; then
+    local migrated_bashrc
+    migrated_bashrc="$(mktemp)"
+    cp -p "$bashrc" "$migrated_bashrc"
+    if ! _migrate_proxmenux_bashrc "$migrated_bashrc" migrate >/dev/null; then
+        rm -f "$migrated_bashrc"
         msg_error "$(translate "Failed to migrate the existing ProxMenux Bash configuration.")"
         return 1
     fi
+    pmx_write_file "$bashrc" < "$migrated_bashrc"
+    rm -f "$migrated_bashrc"
     
  
-    cat >> "$bashrc" << EOF
+    pmx_append_file "$bashrc" << EOF
 ${marker_begin}
 # ProxMenux core customizations
 export HISTTIMEFORMAT="%d/%m/%y %T "
@@ -815,7 +855,7 @@ EOF
     
 
     if ! grep -q "source /root/.bashrc" "$bash_profile" 2>/dev/null; then
-        echo "source /root/.bashrc" >> "$bash_profile" 2>/dev/null
+        echo "source /root/.bashrc" | pmx_append_file "$bash_profile" 2>/dev/null
     fi
     
     msg_ok "$(translate "Bashrc customization completed")"
@@ -839,6 +879,7 @@ _update_existing_log2ram_auto() {
     local func_version="$1"
     local log2ram_bin=""
     local candidate resolved tmp_file
+    pmx_journal_context "_update_existing_log2ram_auto" "$func_version"
 
     msg_ok "$(translate "Log2RAM already registered — updating to latest configuration")"
 
@@ -862,10 +903,7 @@ _update_existing_log2ram_auto() {
 
     if grep -q 'rsync -aAXv ' "$log2ram_bin" 2>/dev/null; then
         [[ -e "${log2ram_bin}.proxmenux.bak" ]] || cp -a "$log2ram_bin" "${log2ram_bin}.proxmenux.bak"
-        tmp_file="$(mktemp "${log2ram_bin}.proxmenux.XXXXXX")" || return 1
-        cp -a "$log2ram_bin" "$tmp_file"
-        sed -i 's/rsync -aAXv /rsync -aXv --no-acls /g' "$tmp_file"
-        mv -f "$tmp_file" "$log2ram_bin"
+        sed 's/rsync -aAXv /rsync -aXv --no-acls /g' "$log2ram_bin" | pmx_write_file "$log2ram_bin"
     fi
 
     if dpkg-query -W -f='${Status}' proxmox-backup-server 2>/dev/null \
@@ -884,7 +922,8 @@ _update_existing_log2ram_auto() {
 EOF
         chmod 0644 "$tmp_file"
         chown root:root "$tmp_file"
-        mv -f "$tmp_file" /etc/logrotate.d/proxmox-backup-api
+        pmx_write_file /etc/logrotate.d/proxmox-backup-api < "$tmp_file"
+        rm -f "$tmp_file"
 
         tmp_file="$(mktemp /etc/cron.hourly/.proxmox-backup-logrotate.XXXXXX)" || return 1
         cat > "$tmp_file" <<'EOF'
@@ -893,7 +932,10 @@ EOF
 EOF
         chmod 0755 "$tmp_file"
         chown root:root "$tmp_file"
-        mv -f "$tmp_file" /etc/cron.hourly/proxmox-backup-logrotate
+        pmx_write_file /etc/cron.hourly/proxmox-backup-logrotate < "$tmp_file"
+        chmod 0755 /etc/cron.hourly/proxmox-backup-logrotate
+        chown root:root /etc/cron.hourly/proxmox-backup-logrotate
+        rm -f "$tmp_file"
         msg_ok "$(translate "PBS API log rotation configured (hourly, size-based)")"
     fi
 
@@ -945,7 +987,10 @@ EOF
     chmod 0755 "$tmp_file"
     chown root:root "$tmp_file"
     bash -n "$tmp_file" || return 1
-    mv -f "$tmp_file" /usr/local/bin/log2ram-check.sh
+    pmx_write_file /usr/local/bin/log2ram-check.sh < "$tmp_file"
+    chmod 0755 /usr/local/bin/log2ram-check.sh
+    chown root:root /usr/local/bin/log2ram-check.sh
+    rm -f "$tmp_file"
 
     tmp_file="$(mktemp /etc/cron.d/.log2ram-auto-sync.XXXXXX)" || return 1
     cat > "$tmp_file" <<'EOF'
@@ -958,7 +1003,10 @@ MAILTO=""
 EOF
     chmod 0644 "$tmp_file"
     chown root:root "$tmp_file"
-    mv -f "$tmp_file" /etc/cron.d/log2ram-auto-sync
+    pmx_write_file /etc/cron.d/log2ram-auto-sync < "$tmp_file"
+    chmod 0644 /etc/cron.d/log2ram-auto-sync
+    chown root:root /etc/cron.d/log2ram-auto-sync
+    rm -f "$tmp_file"
 
     register_tool "log2ram" true "$func_version"
     msg_success "$(translate "Log2RAM installation and configuration completed successfully.")"
@@ -968,6 +1016,7 @@ EOF
 install_log2ram_auto() {
     local FUNC_VERSION="1.5"
     local existing_log2ram_bin=""
+    pmx_journal_context "install_log2ram_auto" "$FUNC_VERSION"
 
     # description: Install Log2RAM with size auto-tuned to host RAM (128M/256M/512M); SSD/M.2 detection skips on rotational disks.
 
@@ -1024,31 +1073,40 @@ install_log2ram_auto() {
 
     msg_info "$(translate "Cleaning previous Log2RAM installation...")"
 
-    systemctl stop log2ram log2ram-daily.timer >/dev/null 2>&1 || true
-    systemctl disable log2ram log2ram-daily.timer >/dev/null 2>&1 || true
+    pmx_disable_service log2ram || true
+    pmx_disable_service log2ram-daily.timer || true
 
-    rm -f /etc/cron.d/log2ram /etc/cron.d/log2ram-auto-sync \
-          /etc/cron.hourly/log2ram /etc/cron.daily/log2ram \
-          /etc/cron.weekly/log2ram /etc/cron.monthly/log2ram 2>/dev/null || true
-    rm -f /usr/local/bin/log2ram-check.sh /usr/local/bin/log2ram /usr/sbin/log2ram 2>/dev/null || true
-    rm -f /etc/systemd/system/log2ram.service \
-          /etc/systemd/system/log2ram-daily.timer \
-          /etc/systemd/system/log2ram-daily.service \
-          /etc/systemd/system/sysinit.target.wants/log2ram.service 2>/dev/null || true
+    local obsolete_path
+    for obsolete_path in \
+        /etc/cron.d/log2ram /etc/cron.d/log2ram-auto-sync \
+        /etc/cron.hourly/log2ram /etc/cron.daily/log2ram \
+        /etc/cron.weekly/log2ram /etc/cron.monthly/log2ram \
+        /usr/local/bin/log2ram-check.sh /usr/local/bin/log2ram /usr/sbin/log2ram \
+        /etc/systemd/system/log2ram.service \
+        /etc/systemd/system/log2ram-daily.timer \
+        /etc/systemd/system/log2ram-daily.service \
+        /etc/systemd/system/sysinit.target.wants/log2ram.service \
+        /etc/log2ram.conf /etc/log2ram.conf.* /etc/logrotate.d/log2ram
+    do
+        pmx_remove_file "$obsolete_path" 2>/dev/null || true
+    done
     rm -rf /etc/systemd/system/log2ram.service.d 2>/dev/null || true
-    rm -f /etc/log2ram.conf* 2>/dev/null || true
-    rm -rf /etc/logrotate.d/log2ram /var/log.hdd /tmp/log2ram 2>/dev/null || true
+    rm -rf /var/log.hdd /tmp/log2ram 2>/dev/null || true
 
+    pmx_record_execution "Re-execute the systemd manager" "systemctl daemon-reexec"
     systemctl daemon-reexec >/dev/null 2>&1 || true
+    pmx_record_execution "Reload systemd configuration" "systemctl daemon-reload"
     systemctl daemon-reload >/dev/null 2>&1 || true
+    pmx_record_execution "Restart cron" "systemctl restart cron"
     systemctl restart cron >/dev/null 2>&1 || true
 
     msg_ok "$(translate "Previous installation cleaned")"
     msg_info "$(translate "Installing Log2RAM from source...")"
 
     if ! command -v git >/dev/null 2>&1; then
+        pmx_record_execution "Update package lists for Log2RAM" "apt-get update -qq"
         apt-get update -qq >/dev/null 2>&1
-        apt-get install -y git >/dev/null 2>&1
+        pmx_install_pkg git
     fi
 
     rm -rf /tmp/log2ram 2>/dev/null || true
@@ -1059,6 +1117,7 @@ install_log2ram_auto() {
 
     cd /tmp/log2ram || { msg_error "$(translate "Failed to access log2ram directory")"; return 1; }
 
+    pmx_record_execution "Run the Log2RAM installer" "bash install.sh"
     if ! bash install.sh >>/tmp/log2ram_install.log 2>&1; then
         msg_error "$(translate "Failed to run log2ram installer. Check /tmp/log2ram_install.log")"
         return 1
@@ -1077,7 +1136,7 @@ install_log2ram_auto() {
         [[ -n "$_l2r_bin" && -f "$_l2r_bin" ]] || continue
         if grep -q 'rsync -aAXv ' "$_l2r_bin" 2>/dev/null; then
             cp -a "$_l2r_bin" "${_l2r_bin}.proxmenux.bak"
-            sed -i 's/rsync -aAXv /rsync -aXv --no-acls /g' "$_l2r_bin"
+            pmx_edit_file "$_l2r_bin" 's/rsync -aAXv /rsync -aXv --no-acls /g'
         fi
         break
     done
@@ -1088,7 +1147,7 @@ install_log2ram_auto() {
     if dpkg-query -W -f='${Status}' proxmox-backup-server 2>/dev/null \
         | grep -q 'install ok installed'; then
         mkdir -p /var/log/proxmox-backup/api 2>/dev/null || true
-        cat > /etc/logrotate.d/proxmox-backup-api <<'EOF'
+        pmx_write_file /etc/logrotate.d/proxmox-backup-api <<'EOF'
 /var/log/proxmox-backup/api/access.log /var/log/proxmox-backup/api/auth.log {
     size 20M
     rotate 3
@@ -1101,7 +1160,7 @@ install_log2ram_auto() {
 EOF
         chmod 0644 /etc/logrotate.d/proxmox-backup-api
         chown root:root /etc/logrotate.d/proxmox-backup-api
-        cat > /etc/cron.hourly/proxmox-backup-logrotate <<'EOF'
+        pmx_write_file /etc/cron.hourly/proxmox-backup-logrotate <<'EOF'
 #!/bin/sh
 /usr/sbin/logrotate /etc/logrotate.d/proxmox-backup-api >/dev/null 2>&1
 EOF
@@ -1110,6 +1169,7 @@ EOF
         msg_ok "$(translate "PBS API log rotation configured (hourly, size-based)")"
     fi
 
+    pmx_record_execution "Reload systemd configuration" "systemctl daemon-reload"
     systemctl daemon-reload >/dev/null 2>&1 || true
 
     if [[ -f /etc/log2ram.conf ]] && command -v log2ram >/dev/null 2>&1; then
@@ -1131,11 +1191,11 @@ EOF
     fi
 
     msg_ok "$(translate "Detected RAM:") $RAM_SIZE_GB GB — $(translate "Log2RAM size set to:") $LOG2RAM_SIZE"
-    sed -i "s/^SIZE=.*/SIZE=$LOG2RAM_SIZE/" /etc/log2ram.conf
+    pmx_edit_file /etc/log2ram.conf "s/^SIZE=.*/SIZE=$LOG2RAM_SIZE/"
 
     LOG2RAM_BIN="$(command -v log2ram || echo /usr/sbin/log2ram)"
 
-    cat > /etc/cron.d/log2ram <<EOF
+    pmx_write_file /etc/cron.d/log2ram <<EOF
 # Log2RAM periodic sync - Created by ProxMenux
 SHELL=/bin/bash
 PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
@@ -1146,7 +1206,7 @@ EOF
     chown root:root /etc/cron.d/log2ram
     msg_ok "$(translate "Log2RAM write scheduled every") $CRON_HOURS $(translate "hour(s)")"
 
-    cat > /usr/local/bin/log2ram-check.sh <<'EOF'
+    pmx_write_file /usr/local/bin/log2ram-check.sh <<'EOF'
 #!/usr/bin/env bash
 # Watch /var/log usage on Log2RAM's tmpfs and act at two thresholds:
 #   > 80% → vacuum journald down to ~30% of SIZE, then log2ram write
@@ -1196,7 +1256,7 @@ fi
 EOF
     chmod +x /usr/local/bin/log2ram-check.sh
 
-    cat > /etc/cron.d/log2ram-auto-sync <<'EOF'
+    pmx_write_file /etc/cron.d/log2ram-auto-sync <<'EOF'
 # Log2RAM auto-sync based on /var/log usage - Created by ProxMenux
 SHELL=/bin/bash
 PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
@@ -1207,6 +1267,7 @@ EOF
     chmod 0644 /etc/cron.d/log2ram-auto-sync
     chown root:root /etc/cron.d/log2ram-auto-sync
 
+    pmx_record_execution "Restart cron" "systemctl restart cron"
     systemctl restart cron >/dev/null 2>&1 || true
     msg_ok "$(translate "Auto-sync enabled when /var/log exceeds 80% of") $LOG2RAM_SIZE"
 
@@ -1232,8 +1293,8 @@ EOF
     [ "$KEEP_MB" -lt 8 ] && KEEP_MB=8
 
 
-    sed -i '/^\[Journal\]/,$d' /etc/systemd/journald.conf 2>/dev/null || true
-    tee -a /etc/systemd/journald.conf >/dev/null <<EOF
+    pmx_edit_file /etc/systemd/journald.conf '/^\[Journal\]/,$d' 2>/dev/null || true
+    pmx_append_file /etc/systemd/journald.conf <<EOF
 [Journal]
 Storage=persistent
 SplitMode=none
@@ -1267,8 +1328,10 @@ EOF
     #msg_ok "$(translate "Backup created:") /etc/systemd/journald.conf.bak.$(date +%Y%m%d-%H%M%S)"
     msg_ok "$(translate "Journald configuration adjusted to") ${USE_MB}M (Log2RAM ${LOG2RAM_SIZE})"
 
+    pmx_record_execution "Reload systemd configuration" "systemctl daemon-reload"
     systemctl daemon-reload >/dev/null 2>&1 || true
-    if ! systemctl enable log2ram >/dev/null 2>&1; then
+    if ! pmx_apply_setting "service-enabled:log2ram" "systemctl is-enabled log2ram" \
+        systemctl enable log2ram; then
         msg_error "$(translate "Log2RAM installation verification failed. Check /tmp/log2ram_install.log")"
         return 1
     fi

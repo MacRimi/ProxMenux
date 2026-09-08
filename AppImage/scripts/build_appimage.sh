@@ -168,7 +168,13 @@ cp "$SCRIPT_DIR/flask_oci_routes.py" "$APP_DIR/usr/bin/" 2>/dev/null || echo "�
 cp "$SCRIPT_DIR/flask_audit_routes.py" "$APP_DIR/usr/bin/" 2>/dev/null || echo "⚠️  flask_audit_routes.py not found"
 cp "$SCRIPT_DIR/audit_store.py" "$APP_DIR/usr/bin/" 2>/dev/null || echo "⚠️  audit_store.py not found"
 cp "$SCRIPT_DIR/audit_checks.py" "$APP_DIR/usr/bin/" 2>/dev/null || echo "⚠️  audit_checks.py not found"
+cp "$SCRIPT_DIR/audit_profiles.py" "$APP_DIR/usr/bin/" 2>/dev/null || echo "⚠️  audit_profiles.py not found"
+cp "$SCRIPT_DIR/audit_policy.py" "$APP_DIR/usr/bin/" 2>/dev/null || echo "⚠️  audit_policy.py not found"
+cp "$SCRIPT_DIR/changes_journal.py" "$APP_DIR/usr/bin/" 2>/dev/null || echo "⚠️  changes_journal.py not found"
+cp "$SCRIPT_DIR/audit_inventory.py" "$APP_DIR/usr/bin/" 2>/dev/null || echo "⚠️  audit_inventory.py not found"
 cp "$SCRIPT_DIR/audit_checks_pve.py" "$APP_DIR/usr/bin/" 2>/dev/null || echo "⚠️  audit_checks_pve.py not found"
+# Preserve the existing build version as assessment provenance; no version bump.
+cp "$APPIMAGE_ROOT/package.json" "$APP_DIR/package.json"
 cp "$SCRIPT_DIR/oci/description_templates.py" "$APP_DIR/usr/bin/" 2>/dev/null || echo "⚠️  description_templates.py not found"
 
 # Copy AI providers module for notification enhancement

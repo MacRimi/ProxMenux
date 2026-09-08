@@ -13,6 +13,9 @@ APT_ENV="env DEBIAN_FRONTEND=noninteractive LC_ALL=C LANG=C"
 if [[ -f "$UTILS_FILE" ]]; then
     source "$UTILS_FILE"
 fi
+if [[ -f "$LOCAL_SCRIPTS/global/pmx_journal.sh" ]]; then
+    source "$LOCAL_SCRIPTS/global/pmx_journal.sh"
+fi
 
 load_language
 initialize_cache
@@ -35,6 +38,8 @@ download_common_functions() {
 }
 
 update_pve9() {
+    local FUNC_VERSION="1.0"
+    pmx_journal_context "update_pve9" "$FUNC_VERSION"
     local pve_version
     pve_version=$(pveversion | awk -F'/' '{print $2}' | cut -d'-' -f1)
     local start_time
@@ -79,17 +84,17 @@ update_pve9() {
     disable_sources_repo() {
         local file="$1"
         if [[ -f "$file" ]]; then
-            sed -i ':a;/^\n*$/{$d;N;ba}' "$file"
+            pmx_edit_file "$file" ':a;/^\n*$/{$d;N;ba}'
 
             if grep -q "^Enabled:" "$file"; then
-                sed -i 's/^Enabled:.*$/Enabled: false/' "$file"
+                pmx_edit_file "$file" 's/^Enabled:.*$/Enabled: false/'
             else
-                echo "Enabled: false" >> "$file"
+                echo "Enabled: false" | pmx_append_file "$file"
             fi
 
             if ! grep -q "^Types: " "$file"; then
                 msg_warn "$(translate "Malformed .sources file detected, removing: $(basename "$file")")"
-                rm -f "$file"
+                pmx_remove_file "$file"
             fi
             return 0
         fi
@@ -110,18 +115,18 @@ update_pve9() {
                        /etc/apt/sources.list.d/pve-install-repo.list \
                        /etc/apt/sources.list.d/debian.list; do
         if [[ -f "$legacy_file" ]]; then
-            rm -f "$legacy_file"
+            pmx_remove_file "$legacy_file"
             msg_ok "$(translate "Removed legacy repository: $(basename "$legacy_file")")" | tee -a "$screen_capture"
         fi
     done
 
     if [[ -f /etc/apt/sources.list.d/debian.sources ]]; then
-        rm -f /etc/apt/sources.list.d/debian.sources
+        pmx_remove_file /etc/apt/sources.list.d/debian.sources
         msg_ok "$(translate "Old debian.sources file removed to prevent duplication")" | tee -a "$screen_capture"
     fi
 
     msg_info "$(translate "Creating Proxmox VE 9.x no-subscription repository...")"
-    cat > /etc/apt/sources.list.d/proxmox.sources << EOF
+    pmx_write_file /etc/apt/sources.list.d/proxmox.sources << EOF
 Enabled: true
 Types: deb
 URIs: http://download.proxmox.com/debian/pve
@@ -134,7 +139,7 @@ EOF
     changes_made=true
 
     msg_info "$(translate "Creating Debian ${TARGET_CODENAME} sources file...")"
-    cat > /etc/apt/sources.list.d/debian.sources << EOF
+    pmx_write_file /etc/apt/sources.list.d/debian.sources << EOF
 Types: deb
 URIs: http://deb.debian.org/debian/
 Suites: ${TARGET_CODENAME} ${TARGET_CODENAME}-updates
@@ -154,11 +159,12 @@ EOF
     local firmware_conf="/etc/apt/apt.conf.d/no-firmware-warnings.conf"
     if [ ! -f "$firmware_conf" ]; then
         msg_info "$(translate "Disabling non-free firmware warnings...")"
-        echo 'APT::Get::Update::SourceListWarnings::NonFreeFirmware "false";' > "$firmware_conf"
+        echo 'APT::Get::Update::SourceListWarnings::NonFreeFirmware "false";' | pmx_write_file "$firmware_conf"
         msg_ok "$(translate "Non-free firmware warnings disabled")"
     fi
 
     # UPDATE: no progress bar here (dpkg is not involved); capture output to parse errors
+    pmx_record_execution "Update package lists" "apt-get update"
     update_output=$(apt-get update 2>&1)
     update_exit_code=$?
 
@@ -176,21 +182,25 @@ EOF
 
                 if command -v gpg >/dev/null 2>&1; then
                     # Modern approach: receive -> export -> dearmor into /etc/apt/keyrings/<KEY>.gpg
+                    pmx_record_execution "Import missing repository signing key" "gpg --batch --keyserver keyserver.ubuntu.com --recv-keys $key"
                     if gpg --batch --keyserver keyserver.ubuntu.com --recv-keys "$key" \
                     && gpg --batch --export "$key" | gpg --dearmor -o "/etc/apt/keyrings/${key}.gpg"; then
                         msg_ok "$(translate "Imported missing GPG key: $key")"
                     else
                         msg_warn "$(translate "Keyrings method failed; trying apt-key fallback")"
+                        pmx_record_execution "Import missing repository signing key with apt-key" "apt-key adv --keyserver keyserver.ubuntu.com --recv-keys $key"
                         apt-key adv --keyserver keyserver.ubuntu.com --recv-keys "$key" >/dev/null 2>&1 || true
                     fi
                 else
                     # Fallback for minimal systems without gpg installed
                     msg_warn "$(translate "gpg not found; trying apt-key fallback")"
+                    pmx_record_execution "Import missing repository signing key with apt-key" "apt-key adv --keyserver keyserver.ubuntu.com --recv-keys $key"
                     apt-key adv --keyserver keyserver.ubuntu.com --recv-keys "$key" >/dev/null 2>&1 || true
                 fi
             fi
 
             # Retry update after importing the key
+            pmx_record_execution "Retry package list update" "apt-get update"
             if apt-get update > "$log_file" 2>&1; then
                 msg_ok "$(translate "Package lists updated after GPG fix")" | tee -a "$screen_capture"
             else
@@ -270,19 +280,24 @@ EOF
 
     if [[ $MENU_RESULT -eq 1 ]]; then
         msg_info2 "$(translate "Update cancelled by user")"
+        pmx_record_execution "Remove unused packages" "apt-get -y autoremove"
         apt-get -y autoremove > /dev/null 2>&1 || true
+        pmx_record_execution "Clean downloaded package cache" "apt-get -y autoclean"
         apt-get -y autoclean > /dev/null 2>&1 || true
         rm -f "$screen_capture"
         return 0
     elif [[ $MENU_RESULT -eq 2 ]]; then
         msg_ok "$(translate "System is already up to date. No update needed.")"
+        pmx_record_execution "Remove unused packages" "apt-get -y autoremove"
         apt-get -y autoremove > /dev/null 2>&1 || true
+        pmx_record_execution "Clean downloaded package cache" "apt-get -y autoclean"
         apt-get -y autoclean > /dev/null 2>&1 || true
         rm -f "$screen_capture"
         return 0
     fi
 
     msg_info "$(translate "Cleaning up unused time synchronization services...")"
+    pmx_record_execution "Purge unused time synchronization services" "apt-get -y -o Dpkg::Options::=--force-confdef purge ntp openntpd systemd-timesyncd"
     if /usr/bin/env DEBIAN_FRONTEND=noninteractive apt-get -y -o Dpkg::Options::='--force-confdef' purge ntp openntpd systemd-timesyncd > /dev/null 2>&1; then
         msg_ok "$(translate "Old time services removed successfully")"
     else
@@ -292,6 +307,7 @@ EOF
     echo -e
 
 
+    pmx_record_execution "Upgrade Proxmox VE 9 packages" "apt -y -o Dpkg::Options::=--force-confdef -o Dpkg::Options::=--force-confold full-upgrade"
     DEBIAN_FRONTEND=noninteractive apt -y \
         -o Dpkg::Options::='--force-confdef' \
         -o Dpkg::Options::='--force-confold' \
@@ -314,7 +330,7 @@ EOF
     msg_info "$(translate "Installing essential Proxmox packages...")"
     local additional_packages="zfsutils-linux proxmox-backup-restore-image chrony"
     
-    if /usr/bin/env DEBIAN_FRONTEND=noninteractive apt-get -y -o Dpkg::Options::='--force-confdef' install $additional_packages >> "$log_file" 2>&1; then
+    if pmx_install_pkg $additional_packages; then
         msg_ok "$(translate "Essential Proxmox packages installed")"
     else
         msg_warn "$(translate "Some essential Proxmox packages may not have been installed")"
@@ -323,7 +339,9 @@ EOF
     lvm_repair_check
     cleanup_duplicate_repos
 
+    pmx_record_execution "Remove unused packages" "apt-get -y autoremove"
     apt-get -y autoremove > /dev/null 2>&1 || true
+    pmx_record_execution "Clean downloaded package cache" "apt-get -y autoclean"
     apt-get -y autoclean > /dev/null 2>&1 || true
     msg_ok "$(translate "Cleanup finished")"
 

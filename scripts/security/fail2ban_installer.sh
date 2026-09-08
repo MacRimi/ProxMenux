@@ -48,6 +48,10 @@ if [[ -f "$UTILS_FILE" ]]; then
   source "$UTILS_FILE"
 fi
 
+if [[ -f "$LOCAL_SCRIPTS/global/pmx_journal.sh" ]]; then
+  source "$LOCAL_SCRIPTS/global/pmx_journal.sh"
+fi
+
 if [[ ! -f "$COMPONENTS_STATUS_FILE" ]]; then
   echo "{}" > "$COMPONENTS_STATUS_FILE"
 fi
@@ -79,6 +83,9 @@ detect_fail2ban() {
 # Installation
 # ==========================================================
 install_fail2ban() {
+  local FUNC_VERSION="1.0"
+  pmx_journal_context "install_fail2ban" "$FUNC_VERSION"
+
   show_proxmenux_logo
   msg_title "$(translate "$SCRIPT_TITLE")"
   msg_info2 "$(translate "Installing and configuring Fail2Ban to protect Proxmox web interface and SSH...")"
@@ -90,7 +97,7 @@ install_fail2ban() {
   if ! grep -RqsE "debian.*(bookworm|trixie)" /etc/apt/sources.list /etc/apt/sources.list.d 2>/dev/null; then
     msg_warn "$(translate "Debian repositories missing; creating default source file")"
     local src="/etc/apt/sources.list.d/debian.sources"
-    cat > "$src" <<EOF
+    pmx_write_file "$src" <<EOF
 Types: deb
 URIs: http://deb.debian.org/debian
 Suites: ${deb_codename} ${deb_codename}-updates
@@ -107,7 +114,7 @@ EOF
   # Install Fail2Ban
   msg_info "$(translate "Installing Fail2Ban...")"
   if ! DEBIAN_FRONTEND=noninteractive apt-get update -y >/dev/null 2>&1 || \
-     ! DEBIAN_FRONTEND=noninteractive apt-get install -y fail2ban >/dev/null 2>&1; then
+     ! pmx_install_pkg fail2ban; then
     msg_error "$(translate "Failed to install Fail2Ban")"
     return 1
   fi
@@ -132,7 +139,7 @@ EOF
 
         # Create a drop-in so we don't break other Proxmox settings
         mkdir -p /etc/systemd/journald.conf.d
-        cat > /etc/systemd/journald.conf.d/proxmenux-loglevel.conf <<'JEOF'
+        pmx_write_file /etc/systemd/journald.conf.d/proxmenux-loglevel.conf <<'JEOF'
 # ProxMenux: Allow auth/info messages so Fail2Ban can detect SSH failures
 # Proxmox default MaxLevelStore=warning drops PAM/SSH auth events
 [Journal]
@@ -148,6 +155,7 @@ JEOF
     esac
 
     if $journald_changed; then
+      pmx_record_execution "restart systemd-journald" "systemctl restart systemd-journald"
       systemctl restart systemd-journald
       sleep 1
       msg_ok "$(translate "journald restarted - auth messages will now be stored")"
@@ -163,7 +171,7 @@ JEOF
 
   # -- Proxmox UI auth logger (pvedaemon) --
   msg_info "$(translate "Creating Proxmox auth logger service...")"
-  cat > /etc/systemd/system/proxmox-auth-logger.service <<'EOF'
+  pmx_write_file /etc/systemd/system/proxmox-auth-logger.service <<'EOF'
 [Unit]
 Description=Proxmox Auth Logger for Fail2Ban
 Documentation=https://github.com/MacRimi/ProxMenux
@@ -185,12 +193,12 @@ EOF
   chown root:adm /var/log/proxmox-auth.log 2>/dev/null || true
 
   systemctl daemon-reload
-  systemctl enable --now proxmox-auth-logger.service >/dev/null 2>&1
+  pmx_enable_service proxmox-auth-logger.service
   msg_ok "$(translate "Proxmox auth logger service created and started")"
 
   # -- SSH auth logger --
   msg_info "$(translate "Creating SSH auth logger service...")"
-  cat > /etc/systemd/system/ssh-auth-logger.service <<'EOF'
+  pmx_write_file /etc/systemd/system/ssh-auth-logger.service <<'EOF'
 [Unit]
 Description=SSH Auth Logger for Fail2Ban
 Documentation=https://github.com/MacRimi/ProxMenux
@@ -212,13 +220,13 @@ EOF
   chown root:adm /var/log/ssh-auth.log 2>/dev/null || true
 
   systemctl daemon-reload
-  systemctl enable --now ssh-auth-logger.service >/dev/null 2>&1
+  pmx_enable_service ssh-auth-logger.service
   msg_ok "$(translate "SSH auth logger service created and started")"
 
   # Configure Proxmox filter
   mkdir -p /etc/fail2ban/filter.d /etc/fail2ban/jail.d
   msg_info "$(translate "Configuring Proxmox filter...")"
-  cat > /etc/fail2ban/filter.d/proxmox.conf <<'EOF'
+  pmx_write_file /etc/fail2ban/filter.d/proxmox.conf <<'EOF'
 [Definition]
 # The proxmox-auth-logger service writes journal lines to /var/log/proxmox-auth.log
 # in short-iso format: 2026-02-10T19:36:08+01:00 host pvedaemon[PID]: message
@@ -231,7 +239,7 @@ EOF
 
   # Configure Proxmox jail (file-based backend)
   msg_info "$(translate "Configuring Proxmox jail...")"
-  cat > /etc/fail2ban/jail.d/proxmox.conf <<'EOF'
+  pmx_write_file /etc/fail2ban/jail.d/proxmox.conf <<'EOF'
 [proxmox]
 enabled = true
 port = 8006
@@ -248,7 +256,7 @@ EOF
   # This reads from a file written directly by the Flask app (not syslog/journal),
   # so it uses a datepattern that matches Python's logging format.
   msg_info "$(translate "Configuring ProxMenux Monitor filter...")"
-  cat > /etc/fail2ban/filter.d/proxmenux.conf <<'EOF'
+  pmx_write_file /etc/fail2ban/filter.d/proxmenux.conf <<'EOF'
 [Definition]
 failregex = ^.*proxmenux-auth: authentication failure; rhost=<HOST> user=.*$
 ignoreregex =
@@ -259,7 +267,7 @@ EOF
   # Configure ProxMenux Monitor jail (port 8008 + http/https for reverse proxy)
   # Uses backend=auto with logpath because the Flask app writes directly to this file.
   msg_info "$(translate "Configuring ProxMenux Monitor jail...")"
-  cat > /etc/fail2ban/jail.d/proxmenux.conf <<'EOF'
+  pmx_write_file /etc/fail2ban/jail.d/proxmenux.conf <<'EOF'
 [proxmenux]
 enabled = true
 port = 8008,http,https
@@ -289,7 +297,7 @@ EOF
 
   # Configure global settings and SSH jail
   msg_info "$(translate "Configuring global Fail2Ban settings and SSH jail...")"
-  cat > /etc/fail2ban/jail.local <<EOF
+  pmx_write_file /etc/fail2ban/jail.local <<EOF
 [DEFAULT]
 ignoreip = 127.0.0.1/8 ::1
 ignoreself = true
@@ -325,18 +333,19 @@ EOF
     fi
 
     # Store original value in our config directory
-    echo "$original_max_auth" > "${BASE_DIR}/sshd_maxauthtries_backup"
+    printf '%s\n' "$original_max_auth" | pmx_write_file "${BASE_DIR}/sshd_maxauthtries_backup"
 
     msg_info "$(translate "Hardening SSH: setting MaxAuthTries to 3...")"
     if grep -qi '^MaxAuthTries' "$sshd_config"; then
-      sed -i 's/^MaxAuthTries.*/MaxAuthTries 3/' "$sshd_config"
+      pmx_edit_file "$sshd_config" 's/^MaxAuthTries.*/MaxAuthTries 3/'
     elif grep -qi '^#MaxAuthTries' "$sshd_config"; then
-      sed -i 's/^#MaxAuthTries.*/MaxAuthTries 3/' "$sshd_config"
+      pmx_edit_file "$sshd_config" 's/^#MaxAuthTries.*/MaxAuthTries 3/'
     else
-      echo "MaxAuthTries 3" >> "$sshd_config"
+      echo "MaxAuthTries 3" | pmx_append_file "$sshd_config"
     fi
 
     # Reload SSH to apply the change (reload, not restart, to keep existing sessions)
+    pmx_record_execution "reload SSH service" "systemctl reload sshd or ssh"
     systemctl reload sshd 2>/dev/null || systemctl reload ssh 2>/dev/null || true
     msg_ok "$(translate "SSH MaxAuthTries set to 3 (original: ${original_max_auth})")"
   fi
@@ -344,7 +353,9 @@ EOF
   # Enable and restart the service (restart ensures new jails are loaded
   # even if fail2ban was already running from a previous install)
   systemctl daemon-reload
-  systemctl enable fail2ban >/dev/null 2>&1
+  pmx_apply_setting "fail2ban enabled state" "systemctl is-enabled fail2ban 2>/dev/null || true" \
+    systemctl enable fail2ban
+  pmx_record_execution "restart fail2ban" "systemctl restart fail2ban"
   systemctl restart fail2ban >/dev/null 2>&1
   sleep 3
 
@@ -372,29 +383,32 @@ EOF
 # Uninstall
 # ==========================================================
 uninstall_fail2ban() {
+  local FUNC_VERSION="1.0"
+  pmx_journal_context "uninstall_fail2ban" "$FUNC_VERSION"
+
   show_proxmenux_logo
   msg_title "$(translate "$SCRIPT_TITLE")"
   msg_info2 "$(translate "Removing Fail2Ban...")"
 
-  systemctl stop fail2ban 2>/dev/null || true
-  systemctl disable fail2ban 2>/dev/null || true
+  pmx_disable_service fail2ban 2>/dev/null || true
 
   # Stop and remove the auth logger services
-  systemctl stop proxmox-auth-logger.service 2>/dev/null || true
-  systemctl disable proxmox-auth-logger.service 2>/dev/null || true
-  rm -f /etc/systemd/system/proxmox-auth-logger.service
-  systemctl stop ssh-auth-logger.service 2>/dev/null || true
-  systemctl disable ssh-auth-logger.service 2>/dev/null || true
-  rm -f /etc/systemd/system/ssh-auth-logger.service
+  pmx_disable_service proxmox-auth-logger.service 2>/dev/null || true
+  pmx_remove_file /etc/systemd/system/proxmox-auth-logger.service
+  pmx_disable_service ssh-auth-logger.service 2>/dev/null || true
+  pmx_remove_file /etc/systemd/system/ssh-auth-logger.service
   systemctl daemon-reload 2>/dev/null || true
+  pmx_record_execution "remove Fail2Ban auth logger files" \
+    "rm -f /var/log/proxmox-auth.log /var/log/ssh-auth.log"
   rm -f /var/log/proxmox-auth.log /var/log/ssh-auth.log
   
+  pmx_record_execution "purge fail2ban package" "apt-get purge -y fail2ban"
   DEBIAN_FRONTEND=noninteractive apt-get purge -y fail2ban >/dev/null 2>&1
-  rm -f /etc/fail2ban/jail.d/proxmox.conf
-  rm -f /etc/fail2ban/jail.d/proxmenux.conf
-  rm -f /etc/fail2ban/filter.d/proxmox.conf
-  rm -f /etc/fail2ban/filter.d/proxmenux.conf
-  rm -f /etc/fail2ban/jail.local
+  pmx_remove_file /etc/fail2ban/jail.d/proxmox.conf
+  pmx_remove_file /etc/fail2ban/jail.d/proxmenux.conf
+  pmx_remove_file /etc/fail2ban/filter.d/proxmox.conf
+  pmx_remove_file /etc/fail2ban/filter.d/proxmenux.conf
+  pmx_remove_file /etc/fail2ban/jail.local
 
   # ── Restore SSH MaxAuthTries to original value ──
   local sshd_config="/etc/ssh/sshd_config"
@@ -405,17 +419,19 @@ uninstall_fail2ban() {
     if [[ -n "$original_val" ]]; then
       msg_info "$(translate "Restoring SSH MaxAuthTries to ${original_val}...")"
       if grep -qi '^MaxAuthTries' "$sshd_config"; then
-        sed -i "s/^MaxAuthTries.*/MaxAuthTries ${original_val}/" "$sshd_config"
+        pmx_edit_file "$sshd_config" "s/^MaxAuthTries.*/MaxAuthTries ${original_val}/"
       fi
+      pmx_record_execution "reload SSH service" "systemctl reload sshd or ssh"
       systemctl reload sshd 2>/dev/null || systemctl reload ssh 2>/dev/null || true
       msg_ok "$(translate "SSH MaxAuthTries restored to ${original_val}")"
     fi
-    rm -f "$backup_file"
+    pmx_remove_file "$backup_file"
   fi
 
   # Remove journald drop-in and restore original log level
   if [[ -f /etc/systemd/journald.conf.d/proxmenux-loglevel.conf ]]; then
-    rm -f /etc/systemd/journald.conf.d/proxmenux-loglevel.conf
+    pmx_remove_file /etc/systemd/journald.conf.d/proxmenux-loglevel.conf
+    pmx_record_execution "restart systemd-journald" "systemctl restart systemd-journald"
     systemctl restart systemd-journald 2>/dev/null || true
     msg_ok "$(translate "journald log level restored")"
   fi

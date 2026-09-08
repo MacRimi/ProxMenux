@@ -10,7 +10,7 @@ import { Badge } from "./ui/badge"
 import { Progress } from "./ui/progress"
 import { Button } from "./ui/button"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "./ui/dialog"
-import { Server, Play, Square, Cpu, MemoryStick, HardDrive, Network, Power, RotateCcw, StopCircle, Container, ChevronDown, ChevronUp, ChevronRight, Terminal, Archive, Plus, PlusCircle, Loader2, Clock, Database, Shield, Bell, FileText, Settings2, Activity, Package, RefreshCw, EthernetPort, ArrowUpCircle, Info, CheckCircle2, EyeOff, Eye, Trash2, Check, X, AlertTriangle, AlertCircle, ExternalLink, Search, Tag as TagIcon } from 'lucide-react'
+import { Server, Play, Square, Cpu, MemoryStick, HardDrive, Network, Power, RotateCcw, StopCircle, Container, ChevronDown, ChevronUp, ChevronRight, Terminal, Archive, Plus, PlusCircle, Loader2, Clock, Database, Shield, Bell, FileText, Settings2, Activity, Package, RefreshCw, EthernetPort, ArrowUpCircle, Info, CheckCircle2, EyeOff, Eye, Trash2, Check, X, AlertTriangle, AlertCircle, Search, Tag as TagIcon } from 'lucide-react'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select"
 import { Checkbox } from "./ui/checkbox"
 import { Switch } from "./ui/switch"
@@ -279,17 +279,6 @@ function hasLxcPendingUpdates(vm: VMData): boolean {
     (app) => app.update_via === "docker" && app.docker_update_available === true && !app.exclude_from_badge,
   ).map(app => app.docker_image_reference || app.id)).size
   return osUpdates + appUpdates + dockerUpdates + delegatedUpdates > 0
-}
-
-function buildRegisteredAppUrl(vm: VMData, port?: LxcAppPort): string | null {
-  const custom = (port?.custom_url || "").trim()
-  if (custom) return custom
-  const rawIp = (vm.ip || "").trim().split("/")[0]
-  if (!rawIp || rawIp === "DHCP" || !port?.port) return null
-  const host = rawIp.includes(":") && !rawIp.startsWith("[") ? `[${rawIp}]` : rawIp
-  const scheme = port.scheme || ([443, 8443, 9443].includes(port.port) ? "https" : "http")
-  const path = port.web_path ? `/${port.web_path.replace(/^\/+/, "")}` : ""
-  return `${scheme}://${host}:${port.port}${path}`
 }
 
 interface VMConfig {
@@ -5210,26 +5199,31 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                         const helperKnownNotUpdateable = !helperExists && !!uc?.helper_slug && uc?.helper_slug_source === "update_wrapper" && !!uc?.helper_updateable_known
                         const helperUnlisted = !helperExists && !!uc?.helper_slug && uc?.helper_slug_source === "update_wrapper" && !uc?.helper_updateable_known
                         // Registration, version tracking and update execution
-                        // are independent capabilities. Every saved app belongs
-                        // in Updates; installed_via only controls whether a
-                        // version state can be shown.
+                        // are independent capabilities. Docker-delegated apps
+                        // already have their complete lifecycle represented by
+                        // the image inventory, so rendering an app section for
+                        // them would duplicate the same update state.
                         const registeredApps = (selectedVM.app_watches || []).filter(
                           (a) => !a.managed_oci_app_id,
                         )
+                        const independentlyUpdatedApps = registeredApps.filter(
+                          (a) => a.update_via !== "docker",
+                        )
                         const helperSectionDetected = uc?.helper_slug !== "docker"
                           && (helperExists || helperKnownNotUpdateable || helperUnlisted || helperInferred)
-                        const helperMatchingApps = registeredApps.filter(
+                        const helperMatchingApps = independentlyUpdatedApps.filter(
                           (a) => !!a.helper_slug && a.helper_slug === uc?.helper_slug,
                         )
                         const helperOnlyApps = helperMatchingApps.filter(
                           (a) => !a.update_command,
                         )
-                        // Every registered app gets exactly one Updates
-                        // section. Docker and the CT-wide helper identity use
-                        // their specialised sections; all other registrations
-                        // use the generic section even when installed_via is
-                        // empty (Web Link only) or dpkg/apk is OS-managed.
-                        const appSections = registeredApps.filter((a) => {
+                        // Every independently updated app gets exactly one
+                        // Updates section. Docker and the CT-wide helper
+                        // identity use their specialised sections; all other
+                        // registrations use the generic section even when
+                        // installed_via is empty (Web Link only) or dpkg/apk
+                        // is OS-managed.
+                        const appSections = independentlyUpdatedApps.filter((a) => {
                           // Docker owns a dedicated section containing
                           // Engine and image lifecycles. Its command editor
                           // is rendered there so Docker never appears twice.
@@ -5469,18 +5463,18 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                                       return (
                                         <div className="divide-y divide-border/50">
                                           {uc!.packages.map((p) => (
-                                            <div key={p.name} className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-0.5 sm:gap-2 py-2 text-sm">
-                                              <span className="font-mono text-foreground/90 flex items-center gap-2 min-w-0">
+                                            <div key={p.name} className="py-2 text-sm min-w-0">
+                                              <span className="font-mono text-foreground/90 flex items-start gap-2 min-w-0">
                                                 {p.security && (
-                                                  <Shield className="h-4 w-4 text-green-500 flex-shrink-0" aria-label={t("vmLxc.updates.securityUpdateAria")} />
+                                                  <Shield className="h-4 w-4 mt-0.5 text-green-500 flex-shrink-0" aria-label={t("vmLxc.updates.securityUpdateAria")} />
                                                 )}
-                                                <span className="truncate">{p.name}</span>
+                                                <span className="break-all" title={p.name}>{p.name}</span>
                                               </span>
-                                              <span className="flex items-center gap-1.5 text-muted-foreground flex-shrink-0 font-mono text-xs sm:text-sm">
-                                                <span>{p.current || "—"}</span>
-                                                <span>→</span>
-                                                <span className="text-foreground">{p.latest}</span>
-                                              </span>
+                                              <div className={`${p.security ? "pl-6" : ""} mt-1.5 grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-start gap-2 font-mono text-xs sm:text-sm`}>
+                                                <span className="text-muted-foreground break-all">{p.current || "—"}</span>
+                                                <span className="text-muted-foreground" aria-hidden="true">→</span>
+                                                <span className="text-foreground break-all">{p.latest}</span>
+                                              </div>
                                             </div>
                                           ))}
                                         </div>
@@ -5739,14 +5733,14 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                                                   <div className="mt-1 text-xs text-muted-foreground flex items-center gap-1.5">
                                                     <Package className="h-3.5 w-3.5 flex-shrink-0" />
                                                     {image.installed_version ? (
-                                                      <span>
+                                                      <span className={image.update_available === false ? "text-green-500" : undefined}>
                                                         {t("vmLxc.updates.installedLabel")} {" "}
-                                                        <code className="text-foreground/80">{image.installed_version}</code>
+                                                        <code className={image.update_available === false ? "text-green-500" : "text-foreground/80"}>{image.installed_version}</code>
                                                       </span>
                                                     ) : (
-                                                      <span>
+                                                      <span className={image.update_available === false ? "text-green-500" : undefined}>
                                                         {t("vmLxc.updates.imageInstalledTag")} {" "}
-                                                        <code className="text-foreground/80">{image.tag}</code>
+                                                        <code className={image.update_available === false ? "text-green-500" : "text-foreground/80"}>{image.tag}</code>
                                                       </span>
                                                     )}
                                                   </div>
@@ -5848,9 +5842,6 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                                   const matchApp = helperOnlyApps[0] || null
                                   if (!matchApp || customCmdEditingApp === matchApp.id) return null
                                   const helperSelected = matchApp.update_method === "helper"
-                                  const appWebUrl = helperUsesWebUpdater
-                                    ? buildRegisteredAppUrl(selectedVM, matchApp.ports?.[0])
-                                    : null
                                   const helperTracksVersion = !!matchApp.installed_via
                                   const hasUpd = helperTracksVersion && matchApp.update_available === true
                                   const upToD = helperTracksVersion && matchApp.update_available === false && !!matchApp.installed_version
@@ -5959,20 +5950,10 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                                         )
                                       })()}
                                       {helperUsesWebUpdater && (
-                                        <div className="mt-3 space-y-3">
+                                        <div className="mt-3">
                                           <p className="text-xs text-muted-foreground leading-relaxed">
                                             {t("vmLxc.updates.adguardWebUpdateOnly")}
                                           </p>
-                                          {appWebUrl && (
-                                            <div className="flex justify-end">
-                                              <Button size="sm" variant="outline" asChild>
-                                                <a href={appWebUrl} target="_blank" rel="noopener noreferrer">
-                                                  <ExternalLink className="h-4 w-4 mr-1.5" />
-                                                  {t("vmLxc.updates.openAdguard")}
-                                                </a>
-                                              </Button>
-                                            </div>
-                                          )}
                                         </div>
                                       )}
                                       {!helperExists && !helperUsesWebUpdater && (

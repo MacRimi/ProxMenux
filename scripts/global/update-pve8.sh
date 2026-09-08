@@ -12,6 +12,9 @@ TOOLS_JSON="/usr/local/share/proxmenux/installed_tools.json"
 if [[ -f "$UTILS_FILE" ]]; then
     source "$UTILS_FILE"
 fi
+if [[ -f "$LOCAL_SCRIPTS/global/pmx_journal.sh" ]]; then
+    source "$LOCAL_SCRIPTS/global/pmx_journal.sh"
+fi
 
 load_language
 initialize_cache
@@ -34,6 +37,8 @@ download_common_functions() {
 }
 
 update_pve8() {
+    local FUNC_VERSION="1.0"
+    pmx_journal_context "update_pve8" "$FUNC_VERSION"
     local start_time=$(date +%s)
     local log_file="/var/log/proxmox-update-$(date +%Y%m%d-%H%M%S).log"
     local changes_made=false
@@ -67,20 +72,20 @@ update_pve8() {
 
 
     if [ -f /etc/apt/sources.list.d/pve-enterprise.list ] && grep -q "^deb" /etc/apt/sources.list.d/pve-enterprise.list; then
-        sed -i "s/^deb/#deb/g" /etc/apt/sources.list.d/pve-enterprise.list
+        pmx_edit_file /etc/apt/sources.list.d/pve-enterprise.list "s/^deb/#deb/g"
         msg_ok "$(translate "Enterprise Proxmox repository disabled")"
         changes_made=true
     fi
 
     if [ -f /etc/apt/sources.list.d/ceph.list ] && grep -q "^deb" /etc/apt/sources.list.d/ceph.list; then
-        sed -i "s/^deb/#deb/g" /etc/apt/sources.list.d/ceph.list
+        pmx_edit_file /etc/apt/sources.list.d/ceph.list "s/^deb/#deb/g"
         msg_ok "$(translate "Enterprise Proxmox Ceph repository disabled")"
         changes_made=true
     fi
 
 
     if [ ! -f /etc/apt/sources.list.d/pve-public-repo.list ] || ! grep -q "pve-no-subscription" /etc/apt/sources.list.d/pve-public-repo.list; then
-        echo "deb http://download.proxmox.com/debian/pve $OS_CODENAME pve-no-subscription" > /etc/apt/sources.list.d/pve-public-repo.list
+        echo "deb http://download.proxmox.com/debian/pve $OS_CODENAME pve-no-subscription" | pmx_write_file /etc/apt/sources.list.d/pve-public-repo.list
         msg_ok "$(translate "Free public Proxmox repository enabled")"
         changes_made=true
     fi
@@ -90,14 +95,15 @@ update_pve8() {
     cp "$sources_file" "${sources_file}.backup.$(date +%Y%m%d_%H%M%S)"
 
     if grep -q -E "(debian-security -security|debian main$|debian -updates)" "$sources_file"; then
-        sed -i '/^deb.*debian-security -security/d' "$sources_file"
-        sed -i '/^deb.*debian main$/d' "$sources_file"
-        sed -i '/^deb.*debian -updates/d' "$sources_file"
+        pmx_edit_file "$sources_file" \
+            -e '/^deb.*debian-security -security/d' \
+            -e '/^deb.*debian main$/d' \
+            -e '/^deb.*debian -updates/d'
         changes_made=true
         msg_ok "$(translate "Malformed repository entries cleaned")"
     fi
 
-    cat > "$sources_file" << EOF
+    pmx_write_file "$sources_file" << EOF
 # Debian $OS_CODENAME repositories
 deb http://deb.debian.org/debian $OS_CODENAME main contrib non-free non-free-firmware
 deb http://deb.debian.org/debian $OS_CODENAME-updates main contrib non-free non-free-firmware
@@ -108,12 +114,13 @@ EOF
 
     local firmware_conf="/etc/apt/apt.conf.d/no-firmware-warnings.conf"
     if [ ! -f "$firmware_conf" ]; then
-        echo 'APT::Get::Update::SourceListWarnings::NonFreeFirmware "false";' > "$firmware_conf"
+        echo 'APT::Get::Update::SourceListWarnings::NonFreeFirmware "false";' | pmx_write_file "$firmware_conf"
     fi
 
     cleanup_duplicate_repos
 
     msg_info "$(translate "Updating package lists...")"
+    pmx_record_execution "Update package lists" "apt-get update"
     if apt-get update > "$log_file" 2>&1; then
         msg_ok "$(translate "Package lists updated successfully")"
     else
@@ -159,12 +166,16 @@ EOF
 
     if [[ $MENU_RESULT -eq 1 ]]; then
         msg_info2 "$(translate "Update cancelled by user")"
+        pmx_record_execution "Remove unused packages" "apt-get -y autoremove"
         apt-get -y autoremove > /dev/null 2>&1 || true
+        pmx_record_execution "Clean downloaded package cache" "apt-get -y autoclean"
         apt-get -y autoclean > /dev/null 2>&1 || true
         return 0
     elif [[ $MENU_RESULT -eq 2 ]]; then
         msg_ok "$(translate "System is already up to date. No update needed.")"
+        pmx_record_execution "Remove unused packages" "apt-get -y autoremove"
         apt-get -y autoremove > /dev/null 2>&1 || true
+        pmx_record_execution "Clean downloaded package cache" "apt-get -y autoclean"
         apt-get -y autoclean > /dev/null 2>&1 || true
         return 0
     fi
@@ -173,6 +184,7 @@ EOF
     local conflicting_packages=$(dpkg -l 2>/dev/null | grep -E "^ii.*(ntp|openntpd|systemd-timesyncd)" | awk '{print $2}')
     if [ -n "$conflicting_packages" ]; then
         msg_info "$(translate "Removing conflicting utilities...")"
+        pmx_record_execution "Purge conflicting time services" "apt-get -y purge $conflicting_packages"
         DEBIAN_FRONTEND=noninteractive apt-get -y purge $conflicting_packages >> "$log_file" 2>&1
         msg_ok "$(translate "Conflicting utilities removed")"
     fi
@@ -185,7 +197,7 @@ EOF
     export DPKG_OPTIONS="--force-confdef --force-confold"  
 
     msg_info "$(translate "Performing packages upgrade...")"
-    apt-get install pv -y > /dev/null 2>&1
+    pmx_install_pkg pv
     total_packages=$(apt-get -s dist-upgrade | grep "^Inst" | wc -l)
     msg_ok "$(translate "Packages upgrade successfull")"
 
@@ -196,6 +208,7 @@ EOF
     tput civis  
     tput sc      
 
+    pmx_record_execution "Upgrade Proxmox VE 8 packages" "apt-get -y -o Dpkg::Options::=--force-confdef -o Dpkg::Options::=--force-confold dist-upgrade"
     (
         /usr/bin/env \
             DEBIAN_FRONTEND=noninteractive \
@@ -250,7 +263,7 @@ EOF
 
     if [ ${#missing_packages[@]} -gt 0 ]; then
         msg_info "$(translate "Installing essential Proxmox packages...")"
-        DEBIAN_FRONTEND=noninteractive apt-get -y install "${missing_packages[@]}" >> "$log_file" 2>&1
+        pmx_install_pkg "${missing_packages[@]}"
         msg_ok "$(translate "Essential Proxmox packages installed")"
     fi
 
@@ -258,7 +271,9 @@ EOF
     cleanup_duplicate_repos
 
     msg_info "$(translate "Performing system cleanup...")"
+    pmx_record_execution "Remove unused packages" "apt-get -y autoremove"
     apt-get -y autoremove > /dev/null 2>&1 || true
+    pmx_record_execution "Clean downloaded package cache" "apt-get -y autoclean"
     apt-get -y autoclean > /dev/null 2>&1 || true
     msg_ok "$(translate "Cleanup finished")"
 

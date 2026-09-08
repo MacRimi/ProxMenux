@@ -22,6 +22,9 @@ BACKUP_DIR="/var/backups/proxmenux"
 if [[ -f "$UTILS_FILE" ]]; then
     source "$UTILS_FILE"
 fi
+if [[ -f "$BASE_DIR/scripts/global/pmx_journal.sh" ]]; then
+    source "$BASE_DIR/scripts/global/pmx_journal.sh"
+fi
 
 load_language
 initialize_cache
@@ -328,6 +331,8 @@ analyze_bridge_configuration() {
 }
 
 guided_bridge_repair() {
+    local FUNC_VERSION="1.0"
+    pmx_journal_context "guided_bridge_repair" "$FUNC_VERSION"
     local step=1
     local total_steps=5
 
@@ -420,7 +425,7 @@ guided_bridge_repair() {
             
             # Apply the change
             if [ "$new_ports" != "$current_ports" ]; then
-                sed -i "/iface $bridge/,/bridge-ports/ s/bridge-ports.*/bridge-ports $new_ports/" /etc/network/interfaces
+                pmx_edit_file /etc/network/interfaces "/iface $bridge/,/bridge-ports/ s/bridge-ports.*/bridge-ports $new_ports/"
             fi
         fi
     done
@@ -567,6 +572,8 @@ analyze_network_configuration() {
 }
 
 guided_configuration_cleanup() {
+    local FUNC_VERSION="1.0"
+    pmx_journal_context "guided_configuration_cleanup" "$FUNC_VERSION"
     local step=1
     local total_steps=5
 
@@ -645,7 +652,7 @@ guided_configuration_cleanup() {
            --infobox "$(translate "Removing invalid configurations...")\n\n$(translate "This may take a few seconds...")" 8 50
     
     for iface in $interfaces_to_remove; do
-        sed -i "/^iface $iface/,/^$/d" /etc/network/interfaces
+        pmx_edit_file /etc/network/interfaces "/^iface $iface/,/^$/d"
     done
     ((step++))
     

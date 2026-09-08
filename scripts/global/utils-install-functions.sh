@@ -41,7 +41,16 @@ PROXMENUX_UTILS=(
 
 # Ensure APT repositories are configured for the current PVE version.
 # Creates missing no-subscription repo entries for PVE8 (bookworm) or PVE9 (trixie).
+# Shared journal helpers, so any script sourcing this file records what
+# it installs without arranging for it.
+if [[ -f "${LOCAL_SCRIPTS:-/usr/local/share/proxmenux/scripts}/global/pmx_journal.sh" ]]; then
+    source "${LOCAL_SCRIPTS:-/usr/local/share/proxmenux/scripts}/global/pmx_journal.sh"
+fi
+
+
 ensure_repositories() {
+    local FUNC_VERSION="1.0"
+    pmx_journal_context "ensure_repositories" "$FUNC_VERSION"
     local pve_version need_update=false
     pve_version=$(pveversion 2>/dev/null | grep -oP 'pve-manager/\K[0-9]+' | head -1)
 
@@ -57,7 +66,7 @@ ensure_repositories() {
         # 0640, which the PVE 9 webgui's repository manager treats as
         # unparseable and silently hides the source — issue #230.
         if [[ ! -f /etc/apt/sources.list.d/proxmox.sources ]]; then
-            cat > /etc/apt/sources.list.d/proxmox.sources <<'EOF'
+            pmx_write_file /etc/apt/sources.list.d/proxmox.sources <<'EOF'
 Enabled: true
 Types: deb
 URIs: http://download.proxmox.com/debian/pve
@@ -70,7 +79,7 @@ EOF
         fi
 
         if [[ ! -f /etc/apt/sources.list.d/debian.sources ]]; then
-            cat > /etc/apt/sources.list.d/debian.sources <<'EOF'
+            pmx_write_file /etc/apt/sources.list.d/debian.sources <<'EOF'
 Types: deb
 URIs: http://deb.debian.org/debian/
 Suites: trixie trixie-updates
@@ -96,19 +105,20 @@ EOF
                 echo "deb http://deb.debian.org/debian bookworm main contrib non-free non-free-firmware"
                 echo "deb http://deb.debian.org/debian bookworm-updates main contrib non-free non-free-firmware"
                 echo "deb http://security.debian.org/debian-security bookworm-security main contrib non-free non-free-firmware"
-            } >> "$sources_file"
+            } | pmx_append_file "$sources_file"
             need_update=true
         fi
 
         if [[ ! -f /etc/apt/sources.list.d/pve-no-subscription.list ]]; then
             echo "deb http://download.proxmox.com/debian/pve bookworm pve-no-subscription" \
-                > /etc/apt/sources.list.d/pve-no-subscription.list
+                | pmx_write_file /etc/apt/sources.list.d/pve-no-subscription.list
             need_update=true
         fi
     fi
 
     if [[ "$need_update" == true ]] || [[ ! -d /var/lib/apt/lists || -z "$(ls -A /var/lib/apt/lists 2>/dev/null)" ]]; then
         msg_info "$(translate "Updating APT package lists...")"
+        pmx_record_execution "Update APT package lists" "apt-get update"
         apt-get update >/dev/null 2>&1 || apt-get update
         # Spinner pair: msg_info must be closed before returning.
         # Without this the next `msg_info` caller spawns a second
@@ -132,7 +142,16 @@ install_single_package() {
     msg_info "$(translate "Installing") $package${description:+ ($description)}..."
     local install_success=false
 
-    if DEBIAN_FRONTEND=noninteractive apt-get install -y "$package" >/dev/null 2>&1; then
+    # Every script that installs anything comes through here, so this is
+    # where an installation becomes visible in the audit. What gets
+    # recorded is the difference the operation made — the packages that
+    # were not on the host and now are, dependencies included — rather
+    # than the name that was asked for.
+    if declare -F pmx_install_pkg >/dev/null 2>&1; then
+        PMX_JOURNAL_FUNCTION="${PMX_JOURNAL_FUNCTION:-install_single_package}" \
+        PMX_JOURNAL_SOURCE="${PMX_JOURNAL_SOURCE:-${SCRIPT_SOURCE:-utils-install-functions.sh}}" \
+            pmx_install_pkg "$package" && install_success=true
+    elif DEBIAN_FRONTEND=noninteractive apt-get install -y "$package" >/dev/null 2>&1; then
         install_success=true
     fi
     cleanup 2>/dev/null || true

@@ -307,6 +307,8 @@ def verify_password(password, password_hash):
     can log in once and trigger a rehash via `_maybe_rehash_password` —
     see lazy migration in `authenticate()`.
     """
+    if not isinstance(password, str) or not password:
+        return False
     if not isinstance(password_hash, str) or not password_hash:
         return False
     if password_hash.startswith(_PWD_PBKDF2_PREFIX):

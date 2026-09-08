@@ -23,6 +23,10 @@ if [[ -f "$UTILS_FILE" ]]; then
     source "$UTILS_FILE"
 fi
 
+if [[ -f "$LOCAL_SCRIPTS/global/pmx_journal.sh" ]]; then
+    source "$LOCAL_SCRIPTS/global/pmx_journal.sh"
+fi
+
 load_language
 initialize_cache
 
@@ -53,6 +57,9 @@ select_privileged_container() {
 }
 
 validate_container_id() {
+    local FUNC_VERSION="1.1"
+    pmx_journal_context "validate_container_id" "$FUNC_VERSION"
+
     if [ -z "$CONTAINER_ID" ]; then
         msg_error "$(translate 'Container ID not defined. Make sure to select a container first.')"
         exit 1
@@ -66,6 +73,8 @@ validate_container_id() {
 
     if pct status "$CONTAINER_ID" | grep -q "running"; then
         msg_info "$(translate 'Stopping the container before conversion...')"
+        pmx_record_execution "stop CT ${CONTAINER_ID} for privileged-to-unprivileged conversion" \
+            "pct stop ${CONTAINER_ID}"
         pct stop "$CONTAINER_ID"
         msg_ok "$(translate 'Container stopped.')"
     fi
@@ -89,7 +98,12 @@ show_backup_warning() {
 }
 
 convert_direct_method() {
+    local FUNC_VERSION="1.1"
+    pmx_journal_context "convert_direct_method" "$FUNC_VERSION"
+
     msg_info2 "$(translate 'Starting direct conversion of container') $CONTAINER_ID..."
+    pmx_record_execution "convert CT ${CONTAINER_ID} filesystem ownership to unprivileged IDs" \
+        "mount rootfs, remap ownership by 100000, and update CT configuration"
     
     TEMP_DIR="/tmp/lxc_convert_$CONTAINER_ID"
     mkdir -p "$TEMP_DIR"
@@ -225,9 +239,9 @@ convert_direct_method() {
 
     CONFIG_FILE="/etc/pve/lxc/$CONTAINER_ID.conf"
     if ! grep -q "^unprivileged:" "$CONFIG_FILE"; then
-        echo "unprivileged: 1" >> "$CONFIG_FILE"
+        echo "unprivileged: 1" | pmx_append_file "$CONFIG_FILE"
     else
-        sed -i 's/^unprivileged:.*/unprivileged: 1/' "$CONFIG_FILE"
+        pmx_edit_file "$CONFIG_FILE" 's/^unprivileged:.*/unprivileged: 1/'
     fi
     
     msg_ok "$(translate 'Direct conversion completed for container') $CONTAINER_ID"
@@ -238,9 +252,12 @@ convert_direct_method() {
 }
 
 cleanup_and_finalize() {
+    local FUNC_VERSION="1.1"
+    pmx_journal_context "cleanup_and_finalize" "$FUNC_VERSION"
 
     if whiptail --yesno "$(translate 'Do you want to start the converted unprivileged container') $CONTAINER_ID $(translate 'now?')" 10 60; then
         msg_info2 "$(translate 'Starting unprivileged container...')"
+        pmx_record_execution "start converted unprivileged CT ${CONTAINER_ID}" "pct start ${CONTAINER_ID}"
         pct start "$CONTAINER_ID"
         msg_ok "$(translate 'Unprivileged container') $CONTAINER_ID $(translate 'started successfully.')"
     fi

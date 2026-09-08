@@ -1760,11 +1760,27 @@ def get_lynis_audit_status():
     }
 
 
-def parse_lynis_report():
+def _parse_lynis_warning(value):
+    """Lynis 3.x: ID|message|details|solution; retain legacy L/M/H records."""
+    parts = [part.strip() for part in value.split("|")]
+    if len(parts) < 2:
+        return None
+    legacy = parts[1] in ("L", "M", "H")
+    return {
+        "test_id": parts[0],
+        "severity": parts[1] if legacy else "",
+        "description": (parts[2] if len(parts) > 2 else "") if legacy else parts[1],
+        "details": "" if legacy or len(parts) < 3 or parts[2] == "-" else parts[2],
+        "solution": parts[3] if len(parts) > 3 and parts[3] != "-" else "",
+    }
+
+
+def parse_lynis_report(enrich_current=True):
     """
     Parse /var/log/lynis-report.dat into structured report data.
     Also enriches with data from lynis.log when report.dat is sparse.
-    Returns a dict with all audit findings.
+    Returns a dict with all audit findings. Set enrich_current=False when
+    consuming historical evidence: do not run live fallback probes.
     """
     report_file = "/var/log/lynis-report.dat"
     output_file = "/var/log/lynis-output.log"
@@ -1890,14 +1906,9 @@ def parse_lynis_report():
 
     # Parse warnings
     for w in warnings_raw:
-        parts = w.split("|")
-        if len(parts) >= 2:
-            report["warnings"].append({
-                "test_id": parts[0].strip() if len(parts) > 0 else "",
-                "severity": parts[1].strip() if len(parts) > 1 else "",
-                "description": parts[2].strip() if len(parts) > 2 else parts[1].strip(),
-                "solution": parts[3].strip() if len(parts) > 3 else "",
-            })
+        warning = _parse_lynis_warning(w)
+        if warning:
+            report["warnings"].append(warning)
 
     # Parse suggestions
     for s in suggestions_raw:
@@ -2100,7 +2111,7 @@ def parse_lynis_report():
                     break
 
     # Also check pve-firewall directly (Proxmox uses its own firewall service)
-    if not report["firewall_active"]:
+    if enrich_current and not report["firewall_active"]:
         try:
             rc, out, _ = _run_cmd(["systemctl", "is-active", "pve-firewall"])
             if rc == 0 and out.strip() == "active":
@@ -2246,7 +2257,7 @@ def parse_lynis_report():
                     pass
 
     # Fallback: get kernel from uname if still empty
-    if not report["kernel_version"]:
+    if enrich_current and not report["kernel_version"]:
         try:
             rc, out, _ = _run_cmd(["uname", "-r"])
             if rc == 0 and out.strip():
@@ -2255,7 +2266,7 @@ def parse_lynis_report():
             pass
 
     # Fallback: get hostname from system
-    if not report["hostname"]:
+    if enrich_current and not report["hostname"]:
         try:
             import socket
             report["hostname"] = socket.gethostname()
@@ -2263,7 +2274,7 @@ def parse_lynis_report():
             pass
 
     # Fallback: get installed packages count
-    if report["installed_packages"] == 0:
+    if enrich_current and report["installed_packages"] == 0:
         try:
             rc, out, _ = _run_cmd(["dpkg", "-l"])
             if rc == 0 and out:

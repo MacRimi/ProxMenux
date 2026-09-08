@@ -418,6 +418,73 @@ def _format_system_startup(data: Dict[str, Any]) -> Tuple[str, str]:
     return title, body
 
 
+def _format_app_update_available(data: Dict[str, Any]) -> Tuple[str, str]:
+    """Render one app update or a scheduled multi-app summary."""
+    hostname = str(data.get("hostname") or _get_hostname())
+    updates = data.get("updates")
+    if not isinstance(updates, list) or len(updates) < 2:
+        app_name = str(data.get("app_name") or "app")
+        vmid = data.get("vmid", "")
+        ct_name = str(data.get("ct_name") or f"CT-{vmid}")
+        installed = str(data.get("installed") or "unknown")
+        latest = str(data.get("latest") or "unknown")
+        return (
+            f"{hostname}: {app_name} update available on CT {vmid}",
+            f"{app_name} on CT {vmid} ({ct_name}) has a new version:\n"
+            f"    {installed} → {latest}",
+        )
+
+    clean_updates = []
+    for item in updates:
+        if not isinstance(item, dict):
+            continue
+        try:
+            vmid = int(item.get("vmid"))
+        except (TypeError, ValueError):
+            continue
+        clean_updates.append({
+            "vmid": vmid,
+            "app_name": str(item.get("app_name") or "app"),
+            "installed": str(item.get("installed") or "unknown"),
+            "latest": str(item.get("latest") or "unknown"),
+        })
+    clean_updates.sort(
+        key=lambda item: (item["vmid"], item["app_name"].casefold())
+    )
+    if not clean_updates:
+        return (
+            f"{hostname}: Application updates available",
+            "Application updates are available.",
+        )
+
+    count = len(clean_updates)
+    container_count = len({item["vmid"] for item in clean_updates})
+    title = f"{hostname}: {count} application updates available"
+    lead = (
+        f"{count} applications in {container_count} LXC "
+        f"container{'s' if container_count != 1 else ''} have a newer version:"
+    )
+    sections = []
+    omitted = 0
+    for vmid in sorted({item["vmid"] for item in clean_updates}):
+        rows = [item for item in clean_updates if item["vmid"] == vmid]
+        section = [f"CT {vmid}"]
+        section.extend(
+            f"• {item['app_name']}: {item['installed']} → {item['latest']}"
+            for item in rows
+        )
+        candidate = "\n\n".join([lead, *sections, "\n".join(section)])
+        # Leave room for channel-specific wrappers and AI formatting while
+        # keeping the raw Telegram message comfortably below 4096 chars.
+        if len(candidate) > 3200:
+            omitted += len(rows)
+            continue
+        sections.append("\n".join(section))
+    if omitted:
+        sections.append(f"… {omitted} additional application(s)")
+    return title, "\n\n".join([lead, *sections])
+
+
 # ─── Severity Icons ──────────────────────────────────────────────
 
 SEVERITY_ICONS = {
@@ -536,6 +603,7 @@ TEMPLATES = {
         # this one off meant users who registered apps in the App tab
         # never received the notification they explicitly asked for.
         'default_enabled': True,
+        'formatter': '_format_app_update_available',
     },
     'docker_stack_update_available': {
         'title': '{hostname}: Docker updates available on CT {vmid}',
@@ -965,6 +1033,13 @@ TEMPLATES = {
         'title': '{hostname}: System problem detected{entity_suffix}',
         'body': 'A system-level problem has been detected.\nReason: {reason}',
         'label': 'System problem detected',
+        'group': 'services',
+        'default_enabled': True,
+    },
+    'kernel_warning': {
+        'title': '{hostname}: Kernel diagnostic event detected',
+        'body': 'The kernel recorded a diagnostic event.\n{kernel_details}',
+        'label': 'Kernel warnings and diagnostic traces',
         'group': 'services',
         'default_enabled': True,
     },
@@ -1811,6 +1886,7 @@ EVENT_EMOJI = {
     'system_reboot':        '\U0001F504',
     'system_restore_completed': '✅',          # check mark
     'system_problem':       '\u26A0\uFE0F',
+    'kernel_warning':       '\u26A0\uFE0F',
     'service_fail':         '\u274C',
     'oom_kill':             '\U0001F4A3',         # bomb
     # Health

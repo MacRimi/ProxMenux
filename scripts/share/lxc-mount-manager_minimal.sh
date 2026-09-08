@@ -30,6 +30,10 @@
 BASE_DIR="/usr/local/share/proxmenux"
 source "$BASE_DIR/utils.sh"
 
+if [[ -f "/usr/local/share/proxmenux/scripts/global/pmx_journal.sh" ]]; then
+    source "/usr/local/share/proxmenux/scripts/global/pmx_journal.sh"
+fi
+
 load_language
 initialize_cache
 
@@ -289,6 +293,8 @@ select_lxc_container() {
 select_container_mount_point() {
     local ctid="$1"
     local host_dir="$2"
+    local FUNC_VERSION="1.0"
+    pmx_journal_context "select_container_mount_point" "$FUNC_VERSION"
     local base_name
     base_name=$(basename "$host_dir")
 
@@ -333,6 +339,8 @@ select_container_mount_point() {
         local ct_status
         ct_status=$(pct status "$ctid" 2>/dev/null | awk '{print $2}')
         if [[ "$ct_status" == "running" ]]; then
+            pmx_record_execution "create mount directory ${mount_point} in CT ${ctid}" \
+                "pct exec ${ctid} -- mkdir -p ${mount_point}"
             pct exec "$ctid" -- mkdir -p "$mount_point" 2>/dev/null
         fi
 
@@ -367,6 +375,8 @@ add_bind_mount() {
     local ctid="$1"
     local host_path="$2"
     local ct_path="$3"
+    local FUNC_VERSION="1.0"
+    pmx_journal_context "add_bind_mount" "$FUNC_VERSION"
 
     if [[ ! "$ctid" =~ ^[0-9]+$ || -z "$host_path" || -z "$ct_path" ]]; then
         msg_error "$(translate "Invalid parameters for bind mount")"
@@ -383,6 +393,8 @@ add_bind_mount() {
     mpidx=$(get_next_mp_index "$ctid")
 
     local result
+    pmx_record_execution "add bind mount ${host_path} to CT ${ctid} at ${ct_path}" \
+        "pct set ${ctid} -mp${mpidx} ${host_path},mp=${ct_path},shared=1,backup=0"
     result=$(pct set "$ctid" -mp${mpidx} "$host_path,mp=$ct_path,shared=1,backup=0" 2>&1)
 
     if [[ $? -eq 0 ]]; then
@@ -451,6 +463,9 @@ view_mount_points() {
 }
 
 remove_mount_point() {
+    local FUNC_VERSION="1.0"
+    pmx_journal_context "remove_mount_point" "$FUNC_VERSION"
+
     show_proxmenux_logo
     msg_title "$(translate "Remove LXC Mount Point")"
 
@@ -532,6 +547,8 @@ $(translate "Proceed with removal")?"
     msg_title "$(translate "Remove LXC Mount Point")"
     msg_info "$(translate "Removing mount point") $selected_mp $(translate "from container") $container_id..."
 
+    pmx_record_execution "remove mount point ${selected_mp} from CT ${container_id}" \
+        "pct set ${container_id} --delete ${selected_mp}"
     if pct set "$container_id" --delete "$selected_mp" 2>/dev/null; then
         msg_ok "$(translate "Mount point removed successfully")"
 
@@ -541,6 +558,8 @@ $(translate "Proceed with removal")?"
             echo ""
             if whiptail --yesno "$(translate "Container is running. Restart to apply changes?")" 8 60; then
                 msg_info "$(translate "Restarting container...")"
+                pmx_record_execution "restart CT ${container_id} after removing ${selected_mp}" \
+                    "pct reboot ${container_id}"
                 if pct reboot "$container_id"; then
                     sleep 3
                     msg_ok "$(translate "Container restarted successfully")"
@@ -573,6 +592,8 @@ $(translate "Proceed with removal")?"
 lmm_fix_cifs_access() {
     local host_dir="$1"
     local is_unprivileged="$2"
+    local FUNC_VERSION="1.0"
+    pmx_journal_context "lmm_fix_cifs_access" "$FUNC_VERSION"
 
     # CIFS mounted by Proxmox GUI uses uid=0/gid=0 by default (root only).
     # The fix: remount with uid/gid that the LXC can access.
@@ -620,13 +641,16 @@ $(translate "Apply fix now? (The share will be briefly remounted)")" \
         18 84 3>&1 1>&2 2>&3; then
 
         msg_info "$(translate "Remounting CIFS share with open permissions...")"
+        pmx_record_execution "remount CIFS share ${mount_src} at ${host_dir}" \
+            "umount ${host_dir}; mount -t cifs ${mount_src} ${host_dir} -o ${new_opts}"
         if umount "$host_dir" 2>/dev/null && \
            mount -t cifs "$mount_src" "$host_dir" -o "$new_opts" 2>/dev/null; then
             msg_ok "$(translate "CIFS share remounted — LXC containers can now read and write")"
 
             # Update fstab if the mount is there
             if grep -qF "$host_dir" /etc/fstab 2>/dev/null; then
-                sed -i "s|^\(${mount_src}[[:space:]].*${host_dir}.*cifs[[:space:]]\).*|\1${new_opts} 0 0|" /etc/fstab 2>/dev/null || true
+                pmx_edit_file /etc/fstab \
+                    "s|^\(${mount_src}[[:space:]].*${host_dir}.*cifs[[:space:]]\).*|\1${new_opts} 0 0|" 2>/dev/null || true
                 msg_ok "$(translate "/etc/fstab updated — permissions will persist after reboot")"
             fi
         else
@@ -639,6 +663,8 @@ lmm_fix_nfs_access() {
     local host_dir="$1"
     local is_unprivileged="$2"
     local uid_shift="${3:-100000}"
+    local FUNC_VERSION="1.0"
+    pmx_journal_context "lmm_fix_nfs_access" "$FUNC_VERSION"
 
     # NFS: the host cannot override server-side permissions.
     # BUT: if the server exports with root_squash (default), we can check
@@ -678,6 +704,8 @@ $(translate "If it still fails, the NFS server export options must be changed on
 $(translate "Apply fix now?")" \
             18 84 3>&1 1>&2 2>&3; then
 
+            pmx_record_execution "apply LXC access permissions to NFS directory ${host_dir}" \
+                "chmod 1777 and setfacl on ${host_dir}"
             if chmod 1777 "$host_dir" 2>/dev/null; then
                 msg_ok "$(translate "NFS directory permissions set — containers should now be able to write")"
             else
@@ -716,6 +744,8 @@ $(translate "You can still mount this share for READ-ONLY access.")" \
 lmm_offer_host_permissions() {
     local host_dir="$1"
     local is_unprivileged="$2"
+    local FUNC_VERSION="1.0"
+    pmx_journal_context "lmm_offer_host_permissions" "$FUNC_VERSION"
 
     # Privileged containers: UID 0 inside = UID 0 on host — always accessible
     [[ "$is_unprivileged" != "1" ]] && return 0
@@ -749,6 +779,8 @@ $(translate "Apply read+write access for 'others' on the host directory?")\n\n\
 $(translate "(Only the host directory is modified. Nothing inside the container is changed.")" \
         16 80 3>&1 1>&2 2>&3; then
 
+        pmx_record_execution "grant mapped LXC users access to host directory ${host_dir}" \
+            "chmod o+rwx and setfacl on ${host_dir}"
         chmod o+rwx "$host_dir" 2>/dev/null || true
         if command -v setfacl >/dev/null 2>&1; then
             setfacl -m o::rwx "$host_dir" 2>/dev/null || true
@@ -798,6 +830,8 @@ _lmm_verify_writable() {
 # ==========================================================
 
 mount_host_directory_minimal() {
+    local FUNC_VERSION="1.0"
+
     # Step 1: Select container
     local container_id
     container_id=$(select_lxc_container)
@@ -900,10 +934,13 @@ $(translate "Proceed")?"
     # bind-mount is supposed to spare them.
     local ct_status
     ct_status=$(pct status "$container_id" 2>/dev/null | awk '{print $2}')
+    pmx_journal_context "mount_host_directory_minimal" "$FUNC_VERSION"
     echo ""
     if [[ "$ct_status" == "running" ]]; then
         if whiptail --yesno "$(translate "Restart container to activate mount?")" 8 60; then
             msg_info "$(translate "Restarting container...")"
+            pmx_record_execution "restart CT ${container_id} to activate bind mount" \
+                "pct reboot ${container_id}"
             if pct reboot "$container_id"; then
                 sleep 5
                 msg_ok "$(translate "Container restarted successfully")"
@@ -918,6 +955,8 @@ $(translate "Proceed")?"
         # declines, fall back to the informational line.
         if whiptail --yesno "$(translate "Container is stopped. Start it now to verify the mount works?")" 8 70; then
             msg_info "$(translate "Starting container...")"
+            pmx_record_execution "start CT ${container_id} to activate and verify bind mount" \
+                "pct start ${container_id}"
             if pct start "$container_id"; then
                 sleep 5
                 msg_ok "$(translate "Container started successfully")"

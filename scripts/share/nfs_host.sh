@@ -38,6 +38,10 @@ if [[ -f "$UTILS_FILE" ]]; then
     source "$UTILS_FILE"
 fi
 
+if [[ -f "$LOCAL_SCRIPTS/global/pmx_journal.sh" ]]; then
+    source "$LOCAL_SCRIPTS/global/pmx_journal.sh"
+fi
+
 load_language
 initialize_cache
 
@@ -64,6 +68,9 @@ get_storage_config() {
 # ==========================================================
 
 discover_nfs_servers() {
+    local FUNC_VERSION="1.0"
+    pmx_journal_context "discover_nfs_servers" "$FUNC_VERSION"
+
     show_proxmenux_logo
     msg_title "$(translate "Add NFS Share as Proxmox Storage")"
     msg_info "$(translate "Scanning network for NFS servers...")"
@@ -72,7 +79,7 @@ discover_nfs_servers() {
     NETWORK=$(echo "$HOST_IP" | cut -d. -f1-3).0/24
 
     if ! which nmap >/dev/null 2>&1; then
-        apt-get install -y nmap &>/dev/null
+        pmx_install_pkg nmap
     fi
 
     SERVERS=$(nmap -p 2049 --open "$NETWORK" 2>/dev/null | grep -B 4 "2049/tcp open" | grep "Nmap scan report" | awk '{print $5}' | sort -u || true)
@@ -253,6 +260,8 @@ add_proxmox_nfs_storage() {
     local server="$2"
     local export="$3"
     local content="${4:-import}"
+    local FUNC_VERSION="1.0"
+    pmx_journal_context "add_proxmox_nfs_storage" "$FUNC_VERSION"
 
     msg_info "$(translate "Starting Proxmox storage integration...")"
 
@@ -267,11 +276,15 @@ add_proxmox_nfs_storage() {
             8 60 --title "$(translate "Storage Exists")"; then
             return 0
         fi
+        pmx_record_execution "remove existing Proxmox NFS storage ${storage_id}" \
+            "pvesm remove ${storage_id}"
         pvesm remove "$storage_id" 2>/dev/null || true
     fi
 
     msg_ok "$(translate "Storage ID is available")"
     msg_info "$(translate "NFS storage adding in progress...")"
+    pmx_record_execution "add NFS export ${server}:${export} as Proxmox storage ${storage_id}" \
+        "pvesm add nfs ${storage_id} --server ${server} --export ${export} --content ${content}"
     if pvesm_output=$(pvesm add nfs "$storage_id" \
         --server "$server" \
         --export "$export" \
@@ -384,6 +397,8 @@ mount_nfs_via_fstab() {
     local mount_path="$3"
     local mount_opts="$4"
     local replace="$5"
+    local FUNC_VERSION="1.0"
+    pmx_journal_context "mount_nfs_via_fstab" "$FUNC_VERSION"
 
     msg_info "$(translate "Preparing host mount...")"
 
@@ -396,6 +411,8 @@ mount_nfs_via_fstab() {
     msg_ok "$(translate "Mount point ready:") $mount_path"
 
     msg_info "$(translate "Mounting NFS share...")"
+    pmx_record_execution "mount NFS export ${server}:${export_path} at ${mount_path}" \
+        "mount -t nfs -o ${mount_opts} ${server}:${export_path} ${mount_path}"
     if ! mount -t nfs -o "$mount_opts" "${server}:${export_path}" "$mount_path" >/dev/null 2>&1; then
         msg_error "$(translate "Failed to mount NFS share on host.")"
         return 1
@@ -418,11 +435,12 @@ mount_nfs_via_fstab() {
 
     # Persist in /etc/fstab.
     if [[ "$replace" == "1" ]]; then
-        sed -i "\|[[:space:]]${mount_path}[[:space:]]|d" /etc/fstab
+        pmx_edit_file /etc/fstab "\|[[:space:]]${mount_path}[[:space:]]|d"
     fi
-    echo "${server}:${export_path} $mount_path nfs $mount_opts 0 0" >> /etc/fstab
+    echo "${server}:${export_path} $mount_path nfs $mount_opts 0 0" | pmx_append_file /etc/fstab
     msg_ok "$(translate "Added to /etc/fstab.")"
 
+    pmx_record_execution "reload systemd units after NFS fstab update" "systemctl daemon-reload"
     systemctl daemon-reload 2>/dev/null || true
 
     echo -e ""
@@ -480,10 +498,13 @@ select_mount_methods() {
 # ==========================================================
 
 mount_nfs_share() {
+    local FUNC_VERSION="1.0"
+    pmx_journal_context "mount_nfs_share" "$FUNC_VERSION"
+
     if ! which showmount >/dev/null 2>&1; then
         msg_info "$(translate "Installing NFS client tools...")"
         apt-get update &>/dev/null
-        apt-get install -y nfs-common &>/dev/null
+        pmx_install_pkg nfs-common
         msg_ok "$(translate "NFS client tools installed")"
     fi
 
@@ -654,6 +675,9 @@ view_nfs_storages() {
 }
 
 remove_nfs_storage() {
+    local FUNC_VERSION="1.0"
+    pmx_journal_context "remove_nfs_storage" "$FUNC_VERSION"
+
     # Collect every removable NFS entry: pvesm storages and fstab-only mounts.
     local OPTIONS=()
     local has_pvesm=0
@@ -718,6 +742,7 @@ remove_nfs_storage() {
                 show_proxmenux_logo
                 msg_title "$(translate "Remove NFS Storage")"
 
+                pmx_record_execution "remove Proxmox NFS storage ${target}" "pvesm remove ${target}"
                 if pvesm remove "$target" 2>/dev/null; then
                     msg_ok "$(translate "Storage") $target $(translate "removed successfully from Proxmox.")"
                 else
@@ -742,6 +767,7 @@ remove_nfs_storage() {
 
                 # Try umount only if currently mounted; never force.
                 if mount | grep -q " on ${mount_path} type "; then
+                    pmx_record_execution "unmount NFS path ${mount_path}" "umount ${mount_path}"
                     if umount "$mount_path" 2>/dev/null; then
                         msg_ok "$(translate "Unmounted:") $mount_path"
                     else
@@ -756,12 +782,14 @@ remove_nfs_storage() {
                 if awk -v mp="$mount_path" '
                     $2 == mp && ($3 == "nfs" || $3 == "nfs4") { next }
                     { print }
-                ' /etc/fstab > /etc/fstab.tmp && mv /etc/fstab.tmp /etc/fstab; then
+                ' /etc/fstab > /etc/fstab.tmp && pmx_write_file /etc/fstab < /etc/fstab.tmp; then
+                    rm -f /etc/fstab.tmp
                     msg_ok "$(translate "Removed entry from /etc/fstab")  ($(translate "backup at /etc/fstab.proxmenux.bak"))"
                 else
                     msg_error "$(translate "Failed to edit /etc/fstab — remove the line manually.")"
                 fi
 
+                pmx_record_execution "reload systemd units after NFS fstab removal" "systemctl daemon-reload"
                 systemctl daemon-reload 2>/dev/null || true
 
                 # Try to remove the directory if empty; keep it otherwise.
@@ -778,6 +806,9 @@ remove_nfs_storage() {
 }
 
 test_nfs_connectivity() {
+    local FUNC_VERSION="1.0"
+    pmx_journal_context "test_nfs_connectivity" "$FUNC_VERSION"
+
     show_proxmenux_logo
     msg_title "$(translate "Test NFS Connectivity")"
 
@@ -791,7 +822,8 @@ test_nfs_connectivity() {
             msg_ok "$(translate "RPC Bind Service: RUNNING")"
         else
             msg_warn "$(translate "RPC Bind Service: STOPPED - starting...")"
-            systemctl start rpcbind 2>/dev/null || true
+            pmx_apply_setting "rpcbind active state" "systemctl is-active rpcbind 2>/dev/null || true" \
+                systemctl start rpcbind || true
         fi
     else
         msg_warn "$(translate "NFS Client Tools: NOT AVAILABLE")"

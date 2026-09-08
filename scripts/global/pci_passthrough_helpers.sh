@@ -5,6 +5,10 @@ if [[ -n "${__PROXMENUX_PCI_PASSTHROUGH_HELPERS__:-}" ]]; then
 fi
 __PROXMENUX_PCI_PASSTHROUGH_HELPERS__=1
 
+if [[ -f /usr/local/share/proxmenux/scripts/global/pmx_journal.sh ]]; then
+  source /usr/local/share/proxmenux/scripts/global/pmx_journal.sh
+fi
+
 function _pci_is_iommu_active() {
   grep -qE 'intel_iommu=on|amd_iommu=on' /proc/cmdline 2>/dev/null || return 1
   [[ -d /sys/kernel/iommu_groups ]] || return 1
@@ -497,6 +501,8 @@ _proxmenux_vfio_bind_add_bdfs() {
 }
 
 _proxmenux_vfio_bind_remove_bdfs() {
+    local FUNC_VERSION="1.0"
+    pmx_journal_context "_proxmenux_vfio_bind_remove_bdfs" "$FUNC_VERSION"
     # Args: any number of BDFs to remove from the binder list
     [[ -f "$PROXMENUX_VFIO_BIND_STATE" ]] || return 0
     _proxmenux_vfio_bind_cleanup_legacy
@@ -511,13 +517,14 @@ _proxmenux_vfio_bind_remove_bdfs() {
         else
             normalized="0000:${bdf}"
         fi
-        sed -i "\|^${normalized}\$|d" "$tmp"
+        sed "\|^${normalized}\$|d" "$tmp" > "${tmp}.next" && mv "${tmp}.next" "$tmp"
     done
     if ! cmp -s "$tmp" "$PROXMENUX_VFIO_BIND_STATE"; then
-        mv "$tmp" "$PROXMENUX_VFIO_BIND_STATE"
+        pmx_write_file "$PROXMENUX_VFIO_BIND_STATE" < "$tmp"
+        rm -f "$tmp"
         _proxmenux_vfio_bind_write_udev_rule
         # If empty, remove state file too (keeps host clean)
-        [[ ! -s "$PROXMENUX_VFIO_BIND_STATE" ]] && rm -f "$PROXMENUX_VFIO_BIND_STATE"
+        [[ ! -s "$PROXMENUX_VFIO_BIND_STATE" ]] && pmx_remove_file "$PROXMENUX_VFIO_BIND_STATE"
         _proxmenux_nvidia_vfio_policy_sync || true
         _proxmenux_mark_host_config_changed
     else
@@ -598,9 +605,11 @@ EOF
 }
 
 _proxmenux_nvidia_vfio_softdeps_sync() {
+    local FUNC_VERSION="1.0"
+    pmx_journal_context "_proxmenux_nvidia_vfio_softdeps_sync" "$FUNC_VERSION"
     local changed=1
     mkdir -p "$(dirname "$PROXMENUX_VFIO_CONF")"
-    touch "$PROXMENUX_VFIO_CONF"
+    [[ -f "$PROXMENUX_VFIO_CONF" ]] || pmx_write_file "$PROXMENUX_VFIO_CONF" < /dev/null
 
     local -a softdeps=(
         "softdep nvidia pre: vfio-pci"
@@ -612,14 +621,14 @@ _proxmenux_nvidia_vfio_softdeps_sync() {
     if _proxmenux_vfio_bind_state_has_vendor "10de"; then
         for line in "${softdeps[@]}"; do
             if ! grep -qFx "$line" "$PROXMENUX_VFIO_CONF" 2>/dev/null; then
-                echo "$line" >> "$PROXMENUX_VFIO_CONF"
+                echo "$line" | pmx_append_file "$PROXMENUX_VFIO_CONF"
                 changed=0
             fi
         done
     else
         for line in "${softdeps[@]}"; do
             if grep -qFx "$line" "$PROXMENUX_VFIO_CONF" 2>/dev/null; then
-                sed -i "\|^${line}$|d" "$PROXMENUX_VFIO_CONF"
+                pmx_edit_file "$PROXMENUX_VFIO_CONF" "\|^${line}$|d"
                 changed=0
             fi
         done
@@ -779,6 +788,8 @@ _proxmenux_vfio_bind_migrate_legacy_nvidia_ids() {
 # passed through.
 # ──────────────────────────────────────────────────────────────────────
 _proxmenux_nvidia_migrate_legacy_blacklist() {
+    local FUNC_VERSION="1.0"
+    pmx_journal_context "_proxmenux_nvidia_migrate_legacy_blacklist" "$FUNC_VERSION"
     local changed=false
     local blacklist_file="${PROXMENUX_ETC_ROOT}/modprobe.d/blacklist.conf"
     local nvidia_blacklist="${PROXMENUX_ETC_ROOT}/modprobe.d/nvidia-blacklist.conf"
@@ -788,29 +799,37 @@ _proxmenux_nvidia_migrate_legacy_blacklist() {
     local modules_load_active="${PROXMENUX_ETC_ROOT}/modules-load.d/nvidia-vfio.conf"
 
     if [[ -f "$blacklist_file" ]] && grep -qE '^blacklist (nvidia|nvidia_drm|nvidia_modeset|nvidia_uvm|nvidiafb)$' "$blacklist_file"; then
-        sed -i \
+        pmx_edit_file "$blacklist_file" \
             -e '/^blacklist nvidia$/d' \
             -e '/^blacklist nvidia_drm$/d' \
             -e '/^blacklist nvidia_modeset$/d' \
             -e '/^blacklist nvidia_uvm$/d' \
-            -e '/^blacklist nvidiafb$/d' \
-            "$blacklist_file"
+            -e '/^blacklist nvidiafb$/d'
         changed=true
     fi
 
     if [[ -f "$nvidia_blacklist" ]]; then
-        rm -f "$nvidia_blacklist"
+        pmx_remove_file "$nvidia_blacklist"
         changed=true
     fi
 
     if [[ -f "$udev_disabled" ]]; then
-        mv "$udev_disabled" "$udev_rules" >/dev/null 2>&1 || true
+        if pmx_write_file "$udev_rules" < "$udev_disabled"; then
+            chmod --reference="$udev_disabled" "$udev_rules" 2>/dev/null || true
+            chown --reference="$udev_disabled" "$udev_rules" 2>/dev/null || true
+            pmx_remove_file "$udev_disabled" || true
+        fi
+        pmx_record_execution "Reload udev rules" "udevadm control --reload-rules"
         udevadm control --reload-rules >/dev/null 2>&1 || true
         changed=true
     fi
 
     if [[ -f "$modules_load_disabled" ]]; then
-        mv "$modules_load_disabled" "$modules_load_active" >/dev/null 2>&1 || true
+        if pmx_write_file "$modules_load_active" < "$modules_load_disabled"; then
+            chmod --reference="$modules_load_disabled" "$modules_load_active" 2>/dev/null || true
+            chown --reference="$modules_load_disabled" "$modules_load_active" 2>/dev/null || true
+            pmx_remove_file "$modules_load_disabled" || true
+        fi
         changed=true
     fi
 

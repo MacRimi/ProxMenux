@@ -778,6 +778,7 @@ export function ProxmoxDashboard() {
                             <React.Fragment key="admin">
                               {btn("logs",     ScrollText,  t("navigation.systemLogs"))}
                               {btn("security", ShieldCheck, t("navigation.security"))}
+                              {btn("audit",    ClipboardCheck, t("navigation.audit"))}
                               {btn("settings", SettingsIcon, t("navigation.settings"))}
                               {btn("about",    Info,         t("navigation.about"))}
                             </React.Fragment>

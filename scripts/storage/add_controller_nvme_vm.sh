@@ -39,6 +39,9 @@ if [[ -f "$LOCAL_SCRIPTS_LOCAL/global/pci_passthrough_helpers.sh" ]]; then
 elif [[ -f "$LOCAL_SCRIPTS_DEFAULT/global/pci_passthrough_helpers.sh" ]]; then
   source "$LOCAL_SCRIPTS_DEFAULT/global/pci_passthrough_helpers.sh"
 fi
+if [[ -f "$LOCAL_SCRIPTS/global/pmx_journal.sh" ]]; then
+  source "$LOCAL_SCRIPTS/global/pmx_journal.sh"
+fi
 load_language
 initialize_cache
 
@@ -74,6 +77,9 @@ register_vfio_iommu_tool() {
 }
 
 enable_iommu_cmdline() {
+  local FUNC_VERSION="1.0"
+  pmx_journal_context "enable_iommu_cmdline" "$FUNC_VERSION"
+
   local silent="${1:-}"
   local cpu_vendor iommu_param
   cpu_vendor=$(grep -m1 "vendor_id" /proc/cpuinfo 2>/dev/null | awk '{print $3}')
@@ -95,7 +101,8 @@ enable_iommu_cmdline() {
   if [[ -f "$cmdline_file" ]] && grep -qE 'root=ZFS=|root=ZFS/' "$cmdline_file" 2>/dev/null; then
     if ! grep -q "$iommu_param" "$cmdline_file" || ! grep -q "iommu=pt" "$cmdline_file"; then
       cp "$cmdline_file" "${cmdline_file}.bak.$(date +%Y%m%d_%H%M%S)"
-      sed -i "s|\\s*$| ${iommu_param} iommu=pt|" "$cmdline_file"
+      pmx_edit_file "$cmdline_file" "s|\\s*$| ${iommu_param} iommu=pt|"
+      pmx_record_execution "refresh Proxmox boot entries" "proxmox-boot-tool refresh"
       proxmox-boot-tool refresh >/dev/null 2>&1 || true
       [[ "$silent" != "silent" ]] && msg_ok "$(translate "IOMMU parameters added to /etc/kernel/cmdline")"
     else
@@ -104,7 +111,8 @@ enable_iommu_cmdline() {
   elif [[ -f "$grub_file" ]]; then
     if ! grep -q "$iommu_param" "$grub_file" || ! grep -q "iommu=pt" "$grub_file"; then
       cp "$grub_file" "${grub_file}.bak.$(date +%Y%m%d_%H%M%S)"
-      sed -i "/GRUB_CMDLINE_LINUX_DEFAULT=/ s|\"$| ${iommu_param} iommu=pt\"|" "$grub_file"
+      pmx_edit_file "$grub_file" "/GRUB_CMDLINE_LINUX_DEFAULT=/ s|\"$| ${iommu_param} iommu=pt\"|"
+      pmx_record_execution "regenerate GRUB configuration" "update-grub"
       update-grub >/dev/null 2>&1 || true
       [[ "$silent" != "silent" ]] && msg_ok "$(translate "IOMMU parameters added to GRUB")"
     else
@@ -521,6 +529,9 @@ prompt_controller_conflict_policy() {
 
 # ── DIALOG PHASE: resolve all conflicts before terminal ───────────────────────
 resolve_disk_conflicts() {
+  local FUNC_VERSION="1.0"
+  pmx_journal_context "resolve_disk_conflicts" "$FUNC_VERSION"
+
   local -a new_pci_list=()
   local pci vmid action slot_base scope_key has_running
 
@@ -559,13 +570,18 @@ resolve_disk_conflicts() {
     case "$action" in
       keep_disable_onboot)
         for vmid in "${source_vms[@]}"; do
-          _vm_onboot_is_enabled "$vmid" && qm set "$vmid" -onboot 0 >/dev/null 2>&1
+          if _vm_onboot_is_enabled "$vmid"; then
+            pmx_record_execution "disable autostart for source VM ${vmid}" "qm set ${vmid} -onboot 0"
+            qm set "$vmid" -onboot 0 >/dev/null 2>&1
+          fi
         done
         new_pci_list+=("$pci")
         ;;
       move_remove_source)
         slot_base=$(_pci_slot_base "$pci")
         for vmid in "${source_vms[@]}"; do
+          pmx_record_execution "remove PCI slot ${slot_base} from source VM ${vmid}" \
+            "_remove_pci_slot_from_vm_config ${vmid} ${slot_base}"
           _remove_pci_slot_from_vm_config "$vmid" "$slot_base"
         done
         new_pci_list+=("$pci")
@@ -616,10 +632,15 @@ resolve_disk_conflicts() {
           for gid in "${guest_ids[@]}"; do
             gtype="${gid%%:*}"; gid_num="${gid##*:}"
             if [[ "$gtype" == "VM" ]]; then
-              _vm_onboot_is_enabled "$gid_num" && qm set "$gid_num" -onboot 0 >/dev/null 2>&1
+              if _vm_onboot_is_enabled "$gid_num"; then
+                pmx_record_execution "disable autostart for VM ${gid_num}" "qm set ${gid_num} -onboot 0"
+                qm set "$gid_num" -onboot 0 >/dev/null 2>&1
+              fi
             else
-              grep -qE '^onboot:\s*1' "/etc/pve/lxc/$gid_num.conf" 2>/dev/null && \
+              if grep -qE '^onboot:\s*1' "/etc/pve/lxc/$gid_num.conf" 2>/dev/null; then
+                pmx_record_execution "disable autostart for CT ${gid_num}" "pct set ${gid_num} -onboot 0"
                 pct set "$gid_num" -onboot 0 >/dev/null 2>&1
+              fi
             fi
           done
           ;;
@@ -629,11 +650,15 @@ resolve_disk_conflicts() {
             if [[ "$gtype" == "VM" ]]; then
               while IFS= read -r slot; do
                 [[ -z "$slot" ]] && continue
+                pmx_record_execution "remove disk slot ${slot} from VM ${gid_num}" \
+                  "qm set ${gid_num} -delete ${slot}"
                 qm set "$gid_num" -delete "$slot" >/dev/null 2>&1
               done < <(_find_disk_slots_in_vm "$gid_num" "$disk")
             else
               while IFS= read -r slot; do
                 [[ -z "$slot" ]] && continue
+                pmx_record_execution "remove disk slot ${slot} from CT ${gid_num}" \
+                  "pct set ${gid_num} -delete ${slot}"
                 pct set "$gid_num" -delete "$slot" >/dev/null 2>&1
               done < <(_find_disk_slots_in_ct "$gid_num" "$disk")
             fi
@@ -647,6 +672,9 @@ resolve_disk_conflicts() {
 }
 
 apply_assignment() {
+  local FUNC_VERSION="1.0"
+  pmx_journal_context "apply_assignment" "$FUNC_VERSION"
+
   : >"$LOG_FILE"
   set_title
 
@@ -681,6 +709,8 @@ apply_assignment() {
     local display_name
     display_name=$(_pci_storage_display_name "$pci")
     msg_info "$(translate "Adding") ${display_name} (${pci}) → hostpci${hostpci_idx}..."
+    pmx_record_execution "assign PCI device ${pci} to VM ${SELECTED_VMID} as hostpci${hostpci_idx}" \
+      "qm set ${SELECTED_VMID} --hostpci${hostpci_idx} ${pci},pcie=1"
     if qm set "$SELECTED_VMID" "--hostpci${hostpci_idx}" "${pci},pcie=1" >>"$LOG_FILE" 2>&1; then
       msg_ok "$(translate "Controller/NVMe assigned") (hostpci${hostpci_idx} → ${pci})"
       assigned_count=$((assigned_count + 1))
@@ -709,6 +739,7 @@ apply_assignment() {
       msg_success "$(translate "Press Enter to continue...")"
       read -r
       msg_warn "$(translate "Rebooting the system...")"
+      pmx_record_execution "reboot host after enabling IOMMU" "reboot"
       reboot
     else
       msg_info2 "$(translate "To use the VM without issues, the host must be restarted before starting it.")"

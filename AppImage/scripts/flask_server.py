@@ -2254,10 +2254,16 @@ def _vm_disk_refresher_loop():
         cycle_started = time.time()
         try:
             resources = get_cached_pvesh_cluster_resources_vm() or []
+            local_node = get_proxmox_node_name()
             live_vmids = set()
             targets = []
             for r in resources:
                 if r.get('type') not in ('qemu', 'vm'):
+                    continue
+                # Cluster resources contains guests from every member. `qm
+                # guest cmd` and the resulting health ownership are local-node
+                # operations, so never probe a VM currently owned elsewhere.
+                if r.get('node') != local_node:
                     continue
                 if r.get('status') != 'running':
                     continue
@@ -6669,7 +6675,12 @@ def get_proxmox_vms():
                         # producing a false "1 package pending"
                         # every time a registered app had a newer
                         # upstream version.
-                        app_list = lxc_app_map.get(str(resource.get('vmid')))
+                        # Docker inventory can be ready before this CT has an
+                        # app sidecar (especially during startup). Keep the
+                        # core VM/LXC inventory independent from that optional
+                        # decoration: an absent app entry is an empty list,
+                        # never a reason to discard every guest in /api/vms.
+                        app_list = lxc_app_map.get(str(resource.get('vmid'))) or []
                         if app_list:
                             vm_data['app_watches'] = app_list
                             # Apps dashboard reads this to build

@@ -30,6 +30,10 @@ if [[ -f "$UTILS_FILE" ]]; then
     source "$UTILS_FILE"
 fi
 
+if [[ -f "$LOCAL_SCRIPTS/global/pmx_journal.sh" ]]; then
+    source "$LOCAL_SCRIPTS/global/pmx_journal.sh"
+fi
+
 load_language
 initialize_cache
 
@@ -56,16 +60,20 @@ get_storage_config() {
 # ==========================================================
 
 ensure_iscsi_tools() {
+    local FUNC_VERSION="1.0"
+    pmx_journal_context "ensure_iscsi_tools" "$FUNC_VERSION"
+
     if ! command -v iscsiadm >/dev/null 2>&1; then
         msg_info "$(translate "Installing iSCSI initiator tools...")"
         apt-get update &>/dev/null
-        apt-get install -y open-iscsi &>/dev/null
-        systemctl enable --now iscsid 2>/dev/null || true
+        pmx_install_pkg open-iscsi
+        pmx_enable_service iscsid 2>/dev/null || true
         msg_ok "$(translate "iSCSI tools installed")"
     fi
 
     if ! systemctl is-active --quiet iscsid 2>/dev/null; then
-        systemctl start iscsid 2>/dev/null || true
+        pmx_apply_setting "iscsid active state" "systemctl is-active iscsid 2>/dev/null || true" \
+            systemctl start iscsid || true
     fi
 }
 
@@ -217,6 +225,9 @@ configure_iscsi_storage() {
 # ==========================================================
 
 add_proxmox_iscsi_storage() {
+    local FUNC_VERSION="1.0"
+    pmx_journal_context "add_proxmox_iscsi_storage" "$FUNC_VERSION"
+
     local storage_id="$1"
     local portal="$2"
     local target="$3"
@@ -233,6 +244,8 @@ add_proxmox_iscsi_storage() {
             8 60 --title "$(translate "Storage Exists")"; then
             return 0
         fi
+        pmx_record_execution "remove existing Proxmox iSCSI storage ${storage_id}" \
+            "pvesm remove ${storage_id}"
         pvesm remove "$storage_id" 2>/dev/null || true
     fi
 
@@ -240,6 +253,8 @@ add_proxmox_iscsi_storage() {
     msg_info "$(translate "Adding iSCSI storage to Proxmox...")"
 
     local pvesm_output pvesm_result
+    pmx_record_execution "add iSCSI target ${target} as Proxmox storage ${storage_id}" \
+        "pvesm add iscsi ${storage_id} --portal ${portal} --target ${target} --content ${content}"
     pvesm_output=$(pvesm add iscsi "$storage_id" \
         --portal "$portal" \
         --target "$target" \
@@ -359,6 +374,9 @@ view_iscsi_storages() {
 }
 
 remove_iscsi_storage() {
+    local FUNC_VERSION="1.0"
+    pmx_journal_context "remove_iscsi_storage" "$FUNC_VERSION"
+
     if ! command -v pvesm >/dev/null 2>&1; then
         dialog --backtitle "ProxMenux" --title "$(translate "Error")" \
             --msgbox "\n$(translate "pvesm not found.")" 8 60
@@ -400,6 +418,7 @@ remove_iscsi_storage() {
         show_proxmenux_logo
         msg_title "$(translate "Remove iSCSI Storage")"
 
+        pmx_record_execution "remove Proxmox iSCSI storage ${SELECTED}" "pvesm remove ${SELECTED}"
         if pvesm remove "$SELECTED" 2>/dev/null; then
             msg_ok "$(translate "Storage") $SELECTED $(translate "removed successfully from Proxmox.")"
         else

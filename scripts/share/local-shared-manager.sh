@@ -42,6 +42,10 @@ if [[ -f "$UTILS_FILE" ]]; then
     source "$UTILS_FILE"
 fi
 
+if [[ -f "$LOCAL_SCRIPTS/global/pmx_journal.sh" ]]; then
+    source "$LOCAL_SCRIPTS/global/pmx_journal.sh"
+fi
+
 SHARE_COMMON_FILE="$LOCAL_SCRIPTS/global/share-common.func"
 if ! source "$SHARE_COMMON_FILE" 2>/dev/null; then
     msg_error "$(translate "Could not load shared functions. Script cannot continue.")"
@@ -64,8 +68,13 @@ fi
 
 lsm_apply_multi_unpriv_permissions() {
     local dir="$1"
+    local FUNC_VERSION="1.0"
+    pmx_journal_context "lsm_apply_multi_unpriv_permissions" "$FUNC_VERSION"
 
     [[ -z "$dir" || ! -d "$dir" ]] && return 1
+
+    pmx_record_execution "apply shared LXC permission profile to ${dir}" \
+        "chown root:root; chmod 1777; chmod -R a+rwX; apply default ACLs when available"
 
     # root:root ownership — no new group needed.
     chown root:root "$dir" 2>/dev/null || true
@@ -224,6 +233,9 @@ lsm_select_host_mount_point_dialog() {
 }
 
 create_shared_directory() {
+    local FUNC_VERSION="1.0"
+    pmx_journal_context "create_shared_directory" "$FUNC_VERSION"
+
     lsm_select_host_mount_point_dialog "$(translate "Select Shared Directory Location")" "shared"
     [[ -z "$LSM_SELECTED_MOUNT_POINT" ]] && return
     SHARED_DIR="$LSM_SELECTED_MOUNT_POINT"
@@ -231,6 +243,7 @@ create_shared_directory() {
     show_proxmenux_logo
     msg_title "$(translate "Create Shared Directory")"
 
+    pmx_record_execution "create shared directory ${SHARED_DIR}" "mkdir -p ${SHARED_DIR}"
     if ! mkdir -p "$SHARED_DIR" 2>/dev/null; then
         msg_error "$(translate "Failed to create directory:") $SHARED_DIR"
         echo ""

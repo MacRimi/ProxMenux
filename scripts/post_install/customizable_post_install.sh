@@ -58,6 +58,11 @@ fi
 if [[ -f "$LOCAL_SCRIPTS/global/utils-install-functions.sh" ]]; then
     source "$LOCAL_SCRIPTS/global/utils-install-functions.sh"
 fi
+# Recording is part of writing: sourced before any function runs so a
+# change made without it is a mistake we can find, not one we can make.
+if [[ -f "$LOCAL_SCRIPTS/global/pmx_journal.sh" ]]; then
+    source "$LOCAL_SCRIPTS/global/pmx_journal.sh"
+fi
 # ==========================================================
 
 
@@ -89,6 +94,18 @@ register_tool() {
   local state="$2"
   local version="${3:-1.0}"
   local source="${4:-${SCRIPT_SOURCE:-unknown}}"
+  # Recorded here rather than in each function: this is the one call the
+  # whole of post-install already makes, so every applied tool reaches
+  # the journal even where the function itself still writes directly.
+  # Such an entry says what was applied and admits it cannot say what
+  # changed, which is the honest account for anything not yet migrated.
+  if declare -F pmx_record_applied >/dev/null 2>&1; then
+    PMX_JOURNAL_FUNCTION="${FUNCNAME[1]:-$tool}" \
+    PMX_JOURNAL_VERSION="$version" \
+    PMX_JOURNAL_SOURCE="$source" \
+      pmx_record_applied "$tool" "$version" \
+        "$([[ "$state" == "true" ]] && echo applied || echo removed)"
+  fi
   ensure_tools_json
   if [[ "$state" == "true" ]]; then
     jq --arg t "$tool" --arg ver "$version" --arg src "$source" \
@@ -157,17 +174,20 @@ $(translate "Do you want to continue anyway?")" 13 70
 
 enable_kexec() {
     local FUNC_VERSION="1.1"
+    pmx_journal_context "enable_kexec" "$FUNC_VERSION"
     # description: Install kexec-tools and add a Ctrl+Alt+K hotkey + systemd unit for fast reboots that skip BIOS/POST.
     msg_info2 "$(translate "Configuring kexec for quick reboots...")"
     NECESSARY_REBOOT=1
 
     # Set default answers for debconf
-    echo "kexec-tools kexec-tools/load_kexec boolean false" | debconf-set-selections > /dev/null 2>&1
+    pmx_apply_setting "kexec-tools/load_kexec" \
+        "debconf-show kexec-tools 2>/dev/null | grep -E '^[* ]*kexec-tools/load_kexec:'" \
+        bash -c 'echo "kexec-tools kexec-tools/load_kexec boolean false" | debconf-set-selections'
 
     msg_info "$(translate "Installing kexec-tools...")"
     # Install kexec-tools without showing output
     if ! dpkg -s kexec-tools >/dev/null 2>&1; then
-        /usr/bin/env DEBIAN_FRONTEND=noninteractive apt-get -y -o Dpkg::Options::='--force-confdef' install kexec-tools > /dev/null 2>&1
+        pmx_install_pkg kexec-tools
         msg_ok "$(translate "kexec-tools installed successfully")"
     else
         msg_ok "$(translate "kexec-tools is already installed")"
@@ -176,7 +196,7 @@ enable_kexec() {
     # Create systemd service file
     local service_file="/etc/systemd/system/kexec-pve.service"
     if [ ! -f "$service_file" ]; then
-        cat <<'EOF' > "$service_file"
+        pmx_write_file "$service_file" <<'EOF'
 [Unit]
 Description=Loading new kernel into memory
 Documentation=man:kexec(8)
@@ -200,18 +220,20 @@ EOF
 
     # Enable the service
     if ! systemctl is-enabled kexec-pve.service > /dev/null 2>&1; then
-        systemctl enable kexec-pve.service > /dev/null 2>&1
+        pmx_apply_setting "kexec-pve.service enablement" \
+            "systemctl is-enabled kexec-pve.service 2>/dev/null" \
+            systemctl enable kexec-pve.service
         msg_ok "$(translate "kexec-pve service enabled")"
     else
         msg_ok "$(translate "kexec-pve service is already enabled")"
     fi
     
     if [ ! -f /root/.bash_profile ]; then
-    touch /root/.bash_profile
+    pmx_write_file /root/.bash_profile < /dev/null
     fi
     
     if ! grep -q "alias reboot-quick='systemctl kexec'" /root/.bash_profile; then
-        echo "alias reboot-quick='systemctl kexec'" >> /root/.bash_profile
+        echo "alias reboot-quick='systemctl kexec'" | pmx_append_file /root/.bash_profile
         msg_ok "$(translate "reboot-quick alias added")"
     else
         msg_ok "$(translate "reboot-quick alias is already configured")"
@@ -301,9 +323,12 @@ MaxLevelConsole=notice
 MaxLevelWall=crit
 EOF
 
-    # Compare the current configuration with the new one
+    # This function already declines to write when nothing differs; the
+    # journal replaces the move so the audit sees what was replaced.
     if ! cmp -s "$journald_conf" "/tmp/journald.conf.new"; then
-        mv "/tmp/journald.conf.new" "$journald_conf"
+        pmx_journal_context "optimize_journald" "$FUNC_VERSION"
+        pmx_write_file "$journald_conf" < /tmp/journald.conf.new
+        rm -f "/tmp/journald.conf.new"
         config_changed=true
     else
         rm "/tmp/journald.conf.new"
@@ -349,8 +374,10 @@ configure_kernel_panic() {
 
     msg_info "$(translate "Updating kernel panic configuration...")"
 
-    # Create or update the configuration file
-    cat <<EOF > "$config_file"
+    # Written through the journal, so the audit can show what this
+    # replaced — or that the file did not exist before.
+    pmx_journal_context "configure_kernel_panic" "$FUNC_VERSION"
+    pmx_write_file "$config_file" <<EOF
 # Enable restart on kernel panic, kernel oops and hardlockup
 kernel.core_pattern = /var/crash/core.%t.%p
 # Reboot on kernel panic after 10s
@@ -377,6 +404,7 @@ EOF
 
 increase_system_limits() {
     local FUNC_VERSION="1.1"
+    pmx_journal_context "increase_system_limits" "$FUNC_VERSION"
     # description: Raise inotify watches, file descriptors, process keys and PID limits to enterprise levels.
     msg_info2 "$(translate "Increasing various system limits...")"
     NECESSARY_REBOOT=1
@@ -391,7 +419,8 @@ increase_system_limits() {
             grep -vF "# ProxMenux configuration" "$file" > "$temp_file"
         fi
         echo -e "# ProxMenux configuration\n$content" >> "$temp_file"
-        mv "$temp_file" "$file"
+        pmx_write_file "$file" < "$temp_file"
+        rm -f "$temp_file"
     }
 
     # Increase max user watches
@@ -426,7 +455,7 @@ kernel.keys.maxkeys=1000000"
     msg_info "$(translate "Setting systemd ulimits...")"
     for file in /etc/systemd/system.conf /etc/systemd/user.conf; do
         if ! grep -q "^DefaultLimitNOFILE=" "$file"; then
-            echo "DefaultLimitNOFILE=1048576" >> "$file"
+            echo "DefaultLimitNOFILE=1048576" | pmx_append_file "$file"
         fi
     done
     msg_ok "$(translate "Systemd ulimits set")"
@@ -435,7 +464,7 @@ kernel.keys.maxkeys=1000000"
     msg_info "$(translate "Configuring PAM limits...")"
     for file in /etc/pam.d/common-session /etc/pam.d/runuser-l; do
         if ! grep -q "^session required pam_limits.so" "$file"; then
-            echo 'session required pam_limits.so' >> "$file"
+            echo 'session required pam_limits.so' | pmx_append_file "$file"
         fi
     done
     msg_ok "$(translate "PAM limits configured")"
@@ -443,8 +472,8 @@ kernel.keys.maxkeys=1000000"
     # Set ulimit for the shell user
     msg_info "$(translate "Setting ulimit for the shell user...")"
     if ! grep -q "ulimit -n 1048576" /root/.profile; then
-        sed -i '/ulimit -n 256000/d' /root/.profile 2>/dev/null
-        echo "ulimit -n 1048576" >> /root/.profile
+        pmx_edit_file /root/.profile '/ulimit -n 256000/d' 2>/dev/null || true
+        echo "ulimit -n 1048576" | pmx_append_file /root/.profile
     fi
     msg_ok "$(translate "Shell user ulimit set")"
 
@@ -477,6 +506,7 @@ fs.aio-max-nr = 1048576"
 
 skip_apt_languages() {
     local FUNC_VERSION="1.0"
+    pmx_journal_context "skip_apt_languages" "$FUNC_VERSION"
     # description: Stop APT from downloading translation files to speed up updates.
     msg_info2 "$(translate "Configuring APT to skip downloading additional languages")"
 
@@ -499,9 +529,10 @@ skip_apt_languages() {
     if ! locale -a | grep -qi "^$normalized_locale$"; then
         # Only add to locale.gen if missing
         if ! grep -qE "^${default_locale}[[:space:]]+UTF-8" /etc/locale.gen; then
-            echo "$default_locale UTF-8" >> /etc/locale.gen
+            echo "$default_locale UTF-8" | pmx_append_file /etc/locale.gen
         fi
         msg_info "$(translate "Generating missing locale:") $default_locale"
+        pmx_record_execution "Generate locale" "locale-gen $default_locale"
         locale-gen "$default_locale"
         msg_ok "$(translate "Locale generated")"
     fi
@@ -514,7 +545,7 @@ skip_apt_languages() {
     if [ -f "$config_file" ] && grep -Fxq "$config_content" "$config_file"; then
         msg_ok "$(translate "APT language configuration already set")"
     else
-        echo "$config_content" > "$config_file"
+        printf '%s\n' "$config_content" | pmx_write_file "$config_file"
         msg_ok "$(translate "APT language configuration updated")"
     fi
 
@@ -537,6 +568,7 @@ skip_apt_languages() {
 
 configure_time_sync() {
     local FUNC_VERSION="1.0"
+    pmx_journal_context "configure_time_sync" "$FUNC_VERSION"
     # description: Detect timezone from public IP and enable systemd time sync (NTP).
     msg_info2 "$(translate "Configuring system time settings...")"
 
@@ -564,13 +596,18 @@ configure_time_sync() {
 
     msg_ok "$(translate "Found timezone $timezone for IP $this_ip")"
 
+    pmx_apply_setting "timezone" "timedatectl show -p Timezone --value" \
+        timedatectl set-timezone "$timezone"
     if timedatectl set-timezone "$timezone"; then
         msg_ok "$(translate "Timezone set to $timezone")"
         
+        pmx_apply_setting "ntp" "timedatectl show -p NTP --value" \
+            timedatectl set-ntp true
         if timedatectl set-ntp true; then
             msg_ok "$(translate "Time settings configured - Timezone:") $timezone"
             register_tool "time_sync" true "$FUNC_VERSION"
             
+            pmx_record_execution "Restart Postfix" "systemctl restart postfix"
             systemctl restart postfix 2>/dev/null || true
         else
             msg_warn "$(translate "Failed to enable automatic time synchronization")"
@@ -643,6 +680,7 @@ configure_time_sync() {
 
 apply_amd_fixes() {
     local FUNC_VERSION="1.0"
+    pmx_journal_context "apply_amd_fixes" "$FUNC_VERSION"
     # description: Detect AMD EPYC/Ryzen CPUs and apply microcode + IOMMU + KVM-specific kernel boot params.
     msg_info2 "$(translate "Detecting AMD CPU and applying fixes if necessary...")"
     NECESSARY_REBOOT=1
@@ -674,13 +712,14 @@ apply_amd_fixes() {
         if ! grep -qw "$added_param" "$cmdline_file"; then
             cp "$cmdline_file" "${cmdline_file}.bak"
 
-            sed -i "s|\s*$| $added_param|" "$cmdline_file"
+            pmx_edit_file "$cmdline_file" "s|\s*$| $added_param|"
             msg_ok "$(translate "Added '$added_param' to /etc/kernel/cmdline")"
         else
             msg_ok "$(translate "'$added_param' already present in /etc/kernel/cmdline")"
         fi
 
         if command -v proxmox-boot-tool >/dev/null 2>&1; then
+            pmx_record_execution "Refresh Proxmox boot configuration" "proxmox-boot-tool refresh"
             proxmox-boot-tool refresh >/dev/null 2>&1 && \
             msg_ok "$(translate "proxmox-boot-tool refreshed")" || \
             msg_warn "$(translate "Failed to refresh proxmox-boot-tool")"
@@ -689,18 +728,19 @@ apply_amd_fixes() {
         # GRUB (no ZFS)
         if [[ -f "$grub_file" ]]; then
 
-            grep -q '^GRUB_CMDLINE_LINUX_DEFAULT="' "$grub_file" || echo 'GRUB_CMDLINE_LINUX_DEFAULT=""' >> "$grub_file"
+            grep -q '^GRUB_CMDLINE_LINUX_DEFAULT="' "$grub_file" || echo 'GRUB_CMDLINE_LINUX_DEFAULT=""' | pmx_append_file "$grub_file"
 
             if ! grep -q 'GRUB_CMDLINE_LINUX_DEFAULT=' "$grub_file"; then
                 msg_warn "$(translate "GRUB_CMDLINE_LINUX_DEFAULT not found in GRUB config")"
             else
                 if ! grep -q "GRUB_CMDLINE_LINUX_DEFAULT=.*\b$added_param\b" "$grub_file"; then
                     cp "$grub_file" "${grub_file}.bak"
-                    sed -i "s/^\(GRUB_CMDLINE_LINUX_DEFAULT=\"[^\"]*\)\"/\1 $added_param\"/" "$grub_file"
+                    pmx_edit_file "$grub_file" "s/^\(GRUB_CMDLINE_LINUX_DEFAULT=\"[^\"]*\)\"/\1 $added_param\"/"
                     msg_ok "$(translate "Added '$added_param' to GRUB_CMDLINE_LINUX_DEFAULT")"
                 else
                     msg_ok "$(translate "'$added_param' already present in GRUB_CMDLINE_LINUX_DEFAULT")"
                 fi
+                pmx_record_execution "Regenerate GRUB configuration" "update-grub"
                 update-grub >/dev/null 2>&1 && \
                 msg_ok "$(translate "GRUB configuration updated")" || \
                 msg_warn "$(translate "Failed to update GRUB")"
@@ -712,22 +752,22 @@ apply_amd_fixes() {
 
 
     local kvm_conf="/etc/modprobe.d/kvm.conf"
-    touch "$kvm_conf"
+    [[ -f "$kvm_conf" ]] || pmx_write_file "$kvm_conf" < /dev/null
 
     if ! grep -q "^options kvm " "$kvm_conf"; then
-        echo "options kvm ignore_msrs=Y report_ignored_msrs=N" >> "$kvm_conf"
+        echo "options kvm ignore_msrs=Y report_ignored_msrs=N" | pmx_append_file "$kvm_conf"
         msg_ok "$(translate "KVM MSR options added to /etc/modprobe.d/kvm.conf")"
     else
 
         if ! grep -q "ignore_msrs=" "$kvm_conf"; then
-            sed -i 's/^options kvm /options kvm ignore_msrs=Y /' "$kvm_conf"
+            pmx_edit_file "$kvm_conf" 's/^options kvm /options kvm ignore_msrs=Y /'
         else
-            sed -i 's/ignore_msrs=[YNyn]/ignore_msrs=Y/' "$kvm_conf"
+            pmx_edit_file "$kvm_conf" 's/ignore_msrs=[YNyn]/ignore_msrs=Y/'
         fi
         if ! grep -q "report_ignored_msrs=" "$kvm_conf"; then
-            sed -i 's/^options kvm .*/& report_ignored_msrs=N/' "$kvm_conf"
+            pmx_edit_file "$kvm_conf" 's/^options kvm .*/& report_ignored_msrs=N/'
         else
-            sed -i 's/report_ignored_msrs=[YNyn]/report_ignored_msrs=N/' "$kvm_conf"
+            pmx_edit_file "$kvm_conf" 's/report_ignored_msrs=[YNyn]/report_ignored_msrs=N/'
         fi
         msg_ok "$(translate "KVM MSR options ensured in /etc/modprobe.d/kvm.conf")"
     fi
@@ -780,11 +820,12 @@ force_apt_ipv4() {
 
 apply_network_optimizations() {
     local FUNC_VERSION="1.2"
+    pmx_journal_context "apply_network_optimizations" "$FUNC_VERSION"
     # description: Tune TCP buffers, somaxconn, IPv4 hardening and disable rp_filter on fw bridges (PVE 9 compatible).
     msg_info "$(translate "Optimizing network settings...")"
     NECESSARY_REBOOT=1
 
-    cat <<'EOF' > /etc/sysctl.d/99-network.conf
+    pmx_write_file /etc/sysctl.d/99-network.conf <<'EOF'
 # ==========================================================
 # ProxMenux - Network tuning (PVE 9 compatible)
 # ==========================================================
@@ -838,9 +879,10 @@ net.unix.max_dgram_qlen = 4096
 EOF
 
 
+    pmx_record_execution "Apply network sysctl configuration" "sysctl --system"
     sysctl --system > /dev/null 2>&1
 
-    cat > /usr/local/sbin/proxmenux-fwbr-tune <<'EOF'
+    pmx_write_file /usr/local/sbin/proxmenux-fwbr-tune <<'EOF'
 #!/usr/bin/env bash
 # Set rp_filter=0 and log_martians=0 on Proxmox fw bridge interfaces.
 # No arg → sweep every interface currently under /proc/sys/net/ipv4/conf/.
@@ -871,7 +913,7 @@ EOF
     chmod 0755 /usr/local/sbin/proxmenux-fwbr-tune
     chown root:root /usr/local/sbin/proxmenux-fwbr-tune
 
-    cat > /etc/systemd/system/proxmenux-fwbr-tune.service <<'EOF'
+    pmx_write_file /etc/systemd/system/proxmenux-fwbr-tune.service <<'EOF'
 [Unit]
 Description=ProxMenux - Tune rp_filter/log_martians on virtual fw bridges
 After=network-online.target
@@ -886,9 +928,9 @@ RemainAfterExit=yes
 WantedBy=multi-user.target
 EOF
 
-    rm -f /etc/udev/rules.d/99-proxmenux-fwbr-tune.rules
+    pmx_remove_file /etc/udev/rules.d/99-proxmenux-fwbr-tune.rules
 
-    cat > /etc/udev/rules.d/99-zz-proxmenux-fwbr-tune.rules <<'EOF'
+    pmx_write_file /etc/udev/rules.d/99-zz-proxmenux-fwbr-tune.rules <<'EOF'
 ACTION=="add", SUBSYSTEM=="net", KERNEL=="fwbr*", RUN+="/usr/local/sbin/proxmenux-fwbr-tune %k"
 ACTION=="add", SUBSYSTEM=="net", KERNEL=="fwln*", RUN+="/usr/local/sbin/proxmenux-fwbr-tune %k"
 ACTION=="add", SUBSYSTEM=="net", KERNEL=="fwpr*", RUN+="/usr/local/sbin/proxmenux-fwbr-tune %k"
@@ -897,15 +939,18 @@ EOF
     chmod 0644 /etc/udev/rules.d/99-zz-proxmenux-fwbr-tune.rules
     chown root:root /etc/udev/rules.d/99-zz-proxmenux-fwbr-tune.rules
 
+    pmx_record_execution "Reload systemd configuration" "systemctl daemon-reload"
     systemctl daemon-reload >/dev/null 2>&1 || true
+    pmx_record_execution "Reload udev rules" "udevadm control --reload-rules"
     udevadm control --reload-rules >/dev/null 2>&1 || true
-    systemctl enable --now proxmenux-fwbr-tune.service >/dev/null 2>&1 || true
+    pmx_enable_service proxmenux-fwbr-tune.service || true
+    pmx_record_execution "Tune existing Proxmox firewall bridge interfaces" "/usr/local/sbin/proxmenux-fwbr-tune"
     /usr/local/sbin/proxmenux-fwbr-tune >/dev/null 2>&1 || true
 
 
     local interfaces_file="/etc/network/interfaces"
     if ! grep -q 'source /etc/network/interfaces.d/*' "$interfaces_file"; then
-        echo "source /etc/network/interfaces.d/*" >> "$interfaces_file"
+        echo "source /etc/network/interfaces.d/*" | pmx_append_file "$interfaces_file"
     fi
 
     msg_ok "$(translate "Network optimization completed")"
@@ -971,6 +1016,7 @@ install_openvswitch() {
 
 enable_tcp_fast_open() {
     local FUNC_VERSION="1.0"
+    pmx_journal_context "enable_tcp_fast_open" "$FUNC_VERSION"
     # description: Enable TCP Fast Open (clients + server) and BBR congestion control for better latency under load.
     msg_info2 "$(translate "Configuring TCP optimizations...")"
 
@@ -981,7 +1027,7 @@ enable_tcp_fast_open() {
     # Enable Google TCP BBR congestion control
     msg_info "$(translate "Enabling Google TCP BBR congestion control...")"
     if [ ! -f "$bbr_conf" ] || ! grep -q "net.ipv4.tcp_congestion_control = bbr" "$bbr_conf"; then
-        cat <<EOF > "$bbr_conf"
+        pmx_write_file "$bbr_conf" <<EOF
 # TCP BBR congestion control
 net.core.default_qdisc = fq
 net.ipv4.tcp_congestion_control = bbr
@@ -995,7 +1041,7 @@ EOF
     # Enable TCP Fast Open
     msg_info "$(translate "Enabling TCP Fast Open...")"
     if [ ! -f "$tfo_conf" ] || ! grep -q "net.ipv4.tcp_fastopen = 3" "$tfo_conf"; then
-        cat <<EOF > "$tfo_conf"
+        pmx_write_file "$tfo_conf" <<EOF
 # TCP Fast Open (TFO)
 net.ipv4.tcp_fastopen = 3
 EOF
@@ -1005,6 +1051,7 @@ EOF
     fi
 
     # Apply changes
+    pmx_record_execution "Apply sysctl configuration" "sysctl --system"
     sysctl --system > /dev/null 2>&1
 
     if [ "$reboot_needed" -eq 1 ]; then
@@ -1028,6 +1075,7 @@ EOF
 
 install_ceph() {
     local FUNC_VERSION="1.1"
+    pmx_journal_context "install_ceph" "$FUNC_VERSION"
     # description: Install Ceph (client + server packages) for distributed RBD/CephFS storage; PVE 8/9 aware repo selection.
     msg_info2 "$(translate "Installing Ceph support...")"
     
@@ -1070,12 +1118,12 @@ install_ceph() {
         # ==========================================
         
 
-        [ -f /etc/apt/sources.list.d/ceph-squid.list ] && rm -f /etc/apt/sources.list.d/ceph-squid.list
-        [ -f /etc/apt/sources.list.d/ceph.list ] && rm -f /etc/apt/sources.list.d/ceph.list
+        [ -f /etc/apt/sources.list.d/ceph-squid.list ] && pmx_remove_file /etc/apt/sources.list.d/ceph-squid.list
+        [ -f /etc/apt/sources.list.d/ceph.list ] && pmx_remove_file /etc/apt/sources.list.d/ceph.list
         
         # Create new deb822 format Ceph repository for PVE 9
         msg_info "$(translate "Creating Ceph repository for PVE 9 (deb822 format)...")"
-        cat > /etc/apt/sources.list.d/ceph.sources << EOF
+        pmx_write_file /etc/apt/sources.list.d/ceph.sources << EOF
 Types: deb
 URIs: https://download.proxmox.com/debian/ceph-${ceph_version}
 Suites: ${target_codename}
@@ -1092,13 +1140,14 @@ EOF
         
         # Use legacy format for PVE 8
         msg_info "$(translate "Creating Ceph repository for PVE 8 (legacy format)...")"
-        echo "deb [signed-by=/usr/share/keyrings/proxmox-archive-keyring.gpg] https://download.proxmox.com/debian/ceph-${ceph_version} ${target_codename} no-subscription" > /etc/apt/sources.list.d/ceph-${ceph_version}.list
+        echo "deb [signed-by=/usr/share/keyrings/proxmox-archive-keyring.gpg] https://download.proxmox.com/debian/ceph-${ceph_version} ${target_codename} no-subscription" | pmx_write_file /etc/apt/sources.list.d/ceph-${ceph_version}.list
         msg_ok "$(translate "Ceph repository configured for PVE 8")"
     fi
 
  
     msg_info "$(translate "Updating package lists...")"
     
+    pmx_record_execution "Update package lists for Ceph" "apt-get update"
     update_output=$(apt-get update 2>&1)
     update_exit_code=$?
     
@@ -1131,6 +1180,7 @@ EOF
     tput civis
     tput sc
     
+    pmx_record_execution "Install Ceph packages" "pveceph install"
     (pveceph install 2>&1 | \
     while IFS= read -r line; do
         if [[ $line == *"Installing"* ]] || [[ $line == *"Unpacking"* ]] || [[ $line == *"Setting up"* ]] || [[ $line == *"Processing"* ]]; then
@@ -1518,13 +1568,14 @@ update_snapshot_schedule() {
     local schedule_type="$2"
     local keep_value="$3"
     local frequency="$4"
+    pmx_journal_context "update_snapshot_schedule" "$FUNC_VERSION"
 
     if [ -f "$config_file" ]; then
         if ! grep -q ".*--keep=$keep_value" "$config_file"; then
             if [ -n "$frequency" ]; then
-                sed -i "s|^\*/[0-9]*.*--keep=[0-9]*|$frequency * * * * root /usr/sbin/zfs-auto-snapshot --quiet --syslog --label=$schedule_type --keep=$keep_value|" "$config_file"
+                pmx_edit_file "$config_file" "s|^\*/[0-9]*.*--keep=[0-9]*|$frequency * * * * root /usr/sbin/zfs-auto-snapshot --quiet --syslog --label=$schedule_type --keep=$keep_value|"
             else
-                sed -i "s|--keep=[0-9]*|--keep=$keep_value|g" "$config_file"
+                pmx_edit_file "$config_file" "s|--keep=[0-9]*|--keep=$keep_value|g"
             fi
             msg_ok "$(translate "Updated $schedule_type snapshot schedule")"
         else
@@ -1577,7 +1628,9 @@ disable_rpc() {
 
     msg_info "$(translate "Disabling and stopping rpcbind service and socket...")"
 
-    systemctl disable --now rpcbind.socket rpcbind.service > /dev/null 2>&1 || true
+    pmx_journal_context "disable_rpc" "$FUNC_VERSION"
+    pmx_disable_service rpcbind.socket || true
+    pmx_disable_service rpcbind.service || true
 
     for unit in rpcbind.socket rpcbind.service; do
         active_state="$(systemctl is-active "$unit" 2>/dev/null || true)"
@@ -1604,13 +1657,14 @@ disable_rpc() {
 
 configure_pigz() {
     local FUNC_VERSION="1.0"
+    pmx_journal_context "configure_pigz" "$FUNC_VERSION"
     # description: Replace gzip with pigz (parallel implementation) for faster vzdump backup compression.
     msg_info2 "$(translate "Configuring pigz as a faster replacement for gzip...")"
 
     # Enable pigz in vzdump configuration
     msg_info "$(translate "Enabling pigz in vzdump configuration...")"
     if ! grep -q "^pigz: 1" /etc/vzdump.conf; then
-        sed -i "s/#pigz:.*/pigz: 1/" /etc/vzdump.conf
+        pmx_edit_file /etc/vzdump.conf "s/#pigz:.*/pigz: 1/"
         msg_ok "$(translate "pigz enabled in vzdump configuration")"
     else
         msg_ok "$(translate "pigz enabled in vzdump configuration")"
@@ -1619,7 +1673,7 @@ configure_pigz() {
     # Install pigz
     if ! dpkg -s pigz >/dev/null 2>&1; then
         msg_info "$(translate "Installing pigz...")"
-        if /usr/bin/env DEBIAN_FRONTEND=noninteractive apt-get -y -o Dpkg::Options::='--force-confdef' install pigz > /dev/null 2>&1; then
+        if pmx_install_pkg pigz; then
             msg_ok "$(translate "pigz installed successfully")"
         else
             msg_error "$(translate "Failed to install pigz")"
@@ -1638,7 +1692,7 @@ GZIP="-1"
 exec /usr/bin/pigz "\$@"
 EOF
     then
-        cat <<EOF > /bin/pigzwrapper
+        pmx_write_file /bin/pigzwrapper <<EOF
 #!/bin/sh
 PATH=/bin:\$PATH
 GZIP="-1"
@@ -1654,7 +1708,7 @@ EOF
     msg_info "$(translate "Replacing gzip with pigz wrapper...")"
     if [ ! -f /bin/gzip.original ]; then
         mv -f /bin/gzip /bin/gzip.original && \
-        cp -f /bin/pigzwrapper /bin/gzip && \
+        pmx_write_file /bin/gzip < /bin/pigzwrapper && \
         chmod +x /bin/gzip
         msg_ok "$(translate "gzip replaced with pigz wrapper successfully")"
     else
@@ -1774,6 +1828,7 @@ install_guest_agent() {
 
 enable_vfio_iommu() {
     local FUNC_VERSION="1.0"
+    pmx_journal_context "enable_vfio_iommu" "$FUNC_VERSION"
     # description: Enable IOMMU and load VFIO modules to allow GPU/PCI passthrough into VMs.
     msg_info2 "$(translate "Enabling IOMMU and configuring VFIO for PCI passthrough...")"
     NECESSARY_REBOOT=1
@@ -1789,9 +1844,9 @@ enable_vfio_iommu() {
         msg_info "$(translate "Cleaning up duplicate parameters...")"
         cp "$cmdline_file" "${cmdline_file}.cleanup.bak"
         
-        sed -i 's/intel_iommu=on[[:space:]]*intel_iommu=on/intel_iommu=on/g' "$cmdline_file"
-        sed -i 's/amd_iommu=on[[:space:]]*amd_iommu=on/amd_iommu=on/g' "$cmdline_file"
-        sed -i 's/iommu=pt[[:space:]]*iommu=pt/iommu=pt/g' "$cmdline_file"
+        pmx_edit_file "$cmdline_file" 's/intel_iommu=on[[:space:]]*intel_iommu=on/intel_iommu=on/g'
+        pmx_edit_file "$cmdline_file" 's/amd_iommu=on[[:space:]]*amd_iommu=on/amd_iommu=on/g'
+        pmx_edit_file "$cmdline_file" 's/iommu=pt[[:space:]]*iommu=pt/iommu=pt/g'
         
         msg_ok "$(translate "Duplicate parameters cleaned")"
     fi
@@ -1842,7 +1897,7 @@ enable_vfio_iommu() {
             [[ "$needs_iommu_pt" == true ]] && params_to_add+=" iommu=pt"
             [[ "$needs_additional" == true ]] && params_to_add+=" $additional_params"
             
-            sed -i "s|\s*$|$params_to_add|" "$cmdline_file"
+            pmx_edit_file "$cmdline_file" "s|\s*$|$params_to_add|"
             msg_ok "$(translate "IOMMU parameters added to /etc/kernel/cmdline")"
         else
             msg_ok "$(translate "IOMMU already configured in /etc/kernel/cmdline")"
@@ -1875,7 +1930,7 @@ enable_vfio_iommu() {
                 params_to_add+=" $additional_params"
             fi
             
-            sed -i "/GRUB_CMDLINE_LINUX_DEFAULT=/ s|\"$|$params_to_add\"|" "$grub_file"
+            pmx_edit_file "$grub_file" "/GRUB_CMDLINE_LINUX_DEFAULT=/ s|\"$|$params_to_add\"|"
             msg_ok "$(translate "IOMMU enabled in GRUB configuration")"
         else
             msg_ok "$(translate "IOMMU already enabled in GRUB configuration")"
@@ -1897,7 +1952,7 @@ enable_vfio_iommu() {
 
     for module in "${vfio_modules[@]}"; do
         if ! grep -q "^$module" "$modules_file"; then
-            echo "$module" >> "$modules_file"
+            echo "$module" | pmx_append_file "$modules_file"
         fi
     done
     msg_ok "$(translate "VFIO modules configured.")"
@@ -1905,27 +1960,30 @@ enable_vfio_iommu() {
     # Blacklist conflicting drivers (sin cambios)
     local blacklist_file="/etc/modprobe.d/blacklist.conf"
     msg_info "$(translate "Checking conflicting drivers blacklist...")"
-    touch "$blacklist_file"
+    [[ -f "$blacklist_file" ]] || pmx_write_file "$blacklist_file" < /dev/null
     
     local blacklist_drivers=("nouveau" "lbm-nouveau" "radeon" "nvidia" "nvidiafb")
     for driver in "${blacklist_drivers[@]}"; do
         if ! grep -q "^blacklist $driver" "$blacklist_file"; then
-            echo "blacklist $driver" >> "$blacklist_file"
+            echo "blacklist $driver" | pmx_append_file "$blacklist_file"
         fi
     done
     
     if ! grep -q "options nouveau modeset=0" "$blacklist_file"; then
-        echo "options nouveau modeset=0" >> "$blacklist_file"
+        echo "options nouveau modeset=0" | pmx_append_file "$blacklist_file"
     fi
     msg_ok "$(translate "Conflicting drivers blacklisted successfully.")"
     
     # Update initramfs and bootloader
     msg_info "$(translate "Updating initramfs, GRUB, and EFI boot, patience...")"
+    pmx_record_execution "Regenerate initramfs" "update-initramfs -u -k all"
     update-initramfs -u -k all > /dev/null 2>&1
     
     if [[ "$uses_zfs" == true ]]; then
+        pmx_record_execution "Refresh Proxmox boot configuration" "proxmox-boot-tool refresh"
         proxmox-boot-tool refresh > /dev/null 2>&1
     else
+        pmx_record_execution "Regenerate GRUB configuration" "update-grub"
         update-grub > /dev/null 2>&1
     fi
     
@@ -2064,6 +2122,7 @@ PY
 
 customize_bashrc() {
     local FUNC_VERSION="1.2"
+    pmx_journal_context "customize_bashrc" "$FUNC_VERSION"
     # description: Install and safely migrate the managed ProxMenux Bash prompt and aliases while preserving or selecting the short/full working-directory style.
     msg_info2 "$(translate "Customizing bashrc for root user...")"
     
@@ -2079,7 +2138,7 @@ customize_bashrc() {
     local choice=""
     local detected_path_style="short"
 
-    [[ -f "$bashrc" ]] || touch "$bashrc"
+    [[ -f "$bashrc" ]] || pmx_write_file "$bashrc" < /dev/null
     if ! detected_path_style="$(_migrate_proxmenux_bashrc "$bashrc" inspect)"; then
         msg_error "$(translate "Failed to inspect the existing ProxMenux Bash configuration.")"
         return 1
@@ -2123,13 +2182,19 @@ customize_bashrc() {
     esac
 
     [ -f "${bashrc}.bak" ] || cp "$bashrc" "${bashrc}.bak" > /dev/null 2>&1
-    if ! _migrate_proxmenux_bashrc "$bashrc" migrate >/dev/null; then
+    local migrated_bashrc
+    migrated_bashrc="$(mktemp)"
+    cp -p "$bashrc" "$migrated_bashrc"
+    if ! _migrate_proxmenux_bashrc "$migrated_bashrc" migrate >/dev/null; then
+        rm -f "$migrated_bashrc"
         msg_error "$(translate "Failed to migrate the existing ProxMenux Bash configuration.")"
         return 1
     fi
+    pmx_write_file "$bashrc" < "$migrated_bashrc"
+    rm -f "$migrated_bashrc"
     
  
-    cat >> "$bashrc" << EOF
+    pmx_append_file "$bashrc" << EOF
 ${marker_begin}
 # ProxMenux core customizations
 export HISTTIMEFORMAT="%d/%m/%y %T "
@@ -2147,7 +2212,7 @@ EOF
     
 
     if ! grep -q "source /root/.bashrc" "$bash_profile" 2>/dev/null; then
-        echo "source /root/.bashrc" >> "$bash_profile" 2>/dev/null
+        echo "source /root/.bashrc" | pmx_append_file "$bash_profile" 2>/dev/null
     fi
     
     msg_ok "$(translate "Bashrc customization completed")"
@@ -2168,6 +2233,7 @@ EOF
 
 setup_motd() {
     local FUNC_VERSION="1.0"
+    pmx_journal_context "setup_motd" "$FUNC_VERSION"
     # description: Add the ProxMenux MOTD banner while preserving the original file contents or absence for rollback.
     msg_info2 "$(translate "Configuring MOTD (Message of the Day) banner...")"
 
@@ -2201,20 +2267,20 @@ setup_motd() {
         msg_ok "$(translate "Custom MOTD message is already configured")"
     else
         # Add the custom message at the beginning of the file
-        touch "$motd_file"
+        [[ -f "$motd_file" ]] || pmx_write_file "$motd_file" < /dev/null
         local motd_tmp
         motd_tmp="$(mktemp)"
         {
             printf '%s\n\n' "$custom_message"
             cat "$motd_file"
         } > "$motd_tmp"
-        cat "$motd_tmp" > "$motd_file"
+        pmx_write_file "$motd_file" < "$motd_tmp"
         rm -f "$motd_tmp"
         changes_made=true
         msg_ok "$(translate "Custom message added to MOTD")"
     fi
 
-    sed -i '/^$/N;/^\n$/D' "$motd_file"
+    pmx_edit_file "$motd_file" '/^$/N;/^\n$/D'
 
     if $changes_made; then
         msg_success "$(translate "MOTD configuration updated successfully")"
@@ -2242,10 +2308,14 @@ optimize_logrotate() {
     local logrotate_conf="/etc/logrotate.conf"
     local backup_conf="${logrotate_conf}.bak"
 
+    # The .bak stays until reverting from the journal exists:
+    # uninstall_logrotate restores from it, and migrating the write must
+    # not quietly disable the rollback that is already shipping.
     cp -n "$logrotate_conf" "$backup_conf" 2>/dev/null || true
 
     msg_info "$(translate "Applying optimized logrotate configuration...")"
-    cat <<EOF > "$logrotate_conf"
+    pmx_journal_context "optimize_logrotate" "$FUNC_VERSION"
+    pmx_write_file "$logrotate_conf" <<EOF
 # ProxMenux optimized configuration (Log2RAM-friendly)
 daily
 su root adm
@@ -2326,7 +2396,10 @@ optimize_memory_settings() {
         msg_info "$(translate "Applying balanced memory optimization settings...")"
     fi
 
-    cat <<EOF > "$sysctl_conf"
+    # Composed in full before writing: the journal records the file as
+    # it ends up, not a write followed by an append.
+    local memory_settings
+    memory_settings="$(cat <<EOF
 # Balanced Memory Optimization
 # Improve responsiveness without excessive memory reservation
 
@@ -2340,11 +2413,15 @@ vm.dirty_background_ratio = 5
 # Avoid excessive virtual memory areas (safe for most applications)
 vm.max_map_count = 262144
 EOF
+)"
 
     if [ -f /proc/sys/vm/compaction_proactiveness ]; then
-        echo "vm.compaction_proactiveness = 20" >> "$sysctl_conf"
+        memory_settings+=$'\n''vm.compaction_proactiveness = 20'
         msg_ok "$(translate "Enabled memory compaction proactiveness")"
     fi
+
+    pmx_journal_context "optimize_memory_settings" "$FUNC_VERSION"
+    printf '%s\n' "$memory_settings" | pmx_write_file "$sysctl_conf"
 
     msg_ok "$(translate "Memory settings optimized successfully")"
     msg_success "$(translate "Memory optimization completed.")"
@@ -2363,6 +2440,7 @@ EOF
 
 optimize_vzdump() {
     local FUNC_VERSION="1.0"
+    pmx_journal_context "optimize_vzdump" "$FUNC_VERSION"
     # description: Lift vzdump bandwidth/IO limits so backups run at the storage's real throughput.
     msg_info2 "$(translate "Optimizing vzdump backup speed...")"
 
@@ -2378,16 +2456,16 @@ optimize_vzdump() {
     # Configure bandwidth limit
     msg_info "$(translate "Configuring bandwidth limit for vzdump...")"
     if ! grep -q "^bwlimit: 0" "$vzdump_conf"; then
-        sed -i '/^#*bwlimit:/d' "$vzdump_conf"
-        echo "bwlimit: 0" >> "$vzdump_conf"
+        pmx_edit_file "$vzdump_conf" '/^#*bwlimit:/d'
+        echo "bwlimit: 0" | pmx_append_file "$vzdump_conf"
     fi
     msg_ok "$(translate "Bandwidth limit configured")"
 
     # Configure I/O priority
     msg_info "$(translate "Configuring I/O priority for vzdump...")"
     if ! grep -q "^ionice: 5" "$vzdump_conf"; then
-        sed -i '/^#*ionice:/d' "$vzdump_conf"
-        echo "ionice: 5" >> "$vzdump_conf"
+        pmx_edit_file "$vzdump_conf" '/^#*ionice:/d'
+        echo "ionice: 5" | pmx_append_file "$vzdump_conf"
     fi
     msg_ok "$(translate "I/O priority configured")"
 
@@ -2470,6 +2548,7 @@ enable_ha() {
 
 configure_fastfetch() {
     local FUNC_VERSION="1.1"
+    pmx_journal_context "configure_fastfetch" "$FUNC_VERSION"
     # description: Install Fastfetch system summary tool with the ProxMenux logo + status block as the SSH login banner.
     msg_info2 "$(translate "Installing and configuring Fastfetch...")"
 
@@ -2480,14 +2559,37 @@ configure_fastfetch() {
     local logos_dir="/usr/local/share/fastfetch/logos"
     local fastfetch_config="$fastfetch_config_dir/config.jsonc"
 
+    apply_fastfetch_config() {
+        local config_tmp status
+        config_tmp="$(mktemp)"
+        if jq "$@" "$fastfetch_config" > "$config_tmp"; then
+            pmx_write_file "$fastfetch_config" < "$config_tmp"
+            status=$?
+        else
+            status=$?
+        fi
+        rm -f "$config_tmp"
+        return "$status"
+    }
+
+    download_fastfetch_logo() {
+        local path="$1" url="$2"
+        local -a statuses
+        wget -qO - "$url" | pmx_write_file "$path"
+        statuses=("${PIPESTATUS[@]}")
+        [[ "${statuses[0]}" -eq 0 && "${statuses[1]}" -eq 0 ]]
+    }
+
     # Ensure directories exist
     mkdir -p "$fastfetch_config_dir"
     mkdir -p "$logos_dir"
 
     
     if command -v fastfetch &> /dev/null; then
+        pmx_record_execution "Remove existing Fastfetch package" "apt-get remove --purge -y fastfetch"
         apt-get remove --purge -y fastfetch > /dev/null 2>&1
-        rm -f /usr/bin/fastfetch /usr/local/bin/fastfetch
+        pmx_remove_file /usr/bin/fastfetch
+        pmx_remove_file /usr/local/bin/fastfetch
     fi
 
     
@@ -2512,7 +2614,9 @@ configure_fastfetch() {
 
     
     wget -qO /tmp/fastfetch.deb "$fastfetch_deb_url"
+    pmx_record_execution "Install Fastfetch package" "dpkg -i /tmp/fastfetch.deb"
     if dpkg -i /tmp/fastfetch.deb > /dev/null 2>&1; then
+        pmx_record_execution "Resolve Fastfetch package dependencies" "apt-get install -f -y"
         apt-get install -f -y  > /dev/null 2>&1 
         msg_ok "$(translate "Fastfetch installed successfully")"
     else
@@ -2531,9 +2635,10 @@ configure_fastfetch() {
 
     
     if [ ! -f "$fastfetch_config" ]; then
-        echo '{"$schema": "https://github.com/fastfetch-cli/fastfetch/raw/dev/doc/json_schema.json", "modules": []}' > "$fastfetch_config"
+        echo '{"$schema": "https://github.com/fastfetch-cli/fastfetch/raw/dev/doc/json_schema.json", "modules": []}' | pmx_write_file "$fastfetch_config"
     fi
 
+    pmx_record_execution "Generate Fastfetch configuration" "fastfetch --gen-config-force"
     fastfetch --gen-config-force > /dev/null 2>&1
 
     while true; do
@@ -2555,8 +2660,8 @@ configure_fastfetch() {
             1)
                 msg_info "$(translate "Downloading ProxMenux logo...")"
                 local proxmenux_logo_path="$logos_dir/ProxMenux.txt"
-                if wget -qO "$proxmenux_logo_path" "https://raw.githubusercontent.com/MacRimi/ProxMenux/main/images/logos_txt/logo.txt"; then
-                    jq --arg path "$proxmenux_logo_path" '. + {logo: $path}' "$fastfetch_config" > "${fastfetch_config}.tmp" && mv "${fastfetch_config}.tmp" "$fastfetch_config"
+                if download_fastfetch_logo "$proxmenux_logo_path" "https://raw.githubusercontent.com/MacRimi/ProxMenux/main/images/logos_txt/logo.txt"; then
+                    apply_fastfetch_config --arg path "$proxmenux_logo_path" '. + {logo: $path}'
                     msg_ok "$(translate "ProxMenux logo applied")"
                 else
                     msg_error "$(translate "Failed to download ProxMenux logo")"
@@ -2565,15 +2670,15 @@ configure_fastfetch() {
                 ;;
             2)
                 msg_info "$(translate "Using default Proxmox logo...")"
-                jq 'del(.logo)' "$fastfetch_config" > "${fastfetch_config}.tmp" && mv "${fastfetch_config}.tmp" "$fastfetch_config"
+                apply_fastfetch_config 'del(.logo)'
                 msg_ok "$(translate "Default Proxmox logo applied")"
                 break
                 ;;
             3)
                 msg_info "$(translate "Downloading JC Channel logo...")"
                 local jc_channel_logo_path="$logos_dir/jc_channel.txt"
-                if wget -qO "$jc_channel_logo_path" "https://raw.githubusercontent.com/MacRimi/ProxMenux/main/images/logos_txt/jc_channel.txt"; then
-                    jq --arg path "$jc_channel_logo_path" '. + {logo: $path}' "$fastfetch_config" > "${fastfetch_config}.tmp" && mv "${fastfetch_config}.tmp" "$fastfetch_config"
+                if download_fastfetch_logo "$jc_channel_logo_path" "https://raw.githubusercontent.com/MacRimi/ProxMenux/main/images/logos_txt/jc_channel.txt"; then
+                    apply_fastfetch_config --arg path "$jc_channel_logo_path" '. + {logo: $path}'
                     msg_ok "$(translate "JC Channel logo applied")"
                 else
                     msg_error "$(translate "Failed to download JC Channel logo")"
@@ -2583,8 +2688,8 @@ configure_fastfetch() {
             4)
                 msg_info "$(translate "Downloading Helper-Scripts logo...")"
                 local helper_scripts_logo_path="$logos_dir/Helper_Scripts.txt"
-                if wget -qO "$helper_scripts_logo_path" "https://raw.githubusercontent.com/MacRimi/ProxMenux/main/images/logos_txt/Helper_Scripts.txt"; then
-                    jq --arg path "$helper_scripts_logo_path" '. + {logo: $path}' "$fastfetch_config" > "${fastfetch_config}.tmp" && mv "${fastfetch_config}.tmp" "$fastfetch_config"
+                if download_fastfetch_logo "$helper_scripts_logo_path" "https://raw.githubusercontent.com/MacRimi/ProxMenux/main/images/logos_txt/Helper_Scripts.txt"; then
+                    apply_fastfetch_config --arg path "$helper_scripts_logo_path" '. + {logo: $path}'
                     msg_ok "$(translate "Helper-Scripts logo applied")"
                 else
                     msg_error "$(translate "Failed to download Helper-Scripts logo")"
@@ -2594,8 +2699,8 @@ configure_fastfetch() {
             5)
                 msg_info "$(translate "Downloading Home-Labs-Club logo...")"
                 local home_lab_club_logo_path="$logos_dir/home_labsclub.txt"
-                if wget -qO "$home_lab_club_logo_path" "https://raw.githubusercontent.com/MacRimi/ProxMenux/main/images/logos_txt/home_labsclub.txt"; then
-                    jq --arg path "$home_lab_club_logo_path" '. + {logo: $path}' "$fastfetch_config" > "${fastfetch_config}.tmp" && mv "${fastfetch_config}.tmp" "$fastfetch_config"
+                if download_fastfetch_logo "$home_lab_club_logo_path" "https://raw.githubusercontent.com/MacRimi/ProxMenux/main/images/logos_txt/home_labsclub.txt"; then
+                    apply_fastfetch_config --arg path "$home_lab_club_logo_path" '. + {logo: $path}'
                     msg_ok "$(translate "Home-Lab-Club logo applied")"
                 else
                     msg_error "$(translate "Failed to download Home-Lab-Club logo")"
@@ -2605,8 +2710,8 @@ configure_fastfetch() {
             6)
                 msg_info "$(translate "Downloading Proxmology logo...")"
                 local proxmology_logo_path="$logos_dir/proxmology.txt"
-                if wget -qO "$proxmology_logo_path" "https://raw.githubusercontent.com/MacRimi/ProxMenux/main/images/logos_txt/proxmology.txt"; then
-                    jq --arg path "$proxmology_logo_path" '. + {logo: $path}' "$fastfetch_config" > "${fastfetch_config}.tmp" && mv "${fastfetch_config}.tmp" "$fastfetch_config"
+                if download_fastfetch_logo "$proxmology_logo_path" "https://raw.githubusercontent.com/MacRimi/ProxMenux/main/images/logos_txt/proxmology.txt"; then
+                    apply_fastfetch_config --arg path "$proxmology_logo_path" '. + {logo: $path}'
                     msg_ok "$(translate "Proxmology logo applied")"
                 else
                     msg_error "$(translate "Failed to download Proxmology logo")"
@@ -2638,7 +2743,7 @@ configure_fastfetch() {
                 fi
 
                 local selected_logo="${logo_files[$((selected_logo_index-1))]}"
-                jq --arg path "$selected_logo" '. + {logo: $path}' "$fastfetch_config" > "${fastfetch_config}.tmp" && mv "${fastfetch_config}.tmp" "$fastfetch_config"
+                apply_fastfetch_config --arg path "$selected_logo" '. + {logo: $path}'
                 msg_ok "$(translate "Custom logo applied: $(basename "$selected_logo")")"
                 break
                 ;;
@@ -2651,25 +2756,27 @@ configure_fastfetch() {
     # Modify Fastfetch modules to display custom title
     msg_info "$(translate "Modifying Fastfetch configuration...")"
 
-    jq '.modules |= map(select(. != "title"))' "$fastfetch_config" > "${fastfetch_config}.tmp" && mv "${fastfetch_config}.tmp" "$fastfetch_config"
+    apply_fastfetch_config '.modules |= map(select(. != "title"))'
 
-    jq 'del(.modules[] | select(type == "object" and .type == "custom"))' "$fastfetch_config" > "${fastfetch_config}.tmp" && mv "${fastfetch_config}.tmp" "$fastfetch_config"
+    apply_fastfetch_config 'del(.modules[] | select(type == "object" and .type == "custom"))'
 
-    jq '.modules |= [{"type": "custom", "format": "\u001b[1;38;5;166mSystem optimised by ProxMenux\u001b[0m"}] + .' "$fastfetch_config" > "${fastfetch_config}.tmp" && mv "${fastfetch_config}.tmp" "$fastfetch_config"
+    apply_fastfetch_config '.modules |= [{"type": "custom", "format": "\u001b[1;38;5;166mSystem optimised by ProxMenux\u001b[0m"}] + .'
 
     msg_ok "$(translate "Fastfetch now displays: System optimised by: ProxMenux")"
 
+    pmx_record_execution "Generate Fastfetch configuration" "fastfetch --gen-config"
     fastfetch --gen-config > /dev/null 2>&1
     msg_ok "$(translate "Fastfetch configuration updated")"
 
 
-    sed -i '/fastfetch/d' ~/.profile /etc/profile 2>/dev/null
-    rm -f /etc/update-motd.d/99-fastfetch
+    pmx_edit_file "$HOME/.profile" '/fastfetch/d' 2>/dev/null || true
+    pmx_edit_file /etc/profile '/fastfetch/d' 2>/dev/null || true
+    pmx_remove_file /etc/update-motd.d/99-fastfetch
 
-    sed -i '/# BEGIN FASTFETCH/,/# END FASTFETCH/d' "$HOME/.bashrc" 2>/dev/null
+    pmx_edit_file "$HOME/.bashrc" '/# BEGIN FASTFETCH/,/# END FASTFETCH/d' 2>/dev/null || true
 
 if ! grep -q '# BEGIN FASTFETCH' "$HOME/.bashrc"; then
-    cat << 'EOF' >> "$HOME/.bashrc"
+    pmx_append_file "$HOME/.bashrc" << 'EOF'
 
 # BEGIN FASTFETCH
 # Run Fastfetch only in interactive sessions
@@ -2716,6 +2823,7 @@ register_tool "fastfetch" true "$FUNC_VERSION"
 
 configure_figurine() {
     local FUNC_VERSION="1.1"
+    pmx_journal_context "configure_figurine" "$FUNC_VERSION"
     # description: Install Figurine (ASCII-art hostname banner) and wire it into the SSH login flow.
     msg_info2 "$(translate "Installing and configuring Figurine...")"
     # `FIGURINE_VERSION` env var allows pinning to a specific release;
@@ -2733,7 +2841,7 @@ configure_figurine() {
     cleanup_dir() { rm -rf "$temp_dir" 2>/dev/null || true; }
     trap cleanup_dir EXIT
 
-    [[ -f "$bashrc" ]] || touch "$bashrc"
+    [[ -f "$bashrc" ]] || pmx_write_file "$bashrc" < /dev/null
 
     if command -v figurine &>/dev/null; then
         msg_info "$(translate "Updating Figurine binary...")"
@@ -2758,10 +2866,12 @@ configure_figurine() {
     fi
 
     msg_info "$(translate "Installing binary to ${install_dir}...")"
-    install -m 0755 -o root -g root "${temp_dir}/deploy/figurine" "$bin_path"
+    pmx_write_file "$bin_path" < "${temp_dir}/deploy/figurine"
+    chmod 0755 "$bin_path"
+    chown root:root "$bin_path"
 
 
-    cat > "$profile_script" << 'EOF'
+    pmx_write_file "$profile_script" << 'EOF'
 /usr/local/bin/figurine -f "3d.flf" $(hostname)
 EOF
     chmod +x "$profile_script"
@@ -2769,10 +2879,10 @@ EOF
 
     ensure_aliases() {
     local bashrc="/root/.bashrc"
-    [[ -f "$bashrc" ]] || touch "$bashrc"
+    [[ -f "$bashrc" ]] || pmx_write_file "$bashrc" < /dev/null
 
     if ! grep -q "shopt -s expand_aliases" "$bashrc" 2>/dev/null; then
-        echo "shopt -s expand_aliases" >> "$bashrc"
+        echo "shopt -s expand_aliases" | pmx_append_file "$bashrc"
     fi
 
     local -a ALIASES=(
@@ -2795,9 +2905,9 @@ EOF
 
         local safe_cmd=${cmd//\'/\'\\\'\'}
 
-        sed -i -E "/^[[:space:]]*alias[[:space:]]+${name}=.*/d" "$bashrc"
+        pmx_edit_file "$bashrc" -E "/^[[:space:]]*alias[[:space:]]+${name}=.*/d"
 
-        printf "alias %s='%s'\n" "$name" "$safe_cmd" >> "$bashrc"
+        printf "alias %s='%s'\n" "$name" "$safe_cmd" | pmx_append_file "$bashrc"
     done
 
     . "$bashrc"
@@ -2854,6 +2964,7 @@ _update_existing_log2ram_custom() {
     local func_version="$1"
     local log2ram_bin=""
     local candidate resolved tmp_file
+    pmx_journal_context "_update_existing_log2ram_custom" "$func_version"
 
     msg_ok "$(translate "Log2RAM already registered — updating to latest configuration")"
 
@@ -2877,10 +2988,7 @@ _update_existing_log2ram_custom() {
 
     if grep -q 'rsync -aAXv ' "$log2ram_bin" 2>/dev/null; then
         [[ -e "${log2ram_bin}.proxmenux.bak" ]] || cp -a "$log2ram_bin" "${log2ram_bin}.proxmenux.bak"
-        tmp_file="$(mktemp "${log2ram_bin}.proxmenux.XXXXXX")" || return 1
-        cp -a "$log2ram_bin" "$tmp_file"
-        sed -i 's/rsync -aAXv /rsync -aXv --no-acls /g' "$tmp_file"
-        mv -f "$tmp_file" "$log2ram_bin"
+        sed 's/rsync -aAXv /rsync -aXv --no-acls /g' "$log2ram_bin" | pmx_write_file "$log2ram_bin"
     fi
 
     if dpkg-query -W -f='${Status}' proxmox-backup-server 2>/dev/null \
@@ -2899,7 +3007,8 @@ _update_existing_log2ram_custom() {
 EOF
         chmod 0644 "$tmp_file"
         chown root:root "$tmp_file"
-        mv -f "$tmp_file" /etc/logrotate.d/proxmox-backup-api
+        pmx_write_file /etc/logrotate.d/proxmox-backup-api < "$tmp_file"
+        rm -f "$tmp_file"
 
         tmp_file="$(mktemp /etc/cron.hourly/.proxmox-backup-logrotate.XXXXXX)" || return 1
         cat > "$tmp_file" <<'EOF'
@@ -2908,7 +3017,10 @@ EOF
 EOF
         chmod 0755 "$tmp_file"
         chown root:root "$tmp_file"
-        mv -f "$tmp_file" /etc/cron.hourly/proxmox-backup-logrotate
+        pmx_write_file /etc/cron.hourly/proxmox-backup-logrotate < "$tmp_file"
+        chmod 0755 /etc/cron.hourly/proxmox-backup-logrotate
+        chown root:root /etc/cron.hourly/proxmox-backup-logrotate
+        rm -f "$tmp_file"
         msg_ok "$(translate "PBS API log rotation configured (hourly, size-based)")"
     fi
 
@@ -2960,7 +3072,10 @@ EOF
         chmod 0755 "$tmp_file"
         chown root:root "$tmp_file"
         bash -n "$tmp_file" || return 1
-        mv -f "$tmp_file" /usr/local/bin/log2ram-check.sh
+        pmx_write_file /usr/local/bin/log2ram-check.sh < "$tmp_file"
+        chmod 0755 /usr/local/bin/log2ram-check.sh
+        chown root:root /usr/local/bin/log2ram-check.sh
+        rm -f "$tmp_file"
     fi
 
     register_tool "log2ram" true "$func_version"
@@ -2971,6 +3086,7 @@ EOF
 configure_log2ram() {
     local FUNC_VERSION="1.5"
     local existing_log2ram_bin=""
+    pmx_journal_context "configure_log2ram" "$FUNC_VERSION"
     # description: Install Log2RAM with user-chosen RAM size; prompts for size and SSD/M.2 awareness before applying.
 
     existing_log2ram_bin="$(command -v log2ram 2>/dev/null || true)"
@@ -3031,22 +3147,29 @@ configure_log2ram() {
 
   
     msg_info "$(translate "Cleaning previous Log2RAM installation...")"
-    systemctl stop log2ram log2ram-daily.timer >/dev/null 2>&1 || true
-    systemctl disable log2ram log2ram-daily.timer >/dev/null 2>&1 || true
+    pmx_disable_service log2ram || true
+    pmx_disable_service log2ram-daily.timer || true
 
-    rm -f /etc/cron.d/log2ram /etc/cron.d/log2ram-auto-sync \
-          /etc/cron.hourly/log2ram /etc/cron.daily/log2ram \
-          /etc/cron.weekly/log2ram /etc/cron.monthly/log2ram 2>/dev/null || true
-    rm -f /usr/local/bin/log2ram-check.sh /usr/local/bin/log2ram /usr/sbin/log2ram 2>/dev/null || true
-    rm -f /etc/systemd/system/log2ram.service \
-          /etc/systemd/system/log2ram-daily.timer \
-          /etc/systemd/system/log2ram-daily.service \
-          /etc/systemd/system/sysinit.target.wants/log2ram.service 2>/dev/null || true
+    local obsolete_path
+    for obsolete_path in \
+        /etc/cron.d/log2ram /etc/cron.d/log2ram-auto-sync \
+        /etc/cron.hourly/log2ram /etc/cron.daily/log2ram \
+        /etc/cron.weekly/log2ram /etc/cron.monthly/log2ram \
+        /usr/local/bin/log2ram-check.sh /usr/local/bin/log2ram /usr/sbin/log2ram \
+        /etc/systemd/system/log2ram.service \
+        /etc/systemd/system/log2ram-daily.timer \
+        /etc/systemd/system/log2ram-daily.service \
+        /etc/systemd/system/sysinit.target.wants/log2ram.service \
+        /etc/log2ram.conf /etc/log2ram.conf.* /etc/logrotate.d/log2ram
+    do
+        pmx_remove_file "$obsolete_path" 2>/dev/null || true
+    done
     rm -rf /etc/systemd/system/log2ram.service.d 2>/dev/null || true
-    rm -f /etc/log2ram.conf* 2>/dev/null || true
-    rm -rf /etc/logrotate.d/log2ram /var/log.hdd /tmp/log2ram 2>/dev/null || true
+    rm -rf /var/log.hdd /tmp/log2ram 2>/dev/null || true
 
+    pmx_record_execution "Reload systemd configuration" "systemctl daemon-reload"
     systemctl daemon-reload >/dev/null 2>&1 || true
+    pmx_record_execution "Restart cron" "systemctl restart cron"
     systemctl restart cron >/dev/null 2>&1 || true
     msg_ok "$(translate "Previous installation cleaned")"
 
@@ -3054,8 +3177,9 @@ configure_log2ram() {
     msg_info "$(translate "Installing Log2RAM from GitHub...")"
     if ! command -v git >/dev/null 2>&1; then
         msg_info "$(translate "Installing required package: git")"
+        pmx_record_execution "Update package lists for Log2RAM" "apt-get update -qq"
         apt-get update -qq >/dev/null 2>&1
-        apt-get install -y git >/dev/null 2>&1
+        pmx_install_pkg git
     fi
 
     rm -rf /tmp/log2ram 2>/dev/null || true
@@ -3066,6 +3190,7 @@ configure_log2ram() {
     fi
 
     cd /tmp/log2ram || { msg_error "$(translate "Failed to access log2ram directory")"; return 1; }
+    pmx_record_execution "Run the Log2RAM installer" "bash install.sh"
     if ! bash install.sh >>/tmp/log2ram_install.log 2>&1; then
         msg_error "$(translate "Failed to run log2ram installer. Check /tmp/log2ram_install.log")"
         return 1
@@ -3084,7 +3209,7 @@ configure_log2ram() {
         [[ -n "$_l2r_bin" && -f "$_l2r_bin" ]] || continue
         if grep -q 'rsync -aAXv ' "$_l2r_bin" 2>/dev/null; then
             cp -a "$_l2r_bin" "${_l2r_bin}.proxmenux.bak"
-            sed -i 's/rsync -aAXv /rsync -aXv --no-acls /g' "$_l2r_bin"
+            pmx_edit_file "$_l2r_bin" 's/rsync -aAXv /rsync -aXv --no-acls /g'
         fi
         break
     done
@@ -3095,7 +3220,7 @@ configure_log2ram() {
     if dpkg-query -W -f='${Status}' proxmox-backup-server 2>/dev/null \
         | grep -q 'install ok installed'; then
         mkdir -p /var/log/proxmox-backup/api 2>/dev/null || true
-        cat > /etc/logrotate.d/proxmox-backup-api <<'EOF'
+        pmx_write_file /etc/logrotate.d/proxmox-backup-api <<'EOF'
 /var/log/proxmox-backup/api/access.log /var/log/proxmox-backup/api/auth.log {
     size 20M
     rotate 3
@@ -3108,7 +3233,7 @@ configure_log2ram() {
 EOF
         chmod 0644 /etc/logrotate.d/proxmox-backup-api
         chown root:root /etc/logrotate.d/proxmox-backup-api
-        cat > /etc/cron.hourly/proxmox-backup-logrotate <<'EOF'
+        pmx_write_file /etc/cron.hourly/proxmox-backup-logrotate <<'EOF'
 #!/bin/sh
 /usr/sbin/logrotate /etc/logrotate.d/proxmox-backup-api >/dev/null 2>&1
 EOF
@@ -3117,6 +3242,7 @@ EOF
         msg_ok "$(translate "PBS API log rotation configured (hourly, size-based)")"
     fi
 
+    pmx_record_execution "Reload systemd configuration" "systemctl daemon-reload"
     systemctl daemon-reload >/dev/null 2>&1 || true
 
     if [[ -f /etc/log2ram.conf ]] && command -v log2ram >/dev/null 2>&1; then
@@ -3127,10 +3253,10 @@ EOF
     fi
 
   
-    sed -i "s/^SIZE=.*/SIZE=$LOG2RAM_SIZE/" /etc/log2ram.conf
+    pmx_edit_file /etc/log2ram.conf "s/^SIZE=.*/SIZE=$LOG2RAM_SIZE/"
     LOG2RAM_BIN="$(command -v log2ram || echo /usr/sbin/log2ram)"
 
-    cat > /etc/cron.d/log2ram <<EOF
+    pmx_write_file /etc/cron.d/log2ram <<EOF
 # Log2RAM periodic sync - Created by ProxMenux
 SHELL=/bin/bash
 PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
@@ -3143,7 +3269,7 @@ EOF
 
    
     if [[ "$ENABLE_AUTOSYNC" == true ]]; then
-        cat > /usr/local/bin/log2ram-check.sh <<'EOF'
+        pmx_write_file /usr/local/bin/log2ram-check.sh <<'EOF'
 #!/usr/bin/env bash
 # Watch /var/log usage on Log2RAM's tmpfs and act at two thresholds:
 #   > 80% → vacuum journald down to ~30% of SIZE, then log2ram write
@@ -3188,7 +3314,7 @@ fi
 EOF
         chmod +x /usr/local/bin/log2ram-check.sh
 
-        cat > /etc/cron.d/log2ram-auto-sync <<'EOF'
+        pmx_write_file /etc/cron.d/log2ram-auto-sync <<'EOF'
 # Log2RAM auto-sync based on /var/log usage - Created by ProxMenux
 SHELL=/bin/bash
 PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
@@ -3199,7 +3325,8 @@ EOF
         chown root:root /etc/cron.d/log2ram-auto-sync
         msg_ok "$(translate "Auto-sync enabled when /var/log exceeds 80% of") $LOG2RAM_SIZE"
     else
-        rm -f /usr/local/bin/log2ram-check.sh /etc/cron.d/log2ram-auto-sync 2>/dev/null || true
+        pmx_remove_file /usr/local/bin/log2ram-check.sh 2>/dev/null || true
+        pmx_remove_file /etc/cron.d/log2ram-auto-sync 2>/dev/null || true
         msg_info2 "$(translate "Auto-sync was not enabled")"
     fi
 
@@ -3221,8 +3348,8 @@ EOF
     [ "$KEEP_MB"    -lt 8  ] && KEEP_MB=8
 
     # Reescribir bloque [Journal] de forma segura
-    sed -i '/^\[Journal\]/,$d' /etc/systemd/journald.conf 2>/dev/null || true
-    tee -a /etc/systemd/journald.conf >/dev/null <<EOF
+    pmx_edit_file /etc/systemd/journald.conf '/^\[Journal\]/,$d' 2>/dev/null || true
+    pmx_append_file /etc/systemd/journald.conf <<EOF
 [Journal]
 Storage=persistent
 SplitMode=none
@@ -3255,8 +3382,10 @@ EOF
     chown -R www-data:www-data /var/log.hdd/pveproxy
     chmod 0750 /var/log.hdd/pveproxy
 
+    pmx_record_execution "Restart cron" "systemctl restart cron"
     systemctl restart cron >/dev/null 2>&1 || true
-    if ! systemctl enable log2ram >/dev/null 2>&1; then
+    if ! pmx_apply_setting "service-enabled:log2ram" "systemctl is-enabled log2ram" \
+        systemctl enable log2ram; then
         msg_error "$(translate "Log2RAM installation verification failed. Check /tmp/log2ram_install.log")"
         return 1
     fi

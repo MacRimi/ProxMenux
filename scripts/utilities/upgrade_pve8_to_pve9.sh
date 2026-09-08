@@ -62,6 +62,9 @@ fi
 if [[ -f "$LOCAL_SCRIPTS/global/utils-install-functions.sh" ]]; then
     source "$LOCAL_SCRIPTS/global/utils-install-functions.sh"
 fi
+if [[ -f "$LOCAL_SCRIPTS/global/pmx_journal.sh" ]]; then
+    source "$LOCAL_SCRIPTS/global/pmx_journal.sh"
+fi
 
 # ==========================================================
 
@@ -376,31 +379,37 @@ EOF
 }
 
 disable_enterprise_repo_if_present() {
+  local FUNC_VERSION="1.0"
+  pmx_journal_context "disable_enterprise_repo_if_present" "$FUNC_VERSION"
   local s="/etc/apt/sources.list.d/pve-enterprise.sources"
   local l="/etc/apt/sources.list.d/pve-enterprise.list"
   if [[ -f "$s" ]]; then
     if grep -qi '^Enabled:' "$s"; then
-      sed -i 's/^Enabled:.*/Enabled: false/i' "$s"
+      pmx_edit_file "$s" 's/^Enabled:.*/Enabled: false/i'
     else
-      echo "Enabled: false" >> "$s"
+      echo "Enabled: false" | pmx_append_file "$s"
     fi
   fi
   if [[ -f "$l" ]]; then
-    sed -i 's/^[[:space:]]*deb/# deb/' "$l"
+    pmx_edit_file "$l" 's/^[[:space:]]*deb/# deb/'
   fi
 }
 
 comment_legacy_pve8_lists() {
+  local FUNC_VERSION="1.0"
+  pmx_journal_context "comment_legacy_pve8_lists" "$FUNC_VERSION"
   for f in /etc/apt/sources.list.d/pve-public-repo.list /etc/apt/sources.list.d/pve-install-repo.list; do
     [[ -f "$f" ]] || continue
-    sed -i 's/^[[:space:]]*deb/# deb/' "$f" || true
+    pmx_edit_file "$f" 's/^[[:space:]]*deb/# deb/' || true
   done
 }
 
 comment_legacy_ceph_list() {
+  local FUNC_VERSION="1.0"
+  pmx_journal_context "comment_legacy_ceph_list" "$FUNC_VERSION"
   local f="/etc/apt/sources.list.d/ceph.list"
   [[ -f "$f" ]] || return 0
-  sed -i 's/^[[:space:]]*deb/# deb/' "$f" || true
+  pmx_edit_file "$f" 's/^[[:space:]]*deb/# deb/' || true
 }
 
 apt_update_with_repo_fallback() {
@@ -811,11 +820,11 @@ else
 fi
 
 
+FUNC_VERSION="1.0"
+pmx_journal_context "upgrade_pve8_to_pve9" "$FUNC_VERSION"
 if [[ "$DISABLE_AUDIT" == "1" ]]; then
-  append_step \
-    "" \
-    "Audit socket disabled or not required" \
-    "systemctl disable --now systemd-journald-audit.socket >/dev/null 2>&1 || true"
+  pmx_disable_service systemd-journald-audit.socket >> "$LOG" 2>&1 || true
+  echo -e "${BFR}${TAB}${CM}${GN}$(translate "Audit socket disabled or not required")${CL}"
 fi
 
 
@@ -856,10 +865,12 @@ fi
 # Step 4
 # ---------------------------
 
+FUNC_VERSION="1.0"
+pmx_journal_context "upgrade_pve8_to_pve9" "$FUNC_VERSION"
 OS_FILE="/etc/apt/sources.list"
 if [[ -f "$OS_FILE" ]]; then
   msg_info "$(translate "Updating Debian Bookworm → Trixie in sources.list...")"
-  if sed -i 's/bookworm/trixie/g' "$OS_FILE"; then
+  if pmx_edit_file "$OS_FILE" 's/bookworm/trixie/g'; then
     msg_ok "$(translate "sources.list updated to Trixie")"
   else
     msg_ok "$(translate "sources.list update skipped (no change)")"
@@ -871,7 +882,7 @@ fi
 PVE_ENT_LIST="/etc/apt/sources.list.d/pve-enterprise.list"
 msg_info "$(translate "Updating pve-enterprise.list (if present) to Trixie...")"
 if [[ -f "$PVE_ENT_LIST" ]]; then
-  if sed -i 's/bookworm/trixie/g' "$PVE_ENT_LIST"; then
+  if pmx_edit_file "$PVE_ENT_LIST" 's/bookworm/trixie/g'; then
     msg_ok "$(translate "pve-enterprise.list updated to Trixie")"
   else
     msg_ok "$(translate "pve-enterprise.list update skipped (no change)")"
@@ -884,9 +895,9 @@ fi
 msg_info "$(translate "Commenting any residual Bookworm lines in *.list...")"
 for f in /etc/apt/sources.list.d/*.list; do
   [[ -f "$f" ]] || continue
-  sed -i '/bookworm/s/^/# /' "$f" || true
+  pmx_edit_file "$f" '/bookworm/s/^/# /' || true
 done
-sed -i '/bookworm/s/^/# /' "$OS_FILE" 2>/dev/null || true
+pmx_edit_file "$OS_FILE" '/bookworm/s/^/# /' 2>/dev/null || true
 msg_ok "$(translate "Residual Bookworm entries commented where applicable")"
 
 

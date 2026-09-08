@@ -33,6 +33,10 @@ if [[ -f "$UTILS_FILE" ]]; then
     source "$UTILS_FILE"
 fi
 
+if [[ -f "$LOCAL_SCRIPTS/global/pmx_journal.sh" ]]; then
+    source "$LOCAL_SCRIPTS/global/pmx_journal.sh"
+fi
+
 
 SHARE_COMMON_FILE="$LOCAL_SCRIPTS/global/share-common.func"
 if ! source "$SHARE_COMMON_FILE" 2>/dev/null; then
@@ -49,6 +53,10 @@ select_privileged_lxc
 
 
 install_samba_client() {
+    local FUNC_VERSION="1.0"
+    pmx_journal_context "install_samba_client" "$FUNC_VERSION"
+    pmx_record_execution "install and prepare Samba client in CT ${CTID}" \
+        "pct exec ${CTID} -- install cifs-utils and smbclient; create ${CREDENTIALS_DIR}"
 
     if pct exec "$CTID" -- dpkg -s cifs-utils &>/dev/null && pct exec "$CTID" -- dpkg -s smbclient &>/dev/null; then
         pct exec "$CTID" -- mkdir -p "$CREDENTIALS_DIR"
@@ -94,6 +102,9 @@ install_samba_client() {
 
 
 discover_samba_servers() {
+    local FUNC_VERSION="1.0"
+    pmx_journal_context "discover_samba_servers" "$FUNC_VERSION"
+
     show_proxmenux_logo
     msg_title "$(translate "Samba LXC Manager")"
     msg_info "$(translate "Scanning network for Samba servers...")"
@@ -105,7 +116,7 @@ discover_samba_servers() {
 
     for pkg in nmap samba-common-bin; do
         if ! which ${pkg%%-*} >/dev/null 2>&1; then
-            apt-get install -y "$pkg" &>/dev/null
+            pmx_install_pkg "$pkg"
         fi
     done
 
@@ -678,13 +689,18 @@ configure_mount_options() {
 }
 
 create_credentials_file() {
+    local FUNC_VERSION="1.0"
+    pmx_journal_context "create_credentials_file" "$FUNC_VERSION"
+
     if [[ "$USE_GUEST" == "true" ]]; then
         return 0
     fi
     
 
     CRED_FILE="$CREDENTIALS_DIR/${SAMBA_SERVER}_${SAMBA_SHARE}.cred"
-    
+
+    pmx_record_execution "create Samba credentials file ${CRED_FILE} in CT ${CTID}" \
+        "pct exec ${CTID} -- write credentials file and chmod 600"
 
     pct exec "$CTID" -- bash -c "cat > '$CRED_FILE' << EOF
 username=$USERNAME
@@ -729,6 +745,7 @@ EOF"
 }
 
 mount_samba_share() {
+    local FUNC_VERSION="1.0"
     # Step 0:
     install_samba_client || return
     
@@ -754,6 +771,10 @@ mount_samba_share() {
     
     # Step 5:
     configure_mount_options || return
+
+    pmx_journal_context "mount_samba_share" "$FUNC_VERSION"
+    pmx_record_execution "mount Samba share //${SAMBA_SERVER}/${SAMBA_SHARE} in CT ${CTID} at ${MOUNT_POINT}" \
+        "pct exec ${CTID} -- mount CIFS share; persistent=${PERMANENT_MOUNT}"
     
     show_proxmenux_logo
     msg_title "$(translate "Installing Samba Client in LXC")"
@@ -803,11 +824,11 @@ mount_samba_share() {
         if [[ "$PERMANENT_MOUNT" == "true" ]]; then
    
 
-            pct exec "$CTID" -- sed -i "\|$MOUNT_POINT|d" /etc/fstab
+            pct exec "$CTID" -- sed --in-place "\|$MOUNT_POINT|d" /etc/fstab
             
 
             FSTAB_ENTRY="$UNC_PATH $MOUNT_POINT cifs ${FULL_OPTIONS},_netdev,x-systemd.automount,noauto 0 0"
-            pct exec "$CTID" -- bash -c "echo '$FSTAB_ENTRY' >> /etc/fstab"
+            pct exec "$CTID" -- bash -c "printf '%s\\n' '$FSTAB_ENTRY' | tee -a /etc/fstab >/dev/null"
             msg_ok "$(translate "Added to /etc/fstab for permanent mounting.")"
         fi
         
@@ -927,6 +948,8 @@ view_samba_mounts() {
 
 
 unmount_samba_share() {
+    local FUNC_VERSION="1.0"
+    pmx_journal_context "unmount_samba_share" "$FUNC_VERSION"
 
     MOUNTS=$(pct exec "$CTID" -- mount -t cifs 2>/dev/null | awk '{print $3}' | sort -u || true)
 
@@ -955,7 +978,9 @@ unmount_samba_share() {
         msg_title "$(translate "Unmount Samba Share")"
 
         CRED_FILE=$(pct exec "$CTID" -- grep -E "\s+$SELECTED_MOUNT\s+" /etc/fstab 2>/dev/null | grep -o "credentials=[^, ]*" | cut -d= -f2 || true)
-        pct exec "$CTID" -- sed -i "\|[[:space:]]$SELECTED_MOUNT[[:space:]]|d" /etc/fstab
+        pmx_record_execution "remove Samba mount ${SELECTED_MOUNT} from CT ${CTID}" \
+            "remove CT fstab entry and credentials file when present"
+        pct exec "$CTID" -- sed --in-place "\|[[:space:]]$SELECTED_MOUNT[[:space:]]|d" /etc/fstab
         msg_ok "$(translate "Removed from /etc/fstab.")"
         
         if [[ -n "$CRED_FILE" && "$CRED_FILE" != "guest" ]]; then

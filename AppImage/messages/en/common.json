@@ -1890,6 +1890,7 @@
         "system_reboot": "System rebooting",
         "system_restore_completed": "Host restore completed",
         "system_problem": "System problem detected",
+        "kernel_warning": "Kernel warnings and diagnostic traces",
         "service_fail": "Service failed",
         "oom_kill": "Out-of-memory process kill",
         "service_fail_batch": "Multiple service failures",
@@ -4983,6 +4984,154 @@
     "customLinkDeleteError": "Delete failed"
   },
   "audit": {
+    "presentation": {
+      "backupAge": "Backup age",
+      "backupLimit": "Limit used",
+      "limitDeclared": "User-declared limit",
+      "limitSchedule": "Schedule + margin",
+      "limitReference": "Reference period",
+      "verifiedChecks": "Verified checks",
+      "unverifiedChecks": "Unverified checks",
+      "checkName": "Check",
+      "verified": "Verified",
+      "verificationScope": "Applicable checks verified. Coverage does not express the health or security of the server.",
+      "noApplicable": "No applicable checks in this assessment.",
+      "noJob": "No scheduled job",
+      "guest": "Guest",
+      "guests": "guests",
+      "host": "Host",
+      "resource": "Resource",
+      "data": "Data",
+      "metadata": "Metadata",
+      "result": "Result",
+      "fact": "Observed fact",
+      "records": "records",
+      "unscheduled": "guests without a scheduled job",
+      "excludedDisks": "excluded disks",
+      "disks": "Disks",
+      "destination": "Destination",
+      "lastCopy": "Latest stored copy",
+      "ageLimit": "Age / limit",
+      "noDestination": "No configured destination",
+      "notFound": "No copy found in the inspected scope",
+      "promiscuous": "Interfaces in promiscuous mode",
+      "noDescription": "Description not available",
+      "occurrence": "Occurrence",
+      "occurrences": "occurrences",
+      "detail": "Detail",
+      "technical": "Technical evidence",
+      "annex": "Technical appendix",
+      "overview": "Findings overview",
+      "incomplete": "Incomplete assessment",
+      "assessment": "Assessment",
+      "noGlobalScore": "Results describe separate criteria; no overall security score is calculated.",
+      "coverage": "Scheduled backup coverage",
+      "scheduled": "With a scheduled job",
+      "copyScope": "A configured job does not establish that a stored or restorable copy exists.",
+      "detailsLink": "Evidence reference",
+      "noSubscription": "No subscription found",
+      "otherDevices": "Other devices in the group",
+      "unversioned": "Version not recorded",
+      "notInstalled": "Not installed",
+      "noPendingRecorded": "No pending update recorded",
+      "originalEvidence": "Original source evidence",
+      "evidenceObserved": "Observed evidence",
+      "evidenceExcerpt": "Compact view. The complete source evidence remains stored with this assessment.",
+      "annexScope": "Complete source evidence for results that require attention, record an observation or could not be verified.",
+      "readOnlyScope": "The assessment does not change configuration. Read commands and, when needed, Lynis may generate logs or reports.",
+      "capacity": "Capacity",
+      "used": "Used",
+      "free": "Free",
+      "reasons": {
+        "agentNotDeclared": "No guest agent declared in the configuration",
+        "arcConflictingSettings": "Persistent settings disagree with each other",
+        "arcMinAboveMax": "The lower ARC bound is above the upper one",
+        "arcPendingReboot": "Persistent setting differs from the loaded parameter",
+        "arrayDegraded": "Running on fewer devices than it was built with",
+        "arrayNotActive": "Not active",
+        "arrayRebuilding": "Short of devices and rebuilding",
+        "backupRunFailed": "The run ended with an error",
+        "backupRunRecovered": "Failed earlier, and a later run succeeded",
+        "bondNoMembersUp": "Down, and no member of the bond is up",
+        "bondRedundancyLost": "Down; the bond keeps other links",
+        "bootEspMissingNewest": "Does not carry the newest kernel the others do",
+        "bootEspOutOfSync": "Out of step with the others: it would start a different kernel",
+        "bootSingleEsp": "One boot partition configured",
+        "bootToolReported": "Reported by proxmox-boot-tool",
+        "cephCheckRaised": "Raised by Ceph",
+        "channelIncomplete": "Enabled but missing part of its configuration",
+        "clusterInquorate": "Without quorum: changes to the cluster are refused",
+        "clusterMemberAbsent": "Configured member not seen by the cluster",
+        "clusterSingleLink": "One corosync link declared",
+        "dataExcludedFromBackup": "Data excluded from the guest's backup",
+        "deliveryFailing": "Recent deliveries did not go out",
+        "destinationUnavailable": "Configured destination unavailable",
+        "diskErrorsActive": "Error recorded within the review window",
+        "diskErrorsPast": "Errors reported earlier, none in the window in use",
+        "diskWarningsActive": "Device warning recorded within the review window",
+        "diskWarningsPast": "Device warnings reported earlier, none in the window in use",
+        "essentialServiceDown": "A service Proxmox needs to answer is not active",
+        "exemptByPolicy": "Declared as not requiring this, so it is outside the count",
+        "expectedButUncovered": "Declared as requiring a backup, and no enabled job selects it",
+        "expectedToAutostart": "Declared as expected to start with the host, and does not",
+        "filesystemExhausted": "No space left",
+        "filesystemNearlyFull": "At or above the space review threshold",
+        "filesystemReadOnly": "The kernel reports this mount read-only: it has stopped accepting writes",
+        "haManagerNotReady": "Neither active nor idle: cannot take a service",
+        "haNoMaster": "No manager: nothing decides where a service should run",
+        "haServiceError": "Left in an error state and no longer managed",
+        "haServiceTransitioning": "Between states",
+        "hostArchiveMissing": "The job record names an archive that is no longer stored",
+        "hostBackupJobFailed": "The job ended with an error",
+        "hostBackupStale": "Older than the age limit in use",
+        "hostBackupUnscheduled": "Stored, with no schedule producing a further copy",
+        "hostNoRetrievableCopy": "No copy this check can still account for",
+        "indexesStale": "Package indexes have not been refreshed recently",
+        "inodesExhausted": "No inodes left",
+        "inodesNearlyExhausted": "At or above the inode review threshold",
+        "kernelAwaitingReboot": "Installed and not the running kernel",
+        "lynisReportStale": "The Lynis report is {days} day(s) old, older than the reference age in use",
+        "lynisWarning": "Recorded by the Lynis audit",
+        "multipathNoPath": "No path left",
+        "multipathPathDown": "Serving on fewer paths",
+        "noAutostart": "Does not start with the host",
+        "noConfigurationReference": "No reference found in the configurations examined",
+        "noJobSelectsGuest": "No enabled backup job selects it",
+        "noPhysicalPort": "Carries no physical port",
+        "noStoredBackup": "No stored copy found",
+        "noStoredBackupUnscheduled": "No scheduled job; no stored copy found",
+        "olderThanFallback": "The backup exceeds the reference period.",
+        "olderThanObjective": "The backup exceeds the user-declared limit.",
+        "olderThanSchedule": "The backup exceeds the scheduled interval plus its margin.",
+        "overprovisioned": "Hands out more virtual capacity than the pool holds",
+        "packageAwaitingRestart": "Installed and asking for a restart",
+        "pastServiceLife": "Past the service-life threshold used for planning",
+        "pinnedToHostCpu": "Pinned to the host processor model",
+        "poolDeviceErrors": "Device counting read, write or checksum errors",
+        "poolNotOnline": "Not online",
+        "rebootMarkerWithoutPackages": "Something wrote the restart marker without naming a package",
+        "recoveryKeyLocalOnly": "Backup encryption key held only on this node, per the recorded escrow mode",
+        "replicationDisabled": "Paused",
+        "replicationFailing": "Last run reported an error",
+        "replicationNeverRan": "Has never completed a synchronisation",
+        "replicationOverdue": "Older than the job's own schedule allows",
+        "retentionNotDeclared": "No retention declared; every copy is kept",
+        "retentionOnServer": "Pruned on the backup server, under jobs this node cannot read",
+        "runsPrivileged": "Runs privileged, sharing the host user namespace",
+        "scrubOverdue": "Last completed scrub older than the review threshold",
+        "storageNearlyFull": "At or above the capacity review threshold",
+        "storageUnreachable": "Not reachable",
+        "thinDataPressure": "Written data close to the pool's capacity",
+        "thinMetadataPressure": "Metadata close to full, which takes the pool read-only",
+        "unitFailed": "systemd stopped retrying it",
+        "verificationFailedOnly": "Verification read the newest copy and it was not intact; no other copy of this guest has verified",
+        "verificationFailedWithFallback": "Verification read the newest copy and it was not intact; an earlier copy did verify",
+        "verificationNotRun": "No verification job has read this copy back"
+      },
+      "lynisTest": "Test",
+      "lynisWarning": "Warning",
+      "couldNotRead": "Could not be read"
+    },
     "title": "Audit & Report",
     "loading": "Loading assessment…",
     "run": "Run assessment",
@@ -4991,9 +5140,8 @@
     "lastRun": "Last assessed on {when}",
     "stale": "{days} days ago",
     "readOnlyNotice": "The assessment only reads the host. It makes no changes.",
+    "unverifiedChecks": "Not taken: {checks}. Each says in its own evidence what it could not read.",
     "noFindings": "No findings match the current filter.",
-    "showPassing": "Show passing checks",
-    "hidePassing": "Hide passing checks",
     "affectedCount": "{count} affected",
     "acceptedNotice": "{count} accepted risk(s) recorded on this host.",
     "states": {
@@ -5001,7 +5149,8 @@
       "warn": "Warning",
       "accepted": "Accepted risk",
       "pass": "Passed",
-      "not_applicable": "Not applicable"
+      "not_applicable": "Not applicable",
+      "unknown": "Not verified"
     },
     "areas": {
       "all": "All",
@@ -5017,7 +5166,8 @@
       "why": "Context",
       "evidence": "Evidence",
       "affected": "Affected",
-      "acceptedRisk": "Accepted risk"
+      "acceptedRisk": "Accepted risk",
+      "sources": "Sources and collection dates"
     },
     "errors": {
       "runFailed": "The assessment could not be started."
@@ -5026,69 +5176,434 @@
       "backup": {
         "guest_coverage": {
           "title": "Backup coverage",
-          "rationale": "Compares the guest inventory against what each backup job selects. A job selects by VMID list, by pool, or with `all 1`, minus its `exclude` list. Jobs carrying `enabled 0` are not considered.",
+          "rationale": "Enabled backup jobs on this node, the guests each one selects, and guest data excluded from them. Configured coverage does not prove that a usable backup exists. Whether an unselected guest was meant to be protected comes from the declared policy.",
           "summary": {
-            "noJobs": "No backup job is defined on this node",
-            "covered": "All {total} guests are covered by a backup job",
-            "uncovered": "{count} of {total} guests are not covered by any enabled backup job"
+            "noJobs": "No backup job is defined on this node for the {total} guests it holds",
+            "covered": "Every one of the {total} guests is selected by an enabled backup job",
+            "uncovered": "{count} of {total} guests are not selected by any enabled backup job",
+            "excludedData": "{count} disk or mount point exclusion(s) need review",
+            "uncoveredExpected": "{required} guests declared as requiring a backup are not selected by any enabled job",
+            "evaluationFailed": "The check could not be evaluated"
+          }
+        },
+        "last_backup_age": {
+          "title": "Age of stored backups",
+          "rationale": "Age: time elapsed since the latest stored backup. Limit used: the reference age against which that backup is compared.",
+          "summary": {
+            "recent": "All {total} guest/destination checks meet the stated age policy",
+            "stale": "{count} of {total} guests have no backup from the last 30 days",
+            "noBackups": "No stored backup matches a guest on this node",
+            "attention": "{count} of {total} guest/destination checks need review",
+            "evaluationFailed": "The check could not be evaluated"
+          }
+        },
+        "retention_defined": {
+          "title": "Backup retention",
+          "rationale": "Retention as Proxmox resolves it: the job's setting, then the storage's, then the node default. Retention applied by a backup server is not readable from this node.",
+          "summary": {
+            "allDefined": "All {total} jobs resolve a retention setting",
+            "missing": "{count} of {total} enabled job(s) declare no retention",
+            "notDeclared": "{count} of {total} jobs keep every copy: no retention is declared for them",
+            "onServer": "{count} of {total} jobs write to a backup server, which prunes them under its own jobs",
+            "evaluationFailed": "The check could not be evaluated"
+          }
+        },
+        "verification_state": {
+          "title": "Backup verification",
+          "rationale": "The verification result Proxmox Backup Server records for each guest's newest copy, and whether an earlier copy of the same guest verified. Verification reads a stored copy back; it is not a restore.",
+          "summary": {
+            "allVerified": "The newest copy of all {total} guests has been verified intact",
+            "failed": "{failed} newest copies failed verification, of {total} examined",
+            "notVerified": "{pending} of {total} newest copies have not been verified",
+            "evaluationFailed": "The verification state could not be read"
+          }
+        },
+        "job_results": {
+          "title": "Backup run results",
+          "rationale": "How each guest's most recent recorded run ended, from the node's task log. Only the latest run is graded. The log is retained for a limited period.",
+          "summary": {
+            "allSucceeded": "All {total} recorded backup runs ended without error",
+            "someFailed": "{count} of {total} recorded backup runs ended with an error",
+            "evaluationFailed": "The task log could not be read",
+            "recovered": "{count} of {total} guests failed an earlier run and succeeded since"
+          }
+        },
+        "host_recovery": {
+          "title": "Host recovery",
+          "rationale": "Host backups as ProxMenux records them: each job it ran, when, whether it succeeded, the destination it wrote to and whether that copy is still there. A job writing to a backup server names no local path. Encryption keys are reported by count and recorded escrow mode only.",
+          "summary": {
+            "noHostBackup": "No host configuration backup is stored and no timer produces one",
+            "protected": "The node's own configuration is stored in {total} archive(s), within the age limit in use",
+            "attention": "{count} finding(s) across {total} host configuration record(s)",
+            "scheduledOnly": "Host configuration backups are scheduled through {count} timer(s); no archive is stored locally"
           }
         }
       },
       "system": {
         "pending_reboot": {
           "title": "Restart state",
-          "rationale": "Checks for `/var/run/reboot-required` and, when present, the packages listed in `/var/run/reboot-required.pkgs`. Also reports the running kernel.",
+          "rationale": "The `/var/run/reboot-required` marker and the packages listed in `/var/run/reboot-required.pkgs`. Its absence does not prove that nothing needs restarting.",
           "summary": {
-            "none": "No restart is pending",
-            "pending": "The host has a pending restart"
+            "none": "Nothing has asked for a restart",
+            "pending": "{count} items are installed and waiting for a restart",
+            "evaluationFailed": "The check could not be evaluated"
           }
         },
         "enterprise_repo_without_subscription": {
           "title": "Enterprise repository",
-          "rationale": "Looks for references to `enterprise.proxmox.com` in `/etc/apt/sources.list` and `sources.list.d`, and contrasts the result with the status returned by `pvesubscription get`.",
+          "rationale": "References to `enterprise.proxmox.com` in `/etc/apt/sources.list` and `sources.list.d`, against the status returned by `pvesubscription get`.",
           "summary": {
             "notEnabled": "The enterprise repository is not enabled",
             "subscribed": "The enterprise repository is backed by a subscription",
-            "unsubscribed": "The enterprise repository is enabled without an active subscription"
+            "unsubscribed": "The enterprise repository is enabled without an active subscription",
+            "evaluationFailed": "The check could not be evaluated"
+          }
+        },
+        "memory_overcommit": {
+          "title": "Memory allocation",
+          "rationale": "The `memory` ceiling of every guest configuration against MemTotal, with running guests counted separately. Containers consume up to that limit; virtual machines without ballooning reserve it.",
+          "summary": {
+            "withinRatio": "Guests are allocated {percent}% of host memory",
+            "aboveRatio": "Guests are allocated {percent}% of host memory",
+            "evaluationFailed": "The check could not be evaluated"
+          }
+        },
+        "time_synchronisation": {
+          "title": "Time synchronisation",
+          "rationale": "NTP and NTPSynchronized as `timedatectl` reports them. Cluster membership, certificate validation and log ordering depend on agreeing clocks. Another mechanism may be disciplining the clock.",
+          "summary": {
+            "synchronised": "The clock is synchronised with a time source",
+            "disabled": "Time synchronisation is disabled",
+            "notSynchronised": "Time synchronisation is enabled but the clock is not synchronised",
+            "evaluationFailed": "The check could not be evaluated"
+          }
+        },
+        "kernel_current": {
+          "title": "Running kernel",
+          "rationale": "The running kernel against the one the host would start next, as `proxmox-boot-tool` reports it. A newer kernel merely installed may be held deliberately; the two differing after a restart is a boot that did not take.",
+          "summary": {
+            "current": "The running kernel {version} is the one the host would start next",
+            "newerAvailable": "The host runs {running} while {newest} is installed",
+            "newerSelected": "The host runs {running} and would start {selected} at the next restart",
+            "wouldDowngrade": "The host runs {running} but would start the older {selected} at the next restart",
+            "bootTargetUnknown": "The host runs {version}; the kernel selected for the next boot could not be read",
+            "evaluationFailed": "The check could not be evaluated"
+          }
+        },
+        "security_updates": {
+          "title": "Security updates",
+          "rationale": "Pending packages whose origin is a security repository, from a simulated `apt-get upgrade`. The count reflects what apt reports, not the severity of what each package fixes.",
+          "summary": {
+            "none": "No package updates are pending",
+            "noSecurity": "{total} update(s) pending, none from a security repository",
+            "pending": "{count} of {total} pending update(s) come from a security repository",
+            "evaluationFailed": "The check could not be evaluated"
+          }
+        },
+        "journal_size": {
+          "title": "Journal size",
+          "rationale": "The journal on disk against the cap that applies to it: SystemMaxUse where it is set, and otherwise journald's default of a tenth of the filesystem it lives on.",
+          "summary": {
+            "bounded": "The journal holds {size}, within its effective cap",
+            "large": "The journal holds {size} on disk",
+            "nearCap": "The journal holds {size} and is at {percent}% of its effective cap",
+            "capUnknown": "The journal holds {size}; its effective cap could not be determined",
+            "evaluationFailed": "The check could not be evaluated"
+          }
+        },
+        "swap_configured": {
+          "title": "Swap",
+          "rationale": "Active swap areas from `swapon` and their total against host memory. No ratio to memory is required by anything; memory pressure is measured elsewhere.",
+          "summary": {
+            "active": "{size} of swap is active",
+            "none": "No swap area is active",
+            "evaluationFailed": "The check could not be evaluated"
+          }
+        },
+        "filesystem_capacity": {
+          "title": "Host filesystem capacity",
+          "rationale": "Space and inodes on the filesystems the host itself needs: the root filesystem, /var, /var/log and the local storage path. A filesystem with free space and no inodes left fails the same way as a full one.",
+          "summary": {
+            "withinLimits": "The {total} host filesystems are within their review thresholds",
+            "pressure": "{count} readings are at or above their review threshold",
+            "evaluationFailed": "Filesystem usage could not be read"
+          }
+        },
+        "update_chain": {
+          "title": "APT package index age",
+          "rationale": "When APT last placed a package index on this host. A repository that answers \"not modified\" leaves its index untouched. Repository reachability is not tested.",
+          "summary": {
+            "current": "Package indexes were refreshed {days} day(s) ago",
+            "stale": "Package indexes were last refreshed {days} day(s) ago",
+            "indexAgeUnknown": "The age of the package indexes could not be determined"
+          }
+        },
+        "notification_delivery": {
+          "title": "Latest notification outcome",
+          "rationale": "Enabled channels and their latest retained delivery result. No history means delivery is unverified; an earlier failure followed by a success is not a current failure. No test notification is sent.",
+          "summary": {
+            "delivering": "The latest recorded delivery succeeded for all {total} enabled channels",
+            "failing": "{count} of {total} enabled channels have a configuration problem or a failed latest delivery",
+            "noChannels": "No notification channel is enabled",
+            "evaluationFailed": "The delivery history could not be read"
+          }
+        },
+        "cluster_quorum": {
+          "title": "Cluster quorum",
+          "rationale": "Quorum as the cluster reports it, the configured nodes against those currently seen, and the number of corosync links declared. Links are read from the configuration, not probed.",
+          "summary": {
+            "standalone": "This node is not a member of a cluster",
+            "quorate": "The cluster is quorate with {total} configured node(s) over {links} corosync link(s)",
+            "attention": "{count} finding(s) across {total} configured node(s)",
+            "evaluationFailed": "Cluster status could not be read"
+          }
+        },
+        "boot_loader": {
+          "title": "Boot loader",
+          "rationale": "The EFI system partitions proxmox-boot-tool reports and the kernels each one carries. No partition is mounted and no boot is attempted.",
+          "summary": {
+            "synchronised": "The {total} boot partitions carry the same kernels",
+            "attention": "{count} of {total} boot partitions need review",
+            "evaluationFailed": "The check could not be evaluated"
+          }
+        },
+        "failed_units": {
+          "title": "Essential services and failed units",
+          "rationale": "Units systemd has given up on after exhausting its restarts, and the services Proxmox needs to answer at all, read by name because an inactive service is not always a failed one. What each unit does is not interpreted here.",
+          "summary": {
+            "allRunning": "The {total} essential services are active and no unit has failed",
+            "attention": "{count} finding(s) among the units",
+            "evaluationFailed": "The check could not be evaluated"
+          }
+        },
+        "ha_state": {
+          "title": "High availability",
+          "rationale": "The HA master, each node's resource manager and the state of every managed service, from `ha-manager status`. Quorum is reported by the cluster check. No service is started, stopped or migrated.",
+          "summary": {
+            "managed": "The {total} managed services are in a settled state across {nodes} node(s)",
+            "attention": "{count} finding(s) across {total} managed service(s)",
+            "evaluationFailed": "The check could not be evaluated"
           }
         }
       },
       "guests": {
         "privileged_containers": {
           "title": "Container privileges",
-          "rationale": "Reviews each container configuration. Proxmox marks unprivileged containers with `unprivileged: 1`; its absence indicates a privileged container, which shares the host user namespace.",
+          "rationale": "The `unprivileged` setting of each container configuration. Its absence means the container shares the host user namespace, which some workloads require.",
           "summary": {
             "allUnprivileged": "All {total} containers are unprivileged",
-            "privileged": "{count} of {total} containers run privileged"
+            "privileged": "{count} of {total} containers run privileged",
+            "evaluationFailed": "The check could not be evaluated"
           }
         },
         "qemu_without_agent": {
           "title": "Guest agent on virtual machines",
-          "rationale": "Reviews each virtual machine configuration for `agent: 1`. The guest agent enables ordered shutdown, filesystem quiescing for snapshots and real disk usage reporting.",
+          "rationale": "The `agent` setting in each virtual machine configuration. The setting says the agent is declared, not that it answers.",
           "summary": {
             "allHaveAgent": "All {total} virtual machines declare the guest agent",
-            "missingAgent": "{count} of {total} virtual machines do not declare the guest agent"
+            "missingAgent": "{count} of {total} virtual machines do not declare the guest agent",
+            "evaluationFailed": "The check could not be evaluated"
+          }
+        },
+        "autostart": {
+          "title": "Automatic start",
+          "rationale": "The `onboot` setting of each guest, excluding templates and guests managed by HA. Whether a guest is expected to come back by itself comes from the declared policy.",
+          "summary": {
+            "allAutostart": "All {total} guests start with the host",
+            "notAutostart": "{count} of {total} guests do not start with the host",
+            "evaluationFailed": "The check could not be evaluated"
+          }
+        },
+        "stuck_snapshots": {
+          "title": "Snapshot state",
+          "rationale": "Snapshot state, age and active tasks. A recent or undated operation is not treated as interrupted.",
+          "summary": {
+            "noSnapshots": "No guest holds snapshots",
+            "allComplete": "The {total} snapshot(s) are complete",
+            "stuck": "{count} of {total} snapshot(s) were left mid-operation",
+            "evaluationFailed": "The check could not be evaluated"
+          }
+        },
+        "cpu_host_type": {
+          "title": "Virtual CPU model",
+          "rationale": "The `cpu` value of each virtual machine. `host` exposes the physical processor's feature set, which constrains the nodes the guest can migrate to. Incompatibility with a particular destination is not read here.",
+          "summary": {
+            "none": "None of the {total} virtual machines is pinned to the host processor",
+            "pinned": "{count} of {total} virtual machines are pinned to the host processor",
+            "evaluationFailed": "The check could not be evaluated"
+          }
+        },
+        "replication_state": {
+          "title": "Replication",
+          "rationale": "Replication jobs from the API: failure count, last error, last synchronisation and the calendar each job declares. Paused jobs are reported as such.",
+          "summary": {
+            "healthy": "The {total} replication job(s) report no error",
+            "failing": "{count} of {total} replication job(s) report an error",
+            "statusUnavailable": "Replication jobs are defined but their status could not be read",
+            "evaluationFailed": "The check could not be evaluated"
           }
         }
       },
       "security": {
         "host_firewall_enabled": {
-          "title": "Firewall state",
-          "rationale": "Checks `enable: 1` in `/etc/pve/firewall/cluster.fw` and in the node's `host.fw`. Proxmox applies node rules only while the datacenter switch is on.",
+          "title": "Configured firewall activation",
+          "rationale": "The `enable` option in the datacenter firewall and in the node's own, and how many rules are written. Proxmox applies the node's rules only while the datacenter switch is on. These options do not say what any rule filters.",
           "summary": {
-            "bothEnabled": "The firewall is enabled at datacenter and node level",
+            "bothEnabled": "Datacenter and node firewall activation is configured",
             "datacenterOff": "The firewall is disabled at datacenter level, so node rules are not applied",
-            "nodeOff": "The firewall is enabled at datacenter level but not on this node"
+            "nodeOff": "The firewall is enabled at datacenter level but not on this node",
+            "evaluationFailed": "The check could not be evaluated"
+          }
+        },
+        "lynis_warnings": {
+          "title": "Lynis warnings",
+          "rationale": "Warnings from the last Lynis audit, each with its test identifier, and how old that audit is. An audit is run only where Lynis is installed and no complete report exists. Suggestions are not included.",
+          "summary": {
+            "none": "The last Lynis audit recorded no warnings",
+            "found": "The last Lynis audit recorded {count} warning(s)",
+            "incomplete": "The Lynis report is incomplete",
+            "evaluationFailed": "The check could not be evaluated",
+            "noneStale": "The last Lynis audit recorded no warnings, and its report is {days} day(s) old",
+            "foundStale": "The last Lynis audit recorded {count} warning(s), and its report is {days} day(s) old"
+          }
+        },
+        "certificate_expiry": {
+          "title": "Certificate validity",
+          "rationale": "The expiry date of the certificate pveproxy serves from /etc/pve/local. A custom certificate takes precedence over the one Proxmox generates.",
+          "summary": {
+            "valid": "The certificate is valid for {days} more day(s)",
+            "expiring": "The certificate expires in {days} day(s)",
+            "expired": "The certificate expired {days} day(s) ago",
+            "evaluationFailed": "The check could not be evaluated"
+          }
+        },
+        "ssh_root_login": {
+          "title": "SSH root access",
+          "rationale": "PermitRootLogin in the effective `sshd -T` configuration, with the authentication methods it combines with. Proxmox ships `yes`, which accepts a password.",
+          "summary": {
+            "password": "Root may sign in over SSH with a password",
+            "keyOnly": "Root may sign in over SSH with a key only",
+            "denied": "Root may not sign in over SSH",
+            "evaluationFailed": "The check could not be evaluated"
           }
         }
       },
       "storage": {
         "orphaned_volumes": {
           "title": "Volume assignment",
-          "rationale": "Compares the volumes returned by `pvesm list` against the existing guest configurations. Only non-shared storage is examined: on shared storage a volume may belong to a guest running on another node.",
+          "rationale": "Guest volumes on local storage against the references in current, pending and snapshot configurations. Backups, ISOs and templates are outside the comparison. An unreferenced volume is a candidate for review.",
           "summary": {
             "none": "No orphaned volumes were found",
-            "found": "{count} volume(s) belong to no existing guest"
+            "found": "{count} volume(s) have no reference in the inspected configurations",
+            "evaluationFailed": "The check could not be evaluated"
+          }
+        },
+        "zfs_arc_max": {
+          "title": "ZFS ARC limit",
+          "rationale": "Effective c_min, c_max and ARC size, the loaded module parameter and the persistent settings in /etc/modprobe.d. A configured value of zero selects the module default; the ARC is a ceiling, and the memory under it is reclaimable.",
+          "summary": {
+            "bounded": "The ARC limit is {percent}% of host memory, and the memory under it is reclaimable",
+            "high": "The ARC may use {percent}% of host memory",
+            "unset": "The ARC has no explicit limit set",
+            "conflicting": "{count} ARC settings do not agree with each other",
+            "pending": "A persistent ARC setting differs from the value the running module carries",
+            "evaluationFailed": "The check could not be evaluated"
+          }
+        },
+        "zfs_scrub_age": {
+          "title": "ZFS scrub",
+          "rationale": "The last completed scrub recorded by `zpool status` for each pool. A resilver is not a scrub. A pool created recently has not had time for one.",
+          "summary": {
+            "recent": "The {total} pool(s) were scrubbed within the last 35 days",
+            "overdue": "{count} of {total} pool(s) have not been scrubbed in 35 days",
+            "neverScrubbed": "{count} pool(s) record no scrub",
+            "evaluationFailed": "The check could not be evaluated"
+          }
+        },
+        "thin_pool_overprovisioning": {
+          "title": "Thin pool allocation",
+          "rationale": "Virtual capacity handed out by each LVM thin pool against the pool's own size, and how much of the pool its volumes have actually written, data and metadata separately.",
+          "summary": {
+            "withinRatio": "The {total} thin pools are below the applied review thresholds",
+            "aboveRatio": "{count} of {total} thin pools hand out more capacity than they hold",
+            "pressure": "{pressure} of {total} thin pools are close to filling their data or metadata",
+            "evaluationFailed": "The check could not be evaluated"
+          }
+        },
+        "connected_storage": {
+          "title": "Connected storage",
+          "rationale": "Availability as PVE reports it, known capacity and current dependencies of every storage enabled on this node. Remote internals are not probed and write access is not tested. Capacity is reported where PVE knows it and left blank where it does not.",
+          "summary": {
+            "available": "PVE reports all {total} storage(s) available; remote internals and write access were not tested",
+            "attention": "{count} of {total} storage(s) need review",
+            "evaluationFailed": "The check could not be evaluated"
+          }
+        },
+        "pool_integrity": {
+          "title": "Pool integrity and redundancy",
+          "rationale": "The state of each ZFS pool and the read, write and checksum counters of its devices. Counters are cumulative since the last `zpool clear`.",
+          "summary": {
+            "healthy": "All {total} pools are online with no device errors recorded",
+            "degraded": "{count} findings across {total} pools",
+            "evaluationFailed": "Pool state could not be read"
+          }
+        },
+        "ceph_health": {
+          "title": "Ceph health",
+          "rationale": "Ceph's own health status and the checks it named. Its tests are not reimplemented and no pool, placement group or OSD is queried separately.",
+          "summary": {
+            "healthy": "Ceph reports HEALTH_OK",
+            "degraded": "Ceph reports {state}, with {count} named check(s)",
+            "evaluationFailed": "The check could not be evaluated"
+          }
+        },
+        "array_integrity": {
+          "title": "Software RAID and multipath",
+          "rationale": "mdadm arrays and multipath maps, read from /proc/mdstat and, where the tool is installed, `multipath -ll`. ZFS pools are reported by their own check.",
+          "summary": {
+            "intact": "The {total} arrays and maps hold their redundancy",
+            "degraded": "{count} of {total} arrays or maps are short of it",
+            "evaluationFailed": "The check could not be evaluated"
+          }
+        }
+      },
+      "hardware": {
+        "disk_service_life": {
+          "title": "Disk service life",
+          "rationale": "Powered-on hours and remaining wear from the Monitor's SMART readings, with the date of each reading. Age is planning information; media errors and device warnings are reported by the health monitor.",
+          "summary": {
+            "withinLife": "The {total} disk readings are within the five-year planning threshold",
+            "pastLife": "{count} of {total} disk readings are past five years of service",
+            "noReadings": "No disk reported usable SMART counters ({skipped} without readings)",
+            "evaluationFailed": "The check could not be evaluated"
+          }
+        },
+        "disk_errors": {
+          "title": "Disk errors",
+          "rationale": "Errors detected on the disks and recorded by the health monitor.",
+          "summary": {
+            "recorded": "{count} of {total} disks with a record have events noted",
+            "noEvents": "No disk event left to grade: none recorded, or every one dismissed"
+          }
+        }
+      },
+      "network": {
+        "bond_members": {
+          "title": "Bond members",
+          "rationale": "The MII status of each bond member from /proc/net/bonding, and how many links remain. In active-backup a standby member reports as up and carries no traffic.",
+          "summary": {
+            "allUp": "All members of the {total} bond(s) are up",
+            "membersDown": "{count} bond member(s) are not up",
+            "evaluationFailed": "The check could not be evaluated"
+          }
+        },
+        "bridge_without_ports": {
+          "title": "Bridge ports",
+          "rationale": "The port configuration of each bridge. A bridge without a physical port carries an internal or routed network.",
+          "summary": {
+            "allConnected": "The {total} bridge(s) carry a port",
+            "isolated": "{count} of {total} bridge(s) carry no port",
+            "evaluationFailed": "The check could not be evaluated"
           }
         }
       }
@@ -5109,6 +5624,389 @@
       "expiry365": "1 year",
       "cancel": "Cancel",
       "confirm": "Accept risk"
-    }
+    },
+    "incomplete": "Incomplete evidence",
+    "progress": "Checked {completed} of {total}",
+    "expires": "Expires: {when}",
+    "runStates": {
+      "partial": "The assessment ran; some readings could not be taken.",
+      "failed": "Assessment interrupted or failed. Review the evidence before relying on these results."
+    },
+    "severities": {
+      "CRITICAL": "Critical",
+      "WARNING": "Warning",
+      "INFO": "Information",
+      "OK": "OK"
+    },
+    "viewSwitch": {
+      "ariaLabel": "Switch between assessment and inventory",
+      "assessment": "Assessment",
+      "inventory": "Inventory",
+      "policy": "Policy",
+      "changes": "Changes"
+    },
+    "inventory": {
+      "loading": "Loading inventory…",
+      "failed": "The inventory could not be composed.",
+      "collectedAt": "Composed on {when}",
+      "unavailable": "Not read in this inventory",
+      "unresolved": "path not resolved",
+      "noUplink": "no uplink",
+      "identity": "Node identity",
+      "node": "Node",
+      "pveVersion": "Proxmox VE",
+      "kernel": "Kernel",
+      "subscription": "Subscription",
+      "cluster": "Cluster",
+      "standalone": "Not in a cluster",
+      "hardware": "Hardware",
+      "system": "System",
+      "serial": "Serial number",
+      "bios": "BIOS",
+      "cpu": "Processor",
+      "topology": "Layout",
+      "cpuLayout": "{sockets} socket(s) × {cores} cores = {threads} threads",
+      "virtualisation": "Virtualisation",
+      "memory": "Memory",
+      "iommuGroups": "IOMMU groups",
+      "network": "Network",
+      "storage": "Storage",
+      "name": "Name",
+      "type": "Type",
+      "content": "Content",
+      "shared": "Shared",
+      "yes": "Yes",
+      "no": "No",
+      "guests": "Guests",
+      "ostype": "Operating system",
+      "onboot": "Starts with host",
+      "tags": "Tags",
+      "privilege": "Privilege",
+      "privileged": "Privileged",
+      "unprivileged": "Unprivileged",
+      "features": "Features",
+      "agent": "Guest agent",
+      "cpuModel": "CPU model",
+      "disks": "Disks",
+      "interfaces": "Network interfaces",
+      "protection": "Backup",
+      "passthrough": "Passthrough",
+      "noBackup": "No backup",
+      "noBackupDetail": "No enabled backup job selects this guest.",
+      "applications": "Applications",
+      "versionUnknown": "version not detected",
+      "passthroughTitle": "PCI passthrough",
+      "iommuGroup": "IOMMU group {group}",
+      "sharedGroup": "{count} more device(s) in the same group",
+      "proxmenux": "ProxMenux optimizations",
+      "latency": "Network latency",
+      "subscriptionStatus": {
+        "notfound": "No subscription found",
+        "active": "Active",
+        "invalid": "Invalid",
+        "expired": "Expired",
+        "suspended": "Suspended",
+        "new": "Pending activation",
+        "unknown": "Unknown"
+      }
+    },
+    "profile": {
+      "label": "Report",
+      "full": "Full audit",
+      "inventory": "Inventory",
+      "security": "Security review",
+      "backup": "Backup assurance",
+      "capacity": "Capacity and wear",
+      "diagnostic": "Quick diagnosis"
+    },
+    "document": {
+      "action": "Generate report",
+      "title": "Audit Report",
+      "subtitle": "Structure, configuration and assessment of {node}",
+      "generated": "Generated",
+      "assessed": "Assessed",
+      "runId": "Assessment reference",
+      "print": "Print or save as PDF",
+      "summaryByArea": "Summary by area",
+      "area": "Area",
+      "inventoryAnnex": "Inventory annex",
+      "scopeTitle": "Scope of this report",
+      "scopeBody": "This report describes the Proxmox VE node named above, as observed from the node itself at the time stated. It does not cover the interior of the guests beyond what they declare, network equipment outside the host, physical infrastructure, or any dependency not visible from this node. Findings marked as not determined were not measured and are not evidence of absence.",
+      "building": "Composing the report…",
+      "node": "Node",
+      "profile": "Profile",
+      "unknownNode": "unidentified node",
+      "executiveSummary": "Assessment summary",
+      "assessment": "Assessment",
+      "verdictHeading": "Result of this run",
+      "verdict": {
+        "critical": "ATTENTION",
+        "warning": "REVIEW",
+        "conformant": "IN ORDER"
+      },
+      "verdictText": {
+        "critical": "{fail} checks report a failed condition and {warn} report a condition to review, out of {total} evaluated.",
+        "warning": "No check reports a failed condition. {warn} of {total} report a condition to review.",
+        "conformant": "The {total} checks in this profile complete without a failed or reviewable condition.",
+        "none": "This profile runs no checks. The document describes the node without assessing it."
+      },
+      "runAt": "Run on {date}",
+      "chartNote": "Checks by area and result.",
+      "nodeIdentity": "Node identity",
+      "system": "System",
+      "cluster": "Cluster",
+      "standaloneNote": "This node is not part of a cluster: it holds its own configuration and its guests do not migrate to another node.",
+      "clusterDiagramNote": "Configured nodes and the corosync links that join them.",
+      "thisNode": "this node",
+      "unreachable": "not seen",
+      "member": "member",
+      "corosyncLinks": "links",
+      "quorum": "Quorum",
+      "quorate": "with quorum",
+      "inquorate": "without quorum",
+      "votes": "Votes",
+      "nodeName": "Node",
+      "architecture": "System architecture",
+      "architectureNote": "How the node is assembled: processor and memory on the board, and what hangs off each controller.",
+      "systemIdentity": "System identity",
+      "board": "Board",
+      "processor": "Processor",
+      "topology": "Sockets × cores / threads",
+      "memory": "Memory",
+      "cores": "cores",
+      "threads": "threads",
+      "memoryModules": "Memory modules",
+      "slot": "Slot",
+      "slotsUsed": "slots used",
+      "slotsFilled": "{used} of {total} slots populated",
+      "emptySlot": "empty",
+      "formFactor": "Format",
+      "speed": "Speed",
+      "manufacturer": "Manufacturer",
+      "product": "Model",
+      "serial": "Serial",
+      "controllers": "Controllers",
+      "class": "Class",
+      "device": "Device",
+      "iommuGroups": "IOMMU groups",
+      "iommuGroup": "IOMMU group",
+      "field": "Field",
+      "value": "Value",
+      "size": "Size",
+      "type": "Type",
+      "storageDevices": "Storage devices",
+      "disks": "Disks",
+      "model": "Model",
+      "bus": "Bus",
+      "serviceLife": "Service life",
+      "healthy": "healthy",
+      "years": "{years} years",
+      "events": "Events",
+      "observations": "Observations",
+      "observationsNote": "Recorded events. SMART reports the present state; this log reports what happened, including events the disk recovered from.",
+      "noObservations": "No events recorded",
+      "noObservationsNote": "No disk has recorded an error since the Monitor began observing them.",
+      "event": "Event",
+      "severity": "Severity",
+      "occurrences": "Occurrences",
+      "firstSeen": "First seen",
+      "lastSeen": "Last seen",
+      "detail": "Detail",
+      "network": "Network",
+      "adapters": "Adapters",
+      "bond": "Bond",
+      "bridge": "Bridge",
+      "bridges": "Bridges",
+      "physicalAdapters": "Physical adapters",
+      "interface": "Interface",
+      "driver": "Driver",
+      "state": "State",
+      "networkDiagramNote": "Path from the wire to each guest: physical adapter, bond where one groups them, bridge and attached guests.",
+      "storageAndProtection": "Storage and protection",
+      "storage": "Storage",
+      "content": "Content",
+      "shared": "Shared",
+      "location": "Location",
+      "backupDestination": "Backup destination",
+      "unprotected": "unprotected",
+      "storageDiagramNote": "Where guest disks live and which destination backs them up.",
+      "unprotectedGuests": "{count} guests with no backup job",
+      "allProtected": "Every guest is covered by a backup job",
+      "allProtectedNote": "Coverage says a job selects the guest; the backup results are assessed separately.",
+      "vmid": "VMID",
+      "name": "Name",
+      "kind": "Kind",
+      "backup": "Backup",
+      "none": "none",
+      "managedSoftware": "Software managed by ProxMenux",
+      "version": "Version",
+      "source": "Source",
+      "current": "up to date",
+      "updateAvailable": "update to {version}",
+      "findings": "Findings in detail",
+      "incomplete": "partial",
+      "scope": "Scope of this report",
+      "scopeText": "This document reports the {profile} profile on the node named in the header, at the moment of the run.",
+      "scopeLocal": "It covers this node only. Guests on other nodes and their configuration are outside it.",
+      "scopeReadOnly": "Every check reads configuration and state that already exists; none modifies the host.",
+      "scopeMoment": "It describes the state at the time of the run, not a period of time.",
+      "notRead": "Sources that could not be read:",
+      "uplink": "Uplink",
+      "conformance": "{pass} of {total} conformant",
+      "latency": "Network latency",
+      "latencyNote": "Latency measured over the reported window, one line per target.",
+      "milliseconds": "ms",
+      "hours": "h",
+      "minimum": "Minimum",
+      "average": "Average",
+      "maximum": "Maximum",
+      "packetLoss": "Packet loss",
+      "samples": "Samples",
+      "target": {
+        "label": "Target",
+        "gateway": "Gateway",
+        "cloudflare": "Cloudflare (1.1.1.1)",
+        "google": "Google (8.8.8.8)"
+      },
+      "actionShort": "Report",
+      "policyDeclared": "It was judged against a declared policy: {guests} guests, {storages} storages and {thresholds} thresholds stated.",
+      "policyNone": "No policy was declared, so an absence this report could not interpret is stated as an observation and never as a warning.",
+      "diagnosticTitle": "Quick diagnosis",
+      "diagnosticSubtitle": "Critical results and warnings on {node}",
+      "diagnosticActing": "{count} critical result(s) and warning(s).",
+      "diagnosticClear": "No critical result and no warning. Observations and conformant results are in the full audit.",
+      "diagnosticUnread": "Readings that could not be taken",
+      "diagnosticMoreRows": "{count} further row(s), in the full audit.",
+      "structureTitle": "Structure and configuration",
+      "structureSubtitle": "How {node} is built and configured"
+    },
+    "results": "Results",
+    "classifications": {
+      "critical": "Critical",
+      "warning": "Warning",
+      "observation": "Observation",
+      "conformant": "Conformant",
+      "unverified": "Unverified",
+      "not_applicable": "Not applicable",
+      "accepted": "Accepted risk",
+      "by_design": "Excluded by policy"
+    },
+    "policy": {
+      "inherit": "{value} (default)",
+      "inheritUnset": "Default",
+      "conflict": "The declaration changed in another session. Your draft has not been saved.",
+      "reload": "Reload saved declaration (discard draft)",
+      "intro": "An assessment sees what this host does, not what it is for. What is declared here is what turns an observation into a warning, or takes it out of the count. Nothing is required: with no declaration the report describes rather than judges.",
+      "loading": "Reading the declaration…",
+      "failed": "The declaration could not be read",
+      "saved": "Saved",
+      "declaredCount": "{count} declarations",
+      "guestsNote": "Required reports what is missing as a warning; unspecified reports it as an observation; not required leaves it out of the count.",
+      "storagesNote": "An unreachable storage is critical where it is declared essential or serves a running guest, a warning where its role is not declared, and an observation where it is declared optional.",
+      "thresholds": "Thresholds",
+      "thresholdsNote": "Empty means the shipped value, shown as the placeholder.",
+      "backup": "Backup",
+      "autostart": "Autostart",
+      "objective": "Recovery objective",
+      "objectivePlaceholder": "hours",
+      "noGuests": "This node holds no guests.",
+      "expectation": {
+        "required": "Required",
+        "not_required": "Not required",
+        "unspecified": "Not stated"
+      },
+      "role": {
+        "essential": "Essential",
+        "optional": "Optional",
+        "unspecified": "Not stated"
+      },
+      "threshold": {
+        "storage_usage_percent": "Storage capacity review (%)",
+        "thin_pool_usage_percent": "Thin pool fill review (%)",
+        "thin_overprovision_ratio": "Thin overprovisioning ratio",
+        "zfs_scrub_days": "ZFS scrub interval (days)",
+        "backup_fallback_days": "Backup age fallback (days)",
+        "backup_schedule_grace_ratio": "Schedule grace (ratio)",
+        "certificate_expiry_days": "Certificate expiry notice (days)",
+        "memory_overcommit_ratio": "Memory overcommit ratio",
+        "disk_service_life_hours": "Disk service life (hours)",
+        "lynis_report_days": "Lynis report age (days)",
+        "package_index_days": "Package index age (days)",
+        "journal_usage_percent": "Journal against its cap (%)",
+        "filesystem_usage_percent": "Filesystem space review (%)",
+        "filesystem_inode_percent": "Filesystem inode review (%)",
+        "disk_error_recent_days": "Recent disk error window (days)"
+      }
+    },
+    "changes": {
+      "loading": "Reading the change journal…",
+      "failed": "The change journal could not be read",
+      "intro": "What ProxMenux changed on this host and what was there before each change. The difference is shown, not the script that applied it.",
+      "empty": "Nothing has been recorded on this host yet.",
+      "since": "Recording since {date}. Anything applied before that appears as applied, without the state it replaced.",
+      "byFunction": "By function",
+      "count": "{count} changes",
+      "function": "Function",
+      "source": "Script",
+      "reversibility": "Undoing this",
+      "difference": "Difference",
+      "diffTruncated": "The difference is longer than what is shown.",
+      "diffUnavailable": "The content that was replaced is no longer stored, so the difference cannot be shown.",
+      "packagesAdded": "Packages added",
+      "commandRun": "Command run",
+      "executionNote": "ProxMenux ran this on request; what it changed was decided by the command, not by ProxMenux.",
+      "unknownNote": "This was applied before the journal existed, so what it replaced was never captured.",
+      "noneInFilter": "No change of this kind.",
+      "class": {
+        "all": "All",
+        "configuration": "Configuration",
+        "installation": "Installations",
+        "execution": "Executions",
+        "registration": "Applied"
+      },
+      "operation": {
+        "write_file": "File replaced",
+        "edit_file": "File edited",
+        "remove_file": "File removed",
+        "install_package": "Installed",
+        "enable_service": "Service enabled",
+        "disable_service": "Service disabled",
+        "run_command": "Ran",
+        "applied": "Applied",
+        "removed": "Removed",
+        "unknown": "Change"
+      },
+      "capture": {
+        "unknown": "Previous state unknown"
+      },
+      "exactness": {
+        "exact": "Restores exactly what was there",
+        "partial": "Partial: dependencies may remain or be removed with it",
+        "none": "Cannot be undone from the journal"
+      }
+    },
+    "comparison": {
+      "loading": "Comparing with the reference run…",
+      "failed": "The reference run could not be set",
+      "since": "Since {date}",
+      "previousRun": "the previous run",
+      "noChange": "No change",
+      "isBaseline": "This run is the reference the others are compared against.",
+      "noBaseline": "No reference run has been chosen yet, so there is nothing to compare against.",
+      "setBaseline": "Use as reference",
+      "unchanged": "{count} checks reported the same result as before.",
+      "new": "New",
+      "newNote": "reported now and not before",
+      "resolved": "Resolved",
+      "resolvedNote": "no longer reported, and nobody accepted them",
+      "accepted": "Accepted",
+      "acceptedNote": "no longer counted because a risk was accepted, not because the host changed",
+      "retired": "No longer assessed",
+      "retiredNote": "present before and absent from this run; nothing verified they stopped",
+      "reasons": {
+        "insufficient_runs": "A comparison needs a reference run and a later one; only one is recorded so far"
+      }
+    },
+    "notApplicableScope": "Nothing in the inspected scope this check applies to."
   }
 }

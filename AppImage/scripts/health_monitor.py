@@ -6149,6 +6149,7 @@ class HealthMonitor:
         try:
             import flask_server  # deferred — avoids circular import at module load
             resources = flask_server.get_cached_pvesh_cluster_resources_vm() or []
+            local_node = flask_server.get_proxmox_node_name()
         except Exception as e:
             print(f"[HealthMonitor] LXC disk check failed: {e}")
             return None
@@ -6169,6 +6170,12 @@ class HealthMonitor:
 
         for r in resources:
             if r.get('type') != 'lxc':
+                continue
+            # `/cluster/resources` is cluster-wide. Capacity belongs to the
+            # node currently running the CT, so every Monitor must ignore
+            # guests owned by another node or the same condition is recorded
+            # and notified independently by every cluster member.
+            if r.get('node') != local_node:
                 continue
             if r.get('status') != 'running':
                 # Stopped CTs — `disk` reads as 0 from pvesh because the
@@ -6194,6 +6201,7 @@ class HealthMonitor:
                 'maxdisk_bytes': maxdisk,
                 'vmid': vmid,
                 'name': name,
+                'node': local_node,
             }
             error_key = f'lxc_disk_{vmid}'
 
@@ -6287,13 +6295,16 @@ class HealthMonitor:
         try:
             import flask_server  # deferred — avoids circular import
             resources = flask_server.get_cached_pvesh_cluster_resources_vm() or []
+            local_node = flask_server.get_proxmox_node_name()
         except Exception as e:
             print(f"[HealthMonitor] VM disk check failed: {e}")
             return None
 
         # Cheap short-circuit: no running QEMU VMs on this node.
         if not any(
-            r.get('type') in ('qemu', 'vm') and r.get('status') == 'running'
+            r.get('type') in ('qemu', 'vm')
+            and r.get('node') == local_node
+            and r.get('status') == 'running'
             for r in resources
         ):
             return None
@@ -6307,6 +6318,8 @@ class HealthMonitor:
 
         for r in resources:
             if r.get('type') not in ('qemu', 'vm'):
+                continue
+            if r.get('node') != local_node:
                 continue
             if r.get('status') != 'running':
                 continue
@@ -6338,6 +6351,7 @@ class HealthMonitor:
                 'maxdisk_bytes': total,
                 'vmid': vmid_str,
                 'name': name,
+                'node': local_node,
             }
             error_key = f'vm_disk_{vmid_str}'
 

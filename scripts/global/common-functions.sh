@@ -12,6 +12,9 @@ TOOLS_JSON="/usr/local/share/proxmenux/installed_tools.json"
 if [[ -f "$UTILS_FILE" ]]; then
     source "$UTILS_FILE"
 fi
+if [[ -f "$LOCAL_SCRIPTS/global/pmx_journal.sh" ]]; then
+    source "$LOCAL_SCRIPTS/global/pmx_journal.sh"
+fi
 
 load_language
 initialize_cache
@@ -84,6 +87,8 @@ lvm_repair_check() {
 
 
 cleanup_duplicate_repos_pve9() {
+    local FUNC_VERSION="1.0"
+    pmx_journal_context "cleanup_duplicate_repos_pve9" "$FUNC_VERSION"
     msg_info "$(translate "Cleaning up duplicate repositories...")"
 
     local sources_file="/etc/apt/sources.list"
@@ -152,7 +157,8 @@ cleanup_duplicate_repos_pve9() {
 
         if [[ "$file_changed" -eq 1 ]]; then
             _backup_once "$sources_file"
-            mv "$temp_file" "$sources_file"
+            pmx_write_file "$sources_file" < "$temp_file"
+            rm -f "$temp_file"
             chmod 644 "$sources_file"
         else
             rm -f "$temp_file"
@@ -201,7 +207,7 @@ cleanup_duplicate_repos_pve9() {
                 esc_uri=$(printf '%s' "$uri" | sed 's/[][\.^$*/]/\\&/g')
                 esc_suite=$(printf '%s' "$suite" | sed 's/[][\.^$*/]/\\&/g')
                 esc_comp=$(printf '%s' "$first_comp" | sed 's/[][\.^$*/]/\\&/g')
-                sed -i -E "/^deb[[:space:]]+${esc_uri}[[:space:]]+${esc_suite}[[:space:]]+.*(^| )${esc_comp}( |$)/s/^/# /" "$target_file"
+                pmx_edit_file "$target_file" -E "/^deb[[:space:]]+${esc_uri}[[:space:]]+${esc_suite}[[:space:]]+.*(^| )${esc_comp}( |$)/s/^/# /"
                 cleaned_count=$((cleaned_count + 1))
             fi
         }
@@ -240,7 +246,7 @@ cleanup_duplicate_repos_pve9() {
         for old_file in /etc/apt/sources.list.d/pve-public-repo.list /etc/apt/sources.list.d/pve-install-repo.list; do
             if [ -f "$old_file" ]; then
                 _backup_once "$old_file"
-                rm -f "$old_file"
+                pmx_remove_file "$old_file"
                 cleaned_count=$((cleaned_count + 1))
             fi
         done
@@ -248,6 +254,7 @@ cleanup_duplicate_repos_pve9() {
 
     if [ $cleaned_count -gt 0 ]; then
         msg_ok "$(translate "Cleaned up $cleaned_count duplicate/old repositories")"
+        pmx_record_execution "Update package lists after repository cleanup" "apt-get update"
         apt-get update > /dev/null 2>&1 || true
     else
         msg_ok "$(translate "No duplicate repositories found")"
@@ -257,6 +264,8 @@ cleanup_duplicate_repos_pve9() {
 
 
 cleanup_duplicate_repos_pve9_() {
+    local FUNC_VERSION="1.0"
+    pmx_journal_context "cleanup_duplicate_repos_pve9_" "$FUNC_VERSION"
     msg_info "$(translate "Cleaning up duplicate repositories...")"
     
     local sources_file="/etc/apt/sources.list"
@@ -285,7 +294,8 @@ cleanup_duplicate_repos_pve9_() {
         fi
     done < "$sources_file"
 
-    mv "$temp_file" "$sources_file"
+    pmx_write_file "$sources_file" < "$temp_file"
+    rm -f "$temp_file"
     chmod 644 "$sources_file"
 
     for src in proxmox debian ceph; do
@@ -308,7 +318,7 @@ cleanup_duplicate_repos_pve9_() {
 
             if [[ -n "$url_match" ]]; then
                 if grep -q "^deb.*$url_match" "$sources_file"; then
-                    sed -i "/^deb.*$url_match/s/^/# /" "$sources_file"
+                    pmx_edit_file "$sources_file" "/^deb.*$url_match/s/^/# /"
                     cleaned_count=$((cleaned_count + 1))
                 fi
             fi
@@ -316,7 +326,7 @@ cleanup_duplicate_repos_pve9_() {
             for list_file in /etc/apt/sources.list.d/*.list; do
                 [[ -f "$list_file" ]] || continue
                 if grep -q "^deb.*$url_match" "$list_file"; then
-                    sed -i "/^deb.*$url_match/s/^/# /" "$list_file"
+                    pmx_edit_file "$list_file" "/^deb.*$url_match/s/^/# /"
                     cleaned_count=$((cleaned_count + 1))
                 fi
             done
@@ -325,6 +335,7 @@ cleanup_duplicate_repos_pve9_() {
 
     if [ $cleaned_count -gt 0 ]; then
         msg_ok "$(translate "Cleaned up $cleaned_count duplicate/old repositories")"
+        pmx_record_execution "Update package lists after repository cleanup" "apt-get update"
         apt-get update > /dev/null 2>&1 || true
     else
         msg_ok "$(translate "No duplicate repositories found")"

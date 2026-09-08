@@ -495,9 +495,25 @@ def auth_change_password():
     """
     try:
         data = request.json or {}
+        # `old_password` is the canonical API field. Accept the original
+        # frontend name as a compatibility alias so an already-open browser
+        # tab can still complete the request after a Monitor update.
         old_password = data.get('old_password')
+        if old_password is None:
+            old_password = data.get('current_password')
         new_password = data.get('new_password')
         totp_code = data.get('totp_code')
+
+        if not isinstance(old_password, str) or not isinstance(new_password, str):
+            return jsonify({
+                "success": False,
+                "message": "Current password and new password are required",
+            }), 400
+        if totp_code is not None and not isinstance(totp_code, str):
+            return jsonify({
+                "success": False,
+                "message": "Invalid 2FA code",
+            }), 400
 
         success, message = auth_manager.change_password(old_password, new_password, totp_code)
 

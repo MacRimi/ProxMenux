@@ -497,6 +497,7 @@ AGGREGATION_RULES = {
     'service_fail':    {'window': 90,  'min_count': 2,  'burst_type': 'burst_service_fail'},
     'service_fail_batch': {'window': 90, 'min_count': 2, 'burst_type': 'burst_service_fail'},
     'system_problem':  {'window': 90,  'min_count': 2,  'burst_type': 'burst_system'},
+    'kernel_warning':  {'window': 90,  'min_count': 2,  'burst_type': 'burst_system'},
     'oom_kill':        {'window': 60,  'min_count': 2,  'burst_type': 'burst_generic'},
     'firewall_issue':  {'window': 60,  'min_count': 2,  'burst_type': 'burst_generic'},
 }
@@ -522,12 +523,10 @@ _DEFAULT_AGGREGATION = {'window': 60, 'min_count': 2, 'burst_type': 'burst_gener
 # recovery is per-event; collapsing them adds zero information.
 _AGGREGATION_EXEMPT_EVENTS = frozenset({
     'error_resolved',
-    # Per-app upstream update. Each event carries a distinct app name,
-    # version and CT id — collapsing "5 app updates burst" into a
-    # summary hides exactly the information the user wants (which
-    # apps, which versions). Startup emit fires all pending updates
-    # at once, so without this exemption only the first 1-2 land and
-    # the rest get buffered into a useless summary.
+    # Registered-app updates are grouped deliberately by their producer during
+    # automatic/startup sweeps, preserving each app, CT and version pair.
+    # Manual checks still emit one complete per-app event. Sending either form
+    # through the generic burst formatter would discard those details.
     'app_update_available',
     'docker_stack_update_available',
     'lxc_update_applied',
@@ -1274,8 +1273,18 @@ class NotificationManager:
             channels = dict(self._channels)
         
         template = TEMPLATES.get(event_type, {})
-        event_group = template.get('group', 'other')
-        default_event_enabled = 'true' if template.get('default_enabled', True) else 'false'
+        # Hidden burst templates represent their originating event; they must
+        # inherit both its category and its per-event toggle. Otherwise turning
+        # off an individual alert suppresses the first message but the hidden
+        # "+N more" summary still arrives later.
+        filter_event_type = event_type
+        if template.get('hidden', False):
+            source_event_type = str(data.get('event_type', '') or '')
+            if source_event_type in TEMPLATES:
+                filter_event_type = source_event_type
+        filter_template = TEMPLATES.get(filter_event_type, template)
+        event_group = filter_template.get('group', template.get('group', 'other'))
+        default_event_enabled = 'true' if filter_template.get('default_enabled', True) else 'false'
         
         # Build AI config once (shared across channels, detail_level varies)
         ai_config = self._build_ai_config()
@@ -1292,7 +1301,7 @@ class NotificationManager:
 
             # ── Per-channel event check ──
             # Default: from template default_enabled, unless explicitly set.
-            ch_event_key = f'{ch_name}.event.{event_type}'
+            ch_event_key = f'{ch_name}.event.{filter_event_type}'
             if self._config.get(ch_event_key, default_event_enabled) == 'false':
                 continue  # Channel has this specific event disabled
 

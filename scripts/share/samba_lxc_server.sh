@@ -32,6 +32,10 @@ if [[ -f "$UTILS_FILE" ]]; then
     source "$UTILS_FILE"
 fi
 
+if [[ -f "$LOCAL_SCRIPTS/global/pmx_journal.sh" ]]; then
+    source "$LOCAL_SCRIPTS/global/pmx_journal.sh"
+fi
+
 
 SHARE_COMMON_FILE="$LOCAL_SCRIPTS/global/share-common.func"
 if ! source "$SHARE_COMMON_FILE" 2>/dev/null; then
@@ -48,6 +52,9 @@ select_privileged_lxc
 
 
 select_mount_point() {
+    local FUNC_VERSION="1.0"
+    pmx_journal_context "select_mount_point" "$FUNC_VERSION"
+
     while true; do
         METHOD=$(whiptail --backtitle "ProxMenux" --title "$(translate "Select Folder")" \
             --menu "$(translate "How do you want to select the folder to share?")" 15 60 5 \
@@ -104,12 +111,16 @@ select_mount_point() {
 
 
 create_share() {
+    local FUNC_VERSION="1.0"
 
     show_proxmenux_logo
     msg_title "$(translate "Create Samba server service")"
     sleep 2
 
     select_mount_point || return
+    pmx_journal_context "create_share" "$FUNC_VERSION"
+    pmx_record_execution "configure Samba share ${MOUNT_POINT} in CT ${CTID}" \
+        "pct exec ${CTID} -- install and configure Samba share ${MOUNT_POINT}"
     
 
     if ! pct exec "$CTID" -- test -d "$MOUNT_POINT"; then
@@ -311,7 +322,7 @@ EOF
         msg_warn "$(translate "The share already exists in smb.conf:") [$SHARE_NAME]"
         if whiptail --yesno "$(translate "Do you want to update the existing share?")" 10 60 --title "$(translate "Update Share")"; then
  
-            pct exec "$CTID" -- sed -i "/^\[$SHARE_NAME\]/,/^$/d" /etc/samba/smb.conf
+            pct exec "$CTID" -- sed --in-place "/^\[$SHARE_NAME\]/,/^$/d" /etc/samba/smb.conf
             pct exec "$CTID" -- bash -c "echo '$CONFIG' >> /etc/samba/smb.conf"
             msg_ok "$(translate "Share updated successfully.")"
         else
@@ -406,6 +417,9 @@ view_shares() {
 
 
 delete_share() {
+    local FUNC_VERSION="1.0"
+    pmx_journal_context "delete_share" "$FUNC_VERSION"
+
     if ! pct exec "$CTID" -- test -f /etc/samba/smb.conf; then
         dialog --backtitle "ProxMenux" --title "$(translate "Error")" --msgbox "\n$(translate "No smb.conf file found.")" 8 50
         return
@@ -438,7 +452,9 @@ delete_share() {
         msg_title "$(translate "Delete Share")"
         
 
-        pct exec "$CTID" -- sed -i "/^\[$SELECTED_SHARE\]/,/^$/d" /etc/samba/smb.conf
+        pmx_record_execution "remove Samba share ${SELECTED_SHARE} from CT ${CTID}" \
+            "pct exec ${CTID} -- remove share ${SELECTED_SHARE} from /etc/samba/smb.conf and restart smbd"
+        pct exec "$CTID" -- sed --in-place "/^\[$SELECTED_SHARE\]/,/^$/d" /etc/samba/smb.conf
         pct exec "$CTID" -- systemctl restart smbd.service
         msg_ok "$(translate "Share deleted and Samba service restarted.")"
     fi
@@ -495,6 +511,7 @@ check_samba_status() {
 
 
 uninstall_samba() {
+    local FUNC_VERSION="1.0"
 
     if ! pct exec "$CTID" -- dpkg -s samba &>/dev/null; then
         dialog --backtitle "ProxMenux" --title "$(translate "Samba Not Installed")" --msgbox "\n$(translate "Samba server is not installed in this CT.")" 8 60
@@ -510,6 +527,9 @@ uninstall_samba() {
     
     show_proxmenux_logo
     msg_title "$(translate "Uninstall Samba Server")"
+    pmx_journal_context "uninstall_samba" "$FUNC_VERSION"
+    pmx_record_execution "uninstall Samba server from CT ${CTID}" \
+        "pct exec ${CTID} -- stop services, preserve smb.conf backup, remove Samba users and packages"
     
 
     msg_info "$(translate "Stopping Samba services...")"

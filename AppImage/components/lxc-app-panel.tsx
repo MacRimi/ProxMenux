@@ -1205,27 +1205,42 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed, initialData }: Prop
         web_path: link.web_path || "/",
         logo_url: link.logo_url || "",
       }
-      const last = draft.ports[draft.ports.length - 1]
-      const indexAfterAdd = (last && last.port === "" && !last.description)
-        ? draft.ports.length - 1
-        : draft.ports.length
-      if (indexAfterAdd === draft.ports.length) {
-        setField({ ports: [...draft.ports, entry] })
-      } else {
-        const ports = [...draft.ports]
-        ports[indexAfterAdd] = entry
-        setField({ ports })
-      }
+      setDetectorTest(null)
+      setEditing((current) => {
+        if (!current) return current
+        const currentPorts = current.draft.ports
+        // The buttons disappear after a port is added, but guard the state
+        // update too so a double click can never create duplicate links.
+        if (currentPorts.some((port) => port.port === link.host_port)) return current
+        const ports = [...currentPorts]
+        const last = ports[ports.length - 1]
+        if (last && last.port === "" && !last.description) ports[ports.length - 1] = entry
+        else ports.push(entry)
+        return { ...current, draft: { ...current.draft, ports } }
+      })
       // Ask the backend whether this service_name has a known catalog
       // category and, if so, patch the just-inserted port so the user
       // finds it pre-selected instead of having to open the dropdown.
-      // Non-blocking — the port is already visible either way.
+      // This must be a functional update: the response can arrive after the
+      // user has added or edited more links, and must never restore the old
+      // draft captured by this render.
       const q = (link.service_name || "").trim()
       if (q) {
         fetchApi<{ category: string | null }>(`/api/apps/suggest_category?name=${encodeURIComponent(q)}`)
           .then((r) => {
             if (!r?.category) return
-            setPort(indexAfterAdd, { category: r.category })
+            setEditing((current) => {
+              if (!current) return current
+              let changed = false
+              const ports = current.draft.ports.map((port) => {
+                if (port.port !== link.host_port || port.category) return port
+                changed = true
+                return { ...port, category: r.category || undefined }
+              })
+              return changed
+                ? { ...current, draft: { ...current.draft, ports } }
+                : current
+            })
           })
           .catch(() => { /* non-fatal — user can pick manually */ })
       }
@@ -1235,15 +1250,32 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed, initialData }: Prop
     const usedPorts = new Set(draft.ports.map((p) => p.port))
     const isDockerDraft = draft.helper_slug === "docker" ||
       (draft.installed_via === "binary" && draft.binary_path?.endsWith("/docker"))
+    // A recognised Docker workload belongs in one place at a time. Keep its
+    // links out of Docker while it is offered (or already registered) as an
+    // independent app. Dismissing that detection makes the links available
+    // under Docker again.
+    const independentDockerWorkloadSlugs = new Set(
+      (suggestions?.docker_workloads || [])
+        .filter((workload) => !dismissedSlugs.has(workload.slug))
+        .map((workload) => workload.slug),
+    )
     const suggestableDockerLinks = isDockerDraft
-      ? (suggestions?.docker_web_links || []).filter((link) => !usedPorts.has(link.host_port))
+      ? (suggestions?.docker_web_links || []).filter(
+          (link) =>
+            !usedPorts.has(link.host_port) &&
+            (!link.service_slug || !independentDockerWorkloadSlugs.has(link.service_slug)),
+        )
       : []
-    // A Docker registration uses structured container → published-port
-    // suggestions below.  Suppress the generic ss/netstat chips in that case
-    // so the same endpoint is not presented twice without its workload name.
-    const suggestable = isDockerDraft
-      ? []
-      : (suggestions?.port_suggestions || []).filter((p) => !usedPorts.has(p))
+    // Keep the generic ss/netstat probe available for Docker too. It covers
+    // host-networked services and listeners that Docker does not expose in
+    // NetworkSettings.Ports. Published ports already represented by a named
+    // Docker workload stay deduplicated from the generic chips.
+    const dockerPublishedPorts = new Set(
+      (suggestions?.docker_web_links || []).map((link) => link.host_port),
+    )
+    const suggestable = (suggestions?.port_suggestions || []).filter(
+      (port) => !usedPorts.has(port) && (!isDockerDraft || !dockerPublishedPorts.has(port)),
+    )
 
     return (
       <div className="space-y-4">

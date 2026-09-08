@@ -61,6 +61,9 @@ MONITOR_PORT=8008
 if [[ -f "$UTILS_FILE" ]]; then
     source "$UTILS_FILE"
 fi
+if [[ -f "$LOCAL_SCRIPTS/global/pmx_journal.sh" ]]; then
+    source "$LOCAL_SCRIPTS/global/pmx_journal.sh"
+fi
 
 load_language
 initialize_cache
@@ -749,6 +752,8 @@ show_version_info() {
 
 # ==========================================================
 uninstall_proxmenu() {
+    local FUNC_VERSION="1.0"
+    pmx_journal_context "uninstall_proxmenu" "$FUNC_VERSION"
     if ! dialog --clear --backtitle "$BACKTITLE" \
                 --title "Uninstall ProxMenux" \
                 --yesno "\n$(translate "Are you sure you want to uninstall ProxMenux?")" 8 60; then
@@ -773,11 +778,13 @@ uninstall_proxmenu() {
         # a pre-static-translations install. Cheap idempotent check.
         if [ -d "/opt/googletrans-env" ]; then
             echo "30" ; echo "Removing legacy googletrans virtualenv..."
+            pmx_record_execution "Remove legacy googletrans virtual environment" "rm -rf /opt/googletrans-env"
             rm -rf "/opt/googletrans-env"
         fi
 
         echo "50" ; echo "Removing ProxMenu files..."
-        rm -f "$INSTALL_DIR/$MENU_SCRIPT"
+        pmx_remove_file "$INSTALL_DIR/$MENU_SCRIPT"
+        pmx_record_execution "Remove ProxMenux application directory" "rm -rf $BASE_DIR"
         rm -rf "$BASE_DIR"
         
         # Remove selected dependencies
@@ -785,22 +792,30 @@ uninstall_proxmenu() {
             echo "70" ; echo "Removing selected dependencies..."
             read -r -a DEPS_ARRAY <<< "$(echo "$deps_to_remove" | tr -d '"')"
             for dep in "${DEPS_ARRAY[@]}"; do
+                pmx_record_execution "Mark ProxMenux dependency as automatic" "apt-mark auto $dep"
                 apt-mark auto "$dep" >/dev/null 2>&1
+                pmx_record_execution "Remove selected ProxMenux dependency" "apt-get -y --purge autoremove $dep"
                 apt-get -y --purge autoremove "$dep" >/dev/null 2>&1
             done
+            pmx_record_execution "Remove unused ProxMenux dependencies" "apt-get autoremove -y --purge"
             apt-get autoremove -y --purge >/dev/null 2>&1
         fi
 
         echo "80" ; echo "Removing ProxMenux Monitor..."
+        pmx_record_execution "Uninstall ProxMenux Monitor" "uninstall_proxmenux_monitor"
         uninstall_proxmenux_monitor
         
         echo "90" ; echo "Restoring system files..."
         # Restore .bashrc and motd
-        [ -f /root/.bashrc.bak ] && mv /root/.bashrc.bak /root/.bashrc
+        if [ -f /root/.bashrc.bak ]; then
+            pmx_write_file /root/.bashrc < /root/.bashrc.bak
+            pmx_remove_file /root/.bashrc.bak
+        fi
         if [ -f /etc/motd.bak ]; then
-            mv /etc/motd.bak /etc/motd
+            pmx_write_file /etc/motd < /etc/motd.bak
+            pmx_remove_file /etc/motd.bak
         else
-            sed -i '/This system is optimised by: ProxMenux/d' /etc/motd
+            pmx_edit_file /etc/motd '/This system is optimised by: ProxMenux/d'
         fi
         
         echo "100" ; echo "Uninstallation complete!"
