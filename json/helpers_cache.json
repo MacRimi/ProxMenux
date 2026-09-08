@@ -532,6 +532,7 @@
       "Gaming & Leisure"
     ],
     "notes": [
+      "The script asks which Debian release AllStarLink runs on (13 Trixie or 12 Bookworm) and pulls the matching asl-apt-repos package. Upstream ships asl3 3.18.2 for both.",
       "Cloud-Init is enabled by default. Configure your SSH key and credentials in the Proxmox Cloud-Init tab before starting the VM.",
       "If you use Cloud-init, checkout cloud-init discussion: `https://github.com/community-scripts/ProxmoxVE/discussions/272`"
     ],
@@ -539,7 +540,7 @@
     "port": 0,
     "website": "https://allstarlink.org/",
     "documentation": "https://allstarlink.github.io/",
-    "logo": "",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/allstar-link.webp",
     "updateable": false,
     "privileged": false,
     "has_arm": false,
@@ -553,7 +554,7 @@
   {
     "name": "AlmaLinux",
     "slug": "almalinux-vm",
-    "desc": "AlmaLinux 10 (Heliotrope Lion) is a community-driven, RHEL-compatible enterprise Linux distribution. It provides a stable, production-ready platform with long-term support, making it ideal for servers, workloads, and cloud deployments.",
+    "desc": "AlmaLinux as a cloud image, with a choice of release at start: 10, 9 or 8. A community-owned RHEL-compatible distribution.",
     "script": "vm/almalinux-vm.sh",
     "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/vm/almalinux-vm.sh",
     "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/vm/almalinux-vm.sh",
@@ -566,6 +567,7 @@
       "Operating Systems & Appliances"
     ],
     "notes": [
+      "The script asks which AlmaLinux release to install (10, 9 or 8). AlmaLinux 10 requires an x86-64-v3 capable host CPU; 9 and 8 run on older hardware.",
       "Cloud-Init is enabled by default. Configure your SSH key and credentials in the Proxmox Cloud-Init tab before starting the VM.",
       "If you use Cloud-init, checkout cloud-init discussion: `https://github.com/community-scripts/ProxmoxVE/discussions/272`"
     ],
@@ -4480,9 +4482,9 @@
     "os": ""
   },
   {
-    "name": "Debian 12",
+    "name": "Debian",
     "slug": "debian-vm",
-    "desc": "Debian 12 (Bookworm) as a cloud image. The long-standing default base for servers that value stability over recency.",
+    "desc": "Debian as a cloud image, with a choice of release at start: 13 (Trixie), 12 (Bookworm) or 11 (Bullseye). The long-standing default base for servers that value stability over recency.",
     "script": "vm/debian-vm.sh",
     "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/vm/debian-vm.sh",
     "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/vm/debian-vm.sh",
@@ -4495,7 +4497,8 @@
       "Operating Systems & Appliances"
     ],
     "notes": [
-      "Cloud-Init is enabled by default. Configure your SSH key and credentials in the Proxmox Cloud-Init tab before starting the VM.",
+      "The script asks which Debian release to install (13, 12 or 11). It replaces the former separate debian-13-vm script.",
+      "Cloud-Init is optional and off by default. Choosing it switches the image from nocloud to genericcloud; configure your SSH key and credentials in the Proxmox Cloud-Init tab before starting the VM.",
       "If you use Cloud-init, checkout cloud-init discussion: `https://github.com/community-scripts/ProxmoxVE/discussions/272`"
     ],
     "warnings": [],
