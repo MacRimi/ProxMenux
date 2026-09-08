@@ -898,6 +898,7 @@
   "Could not detect the CIFS mount for this directory. Try accessing it manually.": "Pre tento priečinok sa nepodarilo zistiť CIFS mount. Skúste ho otvoriť ručne.",
   "Could not determine a valid ISO storage directory.": "Nepodarilo sa určiť platný priečinok pre ISO úložisko.",
   "Could not determine disk path for:": "Nepodarilo sa zistiť cestu k disku pre:",
+  "Could not determine filesystem signature types. Aborting.": "Nepodarilo sa určiť typy podpisov súborových systémov.Prerušuje sa.",
   "Could not determine the IOMMU group for the selected GPU.": "Nepodarilo sa zistiť IOMMU skupinu pre vybranú GPU.",
   "Could not download recovery blob from PBS.": "Nepodarilo sa stiahnuť obnovovací balíček z PBS.",
   "Could not download the installer.": "Inštalátor sa nepodarilo stiahnuť.",

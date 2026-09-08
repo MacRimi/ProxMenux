@@ -898,6 +898,7 @@
   "Could not detect the CIFS mount for this directory. Try accessing it manually.": "Não foi possível detectar a montagem CIFS para este diretório. Tente acessá-lo manualmente.",
   "Could not determine a valid ISO storage directory.": "Não foi possível determinar um diretório de armazenamento ISO válido.",
   "Could not determine disk path for:": "Não foi possível determinar o caminho do disco para:",
+  "Could not determine filesystem signature types. Aborting.": "Não foi possível determinar os tipos de assinatura do sistema de arquivos.Abortando.",
   "Could not determine the IOMMU group for the selected GPU.": "Não foi possível determinar o grupo IOMMU para a GPU selecionada.",
   "Could not download recovery blob from PBS.": "Não foi possível baixar o blob de recuperação do PBS.",
   "Could not download the installer.": "Não foi possível baixar o instalador.",

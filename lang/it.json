@@ -898,6 +898,7 @@
   "Could not detect the CIFS mount for this directory. Try accessing it manually.": "Impossibile rilevare il montaggio CIFS per questa directory. Prova ad accedervi manualmente.",
   "Could not determine a valid ISO storage directory.": "Impossibile determinare una directory di archiviazione ISO valida.",
   "Could not determine disk path for:": "Impossibile determinare il percorso del disco per:",
+  "Could not determine filesystem signature types. Aborting.": "Messaggio tecnico per Proxmox e IT.Traduzione: impossibile determinare i tipi di firma del file system.Interruzione.",
   "Could not determine the IOMMU group for the selected GPU.": "Impossibile determinare il gruppo IOMMU per la GPU selezionata.",
   "Could not download recovery blob from PBS.": "Impossibile scaricare il BLOB di ripristino da PBS.",
   "Could not download the installer.": "Impossibile scaricare il programma di installazione.",
