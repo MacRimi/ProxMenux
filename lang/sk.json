@@ -279,6 +279,7 @@
   "Attempting passthrough with this GPU typically results in": "Pokus o passthrough s touto GPU zvyčajne vedie k",
   "Attention: Removing the subscription banner may cause issues in the web interface after a future update.": "Upozornenie: odstránenie hlásenia o predplatnom môže po budúcej aktualizácii spôsobiť problém vo webovom rozhraní.",
   "Audit completed. Press Enter to continue...": "Audit dokončený. Pokračujte stlačením Enter...",
+  "Audit socket disabled or not required": "Zásuvka auditu je zakázaná alebo sa nevyžaduje",
   "Auth key is required.": "Auth key je povinný.",
   "Auth:": "Prihlásenie:",
   "Authentication": "Prihlásenie",

@@ -279,6 +279,7 @@
   "Attempting passthrough with this GPU typically results in": "Toute tentative de relais avec ce GPU entraîne généralement",
   "Attention: Removing the subscription banner may cause issues in the web interface after a future update.": "Attention : La suppression de la bannière d'abonnement peut entraîner des problèmes dans l'interface Web après une future mise à jour.",
   "Audit completed. Press Enter to continue...": "Vérification terminée. Appuyez sur Entrée pour continuer...",
+  "Audit socket disabled or not required": "Socket d'audit désactivé ou non requis",
   "Auth key is required.": "La clé d'authentification est requise.",
   "Auth:": "Authentification :",
   "Authentication": "Authentification",

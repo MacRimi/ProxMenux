@@ -279,6 +279,7 @@
   "Attempting passthrough with this GPU typically results in": "Försök att passera med denna GPU resulterar vanligtvis i",
   "Attention: Removing the subscription banner may cause issues in the web interface after a future update.": "Observera: Att ta bort prenumerationsbannern kan orsaka problem i webbgränssnittet efter en framtida uppdatering.",
   "Audit completed. Press Enter to continue...": "Revision avslutad. Tryck på Enter för att fortsätta...",
+  "Audit socket disabled or not required": "Granskningsuttaget inaktiverat eller inte nödvändigt",
   "Auth key is required.": "Auth-nyckel krävs.",
   "Auth:": "Auth:",
   "Authentication": "Autentisering",
