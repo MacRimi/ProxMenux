@@ -551,12 +551,12 @@
     "os": ""
   },
   {
-    "name": "AlmaLinux 10",
-    "slug": "almalinux-10-vm",
+    "name": "AlmaLinux",
+    "slug": "almalinux-vm",
     "desc": "AlmaLinux 10 (Heliotrope Lion) is a community-driven, RHEL-compatible enterprise Linux distribution. It provides a stable, production-ready platform with long-term support, making it ideal for servers, workloads, and cloud deployments.",
-    "script": "vm/almalinux-10-vm.sh",
-    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/vm/almalinux-10-vm.sh",
-    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/vm/almalinux-10-vm.sh",
+    "script": "vm/almalinux-vm.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/vm/almalinux-vm.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/vm/almalinux-vm.sh",
     "type": "vm",
     "type_id": "lte524abgx960bd",
     "categories": [
@@ -4573,7 +4573,7 @@
     "updateable": true,
     "privileged": false,
     "has_arm": true,
-    "is_dev": true,
+    "is_dev": false,
     "execute_in": [
       "lxc"
     ],
@@ -20851,7 +20851,7 @@
     "updateable": true,
     "privileged": false,
     "has_arm": true,
-    "is_dev": true,
+    "is_dev": false,
     "execute_in": [
       "lxc"
     ],
