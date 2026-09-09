@@ -179,15 +179,7 @@ def translate_google_web(text: str, dest_lang: str, context: str, timeout: int) 
     req = Request(url, headers={"User-Agent": "ProxMenux translation cache builder"})
     with urlopen(req, timeout=timeout) as response:
         payload = json.loads(response.read().decode("utf-8"))
-    parts = [part[0] for part in payload[0] if part and part[0]]
-    # The endpoint returns one segment per sentence and drops the blank that
-    # separated them, so joining verbatim glues a period to the next word.
-    joined = ""
-    for part in parts:
-        if joined and joined[-1] in ".?!" and part[:1].isalpha() and part[:1].isupper():
-            joined += " "
-        joined += part
-    return joined
+    return "".join(part[0] for part in payload[0] if part and part[0])
 
 
 def translate_appimage(
@@ -277,6 +269,20 @@ def clean_translation(value: str) -> str:
     return value.strip()
 
 
+# Lowercase-or-digit, then the mark, then an uppercase letter: that is a
+# sentence boundary and not `8.0`, `storage.cfg` or `proxmox.com/docs`.
+_SENTENCE_RUN = re.compile(
+    "(?<=[a-z0-9\u00e0-\u00ff\u0107\u010d\u011b\u013e\u0148\u0159\u0161\u0165\u016f\u017a\u017e])"
+    "([.?!])"
+    "(?=[A-Z\u00c0-\u00de\u0106\u010c\u011a\u013d\u0147\u0158\u0160\u0164\u016e\u0179\u017d])"
+)
+
+
+def restore_sentence_spacing(text: str) -> str:
+    """Every provider drops the blank between sentences it translated apart."""
+    return _SENTENCE_RUN.sub(r"\1 ", text)
+
+
 def translate_text(
     text: str,
     dest_lang: str,
@@ -297,7 +303,7 @@ def translate_text(
     else:
         raise ValueError(f"Unknown provider: {provider}")
     translated = restore_technical_terms(clean_translation(translated), protected_terms)
-    return translated or text
+    return restore_sentence_spacing(translated) if translated else text
 
 
 def load_language_cache(path: Path) -> dict[str, str]:
