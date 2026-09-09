@@ -122,6 +122,38 @@ _is_system_mount() {
     esac
 }
 
+# Inverse dependencies include every branch of stacked LVM/RAID devices.
+# PATH avoids constructing nonexistent /dev/<device-mapper NAME> aliases.
+_fmt_system_ancestors() {
+    local device="$1" topology path type found=0
+    topology=$(lsblk -snrpo PATH,TYPE "$device" 2>/dev/null) || return 1
+    while read -r path type; do
+        [[ "$type" == "disk" ]] || continue
+        [[ "$path" == /dev/* ]] || return 1
+        printf '%s\n' "$path"
+        found=1
+    done <<< "$topology"
+    [[ "$found" == 1 ]]
+}
+
+# Enumerate mounts, not devices: a bind mount must not hide another target.
+# Raw output escapes whitespace; --nofsroot omits bind/Btrfs source suffixes.
+_fmt_system_disks() {
+    local mounts path mp fstype disks="" ancestors found_root=0
+    mounts=$(findmnt -krnv -o SOURCE,TARGET,FSTYPE 2>/dev/null) || return 1
+    while read -r path mp fstype; do
+        [[ "$mp" == / ]] && found_root=1
+        _is_system_mount "$mp" || continue
+        # ZFS root is checked separately; pseudo filesystems have no disk.
+        [[ "$path" == /dev/* ]] || continue
+        printf -v path '%b' "$path"
+        ancestors=$(_fmt_system_ancestors "$path") || return 1
+        disks+="$ancestors"$'\n'
+    done <<< "$mounts"
+    [[ "$found_root" == 1 ]] || return 1
+    sort -u <<< "$disks"
+}
+
 # ──────────────────────────────────────────────────────────────────────────────
 # ZFS root-pool detection
 # ──────────────────────────────────────────────────────────────────────────────
@@ -129,11 +161,17 @@ _is_system_mount() {
 # Returns the name of the ZFS pool that holds the root filesystem, or empty
 # if root is on a traditional block device (ext4/xfs/btrfs).
 _get_zfs_root_pool() {
-    local root_fs
-    root_fs=$(df / 2>/dev/null | awk 'NR==2 {print $1}')
-    # A ZFS dataset looks like "rpool/ROOT/pve-1" — not /dev/
-    if [[ "$root_fs" != /dev/* && "$root_fs" == */* ]]; then
-        echo "${root_fs%%/*}"
+    local root_fs fstype root_mount
+    root_mount=$(findmnt -krnv -o SOURCE,FSTYPE -T / 2>/dev/null) || return 1
+    [[ -n "$root_mount" && "$root_mount" != *$'\n'* ]] || return 1
+    read -r root_fs fstype <<< "$root_mount"
+    [[ -n "$root_fs" && -n "$fstype" ]] || return 1
+    if [[ "$fstype" == zfs ]]; then
+        [[ "$root_fs" =~ ^[a-zA-Z][a-zA-Z0-9_.:-]*(/.*)?$ ]] || return 1
+        printf '%s\n' "${root_fs%%/*}"
+    else
+        # An unidentified/non-block root cannot establish formatting safety.
+        [[ "$root_fs" == /dev/* ]] || return 1
     fi
 }
 
@@ -159,6 +197,27 @@ _resolve_zfs_entry() {
     else
         echo "$path"   # whole-disk vdev — path is the disk itself
     fi
+}
+
+# Strict system-pool guard; leave best-effort data-pool helpers unchanged.
+_fmt_system_pool_disks() {
+    local pool="$1" members entry rest path ancestors disks="" found=0
+    command -v timeout >/dev/null 2>&1 || return 1
+    members=$(timeout --kill-after=2 8s zpool list -v -H -P -L "$pool" 2>/dev/null) || return 1
+    while read -r entry rest; do
+        case "$entry" in
+            ""|"$pool"|mirror-[0-9]*|raidz[1-3]-[0-9]*|draid[1-3]:*|logs|dedup|special|cache|spare) continue ;;
+        esac
+        # -P/-L requests full resolved paths; unknown/GUID/file leaves fail closed.
+        [[ "$entry" == /dev/* ]] || return 1
+        path=$(readlink -f "$entry" 2>/dev/null) || return 1
+        [[ "$path" == /dev/* ]] || return 1
+        ancestors=$(_fmt_system_ancestors "$path") || return 1
+        disks+="$ancestors"$'\n'
+        found=1
+    done <<< "$members"
+    [[ "$found" == 1 ]] || return 1
+    sort -u <<< "$disks"
 }
 
 # Emit one /dev/sdX line per disk that is a member of a SPECIFIC ZFS pool.
@@ -253,21 +312,16 @@ build_disk_candidates() {
 
     # ── Detect ZFS root pool (its disks are hard-blocked) ─────────────────
     local root_pool root_pool_disks=""
-    root_pool=$(_get_zfs_root_pool)
-    [[ -n "$root_pool" ]] && root_pool_disks=$(_build_pool_disks "$root_pool" | sort -u)
+    root_pool=$(_get_zfs_root_pool) || return 1
+    if [[ -n "$root_pool" ]]; then
+        root_pool_disks=$(_fmt_system_pool_disks "$root_pool") || return 1
+    fi
 
     # ── Classify mounts: system (hard block) ─────────────────────────────
     local sys_blocked_disks="" swap_parts
     swap_parts=$(swapon --noheadings --raw --show=NAME 2>/dev/null)
 
-    while read -r name mp; do
-        _is_system_mount "$mp" || continue
-        local parent
-        parent=$(lsblk -no PKNAME "/dev/$name" 2>/dev/null)
-        [[ -z "$parent" ]] && parent="$name"
-        sys_blocked_disks+="/dev/$parent"$'\n'
-    done < <(lsblk -ln -o NAME,MOUNTPOINT 2>/dev/null | awk '$2!=""')
-    sys_blocked_disks=$(sort -u <<< "$sys_blocked_disks")
+    sys_blocked_disks=$(_fmt_system_disks) || return 1
 
     # ── Build running VM config text (done once) ──────────────────────────
     local running_cfg="" vmid state conf
@@ -493,29 +547,38 @@ revalidate_selected_disk() {
     fi
 
     # Hard block: disk now contains a system-critical mount
-    local name mp parent
-    while read -r name mp; do
-        _is_system_mount "$mp" || continue
-        parent=$(lsblk -no PKNAME "/dev/$name" 2>/dev/null)
-        [[ "/dev/${parent:-$name}" == "$SELECTED_DISK" ]] && {
-            REVALIDATE_ERROR_DETAIL="$(translate "The selected disk now contains a system-critical mount. Aborting.")"
-            return 1
-        }
-    done < <(lsblk -ln -o NAME,MOUNTPOINT 2>/dev/null | awk '$2!=""')
+    local sys_blocked_disks real_disk
+    if ! sys_blocked_disks=$(_fmt_system_disks); then
+        REVALIDATE_ERROR_DETAIL="$(translate "Unable to resolve system disk topology. Aborting.")"
+        return 1
+    fi
+    real_disk=$(readlink -f "$SELECTED_DISK" 2>/dev/null)
+    if grep -qFx "$SELECTED_DISK" <<< "$sys_blocked_disks" ||
+       { [[ -n "$real_disk" ]] && grep -qFx "$real_disk" <<< "$sys_blocked_disks"; }; then
+        REVALIDATE_ERROR_DETAIL="$(translate "The selected disk now contains a system-critical mount. Aborting.")"
+        return 1
+    fi
 
     # Hard block: disk is now a member of the ZFS root pool
     local root_pool root_pool_disks
-    root_pool=$(_get_zfs_root_pool)
+    if ! root_pool=$(_get_zfs_root_pool); then
+        REVALIDATE_ERROR_DETAIL="$(translate "Unable to identify the root filesystem. Aborting.")"
+        return 1
+    fi
     if [[ -n "$root_pool" ]]; then
-        root_pool_disks=$(_build_pool_disks "$root_pool" | sort -u)
-        if grep -qFx "$SELECTED_DISK" <<< "$root_pool_disks"; then
+        if ! root_pool_disks=$(_fmt_system_pool_disks "$root_pool"); then
+            REVALIDATE_ERROR_DETAIL="$(translate "Unable to resolve system ZFS pool disks. Aborting.")"
+            return 1
+        fi
+        if grep -qFx "$SELECTED_DISK" <<< "$root_pool_disks" ||
+           { [[ -n "$real_disk" ]] && grep -qFx "$real_disk" <<< "$root_pool_disks"; }; then
             REVALIDATE_ERROR_DETAIL="$(translate "The selected disk is now part of the system ZFS pool. Aborting.")"
             return 1
         fi
     fi
 
     # Hard block: disk has a swap partition
-    local swap_parts pname
+    local swap_parts pname mp
     swap_parts=$(swapon --noheadings --raw --show=NAME 2>/dev/null)
     while read -r pname; do
         [[ -z "$pname" ]] && continue
