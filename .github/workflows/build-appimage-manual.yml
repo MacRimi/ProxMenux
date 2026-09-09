@@ -30,7 +30,11 @@ jobs:
       
     - name: Install Python dependencies
       run: |
-        sudo apt-get update
+        # Third-party apt repos on the runner (Google Chrome, Microsoft)
+        # sometimes serve a hash-mismatched index and abort the refresh.
+        # They are irrelevant here, so a failed refresh must not stop the
+        # build: python3 comes from the Ubuntu repos, which fetch fine.
+        sudo apt-get update || true
         sudo apt-get install -y python3 python3-pip python3-venv
         
     - name: Make build script executable
