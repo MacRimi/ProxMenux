@@ -94,18 +94,6 @@ register_tool() {
   local state="$2"
   local version="${3:-1.0}"
   local source="${4:-${SCRIPT_SOURCE:-unknown}}"
-  # Recorded here rather than in each function: this is the one call the
-  # whole of post-install already makes, so every applied tool reaches
-  # the journal even where the function itself still writes directly.
-  # Such an entry says what was applied and admits it cannot say what
-  # changed, which is the honest account for anything not yet migrated.
-  if declare -F pmx_record_applied >/dev/null 2>&1; then
-    PMX_JOURNAL_FUNCTION="${FUNCNAME[1]:-$tool}" \
-    PMX_JOURNAL_VERSION="$version" \
-    PMX_JOURNAL_SOURCE="$source" \
-      pmx_record_applied "$tool" "$version" \
-        "$([[ "$state" == "true" ]] && echo applied || echo removed)"
-  fi
   ensure_tools_json
   if [[ "$state" == "true" ]]; then
     jq --arg t "$tool" --arg ver "$version" --arg src "$source" \

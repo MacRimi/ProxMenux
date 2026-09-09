@@ -158,7 +158,7 @@ _pmx_journal_common() {
 #     EOF
 pmx_write_file() {
     local path="$1"
-    local temp before after existed="false"
+    local temp before="" after="" existed="false"
     temp="$(mktemp)" || { cat > "$path"; return $?; }
     cat > "$temp"
 
@@ -245,7 +245,7 @@ pmx_remove_file() {
 #     printf 'ulimit -n 1048576\n' | pmx_append_file /root/.profile
 pmx_append_file() {
     local path="$1"
-    local temp before after existed="false"
+    local temp before="" after="" existed="false"
     temp="$(mktemp)" || { cat >> "$path"; return $?; }
     cat > "$temp"
 
@@ -342,8 +342,8 @@ pmx_install_pkg() {
 _pmx_service_state() {
     local unit="$1"
     printf '%s/%s' \
-        "$(systemctl is-enabled "$unit" 2>/dev/null || echo unknown)" \
-        "$(systemctl is-active "$unit" 2>/dev/null || echo unknown)"
+        "$(systemctl is-enabled "$unit" 2>/dev/null | head -1 || echo unknown)" \
+        "$(systemctl is-active "$unit" 2>/dev/null | head -1 || echo unknown)"
 }
 
 pmx_enable_service() {

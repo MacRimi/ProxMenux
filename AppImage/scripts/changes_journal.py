@@ -240,6 +240,11 @@ def diff_of(entry: dict[str, Any]) -> Optional[dict[str, Any]]:
     if entry.get("class") != CLASS_CONFIGURATION:
         return None
     before_ref, after_ref = entry.get("before_ref"), entry.get("after_ref")
+    # A service enable/disable changes state, not file content: it carries
+    # before_state/after_state, no refs. With nothing to diff, there is no
+    # difference block to show — the state transition speaks for itself.
+    if not before_ref and not after_ref:
+        return None
     before = read_object(before_ref) if before_ref else ""
     after = read_object(after_ref) if after_ref else ""
     if before is None or after is None:

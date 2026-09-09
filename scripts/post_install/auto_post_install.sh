@@ -97,16 +97,6 @@ register_tool() {
     local state="$2"
     local version="${3:-1.0}"
     local source="${4:-${SCRIPT_SOURCE:-unknown}}"
-    # Same as in the customizable script: the one call every function
-    # already makes, so an applied tool reaches the journal even where
-    # the function itself still writes directly.
-    if declare -F pmx_record_applied >/dev/null 2>&1; then
-        PMX_JOURNAL_FUNCTION="${FUNCNAME[1]:-$tool}" \
-        PMX_JOURNAL_VERSION="$version" \
-        PMX_JOURNAL_SOURCE="$source" \
-            pmx_record_applied "$tool" "$version" \
-              "$([[ "$state" == "true" ]] && echo applied || echo removed)"
-    fi
     ensure_tools_json
     if [[ "$state" == "true" ]]; then
         jq --arg t "$tool" --arg ver "$version" --arg src "$source" \
@@ -1293,8 +1283,13 @@ EOF
     [ "$KEEP_MB" -lt 8 ] && KEEP_MB=8
 
 
-    pmx_edit_file /etc/systemd/journald.conf '/^\[Journal\]/,$d' 2>/dev/null || true
-    pmx_append_file /etc/systemd/journald.conf <<EOF
+    # Compose the final file and write it once: keep everything above the
+    # existing [Journal] section, then our block. Editing then appending
+    # produced two journal entries for one file, each with half the diff;
+    # one write shows the whole before/after a sysadmin should read.
+    {
+        sed '/^\[Journal\]/,$d' /etc/systemd/journald.conf 2>/dev/null
+        cat <<EOF
 [Journal]
 Storage=persistent
 SplitMode=none
@@ -1315,6 +1310,7 @@ MaxLevelKMsg=warning
 MaxLevelConsole=notice
 MaxLevelWall=crit
 EOF
+    } | pmx_write_file /etc/systemd/journald.conf
 
 
     mkdir -p /var/log/pveproxy

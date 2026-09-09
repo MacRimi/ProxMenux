@@ -5954,8 +5954,8 @@
       "diffUnavailable": "The content that was replaced is no longer stored, so the difference cannot be shown.",
       "packagesAdded": "Packages added",
       "commandRun": "Command run",
-      "executionNote": "ProxMenux ran this on request; what it changed was decided by the command, not by ProxMenux.",
-      "unknownNote": "This was applied before the journal existed, so what it replaced was never captured.",
+      "executionNote": "ProxMenux ran this command; what it changed is up to the command itself.",
+      "unknownNote": "Applied before the journal existed, so the prior state was not captured.",
       "noneInFilter": "No change of this kind.",
       "class": {
         "all": "All",
@@ -5966,7 +5966,11 @@
       },
       "operation": {
         "write_file": "File replaced",
+        "file_created": "File created",
+        "file_modified": "File modified",
+        "write_file_created": "File created",
         "edit_file": "File edited",
+        "append_file": "Appended to file",
         "remove_file": "File removed",
         "install_package": "Installed",
         "enable_service": "Service enabled",
@@ -5983,6 +5987,10 @@
         "exact": "Restores exactly what was there",
         "partial": "Partial: dependencies may remain or be removed with it",
         "none": "Cannot be undone from the journal"
+      },
+      "undo": {
+        "remove": "Deletes the file (there was none before)",
+        "restore": "Restores exactly what was there"
       }
     },
     "comparison": {

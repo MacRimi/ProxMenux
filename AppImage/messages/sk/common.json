@@ -5954,8 +5954,8 @@
       "diffUnavailable": "Nahradený obsah už nie je uložený, rozdiel sa nedá zobraziť.",
       "packagesAdded": "Pridané balíky",
       "commandRun": "Spustený príkaz",
-      "executionNote": "ProxMenux to spustil na požiadanie; čo sa zmenilo, rozhodol príkaz, nie ProxMenux.",
-      "unknownNote": "Toto bolo použité pred vznikom denníka, takže nahradený stav sa nikdy nezachytil.",
+      "executionNote": "ProxMenux spustil tento príkaz; čo zmenil, určuje samotný príkaz.",
+      "unknownNote": "Použité skôr, než existoval denník, takže predchádzajúci stav sa nezachytil.",
       "noneInFilter": "Žiadna zmena tohto druhu.",
       "class": {
         "all": "Všetky",
@@ -5966,7 +5966,11 @@
       },
       "operation": {
         "write_file": "Súbor nahradený",
+        "file_created": "Súbor vytvorený",
+        "file_modified": "Súbor zmenený",
+        "write_file_created": "Súbor vytvorený",
         "edit_file": "Súbor upravený",
+        "append_file": "Pridané do súboru",
         "remove_file": "Súbor odstránený",
         "install_package": "Nainštalované",
         "enable_service": "Služba povolená",
@@ -5983,6 +5987,10 @@
         "exact": "Obnoví presne to, čo tam bolo",
         "partial": "Čiastočné: závislosti môžu zostať alebo odísť s tým",
         "none": "Z denníka sa nedá vrátiť"
+      },
+      "undo": {
+        "remove": "Odstráni súbor (predtým žiadny nebol)",
+        "restore": "Obnoví presne to, čo tam bolo"
       }
     },
     "comparison": {

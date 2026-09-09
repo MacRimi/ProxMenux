@@ -726,6 +726,18 @@ install_beta() {
     # also flag README.md, .json, .py etc. as executable for no reason.
     find "$BASE_DIR/scripts" -type f -name '*.sh' -exec chmod +x {} +
 
+    # Register the base dependencies the installer put in place. They are
+    # installed in the dependency step, before this clone delivers
+    # pmx_journal.sh, so the journal cannot capture them as they happen —
+    # this records them once the engine is available. The recording side of
+    # pmx_journal.sh is pure bash and needs nothing else installed.
+    if [ -f "$BASE_DIR/scripts/global/pmx_journal.sh" ]; then
+        # shellcheck source=/dev/null
+        source "$BASE_DIR/scripts/global/pmx_journal.sh"
+        pmx_journal_context "install_proxmenux" "1.0"
+        pmx_record_applied "dialog, jq, curl, git" "1.0" "install_dependencies"
+    fi
+
     if [ -d "./oci" ]; then
         mkdir -p "$BASE_DIR/oci"
         cp -r "./oci/"* "$BASE_DIR/oci/" 2>/dev/null || true

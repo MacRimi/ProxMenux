@@ -5888,8 +5888,8 @@
       "diffUnavailable": "Der ersetzte Inhalt ist nicht mehr gespeichert, der Unterschied lässt sich nicht zeigen.",
       "packagesAdded": "Hinzugefügte Pakete",
       "commandRun": "Ausgeführter Befehl",
-      "executionNote": "ProxMenux hat dies auf Anforderung ausgeführt; was sich änderte, entschied der Befehl, nicht ProxMenux.",
-      "unknownNote": "Dies wurde vor dem Journal angewandt, der ersetzte Zustand wurde nie erfasst.",
+      "executionNote": "ProxMenux hat diesen Befehl ausgeführt; was er geändert hat, bestimmt der Befehl selbst.",
+      "unknownNote": "Angewendet, bevor das Journal existierte, daher wurde der vorherige Zustand nicht erfasst.",
       "noneInFilter": "Keine Änderung dieser Art.",
       "class": {
         "all": "Alle",
@@ -5900,7 +5900,11 @@
       },
       "operation": {
         "write_file": "Datei ersetzt",
+        "file_created": "Datei erstellt",
+        "file_modified": "Datei geändert",
+        "write_file_created": "Datei erstellt",
         "edit_file": "Datei bearbeitet",
+        "append_file": "An Datei angehängt",
         "remove_file": "Datei entfernt",
         "install_package": "Installiert",
         "enable_service": "Dienst aktiviert",
@@ -5917,6 +5921,10 @@
         "exact": "Stellt genau das Vorherige wieder her",
         "partial": "Teilweise: Abhängigkeiten können bleiben oder mitgehen",
         "none": "Aus dem Journal nicht rückgängig zu machen"
+      },
+      "undo": {
+        "remove": "Löscht die Datei (vorher war keine vorhanden)",
+        "restore": "Stellt exakt den vorherigen Zustand wieder her"
       }
     },
     "comparison": {

@@ -5889,8 +5889,8 @@
       "diffUnavailable": "Innehållet som ersattes lagras inte längre, så skillnaden kan inte visas.",
       "packagesAdded": "Tillagda paket",
       "commandRun": "Kört kommando",
-      "executionNote": "ProxMenux körde detta på begäran; vad som ändrades avgjordes av kommandot, inte av ProxMenux.",
-      "unknownNote": "Detta tillämpades innan journalen fanns, så det som ersattes fångades aldrig.",
+      "executionNote": "ProxMenux körde detta kommando; vad det ändrade avgörs av kommandot självt.",
+      "unknownNote": "Tillämpades innan loggen fanns, så det tidigare tillståndet fångades inte.",
       "noneInFilter": "Ingen ändring av det slaget.",
       "class": {
         "all": "Alla",
@@ -5901,7 +5901,11 @@
       },
       "operation": {
         "write_file": "Fil ersatt",
+        "file_created": "Fil skapad",
+        "file_modified": "Fil ändrad",
+        "write_file_created": "Fil skapad",
         "edit_file": "Fil redigerad",
+        "append_file": "Lades till i filen",
         "remove_file": "Fil borttagen",
         "install_package": "Installerat",
         "enable_service": "Tjänst aktiverad",
@@ -5918,6 +5922,10 @@
         "exact": "Återställer exakt det som fanns",
         "partial": "Delvis: beroenden kan bli kvar eller följa med",
         "none": "Kan inte ångras från journalen"
+      },
+      "undo": {
+        "remove": "Tar bort filen (det fanns ingen tidigare)",
+        "restore": "Återställer exakt vad som fanns"
       }
     },
     "comparison": {

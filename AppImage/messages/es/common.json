@@ -5888,8 +5888,8 @@
       "diffUnavailable": "El contenido sustituido ya no está almacenado, así que no se puede mostrar la diferencia.",
       "packagesAdded": "Paquetes añadidos",
       "commandRun": "Comando ejecutado",
-      "executionNote": "ProxMenux lo ejecutó a petición; lo que cambió lo decidió el comando, no ProxMenux.",
-      "unknownNote": "Esto se aplicó antes de que existiera el registro, así que nunca se capturó a qué sustituyó.",
+      "executionNote": "ProxMenux ejecutó este comando; lo que cambió lo determina el propio comando.",
+      "unknownNote": "Se aplicó antes de que existiera el registro, así que no se guardó el estado anterior.",
       "noneInFilter": "No hay ningún cambio de este tipo.",
       "class": {
         "all": "Todos",
@@ -5900,7 +5900,11 @@
       },
       "operation": {
         "write_file": "Fichero reemplazado",
+        "file_created": "Fichero creado",
+        "file_modified": "Fichero modificado",
+        "write_file_created": "Fichero creado",
         "edit_file": "Fichero editado",
+        "append_file": "Se añadió al fichero",
         "remove_file": "Fichero eliminado",
         "install_package": "Instalado",
         "enable_service": "Servicio habilitado",
@@ -5917,6 +5921,10 @@
         "exact": "Restaura exactamente lo que había",
         "partial": "Parcial: pueden quedar dependencias o irse con ello",
         "none": "No se puede deshacer desde el registro"
+      },
+      "undo": {
+        "remove": "Elimina el fichero (no había ninguno antes)",
+        "restore": "Restaura exactamente lo que había"
       }
     },
     "comparison": {

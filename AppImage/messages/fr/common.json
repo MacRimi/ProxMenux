@@ -5888,8 +5888,8 @@
       "diffUnavailable": "Le contenu remplacé n'est plus stocké, la différence ne peut pas être montrée.",
       "packagesAdded": "Paquets ajoutés",
       "commandRun": "Commande exécutée",
-      "executionNote": "ProxMenux l'a exécutée à la demande ; ce qui a changé a été décidé par la commande, pas par ProxMenux.",
-      "unknownNote": "Ceci a été appliqué avant l'existence du journal ; l'état remplacé n'a jamais été capturé.",
+      "executionNote": "ProxMenux a exécuté cette commande ; ce qu'elle a changé dépend de la commande elle-même.",
+      "unknownNote": "Appliqué avant l'existence du journal, l'état précédent n'a donc pas été capturé.",
       "noneInFilter": "Aucune modification de ce type.",
       "class": {
         "all": "Toutes",
@@ -5900,7 +5900,11 @@
       },
       "operation": {
         "write_file": "Fichier remplacé",
+        "file_created": "Fichier créé",
+        "file_modified": "Fichier modifié",
+        "write_file_created": "Fichier créé",
         "edit_file": "Fichier modifié",
+        "append_file": "Ajouté au fichier",
         "remove_file": "Fichier supprimé",
         "install_package": "Installé",
         "enable_service": "Service activé",
@@ -5917,6 +5921,10 @@
         "exact": "Restaure exactement ce qui était là",
         "partial": "Partiel : des dépendances peuvent rester ou partir avec",
         "none": "Ne peut pas être annulé depuis le journal"
+      },
+      "undo": {
+        "remove": "Supprime le fichier (il n'y en avait aucun avant)",
+        "restore": "Restaure exactement ce qui existait"
       }
     },
     "comparison": {
