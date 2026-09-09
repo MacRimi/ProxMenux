@@ -12,7 +12,7 @@ import time
 from collections import defaultdict, deque
 from flask import Blueprint, jsonify, request
 import auth_manager
-from jwt_middleware import require_auth
+from jwt_middleware import require_auth, require_admin_scope
 import jwt
 import datetime
 
@@ -468,13 +468,15 @@ def auth_enable():
 
 
 @auth_bp.route('/api/auth/disable', methods=['POST'])
+@require_admin_scope
 def auth_disable():
-    """Disable authentication"""
+    """Disable authentication
+
+    Guarded by require_admin_scope: turning auth off is an administrative
+    action, so a read-only API token must not reach it. The decorator
+    validates the token and its full_admin scope before the body runs.
+    """
     try:
-        token = request.headers.get('Authorization', '').replace('Bearer ', '')
-        if not token or not auth_manager.verify_token(token):
-            return jsonify({"success": False, "message": "Unauthorized"}), 401
-            
         success, message = auth_manager.disable_auth()
         
         if success:

@@ -22,7 +22,7 @@ import json
 import tempfile
 import base64
 
-from jwt_middleware import require_auth
+from jwt_middleware import require_admin_scope
 
 # Allowed shape for interaction_id used as a file path component when writing
 # the response file. Bounded length, no separators, no path traversal. See
@@ -141,7 +141,7 @@ def terminal_health():
 
 
 @terminal_bp.route('/api/terminal/ticket', methods=['POST'])
-@require_auth
+@require_admin_scope
 def issue_terminal_ticket_route():
     """Issue a single-use, short-lived ticket for opening a terminal WebSocket.
 
