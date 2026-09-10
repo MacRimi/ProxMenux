@@ -276,15 +276,11 @@ add_proxmox_nfs_storage() {
             8 60 --title "$(translate "Storage Exists")"; then
             return 0
         fi
-        pmx_record_execution "remove existing Proxmox NFS storage ${storage_id}" \
-            "pvesm remove ${storage_id}"
         pvesm remove "$storage_id" 2>/dev/null || true
     fi
 
     msg_ok "$(translate "Storage ID is available")"
     msg_info "$(translate "NFS storage adding in progress...")"
-    pmx_record_execution "add NFS export ${server}:${export} as Proxmox storage ${storage_id}" \
-        "pvesm add nfs ${storage_id} --server ${server} --export ${export} --content ${content}"
     if pvesm_output=$(pvesm add nfs "$storage_id" \
         --server "$server" \
         --export "$export" \
@@ -411,8 +407,6 @@ mount_nfs_via_fstab() {
     msg_ok "$(translate "Mount point ready:") $mount_path"
 
     msg_info "$(translate "Mounting NFS share...")"
-    pmx_record_execution "mount NFS export ${server}:${export_path} at ${mount_path}" \
-        "mount -t nfs -o ${mount_opts} ${server}:${export_path} ${mount_path}"
     if ! mount -t nfs -o "$mount_opts" "${server}:${export_path}" "$mount_path" >/dev/null 2>&1; then
         msg_error "$(translate "Failed to mount NFS share on host.")"
         return 1
@@ -440,7 +434,6 @@ mount_nfs_via_fstab() {
     echo "${server}:${export_path} $mount_path nfs $mount_opts 0 0" | pmx_append_file /etc/fstab
     msg_ok "$(translate "Added to /etc/fstab.")"
 
-    pmx_record_execution "reload systemd units after NFS fstab update" "systemctl daemon-reload"
     systemctl daemon-reload 2>/dev/null || true
 
     echo -e ""
@@ -742,7 +735,6 @@ remove_nfs_storage() {
                 show_proxmenux_logo
                 msg_title "$(translate "Remove NFS Storage")"
 
-                pmx_record_execution "remove Proxmox NFS storage ${target}" "pvesm remove ${target}"
                 if pvesm remove "$target" 2>/dev/null; then
                     msg_ok "$(translate "Storage") $target $(translate "removed successfully from Proxmox.")"
                 else
@@ -767,7 +759,6 @@ remove_nfs_storage() {
 
                 # Try umount only if currently mounted; never force.
                 if mount | grep -q " on ${mount_path} type "; then
-                    pmx_record_execution "unmount NFS path ${mount_path}" "umount ${mount_path}"
                     if umount "$mount_path" 2>/dev/null; then
                         msg_ok "$(translate "Unmounted:") $mount_path"
                     else
@@ -789,7 +780,6 @@ remove_nfs_storage() {
                     msg_error "$(translate "Failed to edit /etc/fstab — remove the line manually.")"
                 fi
 
-                pmx_record_execution "reload systemd units after NFS fstab removal" "systemctl daemon-reload"
                 systemctl daemon-reload 2>/dev/null || true
 
                 # Try to remove the directory if empty; keep it otherwise.

@@ -486,8 +486,6 @@ format_and_mount_disk() {
         14 80; then
         return 1
     fi
-    pmx_record_execution "format disk ${disk} as ${filesystem} for ${mount_path}" \
-        "wipe disk, create partition and format as ${filesystem}"
     show_proxmenux_logo
     if [[ "$MODE_PVESM" -eq 1 && "$MODE_FSTAB" -eq 1 ]]; then
         msg_title "$(translate "Add Local Disk (Proxmox storage + host mount)")"
@@ -572,8 +570,6 @@ mount_disk_permanently() {
     msg_ok "$(translate "Mount point created")"
 
     msg_info "$(translate "Mounting disk...")"
-    pmx_record_execution "mount ${partition} at ${mount_path}" \
-        "mount -t ${filesystem} ${partition} ${mount_path}"
     if ! mount -t "$filesystem" "$partition" "$mount_path" 2>/dev/null; then
         msg_error "$(translate "Failed to mount disk")"
         return 1
@@ -622,8 +618,6 @@ _apply_lxc_bind_mount_perms() {
     [[ -d "$mount_path" ]] || return 0
 
     msg_info "$(translate "Applying host permissions for unprivileged LXC bind-mounts...")"
-    pmx_record_execution "apply LXC bind-mount permissions to ${mount_path}" \
-        "chmod o+rwx and setfacl on ${mount_path}"
     chmod o+rwx "$mount_path" 2>/dev/null || true
     if command -v setfacl >/dev/null 2>&1; then
         setfacl -m o::rwx     "$mount_path" 2>/dev/null || true
@@ -653,7 +647,6 @@ mount_existing_disk() {
     msg_ok "$(translate "Mount point created")"
 
     msg_info "$(translate "Mounting existing") $existing_fs $(translate "filesystem...")"
-    pmx_record_execution "mount existing disk ${disk} at ${mount_path}" "mount ${disk} ${mount_path}"
     if ! mount "$disk" "$mount_path" 2>/dev/null; then
         msg_error "$(translate "Failed to mount disk")"
         return 1
@@ -702,7 +695,6 @@ add_proxmox_dir_storage() {
             8 60; then
             return 0
         fi
-        pmx_record_execution "remove existing Proxmox storage ${storage_id}" "pvesm remove ${storage_id}"
         pvesm remove "$storage_id" 2>/dev/null || true
     fi
 
@@ -710,16 +702,12 @@ add_proxmox_dir_storage() {
     local pvesm_output
     local add_ok=false
     if [[ "$storage_kind" == "zfspool" ]]; then
-        pmx_record_execution "add ZFS pool ${pool_name} as Proxmox storage ${storage_id}" \
-            "pvesm add zfspool ${storage_id} --pool ${pool_name} --content ${content}"
         if pvesm_output=$(pvesm add zfspool "$storage_id" \
             --pool "$pool_name" \
             --content "$content" 2>&1); then
             add_ok=true
         fi
     else
-        pmx_record_execution "add directory ${path} as Proxmox storage ${storage_id}" \
-            "pvesm add dir ${storage_id} --path ${path} --content ${content}"
         if pvesm_output=$(pvesm add dir "$storage_id" \
             --path "$path" \
             --content "$content" 2>&1); then
@@ -1048,7 +1036,6 @@ _remove_pvesm_storage() {
 
     # Step 1: Remove from Proxmox
     msg_info "$(translate "Removing storage from Proxmox...")"
-    pmx_record_execution "remove Proxmox storage ${storage_id}" "pvesm remove ${storage_id}"
     if ! pvesm remove "$storage_id" 2>/dev/null; then
         msg_error "$(translate "Failed to remove storage from Proxmox.")"
         echo ""
@@ -1061,7 +1048,6 @@ _remove_pvesm_storage() {
     # Step 2: Unmount if mounted (dir-backed storages only)
     if [[ -n "$path" ]] && mountpoint -q "$path" 2>/dev/null; then
         msg_info "$(translate "Unmounting disk...")"
-        pmx_record_execution "unmount disk from ${path}" "umount ${path}"
         if umount "$path" 2>/dev/null; then
             msg_ok "$(translate "Disk unmounted from") $path"
         else
@@ -1088,7 +1074,6 @@ _remove_pvesm_storage() {
     # Step 3b: Export ZFS pool if applicable
     if [[ -n "$pool" ]] && zpool list "$pool" >/dev/null 2>&1; then
         msg_info "$(translate "Exporting ZFS pool...") $pool"
-        pmx_record_execution "export ZFS pool ${pool}" "zpool export ${pool}"
         if zpool export "$pool" 2>/dev/null; then
             msg_ok "$(translate "ZFS pool exported:") $pool"
         else
@@ -1105,7 +1090,6 @@ _remove_pvesm_storage() {
         read -r
         echo ""
         msg_warn "$(translate "Rebooting the system...")"
-        pmx_record_execution "reboot host after removing storage ${storage_id}" "reboot"
         reboot
     else
         echo ""
@@ -1161,7 +1145,6 @@ _remove_fstab_entry() {
 
         if $mounted; then
             msg_info "$(translate "Unmounting") $mount_point..."
-            pmx_record_execution "unmount disk from ${mount_point}" "umount ${mount_point}"
             if umount "$mount_point" 2>/dev/null; then
                 msg_ok "$(translate "Unmounted successfully")"
             else

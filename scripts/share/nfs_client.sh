@@ -71,8 +71,6 @@ install_nfs_client() {
     fi
 
     msg_info "$(translate "Installing NFS client packages...")"
-    pmx_record_execution "install NFS client packages in CT ${CTID}" \
-        "pct exec ${CTID} -- apt-get update and apt-get install -y nfs-common"
     if ! pct exec "$CTID" -- apt-get update >/dev/null 2>&1; then
         msg_error "$(translate "Failed to update package list.")"
         msg_success "$(translate "Press Enter to return to menu...")"
@@ -408,8 +406,6 @@ mount_nfs_share() {
     configure_mount_options || return
 
     pmx_journal_context "mount_nfs_share" "$FUNC_VERSION"
-    pmx_record_execution "mount NFS export ${NFS_SERVER}:${NFS_EXPORT} in CT ${CTID} at ${MOUNT_POINT}" \
-        "pct exec ${CTID} -- mount NFS; persistent=${PERMANENT_MOUNT}"
     
     
     if ! pct exec "$CTID" -- test -d "$MOUNT_POINT"; then
@@ -585,8 +581,6 @@ unmount_nfs_share() {
         msg_title "$(translate "Unmount NFS Share")"
         
         # Remove from fstab
-        pmx_record_execution "remove NFS mount ${SELECTED_MOUNT} from CT ${CTID}" \
-            "remove CT fstab entry and unmount ${SELECTED_MOUNT}"
         pct exec "$CTID" -- sed --in-place "\|[[:space:]]$SELECTED_MOUNT[[:space:]]|d" /etc/fstab
         msg_ok "$(translate "Removed from /etc/fstab.")"
 
@@ -643,8 +637,6 @@ test_nfs_connectivity() {
         else
             echo "$(translate "RPC Bind Service: STOPPED")"
             msg_warn "$(translate "Starting rpcbind service...")"
-            pmx_record_execution "start rpcbind in CT ${CTID}" \
-                "pct exec ${CTID} -- systemctl start rpcbind"
             pct exec "$CTID" -- systemctl start rpcbind 2>/dev/null || true
         fi
         

@@ -64,9 +64,6 @@ elif [[ -f "$LOCAL_SCRIPTS_DEFAULT/global/utils-install-functions.sh" ]]; then
     source "$LOCAL_SCRIPTS_DEFAULT/global/utils-install-functions.sh"
 fi
 
-if [[ -f "$LOCAL_SCRIPTS/global/pmx_journal.sh" ]]; then
-    source "$LOCAL_SCRIPTS/global/pmx_journal.sh"
-fi
 
 BACKTITLE="ProxMenux"
 UI_MENU_H=20
@@ -674,16 +671,18 @@ prompt_zfs_pool_name() {
 # ──────────────────────────────────────────────────────────────────────────────
 
 ensure_fs_tool() {
-    local FUNC_VERSION="2.0"
-    pmx_journal_context "ensure_fs_tool" "$FUNC_VERSION"
-
     case "$FORMAT_TYPE" in
         exfat)
             command -v mkfs.exfat >/dev/null 2>&1 && return 0
             if declare -F ensure_repositories >/dev/null 2>&1; then
                 ensure_repositories || true
             fi
-            if pmx_install_pkg exfatprogs; then
+            # Installing exfatprogs modifies the host, so it is recorded;
+            # the format operation itself is not. Falls back to raw apt if
+            # the journal helper is not loaded.
+            if { declare -F pmx_install_pkg >/dev/null 2>&1 \
+                   && PMX_JOURNAL_SOURCE="format-disk.sh" pmx_install_pkg exfatprogs; } \
+                 || DEBIAN_FRONTEND=noninteractive apt-get install -y exfatprogs >/dev/null 2>&1; then
                 command -v mkfs.exfat >/dev/null 2>&1 && {
                     msg_ok "$(translate "exFAT tools installed successfully.")"
                     return 0
@@ -727,9 +726,6 @@ wait_for_enter_to_main() {
 # ──────────────────────────────────────────────────────────────────────────────
 
 main() {
-    local FUNC_VERSION="2.0"
-    pmx_journal_context "main" "$FUNC_VERSION"
-
     select_target_disk    || exit 0
     select_operation_mode || exit 0
     confirm_format_action || exit 0
@@ -773,10 +769,6 @@ main() {
     # ── Execute the selected operation ────────────────────────────────────────
     export DOH_SHOW_PROGRESS=0
     export DOH_ENABLE_STACK_RELEASE=0
-
-    pmx_record_execution \
-        "disk operation ${OPERATION_MODE} on ${SELECTED_DISK}" \
-        "format-disk operation=${OPERATION_MODE} disk=${SELECTED_DISK} filesystem=${FORMAT_TYPE:-none} zfs_pool=${ZFS_POOL_NAME:-none}"
 
     if [[ "$OPERATION_MODE" == "wipe_all" ]]; then
         msg_info "$(translate "Wiping partitions and metadata...")"

@@ -25,10 +25,6 @@ if [[ -f "$UTILS_FILE" ]]; then
     source "$UTILS_FILE"
 fi
 
-if [[ -f "$LOCAL_SCRIPTS/global/pmx_journal.sh" ]]; then
-    source "$LOCAL_SCRIPTS/global/pmx_journal.sh"
-fi
-
 load_language
 initialize_cache
 
@@ -73,19 +69,12 @@ show_backup_warning() {
 }
 
 convert_to_privileged() {
-    local FUNC_VERSION="2.0"
-    pmx_journal_context "convert_to_privileged" "$FUNC_VERSION"
-
     CONF_FILE="/etc/pve/lxc/$CONTAINER_ID.conf"
-    pmx_record_execution "convert CT ${CONTAINER_ID} to privileged mode" \
-        "stop CT if running and update ${CONF_FILE}"
     
     CONTAINER_STATUS=$(pct status "$CONTAINER_ID" | awk '{print $2}')
     
     if [ "$CONTAINER_STATUS" == "running" ]; then
         msg_info "$(translate 'Stopping container') $CONTAINER_ID..."
-        pmx_record_execution "stop CT ${CONTAINER_ID} for unprivileged-to-privileged conversion" \
-            "pct shutdown ${CONTAINER_ID}"
         pct shutdown "$CONTAINER_ID"
         
         # Wait for container to stop
@@ -112,8 +101,8 @@ convert_to_privileged() {
     msg_ok "$(translate 'Configuration backup created:') $CONF_FILE.bak"
     
     msg_info "$(translate 'Converting container to privileged...')"
-    pmx_edit_file "$CONF_FILE" '/^unprivileged: 1/d'
-    echo "unprivileged: 0" | pmx_append_file "$CONF_FILE"
+    sed -i '/^unprivileged: 1/d' "$CONF_FILE"
+    echo "unprivileged: 0" >> "$CONF_FILE"
     
     msg_ok "$(translate 'Container successfully converted to privileged.')"
 
@@ -123,12 +112,9 @@ convert_to_privileged() {
 }
 
 finalize_conversion() {
-    local FUNC_VERSION="2.0"
-    pmx_journal_context "finalize_conversion" "$FUNC_VERSION"
 
     if whiptail --yesno "$(translate 'Do you want to start the privileged container') $CONTAINER_ID $(translate 'now?')" 10 60; then
         msg_info "$(translate 'Starting privileged container...')"
-        pmx_record_execution "start converted privileged CT ${CONTAINER_ID}" "pct start ${CONTAINER_ID}"
         pct start "$CONTAINER_ID"
         msg_ok "$(translate 'Privileged container') $CONTAINER_ID $(translate 'started successfully.')"
     fi

@@ -5876,7 +5876,7 @@
     "changes": {
       "loading": "Läser ändringsjournalen…",
       "failed": "Ändringsjournalen kunde inte läsas",
-      "intro": "Vad ProxMenux ändrat på den här värden och vad som fanns före varje ändring. Skillnaden visas, inte skriptet som tillämpade den.",
+      "intro": "Vad ProxMenux ändrat på den här värden och vad som fanns före varje ändring. Skillnaden visas.",
       "empty": "Inget har ännu registrerats på den här värden.",
       "since": "Registrerar sedan {date}. Det som tillämpades dessförinnan står som tillämpat, utan det tillstånd det ersatte.",
       "byFunction": "Per funktion",
@@ -5926,6 +5926,11 @@
       "undo": {
         "remove": "Tar bort filen (det fanns ingen tidigare)",
         "restore": "Återställer exakt vad som fanns"
+      },
+      "section": {
+        "postInstall": "Optimeringar efter installation",
+        "scripts": "ProxMenux-skript",
+        "installs": "Installerade paket och verktyg"
       }
     },
     "comparison": {

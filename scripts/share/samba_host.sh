@@ -297,8 +297,6 @@ add_proxmox_cifs_storage() {
             8 60 --title "$(translate "Storage Exists")"; then
             return 0
         fi
-        pmx_record_execution "remove Proxmox CIFS storage ${storage_id}" \
-            "pvesm remove ${storage_id}"
         pvesm remove "$storage_id" 2>/dev/null || true
     fi
 
@@ -306,8 +304,6 @@ add_proxmox_cifs_storage() {
     msg_info "$(translate "Adding CIFS storage to Proxmox...")"
 
     local pvesm_result pvesm_output
-    pmx_record_execution "add Proxmox CIFS storage ${storage_id}" \
-        "pvesm add cifs ${storage_id} --server ${server} --share ${share} --content ${content}"
     if [[ "$USE_GUEST" == "true" ]]; then
         pvesm_output=$(pvesm add cifs "$storage_id" \
             --server "$server" \
@@ -435,8 +431,6 @@ write_host_credentials_file() {
         return 0
     fi
     local creds_dir="/etc/samba/credentials"
-    pmx_record_execution "create Samba credentials directory ${creds_dir}" \
-        "mkdir -p ${creds_dir}; chmod 0700 ${creds_dir}"
     mkdir -p "$creds_dir"
     chmod 0700 "$creds_dir"
     HOST_CRED_FILE="${creds_dir}/$(echo "${SAMBA_SERVER}_${SAMBA_SHARE}" | tr -c 'A-Za-z0-9._-' '_').cred"
@@ -464,8 +458,6 @@ mount_cifs_via_fstab() {
     msg_info "$(translate "Preparing host mount...")"
 
     if [[ ! -d "$mount_path" ]]; then
-        pmx_record_execution "create CIFS mount point ${mount_path}" \
-            "mkdir -p ${mount_path}"
         if ! mkdir -p "$mount_path" 2>/dev/null; then
             msg_error "$(translate "Failed to create mount point:") $mount_path"
             return 1
@@ -481,8 +473,6 @@ mount_cifs_via_fstab() {
     fi
 
     msg_info "$(translate "Mounting CIFS share...")"
-    pmx_record_execution "mount CIFS share //${server}/${share} at ${mount_path}" \
-        "mount -t cifs //${server}/${share} ${mount_path}"
     if ! mount -t cifs -o "$mount_opts" "//${server}/${share}" "$mount_path" >/dev/null 2>&1; then
         msg_error "$(translate "Failed to mount CIFS share on host.")"
         return 1
@@ -503,7 +493,6 @@ mount_cifs_via_fstab() {
     echo "//${server}/${share} $mount_path cifs $mount_opts 0 0" | pmx_append_file /etc/fstab
     msg_ok "$(translate "Added to /etc/fstab.")"
 
-    pmx_record_execution "reload systemd after CIFS fstab update" "systemctl daemon-reload"
     systemctl daemon-reload 2>/dev/null || true
 
     echo -e ""
@@ -815,8 +804,6 @@ remove_cifs_storage() {
                 show_proxmenux_logo
                 msg_title "$(translate "Remove CIFS Storage")"
 
-                pmx_record_execution "remove Proxmox CIFS storage ${target}" \
-                    "pvesm remove ${target}"
                 if pvesm remove "$target" 2>/dev/null; then
                     msg_ok "$(translate "Storage") $target $(translate "removed successfully from Proxmox.")"
                 else
@@ -850,8 +837,6 @@ remove_cifs_storage() {
                 msg_title "$(translate "Remove CIFS fstab Mount")"
 
                 if mount | grep -q " on ${mount_path} type "; then
-                    pmx_record_execution "unmount CIFS path ${mount_path}" \
-                        "umount ${mount_path}"
                     if umount "$mount_path" 2>/dev/null; then
                         msg_ok "$(translate "Unmounted:") $mount_path"
                     else
@@ -872,7 +857,6 @@ remove_cifs_storage() {
                     msg_error "$(translate "Failed to edit /etc/fstab — remove the line manually.")"
                 fi
 
-                pmx_record_execution "reload systemd after CIFS fstab removal" "systemctl daemon-reload"
                 systemctl daemon-reload 2>/dev/null || true
 
                 # Remove credentials file if it's under the standard ProxMenux dir

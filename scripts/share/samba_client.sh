@@ -55,8 +55,6 @@ select_privileged_lxc
 install_samba_client() {
     local FUNC_VERSION="1.0"
     pmx_journal_context "install_samba_client" "$FUNC_VERSION"
-    pmx_record_execution "install and prepare Samba client in CT ${CTID}" \
-        "pct exec ${CTID} -- install cifs-utils and smbclient; create ${CREDENTIALS_DIR}"
 
     if pct exec "$CTID" -- dpkg -s cifs-utils &>/dev/null && pct exec "$CTID" -- dpkg -s smbclient &>/dev/null; then
         pct exec "$CTID" -- mkdir -p "$CREDENTIALS_DIR"
@@ -699,8 +697,6 @@ create_credentials_file() {
 
     CRED_FILE="$CREDENTIALS_DIR/${SAMBA_SERVER}_${SAMBA_SHARE}.cred"
 
-    pmx_record_execution "create Samba credentials file ${CRED_FILE} in CT ${CTID}" \
-        "pct exec ${CTID} -- write credentials file and chmod 600"
 
     pct exec "$CTID" -- bash -c "cat > '$CRED_FILE' << EOF
 username=$USERNAME
@@ -773,8 +769,6 @@ mount_samba_share() {
     configure_mount_options || return
 
     pmx_journal_context "mount_samba_share" "$FUNC_VERSION"
-    pmx_record_execution "mount Samba share //${SAMBA_SERVER}/${SAMBA_SHARE} in CT ${CTID} at ${MOUNT_POINT}" \
-        "pct exec ${CTID} -- mount CIFS share; persistent=${PERMANENT_MOUNT}"
     
     show_proxmenux_logo
     msg_title "$(translate "Installing Samba Client in LXC")"
@@ -978,8 +972,6 @@ unmount_samba_share() {
         msg_title "$(translate "Unmount Samba Share")"
 
         CRED_FILE=$(pct exec "$CTID" -- grep -E "\s+$SELECTED_MOUNT\s+" /etc/fstab 2>/dev/null | grep -o "credentials=[^, ]*" | cut -d= -f2 || true)
-        pmx_record_execution "remove Samba mount ${SELECTED_MOUNT} from CT ${CTID}" \
-            "remove CT fstab entry and credentials file when present"
         pct exec "$CTID" -- sed --in-place "\|[[:space:]]$SELECTED_MOUNT[[:space:]]|d" /etc/fstab
         msg_ok "$(translate "Removed from /etc/fstab.")"
         

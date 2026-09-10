@@ -5,10 +5,6 @@ if [[ -n "${__PROXMENUX_VM_STORAGE_HELPERS__}" ]]; then
 fi
 __PROXMENUX_VM_STORAGE_HELPERS__=1
 
-if [[ -f "/usr/local/share/proxmenux/scripts/global/pmx_journal.sh" ]]; then
-    source "/usr/local/share/proxmenux/scripts/global/pmx_journal.sh"
-fi
-
 function _array_contains() {
   local needle="$1"
   shift
@@ -375,8 +371,6 @@ function _vm_storage_register_vfio_iommu_tool() {
 }
 
 function _vm_storage_enable_iommu_cmdline() {
-  local FUNC_VERSION="1.0"
-  pmx_journal_context "_vm_storage_enable_iommu_cmdline" "$FUNC_VERSION"
   local cpu_vendor iommu_param
   cpu_vendor=$(grep -m1 "vendor_id" /proc/cpuinfo 2>/dev/null | awk '{print $3}')
 
@@ -394,15 +388,13 @@ function _vm_storage_enable_iommu_cmdline() {
   if [[ -f "$cmdline_file" ]] && grep -qE 'root=ZFS=|root=ZFS/' "$cmdline_file" 2>/dev/null; then
     if ! grep -q "$iommu_param" "$cmdline_file"; then
       cp "$cmdline_file" "${cmdline_file}.bak.$(date +%Y%m%d_%H%M%S)"
-      pmx_edit_file "$cmdline_file" "s|\\s*$| ${iommu_param} iommu=pt|"
-      pmx_record_execution "refresh Proxmox boot entries" "proxmox-boot-tool refresh"
+      sed -i "s|\\s*$| ${iommu_param} iommu=pt|" "$cmdline_file"
       proxmox-boot-tool refresh >/dev/null 2>&1 || true
     fi
   elif [[ -f "$grub_file" ]]; then
     if ! grep -q "$iommu_param" "$grub_file"; then
       cp "$grub_file" "${grub_file}.bak.$(date +%Y%m%d_%H%M%S)"
-      pmx_edit_file "$grub_file" "/GRUB_CMDLINE_LINUX_DEFAULT=/ s|\"$| ${iommu_param} iommu=pt\"|"
-      pmx_record_execution "regenerate GRUB configuration" "update-grub"
+      sed -i "/GRUB_CMDLINE_LINUX_DEFAULT=/ s|\"$| ${iommu_param} iommu=pt\"|" "$grub_file"
       update-grub >/dev/null 2>&1 || true
     fi
   else

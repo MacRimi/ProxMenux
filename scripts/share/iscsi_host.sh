@@ -244,8 +244,6 @@ add_proxmox_iscsi_storage() {
             8 60 --title "$(translate "Storage Exists")"; then
             return 0
         fi
-        pmx_record_execution "remove existing Proxmox iSCSI storage ${storage_id}" \
-            "pvesm remove ${storage_id}"
         pvesm remove "$storage_id" 2>/dev/null || true
     fi
 
@@ -253,8 +251,6 @@ add_proxmox_iscsi_storage() {
     msg_info "$(translate "Adding iSCSI storage to Proxmox...")"
 
     local pvesm_output pvesm_result
-    pmx_record_execution "add iSCSI target ${target} as Proxmox storage ${storage_id}" \
-        "pvesm add iscsi ${storage_id} --portal ${portal} --target ${target} --content ${content}"
     pvesm_output=$(pvesm add iscsi "$storage_id" \
         --portal "$portal" \
         --target "$target" \
@@ -418,7 +414,6 @@ remove_iscsi_storage() {
         show_proxmenux_logo
         msg_title "$(translate "Remove iSCSI Storage")"
 
-        pmx_record_execution "remove Proxmox iSCSI storage ${SELECTED}" "pvesm remove ${SELECTED}"
         if pvesm remove "$SELECTED" 2>/dev/null; then
             msg_ok "$(translate "Storage") $SELECTED $(translate "removed successfully from Proxmox.")"
         else

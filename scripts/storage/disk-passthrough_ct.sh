@@ -48,12 +48,6 @@ elif [[ -f "$LOCAL_SCRIPTS_DEFAULT/global/vm_storage_helpers.sh" ]]; then
     source "$LOCAL_SCRIPTS_DEFAULT/global/vm_storage_helpers.sh"
 fi
 
-if [[ -f "$LOCAL_SCRIPTS/global/pmx_journal.sh" ]]; then
-    source "$LOCAL_SCRIPTS/global/pmx_journal.sh"
-fi
-
-FUNC_VERSION="1.3"
-
 BACKTITLE="ProxMenux"
 UI_MENU_H=20
 UI_MENU_W=84
@@ -126,20 +120,12 @@ get_preferred_disk_path() {
 install_fs_tools_in_ct() {
     local ctid="$1"
     local pkg="$2"
-    local FUNC_VERSION="1.3"
-    pmx_journal_context "install_fs_tools_in_ct" "$FUNC_VERSION"
 
     if pct exec "$ctid" -- sh -c "[ -f /etc/alpine-release ]"; then
-        pmx_record_execution "install ${pkg} in CT ${ctid}" \
-            "pct exec ${ctid} -- apk update and apk add ${pkg}"
         pct exec "$ctid" -- sh -c "apk update >/dev/null 2>&1 && apk add --no-progress $pkg >/dev/null 2>&1"
     elif pct exec "$ctid" -- sh -c "grep -qi 'arch' /etc/os-release 2>/dev/null"; then
-        pmx_record_execution "install ${pkg} in CT ${ctid}" \
-            "pct exec ${ctid} -- pacman -Sy --noconfirm ${pkg}"
         pct exec "$ctid" -- sh -c "pacman -Sy --noconfirm $pkg >/dev/null 2>&1"
     elif pct exec "$ctid" -- sh -c "grep -qiE 'debian|ubuntu' /etc/os-release 2>/dev/null"; then
-        pmx_record_execution "install ${pkg} in CT ${ctid}" \
-            "pct exec ${ctid} -- apt-get update and apt-get install ${pkg}"
         pct exec "$ctid" -- sh -c "apt-get update -qq >/dev/null 2>&1 && apt-get install -y -qq $pkg >/dev/null 2>&1"
     else
         return 1
@@ -261,15 +247,12 @@ msg_ok "$(translate "CT $CTID selected successfully.")"
 
 if [ "$CONVERT_PRIVILEGED" = true ]; then
 
-    pmx_journal_context "disk_passthrough_ct" "$FUNC_VERSION"
-
     show_proxmenux_logo
     msg_title "$(translate "Import Disk to LXC")"
 
     CURRENT_CT_STATUS=$(pct status "$CTID" | awk '{print $2}')
     if [ "$CURRENT_CT_STATUS" == "running" ]; then
         msg_info "$(translate "Stopping container") $CTID..."
-        pmx_record_execution "stop CT ${CTID} for privileged conversion" "pct shutdown ${CTID}"
         pct shutdown "$CTID" &>/dev/null
         for i in {1..10}; do
             sleep 1
@@ -283,13 +266,12 @@ if [ "$CONVERT_PRIVILEGED" = true ]; then
     fi
 
     cp "$CONF_FILE" "$CONF_FILE.bak"
-    pmx_edit_file "$CONF_FILE" '/^unprivileged: 1/d'
-    echo "unprivileged: 0" | pmx_append_file "$CONF_FILE"
+    sed -i '/^unprivileged: 1/d' "$CONF_FILE"
+    echo "unprivileged: 0" >> "$CONF_FILE"
     msg_ok "$(translate "Container successfully converted to privileged.")"
 
     if [ "$CT_RUNNING" = true ]; then
         msg_info "$(translate "Starting container") $CTID..."
-        pmx_record_execution "start CT ${CTID} after privileged conversion" "pct start ${CTID}"
         pct start "$CTID" &>/dev/null
         sleep 2
         if [ "$(pct status "$CTID" | awk '{print $2}')" != "running" ]; then
@@ -585,8 +567,6 @@ msg_title "$(translate "Import Disk to LXC")"
 msg_ok "$(translate "CT $CTID selected successfully.")"
 msg_ok "$(translate "Disks to process:") ${#DISK_LIST[@]}"
 for i in "${!DISK_LIST[@]}"; do
-    pmx_journal_context "disk_passthrough_ct" "$FUNC_VERSION"
-
     IFS=$'\t' read -r _desc_model _desc_size <<< "${DISK_DESCRIPTIONS[$i]}"
     echo -e "${TAB}${BL}${DISK_LIST[$i]}  $_desc_model  $_desc_size${CL}"
 done
@@ -610,8 +590,6 @@ for i in "${!DISK_LIST[@]}"; do
 
     if [ "$NEEDS_PARTITION" = true ]; then
         msg_info "$(translate "Creating partition table and partition...")"
-        pmx_record_execution "create GPT partition on ${DISK} for CT ${CTID}" \
-            "parted -s ${DISK} mklabel gpt mkpart primary 0% 100%"
         if ! parted -s "$DISK" mklabel gpt mkpart primary 0% 100% >/dev/null 2>&1; then
             msg_error "$(translate "Failed to create partition table on disk") $DISK_INFO."
             continue
@@ -638,8 +616,6 @@ for i in "${!DISK_LIST[@]}"; do
 
     if [ "$SKIP_FORMAT" != true ]; then
         msg_info "$(translate "Formatting partition") $PARTITION $(translate "with") $FORMAT_TYPE..."
-        pmx_record_execution "format ${PARTITION} as ${FORMAT_TYPE} for CT ${CTID}" \
-            "mkfs ${FORMAT_TYPE} ${PARTITION}"
         if ! case "$FORMAT_TYPE" in
             "ext4")  mkfs.ext4 -F "$PARTITION" >/dev/null 2>&1 ;;
             "xfs")   mkfs.xfs -f "$PARTITION"  >/dev/null 2>&1 ;;
@@ -682,7 +658,6 @@ for i in "${!DISK_LIST[@]}"; do
                         --yesno "$(translate "The filesystem") $FORMAT_TYPE $(translate "requires the package") $FS_PKG $(translate "installed inside CT") $CTID.\n\n$(translate "The container is currently stopped. Do you want to start it now to install the package?")\n\n$(translate "If you choose No, install") $FS_PKG $(translate "manually inside the container before starting it.")" \
                         $UI_YESNO_H $UI_YESNO_W; then
                 msg_info "$(translate "Starting CT") $CTID..."
-                pmx_record_execution "start CT ${CTID} to install filesystem tools" "pct start ${CTID}"
                 pct start "$CTID" &>/dev/null
                 sleep 2
                 if [ "$(pct status "$CTID" | awk '{print $2}')" != "running" ]; then
@@ -710,14 +685,9 @@ for i in "${!DISK_LIST[@]}"; do
     PERSISTENT_PARTITION=$(get_preferred_disk_path "$PARTITION")
 
     msg_info "$(translate "Applying passthrough to CT") $CTID..."
-    pmx_journal_context "disk_passthrough_ct" "$FUNC_VERSION"
     if [ "$FORMAT_TYPE" == "xfs" ]; then
-        pmx_record_execution "assign ${PERSISTENT_PARTITION} to CT ${CTID} at ${MOUNT_POINT}" \
-            "pct set ${CTID} -mp${INDEX} ${PERSISTENT_PARTITION},mp=${MOUNT_POINT},backup=0,ro=0"
         RESULT=$(pct set "$CTID" -mp${INDEX} "$PERSISTENT_PARTITION,mp=$MOUNT_POINT,backup=0,ro=0" 2>&1)
     else
-        pmx_record_execution "assign ${PERSISTENT_PARTITION} to CT ${CTID} at ${MOUNT_POINT}" \
-            "pct set ${CTID} -mp${INDEX} ${PERSISTENT_PARTITION},mp=${MOUNT_POINT},backup=0,ro=0,acl=1"
         RESULT=$(pct set "$CTID" -mp${INDEX} "$PERSISTENT_PARTITION,mp=$MOUNT_POINT,backup=0,ro=0,acl=1" 2>&1)
     fi
     SET_STATUS=$?

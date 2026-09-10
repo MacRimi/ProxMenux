@@ -5875,7 +5875,7 @@
     "changes": {
       "loading": "Lettura del registro delle modifiche…",
       "failed": "Non è stato possibile leggere il registro delle modifiche",
-      "intro": "Cosa ha cambiato ProxMenux su questo host e cosa c'era prima di ogni modifica. Viene mostrata la differenza, non lo script che l'ha applicata.",
+      "intro": "Cosa ha cambiato ProxMenux su questo host e cosa c'era prima di ogni modifica. Viene mostrata la differenza.",
       "empty": "Su questo host non è ancora stato registrato nulla.",
       "since": "Registrazione dal {date}. Ciò che è stato applicato prima risulta applicato, senza lo stato sostituito.",
       "byFunction": "Per funzione",
@@ -5925,6 +5925,11 @@
       "undo": {
         "remove": "Elimina il file (prima non ce n'era nessuno)",
         "restore": "Ripristina esattamente ciò che c'era"
+      },
+      "section": {
+        "postInstall": "Ottimizzazioni post-installazione",
+        "scripts": "Script di ProxMenux",
+        "installs": "Pacchetti e utilità installati"
       }
     },
     "comparison": {

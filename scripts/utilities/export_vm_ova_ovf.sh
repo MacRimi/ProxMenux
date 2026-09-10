@@ -41,10 +41,6 @@ if [[ -f "$UTILS_FILE" ]]; then
     source "$UTILS_FILE"
 fi
 
-if [[ -f "$LOCAL_SCRIPTS/global/pmx_journal.sh" ]]; then
-    source "$LOCAL_SCRIPTS/global/pmx_journal.sh"
-fi
-
 load_language
 initialize_cache
 
@@ -138,9 +134,6 @@ select_vm() {
 }
 
 ensure_vm_stopped() {
-    local FUNC_VERSION="1.0"
-    pmx_journal_context "ensure_vm_stopped" "$FUNC_VERSION"
-
     local status
     status=$(qm status "$VMID" 2>/dev/null | awk '{print $2}')
 
@@ -153,7 +146,6 @@ ensure_vm_stopped() {
         return 1
     fi
 
-    pmx_record_execution "shut down VM ${VMID} for export" "qm shutdown ${VMID} --timeout 120"
     qm shutdown "$VMID" --timeout 120 >/dev/null 2>&1 || true
 
     local i
@@ -165,7 +157,6 @@ ensure_vm_stopped() {
 
     if dialog --backtitle "ProxMenux" --title "$(translate "Shutdown timeout")" --yesno \
         "$(translate "Graceful shutdown timed out.")\n\n$(translate "Force stop VM now?")" 10 60; then
-        pmx_record_execution "force stop VM ${VMID} for export" "qm stop ${VMID}"
         qm stop "$VMID" >/dev/null 2>&1 || true
         sleep 2
         status=$(qm status "$VMID" 2>/dev/null | awk '{print $2}')
@@ -525,17 +516,12 @@ print_export_result() {
 }
 
 run_export() {
-    local FUNC_VERSION="1.0"
-    pmx_journal_context "run_export" "$FUNC_VERSION"
-
     show_proxmenux_logo
     msg_title "$(translate "Export VM to OVA or OVF")"
 
     msg_ok "$(translate "VM selected:") $VMID ($VM_NAME)"
     msg_ok "$(translate "Export mode:") ${EXPORT_MODE^^}"
     msg_ok "$(translate "Destination:") $DEST_DIR"
-    pmx_record_execution "export VM ${VMID} as ${EXPORT_MODE^^} to ${DEST_DIR}" \
-        "convert ${DISK_COUNT} VM disk(s), generate OVF metadata and package ${EXPORT_MODE^^}"
 
     local ts vm_safe base_name
     ts=$(date +%Y%m%d_%H%M%S)

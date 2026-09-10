@@ -81,6 +81,67 @@ function undoKey(change: { revert: string; exactness: string }): string {
   return `exactness.${change.exactness}`
 }
 
+const FN_LABEL: Record<string, string> = {
+  apply_amd_fixes: "Apply AMD CPU fixes",
+  apply_network_optimizations: "Apply network optimizations",
+  apt_upgrade: "Update and upgrade system",
+  cleanup_duplicate_repos_pve9: "Configure Proxmox APT repositories",
+  configure_fastfetch: "Install and configure Fastfetch",
+  configure_figurine: "Install Figurine",
+  configure_kernel_panic: "Enable restart on kernel panic",
+  configure_log2ram: "Install and configure Log2RAM",
+  configure_pigz: "Use pigz for faster gzip compression",
+  configure_time_sync: "Synchronize time automatically",
+  customize_bashrc: "Customize bashrc",
+  disable_rpc: "Disable portmapper/rpcbind",
+  enable_ha: "Enable High Availability services",
+  enable_kexec: "Enable fast reboots",
+  enable_tcp_fast_open: "Enable TCP BBR/Fast Open control",
+  enable_vfio_iommu: "Enable VFIO IOMMU support",
+  enable_zfs_autotrim: "Enable ZFS autotrim (SSD/NVMe pools)",
+  force_apt_ipv4: "Force APT to use IPv4",
+  increase_system_limits: "Increase various system limits",
+  install_ceph: "Add latest Ceph support",
+  install_guest_agent: "Install relevant guest agent",
+  install_log2ram: "Install and configure Log2RAM",
+  install_log2ram_auto: "Install and configure Log2RAM",
+  install_openvswitch: "Install Open vSwitch",
+  install_ovh_rtm: "Install OVH Real Time Monitoring",
+  install_system_utils: "Install common system utilities",
+  install_zfs_auto_snapshot: "Install ZFS auto-snapshot",
+  optimize_journald: "Optimize journald",
+  optimize_logrotate: "Optimize logrotate",
+  optimize_memory_settings: "Optimize Memory",
+  optimize_vzdump: "Increase vzdump backup speed",
+  optimize_zfs_arc: "Optimize ZFS ARC size",
+  remove_subscription_banner: "Remove subscription banner",
+  setup_motd: "Set up custom MOTD banner",
+  setup_persistent_network: "Interface Names (persistent)",
+  setup_proxmox_repositories: "Configure Proxmox APT repositories",
+  skip_apt_languages: "Skip downloading additional languages",
+  update_pve8: "Update and upgrade system",
+  update_pve9: "Update and upgrade system",
+  update_pve_appliance_manager: "Update Proxmox VE Appliance Manager",
+}
+
+// Post-install functions run from the auto/customizable scripts; everything
+// else is a general host script (nvidia/tpu installers, PVE update, vfio…).
+const POST_INSTALL_SOURCES = new Set(["auto", "customizable"])
+
+// Which of the three sections a change belongs to: installations are their
+// own block, post-install optimizations another, general scripts the rest.
+function blockOf(c: { class: string; source: string }): "installs" | "postInstall" | "scripts" {
+  if (c.class === "installation") return "installs"
+  if (POST_INSTALL_SOURCES.has(c.source)) return "postInstall"
+  return "scripts"
+}
+
+// A post-install function shows its menu name; anything else shows the script
+// that made the change.
+function groupLabel(fn: string, source: string): string {
+  return FN_LABEL[fn] || source || fn || "—"
+}
+
 const CLASS_STYLE: Record<string, { chip: string; Icon: typeof Settings2 }> = {
   configuration: { chip: "bg-blue-500/10 text-blue-400 border-blue-400/20", Icon: Settings2 },
   installation: { chip: "bg-green-500/10 text-green-500 border-green-500/20", Icon: Package },
@@ -226,6 +287,62 @@ function ChangeCard({ change, expanded, onToggle, t, when }: {
   )
 }
 
+function GroupSection({ title, groups, openFn, toggleFn, open, toggle, t, when }: {
+  title: string
+  groups: { key: string; label: string; version: string; last: number; items: Change[] }[]
+  openFn: Set<string>; toggleFn: (k: string) => void
+  open: Set<number>; toggle: (id: number) => void
+  t: (k: string, params?: Record<string, string>) => string
+  when: (n: number) => string
+}) {
+  if (groups.length === 0) return null
+  return (
+    <div className="space-y-2">
+      <h3 className="text-sm font-semibold text-foreground px-1">{title}</h3>
+      {groups.map((g) => {
+        const fnOpen = openFn.has(g.key)
+        return (
+          <Card key={g.key} className="bg-card border-border">
+            <button
+              type="button"
+              onClick={() => toggleFn(g.key)}
+              aria-expanded={fnOpen}
+              className="w-full text-left p-3 flex flex-wrap items-center gap-2
+                         rounded-lg hover:bg-white/5 transition-colors cursor-pointer"
+            >
+              {fnOpen
+                ? <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground" />
+                : <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" />}
+              <FileCode className="h-4 w-4 shrink-0 text-blue-400" />
+              <span className="min-w-0 text-sm font-medium text-foreground break-words">
+                {g.label}
+              </span>
+              {g.version && (
+                <Badge variant="outline" className="text-xs shrink-0">v{g.version}</Badge>
+              )}
+              <Badge variant="outline" className="text-xs tabular-nums shrink-0">
+                {t("audit.changes.count", { count: String(g.items.length) })}
+              </Badge>
+              <span className="ml-auto shrink-0 text-xs text-muted-foreground">
+                {when(g.last)}
+              </span>
+            </button>
+            {fnOpen && (
+              <CardContent className="pt-0 pl-10 pr-3 space-y-2">
+                {g.items.map((change) => (
+                  <ChangeCard key={change.id} change={change}
+                    expanded={open.has(change.id)} onToggle={() => toggle(change.id)}
+                    t={t} when={when} />
+                ))}
+              </CardContent>
+            )}
+          </Card>
+        )
+      })}
+    </div>
+  )
+}
+
 export function AuditChanges() {
   const t = useT()
   const { language } = useI18n()
@@ -234,7 +351,6 @@ export function AuditChanges() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [open, setOpen] = useState<Set<number>>(new Set())
-  const [filter, setFilter] = useState<string>("all")
 
   const load = useCallback(async () => {
     try {
@@ -268,26 +384,27 @@ export function AuditChanges() {
     return next
   })
 
-  const visible = useMemo(
-    () => changes.filter((c) => filter === "all" || c.class === filter),
-    [changes, filter],
-  )
-
-  // A sysadmin asks "what did each ProxMenux function do to my host?" — so
-  // the changes are grouped under the function that made them. Each group is
-  // one card; opening it reveals that function's individual file changes.
-  const groups = useMemo(() => {
-    const byFn = new Map<string, { function: string; version: string; last: number; items: Change[] }>()
-    for (const c of visible) {
-      const key = c.function || "—"
-      const g = byFn.get(key) || { function: key, version: c.function_version || "", last: 0, items: [] }
+  // A sysadmin reads this in three sections: what ProxMenux optimized
+  // (post-install), what its other scripts changed, and what it installed.
+  // Within each, changes are grouped under a card that opens to reveal them.
+  type Group = { key: string; label: string; version: string; last: number; items: Change[] }
+  const blocks = useMemo(() => {
+    const mk = () => new Map<string, Group>()
+    const post = mk(), scripts = mk(), installs = mk()
+    const pick = (b: string) => b === "installs" ? installs : b === "postInstall" ? post : scripts
+    for (const c of changes) {
+      const target = pick(blockOf(c))
+      const key = c.function || c.source || "—"
+      const label = groupLabel(c.function, c.source)
+      const g = target.get(key) || { key, label, version: c.function_version || "", last: 0, items: [] }
       g.items.push(c)
       if (c.recorded_at > g.last) g.last = c.recorded_at
       if (c.function_version) g.version = c.function_version
-      byFn.set(key, g)
+      target.set(key, g)
     }
-    return Array.from(byFn.values()).sort((a, b) => b.last - a.last)
-  }, [visible])
+    const sort = (m: Map<string, Group>) => Array.from(m.values()).sort((a, b) => b.last - a.last)
+    return { post: sort(post), scripts: sort(scripts), installs: sort(installs) }
+  }, [changes])
 
   const when = (epoch: number) => new Date(epoch * 1000).toLocaleString(language)
 
@@ -315,81 +432,22 @@ export function AuditChanges() {
               {t("audit.changes.since", { date: when(summary.journal_started) })}
             </p>
           )}
-          <div className="flex flex-wrap items-center gap-2">
-            {(["all", "configuration", "installation", "execution", "registration"] as const)
-              .filter((key) => key === "all" || summary?.by_class?.[key])
-              .map((key) => (
-                <button
-                  key={key}
-                  type="button"
-                  onClick={() => setFilter(key)}
-                  className={`px-3 py-1 rounded-md text-sm transition-colors ${
-                    filter === key
-                      ? "bg-blue-500 text-white"
-                      : "text-muted-foreground hover:text-foreground hover:bg-background/60"
-                  }`}
-                >
-                  {t(`audit.changes.class.${key}`)}
-                  {key !== "all" && summary?.by_class?.[key] !== undefined && (
-                    <span className="ml-1.5 tabular-nums">{summary.by_class[key]}</span>
-                  )}
-                </button>
-              ))}
-          </div>
         </CardContent>
       </Card>
 
-      <div className="space-y-2">
-        {groups.map((g) => {
-          const fnOpen = openFn.has(g.function)
-          return (
-            <Card key={g.function} className="bg-card border-border">
-              <button
-                type="button"
-                onClick={() => toggleFn(g.function)}
-                aria-expanded={fnOpen}
-                className="w-full text-left p-3 flex flex-wrap items-center gap-2
-                           rounded-lg hover:bg-white/5 transition-colors cursor-pointer"
-              >
-                {fnOpen
-                  ? <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground" />
-                  : <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" />}
-                <FileCode className="h-4 w-4 shrink-0 text-blue-400" />
-                <span className="min-w-0 font-mono text-sm font-medium text-foreground break-all">
-                  {g.function}
-                </span>
-                {g.version && (
-                  <Badge variant="outline" className="text-xs shrink-0">v{g.version}</Badge>
-                )}
-                <Badge variant="outline" className="text-xs tabular-nums shrink-0">
-                  {t("audit.changes.count", { count: String(g.items.length) })}
-                </Badge>
-                <span className="ml-auto shrink-0 text-xs text-muted-foreground">
-                  {when(g.last)}
-                </span>
-              </button>
-
-              {fnOpen && (
-                <CardContent className="pt-0 pl-10 pr-3 space-y-2">
-                  {g.items.map((change) => (
-                    <ChangeCard
-                      key={change.id}
-                      change={change}
-                      expanded={open.has(change.id)}
-                      onToggle={() => toggle(change.id)}
-                      t={t}
-                      when={when}
-                    />
-                  ))}
-                </CardContent>
-              )}
-            </Card>
-          )
-        })}
-        {groups.length === 0 && summary && summary.total > 0 && (
-          <p className="text-sm text-muted-foreground px-1">{t("audit.changes.noneInFilter")}</p>
-        )}
-      </div>
+      <GroupSection title={t("audit.changes.section.postInstall")}
+        groups={blocks.post} openFn={openFn} toggleFn={toggleFn}
+        open={open} toggle={toggle} t={t} when={when} />
+      <GroupSection title={t("audit.changes.section.scripts")}
+        groups={blocks.scripts} openFn={openFn} toggleFn={toggleFn}
+        open={open} toggle={toggle} t={t} when={when} />
+      <GroupSection title={t("audit.changes.section.installs")}
+        groups={blocks.installs} openFn={openFn} toggleFn={toggleFn}
+        open={open} toggle={toggle} t={t} when={when} />
+      {summary && summary.total > 0
+        && blocks.post.length + blocks.scripts.length + blocks.installs.length === 0 && (
+        <p className="text-sm text-muted-foreground px-1">{t("audit.changes.empty")}</p>
+      )}
     </div>
   )
 }

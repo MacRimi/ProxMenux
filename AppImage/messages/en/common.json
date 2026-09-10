@@ -5941,7 +5941,7 @@
     "changes": {
       "loading": "Reading the change journal…",
       "failed": "The change journal could not be read",
-      "intro": "What ProxMenux changed on this host and what was there before each change. The difference is shown, not the script that applied it.",
+      "intro": "What ProxMenux changed on this host and what was there before each change. The difference is shown.",
       "empty": "Nothing has been recorded on this host yet.",
       "since": "Recording since {date}. Anything applied before that appears as applied, without the state it replaced.",
       "byFunction": "By function",
@@ -5991,6 +5991,11 @@
       "undo": {
         "remove": "Deletes the file (there was none before)",
         "restore": "Restores exactly what was there"
+      },
+      "section": {
+        "postInstall": "Post-install optimizations",
+        "scripts": "ProxMenux scripts",
+        "installs": "Installed packages and utilities"
       }
     },
     "comparison": {

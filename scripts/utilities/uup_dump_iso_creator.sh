@@ -33,6 +33,9 @@ VENV_PATH="/opt/googletrans-env"
 if [[ -f "$UTILS_FILE" ]]; then
     source "$UTILS_FILE"
 fi
+if [[ -f "$BASE_DIR/scripts/global/pmx_journal.sh" ]]; then
+    source "$BASE_DIR/scripts/global/pmx_journal.sh"
+fi
 
 load_language
 initialize_cache
@@ -125,7 +128,14 @@ function run_uupdump_creator() {
         msg_info "$(translate "Installing dependencies: ${MISSING[*]}")"
         apt-get update -qq >/dev/null 2>&1
         msg_ok "$(translate "All dependencies installed and verified.")"
-        if ! apt-get install -y "${MISSING[@]}" >/dev/null 2>&1; then
+        # Build dependencies land on the host, so they are recorded;
+        # building the ISO is an operation and is not.
+        if declare -F pmx_install_pkg >/dev/null 2>&1; then
+            if ! PMX_JOURNAL_SOURCE="uup_dump_iso_creator.sh" pmx_install_pkg "${MISSING[@]}"; then
+                msg_error "$(translate "Failed to install: ${MISSING[*]}")"
+                exit 1
+            fi
+        elif ! apt-get install -y "${MISSING[@]}" >/dev/null 2>&1; then
             msg_error "$(translate "Failed to install: ${MISSING[*]}")"
             exit 1
         fi

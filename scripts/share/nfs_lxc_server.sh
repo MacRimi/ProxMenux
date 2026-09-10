@@ -31,10 +31,6 @@ if [[ -f "$UTILS_FILE" ]]; then
     source "$UTILS_FILE"
 fi
 
-if [[ -f "$LOCAL_SCRIPTS/global/pmx_journal.sh" ]]; then
-    source "$LOCAL_SCRIPTS/global/pmx_journal.sh"
-fi
-
 # Load shared functions
 SHARE_COMMON_FILE="$LOCAL_SCRIPTS/global/share-common.func"
 if ! source "$SHARE_COMMON_FILE" 2>/dev/null; then
@@ -53,10 +49,6 @@ select_privileged_lxc
 
 setup_universal_sharedfiles_group() {
     local ctid="$1"
-    local FUNC_VERSION="1.0"
-    pmx_journal_context "setup_universal_sharedfiles_group" "$FUNC_VERSION"
-    pmx_record_execution "configure sharedfiles group and UID mappings in CT ${ctid}" \
-        "pct exec ${ctid} -- manage sharedfiles group, memberships and remapped users"
     
     msg_info "$(translate "Setting sharedfiles group with UID remapping...")"
     
@@ -143,9 +135,6 @@ setup_universal_sharedfiles_group() {
 
 
 select_mount_point() {
-    local FUNC_VERSION="1.0"
-    pmx_journal_context "select_mount_point" "$FUNC_VERSION"
-
     while true; do
         METHOD=$(whiptail --backtitle "ProxMenux" --title "$(translate "Select Folder")" \
             --menu "$(translate "How do you want to select the folder to export?")" 15 60 5 \
@@ -192,8 +181,6 @@ select_mount_point() {
                             --msgbox "$(translate "No mount point was specified.")" 8 50
                         continue
                     fi
-                    pmx_record_execution "create NFS export directory ${MOUNT_POINT} in CT ${CTID}" \
-                        "pct exec ${CTID} -- mkdir -p ${MOUNT_POINT}"
                     pct exec "$CTID" -- mkdir -p "$MOUNT_POINT" 2>/dev/null
                     return 0
                     ;;
@@ -265,7 +252,6 @@ select_export_options() {
 
 
 create_nfs_export() {
-    local FUNC_VERSION="1.0"
 
     show_proxmenux_logo
     msg_title "$(translate "Create LXC server NFS")"
@@ -276,10 +262,6 @@ create_nfs_export() {
     get_network_config || return
     select_export_options || return
 
-    pmx_journal_context "create_nfs_export" "$FUNC_VERSION"
-    pmx_record_execution "configure NFS export ${MOUNT_POINT} in CT ${CTID}" \
-        "install and enable NFS services, update /etc/exports and reload exports"
-
 
     msg_ok "$(translate "Directory successfully.")"
 
@@ -287,7 +269,7 @@ create_nfs_export() {
     if ! pct exec "$CTID" -- dpkg -s nfs-kernel-server &>/dev/null; then
         msg_info "$(translate "Installing NFS server packages inside the CT...")"
         pct exec "$CTID" -- bash -c "apt-get update && apt-get install -y nfs-kernel-server nfs-common rpcbind"
-        pct exec "$CTID" -- systemctl --now enable rpcbind nfs-kernel-server
+        pct exec "$CTID" -- systemctl enable --now rpcbind nfs-kernel-server
         msg_ok "$(translate "NFS server installed successfully.")"
     else
         msg_ok "$(translate "NFS server is already installed.")"
@@ -314,8 +296,8 @@ create_nfs_export() {
     if pct exec "$CTID" -- grep -q "^$MOUNT_POINT " /etc/exports; then
         if dialog --yesno "$(translate "Do you want to update the existing export?")" \
             10 60 --title "$(translate "Update Export")"; then
-            pct exec "$CTID" -- sed --in-place "\|^$MOUNT_POINT |d" /etc/exports
-            pct exec "$CTID" -- bash -c "printf '%s\\n' '$EXPORT_LINE' | tee -a /etc/exports >/dev/null"
+            pct exec "$CTID" -- sed -i "\|^$MOUNT_POINT |d" /etc/exports
+            pct exec "$CTID" -- bash -c "echo '$EXPORT_LINE' >> /etc/exports"
             show_proxmenux_logo
             msg_title "$(translate "Create LXC server NFS")"
             msg_ok "$(translate "Directory successfully.")"
@@ -325,7 +307,7 @@ create_nfs_export() {
 
         fi
     else
-        pct exec "$CTID" -- bash -c "printf '%s\\n' '$EXPORT_LINE' | tee -a /etc/exports >/dev/null"
+        pct exec "$CTID" -- bash -c "echo '$EXPORT_LINE' >> /etc/exports"
         msg_ok "$(translate "Export added successfully.")"
     fi
 
@@ -423,9 +405,6 @@ view_exports() {
 }
 
 delete_export() {
-    local FUNC_VERSION="1.0"
-    pmx_journal_context "delete_export" "$FUNC_VERSION"
-
     if ! pct exec "$CTID" -- test -f /etc/exports; then
         dialog --title "$(translate "Error")" --msgbox "\n$(translate "No exports file found.")" 8 50
         return
@@ -456,9 +435,7 @@ delete_export() {
     if whiptail --yesno "$(translate "Are you sure you want to delete this export?")\n\n$EXPORT_LINE" 10 70 --title "$(translate "Confirm Deletion")"; then
         show_proxmenux_logo
         msg_title "$(translate "Delete Export")"
-        pmx_record_execution "remove NFS export line ${SELECTED_NUM} from CT ${CTID}" \
-            "edit /etc/exports and restart nfs-kernel-server"
-        pct exec "$CTID" -- sed --in-place "${SELECTED_NUM}d" /etc/exports
+        pct exec "$CTID" -- sed -i "${SELECTED_NUM}d" /etc/exports
         pct exec "$CTID" -- exportfs -ra
         pct exec "$CTID" -- systemctl restart nfs-kernel-server
         msg_ok "$(translate "Export deleted and NFS service restarted.")"
@@ -529,9 +506,6 @@ check_nfs_status() {
 }
 
 uninstall_nfs() {
-    local FUNC_VERSION="1.0"
-    pmx_journal_context "uninstall_nfs" "$FUNC_VERSION"
-
     if ! pct exec "$CTID" -- dpkg -s nfs-kernel-server &>/dev/null; then
         dialog --title "$(translate "NFS Not Installed")" --msgbox "\n$(translate "NFS server is not installed in this CT.")" 8 60
         return
@@ -545,8 +519,6 @@ uninstall_nfs() {
     
     show_proxmenux_logo
     msg_title "$(translate "Uninstall NFS Server")"
-    pmx_record_execution "uninstall NFS server from CT ${CTID}" \
-        "stop and disable NFS services, clear exports, remove users, groups and packages"
 
     msg_info "$(translate "Stopping NFS services...")"
     pct exec "$CTID" -- systemctl stop nfs-kernel-server 2>/dev/null || true

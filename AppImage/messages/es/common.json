@@ -4306,7 +4306,7 @@
     },
     "profile": {
       "custom": "Personalizado",
-      "customDescription": "Elija exactamente qué rutas deben incluirse.",
+      "customDescription": "Elija qué rutas deben incluirse.",
       "default": "Por defecto",
       "defaultDescription": "Configuración de host recomendada y datos de ProxMenux.",
       "defaultDescriptionShort": "Configuración de host recomendada.",
@@ -5875,7 +5875,7 @@
     "changes": {
       "loading": "Leyendo el registro de cambios…",
       "failed": "No se ha podido leer el registro de cambios",
-      "intro": "Qué ha cambiado ProxMenux en este host y qué había antes de cada cambio. Se muestra la diferencia, no el script que la aplicó.",
+      "intro": "Qué ha cambiado ProxMenux en este host y qué había antes de cada cambio. Se muestra la diferencia.",
       "empty": "Todavía no se ha registrado nada en este host.",
       "since": "Registrando desde el {date}. Lo aplicado antes figura como aplicado, sin el estado al que sustituyó.",
       "byFunction": "Por función",
@@ -5925,6 +5925,11 @@
       "undo": {
         "remove": "Elimina el fichero (no había ninguno antes)",
         "restore": "Restaura exactamente lo que había"
+      },
+      "section": {
+        "postInstall": "Optimizaciones de post-install",
+        "scripts": "Scripts de ProxMenux",
+        "installs": "Paquetes y utilidades instalados"
       }
     },
     "comparison": {
