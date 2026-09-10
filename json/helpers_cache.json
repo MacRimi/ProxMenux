@@ -3186,7 +3186,7 @@
     "updateable": true,
     "privileged": false,
     "has_arm": false,
-    "is_dev": true,
+    "is_dev": false,
     "execute_in": [
       "lxc"
     ],
@@ -8180,6 +8180,39 @@
     "os": "debian"
   },
   {
+    "name": "PVE Guest Deletion",
+    "slug": "guest-delete",
+    "desc": "<p>This script helps manage and delete LXC containers or VM's on a Proxmox VE server. It lists all available containers/virtual machines, allowing the user to select one or more for deletion through an interactive menu. Running containers/vm's are automatically stopped before deletion, and the user is asked to confirm each action. The script ensures a controlled and efficient management process.</p>",
+    "script": "tools/pve/guest-delete.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/tools/pve/guest-delete.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/tools/pve/guest-delete.sh",
+    "type": "pve",
+    "type_id": "1uyjfno0fpf5buh",
+    "categories": [
+      "scriptcat00001"
+    ],
+    "category_names": [
+      "Host Management"
+    ],
+    "notes": [
+      "Execute within the Proxmox shell"
+    ],
+    "warnings": [],
+    "port": 0,
+    "website": "",
+    "documentation": "",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/proxmox-helper-scripts.webp",
+    "updateable": false,
+    "privileged": false,
+    "has_arm": true,
+    "is_dev": false,
+    "execute_in": [
+      "pve"
+    ],
+    "config_path": "",
+    "os": "debian"
+  },
+  {
     "name": "GWN Manager",
     "slug": "gwn-manager",
     "desc": "GWN Manager is a free on-premise enterprise-grade, management platform for Grandstream GWN series devices. Typically deployed on a customer’s private network, this flexible, scalable solution offers simplified configuration and management.",
@@ -11509,7 +11542,7 @@
     "updateable": true,
     "privileged": false,
     "has_arm": false,
-    "is_dev": true,
+    "is_dev": false,
     "execute_in": [
       "lxc"
     ],
@@ -11680,39 +11713,6 @@
     "updateable": true,
     "privileged": false,
     "has_arm": false,
-    "is_dev": false,
-    "execute_in": [
-      "pve"
-    ],
-    "config_path": "",
-    "os": "debian"
-  },
-  {
-    "name": "PVE LXC Deletion",
-    "slug": "lxc-delete",
-    "desc": "This script helps manage and delete LXC containers on a Proxmox VE server. It lists all available containers, allowing the user to select one or more for deletion through an interactive menu. Running containers are automatically stopped before deletion, and the user is asked to confirm each action. The script ensures a controlled and efficient container management process.",
-    "script": "tools/pve/lxc-delete.sh",
-    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/tools/pve/lxc-delete.sh",
-    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/tools/pve/lxc-delete.sh",
-    "type": "pve",
-    "type_id": "1uyjfno0fpf5buh",
-    "categories": [
-      "scriptcat00001"
-    ],
-    "category_names": [
-      "Host Management"
-    ],
-    "notes": [
-      "Execute within the Proxmox shell"
-    ],
-    "warnings": [],
-    "port": 0,
-    "website": "",
-    "documentation": "",
-    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/proxmox-helper-scripts.webp",
-    "updateable": false,
-    "privileged": false,
-    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -17081,7 +17081,7 @@
     "updateable": true,
     "privileged": false,
     "has_arm": false,
-    "is_dev": true,
+    "is_dev": false,
     "execute_in": [
       "lxc"
     ],
@@ -19291,7 +19291,7 @@
     "updateable": true,
     "privileged": false,
     "has_arm": false,
-    "is_dev": true,
+    "is_dev": false,
     "execute_in": [
       "lxc"
     ],
