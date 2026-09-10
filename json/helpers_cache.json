@@ -23095,7 +23095,7 @@
   {
     "name": "Umbrel OS",
     "slug": "umbrel-os-vm",
-    "desc": "Umbrel OS is a personal server operating system with an app store for self-hosted software. This installs the official image as a VM.",
+    "desc": "Umbrel OS is a personal server operating system with an app store for self-hosted software. This creates a VM that boots the official umbrelOS installer ISO.",
     "script": "vm/umbrel-os-vm.sh",
     "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/vm/umbrel-os-vm.sh",
     "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/vm/umbrel-os-vm.sh",
@@ -23114,11 +23114,11 @@
     "port": 80,
     "website": "https://umbrel.com/",
     "documentation": "https://umbrel.com/umbrelos",
-    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/umbrelos.webp",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/umbrel.webp",
     "updateable": false,
     "privileged": false,
     "has_arm": false,
-    "is_dev": false,
+    "is_dev": true,
     "execute_in": [
       "vm"
     ],
