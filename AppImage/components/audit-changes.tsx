@@ -393,13 +393,17 @@ export function AuditChanges() {
     const post = mk(), scripts = mk(), installs = mk()
     const pick = (b: string) => b === "installs" ? installs : b === "postInstall" ? post : scripts
     for (const c of changes) {
-      const target = pick(blockOf(c))
-      const key = c.function || c.source || "—"
-      const label = groupLabel(c.function, c.source)
-      const g = target.get(key) || { key, label, version: c.function_version || "", last: 0, items: [] }
+      const b = blockOf(c)
+      const target = pick(b)
+      // Post-install groups by function under its menu name; the script and
+      // install sections group by the script that made the change, and show
+      // that script's name — not a per-function label.
+      const key = b === "postInstall" ? (c.function || c.source || "—") : (c.source || c.function || "—")
+      const label = b === "postInstall" ? groupLabel(c.function, c.source) : (c.source || c.function || "—")
+      const g = target.get(key) || { key, label, version: "", last: 0, items: [] }
       g.items.push(c)
       if (c.recorded_at > g.last) g.last = c.recorded_at
-      if (c.function_version) g.version = c.function_version
+      if (b === "postInstall" && c.function_version) g.version = c.function_version
       target.set(key, g)
     }
     const sort = (m: Map<string, Group>) => Array.from(m.values()).sort((a, b) => b.last - a.last)
