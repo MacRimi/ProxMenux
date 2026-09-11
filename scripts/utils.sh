@@ -122,6 +122,15 @@ stop_spinner() {
 # Display info message with spinner
 msg_info() {
     local msg="$1"
+    # Close any spinner still running from a previous msg_info that was never
+    # paired with a msg_ok. Without this its PID is lost when SPINNER_PID is
+    # overwritten below, leaving an orphan spinner on screen (e.g. behind a
+    # whiptail dialog).
+    if [ -n "$SPINNER_PID" ] && ps -p "$SPINNER_PID" > /dev/null 2>&1; then
+        kill "$SPINNER_PID" > /dev/null 2>&1
+        wait "$SPINNER_PID" 2>/dev/null
+        printf "\r\033[K"
+    fi
     echo -ne "${TAB}${MG}${HOLD}${msg}"
     spinner &
     SPINNER_PID=$!
