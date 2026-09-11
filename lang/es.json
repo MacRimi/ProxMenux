@@ -1273,7 +1273,7 @@
   "Do you want to enable IOMMU now?": "¿Quieres habilitar IOMMU ahora?",
   "Do you want to enable the serial port": "¿Quieres habilitar el puerto serie?",
   "Do you want to encrypt this backup?": "¿Quieres cifrar esta copia de seguridad?",
-  "Do you want to install Log2RAM anyway to reduce log write load?": "¿Quiere instalar Log2RAM de todos modos para reducir la carga de escritura de registros?",
+  "Do you want to install Log2RAM to reduce log write load?": "¿Quiere instalar Log2RAM para reducir la carga de escritura de registros?",
   "Do you want to make this mount permanent?": "¿Quieres que este soporte sea permanente?",
   "Do you want to open Switch GPU Mode now?": "¿Quieres abrir el modo Cambiar GPU ahora?",
   "Do you want to proceed and run the Proxmox System Update?": "¿Quiere continuar y ejecutar la actualización del sistema Proxmox?",

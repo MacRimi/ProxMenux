@@ -1273,7 +1273,7 @@
   "Do you want to enable IOMMU now?": "Chcete teraz zapnúť IOMMU?",
   "Do you want to enable the serial port": "Chcete zapnúť sériový port",
   "Do you want to encrypt this backup?": "Chcete túto zálohu šifrovať?",
-  "Do you want to install Log2RAM anyway to reduce log write load?": "Chcete Log2RAM nainštalovať aj tak, aby sa znížil počet zápisov logov na disk?",
+  "Do you want to install Log2RAM to reduce log write load?": "Chcete nainštalovať Log2RAM, aby ste znížili zaťaženie zápisu do denníka?",
   "Do you want to make this mount permanent?": "Chcete, aby bolo toto pripojenie trvalé?",
   "Do you want to open Switch GPU Mode now?": "Chcete teraz otvoriť prepínanie režimu GPU?",
   "Do you want to proceed and run the Proxmox System Update?": "Chcete pokračovať a spustiť aktualizáciu systému Proxmox?",
