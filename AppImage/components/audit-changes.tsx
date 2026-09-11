@@ -403,7 +403,11 @@ export function AuditChanges() {
       // Post-install groups by function under its menu name; the script and
       // install sections group by the script that made the change, and show
       // that script's name — not a per-function label.
-      const key = b === "postInstall" ? (c.function || c.source || "—") : (c.source || c.function || "—")
+      // The same script can appear in more than one section (it changed
+      // config and also installed a package), so the accordion key is scoped
+      // by section — otherwise opening one card opens its twin elsewhere.
+      const rawKey = b === "postInstall" ? (c.function || c.source || "—") : (c.source || c.function || "—")
+      const key = `${b}:${rawKey}`
       const label = b === "postInstall"
         ? groupLabel(c.function, c.source)
         : FRIENDLY_SOURCE.has(c.source)
