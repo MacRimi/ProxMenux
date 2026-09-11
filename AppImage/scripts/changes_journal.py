@@ -111,6 +111,10 @@ def init_db() -> None:
                     ON changes(recorded_at DESC);
                 CREATE INDEX IF NOT EXISTS idx_changes_function
                     ON changes(function);
+                CREATE INDEX IF NOT EXISTS idx_changes_identity
+                    ON changes(function, target, operation);
+                CREATE INDEX IF NOT EXISTS idx_changes_install
+                    ON changes(class, target);
             """)
             conn.commit()
         finally:
@@ -201,14 +205,43 @@ def ingest(limit: int = 5000) -> int:
 
     if not rows:
         return 0
+
+    # A change is identified by what it changed, not by when. Re-applying a
+    # post-install function, re-running a script or re-installing a package
+    # updates the existing entry instead of adding another — the original
+    # "before" is preserved, only the "after" and the timestamp move forward,
+    # so an entry always reads as origin -> current state. Intermediate states
+    # are dropped: the latest is how the host stands now, and it superseded
+    # whatever came between.
+    rows.sort(key=lambda r: r[0])  # oldest first, so the original lands first
     conn = _connect()
     try:
         conn.execute("BEGIN IMMEDIATE")
-        conn.executemany(
-            "INSERT OR IGNORE INTO changes (recorded_at, ingested_at, class, "
-            "operation, source, function, function_version, target, before_ref, "
-            "after_ref, capture, revert, exactness, result, detail, origin) "
-            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", rows)
+        for r in rows:
+            if r[2] == CLASS_INSTALLATION:
+                found = conn.execute(
+                    "SELECT id FROM changes WHERE class = ? AND target = ?",
+                    (CLASS_INSTALLATION, r[7])).fetchone()
+            else:
+                found = conn.execute(
+                    "SELECT id FROM changes WHERE function = ? AND target = ? "
+                    "AND operation = ?", (r[5], r[7], r[3])).fetchone()
+            if found:
+                # Everything but the identity and the original before_ref moves
+                # to the latest application.
+                conn.execute(
+                    "UPDATE changes SET recorded_at = ?, ingested_at = ?, class = ?, "
+                    "source = ?, function_version = ?, after_ref = ?, capture = ?, "
+                    "revert = ?, exactness = ?, result = ?, detail = ?, origin = ? "
+                    "WHERE id = ?",
+                    (r[0], r[1], r[2], r[4], r[6], r[9], r[10], r[11], r[12],
+                     r[13], r[14], r[15], found[0]))
+            else:
+                conn.execute(
+                    "INSERT OR IGNORE INTO changes (recorded_at, ingested_at, class, "
+                    "operation, source, function, function_version, target, before_ref, "
+                    "after_ref, capture, revert, exactness, result, detail, origin) "
+                    "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", r)
         conn.commit()
     finally:
         conn.close()
