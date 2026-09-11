@@ -34,6 +34,10 @@
 # ==========================================================
 
 # Repository and directory structure
+# Bound from the start so every `[ -n "$SPINNER_PID" ]` check is safe under
+# `set -u`, even in a script that sources this before starting a spinner.
+SPINNER_PID=""
+
 LOCAL_SCRIPTS="/usr/local/share/proxmenux/scripts"
 INSTALL_DIR="/usr/local/bin"
 BASE_DIR="/usr/local/share/proxmenux"
@@ -126,7 +130,7 @@ msg_info() {
     # paired with a msg_ok. Without this its PID is lost when SPINNER_PID is
     # overwritten below, leaving an orphan spinner on screen (e.g. behind a
     # whiptail dialog).
-    if [ -n "$SPINNER_PID" ] && ps -p "$SPINNER_PID" > /dev/null 2>&1; then
+    if [ -n "${SPINNER_PID:-}" ] && ps -p "$SPINNER_PID" > /dev/null 2>&1; then
         kill "$SPINNER_PID" > /dev/null 2>&1
         wait "$SPINNER_PID" 2>/dev/null
         printf "\r\033[K"
