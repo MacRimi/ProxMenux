@@ -83,6 +83,11 @@ function undoKey(change: { revert: string; exactness: string }): string {
 }
 
 const FN_LABEL: Record<string, string> = {
+  // Internal helpers of a post-install feature show its menu name, not their
+  // raw name — and never the source ("auto"/"customizable").
+  _update_existing_log2ram_auto: "Install and configure Log2RAM",
+  _update_existing_log2ram_custom: "Install and configure Log2RAM",
+  update_snapshot_schedule: "Install ZFS auto-snapshot",
   apply_amd_fixes: "Apply AMD CPU fixes",
   apply_network_optimizations: "Apply network optimizations",
   apt_upgrade: "Update and upgrade system",
@@ -144,7 +149,9 @@ function blockOf(c: { class: string; source: string }): "installs" | "postInstal
 // A post-install function shows its menu name; anything else shows the script
 // that made the change.
 function groupLabel(fn: string, source: string): string {
-  return FN_LABEL[fn] || source || fn || "—"
+  // A post-install change shows its feature's menu name; if the function is
+  // not a known optimization, its own name — never the bare source.
+  return FN_LABEL[fn] || fn || source || "—"
 }
 
 const CLASS_STYLE: Record<string, { chip: string; Icon: typeof Settings2 }> = {
@@ -406,7 +413,7 @@ export function AuditChanges() {
       // The same script can appear in more than one section (it changed
       // config and also installed a package), so the accordion key is scoped
       // by section — otherwise opening one card opens its twin elsewhere.
-      const rawKey = b === "postInstall" ? (c.function || c.source || "—") : (c.source || c.function || "—")
+      const rawKey = b === "postInstall" ? groupLabel(c.function, c.source) : (c.source || c.function || "—")
       const key = `${b}:${rawKey}`
       const label = b === "postInstall"
         ? groupLabel(c.function, c.source)

@@ -219,23 +219,31 @@ def ingest(limit: int = 5000) -> int:
         conn.execute("BEGIN IMMEDIATE")
         for r in rows:
             if r[2] == CLASS_INSTALLATION:
+                # A package is one entry however often, or by whichever helper,
+                # it is installed.
                 found = conn.execute(
                     "SELECT id FROM changes WHERE class = ? AND target = ?",
                     (CLASS_INSTALLATION, r[7])).fetchone()
+            elif r[2] == CLASS_CONFIGURATION:
+                # A file is one entry no matter which function touched it — a
+                # feature and its re-apply helper both land here — so it always
+                # reads as origin -> current, not once per code path.
+                found = conn.execute(
+                    "SELECT id FROM changes WHERE class = ? AND target = ?",
+                    (CLASS_CONFIGURATION, r[7])).fetchone()
             else:
                 found = conn.execute(
                     "SELECT id FROM changes WHERE function = ? AND target = ? "
                     "AND operation = ?", (r[5], r[7], r[3])).fetchone()
             if found:
-                # Everything but the identity and the original before_ref moves
-                # to the latest application.
+                # Only what reflects the current state moves forward; the
+                # original attribution, operation, capture and before_ref stay,
+                # so the entry keeps reading as how the host came versus now.
                 conn.execute(
-                    "UPDATE changes SET recorded_at = ?, ingested_at = ?, class = ?, "
-                    "source = ?, function_version = ?, after_ref = ?, capture = ?, "
-                    "revert = ?, exactness = ?, result = ?, detail = ?, origin = ? "
-                    "WHERE id = ?",
-                    (r[0], r[1], r[2], r[4], r[6], r[9], r[10], r[11], r[12],
-                     r[13], r[14], r[15], found[0]))
+                    "UPDATE changes SET recorded_at = ?, ingested_at = ?, "
+                    "source = ?, function_version = ?, after_ref = ?, "
+                    "result = ?, detail = ?, origin = ? WHERE id = ?",
+                    (r[0], r[1], r[4], r[6], r[9], r[13], r[14], r[15], found[0]))
             else:
                 conn.execute(
                     "INSERT OR IGNORE INTO changes (recorded_at, ingested_at, class, "
