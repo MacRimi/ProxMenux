@@ -53,6 +53,9 @@ export COMPONENTS_STATUS_FILE
 if [[ -f "$UTILS_FILE" ]]; then
   source "$UTILS_FILE"
 fi
+if [[ -f "$BASE_DIR/scripts/global/pmx_journal.sh" ]]; then
+    source "$BASE_DIR/scripts/global/pmx_journal.sh"
+fi
 if [[ -f "$LOCAL_SCRIPTS/global/pci_passthrough_helpers.sh" ]]; then
   source "$LOCAL_SCRIPTS/global/pci_passthrough_helpers.sh"
 elif [[ -f "$(cd "$(dirname "${BASH_SOURCE[0]}")"/.. && pwd)/global/pci_passthrough_helpers.sh" ]]; then
@@ -134,6 +137,7 @@ check_gpu_not_in_vm_passthrough() {
 }
 
 check_stale_vfio_config_for_nvidia() {
+  pmx_journal_context "check_stale_vfio_config_for_nvidia" "1.3" "nvidia_installer.sh"
   local vfio_conf="/etc/modprobe.d/vfio.conf"
   [[ ! -f "$vfio_conf" ]] && return 0
 
@@ -173,8 +177,10 @@ check_stale_vfio_config_for_nvidia() {
 
   if declare -F _clean_vfio_conf_ids >/dev/null 2>&1 \
      && _clean_vfio_conf_ids "${legacy_ids[@]}"; then
+    pmx_record_execution "Clean stale NVIDIA VFIO IDs" "_clean_vfio_conf_ids ${legacy_ids[*]}"
     msg_info "$(translate 'Rebuilding initramfs after vfio.conf cleanup...')"
     update-initramfs -u >/dev/null 2>&1 || true
+    pmx_record_execution "Rebuild initramfs after NVIDIA VFIO cleanup" "update-initramfs -u"
     msg_ok "$(translate 'Stale VFIO entries removed and initramfs rebuilt.')" | tee -a "$screen_capture"
   else
     msg_ok "$(translate 'No changes were needed in vfio.conf.')" | tee -a "$screen_capture"
@@ -510,6 +516,7 @@ offer_lxc_updates_if_any() {
 # System preparation (repos, headers, etc.)
 # ==========================================================
 ensure_repos_and_headers() {
+  pmx_journal_context "ensure_repos_and_headers" "1.3" "nvidia_installer.sh"
   # Bootstrap APT repos FIRST. On a fresh Proxmox install the
   # pve-no-subscription / debian repos aren't configured by default
   # → `pve-headers-$(uname -r)` and `build-essential` come back as
@@ -537,9 +544,9 @@ ensure_repos_and_headers() {
 
   if ! dpkg -s "pve-headers-$kver" >/dev/null 2>&1 && \
      ! dpkg -s "proxmox-headers-$kver" >/dev/null 2>&1; then
-    apt-get install -y "pve-headers-$kver" "proxmox-headers-$kver" build-essential dkms >>"$LOG_FILE" 2>&1 || true
+    pmx_install_pkg "pve-headers-$kver" "proxmox-headers-$kver" build-essential dkms || true
   else
-    apt-get install -y build-essential dkms >>"$LOG_FILE" 2>&1 || true
+    pmx_install_pkg build-essential dkms || true
   fi
 
   msg_ok "$(translate 'Kernel headers and build tools verified.')" | tee -a "$screen_capture"
@@ -553,14 +560,18 @@ _nouveau_legacy_file_is_proxmenux_shape() {
 }
 
 _nouveau_state_set() {
+  pmx_journal_context "_nouveau_state_set" "1.3" "nvidia_installer.sh"
   local key="$1"
   mkdir -p "$(dirname "$NVIDIA_NOUVEAU_STATE")"
-  touch "$NVIDIA_NOUVEAU_STATE"
+  if [[ ! -f "$NVIDIA_NOUVEAU_STATE" ]]; then
+    pmx_write_file "$NVIDIA_NOUVEAU_STATE" </dev/null
+  fi
   grep -qFx "${key}=1" "$NVIDIA_NOUVEAU_STATE" 2>/dev/null \
-    || echo "${key}=1" >> "$NVIDIA_NOUVEAU_STATE"
+    || printf '%s\n' "${key}=1" | pmx_append_file "$NVIDIA_NOUVEAU_STATE"
 }
 
 restore_nouveau_after_uninstall() {
+  pmx_journal_context "restore_nouveau_after_uninstall" "1.3" "nvidia_installer.sh"
   local remove_global_line=false
 
   if [[ -f "$NVIDIA_NOUVEAU_STATE" ]] \
@@ -572,29 +583,30 @@ restore_nouveau_after_uninstall() {
   # version overwrote this exact two-line file and added the matching line
   # to blacklist.conf, but had no ownership state yet.
   if _nouveau_legacy_file_is_proxmenux_shape; then
-    rm -f "$NVIDIA_NOUVEAU_LEGACY_BLACKLIST"
+    pmx_remove_file "$NVIDIA_NOUVEAU_LEGACY_BLACKLIST"
     remove_global_line=true
   fi
 
-  rm -f "$NVIDIA_NOUVEAU_BLACKLIST"
+  pmx_remove_file "$NVIDIA_NOUVEAU_BLACKLIST"
   if $remove_global_line && [[ -f "$NVIDIA_GLOBAL_BLACKLIST" ]]; then
-    sed -i '/^blacklist nouveau$/d' "$NVIDIA_GLOBAL_BLACKLIST"
+    pmx_edit_file "$NVIDIA_GLOBAL_BLACKLIST" '/^blacklist nouveau$/d'
   fi
-  rm -f "$NVIDIA_NOUVEAU_STATE"
+  pmx_remove_file "$NVIDIA_NOUVEAU_STATE"
 }
 
 blacklist_nouveau() {
+  pmx_journal_context "blacklist_nouveau" "1.3" "nvidia_installer.sh"
   msg_info "$(translate 'Blacklisting nouveau driver...')"
 
   local legacy_owned=false
   if _nouveau_legacy_file_is_proxmenux_shape; then
-    rm -f "$NVIDIA_NOUVEAU_LEGACY_BLACKLIST"
+    pmx_remove_file "$NVIDIA_NOUVEAU_LEGACY_BLACKLIST"
     legacy_owned=true
     _nouveau_state_set "legacy_migrated"
   fi
 
   if ! grep -q '^blacklist nouveau$' "$NVIDIA_GLOBAL_BLACKLIST" 2>/dev/null; then
-    echo "blacklist nouveau" >> "$NVIDIA_GLOBAL_BLACKLIST"
+    printf '%s\n' "blacklist nouveau" | pmx_append_file "$NVIDIA_GLOBAL_BLACKLIST"
     _nouveau_state_set "blacklist_conf_line_added"
   elif $legacy_owned; then
     # The legacy ProxMenux file proves ownership of the companion line.
@@ -602,7 +614,7 @@ blacklist_nouveau() {
   fi
 
   # ProxMenux-owned file: uninstall can now remove only what we created.
-  cat > "$NVIDIA_NOUVEAU_BLACKLIST" <<'EOF'
+  pmx_write_file "$NVIDIA_NOUVEAU_BLACKLIST" <<'EOF'
 # Managed by ProxMenux NVIDIA installer.
 blacklist nouveau
 options nouveau modeset=0
@@ -637,8 +649,9 @@ EOF
 }
 
 ensure_modules_config() {
+  pmx_journal_context "ensure_modules_config" "1.3" "nvidia_installer.sh"
   msg_info "$(translate 'Configuring NVIDIA modules...')"
-  cat > /etc/modules-load.d/nvidia-vfio.conf <<'EOF'
+  pmx_write_file /etc/modules-load.d/nvidia-vfio.conf <<'EOF'
 nvidia
 nvidia_uvm
 EOF
@@ -646,6 +659,7 @@ EOF
 }
 
 stop_and_disable_nvidia_services() {
+  pmx_journal_context "stop_and_disable_nvidia_services" "1.3" "nvidia_installer.sh"
   local services=(
     "nvidia-persistenced.service"
     "nvidia-persistenced"
@@ -666,12 +680,7 @@ stop_and_disable_nvidia_services() {
     msg_info "$(translate 'Stopping and disabling NVIDIA services...')"
     
     for service in "${services[@]}"; do
-      if systemctl is-active --quiet "$service" 2>/dev/null; then
-        systemctl stop "$service" >/dev/null 2>&1 || true
-      fi
-      if systemctl is-enabled --quiet "$service" 2>/dev/null; then
-        systemctl disable "$service" >/dev/null 2>&1 || true
-      fi
+      pmx_disable_service "$service" || true
     done
 
     sleep 2
@@ -711,26 +720,36 @@ unload_nvidia_modules() {
 }
 
 complete_nvidia_uninstall() {
+  pmx_journal_context "complete_nvidia_uninstall" "1.3" "nvidia_installer.sh"
   stop_and_disable_nvidia_services
   unload_nvidia_modules
   
   if command -v nvidia-uninstall >/dev/null 2>&1; then
     msg_info "$(translate 'Running NVIDIA uninstaller...')"
-    nvidia-uninstall --silent >>"$LOG_FILE" 2>&1 || true
+    local uninstall_rc=0
+    nvidia-uninstall --silent >>"$LOG_FILE" 2>&1 || uninstall_rc=$?
+    pmx_record_execution "Run NVIDIA uninstaller" "nvidia-uninstall --silent"
+    if [[ "$uninstall_rc" -eq 0 ]]; then
+      pmx_record_uninstall "NVIDIA driver" "1.3"
+    fi
     msg_ok "$(translate 'NVIDIA uninstaller completed.')"
   fi
   msg_ok "$(translate 'NVIDIA uninstallation steps completed.')" | tee -a "$screen_capture"
   cleanup_nvidia_dkms
   
   msg_info "$(translate 'Removing NVIDIA packages...')"
-  apt-get -y purge 'nvidia-*' 'libnvidia-*' 'cuda-*' 'libcudnn*' >>"$LOG_FILE" 2>&1 || true
+  if apt-get -y purge 'nvidia-*' 'libnvidia-*' 'cuda-*' 'libcudnn*' >>"$LOG_FILE" 2>&1; then
+    pmx_record_uninstall "nvidia-* libnvidia-* cuda-* libcudnn*" "1.3"
+  fi
   apt-get -y autoremove --purge >>"$LOG_FILE" 2>&1 || true
   apt-get -y autoclean >>"$LOG_FILE" 2>&1 || true
   
-  rm -f /etc/modules-load.d/nvidia-vfio.conf
-  rm -f /etc/udev/rules.d/70-nvidia.rules
-  rm -rf /usr/lib/modprobe.d/nvidia*.conf
-  rm -rf /etc/modprobe.d/nvidia*.conf
+  pmx_remove_file /etc/modules-load.d/nvidia-vfio.conf
+  pmx_remove_file /etc/udev/rules.d/70-nvidia.rules
+  local nvidia_conf
+  for nvidia_conf in /usr/lib/modprobe.d/nvidia*.conf /etc/modprobe.d/nvidia*.conf; do
+    [[ -f "$nvidia_conf" ]] && pmx_remove_file "$nvidia_conf"
+  done
   restore_nouveau_after_uninstall
   
   if [[ -d "$NVIDIA_WORKDIR" ]]; then
@@ -745,6 +764,7 @@ complete_nvidia_uninstall() {
 }
 
 cleanup_nvidia_dkms() {
+  pmx_journal_context "cleanup_nvidia_dkms" "1.3" "nvidia_installer.sh"
   local versions
   versions=$(dkms status 2>/dev/null | awk -F, '/nvidia/ {gsub(/ /,"",$2); print $2}' || true)
 
@@ -754,6 +774,7 @@ cleanup_nvidia_dkms() {
   while IFS= read -r ver; do
     [[ -z "$ver" ]] && continue
     dkms remove -m nvidia -v "$ver" --all >/dev/null 2>&1 || true
+    pmx_record_execution "Remove NVIDIA DKMS entry" "dkms remove -m nvidia -v $ver --all"
   done <<< "$versions"
   msg_ok "$(translate 'NVIDIA DKMS entries removed.')"
 }
@@ -1365,6 +1386,7 @@ download_nvidia_installer() {
 # Installation / uninstallation
 # ==========================================================
 run_nvidia_installer() {
+  pmx_journal_context "run_nvidia_installer" "1.3" "nvidia_installer.sh"
   local installer="$1"
 
   msg_info2 "$(translate 'Starting NVIDIA installer. This may take several minutes...')"
@@ -1377,7 +1399,9 @@ run_nvidia_installer() {
   if [[ "${NOUVEAU_STILL_LOADED:-false}" == "true" ]]; then
     msg_info "$(translate 'Rebuilding initramfs to apply nouveau blacklist before installation...')"
     update-initramfs -u -k all >>"$LOG_FILE" 2>&1 || true
+    pmx_record_execution "Rebuild initramfs for NVIDIA installation" "update-initramfs -u -k all"
     proxmox-boot-tool refresh >>"$LOG_FILE" 2>&1 || true
+    pmx_record_execution "Refresh Proxmox boot configuration for NVIDIA installation" "proxmox-boot-tool refresh"
     # Try one more time to unload nouveau after initramfs rebuild
     modprobe -r nouveau 2>/dev/null || true
     sleep 1
@@ -1406,6 +1430,7 @@ run_nvidia_installer() {
     2>&1 | tee -a "$LOG_FILE"
   local rc=${PIPESTATUS[0]}
   echo "" >>"$LOG_FILE"
+  pmx_record_execution "Run NVIDIA driver installer" "sh $installer --no-questions --ui=none --disable-nouveau --no-nouveau-check --dkms"
   
   rm -rf "$tmp_extract_dir"
 
@@ -1415,6 +1440,7 @@ run_nvidia_installer() {
     return 1
   fi
 
+  pmx_record_install "NVIDIA driver" "${DRIVER_VERSION:-1.3}"
   msg_ok "$(translate 'NVIDIA driver installed successfully.')" | tee -a "$screen_capture"
   return 0
 }
@@ -1424,16 +1450,19 @@ remove_nvidia_driver() {
 }
 
 install_udev_rules_and_persistenced() {
+  pmx_journal_context "install_udev_rules_and_persistenced" "1.3" "nvidia_installer.sh"
   msg_info "$(translate 'Installing NVIDIA udev rules and persistence service...')"
 
-  cat >/etc/udev/rules.d/70-nvidia.rules <<'EOF'
+  pmx_write_file /etc/udev/rules.d/70-nvidia.rules <<'EOF'
 # /etc/udev/rules.d/70-nvidia.rules
 KERNEL=="nvidia", RUN+="/bin/bash -c '/usr/bin/nvidia-smi -L'"
 KERNEL=="nvidia_uvm", RUN+="/bin/bash -c '/usr/bin/nvidia-modprobe -c0 -u'"
 EOF
 
   udevadm control --reload-rules
+  pmx_record_execution "Reload NVIDIA udev rules" "udevadm control --reload-rules"
   udevadm trigger --subsystem-match=drm --subsystem-match=pci || true
+  pmx_record_execution "Trigger NVIDIA udev rules" "udevadm trigger --subsystem-match=drm --subsystem-match=pci"
 
   ensure_workdir
   cd "$NVIDIA_WORKDIR" || return 1
@@ -1451,13 +1480,19 @@ EOF
 
   if [[ -d nvidia-persistenced/init ]]; then
     cd nvidia-persistenced/init || return 1
-    ./install.sh >>"$LOG_FILE" 2>&1 || true
+    local persistenced_rc=0
+    ./install.sh >>"$LOG_FILE" 2>&1 || persistenced_rc=$?
+    pmx_record_execution "Install NVIDIA persistence service" "$NVIDIA_WORKDIR/nvidia-persistenced/init/install.sh"
+    if [[ "$persistenced_rc" -eq 0 ]]; then
+      pmx_record_install "nvidia-persistenced" "$NVIDIA_PERSISTENCED_TAG"
+    fi
   fi
 
   msg_ok "$(translate 'NVIDIA udev rules and persistence service installed.')" | tee -a "$screen_capture"
 }
 
 apply_nvidia_patch_if_needed() {
+  pmx_journal_context "apply_nvidia_patch_if_needed" "1.3" "nvidia_installer.sh"
   # NVIDIA_PATCH_AUTO=yes|no skips the yes/no prompt for non-interactive
   # callers; unset preserves the interactive menu behavior.
   case "${NVIDIA_PATCH_AUTO:-}" in
@@ -1504,6 +1539,7 @@ apply_nvidia_patch_if_needed() {
   if [[ -x nvidia-patch/patch.sh ]]; then
     cd nvidia-patch || return 1
     ./patch.sh >>"$LOG_FILE" 2>&1 || true
+    pmx_record_execution "Apply NVIDIA patch" "$NVIDIA_WORKDIR/nvidia-patch/patch.sh"
     msg_ok "$(translate 'NVIDIA patch applied - check README for supported versions.')"
     update_component_status "nvidia_driver" "installed" "$CURRENT_DRIVER_VERSION" "gpu" '{"patched":true}'
   else
@@ -1739,6 +1775,7 @@ show_version_menu() {
 # Main flow
 # ==========================================================
 main() {
+  pmx_journal_context "main" "1.3" "nvidia_installer.sh"
   # Rotate the previous run's log instead of truncating — when the
   # current install fails, the user can compare against the previous
   # attempt to see what changed. Audit Tier 7 — log truncation.
@@ -1846,7 +1883,9 @@ main() {
 
       msg_info "$(translate 'Updating initramfs for all kernels...')"
       update-initramfs -u -k all >>"$LOG_FILE" 2>&1 || true
+      pmx_record_execution "Rebuild initramfs after NVIDIA installation" "update-initramfs -u -k all"
       proxmox-boot-tool refresh >>"$LOG_FILE" 2>&1 || true
+      pmx_record_execution "Refresh Proxmox boot configuration after NVIDIA installation" "proxmox-boot-tool refresh"
       msg_ok "$(translate 'initramfs updated.')"
 
       msg_info2 "$(translate 'Checking NVIDIA driver status with nvidia-smi')"
@@ -1889,7 +1928,9 @@ main() {
 
         msg_info "$(translate 'Updating initramfs for all kernels...')"
         update-initramfs -u -k all >>"$LOG_FILE" 2>&1 || true
+        pmx_record_execution "Rebuild initramfs after NVIDIA removal" "update-initramfs -u -k all"
         proxmox-boot-tool refresh >>"$LOG_FILE" 2>&1 || true
+        pmx_record_execution "Refresh Proxmox boot configuration after NVIDIA removal" "proxmox-boot-tool refresh"
         msg_ok "$(translate 'initramfs updated.')"
 
         restart_prompt

@@ -24,6 +24,10 @@ if [[ -f "$UTILS_FILE" ]]; then
   source "$UTILS_FILE"
 fi
 
+if [[ -f "$BASE_DIR/scripts/global/pmx_journal.sh" ]]; then
+  source "$BASE_DIR/scripts/global/pmx_journal.sh"
+fi
+
 if [[ ! -f "$COMPONENTS_STATUS_FILE" ]]; then
   echo "{}" > "$COMPONENTS_STATUS_FILE"
 fi
@@ -140,6 +144,9 @@ install_amdgpu_top() {
   fi
   
   msg_ok "$(translate 'amdgpu_top installed successfully')"
+
+  pmx_journal_context "install_amdgpu_top" "1.0" "amd_gpu_tools.sh"
+  pmx_record_install "amdgpu-top"
   
   # Clean up
   rm -rf "$tmp_dir"
@@ -160,6 +167,9 @@ uninstall_amdgpu_top() {
   
   if dpkg -r amdgpu-top >>"$LOG_FILE" 2>&1 || apt-get remove -y amdgpu-top >>"$LOG_FILE" 2>&1; then
     msg_ok "$(translate 'amdgpu_top uninstalled successfully')"
+
+    pmx_journal_context "uninstall_amdgpu_top" "1.0" "amd_gpu_tools.sh"
+    pmx_record_uninstall "amdgpu-top"
     
     if type update_component_status &>/dev/null; then
       update_component_status "amdgpu_top" "uninstalled" "" "gpu" '{}'

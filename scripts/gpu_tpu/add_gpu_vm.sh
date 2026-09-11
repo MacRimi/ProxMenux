@@ -42,6 +42,9 @@ screen_capture="/tmp/proxmenux_add_gpu_vm_screen_$$.txt"
 if [[ -f "$UTILS_FILE" ]]; then
     source "$UTILS_FILE"
 fi
+if [[ -f "$BASE_DIR/scripts/global/pmx_journal.sh" ]]; then
+    source "$BASE_DIR/scripts/global/pmx_journal.sh"
+fi
 if [[ -f "$LOCAL_SCRIPTS_LOCAL/global/pci_passthrough_helpers.sh" ]]; then
     source "$LOCAL_SCRIPTS_LOCAL/global/pci_passthrough_helpers.sh"
 elif [[ -f "$LOCAL_SCRIPTS_DEFAULT/global/pci_passthrough_helpers.sh" ]]; then
@@ -113,11 +116,12 @@ _get_pci_driver() {
 }
 
 _add_line_if_missing() {
+    pmx_journal_context "_add_line_if_missing" "1.1" "add_gpu_vm.sh"
     local line="$1"
     local file="$2"
-    touch "$file"
+    [[ -f "$file" ]] || pmx_write_file "$file" < /dev/null
     if ! grep -qF "$line" "$file"; then
-        echo "$line" >> "$file"
+        echo "$line" | pmx_append_file "$file"
         HOST_CONFIG_CHANGED=true
     fi
 }
@@ -670,6 +674,7 @@ check_iommu_enabled() {
 }
 
 _enable_iommu_cmdline() {
+    pmx_journal_context "_enable_iommu_cmdline" "1.1" "add_gpu_vm.sh"
     local cpu_vendor
     cpu_vendor=$(grep -m1 "vendor_id" /proc/cpuinfo 2>/dev/null | awk '{print $3}')
 
@@ -692,8 +697,9 @@ _enable_iommu_cmdline() {
         # systemd-boot / ZFS
         if ! grep -q "$iommu_param" "$cmdline_file"; then
             cp "$cmdline_file" "${cmdline_file}.bak.$(date +%Y%m%d_%H%M%S)"
-            sed -i "s|\\s*$| ${iommu_param} iommu=pt|" "$cmdline_file"
+            pmx_edit_file "$cmdline_file" "s|\\s*$| ${iommu_param} iommu=pt|"
             proxmox-boot-tool refresh >/dev/null 2>&1 || true
+            pmx_record_execution "refresh Proxmox boot configuration" "proxmox-boot-tool refresh"
             msg_ok "$(translate 'IOMMU parameters added to /etc/kernel/cmdline')"
         else
             msg_ok "$(translate 'IOMMU already configured in /etc/kernel/cmdline')"
@@ -702,8 +708,9 @@ _enable_iommu_cmdline() {
         # GRUB
         if ! grep -q "$iommu_param" "$grub_file"; then
             cp "$grub_file" "${grub_file}.bak.$(date +%Y%m%d_%H%M%S)"
-            sed -i "/GRUB_CMDLINE_LINUX_DEFAULT=/ s|\"$| ${iommu_param} iommu=pt\"|" "$grub_file"
+            pmx_edit_file "$grub_file" "/GRUB_CMDLINE_LINUX_DEFAULT=/ s|\"$| ${iommu_param} iommu=pt\"|"
             update-grub >/dev/null 2>&1 || true
+            pmx_record_execution "update GRUB configuration" "update-grub"
             msg_ok "$(translate 'IOMMU parameters added to GRUB')"
         else
             msg_ok "$(translate 'IOMMU already configured in GRUB')"
@@ -1613,9 +1620,12 @@ add_vfio_modules() {
 
 # ── vfio-pci IDs — merge with existing ones ─────────────
 configure_vfio_pci_ids() {
+    pmx_journal_context "configure_vfio_pci_ids" "1.1" "add_gpu_vm.sh"
     msg_info "$(translate 'Configuring vfio-pci binding...')"
     local vfio_conf="/etc/modprobe.d/vfio.conf"
-    touch "$vfio_conf"
+    local vfio_tmp
+    vfio_tmp=$(mktemp)
+    [[ -f "$vfio_conf" ]] && cat "$vfio_conf" > "$vfio_tmp"
 
     # ────────────────────────────────────────────────────────────────
     # NVIDIA: per-BDF binding (multi-GPU safe). The `options vfio-pci
@@ -1629,9 +1639,9 @@ configure_vfio_pci_ids() {
         # Clean up any previous ids= line that captured this NVIDIA
         # (older versions of this script wrote it; remove to avoid
         # collateral grabs on sibling GPUs of the same model).
-        if grep -qE '^options vfio-pci ids=' "$vfio_conf" 2>/dev/null; then
+        if grep -qE '^options vfio-pci ids=' "$vfio_tmp" 2>/dev/null; then
             local existing_line ids_part
-            existing_line=$(grep '^options vfio-pci ids=' "$vfio_conf" | head -1)
+            existing_line=$(grep '^options vfio-pci ids=' "$vfio_tmp" | head -1)
             ids_part=$(echo "$existing_line" | grep -oE 'ids=[^[:space:]]+' | sed 's/ids=//')
 
             local kept=()
@@ -1644,20 +1654,30 @@ configure_vfio_pci_ids() {
                 $drop || kept+=("$eid")
             done
 
-            sed -i '/^options vfio-pci ids=/d' "$vfio_conf"
+            sed '/^options vfio-pci ids=/d' "$vfio_tmp" > "${vfio_tmp}.next"
+            mv "${vfio_tmp}.next" "$vfio_tmp"
             if [[ ${#kept[@]} -gt 0 ]]; then
                 local kept_str
                 kept_str=$(IFS=','; echo "${kept[*]}")
-                echo "options vfio-pci ids=${kept_str} disable_vga=1" >> "$vfio_conf"
+                echo "options vfio-pci ids=${kept_str} disable_vga=1" >> "$vfio_tmp"
             fi
             HOST_CONFIG_CHANGED=true
         fi
 
         # Ensure vfio loads before nvidia so the per-BDF override wins.
-        _add_line_if_missing "softdep nvidia pre: vfio-pci"        "$vfio_conf"
-        _add_line_if_missing "softdep nvidia_drm pre: vfio-pci"    "$vfio_conf"
-        _add_line_if_missing "softdep nvidia_modeset pre: vfio-pci" "$vfio_conf"
-        _add_line_if_missing "softdep nvidia_uvm pre: vfio-pci"    "$vfio_conf"
+        local softdep
+        for softdep in \
+            "softdep nvidia pre: vfio-pci" \
+            "softdep nvidia_drm pre: vfio-pci" \
+            "softdep nvidia_modeset pre: vfio-pci" \
+            "softdep nvidia_uvm pre: vfio-pci"; do
+            if ! grep -qF "$softdep" "$vfio_tmp"; then
+                echo "$softdep" >> "$vfio_tmp"
+                HOST_CONFIG_CHANGED=true
+            fi
+        done
+        pmx_write_file "$vfio_conf" < "$vfio_tmp"
+        rm -f "$vfio_tmp"
 
         # Per-BDF binder rule. IOMMU_DEVICES has the BDFs for the GPU
         # we're passing (and any same-group functions like the audio
@@ -1682,7 +1702,7 @@ configure_vfio_pci_ids() {
     # Collect existing IDs (if any)
     local existing_ids=()
     local existing_line
-    existing_line=$(grep "^options vfio-pci ids=" "$vfio_conf" 2>/dev/null | head -1)
+    existing_line=$(grep "^options vfio-pci ids=" "$vfio_tmp" 2>/dev/null | head -1)
     if [[ -n "$existing_line" ]]; then
         local ids_part
         ids_part=$(echo "$existing_line" | grep -oE 'ids=[^[:space:]]+' | sed 's/ids=//')
@@ -1703,13 +1723,16 @@ configure_vfio_pci_ids() {
     ids_str=$(IFS=','; echo "${all_ids[*]}")
 
     local existing_full_line
-    existing_full_line=$(grep "^options vfio-pci ids=" "$vfio_conf" 2>/dev/null | head -1)
+    existing_full_line=$(grep "^options vfio-pci ids=" "$vfio_tmp" 2>/dev/null | head -1)
     local new_full_line="options vfio-pci ids=${ids_str} disable_vga=1"
     if [[ "$existing_full_line" != "$new_full_line" ]]; then
-        sed -i '/^options vfio-pci ids=/d' "$vfio_conf"
-        echo "$new_full_line" >> "$vfio_conf"
+        sed '/^options vfio-pci ids=/d' "$vfio_tmp" > "${vfio_tmp}.next"
+        mv "${vfio_tmp}.next" "$vfio_tmp"
+        echo "$new_full_line" >> "$vfio_tmp"
         HOST_CONFIG_CHANGED=true
     fi
+    pmx_write_file "$vfio_conf" < "$vfio_tmp"
+    rm -f "$vfio_tmp"
     msg_ok "$(translate 'vfio-pci IDs configured') (${ids_str})" | tee -a "$screen_capture"
 }
 
@@ -1787,6 +1810,7 @@ sanitize_nvidia_host_stack_for_vfio() {
 
 # ── AMD ROM dump: sysfs first, VFCT ACPI table as fallback ───────────────
 _dump_rom_via_vfct() {
+    pmx_journal_context "_dump_rom_via_vfct" "1.1" "add_gpu_vm.sh"
     local rom_dest="$1"
     local vfct_file="/sys/firmware/acpi/tables/VFCT"
     [[ -f "$vfct_file" ]] || return 1
@@ -1808,11 +1832,16 @@ _dump_rom_via_vfct() {
         return 1
     fi
 
-    dd if="$vfct_file" bs=1 skip=64 count="$img_length" of="$rom_dest" 2>/dev/null
+    local rom_tmp
+    rom_tmp=$(mktemp)
+    dd if="$vfct_file" bs=1 skip=64 count="$img_length" of="$rom_tmp" 2>/dev/null
+    pmx_write_file "$rom_dest" < "$rom_tmp"
+    rm -f "$rom_tmp"
     [[ -s "$rom_dest" ]]
 }
 
 dump_amd_rom() {
+    pmx_journal_context "dump_amd_rom" "1.1" "add_gpu_vm.sh"
     local pci_full="$SELECTED_GPU_PCI"
     local rom_path="/sys/bus/pci/devices/${pci_full}/rom"
     local kvm_dir="/usr/share/kvm"
@@ -1828,14 +1857,19 @@ dump_amd_rom() {
     if [[ -f "$rom_path" ]]; then
         msg_info "$(translate 'Dumping AMD GPU ROM BIOS via sysfs...')"
         echo 1 > "$rom_path" 2>/dev/null
-        if cat "$rom_path" > "$rom_dest" 2>>"$LOG_FILE" && [[ -s "$rom_dest" ]]; then
+        local rom_tmp
+        rom_tmp=$(mktemp)
+        if cat "$rom_path" > "$rom_tmp" 2>>"$LOG_FILE" && [[ -s "$rom_tmp" ]]; then
+            pmx_write_file "$rom_dest" < "$rom_tmp"
+            rm -f "$rom_tmp"
             echo 0 > "$rom_path" 2>/dev/null
             AMD_ROM_FILE="$rom_filename"
             msg_ok "$(translate 'GPU ROM dumped to') ${rom_dest}" | tee -a "$screen_capture"
             return 0
         fi
+        rm -f "$rom_tmp"
         echo 0 > "$rom_path" 2>/dev/null
-        rm -f "$rom_dest"
+        pmx_remove_file "$rom_dest"
         msg_warn "$(translate 'sysfs ROM dump failed — trying ACPI VFCT table...')"
     else
         msg_info "$(translate 'No sysfs ROM entry — trying ACPI VFCT table...')"
@@ -1848,7 +1882,7 @@ dump_amd_rom() {
         return 0
     fi
 
-    rm -f "$rom_dest"
+    pmx_remove_file "$rom_dest"
     msg_warn "$(translate 'ROM dump not available — configuring without romfile.')"
     msg_warn "$(translate 'Passthrough may still work without a ROM file.')"
 }
@@ -2159,11 +2193,14 @@ _configure_nvidia_kvm_hide() {
 
 # ── Update initramfs ─────────────────────────────────────
 update_initramfs_host() {
+    pmx_journal_context "update_initramfs_host" "1.1" "add_gpu_vm.sh"
     msg_info "$(translate 'Updating initramfs (this may take a minute)...')"
     update-initramfs -u -k all >>"$LOG_FILE" 2>&1
+    pmx_record_execution "rebuild initramfs" "update-initramfs -u -k all"
     # Copy the freshly-built initramfs to the EFI System Partition.
     # Without this the bootloader keeps using the previous initramfs.
     proxmox-boot-tool refresh >>"$LOG_FILE" 2>&1 || true
+    pmx_record_execution "refresh Proxmox boot configuration" "proxmox-boot-tool refresh"
     msg_ok "$(translate 'initramfs updated')" | tee -a "$screen_capture"
 }
 

@@ -255,6 +255,13 @@ def ingest(limit: int = 5000) -> int:
     try:
         conn.execute("BEGIN IMMEDIATE")
         for r in rows:
+            if r[3] == "uninstall_package":
+                # A removal retires the package's install entry; the current
+                # state is that it is no longer on the host.
+                conn.execute(
+                    "DELETE FROM changes WHERE class = ? AND target = ?",
+                    (CLASS_INSTALLATION, r[7]))
+                continue
             if r[2] == CLASS_INSTALLATION:
                 # A package is one entry however often, or by whichever helper,
                 # it is installed.

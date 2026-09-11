@@ -32,6 +32,9 @@ screen_capture="/tmp/proxmenux_gpu_switch_mode_screen_$$.txt"
 if [[ -f "$UTILS_FILE" ]]; then
   source "$UTILS_FILE"
 fi
+if [[ -f "$BASE_DIR/scripts/global/pmx_journal.sh" ]]; then
+    source "$BASE_DIR/scripts/global/pmx_journal.sh"
+fi
 if [[ -f "$LOCAL_SCRIPTS_LOCAL/global/pci_passthrough_helpers.sh" ]]; then
   source "$LOCAL_SCRIPTS_LOCAL/global/pci_passthrough_helpers.sh"
 elif [[ -f "$LOCAL_SCRIPTS_DEFAULT/global/pci_passthrough_helpers.sh" ]]; then
@@ -92,11 +95,12 @@ _set_title() {
 }
 
 _add_line_if_missing() {
+  pmx_journal_context "_add_line_if_missing" "1.1" "switch_gpu_mode_direct.sh"
   local line="$1"
   local file="$2"
-  touch "$file"
+  [[ -f "$file" ]] || pmx_write_file "$file" < /dev/null
   if ! grep -qFx "$line" "$file" 2>/dev/null; then
-    echo "$line" >>"$file"
+    echo "$line" | pmx_append_file "$file"
     HOST_CONFIG_CHANGED=true
   fi
 }
@@ -177,22 +181,28 @@ _read_vfio_ids() {
 }
 
 _write_vfio_ids() {
+  pmx_journal_context "_write_vfio_ids" "1.1" "switch_gpu_mode_direct.sh"
   local -a ids=("$@")
   local vfio_conf="/etc/modprobe.d/vfio.conf"
-  touch "$vfio_conf"
+  local vfio_tmp
+  vfio_tmp=$(mktemp)
+  [[ -f "$vfio_conf" ]] && cat "$vfio_conf" > "$vfio_tmp"
 
   local current_line new_line ids_str
   current_line=$(grep "^options vfio-pci ids=" "$vfio_conf" 2>/dev/null | head -1)
-  sed -i '/^options vfio-pci ids=/d' "$vfio_conf"
+  sed '/^options vfio-pci ids=/d' "$vfio_tmp" > "${vfio_tmp}.next"
+  mv "${vfio_tmp}.next" "$vfio_tmp"
 
   if [[ ${#ids[@]} -gt 0 ]]; then
     ids_str=$(IFS=','; echo "${ids[*]}")
     new_line="options vfio-pci ids=${ids_str} disable_vga=1"
-    echo "$new_line" >>"$vfio_conf"
+    echo "$new_line" >>"$vfio_tmp"
     [[ "$current_line" != "$new_line" ]] && HOST_CONFIG_CHANGED=true
   else
     [[ -n "$current_line" ]] && HOST_CONFIG_CHANGED=true
   fi
+  pmx_write_file "$vfio_conf" < "$vfio_tmp"
+  rm -f "$vfio_tmp"
 }
 
 _contains_in_array() {
@@ -206,6 +216,7 @@ _contains_in_array() {
 }
 
 _remove_gpu_blacklist() {
+  pmx_journal_context "_remove_gpu_blacklist" "1.1" "switch_gpu_mode_direct.sh"
   local gpu_type="$1"
   local blacklist_file="/etc/modprobe.d/blacklist.conf"
   [[ ! -f "$blacklist_file" ]] && return
@@ -219,12 +230,13 @@ _remove_gpu_blacklist() {
       ;;
     amd)
       grep -qE '^blacklist (radeon|amdgpu)$' "$blacklist_file" 2>/dev/null && changed=true
-      sed -i '/^blacklist radeon$/d' "$blacklist_file"
-      sed -i '/^blacklist amdgpu$/d' "$blacklist_file"
+      pmx_edit_file "$blacklist_file" \
+        -e '/^blacklist radeon$/d' \
+        -e '/^blacklist amdgpu$/d'
       ;;
     intel)
       grep -qE '^blacklist i915$' "$blacklist_file" 2>/dev/null && changed=true
-      sed -i '/^blacklist i915$/d' "$blacklist_file"
+      pmx_edit_file "$blacklist_file" '/^blacklist i915$/d'
       ;;
   esac
   $changed && HOST_CONFIG_CHANGED=true
@@ -271,13 +283,15 @@ _add_amd_softdep() {
 }
 
 _remove_amd_softdep() {
+  pmx_journal_context "_remove_amd_softdep" "1.1" "switch_gpu_mode_direct.sh"
   local vfio_conf="/etc/modprobe.d/vfio.conf"
   [[ ! -f "$vfio_conf" ]] && return
   local changed=false
   grep -qE '^softdep (radeon|amdgpu|snd_hda_intel) pre: vfio-pci$' "$vfio_conf" 2>/dev/null && changed=true
-  sed -i '/^softdep radeon pre: vfio-pci$/d' "$vfio_conf"
-  sed -i '/^softdep amdgpu pre: vfio-pci$/d' "$vfio_conf"
-  sed -i '/^softdep snd_hda_intel pre: vfio-pci$/d' "$vfio_conf"
+  pmx_edit_file "$vfio_conf" \
+    -e '/^softdep radeon pre: vfio-pci$/d' \
+    -e '/^softdep amdgpu pre: vfio-pci$/d' \
+    -e '/^softdep snd_hda_intel pre: vfio-pci$/d'
   $changed && HOST_CONFIG_CHANGED=true
   $changed
 }
@@ -297,6 +311,7 @@ _add_vfio_modules() {
 }
 
 _remove_vfio_modules_if_unused() {
+  pmx_journal_context "_remove_vfio_modules_if_unused" "1.1" "switch_gpu_mode_direct.sh"
   local vfio_count
   vfio_count=$(_read_vfio_ids | wc -l | tr -d '[:space:]')
   [[ "$vfio_count" != "0" ]] && return 1
@@ -308,10 +323,11 @@ _remove_vfio_modules_if_unused() {
   [[ ! -f "$modules_file" ]] && return 1
   local had_any=false
   grep -qE '^vfio$|^vfio_iommu_type1$|^vfio_pci$|^vfio_virqfd$' "$modules_file" 2>/dev/null && had_any=true
-  sed -i '/^vfio$/d' "$modules_file"
-  sed -i '/^vfio_iommu_type1$/d' "$modules_file"
-  sed -i '/^vfio_pci$/d' "$modules_file"
-  sed -i '/^vfio_virqfd$/d' "$modules_file"
+  pmx_edit_file "$modules_file" \
+    -e '/^vfio$/d' \
+    -e '/^vfio_iommu_type1$/d' \
+    -e '/^vfio_pci$/d' \
+    -e '/^vfio_virqfd$/d'
   if $had_any; then
     HOST_CONFIG_CHANGED=true
     return 0
@@ -844,14 +860,28 @@ apply_vm_action_for_lxc_mode() {
 # Switch Mode Functions
 # ==========================================================
 _register_iommu_tool() {
+  pmx_journal_context "_register_iommu_tool" "1.1" "switch_gpu_mode_direct.sh"
   local tools_json="${BASE_DIR:-/usr/local/share/proxmenux}/installed_tools.json"
   command -v jq >/dev/null 2>&1 || return 0
-  [[ -f "$tools_json" ]] || echo "{}" > "$tools_json"
-  jq '.vfio_iommu=true' "$tools_json" > "$tools_json.tmp" \
-    && mv "$tools_json.tmp" "$tools_json" || true
+  local tools_tmp
+  tools_tmp=$(mktemp)
+  if [[ -f "$tools_json" ]]; then
+    jq '.vfio_iommu=true' "$tools_json" > "$tools_tmp" \
+      && pmx_write_file "$tools_json" < "$tools_tmp" || true
+  else
+    printf '{}\n' > "$tools_tmp"
+    if jq '.vfio_iommu=true' "$tools_tmp" > "${tools_tmp}.next"; then
+      mv "${tools_tmp}.next" "$tools_tmp"
+    else
+      rm -f "${tools_tmp}.next"
+    fi
+    pmx_write_file "$tools_json" < "$tools_tmp" || true
+  fi
+  rm -f "$tools_tmp" "${tools_tmp}.next"
 }
 
 _enable_iommu_cmdline() {
+  pmx_journal_context "_enable_iommu_cmdline" "1.1" "switch_gpu_mode_direct.sh"
   local cpu_vendor
   cpu_vendor=$(grep -m1 "vendor_id" /proc/cpuinfo 2>/dev/null | awk '{print $3}')
 
@@ -870,14 +900,16 @@ _enable_iommu_cmdline() {
   if [[ -f "$cmdline_file" ]] && grep -qE 'root=ZFS=|root=ZFS/' "$cmdline_file" 2>/dev/null; then
     if ! grep -q "$iommu_param" "$cmdline_file"; then
       cp "$cmdline_file" "${cmdline_file}.bak.$(date +%Y%m%d_%H%M%S)"
-      sed -i "s|\\s*$| ${iommu_param} iommu=pt|" "$cmdline_file"
+      pmx_edit_file "$cmdline_file" "s|\\s*$| ${iommu_param} iommu=pt|"
       proxmox-boot-tool refresh >>"$LOG_FILE" 2>&1 || true
+      pmx_record_execution "refresh Proxmox boot configuration" "proxmox-boot-tool refresh"
     fi
   elif [[ -f "$grub_file" ]]; then
     if ! grep -q "$iommu_param" "$grub_file"; then
       cp "$grub_file" "${grub_file}.bak.$(date +%Y%m%d_%H%M%S)"
-      sed -i "/GRUB_CMDLINE_LINUX_DEFAULT=/ s|\"$| ${iommu_param} iommu=pt\"|" "$grub_file"
+      pmx_edit_file "$grub_file" "/GRUB_CMDLINE_LINUX_DEFAULT=/ s|\"$| ${iommu_param} iommu=pt\"|"
       update-grub >>"$LOG_FILE" 2>&1 || true
+      pmx_record_execution "update GRUB configuration" "update-grub"
     fi
   else
     return 1
@@ -886,6 +918,7 @@ _enable_iommu_cmdline() {
 }
 
 switch_to_vm_mode() {
+  pmx_journal_context "switch_to_vm_mode" "1.1" "switch_gpu_mode_direct.sh"
   detect_affected_lxc_for_selected
   prompt_lxc_action_for_vm_mode
 
@@ -956,7 +989,9 @@ switch_to_vm_mode() {
   if [[ "$HOST_CONFIG_CHANGED" == "true" ]]; then
     msg_info "$(translate 'Updating initramfs (this may take a minute)...')"
     update-initramfs -u -k all >>"$LOG_FILE" 2>&1
+    pmx_record_execution "rebuild initramfs" "update-initramfs -u -k all"
     proxmox-boot-tool refresh >>"$LOG_FILE" 2>&1 || true
+    pmx_record_execution "refresh Proxmox boot configuration" "proxmox-boot-tool refresh"
     msg_ok "$(translate 'initramfs updated')" | tee -a "$screen_capture"
   fi
 }
@@ -975,6 +1010,7 @@ _type_has_remaining_vfio_ids() {
 }
 
 switch_to_lxc_mode() {
+  pmx_journal_context "switch_to_lxc_mode" "1.1" "switch_gpu_mode_direct.sh"
   collect_selected_iommu_ids
   detect_affected_vms_for_selected
   prompt_vm_action_for_lxc_mode
@@ -1035,7 +1071,9 @@ switch_to_lxc_mode() {
   if [[ "$HOST_CONFIG_CHANGED" == "true" ]]; then
     msg_info "$(translate 'Updating initramfs (this may take a minute)...')"
     update-initramfs -u -k all >>"$LOG_FILE" 2>&1
+    pmx_record_execution "rebuild initramfs" "update-initramfs -u -k all"
     proxmox-boot-tool refresh >>"$LOG_FILE" 2>&1 || true
+    pmx_record_execution "refresh Proxmox boot configuration" "proxmox-boot-tool refresh"
     msg_ok "$(translate 'initramfs updated')" | tee -a "$screen_capture"
   fi
 }
@@ -1154,6 +1192,7 @@ parse_arguments() {
 # Main Entry Point
 # ==========================================================
 check_stale_vfio_config_switch_mode_direct() {
+  pmx_journal_context "check_stale_vfio_config_switch_mode_direct" "1.1" "switch_gpu_mode_direct.sh"
   local vfio_conf="/etc/modprobe.d/vfio.conf"
   [[ ! -f "$vfio_conf" ]] && return 0
 
@@ -1180,7 +1219,9 @@ check_stale_vfio_config_switch_mode_direct() {
   msg_info "$(translate 'Removing stale VFIO entries from vfio.conf...')"
   if declare -F _clean_vfio_conf_ids >/dev/null 2>&1 \
      && _clean_vfio_conf_ids "${legacy_ids[@]}"; then
+    pmx_record_execution "remove stale VFIO IDs" "_clean_vfio_conf_ids ${legacy_ids[*]}"
     update-initramfs -u >/dev/null 2>&1 || true
+    pmx_record_execution "rebuild initramfs" "update-initramfs -u"
     HOST_CONFIG_CHANGED=true
     msg_ok "$(translate 'Stale VFIO entries removed and initramfs rebuilt.')" | tee -a "$screen_capture"
   fi

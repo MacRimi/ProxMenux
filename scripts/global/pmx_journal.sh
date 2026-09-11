@@ -419,6 +419,18 @@ pmx_record_install() {
         "capture=created" "revert=purge" "exactness=none"
 }
 
+# Records that ProxMenux removed a package. On ingest this retires the
+# package's installation entry, so a package installed and later removed no
+# longer shows as present — the journal reflects the current state.
+pmx_record_uninstall() {
+    local packages="$1" version="${2:-1.0}"
+    local -a fields
+    mapfile -t fields < <(_pmx_journal_common)
+    _pmx_journal_record "${fields[@]}" \
+        "class=installation" "operation=uninstall_package" "target=$packages" \
+        "function_version=$version" "capture=none" "revert=none" "exactness=none"
+}
+
 pmx_record_applied() {
     local tool="$1" version="$2" state="${3:-applied}"
     local -a fields

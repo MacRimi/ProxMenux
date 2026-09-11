@@ -51,6 +51,10 @@ if [[ -f "$UTILS_FILE" ]]; then
     source "$UTILS_FILE"
 fi
 
+if [[ -f "$BASE_DIR/scripts/global/pmx_journal.sh" ]]; then
+    source "$BASE_DIR/scripts/global/pmx_journal.sh"
+fi
+
 load_language
 initialize_cache
 
@@ -161,6 +165,7 @@ suggest_gpu_passthrough_if_needed() {
 # ==========================================================
 
 add_udev_rule_for_coral_usb() {
+    pmx_journal_context "add_udev_rule_for_coral_usb" "1.5" "install_coral_lxc.sh"
     RULE_FILE="/etc/udev/rules.d/99-coral-usb.rules"
     RULE_CONTENT='# Coral USB Accelerator
 SUBSYSTEM=="usb", ATTRS{idVendor}=="18d1", ATTRS{idProduct}=="9302", MODE="0666", TAG+="uaccess", SYMLINK+="coral"
@@ -168,14 +173,16 @@ SUBSYSTEM=="usb", ATTRS{idVendor}=="18d1", ATTRS{idProduct}=="9302", MODE="0666"
 SUBSYSTEM=="usb", ATTRS{idVendor}=="1a6e", ATTRS{idProduct}=="089a", MODE="0666", TAG+="uaccess", SYMLINK+="coral"'
 
     if [[ ! -f "$RULE_FILE" ]]; then
-        echo "$RULE_CONTENT" > "$RULE_FILE"
+        printf '%s\n' "$RULE_CONTENT" | pmx_write_file "$RULE_FILE"
         udevadm control --reload-rules && udevadm trigger
+        pmx_record_execution "reload Coral USB udev rules" "udevadm control --reload-rules && udevadm trigger"
         msg_ok "$(translate 'Udev rules for Coral USB devices added and rules reloaded.')"
     elif ! grep -q "18d1.*9302\|1a6e.*089a" "$RULE_FILE"; then
         # Append (>>) instead of overwriting (>) so any user-authored
         # rules in this file survive.
-        printf '\n%s\n' "$RULE_CONTENT" >> "$RULE_FILE"
+        printf '\n%s\n' "$RULE_CONTENT" | pmx_append_file "$RULE_FILE"
         udevadm control --reload-rules && udevadm trigger
+        pmx_record_execution "reload Coral USB udev rules" "udevadm control --reload-rules && udevadm trigger"
         msg_ok "$(translate 'Udev rules for Coral USB devices appended and rules reloaded.')"
     else
         msg_ok "$(translate 'Udev rules for Coral USB devices already exist.')"
