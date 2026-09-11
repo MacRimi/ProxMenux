@@ -819,7 +819,6 @@ _proxmenux_nvidia_migrate_legacy_blacklist() {
             chown --reference="$udev_disabled" "$udev_rules" 2>/dev/null || true
             pmx_remove_file "$udev_disabled" || true
         fi
-        pmx_record_execution "Reload udev rules" "udevadm control --reload-rules"
         udevadm control --reload-rules >/dev/null 2>&1 || true
         changed=true
     fi

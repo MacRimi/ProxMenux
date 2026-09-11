@@ -254,7 +254,6 @@ cleanup_duplicate_repos_pve9() {
 
     if [ $cleaned_count -gt 0 ]; then
         msg_ok "$(translate "Cleaned up $cleaned_count duplicate/old repositories")"
-        pmx_record_execution "Update package lists after repository cleanup" "apt-get update"
         apt-get update > /dev/null 2>&1 || true
     else
         msg_ok "$(translate "No duplicate repositories found")"
@@ -335,7 +334,6 @@ cleanup_duplicate_repos_pve9_() {
 
     if [ $cleaned_count -gt 0 ]; then
         msg_ok "$(translate "Cleaned up $cleaned_count duplicate/old repositories")"
-        pmx_record_execution "Update package lists after repository cleanup" "apt-get update"
         apt-get update > /dev/null 2>&1 || true
     else
         msg_ok "$(translate "No duplicate repositories found")"

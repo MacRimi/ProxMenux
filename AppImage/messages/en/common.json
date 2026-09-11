@@ -5943,7 +5943,7 @@
       "failed": "The change journal could not be read",
       "intro": "What ProxMenux changed on this host and what was there before each change. The difference is shown.",
       "empty": "Nothing has been recorded on this host yet.",
-      "since": "Recording since {date}. Anything applied before that appears as applied, without the state it replaced.",
+      "since": "Recording since {date}.",
       "byFunction": "By function",
       "count": "{count} changes",
       "function": "Function",
@@ -5990,12 +5990,16 @@
       },
       "undo": {
         "remove": "Deletes the file (there was none before)",
-        "restore": "Restores exactly what was there"
+        "restore": "Restores exactly what was there",
+        "purge": "The package can be uninstalled"
       },
       "section": {
         "postInstall": "Post-install optimizations",
         "scripts": "ProxMenux scripts",
         "installs": "Installed packages and utilities"
+      },
+      "scriptLabel": {
+        "install_proxmenux": "ProxMenux installer"
       }
     },
     "comparison": {

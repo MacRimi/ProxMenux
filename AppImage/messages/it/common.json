@@ -5877,7 +5877,7 @@
       "failed": "Non è stato possibile leggere il registro delle modifiche",
       "intro": "Cosa ha cambiato ProxMenux su questo host e cosa c'era prima di ogni modifica. Viene mostrata la differenza.",
       "empty": "Su questo host non è ancora stato registrato nulla.",
-      "since": "Registrazione dal {date}. Ciò che è stato applicato prima risulta applicato, senza lo stato sostituito.",
+      "since": "Registrazione dal {date}.",
       "byFunction": "Per funzione",
       "count": "{count} modifiche",
       "function": "Funzione",
@@ -5924,12 +5924,16 @@
       },
       "undo": {
         "remove": "Elimina il file (prima non ce n'era nessuno)",
-        "restore": "Ripristina esattamente ciò che c'era"
+        "restore": "Ripristina esattamente ciò che c'era",
+        "purge": "Il pacchetto può essere disinstallato"
       },
       "section": {
         "postInstall": "Ottimizzazioni post-installazione",
         "scripts": "Script di ProxMenux",
         "installs": "Pacchetti e utilità installati"
+      },
+      "scriptLabel": {
+        "install_proxmenux": "Installer di ProxMenux"
       }
     },
     "comparison": {

@@ -118,7 +118,6 @@ EOF
 
     if [[ "$need_update" == true ]] || [[ ! -d /var/lib/apt/lists || -z "$(ls -A /var/lib/apt/lists 2>/dev/null)" ]]; then
         msg_info "$(translate "Updating APT package lists...")"
-        pmx_record_execution "Update APT package lists" "apt-get update"
         apt-get update >/dev/null 2>&1 || apt-get update
         # Spinner pair: msg_info must be closed before returning.
         # Without this the next `msg_info` caller spawns a second

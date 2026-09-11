@@ -405,6 +405,20 @@ pmx_record_execution() {
 # changed — the state before it ran is not knowable. Used by the
 # registration path so a host carries an honest account of what was
 # applied before the journal existed.
+# Records packages the installer put on the host before the journal existed
+# (its own dependencies). They are a real host change, so they belong in the
+# installation class — there is simply no prior state to diff, because the
+# host did not have them.
+pmx_record_install() {
+    local packages="$1" version="${2:-1.0}"
+    local -a fields
+    mapfile -t fields < <(_pmx_journal_common)
+    _pmx_journal_record "${fields[@]}" \
+        "class=installation" "operation=install_package" "target=$packages" \
+        "installed=$packages" "function_version=$version" "result=ok" \
+        "capture=created" "revert=purge" "exactness=none"
+}
+
 pmx_record_applied() {
     local tool="$1" version="$2" state="${3:-applied}"
     local -a fields

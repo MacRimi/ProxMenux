@@ -78,6 +78,7 @@ function operationLabelKey(change: { operation: string; capture: string }): stri
 function undoKey(change: { revert: string; exactness: string }): string {
   if (change.revert === "remove") return "undo.remove"
   if (change.revert === "restore" && change.exactness === "exact") return "undo.restore"
+  if (change.revert === "purge") return "undo.purge"
   return `exactness.${change.exactness}`
 }
 
@@ -127,6 +128,10 @@ const FN_LABEL: Record<string, string> = {
 // Post-install functions run from the auto/customizable scripts; everything
 // else is a general host script (nvidia/tpu installers, PVE update, vfio…).
 const POST_INSTALL_SOURCES = new Set(["auto", "customizable"])
+
+// A few sources deserve a friendly name instead of a raw script identifier;
+// everything else shows the script it came from.
+const FRIENDLY_SOURCE = new Set(["install_proxmenux"])
 
 // Which of the three sections a change belongs to: installations are their
 // own block, post-install optimizations another, general scripts the rest.
@@ -399,7 +404,11 @@ export function AuditChanges() {
       // install sections group by the script that made the change, and show
       // that script's name — not a per-function label.
       const key = b === "postInstall" ? (c.function || c.source || "—") : (c.source || c.function || "—")
-      const label = b === "postInstall" ? groupLabel(c.function, c.source) : (c.source || c.function || "—")
+      const label = b === "postInstall"
+        ? groupLabel(c.function, c.source)
+        : FRIENDLY_SOURCE.has(c.source)
+          ? t(`audit.changes.scriptLabel.${c.source}`)
+          : (c.source || c.function || "—")
       const g = target.get(key) || { key, label, version: "", last: 0, items: [] }
       g.items.push(c)
       if (c.recorded_at > g.last) g.last = c.recorded_at
@@ -408,7 +417,7 @@ export function AuditChanges() {
     }
     const sort = (m: Map<string, Group>) => Array.from(m.values()).sort((a, b) => b.last - a.last)
     return { post: sort(post), scripts: sort(scripts), installs: sort(installs) }
-  }, [changes])
+  }, [changes, t])
 
   const when = (epoch: number) => new Date(epoch * 1000).toLocaleString(language)
 

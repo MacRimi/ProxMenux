@@ -5877,7 +5877,7 @@
       "failed": "Das Änderungsjournal war nicht lesbar",
       "intro": "Was ProxMenux auf diesem Host geändert hat und was vor jeder Änderung vorhanden war. Gezeigt wird die Differenz.",
       "empty": "Auf diesem Host wurde noch nichts aufgezeichnet.",
-      "since": "Aufzeichnung seit {date}. Früher Angewandtes erscheint als angewandt, ohne den ersetzten Zustand.",
+      "since": "Aufzeichnung seit {date}.",
       "byFunction": "Nach Funktion",
       "count": "{count} Änderungen",
       "function": "Funktion",
@@ -5924,12 +5924,16 @@
       },
       "undo": {
         "remove": "Löscht die Datei (vorher war keine vorhanden)",
-        "restore": "Stellt exakt den vorherigen Zustand wieder her"
+        "restore": "Stellt exakt den vorherigen Zustand wieder her",
+        "purge": "Das Paket kann deinstalliert werden"
       },
       "section": {
         "postInstall": "Post-Install-Optimierungen",
         "scripts": "ProxMenux-Skripte",
         "installs": "Installierte Pakete und Werkzeuge"
+      },
+      "scriptLabel": {
+        "install_proxmenux": "ProxMenux-Installer"
       }
     },
     "comparison": {

@@ -5943,7 +5943,7 @@
       "failed": "Denník zmien sa nepodarilo prečítať",
       "intro": "Čo ProxMenux na tomto hostiteľovi zmenil a čo tam bolo pred každou zmenou. Zobrazuje sa rozdiel.",
       "empty": "Na tomto hostiteľovi zatiaľ nebolo nič zaznamenané.",
-      "since": "Zaznamenáva sa od {date}. Čo bolo použité skôr, figuruje ako použité, bez stavu, ktorý nahradilo.",
+      "since": "Zaznamenáva sa od {date}.",
       "byFunction": "Podľa funkcie",
       "count": "{count} zmien",
       "function": "Funkcia",
@@ -5990,12 +5990,16 @@
       },
       "undo": {
         "remove": "Odstráni súbor (predtým žiadny nebol)",
-        "restore": "Obnoví presne to, čo tam bolo"
+        "restore": "Obnoví presne to, čo tam bolo",
+        "purge": "Balík možno odinštalovať"
       },
       "section": {
         "postInstall": "Optimalizácie po inštalácii",
         "scripts": "Skripty ProxMenux",
         "installs": "Nainštalované balíky a nástroje"
+      },
+      "scriptLabel": {
+        "install_proxmenux": "Inštalátor ProxMenux"
       }
     },
     "comparison": {

@@ -734,8 +734,8 @@ install_beta() {
     if [ -f "$BASE_DIR/scripts/global/pmx_journal.sh" ]; then
         # shellcheck source=/dev/null
         source "$BASE_DIR/scripts/global/pmx_journal.sh"
-        pmx_journal_context "install_proxmenux" "1.0"
-        pmx_record_applied "dialog, jq, curl, git" "1.0" "install_dependencies"
+        pmx_journal_context "install_proxmenux" "1.0" "install_proxmenux"
+        pmx_record_install "dialog jq curl git" "1.0"
     fi
 
     if [ -d "./oci" ]; then

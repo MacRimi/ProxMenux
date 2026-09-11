@@ -525,7 +525,6 @@ guided_bridge_repair() {
         clear
         msg_info "$(translate "Restarting network service...")"
         
-        pmx_record_execution "Restart networking service" "systemctl restart networking"
         if systemctl restart networking; then
             msg_ok "$(translate "Network service restarted successfully")"
         else

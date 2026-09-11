@@ -520,7 +520,6 @@ skip_apt_languages() {
             echo "$default_locale UTF-8" | pmx_append_file /etc/locale.gen
         fi
         msg_info "$(translate "Generating missing locale:") $default_locale"
-        pmx_record_execution "Generate locale" "locale-gen $default_locale"
         locale-gen "$default_locale"
         msg_ok "$(translate "Locale generated")"
     fi
@@ -595,7 +594,6 @@ configure_time_sync() {
             msg_ok "$(translate "Time settings configured - Timezone:") $timezone"
             register_tool "time_sync" true "$FUNC_VERSION"
             
-            pmx_record_execution "Restart Postfix" "systemctl restart postfix"
             systemctl restart postfix 2>/dev/null || true
         else
             msg_warn "$(translate "Failed to enable automatic time synchronization")"
@@ -707,7 +705,6 @@ apply_amd_fixes() {
         fi
 
         if command -v proxmox-boot-tool >/dev/null 2>&1; then
-            pmx_record_execution "Refresh Proxmox boot configuration" "proxmox-boot-tool refresh"
             proxmox-boot-tool refresh >/dev/null 2>&1 && \
             msg_ok "$(translate "proxmox-boot-tool refreshed")" || \
             msg_warn "$(translate "Failed to refresh proxmox-boot-tool")"
@@ -728,7 +725,6 @@ apply_amd_fixes() {
                 else
                     msg_ok "$(translate "'$added_param' already present in GRUB_CMDLINE_LINUX_DEFAULT")"
                 fi
-                pmx_record_execution "Regenerate GRUB configuration" "update-grub"
                 update-grub >/dev/null 2>&1 && \
                 msg_ok "$(translate "GRUB configuration updated")" || \
                 msg_warn "$(translate "Failed to update GRUB")"
@@ -867,7 +863,6 @@ net.unix.max_dgram_qlen = 4096
 EOF
 
 
-    pmx_record_execution "Apply network sysctl configuration" "sysctl --system"
     sysctl --system > /dev/null 2>&1
 
     pmx_write_file /usr/local/sbin/proxmenux-fwbr-tune <<'EOF'
@@ -927,12 +922,9 @@ EOF
     chmod 0644 /etc/udev/rules.d/99-zz-proxmenux-fwbr-tune.rules
     chown root:root /etc/udev/rules.d/99-zz-proxmenux-fwbr-tune.rules
 
-    pmx_record_execution "Reload systemd configuration" "systemctl daemon-reload"
     systemctl daemon-reload >/dev/null 2>&1 || true
-    pmx_record_execution "Reload udev rules" "udevadm control --reload-rules"
     udevadm control --reload-rules >/dev/null 2>&1 || true
     pmx_enable_service proxmenux-fwbr-tune.service || true
-    pmx_record_execution "Tune existing Proxmox firewall bridge interfaces" "/usr/local/sbin/proxmenux-fwbr-tune"
     /usr/local/sbin/proxmenux-fwbr-tune >/dev/null 2>&1 || true
 
 
@@ -1039,7 +1031,6 @@ EOF
     fi
 
     # Apply changes
-    pmx_record_execution "Apply sysctl configuration" "sysctl --system"
     sysctl --system > /dev/null 2>&1
 
     if [ "$reboot_needed" -eq 1 ]; then
@@ -1135,7 +1126,6 @@ EOF
  
     msg_info "$(translate "Updating package lists...")"
     
-    pmx_record_execution "Update package lists for Ceph" "apt-get update"
     update_output=$(apt-get update 2>&1)
     update_exit_code=$?
     
@@ -1964,14 +1954,11 @@ enable_vfio_iommu() {
     
     # Update initramfs and bootloader
     msg_info "$(translate "Updating initramfs, GRUB, and EFI boot, patience...")"
-    pmx_record_execution "Regenerate initramfs" "update-initramfs -u -k all"
     update-initramfs -u -k all > /dev/null 2>&1
     
     if [[ "$uses_zfs" == true ]]; then
-        pmx_record_execution "Refresh Proxmox boot configuration" "proxmox-boot-tool refresh"
         proxmox-boot-tool refresh > /dev/null 2>&1
     else
-        pmx_record_execution "Regenerate GRUB configuration" "update-grub"
         update-grub > /dev/null 2>&1
     fi
     
@@ -2626,7 +2613,6 @@ configure_fastfetch() {
         echo '{"$schema": "https://github.com/fastfetch-cli/fastfetch/raw/dev/doc/json_schema.json", "modules": []}' | pmx_write_file "$fastfetch_config"
     fi
 
-    pmx_record_execution "Generate Fastfetch configuration" "fastfetch --gen-config-force"
     fastfetch --gen-config-force > /dev/null 2>&1
 
     while true; do
@@ -2752,7 +2738,6 @@ configure_fastfetch() {
 
     msg_ok "$(translate "Fastfetch now displays: System optimised by: ProxMenux")"
 
-    pmx_record_execution "Generate Fastfetch configuration" "fastfetch --gen-config"
     fastfetch --gen-config > /dev/null 2>&1
     msg_ok "$(translate "Fastfetch configuration updated")"
 
@@ -3155,9 +3140,7 @@ configure_log2ram() {
     rm -rf /etc/systemd/system/log2ram.service.d 2>/dev/null || true
     rm -rf /var/log.hdd /tmp/log2ram 2>/dev/null || true
 
-    pmx_record_execution "Reload systemd configuration" "systemctl daemon-reload"
     systemctl daemon-reload >/dev/null 2>&1 || true
-    pmx_record_execution "Restart cron" "systemctl restart cron"
     systemctl restart cron >/dev/null 2>&1 || true
     msg_ok "$(translate "Previous installation cleaned")"
 
@@ -3165,7 +3148,6 @@ configure_log2ram() {
     msg_info "$(translate "Installing Log2RAM from GitHub...")"
     if ! command -v git >/dev/null 2>&1; then
         msg_info "$(translate "Installing required package: git")"
-        pmx_record_execution "Update package lists for Log2RAM" "apt-get update -qq"
         apt-get update -qq >/dev/null 2>&1
         pmx_install_pkg git
     fi
@@ -3178,7 +3160,6 @@ configure_log2ram() {
     fi
 
     cd /tmp/log2ram || { msg_error "$(translate "Failed to access log2ram directory")"; return 1; }
-    pmx_record_execution "Run the Log2RAM installer" "bash install.sh"
     if ! bash install.sh >>/tmp/log2ram_install.log 2>&1; then
         msg_error "$(translate "Failed to run log2ram installer. Check /tmp/log2ram_install.log")"
         return 1
@@ -3230,7 +3211,6 @@ EOF
         msg_ok "$(translate "PBS API log rotation configured (hourly, size-based)")"
     fi
 
-    pmx_record_execution "Reload systemd configuration" "systemctl daemon-reload"
     systemctl daemon-reload >/dev/null 2>&1 || true
 
     if [[ -f /etc/log2ram.conf ]] && command -v log2ram >/dev/null 2>&1; then
@@ -3370,7 +3350,6 @@ EOF
     chown -R www-data:www-data /var/log.hdd/pveproxy
     chmod 0750 /var/log.hdd/pveproxy
 
-    pmx_record_execution "Restart cron" "systemctl restart cron"
     systemctl restart cron >/dev/null 2>&1 || true
     if ! pmx_apply_setting "service-enabled:log2ram" "systemctl is-enabled log2ram" \
         systemctl enable log2ram; then

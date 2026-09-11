@@ -175,8 +175,7 @@ remove_subscription_banner() {
         return 1
     fi
 
-    kill -TERM "$SPINNER_PID" 2>/dev/null
-    sleep 1
+    stop_spinner
 
     if [[ "$pve_version" -ge 9 ]]; then
         if ! whiptail --title "Proxmox VE ${pve_version} Subscription Banner Removal" \
@@ -344,11 +343,8 @@ MaxLevelConsole=notice
 MaxLevelWall=crit
 EOF
     
-    pmx_record_execution "Restart systemd-journald" "systemctl restart systemd-journald.service"
     systemctl restart systemd-journald.service > /dev/null 2>&1
-    pmx_record_execution "Vacuum system journal" "journalctl --vacuum-size=64M --vacuum-time=1d"
     journalctl --vacuum-size=64M --vacuum-time=1d > /dev/null 2>&1
-    pmx_record_execution "Rotate system journal" "journalctl --rotate"
     journalctl --rotate > /dev/null 2>&1
     
     msg_ok "$(translate "Journald optimized - Max size: 64M")"
@@ -380,7 +376,6 @@ create 0640 root adm
 copytruncate
 include /etc/logrotate.d
 EOF
-    pmx_record_execution "Restart logrotate" "systemctl restart logrotate"
     systemctl restart logrotate > /dev/null 2>&1
 
     msg_ok "$(translate "Logrotate optimization completed")"
@@ -574,7 +569,6 @@ net.ipv4.tcp_wmem = 8192 65536 16777216
 net.unix.max_dgram_qlen = 4096
 EOF
 
-  pmx_record_execution "Apply network sysctl configuration" "sysctl --system"
   sysctl --system > /dev/null 2>&1
 
   pmx_write_file /usr/local/sbin/proxmenux-fwbr-tune <<'EOF'
@@ -632,12 +626,9 @@ EOF
   chmod 0644 /etc/udev/rules.d/99-proxmenux-fwbr-tune.rules
   chown root:root /etc/udev/rules.d/99-proxmenux-fwbr-tune.rules
 
-  pmx_record_execution "Reload systemd configuration" "systemctl daemon-reload"
   systemctl daemon-reload >/dev/null 2>&1 || true
-  pmx_record_execution "Reload udev rules" "udevadm control --reload-rules"
   udevadm control --reload-rules >/dev/null 2>&1 || true
   pmx_enable_service proxmenux-fwbr-tune.service || true
-  pmx_record_execution "Tune existing Proxmox firewall bridge interfaces" "/usr/local/sbin/proxmenux-fwbr-tune"
   /usr/local/sbin/proxmenux-fwbr-tune >/dev/null 2>&1 || true
 
 
@@ -1049,9 +1040,8 @@ install_log2ram_auto() {
     if [[ "$is_ssd" == true ]]; then
         msg_ok "$(translate "System disk is SSD or M.2. Proceeding with Log2RAM setup.")"
     else
-        kill -TERM "$SPINNER_PID" 2>/dev/null
-        sleep 1
-        if whiptail --yesno "$(translate "Do you want to install Log2RAM anyway to reduce log write load?")" 10 70 --title "Log2RAM"; then
+        stop_spinner
+        if whiptail --yesno "$(translate "Do you want to install Log2RAM to reduce log write load?")" 10 70 --title "Log2RAM"; then
             msg_ok "$(translate "Proceeding with Log2RAM setup on non-SSD disk as requested by user.")"
         else
             msg_info2 "$(translate "Log2RAM installation cancelled by user")"
@@ -1083,18 +1073,14 @@ install_log2ram_auto() {
     rm -rf /etc/systemd/system/log2ram.service.d 2>/dev/null || true
     rm -rf /var/log.hdd /tmp/log2ram 2>/dev/null || true
 
-    pmx_record_execution "Re-execute the systemd manager" "systemctl daemon-reexec"
     systemctl daemon-reexec >/dev/null 2>&1 || true
-    pmx_record_execution "Reload systemd configuration" "systemctl daemon-reload"
     systemctl daemon-reload >/dev/null 2>&1 || true
-    pmx_record_execution "Restart cron" "systemctl restart cron"
     systemctl restart cron >/dev/null 2>&1 || true
 
     msg_ok "$(translate "Previous installation cleaned")"
     msg_info "$(translate "Installing Log2RAM from source...")"
 
     if ! command -v git >/dev/null 2>&1; then
-        pmx_record_execution "Update package lists for Log2RAM" "apt-get update -qq"
         apt-get update -qq >/dev/null 2>&1
         pmx_install_pkg git
     fi
@@ -1107,7 +1093,6 @@ install_log2ram_auto() {
 
     cd /tmp/log2ram || { msg_error "$(translate "Failed to access log2ram directory")"; return 1; }
 
-    pmx_record_execution "Run the Log2RAM installer" "bash install.sh"
     if ! bash install.sh >>/tmp/log2ram_install.log 2>&1; then
         msg_error "$(translate "Failed to run log2ram installer. Check /tmp/log2ram_install.log")"
         return 1
@@ -1159,7 +1144,6 @@ EOF
         msg_ok "$(translate "PBS API log rotation configured (hourly, size-based)")"
     fi
 
-    pmx_record_execution "Reload systemd configuration" "systemctl daemon-reload"
     systemctl daemon-reload >/dev/null 2>&1 || true
 
     if [[ -f /etc/log2ram.conf ]] && command -v log2ram >/dev/null 2>&1; then
@@ -1257,7 +1241,6 @@ EOF
     chmod 0644 /etc/cron.d/log2ram-auto-sync
     chown root:root /etc/cron.d/log2ram-auto-sync
 
-    pmx_record_execution "Restart cron" "systemctl restart cron"
     systemctl restart cron >/dev/null 2>&1 || true
     msg_ok "$(translate "Auto-sync enabled when /var/log exceeds 80% of") $LOG2RAM_SIZE"
 
@@ -1324,7 +1307,6 @@ EOF
     #msg_ok "$(translate "Backup created:") /etc/systemd/journald.conf.bak.$(date +%Y%m%d-%H%M%S)"
     msg_ok "$(translate "Journald configuration adjusted to") ${USE_MB}M (Log2RAM ${LOG2RAM_SIZE})"
 
-    pmx_record_execution "Reload systemd configuration" "systemctl daemon-reload"
     systemctl daemon-reload >/dev/null 2>&1 || true
     if ! pmx_apply_setting "service-enabled:log2ram" "systemctl is-enabled log2ram" \
         systemctl enable log2ram; then

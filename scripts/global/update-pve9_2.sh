@@ -164,7 +164,6 @@ EOF
     fi
 
     # UPDATE: no progress bar here (dpkg is not involved); capture output to parse errors
-    pmx_record_execution "Update package lists" "apt-get update"
     update_output=$(apt-get update 2>&1)
     update_exit_code=$?
 
@@ -182,25 +181,21 @@ EOF
 
                 if command -v gpg >/dev/null 2>&1; then
                     # Modern approach: receive -> export -> dearmor into /etc/apt/keyrings/<KEY>.gpg
-                    pmx_record_execution "Import missing repository signing key" "gpg --batch --keyserver keyserver.ubuntu.com --recv-keys $key"
                     if gpg --batch --keyserver keyserver.ubuntu.com --recv-keys "$key" \
                     && gpg --batch --export "$key" | gpg --dearmor -o "/etc/apt/keyrings/${key}.gpg"; then
                         msg_ok "$(translate "Imported missing GPG key: $key")"
                     else
                         msg_warn "$(translate "Keyrings method failed; trying apt-key fallback")"
-                        pmx_record_execution "Import missing repository signing key with apt-key" "apt-key adv --keyserver keyserver.ubuntu.com --recv-keys $key"
                         apt-key adv --keyserver keyserver.ubuntu.com --recv-keys "$key" >/dev/null 2>&1 || true
                     fi
                 else
                     # Fallback for minimal systems without gpg installed
                     msg_warn "$(translate "gpg not found; trying apt-key fallback")"
-                    pmx_record_execution "Import missing repository signing key with apt-key" "apt-key adv --keyserver keyserver.ubuntu.com --recv-keys $key"
                     apt-key adv --keyserver keyserver.ubuntu.com --recv-keys "$key" >/dev/null 2>&1 || true
                 fi
             fi
 
             # Retry update after importing the key
-            pmx_record_execution "Retry package list update" "apt-get update"
             if apt-get update > "$log_file" 2>&1; then
                 msg_ok "$(translate "Package lists updated after GPG fix")" | tee -a "$screen_capture"
             else
@@ -282,7 +277,6 @@ EOF
         msg_info2 "$(translate "Update cancelled by user")"
         pmx_record_execution "Remove unused packages" "apt-get -y autoremove"
         apt-get -y autoremove > /dev/null 2>&1 || true
-        pmx_record_execution "Clean downloaded package cache" "apt-get -y autoclean"
         apt-get -y autoclean > /dev/null 2>&1 || true
         rm -f "$screen_capture"
         return 0
@@ -290,7 +284,6 @@ EOF
         msg_ok "$(translate "System is already up to date. No update needed.")"
         pmx_record_execution "Remove unused packages" "apt-get -y autoremove"
         apt-get -y autoremove > /dev/null 2>&1 || true
-        pmx_record_execution "Clean downloaded package cache" "apt-get -y autoclean"
         apt-get -y autoclean > /dev/null 2>&1 || true
         rm -f "$screen_capture"
         return 0
@@ -341,7 +334,6 @@ EOF
 
     pmx_record_execution "Remove unused packages" "apt-get -y autoremove"
     apt-get -y autoremove > /dev/null 2>&1 || true
-    pmx_record_execution "Clean downloaded package cache" "apt-get -y autoclean"
     apt-get -y autoclean > /dev/null 2>&1 || true
     msg_ok "$(translate "Cleanup finished")"
 

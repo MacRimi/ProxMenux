@@ -120,7 +120,6 @@ EOF
     cleanup_duplicate_repos
 
     msg_info "$(translate "Updating package lists...")"
-    pmx_record_execution "Update package lists" "apt-get update"
     if apt-get update > "$log_file" 2>&1; then
         msg_ok "$(translate "Package lists updated successfully")"
     else
@@ -168,14 +167,12 @@ EOF
         msg_info2 "$(translate "Update cancelled by user")"
         pmx_record_execution "Remove unused packages" "apt-get -y autoremove"
         apt-get -y autoremove > /dev/null 2>&1 || true
-        pmx_record_execution "Clean downloaded package cache" "apt-get -y autoclean"
         apt-get -y autoclean > /dev/null 2>&1 || true
         return 0
     elif [[ $MENU_RESULT -eq 2 ]]; then
         msg_ok "$(translate "System is already up to date. No update needed.")"
         pmx_record_execution "Remove unused packages" "apt-get -y autoremove"
         apt-get -y autoremove > /dev/null 2>&1 || true
-        pmx_record_execution "Clean downloaded package cache" "apt-get -y autoclean"
         apt-get -y autoclean > /dev/null 2>&1 || true
         return 0
     fi
@@ -273,7 +270,6 @@ EOF
     msg_info "$(translate "Performing system cleanup...")"
     pmx_record_execution "Remove unused packages" "apt-get -y autoremove"
     apt-get -y autoremove > /dev/null 2>&1 || true
-    pmx_record_execution "Clean downloaded package cache" "apt-get -y autoclean"
     apt-get -y autoclean > /dev/null 2>&1 || true
     msg_ok "$(translate "Cleanup finished")"
 
