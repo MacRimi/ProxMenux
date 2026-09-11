@@ -15,7 +15,6 @@ import {
 } from "lucide-react"
 import { fetchApi } from "../lib/api-config"
 import { useT } from "../lib/i18n/provider"
-import { AuditInventory } from "./audit-inventory"
 import { AuditPolicy } from "./audit-policy"
 import { AuditChanges } from "./audit-changes"
 import { AuditComparison } from "./audit-comparison"
@@ -106,7 +105,7 @@ export function AuditReport() {
   const { language } = useI18n()
   // Assessment and inventory answer different questions and are
   // read differently: one is triaged, the other is read through.
-  const [view, setView] = useState<"assessment" | "inventory" | "changes" | "policy">("assessment")
+  const [view, setView] = useState<"assessment" | "changes" | "policy">("assessment")
   const [running, setRunning] = useState(false)
   const [latest, setLatest] = useState<Run | null>(null)
   const [findings, setFindings] = useState<Finding[]>([])
@@ -123,7 +122,10 @@ export function AuditReport() {
   // The profile decides which question the page answers, so it governs
   // both what an assessment runs and what the inventory documents.
   const [profile, setProfile] = useState("full")
-  const [profiles, setProfiles] = useState<Array<{ id: string; runs_checks: boolean }>>([])
+  const [profiles, setProfiles] = useState<Array<{ id: string; runs_checks: boolean; areas: string[] | null; include: string[] }>>([])
+  // Set when a Lynis-bearing assessment is about to run and the stored
+  // report is missing or stale: the user decides whether to run Lynis now.
+  const [lynisPrompt, setLynisPrompt] = useState<null | { ageDays: number | null; stale: boolean }>(null)
   const [building, setBuilding] = useState(false)
 
   const loadRun = useCallback(async (runId: string) => {
@@ -183,18 +185,41 @@ export function AuditReport() {
     return () => clearInterval(id)
   }, [running, refresh])
 
-  const startRun = async () => {
+  const doRun = async (runLynis: boolean) => {
+    setLynisPrompt(null)
     setError(null)
     try {
       const data: any = await fetchApi("/api/audit/run", {
         method: "POST",
-        body: JSON.stringify({ profile }),
+        body: JSON.stringify({ profile, run_lynis: runLynis }),
       })
       if (data?.success) setRunning(true)
       else setError(data?.message || t("audit.errors.runFailed"))
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e))
     }
+  }
+
+  // A profile that includes the Lynis check asks the user before running,
+  // since producing a fresh Lynis report takes a few minutes. When a
+  // recent report already exists — or Lynis is not installed — the run
+  // starts straight away and reuses it.
+  const startRun = async () => {
+    setError(null)
+    const spec = profiles.find((p) => p.id === profile)
+    const runsLynis = !!spec && (spec.areas === null || spec.areas.includes("security"))
+    if (runsLynis) {
+      try {
+        const r: any = await fetchApi("/api/audit/lynis-readiness")
+        if (r?.success && r.installed && (!r.has_report || r.stale)) {
+          setLynisPrompt({ ageDays: r.age_days ?? null, stale: !!r.stale })
+          return
+        }
+      } catch {
+        /* Readiness is advisory; on failure run without Lynis rather than block. */
+      }
+    }
+    doRun(false)
   }
 
   // Accepting or revoking changes which findings are active, so the run
@@ -308,10 +333,18 @@ export function AuditReport() {
     try {
       const inv: any = await fetchApi(
         `/api/audit/inventory?profile=${encodeURIComponent(profile)}`)
+      // A focused report shows only the checks its profile runs, even
+      // when the findings on screen came from a full assessment: the
+      // report is scoped to its question, not to whichever run produced
+      // the data. `areas: null` (full, diagnostic) keeps everything.
+      const spec = profiles.find((p) => p.id === profile)
+      const scopedFindings = !spec || spec.areas === null
+        ? findings
+        : findings.filter((f) => spec.areas!.includes(f.area) || spec.include.includes(f.check_id))
       openAuditDocument({
         profile,
         run: latest,
-        findings,
+        findings: scopedFindings,
         inventory: inv?.success ? inv.inventory : null,
         t,
         locale: language,
@@ -371,7 +404,7 @@ export function AuditReport() {
       className="flex w-full rounded-lg border border-border bg-muted/40 p-1 gap-1
                  sm:inline-flex sm:w-auto"
     >
-      {(["assessment", "inventory", "changes", "policy"] as const).map((key) => (
+      {(["assessment", "changes", "policy"] as const).map((key) => (
         <button
           key={key}
           type="button"
@@ -423,30 +456,6 @@ export function AuditReport() {
           </div>
         </div>
         <AuditPolicy />
-      </div>
-    )
-  }
-
-  if (view === "inventory") {
-    return (
-      <div className="space-y-4">
-        {/* A row that cannot wrap has nowhere to put the controls but
-            beside the title, which then squeezes into two lines. Title
-            and controls are separate rows until there is width for both. */}
-        <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:gap-3">
-          <div className="flex items-center gap-2">
-            <ClipboardCheck className="h-6 w-6 shrink-0 text-foreground" />
-            <h2 className="text-xl lg:text-2xl font-bold text-foreground">{t("audit.title")}</h2>
-          </div>
-          <div className="flex flex-col gap-2 sm:ml-auto sm:flex-row sm:flex-wrap
-                          sm:items-center sm:gap-3">
-            <div className="flex items-center gap-2 sm:contents">
-              {profilePicker}{documentButton}
-            </div>
-            {viewTabs}
-          </div>
-        </div>
-        <AuditInventory profile={profile} />
       </div>
     )
   }
@@ -741,6 +750,30 @@ export function AuditReport() {
           )
         })}
       </div>
+
+      <Dialog open={lynisPrompt !== null} onOpenChange={(o) => !o && setLynisPrompt(null)}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>{t("audit.lynis.title")}</DialogTitle>
+            <DialogDescription>
+              {lynisPrompt?.stale
+                ? t("audit.lynis.bodyStale", { days: String(lynisPrompt?.ageDays ?? "") })
+                : t("audit.lynis.bodyNotRun")}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="flex-col gap-2 sm:flex-row">
+            <Button variant="outline" onClick={() => setLynisPrompt(null)}>
+              {t("audit.lynis.cancel")}
+            </Button>
+            <Button variant="outline" onClick={() => doRun(false)}>
+              {t("audit.lynis.withoutLynis")}
+            </Button>
+            <Button onClick={() => doRun(true)}>
+              {t("audit.lynis.withLynis")}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={accepting !== null} onOpenChange={(o) => !o && setAccepting(null)}>
         <DialogContent className="sm:max-w-lg">

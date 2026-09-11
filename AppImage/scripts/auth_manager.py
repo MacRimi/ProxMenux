@@ -578,6 +578,10 @@ def list_api_tokens():
         entry = {
             "id": t.get("id"),
             "name": t.get("name", "API Token"),
+            # Tokens issued before scope existed carry no claim and verify
+            # as full_admin, so the list reflects that rather than the
+            # read-only default a new token gets.
+            "scope": t.get("scope", "full_admin"),
             "token_prefix": t.get("token_prefix", "***"),
             "created_at": t.get("created_at"),
             "expires_at": t.get("expires_at"),

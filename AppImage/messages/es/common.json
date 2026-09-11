@@ -1937,7 +1937,7 @@
         "notificationCategories": "Categorías de notificación",
         "enableTelegram": "Habilitar telegrama",
         "setupGuide": "+guía de configuración",
-        "botToken": "Ficha de robot",
+        "botToken": "Token del bot",
         "chatId": "ID de chat",
         "topicId": "ID de tema",
         "optional": "opcional",
@@ -1947,7 +1947,7 @@
         "sendTest": "Enviar prueba",
         "enableGotify": "Habilitar Gotify",
         "serverUrl": "URL del servidor",
-        "appToken": "Ficha de aplicación",
+        "appToken": "Token de la aplicación",
         "enableDiscord": "Activar Discord",
         "webhookUrl": "URL de webhook",
         "enableEmail": "Habilitar correo electrónico",
@@ -2437,8 +2437,8 @@
       "changesRestart": "La página puede desconectarse brevemente mientras se reinicia el servicio."
     },
     "apiTokens": {
-      "defaultName": "Ficha del panel de control",
-      "title": "Fichas API",
+      "defaultName": "Token del panel de control",
+      "title": "Tokens API",
       "description": "Cree tokens de larga duración para integraciones y automatización.",
       "aboutTitle": "Acerca de los tokens API",
       "validFor": "Los tokens siguen siendo válidos hasta que los revoques.",
@@ -2453,23 +2453,31 @@
       "tokenName": "Nombre del token",
       "tokenNamePlaceholder": "Panel de la página de inicio",
       "generating": "Generando...",
-      "generate": "Generar ficha",
+      "generate": "Generar token",
       "yourToken": "Tu token API",
       "saveTokenNow": "Guarde este token ahora.",
       "tokenOnlyShownOnce": "Sólo se mostrará una vez.",
-      "token": "Simbólico",
+      "token": "Token",
       "copied": "Copiado",
       "howToUse": "como usarlo",
       "addToHeaders": "Agregue este encabezado a sus solicitudes:",
-      "authorizationHeaderExample": "Autorización: Portador <token>",
+      "authorizationHeaderExample": "Authorization: Bearer <token>",
       "readmeExamples": "Consulte el archivo README para ver ejemplos de integración.",
       "done": "Hecho",
-      "activeTokens": "Fichas activas",
+      "activeTokens": "Tokens activos",
       "invalidRegenerate": "Si se pierde un token, revocarlo y generar uno nuevo.",
       "legacy": "Legado",
       "revoke": "Revocar",
-      "loading": "Cargando fichas...",
-      "empty": "Aún no hay tokens API."
+      "loading": "Cargando tokens...",
+      "empty": "Aún no hay tokens API.",
+      "scope": {
+        "label": "Permisos del token",
+        "readOnly": "Solo lectura",
+        "readOnlyHint": "Consulta métricas y estado. Recomendado para paneles e integraciones.",
+        "fullAdmin": "Administrador completo",
+        "fullAdminHint": "Control total, igual que tu sesión.",
+        "fullAdminWarning": "Un token de administrador completo puede hacer todo lo que tú: apagar o reiniciar el host, lanzar actualizaciones y abrir un terminal. Compártelo solo con integraciones de total confianza."
+      }
     },
     "firewall": {
       "title": "Cortafuegos",
@@ -3265,7 +3273,13 @@
       "atomicNotifications": "Los eventos de notificación reservan su huella de deduplicación de forma atómica antes del procesado por IA y del envío por canal, así que colectores concurrentes, callbacks de finalización o procesos Monitor paralelos no pueden enviar el mismo evento dos veces. La reserva se libera cuando ningún canal tiene éxito, preservando los reintentos.",
       "borgSshPort": "Destino remoto Borg — el diálogo Añadir destino Borg y el TUI del shell aceptan un puerto SSH personalizado. BORG_RSH, el flujo de instalación automática de clave y la sonda de capacidad lo respetan. Totalmente retrocompatible con las entradas existentes creadas sin un puerto explícito (sugerido por @songochain en la discusión #236).",
       "githubToken": "Settings → GitHub API acepta un token de acceso personal opcional para las comprobaciones de releases y tags cuando se agota la cuota anónima. El token se guarda cifrado y nunca se devuelve al navegador; el error de rate limit está traducido en todos los idiomas del Monitor (sugerido por @SystemIdleProcess en la discusión #306).",
-      "replicationContext": "Las notificaciones nativas de fallo de replicación de Proxmox ahora resuelven el ID del trabajo de replicación, el ID de la VM/LXC afectada y el nombre del guest; el bloque de error exacto de Proxmox se conserva como motivo, y cada trabajo de replicación deduplica de forma independiente (reportado por Ale R.)."
+      "replicationContext": "Las notificaciones nativas de fallo de replicación de Proxmox ahora resuelven el ID del trabajo de replicación, el ID de la VM/LXC afectada y el nombre del guest; el bloque de error exacto de Proxmox se conserva como motivo, y cada trabajo de replicación deduplica de forma independiente (reportado por Ale R.).",
+      "auditAssessment": "Auditoría e Informes — una nueva página que documenta y evalúa el nodo. La evaluación ejecuta un catálogo de comprobaciones de seguridad, backups, capacidad, almacenamiento, red, hardware, invitados y sistema, clasificando cada hallazgo como crítico, aviso, observación o conforme, y diciendo qué leyó en lugar de juzgarlo.",
+      "changeJournal": "Diario de cambios — la vista Cambios muestra exactamente lo que ProxMenux modificó en el host: cada fichero de configuración, paquete y servicio que tocó, con el estado anterior de cada uno, deduplicado a una vista de estado actual que refleja el host tal como está ahora, no un registro de cada ejecución.",
+      "auditReports": "Informes — una auditoría completa más informes enfocados de Revisión de seguridad, Garantía de backups y Capacidad y desgaste, cada uno con su propia cabecera de postura, y un Inventario imprimible; todos se exportan a PDF. La evaluación de seguridad pregunta antes de ejecutar Lynis para que sea rápida.",
+      "auditPolicyBaseline": "Política y referencia — declara qué se espera del host (backups requeridos, firewall, acceso SSH de root) para que los hallazgos se evalúen contra ello, marca una ejecución como referencia y ve qué cambió desde entonces, con los hallazgos nuevos, resueltos y aceptados por separado.",
+      "groupedAppUpdates": "Notificaciones de actualización de aplicaciones agrupadas — un mensaje completo por escaneo en lugar de uno por aplicación, agrupado por LXC con las versiones instalada y disponible.",
+      "adminTokenScope": "Ámbito administrativo — abrir un terminal del Monitor y desactivar la autenticación ahora requieren un token de administrador completo, así que un token de API de solo lectura se mantiene de solo lectura (reportado por @f3rs3n)."
     }
   },
   "network": {
@@ -5812,7 +5826,13 @@
       "diagnosticUnread": "Lecturas que no se pudieron tomar",
       "diagnosticMoreRows": "{count} fila(s) más, en la auditoría completa.",
       "structureTitle": "Estructura y configuración",
-      "structureSubtitle": "Cómo está construido y configurado {node}"
+      "structureSubtitle": "Cómo está construido y configurado {node}",
+      "postureTitle": "Postura",
+      "posture": {
+        "security": "Exposición y acceso del host.",
+        "backup": "Protección de los invitados y su alcance real.",
+        "capacity": "Margen de crecimiento y desgaste de los discos."
+      }
     },
     "results": "Resultados",
     "classifications": {
@@ -5959,6 +5979,14 @@
         "insufficient_runs": "Comparar exige una ejecución de referencia y otra posterior; por ahora solo hay una registrada"
       }
     },
-    "notApplicableScope": "Nada en el alcance examinado al que esta comprobación aplique."
+    "notApplicableScope": "Nada en el alcance examinado al que esta comprobación aplique.",
+    "lynis": {
+      "title": "Ejecutar Lynis",
+      "bodyNotRun": "Lynis está instalado pero aún no se ha ejecutado. Ejecutarlo ahora completa la revisión de seguridad, pero el proceso puede tardar unos minutos.",
+      "bodyStale": "El informe de Lynis es de hace {days} días. Puedes ejecutarlo ahora para actualizar los datos (tarda un poco más) o continuar con el informe existente.",
+      "withLynis": "Ejecutar con Lynis",
+      "withoutLynis": "Ejecutar sin Lynis",
+      "cancel": "Cancelar"
+    }
   }
 }

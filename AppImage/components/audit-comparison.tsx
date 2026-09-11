@@ -151,7 +151,7 @@ export function AuditComparison({ runId, isBaseline, onBaselineSet }: {
       {error && <p className="text-xs text-red-400">{error}</p>}
 
       {!comparable ? (
-        <p className="text-xs text-muted-foreground">
+        <p className="text-sm text-muted-foreground">
           {baseline ? t("audit.comparison.isBaseline") : t("audit.comparison.noBaseline")}
         </p>
       ) : (
@@ -165,8 +165,8 @@ export function AuditComparison({ runId, isBaseline, onBaselineSet }: {
           >
             {open ? <ChevronDown className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
                   : <ChevronRight className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />}
-            <TrendingUp className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-            <span className="text-xs text-muted-foreground">
+            <TrendingUp className="h-4 w-4 shrink-0 text-blue-500" />
+            <span className="text-sm text-muted-foreground">
               {t("audit.comparison.since", {
                 date: baseline?.started_at
                   ? new Date(baseline.started_at * 1000).toLocaleDateString(language)
@@ -174,12 +174,12 @@ export function AuditComparison({ runId, isBaseline, onBaselineSet }: {
               })}
             </span>
             {counts.length === 0 ? (
-              <Badge variant="outline" className="text-xs">
+              <Badge variant="outline" className="text-sm">
                 {t("audit.comparison.noChange")}
               </Badge>
             ) : counts.map(({ key, Icon, tone, n }) => (
-              <Badge key={key} variant="outline" className={`text-xs gap-1.5 ${tone}`}>
-                <Icon className="h-3 w-3" />
+              <Badge key={key} variant="outline" className={`text-sm gap-1.5 ${tone}`}>
+                <Icon className="h-3.5 w-3.5" />
                 {t(`audit.comparison.${key}`)}
                 <span className="tabular-nums font-semibold">{n}</span>
               </Badge>
@@ -191,7 +191,7 @@ export function AuditComparison({ runId, isBaseline, onBaselineSet }: {
               {GROUPS.filter((g) => (comparison[g.key] || []).length > 0).map(
                 ({ key, Icon, tone }) => (
                   <div key={key}>
-                    <p className={`flex items-center gap-1.5 text-xs font-medium mb-1 ${tone}`}>
+                    <p className={`flex items-center gap-1.5 text-sm font-medium mb-1 ${tone}`}>
                       <Icon className="h-3.5 w-3.5" />
                       {t(`audit.comparison.${key}`)}
                       <span className="font-normal text-muted-foreground">
@@ -209,7 +209,7 @@ export function AuditComparison({ runId, isBaseline, onBaselineSet }: {
                 ),
               )}
               {(comparison.unchanged || []).length > 0 && (
-                <p className="text-xs text-muted-foreground">
+                <p className="text-sm text-muted-foreground">
                   {t("audit.comparison.unchanged", {
                     count: String(comparison.unchanged.length),
                   })}

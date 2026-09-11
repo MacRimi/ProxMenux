@@ -3080,7 +3080,10 @@ def _host_recovery(ctx):
                     "summary_key": "scheduledOnly",
                     "summary_params": {"count": str(len(scheduled))},
                     "evidence": evidence}
-        return {"classification": CLASS_WARNING, "summary_key": "noHostBackup",
+        # A host-configuration backup is a ProxMenux feature the operator
+        # may simply not have set up; its absence is not a fault of the
+        # host. Reported as an observation, not a warning.
+        return {"classification": CLASS_OBSERVATION, "summary_key": "noHostBackup",
                 "evidence": evidence}
 
     affected = []

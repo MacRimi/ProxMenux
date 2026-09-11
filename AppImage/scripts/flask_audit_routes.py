@@ -145,6 +145,10 @@ def run():
              any(not isinstance(a, str) or a not in audit_checks.AREAS for a in areas)))):
         return jsonify(success=False, message="Unsupported audit profile or areas"), 400
     only = set(areas) if areas is not None else None
+    # The caller consents to Lynis running as part of the assessment; the
+    # interface asks the user before setting it, since a run can take a few
+    # minutes. Absent or false, the audit reads any stored report instead.
+    run_lynis = bool(data.get('run_lynis'))
 
     with _run_lock:
         if _running['active']:
@@ -159,7 +163,8 @@ def run():
 
     def worker():
         try:
-            audit_checks.run_assessment(profile, only_areas=only, run_id=run_id, progress=_progress)
+            audit_checks.run_assessment(profile, only_areas=only, run_id=run_id,
+                                        progress=_progress, run_lynis=run_lynis)
             audit_store.prune_runs()
         except Exception as e:
             audit_store.finish_run(run_id, checks_total=_running.get('completed', 0), error=str(e))
@@ -374,6 +379,39 @@ def profiles():
     try:
         return jsonify({"success": True, "default": audit_profiles.DEFAULT_PROFILE,
                         "profiles": audit_profiles.describe()})
+    except Exception as e:
+        return jsonify({"success": False, "message": str(e)}), 500
+
+
+@audit_bp.route('/api/audit/lynis-readiness', methods=['GET'])
+@require_auth
+def lynis_readiness():
+    """Whether a security assessment would need to run Lynis.
+
+    The interface reads this before starting a run whose profile includes
+    the Lynis check, so it can ask the user whether to run the audit
+    (which takes a few minutes) or reuse a stored report. Touches no host
+    state beyond reading the existing report file's age.
+    """
+    try:
+        import security_manager
+        from pathlib import Path
+        installed = bool(security_manager._find_lynis_cmd())
+        parsed = (security_manager.parse_lynis_report(enrich_current=False)
+                  if installed else None)
+        complete = bool(parsed and parsed.get("is_complete"))
+        age_days = None
+        if complete:
+            src = next((p for p in (Path("/var/log/lynis-report.dat"),
+                                    Path("/var/log/lynis-output.log"))
+                        if p.exists()), None)
+            if src:
+                age_days = round((time.time() - src.stat().st_mtime) / 86400, 1)
+        limit = audit_policy.load().threshold("lynis_report_days") if audit_policy else 30
+        return jsonify({"success": True, "installed": installed,
+                        "has_report": complete, "age_days": age_days,
+                        "stale_days": limit,
+                        "stale": age_days is not None and age_days >= limit})
     except Exception as e:
         return jsonify({"success": False, "message": str(e)}), 500
 

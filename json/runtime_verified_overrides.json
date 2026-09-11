@@ -416,6 +416,32 @@
           "label": "org.opencontainers.image.version"
         }
       ]
+    },
+    "changedetection": {
+      "operational": true,
+      "name": "Changedetection.io",
+      "install_scope": [
+        "community-script",
+        "manual"
+      ],
+      "evidence": [
+        "community-confirmed:github-discussion-306"
+      ],
+      "detector": {
+        "installed_via": "command",
+        "command_argv": [
+          "/opt/changedetection/.venv/bin/changedetection.io",
+          "--version"
+        ],
+        "installed_regex": "v?(\\d+\\.\\d+\\.\\d+)",
+        "repo": "dgtlmoon/changedetection.io",
+        "github_source": "releases",
+        "tag_regex": "v?(\\d+\\.\\d+\\.\\d+)"
+      },
+      "default_ports": [
+        5000
+      ],
+      "website": "https://changedetection.io/"
     }
   }
 }

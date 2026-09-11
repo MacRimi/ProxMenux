@@ -111,7 +111,7 @@ def registered_checks() -> list[Check]:
 class AuditContext:
     """Lazily collects each source once and shares it across checks."""
 
-    def __init__(self):
+    def __init__(self, run_lynis: bool = False):
         self._cache: dict[str, Any] = {}
         self._source_info = {}
         self._dependencies = {}
@@ -119,6 +119,10 @@ class AuditContext:
         self._errors = {}
         self._check_deadline = float("inf")
         self._run_deadline = time.monotonic() + RUN_TIMEOUT
+        # Whether this assessment may launch Lynis. The user grants it in
+        # the run dialog; without it the audit reads a stored report and
+        # never starts one, so a run is fast and predictable.
+        self._run_lynis_allowed = run_lynis
 
     def begin_check(self, budget: int = CHECK_TIMEOUT):
         self._sources_used = set()
@@ -332,14 +336,39 @@ class AuditContext:
         user launched from that page is waited on rather than duplicated.
         """
         def load():
-            from security_manager import parse_lynis_report
+            from security_manager import parse_lynis_report, _find_lynis_cmd
             parsed = parse_lynis_report(enrich_current=False)
             ran, run_error = False, None
-            if parsed is None or not parsed.get("is_complete"):
-                produced, ran, run_error = self._run_lynis()
-                if produced is not None:
-                    parsed = produced
+            # Launch Lynis only when the assessment was granted permission
+            # (the user chose "with Lynis"). Then run it if there is no
+            # usable report, or refresh a stored one that is past the
+            # staleness threshold, since running is precisely what the
+            # user consented to.
+            if self._run_lynis_allowed:
+                need_run = parsed is None or not parsed.get("is_complete")
+                if not need_run:
+                    src = next((p for p in (Path("/var/log/lynis-report.dat"),
+                                            Path("/var/log/lynis-output.log"))
+                                if p.exists()), None)
+                    if src:
+                        age_days = (time.time() - src.stat().st_mtime) / 86400
+                        need_run = age_days >= self.policy.threshold("lynis_report_days")
+                if need_run:
+                    produced, ran, run_error = self._run_lynis()
+                    if produced is not None:
+                        parsed = produced
             if parsed is None:
+                # No stored report and none produced. Where Lynis is
+                # installed the check should say it was not run rather than
+                # that it does not apply, so the reader knows a reading is
+                # available on request.
+                if not self._run_lynis_allowed and _find_lynis_cmd():
+                    return {"mtime": 0, "source": "", "version": None,
+                            "warnings": [], "suggestions": [],
+                            "hardening_index": None, "complete": False,
+                            "produced_here": False,
+                            "run_error": "Lynis is installed but was not run "
+                                         "for this assessment."}
                 return None
             source = next((p for p in (Path("/var/log/lynis-report.dat"),
                                         Path("/var/log/lynis-output.log")) if p.exists()), None)
@@ -534,7 +563,8 @@ def _classification_of(result: dict, check: "Check") -> str:
 
 
 def run_assessment(profile: str = "full",
-                   only_areas: Optional[set[str]] = None, *, run_id=None, progress=None) -> str:
+                   only_areas: Optional[set[str]] = None, *, run_id=None,
+                   progress=None, run_lynis: bool = False) -> str:
     """Evaluate every registered check and persist the result.
 
     A check that raises is recorded as unverified with the error kept
@@ -551,7 +581,7 @@ def run_assessment(profile: str = "full",
     checks = audit_profiles.selected_checks(profile, registered_checks())
     if only_areas is not None:
         checks = [c for c in checks if c.area in only_areas]
-    ctx = AuditContext()
+    ctx = AuditContext(run_lynis=run_lynis)
     exceptions = audit_store.active_exceptions()
     metadata = ctx.metadata(checks)
     if run_id is None:

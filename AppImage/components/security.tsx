@@ -21,6 +21,7 @@ import { useI18n } from "../lib/i18n/provider"
 interface ApiTokenEntry {
   id: string
   name: string
+  scope?: "read_only" | "full_admin"
   token_prefix: string
   created_at: string
   expires_at: string
@@ -130,6 +131,10 @@ export function Security() {
   const [loadingTokens, setLoadingTokens] = useState(false)
   const [revokingTokenId, setRevokingTokenId] = useState<string | null>(null)
   const [tokenName, setTokenName] = useState("")
+  // API tokens default to read-only (the safe choice for dashboards that
+  // only read metrics). full_admin is opt-in and carries a warning: it
+  // can do everything the logged-in user can (host power, updates, terminal).
+  const [tokenScope, setTokenScope] = useState<"read_only" | "full_admin">("read_only")
 
   // Proxmox Firewall state
   const [firewallLoading, setFirewallLoading] = useState(true)
@@ -1152,6 +1157,7 @@ export function Security() {
           password: tokenPassword,
           totp_token: totpEnabled ? tokenTotpCode : undefined,
           token_name: tokenName || st("apiTokens.defaultName"),
+          scope: tokenScope,
         }),
       })
 
@@ -1170,6 +1176,7 @@ export function Security() {
       setTokenPassword("")
       setTokenTotpCode("")
       setTokenName("")
+      setTokenScope("read_only")
       loadApiTokens()
     } catch (err) {
       setError(err instanceof Error ? err.message : st("errors.generateTokenRetry"))
@@ -1346,10 +1353,12 @@ export function Security() {
   .top-bar-title { font-weight: 600; }
   .top-bar-subtitle { font-size: 11px; color: #94a3b8; display: none; }
   .top-bar button {
-    background: #06b6d4; color: #fff; border: none; padding: 10px 20px; border-radius: 6px;
-    font-size: 14px; font-weight: 600; cursor: pointer;
+    background: #06b6d4; color: #fff; border: none; padding: 8px 12px; border-radius: 6px;
+    font-size: 14px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; justify-content: center;
   }
   .top-bar button:hover { background: #0891b2; }
+  .top-bar .btn-group { display: flex; gap: 8px; }
+  .top-bar button svg { width: 18px; height: 18px; display: block; }
   .hide-mobile { }
   @media (min-width: 640px) {
     .top-bar { padding: 12px 24px; }
@@ -1472,7 +1481,10 @@ function pmxPrint(){
     <strong>${st("lynis.report.brandTitle")}</strong>
     <span id="pmx-print-hint" class="hide-mobile" style="font-size:11px;opacity:0.7;">${st("lynis.report.reviewHint")}</span>
   </div>
-  <button onclick="pmxPrint()">${st("lynis.printSavePdf")}</button>
+  <div class="btn-group">
+    <button onclick="pmxPrint()" title="Print" aria-label="Print"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg></button>
+    <button onclick="pmxPrint()" title="Save as PDF" aria-label="Save as PDF"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><line x1="10" y1="9" x2="8" y2="9"/></svg></button>
+  </div>
 </div>
 
 <!-- Header -->
@@ -2479,6 +2491,44 @@ ${(report.sections && report.sections.length > 0) ? `
                 </div>
 
                 <div className="space-y-2">
+                  <Label>{st("apiTokens.scope.label")}</Label>
+                  <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                    <button
+                      type="button"
+                      onClick={() => setTokenScope("read_only")}
+                      disabled={generatingToken}
+                      className={`rounded-md border px-3 py-2 text-left transition-colors ${
+                        tokenScope === "read_only"
+                          ? "border-blue-500 bg-blue-500/10"
+                          : "border-border hover:bg-muted/60"
+                      }`}
+                    >
+                      <span className="block text-sm font-medium">{st("apiTokens.scope.readOnly")}</span>
+                      <span className="block text-xs text-muted-foreground">{st("apiTokens.scope.readOnlyHint")}</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setTokenScope("full_admin")}
+                      disabled={generatingToken}
+                      className={`rounded-md border px-3 py-2 text-left transition-colors ${
+                        tokenScope === "full_admin"
+                          ? "border-amber-500 bg-amber-500/10"
+                          : "border-border hover:bg-muted/60"
+                      }`}
+                    >
+                      <span className="block text-sm font-medium">{st("apiTokens.scope.fullAdmin")}</span>
+                      <span className="block text-xs text-muted-foreground">{st("apiTokens.scope.fullAdminHint")}</span>
+                    </button>
+                  </div>
+                  {tokenScope === "full_admin" && (
+                    <div className="flex items-start gap-2 rounded-md border border-amber-500/40 bg-amber-500/10 p-2.5 text-xs text-amber-600 dark:text-amber-400">
+                      <TriangleAlert className="h-4 w-4 shrink-0 mt-0.5" />
+                      <span>{st("apiTokens.scope.fullAdminWarning")}</span>
+                    </div>
+                  )}
+                </div>
+
+                <div className="space-y-2">
                   <Label htmlFor="token-password">{st("auth.password")}</Label>
                   <div className="relative">
                     <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -2650,6 +2700,15 @@ ${(report.sections && report.sections.length > 0) ? `
                         <div className="min-w-0">
                           <div className="flex items-center gap-2 flex-wrap">
                             <p className="text-sm font-medium truncate">{token.name}</p>
+                            {token.scope === "read_only" ? (
+                              <span className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-blue-500/15 text-blue-500 border border-blue-500/30 whitespace-nowrap">
+                                {st("apiTokens.scope.readOnly")}
+                              </span>
+                            ) : (
+                              <span className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-amber-500/15 text-amber-500 border border-amber-500/30 whitespace-nowrap">
+                                {st("apiTokens.scope.fullAdmin")}
+                              </span>
+                            )}
                             {isInvalid && (
                               <span className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-red-500/15 text-red-500 border border-red-500/30 whitespace-nowrap">
                                 {st("apiTokens.invalidRegenerate")}

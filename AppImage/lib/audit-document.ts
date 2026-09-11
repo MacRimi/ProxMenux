@@ -892,6 +892,93 @@ function scopeSection(input: DocumentInput, n: number): string {
 
 // ---------------------------------------------------------------------------
 
+// ---------------------------------------------------------------------------
+// Focused reports: a posture header and the one panel that answers the
+// report's question. A focused report opens on its verdict, not on what
+// the machine is — the inventory is its own report.
+// ---------------------------------------------------------------------------
+
+/** The verdict a focused report opens on: the counts that bear on its
+ *  question, phrased in its own terms. The counts are already scoped,
+ *  because a focused run only ran that profile's checks. */
+function postureHeader(input: DocumentInput, n: number): string {
+  const { findings, t, locale } = input
+  const counts: Record<string, number> = {}
+  for (const f of findings) { const c = shownAs(f); counts[c] = (counts[c] || 0) + 1 }
+  const fails = counts.critical || 0
+  const warns = counts.warning || 0
+  const applicable = findings.filter(f => f.classification !== "not_applicable")
+  const verified = applicable.filter(f => !f.incomplete &&
+    ["critical", "warning", "observation", "conformant", "accepted"].includes(f.classification)).length
+  const incomplete = verified < applicable.length || !!(input.run && !input.run.finished_at)
+  const state = fails ? "critical" : warns ? "warning"
+    : counts.observation ? "observation" : "conformant"
+  const headline = t(`audit.document.posture.${input.profile}`, {
+    critical: String(fails), warning: String(warns),
+    observation: String(counts.observation || 0),
+  })
+  const body = `
+  <div class="exec-box posture-${esc(state)}">
+    <div class="exec-text">
+      <h3 class="audit-result-heading">${icon("summary", 22, CLASS_COLOR[state])}${esc(t(`audit.profile.${input.profile}`))}</h3>
+      <p>${esc(headline)}</p>
+      ${incomplete ? `<p class="assessment-incomplete">${esc(auditLabel(t, "incomplete"))}</p>` : ""}
+      <p style="font-size:11px;color:#64748b;margin-top:6px">
+        ${esc(t("audit.document.runAt", { date: when(input.run?.started_at, locale) }))}
+      </p>
+    </div>
+  </div>
+  <div class="audit-counters">${[
+    card(t("audit.classifications.critical"), String(fails), { center: true, color: CLASS_COLOR.critical }),
+    card(t("audit.classifications.warning"), String(warns), { center: true, color: CLASS_COLOR.warning }),
+    card(t("audit.classifications.observation"), String(counts.observation || 0), { center: true, color: CLASS_COLOR.observation }),
+    card(t("audit.classifications.conformant"), String(counts.conformant || 0), { center: true, color: CLASS_COLOR.conformant }),
+  ].join("")}</div>`
+  return section(n, t("audit.document.postureTitle"), body, "summary")
+}
+
+/** Backup coverage: the signature panel of the backup report — how many
+ *  guests carry a job, drawn as a meter with the guests that carry none. */
+function backupCoveragePanel(input: DocumentInput, n: number): string {
+  const s = input.inventory?.sections || {}
+  const guests = s.guests || []
+  const { t } = input
+  if (!guests.length) return ""
+  const unprotected = guests.filter((g: any) => !(g.backups || []).length)
+  const selected = guests.length - unprotected.length
+  const fraction = guests.length ? selected / guests.length * 100 : 0
+  const diagram = storageDiagram(guests, {
+    guests: t("audit.inventory.guests"), storage: t("audit.document.storage"),
+    backup: t("audit.document.backupDestination"), unprotected: auditLabel(t, "noJob"),
+  })
+  const body = `
+  <div class="coverage-panel"><h3>${icon("storage")}${esc(auditLabel(t, "coverage"))}</h3>
+    <div class="audit-meter"><span style="width:${fraction}%"></span></div>
+    <div class="coverage-labels"><span>${selected} / ${guests.length} · ${esc(auditLabel(t, "scheduled"))}</span><span>${unprotected.length} · ${esc(auditLabel(t, "noJob"))}</span></div>
+    <p class="muted">${esc(auditLabel(t, "copyScope"))}</p></div>
+  ${diagram ? `<div class="diagram"><p class="diagram-note">${esc(t("audit.document.storageDiagramNote"))}</p>${diagram}</div>` : ""}
+  ${unprotected.length
+    ? callout("info", t("audit.document.unprotectedGuests", { count: String(unprotected.length) }),
+        esc(unprotected.map((g: any) => `${g.vmid} ${g.name}`).join(" · ")))
+    : callout("info", auditLabel(t, "scheduled"), esc(auditLabel(t, "copyScope")))}`
+  return section(n, auditLabel(t, "coverage"), body, "storage")
+}
+
+/** Capacity meters: the signature panel of the capacity report — used
+ *  against total per connected storage, read from the check's evidence. */
+function capacityMetersPanel(input: DocumentInput, n: number): string {
+  const { t } = input
+  const finding = input.findings.find(f => f.check_id === "storage.connected_storage")
+  let capacityRows: any[] = []
+  try { capacityRows = JSON.parse(finding?.evidence || "{}").storages || [] } catch { /* Raw evidence stays in the appendix. */ }
+  const meters = capacityRows.filter(r => Number(r.total) > 0 && r.used != null).map(r => {
+    const ratio = Math.max(0, Math.min(100, Number(r.used) / Number(r.total) * 100))
+    return `<div class="capacity-item"><strong>${esc(r.storage)}</strong><span>${esc(bytes(Number(r.used)))} / ${esc(bytes(Number(r.total)))}</span><div class="audit-meter"><span style="width:${ratio}%"></span></div></div>`
+  }).join("")
+  if (!meters) return ""
+  return section(n, auditLabel(t, "capacity"), meters, "storage")
+}
+
 export function buildAuditDocument(input: DocumentInput): string {
   const { t, locale } = input
   const node = input.inventory?.sections?.identity?.node || t("audit.document.unknownNode")
@@ -905,6 +992,10 @@ export function buildAuditDocument(input: DocumentInput): string {
   // no checks, so an assessment summary above it counted nothing and a
   // findings section below it listed nothing: two empty frames around
   // the only thing the reader opened this for.
+  // The inventory is its own report: an assessment — the whole audit or
+  // a focused one — opens on its verdict and prints no structure tables.
+  // A focused report adds the one panel that answers its question, and
+  // the inventory profile is the only one that documents the machine.
   const builders = input.profile === "inventory"
     ? [
       identitySection, clusterSection, architectureSection, disksSection,
@@ -913,11 +1004,13 @@ export function buildAuditDocument(input: DocumentInput): string {
     ]
     : input.profile === "diagnostic"
     ? [diagnosticSummary, actionsSection, unreadSection, scopeSection]
-    : [
-      executiveSummary, identitySection, clusterSection, architectureSection,
-      disksSection, networkSection, latencySection, storageSection, guestsSection,
-      passthroughSection, proxmenuxSection, findingsSection, scopeSection, evidenceSection,
-    ]
+    : input.profile === "security"
+    ? [postureHeader, findingsSection, scopeSection, evidenceSection]
+    : input.profile === "backup"
+    ? [postureHeader, backupCoveragePanel, findingsSection, scopeSection, evidenceSection]
+    : input.profile === "capacity"
+    ? [postureHeader, capacityMetersPanel, disksSection, findingsSection, scopeSection, evidenceSection]
+    : [executiveSummary, findingsSection, scopeSection, evidenceSection]
 
   // A section a profile did not ask for produces nothing, and the
   // numbering closes over the gap rather than skipping a number. Each

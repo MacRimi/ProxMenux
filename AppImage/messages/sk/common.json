@@ -2468,7 +2468,15 @@
       "legacy": "Starší",
       "revoke": "Zrušiť",
       "loading": "Načítavam tokeny...",
-      "empty": "Zatiaľ tu nie sú žiadne API tokeny."
+      "empty": "Zatiaľ tu nie sú žiadne API tokeny.",
+      "scope": {
+        "label": "Token permissions",
+        "readOnly": "Read-only",
+        "readOnlyHint": "Reads metrics and status. Recommended for dashboards and integrations.",
+        "fullAdmin": "Full admin",
+        "fullAdminHint": "Full control, like your own session.",
+        "fullAdminWarning": "A full-admin token can do everything you can: power off or reboot the host, run updates and open a terminal. Share it only with fully trusted integrations."
+      }
     },
     "firewall": {
       "title": "Firewall",
@@ -3264,7 +3272,13 @@
       "atomicNotifications": "Udalosti upozornení si ešte pred spracovaním AI a odoslaním do kanála atómovo rezervujú jedinečný odtlačok proti duplicitám. Súbežné kontroly, dokončovacie volania ani paralelné procesy Monitoru tak neodošlú tú istú udalosť dvakrát. Ak neodošle úspešne žiadny kanál, rezervácia sa uvoľní, aby mohli fungovať opakované pokusy.",
       "borgSshPort": "Cieľ Borg na vzdialenom serveri — dialóg „Pridať cieľ Borg“ aj textové rozhranie podporujú vlastný SSH port. Rešpektujú ho BORG_RSH, automatická inštalácia kľúča aj kontrola kapacity. Existujúce ciele bez uvedeného portu naďalej fungujú bez zmeny (navrhol @songochain v diskusii #236).",
       "githubToken": "V časti Nastavenia → GitHub API môžete zadať voliteľný osobný prístupový token, ak pri kontrole vydaní a značiek vyčerpáte anonymný limit. Token je v úložisku zašifrovaný a nikdy sa neposiela do prehliadača; hlásenie o prekročenom limite je preložené do každého jazyka Monitoru (navrhol @SystemIdleProcess v diskusii #306).",
-      "replicationContext": "Natívne upozornenia na zlyhanie replikácie v Proxmoxe teraz doplnia ID úlohy replikácie, dotknuté ID VM/LXC a názov virtuálneho stroja alebo kontajnera. Presný blok chyby z Proxmoxu ostáva zachovaný ako dôvod a každá replikačná úloha sa posudzuje samostatne, aby sa správne odstránili duplicity (nahlásil Ale R.)."
+      "replicationContext": "Natívne upozornenia na zlyhanie replikácie v Proxmoxe teraz doplnia ID úlohy replikácie, dotknuté ID VM/LXC a názov virtuálneho stroja alebo kontajnera. Presný blok chyby z Proxmoxu ostáva zachovaný ako dôvod a každá replikačná úloha sa posudzuje samostatne, aby sa správne odstránili duplicity (nahlásil Ale R.).",
+      "auditAssessment": "Audit & Report — a new page that documents and assesses the node. The Assessment runs a catalogue of checks across security, backups, capacity, storage, network, hardware, guests and system, classifying each finding as critical, warning, observation or conformant and stating what it read rather than judging it.",
+      "changeJournal": "Change journal — a Changes view that lists exactly what ProxMenux modified on this host: every configuration file, package and service it touched, with the prior state of each, deduplicated to a current-state view that shows the host as it stands now rather than a log of every run.",
+      "auditReports": "Reports — a full audit plus focused Security review, Backup assurance and Capacity & wear reports, each opening on its own posture header, and a printable Inventory; all export to PDF. A security assessment asks before running Lynis so a run stays fast.",
+      "auditPolicyBaseline": "Policy and baseline — declare what the host is expected to be (backup requirements, firewall, root SSH login) so findings grade against it, mark a run as the reference, and see what changed since, with new, resolved and accepted findings kept apart.",
+      "groupedAppUpdates": "Grouped application update notifications — one complete message per scan instead of one per application, grouped by LXC with the installed and available versions.",
+      "adminTokenScope": "Administrative scope — opening a Monitor terminal and disabling authentication now require a full-admin token, so a read-only API token issued to a monitoring integration stays read-only (reported by @f3rs3n)."
     }
   },
   "network": {
@@ -5878,7 +5892,13 @@
       "diagnosticUnread": "Merania, ktoré sa nepodarilo vykonať",
       "diagnosticMoreRows": "{count} ďalších riadkov, v úplnom audite.",
       "structureTitle": "Štruktúra a konfigurácia",
-      "structureSubtitle": "Ako je {node} postavený a nakonfigurovaný"
+      "structureSubtitle": "Ako je {node} postavený a nakonfigurovaný",
+      "postureTitle": "Posture",
+      "posture": {
+        "security": "Host exposure and access.",
+        "backup": "Guest protection and whether it is real.",
+        "capacity": "Room to grow and the wear on the disks."
+      }
     },
     "results": "Výsledky",
     "classifications": {
@@ -6025,6 +6045,14 @@
         "insufficient_runs": "Porovnanie vyžaduje referenčné spustenie a neskoršie; zatiaľ je zaznamenané len jedno"
       }
     },
-    "notApplicableScope": "V preskúmanom rozsahu nie je nič, na čo by sa táto kontrola vzťahovala."
+    "notApplicableScope": "V preskúmanom rozsahu nie je nič, na čo by sa táto kontrola vzťahovala.",
+    "lynis": {
+      "title": "Run Lynis",
+      "bodyNotRun": "Lynis is installed but has not been run yet. Running it now completes the security review, but the process can take a few minutes.",
+      "bodyStale": "The Lynis report is {days} days old. You can run it now to refresh the data (it takes a little longer) or continue with the existing report.",
+      "withLynis": "Run with Lynis",
+      "withoutLynis": "Run without Lynis",
+      "cancel": "Cancel"
+    }
   }
 }

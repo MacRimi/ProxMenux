@@ -301,6 +301,7 @@ export function esc(value: unknown): string {
 
 /** Icon-only actions, as in the rest of the family: the browser's print
  *  dialog exposes "Save as PDF" as a destination, so one button covers both. */
+const PRINTER_ICON = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>`
 const PRINT_ICON = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><line x1="10" y1="9" x2="8" y2="9"/></svg>`
 
 export interface ShellOptions {
@@ -343,6 +344,7 @@ function pmxPrint(){ try { window.print(); } catch(e) {} }
     <span class="top-bar-subtitle">${esc(o.topBarSubtitle || "")}</span>
   </div>
   <div class="btn-group">
+    <button onclick="pmxPrint()" title="Print" aria-label="Print">${PRINTER_ICON}</button>
     <button onclick="pmxPrint()" title="Save as PDF" aria-label="Save as PDF">${PRINT_ICON}</button>
   </div>
 </div>

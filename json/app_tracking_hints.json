@@ -506,6 +506,21 @@
     "tag_regex": "(?i)(?:v|release[-_/]?)?(\\d+(?:\\.\\d+){1,3}(?:[-+._][0-9A-Za-z.-]+)?)",
     "website": "https://docs.certimate.me/en-US/"
   },
+  "changedetection": {
+    "command_argv": [
+      "/opt/changedetection/.venv/bin/changedetection.io",
+      "--version"
+    ],
+    "default_ports": [
+      5000
+    ],
+    "github_source": "releases",
+    "installed_regex": "v?(\\d+\\.\\d+\\.\\d+)",
+    "installed_via": "command",
+    "repo": "dgtlmoon/changedetection.io",
+    "tag_regex": "v?(\\d+\\.\\d+\\.\\d+)",
+    "website": "https://changedetection.io/"
+  },
   "checkmate": {
     "default_ports": [
       5173

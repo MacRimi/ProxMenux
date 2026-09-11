@@ -93,11 +93,13 @@ const DEFS = `<defs>
 </defs>`
 
 function svg(width: number, height: number, body: string): string {
-  // A viewBox with no fixed width lets the diagram scale to the column on
-  // screen and to the page when printed, without a second layout.
+  // A viewBox with no fixed width lets the diagram scale down to a narrow
+  // column, but `max-width` caps it at its own coordinate space so a
+  // diagram with few elements is not scaled up until its boxes and text
+  // fill the page. Centred, so a capped diagram sits under its heading.
   return `<svg viewBox="0 0 ${width} ${height}" width="100%" role="img"
        preserveAspectRatio="xMidYMin meet"
-       style="display:block;height:auto">${DEFS}${body}</svg>`
+       style="display:block;height:auto;max-width:${width}px;margin-inline:auto">${DEFS}${body}</svg>`
 }
 
 /**
@@ -113,7 +115,10 @@ export function networkDiagram(
   const entries = Object.entries(bridges || {})
   if (entries.length === 0) return ""
 
-  const COL_W = 132, BOX_H = 34, GAP_Y = 12, PAD = 12
+  // COL_W is the column pitch and BOX_W the box itself: the difference
+  // between them is the horizontal air between a box and the next, drawn
+  // as the arrow. A wider pitch spreads the columns apart.
+  const COL_W = 180, BOX_W = 116, BOX_H = 34, GAP_Y = 12, PAD = 12
   const rows: Array<{ nics: Node[]; bond: Node | null; bridge: Node; count: number }> = []
 
   for (const [id, b] of entries) {
@@ -140,7 +145,7 @@ export function networkDiagram(
 
   const height = PAD * 2 + rows.reduce((h, r) =>
     h + Math.max(r.nics.length, 1) * (BOX_H + GAP_Y), 0)
-  const width = COL_W * (guestsCol + 1) + PAD * 2
+  const width = PAD * 2 + COL_W * guestsCol + BOX_W
 
   let y = PAD
   const parts: string[] = []
@@ -149,7 +154,7 @@ export function networkDiagram(
     ? [labels.nic, labels.bond, labels.bridge, labels.guests]
     : [labels.nic, labels.bridge, labels.guests]
   parts.push(captions.map((c, i) =>
-    `<text x="${PAD + COL_W * i + COL_W / 2}" y="${PAD - 2}" text-anchor="middle"
+    `<text x="${PAD + COL_W * i + BOX_W / 2}" y="${PAD - 2}" text-anchor="middle"
       font-size="9" font-weight="700" letter-spacing="0.06em"
       fill="${MUTED}">${esc(c.toUpperCase())}</text>`).join(""))
   y += 8
@@ -160,20 +165,20 @@ export function networkDiagram(
 
     row.nics.forEach((n, i) => {
       const ny = y + i * (BOX_H + GAP_Y)
-      parts.push(box(PAD, ny, COL_W - 20, BOX_H, n))
+      parts.push(box(PAD, ny, BOX_W, BOX_H, n))
       const target = row.bond ? PAD + COL_W : PAD + COL_W * bridgeCol
-      parts.push(arrow(PAD + COL_W - 20, ny + BOX_H / 2, target, midY + BOX_H / 2))
+      parts.push(arrow(PAD + BOX_W, ny + BOX_H / 2, target, midY + BOX_H / 2))
     })
 
     if (row.bond) {
-      parts.push(box(PAD + COL_W, midY, COL_W - 20, BOX_H, row.bond))
-      parts.push(arrow(PAD + COL_W * bridgeCol - 20, midY + BOX_H / 2,
+      parts.push(box(PAD + COL_W, midY, BOX_W, BOX_H, row.bond))
+      parts.push(arrow(PAD + COL_W + BOX_W, midY + BOX_H / 2,
                        PAD + COL_W * bridgeCol, midY + BOX_H / 2))
     }
-    parts.push(box(PAD + COL_W * bridgeCol, midY, COL_W - 20, BOX_H, row.bridge))
-    parts.push(arrow(PAD + COL_W * guestsCol - 20, midY + BOX_H / 2,
+    parts.push(box(PAD + COL_W * bridgeCol, midY, BOX_W, BOX_H, row.bridge))
+    parts.push(arrow(PAD + COL_W * bridgeCol + BOX_W, midY + BOX_H / 2,
                      PAD + COL_W * guestsCol, midY + BOX_H / 2))
-    parts.push(box(PAD + COL_W * guestsCol, midY, COL_W - 20, BOX_H,
+    parts.push(box(PAD + COL_W * guestsCol, midY, BOX_W, BOX_H,
       { id: `${row.bridge.id}-g`, label: String(row.count), sub: labels.guests }))
     y += block
   }

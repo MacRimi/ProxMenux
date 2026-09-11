@@ -305,34 +305,34 @@ export const CHANGELOG: Record<string, ReleaseNote> = {
 // that haven't been curated by hand.
 const CURRENT_VERSION_FEATURES = [
   {
-    icon: <Sparkles className="h-5 w-5" />,
-    key: "releaseNotes.currentFeatures.aiCustomEndpoint",
-    text: "AI Assistant custom OpenAI endpoint — LiteLLM, LM Studio, LocalAI, vLLM, OmniRoute and any self-hosted proxy on private IPs, loopback or Docker networks are recognised when loading the model catalogue. The dropdown surfaces the server's error (or the underlying network reason) directly under the Load button (#325, reported by @jorgeffonte).",
+    icon: <Activity className="h-5 w-5" />,
+    key: "releaseNotes.currentFeatures.auditAssessment",
+    text: "Audit & Report — a new page that documents and assesses the node. The Assessment runs a catalogue of checks across security, backups, capacity, storage, network, hardware, guests and system, classifying each finding as critical, warning, observation or conformant and stating what it read rather than judging it.",
   },
   {
-    icon: <Wrench className="h-5 w-5" />,
-    key: "releaseNotes.currentFeatures.secureGatewayArch",
-    text: "Secure Gateway wizard — the Alpine template download, local template selection and pct create all match the host's real architecture, so x86_64 hosts receive amd64 containers and arm64 hosts receive arm64 containers (#324, reported by @N0X4DD0).",
+    icon: <Sliders className="h-5 w-5" />,
+    key: "releaseNotes.currentFeatures.changeJournal",
+    text: "Change journal — a Changes view that lists exactly what ProxMenux modified on this host: every configuration file, package and service it touched, with the prior state of each, deduplicated to a current-state view that shows the host as it stands now rather than a log of every run.",
+  },
+  {
+    icon: <Sparkles className="h-5 w-5" />,
+    key: "releaseNotes.currentFeatures.auditReports",
+    text: "Reports — a full audit plus focused Security review, Backup assurance and Capacity & wear reports, each opening on its own posture header, and a printable Inventory; all export to PDF. A security assessment asks before running Lynis so a run stays fast.",
+  },
+  {
+    icon: <Calendar className="h-5 w-5" />,
+    key: "releaseNotes.currentFeatures.auditPolicyBaseline",
+    text: "Policy and baseline — declare what the host is expected to be (backup requirements, firewall, root SSH login) so findings grade against it, mark a run as the reference, and see what changed since, with new, resolved and accepted findings kept apart.",
   },
   {
     icon: <Bell className="h-5 w-5" />,
-    key: "releaseNotes.currentFeatures.atomicNotifications",
-    text: "Notification events reserve their deduplication fingerprint atomically before AI processing and channel delivery, so concurrent collectors, completion callbacks or parallel Monitor processes cannot send the same event twice. The reservation is released when no channel succeeds, preserving retries.",
-  },
-  {
-    icon: <DatabaseBackup className="h-5 w-5" />,
-    key: "releaseNotes.currentFeatures.borgSshPort",
-    text: "Borg remote target — the Add Borg destination dialog and the shell TUI accept a custom SSH port. BORG_RSH, the auto key install flow and the capacity probe all honour it. Fully backwards compatible with existing entries created without an explicit port (suggested by @songochain in discussion #236).",
+    key: "releaseNotes.currentFeatures.groupedAppUpdates",
+    text: "Grouped application update notifications — one complete message per scan instead of one per application, grouped by LXC with the installed and available versions.",
   },
   {
     icon: <Shield className="h-5 w-5" />,
-    key: "releaseNotes.currentFeatures.githubToken",
-    text: "Settings → GitHub API accepts an optional personal access token for release and tag checks when the anonymous quota is exhausted. The token is encrypted at rest and never returned to the browser; the rate-limit error is translated in every Monitor language (suggested by @SystemIdleProcess in discussion #306).",
-  },
-  {
-    icon: <RefreshCw className="h-5 w-5" />,
-    key: "releaseNotes.currentFeatures.replicationContext",
-    text: "Native Proxmox replication failure notifications resolve the replication job ID, affected VM/LXC ID and guest name; the exact error block from Proxmox is preserved as the reason, and each replication job deduplicates independently (reported by Ale R.).",
+    key: "releaseNotes.currentFeatures.adminTokenScope",
+    text: "Administrative scope — opening a Monitor terminal and disabling authentication now require a full-admin token, so a read-only API token issued to a monitoring integration stays read-only (reported by @f3rs3n).",
   },
 ]
 
