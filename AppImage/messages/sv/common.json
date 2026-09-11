@@ -5934,7 +5934,8 @@
         "installs": "Installerade paket och verktyg"
       },
       "scriptLabel": {
-        "install_proxmenux": "ProxMenux-installerare"
+        "install_proxmenux": "ProxMenux-installerare",
+        "monitor": "ProxMenux-övervakning"
       }
     },
     "comparison": {

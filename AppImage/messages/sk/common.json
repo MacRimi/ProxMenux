@@ -5999,7 +5999,8 @@
         "installs": "Nainštalované balíky a nástroje"
       },
       "scriptLabel": {
-        "install_proxmenux": "Inštalátor ProxMenux"
+        "install_proxmenux": "Inštalátor ProxMenux",
+        "monitor": "ProxMenux Monitor"
       }
     },
     "comparison": {

@@ -136,7 +136,7 @@ const POST_INSTALL_SOURCES = new Set(["auto", "customizable"])
 
 // A few sources deserve a friendly name instead of a raw script identifier;
 // everything else shows the script it came from.
-const FRIENDLY_SOURCE = new Set(["install_proxmenux"])
+const FRIENDLY_SOURCE = new Set(["install_proxmenux", "monitor"])
 
 // Which of the three sections a change belongs to: installations are their
 // own block, post-install optimizations another, general scripts the rest.

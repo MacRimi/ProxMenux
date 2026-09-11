@@ -10268,6 +10268,17 @@ def _ensure_smart_tools(install_if_missing=False):
             except Exception as e:
                 install_errors.append(f"nvme-cli: {str(e)}")
     
+    # A package installed on the host belongs in the change journal, whoever
+    # installed it — here the Monitor rather than a script.
+    _just = [pkg for pkg, ok in (('smartmontools', installed.get('smartctl')),
+                                 ('nvme-cli', installed.get('nvme'))) if ok]
+    if _just:
+        try:
+            import changes_journal
+            changes_journal.record_install(' '.join(_just), 'monitor', 'install_smart_tools')
+        except Exception:
+            pass
+
     return {
         'smartctl': has_smartctl, 
         'nvme': has_nvme,
@@ -11593,6 +11604,14 @@ def api_smart_tools_install():
                     }
                     if not success:
                         all_success = False
+
+                _ok = [pkg for pkg, r in results.items() if r.get('success')]
+                if _ok:
+                    try:
+                        import changes_journal
+                        changes_journal.record_install(' '.join(_ok), 'monitor', 'install_smart_tools')
+                    except Exception:
+                        pass
 
                 tools = _ensure_smart_tools()
 

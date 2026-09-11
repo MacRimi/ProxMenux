@@ -148,6 +148,43 @@ def read_object(digest: str) -> Optional[str]:
         return None
 
 
+def record_install(packages: str, source: str = "monitor",
+                   function: str = "monitor") -> bool:
+    """Record a package the Monitor installed on the host, so it appears in the
+    installed-packages section like anything the scripts install. The Monitor
+    is Python and cannot use the bash primitives, so it drops a spool entry in
+    the same shape they write; ingest() picks it up and dedupes it by package.
+    """
+    packages = (packages or "").strip()
+    if not packages:
+        return False
+    entry = {
+        "recorded_at": int(time.time()),
+        "class": CLASS_INSTALLATION,
+        "operation": "install_package",
+        "source": source,
+        "function": function,
+        "function_version": "1.0",
+        "target": packages,
+        "installed": packages,
+        "before": "",
+        "after": "",
+        "capture": "created",
+        "revert": "purge",
+        "exactness": "none",
+        "result": "ok",
+    }
+    try:
+        SPOOL.mkdir(parents=True, exist_ok=True)
+        path = SPOOL / f"{entry['recorded_at']}-{os.getpid()}-{os.urandom(4).hex()}.json"
+        tmp = path.with_suffix(".json.tmp")
+        tmp.write_text(json.dumps(entry), encoding="utf-8")
+        os.replace(tmp, path)
+        return True
+    except OSError:
+        return False
+
+
 def ingest(limit: int = 5000) -> int:
     """Move what the scripts wrote into the table.
 

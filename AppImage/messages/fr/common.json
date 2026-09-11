@@ -5933,7 +5933,8 @@
         "installs": "Paquets et utilitaires installés"
       },
       "scriptLabel": {
-        "install_proxmenux": "Programme d'installation de ProxMenux"
+        "install_proxmenux": "Programme d'installation de ProxMenux",
+        "monitor": "Moniteur ProxMenux"
       }
     },
     "comparison": {

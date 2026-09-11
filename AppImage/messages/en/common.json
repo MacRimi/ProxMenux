@@ -5999,7 +5999,8 @@
         "installs": "Installed packages and utilities"
       },
       "scriptLabel": {
-        "install_proxmenux": "ProxMenux installer"
+        "install_proxmenux": "ProxMenux installer",
+        "monitor": "ProxMenux Monitor"
       }
     },
     "comparison": {
