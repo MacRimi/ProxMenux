@@ -4830,7 +4830,7 @@
       "dismiss": "Skryť"
     },
     "summary": {
-      "guests": "Hostia",
+      "guests": "VM a LXC",
       "bindMountStubs": "Zástupné bind-mounty",
       "staleNodesCleaned": "Vyčistené staré uzly",
       "components": "Komponenty"
@@ -5010,16 +5010,16 @@
       "verificationScope": "Overené kontroly, ktoré sa vzťahujú na tento server. Pokrytie samo o sebe nehovorí nič o stave ani bezpečnosti servera.",
       "noApplicable": "V tomto hodnotení nie sú žiadne relevantné kontroly.",
       "noJob": "Bez plánovanej úlohy",
-      "guest": "Hosť",
-      "guests": "hostia",
-      "host": "Hostiteľ",
+      "guest": "VM/LXC",
+      "guests": "VM a LXC",
+      "host": "Server",
       "resource": "Prostriedok",
       "data": "Dáta",
       "metadata": "Metadáta",
       "result": "Výsledok",
       "fact": "Zistený údaj",
       "records": "záznamy",
-      "unscheduled": "hostia bez plánovanej úlohy",
+      "unscheduled": "VM a LXC bez plánovanej úlohy",
       "excludedDisks": "vylúčené disky",
       "disks": "Disky",
       "destination": "Cieľ",
@@ -5056,7 +5056,7 @@
       "used": "Využité",
       "free": "Voľné",
       "reasons": {
-        "agentNotDeclared": "V konfigurácii nie je deklarovaný agent hosťa",
+        "agentNotDeclared": "Agent virtuálneho stroja nie je nastavený",
         "arcConflictingSettings": "Trvalé nastavenia si navzájom odporujú",
         "arcMinAboveMax": "Dolná hranica ARC je nad hornou",
         "arcPendingReboot": "Trvalé nastavenie sa líši od načítaného parametra",
@@ -5076,7 +5076,7 @@
         "clusterInquorate": "Bez kvóra: zmeny klastra sa odmietajú",
         "clusterMemberAbsent": "Nakonfigurovaný uzol, ktorý klaster nevidí",
         "clusterSingleLink": "Deklarované jediné spojenie corosync",
-        "dataExcludedFromBackup": "Údaje vylúčené zo zálohy hosťa",
+        "dataExcludedFromBackup": "Údaje vylúčené zo zálohy VM alebo LXC",
         "deliveryFailing": "Nedávne doručenia neodišli",
         "destinationUnavailable": "Nastavený cieľ nie je dostupný",
         "diskErrorsActive": "Chyba zaznamenaná v kontrolovanom období",
@@ -5086,7 +5086,7 @@
         "essentialServiceDown": "Služba, ktorú Proxmox potrebuje na odpoveď, nie je aktívna",
         "exemptByPolicy": "Označené ako nevyžadované, preto je mimo počtu",
         "expectedButUncovered": "Označený ako vyžadujúci zálohu a nevyberá ho žiadna povolená úloha",
-        "expectedToAutostart": "Označený ako štartujúci s hostiteľom, no neštartuje",
+        "expectedToAutostart": "Označené na automatické spustenie, no nespúšťa sa",
         "filesystemExhausted": "Nezostáva žiadne miesto",
         "filesystemNearlyFull": "Na prahu preverenia miesta alebo nad ním",
         "filesystemReadOnly": "Jadro hlási tento pripojený bod ako len na čítanie: prestal prijímať zápisy",
@@ -5107,7 +5107,7 @@
         "lynisWarning": "Zaznamenané kontrolou Lynis",
         "multipathNoPath": "Nezostáva žiadna cesta",
         "multipathPathDown": "Obsluhuje po menej cestách",
-        "noAutostart": "Neštartuje s hostiteľom",
+        "noAutostart": "Nespúšťa sa automaticky pri štarte servera",
         "noConfigurationReference": "Bez odkazu v preverených konfiguráciách",
         "noJobSelectsGuest": "Nevyberá ho žiadna povolená zálohovacia úloha",
         "noPhysicalPort": "Nemá žiadny fyzický port",
@@ -5119,7 +5119,7 @@
         "overprovisioned": "Rozdáva viac virtuálnej kapacity, než pool má",
         "packageAwaitingRestart": "Nainštalované a žiada reštart",
         "pastServiceLife": "Nad prahom životnosti používaným na plánovanie",
-        "pinnedToHostCpu": "Viazané na model procesora hostiteľa",
+        "pinnedToHostCpu": "Viazané na model procesora servera",
         "poolDeviceErrors": "Zariadenie počíta chyby čítania, zápisu alebo kontrolného súčtu",
         "poolNotOnline": "Nie je online",
         "rebootMarkerWithoutPackages": "Niečo zapísalo značku reštartu bez uvedenia balíka",
@@ -5130,14 +5130,14 @@
         "replicationOverdue": "Staršia, než pripúšťa vlastný kalendár úlohy",
         "retentionNotDeclared": "Bez deklarovanej retencie; uchovávajú sa všetky kópie",
         "retentionOnServer": "Čistí sa na zálohovacom serveri, úlohami, ktoré tento uzol nevidí",
-        "runsPrivileged": "Beží privilegovane a zdieľa menný priestor používateľov hostiteľa",
+        "runsPrivileged": "Beží privilegovane a zdieľa používateľský priestor servera",
         "scrubOverdue": "Posledný dokončený scrub je starší než prah preverenia",
         "storageNearlyFull": "Na prahu preverenia kapacity alebo nad ním",
         "storageUnreachable": "Nedostupné",
         "thinDataPressure": "Zapísané dáta blízko kapacity poolu",
         "thinMetadataPressure": "Metadáta takmer plné, čo prepne pool len na čítanie",
         "unitFailed": "systemd prestal o ňu pokúšať",
-        "verificationFailedOnly": "Overenie prečítalo najnovšiu kópiu a nebola neporušená; žiadna iná kópia tohto hosťa overená nebola",
+        "verificationFailedOnly": "Overenie načítalo najnovšiu zálohu a tá nebola v poriadku; žiadna iná záloha tohto VM/LXC nebola overená",
         "verificationFailedWithFallback": "Overenie prečítalo najnovšiu kópiu a nebola neporušená; staršia kópia overená bola",
         "verificationNotRun": "Túto kópiu nespätne neprečítala žiadna overovacia úloha"
       },
@@ -5156,7 +5156,7 @@
     "unverifiedChecks": "Nevykonané: {checks}. Každá vo svojich dôkazoch uvádza, čo sa jej nepodarilo prečítať.",
     "noFindings": "Aktuálnemu filtru nezodpovedajú žiadne zistenia.",
     "affectedCount": "ovplyvnené: {count}",
-    "acceptedNotice": "Na tomto hostiteľovi je zaznamenaných {count} prijatých rizík.",
+    "acceptedNotice": "Na tomto serveri je zaznamenaných {count} prijatých rizík.",
     "states": {
       "fail": "Zlyhalo",
       "warn": "Upozornenie",
@@ -5172,7 +5172,7 @@
       "network": "Sieť",
       "security": "Bezpečnosť",
       "backup": "Zálohy",
-      "guests": "Hostia",
+      "guests": "VM a LXC",
       "hardware": "Hardvér"
     },
     "detail": {
@@ -5189,13 +5189,13 @@
       "backup": {
         "guest_coverage": {
           "title": "Pokrytie zálohami",
-          "rationale": "Povolené zálohovacie úlohy na tomto uzle, hostia, ktorých každá vyberá, a údaje hosťa z nich vylúčené. Nakonfigurované pokrytie nedokazuje, že existuje použiteľná záloha. Či mal byť nevybraný hosť chránený, hovorí deklarovaná politika.",
+          "rationale": "Povolené zálohovacie úlohy na tomto uzle, VM a LXC, ktoré vyberajú, a údaje z nich vylúčené. Nastavené pokrytie ešte nedokazuje, že záloha je použiteľná. Pravidlá určujú, či má byť nezahrnutý VM alebo LXC chránený.",
           "summary": {
-            "noJobs": "Pre {total} hostí na tomto uzle nie je definovaná žiadna zálohovacia úloha",
-            "covered": "Všetkých {total} hostí vyberá povolená zálohovacia úloha",
-            "uncovered": "{count} z {total} hostí nevyberá žiadna povolená zálohovacia úloha",
+            "noJobs": "Pre {total} VM a LXC na tomto uzle nie je definovaná žiadna zálohovacia úloha",
+            "covered": "Všetky VM a LXC ({total}) vyberá povolená zálohovacia úloha",
+            "uncovered": "{count} z {total} VM a LXC nevyberá žiadna povolená zálohovacia úloha",
             "excludedData": "Skontrolujte {count} vylúčení diskov alebo prípojných bodov",
-            "uncoveredExpected": "{required} hostí označených ako vyžadujúcich zálohu nevyberá žiadna povolená úloha",
+            "uncoveredExpected": "{required} VM a LXC označených ako vyžadujúce zálohu nevyberá žiadna povolená úloha",
             "evaluationFailed": "Kontrolu sa nepodarilo vyhodnotiť"
           }
         },
@@ -5204,8 +5204,8 @@
           "rationale": "Vek: čas uplynutý od poslednej uloženej zálohy. Použitý limit: referenčný vek, s ktorým sa táto záloha porovnáva.",
           "summary": {
             "recent": "Všetkých {total} kontrol stroja/cieľa spĺňa uvedené kritérium veku zálohy",
-            "stale": "{count} z {total} hostí nemá zálohu z posledných 30 dní",
-            "noBackups": "K žiadnemu hosťovi na tomto uzle sa nenašla uložená záloha",
+            "stale": "{count} z {total} VM a LXC nemá zálohu z posledných 30 dní",
+            "noBackups": "Pre žiadny VM ani LXC na tomto uzle sa nenašla uložená záloha",
             "attention": "{count} z {total} kontrol stroja/cieľa vyžaduje preverenie",
             "evaluationFailed": "Kontrolu sa nepodarilo vyhodnotiť"
           }
@@ -5223,9 +5223,9 @@
         },
         "verification_state": {
           "title": "Overenie záloh",
-          "rationale": "Výsledok overenia, ktorý Proxmox Backup Server zaznamenáva pre najnovšiu kópiu každého hosťa, a či bola overená staršia kópia toho istého hosťa. Overenie číta uloženú kópiu; nie je to obnova.",
+          "rationale": "Výsledok overenia, ktorý Proxmox Backup Server zaznamenáva pri najnovšej zálohe každého VM a LXC, a informácia, či bola overená aj staršia záloha. Overenie len číta uloženú zálohu; nejde o obnovu.",
           "summary": {
-            "allVerified": "Najnovšia kópia všetkých {total} hostí bola overená ako neporušená",
+            "allVerified": "Najnovšia záloha všetkých {total} VM a LXC bola overená ako neporušená",
             "failed": "{failed} najnovších kópií neprešlo overením, z {total} preskúmaných",
             "notVerified": "{pending} z {total} najnovších kópií nebolo overených",
             "evaluationFailed": "Stav overenia sa nepodarilo prečítať"
@@ -5233,22 +5233,22 @@
         },
         "job_results": {
           "title": "Výsledky zálohovacích behov",
-          "rationale": "Ako skončilo najnovšie zaznamenané spustenie každého hosťa, podľa protokolu úloh uzla. Hodnotí sa len posledné. Protokol sa uchováva obmedzený čas.",
+          "rationale": "Ako skončilo posledné zaznamenané spustenie zálohy každého VM a LXC podľa protokolu úloh uzla. Hodnotí sa len posledné spustenie. Protokol sa uchováva obmedzený čas.",
           "summary": {
             "allSucceeded": "Všetkých {total} zaznamenaných zálohovacích behov skončilo bez chyby",
             "someFailed": "{count} z {total} zaznamenaných zálohovacích behov skončilo chybou",
             "evaluationFailed": "Protokol úloh sa nepodarilo prečítať",
-            "recovered": "{count} z {total} hostí zlyhalo pri skoršom spustení a odvtedy uspelo"
+            "recovered": "{count} z {total} VM a LXC zlyhalo pri skoršom spustení a odvtedy uspelo"
           }
         },
         "host_recovery": {
-          "title": "Obnova hostiteľa",
-          "rationale": "Zálohy hostiteľa tak, ako ich zaznamenáva ProxMenux: každá spustená úloha, kedy, či uspela, cieľ a či tá kópia stále existuje. Úloha zapisujúca na zálohovací server neuvádza lokálnu cestu. Šifrovacie kľúče sa uvádzajú len počtom a zaznamenaným režimom úschovy.",
+          "title": "Obnova servera",
+          "rationale": "Zálohy nastavení servera podľa záznamov ProxMenuxu: každá spustená úloha, jej čas, výsledok, cieľ a existencia uloženej zálohy. Úloha zapisujúca na zálohovací server neuvádza lokálnu cestu. Šifrovacie kľúče sa uvádzajú len počtom a zaznamenaným režimom úschovy.",
           "summary": {
-            "noHostBackup": "Nie je uložená žiadna záloha konfigurácie hostiteľa ani časovač, ktorý by ju vytváral",
+            "noHostBackup": "Nie je uložená záloha nastavení servera ani nastavený časovač, ktorý by ju vytváral",
             "protected": "Konfigurácia samotného uzla je uložená v {total} archíve(och), v rámci používaného vekového limitu",
-            "attention": "{count} zistenie(a) k {total} záznamom konfigurácie hostiteľa",
-            "scheduledOnly": "Zálohy konfigurácie hostiteľa sú naplánované cez {count} časovač(e); lokálne nie je uložený žiadny archív"
+            "attention": "Zistenia: {count}; záznamy o nastavení servera: {total}",
+            "scheduledOnly": "Zálohy nastavení servera sú naplánované cez {count} časovačov, lokálne však nie je uložený žiadny archív"
           }
         }
       },
@@ -5274,10 +5274,10 @@
         },
         "memory_overcommit": {
           "title": "Pridelenie pamäte",
-          "rationale": "Strop `memory` každej konfigurácie hosťa oproti MemTotal, pričom bežiaci hostia sa počítajú osobitne. Kontajnery spotrebúvajú po tento limit; virtuálne stroje bez ballooningu ho rezervujú.",
+          "rationale": "Limit `memory` každej konfigurácie VM a LXC oproti MemTotal; spustené VM a LXC sa počítajú osobitne. Kontajnery môžu použiť pamäť až po tento limit, virtuálne stroje bez ballooningu si ju rezervujú.",
           "summary": {
-            "withinRatio": "Hosťom je pridelených {percent}% pamäte hostiteľa",
-            "aboveRatio": "Hosťom je pridelených {percent}% pamäte hostiteľa",
+            "withinRatio": "VM a LXC majú pridelených {percent}% pamäte servera",
+            "aboveRatio": "VM a LXC majú pridelených {percent}% pamäte servera",
             "evaluationFailed": "Kontrolu sa nepodarilo vyhodnotiť"
           }
         },
@@ -5293,13 +5293,13 @@
         },
         "kernel_current": {
           "title": "Bežiace jadro",
-          "rationale": "Bežiace jadro oproti tomu, ktoré by hostiteľ spustil nabudúce, ako ho hlási `proxmox-boot-tool`. Novšie iba nainštalované jadro môže byť zámerne pozdržané; rozdiel po reštarte znamená štart, ktorý sa neuplatnil.",
+          "rationale": "Bežiace jadro sa porovnáva s jadrom, ktoré by server pri ďalšom štarte použil podľa `proxmox-boot-tool`. Novšie nainštalované jadro môže byť zámerne odložené; rozdiel po reštarte znamená, že sa zmena neprejavila.",
           "summary": {
-            "current": "Bežiace jadro {version} je to, ktoré by hostiteľ spustil nabudúce",
-            "newerAvailable": "Hostiteľ beží na {running}, ale je nainštalované {newest}",
-            "newerSelected": "Hostiteľ beží na {running} a pri najbližšom reštarte by spustil {selected}",
-            "wouldDowngrade": "Hostiteľ beží na {running}, ale pri najbližšom reštarte by spustil staršie {selected}",
-            "bootTargetUnknown": "Hostiteľ beží na {version}; jadro zvolené pre najbližší štart sa nepodarilo prečítať",
+            "current": "Bežiace jadro {version} je to, ktoré server použije pri ďalšom štarte",
+            "newerAvailable": "Server beží na {running}, ale je nainštalované {newest}",
+            "newerSelected": "Server beží na {running} a pri najbližšom reštarte použije {selected}",
+            "wouldDowngrade": "Server beží na {running}, ale pri najbližšom reštarte použije staršie {selected}",
+            "bootTargetUnknown": "Server beží na {version}; jadro zvolené pre ďalší štart sa nepodarilo prečítať",
             "evaluationFailed": "Kontrolu sa nepodarilo vyhodnotiť"
           }
         },
@@ -5326,7 +5326,7 @@
         },
         "swap_configured": {
           "title": "Swap",
-          "rationale": "Aktívne odkladacie oblasti podľa `swapon` a ich súčet oproti pamäti hostiteľa. Žiadne pravidlo nevyžaduje pomer k RAM; tlak na pamäť sa meria inde.",
+          "rationale": "Aktívne odkladacie oblasti podľa `swapon` a ich súčet oproti pamäti servera. Žiadne pravidlo nevyžaduje pomer k RAM; tlak na pamäť sa meria inde.",
           "summary": {
             "active": "Aktívny swap má {size}",
             "none": "Nie je aktívna žiadna oblasť swapu",
@@ -5334,17 +5334,17 @@
           }
         },
         "filesystem_capacity": {
-          "title": "Kapacita súborových systémov hostiteľa",
-          "rationale": "Miesto a inody súborových systémov, ktoré hostiteľ sám potrebuje: koreň, /var, /var/log a cesta lokálneho úložiska. Súborový systém s voľným miestom a bez inodov zlyhá rovnako ako plný.",
+          "title": "Kapacita súborových systémov servera",
+          "rationale": "Miesto a inodey v súborových systémoch potrebných pre server: koreň, /var, /var/log a cesta lokálneho úložiska. Súborový systém bez voľných inodeov zlyhá rovnako ako plný.",
           "summary": {
-            "withinLimits": "{total} súborových systémov hostiteľa je pod svojimi prahmi preverenia",
+            "withinLimits": "{total} súborových systémov servera je pod nastavenými limitmi",
             "pressure": "{count} meraní je na prahu preverenia alebo nad ním",
             "evaluationFailed": "Obsadenosť súborových systémov sa nepodarilo prečítať"
           }
         },
         "update_chain": {
           "title": "Vek indexov balíkov APT",
-          "rationale": "Kedy APT naposledy umiestnil na tomto hostiteľovi index balíkov. Repozitár, ktorý odpovie „nezmenené\", ponechá svoj index nedotknutý. Dostupnosť repozitárov sa netestuje.",
+          "rationale": "Kedy APT naposledy aktualizoval index balíkov na tomto serveri. Repozitár, ktorý odpovie „nezmenené\", ponechá index nedotknutý. Dostupnosť repozitárov sa netestuje.",
           "summary": {
             "current": "Indexy balíkov boli aktualizované pred {days} dňom/dňami",
             "stale": "Indexy balíkov boli naposledy aktualizované pred {days} dňom/dňami",
@@ -5402,7 +5402,7 @@
       "guests": {
         "privileged_containers": {
           "title": "Oprávnenia kontajnerov",
-          "rationale": "Nastavenie `unprivileged` každej konfigurácie kontajnera. Jeho absencia znamená, že kontajner zdieľa menný priestor používateľov hostiteľa, čo niektoré záťaže potrebujú.",
+          "rationale": "Nastavenie `unprivileged` každej konfigurácie kontajnera. Ak chýba, kontajner zdieľa používateľský priestor servera, čo niektoré aplikácie vyžadujú.",
           "summary": {
             "allUnprivileged": "Všetkých {total} kontajnerov je neprivilegovaných",
             "privileged": "{count} z {total} kontajnerov beží privilegovane",
@@ -5410,20 +5410,20 @@
           }
         },
         "qemu_without_agent": {
-          "title": "Guest agent vo virtuálnych strojoch",
-          "rationale": "Nastavenie `agent` v konfigurácii každého virtuálneho stroja. Nastavenie hovorí, že agent je deklarovaný, nie že odpovedá.",
+          "title": "QEMU Guest Agent vo virtuálnych strojoch",
+          "rationale": "Nastavenie `agent` v konfigurácii každého virtuálneho stroja. Hovorí len, že QEMU Guest Agent je nastavený, nie že práve odpovedá.",
           "summary": {
-            "allHaveAgent": "Všetkých {total} virtuálnych strojov má deklarovaný guest agent",
-            "missingAgent": "{count} z {total} virtuálnych strojov nemá deklarovaný guest agent",
+            "allHaveAgent": "QEMU Guest Agent je nastavený vo všetkých {total} virtuálnych strojoch",
+            "missingAgent": "QEMU Guest Agent nie je nastavený v {count} z {total} virtuálnych strojov",
             "evaluationFailed": "Kontrolu sa nepodarilo vyhodnotiť"
           }
         },
         "autostart": {
           "title": "Automatické spúšťanie",
-          "rationale": "Nastavenie `onboot` každého hosťa, okrem šablón a hostí spravovaných HA. Či sa má hosť vrátiť sám, hovorí deklarovaná politika.",
+          "rationale": "Nastavenie `onboot` každého VM a LXC okrem šablón a VM/LXC spravovaných HA. Pravidlá určujú, ktoré z nich sa majú spustiť automaticky.",
           "summary": {
-            "allAutostart": "Všetkých {total} hostí sa spúšťa s hostiteľom",
-            "notAutostart": "{count} z {total} hostí sa s hostiteľom nespúšťa",
+            "allAutostart": "Všetky VM a LXC ({total}) sa spúšťajú automaticky pri štarte servera",
+            "notAutostart": "{count} z {total} VM a LXC sa nespúšťa automaticky pri štarte servera",
             "evaluationFailed": "Kontrolu sa nepodarilo vyhodnotiť"
           }
         },
@@ -5431,7 +5431,7 @@
           "title": "Stav snapshotov",
           "rationale": "Stav a vek snapshotov a aktívne úlohy. Nedávna operácia alebo operácia bez overiteľného dátumu sa nepovažuje za prerušenú.",
           "summary": {
-            "noSnapshots": "Žiadny hosť nemá snapshoty",
+            "noSnapshots": "Žiadny VM ani LXC nemá snapshoty",
             "allComplete": "Všetkých {total} snapshotov je dokončených",
             "stuck": "{count} z {total} snapshotov ostalo uprostred operácie",
             "evaluationFailed": "Kontrolu sa nepodarilo vyhodnotiť"
@@ -5439,10 +5439,10 @@
         },
         "cpu_host_type": {
           "title": "Model virtuálneho CPU",
-          "rationale": "Hodnota `cpu` každého virtuálneho stroja. `host` sprístupňuje inštrukčnú sadu fyzického procesora, čo obmedzuje uzly, na ktoré môže hosť migrovať. Nezlučiteľnosť s konkrétnym cieľom sa tu neurčuje.",
+          "rationale": "Hodnota `cpu` každého virtuálneho stroja. `host` sprístupňuje inštrukčnú sadu fyzického procesora, čo obmedzuje uzly, na ktoré môže virtuálny stroj migrovať. Nezlučiteľnosť s konkrétnym cieľom sa tu neurčuje.",
           "summary": {
-            "none": "Žiadny z {total} virtuálnych strojov nie je viazaný na procesor hostiteľa",
-            "pinned": "{count} z {total} virtuálnych strojov je viazaných na procesor hostiteľa",
+            "none": "Žiadny z {total} virtuálnych strojov nie je viazaný na procesor servera",
+            "pinned": "{count} z {total} virtuálnych strojov je viazaných na procesor servera",
             "evaluationFailed": "Kontrolu sa nepodarilo vyhodnotiť"
           }
         },
@@ -5515,8 +5515,8 @@
           "title": "ZFS ARC limit",
           "rationale": "Efektívne hodnoty c_min, c_max a veľkosti ARC, načítaný parameter modulu a trvalé nastavenia v /etc/modprobe.d. Nakonfigurovaná nula volí predvolenú hodnotu modulu; ARC je strop a pamäť pod ním je znovu získateľná.",
           "summary": {
-            "bounded": "Limit ARC je {percent}% pamäte hostiteľa a pamäť pod ním je znovu získateľná",
-            "high": "ARC môže použiť {percent}% pamäte hostiteľa",
+            "bounded": "Limit ARC je {percent}% pamäte servera a pamäť pod ním je možné znovu uvoľniť",
+            "high": "ARC môže použiť {percent}% pamäte servera",
             "unset": "ARC nemá nastavený výslovný limit",
             "conflicting": "{count} nastavení ARC si navzájom odporuje",
             "pending": "Trvalé nastavenie ARC sa líši od hodnoty, ktorú nesie bežiaci modul",
@@ -5690,22 +5690,22 @@
       "shared": "Zdieľané",
       "yes": "Áno",
       "no": "Nie",
-      "guests": "Hostia",
+      "guests": "VM a LXC",
       "ostype": "Operačný systém",
-      "onboot": "Spúšťa sa s hostiteľom",
+      "onboot": "Spúšťa sa pri štarte servera",
       "tags": "Značky",
       "privilege": "Oprávnenie",
       "privileged": "Privilegovaný",
       "unprivileged": "Neprivilegovaný",
       "features": "Funkcie",
-      "agent": "Guest agent",
+      "agent": "QEMU Guest Agent",
       "cpuModel": "Model CPU",
       "disks": "Disky",
       "interfaces": "Sieťové rozhrania",
       "protection": "Záloha",
       "passthrough": "Passthrough",
       "noBackup": "Bez zálohy",
-      "noBackupDetail": "Tohto hosťa nevyberá žiadna povolená zálohovacia úloha.",
+      "noBackupDetail": "Tento VM alebo LXC nevyberá žiadna povolená zálohovacia úloha.",
       "applications": "Aplikácie",
       "versionUnknown": "verzia sa nezistila",
       "passthroughTitle": "PCI passthrough",
@@ -5744,7 +5744,7 @@
       "area": "Oblasť",
       "inventoryAnnex": "Príloha s inventárom",
       "scopeTitle": "Rozsah tejto správy",
-      "scopeBody": "Táto správa zachytáva stav uzla Proxmox VE v čase kontroly. Nepokrýva vnútro hostí nad rámec údajov z ich konfigurácie, zariadenia mimo servera, fyzickú infraštruktúru ani závislosti, ktoré z uzla nie sú viditeľné. Neurčené zistenia sa nekontrolovali; neznamenajú, že je všetko v poriadku alebo že niečo chýba.",
+      "scopeBody": "Táto správa zachytáva stav uzla Proxmox VE v čase kontroly. Nepokrýva vnútro VM a LXC nad rámec údajov z ich konfigurácie, zariadenia mimo servera, fyzickú infraštruktúru ani závislosti, ktoré z uzla nie sú viditeľné. Neurčené zistenia sa nekontrolovali; neznamenajú, že je všetko v poriadku alebo že niečo chýba.",
       "building": "Zostavuje sa správa…",
       "node": "Uzol",
       "profile": "Profil",
@@ -5768,7 +5768,7 @@
       "nodeIdentity": "Identita uzla",
       "system": "Systém",
       "cluster": "Klaster",
-      "standaloneNote": "Tento uzol nie je súčasťou klastra: má vlastnú konfiguráciu a jeho hostia nemigrujú na iný uzol.",
+      "standaloneNote": "Tento uzol nie je súčasťou klastra: má vlastnú konfiguráciu a jeho VM a LXC nemigrujú na iný uzol.",
       "clusterDiagramNote": "Nakonfigurované uzly a linky corosync, ktoré ich spájajú.",
       "thisNode": "tento uzol",
       "unreachable": "nevidený",
@@ -5834,7 +5834,7 @@
       "interface": "Rozhranie",
       "driver": "Ovládač",
       "state": "Stav",
-      "networkDiagramNote": "Cesta od kábla ku každému hosťovi: fyzický adaptér, bond ak ich zoskupuje, bridge a pripojení hostia.",
+      "networkDiagramNote": "Cesta od kábla ku každému VM a LXC: fyzický adaptér, bond, ak ich zoskupuje, bridge a pripojené VM a LXC.",
       "storageAndProtection": "Úložisko a ochrana",
       "storage": "Úložisko",
       "content": "Obsah",
@@ -5842,10 +5842,10 @@
       "location": "Umiestnenie",
       "backupDestination": "Cieľ záloh",
       "unprotected": "bez zálohy",
-      "storageDiagramNote": "Kde ležia disky hostí a ktorý cieľ ich zálohuje.",
-      "unprotectedGuests": "{count} hostí bez zálohovacej úlohy",
-      "allProtected": "Každý hosť je pokrytý zálohovacou úlohou",
-      "allProtectedNote": "Pokrytie znamená, že úloha hosťa vyberá; výsledok záloh sa vyhodnocuje osobitne.",
+      "storageDiagramNote": "Kde ležia disky VM a LXC a ktorý cieľ ich zálohuje.",
+      "unprotectedGuests": "{count} VM a LXC bez zálohovacej úlohy",
+      "allProtected": "Každý VM a LXC je pokrytý zálohovacou úlohou",
+      "allProtectedNote": "Pokrytie znamená, že úloha vyberá daný VM alebo LXC; výsledok záloh sa vyhodnocuje osobitne.",
       "vmid": "VMID",
       "name": "Názov",
       "kind": "Druh",
@@ -5860,7 +5860,7 @@
       "incomplete": "čiastočné",
       "scope": "Rozsah tejto správy",
       "scopeText": "Tento dokument informuje o profile {profile} na uzle uvedenom v hlavičke, v čase behu.",
-      "scopeLocal": "Zahŕňa iba tento uzol. Hostia na iných uzloch a ich konfigurácia sú mimo neho.",
+      "scopeLocal": "Zahŕňa iba tento uzol. VM a LXC na iných uzloch a ich konfigurácia sem nepatria.",
       "scopeReadOnly": "Všetky kontroly iba čítajú existujúcu konfiguráciu a stav; nič nemenia.",
       "scopeMoment": "Popisuje stav v čase behu, nie časové obdobie.",
       "notRead": "Zdroje, ktoré sa nepodarilo prečítať:",
@@ -5921,7 +5921,7 @@
       "saved": "Uložené",
       "declaredCount": "Nastavené pravidlá: {count}",
       "guestsNote": "Ak položku označíte ako vyžadovanú, jej chýbanie sa zobrazí ako upozornenie. Nenastavená položka je len poznámka. Nevyžadovaná sa do výsledku nezapočíta.",
-      "storagesNote": "Nedostupné úložisko je kritické, ak je nevyhnutné alebo ho používa bežiaci hosť. Ak jeho úloha nie je nastavená, zobrazí sa upozornenie; pri voliteľnom úložisku len poznámka.",
+      "storagesNote": "Nedostupné úložisko je kritické, ak je nevyhnutné alebo ho používa spustený VM či LXC. Ak jeho úloha nie je nastavená, zobrazí sa upozornenie; pri voliteľnom úložisku len poznámka.",
       "thresholds": "Limity",
       "thresholdsNote": "Prázdne pole použije predvolenú hodnotu zobrazenú sivým textom.",
       "backup": "Záloha",
@@ -6037,7 +6037,7 @@
       "resolved": "Vyriešené",
       "resolvedNote": "už sa nehlásia a nikto ich neprijal",
       "accepted": "Prijaté",
-      "acceptedNote": "už sa nepočítajú, lebo sa prijalo riziko, nie preto, že by sa hostiteľ zmenil",
+      "acceptedNote": "už sa nepočítajú, lebo sa prijalo riziko, nie preto, že by sa server zmenil",
       "retired": "Už sa nevyhodnocujú",
       "retiredNote": "boli predtým a v tomto behu nie; nič nepotvrdilo, že prestali",
       "reasons": {
