@@ -7869,6 +7869,42 @@
     "os": "debian"
   },
   {
+    "name": "Gotenberg",
+    "slug": "gotenberg",
+    "desc": "Gotenberg is a developer-friendly API for converting numerous document formats (HTML, Markdown, URLs and LibreOffice-supported office documents such as DOCX, XLSX, PPTX and ODF) into PDF. It also merges, splits, flattens and manipulates PDFs using Chromium, LibreOffice, QPDF, pdfcpu, PDFtk and ExifTool. This script builds Gotenberg from source and runs it bare-metal instead of via Docker.",
+    "script": "ct/gotenberg.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/gotenberg.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/gotenberg.sh",
+    "type": "lxc",
+    "type_id": "nm9bra8mzye2scg",
+    "categories": [
+      "scriptcat00012"
+    ],
+    "category_names": [
+      "Documents & Notes"
+    ],
+    "notes": [
+      "Gotenberg is a stateless conversion API - it has no web interface. Verify it is running with: curl http://<container-ip>:3000/health",
+      "Compiled from source on install (no prebuilt bare-metal binary exists) and bundles Chromium + LibreOffice, so the first install takes a while and pulls in sizeable dependencies. The first conversion after a (re)start is slower while Chromium/LibreOffice warm up."
+    ],
+    "warnings": [
+      "The API listens on port 3000 with no authentication. Keep it on a private/internal network or place a reverse proxy with auth in front of it."
+    ],
+    "port": 3000,
+    "website": "https://gotenberg.dev/",
+    "documentation": "https://gotenberg.dev/docs/getting-started/introduction",
+    "logo": "https://gotenberg.dev/img/logo.png",
+    "updateable": true,
+    "privileged": false,
+    "has_arm": false,
+    "is_dev": true,
+    "execute_in": [
+      "lxc"
+    ],
+    "config_path": "",
+    "os": "debian"
+  },
+  {
     "name": "Gotify",
     "slug": "gotify",
     "desc": "Gotify is a simple server for sending and receiving messages",
@@ -10923,7 +10959,7 @@
     "updateable": true,
     "privileged": false,
     "has_arm": false,
-    "is_dev": true,
+    "is_dev": false,
     "execute_in": [
       "lxc"
     ],
