@@ -1703,7 +1703,7 @@
         "network": "Sieťové rozhrania",
         "vms": "VM a kontajnery",
         "services": "Služby PVE",
-        "logs": "Systémové logy",
+        "logs": "Systémové záznamy",
         "updates": "Aktualizácie systému",
         "security": "Bezpečnosť a certifikáty",
         "temperature": "Teplota"
@@ -3242,8 +3242,8 @@
         "description": "Zobrazte si údaje o serveri: CPU, RAM, GPU, disky, sieť, UPS a ďalšie súčasti vrátane modelov, sériových čísel a stavu."
       },
       "logs": {
-        "title": "Systémové logy",
-        "description": "Sledujte systémové záznamy, filtrujte udalosti, hľadajte konkrétne chyby a podľa potreby si zobrazené logy stiahnite."
+        "title": "Systémové záznamy",
+        "description": "Sledujte systémové záznamy, filtrujte udalosti, hľadajte konkrétne chyby a podľa potreby si zobrazené záznamy stiahnite."
       },
       "future": {
         "title": "Pripravené na ďalší rast",
@@ -4522,7 +4522,7 @@
       "network": "Sieťové rozhrania",
       "vms": "VM a kontajnery",
       "services": "Služby PVE",
-      "logs": "Systémové logy",
+      "logs": "Systémové záznamy",
       "updates": "Aktualizácie systému",
       "security": "Bezpečnosť a certifikáty"
     },
