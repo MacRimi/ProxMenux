@@ -95,7 +95,7 @@
     "system": "Systém",
     "cores": "Jadrá",
     "used": "Použité",
-    "cached": "Cache",
+    "cached": "Vyrovnávacia pamäť",
     "total": "Spolu",
     "free": "Voľné",
     "activeVmLxc": "Aktívne VM a LXC",
@@ -114,11 +114,11 @@
     "physicalDisks": "Fyzické disky:",
     "diskSingular": "disk",
     "diskPlural": "diskov",
-    "vmLxcStorage": "Úložisko VM/LXC",
+    "vmLxcStorage": "Úložisko VM a LXC",
     "available": "Dostupné",
     "storageVolumeSingular": "úložisko",
     "storageVolumePlural": "úložísk",
-    "noVmLxcStorage": "Nie je nastavené úložisko pre VM/LXC",
+    "noVmLxcStorage": "Nie je nastavené úložisko pre VM ani LXC",
     "localStorageSystem": "Lokálne úložisko (systém)",
     "storageDataUnavailable": "Údaje o úložisku nie sú dostupné",
     "networkOverview": "Prehľad siete",
@@ -156,8 +156,8 @@
       "min": "min."
     },
     "errors": {
-      "serverUnavailableTitle": "Monitor server nie je dostupný",
-      "serverUnavailableDescription": "Nedá sa pripojiť k Monitor serveru. Skontrolujte, či služba beží, a skúste to znova."
+      "serverUnavailableTitle": "Server Monitora nie je dostupný",
+      "serverUnavailableDescription": "Nedá sa pripojiť k serveru Monitora. Skontrolujte, či služba beží, a skúste to znova."
     }
   },
   "storage": {
