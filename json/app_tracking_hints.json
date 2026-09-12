@@ -484,7 +484,7 @@
     "default_ports": [
       8083
     ],
-    "file_path": "/root/.calibre-web",
+    "file_path": "/root/.calibreweb",
     "file_regex": "(?i)(?:v|release[-_/]?)?(\\d+(?:\\.\\d+){1,3}(?:[-+._][0-9A-Za-z.-]+)?)",
     "github_source": "releases",
     "installed_via": "file",
