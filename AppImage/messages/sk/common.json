@@ -2246,7 +2246,7 @@
   },
   "securityPage": {
     "title": "Bezpečnosť",
-    "description": "Ochrana prístupu k Monitoru aj Proxmox serveru na jednom mieste.",
+    "description": "Ochrana prístupu k Monitoru aj serveru Proxmox na jednom mieste.",
     "values": {
       "permanent": "Natrvalo",
       "perm": "trvalo",
@@ -2256,8 +2256,8 @@
       "disable": "Vypnúť",
       "enabledLower": "zapnutý",
       "disabledLower": "vypnutý",
-      "clusterLower": "zhluk",
-      "hostLower": "hostiteľ",
+      "clusterLower": "klastra",
+      "hostLower": "servera",
       "remove": "Odstrániť",
       "allow": "Povoliť",
       "delete": "Vymazať",
@@ -2334,7 +2334,7 @@
       "ruleAdded": "Firewall pravidlo bolo pridané.",
       "ruleDeleted": "Firewall pravidlo bolo vymazané.",
       "ruleUpdated": "Firewall pravidlo bolo upravené.",
-      "firewallUpdated": "{level} firewall je teraz {state}.",
+      "firewallUpdated": "Firewall {level} je teraz {state}.",
       "monitorPortAdded": "Pravidlo pre port Monitora bolo pridané.",
       "monitorPortRemoved": "Pravidlo pre port Monitora bolo odstránené.",
       "authEnabled": "Prihlásenie je zapnuté.",
@@ -2359,10 +2359,10 @@
     },
     "auth": {
       "title": "Prístup a prihlásenie",
-      "description": "Nastavte, kto môže otvoriť Monitor dashboard.",
+      "description": "Nastavte, kto môže otvoriť rozhranie Monitora.",
       "statusTitle": "Ochrana heslom",
       "passwordEnabled": "Prihlásenie heslom je zapnuté.",
-      "noPasswordProtection": "Dashboard je teraz otvorený bez hesla.",
+      "noPasswordProtection": "Rozhranie je teraz otvorené bez hesla.",
       "enableHint": "Pred sprístupnením mimo súkromnej siete pridajte používateľské meno a heslo.",
       "enable": "Zapnúť prihlásenie",
       "setupTitle": "Vytvoriť prihlásenie",
@@ -2401,12 +2401,12 @@
     },
     "ssl": {
       "title": "SSL / HTTPS",
-      "description": "Šifruje pripojenie k dashboardu v prehliadači.",
+      "description": "Šifruje pripojenie k rozhraniu v prehliadači.",
       "httpsEnabled": "HTTPS je zapnuté.",
-      "httpNoSsl": "Dashboard používa obyčajné HTTP.",
-      "usingCertificate": "Používa sa certifikát: {source}.",
-      "proxmoxHost": "Hostiteľ Proxmox",
-      "custom": "vlastný",
+      "httpNoSsl": "Rozhranie používa obyčajné HTTP.",
+      "usingCertificate": "Používa sa {source}.",
+      "proxmoxHost": "certifikát servera Proxmox",
+      "custom": "vlastný certifikát",
       "unencryptedHttp": "Prenos cez HTTP nie je šifrovaný.",
       "activeCertificate": "Aktívny certifikát",
       "cert": "Certifikát",
@@ -2469,12 +2469,12 @@
       "loading": "Načítavam tokeny...",
       "empty": "Zatiaľ tu nie sú žiadne API tokeny.",
       "scope": {
-        "label": "Token permissions",
-        "readOnly": "Read-only",
-        "readOnlyHint": "Reads metrics and status. Recommended for dashboards and integrations.",
-        "fullAdmin": "Full admin",
-        "fullAdminHint": "Full control, like your own session.",
-        "fullAdminWarning": "A full-admin token can do everything you can: power off or reboot the host, run updates and open a terminal. Share it only with fully trusted integrations."
+        "label": "Oprávnenia tokenu",
+        "readOnly": "Iba na čítanie",
+        "readOnlyHint": "Umožňuje čítať metriky a stav. Odporúčané pre prehľady a integrácie.",
+        "fullAdmin": "Úplné oprávnenia",
+        "fullAdminHint": "Úplný prístup ako vo vašom vlastnom prihlásení.",
+        "fullAdminWarning": "Token s úplnými oprávneniami môže vykonať všetko, čo vy: vypnúť alebo reštartovať server, spustiť aktualizácie a otvoriť terminál. Zdieľajte ho iba s plne dôveryhodnými integráciami."
       }
     },
     "firewall": {
@@ -2482,12 +2482,12 @@
       "description": "Správa stavu Proxmox firewallu a jednoduchých pravidiel prístupu.",
       "notDetectedTitle": "Proxmox firewall sa nenašiel",
       "notDetectedDescription": "Nástroje firewallu na tomto serveri nie sú dostupné.",
-      "clusterTitle": "Klastrový firewall",
-      "clusterActive": "Cluster firewall je aktívny.",
-      "clusterDisabled": "Cluster firewall je vypnutý.",
-      "hostTitle": "Hostiteľský firewall",
-      "hostActive": "Host firewall je aktívny pre tento uzol.",
-      "clusterRequiredHint": "Najprv zapnite cluster firewall, potom host firewall.",
+      "clusterTitle": "Firewall klastra",
+      "clusterActive": "Firewall klastra je aktívny.",
+      "clusterDisabled": "Firewall klastra je vypnutý.",
+      "hostTitle": "Firewall servera",
+      "hostActive": "Firewall servera je aktívny.",
+      "clusterRequiredHint": "Najprv zapnite firewall klastra, potom firewall servera.",
       "quickAccessRules": "Rýchle pravidlá prístupu",
       "port8008": "Port Monitora 8008",
       "port8006AlwaysAllowed": "Proxmox port 8006 je vždy povolený.",
@@ -2500,8 +2500,8 @@
       "portsCovered": "Pokryté porty",
       "drop": "Zahodiť",
       "reject": "Odmietnuť",
-      "cluster": "Cluster",
-      "host": "Hostiteľ",
+      "cluster": "Klaster",
+      "host": "Server",
       "rules": "{count} pravidiel",
       "addRule": "Pridať pravidlo",
       "newRule": "Nové pravidlo",
@@ -2514,8 +2514,8 @@
       "destinationPortHint": "Napríklad 22, 80, 443 alebo 8008.",
       "sourceAddressHint": "Voliteľná IP alebo CIDR, napríklad 192.168.1.0/24.",
       "anyInterface": "Ľubovoľné rozhranie",
-      "hostFirewallThisNode": "Host firewall pre tento uzol",
-      "clusterFirewallAllNodes": "Cluster firewall pre všetky uzly",
+      "hostFirewallThisNode": "Firewall servera",
+      "clusterFirewallAllNodes": "Firewall klastra pre všetky servery",
       "any": "Ľubovoľné",
       "anyLower": "ľubovoľné",
       "incoming": "Prichádzajúce",
@@ -2671,7 +2671,7 @@
       "featureCompliance": "bežné bezpečnostné kontroly",
       "featureGithub": "prehľadný report na tlač alebo uloženie",
       "install": "Nainštalovať Lynis",
-      "installedDescription": "Lynis je nainštalovaný a pripravený skontrolovať tento host.",
+      "installedDescription": "Lynis je nainštalovaný a pripravený skontrolovať tento server.",
       "lastScan": "Posledná kontrola",
       "hardeningIndex": "Skóre spevnenia",
       "warnings": "Varovania",
@@ -2779,7 +2779,7 @@
         "unknownOs": "neznámy OS",
         "noActionableWarnings": "Žiadne varovania na riešenie",
         "and": "a",
-        "expectedBehavior": "Nálezy označené ako očakávané pre Proxmox sú zvyčajne normálne pre hostiteľov Proxmox VE.",
+        "expectedBehavior": "Nálezy označené ako očakávané pre Proxmox sú zvyčajne bežné pre servery Proxmox VE.",
         "lynisRaw": "Pôvodné skóre Lynis",
         "pveAdjusted": "Upravené pre Proxmox",
         "rangeCritical": "0-49 problém",
@@ -2856,7 +2856,7 @@
         "networkUpdateFailed": "Chyba siete pri aktualizácii Secure Gateway",
         "fieldRequired": "Pole {field} je povinné.",
         "deploymentFailed": "Nasadenie zlyhalo",
-        "ociRequiresPve": "Secure Gateway používa štandardný LXC a mal by fungovať na tomto hostiteľovi Proxmox. Ak sa to bude opakovať, skontrolujte protokoly backendu.",
+        "ociRequiresPve": "Secure Gateway používa štandardný LXC a mal by fungovať na tomto serveri Proxmox. Ak sa to bude opakovať, skontrolujte protokoly backendu.",
         "authKeyRequired": "Zadajte Tailscale auth key.",
         "updateAuthKeyFailed": "Nepodarilo sa aktualizovať auth key",
         "couldNotLoadSetupData": "Nepodarilo sa načítať údaje nastavenia."
@@ -2903,7 +2903,7 @@
           "proxmoxNetwork": "Celá lokálna sieť",
           "customNetworks": "Vlastné siete"
         },
-        "hostAccess": "Prístup k hostu",
+        "hostAccess": "Prístup k serveru",
         "networks": "Siete",
         "exitNode": "Exit Node",
         "acceptRoutes": "Prijímať routy",
@@ -2916,7 +2916,7 @@
       "steps": {
         "intro": {
           "title": "Bezpečný vzdialený prístup",
-          "description": "Nastavte bezpečný VPN prístup k svojmu Proxmox serveru"
+          "description": "Nastavte bezpečný VPN prístup k svojmu serveru Proxmox"
         },
         "auth": {
           "title": "Prihlásenie do Tailscale",
@@ -3024,7 +3024,7 @@
           "options": {
             "host_only": {
               "label": "Iba Proxmox",
-              "description": "Prístup iba k tomuto Proxmox serveru, web UI a ProxMenux Monitoru."
+              "description": "Prístup iba k tomuto serveru Proxmox, web UI a ProxMenux Monitoru."
             },
             "proxmox_network": {
               "label": "Celá lokálna sieť",
@@ -3043,7 +3043,7 @@
         "exit_node": {
           "label": "Výstupný uzol",
           "description": "Použiť túto bránu ako internetový výstup, keď ste mimo domu.",
-          "warning": "Vyžaduje schválenie v Tailscale Admin. Po zapnutí na zariadení pôjde všetka internetová prevádzka cez váš Proxmox server."
+          "warning": "Vyžaduje schválenie v Tailscale Admin. Po zapnutí na zariadení pôjde všetka internetová prevádzka cez váš server Proxmox."
         },
         "accept_routes": {
           "label": "Prijímať routy",

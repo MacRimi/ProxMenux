@@ -3269,7 +3269,7 @@ ${(report.sections && report.sections.length > 0) ? `
                                   <span className="text-xs text-foreground font-mono font-medium">{rule.dport || "*"}</span>
                                   <span className={`text-[10px] px-1 py-0 rounded flex-shrink-0 ${
                                     rule.source_file === "cluster" ? "bg-blue-500/10 text-blue-400" : "bg-purple-500/10 text-purple-400"
-                                  }`}>{rule.source_file}</span>
+                                  }`}>{rule.source_file === "cluster" ? st("firewall.cluster") : st("firewall.host")}</span>
                                 </div>
                                 {comment && (
                                   <p className="text-[10px] text-muted-foreground truncate mt-0.5">{comment}</p>
@@ -3287,7 +3287,7 @@ ${(report.sections && report.sections.length > 0) ? `
                               <span className={`hidden sm:block text-[10px] px-1.5 py-0.5 rounded text-center ${
                                 rule.source_file === "cluster" ? "bg-blue-500/10 text-blue-400" : "bg-purple-500/10 text-purple-400"
                               }`}>
-                                {rule.source_file}
+                                {rule.source_file === "cluster" ? st("firewall.cluster") : st("firewall.host")}
                               </span>
                               {/* Expand/Delete */}
                               <div className="flex items-center justify-end">
