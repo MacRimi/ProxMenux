@@ -3304,8 +3304,8 @@
       "vmLxcInterfaces": "Sieťové rozhrania VM a LXC"
     },
     "summary": {
-      "totalInterfaces": "Spolu rozhraní: {count}",
-      "activeCount": "{active}/{total} aktívne"
+      "totalInterfaces": "Rozhraní spolu: {count}",
+      "activeCount": "Aktívne: {active}/{total}"
     },
     "status": {
       "healthy": "V poriadku",
@@ -3328,7 +3328,7 @@
       "other": "Ostatné"
     },
     "labels": {
-      "activeSlave": "Aktívny slave",
+      "activeSlave": "Aktívny člen",
       "average": "Priemer",
       "avg": "Priem.",
       "bitsReceived": "Prijaté bity",
@@ -3339,7 +3339,7 @@
       "bytesSent": "Odoslané bajty",
       "current": "Aktuálne",
       "domain": "Doména",
-      "down": "Príjem",
+      "down": "Prijaté",
       "drops": "Zahodené",
       "dropsIn": "Zahodené prijaté",
       "dropsOut": "Zahodené odoslané",
@@ -3363,17 +3363,17 @@
       "packetsReceived": "Prijaté pakety",
       "packetsSent": "Odoslané pakety",
       "physicalInterface": "Fyzické rozhranie",
-      "primarySlave": "Primárny slave",
+      "primarySlave": "Primárny člen",
       "received": "Prijaté",
       "sent": "Odoslané",
-      "slaveInterfaces": "Slave rozhrania",
+      "slaveInterfaces": "Členské rozhrania",
       "speed": "Rýchlosť",
       "status": "Stav",
       "time": "Čas",
       "type": "Typ",
-      "up": "Odosielanie",
-      "virtualMemberInterfaces": "Virtuálne členské rozhrania",
-      "vmLxcName": "Názov VM/LXC"
+      "up": "Odoslané",
+      "virtualMemberInterfaces": "Virtuálne rozhrania v moste",
+      "vmLxcName": "Názov VM alebo LXC"
     },
     "roles": {
       "active": "aktívne",
@@ -3382,7 +3382,7 @@
     },
     "empty": {
       "noVmLxc": "Žiadne VM/LXC",
-      "noVirtualMembers": "Žiadni virtuálni členovia"
+      "noVirtualMembers": "Žiadne virtuálne rozhrania"
     },
     "timeframes": {
       "hour": "1 hodina",
@@ -3391,18 +3391,18 @@
       "month": "30 dní",
       "year": "1 rok",
       "short": {
-        "hour": "Za 1 h",
-        "day": "Za 24 h",
-        "week": "Za 7 dní",
-        "month": "Za 30 dní",
-        "year": "Za 1 rok"
+        "hour": "Za poslednú hodinu",
+        "day": "Za posledných 24 h",
+        "week": "Za posledných 7 dní",
+        "month": "Za posledných 30 dní",
+        "year": "Za posledný rok"
       },
       "last": {
-        "hour": "Posledná hodina",
-        "day": "Posledných 24 hodín",
-        "week": "Posledných 7 dní",
-        "month": "Posledných 30 dní",
-        "year": "Posledný rok"
+        "hour": "posledná hodina",
+        "day": "posledných 24 hodín",
+        "week": "posledných 7 dní",
+        "month": "posledných 30 dní",
+        "year": "posledný rok"
       }
     },
     "interfaceDetails": {
@@ -3449,7 +3449,7 @@
       "actions": {
         "stop": "Zastaviť",
         "testAgain": "Otestovať znova",
-        "report": "Vytvoriť report"
+        "report": "Vytvoriť správu"
       },
       "testingProgress": "Testujem... {percent} %",
       "secondsRemaining": "Zostáva {seconds} s",
@@ -3460,12 +3460,12 @@
       "noDataForPeriod": "Pre toto obdobie nie sú dostupné dáta odozvy",
       "collectionInterval": "Dáta sa zbierajú každých 60 sekúnd",
       "realTimeMode": "Režim v reálnom čase",
-      "realTimeModeDescription": "Test beží 2 minúty a meria každých 5 sekúnd. Po skončení ho môžeš spustiť znova a pridať ďalšie vzorky. Všetky dáta sa zahrnú do reportu.",
+      "realTimeModeDescription": "Test beží 2 minúty a meria každých 5 sekúnd. Po skončení ho môžeš spustiť znova a pridať ďalšie vzorky. Všetky údaje sa zahrnú do správy.",
       "report": {
-        "title": "Report odozvy siete",
+        "title": "Správa o odozve siete",
         "subtitle": "ProxMenux Monitor - analýza výkonu siete",
-        "topBarTitle": "Report odozvy siete ProxMenux",
-        "topBarSubtitle": "Skontroluj report a potom ho vytlač alebo ulož ako PDF",
+        "topBarTitle": "Správa o odozve siete ProxMenux",
+        "topBarSubtitle": "Skontroluj správu a potom ju vytlač alebo ulož ako PDF",
         "printSavePdf": "Tlačiť / uložiť ako PDF",
         "date": "Dátum",
         "target": "Cieľ",
@@ -3481,7 +3481,7 @@
         "minutesShort": "{count} min",
         "seconds": "{count} s",
         "secondsShort": "{count} s",
-        "testPeriod": "obdobia testu",
+        "testPeriod": "celé obdobie testu",
         "averagePacketLoss": "Priemerná strata paketov: {value} %.",
         "noPacketLoss": "Nebola zistená strata paketov.",
         "defaultGateway": "Predvolená brána",
@@ -3497,7 +3497,7 @@
         "thresholdExcellent": "Ideálne pre aplikácie v reálnom čase, hry a videohovory.",
         "thresholdGood": "V poriadku pre väčšinu aplikácií, s minimálnym dopadom.",
         "thresholdFair": "Už viditeľné oneskorenie. Môže ovplyvniť VoIP a interaktívne aplikácie.",
-        "thresholdPoor": "Výrazná odozva. Odporúča sa preveriť sieť.",
+        "thresholdPoor": "Odozva je výrazne zvýšená. Odporúča sa preveriť sieť.",
         "detailedTestResults": "Podrobné výsledky testu",
         "latencyHistory": "História odozvy (posledných {count} záznamov)",
         "methodology": "Metodika",
@@ -3512,9 +3512,9 @@
         "assessmentFair": "Odozva siete je zvýšená. Skontroluj možné zahltenie siete alebo routovanie.",
         "assessmentPoor": "Odozva siete je kriticky vysoká. Odporúča sa okamžitá kontrola.",
         "assessmentUnknown": "Stav siete sa nepodarilo vyhodnotiť.",
-        "footerTitle": "ProxMenux Monitor - report výkonu siete",
-        "generated": "Vygenerované",
-        "reportId": "ID reportu"
+        "footerTitle": "ProxMenux Monitor - správa o výkone siete",
+        "generated": "Vytvorené",
+        "reportId": "ID správy"
       }
     }
   },
