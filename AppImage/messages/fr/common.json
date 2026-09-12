@@ -1754,7 +1754,7 @@
       "configure": "Configurer",
       "tokenLabel": "Jeton d'accès personnel",
       "tokenPlaceholder": "github_pat_...",
-      "tokenHelp": "Le jeton est stocké sous forme chiffrée. ProxMenux l'utilise uniquement pour des requêtes en lecture seule vers l'API GitHub et ne l'affiche plus ensuite.",
+      "tokenHelp": "Le jeton est stocké sous forme chiffrée. ProxMenux l'utilise uniquement pour des requêtes en lecture seule vers l'API GitHub et ne l'affiche plus ensuite. Un jeton fine-grained avec un accès en lecture seule aux dépôts publics et sans autorisation de compte suffit.",
       "configured": "Jeton configuré",
       "notConfigured": "Utilisation du quota de requêtes anonymes de GitHub",
       "removeToken": "Supprimer le jeton",

@@ -1754,7 +1754,7 @@
       "configure": "Configurar",
       "tokenLabel": "Token de acesso pessoal",
       "tokenPlaceholder": "github_pat_...",
-      "tokenHelp": "O token é armazenado de forma cifrada. O ProxMenux utiliza-o apenas para pedidos de leitura à API do GitHub e não volta a apresentá-lo.",
+      "tokenHelp": "O token é armazenado de forma cifrada. O ProxMenux utiliza-o apenas para pedidos de leitura à API do GitHub e não volta a apresentá-lo. Basta um token fine-grained com acesso de leitura a repositórios públicos e sem permissões de conta.",
       "configured": "Token configurado",
       "notConfigured": "A utilizar a quota de pedidos anónimos do GitHub",
       "removeToken": "Remover token",

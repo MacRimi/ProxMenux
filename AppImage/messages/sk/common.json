@@ -1753,7 +1753,7 @@
       "configure": "Nastaviť",
       "tokenLabel": "Osobný prístupový token",
       "tokenPlaceholder": "github_pat_...",
-      "tokenHelp": "Token sa ukladá šifrovane. ProxMenux ho používa iba na požiadavky GitHub API určené na čítanie a po uložení ho už nezobrazí.",
+      "tokenHelp": "Token sa ukladá šifrovane. ProxMenux ho používa iba na požiadavky GitHub API určené na čítanie a po uložení ho už nezobrazí. Postačuje fine-grained token s prístupom na čítanie k verejným repozitárom a bez oprávnení k účtu.",
       "configured": "Token je nastavený",
       "notConfigured": "Používa sa anonymná kvóta požiadaviek GitHubu",
       "removeToken": "Odstrániť token",

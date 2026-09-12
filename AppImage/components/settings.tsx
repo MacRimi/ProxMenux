@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/card"
-import { Wrench, Package, Ruler, HeartPulse, Cpu, MemoryStick, HardDrive, CircleDot, Network, Server, Settings2, FileText, RefreshCw, Shield, AlertTriangle, Info, Loader2, Check, Database, CloudOff, Code, X, Copy, Sparkles, ArrowUpCircle, BellOff, Globe2, Github } from "lucide-react"
+import { Package, Ruler, HeartPulse, Cpu, MemoryStick, HardDrive, CircleDot, Network, Server, Settings2, FileText, RefreshCw, Shield, AlertTriangle, Info, Loader2, Check, Database, CloudOff, Code, X, Copy, Sparkles, ArrowUpCircle, BellOff, Globe2, Github } from "lucide-react"
 import { Badge } from "./ui/badge"
 import { Button } from "./ui/button"
 import { NotificationSettings } from "./notification-settings"
@@ -2034,7 +2034,7 @@ export function Settings() {
       <Card>
         <CardHeader>
           <div className="flex items-center gap-2">
-            <Wrench className="h-5 w-5 text-orange-500" />
+            <Sparkles className="h-5 w-5 text-orange-500" />
             <CardTitle>{t("settings.optimizations.title")}</CardTitle>
           </div>
           <CardDescription>{t("settings.optimizations.description")}</CardDescription>

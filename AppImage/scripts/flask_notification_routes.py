@@ -12,7 +12,7 @@ from collections import deque
 from flask import Blueprint, jsonify, request
 from notification_manager import notification_manager, SENSITIVE_PLACEHOLDER, validate_external_url
 from notification_channels import CHANNEL_TYPES as _NOTIF_CHANNEL_TYPES
-from jwt_middleware import require_auth
+from jwt_middleware import require_auth, require_admin_scope
 
 
 def _resolve_masked_api_key(provider, api_key):
@@ -314,15 +314,21 @@ def save_notification_settings():
 
 
 @notification_bp.route('/api/notifications/reveal-secret', methods=['POST'])
-@require_auth
+@require_admin_scope
 def reveal_notification_secret():
     """Return one sensitive config value in cleartext.
 
     Backs the "eye" toggle in the Settings UI. The settings GET masks
     every entry in SENSITIVE_KEYS with `'************'` so the secret
     never leaves the server just because someone loaded the page; this
-    endpoint lets an authenticated operator explicitly request the
-    real value for a single key when they need to inspect it.
+    endpoint lets an operator explicitly request the real value for a
+    single key when they need to inspect it.
+
+    Requires `full_admin` scope: this is the one route that hands back a
+    stored credential in cleartext, so a read-only API token — which is
+    handed out precisely because it cannot reach credentials — must not
+    reach it. Session logins carry full_admin implicitly, so the eye
+    toggle in the UI is unaffected.
 
     Body schema (one of):
         {"ai_provider": "groq" | "anthropic" | …}

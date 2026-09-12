@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "./ui/card"
 import { Badge } from "./ui/badge"
 import {
   ChevronDown, ChevronRight, FileCode, HelpCircle, Loader2, Package,
-  Play, Settings2,
+  Play, Settings2, Sparkles, Terminal, Wrench,
 } from "lucide-react"
 import { fetchApi } from "../lib/api-config"
 import { useT, useI18n } from "../lib/i18n/provider"
@@ -299,8 +299,10 @@ function ChangeCard({ change, expanded, onToggle, t, when }: {
   )
 }
 
-function GroupSection({ title, groups, openFn, toggleFn, open, toggle, t, when }: {
+function GroupSection({ title, icon: Icon, iconClass, groups, openFn, toggleFn, open, toggle, t, when }: {
   title: string
+  icon: typeof Settings2
+  iconClass: string
   groups: { key: string; label: string; version: string; last: number; items: Change[] }[]
   openFn: Set<string>; toggleFn: (k: string) => void
   open: Set<number>; toggle: (id: number) => void
@@ -309,8 +311,15 @@ function GroupSection({ title, groups, openFn, toggleFn, open, toggle, t, when }
 }) {
   if (groups.length === 0) return null
   return (
-    <div className="space-y-2">
-      <h3 className="text-sm font-semibold text-foreground px-1">{title}</h3>
+    // Padding on the child: the container's space-y-4 overrides any mt-*.
+    <div className="space-y-2 pt-2">
+      {/* Same type and icon size as CardTitle, so a block heading here reads
+          exactly like a card heading on the Settings page. */}
+      <h3 className="px-1 flex items-center gap-2 text-2xl font-semibold
+                     leading-none tracking-tight text-foreground">
+        <Icon className={`h-5 w-5 shrink-0 ${iconClass}`} />
+        {title}
+      </h3>
       {groups.map((g) => {
         const fnOpen = openFn.has(g.key)
         return (
@@ -460,12 +469,15 @@ export function AuditChanges() {
       </Card>
 
       <GroupSection title={t("audit.changes.section.postInstall")}
+        icon={Sparkles} iconClass="text-orange-500"
         groups={blocks.post} openFn={openFn} toggleFn={toggleFn}
         open={open} toggle={toggle} t={t} when={when} />
       <GroupSection title={t("audit.changes.section.scripts")}
+        icon={Terminal} iconClass="text-cyan-500"
         groups={blocks.scripts} openFn={openFn} toggleFn={toggleFn}
         open={open} toggle={toggle} t={t} when={when} />
       <GroupSection title={t("audit.changes.section.installs")}
+        icon={Wrench} iconClass="text-purple-400"
         groups={blocks.installs} openFn={openFn} toggleFn={toggleFn}
         open={open} toggle={toggle} t={t} when={when} />
       {summary && summary.total > 0

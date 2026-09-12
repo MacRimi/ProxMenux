@@ -1754,7 +1754,7 @@
       "configure": "Konfigurera",
       "tokenLabel": "Personlig åtkomsttoken",
       "tokenPlaceholder": "github_pat_...",
-      "tokenHelp": "Token lagras krypterad. ProxMenux använder den endast för skrivskyddade anrop till GitHub API och visar den inte igen efter att den har sparats.",
+      "tokenHelp": "Token lagras krypterad. ProxMenux använder den endast för skrivskyddade anrop till GitHub API och visar den inte igen efter att den har sparats. Det räcker med en fine-grained token med läsbehörighet till publika repositorier och utan kontobehörigheter.",
       "configured": "Token konfigurerad",
       "notConfigured": "GitHubs anonyma förfrågningskvot används",
       "removeToken": "Ta bort token",

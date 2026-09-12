@@ -2322,7 +2322,7 @@ EOF
 
 
 remove_subscription_banner() {
-    local FUNC_VERSION="1.1"
+    local FUNC_VERSION="1.0"
     # description: Patch the Proxmox web UI to suppress the "no valid subscription" dialog (PVE 8 + 9 variants supported).
     local pve_version
     pve_version=$(pveversion 2>/dev/null | grep -oP 'pve-manager/\K[0-9]+' | head -1)
