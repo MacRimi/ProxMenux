@@ -1637,7 +1637,7 @@
   },
   "settings": {
     "title": "Nastavenia",
-    "description": "Spravujte správanie dashboardu",
+    "description": "Nastavte správanie rozhrania",
     "common": {
       "health": "Stav",
       "alerts": "Upozornenia"
@@ -1645,7 +1645,7 @@
     "interfaceLanguage": {
       "title": "Jazyk rozhrania",
       "description": "Vyberte jazyk používaný v paneli Monitor.",
-      "label": "Jazyk dashboardu",
+      "label": "Jazyk rozhrania",
       "fallbackNote": "",
       "statusComplete": "hotové",
       "statusPartial": "čiastočne preložené",
@@ -1736,12 +1736,12 @@
       "description": "Miesto, kam ProxMenux ukladá hookscripty, napríklad ochranu GPU passthrough pre VM/LXC. V clusteri vyberte zdieľané úložisko, aby sa VM a LXC dali bez problémov presúvať medzi servermi;",
       "localNote": "je viazané iba na jeden server a migráciu pokazí.",
       "placeholder": "Vyberte úložisko...",
-      "footer": "Existujúce VM/LXC nastavené na predchádzajúce úložisko budú fungovať ďalej. Nový výber sa použije iba pri nových GPU passthrough operáciách alebo pri spustení „sync hookscripts“ na hostovi."
+      "footer": "Existujúce VM/LXC nastavené na predchádzajúce úložisko budú fungovať ďalej. Nový výber sa použije iba pri nových GPU passthrough operáciách alebo pri spustení „sync hookscripts“ na serveri."
     },
     "lxcUpdateDetection": {
       "title": "Kontrola aktualizácií v LXC",
       "descriptionStart": "Pravidelne kontroluje bežiace Debian/Ubuntu/Alpine LXC kontajnery, či nemajú dostupné aktualizácie balíkov",
-      "descriptionEnd": " a zobrazí ich v dashboarde. Zodpovedajúci prepínač v Notifikácie -> Služby sa zobrazí iba vtedy, keď je táto kontrola zapnutá.",
+      "descriptionEnd": " a zobrazí ich v prehľade. Zodpovedajúci prepínač v Notifikácie → Služby sa zobrazí iba vtedy, keď je táto kontrola zapnutá.",
       "enableLabel": "Zapnúť kontrolu aktualizácií v LXC",
       "loadFailed": "Nastavenie kontroly aktualizácií LXC sa nepodarilo načítať.",
       "saveFailed": "Nastavenie kontroly aktualizácií LXC sa nepodarilo uložiť.",
@@ -1771,7 +1771,7 @@
       "configuring": "Nastavujem...",
       "webhookConfigured": "PVE webhook sa nastavil automaticky. Proxmox bude posielať notifikácie do ProxMenux.",
       "webhookFailed": "Automatické nastavenie PVE zlyhalo: {error}",
-      "webhookManualSetup": "Notifikácie sú zapnuté. Na dokončenie webhooku spustite nižšie uvedené príkazy na PVE hostovi.",
+      "webhookManualSetup": "Notifikácie sú zapnuté. Na dokončenie webhooku spustite nižšie uvedené príkazy na PVE serveri.",
       "serviceRunning": "Služba beží",
       "serviceStopped": "Služba je zastavená",
       "sentLast24h": "odoslané za 24 h: {count}",
@@ -2148,7 +2148,7 @@
           "description": "Hranice podľa typu disku. Jednotky sú rovnaké (°C), ale predvolené hodnoty sa líšia, pretože každý typ disku znáša iný rozsah."
         },
         "host_storage": {
-          "title": "Miesto na disku - host",
+          "title": "Miesto na disku – server",
           "description": "Platí pre / a všetky prípojné body pod /var/lib/vz, /mnt/* a podobne."
         },
         "lxc_rootfs": {
@@ -2161,21 +2161,21 @@
         },
         "pve_storage": {
           "title": "Kapacita PVE úložísk",
-          "description": "Blokové PVE úložiská: LVM, LVM-thin, ZFS-pool, RBD/Ceph, PBS. Súborové úložiská sú už pokryté hranicami disku hosta."
+          "description": "Blokové PVE úložiská: LVM, LVM-thin, ZFS-pool, RBD/Ceph, PBS. Súborové úložiská už pokrývajú limity diskov servera."
         },
         "zfs_pool": {
           "title": "Kapacita ZFS poolov",
-          "description": "ZFS pooly na úrovni hosta, nezávisle od registrácie v PVE. Sleduje sa teda aj rpool a samostatné zálohovacie pooly."
+          "description": "ZFS pooly na úrovni servera, nezávisle od registrácie v PVE. Sleduje sa teda aj rpool a samostatné zálohovacie pooly."
         }
       },
       "swapPressure": "Tlak na pamäť",
-      "swapPressureHint": "Označí kritickú udalosť len keď platia OBIDVE podmienky súčasne — využitie súboru swap nad prvým limitom A dostupná RAM pod druhým. Upozorňovanie iba na swap bolo hlučné na hostiteľoch Proxmox, kde Linux odsúva neaktívne stránky, kým RAM zostáva dostatočne dostupná.",
+      "swapPressureHint": "Kritickú udalosť označí len vtedy, keď sú splnené obe podmienky: využitie súboru swap je nad prvým limitom a dostupná RAM pod druhým. Upozorňovanie iba na swap bolo na serveroch Proxmox príliš hlučné, pretože Linux odsúva neaktívne stránky aj pri dostatočne dostupnej RAM.",
       "swapHighLabel": "Využitie súboru swap",
       "availableMinLabel": "Minimálna dostupná RAM"
     },
     "navOrder": {
       "title": "Poradie navigácie",
-      "description": "Prispôsobte poradie hlavných záložiek. Zoskupené záložky (Node, Admin) sa presúvajú ako jedna jednotka; ich vnútorné položky si zachovávajú predvolené poradie.",
+      "description": "Prispôsobte poradie hlavných záložiek. Zoskupené záložky (Server, Správa) sa presúvajú ako jedna jednotka; ich vnútorné položky si zachovajú predvolené poradie.",
       "reset": "Obnoviť predvolené",
       "hint": "Presúvajte pre zmenu poradia · Na dotyku najprv podržte",
       "customActive": "Používa sa vlastné poradie navigácie."
