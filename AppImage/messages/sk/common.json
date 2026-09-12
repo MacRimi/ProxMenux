@@ -37,7 +37,7 @@
     "hardware": "Hardvér",
     "backup": "Záloha",
     "terminal": "Terminál",
-    "systemLogs": "Systémové logy",
+    "systemLogs": "Systémové záznamy",
     "security": "Bezpečnosť",
     "settings": "Nastavenia",
     "about": "O projekte",
@@ -3093,15 +3093,15 @@
     }
   },
   "systemLogs": {
-    "title": "Systémové logy a udalosti",
+    "title": "Systémové záznamy a udalosti",
     "sections": "Časti",
     "loading": {
-      "title": "Načítavam logy…",
-      "description": "Získavam systémové logy a udalosti"
+      "title": "Načítavam záznamy…",
+      "description": "Získavam systémové záznamy a udalosti"
     },
     "errors": {
       "connectFailed": "Nepodarilo sa pripojiť k serveru.",
-      "loadFailed": "Logy sa nepodarilo načítať. Skúste to znova."
+      "loadFailed": "Záznamy sa nepodarilo načítať. Skúste to znova."
     },
     "cards": {
       "totalEntries": "Všetky záznamy",
@@ -3109,17 +3109,17 @@
       "errors": "Chyby",
       "requiresAttention": "Vyžadujú pozornosť",
       "warnings": "Upozornenia",
-      "monitorClosely": "Treba ich sledovať",
+      "monitorClosely": "Skontrolujte ich",
       "backups": "Zálohy"
     },
     "tabs": {
-      "logs": "Logy",
+      "logs": "Záznamy",
       "events": "Udalosti",
       "backups": "Zálohy",
       "notifications": "Notifikácie"
     },
     "filters": {
-      "searchPlaceholder": "Hľadať v logoch a udalostiach…",
+      "searchPlaceholder": "Hľadať v záznamoch a udalostiach…",
       "timeRange": "Časové obdobie",
       "oneDay": "Posledný deň",
       "threeDays": "Posledné 3 dni",
@@ -3147,8 +3147,8 @@
       "debug": "Ladenie"
     },
     "export": {
-      "button": "Exportovať logy",
-      "title": "Export systémových logov a udalostí Proxmoxu",
+      "button": "Exportovať záznamy",
+      "title": "Export systémových záznamov a udalostí Proxmoxu",
       "filtersApplied": "Použité filtre"
     },
     "fields": {
@@ -3181,7 +3181,7 @@
       "event": "Udalosť"
     },
     "empty": {
-      "logs": "Vybraným filtrom nezodpovedajú žiadne logy.",
+      "logs": "Vybraným filtrom nezodpovedajú žiadne záznamy.",
       "backups": "Nenašli sa žiadne zálohy.",
       "notifications": "Nenašli sa žiadne notifikácie."
     },
@@ -3192,7 +3192,7 @@
       "totalSize": "Celková veľkosť"
     },
     "modals": {
-      "logTitle": "Podrobnosti logu",
+      "logTitle": "Podrobnosti záznamu",
       "logDescription": "Všetky informácie o tomto zázname",
       "eventTitle": "Podrobnosti udalosti",
       "eventDescription": "Všetky informácie o tejto udalosti",
@@ -3202,8 +3202,8 @@
       "notificationDescription": "Všetky informácie o tejto notifikácii"
     },
     "download": {
-      "taskLog": "Log úlohy Proxmoxu",
-      "completeTaskLog": "Celý log úlohy",
+      "taskLog": "Záznam úlohy Proxmoxu",
+      "completeTaskLog": "Celý záznam úlohy",
       "completeMessage": "Celá správa",
       "completeMessageButton": "Stiahnuť celú správu"
     }
