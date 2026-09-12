@@ -164,7 +164,7 @@
     "loadingTitle": "Načítavam úložiská...",
     "loadingDescription": "Kontrolujem disky, oddiely a úložiská",
     "loadingError": "Úložiská sa nepodarilo načítať: {error}",
-    "storageUsed": "Využité úložisko",
+    "storageUsed": "Využitie úložiska",
     "localUsed": "Lokálne využité",
     "remoteUsed": "Vzdialené využité",
     "physicalDisks": "Fyzické disky",
@@ -232,13 +232,13 @@
     "dataWritten": "Zapísané dáta",
     "life": "životnosť",
     "lifeRemaining": "Zostávajúca životnosť",
-    "realTest": "Reálny test",
+    "realTest": "Aktuálne údaje",
     "wear": {
       "label": "Opotrebenie",
-      "percentageUsed": "Využitá životnosť",
+      "percentageUsed": "Opotrebenie",
       "mediaWearout": "Opotrebovanie média",
       "wearLevel": "Miera opotrebovania",
-      "lifeUsed": "Využitá životnosť"
+      "lifeUsed": "Opotrebenie"
     },
     "estimatedLife": "Odhad životnosti",
     "noWearDetected": "Zatiaľ bez zisteného opotrebenia",
@@ -316,16 +316,16 @@
       "testWait": "Počkajte, kým sa test dokončí. Tlačidlá sa odomknú automaticky.",
       "noProgress": "Firmvér tohto disku neposiela priebeh testu. Test beží na pozadí.",
       "lastTest": "Posledný test",
-      "nvmeMetrics": "Zdravotné údaje NVMe",
-      "sasMetrics": "Zdravotné údaje SAS/SCSI",
+      "nvmeMetrics": "Údaje o stave NVMe",
+      "sasMetrics": "Údaje o stave SAS/SCSI",
       "id": "ID",
       "attribute": "Údaj",
       "value": "Hodnota",
       "worst": "Najhoršie",
       "status": "Stav",
-      "viewFullReport": "Zobraziť celý SMART report",
-      "loadingReport": "Načítavam report...",
-      "reportLoadFailed": "Údaje pre report sa nepodarilo načítať.",
+      "viewFullReport": "Zobraziť celú SMART správu",
+      "loadingReport": "Načítavam správu...",
+      "reportLoadFailed": "Údaje pre SMART správu sa nepodarilo načítať.",
       "statusValues": {
         "passed": "Prešlo",
         "failed": "Zlyhalo",
@@ -346,10 +346,10 @@
       "downloadJson": "Stiahnuť JSON",
       "delete": "Vymazať",
       "confirmDelete": "Vymazať tento záznam testu?",
-      "note": "Výsledky testov sa ukladajú lokálne a používajú sa na vytvorenie podrobného SMART reportu."
+      "note": "Výsledky testov sa ukladajú lokálne a používajú sa na vytvorenie podrobnej SMART správy."
     },
     "smartReport": {
-      "title": "SMART report o stave disku",
+      "title": "SMART správa o stave disku",
       "printPdf": "Vytlačiť / uložiť ako PDF",
       "printHintMac": "Na uloženie ako PDF použite Cmd+P",
       "printHintCtrl": "Na uloženie ako PDF použite Ctrl+P",
@@ -361,7 +361,7 @@
       "smartStatus": "SMART stav",
       "healthAssessment": "Vyhodnotenie stavu disku",
       "passedUpper": "V PORIADKU",
-      "testAgeWarning": "Report vychádza zo SMART testu spred {days} dní ({date}). Stav disku sa odvtedy mohol zmeniť. Odporúčame spustiť nový SMART test.",
+      "testAgeWarning": "SMART správa vychádza z testu spred {days} dní ({date}). Stav disku sa odvtedy mohol zmeniť. Odporúčame spustiť nový SMART test.",
       "healthyAssessment": "Disk pracuje v bežných hodnotách a SMART údaje sú v prijateľných medziach. Je zapnutý približne {uptime} a jeho aktuálna teplota je {temperature}. {sectors}",
       "failedAssessment": "SMART hlási vážny problém s diskom. Hneď zálohujte dôležité dáta a naplánujte výmenu disku.",
       "noBadSectors": "Nenašli sa žiadne chybné sektory.",
@@ -393,8 +393,8 @@
       "attributeCount": "{total} spolu",
       "attributeCountWithWarnings": "{total} spolu, {warnings} upozornení",
       "entriesCount": "{count} záznamov",
-      "fullSelfTestHistory": "Celá história self-testov ({count} záznamov)",
-      "firmwareNoSelfTestLog": "Firmvér tohto disku si nevedie vlastný interný log self-testov. Výsledky sleduje ProxMenux Monitor.",
+      "fullSelfTestHistory": "Celá história SMART testov ({count} záznamov)",
+      "firmwareNoSelfTestLog": "Firmvér tohto disku si nevedie vlastný záznam SMART testov. Výsledky sleduje ProxMenux Monitor.",
       "ssdWearNote": "Odhad životnosti SSD vychádza z opotrebovania, ktoré hlási výrobca. Skutočná životnosť sa môže líšiť podľa záťaže a spôsobu používania.",
       "labels": {
         "model": "Model",
@@ -402,7 +402,7 @@
         "estimatedLife": "Odhadovaná zostávajúca životnosť",
         "totalDataWritten": "Celkom zapísaných dát",
         "availableSpare": "Voľná rezerva",
-        "reportGenerated": "Report vytvorený",
+        "reportGenerated": "Správa vytvorená",
         "testType": "Typ testu",
         "lastTestType": "Posledný typ testu",
         "testResult": "Výsledok testu",
@@ -426,7 +426,7 @@
         "lifeRemaining": "ZOSTÁVAJÚCA ŽIVOTNOSŤ",
         "estimated": "Odhad",
         "usageStatistics": "ŠTATISTIKA POUŽÍVANIA",
-        "percentageUsed": "Využitá životnosť",
+        "percentageUsed": "Opotrebenie",
         "dataWritten": "Zapísané dáta",
         "source": "Zdroj",
         "ssdLifeIndicator": "Ukazovateľ životnosti SSD",
@@ -536,18 +536,18 @@
         "minutesInWarningRange": "Minúty v pásme upozornenia",
         "minutesInCriticalRange": "Minúty v kritickom pásme",
         "totalHostReads": "Celkové čítania zo servera",
-        "totalReadCommands": "Celkový počet read príkazov",
-        "totalWriteCommands": "Celkový počet write príkazov",
+        "totalReadCommands": "Celkový počet príkazov na čítanie",
+        "totalWriteCommands": "Celkový počet príkazov na zápis",
         "sensorHotspot": "Hotspot senzora [1]"
       },
       "empty": {
         "nvmeMetrics": "Nie sú dostupné žiadne NVMe metriky",
         "sasMetrics": "Nie sú dostupné žiadne SAS metriky",
         "smartAttributes": "Nie sú dostupné žiadne SMART atribúty",
-        "selfTestHistory": "Nie je dostupná história self-testov. Spustite SMART self-test a výsledky sa zobrazia tu."
+        "selfTestHistory": "História SMART testov zatiaľ nie je dostupná. Spustite SMART test a výsledky sa zobrazia tu."
       },
       "footer": {
-        "generatedBy": "Report vytvoril ProxMenux Monitor"
+        "generatedBy": "Správu vytvoril ProxMenux Monitor"
       },
       "attributeLabels": {
         "criticalWarning": "Kritické upozornenie",
@@ -557,7 +557,7 @@
         "temperatureSensor3": "Teplotný senzor 3",
         "availableSpare": "Voľná rezerva",
         "availableSpareThreshold": "Minimálna voľná rezerva",
-        "percentageUsed": "Využitá životnosť",
+        "percentageUsed": "Opotrebenie",
         "enduranceGroupWarning": "Upozornenie na výdrž skupiny",
         "mediaErrors": "Chyby média",
         "mediaIntegrityErrors": "Chyby média a integrity dát",
@@ -719,7 +719,7 @@
       },
       "recommendations": {
         "healthyTitle": "Disk je v poriadku",
-        "healthyText": "Všetky SMART hodnoty sú v bežnom rozsahu. Disk ďalej pravidelne sledujte.",
+        "healthyText": "Všetky SMART hodnoty sú v bežnom rozsahu. Disk pravidelne kontrolujte.",
         "criticalTitle": "Kritický problém so stavom disku",
         "criticalText": "SMART hlási problém. Hneď zálohujte všetky dáta a naplánujte výmenu disku.",
         "reallocatedTitle": "Presunuté sektory ({count})",
