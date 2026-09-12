@@ -5145,50 +5145,50 @@
       "lynisWarning": "Upozornenie",
       "couldNotRead": "Nepodarilo sa prečítať"
     },
-    "title": "Audit & Report",
-    "loading": "Loading assessment…",
-    "run": "Run assessment",
-    "running": "Assessing…",
-    "neverRun": "This host has not been assessed yet.",
-    "lastRun": "Last assessed on {when}",
-    "stale": "{days} days ago",
-    "readOnlyNotice": "The assessment only reads the host. It makes no changes.",
+    "title": "Audit a správy",
+    "loading": "Načítava sa hodnotenie…",
+    "run": "Spustiť hodnotenie",
+    "running": "Vyhodnocuje sa…",
+    "neverRun": "Tento hostiteľ ešte nebol vyhodnotený.",
+    "lastRun": "Naposledy vyhodnotené: {when}",
+    "stale": "pred {days} dňami",
+    "readOnlyNotice": "Hodnotenie hostiteľa iba číta. Nič nemení.",
     "unverifiedChecks": "Nevykonané: {checks}. Každá vo svojich dôkazoch uvádza, čo sa jej nepodarilo prečítať.",
-    "noFindings": "No findings match the current filter.",
-    "affectedCount": "{count} affected",
-    "acceptedNotice": "{count} accepted risk(s) recorded on this host.",
+    "noFindings": "Aktuálnemu filtru nezodpovedajú žiadne zistenia.",
+    "affectedCount": "ovplyvnené: {count}",
+    "acceptedNotice": "Na tomto hostiteľovi je zaznamenaných {count} prijatých rizík.",
     "states": {
-      "fail": "Failed",
-      "warn": "Warning",
-      "accepted": "Accepted risk",
-      "pass": "Passed",
-      "not_applicable": "Not applicable",
+      "fail": "Zlyhalo",
+      "warn": "Upozornenie",
+      "accepted": "Prijaté riziko",
+      "pass": "Vyhovuje",
+      "not_applicable": "Neuplatňuje sa",
       "unknown": "Neoverené"
     },
     "areas": {
-      "all": "All",
-      "system": "System",
-      "storage": "Storage",
-      "network": "Network",
-      "security": "Security",
-      "backup": "Backup",
-      "guests": "Guests",
-      "hardware": "Hardware"
+      "all": "Všetko",
+      "system": "Systém",
+      "storage": "Úložisko",
+      "network": "Sieť",
+      "security": "Bezpečnosť",
+      "backup": "Zálohy",
+      "guests": "Hostia",
+      "hardware": "Hardvér"
     },
     "detail": {
-      "why": "Context",
-      "evidence": "Evidence",
-      "affected": "Affected",
-      "acceptedRisk": "Accepted risk",
+      "why": "Súvislosti",
+      "evidence": "Podklady",
+      "affected": "Ovplyvnené",
+      "acceptedRisk": "Prijaté riziko",
       "sources": "Zdroje a časy zberu"
     },
     "errors": {
-      "runFailed": "The assessment could not be started."
+      "runFailed": "Hodnotenie sa nepodarilo spustiť."
     },
     "checks": {
       "backup": {
         "guest_coverage": {
-          "title": "Backup coverage",
+          "title": "Pokrytie zálohami",
           "rationale": "Povolené zálohovacie úlohy na tomto uzle, hostia, ktorých každá vyberá, a údaje hosťa z nich vylúčené. Nakonfigurované pokrytie nedokazuje, že existuje použiteľná záloha. Či mal byť nevybraný hosť chránený, hovorí deklarovaná politika.",
           "summary": {
             "noJobs": "Pre {total} hostí na tomto uzle nie je definovaná žiadna zálohovacia úloha",
@@ -5196,29 +5196,29 @@
             "uncovered": "{count} z {total} hostí nevyberá žiadna povolená zálohovacia úloha",
             "excludedData": "Skontrolujte {count} vylúčení diskov alebo prípojných bodov",
             "uncoveredExpected": "{required} hostí označených ako vyžadujúcich zálohu nevyberá žiadna povolená úloha",
-            "evaluationFailed": "The check could not be evaluated"
+            "evaluationFailed": "Kontrolu sa nepodarilo vyhodnotiť"
           }
         },
         "last_backup_age": {
-          "title": "Age of stored backups",
+          "title": "Vek uložených záloh",
           "rationale": "Vek: čas uplynutý od poslednej uloženej zálohy. Použitý limit: referenčný vek, s ktorým sa táto záloha porovnáva.",
           "summary": {
             "recent": "Všetkých {total} kontrol stroja/cieľa spĺňa uvedené kritérium veku zálohy",
-            "stale": "{count} of {total} guests have no backup from the last 30 days",
-            "noBackups": "No stored backup matches a guest on this node",
+            "stale": "{count} z {total} hostí nemá zálohu z posledných 30 dní",
+            "noBackups": "K žiadnemu hosťovi na tomto uzle sa nenašla uložená záloha",
             "attention": "{count} z {total} kontrol stroja/cieľa vyžaduje preverenie",
-            "evaluationFailed": "The check could not be evaluated"
+            "evaluationFailed": "Kontrolu sa nepodarilo vyhodnotiť"
           }
         },
         "retention_defined": {
-          "title": "Backup retention",
+          "title": "Retencia záloh",
           "rationale": "Retencia tak, ako ju rieši Proxmox: nastavenie úlohy, potom úložiska, potom predvolená hodnota uzla. Retenciu, ktorú uplatňuje zálohovací server, z tohto uzla prečítať nemožno.",
           "summary": {
             "allDefined": "Všetkých {total} úloh má vyriešené nastavenie retencie",
-            "missing": "{count} of {total} enabled job(s) declare no retention",
+            "missing": "{count} z {total} povolených úloh nemá nastavenú retenciu",
             "notDeclared": "{count} z {total} úloh uchováva každú kópiu: nemajú deklarovanú retenciu",
             "onServer": "{count} z {total} úloh zapisuje na zálohovací server, ktorý ich čistí vlastnými úlohami",
-            "evaluationFailed": "The check could not be evaluated"
+            "evaluationFailed": "Kontrolu sa nepodarilo vyhodnotiť"
           }
         },
         "verification_state": {
@@ -5254,83 +5254,83 @@
       },
       "system": {
         "pending_reboot": {
-          "title": "Restart state",
+          "title": "Stav reštartu",
           "rationale": "Značka `/var/run/reboot-required` a balíky uvedené v `/var/run/reboot-required.pkgs`. Jej neprítomnosť nedokazuje, že netreba nič reštartovať.",
           "summary": {
             "none": "Nič si nevyžiadalo reštart",
             "pending": "{count} položiek je nainštalovaných a čaká na reštart",
-            "evaluationFailed": "The check could not be evaluated"
+            "evaluationFailed": "Kontrolu sa nepodarilo vyhodnotiť"
           }
         },
         "enterprise_repo_without_subscription": {
-          "title": "Enterprise repository",
+          "title": "Enterprise repozitár",
           "rationale": "Odkazy na `enterprise.proxmox.com` v `/etc/apt/sources.list` a `sources.list.d` oproti stavu, ktorý vracia `pvesubscription get`.",
           "summary": {
-            "notEnabled": "The enterprise repository is not enabled",
-            "subscribed": "The enterprise repository is backed by a subscription",
-            "unsubscribed": "The enterprise repository is enabled without an active subscription",
-            "evaluationFailed": "The check could not be evaluated"
+            "notEnabled": "Enterprise repozitár nie je povolený",
+            "subscribed": "Enterprise repozitár je pokrytý predplatným",
+            "unsubscribed": "Enterprise repozitár je povolený bez aktívneho predplatného",
+            "evaluationFailed": "Kontrolu sa nepodarilo vyhodnotiť"
           }
         },
         "memory_overcommit": {
-          "title": "Memory allocation",
+          "title": "Pridelenie pamäte",
           "rationale": "Strop `memory` každej konfigurácie hosťa oproti MemTotal, pričom bežiaci hostia sa počítajú osobitne. Kontajnery spotrebúvajú po tento limit; virtuálne stroje bez ballooningu ho rezervujú.",
           "summary": {
-            "withinRatio": "Guests are allocated {percent}% of host memory",
-            "aboveRatio": "Guests are allocated {percent}% of host memory",
-            "evaluationFailed": "The check could not be evaluated"
+            "withinRatio": "Hosťom je pridelených {percent}% pamäte hostiteľa",
+            "aboveRatio": "Hosťom je pridelených {percent}% pamäte hostiteľa",
+            "evaluationFailed": "Kontrolu sa nepodarilo vyhodnotiť"
           }
         },
         "time_synchronisation": {
-          "title": "Time synchronisation",
+          "title": "Synchronizácia času",
           "rationale": "NTP a NTPSynchronized tak, ako ich hlási `timedatectl`. Členstvo v klastri, overovanie certifikátov a poradie záznamov závisia od zhodných hodín. Hodiny môže riadiť aj iný mechanizmus.",
           "summary": {
-            "synchronised": "The clock is synchronised with a time source",
-            "disabled": "Time synchronisation is disabled",
-            "notSynchronised": "Time synchronisation is enabled but the clock is not synchronised",
-            "evaluationFailed": "The check could not be evaluated"
+            "synchronised": "Hodiny sú synchronizované so zdrojom času",
+            "disabled": "Synchronizácia času je vypnutá",
+            "notSynchronised": "Synchronizácia času je zapnutá, ale hodiny nie sú synchronizované",
+            "evaluationFailed": "Kontrolu sa nepodarilo vyhodnotiť"
           }
         },
         "kernel_current": {
-          "title": "Running kernel",
+          "title": "Bežiace jadro",
           "rationale": "Bežiace jadro oproti tomu, ktoré by hostiteľ spustil nabudúce, ako ho hlási `proxmox-boot-tool`. Novšie iba nainštalované jadro môže byť zámerne pozdržané; rozdiel po reštarte znamená štart, ktorý sa neuplatnil.",
           "summary": {
             "current": "Bežiace jadro {version} je to, ktoré by hostiteľ spustil nabudúce",
-            "newerAvailable": "The host runs {running} while {newest} is installed",
+            "newerAvailable": "Hostiteľ beží na {running}, ale je nainštalované {newest}",
             "newerSelected": "Hostiteľ beží na {running} a pri najbližšom reštarte by spustil {selected}",
             "wouldDowngrade": "Hostiteľ beží na {running}, ale pri najbližšom reštarte by spustil staršie {selected}",
             "bootTargetUnknown": "Hostiteľ beží na {version}; jadro zvolené pre najbližší štart sa nepodarilo prečítať",
-            "evaluationFailed": "The check could not be evaluated"
+            "evaluationFailed": "Kontrolu sa nepodarilo vyhodnotiť"
           }
         },
         "security_updates": {
-          "title": "Security updates",
+          "title": "Bezpečnostné aktualizácie",
           "rationale": "Čakajúce balíky, ktorých zdrojom je bezpečnostný repozitár, zo simulovaného `apt-get upgrade`. Počet odráža to, čo hlási apt, nie závažnosť toho, čo každý balík opravuje.",
           "summary": {
-            "none": "No package updates are pending",
-            "noSecurity": "{total} update(s) pending, none from a security repository",
-            "pending": "{count} of {total} pending update(s) come from a security repository",
-            "evaluationFailed": "The check could not be evaluated"
+            "none": "Nečakajú žiadne aktualizácie balíkov",
+            "noSecurity": "Čaká {total} aktualizácií, žiadna z bezpečnostného repozitára",
+            "pending": "{count} z {total} čakajúcich aktualizácií pochádza z bezpečnostného repozitára",
+            "evaluationFailed": "Kontrolu sa nepodarilo vyhodnotiť"
           }
         },
         "journal_size": {
-          "title": "Journal size",
+          "title": "Veľkosť žurnálu",
           "rationale": "Journal na disku oproti stropu, ktorý sa naň vzťahuje: SystemMaxUse, ak je nastavený, inak predvolená hodnota journald, desatina súborového systému, na ktorom leží.",
           "summary": {
             "bounded": "Journal zaberá {size}, v rámci svojho účinného stropu",
-            "large": "The journal holds {size} on disk",
+            "large": "Žurnál zaberá na disku {size}",
             "nearCap": "Journal zaberá {size} a je na {percent}% svojho účinného stropu",
             "capUnknown": "Journal zaberá {size}; jeho účinný strop sa nepodarilo určiť",
-            "evaluationFailed": "The check could not be evaluated"
+            "evaluationFailed": "Kontrolu sa nepodarilo vyhodnotiť"
           }
         },
         "swap_configured": {
           "title": "Swap",
           "rationale": "Aktívne odkladacie oblasti podľa `swapon` a ich súčet oproti pamäti hostiteľa. Žiadne pravidlo nevyžaduje pomer k RAM; tlak na pamäť sa meria inde.",
           "summary": {
-            "active": "{size} of swap is active",
-            "none": "No swap area is active",
-            "evaluationFailed": "The check could not be evaluated"
+            "active": "Aktívny swap má {size}",
+            "none": "Nie je aktívna žiadna oblasť swapu",
+            "evaluationFailed": "Kontrolu sa nepodarilo vyhodnotiť"
           }
         },
         "filesystem_capacity": {
@@ -5377,7 +5377,7 @@
           "summary": {
             "synchronised": "{total} zavádzacích oddielov nesie rovnaké jadrá",
             "attention": "{count} z {total} zavádzacích oddielov si vyžaduje kontrolu",
-            "evaluationFailed": "The check could not be evaluated"
+            "evaluationFailed": "Kontrolu sa nepodarilo vyhodnotiť"
           }
         },
         "failed_units": {
@@ -5386,7 +5386,7 @@
           "summary": {
             "allRunning": "{total} základných služieb je aktívnych a žiadna jednotka nezlyhala",
             "attention": "{count} zistenie(a) medzi jednotkami",
-            "evaluationFailed": "The check could not be evaluated"
+            "evaluationFailed": "Kontrolu sa nepodarilo vyhodnotiť"
           }
         },
         "ha_state": {
@@ -5395,65 +5395,65 @@
           "summary": {
             "managed": "{total} spravovaných služieb je v ustálenom stave na {nodes} uzloch",
             "attention": "{count} zistenie(a) k {total} spravovaným službám",
-            "evaluationFailed": "The check could not be evaluated"
+            "evaluationFailed": "Kontrolu sa nepodarilo vyhodnotiť"
           }
         }
       },
       "guests": {
         "privileged_containers": {
-          "title": "Container privileges",
+          "title": "Oprávnenia kontajnerov",
           "rationale": "Nastavenie `unprivileged` každej konfigurácie kontajnera. Jeho absencia znamená, že kontajner zdieľa menný priestor používateľov hostiteľa, čo niektoré záťaže potrebujú.",
           "summary": {
-            "allUnprivileged": "All {total} containers are unprivileged",
-            "privileged": "{count} of {total} containers run privileged",
-            "evaluationFailed": "The check could not be evaluated"
+            "allUnprivileged": "Všetkých {total} kontajnerov je neprivilegovaných",
+            "privileged": "{count} z {total} kontajnerov beží privilegovane",
+            "evaluationFailed": "Kontrolu sa nepodarilo vyhodnotiť"
           }
         },
         "qemu_without_agent": {
-          "title": "Guest agent on virtual machines",
+          "title": "Guest agent vo virtuálnych strojoch",
           "rationale": "Nastavenie `agent` v konfigurácii každého virtuálneho stroja. Nastavenie hovorí, že agent je deklarovaný, nie že odpovedá.",
           "summary": {
-            "allHaveAgent": "All {total} virtual machines declare the guest agent",
-            "missingAgent": "{count} of {total} virtual machines do not declare the guest agent",
-            "evaluationFailed": "The check could not be evaluated"
+            "allHaveAgent": "Všetkých {total} virtuálnych strojov má deklarovaný guest agent",
+            "missingAgent": "{count} z {total} virtuálnych strojov nemá deklarovaný guest agent",
+            "evaluationFailed": "Kontrolu sa nepodarilo vyhodnotiť"
           }
         },
         "autostart": {
-          "title": "Automatic start",
+          "title": "Automatické spúšťanie",
           "rationale": "Nastavenie `onboot` každého hosťa, okrem šablón a hostí spravovaných HA. Či sa má hosť vrátiť sám, hovorí deklarovaná politika.",
           "summary": {
-            "allAutostart": "All {total} guests start with the host",
-            "notAutostart": "{count} of {total} guests do not start with the host",
-            "evaluationFailed": "The check could not be evaluated"
+            "allAutostart": "Všetkých {total} hostí sa spúšťa s hostiteľom",
+            "notAutostart": "{count} z {total} hostí sa s hostiteľom nespúšťa",
+            "evaluationFailed": "Kontrolu sa nepodarilo vyhodnotiť"
           }
         },
         "stuck_snapshots": {
-          "title": "Snapshot state",
+          "title": "Stav snapshotov",
           "rationale": "Stav a vek snapshotov a aktívne úlohy. Nedávna operácia alebo operácia bez overiteľného dátumu sa nepovažuje za prerušenú.",
           "summary": {
-            "noSnapshots": "No guest holds snapshots",
-            "allComplete": "The {total} snapshot(s) are complete",
-            "stuck": "{count} of {total} snapshot(s) were left mid-operation",
-            "evaluationFailed": "The check could not be evaluated"
+            "noSnapshots": "Žiadny hosť nemá snapshoty",
+            "allComplete": "Všetkých {total} snapshotov je dokončených",
+            "stuck": "{count} z {total} snapshotov ostalo uprostred operácie",
+            "evaluationFailed": "Kontrolu sa nepodarilo vyhodnotiť"
           }
         },
         "cpu_host_type": {
-          "title": "Virtual CPU model",
+          "title": "Model virtuálneho CPU",
           "rationale": "Hodnota `cpu` každého virtuálneho stroja. `host` sprístupňuje inštrukčnú sadu fyzického procesora, čo obmedzuje uzly, na ktoré môže hosť migrovať. Nezlučiteľnosť s konkrétnym cieľom sa tu neurčuje.",
           "summary": {
-            "none": "None of the {total} virtual machines is pinned to the host processor",
-            "pinned": "{count} of {total} virtual machines are pinned to the host processor",
-            "evaluationFailed": "The check could not be evaluated"
+            "none": "Žiadny z {total} virtuálnych strojov nie je viazaný na procesor hostiteľa",
+            "pinned": "{count} z {total} virtuálnych strojov je viazaných na procesor hostiteľa",
+            "evaluationFailed": "Kontrolu sa nepodarilo vyhodnotiť"
           }
         },
         "replication_state": {
-          "title": "Replication",
+          "title": "Replikácia",
           "rationale": "Replikačné úlohy z API: počet zlyhaní, posledná chyba, posledná synchronizácia a kalendár, ktorý každá úloha deklaruje. Pozastavené úlohy sú označené ako také.",
           "summary": {
-            "healthy": "The {total} replication job(s) report no error",
-            "failing": "{count} of {total} replication job(s) report an error",
-            "statusUnavailable": "Replication jobs are defined but their status could not be read",
-            "evaluationFailed": "The check could not be evaluated"
+            "healthy": "Všetkých {total} replikačných úloh nehlási chybu",
+            "failing": "{count} z {total} replikačných úloh hlási chybu",
+            "statusUnavailable": "Replikačné úlohy sú nastavené, ale ich stav sa nepodarilo prečítať",
+            "evaluationFailed": "Kontrolu sa nepodarilo vyhodnotiť"
           }
         }
       },
@@ -5465,50 +5465,50 @@
             "bothEnabled": "Aktivácia firewallu je nakonfigurovaná na úrovni dátového centra aj uzla",
             "datacenterOff": "Firewall je na úrovni dátového centra vypnutý, takže pravidlá uzla sa neuplatňujú",
             "nodeOff": "Firewall je zapnutý na úrovni dátového centra, ale nie na tomto uzle",
-            "evaluationFailed": "The check could not be evaluated"
+            "evaluationFailed": "Kontrolu sa nepodarilo vyhodnotiť"
           }
         },
         "lynis_warnings": {
-          "title": "Lynis warnings",
+          "title": "Upozornenia Lynisu",
           "rationale": "Upozornenia z poslednej kontroly Lynis, každé s identifikátorom testu, a vek tejto kontroly. Kontrola sa spustí len vtedy, keď je Lynis nainštalovaný a neexistuje úplná správa. Návrhy nie sú zahrnuté.",
           "summary": {
-            "none": "The last Lynis audit recorded no warnings",
-            "found": "The last Lynis audit recorded {count} warning(s)",
-            "incomplete": "The Lynis report is incomplete",
-            "evaluationFailed": "The check could not be evaluated",
+            "none": "Posledná kontrola Lynisu nezaznamenala žiadne upozornenia",
+            "found": "Posledná kontrola Lynisu zaznamenala {count} upozornení",
+            "incomplete": "Správa Lynisu nie je úplná",
+            "evaluationFailed": "Kontrolu sa nepodarilo vyhodnotiť",
             "noneStale": "Posledná kontrola Lynisu nezaznamenala upozornenia a jej správa má {days} dní",
             "foundStale": "Posledná kontrola Lynisu zaznamenala {count} upozornení a jej správa má {days} dní"
           }
         },
         "certificate_expiry": {
-          "title": "Certificate validity",
+          "title": "Platnosť certifikátu",
           "rationale": "Dátum platnosti certifikátu, ktorý pveproxy poskytuje z /etc/pve/local. Vlastný certifikát má prednosť pred tým, ktorý generuje Proxmox.",
           "summary": {
-            "valid": "The certificate is valid for {days} more day(s)",
-            "expiring": "The certificate expires in {days} day(s)",
-            "expired": "The certificate expired {days} day(s) ago",
-            "evaluationFailed": "The check could not be evaluated"
+            "valid": "Certifikát platí ešte {days} dní",
+            "expiring": "Platnosť certifikátu vyprší o {days} dní",
+            "expired": "Platnosť certifikátu vypršala pred {days} dňami",
+            "evaluationFailed": "Kontrolu sa nepodarilo vyhodnotiť"
           }
         },
         "ssh_root_login": {
-          "title": "SSH root access",
+          "title": "Prístup roota cez SSH",
           "rationale": "PermitRootLogin v efektívnej konfigurácii `sshd -T` spolu s metódami overenia. Proxmox sa dodáva s `yes`, ktoré prijíma heslo.",
           "summary": {
-            "password": "Root may sign in over SSH with a password",
-            "keyOnly": "Root may sign in over SSH with a key only",
-            "denied": "Root may not sign in over SSH",
-            "evaluationFailed": "The check could not be evaluated"
+            "password": "Root sa môže cez SSH prihlásiť heslom",
+            "keyOnly": "Root sa môže cez SSH prihlásiť iba kľúčom",
+            "denied": "Root sa cez SSH nemôže prihlásiť",
+            "evaluationFailed": "Kontrolu sa nepodarilo vyhodnotiť"
           }
         }
       },
       "storage": {
         "orphaned_volumes": {
-          "title": "Volume assignment",
+          "title": "Priradenie zväzkov",
           "rationale": "Zväzky hostí na lokálnom úložisku oproti odkazom v aktuálnych, čakajúcich a snapshotových konfiguráciách. Zálohy, ISO a šablóny zostávajú mimo porovnania. Zväzok bez odkazu je kandidát na preverenie.",
           "summary": {
-            "none": "No orphaned volumes were found",
+            "none": "Nenašli sa žiadne osirotené zväzky",
             "found": "{count} zväzkov nemá odkaz v kontrolovaných konfiguráciách",
-            "evaluationFailed": "The check could not be evaluated"
+            "evaluationFailed": "Kontrolu sa nepodarilo vyhodnotiť"
           }
         },
         "zfs_arc_max": {
@@ -5516,31 +5516,31 @@
           "rationale": "Efektívne hodnoty c_min, c_max a veľkosti ARC, načítaný parameter modulu a trvalé nastavenia v /etc/modprobe.d. Nakonfigurovaná nula volí predvolenú hodnotu modulu; ARC je strop a pamäť pod ním je znovu získateľná.",
           "summary": {
             "bounded": "Limit ARC je {percent}% pamäte hostiteľa a pamäť pod ním je znovu získateľná",
-            "high": "The ARC may use {percent}% of host memory",
-            "unset": "The ARC has no explicit limit set",
+            "high": "ARC môže použiť {percent}% pamäte hostiteľa",
+            "unset": "ARC nemá nastavený výslovný limit",
             "conflicting": "{count} nastavení ARC si navzájom odporuje",
             "pending": "Trvalé nastavenie ARC sa líši od hodnoty, ktorú nesie bežiaci modul",
-            "evaluationFailed": "The check could not be evaluated"
+            "evaluationFailed": "Kontrolu sa nepodarilo vyhodnotiť"
           }
         },
         "zfs_scrub_age": {
           "title": "ZFS scrub",
           "rationale": "Posledný dokončený scrub, ktorý `zpool status` uvádza pre každý pool. Resilver nie je scrub. Nedávno vytvorený pool naň ešte nemal príležitosť.",
           "summary": {
-            "recent": "The {total} pool(s) were scrubbed within the last 35 days",
-            "overdue": "{count} of {total} pool(s) have not been scrubbed in 35 days",
-            "neverScrubbed": "{count} pool(s) record no scrub",
-            "evaluationFailed": "The check could not be evaluated"
+            "recent": "Všetkých {total} poolov bolo skontrolovaných scrubom za posledných 35 dní",
+            "overdue": "{count} z {total} poolov nebolo skontrolovaných scrubom 35 dní",
+            "neverScrubbed": "{count} poolov nemá záznam o scrube",
+            "evaluationFailed": "Kontrolu sa nepodarilo vyhodnotiť"
           }
         },
         "thin_pool_overprovisioning": {
-          "title": "Thin pool allocation",
+          "title": "Pridelenie thin poolu",
           "rationale": "Virtuálna kapacita rozdelená každým tenkým poolom LVM oproti veľkosti samotného poolu a to, koľko jeho zväzky skutočne zapísali, dáta a metadáta osobitne.",
           "summary": {
             "withinRatio": "Všetkých {total} thin poolov je pod použitými prahmi kontroly",
             "aboveRatio": "{count} z {total} tenkých poolov rozdáva viac kapacity, než má",
             "pressure": "{pressure} z {total} tenkých poolov je blízko zaplneniu dát alebo metadát",
-            "evaluationFailed": "The check could not be evaluated"
+            "evaluationFailed": "Kontrolu sa nepodarilo vyhodnotiť"
           }
         },
         "connected_storage": {
@@ -5549,7 +5549,7 @@
           "summary": {
             "available": "PVE hlási všetkých {total} úložísk ako dostupných; vzdialené interné súčasti ani zápis sa netestovali",
             "attention": "{count} z {total} úložísk vyžaduje kontrolu",
-            "evaluationFailed": "The check could not be evaluated"
+            "evaluationFailed": "Kontrolu sa nepodarilo vyhodnotiť"
           }
         },
         "pool_integrity": {
@@ -5567,7 +5567,7 @@
           "summary": {
             "healthy": "Ceph hlási HEALTH_OK",
             "degraded": "Ceph hlási {state}, s {count} pomenovanými kontrolami",
-            "evaluationFailed": "The check could not be evaluated"
+            "evaluationFailed": "Kontrolu sa nepodarilo vyhodnotiť"
           }
         },
         "array_integrity": {
@@ -5576,19 +5576,19 @@
           "summary": {
             "intact": "{total} polí a máp si zachováva redundanciu",
             "degraded": "{count} z {total} polí alebo máp ju stratilo",
-            "evaluationFailed": "The check could not be evaluated"
+            "evaluationFailed": "Kontrolu sa nepodarilo vyhodnotiť"
           }
         }
       },
       "hardware": {
         "disk_service_life": {
-          "title": "Disk service life",
+          "title": "Životnosť diskov",
           "rationale": "Prevádzkové hodiny a zostávajúca životnosť z hodnôt SMART, ktoré má monitor, s dátumom každého merania. Vek je informácia na plánovanie; chyby média a upozornenia zariadenia hlási monitor stavu.",
           "summary": {
             "withinLife": "{total} meraní diskov neprekračuje päťročnú orientačnú hranicu",
             "pastLife": "{count} z {total} meraní diskov prekračuje päť rokov prevádzky",
             "noReadings": "Žiadny disk neposkytuje použiteľné SMART hodnoty ({skipped} bez meraní)",
-            "evaluationFailed": "The check could not be evaluated"
+            "evaluationFailed": "Kontrolu sa nepodarilo vyhodnotiť"
           }
         },
         "disk_errors": {
@@ -5602,41 +5602,41 @@
       },
       "network": {
         "bond_members": {
-          "title": "Bond members",
+          "title": "Členovia bondu",
           "rationale": "Stav MII každého člena bondu z /proc/net/bonding a koľko spojení zostáva. V režime active-backup sa záložný člen hlási ako aktívny a neprenáša prevádzku.",
           "summary": {
-            "allUp": "All members of the {total} bond(s) are up",
-            "membersDown": "{count} bond member(s) are not up",
-            "evaluationFailed": "The check could not be evaluated"
+            "allUp": "Všetci členovia {total} bondov sú aktívni",
+            "membersDown": "{count} členov bondu nie je aktívnych",
+            "evaluationFailed": "Kontrolu sa nepodarilo vyhodnotiť"
           }
         },
         "bridge_without_ports": {
-          "title": "Bridge ports",
+          "title": "Porty bridgeov",
           "rationale": "Konfigurácia portov každého bridge. Bridge bez fyzického portu obsluhuje internú alebo smerovanú sieť.",
           "summary": {
-            "allConnected": "The {total} bridge(s) carry a port",
-            "isolated": "{count} of {total} bridge(s) carry no port",
-            "evaluationFailed": "The check could not be evaluated"
+            "allConnected": "Všetkých {total} bridgeov má port",
+            "isolated": "{count} z {total} bridgeov nemá port",
+            "evaluationFailed": "Kontrolu sa nepodarilo vyhodnotiť"
           }
         }
       }
     },
-    "summaryFallback": "The check could not be evaluated",
+    "summaryFallback": "Kontrolu sa nepodarilo vyhodnotiť",
     "acceptRisk": {
-      "action": "Accept risk",
-      "revoke": "Return to active",
-      "title": "Accept this risk",
-      "reasonLabel": "Reason",
-      "reasonHelp": "Required. It is recorded together with the author and the date.",
-      "reasonPlaceholder": "e.g. Lab containers, not covered on purpose",
-      "expiryLabel": "Review after",
-      "expiryHelp": "When the period ends the finding becomes active again.",
-      "expiryNever": "Does not expire",
-      "expiry90": "90 days",
-      "expiry180": "180 days",
-      "expiry365": "1 year",
-      "cancel": "Cancel",
-      "confirm": "Accept risk"
+      "action": "Prijať riziko",
+      "revoke": "Vrátiť medzi aktívne",
+      "title": "Prijať toto riziko",
+      "reasonLabel": "Dôvod",
+      "reasonHelp": "Povinné. Uloží sa spolu s autorom a dátumom.",
+      "reasonPlaceholder": "napr. Testovacie kontajnery, zámerne bez pokrytia",
+      "expiryLabel": "Znova preveriť po",
+      "expiryHelp": "Po uplynutí obdobia bude zistenie opäť aktívne.",
+      "expiryNever": "Bez vypršania",
+      "expiry90": "90 dní",
+      "expiry180": "180 dní",
+      "expiry365": "1 rok",
+      "cancel": "Zrušiť",
+      "confirm": "Prijať riziko"
     },
     "incomplete": "Neúplné dôkazy",
     "progress": "Overené {completed} z {total}",
@@ -5652,66 +5652,66 @@
       "OK": "OK"
     },
     "viewSwitch": {
-      "ariaLabel": "Switch between assessment and inventory",
-      "assessment": "Assessment",
-      "inventory": "Inventory",
+      "ariaLabel": "Prepnúť medzi hodnotením a inventárom",
+      "assessment": "Hodnotenie",
+      "inventory": "Inventár",
       "policy": "Politika",
       "changes": "Zmeny"
     },
     "inventory": {
-      "loading": "Loading inventory…",
-      "failed": "The inventory could not be composed.",
-      "collectedAt": "Composed on {when}",
-      "unavailable": "Not read in this inventory",
-      "unresolved": "path not resolved",
-      "noUplink": "no uplink",
-      "identity": "Node identity",
-      "node": "Node",
+      "loading": "Načítava sa inventár…",
+      "failed": "Inventár sa nepodarilo zostaviť.",
+      "collectedAt": "Zostavené: {when}",
+      "unavailable": "V tomto inventári sa neprečítalo",
+      "unresolved": "cesta sa nepodarilo určiť",
+      "noUplink": "bez uplinku",
+      "identity": "Identita uzla",
+      "node": "Uzol",
       "pveVersion": "Proxmox VE",
       "kernel": "Kernel",
-      "subscription": "Subscription",
-      "cluster": "Cluster",
-      "standalone": "Not in a cluster",
-      "hardware": "Hardware",
-      "system": "System",
-      "serial": "Serial number",
+      "subscription": "Predplatné",
+      "cluster": "Klaster",
+      "standalone": "Nie je v klastri",
+      "hardware": "Hardvér",
+      "system": "Systém",
+      "serial": "Sériové číslo",
       "bios": "BIOS",
-      "cpu": "Processor",
-      "topology": "Layout",
-      "cpuLayout": "{sockets} socket(s) × {cores} cores = {threads} threads",
-      "virtualisation": "Virtualisation",
-      "memory": "Memory",
-      "iommuGroups": "IOMMU groups",
-      "network": "Network",
-      "storage": "Storage",
-      "name": "Name",
-      "type": "Type",
-      "content": "Content",
-      "shared": "Shared",
-      "yes": "Yes",
-      "no": "No",
-      "guests": "Guests",
-      "ostype": "Operating system",
-      "onboot": "Starts with host",
-      "tags": "Tags",
-      "privilege": "Privilege",
-      "privileged": "Privileged",
-      "unprivileged": "Unprivileged",
-      "features": "Features",
+      "cpu": "Procesor",
+      "topology": "Rozloženie",
+      "cpuLayout": "{sockets} socketov × {cores} jadier = {threads} vlákien",
+      "virtualisation": "Virtualizácia",
+      "memory": "Pamäť",
+      "iommuGroups": "Skupiny IOMMU",
+      "network": "Sieť",
+      "storage": "Úložisko",
+      "name": "Názov",
+      "type": "Typ",
+      "content": "Obsah",
+      "shared": "Zdieľané",
+      "yes": "Áno",
+      "no": "Nie",
+      "guests": "Hostia",
+      "ostype": "Operačný systém",
+      "onboot": "Spúšťa sa s hostiteľom",
+      "tags": "Značky",
+      "privilege": "Oprávnenie",
+      "privileged": "Privilegovaný",
+      "unprivileged": "Neprivilegovaný",
+      "features": "Funkcie",
       "agent": "Guest agent",
-      "cpuModel": "CPU model",
-      "disks": "Disks",
-      "interfaces": "Network interfaces",
-      "protection": "Backup",
+      "cpuModel": "Model CPU",
+      "disks": "Disky",
+      "interfaces": "Sieťové rozhrania",
+      "protection": "Záloha",
       "passthrough": "Passthrough",
-      "noBackup": "No backup",
-      "noBackupDetail": "No enabled backup job selects this guest.",
-      "applications": "Applications",
-      "versionUnknown": "version not detected",
+      "noBackup": "Bez zálohy",
+      "noBackupDetail": "Tohto hosťa nevyberá žiadna povolená zálohovacia úloha.",
+      "applications": "Aplikácie",
+      "versionUnknown": "verzia sa nezistila",
       "passthroughTitle": "PCI passthrough",
-      "iommuGroup": "IOMMU group {group}",
-      "sharedGroup": "{count} more device(s) in the same group",
-      "proxmenux": "ProxMenux optimizations",
+      "iommuGroup": "Skupina IOMMU {group}",
+      "sharedGroup": "ďalších {count} zariadení v rovnakej skupine",
+      "proxmenux": "Optimalizácie ProxMenuxu",
       "latency": "Sieťová odozva",
       "subscriptionStatus": {
         "notfound": "Predplatné sa nenašlo",
@@ -5724,12 +5724,12 @@
       }
     },
     "profile": {
-      "label": "Report",
-      "full": "Full audit",
-      "inventory": "Inventory",
-      "security": "Security review",
-      "backup": "Backup assurance",
-      "capacity": "Capacity and wear",
+      "label": "Správa",
+      "full": "Úplný audit",
+      "inventory": "Inventár",
+      "security": "Kontrola bezpečnosti",
+      "backup": "Overenie záloh",
+      "capacity": "Kapacita a opotrebenie",
       "diagnostic": "Rýchla diagnostika"
     },
     "document": {
@@ -5737,14 +5737,14 @@
       "title": "Správa z auditu",
       "subtitle": "Štruktúra, konfigurácia a vyhodnotenie uzla {node}",
       "generated": "Vygenerované",
-      "assessed": "Assessed",
-      "runId": "Assessment reference",
-      "print": "Print or save as PDF",
-      "summaryByArea": "Summary by area",
-      "area": "Area",
-      "inventoryAnnex": "Inventory annex",
-      "scopeTitle": "Scope of this report",
-      "scopeBody": "This report describes the Proxmox VE node named above, as observed from the node itself at the time stated. It does not cover the interior of the guests beyond what they declare, network equipment outside the host, physical infrastructure, or any dependency not visible from this node. Findings marked as not determined were not measured and are not evidence of absence.",
+      "assessed": "Vyhodnotené",
+      "runId": "Označenie hodnotenia",
+      "print": "Vytlačiť alebo uložiť ako PDF",
+      "summaryByArea": "Zhrnutie podľa oblasti",
+      "area": "Oblasť",
+      "inventoryAnnex": "Príloha s inventárom",
+      "scopeTitle": "Rozsah tejto správy",
+      "scopeBody": "Táto správa opisuje uvedený uzol Proxmox VE podľa stavu, ktorý sám uzol poskytol v uvedenom čase. Nepokrýva vnútro hostí nad rámec toho, čo deklarujú, sieťové zariadenia mimo hostiteľa, fyzickú infraštruktúru ani závislosť, ktorú z tohto uzla nevidno. Zistenia označené ako neurčené sa nemerali; neznamenajú, že nič nie je prítomné.",
       "building": "Zostavuje sa správa…",
       "node": "Uzol",
       "profile": "Profil",
@@ -5892,11 +5892,11 @@
       "diagnosticMoreRows": "{count} ďalších riadkov, v úplnom audite.",
       "structureTitle": "Štruktúra a konfigurácia",
       "structureSubtitle": "Ako je {node} postavený a nakonfigurovaný",
-      "postureTitle": "Posture",
+      "postureTitle": "Prehľad stavu",
       "posture": {
-        "security": "Host exposure and access.",
-        "backup": "Guest protection and whether it is real.",
-        "capacity": "Room to grow and the wear on the disks."
+        "security": "Vystavenie hostiteľa a prístup k nemu.",
+        "backup": "Ochrana hostí a to, či naozaj funguje.",
+        "capacity": "Priestor na rast a opotrebenie diskov."
       }
     },
     "results": "Výsledky",
@@ -6046,12 +6046,12 @@
     },
     "notApplicableScope": "V preskúmanom rozsahu nie je nič, na čo by sa táto kontrola vzťahovala.",
     "lynis": {
-      "title": "Run Lynis",
-      "bodyNotRun": "Lynis is installed but has not been run yet. Running it now completes the security review, but the process can take a few minutes.",
-      "bodyStale": "The Lynis report is {days} days old. You can run it now to refresh the data (it takes a little longer) or continue with the existing report.",
-      "withLynis": "Run with Lynis",
-      "withoutLynis": "Run without Lynis",
-      "cancel": "Cancel"
+      "title": "Spustiť Lynis",
+      "bodyNotRun": "Lynis je nainštalovaný, ale ešte nebol spustený. Spustením dokončíte kontrolu bezpečnosti, no môže to trvať niekoľko minút.",
+      "bodyStale": "Správa Lynisu má {days} dní. Môžete ho spustiť teraz a obnoviť údaje (bude to trvať o niečo dlhšie), alebo pokračovať s existujúcou správou.",
+      "withLynis": "Spustiť s Lynisom",
+      "withoutLynis": "Spustiť bez Lynisu",
+      "cancel": "Zrušiť"
     }
   }
 }
