@@ -4169,7 +4169,7 @@
       "fingerprintTitle": "Zobraziť odtlačok kľúča",
       "installed": "Nainštalované",
       "keyfileLabel": "Súbor s kľúčom PBS",
-      "notInstalled": "Nenainštalované",
+      "notInstalled": "Nenainštalovaný",
       "orUploadFromMachine": "alebo nahraj jeden z tohto počítača.",
       "orUploadOwn": "alebo nahraj vlastný súbor s kľúčom.",
       "pveKeyDescriptionAfter": "a Monitor ho môže použiť.",
@@ -4755,11 +4755,11 @@
   },
   "restoreProgress": {
     "title": "Priebeh po obnove",
-    "startedAt": "Spustené {time}",
-    "finishedAt": "dokončené {time}",
+    "startedAt": "Spustené: {time}",
+    "finishedAt": "Dokončené: {time}",
     "startedRelative": "spustené {time}",
     "steps": "{done}/{total} krokov",
-    "exitCode": "ukončiť {code}",
+    "exitCode": "Kód ukončenia: {code}",
     "status": {
       "running": "Obnova prebieha",
       "complete": "Obnova je hotová",
@@ -4787,9 +4787,9 @@
       "noOutput": "(bez výstupu)"
     },
     "rollback": {
-      "empty": "Na tomto hoste nie sú položky, ktoré by chýbali v obnovenej zálohe.",
+      "empty": "Na tomto serveri nie sú položky, ktoré by chýbali v obnovenej zálohe.",
       "showCleanup": "Ukázať ručné príkazy na čistenie",
-      "description": "Tieto položky sú na tomto hoste, ale v obnovenej zálohe neboli. Pred odstránením ich skontrolujte.",
+      "description": "Tieto položky sú na tomto serveri, ale v obnovenej zálohe neboli. Pred odstránením ich skontrolujte.",
       "vms": "VM vytvorené po zálohe",
       "lxcs": "LXC vytvorené po zálohe",
       "components": "Komponenty nainštalované po zálohe",
@@ -4809,7 +4809,7 @@
       "skippedPartial": "Preskočené (chýbajú niektoré disky)",
       "skippedPartialHelp": "Niektoré vdev disky sa nenašli v /dev/disk/by-id. Pool sa nepripojil, aby sa nespustil v degradovanom stave. Opravte disky alebo ho pripojte ručne cez zpool import.",
       "skippedMissing": "Preskočené (žiadne disky nie sú prítomné)",
-      "skippedMissingHelp": "Na tomto hoste nie sú žiadne disky z tohto poolu. Presuňte disky sem alebo pool pripojte z iného hosta.",
+      "skippedMissingHelp": "Na tomto serveri nie sú žiadne disky z tohto poolu. Presuňte disky sem alebo pool pripojte z iného servera.",
       "importFailed": "Pripojenie zlyhalo",
       "importFailedHelp": "ZFS odmietol pripojenie aj s -f. Skontrolujte zpool import a log nižšie.",
       "logPath": "Denník: {path}"
