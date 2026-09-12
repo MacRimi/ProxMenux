@@ -2193,6 +2193,19 @@
     "tag_regex": "(?i)(?:v|release[-_/]?)?(\\d+(?:\\.\\d+){1,3}(?:[-+._][0-9A-Za-z.-]+)?)",
     "website": "https://leantime.io"
   },
+  "lemonade-server": {
+    "default_ports": [
+      13305
+    ],
+    "file_path": "/root/.lemonade-server",
+    "file_regex": "(?i)(?:v|release[-_/]?)?(\\d+(?:\\.\\d+){1,3}(?:[-+._][0-9A-Za-z.-]+)?)",
+    "github_source": "releases",
+    "installed_via": "file",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/lemonade-ai.webp",
+    "repo": "lemonade-sdk/lemonade",
+    "tag_regex": "(?i)(?:v|release[-_/]?)?(\\d+(?:\\.\\d+){1,3}(?:[-+._][0-9A-Za-z.-]+)?)",
+    "website": "https://lemonade-server.ai/"
+  },
   "librenms": {
     "default_ports": [
       80
