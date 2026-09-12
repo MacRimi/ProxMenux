@@ -4959,7 +4959,7 @@
     "ok": "OK"
   },
   "apps": {
-    "searchPlaceholder": "Hľadať aplikáciu alebo CT…",
+    "searchPlaceholder": "Hľadať aplikáciu, VM alebo LXC…",
     "searchAriaLabel": "Hľadať",
     "filterAll": "Všetky kategórie",
     "filterAriaLabel": "Filtrovať podľa kategórie",
@@ -4973,7 +4973,7 @@
     "openAriaLabel": "Otvoriť {name} na novej karte",
     "openGuestAriaLabel": "Otvoriť {name} ({type} {id})",
     "emptyTitle": "Zatiaľ tu nie sú žiadne aplikácie s webovým odkazom.",
-    "emptyHint": "Pridajte webový odkaz k ľubovoľnej aplikácii na karte Aplikácie v CT a zobrazí sa tu.",
+    "emptyHint": "Pridajte webový odkaz k ľubovoľnej aplikácii na karte Aplikácie v LXC a zobrazí sa tu.",
     "customLinkAdd": "Pridať odkaz",
     "editModeToggle": "Upraviť",
     "editModeDone": "Hotovo",
@@ -4987,8 +4987,8 @@
     "customLinkLogoPlaceholder": "napr. https://example.com/logo.webp",
     "customLinkCategory": "Kategória (voliteľné)",
     "customLinkBinding": "Priradené k",
-    "customLinkBindingNone": "Nie je priradené k žiadnemu VM ani CT",
-    "customLinkBindingHelp": "Priraďte tento odkaz k VM alebo CT. Na karte sa zobrazí jeho ID a názov a jedným kliknutím ho otvoríte.",
+    "customLinkBindingNone": "Nie je priradené k žiadnemu VM ani LXC",
+    "customLinkBindingHelp": "Priraďte tento odkaz k VM alebo LXC. Na karte sa zobrazí jeho ID a názov a jedným kliknutím ho otvoríte.",
     "customLinkSave": "Uložiť",
     "customLinkCreate": "Vytvoriť",
     "customLinkCancel": "Zrušiť",

@@ -640,7 +640,7 @@ function AppCard({
     if (link.customId) onEditCustom(link.customId)
   }
 
-  const guestPrefix = link.guestType === "qemu" ? "VM" : "CT"
+  const guestPrefix = link.guestType === "qemu" ? "VM" : "LXC"
   const hasBinding = link.vmid != null
 
   return (

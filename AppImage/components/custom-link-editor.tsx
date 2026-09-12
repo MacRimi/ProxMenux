@@ -258,7 +258,7 @@ export function CustomLinkEditor({
                 <SelectItem value={UNBOUND_KEY}>{t("apps.customLinkBindingNone")}</SelectItem>
                 {sortedGuests.map((g) => (
                   <SelectItem key={`${g.type}:${g.vmid}`} value={`${g.type}:${g.vmid}`}>
-                    {g.type === "qemu" ? "VM" : "CT"} {g.vmid} · {g.name}
+                    {g.type === "qemu" ? "VM" : "LXC"} {g.vmid} · {g.name}
                   </SelectItem>
                 ))}
               </SelectContent>
