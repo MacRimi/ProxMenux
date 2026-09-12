@@ -4994,7 +4994,37 @@
     "customLinkCancel": "Zrušiť",
     "customLinkDelete": "Odstrániť",
     "customLinkSaveError": "Odkaz sa nepodarilo uložiť",
-    "customLinkDeleteError": "Odkaz sa nepodarilo odstrániť"
+    "customLinkDeleteError": "Odkaz sa nepodarilo odstrániť",
+    "categoryLabels": {
+      "arrSuite": "Sada *Arr",
+      "aiCodingDevTools": "AI, programovanie a vývojárske nástroje",
+      "adblockDns": "Blokovanie reklám a DNS",
+      "authenticationSecurity": "Overovanie a bezpečnosť",
+      "automationScheduling": "Automatizácia a plánovanie",
+      "backupRecovery": "Zálohovanie a obnova",
+      "businessErp": "Podnikové aplikácie a ERP",
+      "communicationCommunity": "Komunikácia a komunita",
+      "containersDocker": "Kontajnery a Docker",
+      "dashboardsFrontends": "Prehľady a webové rozhrania",
+      "databases": "Databázy",
+      "documentsNotes": "Dokumenty a poznámky",
+      "filesDownloads": "Súbory a sťahovanie",
+      "financeBudgeting": "Financie a rozpočet",
+      "gamingLeisure": "Hry a voľný čas",
+      "hostManagement": "Správa servera",
+      "iotSmartHome": "IoT a inteligentná domácnosť",
+      "mediaStreaming": "Médiá a streamovanie",
+      "messagingQueues": "Správy a fronty",
+      "miscellaneous": "Ostatné",
+      "monitoringAnalytics": "Monitorovanie a analýza",
+      "nvrCameras": "NVR a kamery",
+      "networkFirewall": "Sieť a firewall",
+      "operatingSystemsAppliances": "Operačné systémy a zariadenia",
+      "productivityWorkflows": "Produktivita a pracovné postupy",
+      "remoteAccessVpn": "Vzdialený prístup a VPN",
+      "webserversProxies": "Webové servery a proxy",
+      "zigbeeZwaveMatter": "Zigbee, Z-Wave a Matter"
+    }
   },
   "audit": {
     "presentation": {
