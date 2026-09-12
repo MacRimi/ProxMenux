@@ -2201,8 +2201,7 @@
     "authenticationCode": "Overovací kód",
     "backupCodeHint": "Môžete použiť aj záložný kód vo formáte XXXX-XXXX",
     "backToLogin": "Späť na prihlásenie",
-    "verifyCode": "Overiť kód",
-    "version": "ProxMenux Monitor v1.2.6"
+    "verifyCode": "Overiť kód"
   },
   "account": {
     "signedIn": "Prihlásený",

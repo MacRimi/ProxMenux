@@ -10,6 +10,7 @@ import { Checkbox } from "./ui/checkbox"
 import { Lock, User, AlertCircle, Server, Shield, Eye, EyeOff } from "lucide-react"
 import { getApiUrl } from "../lib/api-config"
 import { useT } from "../lib/i18n/provider"
+import { APP_VERSION } from "../lib/version"
 import Image from "next/image"
 
 interface LoginProps {
@@ -297,7 +298,7 @@ export function Login({ onLogin }: LoginProps) {
           </form>
         </div>
 
-        <p className="text-center text-sm text-muted-foreground">{t("login.version")}</p>
+        <p className="text-center text-sm text-muted-foreground">{`ProxMenux Monitor v${APP_VERSION}`}</p>
       </div>
     </div>
   )

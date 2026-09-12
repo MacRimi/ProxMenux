@@ -2202,8 +2202,7 @@
     "authenticationCode": "Autentiseringskod",
     "backupCodeHint": "Du kan också använda en reservkod (format: XXXX-XXXX)",
     "backToLogin": "Tillbaka till inloggning",
-    "verifyCode": "Verifiera koden",
-    "version": "ProxMenux Monitor v1.2.6"
+    "verifyCode": "Verifiera koden"
   },
   "account": {
     "signedIn": "Inloggad",

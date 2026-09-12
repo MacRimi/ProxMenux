@@ -2202,8 +2202,7 @@
     "authenticationCode": "Código de autenticación",
     "backupCodeHint": "También puedes utilizar un código de respaldo (formato: XXXX-XXXX)",
     "backToLogin": "Volver a iniciar sesión",
-    "verifyCode": "Verificar código",
-    "version": "ProxMenux Monitor v1.2.6"
+    "verifyCode": "Verificar código"
   },
   "account": {
     "signedIn": "Iniciado sesión",
