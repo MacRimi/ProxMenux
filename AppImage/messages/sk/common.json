@@ -974,7 +974,7 @@
       "dhm": "{days} d {hours} h {minutes} min"
     },
     "details": {
-      "sourceHost": "Zdroj na hostiteľovi",
+      "sourceHost": "Zdroj na serveri",
       "mountedAtCt": "Pripojené v CT",
       "total": "Celkovo",
       "used": "Použité",
@@ -996,7 +996,7 @@
       "scsiController": "SCSI radič",
       "dnsNameserver": "DNS server",
       "searchDomain": "Vyhľadávacia doména",
-      "hostname": "Názov hostiteľa",
+      "hostname": "Názov systému",
       "storageType": "{type} úložisko",
       "mountAttributes": "Atribúty pripojenia (LXC config)",
       "runtimeMountOptions": "Aktuálne voľby pripojenia",
@@ -1021,7 +1021,7 @@
       "mountPointIndexed": "Bod pripojenia {index}",
       "network": "Sieť",
       "networkInterface": "Sieťové rozhranie {index}",
-      "hostInterface": "Hostiteľ: {interface}",
+      "hostInterface": "Rozhranie servera: {interface}",
       "gateway": "Brána",
       "gatewayV6": "Brána v6",
       "type": "Typ",
@@ -1040,7 +1040,7 @@
       "mountTypes": {
         "pveVolume": "PVE zväzok",
         "pveStorageBind": "bind z PVE úložiska",
-        "hostBind": "bind z hostiteľa",
+        "hostBind": "bind zo servera",
         "adHoc": "ad-hoc v CT"
       },
       "mountStatus": {
@@ -1084,10 +1084,10 @@
     "confirm": {
       "forceStopTitle": "Vynútiť vypnutie",
       "rebootTitle": "Reštartovať",
-      "forceStopDescription": "Toto obíde bežné vypnutie systému vo VM/LXC a môže poškodiť otvorené databázy alebo súborový systém. Hosť sa okamžite ukončí.",
-      "rebootDescription": "Toto vynúti reštart bez čakania, kým hosťovský systém bezpečne dokončí zápisy. Ak je to možné, použite bežné vypnutie.",
+      "forceStopDescription": "Toto obíde bežné vypnutie systému vo VM/LXC a môže poškodiť otvorené databázy alebo súborový systém. VM alebo LXC sa okamžite ukončí.",
+      "rebootDescription": "Toto vynúti reštart bez čakania, kým systém vo VM alebo LXC bezpečne dokončí zápisy. Ak je to možné, použite bežné vypnutie.",
       "typeToConfirm": "Pre potvrdenie zadajte {vmid}:",
-      "guest": "Hosť:"
+      "guest": "VM/LXC:"
     },
     "guestTypes": {
       "container": "kontajner",
