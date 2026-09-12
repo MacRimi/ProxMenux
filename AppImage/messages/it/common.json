@@ -6,12 +6,12 @@
     "loading": "Caricamento...",
     "connecting": "Connessione al ProxMenux Monitor",
     "unknown": "Sconosciuto",
-    "notAvailable": "N / A",
+    "notAvailable": "N/A",
     "serverOffline": "Server non in linea",
     "supportProject": "Sostieni e contribuisci al progetto"
   },
   "common": {
-    "notAvailable": "N / A",
+    "notAvailable": "N/A",
     "unknown": "Sconosciuto"
   },
   "actions": {
@@ -953,7 +953,7 @@
       "dhm": "{days}d {hours}h {minutes}m"
     },
     "details": {
-      "sourceHost": "Fonte (ospite)",
+      "sourceHost": "Origine (host)",
       "mountedAtCt": "Montato a (CT)",
       "total": "Totale",
       "used": "Usato",
@@ -1000,7 +1000,7 @@
       "mountPointIndexed": "Punto di montaggio {index}",
       "network": "Rete",
       "networkInterface": "Interfaccia di rete {index}",
-      "hostInterface": "Ospite: {interface}",
+      "hostInterface": "Host: {interface}",
       "gateway": "Porta",
       "gatewayV6": "Gateway v6",
       "type": "Tipo",
@@ -1025,7 +1025,7 @@
       "mountStatus": {
         "stale": "stantio",
         "notMounted": "non montato",
-        "hostDetached": "ospite distaccato",
+        "hostDetached": "host scollegato",
         "readOnly": "sola lettura",
         "stopped": "fermato",
         "mounted": "montato"
@@ -1809,7 +1809,7 @@
           "label": "Sicurezza"
         },
         "cluster": {
-          "label": "Grappolo"
+          "label": "Cluster"
         },
         "services": {
           "label": "Servizi"
@@ -1951,7 +1951,7 @@
         "enableDiscord": "Abilita Discordia",
         "webhookUrl": "URL del webhook",
         "enableEmail": "Abilita e-mail",
-        "smtpHost": "Ospite SMTP",
+        "smtpHost": "Host SMTP",
         "port": "Porta",
         "tlsMode": "Modalità TLS",
         "noTls": "Nessuno (porta 25)",
@@ -2257,8 +2257,8 @@
       "disable": "Disabilita",
       "enabledLower": "abilitato",
       "disabledLower": "disabilitato",
-      "clusterLower": "grappolo",
-      "hostLower": "ospite",
+      "clusterLower": "cluster",
+      "hostLower": "host",
       "remove": "Rimuovere",
       "allow": "Permettere",
       "delete": "Eliminare",
@@ -2406,7 +2406,7 @@
       "httpsEnabled": "HTTPS è abilitato.",
       "httpNoSsl": "Il dashboard utilizza il semplice HTTP.",
       "usingCertificate": "Utilizzo del certificato {source}.",
-      "proxmoxHost": "Ospite Proxmox",
+      "proxmoxHost": "Host Proxmox",
       "custom": "costume",
       "unencryptedHttp": "Il traffico non è crittografato su HTTP.",
       "activeCertificate": "Certificato attivo",
@@ -2486,7 +2486,7 @@
       "clusterTitle": "Firewall del cluster",
       "clusterActive": "Il firewall del cluster è attivo.",
       "clusterDisabled": "Il firewall del cluster è disabilitato.",
-      "hostTitle": "Firewall dell'ospite",
+      "hostTitle": "Firewall dell'host",
       "hostActive": "Il firewall host è attivo per questo nodo.",
       "clusterRequiredHint": "Abilita prima il firewall del cluster, quindi abilita il firewall dell'host.",
       "quickAccessRules": "Regole di accesso rapido",
@@ -2501,8 +2501,8 @@
       "portsCovered": "Porti coperti",
       "drop": "Gocciolare",
       "reject": "Rifiutare",
-      "cluster": "Grappolo",
-      "host": "Ospite",
+      "cluster": "Cluster",
+      "host": "Host",
       "rules": "{count} regole",
       "addRule": "Aggiungi regola",
       "newRule": "Nuova regola",
@@ -2904,7 +2904,7 @@
           "proxmoxNetwork": "Rete locale completa",
           "customNetworks": "Reti personalizzate"
         },
-        "hostAccess": "Accesso dell'ospite",
+        "hostAccess": "Accesso all'host",
         "networks": "Reti",
         "exitNode": "Nodo di uscita",
         "acceptRoutes": "Accetta percorsi",
@@ -3164,7 +3164,7 @@
       "node": "Nodo",
       "user": "Utente",
       "unit": "Unità",
-      "host": "Ospite",
+      "host": "Host",
       "timestamp": "Timestamp",
       "type": "Tipo",
       "systemdUnit": "Unità di sistema",
@@ -3607,7 +3607,7 @@
       "runtime": "Durata",
       "inputVoltage": "Tensione in ingresso",
       "status": "Stato",
-      "host": "Ospite",
+      "host": "Host",
       "chargeLevel": "Livello di carica",
       "runtimeRemaining": "Tempo di esecuzione rimanente",
       "batteryVoltage": "Voltaggio della batteria",
@@ -3822,7 +3822,7 @@
       "encryptedTitle": "Questo backup è crittografato",
       "filesInBackup": "File nel backup",
       "group": "Gruppo",
-      "host": "Ospite",
+      "host": "Host",
       "importKeyToDownloadTitle": "Importa il file di chiavi corrispondente prima del download",
       "importKeyToRestoreTitle": "Importa il file di chiavi corrispondente prima del ripristino",
       "importKeyToViewTitle": "Importa il file di chiavi corrispondente prima di visualizzare i contenuti",
@@ -4083,8 +4083,8 @@
       "size": "Misurare",
       "sizeLabel": "Misurare",
       "source": "Fonte",
-      "sourceHost": "Ospite di origine",
-      "sourceHostLabel": "Ospite di origine",
+      "sourceHost": "Host di origine",
+      "sourceHostLabel": "Host di origine",
       "sshHostOrIp": "Host/IP SSH",
       "sshKeyPath": "Percorso della chiave SSH",
       "sshUser": "Utente SSH",
@@ -4254,7 +4254,7 @@
       "pathsArchived": "Percorsi archiviati",
       "proxmoxVersion": "Versione Proxmox",
       "roles": "Ruoli",
-      "sourceHost": "Ospite di origine",
+      "sourceHost": "Host di origine",
       "vmsAtBackup": "VM al backup"
     },
     "manual": {
@@ -4931,7 +4931,34 @@
     "customLinkSaveError": "Save failed",
     "customLinkDeleteError": "Delete failed",
     "categoryLabels": {
-      "arrSuite": "*Arr Suite", "aiCodingDevTools": "AI / Coding & Dev-Tools", "adblockDns": "Adblock & DNS", "authenticationSecurity": "Authentication & Security", "automationScheduling": "Automation & Scheduling", "backupRecovery": "Backup & Recovery", "businessErp": "Business & ERP", "communicationCommunity": "Communication & Community", "containersDocker": "Containers & Docker", "dashboardsFrontends": "Dashboards & Frontends", "databases": "Databases", "documentsNotes": "Documents & Notes", "filesDownloads": "Files & Downloads", "financeBudgeting": "Finance & Budgeting", "gamingLeisure": "Gaming & Leisure", "hostManagement": "Host Management", "iotSmartHome": "IoT & Smart Home", "mediaStreaming": "Media & Streaming", "messagingQueues": "Messaging & Queues", "miscellaneous": "Miscellaneous", "monitoringAnalytics": "Monitoring & Analytics", "nvrCameras": "NVR & Cameras", "networkFirewall": "Network & Firewall", "operatingSystemsAppliances": "Operating Systems & Appliances", "productivityWorkflows": "Productivity & Workflows", "remoteAccessVpn": "Remote Access & VPN", "webserversProxies": "Webservers & Proxies", "zigbeeZwaveMatter": "ZigBee, Z-Wave & Matter"
+      "arrSuite": "*Arr Suite",
+      "aiCodingDevTools": "AI / Coding & Dev-Tools",
+      "adblockDns": "Adblock & DNS",
+      "authenticationSecurity": "Authentication & Security",
+      "automationScheduling": "Automation & Scheduling",
+      "backupRecovery": "Backup & Recovery",
+      "businessErp": "Business & ERP",
+      "communicationCommunity": "Communication & Community",
+      "containersDocker": "Containers & Docker",
+      "dashboardsFrontends": "Dashboards & Frontends",
+      "databases": "Databases",
+      "documentsNotes": "Documents & Notes",
+      "filesDownloads": "Files & Downloads",
+      "financeBudgeting": "Finance & Budgeting",
+      "gamingLeisure": "Gaming & Leisure",
+      "hostManagement": "Host Management",
+      "iotSmartHome": "IoT & Smart Home",
+      "mediaStreaming": "Media & Streaming",
+      "messagingQueues": "Messaging & Queues",
+      "miscellaneous": "Miscellaneous",
+      "monitoringAnalytics": "Monitoring & Analytics",
+      "nvrCameras": "NVR & Cameras",
+      "networkFirewall": "Network & Firewall",
+      "operatingSystemsAppliances": "Operating Systems & Appliances",
+      "productivityWorkflows": "Productivity & Workflows",
+      "remoteAccessVpn": "Remote Access & VPN",
+      "webserversProxies": "Webservers & Proxies",
+      "zigbeeZwaveMatter": "ZigBee, Z-Wave & Matter"
     }
   },
   "audit": {
