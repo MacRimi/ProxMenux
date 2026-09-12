@@ -29,7 +29,7 @@ import {
 } from "lucide-react"
 import { useState, useEffect, useMemo } from "react"
 import { API_PORT, fetchApi, getApiUrl, getAuthToken } from "@/lib/api-config"
-import { useT } from "@/lib/i18n/provider"
+import { useI18n } from "@/lib/i18n/provider"
 
 interface Backup {
   volid: string
@@ -89,7 +89,7 @@ interface CombinedLogEntry {
 }
 
 export function SystemLogs() {
-  const t = useT()
+  const { language, t } = useI18n()
   const [logs, setLogs] = useState<SystemLog[]>([])
   const [backups, setBackups] = useState<Backup[]>([])
   const [events, setEvents] = useState<Event[]>([])
@@ -607,7 +607,7 @@ export function SystemLogs() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-foreground">
-              {(logsCounts?.total ?? 0).toLocaleString("fr-FR")}
+              {(logsCounts?.total ?? 0).toLocaleString(language)}
             </div>
             <p className="text-xs text-muted-foreground mt-2">{t("systemLogs.cards.selectedRange")}</p>
           </CardContent>
@@ -619,7 +619,7 @@ export function SystemLogs() {
             <XCircle className="h-4 w-4 text-red-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-red-500">{(logsCounts?.errors ?? 0).toLocaleString("fr-FR")}</div>
+            <div className="text-2xl font-bold text-red-500">{(logsCounts?.errors ?? 0).toLocaleString(language)}</div>
             <p className="text-xs text-muted-foreground mt-2">{t("systemLogs.cards.requiresAttention")}</p>
           </CardContent>
         </Card>
@@ -630,7 +630,7 @@ export function SystemLogs() {
             <AlertTriangle className="h-4 w-4 text-yellow-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-yellow-500">{(logsCounts?.warnings ?? 0).toLocaleString("fr-FR")}</div>
+            <div className="text-2xl font-bold text-yellow-500">{(logsCounts?.warnings ?? 0).toLocaleString(language)}</div>
             <p className="text-xs text-muted-foreground mt-2">{t("systemLogs.cards.monitorClosely")}</p>
           </CardContent>
         </Card>
@@ -641,7 +641,7 @@ export function SystemLogs() {
             <Database className="h-4 w-4 text-blue-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-blue-500">{backupStats.total.toLocaleString("fr-FR")}</div>
+            <div className="text-2xl font-bold text-blue-500">{backupStats.total.toLocaleString(language)}</div>
             <p className="text-xs text-muted-foreground mt-2">{formatBytes(backupStats.totalSize)}</p>
           </CardContent>
         </Card>

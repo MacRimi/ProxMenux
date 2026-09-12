@@ -865,7 +865,7 @@ export function SystemOverview() {
             </div>
             <div className="flex justify-between">
               <span className="text-muted-foreground">{t("overview.proxmoxVersion")}</span>
-              <span className="text-foreground">{systemData.proxmox_version || "N/A"}</span>
+              <span className="text-foreground">{systemData.proxmox_version || t("app.notAvailable")}</span>
             </div>
             <div className="flex justify-between">
               <span className="text-muted-foreground">{t("overview.kernel")}</span>
@@ -906,18 +906,18 @@ export function SystemOverview() {
 
             <div className="flex justify-between items-center pb-3 border-b border-border">
               <span className="text-sm text-muted-foreground">{t("overview.cpuThreads")}</span>
-              <span className="text-lg font-semibold text-foreground">{systemData.cpu_threads || "N/A"}</span>
+              <span className="text-lg font-semibold text-foreground">{systemData.cpu_threads || t("app.notAvailable")}</span>
             </div>
 
             <div className="flex justify-between items-center pb-3 border-b border-border">
               <span className="text-sm text-muted-foreground">{t("overview.physicalDisks")}</span>
-              <span className="text-lg font-semibold text-foreground">{storageData?.disk_count || "N/A"}</span>
+              <span className="text-lg font-semibold text-foreground">{storageData?.disk_count || t("app.notAvailable")}</span>
             </div>
 
             <div className="flex justify-between items-center">
               <span className="text-sm text-muted-foreground">{t("overview.networkInterfaces")}</span>
               <span className="text-lg font-semibold text-foreground">
-                {networkData?.physical_total_count || networkData?.physical_interfaces?.length || "N/A"}
+                {networkData?.physical_total_count || networkData?.physical_interfaces?.length || t("app.notAvailable")}
               </span>
             </div>
           </CardContent>

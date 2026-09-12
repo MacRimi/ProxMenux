@@ -3813,6 +3813,7 @@
       "deletePbsDescription": "Isso remove o instantâneo do PBS do armazenamento de dados.",
       "deletePbsTitle": "Excluir instantâneo do PBS",
       "companionFile": "arquivo complementar",
+      "descriptionAfter": "",
       "descriptionBefore": "Procure e restaure backups encontrados em",
       "descriptionAfter": "",
       "downloadTitle": "Baixe este backup",
@@ -4929,7 +4930,10 @@
     "customLinkCancel": "Cancel",
     "customLinkDelete": "Delete",
     "customLinkSaveError": "Save failed",
-    "customLinkDeleteError": "Delete failed"
+    "customLinkDeleteError": "Delete failed",
+    "categoryLabels": {
+      "arrSuite": "*Arr Suite", "aiCodingDevTools": "AI / Coding & Dev-Tools", "adblockDns": "Adblock & DNS", "authenticationSecurity": "Authentication & Security", "automationScheduling": "Automation & Scheduling", "backupRecovery": "Backup & Recovery", "businessErp": "Business & ERP", "communicationCommunity": "Communication & Community", "containersDocker": "Containers & Docker", "dashboardsFrontends": "Dashboards & Frontends", "databases": "Databases", "documentsNotes": "Documents & Notes", "filesDownloads": "Files & Downloads", "financeBudgeting": "Finance & Budgeting", "gamingLeisure": "Gaming & Leisure", "hostManagement": "Host Management", "iotSmartHome": "IoT & Smart Home", "mediaStreaming": "Media & Streaming", "messagingQueues": "Messaging & Queues", "miscellaneous": "Miscellaneous", "monitoringAnalytics": "Monitoring & Analytics", "nvrCameras": "NVR & Cameras", "networkFirewall": "Network & Firewall", "operatingSystemsAppliances": "Operating Systems & Appliances", "productivityWorkflows": "Productivity & Workflows", "remoteAccessVpn": "Remote Access & VPN", "webserversProxies": "Webservers & Proxies", "zigbeeZwaveMatter": "ZigBee, Z-Wave & Matter"
+    }
   },
   "audit": {
     "presentation": {

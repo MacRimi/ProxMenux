@@ -35,6 +35,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from ".
 import { fetchApi } from "../lib/api-config"
 import { fetchLxcApps, getLxcAppsCached, setLxcAppsCached, subscribeLxcApps } from "../lib/lxc-apps-cache"
 import { categoryChipStyle, useIsLightTheme } from "../lib/category-color"
+import { getCategoryLabel } from "../lib/category-label"
 import { useT } from "@/lib/i18n/provider"
 
 // installed_via is optional now — an empty value means "register only,
@@ -1604,7 +1605,7 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed, initialData }: Prop
                             <SelectContent>
                               <SelectItem value="__none__">{t("vmLxc.appEditor.portCategoryNone")}</SelectItem>
                               {categoryPresets.map((c) => (
-                                <SelectItem key={c} value={c}>{c}</SelectItem>
+                                <SelectItem key={c} value={c}>{getCategoryLabel(t, c)}</SelectItem>
                               ))}
                               <SelectItem value="__add__">{t("vmLxc.appEditor.portCategoryAddNew")}</SelectItem>
                             </SelectContent>
@@ -2649,9 +2650,9 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed, initialData }: Prop
                               <span
                                 style={categoryChipStyle(p.category, isLightTheme)}
                                 className="flex-shrink-0 px-1.5 py-0.5 border rounded text-[10px] font-medium truncate max-w-[40%]"
-                                title={p.category}
+                                title={getCategoryLabel(t, p.category)}
                               >
-                                {p.category}
+                                {getCategoryLabel(t, p.category)}
                               </span>
                             )}
                           </div>

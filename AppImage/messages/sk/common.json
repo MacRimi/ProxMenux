@@ -37,7 +37,7 @@
     "hardware": "Hardvér",
     "backup": "Záloha",
     "terminal": "Terminál",
-    "systemLogs": "Systémové logy",
+    "systemLogs": "Systémové záznamy",
     "security": "Bezpečnosť",
     "settings": "Nastavenia",
     "about": "O projekte",
@@ -95,7 +95,7 @@
     "system": "Systém",
     "cores": "Jadrá",
     "used": "Použité",
-    "cached": "Cache",
+    "cached": "Vyrovnávacia pamäť",
     "total": "Spolu",
     "free": "Voľné",
     "activeVmLxc": "Aktívne VM a LXC",
@@ -114,11 +114,11 @@
     "physicalDisks": "Fyzické disky:",
     "diskSingular": "disk",
     "diskPlural": "diskov",
-    "vmLxcStorage": "Úložisko VM/LXC",
+    "vmLxcStorage": "Úložisko VM a LXC",
     "available": "Dostupné",
     "storageVolumeSingular": "úložisko",
     "storageVolumePlural": "úložísk",
-    "noVmLxcStorage": "Nie je nastavené úložisko pre VM/LXC",
+    "noVmLxcStorage": "Nie je nastavené úložisko pre VM ani LXC",
     "localStorageSystem": "Lokálne úložisko (systém)",
     "storageDataUnavailable": "Údaje o úložisku nie sú dostupné",
     "networkOverview": "Prehľad siete",
@@ -156,15 +156,15 @@
       "min": "min."
     },
     "errors": {
-      "serverUnavailableTitle": "Monitor server nie je dostupný",
-      "serverUnavailableDescription": "Nedá sa pripojiť k Monitor serveru. Skontrolujte, či služba beží, a skúste to znova."
+      "serverUnavailableTitle": "Server Monitora nie je dostupný",
+      "serverUnavailableDescription": "Nedá sa pripojiť k serveru Monitora. Skontrolujte, či služba beží, a skúste to znova."
     }
   },
   "storage": {
     "loadingTitle": "Načítavam úložiská...",
     "loadingDescription": "Kontrolujem disky, oddiely a úložiská",
     "loadingError": "Úložiská sa nepodarilo načítať: {error}",
-    "storageUsed": "Využité úložisko",
+    "storageUsed": "Využitie úložiska",
     "localUsed": "Lokálne využité",
     "remoteUsed": "Vzdialené využité",
     "physicalDisks": "Fyzické disky",
@@ -232,13 +232,13 @@
     "dataWritten": "Zapísané dáta",
     "life": "životnosť",
     "lifeRemaining": "Zostávajúca životnosť",
-    "realTest": "Reálny test",
+    "realTest": "Aktuálne údaje",
     "wear": {
       "label": "Opotrebenie",
-      "percentageUsed": "Využitá životnosť",
+      "percentageUsed": "Opotrebenie",
       "mediaWearout": "Opotrebovanie média",
       "wearLevel": "Miera opotrebovania",
-      "lifeUsed": "Využitá životnosť"
+      "lifeUsed": "Opotrebenie"
     },
     "estimatedLife": "Odhad životnosti",
     "noWearDetected": "Zatiaľ bez zisteného opotrebenia",
@@ -316,16 +316,16 @@
       "testWait": "Počkajte, kým sa test dokončí. Tlačidlá sa odomknú automaticky.",
       "noProgress": "Firmvér tohto disku neposiela priebeh testu. Test beží na pozadí.",
       "lastTest": "Posledný test",
-      "nvmeMetrics": "Zdravotné údaje NVMe",
-      "sasMetrics": "Zdravotné údaje SAS/SCSI",
+      "nvmeMetrics": "Údaje o stave NVMe",
+      "sasMetrics": "Údaje o stave SAS/SCSI",
       "id": "ID",
       "attribute": "Údaj",
       "value": "Hodnota",
       "worst": "Najhoršie",
       "status": "Stav",
-      "viewFullReport": "Zobraziť celý SMART report",
-      "loadingReport": "Načítavam report...",
-      "reportLoadFailed": "Údaje pre report sa nepodarilo načítať.",
+      "viewFullReport": "Zobraziť celú SMART správu",
+      "loadingReport": "Načítavam správu...",
+      "reportLoadFailed": "Údaje pre SMART správu sa nepodarilo načítať.",
       "statusValues": {
         "passed": "Prešlo",
         "failed": "Zlyhalo",
@@ -346,10 +346,10 @@
       "downloadJson": "Stiahnuť JSON",
       "delete": "Vymazať",
       "confirmDelete": "Vymazať tento záznam testu?",
-      "note": "Výsledky testov sa ukladajú lokálne a používajú sa na vytvorenie podrobného SMART reportu."
+      "note": "Výsledky testov sa ukladajú lokálne a používajú sa na vytvorenie podrobnej SMART správy."
     },
     "smartReport": {
-      "title": "SMART report o stave disku",
+      "title": "SMART správa o stave disku",
       "printPdf": "Vytlačiť / uložiť ako PDF",
       "printHintMac": "Na uloženie ako PDF použite Cmd+P",
       "printHintCtrl": "Na uloženie ako PDF použite Ctrl+P",
@@ -361,7 +361,7 @@
       "smartStatus": "SMART stav",
       "healthAssessment": "Vyhodnotenie stavu disku",
       "passedUpper": "V PORIADKU",
-      "testAgeWarning": "Report vychádza zo SMART testu spred {days} dní ({date}). Stav disku sa odvtedy mohol zmeniť. Odporúčame spustiť nový SMART test.",
+      "testAgeWarning": "SMART správa vychádza z testu spred {days} dní ({date}). Stav disku sa odvtedy mohol zmeniť. Odporúčame spustiť nový SMART test.",
       "healthyAssessment": "Disk pracuje v bežných hodnotách a SMART údaje sú v prijateľných medziach. Je zapnutý približne {uptime} a jeho aktuálna teplota je {temperature}. {sectors}",
       "failedAssessment": "SMART hlási vážny problém s diskom. Hneď zálohujte dôležité dáta a naplánujte výmenu disku.",
       "noBadSectors": "Nenašli sa žiadne chybné sektory.",
@@ -393,8 +393,8 @@
       "attributeCount": "{total} spolu",
       "attributeCountWithWarnings": "{total} spolu, {warnings} upozornení",
       "entriesCount": "{count} záznamov",
-      "fullSelfTestHistory": "Celá história self-testov ({count} záznamov)",
-      "firmwareNoSelfTestLog": "Firmvér tohto disku si nevedie vlastný interný log self-testov. Výsledky sleduje ProxMenux Monitor.",
+      "fullSelfTestHistory": "Celá história SMART testov ({count} záznamov)",
+      "firmwareNoSelfTestLog": "Firmvér tohto disku si nevedie vlastný záznam SMART testov. Výsledky sleduje ProxMenux Monitor.",
       "ssdWearNote": "Odhad životnosti SSD vychádza z opotrebovania, ktoré hlási výrobca. Skutočná životnosť sa môže líšiť podľa záťaže a spôsobu používania.",
       "labels": {
         "model": "Model",
@@ -402,7 +402,7 @@
         "estimatedLife": "Odhadovaná zostávajúca životnosť",
         "totalDataWritten": "Celkom zapísaných dát",
         "availableSpare": "Voľná rezerva",
-        "reportGenerated": "Report vytvorený",
+        "reportGenerated": "Správa vytvorená",
         "testType": "Typ testu",
         "lastTestType": "Posledný typ testu",
         "testResult": "Výsledok testu",
@@ -426,7 +426,7 @@
         "lifeRemaining": "ZOSTÁVAJÚCA ŽIVOTNOSŤ",
         "estimated": "Odhad",
         "usageStatistics": "ŠTATISTIKA POUŽÍVANIA",
-        "percentageUsed": "Využitá životnosť",
+        "percentageUsed": "Opotrebenie",
         "dataWritten": "Zapísané dáta",
         "source": "Zdroj",
         "ssdLifeIndicator": "Ukazovateľ životnosti SSD",
@@ -521,8 +521,8 @@
         "warningTempTime": "Čas v teplotnom upozornení",
         "criticalTempTime": "Čas v kritickej teplote",
         "dataRead": "Prečítané dáta",
-        "hostReadCommands": "Read príkazy hosta",
-        "hostWriteCommands": "Write príkazy hosta",
+        "hostReadCommands": "Príkazy čítania zo servera",
+        "hostWriteCommands": "Príkazy zápisu zo servera",
         "hotspotTemp": "Teplota hotspotu",
         "sensors": "Senzory"
       },
@@ -535,19 +535,19 @@
         "mayIncludeBenignArtifacts": "Môže obsahovať neškodné záznamy",
         "minutesInWarningRange": "Minúty v pásme upozornenia",
         "minutesInCriticalRange": "Minúty v kritickom pásme",
-        "totalHostReads": "Celkové čítania hosta",
-        "totalReadCommands": "Celkový počet read príkazov",
-        "totalWriteCommands": "Celkový počet write príkazov",
+        "totalHostReads": "Celkové čítania zo servera",
+        "totalReadCommands": "Celkový počet príkazov na čítanie",
+        "totalWriteCommands": "Celkový počet príkazov na zápis",
         "sensorHotspot": "Hotspot senzora [1]"
       },
       "empty": {
         "nvmeMetrics": "Nie sú dostupné žiadne NVMe metriky",
         "sasMetrics": "Nie sú dostupné žiadne SAS metriky",
         "smartAttributes": "Nie sú dostupné žiadne SMART atribúty",
-        "selfTestHistory": "Nie je dostupná história self-testov. Spustite SMART self-test a výsledky sa zobrazia tu."
+        "selfTestHistory": "História SMART testov zatiaľ nie je dostupná. Spustite SMART test a výsledky sa zobrazia tu."
       },
       "footer": {
-        "generatedBy": "Report vytvoril ProxMenux Monitor"
+        "generatedBy": "Správu vytvoril ProxMenux Monitor"
       },
       "attributeLabels": {
         "criticalWarning": "Kritické upozornenie",
@@ -557,7 +557,7 @@
         "temperatureSensor3": "Teplotný senzor 3",
         "availableSpare": "Voľná rezerva",
         "availableSpareThreshold": "Minimálna voľná rezerva",
-        "percentageUsed": "Využitá životnosť",
+        "percentageUsed": "Opotrebenie",
         "enduranceGroupWarning": "Upozornenie na výdrž skupiny",
         "mediaErrors": "Chyby média",
         "mediaIntegrityErrors": "Chyby média a integrity dát",
@@ -566,8 +566,8 @@
         "nvmePowerOnHours": "Hodiny prevádzky",
         "dataUnitsRead": "Prečítané dátové jednotky",
         "dataUnitsWritten": "Zapísané dátové jednotky",
-        "hostReadCommands": "Príkazy čítania hosta",
-        "hostWriteCommands": "Príkazy zápisu hosta",
+        "hostReadCommands": "Príkazy čítania zo servera",
+        "hostWriteCommands": "Príkazy zápisu zo servera",
         "controllerBusyTime": "Čas vyťaženia radiča",
         "errorLogEntries": "Záznamy v logu chýb",
         "warningTempTime": "Čas v pásme teplotného upozornenia",
@@ -595,8 +595,8 @@
         "nvmePowerOnHours": "Celkový počet hodín, počas ktorých bol disk zapnutý od výroby.",
         "dataUnitsRead": "Celkové čítanie v jednotkách 512 KB. Po vynásobení 512 000 dostanete bajty. Hodí sa na výpočet dennej čítacej záťaže.",
         "dataUnitsWritten": "Celkový zápis v jednotkách 512 KB. Porovnajte s TBW hodnotou na odhad zostávajúcej výdrže.",
-        "hostReadCommands": "Celkový počet read príkazov od hosta. Vysoký pomer oproti zápisom znamená čítaciu záťaž.",
-        "hostWriteCommands": "Celkový počet write príkazov od hosta. Zahŕňa aj zápisy metadát súborového systému.",
+        "hostReadCommands": "Celkový počet príkazov čítania zo servera. Vysoký pomer oproti zápisom znamená čítaciu záťaž.",
+        "hostWriteCommands": "Celkový počet príkazov zápisu zo servera. Zahŕňa aj zápisy metadát súborového systému.",
         "controllerBusyTime": "Celkový počet minút, keď radič spracúval I/O príkazy. Vysoké hodnoty znamenajú dlhodobú veľkú záťaž.",
         "errorLogEntries": "Počet záznamov v logu chýb. Často zahŕňa aj neškodné záznamy zo self-testov; porovnajte s Media Errors.",
         "warningTempTime": "Celkový počet minút nad teplotným prahom upozornenia. Spôsobuje znižovanie výkonu. Ideálna hodnota je nula.",
@@ -657,7 +657,7 @@
         "interfaceCrcErrorCount": "CRC chyby na rozhraní. Pravdepodobný problém s káblom alebo konektorom.",
         "hardwareEccRecovered": "Chyby čítania opravené hardvérovým ECC. Nenulová hodnota je bežná; rýchly rast si zaslúži pozornosť.",
         "eccErrorRate": "Miera chýb opravených ECC. Ide o výpočet výrobcu; hodnota VALUE je dôležitejšia než raw počet.",
-        "endToEndError": "Poškodenie dát medzi cache radiča a hostiteľským rozhraním. Malo by byť vždy nula.",
+        "endToEndError": "Poškodenie dát medzi cache radiča a rozhraním servera. Malo by byť vždy nula.",
         "endToEndErrorDetectionCount": "Počet paritných chýb v dátovej ceste. Nenulová hodnota naznačuje problém radiča.",
         "wearLevelingCount": "Priemerný počet mazacích cyklov na NAND blok (SSD). Nižšia VALUE znamená viac spotrebovanej životnosti.",
         "wearRangeDelta": "Rozdiel medzi najviac a najmenej opotrebovanými blokmi (SSD). Vysoké hodnoty znamenajú nerovnomerné opotrebovanie.",
@@ -680,13 +680,13 @@
         "lifetimeReadsGib": "Celkové dáta prečítané počas životnosti disku v GiB.",
         "totalWritesGib": "Celkové dáta zapísané v GiB. Porovnajte s TBW hodnotou na odhad výdrže.",
         "totalReadsGib": "Celkové dáta prečítané v GiB.",
-        "nandWritesGib": "Raw zápisy do NAND v GiB. Bývajú vyššie než zápisy hosta pre write amplification.",
-        "hostWrites32Mib": "Celkové dáta zapísané hostom v jednotkách 32 MiB.",
-        "hostReads32Mib": "Celkové dáta prečítané hostom v jednotkách 32 MiB.",
-        "hostWritesMib": "Celkové dáta zapísané hostom v MiB.",
-        "hostReadsMib": "Celkové dáta prečítané hostom v MiB.",
+        "nandWritesGib": "Raw zápisy do NAND v GiB. Bývajú vyššie než zápisy zo servera pre write amplification.",
+        "hostWrites32Mib": "Celkové dáta zapísané zo servera v jednotkách 32 MiB.",
+        "hostReads32Mib": "Celkové dáta prečítané serverom v jednotkách 32 MiB.",
+        "hostWritesMib": "Celkové dáta zapísané zo servera v MiB.",
+        "hostReadsMib": "Celkové dáta prečítané serverom v MiB.",
         "nandGbWrittenTlc": "Celkové dáta zapísané do TLC NAND buniek v GB. Zahŕňa aj write amplification.",
-        "nandGibWritten": "Celkové zápisy do NAND v GiB. Bývajú vyššie než zápisy hosta pre write amplification a garbage collection.",
+        "nandGibWritten": "Celkové zápisy do NAND v GiB. Bývajú vyššie než zápisy zo servera pre write amplification a garbage collection.",
         "averageBlockEraseCount": "Priemerný počet mazacích cyklov na NAND blok (SSD). Disky bývajú dimenzované približne na 3K-100K cyklov.",
         "averageEraseCount": "Priemerné mazacie cykly na blok. Porovnajte s udávanou výdržou na odhad zostávajúcej životnosti.",
         "maxEraseCount": "Najvyšší počet mazacích cyklov na jednom bloku. Veľký rozdiel oproti priemeru znamená nerovnomerné opotrebovanie.",
@@ -719,7 +719,7 @@
       },
       "recommendations": {
         "healthyTitle": "Disk je v poriadku",
-        "healthyText": "Všetky SMART hodnoty sú v bežnom rozsahu. Disk ďalej pravidelne sledujte.",
+        "healthyText": "Všetky SMART hodnoty sú v bežnom rozsahu. Disk pravidelne kontrolujte.",
         "criticalTitle": "Kritický problém so stavom disku",
         "criticalText": "SMART hlási problém. Hneď zálohujte všetky dáta a naplánujte výmenu disku.",
         "reallocatedTitle": "Presunuté sektory ({count})",
@@ -831,7 +831,7 @@
     "processes": {
       "topByCpu": "Procesy s najvyšším CPU",
       "topByMemory": "Procesy s najvyššou pamäťou",
-      "cpuDescription": "Aktuálne využitie CPU podľa procesu. Je to podiel z celkového CPU hosta, teda rovnaká mierka ako karta Využitie CPU vyššie. Po otvorení sa obnovuje každé 3 s.",
+      "cpuDescription": "Aktuálne využitie CPU podľa procesu. Je to podiel z celkového CPU servera, teda rovnaká mierka ako karta Využitie CPU vyššie. Po otvorení sa obnovuje každé 3 s.",
       "memoryDescription": "Aktuálne využitie rezidentnej pamäte podľa procesu. Po otvorení sa obnovuje každé 3 s.",
       "filterPlaceholder": "Filtrovať podľa príkazu, používateľa alebo PID...",
       "pid": "PID",
@@ -974,7 +974,7 @@
       "dhm": "{days} d {hours} h {minutes} min"
     },
     "details": {
-      "sourceHost": "Zdroj na hostiteľovi",
+      "sourceHost": "Zdroj na serveri",
       "mountedAtCt": "Pripojené v CT",
       "total": "Celkovo",
       "used": "Použité",
@@ -996,7 +996,7 @@
       "scsiController": "SCSI radič",
       "dnsNameserver": "DNS server",
       "searchDomain": "Vyhľadávacia doména",
-      "hostname": "Názov hostiteľa",
+      "hostname": "Názov systému",
       "storageType": "{type} úložisko",
       "mountAttributes": "Atribúty pripojenia (LXC config)",
       "runtimeMountOptions": "Aktuálne voľby pripojenia",
@@ -1021,7 +1021,7 @@
       "mountPointIndexed": "Bod pripojenia {index}",
       "network": "Sieť",
       "networkInterface": "Sieťové rozhranie {index}",
-      "hostInterface": "Hostiteľ: {interface}",
+      "hostInterface": "Rozhranie servera: {interface}",
       "gateway": "Brána",
       "gatewayV6": "Brána v6",
       "type": "Typ",
@@ -1040,7 +1040,7 @@
       "mountTypes": {
         "pveVolume": "PVE zväzok",
         "pveStorageBind": "bind z PVE úložiska",
-        "hostBind": "bind z hostiteľa",
+        "hostBind": "bind zo servera",
         "adHoc": "ad-hoc v CT"
       },
       "mountStatus": {
@@ -1084,10 +1084,10 @@
     "confirm": {
       "forceStopTitle": "Vynútiť vypnutie",
       "rebootTitle": "Reštartovať",
-      "forceStopDescription": "Toto obíde bežné vypnutie systému vo VM/LXC a môže poškodiť otvorené databázy alebo súborový systém. Hosť sa okamžite ukončí.",
-      "rebootDescription": "Toto vynúti reštart bez čakania, kým hosťovský systém bezpečne dokončí zápisy. Ak je to možné, použite bežné vypnutie.",
+      "forceStopDescription": "Toto obíde bežné vypnutie systému vo VM/LXC a môže poškodiť otvorené databázy alebo súborový systém. VM alebo LXC sa okamžite ukončí.",
+      "rebootDescription": "Toto vynúti reštart bez čakania, kým systém vo VM alebo LXC bezpečne dokončí zápisy. Ak je to možné, použite bežné vypnutie.",
       "typeToConfirm": "Pre potvrdenie zadajte {vmid}:",
-      "guest": "Hosť:"
+      "guest": "VM/LXC:"
     },
     "guestTypes": {
       "container": "kontajner",
@@ -1637,7 +1637,7 @@
   },
   "settings": {
     "title": "Nastavenia",
-    "description": "Spravujte správanie dashboardu",
+    "description": "Nastavte správanie rozhrania",
     "common": {
       "health": "Stav",
       "alerts": "Upozornenia"
@@ -1645,7 +1645,7 @@
     "interfaceLanguage": {
       "title": "Jazyk rozhrania",
       "description": "Vyberte jazyk používaný v paneli Monitor.",
-      "label": "Jazyk dashboardu",
+      "label": "Jazyk rozhrania",
       "fallbackNote": "",
       "statusComplete": "hotové",
       "statusPartial": "čiastočne preložené",
@@ -1703,7 +1703,7 @@
         "network": "Sieťové rozhrania",
         "vms": "VM a kontajnery",
         "services": "Služby PVE",
-        "logs": "Systémové logy",
+        "logs": "Systémové záznamy",
         "updates": "Aktualizácie systému",
         "security": "Bezpečnosť a certifikáty",
         "temperature": "Teplota"
@@ -1736,12 +1736,12 @@
       "description": "Miesto, kam ProxMenux ukladá hookscripty, napríklad ochranu GPU passthrough pre VM/LXC. V clusteri vyberte zdieľané úložisko, aby sa VM a LXC dali bez problémov presúvať medzi servermi;",
       "localNote": "je viazané iba na jeden server a migráciu pokazí.",
       "placeholder": "Vyberte úložisko...",
-      "footer": "Existujúce VM/LXC nastavené na predchádzajúce úložisko budú fungovať ďalej. Nový výber sa použije iba pri nových GPU passthrough operáciách alebo pri spustení „sync hookscripts“ na hostovi."
+      "footer": "Existujúce VM/LXC nastavené na predchádzajúce úložisko budú fungovať ďalej. Nový výber sa použije iba pri nových GPU passthrough operáciách alebo pri spustení „sync hookscripts“ na serveri."
     },
     "lxcUpdateDetection": {
       "title": "Kontrola aktualizácií v LXC",
       "descriptionStart": "Pravidelne kontroluje bežiace Debian/Ubuntu/Alpine LXC kontajnery, či nemajú dostupné aktualizácie balíkov",
-      "descriptionEnd": " a zobrazí ich v dashboarde. Zodpovedajúci prepínač v Notifikácie -> Služby sa zobrazí iba vtedy, keď je táto kontrola zapnutá.",
+      "descriptionEnd": " a zobrazí ich v prehľade. Zodpovedajúci prepínač v Notifikácie → Služby sa zobrazí iba vtedy, keď je táto kontrola zapnutá.",
       "enableLabel": "Zapnúť kontrolu aktualizácií v LXC",
       "loadFailed": "Nastavenie kontroly aktualizácií LXC sa nepodarilo načítať.",
       "saveFailed": "Nastavenie kontroly aktualizácií LXC sa nepodarilo uložiť.",
@@ -1771,7 +1771,7 @@
       "configuring": "Nastavujem...",
       "webhookConfigured": "PVE webhook sa nastavil automaticky. Proxmox bude posielať notifikácie do ProxMenux.",
       "webhookFailed": "Automatické nastavenie PVE zlyhalo: {error}",
-      "webhookManualSetup": "Notifikácie sú zapnuté. Na dokončenie webhooku spustite nižšie uvedené príkazy na PVE hostovi.",
+      "webhookManualSetup": "Notifikácie sú zapnuté. Na dokončenie webhooku spustite nižšie uvedené príkazy na PVE serveri.",
       "serviceRunning": "Služba beží",
       "serviceStopped": "Služba je zastavená",
       "sentLast24h": "odoslané za 24 h: {count}",
@@ -2148,7 +2148,7 @@
           "description": "Hranice podľa typu disku. Jednotky sú rovnaké (°C), ale predvolené hodnoty sa líšia, pretože každý typ disku znáša iný rozsah."
         },
         "host_storage": {
-          "title": "Miesto na disku - host",
+          "title": "Miesto na disku – server",
           "description": "Platí pre / a všetky prípojné body pod /var/lib/vz, /mnt/* a podobne."
         },
         "lxc_rootfs": {
@@ -2161,21 +2161,21 @@
         },
         "pve_storage": {
           "title": "Kapacita PVE úložísk",
-          "description": "Blokové PVE úložiská: LVM, LVM-thin, ZFS-pool, RBD/Ceph, PBS. Súborové úložiská sú už pokryté hranicami disku hosta."
+          "description": "Blokové PVE úložiská: LVM, LVM-thin, ZFS-pool, RBD/Ceph, PBS. Súborové úložiská už pokrývajú limity diskov servera."
         },
         "zfs_pool": {
           "title": "Kapacita ZFS poolov",
-          "description": "ZFS pooly na úrovni hosta, nezávisle od registrácie v PVE. Sleduje sa teda aj rpool a samostatné zálohovacie pooly."
+          "description": "ZFS pooly na úrovni servera, nezávisle od registrácie v PVE. Sleduje sa teda aj rpool a samostatné zálohovacie pooly."
         }
       },
       "swapPressure": "Tlak na pamäť",
-      "swapPressureHint": "Označí kritickú udalosť len keď platia OBIDVE podmienky súčasne — využitie súboru swap nad prvým limitom A dostupná RAM pod druhým. Upozorňovanie iba na swap bolo hlučné na hostiteľoch Proxmox, kde Linux odsúva neaktívne stránky, kým RAM zostáva dostatočne dostupná.",
+      "swapPressureHint": "Kritickú udalosť označí len vtedy, keď sú splnené obe podmienky: využitie súboru swap je nad prvým limitom a dostupná RAM pod druhým. Upozorňovanie iba na swap bolo na serveroch Proxmox príliš hlučné, pretože Linux odsúva neaktívne stránky aj pri dostatočne dostupnej RAM.",
       "swapHighLabel": "Využitie súboru swap",
       "availableMinLabel": "Minimálna dostupná RAM"
     },
     "navOrder": {
       "title": "Poradie navigácie",
-      "description": "Prispôsobte poradie hlavných záložiek. Zoskupené záložky (Node, Admin) sa presúvajú ako jedna jednotka; ich vnútorné položky si zachovávajú predvolené poradie.",
+      "description": "Prispôsobte poradie hlavných záložiek. Zoskupené záložky (Server, Správa) sa presúvajú ako jedna jednotka; ich vnútorné položky si zachovajú predvolené poradie.",
       "reset": "Obnoviť predvolené",
       "hint": "Presúvajte pre zmenu poradia · Na dotyku najprv podržte",
       "customActive": "Používa sa vlastné poradie navigácie."
@@ -2246,7 +2246,7 @@
   },
   "securityPage": {
     "title": "Bezpečnosť",
-    "description": "Ochrana prístupu k Monitoru aj Proxmox serveru na jednom mieste.",
+    "description": "Ochrana prístupu k Monitoru aj serveru Proxmox na jednom mieste.",
     "values": {
       "permanent": "Natrvalo",
       "perm": "trvalo",
@@ -2256,8 +2256,8 @@
       "disable": "Vypnúť",
       "enabledLower": "zapnutý",
       "disabledLower": "vypnutý",
-      "clusterLower": "zhluk",
-      "hostLower": "hostiteľ",
+      "clusterLower": "klastra",
+      "hostLower": "servera",
       "remove": "Odstrániť",
       "allow": "Povoliť",
       "delete": "Vymazať",
@@ -2334,7 +2334,7 @@
       "ruleAdded": "Firewall pravidlo bolo pridané.",
       "ruleDeleted": "Firewall pravidlo bolo vymazané.",
       "ruleUpdated": "Firewall pravidlo bolo upravené.",
-      "firewallUpdated": "{level} firewall je teraz {state}.",
+      "firewallUpdated": "Firewall {level} je teraz {state}.",
       "monitorPortAdded": "Pravidlo pre port Monitora bolo pridané.",
       "monitorPortRemoved": "Pravidlo pre port Monitora bolo odstránené.",
       "authEnabled": "Prihlásenie je zapnuté.",
@@ -2359,10 +2359,10 @@
     },
     "auth": {
       "title": "Prístup a prihlásenie",
-      "description": "Nastavte, kto môže otvoriť Monitor dashboard.",
+      "description": "Nastavte, kto môže otvoriť rozhranie Monitora.",
       "statusTitle": "Ochrana heslom",
       "passwordEnabled": "Prihlásenie heslom je zapnuté.",
-      "noPasswordProtection": "Dashboard je teraz otvorený bez hesla.",
+      "noPasswordProtection": "Rozhranie je teraz otvorené bez hesla.",
       "enableHint": "Pred sprístupnením mimo súkromnej siete pridajte používateľské meno a heslo.",
       "enable": "Zapnúť prihlásenie",
       "setupTitle": "Vytvoriť prihlásenie",
@@ -2401,12 +2401,12 @@
     },
     "ssl": {
       "title": "SSL / HTTPS",
-      "description": "Šifruje pripojenie k dashboardu v prehliadači.",
+      "description": "Šifruje pripojenie k rozhraniu v prehliadači.",
       "httpsEnabled": "HTTPS je zapnuté.",
-      "httpNoSsl": "Dashboard používa obyčajné HTTP.",
-      "usingCertificate": "Používa sa certifikát: {source}.",
-      "proxmoxHost": "Hostiteľ Proxmox",
-      "custom": "vlastný",
+      "httpNoSsl": "Rozhranie používa obyčajné HTTP.",
+      "usingCertificate": "Používa sa {source}.",
+      "proxmoxHost": "certifikát servera Proxmox",
+      "custom": "vlastný certifikát",
       "unencryptedHttp": "Prenos cez HTTP nie je šifrovaný.",
       "activeCertificate": "Aktívny certifikát",
       "cert": "Certifikát",
@@ -2469,12 +2469,12 @@
       "loading": "Načítavam tokeny...",
       "empty": "Zatiaľ tu nie sú žiadne API tokeny.",
       "scope": {
-        "label": "Token permissions",
-        "readOnly": "Read-only",
-        "readOnlyHint": "Reads metrics and status. Recommended for dashboards and integrations.",
-        "fullAdmin": "Full admin",
-        "fullAdminHint": "Full control, like your own session.",
-        "fullAdminWarning": "A full-admin token can do everything you can: power off or reboot the host, run updates and open a terminal. Share it only with fully trusted integrations."
+        "label": "Oprávnenia tokenu",
+        "readOnly": "Iba na čítanie",
+        "readOnlyHint": "Umožňuje čítať metriky a stav. Odporúčané pre prehľady a integrácie.",
+        "fullAdmin": "Úplné oprávnenia",
+        "fullAdminHint": "Úplný prístup ako vo vašom vlastnom prihlásení.",
+        "fullAdminWarning": "Token s úplnými oprávneniami môže vykonať všetko, čo vy: vypnúť alebo reštartovať server, spustiť aktualizácie a otvoriť terminál. Zdieľajte ho iba s plne dôveryhodnými integráciami."
       }
     },
     "firewall": {
@@ -2482,12 +2482,12 @@
       "description": "Správa stavu Proxmox firewallu a jednoduchých pravidiel prístupu.",
       "notDetectedTitle": "Proxmox firewall sa nenašiel",
       "notDetectedDescription": "Nástroje firewallu na tomto serveri nie sú dostupné.",
-      "clusterTitle": "Klastrový firewall",
-      "clusterActive": "Cluster firewall je aktívny.",
-      "clusterDisabled": "Cluster firewall je vypnutý.",
-      "hostTitle": "Hostiteľský firewall",
-      "hostActive": "Host firewall je aktívny pre tento uzol.",
-      "clusterRequiredHint": "Najprv zapnite cluster firewall, potom host firewall.",
+      "clusterTitle": "Firewall klastra",
+      "clusterActive": "Firewall klastra je aktívny.",
+      "clusterDisabled": "Firewall klastra je vypnutý.",
+      "hostTitle": "Firewall servera",
+      "hostActive": "Firewall servera je aktívny.",
+      "clusterRequiredHint": "Najprv zapnite firewall klastra, potom firewall servera.",
       "quickAccessRules": "Rýchle pravidlá prístupu",
       "port8008": "Port Monitora 8008",
       "port8006AlwaysAllowed": "Proxmox port 8006 je vždy povolený.",
@@ -2500,8 +2500,8 @@
       "portsCovered": "Pokryté porty",
       "drop": "Zahodiť",
       "reject": "Odmietnuť",
-      "cluster": "Cluster",
-      "host": "Hostiteľ",
+      "cluster": "Klaster",
+      "host": "Server",
       "rules": "{count} pravidiel",
       "addRule": "Pridať pravidlo",
       "newRule": "Nové pravidlo",
@@ -2514,8 +2514,8 @@
       "destinationPortHint": "Napríklad 22, 80, 443 alebo 8008.",
       "sourceAddressHint": "Voliteľná IP alebo CIDR, napríklad 192.168.1.0/24.",
       "anyInterface": "Ľubovoľné rozhranie",
-      "hostFirewallThisNode": "Host firewall pre tento uzol",
-      "clusterFirewallAllNodes": "Cluster firewall pre všetky uzly",
+      "hostFirewallThisNode": "Firewall servera",
+      "clusterFirewallAllNodes": "Firewall klastra pre všetky servery",
       "any": "Ľubovoľné",
       "anyLower": "ľubovoľné",
       "incoming": "Prichádzajúce",
@@ -2671,7 +2671,7 @@
       "featureCompliance": "bežné bezpečnostné kontroly",
       "featureGithub": "prehľadný report na tlač alebo uloženie",
       "install": "Nainštalovať Lynis",
-      "installedDescription": "Lynis je nainštalovaný a pripravený skontrolovať tento host.",
+      "installedDescription": "Lynis je nainštalovaný a pripravený skontrolovať tento server.",
       "lastScan": "Posledná kontrola",
       "hardeningIndex": "Skóre spevnenia",
       "warnings": "Varovania",
@@ -2779,7 +2779,7 @@
         "unknownOs": "neznámy OS",
         "noActionableWarnings": "Žiadne varovania na riešenie",
         "and": "a",
-        "expectedBehavior": "Nálezy označené ako očakávané pre Proxmox sú zvyčajne normálne pre hostiteľov Proxmox VE.",
+        "expectedBehavior": "Nálezy označené ako očakávané pre Proxmox sú zvyčajne bežné pre servery Proxmox VE.",
         "lynisRaw": "Pôvodné skóre Lynis",
         "pveAdjusted": "Upravené pre Proxmox",
         "rangeCritical": "0-49 problém",
@@ -2856,7 +2856,7 @@
         "networkUpdateFailed": "Chyba siete pri aktualizácii Secure Gateway",
         "fieldRequired": "Pole {field} je povinné.",
         "deploymentFailed": "Nasadenie zlyhalo",
-        "ociRequiresPve": "Secure Gateway používa štandardný LXC a mal by fungovať na tomto hostiteľovi Proxmox. Ak sa to bude opakovať, skontrolujte protokoly backendu.",
+        "ociRequiresPve": "Secure Gateway používa štandardný LXC a mal by fungovať na tomto serveri Proxmox. Ak sa to bude opakovať, skontrolujte protokoly backendu.",
         "authKeyRequired": "Zadajte Tailscale auth key.",
         "updateAuthKeyFailed": "Nepodarilo sa aktualizovať auth key",
         "couldNotLoadSetupData": "Nepodarilo sa načítať údaje nastavenia."
@@ -2903,7 +2903,7 @@
           "proxmoxNetwork": "Celá lokálna sieť",
           "customNetworks": "Vlastné siete"
         },
-        "hostAccess": "Prístup k hostu",
+        "hostAccess": "Prístup k serveru",
         "networks": "Siete",
         "exitNode": "Exit Node",
         "acceptRoutes": "Prijímať routy",
@@ -2916,7 +2916,7 @@
       "steps": {
         "intro": {
           "title": "Bezpečný vzdialený prístup",
-          "description": "Nastavte bezpečný VPN prístup k svojmu Proxmox serveru"
+          "description": "Nastavte bezpečný VPN prístup k svojmu serveru Proxmox"
         },
         "auth": {
           "title": "Prihlásenie do Tailscale",
@@ -3024,7 +3024,7 @@
           "options": {
             "host_only": {
               "label": "Iba Proxmox",
-              "description": "Prístup iba k tomuto Proxmox serveru, web UI a ProxMenux Monitoru."
+              "description": "Prístup iba k tomuto serveru Proxmox, web UI a ProxMenux Monitoru."
             },
             "proxmox_network": {
               "label": "Celá lokálna sieť",
@@ -3043,7 +3043,7 @@
         "exit_node": {
           "label": "Výstupný uzol",
           "description": "Použiť túto bránu ako internetový výstup, keď ste mimo domu.",
-          "warning": "Vyžaduje schválenie v Tailscale Admin. Po zapnutí na zariadení pôjde všetka internetová prevádzka cez váš Proxmox server."
+          "warning": "Vyžaduje schválenie v Tailscale Admin. Po zapnutí na zariadení pôjde všetka internetová prevádzka cez váš server Proxmox."
         },
         "accept_routes": {
           "label": "Prijímať routy",
@@ -3093,15 +3093,15 @@
     }
   },
   "systemLogs": {
-    "title": "Systémové logy a udalosti",
+    "title": "Systémové záznamy a udalosti",
     "sections": "Časti",
     "loading": {
-      "title": "Načítavam logy…",
-      "description": "Získavam systémové logy a udalosti"
+      "title": "Načítavam záznamy…",
+      "description": "Získavam systémové záznamy a udalosti"
     },
     "errors": {
       "connectFailed": "Nepodarilo sa pripojiť k serveru.",
-      "loadFailed": "Logy sa nepodarilo načítať. Skúste to znova."
+      "loadFailed": "Záznamy sa nepodarilo načítať. Skúste to znova."
     },
     "cards": {
       "totalEntries": "Všetky záznamy",
@@ -3109,17 +3109,17 @@
       "errors": "Chyby",
       "requiresAttention": "Vyžadujú pozornosť",
       "warnings": "Upozornenia",
-      "monitorClosely": "Treba ich sledovať",
+      "monitorClosely": "Skontrolujte ich",
       "backups": "Zálohy"
     },
     "tabs": {
-      "logs": "Logy",
+      "logs": "Záznamy",
       "events": "Udalosti",
       "backups": "Zálohy",
       "notifications": "Notifikácie"
     },
     "filters": {
-      "searchPlaceholder": "Hľadať v logoch a udalostiach…",
+      "searchPlaceholder": "Hľadať v záznamoch a udalostiach…",
       "timeRange": "Časové obdobie",
       "oneDay": "Posledný deň",
       "threeDays": "Posledné 3 dni",
@@ -3147,8 +3147,8 @@
       "debug": "Ladenie"
     },
     "export": {
-      "button": "Exportovať logy",
-      "title": "Export systémových logov a udalostí Proxmoxu",
+      "button": "Exportovať záznamy",
+      "title": "Export systémových záznamov a udalostí Proxmoxu",
       "filtersApplied": "Použité filtre"
     },
     "fields": {
@@ -3181,7 +3181,7 @@
       "event": "Udalosť"
     },
     "empty": {
-      "logs": "Vybraným filtrom nezodpovedajú žiadne logy.",
+      "logs": "Vybraným filtrom nezodpovedajú žiadne záznamy.",
       "backups": "Nenašli sa žiadne zálohy.",
       "notifications": "Nenašli sa žiadne notifikácie."
     },
@@ -3192,7 +3192,7 @@
       "totalSize": "Celková veľkosť"
     },
     "modals": {
-      "logTitle": "Podrobnosti logu",
+      "logTitle": "Podrobnosti záznamu",
       "logDescription": "Všetky informácie o tomto zázname",
       "eventTitle": "Podrobnosti udalosti",
       "eventDescription": "Všetky informácie o tejto udalosti",
@@ -3202,8 +3202,8 @@
       "notificationDescription": "Všetky informácie o tejto notifikácii"
     },
     "download": {
-      "taskLog": "Log úlohy Proxmoxu",
-      "completeTaskLog": "Celý log úlohy",
+      "taskLog": "Záznam úlohy Proxmoxu",
+      "completeTaskLog": "Celý záznam úlohy",
       "completeMessage": "Celá správa",
       "completeMessageButton": "Stiahnuť celú správu"
     }
@@ -3242,8 +3242,8 @@
         "description": "Zobrazte si údaje o serveri: CPU, RAM, GPU, disky, sieť, UPS a ďalšie súčasti vrátane modelov, sériových čísel a stavu."
       },
       "logs": {
-        "title": "Systémové logy",
-        "description": "Sledujte systémové záznamy, filtrujte udalosti, hľadajte konkrétne chyby a podľa potreby si zobrazené logy stiahnite."
+        "title": "Systémové záznamy",
+        "description": "Sledujte systémové záznamy, filtrujte udalosti, hľadajte konkrétne chyby a podľa potreby si zobrazené záznamy stiahnite."
       },
       "future": {
         "title": "Pripravené na ďalší rast",
@@ -3304,8 +3304,8 @@
       "vmLxcInterfaces": "Sieťové rozhrania VM a LXC"
     },
     "summary": {
-      "totalInterfaces": "Spolu rozhraní: {count}",
-      "activeCount": "{active}/{total} aktívne"
+      "totalInterfaces": "Rozhraní spolu: {count}",
+      "activeCount": "Aktívne: {active}/{total}"
     },
     "status": {
       "healthy": "V poriadku",
@@ -3328,7 +3328,7 @@
       "other": "Ostatné"
     },
     "labels": {
-      "activeSlave": "Aktívny slave",
+      "activeSlave": "Aktívny člen",
       "average": "Priemer",
       "avg": "Priem.",
       "bitsReceived": "Prijaté bity",
@@ -3339,7 +3339,7 @@
       "bytesSent": "Odoslané bajty",
       "current": "Aktuálne",
       "domain": "Doména",
-      "down": "Príjem",
+      "down": "Prijaté",
       "drops": "Zahodené",
       "dropsIn": "Zahodené prijaté",
       "dropsOut": "Zahodené odoslané",
@@ -3347,7 +3347,7 @@
       "errors": "Chyby",
       "errorsIn": "Chyby pri príjme",
       "errorsOut": "Chyby pri odosielaní",
-      "hostname": "Názov hosta",
+      "hostname": "Názov servera",
       "interfaceName": "Názov rozhrania",
       "ipAddress": "IP adresa",
       "latency": "Odozva",
@@ -3363,17 +3363,17 @@
       "packetsReceived": "Prijaté pakety",
       "packetsSent": "Odoslané pakety",
       "physicalInterface": "Fyzické rozhranie",
-      "primarySlave": "Primárny slave",
+      "primarySlave": "Primárny člen",
       "received": "Prijaté",
       "sent": "Odoslané",
-      "slaveInterfaces": "Slave rozhrania",
+      "slaveInterfaces": "Členské rozhrania",
       "speed": "Rýchlosť",
       "status": "Stav",
       "time": "Čas",
       "type": "Typ",
-      "up": "Odosielanie",
-      "virtualMemberInterfaces": "Virtuálne členské rozhrania",
-      "vmLxcName": "Názov VM/LXC"
+      "up": "Odoslané",
+      "virtualMemberInterfaces": "Virtuálne rozhrania v moste",
+      "vmLxcName": "Názov VM alebo LXC"
     },
     "roles": {
       "active": "aktívne",
@@ -3382,7 +3382,7 @@
     },
     "empty": {
       "noVmLxc": "Žiadne VM/LXC",
-      "noVirtualMembers": "Žiadni virtuálni členovia"
+      "noVirtualMembers": "Žiadne virtuálne rozhrania"
     },
     "timeframes": {
       "hour": "1 hodina",
@@ -3391,18 +3391,18 @@
       "month": "30 dní",
       "year": "1 rok",
       "short": {
-        "hour": "Za 1 h",
-        "day": "Za 24 h",
-        "week": "Za 7 dní",
-        "month": "Za 30 dní",
-        "year": "Za 1 rok"
+        "hour": "Za poslednú hodinu",
+        "day": "Za posledných 24 h",
+        "week": "Za posledných 7 dní",
+        "month": "Za posledných 30 dní",
+        "year": "Za posledný rok"
       },
       "last": {
-        "hour": "Posledná hodina",
-        "day": "Posledných 24 hodín",
-        "week": "Posledných 7 dní",
-        "month": "Posledných 30 dní",
-        "year": "Posledný rok"
+        "hour": "posledná hodina",
+        "day": "posledných 24 hodín",
+        "week": "posledných 7 dní",
+        "month": "posledných 30 dní",
+        "year": "posledný rok"
       }
     },
     "interfaceDetails": {
@@ -3449,7 +3449,7 @@
       "actions": {
         "stop": "Zastaviť",
         "testAgain": "Otestovať znova",
-        "report": "Vytvoriť report"
+        "report": "Vytvoriť správu"
       },
       "testingProgress": "Testujem... {percent} %",
       "secondsRemaining": "Zostáva {seconds} s",
@@ -3460,12 +3460,12 @@
       "noDataForPeriod": "Pre toto obdobie nie sú dostupné dáta odozvy",
       "collectionInterval": "Dáta sa zbierajú každých 60 sekúnd",
       "realTimeMode": "Režim v reálnom čase",
-      "realTimeModeDescription": "Test beží 2 minúty a meria každých 5 sekúnd. Po skončení ho môžeš spustiť znova a pridať ďalšie vzorky. Všetky dáta sa zahrnú do reportu.",
+      "realTimeModeDescription": "Test beží 2 minúty a meria každých 5 sekúnd. Po skončení ho môžeš spustiť znova a pridať ďalšie vzorky. Všetky údaje sa zahrnú do správy.",
       "report": {
-        "title": "Report odozvy siete",
+        "title": "Správa o odozve siete",
         "subtitle": "ProxMenux Monitor - analýza výkonu siete",
-        "topBarTitle": "Report odozvy siete ProxMenux",
-        "topBarSubtitle": "Skontroluj report a potom ho vytlač alebo ulož ako PDF",
+        "topBarTitle": "Správa o odozve siete ProxMenux",
+        "topBarSubtitle": "Skontroluj správu a potom ju vytlač alebo ulož ako PDF",
         "printSavePdf": "Tlačiť / uložiť ako PDF",
         "date": "Dátum",
         "target": "Cieľ",
@@ -3481,7 +3481,7 @@
         "minutesShort": "{count} min",
         "seconds": "{count} s",
         "secondsShort": "{count} s",
-        "testPeriod": "obdobia testu",
+        "testPeriod": "celé obdobie testu",
         "averagePacketLoss": "Priemerná strata paketov: {value} %.",
         "noPacketLoss": "Nebola zistená strata paketov.",
         "defaultGateway": "Predvolená brána",
@@ -3497,7 +3497,7 @@
         "thresholdExcellent": "Ideálne pre aplikácie v reálnom čase, hry a videohovory.",
         "thresholdGood": "V poriadku pre väčšinu aplikácií, s minimálnym dopadom.",
         "thresholdFair": "Už viditeľné oneskorenie. Môže ovplyvniť VoIP a interaktívne aplikácie.",
-        "thresholdPoor": "Výrazná odozva. Odporúča sa preveriť sieť.",
+        "thresholdPoor": "Odozva je výrazne zvýšená. Odporúča sa preveriť sieť.",
         "detailedTestResults": "Podrobné výsledky testu",
         "latencyHistory": "História odozvy (posledných {count} záznamov)",
         "methodology": "Metodika",
@@ -3512,9 +3512,9 @@
         "assessmentFair": "Odozva siete je zvýšená. Skontroluj možné zahltenie siete alebo routovanie.",
         "assessmentPoor": "Odozva siete je kriticky vysoká. Odporúča sa okamžitá kontrola.",
         "assessmentUnknown": "Stav siete sa nepodarilo vyhodnotiť.",
-        "footerTitle": "ProxMenux Monitor - report výkonu siete",
-        "generated": "Vygenerované",
-        "reportId": "ID reportu"
+        "footerTitle": "ProxMenux Monitor - správa o výkone siete",
+        "generated": "Vytvorené",
+        "reportId": "ID správy"
       }
     }
   },
@@ -3606,7 +3606,7 @@
       "runtime": "Výdrž",
       "inputVoltage": "Vstupné napätie",
       "status": "Stav",
-      "host": "Hostiteľ",
+      "host": "Server",
       "chargeLevel": "Úroveň nabitia",
       "runtimeRemaining": "Zostávajúca výdrž",
       "batteryVoltage": "Napätie batérie",
@@ -3662,7 +3662,7 @@
     },
     "recommendations": {
       "intel": "Pre rozšírené monitorovanie GPU nainštaluj balík intel-gpu-tools alebo igt-gpu-tools.",
-      "nvidia": "Monitorovanie NVIDIA GPU v reálnom čase vyžaduje proprietárny ovládač (balík nvidia-driver). Inštaluj ho len vtedy, keď GPU používa priamo hostiteľ.",
+      "nvidia": "Monitorovanie NVIDIA GPU v reálnom čase vyžaduje proprietárny ovládač (balík nvidia-driver). Inštaluj ho len vtedy, keď GPU používa priamo server.",
       "amd": "Pre rozšírené monitorovanie AMD GPU nainštaluj amdgpu_top. Stiahnuť ho vieš z: https://github.com/Umio-Yasuno/amdgpu_top",
       "generic": "Pre rozšírené monitorovanie GPU nainštaluj vhodné monitorovacie nástroje pre svoj hardvér."
     },
@@ -4169,7 +4169,7 @@
       "fingerprintTitle": "Zobraziť odtlačok kľúča",
       "installed": "Nainštalované",
       "keyfileLabel": "Súbor s kľúčom PBS",
-      "notInstalled": "Nenainštalované",
+      "notInstalled": "Nenainštalovaný",
       "orUploadFromMachine": "alebo nahraj jeden z tohto počítača.",
       "orUploadOwn": "alebo nahraj vlastný súbor s kľúčom.",
       "pveKeyDescriptionAfter": "a Monitor ho môže použiť.",
@@ -4522,7 +4522,7 @@
       "network": "Sieťové rozhrania",
       "vms": "VM a kontajnery",
       "services": "Služby PVE",
-      "logs": "Systémové logy",
+      "logs": "Systémové záznamy",
       "updates": "Aktualizácie systému",
       "security": "Bezpečnosť a certifikáty"
     },
@@ -4755,11 +4755,11 @@
   },
   "restoreProgress": {
     "title": "Priebeh po obnove",
-    "startedAt": "Spustené {time}",
-    "finishedAt": "dokončené {time}",
+    "startedAt": "Spustené: {time}",
+    "finishedAt": "Dokončené: {time}",
     "startedRelative": "spustené {time}",
     "steps": "{done}/{total} krokov",
-    "exitCode": "ukončiť {code}",
+    "exitCode": "Kód ukončenia: {code}",
     "status": {
       "running": "Obnova prebieha",
       "complete": "Obnova je hotová",
@@ -4787,9 +4787,9 @@
       "noOutput": "(bez výstupu)"
     },
     "rollback": {
-      "empty": "Na tomto hoste nie sú položky, ktoré by chýbali v obnovenej zálohe.",
+      "empty": "Na tomto serveri nie sú položky, ktoré by chýbali v obnovenej zálohe.",
       "showCleanup": "Ukázať ručné príkazy na čistenie",
-      "description": "Tieto položky sú na tomto hoste, ale v obnovenej zálohe neboli. Pred odstránením ich skontrolujte.",
+      "description": "Tieto položky sú na tomto serveri, ale v obnovenej zálohe neboli. Pred odstránením ich skontrolujte.",
       "vms": "VM vytvorené po zálohe",
       "lxcs": "LXC vytvorené po zálohe",
       "components": "Komponenty nainštalované po zálohe",
@@ -4809,7 +4809,7 @@
       "skippedPartial": "Preskočené (chýbajú niektoré disky)",
       "skippedPartialHelp": "Niektoré vdev disky sa nenašli v /dev/disk/by-id. Pool sa nepripojil, aby sa nespustil v degradovanom stave. Opravte disky alebo ho pripojte ručne cez zpool import.",
       "skippedMissing": "Preskočené (žiadne disky nie sú prítomné)",
-      "skippedMissingHelp": "Na tomto hoste nie sú žiadne disky z tohto poolu. Presuňte disky sem alebo pool pripojte z iného hosta.",
+      "skippedMissingHelp": "Na tomto serveri nie sú žiadne disky z tohto poolu. Presuňte disky sem alebo pool pripojte z iného servera.",
       "importFailed": "Pripojenie zlyhalo",
       "importFailedHelp": "ZFS odmietol pripojenie aj s -f. Skontrolujte zpool import a log nižšie.",
       "logPath": "Denník: {path}"
@@ -4867,10 +4867,10 @@
     "vpnTip": "Ak používate VPN, skontrolujte, či je pripojenie stabilné.",
     "websocketError": "Chyba WebSocket spojenia",
     "commandDescriptions": [
-      "Zobraziť všetky Proxmox servery",
-      "Zobraziť VM na serveri",
-      "Zobraziť LXC kontajnery na serveri",
-      "Zobraziť úložiská na serveri",
+      "Zobraziť všetky uzly Proxmoxu",
+      "Zobraziť VM na uzle Proxmoxu",
+      "Zobraziť LXC kontajnery na uzle Proxmoxu",
+      "Zobraziť úložiská na uzle Proxmoxu",
       "Zobraziť sieťové rozhrania",
       "Zobraziť všetky QEMU/KVM virtuálne stroje",
       "Spustiť virtuálny stroj",
@@ -4890,7 +4890,7 @@
       "Zobraziť verziu Proxmox VE",
       "Skontrolovať stav klastra",
       "Zobraziť stav klastra",
-      "Zobraziť servery v klastri",
+      "Zobraziť uzly klastra",
       "Zobraziť stav ZFS poolu",
       "Zobraziť všetky ZFS pooly",
       "Zobraziť všetky ZFS datasety",
@@ -4959,7 +4959,7 @@
     "ok": "OK"
   },
   "apps": {
-    "searchPlaceholder": "Hľadať aplikáciu alebo CT…",
+    "searchPlaceholder": "Hľadať aplikáciu, VM alebo LXC…",
     "searchAriaLabel": "Hľadať",
     "filterAll": "Všetky kategórie",
     "filterAriaLabel": "Filtrovať podľa kategórie",
@@ -4973,7 +4973,7 @@
     "openAriaLabel": "Otvoriť {name} na novej karte",
     "openGuestAriaLabel": "Otvoriť {name} ({type} {id})",
     "emptyTitle": "Zatiaľ tu nie sú žiadne aplikácie s webovým odkazom.",
-    "emptyHint": "Pridajte webový odkaz k ľubovoľnej aplikácii na karte Aplikácie v CT a zobrazí sa tu.",
+    "emptyHint": "Pridajte webový odkaz k ľubovoľnej aplikácii na karte Aplikácie v LXC a zobrazí sa tu.",
     "customLinkAdd": "Pridať odkaz",
     "editModeToggle": "Upraviť",
     "editModeDone": "Hotovo",
@@ -4987,14 +4987,44 @@
     "customLinkLogoPlaceholder": "napr. https://example.com/logo.webp",
     "customLinkCategory": "Kategória (voliteľné)",
     "customLinkBinding": "Priradené k",
-    "customLinkBindingNone": "Nie je priradené k žiadnemu VM ani CT",
-    "customLinkBindingHelp": "Priraďte tento odkaz k VM alebo CT. Na karte sa zobrazí jeho ID a názov a jedným kliknutím ho otvoríte.",
+    "customLinkBindingNone": "Nie je priradené k žiadnemu VM ani LXC",
+    "customLinkBindingHelp": "Priraďte tento odkaz k VM alebo LXC. Na karte sa zobrazí jeho ID a názov a jedným kliknutím ho otvoríte.",
     "customLinkSave": "Uložiť",
     "customLinkCreate": "Vytvoriť",
     "customLinkCancel": "Zrušiť",
     "customLinkDelete": "Odstrániť",
     "customLinkSaveError": "Odkaz sa nepodarilo uložiť",
-    "customLinkDeleteError": "Odkaz sa nepodarilo odstrániť"
+    "customLinkDeleteError": "Odkaz sa nepodarilo odstrániť",
+    "categoryLabels": {
+      "arrSuite": "Sada *Arr",
+      "aiCodingDevTools": "AI, programovanie a vývojárske nástroje",
+      "adblockDns": "Blokovanie reklám a DNS",
+      "authenticationSecurity": "Overovanie a bezpečnosť",
+      "automationScheduling": "Automatizácia a plánovanie",
+      "backupRecovery": "Zálohovanie a obnova",
+      "businessErp": "Podnikové aplikácie a ERP",
+      "communicationCommunity": "Komunikácia a komunita",
+      "containersDocker": "Kontajnery a Docker",
+      "dashboardsFrontends": "Prehľady a webové rozhrania",
+      "databases": "Databázy",
+      "documentsNotes": "Dokumenty a poznámky",
+      "filesDownloads": "Súbory a sťahovanie",
+      "financeBudgeting": "Financie a rozpočet",
+      "gamingLeisure": "Hry a voľný čas",
+      "hostManagement": "Správa servera",
+      "iotSmartHome": "IoT a inteligentná domácnosť",
+      "mediaStreaming": "Médiá a streamovanie",
+      "messagingQueues": "Správy a fronty",
+      "miscellaneous": "Ostatné",
+      "monitoringAnalytics": "Monitorovanie a analýza",
+      "nvrCameras": "NVR a kamery",
+      "networkFirewall": "Sieť a firewall",
+      "operatingSystemsAppliances": "Operačné systémy a zariadenia",
+      "productivityWorkflows": "Produktivita a pracovné postupy",
+      "remoteAccessVpn": "Vzdialený prístup a VPN",
+      "webserversProxies": "Webové servery a proxy",
+      "zigbeeZwaveMatter": "Zigbee, Z-Wave a Matter"
+    }
   },
   "audit": {
     "presentation": {
