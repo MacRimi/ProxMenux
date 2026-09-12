@@ -5146,11 +5146,11 @@
       "couldNotRead": "Nepodarilo sa prečítať"
     },
     "title": "Audit a správy",
-    "loading": "Načítava sa hodnotenie…",
-    "run": "Spustiť hodnotenie",
-    "running": "Vyhodnocuje sa…",
+    "loading": "Načítava sa kontrola…",
+    "run": "Spustiť kontrolu",
+    "running": "Prebieha kontrola…",
     "neverRun": "Tento server ešte nebol skontrolovaný.",
-    "lastRun": "Naposledy vyhodnotené: {when}",
+    "lastRun": "Posledná kontrola: {when}",
     "stale": "pred {days} dňami",
     "readOnlyNotice": "Kontrola iba číta údaje zo servera. Nič nemení.",
     "unverifiedChecks": "Nepodarilo sa overiť: {checks}. Pri každej kontrole je uvedené, ktoré údaje sa nepodarilo prečítať.",
@@ -5315,12 +5315,12 @@
         },
         "journal_size": {
           "title": "Veľkosť systémového denníka",
-          "rationale": "Journal na disku oproti stropu, ktorý sa naň vzťahuje: SystemMaxUse, ak je nastavený, inak predvolená hodnota journald, desatina súborového systému, na ktorom leží.",
+          "rationale": "Využitie systémového denníka na disku vzhľadom na jeho limit: SystemMaxUse, ak je nastavený, inak predvolenú hodnotu journald, teda desatinu súborového systému, na ktorom leží.",
           "summary": {
-            "bounded": "Journal zaberá {size}, v rámci svojho účinného stropu",
-            "large": "Žurnál zaberá na disku {size}",
-            "nearCap": "Journal zaberá {size} a je na {percent}% svojho účinného stropu",
-            "capUnknown": "Journal zaberá {size}; jeho účinný strop sa nepodarilo určiť",
+            "bounded": "Systémový denník zaberá {size}, čo je v rámci jeho limitu",
+            "large": "Systémový denník zaberá na disku {size}",
+            "nearCap": "Systémový denník zaberá {size}, teda {percent}% svojho limitu",
+            "capUnknown": "Systémový denník zaberá {size}; jeho limit sa nepodarilo určiť",
             "evaluationFailed": "Kontrolu sa nepodarilo vyhodnotiť"
           }
         },
