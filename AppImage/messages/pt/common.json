@@ -3814,6 +3814,7 @@
       "deletePbsTitle": "Excluir instantâneo do PBS",
       "companionFile": "arquivo complementar",
       "descriptionBefore": "Procure e restaure backups encontrados em",
+      "descriptionAfter": "",
       "downloadTitle": "Baixe este backup",
       "emptyAfter": "backups ainda.",
       "emptyBefore": "Não",
