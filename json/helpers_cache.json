@@ -23619,9 +23619,9 @@
       "To use this as the map-matching backend for GeoPulse, set GEOPULSE_TIMELINE_MAP_MATCHING_ENABLED=true, GEOPULSE_TIMELINE_MAP_MATCHING_PROVIDER=valhalla and GEOPULSE_TIMELINE_MAP_MATCHING_VALHALLA_BASE_URL=http://<this-container-IP>:8002 on the GeoPulse backend."
     ],
     "warnings": [
-      "No routing tiles are built during install. Find your region's extract at https://download.geofabrik.de/ (browse to a continent, then country/region, and copy the .osm.pbf download link), then build the graph with: /opt/valhalla_data/build-tiles.sh <pbf-url>. Avoid planet-wide data unless the container is sized for it.",
+      "No routing tiles are built during install. Find your region's extract at https://download.geofabrik.de/ (browse to a continent, then country/region, and copy the .osm.pbf download link), then build the graph with: /opt/valhalla_data/build-tiles.sh {pbf-url}. Avoid planet-wide data unless the container is sized for it.",
       "The HTTP API on port 8002 has no authentication - keep it on a private/internal network.",
-      "The default 24GB disk / 8192MB RAM only covers the build. Routing tiles need several times the compressed extract size in free disk, so resize the container before building tiles for large regions."
+      "The default 24GB disk / 6144MB RAM only covers the build. Routing tiles need several times the compressed extract size in free disk, so resize the container before building tiles for large regions."
     ],
     "port": 8002,
     "website": "https://valhalla.github.io/valhalla/",
