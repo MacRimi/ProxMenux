@@ -2521,11 +2521,11 @@
     "port": 8081,
     "website": "https://github.com/karanhudia/borg-ui",
     "documentation": "https://github.com/karanhudia/borg-ui#readme",
-    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/borgbackup.webp",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/borg-ui.webp",
     "updateable": true,
     "privileged": false,
     "has_arm": true,
-    "is_dev": true,
+    "is_dev": false,
     "execute_in": [
       "lxc"
     ],
