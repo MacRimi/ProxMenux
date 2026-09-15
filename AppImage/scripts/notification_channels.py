@@ -982,15 +982,18 @@ class EmailChannel(NotificationChannel):
         # ── Build structured detail rows from known data fields ──
         detail_rows = self._build_detail_rows(data, event_type, group, html_mod)
 
-        # Vzdump bodies are authoritative multi-item inventories. Structured
-        # backup metadata is only a summary and previously replaced the body in
-        # the HTML alternative, hiding all guest rows. Render every body line
-        # exactly once for these events instead of mixing both representations.
+        # Vzdump bodies are authoritative multi-item inventories. Keep their
+        # lines exactly once, but retain the localized structured status row;
+        # the remaining structured backup metadata only duplicates the report.
         if event_type in {'backup_complete', 'backup_fail'}:
-            detail_rows = [
+            status_label = html_mod.escape(
+                _runtime_text('email.fields.status', data)
+            )
+            detail_rows = [row for row in detail_rows if row[0] == status_label]
+            detail_rows.extend(
                 ('', html_mod.escape(line.strip()))
                 for line in body.split('\n') if line.strip()
-            ]
+            )
 
         # ── Fallback: if no structured rows, render body text lines ──
         if not detail_rows:
