@@ -70,6 +70,21 @@ class RuntimeCatalogTests(unittest.TestCase):
         for key in en:
             self.assertEqual(_placeholders(sk[key]), _placeholders(en[key]), key)
 
+    def test_notification_language_ui_keys_exist_in_both_catalogs(self):
+        required = {
+            "notificationLanguage",
+            "selectNotificationLanguage",
+            "notificationLanguageHint",
+        }
+        for language in ("en", "sk"):
+            path = APPIMAGE_DIR / "messages" / language / "common.json"
+            common = json.loads(path.read_text(encoding="utf-8"))
+            ui = common["settings"]["notifications"]["ui"]
+            self.assertTrue(required.issubset(ui), language)
+            for key in required:
+                self.assertIsInstance(ui[key], str)
+                self.assertTrue(ui[key].strip(), f"{language}:{key}")
+
     def test_slovak_catalog_preserves_placeholders_and_translates_static_text(self):
         en = self.catalogs["en"]["templates"]
         sk = self.catalogs["sk"]["templates"]

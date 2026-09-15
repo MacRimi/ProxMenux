@@ -1981,7 +1981,10 @@
         "systemHostname": "System hostname",
         "displayNameHint": "Name shown in notifications. Edit it or leave it empty to use the system hostname.",
         "activeFooter": "Notifications are active. Each channel follows its own category and event selection.",
-        "inactiveFooter": "Enable notifications to receive system, health and security alerts through the configured channels."
+        "inactiveFooter": "Enable notifications to receive system, health and security alerts through the configured channels.",
+        "notificationLanguage": "Notification language",
+        "selectNotificationLanguage": "Select notification language",
+        "notificationLanguageHint": "Used for deterministic runtime notifications even when AI is disabled."
       },
       "ai": {
         "title": "AI enhancement",

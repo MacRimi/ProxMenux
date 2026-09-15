@@ -1981,7 +1981,10 @@
         "systemHostname": "Názov systému",
         "displayNameHint": "Meno zobrazené v notifikáciách. Upravte ho alebo nechajte prázdne a použije sa názov systému.",
         "activeFooter": "Notifikácie sú aktívne. Každý kanál posiela udalosti podľa vlastného výberu kategórií.",
-        "inactiveFooter": "Zapnite notifikácie a dostávajte upozornenia o systéme, stave a bezpečnosti cez nastavené kanály."
+        "inactiveFooter": "Zapnite notifikácie a dostávajte upozornenia o systéme, stave a bezpečnosti cez nastavené kanály.",
+        "notificationLanguage": "Jazyk notifikácií",
+        "selectNotificationLanguage": "Vyberte jazyk notifikácií",
+        "notificationLanguageHint": "Používa sa pre spoľahlivé runtime notifikácie aj vtedy, keď je AI vypnutá."
       },
       "ai": {
         "title": "AI vylepšenie",
