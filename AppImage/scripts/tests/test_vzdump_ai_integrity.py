@@ -250,8 +250,8 @@ class VzdumpAIIntegrityTests(unittest.TestCase):
             rendered["body"], "INFO", data,
         )
 
-        self.assertEqual(html.count("guest-100 (100)"), 1)
-        self.assertEqual(html.count("guest-148 (148)"), 1)
+        for vmid in range(100, 149):
+            self.assertEqual(html.count(f"guest-{vmid} ({vmid})"), 1, vmid)
         self.assertEqual(html.count("49 backups"), 1)
 
     def test_backup_fail_email_html_keeps_inventory_and_localized_status_once(self):
@@ -275,12 +275,13 @@ class VzdumpAIIntegrityTests(unittest.TestCase):
             rendered["body"], "CRITICAL", data,
         )
 
-        self.assertEqual(html.count("guest-100 (100)"), 1)
-        self.assertEqual(html.count("guest-148 (148)"), 1)
+        for vmid in range(100, 149):
+            self.assertEqual(html.count(f"guest-{vmid} ({vmid})"), 1, vmid)
         self.assertEqual(html.count("49 backups"), 1)
         self.assertEqual(html.count("1 failed"), 1)
         self.assertEqual(html.count(">Zlyhalo<"), 1)
         self.assertNotIn(">Failed<", html)
+        self.assertLessEqual(html.count("last guest failed"), 1)
 
     def test_telegram_chunks_preserve_complete_49_item_message(self):
         rendered = _render("backup_complete")
@@ -329,6 +330,50 @@ class VzdumpAIIntegrityTests(unittest.TestCase):
             self.assertEqual(parser.stack, [])
             self.assertNotRegex(chunk, r"&(?:amp)?$")
             self.assertNotRegex(chunk, r"^amp;")
+
+    def test_telegram_chunks_bound_an_oversized_entity(self):
+        channel = TelegramChannel("123:token", "456")
+        chunks = channel._split_message("&" + ("entity" * 900) + ";")
+
+        self.assertTrue(chunks)
+        self.assertTrue(all(len(chunk) <= 4096 for chunk in chunks))
+
+    def test_telegram_chunks_bound_an_oversized_tag(self):
+        channel = TelegramChannel("123:token", "456")
+        html_message = '<b data-value="' + ("x" * 5000) + '">visible text</b>'
+        chunks = channel._split_message(html_message)
+
+        self.assertTrue(chunks)
+        self.assertTrue(all(len(chunk) <= 4096 for chunk in chunks))
+        self.assertIn("visible text", "".join(chunks))
+
+    def test_telegram_chunks_bound_deeply_nested_formatting(self):
+        from html.parser import HTMLParser
+
+        class _BalancedParser(HTMLParser):
+            def __init__(self):
+                super().__init__(convert_charrefs=False)
+                self.stack = []
+
+            def handle_starttag(self, tag, attrs):
+                self.stack.append(tag)
+
+            def handle_endtag(self, tag):
+                if not self.stack or self.stack.pop() != tag:
+                    raise AssertionError(f"unbalanced closing tag: {tag}")
+
+        html_message = ("<b>" * 700) + ("A" * 5000) + ("</b>" * 700)
+        channel = TelegramChannel("123:token", "456")
+        chunks = channel._split_message(html_message)
+
+        self.assertTrue(chunks)
+        self.assertTrue(all(len(chunk) <= 4096 for chunk in chunks))
+        self.assertEqual("".join(chunks).count("A"), 5000)
+        for chunk in chunks:
+            parser = _BalancedParser()
+            parser.feed(chunk)
+            parser.close()
+            self.assertEqual(parser.stack, [])
 
 
 if __name__ == "__main__":

@@ -332,6 +332,7 @@ class TelegramChannel(NotificationChannel):
             r'&(?:#[0-9]+|#x[0-9A-Fa-f]+|[A-Za-z][A-Za-z0-9]+);|<[^<>]+>|.',
             re.DOTALL,
         )
+        entity_re = re.compile(r'&(?:#[0-9]+|#x[0-9A-Fa-f]+|[A-Za-z][A-Za-z0-9]+);')
         tag_re = re.compile(r'<\s*(/?)\s*([A-Za-z0-9-]+)(?:\s[^<>]*)?>')
         void_tags = {'br'}
 
@@ -352,19 +353,69 @@ class TelegramChannel(NotificationChannel):
         def _closers(stack):
             return ''.join(f'</{name}>' for name, _ in reversed(stack))
 
+        def _openers(stack):
+            return ''.join(opener for _, opener in stack)
+
+        def _plain_chunks(tokens):
+            """Drop unsafe formatting while preserving safe visible HTML text."""
+            safe_tokens = []
+            for token in tokens:
+                if tag_re.fullmatch(token):
+                    continue
+                if entity_re.fullmatch(token) and len(token) <= self.MAX_LENGTH:
+                    safe_tokens.append(token)
+                    continue
+                if entity_re.fullmatch(token) or token in {'&', '<', '>'}:
+                    safe_tokens.extend(token_re.findall(self._escape_html(token)))
+                else:
+                    safe_tokens.append(token)
+
+            plain_chunks = []
+            current = ''
+            for token in safe_tokens:
+                if current and len(current) + len(token) > self.MAX_LENGTH:
+                    plain_chunks.append(current)
+                    current = ''
+                current += token
+            if current:
+                plain_chunks.append(current)
+            return plain_chunks
+
+        tokens = token_re.findall(text)
+        probe_tags = []
+        unsafe_html = False
+        for token in tokens:
+            match = tag_re.fullmatch(token)
+            if match and match.group(1):
+                name = match.group(2).lower()
+                if not probe_tags or probe_tags[-1][0] != name:
+                    unsafe_html = True
+                    break
+            next_tags = _advance(probe_tags, token)
+            minimum_chunk = len(_openers(probe_tags)) + len(token) + len(_closers(next_tags))
+            if len(token) > self.MAX_LENGTH or minimum_chunk > self.MAX_LENGTH:
+                unsafe_html = True
+                break
+            probe_tags = next_tags
+
+        if unsafe_html:
+            return _plain_chunks(tokens)
+
         chunks = []
         current = ''
         open_tags = []
-        for token in token_re.findall(text):
+        for token in tokens:
             next_tags = _advance(open_tags, token)
             if current and len(current) + len(token) + len(_closers(next_tags)) > self.MAX_LENGTH:
                 chunks.append(current + _closers(open_tags))
-                current = ''.join(opener for _, opener in open_tags)
+                current = _openers(open_tags)
             current += token
             open_tags = _advance(open_tags, token)
 
         if current:
             chunks.append(current + _closers(open_tags))
+        if any(len(chunk) > self.MAX_LENGTH for chunk in chunks):
+            return _plain_chunks(tokens)
         return chunks
     
     @staticmethod
