@@ -1555,6 +1555,8 @@ EVENT_GROUPS = {
     'services':  {'label': 'Services',        'description': 'System services, shutdown, reboot'},
     'health':    {'label': 'Health Monitor',  'description': 'Health checks, degradation, recovery'},
     'updates':   {'label': 'Updates',         'description': 'System and PVE updates'},
+    'hardware':  {'label': 'Hardware',        'description': 'GPU, PCIe and hardware events'},
+    'system':    {'label': 'System',          'description': 'System and internal service events'},
     'other':     {'label': 'Other',           'description': 'Uncategorized notifications'},
 }
 

@@ -151,7 +151,7 @@ function validateGotifyUrl(url: string): { error?: string; warning?: string } {
   return {}
 }
 
-const EVENT_CATEGORIES = ["vm_ct", "backup", "resources", "storage", "network", "security", "cluster", "services", "health", "updates", "other"].map(key => ({ key }))
+const EVENT_CATEGORIES = ["vm_ct", "backup", "resources", "storage", "network", "security", "cluster", "services", "health", "updates", "hardware", "system", "other"].map(key => ({ key }))
 
 const CHANNEL_TYPES = ["telegram", "gotify", "discord", "email", "pushover", "apprise"] as const
 
@@ -266,7 +266,7 @@ const DEFAULT_CONFIG: NotificationConfig = {
   event_categories: {
     vm_ct: true, backup: true, resources: true, storage: true,
     network: true, security: true, cluster: true, services: true,
-    health: true, updates: true, other: true,
+    health: true, updates: true, hardware: true, system: true, other: true,
   },
   event_toggles: {},
   event_types_by_group: {},
