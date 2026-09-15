@@ -308,18 +308,51 @@ class TelegramChannel(NotificationChannel):
         return self._http_request(url, payload, {'Content-Type': 'application/json'})
     
     def _split_message(self, text: str) -> list:
+        """Split Telegram HTML without cutting entities or formatting tags.
+
+        Open formatting tags are closed at the end of a chunk and reopened in
+        the next one, so every API request is valid HTML on its own.
+        """
         if len(text) <= self.MAX_LENGTH:
             return [text]
+
+        token_re = re.compile(
+            r'&(?:#[0-9]+|#x[0-9A-Fa-f]+|[A-Za-z][A-Za-z0-9]+);|<[^<>]+>|.',
+            re.DOTALL,
+        )
+        tag_re = re.compile(r'<\s*(/?)\s*([A-Za-z0-9-]+)(?:\s[^<>]*)?>')
+        void_tags = {'br'}
+
+        def _advance(stack, token):
+            match = tag_re.fullmatch(token)
+            if not match:
+                return list(stack)
+            closing, name = match.groups()
+            name = name.lower()
+            next_stack = list(stack)
+            if closing:
+                if next_stack and next_stack[-1][0] == name:
+                    next_stack.pop()
+            elif not token.rstrip().endswith('/>') and name not in void_tags:
+                next_stack.append((name, token))
+            return next_stack
+
+        def _closers(stack):
+            return ''.join(f'</{name}>' for name, _ in reversed(stack))
+
         chunks = []
-        while text:
-            if len(text) <= self.MAX_LENGTH:
-                chunks.append(text)
-                break
-            split_at = text.rfind('\n', 0, self.MAX_LENGTH)
-            if split_at == -1:
-                split_at = self.MAX_LENGTH
-            chunks.append(text[:split_at])
-            text = text[split_at:].lstrip('\n')
+        current = ''
+        open_tags = []
+        for token in token_re.findall(text):
+            next_tags = _advance(open_tags, token)
+            if current and len(current) + len(token) + len(_closers(next_tags)) > self.MAX_LENGTH:
+                chunks.append(current + _closers(open_tags))
+                current = ''.join(opener for _, opener in open_tags)
+            current += token
+            open_tags = _advance(open_tags, token)
+
+        if current:
+            chunks.append(current + _closers(open_tags))
         return chunks
     
     @staticmethod
@@ -948,6 +981,16 @@ class EmailChannel(NotificationChannel):
 
         # ── Build structured detail rows from known data fields ──
         detail_rows = self._build_detail_rows(data, event_type, group, html_mod)
+
+        # Vzdump bodies are authoritative multi-item inventories. Structured
+        # backup metadata is only a summary and previously replaced the body in
+        # the HTML alternative, hiding all guest rows. Render every body line
+        # exactly once for these events instead of mixing both representations.
+        if event_type in {'backup_complete', 'backup_fail'}:
+            detail_rows = [
+                ('', html_mod.escape(line.strip()))
+                for line in body.split('\n') if line.strip()
+            ]
 
         # ── Fallback: if no structured rows, render body text lines ──
         if not detail_rows:

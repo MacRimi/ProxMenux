@@ -1376,27 +1376,32 @@ class NotificationManager:
                 # raw template-formatted notification. Audit Tier 6 —
                 # `_dispatch_to_channels`: AI failure dropped the notification.
                 try:
-                    enriched_context = enrich_context_for_ai(
-                        title=ch_title,
-                        body=ch_body,
-                        event_type=event_type,
-                        data=data,
-                        journal_context=raw_journal_context,
-                        detail_level=detail_level
-                    )
+                    # Backup reports are authoritative inventories. A model can
+                    # neither be trusted to avoid repeating all guest rows nor to
+                    # preserve every value, so these two events bypass AI entirely.
+                    ai_result = None
+                    if event_type not in {'backup_complete', 'backup_fail'}:
+                        enriched_context = enrich_context_for_ai(
+                            title=ch_title,
+                            body=ch_body,
+                            event_type=event_type,
+                            data=data,
+                            journal_context=raw_journal_context,
+                            detail_level=detail_level
+                        )
 
-                    # Wrap the AI rewrite with a hard timeout so a slow Ollama
-                    # call (90-120 s on slow CPUs) doesn't stall the dispatch
-                    # thread and delay every other queued event. On timeout we
-                    # ship the non-AI title/body — the user still gets the
-                    # notification, just without LLM polish. Audit Tier 3.2 #2.
-                    ai_result = _format_with_ai_bounded(
-                        format_with_ai_full,
-                        ch_title, ch_body, severity, channel_ai_config,
-                        detail_level=detail_level,
-                        journal_context=enriched_context,
-                        use_emojis=use_rich_format,
-                    )
+                        # Wrap the AI rewrite with a hard timeout so a slow Ollama
+                        # call (90-120 s on slow CPUs) doesn't stall the dispatch
+                        # thread and delay every other queued event. On timeout we
+                        # ship the non-AI title/body — the user still gets the
+                        # notification, just without LLM polish. Audit Tier 3.2 #2.
+                        ai_result = _format_with_ai_bounded(
+                            format_with_ai_full,
+                            ch_title, ch_body, severity, channel_ai_config,
+                            detail_level=detail_level,
+                            journal_context=enriched_context,
+                            use_emojis=use_rich_format,
+                        )
                     if ai_result is not None:
                         ch_title = ai_result.get('title', ch_title)
                         ch_body = ai_result.get('body', ch_body)
