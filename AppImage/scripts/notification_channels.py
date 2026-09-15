@@ -1148,6 +1148,9 @@ class EmailChannel(NotificationChannel):
             'New Version': 'newVersion',
         }
         language_data = data
+
+        def _event_label() -> str:
+            return _runtime_notification_text(f'templates.{event_type}.label', language_data)
         
         def _add(label: str, value, fmt: str = ''):
             """Add a localized row if value is truthy."""
@@ -1189,7 +1192,8 @@ class EmailChannel(NotificationChannel):
             # tell which target the backup ran against. Reported gap: emails
             # showed no way to distinguish which PBS failed with 2+ configured.
             _add('Storage', data.get('storage') or data.get('storage_name'), 'code')
-            _add('Status', 'Failed' if 'fail' in event_type else 'Completed' if 'complete' in event_type else 'Started',
+            status_key = 'failed' if 'fail' in event_type else 'completed' if 'complete' in event_type else 'started'
+            _add('Status', _runtime_text(f'email.status.{status_key}', language_data),
                  'severity' if 'fail' in event_type else '')
             _add('Size', data.get('size'))
             _add('Duration', data.get('duration'))
@@ -1201,7 +1205,7 @@ class EmailChannel(NotificationChannel):
 
         # ── Resources ──
         elif group == 'resources':
-            _add('Metric', event_type.replace('_', ' ').title())
+            _add('Metric', _event_label())
             _add('Current Value', data.get('value'), 'bold')
             _add('Threshold', data.get('threshold'))
             _add('CPU Cores', data.get('cores'))
@@ -1235,7 +1239,7 @@ class EmailChannel(NotificationChannel):
 
         # ── Security ──
         elif group == 'security':
-            _add('Event', event_type.replace('_', ' ').title())
+            _add('Event', _event_label())
             _add('Source IP', data.get('source_ip'), 'code')
             _add('Username', data.get('username'), 'code')
             _add('Service', data.get('service'))
@@ -1245,7 +1249,7 @@ class EmailChannel(NotificationChannel):
 
         # ── Cluster ──
         elif group == 'cluster':
-            _add('Event', event_type.replace('_', ' ').title())
+            _add('Event', _event_label())
             _add('Node', data.get('node_name'), 'bold')
             _add('Quorum', data.get('quorum'))
             _add('Nodes Affected', data.get('entity_list'))
@@ -1254,7 +1258,7 @@ class EmailChannel(NotificationChannel):
         elif group == 'services':
             _add('Service', data.get('service_name'), 'code')
             _add('Process', data.get('process'), 'code')
-            _add('Event', event_type.replace('_', ' ').title())
+            _add('Event', _event_label())
             reason = data.get('reason', '')
             if reason and len(reason) <= 80:
                 _add('Details', reason)
@@ -1286,13 +1290,20 @@ class EmailChannel(NotificationChannel):
                         f'<code style="padding:1px 5px;background:#f3f4f6;border-radius:3px;font-family:monospace;font-size:12px;">{esc(p)}</code>'
                         for p in pkg_lines
                     )
-                    rows.append((esc('Important Packages'), pkg_html))
+                    rows.append((esc(_runtime_text('email.fields.importantPackages', language_data)), pkg_html))
             _add('Current Version', data.get('current_version'), 'code')
             # `new_version` is the field used by generic package-update events;
             # driver-update templates (nvidia, coral) populate `latest_version`.
             # Read both so the tabular row is never empty when the template's
             # title/body already printed the new version.
             _add('New Version', data.get('new_version') or data.get('latest_version'), 'code')
+
+        # ── Generic system events ──
+        elif group == 'system':
+            _add('Event', _event_label())
+            reason = data.get('reason', '')
+            if reason and len(reason) <= 80:
+                _add('Details', reason)
 
         # ── Other / unknown ──
         else:

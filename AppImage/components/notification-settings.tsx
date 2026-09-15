@@ -205,6 +205,12 @@ const NOTIFICATION_LANGUAGES = [
   { value: "sk", label: "Slovenčina" },
 ]
 
+function normalizeNotificationLanguage(notificationLanguage?: string, legacyAiLanguage?: string): string {
+  if (notificationLanguage === "en" || notificationLanguage === "sk") return notificationLanguage
+  if (legacyAiLanguage === "en" || legacyAiLanguage === "sk") return legacyAiLanguage
+  return "en"
+}
+
 const AI_LANGUAGES = [
   { value: "en", label: "English" },
   { value: "sk", label: "Slovenčina" },
@@ -408,7 +414,10 @@ export function NotificationSettings() {
           ai_prompt_mode: data.config.ai_prompt_mode || "default",
           ai_custom_prompt: data.config.ai_custom_prompt || "",
           ai_allow_suggestions: data.config.ai_allow_suggestions || "false",
-          notification_language: data.config.notification_language || data.config.ai_language || "en",
+          notification_language: normalizeNotificationLanguage(
+            data.config.notification_language,
+            data.config.ai_language,
+          ),
         }
         // If ai_model exists but ai_models doesn't have it, save it
         if (configWithDefaults.ai_model && !configWithDefaults.ai_models[configWithDefaults.ai_provider]) {
@@ -842,7 +851,7 @@ export function NotificationSettings() {
     ai_enabled: String(cfg.ai_enabled),
     ai_provider: cfg.ai_provider,
     ai_model: cfg.ai_model,
-    notification_language: cfg.notification_language,
+    notification_language: normalizeNotificationLanguage(cfg.notification_language, cfg.ai_language),
     ai_language: cfg.ai_language,
     ai_ollama_url: cfg.ai_ollama_url,
     ai_openai_base_url: cfg.ai_openai_base_url,
@@ -2192,7 +2201,7 @@ export function NotificationSettings() {
                 <Label className="text-xs sm:text-sm text-foreground/80">{t("settings.notifications.ui.notificationLanguage")}</Label>
               </div>
               <Select
-                value={config.notification_language || config.ai_language || "en"}
+                value={normalizeNotificationLanguage(config.notification_language, config.ai_language)}
                 onValueChange={value => updateConfig(previous => ({ ...previous, notification_language: value }))}
                 disabled={!editMode}
               >
