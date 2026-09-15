@@ -7897,7 +7897,7 @@
     "port": 3000,
     "website": "https://gotenberg.dev/",
     "documentation": "https://gotenberg.dev/docs/getting-started/introduction",
-    "logo": "https://gotenberg.dev/img/logo.png",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/gotenberg.webp",
     "updateable": true,
     "privileged": false,
     "has_arm": false,
@@ -23622,17 +23622,18 @@
     ],
     "notes": [
       "Installed by compiling from source (no prebuilt package exists), which takes roughly 20-45+ minutes depending on CPU/RAM.",
+      "build-tiles.sh rebuilds the graph from only the extracts passed in that run, so running it again for another region does not accumulate regions. To cover multiple regions, pass all their URLs/paths in one run (they are all forwarded to valhalla_build_tiles) or merge the PBFs first with 'osmium merge'.",
       "To use this as the map-matching backend for GeoPulse, set GEOPULSE_TIMELINE_MAP_MATCHING_ENABLED=true, GEOPULSE_TIMELINE_MAP_MATCHING_PROVIDER=valhalla and GEOPULSE_TIMELINE_MAP_MATCHING_VALHALLA_BASE_URL=http://<this-container-IP>:8002 on the GeoPulse backend."
     ],
     "warnings": [
-      "No routing tiles are built during install. Find your region's extract at https://download.geofabrik.de/ (browse to a continent, then country/region, and copy the .osm.pbf download link), then build the graph with: /opt/valhalla_data/build-tiles.sh {pbf-url}. Avoid planet-wide data unless the container is sized for it.",
+      "No routing tiles are built during install. Find your region's extract at https://download.geofabrik.de/ (browse to a continent, then country/region, and copy the .osm.pbf download link), then build the graph with: /opt/valhalla_data/build-tiles.sh {pbf-url-1} {pbf-url-2}. Avoid planet-wide data unless the container is sized for it.",
       "The HTTP API on port 8002 has no authentication - keep it on a private/internal network.",
       "The default 24GB disk / 6144MB RAM only covers the build. Routing tiles need several times the compressed extract size in free disk, so resize the container before building tiles for large regions."
     ],
     "port": 8002,
     "website": "https://valhalla.github.io/valhalla/",
     "documentation": "https://valhalla.github.io/valhalla/",
-    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/valhalla.webp",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/valhalla-maps.webp",
     "updateable": true,
     "privileged": false,
     "has_arm": false,
