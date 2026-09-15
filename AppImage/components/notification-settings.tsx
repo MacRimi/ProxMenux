@@ -77,6 +77,7 @@ interface NotificationConfig {
   ai_api_keys: Record<string, string>  // Per-provider API keys
   ai_models: Record<string, string>    // Per-provider selected models
   ai_model: string                     // Current active model (for the selected provider)
+  notification_language: string
   ai_language: string
   ai_ollama_url: string
   ai_openai_base_url: string
@@ -199,6 +200,11 @@ const AI_PROVIDERS = [
   },
 ]
 
+const NOTIFICATION_LANGUAGES = [
+  { value: "en", label: "English" },
+  { value: "sk", label: "Slovenčina" },
+]
+
 const AI_LANGUAGES = [
   { value: "en", label: "English" },
   { value: "sk", label: "Slovenčina" },
@@ -284,6 +290,7 @@ const DEFAULT_CONFIG: NotificationConfig = {
     openrouter: "",
   },
   ai_model: "",
+  notification_language: "en",
   ai_language: "en",
   ai_ollama_url: "http://localhost:11434",
   ai_openai_base_url: "",
@@ -401,6 +408,7 @@ export function NotificationSettings() {
           ai_prompt_mode: data.config.ai_prompt_mode || "default",
           ai_custom_prompt: data.config.ai_custom_prompt || "",
           ai_allow_suggestions: data.config.ai_allow_suggestions || "false",
+          notification_language: data.config.notification_language || data.config.ai_language || "en",
         }
         // If ai_model exists but ai_models doesn't have it, save it
         if (configWithDefaults.ai_model && !configWithDefaults.ai_models[configWithDefaults.ai_provider]) {
@@ -834,6 +842,7 @@ export function NotificationSettings() {
     ai_enabled: String(cfg.ai_enabled),
     ai_provider: cfg.ai_provider,
     ai_model: cfg.ai_model,
+    notification_language: cfg.notification_language,
     ai_language: cfg.ai_language,
     ai_ollama_url: cfg.ai_ollama_url,
     ai_openai_base_url: cfg.ai_openai_base_url,
@@ -2173,6 +2182,31 @@ export function NotificationSettings() {
               />
               <p className="text-xs text-muted-foreground">
                 {t("settings.notifications.ui.displayNameHint")}
+              </p>
+            </div>
+
+            {/* ── Runtime notification language (independent of AI) ── */}
+            <div className="space-y-2 pb-3 border-b border-border/50">
+              <div className="flex items-center gap-2">
+                <Globe className="h-4 w-4 text-green-400" />
+                <Label className="text-xs sm:text-sm text-foreground/80">{t("settings.notifications.ui.notificationLanguage")}</Label>
+              </div>
+              <Select
+                value={config.notification_language || config.ai_language || "en"}
+                onValueChange={value => updateConfig(previous => ({ ...previous, notification_language: value }))}
+                disabled={!editMode}
+              >
+                <SelectTrigger className="h-9 text-sm">
+                  <SelectValue placeholder={t("settings.notifications.ui.selectNotificationLanguage")} />
+                </SelectTrigger>
+                <SelectContent>
+                  {NOTIFICATION_LANGUAGES.map(language => (
+                    <SelectItem key={language.value} value={language.value}>{language.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                {t("settings.notifications.ui.notificationLanguageHint")}
               </p>
             </div>
 

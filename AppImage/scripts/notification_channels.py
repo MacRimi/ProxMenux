@@ -36,6 +36,18 @@ _KNOWN_SSRF_TARGETS = {
 _BLOCKED_LOOPBACK_PORTS = {'8006', '8007'}  # PVE API HTTPS / HTTPS-alt
 
 
+def _runtime_notification_text(key: str, data: Optional[Dict] = None,
+                               **values: Any) -> str:
+    """Resolve runtime text lazily to avoid the manager/channel import cycle."""
+    from notification_templates import runtime_message
+    language = str((data or {}).get('_notification_language', 'en'))
+    return runtime_message(key, language, **values)
+
+
+def _runtime_text(key: str, data: Optional[Dict] = None, **values: Any) -> str:
+    return _runtime_notification_text(f'channels.{key}', data, **values)
+
+
 def _validate_user_webhook_url(url: str) -> Tuple[bool, str]:
     """Lightweight SSRF guard for Gotify-style channels.
 
@@ -645,11 +657,11 @@ class DiscordChannel(NotificationChannel):
             ]
         elif data:
             if data.get('category'):
-                fields.append({'name': 'Category', 'value': data['category'], 'inline': True})
+                fields.append({'name': _runtime_text('discord.category', data), 'value': data['category'], 'inline': True})
             if data.get('hostname'):
-                fields.append({'name': 'Host', 'value': data['hostname'], 'inline': True})
+                fields.append({'name': _runtime_text('discord.host', data), 'value': data['hostname'], 'inline': True})
             if data.get('severity'):
-                fields.append({'name': 'Severity', 'value': data['severity'], 'inline': True})
+                fields.append({'name': _runtime_text('discord.severity', data), 'value': data['severity'], 'inline': True})
 
         embeds: List[Dict[str, Any]] = []
         for idx, chunk in enumerate(chunks):
@@ -969,12 +981,17 @@ class EmailChannel(NotificationChannel):
         import time as _time
 
         data = data or {}
-        sev = self._SEV_STYLE.get(severity, self._SEV_DEFAULT)
+        sev = dict(self._SEV_STYLE.get(severity, self._SEV_DEFAULT))
+        severity_key = severity.lower() if severity in self._SEV_STYLE else 'default'
+        sev['label'] = _runtime_text(f'email.severity.{severity_key}', data)
 
         # Determine group for section header
         event_type = data.get('_event_type', '')
         group = data.get('_group', 'other')
-        section_label = self._GROUP_LABELS.get(group, 'System Notification')
+        section_label = _runtime_text(f'email.groups.{group}', data)
+        report_label = _runtime_text('email.report', data, group=section_label)
+        host_label = _runtime_text('email.host', data)
+        footer_label = _runtime_text('email.footer', data)
 
         # Timestamp
         ts = data.get('timestamp', '') or _time.strftime('%Y-%m-%d %H:%M:%S UTC', _time.gmtime())
@@ -1029,7 +1046,7 @@ class EmailChannel(NotificationChannel):
         if reason and len(reason) > 80:
             reason_html = f'''
 <div style="margin:16px 0 0;padding:12px 16px;border:1px solid #d1d5db;border-radius:6px;">
-  <p style="margin:0 0 4px;font-size:11px;font-weight:600;color:#374151;text-transform:uppercase;letter-spacing:0.05em;">Details</p>
+  <p style="margin:0 0 4px;font-size:11px;font-weight:600;color:#374151;text-transform:uppercase;letter-spacing:0.05em;">{_runtime_text('email.details', data)}</p>
   <p style="margin:0;font-size:13px;color:#1f2937;line-height:1.6;white-space:pre-wrap;">{html_mod.escape(reason)}</p>
 </div>'''
 
@@ -1039,7 +1056,7 @@ class EmailChannel(NotificationChannel):
             display_title = display_title.replace(prefix, '').strip()
 
         return f'''<!DOCTYPE html>
-<html lang="en">
+<html lang="{html_mod.escape(str(data.get('_notification_language', 'en')))}">
 <head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"></head>
 <body style="margin:0;padding:0;background-color:#f3f4f6;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;">
 <div style="max-width:640px;margin:24px auto;background:#ffffff;border-radius:8px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,0.1);border:1px solid #d1d5db;">
@@ -1050,7 +1067,7 @@ class EmailChannel(NotificationChannel):
       <tr>
         <td>
           <h1 style="margin:0;font-size:18px;font-weight:700;color:#111827;letter-spacing:-0.02em;">ProxMenux Monitor</h1>
-          <p style="margin:4px 0 0;font-size:12px;color:#4b5563;">{html_mod.escape(section_label)} Report</p>
+          <p style="margin:4px 0 0;font-size:12px;color:#4b5563;">{html_mod.escape(report_label)}</p>
         </td>
         <td style="text-align:right;vertical-align:top;">
           <span style="display:inline-block;padding:4px 12px;border-radius:4px;font-size:11px;font-weight:600;letter-spacing:0.05em;color:{sev['color']};background:{sev['bg']};border:1px solid {sev['border']};">{sev['label'].upper()}</span>
@@ -1070,7 +1087,7 @@ class EmailChannel(NotificationChannel):
     <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom:16px;">
       <tr>
         <td style="font-size:12px;color:#4b5563;">
-          Host: <strong style="color:#111827;">{html_mod.escape(data.get('hostname', ''))}</strong>
+          {html_mod.escape(host_label)}: <strong style="color:#111827;">{html_mod.escape(data.get('hostname', ''))}</strong>
         </td>
         <td style="font-size:12px;color:#4b5563;text-align:right;">
           {html_mod.escape(ts)}
@@ -1090,7 +1107,7 @@ class EmailChannel(NotificationChannel):
   <div style="padding:14px 28px;border-top:1px solid #d1d5db;">
     <table width="100%" cellpadding="0" cellspacing="0" border="0">
       <tr>
-        <td style="font-size:11px;color:#4b5563;">ProxMenux Notification Service</td>
+        <td style="font-size:11px;color:#4b5563;">{html_mod.escape(footer_label)}</td>
         <td style="font-size:11px;color:#4b5563;text-align:right;">proxmenux.com</td>
       </tr>
     </table>
@@ -1110,11 +1127,34 @@ class EmailChannel(NotificationChannel):
         """
         esc = html_mod.escape
         rows = []
+        field_keys = {
+            'VM/CT ID': 'vmCtId', 'Name': 'name', 'Action': 'action',
+            'Target Node': 'targetNode', 'Reason': 'reason', 'Storage': 'storage',
+            'Status': 'status', 'Size': 'size', 'Duration': 'duration',
+            'Snapshot': 'snapshot', 'Metric': 'metric', 'Current Value': 'currentValue',
+            'Threshold': 'threshold', 'CPU Cores': 'cpuCores', 'Memory': 'memory',
+            'Temperature': 'temperature', 'Mount Point': 'mountPoint', 'Usage': 'usage',
+            'Available': 'available', 'Device': 'device', 'Severity': 'severity',
+            'Storage Name': 'storageName', 'Type': 'type', 'Interface': 'interface',
+            'Latency': 'latency', 'Event': 'event', 'Source IP': 'sourceIp',
+            'Username': 'username', 'Service': 'service', 'Jail': 'jail',
+            'Failures': 'failures', 'Change': 'change', 'Node': 'node',
+            'Quorum': 'quorum', 'Nodes Affected': 'nodesAffected', 'Process': 'process',
+            'Details': 'reason', 'Category': 'category',
+            'Previous Severity': 'previousSeverity', 'Active Issues': 'activeIssues',
+            'Total Updates': 'totalUpdates', 'Security Updates': 'securityUpdates',
+            'Proxmox Updates': 'proxmoxUpdates', 'Kernel Updates': 'kernelUpdates',
+            'Important Packages': 'importantPackages', 'Current Version': 'currentVersion',
+            'New Version': 'newVersion',
+        }
+        language_data = data
         
         def _add(label: str, value, fmt: str = ''):
-            """Add a row if value is truthy."""
+            """Add a localized row if value is truthy."""
+            original_label = label
+            label = _runtime_text(f"email.fields.{field_keys[label]}", language_data)
             v = str(value).strip() if value else ''
-            if not v or v == '0' and label not in ('Failures',):
+            if not v or v == '0' and original_label not in ('Failures',):
                 return
             if fmt == 'severity':
                 sev_colors = {
@@ -1136,7 +1176,8 @@ class EmailChannel(NotificationChannel):
         if group == 'vm_ct':
             _add('VM/CT ID', data.get('vmid'), 'code')
             _add('Name', data.get('vmname'), 'bold')
-            _add('Action', event_type.replace('_', ' ').replace('vm ', 'VM ').replace('ct ', 'CT ').title())
+            action = _runtime_notification_text(f'templates.{event_type}.label', data)
+            _add('Action', action)
             _add('Target Node', data.get('target_node'))
             _add('Reason', data.get('reason'))
 

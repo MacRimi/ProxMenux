@@ -17,7 +17,60 @@ import socket
 import time
 import urllib.request
 import urllib.error
+from functools import lru_cache
+from pathlib import Path
 from typing import Dict, Any, Optional, List, Tuple
+
+
+_SCRIPT_ROOT = Path(__file__).resolve().parents[1]
+_BUNDLED_CATALOG_DIR = _SCRIPT_ROOT / 'share' / 'proxmenux' / 'messages'
+_SOURCE_CATALOG_DIR = _SCRIPT_ROOT / 'messages'
+RUNTIME_CATALOG_DIR = (
+    _BUNDLED_CATALOG_DIR
+    if _BUNDLED_CATALOG_DIR.is_dir()
+    else _SOURCE_CATALOG_DIR
+    if _SOURCE_CATALOG_DIR.is_dir()
+    else Path('/usr/share/proxmenux/messages')
+)
+
+
+class _SafeFormatDict(dict):
+    def __missing__(self, key):
+        return ''
+
+
+@lru_cache(maxsize=8)
+def _load_runtime_catalog(language: str) -> Dict[str, Any]:
+    """Load one existing Monitor catalog's runtime notification namespace."""
+    path = RUNTIME_CATALOG_DIR / language / 'common.json'
+    try:
+        with path.open(encoding='utf-8') as handle:
+            return json.load(handle).get('runtime', {}).get('notifications', {})
+    except (OSError, ValueError, TypeError):
+        return {}
+
+
+def _catalog_value(catalog: Dict[str, Any], dotted_key: str) -> Optional[str]:
+    value: Any = catalog
+    for part in dotted_key.split('.'):
+        if not isinstance(value, dict) or part not in value:
+            return None
+        value = value[part]
+    return value if isinstance(value, str) and value else None
+
+
+def runtime_message(key: str, language: str = 'en', **values: Any) -> str:
+    """Resolve runtime text with per-key English fallback and safe placeholders."""
+    requested = (language or 'en').split('-', 1)[0].lower()
+    value = _catalog_value(_load_runtime_catalog(requested), key)
+    if value is None:
+        value = _catalog_value(_load_runtime_catalog('en'), key)
+    if value is None:
+        return ''
+    try:
+        return value.format_map(_SafeFormatDict(values))
+    except (ValueError, IndexError):
+        return value
 
 
 # ─── vzdump message parser ───────────────────────────────────────
@@ -248,7 +301,8 @@ def _parse_vzdump_message(message: str) -> Optional[Dict[str, Any]]:
     }
 
 
-def _format_vzdump_body(parsed: Dict[str, Any], is_success: bool) -> str:
+def _format_vzdump_body(parsed: Dict[str, Any], is_success: bool,
+                        language: str = 'en') -> str:
     """Format parsed vzdump data into a clean Telegram-friendly message."""
     parts = []
     
@@ -285,9 +339,9 @@ def _format_vzdump_body(parsed: Dict[str, Any], is_success: bool) -> str:
         # Size and Duration on same line with icons
         detail_line = []
         if vm.get('size'):
-            detail_line.append(f"\U0001F4CF Size: {vm['size']}")
+            detail_line.append(f"\U0001F4CF {runtime_message('vzdump.size', language, value=vm['size'])}")
         if vm.get('time'):
-            detail_line.append(f"\u23F1\uFE0F Duration: {vm['time']}")
+            detail_line.append(f"\u23F1\uFE0F {runtime_message('vzdump.duration', language, value=vm['time'])}")
         if detail_line:
             parts.append(' | '.join(detail_line))
         
@@ -302,7 +356,7 @@ def _format_vzdump_body(parsed: Dict[str, Any], is_success: bool) -> str:
                 label = storage_name if storage_name else 'PBS'
                 parts.append(f"\U0001F5C4\uFE0F {label}: {fname}")
             else:
-                label = storage_name if storage_name else 'File'
+                label = storage_name if storage_name else runtime_message('vzdump.file', language)
                 parts.append(f"\U0001F4C1 {label}: {fname}")
         
         # Error reason if failed
@@ -320,13 +374,13 @@ def _format_vzdump_body(parsed: Dict[str, Any], is_success: bool) -> str:
         
         summary_parts = []
         if vm_count:
-            summary_parts.append(f"\U0001F4CA {vm_count} backups")
+            summary_parts.append(f"\U0001F4CA {runtime_message('vzdump.backups', language, count=vm_count)}")
         if fail_count:
-            summary_parts.append(f"\u274C {fail_count} failed")
+            summary_parts.append(f"\u274C {runtime_message('vzdump.failed', language, count=fail_count)}")
         if parsed.get('total_size'):
-            summary_parts.append(f"\U0001F4E6 Total: {parsed['total_size']}")
+            summary_parts.append(f"\U0001F4E6 {runtime_message('vzdump.total', language, value=parsed['total_size'])}")
         if parsed.get('total_time'):
-            summary_parts.append(f"\u23F1\uFE0F Time: {parsed['total_time']}")
+            summary_parts.append(f"\u23F1\uFE0F {runtime_message('vzdump.time', language, value=parsed['total_time'])}")
         
         if summary_parts:
             parts.append(' | '.join(summary_parts))
@@ -334,88 +388,67 @@ def _format_vzdump_body(parsed: Dict[str, Any], is_success: bool) -> str:
     return '\n'.join(parts)
 
 
-def _format_system_startup(data: Dict[str, Any]) -> Tuple[str, str]:
-    """
-    Format comprehensive system startup report.
-    
-    Returns (title, body) tuple for the notification.
-    Handles both simple startups (all OK) and those with issues.
-    """
+def _format_system_startup(data: Dict[str, Any], language: str = 'en') -> Tuple[str, str]:
+    """Format the comprehensive startup report using runtime catalogs."""
     hostname = data.get('hostname', 'unknown')
     has_issues = data.get('has_issues', False)
-    
-    # Build title
     if has_issues:
         total_issues = (
-            data.get('total_failed', 0) +
-            len(data.get('services_failed', [])) +
-            len(data.get('storage_unavailable', []))
+            data.get('total_failed', 0)
+            + len(data.get('services_failed', []))
+            + len(data.get('storage_unavailable', []))
         )
-        title = f"{hostname}: System startup - {total_issues} issue(s) detected"
+        title = runtime_message('startup.issuesTitle', language, hostname=hostname, count=total_issues)
     else:
-        title = f"{hostname}: System startup completed"
-    
-    # Build body
+        title = runtime_message('startup.completeTitle', language, hostname=hostname)
+
     parts = []
-    
-    # Overall status
     if not has_issues:
-        parts.append("All systems operational.")
-    
-    # VMs/CTs started
+        parts.append(runtime_message('startup.operational', language))
+
     vms_ok = len(data.get('vms_started', []))
     cts_ok = len(data.get('cts_started', []))
     if vms_ok or cts_ok:
-        count_parts = []
+        counts = []
         if vms_ok:
-            count_parts.append(f"{vms_ok} VM{'s' if vms_ok > 1 else ''}")
+            key = 'startup.vmCountOne' if vms_ok == 1 else 'startup.vmCountMany'
+            counts.append(runtime_message(key, language, count=vms_ok))
         if cts_ok:
-            count_parts.append(f"{cts_ok} CT{'s' if cts_ok > 1 else ''}")
-        
-        # List names (up to 5)
-        names = []
-        for vm in data.get('vms_started', [])[:3]:
-            names.append(f"{vm['name']} ({vm['vmid']})")
-        for ct in data.get('cts_started', [])[:3]:
-            names.append(f"{ct['name']} ({ct['vmid']})")
-        
-        line = f"\u2705 {' and '.join(count_parts)} started"
+            key = 'startup.ctCountOne' if cts_ok == 1 else 'startup.ctCountMany'
+            counts.append(runtime_message(key, language, count=cts_ok))
+        names = [
+            f"{item['name']} ({item['vmid']})"
+            for item in (data.get('vms_started', [])[:3] + data.get('cts_started', [])[:3])
+        ]
+        line = runtime_message('startup.started', language, counts=', '.join(counts))
         if names:
-            if len(names) <= 5:
-                line += f": {', '.join(names)}"
-            else:
-                line += f": {', '.join(names[:5])}..."
+            line += f": {', '.join(names[:5])}"
+            if len(names) > 5:
+                line += '…'
         parts.append(line)
-    
-    # Failed VMs/CTs
+
+    unknown_error = runtime_message('startup.unknownError', language)
     for vm in data.get('vms_failed', []):
-        reason = vm.get('reason', 'unknown error')
-        parts.append(f"\u274C VM failed: {vm['name']} - {reason}")
-    
+        parts.append(runtime_message('startup.vmFailed', language, name=vm['name'], reason=vm.get('reason', unknown_error)))
     for ct in data.get('cts_failed', []):
-        reason = ct.get('reason', 'unknown error')
-        parts.append(f"\u274C CT failed: {ct['name']} - {reason}")
-    
-    # Storage issues
+        parts.append(runtime_message('startup.ctFailed', language, name=ct['name'], reason=ct.get('reason', unknown_error)))
+
     storage_unavailable = data.get('storage_unavailable', [])
     if storage_unavailable:
-        names = [s['name'] for s in storage_unavailable[:3]]
-        parts.append(f"\u26A0\uFE0F Storage: {len(storage_unavailable)} unavailable ({', '.join(names)})")
-    
-    # Service issues  
+        parts.append(runtime_message(
+            'startup.storageUnavailable', language, count=len(storage_unavailable),
+            names=', '.join(item['name'] for item in storage_unavailable[:3]),
+        ))
     services_failed = data.get('services_failed', [])
     if services_failed:
-        names = [s['name'] for s in services_failed[:3]]
-        parts.append(f"\u26A0\uFE0F Services: {len(services_failed)} failed ({', '.join(names)})")
-    
-    # Startup duration
+        parts.append(runtime_message(
+            'startup.servicesFailed', language, count=len(services_failed),
+            names=', '.join(item['name'] for item in services_failed[:3]),
+        ))
     duration = data.get('startup_duration_seconds', 0)
     if duration:
-        minutes = int(duration // 60)
-        parts.append(f"\u23F1\uFE0F Startup completed in {minutes} min")
-    
-    body = '\n'.join(parts)
-    return title, body
+        parts.append(runtime_message('startup.duration', language, minutes=int(duration // 60)))
+    return title, '\n'.join(parts)
 
 
 def _format_app_update_available(data: Dict[str, Any]) -> Tuple[str, str]:
@@ -1568,7 +1601,8 @@ def _format_bytes_human(n: Any) -> str:
     return f'{size:.1f} {units[i]}'
 
 
-def render_template(event_type: str, data: Dict[str, Any]) -> Dict[str, Any]:
+def render_template(event_type: str, data: Dict[str, Any],
+                    language: str = 'en') -> Dict[str, Any]:
     """Render a template into a structured notification object.
     
     Returns structured output usable by all channels:
@@ -1576,19 +1610,35 @@ def render_template(event_type: str, data: Dict[str, Any]) -> Dict[str, Any]:
     """
     import html as html_mod
     
-    template = TEMPLATES.get(event_type)
-    if not template:
+    source_template = TEMPLATES.get(event_type)
+    if not source_template:
         # Catch-all: unknown event types always get delivered (group 'other')
         # so no Proxmox notification is ever silently dropped.
         fallback_body = data.get('message', data.get('reason', str(data)))
         severity = data.get('severity', 'INFO')
         return {
-            'title': f"{_get_hostname()}: {event_type}",
+            'title': runtime_message(
+                'fallback.unknownTitle', language,
+                hostname=_get_hostname(), event_type=event_type,
+            ),
             'body': fallback_body, 'body_text': fallback_body,
             'body_html': f'<p>{html_mod.escape(str(fallback_body))}</p>',
             'fields': [], 'tags': [severity, 'other', event_type],
             'severity': severity, 'group': 'other',
         }
+
+    template = dict(source_template)
+    requested_language = (language or 'en').split('-', 1)[0].lower()
+    requested_catalog = _load_runtime_catalog(requested_language)
+    english_catalog = _load_runtime_catalog('en')
+    for field in ('title', 'body', 'label'):
+        key = f'templates.{event_type}.{field}'
+        localized = (
+            _catalog_value(requested_catalog, key)
+            or _catalog_value(english_catalog, key)
+        )
+        if localized:
+            template[field] = localized
     
     # Ensure hostname is always available
     variables = {
@@ -1610,7 +1660,7 @@ def render_template(event_type: str, data: Dict[str, Any]) -> Dict[str, Any]:
         'packages': '', 'pve_packages': '', 'version': '',
         'issue_list': '', 'error_key': '',
         'storage_name': '', 'storage_type': '',
-        'important_list': 'none',
+        'important_list': runtime_message('fallback.none', language),
         # Host Backup specifics (run_scheduled_backup.sh + backup_host.sh).
         'job_id': '', 'backend': '', 'backend_label': '',
         'destination': '', 'profile_mode': '',
@@ -1626,9 +1676,9 @@ def render_template(event_type: str, data: Dict[str, Any]) -> Dict[str, Any]:
         if _byte_key in data:
             variables[f'{_byte_key}_human'] = _format_bytes_human(data[_byte_key])
 
-    # Ensure important_list is never blank (fallback to 'none')
+    # Ensure important_list is never blank (fallback to localized "none")
     if not variables.get('important_list', '').strip():
-        variables['important_list'] = 'none'
+        variables['important_list'] = runtime_message('fallback.none', language)
 
     # Derive the affected object's display name for titles that use it.
     # Priority: caller-supplied `entity` (health_monitor.emit_event) →
@@ -1657,7 +1707,8 @@ def render_template(event_type: str, data: Dict[str, Any]) -> Dict[str, Any]:
     _caller_title = str(variables.get('title', '')).strip()
     if not _caller_title:
         hn = variables.get('hostname', '')
-        _caller_title = f'{hn}: Health check degraded' if hn else 'Health check degraded'
+        degraded = runtime_message('fallback.healthCheckDegraded', language)
+        _caller_title = f'{hn}: {degraded}' if hn else degraded
     variables['title_or_default'] = _caller_title
     
     # `format_map` with a SafeDict avoids the KeyError → "show raw template
@@ -1685,7 +1736,7 @@ def render_template(event_type: str, data: Dict[str, Any]) -> Dict[str, Any]:
     if formatter_name and formatter_name in globals():
         formatter_func = globals()[formatter_name]
         try:
-            title, body_text = formatter_func(data)
+            title, body_text = formatter_func(data, language=language)
         except Exception:
             # Fallback to standard formatting if formatter fails
             try:
@@ -1696,9 +1747,10 @@ def render_template(event_type: str, data: Dict[str, Any]) -> Dict[str, Any]:
         parsed = _parse_vzdump_message(pve_message)
         if parsed:
             is_success = (event_type == 'backup_complete')
-            body_text = _format_vzdump_body(parsed, is_success)
-            # Use PVE's own title if available (contains hostname and status)
-            if pve_title:
+            body_text = _format_vzdump_body(parsed, is_success, language=language)
+            # Preserve PVE's source title for English, but never leak it into a
+            # deterministic localized notification.
+            if pve_title and requested_language == 'en':
                 title = pve_title
         else:
             # Couldn't parse -- use PVE raw message as body
@@ -1722,15 +1774,15 @@ def render_template(event_type: str, data: Dict[str, Any]) -> Dict[str, Any]:
     # Build structured fields for Discord embeds / rich notifications
     fields = []
     field_map = [
-        ('vmid', 'VM/CT'), ('vmname', 'Name'), ('device', 'Device'),
-        ('source_ip', 'Source IP'), ('node_name', 'Node'), ('category', 'Category'),
-        ('service_name', 'Service'), ('jail', 'Jail'), ('username', 'User'),
-        ('count', 'Count'), ('window', 'Window'), ('entity_list', 'Affected'),
+        ('vmid', 'fields.vmid'), ('vmname', 'fields.name'), ('device', 'fields.device'),
+        ('source_ip', 'fields.sourceIp'), ('node_name', 'fields.node'), ('category', 'fields.category'),
+        ('service_name', 'fields.service'), ('jail', 'fields.jail'), ('username', 'fields.user'),
+        ('count', 'fields.count'), ('window', 'fields.window'), ('entity_list', 'fields.affected'),
     ]
-    for key, label in field_map:
+    for key, label_key in field_map:
         val = variables.get(key, '')
         if val:
-            fields.append((label, str(val)))
+            fields.append((runtime_message(label_key, language), str(val)))
     
     # Build HTML body with escaped content
     body_html_parts = []
