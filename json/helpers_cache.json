@@ -6878,7 +6878,9 @@
     "category_names": [
       "AI / Coding & Dev-Tools"
     ],
-    "notes": [],
+    "notes": [
+      "The script installs SQLite3 as default database provider. You will be asked to select database type when you initially open the application URL. Select SQLite3 or provide your own database."
+    ],
     "warnings": [],
     "port": 3000,
     "website": "https://forgejo.org/",
@@ -6909,7 +6911,9 @@
     "category_names": [
       "AI / Coding & Dev-Tools"
     ],
-    "notes": [],
+    "notes": [
+      "The script installs SQLite3 as default database provider. You will be asked to select database type when you initially open the application URL. Select SQLite3 or provide your own database."
+    ],
     "warnings": [],
     "port": 3000,
     "website": "https://forgejo.org/",
@@ -14879,7 +14883,9 @@
     "category_names": [
       "Operating Systems & Appliances"
     ],
-    "notes": [],
+    "notes": [
+      "Installed version is OpenMediaVault 7"
+    ],
     "warnings": [
       "Running OVM in a LXC container may require a complicated disk setup, consider using a VM instead. More info: `https://github.com/community-scripts/ProxmoxVE/discussions/175`"
     ],
@@ -23630,7 +23636,7 @@
     "updateable": true,
     "privileged": false,
     "has_arm": false,
-    "is_dev": true,
+    "is_dev": false,
     "execute_in": [
       "lxc"
     ],
