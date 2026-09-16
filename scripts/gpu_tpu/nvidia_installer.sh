@@ -232,7 +232,15 @@ find_nvidia_containers() {
   NVIDIA_CONTAINERS=()
   for conf in /etc/pve/lxc/*.conf; do
     [[ -f "$conf" ]] || continue
-    if grep -qiE "dev[0-9]+:.*nvidia" "$conf"; then
+    # An OCI container declares an entrypoint (or cmd) and receives its
+    # driver libraries from the container runtime, not from a .run
+    # installer unpacked into its rootfs. Whatever this installer does
+    # to a conventional LXC does not apply to one, so it stays out of
+    # this list entirely — including out of the driver propagation.
+    if grep -qaE "^(entrypoint|cmd):" "$conf"; then
+      continue
+    fi
+    if grep -qaiE "dev[0-9]+:.*nvidia" "$conf"; then
       NVIDIA_CONTAINERS+=("$(basename "$conf" .conf)")
     fi
   done
@@ -822,7 +830,11 @@ KEYLASE_PATCH_URL="https://raw.githubusercontent.com/keylase/nvidia-patch/master
 NVIDIA_BRANCHES_CACHE="/var/cache/proxmenux/nvidia_stable_branches.txt"
 NVIDIA_PRODUCTION_HEAD_CACHE="/var/cache/proxmenux/nvidia_production_head.txt"
 NVIDIA_BRANCH_HEADS_CACHE="/var/cache/proxmenux/nvidia_branch_heads.txt"
-NVIDIA_GPU_SUPPORT_CACHE_PREFIX="/var/cache/proxmenux/nvidia_gpu_support_"
+# v2: the first generation of these files scraped the whole page and so
+# included the legacy table (see _nvidia_supported_ids_from_page). Those
+# files say a branch supports GPUs it has dropped, so they are left
+# behind rather than reused.
+NVIDIA_GPU_SUPPORT_CACHE_PREFIX="/var/cache/proxmenux/nvidia_gpu_support_v2_"
 NVIDIA_BRANCHES_TTL_SECONDS=$((24 * 3600))
 NVIDIA_BRANCHES_URL="https://www.nvidia.com/en-us/drivers/unix/"
 
@@ -895,8 +907,8 @@ refresh_nvidia_branches_cache() {
   # as the general-purpose default). Best-effort.
   local prod_head
   prod_head=$(echo "$clean" \
-    | grep -oiE 'Production Branch Version:[^<]*(</span>)?\s*<a[^>]*>[0-9]+\.[0-9]+(\.[0-9]+)?' \
-    | grep -oE '>[0-9]+\.[0-9]+(\.[0-9]+)?' \
+    | grep -aoiE 'Production Branch Version:[^<]*(</span>)?\s*<a[^>]*>[0-9]+\.[0-9]+(\.[0-9]+)?' \
+    | grep -aoE '>[0-9]+\.[0-9]+(\.[0-9]+)?' \
     | tr -d '>' \
     | head -n1)
   if [[ -n "$prod_head" ]]; then
@@ -918,6 +930,26 @@ get_nvidia_branch_head() {
   awk -F'|' -v m="$major" '$2 == m { print $3; exit }' "$NVIDIA_BRANCH_HEADS_CACHE"
 }
 
+# The device ids a branch actually supports, read from its
+# supportedchips.html on stdin.
+#
+# The page carries two tables: the GPUs this branch supports, and, under
+# "legacy GPUs that are no longer supported", the ones it has dropped and
+# that need an older branch. Reading both says a branch supports every
+# card NVIDIA ever shipped — which is how a Quadro P1000 came to be
+# offered the 595 branch that refuses it at probe time, after compiling
+# and installing perfectly. Everything from that heading on is cut away.
+_nvidia_supported_ids_from_page() {
+  awk '
+    /legacy GPUs that are no longer supported/ { exit }
+    { print }
+  ' \
+    | grep -aoiE '<td>[0-9A-F]{4}</td>' \
+    | grep -aoiE '[0-9A-F]{4}' \
+    | tr 'A-F' 'a-f' \
+    | sort -u
+}
+
 # Refresh the per-branch supported-GPU cache. Uses the branch head as
 # the "sample release" for the whole branch — NVIDIA rarely drops chip
 # support inside a live branch, so this is a solid proxy that also
@@ -933,7 +965,8 @@ refresh_nvidia_gpu_support_for_major() {
   if [[ -f "$cache" ]]; then
     ts=$(stat -c '%Y' "$cache" 2>/dev/null || echo 0)
     age=$(( now - ts ))
-    if (( age < NVIDIA_BRANCHES_TTL_SECONDS )) && [[ -s "$cache" ]]; then
+    # Empty file = recorded negative (see filter_option_c_branch).
+    if (( age < NVIDIA_BRANCHES_TTL_SECONDS )); then
       return 0
     fi
   fi
@@ -949,11 +982,7 @@ refresh_nvidia_gpu_support_for_major() {
   # NVIDIA's supportedchips.html lays out each GPU row as a <td> with
   # the PCI Device ID in 4-char hex. Anchor on the surrounding tag so
   # we don't sweep up unrelated 4-hex strings elsewhere in the page.
-  echo "$html" \
-    | grep -oiE '<td>[0-9A-F]{4}</td>' \
-    | grep -oiE '[0-9A-F]{4}' \
-    | tr 'A-F' 'a-f' \
-    | sort -u > "$tmp"
+  printf '%s\n' "$html" | _nvidia_supported_ids_from_page > "$tmp"
   if [[ -s "$tmp" ]]; then
     mv "$tmp" "$cache"
     return 0
@@ -1029,7 +1058,7 @@ refresh_keylase_patch_cache() {
   local tmp
   tmp=$(mktemp)
   if curl -fsSL --max-time 15 "$KEYLASE_PATCH_URL" 2>/dev/null \
-       | grep -oE '\["[0-9]+\.[0-9]+(\.[0-9]+)?"\]' \
+       | grep -aoE '\["[0-9]+\.[0-9]+(\.[0-9]+)?"\]' \
        | sed -E 's/\["([0-9.]+)"\]/\1/' \
        | sort -u > "$tmp" && [[ -s "$tmp" ]]; then
     mv "$tmp" "$KEYLASE_PATCH_CACHE"
@@ -1056,12 +1085,47 @@ filter_keylase_supported() {
   done <<< "$versions_in"
 }
 
+# The oldest NVIDIA driver that can build against the running kernel.
+# A branch that predates a kernel does not compile for it, and the
+# picker offering one is worse than it sounds: when a driver is already
+# installed, choosing another version uninstalls it before building the
+# new one, so a version DKMS cannot compile leaves the host with no
+# driver at all.
+#
+# The thresholds are the ones NVIDIA's own release notes establish per
+# branch. The top one is confirmed on this project's PVE 9 host, where
+# 580.178.04 builds and runs against kernel 7.0.14-17-pve.
+#
+# Kernel versions are compared as a major/minor pair rather than with
+# separate tests on each half: `major >= 6 && minor >= 17` reads as
+# "6.17 or newer" and is false for 7.0, which would hand a brand new
+# kernel the floor of a much older one.
+nvidia_kernel_driver_floor() {
+  local kver major minor rank
+  kver=$(uname -r)
+  major="${kver%%.*}"
+  minor="${kver#*.}"; minor="${minor%%.*}"
+  major=$((10#${major:-0} + 0)) 2>/dev/null || major=0
+  minor=$((10#${minor:-0} + 0)) 2>/dev/null || minor=0
+  rank=$(( major * 1000 + minor ))
+  if   (( rank >= 6017 )); then printf '580.82.07\n'   # 6.17+ and every 7.x
+  elif (( rank >= 6008 )); then printf '550\n'
+  elif (( rank >= 6002 )); then printf '535\n'
+  elif (( rank >= 5015 )); then printf '470\n'
+  else                          printf '450\n'
+  fi
+}
+
 filter_option_c_branch() {
   local versions_in="$1"
   local current="$2"
   local _unused_recommended_branch="$3"
 
   refresh_nvidia_branches_cache 2>/dev/null || true
+
+  local kernel_floor kernel_floor_major
+  kernel_floor=$(nvidia_kernel_driver_floor)
+  kernel_floor_major="${kernel_floor%%.*}"
 
   local target_branch=""
   if [[ -f "$NVIDIA_BRANCHES_CACHE" && -s "$NVIDIA_BRANCHES_CACHE" ]]; then
@@ -1086,22 +1150,34 @@ filter_option_c_branch() {
     local _m="${_v%%.*}"
     [[ -z "${_major_head[$_m]:-}" ]] && _major_head[$_m]="$_v"
   done < <(printf '%s\n' "$versions_in")
-  # Warm the supported-GPU cache for every stable major (whitelist
-  # heads: head already known → normal path; superseded heads: seed the
-  # cache-file's head-version by directly writing a lightweight lookup).
-  # For endorsed majors we can use refresh_nvidia_gpu_support_for_major
-  # as-is (it looks up NVIDIA_BRANCH_HEADS_CACHE). For non-endorsed
-  # majors we need to fetch supportedchips.html against the highest
-  # release we saw in the CDN listing.
+  # Warm the supported-GPU cache, but only for the majors that can
+  # actually reach the GPU-compat test in the filter below. The CDN
+  # publishes every major it has ever shipped — 77 of them at time of
+  # writing, back to 71.x — and fetching supportedchips.html for all of
+  # them cost about a minute before the picker could be drawn, most of
+  # it spent on branches the very next loop discards on the target-branch
+  # floor alone. The two predicates applied here are the same ones the
+  # filter uses, and both are local arithmetic.
   local _m _head _cache _now _ts _age _html _tmp
   _now=$(date +%s)
   for _m in "${!_major_head[@]}"; do
+    if (( 10#$_m < 10#$kernel_floor_major )); then
+      continue
+    fi
+    if [[ -n "$target_branch" ]] && (( 10#$_m < 10#$target_branch )); then
+      continue
+    fi
+    is_nvidia_stable_branch "$_m" || is_branch_release_count_sufficient "$_m" || continue
     _head="${_major_head[$_m]}"
     _cache="${NVIDIA_GPU_SUPPORT_CACHE_PREFIX}${_m}.txt"
     if [[ -f "$_cache" ]]; then
       _ts=$(stat -c '%Y' "$_cache" 2>/dev/null || echo 0)
       _age=$(( _now - _ts ))
-      if (( _age < NVIDIA_BRANCHES_TTL_SECONDS )) && [[ -s "$_cache" ]]; then
+      # An empty cache file is a recorded negative: that branch's README
+      # carries no device-id table, so the compat test fails open for it.
+      # Treating it as a miss meant re-fetching those pages on every run,
+      # for as long as the branch existed.
+      if (( _age < NVIDIA_BRANCHES_TTL_SECONDS )); then
         continue
       fi
     fi
@@ -1111,20 +1187,17 @@ filter_option_c_branch() {
     [[ -z "$_html" ]] && continue
     mkdir -p "$(dirname "$_cache")" 2>/dev/null || continue
     _tmp=$(mktemp)
-    echo "$_html" \
-      | grep -oiE '<td>[0-9A-F]{4}</td>' \
-      | grep -oiE '[0-9A-F]{4}' \
-      | tr 'A-F' 'a-f' \
-      | sort -u > "$_tmp"
-    if [[ -s "$_tmp" ]]; then
-      mv "$_tmp" "$_cache"
-    else
-      rm -f "$_tmp"
-    fi
+    printf '%s\n' "$_html" | _nvidia_supported_ids_from_page > "$_tmp"
+    mv "$_tmp" "$_cache"
   done
   while IFS= read -r ver; do
     [[ -z "$ver" ]] && continue
     local ver_major="${ver%%.*}"
+    # Older than the running kernel can build: not a candidate.
+    version_le "$kernel_floor" "$ver" || continue
+    # And one the compiler has already refused on this kernel is not a
+    # candidate either, whatever the branch heuristics say about it.
+    [[ "$(nvidia_build_verdict "$ver" 2>/dev/null)" == "fail" ]] && continue
     if [[ -n "$target_branch" ]] && (( 10#$ver_major < 10#$target_branch )); then
       continue
     fi
@@ -1385,6 +1458,110 @@ download_nvidia_installer() {
 # ==========================================================
 # Installation / uninstallation
 # ==========================================================
+# What the compiler already answered, for this exact kernel.
+#
+# Whether a given driver source builds against a given kernel build is
+# a fixed fact, so the answer is worth keeping: a version that failed
+# is not offered again while the host runs that kernel, and one that
+# passed does not pay the check twice. `uname -r` carries the Proxmox
+# build number, so a kernel update produces new keys on its own and no
+# expiry is needed.
+NVIDIA_BUILD_VERDICT_CACHE="/var/cache/proxmenux/nvidia_build_verdicts.txt"
+
+# Echoes `ok` or `fail` for this kernel; nothing, and non-zero, when the
+# pair has not been tried.
+nvidia_build_verdict() {
+  local version="$1" kver line
+  [[ -n "$version" ]] || return 1
+  kver="$(uname -r)"
+  [[ -s "$NVIDIA_BUILD_VERDICT_CACHE" ]] || return 1
+  line=$(grep -aF "${kver}|${version}|" "$NVIDIA_BUILD_VERDICT_CACHE" 2>/dev/null | tail -n1)
+  [[ -n "$line" ]] || return 1
+  printf '%s\n' "${line##*|}"
+}
+
+nvidia_record_build_verdict() {
+  local version="$1" verdict="$2" kver tmp
+  [[ -n "$version" && -n "$verdict" ]] || return 0
+  kver="$(uname -r)"
+  mkdir -p "$(dirname "$NVIDIA_BUILD_VERDICT_CACHE")" 2>/dev/null || return 0
+  if [[ -f "$NVIDIA_BUILD_VERDICT_CACHE" ]]; then
+    tmp=$(mktemp) || return 0
+    grep -avF "${kver}|${version}|" "$NVIDIA_BUILD_VERDICT_CACHE" > "$tmp" 2>/dev/null
+    mv "$tmp" "$NVIDIA_BUILD_VERDICT_CACHE" 2>/dev/null || rm -f "$tmp"
+  fi
+  printf '%s|%s|%s\n' "$kver" "$version" "$verdict" >> "$NVIDIA_BUILD_VERDICT_CACHE" 2>/dev/null || true
+}
+
+# How long the build check may take before it is abandoned. A module
+# builds in two to five minutes on a modest node; past this something
+# is wrong and the user should not be left watching a spinner.
+NVIDIA_BUILD_CHECK_TIMEOUT=900
+
+# Does this driver's kernel module actually build against the running
+# kernel?
+#
+# NVIDIA publishes a minimum kernel per release and no maximum, so no
+# catalogue can answer this — the only thing that settles it is the
+# compiler. It is asked here, before anything is removed, because the
+# install path uninstalls a working driver before building its
+# replacement: a version that cannot compile would otherwise leave the
+# host with no driver at all, which is a far worse outcome than a
+# version that was never installed.
+#
+# The proprietary module is built, which is the one `--dkms` installs.
+# Nothing is loaded, registered or written outside the temporary tree.
+#
+# Returns: 0 it builds · 1 it does not · 2 the question could not be
+# asked (no headers, extraction failed), which is not an answer and is
+# reported as such rather than passed off as a success.
+verify_driver_builds_for_running_kernel() {
+  local installer="$1"
+  local version="${2:-}"
+  local ksrc work rc known
+  ksrc="/lib/modules/$(uname -r)/build"
+
+  # Already answered for this kernel: do not compile it again.
+  if [[ -n "$version" ]] && known=$(nvidia_build_verdict "$version"); then
+    case "$known" in
+      ok)   echo "Build check: already verified for $(uname -r)" >>"$LOG_FILE"; return 0 ;;
+      fail) echo "Build check: already known not to build on $(uname -r)" >>"$LOG_FILE"; return 1 ;;
+    esac
+  fi
+
+  [[ -f "$installer" ]] || return 2
+  [[ -d "$ksrc" ]] || return 2
+
+  work=$(mktemp -d /tmp/pmx-nvidia-verify.XXXXXX) || return 2
+
+  echo "=== Build check for $installer against $(uname -r) ===" >>"$LOG_FILE"
+  if ! sh "$installer" --extract-only --target "${work}/payload" >>"$LOG_FILE" 2>&1; then
+    echo "Build check: could not extract the installer" >>"$LOG_FILE"
+    rm -rf "$work"
+    return 2
+  fi
+  if [[ ! -d "${work}/payload/kernel" ]]; then
+    echo "Build check: no kernel module sources in the payload" >>"$LOG_FILE"
+    rm -rf "$work"
+    return 2
+  fi
+
+  timeout "$NVIDIA_BUILD_CHECK_TIMEOUT" \
+    make -C "${work}/payload/kernel" -j"$(nproc 2>/dev/null || echo 2)" \
+      modules SYSSRC="$ksrc" >>"$LOG_FILE" 2>&1
+  rc=$?
+  if [[ $rc -eq 0 ]]; then
+    echo "Build check: module built successfully" >>"$LOG_FILE"
+    [[ -n "$version" ]] && nvidia_record_build_verdict "$version" "ok"
+  else
+    echo "Build check: module did NOT build (exit $rc)" >>"$LOG_FILE"
+    [[ -n "$version" ]] && nvidia_record_build_verdict "$version" "fail"
+  fi
+  rm -rf "$work"
+  [[ $rc -eq 0 ]] && return 0
+  return 1
+}
+
 run_nvidia_installer() {
   pmx_journal_context "run_nvidia_installer" "1.3" "nvidia_installer.sh"
   local installer="$1"
@@ -1548,6 +1725,166 @@ apply_nvidia_patch_if_needed() {
   fi
 }
 
+# ==========================================================
+# NVIDIA Container Toolkit
+# ==========================================================
+# The Toolkit is what lets a container see the host's GPU: it reports
+# which driver components are compatible with the loaded driver, and the
+# OCI backend consumes that inventory to build a container's device
+# nodes and library mounts. A host carrying a driver and no Toolkit can
+# run nothing on that GPU from a container, so it is installed with the
+# driver rather than offered as a choice.
+#
+# The phase is deliberately independent of the DKMS install: it has to
+# be able to put a missing or broken Toolkit back on a host whose driver
+# is already installed and is not being touched.
+
+NVIDIA_CTK_KEYRING="/usr/share/keyrings/nvidia-container-toolkit-keyring.gpg"
+NVIDIA_CTK_LIST="/etc/apt/sources.list.d/nvidia-container-toolkit.list"
+NVIDIA_CTK_GPGKEY_URL="https://nvidia.github.io/libnvidia-container/gpgkey"
+NVIDIA_CTK_REPO_URL="https://nvidia.github.io/libnvidia-container/stable/deb/nvidia-container-toolkit.list"
+# Two are asked for; APT pulls the other two as dependencies. All four
+# are verified afterwards, because a partial set is a broken Toolkit.
+NVIDIA_CTK_REQUEST=(nvidia-container-toolkit libnvidia-container-tools)
+NVIDIA_CTK_EXPECTED=(nvidia-container-toolkit nvidia-container-toolkit-base \
+                     libnvidia-container-tools libnvidia-container1)
+
+# True when some sources file already points at NVIDIA's container
+# repository. Someone who configured it by hand keeps their file: a
+# second list for the same repository is an apt warning on every run.
+_nvidia_ctk_repo_configured_elsewhere() {
+  local f
+  for f in /etc/apt/sources.list /etc/apt/sources.list.d/*.list /etc/apt/sources.list.d/*.sources; do
+    [[ -f "$f" ]] || continue
+    [[ "$f" == "$NVIDIA_CTK_LIST" ]] && continue
+    if grep -qa "nvidia.github.io/libnvidia-container" "$f" 2>/dev/null; then
+      printf '%s\n' "$f"
+      return 0
+    fi
+  done
+  return 1
+}
+
+_nvidia_ctk_installed_versions() {
+  local pkg ver
+  for pkg in "${NVIDIA_CTK_EXPECTED[@]}"; do
+    ver=$(dpkg-query -W -f='${Version}' "$pkg" 2>/dev/null)
+    [[ -n "$ver" ]] && printf '%s %s\n' "$pkg" "$ver"
+  done
+}
+
+# Installs repository, key and packages. Returns non-zero on failure —
+# the caller reports it rather than letting a driver install that left
+# no working Toolkit behind be announced as complete.
+install_nvidia_container_toolkit() {
+  pmx_journal_context "install_nvidia_container_toolkit" "1.0" "nvidia_installer.sh"
+
+  msg_info "$(translate 'Installing NVIDIA Container Toolkit...')"
+
+  # Through the journal, so anything this actually adds to the host is
+  # recorded like every other package ProxMenux installs.
+  pmx_install_pkg ca-certificates curl gnupg >>"$LOG_FILE" 2>&1 || true
+
+  local work
+  work=$(mktemp -d) || { msg_error "$(translate 'Could not create a temporary directory for the NVIDIA Container Toolkit.')"; return 1; }
+
+  # Key and list are downloaded to a temporary directory first: a
+  # truncated response must not replace a keyring that works.
+  if [[ ! -s "$NVIDIA_CTK_KEYRING" ]]; then
+    if ! curl --fail --show-error --silent --location --max-time 30 \
+         "$NVIDIA_CTK_GPGKEY_URL" -o "${work}/key.asc" >>"$LOG_FILE" 2>&1; then
+      rm -rf "$work"
+      msg_error "$(translate 'Could not download the NVIDIA Container Toolkit signing key.')"
+      return 1
+    fi
+    if ! gpg --batch --yes --dearmor --output "${work}/key.gpg" "${work}/key.asc" >>"$LOG_FILE" 2>&1; then
+      rm -rf "$work"
+      msg_error "$(translate 'The NVIDIA Container Toolkit signing key could not be read.')"
+      return 1
+    fi
+    install -m 0644 "${work}/key.gpg" "$NVIDIA_CTK_KEYRING" >>"$LOG_FILE" 2>&1 || {
+      rm -rf "$work"
+      msg_error "$(translate 'Could not install the NVIDIA Container Toolkit signing key.')"
+      return 1
+    }
+    # Recorded as an execution rather than a file write: the key is
+    # binary, and a stored copy of it would reach the journal's diff as
+    # replacement characters. The entry says what was placed and where,
+    # which is what a reader of the journal needs from it.
+    pmx_record_execution "Install NVIDIA Container Toolkit signing key" \
+      "install -m 0644 <libnvidia-container gpgkey> $NVIDIA_CTK_KEYRING"
+  fi
+
+  local existing_repo=""
+  existing_repo=$(_nvidia_ctk_repo_configured_elsewhere) || true
+  if [[ -n "$existing_repo" ]]; then
+    echo "NVIDIA container repository already configured in ${existing_repo} — leaving it alone" >>"$LOG_FILE"
+  else
+    if ! curl --fail --show-error --silent --location --max-time 30 \
+         "$NVIDIA_CTK_REPO_URL" -o "${work}/repository.list" >>"$LOG_FILE" 2>&1; then
+      rm -rf "$work"
+      msg_error "$(translate 'Could not download the NVIDIA Container Toolkit repository definition.')"
+      return 1
+    fi
+    # The published list carries no signed-by; adding it is what keeps
+    # the repository verified against our keyring alone.
+    sed "s#deb https://#deb [signed-by=${NVIDIA_CTK_KEYRING}] https://#g" \
+      "${work}/repository.list" > "${work}/signed.list"
+    if [[ ! -s "${work}/signed.list" ]]; then
+      rm -rf "$work"
+      msg_error "$(translate 'The NVIDIA Container Toolkit repository definition was empty.')"
+      return 1
+    fi
+    pmx_write_file "$NVIDIA_CTK_LIST" < "${work}/signed.list"
+    chmod 0644 "$NVIDIA_CTK_LIST" 2>/dev/null || true
+  fi
+  rm -rf "$work"
+
+  # Refresh this repository only. A full apt-get update here would make
+  # the Toolkit phase answer for every other source on the host.
+  apt-get update \
+    -o Dir::Etc::sourcelist="sources.list.d/$(basename "$NVIDIA_CTK_LIST")" \
+    -o Dir::Etc::sourceparts="-" \
+    -o APT::Get::List-Cleanup="0" >>"$LOG_FILE" 2>&1 || true
+
+  pmx_install_pkg "${NVIDIA_CTK_REQUEST[@]}" >>"$LOG_FILE" 2>&1
+
+  local missing=() pkg
+  for pkg in "${NVIDIA_CTK_EXPECTED[@]}"; do
+    dpkg-query -W -f='${Status}' "$pkg" 2>/dev/null | grep -qa "install ok installed" || missing+=("$pkg")
+  done
+
+  if [[ ${#missing[@]} -gt 0 ]]; then
+    msg_error "$(translate 'NVIDIA Container Toolkit is incomplete. Missing:') ${missing[*]}"
+    echo "NVIDIA Container Toolkit missing packages: ${missing[*]}" >>"$LOG_FILE"
+    update_component_status "nvidia_container_toolkit" "failed" "" "gpu" '{}' >>"$LOG_FILE" 2>&1 || true
+    return 1
+  fi
+
+  local ctk_version
+  ctk_version=$(dpkg-query -W -f='${Version}' nvidia-container-toolkit 2>/dev/null)
+  _nvidia_ctk_installed_versions >>"$LOG_FILE" 2>&1
+  msg_ok "$(translate 'NVIDIA Container Toolkit') ${ctk_version} $(translate 'installed.')"
+  update_component_status "nvidia_container_toolkit" "installed" "$ctk_version" "gpu" '{}' >>"$LOG_FILE" 2>&1 || true
+
+  # The inventory the Toolkit reports is only meaningful once the driver
+  # answers. Where it does not — a driver installed but not yet loaded —
+  # the packages are in place and the reading waits for the restart,
+  # which is a different thing from a Toolkit that does not work.
+  if command -v nvidia-smi >/dev/null 2>&1 && nvidia-smi -L >/dev/null 2>&1; then
+    if command -v nvidia-container-cli >/dev/null 2>&1 \
+       && nvidia-container-cli --version >>"$LOG_FILE" 2>&1; then
+      msg_ok "$(translate 'NVIDIA Container Toolkit verified against the running driver.')"
+    else
+      msg_warn "$(translate 'NVIDIA Container Toolkit is installed but its command line did not answer.')"
+    fi
+  else
+    msg_warn "$(translate 'NVIDIA Container Toolkit installed. GPU validation pending until the host restarts.')"
+  fi
+
+  return 0
+}
+
 restart_prompt() {
   if hybrid_whiptail_yesno "$(translate 'NVIDIA Drivers')" \
     "\n$(translate 'The installation/changes require a server restart to apply correctly. Do you want to reboot now?')"; then
@@ -1585,6 +1922,7 @@ show_install_overview() {
   local overview
   overview="\n$(translate 'This installation will:')\n\n"
   overview+=" • $(translate 'Install NVIDIA proprietary drivers')\n"
+  overview+=" • $(translate 'Install NVIDIA Container Toolkit (GPU support for OCI containers)')\n"
   overview+=" • $(translate 'Configure GPU passthrough with VFIO')\n"
   overview+=" • $(translate 'Blacklist nouveau driver')\n"
   overview+=" • $(translate 'Enable IOMMU support if not enabled')\n"
@@ -1604,7 +1942,10 @@ show_install_overview() {
     local ctid lxc_ver ct_name
     for ctid in "${NVIDIA_CONTAINERS[@]}"; do
       lxc_ver=$(get_lxc_nvidia_version "$ctid")
-      ct_name=$(pct config "$ctid" 2>/dev/null | grep "^hostname:" | awk '{print $2}')
+      # `pct config` separates an OCI image's environment with NUL
+      # bytes, which makes grep treat the stream as binary and drop its
+      # output — the name came back empty and grep warned on stderr.
+      ct_name=$(pct config "$ctid" 2>/dev/null | grep -a "^hostname:" | awk '{print $2}')
       overview+="  \Zb\Z4CT ${ctid}\Zn  ${ct_name:+(${ct_name})}  — $(translate 'driver:') ${lxc_ver}\n"
     done
   fi
@@ -1659,7 +2000,7 @@ show_version_menu() {
   # global "latest". But latest.txt lags the Production Branch head
   # (595.91.07 today vs 595.84 in latest.txt) and also hides the New
   # Feature Branch head (610.x) that is a legitimate option once
-  # kernel + GPU compat pass. Kernel floor, endorsement whitelist,
+  # kernel + GPU compat pass. The kernel floor, endorsement whitelist,
   # release-count heuristic and GPU-compat filter already narrow the
   # list to safe candidates; the Production head still stands out in
   # the "Latest available" recommendation, so an artificial ceiling
@@ -1729,7 +2070,8 @@ show_version_menu() {
   fi
 
   local menu_text="$(translate 'Select the NVIDIA driver version to install:')\n\n"
-  menu_text+="$(translate 'Versions shown belong to maintained NVIDIA branches that list your GPU PCI ID. DKMS compilation is the final validation against the running kernel. The recommended version keeps the current branch, or uses the NVIDIA Production Branch on a fresh install.')"
+  menu_text+="$(translate 'Versions shown belong to maintained NVIDIA branches that list your GPU PCI ID and are new enough to build against the running kernel. DKMS compilation is the final validation. The recommended version keeps the current branch, or uses the NVIDIA Production Branch on a fresh install.')"
+  menu_text+="\n\n$(translate 'Running kernel:') ${kernel_version} — $(translate 'oldest driver offered:') $(nvidia_kernel_driver_floor)"
   if $patch_filtered; then
     menu_text+="\n\n$(translate 'NVENC patch detected — list narrowed to versions supported by keylase/nvidia-patch.')"
   elif [[ -n "$patch_filter_note" ]]; then
@@ -1808,65 +2150,98 @@ main() {
 
       get_system_info
 
-      show_version_menu
-      if [[ "$DRIVER_VERSION" == "cancel" || -z "$DRIVER_VERSION" ]]; then
-        exit 0
-      fi
+      # Choosing, confirming and proving the version is one loop: a
+      # version that turns out not to build sends the user back to the
+      # list — now without that version in it — instead of dropping them
+      # out of the installer to start again from the menu.
+      local installer=""
+      while :; do
+        show_version_menu
+        if [[ "$DRIVER_VERSION" == "cancel" || -z "$DRIVER_VERSION" ]]; then
+          exit 0
+        fi
 
-      if $CURRENT_DRIVER_INSTALLED; then
-        if [[ "$CURRENT_DRIVER_VERSION" == "$DRIVER_VERSION" ]]; then
-          local confirm_text
-          confirm_text="\n\n\n$(translate 'Version') \Zb\Z4$DRIVER_VERSION\Zn\n\n$(translate 'is already installed. Do you want to reinstall it? This will perform a clean uninstall first.')"
-          if ! hybrid_yesno "$(translate 'Same Version Detected')" "$confirm_text" 14 70; then
-              exit 0
-          fi
-        else
-          local confirm_text
-          confirm_text="\n\n$(translate 'Current version:') \Zb$CURRENT_DRIVER_VERSION\Zn\n"
-          confirm_text+="$(translate 'New version:') \Zb\Z4$DRIVER_VERSION\Zn\n\n"
-          confirm_text+="$(translate 'The current driver will be completely uninstalled before installing the new version. Continue?')"
-          if ! hybrid_yesno "$(translate 'Version Change Detected')" "$confirm_text" 20 70; then
-              exit 0
+        if $CURRENT_DRIVER_INSTALLED; then
+          if [[ "$CURRENT_DRIVER_VERSION" == "$DRIVER_VERSION" ]]; then
+            local confirm_text
+            confirm_text="\n\n\n$(translate 'Version') \Zb\Z4$DRIVER_VERSION\Zn\n\n$(translate 'is already installed. Do you want to reinstall it? This will perform a clean uninstall first.')"
+            if ! hybrid_yesno "$(translate 'Same Version Detected')" "$confirm_text" 14 70; then
+                exit 0
+            fi
+          else
+            local confirm_text
+            confirm_text="\n\n$(translate 'Current version:') \Zb$CURRENT_DRIVER_VERSION\Zn\n"
+            confirm_text+="$(translate 'New version:') \Zb\Z4$DRIVER_VERSION\Zn\n\n"
+            confirm_text+="$(translate 'The current driver will be completely uninstalled before installing the new version. Continue?')"
+            if ! hybrid_yesno "$(translate 'Version Change Detected')" "$confirm_text" 20 70; then
+                exit 0
+            fi
           fi
         fi
-        
+
         show_proxmenux_logo
         msg_title "$(translate "$SCRIPT_TITLE")"
+
+        # Headers before anything else: the build check below needs them,
+        # and so does DKMS afterwards.
+        ensure_repos_and_headers
+
+        installer=$(download_nvidia_installer "$DRIVER_VERSION")
+        local download_result=$?
+
+        if [[ $download_result -ne 0 ]]; then
+          msg_error "$(translate 'Failed to download NVIDIA installer')"
+          exit 1
+        fi
+
+        msg_ok "$(translate 'NVIDIA installer downloaded successfully')" | tee -a "$screen_capture"
+
+        if [[ -z "$installer" || ! -f "$installer" ]]; then
+          msg_error "$(translate 'Internal error: NVIDIA installer path is empty or file not found.')"
+          rm -f "$screen_capture"
+          exit 1
+        fi
+
+        # Prove the module builds before the working driver is taken away.
+        # NVIDIA publishes no maximum supported kernel, so this is the only
+        # thing that can answer it — and it is quick: a version that cannot
+        # build fails in the configuration tests, long before it compiles.
+        msg_info "$(translate 'Checking that this version builds against the running kernel...')"
+        verify_driver_builds_for_running_kernel "$installer" "$DRIVER_VERSION"
+        local build_check=$?
+        stop_spinner
+        case $build_check in
+          0)
+            msg_ok "$(translate 'Version') $DRIVER_VERSION $(translate 'builds against kernel') $(uname -r)" \
+              | tee -a "$screen_capture"
+            break
+            ;;
+          1)
+            msg_error "$(translate 'This version does not build against the running kernel.')"
+            hybrid_msgbox "$(translate 'Incompatible version')" \
+              "\n$(translate 'The kernel module of version') \Zb${DRIVER_VERSION}\Zn $(translate 'could not be compiled for kernel') \Zb$(uname -r)\Zn.\n\n$(translate 'Nothing has been changed and the current driver is untouched. It will not be offered again while this kernel is running.')\n\n$(translate 'Log file'): ${LOG_FILE}" 16 78
+            continue
+            ;;
+          *)
+            msg_warn "$(translate 'The build could not be checked beforehand; continuing without that check.')"
+            break
+            ;;
+        esac
+      done
+
+      if $CURRENT_DRIVER_INSTALLED; then
         msg_info2 "$(translate 'Uninstalling current NVIDIA driver before installing new version')"
         complete_nvidia_uninstall
-        
         sleep 2
-        
         CURRENT_DRIVER_INSTALLED=false
         CURRENT_DRIVER_VERSION=""
       fi
 
-      show_proxmenux_logo
-      msg_title "$(translate "$SCRIPT_TITLE")"
-
-      ensure_repos_and_headers
       blacklist_nouveau
       ensure_modules_config
-      
+
       stop_and_disable_nvidia_services
       unload_nvidia_modules
-
-      local installer
-      installer=$(download_nvidia_installer "$DRIVER_VERSION")
-      local download_result=$?
-
-      if [[ $download_result -ne 0 ]]; then
-        msg_error "$(translate 'Failed to download NVIDIA installer')"
-        exit 1
-      fi
-
-      msg_ok "$(translate 'NVIDIA installer downloaded successfully')" | tee -a "$screen_capture"
-
-      if [[ -z "$installer" || ! -f "$installer" ]]; then
-        msg_error "$(translate 'Internal error: NVIDIA installer path is empty or file not found.')"
-        rm -f "$screen_capture"
-        exit 1
-      fi
 
       if ! run_nvidia_installer "$installer"; then
         rm -f "$screen_capture"
@@ -1889,12 +2264,38 @@ main() {
       msg_ok "$(translate 'initramfs updated.')"
 
       msg_info2 "$(translate 'Checking NVIDIA driver status with nvidia-smi')"
+      CURRENT_DRIVER_VERSION=""
       if command -v nvidia-smi >/dev/null 2>&1; then
         nvidia-smi || true
-        CURRENT_DRIVER_VERSION=$(nvidia-smi --query-gpu=driver_version --format=csv,noheader 2>/dev/null | head -n1)
-        CURRENT_DRIVER_INSTALLED=true
+        # nvidia-smi writes its failure to stdout, not stderr, so a
+        # driver that installed but cannot talk to the GPU used to be
+        # captured as the version and announced as installed — the whole
+        # error message where the version belonged. The exit status is
+        # what says whether it answered, and the value is only kept when
+        # it looks like a version.
+        local smi_version=""
+        if smi_version=$(nvidia-smi --query-gpu=driver_version --format=csv,noheader 2>/dev/null | head -n1); then
+          smi_version="${smi_version//[[:space:]]/}"
+          [[ "$smi_version" =~ ^[0-9]+\.[0-9]+(\.[0-9]+)?$ ]] && CURRENT_DRIVER_VERSION="$smi_version"
+        fi
+        [[ -n "$CURRENT_DRIVER_VERSION" ]] && CURRENT_DRIVER_INSTALLED=true
       else
         msg_warn "$(translate 'nvidia-smi not found in PATH. Please verify the driver installation.')"
+      fi
+
+      # A module that is built and installed but refuses this GPU is not
+      # a failed installation and not a working one either: the driver is
+      # on the host and the card is not being driven. Say exactly that,
+      # and point at the kernel's own reason.
+      if [[ -z "$CURRENT_DRIVER_VERSION" ]] && command -v nvidia-smi >/dev/null 2>&1; then
+        local nvrm_reason
+        nvrm_reason=$(dmesg 2>/dev/null | grep -a "NVRM" | grep -aiE "legacy|no longer|not supported|will ignore" | tail -n1 | sed 's/.*NVRM: *//')
+        if [[ -n "$nvrm_reason" ]]; then
+          msg_error "$(translate 'The driver installed but does not drive this GPU.')"
+          hybrid_msgbox "$(translate 'GPU not driven by this version')" \
+            "\n$(translate 'Version') \Zb${DRIVER_VERSION}\Zn $(translate 'was installed, but the kernel reports:')\n\n\Zb${nvrm_reason}\Zn\n\n$(translate 'Install a version from the branch the kernel names.')\n\n$(translate 'Log file'): ${LOG_FILE}" 18 78
+          update_component_status "nvidia_driver" "failed" "$DRIVER_VERSION" "gpu" '{"patched":false}'
+        fi
       fi
 
       if [[ -n "$CURRENT_DRIVER_VERSION" ]]; then
@@ -1905,6 +2306,14 @@ main() {
       else
         msg_error "$(translate 'Failed to detect installed NVIDIA driver version.')"
         update_component_status "nvidia_driver" "failed" "" "gpu" '{"patched":false}'
+      fi
+
+      # The Toolkit is part of what this installer delivers, so it runs
+      # whether or not the driver step reported a version — a driver that
+      # needs a restart still wants its Toolkit in place beforehand.
+      if ! install_nvidia_container_toolkit; then
+        msg_warn "$(translate 'The NVIDIA driver is installed, but the Container Toolkit phase did not complete. GPU support for OCI containers is unavailable until it does.')"
+        echo "" | tee -a "$screen_capture" >/dev/null
       fi
 
       # Propagate the new driver to LXC containers with NVIDIA passthrough, if any.
@@ -2065,6 +2474,12 @@ auto_reinstall_from_state() {
     if declare -F update_component_status >/dev/null 2>&1; then
       update_component_status "nvidia_driver" "installed" "$DRIVER_VERSION" "gpu" '{"patched":false}' >>"$LOG_FILE" 2>&1
     fi
+  fi
+
+  # Same phase as the interactive path: a restored host that comes back
+  # with its driver but without the Toolkit has no GPU in its containers.
+  if ! install_nvidia_container_toolkit >>"$LOG_FILE" 2>&1; then
+    echo "WARNING: NVIDIA Container Toolkit phase did not complete" | tee -a "$LOG_FILE"
   fi
 
   echo "✓ NVIDIA driver $DRIVER_VERSION reinstalled" | tee -a "$LOG_FILE"

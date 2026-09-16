@@ -57,6 +57,16 @@ PROTECTED_TECHNICAL_TERMS = (
     "pveproxy",
     "apt-get",
     "Frigate",
+    # Kernel driver and subsystem names. Left to a translator, `nouveau`
+    # becomes the adjective it is borrowed from — "el nuevo controlador"
+    # in Spanish, "Jugendstil" in German — and the reader is told about a
+    # driver that does not exist instead of the one being blacklisted.
+    "nvidia-container-toolkit",
+    "nvidia-smi",
+    "initramfs",
+    "nouveau",
+    "vfio-pci",
+    "modprobe",
     "Docker",
     "Coral",
     "gasket",
