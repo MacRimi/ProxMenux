@@ -4,10 +4,19 @@ Auto-translate missing keys in AppImage/messages/<locale>/common.json
 against the English source (AppImage/messages/en/common.json).
 
 Guardrails:
-  - Keys already translated in a target locale are PRESERVED. A key is
-    considered "already translated" when the target value is non-empty
-    AND differs from the English source. This protects human-curated
-    locales (Vaso73's sk) from being overwritten.
+  - Non-empty string translations are PRESERVED, including values equal
+    to English. --refresh explicitly opts into replacing valid strings.
+  - Arrays, objects and non-string leaves retain their JSON types. Array
+    entries are translated individually, never as serialized Python text.
+  - Preflight all locales; skip locales with existing type mismatches without
+    provider calls or writes, including with --refresh. Valid locales proceed,
+    but any skipped locale makes the run exit 1 (partial failure).
+    The diagnostic identifies the locale
+    and JSON Pointer requiring manual reconciliation. No automatic migration
+    of serialized arrays is attempted: parseability or equal length cannot
+    prove correspondence to current English indices. Recover human text only
+    after checking its original source/order; do not delete it to force refill.
+    Null string leaves remain eligible for filling, as in earlier versions.
   - `{placeholder}` tokens (next-intl style: `{vmid}`, `{appName}`, etc.)
     are extracted before translation and restored afterwards, so the
     interpolation contract stays intact regardless of what the
@@ -15,6 +24,13 @@ Guardrails:
   - `sk` IS translated by default too. Guardrail #1 protects every key
     Vaso73 has curated by hand; auto-translation only fills the keys
     that are still on the English fallback in sk.
+
+Workflow limitation: build-i18n-messages.yml runs Commit + push only after
+successful generation. Exit 1 for skipped locales prevents that step, even
+when valid locales made local progress. This does not restore automatic
+publication for the default locale set until mismatches are reconciled or
+workflow policy is separately changed. Invalid JSON syntax still aborts
+preflight globally; per-locale skipping covers parsed catalog type mismatches.
 
 Reuses the same translation providers as build_translation_cache.py so
 the CI environment (googletrans pinning, AppImage provider) stays
@@ -58,36 +74,38 @@ DEFAULT_CONTEXT = "Context: Technical UI text for a Proxmox management dashboard
 PLACEHOLDER_RE = re.compile(r"\{[A-Za-z_][A-Za-z0-9_]*\}")
 
 
-def flatten(node: dict, prefix: str = "") -> dict[str, str]:
-    """Depth-first flatten of a nested dict into ``{"a.b.c": "value"}``.
-    Non-string leaves are coerced to str (should not happen in messages
-    catalogs, but keeps the function total)."""
-    out: dict[str, str] = {}
-    for key, value in node.items():
-        path = f"{prefix}{key}" if not prefix else f"{prefix}.{key}"
-        if isinstance(value, dict):
-            out.update(flatten(value, path))
-        elif value is None:
-            out[path] = ""
-        else:
-            out[path] = str(value)
+CatalogPath = tuple[str | int, ...]
+
+
+def flatten(node: object, prefix: CatalogPath = ()) -> dict[CatalogPath, object]:
+    """Keep typed path segments and empty container markers, without coercion."""
+    if isinstance(node, dict):
+        out = {prefix: {}}
+        children = node.items()
+    elif isinstance(node, list):
+        out = {prefix: []}
+        children = enumerate(node)
+    else:
+        return {prefix: node}
+    for key, value in children:
+        out.update(flatten(value, prefix + (key,)))
     return out
 
 
-def unflatten(flat: dict[str, str]) -> dict:
-    """Inverse of ``flatten``: rebuild nested structure from dotted keys."""
-    out: dict = {}
-    for path, value in flat.items():
-        parts = path.split(".")
-        cursor = out
-        for part in parts[:-1]:
-            existing = cursor.get(part)
-            if not isinstance(existing, dict):
-                existing = {}
-                cursor[part] = existing
-            cursor = existing
-        cursor[parts[-1]] = value
-    return out
+def unflatten(flat: dict[CatalogPath, object]) -> object:
+    """Rebuild a tree from typed paths; parents precede children by depth."""
+    nodes = {}
+    for path in sorted(flat, key=len):
+        value = flat[path]
+        nodes[path] = {} if isinstance(value, dict) else [] if isinstance(value, list) else value
+        if path:
+            parent = nodes[path[:-1]]
+            key = path[-1]
+            if isinstance(parent, list):
+                while len(parent) <= key:
+                    parent.append(None)
+            parent[key] = nodes[path]
+    return nodes[()]
 
 
 def protect_placeholders(text: str) -> tuple[str, list[str]]:
@@ -240,11 +258,38 @@ def main() -> int:
     print(f"Provider: {args.provider}", flush=True)
     print(f"Sleep between calls: {args.sleep}s", flush=True)
 
-    total_failures: list[tuple[str, str, str]] = []
+    total_failures: list[tuple[str, CatalogPath, str]] = []
 
+    # Preflight every locale before any provider call or write. Serialized
+    # arrays have no trustworthy index correspondence, even if JSON parses.
+    # Never guess, evaluate Python repr, or discard human text on --refresh.
+    targets = {}
+    skipped = set()
     for lang in languages:
         locale_path = messages_dir / lang / "common.json"
         target_flat = flatten(read_json(locale_path))
+        targets[lang] = target_flat
+        for key, en_value in en_flat.items():
+            if key not in target_flat:
+                continue
+            existing = target_flat[key]
+            if isinstance(en_value, str) and existing is None:
+                continue  # Historical null string leaves are treated as empty.
+            if type(existing) is not type(en_value):
+                pointer = "".join("/" + str(part).replace("~", "~0").replace("/", "~1") for part in key)
+                location = f"JSON Pointer {json.dumps(pointer)}" + (" (root)" if not key else "")
+                print(
+                    f"{locale_path}: {location}: expected {type(en_value).__name__}, "
+                    f"found {type(existing).__name__}; manual reconciliation required. "
+                    "Locale skipped; its catalog will not be written.", file=sys.stderr,
+                )
+                skipped.add(lang)
+
+    for lang in languages:
+        if lang in skipped:
+            continue
+        locale_path = messages_dir / lang / "common.json"
+        target_flat = targets[lang]
 
         # Decide what needs translating. Same rule as
         # build_translation_cache.py: only touch keys whose target
@@ -263,9 +308,19 @@ def main() -> int:
         #      steady-state, not a bug.
         # When someone genuinely wants to redo everything, --refresh
         # is still available (and is destructive by design).
-        missing: list[str] = []
+        # Seed structural nodes and non-text leaves before any checkpoint.
+        # Only strings are sent to a translation provider.
+        original_flat = target_flat.copy()
         for key, en_value in en_flat.items():
-            if not en_value:
+            if not isinstance(en_value, str) or not en_value:
+                target_flat.setdefault(key, en_value)
+            elif key and isinstance(key[-1], int):
+                # Null keeps an untranslated array position addressable while
+                # allowing the runtime English fallback and a later retry.
+                target_flat.setdefault(key, None)
+        missing: list[CatalogPath] = []
+        for key, en_value in en_flat.items():
+            if not isinstance(en_value, str) or not en_value:
                 continue
             existing = target_flat.get(key, "")
             if args.refresh or not existing:
@@ -276,10 +331,12 @@ def main() -> int:
 
         print(f"\n=== {lang}: {len(missing)} keys to translate ===", flush=True)
         if not missing:
-            print(f"  {lang}: nothing to do", flush=True)
+            if target_flat != original_flat:
+                write_json(locale_path, unflatten(target_flat))
+            print(f"  {lang}: nothing to translate", flush=True)
             continue
 
-        failures_for_lang: list[tuple[str, str, str]] = []
+        failures_for_lang: list[tuple[str, CatalogPath, str]] = []
 
         for index, key in enumerate(missing, start=1):
             en_value = en_flat[key]
@@ -336,7 +393,18 @@ def main() -> int:
         # Previously we returned 2, which failed the whole run and
         # discarded 36 out of 38 successful translations because
         # 2 googletrans timeouts hit sv at the start of the burst.
-        return 0
+        if not skipped:
+            return 0
+
+    if skipped:
+        names = ', '.join(dict.fromkeys(lang for lang in languages if lang in skipped))
+        print(
+            f"\nPartial failure: skipped {len(skipped)} locale(s): {names}. "
+            "Valid locales processed; skipped catalogs unchanged. "
+            "Manual reconciliation required; exiting 1.",
+            file=sys.stderr, flush=True,
+        )
+        return 1
 
     print("\ni18n messages generated successfully.", flush=True)
     return 0

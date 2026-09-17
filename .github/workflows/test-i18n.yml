@@ -1,0 +1,45 @@
+name: Offline i18n tests
+
+on:
+  pull_request:
+    paths:
+      - '.github/scripts/**'
+      - '.github/workflows/test-i18n.yml'
+      - '.github/workflows/build-i18n-messages.yml'
+      - 'AppImage/messages/**'
+      - 'AppImage/lib/i18n/**'
+      - 'AppImage/components/terminal-panel.tsx'
+      - 'CONTRIBUTING.md'
+  push:
+    branches: [main, develop]
+    paths:
+      - '.github/scripts/**'
+      - '.github/workflows/test-i18n.yml'
+      - '.github/workflows/build-i18n-messages.yml'
+      - 'AppImage/messages/**'
+      - 'AppImage/lib/i18n/**'
+      - 'AppImage/components/terminal-panel.tsx'
+      - 'CONTRIBUTING.md'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  offline-i18n:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '22.14.0'
+      - name: Run complete offline script test suite
+        env:
+          PYTHONDONTWRITEBYTECODE: '1'
+        run: python3 -m unittest discover -s .github/scripts/tests -v

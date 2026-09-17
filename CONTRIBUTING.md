@@ -818,6 +818,38 @@ Note that the dev server has no Flask backend on the same host by default: the a
 
 ### Testing
 
+#### Offline i18n script tests
+
+From the repository root, run the complete script suite:
+
+```bash
+python3 -m unittest discover -s .github/scripts/tests -v
+```
+
+Prerequisites: Python 3.11+ (standard library only) and Node **22.14+**
+(Node 22 LTS is the CI baseline). Node 20 can still build the Monitor, but
+cannot run this suite's native TypeScript consumer test. The test passes
+`--experimental-strip-types` explicitly and executes the actual pure lookup
+functions extracted from `AppImage/lib/i18n/provider.tsx`, not a reimplementation.
+It does not launch React or require `npm install`, `pip install`, a Proxmox host,
+API keys, or a translation provider. Generator tests use isolated temporary
+catalogs and fake/forbidden providers; repository catalogs are not regenerated.
+
+If Node is not on `PATH`, select a local executable without a global install:
+
+```bash
+NODE_BINARY=/path/to/node-v22.14.0/bin/node \
+  python3 -m unittest discover -s .github/scripts/tests -v
+```
+
+Missing, unusable, or older Node runtimes fail with setup instructions rather
+than silently skipping the consumer assertions. `.github/workflows/test-i18n.yml`
+provisions Python and Node and runs this same command on relevant pull requests
+and main/develop pushes (or manually). It is separate from the translation
+publication workflow and has read-only repository permissions.
+
+#### Monitor checks
+
 - **Python tests** — under `AppImage/scripts/tests/`. Run with `python3 -m unittest discover -s AppImage/scripts/tests`. Add a test file when you add non-trivial backend logic (auth, notifications, background checks).
 - **UI smoke test** — deploy the built AppImage to a test host, restart `proxmenux-monitor.service`, and walk through the affected views in the browser. There is no formal e2e suite yet; a real-host smoke pass is expected for any UI change.
 - **JSON parse** — after editing any i18n catalog, verify it parses: `python3 -c "import json; json.load(open('AppImage/messages/<lang>/common.json'))"`.
