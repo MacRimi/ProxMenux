@@ -707,6 +707,52 @@ class RuntimeCatalogTests(unittest.TestCase):
         self.assertNotIn("System", channel.payload[1])
         self.assertTrue(channel.payload[3]["_quiet_hours_summary"])
 
+    def test_digest_buffer_coalesces_only_identical_recent_events(self):
+        manager = notification_manager.NotificationManager()
+        with tempfile.TemporaryDirectory() as directory:
+            db_path = Path(directory) / "settings.db"
+            conn = sqlite3.connect(db_path)
+            conn.execute(
+                "CREATE TABLE digest_pending ("
+                "id INTEGER PRIMARY KEY, channel TEXT, event_type TEXT, "
+                "event_group TEXT, severity TEXT, ts INTEGER, title TEXT, body TEXT)"
+            )
+            conn.commit()
+            conn.close()
+
+            with mock.patch.object(notification_manager, "DB_PATH", db_path), \
+                    mock.patch.object(notification_manager.time, "time", side_effect=(1000, 1060, 1070, 1301)):
+                manager._buffer_digest_event(
+                    "telegram", "lxc_update_applied", "vm_ct", "INFO",
+                    "pve01: LXC wireguard (101) update completed", "Source: Manual",
+                )
+                # Same completed task from an adjacent collector: do not list it twice.
+                manager._buffer_digest_event(
+                    "telegram", "lxc_update_applied", "vm_ct", "INFO",
+                    "pve01: LXC wireguard (101) update completed", "Source: Manual",
+                )
+                # Different result/body for the same LXC remains visible.
+                manager._buffer_digest_event(
+                    "telegram", "lxc_update_applied", "vm_ct", "INFO",
+                    "pve01: LXC wireguard (101) update completed", "Source: Scheduled",
+                )
+                # The same result is allowed again outside the short window.
+                manager._buffer_digest_event(
+                    "telegram", "lxc_update_applied", "vm_ct", "INFO",
+                    "pve01: LXC wireguard (101) update completed", "Source: Manual",
+                )
+
+            conn = sqlite3.connect(db_path)
+            rows = conn.execute(
+                "SELECT ts, body FROM digest_pending ORDER BY id"
+            ).fetchall()
+            conn.close()
+
+        self.assertEqual(
+            rows,
+            [(1000, "Source: Manual"), (1070, "Source: Scheduled"), (1301, "Source: Manual")],
+        )
+
     def test_visible_templates_use_known_backend_and_frontend_groups(self):
         visible_groups = {
             template.get("group", "other")

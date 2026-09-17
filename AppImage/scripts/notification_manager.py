@@ -1602,6 +1602,10 @@ class NotificationManager:
         'vm_fail', 'ct_fail',
         'system_shutdown', 'system_reboot',
     })
+    # A task completion can be observed twice through adjacent collectors.
+    # Keep the daily digest useful by coalescing only byte-for-byte identical
+    # buffered INFO entries that arrive close together.
+    _DIGEST_DUPLICATE_WINDOW = 300  # seconds
 
     def _should_buffer_for_digest(self, ch_name: str, severity: str,
                                   event_type: str) -> bool:
@@ -1632,12 +1636,29 @@ class NotificationManager:
             conn = sqlite3.connect(str(DB_PATH), timeout=10)
             conn.execute('PRAGMA journal_mode=WAL')
             conn.execute('PRAGMA busy_timeout=5000')
+            # Adjacent collectors can observe the same completed task. Only
+            # coalesce byte-for-byte identical rows, so a different version,
+            # source or result stays visible in the same digest.
+            now = int(time.time())
+            duplicate = conn.execute(
+                'SELECT 1 FROM digest_pending '
+                'WHERE channel = ? AND event_type = ? AND event_group = ? '
+                'AND severity = ? AND title = ? AND body = ? AND ts >= ? '
+                'LIMIT 1',
+                (
+                    ch_name, event_type, event_group, severity, title, body,
+                    now - self._DIGEST_DUPLICATE_WINDOW,
+                ),
+            ).fetchone()
+            if duplicate:
+                conn.close()
+                return
             conn.execute(
                 'INSERT INTO digest_pending '
                 '(channel, event_type, event_group, severity, ts, title, body) '
                 'VALUES (?, ?, ?, ?, ?, ?, ?)',
                 (ch_name, event_type, event_group, severity,
-                 int(time.time()), title, body),
+                 now, title, body),
             )
             conn.commit()
             conn.close()
