@@ -289,6 +289,29 @@ class RuntimeCatalogTests(unittest.TestCase):
         self.assertIn("Vitajte", body)
         self.assertIn("profilovú fotografiu", caption)
 
+    def test_batch_app_updates_render_from_every_runtime_catalog(self):
+        data = {
+            "hostname": "HOST-ŽILINA",
+            "updates": [
+                {"vmid": 100, "app_name": "AdGuard Home", "installed": "1.0", "latest": "1.1"},
+                {"vmid": 115, "app_name": "Redis", "installed": "7.0", "latest": "8.1"},
+            ],
+        }
+        for language in self.RUNTIME_LANGUAGES:
+            rendered = notification_templates.render_template(
+                "app_update_available", data, language=language,
+            )
+            self.assertEqual(
+                rendered["title"],
+                notification_templates.runtime_message(
+                    "appUpdates.batchTitle", language,
+                    hostname="HOST-ŽILINA", count=2,
+                ),
+                language,
+            )
+            self.assertIn("CT 100", rendered["body"], language)
+            self.assertIn("• Redis: 7.0 → 8.1", rendered["body"], language)
+
     def test_ai_disabled_telegram_receives_deterministic_slovak(self):
         class RecordingTelegram:
             def __init__(self):

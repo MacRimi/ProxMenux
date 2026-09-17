@@ -582,20 +582,29 @@ def _format_system_startup(data: Dict[str, Any], language: str = 'en') -> Tuple[
     return title, '\n'.join(parts)
 
 
-def _format_app_update_available(data: Dict[str, Any]) -> Tuple[str, str]:
+def _format_app_update_available(data: Dict[str, Any],
+                                 language: str = 'en') -> Tuple[str, str]:
     """Render one app update or a scheduled multi-app summary."""
-    hostname = str(data.get("hostname") or _get_hostname())
-    updates = data.get("updates")
+    hostname = str(data.get('hostname') or _get_hostname())
+    app_fallback = runtime_message('appUpdates.app', language) or 'app'
+    unknown = runtime_message('appUpdates.unknown', language) or 'unknown'
+    updates = data.get('updates')
     if not isinstance(updates, list) or len(updates) < 2:
-        app_name = str(data.get("app_name") or "app")
-        vmid = data.get("vmid", "")
-        ct_name = str(data.get("ct_name") or f"CT-{vmid}")
-        installed = str(data.get("installed") or "unknown")
-        latest = str(data.get("latest") or "unknown")
+        app_name = str(data.get('app_name') or app_fallback)
+        vmid = data.get('vmid', '')
+        ct_name = str(data.get('ct_name') or f'CT-{vmid}')
+        installed = str(data.get('installed') or unknown)
+        latest = str(data.get('latest') or unknown)
         return (
-            f"{hostname}: {app_name} update available on CT {vmid}",
-            f"{app_name} on CT {vmid} ({ct_name}) has a new version:\n"
-            f"    {installed} → {latest}",
+            runtime_message(
+                'appUpdates.singleTitle', language,
+                hostname=hostname, app_name=app_name, vmid=vmid,
+            ),
+            runtime_message(
+                'appUpdates.singleBody', language,
+                app_name=app_name, vmid=vmid, ct_name=ct_name,
+                installed=installed, latest=latest,
+            ),
         )
 
     clean_updates = []
@@ -607,26 +616,31 @@ def _format_app_update_available(data: Dict[str, Any]) -> Tuple[str, str]:
         except (TypeError, ValueError):
             continue
         clean_updates.append({
-            "vmid": vmid,
-            "app_name": str(item.get("app_name") or "app"),
-            "installed": str(item.get("installed") or "unknown"),
-            "latest": str(item.get("latest") or "unknown"),
+            'vmid': vmid,
+            'app_name': str(item.get('app_name') or app_fallback),
+            'installed': str(item.get('installed') or unknown),
+            'latest': str(item.get('latest') or unknown),
         })
     clean_updates.sort(
         key=lambda item: (item["vmid"], item["app_name"].casefold())
     )
     if not clean_updates:
         return (
-            f"{hostname}: Application updates available",
-            "Application updates are available.",
+            runtime_message('appUpdates.emptyTitle', language, hostname=hostname),
+            runtime_message('appUpdates.emptyBody', language),
         )
 
     count = len(clean_updates)
     container_count = len({item["vmid"] for item in clean_updates})
-    title = f"{hostname}: {count} application updates available"
-    lead = (
-        f"{count} applications in {container_count} LXC "
-        f"container{'s' if container_count != 1 else ''} have a newer version:"
+    title = runtime_message(
+        'appUpdates.batchTitle', language, hostname=hostname, count=count,
+    )
+    lead_key = (
+        'appUpdates.batchLeadOneContainer'
+        if container_count == 1 else 'appUpdates.batchLeadManyContainers'
+    )
+    lead = runtime_message(
+        lead_key, language, count=count, container_count=container_count,
     )
     sections = []
     omitted = 0
@@ -645,7 +659,7 @@ def _format_app_update_available(data: Dict[str, Any]) -> Tuple[str, str]:
             continue
         sections.append("\n".join(section))
     if omitted:
-        sections.append(f"… {omitted} additional application(s)")
+        sections.append(runtime_message('appUpdates.additional', language, count=omitted))
     return title, "\n\n".join([lead, *sections])
 
 
