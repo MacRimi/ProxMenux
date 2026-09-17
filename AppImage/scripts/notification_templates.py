@@ -1831,7 +1831,8 @@ def render_template(event_type: str, data: Dict[str, Any],
             variables[f'{_byte_key}_human'] = _format_bytes_human(data[_byte_key])
 
     # Ensure important_list is never blank (fallback to localized "none")
-    if not variables.get('important_list', '').strip():
+    important_list = str(variables.get('important_list', '')).strip()
+    if not important_list or important_list.casefold() == 'none':
         variables['important_list'] = runtime_message('fallback.none', language)
 
     # Derive the affected object's display name for titles that use it.

@@ -189,6 +189,8 @@ class RuntimeCatalogTests(unittest.TestCase):
         self.assertIn("🛡️ Bezpečnostné aktualizácie: 0", enriched_body)
         self.assertIn("⚙️ Aktualizácie jadra: 0", enriched_body)
         self.assertIn("📋 Dôležité balíky:", enriched_body)
+        self.assertIn("žiadne", enriched_body)
+        self.assertNotIn("\nnone", enriched_body)
 
         for language in self.RUNTIME_LANGUAGES:
             locale_data = {**data, "_notification_language": language}
