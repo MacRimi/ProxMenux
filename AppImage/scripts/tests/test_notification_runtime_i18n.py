@@ -707,7 +707,7 @@ class RuntimeCatalogTests(unittest.TestCase):
         self.assertNotIn("System", channel.payload[1])
         self.assertTrue(channel.payload[3]["_quiet_hours_summary"])
 
-    def test_digest_buffer_coalesces_only_identical_recent_events(self):
+    def test_digest_buffer_coalesces_lxc_results_despite_detail_changes(self):
         manager = notification_manager.NotificationManager()
         with tempfile.TemporaryDirectory() as directory:
             db_path = Path(directory) / "settings.db"
@@ -721,20 +721,25 @@ class RuntimeCatalogTests(unittest.TestCase):
             conn.close()
 
             with mock.patch.object(notification_manager, "DB_PATH", db_path), \
-                    mock.patch.object(notification_manager.time, "time", side_effect=(1000, 1060, 1070, 1301)):
+                    mock.patch.object(notification_manager.time, "time", side_effect=(1000, 1060, 1070, 1080, 1301)):
                 manager._buffer_digest_event(
                     "telegram", "lxc_update_applied", "vm_ct", "INFO",
                     "pve01: LXC wireguard (101) update completed", "Source: Manual",
                 )
-                # Same completed task from an adjacent collector: do not list it twice.
-                manager._buffer_digest_event(
-                    "telegram", "lxc_update_applied", "vm_ct", "INFO",
-                    "pve01: LXC wireguard (101) update completed", "Source: Manual",
-                )
-                # Different result/body for the same LXC remains visible.
+                # An adjacent collector can report the same completion with
+                # a different source or duration. It must not appear twice.
                 manager._buffer_digest_event(
                     "telegram", "lxc_update_applied", "vm_ct", "INFO",
                     "pve01: LXC wireguard (101) update completed", "Source: Scheduled",
+                )
+                # Other event types still require the full message to match.
+                manager._buffer_digest_event(
+                    "telegram", "app_update_available", "applications", "INFO",
+                    "pve01: Update available", "Version: 1.0 → 1.1",
+                )
+                manager._buffer_digest_event(
+                    "telegram", "app_update_available", "applications", "INFO",
+                    "pve01: Update available", "Version: 1.0 → 1.2",
                 )
                 # The same result is allowed again outside the short window.
                 manager._buffer_digest_event(
@@ -750,7 +755,12 @@ class RuntimeCatalogTests(unittest.TestCase):
 
         self.assertEqual(
             rows,
-            [(1000, "Source: Manual"), (1070, "Source: Scheduled"), (1301, "Source: Manual")],
+            [
+                (1000, "Source: Manual"),
+                (1070, "Version: 1.0 → 1.1"),
+                (1080, "Version: 1.0 → 1.2"),
+                (1301, "Source: Manual"),
+            ],
         )
 
     def test_visible_templates_use_known_backend_and_frontend_groups(self):
