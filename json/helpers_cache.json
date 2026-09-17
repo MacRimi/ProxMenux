@@ -5085,6 +5085,42 @@
     "os": "debian"
   },
   {
+    "name": "Dockhand",
+    "slug": "dockhand",
+    "desc": "<p>Dockhand is a modern, efficient Docker management application providing real-time container management, Compose stack orchestration, and multi-environment support. All in a lightweight, secure and privacy-focused package.</p>",
+    "script": "tools/addon/dockhand.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/tools/addon/dockhand.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/tools/addon/dockhand.sh",
+    "type": "addon",
+    "type_id": "88xtxy57q80v38v",
+    "categories": [
+      "scriptcat00003"
+    ],
+    "category_names": [
+      "Containers & Docker"
+    ],
+    "notes": [
+      "This is an addon script intended to be used on top of an existing Docker container.",
+      "Execute within an existing LXC console (Debian / Ubuntu / Alpine supported)",
+      "To update, run the addon script again and select Update, or use: bash <(curl -fsSL https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/tools/addon/dockhand.sh)"
+    ],
+    "warnings": [],
+    "port": 3000,
+    "website": "https://dockhand.pro/",
+    "documentation": "",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/dockhand.webp",
+    "updateable": true,
+    "privileged": false,
+    "has_arm": true,
+    "is_dev": false,
+    "execute_in": [
+      "lxc",
+      "vm"
+    ],
+    "config_path": "",
+    "os": "debian"
+  },
+  {
     "name": "Docmost",
     "slug": "docmost",
     "desc": "Open-source collaborative wiki and documentation software. Create, collaborate, and share knowledge seamlessly with Docmost. Ideal for managing your wiki, knowledge-base, documentation and a lot more.",
@@ -11583,41 +11619,6 @@
     "privileged": false,
     "has_arm": false,
     "is_dev": false,
-    "execute_in": [
-      "lxc"
-    ],
-    "config_path": "",
-    "os": "debian"
-  },
-  {
-    "name": "Logto",
-    "slug": "logto",
-    "desc": "Logto is an open-source identity and access management (IAM) platform for building sign-in, authentication, and authorization. It provides OIDC-based auth, a prebuilt sign-in experience, user and role management, and an Admin Console, backed by PostgreSQL.",
-    "script": "ct/logto.sh",
-    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/logto.sh",
-    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/logto.sh",
-    "type": "lxc",
-    "type_id": "nm9bra8mzye2scg",
-    "categories": [
-      "scriptcat00006"
-    ],
-    "category_names": [
-      "Authentication & Security"
-    ],
-    "notes": [
-      "Open the Admin Console at https://<IP>:3002 and accept the self-signed certificate. The sign-in flow redirects to the Core at https://logto.<IP>.nip.io:3001 (a nip.io hostname that auto-resolves to the container) — open that URL once too and accept its certificate before signing in. Then complete the Welcome flow to create your first admin account."
-    ],
-    "warnings": [
-      "HTTPS with two distinct hostnames is required: the console uses Web Crypto (crypto.subtle, HTTPS-only), and Logto's OIDC needs the Core (logto.<IP>.nip.io:3001) and Console (<IP>:3002) on different hostnames so their session cookies don't collide (a bare IP on two ports causes an 'invalid session' error). If your router blocks nip.io (DNS-rebinding protection), or for a browser-trusted cert, front Logto with your own domain + reverse proxy and set ENDPOINT/ADMIN_ENDPOINT in /opt/logto/.env accordingly."
-    ],
-    "port": 3002,
-    "website": "https://logto.io/",
-    "documentation": "https://docs.logto.io/",
-    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/logto.webp",
-    "updateable": true,
-    "privileged": false,
-    "has_arm": false,
-    "is_dev": true,
     "execute_in": [
       "lxc"
     ],
