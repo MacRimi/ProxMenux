@@ -414,13 +414,13 @@ comment_legacy_ceph_list() {
 
 apt_update_with_repo_fallback() {
 
-  local output status
-  output="$(apt-get update >/dev/null 2>&1 | tee -a "$LOG")"; status=${PIPESTATUS[0]}
-  if [[ $status -eq 0 ]]; then
+  local output
+  # Keep diagnostics and check the pipeline inside the command substitution.
+  if output="$(set -o pipefail; apt-get update 2>&1 | tee -a "$LOG")"; then
     msg_ok2 "$(translate "APT indexes updated for Trixie")"
     return 0
   fi
-  if [[ "$REPO_MODE" == "enterprise" ]] && { echo "$output" | grep -qE '401[[:space:]]+Unauthorized' || echo "$output" | grep -qi 'enterprise\.proxmox\.com'; }; then
+  if [[ "$REPO_MODE" == "enterprise" ]] && { grep -qE '401[[:space:]]+Unauthorized' <<< "$output" || grep -qi 'enterprise\.proxmox\.com' <<< "$output"; }; then
     if [[ "$ASSUME_YES" == "1" ]] || confirm "$(translate "Enterprise repository returned 401 Unauthorized (no valid subscription). Switch to the no-subscription repository and retry?")"; then
 
       disable_enterprise_repo_if_present
@@ -431,7 +431,7 @@ apt_update_with_repo_fallback() {
       REPO_MODE="no-subscription"
       msg_ok2 "$(translate "Repositories switched to no-subscription")"
 
-      if apt-get update >> "$LOG" >/dev/null 2>&1; then
+      if apt-get update >> "$LOG" 2>&1; then
         msg_ok2 "$(translate "APT indexes updated for Trixie (no-subscription)")"
         return 0
       else
@@ -457,7 +457,12 @@ proxmox_repo_candidate_ok() {
 
 
 simulate_would_remove_proxmox_ve() {
-  apt-get -s dist-upgrade >/dev/null 2>&1 | grep -Eq 'Remv[[:space:]]+proxmox-ve|The following packages will be REMOVED:.*proxmox-ve'
+  # Return 0 for removal, 1 for a safe plan, and 2 if simulation/logging fails.
+  local output
+  if ! output="$(set -o pipefail; LC_ALL=C apt-get -s dist-upgrade 2>&1 | tee -a "$LOG")"; then
+    return 2
+  fi
+  grep -Eq 'Remv[[:space:]]+proxmox-ve|The following packages will be REMOVED:.*proxmox-ve' <<< "$output"
 }
 
 
@@ -493,6 +498,11 @@ guard_against_proxmox_ve_removal() {
     echo "ls -l /etc/apt/sources.list.d/*.list /etc/apt/sources.list.d/*.sources"
     exit 1
   else
+    local status=$?
+    if [[ $status -ne 1 ]]; then
+      msg_error "$(translate "Pre-upgrade simulation failed. See log:") $LOG"
+      exit 1
+    fi
     msg_ok "$(translate "Pre-upgrade simulation passed: 'proxmox-ve' will be kept or upgraded safely.")"
   fi
 
