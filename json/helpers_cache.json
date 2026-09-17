@@ -544,7 +544,7 @@
     "updateable": false,
     "privileged": false,
     "has_arm": false,
-    "is_dev": true,
+    "is_dev": false,
     "execute_in": [
       "vm"
     ],
@@ -810,7 +810,7 @@
     "updateable": true,
     "privileged": false,
     "has_arm": false,
-    "is_dev": true,
+    "is_dev": false,
     "execute_in": [
       "vm"
     ],
@@ -1425,18 +1425,18 @@
       "Operating Systems & Appliances"
     ],
     "notes": [
-      "Cloud-Init is enabled by default. Configure your SSH key and credentials in the Proxmox Cloud-Init tab before starting the VM.",
-      "If you use Cloud-init, checkout cloud-init discussion: `https://github.com/community-scripts/ProxmoxVE/discussions/272`"
+      "This boots the Arch installer ISO, which logs in as root by itself. Run `archinstall` or install by hand onto the empty disk, then detach the ISO with `qm set <VMID> --ide2 none`.",
+      "The Arch ISO carries no Cloud-Init and no guest agent. Install `qemu-guest-agent` in the guest for Proxmox to show its IP."
     ],
     "warnings": [],
     "port": 0,
     "website": "https://archlinux.org/",
     "documentation": "https://wiki.archlinux.org/",
-    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/arch-linux.webp",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/archlinux.webp",
     "updateable": false,
     "privileged": false,
     "has_arm": false,
-    "is_dev": false,
+    "is_dev": true,
     "execute_in": [
       "vm"
     ],
@@ -4446,40 +4446,6 @@
       "password": ""
     },
     "os": "debian"
-  },
-  {
-    "name": "Debian 13",
-    "slug": "debian-13-vm",
-    "desc": "Debian 13 (Trixie) as a cloud image. A general-purpose base for anything you would otherwise install by hand.",
-    "script": "vm/debian-13-vm.sh",
-    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/vm/debian-13-vm.sh",
-    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/vm/debian-13-vm.sh",
-    "type": "vm",
-    "type_id": "lte524abgx960bd",
-    "categories": [
-      "scriptcat00002"
-    ],
-    "category_names": [
-      "Operating Systems & Appliances"
-    ],
-    "notes": [
-      "Cloud-Init is enabled by default. Configure your SSH key and credentials in the Proxmox Cloud-Init tab before starting the VM.",
-      "If you use Cloud-init, checkout cloud-init discussion: `https://github.com/community-scripts/ProxmoxVE/discussions/272`"
-    ],
-    "warnings": [],
-    "port": 0,
-    "website": "https://www.debian.org/",
-    "documentation": "https://www.debian.org/doc/",
-    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/debian.webp",
-    "updateable": false,
-    "privileged": false,
-    "has_arm": false,
-    "is_dev": false,
-    "execute_in": [
-      "vm"
-    ],
-    "config_path": "",
-    "os": ""
   },
   {
     "name": "Debian",
