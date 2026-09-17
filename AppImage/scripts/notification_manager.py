@@ -3006,6 +3006,7 @@ class NotificationManager:
     def save_settings(self, settings: Dict[str, str]) -> Dict[str, Any]:
         """Save multiple notification settings at once."""
         try:
+            previous_config = dict(self._config)
             conn = sqlite3.connect(str(DB_PATH), timeout=10)
             conn.execute('PRAGMA journal_mode=WAL')
             conn.execute('PRAGMA busy_timeout=5000')
@@ -3098,6 +3099,38 @@ class NotificationManager:
                             VALUES (?, ?, ?)
                         ''', (marker_key, 'true', now))
                         self._config[f'event_explicit.{event_type}'] = 'true'
+
+            # A digest time can be changed after today's digest has already
+            # been sent.  Retaining digest_last_at in that case silently
+            # makes the newly selected, still-future time wait until tomorrow.
+            # Reset the guard only for a genuine enable/time change to a later
+            # time today; ordinary saves and past times remain rate-limited.
+            now = datetime.now()
+            current_minute = now.hour * 60 + now.minute
+            for ch_type in CHANNEL_TYPES:
+                enabled_key = f'{ch_type}.digest_enabled'
+                time_key = f'{ch_type}.digest_time'
+                last_key = f'{ch_type}.digest_last_at'
+                if self._config.get(enabled_key, 'false') != 'true':
+                    continue
+                changed = (
+                    previous_config.get(enabled_key, 'false') != 'true'
+                    or previous_config.get(time_key, '09:00') != self._config.get(time_key, '09:00')
+                )
+                if not changed:
+                    continue
+                try:
+                    hour, minute = (int(part) for part in self._config.get(time_key, '09:00').split(':', 1))
+                    target_minute = hour * 60 + minute
+                except (ValueError, AttributeError):
+                    continue
+                if not (current_minute < target_minute < 24 * 60):
+                    continue
+                cursor.execute('''
+                    INSERT OR REPLACE INTO user_settings (setting_key, setting_value, updated_at)
+                    VALUES (?, ?, ?)
+                ''', (f'{SETTINGS_PREFIX}{last_key}', '', now.isoformat()))
+                self._config[last_key] = ''
             
             conn.commit()
             conn.close()

@@ -5,6 +5,7 @@ import string
 import sys
 import tempfile
 import unittest
+from datetime import datetime
 from pathlib import Path
 from unittest import mock
 
@@ -474,6 +475,63 @@ class RuntimeCatalogTests(unittest.TestCase):
                 loaded._load_config()
                 self.assertEqual(loaded.get_settings()["config"]["notification_language"], "sk")
                 self.assertEqual(loaded.get_settings()["config"]["ai_language"], "de")
+
+    def test_future_digest_time_change_resets_only_the_digest_guard(self):
+        class FixedDatetime:
+            @classmethod
+            def now(cls):
+                return datetime(2026, 9, 17, 13, 30)
+
+        with tempfile.TemporaryDirectory() as directory:
+            db_path = Path(directory) / "settings.db"
+            conn = sqlite3.connect(db_path)
+            conn.execute("CREATE TABLE user_settings (setting_key TEXT PRIMARY KEY, setting_value TEXT, updated_at TEXT)")
+            conn.commit()
+            conn.close()
+
+            manager = notification_manager.NotificationManager()
+            manager._config = {
+                "telegram.digest_enabled": "true",
+                "telegram.digest_time": "13:20",
+                "telegram.digest_last_at": "2026-09-17T13:20:25",
+            }
+            with mock.patch.object(notification_manager, "DB_PATH", db_path), \
+                    mock.patch.object(notification_manager, "datetime", FixedDatetime):
+                result = manager.save_settings({
+                    "telegram.digest_enabled": "true",
+                    "telegram.digest_time": "13:40",
+                })
+
+            self.assertTrue(result["success"], result)
+            self.assertEqual(manager._config["telegram.digest_last_at"], "")
+            conn = sqlite3.connect(db_path)
+            stored = conn.execute(
+                "SELECT setting_value FROM user_settings WHERE setting_key = ?",
+                ("notification.telegram.digest_last_at",),
+            ).fetchone()
+            conn.close()
+            self.assertEqual(stored[0], "")
+
+        manager = notification_manager.NotificationManager()
+        manager._config = {
+            "telegram.digest_enabled": "true",
+            "telegram.digest_time": "13:40",
+            "telegram.digest_last_at": "2026-09-17T13:20:25",
+        }
+        with tempfile.TemporaryDirectory() as directory:
+            db_path = Path(directory) / "settings.db"
+            conn = sqlite3.connect(db_path)
+            conn.execute("CREATE TABLE user_settings (setting_key TEXT PRIMARY KEY, setting_value TEXT, updated_at TEXT)")
+            conn.commit()
+            conn.close()
+            with mock.patch.object(notification_manager, "DB_PATH", db_path), \
+                    mock.patch.object(notification_manager, "datetime", FixedDatetime):
+                result = manager.save_settings({
+                    "telegram.digest_enabled": "true",
+                    "telegram.digest_time": "13:40",
+                })
+        self.assertTrue(result["success"], result)
+        self.assertEqual(manager._config["telegram.digest_last_at"], "2026-09-17T13:20:25")
 
     def test_ai_language_is_independent_from_runtime_notification_language(self):
         manager = notification_manager.NotificationManager()
