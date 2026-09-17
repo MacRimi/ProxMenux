@@ -73,6 +73,137 @@ def runtime_message(key: str, language: str = 'en', **values: Any) -> str:
         return value
 
 
+def _format_lxc_update_details(data: Dict[str, Any], language: str) -> str:
+    """Render an LXC update outcome from structured data in the selected locale."""
+    update = data.get('lxc_update')
+    if not isinstance(update, dict):
+        return str(data.get('details') or '')
+
+    def _mapping(value: Any) -> Dict[str, Any]:
+        return value if isinstance(value, dict) else {}
+
+    def _items(value: Any) -> List[str]:
+        return [str(item) for item in value if str(item)] if isinstance(value, list) else []
+
+    source = 'scheduled' if update.get('source') == 'scheduled' else 'manual'
+    labels = _items(update.get('labels')) or _items(update.get('targets'))
+    lines = [
+        runtime_message('lxcUpdate.sourceLabel', language)
+        + ': ' + runtime_message(f'lxcUpdate.source.{source}', language),
+        runtime_message('lxcUpdate.targets', language) + ': ' + ', '.join(labels),
+    ]
+
+    targets = _items(update.get('targets'))
+    before = _mapping(update.get('before'))
+    after = _mapping(update.get('after'))
+    if 'os' in targets:
+        before_count = before.get('os_pending')
+        after_count = after.get('os_pending')
+        if isinstance(before_count, int) and isinstance(after_count, int):
+            lines.append(runtime_message(
+                'lxcUpdate.osPending', language, before=before_count, after=after_count,
+            ))
+        else:
+            lines.append(runtime_message('lxcUpdate.osUnverified', language))
+
+    before_apps = _mapping(before.get('apps'))
+    after_apps = _mapping(after.get('apps'))
+    app_ids = {
+        target.split(':', 1)[1]
+        for target in targets if target.startswith('app:')
+    }
+    if 'apps' in targets:
+        app_ids.update(str(app_id) for app_id in before_apps)
+        app_ids.update(str(app_id) for app_id in after_apps)
+    app_lines = []
+    for app_id in sorted(app_ids):
+        old = _mapping(before_apps.get(app_id))
+        new = _mapping(after_apps.get(app_id))
+        old_version = old.get('installed_version')
+        new_version = new.get('installed_version')
+        if old_version and new_version and old_version != new_version:
+            app_lines.append(
+                f"{new.get('name') or old.get('name') or app_id}: "
+                f'{old_version} → {new_version}'
+            )
+    if app_lines:
+        lines.append(runtime_message(
+            'lxcUpdate.applications', language, items='; '.join(app_lines[:8]),
+        ))
+    elif app_ids:
+        lines.append(runtime_message('lxcUpdate.applicationsUnverified', language))
+
+    docker_requested = any(target.startswith('docker-') for target in targets)
+    before_docker = _mapping(before.get('docker_inventory'))
+    after_docker = _mapping(after.get('docker_inventory'))
+    if 'docker-engine' in targets:
+        old_engine = before_docker.get('engine_version')
+        new_engine = after_docker.get('engine_version')
+        if old_engine and new_engine and old_engine != new_engine:
+            lines.append(runtime_message(
+                'lxcUpdate.dockerEngineChange', language, before=old_engine, after=new_engine,
+            ))
+        elif new_engine:
+            lines.append(runtime_message(
+                'lxcUpdate.dockerEngineVerified', language, version=new_engine,
+            ))
+        else:
+            lines.append(runtime_message('lxcUpdate.dockerEngineUnverified', language))
+    if docker_requested and any(target != 'docker-engine' for target in targets):
+        before_pending = before_docker.get('update_count')
+        after_pending = after_docker.get('update_count')
+        if isinstance(before_pending, int) and isinstance(after_pending, int):
+            lines.append(runtime_message(
+                'lxcUpdate.dockerImagesPending', language,
+                before=before_pending, after=after_pending,
+            ))
+        after_by_ref = {
+            str(item.get('reference')): item
+            for item in after_docker.get('images') or []
+            if isinstance(item, dict) and item.get('reference')
+        }
+        changed_images = []
+        for old_image in before_docker.get('images') or []:
+            if not isinstance(old_image, dict):
+                continue
+            reference = str(old_image.get('reference') or '')
+            new_image = _mapping(after_by_ref.get(reference))
+            if reference and old_image.get('local_digest') != new_image.get('local_digest'):
+                changed_images.append(reference)
+        if changed_images:
+            lines.append(runtime_message(
+                'lxcUpdate.dockerImagesChanged', language,
+                images=', '.join(changed_images[:8]),
+            ))
+
+    deferred = _items(update.get('deferred_targets'))
+    if deferred:
+        lines.append(runtime_message(
+            'lxcUpdate.deferredTargets', language, targets=', '.join(deferred),
+        ))
+    reason = str(update.get('reason') or '').strip()
+    if reason:
+        lines.append(runtime_message('lxcUpdate.reason', language, reason=reason))
+    reboot_required = update.get('reboot_required')
+    if reboot_required is not None:
+        value = runtime_message(
+            'lxcUpdate.yes' if reboot_required else 'lxcUpdate.no', language,
+        )
+        lines.append(runtime_message(
+            'lxcUpdate.restartRequired', language, value=value,
+        ))
+    if update.get('verification_pending'):
+        lines.append(runtime_message('lxcUpdate.verificationPending', language))
+    for error in _items(update.get('verification_errors'))[:4]:
+        lines.append(runtime_message(
+            'lxcUpdate.verificationWarning', language, error=error,
+        ))
+    lines.append(runtime_message(
+        'lxcUpdate.duration', language, duration=update.get('duration') or '',
+    ))
+    return '\n'.join(lines)
+
+
 # ─── vzdump message parser ───────────────────────────────────────
 
 def _parse_vzdump_message(message: str) -> Optional[Dict[str, Any]]:
@@ -1670,6 +1801,13 @@ def render_template(event_type: str, data: Dict[str, Any],
         'log_file': '',
     }
     variables.update(data)
+
+    if event_type == 'lxc_update_applied' and isinstance(data.get('lxc_update'), dict):
+        status = str(data['lxc_update'].get('status') or '')
+        localized_status = runtime_message(f'lxcUpdate.status.{status}', language)
+        if localized_status:
+            variables['result'] = localized_status
+        variables['details'] = _format_lxc_update_details(data, language)
 
     # Humanise raw-byte fields so templates can render '35.3 GiB' instead
     # of '37952020480'. Producers keep emitting raw ints (needed by APIs

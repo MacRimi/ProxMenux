@@ -120,6 +120,40 @@ class RuntimeCatalogTests(unittest.TestCase):
                     if name not in {"entity_suffix", "title_or_default"}:
                         self.assertIn(str(values[name]), combined, f"{event_type}:{name}")
 
+    def test_lxc_update_result_and_details_render_in_slovak(self):
+        data = {
+            "hostname": "homelab",
+            "ct_name": "iventoy",
+            "vmid": "105",
+            "result": "succeeded",
+            "details": "Source: Manual",
+            "lxc_update": {
+                "status": "success",
+                "source": "manual",
+                "targets": ["app:iventoy"],
+                "labels": ["iVentoy"],
+                "duration": "16s",
+                "before": {
+                    "apps": {"iventoy": {"name": "iVentoy", "installed_version": "1.0.42"}},
+                },
+                "after": {
+                    "apps": {"iventoy": {"name": "iVentoy", "installed_version": "1.0.43"}},
+                },
+                "verification_pending": False,
+                "verification_errors": [],
+                "reboot_required": False,
+            },
+        }
+        rendered = notification_templates.render_template("lxc_update_applied", data, language="sk")
+        self.assertEqual(rendered["title"], "homelab: LXC iventoy (105) aktualizácia úspešne dokončená")
+        self.assertIn("Zdroj: Manuálne", rendered["body"])
+        self.assertIn("Ciele: iVentoy", rendered["body"])
+        self.assertIn("Aplikácie: iVentoy: 1.0.42 → 1.0.43", rendered["body"])
+        self.assertIn("Vyžaduje sa reštart: nie", rendered["body"])
+        self.assertIn("Trvanie: 16s", rendered["body"])
+        self.assertNotIn("Source:", rendered["body"])
+        self.assertNotIn("succeeded", rendered["title"])
+
     def test_missing_slovak_key_falls_back_to_english(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
