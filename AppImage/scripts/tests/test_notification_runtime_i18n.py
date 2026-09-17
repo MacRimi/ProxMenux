@@ -221,6 +221,47 @@ class RuntimeCatalogTests(unittest.TestCase):
         self.assertIn("📦 Kontajner repopulse-labs-test (CT 210) má 1 aktualizácií Docker:", enriched_body)
         self.assertIn("🐳 • Docker Engine: 29.8.0 → 29.8.1", enriched_body)
 
+    def test_app_and_proxmox_update_body_icons_cover_versions(self):
+        app_data = {
+            "hostname": "HomeLAB_1", "app_name": "Uptime Kuma", "vmid": "108",
+            "ct_name": "uptime-kuma", "installed": "2.5.4", "latest": "2.5.5",
+            "severity": "INFO", "_notification_language": "sk",
+        }
+        app = notification_templates.render_template(
+            "app_update_available", app_data, language="sk",
+        )
+        _title, app_body = notification_templates.enrich_with_emojis(
+            "app_update_available", app["title"], app["body"], app_data,
+        )
+        self.assertIn("📦 Aplikácia Uptime Kuma na CT 108 (uptime-kuma) má novú verziu:", app_body)
+        self.assertIn("🔄 2.5.4 → 2.5.5", app_body)
+
+        pve_data = {
+            "hostname": "HomeLAB_1", "current_version": "9.2.18",
+            "new_version": "9.2.20", "details": "pve-manager 9.2.18 → 9.2.20",
+            "severity": "INFO", "_notification_language": "sk",
+        }
+        pve = notification_templates.render_template("pve_update", pve_data, language="sk")
+        _title, pve_body = notification_templates.enrich_with_emojis(
+            "pve_update", pve["title"], pve["body"], pve_data,
+        )
+        self.assertIn("📦 Aktuálna: 9.2.18", pve_body)
+        self.assertIn("🆕 Nová: 9.2.20", pve_body)
+        self.assertIn("🔧 pve-manager 9.2.18 → 9.2.20", pve_body)
+
+        for language in self.RUNTIME_LANGUAGES:
+            locale_data = {**pve_data, "_notification_language": language}
+            locale = notification_templates.render_template(
+                "pve_update", locale_data, language=language,
+            )
+            _title, locale_body = notification_templates.enrich_with_emojis(
+                "pve_update", locale["title"], locale["body"], locale_data,
+            )
+            label = notification_templates._localized_template_labels(
+                "pve_update", language,
+            )["new_version"][0]
+            self.assertIn(f"🆕 {label}: 9.2.20", locale_body, language)
+
     def test_missing_slovak_key_falls_back_to_english(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)

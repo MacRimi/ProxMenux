@@ -2221,6 +2221,7 @@ FIELD_EMOJI = {
     'kernel_count': '\u2699\uFE0F',
     'important_list': '\U0001F4CB',  # clipboard
     'current_version': '\U0001F4E6',  # package \u2014 installed version
+    'new_version': '\U0001F195',      # NEW button \u2014 offered version
     'latest_version': '\U0001F195',   # NEW button \u2014 upstream version
     'kernel':       '\u2699\uFE0F',    # gear \u2014 running kernel
     'menu_label':   '\U0001F4D6',      # open book \u2014 menu navigation hint
@@ -2394,11 +2395,40 @@ def enrich_with_emojis(event_type: str, title: str, body: str,
     # Build enriched body: prepend field emojis to recognizable lines
     lines = preprocessed.split('\n')
     enriched_lines = []
+    app_update_is_single = (
+        not isinstance(data.get('updates'), list) or len(data['updates']) < 2
+    )
+    app_update_lead_added = False
+    app_update_version = None
+    if event_type == 'app_update_available' and app_update_is_single:
+        app_update_version = f"{data.get('installed', '')} → {data.get('latest', '')}".strip()
     
     for line in lines:
         stripped = line.strip()
         if not stripped:
             enriched_lines.append(line)
+            continue
+
+        # App-update notifications deliberately use a compact, prose-like
+        # template rather than field labels. Keep their two structured lines
+        # as readable as other update notifications without depending on a
+        # translated phrase to recognize them.
+        if event_type == 'app_update_available' and app_update_is_single:
+            if not app_update_lead_added:
+                enriched_lines.append(f'📦 {stripped}')
+                app_update_lead_added = True
+                continue
+            if app_update_version and stripped == app_update_version:
+                enriched_lines.append(f'🔄 {stripped}')
+                continue
+
+        # The Proxmox VE detector emits the manager version as a concise,
+        # structured technical detail outside the localized template fields.
+        # Mark only that known detail; arbitrary detector text remains intact.
+        if event_type == 'pve_update' and re.match(
+            r'^pve-manager\s+\S+\s+(?:→|->)\s+\S+$', stripped,
+        ):
+            enriched_lines.append(f'🔧 {stripped}')
             continue
         
         # First, check health-specific patterns
