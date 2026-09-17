@@ -1531,6 +1531,7 @@ def _health_collector_loop():
                             'count': str(len(degraded)),
                             'title': title,
                             'reason': body,
+                            'health_degraded': {'categories': degraded},
                             '_journal_context': journal_context,
                         },
                         source='health_monitor',

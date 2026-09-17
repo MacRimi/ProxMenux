@@ -663,6 +663,75 @@ def _format_app_update_available(data: Dict[str, Any],
     return title, "\n\n".join([lead, *sections])
 
 
+_CPU_SUSTAINED_REASON = re.compile(
+    r'^CPU >(?P<threshold>[0-9.]+)% sustained for (?P<duration>\d+)s$'
+)
+
+
+def _format_health_degraded(data: Dict[str, Any],
+                            language: str = 'en') -> Tuple[str, str]:
+    """Render Monitor-generated health degradations in the chosen locale."""
+    payload = data.get('health_degraded')
+    if not isinstance(payload, dict):
+        return str(data.get('title') or ''), str(data.get('reason') or '')
+
+    categories = payload.get('categories')
+    if not isinstance(categories, list) or not categories:
+        return str(data.get('title') or ''), str(data.get('reason') or '')
+
+    def category_label(item: Dict[str, Any]) -> str:
+        category = str(item.get('key') or '')
+        return (
+            runtime_message(f'healthDegraded.categories.{category}', language)
+            or str(item.get('category') or category)
+        )
+
+    def severity_label(item: Dict[str, Any]) -> str:
+        severity = str(item.get('status') or data.get('severity') or 'WARNING').lower()
+        return (
+            runtime_message(f'healthDegraded.severity.{severity}', language)
+            or str(item.get('status') or data.get('severity') or 'WARNING')
+        )
+
+    def localized_reason(item: Dict[str, Any]) -> str:
+        reason = str(item.get('reason') or '')
+        if str(item.get('key') or '') == 'cpu':
+            match = _CPU_SUSTAINED_REASON.fullmatch(reason)
+            if match:
+                return runtime_message(
+                    'healthDegraded.reasons.cpuSustained', language,
+                    threshold=match.group('threshold'), duration=match.group('duration'),
+                ) or reason
+        return reason
+
+    hostname = str(data.get('hostname') or _get_hostname())
+    if len(categories) == 1:
+        item = categories[0] if isinstance(categories[0], dict) else {}
+        title = runtime_message(
+            'healthDegraded.singleTitle', language,
+            hostname=hostname, severity=severity_label(item), category=category_label(item),
+        )
+        entity = str(item.get('entity') or '').strip()
+        if entity:
+            title = f'{title} — {entity}'
+        return title, localized_reason(item)
+
+    title = runtime_message(
+        'healthDegraded.multipleTitle', language,
+        hostname=hostname, count=len(categories),
+    )
+    lines = []
+    for item in categories:
+        if not isinstance(item, dict):
+            continue
+        lines.append(runtime_message(
+            'healthDegraded.multipleLine', language,
+            severity=severity_label(item), category=category_label(item),
+            reason=localized_reason(item),
+        ))
+    return title, '\n'.join(line for line in lines if line)
+
+
 # ─── Severity Icons ──────────────────────────────────────────────
 
 SEVERITY_ICONS = {
@@ -735,6 +804,7 @@ TEMPLATES = {
         'label': 'Health check degraded',
         'group': 'health',
         'default_enabled': True,
+        'formatter': '_format_health_degraded',
     },
     
     # ── VM / CT events ──

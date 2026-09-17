@@ -294,6 +294,38 @@ class RuntimeCatalogTests(unittest.TestCase):
         self.assertIn("Vitajte", body)
         self.assertIn("profilovú fotografiu", caption)
 
+    def test_monitor_generated_cpu_health_degradation_is_slovak(self):
+        data = {
+            "hostname": "HomeLAB_2",
+            "severity": "CRITICAL",
+            "title": "HomeLAB_2: Health CRITICAL - CPU Usage & Temperature",
+            "reason": "CPU >95.0% sustained for 296s",
+            "health_degraded": {
+                "categories": [{
+                    "key": "cpu",
+                    "status": "CRITICAL",
+                    "reason": "CPU >95.0% sustained for 296s",
+                    "entity": "",
+                }],
+            },
+        }
+        rendered = notification_templates.render_template(
+            "health_degraded", data, language="sk",
+        )
+        self.assertEqual(
+            rendered["title"],
+            "HomeLAB_2: Kritický stav – Využitie CPU a teplota",
+        )
+        self.assertEqual(rendered["body"], "CPU je nad 95.0 % už 296 s.")
+        self.assertNotIn("Health CRITICAL", rendered["title"])
+        self.assertNotIn("sustained", rendered["body"])
+
+        enriched_title, _body = notification_templates.enrich_with_emojis(
+            "health_degraded", rendered["title"], rendered["body"],
+            {**data, "_notification_language": "sk"},
+        )
+        self.assertTrue(enriched_title.startswith("⚠️ "))
+
     def test_batch_app_updates_render_from_every_runtime_catalog(self):
         data = {
             "hostname": "HOST-ŽILINA",
