@@ -41,7 +41,8 @@ if BASE_DIR not in sys.path:
 from notification_channels import create_channel, CHANNEL_TYPES
 from notification_templates import (
     render_template, format_with_ai, format_with_ai_full, enrich_with_emojis, TEMPLATES,
-    EVENT_GROUPS, get_event_types_by_group, get_default_enabled_events, runtime_message,
+    EVENT_GROUPS, CATEGORY_EMOJI, EVENT_EMOJI, get_event_types_by_group,
+    get_default_enabled_events, runtime_message,
 )
 from notification_events import (
     JournalWatcher, TaskWatcher, PollingCollector, NotificationEvent,
@@ -1699,6 +1700,9 @@ class NotificationManager:
             'digest.title', language, hostname=host,
             timestamp=now.strftime('%Y-%m-%d %H:%M'),
         )
+        rich_format = self._config.get(f'{ch_name}.rich_format', 'false') == 'true'
+        if rich_format:
+            summary_title = f'📋 {summary_title}'
 
         try:
             conn = sqlite3.connect(str(DB_PATH), timeout=10)
@@ -1738,7 +1742,7 @@ class NotificationManager:
             )
             return
 
-        summary_body = self._compose_digest_body(rows)
+        summary_body = self._compose_digest_body(rows, use_icons=rich_format)
 
         result: dict = {'success': False, 'error': ''}
         try:
@@ -1782,7 +1786,7 @@ class NotificationManager:
             print(f"[NotificationManager] digest cleanup failed for "
                   f"{ch_name}: {e}")
 
-    def _compose_digest_body(self, rows: list) -> str:
+    def _compose_digest_body(self, rows: list, use_icons: bool = False) -> str:
         """Render a grouped summary body. rows is a list of
         (id, event_type, event_group, ts, title, body) tuples ordered
         by timestamp ASC.
@@ -1797,11 +1801,17 @@ class NotificationManager:
         lines = [runtime_message('digest.lead', language, count=len(rows))]
         for group, items in groups.items():
             group_label = runtime_message(f'digest.groups.{group}', language) or group.title()
-            lines.append(f"{group_label}: {len(items)}")
+            group_icon = CATEGORY_EMOJI.get(group, '') if use_icons else ''
+            group_prefix = f'{group_icon} ' if group_icon else ''
+            lines.append(f"{group_prefix}{group_label}: {len(items)}")
             for ts, ev_type, title in items[:8]:
                 hhmm = datetime.fromtimestamp(ts).strftime('%H:%M')
                 short_title = title.split(': ', 1)[-1] if ': ' in title else title
-                lines.append(f"  • {hhmm}  {short_title}")
+                event_icon = (
+                    EVENT_EMOJI.get(ev_type) or CATEGORY_EMOJI.get(group, '')
+                ) if use_icons else ''
+                event_prefix = f'{event_icon} ' if event_icon else ''
+                lines.append(f"  • {event_prefix}{hhmm}  {short_title}")
             if len(items) > 8:
                 lines.append(runtime_message('digest.more', language, count=len(items) - 8))
             lines.append('')
@@ -1939,7 +1949,8 @@ class NotificationManager:
         summary_title = runtime_message(
             'digest.quietTitle', language, hostname=host, count=len(rows),
         )
-        summary_body = self._compose_digest_body(rows)
+        use_icons = self._config.get(f'{ch_name}.rich_format', 'false') == 'true'
+        summary_body = self._compose_digest_body(rows, use_icons=use_icons)
 
         result: dict = {'success': False, 'error': ''}
         try:
