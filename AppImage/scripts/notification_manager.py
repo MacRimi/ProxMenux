@@ -211,6 +211,40 @@ def _resolve_display_hostname(config: Optional[Dict[str, str]] = None) -> str:
     return socket.gethostname()
 
 
+def resolve_notification_hostname(value: Any = None,
+                                  config: Optional[Dict[str, str]] = None) -> str:
+    """Return the configured display name for a hostname of this local node.
+
+    Some event producers pass ``socket.gethostname()`` explicitly while
+    others let the notification layer resolve it.  A configured display name
+    must have the same result in both cases.  Keep a hostname that is not an
+    alias of this machine intact: it can identify a remote node forwarded to
+    this monitor.
+    """
+    configured_name = (config or {}).get('hostname', '')
+    configured_name = str(configured_name or '').strip()
+    candidate = str(value or '').strip()
+
+    if not configured_name:
+        return candidate or _resolve_display_hostname(config)
+    if not candidate:
+        return configured_name
+
+    local_aliases = set()
+    for resolver in (socket.gethostname, socket.getfqdn):
+        try:
+            hostname = str(resolver() or '').strip()
+        except Exception:
+            hostname = ''
+        if hostname:
+            local_aliases.add(hostname.casefold())
+            local_aliases.add(hostname.split('.', 1)[0].casefold())
+
+    if candidate.casefold() in local_aliases:
+        return configured_name
+    return candidate
+
+
 # ─── Encryption for Sensitive Data ───────────────────────────────
 #
 # Audit Tier 4 #24 flagged the previous implementation as trivially reversible:
@@ -1223,6 +1257,13 @@ class NotificationManager:
     
     def _dispatch_event(self, event: NotificationEvent):
         """Shared dispatch pipeline: cooldown -> rate limit -> render -> send."""
+        # Event sources may supply the local kernel hostname themselves.
+        # Normalize it here so every delivery path honours the configured
+        # notification display name, including newly added event producers.
+        event.data['hostname'] = resolve_notification_hostname(
+            event.data.get('hostname'), self._config,
+        )
+
         # Suppress VM/CT start/stop during active backups (second layer of defense).
         # The primary filter is in TaskWatcher, but timing gaps can let events
         # slip through. This catch-all filter checks at dispatch time.
@@ -2376,6 +2417,9 @@ class NotificationManager:
                 }
         
         runtime_data = dict(data or {})
+        runtime_data['hostname'] = resolve_notification_hostname(
+            runtime_data.get('hostname'), self._config,
+        )
         runtime_data.setdefault('_notification_language', self._notification_language())
 
         # Render template if available

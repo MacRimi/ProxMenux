@@ -93,7 +93,7 @@ from flask_security_routes import security_bp  # noqa: E402
 from flask_notification_routes import notification_bp  # noqa: E402
 from flask_oci_routes import oci_bp  # noqa: E402
 from flask_audit_routes import audit_bp  # noqa: E402
-from notification_manager import notification_manager  # noqa: E402
+from notification_manager import notification_manager, resolve_notification_hostname  # noqa: E402
 import post_install_versions  # noqa: E402  — Sprint 12A: detect post-install function updates
 from jwt_middleware import require_auth, require_auth_or_ticket, require_admin_scope  # noqa: E402
 import auth_manager  # noqa: E402
@@ -1464,6 +1464,11 @@ def _health_collector_loop():
                 if not hostname:
                     import socket as _sock
                     hostname = _sock.gethostname()
+                # The health collector builds its title before the event
+                # reaches NotificationManager, so normalize here as well.
+                hostname = resolve_notification_hostname(
+                    hostname, notification_manager._config,
+                )
                 
                 # Capture journal context for AI enrichment
                 # Extract category keys and reasons for keyword matching

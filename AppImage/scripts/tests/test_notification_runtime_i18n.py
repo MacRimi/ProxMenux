@@ -253,6 +253,49 @@ class RuntimeCatalogTests(unittest.TestCase):
         self.assertIn("účtovníctvo", channel.payload[1])
         self.assertNotIn("is now running", channel.payload[1])
 
+    def test_display_name_replaces_only_the_local_runtime_hostname(self):
+        config = {"hostname": "HomeLAB_2"}
+        with mock.patch.object(notification_manager.socket, "gethostname", return_value="homelab-2"), \
+                mock.patch.object(notification_manager.socket, "getfqdn", return_value="homelab-2.home.lab"):
+            self.assertEqual(
+                notification_manager.resolve_notification_hostname("homelab-2", config),
+                "HomeLAB_2",
+            )
+            self.assertEqual(
+                notification_manager.resolve_notification_hostname("remote-pve", config),
+                "remote-pve",
+            )
+
+        class RecordingChannel:
+            def __init__(self):
+                self.payload = None
+
+            def send(self, title, body, severity, data=None):
+                self.payload = (title, body, severity, data)
+                return {"success": True}
+
+        manager = notification_manager.NotificationManager()
+        channel = RecordingChannel()
+        manager._channels = {"telegram": channel}
+        manager._config = {
+            "notification_language": "sk",
+            "hostname": "HomeLAB_2",
+            "ai_enabled": "false",
+            "telegram.rich_format": "false",
+        }
+        with mock.patch.object(notification_manager.socket, "gethostname", return_value="homelab-2"), \
+                mock.patch.object(notification_manager.socket, "getfqdn", return_value="homelab-2.home.lab"), \
+                mock.patch.object(manager, "_record_history"):
+            result = manager.send_notification(
+                "docker_stack_update_available", "INFO", "", "",
+                data={"hostname": "homelab-2", "vmid": "210", "ct_name": "repopulse", "count": "1", "details": "Docker Engine"},
+                skip_toggle_check=True,
+            )
+
+        self.assertTrue(result["success"])
+        self.assertIn("HomeLAB_2: Na CT 210 sú dostupné aktualizácie Docker", channel.payload[0])
+        self.assertNotIn("homelab-2:", channel.payload[0])
+
     def test_email_channel_chrome_uses_the_runtime_catalog(self):
         channel = object.__new__(notification_channels.EmailChannel)
         channel.subject_prefix = "[ProxMenux]"
