@@ -41,7 +41,7 @@ if BASE_DIR not in sys.path:
 from notification_channels import create_channel, CHANNEL_TYPES
 from notification_templates import (
     render_template, format_with_ai, format_with_ai_full, enrich_with_emojis, TEMPLATES,
-    EVENT_GROUPS, get_event_types_by_group, get_default_enabled_events
+    EVENT_GROUPS, get_event_types_by_group, get_default_enabled_events, runtime_message,
 )
 from notification_events import (
     JournalWatcher, TaskWatcher, PollingCollector, NotificationEvent,
@@ -61,6 +61,17 @@ except ImportError:
 DB_PATH = Path('/usr/local/share/proxmenux/health_monitor.db')
 SETTINGS_PREFIX = 'notification.'
 ENCRYPTION_KEY_FILE = Path('/usr/local/share/proxmenux/.notification_key')
+RUNTIME_NOTIFICATION_LANGUAGES = ('en', 'de', 'es', 'fr', 'it', 'pt', 'sk', 'sv')
+ALLOWED_AI_LANGUAGES = (
+    'en', 'sk', 'es', 'fr', 'de', 'it', 'pt', 'ru', 'sv', 'no',
+    'ja', 'zh', 'ko', 'pl', 'nl', 'tr', 'ar',
+)
+_AI_BYPASS_EVENTS = frozenset({'backup_complete', 'backup_fail'})
+
+
+def _should_bypass_ai(event_type: str) -> bool:
+    """Keep complete backup inventories deterministic on every send path."""
+    return event_type in _AI_BYPASS_EVENTS
 
 # Keys that contain sensitive data and should be encrypted
 SENSITIVE_KEYS = {
@@ -934,6 +945,21 @@ class NotificationManager:
             or self._config.get('ai_model', '')
         )
 
+    def _notification_language(self) -> str:
+        """Return a bundled runtime locale, with a safe English fallback.
+
+        Older installations used the AI language for every notification.  Keep
+        that value as a migration fallback only; notification text is now
+        independent of whether AI enhancement is enabled.
+        """
+        selected = str(self._config.get('notification_language', '')).strip().lower()
+        if selected in RUNTIME_NOTIFICATION_LANGUAGES:
+            return selected
+        legacy = str(self._config.get('ai_language', '')).strip().lower()
+        if legacy in RUNTIME_NOTIFICATION_LANGUAGES:
+            return legacy
+        return 'en'
+
     def _build_ai_config(self) -> Dict[str, Any]:
         """Build the shared AI config passed to notification rewriters."""
         ai_provider = self._config.get('ai_provider', 'groq')
@@ -1232,9 +1258,13 @@ class NotificationManager:
 
             severity = event.severity
             event.data['severity'] = severity
-            rendered = render_template(event.event_type, event.data)
+            notification_language = self._notification_language()
+            rendered = render_template(
+                event.event_type, event.data, language=notification_language,
+            )
 
             enriched_data = dict(event.data)
+            enriched_data['_notification_language'] = notification_language
             enriched_data['_rendered_fields'] = rendered.get('fields', [])
             enriched_data['_body_html'] = rendered.get('body_html', '')
             enriched_data['_event_type'] = event.event_type
@@ -1380,7 +1410,7 @@ class NotificationManager:
                     # neither be trusted to avoid repeating all guest rows nor to
                     # preserve every value, so these two events bypass AI entirely.
                     ai_result = None
-                    if event_type not in {'backup_complete', 'backup_fail'}:
+                    if not _should_bypass_ai(event_type):
                         enriched_context = enrich_context_for_ai(
                             title=ch_title,
                             body=ch_body,
@@ -1623,8 +1653,10 @@ class NotificationManager:
         (issue #233).
         """
         host = _resolve_display_hostname(self._config)
-        summary_title = (
-            f"{host}: 24h summary ({now.strftime('%Y-%m-%d %H:%M')})"
+        language = self._notification_language()
+        summary_title = runtime_message(
+            'digest.title', language, hostname=host,
+            timestamp=now.strftime('%Y-%m-%d %H:%M'),
         )
 
         try:
@@ -1642,7 +1674,7 @@ class NotificationManager:
             print(f"[NotificationManager] digest read failed for {ch_name}: {e}")
             self._record_history(
                 'digest', ch_name, summary_title,
-                f'digest read failed: {e}', 'INFO',
+                runtime_message('digest.readFailed', language, error=e), 'INFO',
                 False, str(e), 'digest_scheduler',
             )
             self._stats['total_errors'] += 1
@@ -1660,7 +1692,7 @@ class NotificationManager:
             # just nothing INFO non-exempt to summarize.
             self._record_history(
                 'digest', ch_name, summary_title,
-                'No INFO events buffered for this digest window.',
+                runtime_message('digest.empty', language),
                 'INFO', True, '', 'digest_scheduler',
             )
             return
@@ -1670,7 +1702,8 @@ class NotificationManager:
         result: dict = {'success': False, 'error': ''}
         try:
             result = channel.send(summary_title, summary_body, severity='INFO',
-                                  data={'_digest': True, '_count': len(rows)}) or result
+                                  data={'_digest': True, '_count': len(rows),
+                                        '_notification_language': language}) or result
         except Exception as e:
             print(f"[NotificationManager] digest send failed for "
                   f"{ch_name}: {e}")
@@ -1719,20 +1752,19 @@ class NotificationManager:
             label = group or 'other'
             groups.setdefault(label, []).append((ts, ev_type, title))
 
-        lines = [f"{len(rows)} INFO events grouped by category:\n"]
+        language = self._notification_language()
+        lines = [runtime_message('digest.lead', language, count=len(rows))]
         for group, items in groups.items():
-            lines.append(f"{group.title()}: {len(items)}")
+            group_label = runtime_message(f'digest.groups.{group}', language) or group.title()
+            lines.append(f"{group_label}: {len(items)}")
             for ts, ev_type, title in items[:8]:
                 hhmm = datetime.fromtimestamp(ts).strftime('%H:%M')
                 short_title = title.split(': ', 1)[-1] if ': ' in title else title
                 lines.append(f"  • {hhmm}  {short_title}")
             if len(items) > 8:
-                lines.append(f"  • … and {len(items) - 8} more")
+                lines.append(runtime_message('digest.more', language, count=len(items) - 8))
             lines.append('')
-        lines.append(
-            '(Critical/Warning events arrived at the time they happened, '
-            'not in this digest.)'
-        )
+        lines.append(runtime_message('digest.footer', language))
         return '\n'.join(lines).rstrip() + '\n'
 
     # ─── Quiet Hours buffer + flush ────────────────────────────
@@ -1862,8 +1894,9 @@ class NotificationManager:
             return
 
         host = _resolve_display_hostname(self._config)
-        summary_title = (
-            f"{host}: {len(rows)} events buffered during Quiet Hours"
+        language = self._notification_language()
+        summary_title = runtime_message(
+            'digest.quietTitle', language, hostname=host, count=len(rows),
         )
         summary_body = self._compose_digest_body(rows)
 
@@ -1871,7 +1904,8 @@ class NotificationManager:
         try:
             result = channel.send(
                 summary_title, summary_body, severity='INFO',
-                data={'_quiet_hours_summary': True, '_count': len(rows)},
+                data={'_quiet_hours_summary': True, '_count': len(rows),
+                      '_notification_language': language},
             ) or result
         except Exception as e:
             print(f"[NotificationManager] quiet send failed for "
@@ -2341,12 +2375,20 @@ class NotificationManager:
                     'skipped': True,
                 }
         
+        runtime_data = dict(data or {})
+        runtime_data.setdefault('_notification_language', self._notification_language())
+
         # Render template if available
         if event_type in TEMPLATES and not message:
-            rendered = render_template(event_type, data or {})
+            rendered = render_template(
+                event_type, runtime_data,
+                language=runtime_data['_notification_language'],
+            )
             title = title or rendered['title']
             message = rendered['body']
             severity = severity or rendered['severity']
+
+        data = runtime_data
         
         # AI config for enhancement
         ai_config = self._build_ai_config()
@@ -2369,13 +2411,16 @@ class NotificationManager:
                 
                 # Pass channel_type so AI knows whether to append original (email only)
                 channel_ai_config = {**ai_config, 'channel_type': ch_name}
-                ai_result = format_with_ai_full(
-                    title, message, severity, channel_ai_config,
-                    detail_level=detail_level,
-                    use_emojis=use_rich_format
-                )
-                ch_title = ai_result.get('title', title)
-                ch_message = ai_result.get('body', message)
+                if _should_bypass_ai(event_type):
+                    ch_title, ch_message = title, message
+                else:
+                    ai_result = format_with_ai_full(
+                        title, message, severity, channel_ai_config,
+                        detail_level=detail_level,
+                        use_emojis=use_rich_format
+                    )
+                    ch_title = ai_result.get('title', title)
+                    ch_message = ai_result.get('body', message)
                 
                 result = channel.send(ch_title, ch_message, severity, data)
                 results[ch_name] = result
@@ -2407,6 +2452,32 @@ class NotificationManager:
         """Send a raw message without template (for custom scripts)."""
         return self.send_notification(
             'custom', severity, title, message, source=source
+        )
+
+    def _build_test_message(self, use_rich_format: bool, ai_enabled: bool,
+                            ai_info: str) -> tuple:
+        """Build the channel test payload in the selected notification language."""
+        language = self._notification_language()
+        icon_key = 'test.iconsEnabled' if use_rich_format else 'test.iconsDisabled'
+        ai_key = 'test.aiEnabled' if ai_enabled else 'test.aiDisabled'
+        icon_status = runtime_message(icon_key, language)
+        ai_status = runtime_message(ai_key, language, info=ai_info)
+        if use_rich_format:
+            icon_status = f'✅ {icon_status}'
+            ai_status = f'✅ {ai_status}' if ai_enabled else f'❌ {ai_status}'
+        body = '\n\n'.join([
+            runtime_message('test.welcome', language),
+            runtime_message('test.verify', language),
+            '\n'.join([
+                runtime_message('test.configuration', language),
+                icon_status,
+                ai_status,
+            ]),
+            runtime_message('test.alerts', language),
+        ])
+        return (
+            runtime_message('test.title', language), body,
+            runtime_message('test.photoCaption', language),
         )
     
     def test_channel(self, channel_name: str = 'all') -> Dict[str, Any]:
@@ -2453,7 +2524,6 @@ class NotificationManager:
         
         # ProxMenux logo for welcome message
         logo_url = 'https://proxmenux.com/telegram.png'
-        logo_caption = 'You can use this image as the profile photo for your notification bot.'
         
         for ch_name, channel in targets.items():
             try:
@@ -2464,25 +2534,8 @@ class NotificationManager:
                 rich_key = f'{ch_name}.rich_format'
                 use_rich_format = self._config.get(rich_key, 'false') == 'true'
                 
-                # Build status indicators for icons and AI, adapted to channel format
-                if use_rich_format:
-                    icon_status  = '✅ Icons: enabled'
-                    ai_status    = f'✅ AI: enabled ({ai_info})' if ai_enabled else '❌ AI: disabled'
-                else:
-                    icon_status  = 'Icons: disabled'
-                    ai_status    = f'AI: enabled ({ai_info})' if ai_enabled else 'AI: disabled'
-                
-                # Base test message — shows current channel config
-                # NOTE: narrative lines are intentionally unlabeled so the AI
-                # does not prepend "Message:" or other spurious field labels.
-                base_title = 'ProxMenux Test'
-                base_message = (
-                    'Welcome to ProxMenux Monitor!\n\n'
-                    'This is a test message to verify your notification channel is working correctly.\n\n'
-                    'Channel configuration:\n'
-                    f'{icon_status}\n'
-                    f'{ai_status}\n\n'
-                    'You will receive alerts about system events, health status changes, and security incidents.'
+                base_title, base_message, logo_caption = self._build_test_message(
+                    use_rich_format, ai_enabled, ai_info,
                 )
                 
                 # Apply AI enhancement (translates to configured language)
@@ -2497,7 +2550,11 @@ class NotificationManager:
                 enhanced_message = ai_result.get('body', base_message)
                 
                 # Send message
-                send_result = channel.send(enhanced_title, enhanced_message, 'INFO')
+                send_result = channel.send(
+                    enhanced_title, enhanced_message, 'INFO',
+                    data={'_notification_language': self._notification_language(),
+                          '_event_type': 'test', '_group': 'other'},
+                )
                 success = send_result.get('success', False)
                 error = send_result.get('error', '')
                 
@@ -2870,6 +2927,7 @@ class NotificationManager:
             'ai_api_keys': ai_api_keys,
             'ai_models': ai_models,
             'ai_model': self._active_ai_model(current_provider),
+            'notification_language': self._notification_language(),
             'ai_language': self._config.get('ai_language', 'en'),
             'ai_ollama_url': self._config.get('ai_ollama_url', 'http://localhost:11434'),
             'ai_openai_base_url': self._config.get('ai_openai_base_url', ''),
@@ -2949,6 +3007,11 @@ class NotificationManager:
                 if short_key == 'ai_language':
                     if str(value) not in _ALLOWED_AI_LANGUAGES:
                         raise ValueError(f"Invalid ai_language: must be one of {_ALLOWED_AI_LANGUAGES}")
+                if short_key == 'notification_language':
+                    if str(value) not in RUNTIME_NOTIFICATION_LANGUAGES:
+                        raise ValueError(
+                            f"Invalid notification_language: must be one of {RUNTIME_NOTIFICATION_LANGUAGES}"
+                        )
 
                 # Encrypt sensitive values before storing. Skip if the value is
                 # already in either encrypted form — `encrypt_sensitive_value`

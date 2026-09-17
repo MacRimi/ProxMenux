@@ -29,10 +29,12 @@ def _placeholders(value):
 
 
 class RuntimeCatalogTests(unittest.TestCase):
+    RUNTIME_LANGUAGES = ("en", "de", "es", "fr", "it", "pt", "sk", "sv")
+
     @classmethod
     def setUpClass(cls):
         cls.catalogs = {}
-        for language in ("en", "sk"):
+        for language in cls.RUNTIME_LANGUAGES:
             path = APPIMAGE_DIR / "messages" / language / "common.json"
             cls.catalogs[language] = json.loads(path.read_text(encoding="utf-8"))["runtime"]["notifications"]
 
@@ -65,10 +67,11 @@ class RuntimeCatalogTests(unittest.TestCase):
             return result
 
         en = flatten(self.catalogs["en"])
-        sk = flatten(self.catalogs["sk"])
-        self.assertEqual(set(sk), set(en))
-        for key in en:
-            self.assertEqual(_placeholders(sk[key]), _placeholders(en[key]), key)
+        for language, catalog in self.catalogs.items():
+            translated = flatten(catalog)
+            self.assertEqual(set(translated), set(en), language)
+            for key in en:
+                self.assertEqual(_placeholders(translated[key]), _placeholders(en[key]), f"{language}:{key}")
 
     def test_notification_language_ui_keys_exist_in_both_catalogs(self):
         required = {
@@ -76,7 +79,7 @@ class RuntimeCatalogTests(unittest.TestCase):
             "selectNotificationLanguage",
             "notificationLanguageHint",
         }
-        for language in ("en", "sk"):
+        for language in self.RUNTIME_LANGUAGES:
             path = APPIMAGE_DIR / "messages" / language / "common.json"
             common = json.loads(path.read_text(encoding="utf-8"))
             ui = common["settings"]["notifications"]["ui"]
@@ -231,7 +234,7 @@ class RuntimeCatalogTests(unittest.TestCase):
         )
         self.assertIn("Systémové zdroje", html)
         self.assertIn("UPOZORNENIE", html)
-        self.assertIn("Hostiteľ:", html)
+        self.assertIn("Server:", html)
         self.assertIn("Aktuálna hodnota", html)
         self.assertNotIn(">Details<", html)
         self.assertNotIn("System Resources Report", html)
@@ -281,16 +284,16 @@ class RuntimeCatalogTests(unittest.TestCase):
         self.assertEqual(manager._notification_language(), "sk")
         self.assertEqual(manager._build_ai_config()["ai_language"], "de")
 
-    def test_legacy_non_runtime_ai_language_roundtrips_as_english_runtime(self):
+    def test_legacy_runtime_capable_ai_language_is_preserved(self):
         manager = notification_manager.NotificationManager()
         manager._config = {"ai_language": "de"}
-        self.assertEqual(manager._notification_language(), "en")
-        self.assertEqual(manager.get_settings()["config"]["notification_language"], "en")
+        self.assertEqual(manager._notification_language(), "de")
+        self.assertEqual(manager.get_settings()["config"]["notification_language"], "de")
 
         manager._config = {"notification_language": "invalid", "ai_language": "sk"}
         self.assertEqual(manager._notification_language(), "sk")
         manager._config = {"notification_language": "invalid", "ai_language": "de"}
-        self.assertEqual(manager._notification_language(), "en")
+        self.assertEqual(manager._notification_language(), "de")
 
         with tempfile.TemporaryDirectory() as directory:
             db_path = Path(directory) / "settings.db"
@@ -420,7 +423,7 @@ class RuntimeCatalogTests(unittest.TestCase):
         self.assertEqual(visible_groups - backend_groups, set())
         self.assertEqual(visible_groups - frontend_groups, set())
         self.assertEqual(frontend_groups, backend_groups)
-        for language in ("en", "sk"):
+        for language in self.RUNTIME_LANGUAGES:
             catalog = json.loads(
                 (APPIMAGE_DIR / "messages" / language / "common.json").read_text(encoding="utf-8")
             )
@@ -432,12 +435,12 @@ class RuntimeCatalogTests(unittest.TestCase):
 
     def test_build_bundles_runtime_catalogs(self):
         build = (SCRIPTS_DIR / "build_appimage.sh").read_text(encoding="utf-8")
-        self.assertIn('messages/en/common.json', build)
-        self.assertIn('messages/sk/common.json', build)
+        for language in self.RUNTIME_LANGUAGES:
+            self.assertIn(language, build)
         self.assertIn('$APP_DIR/usr/share/proxmenux/messages', build)
 
     def test_missing_event_type_names_exist_in_both_ui_catalogs(self):
-        for language in ("en", "sk"):
+        for language in self.RUNTIME_LANGUAGES:
             path = APPIMAGE_DIR / "messages" / language / "common.json"
             event_types = json.loads(path.read_text(encoding="utf-8"))["settings"]["notifications"]["eventTypes"]
             self.assertIn("lxc_update_applied", event_types)

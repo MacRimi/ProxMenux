@@ -202,12 +202,19 @@ const AI_PROVIDERS = [
 
 const NOTIFICATION_LANGUAGES = [
   { value: "en", label: "English" },
+  { value: "de", label: "Deutsch" },
+  { value: "es", label: "Español" },
+  { value: "fr", label: "Français" },
+  { value: "it", label: "Italiano" },
+  { value: "pt", label: "Português" },
   { value: "sk", label: "Slovenčina" },
+  { value: "sv", label: "Svenska" },
 ]
 
 function normalizeNotificationLanguage(notificationLanguage?: string, legacyAiLanguage?: string): string {
-  if (notificationLanguage === "en" || notificationLanguage === "sk") return notificationLanguage
-  if (legacyAiLanguage === "en" || legacyAiLanguage === "sk") return legacyAiLanguage
+  const runtimeLanguages = new Set(NOTIFICATION_LANGUAGES.map(language => language.value))
+  if (notificationLanguage && runtimeLanguages.has(notificationLanguage)) return notificationLanguage
+  if (legacyAiLanguage && runtimeLanguages.has(legacyAiLanguage)) return legacyAiLanguage
   return "en"
 }
 

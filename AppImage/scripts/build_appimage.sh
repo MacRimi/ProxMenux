@@ -164,9 +164,12 @@ cp "$SCRIPT_DIR/ai_context_enrichment.py" "$APP_DIR/usr/bin/" 2>/dev/null || ech
 cp "$SCRIPT_DIR/startup_grace.py" "$APP_DIR/usr/bin/" 2>/dev/null || echo "⚠️  startup_grace.py not found"
 cp "$SCRIPT_DIR/flask_notification_routes.py" "$APP_DIR/usr/bin/" 2>/dev/null || echo "⚠️  flask_notification_routes.py not found"
 # Backend notification rendering reuses the canonical Monitor catalogs.
-mkdir -p "$APP_DIR/usr/share/proxmenux/messages/en" "$APP_DIR/usr/share/proxmenux/messages/sk"
-cp "$APPIMAGE_ROOT/messages/en/common.json" "$APP_DIR/usr/share/proxmenux/messages/en/common.json"
-cp "$APPIMAGE_ROOT/messages/sk/common.json" "$APP_DIR/usr/share/proxmenux/messages/sk/common.json"
+# Keep every supported locale in the bundle so the runtime selector and its
+# fallback behavior exactly match the Monitor UI.
+for locale in en de es fr it pt sk sv; do
+    mkdir -p "$APP_DIR/usr/share/proxmenux/messages/$locale"
+    cp "$APPIMAGE_ROOT/messages/$locale/common.json" "$APP_DIR/usr/share/proxmenux/messages/$locale/common.json"
+done
 cp "$SCRIPT_DIR/oci_manager.py" "$APP_DIR/usr/bin/" 2>/dev/null || echo "⚠️  oci_manager.py not found"
 cp "$SCRIPT_DIR/flask_oci_routes.py" "$APP_DIR/usr/bin/" 2>/dev/null || echo "⚠️  flask_oci_routes.py not found"
 cp "$SCRIPT_DIR/flask_audit_routes.py" "$APP_DIR/usr/bin/" 2>/dev/null || echo "⚠️  flask_audit_routes.py not found"
