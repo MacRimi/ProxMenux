@@ -2785,8 +2785,7 @@ def _update_chain(ctx):
     inherits the age of that picture.
 
     Whether each repository can still be reached is not tested: finding
-    out means refreshing the indexes, and an assessment that only reads
-    does not do that.
+    out means refreshing the indexes, which this check does not do.
     """
     # pkgcache.bin is rebuilt from files already on disk, so its date
     # says nothing about contacting a repository. These three do, in
@@ -3392,7 +3391,8 @@ def _boot_loader(ctx):
     evidence += ("\nEach partition is an EFI system partition Proxmox keeps in "
                  "step so the host survives losing any one boot disk. The "
                  "kernel each would start is read from the tool's own report; "
-                 "no partition is mounted and no boot is attempted.")
+                 "proxmox-boot-tool status can temporarily mount EFI system partitions; "
+                 "no boot is attempted.")
 
     affected = []
     for message in problems:

@@ -1,8 +1,9 @@
 """Check registry and evaluation engine for Audit & Report.
 
 A check declares an identifier, an area and the severity its failure
-carries, and returns the outcome of one evaluation. Checks never modify
-the host: an assessment reads, it does not act.
+carries, and returns the outcome of one evaluation. Assessments inspect
+host settings and health. They can write reports and logs; boot status
+checks can temporarily mount EFI system partitions.
 
 Identifiers are ``<area>.<slug>`` and are frozen once published. Rewording
 a title never changes the identifier, because the accepted-risk register
@@ -185,7 +186,7 @@ class AuditContext:
         return self._cache[key]
 
     def run(self, cmd: list[str], timeout: int = 10, allowed_codes=(0,)) -> tuple[int, str]:
-        """Run a read-only command, returning exit code and output."""
+        """Run an inspection command, returning exit code and output."""
         key = "cmd:" + json.dumps(cmd)
         self.source(key)
         if key in self._cache:
