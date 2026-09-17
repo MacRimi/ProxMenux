@@ -154,6 +154,70 @@ class RuntimeCatalogTests(unittest.TestCase):
         self.assertNotIn("Source:", rendered["body"])
         self.assertNotIn("succeeded", rendered["title"])
 
+        _title, enriched_body = notification_templates.enrich_with_emojis(
+            "lxc_update_applied", rendered["title"], rendered["body"],
+            {**data, "_notification_language": "sk", "severity": "INFO"},
+        )
+        self.assertIn("🧭 Zdroj: Manuálne", enriched_body)
+        self.assertIn("🎯 Ciele: iVentoy", enriched_body)
+        self.assertIn("🧩 Aplikácie: iVentoy: 1.0.42 → 1.0.43", enriched_body)
+        self.assertIn("🔄 Vyžaduje sa reštart: nie", enriched_body)
+        self.assertIn("⏱️ Trvanie: 16s", enriched_body)
+
+        for language in self.RUNTIME_LANGUAGES:
+            rendered_locale = notification_templates.render_template(
+                "lxc_update_applied", data, language=language,
+            )
+            _title, body_locale = notification_templates.enrich_with_emojis(
+                "lxc_update_applied", rendered_locale["title"], rendered_locale["body"],
+                {**data, "_notification_language": language, "severity": "INFO"},
+            )
+            self.assertIn("🧭", body_locale, language)
+            self.assertIn("⏱️", body_locale, language)
+
+    def test_update_summary_body_icons_follow_the_selected_language(self):
+        data = {
+            "hostname": "pve01", "total_count": "2", "security_count": "0",
+            "pve_count": "1", "kernel_count": "0", "important_list": "none",
+            "severity": "INFO", "_notification_language": "sk",
+        }
+        rendered = notification_templates.render_template("update_summary", data, language="sk")
+        _title, enriched_body = notification_templates.enrich_with_emojis(
+            "update_summary", rendered["title"], rendered["body"], data,
+        )
+        self.assertIn("📦 Aktualizácie spolu: 2", enriched_body)
+        self.assertIn("🛡️ Bezpečnostné aktualizácie: 0", enriched_body)
+        self.assertIn("⚙️ Aktualizácie jadra: 0", enriched_body)
+        self.assertIn("📋 Dôležité balíky:", enriched_body)
+
+        for language in self.RUNTIME_LANGUAGES:
+            locale_data = {**data, "_notification_language": language}
+            rendered_locale = notification_templates.render_template(
+                "update_summary", locale_data, language=language,
+            )
+            _title, body_locale = notification_templates.enrich_with_emojis(
+                "update_summary", rendered_locale["title"], rendered_locale["body"], locale_data,
+            )
+            total_label = notification_templates._localized_template_labels(
+                "update_summary", language,
+            )["total_count"][0]
+            self.assertIn(f"📦 {total_label}: 2", body_locale, language)
+
+    def test_docker_update_body_icons_preserve_localized_container_label(self):
+        data = {
+            "hostname": "pve01", "vmid": "210", "ct_name": "repopulse-labs-test",
+            "count": "1", "details": "• Docker Engine: 29.8.0 → 29.8.1",
+            "severity": "INFO", "_notification_language": "sk",
+        }
+        rendered = notification_templates.render_template(
+            "docker_stack_update_available", data, language="sk",
+        )
+        _title, enriched_body = notification_templates.enrich_with_emojis(
+            "docker_stack_update_available", rendered["title"], rendered["body"], data,
+        )
+        self.assertIn("📦 Kontajner repopulse-labs-test (CT 210) má 1 aktualizácií Docker:", enriched_body)
+        self.assertIn("🐳 • Docker Engine: 29.8.0 → 29.8.1", enriched_body)
+
     def test_missing_slovak_key_falls_back_to_english(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)

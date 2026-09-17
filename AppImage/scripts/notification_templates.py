@@ -2111,6 +2111,7 @@ FIELD_EMOJI = {
     'hostname':     '\U0001F4BB',   # laptop
     'vmid':         '\U0001F194',   # ID button
     'vmname':       '\U0001F3F7\uFE0F',  # label
+    'ct_name':      '\U0001F4E6',   # package / container
     'device':       '\U0001F4BD',   # disk
     'mount':        '\U0001F4C2',   # open folder
     'source_ip':    '\U0001F310',   # globe
@@ -2139,6 +2140,82 @@ FIELD_EMOJI = {
     'kernel':       '\u2699\uFE0F',    # gear \u2014 running kernel
     'menu_label':   '\U0001F4D6',      # open book \u2014 menu navigation hint
 }
+
+
+_TEMPLATE_FIELD_RE = re.compile(r'\{([a-zA-Z_][a-zA-Z0-9_]*)[^}]*\}')
+
+
+def _localized_template_labels(event_type: str, language: str) -> Dict[str, List[str]]:
+    """Return the visible labels paired with template fields in one locale.
+
+    The old emoji pass compared rendered English words such as ``Duration``
+    and ``Total updates``. That necessarily stops matching after a template
+    is translated. The template itself still knows which field each label
+    describes, so derive the visible wording from that localized template.
+    """
+    requested = (language or 'en').split('-', 1)[0].lower()
+    key = f'templates.{event_type}.body'
+    # Use the raw catalog entry rather than runtime_message(): the latter
+    # deliberately formats unknown placeholders away, while this helper needs
+    # to inspect those placeholders to associate each label with its field.
+    body = (
+        _catalog_value(_load_runtime_catalog(requested), key)
+        or _catalog_value(_load_runtime_catalog('en'), key)
+    )
+    if not body:
+        body = TEMPLATES.get(event_type, {}).get('body', '')
+
+    labels: Dict[str, List[str]] = {}
+    lines = body.splitlines()
+    for index, line in enumerate(lines):
+        matches = list(_TEMPLATE_FIELD_RE.finditer(line))
+        for match in matches:
+            label = line[:match.start()].strip().rstrip(':').strip()
+            if label:
+                labels.setdefault(match.group(1), []).append(label)
+
+        # A heading on its own line (for example "Important packages:")
+        # labels the variable rendered on the following line.
+        if line.strip().endswith(':') and index + 1 < len(lines):
+            next_matches = list(_TEMPLATE_FIELD_RE.finditer(lines[index + 1]))
+            if len(next_matches) == 1:
+                label = line.strip().rstrip(':').strip()
+                if label:
+                    labels.setdefault(next_matches[0].group(1), []).append(label)
+    return labels
+
+
+def _lxc_update_label_icons(language: str) -> Dict[str, str]:
+    """Return localized LXC-update detail prefixes with stable icons."""
+    values = {
+        'before': '0', 'after': '0', 'items': 'item', 'targets': 'target',
+        'reason': 'reason', 'value': 'value', 'error': 'error', 'duration': '0s',
+    }
+    definitions = (
+        ('lxcUpdate.sourceLabel', '🧭'),
+        ('lxcUpdate.targets', '🎯'),
+        ('lxcUpdate.osPending', '📦'),
+        ('lxcUpdate.osUnverified', '📦'),
+        ('lxcUpdate.applications', '🧩'),
+        ('lxcUpdate.applicationsUnverified', '🧩'),
+        ('lxcUpdate.dockerEngineChange', '🐳'),
+        ('lxcUpdate.dockerEngineVerified', '🐳'),
+        ('lxcUpdate.dockerEngineUnverified', '🐳'),
+        ('lxcUpdate.dockerImagesPending', '🐳'),
+        ('lxcUpdate.dockerImagesChanged', '🐳'),
+        ('lxcUpdate.deferredTargets', '⏳'),
+        ('lxcUpdate.reason', '📝'),
+        ('lxcUpdate.restartRequired', '🔄'),
+        ('lxcUpdate.verificationPending', '⏳'),
+        ('lxcUpdate.verificationWarning', '⚠️'),
+        ('lxcUpdate.duration', '⏱️'),
+    )
+    result = {}
+    for key, icon in definitions:
+        rendered = runtime_message(key, language, **values).strip()
+        if rendered:
+            result[rendered.split(':', 1)[0].strip()] = icon
+    return result
 
 
 def enrich_with_emojis(event_type: str, title: str, body: str,
@@ -2201,6 +2278,13 @@ def enrich_with_emojis(event_type: str, title: str, body: str,
     preprocessed = re.sub(r'^\n+', '', preprocessed)
     preprocessed = preprocessed.strip()
     
+    language = str(data.get('_notification_language') or 'en')
+    localized_labels = _localized_template_labels(event_type, language)
+    lxc_update_labels = (
+        _lxc_update_label_icons(language)
+        if event_type == 'lxc_update_applied' else {}
+    )
+
     # ── Extended emoji mappings for health/disk messages ──
     HEALTH_EMOJI_MAP = {
         # Disk patterns
@@ -2246,6 +2330,30 @@ def enrich_with_emojis(event_type: str, title: str, body: str,
         
         if health_enriched:
             continue
+
+        # LXC update outcomes are assembled from structured details rather
+        # than one static template line. Their translated labels come from
+        # the runtime catalog, so keep the mapping semantic rather than
+        # comparing an English translation.
+        matched_lxc_label = next(
+            (label for label in lxc_update_labels
+             if stripped.lower().startswith(label.lower())),
+            None,
+        )
+        if matched_lxc_label:
+            icon = lxc_update_labels[matched_lxc_label]
+            if not stripped.startswith(icon):
+                enriched_lines.append(f'{icon} {stripped}')
+            else:
+                enriched_lines.append(stripped)
+            continue
+
+        # Docker's engine inventory is generated by the detector, not the
+        # translated template. "Docker Engine" is its product name and stays
+        # stable across locales, so it is safe to decorate directly.
+        if event_type == 'docker_stack_update_available' and stripped.startswith('• Docker Engine:'):
+            enriched_lines.append(f'🐳 {stripped}')
+            continue
         
         # Try to match "FieldName: value" patterns
         enriched = False
@@ -2270,6 +2378,7 @@ def enrich_with_emojis(event_type: str, title: str, body: str,
             }
             if field_key in _LABEL_MAP:
                 label_variants.append(_LABEL_MAP[field_key])
+            label_variants.extend(localized_labels.get(field_key, []))
             
             for label in label_variants:
                 if stripped.lower().startswith(label.lower() + ':'):
