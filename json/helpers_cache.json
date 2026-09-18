@@ -579,7 +579,7 @@
     "updateable": true,
     "privileged": false,
     "has_arm": false,
-    "is_dev": true,
+    "is_dev": false,
     "execute_in": [
       "vm"
     ],
@@ -4737,6 +4737,41 @@
       "password": ""
     },
     "os": "devuan"
+  },
+  {
+    "name": "DietPi",
+    "slug": "dietpi",
+    "desc": "DietPi is a lightweight Debian-based OS with a curated software catalogue (dietpi-software) and simple configuration tools. The script creates a Debian LXC and converts it with the official dietpi-installer.",
+    "script": "ct/dietpi.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/dietpi.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/dietpi.sh",
+    "type": "lxc",
+    "type_id": "nm9bra8mzye2scg",
+    "categories": [],
+    "category_names": [],
+    "notes": [
+      "Restart the container once after creation; DietPi's interactive first run setup starts at the next login.",
+      "SSH server, locale, software picks and more can be preconfigured in /boot/dietpi.txt before that restart.",
+      "A root password set in the advanced settings is applied to root and the dietpi user at that restart. Without one, both get the password dietpi."
+    ],
+    "warnings": [],
+    "port": 0,
+    "website": "https://dietpi.com/",
+    "documentation": "https://dietpi.com/docs/",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/dietpi.webp",
+    "updateable": true,
+    "privileged": false,
+    "has_arm": false,
+    "is_dev": true,
+    "execute_in": [
+      "lxc"
+    ],
+    "config_path": "",
+    "default_credentials": {
+      "username": "root",
+      "password": "dietpi"
+    },
+    "os": "debian"
   },
   {
     "name": "Directus",
@@ -11555,6 +11590,44 @@
     "os": "debian"
   },
   {
+    "name": "LocalAI",
+    "slug": "localai",
+    "desc": "LocalAI is a drop-in replacement for the OpenAI API that runs entirely on your own hardware. One binary serves text generation, image generation, speech-to-text and text-to-speech behind OpenAI-compatible endpoints, backed by a model gallery and pluggable inference backends. Heavier than llama.cpp, but multi-modal and self-managing.",
+    "script": "ct/localai.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/localai.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/localai.sh",
+    "type": "lxc",
+    "type_id": "nm9bra8mzye2scg",
+    "categories": [
+      "scriptcat00020"
+    ],
+    "category_names": [
+      "AI / Coding & Dev-Tools"
+    ],
+    "notes": [
+      "No models are installed by default. Use the gallery in the web UI to pull one, or drop GGUF files into /opt/localai_data/models. Inference backends are fetched on first use and can be several GB each, which is what the 30 GB default disk is for.",
+      "GPU passthrough is offered during creation and driver libraries inside the container are matched to the host driver version automatically. Without a GPU everything still works on the CPU, just slowly.",
+      "Models, backends and the auth database live in /opt/localai_data and configuration in /opt/localai.env, both outside the application directory, so updates never touch them. A mount point on /opt/localai_data is worth considering rather than growing the root disk.",
+      "User accounts need a database. Upstream ships the release binary without the CGO auth tag, so the built-in SQLite store is unavailable and PostgreSQL is installed alongside LocalAI when the option is enabled. Leaving it off keeps the container to a single service."
+    ],
+    "warnings": [
+      "The API is protected from the moment it starts. With user accounts off, a static API key is generated and saved to ~/localai.creds in the container; clients send it as 'Authorization: Bearer <key>' or an 'x-api-key' header, and it grants full admin access. With user accounts on, register in the web UI immediately after install - the first account created becomes the admin."
+    ],
+    "port": 8080,
+    "website": "https://localai.io/",
+    "documentation": "https://localai.io/docs/",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/localai.webp",
+    "updateable": true,
+    "privileged": false,
+    "has_arm": false,
+    "is_dev": true,
+    "execute_in": [
+      "lxc"
+    ],
+    "config_path": "",
+    "os": "debian"
+  },
+  {
     "name": "Logseq",
     "slug": "logseq",
     "desc": "Logseq is a privacy-first, open-source knowledge base and outliner for organizing notes, tasks and connected thoughts with Markdown and a local-first graph. This deployment builds and serves the self-hosted web version behind Nginx.",
@@ -13752,6 +13825,43 @@
     "os": "debian"
   },
   {
+    "name": "NextDNS",
+    "slug": "nextdns",
+    "desc": "NextDNS is a DNS-over-HTTPS (DoH) client and resolver that blocks ads, trackers and malware using cloud-managed profiles. This script installs a minimal Debian LXC with the official NextDNS CLI from the NextDNS apt repository, prompts for your profile ID, and configures router mode so DNS is served on TCP/UDP port 53.",
+    "script": "ct/nextdns.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/nextdns.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/nextdns.sh",
+    "type": "lxc",
+    "type_id": "nm9bra8mzye2scg",
+    "categories": [
+      "scriptcat00005"
+    ],
+    "category_names": [
+      "Adblock & DNS"
+    ],
+    "notes": [
+      "During install you will be asked for your NextDNS profile ID (or pass var_nextdns_profile). The script runs: nextdns install -profile <id> -report-client-info -setup-router",
+      "Create or copy your profile ID from https://my.nextdns.io before running the script.",
+      "After install, NextDNS listens on TCP/UDP port 53. Point DHCP clients at the container IP:53, or set the container as upstream DNS on your router. There is no local web UI (profiles are managed at my.nextdns.io).",
+      "Router mode (-setup-router) makes this LXC the DNS server for your network.",
+      "Updates use the official NextDNS apt repository (repo.nextdns.io). Run the container update script or apt upgrade inside the LXC."
+    ],
+    "warnings": [],
+    "port": 0,
+    "website": "https://nextdns.io/",
+    "documentation": "https://github.com/nextdns/nextdns/wiki",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/nextdns.webp",
+    "updateable": true,
+    "privileged": false,
+    "has_arm": false,
+    "is_dev": true,
+    "execute_in": [
+      "lxc"
+    ],
+    "config_path": "",
+    "os": "debian"
+  },
+  {
     "name": "Nexterm",
     "slug": "nexterm",
     "desc": "Nexterm is an open-source server management software for SSH, VNC & RDP. It bundles a web interface, file management, monitoring, and team collaboration with two-factor authentication, OIDC SSO, and encrypted credential storage.",
@@ -15225,6 +15335,84 @@
     "os": "debian"
   },
   {
+    "name": "OpenList",
+    "slug": "openlist",
+    "desc": "OpenList is a file list program that mounts many storage backends - S3, WebDAV, OneDrive, Google Drive, SFTP, local disks and more - behind one web UI, and serves them again over WebDAV, FTP and S3. It is the community-driven fork of AList.",
+    "script": "ct/openlist.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/openlist.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/openlist.sh",
+    "type": "lxc",
+    "type_id": "nm9bra8mzye2scg",
+    "categories": [
+      "scriptcat00011"
+    ],
+    "category_names": [
+      "Files & Downloads"
+    ],
+    "notes": [
+      "One script serves both variants: the installer asks for the container OS, or pass var_os=alpine to pick Alpine unattended.",
+      "The admin password is generated during the installation and saved to /root/openlist.creds inside the container. Change it with `/opt/openlist/openlist --data /opt/openlist_data admin set <password>`.",
+      "Config, database, logs and search index live in /opt/openlist_data, outside the directory an update replaces, so updating never touches them."
+    ],
+    "warnings": [],
+    "port": 5244,
+    "website": "https://oplist.org/",
+    "documentation": "https://doc.oplist.org/",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/openlist.webp",
+    "updateable": true,
+    "privileged": false,
+    "has_arm": false,
+    "is_dev": true,
+    "execute_in": [
+      "lxc"
+    ],
+    "config_path": "",
+    "default_credentials": {
+      "username": "admin",
+      "password": ""
+    },
+    "os": "debian"
+  },
+  {
+    "name": "OpenList",
+    "slug": "openlist",
+    "desc": "OpenList is a file list program that mounts many storage backends - S3, WebDAV, OneDrive, Google Drive, SFTP, local disks and more - behind one web UI, and serves them again over WebDAV, FTP and S3. It is the community-driven fork of AList.",
+    "script": "ct/openlist.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/openlist.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/openlist.sh",
+    "type": "lxc",
+    "type_id": "nm9bra8mzye2scg",
+    "categories": [
+      "scriptcat00011"
+    ],
+    "category_names": [
+      "Files & Downloads"
+    ],
+    "notes": [
+      "One script serves both variants: the installer asks for the container OS, or pass var_os=alpine to pick Alpine unattended.",
+      "The admin password is generated during the installation and saved to /root/openlist.creds inside the container. Change it with `/opt/openlist/openlist --data /opt/openlist_data admin set <password>`.",
+      "Config, database, logs and search index live in /opt/openlist_data, outside the directory an update replaces, so updating never touches them."
+    ],
+    "warnings": [],
+    "port": 5244,
+    "website": "https://oplist.org/",
+    "documentation": "https://doc.oplist.org/",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/openlist.webp",
+    "updateable": true,
+    "privileged": false,
+    "has_arm": false,
+    "is_dev": true,
+    "execute_in": [
+      "lxc"
+    ],
+    "config_path": "",
+    "default_credentials": {
+      "username": "admin",
+      "password": ""
+    },
+    "os": "alpine"
+  },
+  {
     "name": "OpenObserve",
     "slug": "openobserve",
     "desc": "OpenObserve is a simple yet sophisticated log search, infrastructure monitoring, and APM solution.",
@@ -15365,6 +15553,76 @@
     ],
     "config_path": "",
     "os": "debian"
+  },
+  {
+    "name": "OpenViking",
+    "slug": "openviking",
+    "desc": "OpenViking is a self-evolving context database for AI agents that unifies agent memory, knowledge RAG and skills. Run it as a standalone HTTP server and connect any client (Python SDK, CLI, or the bundled Web Studio).",
+    "script": "ct/openviking.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/openviking.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/openviking.sh",
+    "type": "lxc",
+    "type_id": "nm9bra8mzye2scg",
+    "categories": [
+      "scriptcat00020"
+    ],
+    "category_names": [
+      "AI / Coding & Dev-Tools"
+    ],
+    "notes": [
+      "A root API key is generated during install and printed at the end of the setup; it is also stored as server.root_api_key in /opt/openviking_data/ov.conf."
+    ],
+    "warnings": [
+      "Model API keys must be configured in /opt/openviking_data/ov.conf (embedding and VLM sections) before the server can store or retrieve memory. Edit the file and restart the service afterwards."
+    ],
+    "port": 1933,
+    "website": "https://www.openviking.ai/",
+    "documentation": "https://docs.openviking.ai/",
+    "logo": "https://raw.githubusercontent.com/volcengine/OpenViking/main/web-studio/public/icon-512.png",
+    "updateable": true,
+    "privileged": false,
+    "has_arm": false,
+    "is_dev": true,
+    "execute_in": [
+      "lxc"
+    ],
+    "config_path": "",
+    "os": "debian"
+  },
+  {
+    "name": "OpenViking",
+    "slug": "openviking",
+    "desc": "OpenViking is a self-evolving context database for AI agents that unifies agent memory, knowledge RAG and skills. Run it as a standalone HTTP server and connect any client (Python SDK, CLI, or the bundled Web Studio).",
+    "script": "ct/openviking.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/openviking.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/openviking.sh",
+    "type": "lxc",
+    "type_id": "nm9bra8mzye2scg",
+    "categories": [
+      "scriptcat00020"
+    ],
+    "category_names": [
+      "AI / Coding & Dev-Tools"
+    ],
+    "notes": [
+      "A root API key is generated during install and printed at the end of the setup; it is also stored as server.root_api_key in /opt/openviking_data/ov.conf."
+    ],
+    "warnings": [
+      "Model API keys must be configured in /opt/openviking_data/ov.conf (embedding and VLM sections) before the server can store or retrieve memory. Edit the file and restart the service afterwards."
+    ],
+    "port": 1933,
+    "website": "https://www.openviking.ai/",
+    "documentation": "https://docs.openviking.ai/",
+    "logo": "https://raw.githubusercontent.com/volcengine/OpenViking/main/web-studio/public/icon-512.png",
+    "updateable": true,
+    "privileged": false,
+    "has_arm": false,
+    "is_dev": true,
+    "execute_in": [
+      "lxc"
+    ],
+    "config_path": "",
+    "os": "alpine"
   },
   {
     "name": "Open WebUI",
@@ -18564,6 +18822,42 @@
     "os": "debian"
   },
   {
+    "name": "Razzia",
+    "slug": "razzia",
+    "desc": "Razzia is a self-hosted, open-source quiz platform for smaller events. A manager hosts a live quiz from the browser while participants join with a room code from their own devices, with quizzes, results and custom branding stored as files in the config folder.",
+    "script": "ct/razzia.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/razzia.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/razzia.sh",
+    "type": "lxc",
+    "type_id": "nm9bra8mzye2scg",
+    "categories": [
+      "scriptcat00024"
+    ],
+    "category_names": [
+      "Gaming & Leisure"
+    ],
+    "notes": [
+      "The manager password is generated during installation and stored in /opt/razzia-config/game.json. Open the manager interface at http://<IP>:3000/manager and log in with it. Manager access stays blocked while managerPassword is the upstream default value \"PASSWORD\".",
+      "Quizzes, saved results and optional branding live in /opt/razzia-config (quizz/, results/, branding/). An example quiz is created there on first start. Restart the service after editing game.json: systemctl restart razzia"
+    ],
+    "warnings": [
+      "Game state is kept in memory by the socket server, so only run a single instance. Behind a reverse proxy, WebSocket upgrade headers must be forwarded to port 3000 or clients stay stuck on connecting."
+    ],
+    "port": 3000,
+    "website": "https://github.com/Ralex91/Razzia",
+    "documentation": "https://github.com/Ralex91/Razzia/blob/main/docs/README.md",
+    "logo": "https://cdn.jsdelivr.net/gh/Ralex91/Razzia@main/packages/web/public/icon.svg",
+    "updateable": true,
+    "privileged": false,
+    "has_arm": false,
+    "is_dev": true,
+    "execute_in": [
+      "lxc"
+    ],
+    "config_path": "",
+    "os": "debian"
+  },
+  {
     "name": "Rclone",
     "slug": "rclone",
     "desc": "Rclone is a command-line program to manage files on cloud storage. It is a feature-rich alternative to cloud vendors' web storage interfaces",
@@ -21463,6 +21757,40 @@
     ],
     "config_path": "",
     "os": "alpine"
+  },
+  {
+    "name": "T3 Code",
+    "slug": "t3code",
+    "desc": "T3 Code is a web and desktop control surface for running coding agents on your machine.",
+    "script": "ct/t3code.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/t3code.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/t3code.sh",
+    "type": "lxc",
+    "type_id": "nm9bra8mzye2scg",
+    "categories": [
+      "scriptcat00020"
+    ],
+    "category_names": [
+      "AI / Coding & Dev-Tools"
+    ],
+    "notes": [
+      "Provider CLIs (Codex, Claude, Grok, OpenCode, GitHub) are included in the install. Login to the CT after creation to authenticate with these services.",
+      "Access T3 Code at http://<IP>:3773 and pair a device with the token/QR shown after install. Regenerate it with: `pct exec <CTID> -- t3 pair --base-dir /opt/t3code.`"
+    ],
+    "warnings": [],
+    "port": 3773,
+    "website": "https://t3.codes",
+    "documentation": "https://github.com/pingdotgg/t3code/tree/main/docs",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/t3code.webp",
+    "updateable": true,
+    "privileged": false,
+    "has_arm": false,
+    "is_dev": true,
+    "execute_in": [
+      "lxc"
+    ],
+    "config_path": "",
+    "os": "debian"
   },
   {
     "name": "Tandoor Recipes",
@@ -24694,6 +25022,39 @@
     "privileged": false,
     "has_arm": true,
     "is_dev": false,
+    "execute_in": [
+      "lxc"
+    ],
+    "config_path": "",
+    "os": "debian"
+  },
+  {
+    "name": "WRP",
+    "slug": "wrp",
+    "desc": "WRP (Web Rendering Proxy) is a browser-in-browser proxy server that lets historical and vintage web browsers use the modern web. It drives a headless Chromium instance and renders pages back as clickable images or simplified HTML, so clients as old as Mosaic can browse today's HTTPS-only web.",
+    "script": "ct/wrp.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/wrp.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/wrp.sh",
+    "type": "lxc",
+    "type_id": "nm9bra8mzye2scg",
+    "categories": [
+      "scriptcat00004"
+    ],
+    "category_names": [
+      "Network & Firewall"
+    ],
+    "notes": [
+      "Point a legacy browser (or its proxy settings) at http://<container-ip>:8080."
+    ],
+    "warnings": [],
+    "port": 8080,
+    "website": "https://github.com/tenox7/wrp",
+    "documentation": "https://github.com/tenox7/wrp#readme",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/chromium.webp",
+    "updateable": true,
+    "privileged": false,
+    "has_arm": false,
+    "is_dev": true,
     "execute_in": [
       "lxc"
     ],
