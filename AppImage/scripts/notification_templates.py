@@ -17,7 +17,191 @@ import socket
 import time
 import urllib.request
 import urllib.error
+from functools import lru_cache
+from pathlib import Path
 from typing import Dict, Any, Optional, List, Tuple
+
+
+_SCRIPT_ROOT = Path(__file__).resolve().parents[1]
+_BUNDLED_CATALOG_DIR = _SCRIPT_ROOT / 'share' / 'proxmenux' / 'messages'
+_SOURCE_CATALOG_DIR = _SCRIPT_ROOT / 'messages'
+RUNTIME_CATALOG_DIR = (
+    _BUNDLED_CATALOG_DIR
+    if _BUNDLED_CATALOG_DIR.is_dir()
+    else _SOURCE_CATALOG_DIR
+    if _SOURCE_CATALOG_DIR.is_dir()
+    else Path('/usr/share/proxmenux/messages')
+)
+
+
+class _SafeFormatDict(dict):
+    def __missing__(self, key):
+        return ''
+
+
+@lru_cache(maxsize=8)
+def _load_runtime_catalog(language: str) -> Dict[str, Any]:
+    """Load one existing Monitor catalog's runtime notification namespace."""
+    path = RUNTIME_CATALOG_DIR / language / 'common.json'
+    try:
+        with path.open(encoding='utf-8') as handle:
+            return json.load(handle).get('runtime', {}).get('notifications', {})
+    except (OSError, ValueError, TypeError):
+        return {}
+
+
+def _catalog_value(catalog: Dict[str, Any], dotted_key: str) -> Optional[str]:
+    value: Any = catalog
+    for part in dotted_key.split('.'):
+        if not isinstance(value, dict) or part not in value:
+            return None
+        value = value[part]
+    return value if isinstance(value, str) and value else None
+
+
+def runtime_message(key: str, language: str = 'en', **values: Any) -> str:
+    """Resolve runtime text with per-key English fallback and safe placeholders."""
+    requested = (language or 'en').split('-', 1)[0].lower()
+    value = _catalog_value(_load_runtime_catalog(requested), key)
+    if value is None:
+        value = _catalog_value(_load_runtime_catalog('en'), key)
+    if value is None:
+        return ''
+    try:
+        return value.format_map(_SafeFormatDict(values))
+    except (ValueError, IndexError):
+        return value
+
+
+def _format_lxc_update_details(data: Dict[str, Any], language: str) -> str:
+    """Render an LXC update outcome from structured data in the selected locale."""
+    update = data.get('lxc_update')
+    if not isinstance(update, dict):
+        return str(data.get('details') or '')
+
+    def _mapping(value: Any) -> Dict[str, Any]:
+        return value if isinstance(value, dict) else {}
+
+    def _items(value: Any) -> List[str]:
+        return [str(item) for item in value if str(item)] if isinstance(value, list) else []
+
+    source = 'scheduled' if update.get('source') == 'scheduled' else 'manual'
+    labels = _items(update.get('labels')) or _items(update.get('targets'))
+    lines = [
+        runtime_message('lxcUpdate.sourceLabel', language)
+        + ': ' + runtime_message(f'lxcUpdate.source.{source}', language),
+        runtime_message('lxcUpdate.targets', language) + ': ' + ', '.join(labels),
+    ]
+
+    targets = _items(update.get('targets'))
+    before = _mapping(update.get('before'))
+    after = _mapping(update.get('after'))
+    if 'os' in targets:
+        before_count = before.get('os_pending')
+        after_count = after.get('os_pending')
+        if isinstance(before_count, int) and isinstance(after_count, int):
+            lines.append(runtime_message(
+                'lxcUpdate.osPending', language, before=before_count, after=after_count,
+            ))
+        else:
+            lines.append(runtime_message('lxcUpdate.osUnverified', language))
+
+    before_apps = _mapping(before.get('apps'))
+    after_apps = _mapping(after.get('apps'))
+    app_ids = {
+        target.split(':', 1)[1]
+        for target in targets if target.startswith('app:')
+    }
+    if 'apps' in targets:
+        app_ids.update(str(app_id) for app_id in before_apps)
+        app_ids.update(str(app_id) for app_id in after_apps)
+    app_lines = []
+    for app_id in sorted(app_ids):
+        old = _mapping(before_apps.get(app_id))
+        new = _mapping(after_apps.get(app_id))
+        old_version = old.get('installed_version')
+        new_version = new.get('installed_version')
+        if old_version and new_version and old_version != new_version:
+            app_lines.append(
+                f"{new.get('name') or old.get('name') or app_id}: "
+                f'{old_version} → {new_version}'
+            )
+    if app_lines:
+        lines.append(runtime_message(
+            'lxcUpdate.applications', language, items='; '.join(app_lines[:8]),
+        ))
+    elif app_ids:
+        lines.append(runtime_message('lxcUpdate.applicationsUnverified', language))
+
+    docker_requested = any(target.startswith('docker-') for target in targets)
+    before_docker = _mapping(before.get('docker_inventory'))
+    after_docker = _mapping(after.get('docker_inventory'))
+    if 'docker-engine' in targets:
+        old_engine = before_docker.get('engine_version')
+        new_engine = after_docker.get('engine_version')
+        if old_engine and new_engine and old_engine != new_engine:
+            lines.append(runtime_message(
+                'lxcUpdate.dockerEngineChange', language, before=old_engine, after=new_engine,
+            ))
+        elif new_engine:
+            lines.append(runtime_message(
+                'lxcUpdate.dockerEngineVerified', language, version=new_engine,
+            ))
+        else:
+            lines.append(runtime_message('lxcUpdate.dockerEngineUnverified', language))
+    if docker_requested and any(target != 'docker-engine' for target in targets):
+        before_pending = before_docker.get('update_count')
+        after_pending = after_docker.get('update_count')
+        if isinstance(before_pending, int) and isinstance(after_pending, int):
+            lines.append(runtime_message(
+                'lxcUpdate.dockerImagesPending', language,
+                before=before_pending, after=after_pending,
+            ))
+        after_by_ref = {
+            str(item.get('reference')): item
+            for item in after_docker.get('images') or []
+            if isinstance(item, dict) and item.get('reference')
+        }
+        changed_images = []
+        for old_image in before_docker.get('images') or []:
+            if not isinstance(old_image, dict):
+                continue
+            reference = str(old_image.get('reference') or '')
+            new_image = _mapping(after_by_ref.get(reference))
+            if reference and old_image.get('local_digest') != new_image.get('local_digest'):
+                changed_images.append(reference)
+        if changed_images:
+            lines.append(runtime_message(
+                'lxcUpdate.dockerImagesChanged', language,
+                images=', '.join(changed_images[:8]),
+            ))
+
+    deferred = _items(update.get('deferred_targets'))
+    if deferred:
+        lines.append(runtime_message(
+            'lxcUpdate.deferredTargets', language, targets=', '.join(deferred),
+        ))
+    reason = str(update.get('reason') or '').strip()
+    if reason:
+        lines.append(runtime_message('lxcUpdate.reason', language, reason=reason))
+    reboot_required = update.get('reboot_required')
+    if reboot_required is not None:
+        value = runtime_message(
+            'lxcUpdate.yes' if reboot_required else 'lxcUpdate.no', language,
+        )
+        lines.append(runtime_message(
+            'lxcUpdate.restartRequired', language, value=value,
+        ))
+    if update.get('verification_pending'):
+        lines.append(runtime_message('lxcUpdate.verificationPending', language))
+    for error in _items(update.get('verification_errors'))[:4]:
+        lines.append(runtime_message(
+            'lxcUpdate.verificationWarning', language, error=error,
+        ))
+    lines.append(runtime_message(
+        'lxcUpdate.duration', language, duration=update.get('duration') or '',
+    ))
+    return '\n'.join(lines)
 
 
 # ─── vzdump message parser ───────────────────────────────────────
@@ -248,7 +432,8 @@ def _parse_vzdump_message(message: str) -> Optional[Dict[str, Any]]:
     }
 
 
-def _format_vzdump_body(parsed: Dict[str, Any], is_success: bool) -> str:
+def _format_vzdump_body(parsed: Dict[str, Any], is_success: bool,
+                        language: str = 'en') -> str:
     """Format parsed vzdump data into a clean Telegram-friendly message."""
     parts = []
     
@@ -285,9 +470,9 @@ def _format_vzdump_body(parsed: Dict[str, Any], is_success: bool) -> str:
         # Size and Duration on same line with icons
         detail_line = []
         if vm.get('size'):
-            detail_line.append(f"\U0001F4CF Size: {vm['size']}")
+            detail_line.append(f"\U0001F4CF {runtime_message('vzdump.size', language, value=vm['size'])}")
         if vm.get('time'):
-            detail_line.append(f"\u23F1\uFE0F Duration: {vm['time']}")
+            detail_line.append(f"\u23F1\uFE0F {runtime_message('vzdump.duration', language, value=vm['time'])}")
         if detail_line:
             parts.append(' | '.join(detail_line))
         
@@ -302,7 +487,7 @@ def _format_vzdump_body(parsed: Dict[str, Any], is_success: bool) -> str:
                 label = storage_name if storage_name else 'PBS'
                 parts.append(f"\U0001F5C4\uFE0F {label}: {fname}")
             else:
-                label = storage_name if storage_name else 'File'
+                label = storage_name if storage_name else runtime_message('vzdump.file', language)
                 parts.append(f"\U0001F4C1 {label}: {fname}")
         
         # Error reason if failed
@@ -320,13 +505,13 @@ def _format_vzdump_body(parsed: Dict[str, Any], is_success: bool) -> str:
         
         summary_parts = []
         if vm_count:
-            summary_parts.append(f"\U0001F4CA {vm_count} backups")
+            summary_parts.append(f"\U0001F4CA {runtime_message('vzdump.backups', language, count=vm_count)}")
         if fail_count:
-            summary_parts.append(f"\u274C {fail_count} failed")
+            summary_parts.append(f"\u274C {runtime_message('vzdump.failed', language, count=fail_count)}")
         if parsed.get('total_size'):
-            summary_parts.append(f"\U0001F4E6 Total: {parsed['total_size']}")
+            summary_parts.append(f"\U0001F4E6 {runtime_message('vzdump.total', language, value=parsed['total_size'])}")
         if parsed.get('total_time'):
-            summary_parts.append(f"\u23F1\uFE0F Time: {parsed['total_time']}")
+            summary_parts.append(f"\u23F1\uFE0F {runtime_message('vzdump.time', language, value=parsed['total_time'])}")
         
         if summary_parts:
             parts.append(' | '.join(summary_parts))
@@ -334,104 +519,92 @@ def _format_vzdump_body(parsed: Dict[str, Any], is_success: bool) -> str:
     return '\n'.join(parts)
 
 
-def _format_system_startup(data: Dict[str, Any]) -> Tuple[str, str]:
-    """
-    Format comprehensive system startup report.
-    
-    Returns (title, body) tuple for the notification.
-    Handles both simple startups (all OK) and those with issues.
-    """
+def _format_system_startup(data: Dict[str, Any], language: str = 'en') -> Tuple[str, str]:
+    """Format the comprehensive startup report using runtime catalogs."""
     hostname = data.get('hostname', 'unknown')
     has_issues = data.get('has_issues', False)
-    
-    # Build title
     if has_issues:
         total_issues = (
-            data.get('total_failed', 0) +
-            len(data.get('services_failed', [])) +
-            len(data.get('storage_unavailable', []))
+            data.get('total_failed', 0)
+            + len(data.get('services_failed', []))
+            + len(data.get('storage_unavailable', []))
         )
-        title = f"{hostname}: System startup - {total_issues} issue(s) detected"
+        title = runtime_message('startup.issuesTitle', language, hostname=hostname, count=total_issues)
     else:
-        title = f"{hostname}: System startup completed"
-    
-    # Build body
+        title = runtime_message('startup.completeTitle', language, hostname=hostname)
+
     parts = []
-    
-    # Overall status
     if not has_issues:
-        parts.append("All systems operational.")
-    
-    # VMs/CTs started
+        parts.append(runtime_message('startup.operational', language))
+
     vms_ok = len(data.get('vms_started', []))
     cts_ok = len(data.get('cts_started', []))
     if vms_ok or cts_ok:
-        count_parts = []
+        counts = []
         if vms_ok:
-            count_parts.append(f"{vms_ok} VM{'s' if vms_ok > 1 else ''}")
+            key = 'startup.vmCountOne' if vms_ok == 1 else 'startup.vmCountMany'
+            counts.append(runtime_message(key, language, count=vms_ok))
         if cts_ok:
-            count_parts.append(f"{cts_ok} CT{'s' if cts_ok > 1 else ''}")
-        
-        # List names (up to 5)
-        names = []
-        for vm in data.get('vms_started', [])[:3]:
-            names.append(f"{vm['name']} ({vm['vmid']})")
-        for ct in data.get('cts_started', [])[:3]:
-            names.append(f"{ct['name']} ({ct['vmid']})")
-        
-        line = f"\u2705 {' and '.join(count_parts)} started"
+            key = 'startup.ctCountOne' if cts_ok == 1 else 'startup.ctCountMany'
+            counts.append(runtime_message(key, language, count=cts_ok))
+        names = [
+            f"{item['name']} ({item['vmid']})"
+            for item in (data.get('vms_started', [])[:3] + data.get('cts_started', [])[:3])
+        ]
+        line = runtime_message('startup.started', language, counts=', '.join(counts))
         if names:
-            if len(names) <= 5:
-                line += f": {', '.join(names)}"
-            else:
-                line += f": {', '.join(names[:5])}..."
+            line += f": {', '.join(names[:5])}"
+            if len(names) > 5:
+                line += '…'
         parts.append(line)
-    
-    # Failed VMs/CTs
+
+    unknown_error = runtime_message('startup.unknownError', language)
     for vm in data.get('vms_failed', []):
-        reason = vm.get('reason', 'unknown error')
-        parts.append(f"\u274C VM failed: {vm['name']} - {reason}")
-    
+        parts.append(runtime_message('startup.vmFailed', language, name=vm['name'], reason=vm.get('reason', unknown_error)))
     for ct in data.get('cts_failed', []):
-        reason = ct.get('reason', 'unknown error')
-        parts.append(f"\u274C CT failed: {ct['name']} - {reason}")
-    
-    # Storage issues
+        parts.append(runtime_message('startup.ctFailed', language, name=ct['name'], reason=ct.get('reason', unknown_error)))
+
     storage_unavailable = data.get('storage_unavailable', [])
     if storage_unavailable:
-        names = [s['name'] for s in storage_unavailable[:3]]
-        parts.append(f"\u26A0\uFE0F Storage: {len(storage_unavailable)} unavailable ({', '.join(names)})")
-    
-    # Service issues  
+        parts.append(runtime_message(
+            'startup.storageUnavailable', language, count=len(storage_unavailable),
+            names=', '.join(item['name'] for item in storage_unavailable[:3]),
+        ))
     services_failed = data.get('services_failed', [])
     if services_failed:
-        names = [s['name'] for s in services_failed[:3]]
-        parts.append(f"\u26A0\uFE0F Services: {len(services_failed)} failed ({', '.join(names)})")
-    
-    # Startup duration
+        parts.append(runtime_message(
+            'startup.servicesFailed', language, count=len(services_failed),
+            names=', '.join(item['name'] for item in services_failed[:3]),
+        ))
     duration = data.get('startup_duration_seconds', 0)
     if duration:
-        minutes = int(duration // 60)
-        parts.append(f"\u23F1\uFE0F Startup completed in {minutes} min")
-    
-    body = '\n'.join(parts)
-    return title, body
+        parts.append(runtime_message('startup.duration', language, minutes=int(duration // 60)))
+    return title, '\n'.join(parts)
 
 
-def _format_app_update_available(data: Dict[str, Any]) -> Tuple[str, str]:
+def _format_app_update_available(data: Dict[str, Any],
+                                 language: str = 'en') -> Tuple[str, str]:
     """Render one app update or a scheduled multi-app summary."""
-    hostname = str(data.get("hostname") or _get_hostname())
-    updates = data.get("updates")
+    hostname = str(data.get('hostname') or _get_hostname())
+    app_fallback = runtime_message('appUpdates.app', language) or 'app'
+    unknown = runtime_message('appUpdates.unknown', language) or 'unknown'
+    updates = data.get('updates')
     if not isinstance(updates, list) or len(updates) < 2:
-        app_name = str(data.get("app_name") or "app")
-        vmid = data.get("vmid", "")
-        ct_name = str(data.get("ct_name") or f"CT-{vmid}")
-        installed = str(data.get("installed") or "unknown")
-        latest = str(data.get("latest") or "unknown")
+        app_name = str(data.get('app_name') or app_fallback)
+        vmid = data.get('vmid', '')
+        ct_name = str(data.get('ct_name') or f'CT-{vmid}')
+        installed = str(data.get('installed') or unknown)
+        latest = str(data.get('latest') or unknown)
         return (
-            f"{hostname}: {app_name} update available on CT {vmid}",
-            f"{app_name} on CT {vmid} ({ct_name}) has a new version:\n"
-            f"    {installed} → {latest}",
+            runtime_message(
+                'appUpdates.singleTitle', language,
+                hostname=hostname, app_name=app_name, vmid=vmid,
+            ),
+            runtime_message(
+                'appUpdates.singleBody', language,
+                app_name=app_name, vmid=vmid, ct_name=ct_name,
+                installed=installed, latest=latest,
+            ),
         )
 
     clean_updates = []
@@ -443,26 +616,31 @@ def _format_app_update_available(data: Dict[str, Any]) -> Tuple[str, str]:
         except (TypeError, ValueError):
             continue
         clean_updates.append({
-            "vmid": vmid,
-            "app_name": str(item.get("app_name") or "app"),
-            "installed": str(item.get("installed") or "unknown"),
-            "latest": str(item.get("latest") or "unknown"),
+            'vmid': vmid,
+            'app_name': str(item.get('app_name') or app_fallback),
+            'installed': str(item.get('installed') or unknown),
+            'latest': str(item.get('latest') or unknown),
         })
     clean_updates.sort(
         key=lambda item: (item["vmid"], item["app_name"].casefold())
     )
     if not clean_updates:
         return (
-            f"{hostname}: Application updates available",
-            "Application updates are available.",
+            runtime_message('appUpdates.emptyTitle', language, hostname=hostname),
+            runtime_message('appUpdates.emptyBody', language),
         )
 
     count = len(clean_updates)
     container_count = len({item["vmid"] for item in clean_updates})
-    title = f"{hostname}: {count} application updates available"
-    lead = (
-        f"{count} applications in {container_count} LXC "
-        f"container{'s' if container_count != 1 else ''} have a newer version:"
+    title = runtime_message(
+        'appUpdates.batchTitle', language, hostname=hostname, count=count,
+    )
+    lead_key = (
+        'appUpdates.batchLeadOneContainer'
+        if container_count == 1 else 'appUpdates.batchLeadManyContainers'
+    )
+    lead = runtime_message(
+        lead_key, language, count=count, container_count=container_count,
     )
     sections = []
     omitted = 0
@@ -481,8 +659,77 @@ def _format_app_update_available(data: Dict[str, Any]) -> Tuple[str, str]:
             continue
         sections.append("\n".join(section))
     if omitted:
-        sections.append(f"… {omitted} additional application(s)")
+        sections.append(runtime_message('appUpdates.additional', language, count=omitted))
     return title, "\n\n".join([lead, *sections])
+
+
+_CPU_SUSTAINED_REASON = re.compile(
+    r'^CPU >(?P<threshold>[0-9.]+)% sustained for (?P<duration>\d+)s$'
+)
+
+
+def _format_health_degraded(data: Dict[str, Any],
+                            language: str = 'en') -> Tuple[str, str]:
+    """Render Monitor-generated health degradations in the chosen locale."""
+    payload = data.get('health_degraded')
+    if not isinstance(payload, dict):
+        return str(data.get('title') or ''), str(data.get('reason') or '')
+
+    categories = payload.get('categories')
+    if not isinstance(categories, list) or not categories:
+        return str(data.get('title') or ''), str(data.get('reason') or '')
+
+    def category_label(item: Dict[str, Any]) -> str:
+        category = str(item.get('key') or '')
+        return (
+            runtime_message(f'healthDegraded.categories.{category}', language)
+            or str(item.get('category') or category)
+        )
+
+    def severity_label(item: Dict[str, Any]) -> str:
+        severity = str(item.get('status') or data.get('severity') or 'WARNING').lower()
+        return (
+            runtime_message(f'healthDegraded.severity.{severity}', language)
+            or str(item.get('status') or data.get('severity') or 'WARNING')
+        )
+
+    def localized_reason(item: Dict[str, Any]) -> str:
+        reason = str(item.get('reason') or '')
+        if str(item.get('key') or '') == 'cpu':
+            match = _CPU_SUSTAINED_REASON.fullmatch(reason)
+            if match:
+                return runtime_message(
+                    'healthDegraded.reasons.cpuSustained', language,
+                    threshold=match.group('threshold'), duration=match.group('duration'),
+                ) or reason
+        return reason
+
+    hostname = str(data.get('hostname') or _get_hostname())
+    if len(categories) == 1:
+        item = categories[0] if isinstance(categories[0], dict) else {}
+        title = runtime_message(
+            'healthDegraded.singleTitle', language,
+            hostname=hostname, severity=severity_label(item), category=category_label(item),
+        )
+        entity = str(item.get('entity') or '').strip()
+        if entity:
+            title = f'{title} — {entity}'
+        return title, localized_reason(item)
+
+    title = runtime_message(
+        'healthDegraded.multipleTitle', language,
+        hostname=hostname, count=len(categories),
+    )
+    lines = []
+    for item in categories:
+        if not isinstance(item, dict):
+            continue
+        lines.append(runtime_message(
+            'healthDegraded.multipleLine', language,
+            severity=severity_label(item), category=category_label(item),
+            reason=localized_reason(item),
+        ))
+    return title, '\n'.join(line for line in lines if line)
 
 
 # ─── Severity Icons ──────────────────────────────────────────────
@@ -557,6 +804,7 @@ TEMPLATES = {
         'label': 'Health check degraded',
         'group': 'health',
         'default_enabled': True,
+        'formatter': '_format_health_degraded',
     },
     
     # ── VM / CT events ──
@@ -1522,6 +1770,8 @@ EVENT_GROUPS = {
     'services':  {'label': 'Services',        'description': 'System services, shutdown, reboot'},
     'health':    {'label': 'Health Monitor',  'description': 'Health checks, degradation, recovery'},
     'updates':   {'label': 'Updates',         'description': 'System and PVE updates'},
+    'hardware':  {'label': 'Hardware',        'description': 'GPU, PCIe and hardware events'},
+    'system':    {'label': 'System',          'description': 'System and internal service events'},
     'other':     {'label': 'Other',           'description': 'Uncategorized notifications'},
 }
 
@@ -1568,7 +1818,8 @@ def _format_bytes_human(n: Any) -> str:
     return f'{size:.1f} {units[i]}'
 
 
-def render_template(event_type: str, data: Dict[str, Any]) -> Dict[str, Any]:
+def render_template(event_type: str, data: Dict[str, Any],
+                    language: str = 'en') -> Dict[str, Any]:
     """Render a template into a structured notification object.
     
     Returns structured output usable by all channels:
@@ -1576,19 +1827,35 @@ def render_template(event_type: str, data: Dict[str, Any]) -> Dict[str, Any]:
     """
     import html as html_mod
     
-    template = TEMPLATES.get(event_type)
-    if not template:
+    source_template = TEMPLATES.get(event_type)
+    if not source_template:
         # Catch-all: unknown event types always get delivered (group 'other')
         # so no Proxmox notification is ever silently dropped.
         fallback_body = data.get('message', data.get('reason', str(data)))
         severity = data.get('severity', 'INFO')
         return {
-            'title': f"{_get_hostname()}: {event_type}",
+            'title': runtime_message(
+                'fallback.unknownTitle', language,
+                hostname=_get_hostname(), event_type=event_type,
+            ),
             'body': fallback_body, 'body_text': fallback_body,
             'body_html': f'<p>{html_mod.escape(str(fallback_body))}</p>',
             'fields': [], 'tags': [severity, 'other', event_type],
             'severity': severity, 'group': 'other',
         }
+
+    template = dict(source_template)
+    requested_language = (language or 'en').split('-', 1)[0].lower()
+    requested_catalog = _load_runtime_catalog(requested_language)
+    english_catalog = _load_runtime_catalog('en')
+    for field in ('title', 'body', 'label'):
+        key = f'templates.{event_type}.{field}'
+        localized = (
+            _catalog_value(requested_catalog, key)
+            or _catalog_value(english_catalog, key)
+        )
+        if localized:
+            template[field] = localized
     
     # Ensure hostname is always available
     variables = {
@@ -1610,7 +1877,7 @@ def render_template(event_type: str, data: Dict[str, Any]) -> Dict[str, Any]:
         'packages': '', 'pve_packages': '', 'version': '',
         'issue_list': '', 'error_key': '',
         'storage_name': '', 'storage_type': '',
-        'important_list': 'none',
+        'important_list': runtime_message('fallback.none', language),
         # Host Backup specifics (run_scheduled_backup.sh + backup_host.sh).
         'job_id': '', 'backend': '', 'backend_label': '',
         'destination': '', 'profile_mode': '',
@@ -1619,6 +1886,13 @@ def render_template(event_type: str, data: Dict[str, Any]) -> Dict[str, Any]:
     }
     variables.update(data)
 
+    if event_type == 'lxc_update_applied' and isinstance(data.get('lxc_update'), dict):
+        status = str(data['lxc_update'].get('status') or '')
+        localized_status = runtime_message(f'lxcUpdate.status.{status}', language)
+        if localized_status:
+            variables['result'] = localized_status
+        variables['details'] = _format_lxc_update_details(data, language)
+
     # Humanise raw-byte fields so templates can render '35.3 GiB' instead
     # of '37952020480'. Producers keep emitting raw ints (needed by APIs
     # and the dashboard); the humanised twin is derived on the fly here.
@@ -1626,9 +1900,10 @@ def render_template(event_type: str, data: Dict[str, Any]) -> Dict[str, Any]:
         if _byte_key in data:
             variables[f'{_byte_key}_human'] = _format_bytes_human(data[_byte_key])
 
-    # Ensure important_list is never blank (fallback to 'none')
-    if not variables.get('important_list', '').strip():
-        variables['important_list'] = 'none'
+    # Ensure important_list is never blank (fallback to localized "none")
+    important_list = str(variables.get('important_list', '')).strip()
+    if not important_list or important_list.casefold() == 'none':
+        variables['important_list'] = runtime_message('fallback.none', language)
 
     # Derive the affected object's display name for titles that use it.
     # Priority: caller-supplied `entity` (health_monitor.emit_event) →
@@ -1657,7 +1932,8 @@ def render_template(event_type: str, data: Dict[str, Any]) -> Dict[str, Any]:
     _caller_title = str(variables.get('title', '')).strip()
     if not _caller_title:
         hn = variables.get('hostname', '')
-        _caller_title = f'{hn}: Health check degraded' if hn else 'Health check degraded'
+        degraded = runtime_message('fallback.healthCheckDegraded', language)
+        _caller_title = f'{hn}: {degraded}' if hn else degraded
     variables['title_or_default'] = _caller_title
     
     # `format_map` with a SafeDict avoids the KeyError → "show raw template
@@ -1685,7 +1961,7 @@ def render_template(event_type: str, data: Dict[str, Any]) -> Dict[str, Any]:
     if formatter_name and formatter_name in globals():
         formatter_func = globals()[formatter_name]
         try:
-            title, body_text = formatter_func(data)
+            title, body_text = formatter_func(data, language=language)
         except Exception:
             # Fallback to standard formatting if formatter fails
             try:
@@ -1696,9 +1972,10 @@ def render_template(event_type: str, data: Dict[str, Any]) -> Dict[str, Any]:
         parsed = _parse_vzdump_message(pve_message)
         if parsed:
             is_success = (event_type == 'backup_complete')
-            body_text = _format_vzdump_body(parsed, is_success)
-            # Use PVE's own title if available (contains hostname and status)
-            if pve_title:
+            body_text = _format_vzdump_body(parsed, is_success, language=language)
+            # Preserve PVE's source title for English, but never leak it into a
+            # deterministic localized notification.
+            if pve_title and requested_language == 'en':
                 title = pve_title
         else:
             # Couldn't parse -- use PVE raw message as body
@@ -1722,15 +1999,15 @@ def render_template(event_type: str, data: Dict[str, Any]) -> Dict[str, Any]:
     # Build structured fields for Discord embeds / rich notifications
     fields = []
     field_map = [
-        ('vmid', 'VM/CT'), ('vmname', 'Name'), ('device', 'Device'),
-        ('source_ip', 'Source IP'), ('node_name', 'Node'), ('category', 'Category'),
-        ('service_name', 'Service'), ('jail', 'Jail'), ('username', 'User'),
-        ('count', 'Count'), ('window', 'Window'), ('entity_list', 'Affected'),
+        ('vmid', 'fields.vmid'), ('vmname', 'fields.name'), ('device', 'fields.device'),
+        ('source_ip', 'fields.sourceIp'), ('node_name', 'fields.node'), ('category', 'fields.category'),
+        ('service_name', 'fields.service'), ('jail', 'fields.jail'), ('username', 'fields.user'),
+        ('count', 'fields.count'), ('window', 'fields.window'), ('entity_list', 'fields.affected'),
     ]
-    for key, label in field_map:
+    for key, label_key in field_map:
         val = variables.get(key, '')
         if val:
-            fields.append((label, str(val)))
+            fields.append((runtime_message(label_key, language), str(val)))
     
     # Build HTML body with escaped content
     body_html_parts = []
@@ -1919,6 +2196,7 @@ FIELD_EMOJI = {
     'hostname':     '\U0001F4BB',   # laptop
     'vmid':         '\U0001F194',   # ID button
     'vmname':       '\U0001F3F7\uFE0F',  # label
+    'ct_name':      '\U0001F4E6',   # package / container
     'device':       '\U0001F4BD',   # disk
     'mount':        '\U0001F4C2',   # open folder
     'source_ip':    '\U0001F310',   # globe
@@ -1943,10 +2221,87 @@ FIELD_EMOJI = {
     'kernel_count': '\u2699\uFE0F',
     'important_list': '\U0001F4CB',  # clipboard
     'current_version': '\U0001F4E6',  # package \u2014 installed version
+    'new_version': '\U0001F195',      # NEW button \u2014 offered version
     'latest_version': '\U0001F195',   # NEW button \u2014 upstream version
     'kernel':       '\u2699\uFE0F',    # gear \u2014 running kernel
     'menu_label':   '\U0001F4D6',      # open book \u2014 menu navigation hint
 }
+
+
+_TEMPLATE_FIELD_RE = re.compile(r'\{([a-zA-Z_][a-zA-Z0-9_]*)[^}]*\}')
+
+
+def _localized_template_labels(event_type: str, language: str) -> Dict[str, List[str]]:
+    """Return the visible labels paired with template fields in one locale.
+
+    The old emoji pass compared rendered English words such as ``Duration``
+    and ``Total updates``. That necessarily stops matching after a template
+    is translated. The template itself still knows which field each label
+    describes, so derive the visible wording from that localized template.
+    """
+    requested = (language or 'en').split('-', 1)[0].lower()
+    key = f'templates.{event_type}.body'
+    # Use the raw catalog entry rather than runtime_message(): the latter
+    # deliberately formats unknown placeholders away, while this helper needs
+    # to inspect those placeholders to associate each label with its field.
+    body = (
+        _catalog_value(_load_runtime_catalog(requested), key)
+        or _catalog_value(_load_runtime_catalog('en'), key)
+    )
+    if not body:
+        body = TEMPLATES.get(event_type, {}).get('body', '')
+
+    labels: Dict[str, List[str]] = {}
+    lines = body.splitlines()
+    for index, line in enumerate(lines):
+        matches = list(_TEMPLATE_FIELD_RE.finditer(line))
+        for match in matches:
+            label = line[:match.start()].strip().rstrip(':').strip()
+            if label:
+                labels.setdefault(match.group(1), []).append(label)
+
+        # A heading on its own line (for example "Important packages:")
+        # labels the variable rendered on the following line.
+        if line.strip().endswith(':') and index + 1 < len(lines):
+            next_matches = list(_TEMPLATE_FIELD_RE.finditer(lines[index + 1]))
+            if len(next_matches) == 1:
+                label = line.strip().rstrip(':').strip()
+                if label:
+                    labels.setdefault(next_matches[0].group(1), []).append(label)
+    return labels
+
+
+def _lxc_update_label_icons(language: str) -> Dict[str, str]:
+    """Return localized LXC-update detail prefixes with stable icons."""
+    values = {
+        'before': '0', 'after': '0', 'items': 'item', 'targets': 'target',
+        'reason': 'reason', 'value': 'value', 'error': 'error', 'duration': '0s',
+    }
+    definitions = (
+        ('lxcUpdate.sourceLabel', '🧭'),
+        ('lxcUpdate.targets', '🎯'),
+        ('lxcUpdate.osPending', '📦'),
+        ('lxcUpdate.osUnverified', '📦'),
+        ('lxcUpdate.applications', '🧩'),
+        ('lxcUpdate.applicationsUnverified', '🧩'),
+        ('lxcUpdate.dockerEngineChange', '🐳'),
+        ('lxcUpdate.dockerEngineVerified', '🐳'),
+        ('lxcUpdate.dockerEngineUnverified', '🐳'),
+        ('lxcUpdate.dockerImagesPending', '🐳'),
+        ('lxcUpdate.dockerImagesChanged', '🐳'),
+        ('lxcUpdate.deferredTargets', '⏳'),
+        ('lxcUpdate.reason', '📝'),
+        ('lxcUpdate.restartRequired', '🔄'),
+        ('lxcUpdate.verificationPending', '⏳'),
+        ('lxcUpdate.verificationWarning', '⚠️'),
+        ('lxcUpdate.duration', '⏱️'),
+    )
+    result = {}
+    for key, icon in definitions:
+        rendered = runtime_message(key, language, **values).strip()
+        if rendered:
+            result[rendered.split(':', 1)[0].strip()] = icon
+    return result
 
 
 def enrich_with_emojis(event_type: str, title: str, body: str,
@@ -2009,6 +2364,13 @@ def enrich_with_emojis(event_type: str, title: str, body: str,
     preprocessed = re.sub(r'^\n+', '', preprocessed)
     preprocessed = preprocessed.strip()
     
+    language = str(data.get('_notification_language') or 'en')
+    localized_labels = _localized_template_labels(event_type, language)
+    lxc_update_labels = (
+        _lxc_update_label_icons(language)
+        if event_type == 'lxc_update_applied' else {}
+    )
+
     # ── Extended emoji mappings for health/disk messages ──
     HEALTH_EMOJI_MAP = {
         # Disk patterns
@@ -2033,11 +2395,40 @@ def enrich_with_emojis(event_type: str, title: str, body: str,
     # Build enriched body: prepend field emojis to recognizable lines
     lines = preprocessed.split('\n')
     enriched_lines = []
+    app_update_is_single = (
+        not isinstance(data.get('updates'), list) or len(data['updates']) < 2
+    )
+    app_update_lead_added = False
+    app_update_version = None
+    if event_type == 'app_update_available' and app_update_is_single:
+        app_update_version = f"{data.get('installed', '')} → {data.get('latest', '')}".strip()
     
     for line in lines:
         stripped = line.strip()
         if not stripped:
             enriched_lines.append(line)
+            continue
+
+        # App-update notifications deliberately use a compact, prose-like
+        # template rather than field labels. Keep their two structured lines
+        # as readable as other update notifications without depending on a
+        # translated phrase to recognize them.
+        if event_type == 'app_update_available' and app_update_is_single:
+            if not app_update_lead_added:
+                enriched_lines.append(f'📦 {stripped}')
+                app_update_lead_added = True
+                continue
+            if app_update_version and stripped == app_update_version:
+                enriched_lines.append(f'🔄 {stripped}')
+                continue
+
+        # The Proxmox VE detector emits the manager version as a concise,
+        # structured technical detail outside the localized template fields.
+        # Mark only that known detail; arbitrary detector text remains intact.
+        if event_type == 'pve_update' and re.match(
+            r'^pve-manager\s+\S+\s+(?:→|->)\s+\S+$', stripped,
+        ):
+            enriched_lines.append(f'🔧 {stripped}')
             continue
         
         # First, check health-specific patterns
@@ -2053,6 +2444,30 @@ def enrich_with_emojis(event_type: str, title: str, body: str,
                 break
         
         if health_enriched:
+            continue
+
+        # LXC update outcomes are assembled from structured details rather
+        # than one static template line. Their translated labels come from
+        # the runtime catalog, so keep the mapping semantic rather than
+        # comparing an English translation.
+        matched_lxc_label = next(
+            (label for label in lxc_update_labels
+             if stripped.lower().startswith(label.lower())),
+            None,
+        )
+        if matched_lxc_label:
+            icon = lxc_update_labels[matched_lxc_label]
+            if not stripped.startswith(icon):
+                enriched_lines.append(f'{icon} {stripped}')
+            else:
+                enriched_lines.append(stripped)
+            continue
+
+        # Docker's engine inventory is generated by the detector, not the
+        # translated template. "Docker Engine" is its product name and stays
+        # stable across locales, so it is safe to decorate directly.
+        if event_type == 'docker_stack_update_available' and stripped.startswith('• Docker Engine:'):
+            enriched_lines.append(f'🐳 {stripped}')
             continue
         
         # Try to match "FieldName: value" patterns
@@ -2078,6 +2493,7 @@ def enrich_with_emojis(event_type: str, title: str, body: str,
             }
             if field_key in _LABEL_MAP:
                 label_variants.append(_LABEL_MAP[field_key])
+            label_variants.extend(localized_labels.get(field_key, []))
             
             for label in label_variants:
                 if stripped.lower().startswith(label.lower() + ':'):

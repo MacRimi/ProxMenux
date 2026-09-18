@@ -135,6 +135,31 @@ class AppUpdateNotificationBatchTests(unittest.TestCase):
         self.assertIn("• Docmost: 0.2 → 0.9", rendered["body"])
         self.assertIn("• Redis: 7.0 → 8.1", rendered["body"])
 
+    def test_batch_formatter_uses_slovak_runtime_messages(self):
+        data = {
+            "hostname": "HomeLAB_2",
+            "updates": [
+                {"vmid": 115, "app_name": "Redis", "installed": "7.0", "latest": "8.1"},
+                {"vmid": 100, "app_name": "AdGuard Home", "installed": "1.0", "latest": "1.1"},
+                {"vmid": 115, "app_name": "Docmost", "installed": "0.2", "latest": "0.9"},
+            ],
+        }
+
+        rendered = notification_templates.render_template(
+            "app_update_available", data, language="sk",
+        )
+
+        self.assertEqual(
+            rendered["title"],
+            "HomeLAB_2: Dostupné aktualizácie aplikácií: 3",
+        )
+        self.assertIn(
+            "Aplikácie s dostupnou novšou verziou: 3 v 2 kontajneroch LXC:",
+            rendered["body"],
+        )
+        self.assertIn("• AdGuard Home: 1.0 → 1.1", rendered["body"])
+        self.assertNotIn("application updates available", rendered["title"])
+
 
 if __name__ == "__main__":
     unittest.main()

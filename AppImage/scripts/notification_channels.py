@@ -36,6 +36,18 @@ _KNOWN_SSRF_TARGETS = {
 _BLOCKED_LOOPBACK_PORTS = {'8006', '8007'}  # PVE API HTTPS / HTTPS-alt
 
 
+def _runtime_notification_text(key: str, data: Optional[Dict] = None,
+                               **values: Any) -> str:
+    """Resolve runtime text lazily to avoid the manager/channel import cycle."""
+    from notification_templates import runtime_message
+    language = str((data or {}).get('_notification_language', 'en'))
+    return runtime_message(key, language, **values)
+
+
+def _runtime_text(key: str, data: Optional[Dict] = None, **values: Any) -> str:
+    return _runtime_notification_text(f'channels.{key}', data, **values)
+
+
 def _validate_user_webhook_url(url: str) -> Tuple[bool, str]:
     """Lightweight SSRF guard for Gotify-style channels.
 
@@ -308,18 +320,102 @@ class TelegramChannel(NotificationChannel):
         return self._http_request(url, payload, {'Content-Type': 'application/json'})
     
     def _split_message(self, text: str) -> list:
+        """Split Telegram HTML without cutting entities or formatting tags.
+
+        Open formatting tags are closed at the end of a chunk and reopened in
+        the next one, so every API request is valid HTML on its own.
+        """
         if len(text) <= self.MAX_LENGTH:
             return [text]
-        chunks = []
-        while text:
-            if len(text) <= self.MAX_LENGTH:
-                chunks.append(text)
+
+        token_re = re.compile(
+            r'&(?:#[0-9]+|#x[0-9A-Fa-f]+|[A-Za-z][A-Za-z0-9]+);|<[^<>]+>|.',
+            re.DOTALL,
+        )
+        entity_re = re.compile(r'&(?:#[0-9]+|#x[0-9A-Fa-f]+|[A-Za-z][A-Za-z0-9]+);')
+        tag_re = re.compile(r'<\s*(/?)\s*([A-Za-z0-9-]+)(?:\s[^<>]*)?>')
+        void_tags = {'br'}
+
+        def _advance(stack, token):
+            match = tag_re.fullmatch(token)
+            if not match:
+                return list(stack)
+            closing, name = match.groups()
+            name = name.lower()
+            next_stack = list(stack)
+            if closing:
+                if next_stack and next_stack[-1][0] == name:
+                    next_stack.pop()
+            elif not token.rstrip().endswith('/>') and name not in void_tags:
+                next_stack.append((name, token))
+            return next_stack
+
+        def _closers(stack):
+            return ''.join(f'</{name}>' for name, _ in reversed(stack))
+
+        def _openers(stack):
+            return ''.join(opener for _, opener in stack)
+
+        def _plain_chunks(tokens):
+            """Drop unsafe formatting while preserving safe visible HTML text."""
+            safe_tokens = []
+            for token in tokens:
+                if tag_re.fullmatch(token):
+                    continue
+                if entity_re.fullmatch(token) and len(token) <= self.MAX_LENGTH:
+                    safe_tokens.append(token)
+                    continue
+                if entity_re.fullmatch(token) or token in {'&', '<', '>'}:
+                    safe_tokens.extend(token_re.findall(self._escape_html(token)))
+                else:
+                    safe_tokens.append(token)
+
+            plain_chunks = []
+            current = ''
+            for token in safe_tokens:
+                if current and len(current) + len(token) > self.MAX_LENGTH:
+                    plain_chunks.append(current)
+                    current = ''
+                current += token
+            if current:
+                plain_chunks.append(current)
+            return plain_chunks
+
+        tokens = token_re.findall(text)
+        probe_tags = []
+        unsafe_html = False
+        for token in tokens:
+            match = tag_re.fullmatch(token)
+            if match and match.group(1):
+                name = match.group(2).lower()
+                if not probe_tags or probe_tags[-1][0] != name:
+                    unsafe_html = True
+                    break
+            next_tags = _advance(probe_tags, token)
+            minimum_chunk = len(_openers(probe_tags)) + len(token) + len(_closers(next_tags))
+            if len(token) > self.MAX_LENGTH or minimum_chunk > self.MAX_LENGTH:
+                unsafe_html = True
                 break
-            split_at = text.rfind('\n', 0, self.MAX_LENGTH)
-            if split_at == -1:
-                split_at = self.MAX_LENGTH
-            chunks.append(text[:split_at])
-            text = text[split_at:].lstrip('\n')
+            probe_tags = next_tags
+
+        if unsafe_html:
+            return _plain_chunks(tokens)
+
+        chunks = []
+        current = ''
+        open_tags = []
+        for token in tokens:
+            next_tags = _advance(open_tags, token)
+            if current and len(current) + len(token) + len(_closers(next_tags)) > self.MAX_LENGTH:
+                chunks.append(current + _closers(open_tags))
+                current = _openers(open_tags)
+            current += token
+            open_tags = _advance(open_tags, token)
+
+        if current:
+            chunks.append(current + _closers(open_tags))
+        if any(len(chunk) > self.MAX_LENGTH for chunk in chunks):
+            return _plain_chunks(tokens)
         return chunks
     
     @staticmethod
@@ -612,11 +708,11 @@ class DiscordChannel(NotificationChannel):
             ]
         elif data:
             if data.get('category'):
-                fields.append({'name': 'Category', 'value': data['category'], 'inline': True})
+                fields.append({'name': _runtime_text('discord.category', data), 'value': data['category'], 'inline': True})
             if data.get('hostname'):
-                fields.append({'name': 'Host', 'value': data['hostname'], 'inline': True})
+                fields.append({'name': _runtime_text('discord.host', data), 'value': data['hostname'], 'inline': True})
             if data.get('severity'):
-                fields.append({'name': 'Severity', 'value': data['severity'], 'inline': True})
+                fields.append({'name': _runtime_text('discord.severity', data), 'value': data['severity'], 'inline': True})
 
         embeds: List[Dict[str, Any]] = []
         for idx, chunk in enumerate(chunks):
@@ -936,18 +1032,36 @@ class EmailChannel(NotificationChannel):
         import time as _time
 
         data = data or {}
-        sev = self._SEV_STYLE.get(severity, self._SEV_DEFAULT)
+        sev = dict(self._SEV_STYLE.get(severity, self._SEV_DEFAULT))
+        severity_key = severity.lower() if severity in self._SEV_STYLE else 'default'
+        sev['label'] = _runtime_text(f'email.severity.{severity_key}', data)
 
         # Determine group for section header
         event_type = data.get('_event_type', '')
         group = data.get('_group', 'other')
-        section_label = self._GROUP_LABELS.get(group, 'System Notification')
+        section_label = _runtime_text(f'email.groups.{group}', data)
+        report_label = _runtime_text('email.report', data, group=section_label)
+        host_label = _runtime_text('email.host', data)
+        footer_label = _runtime_text('email.footer', data)
 
         # Timestamp
         ts = data.get('timestamp', '') or _time.strftime('%Y-%m-%d %H:%M:%S UTC', _time.gmtime())
 
         # ── Build structured detail rows from known data fields ──
         detail_rows = self._build_detail_rows(data, event_type, group, html_mod)
+
+        # Vzdump bodies are authoritative multi-item inventories. Keep their
+        # lines exactly once, but retain the localized structured status row;
+        # the remaining structured backup metadata only duplicates the report.
+        if event_type in {'backup_complete', 'backup_fail'}:
+            status_label = html_mod.escape(
+                _runtime_text('email.fields.status', data)
+            )
+            detail_rows = [row for row in detail_rows if row[0] == status_label]
+            detail_rows.extend(
+                ('', html_mod.escape(line.strip()))
+                for line in body.split('\n') if line.strip()
+            )
 
         # ── Fallback: if no structured rows, render body text lines ──
         if not detail_rows:
@@ -983,7 +1097,7 @@ class EmailChannel(NotificationChannel):
         if reason and len(reason) > 80:
             reason_html = f'''
 <div style="margin:16px 0 0;padding:12px 16px;border:1px solid #d1d5db;border-radius:6px;">
-  <p style="margin:0 0 4px;font-size:11px;font-weight:600;color:#374151;text-transform:uppercase;letter-spacing:0.05em;">Details</p>
+  <p style="margin:0 0 4px;font-size:11px;font-weight:600;color:#374151;text-transform:uppercase;letter-spacing:0.05em;">{_runtime_text('email.details', data)}</p>
   <p style="margin:0;font-size:13px;color:#1f2937;line-height:1.6;white-space:pre-wrap;">{html_mod.escape(reason)}</p>
 </div>'''
 
@@ -993,7 +1107,7 @@ class EmailChannel(NotificationChannel):
             display_title = display_title.replace(prefix, '').strip()
 
         return f'''<!DOCTYPE html>
-<html lang="en">
+<html lang="{html_mod.escape(str(data.get('_notification_language', 'en')))}">
 <head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"></head>
 <body style="margin:0;padding:0;background-color:#f3f4f6;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;">
 <div style="max-width:640px;margin:24px auto;background:#ffffff;border-radius:8px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,0.1);border:1px solid #d1d5db;">
@@ -1004,7 +1118,7 @@ class EmailChannel(NotificationChannel):
       <tr>
         <td>
           <h1 style="margin:0;font-size:18px;font-weight:700;color:#111827;letter-spacing:-0.02em;">ProxMenux Monitor</h1>
-          <p style="margin:4px 0 0;font-size:12px;color:#4b5563;">{html_mod.escape(section_label)} Report</p>
+          <p style="margin:4px 0 0;font-size:12px;color:#4b5563;">{html_mod.escape(report_label)}</p>
         </td>
         <td style="text-align:right;vertical-align:top;">
           <span style="display:inline-block;padding:4px 12px;border-radius:4px;font-size:11px;font-weight:600;letter-spacing:0.05em;color:{sev['color']};background:{sev['bg']};border:1px solid {sev['border']};">{sev['label'].upper()}</span>
@@ -1024,7 +1138,7 @@ class EmailChannel(NotificationChannel):
     <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom:16px;">
       <tr>
         <td style="font-size:12px;color:#4b5563;">
-          Host: <strong style="color:#111827;">{html_mod.escape(data.get('hostname', ''))}</strong>
+          {html_mod.escape(host_label)}: <strong style="color:#111827;">{html_mod.escape(data.get('hostname', ''))}</strong>
         </td>
         <td style="font-size:12px;color:#4b5563;text-align:right;">
           {html_mod.escape(ts)}
@@ -1044,7 +1158,7 @@ class EmailChannel(NotificationChannel):
   <div style="padding:14px 28px;border-top:1px solid #d1d5db;">
     <table width="100%" cellpadding="0" cellspacing="0" border="0">
       <tr>
-        <td style="font-size:11px;color:#4b5563;">ProxMenux Notification Service</td>
+        <td style="font-size:11px;color:#4b5563;">{html_mod.escape(footer_label)}</td>
         <td style="font-size:11px;color:#4b5563;text-align:right;">proxmenux.com</td>
       </tr>
     </table>
@@ -1064,11 +1178,37 @@ class EmailChannel(NotificationChannel):
         """
         esc = html_mod.escape
         rows = []
+        field_keys = {
+            'VM/CT ID': 'vmCtId', 'Name': 'name', 'Action': 'action',
+            'Target Node': 'targetNode', 'Reason': 'reason', 'Storage': 'storage',
+            'Status': 'status', 'Size': 'size', 'Duration': 'duration',
+            'Snapshot': 'snapshot', 'Metric': 'metric', 'Current Value': 'currentValue',
+            'Threshold': 'threshold', 'CPU Cores': 'cpuCores', 'Memory': 'memory',
+            'Temperature': 'temperature', 'Mount Point': 'mountPoint', 'Usage': 'usage',
+            'Available': 'available', 'Device': 'device', 'Severity': 'severity',
+            'Storage Name': 'storageName', 'Type': 'type', 'Interface': 'interface',
+            'Latency': 'latency', 'Event': 'event', 'Source IP': 'sourceIp',
+            'Username': 'username', 'Service': 'service', 'Jail': 'jail',
+            'Failures': 'failures', 'Change': 'change', 'Node': 'node',
+            'Quorum': 'quorum', 'Nodes Affected': 'nodesAffected', 'Process': 'process',
+            'Details': 'reason', 'Category': 'category',
+            'Previous Severity': 'previousSeverity', 'Active Issues': 'activeIssues',
+            'Total Updates': 'totalUpdates', 'Security Updates': 'securityUpdates',
+            'Proxmox Updates': 'proxmoxUpdates', 'Kernel Updates': 'kernelUpdates',
+            'Important Packages': 'importantPackages', 'Current Version': 'currentVersion',
+            'New Version': 'newVersion',
+        }
+        language_data = data
+
+        def _event_label() -> str:
+            return _runtime_notification_text(f'templates.{event_type}.label', language_data)
         
         def _add(label: str, value, fmt: str = ''):
-            """Add a row if value is truthy."""
+            """Add a localized row if value is truthy."""
+            original_label = label
+            label = _runtime_text(f"email.fields.{field_keys[label]}", language_data)
             v = str(value).strip() if value else ''
-            if not v or v == '0' and label not in ('Failures',):
+            if not v or v == '0' and original_label not in ('Failures',):
                 return
             if fmt == 'severity':
                 sev_colors = {
@@ -1090,7 +1230,8 @@ class EmailChannel(NotificationChannel):
         if group == 'vm_ct':
             _add('VM/CT ID', data.get('vmid'), 'code')
             _add('Name', data.get('vmname'), 'bold')
-            _add('Action', event_type.replace('_', ' ').replace('vm ', 'VM ').replace('ct ', 'CT ').title())
+            action = _runtime_notification_text(f'templates.{event_type}.label', data)
+            _add('Action', action)
             _add('Target Node', data.get('target_node'))
             _add('Reason', data.get('reason'))
 
@@ -1102,7 +1243,8 @@ class EmailChannel(NotificationChannel):
             # tell which target the backup ran against. Reported gap: emails
             # showed no way to distinguish which PBS failed with 2+ configured.
             _add('Storage', data.get('storage') or data.get('storage_name'), 'code')
-            _add('Status', 'Failed' if 'fail' in event_type else 'Completed' if 'complete' in event_type else 'Started',
+            status_key = 'failed' if 'fail' in event_type else 'completed' if 'complete' in event_type else 'started'
+            _add('Status', _runtime_text(f'email.status.{status_key}', language_data),
                  'severity' if 'fail' in event_type else '')
             _add('Size', data.get('size'))
             _add('Duration', data.get('duration'))
@@ -1114,7 +1256,7 @@ class EmailChannel(NotificationChannel):
 
         # ── Resources ──
         elif group == 'resources':
-            _add('Metric', event_type.replace('_', ' ').title())
+            _add('Metric', _event_label())
             _add('Current Value', data.get('value'), 'bold')
             _add('Threshold', data.get('threshold'))
             _add('CPU Cores', data.get('cores'))
@@ -1148,7 +1290,7 @@ class EmailChannel(NotificationChannel):
 
         # ── Security ──
         elif group == 'security':
-            _add('Event', event_type.replace('_', ' ').title())
+            _add('Event', _event_label())
             _add('Source IP', data.get('source_ip'), 'code')
             _add('Username', data.get('username'), 'code')
             _add('Service', data.get('service'))
@@ -1158,7 +1300,7 @@ class EmailChannel(NotificationChannel):
 
         # ── Cluster ──
         elif group == 'cluster':
-            _add('Event', event_type.replace('_', ' ').title())
+            _add('Event', _event_label())
             _add('Node', data.get('node_name'), 'bold')
             _add('Quorum', data.get('quorum'))
             _add('Nodes Affected', data.get('entity_list'))
@@ -1167,7 +1309,7 @@ class EmailChannel(NotificationChannel):
         elif group == 'services':
             _add('Service', data.get('service_name'), 'code')
             _add('Process', data.get('process'), 'code')
-            _add('Event', event_type.replace('_', ' ').title())
+            _add('Event', _event_label())
             reason = data.get('reason', '')
             if reason and len(reason) <= 80:
                 _add('Details', reason)
@@ -1199,13 +1341,20 @@ class EmailChannel(NotificationChannel):
                         f'<code style="padding:1px 5px;background:#f3f4f6;border-radius:3px;font-family:monospace;font-size:12px;">{esc(p)}</code>'
                         for p in pkg_lines
                     )
-                    rows.append((esc('Important Packages'), pkg_html))
+                    rows.append((esc(_runtime_text('email.fields.importantPackages', language_data)), pkg_html))
             _add('Current Version', data.get('current_version'), 'code')
             # `new_version` is the field used by generic package-update events;
             # driver-update templates (nvidia, coral) populate `latest_version`.
             # Read both so the tabular row is never empty when the template's
             # title/body already printed the new version.
             _add('New Version', data.get('new_version') or data.get('latest_version'), 'code')
+
+        # ── Generic system events ──
+        elif group == 'system':
+            _add('Event', _event_label())
+            reason = data.get('reason', '')
+            if reason and len(reason) <= 80:
+                _add('Details', reason)
 
         # ── Other / unknown ──
         else:
