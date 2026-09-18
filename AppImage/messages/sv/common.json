@@ -1822,6 +1822,12 @@
         },
         "other": {
           "label": "Andra"
+        },
+        "hardware": {
+          "label": "Hårdvara"
+        },
+        "system": {
+          "label": "System"
         }
       },
       "eventTypes": {
@@ -1920,7 +1926,9 @@
         "secure_gateway_update_available": "Secure Gateway uppdatering tillgänglig",
         "nvidia_driver_update_available": "NVIDIA drivrutinsuppdatering tillgänglig",
         "coral_driver_update_available": "Coral TPU drivrutinsuppdatering tillgänglig",
-        "app_update_available": "Appuppdatering tillgänglig"
+        "app_update_available": "Appuppdatering tillgänglig",
+        "lxc_update_applied": "LXC uppdatering tillämpad",
+        "docker_stack_update_available": "Docker uppdateringar tillgängliga"
       },
       "ui": {
         "quietHours": "Tysta timmar",
@@ -1982,7 +1990,10 @@
         "systemHostname": "Systemets värdnamn",
         "displayNameHint": "Namn visas i aviseringar. Redigera den eller lämna den tom för att använda systemets värdnamn.",
         "activeFooter": "Aviseringar är aktiva. Varje kanal följer sin egen kategori och evenemangsval.",
-        "inactiveFooter": "Aktivera aviseringar för att ta emot system-, hälso- och säkerhetsvarningar via de konfigurerade kanalerna."
+        "inactiveFooter": "Aktivera aviseringar för att ta emot system-, hälso- och säkerhetsvarningar via de konfigurerade kanalerna.",
+        "notificationLanguage": "Aviseringsspråk",
+        "selectNotificationLanguage": "Välj språk för meddelanden",
+        "notificationLanguageHint": "Används för deterministiska körtidsmeddelanden även när AI är inaktiverat."
       },
       "ai": {
         "title": "AI-förbättring",
@@ -5173,7 +5184,8 @@
       },
       "lynisTest": "Test",
       "lynisWarning": "Varning",
-      "couldNotRead": "Kunde inte läsas"
+      "couldNotRead": "Kunde inte läsas",
+      "readOnlyScope": "Bedömningen inspekterar värdinställningar och hälsa.Den kan skriva rapporter och loggar;startstatuskontroller kan tillfälligt montera EFI-systempartitioner."
     },
     "title": "Audit & Report",
     "loading": "Loading assessment…",
@@ -5406,7 +5418,8 @@
             "synchronised": "De {total} startpartitionerna bär samma kärnor",
             "attention": "{count} av {total} startpartitioner behöver ses över",
             "evaluationFailed": "The check could not be evaluated"
-          }
+          },
+          "rationale": "EFI-systempartitionerna proxmox-boot-tool rapporter och de kärnor som var och en bär.proxmox-boot-tool status kan tillfälligt montera EFI-systempartitioner;ingen start görs."
         },
         "failed_units": {
           "title": "Väsentliga tjänster och misslyckade enheter",
@@ -5924,7 +5937,8 @@
         "security": "Host exposure and access.",
         "backup": "Guest protection and whether it is real.",
         "capacity": "Room to grow and the wear on the disks."
-      }
+      },
+      "scopeReadOnly": "Bedömningen inspekterar värdinställningar och hälsa.Den kan skriva rapporter och loggar;startstatuskontroller kan tillfälligt montera EFI-systempartitioner."
     },
     "results": "Resultat",
     "classifications": {
@@ -6079,6 +6093,739 @@
       "withLynis": "Run with Lynis",
       "withoutLynis": "Run without Lynis",
       "cancel": "Cancel"
+    },
+    "readOnlyNotice": "Bedömningen inspekterar värdinställningar och hälsa.Den kan skriva rapporter och loggar;startstatuskontroller kan tillfälligt montera EFI-systempartitioner."
+  },
+  "runtime": {
+    "notifications": {
+      "templates": {
+        "state_change": {
+          "title": "{hostname}: {category} har ändrats till {current}{entity_suffix}",
+          "body": "{category} status ändrad från {previous} till {current}.\n{reason}",
+          "label": "Hälsotillståndet har ändrats"
+        },
+        "new_error": {
+          "title": "{hostname}: Nytt {severity} - {category}{entity_suffix}",
+          "body": "{reason}",
+          "label": "Nytt hälsoproblem"
+        },
+        "error_resolved": {
+          "title": "{hostname}: Löst - {category}{entity_suffix}",
+          "body": "{category}-problemet har lösts.\n{reason}\n🚦 Tidigare svårighetsgrad: {original_severity}\n⏱️ Varaktighet: {duration}",
+          "label": "Återställningsmeddelande"
+        },
+        "error_escalated": {
+          "title": "{hostname}: Eskalerad till {severity} - {category}{entity_suffix}",
+          "body": "{reason}",
+          "label": "Hälsoproblemet eskalerade"
+        },
+        "health_degraded": {
+          "title": "{title_or_default}",
+          "body": "{reason}",
+          "label": "Hälsokontroll försämrad"
+        },
+        "lxc_updates_available": {
+          "title": "{hostname}: {count} LXC(s) med paketuppdateringar tillgängliga",
+          "body": "📊 {count} LXC(s) med väntande paketuppdateringar (📦 {total_packages} totalt, 🔒 {security_count} säkerhet):\n\n{ct_list}",
+          "label": "LXC uppdateringar tillgängliga (experimentell)"
+        },
+        "lxc_update_applied": {
+          "title": "{hostname}: LXC {ct_name} ({vmid}) uppdatera {result}",
+          "body": "{details}",
+          "label": "LXC uppdatering tillämpad"
+        },
+        "app_update_available": {
+          "title": "{hostname}: {app_name} uppdatering tillgänglig på CT {vmid}",
+          "body": "{app_name} på CT {vmid} ({ct_name}) har en ny version:\n{installed} → {latest}",
+          "label": "Appuppdatering tillgänglig"
+        },
+        "docker_stack_update_available": {
+          "title": "{hostname}: Docker uppdateringar tillgängliga på CT {vmid}",
+          "body": "Behållaren {ct_name} (CT {vmid}) har {count} Docker uppdatering(ar):\n{details}",
+          "label": "Docker uppdateringar tillgängliga"
+        },
+        "vm_start": {
+          "title": "{hostname}: VM {vmname} ({vmid}) startade",
+          "body": "Virtuell maskin {vmname} (ID: {vmid}) körs nu.",
+          "label": "VM startade"
+        },
+        "vm_start_warning": {
+          "title": "{hostname}: VM {vmname} ({vmid}) började med varningar",
+          "body": "Virtuell maskin {vmname} (ID: {vmid}) startade framgångsrikt men har varningar.\nVarningar: {reason}",
+          "label": "VM startade (varningar)"
+        },
+        "vm_stop": {
+          "title": "{hostname}: VM {vmname} ({vmid}) stoppade",
+          "body": "Virtuell maskin {vmname} (ID: {vmid}) har stoppats.",
+          "label": "VM stoppas"
+        },
+        "vm_shutdown": {
+          "title": "{hostname}: VM {vmname} ({vmid}) stängs av",
+          "body": "Den virtuella maskinen {vmname} (ID: {vmid}) har stängts av rent.",
+          "label": "VM-avstängning"
+        },
+        "vm_fail": {
+          "title": "{hostname}: VM {vmname} ({vmid}) FAILED",
+          "body": "Virtuell maskin {vmname} (ID: {vmid}) har kraschat eller kunde inte startas.\nOrsak: {reason}",
+          "label": "VM FAILED"
+        },
+        "vm_restart": {
+          "title": "{hostname}: VM {vmname} ({vmid}) startade om",
+          "body": "Virtuell maskin {vmname} (ID: {vmid}) har startats om.",
+          "label": "VM har startat om"
+        },
+        "ct_start": {
+          "title": "{hostname}: CT {vmname} ({vmid}) startade",
+          "body": "Behållaren {vmname} (ID: {vmid}) körs nu.",
+          "label": "CT startade"
+        },
+        "ct_start_warning": {
+          "title": "{hostname}: CT {vmname} ({vmid}) började med varningar",
+          "body": "Behållaren {vmname} (ID: {vmid}) startade framgångsrikt men har varningar.\nVarningar: {reason}",
+          "label": "CT startad (varningar)"
+        },
+        "ct_stop": {
+          "title": "{hostname}: CT {vmname} ({vmid}) stoppade",
+          "body": "Behållaren {vmname} (ID: {vmid}) har stoppats.",
+          "label": "CT stoppad"
+        },
+        "ct_shutdown": {
+          "title": "{hostname}: CT {vmname} ({vmid}) stängs av",
+          "body": "Behållaren {vmname} (ID: {vmid}) har stängts av rent.",
+          "label": "CT-avstängning"
+        },
+        "ct_restart": {
+          "title": "{hostname}: CT {vmname} ({vmid}) startade om",
+          "body": "Behållaren {vmname} (ID: {vmid}) har startats om.",
+          "label": "CT startade om"
+        },
+        "ct_fail": {
+          "title": "{hostname}: CT {vmname} ({vmid}) MISSLYCKADES",
+          "body": "Behållaren {vmname} (ID: {vmid}) har kraschat eller kunde inte startas.\nOrsak: {reason}",
+          "label": "CT FAILED"
+        },
+        "migration_start": {
+          "title": "{hostname}: Migrering startade — {vmname} ({vmid})",
+          "body": "Live migration of {vmname} (ID: {vmid}) to node {target_node} has started.",
+          "label": "Migreringen startade"
+        },
+        "migration_complete": {
+          "title": "{hostname}: Migreringen slutförd — {vmname} ({vmid})",
+          "body": "{vmname} (ID: {vmid}) har migrerats till noden {target_node}.",
+          "label": "Migreringen är klar"
+        },
+        "migration_warning": {
+          "title": "{hostname}: Migrering komplett med varningar — {vmname} ({vmid})",
+          "body": "{vmname} (ID: {vmid}) migrerade till nod {target_node} men stötte på varningar.\nVarningar: {reason}",
+          "label": "Migration (varningar)"
+        },
+        "migration_fail": {
+          "title": "{hostname}: Migrering misslyckades — {vmname} ({vmid})",
+          "body": "Migrering av {vmname} (ID: {vmid}) till nod {target_node} misslyckades.\nOrsak: {reason}",
+          "label": "Migreringen misslyckades"
+        },
+        "replication_fail": {
+          "title": "{hostname}: Replikering misslyckades — {vmname} ({vmid})",
+          "body": "Replikering av {vmname} (ID: {vmid}) misslyckades.\nOrsak: {reason}",
+          "label": "Replikering misslyckades"
+        },
+        "replication_complete": {
+          "title": "{hostname}: Replikering slutförd — {vmname} ({vmid})",
+          "body": "Replikering av {vmname} (ID: {vmid}) har slutförts.",
+          "label": "Replikeringen är klar"
+        },
+        "backup_start": {
+          "title": "{hostname}: Säkerhetskopiering startade {storage}",
+          "body": "Säkerhetskopiering startade på lagring {storage}.\n{reason}",
+          "label": "Säkerhetskopiering startade"
+        },
+        "backup_complete": {
+          "title": "{hostname} → {storage}: Säkerhetskopiering klar — {vmname} ({vmid})",
+          "body": "Säkerhetskopiering av {vmname} (ID: {vmid}) slutfördes framgångsrikt på {storage}.\nStorlek: {size}",
+          "label": "Säkerhetskopieringen är klar"
+        },
+        "backup_warning": {
+          "title": "{hostname} → {storage}: Säkerhetskopiering komplett med varningar — {vmname} ({vmid})",
+          "body": "Säkerhetskopiering av {vmname} (ID: {vmid}) på {storage} slutförd men påträffade varningar.\nVarningar: {reason}",
+          "label": "Säkerhetskopiering (varningar)"
+        },
+        "backup_fail": {
+          "title": "{hostname} → {storage}: Säkerhetskopiering misslyckades — {vmname} ({vmid})",
+          "body": "Säkerhetskopiering av {vmname} (ID: {vmid}) misslyckades på {storage}.\nOrsak: {reason}",
+          "label": "Säkerhetskopieringen misslyckades"
+        },
+        "host_backup_start": {
+          "title": "{hostname}: Värdsäkerhetskopiering startade → {backend_label}",
+          "body": "Jobb: {job_id}\nBackend: {backend_label}\nDestination: {destination}\nProfil: {profile_mode}",
+          "label": "Värdsäkerhetskopiering startade"
+        },
+        "host_backup_complete": {
+          "title": "{hostname}: Värdsäkerhetskopiering klar → {backend_label}",
+          "body": "Jobb: {job_id}\nBackend: {backend_label}\nDestination: {destination}\nDatastorlek: {data_size}\nArkivstorlek: {archive_size}\nVaraktighet: {duration}",
+          "label": "Värdsäkerhetskopiering klar"
+        },
+        "host_backup_fail": {
+          "title": "{hostname}: Värdsäkerhetskopiering misslyckades → {backend_label}",
+          "body": "Jobb: {job_id}\nBackend: {backend_label}\nDestination: {destination}\nVaraktighet före fel: {duration}\nOrsak: {reason}\nLogg: {log_file}",
+          "label": "Säkerhetskopiering av värd misslyckades"
+        },
+        "snapshot_complete": {
+          "title": "{hostname}: Ögonblicksbild skapad — {vmname} ({vmid})",
+          "body": "Ögonblicksbild \"{snapshot_name}\" skapad för {vmname} (ID: {vmid}).",
+          "label": "Ögonblicksbild skapad"
+        },
+        "snapshot_fail": {
+          "title": "{hostname}: Snapshot FAILED — {vmname} ({vmid})",
+          "body": "Det gick inte att skapa en ögonblicksbild för {vmname} (ID: {vmid}).\nOrsak: {reason}",
+          "label": "Snapshot FAILED"
+        },
+        "cpu_high": {
+          "title": "{hostname}: Hög CPU-användning — {value}%",
+          "body": "CPU-användningen har nått {value}% på {cores} kärnor.\n{details}",
+          "label": "Hög CPU-användning"
+        },
+        "ram_high": {
+          "title": "{hostname}: Hög minnesanvändning — {value}%",
+          "body": "Minnesanvändning: {used} / {total} ({value}%).\n{details}",
+          "label": "Hög minnesanvändning"
+        },
+        "temp_high": {
+          "title": "{hostname}: Hög CPU-temperatur — {value}°C",
+          "body": "CPU-temperaturen har nått {value}°C (tröskel: {threshold}°C).\n{details}",
+          "label": "Hög temperatur"
+        },
+        "disk_space_low": {
+          "title": "{hostname}: Lite diskutrymme på {mount}",
+          "body": "Filsystem {mount}: {used}% används ({available} tillgängligt).\nFrigör diskutrymme för att undvika avbrott i tjänsten.",
+          "label": "Lite diskutrymme"
+        },
+        "disk_io_error": {
+          "title": "{hostname}: Diskfel har upptäckts — {device}",
+          "body": "I/O-fel eller diskfel upptäcktes på enheten {device}.\n{reason}",
+          "label": "Diskfel / I/O-fel"
+        },
+        "storage_unavailable": {
+          "title": "{hostname}: Lagring otillgänglig — {storage_name}",
+          "body": "PVE-lagring \"{storage_name}\" (typ: {storage_type}) är inte tillgänglig.\nOrsak: {reason}",
+          "label": "Lagring inte tillgängligt"
+        },
+        "smart_test_complete": {
+          "title": "{hostname}: SMART-testet slutfört — {device}",
+          "body": "SMART {test_type} test på /dev/{device} har slutförts.\nResultat: {result}\nVaraktighet: {duration}",
+          "label": "SMART-testet avslutat"
+        },
+        "smart_test_failed": {
+          "title": "{hostname}: SMART test misslyckades — {device}",
+          "body": "SMART {test_type} test på /dev/{device} har misslyckats.\nResultat: {result}\nOrsak: {reason}",
+          "label": "SMART test misslyckades"
+        },
+        "gpu_mode_switch": {
+          "title": "{hostname}: GPU-läge ändrat till {new_mode}",
+          "body": "GPU-genomkopplingsläget har bytts.\nGPU: {gpu_name} ({gpu_pci})\nFöregående läge: {old_mode}\nNytt läge: {new_mode}\n{details}",
+          "label": "GPU-läge har ändrats"
+        },
+        "gpu_passthrough_blocked": {
+          "title": "{hostname}: {guest_type} {guest_id} blockerad vid start",
+          "body": "PCIe passthrough guard förhindrade {guest_type} {guest_id} ({guest_name}) från att starta.\nOrsak: {reason}\n{details}",
+          "label": "GPU-genomföring blockerad"
+        },
+        "pci_passthrough_conflict": {
+          "title": "{hostname}: PCIe-enhetskonflikt upptäcktes — {device_pci}",
+          "body": "En PCIe-enhet är tilldelad till flera gäster.\nEnhet: {device_pci}\nMotstridiga gäster: {guest_list}\nÅtgärd krävs: Stoppa en av gästerna eller tilldela om enheten.",
+          "label": "PCIe-enhetskonflikt"
+        },
+        "load_high": {
+          "title": "{hostname}: Hög systembelastning — {value}",
+          "body": "Genomsnittlig systembelastning är {value} på {cores} kärnor.\n{details}",
+          "label": "Hög systembelastning"
+        },
+        "network_down": {
+          "title": "{hostname}: Nätverksanslutning förlorad{entity_suffix}",
+          "body": "Noden har förlorat nätverksanslutningen.\nOrsak: {reason}",
+          "label": "Nätverksanslutning förlorad"
+        },
+        "network_latency": {
+          "title": "{hostname}: Hög nätverkslatens — {value}ms",
+          "body": "Latens till gateway: {value}ms (tröskelvärde: {threshold}ms).\nDetta kan indikera nätverksöverbelastning eller maskinvaruproblem.",
+          "label": "Hög nätverkslatens"
+        },
+        "auth_fail": {
+          "title": "{hostname}: Autentiseringsfel",
+          "body": "Misslyckat inloggningsförsök upptäcktes.\nKälla IP: {source_ip}\nAnvändare: {username}\nService: {service}",
+          "label": "Autentiseringsfel"
+        },
+        "ip_block": {
+          "title": "{hostname}: IP blockerad av Fail2Ban",
+          "body": "IP-adressen {source_ip} har förbjudits.\nFängelse: {jail}\nMisslyckade försök: {failures}",
+          "label": "IP blockerad av Fail2Ban"
+        },
+        "firewall_issue": {
+          "title": "{hostname}: Brandväggsproblem upptäckt{entity_suffix}",
+          "body": "Ett brandväggskonfigurationsproblem har upptäckts.\nOrsak: {reason}",
+          "label": "Brandväggsproblem upptäckt"
+        },
+        "user_permission_change": {
+          "title": "{hostname}: Användarbehörighet ändrad",
+          "body": "Användare: {username}\nÄndra: {change_details}",
+          "label": "Användarbehörighet har ändrats"
+        },
+        "split_brain": {
+          "title": "{hostname}: SPLIT-BRAIN upptäckt",
+          "body": "Ett tillstånd med delad hjärna i kluster har upptäckts.Quorum kan gå förlorat.\nKvorumsstatus: {quorum}",
+          "label": "SPLIT-BRAIN upptäckt"
+        },
+        "node_disconnect": {
+          "title": "{hostname}: Nod {node_name} frånkopplad",
+          "body": "Node {node_name} has disconnected from the cluster.",
+          "label": "Noden frånkopplad"
+        },
+        "node_reconnect": {
+          "title": "{hostname}: Noden {node_name} återansluten",
+          "body": "Noden {node_name} har gått med i klustret igen.",
+          "label": "Noden återansluten"
+        },
+        "system_startup": {
+          "title": "{hostname}: {reason}",
+          "body": "{summary}",
+          "label": "Systemstartrapport"
+        },
+        "system_shutdown": {
+          "title": "{hostname}: Systemet stängs av",
+          "body": "Noden stängs av.\n{reason}",
+          "label": "Systemet stängs av"
+        },
+        "system_reboot": {
+          "title": "{hostname}: Systemet startar om",
+          "body": "Noden startas om.\n{reason}",
+          "label": "Systemet startar om"
+        },
+        "system_restore_completed": {
+          "title": "{hostname}: Värdåterställning avslutad",
+          "body": "Uppgifter efter återställning slutförda i bakgrunden.\n\nGäster ansökte: {guests}\nBind-monterade stubbar: {stubs}\nInaktuella nodkataloger har tagits bort: {stale_nodes}\nKomponenter installerade om: {components}\nVaraktighet: {duration}\n{warnings_block}\nNoden är nu helt redo att användas.",
+          "label": "Värdåterställning slutförd"
+        },
+        "system_problem": {
+          "title": "{hostname}: Systemproblem upptäckt{entity_suffix}",
+          "body": "Ett problem på systemnivå har upptäckts.\nOrsak: {reason}",
+          "label": "Systemproblem har upptäckts"
+        },
+        "service_fail": {
+          "title": "{hostname}: Tjänsten misslyckades — {service_name}",
+          "body": "Systemtjänsten \"{service_name}\" har misslyckats.\nOrsak: {reason}",
+          "label": "Tjänsten misslyckades"
+        },
+        "oom_kill": {
+          "title": "{hostname}: OOM Kill — {process}",
+          "body": "Processen \"{process}\" dödades av Out-of-Memory-hanteraren.\n{reason}",
+          "label": "Minneslöst döda"
+        },
+        "service_fail_batch": {
+          "title": "{hostname}: {service_count} tjänster misslyckades{entity_suffix}",
+          "body": "{reason}",
+          "label": "Tjänsten misslyckas batch"
+        },
+        "cron_output": {
+          "title": "{hostname}: {pve_title}",
+          "body": "{reason}",
+          "label": "Cron-jobbutdata (per-cron stdout via e-post)"
+        },
+        "system_mail": {
+          "title": "{hostname}: {pve_title}",
+          "body": "{reason}",
+          "label": "Smartd / mail studsar (PVE system mail)"
+        },
+        "apt_listchanges": {
+          "title": "{hostname}: {pve_title}",
+          "body": "Uppströmspaketinformation vidarebefordrad av Proxmox VE genom apt-listchanges.Följande text kommer från paketunderhållaren och är inte en ProxMenux rekommendation.\n\n{reason}",
+          "label": "apt-listchanges paketmeddelanden"
+        },
+        "webhook_test": {
+          "title": "{hostname}: Webhook-test mottaget",
+          "body": "PVE webhook anslutningstest lyckats.\n{reason}",
+          "label": "Webhook test"
+        },
+        "update_available": {
+          "title": "{hostname}: Uppdateringar tillgängliga",
+          "body": "Totalt antal uppdateringar: {total_count}\nSäkerhet: {security_count}\nProxmox: {pve_count}\nKärna: {kernel_count}\nViktiga paket:\n{important_list}",
+          "label": "Uppdateringar tillgängliga (legacy)"
+        },
+        "unknown_persistent": {
+          "title": "{hostname}: Kontrollera otillgänglig - {category}{entity_suffix}",
+          "body": "Health check för {category} har varit otillgänglig i 3+ cykler.\n{reason}",
+          "label": "Kontrollera inte tillgänglig"
+        },
+        "health_persistent": {
+          "title": "{hostname}: {count} aktiv(a) hälsoproblem{entity_suffix}",
+          "body": "Följande hälsoproblem är fortfarande olösta:\n{issue_list}\n\nDenna sammanfattning skickas en gång var 24:e timme medan problemen kvarstår.",
+          "label": "Aktiva hälsoproblem (dagligen)"
+        },
+        "health_issue_new": {
+          "title": "{hostname}: Nytt hälsoproblem — {category}{entity_suffix}",
+          "body": "Nytt {severity} problem upptäckt i: {category}\nDetaljer: {reason}",
+          "label": "Nytt hälsoproblem"
+        },
+        "health_issue_resolved": {
+          "title": "{hostname}: Löst - {category}{entity_suffix}",
+          "body": "{category} problemet har lösts.\n{reason}\nVaraktighet: {duration}",
+          "label": "Hälsoproblem löst"
+        },
+        "update_summary": {
+          "title": "{hostname}: Uppdateringar tillgängliga",
+          "body": "Totalt antal uppdateringar: {total_count}\nSäkerhetsuppdateringar: {security_count}\nProxmox-relaterade uppdateringar: {pve_count}\nKärnuppdateringar: {kernel_count}\nViktiga paket:\n{important_list}",
+          "label": "Värdpaketuppdateringar"
+        },
+        "pve_update": {
+          "title": "{hostname}: Proxmox VE {new_version} tillgänglig",
+          "body": "En ny Proxmox VE-version är tillgänglig.\nAktuell: {current_version}\nNytt: {new_version}\n{details}",
+          "label": "Proxmox VE-uppdatering tillgänglig"
+        },
+        "update_complete": {
+          "title": "{hostname}: Systemuppdatering slutförd",
+          "body": "Systempaket har uppdaterats.\n{details}",
+          "label": "Värduppdateringen slutförd"
+        },
+        "ai_model_migrated": {
+          "title": "{hostname}: AI-modell uppdaterad",
+          "body": "AI-modellen för aviseringar har uppdaterats automatiskt.\nLeverantör: {provider}\nTidigare modell: {old_model}\nNy modell: {new_model}\n\n{message}",
+          "label": "AI-modellen uppdateras automatiskt"
+        },
+        "proxmenux_update": {
+          "title": "{hostname}: ProxMenux {new_version} tillgänglig",
+          "body": "En ny version av ProxMenux är tillgänglig.\nAktuell: {current_version}\nNytt: {new_version}",
+          "label": "ProxMenux uppdatering tillgänglig"
+        },
+        "mount_stale": {
+          "title": "{hostname}: gammalt fjärrfäste {mount_target}",
+          "body": "Fjärrmontering {mount_target} ({fstype}) från {mount_source} är inaktuell{lxc_scope}.\nStatistik tog timeout eller returnerade ett fel: {error}\n\nAppar som skriver till den här sökvägen kommer tyst att landa på det underliggande filsystemet och kan fylla disken.Montera om eller fixa anslutningen ASAP.",
+          "label": "Fjärrmontering gammal"
+        },
+        "mount_readonly": {
+          "title": "{hostname}: fjärrmontering {mount_target} är skrivskyddad",
+          "body": "Fjärrmontering {mount_target} ({fstype}) från {mount_source} är monterad skrivskyddad{lxc_scope}.Skriver misslyckas.Om detta var oavsiktligt, montera om med rw.",
+          "label": "Fjärrmontering skrivskyddad"
+        },
+        "lxc_disk_low": {
+          "title": "{hostname}: CT {vmid} rootfs vid {usage_percent}%",
+          "body": "CT {vmid} ({name}) rootfs är på {usage_percent}% ({disk_bytes_human} / {maxdisk_bytes_human}).\n\nEn fullständig LXC rootfs hindrar behållaren från att starta upp rent.Expandera antingen rootfs (pct resize {vmid} rootfs +1G) eller ledigt utrymme inuti behållaren.",
+          "label": "LXC rootfs nästan full"
+        },
+        "vm_disk_low": {
+          "title": "{hostname}: VM {vmid} filsystem på {usage_percent}%",
+          "body": "VM {vmid} ({name}) gästfilsystem är på {usage_percent}% ({disk_bytes_human} / {maxdisk_bytes_human}).\n\nRapporterad av QEMU gästagenten.Inkluderar alla beständiga filsystem som gästen monterar på en blockenhet – både virtuella diskar och PCI-genomgångsenheter.Frigör utrymme inuti gästen eller utöka den påverkade lagringen innan skrivningar börjar misslyckas.",
+          "label": "VM-filsystem nästan fulla"
+        },
+        "lxc_mount_low": {
+          "title": "{hostname}: CT {vmid} montera {mount} vid {usage_percent}%",
+          "body": "Montera {mount} inuti CT {vmid} ({name}) är vid {usage_percent}% använd.\nFilsystemtyp: {fstype}\n\nEn full montering inuti en container blockerar ofta applikationen tyst - skriver antingen misslyckas eller, värre, landar på rootfs och utlöser rootfs-varningen nästa.Frigör utrymme på fästet eller utöka det.",
+          "label": "LXC montering nästan full"
+        },
+        "pve_storage_full": {
+          "title": "{hostname}: PVE-lagring {storage_name} vid {usage_percent}%",
+          "body": "Proxmox lagring \"{storage_name}\" (typ: {storage_type}) används på {usage_percent}%.\n\nNär den är full kan ingen ny VM/CT tillhandahållas och befintliga gäster kan misslyckas med att skriva.Flytta/ta bort oanvända volymer eller utöka den underliggande poolen/LV/RBD-bilden.",
+          "label": "PVE-lagring nästan full"
+        },
+        "zfs_pool_full": {
+          "title": "{hostname}: ZFS pool {pool_name} vid {usage_percent}%",
+          "body": "ZFS poolen \"{pool_name}\" har en kapacitet på {usage_percent}%.\n\nZFS prestanda och skrivtillförlitlighet försämras kraftigt över ~80 % kapacitet (CoW behöver ledigt utrymme för nya block).Frigör ögonblicksbilder, beskär gamla datauppsättningar eller lägg till fler vdevs till poolen.",
+          "label": "ZFS pool nästan full"
+        },
+        "post_install_update": {
+          "title": "{hostname}: {count} ProxMenux optimeringsuppdatering(ar) tillgängliga",
+          "body": "{count} ProxMenux optimeringsuppdatering(ar) tillgängliga på denna värd.\n\n🛠️ Tillgängliga versioner:\n{tool_list}\n\n💡 Ansök från:\n• ProxMenux Bildskärm → Inställningar → ProxMenux Optimering\n• Eller kör efterinstallationsmenyn (alternativ 2) → \"Använd tillgängliga uppdateringar\"",
+          "label": "ProxMenux optimeringsuppdateringar tillgängliga"
+        },
+        "secure_gateway_update_available": {
+          "title": "{hostname}: {app_name} uppdatering tillgänglig{update_title_suffix}",
+          "body": "{app_name} (hanteras av ProxMenux) har 📦 {package_count} paketuppdatering(ar) väntande i sin behållare.\n{version_line}\n\n💡 Öppna ProxMenux Monitor > Inställningar > Säker gateway och klicka på \"Uppdatera\" för att ansöka.\n\n🗂️ Paket:\n{package_list}",
+          "label": "Säker gateway-uppdatering tillgänglig"
+        },
+        "nvidia_driver_update_available": {
+          "title": "{hostname}: NVIDIA drivrutinsuppdatering tillgänglig — v{latest_version}",
+          "body": "En nyare underhållsversion är tillgänglig för den installerade NVIDIA-drivrutinen.\n🔹 För närvarande installerad: v{current_version}\nSenaste tillgängliga: v{latest_version}\n\n{upgrade_reason}\n\n💡 För att installera om:\n• Från menyn ProxMenux efter installationen: {menu_label}\n\nOminstallation bygger om modulen DKMS mot den körande kärnan och kräver en omstart för att ladda den nya drivrutinen.",
+          "label": "NVIDIA-drivrutinsuppdatering tillgänglig"
+        },
+        "coral_driver_update_available": {
+          "title": "{hostname}: Coral TPU-drivrutinsuppdatering tillgänglig — {latest_version}",
+          "body": "En nyare {variant_label} är tillgänglig.\n🔹 För närvarande installerad: {current_version}\nSenaste tillgängliga: {latest_version}\n\n{upgrade_reason}\n\n💡 För att installera om:\n• Från menyn ProxMenux efter installationen: {menu_label}\n\n{reboot_note}",
+          "label": "Coral TPU drivrutinsuppdatering tillgänglig"
+        },
+        "burst_auth_fail": {
+          "title": "{hostname}: +{count} fler autentiseringsfel i {window}",
+          "body": "+{count} ytterligare autentiseringsfel upptäcktes i {window} ({total_count} totalt).\nKällor: {entity_list}",
+          "label": "Auth-fel brister"
+        },
+        "burst_ip_block": {
+          "title": "{hostname}: Fail2Ban förbjudna +{count} fler IP-adresser i {window}",
+          "body": "+{count} ytterligare IP-adresser förbjudna av Fail2Ban i {window} ({total_count} totalt).\nIP:er: {entity_list}",
+          "label": "IP block burst"
+        },
+        "burst_disk_io": {
+          "title": "{hostname}: +{count} fler disk I/O-fel på {entity_list}",
+          "body": "+{count} additional I/O errors detected in {window} ({total_count} total).\nEnheter: {entity_list}",
+          "label": "Disk I/O burst"
+        },
+        "burst_cluster": {
+          "title": "{hostname}: Klusterflapping upptäcktes (+{count} ändringar till)",
+          "body": "Klusterstatus har ändrats +{count} gånger till i {window} ({total_count} totalt).\nNoder: {entity_list}",
+          "label": "Kluster flaxande brast"
+        },
+        "burst_service_fail": {
+          "title": "{hostname}: +{count} fler tjänster misslyckades i {window}",
+          "body": "+{count} ytterligare tjänstefel upptäcktes i {window} ({total_count} totalt).\nDetta indikerar vanligtvis en omstart av noden eller omstart av PVE-tjänsten.\n\nYtterligare fel:\n{details}",
+          "label": "Service fail burst"
+        },
+        "burst_system": {
+          "title": "{hostname}: +{count} fler systemproblem i {window}",
+          "body": "+{count} ytterligare systemproblem upptäcktes i {window} ({total_count} totalt).\n\nYtterligare problem:\n{details}",
+          "label": "Systemproblem sprack"
+        },
+        "burst_generic": {
+          "title": "{hostname}: +{count} fler {event_type} händelser i {window}",
+          "body": "+{count} ytterligare händelser av typen {event_type} i {window} ({total_count} totalt).\n\nYtterligare evenemang:\n{details}",
+          "label": "Generisk burst"
+        },
+        "kernel_warning": {
+          "title": "{hostname}: Diagnostikhändelse för kärnan upptäcktes",
+          "body": "Kärnan registrerade en diagnostisk händelse: {kernel_details}",
+          "label": "Kärnvarningar och diagnostiska spår"
+        }
+      },
+      "lxcUpdate": {
+        "status": {
+          "success": "lyckades",
+          "failure": "misslyckades",
+          "partial": "delvis klar",
+          "deferred": "uppskjuten",
+          "skipped": "hoppat över"
+        },
+        "source": {
+          "scheduled": "Schemalagd",
+          "manual": "Manual"
+        },
+        "sourceLabel": "Källa",
+        "targets": "Mål",
+        "osPending": "OS-paket väntande: {before} → {after}",
+        "osUnverified": "OS-paket: uppdateringskommandot körs;resultatet inte verifierat",
+        "applications": "Applikationer: {items}",
+        "applicationsUnverified": "Applikationer: uppdateringsprogrammet körs;ingen spårad versionsändring observerades",
+        "dockerEngineChange": "Docker Motor: {before} → {after}",
+        "dockerEngineVerified": "Docker Motor: verifierad på {version}",
+        "dockerEngineUnverified": "Docker Motor: uppdateringskommandot körs;version inte verifierad",
+        "dockerImagesPending": "Docker väntande bilder: {before} → {after}",
+        "dockerImagesChanged": "Docker bilder ändrade: {images}",
+        "deferredTargets": "Uppskjutna mål: {targets}",
+        "reason": "Orsak: {reason}",
+        "restartRequired": "Omstart krävs: {value}",
+        "yes": "ja",
+        "no": "nej",
+        "verificationPending": "Verifiering väntar tills behållaren körs",
+        "verificationWarning": "Verifieringsvarning: {error}",
+        "duration": "Varaktighet: {duration}"
+      },
+      "fallback": {
+        "unknownTitle": "{hostname}: {event_type}",
+        "healthCheckDegraded": "Hälsokontroll försämrad",
+        "none": "ingen"
+      },
+      "fields": {
+        "vmid": "VM/CT",
+        "name": "Namn",
+        "device": "Enhet",
+        "sourceIp": "Källa IP",
+        "node": "Nod",
+        "category": "Kategori",
+        "service": "Service",
+        "jail": "Fängelse",
+        "user": "Användare",
+        "count": "Räkna",
+        "window": "Fönster",
+        "affected": "Berörd"
+      },
+      "vzdump": {
+        "size": "Storlek: {value}",
+        "duration": "Varaktighet: {value}",
+        "file": "Arkiv",
+        "backups": "{count} säkerhetskopior",
+        "failed": "{count} misslyckades",
+        "total": "Totalt: {value}",
+        "time": "Tid: {value}"
+      },
+      "startup": {
+        "issuesTitle": "{hostname}: Systemstart - {count} problem upptäcktes",
+        "completeTitle": "{hostname}: Systemstart slutförd",
+        "operational": "Alla system är i drift.",
+        "vmCountOne": "{count} VM",
+        "vmCountMany": "{count} virtuella datorer",
+        "ctCountOne": "{count} CT",
+        "ctCountMany": "{count} CTs",
+        "started": "✅ {counts} har startat",
+        "vmFailed": "❌ VM misslyckades: {name} - {reason}",
+        "ctFailed": "❌ CT misslyckades: {name} - {reason}",
+        "unknownError": "okänt fel",
+        "storageUnavailable": "⚠️ Lagring: {count} otillgänglig ({names})",
+        "servicesFailed": "⚠️ Tjänster: {count} misslyckades ({names})",
+        "duration": "⏱️ Starten slutförd på {minutes} min"
+      },
+      "appUpdates": {
+        "singleTitle": "{hostname}: {app_name} uppdatering tillgänglig på CT {vmid}",
+        "singleBody": "{app_name} på CT {vmid} ({ct_name}) har en ny version:\n{installed} → {latest}",
+        "emptyTitle": "{hostname}: Programuppdateringar tillgängliga",
+        "emptyBody": "Appuppdateringar är tillgängliga.",
+        "batchTitle": "{hostname}: {count} applikationsuppdateringar tillgängliga",
+        "batchLeadOneContainer": "{count} applikationer i {container_count} LXC behållare har en nyare version:",
+        "batchLeadManyContainers": "{count} applikationer i {container_count} LXC behållare har en nyare version:",
+        "additional": "… {count} ytterligare applikation(er)",
+        "app": "app",
+        "unknown": "okänd"
+      },
+      "healthDegraded": {
+        "categories": {
+          "cpu": "CPU-användning och temperatur",
+          "memory": "Minne och byt",
+          "storage": "Förvaringsfästen och utrymme",
+          "disks": "Disk I/O och fel",
+          "network": "Nätverksgränssnitt",
+          "vms": "virtuella datorer och behållare",
+          "services": "PVE-tjänster",
+          "logs": "Systemloggar",
+          "updates": "Systemuppdateringar",
+          "security": "Säkerhet"
+        },
+        "severity": {
+          "critical": "Kritisk",
+          "warning": "Varning"
+        },
+        "reasons": {
+          "cpuSustained": "CPU är över {threshold}% i {duration}s."
+        },
+        "singleTitle": "{hostname}: {severity} hälsostatus – {category}",
+        "multipleTitle": "{hostname}: {count} hälsokontroller försämrade",
+        "multipleLine": "• {severity}: {category}\n{reason}"
+      },
+      "digest": {
+        "groups": {
+          "vm_ct": "VM en CT",
+          "backup": "Säkerhetskopiering",
+          "resources": "Resurser",
+          "storage": "Lagring",
+          "network": "Nätverk",
+          "security": "Säkerhet",
+          "cluster": "Kluster",
+          "services": "Tjänster",
+          "health": "Hälsa",
+          "updates": "Uppdateringar",
+          "hardware": "Hårdvara",
+          "system": "System",
+          "other": "Annat"
+        },
+        "title": "{hostname}: 24 timmars sammanfattning ({timestamp})",
+        "readFailed": "sammanfattningsläsning misslyckades: {error}",
+        "empty": "Inga INFO-händelser buffrade för detta sammanfattningsfönster.",
+        "lead": "{count} INFO-händelser grupperade efter kategori:",
+        "more": "• … och {count} till",
+        "footer": "(Kritiska/varningshändelser kom vid den tidpunkt de hände, inte i den här sammanfattningen.)",
+        "quietTitle": "{hostname}: {count} händelser buffrade under tysta timmar"
+      },
+      "test": {
+        "title": "ProxMenux Test",
+        "welcome": "Välkommen till ProxMenux Monitor!",
+        "verify": "Detta är ett testmeddelande för att verifiera att din aviseringskanal fungerar korrekt.",
+        "configuration": "Kanalkonfiguration:",
+        "iconsEnabled": "Ikoner: aktiverad",
+        "iconsDisabled": "Ikoner: inaktiverad",
+        "aiEnabled": "AI: aktiverad ({info})",
+        "aiDisabled": "AI: inaktiverad",
+        "alerts": "Du kommer att få varningar om systemhändelser, hälsostatusändringar och säkerhetsincidenter.",
+        "photoCaption": "Du kan använda den här bilden som profilbild för din aviseringsbot."
+      },
+      "channels": {
+        "discord": {
+          "category": "Kategori",
+          "host": "Värd",
+          "severity": "Allvarlighet"
+        },
+        "email": {
+          "severity": {
+            "critical": "Kritisk",
+            "warning": "Varning",
+            "info": "Information",
+            "ok": "Löst",
+            "default": "Observera"
+          },
+          "groups": {
+            "vm_ct": "Virtuell maskin / behållare",
+            "backup": "Säkerhetskopiering och ögonblicksbild",
+            "resources": "Systemresurser",
+            "storage": "Lagring",
+            "network": "Nätverk",
+            "security": "Säkerhet",
+            "cluster": "Kluster",
+            "services": "Systemtjänster",
+            "health": "Health Monitor",
+            "updates": "Systemuppdateringar",
+            "system": "System",
+            "hardware": "Hårdvara",
+            "other": "Systemmeddelande"
+          },
+          "fields": {
+            "vmCtId": "VM/CT ID",
+            "name": "Namn",
+            "action": "Action",
+            "targetNode": "Målnod",
+            "reason": "Anledning",
+            "storage": "Lagring",
+            "status": "Status",
+            "size": "Storlek",
+            "duration": "Varaktighet",
+            "snapshot": "Snapshot",
+            "metric": "Metrisk",
+            "currentValue": "Nuvarande värde",
+            "threshold": "Tröskel",
+            "cpuCores": "CPU-kärnor",
+            "memory": "Minne",
+            "temperature": "Temperatur",
+            "mountPoint": "Mount Point",
+            "usage": "Användning",
+            "available": "Tillgänglig",
+            "device": "Enhet",
+            "severity": "Allvarlighet",
+            "storageName": "Lagringsnamn",
+            "type": "Typ",
+            "interface": "Gränssnitt",
+            "latency": "Latens",
+            "event": "Event",
+            "sourceIp": "Källa IP",
+            "username": "Användarnamn",
+            "service": "Service",
+            "jail": "Fängelse",
+            "failures": "Misslyckanden",
+            "change": "Ändra",
+            "node": "Nod",
+            "quorum": "Kvorum",
+            "nodesAffected": "Noder som påverkas",
+            "process": "Process",
+            "category": "Kategori",
+            "previousSeverity": "Tidigare allvarlighetsgrad",
+            "activeIssues": "Active Issues",
+            "totalUpdates": "Totala uppdateringar",
+            "securityUpdates": "Säkerhetsuppdateringar",
+            "proxmoxUpdates": "Proxmox Uppdateringar",
+            "kernelUpdates": "Kärnuppdateringar",
+            "importantPackages": "Viktiga paket",
+            "currentVersion": "Aktuell version",
+            "newVersion": "Ny version"
+          },
+          "status": {
+            "failed": "Misslyckades",
+            "completed": "Klar",
+            "started": "Startat"
+          },
+          "report": "{group} Rapportera",
+          "details": "Detaljer",
+          "host": "Värd",
+          "footer": "ProxMenux Notification Service"
+        }
+      }
     }
   }
 }
