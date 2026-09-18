@@ -4,10 +4,11 @@
 ProxMenux Audit Routes
 Flask blueprint for the Audit & Report assessment engine.
 
-An assessment reads the host and records findings; it never modifies
-anything. The run endpoint is therefore the only POST that does real
-work, and it is deliberately serialised: two concurrent assessments would
-compete for the same collectors without producing a better answer.
+An assessment inspects host settings and health and records findings.
+It can write reports and logs; boot status checks can temporarily mount
+EFI system partitions. Assessment runs are deliberately serialised: two
+concurrent assessments would compete for the same collectors without
+producing a better answer.
 """
 
 import threading
