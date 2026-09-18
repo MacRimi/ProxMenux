@@ -3292,6 +3292,7 @@
   "Pre-existing gasket-dkms package removed.": "Pacchetto gasket-dkms preesistente rimosso.",
   "Pre-restore backup:": "Backup pre-ripristino:",
   "Pre-upgrade check FAILED: the simulation shows that 'proxmox-ve' would be REMOVED.\n    This indicates a repository or dependency issue and upgrading now could break your Proxmox installation.": "Controllo pre-aggiornamento FALLITO: la simulazione mostra che 'proxmox-ve' verrebbe RIMOSSO.\n    Ciò indica un problema di repository o dipendenza e l'aggiornamento ora potrebbe interrompere l'installazione di Proxmox.",
+  "Pre-upgrade simulation failed. See log:": "Simulazione pre-aggiornamento non riuscita. Vedi registro:",
   "Pre-upgrade simulation passed: 'proxmox-ve' will be kept or upgraded safely.": "Simulazione pre-aggiornamento superata: 'proxmox-ve' verrà mantenuto o aggiornato in modo sicuro.",
   "Preparing Log2RAM configuration": "Preparazione della configurazione Log2RAM",
   "Preparing files for backup...": "Preparazione dei file per il backup...",

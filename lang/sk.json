@@ -3292,6 +3292,7 @@
   "Pre-existing gasket-dkms package removed.": "Existujúci balík gasket-dkms bol odstránený.",
   "Pre-restore backup:": "Záloha pred obnovou:",
   "Pre-upgrade check FAILED: the simulation shows that 'proxmox-ve' would be REMOVED.\n    This indicates a repository or dependency issue and upgrading now could break your Proxmox installation.": "Kontrola pred aktualizáciou ZLYHALA: simulácia ukazuje, že balík 'proxmox-ve' by bol ODSTRÁNENÝ.\n    To naznačuje problém s repozitárom alebo závislosťami a aktualizácia by teraz mohla poškodiť inštaláciu Proxmoxu.",
+  "Pre-upgrade simulation failed. See log:": "Simulácia pred inováciou zlyhala. Pozri denník:",
   "Pre-upgrade simulation passed: 'proxmox-ve' will be kept or upgraded safely.": "Simulácia pred aktualizáciou prešla: 'proxmox-ve' zostane zachované alebo sa bezpečne aktualizuje.",
   "Preparing Log2RAM configuration": "Pripravujem nastavenie Log2RAM",
   "Preparing files for backup...": "Pripravujem súbory na zálohu...",
