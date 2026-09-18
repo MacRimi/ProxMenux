@@ -5185,7 +5185,7 @@
       "lynisTest": "Test",
       "lynisWarning": "Varning",
       "couldNotRead": "Kunde inte läsas",
-      "readOnlyScope": "Bedömningen inspekterar värdinställningar och hälsa.Den kan skriva rapporter och loggar;startstatuskontroller kan tillfälligt montera EFI-systempartitioner."
+      "readOnlyScope": "Bedömningen inspekterar värdinställningar och hälsa. Den kan skriva rapporter och loggar; startstatuskontroller kan tillfälligt montera EFI-systempartitioner."
     },
     "title": "Audit & Report",
     "loading": "Loading assessment…",
@@ -5419,7 +5419,7 @@
             "attention": "{count} av {total} startpartitioner behöver ses över",
             "evaluationFailed": "The check could not be evaluated"
           },
-          "rationale": "EFI-systempartitionerna proxmox-boot-tool rapporter och de kärnor som var och en bär.proxmox-boot-tool status kan tillfälligt montera EFI-systempartitioner;ingen start görs."
+          "rationale": "EFI-systempartitionerna proxmox-boot-tool rapporter och de kärnor som var och en bär. proxmox-boot-tool status kan tillfälligt montera EFI-systempartitioner; ingen start görs."
         },
         "failed_units": {
           "title": "Väsentliga tjänster och misslyckade enheter",
@@ -5938,7 +5938,7 @@
         "backup": "Guest protection and whether it is real.",
         "capacity": "Room to grow and the wear on the disks."
       },
-      "scopeReadOnly": "Bedömningen inspekterar värdinställningar och hälsa.Den kan skriva rapporter och loggar;startstatuskontroller kan tillfälligt montera EFI-systempartitioner."
+      "scopeReadOnly": "Bedömningen inspekterar värdinställningar och hälsa. Den kan skriva rapporter och loggar; startstatuskontroller kan tillfälligt montera EFI-systempartitioner."
     },
     "results": "Resultat",
     "classifications": {
@@ -6094,7 +6094,7 @@
       "withoutLynis": "Run without Lynis",
       "cancel": "Cancel"
     },
-    "readOnlyNotice": "Bedömningen inspekterar värdinställningar och hälsa.Den kan skriva rapporter och loggar;startstatuskontroller kan tillfälligt montera EFI-systempartitioner."
+    "readOnlyNotice": "Bedömningen inspekterar värdinställningar och hälsa. Den kan skriva rapporter och loggar; startstatuskontroller kan tillfälligt montera EFI-systempartitioner."
   },
   "runtime": {
     "notifications": {
@@ -6136,7 +6136,7 @@
         },
         "app_update_available": {
           "title": "{hostname}: {app_name} uppdatering tillgänglig på CT {vmid}",
-          "body": "{app_name} på CT {vmid} ({ct_name}) har en ny version:\n{installed} → {latest}",
+          "body": "{app_name} på CT {vmid} ({ct_name}) har en ny version:\n    {installed} → {latest}",
           "label": "Appuppdatering tillgänglig"
         },
         "docker_stack_update_available": {
@@ -6356,7 +6356,7 @@
         },
         "ip_block": {
           "title": "{hostname}: IP blockerad av Fail2Ban",
-          "body": "IP-adressen {source_ip} har förbjudits.\nFängelse: {jail}\nMisslyckade försök: {failures}",
+          "body": "IP-adressen {source_ip} har förbjudits.\nJail: {jail}\nMisslyckade försök: {failures}",
           "label": "IP blockerad av Fail2Ban"
         },
         "firewall_issue": {
@@ -6371,7 +6371,7 @@
         },
         "split_brain": {
           "title": "{hostname}: SPLIT-BRAIN upptäckt",
-          "body": "Ett tillstånd med delad hjärna i kluster har upptäckts.Quorum kan gå förlorat.\nKvorumsstatus: {quorum}",
+          "body": "Ett split-brain-tillstånd har upptäckts i klustret. Quorum kan gå förlorat.\nKvorumsstatus: {quorum}",
           "label": "SPLIT-BRAIN upptäckt"
         },
         "node_disconnect": {
@@ -6436,7 +6436,7 @@
         },
         "apt_listchanges": {
           "title": "{hostname}: {pve_title}",
-          "body": "Uppströmspaketinformation vidarebefordrad av Proxmox VE genom apt-listchanges.Följande text kommer från paketunderhållaren och är inte en ProxMenux rekommendation.\n\n{reason}",
+          "body": "Uppströmspaketinformation vidarebefordrad av Proxmox VE genom apt-listchanges. Följande text kommer från paketunderhållaren och är inte en ProxMenux rekommendation.\n\n{reason}",
           "label": "apt-listchanges paketmeddelanden"
         },
         "webhook_test": {
@@ -6496,42 +6496,42 @@
         },
         "mount_stale": {
           "title": "{hostname}: gammalt fjärrfäste {mount_target}",
-          "body": "Fjärrmontering {mount_target} ({fstype}) från {mount_source} är inaktuell{lxc_scope}.\nStatistik tog timeout eller returnerade ett fel: {error}\n\nAppar som skriver till den här sökvägen kommer tyst att landa på det underliggande filsystemet och kan fylla disken.Montera om eller fixa anslutningen ASAP.",
+          "body": "Fjärrmontering {mount_target} ({fstype}) från {mount_source} är inaktuell{lxc_scope}.\nStatistik tog timeout eller returnerade ett fel: {error}\n\nAppar som skriver till den här sökvägen kommer tyst att landa på det underliggande filsystemet och kan fylla disken. Montera om eller fixa anslutningen ASAP.",
           "label": "Fjärrmontering gammal"
         },
         "mount_readonly": {
           "title": "{hostname}: fjärrmontering {mount_target} är skrivskyddad",
-          "body": "Fjärrmontering {mount_target} ({fstype}) från {mount_source} är monterad skrivskyddad{lxc_scope}.Skriver misslyckas.Om detta var oavsiktligt, montera om med rw.",
+          "body": "Fjärrmontering {mount_target} ({fstype}) från {mount_source} är monterad skrivskyddad{lxc_scope}.Skriver misslyckas. Om detta var oavsiktligt, montera om med rw.",
           "label": "Fjärrmontering skrivskyddad"
         },
         "lxc_disk_low": {
           "title": "{hostname}: CT {vmid} rootfs vid {usage_percent}%",
-          "body": "CT {vmid} ({name}) rootfs är på {usage_percent}% ({disk_bytes_human} / {maxdisk_bytes_human}).\n\nEn fullständig LXC rootfs hindrar behållaren från att starta upp rent.Expandera antingen rootfs (pct resize {vmid} rootfs +1G) eller ledigt utrymme inuti behållaren.",
+          "body": "CT {vmid} ({name}) rootfs är på {usage_percent}% ({disk_bytes_human} / {maxdisk_bytes_human}).\n\nEn fullständig LXC rootfs hindrar behållaren från att starta upp rent. Expandera antingen rootfs (pct resize {vmid} rootfs +1G) eller ledigt utrymme inuti behållaren.",
           "label": "LXC rootfs nästan full"
         },
         "vm_disk_low": {
           "title": "{hostname}: VM {vmid} filsystem på {usage_percent}%",
-          "body": "VM {vmid} ({name}) gästfilsystem är på {usage_percent}% ({disk_bytes_human} / {maxdisk_bytes_human}).\n\nRapporterad av QEMU gästagenten.Inkluderar alla beständiga filsystem som gästen monterar på en blockenhet – både virtuella diskar och PCI-genomgångsenheter.Frigör utrymme inuti gästen eller utöka den påverkade lagringen innan skrivningar börjar misslyckas.",
+          "body": "VM {vmid} ({name}) gästfilsystem är på {usage_percent}% ({disk_bytes_human} / {maxdisk_bytes_human}).\n\nRapporterad av QEMU gästagenten. Inkluderar alla beständiga filsystem som gästen monterar på en blockenhet – både virtuella diskar och PCI-genomgångsenheter. Frigör utrymme inuti gästen eller utöka den påverkade lagringen innan skrivningar börjar misslyckas.",
           "label": "VM-filsystem nästan fulla"
         },
         "lxc_mount_low": {
           "title": "{hostname}: CT {vmid} montera {mount} vid {usage_percent}%",
-          "body": "Montera {mount} inuti CT {vmid} ({name}) är vid {usage_percent}% använd.\nFilsystemtyp: {fstype}\n\nEn full montering inuti en container blockerar ofta applikationen tyst - skriver antingen misslyckas eller, värre, landar på rootfs och utlöser rootfs-varningen nästa.Frigör utrymme på fästet eller utöka det.",
+          "body": "Montera {mount} inuti CT {vmid} ({name}) är vid {usage_percent}% använd.\nFilsystemtyp: {fstype}\n\nEn full montering inuti en container blockerar ofta applikationen tyst - skriver antingen misslyckas eller, värre, landar på rootfs och utlöser rootfs-varningen nästa. Frigör utrymme på fästet eller utöka det.",
           "label": "LXC montering nästan full"
         },
         "pve_storage_full": {
           "title": "{hostname}: PVE-lagring {storage_name} vid {usage_percent}%",
-          "body": "Proxmox lagring \"{storage_name}\" (typ: {storage_type}) används på {usage_percent}%.\n\nNär den är full kan ingen ny VM/CT tillhandahållas och befintliga gäster kan misslyckas med att skriva.Flytta/ta bort oanvända volymer eller utöka den underliggande poolen/LV/RBD-bilden.",
+          "body": "Proxmox lagring \"{storage_name}\" (typ: {storage_type}) används på {usage_percent}%.\n\nNär den är full kan ingen ny VM/CT tillhandahållas och befintliga gäster kan misslyckas med att skriva. Flytta/ta bort oanvända volymer eller utöka den underliggande poolen/LV/RBD-bilden.",
           "label": "PVE-lagring nästan full"
         },
         "zfs_pool_full": {
           "title": "{hostname}: ZFS pool {pool_name} vid {usage_percent}%",
-          "body": "ZFS poolen \"{pool_name}\" har en kapacitet på {usage_percent}%.\n\nZFS prestanda och skrivtillförlitlighet försämras kraftigt över ~80 % kapacitet (CoW behöver ledigt utrymme för nya block).Frigör ögonblicksbilder, beskär gamla datauppsättningar eller lägg till fler vdevs till poolen.",
+          "body": "ZFS poolen \"{pool_name}\" har en kapacitet på {usage_percent}%.\n\nZFS prestanda och skrivtillförlitlighet försämras kraftigt över ~80 % kapacitet (CoW behöver ledigt utrymme för nya block). Frigör ögonblicksbilder, beskär gamla datauppsättningar eller lägg till fler vdevs till poolen.",
           "label": "ZFS pool nästan full"
         },
         "post_install_update": {
           "title": "{hostname}: {count} ProxMenux optimeringsuppdatering(ar) tillgängliga",
-          "body": "{count} ProxMenux optimeringsuppdatering(ar) tillgängliga på denna värd.\n\n🛠️ Tillgängliga versioner:\n{tool_list}\n\n💡 Ansök från:\n• ProxMenux Bildskärm → Inställningar → ProxMenux Optimering\n• Eller kör efterinstallationsmenyn (alternativ 2) → \"Använd tillgängliga uppdateringar\"",
+          "body": "{count} ProxMenux optimeringsuppdatering(ar) tillgängliga på denna värd.\n\n🛠️ Tillgängliga versioner:\n{tool_list}\n\n💡 Ansök från:\n  • ProxMenux Bildskärm → Inställningar → ProxMenux Optimering\n  • Eller kör efterinstallationsmenyn (alternativ 2) → \"Använd tillgängliga uppdateringar\"",
           "label": "ProxMenux optimeringsuppdateringar tillgängliga"
         },
         "secure_gateway_update_available": {
@@ -6541,12 +6541,12 @@
         },
         "nvidia_driver_update_available": {
           "title": "{hostname}: NVIDIA drivrutinsuppdatering tillgänglig — v{latest_version}",
-          "body": "En nyare underhållsversion är tillgänglig för den installerade NVIDIA-drivrutinen.\n🔹 För närvarande installerad: v{current_version}\nSenaste tillgängliga: v{latest_version}\n\n{upgrade_reason}\n\n💡 För att installera om:\n• Från menyn ProxMenux efter installationen: {menu_label}\n\nOminstallation bygger om modulen DKMS mot den körande kärnan och kräver en omstart för att ladda den nya drivrutinen.",
+          "body": "En nyare underhållsversion är tillgänglig för den installerade NVIDIA-drivrutinen.\n🔹 För närvarande installerad: v{current_version}\nSenaste tillgängliga: v{latest_version}\n\n{upgrade_reason}\n\n💡 För att installera om:\n  • Från menyn ProxMenux efter installationen: {menu_label}\n\nOminstallation bygger om modulen DKMS mot den körande kärnan och kräver en omstart för att ladda den nya drivrutinen.",
           "label": "NVIDIA-drivrutinsuppdatering tillgänglig"
         },
         "coral_driver_update_available": {
           "title": "{hostname}: Coral TPU-drivrutinsuppdatering tillgänglig — {latest_version}",
-          "body": "En nyare {variant_label} är tillgänglig.\n🔹 För närvarande installerad: {current_version}\nSenaste tillgängliga: {latest_version}\n\n{upgrade_reason}\n\n💡 För att installera om:\n• Från menyn ProxMenux efter installationen: {menu_label}\n\n{reboot_note}",
+          "body": "En nyare {variant_label} är tillgänglig.\n🔹 För närvarande installerad: {current_version}\nSenaste tillgängliga: {latest_version}\n\n{upgrade_reason}\n\n💡 För att installera om:\n  • Från menyn ProxMenux efter installationen: {menu_label}\n\n{reboot_note}",
           "label": "Coral TPU drivrutinsuppdatering tillgänglig"
         },
         "burst_auth_fail": {
@@ -6556,7 +6556,7 @@
         },
         "burst_ip_block": {
           "title": "{hostname}: Fail2Ban förbjudna +{count} fler IP-adresser i {window}",
-          "body": "+{count} ytterligare IP-adresser förbjudna av Fail2Ban i {window} ({total_count} totalt).\nIP:er: {entity_list}",
+          "body": "+{count} ytterligare IP-adresser förbjudna av Fail2Ban i {window} ({total_count} totalt).\nIP: er: {entity_list}",
           "label": "IP block burst"
         },
         "burst_disk_io": {
@@ -6605,12 +6605,12 @@
         "sourceLabel": "Källa",
         "targets": "Mål",
         "osPending": "OS-paket väntande: {before} → {after}",
-        "osUnverified": "OS-paket: uppdateringskommandot körs;resultatet inte verifierat",
+        "osUnverified": "OS-paket: uppdateringskommandot körs; resultatet inte verifierat",
         "applications": "Applikationer: {items}",
-        "applicationsUnverified": "Applikationer: uppdateringsprogrammet körs;ingen spårad versionsändring observerades",
-        "dockerEngineChange": "Docker Motor: {before} → {after}",
-        "dockerEngineVerified": "Docker Motor: verifierad på {version}",
-        "dockerEngineUnverified": "Docker Motor: uppdateringskommandot körs;version inte verifierad",
+        "applicationsUnverified": "Applikationer: uppdateringsprogrammet körs; ingen spårad versionsändring observerades",
+        "dockerEngineChange": "Docker Engine: {before} → {after}",
+        "dockerEngineVerified": "Docker Engine: verifierad på {version}",
+        "dockerEngineUnverified": "Docker Engine: uppdateringskommandot körs; version inte verifierad",
         "dockerImagesPending": "Docker väntande bilder: {before} → {after}",
         "dockerImagesChanged": "Docker bilder ändrade: {images}",
         "deferredTargets": "Uppskjutna mål: {targets}",
@@ -6635,7 +6635,7 @@
         "node": "Nod",
         "category": "Kategori",
         "service": "Service",
-        "jail": "Fängelse",
+        "jail": "Jail",
         "user": "Användare",
         "count": "Räkna",
         "window": "Fönster",
@@ -6668,7 +6668,7 @@
       },
       "appUpdates": {
         "singleTitle": "{hostname}: {app_name} uppdatering tillgänglig på CT {vmid}",
-        "singleBody": "{app_name} på CT {vmid} ({ct_name}) har en ny version:\n{installed} → {latest}",
+        "singleBody": "{app_name} på CT {vmid} ({ct_name}) har en ny version:\n    {installed} → {latest}",
         "emptyTitle": "{hostname}: Programuppdateringar tillgängliga",
         "emptyBody": "Appuppdateringar är tillgängliga.",
         "batchTitle": "{hostname}: {count} applikationsuppdateringar tillgängliga",
@@ -6685,7 +6685,7 @@
           "storage": "Förvaringsfästen och utrymme",
           "disks": "Disk I/O och fel",
           "network": "Nätverksgränssnitt",
-          "vms": "virtuella datorer och behållare",
+          "vms": "Virtuella datorer och behållare",
           "services": "PVE-tjänster",
           "logs": "Systemloggar",
           "updates": "Systemuppdateringar",
@@ -6700,7 +6700,7 @@
         },
         "singleTitle": "{hostname}: {severity} hälsostatus – {category}",
         "multipleTitle": "{hostname}: {count} hälsokontroller försämrade",
-        "multipleLine": "• {severity}: {category}\n{reason}"
+        "multipleLine": "• {severity}: {category}\n  {reason}"
       },
       "digest": {
         "groups": {
@@ -6721,8 +6721,8 @@
         "title": "{hostname}: 24 timmars sammanfattning ({timestamp})",
         "readFailed": "sammanfattningsläsning misslyckades: {error}",
         "empty": "Inga INFO-händelser buffrade för detta sammanfattningsfönster.",
-        "lead": "{count} INFO-händelser grupperade efter kategori:",
-        "more": "• … och {count} till",
+        "lead": "{count} INFO-händelser grupperade efter kategori:\n",
+        "more": "  • … och {count} till",
         "footer": "(Kritiska/varningshändelser kom vid den tidpunkt de hände, inte i den här sammanfattningen.)",
         "quietTitle": "{hostname}: {count} händelser buffrade under tysta timmar"
       },
@@ -6797,7 +6797,7 @@
             "sourceIp": "Källa IP",
             "username": "Användarnamn",
             "service": "Service",
-            "jail": "Fängelse",
+            "jail": "Jail",
             "failures": "Misslyckanden",
             "change": "Ändra",
             "node": "Nod",

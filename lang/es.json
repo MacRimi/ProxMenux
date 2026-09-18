@@ -5228,7 +5228,7 @@
   "of": "de",
   "of free disk space.": "de espacio libre en disco.",
   "older firmware may increase passthrough instability": "el firmware más antiguo puede aumentar la inestabilidad del paso",
-  "oldest driver offered:": "conductor más antiguo ofrecido:",
+  "oldest driver offered:": "controlador más antiguo ofrecido:",
   "on SSD/NVMe pools that support discard": "en grupos de SSD/NVMe que admiten descarte",
   "openssl encryption failed.": "falló el cifrado de openssl.",
   "openssl is not installed — cannot create recovery copy. Install openssl and retry.": "openssl no está instalado; no se puede crear una copia de recuperación. Instale openssl y vuelva a intentarlo.",

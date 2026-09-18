@@ -1927,8 +1927,8 @@
         "secure_gateway_update_available": "Actualización de Secure Gateway disponible",
         "nvidia_driver_update_available": "Actualización del controlador NVIDIA disponible",
         "coral_driver_update_available": "Actualización del controlador Coral TPU disponible",
-        "lxc_update_applied": "actualización LXC aplicada",
-        "docker_stack_update_available": "Docker actualizaciones disponibles"
+        "lxc_update_applied": "Actualización LXC aplicada",
+        "docker_stack_update_available": "Actualizaciones de Docker disponibles"
       },
       "ui": {
         "quietHours": "Horas tranquilas",
@@ -1991,9 +1991,9 @@
         "displayNameHint": "Nombre que se muestra en las notificaciones. Edítelo o déjelo vacío para usar el nombre de host del sistema.",
         "activeFooter": "Las notificaciones están activas. Cada canal sigue su propia categoría y selección de eventos.",
         "inactiveFooter": "Habilite notificaciones para recibir alertas del sistema, de salud y de seguridad a través de los canales configurados.",
-        "notificationLanguage": "idioma de notificación",
-        "selectNotificationLanguage": "seleccione el idioma de notificación",
-        "notificationLanguageHint": "se utiliza para notificaciones deterministas en tiempo de ejecución incluso cuando la IA está deshabilitada."
+        "notificationLanguage": "Idioma de notificación",
+        "selectNotificationLanguage": "Seleccione el idioma de notificación",
+        "notificationLanguageHint": "Se utiliza para notificaciones deterministas en tiempo de ejecución incluso cuando la IA está deshabilitada."
       },
       "ai": {
         "title": "mejora de la IA",
@@ -5185,7 +5185,7 @@
       "lynisTest": "Test",
       "lynisWarning": "Aviso",
       "couldNotRead": "No se pudo leer",
-      "readOnlyScope": "La evaluación inspecciona la configuración y el estado del host.Puede escribir informes y registros;Las comprobaciones del estado de arranque pueden montar temporalmente particiones del sistema EFI."
+      "readOnlyScope": "La evaluación inspecciona la configuración y el estado del host. Puede escribir informes y logs; las comprobaciones del estado de arranque pueden montar temporalmente las particiones de sistema EFI."
     },
     "title": "Auditoría e informes",
     "loading": "Cargando evaluación…",
@@ -5419,7 +5419,7 @@
             "attention": "{count} de {total} particiones de arranque requieren revisión",
             "evaluationFailed": "No se pudo evaluar la comprobación"
           },
-          "rationale": "El sistema EFI particiona los informes proxmox-boot-tool y los kernels que lleva cada uno.proxmox-boot-tool status puede montar temporalmente particiones del sistema EFI;no se intenta ningún arranque."
+          "rationale": "Las particiones de sistema EFI que indica proxmox-boot-tool y los kernels que contiene cada una. proxmox-boot-tool status puede montar temporalmente las particiones de sistema EFI; no se intenta ningún arranque."
         },
         "failed_units": {
           "title": "Servicios esenciales y unidades fallidas",
@@ -5938,7 +5938,7 @@
         "backup": "Protección de los invitados y su alcance real.",
         "capacity": "Margen de crecimiento y desgaste de los discos."
       },
-      "scopeReadOnly": "La evaluación inspecciona la configuración y el estado del host.Puede escribir informes y registros;Las comprobaciones del estado de arranque pueden montar temporalmente particiones del sistema EFI."
+      "scopeReadOnly": "La evaluación inspecciona la configuración y el estado del host. Puede escribir informes y logs; las comprobaciones del estado de arranque pueden montar temporalmente las particiones de sistema EFI."
     },
     "results": "Resultados",
     "classifications": {
@@ -6094,63 +6094,63 @@
       "withoutLynis": "Ejecutar sin Lynis",
       "cancel": "Cancelar"
     },
-    "readOnlyNotice": "La evaluación inspecciona la configuración y el estado del host.Puede escribir informes y registros;Las comprobaciones del estado de arranque pueden montar temporalmente particiones del sistema EFI."
+    "readOnlyNotice": "La evaluación inspecciona la configuración y el estado del host. Puede escribir informes y logs; las comprobaciones del estado de arranque pueden montar temporalmente las particiones de sistema EFI."
   },
   "runtime": {
     "notifications": {
       "templates": {
         "state_change": {
           "title": "{hostname}: {category} cambió a {current}{entity_suffix}",
-          "body": "el estado de {category} cambió de {previous} a {current}.\n{reason}",
-          "label": "El estado de salud cambió"
+          "body": "El estado de {category} ha cambiado de {previous} a {current}.\n{reason}",
+          "label": "Estado de salud cambiado"
         },
         "new_error": {
-          "title": "{hostname}: Nuevo {severity} - {category}{entity_suffix}",
+          "title": "{hostname}: nuevo problema ({severity}) - {category}{entity_suffix}",
           "body": "{reason}",
           "label": "Nuevo problema de salud"
         },
         "error_resolved": {
           "title": "{hostname}: Resuelto - {category}{entity_suffix}",
           "body": "El problema {category} se ha resuelto.\n{reason}\n🚦 Gravedad anterior: {original_severity}\n⏱️ Duración: {duration}",
-          "label": "notificación de recuperación"
+          "label": "Notificación de recuperación"
         },
         "error_escalated": {
           "title": "{hostname}: escalado a {severity} - {category}{entity_suffix}",
           "body": "{reason}",
-          "label": "El problema de salud se intensificó"
+          "label": "Problema de salud escalado"
         },
         "health_degraded": {
           "title": "{title_or_default}",
           "body": "{reason}",
-          "label": "Control de salud degradado"
+          "label": "Comprobación de salud degradada"
         },
         "lxc_updates_available": {
           "title": "{hostname}: {count} LXC(s) con actualizaciones de paquetes disponibles",
-          "body": "📊 {count} LXC(s) con actualizaciones de paquetes pendientes (📦 {total_packages} total, 🔒 {security_count} seguridad):\n\n{ct_list}",
-          "label": "LXC actualizaciones disponibles (experimental)"
+          "body": "📊 {count} LXC con actualizaciones de paquetes pendientes (📦 {total_packages} en total, 🔒 {security_count} de seguridad):\n\n{ct_list}",
+          "label": "Actualizaciones de LXC disponibles (experimental)"
         },
         "lxc_update_applied": {
           "title": "{hostname}: LXC {ct_name} ({vmid}) actualización {result}",
           "body": "{details}",
-          "label": "actualización LXC aplicada"
+          "label": "Actualización LXC aplicada"
         },
         "app_update_available": {
-          "title": "{hostname}: {app_name} actualización disponible en CT {vmid}",
-          "body": "{app_name} en CT {vmid} ({ct_name}) tiene una nueva versión:\n{installed} → {latest}",
-          "label": "actualización de la aplicación disponible"
+          "title": "{hostname}: actualización de {app_name} disponible en CT {vmid}",
+          "body": "{app_name} en CT {vmid} ({ct_name}) tiene una nueva versión:\n    {installed} → {latest}",
+          "label": "Actualización de aplicación disponible"
         },
         "docker_stack_update_available": {
-          "title": "{hostname}: Docker actualizaciones disponibles en CT {vmid}",
-          "body": "El contenedor {ct_name} (CT {vmid}) tiene {count} Docker actualizaciones:\n{details}",
-          "label": "Docker actualizaciones disponibles"
+          "title": "{hostname}: actualizaciones de Docker disponibles en CT {vmid}",
+          "body": "El contenedor {ct_name} (CT {vmid}) tiene {count} actualización(es) de Docker:\n{details}",
+          "label": "Actualizaciones de Docker disponibles"
         },
         "vm_start": {
           "title": "{hostname}: VM {vmname} ({vmid}) iniciada",
-          "body": "La máquina virtual {vmname} (ID: {vmid}) ya se está ejecutando.",
+          "body": "La máquina virtual {vmname} (ID: {vmid}) está en ejecución.",
           "label": "VM iniciada"
         },
         "vm_start_warning": {
-          "title": "{hostname}: VM {vmname} ({vmid}) comenzó con advertencias",
+          "title": "{hostname}: VM {vmname} ({vmid}) iniciada con advertencias",
           "body": "La máquina virtual {vmname} (ID: {vmid}) se inició correctamente pero tiene advertencias.\nAdvertencias: {reason}",
           "label": "VM iniciada (advertencias)"
         },
@@ -6161,13 +6161,13 @@
         },
         "vm_shutdown": {
           "title": "{hostname}: VM {vmname} ({vmid}) apagada",
-          "body": "La máquina virtual {vmname} (ID: {vmid}) se ha cerrado limpiamente.",
-          "label": "apagado de VM"
+          "body": "La máquina virtual {vmname} (ID: {vmid}) se ha apagado correctamente.",
+          "label": "Apagado de VM"
         },
         "vm_fail": {
-          "title": "{hostname}: VM {vmname} ({vmid}) FALLÓ",
+          "title": "{hostname}: VM {vmname} ({vmid}) FALLIDA",
           "body": "La máquina virtual {vmname} (ID: {vmid}) falló o no pudo iniciarse.\nMotivo: {reason}",
-          "label": "VM FALLÓ"
+          "label": "VM FALLIDA"
         },
         "vm_restart": {
           "title": "{hostname}: VM {vmname} ({vmid}) reiniciada",
@@ -6176,11 +6176,11 @@
         },
         "ct_start": {
           "title": "{hostname}: CT {vmname} ({vmid}) iniciado",
-          "body": "el contenedor {vmname} (ID: {vmid}) ya se está ejecutando.",
+          "body": "El contenedor {vmname} (ID: {vmid}) está en ejecución.",
           "label": "CT iniciado"
         },
         "ct_start_warning": {
-          "title": "{hostname}: CT {vmname} ({vmid}) comenzó con advertencias",
+          "title": "{hostname}: CT {vmname} ({vmid}) iniciado con advertencias",
           "body": "El contenedor {vmname} (ID: {vmid}) se inició correctamente pero tiene advertencias.\nAdvertencias: {reason}",
           "label": "CT iniciado (advertencias)"
         },
@@ -6191,8 +6191,8 @@
         },
         "ct_shutdown": {
           "title": "{hostname}: CT {vmname} ({vmid}) apagado",
-          "body": "El contenedor {vmname} (ID: {vmid}) se cerró limpiamente.",
-          "label": "apagado de CT"
+          "body": "El contenedor {vmname} (ID: {vmid}) se ha apagado correctamente.",
+          "label": "Apagado de CT"
         },
         "ct_restart": {
           "title": "{hostname}: CT {vmname} ({vmid}) reiniciado",
@@ -6200,108 +6200,108 @@
           "label": "CT reiniciado"
         },
         "ct_fail": {
-          "title": "{hostname}: CT {vmname} ({vmid}) FALLÓ",
+          "title": "{hostname}: CT {vmname} ({vmid}) FALLIDO",
           "body": "El contenedor {vmname} (ID: {vmid}) falló o no pudo iniciarse.\nMotivo: {reason}",
-          "label": "CT FALLÓ"
+          "label": "CT FALLIDO"
         },
         "migration_start": {
           "title": "{hostname}: Migración iniciada: {vmname} ({vmid})",
           "body": "Se ha iniciado la migración en vivo de {vmname} (ID: {vmid}) al nodo {target_node}.",
-          "label": "La migración comenzó"
+          "label": "Migración iniciada"
         },
         "migration_complete": {
-          "title": "{hostname}: Migración completa: {vmname} ({vmid})",
+          "title": "{hostname}: migración completada — {vmname} ({vmid})",
           "body": "{vmname} (ID: {vmid}) migró correctamente al nodo {target_node}.",
-          "label": "Migración completa"
+          "label": "Migración completada"
         },
         "migration_warning": {
-          "title": "{hostname}: Migración completa con advertencias: {vmname} ({vmid})",
+          "title": "{hostname}: migración completada con advertencias — {vmname} ({vmid})",
           "body": "{vmname} (ID: {vmid}) migró al nodo {target_node} pero encontró advertencias.\nAdvertencias: {reason}",
           "label": "Migración (advertencias)"
         },
         "migration_fail": {
-          "title": "{hostname}: La migración FALLÓ — {vmname} ({vmid})",
+          "title": "{hostname}: migración FALLIDA — {vmname} ({vmid})",
           "body": "Error en la migración de {vmname} (ID: {vmid}) al nodo {target_node}.\nMotivo: {reason}",
-          "label": "Migración FALLÓ"
+          "label": "Migración FALLIDA"
         },
         "replication_fail": {
-          "title": "{hostname}: La replicación FALLÓ — {vmname} ({vmid})",
+          "title": "{hostname}: replicación FALLIDA — {vmname} ({vmid})",
           "body": "Error en la replicación de {vmname} (ID: {vmid}).\nMotivo: {reason}",
-          "label": "Replicación FALLADA"
+          "label": "Replicación FALLIDA"
         },
         "replication_complete": {
-          "title": "{hostname}: Replicación completa: {vmname} ({vmid})",
+          "title": "{hostname}: replicación completada — {vmname} ({vmid})",
           "body": "La replicación de {vmname} (ID: {vmid}) se completó correctamente.",
-          "label": "Replicación completa"
+          "label": "Replicación completada"
         },
         "backup_start": {
-          "title": "{hostname}: la copia de seguridad se inició el {storage}",
-          "body": "el trabajo de copia de seguridad se inició en el almacenamiento {storage}.\n{reason}",
-          "label": "Copia de seguridad iniciada"
+          "title": "{hostname}: Backup iniciado en {storage}",
+          "body": "La tarea de backup se ha iniciado en el almacenamiento {storage}.\n{reason}",
+          "label": "Backup iniciado"
         },
         "backup_complete": {
-          "title": "{hostname} → {storage}: Copia de seguridad completada — {vmname} ({vmid})",
-          "body": "La copia de seguridad de {vmname} (ID: {vmid}) se completó correctamente el {storage}.\nTamaño: {size}",
-          "label": "Copia de seguridad completa"
+          "title": "{hostname} → {storage}: Backup completado — {vmname} ({vmid})",
+          "body": "El backup de {vmname} (ID: {vmid}) se ha completado correctamente en {storage}.\nTamaño: {size}",
+          "label": "Backup completado"
         },
         "backup_warning": {
-          "title": "{hostname} → {storage}: Copia de seguridad completa con advertencias — {vmname} ({vmid})",
-          "body": "Copia de seguridad de {vmname} (ID: {vmid}) en {storage} completada pero encontró advertencias.\nAdvertencias: {reason}",
-          "label": "Copia de seguridad (advertencias)"
+          "title": "{hostname} → {storage}: Backup completado con advertencias — {vmname} ({vmid})",
+          "body": "El backup de {vmname} (ID: {vmid}) en {storage} se ha completado, pero con advertencias.\nAdvertencias: {reason}",
+          "label": "Backup (advertencias)"
         },
         "backup_fail": {
-          "title": "{hostname} → {storage}: Copia de seguridad FALLÓ - {vmname} ({vmid})",
-          "body": "La copia de seguridad de {vmname} (ID: {vmid}) falló el {storage}.\nMotivo: {reason}",
-          "label": "Copia de seguridad FALLÓ"
+          "title": "{hostname} → {storage}: Backup FALLIDO — {vmname} ({vmid})",
+          "body": "El backup de {vmname} (ID: {vmid}) ha fallado en {storage}.\nMotivo: {reason}",
+          "label": "Backup FALLIDO"
         },
         "host_backup_start": {
-          "title": "{hostname}: copia de seguridad del host iniciada → {backend_label}",
-          "body": "Trabajo: {job_id}\nServidor: {backend_label}\nDestino: {destination}\nPerfil: {profile_mode}",
-          "label": "Se inició la copia de seguridad del host"
+          "title": "{hostname}: backup del host iniciado → {backend_label}",
+          "body": "Trabajo: {job_id}\nBackend: {backend_label}\nDestino: {destination}\nPerfil: {profile_mode}",
+          "label": "Backup del host iniciado"
         },
         "host_backup_complete": {
-          "title": "{hostname}: copia de seguridad del host completada → {backend_label}",
-          "body": "Trabajo: {job_id}\nServidor: {backend_label}\nDestino: {destination}\nTamaño de datos: {data_size}\nTamaño del archivo: {archive_size}\nDuración: {duration}",
-          "label": "Copia de seguridad del host completa"
+          "title": "{hostname}: backup del host completado → {backend_label}",
+          "body": "Trabajo: {job_id}\nBackend: {backend_label}\nDestino: {destination}\nTamaño de los datos: {data_size}\nTamaño del archivo: {archive_size}\nDuración: {duration}",
+          "label": "Backup del host completado"
         },
         "host_backup_fail": {
-          "title": "{hostname}: la copia de seguridad del host FALLÓ → {backend_label}",
-          "body": "Trabajo: {job_id}\nServidor: {backend_label}\nDestino: {destination}\nDuración antes del fallo: {duration}\nMotivo: {reason}\nRegistro: {log_file}",
-          "label": "Copia de seguridad del host FALLÓ"
+          "title": "{hostname}: backup del host FALLIDO → {backend_label}",
+          "body": "Trabajo: {job_id}\nBackend: {backend_label}\nDestino: {destination}\nDuración antes del fallo: {duration}\nMotivo: {reason}\nLog: {log_file}",
+          "label": "Backup del host FALLIDO"
         },
         "snapshot_complete": {
           "title": "{hostname}: instantánea creada: {vmname} ({vmid})",
-          "body": "instantánea \"{snapshot_name}\" creada para {vmname} (ID: {vmid}).",
+          "body": "Instantánea \"{snapshot_name}\" creada para {vmname} (ID: {vmid}).",
           "label": "Instantánea creada"
         },
         "snapshot_fail": {
-          "title": "{hostname}: Instantánea FALLÓ - {vmname} ({vmid})",
+          "title": "{hostname}: instantánea FALLIDA — {vmname} ({vmid})",
           "body": "Error al crear una instantánea para {vmname} (ID: {vmid}).\nMotivo: {reason}",
-          "label": "Instantánea FALLÓ"
+          "label": "Instantánea FALLIDA"
         },
         "cpu_high": {
           "title": "{hostname}: uso elevado de CPU: {value}%",
-          "body": "el uso de la CPU ha alcanzado el {value}% en {cores} núcleos.\n{details}",
-          "label": "uso elevado de CPU"
+          "body": "El uso de la CPU ha alcanzado el {value}% en {cores} núcleos.\n{details}",
+          "label": "Uso elevado de CPU"
         },
         "ram_high": {
           "title": "{hostname}: uso elevado de memoria: {value}%",
           "body": "Uso de memoria: {used} / {total} ({value}%).\n{details}",
-          "label": "uso elevado de memoria"
+          "label": "Uso elevado de memoria"
         },
         "temp_high": {
           "title": "{hostname}: Temperatura alta de la CPU: {value}°C",
-          "body": "la temperatura de la CPU ha alcanzado {value}°C (umbral: {threshold}°C).\n{details}",
-          "label": "alta temperatura"
+          "body": "La temperatura de la CPU ha alcanzado {value}°C (umbral: {threshold}°C).\n{details}",
+          "label": "Alta temperatura"
         },
         "disk_space_low": {
           "title": "{hostname}: poco espacio en disco en {mount}",
-          "body": "Sistema de archivos {mount}: {used}% usado ({available} disponible).\nLibere espacio en disco para evitar interrupciones en el servicio.",
-          "label": "poco espacio en disco"
+          "body": "Sistema de archivos {mount}: {used}% usado ({available} disponibles).\nLibere espacio en disco para evitar interrupciones del servicio.",
+          "label": "Poco espacio en disco"
         },
         "disk_io_error": {
           "title": "{hostname}: Fallo de disco detectado — {device}",
-          "body": "Error de E/S o falla de disco detectada en el dispositivo {device}.\n{reason}",
+          "body": "Error de E/S o fallo de disco detectado en el dispositivo {device}.\n{reason}",
           "label": "Fallo de disco/error de E/S"
         },
         "storage_unavailable": {
@@ -6312,27 +6312,27 @@
         "smart_test_complete": {
           "title": "{hostname}: prueba SMART completada — {device}",
           "body": "La prueba SMART {test_type} en /dev/{device} se ha completado.\nResultado: {result}\nDuración: {duration}",
-          "label": "prueba SMART completada"
+          "label": "Prueba SMART completada"
         },
         "smart_test_failed": {
-          "title": "{hostname}: Prueba SMART FALLÓ - {device}",
+          "title": "{hostname}: prueba SMART FALLIDA — {device}",
           "body": "La prueba SMART {test_type} en /dev/{device} falló.\nResultado: {result}\nMotivo: {reason}",
-          "label": "Prueba INTELIGENTE FALLÓ"
+          "label": "Prueba SMART FALLIDA"
         },
         "gpu_mode_switch": {
           "title": "{hostname}: el modo GPU cambió a {new_mode}",
-          "body": "Se ha cambiado el modo de transferencia de GPU.\nGPU: {gpu_name} ({gpu_pci})\nModo anterior: {old_mode}\nNuevo modo: {new_mode}\n{details}",
-          "label": "modo GPU cambiado"
+          "body": "Se ha cambiado el modo de passthrough de la GPU.\nGPU: {gpu_name} ({gpu_pci})\nModo anterior: {old_mode}\nNuevo modo: {new_mode}\n{details}",
+          "label": "Modo GPU cambiado"
         },
         "gpu_passthrough_blocked": {
           "title": "{hostname}: {guest_type} {guest_id} bloqueado al inicio",
-          "body": "La protección de paso a través de PCIe impidió que se iniciara {guest_type} {guest_id} ({guest_name}).\nMotivo: {reason}\n{details}",
-          "label": "paso de GPU bloqueado"
+          "body": "La protección de passthrough PCIe impidió que se iniciara {guest_type} {guest_id} ({guest_name}).\nMotivo: {reason}\n{details}",
+          "label": "Passthrough de GPU bloqueado"
         },
         "pci_passthrough_conflict": {
           "title": "{hostname}: Se detectó un conflicto en el dispositivo PCIe: {device_pci}",
-          "body": "un dispositivo PCIe está asignado a varios invitados.\nDispositivo: {device_pci}\nInvitados en conflicto: {guest_list}\nAcción requerida: detener a uno de los invitados o reasignar el dispositivo.",
-          "label": "conflicto de dispositivo PCIe"
+          "body": "Un dispositivo PCIe está asignado a varios guests.\nDispositivo: {device_pci}\nGuests en conflicto: {guest_list}\nAcción necesaria: detenga uno de los guests o reasigne el dispositivo.",
+          "label": "Conflicto de dispositivo PCIe"
         },
         "load_high": {
           "title": "{hostname}: carga alta del sistema: {value}",
@@ -6341,88 +6341,88 @@
         },
         "network_down": {
           "title": "{hostname}: Se perdió la conectividad de red{entity_suffix}",
-          "body": "el nodo ha perdido la conectividad de la red.\nMotivo: {reason}",
+          "body": "El nodo ha perdido la conectividad de la red.\nMotivo: {reason}",
           "label": "Se perdió la conectividad de red"
         },
         "network_latency": {
           "title": "{hostname}: latencia de red alta: {value}ms",
           "body": "Latencia a la puerta de enlace: {value}ms (umbral: {threshold}ms).\nEsto puede indicar congestión de la red o problemas de hardware.",
-          "label": "alta latencia de red"
+          "label": "Alta latencia de red"
         },
         "auth_fail": {
           "title": "{hostname}: error de autenticación",
           "body": "Se detectó un intento fallido de inicio de sesión.\nIP de origen: {source_ip}\nUsuario: {username}\nServicio: {service}",
-          "label": "error de autenticación"
+          "label": "Error de autenticación"
         },
         "ip_block": {
           "title": "{hostname}: IP bloqueada por Fail2Ban",
-          "body": "la dirección IP {source_ip} ha sido prohibida.\nCárcel: {jail}\nIntentos fallidos: {failures}",
+          "body": "La dirección IP {source_ip} ha sido baneada.\nJail: {jail}\nIntentos fallidos: {failures}",
           "label": "IP bloqueada por Fail2Ban"
         },
         "firewall_issue": {
           "title": "{hostname}: Problema de firewall detectado{entity_suffix}",
-          "body": "se ha detectado un problema de configuración del firewall.\nMotivo: {reason}",
-          "label": "Se detectó un problema de firewall"
+          "body": "Se ha detectado un problema de configuración del firewall.\nMotivo: {reason}",
+          "label": "Problema de firewall detectado"
         },
         "user_permission_change": {
           "title": "{hostname}: permiso de usuario cambiado",
           "body": "Usuario: {username}\nCambio: {change_details}",
-          "label": "permiso de usuario cambiado"
+          "label": "Permiso de usuario cambiado"
         },
         "split_brain": {
-          "title": "{hostname}: CEREBRO DIVIDIDO detectado",
-          "body": "Se ha detectado una condición de cerebro dividido en racimos.Es posible que se pierda el quórum.\nEstado del quórum: {quorum}",
-          "label": "CEREBRO DIVIDIDO detectado"
+          "title": "{hostname}: SPLIT-BRAIN detectado",
+          "body": "Se ha detectado una situación de split-brain en el clúster. Es posible que se pierda el quórum.\nEstado del quórum: {quorum}",
+          "label": "SPLIT-BRAIN detectado"
         },
         "node_disconnect": {
           "title": "{hostname}: Nodo {node_name} desconectado",
-          "body": "el nodo {node_name} se ha desconectado del clúster.",
+          "body": "El nodo {node_name} se ha desconectado del clúster.",
           "label": "Nodo desconectado"
         },
         "node_reconnect": {
           "title": "{hostname}: Nodo {node_name} reconectado",
-          "body": "el nodo {node_name} se ha reincorporado al clúster correctamente.",
+          "body": "El nodo {node_name} se ha reincorporado al clúster correctamente.",
           "label": "Nodo reconectado"
         },
         "system_startup": {
           "title": "{hostname}: {reason}",
           "body": "{summary}",
-          "label": "informe de inicio del sistema"
+          "label": "Informe de inicio del sistema"
         },
         "system_shutdown": {
           "title": "{hostname}: Sistema apagándose",
-          "body": "El nodo se está cerrando.\n{reason}",
+          "body": "El nodo se está apagando.\n{reason}",
           "label": "Sistema apagándose"
         },
         "system_reboot": {
           "title": "{hostname}: reinicio del sistema",
           "body": "El nodo se está reiniciando.\n{reason}",
-          "label": "reinicio del sistema"
+          "label": "Reinicio del sistema"
         },
         "system_restore_completed": {
           "title": "{hostname}: restauración del host finalizada",
-          "body": "Tareas posteriores a la restauración completadas en segundo plano.\n\nInvitados solicitados: {guests}\nTalones de montaje enlazado: {stubs}\nSe eliminaron los directorios de nodos obsoletos: {stale_nodes}\nComponentes reinstalados: {components}\nDuración: {duration}\n{warnings_block}\nEl nodo ahora está completamente listo para usar.",
-          "label": "restauración del host completada"
+          "body": "Tareas posteriores a la restauración completadas en segundo plano.\n\nGuests aplicados: {guests}\nStubs de bind mount: {stubs}\nDirectorios de nodos obsoletos eliminados: {stale_nodes}\nComponentes reinstalados: {components}\nDuración: {duration}\n{warnings_block}\nEl nodo está listo para usarse.",
+          "label": "Restauración del host completada"
         },
         "system_problem": {
           "title": "{hostname}: Problema del sistema detectado{entity_suffix}",
-          "body": "se ha detectado un problema a nivel del sistema.\nMotivo: {reason}",
+          "body": "Se ha detectado un problema a nivel del sistema.\nMotivo: {reason}",
           "label": "Problema del sistema detectado"
         },
         "service_fail": {
-          "title": "{hostname}: Error en el servicio: {service_name}",
+          "title": "{hostname}: servicio fallido — {service_name}",
           "body": "El servicio del sistema \"{service_name}\" ha fallado.\nMotivo: {reason}",
-          "label": "el servicio falló"
+          "label": "Servicio fallido"
         },
         "oom_kill": {
-          "title": "{hostname}: OOM Kill - {process}",
-          "body": "El administrador de memoria insuficiente eliminó el proceso \"{process}\".\n{reason}",
-          "label": "Matar sin memoria"
+          "title": "{hostname}: OOM Kill — {process}",
+          "body": "El gestor de falta de memoria (OOM) ha terminado el proceso \"{process}\".\n{reason}",
+          "label": "Proceso terminado por falta de memoria (OOM)"
         },
         "service_fail_batch": {
           "title": "{hostname}: {service_count} servicios fallidos{entity_suffix}",
           "body": "{reason}",
-          "label": "lote de errores de servicio"
+          "label": "Lote de errores de servicio"
         },
         "cron_output": {
           "title": "{hostname}: {pve_title}",
@@ -6436,187 +6436,187 @@
         },
         "apt_listchanges": {
           "title": "{hostname}: {pve_title}",
-          "body": "información del paquete ascendente reenviada por Proxmox VE a través de apt-listchanges.El siguiente texto proviene del responsable del paquete y no es una recomendación ProxMenux.\n\n{reason}",
+          "body": "Información del paquete ascendente reenviada por Proxmox VE a través de apt-listchanges. El siguiente texto proviene del responsable del paquete y no es una recomendación ProxMenux.\n\n{reason}",
           "label": "avisos del paquete apt-listchanges"
         },
         "webhook_test": {
           "title": "{hostname}: prueba de webhook recibida",
           "body": "Prueba de conectividad del webhook PVE exitosa.\n{reason}",
-          "label": "prueba de webhook"
+          "label": "Prueba de webhook"
         },
         "update_available": {
           "title": "{hostname}: Actualizaciones disponibles",
-          "body": "Actualizaciones totales: {total_count}\nSeguridad: {security_count}\nProxmox: {pve_count}\nNúcleo: {kernel_count}\nPaquetes importantes:\n{important_list}",
-          "label": "Actualizaciones disponibles (heredadas)"
+          "body": "Actualizaciones totales: {total_count}\nSeguridad: {security_count}\nProxmox: {pve_count}\nKernel: {kernel_count}\nPaquetes importantes:\n{important_list}",
+          "label": "Actualizaciones disponibles (legado)"
         },
         "unknown_persistent": {
-          "title": "{hostname}: Marcar no disponible - {category}{entity_suffix}",
-          "body": "La verificación de estado de {category} no ha estado disponible durante más de 3 ciclos.\n{reason}",
-          "label": "Marcar no disponible"
+          "title": "{hostname}: comprobación no disponible - {category}{entity_suffix}",
+          "body": "La comprobación de salud de {category} lleva más de 3 ciclos sin estar disponible.\n{reason}",
+          "label": "Comprobación no disponible"
         },
         "health_persistent": {
-          "title": "{hostname}: {count} problema(s) de salud activo{entity_suffix}",
+          "title": "{hostname}: {count} problema(s) de salud activo(s){entity_suffix}",
           "body": "Los siguientes problemas de salud siguen sin resolverse:\n{issue_list}\n\nEste resumen se envía una vez cada 24 horas mientras persistan los problemas.",
-          "label": "Problemas de salud activos (diarios)"
+          "label": "Problemas de salud activos (diario)"
         },
         "health_issue_new": {
           "title": "{hostname}: Nuevo problema de salud: {category}{entity_suffix}",
-          "body": "Nuevo problema {severity} detectado en: {category}\nDetalles: {reason}",
+          "body": "Nuevo problema ({severity}) detectado en: {category}\nDetalles: {reason}",
           "label": "Nuevo problema de salud"
         },
         "health_issue_resolved": {
           "title": "{hostname}: Resuelto - {category}{entity_suffix}",
-          "body": "el problema {category} se ha resuelto.\n{reason}\nDuración: {duration}",
-          "label": "problema de salud resuelto"
+          "body": "El problema de {category} se ha resuelto.\n{reason}\nDuración: {duration}",
+          "label": "Problema de salud resuelto"
         },
         "update_summary": {
           "title": "{hostname}: Actualizaciones disponibles",
           "body": "Actualizaciones totales: {total_count}\nActualizaciones de seguridad: {security_count}\nActualizaciones relacionadas con Proxmox: {pve_count}\nActualizaciones del kernel: {kernel_count}\nPaquetes importantes:\n{important_list}",
-          "label": "actualizaciones del paquete de host"
+          "label": "Actualizaciones de paquetes del host"
         },
         "pve_update": {
           "title": "{hostname}: Proxmox VE {new_version} disponible",
-          "body": "Hay disponible una nueva versión Proxmox VE.\nActual: {current_version}\nNuevo: {new_version}\n{details}",
-          "label": "Proxmox Actualización de VE disponible"
+          "body": "Hay disponible una nueva versión de Proxmox VE.\nActual: {current_version}\nNueva: {new_version}\n{details}",
+          "label": "Actualización de Proxmox VE disponible"
         },
         "update_complete": {
           "title": "{hostname}: actualización del sistema completada",
-          "body": "los paquetes del sistema se han actualizado correctamente.\n{details}",
+          "body": "Los paquetes del sistema se han actualizado correctamente.\n{details}",
           "label": "Actualización del host completada"
         },
         "ai_model_migrated": {
           "title": "{hostname}: modelo de IA actualizado",
-          "body": "el modelo de IA para notificaciones se ha actualizado automáticamente.\nProveedor: {provider}\nModelo anterior: {old_model}\nNuevo modelo: {new_model}\n\n{message}",
-          "label": "modelo de IA actualizado automáticamente"
+          "body": "El modelo de IA para notificaciones se ha actualizado automáticamente.\nProveedor: {provider}\nModelo anterior: {old_model}\nNuevo modelo: {new_model}\n\n{message}",
+          "label": "Modelo de IA actualizado automáticamente"
         },
         "proxmenux_update": {
           "title": "{hostname}: ProxMenux {new_version} disponible",
-          "body": "hay disponible una nueva versión de ProxMenux.\nActual: {current_version}\nNuevo: {new_version}",
-          "label": "ProxMenux actualización disponible"
+          "body": "Hay disponible una nueva versión de ProxMenux.\nActual: {current_version}\nNueva: {new_version}",
+          "label": "Actualización de ProxMenux disponible"
         },
         "mount_stale": {
           "title": "{hostname}: montaje remoto obsoleto {mount_target}",
-          "body": "El montaje remoto {mount_target} ({fstype}) de {mount_source} está obsoleto{lxc_scope}.\nSe agotó el tiempo de espera de la estadística o se devolvió un error: {error}\n\nLas aplicaciones que escriban en esta ruta aterrizarán silenciosamente en el sistema de archivos subyacente y pueden llenar el disco.Vuelva a montar o arregle la conectividad lo antes posible.",
+          "body": "El montaje remoto {mount_target} ({fstype}) de {mount_source} ha quedado obsoleto{lxc_scope}.\nLa consulta stat agotó el tiempo de espera o devolvió un error: {error}\n\nLas aplicaciones que escriban en esta ruta acabarán escribiendo, sin avisar, en el sistema de archivos subyacente y pueden llenar el disco. Vuelva a montarlo o restablezca la conectividad cuanto antes.",
           "label": "Montaje remoto obsoleto"
         },
         "mount_readonly": {
           "title": "{hostname}: el montaje remoto {mount_target} es de solo lectura",
-          "body": "El montaje remoto {mount_target} ({fstype}) de {mount_source} está montado como de solo lectura {lxc_scope}.Las escrituras fallarán.Si esto no fue intencional, vuelva a montar con rw.",
+          "body": "El montaje remoto {mount_target} ({fstype}) de {mount_source} está montado en solo lectura{lxc_scope}. Las escrituras fallarán. Si no es intencionado, vuelva a montarlo con rw.",
           "label": "Montaje remoto de solo lectura"
         },
         "lxc_disk_low": {
-          "title": "{hostname}: CT {vmid} rootfs en {usage_percent}%",
-          "body": "CT {vmid} ({name}) rootfs está en {usage_percent}% ({disk_bytes_human} / {maxdisk_bytes_human}).\n\nUn rootfs LXC completo impide que el contenedor se inicie limpiamente.Expanda los rootfs (pct resize {vmid} rootfs +1G) o libere espacio dentro del contenedor.",
-          "label": "LXC rootfs casi completo"
+          "title": "{hostname}: rootfs del CT {vmid} al {usage_percent}%",
+          "body": "El rootfs del CT {vmid} ({name}) está al {usage_percent}% ({disk_bytes_human} / {maxdisk_bytes_human}).\n\nUn rootfs LXC lleno impide que el contenedor arranque correctamente. Amplíe el rootfs (pct resize {vmid} rootfs +1G) o libere espacio dentro del contenedor.",
+          "label": "Rootfs de LXC casi lleno"
         },
         "vm_disk_low": {
-          "title": "{hostname}: VM {vmid} sistemas de archivos al {usage_percent}%",
-          "body": "Los sistemas de archivos invitados de VM {vmid} ({name}) están en {usage_percent}% ({disk_bytes_human} / {maxdisk_bytes_human}).\n\nReportado por el agente invitado QEMU.Incluye todos los sistemas de archivos persistentes que el invitado monta en un dispositivo de bloque, tanto discos virtuales como unidades de paso PCI.Libere espacio dentro del huésped o amplíe el almacenamiento afectado antes de que las escrituras comiencen a fallar.",
-          "label": "sistemas de archivos VM casi llenos"
+          "title": "{hostname}: sistemas de archivos de la VM {vmid} al {usage_percent}%",
+          "body": "Los sistemas de archivos del guest de la VM {vmid} ({name}) están al {usage_percent}% ({disk_bytes_human} / {maxdisk_bytes_human}).\n\nDato informado por el guest agent de QEMU. Incluye todos los sistemas de archivos persistentes que el guest monta sobre un dispositivo de bloques, tanto discos virtuales como unidades en passthrough PCI. Libere espacio dentro del guest o amplíe el almacenamiento afectado antes de que las escrituras empiecen a fallar.",
+          "label": "Sistemas de archivos de la VM casi llenos"
         },
         "lxc_mount_low": {
-          "title": "{hostname}: CT {vmid} monte {mount} en {usage_percent}%",
-          "body": "El montaje {mount} dentro de CT {vmid} ({name}) está al {usage_percent}% de uso.\nTipo de sistema de archivos: {fstype}\n\nUn montaje completo dentro de un contenedor a menudo bloquea la aplicación de forma silenciosa: las escrituras fallan o, peor aún, aterrizan en rootfs y activan la alerta de rootfs a continuación.Libere espacio en el soporte o amplíelo.",
-          "label": "LXC montaje casi completo"
+          "title": "{hostname}: montaje {mount} del CT {vmid} al {usage_percent}%",
+          "body": "El montaje {mount} dentro del CT {vmid} ({name}) está al {usage_percent}% de uso.\nTipo de sistema de archivos: {fstype}\n\nUn montaje lleno dentro de un contenedor suele bloquear la aplicación sin avisar: las escrituras fallan o, peor aún, acaban en el rootfs y disparan después su alerta. Libere espacio en el montaje o amplíelo.",
+          "label": "Montaje LXC casi lleno"
         },
         "pve_storage_full": {
           "title": "{hostname}: almacenamiento PVE {storage_name} al {usage_percent}%",
-          "body": "Proxmox el almacenamiento \"{storage_name}\" (tipo: {storage_type}) está al {usage_percent}% de uso.\n\nUna vez lleno, no se puede aprovisionar ninguna VM/CT nueva y es posible que los invitados existentes no puedan escribir.Mueva/elimine volúmenes no utilizados o expanda la imagen subyacente del grupo/LV/RBD.",
+          "body": "El almacenamiento de Proxmox \"{storage_name}\" (tipo: {storage_type}) está al {usage_percent}% de uso.\n\nUna vez lleno, no se podrán crear VM/CT nuevas y los guests existentes pueden fallar al escribir. Mueva o elimine los volúmenes que no se usen, o amplíe el pool/LV/imagen RBD subyacente.",
           "label": "Almacenamiento PVE casi lleno"
         },
         "zfs_pool_full": {
-          "title": "{hostname}: ZFS grupo {pool_name} al {usage_percent}%",
-          "body": "ZFS grupo \"{pool_name}\" está al {usage_percent}% de su capacidad.\n\nEl rendimiento de ZFS y la confiabilidad de escritura se degradan drásticamente por encima del ~80 % de la capacidad (CoW necesita espacio libre para nuevos bloques).Libere instantáneas, elimine conjuntos de datos antiguos o agregue más vdev al grupo.",
-          "label": "ZFS piscina casi llena"
+          "title": "{hostname}: pool ZFS {pool_name} al {usage_percent}%",
+          "body": "El pool ZFS \"{pool_name}\" está al {usage_percent}% de su capacidad.\n\nEl rendimiento y la fiabilidad de escritura de ZFS se degradan bruscamente por encima del ~80% de capacidad (CoW necesita espacio libre para los bloques nuevos). Libere instantáneas, elimine datasets antiguos o añada más vdevs al pool.",
+          "label": "Pool ZFS casi lleno"
         },
         "post_install_update": {
-          "title": "{hostname}: {count} ProxMenux actualizaciones de optimización disponibles",
-          "body": "{count} ProxMenux actualizaciones de optimización disponibles en este host.\n\n🛠️ Versiones disponibles:\n{tool_list}\n\n💡 Aplicar desde:\n• ProxMenux Monitor → Configuración → ProxMenux Optimizaciones\n• O ejecute el menú posterior a la instalación (opción 2) → \"Aplicar actualizaciones disponibles\"",
-          "label": "ProxMenux actualizaciones de optimización disponibles"
+          "title": "{hostname}: {count} actualización(es) de optimizaciones de ProxMenux disponible(s)",
+          "body": "{count} actualización(es) de optimizaciones de ProxMenux disponible(s) en este host.\n\n🛠️ Versiones disponibles:\n{tool_list}\n\n💡 Aplicar desde:\n  • ProxMenux Monitor → Ajustes → ProxMenux Optimizations\n  • O ejecute el menú de post-instalación (opción 2) → \"Aplicar actualizaciones disponibles\"",
+          "label": "Actualizaciones de optimizaciones de ProxMenux disponibles"
         },
         "secure_gateway_update_available": {
-          "title": "{hostname}: {app_name} actualización disponible{update_title_suffix}",
-          "body": "{app_name} (administrado por ProxMenux) tiene 📦 {package_count} actualizaciones de paquete pendientes en su contenedor.\n{version_line}\n\n💡 Abra ProxMenux Monitor > Configuración > Secure Gateway y haga clic en \"Actualizar\" para aplicar.\n\n🗂️ Paquetes:\n{package_list}",
+          "title": "{hostname}: actualización de {app_name} disponible{update_title_suffix}",
+          "body": "{app_name} (gestionado por ProxMenux) tiene 📦 {package_count} actualización(es) de paquetes pendiente(s) en su contenedor.\n{version_line}\n\n💡 Abra ProxMenux Monitor > Ajustes > Secure Gateway y haga clic en \"Actualizar\" para aplicarlas.\n\n🗂️ Paquetes:\n{package_list}",
           "label": "Actualización de Secure Gateway disponible"
         },
         "nvidia_driver_update_available": {
           "title": "{hostname}: actualización del controlador NVIDIA disponible: v{latest_version}",
-          "body": "Hay disponible una versión de mantenimiento más reciente para la rama de controladores NVIDIA instalada.\n🔹 Actualmente instalado: v{current_version}\n🟢 Último disponible: v{latest_version}\n\n{upgrade_reason}\n\n💡 Para reinstalar:\n• Desde el menú posterior a la instalación ProxMenux: {menu_label}\n\nLa reinstalación reconstruye el módulo DKMS con el kernel en ejecución y requiere un reinicio para cargar el nuevo controlador.",
+          "body": "Hay disponible una versión de mantenimiento más reciente para la rama del controlador NVIDIA instalada.\n🔹 Instalada actualmente: v{current_version}\n🟢 Última disponible:    v{latest_version}\n\n{upgrade_reason}\n\n💡 Para reinstalar:\n  • Desde el menú de post-instalación de ProxMenux: {menu_label}\n\nLa reinstalación reconstruye el módulo DKMS contra el kernel en ejecución y requiere un reinicio para cargar el nuevo controlador.",
           "label": "Actualización del controlador NVIDIA disponible"
         },
         "coral_driver_update_available": {
-          "title": "{hostname}: Coral Actualización del controlador TPU disponible: {latest_version}",
-          "body": "hay disponible un {variant_label} más nuevo.\n🔹 Actualmente instalado: {current_version}\n🟢 Último disponible: {latest_version}\n\n{upgrade_reason}\n\n💡 Para reinstalar:\n• Desde el menú posterior a la instalación ProxMenux: {menu_label}\n\n{reboot_note}",
-          "label": "Coral Actualización del controlador TPU disponible"
+          "title": "{hostname}: actualización del controlador de Coral TPU disponible — {latest_version}",
+          "body": "Hay disponible un {variant_label} más reciente.\n🔹 Instalado actualmente: {current_version}\n🟢 Última disponible:    {latest_version}\n\n{upgrade_reason}\n\n💡 Para reinstalar:\n  • Desde el menú de post-instalación de ProxMenux: {menu_label}\n\n{reboot_note}",
+          "label": "Actualización del controlador de Coral TPU disponible"
         },
         "burst_auth_fail": {
-          "title": "{hostname}: +{count} más errores de autenticación en {window}",
+          "title": "{hostname}: +{count} fallos de autenticación más en {window}",
           "body": "+{count} errores de autenticación adicionales detectados en {window} ({total_count} en total).\nFuentes: {entity_list}",
-          "label": "Los fallos de autenticación estallan"
+          "label": "Ráfaga de fallos de autenticación"
         },
         "burst_ip_block": {
-          "title": "{hostname}: Fail2Ban prohibido +{count} IP más en {window}",
-          "body": "+{count} IP adicionales prohibidas por Fail2Ban en {window} ({total_count} en total).\nIP: {entity_list}",
-          "label": "ráfaga de bloque de IP"
+          "title": "{hostname}: Fail2Ban ha baneado +{count} IP más en {window}",
+          "body": "+{count} IP adicionales baneadas por Fail2Ban en {window} ({total_count} en total).\nIP: {entity_list}",
+          "label": "Ráfaga de bloqueos de IP"
         },
         "burst_disk_io": {
-          "title": "{hostname}: +{count} más errores de E/S de disco en {entity_list}",
+          "title": "{hostname}: +{count} errores de E/S de disco más en {entity_list}",
           "body": "+{count} errores de E/S adicionales detectados en {window} ({total_count} en total).\nDispositivos: {entity_list}",
-          "label": "Explosión de E/S de disco"
+          "label": "Ráfaga de errores de E/S de disco"
         },
         "burst_cluster": {
-          "title": "{hostname}: Se detectó aleteo del grupo (+{count} cambios más)",
-          "body": "el estado del clúster cambió +{count} veces más en {window} ({total_count} en total).\nNodos: {entity_list}",
-          "label": "Explosión de aleteo de racimo"
+          "title": "{hostname}: inestabilidad del clúster detectada (+{count} cambios más)",
+          "body": "El estado del clúster cambió +{count} veces más en {window} ({total_count} en total).\nNodos: {entity_list}",
+          "label": "Ráfaga de inestabilidad del clúster"
         },
         "burst_service_fail": {
-          "title": "{hostname}: +{count} más servicios fallaron en {window}",
-          "body": "+{count} fallas de servicio adicionales detectadas en {window} ({total_count} en total).\nNormalmente, esto indica un reinicio del nodo o del servicio PVE.\n\nFallos adicionales:\n{details}",
-          "label": "Explosión de falla del servicio"
+          "title": "{hostname}: +{count} servicios más han fallado en {window}",
+          "body": "+{count} fallos de servicio adicionales detectados en {window} ({total_count} en total).\nNormalmente, esto indica un reinicio del nodo o de un servicio de PVE.\n\nFallos adicionales:\n{details}",
+          "label": "Ráfaga de fallos de servicio"
         },
         "burst_system": {
-          "title": "{hostname}: +{count} más problemas del sistema en {window}",
+          "title": "{hostname}: +{count} problemas del sistema más en {window}",
           "body": "+{count} problemas adicionales del sistema detectados en {window} ({total_count} en total).\n\nProblemas adicionales:\n{details}",
-          "label": "Los problemas del sistema estallan"
+          "label": "Ráfaga de problemas del sistema"
         },
         "burst_generic": {
-          "title": "{hostname}: +{count} más {event_type} eventos en {window}",
-          "body": "+{count} eventos adicionales de tipo {event_type} en {window} ({total_count} total).\n\nEventos adicionales:\n{details}",
-          "label": "ráfaga genérica"
+          "title": "{hostname}: +{count} eventos {event_type} más en {window}",
+          "body": "+{count} eventos adicionales de tipo {event_type} en {window} ({total_count} en total).\n\nEventos adicionales:\n{details}",
+          "label": "Ráfaga genérica"
         },
         "kernel_warning": {
           "title": "{hostname}: Se detectó un evento de diagnóstico del kernel",
           "body": "El kernel registró un evento de diagnóstico: {kernel_details}",
-          "label": "advertencias del kernel y seguimientos de diagnóstico"
+          "label": "Advertencias del kernel y trazas de diagnóstico"
         }
       },
       "lxcUpdate": {
         "status": {
-          "success": "tuvo éxito",
-          "failure": "fallido",
-          "partial": "completado parcialmente",
-          "deferred": "diferido",
-          "skipped": "omitido"
+          "success": "correcta",
+          "failure": "fallida",
+          "partial": "completada parcialmente",
+          "deferred": "aplazada",
+          "skipped": "omitida"
         },
         "source": {
-          "scheduled": "programado",
-          "manual": "manual"
+          "scheduled": "Programado",
+          "manual": "Manual"
         },
-        "sourceLabel": "Fuente",
-        "targets": "Objetivos",
-        "osPending": "paquetes de sistema operativo pendientes: {before} → {after}",
-        "osUnverified": "paquetes de sistema operativo: comando de actualización ejecutado;resultado no verificado",
+        "sourceLabel": "Origen",
+        "targets": "Destinos",
+        "osPending": "Paquetes de sistema operativo pendientes: {before} → {after}",
+        "osUnverified": "Paquetes de sistema operativo: comando de actualización ejecutado; resultado no verificado",
         "applications": "Aplicaciones: {items}",
-        "applicationsUnverified": "Aplicaciones: actualizador ejecutado;no se observó ningún cambio de versión rastreado",
-        "dockerEngineChange": "Docker Motor: {before} → {after}",
-        "dockerEngineVerified": "Docker Motor: verificado en {version}",
-        "dockerEngineUnverified": "Docker Motor: comando de actualización ejecutado;versión no verificada",
-        "dockerImagesPending": "Docker imágenes pendientes: {before} → {after}",
-        "dockerImagesChanged": "Docker imágenes cambiadas: {images}",
+        "applicationsUnverified": "Aplicaciones: se ejecutó el actualizador; no se observó ningún cambio en las versiones rastreadas",
+        "dockerEngineChange": "Docker Engine: {before} → {after}",
+        "dockerEngineVerified": "Docker Engine: verificado en {version}",
+        "dockerEngineUnverified": "Docker Engine: comando de actualización ejecutado; versión no verificada",
+        "dockerImagesPending": "Imágenes Docker pendientes: {before} → {after}",
+        "dockerImagesChanged": "Imágenes Docker cambiadas: {images}",
         "deferredTargets": "Objetivos diferidos: {targets}",
-        "reason": "Razón: {reason}",
-        "restartRequired": "Reiniciar requerido: {value}",
-        "yes": "si",
+        "reason": "Motivo: {reason}",
+        "restartRequired": "Reinicio requerido: {value}",
+        "yes": "sí",
         "no": "no",
         "verificationPending": "Verificación pendiente hasta que el contenedor se esté ejecutando",
         "verificationWarning": "Advertencia de verificación: {error}",
@@ -6624,7 +6624,7 @@
       },
       "fallback": {
         "unknownTitle": "{hostname}: {event_type}",
-        "healthCheckDegraded": "Control de salud degradado",
+        "healthCheckDegraded": "Comprobación de salud degradada",
         "none": "ninguno"
       },
       "fields": {
@@ -6635,60 +6635,60 @@
         "node": "Nodo",
         "category": "Categoría",
         "service": "Servicio",
-        "jail": "cárcel",
+        "jail": "Jail",
         "user": "Usuario",
-        "count": "contar",
-        "window": "ventana",
+        "count": "Recuento",
+        "window": "Ventana",
         "affected": "Afectado"
       },
       "vzdump": {
         "size": "Tamaño: {value}",
         "duration": "Duración: {value}",
         "file": "Archivo",
-        "backups": "{count} copias de seguridad",
-        "failed": "{count} falló",
+        "backups": "{count} backups",
+        "failed": "{count} fallidos",
         "total": "Total: {value}",
         "time": "Hora: {value}"
       },
       "startup": {
         "issuesTitle": "{hostname}: Inicio del sistema: {count} problemas detectados",
         "completeTitle": "{hostname}: inicio del sistema completado",
-        "operational": "Todos los sistemas operativos.",
-        "vmCountOne": "{count} máquina virtual",
-        "vmCountMany": "{count} máquinas virtuales",
+        "operational": "Todos los sistemas funcionan con normalidad.",
+        "vmCountOne": "{count} VM",
+        "vmCountMany": "{count} VM",
         "ctCountOne": "{count} CT",
         "ctCountMany": "{count} CT",
-        "started": "✅ {counts} iniciado",
+        "started": "✅ {counts} iniciados",
         "vmFailed": "❌ VM falló: {name} - {reason}",
         "ctFailed": "❌ CT falló: {name} - {reason}",
         "unknownError": "error desconocido",
         "storageUnavailable": "⚠️ Almacenamiento: {count} no disponible ({names})",
-        "servicesFailed": "⚠️ Servicios: {count} falló ({names})",
+        "servicesFailed": "⚠️ Servicios: {count} con fallos ({names})",
         "duration": "⏱️ Inicio completado en {minutes} min"
       },
       "appUpdates": {
-        "singleTitle": "{hostname}: {app_name} actualización disponible en CT {vmid}",
-        "singleBody": "{app_name} en CT {vmid} ({ct_name}) tiene una nueva versión:\n{installed} → {latest}",
-        "emptyTitle": "{hostname}: actualizaciones de la aplicación disponibles",
-        "emptyBody": "las actualizaciones de la aplicación están disponibles.",
-        "batchTitle": "{hostname}: {count} actualizaciones de la aplicación disponibles",
-        "batchLeadOneContainer": "las aplicaciones {count} en el contenedor {container_count} LXC tienen una versión más reciente:",
-        "batchLeadManyContainers": "Las aplicaciones {count} en contenedores {container_count} LXC tienen una versión más reciente:",
+        "singleTitle": "{hostname}: actualización de {app_name} disponible en CT {vmid}",
+        "singleBody": "{app_name} en CT {vmid} ({ct_name}) tiene una nueva versión:\n    {installed} → {latest}",
+        "emptyTitle": "{hostname}: actualizaciones de aplicaciones disponibles",
+        "emptyBody": "Hay actualizaciones de aplicaciones disponibles.",
+        "batchTitle": "{hostname}: {count} actualizaciones de aplicaciones disponibles",
+        "batchLeadOneContainer": "{count} aplicaciones en {container_count} contenedor LXC tienen una versión más reciente:",
+        "batchLeadManyContainers": "{count} aplicaciones en {container_count} contenedores LXC tienen una versión más reciente:",
         "additional": "… {count} aplicaciones adicionales",
         "app": "aplicación",
         "unknown": "desconocido"
       },
       "healthDegraded": {
         "categories": {
-          "cpu": "uso y temperatura de la CPU",
-          "memory": "Memoria e intercambio",
-          "storage": "soportes de almacenamiento y espacio",
+          "cpu": "Uso y temperatura de la CPU",
+          "memory": "Memoria y swap",
+          "storage": "Montajes y espacio de almacenamiento",
           "disks": "E/S de disco y errores",
-          "network": "interfaces de red",
-          "vms": "máquinas virtuales y contenedores",
-          "services": "servicios PVE",
-          "logs": "registros del sistema",
-          "updates": "actualizaciones del sistema",
+          "network": "Interfaces de red",
+          "vms": "Máquinas virtuales y contenedores",
+          "services": "Servicios PVE",
+          "logs": "Logs del sistema",
+          "updates": "Actualizaciones del sistema",
           "security": "Seguridad"
         },
         "severity": {
@@ -6696,16 +6696,16 @@
           "warning": "Advertencia"
         },
         "reasons": {
-          "cpuSustained": "la CPU está por encima del {threshold}% para {duration}s."
+          "cpuSustained": "La CPU está por encima del {threshold}% durante {duration} s."
         },
-        "singleTitle": "{hostname}: {severity} estado de salud – {category}",
-        "multipleTitle": "{hostname}: {count} controles de estado degradados",
-        "multipleLine": "• {severity}: {category}\n{reason}"
+        "singleTitle": "{hostname}: estado de salud: {severity} – {category}",
+        "multipleTitle": "{hostname}: {count} comprobaciones de salud degradadas",
+        "multipleLine": "• {severity}: {category}\n  {reason}"
       },
       "digest": {
         "groups": {
           "vm_ct": "VM y CT",
-          "backup": "copia de seguridad",
+          "backup": "Backup",
           "resources": "Recursos",
           "storage": "Almacenamiento",
           "network": "Red",
@@ -6719,29 +6719,29 @@
           "other": "Otro"
         },
         "title": "{hostname}: resumen de 24 horas ({timestamp})",
-        "readFailed": "lectura de resumen fallida: {error}",
+        "readFailed": "error al leer el resumen: {error}",
         "empty": "No hay eventos INFO almacenados en el búfer para esta ventana de resumen.",
-        "lead": "{count} INFORMACIÓN de eventos agrupados por categoría:",
-        "more": "• … y {count} más",
+        "lead": "{count} eventos INFO agrupados por categoría:\n",
+        "more": "  • … y {count} más",
         "footer": "(Los eventos críticos/de advertencia llegaron en el momento en que ocurrieron, no en este resumen).",
         "quietTitle": "{hostname}: {count} eventos almacenados en búfer durante las horas de silencio"
       },
       "test": {
-        "title": "ProxMenux Prueba",
+        "title": "Prueba de ProxMenux",
         "welcome": "¡Bienvenido a ProxMenux Monitor!",
-        "verify": "este es un mensaje de prueba para verificar que su canal de notificaciones esté funcionando correctamente.",
+        "verify": "Este es un mensaje de prueba para verificar que su canal de notificaciones esté funcionando correctamente.",
         "configuration": "Configuración del canal:",
-        "iconsEnabled": "Iconos: habilitado",
-        "iconsDisabled": "Iconos: deshabilitado",
-        "aiEnabled": "AI: habilitado ({info})",
-        "aiDisabled": "AI: deshabilitado",
-        "alerts": "recibirá alertas sobre eventos del sistema, cambios en el estado de salud e incidentes de seguridad.",
-        "photoCaption": "puedes usar esta imagen como foto de perfil para tu robot de notificaciones."
+        "iconsEnabled": "Iconos: habilitados",
+        "iconsDisabled": "Iconos: deshabilitados",
+        "aiEnabled": "IA: habilitada ({info})",
+        "aiDisabled": "IA: deshabilitada",
+        "alerts": "Recibirá alertas sobre eventos del sistema, cambios en el estado de salud e incidentes de seguridad.",
+        "photoCaption": "Puede usar esta imagen como foto de perfil de su bot de notificaciones."
       },
       "channels": {
         "discord": {
           "category": "Categoría",
-          "host": "Anfitrión",
+          "host": "Host",
           "severity": "Severidad"
         },
         "email": {
@@ -6754,7 +6754,7 @@
           },
           "groups": {
             "vm_ct": "Máquina virtual / Contenedor",
-            "backup": "copia de seguridad e instantánea",
+            "backup": "Backup e instantáneas",
             "resources": "Recursos del sistema",
             "storage": "Almacenamiento",
             "network": "Red",
@@ -6772,34 +6772,34 @@
             "name": "Nombre",
             "action": "Acción",
             "targetNode": "Nodo de destino",
-            "reason": "Razón",
+            "reason": "Motivo",
             "storage": "Almacenamiento",
             "status": "Estado",
             "size": "Tamaño",
             "duration": "Duración",
-            "snapshot": "instantánea",
-            "metric": "Métrico",
+            "snapshot": "Instantánea",
+            "metric": "Métrica",
             "currentValue": "Valor actual",
             "threshold": "Umbral",
             "cpuCores": "Núcleos de CPU",
             "memory": "Memoria",
             "temperature": "Temperatura",
             "mountPoint": "Punto de montaje",
-            "usage": "uso",
+            "usage": "Uso",
             "available": "Disponible",
             "device": "Dispositivo",
             "severity": "Severidad",
             "storageName": "Nombre de almacenamiento",
-            "type": "escribir",
+            "type": "Tipo",
             "interface": "Interfaz",
             "latency": "Latencia",
             "event": "Evento",
             "sourceIp": "IP de origen",
-            "username": "nombre de usuario",
+            "username": "Nombre de usuario",
             "service": "Servicio",
-            "jail": "cárcel",
-            "failures": "fracasos",
-            "change": "cambiar",
+            "jail": "Jail",
+            "failures": "Fallos",
+            "change": "Cambio",
             "node": "Nodo",
             "quorum": "Quórum",
             "nodesAffected": "Nodos afectados",
@@ -6809,21 +6809,21 @@
             "activeIssues": "Problemas activos",
             "totalUpdates": "Actualizaciones totales",
             "securityUpdates": "Actualizaciones de seguridad",
-            "proxmoxUpdates": "Proxmox Actualizaciones",
+            "proxmoxUpdates": "Actualizaciones de Proxmox",
             "kernelUpdates": "Actualizaciones del kernel",
             "importantPackages": "Paquetes importantes",
             "currentVersion": "Versión actual",
-            "newVersion": "Nueva Versión"
+            "newVersion": "Nueva versión"
           },
           "status": {
-            "failed": "fallido",
+            "failed": "Fallido",
             "completed": "Completado",
-            "started": "iniciado"
+            "started": "Iniciado"
           },
-          "report": "{group} Informe",
+          "report": "Informe de {group}",
           "details": "Detalles",
-          "host": "Anfitrión",
-          "footer": "ProxMenux Servicio de notificación"
+          "host": "Host",
+          "footer": "Servicio de notificaciones de ProxMenux"
         }
       }
     }

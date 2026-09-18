@@ -5185,7 +5185,7 @@
       "lynisTest": "Test",
       "lynisWarning": "Warnung",
       "couldNotRead": "Nicht lesbar",
-      "readOnlyScope": "Die Bewertung überprüft die Hosteinstellungen und den Zustand.Es kann Berichte und Protokolle schreiben;Boot-Statusprüfungen können EFI-Systempartitionen vorübergehend bereitstellen."
+      "readOnlyScope": "Die Bewertung überprüft die Hosteinstellungen und den Zustand. Es kann Berichte und Protokolle schreiben; Boot-Statusprüfungen können EFI-Systempartitionen vorübergehend bereitstellen."
     },
     "title": "Audit & Report",
     "loading": "Loading assessment…",
@@ -5419,7 +5419,7 @@
             "attention": "{count} von {total} Bootpartitionen bedürfen der Prüfung",
             "evaluationFailed": "The check could not be evaluated"
           },
-          "rationale": "Die EFI-Systempartitionen proxmox-boot-tool-Berichte und die Kernel, die jeder trägt.proxmox-boot-tool-Status kann EFI-Systempartitionen vorübergehend bereitstellen;Es wird kein Bootversuch unternommen."
+          "rationale": "Die EFI-Systempartitionen proxmox-boot-tool-Berichte und die Kernel, die jeder trägt. proxmox-boot-tool-Status kann EFI-Systempartitionen vorübergehend bereitstellen; Es wird kein Bootversuch unternommen."
         },
         "failed_units": {
           "title": "Wesentliche Dienste und fehlgeschlagene Units",
@@ -5938,7 +5938,7 @@
         "backup": "Guest protection and whether it is real.",
         "capacity": "Room to grow and the wear on the disks."
       },
-      "scopeReadOnly": "Die Bewertung überprüft die Hosteinstellungen und den Zustand.Es kann Berichte und Protokolle schreiben;Boot-Statusprüfungen können EFI-Systempartitionen vorübergehend bereitstellen."
+      "scopeReadOnly": "Die Bewertung überprüft die Hosteinstellungen und den Zustand. Es kann Berichte und Protokolle schreiben; Boot-Statusprüfungen können EFI-Systempartitionen vorübergehend bereitstellen."
     },
     "results": "Ergebnisse",
     "classifications": {
@@ -6094,7 +6094,7 @@
       "withoutLynis": "Run without Lynis",
       "cancel": "Cancel"
     },
-    "readOnlyNotice": "Die Bewertung überprüft die Hosteinstellungen und den Zustand.Es kann Berichte und Protokolle schreiben;Boot-Statusprüfungen können EFI-Systempartitionen vorübergehend bereitstellen."
+    "readOnlyNotice": "Die Bewertung überprüft die Hosteinstellungen und den Zustand. Es kann Berichte und Protokolle schreiben; Boot-Statusprüfungen können EFI-Systempartitionen vorübergehend bereitstellen."
   },
   "runtime": {
     "notifications": {
@@ -6136,7 +6136,7 @@
         },
         "app_update_available": {
           "title": "{hostname}: {app_name} Update verfügbar auf CT {vmid}",
-          "body": "{app_name} auf CT {vmid} ({ct_name}) hat eine neue Version:\n{installed} → {latest}",
+          "body": "{app_name} auf CT {vmid} ({ct_name}) hat eine neue Version:\n    {installed} → {latest}",
           "label": "App-Update verfügbar"
         },
         "docker_stack_update_available": {
@@ -6356,7 +6356,7 @@
         },
         "ip_block": {
           "title": "{hostname}: IP durch Fail2Ban blockiert",
-          "body": "IP-Adresse {source_ip} wurde gesperrt.\nGefängnis: {jail}\nFehlversuche: {failures}",
+          "body": "IP-Adresse {source_ip} wurde gesperrt.\nJail: {jail}\nFehlversuche: {failures}",
           "label": "IP durch Fail2Ban blockiert"
         },
         "firewall_issue": {
@@ -6371,7 +6371,7 @@
         },
         "split_brain": {
           "title": "{hostname}: SPLIT-BRAIN erkannt",
-          "body": "Es wurde eine Cluster-Split-Brain-Erkrankung festgestellt.Das Quorum kann verloren gehen.\nQuorumsstatus: {quorum}",
+          "body": "Es wurde ein Split-Brain-Zustand im Cluster festgestellt. Das Quorum kann verloren gehen.\nQuorumsstatus: {quorum}",
           "label": "SPLIT-BRAIN erkannt"
         },
         "node_disconnect": {
@@ -6436,7 +6436,7 @@
         },
         "apt_listchanges": {
           "title": "{hostname}: {pve_title}",
-          "body": "Upstream-Paketinformationen, die von Proxmox VE über apt-listchanges weitergeleitet werden.Der folgende Text stammt vom Paketbetreuer und ist keine ProxMenux Empfehlung.\n\n{reason}",
+          "body": "Upstream-Paketinformationen, die von Proxmox VE über apt-listchanges weitergeleitet werden. Der folgende Text stammt vom Paketbetreuer und ist keine ProxMenux Empfehlung.\n\n{reason}",
           "label": "Pakethinweise zu apt-listchanges"
         },
         "webhook_test": {
@@ -6496,42 +6496,42 @@
         },
         "mount_stale": {
           "title": "{hostname}: veralteter Remote-Mount {mount_target}",
-          "body": "Remote-Mount {mount_target} ({fstype}) von {mount_source} ist veraltet{lxc_scope}.\nStat hat das Zeitlimit überschritten oder einen Fehler zurückgegeben: {error}\n\nApps, die auf diesen Pfad schreiben, landen stillschweigend im zugrunde liegenden Dateisystem und füllen möglicherweise die Festplatte.Stellen Sie die Konnektivität so schnell wie möglich wieder her oder reparieren Sie sie.",
+          "body": "Remote-Mount {mount_target} ({fstype}) von {mount_source} ist veraltet{lxc_scope}.\nStat hat das Zeitlimit überschritten oder einen Fehler zurückgegeben: {error}\n\nApps, die auf diesen Pfad schreiben, landen stillschweigend im zugrunde liegenden Dateisystem und füllen möglicherweise die Festplatte. Stellen Sie die Konnektivität so schnell wie möglich wieder her oder reparieren Sie sie.",
           "label": "Remote-Mount veraltet"
         },
         "mount_readonly": {
           "title": "{hostname}: Remote-Mount {mount_target} ist schreibgeschützt",
-          "body": "Remote-Mount {mount_target} ({fstype}) von {mount_source} ist schreibgeschützt gemountet{lxc_scope}.Schreibvorgänge schlagen fehl.Wenn dies unbeabsichtigt war, mounten Sie es erneut mit RW.",
+          "body": "Remote-Mount {mount_target} ({fstype}) von {mount_source} ist schreibgeschützt gemountet{lxc_scope}.Schreibvorgänge schlagen fehl. Wenn dies unbeabsichtigt war, mounten Sie es erneut mit RW.",
           "label": "Remote-Mount schreibgeschützt"
         },
         "lxc_disk_low": {
           "title": "{hostname}: CT {vmid} Rootfs bei {usage_percent} %",
-          "body": "CT {vmid} ({name}) Rootfs liegt bei {usage_percent} % ({disk_bytes_human} / {maxdisk_bytes_human}).\n\nEin vollständiges LXC Rootfs verhindert, dass der Container sauber startet.Erweitern Sie entweder die Rootfs (pct resize {vmid} rootfs +1G) oder geben Sie Speicherplatz im Container frei.",
+          "body": "CT {vmid} ({name}) Rootfs liegt bei {usage_percent} % ({disk_bytes_human} / {maxdisk_bytes_human}).\n\nEin vollständiges LXC Rootfs verhindert, dass der Container sauber startet. Erweitern Sie entweder die Rootfs (pct resize {vmid} rootfs +1G) oder geben Sie Speicherplatz im Container frei.",
           "label": "LXC rootfs fast voll"
         },
         "vm_disk_low": {
           "title": "{hostname}: VM {vmid} Dateisysteme bei {usage_percent} %",
-          "body": "VM {vmid} ({name}) Gastdateisysteme liegen bei {usage_percent} % ({disk_bytes_human} / {maxdisk_bytes_human}).\n\nGemeldet vom Gastagenten QEMU.Umfasst jedes persistente Dateisystem, das der Gast auf einem Blockgerät bereitstellt – virtuelle Festplatten und PCI-Passthrough-Laufwerke gleichermaßen.Geben Sie Speicherplatz im Gast frei oder erweitern Sie den betroffenen Speicher, bevor Schreibvorgänge fehlschlagen.",
+          "body": "VM {vmid} ({name}) Gastdateisysteme liegen bei {usage_percent} % ({disk_bytes_human} / {maxdisk_bytes_human}).\n\nGemeldet vom Gastagenten QEMU. Umfasst jedes persistente Dateisystem, das der Gast auf einem Blockgerät bereitstellt – virtuelle Festplatten und PCI-Passthrough-Laufwerke gleichermaßen. Geben Sie Speicherplatz im Gast frei oder erweitern Sie den betroffenen Speicher, bevor Schreibvorgänge fehlschlagen.",
           "label": "VM-Dateisysteme fast voll"
         },
         "lxc_mount_low": {
           "title": "{hostname}: CT {vmid} Mount {mount} bei {usage_percent} %",
-          "body": "Mount {mount} in CT {vmid} ({name}) ist zu {usage_percent} % genutzt.\nDateisystemtyp: {fstype}\n\nEin vollständiger Mount innerhalb eines Containers blockiert die Anwendung oft stillschweigend – Schreibvorgänge schlagen entweder fehl oder, schlimmer noch, landen im Rootfs und lösen als nächstes die Rootfs-Warnung aus.Machen Sie Platz auf der Halterung frei oder erweitern Sie sie.",
+          "body": "Mount {mount} in CT {vmid} ({name}) ist zu {usage_percent} % genutzt.\nDateisystemtyp: {fstype}\n\nEin vollständiger Mount innerhalb eines Containers blockiert die Anwendung oft stillschweigend – Schreibvorgänge schlagen entweder fehl oder, schlimmer noch, landen im Rootfs und lösen als nächstes die Rootfs-Warnung aus. Machen Sie Platz auf der Halterung frei oder erweitern Sie sie.",
           "label": "LXC Mount fast voll"
         },
         "pve_storage_full": {
           "title": "{hostname}: PVE-Speicher {storage_name} bei {usage_percent} %",
-          "body": "Proxmox Speicher „{storage_name}“ (Typ: {storage_type}) ist zu {usage_percent} % belegt.\n\nSobald sie voll ist, kann keine neue VM/CT mehr bereitgestellt werden und vorhandene Gäste können möglicherweise nicht schreiben.Verschieben/löschen Sie nicht verwendete Volumes oder erweitern Sie das zugrunde liegende Pool-/LV-/RBD-Image.",
+          "body": "Proxmox Speicher „{storage_name}“ (Typ: {storage_type}) ist zu {usage_percent} % belegt.\n\nSobald sie voll ist, kann keine neue VM/CT mehr bereitgestellt werden und vorhandene Gäste können möglicherweise nicht schreiben. Verschieben/löschen Sie nicht verwendete Volumes oder erweitern Sie das zugrunde liegende Pool-/LV-/RBD-Image.",
           "label": "PVE-Speicher fast voll"
         },
         "zfs_pool_full": {
           "title": "{hostname}: ZFS Pool {pool_name} bei {usage_percent} %",
-          "body": "ZFS Pool „{pool_name}“ hat eine Kapazität von {usage_percent} %.\n\nZFS Leistung und Schreibzuverlässigkeit nehmen über ~80 % der Kapazität stark ab (CoW benötigt freien Speicherplatz für neue Blöcke).Geben Sie Snapshots frei, bereinigen Sie alte Datensätze oder fügen Sie dem Pool weitere vdevs hinzu.",
+          "body": "ZFS Pool „{pool_name}“ hat eine Kapazität von {usage_percent} %.\n\nZFS Leistung und Schreibzuverlässigkeit nehmen über ~80 % der Kapazität stark ab (CoW benötigt freien Speicherplatz für neue Blöcke). Geben Sie Snapshots frei, bereinigen Sie alte Datensätze oder fügen Sie dem Pool weitere vdevs hinzu.",
           "label": "ZFS Pool fast voll"
         },
         "post_install_update": {
           "title": "{hostname}: {count} ProxMenux Optimierungsupdate(s) verfügbar",
-          "body": "{count} ProxMenux Optimierungsupdate(s) auf diesem Host verfügbar.\n\n🛠️ Verfügbare Versionen:\n{tool_list}\n\n💡 Bewerben Sie sich unter:\n• ProxMenux Monitor → Einstellungen → ProxMenux Optimierungen\n• Oder führen Sie das Nachinstallationsmenü (Option 2) → „Verfügbare Updates anwenden“ aus.",
+          "body": "{count} ProxMenux Optimierungsupdate(s) auf diesem Host verfügbar.\n\n🛠️ Verfügbare Versionen:\n{tool_list}\n\n💡 Bewerben Sie sich unter:\n  • ProxMenux Monitor → Einstellungen → ProxMenux Optimierungen\n  • Oder führen Sie das Nachinstallationsmenü (Option 2) → „Verfügbare Updates anwenden“ aus.",
           "label": "ProxMenux Optimierungsupdates verfügbar"
         },
         "secure_gateway_update_available": {
@@ -6541,12 +6541,12 @@
         },
         "nvidia_driver_update_available": {
           "title": "{hostname}: NVIDIA-Treiber-Update verfügbar – v{latest_version}",
-          "body": "Für den installierten NVIDIA-Treiberzweig ist eine neuere Wartungsversion verfügbar.\n🔹 Derzeit installiert: v{current_version}\n🟢 Neueste verfügbar: v{latest_version}\n\n{upgrade_reason}\n\n💡 Zur Neuinstallation:\n• Aus dem Post-Installationsmenü ProxMenux: {menu_label}\n\nBei der Neuinstallation wird das Modul DKMS mit dem laufenden Kernel neu erstellt und ein Neustart erforderlich, um den neuen Treiber zu laden.",
+          "body": "Für den installierten NVIDIA-Treiberzweig ist eine neuere Wartungsversion verfügbar.\n🔹 Derzeit installiert: v{current_version}\n🟢 Neueste verfügbar: v{latest_version}\n\n{upgrade_reason}\n\n💡 Zur Neuinstallation:\n  • Aus dem Post-Installationsmenü ProxMenux: {menu_label}\n\nBei der Neuinstallation wird das Modul DKMS mit dem laufenden Kernel neu erstellt und ein Neustart erforderlich, um den neuen Treiber zu laden.",
           "label": "NVIDIA-Treiberupdate verfügbar"
         },
         "coral_driver_update_available": {
           "title": "{hostname}: Coral TPU-Treiber-Update verfügbar – {latest_version}",
-          "body": "Ein neueres {variant_label} ist verfügbar.\n🔹 Derzeit installiert: {current_version}\n🟢 Neueste verfügbar: {latest_version}\n\n{upgrade_reason}\n\n💡 Zur Neuinstallation:\n• Aus dem Post-Installationsmenü ProxMenux: {menu_label}\n\n{reboot_note}",
+          "body": "Ein neueres {variant_label} ist verfügbar.\n🔹 Derzeit installiert: {current_version}\n🟢 Neueste verfügbar: {latest_version}\n\n{upgrade_reason}\n\n💡 Zur Neuinstallation:\n  • Aus dem Post-Installationsmenü ProxMenux: {menu_label}\n\n{reboot_note}",
           "label": "Coral TPU-Treiber-Update verfügbar"
         },
         "burst_auth_fail": {
@@ -6605,12 +6605,12 @@
         "sourceLabel": "Quelle",
         "targets": "Ziele",
         "osPending": "Ausstehende Betriebssystempakete: {before} → {after}",
-        "osUnverified": "Betriebssystempakete: Aktualisierungsbefehl ausgeführt;Ergebnis nicht verifiziert",
+        "osUnverified": "Betriebssystempakete: Aktualisierungsbefehl ausgeführt; Ergebnis nicht verifiziert",
         "applications": "Anwendungen: {items}",
-        "applicationsUnverified": "Anwendungen: Updater ausgeführt;Es wurde keine nachverfolgte Versionsänderung beobachtet",
+        "applicationsUnverified": "Anwendungen: Updater ausgeführt; Es wurde keine nachverfolgte Versionsänderung beobachtet",
         "dockerEngineChange": "Docker Engine: {before} → {after}",
         "dockerEngineVerified": "Docker Engine: überprüft bei {version}",
-        "dockerEngineUnverified": "Docker Engine: Aktualisierungsbefehl ausgeführt;Version nicht verifiziert",
+        "dockerEngineUnverified": "Docker Engine: Aktualisierungsbefehl ausgeführt; Version nicht verifiziert",
         "dockerImagesPending": "Docker Bilder ausstehend: {before} → {after}",
         "dockerImagesChanged": "Docker Bilder geändert: {images}",
         "deferredTargets": "Zurückgestellte Ziele: {targets}",
@@ -6635,7 +6635,7 @@
         "node": "Knoten",
         "category": "Kategorie",
         "service": "Service",
-        "jail": "Gefängnis",
+        "jail": "Jail",
         "user": "Benutzer",
         "count": "Zählen",
         "window": "Fenster",
@@ -6668,7 +6668,7 @@
       },
       "appUpdates": {
         "singleTitle": "{hostname}: {app_name} Update verfügbar auf CT {vmid}",
-        "singleBody": "{app_name} auf CT {vmid} ({ct_name}) hat eine neue Version:\n{installed} → {latest}",
+        "singleBody": "{app_name} auf CT {vmid} ({ct_name}) hat eine neue Version:\n    {installed} → {latest}",
         "emptyTitle": "{hostname}: Anwendungsupdates verfügbar",
         "emptyBody": "Anwendungsaktualisierungen sind verfügbar.",
         "batchTitle": "{hostname}: {count} Anwendungsupdates verfügbar",
@@ -6700,7 +6700,7 @@
         },
         "singleTitle": "{hostname}: {severity} Gesundheitszustand – {category}",
         "multipleTitle": "{hostname}: {count} Gesundheitsprüfungen beeinträchtigt",
-        "multipleLine": "• {severity}: {category}\n{reason}"
+        "multipleLine": "• {severity}: {category}\n  {reason}"
       },
       "digest": {
         "groups": {
@@ -6721,8 +6721,8 @@
         "title": "{hostname}: 24-Stunden-Zusammenfassung ({timestamp})",
         "readFailed": "Lesen des Digests fehlgeschlagen: {error}",
         "empty": "Für dieses Digest-Fenster wurden keine INFO-Ereignisse gepuffert.",
-        "lead": "{count} INFO-Ereignisse nach Kategorie gruppiert:",
-        "more": "• … und {count} mehr",
+        "lead": "{count} INFO-Ereignisse nach Kategorie gruppiert:\n",
+        "more": "  • … und {count} mehr",
         "footer": "(Kritische/warnende Ereignisse trafen zum Zeitpunkt ihres Auftretens ein, nicht in dieser Übersicht.)",
         "quietTitle": "{hostname}: {count} Ereignisse, die während der Ruhezeiten gepuffert wurden"
       },
@@ -6797,7 +6797,7 @@
             "sourceIp": "Quell-IP",
             "username": "Benutzername",
             "service": "Service",
-            "jail": "Gefängnis",
+            "jail": "Jail",
             "failures": "Fehler",
             "change": "Ändern",
             "node": "Knoten",
