@@ -2598,7 +2598,7 @@ def _backup_job_results(ctx):
             return _unverified(evidence)
         if healed:
             return {"summary_key": "recovered",
-                    "summary_params": {"count": str(len(healed)),
+                    "summary_params": {"count": str(len({r["vmid"] for r in recovered})),
                                        "total": str(len(latest))},
                     "affected": healed, "incomplete": bool(unknown),
                     "evidence": evidence}
