@@ -75,8 +75,10 @@ class CommandDescriptionsTests(unittest.TestCase):
                 self.assertEqual(len(actual), len(commands))
                 self.assertEqual(actual, expected)
                 self.assertTrue(all(isinstance(x, str) and x for x in actual))
+        # Explicit English recovery values are frozen locale text, not live fallback.
         for index in FIXTURE["fallback_indices"]:
-            self.assertEqual(catalog("sv")["terminal"]["commandDescriptions"][index], FIXTURE["english"][index])
+            self.assertEqual(catalog("sv")["terminal"]["commandDescriptions"][index],
+                             FIXTURE["locales"]["sv"][index])
 
     def test_workflow_default_catalogs_rerun_without_provider_or_writes(self):
         workflow = (ROOT / ".github/workflows/build-i18n-messages.yml").read_text()
@@ -116,6 +118,9 @@ class CommandDescriptionsTests(unittest.TestCase):
                   '\nconst MESSAGE_CATALOG = ' + json.dumps(catalogs) + ';\n' +
                   'function t(language: string, key: string, params?: TranslationParams) {\n' + lookup + '}\n' +
                   'const fixture = ' + json.dumps(FIXTURE) + ';\n' + '''
+fixture.english.forEach((text, i) => {
+  assert.equal(t("en", `terminal.commandDescriptions.${i}`), text);
+});
 for (const [lang, texts] of Object.entries(fixture.locales)) {
   texts.forEach((text, i) => {
     const key = `terminal.commandDescriptions.${i}`;
