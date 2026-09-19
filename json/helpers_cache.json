@@ -23224,80 +23224,12 @@
     "os": "ubuntu"
   },
   {
-    "name": "Ubuntu 22.04",
-    "slug": "ubuntu2204-vm",
-    "desc": "Ubuntu 22.04 LTS (Jammy Jellyfish) as a cloud image, supported until 2027.",
-    "script": "vm/ubuntu2204-vm.sh",
-    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/vm/ubuntu2204-vm.sh",
-    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/vm/ubuntu2204-vm.sh",
-    "type": "vm",
-    "type_id": "lte524abgx960bd",
-    "categories": [
-      "scriptcat00002"
-    ],
-    "category_names": [
-      "Operating Systems & Appliances"
-    ],
-    "notes": [
-      "Cloud-Init is enabled by default. Configure your SSH key and credentials in the Proxmox Cloud-Init tab before starting the VM.",
-      "If you use Cloud-init, checkout cloud-init discussion: `https://github.com/community-scripts/ProxmoxVE/discussions/272`"
-    ],
-    "warnings": [],
-    "port": 0,
-    "website": "https://ubuntu.com/",
-    "documentation": "https://help.ubuntu.com/",
-    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/ubuntu.webp",
-    "updateable": false,
-    "privileged": false,
-    "has_arm": false,
-    "is_dev": false,
-    "execute_in": [
-      "vm"
-    ],
-    "config_path": "",
-    "os": ""
-  },
-  {
-    "name": "Ubuntu 24.04",
-    "slug": "ubuntu2404-vm",
-    "desc": "Ubuntu 24.04 LTS (Noble Numbat) as a cloud image, supported until 2029.",
-    "script": "vm/ubuntu2404-vm.sh",
-    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/vm/ubuntu2404-vm.sh",
-    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/vm/ubuntu2404-vm.sh",
-    "type": "vm",
-    "type_id": "lte524abgx960bd",
-    "categories": [
-      "scriptcat00002"
-    ],
-    "category_names": [
-      "Operating Systems & Appliances"
-    ],
-    "notes": [
-      "Cloud-Init is enabled by default. Configure your SSH key and credentials in the Proxmox Cloud-Init tab before starting the VM.",
-      "If you use Cloud-init, checkout cloud-init discussion: `https://github.com/community-scripts/ProxmoxVE/discussions/272`"
-    ],
-    "warnings": [],
-    "port": 0,
-    "website": "https://ubuntu.com/",
-    "documentation": "https://help.ubuntu.com/",
-    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/ubuntu.webp",
-    "updateable": false,
-    "privileged": false,
-    "has_arm": false,
-    "is_dev": false,
-    "execute_in": [
-      "vm"
-    ],
-    "config_path": "",
-    "os": ""
-  },
-  {
-    "name": "Ubuntu 25.04",
-    "slug": "ubuntu2504-vm",
-    "desc": "Ubuntu 25.04 (Plucky Puffin) as a cloud image. An interim release with a nine-month support window.",
-    "script": "vm/ubuntu2504-vm.sh",
-    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/vm/ubuntu2504-vm.sh",
-    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/vm/ubuntu2504-vm.sh",
+    "name": "Ubuntu",
+    "slug": "ubuntu-vm",
+    "desc": "<p>Installs an Ubuntu VM with support for Ubuntu 22.04, 24.04, 25.04, and 26.04, optionally using Cloud-Init. Ubuntu is a widely used Linux distribution known for its stability, extensive package ecosystem, and strong server support. LTS releases such as 22.04, 24.04, and 26.04 receive long-term maintenance, while interim releases such as 25.04 are supported for nine months. This makes the VM suitable for both stable production environments and testing newer Ubuntu releases.</p>",
+    "script": "vm/ubuntu-vm.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/vm/ubuntu-vm.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/vm/ubuntu-vm.sh",
     "type": "vm",
     "type_id": "lte524abgx960bd",
     "categories": [
