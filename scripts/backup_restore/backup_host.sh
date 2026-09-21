@@ -919,7 +919,11 @@ _bk_manage_extra_paths() {
         if (( count == 0 )); then
             preview="$(hb_translate "You haven't added any custom paths yet.")"
         else
-            preview="$(hb_translate "Currently"): \Zb\Z4${count}\Zn $(hb_translate "custom path(s) saved.")"
+            preview="$(hb_translate "Custom paths currently saved: {count}.")"
+            if [[ "$preview" != *'{count}'* ]]; then
+                preview="Custom paths currently saved: {count}."
+            fi
+            preview="${preview//\{count\}/"\Zb\Z4${count}\Zn"}"
         fi
         preview+=$'\n\n'"$(hb_translate "Custom paths are included in BOTH default and custom backup profiles.")"
 
@@ -3878,7 +3882,13 @@ _rs_run_complete_extras() {
                         "${installable[@]}" >>"$apt_log" 2>&1
                 local apt_rc=$?
                 if (( apt_rc == 0 )); then
-                    msg_ok "$(translate "Installed:") ${#installable[@]} $(translate "packages.")"
+                    local installed_message
+                    installed_message="$(translate "Packages installed: {count}.")"
+                    if [[ "$installed_message" != *'{count}'* ]]; then
+                        installed_message="Packages installed: {count}."
+                    fi
+                    installed_message="${installed_message//\{count\}/${#installable[@]}}"
+                    msg_ok "$installed_message"
                 else
                     msg_warn "$(translate "apt-get exited") ${apt_rc} — $(translate "see log:") $apt_log"
                 fi
