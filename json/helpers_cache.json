@@ -1632,7 +1632,7 @@
     "updateable": true,
     "privileged": false,
     "has_arm": false,
-    "is_dev": true,
+    "is_dev": false,
     "execute_in": [
       "lxc"
     ],
@@ -11041,6 +11041,46 @@
       "lxc"
     ],
     "config_path": "",
+    "os": "debian"
+  },
+  {
+    "name": "LibreDB Studio",
+    "slug": "libredbstudio",
+    "desc": "LibreDB Studio is a browser-based SQL IDE you run on your own server. It connects to PostgreSQL, MySQL, SQLite, libSQL, DuckDB, Oracle, SQL Server, MongoDB, Redis, Couchbase, ClickHouse, Apache Druid, Elasticsearch, OpenSearch, Apache Trino and Apache Cassandra. Optional AI query assistance works with a local Ollama model, and read-only access is enforced by the database itself rather than by parsing SQL.",
+    "script": "ct/libredbstudio.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/libredbstudio.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/libredbstudio.sh",
+    "type": "lxc",
+    "type_id": "nm9bra8mzye2scg",
+    "categories": [
+      "scriptcat00008"
+    ],
+    "category_names": [
+      "Databases"
+    ],
+    "notes": [
+      "The admin password is generated during install and written to /etc/libredb-studio/env inside the container.",
+      "The AI panel is hidden unless a model is configured, and nothing leaves the container while it is unconfigured."
+    ],
+    "warnings": [
+      "The install sets AUTH_COOKIE_SECURE=false because the container is reached over plain HTTP. Remove that line when you put the app behind HTTPS."
+    ],
+    "port": 3000,
+    "website": "https://libredb.org/",
+    "documentation": "https://github.com/libredb/libredb-studio/blob/main/README.md",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/libredb-studio.webp",
+    "updateable": true,
+    "privileged": false,
+    "has_arm": false,
+    "is_dev": true,
+    "execute_in": [
+      "lxc"
+    ],
+    "config_path": "",
+    "default_credentials": {
+      "username": "admin@libredb.org",
+      "password": ""
+    },
     "os": "debian"
   },
   {
@@ -25119,12 +25159,12 @@
       "Media & Streaming"
     ],
     "notes": [
-      "Two services run here: your-spotify (API on 8080) and your-spotify-web (UI on 3000). Point the reverse proxy at both.",
-      "Listening history is stored in the local MongoDB database 'your_spotify'. Back that up rather than /opt."
+      "Two services run here: your-spotify (API on 8080) and your-spotify-web (UI on 3000). Point the reverse proxy at both."
     ],
     "warnings": [
       "Spotify only accepts https redirect URIs (loopback excepted), so the Spotify login cannot be completed on the container's plain IP - it fails with 'redirect_uri: Insecure'. A TLS reverse proxy with a real domain is required for normal use.",
-      "Create an app at https://developer.spotify.com/dashboard, put its client ID and secret into SPOTIFY_PUBLIC and SPOTIFY_SECRET in /opt/your-spotify.env, set API_ENDPOINT and CLIENT_ENDPOINT to your https URLs, and register <API_ENDPOINT>/oauth/spotify/callback in the dashboard. The API endpoint is baked into the built frontend; set both endpoints at install time, or change them in /opt/your-spotify.env and run 'update' inside the container, which re-applies them."
+      "Create an app at https://developer.spotify.com/dashboard, put its client ID and secret into SPOTIFY_PUBLIC and SPOTIFY_SECRET in /opt/your-spotify.env, set API_ENDPOINT and CLIENT_ENDPOINT to your https URLs, and register <API_ENDPOINT>/oauth/spotify/callback in the dashboard. The API endpoint is baked into the built frontend; set both endpoints at install time, or change them in /opt/your-spotify.env and run 'update' inside the container, which re-applies them.",
+      "Known issue in 1.20.0: the Settings page stays blank. Fixed upstream but not yet released - see `https://github.com/Yooooomi/your_spotify/issues/617`"
     ],
     "port": 3000,
     "website": "https://github.com/Yooooomi/your_spotify",
