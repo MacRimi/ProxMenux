@@ -1670,6 +1670,7 @@
   "Failed to format disk as": "Formatierung des Datenträgers als fehlgeschlagen",
   "Failed to format partition": "Partition konnte nicht formatiert werden",
   "Failed to format the partition.": "Die Partition konnte nicht formatiert werden.",
+  "Failed to generate Fastfetch configuration.": "Die Fastfetch-Konfiguration konnte nicht generiert werden.",
   "Failed to get .deb download URL": "Die .deb-Download-URL konnte nicht abgerufen werden",
   "Failed to get latest version from GitHub": "Die neueste Version konnte nicht von GitHub abgerufen werden",
   "Failed to get release information from GitHub": "Versionsinformationen konnten nicht von GitHub abgerufen werden",

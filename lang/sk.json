@@ -1670,6 +1670,7 @@
   "Failed to format disk as": "Disk sa nepodarilo naformátovať ako",
   "Failed to format partition": "Oddiel sa nepodarilo naformátovať",
   "Failed to format the partition.": "Oddiel sa nepodarilo naformátovať.",
+  "Failed to generate Fastfetch configuration.": "Nepodarilo sa vygenerovať konfiguráciu Fastfetch.",
   "Failed to get .deb download URL": "Nepodarilo sa získať odkaz na stiahnutie .deb balíka",
   "Failed to get latest version from GitHub": "Nepodarilo sa zistiť najnovšiu verziu z GitHubu",
   "Failed to get release information from GitHub": "Nepodarilo sa získať informácie o vydaní z GitHubu",
