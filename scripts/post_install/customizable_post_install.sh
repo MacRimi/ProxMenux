@@ -2521,8 +2521,28 @@ enable_ha() {
 
 
 
+_generate_fastfetch_config() {
+    local target="$1"
+    local temp_dir generated_config
+
+    temp_dir="$(mktemp -d)" || return 1
+    generated_config="$temp_dir/config.jsonc"
+
+    if ! fastfetch --gen-config "$generated_config" > /dev/null 2>&1; then
+        rm -rf "$temp_dir"
+        return 1
+    fi
+
+    if ! pmx_write_file "$target" < "$generated_config"; then
+        rm -rf "$temp_dir"
+        return 1
+    fi
+
+    rm -rf "$temp_dir"
+}
+
 configure_fastfetch() {
-    local FUNC_VERSION="1.1"
+    local FUNC_VERSION="1.2"
     pmx_journal_context "configure_fastfetch" "$FUNC_VERSION"
     # description: Install Fastfetch system summary tool with the ProxMenux logo + status block as the SSH login banner.
     msg_info2 "$(translate "Installing and configuring Fastfetch...")"
@@ -2608,12 +2628,10 @@ configure_fastfetch() {
         return 1
     fi
 
-    
-    if [ ! -f "$fastfetch_config" ]; then
-        echo '{"$schema": "https://github.com/fastfetch-cli/fastfetch/raw/dev/doc/json_schema.json", "modules": []}' | pmx_write_file "$fastfetch_config"
+    if ! _generate_fastfetch_config "$fastfetch_config"; then
+        msg_error "$(translate "Failed to generate Fastfetch configuration.")"
+        return 1
     fi
-
-    fastfetch --gen-config-force > /dev/null 2>&1
 
     while true; do
         # Define logo options
