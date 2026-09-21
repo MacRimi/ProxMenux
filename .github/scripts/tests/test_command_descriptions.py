@@ -90,6 +90,18 @@ class CommandDescriptionsTests(unittest.TestCase):
                 path = root / lang / "common.json"
                 path.parent.mkdir()
                 shutil.copyfile(ROOT / f"AppImage/messages/{lang}/common.json", path)
+                # Model steady state after automation fills this intentional new key.
+                # Runtime missing-key fallback is tested separately in test_storage_messages.cjs.
+                if lang != "en":
+                    messages = json.loads(path.read_text())
+                    messages["storage"].setdefault("savedSmartData", catalog("en")["storage"]["savedSmartData"])
+                    report = messages["storage"]["smartReport"]
+                    source_report = catalog("en")["storage"]["smartReport"]
+                    for key in ("passedAssessment", "noReallocatedSectorsReported", "passedMeaningTitle", "passedMeaning"):
+                        report.setdefault(key, source_report[key])
+                    for key in ("passedTitle", "passedText"):
+                        report["recommendations"].setdefault(key, source_report["recommendations"][key])
+                    path.write_text(json.dumps(messages))
             before = {p: p.read_bytes() for p in root.glob("*/common.json")}
             argv = [str(SCRIPT), "--source", str(root / "en/common.json"),
                     "--messages-dir", str(root), "--languages", languages, "--sleep", "0"]
