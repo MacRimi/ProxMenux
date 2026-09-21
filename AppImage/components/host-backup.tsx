@@ -1300,7 +1300,7 @@ export function HostBackup() {
             </div>
           ) : unifiedArchives.length === 0 ? (
             <div className="text-sm text-muted-foreground py-4">
-              {t("backup.archives.emptyBefore")} <span className="font-medium">{t("backup.manual.run")}</span> {t("backup.archives.emptyAfter")}
+              {t("backup.archives.emptyMessage")}
             </div>
           ) : (
             <div className="space-y-2">
@@ -4089,7 +4089,7 @@ function CreateJobDialog({
                         className="font-mono"
                       />
                       <p className="text-xs text-muted-foreground">
-                        {t("backup.destinations.localAttachHelpBefore")} <code className="font-mono">/dump</code> {t("backup.destinations.localAttachHelpMiddle")} <code className="font-mono">/var/lib/vz/dump</code>.
+                        {t("backup.destinations.localAttachHelpMessage")}
                       </p>
                     </>
                   ) : (
@@ -5709,7 +5709,7 @@ function DestinationsSection({
                   )}
                   {backups > 0 && (
                     <div className="px-3 py-2 rounded-md border border-blue-500/40 bg-blue-500/5">
-                      {t("backup.destinations.backupsKeptBefore", { count: backups })} <span className="font-medium">{t("backup.destinations.kept")}</span>.
+                      {t("backup.destinations.backupsKeptMessage")}
                     </div>
                   )}
                 </div>
