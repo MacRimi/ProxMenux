@@ -3834,7 +3834,8 @@
       "unmount": "Aushängen",
       "upload": "Hochladen",
       "use": "Verwenden",
-      "viewContents": "Inhalte ansehen"
+      "viewContents": "Inhalte ansehen",
+      "prepareSshKey": "Schlüssel vorbereiten"
     },
     "archives": {
       "archive": "Archiv",
@@ -3989,7 +3990,12 @@
       "unmountTitle": "Hängen Sie dieses Ziel aus",
       "whereIsBorgRepo": "Wo ist das Borg-Repository?",
       "backupsKeptMessage": "Vorhandene Backup-Archive werden nicht gelöscht.",
-      "localAttachHelpMessage": "Mounten Sie zuerst USB-Laufwerke.Lassen Sie das Feld leer, um den PVE-Speicherpfad + /dump zu verwenden (Fallback: /var/lib/vz/dump)."
+      "localAttachHelpMessage": "Mounten Sie zuerst USB-Laufwerke.Lassen Sie das Feld leer, um den PVE-Speicherpfad + /dump zu verwenden (Fallback: /var/lib/vz/dump).",
+      "sshAuthorizedKeyHelp": "Überprüfen Sie die folgende Zeile, bevor Sie sie zu ~/.ssh/authorized_keys für {user} auf dem Remote-Host hinzufügen.",
+      "sshKeyHelpMessage": "Pfad des privaten Schlüssels auf diesem Host.Verwenden Sie {action}, überprüfen Sie dann die angezeigte Public-Key-Zeile und fügen Sie sie zu ~/.ssh/authorized_keys des Remote-Benutzers hinzu.",
+      "sshKeySetupHelp": "Erstellt einen Schlüssel im angegebenen lokalen Pfad, wenn keiner vorhanden ist;andernfalls liest es seinen öffentlichen Schlüssel.Auf dem Remote-Host ist kein Schlüssel installiert.",
+      "sshKeySetupTitle": "SSH-Schlüsseleinrichtung",
+      "sshUserHelpMessage": "Remote-Konto, das für den Zugriff auf das Borg-Repository verwendet wird, zum Beispiel borg."
     },
     "encryption": {
       "autoDetectedFromPveStorage": "Aus PVE-Speicher erkannt",

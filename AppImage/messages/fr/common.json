@@ -3834,7 +3834,8 @@
       "unmount": "Démonter",
       "upload": "Télécharger",
       "use": "Utiliser",
-      "viewContents": "Afficher le contenu"
+      "viewContents": "Afficher le contenu",
+      "prepareSshKey": "Préparer la clé"
     },
     "archives": {
       "archive": "Archive",
@@ -3989,7 +3990,12 @@
       "unmountTitle": "Démonter cette destination",
       "whereIsBorgRepo": "Où se trouve le référentiel Borg ?",
       "backupsKeptMessage": "Les archives de sauvegarde existantes ne sont pas supprimées.",
-      "localAttachHelpMessage": "Montez d’abord les clés USB.Laissez vide pour utiliser le chemin de stockage PVE + /dump (repli : /var/lib/vz/dump)."
+      "localAttachHelpMessage": "Montez d’abord les clés USB.Laissez vide pour utiliser le chemin de stockage PVE + /dump (repli : /var/lib/vz/dump).",
+      "sshAuthorizedKeyHelp": "examinez la ligne ci-dessous avant de l'ajouter à ~/.ssh/authorized_keys pour {user} sur l'hôte distant.",
+      "sshKeyHelpMessage": "Chemin de clé privée sur cet hôte.Utilisez {action}, puis examinez et ajoutez la ligne de clé publique affichée au ~/.ssh/authorized_keys de l'utilisateur distant.",
+      "sshKeySetupHelp": "crée une clé sur le chemin local spécifié s'il n'en existe pas ;sinon, lit sa clé publique.Aucune clé n'est installée sur l'hôte distant.",
+      "sshKeySetupTitle": "configuration de la clé SSH",
+      "sshUserHelpMessage": "Compte distant utilisé pour accéder au référentiel Borg, par exemple borg."
     },
     "encryption": {
       "autoDetectedFromPveStorage": "Détecté depuis le stockage PVE",

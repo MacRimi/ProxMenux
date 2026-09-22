@@ -3834,7 +3834,8 @@
       "unmount": "Smonta",
       "upload": "Caricamento",
       "use": "Utilizzo",
-      "viewContents": "Visualizza i contenuti"
+      "viewContents": "Visualizza i contenuti",
+      "prepareSshKey": "prepara la chiave"
     },
     "archives": {
       "archive": "Archivio",
@@ -3989,7 +3990,12 @@
       "unmountTitle": "Smonta questa destinazione",
       "whereIsBorgRepo": "Dov'è il deposito Borg?",
       "backupsKeptMessage": "gli archivi di backup esistenti non vengono eliminati.",
-      "localAttachHelpMessage": "monta prima le unità USB.Lascia vuoto per utilizzare il percorso di archiviazione PVE + /dump (fallback: /var/lib/vz/dump)."
+      "localAttachHelpMessage": "monta prima le unità USB.Lascia vuoto per utilizzare il percorso di archiviazione PVE + /dump (fallback: /var/lib/vz/dump).",
+      "sshAuthorizedKeyHelp": "rivedere la riga seguente prima di aggiungerla a ~/.ssh/authorized_keys per {user} sull'host remoto.",
+      "sshKeyHelpMessage": "percorso della chiave privata su questo host.Utilizzare {action}, quindi rivedere e aggiungere la riga della chiave pubblica visualizzata al file ~/.ssh/authorized_keys dell'utente remoto.",
+      "sshKeySetupHelp": "crea una chiave nel percorso locale specificato se non ne esiste alcuna;altrimenti legge la sua chiave pubblica.Nessuna chiave è installata sull'host remoto.",
+      "sshKeySetupTitle": "configurazione della chiave SSH",
+      "sshUserHelpMessage": "account remoto utilizzato per accedere al repository Borg, ad esempio borg."
     },
     "encryption": {
       "autoDetectedFromPveStorage": "Rilevato dall'archivio PVE",

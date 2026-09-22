@@ -3833,7 +3833,8 @@
       "unmount": "Odpojiť",
       "upload": "Nahrať",
       "use": "Použiť",
-      "viewContents": "Zobraziť obsah"
+      "viewContents": "Zobraziť obsah",
+      "prepareSshKey": "Pripraviť kľúč"
     },
     "archives": {
       "archive": "Archív",
@@ -3988,7 +3989,12 @@
       "unmountTitle": "Odpojiť tento cieľ",
       "whereIsBorgRepo": "Kde je Borg repozitár?",
       "backupsKeptMessage": "Existujúce zálohy sa neodstránia.",
-      "localAttachHelpMessage": "Najprv pripojte jednotky USB.Ak chcete použiť cestu k úložisku PVE + /dump, nechajte pole prázdne (záložný: /var/lib/vz/dump)."
+      "localAttachHelpMessage": "Najprv pripojte jednotky USB.Ak chcete použiť cestu k úložisku PVE + /dump, nechajte pole prázdne (záložný: /var/lib/vz/dump).",
+      "sshAuthorizedKeyHelp": "Pred pridaním do ~/.ssh/authorized_keys pre {user} na vzdialenom hostiteľovi skontrolujte riadok nižšie.",
+      "sshKeyHelpMessage": "Cesta súkromného kľúča na tomto hostiteľovi.Použite {action}, potom skontrolujte a pridajte zobrazený riadok verejného kľúča do ~/.ssh/authorized_keys vzdialeného používateľa.",
+      "sshKeySetupHelp": "Vytvorí kľúč na zadanej lokálnej ceste, ak žiadny neexistuje;inak prečíta svoj verejný kľúč.Na vzdialenom hostiteľovi nie je nainštalovaný žiadny kľúč.",
+      "sshKeySetupTitle": "Nastavenie kľúča SSH",
+      "sshUserHelpMessage": "Vzdialený účet používaný na prístup k úložisku Borg, napríklad Borg."
     },
     "encryption": {
       "autoDetectedFromPveStorage": "Zistené z PVE úložiska",
