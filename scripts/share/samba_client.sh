@@ -218,7 +218,7 @@ validate_guest_access() {
     local server="$1"
     
     show_proxmenux_logo
-    msg_info "$(translate "Testing comprehensive guest access to server") $server..."
+    msg_info "$(translate "Testing guest listing and share access on server") $server..."
     
     GUEST_LIST_OUTPUT=$(smbclient -L "$server" -N 2>&1)
     GUEST_LIST_RESULT=$?
@@ -226,12 +226,12 @@ validate_guest_access() {
     if [[ $GUEST_LIST_RESULT -ne 0 ]]; then
         cleanup
         if echo "$GUEST_LIST_OUTPUT" | grep -qi "access denied\|logon failure"; then
-            whiptail --title "$(translate "Guest Access Denied")" \
-                   --msgbox "$(translate "Guest access is not allowed on this server.")\n\n$(translate "You need to use username and password authentication.")" \
+            whiptail --title "$(translate "Guest Listing Failed")" \
+                   --msgbox "$(translate "Guest share listing failed.")\n\n$(translate "Try username and password authentication.")" \
                    10 70
         else
-            whiptail --title "$(translate "Guest Access Error")" \
-                   --msgbox "$(translate "Guest access failed.")\n\n$(translate "Error details:")\n$(echo "$GUEST_LIST_OUTPUT" | head -3)" \
+            whiptail --title "$(translate "Guest Listing Failed")" \
+                   --msgbox "$(translate "Guest share listing failed.")\n\n$(translate "Error details:")\n$(echo "$GUEST_LIST_OUTPUT" | head -3)" \
                    12 70
         fi
         return 1
@@ -241,13 +241,13 @@ validate_guest_access() {
 
     GUEST_SHARES=$(echo "$GUEST_LIST_OUTPUT" | awk '/Disk/ && !/IPC\$/ && !/ADMIN\$/ && !/print\$/ {print $1}' | grep -v "^$")
     if [[ -z "$GUEST_SHARES" ]]; then
-        whiptail --title "$(translate "No Guest Shares")" \
-               --msgbox "$(translate "Guest access works for listing, but no shares are available.")\n\n$(translate "The server may require authentication for actual share access.")" \
-               10 70
+        whiptail --title "$(translate "No Shares to Test")" \
+               --msgbox "$(translate "No disk shares were selected from the guest listing.")\n\n$(translate "The server may require authentication for actual share access.")" \
+               12 70
         return 1
     fi
     
-    msg_ok "$(translate "Found guest-accessible shares:") $(echo "$GUEST_SHARES" | wc -l)"
+    msg_ok "$(translate "Shares selected from guest listing:") $(echo "$GUEST_SHARES" | wc -l)"
 
     msg_info "$(translate "Step 2: Testing actual share access with guest...")"
     ACCESSIBLE_SHARES=""
@@ -265,15 +265,15 @@ validate_guest_access() {
                 echo -e
                 ACCESSIBLE_SHARES="$ACCESSIBLE_SHARES$share\n"
             else
-                msg_error "$(translate "Guest access denied for share:") $share"
+                msg_error "$(translate "Guest access test failed for share:") $share"
                 FAILED_SHARES="$FAILED_SHARES$share\n"
                 
                 if echo "$SHARE_TEST_OUTPUT" | grep -qi "access denied\|logon failure\|authentication"; then
-                    msg_warn "  $(translate "Reason: Authentication required")"
+                    msg_warn "  $(translate "Test output mentions authentication or access denial.")"
                 elif echo "$SHARE_TEST_OUTPUT" | grep -qi "permission denied"; then
-                    msg_warn "  $(translate "Reason: Permission denied")"
+                    msg_warn "  $(translate "Test output reports permission denied.")"
                 else
-                    msg_warn "  $(translate "Reason: Access denied")"
+                    msg_warn "  $(translate "The guest access test did not succeed.")"
                 fi
             fi
         fi
@@ -287,7 +287,7 @@ validate_guest_access() {
     msg_info2 "$(translate "Guest Access Validation Results:")"
     echo -e "${TAB}${BGN}$(translate "Shares found:")${CL} ${BL}$(echo "$GUEST_SHARES" | wc -l)${CL}"
     echo -e "${TAB}${BGN}$(translate "Guest accessible:")${CL} ${GN}$ACCESSIBLE_COUNT${CL}"
-    echo -e "${TAB}${BGN}$(translate "Authentication required:")${CL} ${YW}$FAILED_COUNT${CL}"
+    echo -e "${TAB}${BGN}$(translate "Guest share access tests failed:")${CL} ${YW}$FAILED_COUNT${CL}"
     
     if [[ $ACCESSIBLE_COUNT -gt 0 ]]; then
         msg_ok "$(translate "Guest access validated successfully!")"
@@ -307,7 +307,7 @@ validate_guest_access() {
         msg_success "$(translate "Press Enter to continue...")"
         read -r
         whiptail --title "$(translate "Guest Access Failed")" \
-               --msgbox "$(translate "While the server allows guest listing, no shares are actually accessible without authentication.")\n\n$(translate "You need to use username and password authentication.")" \
+               --msgbox "$(translate "No share access test succeeded with guest authentication.")\n\n$(translate "Try username and password authentication.")" \
                12 70
         clear       
         return 1
@@ -322,7 +322,7 @@ validate_guest_access() {
 get_samba_credentials() {
     while true; do
         CHOICE=$(whiptail --title "$(translate "Samba Credentials")" \
-            --menu "$(translate "Select authentication mode:")" 13 60 2 \
+            --menu "$(translate "Select authentication mode:")" 0 0 2 \
             "1" "$(translate "Configure with username and password")" \
             "2" "$(translate "Configure as guest (no authentication)")" \
             3>&1 1>&2 2>&3)
@@ -480,7 +480,7 @@ EOF
         esac
         
 
-        if ! whiptail --yesno "$(translate "Authentication failed.")\n\n$(translate "Do you want to try different credentials or authentication method?")" 10 70 --title "$(translate "Try Again")"; then
+        if ! whiptail --yesno "$(translate "Samba access setup did not complete.")\n\n$(translate "Do you want to try different credentials or authentication method?")" 10 70 --title "$(translate "Try Again")"; then
             return 1
         fi
 
