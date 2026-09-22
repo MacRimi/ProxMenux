@@ -2,7 +2,7 @@
 
 Runtime distribution only:
 
-- `proxmenux-oci.sh`: installer entry point.
+- `proxmenux-oci.sh`: entry point, run from this directory.
 - `catalog/`: index, application templates, curated definitions and overlays.
 - `src/`: menu and deployment orchestrator.
 - `remote/`: native Proxmox OCI/LXC installation and lifecycle helpers.
