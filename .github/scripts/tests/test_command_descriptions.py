@@ -123,6 +123,12 @@ class CommandDescriptionsTests(unittest.TestCase):
                     for section, key in (("encryption", "pbsHelp"),
                                          ("keyfileActions", "pveKeyDescription")):
                         messages["backup"][section].setdefault(key, english["backup"][section][key])
+                    for key in ("sshUserHelpMessage", "sshKeyHelpMessage", "sshKeySetupTitle",
+                                "sshKeySetupHelp", "sshAuthorizedKeyHelp"):
+                        messages["backup"]["destinations"].setdefault(
+                            key, english["backup"]["destinations"][key])
+                    messages["backup"]["actions"].setdefault(
+                        "prepareSshKey", english["backup"]["actions"]["prepareSshKey"])
                     path.write_text(json.dumps(messages, ensure_ascii=False))
             before = {p: p.read_bytes() for p in root.glob("*/common.json")}
             argv = [str(SCRIPT), "--source", str(root / "en/common.json"),
