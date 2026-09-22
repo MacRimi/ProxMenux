@@ -808,7 +808,11 @@
         "saturday": "Samstag"
       }
     },
-    "savedSmartData": "SMART-Daten gespeichert"
+    "savedSmartData": "SMART-Daten gespeichert",
+    "idle": "Idle",
+    "idleTitle": "Nicht lesen, während nichts es benutzt, also kann es sich drehen. Seine Temperatur wird erneut angezeigt, sobald die Scheibe in Gebrauch ist.",
+    "diskExcluded": "Ausgenommen",
+    "diskExcludedTitle": "Ausgenommen von periodischen Lesevorgängen in Einstellungen."
   },
   "details": {
     "temperature": {
@@ -1388,7 +1392,9 @@
       "postApplyAllOk": "{count} Paket(e) erfolgreich angewendet – nichts ausstehend.",
       "postApplyNothingPending": "Nichts ausstehend – alles ist auf dem neuesten Stand.",
       "postApplyPartial": "{pending} Paket(e) stehen nach der Ausführung noch aus.",
-      "postApplyPartialSubline": "{applied} angewendet. Einige Aktualisierungen wurden nicht abgeschlossen – sehen Sie sich die Terminalausgabe oben an."
+      "postApplyPartialSubline": "{applied} angewendet. Einige Aktualisierungen wurden nicht abgeschlossen – sehen Sie sich die Terminalausgabe oben an.",
+      "imagePinned": "Angeheftet an einen Digest",
+      "imagePinnedTitle": "Dieser Container führt das genaue Bild seiner Digest-Namen aus. Ein neueres Tag ändert es nicht; das Bearbeiten der Referenz in seiner Konfiguration tut es."
     },
     "bulkUpdate": {
       "title": "Sammelaktualisierung",
@@ -2198,6 +2204,18 @@
       "reset": "Standard wiederherstellen",
       "hint": "Ziehen zum Neuanordnen · Auf Touch zuerst lange drücken",
       "customActive": "Benutzerdefinierte Navigationsreihenfolge aktiv."
+    },
+    "diskExclusions": {
+      "title": "Ausschlüsse von Datenträgern",
+      "description": "Festplatten, die nie nach einem Zeitplan gelesen werden, so dass sie auf ihrem eigenen Timer herunterfahren können.",
+      "empty": "Keine physischen Festplatten gefunden.",
+      "disk": "Scheibe",
+      "periodicReads": "Regelmäßige Ablesungen",
+      "excluded": "Ausgenommen",
+      "notConnected": "nicht verbunden",
+      "saveFailed": "Konnte die Diskausschlüsse nicht retten.",
+      "help": "Eine ausgeschlossene Festplatte erhält keine geplante Temperatur oder SMART liest - nicht einmal eine Power-Mode-Abfrage -, so dass sie völlig in Ruhe gelassen wird. Das Öffnen seiner SMART-Details liest es immer noch.",
+      "idleHelp": "Mechanische Festplatten ohne Aktivität werden bereits automatisch in Ruhe gelassen, bis etwas sie wieder verwendet."
     }
   },
   "login": {
@@ -5253,7 +5271,14 @@
             "excludedData": "{count} Datenträger- oder Mountpoint-Ausschlüsse prüfen",
             "uncoveredExpected": "{required} Gäste, für die eine Sicherung erklärt wurde, wählt kein aktivierter Auftrag aus",
             "evaluationFailed": "The check could not be evaluated"
-          }
+          },
+          "nextStep": {
+            "noJobs": "Erstellen Sie einen Backup-Job auf diesem Knoten und wählen Sie die Gäste mit Daten aus, die Sie nicht von Hand neu erstellen möchten. Ein Job, der existiert, aber deaktiviert ist, wählt nichts aus.",
+            "uncovered": "Entscheiden Sie für jeden dieser Gäste, ob er etwas hält, das es wert ist, behalten zu werden. Fügen Sie diejenigen hinzu, die zu einem Job beitragen; für diejenigen, die dies nicht tun, erklären Sie dies in der Richtlinie, damit sie hier nicht mehr gezählt werden.",
+            "excludedData": "Öffnen Sie die Ausschlussliste jedes Jobs und bestätigen Sie, dass Daten, die Sie verlieren können, weggelassen werden. Ein Ausschluss, der hinzugefügt wird, um einen Job schneller zu machen, schützt nichts, was er überspringt.",
+            "uncoveredExpected": "Die Richtlinie erklärt, dass diese Gäste ein Backup benötigen und kein aktivierter Job sie auswählt. Entweder fügen Sie sie zu einem Job hinzu oder ändern Sie, was die Richtlinie erklärt, so dass die beiden zustimmen."
+          },
+          "explanation": "Ein Backup schützt nur das, was ein Job tatsächlich auswählt. Dieser Check verbindet die Gäste auf diesem Knoten mit den Jobs, die hier ausgeführt werden, so dass ein Gast, den niemand sichert, als solcher erscheint, anstatt angenommen zu werden, dass er von etwas anderem abgedeckt wird."
         },
         "last_backup_age": {
           "title": "Age of stored backups",
@@ -5264,7 +5289,13 @@
             "noBackups": "No stored backup matches a guest on this node",
             "attention": "{count} von {total} Gast-/Zielprüfungen erfordern eine Überprüfung",
             "evaluationFailed": "The check could not be evaluated"
-          }
+          },
+          "nextStep": {
+            "stale": "Finden Sie heraus, warum der Job aufhörte, Kopien für diese Gäste zu produzieren: Möglicherweise wurde er deaktiviert, sein Zeitplan wird möglicherweise nie ausgelöst oder seine Läufe können fehlschlagen. Der Run Results Check berichtet, wie jeder Job zuletzt beendet wurde.",
+            "noBackups": "Keine gespeicherte Kopie stimmt mit einem Gast auf diesem Knoten überein. Wenn die Jobs an ein Ziel schreiben, das dieser Knoten nicht lesen kann, wird das erwartet; sonst produzieren sie nichts.",
+            "attention": "Überprüfen Sie die aufgeführten Gäste. Jeder hat entweder keine aktuelle Kopie oder hat eine älter als das Alter in Gebrauch."
+          },
+          "explanation": "Ein Job, der existiert, ist nicht dasselbe wie eine Kopie, die existiert. Dieser Scheck liest die neueste gespeicherte Kopie jedes Gastes und wie lange es geschrieben wurde, was bedeutet, wie weit zurück Sie gehen müssten, wenn Sie heute wiederherstellen müssten."
         },
         "retention_defined": {
           "title": "Backup retention",
@@ -5275,7 +5306,13 @@
             "notDeclared": "{count} von {total} Aufträgen behalten jede Kopie: für sie ist keine Aufbewahrung erklärt",
             "onServer": "{count} von {total} Aufträgen schreiben auf einen Sicherungsserver, der sie mit eigenen Aufträgen bereinigt",
             "evaluationFailed": "The check could not be evaluated"
-          }
+          },
+          "nextStep": {
+            "missing": "Legen Sie eine Aufbewahrung für diese Jobs oder für den Speicher fest, an den sie schreiben. Proxmox nimmt zuerst die Einstellung des Jobs, dann den Speicher und dann den Node Default an.",
+            "notDeclared": "Diese Jobs behalten jede Kopie, die sie machen. Das ist eine bewusste Wahl für einige Ziele, aber bestätigen Sie, dass das Ziel Raum hat, weiter zu wachsen.",
+            "onServer": "Diese Jobs schreiben an einen Backup-Server, der sie nach seinen eigenen Regeln beschneidet. Was es hält, kann nicht von diesem Knoten gelesen werden, also überprüfen Sie die Aufbewahrung dort."
+          },
+          "explanation": "Die Aufbewahrung entscheidet darüber, wie viele Kopien wie lange aufbewahrt werden. Ohne es füllt sich ein Ziel, bis es aufhört, neue Kopien zu akzeptieren, und ein Backup, das nicht geschrieben werden kann, ist das, was Sie an dem Tag erfahren, an dem Sie es brauchen."
         },
         "verification_state": {
           "title": "Sicherungsprüfung",
@@ -5285,7 +5322,12 @@
             "failed": "{failed} neueste Kopien bestanden die Prüfung nicht, von {total} untersuchten",
             "notVerified": "{pending} von {total} neuesten Kopien wurden nicht geprüft",
             "evaluationFailed": "Der Prüfstatus war nicht lesbar"
-          }
+          },
+          "nextStep": {
+            "failed": "Auf eine Kopie, die nicht überprüft wird, kann man sich nicht verlassen. Überprüfen Sie, ob eine frühere Kopie des gleichen Gastes verifiziert wurde, und sehen Sie sich den Speicher an, auf dem die fehlgeschlagenen Kopien leben.",
+            "notVerified": "Nichts hat bestätigt, dass diese Kopien zurückgelesen werden können. Ein Backup-Server kann nach einem eigenen Zeitplan überprüfen, getrennt von dem Job, der sie geschrieben hat."
+          },
+          "explanation": "Die Überprüfung liest eine gespeicherte Kopie zurück und bestätigt, dass sie intakt ist. Es ist der Unterschied zwischen einer Kopie, die existiert, und einer Kopie, die gelesen werden kann - eine Unterscheidung, die nur an dem Tag zählt, an dem Sie sie brauchen."
         },
         "job_results": {
           "title": "Ergebnisse der Sicherungsläufe",
@@ -5295,7 +5337,12 @@
             "someFailed": "{count} von {total} aufgezeichneten Sicherungsläufen endeten mit einem Fehler",
             "evaluationFailed": "Das Aufgabenprotokoll war nicht lesbar",
             "recovered": "{count} von {total} Gästen schlugen in einem früheren Lauf fehl und waren seither erfolgreich"
-          }
+          },
+          "nextStep": {
+            "someFailed": "Lesen Sie den Fehler im Task-Log für diese Runs. Ein Lauf, der mit einem Fehler endet, produzierte keine nutzbare Kopie für die Gäste, die er abdeckt.",
+            "recovered": "Diese Gäste scheiterten an einem früheren Lauf und sind seitdem erfolgreich. Der frühere Fehler ist immer noch lesenswert: Ein Fehler, der sich selbst gelöst hat, kehrt oft zurück."
+          },
+          "explanation": "Wie der letzte Lauf jedes Jobs endete, als dieser Knoten ihn aufzeichnete. Ein Job kann perfekt konfiguriert werden und trotzdem jede Nacht scheitern, und hier zeigt sich das."
         },
         "host_recovery": {
           "title": "Wiederherstellung des Hosts",
@@ -5305,7 +5352,13 @@
             "protected": "Die Konfiguration des Knotens selbst liegt in {total} Archiv(en) innerhalb der verwendeten Altersgrenze",
             "attention": "{count} Feststellung(en) zu {total} Einträgen der Host-Konfiguration",
             "scheduledOnly": "Backups der Host-Konfiguration sind über {count} Timer geplant; lokal ist kein Archiv gespeichert"
-          }
+          },
+          "nextStep": {
+            "noHostBackup": "Nichts speichert die eigene Konfiguration dieses Knotens. Der Wiederaufbau würde bedeuten, die Speicher-, Netzwerk- und Benutzerdefinitionen von Hand zu rekonstruieren, aus welchen Notizen auch immer.",
+            "attention": "Überprüfen Sie die aufgelisteten Host-Konfigurationseinträge. Jeder hat etwas, das einen Blick wert ist: ein Lauf, der fehlgeschlagen ist, ein Ziel, das weg ist, oder eine Kopie, die älter ist als das Alter, in dem sie verwendet werden.",
+            "scheduledOnly": "Ein Timer erzeugt Host-Konfigurations-Backups, aber keines ist noch gespeichert. Bis zur ersten Ausführung ist die eigene Konfiguration des Knotens nicht geschützt."
+          },
+          "explanation": "Das Sichern der Gäste stellt den Knoten nicht wieder her. Diese Überprüfung untersucht, ob die eigene Konfiguration des Knotens - seine Speicherdefinitionen, sein Netzwerk, seine Benutzer - irgendwo gespeichert ist, wovon das Umbauen des Hosts selbst abhängt."
         }
       },
       "system": {
@@ -6116,7 +6169,9 @@
       "withoutLynis": "Run without Lynis",
       "cancel": "Cancel"
     },
-    "readOnlyNotice": "Die Bewertung überprüft die Hosteinstellungen und den Zustand. Es kann Berichte und Protokolle schreiben; Boot-Statusprüfungen können EFI-Systempartitionen vorübergehend bereitstellen."
+    "readOnlyNotice": "Die Bewertung überprüft die Hosteinstellungen und den Zustand. Es kann Berichte und Protokolle schreiben; Boot-Statusprüfungen können EFI-Systempartitionen vorübergehend bereitstellen.",
+    "noActionNeeded": "Nichts zu tun. Dieser Check hat herausgefunden, was er erwartet.",
+    "couldNotEvaluate": "Diese Überprüfung konnte nicht ausgewertet werden, so dass sie nichts meldet. Die Beweise dokumentieren, was sie nicht lesen konnten."
   },
   "runtime": {
     "notifications": {

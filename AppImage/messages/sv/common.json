@@ -808,7 +808,11 @@
         "saturday": "lördag"
       }
     },
-    "savedSmartData": "Sparad SMART-data"
+    "savedSmartData": "Sparad SMART-data",
+    "idle": "Idle",
+    "idleTitle": "Läs inte medan ingenting använder det, så det kan snurra ner. Temperaturen visas igen så snart disken används.",
+    "diskExcluded": "Exkluderad",
+    "diskExcludedTitle": "Exkluderad från periodiska läsningar i Inställningar."
   },
   "details": {
     "temperature": {
@@ -1388,7 +1392,9 @@
       "postApplyAllOk": "{count} paket(en) har tillämpats framgångsrikt — inget väntande.",
       "postApplyNothingPending": "Inget väntande — allt är uppdaterat.",
       "postApplyPartial": "{pending} paket som fortfarande väntar efter körningen.",
-      "postApplyPartialSubline": "{applied} tillämpas. Vissa uppdateringar slutfördes inte – granska terminalutgången ovan."
+      "postApplyPartialSubline": "{applied} tillämpas. Vissa uppdateringar slutfördes inte – granska terminalutgången ovan.",
+      "imagePinned": "Pinned till ett smält",
+      "imagePinnedTitle": "Denna behållare kör den exakta bilden dess smältnamn. En nyare tagg ändrar inte den; redigera referensen i dess konfiguration gör."
     },
     "bulkUpdate": {
       "title": "Gruppuppdatering",
@@ -2198,6 +2204,18 @@
       "reset": "Återställ standard",
       "hint": "Dra för att ändra ordning · På touch, håll länge först",
       "customActive": "Anpassad navigeringsordning aktiv."
+    },
+    "diskExclusions": {
+      "title": "Diskuteslutningar",
+      "description": "Disker som aldrig läses på ett schema, så att de kan snurra ner på sin egen timer.",
+      "empty": "Inga fysiska diskar hittades.",
+      "disk": "Disk",
+      "periodicReads": "Periodiska läsningar",
+      "excluded": "Exkluderad",
+      "notConnected": "Inte ansluten",
+      "saveFailed": "Kunde inte spara diskutslag.",
+      "help": "En exkluderad disk får ingen schemalagd temperatur eller SMART läser - inte ens en power-mode fråga - så det lämnas helt ensam. Öppna SMART-detaljerna läser det fortfarande.",
+      "idleHelp": "Mekaniska diskar utan aktivitet lämnas redan ensam automatiskt tills något använder dem igen."
     }
   },
   "login": {
@@ -5253,7 +5271,14 @@
             "excludedData": "Granska {count} undantag för diskar eller monteringspunkter",
             "uncoveredExpected": "{required} gäster som deklarerats behöva säkerhetskopia väljs inte av något aktiverat jobb",
             "evaluationFailed": "The check could not be evaluated"
-          }
+          },
+          "nextStep": {
+            "noJobs": "Skapa ett backup jobb på denna nod och välj de gäster som håller data som du inte vill bygga för hand. Ett jobb som existerar men är funktionshindrat väljer ingenting.",
+            "uncovered": "Bestäm, för var och en av dessa gäster, oavsett om det håller något värt att hålla. Lägg till de som gör till ett jobb, för de som inte gör det, förklara att i politiken så slutar de räknas här.",
+            "excludedData": "Öppna varje jobb exkluderingslista och bekräfta att det som lämnar ut är data du har råd att förlora. En utestängning som läggs till för att göra ett jobb snabbare skyddar ingenting det hoppar.",
+            "uncoveredExpected": "Policyn förklarar dessa gäster som kräver en säkerhetskopia och inget aktiverat jobb väljer dem. Lägg dem antingen till ett jobb eller ändra vad policyn förklarar, så de två är överens."
+          },
+          "explanation": "En säkerhetskopia skyddar bara vad ett jobb faktiskt väljer. Denna check par gästerna på denna nod med de jobb som körs här, så en gäst ingen backar upp verkar som sådan istället för att antas vara täckt av något annat."
         },
         "last_backup_age": {
           "title": "Age of stored backups",
@@ -5264,7 +5289,13 @@
             "noBackups": "No stored backup matches a guest on this node",
             "attention": "{count} av {total} gäst-/destinationskontroller behöver granskas",
             "evaluationFailed": "The check could not be evaluated"
-          }
+          },
+          "nextStep": {
+            "stale": "Ta reda på varför jobbet slutade producera kopior för dessa gäster: det kan ha varit inaktiverat, dess schema kan aldrig elda, eller dess körningar kan misslyckas. Löpresultaten kontrollerar hur varje jobb senast slutade.",
+            "noBackups": "Ingen lagrad kopia matchar någon gäst på denna nod. Om jobben skriver till en destination kan denna nod inte läsa, det förväntas; annars producerar de ingenting.",
+            "attention": "Granska gästerna listade. Var och en har antingen ingen ny kopia eller har en äldre än den ålder som används."
+          },
+          "explanation": "Ett jobb som finns är inte detsamma som en kopia som finns. Denna check läser den senaste lagrade kopian av varje gäst och hur länge sedan den skrevs, vilket är hur långt tillbaka du skulle behöva gå om du var tvungen att återställa idag."
         },
         "retention_defined": {
           "title": "Backup retention",
@@ -5275,7 +5306,13 @@
             "notDeclared": "{count} av {total} jobb behåller varje kopia: ingen lagringstid är deklarerad",
             "onServer": "{count} av {total} jobb skriver till en säkerhetskopieringsserver, som gallrar dem med egna jobb",
             "evaluationFailed": "The check could not be evaluated"
-          }
+          },
+          "nextStep": {
+            "missing": "Ange en lagring på dessa jobb, eller på lagringen de skriver till. Proxmox tar jobbets inställning först, sedan lagringen, sedan noden standard.",
+            "notDeclared": "Dessa jobb håller varje kopia de gör. Det är ett avsiktligt val för vissa destinationer, men bekräftar att destinationen har plats att fortsätta växa.",
+            "onServer": "Dessa jobb skriver till en backupserver, som beskär dem enligt sina egna regler. Vad den håller inte kan läsas från denna nod, så kontrollera retention där."
+          },
+          "explanation": "Lagring bestämmer hur många kopior som hålls och hur länge. Utan det fyller en destination tills den slutar acceptera nya kopior, och en säkerhetskopia som inte kan skrivas är den du får veta om den dag du behöver det."
         },
         "verification_state": {
           "title": "Verifiering av säkerhetskopior",
@@ -5285,7 +5322,12 @@
             "failed": "{failed} senaste kopior klarade inte verifieringen, av {total} granskade",
             "notVerified": "{pending} av {total} senaste kopior har inte verifierats",
             "evaluationFailed": "Verifieringsstatus kunde inte läsas"
-          }
+          },
+          "nextStep": {
+            "failed": "En kopia som misslyckas med verifiering kan inte åberopas. Kontrollera om en tidigare kopia av samma gäst verifieras och titta på lagringen de misslyckade kopiorna lever vidare.",
+            "notVerified": "Inget har bekräftat att dessa kopior kan läsas tillbaka. En backup-server kan verifiera på ett eget schema, separat från det jobb som skrev dem."
+          },
+          "explanation": "Verifiering läser en lagrad kopia tillbaka och bekräftar att den är intakt. Det är skillnaden mellan en kopia som finns och en kopia som kan läsas - en skillnad som bara spelar roll på den dag du behöver det."
         },
         "job_results": {
           "title": "Resultat av säkerhetskopieringskörningar",
@@ -5295,7 +5337,12 @@
             "someFailed": "{count} av {total} registrerade körningar slutade med ett fel",
             "evaluationFailed": "Uppgiftsloggen kunde inte läsas",
             "recovered": "{count} av {total} gäster misslyckades i en tidigare körning och har lyckats sedan dess"
-          }
+          },
+          "nextStep": {
+            "someFailed": "Läs felet i uppgiftsloggen för dessa körningar. En körning som slutar med ett fel som inte produceras någon användbar kopia för de gäster som den täcker.",
+            "recovered": "Dessa gäster misslyckades tidigare och har lyckats sedan dess. Det tidigare felet är fortfarande värt att läsa: ett misslyckande som löste sig återvänder ofta."
+          },
+          "explanation": "Hur varje jobbs senaste körning slutade, eftersom denna nod spelade in den. Ett jobb kan konfigureras perfekt och fortfarande misslyckas varje natt, och det är där det visar."
         },
         "host_recovery": {
           "title": "Återställning av värden",
@@ -5305,7 +5352,13 @@
             "protected": "Nodens egen konfiguration är lagrad i {total} arkiv, inom den åldersgräns som används",
             "attention": "{count} iakttagelse(r) för {total} poster med värdens konfiguration",
             "scheduledOnly": "Säkerhetskopior av värdens konfiguration är schemalagda via {count} timer; inget arkiv är lagrat lokalt"
-          }
+          },
+          "nextStep": {
+            "noHostBackup": "Ingenting lagrar denna nods egen konfiguration. Ombyggnad skulle det innebära att rekonstruera lagrings-, nätverks- och användardefinitioner för hand, från vilka anteckningar som finns.",
+            "attention": "Granska värdkonfigurationsposterna listade. Var och en har något värt att titta på: en körning som misslyckades, en destination som är borta eller en kopia äldre än den ålder som används.",
+            "scheduledOnly": "En timer kommer att producera värdkonfigurationsbackup, men ingen lagras ännu. Tills den första körs, är nodens egen konfiguration inte skyddad."
+          },
+          "explanation": "Att backa upp gästerna återställer inte noden. Denna kontroll tittar på om nodens egen konfiguration - dess lagringsdefinitioner, dess nätverk, dess användare - lagras var som helst, vilket är vad ombyggnad värden själv beror på."
         }
       },
       "system": {
@@ -6116,7 +6169,9 @@
       "withoutLynis": "Run without Lynis",
       "cancel": "Cancel"
     },
-    "readOnlyNotice": "Bedömningen inspekterar värdinställningar och hälsa. Den kan skriva rapporter och loggar; startstatuskontroller kan tillfälligt montera EFI-systempartitioner."
+    "readOnlyNotice": "Bedömningen inspekterar värdinställningar och hälsa. Den kan skriva rapporter och loggar; startstatuskontroller kan tillfälligt montera EFI-systempartitioner.",
+    "noActionNeeded": "Inget att göra. Denna kontroll fann vad den förväntar sig att hitta.",
+    "couldNotEvaluate": "Denna kontroll kunde inte utvärderas, så det rapporterar ingenting heller. Beviset registrerar vad det inte kunde läsa."
   },
   "runtime": {
     "notifications": {

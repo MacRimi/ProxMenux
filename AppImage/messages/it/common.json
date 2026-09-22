@@ -808,7 +808,11 @@
         "saturday": "Sabato"
       }
     },
-    "savedSmartData": "dati SMART salvati"
+    "savedSmartData": "dati SMART salvati",
+    "idle": "Idle",
+    "idleTitle": "Non leggere mentre nulla lo sta usando, in modo che possa girare verso il basso. La sua temperatura viene mostrata di nuovo non appena il disco è in uso.",
+    "diskExcluded": "Escluso",
+    "diskExcludedTitle": "Escluso da letture periodiche in Impostazioni."
   },
   "details": {
     "temperature": {
@@ -1388,7 +1392,9 @@
       "postApplyAllOk": "pacchetto/i {count} applicato correttamente: nulla in sospeso.",
       "postApplyNothingPending": "nulla in sospeso: tutto è aggiornato.",
       "postApplyPartial": "{pending} pacchetto/i ancora in sospeso dopo l'esecuzione.",
-      "postApplyPartialSubline": "{applied} applicato. Alcuni aggiornamenti non sono stati completati: esamina l'output del terminale sopra."
+      "postApplyPartialSubline": "{applied} applicato. Alcuni aggiornamenti non sono stati completati: esamina l'output del terminale sopra.",
+      "imagePinned": "Pinned a digerire",
+      "imagePinnedTitle": "Questo contenitore esegue l'immagine esatta dei suoi nomi digeriti. Un nuovo tag non lo cambia; modifica il riferimento nella sua configurazione."
     },
     "bulkUpdate": {
       "title": "Aggiornamento in blocco",
@@ -2198,6 +2204,18 @@
       "reset": "Ripristina predefinito",
       "hint": "Trascina per riordinare · Su touch, pressione prolungata prima",
       "customActive": "Ordine di navigazione personalizzato attivo."
+    },
+    "diskExclusions": {
+      "title": "Esclusioni del disco",
+      "description": "I dischi che non sono mai letti su un programma, in modo che possano girare giù sul proprio timer.",
+      "empty": "Nessun disco fisico trovato.",
+      "disk": "Disk",
+      "periodicReads": "Letture periodiche",
+      "excluded": "Escluso",
+      "notConnected": "Non collegato",
+      "saveFailed": "Non poteva salvare le esclusioni del disco.",
+      "help": "Un disco escluso non ottiene alcuna temperatura programmata o legge SMART — nemmeno una query power-mode — quindi è lasciato completamente da solo. Aprire i suoi dettagli SMART lo legge ancora.",
+      "idleHelp": "I dischi meccanici senza attività sono già lasciati da soli automaticamente fino a quando qualcosa li utilizza di nuovo."
     }
   },
   "login": {
@@ -5253,7 +5271,14 @@
             "excludedData": "{count} esclusioni di dischi o mount point da verificare",
             "uncoveredExpected": "{required} guest dichiarati come da proteggere non sono selezionati da alcun processo attivo",
             "evaluationFailed": "The check could not be evaluated"
-          }
+          },
+          "nextStep": {
+            "noJobs": "Creare un lavoro di backup su questo nodo e selezionare gli ospiti in possesso di dati che non si desidera ricostruire a mano. Un lavoro che esiste ma è disabilitato non seleziona nulla.",
+            "uncovered": "Decidere, per ciascuno di questi ospiti, se detiene qualcosa che vale la pena di mantenere. Aggiungere quelli che fanno a un lavoro; per quelli che non lo fanno, dichiarare che nella politica così smettere di essere contati qui.",
+            "excludedData": "Aprire la lista di esclusione di ogni lavoro e confermare che ciò che lascia fuori è i dati che si può permettere di perdere. Un'esclusione aggiunta per rendere un lavoro più veloce protegge nulla salta.",
+            "uncoveredExpected": "La politica dichiara questi ospiti come richiedono un backup e nessun lavoro abilitato li seleziona. Aggiungili a un lavoro o cambia ciò che la politica dichiara, così i due concordano."
+          },
+          "explanation": "Un backup protegge solo ciò che un lavoro effettivamente seleziona. Questo controllo accoppia gli ospiti su questo nodo con i lavori che corrono qui, quindi un ospite nessuno backs up appare come tale invece di essere assunto per essere coperto da qualcos'altro."
         },
         "last_backup_age": {
           "title": "Age of stored backups",
@@ -5264,7 +5289,13 @@
             "noBackups": "No stored backup matches a guest on this node",
             "attention": "{count} verifiche guest/destinazione su {total} richiedono attenzione",
             "evaluationFailed": "The check could not be evaluated"
-          }
+          },
+          "nextStep": {
+            "stale": "Scopri perché il lavoro ha smesso di produrre copie per questi ospiti: potrebbe essere stato disabilitato, il suo programma potrebbe non sparare, o le sue piste potrebbero essere in fallimento. I risultati dell'esecuzione controllano i rapporti come ogni lavoro è finito.",
+            "noBackups": "Nessuna copia memorizzata corrisponde a qualsiasi ospite su questo nodo. Se i lavori scrivono a una destinazione questo nodo non può leggere, questo è previsto; altrimenti non producono nulla.",
+            "attention": "Rivedere gli ospiti elencati. Ognuno non ha copia recente o ha uno più vecchio dell'età in uso."
+          },
+          "explanation": "Un lavoro che esiste non è lo stesso di una copia che esiste. Questo controllo legge la nuova copia memorizzata di ogni ospite e quanto tempo fa è stato scritto, che è quanto lontano indietro si dovrebbe andare se si doveva ripristinare oggi."
         },
         "retention_defined": {
           "title": "Backup retention",
@@ -5275,7 +5306,13 @@
             "notDeclared": "{count} processi su {total} conservano ogni copia: non hanno una ritenzione dichiarata",
             "onServer": "{count} processi su {total} scrivono su un server di backup, che le pota con i propri processi",
             "evaluationFailed": "The check could not be evaluated"
-          }
+          },
+          "nextStep": {
+            "missing": "Impostare una ritenzione su questi lavori, o sullo storage a cui scrivono. Proxmox prende l'impostazione del lavoro prima, poi lo storage è, poi il nodo predefinito.",
+            "notDeclared": "Questi lavori tengono ogni copia che fanno. Questa è una scelta deliberata per alcune destinazioni, ma confermare che la destinazione ha spazio per continuare a crescere.",
+            "onServer": "Questi lavori scrivono a un server di backup, che li prunes sotto le proprie regole. Ciò che mantiene non può essere letto da questo nodo, quindi controllare la ritenzione lì."
+          },
+          "explanation": "La detenzione decide quante copie sono conservate e per quanto tempo. Senza di esso una destinazione si riempie fino a quando non smette di accettare nuove copie, e un backup che non può essere scritto è quello che si scopre il giorno che ne hai bisogno."
         },
         "verification_state": {
           "title": "Verifica dei backup",
@@ -5285,7 +5322,12 @@
             "failed": "{failed} copie recenti non hanno superato la verifica, su {total} esaminate",
             "notVerified": "{pending} di {total} copie recenti non sono state verificate",
             "evaluationFailed": "Non è stato possibile leggere lo stato di verifica"
-          }
+          },
+          "nextStep": {
+            "failed": "Una copia che fallisce la verifica non può essere invocata. Controllare se una copia precedente dello stesso ospite verificato, e guardare la memorizzazione le copie fallite in diretta.",
+            "notVerified": "Nulla ha confermato che queste copie possono essere lette. Un server di backup può verificare su un proprio programma, separatamente dal lavoro che li ha scritti."
+          },
+          "explanation": "La verifica legge una copia memorizzata e conferma che è intatta. È la differenza tra una copia che esiste e una copia che può essere letta — una distinzione che conta solo il giorno che ne hai bisogno."
         },
         "job_results": {
           "title": "Esiti delle esecuzioni di backup",
@@ -5295,7 +5337,12 @@
             "someFailed": "{count} di {total} esecuzioni di backup registrate sono terminate con un errore",
             "evaluationFailed": "Non è stato possibile leggere il registro attività",
             "recovered": "{count} di {total} ospiti sono falliti in un'esecuzione precedente e da allora sono riusciti"
-          }
+          },
+          "nextStep": {
+            "someFailed": "Leggi l'errore nel registro delle attività per queste operazioni. Una corsa che termina con un errore prodotto nessuna copia utilizzabile per gli ospiti che copre.",
+            "recovered": "Questi ospiti hanno fallito una prima corsa e sono riusciti da allora. L'errore precedente vale ancora la pena di leggere: un fallimento che si risolve spesso ritorna."
+          },
+          "explanation": "Come ogni lavoro e' finito il piu' recente, come ha registrato questo nodo. Un lavoro può essere configurato perfettamente e ancora fallire ogni notte, e questo è dove mostra."
         },
         "host_recovery": {
           "title": "Ripristino dell'host",
@@ -5305,7 +5352,13 @@
             "protected": "La configurazione del nodo stesso è memorizzata in {total} archivio/i, entro il limite di età in uso",
             "attention": "{count} rilievo/i su {total} record di configurazione dell'host",
             "scheduledOnly": "I backup della configurazione dell'host sono pianificati tramite {count} timer; nessun archivio è memorizzato localmente"
-          }
+          },
+          "nextStep": {
+            "noHostBackup": "Niente memorizza la configurazione di questo nodo. Ricostruire significherebbe ricostruire lo storage, la rete e le definizioni utente a mano, da qualsiasi nota esista.",
+            "attention": "Rivedere i record di configurazione dell'host elencati. Ognuno ha qualcosa che vale la pena guardare: una corsa che ha fallito, una destinazione che è andato, o una copia più vecchia dell'età in uso.",
+            "scheduledOnly": "Un timer produrrà backup di configurazione host, ma nessuno è ancora memorizzato. Finché il primo non viene eseguito, la configurazione del nodo non è protetta."
+          },
+          "explanation": "Il backup degli ospiti non ripristina il nodo. Questo controllo esamina se la configurazione del nodo — le sue definizioni di archiviazione, la sua rete, i suoi utenti — è memorizzata ovunque, che è ciò che la ricostruzione dell'host stesso dipende."
         }
       },
       "system": {
@@ -6116,7 +6169,9 @@
       "withoutLynis": "Run without Lynis",
       "cancel": "Cancel"
     },
-    "readOnlyNotice": "La valutazione esamina le impostazioni e l'integrità dell'host. Può scrivere report e log; i controlli dello stato di avvio possono montare temporaneamente partizioni di sistema EFI."
+    "readOnlyNotice": "La valutazione esamina le impostazioni e l'integrità dell'host. Può scrivere report e log; i controlli dello stato di avvio possono montare temporaneamente partizioni di sistema EFI.",
+    "noActionNeeded": "Niente da fare. Questo assegno ha trovato quello che si aspetta di trovare.",
+    "couldNotEvaluate": "Questo controllo non può essere valutato, quindi non segnala nulla in entrambi i casi. Le prove riportano ciò che non era in grado di leggere."
   },
   "runtime": {
     "notifications": {

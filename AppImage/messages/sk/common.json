@@ -807,7 +807,11 @@
         "saturday": "Sobota"
       }
     },
-    "savedSmartData": "Uložené údaje SMART"
+    "savedSmartData": "Uložené údaje SMART",
+    "idle": "Voľnobeh",
+    "idleTitle": "Nečítaj, kým ho nič nepoužíva, aby sa to mohlo roztočiť. Jeho teplota sa znova zobrazí, akonáhle sa disk používa.",
+    "diskExcluded": "Vylúčené",
+    "diskExcludedTitle": "Vylúčené z periodických čítania v Nastaveniach."
   },
   "details": {
     "temperature": {
@@ -1409,7 +1413,9 @@
       "postApplyAllOk": "{count} balíkov bolo úspešne použitých – nič sa nečaká.",
       "postApplyNothingPending": "Nič sa nečaká – všetko je aktuálne.",
       "postApplyPartial": "{pending} balíkov, ktoré po spustení stále čakajú.",
-      "postApplyPartialSubline": "Použilo sa {applied}. Niektoré aktualizácie sa nedokončili – skontrolujte výstup terminálu vyššie."
+      "postApplyPartialSubline": "Použilo sa {applied}. Niektoré aktualizácie sa nedokončili – skontrolujte výstup terminálu vyššie.",
+      "imagePinned": "Vrúbkované do trávenia",
+      "imagePinnedTitle": "Táto nádoba vedie presný obraz jeho tráviace názvy. Novší tag ho nemení; úprava odkazu v jeho konfigurácii áno."
     },
     "bulkUpdate": {
       "title": "Hromadná aktualizácia",
@@ -2197,6 +2203,18 @@
       "reset": "Obnoviť predvolené",
       "hint": "Presúvajte pre zmenu poradia · Na dotyku najprv podržte",
       "customActive": "Používa sa vlastné poradie navigácie."
+    },
+    "diskExclusions": {
+      "title": "Vylúčenie disku",
+      "description": "Disky, ktoré sa nikdy nečítajú v rozvrhu, takže sa môžu otáčať dole na svoj vlastný časovač.",
+      "empty": "Nenašli sa žiadne fyzické disky.",
+      "disk": "Disk",
+      "periodicReads": "Pravidelné čítanie",
+      "excluded": "Vylúčené",
+      "notConnected": "Nepripojený",
+      "saveFailed": "Nepodarilo sa uložiť vylúčenie disku.",
+      "help": "Vylúčený disk nedostane žiadnu plánovanú teplotu alebo SMART číta  Otvorenie jeho SMART detaily stále číta.",
+      "idleHelp": "Mechanické disky bez aktivity sú už automaticky ponechané samé, kým ich niečo znova nepoužíva."
     }
   },
   "login": {
@@ -5253,7 +5271,14 @@
             "excludedData": "Skontrolujte {count} vylúčení diskov alebo prípojných bodov",
             "uncoveredExpected": "{required} VM a LXC označených ako vyžadujúce zálohu nevyberá žiadna povolená úloha",
             "evaluationFailed": "Kontrolu sa nepodarilo vyhodnotiť"
-          }
+          },
+          "nextStep": {
+            "noJobs": "Vytvorte záložnú úlohu na tomto uzle a vyberte hostí, ktorí majú dáta, ktoré by ste nechceli prestavať ručne. Práca, ktorá existuje, ale je zdravotne postihnutá, nič nevyberá.",
+            "uncovered": "Rozhodnite sa pre každého z týchto hostí, či má niečo, čo stojí za to udržať. Pridajte tie, ktoré robia prácu; pre tie, ktoré nie, deklarujte, že v politike, takže sa prestanú počítať tu.",
+            "excludedData": "Otvorte zoznam vylúčených pracovných miest a potvrďte, že vynecháva údaje, ktoré si môžete dovoliť stratiť. Vylúčenie pridané, aby sa práca rýchlejšie chráni nič, čo preskočí.",
+            "uncoveredExpected": "Politika vyhlasuje, že títo hostia vyžadujú zálohu a žiadna povolená práca si ich vyberie. Buď ich pridajte do práce, alebo zmeňte, čo politika vyhlasuje, takže obaja súhlasia."
+          },
+          "explanation": "Záloha chráni len to, čo si práca skutočne vyberie. Táto kontrola spáruje hostí na tomto uzle s pracovnými miestami, ktoré tu bežia, takže hosť, ktorý sa nikto neobjaví ako taký, namiesto toho, aby bol považovaný za pokrytý niečím iným."
         },
         "last_backup_age": {
           "title": "Vek uložených záloh",
@@ -5264,7 +5289,13 @@
             "noBackups": "Pre žiadny VM ani LXC na tomto uzle sa nenašla uložená záloha",
             "attention": "{count} z {total} kontrol stroja/cieľa vyžaduje preverenie",
             "evaluationFailed": "Kontrolu sa nepodarilo vyhodnotiť"
-          }
+          },
+          "nextStep": {
+            "stale": "Zistite, prečo práca prestala pre týchto hostí vyrábať výtlačky: mohla byť zdravotne postihnutá, jej rozvrh možno nikdy nevystrelí, alebo môže zlyhať. Spustiť výsledky kontroly hlási, ako každá práca skončila.",
+            "noBackups": "Žiadna uložená kópia sa nezhoduje s hosťom v tomto uzle. Ak práce napísať do cieľa, tento uzol nemôže čítať, to sa očakáva, inak sú produkovať nič.",
+            "attention": "Prezrite si uvedených hostí. Každá z nich nemá žiadnu kópiu alebo je staršia ako vek, ktorý sa používa."
+          },
+          "explanation": "Práca, ktorá existuje, nie je to isté ako kópia, ktorá existuje. Tento šek číta najnovšie uložené kópie každého hosťa a ako dávno to bolo napísané, čo je, ako ďaleko by ste mali ísť, ak ste museli obnoviť dnes."
         },
         "retention_defined": {
           "title": "Retencia záloh",
@@ -5275,7 +5306,13 @@
             "notDeclared": "{count} z {total} úloh uchováva každú kópiu: nemajú deklarovanú retenciu",
             "onServer": "{count} z {total} úloh zapisuje na zálohovací server, ktorý ich čistí vlastnými úlohami",
             "evaluationFailed": "Kontrolu sa nepodarilo vyhodnotiť"
-          }
+          },
+          "nextStep": {
+            "missing": "Nastavte si držanie na týchto pracovných miestach, alebo na sklade, na ktorý píšu. Proxmox berie nastavenie úlohy ako prvý, potom úložisko je, potom uzol predvolený.",
+            "notDeclared": "Tieto práce uchovávajú všetky kópie, ktoré robia. To je zámerná voľba pre niektoré destinácie, ale potvrďte, že cieľ má priestor na rast.",
+            "onServer": "Tieto úlohy píšu na záložný server, ktorý ich prerezáva podľa vlastných pravidiel. Z tohto uzla sa nedá čítať to, čo drží, takže skontrolujte, či tam nie je."
+          },
+          "explanation": "O tom, koľko výtlačkov sa uchováva a ako dlho sa uchováva. Bez nej sa cieľ naplní, kým neprestane prijímať nové kópie, a záloha, ktorú nemožno napísať, je tá, o ktorej sa dozviete v deň, keď ju potrebujete."
         },
         "verification_state": {
           "title": "Overenie záloh",
@@ -5285,7 +5322,12 @@
             "failed": "{failed} najnovších kópií neprešlo overením, z {total} preskúmaných",
             "notVerified": "{pending} z {total} najnovších kópií nebolo overených",
             "evaluationFailed": "Stav overenia sa nepodarilo prečítať"
-          }
+          },
+          "nextStep": {
+            "failed": "Kópiu, ktorá nie je overená, nemožno použiť. Skontrolujte, či skoršia kópia rovnakého hosťa overené, a pozrite sa na skladovanie neúspešné kópie naživo.",
+            "notVerified": "Nič nepotvrdilo, že tieto kópie sa dajú prečítať späť. Záložný server môže overiť svoj vlastný rozvrh, oddelene od úlohy, ktorá ich napísala."
+          },
+          "explanation": "Overenie číta uložené kópie späť a potvrdzuje, že je neporušený. Je to rozdiel medzi kópiou, ktorá existuje, a kópiou, ktorá môže byť prečítaná, rozdiel, ktorý záleží len na dni, kedy ho potrebujete."
         },
         "job_results": {
           "title": "Výsledky zálohovacích behov",
@@ -5295,7 +5337,12 @@
             "someFailed": "{count} z {total} zaznamenaných zálohovacích behov skončilo chybou",
             "evaluationFailed": "Protokol úloh sa nepodarilo prečítať",
             "recovered": "{count} z {total} VM a LXC zlyhalo pri skoršom spustení a odvtedy uspelo"
-          }
+          },
+          "nextStep": {
+            "someFailed": "Prečítajte si chybu v zázname úloh pre tieto behy. Spustenie, ktoré končí s chybou vyrobené žiadne použiteľné kópie pre hostí, na ktoré sa vzťahuje.",
+            "recovered": "Títo hostia zlyhali a odvtedy sa im to podarilo. Predchádzajúca chyba stále stojí za čítanie: zlyhanie, ktoré vyrieši sám často vracia."
+          },
+          "explanation": "Ako sa posledná práca skončila, ako to nahral tento uzol. Práca môže byť nakonfigurovaná dokonale a stále zlyhá každú noc, a to je miesto, kde to ukazuje."
         },
         "host_recovery": {
           "title": "Obnova servera",
@@ -5305,7 +5352,13 @@
             "protected": "Konfigurácia samotného uzla je uložená v {total} archíve(och), v rámci používaného vekového limitu",
             "attention": "Zistenia: {count}; záznamy o nastavení servera: {total}",
             "scheduledOnly": "Zálohy nastavení servera sú naplánované cez {count} časovačov, lokálne však nie je uložený žiadny archív"
-          }
+          },
+          "nextStep": {
+            "noHostBackup": "Nič neukladá konfiguráciu tohto uzla. Obnova by znamenala rekonštrukciu úložiska, siete a užívateľských definícií ručne, z akýchkoľvek poznámok.",
+            "attention": "Prehľadajte uvedené záznamy konfigurácie hostiteľa. Každý má niečo, čo stojí za to pozrieť sa na: beh, ktorý zlyhal, cieľ, ktorý je preč, alebo výtlačok starší ako vek v používaní.",
+            "scheduledOnly": "Časovač bude produkovať zálohovanie konfigurácie hostiteľa, ale žiadny ešte nie je uložený. Kým prvý beží, uzol vlastné nastavenie nie je chránené."
+          },
+          "explanation": "Zálohovanie hostí neobnoví uzol. Táto kontrola sa pozerá na to, či uzol vlastné konfigurácia"
         }
       },
       "system": {
@@ -6115,7 +6168,9 @@
       "withLynis": "Spustiť s Lynisom",
       "withoutLynis": "Spustiť bez Lynisu",
       "cancel": "Zrušiť"
-    }
+    },
+    "noActionNeeded": "Nemám čo robiť. Tento šek našiel to, čo očakáva.",
+    "couldNotEvaluate": "Tento šek nemohol byť vyhodnotený, takže nič nehlási. Dôkazy zaznamenávajú, čo nebolo možné prečítať."
   },
   "runtime": {
     "notifications": {

@@ -808,7 +808,11 @@
         "saturday": "Samedi"
       }
     },
-    "savedSmartData": "données SMART enregistrées"
+    "savedSmartData": "données SMART enregistrées",
+    "idle": "Idée",
+    "idleTitle": "Ne pas lire pendant que rien ne l'utilise, donc il peut tourner vers le bas. Sa température est montrée à nouveau dès que le disque est utilisé.",
+    "diskExcluded": "Exclusion",
+    "diskExcludedTitle": "Exclus des lectures périodiques dans Paramètres."
   },
   "details": {
     "temperature": {
@@ -1388,7 +1392,9 @@
       "postApplyAllOk": "{count} package(s) appliqué(s) avec succès – rien en attente.",
       "postApplyNothingPending": "Rien en attente – tout est à jour.",
       "postApplyPartial": "{pending} package(s) toujours en attente après l'exécution.",
-      "postApplyPartialSubline": "{applied} appliqué. Certaines mises à jour n'ont pas été terminées – consultez la sortie du terminal ci-dessus."
+      "postApplyPartialSubline": "{applied} appliqué. Certaines mises à jour n'ont pas été terminées – consultez la sortie du terminal ci-dessus.",
+      "imagePinned": "Pinné à un digest",
+      "imagePinnedTitle": "Ce conteneur exécute l'image exacte de ses noms de digest. Une balise plus récente ne la modifie pas; modifier la référence dans sa configuration le fait."
     },
     "bulkUpdate": {
       "title": "Mise à jour groupée",
@@ -2198,6 +2204,18 @@
       "reset": "Restaurer par défaut",
       "hint": "Glissez pour réorganiser · Sur tactile, appui long d'abord",
       "customActive": "Ordre de navigation personnalisé actif."
+    },
+    "diskExclusions": {
+      "title": "Exclusions de disques",
+      "description": "Disques qui ne sont jamais lus sur un horaire, donc ils peuvent tourner vers le bas sur leur propre minuterie.",
+      "empty": "Aucun disque physique trouvé.",
+      "disk": "Disque",
+      "periodicReads": "Lectures périodiques",
+      "excluded": "Exclusion",
+      "notConnected": "Non connecté",
+      "saveFailed": "Impossible d'enregistrer les exclusions du disque.",
+      "help": "Un disque exclu n'obtient aucune température programmée ou SMART lit — pas même une requête en mode de puissance — donc il est laissé tout seul. Ouverture de ses détails SMART le lit encore.",
+      "idleHelp": "Les disques mécaniques sans activité sont déjà laissés seuls automatiquement jusqu'à ce que quelque chose les utilise à nouveau."
     }
   },
   "login": {
@@ -5253,7 +5271,14 @@
             "excludedData": "{count} exclusions de disques ou montages à vérifier",
             "uncoveredExpected": "{required} invités déclarés comme devant être sauvegardés ne sont sélectionnés par aucune tâche activée",
             "evaluationFailed": "The check could not be evaluated"
-          }
+          },
+          "nextStep": {
+            "noJobs": "Créez un travail de sauvegarde sur ce noeud et sélectionnez les invités qui détiennent des données que vous ne voudriez pas reconstruire à la main. Un emploi qui existe mais qui est handicapé ne sélectionne rien.",
+            "uncovered": "Décidez, pour chacun de ces invités, s'il vaut la peine de garder quelque chose. Ajoutez ceux qui font un travail ; pour ceux qui ne le font pas, déclarez que dans la politique donc ils cessent d'être comptés ici.",
+            "excludedData": "Ouvrez la liste d'exclusion de chaque emploi et confirmez que ce qu'il laisse de côté est des données que vous pouvez vous permettre de perdre. Une exclusion ajoutée pour rendre un emploi plus rapide ne protège rien qu'il saute.",
+            "uncoveredExpected": "La politique déclare que ces clients ont besoin d'une sauvegarde et qu'aucun emploi activé ne les sélectionne. Soit les ajouter à un emploi ou changer ce que la politique déclare, donc les deux sont d'accord."
+          },
+          "explanation": "Une sauvegarde protège seulement ce qu'un travail choisit réellement. Ce chèque jumele les invités sur ce nœud avec les emplois qui courent ici, donc un invité que personne ne soutient apparaît comme tel au lieu d'être supposé être couvert par quelque chose d'autre."
         },
         "last_backup_age": {
           "title": "Age of stored backups",
@@ -5264,7 +5289,13 @@
             "noBackups": "No stored backup matches a guest on this node",
             "attention": "{count} vérifications invité/destination sur {total} nécessitent un examen",
             "evaluationFailed": "The check could not be evaluated"
-          }
+          },
+          "nextStep": {
+            "stale": "Découvrez pourquoi le travail a cessé de produire des copies pour ces invités : il a peut-être été désactivé, son emploi du temps peut ne jamais tirer, ou ses pistes peuvent échouer. La vérification des résultats de l'exécution indique comment chaque travail s'est terminé.",
+            "noBackups": "Aucune copie enregistrée ne correspond à aucun invité sur ce nœud. Si les tâches écrivent à une destination ce nœud ne peut pas lire, c'est attendu, sinon ils ne produisent rien.",
+            "attention": "Passez en revue les invités énumérés. Chacun d'eux n'a pas de copie récente ou plus âgé que l'âge en usage."
+          },
+          "explanation": "Un travail qui existe n'est pas le même qu'une copie qui existe. Cette vérification lit la plus récente copie stockée de chaque invité et combien de temps il a été écrit, ce qui est à quel point il vous faudrait aller si vous deviez restaurer aujourd'hui."
         },
         "retention_defined": {
           "title": "Backup retention",
@@ -5275,7 +5306,13 @@
             "notDeclared": "{count} tâches sur {total} conservent toutes les copies : aucune rétention n'est déclarée",
             "onServer": "{count} tâches sur {total} écrivent sur un serveur de sauvegarde, qui les élague avec ses propres tâches",
             "evaluationFailed": "The check could not be evaluated"
-          }
+          },
+          "nextStep": {
+            "missing": "Réglez une rétention sur ces tâches, ou sur le stockage auquel ils écrivent. Proxmox prend le réglage du travail d'abord, puis le stockage, puis le noeud par défaut.",
+            "notDeclared": "Ces tâches gardent toutes les copies qu'elles font. C'est un choix délibéré pour certaines destinations, mais confirmer que la destination a de la place pour continuer à croître.",
+            "onServer": "Ces tâches écrivent sur un serveur de sauvegarde, qui les prune sous ses propres règles. Ce qu'il conserve ne peut pas être lu à partir de ce noeud, alors vérifiez la rétention là-bas."
+          },
+          "explanation": "La conservation détermine combien d'exemplaires sont conservés et pour combien de temps. Sans elle, une destination se remplit jusqu'à ce qu'elle cesse d'accepter de nouvelles copies, et une sauvegarde qui ne peut pas être écrite est celle que vous découvrez le jour où vous en avez besoin."
         },
         "verification_state": {
           "title": "Vérification des sauvegardes",
@@ -5285,7 +5322,12 @@
             "failed": "{failed} copies récentes ont échoué à la vérification, sur {total} examinées",
             "notVerified": "{pending} des {total} copies récentes n'ont pas été vérifiées",
             "evaluationFailed": "L'état de vérification n'a pas pu être lu"
-          }
+          },
+          "nextStep": {
+            "failed": "On ne peut se fier à une copie qui échoue à la vérification. Vérifiez si une copie antérieure du même invité a été vérifiée, et regardez le stockage des copies échouées en direct.",
+            "notVerified": "Rien n'a confirmé que ces copies puissent être lues en arrière. Un serveur de sauvegarde peut vérifier sur son propre planning, séparément du travail qui les a écrit."
+          },
+          "explanation": "La vérification lit une copie stockée et confirme qu'elle est intacte. C'est la différence entre une copie qui existe et une copie qui peut être lue — une distinction qui ne compte que le jour où vous en avez besoin."
         },
         "job_results": {
           "title": "Résultats des exécutions de sauvegarde",
@@ -5295,7 +5337,12 @@
             "someFailed": "{count} des {total} exécutions de sauvegarde enregistrées se sont terminées par une erreur",
             "evaluationFailed": "Le journal des tâches n'a pas pu être lu",
             "recovered": "{count} invités sur {total} ont échoué lors d'une exécution antérieure et ont réussi depuis"
-          }
+          },
+          "nextStep": {
+            "someFailed": "Lisez l'erreur dans le journal des tâches pour ces exécutions. Une course qui se termine par une erreur n'a produit aucune copie utilisable pour les invités qu'elle couvre.",
+            "recovered": "Ces invités ont échoué une première course et ont réussi depuis. L'erreur antérieure mérite toujours d'être lue : un échec qui s'est résolu revient souvent."
+          },
+          "explanation": "Comment chaque emploi a fini le plus récent, comme ce nœud l'a enregistré. Un travail peut être parfaitement configuré et échoue toujours chaque nuit, et c'est là que ça se voit."
         },
         "host_recovery": {
           "title": "Récupération de l'hôte",
@@ -5305,7 +5352,13 @@
             "protected": "La configuration du nœud lui-même est stockée dans {total} archive(s), dans la limite d'ancienneté en vigueur",
             "attention": "{count} constat(s) sur {total} enregistrement(s) de configuration de l'hôte",
             "scheduledOnly": "Les sauvegardes de la configuration de l'hôte sont planifiées par {count} minuterie(s) ; aucune archive n'est stockée localement"
-          }
+          },
+          "nextStep": {
+            "noHostBackup": "Rien ne stocke la configuration de ce noeud. Reconstruire cela signifie reconstruire manuellement les définitions du stockage, du réseau et de l'utilisateur, à partir de toutes les notes existantes.",
+            "attention": "Consultez les enregistrements de configuration de l'hôte énumérés. Chacun a quelque chose qui mérite d'être examiné : une course qui a échoué, une destination disparue, ou une copie plus ancienne que l'âge en usage.",
+            "scheduledOnly": "Un minuteur produira des sauvegardes de configuration d'hôte, mais aucune n'est encore stockée. Jusqu'à ce que le premier tourne, la configuration propre du noeud n'est pas protégée."
+          },
+          "explanation": "Le soutien des invités ne restaure pas le nœud. Ce contrôle vise à déterminer si la configuration propre du nœud — ses définitions de stockage, son réseau, ses utilisateurs — est stockée n'importe où, ce qui dépend de la reconstruction de l'hôte lui-même."
         }
       },
       "system": {
@@ -6116,7 +6169,9 @@
       "withoutLynis": "Run without Lynis",
       "cancel": "Cancel"
     },
-    "readOnlyNotice": "L’évaluation inspecte les paramètres et l’état de l’hôte. Il peut rédiger des rapports et des journaux ;les vérifications de l'état de démarrage peuvent monter temporairement les partitions système EFI."
+    "readOnlyNotice": "L’évaluation inspecte les paramètres et l’état de l’hôte. Il peut rédiger des rapports et des journaux ;les vérifications de l'état de démarrage peuvent monter temporairement les partitions système EFI.",
+    "noActionNeeded": "Rien à faire. Ce chèque a trouvé ce qu'il s'attend à trouver.",
+    "couldNotEvaluate": "Cette vérification n'a pu être évaluée, de sorte qu'elle ne fait aucun rapport. La preuve enregistre ce qu'elle n'a pas pu lire."
   },
   "runtime": {
     "notifications": {
