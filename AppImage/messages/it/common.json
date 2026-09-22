@@ -3845,7 +3845,8 @@
       "restoreTitle": "Ripristina da questo backup",
       "startingExport": "Preparazione download...",
       "title": "Backup",
-      "viewContentsTitle": "Visualizza i contenuti del backup"
+      "viewContentsTitle": "Visualizza i contenuti del backup",
+      "emptyMessage": "nessun archivio di backup trovato."
     },
     "backends": {
       "borgDescription": "Repository Borg per backup host deduplicati.",
@@ -3961,7 +3962,9 @@
       "sshUserHelpBefore": "Utente sull'host remoto,",
       "title": "Destinazioni",
       "unmountTitle": "Smonta questa destinazione",
-      "whereIsBorgRepo": "Dov'è il deposito Borg?"
+      "whereIsBorgRepo": "Dov'è il deposito Borg?",
+      "backupsKeptMessage": "gli archivi di backup esistenti non vengono eliminati.",
+      "localAttachHelpMessage": "monta prima le unità USB.Lascia vuoto per utilizzare il percorso di archiviazione PVE + /dump (fallback: /var/lib/vz/dump)."
     },
     "encryption": {
       "autoDetectedFromPveStorage": "Rilevato dall'archivio PVE",

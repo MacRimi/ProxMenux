@@ -3845,7 +3845,8 @@
       "startingExport": "Förbereder nedladdning...",
       "title": "Säkerhetskopieringar",
       "viewContentsTitle": "Visa säkerhetskopieringsinnehåll",
-      "descriptionAfter": ""
+      "descriptionAfter": "",
+      "emptyMessage": "Inga backup-arkiv hittades."
     },
     "backends": {
       "borgDescription": "Borg-arkiv för deduplicerade värdsäkerhetskopior.",
@@ -3961,7 +3962,9 @@
       "sshUserHelpBefore": "Användare på fjärrvärden,",
       "title": "Destinationer",
       "unmountTitle": "Avmontera denna destination",
-      "whereIsBorgRepo": "Var finns Borgarkivet?"
+      "whereIsBorgRepo": "Var finns Borgarkivet?",
+      "backupsKeptMessage": "Befintliga säkerhetskopieringsarkiv tas inte bort.",
+      "localAttachHelpMessage": "Montera USB-enheter först.Lämna tomt för att använda PVE-lagringssökvägen + /dump (fallback: /var/lib/vz/dump)."
     },
     "encryption": {
       "autoDetectedFromPveStorage": "Upptäckt från PVE-lagring",

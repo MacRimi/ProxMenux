@@ -3845,7 +3845,8 @@
       "restoreTitle": "Von diesem Backup wiederherstellen",
       "startingExport": "Download wird vorbereitet...",
       "title": "Backups",
-      "viewContentsTitle": "Sicherungsinhalte anzeigen"
+      "viewContentsTitle": "Sicherungsinhalte anzeigen",
+      "emptyMessage": "Keine Sicherungsarchive gefunden."
     },
     "backends": {
       "borgDescription": "Borg-Repository für deduplizierte Host-Backups.",
@@ -3961,7 +3962,9 @@
       "sshUserHelpBefore": "Benutzer auf dem Remote-Host,",
       "title": "Reiseziele",
       "unmountTitle": "Hängen Sie dieses Ziel aus",
-      "whereIsBorgRepo": "Wo ist das Borg-Repository?"
+      "whereIsBorgRepo": "Wo ist das Borg-Repository?",
+      "backupsKeptMessage": "Vorhandene Backup-Archive werden nicht gelöscht.",
+      "localAttachHelpMessage": "Mounten Sie zuerst USB-Laufwerke.Lassen Sie das Feld leer, um den PVE-Speicherpfad + /dump zu verwenden (Fallback: /var/lib/vz/dump)."
     },
     "encryption": {
       "autoDetectedFromPveStorage": "Aus PVE-Speicher erkannt",
