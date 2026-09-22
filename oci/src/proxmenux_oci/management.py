@@ -141,7 +141,7 @@ def interactive_management(project, ui):
 
 def _interactive_management(project, ui):
     if os.geteuid() != 0 or not shutil.which('pct'):
-        ui.message(translate('This interface runs on the Proxmox node as root. Open proxmenux-oci.sh on the Proxmox host.'), translate('OCI management'))
+        ui.message(translate('This interface runs on the Proxmox node as root. Open OCI manager Apps from the ProxMenux menu on the Proxmox host.'), translate('OCI management'))
         return
     rows = saved_inventory(project)
     if not rows:

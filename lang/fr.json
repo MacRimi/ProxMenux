@@ -6209,7 +6209,6 @@
   "This installation will:": "Cette installation va :",
   "This installer will:": "Ce programme d'installation va :",
   "This interface is configured but doesn't exist physically": "Cette interface est configurée mais n'existe pas physiquement",
-  "This interface runs on the Proxmox node as root. Open proxmenux-oci.sh on the Proxmox host.": "Cette interface fonctionne sur le nœud Proxmox comme racine. Ouvrez proxmenux-oci.sh sur l'hôte Proxmox.",
   "This is IRREVERSIBLE.": "C’est IRRÉVERSIBLE.",
   "This is a destructive action": "Il s’agit d’une action destructrice",
   "This is a simple configuration change": "Il s'agit d'un simple changement de configuration",
