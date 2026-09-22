@@ -618,8 +618,11 @@ function PbsKeyfileActions({ pbsRepository }: { pbsRepository?: string }) {
                   <div className="flex-1 space-y-1">
                     <div className="font-semibold text-emerald-300">{t("backup.keyfileActions.pveKeyDetected")}</div>
                     <div className="text-muted-foreground">
-                      {t("backup.keyfileActions.pveKeyDescriptionBefore")} <code className="font-mono text-[10.5px]">{pveMatch.name}</code> {t("backup.keyfileActions.pveKeyDescriptionMiddle")}{" "}
-                      <code className="font-mono text-[10.5px] break-all">{pveMatch.path}</code>. {t("backup.keyfileActions.pveKeyDescriptionAfter")}
+                      {t("backup.keyfileActions.pveKeyDescription").split(/(\{storage\}|\{path\})/).map((part, index) =>
+                        part === "{storage}" ? <code key={index} className="font-mono text-[10.5px] break-all">{pveMatch.name}</code>
+                          : part === "{path}" ? <code key={index} className="font-mono text-[10.5px] break-all">{pveMatch.path}</code>
+                            : part
+                      )}
                     </div>
                   </div>
                 </div>
@@ -2131,8 +2134,11 @@ function InspectModal({
                       <div className="flex-1 space-y-1">
                         <div className="font-semibold text-emerald-300">{t("backup.keyfileActions.pveKeyDetected")}</div>
                         <div className="text-muted-foreground">
-                          {t("backup.keyfileActions.pveKeyDescriptionBefore")} <code className="font-mono text-[10.5px]">{pveMatchInspect.name}</code> {t("backup.keyfileActions.pveKeyDescriptionMiddle")}{" "}
-                          <code className="font-mono text-[10.5px] break-all">{pveMatchInspect.path}</code>. {t("backup.keyfileActions.pveKeyDescriptionAfter")}
+                          {t("backup.keyfileActions.pveKeyDescription").split(/(\{storage\}|\{path\})/).map((part, index) =>
+                            part === "{storage}" ? <code key={index} className="font-mono text-[10.5px] break-all">{pveMatchInspect.name}</code>
+                              : part === "{path}" ? <code key={index} className="font-mono text-[10.5px] break-all">{pveMatchInspect.path}</code>
+                                : part
+                          )}
                         </div>
                       </div>
                     </div>
@@ -3879,7 +3885,14 @@ function CreateJobDialog({
                           {t("backup.encryption.encryptBackups")}
                         </div>
                         <p className="text-[11px] text-muted-foreground mt-1">
-                          {t("backup.encryption.pbsHelpBefore")} <code className="font-mono">--keyfile</code> {t("backup.encryption.pbsHelpMiddle")} <code className="font-mono">proxmox-backup-client backup</code>. {t("backup.encryption.pbsHelpAfter")} <code className="font-mono">/usr/local/share/proxmenux/pbs-key.conf</code> (chmod 0600) {t("backup.encryption.pbsHelpEnd")}
+                          {t("backup.encryption.pbsHelp").split(/(\{keyfile\}|\{option\}|\{mode\})/).map((part, index) => {
+                            const literals: Record<string, string> = {
+                              "{keyfile}": "/usr/local/share/proxmenux/pbs-key.conf",
+                              "{option}": "--keyfile",
+                              "{mode}": "0600",
+                            }
+                            return literals[part] ? <code key={index} className="font-mono break-all">{literals[part]}</code> : part
+                          })}
                         </p>
                       </div>
                     </label>
