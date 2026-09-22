@@ -94,6 +94,11 @@ PROTECTED_TECHNICAL_TERMS = (
     "GPU",
     "CPU",
     "AMD",
+    # Proxmox's own words for a container and a virtual machine. Read as
+    # initials they get reordered — "CT" comes back as "TC" in Spanish —
+    # and the reader is told about something Proxmox does not call that.
+    "CT",
+    "VM",
 )
 TECHNICAL_TERM_RE = re.compile(
     "|".join(
@@ -106,6 +111,9 @@ TRANSLATE_CALL_RE = re.compile(
     r"""translate\s+(?P<quote>["'])(?P<text>(?:\\.|(?! (?P=quote) ).)*?)(?P=quote)""",
     re.VERBOSE | re.DOTALL,
 )
+# Same shape the Monitor's generator uses, so a message reads identically
+# whichever of the two catalogues it comes from.
+PLACEHOLDER_RE = re.compile(r"\{[A-Za-z_][A-Za-z0-9_]*\}")
 # Providers that answer the same thing every time for the same input, so a
 # second attempt cannot produce a different result. `appimage` shells out to a
 # binary that may reach a network service, so it is not on the list.
@@ -133,9 +141,42 @@ def protect_catalog_titles(directories) -> None:
     if not titles:
         return
     terms = tuple(sorted(set(PROTECTED_TECHNICAL_TERMS) | titles, key=len, reverse=True))
+    # Same word boundaries as the module-level pattern. Without them a short
+    # term matches inside longer words, and every application title in the
+    # catalogue joins the glossary here.
     TECHNICAL_TERM_RE = re.compile(
-        "|".join(re.escape(term) for term in terms), re.IGNORECASE)
+        "|".join(
+            rf"(?<![A-Za-z0-9_]){re.escape(term)}(?![A-Za-z0-9_])"
+            for term in terms
+        ),
+        re.IGNORECASE,
+    )
     print(f"Protected application names: {len(titles)}", flush=True)
+
+
+def protect_placeholders(text: str) -> tuple[str, list[str]]:
+    """Replace each ``{name}`` with a token before translation.
+
+    A provider reads the name inside the braces as a word and translates
+    it: ``{count}`` comes back as ``{conta}`` in Portuguese and ``{počet}``
+    in Slovak. The consumer then finds no placeholder to substitute and
+    falls back to English, so the translation was paid for and never used.
+    The token carries no underscores because argos splits on them.
+    """
+    found: list[str] = []
+
+    def _swap(match: re.Match[str]) -> str:
+        found.append(match.group(0))
+        return f"PMXPH{len(found) - 1:03d}"
+
+    return PLACEHOLDER_RE.sub(_swap, text), found
+
+
+def restore_placeholders(text: str, found: list[str]) -> str:
+    """Put the original ``{name}`` back where each token landed."""
+    for index, original in enumerate(found):
+        text = text.replace(f"PMXPH{index:03d}", original)
+    return text
 
 
 def protect_technical_terms(text: str) -> tuple[str, list[str]]:
@@ -433,7 +474,8 @@ def translate_text(
     timeout: int,
     appimage_path: Path,
 ) -> str:
-    protected_text, protected_terms = protect_technical_terms(text)
+    protected_text, placeholders = protect_placeholders(text)
+    protected_text, protected_terms = protect_technical_terms(protected_text)
     if provider == "argos":
         translated = translate_argos(protected_text, dest_lang)
     elif provider == "googletrans":
@@ -447,6 +489,7 @@ def translate_text(
     else:
         raise ValueError(f"Unknown provider: {provider}")
     translated = restore_technical_terms(clean_translation(translated), protected_terms)
+    translated = restore_placeholders(translated, placeholders)
     return restore_sentence_spacing(translated) if translated else text
 
 

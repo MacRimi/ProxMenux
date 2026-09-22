@@ -891,6 +891,8 @@
   "Completed with errors —": "Kompletterad med fel —",
   "Completed.": "Avslutad.",
   "Completed. Devices added to VM {vmid}: {count}.": "Klar. Enheter som har lagts till VM {vmid}: {count}.",
+  "Completed. Disks added to CT {ctid}: {count}.": "Slutfört. Disker läggs till CT {ctid}: {count}.",
+  "Completed. Disks added to VM {vmid}: {count}.": "Slutfört. Disker läggs till VM {vmid}: {count}.",
   "Completed. Press Enter to return to menu...": "Avslutad. Tryck på Enter för att återgå till menyn...",
   "Completing its final cleanup...": "Slutför sin sista rengöring...",
   "Completing pending package configurations...": "Slutför väntande paketkonfigurationer...",
