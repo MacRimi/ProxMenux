@@ -975,7 +975,8 @@ export function StorageOverview() {
     let unavailable = 0
 
     storageData.disks.forEach((disk) => {
-      if (disk.standby || typeof disk.temperature !== "number" ||
+      // Match disk rows: policy-suppressed cached readings are not live temperatures.
+      if (disk.standby || disk.idle || disk.excluded || typeof disk.temperature !== "number" ||
           !Number.isFinite(disk.temperature) || disk.temperature <= 0) {
         unavailable++
         return

@@ -74,6 +74,15 @@ const fixtures = [
   [[disk(30)], ['Temperatures normal'], 'green'],
   [[disk(30),disk(35)], ['Temperatures normal'], 'green'],
   [[disk(0)], ['Temperatures unavailable','Unavailable: 1'], 'neutral'],
+  // /api/storage can pair cached positive SMART values with current policy flags.
+  [[{...disk(30),excluded:true}], ['Temperatures unavailable','Unavailable: 1'], 'neutral'],
+  [[{...disk(90),excluded:true}], ['Temperatures unavailable','Unavailable: 1'], 'neutral'],
+  [[disk(30),{...disk(90),excluded:true}], ['Temperature data incomplete','Unavailable: 1'], 'neutral'],
+  [[disk(60),{...disk(90),excluded:true},{...disk(90),idle:true}], ['High temperatures: 1','Unavailable: 2'], 'yellow'],
+  [[disk(65),{...disk(90),excluded:true,idle:true,standby:true}], ['Critical temperatures: 1','Unavailable: 1'], 'red'],
+  [[{...disk(30),idle:true}], ['Temperatures unavailable','Unavailable: 1'], 'neutral'],
+  [[{...disk(90),idle:true}], ['Temperatures unavailable','Unavailable: 1'], 'neutral'],
+  [[disk(30),{...disk(90),idle:true}], ['Temperature data incomplete','Unavailable: 1'], 'neutral'],
   [[disk(0),{...disk(90),standby:true}], ['Temperatures unavailable','Unavailable: 2'], 'neutral'],
   [[disk(30),disk(0)], ['Temperature data incomplete','Unavailable: 1'], 'neutral'],
   [[disk(60),disk(0)], ['High temperatures: 1','Unavailable: 1'], 'yellow'],
@@ -83,6 +92,8 @@ for (const [disks,messages,tone] of fixtures) {
   const html = render(disks);
   for(const message of messages) assert.ok(html.includes(message), `actual JSX: ${message}`);
   assert.equal(html.includes('text-green-500'),tone==='green');
+  assert.equal(html.includes('High temperatures:'), messages.some(message => message.startsWith('High temperatures:')), 'suppressed readings cannot add warning alerts');
+  assert.equal(html.includes('Critical temperatures:'), messages.some(message => message.startsWith('Critical temperatures:')), 'suppressed readings cannot add critical alerts');
   if(tone !== 'neutral') assert.ok(html.includes(`text-${tone}-500`));
   assert.ok(!html.includes('all healthy'));
 }
