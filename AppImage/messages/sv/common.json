@@ -5354,8 +5354,8 @@
             "recovered": "{count} av {total} gäster misslyckades i en tidigare körning och har lyckats sedan dess"
           },
           "nextStep": {
-            "someFailed": "Läs felet i uppgiftsloggen för dessa körningar. En körning som slutar med ett fel som inte produceras någon användbar kopia för de gäster som den täcker.",
-            "recovered": "Dessa gäster misslyckades tidigare och har lyckats sedan dess. Det tidigare felet är fortfarande värt att läsa: ett misslyckande som löste sig återvänder ofta."
+            "recovered": "Dessa gäster misslyckades tidigare och har lyckats sedan dess. Det tidigare felet är fortfarande värt att läsa: ett misslyckande som löste sig återvänder ofta.",
+            "someFailed": "Läs felet i uppgiftsloggen för dessa körningar. Behandla en körning som slutar med ett fel som misslyckats, och bekräfta en tillgänglig kopia för de gäster som den täcker innan du förlitar dig på en."
           },
           "explanation": "Hur varje jobbs senaste körning slutade, eftersom denna nod spelade in den. Ett jobb kan konfigureras perfekt och fortfarande misslyckas varje natt, och det är där det visar."
         },
@@ -5369,9 +5369,9 @@
             "scheduledOnly": "Säkerhetskopior av värdens konfiguration är schemalagda via {count} timer; inget arkiv är lagrat lokalt"
           },
           "nextStep": {
-            "noHostBackup": "Ingenting lagrar denna nods egen konfiguration. Ombyggnad skulle det innebära att rekonstruera lagrings-, nätverks- och användardefinitioner för hand, från vilka anteckningar som finns.",
             "attention": "Granska värdkonfigurationsposterna listade. Var och en har något värt att titta på: en körning som misslyckades, en destination som är borta eller en kopia äldre än den ålder som används.",
-            "scheduledOnly": "En timer kommer att producera värdkonfigurationsbackup, men ingen lagras ännu. Tills den första körs, är nodens egen konfiguration inte skyddad."
+            "scheduledOnly": "En timer kommer att producera värdkonfigurationsbackup, men ingen lagras ännu. Tills den första körs, är nodens egen konfiguration inte skyddad.",
+            "noHostBackup": "Ingen lagrad värdkonfigurationsbackup spelas in här. Om man inte existerar någonstans kan denna nod inte se, skulle ombyggnad innebära att man rekonstruerar lagring, nätverk och användardefinitioner för hand, från vilka anteckningar som finns."
           },
           "explanation": "Att backa upp gästerna återställer inte noden. Denna kontroll tittar på om nodens egen konfiguration - dess lagringsdefinitioner, dess nätverk, dess användare - lagras var som helst, vilket är vad ombyggnad värden själv beror på."
         }

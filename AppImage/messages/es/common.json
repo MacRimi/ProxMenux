@@ -5350,8 +5350,8 @@
           "title": "Resultado de las ejecuciones de backup",
           "explanation": "Cómo terminó la última ejecución de cada trabajo, según lo registró este nodo. Un trabajo puede estar perfectamente configurado y aun así fallar todas las noches, y es aquí donde eso se ve.",
           "nextStep": {
-            "someFailed": "Lee el error en el registro de tareas de estas ejecuciones. Una ejecución que termina con error no ha producido ninguna copia utilizable de los invitados que cubre.",
-            "recovered": "Estos invitados fallaron en una ejecución anterior y desde entonces han terminado bien. El error anterior merece leerse igualmente: un fallo que se arregló solo suele volver."
+            "recovered": "Estos invitados fallaron en una ejecución anterior y desde entonces han terminado bien. El error anterior merece leerse igualmente: un fallo que se arregló solo suele volver.",
+            "someFailed": "Lee el error en el registro de tareas de estas ejecuciones. Da por fallida cualquier ejecución que termine con error, y confirma que hay una copia disponible de los invitados que cubre antes de contar con ella."
           },
           "rationale": "Cómo terminó la ejecución más reciente de cada invitado, según el registro de tareas del nodo. Solo se gradúa la última. El registro se conserva un tiempo limitado.",
           "summary": {
@@ -5365,9 +5365,9 @@
           "title": "Recuperación del host",
           "explanation": "Respaldar los invitados no restaura el nodo. Esta comprobación mira si la configuración del propio nodo —sus definiciones de almacenamiento, su red, sus usuarios— está guardada en algún sitio, que es de lo que depende poder reconstruir el host.",
           "nextStep": {
-            "noHostBackup": "Nada guarda la configuración de este nodo. Reconstruirlo supondría rehacer a mano las definiciones de almacenamiento, red y usuarios, a partir de las notas que haya.",
             "attention": "Revisa los registros de configuración del host de la lista. Cada uno tiene algo que mirar: una ejecución que falló, un destino que ya no está, o una copia más antigua que el límite en uso.",
-            "scheduledOnly": "Un temporizador producirá backups de la configuración del host, pero todavía no hay ninguno guardado. Hasta que se ejecute el primero, la configuración del nodo no está protegida."
+            "scheduledOnly": "Un temporizador producirá backups de la configuración del host, pero todavía no hay ninguno guardado. Hasta que se ejecute el primero, la configuración del nodo no está protegida.",
+            "noHostBackup": "Aquí no consta ningún backup guardado de la configuración del host. Salvo que exista en algún sitio que este nodo no ve, reconstruirlo supondría rehacer a mano las definiciones de almacenamiento, red y usuarios, con las notas que haya."
           },
           "rationale": "Backups del host tal como los registra ProxMenux: cada trabajo que ejecutó, cuándo, si terminó bien, el destino donde escribió y si esa copia sigue ahí. Un trabajo que escribe en un servidor de backup no nombra ninguna ruta local. Las claves de cifrado se exponen solo por recuento y modo de custodia registrado.",
           "summary": {

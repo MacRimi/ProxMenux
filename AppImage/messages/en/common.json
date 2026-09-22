@@ -5350,7 +5350,7 @@
           "title": "Backup run results",
           "explanation": "How each job's most recent run ended, as this node recorded it. A job can be configured perfectly and still fail every night, and this is where that shows.",
           "nextStep": {
-            "someFailed": "Read the error in the task log for these runs. A run that ends with an error produced no usable copy for the guests it covers.",
+            "someFailed": "Read the error in the task log for these runs. Treat a run that ends with an error as unsuccessful, and confirm an available copy for the guests it covers before relying on one.",
             "recovered": "These guests failed an earlier run and have succeeded since. The earlier error is still worth reading: a failure that resolved itself often returns."
           },
           "rationale": "How each guest's most recent recorded run ended, from the node's task log. Only the latest run is graded. The log is retained for a limited period.",
@@ -5365,7 +5365,7 @@
           "title": "Host recovery",
           "explanation": "Backing up the guests does not restore the node. This check looks at whether the node's own configuration — its storage definitions, its network, its users — is stored anywhere, which is what rebuilding the host itself depends on.",
           "nextStep": {
-            "noHostBackup": "Nothing stores this node's own configuration. Rebuilding it would mean reconstructing the storage, network and user definitions by hand, from whatever notes exist.",
+            "noHostBackup": "No stored host-configuration backup is recorded here. Unless one exists somewhere this node cannot see, rebuilding would mean reconstructing the storage, network and user definitions by hand, from whatever notes exist.",
             "attention": "Review the host configuration records listed. Each has something worth looking at: a run that failed, a destination that is gone, or a copy older than the age in use.",
             "scheduledOnly": "A timer will produce host configuration backups, but none is stored yet. Until the first one runs, the node's own configuration is not protected."
           },
