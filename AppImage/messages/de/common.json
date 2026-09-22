@@ -744,8 +744,14 @@
         "seagateTitle": "Seagate Raw_Read_Error_Rate – Normales Verhalten",
         "seagateText": "Seagate-Laufwerke melden sehr große Rohwerte für Attribut Nr. 1. Dies wird erwartet; Es zählt nur der normalisierte Wert und dieser sollte bei 100 bleiben.",
         "smrTitle": "SMR-Laufwerk erkannt – Schreibbeschränkungen",
-        "smrText": "SMR-Festplatten schreiben zufällige Daten langsamer und können bei hoher gemischter Arbeitslast zum Stillstand kommen. Sie eignen sich für Backups und Archive, werden jedoch nicht als primärer Proxmox-Speicher oder ZFS-vdevs empfohlen."
-      }
+        "smrText": "SMR-Festplatten schreiben zufällige Daten langsamer und können bei hoher gemischter Arbeitslast zum Stillstand kommen. Sie eignen sich für Backups und Archive, werden jedoch nicht als primärer Proxmox-Speicher oder ZFS-vdevs empfohlen.",
+        "passedTitle": "Überprüfen Sie die gemeldeten Ergebnisse",
+        "passedText": "Der Status „PASSED“ kann gleichzeitig mit Warnungen oder aufgezeichneten Fehlern bestehen.Überprüfen Sie die Berichtsdetails, führen Sie die regelmäßige Überwachung fort und führen Sie aktuelle Backups durch."
+      },
+      "passedAssessment": "Der angegebene SMART-Status ist PASSED.Dieser Status allein stellt nicht sicher, dass jedes Attribut innerhalb des zulässigen Bereichs liegt oder dass die Festplatte fehlerfrei ist.Angezeigte Einschaltzeit: {uptime}.Angezeigte Temperatur: {temperature}.{sectors}",
+      "noReallocatedSectorsReported": "Der angegebene Wert für den neu zugewiesenen Sektor ist Null oder nicht verfügbar.Dies beweist nicht, dass es keine fehlerhaften Sektoren gibt.",
+      "passedMeaningTitle": "Was bedeutet der Status „PASSED“?",
+      "passedMeaning": "PASSED ist der Gesamtstatus dieses Berichts, kein Beweis für einen abgeschlossenen Selbsttest oder eine Garantie gegen Fehlschläge.Überprüfen Sie die Attribute, Fehlerprotokolle und Selbsttestergebnisse und bewahren Sie aktuelle Backups auf."
     },
     "ataErrors": {
       "idnf": "Sektoradresse nicht gefunden – möglicherweise fehlerhafter Sektor oder Kabelproblem",
@@ -801,7 +807,8 @@
         "friday": "Freitag",
         "saturday": "Samstag"
       }
-    }
+    },
+    "savedSmartData": "SMART-Daten gespeichert"
   },
   "details": {
     "temperature": {

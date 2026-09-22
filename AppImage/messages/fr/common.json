@@ -744,8 +744,14 @@
         "seagateTitle": "Seagate Raw_Read_Error_Rate - Comportement normal",
         "seagateText": "Les disques Seagate signalent des valeurs brutes très élevées pour l'attribut n°1. C'est prévu ; seule la valeur normalisée compte et elle doit rester à 100.",
         "smrTitle": "Lecteur SMR détecté – Limites d'écriture",
-        "smrText": "Les disques SMR écrivent des données aléatoires plus lentement et peuvent stagner sous une lourde charge de travail mixte. Ils conviennent aux sauvegardes et aux archives, mais ne sont pas recommandés comme stockage Proxmox principal ou comme vdevs ZFS."
-      }
+        "smrText": "Les disques SMR écrivent des données aléatoires plus lentement et peuvent stagner sous une lourde charge de travail mixte. Ils conviennent aux sauvegardes et aux archives, mais ne sont pas recommandés comme stockage Proxmox principal ou comme vdevs ZFS.",
+        "passedTitle": "examiner les résultats rapportés",
+        "passedText": "Un statut PASSÉ peut coexister avec des avertissements ou des erreurs enregistrées.Examinez les détails du rapport, poursuivez une surveillance régulière et conservez les sauvegardes actuelles."
+      },
+      "passedAssessment": "Le statut SMART fourni est RÉUSSI.Cet état à lui seul ne garantit pas que chaque attribut est à portée ou que le disque est exempt de défauts.Heure de mise sous tension affichée : {uptime}.Température affichée : {temperature}.{sectors}",
+      "noReallocatedSectorsReported": "La valeur du secteur réaffecté fournie est nulle ou indisponible ;cela ne signifie pas qu’il n’y a pas de secteurs défectueux.",
+      "passedMeaningTitle": "Que signifie un statut RÉUSSI ?",
+      "passedMeaning": "PASSED est le statut global fourni pour ce rapport, et non la preuve d'un autotest terminé ou une garantie contre l'échec.Examinez les attributs, les journaux d'erreurs et les résultats des autotests, et conservez les sauvegardes actuelles."
     },
     "ataErrors": {
       "idnf": "Adresse de secteur introuvable - possible problème de secteur ou de câble défectueux",
@@ -801,7 +807,8 @@
         "friday": "Vendredi",
         "saturday": "Samedi"
       }
-    }
+    },
+    "savedSmartData": "données SMART enregistrées"
   },
   "details": {
     "temperature": {

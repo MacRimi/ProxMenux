@@ -743,8 +743,14 @@
         "seagateTitle": "Seagate Raw_Read_Error_Rate - bežné správanie",
         "seagateText": "Disky Seagate uvádzajú pri atribúte č. 1 veľmi vysoké raw hodnoty. Je to bežné; dôležitá je normalizovaná hodnota, ktorá má zostať na 100.",
         "smrTitle": "Nájdený SMR disk - obmedzenia zápisu",
-        "smrText": "SMR disky zapisujú náhodné dáta pomalšie a pri veľkej zmiešanej záťaži sa môžu zaseknúť. Hodia sa na zálohy a archívy, nie však ako hlavné úložisko Proxmoxu alebo ZFS vdev."
-      }
+        "smrText": "SMR disky zapisujú náhodné dáta pomalšie a pri veľkej zmiešanej záťaži sa môžu zaseknúť. Hodia sa na zálohy a archívy, nie však ako hlavné úložisko Proxmoxu alebo ZFS vdev.",
+        "passedTitle": "Skontrolujte nahlásené výsledky",
+        "passedText": "Stav PASSED môže existovať súčasne s upozorneniami alebo zaznamenanými chybami.Skontrolujte podrobnosti správy, pokračujte v pravidelnom monitorovaní a udržiavajte aktuálne zálohy."
+      },
+      "passedAssessment": "Dodaný stav SMART je PASSED.Tento stav sám osebe neznamená, že každý atribút je v dosahu alebo že disk je bez chýb.Zobrazený čas zapnutia: {uptime}.Zobrazená teplota: {temperature}.{sectors}",
+      "noReallocatedSectorsReported": "Dodaná hodnota prerozdeleného sektora je nulová alebo nedostupná;to neznamená, že neexistujú žiadne chybné sektory.",
+      "passedMeaningTitle": "Čo znamená stav PASSED?",
+      "passedMeaning": "PASSED je celkový stav uvedený v tejto správe, nie dôkaz o vykonanom samoteste alebo záruka proti zlyhaniu.Skontrolujte atribúty, protokoly chýb a výsledky autotestov a uchovávajte aktuálne zálohy."
     },
     "ataErrors": {
       "idnf": "Adresa sektora sa nenašla - možný chybný sektor alebo problém s káblom",
@@ -800,7 +806,8 @@
         "friday": "Piatok",
         "saturday": "Sobota"
       }
-    }
+    },
+    "savedSmartData": "Uložené údaje SMART"
   },
   "details": {
     "temperature": {

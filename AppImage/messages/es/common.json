@@ -744,8 +744,14 @@
         "seagateTitle": "Seagate Raw_Read_Error_Rate: comportamiento normal",
         "seagateText": "Las unidades Seagate informan valores brutos muy grandes para el atributo n.º 1. Esto es de esperar; sólo importa el valor normalizado y debe permanecer en 100.",
         "smrTitle": "Unidad SMR detectada: limitaciones de escritura",
-        "smrText": "Los discos SMR escriben datos aleatorios más lentamente y pueden detenerse bajo una carga de trabajo mixta intensa. Se adaptan a copias de seguridad y archivos, pero no se recomiendan como almacenamiento principal de Proxmox o vdevs ZFS."
-      }
+        "smrText": "Los discos SMR escriben datos aleatorios más lentamente y pueden detenerse bajo una carga de trabajo mixta intensa. Se adaptan a copias de seguridad y archivos, pero no se recomiendan como almacenamiento principal de Proxmox o vdevs ZFS.",
+        "passedTitle": "revisar los resultados informados",
+        "passedText": "Un estado PASADO puede coexistir con advertencias o errores registrados.Revise los detalles del informe, continúe con el monitoreo regular y mantenga copias de seguridad actualizadas."
+      },
+      "passedAssessment": "El estado SMART proporcionado es APROBADO.Este estado por sí solo no establece que todos los atributos estén dentro del rango o que el disco esté libre de fallas.Hora de encendido mostrada: {uptime}.Temperatura mostrada: {temperature}.{sectors}",
+      "noReallocatedSectorsReported": "el valor del sector reasignado proporcionado es cero o no está disponible;esto no establece que no haya sectores malos.",
+      "passedMeaningTitle": "¿Qué significa un estado APROBADO?",
+      "passedMeaning": "PASADO es el estado general proporcionado en este informe, no una prueba de una autoprueba completa ni una garantía contra fallas.Revise los atributos, los registros de errores y los resultados de las autopruebas, y mantenga copias de seguridad actualizadas."
     },
     "ataErrors": {
       "idnf": "Dirección del sector no encontrada: posible sector defectuoso o problema con el cable",
@@ -801,7 +807,8 @@
         "friday": "Viernes",
         "saturday": "Sábado"
       }
-    }
+    },
+    "savedSmartData": "datos SMART guardados"
   },
   "details": {
     "temperature": {

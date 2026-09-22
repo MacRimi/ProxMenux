@@ -744,8 +744,14 @@
         "seagateTitle": "Seagate Raw_Read_Error_Rate - Normalt beteende",
         "seagateText": "Seagate-enheter rapporterar mycket stora råvärden för attribut #1. Detta förväntas; bara det normaliserade värdet spelar roll och det bör ligga kvar på 100.",
         "smrTitle": "SMR-enhet upptäckt - Skrivbegränsningar",
-        "smrText": "SMR-diskar skriver slumpmässiga data långsammare och kan stanna under en tung blandad arbetsbelastning. De passar säkerhetskopior och arkiv, men rekommenderas inte som primär Proxmox-lagring eller ZFS vdevs."
-      }
+        "smrText": "SMR-diskar skriver slumpmässiga data långsammare och kan stanna under en tung blandad arbetsbelastning. De passar säkerhetskopior och arkiv, men rekommenderas inte som primär Proxmox-lagring eller ZFS vdevs.",
+        "passedTitle": "Granska de rapporterade resultaten",
+        "passedText": "En PASSED-status kan samexistera med varningar eller registrerade fel.Granska rapportdetaljerna, fortsätt regelbunden övervakning och behåll aktuella säkerhetskopior."
+      },
+      "passedAssessment": "Den medföljande SMART-statusen har godkänts.Denna status ensam fastställer inte att varje attribut är inom räckhåll eller att disken är fri från fel.Starttid visas: {uptime}.Temperatur visad: {temperature}.{sectors}",
+      "noReallocatedSectorsReported": "Det angivna omfördelade värdet för sektorn är noll eller inte tillgängligt;detta slår inte fast att det inte finns några dåliga sektorer.",
+      "passedMeaningTitle": "Vad betyder en godkänd status?",
+      "passedMeaning": "PASSED är den övergripande statusen som ges till denna rapport, inte bevis på ett genomfört självtest eller en garanti mot misslyckande.Granska attribut, felloggar och självtestresultat och behåll aktuella säkerhetskopior."
     },
     "ataErrors": {
       "idnf": "Sektoradress hittades inte - möjligen dålig sektor eller kabelproblem",
@@ -801,7 +807,8 @@
         "friday": "fredag",
         "saturday": "lördag"
       }
-    }
+    },
+    "savedSmartData": "Sparad SMART-data"
   },
   "details": {
     "temperature": {

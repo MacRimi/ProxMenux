@@ -744,8 +744,14 @@
         "seagateTitle": "Seagate Raw_Read_Error_Rate - Comportamento normale",
         "seagateText": "Le unità Seagate riportano valori grezzi molto grandi per l'attributo n. 1. Questo è previsto; conta solo il valore normalizzato e dovrebbe rimanere su 100.",
         "smrTitle": "Rilevata unità SMR - Limitazioni di scrittura",
-        "smrText": "I dischi SMR scrivono dati casuali più lentamente e potrebbero bloccarsi in caso di carico di lavoro misto pesante. Sono adatti a backup e archivi, ma non sono consigliati come storage Proxmox primario o vdev ZFS."
-      }
+        "smrText": "I dischi SMR scrivono dati casuali più lentamente e potrebbero bloccarsi in caso di carico di lavoro misto pesante. Sono adatti a backup e archivi, ma non sono consigliati come storage Proxmox primario o vdev ZFS.",
+        "passedTitle": "esamina i risultati riportati",
+        "passedText": "uno stato PASSATO può coesistere con avvisi o errori registrati.Esamina i dettagli del report, continua il monitoraggio regolare e mantieni i backup aggiornati."
+      },
+      "passedAssessment": "lo stato SMART fornito è PASSATO.Questo stato da solo non stabilisce che tutti gli attributi rientrino nel raggio d'azione o che il disco sia privo di errori.Ora di accensione visualizzata: {uptime}.Temperatura mostrata: {temperature}.{sectors}",
+      "noReallocatedSectorsReported": "il valore del settore riallocato fornito è zero o non disponibile;questo non dimostra che non ci siano settori danneggiati.",
+      "passedMeaningTitle": "Cosa significa lo stato PASSATO?",
+      "passedMeaning": "SUPERATO è lo stato complessivo fornito a questo rapporto, non la prova di un autotest completato o una garanzia contro il fallimento.Esaminare gli attributi, i registri degli errori e i risultati dei test automatici e conservare i backup aggiornati."
     },
     "ataErrors": {
       "idnf": "Indirizzo del settore non trovato: possibile problema del settore danneggiato o del cavo",
@@ -801,7 +807,8 @@
         "friday": "Venerdì",
         "saturday": "Sabato"
       }
-    }
+    },
+    "savedSmartData": "dati SMART salvati"
   },
   "details": {
     "temperature": {
