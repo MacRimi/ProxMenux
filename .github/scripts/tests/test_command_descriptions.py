@@ -115,6 +115,15 @@ class CommandDescriptionsTests(unittest.TestCase):
                         report["recommendations"].setdefault(
                             key, source_report["recommendations"][key])
                     path.write_text(json.dumps(temporary, ensure_ascii=False))
+                # Model steady state after the bot fills these intentional new
+                # messages; keep repository locales and all other leaves intact.
+                if lang != "en":
+                    messages = json.loads(path.read_text())
+                    english = catalog("en")
+                    for section, key in (("encryption", "pbsHelp"),
+                                         ("keyfileActions", "pveKeyDescription")):
+                        messages["backup"][section].setdefault(key, english["backup"][section][key])
+                    path.write_text(json.dumps(messages, ensure_ascii=False))
             before = {p: p.read_bytes() for p in root.glob("*/common.json")}
             argv = [str(SCRIPT), "--source", str(root / "en/common.json"),
                     "--messages-dir", str(root), "--languages", languages, "--sleep", "0"]
