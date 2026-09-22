@@ -965,37 +965,25 @@ export function StorageOverview() {
   }
 
   const getDiskHealthBreakdown = () => {
-    if (!storageData || !storageData.disks) {
-      return { normal: 0, warning: 0, critical: 0 }
+    if (!storageData || !Array.isArray(storageData.disks)) {
+      return { normal: 0, warning: 0, critical: 0, unavailable: 0 }
     }
 
     let normal = 0
     let warning = 0
     let critical = 0
+    let unavailable = 0
 
     storageData.disks.forEach((disk) => {
-      if (disk.temperature === 0) {
-        // No temperature reading available — count as normal so a
-        // missing sensor doesn't inflate the warning count.
-        normal++
+      // Match disk rows: policy-suppressed cached readings are not live temperatures.
+      if (disk.standby || disk.idle || disk.excluded || typeof disk.temperature !== "number" ||
+          !Number.isFinite(disk.temperature) || disk.temperature <= 0) {
+        unavailable++
         return
       }
 
-      // Reuse the exact threshold lookup that the per-disk badge
-      // (`getTempColor`) uses, so the green / amber / red colour in
-      // the disk card and the "X normal, Y warning, Z critical" tally
-      // at the top of the page always agree.
-      //
-      // Previously this breakdown carried its own hardcoded ladder
-      // (HDD ≤45 normal, ≤55 warning, …) which was far stricter than
-      // the configurable defaults from `useDiskTempThresholds`
-      // (HDD warn 60, hot 65). A disk at 48 °C therefore showed a
-      // green badge but was counted as "warning" in the summary —
-      // exactly the case the user reported. Driving both from the
-      // same source (`dtThresholds`) means the user-tunable values
-      // under Settings → Health Monitor Thresholds → Disk temperature
-      // now apply to the breakdown as well, and the displayed colour
-      // is always the source of truth.
+      // Only usable readings enter the existing configurable threshold lookup.
+      // Keep the resolver and defaults shared with the per-disk temperature badge.
       const diskType = getDiskType(disk.name, disk.rotation_rate)
       const cls: keyof DiskTempMap =
         diskType === "NVMe" ? "NVMe" : diskType === "SSD" ? "SSD" : "HDD"
@@ -1005,11 +993,11 @@ export function StorageOverview() {
       else normal++
     })
 
-    return { normal, warning, critical }
+    return { normal, warning, critical, unavailable }
   }
 
   const getDiskTypesBreakdown = () => {
-    if (!storageData || !storageData.disks) {
+    if (!storageData || !Array.isArray(storageData.disks)) {
       return { nvme: 0, ssd: 0, hdd: 0, usb: 0 }
     }
 
@@ -1134,7 +1122,7 @@ export function StorageOverview() {
     )
   }
 
-  if (!storageData || storageData.error) {
+  if (!storageData || storageData.error || !Array.isArray(storageData.disks)) {
     return (
       <div className="flex items-center justify-center h-64">
         <div className="text-red-500">
@@ -1312,12 +1300,16 @@ export function StorageOverview() {
         {(() => {
           const total = Math.max(1, storageData.disk_count || 0)
           const seg = 100 / total
-          const allHealthy = diskHealthBreakdown.warning === 0 && diskHealthBreakdown.critical === 0
-          const healthBadge = allHealthy
-            ? <Badge variant="outline" className="bg-green-500/10 text-green-500 border-green-500/20">✓ {t("storage.allHealthy")}</Badge>
-            : diskHealthBreakdown.critical > 0
-              ? <Badge variant="outline" className="bg-red-500/10 text-red-500 border-red-500/20">{t("storage.criticalCount", { count: diskHealthBreakdown.critical })}</Badge>
-              : <Badge variant="outline" className="bg-yellow-500/10 text-yellow-500 border-yellow-500/20">{t("storage.warningCount", { count: diskHealthBreakdown.warning })}</Badge>
+          const allTemperaturesNormal = storageData.disks.length > 0 && diskHealthBreakdown.unavailable === 0 && diskHealthBreakdown.warning === 0 && diskHealthBreakdown.critical === 0
+          const healthBadge = storageData.disks.length === 0
+            ? <Badge variant="outline" className="bg-muted text-muted-foreground border-border">{t("storage.temperatureNoDisks")}</Badge>
+            : allTemperaturesNormal
+              ? <Badge variant="outline" className="bg-green-500/10 text-green-500 border-green-500/20">{t("storage.temperatureNormal")}</Badge>
+              : diskHealthBreakdown.critical > 0
+                ? <Badge variant="outline" className="bg-red-500/10 text-red-500 border-red-500/20">{t("storage.temperatureCriticalCount", { count: diskHealthBreakdown.critical })}</Badge>
+                : diskHealthBreakdown.warning > 0
+                  ? <Badge variant="outline" className="bg-yellow-500/10 text-yellow-500 border-yellow-500/20">{t("storage.temperatureHighCount", { count: diskHealthBreakdown.warning })}</Badge>
+                  : <Badge variant="outline" className="bg-muted text-muted-foreground border-border">{t(diskHealthBreakdown.normal > 0 ? "storage.temperatureIncomplete" : "storage.temperatureUnavailable")}</Badge>
           const seg_purple = '#a855f7'
           const seg_cyan = '#06b6d4'
           const seg_blue = '#3b82f6'
@@ -1339,7 +1331,15 @@ export function StorageOverview() {
                     <span className="text-3xl font-bold leading-none">{storageData.disk_count}</span>
                     <span className="text-base font-medium ml-1 text-muted-foreground">{diskCountLabel(storageData.disk_count)}</span>
                   </div>
+                </div>
+                <div className="mb-3 flex flex-col items-start gap-1 [&>div]:max-w-full [&>div]:whitespace-normal [&>div]:break-words">
                   {healthBadge}
+                  {diskHealthBreakdown.critical > 0 && diskHealthBreakdown.warning > 0 && (
+                    <p className="text-xs text-yellow-500">{t("storage.temperatureHighCount", { count: diskHealthBreakdown.warning })}</p>
+                  )}
+                  {diskHealthBreakdown.unavailable > 0 && (
+                    <p className="text-xs text-muted-foreground">{t("storage.temperatureUnavailableCount", { count: diskHealthBreakdown.unavailable })}</p>
+                  )}
                 </div>
                 <div className="flex h-1.5 rounded-full overflow-hidden gap-[2px]">
                   {segments.map((s, i) => (

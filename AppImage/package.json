@@ -4,6 +4,7 @@
   "description": "Proxmox System Monitoring Dashboard",
   "private": true,
   "scripts": {
+    "test:storage-temperature": "node tests/storage-temperature-summary.cjs",
     "dev": "next dev",
     "build": "next build",
     "start": "next start",

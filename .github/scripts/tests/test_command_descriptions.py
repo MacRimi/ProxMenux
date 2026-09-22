@@ -114,6 +114,14 @@ class CommandDescriptionsTests(unittest.TestCase):
                     for key in ("passedTitle", "passedText"):
                         report["recommendations"].setdefault(
                             key, source_report["recommendations"][key])
+                    # New thermal messages also await automatic translation.
+                    # Seed only these intentional additions in the temporary copy.
+                    for key in (
+                        "temperatureNoDisks", "temperatureNormal", "temperatureHighCount",
+                        "temperatureCriticalCount", "temperatureUnavailable",
+                        "temperatureIncomplete", "temperatureUnavailableCount",
+                    ):
+                        temporary["storage"].setdefault(key, catalog("en")["storage"][key])
                     path.write_text(json.dumps(temporary, ensure_ascii=False))
                 # Model steady state after the bot fills these intentional new
                 # messages; keep repository locales and all other leaves intact.
