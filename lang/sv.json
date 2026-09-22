@@ -6209,6 +6209,7 @@
   "This installation will:": "Denna installation kommer att:",
   "This installer will:": "Detta installationsprogram kommer att:",
   "This interface is configured but doesn't exist physically": "Detta gränssnitt är konfigurerat men existerar inte fysiskt",
+  "This interface runs on the Proxmox node as root. Open OCI manager Apps from the ProxMenux menu on the Proxmox host.": "Detta gränssnitt körs på Proxmox-noden som root. Öppna OCI manager-appar från ProxMenux-menyn på Proxmox-värden.",
   "This is IRREVERSIBLE.": "Detta är IRREVERSIBELT.",
   "This is a destructive action": "Detta är en destruktiv handling",
   "This is a simple configuration change": "Detta är en enkel konfigurationsändring",
