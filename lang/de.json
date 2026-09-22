@@ -892,6 +892,8 @@
   "Completed with errors —": "Mit Fehlern abgeschlossen –",
   "Completed.": "Vollendet.",
   "Completed. Devices added to VM {vmid}: {count}.": "Abgeschlossen. Zur VM {vmid} hinzugefügte Geräte: {count}.",
+  "Completed. Disks added to CT {ctid}: {count}.": "Abgeschlossen. Zu CT {ctid} hinzugefügte Festplatten: {count}.",
+  "Completed. Disks added to VM {vmid}: {count}.": "Abgeschlossen. Zu VM {vmid} hinzugefügte Festplatten: {count}.",
   "Completed. Press Enter to return to menu...": "Vollendet. Drücken Sie die Eingabetaste, um zum Menü zurückzukehren...",
   "Completing its final cleanup...": "Abschluss der endgültigen Bereinigung...",
   "Completing pending package configurations...": "Ausstehende Paketkonfigurationen werden abgeschlossen...",

@@ -893,6 +893,8 @@
   "Completed with errors —": "Completato con errori —",
   "Completed.": "Completato.",
   "Completed. Devices added to VM {vmid}: {count}.": "completato. Dispositivi aggiunti alla VM {vmid}: {count}.",
+  "Completed. Disks added to CT {ctid}: {count}.": "Completato. I dischi aggiunti a CT {ctid}: {count}.",
+  "Completed. Disks added to VM {vmid}: {count}.": "Completato. I dischi aggiunti a VM {vmid}: {count}.",
   "Completed. Press Enter to return to menu...": "Completato. Premere Invio per tornare al menu...",
   "Completing its final cleanup...": "Completa la sua pulizia finale...",
   "Completing pending package configurations...": "completamento delle configurazioni dei pacchetti in sospeso...",
