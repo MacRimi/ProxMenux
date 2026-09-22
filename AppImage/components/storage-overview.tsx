@@ -2065,7 +2065,7 @@ export function StorageOverview() {
                     <h4 className="font-semibold mb-3 flex items-center gap-2">
                       {t("storage.wearLifetime")}
                       {smartJsonData?.has_data && !wi && (
-                        <Badge className="bg-green-500/10 text-green-400 border-green-500/20 text-[10px] px-1.5">{t("storage.realTest")}</Badge>
+                        <Badge className="bg-green-500/10 text-green-400 border-green-500/20 text-[10px] px-1.5">{t("storage.savedSmartData")}</Badge>
                       )}
                     </h4>
                     <div className="flex gap-5 items-start">
@@ -2777,7 +2777,7 @@ function openSmartReport(disk: DiskInfo, testStatus: SmartTestStatus, smartAttri
   // Build recommendations
   const recommendations: string[] = []
   if (isHealthy) {
-    recommendations.push(`<div class="rec-item rec-ok"><div class="rec-icon">&#10003;</div><div><strong>${t("storage.smartReport.recommendations.healthyTitle")}</strong><p>${t("storage.smartReport.recommendations.healthyText")}</p></div></div>`)
+    recommendations.push(`<div class="rec-item rec-ok"><div class="rec-icon">&#10003;</div><div><strong>${t("storage.smartReport.recommendations.passedTitle")}</strong><p>${t("storage.smartReport.recommendations.passedText")}</p></div></div>`)
   } else {
     recommendations.push(`<div class="rec-item rec-critical"><div class="rec-icon">&#10007;</div><div><strong>${t("storage.smartReport.recommendations.criticalTitle")}</strong><p>${t("storage.smartReport.recommendations.criticalText")}</p></div></div>`)
   }
@@ -3284,7 +3284,7 @@ function pmxPrint(){
       <h3>${t("storage.smartReport.healthAssessment")}</h3>
       <p>
         ${isHealthy 
-          ? t("storage.smartReport.healthyAssessment", { uptime: powerOnFormatted, temperature: disk.temperature > 0 ? disk.temperature + '°C' : na, sectors: (disk.reallocated_sectors ?? 0) === 0 ? t("storage.smartReport.noBadSectors") : t("storage.smartReport.reallocatedSectors", { count: disk.reallocated_sectors ?? 0 }) })
+          ? t("storage.smartReport.passedAssessment", { uptime: powerOnFormatted, temperature: disk.temperature > 0 ? disk.temperature + '°C' : na, sectors: (disk.reallocated_sectors ?? 0) === 0 ? t("storage.smartReport.noReallocatedSectorsReported") : t("storage.smartReport.reallocatedSectors", { count: disk.reallocated_sectors ?? 0 }) })
           : t("storage.smartReport.failedAssessment")
         }
       </p>
@@ -3294,11 +3294,11 @@ function pmxPrint(){
   <!-- Simple Explanation for Non-Technical Users -->
   <div style="background:${isHealthy ? '#dcfce7' : (hasCritical ? '#fee2e2' : '#fef3c7')};border:1px solid ${isHealthy ? '#86efac' : (hasCritical ? '#fca5a5' : '#fcd34d')};border-radius:8px;padding:16px;margin-top:12px;">
     <div style="font-weight:700;font-size:14px;color:${isHealthy ? '#166534' : (hasCritical ? '#991b1b' : '#92400e')};margin-bottom:8px;">
-      ${isHealthy ? t("storage.smartReport.healthyMeaningTitle") : (hasCritical ? t("storage.smartReport.attentionTitle") : t("storage.smartReport.monitorTitle"))}
+      ${isHealthy ? t("storage.smartReport.passedMeaningTitle") : (hasCritical ? t("storage.smartReport.attentionTitle") : t("storage.smartReport.monitorTitle"))}
     </div>
     <p style="color:${isHealthy ? '#166534' : (hasCritical ? '#991b1b' : '#92400e')};font-size:12px;margin:0 0 8px 0;">
       ${isHealthy 
-        ? t("storage.smartReport.healthyMeaning")
+        ? t("storage.smartReport.passedMeaning")
         : (hasCritical 
           ? t("storage.smartReport.criticalMeaning")
           : t("storage.smartReport.warningMeaning")

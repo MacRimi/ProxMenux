@@ -91,9 +91,10 @@ class CommandDescriptionsTests(unittest.TestCase):
                 path.parent.mkdir()
                 shutil.copyfile(ROOT / f"AppImage/messages/{lang}/common.json", path)
                 # This steady-state fixture assumes generation already finished.
-                # Seed only the three new backup messages in temporary locale
-                # copies; keep recovered command arrays and repo catalogs exact.
-                # Actual missing-key fallback is tested by the JSX seam tests.
+                # Seed only the keys the two message PRs introduce; keep the
+                # recovered command arrays and the repo catalogs exact. Runtime
+                # missing-key fallback is covered by the JSX seam tests and by
+                # test_storage_messages.cjs.
                 if lang != "en":
                     temporary = json.loads(path.read_text())
                     for section, key in (
@@ -103,6 +104,16 @@ class CommandDescriptionsTests(unittest.TestCase):
                     ):
                         temporary["backup"][section].setdefault(
                             key, catalog("en")["backup"][section][key])
+                    temporary["storage"].setdefault(
+                        "savedSmartData", catalog("en")["storage"]["savedSmartData"])
+                    report = temporary["storage"]["smartReport"]
+                    source_report = catalog("en")["storage"]["smartReport"]
+                    for key in ("passedAssessment", "noReallocatedSectorsReported",
+                                "passedMeaningTitle", "passedMeaning"):
+                        report.setdefault(key, source_report[key])
+                    for key in ("passedTitle", "passedText"):
+                        report["recommendations"].setdefault(
+                            key, source_report["recommendations"][key])
                     path.write_text(json.dumps(temporary, ensure_ascii=False))
             before = {p: p.read_bytes() for p in root.glob("*/common.json")}
             argv = [str(SCRIPT), "--source", str(root / "en/common.json"),

@@ -233,6 +233,7 @@
     "life": "life",
     "lifeRemaining": "Life Remaining",
     "realTest": "Real Test",
+    "savedSmartData": "Saved SMART data",
     "wear": {
       "label": "Wear",
       "percentageUsed": "Percentage Used",
@@ -362,6 +363,10 @@
       "healthAssessment": "Disk Health Assessment",
       "passedUpper": "PASSED",
       "testAgeWarning": "This report is based on a SMART test performed {days} days ago ({date}). Disk health may have changed since then. We recommend running a new SMART test for up-to-date results.",
+      "passedAssessment": "The supplied SMART status is PASSED. This status alone does not establish that every attribute is within range or that the disk is free of faults. Power-on time shown: {uptime}. Temperature shown: {temperature}. {sectors}",
+      "noReallocatedSectorsReported": "The supplied reallocated-sector value is zero or unavailable; this does not establish that there are no bad sectors.",
+      "passedMeaningTitle": "What does a PASSED status mean?",
+      "passedMeaning": "PASSED is the overall status supplied to this report, not proof of a completed self-test or a guarantee against failure. Review the attributes, error logs and self-test results, and keep current backups.",
       "healthyAssessment": "This disk is operating within normal parameters. All SMART attributes are within acceptable thresholds. The disk has been powered on for approximately {uptime} and is currently operating at {temperature}. {sectors}",
       "failedAssessment": "This disk has reported a SMART health failure. Immediate action is required. Back up all critical data and plan for disk replacement.",
       "noBadSectors": "No bad sectors have been detected.",
@@ -718,6 +723,8 @@
         "backgroundScanStatus": "Status of the SCSI background media scan. Runs continuously to detect surface defects."
       },
       "recommendations": {
+        "passedTitle": "Review the reported results",
+        "passedText": "A PASSED status can coexist with warnings or recorded errors. Review the report details, continue regular monitoring and keep current backups.",
         "healthyTitle": "Disk is Healthy",
         "healthyText": "All SMART attributes are within normal ranges. Continue regular monitoring.",
         "criticalTitle": "Critical: Disk Health Issue Detected",

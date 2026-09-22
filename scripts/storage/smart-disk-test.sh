@@ -232,7 +232,7 @@ while true; do
         else
           HEALTH=$(echo "$OUTPUT" | grep -i "critical_warning" | awk '{print $NF}')
           if [[ "$HEALTH" == "0" ]]; then
-            msg_ok "$(translate 'NVMe health status: PASSED')"
+            msg_ok "$(translate 'NVMe critical_warning is 0 (no critical warnings reported).')"
           else
             msg_warn "$(translate 'NVMe health status: WARNING (critical_warning =') $HEALTH)"
           fi
