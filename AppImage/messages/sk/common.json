@@ -5355,7 +5355,7 @@
           },
           "nextStep": {
             "recovered": "Títo hostia zlyhali a odvtedy sa im to podarilo. Predchádzajúca chyba stále stojí za čítanie: zlyhanie, ktoré vyrieši sám často vracia.",
-            "someFailed": "Prečítajte si chybu v zázname úloh pre tieto behy. Zaobchádzajte s behom, ktorý končí s chybou ako neúspešný, a potvrďte k dispozícii kópiu pre hostí, ktorú pokrýva pred spoliehaním sa na jeden."
+            "someFailed": "Pri týchto behoch si pozrite chybu v zázname úloh. Beh, ktorý skončil chybou, považujte za neúspešný. Skôr než sa na zálohu spoľahnete, overte dostupnú kópiu pre príslušné VM a LXC."
           },
           "explanation": "Ako sa posledná práca skončila, ako to nahral tento uzol. Práca môže byť nakonfigurovaná dokonale a stále zlyhá každú noc, a to je miesto, kde to ukazuje."
         },
@@ -5371,7 +5371,7 @@
           "nextStep": {
             "attention": "Prehľadajte uvedené záznamy konfigurácie hostiteľa. Každý má niečo, čo stojí za to pozrieť sa na: beh, ktorý zlyhal, cieľ, ktorý je preč, alebo výtlačok starší ako vek v používaní.",
             "scheduledOnly": "Časovač bude produkovať zálohovanie konfigurácie hostiteľa, ale žiadny ešte nie je uložený. Kým prvý beží, uzol vlastné nastavenie nie je chránené.",
-            "noHostBackup": "Tu nie je zaznamenaná žiadna záloha konfigurácie hostiteľa. Pokiaľ nie je niekde tento uzol neviditeľný, prestavba by znamenala rekonštrukciu úložiska, siete a užívateľských definícií ručne, z akýchkoľvek poznámok."
+            "noHostBackup": "ProxMenux tu nemá zaznamenanú uloženú zálohu nastavení servera. Ak neexistuje iná záloha, ktorú tento uzol nevidí, pri obnove servera by bolo potrebné úložiská, sieť a používateľské účty nastaviť ručne podľa dostupných poznámok."
           },
           "explanation": "Zálohovanie hostí neobnoví uzol. Táto kontrola sa pozerá na to, či uzol vlastné konfigurácia"
         }
