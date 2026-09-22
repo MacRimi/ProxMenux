@@ -1,0 +1,81 @@
+{
+  "container_contract": {
+    "environment": [
+      {
+        "name": "PUID",
+        "example": "1000",
+        "required": true,
+        "sensitive": false,
+        "source": "linuxserver-compose"
+      },
+      {
+        "name": "PGID",
+        "example": "1000",
+        "required": true,
+        "sensitive": false,
+        "source": "linuxserver-compose"
+      },
+      {
+        "name": "TZ",
+        "example": "Etc/UTC",
+        "required": true,
+        "sensitive": false,
+        "source": "linuxserver-compose"
+      },
+      {
+        "name": "FG_LOG_LEVEL",
+        "example": "info",
+        "required": true,
+        "sensitive": false,
+        "source": "linuxserver-compose"
+      },
+      {
+        "name": "FG_LOG_FILE",
+        "example": "/config/flexget.log",
+        "required": true,
+        "sensitive": false,
+        "source": "linuxserver-compose"
+      },
+      {
+        "name": "FG_CONFIG_FILE",
+        "example": "/config/.flexget/config.yml",
+        "required": true,
+        "sensitive": false,
+        "source": "linuxserver-compose"
+      },
+      {
+        "name": "FG_WEBUI_PASSWORD",
+        "example": "",
+        "required": true,
+        "sensitive": true,
+        "prompt": "Password of the FlexGet web interface",
+        "source": "flexget-readme"
+      }
+    ]
+  },
+  "first_run": {
+    "credentials": [
+      {
+        "label": "FlexGet web interface",
+        "type": "configured-or-installer-generated",
+        "username": "flexget",
+        "password": null,
+        "password_environment": "FG_WEBUI_PASSWORD",
+        "change_required": false,
+        "source": "flexget-webserver-default-user",
+        "retrieval": null
+      }
+    ]
+  },
+  "proxmox": {
+    "installer_profile": {
+      "generated_sensitive_environment": {
+        "FG_WEBUI_PASSWORD": {
+          "strategy": "token-hex",
+          "bytes": 12,
+          "prompt": true
+        }
+      }
+    }
+  }
+}

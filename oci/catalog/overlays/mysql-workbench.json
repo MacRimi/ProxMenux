@@ -1,0 +1,15 @@
+{
+  "proxmox": {
+    "installer_profile": {
+      "selkies": {
+        "base": "FROM ghcr.io/linuxserver/baseimage-selkies:arch",
+        "dockerfile_url": "https://raw.githubusercontent.com/linuxserver/docker-mysql-workbench/master/Dockerfile",
+        "dockerfile_sha256": "10fef7181221fb1552c66caaaac5fdc5712f036153961ec2f086500b3b81b1f1",
+        "reviewed_on": "2026-09-16",
+        "documentation": "https://docs.linuxserver.io/images/docker-baseimage-selkies/",
+        "nvidia": "not-offered-until-specific-host-and-image-validation",
+        "validation": "profile-generated; real streaming workload pending"
+      }
+    }
+  }
+}

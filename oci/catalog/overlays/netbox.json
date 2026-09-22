@@ -1,0 +1,197 @@
+{
+  "container_contract": {
+    "environment": [
+      {
+        "name": "PUID",
+        "example": "1000",
+        "required": true,
+        "sensitive": false,
+        "source": "linuxserver-compose"
+      },
+      {
+        "name": "PGID",
+        "example": "1000",
+        "required": true,
+        "sensitive": false,
+        "source": "linuxserver-compose"
+      },
+      {
+        "name": "TZ",
+        "example": "Etc/UTC",
+        "required": true,
+        "sensitive": false,
+        "source": "linuxserver-compose"
+      },
+      {
+        "name": "SUPERUSER_EMAIL",
+        "example": "",
+        "required": true,
+        "sensitive": false,
+        "prompt": "Email address of the NetBox admin account",
+        "source": "netbox-readme"
+      },
+      {
+        "name": "SUPERUSER_PASSWORD",
+        "example": "",
+        "required": true,
+        "sensitive": true,
+        "prompt": "Password of the NetBox admin account",
+        "source": "netbox-readme"
+      },
+      {
+        "name": "ALLOWED_HOST",
+        "example": "",
+        "required": true,
+        "sensitive": false,
+        "source": "linuxserver-compose"
+      },
+      {
+        "name": "DB_NAME",
+        "example": "",
+        "required": true,
+        "sensitive": false,
+        "source": "linuxserver-compose"
+      },
+      {
+        "name": "DB_USER",
+        "example": "",
+        "required": true,
+        "sensitive": false,
+        "source": "linuxserver-compose"
+      },
+      {
+        "name": "DB_PASSWORD",
+        "example": "",
+        "required": true,
+        "sensitive": true,
+        "source": "linuxserver-compose"
+      },
+      {
+        "name": "DB_HOST",
+        "example": "",
+        "required": true,
+        "sensitive": false,
+        "source": "linuxserver-compose"
+      },
+      {
+        "name": "DB_PORT",
+        "example": "",
+        "required": true,
+        "sensitive": false,
+        "source": "linuxserver-compose"
+      },
+      {
+        "name": "REDIS_HOST",
+        "example": "",
+        "required": true,
+        "sensitive": false,
+        "source": "linuxserver-compose"
+      },
+      {
+        "name": "REDIS_PORT",
+        "example": "",
+        "required": true,
+        "sensitive": false,
+        "source": "linuxserver-compose"
+      },
+      {
+        "name": "REDIS_USERNAME",
+        "example": "",
+        "required": true,
+        "sensitive": false,
+        "source": "linuxserver-compose"
+      },
+      {
+        "name": "REDIS_PASSWORD",
+        "example": "",
+        "required": true,
+        "sensitive": true,
+        "source": "linuxserver-compose"
+      },
+      {
+        "name": "REDIS_DB_TASK",
+        "example": "",
+        "required": true,
+        "sensitive": false,
+        "source": "linuxserver-compose"
+      },
+      {
+        "name": "REDIS_DB_CACHE",
+        "example": "",
+        "required": true,
+        "sensitive": false,
+        "source": "linuxserver-compose"
+      },
+      {
+        "name": "BASE_PATH",
+        "example": "",
+        "required": false,
+        "sensitive": false,
+        "source": "linuxserver-compose"
+      },
+      {
+        "name": "CSRF_TRUSTED_ORIGINS",
+        "example": "",
+        "required": false,
+        "sensitive": false,
+        "source": "linuxserver-compose"
+      },
+      {
+        "name": "REMOTE_AUTH_ENABLED",
+        "example": "",
+        "required": false,
+        "sensitive": false,
+        "source": "linuxserver-compose"
+      },
+      {
+        "name": "REMOTE_AUTH_BACKEND",
+        "example": "",
+        "required": false,
+        "sensitive": false,
+        "source": "linuxserver-compose"
+      },
+      {
+        "name": "REMOTE_AUTH_HEADER",
+        "example": "",
+        "required": false,
+        "sensitive": false,
+        "source": "linuxserver-compose"
+      },
+      {
+        "name": "REMOTE_AUTH_AUTO_CREATE_USER",
+        "example": "",
+        "required": false,
+        "sensitive": false,
+        "source": "linuxserver-compose"
+      },
+      {
+        "name": "REMOTE_AUTH_DEFAULT_GROUPS",
+        "example": "",
+        "required": false,
+        "sensitive": false,
+        "source": "linuxserver-compose"
+      },
+      {
+        "name": "REMOTE_AUTH_DEFAULT_PERMISSIONS",
+        "example": "",
+        "required": false,
+        "sensitive": false,
+        "source": "linuxserver-compose"
+      }
+    ]
+  },
+  "first_run": {
+    "credentials": [
+      {
+        "label": "NetBox",
+        "type": "configured-or-installer-generated",
+        "username": "admin",
+        "password": null,
+        "password_environment": "SUPERUSER_PASSWORD",
+        "change_required": false,
+        "source": "netbox-image-superuser",
+        "retrieval": null
+      }
+    ]
+  }
+}

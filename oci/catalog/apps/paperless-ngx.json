@@ -1,0 +1,669 @@
+{
+  "schema_version": "0.5.0",
+  "kind": "proxmenux.oci-template",
+  "id": "image-paperless-ngx",
+  "status": "laboratory-validated",
+  "catalog_ui": {
+    "title": {
+      "en_US": "Paperless-ngx"
+    },
+    "tagline": {
+      "en_US": "Searchable document archive with OCR"
+    },
+    "description": {
+      "en_US": "Official Paperless-ngx deployment with private PostgreSQL and Valkey dependencies."
+    },
+    "category": "productivity",
+    "category_label": "Productivity & Workflows",
+    "author": "Paperless-ngx",
+    "developer": "Paperless-ngx",
+    "icon": null,
+    "thumbnail": null,
+    "screenshots": [],
+    "architectures": [
+      "amd64",
+      "arm64"
+    ],
+    "launch": {
+      "scheme": "http",
+      "port": 8000,
+      "path": "/"
+    },
+    "website": "https://docs.paperless-ngx.com/",
+    "documentation": "https://docs.paperless-ngx.com/setup/",
+    "repository": "https://github.com/paperless-ngx/paperless-ngx",
+    "tips": [
+      "Documents are stored unencrypted inside the media volume; protect and back up the host.",
+      "The consume and export folders can be Proxmox volumes or shared host directories."
+    ],
+    "mini_changelog": [],
+    "display_version": null,
+    "updated_at": "2026-09-13"
+  },
+  "source": {
+    "provider": "paperless-ngx",
+    "repository": "https://github.com/paperless-ngx/paperless-ngx",
+    "default_branch": "main",
+    "revision": "72ea38ab126e92fb63d68b7f5d0e6d9abaafe589",
+    "readme_raw_url": "https://raw.githubusercontent.com/paperless-ngx/paperless-ngx/main/docker/compose/docker-compose.postgres.yml",
+    "image_repository_url": "https://github.com/paperless-ngx/paperless-ngx/pkgs/container/paperless-ngx",
+    "readme_pushed_at": "2026-09-13T00:00:00Z",
+    "compose_sha256": "85206b8ae6cd74db70998de6479b4c1f7b50c077772a1af2c026c9ecb35b689c",
+    "generated_at": "2026-09-13T00:00:00+00:00"
+  },
+  "container_contract": {
+    "service_name": "webserver",
+    "container_name": "paperless-ngx",
+    "image": {
+      "reference": "ghcr.io/paperless-ngx/paperless-ngx:latest",
+      "registry": "ghcr.io",
+      "repository": "paperless-ngx/paperless-ngx",
+      "tag": "latest",
+      "digest": null,
+      "pull_policy": "resolve-selected-tag-to-architecture-digest-at-install"
+    },
+    "environment": [
+      {
+        "name": "PAPERLESS_REDIS",
+        "example": "redis://broker:6379",
+        "required": true,
+        "sensitive": false,
+        "source": "docker-compose"
+      },
+      {
+        "name": "PAPERLESS_DBHOST",
+        "example": "db",
+        "required": true,
+        "sensitive": false,
+        "source": "docker-compose"
+      },
+      {
+        "name": "PAPERLESS_DBENGINE",
+        "example": "postgresql",
+        "required": true,
+        "sensitive": false,
+        "source": "docker-compose"
+      },
+      {
+        "name": "PAPERLESS_DBNAME",
+        "example": "paperless",
+        "required": true,
+        "sensitive": false,
+        "source": "proxmenux-installer"
+      },
+      {
+        "name": "PAPERLESS_DBUSER",
+        "example": "paperless",
+        "required": true,
+        "sensitive": false,
+        "source": "proxmenux-installer"
+      },
+      {
+        "name": "PAPERLESS_DBPASS",
+        "example": "${GENERATED_DB_PASSWORD}",
+        "required": true,
+        "sensitive": true,
+        "source": "proxmenux-installer"
+      },
+      {
+        "name": "PAPERLESS_SECRET_KEY",
+        "example": "${GENERATED_SECRET_KEY}",
+        "required": true,
+        "sensitive": true,
+        "source": "docker-compose.env"
+      },
+      {
+        "name": "PAPERLESS_ADMIN_USER",
+        "example": "admin",
+        "required": true,
+        "sensitive": false,
+        "source": "paperless-ngx-configuration"
+      },
+      {
+        "name": "PAPERLESS_ADMIN_PASSWORD",
+        "example": "${GENERATED_ADMIN_PASSWORD}",
+        "required": true,
+        "sensitive": true,
+        "source": "paperless-ngx-configuration"
+      },
+      {
+        "name": "PAPERLESS_TIME_ZONE",
+        "example": "Europe/Madrid",
+        "required": false,
+        "sensitive": false,
+        "source": "docker-compose.env"
+      },
+      {
+        "name": "PAPERLESS_OCR_LANGUAGE",
+        "example": "spa",
+        "required": false,
+        "sensitive": false,
+        "source": "docker-compose.env"
+      }
+    ],
+    "volumes": [
+      {
+        "id": "paperless-data",
+        "container_path": "/usr/src/paperless/data",
+        "compose_source_example": "data",
+        "read_only": false,
+        "required": true,
+        "installation_choice": [
+          "managed-volume"
+        ],
+        "default": "managed-volume",
+        "managed_volume": {
+          "backup": true,
+          "default_size_gb": 8
+        }
+      },
+      {
+        "id": "paperless-media",
+        "container_path": "/usr/src/paperless/media",
+        "compose_source_example": "media",
+        "read_only": false,
+        "required": true,
+        "installation_choice": [
+          "managed-volume"
+        ],
+        "default": "managed-volume",
+        "managed_volume": {
+          "backup": true,
+          "default_size_gb": 64
+        }
+      },
+      {
+        "id": "paperless-export",
+        "container_path": "/usr/src/paperless/export",
+        "compose_source_example": "./export",
+        "read_only": false,
+        "required": true,
+        "installation_choice": [
+          "managed-volume",
+          "host-bind"
+        ],
+        "default": "host-bind",
+        "managed_volume": {
+          "backup": true,
+          "default_size_gb": 8
+        }
+      },
+      {
+        "id": "paperless-consume",
+        "container_path": "/usr/src/paperless/consume",
+        "compose_source_example": "./consume",
+        "read_only": false,
+        "required": true,
+        "installation_choice": [
+          "managed-volume",
+          "host-bind"
+        ],
+        "default": "host-bind",
+        "managed_volume": {
+          "backup": true,
+          "default_size_gb": 8
+        }
+      }
+    ],
+    "ports": [
+      {
+        "container_port": 8000,
+        "published_example": 8000,
+        "protocol": "tcp",
+        "required": true,
+        "proxmox_behavior": "listener-on-dedicated-lxc-address-no-nat"
+      }
+    ],
+    "related_services": [
+      {
+        "name": "db",
+        "image": "docker.io/library/postgres:18"
+      },
+      {
+        "name": "broker",
+        "image": "docker.io/valkey/valkey:9-alpine"
+      }
+    ],
+    "restart": "unless-stopped",
+    "stop_grace_period": null,
+    "original_compose": "services:\n  broker:\n    image: docker.io/valkey/valkey:9-alpine\n    restart: unless-stopped\n    volumes:\n      - redisdata:/data\n  db:\n    image: docker.io/library/postgres:18\n    restart: unless-stopped\n    volumes:\n      - pgdata:/var/lib/postgresql\n    environment:\n      POSTGRES_DB: paperless\n      POSTGRES_USER: paperless\n      POSTGRES_PASSWORD: paperless\n  webserver:\n    image: ghcr.io/paperless-ngx/paperless-ngx:latest\n    restart: unless-stopped\n    depends_on:\n      - db\n      - broker\n    ports:\n      - '8000:8000'\n    volumes:\n      - data:/usr/src/paperless/data\n      - media:/usr/src/paperless/media\n      - ./export:/usr/src/paperless/export\n      - ./consume:/usr/src/paperless/consume\n    env_file: docker-compose.env\n    environment:\n      PAPERLESS_REDIS: redis://broker:6379\n      PAPERLESS_DBHOST: db\n      PAPERLESS_DBENGINE: postgresql\nvolumes:\n  data:\n  media:\n  pgdata:\n  redisdata:\n"
+  },
+  "compose_stack": {
+    "project_name": "paperless-ngx",
+    "deployment_model": "one-native-oci-lxc-per-compose-service",
+    "user_experience": "single-application-install",
+    "main_service": "webserver",
+    "service_count": 3,
+    "services": [
+      {
+        "name": "broker",
+        "image": "docker.io/valkey/valkey:9-alpine",
+        "is_main": false,
+        "role": "dependency",
+        "vmid_offset": 1,
+        "depends_on": [],
+        "frontend_network": false,
+        "private_network": true,
+        "compose": {
+          "image": "docker.io/valkey/valkey:9-alpine",
+          "restart": "unless-stopped",
+          "volumes": [
+            "redisdata:/data"
+          ]
+        }
+      },
+      {
+        "name": "db",
+        "image": "docker.io/library/postgres:18",
+        "is_main": false,
+        "role": "dependency",
+        "vmid_offset": 2,
+        "depends_on": [],
+        "frontend_network": false,
+        "private_network": true,
+        "compose": {
+          "image": "docker.io/library/postgres:18",
+          "environment": {
+            "POSTGRES_DB": "paperless",
+            "POSTGRES_USER": "paperless",
+            "POSTGRES_PASSWORD": "${GENERATED_DB_PASSWORD}"
+          },
+          "restart": "unless-stopped",
+          "volumes": [
+            "pgdata:/var/lib/postgresql"
+          ]
+        }
+      },
+      {
+        "name": "webserver",
+        "image": "ghcr.io/paperless-ngx/paperless-ngx:latest",
+        "is_main": true,
+        "role": "frontend",
+        "vmid_offset": 0,
+        "depends_on": [
+          "db",
+          "broker"
+        ],
+        "frontend_network": true,
+        "private_network": true,
+        "compose": {
+          "image": "ghcr.io/paperless-ngx/paperless-ngx:latest",
+          "ports": [
+            "8000:8000"
+          ],
+          "volumes": [
+            "data:/usr/src/paperless/data",
+            "media:/usr/src/paperless/media",
+            "./export:/usr/src/paperless/export",
+            "./consume:/usr/src/paperless/consume"
+          ],
+          "environment": {
+            "PAPERLESS_REDIS": "redis://broker:6379",
+            "PAPERLESS_DBHOST": "db",
+            "PAPERLESS_DBENGINE": "postgresql"
+          },
+          "restart": "unless-stopped"
+        }
+      }
+    ],
+    "top_level": {
+      "volumes": {
+        "data": {},
+        "media": {},
+        "pgdata": {},
+        "redisdata": {}
+      }
+    },
+    "networking": {
+      "frontend": "selected-proxmox-bridge",
+      "private_required": true,
+      "private_creation": "automatic-create-if-missing",
+      "private_address_allocation": "automatic-static-address-per-service",
+      "service_discovery": "private-addresses-replace-compose-service-dns",
+      "dependency_external_access": "disabled",
+      "prompt_user_for_private_network": false
+    },
+    "storage": [
+      {
+        "id": "webserver-data",
+        "service": "webserver",
+        "container_path": "/usr/src/paperless/data",
+        "mode": "managed-volume",
+        "user_selectable": false,
+        "backup": true,
+        "shared_with_other_lxc": false
+      },
+      {
+        "id": "webserver-media",
+        "service": "webserver",
+        "container_path": "/usr/src/paperless/media",
+        "mode": "managed-volume",
+        "user_selectable": false,
+        "backup": true,
+        "shared_with_other_lxc": false
+      },
+      {
+        "id": "webserver-export",
+        "service": "webserver",
+        "container_path": "/usr/src/paperless/export",
+        "mode": "user-selectable",
+        "user_selectable": true,
+        "backup": true,
+        "shared_with_other_lxc": true,
+        "default": "host-bind",
+        "installation_choice": [
+          "managed-volume",
+          "host-bind"
+        ]
+      },
+      {
+        "id": "webserver-consume",
+        "service": "webserver",
+        "container_path": "/usr/src/paperless/consume",
+        "mode": "user-selectable",
+        "user_selectable": true,
+        "backup": true,
+        "shared_with_other_lxc": true,
+        "default": "host-bind",
+        "installation_choice": [
+          "managed-volume",
+          "host-bind"
+        ]
+      },
+      {
+        "id": "database-data",
+        "service": "db",
+        "container_path": "/var/lib/postgresql",
+        "mode": "managed-volume",
+        "user_selectable": false,
+        "backup": true,
+        "shared_with_other_lxc": false
+      },
+      {
+        "id": "broker-data",
+        "service": "broker",
+        "container_path": "/data",
+        "mode": "managed-volume",
+        "user_selectable": false,
+        "backup": true,
+        "shared_with_other_lxc": false
+      }
+    ],
+    "orchestration": {
+      "reserve_vmids_atomically": 3,
+      "start_order": [
+        "db",
+        "broker",
+        "webserver"
+      ],
+      "stop_order": [
+        "webserver",
+        "broker",
+        "db"
+      ],
+      "dependency_readiness": "healthcheck-before-webserver",
+      "rollback_on_failure": "remove-all-new-lxc-and-new-managed-volumes"
+    },
+    "installer_inputs": {
+      "prompted": [
+        "stack_name",
+        "base_vmid",
+        "rootfs_storage",
+        "persistent_data_destinations",
+        "frontend_bridge",
+        "timezone",
+        "ocr_language",
+        "admin_username"
+      ],
+      "automatic": [
+        "dependent_vmids",
+        "private_bridge",
+        "private_addresses",
+        "generated_secrets",
+        "dependency_start_and_stop_order"
+      ],
+      "generated_secrets": [
+        {
+          "id": "admin-password",
+          "strategy": "generate-cryptographically-random-at-install"
+        },
+        {
+          "id": "database-password",
+          "strategy": "generate-cryptographically-random-at-install"
+        },
+        {
+          "id": "secret-key",
+          "strategy": "generate-cryptographically-random-at-install"
+        }
+      ]
+    }
+  },
+  "first_run": {
+    "endpoints": [
+      {
+        "label": "Paperless-ngx WebUI",
+        "scheme": "http",
+        "port": 8000,
+        "path": "/",
+        "source": "official-compose"
+      }
+    ],
+    "credentials": [
+      {
+        "label": "Generated Paperless administrator",
+        "type": "runtime-generated",
+        "username": "admin",
+        "password": null,
+        "change_required": true,
+        "source": "proxmenux-installer-generated",
+        "retrieval": null
+      }
+    ]
+  },
+  "proxmox": {
+    "runtime": "native-oci-lxc",
+    "technology_status": "proxmox-technology-preview",
+    "defaults": {
+      "unprivileged": true,
+      "ostype": "auto-from-image",
+      "cores": 2,
+      "memory_mb": 2048,
+      "swap_mb": 1024,
+      "rootfs_size_gb": 8,
+      "rootfs_storage": "local-lvm",
+      "volume_storage": "local-lvm",
+      "template_storage": "local",
+      "bridge": "vmbr0",
+      "ipv4": "dhcp",
+      "firewall": true,
+      "host_managed_network": true,
+      "onboot": false,
+      "features": [
+        "nesting=1"
+      ],
+      "shutdown_timeout_seconds": 30
+    },
+    "image_metadata_policy": {
+      "entrypoint": "import-from-oci-image",
+      "cmd": "import-from-oci-image",
+      "environment": "import-image-env-then-apply-compose-overrides",
+      "user": "import-from-oci-image",
+      "working_dir": "import-from-oci-image",
+      "stop_signal": "import-from-oci-image"
+    },
+    "catalog": {
+      "replaces_discovered_ids": [
+        "paperless-ngx"
+      ]
+    },
+    "adaptations": [
+      {
+        "id": "three-native-lxc-services",
+        "upstream_behavior": "Docker Compose starts Paperless-ngx, PostgreSQL and Valkey together.",
+        "native_lxc_behavior": "One catalog action creates three native OCI LXC containers.",
+        "reason": "Each OCI image is imported as its own Proxmox LXC.",
+        "behavioral_impact": "The user still installs one application stack.",
+        "validation": "passed-laboratory-2026-09-13"
+      },
+      {
+        "id": "private-service-network",
+        "upstream_behavior": "Compose DNS connects webserver to db and broker.",
+        "native_lxc_behavior": "A private Proxmox bridge assigns fixed addresses to all three services.",
+        "reason": "Native LXC containers do not share Docker service discovery.",
+        "behavioral_impact": "PostgreSQL and Valkey are not exposed on the LAN.",
+        "validation": "passed-laboratory-2026-09-13"
+      },
+      {
+        "id": "native-persistent-volumes",
+        "upstream_behavior": "Docker named volumes persist data, media, PostgreSQL and Valkey.",
+        "native_lxc_behavior": "Proxmox-managed mpN volumes preserve the same container paths with backup=1.",
+        "reason": "Private state must participate in native Proxmox backup and restore.",
+        "behavioral_impact": "No application state depends on the root filesystem.",
+        "validation": "passed-laboratory-2026-09-13"
+      },
+      {
+        "id": "selectable-transfer-directories",
+        "upstream_behavior": "Compose bind-mounts local export and consume directories.",
+        "native_lxc_behavior": "The installer offers managed volumes or host directories and creates selected host paths.",
+        "reason": "Scanners and other OCI applications may need access to consume and export.",
+        "behavioral_impact": "Host-bound transfer folders are excluded from native LXC backups.",
+        "validation": "passed-laboratory-2026-09-13"
+      },
+      {
+        "id": "generated-first-run-secrets",
+        "upstream_behavior": "The administrator and required secret key are configured outside the Compose file.",
+        "native_lxc_behavior": "The installer generates an admin password, database password and Paperless secret key.",
+        "reason": "A new deployment must not use published default secrets.",
+        "behavioral_impact": "The initial administrator credentials are printed once after installation.",
+        "validation": "passed-laboratory-2026-09-13"
+      }
+    ],
+    "laboratory_contract": {
+      "requirements": {
+        "proxmox_min_version": "9.1",
+        "minimum_host_memory_mb": 4096,
+        "recommended_host_memory_mb": 6144,
+        "database_storage": {
+          "must_be_local": true,
+          "network_filesystem_allowed": false
+        }
+      },
+      "defaults": {
+        "stack_name": "paperless",
+        "timezone": "Europe/Madrid",
+        "ocr_language": "spa",
+        "rootfs_storage": "local-lvm",
+        "application_storage": "local-lvm",
+        "database_storage": "local-lvm",
+        "data_volume_size_gb": 8,
+        "media_volume_size_gb": 64,
+        "database_volume_size_gb": 8,
+        "broker_volume_size_gb": 4,
+        "transfer_volume_size_gb": 8,
+        "shared_transfer_root": "/mnt/oci-shared/paperless/${stack_name}",
+        "frontend_network": {
+          "bridge": "vmbr0",
+          "ipv4_mode": "dhcp",
+          "firewall": true,
+          "host_managed": true
+        },
+        "private_network": {
+          "mode": "create-if-missing",
+          "bridge": "vmbr10",
+          "subnet": "10.77.0.0/24",
+          "host_address": "10.77.0.1/24",
+          "application_address": "10.77.0.30/24",
+          "database_address": "10.77.0.31/24",
+          "broker_address": "10.77.0.32/24",
+          "nat": false
+        },
+        "application": {
+          "admin_username": "admin"
+        }
+      },
+      "installer_contract": {
+        "deployment_kind": "paperless-three-lxc-stack",
+        "reserve_vmids_atomically": 3,
+        "generated_secrets": [
+          "POSTGRES_PASSWORD",
+          "PAPERLESS_ADMIN_PASSWORD",
+          "PAPERLESS_SECRET_KEY"
+        ],
+        "private_volumes": {
+          "data": "/usr/src/paperless/data",
+          "media": "/usr/src/paperless/media",
+          "database": "/var/lib/postgresql",
+          "broker": "/data"
+        },
+        "transfer_directories": {
+          "choices": [
+            "managed-volume",
+            "host-bind"
+          ],
+          "default": "host-bind"
+        },
+        "start_order": [
+          "db",
+          "broker",
+          "webserver"
+        ],
+        "stop_order": [
+          "webserver",
+          "broker",
+          "db"
+        ]
+      }
+    }
+  },
+  "compatibility": {
+    "automatic_install_candidate": true,
+    "validated": true,
+    "supported_compose_keys": [
+      "depends_on",
+      "env_file",
+      "environment",
+      "image",
+      "ports",
+      "restart",
+      "volumes"
+    ],
+    "untranslated_blockers": [],
+    "policy": "The official three-service PostgreSQL Compose has a dedicated native LXC orchestrator validated by clean installation and ordered restart."
+  },
+  "validation": {
+    "schema": "passed",
+    "clean_install": "passed-2026-09-13-paperless-ngx-3.1.3",
+    "service_health": "passed-paperless-postgresql-valkey",
+    "restart_persistence": "passed-ordered-stop-start-admin-preserved",
+    "backup_restore": "pending",
+    "update_preserves_data": "pending",
+    "private_dependency_network": "passed-10.77.0.30-32",
+    "managed_volume_persistence": "passed-data-media-postgresql-valkey",
+    "ocr_languages": "passed-eng-spa",
+    "laboratory_versions": {
+      "paperless_ngx": "3.1.3",
+      "postgresql": "18.6",
+      "valkey": "9.1.2"
+    }
+  },
+  "lifecycle": {
+    "update_strategy": "resolve-selected-tags-then-apply-reviewed-native-lxc-update",
+    "registry_state": {
+      "resolved_architecture": null,
+      "resolved_digest": null,
+      "image_version_label": null,
+      "image_created": null
+    },
+    "change_detection": "compare-compose-sha256-and-resolved-image-digests",
+    "automatic_unattended_updates": false,
+    "dependency_lifecycle": {
+      "implementation": "proxmox-hookscript",
+      "trigger": "main-lxc-pre-start",
+      "starts_stopped_dependencies": true,
+      "waits_for_dependency_healthchecks": true,
+      "stops_dependencies_with_main": false,
+      "persistent_contract": "/etc/pve/priv/proxmenux-stack-<main-vmid>.json",
+      "runtime_owner": "proxmox-ve"
+    }
+  }
+}

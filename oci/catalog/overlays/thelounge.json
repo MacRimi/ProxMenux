@@ -1,0 +1,11 @@
+{
+  "proxmox": {
+    "installer_profile": {
+      "completion_notes": [
+        "The Lounge starts in public mode: anyone who reaches the address opens the client without logging in, and the IRC networks added are lost when the session ends.",
+        "Named accounts need private mode. Stop the container, set public: false in /config/config.js, start it again and create each user with: pct exec <CTID> -- env THELOUNGE_HOME=/config s6-setuidgid abc thelounge add <user>",
+        "The command asks for a password that is not echoed. After creating the users, the web interface asks for a user name and a password."
+      ]
+    }
+  }
+}

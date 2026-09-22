@@ -1,0 +1,304 @@
+{
+  "schema_version": "0.3.0",
+  "kind": "proxmenux.oci-template",
+  "id": "linuxserver-librespeed",
+  "status": "generated-unvalidated",
+  "catalog_ui": {
+    "title": {
+      "en_US": "Librespeed"
+    },
+    "tagline": {
+      "en_US": "Librespeed is a very lightweight Speedtest implemented in Javascript, using XMLHttpRequest and Web Workers."
+    },
+    "description": {
+      "en_US": "Librespeed is a very lightweight Speedtest implemented in Javascript, using XMLHttpRequest and Web Workers."
+    },
+    "category": "misc",
+    "category_label": "Miscellaneous",
+    "author": "LinuxServer.io",
+    "developer": null,
+    "icon": "https://raw.githubusercontent.com/linuxserver/docker-templates/master/linuxserver.io/img/librespeed-icon.png",
+    "thumbnail": "https://raw.githubusercontent.com/linuxserver/docker-templates/master/linuxserver.io/img/librespeed-banner.png",
+    "screenshots": [],
+    "architectures": [
+      "amd64",
+      "arm64"
+    ],
+    "launch": {
+      "scheme": "http",
+      "port": 80,
+      "path": "/"
+    },
+    "website": "https://github.com/librespeed/speedtest",
+    "documentation": "https://docs.linuxserver.io/images/docker-librespeed/",
+    "repository": "https://github.com/linuxserver/docker-librespeed",
+    "tips": [],
+    "mini_changelog": [
+      {
+        "date": "2026-07-29",
+        "note": "Rebase to Alpine 3.24. Enable new UI with additional settings files available in the config folder."
+      },
+      {
+        "date": "2025-07-27",
+        "note": "Rebase to Alpine 3.22."
+      },
+      {
+        "date": "2024-06-27",
+        "note": "Rebase to Alpine 3.20. Existing users should update their nginx confs to avoid http2 deprecation warnings."
+      },
+      {
+        "date": "2023-12-23",
+        "note": "Rebase to Alpine 3.19 with php 8.3."
+      },
+      {
+        "date": "2023-12-06",
+        "note": "Replace php mysqli with php pdo_pgsql."
+      }
+    ],
+    "display_version": null,
+    "updated_at": "2026-07-29"
+  },
+  "source": {
+    "provider": "linuxserver.io",
+    "repository": "https://github.com/linuxserver/docker-librespeed",
+    "default_branch": "master",
+    "revision": "92b3f37f527fe046a163eebcece28b6d02e59320",
+    "readme_raw_url": "https://raw.githubusercontent.com/linuxserver/docker-librespeed/92b3f37f527fe046a163eebcece28b6d02e59320/README.md",
+    "readme_pushed_at": "2026-09-12T13:17:52Z",
+    "compose_sha256": "229bb9d88560c3f99982a35304a6e4bcfcca79fd2d08ca3b8a091a5f2293ce39",
+    "generated_at": "2026-09-12T14:37:30+00:00"
+  },
+  "container_contract": {
+    "service_name": "librespeed",
+    "container_name": "librespeed",
+    "image": {
+      "reference": "lscr.io/linuxserver/librespeed:latest",
+      "registry": "lscr.io",
+      "repository": "lscr.io/linuxserver/librespeed",
+      "tag": "latest",
+      "digest": null,
+      "pull_policy": "resolve-selected-tag-to-architecture-digest-at-install"
+    },
+    "environment": [
+      {
+        "name": "PUID",
+        "example": "1000",
+        "required": true,
+        "sensitive": false,
+        "source": "linuxserver-compose"
+      },
+      {
+        "name": "PGID",
+        "example": "1000",
+        "required": true,
+        "sensitive": false,
+        "source": "linuxserver-compose"
+      },
+      {
+        "name": "TZ",
+        "example": "Etc/UTC",
+        "required": true,
+        "sensitive": false,
+        "source": "linuxserver-compose"
+      },
+      {
+        "name": "PASSWORD",
+        "example": "PASSWORD",
+        "required": true,
+        "sensitive": true,
+        "source": "linuxserver-compose"
+      },
+      {
+        "name": "CUSTOM_RESULTS",
+        "example": "false",
+        "required": false,
+        "sensitive": false,
+        "source": "linuxserver-compose"
+      },
+      {
+        "name": "DB_TYPE",
+        "example": "sqlite",
+        "required": false,
+        "sensitive": false,
+        "source": "linuxserver-compose"
+      },
+      {
+        "name": "DB_NAME",
+        "example": "DB_NAME",
+        "required": false,
+        "sensitive": false,
+        "source": "linuxserver-compose"
+      },
+      {
+        "name": "DB_HOSTNAME",
+        "example": "DB_HOSTNAME",
+        "required": false,
+        "sensitive": false,
+        "source": "linuxserver-compose"
+      },
+      {
+        "name": "DB_USERNAME",
+        "example": "DB_USERNAME",
+        "required": false,
+        "sensitive": false,
+        "source": "linuxserver-compose"
+      },
+      {
+        "name": "DB_PASSWORD",
+        "example": "DB_PASSWORD",
+        "required": false,
+        "sensitive": true,
+        "source": "linuxserver-compose"
+      },
+      {
+        "name": "DB_PORT",
+        "example": "DB_PORT",
+        "required": false,
+        "sensitive": false,
+        "source": "linuxserver-compose"
+      },
+      {
+        "name": "IPINFO_APIKEY",
+        "example": "ACCESS_TOKEN",
+        "required": false,
+        "sensitive": false,
+        "source": "linuxserver-compose"
+      }
+    ],
+    "volumes": [
+      {
+        "id": "volume-0",
+        "container_path": "/config",
+        "compose_source_example": "/path/to/librespeed/config",
+        "read_only": false,
+        "required": true,
+        "installation_choice": [
+          "managed-volume",
+          "host-bind"
+        ],
+        "default": "managed-volume",
+        "managed_volume": {
+          "backup": true,
+          "default_size_gb": 4
+        }
+      }
+    ],
+    "ports": [
+      {
+        "container_port": 80,
+        "published_example": 80,
+        "protocol": "tcp",
+        "required": true,
+        "proxmox_behavior": "listener-on-dedicated-lxc-address-no-nat"
+      }
+    ],
+    "related_services": [],
+    "restart": "unless-stopped",
+    "stop_grace_period": null,
+    "original_compose": "---\nservices:\n  librespeed:\n    image: lscr.io/linuxserver/librespeed:latest\n    container_name: librespeed\n    environment:\n      - PUID=1000\n      - PGID=1000\n      - TZ=Etc/UTC\n      - PASSWORD=PASSWORD\n      - CUSTOM_RESULTS=false #optional\n      - DB_TYPE=sqlite #optional\n      - DB_NAME=DB_NAME #optional\n      - DB_HOSTNAME=DB_HOSTNAME #optional\n      - DB_USERNAME=DB_USERNAME #optional\n      - DB_PASSWORD=DB_PASSWORD #optional\n      - DB_PORT=DB_PORT #optional\n      - IPINFO_APIKEY=ACCESS_TOKEN #optional\n    volumes:\n      - /path/to/librespeed/config:/config\n    ports:\n      - 80:80\n    restart: unless-stopped\n"
+  },
+  "first_run": {
+    "endpoints": [
+      {
+        "label": "Web UI",
+        "scheme": "http",
+        "port": 80,
+        "path": "/",
+        "source": "compose-first-tcp-port-fallback"
+      }
+    ],
+    "credentials": []
+  },
+  "proxmox": {
+    "runtime": "native-oci-lxc",
+    "technology_status": "proxmox-technology-preview",
+    "defaults": {
+      "unprivileged": true,
+      "ostype": "auto-from-image",
+      "cores": 2,
+      "memory_mb": 1024,
+      "swap_mb": 512,
+      "rootfs_size_gb": 8,
+      "rootfs_storage": "local-lvm",
+      "volume_storage": "local-lvm",
+      "template_storage": "local",
+      "bridge": "vmbr0",
+      "ipv4": "dhcp",
+      "firewall": true,
+      "host_managed_network": true,
+      "onboot": false,
+      "features": [
+        "nesting=1"
+      ],
+      "shutdown_timeout_seconds": 30
+    },
+    "image_metadata_policy": {
+      "entrypoint": "import-from-oci-image",
+      "cmd": "import-from-oci-image",
+      "environment": "import-image-env-then-apply-compose-overrides",
+      "user": "import-from-oci-image",
+      "working_dir": "import-from-oci-image",
+      "stop_signal": "import-from-oci-image"
+    },
+    "adaptations": [
+      {
+        "id": "dedicated-lxc-network",
+        "upstream_behavior": "Docker publishes selected container ports on the Docker host.",
+        "native_lxc_behavior": "The application listens on the same container ports at its dedicated LXC address.",
+        "reason": "A native LXC has its own address and does not require Docker port NAT.",
+        "behavioral_impact": "Users open the LXC address instead of the Proxmox host address.",
+        "validation": "pending-per-application"
+      },
+      {
+        "id": "compose-environment-overlay",
+        "upstream_behavior": "Compose environment values override OCI image environment values.",
+        "native_lxc_behavior": "ProxMenux merges the same values into lxc.environment.runtime while the CT is stopped.",
+        "reason": "PVE imports image Env automatically; Compose values still need to override it.",
+        "behavioral_impact": "None expected.",
+        "validation": "pending-per-application"
+      },
+      {
+        "id": "stop-grace-period",
+        "upstream_behavior": "Docker waits for Compose stop_grace_period before forcing termination.",
+        "native_lxc_behavior": "ProxMenux records the same timeout for its pct shutdown lifecycle operations.",
+        "reason": "Proxmox has no equivalent per-CT persistent restart-policy field; startup.down is not a shutdown timeout.",
+        "behavioral_impact": "Normal Proxmox node shutdown remains governed by the node-wide shutdown policy.",
+        "validation": "not-requested-by-compose"
+      }
+    ]
+  },
+  "compatibility": {
+    "automatic_install_candidate": true,
+    "validated": false,
+    "supported_compose_keys": [
+      "container_name",
+      "environment",
+      "image",
+      "ports",
+      "restart",
+      "stop_grace_period",
+      "volumes"
+    ],
+    "untranslated_blockers": [],
+    "policy": "A generated template is never promoted to validated without install, health, restart and persistence tests."
+  },
+  "validation": {
+    "schema": "passed-at-generation",
+    "clean_install": "pending",
+    "service_health": "pending",
+    "restart_persistence": "pending",
+    "backup_restore": "pending",
+    "update_preserves_data": "pending"
+  },
+  "lifecycle": {
+    "update_strategy": "replace-rootfs-from-new-oci-image-preserve-managed-volumes",
+    "registry_state": {
+      "resolved_architecture": null,
+      "resolved_digest": null,
+      "image_version_label": null,
+      "image_created": null
+    },
+    "change_detection": "compare-resolved-architecture-digest",
+    "automatic_unattended_updates": false
+  }
+}

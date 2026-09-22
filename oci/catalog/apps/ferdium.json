@@ -1,0 +1,373 @@
+{
+  "schema_version": "0.3.0",
+  "kind": "proxmenux.oci-template",
+  "id": "linuxserver-ferdium",
+  "status": "generated-unvalidated",
+  "catalog_ui": {
+    "title": {
+      "en_US": "Ferdium"
+    },
+    "tagline": {
+      "en_US": "Ferdium is a desktop app that helps you organize how you use your favourite apps by combining them into one application."
+    },
+    "description": {
+      "en_US": "Ferdium is a desktop app that helps you organize how you use your favourite apps by combining them into one application."
+    },
+    "category": "misc",
+    "category_label": "Miscellaneous",
+    "author": "LinuxServer.io",
+    "developer": null,
+    "icon": "https://raw.githubusercontent.com/linuxserver/docker-templates/master/linuxserver.io/img/ferdium-icon.png",
+    "thumbnail": "https://raw.githubusercontent.com/linuxserver/docker-templates/master/linuxserver.io/img/ferdium-banner.png",
+    "screenshots": [],
+    "architectures": [
+      "amd64",
+      "arm64"
+    ],
+    "launch": {
+      "scheme": "https",
+      "port": 3001,
+      "path": "/"
+    },
+    "website": "https://ferdium.org/",
+    "documentation": "https://docs.linuxserver.io/images/docker-ferdium/",
+    "repository": "https://github.com/linuxserver/docker-ferdium",
+    "tips": [],
+    "mini_changelog": [
+      {
+        "date": "2026-04-03",
+        "note": "Make Wayland default disable with PIXELFLUX_WAYLAND=false."
+      },
+      {
+        "date": "2026-03-21",
+        "note": "Use Wayland ozone platform fixes scaling and acceleration."
+      },
+      {
+        "date": "2025-12-28",
+        "note": "Add Wayland init logic."
+      },
+      {
+        "date": "2025-09-22",
+        "note": "Rebase to Debian Trixie."
+      },
+      {
+        "date": "2025-07-12",
+        "note": "Rebase to Selkies, HTTPS IS NOW REQUIRED."
+      }
+    ],
+    "display_version": null,
+    "updated_at": "2026-04-03"
+  },
+  "source": {
+    "provider": "linuxserver.io",
+    "repository": "https://github.com/linuxserver/docker-ferdium",
+    "default_branch": "master",
+    "revision": "7b0ba3f02d2a7a410933845427c5ef6bfa0e196e",
+    "readme_raw_url": "https://raw.githubusercontent.com/linuxserver/docker-ferdium/7b0ba3f02d2a7a410933845427c5ef6bfa0e196e/README.md",
+    "readme_pushed_at": "2026-09-07T20:24:53Z",
+    "compose_sha256": "b7cbb69404319fa9743f1c71cd8f8ffa1d3b5050f386442d197921c0a46568c4",
+    "generated_at": "2026-09-12T14:37:26+00:00"
+  },
+  "container_contract": {
+    "service_name": "ferdium",
+    "container_name": "ferdium",
+    "image": {
+      "reference": "lscr.io/linuxserver/ferdium:latest",
+      "registry": "lscr.io",
+      "repository": "lscr.io/linuxserver/ferdium",
+      "tag": "latest",
+      "digest": null,
+      "pull_policy": "resolve-selected-tag-to-architecture-digest-at-install"
+    },
+    "environment": [
+      {
+        "name": "PUID",
+        "example": "1000",
+        "required": true,
+        "sensitive": false,
+        "source": "linuxserver-compose"
+      },
+      {
+        "name": "PGID",
+        "example": "1000",
+        "required": true,
+        "sensitive": false,
+        "source": "linuxserver-compose"
+      },
+      {
+        "name": "TZ",
+        "example": "Etc/UTC",
+        "required": true,
+        "sensitive": false,
+        "source": "linuxserver-compose"
+      },
+      {
+        "name": "LC_ALL",
+        "example": "",
+        "required": false,
+        "sensitive": false,
+        "source": "upstream-documentation",
+        "prompt": "Language/locale (e.g. es_ES.UTF-8; translation of every application is not guaranteed)"
+      }
+    ],
+    "volumes": [
+      {
+        "id": "volume-0",
+        "container_path": "/config",
+        "compose_source_example": "/path/to/config",
+        "read_only": false,
+        "required": true,
+        "installation_choice": [
+          "managed-volume",
+          "host-bind"
+        ],
+        "default": "managed-volume",
+        "managed_volume": {
+          "backup": true,
+          "default_size_gb": 4
+        }
+      }
+    ],
+    "ports": [
+      {
+        "container_port": 3000,
+        "published_example": 3000,
+        "protocol": "tcp",
+        "required": true,
+        "proxmox_behavior": "listener-on-dedicated-lxc-address-no-nat"
+      },
+      {
+        "container_port": 3001,
+        "published_example": 3001,
+        "protocol": "tcp",
+        "required": true,
+        "proxmox_behavior": "listener-on-dedicated-lxc-address-no-nat"
+      }
+    ],
+    "related_services": [],
+    "restart": "unless-stopped",
+    "stop_grace_period": null,
+    "original_compose": "---\nservices:\n  ferdium:\n    image: lscr.io/linuxserver/ferdium:latest\n    container_name: ferdium\n    environment:\n      - PUID=1000\n      - PGID=1000\n      - TZ=Etc/UTC\n    volumes:\n      - /path/to/config:/config\n    ports:\n      - 3000:3000\n      - 3001:3001\n    shm_size: \"1gb\"\n    restart: unless-stopped\n"
+  },
+  "first_run": {
+    "endpoints": [
+      {
+        "label": "Web UI",
+        "scheme": "https",
+        "port": 3001,
+        "path": "/",
+        "source": "linuxserver-readme-application-setup"
+      }
+    ],
+    "credentials": []
+  },
+  "proxmox": {
+    "runtime": "native-oci-lxc",
+    "technology_status": "proxmox-technology-preview",
+    "defaults": {
+      "unprivileged": true,
+      "ostype": "auto-from-image",
+      "cores": 2,
+      "memory_mb": 1024,
+      "swap_mb": 512,
+      "rootfs_size_gb": 8,
+      "rootfs_storage": "local-lvm",
+      "volume_storage": "local-lvm",
+      "template_storage": "local",
+      "bridge": "vmbr0",
+      "ipv4": "dhcp",
+      "firewall": true,
+      "host_managed_network": true,
+      "onboot": false,
+      "features": [
+        "nesting=1"
+      ],
+      "shutdown_timeout_seconds": 30
+    },
+    "image_metadata_policy": {
+      "entrypoint": "import-from-oci-image",
+      "cmd": "import-from-oci-image",
+      "environment": "import-image-env-then-apply-compose-overrides",
+      "user": "import-from-oci-image",
+      "working_dir": "import-from-oci-image",
+      "stop_signal": "import-from-oci-image"
+    },
+    "adaptations": [
+      {
+        "id": "dedicated-lxc-network",
+        "upstream_behavior": "Docker publishes selected container ports on the Docker host.",
+        "native_lxc_behavior": "The application listens on the same container ports at its dedicated LXC address.",
+        "reason": "A native LXC has its own address and does not require Docker port NAT.",
+        "behavioral_impact": "Users open the LXC address instead of the Proxmox host address.",
+        "validation": "pending-per-application"
+      },
+      {
+        "id": "compose-environment-overlay",
+        "upstream_behavior": "Compose environment values override OCI image environment values.",
+        "native_lxc_behavior": "ProxMenux merges the same values into lxc.environment.runtime while the CT is stopped.",
+        "reason": "PVE imports image Env automatically; Compose values still need to override it.",
+        "behavioral_impact": "None expected.",
+        "validation": "pending-per-application"
+      },
+      {
+        "id": "stop-grace-period",
+        "upstream_behavior": "Docker waits for Compose stop_grace_period before forcing termination.",
+        "native_lxc_behavior": "ProxMenux records the same timeout for its pct shutdown lifecycle operations.",
+        "reason": "Proxmox has no equivalent per-CT persistent restart-policy field; startup.down is not a shutdown timeout.",
+        "behavioral_impact": "Normal Proxmox node shutdown remains governed by the node-wide shutdown policy.",
+        "validation": "not-requested-by-compose"
+      },
+      {
+        "id": "compose-shm-size",
+        "upstream_behavior": "Compose sets the size of the container /dev/shm tmpfs.",
+        "native_lxc_behavior": "ProxMenux mounts a native LXC tmpfs at /dev/shm with the same requested capacity.",
+        "reason": "The OCI image runs directly as an LXC and therefore needs the equivalent Proxmox mount entry.",
+        "behavioral_impact": "None expected.",
+        "validation": "pending-per-application"
+      }
+    ],
+    "installer_profile": {
+      "tmpfs_mounts": [
+        {
+          "id": "compose-shm",
+          "container_path": "/dev/shm",
+          "default_size_mb": 1024,
+          "minimum_size_mb": 1,
+          "size_prompt": "Size of the /dev/shm shared memory in MB",
+          "mount_options": [
+            "rw",
+            "nosuid",
+            "nodev"
+          ]
+        },
+        {
+          "id": "nginx-runtime",
+          "container_path": "/run/nginx",
+          "default_size_mb": 1,
+          "minimum_size_mb": 1,
+          "prompt_size": false,
+          "mount_options": [
+            "rw",
+            "nosuid",
+            "nodev",
+            "mode=0755"
+          ]
+        }
+      ],
+      "selkies": {
+        "base": "FROM ghcr.io/linuxserver/baseimage-selkies:debiantrixie",
+        "dockerfile_url": "https://raw.githubusercontent.com/linuxserver/docker-ferdium/master/Dockerfile",
+        "dockerfile_sha256": "c47d21332c5d5516c76e7593905690c85c42a5d58aabfe0d0e099161b03b4755",
+        "reviewed_on": "2026-09-16",
+        "documentation": "https://docs.linuxserver.io/images/docker-baseimage-selkies/",
+        "nvidia": "not-offered-until-specific-host-and-image-validation",
+        "validation": "profile-generated; real streaming workload pending"
+      },
+      "optional_devices": [],
+      "hardware_acceleration": {
+        "prompt": "Selkies desktop and streaming acceleration",
+        "default": "none",
+        "profiles": [
+          {
+            "id": "none",
+            "label": "No GPU (CPU)",
+            "device_requests": [],
+            "environment": [
+              {
+                "name": "AUTO_GPU",
+                "value": "false"
+              }
+            ]
+          },
+          {
+            "id": "vaapi",
+            "label": "Intel/AMD (streaming rendering and encoding)",
+            "device_requests": [
+              {
+                "id": "selkies-render",
+                "kind": "character-device",
+                "path_prompt": "Intel/AMD render node",
+                "host_path_default": "/dev/dri/renderD128",
+                "container_path_strategy": "same-as-host",
+                "mode": "0660",
+                "deny_write": false,
+                "gid_strategy": "host-device-gid",
+                "drm_vendor_ids": [
+                  "0x8086",
+                  "0x1002"
+                ]
+              }
+            ],
+            "environment": [
+              {
+                "name": "PIXELFLUX_WAYLAND",
+                "value": "true"
+              },
+              {
+                "name": "AUTO_GPU",
+                "value": "false"
+              }
+            ],
+            "environment_from_devices": {
+              "DRINODE": [
+                "selkies-render"
+              ],
+              "DRI_NODE": [
+                "selkies-render"
+              ],
+              "ATTACHED_DEVICES_PERMS": [
+                "selkies-render"
+              ]
+            }
+          }
+        ]
+      },
+      "gpu_validation": {
+        "device_inventory": "host-sysfs-and-stat",
+        "application_acceleration": "requires-workload-test",
+        "tone_mapping": "not-implied-by-device-access"
+      },
+      "device_permissions": {
+        "strategy": "linuxserver-native-init",
+        "service_user": "abc",
+        "environment": "ATTACHED_DEVICES_PERMS",
+        "paths": "all-resolved-selected-character-devices"
+      }
+    }
+  },
+  "compatibility": {
+    "automatic_install_candidate": true,
+    "validated": false,
+    "supported_compose_keys": [
+      "container_name",
+      "environment",
+      "image",
+      "ports",
+      "restart",
+      "shm_size",
+      "stop_grace_period",
+      "volumes"
+    ],
+    "untranslated_blockers": [],
+    "policy": "A generated template is never promoted to validated without install, health, restart and persistence tests."
+  },
+  "validation": {
+    "schema": "passed-at-generation",
+    "clean_install": "pending",
+    "service_health": "pending",
+    "restart_persistence": "pending",
+    "backup_restore": "pending",
+    "update_preserves_data": "pending"
+  },
+  "lifecycle": {
+    "update_strategy": "replace-rootfs-from-new-oci-image-preserve-managed-volumes",
+    "registry_state": {
+      "resolved_architecture": null,
+      "resolved_digest": null,
+      "image_version_label": null,
+      "image_created": null
+    },
+    "change_detection": "compare-resolved-architecture-digest",
+    "automatic_unattended_updates": false
+  }
+}

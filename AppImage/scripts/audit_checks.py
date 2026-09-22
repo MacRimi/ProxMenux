@@ -691,6 +691,37 @@ def run_assessment(profile: str = "full",
     return run_id
 
 
+def _scope(finding: dict) -> int:
+    """How many objects a finding covers. A check that named three guests
+    and now names nine describes a larger problem, even at the same
+    gravity."""
+    return len(finding.get("affected") or [])
+
+
+def _movement(previous: dict, current: dict) -> int:
+    """Whether a finding present in both runs got worse (1), better (-1) or
+    held (0). Gravity decides; scope only breaks a tie, because a finding
+    takes the gravity of its gravest object and dropping from critical to
+    warning is progress however many objects it now names."""
+    before = audit_store.CLASS_ORDER.get(previous["classification"])
+    after = audit_store.CLASS_ORDER.get(current["classification"])
+    if before is not None and after is not None and before != after:
+        return 1 if after < before else -1
+    before_scope, after_scope = _scope(previous), _scope(current)
+    if after_scope != before_scope:
+        return 1 if after_scope > before_scope else -1
+    return 0
+
+
+def _against(current: dict, previous: dict) -> dict:
+    """A finding carrying where it came from, so the reader is told what
+    moved instead of only what it is now."""
+    return {**current,
+            "previous_classification": previous["classification"],
+            "previous_affected": _scope(previous),
+            "affected_count": _scope(current)}
+
+
 def compare_runs(base_run: str, other_run: str) -> dict[str, list[dict]]:
     """Classify how findings moved between two runs.
 
@@ -700,6 +731,12 @@ def compare_runs(base_run: str, other_run: str) -> dict[str, list[dict]]:
     that merges them would tell its reader the problem went away when the
     decision was to live with it.
 
+    A finding that was already failing and still fails is never new. It
+    either got worse, got better without being resolved, or held: reporting
+    a warning that became critical as new hides that it was already there,
+    and reporting a critical that dropped to a warning as new tells the
+    reader their work created a problem.
+
     ``unchanged`` is kept so a report can state that the rest of the
     surface held steady rather than leaving it unaccounted for.
     """
@@ -708,6 +745,7 @@ def compare_runs(base_run: str, other_run: str) -> dict[str, list[dict]]:
     other = {f["check_id"]: f for f in audit_store.get_findings(other_run)}
 
     new, resolved, accepted, unchanged, unverified = [], [], [], [], []
+    worse, better = [], []
     for check_id, current in other.items():
         previous = base.get(check_id)
         was = previous["classification"] in problems if previous else False
@@ -718,8 +756,16 @@ def compare_runs(base_run: str, other_run: str) -> dict[str, list[dict]]:
             unverified.append(current)
         elif now and current.get("decision") == audit_store.DECISION_ACCEPTED:
             accepted.append(current)
-        elif now and (not was or previous["classification"] != current["classification"]):
+        elif now and not was:
             new.append(current)
+        elif now and was:
+            moved = _movement(previous, current)
+            if moved > 0:
+                worse.append(_against(current, previous))
+            elif moved < 0:
+                better.append(_against(current, previous))
+            else:
+                unchanged.append(current)
         elif was and not now:
             if current.get("decision") == audit_store.DECISION_ACCEPTED:
                 accepted.append(current)
@@ -738,6 +784,8 @@ def compare_runs(base_run: str, other_run: str) -> dict[str, list[dict]]:
 
     return {
         "new": new,
+        "worse": worse,
+        "better": better,
         "resolved": resolved,
         "accepted": accepted,
         "unchanged": unchanged,

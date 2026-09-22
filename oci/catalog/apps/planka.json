@@ -1,0 +1,304 @@
+{
+  "schema_version": "0.3.0",
+  "kind": "proxmenux.oci-template",
+  "id": "linuxserver-planka",
+  "status": "generated-unvalidated",
+  "catalog_ui": {
+    "title": {
+      "en_US": "Planka"
+    },
+    "tagline": {
+      "en_US": "Planka is an elegant open source project tracking tool."
+    },
+    "description": {
+      "en_US": "Planka is an elegant open source project tracking tool."
+    },
+    "category": "productivity",
+    "category_label": "Productivity & Workflows",
+    "author": "LinuxServer.io",
+    "developer": null,
+    "icon": "https://raw.githubusercontent.com/linuxserver/docker-templates/master/linuxserver.io/img/planka-icon.png",
+    "thumbnail": "https://raw.githubusercontent.com/linuxserver/docker-templates/master/linuxserver.io/img/planka-banner.png",
+    "screenshots": [],
+    "architectures": [
+      "amd64",
+      "arm64"
+    ],
+    "launch": {
+      "scheme": "http",
+      "port": 1337,
+      "path": "/"
+    },
+    "website": "https://github.com/plankanban/planka/",
+    "documentation": "https://docs.linuxserver.io/images/docker-planka/",
+    "repository": "https://github.com/linuxserver/docker-planka",
+    "tips": [],
+    "mini_changelog": [
+      {
+        "date": "2026-08-24",
+        "note": "Add python dep, apprise."
+      },
+      {
+        "date": "2026-07-05",
+        "note": "Rebase to Alpine 3.24."
+      },
+      {
+        "date": "2026-02-13",
+        "note": "Rebase to Alpine 3.23. Updates for v2. Users should update `TRUST_PROXY` to use `true`/`false` instead of `1`/`0`."
+      },
+      {
+        "date": "2025-01-12",
+        "note": "Rebase to Alpine 3.21."
+      },
+      {
+        "date": "2024-09-18",
+        "note": "Update default user docs."
+      }
+    ],
+    "display_version": null,
+    "updated_at": "2026-08-24"
+  },
+  "source": {
+    "provider": "linuxserver.io",
+    "repository": "https://github.com/linuxserver/docker-planka",
+    "default_branch": "main",
+    "revision": "670c97e17338971e9cda2c907a2ccad2e045b853",
+    "readme_raw_url": "https://raw.githubusercontent.com/linuxserver/docker-planka/670c97e17338971e9cda2c907a2ccad2e045b853/README.md",
+    "readme_pushed_at": "2026-09-10T18:53:49Z",
+    "compose_sha256": "796b79b05a1ecfbdb3909b739daadec9cf670462ec7b866d6cf20c46edf78ab7",
+    "generated_at": "2026-09-12T14:37:34+00:00"
+  },
+  "container_contract": {
+    "service_name": "planka",
+    "container_name": "planka",
+    "image": {
+      "reference": "lscr.io/linuxserver/planka:latest",
+      "registry": "lscr.io",
+      "repository": "lscr.io/linuxserver/planka",
+      "tag": "latest",
+      "digest": null,
+      "pull_policy": "resolve-selected-tag-to-architecture-digest-at-install"
+    },
+    "environment": [
+      {
+        "name": "PUID",
+        "example": "1000",
+        "required": true,
+        "sensitive": false,
+        "source": "linuxserver-compose"
+      },
+      {
+        "name": "PGID",
+        "example": "1000",
+        "required": true,
+        "sensitive": false,
+        "source": "linuxserver-compose"
+      },
+      {
+        "name": "TZ",
+        "example": "Etc/UTC",
+        "required": true,
+        "sensitive": false,
+        "source": "linuxserver-compose"
+      },
+      {
+        "name": "BASE_URL",
+        "example": "https://planka.example.com",
+        "required": true,
+        "sensitive": false,
+        "source": "linuxserver-compose"
+      },
+      {
+        "name": "DATABASE_URL",
+        "example": "postgresql://user:password@planka-db:5432/planka",
+        "required": true,
+        "sensitive": false,
+        "source": "linuxserver-compose"
+      },
+      {
+        "name": "DEFAULT_ADMIN_EMAIL",
+        "example": "demo@demo.demo",
+        "required": true,
+        "sensitive": false,
+        "source": "linuxserver-compose"
+      },
+      {
+        "name": "DEFAULT_ADMIN_USERNAME",
+        "example": "demo",
+        "required": true,
+        "sensitive": false,
+        "source": "linuxserver-compose"
+      },
+      {
+        "name": "DEFAULT_ADMIN_PASSWORD",
+        "example": "demo",
+        "required": true,
+        "sensitive": true,
+        "source": "linuxserver-compose"
+      },
+      {
+        "name": "DEFAULT_ADMIN_NAME",
+        "example": "Demo User",
+        "required": true,
+        "sensitive": false,
+        "source": "linuxserver-compose"
+      },
+      {
+        "name": "SECRET_KEY",
+        "example": "notasecretkey",
+        "required": true,
+        "sensitive": true,
+        "source": "linuxserver-compose"
+      },
+      {
+        "name": "TRUST_PROXY",
+        "example": "false",
+        "required": true,
+        "sensitive": false,
+        "source": "linuxserver-compose"
+      },
+      {
+        "name": "DEFAULT_LANGUAGE",
+        "example": "en-US",
+        "required": false,
+        "sensitive": false,
+        "source": "linuxserver-compose"
+      }
+    ],
+    "volumes": [
+      {
+        "id": "volume-0",
+        "container_path": "/config",
+        "compose_source_example": "/path/to/planka/data",
+        "read_only": false,
+        "required": true,
+        "installation_choice": [
+          "managed-volume",
+          "host-bind"
+        ],
+        "default": "managed-volume",
+        "managed_volume": {
+          "backup": true,
+          "default_size_gb": 4
+        }
+      }
+    ],
+    "ports": [
+      {
+        "container_port": 1337,
+        "published_example": 1337,
+        "protocol": "tcp",
+        "required": true,
+        "proxmox_behavior": "listener-on-dedicated-lxc-address-no-nat"
+      }
+    ],
+    "related_services": [],
+    "restart": "unless-stopped",
+    "stop_grace_period": null,
+    "original_compose": "---\nservices:\n  planka:\n    image: lscr.io/linuxserver/planka:latest\n    container_name: planka\n    environment:\n      - PUID=1000\n      - PGID=1000\n      - TZ=Etc/UTC\n      - BASE_URL=https://planka.example.com\n      - DATABASE_URL=postgresql://user:password@planka-db:5432/planka\n      - DEFAULT_ADMIN_EMAIL=demo@demo.demo\n      - DEFAULT_ADMIN_USERNAME=demo\n      - DEFAULT_ADMIN_PASSWORD=demo\n      - \"DEFAULT_ADMIN_NAME=Demo User\"\n      - SECRET_KEY=notasecretkey\n      - TRUST_PROXY=false\n      - DEFAULT_LANGUAGE=en-US #optional\n    volumes:\n      - /path/to/planka/data:/config\n    ports:\n      - 1337:1337\n    restart: unless-stopped\n"
+  },
+  "first_run": {
+    "endpoints": [
+      {
+        "label": "Web UI",
+        "scheme": "http",
+        "port": 1337,
+        "path": "/",
+        "source": "compose-first-tcp-port-fallback"
+      }
+    ],
+    "credentials": []
+  },
+  "proxmox": {
+    "runtime": "native-oci-lxc",
+    "technology_status": "proxmox-technology-preview",
+    "defaults": {
+      "unprivileged": true,
+      "ostype": "auto-from-image",
+      "cores": 2,
+      "memory_mb": 1024,
+      "swap_mb": 512,
+      "rootfs_size_gb": 8,
+      "rootfs_storage": "local-lvm",
+      "volume_storage": "local-lvm",
+      "template_storage": "local",
+      "bridge": "vmbr0",
+      "ipv4": "dhcp",
+      "firewall": true,
+      "host_managed_network": true,
+      "onboot": false,
+      "features": [
+        "nesting=1"
+      ],
+      "shutdown_timeout_seconds": 30
+    },
+    "image_metadata_policy": {
+      "entrypoint": "import-from-oci-image",
+      "cmd": "import-from-oci-image",
+      "environment": "import-image-env-then-apply-compose-overrides",
+      "user": "import-from-oci-image",
+      "working_dir": "import-from-oci-image",
+      "stop_signal": "import-from-oci-image"
+    },
+    "adaptations": [
+      {
+        "id": "dedicated-lxc-network",
+        "upstream_behavior": "Docker publishes selected container ports on the Docker host.",
+        "native_lxc_behavior": "The application listens on the same container ports at its dedicated LXC address.",
+        "reason": "A native LXC has its own address and does not require Docker port NAT.",
+        "behavioral_impact": "Users open the LXC address instead of the Proxmox host address.",
+        "validation": "pending-per-application"
+      },
+      {
+        "id": "compose-environment-overlay",
+        "upstream_behavior": "Compose environment values override OCI image environment values.",
+        "native_lxc_behavior": "ProxMenux merges the same values into lxc.environment.runtime while the CT is stopped.",
+        "reason": "PVE imports image Env automatically; Compose values still need to override it.",
+        "behavioral_impact": "None expected.",
+        "validation": "pending-per-application"
+      },
+      {
+        "id": "stop-grace-period",
+        "upstream_behavior": "Docker waits for Compose stop_grace_period before forcing termination.",
+        "native_lxc_behavior": "ProxMenux records the same timeout for its pct shutdown lifecycle operations.",
+        "reason": "Proxmox has no equivalent per-CT persistent restart-policy field; startup.down is not a shutdown timeout.",
+        "behavioral_impact": "Normal Proxmox node shutdown remains governed by the node-wide shutdown policy.",
+        "validation": "not-requested-by-compose"
+      }
+    ]
+  },
+  "compatibility": {
+    "automatic_install_candidate": true,
+    "validated": false,
+    "supported_compose_keys": [
+      "container_name",
+      "environment",
+      "image",
+      "ports",
+      "restart",
+      "stop_grace_period",
+      "volumes"
+    ],
+    "untranslated_blockers": [],
+    "policy": "A generated template is never promoted to validated without install, health, restart and persistence tests."
+  },
+  "validation": {
+    "schema": "passed-at-generation",
+    "clean_install": "pending",
+    "service_health": "pending",
+    "restart_persistence": "pending",
+    "backup_restore": "pending",
+    "update_preserves_data": "pending"
+  },
+  "lifecycle": {
+    "update_strategy": "replace-rootfs-from-new-oci-image-preserve-managed-volumes",
+    "registry_state": {
+      "resolved_architecture": null,
+      "resolved_digest": null,
+      "image_version_label": null,
+      "image_created": null
+    },
+    "change_detection": "compare-resolved-architecture-digest",
+    "automatic_unattended_updates": false
+  }
+}

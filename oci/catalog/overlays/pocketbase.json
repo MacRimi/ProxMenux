@@ -1,0 +1,15 @@
+{
+  "first_run": {
+    "credentials": [
+      {
+        "label": "PocketBase admin UI",
+        "type": "static-default",
+        "username": "casaos@admin.local",
+        "password": "adminpocketbase",
+        "change_required": true,
+        "source": "casaos-image-superuser",
+        "retrieval": null
+      }
+    ]
+  }
+}

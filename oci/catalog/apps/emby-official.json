@@ -1,0 +1,486 @@
+{
+  "schema_version": "0.4.0",
+  "kind": "proxmenux.oci-template",
+  "id": "image-emby-official",
+  "status": "generated-unvalidated",
+  "catalog_ui": {
+    "title": {
+      "en_US": "Emby Official"
+    },
+    "tagline": {
+      "en_US": "Official Emby Media Server image with optional VA-API or NVIDIA acceleration."
+    },
+    "description": {
+      "en_US": "Emby is a personal media management platform that brings home videos, music, and photos together, automatically converting and streaming to any device. An intuitive design makes it ideal for users to enjoy media content anytime, anywhere, meeting family entertainment and media management needs.\n\nCore features include cross-device media streaming and easy access. It supports real-time conversion and streaming of personal media to any device for seamless playback. A connection service enables easy media access while away from home. Live TV functionality supports streaming, managing DVR, and accessing a library of recordings. Mobile sync delivers media to smartphones and tablets for offline access, automatically updating new content.\n\nIt offers parental controls to restrict children's content access, set schedules and time limits, and remotely monitor sessions. Chromecast support enables easy streaming of videos, music, photos, and Live TV. Content is presented elegantly, enhancing visual experience. Cloud sync supports backup, archiving, and multi-resolution storage for optimized streaming. Web-based media management facilitates editing metadata, images, and searching subtitles, while DLNA integration auto-detects network devices for content streaming. With convenience and versatility at the core, the platform delivers a modern media management solution.\n\n**Key Features:**\n- Automatic conversion and streaming of media to any device\n- Easy access via connection service while away from home\n- Live TV streaming, DVR management, and recording library access\n- Mobile sync to smartphones and tablets for offline access\n- Parental controls with content restrictions, schedules, and remote monitoring\n- Chromecast support for streaming videos, music, photos, and Live TV\n- Cloud sync for backup and multi-resolution storage\n- Web-based media management for editing metadata and searching subtitles\n- DLNA integration for auto-detecting network devices and streaming content\n\n**Learn More:**\n- [Emby Official Website](https://emby.media/)\n"
+    },
+    "category": "media",
+    "category_label": "Media & Streaming",
+    "author": "Emby Team",
+    "developer": "Emby Team",
+    "icon": null,
+    "thumbnail": null,
+    "screenshots": [],
+    "architectures": [
+      "amd64",
+      "arm64"
+    ],
+    "launch": {
+      "scheme": "http",
+      "port": 8096,
+      "path": "/"
+    },
+    "website": "https://emby.media/",
+    "documentation": "https://hub.docker.com/r/emby/embyserver",
+    "repository": "https://hub.docker.com/r/emby/embyserver",
+    "tips": [
+      "UID, GID and GIDLIST follow the official image contract.",
+      "The installer adds the selected render-device GID to GIDLIST for VA-API access.",
+      "Emby documents VA-API and NVDEC/NVENC support for amd64 only."
+    ],
+    "mini_changelog": [],
+    "display_version": null,
+    "updated_at": null
+  },
+  "source": {
+    "provider": "emby",
+    "repository": "https://hub.docker.com/r/emby/embyserver",
+    "default_branch": "master",
+    "revision": "f324967b88a13e1075d6aa6debe31a955a7c6b47abe4c2d34342bc9d1d964518",
+    "image_repository_url": "https://hub.docker.com/r/emby/embyserver",
+    "compose_sha256": "b960d39e446660d21c2e88e89d6ae2ce3e1294c31d9d4ee18b8a94c7b9e8d786",
+    "generated_at": "2026-09-13T21:08:59+00:00"
+  },
+  "container_contract": {
+    "service_name": "emby",
+    "container_name": "embyserver",
+    "image": {
+      "reference": "emby/embyserver:latest",
+      "registry": "docker.io",
+      "repository": "emby/embyserver",
+      "tag": "latest",
+      "digest": null,
+      "pull_policy": "resolve-selected-tag-to-architecture-digest-at-install"
+    },
+    "environment": [
+      {
+        "name": "UID",
+        "example": "1000",
+        "required": true,
+        "sensitive": false,
+        "source": "official-container-documentation",
+        "prompt": "UID that Emby runs as"
+      },
+      {
+        "name": "GID",
+        "example": "100",
+        "required": true,
+        "sensitive": false,
+        "source": "official-container-documentation",
+        "prompt": "Primary GID for Emby"
+      },
+      {
+        "name": "GIDLIST",
+        "example": "100",
+        "required": true,
+        "sensitive": false,
+        "source": "official-container-documentation",
+        "prompt": "Additional media/GPU GIDs, comma-separated"
+      }
+    ],
+    "volumes": [
+      {
+        "id": "config",
+        "container_path": "/config",
+        "compose_source_example": "/path/to/programdata",
+        "read_only": false,
+        "required": true,
+        "installation_choice": [
+          "managed-volume",
+          "host-bind"
+        ],
+        "default": "managed-volume",
+        "managed_volume": {
+          "backup": true,
+          "default_size_gb": 8
+        }
+      },
+      {
+        "id": "tvshows",
+        "container_path": "/mnt/share1",
+        "compose_source_example": "/path/to/tvshows",
+        "read_only": false,
+        "required": true,
+        "installation_choice": [
+          "managed-volume",
+          "host-bind"
+        ],
+        "default": "host-bind",
+        "managed_volume": {
+          "backup": false,
+          "default_size_gb": 32
+        }
+      },
+      {
+        "id": "movies",
+        "container_path": "/mnt/share2",
+        "compose_source_example": "/path/to/movies",
+        "read_only": false,
+        "required": true,
+        "installation_choice": [
+          "managed-volume",
+          "host-bind"
+        ],
+        "default": "host-bind",
+        "managed_volume": {
+          "backup": false,
+          "default_size_gb": 32
+        }
+      }
+    ],
+    "ports": [
+      {
+        "container_port": 8096,
+        "published_example": 8096,
+        "protocol": "tcp",
+        "required": true,
+        "proxmox_behavior": "listener-on-dedicated-lxc-address-no-nat"
+      },
+      {
+        "container_port": 8920,
+        "published_example": 8920,
+        "protocol": "tcp",
+        "required": false,
+        "proxmox_behavior": "listener-on-dedicated-lxc-address-no-nat"
+      },
+      {
+        "container_port": 7359,
+        "published_example": 7359,
+        "protocol": "udp",
+        "required": false,
+        "proxmox_behavior": "listener-on-dedicated-lxc-address-no-nat"
+      },
+      {
+        "container_port": 1900,
+        "published_example": 1900,
+        "protocol": "udp",
+        "required": false,
+        "proxmox_behavior": "listener-on-dedicated-lxc-address-no-nat"
+      }
+    ],
+    "related_services": [],
+    "restart": "on-failure",
+    "stop_grace_period": null,
+    "original_compose": "services:\n  emby:\n    image: emby/embyserver:latest\n    container_name: embyserver\n    environment:\n      - UID=1000\n      - GID=100\n      - GIDLIST=100\n    volumes:\n      - /path/to/programdata:/config\n      - /path/to/tvshows:/mnt/share1\n      - /path/to/movies:/mnt/share2\n    ports:\n      - 8096:8096/tcp\n      - 8920:8920/tcp\n    restart: on-failure\n"
+  },
+  "first_run": {
+    "endpoints": [
+      {
+        "label": "Emby WebUI",
+        "scheme": "http",
+        "port": 8096,
+        "path": "/",
+        "source": "official-container-documentation"
+      }
+    ],
+    "credentials": []
+  },
+  "proxmox": {
+    "runtime": "native-oci-lxc",
+    "technology_status": "proxmox-technology-preview",
+    "defaults": {
+      "unprivileged": true,
+      "ostype": "auto-from-image",
+      "cores": 2,
+      "memory_mb": 2048,
+      "swap_mb": 512,
+      "rootfs_size_gb": 8,
+      "rootfs_storage": "local-lvm",
+      "volume_storage": "local-lvm",
+      "template_storage": "local",
+      "bridge": "vmbr0",
+      "ipv4": "dhcp",
+      "firewall": true,
+      "host_managed_network": true,
+      "onboot": false,
+      "features": [
+        "nesting=1"
+      ],
+      "shutdown_timeout_seconds": 30
+    },
+    "image_metadata_policy": {
+      "entrypoint": "import-from-oci-image",
+      "cmd": "import-from-oci-image",
+      "environment": "import-image-env-then-apply-compose-overrides",
+      "user": "import-from-oci-image",
+      "working_dir": "import-from-oci-image",
+      "stop_signal": "import-from-oci-image"
+    },
+    "installer_profile": {
+      "hardware_acceleration": {
+        "prompt": "Hardware acceleration for Emby",
+        "default": "none",
+        "profiles": [
+          {
+            "id": "none",
+            "label": "No acceleration (CPU)",
+            "device_requests": [],
+            "architectures": [
+              "amd64",
+              "arm64"
+            ]
+          },
+          {
+            "id": "vaapi",
+            "label": "Intel/AMD (VA-API)",
+            "device_requests": [
+              {
+                "id": "vaapi-render",
+                "kind": "character-device",
+                "purpose": "vaapi",
+                "path_prompt": "GPU render device",
+                "host_path_default": "/dev/dri/renderD128",
+                "container_path_strategy": "same-as-host",
+                "mode": "0660",
+                "deny_write": false,
+                "gid_strategy": "host-device-gid",
+                "append_host_device_gid_to_environment": "GIDLIST"
+              }
+            ],
+            "architectures": [
+              "amd64"
+            ]
+          },
+          {
+            "id": "nvidia",
+            "label": "NVIDIA (NVENC/NVDEC)",
+            "device_requests": [
+              {
+                "id": "nvidia-runtime",
+                "kind": "nvidia-runtime",
+                "purpose": "nvidia-cuda-nvenc-nvdec",
+                "device_selection": "all-requested-by-compose",
+                "append_host_device_gid_to_environment": "GIDLIST"
+              }
+            ],
+            "environment": [
+              {
+                "name": "NVIDIA_VISIBLE_DEVICES",
+                "value": "all"
+              }
+            ],
+            "architectures": [
+              "amd64"
+            ]
+          }
+        ]
+      },
+      "startup_healthcheck": {
+        "scheme": "http",
+        "port": 8096,
+        "path": "/",
+        "timeout_seconds": 240,
+        "request_timeout_seconds": 10,
+        "stability_seconds": 4,
+        "verify_tls": false
+      },
+      "volume_preparations": [
+        {
+          "container_path": "/config",
+          "remove_lost_found": true,
+          "owner_strategy": "mapped-application-user",
+          "only_when_mount_type": "managed-volume"
+        }
+      ],
+      "gpu_validation": {
+        "device_inventory": "host-sysfs-and-stat",
+        "application_acceleration": "requires-workload-test",
+        "tone_mapping": "not-implied-by-device-access"
+      }
+    },
+    "adaptations": [
+      {
+        "id": "imported-compose-source",
+        "upstream_behavior": "The source definition deploys the complete Docker Compose application model.",
+        "native_lxc_behavior": "The source model is preserved and remains blocked until every service option has a reviewed native Proxmox mapping.",
+        "reason": "Catalog import must not imply runtime compatibility.",
+        "behavioral_impact": "No automatic installation before review.",
+        "validation": "pending-per-application"
+      },
+      {
+        "id": "rolling-latest-image",
+        "upstream_behavior": "A discovered Compose may pin a release tag or digest.",
+        "native_lxc_behavior": "ProxMenux selects the same image repository with the latest tag for catalog installations.",
+        "reason": "The automatic catalog intentionally offers rolling latest images; pinned versions belong to the future manual installer.",
+        "behavioral_impact": "The installed release can be newer than the discovered Compose revision.",
+        "validation": "pending-per-application"
+      },
+      {
+        "id": "dedicated-lxc-network",
+        "upstream_behavior": "Docker publishes selected container ports on the Docker host.",
+        "native_lxc_behavior": "A reviewed native application will listen on its original container ports at a dedicated LXC address.",
+        "reason": "A native LXC has its own address and does not require Docker port NAT.",
+        "behavioral_impact": "Published ports are metadata; ProxMenux URLs use the matching container target port.",
+        "validation": "pending-per-application"
+      },
+      {
+        "id": "compose-shm-size",
+        "upstream_behavior": "Compose sets the size of the container /dev/shm tmpfs.",
+        "native_lxc_behavior": "ProxMenux mounts a native LXC tmpfs at /dev/shm with the same requested capacity.",
+        "reason": "The OCI image runs directly as an LXC and therefore needs the equivalent Proxmox mount entry.",
+        "behavioral_impact": "None expected.",
+        "validation": "not-requested-by-compose"
+      },
+      {
+        "id": "compose-command",
+        "upstream_behavior": "Compose replaces the image Cmd while retaining its Entrypoint.",
+        "native_lxc_behavior": "ProxMenux reads the official OCI Entrypoint and combines it with the Compose command as the native LXC init command.",
+        "reason": "Proxmox stores the effective OCI process as one entrypoint string.",
+        "behavioral_impact": "None expected.",
+        "validation": "not-requested-by-compose"
+      },
+      {
+        "id": "compose-privileged-mode",
+        "upstream_behavior": "Compose selects whether the container runs in privileged mode.",
+        "native_lxc_behavior": "ProxMenux uses a privileged LXC only after an explicit high-risk confirmation; otherwise it keeps the LXC unprivileged.",
+        "reason": "The native OCI-LXC deployment must preserve the requested privilege level without silently weakening isolation.",
+        "behavioral_impact": "A privileged LXC has weaker isolation from the Proxmox host.",
+        "validation": "native-equivalent"
+      },
+      {
+        "id": "compose-process-runtime",
+        "upstream_behavior": "Compose can replace Entrypoint, User and WorkingDir and request an init process or interactive terminal.",
+        "native_lxc_behavior": "ProxMenux applies the process overrides through native LXC init directives; lxc-init provides PID 1 supervision and the CT console provides terminal access.",
+        "reason": "The OCI process must start with the same identity, command and working directory without Docker.",
+        "behavioral_impact": "Compose stdin_open and tty become access through the Proxmox LXC console.",
+        "validation": "not-requested-by-compose"
+      },
+      {
+        "id": "compose-healthcheck",
+        "upstream_behavior": "Docker periodically executes the declared container healthcheck.",
+        "native_lxc_behavior": "For a single-service LXC, ProxMenux translates HTTP localhost checks into a mandatory first-start service check.",
+        "reason": "Proxmox has no persistent Docker health state, while the installer still must detect a failed first boot.",
+        "behavioral_impact": "The check runs during installation rather than continuously after installation.",
+        "validation": "not-requested-by-compose"
+      },
+      {
+        "id": "compose-cpu-priority",
+        "upstream_behavior": "Docker cpu_shares sets a relative scheduling weight with 1024 as its neutral value.",
+        "native_lxc_behavior": "ProxMenux converts the relative weight to Proxmox cpuunits with 100 as its neutral value and lets the user review it.",
+        "reason": "Both settings express relative CPU priority on different scales.",
+        "behavioral_impact": "Rounding and Proxmox minimum limits can slightly change very low weights.",
+        "validation": "not-requested-by-compose"
+      },
+      {
+        "id": "compose-network-identity",
+        "upstream_behavior": "Compose can set hostname, MAC address, extra hosts and attach a service to Docker networks.",
+        "native_lxc_behavior": "ProxMenux applies hostname and MAC to net0, writes additional host aliases into the LXC and uses its dedicated bridge connection for single-service networks.",
+        "reason": "A dedicated LXC has its own network namespace and does not need a Docker bridge per service.",
+        "behavioral_impact": "host-gateway resolves to the IPv4 address of the selected Proxmox bridge.",
+        "validation": "not-requested-by-compose"
+      },
+      {
+        "id": "docker-engine-metadata",
+        "upstream_behavior": "Compose labels annotate Docker objects and the json-file logging driver rotates Docker-managed logs.",
+        "native_lxc_behavior": "Labels remain source metadata; Docker json-file settings are not applied because the OCI process runs directly under LXC.",
+        "reason": "There is no Docker object or Docker json-file log behind a native OCI-LXC application.",
+        "behavioral_impact": "Docker-only label consumers and Docker log-driver rotation do not exist in the native deployment.",
+        "validation": "not-requested-by-compose"
+      },
+      {
+        "id": "compose-device-passthrough",
+        "upstream_behavior": "Compose passes host character devices or requests an NVIDIA runtime GPU.",
+        "native_lxc_behavior": "ProxMenux converts recognized device declarations to native Proxmox dev resources; NVIDIA profiles also inject compatible host driver libraries read-only.",
+        "reason": "Native OCI-LXC does not execute Docker device or NVIDIA runtime hooks.",
+        "behavioral_impact": "Hardware is exposed only after explicit user confirmation and host-path validation.",
+        "validation": "pending-per-application"
+      },
+      {
+        "id": "compose-host-ipc",
+        "upstream_behavior": "ipc: host shares the Docker host IPC namespace, commonly to avoid Docker's small default shared-memory allocation.",
+        "native_lxc_behavior": "The application keeps the LXC IPC namespace and receives a configurable 1 GiB /dev/shm instead of sharing Proxmox host IPC.",
+        "reason": "Processes in a single native LXC already share one IPC namespace; retaining isolation is safer than exposing host IPC.",
+        "behavioral_impact": "The application cannot exchange IPC objects with processes on the Proxmox host.",
+        "validation": "not-requested-by-compose"
+      }
+    ],
+    "deployment_profile": {
+      "variant": "hardware-selectable",
+      "gpu_passthrough": "installer-selection"
+    },
+    "catalog": {
+      "replaces_discovered_ids": [
+        "emby",
+        "emby-nvidia"
+      ]
+    },
+    "application_options": {
+      "hardware_transcoding": {
+        "show_in_catalog": true,
+        "selectable": true,
+        "documented_acceleration_architectures": [
+          "amd64"
+        ],
+        "backends": [
+          "VA-API",
+          "NVDEC/NVENC"
+        ]
+      }
+    }
+  },
+  "compatibility": {
+    "automatic_install_candidate": true,
+    "validated": false,
+    "supported_compose_keys": [
+      "command",
+      "container_name",
+      "cpu_shares",
+      "deploy",
+      "devices",
+      "entrypoint",
+      "environment",
+      "extra_hosts",
+      "healthcheck",
+      "hostname",
+      "image",
+      "init",
+      "ipc",
+      "labels",
+      "logging",
+      "mac_address",
+      "network_mode",
+      "networks",
+      "ports",
+      "privileged",
+      "restart",
+      "runtime",
+      "shm_size",
+      "stdin_open",
+      "stop_grace_period",
+      "tty",
+      "user",
+      "volumes",
+      "working_dir"
+    ],
+    "untranslated_blockers": [],
+    "policy": "Single-image definitions are installable when every declared Compose option has a native Proxmox translation. Multi-image and unsupported runtime features remain blocked until their orchestrator or mapping is available."
+  },
+  "validation": {
+    "schema": "passed-at-generation",
+    "clean_install": "pending",
+    "service_health": "pending",
+    "restart_persistence": "pending",
+    "backup_restore": "pending",
+    "update_preserves_data": "pending"
+  },
+  "lifecycle": {
+    "update_strategy": "resolve-latest-image-then-apply-reviewed-native-lxc-update",
+    "registry_state": {
+      "resolved_architecture": null,
+      "resolved_digest": null,
+      "image_version_label": null,
+      "image_created": null
+    },
+    "change_detection": "compare-compose-sha256-and-resolved-latest-image-digest",
+    "automatic_unattended_updates": false
+  }
+}

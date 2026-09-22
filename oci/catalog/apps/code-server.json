@@ -1,0 +1,290 @@
+{
+  "schema_version": "0.3.0",
+  "kind": "proxmenux.oci-template",
+  "id": "linuxserver-code-server",
+  "status": "generated-unvalidated",
+  "catalog_ui": {
+    "title": {
+      "en_US": "Code Server"
+    },
+    "tagline": {
+      "en_US": "Code-server is VS Code running on a remote server, accessible through the browser."
+    },
+    "description": {
+      "en_US": "Code-server is VS Code running on a remote server, accessible through the browser."
+    },
+    "category": "misc",
+    "category_label": "Miscellaneous",
+    "author": "LinuxServer.io",
+    "developer": null,
+    "icon": "https://raw.githubusercontent.com/linuxserver/docker-templates/master/linuxserver.io/img/code-server-icon.png",
+    "thumbnail": "https://raw.githubusercontent.com/linuxserver/docker-templates/master/linuxserver.io/img/code-server-banner.png",
+    "screenshots": [],
+    "architectures": [
+      "amd64",
+      "arm64"
+    ],
+    "launch": {
+      "scheme": "http",
+      "port": 8443,
+      "path": "/"
+    },
+    "website": "https://coder.com",
+    "documentation": "https://docs.linuxserver.io/images/docker-code-server/",
+    "repository": "https://github.com/linuxserver/docker-code-server",
+    "tips": [],
+    "mini_changelog": [
+      {
+        "date": "2026-05-17",
+        "note": "Let server listen on both ipv4 and ipv6 even when running container as root."
+      },
+      {
+        "date": "2025-08-10",
+        "note": "Let server listen on both ipv4 and ipv6."
+      },
+      {
+        "date": "2025-06-03",
+        "note": "Allow setting PWA name using env var `PWA_APPNAME`."
+      },
+      {
+        "date": "2024-10-13",
+        "note": "Only chown config folder when change to ownership or new install is detected."
+      },
+      {
+        "date": "2024-10-09",
+        "note": "Manage permissions in /config/.ssh according to file type"
+      }
+    ],
+    "display_version": null,
+    "updated_at": "2026-05-17"
+  },
+  "source": {
+    "provider": "linuxserver.io",
+    "repository": "https://github.com/linuxserver/docker-code-server",
+    "default_branch": "master",
+    "revision": "efc786252e7750b6e9915bc57aff86454d88b0f4",
+    "readme_raw_url": "https://raw.githubusercontent.com/linuxserver/docker-code-server/efc786252e7750b6e9915bc57aff86454d88b0f4/README.md",
+    "readme_pushed_at": "2026-09-11T05:22:23Z",
+    "compose_sha256": "07da8874c9c570566a876e5fba9b523cee9ca8ee54ac950381d7db9b3720bc70",
+    "generated_at": "2026-09-12T14:37:25+00:00"
+  },
+  "container_contract": {
+    "service_name": "code-server",
+    "container_name": "code-server",
+    "image": {
+      "reference": "lscr.io/linuxserver/code-server:latest",
+      "registry": "lscr.io",
+      "repository": "lscr.io/linuxserver/code-server",
+      "tag": "latest",
+      "digest": null,
+      "pull_policy": "resolve-selected-tag-to-architecture-digest-at-install"
+    },
+    "environment": [
+      {
+        "name": "PUID",
+        "example": "1000",
+        "required": true,
+        "sensitive": false,
+        "source": "linuxserver-compose"
+      },
+      {
+        "name": "PGID",
+        "example": "1000",
+        "required": true,
+        "sensitive": false,
+        "source": "linuxserver-compose"
+      },
+      {
+        "name": "TZ",
+        "example": "Etc/UTC",
+        "required": true,
+        "sensitive": false,
+        "source": "linuxserver-compose"
+      },
+      {
+        "name": "PASSWORD",
+        "example": "password",
+        "required": false,
+        "sensitive": true,
+        "source": "linuxserver-compose"
+      },
+      {
+        "name": "HASHED_PASSWORD",
+        "example": "",
+        "required": false,
+        "sensitive": true,
+        "source": "linuxserver-compose"
+      },
+      {
+        "name": "SUDO_PASSWORD",
+        "example": "password",
+        "required": false,
+        "sensitive": true,
+        "source": "linuxserver-compose"
+      },
+      {
+        "name": "SUDO_PASSWORD_HASH",
+        "example": "",
+        "required": false,
+        "sensitive": true,
+        "source": "linuxserver-compose"
+      },
+      {
+        "name": "PROXY_DOMAIN",
+        "example": "code-server.my.domain",
+        "required": false,
+        "sensitive": false,
+        "source": "linuxserver-compose"
+      },
+      {
+        "name": "DEFAULT_WORKSPACE",
+        "example": "/config/workspace",
+        "required": false,
+        "sensitive": false,
+        "source": "linuxserver-compose"
+      },
+      {
+        "name": "PWA_APPNAME",
+        "example": "code-server",
+        "required": false,
+        "sensitive": false,
+        "source": "linuxserver-compose"
+      }
+    ],
+    "volumes": [
+      {
+        "id": "volume-0",
+        "container_path": "/config",
+        "compose_source_example": "/path/to/code-server/config",
+        "read_only": false,
+        "required": true,
+        "installation_choice": [
+          "managed-volume",
+          "host-bind"
+        ],
+        "default": "managed-volume",
+        "managed_volume": {
+          "backup": true,
+          "default_size_gb": 4
+        }
+      }
+    ],
+    "ports": [
+      {
+        "container_port": 8443,
+        "published_example": 8443,
+        "protocol": "tcp",
+        "required": true,
+        "proxmox_behavior": "listener-on-dedicated-lxc-address-no-nat"
+      }
+    ],
+    "related_services": [],
+    "restart": "unless-stopped",
+    "stop_grace_period": null,
+    "original_compose": "---\nservices:\n  code-server:\n    image: lscr.io/linuxserver/code-server:latest\n    container_name: code-server\n    environment:\n      - PUID=1000\n      - PGID=1000\n      - TZ=Etc/UTC\n      - PASSWORD=password #optional\n      - HASHED_PASSWORD= #optional\n      - SUDO_PASSWORD=password #optional\n      - SUDO_PASSWORD_HASH= #optional\n      - PROXY_DOMAIN=code-server.my.domain #optional\n      - DEFAULT_WORKSPACE=/config/workspace #optional\n      - PWA_APPNAME=code-server #optional\n    volumes:\n      - /path/to/code-server/config:/config\n    ports:\n      - 8443:8443\n    restart: unless-stopped\n"
+  },
+  "first_run": {
+    "endpoints": [
+      {
+        "label": "Web UI",
+        "scheme": "http",
+        "port": 8443,
+        "path": "/",
+        "source": "compose-first-tcp-port-fallback"
+      }
+    ],
+    "credentials": []
+  },
+  "proxmox": {
+    "runtime": "native-oci-lxc",
+    "technology_status": "proxmox-technology-preview",
+    "defaults": {
+      "unprivileged": true,
+      "ostype": "auto-from-image",
+      "cores": 2,
+      "memory_mb": 1024,
+      "swap_mb": 512,
+      "rootfs_size_gb": 8,
+      "rootfs_storage": "local-lvm",
+      "volume_storage": "local-lvm",
+      "template_storage": "local",
+      "bridge": "vmbr0",
+      "ipv4": "dhcp",
+      "firewall": true,
+      "host_managed_network": true,
+      "onboot": false,
+      "features": [
+        "nesting=1"
+      ],
+      "shutdown_timeout_seconds": 30
+    },
+    "image_metadata_policy": {
+      "entrypoint": "import-from-oci-image",
+      "cmd": "import-from-oci-image",
+      "environment": "import-image-env-then-apply-compose-overrides",
+      "user": "import-from-oci-image",
+      "working_dir": "import-from-oci-image",
+      "stop_signal": "import-from-oci-image"
+    },
+    "adaptations": [
+      {
+        "id": "dedicated-lxc-network",
+        "upstream_behavior": "Docker publishes selected container ports on the Docker host.",
+        "native_lxc_behavior": "The application listens on the same container ports at its dedicated LXC address.",
+        "reason": "A native LXC has its own address and does not require Docker port NAT.",
+        "behavioral_impact": "Users open the LXC address instead of the Proxmox host address.",
+        "validation": "pending-per-application"
+      },
+      {
+        "id": "compose-environment-overlay",
+        "upstream_behavior": "Compose environment values override OCI image environment values.",
+        "native_lxc_behavior": "ProxMenux merges the same values into lxc.environment.runtime while the CT is stopped.",
+        "reason": "PVE imports image Env automatically; Compose values still need to override it.",
+        "behavioral_impact": "None expected.",
+        "validation": "pending-per-application"
+      },
+      {
+        "id": "stop-grace-period",
+        "upstream_behavior": "Docker waits for Compose stop_grace_period before forcing termination.",
+        "native_lxc_behavior": "ProxMenux records the same timeout for its pct shutdown lifecycle operations.",
+        "reason": "Proxmox has no equivalent per-CT persistent restart-policy field; startup.down is not a shutdown timeout.",
+        "behavioral_impact": "Normal Proxmox node shutdown remains governed by the node-wide shutdown policy.",
+        "validation": "not-requested-by-compose"
+      }
+    ]
+  },
+  "compatibility": {
+    "automatic_install_candidate": true,
+    "validated": false,
+    "supported_compose_keys": [
+      "container_name",
+      "environment",
+      "image",
+      "ports",
+      "restart",
+      "stop_grace_period",
+      "volumes"
+    ],
+    "untranslated_blockers": [],
+    "policy": "A generated template is never promoted to validated without install, health, restart and persistence tests."
+  },
+  "validation": {
+    "schema": "passed-at-generation",
+    "clean_install": "pending",
+    "service_health": "pending",
+    "restart_persistence": "pending",
+    "backup_restore": "pending",
+    "update_preserves_data": "pending"
+  },
+  "lifecycle": {
+    "update_strategy": "replace-rootfs-from-new-oci-image-preserve-managed-volumes",
+    "registry_state": {
+      "resolved_architecture": null,
+      "resolved_digest": null,
+      "image_version_label": null,
+      "image_created": null
+    },
+    "change_detection": "compare-resolved-architecture-digest",
+    "automatic_unattended_updates": false
+  }
+}

@@ -1,0 +1,15 @@
+{
+  "proxmox": {
+    "installer_profile": {
+      "selkies": {
+        "base": "FROM ghcr.io/linuxserver/baseimage-selkies:arch",
+        "dockerfile_url": "https://raw.githubusercontent.com/linuxserver/docker-kdenlive/master/Dockerfile",
+        "dockerfile_sha256": "cb69b193c30a69f2f5f2f3d667bae33d41beacb23c60847e69ce71265c29cb0c",
+        "reviewed_on": "2026-09-16",
+        "documentation": "https://docs.linuxserver.io/images/docker-baseimage-selkies/",
+        "nvidia": "not-offered-until-specific-host-and-image-validation",
+        "validation": "profile-generated; real streaming workload pending"
+      }
+    }
+  }
+}

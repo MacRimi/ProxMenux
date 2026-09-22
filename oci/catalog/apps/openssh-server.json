@@ -1,0 +1,390 @@
+{
+  "schema_version": "0.4.0",
+  "kind": "proxmenux.oci-template",
+  "id": "linuxserver-openssh-server",
+  "status": "laboratory-validated",
+  "catalog_ui": {
+    "title": {
+      "en_US": "Openssh Server"
+    },
+    "tagline": {
+      "en_US": "Openssh-server is a sandboxed environment that allows ssh access without giving keys to the entire server."
+    },
+    "description": {
+      "en_US": "Openssh-server is a sandboxed environment that allows ssh access without giving keys to the entire server."
+    },
+    "category": "misc",
+    "category_label": "Miscellaneous",
+    "author": "LinuxServer.io",
+    "developer": null,
+    "icon": "https://raw.githubusercontent.com/linuxserver/docker-templates/master/linuxserver.io/img/openssh-server-icon.png",
+    "thumbnail": "https://raw.githubusercontent.com/linuxserver/docker-templates/master/linuxserver.io/img/openssh-server-banner.png",
+    "screenshots": [],
+    "architectures": [
+      "amd64",
+      "arm64"
+    ],
+    "launch": {
+      "scheme": "http",
+      "port": 2222,
+      "path": "/"
+    },
+    "website": "https://www.openssh.com/",
+    "documentation": "https://docs.linuxserver.io/images/docker-openssh-server/",
+    "repository": "https://github.com/linuxserver/docker-openssh-server",
+    "tips": [],
+    "mini_changelog": [
+      {
+        "date": "2026-07-05",
+        "note": "Rebase to Alpine 3.24."
+      },
+      {
+        "date": "2025-12-28",
+        "note": "Rebase to Alpine 3.23."
+      },
+      {
+        "date": "2025-07-05",
+        "note": "Rebase to Alpine 3.22."
+      },
+      {
+        "date": "2025-02-10",
+        "note": "Add support for sshd_config.d"
+      },
+      {
+        "date": "2025-01-12",
+        "note": "Rebase to Alpine 3.21."
+      }
+    ],
+    "display_version": null,
+    "updated_at": "2026-07-05"
+  },
+  "source": {
+    "provider": "linuxserver.io",
+    "repository": "https://github.com/linuxserver/docker-openssh-server",
+    "default_branch": "master",
+    "revision": "4e43b1ae9bc8cb3aba5f59ab96e4ba231f9a8455",
+    "readme_raw_url": "https://raw.githubusercontent.com/linuxserver/docker-openssh-server/4e43b1ae9bc8cb3aba5f59ab96e4ba231f9a8455/README.md",
+    "readme_pushed_at": "2026-09-06T21:01:44Z",
+    "compose_sha256": "d8bca8e6e562b6d563ef25a2559f7ab0c650adabd17b1c96889c23ab1e9fcf6f",
+    "generated_at": "2026-09-13T14:54:03+00:00"
+  },
+  "container_contract": {
+    "service_name": "openssh-server",
+    "container_name": "openssh-server",
+    "image": {
+      "reference": "lscr.io/linuxserver/openssh-server:latest",
+      "registry": "lscr.io",
+      "repository": "lscr.io/linuxserver/openssh-server",
+      "tag": "latest",
+      "digest": null,
+      "pull_policy": "resolve-selected-tag-to-architecture-digest-at-install"
+    },
+    "environment": [
+      {
+        "name": "PUID",
+        "example": "1000",
+        "required": true,
+        "sensitive": false,
+        "source": "linuxserver-compose"
+      },
+      {
+        "name": "PGID",
+        "example": "1000",
+        "required": true,
+        "sensitive": false,
+        "source": "linuxserver-compose"
+      },
+      {
+        "name": "TZ",
+        "example": "Etc/UTC",
+        "required": true,
+        "sensitive": false,
+        "source": "linuxserver-compose"
+      },
+      {
+        "name": "PUBLIC_KEY",
+        "example": "yourpublickey",
+        "required": false,
+        "sensitive": true,
+        "source": "linuxserver-compose"
+      },
+      {
+        "name": "PUBLIC_KEY_FILE",
+        "example": "/path/to/file",
+        "required": false,
+        "sensitive": true,
+        "source": "linuxserver-compose"
+      },
+      {
+        "name": "PUBLIC_KEY_DIR",
+        "example": "/path/to/directory/containing/_only_/pubkeys",
+        "required": false,
+        "sensitive": true,
+        "source": "linuxserver-compose"
+      },
+      {
+        "name": "PUBLIC_KEY_URL",
+        "example": "https://github.com/username.keys",
+        "required": false,
+        "sensitive": true,
+        "source": "linuxserver-compose"
+      },
+      {
+        "name": "SUDO_ACCESS",
+        "example": "false",
+        "required": false,
+        "sensitive": false,
+        "source": "linuxserver-compose"
+      },
+      {
+        "name": "PASSWORD_ACCESS",
+        "example": "false",
+        "required": false,
+        "sensitive": true,
+        "source": "linuxserver-compose"
+      },
+      {
+        "name": "USER_PASSWORD",
+        "example": "password",
+        "required": false,
+        "sensitive": true,
+        "source": "linuxserver-compose"
+      },
+      {
+        "name": "USER_PASSWORD_FILE",
+        "example": "/path/to/file",
+        "required": false,
+        "sensitive": true,
+        "source": "linuxserver-compose"
+      },
+      {
+        "name": "USER_NAME",
+        "example": "linuxserver.io",
+        "required": false,
+        "sensitive": false,
+        "source": "linuxserver-compose"
+      },
+      {
+        "name": "LOG_STDOUT",
+        "example": "",
+        "required": false,
+        "sensitive": false,
+        "source": "linuxserver-compose"
+      }
+    ],
+    "volumes": [
+      {
+        "id": "volume-0",
+        "container_path": "/config",
+        "compose_source_example": "/path/to/openssh-server/config",
+        "read_only": false,
+        "required": true,
+        "installation_choice": [
+          "managed-volume",
+          "host-bind"
+        ],
+        "default": "managed-volume",
+        "managed_volume": {
+          "backup": true,
+          "default_size_gb": 4
+        }
+      }
+    ],
+    "ports": [
+      {
+        "container_port": 2222,
+        "published_example": 2222,
+        "protocol": "tcp",
+        "required": true,
+        "proxmox_behavior": "listener-on-dedicated-lxc-address-no-nat"
+      }
+    ],
+    "related_services": [],
+    "restart": "unless-stopped",
+    "stop_grace_period": null,
+    "original_compose": "---\nservices:\n  openssh-server:\n    image: lscr.io/linuxserver/openssh-server:latest\n    container_name: openssh-server\n    hostname: openssh-server #optional\n    environment:\n      - PUID=1000\n      - PGID=1000\n      - TZ=Etc/UTC\n      - PUBLIC_KEY=yourpublickey #optional\n      - PUBLIC_KEY_FILE=/path/to/file #optional\n      - PUBLIC_KEY_DIR=/path/to/directory/containing/_only_/pubkeys #optional\n      - PUBLIC_KEY_URL=https://github.com/username.keys #optional\n      - SUDO_ACCESS=false #optional\n      - PASSWORD_ACCESS=false #optional\n      - USER_PASSWORD=password #optional\n      - USER_PASSWORD_FILE=/path/to/file #optional\n      - USER_NAME=linuxserver.io #optional\n      - LOG_STDOUT= #optional\n    volumes:\n      - /path/to/openssh-server/config:/config\n    ports:\n      - 2222:2222\n    restart: unless-stopped\n"
+  },
+  "first_run": {
+    "endpoints": [
+      {
+        "label": "Web UI",
+        "scheme": "http",
+        "port": 2222,
+        "path": "/",
+        "source": "compose-first-tcp-port-fallback"
+      }
+    ],
+    "credentials": []
+  },
+  "proxmox": {
+    "runtime": "native-oci-lxc",
+    "technology_status": "proxmox-technology-preview",
+    "defaults": {
+      "unprivileged": true,
+      "ostype": "auto-from-image",
+      "cores": 2,
+      "memory_mb": 1024,
+      "swap_mb": 512,
+      "rootfs_size_gb": 8,
+      "rootfs_storage": "local-lvm",
+      "volume_storage": "local-lvm",
+      "template_storage": "local",
+      "bridge": "vmbr0",
+      "ipv4": "dhcp",
+      "firewall": true,
+      "host_managed_network": true,
+      "onboot": false,
+      "features": [
+        "nesting=1"
+      ],
+      "shutdown_timeout_seconds": 30
+    },
+    "image_metadata_policy": {
+      "entrypoint": "import-from-oci-image",
+      "cmd": "import-from-oci-image",
+      "environment": "import-image-env-then-apply-compose-overrides",
+      "user": "import-from-oci-image",
+      "working_dir": "import-from-oci-image",
+      "stop_signal": "import-from-oci-image"
+    },
+    "installer_profile": {
+      "runtime": {
+        "hostname": "openssh-server"
+      }
+    },
+    "adaptations": [
+      {
+        "id": "dedicated-lxc-network",
+        "upstream_behavior": "Docker publishes selected container ports on the Docker host.",
+        "native_lxc_behavior": "The application listens on the same container ports at its dedicated LXC address.",
+        "reason": "A native LXC has its own address and does not require Docker port NAT.",
+        "behavioral_impact": "Users open the LXC address instead of the Proxmox host address.",
+        "validation": "pending-per-application"
+      },
+      {
+        "id": "compose-environment-overlay",
+        "upstream_behavior": "Compose environment values override OCI image environment values.",
+        "native_lxc_behavior": "ProxMenux merges the same values into lxc.environment.runtime while the CT is stopped.",
+        "reason": "PVE imports image Env automatically; Compose values still need to override it.",
+        "behavioral_impact": "None expected.",
+        "validation": "pending-per-application"
+      },
+      {
+        "id": "stop-grace-period",
+        "upstream_behavior": "Docker waits for Compose stop_grace_period before forcing termination.",
+        "native_lxc_behavior": "ProxMenux records the same timeout for its pct shutdown lifecycle operations.",
+        "reason": "Proxmox has no equivalent per-CT persistent restart-policy field; startup.down is not a shutdown timeout.",
+        "behavioral_impact": "Normal Proxmox node shutdown remains governed by the node-wide shutdown policy.",
+        "validation": "not-requested-by-compose"
+      },
+      {
+        "id": "compose-shm-size",
+        "upstream_behavior": "Compose sets the size of the container /dev/shm tmpfs.",
+        "native_lxc_behavior": "ProxMenux mounts a native LXC tmpfs at /dev/shm with the same requested capacity.",
+        "reason": "The OCI image runs directly as an LXC and therefore needs the equivalent Proxmox mount entry.",
+        "behavioral_impact": "None expected.",
+        "validation": "not-requested-by-compose"
+      },
+      {
+        "id": "compose-command",
+        "upstream_behavior": "Compose replaces the image Cmd while retaining its Entrypoint.",
+        "native_lxc_behavior": "ProxMenux reads the official OCI Entrypoint and combines it with the Compose command as the native LXC init command.",
+        "reason": "Proxmox stores the effective OCI process as one entrypoint string.",
+        "behavioral_impact": "None expected.",
+        "validation": "not-requested-by-compose"
+      },
+      {
+        "id": "compose-process-runtime",
+        "upstream_behavior": "Compose can replace Entrypoint, User and WorkingDir and request an init process or interactive terminal.",
+        "native_lxc_behavior": "ProxMenux applies the process overrides through native LXC init directives; lxc-init provides PID 1 supervision and the CT console provides terminal access.",
+        "reason": "The OCI process must start with the same identity, command and working directory without Docker.",
+        "behavioral_impact": "Compose stdin_open and tty become access through the Proxmox LXC console.",
+        "validation": "not-requested-by-compose"
+      },
+      {
+        "id": "compose-healthcheck",
+        "upstream_behavior": "Docker periodically executes the declared container healthcheck.",
+        "native_lxc_behavior": "For a single-service LXC, ProxMenux translates HTTP localhost checks into a mandatory first-start service check.",
+        "reason": "Proxmox has no persistent Docker health state, while the installer still must detect a failed first boot.",
+        "behavioral_impact": "The check runs during installation rather than continuously after installation.",
+        "validation": "not-requested-by-compose"
+      },
+      {
+        "id": "compose-cpu-priority",
+        "upstream_behavior": "Docker cpu_shares sets a relative scheduling weight with 1024 as its neutral value.",
+        "native_lxc_behavior": "ProxMenux converts the relative weight to Proxmox cpuunits with 100 as its neutral value and lets the user review it.",
+        "reason": "Both settings express relative CPU priority on different scales.",
+        "behavioral_impact": "Rounding and Proxmox minimum limits can slightly change very low weights.",
+        "validation": "not-requested-by-compose"
+      },
+      {
+        "id": "compose-network-identity",
+        "upstream_behavior": "Compose can set hostname, MAC address, extra hosts and attach a service to Docker networks.",
+        "native_lxc_behavior": "ProxMenux applies hostname and MAC to net0, writes additional host aliases into the LXC and uses its dedicated bridge connection for single-service networks.",
+        "reason": "A dedicated LXC has its own network namespace and does not need a Docker bridge per service.",
+        "behavioral_impact": "host-gateway resolves to the IPv4 address of the selected Proxmox bridge.",
+        "validation": "pending-per-application"
+      },
+      {
+        "id": "docker-engine-metadata",
+        "upstream_behavior": "Compose labels annotate Docker objects and the json-file logging driver rotates Docker-managed logs.",
+        "native_lxc_behavior": "Labels remain source metadata; Docker json-file settings are not applied because the OCI process runs directly under LXC.",
+        "reason": "There is no Docker object or Docker json-file log behind a native OCI-LXC application.",
+        "behavioral_impact": "Docker-only label consumers and Docker log-driver rotation do not exist in the native deployment.",
+        "validation": "not-requested-by-compose"
+      }
+    ]
+  },
+  "compatibility": {
+    "automatic_install_candidate": true,
+    "validated": false,
+    "supported_compose_keys": [
+      "command",
+      "container_name",
+      "cpu_shares",
+      "entrypoint",
+      "environment",
+      "extra_hosts",
+      "healthcheck",
+      "hostname",
+      "image",
+      "init",
+      "labels",
+      "logging",
+      "mac_address",
+      "networks",
+      "ports",
+      "privileged",
+      "restart",
+      "shm_size",
+      "stdin_open",
+      "stop_grace_period",
+      "tty",
+      "user",
+      "volumes",
+      "working_dir"
+    ],
+    "untranslated_blockers": [],
+    "policy": "A generated template is never promoted to validated without install, health, restart and persistence tests."
+  },
+  "validation": {
+    "schema": "passed-at-generation",
+    "clean_install": "passed-amd64",
+    "service_health": "passed-amd64",
+    "restart_persistence": "pending",
+    "backup_restore": "pending",
+    "update_preserves_data": "pending",
+    "authenticated_login": "passed-amd64"
+  },
+  "lifecycle": {
+    "update_strategy": "replace-rootfs-from-new-oci-image-preserve-managed-volumes",
+    "registry_state": {
+      "resolved_architecture": null,
+      "resolved_digest": null,
+      "image_version_label": null,
+      "image_created": null
+    },
+    "change_detection": "compare-resolved-architecture-digest",
+    "automatic_unattended_updates": false
+  }
+}

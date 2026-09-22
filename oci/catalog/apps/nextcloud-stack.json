@@ -1,0 +1,613 @@
+{
+  "schema_version": "0.5.0",
+  "kind": "proxmenux.oci-template",
+  "id": "image-nextcloud-stack",
+  "status": "generated-unvalidated",
+  "catalog_ui": {
+    "title": {
+      "en_US": "Nextcloud Stack"
+    },
+    "tagline": {
+      "en_US": "Nextcloud with private PostgreSQL and Redis dependencies"
+    },
+    "description": {
+      "en_US": "A three-service Nextcloud deployment adapted to native Proxmox OCI LXC containers."
+    },
+    "category": "productivity",
+    "category_label": "Productivity & Workflows",
+    "author": "Nextcloud",
+    "developer": "Nextcloud",
+    "icon": null,
+    "thumbnail": null,
+    "screenshots": [],
+    "architectures": [
+      "amd64"
+    ],
+    "launch": {
+      "scheme": "http",
+      "port": 80,
+      "path": "/"
+    },
+    "website": "https://nextcloud.com/",
+    "documentation": "https://github.com/nextcloud/docker",
+    "repository": "https://github.com/nextcloud/docker",
+    "tips": [],
+    "mini_changelog": [],
+    "display_version": null,
+    "updated_at": "2026-08-27"
+  },
+  "source": {
+    "provider": "nextcloud",
+    "repository": "https://github.com/nextcloud/docker",
+    "revision": "efbfd48ff39b00cdb9b5283b68db9d62542523979ae65da68b43f607b678bae5",
+    "image_repository_url": "https://hub.docker.com/_/nextcloud",
+    "readme_pushed_at": "2026-08-27T00:00:00Z",
+    "compose_sha256": "efbfd48ff39b00cdb9b5283b68db9d62542523979ae65da68b43f607b678bae5",
+    "generated_at": "2026-09-12T15:37:08+00:00"
+  },
+  "container_contract": {
+    "service_name": "application",
+    "container_name": "application",
+    "image": {
+      "reference": "nextcloud:latest",
+      "registry": "docker.io",
+      "repository": "nextcloud",
+      "tag": "latest",
+      "digest": null,
+      "pull_policy": "resolve-selected-tag-to-architecture-digest-at-install"
+    },
+    "environment": [
+      {
+        "name": "POSTGRES_HOST",
+        "example": "database",
+        "required": true,
+        "sensitive": false,
+        "source": "docker-compose"
+      },
+      {
+        "name": "POSTGRES_DB",
+        "example": "nextcloud",
+        "required": true,
+        "sensitive": false,
+        "source": "docker-compose"
+      },
+      {
+        "name": "POSTGRES_USER",
+        "example": "nextcloud",
+        "required": true,
+        "sensitive": false,
+        "source": "docker-compose"
+      },
+      {
+        "name": "POSTGRES_PASSWORD",
+        "example": "${GENERATED_DB_PASSWORD}",
+        "required": true,
+        "sensitive": true,
+        "source": "docker-compose"
+      },
+      {
+        "name": "REDIS_HOST",
+        "example": "cache",
+        "required": true,
+        "sensitive": false,
+        "source": "docker-compose"
+      },
+      {
+        "name": "NEXTCLOUD_ADMIN_USER",
+        "example": "admin",
+        "required": true,
+        "sensitive": false,
+        "source": "docker-compose"
+      },
+      {
+        "name": "NEXTCLOUD_ADMIN_PASSWORD",
+        "example": "${GENERATED_ADMIN_PASSWORD}",
+        "required": true,
+        "sensitive": true,
+        "source": "docker-compose"
+      },
+      {
+        "name": "NEXTCLOUD_INIT_HTACCESS",
+        "example": "true",
+        "required": true,
+        "sensitive": false,
+        "source": "docker-compose"
+      }
+    ],
+    "volumes": [
+      {
+        "id": "volume-0",
+        "container_path": "/var/www/html",
+        "compose_source_example": "nextcloud-html",
+        "read_only": false,
+        "required": true,
+        "installation_choice": [
+          "managed-volume",
+          "host-bind"
+        ],
+        "default": "managed-volume",
+        "managed_volume": {
+          "backup": true,
+          "default_size_gb": 8
+        }
+      }
+    ],
+    "ports": [
+      {
+        "container_port": 80,
+        "published_example": 80,
+        "protocol": "tcp",
+        "required": true,
+        "proxmox_behavior": "listener-on-dedicated-lxc-address-no-nat"
+      }
+    ],
+    "related_services": [
+      {
+        "name": "database",
+        "image": "postgres:latest"
+      },
+      {
+        "name": "cache",
+        "image": "redis:latest"
+      }
+    ],
+    "restart": "unless-stopped",
+    "stop_grace_period": null,
+    "original_compose": "name: nextcloud-stack\nservices:\n  application:\n    image: nextcloud:latest\n    depends_on:\n      database:\n        condition: service_healthy\n      cache:\n        condition: service_healthy\n    environment:\n      POSTGRES_HOST: database\n      POSTGRES_DB: nextcloud\n      POSTGRES_USER: nextcloud\n      POSTGRES_PASSWORD: ${GENERATED_DB_PASSWORD}\n      REDIS_HOST: cache\n      NEXTCLOUD_ADMIN_USER: admin\n      NEXTCLOUD_ADMIN_PASSWORD: ${GENERATED_ADMIN_PASSWORD}\n      NEXTCLOUD_INIT_HTACCESS: 'true'\n    ports:\n    - 80:80\n    volumes:\n    - nextcloud-html:/var/www/html\n    restart: unless-stopped\n  database:\n    image: postgres:latest\n    command:\n    - postgres\n    - -c\n    - listen_addresses=0.0.0.0\n    environment:\n      POSTGRES_DB: nextcloud\n      POSTGRES_USER: nextcloud\n      POSTGRES_PASSWORD: ${GENERATED_DB_PASSWORD}\n      POSTGRES_INITDB_ARGS: --data-checksums\n      PGDATA: /var/lib/postgresql/data/pgdata\n    healthcheck:\n      test:\n      - CMD-SHELL\n      - pg_isready -U nextcloud -d nextcloud\n      interval: 5s\n      timeout: 5s\n      retries: 30\n    volumes:\n    - postgres-data:/var/lib/postgresql/data\n    restart: unless-stopped\n  cache:\n    image: redis:latest\n    command: redis-server\n    healthcheck:\n      test:\n      - CMD\n      - redis-cli\n      - ping\n      interval: 5s\n      timeout: 5s\n      retries: 30\n    restart: unless-stopped\nvolumes:\n  nextcloud-html: {}\n  postgres-data: {}\n"
+  },
+  "compose_stack": {
+    "project_name": "nextcloud-stack",
+    "deployment_model": "one-native-oci-lxc-per-compose-service",
+    "user_experience": "single-application-install",
+    "main_service": "application",
+    "service_count": 3,
+    "services": [
+      {
+        "name": "cache",
+        "image": "redis:latest",
+        "is_main": false,
+        "role": "dependency",
+        "vmid_offset": 1,
+        "depends_on": [],
+        "frontend_network": false,
+        "private_network": true,
+        "compose": {
+          "image": "redis:latest",
+          "command": "redis-server",
+          "healthcheck": {
+            "test": [
+              "CMD",
+              "redis-cli",
+              "ping"
+            ],
+            "interval": "5s",
+            "timeout": "5s",
+            "retries": 30
+          },
+          "restart": "unless-stopped"
+        }
+      },
+      {
+        "name": "database",
+        "image": "postgres:latest",
+        "is_main": false,
+        "role": "dependency",
+        "vmid_offset": 2,
+        "depends_on": [],
+        "frontend_network": false,
+        "private_network": true,
+        "compose": {
+          "image": "postgres:latest",
+          "command": [
+            "postgres",
+            "-c",
+            "listen_addresses=0.0.0.0"
+          ],
+          "environment": {
+            "POSTGRES_DB": "nextcloud",
+            "POSTGRES_USER": "nextcloud",
+            "POSTGRES_PASSWORD": "${GENERATED_DB_PASSWORD}",
+            "POSTGRES_INITDB_ARGS": "--data-checksums",
+            "PGDATA": "/var/lib/postgresql/data/pgdata"
+          },
+          "healthcheck": {
+            "test": [
+              "CMD-SHELL",
+              "pg_isready -U nextcloud -d nextcloud"
+            ],
+            "interval": "5s",
+            "timeout": "5s",
+            "retries": 30
+          },
+          "volumes": [
+            "postgres-data:/var/lib/postgresql"
+          ],
+          "restart": "unless-stopped"
+        }
+      },
+      {
+        "name": "application",
+        "image": "nextcloud:latest",
+        "is_main": true,
+        "role": "frontend",
+        "vmid_offset": 0,
+        "depends_on": [
+          "cache",
+          "database"
+        ],
+        "frontend_network": true,
+        "private_network": true,
+        "compose": {
+          "image": "nextcloud:latest",
+          "depends_on": {
+            "database": {
+              "condition": "service_healthy"
+            },
+            "cache": {
+              "condition": "service_healthy"
+            }
+          },
+          "environment": {
+            "POSTGRES_HOST": "database",
+            "POSTGRES_DB": "nextcloud",
+            "POSTGRES_USER": "nextcloud",
+            "POSTGRES_PASSWORD": "${GENERATED_DB_PASSWORD}",
+            "REDIS_HOST": "cache",
+            "NEXTCLOUD_ADMIN_USER": "admin",
+            "NEXTCLOUD_ADMIN_PASSWORD": "${GENERATED_ADMIN_PASSWORD}",
+            "NEXTCLOUD_INIT_HTACCESS": "true"
+          },
+          "ports": [
+            "80:80"
+          ],
+          "volumes": [
+            "nextcloud-html:/var/www/html"
+          ],
+          "restart": "unless-stopped"
+        }
+      }
+    ],
+    "top_level": {
+      "name": "nextcloud-stack",
+      "volumes": {
+        "nextcloud-html": {},
+        "postgres-data": {}
+      }
+    },
+    "networking": {
+      "frontend": "selected-proxmox-bridge",
+      "private_required": true,
+      "private_creation": "automatic-create-if-missing",
+      "private_address_allocation": "automatic-static-address-per-service",
+      "service_discovery": "private-addresses-with-compose-service-host-aliases",
+      "dependency_external_access": "disabled-unless-service-publishes-ports",
+      "prompt_user_for_private_network": false
+    },
+    "storage": [
+      {
+        "id": "application-volume-0",
+        "service": "application",
+        "container_path": "/var/www/html",
+        "mode": "user-selectable",
+        "user_selectable": true,
+        "backup": true,
+        "shared_with_other_lxc": false,
+        "source_path": null,
+        "source_path_prompt": null,
+        "default": "managed-volume",
+        "installation_choice": [
+          "managed-volume",
+          "host-bind"
+        ]
+      },
+      {
+        "id": "database-volume-0",
+        "service": "database",
+        "container_path": "/var/lib/postgresql",
+        "mode": "managed-volume",
+        "user_selectable": false,
+        "backup": true,
+        "shared_with_other_lxc": false,
+        "source_path": null,
+        "source_path_prompt": null
+      }
+    ],
+    "orchestration": {
+      "reserve_vmids_atomically": 3,
+      "start_order": [
+        "cache",
+        "database",
+        "application"
+      ],
+      "stop_order": [
+        "application",
+        "database",
+        "cache"
+      ],
+      "dependency_readiness": "compose-healthcheck-then-port-or-process-fallback",
+      "rollback_on_failure": "remove-all-new-lxc-and-new-managed-volumes"
+    },
+    "installer_inputs": {
+      "prompted": [
+        "stack_name",
+        "base_vmid",
+        "rootfs_storage",
+        "persistent_data_destinations",
+        "frontend_bridge",
+        "frontend_ipv4_mode"
+      ],
+      "automatic": [
+        "dependent_vmids",
+        "private_bridge",
+        "private_subnet",
+        "private_service_addresses",
+        "compose_service_aliases",
+        "generated_secrets",
+        "dependency_start_and_stop_order"
+      ],
+      "generated_secrets": [
+        {
+          "id": "admin-password",
+          "strategy": "generate-cryptographically-random-at-install",
+          "bindings": [
+            {
+              "service": "application",
+              "environment_variable": "NEXTCLOUD_ADMIN_PASSWORD"
+            }
+          ]
+        },
+        {
+          "id": "db-password",
+          "strategy": "generate-cryptographically-random-at-install",
+          "bindings": [
+            {
+              "service": "application",
+              "environment_variable": "POSTGRES_PASSWORD"
+            },
+            {
+              "service": "database",
+              "environment_variable": "POSTGRES_PASSWORD"
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "first_run": {
+    "endpoints": [
+      {
+        "label": "Web UI",
+        "scheme": "http",
+        "port": 80,
+        "path": "/",
+        "source": "compose-metadata"
+      }
+    ],
+    "credentials": [
+      {
+        "label": "Generated administrator login",
+        "type": "runtime-generated",
+        "username": "admin",
+        "password": null,
+        "change_required": true,
+        "source": "proxmenux-installer-generated",
+        "retrieval": null
+      }
+    ]
+  },
+  "proxmox": {
+    "runtime": "native-oci-lxc",
+    "technology_status": "proxmox-technology-preview",
+    "defaults": {
+      "unprivileged": true,
+      "ostype": "auto-from-image",
+      "cores": 2,
+      "memory_mb": 1024,
+      "swap_mb": 512,
+      "rootfs_size_gb": 8,
+      "rootfs_storage": "local-lvm",
+      "volume_storage": "local-lvm",
+      "template_storage": "local",
+      "bridge": "vmbr0",
+      "ipv4": "dhcp",
+      "firewall": true,
+      "host_managed_network": true,
+      "onboot": false,
+      "features": [
+        "nesting=1"
+      ],
+      "shutdown_timeout_seconds": 30
+    },
+    "image_metadata_policy": {
+      "entrypoint": "import-from-oci-image",
+      "cmd": "import-from-oci-image",
+      "environment": "import-image-env-then-apply-compose-overrides",
+      "user": "import-from-oci-image",
+      "working_dir": "import-from-oci-image",
+      "stop_signal": "import-from-oci-image"
+    },
+    "adaptations": [
+      {
+        "id": "postgres-declared-volume-persistence",
+        "upstream_behavior": "Current PostgreSQL latest images declare /var/lib/postgresql as their persistent volume.",
+        "native_lxc_behavior": "The managed backup-enabled volume covers /var/lib/postgresql; explicit PGDATA remains /var/lib/postgresql/data/pgdata.",
+        "reason": "Image replacement must not discard declared persistence.",
+        "behavioral_impact": "Existing child-path volumes need a reviewed migration; update never moves their data implicitly.",
+        "validation": "clean-install-passed-20260916"
+      },
+      {
+        "id": "imported-compose-source",
+        "upstream_behavior": "The source definition deploys the complete Docker Compose application model.",
+        "native_lxc_behavior": "A reviewed three-LXC orchestrator translates every required service option into native Proxmox OCI LXC configuration.",
+        "reason": "Catalog import must not imply runtime compatibility.",
+        "behavioral_impact": "One catalog action installs the complete application stack.",
+        "validation": "passed-in-historical-laboratory-profile"
+      },
+      {
+        "id": "rolling-latest-image",
+        "upstream_behavior": "A discovered Compose may pin a release tag or digest.",
+        "native_lxc_behavior": "ProxMenux selects the same image repository with the latest tag for catalog installations.",
+        "reason": "The automatic catalog intentionally offers rolling latest images; pinned versions belong to the future manual installer.",
+        "behavioral_impact": "The installed release can be newer than the discovered Compose revision.",
+        "validation": "pending-per-application"
+      },
+      {
+        "id": "dedicated-lxc-network",
+        "upstream_behavior": "Docker publishes selected container ports on the Docker host.",
+        "native_lxc_behavior": "A reviewed native application will listen on its original container ports at a dedicated LXC address.",
+        "reason": "A native LXC has its own address and does not require Docker port NAT.",
+        "behavioral_impact": "Published ports are metadata; ProxMenux URLs use the matching container target port.",
+        "validation": "pending-per-application"
+      },
+      {
+        "id": "private-service-network",
+        "upstream_behavior": "Compose DNS connects the application to PostgreSQL and Redis by service name.",
+        "native_lxc_behavior": "Three LXC containers use automatic private addresses and matching service aliases.",
+        "reason": "Native OCI services run in separate LXC network namespaces.",
+        "behavioral_impact": "Database and cache remain inaccessible from the frontend network.",
+        "validation": "passed-in-laboratory-profile-2026-08-27"
+      },
+      {
+        "id": "managed-application-and-database-volumes",
+        "upstream_behavior": "Named Docker volumes persist /var/www/html and PostgreSQL data.",
+        "native_lxc_behavior": "Proxmox-managed mpN volumes preserve the same paths with backup=1.",
+        "reason": "Private application and database state belongs in native Proxmox backups.",
+        "behavioral_impact": "No shared host directory is created for Nextcloud user data.",
+        "validation": "passed-in-laboratory-profile-2026-08-27"
+      },
+      {
+        "id": "ordered-healthchecked-startup",
+        "upstream_behavior": "Compose dependency health controls application startup.",
+        "native_lxc_behavior": "The stack orchestrator starts PostgreSQL, Redis and Nextcloud in health-checked order.",
+        "reason": "Proxmox does not provide Compose depends_on semantics across LXC containers.",
+        "behavioral_impact": "One user action still installs and controls the complete application.",
+        "validation": "passed-in-laboratory-profile-2026-08-27"
+      }
+    ],
+    "laboratory_contract": {
+      "requirements": {
+        "proxmox_min_version": "9.1",
+        "minimum_host_memory_mb": 4096,
+        "recommended_host_memory_mb": 6144,
+        "database_storage": {
+          "must_be_local": true,
+          "network_filesystem_allowed": false
+        }
+      },
+      "defaults": {
+        "stack_name": "nextcloud",
+        "timezone": "Europe/Madrid",
+        "rootfs_storage": "local-lvm",
+        "application_storage": "local-lvm",
+        "database_storage": "local-lvm",
+        "shared_application_root": "/mnt/oci-shared/nextcloud/${stack_name}",
+        "application_volume_size_gb": 32,
+        "database_volume_size_gb": 8,
+        "frontend_network": {
+          "bridge": "vmbr0",
+          "ipv4_mode": "dhcp",
+          "firewall": true,
+          "host_managed": true
+        },
+        "private_network": {
+          "mode": "create-if-missing",
+          "bridge": "vmbr10",
+          "subnet": "10.77.0.0/24",
+          "host_address": "10.77.0.1/24",
+          "application_address": "10.77.0.20/24",
+          "database_address": "10.77.0.21/24",
+          "cache_address": "10.77.0.22/24",
+          "nat": false
+        },
+        "application": {
+          "admin_username": "admin",
+          "php_memory_limit": "1G",
+          "php_upload_limit": "2G",
+          "apache_body_limit": "0"
+        },
+        "maintenance_window_start_utc": 3,
+        "default_phone_region": "ES"
+      },
+      "installer_contract": {
+        "deployment_kind": "nextcloud-three-lxc-stack",
+        "reserve_vmids_atomically": 3,
+        "generated_secrets": [
+          "POSTGRES_PASSWORD",
+          "NEXTCLOUD_ADMIN_PASSWORD"
+        ],
+        "application_volume": {
+          "container_path": "/var/www/html",
+          "choices": [
+            "managed-volume",
+            "host-bind"
+          ],
+          "default": "managed-volume"
+        },
+        "database_volume": {
+          "container_path": "/var/lib/postgresql",
+          "mode": "managed-volume",
+          "backup": true,
+          "local_storage_required": true
+        },
+        "start_order": [
+          "database",
+          "cache",
+          "application"
+        ],
+        "stop_order": [
+          "application",
+          "cache",
+          "database"
+        ]
+      }
+    }
+  },
+  "compatibility": {
+    "automatic_install_candidate": true,
+    "validated": false,
+    "supported_compose_keys": [
+      "container_name",
+      "environment",
+      "image",
+      "ports",
+      "restart",
+      "stop_grace_period",
+      "volumes"
+    ],
+    "untranslated_blockers": [],
+    "policy": "The three-LXC architecture and LXC adaptations were validated in the laboratory. Rolling latest images are installable and require a fresh validation run."
+  },
+  "validation": {
+    "schema": "passed-at-generation",
+    "clean_install": "pending-current-rolling-images",
+    "service_health": "pending-current-rolling-images",
+    "restart_persistence": "pending",
+    "backup_restore": "pending",
+    "update_preserves_data": "pending",
+    "historical_lab_profile": "passed-2026-08-27-nextcloud-33.0.5-postgres-17.11-redis-8",
+    "private_dependency_network": "passed-historical-profile",
+    "managed_volume_persistence": "passed-historical-profile",
+    "ordered_restart": "passed-historical-profile",
+    "rolling_latest": "installable-pending-current-run"
+  },
+  "lifecycle": {
+    "update_strategy": "resolve-latest-image-then-apply-reviewed-native-lxc-update",
+    "registry_state": {
+      "resolved_architecture": null,
+      "resolved_digest": null,
+      "image_version_label": null,
+      "image_created": null
+    },
+    "change_detection": "compare-compose-sha256-and-resolved-latest-image-digest",
+    "automatic_unattended_updates": false,
+    "dependency_lifecycle": {
+      "implementation": "proxmox-hookscript",
+      "trigger": "main-lxc-pre-start",
+      "starts_stopped_dependencies": true,
+      "waits_for_dependency_healthchecks": true,
+      "stops_dependencies_with_main": false,
+      "persistent_contract": "/etc/pve/priv/proxmenux-stack-<main-vmid>.json",
+      "runtime_owner": "proxmox-ve"
+    }
+  }
+}

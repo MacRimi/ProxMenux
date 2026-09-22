@@ -1,0 +1,417 @@
+{
+  "schema_version": "0.5.0",
+  "kind": "proxmenux.oci-template",
+  "id": "image-codeproject-ai",
+  "status": "laboratory-validated",
+  "catalog_ui": {
+    "title": {
+      "en_US": "CodeProject.AI Server"
+    },
+    "tagline": {
+      "en_US": "CodeProject.AI Server"
+    },
+    "description": {
+      "en_US": "Official latest CPU image with persistent settings and modules. Initial CPU and Coral PCIe inference passed on Intel amd64. Coral module uses its persistent upstream EdgeTPU runtime via module-scoped LD_PRELOAD; missing JSON defaults preserve existing user settings. The TPU needs exclusive access. ARM and NVIDIA channels are not offered by this template; Failures observed on the AMD lab host remain unexplained; no blanket AMD incompatibility is inferred."
+    },
+    "category": "ai",
+    "category_label": "AI",
+    "author": "codeproject",
+    "developer": "codeproject",
+    "icon": null,
+    "thumbnail": null,
+    "screenshots": [],
+    "architectures": [
+      "amd64"
+    ],
+    "launch": {
+      "scheme": "http",
+      "port": 32168,
+      "path": "/"
+    },
+    "website": "https://github.com/codeproject/CodeProject.AI-Server",
+    "documentation": "https://github.com/codeproject/CodeProject.AI-Server",
+    "repository": "https://github.com/codeproject/CodeProject.AI-Server",
+    "tips": [
+      "Official latest CPU image with persistent settings and modules. Initial CPU and Coral PCIe inference passed on Intel amd64. Coral module uses its persistent upstream EdgeTPU runtime via module-scoped LD_PRELOAD; missing JSON defaults preserve existing user settings. The TPU needs exclusive access. ARM and NVIDIA channels are not offered by this template; Failures observed on the AMD lab host remain unexplained; no blanket AMD incompatibility is inferred.",
+      "Install ObjectDetectionCoral in the dashboard. Stop competing object detectors when assigning its detection route; exposing a device does not configure an inference module."
+    ],
+    "mini_changelog": [],
+    "display_version": null,
+    "updated_at": "2026-09-16",
+    "hidden": true,
+    "hidden_reason": "Temporarily withdrawn at user request pending further hardware validation."
+  },
+  "source": {
+    "provider": "codeproject",
+    "repository": "https://github.com/codeproject/CodeProject.AI-Server",
+    "default_branch": "main",
+    "revision": "e3468c831b169e27ed6c97f665f1efb48ab0285f",
+    "readme_raw_url": "https://raw.githubusercontent.com/codeproject/CodeProject.AI-Server/e3468c831b169e27ed6c97f665f1efb48ab0285f/README.md",
+    "image_repository_url": "https://hub.docker.com/r/codeproject/ai-server",
+    "compose_sha256": "a8ce9bcbde2cbc0fc9a840b93bab72a33da2a2f4a18857896b837cbc7f462ece",
+    "generated_at": "2026-09-16T22:00:00+02:00"
+  },
+  "container_contract": {
+    "service_name": "codeproject-ai",
+    "container_name": "codeproject-ai",
+    "image": {
+      "reference": "codeproject/ai-server:latest",
+      "registry": "docker.io",
+      "repository": "codeproject/ai-server",
+      "tag": "latest",
+      "digest": null,
+      "pull_policy": "resolve-selected-tag-to-architecture-digest-at-install"
+    },
+    "environment": [],
+    "volumes": [
+      {
+        "id": "config",
+        "container_path": "/etc/codeproject/ai",
+        "compose_source_example": "config-data",
+        "read_only": false,
+        "required": true,
+        "installation_choice": [
+          "managed-volume",
+          "host-bind"
+        ],
+        "default": "managed-volume",
+        "managed_volume": {
+          "backup": true,
+          "default_size_gb": 4
+        }
+      },
+      {
+        "id": "modules",
+        "container_path": "/app/modules",
+        "compose_source_example": "modules-data",
+        "read_only": false,
+        "required": true,
+        "installation_choice": [
+          "managed-volume",
+          "host-bind"
+        ],
+        "default": "managed-volume",
+        "managed_volume": {
+          "backup": true,
+          "default_size_gb": 16
+        }
+      }
+    ],
+    "ports": [
+      {
+        "container_port": 32168,
+        "published_example": 32168,
+        "protocol": "tcp",
+        "required": true,
+        "proxmox_behavior": "listener-on-dedicated-lxc-address-no-nat"
+      }
+    ],
+    "related_services": [],
+    "restart": "unless-stopped",
+    "stop_grace_period": null,
+    "original_compose": "{\n  \"services\": {\n    \"codeproject-ai\": {\n      \"image\": \"codeproject/ai-server:latest\",\n      \"volumes\": [\n        \"config-data:/etc/codeproject/ai\",\n        \"modules-data:/app/modules\"\n      ],\n      \"ports\": [\n        \"32168:32168\"\n      ],\n      \"environment\": {},\n      \"restart\": \"unless-stopped\"\n    }\n  }\n}"
+  },
+  "compose_stack": {
+    "project_name": "mkvtoolnix",
+    "deployment_model": "one-native-oci-lxc-per-compose-service",
+    "user_experience": "single-application-install",
+    "main_service": "mkvtoolnix",
+    "service_count": 1,
+    "services": [
+      {
+        "name": "mkvtoolnix",
+        "image": "jlesage/mkvtoolnix:latest",
+        "is_main": true,
+        "role": "frontend",
+        "vmid_offset": 0,
+        "depends_on": [],
+        "frontend_network": true,
+        "private_network": false,
+        "compose": {
+          "image": "jlesage/mkvtoolnix:latest",
+          "ports": [
+            "5800:5800"
+          ],
+          "environment": {
+            "USER_ID": "1000",
+            "GROUP_ID": "1000",
+            "TZ": "Europe/Madrid"
+          },
+          "volumes": [
+            "mkvtoolnix-config:/config",
+            "/mnt/oci-shared/media:/storage"
+          ],
+          "restart": "unless-stopped"
+        }
+      }
+    ],
+    "top_level": {},
+    "networking": {
+      "frontend": "selected-proxmox-bridge",
+      "private_required": false,
+      "private_creation": "not-required",
+      "private_address_allocation": "not-required",
+      "service_discovery": "dedicated-lxc-address",
+      "dependency_external_access": "not-applicable",
+      "prompt_user_for_private_network": false
+    },
+    "storage": [
+      {
+        "id": "mkvtoolnix-config",
+        "service": "mkvtoolnix",
+        "container_path": "/config",
+        "mode": "user-selectable",
+        "user_selectable": true,
+        "backup": true,
+        "shared_with_other_lxc": false,
+        "default": "managed-volume",
+        "installation_choice": [
+          "managed-volume",
+          "host-bind"
+        ]
+      },
+      {
+        "id": "mkvtoolnix-storage",
+        "service": "mkvtoolnix",
+        "container_path": "/storage",
+        "mode": "user-selectable",
+        "user_selectable": true,
+        "backup": true,
+        "shared_with_other_lxc": true,
+        "default": "host-bind",
+        "installation_choice": [
+          "managed-volume",
+          "host-bind"
+        ]
+      }
+    ],
+    "orchestration": {
+      "reserve_vmids_atomically": 1,
+      "start_order": [
+        "mkvtoolnix"
+      ],
+      "stop_order": [
+        "mkvtoolnix"
+      ],
+      "dependency_readiness": "mandatory-http-first-start-healthcheck",
+      "rollback_on_failure": "remove-new-rootfs-preserve-external-host-data"
+    },
+    "installer_inputs": {
+      "prompted": [
+        "base_vmid",
+        "rootfs_storage",
+        "persistent_data_destinations",
+        "frontend_bridge",
+        "frontend_ipv4_mode"
+      ],
+      "automatic": [
+        "image_digest_resolution",
+        "managed_volume_preparation"
+      ],
+      "generated_secrets": []
+    }
+  },
+  "proxmox": {
+    "runtime": "native-oci-lxc",
+    "technology_status": "proxmox-technology-preview",
+    "catalog": {
+      "replaces_discovered_ids": []
+    },
+    "defaults": {
+      "unprivileged": true,
+      "ostype": "auto-from-image",
+      "cores": 2,
+      "memory_mb": 2048,
+      "swap_mb": 512,
+      "rootfs_size_gb": 8,
+      "rootfs_storage": "local-lvm",
+      "volume_storage": "local-lvm",
+      "template_storage": "local",
+      "bridge": "vmbr0",
+      "ipv4": "dhcp",
+      "firewall": true,
+      "host_managed_network": true,
+      "onboot": false,
+      "features": [
+        "nesting=1"
+      ],
+      "shutdown_timeout_seconds": 30
+    },
+    "image_metadata_policy": {
+      "entrypoint": "import-from-oci-image",
+      "cmd": "import-from-oci-image",
+      "environment": "import-image-env-then-apply-compose-overrides",
+      "user": "import-from-oci-image",
+      "working_dir": "import-from-oci-image",
+      "stop_signal": "import-from-oci-image"
+    },
+    "adaptations": [
+      {
+        "id": "native-persistent-volumes",
+        "upstream_behavior": "Docker bind mounts persistent directories into the image.",
+        "native_lxc_behavior": "ProxMenux attaches native Proxmox volumes or explicit host bind mounts at the same container paths.",
+        "reason": "Preserve the official image contract while making persistence visible to Proxmox backup policy.",
+        "behavioral_impact": "None expected.",
+        "validation": "passed-amd64-intel"
+      },
+      {
+        "id": "native-device-passthrough",
+        "upstream_behavior": "Docker exposes explicitly selected host devices to the container.",
+        "native_lxc_behavior": "ProxMenux maps each selected device with the native Proxmox dev resource.",
+        "reason": "The OCI process runs directly inside an LXC rather than through Docker.",
+        "behavioral_impact": "Only devices explicitly selected by the user are exposed.",
+        "validation": "not-required"
+      },
+      {
+        "id": "persistent-coral-module-runtime",
+        "upstream_behavior": "The official Coral module downloads the EdgeTPU runtime into its module folder, then copies a library into /usr/lib.",
+        "native_lxc_behavior": "Module-scoped LD_PRELOAD points to the same upstream runtime retained in /app/modules. Missing defaults are merged into the official /etc/codeproject/ai/modulesettings.json.",
+        "reason": "A new image rootfs does not retain libraries installed after image creation, in Docker or native OCI.",
+        "behavioral_impact": "Only ObjectDetectionCoral receives this setting; existing user overrides are preserved. No image files or host drivers are changed.",
+        "validation": "passed-installer-recreation-and-coral-inference-amd64-intel"
+      }
+    ],
+    "installer_profile": {
+      "optional_devices": [
+        {
+          "id": "coral-pcie",
+          "kind": "character-device",
+          "enable_prompt": "Add a Coral PCIe/M.2 device?",
+          "enabled_default": false,
+          "path_prompt": "Coral PCIe/M.2 node (e.g. /dev/apex_0)",
+          "host_path_default": "/dev/apex_0",
+          "container_path_strategy": "same-as-host",
+          "mode": "0660",
+          "deny_write": false,
+          "gid_strategy": "host-device-gid"
+        }
+      ],
+      "startup_healthcheck": {
+        "scheme": "http",
+        "port": 32168,
+        "path": "/",
+        "timeout_seconds": 300,
+        "request_timeout_seconds": 10,
+        "stability_seconds": 4,
+        "verify_tls": false
+      },
+      "generated_files": [
+        {
+          "container_path": "/etc/codeproject/ai/modulesettings.json",
+          "mode": "0644",
+          "owner": "mapped-root",
+          "only_if_missing": true,
+          "json_defaults": true,
+          "content": "{\n  \"Modules\": {\n    \"ObjectDetectionCoral\": {\n      \"EnvironmentVariables\": {\n        \"LD_PRELOAD\": \"/app/modules/ObjectDetectionCoral/edgetpu_runtime/libedgetpu/throttled/k8/libedgetpu.so.1.0\"\n      },\n      \"LaunchSettings\": {\n        \"AutoStart\": false\n      }\n    }\n  }\n}\n"
+        }
+      ],
+      "hardware_acceleration": {
+        "prompt": "Acceleration for CodeProject.AI",
+        "default": "cpu",
+        "profiles": [
+          {
+            "id": "cpu",
+            "label": "CPU",
+            "device_requests": [],
+            "image": {
+              "reference": "codeproject/ai-server:latest",
+              "registry": "docker.io",
+              "repository": "codeproject/ai-server",
+              "tag": "latest",
+              "digest": null,
+              "pull_policy": "resolve-selected-tag-to-architecture-digest-at-install"
+            }
+          },
+          {
+            "id": "nvidia",
+            "label": "NVIDIA (CUDA; official GPU image)",
+            "image": {
+              "reference": "codeproject/ai-server:gpu",
+              "registry": "docker.io",
+              "repository": "codeproject/ai-server",
+              "tag": "gpu",
+              "digest": null,
+              "pull_policy": "resolve-selected-tag-to-architecture-digest-at-install"
+            },
+            "device_requests": [
+              {
+                "id": "nvidia-runtime",
+                "kind": "nvidia-runtime",
+                "purpose": "nvidia-cuda",
+                "device_selection": "all-requested-by-compose"
+              }
+            ],
+            "environment": [
+              {
+                "name": "NVIDIA_VISIBLE_DEVICES",
+                "value": "all"
+              },
+              {
+                "name": "NVIDIA_DRIVER_CAPABILITIES",
+                "value": "compute,utility"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    "security_profile": {
+      "requires_privileged_lxc": false,
+      "source_requests_privileged_lxc": false,
+      "optional_privileged_lxc": false,
+      "requires_host_pid_namespace": false,
+      "source_requests_relaxed_confinement": false,
+      "requires_relaxed_confinement": false,
+      "optional_relaxed_confinement": false,
+      "risk_level": "normal",
+      "confirmation_required": false,
+      "warning": "No security relaxation is required for the reviewed profile."
+    }
+  },
+  "compatibility": {
+    "automatic_install_candidate": true,
+    "validated": true,
+    "supported_compose_keys": [
+      "devices",
+      "environment",
+      "image",
+      "ports",
+      "restart",
+      "volumes"
+    ],
+    "untranslated_blockers": [],
+    "policy": "Official latest CPU image with persistent settings and modules. Initial CPU and Coral PCIe inference passed on Intel amd64. Coral module uses its persistent upstream EdgeTPU runtime via module-scoped LD_PRELOAD; missing JSON defaults preserve existing user settings. The TPU needs exclusive access. ARM and NVIDIA channels are not offered by this template; Failures observed on the AMD lab host remain unexplained; no blanket AMD incompatibility is inferred. NVIDIA uses the official gpu channel with native Toolkit integration; inference validation pending. Intel/AMD GPU inference is not advertised without an upstream compatible module/runtime."
+  },
+  "first_run": {
+    "endpoints": [
+      {
+        "label": "Web UI",
+        "scheme": "http",
+        "port": 32168,
+        "path": "/",
+        "source": "https://github.com/codeproject/CodeProject.AI-Server"
+      }
+    ],
+    "credentials": []
+  },
+  "validation": {
+    "schema": "passed-at-generation",
+    "clean_install": "passed-amd64-intel",
+    "service_health": "passed-amd64-intel",
+    "restart_persistence": "passed-amd64-intel",
+    "backup_restore": "passed-interrupted-candidate-native-recovery",
+    "update_preserves_data": "passed-same-digest-rootfs-recreation",
+    "evidence": "docs/lab/new-images-validation-20260918.json"
+  },
+  "lifecycle": {
+    "update_strategy": "resolve-latest-image-then-apply-reviewed-native-lxc-update",
+    "registry_state": {
+      "resolved_architecture": null,
+      "resolved_digest": null,
+      "image_version_label": null,
+      "image_created": null
+    },
+    "change_detection": "compare-readme-revision-and-resolved-latest-image-digest",
+    "automatic_unattended_updates": false
+  }
+}

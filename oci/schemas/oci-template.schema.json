@@ -1,0 +1,346 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://proxmenux.example/schemas/oci-template.schema.json",
+  "title": "ProxMenux native OCI template",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "kind",
+    "id",
+    "status",
+    "catalog_ui",
+    "source",
+    "container_contract",
+    "proxmox",
+    "compatibility",
+    "validation",
+    "lifecycle"
+  ],
+  "properties": {
+    "schema_version": {"enum": ["0.2.0", "0.3.0", "0.4.0", "0.5.0"]},
+    "kind": {"const": "proxmenux.oci-template"},
+    "id": {"type": "string", "pattern": "^[a-z0-9][a-z0-9-]+$"},
+    "status": {
+      "enum": ["generated-unvalidated", "generated-review-required", "laboratory-validated", "stable"]
+    },
+    "catalog_ui": {
+      "type": "object",
+      "required": ["title", "description", "category", "architectures", "launch", "mini_changelog"],
+      "properties": {
+        "title": {"$ref": "#/$defs/localizedText"},
+        "tagline": {"$ref": "#/$defs/localizedText"},
+        "hidden": {"type": "boolean", "default": false},
+        "hidden_reason": {"type": "string"},
+        "description": {"$ref": "#/$defs/localizedText"},
+        "category": {"type": "string"},
+        "category_label": {"type": "string"},
+        "author": {"type": ["string", "null"]},
+        "developer": {"type": ["string", "null"]},
+        "icon": {"type": ["string", "null"]},
+        "thumbnail": {"type": ["string", "null"]},
+        "screenshots": {"type": "array", "items": {"type": "string"}},
+        "architectures": {
+          "type": "array",
+          "items": {"enum": ["amd64", "arm64", "armhf", "i386", "ppc64le", "s390x"]},
+          "minItems": 1,
+          "uniqueItems": true
+        },
+        "launch": {
+          "type": "object",
+          "required": ["scheme", "port", "path"],
+          "properties": {
+            "scheme": {"enum": ["http", "https"]},
+            "port": {"type": ["integer", "null"], "minimum": 1, "maximum": 65535},
+            "path": {"type": "string", "pattern": "^/"}
+          },
+          "additionalProperties": false
+        },
+        "website": {"type": ["string", "null"]},
+        "documentation": {"type": ["string", "null"]},
+        "repository": {"type": "string"},
+        "tips": {"type": "array", "items": {"type": "string"}},
+        "mini_changelog": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["date", "note"],
+            "properties": {
+              "date": {"type": "string", "format": "date"},
+              "note": {"type": "string"}
+            },
+            "additionalProperties": false
+          }
+        },
+        "display_version": {"type": ["string", "null"]},
+        "updated_at": {"type": ["string", "null"]}
+      },
+      "additionalProperties": false
+    },
+    "source": {
+      "type": "object",
+      "required": ["provider", "repository", "revision", "compose_sha256", "generated_at"],
+      "properties": {
+        "provider": {"type": "string", "minLength": 1},
+        "repository": {"type": "string", "format": "uri"},
+        "default_branch": {"type": "string"},
+        "revision": {"type": "string", "pattern": "^(?:[0-9a-f]{40}|[0-9a-f]{64})$"},
+        "readme_raw_url": {"type": "string", "format": "uri"},
+        "image_repository_url": {"type": "string", "format": "uri"},
+        "readme_pushed_at": {"type": "string"},
+        "compose_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "generated_at": {"type": "string", "format": "date-time"}
+      },
+      "additionalProperties": false
+    },
+    "container_contract": {
+      "type": "object",
+      "required": ["service_name", "container_name", "image", "environment", "volumes", "ports", "original_compose"],
+      "properties": {
+        "service_name": {"type": "string"},
+        "container_name": {"type": "string"},
+        "image": {
+          "type": "object",
+          "required": ["reference", "registry", "repository", "tag", "digest", "pull_policy"],
+          "properties": {
+            "reference": {"type": "string"},
+            "registry": {"type": "string"},
+            "repository": {"type": "string"},
+            "tag": {"type": "string"},
+            "digest": {"type": ["string", "null"]},
+            "pull_policy": {"type": "string"}
+          },
+          "additionalProperties": false
+        },
+        "environment": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["name", "example", "required", "sensitive", "source"],
+            "properties": {
+              "name": {"type": "string", "pattern": "^[A-Za-z_][A-Za-z0-9_]*$"},
+              "example": {"type": ["string", "null"]},
+              "prompt": {"type": "string", "minLength": 1},
+              "prompt_user": {"type": "boolean"},
+              "required": {"type": "boolean"},
+              "sensitive": {"type": "boolean"},
+              "source": {"type": "string"}
+            },
+            "additionalProperties": false
+          }
+        },
+        "volumes": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["id", "container_path", "read_only", "required", "installation_choice", "default", "managed_volume"],
+            "properties": {
+              "id": {"type": "string"},
+              "container_path": {"type": "string", "pattern": "^/"},
+              "compose_source_example": {"type": ["string", "null"]},
+              "read_only": {"type": "boolean"},
+              "required": {"type": "boolean"},
+              "installation_choice": {
+                "type": "array",
+                "items": {"enum": ["managed-volume", "host-bind", "skip"]},
+                "uniqueItems": true
+              },
+              "default": {"enum": ["managed-volume", "host-bind", "skip"]},
+              "managed_volume": {
+                "type": "object",
+                "required": ["backup", "default_size_gb"],
+                "properties": {
+                  "backup": {"type": "boolean"},
+                  "default_size_gb": {"type": "integer", "minimum": 1}
+                },
+                "additionalProperties": false
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "ports": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["container_port", "published_example", "protocol", "required", "proxmox_behavior"],
+            "properties": {
+              "container_port": {"type": "integer", "minimum": 1, "maximum": 65535},
+              "container_port_end": {"type": "integer", "minimum": 1, "maximum": 65535},
+              "published_example": {"type": ["integer", "null"], "minimum": 1, "maximum": 65535},
+              "published_example_end": {"type": "integer", "minimum": 1, "maximum": 65535},
+              "protocol": {"enum": ["tcp", "udp", "sctp"]},
+              "required": {"type": "boolean"},
+              "proxmox_behavior": {"type": "string"}
+            },
+            "additionalProperties": false
+          }
+        },
+        "related_services": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["name", "image"],
+            "properties": {
+              "name": {"type": "string", "minLength": 1},
+              "image": {"type": ["string", "null"]}
+            },
+            "additionalProperties": false
+          }
+        },
+        "restart": {"type": ["string", "null"]},
+        "stop_grace_period": {"type": ["string", "null"]},
+        "original_compose": {"type": "string", "minLength": 1}
+      },
+      "additionalProperties": false
+    },
+    "first_run": {
+      "type": "object",
+      "required": ["endpoints", "credentials"],
+      "properties": {
+        "endpoints": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["label", "scheme", "port", "path", "source"],
+            "properties": {
+              "label": {"type": "string"},
+              "scheme": {"enum": ["http", "https"]},
+              "port": {"type": "integer", "minimum": 1, "maximum": 65535},
+              "path": {"type": "string", "pattern": "^/"},
+              "source": {"type": "string"}
+            },
+            "additionalProperties": false
+          }
+        },
+        "credentials": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["label", "username", "password", "change_required", "source"],
+            "properties": {
+              "label": {"type": "string"},
+              "type": {"enum": ["static-default", "runtime-generated", "configured-or-installer-generated"]},
+              "username": {"type": "string", "minLength": 1},
+              "password": {"type": ["string", "null"]},
+              "username_environment": {"type": "string", "pattern": "^[A-Za-z_][A-Za-z0-9_]*$"},
+              "password_environment": {"type": "string", "pattern": "^[A-Za-z_][A-Za-z0-9_]*$"},
+              "change_required": {"type": "boolean"},
+              "source": {"type": "string"},
+              "retrieval": {
+                "oneOf": [
+                  {"type": "null"},
+                  {
+                    "type": "object",
+                    "properties": {
+                      "method": {"const": "container-console-pattern"},
+                      "pattern_id": {"const": "linuxserver-temporary-password"},
+                      "pattern": {"type": "string", "minLength": 1},
+                      "timeout_seconds": {"type": "integer", "minimum": 1, "maximum": 600}
+                    },
+                    "required": ["method", "timeout_seconds"],
+                    "anyOf": [{"required": ["pattern_id"]}, {"required": ["pattern"]}],
+                    "additionalProperties": false
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "method": {"const": "container-file"},
+                      "path": {"type": "string", "pattern": "^/[^\\s]*$"},
+                      "pattern": {"type": "string", "minLength": 1},
+                      "timeout_seconds": {"type": "integer", "minimum": 1, "maximum": 600}
+                    },
+                    "required": ["method", "path", "timeout_seconds"],
+                    "additionalProperties": false
+                  }
+                ]
+              }
+            },
+            "additionalProperties": false
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "compose_stack": {
+      "type": "object",
+      "required": ["project_name", "deployment_model", "user_experience", "main_service", "service_count", "services", "top_level", "networking", "storage", "orchestration", "installer_inputs"],
+      "properties": {
+        "project_name": {"type": "string", "minLength": 1},
+        "deployment_model": {"const": "one-native-oci-lxc-per-compose-service"},
+        "user_experience": {"const": "single-application-install"},
+        "main_service": {"type": "string", "minLength": 1},
+        "service_count": {"type": "integer", "minimum": 1},
+        "services": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "required": ["name", "image", "is_main", "role", "vmid_offset", "depends_on", "frontend_network", "private_network", "compose"],
+            "properties": {
+              "name": {"type": "string", "minLength": 1},
+              "image": {"type": ["string", "null"]},
+              "is_main": {"type": "boolean"},
+              "role": {"enum": ["frontend", "dependency"]},
+              "vmid_offset": {"type": "integer", "minimum": 0},
+              "depends_on": {"type": "array", "items": {"type": "string"}, "uniqueItems": true},
+              "frontend_network": {"type": "boolean"},
+              "private_network": {"type": "boolean"},
+              "compose": {"type": "object"}
+            },
+            "additionalProperties": false
+          }
+        },
+        "top_level": {"type": "object"},
+        "networking": {"type": "object"},
+        "storage": {"type": "array", "items": {"type": "object"}},
+        "orchestration": {"type": "object"},
+        "installer_inputs": {"type": "object"}
+      },
+      "additionalProperties": false
+    },
+    "proxmox": {"type": "object"},
+    "compatibility": {
+      "type": "object",
+      "required": ["automatic_install_candidate", "validated", "supported_compose_keys", "untranslated_blockers", "policy"],
+      "properties": {
+        "automatic_install_candidate": {"type": "boolean"},
+        "validated": {"type": "boolean"},
+        "supported_compose_keys": {"type": "array", "items": {"type": "string"}},
+        "untranslated_blockers": {"type": "array", "items": {"type": "string"}},
+        "policy": {"type": "string"}
+      },
+      "additionalProperties": false
+    },
+    "validation": {"type": "object"},
+    "lifecycle": {"type": "object"}
+  },
+  "additionalProperties": false,
+  "allOf": [
+    {
+      "if": {
+        "properties": {"schema_version": {"enum": ["0.3.0", "0.4.0", "0.5.0"]}},
+        "required": ["schema_version"]
+      },
+      "then": {"required": ["first_run"]}
+    },
+    {
+      "if": {
+        "properties": {"schema_version": {"const": "0.5.0"}},
+        "required": ["schema_version"]
+      },
+      "then": {
+        "required": ["compose_stack"],
+        "properties": {
+          "source": {"required": ["image_repository_url"]}
+        }
+      }
+    }
+  ],
+  "$defs": {
+    "localizedText": {
+      "type": "object",
+      "required": ["en_US"],
+      "additionalProperties": {"type": "string"}
+    }
+  }
+}

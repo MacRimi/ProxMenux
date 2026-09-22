@@ -208,7 +208,7 @@
     "notApplicable": "n / A",
     "error": "Error",
     "system": "Sistema",
-    "standby": "Apoyar",
+    "standby": "En reposo",
     "standbyTitle": "La unidad está en espera: se omitió smartctl para mantenerla apagada",
     "filesystemCorruption": "Se detectó corrupción en el sistema de archivos",
     "ioErrorOne": "{count} Error de E/S en 5 minutos",
@@ -808,6 +808,10 @@
         "saturday": "Sábado"
       }
     },
+    "idle": "En reposo",
+    "idleTitle": "No se lee mientras nada lo usa, para que pueda apagarse. Su temperatura vuelve a mostrarse en cuanto el disco se usa.",
+    "diskExcluded": "Excluido",
+    "diskExcludedTitle": "Excluido de las lecturas periódicas en Ajustes.",
     "savedSmartData": "datos SMART guardados"
   },
   "details": {
@@ -1383,6 +1387,8 @@
       "imageUpToDate": "Actualizada",
       "imageInstalledTag": "etiqueta instalada",
       "imageDigestUnknown": "Digest no disponible",
+      "imagePinned": "Anclada a un digest",
+      "imagePinnedTitle": "Este contenedor ejecuta exactamente la imagen que indica su digest. Un tag más reciente no la cambia; para cambiarla hay que editar la referencia en su configuración.",
       "dockerPendingSummary": "Se detectaron {count} actualización(es) de imágenes Docker. Actualízalas con su flujo de Docker o Compose.",
       "postApplyChecking": "Comprobando resultado de la actualización…",
       "postApplyAllOk": "{count} paquete(s) aplicados correctamente — nada pendiente.",
@@ -2198,6 +2204,18 @@
       "reset": "Restaurar por defecto",
       "hint": "Arrastra para reordenar · En táctil, mantén pulsado primero",
       "customActive": "Usando orden de navegación personalizado."
+    },
+    "diskExclusions": {
+      "title": "Exclusiones de discos",
+      "description": "Discos que nunca se leen de forma periódica, para que puedan apagarse con su propio temporizador.",
+      "empty": "No se han encontrado discos físicos.",
+      "disk": "Disco",
+      "periodicReads": "Lecturas periódicas",
+      "excluded": "Excluido",
+      "notConnected": "No conectado",
+      "saveFailed": "No se pudieron guardar las exclusiones de discos.",
+      "help": "Un disco excluido no recibe lecturas periódicas de temperatura ni de SMART —ni siquiera la consulta de su estado de energía—, así que el Monitor no lo consulta en absoluto. Abrir sus detalles SMART sí lo lee.",
+      "idleHelp": "Los discos mecánicos sin actividad ya no se consultan automáticamente, para no sacarlos del reposo, hasta que algo vuelve a usarlos."
     }
   },
   "login": {
@@ -2206,7 +2224,7 @@
     "password": "Contraseña",
     "usernamePlaceholder": "Ingrese su nombre de usuario",
     "passwordPlaceholder": "Introduce tu contraseña",
-    "rememberMe": "Acuérdate de mí",
+    "rememberMe": "Recordar",
     "missingCredentials": "Por favor ingrese nombre de usuario y contraseña",
     "missingTotp": "Por favor ingresa tu código 2FA",
     "invalidCredentials": "Nombre de usuario o contraseña incorrectos",
@@ -3396,7 +3414,7 @@
     },
     "roles": {
       "active": "activo",
-      "standby": "apoyar",
+      "standby": "en espera",
       "down": "abajo"
     },
     "empty": {
@@ -5208,6 +5226,11 @@
     "noFindings": "Ningún hallazgo coincide con el filtro actual.",
     "affectedCount": "{count} afectados",
     "acceptedNotice": "{count} riesgo(s) aceptado(s) registrados en este host.",
+    "noActionNeeded": "No hay nada que hacer. Esta comprobación ha encontrado lo que espera encontrar.",
+    "couldNotEvaluate": "Esta comprobación no se ha podido evaluar, así que no afirma nada en ningún sentido. La evidencia recoge qué no pudo leer.",
+    "reviewOn": "Revisar el: {when}",
+    "reviewDue": "Toca revisarla — la decisión sigue en vigor",
+    "reviewDueNotice": "{count} decisión(es) aceptada(s) esperan revisión.",
     "states": {
       "fail": "Fallo",
       "warn": "Aviso",
@@ -5228,6 +5251,8 @@
     },
     "detail": {
       "why": "Contexto",
+      "whatItMeans": "Qué significa",
+      "whatToDo": "Qué hacer",
       "evidence": "Evidencia",
       "affected": "Afectados",
       "acceptedRisk": "Riesgo aceptado",
@@ -5240,6 +5265,13 @@
       "backup": {
         "guest_coverage": {
           "title": "Cobertura de backups",
+          "explanation": "Un backup solo protege lo que un trabajo selecciona de verdad. Esta comprobación cruza los invitados de este nodo con los trabajos que se ejecutan aquí, de modo que un invitado al que nadie respalda aparece como tal en lugar de darse por cubierto por algo.",
+          "nextStep": {
+            "noJobs": "Crea un trabajo de backup en este nodo y selecciona los invitados que guarden datos que no querrías rehacer a mano. Un trabajo que existe pero está deshabilitado no selecciona nada.",
+            "uncovered": "Decide, para cada uno de estos invitados, si guarda algo que merezca conservarse. Añade a un trabajo los que sí; para los que no, decláralo en la política y dejarán de contarse aquí.",
+            "excludedData": "Abre la lista de exclusiones de cada trabajo y confirma que lo que deja fuera son datos que puedes permitirte perder. Una exclusión añadida para acelerar un trabajo no protege nada de lo que omite.",
+            "uncoveredExpected": "La política declara que estos invitados requieren backup y ningún trabajo activo los selecciona. Añádelos a un trabajo o cambia lo que declara la política, para que ambas cosas coincidan."
+          },
           "rationale": "Trabajos de backup habilitados en este nodo, los invitados que selecciona cada uno y los datos del invitado excluidos de ellos. La cobertura configurada no demuestra que exista una copia utilizable. Si un invitado no seleccionado debía protegerse lo indica la política declarada.",
           "summary": {
             "noJobs": "No hay ningún trabajo de backup definido en este nodo para los {total} invitados que alberga",
@@ -5252,6 +5284,12 @@
         },
         "last_backup_age": {
           "title": "Antigüedad de las copias almacenadas",
+          "explanation": "Que exista un trabajo no es lo mismo que exista una copia. Esta comprobación lee la copia más reciente de cada invitado y cuánto hace que se escribió, que es hasta dónde tendrías que retroceder si hoy hubiera que restaurar.",
+          "nextStep": {
+            "stale": "Averigua por qué el trabajo dejó de producir copias de estos invitados: puede estar deshabilitado, su programación puede no dispararse nunca, o sus ejecuciones pueden estar fallando. La comprobación de resultados indica cómo terminó cada trabajo.",
+            "noBackups": "Ninguna copia almacenada corresponde a un invitado de este nodo. Si los trabajos escriben en un destino que este nodo no puede leer, es lo esperable; si no, no están produciendo nada.",
+            "attention": "Revisa los invitados de la lista. Cada uno no tiene copia reciente o la que tiene supera la antigüedad en uso."
+          },
           "rationale": "Antigüedad: tiempo transcurrido desde la última copia almacenada. Límite utilizado: antigüedad de referencia con la que se compara esa copia.",
           "summary": {
             "recent": "Las {total} comprobaciones de máquina/destino cumplen el criterio de antigüedad indicado",
@@ -5263,6 +5301,12 @@
         },
         "retention_defined": {
           "title": "Retención de backups",
+          "explanation": "La retención decide cuántas copias se conservan y durante cuánto tiempo. Sin ella un destino se llena hasta dejar de admitir copias nuevas, y un backup que no se puede escribir es justo del que te enteras el día que lo necesitas.",
+          "nextStep": {
+            "missing": "Define una retención en estos trabajos, o en el almacenamiento donde escriben. Proxmox toma primero el ajuste del trabajo, después el del almacenamiento y por último el del nodo.",
+            "notDeclared": "Estos trabajos conservan todas las copias que hacen. En algunos destinos es una decisión deliberada, pero confirma que el destino tiene sitio para seguir creciendo.",
+            "onServer": "Estos trabajos escriben en un servidor de backup, que las poda con sus propias reglas. Lo que conserva no se puede leer desde este nodo, así que comprueba la retención allí."
+          },
           "rationale": "La retención tal como la resuelve Proxmox: el ajuste del trabajo, después el del almacenamiento y después el valor por defecto del nodo. La retención que aplica un servidor de backup no se puede leer desde este nodo.",
           "summary": {
             "allDefined": "Los {total} trabajos resuelven un ajuste de retención",
@@ -5274,6 +5318,11 @@
         },
         "verification_state": {
           "title": "Verificación de las copias",
+          "explanation": "La verificación vuelve a leer una copia almacenada y confirma que está íntegra. Es la diferencia entre una copia que existe y una copia que se puede leer, una distinción que solo importa el día que la necesitas.",
+          "nextStep": {
+            "failed": "No se puede confiar en una copia que no supera la verificación. Comprueba si una copia anterior del mismo invitado sí la superó, y revisa el almacenamiento donde residen las que han fallado.",
+            "notVerified": "Nada ha confirmado que estas copias se puedan volver a leer. Un servidor de backup puede verificarlas con una programación propia, independiente del trabajo que las escribió."
+          },
           "rationale": "El resultado de verificación que Proxmox Backup Server registra para la copia más reciente de cada invitado, y si una copia anterior del mismo invitado se verificó. La verificación lee una copia almacenada; no es una restauración.",
           "summary": {
             "allVerified": "La copia más reciente de los {total} invitados se ha verificado íntegra",
@@ -5284,6 +5333,11 @@
         },
         "job_results": {
           "title": "Resultado de las ejecuciones de backup",
+          "explanation": "Cómo terminó la última ejecución de cada trabajo, según lo registró este nodo. Un trabajo puede estar perfectamente configurado y aun así fallar todas las noches, y es aquí donde eso se ve.",
+          "nextStep": {
+            "someFailed": "Lee el error en el registro de tareas de estas ejecuciones. Una ejecución que termina con error no ha producido ninguna copia utilizable de los invitados que cubre.",
+            "recovered": "Estos invitados fallaron en una ejecución anterior y desde entonces han terminado bien. El error anterior merece leerse igualmente: un fallo que se arregló solo suele volver."
+          },
           "rationale": "Cómo terminó la ejecución más reciente de cada invitado, según el registro de tareas del nodo. Solo se gradúa la última. El registro se conserva un tiempo limitado.",
           "summary": {
             "allSucceeded": "Las {total} ejecuciones de backup registradas terminaron sin error",
@@ -5294,6 +5348,12 @@
         },
         "host_recovery": {
           "title": "Recuperación del host",
+          "explanation": "Respaldar los invitados no restaura el nodo. Esta comprobación mira si la configuración del propio nodo —sus definiciones de almacenamiento, su red, sus usuarios— está guardada en algún sitio, que es de lo que depende poder reconstruir el host.",
+          "nextStep": {
+            "noHostBackup": "Nada guarda la configuración de este nodo. Reconstruirlo supondría rehacer a mano las definiciones de almacenamiento, red y usuarios, a partir de las notas que haya.",
+            "attention": "Revisa los registros de configuración del host de la lista. Cada uno tiene algo que mirar: una ejecución que falló, un destino que ya no está, o una copia más antigua que el límite en uso.",
+            "scheduledOnly": "Un temporizador producirá backups de la configuración del host, pero todavía no hay ninguno guardado. Hasta que se ejecute el primero, la configuración del nodo no está protegida."
+          },
           "rationale": "Backups del host tal como los registra ProxMenux: cada trabajo que ejecutó, cuándo, si terminó bien, el destino donde escribió y si esa copia sigue ahí. Un trabajo que escribe en un servidor de backup no nombra ninguna ruta local. Las claves de cifrado se exponen solo por recuento y modo de custodia registrado.",
           "summary": {
             "noHostBackup": "No hay ningún backup de la configuración del host almacenado ni temporizador que lo genere",
@@ -5680,9 +5740,12 @@
       "reasonLabel": "Motivo",
       "reasonHelp": "Obligatorio. Queda registrado junto al autor y la fecha.",
       "reasonPlaceholder": "p. ej. Contenedores de laboratorio, sin cobertura a propósito",
-      "expiryLabel": "Revisar dentro de",
+      "expiryLabel": "Deja de aplicarse tras",
       "expiryHelp": "Al cumplirse el plazo el hallazgo vuelve a estado activo.",
       "expiryNever": "No caduca",
+      "reviewLabel": "Recordarme revisarla",
+      "reviewHelp": "La decisión sigue en vigor; solo vuelve a tu atención.",
+      "reviewNever": "Sin recordatorio",
       "expiry90": "90 días",
       "expiry180": "180 días",
       "expiry365": "1 año",
@@ -6085,6 +6148,10 @@
       "unchanged": "{count} comprobaciones dieron el mismo resultado que antes.",
       "new": "Nuevos",
       "newNote": "se informan ahora y antes no",
+      "worse": "Empeoraron",
+      "worseNote": "se siguen informando, y son más graves o alcanzan a más que antes",
+      "better": "Mejoraron",
+      "betterNote": "se siguen informando, pero son menos graves o alcanzan a menos que antes",
       "resolved": "Resueltos",
       "resolvedNote": "ya no se informan, y nadie los aceptó",
       "accepted": "Aceptados",

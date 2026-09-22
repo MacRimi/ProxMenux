@@ -1,0 +1,15 @@
+{
+  "first_run": {
+    "credentials": [
+      {
+        "label": "Raneto web interface",
+        "type": "static-default",
+        "username": "admin",
+        "password": "password",
+        "change_required": true,
+        "source": "linuxserver-readme-application-setup",
+        "retrieval": null
+      }
+    ]
+  }
+}

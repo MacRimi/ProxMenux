@@ -1,0 +1,10 @@
+{
+  "proxmox": {
+    "installer_profile": {
+      "completion_notes": [
+        "doplarr_rs starts from the example configuration and connects to nothing. Write the token of your Discord bot in discord_token in /config/config.toml inside the container.",
+        "Each /request command needs a backend: add a [[backends]] block in the same file with the url and api_key of your Sonarr, Radarr or Seerr instance, then restart the container."
+      ]
+    }
+  }
+}

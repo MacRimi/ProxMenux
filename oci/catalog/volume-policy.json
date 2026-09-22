@@ -1,0 +1,120 @@
+{
+  "schema_version": "0.1.0",
+  "kind": "proxmenux.oci-volume-policy",
+  "description": "Paths that hold content of the user: media libraries, photos, shared files, downloads and model or backup collections. They are offered as a container volume or a host directory, and the installation asks which one. Every other path is application state and is kept in a container volume without asking.",
+  "shared_paths": [
+    "/DATA",
+    "/Media",
+    "/Music",
+    "/RoonBackups",
+    "/app/Downloads",
+    "/audiobooks",
+    "/backups",
+    "/books",
+    "/comics",
+    "/data/downloads",
+    "/data/models",
+    "/data/movies",
+    "/data/nes/roms",
+    "/data/outputs",
+    "/data/tvshows",
+    "/data1",
+    "/data2",
+    "/download",
+    "/downloads",
+    "/files",
+    "/folder",
+    "/gallery",
+    "/home/nonroot/pdfding/media",
+    "/incomplete-downloads",
+    "/libraries",
+    "/mame",
+    "/manga",
+    "/media",
+    "/media/frigate",
+    "/mnt/share1",
+    "/mnt/share2",
+    "/models",
+    "/movies",
+    "/music",
+    "/notes",
+    "/opt/notebooks",
+    "/output",
+    "/photoprism/originals",
+    "/pictures",
+    "/playlist",
+    "/playlists",
+    "/podcasts",
+    "/project",
+    "/recordings",
+    "/romm/library",
+    "/source",
+    "/storage",
+    "/sync",
+    "/temp",
+    "/tv",
+    "/usr/src/paperless/consume",
+    "/usr/src/paperless/export",
+    "/var/file_drop_files",
+    "/w",
+    "/watch",
+    "/workspace/TurboDiffusion/checkpoints_host",
+    "/workspace/TurboDiffusion/outputs"
+  ],
+  "applications": {
+    "crafty": [
+      "/crafty/import"
+    ],
+    "doublecommander": [
+      "/data"
+    ],
+    "downtify": [
+      "/data"
+    ],
+    "emulatorjs": [
+      "/data"
+    ],
+    "flexget": [
+      "/data"
+    ],
+    "immich": [
+      "/data"
+    ],
+    "kavita": [
+      "/data"
+    ],
+    "komga": [
+      "/data"
+    ],
+    "navidrome": [
+      "/data"
+    ],
+    "nextcloud": [
+      "/data"
+    ],
+    "plex-official": [
+      "/data"
+    ],
+    "projectsend": [
+      "/data"
+    ],
+    "psitransfer": [
+      "/data"
+    ],
+    "qdirstat": [
+      "/data"
+    ],
+    "rclone": [
+      "/data"
+    ],
+    "rsnapshot": [
+      "/data"
+    ],
+    "snapotter": [
+      "/data"
+    ],
+    "unpackerr": [
+      "/data"
+    ]
+  }
+}

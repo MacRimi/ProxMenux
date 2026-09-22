@@ -1616,8 +1616,10 @@ _system_info_cache = {
     'proxmox_version_time': 0,
     'available_updates': 0,
     'available_updates_time': 0,
+    'available_updates_stamp': 0.0,
 }
 _SYSTEM_INFO_CACHE_TTL = 21600  # 6 hours - update notifications are sent once per 24h
+_AVAILABLE_UPDATES_MIN_INTERVAL = 30  # seconds between apt recounts when apt state moves
 
 # Cache for pvesh cluster resources (reduces repeated API calls)
 _pvesh_cache = {
@@ -3316,15 +3318,39 @@ def get_proxmox_version():
     _system_info_cache['proxmox_version_time'] = now
     return proxmox_version
 
+def _apt_state_stamp():
+    """Newest mtime of the files that decide what `apt list --upgradable`
+    answers: dpkg's status file (what is installed) and apt's package
+    lists (what is on offer). Any upgrade moves it — whichever way the
+    packages were installed."""
+    newest = 0.0
+    for path in ('/var/lib/dpkg/status', '/var/lib/apt/lists', '/var/cache/apt/pkgcache.bin'):
+        try:
+            newest = max(newest, os.path.getmtime(path))
+        except OSError:
+            pass
+    return newest
+
+
 def get_available_updates():
-    """Get the number of available package updates. Cached for 6 hours."""
+    """Get the number of available package updates. Cached for 6 hours,
+    or until apt's own state moves — an upgrade that finishes two minutes
+    after the count was taken must not leave the overview showing what
+    was pending before it ran."""
     global _system_info_cache
-    
+
     now = time.time()
-    if _system_info_cache['available_updates_time'] > 0 and \
-       now - _system_info_cache['available_updates_time'] < _SYSTEM_INFO_CACHE_TTL:
-        return _system_info_cache['available_updates']
-    
+    stamp = _apt_state_stamp()
+    age = now - _system_info_cache['available_updates_time']
+    if _system_info_cache['available_updates_time'] > 0:
+        # dpkg rewrites its status file once per package, so during an
+        # upgrade the stamp moves with every one of them. The floor keeps
+        # that from turning each overview poll into an apt call.
+        if age < _AVAILABLE_UPDATES_MIN_INTERVAL:
+            return _system_info_cache['available_updates']
+        if stamp == _system_info_cache['available_updates_stamp'] and age < _SYSTEM_INFO_CACHE_TTL:
+            return _system_info_cache['available_updates']
+
     available_updates = 0
     try:
         # Use apt list --upgradable to count available updates
@@ -3340,6 +3366,7 @@ def get_available_updates():
     
     _system_info_cache['available_updates'] = available_updates
     _system_info_cache['available_updates_time'] = now
+    _system_info_cache['available_updates_stamp'] = stamp
     return available_updates
 
 # AGREGANDO FUNCIÓN PARA PARSEAR PROCESOS DE INTEL_GPU_TOP (SIN -J)
@@ -4123,9 +4150,13 @@ def get_storage_info():
                         # temperature graph isn't a monitor bug — the
                         # disk is parked. See issue #232.
                         in_standby = False
+                        in_idle = False
+                        in_excluded = False
                         try:
                             import disk_temperature_history as _dth
                             in_standby = _dth.is_disk_in_standby(disk_name)
+                            in_idle = _dth.is_disk_idle(disk_name)
+                            in_excluded = disk_name in _dth.excluded_disk_names()
                         except Exception:
                             pass
                         physical_disks[disk_name] = {
@@ -4135,6 +4166,8 @@ def get_storage_info():
                             'size_bytes': disk_size_bytes,
                             'temperature': smart_data.get('temperature', 0),
                             'standby': in_standby,
+                            'idle': in_idle,
+                            'excluded': in_excluded,
                             'health': smart_data.get('health', 'unknown'),
                             'power_on_hours': smart_data.get('power_on_hours', 0),
                             'smart_status': smart_data.get('smart_status', 'unknown'),
@@ -4859,6 +4892,22 @@ def get_smart_data(disk_name):
     cached = _smart_result_cache.get(disk_name)
     if cached and now - cached[0] < _SMART_RESULT_TTL:
         return dict(cached[1])
+
+    # Excluded, or rotational with no I/O since it was last looked at: send
+    # it nothing — not even the power-mode question below, which is still a
+    # command. Serve what is known, without a temperature that would only be
+    # stale. Same rule as the temperature poller, so the two agree.
+    try:
+        import disk_temperature_history as _dth
+        policy = _dth.disk_read_policy(disk_name)
+    except Exception:
+        policy = 'read'
+    if policy != 'read':
+        base = dict(cached[1]) if cached else _smart_default_payload()
+        base['temperature'] = 0
+        base['excluded'] = policy == 'excluded'
+        base['idle'] = policy == 'idle'
+        return base
 
     if _hdd_in_standby(disk_name):
         # Keep serving the last known values (temperature blanked, since
@@ -14433,7 +14482,7 @@ def api_health_thresholds_get():
 
 
 @app.route('/api/health/thresholds', methods=['PUT'])
-@require_auth
+@require_admin_scope
 def api_health_thresholds_put():
     """Save a partial threshold payload. Body shape mirrors DEFAULTS
     but the leaves are bare numbers, not metadata dicts. Sections not
@@ -14453,7 +14502,7 @@ def api_health_thresholds_put():
 
 
 @app.route('/api/health/thresholds/reset', methods=['POST'])
-@require_auth
+@require_admin_scope
 def api_health_thresholds_reset():
     """Reset thresholds. ?section=<name> resets one section, no
     parameter resets everything to recommended."""
@@ -14473,7 +14522,7 @@ def api_health_thresholds_reset():
 
 
 @app.route('/api/health/acknowledge', methods=['POST'])
-@require_auth
+@require_admin_scope
 def api_health_acknowledge():
     """Acknowledge/dismiss a health error by error_key.
 
@@ -14502,7 +14551,7 @@ def api_health_acknowledge():
 
 
 @app.route('/api/health/un-acknowledge', methods=['POST'])
-@require_auth
+@require_admin_scope
 def api_health_unacknowledge():
     """Reverse a previous dismiss — re-enables the alert so it can fire again.
 
@@ -20148,7 +20197,11 @@ def _borg_env_for(target: dict, extra: dict | None = None) -> dict:
         env['BORG_PASSPHRASE'] = pw
     ssh_key = target.get('ssh_key') or ''
     if ssh_key:
-        env['BORG_RSH'] = f'ssh -i {ssh_key} -o StrictHostKeyChecking=accept-new'
+        # IdentitiesOnly keeps ssh from offering root's default keys first:
+        # a server that only accepts the ProxMenux key can hit MaxAuthTries
+        # before it is ever tried. borg adds `-p <port>` from the ssh:// URL.
+        env['BORG_RSH'] = (f'ssh -i {ssh_key} -o IdentitiesOnly=yes '
+                           '-o StrictHostKeyChecking=accept-new')
     # Non-interactive: if borg would prompt about a relocated repo, take
     # the safe answer instead of hanging the request.
     env['BORG_RELOCATED_REPO_ACCESS_IS_OK'] = 'yes'

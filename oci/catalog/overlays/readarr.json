@@ -1,0 +1,6 @@
+{
+  "catalog_ui": {
+    "hidden": true,
+    "hidden_reason": "Retired upstream: only nightly builds are published, with no stable release"
+  }
+}

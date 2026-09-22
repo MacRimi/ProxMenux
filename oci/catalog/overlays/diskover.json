@@ -1,0 +1,14 @@
+{
+  "proxmox": {
+    "stack_adaptation_notes": [
+      "mem_limit is translated to the editable Proxmox memory default; ulimits is translated to native lxc.prlimit entries.",
+      "The upstream original_compose uses Elasticsearch 7.17.22. The normalized catalog candidate uses latest; tag availability and application compatibility must be reviewed before enabling installation.",
+      "The privileged elasticsearch-helper modifies host vm.max_map_count. No host sysctl is changed and this helper must not be discarded silently.",
+      "Elasticsearch persistence, healthchecks and host requirements still block the native stack."
+    ]
+  },
+  "catalog_ui": {
+    "hidden": true,
+    "hidden_reason": "Pending multi-container adaptation; retained for future work"
+  }
+}

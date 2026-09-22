@@ -44,7 +44,14 @@ interface Finding {
   collected_at?: number
   check_version?: number
   sources?: Array<{ source: string; collected_at: number; error?: string }>
-  exception?: { reason: string; accepted_by: string; accepted_at: number; expires_at?: number | null } | null
+  exception?: {
+    reason: string; accepted_by: string; accepted_at: number
+    expires_at?: number | null
+    // Asks for the decision to be looked at again on this date. It does
+    // not withdraw it: an acceptance can stand indefinitely and still
+    // come back for review.
+    review_at?: number | null
+  } | null
 }
 
 interface Run {
@@ -117,6 +124,7 @@ export function AuditReport() {
   const [accepting, setAccepting] = useState<Finding | null>(null)
   const [reason, setReason] = useState("")
   const [expiryDays, setExpiryDays] = useState<string>("")
+  const [reviewDays, setReviewDays] = useState<string>("")
   const [saving, setSaving] = useState(false)
   const [progress, setProgress] = useState({ completed: 0, total: 0 })
   // The profile decides which question the page answers, so it governs
@@ -165,9 +173,11 @@ export function AuditReport() {
   // Expiry changes a decision, not the assessment. One local timer and
   // a focus refresh keep it current without periodic scans or idle polling.
   useEffect(() => {
-    const expiry = findings.flatMap((f) => f.exception?.expires_at ? [f.exception.expires_at] : [])
-    if (!expiry.length) return
-    const delay = Math.max(100, Math.min(2147483647, Math.min(...expiry) * 1000 - Date.now() + 100))
+    const now = Date.now() / 1000
+    const due = findings.flatMap((f) => [f.exception?.expires_at, f.exception?.review_at]
+      .filter((t): t is number => !!t && t > now))
+    if (!due.length) return
+    const delay = Math.max(100, Math.min(2147483647, Math.min(...due) * 1000 - Date.now() + 100))
     const id = setTimeout(refresh, delay)
     return () => clearTimeout(id)
   }, [findings, refresh])
@@ -235,6 +245,7 @@ export function AuditReport() {
         reason: reason.trim(),
       }
       if (expiryDays) body.expires_in_days = Number(expiryDays)
+      if (reviewDays) body.review_in_days = Number(reviewDays)
       const data: any = await fetchApi("/api/audit/exceptions", {
         method: "POST",
         body: JSON.stringify(body),
@@ -243,6 +254,7 @@ export function AuditReport() {
       setAccepting(null)
       setReason("")
       setExpiryDays("")
+      setReviewDays("")
       await refresh()
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e))
@@ -277,6 +289,9 @@ export function AuditReport() {
     [findings, areaFilter])
 
   const acceptedCount = summary.accepted || 0
+  const reviewDueCount = findings.filter(
+    (f) => f.exception?.review_at && f.exception.review_at * 1000 <= Date.now(),
+  ).length
   const unverifiedChecks = findings.filter(
     (f) => f.classification === "unverified" || f.incomplete)
   const ageDays = latest?.finished_at
@@ -297,6 +312,26 @@ export function AuditReport() {
     const key = `audit.checks.${f.check_id}.summary.${f.summary_key}`
     const text = t(key, params)
     return text === key ? t("audit.summaryFallback") : text
+  }
+
+  // A check's plain-language texts are optional. Those that do not carry
+  // them yet render nothing, rather than the raw key a missing lookup
+  // returns, so the section can gain them one area at a time.
+  const optional = (key: string) => {
+    const text = t(key)
+    return text === key ? null : text
+  }
+
+  // What to do about a finding depends on what was found, not on what was
+  // checked: an outcome that is not a problem has no next step, and one
+  // that could not be evaluated has nothing to act on either.
+  const nextStepOf = (f: Finding) => {
+    if (f.classification === "not_applicable") return null
+    if (f.classification === "unverified" || f.incomplete) return t("audit.couldNotEvaluate")
+    if (f.classification !== "critical" && f.classification !== "warning") {
+      return t("audit.noActionNeeded")
+    }
+    return f.summary_key ? optional(`audit.checks.${f.check_id}.nextStep.${f.summary_key}`) : null
   }
 
   const notApplicableText = (f: Finding) => {
@@ -594,6 +629,15 @@ export function AuditReport() {
                 {t("audit.acceptedNotice", { count: String(acceptedCount) })}
               </p>
             )}
+
+            {/* A decision that asked to be revisited says so here, where it
+                is read without going to look for it. The acceptance still
+                stands; this is a reminder, not a lapse. */}
+            {reviewDueCount > 0 && (
+              <p className="text-xs text-amber-500">
+                {t("audit.reviewDueNotice", { count: String(reviewDueCount) })}
+              </p>
+            )}
           </CardContent>
         )}
       </Card>
@@ -671,6 +715,17 @@ export function AuditReport() {
 
               {open && (
                 <CardContent className="pt-0 pl-11 space-y-4">
+                  {optional(`audit.checks.${f.check_id}.explanation`) && (
+                    <div>
+                      <p className="text-xs font-medium text-muted-foreground mb-1">
+                        {t("audit.detail.whatItMeans")}
+                      </p>
+                      <p className="text-sm text-foreground">
+                        {optional(`audit.checks.${f.check_id}.explanation`)}
+                      </p>
+                    </div>
+                  )}
+
                   <div>
                     <p className="text-xs font-medium text-muted-foreground mb-1">
                       {t("audit.detail.why")}
@@ -679,6 +734,15 @@ export function AuditReport() {
                       {t(`audit.checks.${f.check_id}.rationale`)}
                     </p>
                   </div>
+
+                  {nextStepOf(f) && (
+                    <div>
+                      <p className="text-xs font-medium text-muted-foreground mb-1">
+                        {t("audit.detail.whatToDo")}
+                      </p>
+                      <p className="text-sm text-foreground">{nextStepOf(f)}</p>
+                    </div>
+                  )}
 
                   {f.exception && (
                     <div className="rounded-md border border-border bg-background p-3">
@@ -692,7 +756,13 @@ export function AuditReport() {
                         {f.exception.expires_at && <> · {t("audit.expires", {
                           when: new Date(f.exception.expires_at * 1000).toLocaleString(),
                         })}</>}
+                        {f.exception.review_at && <> · {t("audit.reviewOn", {
+                          when: new Date(f.exception.review_at * 1000).toLocaleDateString(),
+                        })}</>}
                       </p>
+                      {!!f.exception.review_at && f.exception.review_at * 1000 <= Date.now() && (
+                        <p className="text-xs text-amber-500 mt-1">{t("audit.reviewDue")}</p>
+                      )}
                     </div>
                   )}
 
@@ -728,7 +798,7 @@ export function AuditReport() {
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => { setAccepting(f); setReason(""); setExpiryDays("") }}
+                      onClick={() => { setAccepting(f); setReason(""); setExpiryDays(""); setReviewDays("") }}
                     >
                       <ShieldOff className="h-4 w-4 mr-2" />
                       {t("audit.acceptRisk.action")}
@@ -817,6 +887,29 @@ export function AuditReport() {
                 <SelectTrigger id="audit-expiry" className="w-full"><SelectValue /></SelectTrigger>
                 <SelectContent>
                     <SelectItem value="none">{t("audit.acceptRisk.expiryNever")}</SelectItem>
+                    <SelectItem value="90">{t("audit.acceptRisk.expiry90")}</SelectItem>
+                    <SelectItem value="180">{t("audit.acceptRisk.expiry180")}</SelectItem>
+                    <SelectItem value="365">{t("audit.acceptRisk.expiry365")}</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Separate from the expiry on purpose: this one asks to look at
+                the decision again without withdrawing it, so "remind me in a
+                year" no longer has to be spelled as "stop accepting this in a
+                year". */}
+            <div>
+              <label htmlFor="audit-review" className="text-sm font-medium text-foreground">
+                {t("audit.acceptRisk.reviewLabel")}
+              </label>
+              <p className="text-xs text-muted-foreground mt-0.5 mb-2">
+                {t("audit.acceptRisk.reviewHelp")}
+              </p>
+              <Select value={reviewDays || "none"}
+                      onValueChange={(v) => setReviewDays(v === "none" ? "" : v)}>
+                <SelectTrigger id="audit-review" className="w-full"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                    <SelectItem value="none">{t("audit.acceptRisk.reviewNever")}</SelectItem>
                     <SelectItem value="90">{t("audit.acceptRisk.expiry90")}</SelectItem>
                     <SelectItem value="180">{t("audit.acceptRisk.expiry180")}</SelectItem>
                     <SelectItem value="365">{t("audit.acceptRisk.expiry365")}</SelectItem>

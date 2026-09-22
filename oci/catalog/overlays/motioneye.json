@@ -1,0 +1,29 @@
+{
+  "first_run": {
+    "credentials": [
+      {
+        "label": "motionEye web interface",
+        "type": "static-default",
+        "username": "admin",
+        "password": "",
+        "change_required": true,
+        "source": "upstream-motioneye-readme",
+        "retrieval": null
+      }
+    ]
+  },
+  "container_contract": {
+    "image": {
+      "reference": "ghcr.io/motioneye-project/motioneye:latest",
+      "tag": "latest",
+      "registry": "ghcr.io",
+      "repository": "ghcr.io/motioneye-project/motioneye"
+    }
+  },
+  "catalog_ui": {
+    "architectures": [
+      "amd64",
+      "arm64"
+    ]
+  }
+}

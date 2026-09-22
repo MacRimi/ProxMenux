@@ -1,0 +1,107 @@
+{
+  "container_contract": {
+    "environment": [
+      {
+        "name": "PUID",
+        "example": "1000",
+        "required": true,
+        "sensitive": false,
+        "source": "linuxserver-compose"
+      },
+      {
+        "name": "PGID",
+        "example": "1000",
+        "required": true,
+        "sensitive": false,
+        "source": "linuxserver-compose"
+      },
+      {
+        "name": "TZ",
+        "example": "Etc/UTC",
+        "required": true,
+        "sensitive": false,
+        "source": "linuxserver-compose"
+      },
+      {
+        "name": "APP_URL",
+        "example": "",
+        "required": true,
+        "sensitive": false,
+        "source": "linuxserver-compose"
+      },
+      {
+        "name": "APP_KEY",
+        "example": "",
+        "required": true,
+        "sensitive": true,
+        "source": "laravel-application-key"
+      },
+      {
+        "name": "DB_HOST",
+        "example": "",
+        "required": true,
+        "sensitive": false,
+        "source": "linuxserver-compose"
+      },
+      {
+        "name": "DB_PORT",
+        "example": "3306",
+        "required": true,
+        "sensitive": false,
+        "source": "linuxserver-compose"
+      },
+      {
+        "name": "DB_USERNAME",
+        "example": "",
+        "required": true,
+        "sensitive": false,
+        "source": "linuxserver-compose"
+      },
+      {
+        "name": "DB_PASSWORD",
+        "example": "",
+        "required": true,
+        "sensitive": true,
+        "source": "linuxserver-compose"
+      },
+      {
+        "name": "DB_DATABASE",
+        "example": "",
+        "required": true,
+        "sensitive": false,
+        "source": "linuxserver-compose"
+      },
+      {
+        "name": "QUEUE_CONNECTION",
+        "example": "",
+        "required": false,
+        "sensitive": false,
+        "source": "linuxserver-compose"
+      }
+    ]
+  },
+  "first_run": {
+    "credentials": [
+      {
+        "label": "BookStack web interface",
+        "type": "static-default",
+        "username": "admin@admin.com",
+        "password": "password",
+        "change_required": true,
+        "source": "linuxserver-readme-application-setup",
+        "retrieval": null
+      }
+    ]
+  },
+  "proxmox": {
+    "installer_profile": {
+      "generated_sensitive_environment": {
+        "APP_KEY": {
+          "strategy": "token-hex",
+          "bytes": 16,
+          "prompt": true
+        }
+      }
+    }
+  }
+}

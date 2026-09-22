@@ -1,0 +1,130 @@
+{
+  "container_contract": {
+    "image": {
+      "reference": "ghcr.io/wg-easy/wg-easy:15",
+      "tag": "15"
+    },
+    "environment": [
+      {
+        "name": "PASSWORD",
+        "example": "",
+        "required": false,
+        "sensitive": true,
+        "prompt_user": false,
+        "source": "wg-easy-v15-refuses-to-start-with-this-variable"
+      },
+      {
+        "name": "WG_HOST",
+        "example": "",
+        "required": false,
+        "sensitive": false,
+        "prompt_user": false,
+        "source": "wg-easy-v15-replaced-by-INIT_HOST"
+      },
+      {
+        "name": "WG_PORT",
+        "example": "",
+        "required": false,
+        "sensitive": false,
+        "prompt_user": false,
+        "source": "wg-easy-v15-replaced-by-INIT_PORT"
+      },
+      {
+        "name": "WG_DEFAULT_DNS",
+        "example": "",
+        "required": false,
+        "sensitive": false,
+        "prompt_user": false,
+        "source": "wg-easy-v15-replaced-by-INIT_DNS"
+      },
+      {
+        "name": "INSECURE",
+        "example": "true",
+        "required": true,
+        "sensitive": false,
+        "prompt_user": false,
+        "source": "wg-easy-optional-configuration"
+      },
+      {
+        "name": "INIT_ENABLED",
+        "example": "true",
+        "required": true,
+        "sensitive": false,
+        "prompt_user": false,
+        "source": "wg-easy-unattended-setup"
+      },
+      {
+        "name": "INIT_USERNAME",
+        "example": "admin",
+        "required": true,
+        "sensitive": false,
+        "prompt": "User name of the administrator of the web interface",
+        "source": "wg-easy-unattended-setup"
+      },
+      {
+        "name": "INIT_PASSWORD",
+        "example": "",
+        "required": true,
+        "sensitive": true,
+        "prompt": "Administrator password, at least 12 characters (empty = generated)",
+        "source": "wg-easy-unattended-setup"
+      },
+      {
+        "name": "INIT_HOST",
+        "example": "",
+        "required": true,
+        "sensitive": false,
+        "prompt": "Public address clients connect to (vpn.example.com or a public IP)",
+        "source": "wg-easy-unattended-setup"
+      },
+      {
+        "name": "INIT_PORT",
+        "example": "51820",
+        "required": true,
+        "sensitive": false,
+        "prompt": "Public UDP port clients connect to",
+        "source": "wg-easy-unattended-setup"
+      },
+      {
+        "name": "INIT_DNS",
+        "example": "1.1.1.1",
+        "required": true,
+        "sensitive": false,
+        "prompt": "DNS server written in the client configurations",
+        "source": "wg-easy-unattended-setup"
+      }
+    ]
+  },
+  "first_run": {
+    "credentials": [
+      {
+        "label": "WireGuard Easy web interface",
+        "type": "configured-or-installer-generated",
+        "username": "admin",
+        "password": null,
+        "username_environment": "INIT_USERNAME",
+        "password_environment": "INIT_PASSWORD",
+        "change_required": false,
+        "source": "wg-easy-unattended-setup",
+        "retrieval": null
+      }
+    ]
+  },
+  "proxmox": {
+    "installer_profile": {
+      "generated_sensitive_environment": {
+        "INIT_PASSWORD": {
+          "strategy": "token-hex",
+          "bytes": 16,
+          "prompt": true
+        }
+      },
+      "completion_notes": [
+        "The administrator account, the public address and the UDP port are created on the first start, so the web interface opens directly on its login page.",
+        "The web interface is served over plain HTTP on port 51821 (INSECURE=true). Keep it inside the local network or publish it through a reverse proxy with TLS.",
+        "The initial user name and password stay written in /etc/pve/lxc/<CTID>.conf as INIT_USERNAME and INIT_PASSWORD. They can be removed after the first login, with the container stopped.",
+        "Clients reach the VPN through the public address and the UDP port given during the installation, so that port must be forwarded to this container."
+      ]
+    }
+  }
+}

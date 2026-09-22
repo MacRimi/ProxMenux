@@ -50,7 +50,7 @@ fi
 root_fs="$(findmnt -no FSTYPE / 2>/dev/null || echo ext4)"
 
 # ── CPU model / arch ──
-cpu_model="$(lscpu 2>/dev/null | awk -F: '/^Model name/{sub(/^[ \t]+/, "", $2); print $2; exit}')"
+cpu_model="$(LC_ALL=C lscpu 2>/dev/null | awk -F: '/^Model name/{sub(/^[ \t]+/, "", $2); print $2; exit}')"
 cpu_arch="$(uname -m)"
 # Normalize to schema enum
 case "$cpu_arch" in

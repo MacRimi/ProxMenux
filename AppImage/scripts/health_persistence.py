@@ -421,6 +421,22 @@ class HealthPersistence:
             )
         ''')
         cursor.execute('CREATE INDEX IF NOT EXISTS idx_excluded_interface ON excluded_interfaces(interface_name)')
+
+        # Disks the user wants left alone: no periodic SMART or temperature
+        # reads, so a drive can reach its own spin-down and stop cycling its
+        # heads. Keyed by a stable identity rather than the kernel name, which
+        # a USB drive can change (sda -> sdb) on every reconnection.
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS excluded_disks (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                disk_key TEXT UNIQUE NOT NULL,
+                disk_name TEXT,
+                model TEXT,
+                serial TEXT,
+                excluded_at TEXT NOT NULL,
+                reason TEXT
+            )
+        ''')
         
         conn.commit()
         
@@ -430,7 +446,7 @@ class HealthPersistence:
         required_tables = {'errors', 'events', 'system_capabilities', 'user_settings', 
                           'notification_history', 'notification_last_sent', 'notification_delivery_claims',
                           'disk_registry', 'disk_observations', 
-                          'excluded_storages', 'excluded_interfaces'}
+                          'excluded_storages', 'excluded_interfaces', 'excluded_disks'}
         missing = required_tables - tables
         if missing:
             print(f"[HealthPersistence] WARNING: Missing tables after init: {missing}")
@@ -3257,6 +3273,67 @@ class HealthPersistence:
             print(f"[HealthPersistence] Error removing interface exclusion: {e}")
             return False
     
+    # ------------------------------------------------------------------
+    # Disk exclusions
+    # ------------------------------------------------------------------
+
+    def get_excluded_disks(self) -> List[Dict[str, Any]]:
+        """Every disk the user has excluded from periodic reads."""
+        try:
+            with self._db_connection(row_factory=True) as conn:
+                cursor = conn.cursor()
+                cursor.execute('''
+                    SELECT disk_key, disk_name, model, serial, excluded_at, reason
+                    FROM excluded_disks
+                ''')
+                return [dict(row) for row in cursor.fetchall()]
+        except Exception as e:
+            print(f"[HealthPersistence] Error getting excluded disks: {e}")
+            return []
+
+    def exclude_disk(self, disk_key: str, disk_name: str = None, model: str = None,
+                     serial: str = None, reason: str = None) -> bool:
+        """Add a disk to the exclusion list, or refresh its display fields."""
+        try:
+            with self._db_connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute('''
+                    INSERT INTO excluded_disks
+                    (disk_key, disk_name, model, serial, excluded_at, reason)
+                    VALUES (?, ?, ?, ?, ?, ?)
+                    ON CONFLICT(disk_key) DO UPDATE SET
+                        disk_name = excluded.disk_name,
+                        model = excluded.model,
+                        serial = excluded.serial
+                ''', (disk_key, disk_name, model, serial, datetime.now().isoformat(), reason))
+                conn.commit()
+                return True
+        except Exception as e:
+            print(f"[HealthPersistence] Error excluding disk: {e}")
+            return False
+
+    def remove_disk_exclusion(self, disk_key: str) -> bool:
+        """Put a disk back under periodic reads."""
+        try:
+            with self._db_connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute('DELETE FROM excluded_disks WHERE disk_key = ?', (disk_key,))
+                conn.commit()
+                return cursor.rowcount > 0
+        except Exception as e:
+            print(f"[HealthPersistence] Error removing disk exclusion: {e}")
+            return False
+
+    def get_excluded_disk_keys(self) -> set:
+        """Stable keys of the excluded disks (see disk_identity.disk_key)."""
+        try:
+            with self._db_connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute('SELECT disk_key FROM excluded_disks')
+                return {row[0] for row in cursor.fetchall()}
+        except Exception:
+            return set()
+
     def get_excluded_interface_names(self, check_type: str = 'health') -> set:
         """
         Get set of interface names excluded for a specific check type.

@@ -1,0 +1,19 @@
+{
+  "proxmox": {
+    "stack_environment_overrides": {
+      "teable-cache": {"REDISCLI_AUTH": "${GENERATED_REDIS_PASSWORD}"},
+      "teable": {"BACKEND_CACHE_REDIS_URI": "redis://default:${GENERATED_REDIS_PASSWORD}@teable-cache:6379/0"}
+    },
+    "stack_command_overrides": {
+      "teable-cache": ["redis-server", "--requirepass", "${REDISCLI_AUTH}"]
+    },
+    "stack_adaptation_notes": [
+      "The malformed imported '--requirepass password' argument is translated to separate Redis command arguments, preserving its upstream entrypoint.",
+      "Redis, its authenticated healthcheck and Teable share one generated password. The hook contains no secret; redis-cli reads REDISCLI_AUTH inside the LXC.",
+      "The named internal Compose bridge becomes an automatically allocated private Proxmox bridge, avoiding fixed-name collisions.",
+      "Redis readiness requires the exact PONG response, not only redis-cli exit status.",
+      "Credentials persist in native LXC runtime metadata; administrator access can read them. Latest images and first boot remain unvalidated."
+    ],
+    "stack_references": ["https://github.com/teableio/teable", "https://redis.io/docs/latest/develop/tools/cli/"]
+  }
+}

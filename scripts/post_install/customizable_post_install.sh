@@ -67,7 +67,7 @@ fi
 
 
 OS_CODENAME="$(grep "VERSION_CODENAME=" /etc/os-release | cut -d"=" -f 2 | xargs )"
-RAM_SIZE_GB=$(( $(vmstat -s | grep -i "total memory" | xargs | cut -d" " -f 1) / 1024 / 1000))
+RAM_SIZE_GB=$(awk '/^MemTotal:/{print int($2/1024/1024)}' /proc/meminfo)
 NECESSARY_REBOOT=0
 SCRIPT_TITLE="Customizable post-installation optimization script"
 
@@ -3075,7 +3075,7 @@ EOF
 
 
 configure_log2ram() {
-    local FUNC_VERSION="1.5"
+    local FUNC_VERSION="1.6"
     local existing_log2ram_bin=""
     pmx_journal_context "configure_log2ram" "$FUNC_VERSION"
     # description: Install Log2RAM with user-chosen RAM size; prompts for size and SSD/M.2 awareness before applying.
@@ -3092,7 +3092,7 @@ configure_log2ram() {
     sleep 1
 
 
-    RAM_SIZE_GB=$(free -g | awk '/^Mem:/{print $2}')
+    RAM_SIZE_GB=$(awk '/^MemTotal:/{print int($2/1024/1024)}' /proc/meminfo)
     [[ -z "$RAM_SIZE_GB" || "$RAM_SIZE_GB" -eq 0 ]] && RAM_SIZE_GB=4
 
     if (( RAM_SIZE_GB <= 8 )); then

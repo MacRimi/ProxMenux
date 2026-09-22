@@ -1,0 +1,328 @@
+{
+  "schema_version": "0.5.0",
+  "kind": "proxmenux.oci-template",
+  "id": "image-docker-volume-backup",
+  "status": "generated-review-required",
+  "catalog_ui": {
+    "title": {
+      "en_US": "Docker Volume Backup"
+    },
+    "tagline": {
+      "en_US": "Docker Volume Backup"
+    },
+    "description": {
+      "en_US": "Requires real Docker daemon/socket and Docker Compose stacks; cannot back up native Proxmox OCI instances as Docker volumes. Hidden pending explicit external Docker integration; no Docker installed on Proxmox."
+    },
+    "category": "tools",
+    "category_label": "Tools",
+    "author": "mrcaringi",
+    "developer": "mrcaringi",
+    "icon": null,
+    "thumbnail": null,
+    "screenshots": [],
+    "architectures": [
+      "amd64",
+      "arm64"
+    ],
+    "launch": {
+      "scheme": "http",
+      "port": null,
+      "path": "/"
+    },
+    "website": "https://github.com/MrCaringi/docker-volume-backup",
+    "documentation": "https://github.com/MrCaringi/docker-volume-backup",
+    "repository": "https://github.com/MrCaringi/docker-volume-backup",
+    "tips": [
+      "Requires real Docker daemon/socket and Docker Compose stacks; cannot back up native Proxmox OCI instances as Docker volumes. Hidden pending explicit external Docker integration; no Docker installed on Proxmox."
+    ],
+    "mini_changelog": [],
+    "display_version": null,
+    "updated_at": "2026-09-16",
+    "hidden": true,
+    "hidden_reason": "Requires a real Docker daemon and Compose stacks; native OCI instances are not Docker volumes."
+  },
+  "source": {
+    "provider": "mrcaringi",
+    "repository": "https://github.com/MrCaringi/docker-volume-backup",
+    "default_branch": "main",
+    "revision": "a12dbb8770687a5f8127fe9843e83755d3addbb6",
+    "readme_raw_url": "https://raw.githubusercontent.com/MrCaringi/docker-volume-backup/a12dbb8770687a5f8127fe9843e83755d3addbb6/README.md",
+    "image_repository_url": "https://hub.docker.com/r/mrcaringi/docker-volume-backup",
+    "compose_sha256": "28758bdfd464f5d2ae5ae88ed334f2b6fe842642ca189548086f0c64a76882ef",
+    "generated_at": "2026-09-16T22:00:00+02:00"
+  },
+  "container_contract": {
+    "service_name": "docker-volume-backup",
+    "container_name": "docker-volume-backup",
+    "image": {
+      "reference": "mrcaringi/docker-volume-backup:latest",
+      "registry": "docker.io",
+      "repository": "mrcaringi/docker-volume-backup",
+      "tag": "latest",
+      "digest": null,
+      "pull_policy": "resolve-selected-tag-to-architecture-digest-at-install"
+    },
+    "environment": [
+      {
+        "name": "CRON_SCHEDULE",
+        "example": "0 2 * * *",
+        "required": true,
+        "sensitive": false,
+        "source": "upstream-documentation",
+        "prompt_user": true
+      },
+      {
+        "name": "TZ",
+        "example": "Europe/Madrid",
+        "required": false,
+        "sensitive": false,
+        "source": "upstream-documentation",
+        "prompt_user": true
+      }
+    ],
+    "volumes": [
+      {
+        "id": "config",
+        "container_path": "/config",
+        "compose_source_example": "config-data",
+        "read_only": false,
+        "required": true,
+        "installation_choice": [
+          "managed-volume",
+          "host-bind"
+        ],
+        "default": "managed-volume",
+        "managed_volume": {
+          "backup": true,
+          "default_size_gb": 4
+        }
+      },
+      {
+        "id": "backups",
+        "container_path": "/backup",
+        "compose_source_example": "/mnt/oci-shared/backups",
+        "read_only": false,
+        "required": true,
+        "installation_choice": [
+          "managed-volume",
+          "host-bind"
+        ],
+        "default": "host-bind",
+        "managed_volume": {
+          "backup": true,
+          "default_size_gb": 32
+        }
+      }
+    ],
+    "ports": [],
+    "related_services": [],
+    "restart": "unless-stopped",
+    "stop_grace_period": null,
+    "original_compose": "# docker-compose.yml\nservices:\n  container-backups:\n    image: mrcaringi/docker-volume-backup:latest\n    container_name: container-backups\n    hostname: myserver          # shown in Telegram notifications\n    restart: always\n    environment:\n      CRON_SCHEDULE: \"0 2 * * *\"\n    volumes:\n      - /var/run/docker.sock:/var/run/docker.sock\n      - ./config.json:/config/config.json:ro\n      - /path/to/backups:/backup\n      # Mount stack directories at the same path used in config.json\n      - /home/user/docker/stacks:/home/user/docker/stacks:ro\n"
+  },
+  "compose_stack": {
+    "project_name": "mkvtoolnix",
+    "deployment_model": "one-native-oci-lxc-per-compose-service",
+    "user_experience": "single-application-install",
+    "main_service": "mkvtoolnix",
+    "service_count": 1,
+    "services": [
+      {
+        "name": "mkvtoolnix",
+        "image": "jlesage/mkvtoolnix:latest",
+        "is_main": true,
+        "role": "frontend",
+        "vmid_offset": 0,
+        "depends_on": [],
+        "frontend_network": true,
+        "private_network": false,
+        "compose": {
+          "image": "jlesage/mkvtoolnix:latest",
+          "ports": [
+            "5800:5800"
+          ],
+          "environment": {
+            "USER_ID": "1000",
+            "GROUP_ID": "1000",
+            "TZ": "Europe/Madrid"
+          },
+          "volumes": [
+            "mkvtoolnix-config:/config",
+            "/mnt/oci-shared/media:/storage"
+          ],
+          "restart": "unless-stopped"
+        }
+      }
+    ],
+    "top_level": {},
+    "networking": {
+      "frontend": "selected-proxmox-bridge",
+      "private_required": false,
+      "private_creation": "not-required",
+      "private_address_allocation": "not-required",
+      "service_discovery": "dedicated-lxc-address",
+      "dependency_external_access": "not-applicable",
+      "prompt_user_for_private_network": false
+    },
+    "storage": [
+      {
+        "id": "mkvtoolnix-config",
+        "service": "mkvtoolnix",
+        "container_path": "/config",
+        "mode": "user-selectable",
+        "user_selectable": true,
+        "backup": true,
+        "shared_with_other_lxc": false,
+        "default": "managed-volume",
+        "installation_choice": [
+          "managed-volume",
+          "host-bind"
+        ]
+      },
+      {
+        "id": "mkvtoolnix-storage",
+        "service": "mkvtoolnix",
+        "container_path": "/storage",
+        "mode": "user-selectable",
+        "user_selectable": true,
+        "backup": true,
+        "shared_with_other_lxc": true,
+        "default": "host-bind",
+        "installation_choice": [
+          "managed-volume",
+          "host-bind"
+        ]
+      }
+    ],
+    "orchestration": {
+      "reserve_vmids_atomically": 1,
+      "start_order": [
+        "mkvtoolnix"
+      ],
+      "stop_order": [
+        "mkvtoolnix"
+      ],
+      "dependency_readiness": "mandatory-http-first-start-healthcheck",
+      "rollback_on_failure": "remove-new-rootfs-preserve-external-host-data"
+    },
+    "installer_inputs": {
+      "prompted": [
+        "base_vmid",
+        "rootfs_storage",
+        "persistent_data_destinations",
+        "frontend_bridge",
+        "frontend_ipv4_mode"
+      ],
+      "automatic": [
+        "image_digest_resolution",
+        "managed_volume_preparation"
+      ],
+      "generated_secrets": []
+    }
+  },
+  "proxmox": {
+    "runtime": "native-oci-lxc",
+    "technology_status": "proxmox-technology-preview",
+    "catalog": {
+      "replaces_discovered_ids": []
+    },
+    "defaults": {
+      "unprivileged": true,
+      "ostype": "auto-from-image",
+      "cores": 2,
+      "memory_mb": 2048,
+      "swap_mb": 512,
+      "rootfs_size_gb": 8,
+      "rootfs_storage": "local-lvm",
+      "volume_storage": "local-lvm",
+      "template_storage": "local",
+      "bridge": "vmbr0",
+      "ipv4": "dhcp",
+      "firewall": true,
+      "host_managed_network": true,
+      "onboot": false,
+      "features": [
+        "nesting=1"
+      ],
+      "shutdown_timeout_seconds": 30
+    },
+    "image_metadata_policy": {
+      "entrypoint": "import-from-oci-image",
+      "cmd": "import-from-oci-image",
+      "environment": "import-image-env-then-apply-compose-overrides",
+      "user": "import-from-oci-image",
+      "working_dir": "import-from-oci-image",
+      "stop_signal": "import-from-oci-image"
+    },
+    "adaptations": [
+      {
+        "id": "native-persistent-volumes",
+        "upstream_behavior": "Docker bind mounts persistent directories into the image.",
+        "native_lxc_behavior": "ProxMenux attaches native Proxmox volumes or explicit host bind mounts at the same container paths.",
+        "reason": "Preserve the official image contract while making persistence visible to Proxmox backup policy.",
+        "behavioral_impact": "None expected.",
+        "validation": "pending-clean-install"
+      },
+      {
+        "id": "native-device-passthrough",
+        "upstream_behavior": "Docker exposes explicitly selected host devices to the container.",
+        "native_lxc_behavior": "ProxMenux maps each selected device with the native Proxmox dev resource.",
+        "reason": "The OCI process runs directly inside an LXC rather than through Docker.",
+        "behavioral_impact": "Only devices explicitly selected by the user are exposed.",
+        "validation": "not-required"
+      }
+    ],
+    "installer_profile": {},
+    "security_profile": {
+      "requires_privileged_lxc": false,
+      "source_requests_privileged_lxc": false,
+      "optional_privileged_lxc": false,
+      "requires_host_pid_namespace": false,
+      "source_requests_relaxed_confinement": false,
+      "requires_relaxed_confinement": false,
+      "optional_relaxed_confinement": false,
+      "risk_level": "normal",
+      "confirmation_required": false,
+      "warning": "No security relaxation is required for the reviewed profile."
+    }
+  },
+  "compatibility": {
+    "automatic_install_candidate": false,
+    "validated": false,
+    "supported_compose_keys": [
+      "devices",
+      "environment",
+      "image",
+      "ports",
+      "restart",
+      "volumes"
+    ],
+    "untranslated_blockers": [
+      "docker-engine-required-no-native-oci-stack-support"
+    ],
+    "policy": "Requires real Docker daemon/socket and Docker Compose stacks; cannot back up native Proxmox OCI instances as Docker volumes. Hidden pending explicit external Docker integration; no Docker installed on Proxmox."
+  },
+  "first_run": {
+    "endpoints": [],
+    "credentials": []
+  },
+  "validation": {
+    "schema": "passed-at-generation",
+    "clean_install": "pending",
+    "service_health": "pending",
+    "restart_persistence": "pending",
+    "backup_restore": "pending",
+    "update_preserves_data": "pending"
+  },
+  "lifecycle": {
+    "update_strategy": "resolve-latest-image-then-apply-reviewed-native-lxc-update",
+    "registry_state": {
+      "resolved_architecture": null,
+      "resolved_digest": null,
+      "image_version_label": null,
+      "image_created": null
+    },
+    "change_detection": "compare-readme-revision-and-resolved-latest-image-digest",
+    "automatic_unattended_updates": false
+  }
+}

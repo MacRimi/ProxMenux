@@ -1,0 +1,135 @@
+{
+  "container_contract": {
+    "environment": [
+      {
+        "name": "PUID",
+        "example": "1000",
+        "required": true,
+        "sensitive": false,
+        "source": "linuxserver-compose"
+      },
+      {
+        "name": "PGID",
+        "example": "1000",
+        "required": true,
+        "sensitive": false,
+        "source": "linuxserver-compose"
+      },
+      {
+        "name": "TZ",
+        "example": "Etc/UTC",
+        "required": true,
+        "sensitive": false,
+        "source": "linuxserver-compose"
+      },
+      {
+        "name": "APP_KEY",
+        "example": "",
+        "required": true,
+        "sensitive": true,
+        "source": "laravel-application-key"
+      },
+      {
+        "name": "APP_URL",
+        "example": "",
+        "required": true,
+        "sensitive": false,
+        "source": "linuxserver-compose"
+      },
+      {
+        "name": "DB_CONNECTION",
+        "example": "sqlite",
+        "required": true,
+        "sensitive": false,
+        "source": "linuxserver-compose"
+      },
+      {
+        "name": "SPEEDTEST_SCHEDULE",
+        "example": "",
+        "required": true,
+        "sensitive": false,
+        "source": "linuxserver-compose"
+      },
+      {
+        "name": "SPEEDTEST_SERVERS",
+        "example": "",
+        "required": true,
+        "sensitive": false,
+        "source": "linuxserver-compose"
+      },
+      {
+        "name": "DB_HOST",
+        "example": "",
+        "required": false,
+        "sensitive": false,
+        "source": "linuxserver-compose"
+      },
+      {
+        "name": "DB_PORT",
+        "example": "",
+        "required": false,
+        "sensitive": false,
+        "source": "linuxserver-compose"
+      },
+      {
+        "name": "DB_DATABASE",
+        "example": "",
+        "required": false,
+        "sensitive": false,
+        "source": "linuxserver-compose"
+      },
+      {
+        "name": "DB_USERNAME",
+        "example": "",
+        "required": false,
+        "sensitive": false,
+        "source": "linuxserver-compose"
+      },
+      {
+        "name": "DB_PASSWORD",
+        "example": "",
+        "required": false,
+        "sensitive": true,
+        "source": "linuxserver-compose"
+      },
+      {
+        "name": "DISPLAY_TIMEZONE",
+        "example": "Etc/UTC",
+        "required": false,
+        "sensitive": false,
+        "source": "linuxserver-compose"
+      },
+      {
+        "name": "PRUNE_RESULTS_OLDER_THAN",
+        "example": "0",
+        "required": false,
+        "sensitive": false,
+        "source": "linuxserver-compose"
+      }
+    ]
+  },
+  "first_run": {
+    "credentials": [
+      {
+        "label": "Speedtest Tracker web interface",
+        "type": "static-default",
+        "username": "admin@example.com",
+        "password": "password",
+        "change_required": true,
+        "source": "linuxserver-readme-application-setup",
+        "retrieval": null
+      }
+    ]
+  },
+  "proxmox": {
+    "installer_profile": {
+      "generated_sensitive_environment": {
+        "APP_KEY": {
+          "strategy": "token-hex",
+          "bytes": 16,
+          "prompt": true
+        }
+      }
+    }
+  }
+}

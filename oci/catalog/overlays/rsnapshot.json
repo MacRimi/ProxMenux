@@ -1,0 +1,10 @@
+{
+  "proxmox": {
+    "installer_profile": {
+      "completion_notes": [
+        "rsnapshot starts with the default configuration, which backs up /data into /.snapshots. Edit /config/rsnapshot.conf inside the container to set your own backup points, snapshot root and retention intervals.",
+        "No backup is scheduled: the rsnapshot lines in /config/crontabs/root are commented out. Uncomment or adjust the intervals you want, then restart the container."
+      ]
+    }
+  }
+}

@@ -1,0 +1,11 @@
+{
+  "container_contract": {
+    "image": {
+      "reference": "ngosang/amule:develop",
+      "tag": "develop"
+    }
+  },
+  "proxmox": {
+    "image_selection_note": "The develop tag carries the current aMule build, which is the one this catalog installs. The latest tag still points at 3.0.1-2 (21 August 2026); move back to latest once that release includes what develop carries today (develop-20260919-13a8c9f)."
+  }
+}

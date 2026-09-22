@@ -1,0 +1,30 @@
+{
+  "proxmox": {
+    "stack_completion_notes": [
+      "Kimai has no default account. Enter the container with: pct enter {main_vmid}",
+      "Inside the LXC, create the administrator: console kimai:user:create YOUR_USERNAME YOUR_EMAIL ROLE_SUPER_ADMIN"
+    ],
+    "stack_environment_overrides": {
+      "kimai": {
+        "APP_SECRET": "${GENERATED_APP_SECRET}",
+        "DATABASE_URL": "mysql://kimai:${GENERATED_KIMAI_DB_PASSWORD}@mariadb:3306/kimai?charset=utf8mb4",
+        "TRUSTED_HOSTS": "^(?:[0-9]{1,3}[.]){3}[0-9]{1,3}$|^localhost$"
+      },
+      "mariadb": {
+        "MYSQL_ROOT_PASSWORD": "${GENERATED_MARIADB_ROOT_PASSWORD}",
+        "MYSQL_DATABASE": "kimai",
+        "MYSQL_USER": "kimai",
+        "MYSQL_PASSWORD": "${GENERATED_KIMAI_DB_PASSWORD}"
+      }
+    },
+    "stack_adaptation_notes": [
+      "Both images remain LinuxServer images, including lscr.io/linuxserver/mariadb:latest; no database image substitution.",
+      "MariaDB persists /config and readiness requires an authenticated SELECT 1 as the application user.",
+      "The DATABASE_URL uses the shared generated database password and automatic server version detection.",
+      "Initial TRUSTED_HOSTS permits IPv4 hostnames and localhost. Set the intended domain when configuring a reverse proxy.",
+      "Create the first administrator using the upstream console kimai:user:create command inside the Kimai LXC; no default account is fabricated.",
+      "Installation, migrations, administrator creation and persistence remain unvalidated in a real OCI LXC."
+    ],
+    "stack_references": ["https://docs.linuxserver.io/images/docker-kimai/", "https://docs.linuxserver.io/images/docker-mariadb/"]
+  }
+}

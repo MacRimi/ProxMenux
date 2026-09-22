@@ -1,0 +1,367 @@
+{
+  "schema_version": "0.3.0",
+  "kind": "proxmenux.oci-template",
+  "id": "linuxserver-unifi-network-application",
+  "status": "generated-unvalidated",
+  "catalog_ui": {
+    "title": {
+      "en_US": "Unifi Network Application"
+    },
+    "tagline": {
+      "en_US": ""
+    },
+    "description": {
+      "en_US": ""
+    },
+    "category": "misc",
+    "category_label": "Miscellaneous",
+    "author": "LinuxServer.io",
+    "developer": null,
+    "icon": "https://raw.githubusercontent.com/linuxserver/docker-templates/master/linuxserver.io/img/unifi-network-application-icon.png",
+    "thumbnail": "https://raw.githubusercontent.com/linuxserver/docker-templates/master/linuxserver.io/img/unifi-network-application-banner.png",
+    "screenshots": [],
+    "architectures": [
+      "amd64",
+      "arm64"
+    ],
+    "launch": {
+      "scheme": "https",
+      "port": 8443,
+      "path": "/"
+    },
+    "website": null,
+    "documentation": "https://docs.linuxserver.io/images/docker-unifi-network-application/",
+    "repository": "https://github.com/linuxserver/docker-unifi-network-application",
+    "tips": [],
+    "mini_changelog": [
+      {
+        "date": "2026-07-14",
+        "note": "Rebase to Ubuntu Resolute."
+      },
+      {
+        "date": "2026-04-20",
+        "note": "Bump JRE to v25 to support v10.3+ of the application."
+      },
+      {
+        "date": "2025-10-20",
+        "note": "Switch to using FW API endpoint for version checks."
+      },
+      {
+        "date": "2025-05-08",
+        "note": "Update sample `init-mongo.sh` for compatibility with 9.1.120 (only affects new installs)."
+      },
+      {
+        "date": "2025-02-13",
+        "note": "Revert JRE to 17."
+      }
+    ],
+    "display_version": null,
+    "updated_at": "2026-07-14"
+  },
+  "source": {
+    "provider": "linuxserver.io",
+    "repository": "https://github.com/linuxserver/docker-unifi-network-application",
+    "default_branch": "main",
+    "revision": "8bba858a1b5f2275819d81102e131baa566247ab",
+    "readme_raw_url": "https://raw.githubusercontent.com/linuxserver/docker-unifi-network-application/8bba858a1b5f2275819d81102e131baa566247ab/README.md",
+    "readme_pushed_at": "2026-09-08T20:23:32Z",
+    "compose_sha256": "6c2dd55372cb57597115bb957f161a10a29052badd2d07ae41e7420b07382f02",
+    "generated_at": "2026-09-12T14:37:38+00:00"
+  },
+  "container_contract": {
+    "service_name": "unifi-network-application",
+    "container_name": "unifi-network-application",
+    "image": {
+      "reference": "lscr.io/linuxserver/unifi-network-application:latest",
+      "registry": "lscr.io",
+      "repository": "lscr.io/linuxserver/unifi-network-application",
+      "tag": "latest",
+      "digest": null,
+      "pull_policy": "resolve-selected-tag-to-architecture-digest-at-install"
+    },
+    "environment": [
+      {
+        "name": "PUID",
+        "example": "1000",
+        "required": true,
+        "sensitive": false,
+        "source": "linuxserver-compose"
+      },
+      {
+        "name": "PGID",
+        "example": "1000",
+        "required": true,
+        "sensitive": false,
+        "source": "linuxserver-compose"
+      },
+      {
+        "name": "TZ",
+        "example": "Etc/UTC",
+        "required": true,
+        "sensitive": false,
+        "source": "linuxserver-compose"
+      },
+      {
+        "name": "MONGO_USER",
+        "example": "unifi",
+        "required": true,
+        "sensitive": false,
+        "source": "linuxserver-compose"
+      },
+      {
+        "name": "MONGO_PASS",
+        "example": "",
+        "required": true,
+        "sensitive": true,
+        "source": "linuxserver-compose"
+      },
+      {
+        "name": "MONGO_HOST",
+        "example": "unifi-db",
+        "required": true,
+        "sensitive": false,
+        "source": "linuxserver-compose"
+      },
+      {
+        "name": "MONGO_PORT",
+        "example": "27017",
+        "required": true,
+        "sensitive": false,
+        "source": "linuxserver-compose"
+      },
+      {
+        "name": "MONGO_DBNAME",
+        "example": "unifi",
+        "required": true,
+        "sensitive": false,
+        "source": "linuxserver-compose"
+      },
+      {
+        "name": "MONGO_AUTHSOURCE",
+        "example": "admin",
+        "required": true,
+        "sensitive": false,
+        "source": "linuxserver-compose"
+      },
+      {
+        "name": "MEM_LIMIT",
+        "example": "1024",
+        "required": false,
+        "sensitive": false,
+        "source": "linuxserver-compose"
+      },
+      {
+        "name": "MEM_STARTUP",
+        "example": "1024",
+        "required": false,
+        "sensitive": false,
+        "source": "linuxserver-compose"
+      },
+      {
+        "name": "MONGO_TLS",
+        "example": "",
+        "required": false,
+        "sensitive": false,
+        "source": "linuxserver-compose"
+      }
+    ],
+    "volumes": [
+      {
+        "id": "volume-0",
+        "container_path": "/config",
+        "compose_source_example": "/path/to/unifi-network-application/data",
+        "read_only": false,
+        "required": true,
+        "installation_choice": [
+          "managed-volume",
+          "host-bind"
+        ],
+        "default": "managed-volume",
+        "managed_volume": {
+          "backup": true,
+          "default_size_gb": 4
+        }
+      }
+    ],
+    "ports": [
+      {
+        "container_port": 8443,
+        "published_example": 8443,
+        "protocol": "tcp",
+        "required": true,
+        "proxmox_behavior": "listener-on-dedicated-lxc-address-no-nat"
+      },
+      {
+        "container_port": 3478,
+        "published_example": 3478,
+        "protocol": "udp",
+        "required": true,
+        "proxmox_behavior": "listener-on-dedicated-lxc-address-no-nat"
+      },
+      {
+        "container_port": 10001,
+        "published_example": 10001,
+        "protocol": "udp",
+        "required": true,
+        "proxmox_behavior": "listener-on-dedicated-lxc-address-no-nat"
+      },
+      {
+        "container_port": 8080,
+        "published_example": 8080,
+        "protocol": "tcp",
+        "required": true,
+        "proxmox_behavior": "listener-on-dedicated-lxc-address-no-nat"
+      },
+      {
+        "container_port": 1900,
+        "published_example": 1900,
+        "protocol": "udp",
+        "required": false,
+        "proxmox_behavior": "listener-on-dedicated-lxc-address-no-nat"
+      },
+      {
+        "container_port": 8843,
+        "published_example": 8843,
+        "protocol": "tcp",
+        "required": false,
+        "proxmox_behavior": "listener-on-dedicated-lxc-address-no-nat"
+      },
+      {
+        "container_port": 8880,
+        "published_example": 8880,
+        "protocol": "tcp",
+        "required": false,
+        "proxmox_behavior": "listener-on-dedicated-lxc-address-no-nat"
+      },
+      {
+        "container_port": 6789,
+        "published_example": 6789,
+        "protocol": "tcp",
+        "required": false,
+        "proxmox_behavior": "listener-on-dedicated-lxc-address-no-nat"
+      },
+      {
+        "container_port": 5514,
+        "published_example": 5514,
+        "protocol": "udp",
+        "required": false,
+        "proxmox_behavior": "listener-on-dedicated-lxc-address-no-nat"
+      }
+    ],
+    "related_services": [],
+    "restart": "unless-stopped",
+    "stop_grace_period": null,
+    "original_compose": "---\nservices:\n  unifi-network-application:\n    image: lscr.io/linuxserver/unifi-network-application:latest\n    container_name: unifi-network-application\n    environment:\n      - PUID=1000\n      - PGID=1000\n      - TZ=Etc/UTC\n      - MONGO_USER=unifi\n      - MONGO_PASS=\n      - MONGO_HOST=unifi-db\n      - MONGO_PORT=27017\n      - MONGO_DBNAME=unifi\n      - MONGO_AUTHSOURCE=admin\n      - MEM_LIMIT=1024 #optional\n      - MEM_STARTUP=1024 #optional\n      - MONGO_TLS= #optional\n    volumes:\n      - /path/to/unifi-network-application/data:/config\n    ports:\n      - 8443:8443\n      - 3478:3478/udp\n      - 10001:10001/udp\n      - 8080:8080\n      - 1900:1900/udp #optional\n      - 8843:8843 #optional\n      - 8880:8880 #optional\n      - 6789:6789 #optional\n      - 5514:5514/udp #optional\n    restart: unless-stopped\n"
+  },
+  "first_run": {
+    "endpoints": [
+      {
+        "label": "Web UI 1",
+        "scheme": "https",
+        "port": 8443,
+        "path": "/",
+        "source": "linuxserver-readme-application-setup"
+      },
+      {
+        "label": "Web UI 2",
+        "scheme": "http",
+        "port": 8080,
+        "path": "/inform",
+        "source": "linuxserver-readme-application-setup"
+      }
+    ],
+    "credentials": []
+  },
+  "proxmox": {
+    "runtime": "native-oci-lxc",
+    "technology_status": "proxmox-technology-preview",
+    "defaults": {
+      "unprivileged": true,
+      "ostype": "auto-from-image",
+      "cores": 2,
+      "memory_mb": 1024,
+      "swap_mb": 512,
+      "rootfs_size_gb": 8,
+      "rootfs_storage": "local-lvm",
+      "volume_storage": "local-lvm",
+      "template_storage": "local",
+      "bridge": "vmbr0",
+      "ipv4": "dhcp",
+      "firewall": true,
+      "host_managed_network": true,
+      "onboot": false,
+      "features": [
+        "nesting=1"
+      ],
+      "shutdown_timeout_seconds": 30
+    },
+    "image_metadata_policy": {
+      "entrypoint": "import-from-oci-image",
+      "cmd": "import-from-oci-image",
+      "environment": "import-image-env-then-apply-compose-overrides",
+      "user": "import-from-oci-image",
+      "working_dir": "import-from-oci-image",
+      "stop_signal": "import-from-oci-image"
+    },
+    "adaptations": [
+      {
+        "id": "dedicated-lxc-network",
+        "upstream_behavior": "Docker publishes selected container ports on the Docker host.",
+        "native_lxc_behavior": "The application listens on the same container ports at its dedicated LXC address.",
+        "reason": "A native LXC has its own address and does not require Docker port NAT.",
+        "behavioral_impact": "Users open the LXC address instead of the Proxmox host address.",
+        "validation": "pending-per-application"
+      },
+      {
+        "id": "compose-environment-overlay",
+        "upstream_behavior": "Compose environment values override OCI image environment values.",
+        "native_lxc_behavior": "ProxMenux merges the same values into lxc.environment.runtime while the CT is stopped.",
+        "reason": "PVE imports image Env automatically; Compose values still need to override it.",
+        "behavioral_impact": "None expected.",
+        "validation": "pending-per-application"
+      },
+      {
+        "id": "stop-grace-period",
+        "upstream_behavior": "Docker waits for Compose stop_grace_period before forcing termination.",
+        "native_lxc_behavior": "ProxMenux records the same timeout for its pct shutdown lifecycle operations.",
+        "reason": "Proxmox has no equivalent per-CT persistent restart-policy field; startup.down is not a shutdown timeout.",
+        "behavioral_impact": "Normal Proxmox node shutdown remains governed by the node-wide shutdown policy.",
+        "validation": "not-requested-by-compose"
+      }
+    ]
+  },
+  "compatibility": {
+    "automatic_install_candidate": true,
+    "validated": false,
+    "supported_compose_keys": [
+      "container_name",
+      "environment",
+      "image",
+      "ports",
+      "restart",
+      "stop_grace_period",
+      "volumes"
+    ],
+    "untranslated_blockers": [],
+    "policy": "A generated template is never promoted to validated without install, health, restart and persistence tests."
+  },
+  "validation": {
+    "schema": "passed-at-generation",
+    "clean_install": "pending",
+    "service_health": "pending",
+    "restart_persistence": "pending",
+    "backup_restore": "pending",
+    "update_preserves_data": "pending"
+  },
+  "lifecycle": {
+    "update_strategy": "replace-rootfs-from-new-oci-image-preserve-managed-volumes",
+    "registry_state": {
+      "resolved_architecture": null,
+      "resolved_digest": null,
+      "image_version_label": null,
+      "image_created": null
+    },
+    "change_detection": "compare-resolved-architecture-digest",
+    "automatic_unattended_updates": false
+  }
+}

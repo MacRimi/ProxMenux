@@ -1,0 +1,100 @@
+{
+  "container_contract": {
+    "environment": [
+      {
+        "name": "PUID",
+        "example": "1000",
+        "required": true,
+        "sensitive": false,
+        "source": "linuxserver-compose"
+      },
+      {
+        "name": "PGID",
+        "example": "1000",
+        "required": true,
+        "sensitive": false,
+        "source": "linuxserver-compose"
+      },
+      {
+        "name": "TZ",
+        "example": "Etc/UTC",
+        "required": true,
+        "sensitive": false,
+        "source": "linuxserver-compose"
+      },
+      {
+        "name": "SERVERURL",
+        "example": "",
+        "required": true,
+        "sensitive": false,
+        "prompt": "Public address peers connect to, or auto to detect it (vpn.example.com)",
+        "source": "linuxserver-wireguard-readme"
+      },
+      {
+        "name": "SERVERPORT",
+        "example": "51820",
+        "required": false,
+        "sensitive": false,
+        "prompt": "Public UDP port peers connect to",
+        "source": "linuxserver-wireguard-readme"
+      },
+      {
+        "name": "PEERS",
+        "example": "",
+        "required": true,
+        "sensitive": false,
+        "prompt": "Peers to create: a number (3) or a list of names (phone,laptop)",
+        "source": "linuxserver-wireguard-readme"
+      },
+      {
+        "name": "PEERDNS",
+        "example": "auto",
+        "required": false,
+        "sensitive": false,
+        "prompt": "DNS server written in the peer configurations (auto or an IP address)",
+        "source": "linuxserver-wireguard-readme"
+      },
+      {
+        "name": "INTERNAL_SUBNET",
+        "example": "10.13.13.0",
+        "required": false,
+        "sensitive": false,
+        "prompt": "Internal subnet of the tunnel (change it only if it clashes)",
+        "source": "linuxserver-wireguard-readme"
+      },
+      {
+        "name": "ALLOWEDIPS",
+        "example": "0.0.0.0/0",
+        "required": false,
+        "sensitive": false,
+        "prompt": "Networks the peers reach through the tunnel (0.0.0.0/0 = all traffic)",
+        "source": "linuxserver-wireguard-readme"
+      },
+      {
+        "name": "PERSISTENTKEEPALIVE_PEERS",
+        "example": "",
+        "required": false,
+        "sensitive": false,
+        "source": "linuxserver-compose"
+      },
+      {
+        "name": "LOG_CONFS",
+        "example": "true",
+        "required": false,
+        "sensitive": false,
+        "source": "linuxserver-compose"
+      }
+    ]
+  },
+  "proxmox": {
+    "installer_profile": {
+      "completion_notes": [
+        "Each peer gets its configuration and its QR code inside the container: /config/peer1/peer1.conf and /config/peer1/peer1.png, or /config/peer_<name>/peer_<name>.conf when names were given.",
+        "Show the QR code of a peer again with: pct exec <CTID> -- /app/show-peer 1",
+        "Copy a peer configuration to the host with: pct pull <CTID> /config/peer1/peer1.conf peer1.conf",
+        "Peers reach the server through the public address and the UDP port given during the installation, so that port must be forwarded to this container.",
+        "Adding peers later means raising PEERS in /etc/pve/lxc/<CTID>.conf and restarting the container. The existing peer keys are kept."
+      ]
+    }
+  }
+}

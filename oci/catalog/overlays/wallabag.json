@@ -1,0 +1,43 @@
+{
+  "container_contract": {
+    "environment": [
+      {
+        "name": "SYMFONY__ENV__DOMAIN_NAME",
+        "example": "",
+        "required": true,
+        "sensitive": false,
+        "prompt": "Address used to reach wallabag (http://IP or https://wallabag.example.com)",
+        "source": "wallabag-docker-readme"
+      },
+      {
+        "name": "SYMFONY__ENV__SERVER_NAME",
+        "example": "Wallabag",
+        "required": true,
+        "sensitive": false,
+        "prompt": "Name of this wallabag instance, shown in the interface and in 2FA codes",
+        "source": "wallabag-docker-readme"
+      }
+    ]
+  },
+  "first_run": {
+    "credentials": [
+      {
+        "label": "wallabag web interface",
+        "type": "static-default",
+        "username": "wallabag",
+        "password": "wallabag",
+        "change_required": true,
+        "source": "upstream-wallabag-docker-readme",
+        "retrieval": null
+      }
+    ]
+  },
+  "proxmox": {
+    "installer_profile": {
+      "completion_notes": [
+        "wallabag listens on port 80 of the container and stores its data in SQLite.",
+        "wallabag builds its links from the address given during the installation. If it does not match the address of the container, edit lxc.environment.runtime: SYMFONY__ENV__DOMAIN_NAME in /etc/pve/lxc/<CTID>.conf with the container stopped, and start it again."
+      ]
+    }
+  }
+}

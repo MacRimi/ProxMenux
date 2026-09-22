@@ -1,0 +1,6 @@
+{
+  "catalog_ui": {
+    "hidden": true,
+    "hidden_reason": "Manages libvirt hosts, and Proxmox VE does not use libvirt"
+  }
+}

@@ -1,0 +1,145 @@
+{
+  "container_contract": {
+    "environment": [
+      {
+        "name": "PUID",
+        "example": "1000",
+        "required": true,
+        "sensitive": false,
+        "source": "linuxserver-compose"
+      },
+      {
+        "name": "PGID",
+        "example": "1000",
+        "required": true,
+        "sensitive": false,
+        "source": "linuxserver-compose"
+      },
+      {
+        "name": "TZ",
+        "example": "Etc/UTC",
+        "required": true,
+        "sensitive": false,
+        "source": "linuxserver-compose"
+      },
+      {
+        "name": "URL",
+        "example": "",
+        "required": true,
+        "sensitive": false,
+        "prompt": "Domain for the certificate (example.com)",
+        "source": "linuxserver-swag-readme"
+      },
+      {
+        "name": "VALIDATION",
+        "example": "",
+        "required": true,
+        "sensitive": false,
+        "prompt": "Validation method: http (port 80 forwarded) or dns (DNS provider plugin)",
+        "source": "linuxserver-swag-readme"
+      },
+      {
+        "name": "SUBDOMAINS",
+        "example": "",
+        "required": false,
+        "sensitive": false,
+        "prompt": "Subdomains for the certificate, comma separated (wildcard for *.domain)",
+        "source": "linuxserver-swag-readme"
+      },
+      {
+        "name": "CERTPROVIDER",
+        "example": "",
+        "required": false,
+        "sensitive": false,
+        "prompt": "Certificate provider: empty for Let's Encrypt, zerossl for ZeroSSL",
+        "source": "linuxserver-swag-readme"
+      },
+      {
+        "name": "CERT_PROFILE",
+        "example": "",
+        "required": false,
+        "sensitive": false,
+        "source": "linuxserver-compose"
+      },
+      {
+        "name": "DNSPLUGIN",
+        "example": "cloudflare",
+        "required": false,
+        "sensitive": false,
+        "prompt": "DNS plugin used with dns validation (cloudflare, duckdns, ovh...)",
+        "source": "linuxserver-swag-readme"
+      },
+      {
+        "name": "PROPAGATION",
+        "example": "",
+        "required": false,
+        "sensitive": false,
+        "source": "linuxserver-compose"
+      },
+      {
+        "name": "EMAIL",
+        "example": "",
+        "required": false,
+        "sensitive": false,
+        "prompt": "Email address for certificate expiry notices (required by ZeroSSL)",
+        "source": "linuxserver-swag-readme"
+      },
+      {
+        "name": "ONLY_SUBDOMAINS",
+        "example": "false",
+        "required": false,
+        "sensitive": false,
+        "source": "linuxserver-compose"
+      },
+      {
+        "name": "EXTRA_DOMAINS",
+        "example": "",
+        "required": false,
+        "sensitive": false,
+        "source": "linuxserver-compose"
+      },
+      {
+        "name": "STAGING",
+        "example": "false",
+        "required": false,
+        "sensitive": false,
+        "prompt": "Request a staging certificate for testing: true or false",
+        "source": "linuxserver-swag-readme"
+      },
+      {
+        "name": "DISABLE_F2B",
+        "example": "",
+        "required": false,
+        "sensitive": false,
+        "source": "linuxserver-compose"
+      },
+      {
+        "name": "SWAG_AUTORELOAD",
+        "example": "",
+        "required": false,
+        "sensitive": false,
+        "source": "linuxserver-compose"
+      },
+      {
+        "name": "SWAG_AUTORELOAD_WATCHLIST",
+        "example": "",
+        "required": false,
+        "sensitive": false,
+        "source": "linuxserver-compose"
+      }
+    ]
+  },
+  "proxmox": {
+    "installer_profile": {
+      "completion_notes": [
+        "The domain must resolve to the public address of this network before the certificate can be issued.",
+        "With http validation, port 80 of the router must be forwarded to port 80 of this container.",
+        "With dns validation, the DNSPLUGIN variable names the provider plugin. The advanced installation asks for it; otherwise add the line lxc.environment.runtime: DNSPLUGIN=<plugin> to /etc/pve/lxc/<CTID>.conf with the container stopped.",
+        "With dns validation, write the provider credentials in /config/dns-conf/<plugin>.ini inside the container and restart it.",
+        "Certificate errors are logged in /config/log/letsencrypt inside the container.",
+        "SWAG serves HTTPS on port 443. Plain HTTP on port 80 is disabled in /config/nginx/site-confs/default.conf.",
+        "Reverse proxy samples for other applications are in /config/nginx/proxy_confs inside the container."
+      ]
+    }
+  }
+}

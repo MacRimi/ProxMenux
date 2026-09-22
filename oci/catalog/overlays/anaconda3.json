@@ -1,0 +1,60 @@
+{
+  "container_contract": {
+    "environment": [
+      {
+        "name": "LANG",
+        "example": "C.UTF-8",
+        "required": true,
+        "sensitive": false,
+        "source": "docker-compose"
+      },
+      {
+        "name": "LC_ALL",
+        "example": "C.UTF-8",
+        "required": true,
+        "sensitive": false,
+        "source": "docker-compose"
+      },
+      {
+        "name": "PATH",
+        "example": "/opt/conda/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
+        "required": true,
+        "sensitive": false,
+        "source": "docker-compose"
+      },
+      {
+        "name": "JUPYTER_TOKEN",
+        "example": "",
+        "required": true,
+        "sensitive": true,
+        "prompt": "Access token of the Jupyter Lab web interface",
+        "source": "jupyter-server-documentation"
+      }
+    ]
+  },
+  "first_run": {
+    "credentials": [
+      {
+        "label": "Jupyter Lab (token only)",
+        "type": "configured-or-installer-generated",
+        "username": "Not required (token only)",
+        "password": null,
+        "password_environment": "JUPYTER_TOKEN",
+        "change_required": false,
+        "source": "jupyter-server-documentation",
+        "retrieval": null
+      }
+    ]
+  },
+  "proxmox": {
+    "installer_profile": {
+      "generated_sensitive_environment": {
+        "JUPYTER_TOKEN": {
+          "strategy": "token-hex",
+          "bytes": 16,
+          "prompt": true
+        }
+      }
+    }
+  }
+}

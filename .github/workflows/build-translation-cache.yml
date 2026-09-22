@@ -18,6 +18,9 @@ on:
       - 'menu'
       - 'install_proxmenux.sh'
       - 'install_proxmenux_beta.sh'
+      - 'oci/src/**/*.py'
+      - 'oci/remote/*.sh'
+      - 'oci/catalog/**/*.json'
       - '.github/scripts/build_translation_cache.py'
       - '.github/workflows/build-translation-cache.yml'
   workflow_dispatch:
@@ -79,6 +82,10 @@ jobs:
             --extra-file menu \
             --extra-file install_proxmenux.sh \
             --extra-file install_proxmenux_beta.sh \
+            --extra-dir oci/remote \
+            --python-dir oci/src \
+            --python-dir oci/remote \
+            --catalog-dir oci/catalog \
             --output-dir lang \
             --provider googletrans \
             $REFRESH_FLAG

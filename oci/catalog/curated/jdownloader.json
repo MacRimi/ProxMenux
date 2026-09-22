@@ -1,0 +1,1017 @@
+{
+  "schema_version": "0.5.0",
+  "kind": "proxmenux.oci-template",
+  "id": "image-jdownloader",
+  "status": "laboratory-validated",
+  "catalog_ui": {
+    "title": {
+      "en_US": "JDownloader"
+    },
+    "tagline": {
+      "en_US": "JDownloader 2 with browser GUI and MyJDownloader support"
+    },
+    "description": {
+      "en_US": "The maintained jlesage JDownloader 2 image adapted as a native Proxmox OCI LXC with persistent configuration and shared downloads."
+    },
+    "category": "downloads",
+    "category_label": "Files & Downloads",
+    "author": "jlesage",
+    "developer": "jlesage",
+    "icon": null,
+    "thumbnail": null,
+    "screenshots": [],
+    "architectures": [
+      "amd64"
+    ],
+    "launch": {
+      "scheme": "http",
+      "port": 5800,
+      "path": "/"
+    },
+    "website": "https://jdownloader.org/",
+    "documentation": "https://github.com/jlesage/docker-jdownloader-2",
+    "repository": "https://github.com/jlesage/docker-jdownloader-2",
+    "tips": [
+      "JDownloader 2 is the current application name; this curated entry replaces the duplicate jdownloader2 discovery entry.",
+      "Web authentication requires HTTPS unless the explicitly insecure upstream override is selected."
+    ],
+    "mini_changelog": [],
+    "display_version": null,
+    "updated_at": "2026-08-26"
+  },
+  "source": {
+    "provider": "jlesage",
+    "repository": "https://github.com/jlesage/docker-jdownloader-2",
+    "revision": "5b7968aaa112f1a8ab8ecc81bd65265bd6ca7423216ee8e32f77e46c0d5b4569",
+    "image_repository_url": "https://hub.docker.com/r/jlesage/jdownloader-2",
+    "readme_pushed_at": "2026-08-26T22:06:48Z",
+    "compose_sha256": "5b7968aaa112f1a8ab8ecc81bd65265bd6ca7423216ee8e32f77e46c0d5b4569",
+    "generated_at": "2026-09-12T15:54:10+00:00",
+    "default_branch": "master"
+  },
+  "container_contract": {
+    "service_name": "jdownloader",
+    "container_name": "jdownloader",
+    "image": {
+      "reference": "jlesage/jdownloader-2:latest",
+      "registry": "docker.io",
+      "repository": "jlesage/jdownloader-2",
+      "tag": "latest",
+      "digest": null,
+      "pull_policy": "resolve-selected-tag-to-architecture-digest-at-install"
+    },
+    "environment": [
+      {
+        "name": "USER_ID",
+        "example": "1000",
+        "required": true,
+        "sensitive": false,
+        "source": "docker-compose"
+      },
+      {
+        "name": "GROUP_ID",
+        "example": "1000",
+        "required": true,
+        "sensitive": false,
+        "source": "docker-compose"
+      },
+      {
+        "name": "UMASK",
+        "example": "002",
+        "required": true,
+        "sensitive": false,
+        "source": "docker-compose"
+      },
+      {
+        "name": "TZ",
+        "example": "Etc/UTC",
+        "required": true,
+        "sensitive": false,
+        "source": "docker-compose"
+      },
+      {
+        "name": "VNC_LOCALHOST_ONLY",
+        "example": "1",
+        "required": true,
+        "sensitive": false,
+        "source": "docker-compose"
+      },
+      {
+        "name": "WEB_AUTHENTICATION",
+        "example": "1",
+        "required": true,
+        "sensitive": false,
+        "source": "docker-compose"
+      },
+      {
+        "name": "WEB_AUTHENTICATION_USERNAME",
+        "example": "admin",
+        "required": true,
+        "sensitive": false,
+        "source": "docker-compose"
+      },
+      {
+        "name": "WEB_AUTHENTICATION_PASSWORD",
+        "example": "${GENERATED_WEB_PASSWORD}",
+        "required": true,
+        "sensitive": true,
+        "source": "docker-compose"
+      },
+      {
+        "name": "SECURE_CONNECTION",
+        "example": "1",
+        "required": true,
+        "sensitive": false,
+        "source": "docker-compose"
+      }
+    ],
+    "volumes": [
+      {
+        "id": "volume-0",
+        "container_path": "/config",
+        "compose_source_example": "jdownloader-config",
+        "read_only": false,
+        "required": true,
+        "installation_choice": [
+          "managed-volume",
+          "host-bind"
+        ],
+        "default": "managed-volume",
+        "managed_volume": {
+          "backup": true,
+          "default_size_gb": 4
+        }
+      },
+      {
+        "id": "volume-1",
+        "container_path": "/output",
+        "compose_source_example": "/mnt/oci-shared/downloads",
+        "read_only": false,
+        "required": true,
+        "installation_choice": [
+          "managed-volume",
+          "host-bind"
+        ],
+        "default": "managed-volume",
+        "managed_volume": {
+          "backup": true,
+          "default_size_gb": 8
+        }
+      }
+    ],
+    "ports": [
+      {
+        "container_port": 5800,
+        "published_example": 5800,
+        "protocol": "tcp",
+        "required": true,
+        "proxmox_behavior": "listener-on-dedicated-lxc-address-no-nat"
+      },
+      {
+        "container_port": 3129,
+        "published_example": 3129,
+        "protocol": "tcp",
+        "required": true,
+        "proxmox_behavior": "listener-on-dedicated-lxc-address-no-nat"
+      }
+    ],
+    "related_services": [],
+    "restart": "unless-stopped",
+    "stop_grace_period": null,
+    "original_compose": "name: jdownloader\nservices:\n  jdownloader:\n    image: jlesage/jdownloader-2:latest\n    environment:\n      USER_ID: '1000'\n      GROUP_ID: '1000'\n      UMASK: '002'\n      TZ: Etc/UTC\n      VNC_LOCALHOST_ONLY: '1'\n      WEB_AUTHENTICATION: '1'\n      WEB_AUTHENTICATION_USERNAME: admin\n      WEB_AUTHENTICATION_PASSWORD: ${GENERATED_GENERATED_WEB_PASSWORD}\n      SECURE_CONNECTION: '1'\n    ports:\n    - 5800:5800\n    - 3129:3129\n    volumes:\n    - jdownloader-config:/config\n    - /mnt/oci-shared/downloads:/output\n    restart: unless-stopped\nvolumes:\n  jdownloader-config: {}\n"
+  },
+  "compose_stack": {
+    "project_name": "jdownloader",
+    "deployment_model": "one-native-oci-lxc-per-compose-service",
+    "user_experience": "single-application-install",
+    "main_service": "jdownloader",
+    "service_count": 1,
+    "services": [
+      {
+        "name": "jdownloader",
+        "image": "jlesage/jdownloader-2:latest",
+        "is_main": true,
+        "role": "frontend",
+        "vmid_offset": 0,
+        "depends_on": [],
+        "frontend_network": true,
+        "private_network": false,
+        "compose": {
+          "image": "jlesage/jdownloader-2:latest",
+          "environment": {
+            "USER_ID": "1000",
+            "GROUP_ID": "1000",
+            "UMASK": "002",
+            "TZ": "Etc/UTC",
+            "VNC_LOCALHOST_ONLY": "1",
+            "WEB_AUTHENTICATION": "1",
+            "WEB_AUTHENTICATION_USERNAME": "admin",
+            "WEB_AUTHENTICATION_PASSWORD": "${GENERATED_GENERATED_WEB_PASSWORD}",
+            "SECURE_CONNECTION": "1"
+          },
+          "ports": [
+            "5800:5800",
+            "3129:3129"
+          ],
+          "volumes": [
+            "jdownloader-config:/config",
+            "/mnt/oci-shared/downloads:/output"
+          ],
+          "restart": "unless-stopped"
+        }
+      }
+    ],
+    "top_level": {
+      "name": "jdownloader",
+      "volumes": {
+        "jdownloader-config": {}
+      }
+    },
+    "networking": {
+      "frontend": "selected-proxmox-bridge",
+      "private_required": false,
+      "private_creation": "automatic-create-if-missing",
+      "private_address_allocation": "automatic-static-address-per-service",
+      "service_discovery": "private-addresses-with-compose-service-host-aliases",
+      "dependency_external_access": "disabled-unless-service-publishes-ports",
+      "prompt_user_for_private_network": false
+    },
+    "storage": [
+      {
+        "id": "jdownloader-volume-0",
+        "service": "jdownloader",
+        "container_path": "/config",
+        "mode": "managed-volume",
+        "user_selectable": false,
+        "backup": true,
+        "shared_with_other_lxc": false,
+        "source_path": null,
+        "source_path_prompt": null
+      },
+      {
+        "id": "jdownloader-volume-1",
+        "service": "jdownloader",
+        "container_path": "/output",
+        "mode": "managed-volume",
+        "user_selectable": false,
+        "backup": true,
+        "shared_with_other_lxc": false,
+        "source_path": null,
+        "source_path_prompt": null
+      }
+    ],
+    "orchestration": {
+      "reserve_vmids_atomically": 1,
+      "start_order": [
+        "jdownloader"
+      ],
+      "stop_order": [
+        "jdownloader"
+      ],
+      "dependency_readiness": "compose-healthcheck-then-port-or-process-fallback",
+      "rollback_on_failure": "remove-new-rootfs-preserve-created-persistent-volumes"
+    },
+    "installer_inputs": {
+      "prompted": [
+        "stack_name",
+        "base_vmid",
+        "rootfs_storage",
+        "persistent_data_destinations",
+        "frontend_bridge",
+        "frontend_ipv4_mode"
+      ],
+      "automatic": [
+        "dependent_vmids",
+        "private_bridge",
+        "private_subnet",
+        "private_service_addresses",
+        "compose_service_aliases",
+        "generated_secrets",
+        "dependency_start_and_stop_order"
+      ],
+      "generated_secrets": [
+        {
+          "id": "generated-web-password",
+          "strategy": "generate-cryptographically-random-at-install",
+          "bindings": [
+            {
+              "service": "jdownloader",
+              "environment_variable": "WEB_AUTHENTICATION_PASSWORD"
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "first_run": {
+    "endpoints": [
+      {
+        "label": "JDownloader WebUI",
+        "scheme": "https",
+        "port": 5800,
+        "path": "/",
+        "source": "upstream-jlesage-readme"
+      }
+    ],
+    "credentials": [
+      {
+        "label": "JDownloader WebUI",
+        "type": "configured-or-installer-generated",
+        "username": "admin",
+        "password": null,
+        "username_environment": "WEB_AUTHENTICATION_USERNAME",
+        "password_environment": "WEB_AUTHENTICATION_PASSWORD",
+        "change_required": true,
+        "source": "official-image-environment",
+        "retrieval": null
+      }
+    ]
+  },
+  "proxmox": {
+    "runtime": "native-oci-lxc",
+    "technology_status": "proxmox-technology-preview",
+    "catalog": {
+      "replaces_discovered_ids": [
+        "jdownloader2"
+      ]
+    },
+    "defaults": {
+      "unprivileged": true,
+      "ostype": "auto-from-image",
+      "cores": 2,
+      "memory_mb": 2048,
+      "swap_mb": 512,
+      "rootfs_size_gb": 8,
+      "rootfs_storage": "local-lvm",
+      "volume_storage": "local-lvm",
+      "template_storage": "local",
+      "bridge": "vmbr0",
+      "ipv4": "dhcp",
+      "firewall": true,
+      "host_managed_network": true,
+      "onboot": false,
+      "features": [
+        "nesting=1"
+      ],
+      "shutdown_timeout_seconds": 30
+    },
+    "image_metadata_policy": {
+      "entrypoint": "import-from-oci-image-then-apply-reviewed-lxc-wrapper",
+      "cmd": "import-from-oci-image",
+      "environment": "import-image-env-then-apply-user-values",
+      "user": "import-from-oci-image",
+      "working_dir": "import-from-oci-image",
+      "stop_signal": "import-from-oci-image"
+    },
+    "adaptations": [
+      {
+        "id": "persistent-config-volume-preparation",
+        "upstream_behavior": "Docker bind mounts an initially empty directory at /config.",
+        "native_lxc_behavior": "Create a managed volume at /config, remove its empty lost+found and apply the unprivileged UID mapping before first start.",
+        "reason": "The image expects /config to be writable by USER_ID/GROUP_ID.",
+        "behavioral_impact": "Configuration remains included in native Proxmox backups.",
+        "validation": "passed-laboratory-profile"
+      },
+      {
+        "id": "secure-web-authentication",
+        "upstream_behavior": "WEB_AUTHENTICATION requires SECURE_CONNECTION unless the insecure override is enabled.",
+        "native_lxc_behavior": "Generate a password and enable HTTPS together; expose the self-signed-certificate warning at first run.",
+        "reason": "The upstream image disables secure sign-in over plain HTTP.",
+        "behavioral_impact": "The first browser visit must trust the generated certificate or use a reverse proxy.",
+        "validation": "passed-https-login-laboratory-profile"
+      }
+    ],
+    "laboratory_contract": {
+      "requirements": {
+        "proxmox_min_version": "9.1",
+        "commands": [
+          "pct",
+          "pvesm",
+          "skopeo",
+          "curl"
+        ],
+        "features": [
+          "native-oci-lxc",
+          "managed-volume-backup"
+        ]
+      },
+      "configuration_schema": {
+        "vmid": {
+          "type": "integer",
+          "required": false,
+          "default": null
+        },
+        "hostname": {
+          "type": "string",
+          "required": true,
+          "default": "jdownloader",
+          "validation": {
+            "pattern": "^[a-z0-9][a-z0-9-]{0,62}$"
+          }
+        },
+        "rootfs_storage": {
+          "type": "storage-selector",
+          "required": true,
+          "content_types": [
+            "rootdir"
+          ]
+        },
+        "rootfs_size_gb": {
+          "type": "integer",
+          "required": true,
+          "default": 8,
+          "minimum": 4
+        },
+        "config_storage": {
+          "type": "storage-selector",
+          "required": true,
+          "content_types": [
+            "rootdir"
+          ],
+          "description": "Volumen gestionado por Proxmox para /config e incluido en vzdump."
+        },
+        "config_size_gb": {
+          "type": "integer",
+          "required": true,
+          "default": 4,
+          "minimum": 2
+        },
+        "downloads_host_path": {
+          "type": "host-directory",
+          "required": true,
+          "default": "/mnt/oci-shared/downloads",
+          "create_if_missing": true
+        },
+        "management_mode": {
+          "type": "select",
+          "required": true,
+          "default": "myjdownloader-headless",
+          "options": [
+            "myjdownloader-headless",
+            "web-gui"
+          ]
+        },
+        "myjdownloader_email": {
+          "type": "email",
+          "required_when": {
+            "field": "management_mode",
+            "equals": "myjdownloader-headless"
+          },
+          "sensitive": true,
+          "pve_visibility": "visible-by-design"
+        },
+        "myjdownloader_password": {
+          "type": "password",
+          "required_when": {
+            "field": "management_mode",
+            "equals": "myjdownloader-headless"
+          },
+          "sensitive": true,
+          "pve_visibility": "visible-by-design"
+        },
+        "myjdownloader_device_name": {
+          "type": "string",
+          "required": true,
+          "default": "ProxMenux-JDownloader"
+        },
+        "direct_connect_enabled": {
+          "type": "boolean",
+          "required": true,
+          "default": false,
+          "description": "No abre puertos en el router; solo declara el puerto local 3129."
+        },
+        "web_authentication_enabled": {
+          "type": "boolean",
+          "required_when": {
+            "field": "management_mode",
+            "equals": "web-gui"
+          },
+          "default": true
+        },
+        "secure_connection_enabled": {
+          "type": "boolean",
+          "required_when": {
+            "field": "management_mode",
+            "equals": "web-gui"
+          },
+          "default": true,
+          "description": "Activa HTTPS. Debe permanecer habilitado cuando web_authentication_enabled sea true porque la imagen oficial deshabilita el formulario de acceso sobre HTTP."
+        },
+        "web_username": {
+          "type": "string",
+          "required_when": {
+            "field": "web_authentication_enabled",
+            "equals": true
+          },
+          "default": "admin"
+        },
+        "web_password": {
+          "type": "password",
+          "required_when": {
+            "field": "web_authentication_enabled",
+            "equals": true
+          },
+          "generate_when_empty": true,
+          "sensitive": true,
+          "pve_visibility": "visible-by-design"
+        },
+        "user_id": {
+          "type": "integer",
+          "required": true,
+          "default": 1000,
+          "minimum": 1
+        },
+        "group_id": {
+          "type": "integer",
+          "required": true,
+          "default": 1000,
+          "minimum": 1
+        },
+        "cores": {
+          "type": "integer",
+          "required": true,
+          "default": 2,
+          "minimum": 1
+        },
+        "memory_mb": {
+          "type": "integer",
+          "required": true,
+          "default": 2048,
+          "minimum": 1024
+        },
+        "swap_mb": {
+          "type": "integer",
+          "required": true,
+          "default": 512,
+          "minimum": 0
+        },
+        "bridge": {
+          "type": "network-bridge-selector",
+          "required": true,
+          "default": "vmbr0"
+        },
+        "ipv4_mode": {
+          "type": "select",
+          "required": true,
+          "default": "dhcp",
+          "options": [
+            "dhcp",
+            "static"
+          ]
+        },
+        "timezone": {
+          "type": "timezone",
+          "required": true,
+          "default": "Europe/Madrid"
+        },
+        "onboot": {
+          "type": "boolean",
+          "required": true,
+          "default": false
+        }
+      },
+      "configuration_constraints": [
+        {
+          "id": "web-authentication-requires-https",
+          "when": {
+            "field": "web_authentication_enabled",
+            "equals": true
+          },
+          "assert": {
+            "field": "secure_connection_enabled",
+            "equals": true
+          },
+          "error": "La imagen oficial de JDownloader deshabilita el inicio de sesion web si la conexion no usa HTTPS."
+        }
+      ],
+      "environment": [
+        {
+          "name": "USER_ID",
+          "value_from": "user_id"
+        },
+        {
+          "name": "GROUP_ID",
+          "value_from": "group_id"
+        },
+        {
+          "name": "UMASK",
+          "value": "002"
+        },
+        {
+          "name": "TZ",
+          "value_from": "timezone"
+        },
+        {
+          "name": "JDOWNLOADER_HEADLESS",
+          "value_map": {
+            "myjdownloader-headless": "1",
+            "web-gui": "0"
+          },
+          "value_from": "management_mode"
+        },
+        {
+          "name": "VNC_LOCALHOST_ONLY",
+          "value": "1"
+        },
+        {
+          "name": "SECURE_CONNECTION",
+          "value_map": {
+            "true": "1",
+            "false": "0"
+          },
+          "value_from": "secure_connection_enabled",
+          "enabled_when": {
+            "field": "management_mode",
+            "equals": "web-gui"
+          }
+        },
+        {
+          "name": "MYJDOWNLOADER_EMAIL",
+          "value_from": "myjdownloader_email",
+          "sensitive": true,
+          "enabled_when": {
+            "field": "management_mode",
+            "equals": "myjdownloader-headless"
+          }
+        },
+        {
+          "name": "MYJDOWNLOADER_PASSWORD",
+          "value_from": "myjdownloader_password",
+          "sensitive": true,
+          "enabled_when": {
+            "field": "management_mode",
+            "equals": "myjdownloader-headless"
+          }
+        },
+        {
+          "name": "MYJDOWNLOADER_DEVICE_NAME",
+          "value_from": "myjdownloader_device_name",
+          "enabled_when": {
+            "field": "management_mode",
+            "equals": "myjdownloader-headless"
+          }
+        },
+        {
+          "name": "WEB_AUTHENTICATION",
+          "value": "1",
+          "enabled_when": {
+            "field": "web_authentication_enabled",
+            "equals": true
+          }
+        },
+        {
+          "name": "WEB_AUTHENTICATION_USERNAME",
+          "value_from": "web_username",
+          "enabled_when": {
+            "field": "web_authentication_enabled",
+            "equals": true
+          }
+        },
+        {
+          "name": "WEB_AUTHENTICATION_PASSWORD",
+          "value_from": "web_password",
+          "sensitive": true,
+          "enabled_when": {
+            "field": "web_authentication_enabled",
+            "equals": true
+          }
+        }
+      ],
+      "mounts": [
+        {
+          "id": "config",
+          "container_path": "/config",
+          "source": "managed-volume",
+          "storage_field": "config_storage",
+          "size_field": "config_size_gb",
+          "backup": true,
+          "required": true,
+          "pre_first_start": [
+            "mount-volume-on-host",
+            "remove-empty-lost-and-found",
+            "apply-unprivileged-root-ownership",
+            "unmount-volume"
+          ]
+        },
+        {
+          "id": "downloads",
+          "container_path": "/output",
+          "source": "host-bind",
+          "host_path_field": "downloads_host_path",
+          "read_only": false,
+          "backup": false,
+          "required": true,
+          "pre_start_check": "host-path-mounted-and-writable-by-mapped-user-id"
+        }
+      ],
+      "deployment": {
+        "runtime": "proxmox-native-oci-lxc",
+        "unprivileged": true,
+        "entrypoint": "/usr/local/bin/jdownloader-lxc-start",
+        "working_directory": "/tmp",
+        "hostname_default": "jdownloader",
+        "onboot_default": false,
+        "startup_order_default": 15,
+        "startup_delay_seconds_default": 10,
+        "shutdown_timeout_seconds": 30,
+        "halt_signal": "SIGTERM",
+        "features": [
+          "nesting=1"
+        ],
+        "ports": [
+          {
+            "port": 5800,
+            "protocol": "tcp",
+            "purpose": "optional-web-gui",
+            "enabled_when": {
+              "field": "management_mode",
+              "equals": "web-gui"
+            }
+          },
+          {
+            "port": 3129,
+            "protocol": "tcp",
+            "purpose": "optional-myjdownloader-direct-connect",
+            "enabled_field": "direct_connect_enabled"
+          }
+        ],
+        "preserve_image_environment": true,
+        "entrypoint_override": "documented-lxc-runtime-adaptation",
+        "entrypoint_source": "validated-lxc-oci-profile"
+      },
+      "bootstrap": {
+        "myjdownloader": {
+          "enabled_when": {
+            "field": "management_mode",
+            "equals": "myjdownloader-headless"
+          },
+          "method": "official-image-environment",
+          "environment": [
+            "MYJDOWNLOADER_EMAIL",
+            "MYJDOWNLOADER_PASSWORD",
+            "MYJDOWNLOADER_DEVICE_NAME"
+          ],
+          "pve_visibility": "visible-by-design",
+          "procedure": [
+            "set-selected-values-in-lxc.environment.runtime",
+            "start-with-entrypoint-and-cmd-imported-from-the-official-image",
+            "verify-java-process-and-myjdownloader-device-state"
+          ]
+        },
+        "web_gui": {
+          "enabled_when": {
+            "field": "management_mode",
+            "equals": "web-gui"
+          },
+          "authentication": {
+            "default_enabled": true,
+            "method": "official-image-environment",
+            "environment": [
+              "SECURE_CONNECTION",
+              "WEB_AUTHENTICATION",
+              "WEB_AUTHENTICATION_USERNAME",
+              "WEB_AUTHENTICATION_PASSWORD"
+            ],
+            "pve_visibility": "visible-by-design",
+            "alternative": "Manage multiple users with the image-provided webauth-user tool and /config/webauth-htpasswd."
+          },
+          "security": [
+            "keep-vnc-localhost-only",
+            "require-web-authentication-for-non-lab-deployments",
+            "require-secure-connection-when-web-authentication-is-enabled",
+            "generate-self-signed-certificate-when-no-certificate-is-provided",
+            "allow-user-supplied-certificates-under-config-certs"
+          ]
+        }
+      },
+      "healthcheck": {
+        "profiles": {
+          "web-gui": {
+            "type": "http",
+            "scheme": "https",
+            "port": 5800,
+            "path": "/",
+            "tls_verify": false,
+            "expected_status": 302,
+            "expected_location": "/login/"
+          },
+          "myjdownloader-headless": {
+            "type": "command",
+            "command": [
+              "pgrep",
+              "-f",
+              "JDownloader.jar"
+            ]
+          }
+        },
+        "interval_seconds": 30,
+        "timeout_seconds": 10,
+        "retries": 20,
+        "start_period_seconds": 180
+      },
+      "backup_restore": {
+        "native_proxmox_backup": true,
+        "included_mounts": [
+          "/config"
+        ],
+        "excluded_mounts": [
+          "/output"
+        ],
+        "application_consistency": "Use snapshot mode with guest filesystem freeze; stop mode is preferred during active downloads.",
+        "restore_order": [
+          "restore-vzdump",
+          "verify-shared-downloads-host-path",
+          "start-container",
+          "wait-for-selected-healthcheck"
+        ]
+      },
+      "boundaries": {
+        "bundles_credentials": false,
+        "bundles_download_links": false,
+        "bundles_downloaded_content": false,
+        "installer_must_not_store_sensitive_values_in_pve_metadata": false,
+        "compose_environment_visible_in_pve_metadata": true
+      },
+      "generated_assets": {
+        "runtime_wrapper": {
+          "container_path": "/usr/local/bin/jdownloader-lxc-start",
+          "owner": "root:root",
+          "mode": "0755",
+          "content": "#!/bin/sh\nset -e\nexec >>/config/container-start.log 2>&1\nexec /init\n",
+          "create_before_first_start": true
+        }
+      },
+      "notes": [
+        "La imagen de Jlesage se eligio frente a JayMoulin porque esta mantenida en 2026.",
+        "El directorio lost+found del volumen ext4 debe eliminarse antes del primer arranque en LXC sin privilegios.",
+        "La interfaz web no debe publicarse sin autenticacion fuera de un laboratorio local.",
+        "La imagen oficial requiere HTTPS cuando WEB_AUTHENTICATION=1; sobre HTTP muestra el formulario, pero deshabilita el inicio de sesion.",
+        "SECURE_CONNECTION=1 genera certificados autofirmados bajo /config/certs si el usuario no proporciona certificados validos.",
+        "El navegador puede exigir aceptar el certificado autofirmado la primera vez; un despliegue permanente debe admitir certificados propios o un proxy inverso HTTPS correctamente configurado.",
+        "La ruta /mnt/pve/Piblic/Transmission/eMule fue validada como ejemplo real de host-bind NFS, pero el instalador siempre debe solicitar downloads_host_path al usuario.",
+        "MyJDownloader es un servicio externo; su cuenta y disponibilidad no forman parte de la imagen OCI."
+      ]
+    },
+    "installer_profile": {
+      "generated_sensitive_environment": {
+        "WEB_AUTHENTICATION_PASSWORD": {
+          "strategy": "token-hex",
+          "bytes": 16
+        }
+      },
+      "generated_files": [
+        {
+          "id": "jdownloader-first-boot-wrapper",
+          "container_path": "/usr/local/bin/jdownloader-lxc-start",
+          "owner": "mapped-root",
+          "mode": "0755",
+          "content": "#!/bin/sh\nset -e\nexec >>/config/container-start.log 2>&1\nexec /init\n"
+        }
+      ],
+      "volume_preparations": [
+        {
+          "container_path": "/config",
+          "remove_lost_found": true,
+          "owner_strategy": "mapped-root"
+        }
+      ],
+      "runtime": {
+        "entrypoint": "/usr/local/bin/jdownloader-lxc-start",
+        "working_directory": "/tmp",
+        "halt_signal": "SIGTERM"
+      },
+      "startup_healthcheck": {
+        "scheme": "https",
+        "port": 5800,
+        "path": "/",
+        "verify_tls": false,
+        "timeout_seconds": 180,
+        "request_timeout_seconds": 5,
+        "stability_seconds": 0
+      }
+    }
+  },
+  "compatibility": {
+    "automatic_install_candidate": true,
+    "validated": true,
+    "supported_compose_keys": [
+      "container_name",
+      "environment",
+      "image",
+      "ports",
+      "restart",
+      "stop_grace_period",
+      "volumes"
+    ],
+    "untranslated_blockers": [],
+    "policy": "The validated first-boot wrapper, secure WebUI credentials and volume preparation are implemented through reusable declarative installer capabilities."
+  },
+  "validation": {
+    "schema": "passed-at-generation",
+    "validated_profile": {
+      "id": "pve55-jdownloader-managed-config",
+      "validated_on": "2026-08-27",
+      "validation_status": "passed-web-gui-https-authenticated-myjdownloader-credentials-pending",
+      "proxmox_version": "9.2.11",
+      "container_id": 126,
+      "image": {
+        "tag": "v26.08.2",
+        "digest": "sha256:f16d47986bf6a5db6d67484e3b7e76404bce74f6f212809127a79eb76aa1c641",
+        "archive_sha256": "84aa07101c51a2d5f51d0bf86c2ee9f4ad660788782cff7a16a620cbfc708877"
+      },
+      "storage": {
+        "rootfs": "local-lvm:8G",
+        "config": "local-lvm:4G,backup=1",
+        "downloads": "host-bind:/mnt/pve/Piblic/Transmission/eMule->/output,read-write,backup=0"
+      },
+      "validation": {
+        "web_gui_https_redirect_to_login": "passed-302",
+        "http_redirect_to_https": "passed-307",
+        "self_signed_https_certificate": "passed-generated-for-hostname-jdownloader",
+        "web_authentication_user_created": "passed-admin-present-in-htpasswd",
+        "java_process": "passed",
+        "persistent_config": "passed",
+        "shared_download_write_as_app_user": "passed",
+        "default_download_folder": "passed-/output",
+        "vnc_localhost_only": "passed",
+        "restart_without_errors": "passed",
+        "vzdump_config_inclusion": "passed-by-mp0-backup-flag",
+        "vzdump_restore_to_temporary_ct": "passed-historical-lab-not-repeated-on-ct126",
+        "myjdownloader_account_connection": "not-tested-no-user-credentials"
+      },
+      "previous_validation_status": "passed-web-gui-myjdownloader-credentials-pending",
+      "validated_lxc_adapted_profile": {
+        "entrypoint": "/usr/local/bin/jdownloader-lxc-start",
+        "custom_rootfs_files": true,
+        "custom_host_services": false,
+        "validation": "passed-historical-lab"
+      },
+      "candidate_direct_image_profile": {
+        "entrypoint": "from-oci-image-config",
+        "custom_rootfs_files": false,
+        "custom_host_services": false,
+        "validation": "pending-clean-import-test"
+      }
+    },
+    "translation_audit": {
+      "reviewed_on": "2026-08-27",
+      "compose_credentials": [
+        "MYJDOWNLOADER_EMAIL",
+        "MYJDOWNLOADER_PASSWORD",
+        "WEB_AUTHENTICATION_USERNAME",
+        "WEB_AUTHENTICATION_PASSWORD"
+      ],
+      "application_generated_credentials": [
+        "JDownloader state and optional htpasswd database under /config"
+      ],
+      "result": "aligned-with-official-image-environment"
+    },
+    "source_profile": "jdownloader-oci.json"
+  },
+  "lifecycle": {
+    "update_strategy": "replace-rootfs-from-latest-oci-image-preserve-managed-config-volume",
+    "registry_state": {
+      "resolved_architecture": null,
+      "resolved_digest": null,
+      "image_version_label": null,
+      "image_created": null
+    },
+    "change_detection": "compare-resolved-architecture-digest",
+    "automatic_unattended_updates": false,
+    "validated_workflows": {
+      "install": [
+        "validate-requirements",
+        "validate-storage-capacity",
+        "create-shared-download-directory",
+        "prepare-unprivileged-id-mapping-permissions",
+        "pull-oci-image-by-digest",
+        "create-container",
+        "attach-managed-config-volume",
+        "remove-empty-lost-and-found-from-config-volume",
+        "attach-shared-downloads-bind",
+        "inject-runtime-wrapper",
+        "apply-runtime-environment",
+        "start-container",
+        "wait-for-default-config-files",
+        "run-selected-bootstrap",
+        "verify-http-redirects-to-https-for-authenticated-web-gui",
+        "wait-for-selected-healthcheck"
+      ],
+      "update": [
+        "pause-active-downloads",
+        "stop-container",
+        "backup-container",
+        "pull-new-oci-image",
+        "recreate-rootfs-preserving-managed-config-volume",
+        "inject-runtime-wrapper",
+        "start-container",
+        "wait-for-selected-healthcheck"
+      ],
+      "uninstall": {
+        "remove_rootfs": true,
+        "preserve_config_by_default": true,
+        "preserve_shared_downloads": true
+      }
+    }
+  }
+}

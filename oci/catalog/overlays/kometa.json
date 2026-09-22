@@ -1,0 +1,9 @@
+{
+  "proxmox": {
+    "installer_profile": {
+      "completion_notes": [
+        "Kometa reads its configuration from /config/config.yml and the container only ships /config/config.yml.template. Copy the template to config.yml, fill in the required Plex and TMDb connections, then restart the container."
+      ]
+    }
+  }
+}

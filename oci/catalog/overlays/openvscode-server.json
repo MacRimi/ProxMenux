@@ -1,0 +1,6 @@
+{
+  "catalog_ui": {
+    "hidden": true,
+    "hidden_reason": "Deprecated upstream: the image no longer receives updates"
+  }
+}

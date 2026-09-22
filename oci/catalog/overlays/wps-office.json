@@ -1,0 +1,15 @@
+{
+  "proxmox": {
+    "installer_profile": {
+      "selkies": {
+        "base": "FROM ghcr.io/linuxserver/baseimage-selkies:arch",
+        "dockerfile_url": "https://raw.githubusercontent.com/linuxserver/docker-wps-office/master/Dockerfile",
+        "dockerfile_sha256": "195689c826f891fa8e50019092eef4aa817eca18bf7012175d6ba44474170e4b",
+        "reviewed_on": "2026-09-16",
+        "documentation": "https://docs.linuxserver.io/images/docker-baseimage-selkies/",
+        "nvidia": "not-offered-until-specific-host-and-image-validation",
+        "validation": "profile-generated; real streaming workload pending"
+      }
+    }
+  }
+}

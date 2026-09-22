@@ -1,0 +1,99 @@
+{
+  "status": "generated-unvalidated",
+  "catalog_ui": {
+    "tips": [
+      "Optional host mode: shares the Proxmox IP and metrics. If declined, it installs unprivileged, with its own IP and metrics for the LXC ONLY.",
+      "Privileged access to the host PID/network and unconfined AppArmor: requires confirmation. Trusted networks only; the host firewall is the one that applies.",
+      "Neither docker.sock nor the host root directory is mounted. Docker inventory, SMART and capacity of all filesystems are not guaranteed.",
+      "LXCFS is skipped only in the monitor CT so that the limited container RAM/CPU is not shown.",
+      "Uses lxc.include with /etc/pve/lxc/proxmenux-host-monitor; this file is not included in vzdump and must be kept when restoring on another host.",
+      "The CPU limit is applied as cpulimit, without hiding processors through affinity."
+    ]
+  },
+  "container_contract": {
+    "environment": [
+      {
+        "name": "GLANCES_OPT",
+        "example": "-w",
+        "required": true,
+        "sensitive": false,
+        "source": "docker-compose",
+        "prompt_user": false
+      }
+    ],
+    "volumes": []
+  },
+  "proxmox": {
+    "defaults": {
+      "unprivileged": false,
+      "ostype": "unmanaged",
+      "memory_mb": 512,
+      "features": []
+    },
+    "security_profile": {
+      "requires_privileged_lxc": true,
+      "requires_host_pid_namespace": true,
+      "optional_privileged_lxc": false,
+      "requires_relaxed_confinement": true,
+      "optional_relaxed_confinement": false,
+      "confirmation_required": true,
+      "risk_level": "high",
+      "warning": "Host monitor: shared PID/network and privileged access. A compromised image could affect Proxmox. Use only on trusted networks."
+    },
+    "installer_profile": {
+      "host_monitor": "glances",
+      "host_monitor_optional": true,
+      "host_monitor_mounts": [
+        {
+          "source": "/etc/os-release",
+          "target": "/etc/os-release"
+        }
+      ],
+      "startup_healthcheck": {
+        "scheme": "http",
+        "port": 61208,
+        "path": "/",
+        "timeout_seconds": 180,
+        "request_timeout_seconds": 5,
+        "verify_tls": false
+      },
+      "security": {
+        "required_capabilities": [
+          "SYS_PTRACE"
+        ],
+        "options": {
+          "apparmor_profile": "unconfined"
+        }
+      }
+    }
+  },
+  "compatibility": {
+    "automatic_install_candidate": true,
+    "validated": false,
+    "untranslated_blockers": []
+  },
+  "validation": {
+    "service_health": "passed-observed-2026-09-14",
+    "restart_persistence": "passed-observed-2026-09-14",
+    "backup_restore": "pending",
+    "update_preserves_data": "pending",
+    "latest_runtime_observation": {
+      "date": "2026-09-14",
+      "vmid": 101,
+      "architecture": "amd64",
+      "proxmox": "9.2.18",
+      "image_digest": "sha256:7bdd499825a9044ad495714421ea2049b73696d64f1fe6697e1ae07bfe164e2c",
+      "image_version": "v4.5.6",
+      "http_port": 61208,
+      "host_pid_namespace": true,
+      "host_network_namespace": true,
+      "host_memory_bytes": 16110522368,
+      "shutdown_start_passed": true,
+      "companion_include": "/etc/pve/lxc/proxmenux-host-monitor",
+      "companion_included_in_vzdump": false,
+      "rolling_tag_validation": "only-observed-digest",
+      "host_cpu_count": 16,
+      "host_process_count_observed": 559
+    }
+  }
+}

@@ -57,13 +57,14 @@ show_menu() {
         dialog --clear \
             --backtitle "ProxMenux" \
             --title "$(translate "$menu_title")" \
-            --menu "\n$(translate "Select an option:")" 21 70 12 \
+            --menu "\n$(translate "Select an option:")" 22 70 14 \
             1 "$(translate "Settings post-install Proxmox")" \
             2 "$(translate "Hardware: GPUs and Coral-TPU")" \
             3 "$(translate "Create VM from template or script")" \
             4 "$(translate "Disk Manager")" \
             5 "$(translate "Storage & Share Manager")" \
             6 "$(translate "Proxmox VE Helper Scripts")" \
+            o "$(translate "OCI manager Apps (beta)")" \
             7 "$(translate "Network Management")" \
             8 "$(translate "Security")" \
             9 "$(translate "Utilities and Tools")" \
@@ -90,6 +91,7 @@ show_menu() {
             4) exec bash "$LOCAL_SCRIPTS/menus/storage_menu.sh" ;;
             5) exec bash "$LOCAL_SCRIPTS/menus/share_menu.sh" ;;
             6) exec bash "$LOCAL_SCRIPTS/menus/menu_Helper_Scripts.sh" ;;
+            o) exec bash "$LOCAL_SCRIPTS/oci/oci_manager_apps.sh" ;;
             7) exec bash "$LOCAL_SCRIPTS/menus/network_menu.sh" ;;
             8) exec bash "$LOCAL_SCRIPTS/menus/security_menu.sh" ;;
             9) exec bash "$LOCAL_SCRIPTS/menus/utilities_menu.sh" ;;

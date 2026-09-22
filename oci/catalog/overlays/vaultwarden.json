@@ -1,0 +1,74 @@
+{
+  "catalog_ui": {
+    "launch": {
+      "scheme": "https",
+      "port": 443,
+      "path": "/"
+    },
+    "tips": [
+      "The Web Vault requires a secure context. ProxMenux enables Vaultwarden's native Rocket TLS listener on port 443.",
+      "A persistent self-signed certificate is generated under /data/tls. Browsers must trust or explicitly accept it; a trusted reverse proxy certificate can replace these files later."
+    ]
+  },
+  "container_contract": {
+    "environment": [
+      {
+        "name": "ROCKET_PORT",
+        "example": "443",
+        "required": true,
+        "sensitive": false,
+        "prompt_user": false,
+        "source": "vaultwarden-rocket-tls"
+      },
+      {
+        "name": "ROCKET_TLS",
+        "example": "{certs=\"/data/tls/vaultwarden.crt\",key=\"/data/tls/vaultwarden.key\"}",
+        "required": true,
+        "sensitive": false,
+        "prompt_user": false,
+        "source": "vaultwarden-rocket-tls"
+      }
+    ],
+    "ports": [
+      {
+        "container_port": 443,
+        "published_example": 443,
+        "protocol": "tcp",
+        "required": true,
+        "proxmox_behavior": "listener-on-dedicated-lxc-address-no-nat"
+      }
+    ]
+  },
+  "proxmox": {
+    "installer_profile": {
+      "self_signed_tls": {
+        "certificate_path": "/data/tls/vaultwarden.crt",
+        "private_key_path": "/data/tls/vaultwarden.key",
+        "common_name_from": "deployment-hostname",
+        "valid_days": 3650,
+        "preserve_existing": true
+      },
+      "startup_healthcheck": {
+        "scheme": "https",
+        "port": 443,
+        "path": "/alive",
+        "timeout_seconds": 180,
+        "request_timeout_seconds": 10,
+        "stability_seconds": 4,
+        "verify_tls": false
+      }
+    }
+  },
+  "first_run": {
+    "endpoints": [
+      {
+        "label": "Vaultwarden Web Vault",
+        "scheme": "https",
+        "port": 443,
+        "path": "/",
+        "source": "vaultwarden-native-rocket-tls"
+      }
+    ],
+    "credentials": []
+  }
+}

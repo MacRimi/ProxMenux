@@ -6177,7 +6177,13 @@ function AddDestinationDialog({
         // back to the URL match; default 22 when neither is set.
         const port = editing.ssh_port ?? (ssh[3] ? Number(ssh[3]) : 22)
         setBorgSshPort(String(port || 22))
-        setBorgSshRemotePath(`/${ssh[4]}`)
+        // `./path` (relative to the SSH user's home) and `~/path` are Borg
+        // path forms of their own — only an absolute path gets the slash
+        // the URL dropped.
+        const remotePath = ssh[4]
+        setBorgSshRemotePath(
+          remotePath.startsWith("./") || remotePath.startsWith("~/") ? remotePath : `/${remotePath}`,
+        )
         setBorgSshKeyPath(editing.ssh_key_path || "/root/.ssh/proxmenux_borg")
         setBorgRepo("")
       } else {

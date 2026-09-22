@@ -1,0 +1,15 @@
+{
+  "proxmox": {
+    "installer_profile": {
+      "selkies": {
+        "base": "FROM ghcr.io/linuxserver/baseimage-selkies:kali",
+        "dockerfile_url": "https://raw.githubusercontent.com/linuxserver/docker-kali-linux/master/Dockerfile",
+        "dockerfile_sha256": "cd5947fea72f349b12b60aceb0c9c32629954f5e14ab3003f47d153160be9bc9",
+        "reviewed_on": "2026-09-16",
+        "documentation": "https://docs.linuxserver.io/images/docker-baseimage-selkies/",
+        "nvidia": "not-offered-until-specific-host-and-image-validation",
+        "validation": "profile-generated; real streaming workload pending"
+      }
+    }
+  }
+}

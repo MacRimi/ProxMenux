@@ -1,0 +1,6 @@
+{
+  "catalog_ui": {
+    "hidden": true,
+    "hidden_reason": "Needs MariaDB or PostgreSQL in its own container; planned as a multi-container application"
+  }
+}

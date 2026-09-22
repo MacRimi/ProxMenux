@@ -8,6 +8,7 @@ import { Button } from "./ui/button"
 import { NotificationSettings } from "./notification-settings"
 import { HealthThresholds } from "./health-thresholds"
 import { LxcUpdateDetection } from "./lxc-update-detection"
+import { DiskExclusions } from "./disk-exclusions"
 import { ScriptTerminalModal } from "./script-terminal-modal"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select"
 import { Switch } from "./ui/switch"
@@ -1861,6 +1862,8 @@ export function Settings() {
           )}
         </CardContent>
       </Card>
+
+      <DiskExclusions />
 
       {/* Health Monitor Thresholds — placed above Notifications because the
           values configured here drive what triggers the notifications below. */}

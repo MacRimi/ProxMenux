@@ -1,0 +1,19 @@
+{
+  "first_run": {
+    "credentials": [
+      {
+        "label": "Temporary login",
+        "type": "runtime-generated",
+        "username": "admin",
+        "password": null,
+        "change_required": true,
+        "source": "qbittorrent-temporary-password-on-first-start",
+        "retrieval": {
+          "method": "container-console-pattern",
+          "pattern_id": "linuxserver-temporary-password",
+          "timeout_seconds": 180
+        }
+      }
+    ]
+  }
+}

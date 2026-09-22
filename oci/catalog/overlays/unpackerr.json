@@ -1,0 +1,10 @@
+{
+  "proxmox": {
+    "installer_profile": {
+      "completion_notes": [
+        "Unpackerr has no web interface and extracts nothing until it is pointed at a Starr application. Uncomment the [sonarr.0] or [radarr.0] section in /config/unpackerr.conf inside the container, set its url and api_key, then restart the container.",
+        "The same connection can be given as container variables instead of the file: UN_SONARR_0_URL and UN_SONARR_0_API_KEY, or the UN_RADARR_0_ equivalents."
+      ]
+    }
+  }
+}

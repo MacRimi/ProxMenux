@@ -1,0 +1,15 @@
+{
+  "first_run": {
+    "credentials": [
+      {
+        "label": "NZBGet web interface",
+        "type": "static-default",
+        "username": "nzbget",
+        "password": "tegbzn6789",
+        "change_required": true,
+        "source": "linuxserver-readme-application-setup",
+        "retrieval": null
+      }
+    ]
+  }
+}

@@ -424,3 +424,40 @@ cleanup_duplicate_repos() {
         cleanup_duplicate_repos_pve8
     fi
 }
+
+
+# ==========================================================
+# Update log helpers
+# ==========================================================
+# An update log is what is left once the terminal is gone: the Monitor
+# runs the same update from a systemd unit with no terminal at all, and
+# an operator reads the log days later to find out what moved.
+
+# Reads `apt list --upgradable` on stdin and writes one aligned
+# `name  old → new` line per package. Lines that do not carry the
+# "[upgradable from: …]" part are passed through as they came.
+pmx_format_upgradable() {
+    awk 'NF == 0 { next }
+         $0 ~ /\[upgradable from: / {
+             name = $1; sub(/\/.*/, "", name)
+             from = $6; sub(/\]$/, "", from)
+             printf "  %-30s %s → %s\n", name, from, $2
+             next
+         }
+         { print "  " $0 }'
+}
+
+# Writes what dpkg actually did since `$1` (a "YYYY-MM-DD HH:MM:SS"
+# stamp taken before the upgrade). dpkg's own log is the authoritative
+# record of the transaction — it carries both versions of every package
+# replaced, which apt's console output does not spell out.
+pmx_dpkg_changes_since() {
+    local since="$1"
+    [[ -n "$since" && -r /var/log/dpkg.log ]] || return 0
+    awk -v since="$since" '
+        ($1 " " $2) < since { next }
+        $3 == "upgrade" { pkg = $4; sub(/:.*/, "", pkg); printf "  %-30s %s → %s\n", pkg, $5, $6; next }
+        $3 == "install" { pkg = $4; sub(/:.*/, "", pkg); printf "  %-30s installed %s\n", pkg, $6; next }
+        $3 == "remove" || $3 == "purge" { pkg = $4; sub(/:.*/, "", pkg); printf "  %-30s %sd %s\n", pkg, $3, $5 }
+    ' /var/log/dpkg.log
+}

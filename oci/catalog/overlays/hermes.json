@@ -1,0 +1,83 @@
+{
+  "container_contract": {
+    "environment": [
+      {
+        "name": "HERMES_DASHBOARD",
+        "example": "1",
+        "required": true,
+        "sensitive": false,
+        "source": "docker-compose"
+      },
+      {
+        "name": "HERMES_DASHBOARD_BASIC_AUTH_USERNAME",
+        "example": "admin",
+        "required": true,
+        "sensitive": false,
+        "source": "official-image-environment"
+      },
+      {
+        "name": "HERMES_DASHBOARD_BASIC_AUTH_PASSWORD",
+        "example": "${GENERATED_HERMES_DASHBOARD_PASSWORD}",
+        "required": true,
+        "sensitive": true,
+        "source": "official-image-environment"
+      },
+      {
+        "name": "HERMES_DASHBOARD_BASIC_AUTH_SECRET",
+        "example": "${GENERATED_HERMES_DASHBOARD_SESSION_SECRET}",
+        "required": true,
+        "sensitive": true,
+        "source": "official-image-environment"
+      }
+    ]
+  },
+  "first_run": {
+    "endpoints": [
+      {
+        "label": "Hermes WebUI",
+        "scheme": "http",
+        "port": 9119,
+        "path": "/",
+        "source": "official-image-dashboard"
+      }
+    ],
+    "credentials": [
+      {
+        "label": "Hermes WebUI",
+        "type": "configured-or-installer-generated",
+        "username": "admin",
+        "password": null,
+        "username_environment": "HERMES_DASHBOARD_BASIC_AUTH_USERNAME",
+        "password_environment": "HERMES_DASHBOARD_BASIC_AUTH_PASSWORD",
+        "change_required": false,
+        "source": "official-image-environment",
+        "retrieval": null
+      }
+    ]
+  },
+  "proxmox": {
+    "installer_profile": {
+      "generated_sensitive_environment": {
+        "HERMES_DASHBOARD_BASIC_AUTH_PASSWORD": {
+          "strategy": "token-hex",
+          "bytes": 16,
+          "prompt": true
+        },
+        "HERMES_DASHBOARD_BASIC_AUTH_SECRET": {
+          "strategy": "token-hex",
+          "bytes": 32,
+          "prompt": false
+        }
+      },
+      "startup_healthcheck": {
+        "scheme": "http",
+        "port": 9119,
+        "path": "/",
+        "verify_tls": true,
+        "timeout_seconds": 180,
+        "request_timeout_seconds": 5,
+        "stability_seconds": 4
+      }
+    }
+  }
+}

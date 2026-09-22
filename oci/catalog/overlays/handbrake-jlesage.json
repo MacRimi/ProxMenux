@@ -1,0 +1,99 @@
+{
+  "catalog_ui": {
+    "tips": [
+      "Intel/AMD acceleration is enabled by passing /dev/dri to the LXC; it does not require making the LXC privileged.",
+      "The privileged request from the imported Compose is discarded because it is not part of the official jlesage/handbrake requirements."
+    ]
+  },
+  "container_contract": {
+    "environment": [
+      {
+        "name": "USER_ID",
+        "example": "1000",
+        "required": true,
+        "sensitive": false,
+        "source": "jlesage-documentation"
+      },
+      {
+        "name": "GROUP_ID",
+        "example": "1000",
+        "required": true,
+        "sensitive": false,
+        "source": "jlesage-documentation"
+      },
+      {
+        "name": "TZ",
+        "example": "Europe/Madrid",
+        "required": true,
+        "sensitive": false,
+        "source": "jlesage-documentation"
+      }
+    ]
+  },
+  "proxmox": {
+    "security_profile": {
+      "requires_privileged_lxc": false,
+      "source_requests_privileged_lxc": true,
+      "optional_privileged_lxc": false,
+      "requires_host_pid_namespace": false,
+      "requires_relaxed_confinement": false,
+      "risk_level": "normal",
+      "confirmation_required": false,
+      "warning": "The imported Compose requests privileged, but the official jlesage/handbrake documentation does not require it; ProxMenux keeps the LXC unprivileged."
+    },
+    "installer_profile": {
+      "device_requests": [
+        {
+          "id": "vaapi-render",
+          "kind": "character-device",
+          "purpose": "vaapi",
+          "enable_prompt": "Enable Intel/AMD VA-API video acceleration",
+          "enabled_default": false,
+          "required_by_compose": false,
+          "path_prompt": "GPU render device",
+          "host_path_default": "/dev/dri/renderD128",
+          "container_path_strategy": "same-as-host",
+          "mode": "0660",
+          "deny_write": false,
+          "gid_strategy": "host-device-gid",
+          "source_mapping": "/dev/dri/renderD128:/dev/dri/renderD128"
+        }
+      ],
+      "volume_preparations": [
+        {
+          "container_path": "/config",
+          "remove_lost_found": true,
+          "owner_strategy": "mapped-application-user",
+          "only_when_mount_type": "managed-volume"
+        },
+        {
+          "container_path": "/storage",
+          "remove_lost_found": true,
+          "owner_strategy": "mapped-application-user",
+          "only_when_mount_type": "managed-volume"
+        },
+        {
+          "container_path": "/watch",
+          "remove_lost_found": true,
+          "owner_strategy": "mapped-application-user",
+          "only_when_mount_type": "managed-volume"
+        },
+        {
+          "container_path": "/output",
+          "remove_lost_found": true,
+          "owner_strategy": "mapped-application-user",
+          "only_when_mount_type": "managed-volume"
+        }
+      ],
+      "startup_healthcheck": {
+        "scheme": "http",
+        "port": 5800,
+        "path": "/",
+        "timeout_seconds": 180,
+        "request_timeout_seconds": 10,
+        "stability_seconds": 4,
+        "verify_tls": false
+      }
+    }
+  }
+}
