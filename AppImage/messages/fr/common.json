@@ -5354,8 +5354,8 @@
             "recovered": "{count} invités sur {total} ont échoué lors d'une exécution antérieure et ont réussi depuis"
           },
           "nextStep": {
-            "someFailed": "Lisez l'erreur dans le journal des tâches pour ces exécutions. Une course qui se termine par une erreur n'a produit aucune copie utilisable pour les invités qu'elle couvre.",
-            "recovered": "Ces invités ont échoué une première course et ont réussi depuis. L'erreur antérieure mérite toujours d'être lue : un échec qui s'est résolu revient souvent."
+            "recovered": "Ces invités ont échoué une première course et ont réussi depuis. L'erreur antérieure mérite toujours d'être lue : un échec qui s'est résolu revient souvent.",
+            "someFailed": "Lisez l'erreur dans le journal des tâches pour ces exécutions. Traiter une course qui se termine par une erreur comme infructueuse, et confirmer une copie disponible pour les invités qu'elle couvre avant de compter sur une."
           },
           "explanation": "Comment chaque emploi a fini le plus récent, comme ce nœud l'a enregistré. Un travail peut être parfaitement configuré et échoue toujours chaque nuit, et c'est là que ça se voit."
         },
@@ -5369,9 +5369,9 @@
             "scheduledOnly": "Les sauvegardes de la configuration de l'hôte sont planifiées par {count} minuterie(s) ; aucune archive n'est stockée localement"
           },
           "nextStep": {
-            "noHostBackup": "Rien ne stocke la configuration de ce noeud. Reconstruire cela signifie reconstruire manuellement les définitions du stockage, du réseau et de l'utilisateur, à partir de toutes les notes existantes.",
             "attention": "Consultez les enregistrements de configuration de l'hôte énumérés. Chacun a quelque chose qui mérite d'être examiné : une course qui a échoué, une destination disparue, ou une copie plus ancienne que l'âge en usage.",
-            "scheduledOnly": "Un minuteur produira des sauvegardes de configuration d'hôte, mais aucune n'est encore stockée. Jusqu'à ce que le premier tourne, la configuration propre du noeud n'est pas protégée."
+            "scheduledOnly": "Un minuteur produira des sauvegardes de configuration d'hôte, mais aucune n'est encore stockée. Jusqu'à ce que le premier tourne, la configuration propre du noeud n'est pas protégée.",
+            "noHostBackup": "Aucune sauvegarde de configuration d'hôte n'est enregistrée ici. À moins qu'il n'existe quelque part ce nœud ne puisse pas voir, la reconstruction signifierait la reconstruction du stockage, du réseau et des définitions utilisateur à la main, à partir de toutes les notes existantes."
           },
           "explanation": "Le soutien des invités ne restaure pas le nœud. Ce contrôle vise à déterminer si la configuration propre du nœud — ses définitions de stockage, son réseau, ses utilisateurs — est stockée n'importe où, ce qui dépend de la reconstruction de l'hôte lui-même."
         }

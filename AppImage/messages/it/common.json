@@ -5354,8 +5354,8 @@
             "recovered": "{count} di {total} ospiti sono falliti in un'esecuzione precedente e da allora sono riusciti"
           },
           "nextStep": {
-            "someFailed": "Leggi l'errore nel registro delle attività per queste operazioni. Una corsa che termina con un errore prodotto nessuna copia utilizzabile per gli ospiti che copre.",
-            "recovered": "Questi ospiti hanno fallito una prima corsa e sono riusciti da allora. L'errore precedente vale ancora la pena di leggere: un fallimento che si risolve spesso ritorna."
+            "recovered": "Questi ospiti hanno fallito una prima corsa e sono riusciti da allora. L'errore precedente vale ancora la pena di leggere: un fallimento che si risolve spesso ritorna.",
+            "someFailed": "Leggi l'errore nel registro delle attività per queste operazioni. Trattare una corsa che termina con un errore come non riuscito, e confermare una copia disponibile per gli ospiti che copre prima di fare affidamento su uno."
           },
           "explanation": "Come ogni lavoro e' finito il piu' recente, come ha registrato questo nodo. Un lavoro può essere configurato perfettamente e ancora fallire ogni notte, e questo è dove mostra."
         },
@@ -5369,9 +5369,9 @@
             "scheduledOnly": "I backup della configurazione dell'host sono pianificati tramite {count} timer; nessun archivio è memorizzato localmente"
           },
           "nextStep": {
-            "noHostBackup": "Niente memorizza la configurazione di questo nodo. Ricostruire significherebbe ricostruire lo storage, la rete e le definizioni utente a mano, da qualsiasi nota esista.",
             "attention": "Rivedere i record di configurazione dell'host elencati. Ognuno ha qualcosa che vale la pena guardare: una corsa che ha fallito, una destinazione che è andato, o una copia più vecchia dell'età in uso.",
-            "scheduledOnly": "Un timer produrrà backup di configurazione host, ma nessuno è ancora memorizzato. Finché il primo non viene eseguito, la configurazione del nodo non è protetta."
+            "scheduledOnly": "Un timer produrrà backup di configurazione host, ma nessuno è ancora memorizzato. Finché il primo non viene eseguito, la configurazione del nodo non è protetta.",
+            "noHostBackup": "Qui non viene registrato alcun backup di configurazione host memorizzato. A meno che non si esista da qualche parte questo nodo non possa vedere, la ricostruzione significherebbe ricostruire lo storage, la rete e le definizioni degli utenti a mano, da qualsiasi nota esista."
           },
           "explanation": "Il backup degli ospiti non ripristina il nodo. Questo controllo esamina se la configurazione del nodo — le sue definizioni di archiviazione, la sua rete, i suoi utenti — è memorizzata ovunque, che è ciò che la ricostruzione dell'host stesso dipende."
         }

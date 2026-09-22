@@ -5354,8 +5354,8 @@
             "recovered": "{count} de {total} convidados falharam numa execução anterior e desde então terminaram bem"
           },
           "nextStep": {
-            "someFailed": "Leia o erro no registro de tarefas para estas execuções. Uma execução que termina com um erro não produziu nenhuma cópia utilizável para os convidados que cobre.",
-            "recovered": "Estes convidados falharam numa corrida anterior e tiveram sucesso desde então. O erro anterior ainda vale a pena ler: uma falha que se resolveu frequentemente retorna."
+            "recovered": "Estes convidados falharam numa corrida anterior e tiveram sucesso desde então. O erro anterior ainda vale a pena ler: uma falha que se resolveu frequentemente retorna.",
+            "someFailed": "Leia o erro no registro de tarefas para estas execuções. Trate uma execução que termina com um erro como mal sucedido, e confirme uma cópia disponível para os convidados que ele cobre antes de confiar em um."
           },
           "explanation": "Como a execução mais recente de cada trabalho terminou, como este nó gravou. Um trabalho pode ser configurado perfeitamente e ainda falhar todas as noites, e é aqui que isso mostra."
         },
@@ -5369,9 +5369,9 @@
             "scheduledOnly": "Os backups da configuração do host estão agendados através de {count} temporizador(es); não há qualquer arquivo armazenado localmente"
           },
           "nextStep": {
-            "noHostBackup": "Nada armazena a própria configuração deste nó. Reconstruir isso significaria reconstruir manualmente o armazenamento, a rede e as definições do usuário, a partir de quaisquer notas existentes.",
             "attention": "Reveja os registros de configuração da máquina listados. Cada um tem algo que vale a pena olhar: uma corrida que falhou, um destino que se foi, ou uma cópia mais velha do que a idade em uso.",
-            "scheduledOnly": "Um timer irá produzir backups de configuração da máquina, mas nenhum ainda está armazenado. Até que o primeiro seja executado, a própria configuração do nó não está protegida."
+            "scheduledOnly": "Um timer irá produzir backups de configuração da máquina, mas nenhum ainda está armazenado. Até que o primeiro seja executado, a própria configuração do nó não está protegida.",
+            "noHostBackup": "Não é gravada nenhuma cópia de segurança da configuração da máquina. A menos que exista algum lugar que este nó não possa ver, reconstruir significaria reconstruir manualmente o armazenamento, a rede e as definições do usuário, a partir de quaisquer notas que existam."
           },
           "explanation": "Fazer backup dos hóspedes não restaura o nó. Esta verificação verifica se a própria configuração do nó — suas definições de armazenamento, sua rede, seus usuários — é armazenada em qualquer lugar, que é o que a reconstrução do próprio host depende."
         }

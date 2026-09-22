@@ -5354,8 +5354,8 @@
             "recovered": "{count} z {total} VM a LXC zlyhalo pri skoršom spustení a odvtedy uspelo"
           },
           "nextStep": {
-            "someFailed": "Prečítajte si chybu v zázname úloh pre tieto behy. Spustenie, ktoré končí s chybou vyrobené žiadne použiteľné kópie pre hostí, na ktoré sa vzťahuje.",
-            "recovered": "Títo hostia zlyhali a odvtedy sa im to podarilo. Predchádzajúca chyba stále stojí za čítanie: zlyhanie, ktoré vyrieši sám často vracia."
+            "recovered": "Títo hostia zlyhali a odvtedy sa im to podarilo. Predchádzajúca chyba stále stojí za čítanie: zlyhanie, ktoré vyrieši sám často vracia.",
+            "someFailed": "Pri týchto behoch si pozrite chybu v zázname úloh. Beh, ktorý skončil chybou, považujte za neúspešný. Skôr než sa na zálohu spoľahnete, overte dostupnú kópiu pre príslušné VM a LXC."
           },
           "explanation": "Ako sa posledná práca skončila, ako to nahral tento uzol. Práca môže byť nakonfigurovaná dokonale a stále zlyhá každú noc, a to je miesto, kde to ukazuje."
         },
@@ -5369,9 +5369,9 @@
             "scheduledOnly": "Zálohy nastavení servera sú naplánované cez {count} časovačov, lokálne však nie je uložený žiadny archív"
           },
           "nextStep": {
-            "noHostBackup": "Nič neukladá konfiguráciu tohto uzla. Obnova by znamenala rekonštrukciu úložiska, siete a užívateľských definícií ručne, z akýchkoľvek poznámok.",
             "attention": "Prehľadajte uvedené záznamy konfigurácie hostiteľa. Každý má niečo, čo stojí za to pozrieť sa na: beh, ktorý zlyhal, cieľ, ktorý je preč, alebo výtlačok starší ako vek v používaní.",
-            "scheduledOnly": "Časovač bude produkovať zálohovanie konfigurácie hostiteľa, ale žiadny ešte nie je uložený. Kým prvý beží, uzol vlastné nastavenie nie je chránené."
+            "scheduledOnly": "Časovač bude produkovať zálohovanie konfigurácie hostiteľa, ale žiadny ešte nie je uložený. Kým prvý beží, uzol vlastné nastavenie nie je chránené.",
+            "noHostBackup": "ProxMenux tu nemá zaznamenanú uloženú zálohu nastavení servera. Ak neexistuje iná záloha, ktorú tento uzol nevidí, pri obnove servera by bolo potrebné úložiská, sieť a používateľské účty nastaviť ručne podľa dostupných poznámok."
           },
           "explanation": "Zálohovanie hostí neobnoví uzol. Táto kontrola sa pozerá na to, či uzol vlastné konfigurácia"
         }

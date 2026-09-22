@@ -5354,8 +5354,8 @@
             "recovered": "{count} von {total} Gästen schlugen in einem früheren Lauf fehl und waren seither erfolgreich"
           },
           "nextStep": {
-            "someFailed": "Lesen Sie den Fehler im Task-Log für diese Runs. Ein Lauf, der mit einem Fehler endet, produzierte keine nutzbare Kopie für die Gäste, die er abdeckt.",
-            "recovered": "Diese Gäste scheiterten an einem früheren Lauf und sind seitdem erfolgreich. Der frühere Fehler ist immer noch lesenswert: Ein Fehler, der sich selbst gelöst hat, kehrt oft zurück."
+            "recovered": "Diese Gäste scheiterten an einem früheren Lauf und sind seitdem erfolgreich. Der frühere Fehler ist immer noch lesenswert: Ein Fehler, der sich selbst gelöst hat, kehrt oft zurück.",
+            "someFailed": "Lesen Sie den Fehler im Task-Log für diese Runs. Behandeln Sie einen Lauf, der mit einem Fehler endet, als erfolglos und bestätigen Sie eine verfügbare Kopie für die Gäste, die er abdeckt, bevor Sie sich auf einen verlassen."
           },
           "explanation": "Wie der letzte Lauf jedes Jobs endete, als dieser Knoten ihn aufzeichnete. Ein Job kann perfekt konfiguriert werden und trotzdem jede Nacht scheitern, und hier zeigt sich das."
         },
@@ -5369,9 +5369,9 @@
             "scheduledOnly": "Backups der Host-Konfiguration sind über {count} Timer geplant; lokal ist kein Archiv gespeichert"
           },
           "nextStep": {
-            "noHostBackup": "Nichts speichert die eigene Konfiguration dieses Knotens. Der Wiederaufbau würde bedeuten, die Speicher-, Netzwerk- und Benutzerdefinitionen von Hand zu rekonstruieren, aus welchen Notizen auch immer.",
             "attention": "Überprüfen Sie die aufgelisteten Host-Konfigurationseinträge. Jeder hat etwas, das einen Blick wert ist: ein Lauf, der fehlgeschlagen ist, ein Ziel, das weg ist, oder eine Kopie, die älter ist als das Alter, in dem sie verwendet werden.",
-            "scheduledOnly": "Ein Timer erzeugt Host-Konfigurations-Backups, aber keines ist noch gespeichert. Bis zur ersten Ausführung ist die eigene Konfiguration des Knotens nicht geschützt."
+            "scheduledOnly": "Ein Timer erzeugt Host-Konfigurations-Backups, aber keines ist noch gespeichert. Bis zur ersten Ausführung ist die eigene Konfiguration des Knotens nicht geschützt.",
+            "noHostBackup": "Hier wird kein gespeichertes Host-Konfigurations-Backup aufgezeichnet. Wenn man nicht irgendwo existiert, den dieser Knoten nicht sehen kann, würde das Umbauen bedeuten, die Speicher-, Netzwerk- und Benutzerdefinitionen von Hand aus beliebigen Notizen zu rekonstruieren."
           },
           "explanation": "Das Sichern der Gäste stellt den Knoten nicht wieder her. Diese Überprüfung untersucht, ob die eigene Konfiguration des Knotens - seine Speicherdefinitionen, sein Netzwerk, seine Benutzer - irgendwo gespeichert ist, wovon das Umbauen des Hosts selbst abhängt."
         }
