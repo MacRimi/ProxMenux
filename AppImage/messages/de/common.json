@@ -812,7 +812,14 @@
     "idle": "Idle",
     "idleTitle": "Nicht lesen, während nichts es benutzt, also kann es sich drehen. Seine Temperatur wird erneut angezeigt, sobald die Scheibe in Gebrauch ist.",
     "diskExcluded": "Ausgenommen",
-    "diskExcludedTitle": "Ausgenommen von periodischen Lesevorgängen in Einstellungen."
+    "diskExcludedTitle": "Ausgenommen von periodischen Lesevorgängen in Einstellungen.",
+    "temperatureNoDisks": "No disks",
+    "temperatureNormal": "Temperaturen normal",
+    "temperatureHighCount": "Hohe Temperaturen: {count}",
+    "temperatureCriticalCount": "Kritische Temperaturen: {count}",
+    "temperatureUnavailable": "Temperaturen nicht verfügbar",
+    "temperatureIncomplete": "Temperaturdaten unvollständig",
+    "temperatureUnavailableCount": "Nicht verfügbar: {count}"
   },
   "details": {
     "temperature": {

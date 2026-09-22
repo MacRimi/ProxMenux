@@ -811,7 +811,14 @@
     "idle": "Voľnobeh",
     "idleTitle": "Nečítaj, kým ho nič nepoužíva, aby sa to mohlo roztočiť. Jeho teplota sa znova zobrazí, akonáhle sa disk používa.",
     "diskExcluded": "Vylúčené",
-    "diskExcludedTitle": "Vylúčené z periodických čítania v Nastaveniach."
+    "diskExcludedTitle": "Vylúčené z periodických čítania v Nastaveniach.",
+    "temperatureNoDisks": "No disks",
+    "temperatureNormal": "Teploty normálne",
+    "temperatureHighCount": "Vysoké teploty: {count}",
+    "temperatureCriticalCount": "Kritické teploty: {count}",
+    "temperatureUnavailable": "Teploty nie sú k dispozícii",
+    "temperatureIncomplete": "Údaje o teplote nie sú úplné",
+    "temperatureUnavailableCount": "Nedostupné: {count}"
   },
   "details": {
     "temperature": {

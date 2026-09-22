@@ -812,7 +812,14 @@
     "idleTitle": "No se lee mientras nada lo usa, para que pueda apagarse. Su temperatura vuelve a mostrarse en cuanto el disco se usa.",
     "diskExcluded": "Excluido",
     "diskExcludedTitle": "Excluido de las lecturas periódicas en Ajustes.",
-    "savedSmartData": "datos SMART guardados"
+    "savedSmartData": "datos SMART guardados",
+    "temperatureNoDisks": "Sin discos",
+    "temperatureNormal": "Temperaturas normales",
+    "temperatureHighCount": "Altas temperaturas: {count}",
+    "temperatureCriticalCount": "Temperaturas críticas: {count}",
+    "temperatureUnavailable": "Temperaturas no disponibles",
+    "temperatureIncomplete": "datos de temperatura incompletos",
+    "temperatureUnavailableCount": "No disponible: {count}"
   },
   "details": {
     "temperature": {

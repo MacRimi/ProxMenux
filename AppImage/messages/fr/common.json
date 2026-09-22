@@ -812,7 +812,14 @@
     "idle": "Idée",
     "idleTitle": "Ne pas lire pendant que rien ne l'utilise, donc il peut tourner vers le bas. Sa température est montrée à nouveau dès que le disque est utilisé.",
     "diskExcluded": "Exclusion",
-    "diskExcludedTitle": "Exclus des lectures périodiques dans Paramètres."
+    "diskExcludedTitle": "Exclus des lectures périodiques dans Paramètres.",
+    "temperatureNoDisks": "Pas de disques",
+    "temperatureNormal": "Températures normales",
+    "temperatureHighCount": "Températures élevées : {count}",
+    "temperatureCriticalCount": "Températures critiques : {count}",
+    "temperatureUnavailable": "Températures indisponibles",
+    "temperatureIncomplete": "Données de température incomplètes",
+    "temperatureUnavailableCount": "Indisponible : {count}"
   },
   "details": {
     "temperature": {

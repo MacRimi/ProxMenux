@@ -812,7 +812,14 @@
     "idle": "Idle",
     "idleTitle": "Läs inte medan ingenting använder det, så det kan snurra ner. Temperaturen visas igen så snart disken används.",
     "diskExcluded": "Exkluderad",
-    "diskExcludedTitle": "Exkluderad från periodiska läsningar i Inställningar."
+    "diskExcludedTitle": "Exkluderad från periodiska läsningar i Inställningar.",
+    "temperatureNoDisks": "Inga diskar",
+    "temperatureNormal": "Normala temperaturer",
+    "temperatureHighCount": "Höga temperaturer: {count}",
+    "temperatureCriticalCount": "Critical temperatures: {count}",
+    "temperatureUnavailable": "Temperaturer otillgängliga",
+    "temperatureIncomplete": "Temperaturdata är ofullständig",
+    "temperatureUnavailableCount": "Ej tillgänglig: {count}"
   },
   "details": {
     "temperature": {

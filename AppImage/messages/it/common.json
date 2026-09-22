@@ -812,7 +812,14 @@
     "idle": "Idle",
     "idleTitle": "Non leggere mentre nulla lo sta usando, in modo che possa girare verso il basso. La sua temperatura viene mostrata di nuovo non appena il disco è in uso.",
     "diskExcluded": "Escluso",
-    "diskExcludedTitle": "Escluso da letture periodiche in Impostazioni."
+    "diskExcludedTitle": "Escluso da letture periodiche in Impostazioni.",
+    "temperatureNoDisks": "Nessun disco",
+    "temperatureNormal": "Temperature nella norma",
+    "temperatureHighCount": "Temperature elevate: {count}",
+    "temperatureCriticalCount": "Temperature critiche: {count}",
+    "temperatureUnavailable": "Temperatures unavailable",
+    "temperatureIncomplete": "Dati sulla temperatura incompleti",
+    "temperatureUnavailableCount": "non disponibile: {count}"
   },
   "details": {
     "temperature": {
