@@ -2734,7 +2734,7 @@
   "NVIDIA update failed for LXC": "La mise à jour NVIDIA a échoué pour LXC",
   "NVIDIA userspace libraries installed.": "Bibliothèques d'espace utilisateur NVIDIA installées.",
   "NVMe Disk Detected": "Disque NVMe détecté",
-  "NVMe health status: PASSED": "État de santé NVMe : RÉUSSI",
+  "NVMe critical_warning is 0 (no critical warnings reported).": "NVMe critic_warning est 0 (aucun avertissement critique signalé).",
   "NVMe health status: WARNING (critical_warning =": "État de santé NVMe : AVERTISSEMENT (critical_warning =",
   "NVMe skipped (to add as PCIe use 'Add Controller or NVMe PCIe to VM'):": "NVMe ignoré (pour ajouter en tant que PCIe, utilisez « Ajouter un contrôleur ou NVMe PCIe à la VM ») :",
   "NVMe-specific SMART log": "Journal SMART spécifique à NVMe",

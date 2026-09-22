@@ -2734,7 +2734,7 @@
   "NVIDIA update failed for LXC": "NVIDIA-uppdatering misslyckades för LXC",
   "NVIDIA userspace libraries installed.": "NVIDIA-användarutrymmesbibliotek installerade.",
   "NVMe Disk Detected": "NVMe-disk upptäckt",
-  "NVMe health status: PASSED": "NVMe hälsostatus: Godkänd",
+  "NVMe critical_warning is 0 (no critical warnings reported).": "NVMe critical_warning är 0 (inga kritiska varningar har rapporterats).",
   "NVMe health status: WARNING (critical_warning =": "NVMe hälsostatus: VARNING (critical_warning =",
   "NVMe skipped (to add as PCIe use 'Add Controller or NVMe PCIe to VM'):": "NVMe hoppade över (för att lägga till som PCIe använd 'Lägg till styrenhet eller NVMe PCIe till VM'):",
   "NVMe-specific SMART log": "NVMe-specifik SMART-logg",

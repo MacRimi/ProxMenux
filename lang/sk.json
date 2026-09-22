@@ -2734,7 +2734,7 @@
   "NVIDIA update failed for LXC": "Aktualizácia NVIDIA zlyhala pre LXC",
   "NVIDIA userspace libraries installed.": "NVIDIA userspace knižnice nainštalované.",
   "NVMe Disk Detected": "Zistený NVMe disk",
-  "NVMe health status: PASSED": "Stav NVMe: V PORIADKU",
+  "NVMe critical_warning is 0 (no critical warnings reported).": "Kritické varovanie NVMe je 0 (žiadne kritické varovania nie sú hlásené).",
   "NVMe health status: WARNING (critical_warning =": "Stav NVMe: UPOZORNENIE (critical_warning =",
   "NVMe skipped (to add as PCIe use 'Add Controller or NVMe PCIe to VM'):": "NVMe preskočené (ak ho chcete pridať ako PCIe, použite 'Pridať radič alebo NVMe PCIe do VM'):",
   "NVMe-specific SMART log": "SMART záznam špecifický pre NVMe",
