@@ -713,7 +713,13 @@ done
 
 echo ""
 if [ "$DISKS_ADDED" -gt 0 ]; then
-    msg_ok "$(translate "Completed.") $DISKS_ADDED $(translate "disk(s) added to CT") $CTID."
+    COMPLETED_MESSAGE="$(translate "Completed. Disks added to CT {ctid}: {count}.")"
+    if [[ "$COMPLETED_MESSAGE" != *'{ctid}'* || "$COMPLETED_MESSAGE" != *'{count}'* ]]; then
+        COMPLETED_MESSAGE="Completed. Disks added to CT {ctid}: {count}."
+    fi
+    COMPLETED_MESSAGE="${COMPLETED_MESSAGE//\{ctid\}/$CTID}"
+    COMPLETED_MESSAGE="${COMPLETED_MESSAGE//\{count\}/$DISKS_ADDED}"
+    msg_ok "$COMPLETED_MESSAGE"
 else
     msg_warn "$(translate "No disks were added.")"
 fi
