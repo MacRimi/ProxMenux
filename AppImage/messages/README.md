@@ -7,4 +7,22 @@ The ProxMenux Monitor dashboard uses a small client-side i18n layer.
 
 To improve a translation, edit the values in your locale's `common.json` — keep placeholders such as `{uptime}`, `{vmid}` or `{count}` unchanged, and don't translate brand or product names (`ProxMenux Monitor`, `Proxmox Backup Server`, `Secure Gateway`, `Tailscale`, etc.). Missing keys fall back to English at runtime, so a partial refresh is always safe to merge.
 
+## Backup message composition regressions
+
+From the repository root, run:
+
+```sh
+node tests/test_backup_archives_empty.cjs
+node tests/test_backup_destination_messages.cjs
+```
+
+Prerequisites: Node.js and the `typescript` development dependency from
+`AppImage/package.json` must be installed/resolvable (normally in
+`AppImage/node_modules`). These tests compile actual JSX message branches and
+pure i18n lookup functions without importing the component or calling a backend.
+They cover whole English messages, missing-key locale fallback, loading/error
+branches, nonempty lists, the removal notice at zero/one/multiple archives,
+local-attach help, and unchanged shared labels. They do not replace browser or
+real-host acceptance. Keep literal paths in the local-attach help unchanged.
+
 To add a new locale, see [§11 → Adding a new locale](../../CONTRIBUTING.md#adding-a-new-locale) in the Contributing Guide.

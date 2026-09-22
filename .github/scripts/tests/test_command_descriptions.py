@@ -90,6 +90,20 @@ class CommandDescriptionsTests(unittest.TestCase):
                 path = root / lang / "common.json"
                 path.parent.mkdir()
                 shutil.copyfile(ROOT / f"AppImage/messages/{lang}/common.json", path)
+                # This steady-state fixture assumes generation already finished.
+                # Seed only the three new backup messages in temporary locale
+                # copies; keep recovered command arrays and repo catalogs exact.
+                # Actual missing-key fallback is tested by the JSX seam tests.
+                if lang != "en":
+                    temporary = json.loads(path.read_text())
+                    for section, key in (
+                        ("archives", "emptyMessage"),
+                        ("destinations", "backupsKeptMessage"),
+                        ("destinations", "localAttachHelpMessage"),
+                    ):
+                        temporary["backup"][section].setdefault(
+                            key, catalog("en")["backup"][section][key])
+                    path.write_text(json.dumps(temporary, ensure_ascii=False))
             before = {p: p.read_bytes() for p in root.glob("*/common.json")}
             argv = [str(SCRIPT), "--source", str(root / "en/common.json"),
                     "--messages-dir", str(root), "--languages", languages, "--sleep", "0"]
