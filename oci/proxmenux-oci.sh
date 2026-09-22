@@ -7,7 +7,7 @@ REQUIREMENTS="$ROOT_DIR/requirements.txt"
 STAMP="$VENV_DIR/.requirements.sha256"
 
 command -v python3 >/dev/null 2>&1 || {
-  echo "ERROR: se necesita Python 3 en el Mac." >&2
+  echo "ERROR: Python 3 is required." >&2
   exit 1
 }
 
@@ -15,10 +15,10 @@ if python3 -c 'import yaml, jsonschema' >/dev/null 2>&1; then
   PYTHON=python3
 else
   if [[ ! -x "$VENV_DIR/bin/python" ]] || ! "$VENV_DIR/bin/python" -m pip --version >/dev/null 2>&1; then
-    echo "Preparando entorno Python local..."
+    echo "Preparing the local Python environment..."
     rm -rf "$VENV_DIR"
     python3 -m venv "$VENV_DIR" || {
-      echo "ERROR: no se pudo crear venv. En Debian instala python3-venv, python3-yaml y python3-jsonschema." >&2
+      echo "ERROR: could not create the virtual environment. On Debian, install python3-venv, python3-yaml and python3-jsonschema." >&2
       exit 1
     }
   fi
@@ -29,7 +29,7 @@ else
   fi
   INSTALLED_HASH=$(cat "$STAMP" 2>/dev/null || true)
   if [[ "$CURRENT_HASH" != "$INSTALLED_HASH" ]]; then
-    echo "Instalando dependencias verificables del conversor..."
+    echo "Installing the converter dependencies..."
     "$VENV_DIR/bin/python" -m pip install --disable-pip-version-check -r "$REQUIREMENTS"
     printf '%s\n' "$CURRENT_HASH" >"$STAMP"
   fi
