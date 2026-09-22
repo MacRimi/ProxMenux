@@ -6435,7 +6435,7 @@ function AddDestinationDialog({
                     <Label htmlFor="borgSshUser">{t("backup.fields.sshUser")}</Label>
                     <Input id="borgSshUser" value={borgSshUser} onChange={(e) => setBorgSshUser(e.target.value)} className="font-mono mt-1" placeholder="borg" />
                     <p className="text-xs text-muted-foreground mt-1">
-                      {t("backup.destinations.sshUserHelpBefore")} <code className="font-mono">borg serve</code>. {t("backup.destinations.sshUserHelpAfter")} <code className="font-mono">borg</code>, {t("backup.destinations.not")} <code className="font-mono">root</code>.
+                      {t("backup.destinations.sshUserHelpMessage")}
                     </p>
                   </div>
                   <div className="grid grid-cols-[1fr_100px] gap-3">
@@ -6464,14 +6464,13 @@ function AddDestinationDialog({
                     <Label htmlFor="borgKeyPath">{t("backup.fields.sshKeyPath")}</Label>
                     <Input id="borgKeyPath" value={borgSshKeyPath} onChange={(e) => setBorgSshKeyPath(e.target.value)} className="font-mono mt-1" />
                     <p className="text-xs text-muted-foreground mt-1">
-                      {t("backup.destinations.sshKeyHelpBefore")}
-                      {" "}{t("backup.destinations.sshKeyHelpMiddle")} <span className="font-medium text-foreground">{t("backup.actions.generateKey")}</span> {t("backup.destinations.sshKeyHelpAfter")}
+                      {t("backup.destinations.sshKeyHelpMessage", { action: t("backup.actions.prepareSshKey") })}
                     </p>
                   </div>
 
                   <div className="rounded-md border border-border bg-card p-3 space-y-2">
                     <div className="flex items-center justify-between gap-2">
-                      <span className="text-xs font-medium">{t("backup.destinations.generateNewSshKey")}</span>
+                      <span className="text-xs font-medium">{t("backup.destinations.sshKeySetupTitle")}</span>
                       <Button
                         type="button"
                         size="sm"
@@ -6481,13 +6480,13 @@ function AddDestinationDialog({
                         onClick={generateBorgKey}
                       >
                         {generatingKey ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1" /> : <Plus className="h-3.5 w-3.5 mr-1" />}
-                        {generatedKey ? t("backup.actions.regenerate") : t("backup.actions.generateKey")}
+                        {t("backup.actions.prepareSshKey")}
                       </Button>
                     </div>
                     {generatedKey ? (
                       <>
                         <p className="text-[11px] text-muted-foreground">
-                          {t("backup.destinations.appendAuthorizedKeyBefore")} <code className="font-mono">~{borgSshUser}/.ssh/authorized_keys</code>:
+                          {t("backup.destinations.sshAuthorizedKeyHelp", { user: borgSshUser })}
                         </p>
                         <textarea
                           readOnly
@@ -6498,7 +6497,7 @@ function AddDestinationDialog({
                       </>
                     ) : (
                       <p className="text-[11px] text-muted-foreground">
-                        {t("backup.destinations.createsSshKeyBefore")} <code className="font-mono">borg serve</code> {t("backup.destinations.createsSshKeyAfter")}
+                        {t("backup.destinations.sshKeySetupHelp")}
                       </p>
                     )}
                   </div>

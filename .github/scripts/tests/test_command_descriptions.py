@@ -115,6 +115,16 @@ class CommandDescriptionsTests(unittest.TestCase):
                         report["recommendations"].setdefault(
                             key, source_report["recommendations"][key])
                     path.write_text(json.dumps(temporary, ensure_ascii=False))
+                # Model steady-state generation for the six intentional English-only
+                # Borg additions, in temporary copies only. Keep every other gap visible.
+                if lang != "en":
+                    copied = json.loads(path.read_text())
+                    english = catalog("en")["backup"]
+                    for key in ("sshUserHelpMessage", "sshKeyHelpMessage", "sshKeySetupTitle",
+                                "sshKeySetupHelp", "sshAuthorizedKeyHelp"):
+                        copied["backup"]["destinations"].setdefault(key, english["destinations"][key])
+                    copied["backup"]["actions"].setdefault("prepareSshKey", english["actions"]["prepareSshKey"])
+                    path.write_text(json.dumps(copied), encoding="utf-8")
             before = {p: p.read_bytes() for p in root.glob("*/common.json")}
             argv = [str(SCRIPT), "--source", str(root / "en/common.json"),
                     "--messages-dir", str(root), "--languages", languages, "--sleep", "0"]
