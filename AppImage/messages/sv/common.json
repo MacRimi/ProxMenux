@@ -4025,7 +4025,8 @@
       "pveKeyWillBeCopied": "PVE-krypteringsnyckeln kommer att kopieras för bildskärmsåterställningar.",
       "savePassphraseNow": "Spara lösenordsfras för schemalagda körningar",
       "unrecoverable": "Utan nyckeln kan krypterade säkerhetskopior inte återställas.",
-      "usesSharedKeyfileAt": "Använder delad nyckelfil på"
+      "usesSharedKeyfileAt": "Använder delad nyckelfil på",
+      "pbsHelp": "Monitor använder {keyfile} med {option} för krypterade PBS-säkerhetskopior och -återställningar.Nyckelfilen lagras i läge {mode}.Förvara en säker kopia utanför denna värd."
     },
     "errors": {
       "backendNoStagingPath": "Backend returnerade inte en mellanstationsbana.",
@@ -4222,7 +4223,8 @@
       "uploadFromMachine": "Ladda upp från den här maskinen",
       "uploadTitle": "Ladda upp nyckelfil",
       "useThisKey": "Använd denna nyckel",
-      "willFail": "kommer att misslyckas"
+      "willFail": "kommer att misslyckas",
+      "pveKeyDescription": "PVE-lagring {storage} har en nyckelfil på {path}.Du kan importera den till Monitor."
     },
     "keyfileError": {
       "currentlyInstalled": "För närvarande installerad",

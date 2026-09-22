@@ -4025,7 +4025,8 @@
       "pveKeyWillBeCopied": "La chiave di crittografia PVE verrà copiata per i ripristini di Monitor.",
       "savePassphraseNow": "Salva la passphrase per le esecuzioni pianificate",
       "unrecoverable": "Senza la chiave, i backup crittografati non possono essere ripristinati.",
-      "usesSharedKeyfileAt": "Utilizza il file di chiavi condiviso su"
+      "usesSharedKeyfileAt": "Utilizza il file di chiavi condiviso su",
+      "pbsHelp": "Monitor utilizza {keyfile} con {option} per backup e ripristini PBS crittografati.Il file di chiavi viene archiviato con la modalità {mode}.Conserva una copia sicura all'esterno di questo host."
     },
     "errors": {
       "backendNoStagingPath": "Il backend non ha restituito un percorso di gestione temporanea.",
@@ -4222,7 +4223,8 @@
       "uploadFromMachine": "Carica da questa macchina",
       "uploadTitle": "Carica il file di chiavi",
       "useThisKey": "Usa questa chiave",
-      "willFail": "fallirà"
+      "willFail": "fallirà",
+      "pveKeyDescription": "lo storage PVE {storage} ha un file di chiavi in ​​{path}.Puoi importarlo in Monitor."
     },
     "keyfileError": {
       "currentlyInstalled": "Attualmente installato",

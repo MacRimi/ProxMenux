@@ -4025,7 +4025,8 @@
       "pveKeyWillBeCopied": "La clé de cryptage PVE sera copiée pour les restaurations du moniteur.",
       "savePassphraseNow": "Enregistrer la phrase secrète pour les exécutions planifiées",
       "unrecoverable": "Sans la clé, les sauvegardes chiffrées ne peuvent pas être restaurées.",
-      "usesSharedKeyfileAt": "Utilise le fichier de clés partagé sur"
+      "usesSharedKeyfileAt": "Utilise le fichier de clés partagé sur",
+      "pbsHelp": "Monitor utilise {keyfile} avec {option} pour les sauvegardes et les restaurations PBS chiffrées.Le fichier de clés est stocké avec le mode {mode}.Conservez une copie sécurisée en dehors de cet hôte."
     },
     "errors": {
       "backendNoStagingPath": "Le backend n’a pas renvoyé de chemin intermédiaire.",
@@ -4222,7 +4223,8 @@
       "uploadFromMachine": "Télécharger depuis cette machine",
       "uploadTitle": "Télécharger le fichier clé",
       "useThisKey": "Utilisez cette clé",
-      "willFail": "échouera"
+      "willFail": "échouera",
+      "pveKeyDescription": "Le stockage PVE {storage} a un fichier clé à {path}.Vous pouvez l'importer dans Monitor."
     },
     "keyfileError": {
       "currentlyInstalled": "Actuellement installé",

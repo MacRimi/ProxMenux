@@ -4024,7 +4024,8 @@
       "pveKeyWillBeCopied": "PVE šifrovací kľúč sa skopíruje pre obnovy cez Monitor.",
       "savePassphraseNow": "Uložiť heslo pre plánované zálohy",
       "unrecoverable": "Bez kľúča šifrované zálohy nepôjde obnoviť.",
-      "usesSharedKeyfileAt": "Používa spoločný súbor s kľúčom v"
+      "usesSharedKeyfileAt": "Používa spoločný súbor s kľúčom v",
+      "pbsHelp": "Monitor používa {keyfile} s {option} na šifrované zálohy a obnovy PBS.Súbor kľúča je uložený v režime {mode}.Uschovajte si bezpečnú kópiu mimo tohto hostiteľa."
     },
     "errors": {
       "backendNoStagingPath": "Cieľ nevrátil cestu k dočasným súborom.",
@@ -4221,7 +4222,8 @@
       "uploadFromMachine": "Nahrať z tohto počítača",
       "uploadTitle": "Nahrať súbor s kľúčom",
       "useThisKey": "Použiť tento kľúč",
-      "willFail": "zlyhá"
+      "willFail": "zlyhá",
+      "pveKeyDescription": "Úložisko PVE {storage} má súbor kľúča na {path}.Môžete ho importovať do aplikácie Monitor."
     },
     "keyfileError": {
       "currentlyInstalled": "Aktuálne nainštalované",

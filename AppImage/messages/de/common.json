@@ -4025,7 +4025,8 @@
       "pveKeyWillBeCopied": "Der PVE-Verschlüsselungsschlüssel wird für Monitor-Wiederherstellungen kopiert.",
       "savePassphraseNow": "Speichern Sie die Passphrase für geplante Ausführungen",
       "unrecoverable": "Ohne den Schlüssel können verschlüsselte Backups nicht wiederhergestellt werden.",
-      "usesSharedKeyfileAt": "Verwendet eine gemeinsame Schlüsseldatei unter"
+      "usesSharedKeyfileAt": "Verwendet eine gemeinsame Schlüsseldatei unter",
+      "pbsHelp": "Monitor verwendet {keyfile} mit {option} für verschlüsselte PBS-Sicherungen und -Wiederherstellungen.Die Schlüsseldatei wird im Modus {mode} gespeichert.Bewahren Sie eine sichere Kopie außerhalb dieses Hosts auf."
     },
     "errors": {
       "backendNoStagingPath": "Das Backend hat keinen Staging-Pfad zurückgegeben.",
@@ -4222,7 +4223,8 @@
       "uploadFromMachine": "Von diesem Computer hochladen",
       "uploadTitle": "Schlüsseldatei hochladen",
       "useThisKey": "Benutzen Sie diesen Schlüssel",
-      "willFail": "wird scheitern"
+      "willFail": "wird scheitern",
+      "pveKeyDescription": "PVE-Speicher {storage} hat eine Schlüsseldatei unter {path}.Sie können es in Monitor importieren."
     },
     "keyfileError": {
       "currentlyInstalled": "Derzeit installiert",
