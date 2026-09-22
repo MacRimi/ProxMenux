@@ -141,7 +141,7 @@ function select_disk_type() {
 # Select Virtual Disks
 # ==========================================================
 function select_virtual_disk() {
-  msg_info "Detecting available storage volumes..."
+  msg_info "$(translate "Detecting storage for disk images...")"
 
   local STORAGE_MENU=()
   local TAG TYPE FREE ITEM
@@ -165,8 +165,8 @@ function select_virtual_disk() {
     STORAGE=${STORAGE_MENU[0]}
   else
     [[ -n "${SPINNER_PID:-}" ]] && kill "$SPINNER_PID" >/dev/null 2>&1
-    STORAGE=$(whiptail --backtitle "ProxMenuX" --title "$(translate "Select Storage Volume")" --radiolist \
-      "$(translate  "Choose the storage volume for the virtual disk:\n")" 20 78 10 \
+    STORAGE=$(whiptail --backtitle "ProxMenuX" --title "$(translate "Select Storage")" --radiolist \
+      "$(translate "Choose the storage for the virtual disk:")"$'\n' 20 78 10 \
       "${STORAGE_MENU[@]}" 3>&1 1>&2 2>&3)
 
     if [ $? -ne 0 ] || [ -z "$STORAGE" ]; then
