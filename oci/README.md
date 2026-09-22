@@ -58,26 +58,24 @@ compatible merely because conversion succeeded.
 
 ## Catalog maintenance
 
-The catalog is generated rather than written by hand. `proxmenux-oci.sh` is the
-tool that produces and inspects it, and it is what a contributor adding an
-application runs:
+The catalog is generated rather than written by hand. A contributor adding an
+application runs the orchestrator directly from this directory:
 
 ```bash
-./proxmenux-oci.sh sync
-./proxmenux-oci.sh list --filter sonarr
-./proxmenux-oci.sh generate sonarr
-./proxmenux-oci.sh show sonarr
-GITHUB_TOKEN=github_pat_xxx ./proxmenux-oci.sh generate-all
+export PYTHONPATH=src
+python3 -m proxmenux_oci sync
+python3 -m proxmenux_oci list --filter sonarr
+python3 -m proxmenux_oci generate sonarr
+python3 -m proxmenux_oci show sonarr
+GITHUB_TOKEN=github_pat_xxx python3 -m proxmenux_oci generate-all
 ```
 
 `generate` writes one application's template from its published recipe; `show`
 prints what the installation would create, which is the fastest way to see
 whether a translation came out right before installing anything.
 
-On Debian and Proxmox the launcher reuses the distribution packages
-`python3-yaml` and `python3-jsonschema` when they are present, so nothing is
-installed into the system Python. Where they are absent, install them with APT
-before generating the catalog.
+It needs `python3-yaml` and `python3-jsonschema`. On Debian and Proxmox both
+are distribution packages; install them with APT before generating the catalog.
 
 `GITHUB_TOKEN` is optional and only raises the public API rate limit, which the
 full `generate-all` pass reaches. Never commit a token; `.env` files are
