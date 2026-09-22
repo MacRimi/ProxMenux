@@ -6,6 +6,24 @@ VENV_DIR="$ROOT_DIR/.venv"
 REQUIREMENTS="$ROOT_DIR/requirements.txt"
 STAMP="$VENV_DIR/.requirements.sha256"
 
+# The orchestrator lives beside this script, so it has to run from where it
+# was installed. Piped from a URL there is no directory to read: $0 is "bash",
+# ROOT_DIR becomes the working directory, and the first missing file reports a
+# path nobody asked for.
+if [ ! -r "$REQUIREMENTS" ] || [ ! -d "$ROOT_DIR/src/proxmenux_oci" ]; then
+  cat >&2 <<EOF
+ERROR: this script runs from the directory it was installed in, next to
+       requirements.txt and src/. It cannot be piped from a URL.
+
+On a Proxmox host with ProxMenux installed:
+  /usr/local/share/proxmenux/oci/engine/proxmenux-oci.sh "\$@"
+
+From a clone of the repository:
+  cd oci && ./proxmenux-oci.sh "\$@"
+EOF
+  exit 1
+fi
+
 command -v python3 >/dev/null 2>&1 || {
   echo "ERROR: Python 3 is required." >&2
   exit 1
