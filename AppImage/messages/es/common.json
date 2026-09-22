@@ -3845,7 +3845,8 @@
       "restoreTitle": "Restaurar desde esta copia de seguridad",
       "startingExport": "Preparando descarga...",
       "title": "Copias de seguridad",
-      "viewContentsTitle": "Ver contenidos de la copia de seguridad"
+      "viewContentsTitle": "Ver contenidos de la copia de seguridad",
+      "emptyMessage": "No se encontraron archivos de respaldo."
     },
     "backends": {
       "borgDescription": "Repositorio Borg para copias de seguridad de host deduplicadas.",
@@ -3961,7 +3962,9 @@
       "sshUserHelpBefore": "Usuario en el host remoto,",
       "title": "Destinos",
       "unmountTitle": "Desmontar este destino",
-      "whereIsBorgRepo": "¿Dónde está el repositorio Borg?"
+      "whereIsBorgRepo": "¿Dónde está el repositorio Borg?",
+      "backupsKeptMessage": "los archivos de copia de seguridad existentes no se eliminan.",
+      "localAttachHelpMessage": "Monte primero las unidades USB.Déjelo en blanco para usar la ruta de almacenamiento PVE + /dump (alternativa: /var/lib/vz/dump)."
     },
     "encryption": {
       "autoDetectedFromPveStorage": "Detectado desde el almacenamiento PVE",

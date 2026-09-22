@@ -3845,7 +3845,8 @@
       "restoreTitle": "Restaurer à partir de cette sauvegarde",
       "startingExport": "Préparation du téléchargement...",
       "title": "Sauvegardes",
-      "viewContentsTitle": "Afficher le contenu de la sauvegarde"
+      "viewContentsTitle": "Afficher le contenu de la sauvegarde",
+      "emptyMessage": "Aucune archive de sauvegarde trouvée."
     },
     "backends": {
       "borgDescription": "Référentiel Borg pour les sauvegardes d'hôtes dédupliquées.",
@@ -3961,7 +3962,9 @@
       "sshUserHelpBefore": "Utilisateur sur l'hôte distant,",
       "title": "Destinations",
       "unmountTitle": "Démonter cette destination",
-      "whereIsBorgRepo": "Où se trouve le référentiel Borg ?"
+      "whereIsBorgRepo": "Où se trouve le référentiel Borg ?",
+      "backupsKeptMessage": "Les archives de sauvegarde existantes ne sont pas supprimées.",
+      "localAttachHelpMessage": "Montez d’abord les clés USB.Laissez vide pour utiliser le chemin de stockage PVE + /dump (repli : /var/lib/vz/dump)."
     },
     "encryption": {
       "autoDetectedFromPveStorage": "Détecté depuis le stockage PVE",
