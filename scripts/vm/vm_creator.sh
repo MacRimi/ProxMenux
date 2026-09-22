@@ -179,8 +179,14 @@ function select_storage_target() {
     STORAGE="${STORAGE_MENU[0]}"
   else
     [[ -n "${SPINNER_PID:-}" ]] && kill "$SPINNER_PID" >/dev/null 2>&1
+    local storage_prompt
+    case "$PURPOSE" in
+      EFI) storage_prompt=$(translate "Choose the storage for the EFI disk (4MB):") ;;
+      TPM) storage_prompt=$(translate "Choose the storage for the TPM disk (4MB):") ;;
+      *) storage_prompt=$(translate "Choose the storage volume for the $PURPOSE disk (4MB):") ;;
+    esac
     STORAGE=$(whiptail --backtitle "ProxMenux" --title "$(translate "$PURPOSE Disk Storage")" --radiolist \
-      "$(translate "Choose the storage volume for the $PURPOSE disk (4MB):\n\nUse Spacebar to select.")" 16 70 6 \
+      "$storage_prompt"$'\n\n'"$(translate "Use Spacebar to select.")" 16 70 6 \
       "${STORAGE_MENU[@]}" 3>&1 1>&2 2>&3) || {
         msg_warn "$(translate "$PURPOSE disk storage selection cancelled.")" >&2
         return 1

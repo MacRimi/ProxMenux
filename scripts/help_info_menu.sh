@@ -382,7 +382,7 @@ show_storage_commands() {
                 echo -en "\n${TAB}${BOLD}${YW}${HOLD}$(translate 'Enter full path to the disk image (e.g., /var/lib/vz/images/xyz.img): ')${CL}"
                 read -r image_path
 
-                echo -e "\n${YELLOW}$(translate 'Available storage volumes:')${NC}"
+                echo -e "\n${YELLOW}$(translate 'Storage IDs:')${NC}"
                 pvesm status | awk 'NR>1 {print " - "$1}'
 
                 echo -en "\n${TAB}${BOLD}${YW}${HOLD}$(translate 'Enter target storage name (e.g., local-lvm): ')${CL}"
