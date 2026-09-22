@@ -1,0 +1,132 @@
+{
+  "container_contract": {
+    "environment": [
+      {
+        "name": "PUID",
+        "example": "1000",
+        "required": true,
+        "sensitive": false,
+        "source": "linuxserver-compose"
+      },
+      {
+        "name": "PGID",
+        "example": "1000",
+        "required": true,
+        "sensitive": false,
+        "source": "linuxserver-compose"
+      },
+      {
+        "name": "TZ",
+        "example": "Etc/UTC",
+        "required": true,
+        "sensitive": false,
+        "source": "linuxserver-compose"
+      },
+      {
+        "name": "CONFIGFILE",
+        "example": "/config/adguardhome-sync.yaml",
+        "required": false,
+        "sensitive": false,
+        "source": "linuxserver-compose"
+      },
+      {
+        "name": "ORIGIN_URL",
+        "example": "",
+        "required": true,
+        "sensitive": false,
+        "prompt": "Web address of the main AdGuard Home, whose settings are copied (e.g. http://192.168.1.2)",
+        "source": "adguardhome-sync-environment"
+      },
+      {
+        "name": "ORIGIN_USERNAME",
+        "example": "",
+        "required": true,
+        "sensitive": false,
+        "prompt": "User of the main AdGuard Home",
+        "source": "adguardhome-sync-environment"
+      },
+      {
+        "name": "ORIGIN_PASSWORD",
+        "example": "",
+        "required": true,
+        "sensitive": true,
+        "prompt": "Password of the main AdGuard Home",
+        "source": "adguardhome-sync-environment"
+      },
+      {
+        "name": "REPLICA1_URL",
+        "example": "",
+        "required": true,
+        "sensitive": false,
+        "prompt": "Web address of the AdGuard Home that receives the settings (e.g. http://192.168.1.3)",
+        "source": "adguardhome-sync-environment"
+      },
+      {
+        "name": "REPLICA1_USERNAME",
+        "example": "",
+        "required": true,
+        "sensitive": false,
+        "prompt": "User of the AdGuard Home that receives the settings",
+        "source": "adguardhome-sync-environment"
+      },
+      {
+        "name": "REPLICA1_PASSWORD",
+        "example": "",
+        "required": true,
+        "sensitive": true,
+        "prompt": "Password of the AdGuard Home that receives the settings",
+        "source": "adguardhome-sync-environment"
+      },
+      {
+        "name": "API_USERNAME",
+        "example": "admin",
+        "required": true,
+        "sensitive": false,
+        "prompt_user": false,
+        "source": "adguardhome-sync-environment"
+      },
+      {
+        "name": "API_PASSWORD",
+        "example": "",
+        "required": true,
+        "sensitive": true,
+        "prompt": "Password of the Adguardhome Sync web interface",
+        "source": "adguardhome-sync-environment"
+      },
+      {
+        "name": "HTTP_CLIENT_TIMEOUT",
+        "example": "10s",
+        "required": true,
+        "sensitive": false,
+        "prompt_user": false,
+        "source": "adguardhome-sync-environment"
+      }
+    ]
+  },
+  "first_run": {
+    "credentials": [
+      {
+        "label": "Adguardhome Sync web interface",
+        "type": "configured-or-installer-generated",
+        "username": "admin",
+        "password": null,
+        "username_environment": "API_USERNAME",
+        "password_environment": "API_PASSWORD",
+        "change_required": false,
+        "source": "adguardhome-sync-environment",
+        "retrieval": null
+      }
+    ]
+  },
+  "proxmox": {
+    "installer_profile": {
+      "generated_sensitive_environment": {
+        "API_PASSWORD": {
+          "strategy": "token-hex",
+          "bytes": 12,
+          "prompt": true
+        }
+      }
+    }
+  }
+}

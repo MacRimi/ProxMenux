@@ -1,0 +1,15 @@
+{
+  "first_run": {
+    "credentials": [
+      {
+        "label": "Airsonic Advanced web interface",
+        "type": "static-default",
+        "username": "admin",
+        "password": "admin",
+        "change_required": true,
+        "source": "linuxserver-readme-application-setup",
+        "retrieval": null
+      }
+    ]
+  }
+}

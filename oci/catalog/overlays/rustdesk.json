@@ -1,0 +1,15 @@
+{
+  "proxmox": {
+    "installer_profile": {
+      "selkies": {
+        "base": "FROM ghcr.io/linuxserver/baseimage-selkies:debiantrixie",
+        "dockerfile_url": "https://raw.githubusercontent.com/linuxserver/docker-rustdesk/master/Dockerfile",
+        "dockerfile_sha256": "f1b789a119aed58821c2e113e74a7381f671e97c2f71eac60416f45d5c1ade14",
+        "reviewed_on": "2026-09-16",
+        "documentation": "https://docs.linuxserver.io/images/docker-baseimage-selkies/",
+        "nvidia": "not-offered-until-specific-host-and-image-validation",
+        "validation": "profile-generated; real streaming workload pending"
+      }
+    }
+  }
+}

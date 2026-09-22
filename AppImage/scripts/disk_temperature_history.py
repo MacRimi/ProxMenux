@@ -410,8 +410,133 @@ def _extract_temperature(data: dict[str, Any]) -> Optional[float]:
 # ---------------------------------------------------------------------------
 
 
+# ── Leaving idle and excluded disks alone ──────────────────────────
+#
+# `-n standby` keeps a periodic reader from waking a disk that is asleep.
+# It does not let an awake one fall asleep: a drive's spin-down timer
+# counts time without commands, and a read every minute resets it, so an
+# unused drive whose timer is longer than that never spins down — and a
+# drive that parks its heads when idle loads them again on every read.
+#
+# So a rotational disk with no I/O since it was last looked at is not read
+# at all, not even asked for its power mode. The counters come from
+# /proc/diskstats, which costs no disk access, and a SMART query does not
+# move them — passthrough commands are not accounted as reads or writes —
+# so any change means something else used the disk. A disk in use is
+# already awake, and reading it then costs nothing. Solid-state disks have
+# no spindle and no heads, and keep their reading.
+#
+# A disk seen for the first time is read once, so a Monitor that has just
+# started still has values to show; after that it is left alone for as
+# long as nothing uses it.
+
+READ = "read"
+IDLE = "idle"
+EXCLUDED = "excluded"
+
+_last_io: dict[str, tuple[int, int]] = {}
+_idle_state: dict[str, float] = {}
+_IDLE_TTL = 600  # same horizon as the standby badge
+
+
+def _read_diskstats() -> dict[str, tuple[int, int]]:
+    """Reads and writes completed per device, from /proc/diskstats."""
+    out: dict[str, tuple[int, int]] = {}
+    try:
+        with open("/proc/diskstats") as f:
+            for line in f:
+                parts = line.split()
+                if len(parts) < 8:
+                    continue
+                try:
+                    out[parts[2]] = (int(parts[3]), int(parts[7]))
+                except ValueError:
+                    continue
+    except OSError:
+        pass
+    return out
+
+
+def _is_rotational(disk_name: str) -> bool:
+    try:
+        with open(f"/sys/block/{disk_name}/queue/rotational") as f:
+            return f.read().strip() == "1"
+    except OSError:
+        return False
+
+
+_EXCLUDED_TTL = 15
+_excluded_cache: Optional[tuple[float, set]] = None
+
+
+def excluded_disk_names() -> set:
+    """Kernel names of the disks the user excluded. Fails open: if the
+    list cannot be read, nothing is excluded rather than everything.
+    Held for a few seconds, since every reader asks for every disk."""
+    global _excluded_cache
+    now = time.time()
+    with _cache_lock:
+        if _excluded_cache is not None and _excluded_cache[0] > now:
+            return set(_excluded_cache[1])
+    names: set = set()
+    try:
+        from health_persistence import health_persistence
+        keys = health_persistence.get_excluded_disk_keys()
+        if keys:
+            from disk_identity import names_for_keys
+            names = names_for_keys(keys)
+    except Exception:
+        names = set()
+    with _cache_lock:
+        _excluded_cache = (now + _EXCLUDED_TTL, set(names))
+    return names
+
+
+def invalidate_disk_exclusions() -> None:
+    """Apply a change to the exclusion list on the next read."""
+    global _excluded_cache
+    with _cache_lock:
+        _excluded_cache = None
+
+
+_excluded_disk_names = excluded_disk_names
+
+
+def disk_read_policy(disk_name: str, excluded: Optional[set] = None) -> str:
+    """Whether a periodic reader may touch this disk now: READ, IDLE or
+    EXCLUDED. Shared by every reader that runs on its own, so the
+    temperature poller and the storage view cannot disagree about a disk.
+    ``excluded`` lets a caller that checks many disks pass the list once."""
+    if excluded is None:
+        excluded = _excluded_disk_names()
+    if disk_name in excluded:
+        _idle_state.pop(disk_name, None)
+        return EXCLUDED
+    if not _is_rotational(disk_name):
+        return READ
+    current = _read_diskstats().get(disk_name)
+    with _cache_lock:
+        previous = _last_io.get(disk_name)
+        if current is not None:
+            _last_io[disk_name] = current
+    if current is None or previous is None or current != previous:
+        _idle_state.pop(disk_name, None)
+        return READ
+    _idle_state[disk_name] = time.time()
+    return IDLE
+
+
+def is_disk_idle(disk_name: str) -> bool:
+    """True while the disk is being left alone for having no I/O."""
+    ts = _idle_state.get(disk_name)
+    return ts is not None and (time.time() - ts) < _IDLE_TTL
+
+
 def record_all_disk_temperatures() -> int:
-    """Sample every non-USB disk and persist its temperature.
+    """Sample the disks that may be read now and persist their temperature.
+
+    USB disks are included. A disk the user excluded, or a rotational one
+    with no I/O since the last cycle, is skipped — see ``disk_read_policy``.
 
     Sampling fans out across a thread pool so a host with N disks pays
     roughly the time of the slowest single ``smartctl`` call instead of
@@ -419,7 +544,8 @@ def record_all_disk_temperatures() -> int:
     threading is enough — no need for asyncio. Returns the number of
     rows actually written.
     """
-    disks = _list_target_disks()
+    excluded = _excluded_disk_names()
+    disks = [d for d in _list_target_disks() if disk_read_policy(d, excluded) == READ]
     if not disks:
         return 0
     now = int(time.time())

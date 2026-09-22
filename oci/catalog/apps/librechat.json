@@ -1,0 +1,1305 @@
+{
+  "schema_version": "0.5.0",
+  "kind": "proxmenux.oci-template",
+  "id": "image-librechat",
+  "status": "generated-review-required",
+  "catalog_ui": {
+    "title": {
+      "en_US": "LibreChat"
+    },
+    "tagline": {
+      "en_US": "A full-featured, open-source AI chat interface"
+    },
+    "description": {
+      "en_US": "LibreChat is a full-featured, open-source AI chat interface that allows users to interact with multiple AI models through a unified platform. It supports various AI providers and offers advanced features like conversation management, plugin support, and customizable interfaces.\n**Key Features:**\n- Support for multiple AI models and providers\n- Conversation history and management\n- Plugin system for extended functionality\n- Customizable themes and interfaces\n- User authentication and management\n- API integrations for various services\n- Search functionality with MeiliSearch\n- RAG (Retrieval-Augmented Generation) support\n- File upload and processing capabilities\n- Multi-language support\n\n**Learn More:**\n- [LibreChat Official Website](https://www.librechat.ai)\n- [LibreChat GitHub Repository](https://github.com/danny-avila/LibreChat)\n\n**extra:**\nYou can refer to the [Custom AI Endpoints](https://www.librechat.ai/docs/configuration/librechat_yaml/ai_endpoints) documentation to configure the relevant files for calling the APIs of Anyscale, ApiPie, Cohere, Deepseek, Databricks, Fireworks, Groq, HuggingFace, Mistral, OpenRouter, Perplexity, ShuttleAI, TogetherAI, Unify, and xAI.\n"
+    },
+    "category": "ai",
+    "category_label": "AI / Coding & Dev-Tools",
+    "author": "LibreChat",
+    "developer": "LibreChat",
+    "icon": null,
+    "thumbnail": null,
+    "screenshots": [],
+    "architectures": [
+      "amd64"
+    ],
+    "launch": {
+      "scheme": "http",
+      "port": 3080,
+      "path": "/"
+    },
+    "website": "https://www.librechat.ai",
+    "documentation": null,
+    "repository": "https://ghcr.io/danny-avila/librechat-dev",
+    "tips": [],
+    "mini_changelog": [],
+    "display_version": null,
+    "updated_at": null,
+    "hidden": true,
+    "hidden_reason": "Pending multi-container adaptation; retained for future work"
+  },
+  "source": {
+    "provider": "danny-avila",
+    "repository": "https://ghcr.io/danny-avila/librechat-dev",
+    "revision": "317c5bd2b9967f7396645b303872ca02fa799531ad50c311a670d1d9d7af3db8",
+    "image_repository_url": "https://ghcr.io/danny-avila/librechat-dev",
+    "readme_pushed_at": "2026-09-11T10:43:22Z",
+    "compose_sha256": "317c5bd2b9967f7396645b303872ca02fa799531ad50c311a670d1d9d7af3db8",
+    "generated_at": "2026-09-13T15:48:30+00:00"
+  },
+  "container_contract": {
+    "service_name": "librechat-api",
+    "container_name": "librechat-api",
+    "image": {
+      "reference": "ghcr.io/danny-avila/librechat-dev:latest",
+      "registry": "ghcr.io",
+      "repository": "ghcr.io/danny-avila/librechat-dev",
+      "tag": "latest",
+      "digest": null,
+      "pull_policy": "resolve-selected-tag-to-architecture-digest-at-install"
+    },
+    "environment": [
+      {
+        "name": "ASSISTANTS_API_KEY",
+        "example": "${GENERATED_ASSISTANTS_API_KEY}",
+        "required": true,
+        "sensitive": true,
+        "source": "docker-compose"
+      },
+      {
+        "name": "OPENAI_API_KEY",
+        "example": "${GENERATED_OPENAI_API_KEY}",
+        "required": true,
+        "sensitive": true,
+        "source": "docker-compose"
+      },
+      {
+        "name": "GOOGLE_KEY",
+        "example": "${GENERATED_GOOGLE_KEY}",
+        "required": true,
+        "sensitive": true,
+        "source": "docker-compose"
+      },
+      {
+        "name": "ANTHROPIC_API_KEY",
+        "example": "${GENERATED_ANTHROPIC_API_KEY}",
+        "required": true,
+        "sensitive": true,
+        "source": "docker-compose"
+      },
+      {
+        "name": "HOST",
+        "example": "0.0.0.0",
+        "required": true,
+        "sensitive": false,
+        "source": "docker-compose"
+      },
+      {
+        "name": "PORT",
+        "example": "3080",
+        "required": true,
+        "sensitive": false,
+        "source": "docker-compose"
+      },
+      {
+        "name": "DOMAIN_CLIENT",
+        "example": "http://0.0.0.0:3080",
+        "required": true,
+        "sensitive": false,
+        "source": "docker-compose"
+      },
+      {
+        "name": "DOMAIN_SERVER",
+        "example": "http://0.0.0.0:3080",
+        "required": true,
+        "sensitive": false,
+        "source": "docker-compose"
+      },
+      {
+        "name": "NO_INDEX",
+        "example": "true",
+        "required": true,
+        "sensitive": false,
+        "source": "docker-compose"
+      },
+      {
+        "name": "TRUST_PROXY",
+        "example": "1",
+        "required": true,
+        "sensitive": false,
+        "source": "docker-compose"
+      },
+      {
+        "name": "CONSOLE_JSON",
+        "example": "false",
+        "required": true,
+        "sensitive": false,
+        "source": "docker-compose"
+      },
+      {
+        "name": "DEBUG_LOGGING",
+        "example": "true",
+        "required": true,
+        "sensitive": false,
+        "source": "docker-compose"
+      },
+      {
+        "name": "DEBUG_CONSOLE",
+        "example": "false",
+        "required": true,
+        "sensitive": false,
+        "source": "docker-compose"
+      },
+      {
+        "name": "MONGO_URI",
+        "example": "mongodb://librechat-mongodb:27017/LibreChat",
+        "required": true,
+        "sensitive": false,
+        "source": "docker-compose"
+      },
+      {
+        "name": "MEILI_HOST",
+        "example": "http://librechat-meilisearch:7700",
+        "required": true,
+        "sensitive": false,
+        "source": "docker-compose"
+      },
+      {
+        "name": "RAG_PORT",
+        "example": "8000",
+        "required": true,
+        "sensitive": false,
+        "source": "docker-compose"
+      },
+      {
+        "name": "RAG_API_URL",
+        "example": "http://librechat-rag-api:8000",
+        "required": true,
+        "sensitive": false,
+        "source": "docker-compose"
+      },
+      {
+        "name": "SEARCH",
+        "example": "true",
+        "required": true,
+        "sensitive": false,
+        "source": "docker-compose"
+      },
+      {
+        "name": "MEILI_NO_ANALYTICS",
+        "example": "true",
+        "required": true,
+        "sensitive": false,
+        "source": "docker-compose"
+      },
+      {
+        "name": "OPENAI_MODERATION",
+        "example": "false",
+        "required": true,
+        "sensitive": false,
+        "source": "docker-compose"
+      },
+      {
+        "name": "BAN_VIOLATIONS",
+        "example": "true",
+        "required": true,
+        "sensitive": false,
+        "source": "docker-compose"
+      },
+      {
+        "name": "BAN_DURATION",
+        "example": "1000 * 60 * 60 * 2",
+        "required": true,
+        "sensitive": false,
+        "source": "docker-compose"
+      },
+      {
+        "name": "BAN_INTERVAL",
+        "example": "20",
+        "required": true,
+        "sensitive": false,
+        "source": "docker-compose"
+      },
+      {
+        "name": "LOGIN_VIOLATION_SCORE",
+        "example": "1",
+        "required": true,
+        "sensitive": false,
+        "source": "docker-compose"
+      },
+      {
+        "name": "REGISTRATION_VIOLATION_SCORE",
+        "example": "1",
+        "required": true,
+        "sensitive": false,
+        "source": "docker-compose"
+      },
+      {
+        "name": "CONCURRENT_VIOLATION_SCORE",
+        "example": "1",
+        "required": true,
+        "sensitive": false,
+        "source": "docker-compose"
+      },
+      {
+        "name": "MESSAGE_VIOLATION_SCORE",
+        "example": "1",
+        "required": true,
+        "sensitive": false,
+        "source": "docker-compose"
+      },
+      {
+        "name": "NON_BROWSER_VIOLATION_SCORE",
+        "example": "20",
+        "required": true,
+        "sensitive": false,
+        "source": "docker-compose"
+      },
+      {
+        "name": "TTS_VIOLATION_SCORE",
+        "example": "0",
+        "required": true,
+        "sensitive": false,
+        "source": "docker-compose"
+      },
+      {
+        "name": "STT_VIOLATION_SCORE",
+        "example": "0",
+        "required": true,
+        "sensitive": false,
+        "source": "docker-compose"
+      },
+      {
+        "name": "FORK_VIOLATION_SCORE",
+        "example": "0",
+        "required": true,
+        "sensitive": false,
+        "source": "docker-compose"
+      },
+      {
+        "name": "IMPORT_VIOLATION_SCORE",
+        "example": "0",
+        "required": true,
+        "sensitive": false,
+        "source": "docker-compose"
+      },
+      {
+        "name": "FILE_UPLOAD_VIOLATION_SCORE",
+        "example": "0",
+        "required": true,
+        "sensitive": false,
+        "source": "docker-compose"
+      },
+      {
+        "name": "LOGIN_MAX",
+        "example": "7",
+        "required": true,
+        "sensitive": false,
+        "source": "docker-compose"
+      },
+      {
+        "name": "LOGIN_WINDOW",
+        "example": "5",
+        "required": true,
+        "sensitive": false,
+        "source": "docker-compose"
+      },
+      {
+        "name": "REGISTER_MAX",
+        "example": "5",
+        "required": true,
+        "sensitive": false,
+        "source": "docker-compose"
+      },
+      {
+        "name": "REGISTER_WINDOW",
+        "example": "60",
+        "required": true,
+        "sensitive": false,
+        "source": "docker-compose"
+      },
+      {
+        "name": "LIMIT_CONCURRENT_MESSAGES",
+        "example": "true",
+        "required": true,
+        "sensitive": false,
+        "source": "docker-compose"
+      },
+      {
+        "name": "CONCURRENT_MESSAGE_MAX",
+        "example": "2",
+        "required": true,
+        "sensitive": false,
+        "source": "docker-compose"
+      },
+      {
+        "name": "LIMIT_MESSAGE_IP",
+        "example": "true",
+        "required": true,
+        "sensitive": false,
+        "source": "docker-compose"
+      },
+      {
+        "name": "MESSAGE_IP_MAX",
+        "example": "40",
+        "required": true,
+        "sensitive": false,
+        "source": "docker-compose"
+      },
+      {
+        "name": "MESSAGE_IP_WINDOW",
+        "example": "1",
+        "required": true,
+        "sensitive": false,
+        "source": "docker-compose"
+      },
+      {
+        "name": "LIMIT_MESSAGE_USER",
+        "example": "false",
+        "required": true,
+        "sensitive": false,
+        "source": "docker-compose"
+      },
+      {
+        "name": "MESSAGE_USER_MAX",
+        "example": "40",
+        "required": true,
+        "sensitive": false,
+        "source": "docker-compose"
+      },
+      {
+        "name": "MESSAGE_USER_WINDOW",
+        "example": "1",
+        "required": true,
+        "sensitive": false,
+        "source": "docker-compose"
+      },
+      {
+        "name": "ILLEGAL_MODEL_REQ_SCORE",
+        "example": "5",
+        "required": true,
+        "sensitive": false,
+        "source": "docker-compose"
+      },
+      {
+        "name": "ALLOW_EMAIL_LOGIN",
+        "example": "true",
+        "required": true,
+        "sensitive": false,
+        "source": "docker-compose"
+      },
+      {
+        "name": "ALLOW_REGISTRATION",
+        "example": "true",
+        "required": true,
+        "sensitive": false,
+        "source": "docker-compose"
+      },
+      {
+        "name": "ALLOW_SOCIAL_LOGIN",
+        "example": "false",
+        "required": true,
+        "sensitive": false,
+        "source": "docker-compose"
+      },
+      {
+        "name": "ALLOW_SOCIAL_REGISTRATION",
+        "example": "false",
+        "required": true,
+        "sensitive": false,
+        "source": "docker-compose"
+      },
+      {
+        "name": "ALLOW_PASSWORD_RESET",
+        "example": "${GENERATED_ALLOW_PASSWORD_RESET}",
+        "required": true,
+        "sensitive": true,
+        "source": "docker-compose"
+      },
+      {
+        "name": "ALLOW_UNVERIFIED_EMAIL_LOGIN",
+        "example": "true",
+        "required": true,
+        "sensitive": false,
+        "source": "docker-compose"
+      },
+      {
+        "name": "SESSION_EXPIRY",
+        "example": "1000 * 60 * 15",
+        "required": true,
+        "sensitive": false,
+        "source": "docker-compose"
+      },
+      {
+        "name": "REFRESH_TOKEN_EXPIRY",
+        "example": "${GENERATED_REFRESH_TOKEN_EXPIRY}",
+        "required": true,
+        "sensitive": true,
+        "source": "docker-compose"
+      },
+      {
+        "name": "JWT_SECRET",
+        "example": "${GENERATED_JWT_SECRET}",
+        "required": true,
+        "sensitive": true,
+        "source": "docker-compose"
+      },
+      {
+        "name": "JWT_REFRESH_SECRET",
+        "example": "${GENERATED_JWT_REFRESH_SECRET}",
+        "required": true,
+        "sensitive": true,
+        "source": "docker-compose"
+      },
+      {
+        "name": "CREDS_KEY",
+        "example": "${GENERATED_CREDS_KEY}",
+        "required": true,
+        "sensitive": true,
+        "source": "docker-compose"
+      },
+      {
+        "name": "CREDS_IV",
+        "example": "e2341419ec3dd3d19b13a1a87fafcbfb",
+        "required": true,
+        "sensitive": false,
+        "source": "docker-compose"
+      },
+      {
+        "name": "DEBUG_PLUGINS",
+        "example": "true",
+        "required": true,
+        "sensitive": false,
+        "source": "docker-compose"
+      },
+      {
+        "name": "DEBUG_OPENAI",
+        "example": "false",
+        "required": true,
+        "sensitive": false,
+        "source": "docker-compose"
+      }
+    ],
+    "volumes": [
+      {
+        "id": "volume-0",
+        "container_path": "/app/client/public/images",
+        "compose_source_example": "/DATA/AppData/$AppID/images",
+        "read_only": false,
+        "required": true,
+        "installation_choice": [
+          "managed-volume",
+          "host-bind"
+        ],
+        "default": "managed-volume",
+        "managed_volume": {
+          "backup": true,
+          "default_size_gb": 8
+        }
+      },
+      {
+        "id": "volume-1",
+        "container_path": "/app/uploads",
+        "compose_source_example": "/DATA/AppData/$AppID/uploads",
+        "read_only": false,
+        "required": true,
+        "installation_choice": [
+          "managed-volume",
+          "host-bind"
+        ],
+        "default": "managed-volume",
+        "managed_volume": {
+          "backup": true,
+          "default_size_gb": 8
+        }
+      },
+      {
+        "id": "volume-2",
+        "container_path": "/app/api/logs",
+        "compose_source_example": "/DATA/AppData/$AppID/logs",
+        "read_only": false,
+        "required": true,
+        "installation_choice": [
+          "managed-volume",
+          "host-bind"
+        ],
+        "default": "managed-volume",
+        "managed_volume": {
+          "backup": true,
+          "default_size_gb": 8
+        }
+      }
+    ],
+    "ports": [
+      {
+        "container_port": 3080,
+        "published_example": 3080,
+        "protocol": "tcp",
+        "required": true,
+        "proxmox_behavior": "listener-on-dedicated-lxc-address-no-nat"
+      }
+    ],
+    "related_services": [
+      {
+        "name": "librechat-mongodb",
+        "image": "mongo:latest"
+      },
+      {
+        "name": "librechat-meilisearch",
+        "image": "getmeili/meilisearch:latest"
+      },
+      {
+        "name": "librechat-vectordb",
+        "image": "ankane/pgvector:latest"
+      },
+      {
+        "name": "librechat-rag-api",
+        "image": "ghcr.io/danny-avila/librechat-rag-api-dev-lite:latest"
+      }
+    ],
+    "restart": "unless-stopped",
+    "stop_grace_period": null,
+    "original_compose": "name: librechat\nservices:\n  librechat-api:\n    container_name: librechat-api\n    ports:\n    - 3080:3080\n    depends_on:\n    - librechat-mongodb\n    - librechat-rag-api\n    image: ghcr.io/danny-avila/librechat-dev:latest\n    restart: unless-stopped\n    extra_hosts:\n    - host.docker.internal:host-gateway\n    environment:\n    - ASSISTANTS_API_KEY=${GENERATED_ASSISTANTS_API_KEY}\n    - OPENAI_API_KEY=${GENERATED_OPENAI_API_KEY}\n    - GOOGLE_KEY=${GENERATED_GOOGLE_KEY}\n    - ANTHROPIC_API_KEY=${GENERATED_ANTHROPIC_API_KEY}\n    - HOST=0.0.0.0\n    - PORT=3080\n    - DOMAIN_CLIENT=http://0.0.0.0:3080\n    - DOMAIN_SERVER=http://0.0.0.0:3080\n    - NO_INDEX=true\n    - TRUST_PROXY=1\n    - CONSOLE_JSON=false\n    - DEBUG_LOGGING=true\n    - DEBUG_CONSOLE=false\n    - MONGO_URI=mongodb://librechat-mongodb:27017/LibreChat\n    - MEILI_HOST=http://librechat-meilisearch:7700\n    - RAG_PORT=8000\n    - RAG_API_URL=http://librechat-rag-api:8000\n    - SEARCH=true\n    - MEILI_NO_ANALYTICS=true\n    - OPENAI_MODERATION=false\n    - BAN_VIOLATIONS=true\n    - BAN_DURATION=1000 * 60 * 60 * 2\n    - BAN_INTERVAL=20\n    - LOGIN_VIOLATION_SCORE=1\n    - REGISTRATION_VIOLATION_SCORE=1\n    - CONCURRENT_VIOLATION_SCORE=1\n    - MESSAGE_VIOLATION_SCORE=1\n    - NON_BROWSER_VIOLATION_SCORE=20\n    - TTS_VIOLATION_SCORE=0\n    - STT_VIOLATION_SCORE=0\n    - FORK_VIOLATION_SCORE=0\n    - IMPORT_VIOLATION_SCORE=0\n    - FILE_UPLOAD_VIOLATION_SCORE=0\n    - LOGIN_MAX=7\n    - LOGIN_WINDOW=5\n    - REGISTER_MAX=5\n    - REGISTER_WINDOW=60\n    - LIMIT_CONCURRENT_MESSAGES=true\n    - CONCURRENT_MESSAGE_MAX=2\n    - LIMIT_MESSAGE_IP=true\n    - MESSAGE_IP_MAX=40\n    - MESSAGE_IP_WINDOW=1\n    - LIMIT_MESSAGE_USER=false\n    - MESSAGE_USER_MAX=40\n    - MESSAGE_USER_WINDOW=1\n    - ILLEGAL_MODEL_REQ_SCORE=5\n    - ALLOW_EMAIL_LOGIN=true\n    - ALLOW_REGISTRATION=true\n    - ALLOW_SOCIAL_LOGIN=false\n    - ALLOW_SOCIAL_REGISTRATION=false\n    - ALLOW_PASSWORD_RESET=${GENERATED_ALLOW_PASSWORD_RESET}\n    - ALLOW_UNVERIFIED_EMAIL_LOGIN=true\n    - SESSION_EXPIRY=1000 * 60 * 15\n    - REFRESH_TOKEN_EXPIRY=${GENERATED_REFRESH_TOKEN_EXPIRY}\n    - JWT_SECRET=${GENERATED_JWT_SECRET}\n    - JWT_REFRESH_SECRET=${GENERATED_JWT_REFRESH_SECRET}\n    - CREDS_KEY=${GENERATED_CREDS_KEY}\n    - CREDS_IV=e2341419ec3dd3d19b13a1a87fafcbfb\n    - DEBUG_PLUGINS=true\n    - DEBUG_OPENAI=false\n    volumes:\n    - type: bind\n      source: /DATA/AppData/$AppID/images\n      target: /app/client/public/images\n    - type: bind\n      source: /DATA/AppData/$AppID/uploads\n      target: /app/uploads\n    - type: bind\n      source: /DATA/AppData/$AppID/logs\n      target: /app/api/logs\n    networks:\n    - librechat-net\n    deploy:\n      resources:\n        reservations:\n          memory: 1024M\n  librechat-mongodb:\n    container_name: librechat-mongodb\n    image: mongo:latest\n    restart: unless-stopped\n    volumes:\n    - type: bind\n      source: /DATA/AppData/$AppID/data-node\n      target: /data/db\n    command:\n    - mongod\n    - --noauth\n    networks:\n    - librechat-net\n    deploy:\n      resources:\n        reservations:\n          memory: 1024M\n  librechat-meilisearch:\n    container_name: librechat-meilisearch\n    image: getmeili/meilisearch:latest\n    restart: unless-stopped\n    user: 1000:1000\n    environment:\n    - MEILI_HOST=http://librechat-meilisearch:7700\n    - MEILI_NO_ANALYTICS=true\n    - MEILI_MASTER_KEY=${GENERATED_MEILI_MASTER_KEY}\n    volumes:\n    - type: bind\n      source: /DATA/AppData/$AppID/meili_data_v1.12\n      target: /meili_data\n    networks:\n    - librechat-net\n  librechat-vectordb:\n    container_name: librechat-vectordb\n    image: ankane/pgvector:latest\n    environment:\n      POSTGRES_DB: mydatabase\n      POSTGRES_USER: myuser\n      POSTGRES_PASSWORD: ${GENERATED_POSTGRES_PASSWORD}\n    restart: unless-stopped\n    volumes:\n    - /DATA/AppData/$AppID/postgresql/data:/var/lib/postgresql/data\n    networks:\n    - librechat-net\n    deploy:\n      resources:\n        reservations:\n          memory: 500M\n  librechat-rag-api:\n    container_name: librechat-rag-api\n    image: ghcr.io/danny-avila/librechat-rag-api-dev-lite:latest\n    environment:\n    - DB_HOST=librechat-vectordb\n    - RAG_PORT=8000\n    restart: unless-stopped\n    depends_on:\n    - librechat-vectordb\n    networks:\n    - librechat-net\n    deploy:\n      resources:\n        reservations:\n          memory: 1024M\nnetworks:\n  librechat-net:\n    driver: bridge\n"
+  },
+  "compose_stack": {
+    "project_name": "librechat",
+    "deployment_model": "one-native-oci-lxc-per-compose-service",
+    "user_experience": "single-application-install",
+    "main_service": "librechat-api",
+    "service_count": 5,
+    "services": [
+      {
+        "name": "librechat-meilisearch",
+        "image": "getmeili/meilisearch:latest",
+        "is_main": false,
+        "role": "dependency",
+        "vmid_offset": 1,
+        "depends_on": [],
+        "frontend_network": false,
+        "private_network": true,
+        "compose": {
+          "container_name": "librechat-meilisearch",
+          "image": "getmeili/meilisearch:latest",
+          "restart": "unless-stopped",
+          "user": "1000:1000",
+          "environment": [
+            "MEILI_HOST=http://librechat-meilisearch:7700",
+            "MEILI_NO_ANALYTICS=true",
+            "MEILI_MASTER_KEY=${GENERATED_MEILI_MASTER_KEY}"
+          ],
+          "volumes": [
+            {
+              "type": "bind",
+              "source": "/DATA/AppData/$AppID/meili_data_v1.12",
+              "target": "/meili_data"
+            }
+          ],
+          "networks": [
+            "librechat-net"
+          ]
+        }
+      },
+      {
+        "name": "librechat-mongodb",
+        "image": "mongo:latest",
+        "is_main": false,
+        "role": "dependency",
+        "vmid_offset": 2,
+        "depends_on": [],
+        "frontend_network": false,
+        "private_network": true,
+        "compose": {
+          "container_name": "librechat-mongodb",
+          "image": "mongo:latest",
+          "restart": "unless-stopped",
+          "volumes": [
+            {
+              "type": "bind",
+              "source": "/DATA/AppData/$AppID/data-node",
+              "target": "/data/db"
+            }
+          ],
+          "command": [
+            "mongod",
+            "--noauth"
+          ],
+          "networks": [
+            "librechat-net"
+          ],
+          "deploy": {
+            "resources": {
+              "reservations": {
+                "memory": "1024M"
+              }
+            }
+          }
+        }
+      },
+      {
+        "name": "librechat-vectordb",
+        "image": "ankane/pgvector:latest",
+        "is_main": false,
+        "role": "dependency",
+        "vmid_offset": 3,
+        "depends_on": [],
+        "frontend_network": false,
+        "private_network": true,
+        "compose": {
+          "container_name": "librechat-vectordb",
+          "image": "ankane/pgvector:latest",
+          "environment": {
+            "POSTGRES_DB": "mydatabase",
+            "POSTGRES_USER": "myuser",
+            "POSTGRES_PASSWORD": "${GENERATED_POSTGRES_PASSWORD}"
+          },
+          "restart": "unless-stopped",
+          "volumes": [
+            "/DATA/AppData/$AppID/postgresql/data:/var/lib/postgresql/data"
+          ],
+          "networks": [
+            "librechat-net"
+          ],
+          "deploy": {
+            "resources": {
+              "reservations": {
+                "memory": "500M"
+              }
+            }
+          }
+        }
+      },
+      {
+        "name": "librechat-rag-api",
+        "image": "ghcr.io/danny-avila/librechat-rag-api-dev-lite:latest",
+        "is_main": false,
+        "role": "dependency",
+        "vmid_offset": 4,
+        "depends_on": [
+          "librechat-vectordb"
+        ],
+        "frontend_network": false,
+        "private_network": true,
+        "compose": {
+          "container_name": "librechat-rag-api",
+          "image": "ghcr.io/danny-avila/librechat-rag-api-dev-lite:latest",
+          "environment": [
+            "DB_HOST=librechat-vectordb",
+            "RAG_PORT=8000"
+          ],
+          "restart": "unless-stopped",
+          "depends_on": [
+            "librechat-vectordb"
+          ],
+          "networks": [
+            "librechat-net"
+          ],
+          "deploy": {
+            "resources": {
+              "reservations": {
+                "memory": "1024M"
+              }
+            }
+          }
+        }
+      },
+      {
+        "name": "librechat-api",
+        "image": "ghcr.io/danny-avila/librechat-dev:latest",
+        "is_main": true,
+        "role": "frontend",
+        "vmid_offset": 0,
+        "depends_on": [
+          "librechat-mongodb",
+          "librechat-rag-api"
+        ],
+        "frontend_network": true,
+        "private_network": true,
+        "compose": {
+          "container_name": "librechat-api",
+          "ports": [
+            "3080:3080"
+          ],
+          "depends_on": [
+            "librechat-mongodb",
+            "librechat-rag-api"
+          ],
+          "image": "ghcr.io/danny-avila/librechat-dev:latest",
+          "restart": "unless-stopped",
+          "extra_hosts": [
+            "host.docker.internal:host-gateway"
+          ],
+          "environment": [
+            "ASSISTANTS_API_KEY=${GENERATED_ASSISTANTS_API_KEY}",
+            "OPENAI_API_KEY=${GENERATED_OPENAI_API_KEY}",
+            "GOOGLE_KEY=${GENERATED_GOOGLE_KEY}",
+            "ANTHROPIC_API_KEY=${GENERATED_ANTHROPIC_API_KEY}",
+            "HOST=0.0.0.0",
+            "PORT=3080",
+            "DOMAIN_CLIENT=http://0.0.0.0:3080",
+            "DOMAIN_SERVER=http://0.0.0.0:3080",
+            "NO_INDEX=true",
+            "TRUST_PROXY=1",
+            "CONSOLE_JSON=false",
+            "DEBUG_LOGGING=true",
+            "DEBUG_CONSOLE=false",
+            "MONGO_URI=mongodb://librechat-mongodb:27017/LibreChat",
+            "MEILI_HOST=http://librechat-meilisearch:7700",
+            "RAG_PORT=8000",
+            "RAG_API_URL=http://librechat-rag-api:8000",
+            "SEARCH=true",
+            "MEILI_NO_ANALYTICS=true",
+            "OPENAI_MODERATION=false",
+            "BAN_VIOLATIONS=true",
+            "BAN_DURATION=1000 * 60 * 60 * 2",
+            "BAN_INTERVAL=20",
+            "LOGIN_VIOLATION_SCORE=1",
+            "REGISTRATION_VIOLATION_SCORE=1",
+            "CONCURRENT_VIOLATION_SCORE=1",
+            "MESSAGE_VIOLATION_SCORE=1",
+            "NON_BROWSER_VIOLATION_SCORE=20",
+            "TTS_VIOLATION_SCORE=0",
+            "STT_VIOLATION_SCORE=0",
+            "FORK_VIOLATION_SCORE=0",
+            "IMPORT_VIOLATION_SCORE=0",
+            "FILE_UPLOAD_VIOLATION_SCORE=0",
+            "LOGIN_MAX=7",
+            "LOGIN_WINDOW=5",
+            "REGISTER_MAX=5",
+            "REGISTER_WINDOW=60",
+            "LIMIT_CONCURRENT_MESSAGES=true",
+            "CONCURRENT_MESSAGE_MAX=2",
+            "LIMIT_MESSAGE_IP=true",
+            "MESSAGE_IP_MAX=40",
+            "MESSAGE_IP_WINDOW=1",
+            "LIMIT_MESSAGE_USER=false",
+            "MESSAGE_USER_MAX=40",
+            "MESSAGE_USER_WINDOW=1",
+            "ILLEGAL_MODEL_REQ_SCORE=5",
+            "ALLOW_EMAIL_LOGIN=true",
+            "ALLOW_REGISTRATION=true",
+            "ALLOW_SOCIAL_LOGIN=false",
+            "ALLOW_SOCIAL_REGISTRATION=false",
+            "ALLOW_PASSWORD_RESET=${GENERATED_ALLOW_PASSWORD_RESET}",
+            "ALLOW_UNVERIFIED_EMAIL_LOGIN=true",
+            "SESSION_EXPIRY=1000 * 60 * 15",
+            "REFRESH_TOKEN_EXPIRY=${GENERATED_REFRESH_TOKEN_EXPIRY}",
+            "JWT_SECRET=${GENERATED_JWT_SECRET}",
+            "JWT_REFRESH_SECRET=${GENERATED_JWT_REFRESH_SECRET}",
+            "CREDS_KEY=${GENERATED_CREDS_KEY}",
+            "CREDS_IV=e2341419ec3dd3d19b13a1a87fafcbfb",
+            "DEBUG_PLUGINS=true",
+            "DEBUG_OPENAI=false"
+          ],
+          "volumes": [
+            {
+              "type": "bind",
+              "source": "/DATA/AppData/$AppID/images",
+              "target": "/app/client/public/images"
+            },
+            {
+              "type": "bind",
+              "source": "/DATA/AppData/$AppID/uploads",
+              "target": "/app/uploads"
+            },
+            {
+              "type": "bind",
+              "source": "/DATA/AppData/$AppID/logs",
+              "target": "/app/api/logs"
+            }
+          ],
+          "networks": [
+            "librechat-net"
+          ],
+          "deploy": {
+            "resources": {
+              "reservations": {
+                "memory": "1024M"
+              }
+            }
+          }
+        }
+      }
+    ],
+    "top_level": {
+      "name": "librechat",
+      "networks": {
+        "librechat-net": {
+          "driver": "bridge"
+        }
+      }
+    },
+    "networking": {
+      "frontend": "selected-proxmox-bridge",
+      "private_required": true,
+      "private_creation": "automatic-create-if-missing",
+      "private_address_allocation": "automatic-static-address-per-service",
+      "service_discovery": "private-addresses-with-compose-service-host-aliases",
+      "dependency_external_access": "disabled-unless-service-publishes-ports",
+      "prompt_user_for_private_network": false
+    },
+    "storage": [
+      {
+        "id": "librechat-api-volume-0",
+        "service": "librechat-api",
+        "container_path": "/app/client/public/images",
+        "mode": "managed-volume",
+        "user_selectable": false,
+        "backup": true,
+        "shared_with_other_lxc": false,
+        "source_path": null,
+        "source_path_prompt": null
+      },
+      {
+        "id": "librechat-api-volume-1",
+        "service": "librechat-api",
+        "container_path": "/app/uploads",
+        "mode": "host-bind",
+        "user_selectable": true,
+        "backup": false,
+        "shared_with_other_lxc": true,
+        "source_path": null,
+        "source_path_prompt": "Host directory for librechat-api:/app/uploads"
+      },
+      {
+        "id": "librechat-api-volume-2",
+        "service": "librechat-api",
+        "container_path": "/app/api/logs",
+        "mode": "managed-volume",
+        "user_selectable": false,
+        "backup": true,
+        "shared_with_other_lxc": false,
+        "source_path": null,
+        "source_path_prompt": null
+      },
+      {
+        "id": "librechat-mongodb-volume-0",
+        "service": "librechat-mongodb",
+        "container_path": "/data/db",
+        "mode": "host-bind",
+        "user_selectable": true,
+        "backup": false,
+        "shared_with_other_lxc": true,
+        "source_path": null,
+        "source_path_prompt": "Host directory for librechat-mongodb:/data/db"
+      },
+      {
+        "id": "librechat-meilisearch-volume-0",
+        "service": "librechat-meilisearch",
+        "container_path": "/meili_data",
+        "mode": "managed-volume",
+        "user_selectable": false,
+        "backup": true,
+        "shared_with_other_lxc": false,
+        "source_path": null,
+        "source_path_prompt": null
+      },
+      {
+        "id": "librechat-vectordb-volume-0",
+        "service": "librechat-vectordb",
+        "container_path": "/var/lib/postgresql/data",
+        "mode": "managed-volume",
+        "user_selectable": false,
+        "backup": true,
+        "shared_with_other_lxc": false,
+        "source_path": null,
+        "source_path_prompt": null
+      }
+    ],
+    "orchestration": {
+      "reserve_vmids_atomically": 5,
+      "start_order": [
+        "librechat-meilisearch",
+        "librechat-mongodb",
+        "librechat-vectordb",
+        "librechat-rag-api",
+        "librechat-api"
+      ],
+      "stop_order": [
+        "librechat-api",
+        "librechat-rag-api",
+        "librechat-vectordb",
+        "librechat-mongodb",
+        "librechat-meilisearch"
+      ],
+      "dependency_readiness": "compose-healthcheck-then-port-or-process-fallback",
+      "rollback_on_failure": "remove-new-rootfs-preserve-created-persistent-volumes"
+    },
+    "installer_inputs": {
+      "prompted": [
+        "stack_name",
+        "base_vmid",
+        "rootfs_storage",
+        "persistent_data_destinations",
+        "frontend_bridge",
+        "frontend_ipv4_mode"
+      ],
+      "automatic": [
+        "dependent_vmids",
+        "private_bridge",
+        "private_subnet",
+        "private_service_addresses",
+        "compose_service_aliases",
+        "generated_secrets",
+        "dependency_start_and_stop_order"
+      ],
+      "generated_secrets": [
+        {
+          "id": "allow-password-reset",
+          "strategy": "generate-cryptographically-random-at-install",
+          "bindings": [
+            {
+              "service": "librechat-api",
+              "environment_variable": "ALLOW_PASSWORD_RESET"
+            }
+          ]
+        },
+        {
+          "id": "anthropic-api-key",
+          "strategy": "generate-cryptographically-random-at-install",
+          "bindings": [
+            {
+              "service": "librechat-api",
+              "environment_variable": "ANTHROPIC_API_KEY"
+            }
+          ]
+        },
+        {
+          "id": "assistants-api-key",
+          "strategy": "generate-cryptographically-random-at-install",
+          "bindings": [
+            {
+              "service": "librechat-api",
+              "environment_variable": "ASSISTANTS_API_KEY"
+            }
+          ]
+        },
+        {
+          "id": "creds-key",
+          "strategy": "generate-cryptographically-random-at-install",
+          "bindings": [
+            {
+              "service": "librechat-api",
+              "environment_variable": "CREDS_KEY"
+            }
+          ]
+        },
+        {
+          "id": "google-key",
+          "strategy": "generate-cryptographically-random-at-install",
+          "bindings": [
+            {
+              "service": "librechat-api",
+              "environment_variable": "GOOGLE_KEY"
+            }
+          ]
+        },
+        {
+          "id": "jwt-refresh-secret",
+          "strategy": "generate-cryptographically-random-at-install",
+          "bindings": [
+            {
+              "service": "librechat-api",
+              "environment_variable": "JWT_REFRESH_SECRET"
+            }
+          ]
+        },
+        {
+          "id": "jwt-secret",
+          "strategy": "generate-cryptographically-random-at-install",
+          "bindings": [
+            {
+              "service": "librechat-api",
+              "environment_variable": "JWT_SECRET"
+            }
+          ]
+        },
+        {
+          "id": "meili-master-key",
+          "strategy": "generate-cryptographically-random-at-install",
+          "bindings": [
+            {
+              "service": "librechat-meilisearch",
+              "environment_variable": "MEILI_MASTER_KEY"
+            }
+          ]
+        },
+        {
+          "id": "openai-api-key",
+          "strategy": "generate-cryptographically-random-at-install",
+          "bindings": [
+            {
+              "service": "librechat-api",
+              "environment_variable": "OPENAI_API_KEY"
+            }
+          ]
+        },
+        {
+          "id": "postgres-password",
+          "strategy": "generate-cryptographically-random-at-install",
+          "bindings": [
+            {
+              "service": "librechat-vectordb",
+              "environment_variable": "POSTGRES_PASSWORD"
+            }
+          ]
+        },
+        {
+          "id": "refresh-token-expiry",
+          "strategy": "generate-cryptographically-random-at-install",
+          "bindings": [
+            {
+              "service": "librechat-api",
+              "environment_variable": "REFRESH_TOKEN_EXPIRY"
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "first_run": {
+    "endpoints": [
+      {
+        "label": "Web UI",
+        "scheme": "http",
+        "port": 3080,
+        "path": "/",
+        "source": "compose-metadata"
+      }
+    ],
+    "credentials": []
+  },
+  "proxmox": {
+    "runtime": "native-oci-lxc",
+    "technology_status": "proxmox-technology-preview",
+    "defaults": {
+      "unprivileged": true,
+      "ostype": "auto-from-image",
+      "cores": 2,
+      "memory_mb": 1024,
+      "swap_mb": 512,
+      "rootfs_size_gb": 8,
+      "rootfs_storage": "local-lvm",
+      "volume_storage": "local-lvm",
+      "template_storage": "local",
+      "bridge": "vmbr0",
+      "ipv4": "dhcp",
+      "firewall": true,
+      "host_managed_network": true,
+      "onboot": false,
+      "features": [
+        "nesting=1"
+      ],
+      "shutdown_timeout_seconds": 30
+    },
+    "image_metadata_policy": {
+      "entrypoint": "import-from-oci-image",
+      "cmd": "import-from-oci-image",
+      "environment": "import-image-env-then-apply-compose-overrides",
+      "user": "import-from-oci-image",
+      "working_dir": "import-from-oci-image",
+      "stop_signal": "import-from-oci-image"
+    },
+    "installer_profile": {
+      "extra_hosts": [
+        {
+          "hostname": "host.docker.internal",
+          "address": "host-gateway"
+        }
+      ]
+    },
+    "adaptations": [
+      {
+        "id": "imported-compose-source",
+        "upstream_behavior": "The source definition deploys the complete Docker Compose application model.",
+        "native_lxc_behavior": "The source model is preserved and remains blocked until every service option has a reviewed native Proxmox mapping.",
+        "reason": "Catalog import must not imply runtime compatibility.",
+        "behavioral_impact": "No automatic installation before review.",
+        "validation": "pending-per-application"
+      },
+      {
+        "id": "rolling-latest-image",
+        "upstream_behavior": "A discovered Compose may pin a release tag or digest.",
+        "native_lxc_behavior": "ProxMenux selects the same image repository with the latest tag for catalog installations.",
+        "reason": "The automatic catalog intentionally offers rolling latest images; pinned versions belong to the future manual installer.",
+        "behavioral_impact": "The installed release can be newer than the discovered Compose revision.",
+        "validation": "pending-per-application"
+      },
+      {
+        "id": "dedicated-lxc-network",
+        "upstream_behavior": "Docker publishes selected container ports on the Docker host.",
+        "native_lxc_behavior": "A reviewed native application will listen on its original container ports at a dedicated LXC address.",
+        "reason": "A native LXC has its own address and does not require Docker port NAT.",
+        "behavioral_impact": "Published ports are metadata; ProxMenux URLs use the matching container target port.",
+        "validation": "pending-per-application"
+      },
+      {
+        "id": "compose-shm-size",
+        "upstream_behavior": "Compose sets the size of the container /dev/shm tmpfs.",
+        "native_lxc_behavior": "ProxMenux mounts a native LXC tmpfs at /dev/shm with the same requested capacity.",
+        "reason": "The OCI image runs directly as an LXC and therefore needs the equivalent Proxmox mount entry.",
+        "behavioral_impact": "None expected.",
+        "validation": "not-requested-by-compose"
+      },
+      {
+        "id": "compose-command",
+        "upstream_behavior": "Compose replaces the image Cmd while retaining its Entrypoint.",
+        "native_lxc_behavior": "ProxMenux reads the official OCI Entrypoint and combines it with the Compose command as the native LXC init command.",
+        "reason": "Proxmox stores the effective OCI process as one entrypoint string.",
+        "behavioral_impact": "None expected.",
+        "validation": "not-requested-by-compose"
+      },
+      {
+        "id": "compose-privileged-mode",
+        "upstream_behavior": "Compose selects whether the container runs in privileged mode.",
+        "native_lxc_behavior": "ProxMenux uses a privileged LXC only after an explicit high-risk confirmation; otherwise it keeps the LXC unprivileged.",
+        "reason": "The native OCI-LXC deployment must preserve the requested privilege level without silently weakening isolation.",
+        "behavioral_impact": "A privileged LXC has weaker isolation from the Proxmox host.",
+        "validation": "native-equivalent"
+      },
+      {
+        "id": "compose-process-runtime",
+        "upstream_behavior": "Compose can replace Entrypoint, User and WorkingDir and request an init process or interactive terminal.",
+        "native_lxc_behavior": "ProxMenux applies the process overrides through native LXC init directives; lxc-init provides PID 1 supervision and the CT console provides terminal access.",
+        "reason": "The OCI process must start with the same identity, command and working directory without Docker.",
+        "behavioral_impact": "Compose stdin_open and tty become access through the Proxmox LXC console.",
+        "validation": "not-requested-by-compose"
+      },
+      {
+        "id": "compose-healthcheck",
+        "upstream_behavior": "Docker periodically executes the declared container healthcheck.",
+        "native_lxc_behavior": "For a single-service LXC, ProxMenux translates HTTP localhost checks into a mandatory first-start service check.",
+        "reason": "Proxmox has no persistent Docker health state, while the installer still must detect a failed first boot.",
+        "behavioral_impact": "The check runs during installation rather than continuously after installation.",
+        "validation": "not-requested-by-compose"
+      },
+      {
+        "id": "compose-cpu-priority",
+        "upstream_behavior": "Docker cpu_shares sets a relative scheduling weight with 1024 as its neutral value.",
+        "native_lxc_behavior": "ProxMenux converts the relative weight to Proxmox cpuunits with 100 as its neutral value and lets the user review it.",
+        "reason": "Both settings express relative CPU priority on different scales.",
+        "behavioral_impact": "Rounding and Proxmox minimum limits can slightly change very low weights.",
+        "validation": "not-requested-by-compose"
+      },
+      {
+        "id": "compose-network-identity",
+        "upstream_behavior": "Compose can set hostname, MAC address, extra hosts and attach a service to Docker networks.",
+        "native_lxc_behavior": "ProxMenux applies hostname and MAC to net0, writes additional host aliases into the LXC and uses its dedicated bridge connection for single-service networks.",
+        "reason": "A dedicated LXC has its own network namespace and does not need a Docker bridge per service.",
+        "behavioral_impact": "host-gateway resolves to the IPv4 address of the selected Proxmox bridge.",
+        "validation": "pending-per-application"
+      },
+      {
+        "id": "compose-network-mode",
+        "upstream_behavior": "Docker host mode removes Docker network isolation; bridge and default use a Docker-managed network.",
+        "native_lxc_behavior": "The OCI process uses the dedicated LXC network namespace directly, so host, bridge and default all listen on the LXC address without Docker NAT.",
+        "reason": "The LXC is the application host and already has its own address and port namespace.",
+        "behavioral_impact": "host means the LXC host, never the Proxmox host; this preserves Proxmox network isolation.",
+        "validation": "not-requested-by-compose"
+      },
+      {
+        "id": "compose-capabilities-and-sysctls",
+        "upstream_behavior": "Compose can add Linux capabilities and set kernel parameters in the container network namespace.",
+        "native_lxc_behavior": "ProxMenux validates requested capabilities against the native LXC capability set and writes namespaced network settings as lxc.sysctl directives.",
+        "reason": "A native OCI-LXC already starts with the namespaced capability set; lxc.cap.keep would incorrectly discard unrelated required capabilities.",
+        "behavioral_impact": "Host-global capabilities such as SYS_MODULE remain blocked until their host prerequisite is explicitly adapted.",
+        "validation": "not-requested-by-compose"
+      },
+      {
+        "id": "docker-engine-metadata",
+        "upstream_behavior": "Compose labels annotate Docker objects and the json-file logging driver rotates Docker-managed logs.",
+        "native_lxc_behavior": "Labels remain source metadata; Docker json-file settings are not applied because the OCI process runs directly under LXC.",
+        "reason": "There is no Docker object or Docker json-file log behind a native OCI-LXC application.",
+        "behavioral_impact": "Docker-only label consumers and Docker log-driver rotation do not exist in the native deployment.",
+        "validation": "not-requested-by-compose"
+      },
+      {
+        "id": "compose-device-passthrough",
+        "upstream_behavior": "Compose passes host character devices or requests an NVIDIA runtime GPU.",
+        "native_lxc_behavior": "ProxMenux converts recognized device declarations to native Proxmox dev resources; NVIDIA profiles also inject compatible host driver libraries read-only.",
+        "reason": "Native OCI-LXC does not execute Docker device or NVIDIA runtime hooks.",
+        "behavioral_impact": "Hardware is exposed only after explicit user confirmation and host-path validation.",
+        "validation": "not-requested-by-compose"
+      },
+      {
+        "id": "compose-host-ipc",
+        "upstream_behavior": "ipc: host shares the Docker host IPC namespace, commonly to avoid Docker's small default shared-memory allocation.",
+        "native_lxc_behavior": "The application keeps the LXC IPC namespace and receives a configurable 1 GiB /dev/shm instead of sharing Proxmox host IPC.",
+        "reason": "Processes in a single native LXC already share one IPC namespace; retaining isolation is safer than exposing host IPC.",
+        "behavioral_impact": "The application cannot exchange IPC objects with processes on the Proxmox host.",
+        "validation": "not-requested-by-compose"
+      }
+    ],
+    "generic_stack_review": [
+      "librechat-api: credencial externa o booleano GENERATED_ANTHROPIC_API_KEY pendiente",
+      "librechat-api: credencial externa o booleano GENERATED_ASSISTANTS_API_KEY pendiente",
+      "librechat-api: credencial externa o booleano GENERATED_OPENAI_API_KEY pendiente",
+      "librechat-api: extra_hosts necesita revision de pila",
+      "librechat-mongodb: comando de dependencia personalizado pendiente",
+      "librechat-rag-api: perfil de salud y persistencia pendiente",
+      "librechat-vectordb: perfil de salud y persistencia pendiente"
+    ]
+  },
+  "compatibility": {
+    "automatic_install_candidate": false,
+    "validated": false,
+    "supported_compose_keys": [
+      "cap_add",
+      "command",
+      "container_name",
+      "cpu_shares",
+      "deploy",
+      "devices",
+      "entrypoint",
+      "environment",
+      "extra_hosts",
+      "healthcheck",
+      "hostname",
+      "image",
+      "init",
+      "ipc",
+      "labels",
+      "logging",
+      "mac_address",
+      "network_mode",
+      "networks",
+      "ports",
+      "privileged",
+      "restart",
+      "runtime",
+      "shm_size",
+      "stdin_open",
+      "stop_grace_period",
+      "sysctls",
+      "tty",
+      "user",
+      "volumes",
+      "working_dir"
+    ],
+    "untranslated_blockers": [
+      "multi-service-compose",
+      "compose-key:depends_on",
+      "service:librechat-rag-api:compose-key:depends_on",
+      "native-multi-lxc-orchestrator-not-yet-implemented"
+    ],
+    "policy": "Single-image definitions are installable when every declared Compose option has a native Proxmox translation. Multi-image and unsupported runtime features remain blocked until their orchestrator or mapping is available."
+  },
+  "validation": {
+    "schema": "passed-at-generation",
+    "clean_install": "pending",
+    "service_health": "pending",
+    "restart_persistence": "pending",
+    "backup_restore": "pending",
+    "update_preserves_data": "pending"
+  },
+  "lifecycle": {
+    "update_strategy": "resolve-latest-image-then-apply-reviewed-native-lxc-update",
+    "registry_state": {
+      "resolved_architecture": null,
+      "resolved_digest": null,
+      "image_version_label": null,
+      "image_created": null
+    },
+    "change_detection": "compare-compose-sha256-and-resolved-latest-image-digest",
+    "automatic_unattended_updates": false
+  }
+}

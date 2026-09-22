@@ -309,22 +309,29 @@ def accept_exception():
                 finding.get('incomplete') or not finding.get('scope')):
             return jsonify(success=False, message="This finding cannot be accepted"), 400
 
-        expires_at = None
-        days = data.get('expires_in_days')
-        if days is not None:
-            try:
-                if isinstance(days, bool) or int(days) != float(days) or not 1 <= int(days) <= 3650:
-                    raise ValueError("invalid expiry")
-                expires_at = int(time.time()) + int(days) * 86400
-            except (TypeError, ValueError):
-                return jsonify({"success": False,
-                                "message": "Invalid expiry"}), 400
+        def _in_days(value, label):
+            """A day count from now, or None. Same bounds as the expiry so a
+            reminder cannot be set further out than a decision can last."""
+            if value is None:
+                return None
+            if isinstance(value, bool) or int(value) != float(value) or not 1 <= int(value) <= 3650:
+                raise ValueError(f"invalid {label}")
+            return int(time.time()) + int(value) * 86400
+
+        try:
+            expires_at = _in_days(data.get('expires_in_days'), 'expiry')
+            # Independent of the expiry: it brings the decision back to the
+            # reader on that date without withdrawing it.
+            review_at = _in_days(data.get('review_in_days'), 'review date')
+        except (TypeError, ValueError) as e:
+            return jsonify({"success": False, "message": str(e)}), 400
 
         audit_store.accept_risk(
             check_id, reason,
             accepted_by=_actor(),
             expires_at=expires_at,
             scope=finding['scope'],
+            review_at=review_at,
         )
         return jsonify({"success": True})
     except ValueError as e:

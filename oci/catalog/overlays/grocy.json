@@ -1,0 +1,14 @@
+{
+  "first_run": {
+    "credentials": [
+      {
+        "label": "Grocy (new installation; restored data keeps its credentials)",
+        "type": "static-default",
+        "username": "admin",
+        "password": "admin",
+        "change_required": true,
+        "source": "https://docs.linuxserver.io/images/docker-grocy/"
+      }
+    ]
+  }
+}

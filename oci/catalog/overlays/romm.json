@@ -1,0 +1,36 @@
+{
+  "proxmox": {
+    "stack_environment_overrides": {
+      "romm": {
+        "ROMM_DB_DRIVER": "mariadb",
+        "DB_PASSWD": "${GENERATED_MARIADB_PASSWORD}",
+        "IGDB_CLIENT_ID": "",
+        "IGDB_CLIENT_SECRET": "",
+        "SCREENSCRAPER_USER": "",
+        "SCREENSCRAPER_PASSWORD": "",
+        "STEAMGRIDDB_API_KEY": ""
+      }
+    },
+    "stack_optional_environment": [
+      {"service": "romm", "label": "IGDB", "fields": [
+        {"name": "IGDB_CLIENT_ID", "label": "IGDB Client ID", "sensitive": false},
+        {"name": "IGDB_CLIENT_SECRET", "label": "IGDB Client Secret", "sensitive": true}
+      ]},
+      {"service": "romm", "label": "ScreenScraper", "fields": [
+        {"name": "SCREENSCRAPER_USER", "label": "ScreenScraper username", "sensitive": false},
+        {"name": "SCREENSCRAPER_PASSWORD", "label": "ScreenScraper password", "sensitive": true}
+      ]},
+      {"service": "romm", "label": "SteamGridDB", "fields": [
+        {"name": "STEAMGRIDDB_API_KEY", "label": "SteamGridDB API key", "sensitive": true}
+      ]}
+    ],
+    "stack_adaptation_notes": [
+      "DB_PASSWD and MARIADB_PASSWORD share one generated secret. The MariaDB root password is independent.",
+      "External metadata credentials are optional user input, never randomly generated. Without them, associated metadata integrations are not configured.",
+      "Configuration, assets, library, resources and database volumes default to private backed-up Proxmox volumes. Users can select host directories explicitly.",
+      "The hook starts stopped dependencies before RomM. It does not propagate manual dependency restarts to the application like Compose depends_on restart:true.",
+      "Latest tags are retained; first boot, hardware and upstream version compatibility remain unvalidated."
+    ],
+    "stack_references": ["https://docs.romm.app/5.2.0/install/databases/", "https://docs.romm.app/5.2.0/reference/environment-variables/"]
+  }
+}

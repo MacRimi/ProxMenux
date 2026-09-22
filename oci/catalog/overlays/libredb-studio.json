@@ -1,0 +1,81 @@
+{
+  "container_contract": {
+    "environment": [
+      {
+        "name": "ADMIN_EMAIL",
+        "example": "admin@libredb.org",
+        "required": true,
+        "sensitive": false,
+        "prompt": "Email address of the LibreDB Studio administrator",
+        "source": "libredb-studio-documentation"
+      },
+      {
+        "name": "ADMIN_PASSWORD",
+        "example": "",
+        "required": true,
+        "sensitive": true,
+        "prompt": "Password of the LibreDB Studio administrator",
+        "source": "libredb-studio-documentation"
+      },
+      {
+        "name": "JWT_SECRET",
+        "example": "",
+        "required": true,
+        "sensitive": true,
+        "source": "libredb-studio-documentation"
+      },
+      {
+        "name": "STORAGE_PROVIDER",
+        "example": "sqlite",
+        "required": true,
+        "sensitive": false,
+        "source": "docker-compose"
+      },
+      {
+        "name": "STORAGE_SQLITE_PATH",
+        "example": "/app/data/libredb-storage.db",
+        "required": true,
+        "sensitive": false,
+        "source": "docker-compose"
+      },
+      {
+        "name": "AUTH_COOKIE_SECURE",
+        "example": "false",
+        "required": true,
+        "sensitive": false,
+        "source": "docker-compose"
+      }
+    ]
+  },
+  "first_run": {
+    "credentials": [
+      {
+        "label": "LibreDB Studio",
+        "type": "configured-or-installer-generated",
+        "username": "admin@libredb.org",
+        "password": null,
+        "username_environment": "ADMIN_EMAIL",
+        "password_environment": "ADMIN_PASSWORD",
+        "change_required": false,
+        "source": "libredb-studio-documentation",
+        "retrieval": null
+      }
+    ]
+  },
+  "proxmox": {
+    "installer_profile": {
+      "generated_sensitive_environment": {
+        "ADMIN_PASSWORD": {
+          "strategy": "token-hex",
+          "bytes": 12,
+          "prompt": true
+        },
+        "JWT_SECRET": {
+          "strategy": "token-hex",
+          "bytes": 32,
+          "prompt": true
+        }
+      }
+    }
+  }
+}

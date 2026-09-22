@@ -1,0 +1,134 @@
+{
+  "container_contract": {
+    "environment": [
+      {
+        "name": "PUID",
+        "example": "1000",
+        "required": true,
+        "sensitive": false,
+        "source": "linuxserver-compose"
+      },
+      {
+        "name": "PGID",
+        "example": "1000",
+        "required": true,
+        "sensitive": false,
+        "source": "linuxserver-compose"
+      },
+      {
+        "name": "TZ",
+        "example": "Etc/UTC",
+        "required": true,
+        "sensitive": false,
+        "source": "linuxserver-compose"
+      },
+      {
+        "name": "PUBLIC_KEY",
+        "example": "yourpublickey",
+        "required": false,
+        "sensitive": true,
+        "source": "linuxserver-compose"
+      },
+      {
+        "name": "PUBLIC_KEY_FILE",
+        "example": "/path/to/file",
+        "required": false,
+        "sensitive": true,
+        "source": "linuxserver-compose"
+      },
+      {
+        "name": "PUBLIC_KEY_DIR",
+        "example": "/path/to/directory/containing/_only_/pubkeys",
+        "required": false,
+        "sensitive": true,
+        "source": "linuxserver-compose"
+      },
+      {
+        "name": "PUBLIC_KEY_URL",
+        "example": "https://github.com/username.keys",
+        "required": false,
+        "sensitive": true,
+        "source": "linuxserver-compose"
+      },
+      {
+        "name": "SUDO_ACCESS",
+        "example": "false",
+        "required": false,
+        "sensitive": false,
+        "source": "linuxserver-compose"
+      },
+      {
+        "name": "PASSWORD_ACCESS",
+        "example": "true",
+        "required": true,
+        "sensitive": false,
+        "prompt_user": false,
+        "source": "openssh-server-readme"
+      },
+      {
+        "name": "USER_PASSWORD",
+        "example": "",
+        "required": true,
+        "sensitive": true,
+        "prompt": "Password for the SSH login",
+        "source": "openssh-server-readme"
+      },
+      {
+        "name": "USER_PASSWORD_FILE",
+        "example": "/path/to/file",
+        "required": false,
+        "sensitive": true,
+        "source": "linuxserver-compose"
+      },
+      {
+        "name": "USER_NAME",
+        "example": "linuxserver.io",
+        "required": true,
+        "sensitive": false,
+        "prompt": "User name for the SSH login",
+        "source": "openssh-server-readme"
+      },
+      {
+        "name": "LOG_STDOUT",
+        "example": "",
+        "required": false,
+        "sensitive": false,
+        "source": "linuxserver-compose"
+      }
+    ]
+  },
+  "first_run": {
+    "credentials": [
+      {
+        "label": "SSH access",
+        "type": "configured-or-installer-generated",
+        "username": "linuxserver.io",
+        "password": null,
+        "username_environment": "USER_NAME",
+        "password_environment": "USER_PASSWORD",
+        "change_required": false,
+        "source": "openssh-server-readme",
+        "retrieval": null
+      }
+    ],
+    "endpoints": []
+  },
+  "proxmox": {
+    "installer_profile": {
+      "generated_sensitive_environment": {
+        "USER_PASSWORD": {
+          "strategy": "token-hex",
+          "bytes": 12,
+          "prompt": true
+        }
+      }
+    }
+  },
+  "catalog_ui": {
+    "launch": {
+      "scheme": "http",
+      "port": null,
+      "path": "/"
+    }
+  }
+}

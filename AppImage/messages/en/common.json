@@ -807,7 +807,11 @@
         "friday": "Friday",
         "saturday": "Saturday"
       }
-    }
+    },
+    "idle": "Idle",
+    "idleTitle": "Not read while nothing is using it, so it can spin down. Its temperature is shown again as soon as the disk is in use.",
+    "diskExcluded": "Excluded",
+    "diskExcludedTitle": "Excluded from periodic reads in Settings."
   },
   "details": {
     "temperature": {
@@ -1404,6 +1408,8 @@
       "imageUpToDate": "Up to date",
       "imageInstalledTag": "installed tag",
       "imageDigestUnknown": "Digest unavailable",
+      "imagePinned": "Pinned to a digest",
+      "imagePinnedTitle": "This container runs the exact image its digest names. A newer tag does not change it; editing the reference in its configuration does.",
       "dockerPendingSummary": "{count} Docker image update(s) detected. Update with the owning Docker or Compose workflow.",
       "postApplyChecking": "Verifying update result…",
       "postApplyAllOk": "{count} package(s) applied successfully — nothing pending.",
@@ -2197,6 +2203,18 @@
       "reset": "Restore default",
       "hint": "Drag to reorder · On touch, long-press first",
       "customActive": "Using custom navigation order."
+    },
+    "diskExclusions": {
+      "title": "Disk exclusions",
+      "description": "Disks that are never read on a schedule, so they can spin down on their own timer.",
+      "empty": "No physical disks found.",
+      "disk": "Disk",
+      "periodicReads": "Periodic reads",
+      "excluded": "Excluded",
+      "notConnected": "Not connected",
+      "saveFailed": "Could not save the disk exclusions.",
+      "help": "An excluded disk gets no scheduled temperature or SMART reads — not even a power-mode query — so it is left entirely alone. Opening its SMART details still reads it.",
+      "idleHelp": "Mechanical disks with no activity are already left alone automatically until something uses them again."
     }
   },
   "login": {
@@ -5208,6 +5226,11 @@
     "noFindings": "No findings match the current filter.",
     "affectedCount": "{count} affected",
     "acceptedNotice": "{count} accepted risk(s) recorded on this host.",
+    "noActionNeeded": "Nothing to do. This check found what it expects to find.",
+    "couldNotEvaluate": "This check could not be evaluated, so it reports nothing either way. The evidence records what it was unable to read.",
+    "reviewOn": "Review on: {when}",
+    "reviewDue": "Due for review — the decision still stands",
+    "reviewDueNotice": "{count} accepted decision(s) are due for review.",
     "states": {
       "fail": "Failed",
       "warn": "Warning",
@@ -5228,6 +5251,8 @@
     },
     "detail": {
       "why": "Context",
+      "whatItMeans": "What this means",
+      "whatToDo": "What to do",
       "evidence": "Evidence",
       "affected": "Affected",
       "acceptedRisk": "Accepted risk",
@@ -5240,6 +5265,13 @@
       "backup": {
         "guest_coverage": {
           "title": "Backup coverage",
+          "explanation": "A backup protects only what a job actually selects. This check pairs the guests on this node with the jobs that run here, so a guest nobody backs up appears as such instead of being assumed to be covered by something else.",
+          "nextStep": {
+            "noJobs": "Create a backup job on this node and select the guests holding data you would not want to rebuild by hand. A job that exists but is disabled selects nothing.",
+            "uncovered": "Decide, for each of these guests, whether it holds anything worth keeping. Add the ones that do to a job; for the ones that do not, declare that in the policy so they stop being counted here.",
+            "excludedData": "Open each job's exclusion list and confirm that what it leaves out is data you can afford to lose. An exclusion added to make a job faster protects nothing it skips.",
+            "uncoveredExpected": "The policy declares these guests as requiring a backup and no enabled job selects them. Either add them to a job or change what the policy declares, so the two agree."
+          },
           "rationale": "Enabled backup jobs on this node, the guests each one selects, and guest data excluded from them. Configured coverage does not prove that a usable backup exists. Whether an unselected guest was meant to be protected comes from the declared policy.",
           "summary": {
             "noJobs": "No backup job is defined on this node for the {total} guests it holds",
@@ -5252,6 +5284,12 @@
         },
         "last_backup_age": {
           "title": "Age of stored backups",
+          "explanation": "A job that exists is not the same as a copy that exists. This check reads the newest stored copy of each guest and how long ago it was written, which is how far back you would have to go if you had to restore today.",
+          "nextStep": {
+            "stale": "Find out why the job stopped producing copies for these guests: it may have been disabled, its schedule may never fire, or its runs may be failing. The run results check reports how each job last ended.",
+            "noBackups": "No stored copy matches any guest on this node. If the jobs write to a destination this node cannot read, that is expected; otherwise they are producing nothing.",
+            "attention": "Review the guests listed. Each one either has no recent copy or has one older than the age in use."
+          },
           "rationale": "Age: time elapsed since the latest stored backup. Limit used: the reference age against which that backup is compared.",
           "summary": {
             "recent": "All {total} guest/destination checks meet the stated age policy",
@@ -5263,6 +5301,12 @@
         },
         "retention_defined": {
           "title": "Backup retention",
+          "explanation": "Retention decides how many copies are kept and for how long. Without it a destination fills until it stops accepting new copies, and a backup that cannot be written is the one you find out about on the day you need it.",
+          "nextStep": {
+            "missing": "Set a retention on these jobs, or on the storage they write to. Proxmox takes the job's setting first, then the storage's, then the node default.",
+            "notDeclared": "These jobs keep every copy they make. That is a deliberate choice for some destinations, but confirm the destination has room to keep growing.",
+            "onServer": "These jobs write to a backup server, which prunes them under its own rules. What it keeps cannot be read from this node, so check the retention there."
+          },
           "rationale": "Retention as Proxmox resolves it: the job's setting, then the storage's, then the node default. Retention applied by a backup server is not readable from this node.",
           "summary": {
             "allDefined": "All {total} jobs resolve a retention setting",
@@ -5274,6 +5318,11 @@
         },
         "verification_state": {
           "title": "Backup verification",
+          "explanation": "Verification reads a stored copy back and confirms it is intact. It is the difference between a copy that exists and a copy that can be read — a distinction that only matters on the day you need it.",
+          "nextStep": {
+            "failed": "A copy that fails verification cannot be relied on. Check whether an earlier copy of the same guest verified, and look at the storage the failed copies live on.",
+            "notVerified": "Nothing has confirmed that these copies can be read back. A backup server can verify on a schedule of its own, separately from the job that wrote them."
+          },
           "rationale": "The verification result Proxmox Backup Server records for each guest's newest copy, and whether an earlier copy of the same guest verified. Verification reads a stored copy back; it is not a restore.",
           "summary": {
             "allVerified": "The newest copy of all {total} guests has been verified intact",
@@ -5284,6 +5333,11 @@
         },
         "job_results": {
           "title": "Backup run results",
+          "explanation": "How each job's most recent run ended, as this node recorded it. A job can be configured perfectly and still fail every night, and this is where that shows.",
+          "nextStep": {
+            "someFailed": "Read the error in the task log for these runs. A run that ends with an error produced no usable copy for the guests it covers.",
+            "recovered": "These guests failed an earlier run and have succeeded since. The earlier error is still worth reading: a failure that resolved itself often returns."
+          },
           "rationale": "How each guest's most recent recorded run ended, from the node's task log. Only the latest run is graded. The log is retained for a limited period.",
           "summary": {
             "allSucceeded": "All {total} recorded backup runs ended without error",
@@ -5294,6 +5348,12 @@
         },
         "host_recovery": {
           "title": "Host recovery",
+          "explanation": "Backing up the guests does not restore the node. This check looks at whether the node's own configuration — its storage definitions, its network, its users — is stored anywhere, which is what rebuilding the host itself depends on.",
+          "nextStep": {
+            "noHostBackup": "Nothing stores this node's own configuration. Rebuilding it would mean reconstructing the storage, network and user definitions by hand, from whatever notes exist.",
+            "attention": "Review the host configuration records listed. Each has something worth looking at: a run that failed, a destination that is gone, or a copy older than the age in use.",
+            "scheduledOnly": "A timer will produce host configuration backups, but none is stored yet. Until the first one runs, the node's own configuration is not protected."
+          },
           "rationale": "Host backups as ProxMenux records them: each job it ran, when, whether it succeeded, the destination it wrote to and whether that copy is still there. A job writing to a backup server names no local path. Encryption keys are reported by count and recorded escrow mode only.",
           "summary": {
             "noHostBackup": "No host configuration backup is stored and no timer produces one",
@@ -5680,9 +5740,12 @@
       "reasonLabel": "Reason",
       "reasonHelp": "Required. It is recorded together with the author and the date.",
       "reasonPlaceholder": "e.g. Lab containers, not covered on purpose",
-      "expiryLabel": "Review after",
+      "expiryLabel": "Stops applying after",
       "expiryHelp": "When the period ends the finding becomes active again.",
       "expiryNever": "Does not expire",
+      "reviewLabel": "Remind me to review",
+      "reviewHelp": "The decision stays in force; it is only brought back to your attention.",
+      "reviewNever": "No reminder",
       "expiry90": "90 days",
       "expiry180": "180 days",
       "expiry365": "1 year",
@@ -6085,6 +6148,10 @@
       "unchanged": "{count} checks reported the same result as before.",
       "new": "New",
       "newNote": "reported now and not before",
+      "worse": "Worse",
+      "worseNote": "still reported, and graver or reaching further than before",
+      "better": "Better",
+      "betterNote": "still reported, but less grave or reaching less far than before",
       "resolved": "Resolved",
       "resolvedNote": "no longer reported, and nobody accepted them",
       "accepted": "Accepted",

@@ -1,0 +1,600 @@
+{
+  "schema_version": "0.4.0",
+  "kind": "proxmenux.oci-template",
+  "id": "linuxserver-diskover",
+  "status": "generated-review-required",
+  "catalog_ui": {
+    "title": {
+      "en_US": "Diskover"
+    },
+    "tagline": {
+      "en_US": "diskover is an open source file system indexer that uses Elasticsearch to index and manage data across heterogeneous storage systems."
+    },
+    "description": {
+      "en_US": "diskover is an open source file system indexer that uses Elasticsearch to index and manage data across heterogeneous storage systems."
+    },
+    "category": "misc",
+    "category_label": "Miscellaneous",
+    "author": "LinuxServer.io",
+    "developer": null,
+    "icon": "https://raw.githubusercontent.com/linuxserver/docker-templates/master/linuxserver.io/img/diskover-icon.png",
+    "thumbnail": "https://raw.githubusercontent.com/linuxserver/docker-templates/master/linuxserver.io/img/diskover-banner.png",
+    "screenshots": [],
+    "architectures": [
+      "amd64",
+      "arm64"
+    ],
+    "launch": {
+      "scheme": "http",
+      "port": 80,
+      "path": "/"
+    },
+    "website": "https://github.com/diskoverdata/diskover-community",
+    "documentation": "https://docs.linuxserver.io/images/docker-diskover/",
+    "repository": "https://github.com/linuxserver/docker-diskover",
+    "tips": [],
+    "mini_changelog": [
+      {
+        "date": "2024-09-06",
+        "note": "Rebase to Alpine 3.20. Existing users should update their nginx confs to avoid http2 deprecation warnings."
+      },
+      {
+        "date": "2024-03-06",
+        "note": "Existing users should update: site-confs/default.conf - Cleanup default site conf."
+      },
+      {
+        "date": "2024-03-06",
+        "note": "Rebase to Alpine 3.19 with php 8.3."
+      },
+      {
+        "date": "2023-05-25",
+        "note": "Rebase to Alpine 3.18, deprecate armhf."
+      },
+      {
+        "date": "2023-04-13",
+        "note": "Move ssl.conf include to default.conf."
+      }
+    ],
+    "display_version": null,
+    "updated_at": "2024-09-06",
+    "hidden": true,
+    "hidden_reason": "Pending multi-container adaptation; retained for future work"
+  },
+  "source": {
+    "provider": "linuxserver.io",
+    "repository": "https://github.com/linuxserver/docker-diskover",
+    "default_branch": "master",
+    "revision": "ccd08155ea8dea36794c4f4b3d56c3a9be4d9f4e",
+    "readme_raw_url": "https://raw.githubusercontent.com/linuxserver/docker-diskover/ccd08155ea8dea36794c4f4b3d56c3a9be4d9f4e/README.md",
+    "readme_pushed_at": "2026-09-10T14:55:45Z",
+    "compose_sha256": "160f74a3ded1b800740c6b9125da52b39f121da1b8a41cc0d1774d57a909cbb7",
+    "generated_at": "2026-09-13T15:48:25+00:00"
+  },
+  "container_contract": {
+    "service_name": "diskover",
+    "container_name": "diskover",
+    "image": {
+      "reference": "lscr.io/linuxserver/diskover:latest",
+      "registry": "lscr.io",
+      "repository": "lscr.io/linuxserver/diskover",
+      "tag": "latest",
+      "digest": null,
+      "pull_policy": "resolve-selected-tag-to-architecture-digest-at-install"
+    },
+    "environment": [
+      {
+        "name": "PUID",
+        "example": "1000",
+        "required": true,
+        "sensitive": false,
+        "source": "linuxserver-compose"
+      },
+      {
+        "name": "PGID",
+        "example": "1000",
+        "required": true,
+        "sensitive": false,
+        "source": "linuxserver-compose"
+      },
+      {
+        "name": "TZ",
+        "example": "America/New_York",
+        "required": true,
+        "sensitive": false,
+        "source": "linuxserver-compose"
+      },
+      {
+        "name": "ES_HOST",
+        "example": "elasticsearch",
+        "required": true,
+        "sensitive": false,
+        "source": "linuxserver-compose"
+      },
+      {
+        "name": "ES_PORT",
+        "example": "9200",
+        "required": true,
+        "sensitive": false,
+        "source": "linuxserver-compose"
+      }
+    ],
+    "volumes": [
+      {
+        "id": "volume-0",
+        "container_path": "/config",
+        "compose_source_example": "/path/to/diskover/config",
+        "read_only": false,
+        "required": true,
+        "installation_choice": [
+          "managed-volume",
+          "host-bind"
+        ],
+        "default": "managed-volume",
+        "managed_volume": {
+          "backup": true,
+          "default_size_gb": 4
+        }
+      },
+      {
+        "id": "volume-1",
+        "container_path": "/data",
+        "compose_source_example": "/path/to/diskover/data",
+        "read_only": false,
+        "required": true,
+        "installation_choice": [
+          "managed-volume",
+          "host-bind"
+        ],
+        "default": "managed-volume",
+        "managed_volume": {
+          "backup": true,
+          "default_size_gb": 8
+        }
+      }
+    ],
+    "ports": [
+      {
+        "container_port": 80,
+        "published_example": 80,
+        "protocol": "tcp",
+        "required": true,
+        "proxmox_behavior": "listener-on-dedicated-lxc-address-no-nat"
+      }
+    ],
+    "related_services": [
+      {
+        "name": "elasticsearch",
+        "image": "docker.elastic.co/elasticsearch/elasticsearch:7.17.22"
+      },
+      {
+        "name": "elasticsearch-helper",
+        "image": "alpine"
+      }
+    ],
+    "restart": "unless-stopped",
+    "stop_grace_period": null,
+    "original_compose": "version: '2'\nservices:\n  diskover:\n    image: lscr.io/linuxserver/diskover\n    container_name: diskover\n    environment:\n      - PUID=1000\n      - PGID=1000\n      - TZ=America/New_York\n      - ES_HOST=elasticsearch\n      - ES_PORT=9200\n    volumes:\n      - /path/to/diskover/config:/config\n      - /path/to/diskover/data:/data\n    ports:\n      - 80:80\n    mem_limit: 4096m\n    restart: unless-stopped\n    depends_on:\n      - elasticsearch\n  elasticsearch:\n    container_name: elasticsearch\n    image: docker.elastic.co/elasticsearch/elasticsearch:7.17.22\n    environment:\n      - discovery.type=single-node\n      - xpack.security.enabled=false\n      - bootstrap.memory_lock=true\n      - \"ES_JAVA_OPTS=-Xms1g -Xmx1g\"\n    ulimits:\n      memlock:\n        soft: -1\n        hard: -1\n    volumes:\n      - /path/to/esdata:/usr/share/elasticsearch/data\n    ports:\n      - 9200:9200\n    depends_on:\n      - elasticsearch-helper\n    restart: unless-stopped\n  elasticsearch-helper:\n    image: alpine\n    command: sh -c \"sysctl -w vm.max_map_count=262144\"\n    privileged: true\n"
+  },
+  "first_run": {
+    "endpoints": [
+      {
+        "label": "Web UI",
+        "scheme": "http",
+        "port": 80,
+        "path": "/",
+        "source": "compose-first-tcp-port-fallback"
+      }
+    ],
+    "credentials": []
+  },
+  "proxmox": {
+    "runtime": "native-oci-lxc",
+    "technology_status": "proxmox-technology-preview",
+    "defaults": {
+      "unprivileged": true,
+      "ostype": "auto-from-image",
+      "cores": 2,
+      "memory_mb": 4096,
+      "swap_mb": 512,
+      "rootfs_size_gb": 8,
+      "rootfs_storage": "local-lvm",
+      "volume_storage": "local-lvm",
+      "template_storage": "local",
+      "bridge": "vmbr0",
+      "ipv4": "dhcp",
+      "firewall": true,
+      "host_managed_network": true,
+      "onboot": false,
+      "features": [
+        "nesting=1"
+      ],
+      "shutdown_timeout_seconds": 30
+    },
+    "image_metadata_policy": {
+      "entrypoint": "import-from-oci-image",
+      "cmd": "import-from-oci-image",
+      "environment": "import-image-env-then-apply-compose-overrides",
+      "user": "import-from-oci-image",
+      "working_dir": "import-from-oci-image",
+      "stop_signal": "import-from-oci-image"
+    },
+    "adaptations": [
+      {
+        "id": "dedicated-lxc-network",
+        "upstream_behavior": "Docker publishes selected container ports on the Docker host.",
+        "native_lxc_behavior": "The application listens on the same container ports at its dedicated LXC address.",
+        "reason": "A native LXC has its own address and does not require Docker port NAT.",
+        "behavioral_impact": "Users open the LXC address instead of the Proxmox host address.",
+        "validation": "pending-per-application"
+      },
+      {
+        "id": "compose-environment-overlay",
+        "upstream_behavior": "Compose environment values override OCI image environment values.",
+        "native_lxc_behavior": "ProxMenux merges the same values into lxc.environment.runtime while the CT is stopped.",
+        "reason": "PVE imports image Env automatically; Compose values still need to override it.",
+        "behavioral_impact": "None expected.",
+        "validation": "pending-per-application"
+      },
+      {
+        "id": "stop-grace-period",
+        "upstream_behavior": "Docker waits for Compose stop_grace_period before forcing termination.",
+        "native_lxc_behavior": "ProxMenux records the same timeout for its pct shutdown lifecycle operations.",
+        "reason": "Proxmox has no equivalent per-CT persistent restart-policy field; startup.down is not a shutdown timeout.",
+        "behavioral_impact": "Normal Proxmox node shutdown remains governed by the node-wide shutdown policy.",
+        "validation": "not-requested-by-compose"
+      },
+      {
+        "id": "compose-shm-size",
+        "upstream_behavior": "Compose sets the size of the container /dev/shm tmpfs.",
+        "native_lxc_behavior": "ProxMenux mounts a native LXC tmpfs at /dev/shm with the same requested capacity.",
+        "reason": "The OCI image runs directly as an LXC and therefore needs the equivalent Proxmox mount entry.",
+        "behavioral_impact": "None expected.",
+        "validation": "not-requested-by-compose"
+      },
+      {
+        "id": "compose-command",
+        "upstream_behavior": "Compose replaces the image Cmd while retaining its Entrypoint.",
+        "native_lxc_behavior": "ProxMenux reads the official OCI Entrypoint and combines it with the Compose command as the native LXC init command.",
+        "reason": "Proxmox stores the effective OCI process as one entrypoint string.",
+        "behavioral_impact": "None expected.",
+        "validation": "not-requested-by-compose"
+      },
+      {
+        "id": "compose-process-runtime",
+        "upstream_behavior": "Compose can replace Entrypoint, User and WorkingDir and request an init process or interactive terminal.",
+        "native_lxc_behavior": "ProxMenux applies the process overrides through native LXC init directives; lxc-init provides PID 1 supervision and the CT console provides terminal access.",
+        "reason": "The OCI process must start with the same identity, command and working directory without Docker.",
+        "behavioral_impact": "Compose stdin_open and tty become access through the Proxmox LXC console.",
+        "validation": "not-requested-by-compose"
+      },
+      {
+        "id": "compose-healthcheck",
+        "upstream_behavior": "Docker periodically executes the declared container healthcheck.",
+        "native_lxc_behavior": "For a single-service LXC, ProxMenux translates HTTP localhost checks into a mandatory first-start service check.",
+        "reason": "Proxmox has no persistent Docker health state, while the installer still must detect a failed first boot.",
+        "behavioral_impact": "The check runs during installation rather than continuously after installation.",
+        "validation": "not-requested-by-compose"
+      },
+      {
+        "id": "compose-cpu-priority",
+        "upstream_behavior": "Docker cpu_shares sets a relative scheduling weight with 1024 as its neutral value.",
+        "native_lxc_behavior": "ProxMenux converts the relative weight to Proxmox cpuunits with 100 as its neutral value and lets the user review it.",
+        "reason": "Both settings express relative CPU priority on different scales.",
+        "behavioral_impact": "Rounding and Proxmox minimum limits can slightly change very low weights.",
+        "validation": "not-requested-by-compose"
+      },
+      {
+        "id": "compose-network-identity",
+        "upstream_behavior": "Compose can set hostname, MAC address, extra hosts and attach a service to Docker networks.",
+        "native_lxc_behavior": "ProxMenux applies hostname and MAC to net0, writes additional host aliases into the LXC and uses its dedicated bridge connection for single-service networks.",
+        "reason": "A dedicated LXC has its own network namespace and does not need a Docker bridge per service.",
+        "behavioral_impact": "host-gateway resolves to the IPv4 address of the selected Proxmox bridge.",
+        "validation": "not-requested-by-compose"
+      },
+      {
+        "id": "compose-network-mode",
+        "upstream_behavior": "Docker host mode removes Docker network isolation; bridge and default use a Docker-managed network.",
+        "native_lxc_behavior": "The OCI process uses the dedicated LXC network namespace directly, so host, bridge and default all listen on the LXC address without Docker NAT.",
+        "reason": "The LXC is the application host and already has its own address and port namespace.",
+        "behavioral_impact": "host means the LXC host, never the Proxmox host; this preserves Proxmox network isolation.",
+        "validation": "not-requested-by-compose"
+      },
+      {
+        "id": "compose-capabilities-and-sysctls",
+        "upstream_behavior": "Compose can add Linux capabilities and set kernel parameters in the container network namespace.",
+        "native_lxc_behavior": "ProxMenux validates requested capabilities against the native LXC capability set and writes namespaced network settings as lxc.sysctl directives.",
+        "reason": "A native OCI-LXC already starts with the namespaced capability set; lxc.cap.keep would incorrectly discard unrelated required capabilities.",
+        "behavioral_impact": "Host-global capabilities such as SYS_MODULE remain blocked until their host prerequisite is explicitly adapted.",
+        "validation": "not-requested-by-compose"
+      },
+      {
+        "id": "docker-engine-metadata",
+        "upstream_behavior": "Compose labels annotate Docker objects and the json-file logging driver rotates Docker-managed logs.",
+        "native_lxc_behavior": "Labels remain source metadata; Docker json-file settings are not applied because the OCI process runs directly under LXC.",
+        "reason": "There is no Docker object or Docker json-file log behind a native OCI-LXC application.",
+        "behavioral_impact": "Docker-only label consumers and Docker log-driver rotation do not exist in the native deployment.",
+        "validation": "not-requested-by-compose"
+      },
+      {
+        "id": "compose-device-passthrough",
+        "upstream_behavior": "Compose passes host character devices or requests an NVIDIA runtime GPU.",
+        "native_lxc_behavior": "ProxMenux converts recognized device declarations to native Proxmox dev resources; NVIDIA profiles also inject compatible host driver libraries read-only.",
+        "reason": "Native OCI-LXC does not execute Docker device or NVIDIA runtime hooks.",
+        "behavioral_impact": "Hardware is exposed only after explicit user confirmation and host-path validation.",
+        "validation": "not-requested-by-compose"
+      },
+      {
+        "id": "compose-host-ipc",
+        "upstream_behavior": "ipc: host shares the Docker host IPC namespace, commonly to avoid Docker's small default shared-memory allocation.",
+        "native_lxc_behavior": "The application keeps the LXC IPC namespace and receives a configurable 1 GiB /dev/shm instead of sharing Proxmox host IPC.",
+        "reason": "Processes in a single native LXC already share one IPC namespace; retaining isolation is safer than exposing host IPC.",
+        "behavioral_impact": "The application cannot exchange IPC objects with processes on the Proxmox host.",
+        "validation": "not-requested-by-compose"
+      },
+      {
+        "id": "compose-resource-limits",
+        "upstream_behavior": "mem_limit sets the memory ceiling; ulimits sets process soft/hard resource limits.",
+        "native_lxc_behavior": "mem_limit supplies the editable Proxmox memory default, rounded up to MiB; ulimits maps to lxc.prlimit with -1 represented as unlimited.",
+        "reason": "Use native Proxmox memory and LXC prlimits, without a wrapper or changing the host kernel configuration.",
+        "behavioral_impact": "User-selected memory overrides Compose. Swap is a separate choice. Kernel restrictions still apply; nproc counts processes by real UID, not by container.",
+        "validation": "pending-per-application"
+      }
+    ],
+    "installer_profile": {
+      "resources": {
+        "memory_default_mb": 4096
+      }
+    },
+    "generic_stack_review": [
+      "elasticsearch-helper: perfil de salud y persistencia pendiente",
+      "elasticsearch-helper: privileged necesita revision de pila",
+      "elasticsearch: perfil de salud y persistencia pendiente"
+    ],
+    "stack_adaptation_notes": [
+      "mem_limit is translated to the editable Proxmox memory default; ulimits is translated to native lxc.prlimit entries.",
+      "The upstream original_compose uses Elasticsearch 7.17.22. The normalized catalog candidate uses latest; tag availability and application compatibility must be reviewed before enabling installation.",
+      "The privileged elasticsearch-helper modifies host vm.max_map_count. No host sysctl is changed and this helper must not be discarded silently.",
+      "Elasticsearch persistence, healthchecks and host requirements still block the native stack."
+    ]
+  },
+  "compatibility": {
+    "automatic_install_candidate": false,
+    "validated": false,
+    "supported_compose_keys": [
+      "cap_add",
+      "command",
+      "container_name",
+      "cpu_shares",
+      "devices",
+      "entrypoint",
+      "environment",
+      "extra_hosts",
+      "healthcheck",
+      "hostname",
+      "image",
+      "init",
+      "ipc",
+      "labels",
+      "logging",
+      "mac_address",
+      "network_mode",
+      "networks",
+      "ports",
+      "privileged",
+      "restart",
+      "runtime",
+      "shm_size",
+      "stdin_open",
+      "stop_grace_period",
+      "sysctls",
+      "tty",
+      "user",
+      "volumes",
+      "working_dir"
+    ],
+    "untranslated_blockers": [
+      "multi-service-compose",
+      "compose-key:depends_on",
+      "native-multi-lxc-orchestrator-not-yet-implemented"
+    ],
+    "policy": "A generated template is never promoted to validated without install, health, restart and persistence tests."
+  },
+  "validation": {
+    "schema": "passed-at-generation",
+    "clean_install": "pending",
+    "service_health": "pending",
+    "restart_persistence": "pending",
+    "backup_restore": "pending",
+    "update_preserves_data": "pending"
+  },
+  "lifecycle": {
+    "update_strategy": "replace-rootfs-from-new-oci-image-preserve-managed-volumes",
+    "registry_state": {
+      "resolved_architecture": null,
+      "resolved_digest": null,
+      "image_version_label": null,
+      "image_created": null
+    },
+    "change_detection": "compare-resolved-architecture-digest",
+    "automatic_unattended_updates": false
+  },
+  "compose_stack": {
+    "project_name": "diskover",
+    "deployment_model": "one-native-oci-lxc-per-compose-service",
+    "user_experience": "single-application-install",
+    "main_service": "diskover",
+    "service_count": 3,
+    "services": [
+      {
+        "name": "elasticsearch-helper",
+        "image": "alpine:latest",
+        "is_main": false,
+        "role": "dependency",
+        "vmid_offset": 1,
+        "depends_on": [],
+        "frontend_network": false,
+        "private_network": true,
+        "compose": {
+          "image": "alpine",
+          "command": "sh -c \"sysctl -w vm.max_map_count=262144\"",
+          "privileged": true
+        }
+      },
+      {
+        "name": "elasticsearch",
+        "image": "docker.elastic.co/elasticsearch/elasticsearch:latest",
+        "is_main": false,
+        "role": "dependency",
+        "vmid_offset": 2,
+        "depends_on": [
+          "elasticsearch-helper"
+        ],
+        "frontend_network": true,
+        "private_network": true,
+        "compose": {
+          "container_name": "elasticsearch",
+          "image": "docker.elastic.co/elasticsearch/elasticsearch:7.17.22",
+          "environment": [
+            "discovery.type=single-node",
+            "xpack.security.enabled=false",
+            "bootstrap.memory_lock=true",
+            "ES_JAVA_OPTS=-Xms1g -Xmx1g"
+          ],
+          "ulimits": {
+            "memlock": {
+              "soft": -1,
+              "hard": -1
+            }
+          },
+          "volumes": [
+            "/path/to/esdata:/usr/share/elasticsearch/data"
+          ],
+          "ports": [
+            "9200:9200"
+          ],
+          "depends_on": [
+            "elasticsearch-helper"
+          ],
+          "restart": "unless-stopped"
+        }
+      },
+      {
+        "name": "diskover",
+        "image": "lscr.io/linuxserver/diskover:latest",
+        "is_main": true,
+        "role": "frontend",
+        "vmid_offset": 0,
+        "depends_on": [
+          "elasticsearch"
+        ],
+        "frontend_network": true,
+        "private_network": true,
+        "compose": {
+          "image": "lscr.io/linuxserver/diskover",
+          "container_name": "diskover",
+          "environment": [
+            "PUID=1000",
+            "PGID=1000",
+            "TZ=America/New_York",
+            "ES_HOST=elasticsearch",
+            "ES_PORT=9200"
+          ],
+          "volumes": [
+            "/path/to/diskover/config:/config",
+            "/path/to/diskover/data:/data"
+          ],
+          "ports": [
+            "80:80"
+          ],
+          "mem_limit": "4096m",
+          "restart": "unless-stopped",
+          "depends_on": [
+            "elasticsearch"
+          ]
+        }
+      }
+    ],
+    "top_level": {
+      "version": "2"
+    },
+    "networking": {
+      "frontend": "selected-proxmox-bridge",
+      "private_required": true,
+      "private_creation": "automatic-create-if-missing",
+      "private_address_allocation": "automatic-static-address-per-service",
+      "service_discovery": "private-addresses-with-compose-service-host-aliases",
+      "dependency_external_access": "disabled-unless-service-publishes-ports",
+      "prompt_user_for_private_network": false
+    },
+    "storage": [
+      {
+        "id": "diskover-volume-0",
+        "service": "diskover",
+        "container_path": "/config",
+        "mode": "managed-volume",
+        "user_selectable": false,
+        "backup": true,
+        "shared_with_other_lxc": false,
+        "source_path": null,
+        "source_path_prompt": null
+      },
+      {
+        "id": "diskover-volume-1",
+        "service": "diskover",
+        "container_path": "/data",
+        "mode": "host-bind",
+        "user_selectable": true,
+        "backup": false,
+        "shared_with_other_lxc": true,
+        "source_path": null,
+        "source_path_prompt": "Host directory for diskover:/data"
+      },
+      {
+        "id": "elasticsearch-volume-0",
+        "service": "elasticsearch",
+        "container_path": "/usr/share/elasticsearch/data",
+        "mode": "managed-volume",
+        "user_selectable": false,
+        "backup": true,
+        "shared_with_other_lxc": false,
+        "source_path": null,
+        "source_path_prompt": null
+      }
+    ],
+    "orchestration": {
+      "reserve_vmids_atomically": 3,
+      "start_order": [
+        "elasticsearch-helper",
+        "elasticsearch",
+        "diskover"
+      ],
+      "stop_order": [
+        "diskover",
+        "elasticsearch",
+        "elasticsearch-helper"
+      ],
+      "dependency_readiness": "compose-healthcheck-then-port-or-process-fallback",
+      "rollback_on_failure": "remove-new-rootfs-preserve-created-persistent-volumes"
+    },
+    "installer_inputs": {
+      "prompted": [
+        "stack_name",
+        "base_vmid",
+        "rootfs_storage",
+        "persistent_data_destinations",
+        "frontend_bridge",
+        "frontend_ipv4_mode"
+      ],
+      "automatic": [
+        "dependent_vmids",
+        "private_bridge",
+        "private_subnet",
+        "private_service_addresses",
+        "compose_service_aliases",
+        "generated_secrets",
+        "dependency_start_and_stop_order"
+      ],
+      "generated_secrets": []
+    }
+  }
+}

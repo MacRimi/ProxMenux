@@ -1,0 +1,427 @@
+{
+  "schema_version": "0.5.0",
+  "kind": "proxmenux.oci-template",
+  "id": "image-convertx",
+  "status": "generated-unvalidated",
+  "catalog_ui": {
+    "title": {
+      "en_US": "ConvertX"
+    },
+    "tagline": {
+      "en_US": "A versatile file conversion tool that supports multiple formats."
+    },
+    "description": {
+      "en_US": "ConvertX is a self-hosted file conversion service that allows users to convert files between different formats through an intuitive web interface. It supports a wide range of file types including documents, images, videos, and audio files, making it a comprehensive solution for all your file conversion needs.\n\nThe service is designed with simplicity and ease of use in mind. Users can simply upload their files, select the desired output format, and let ConvertX handle the conversion process. The web interface provides a clean and user-friendly experience, with drag-and-drop support and batch conversion capabilities.\n\nConvertX runs entirely on your own infrastructure, ensuring that your files remain private and secure. There's no need to upload sensitive documents to third-party services, giving you full control over your data. The service is containerized for easy deployment and can be integrated into existing home server setups.\n\n**Key Features:**\n- Support for multiple file formats (documents, images, videos, audio)\n- Intuitive web interface with drag-and-drop support\n- Batch conversion capabilities\n- Self-hosted for privacy and security\n- Containerized for easy deployment\n- No file size limitations\n\n**Learn More:**\n- [ConvertX GitHub Repository](https://github.com/c4illin/convertx)\n"
+    },
+    "category": "documents",
+    "category_label": "Documents & Notes",
+    "author": "c4illin",
+    "developer": "c4illin",
+    "icon": null,
+    "thumbnail": null,
+    "screenshots": [],
+    "architectures": [
+      "amd64",
+      "arm64"
+    ],
+    "launch": {
+      "scheme": "http",
+      "port": 3000,
+      "path": "/"
+    },
+    "website": "",
+    "documentation": null,
+    "repository": "https://hub.docker.com/r/c4illin/convertx",
+    "tips": [],
+    "mini_changelog": [],
+    "display_version": null,
+    "updated_at": null
+  },
+  "source": {
+    "provider": "c4illin",
+    "repository": "https://hub.docker.com/r/c4illin/convertx",
+    "revision": "20d9f7eb1e084a5dd716a04c49f64bf3e291565b462f17ebfa942e1898fbba91",
+    "image_repository_url": "https://hub.docker.com/r/c4illin/convertx",
+    "readme_pushed_at": "2026-09-11T10:43:22Z",
+    "compose_sha256": "20d9f7eb1e084a5dd716a04c49f64bf3e291565b462f17ebfa942e1898fbba91",
+    "generated_at": "2026-09-13T15:34:58+00:00"
+  },
+  "container_contract": {
+    "service_name": "convertx",
+    "container_name": "convertx",
+    "image": {
+      "reference": "c4illin/convertx:latest",
+      "registry": "docker.io",
+      "repository": "c4illin/convertx",
+      "tag": "latest",
+      "digest": null,
+      "pull_policy": "resolve-selected-tag-to-architecture-digest-at-install"
+    },
+    "environment": [
+      {
+        "name": "JWT_SECRET",
+        "example": "${GENERATED_JWT_SECRET}",
+        "required": true,
+        "sensitive": true,
+        "source": "docker-compose"
+      },
+      {
+        "name": "HTTP_ALLOWED",
+        "example": "true",
+        "required": true,
+        "sensitive": false,
+        "source": "docker-compose"
+      }
+    ],
+    "volumes": [
+      {
+        "id": "volume-0",
+        "container_path": "/app/data",
+        "compose_source_example": "/DATA/AppData/$AppID/data",
+        "read_only": false,
+        "required": true,
+        "installation_choice": [
+          "managed-volume",
+          "host-bind"
+        ],
+        "default": "managed-volume",
+        "managed_volume": {
+          "backup": true,
+          "default_size_gb": 8
+        }
+      }
+    ],
+    "ports": [
+      {
+        "container_port": 3000,
+        "published_example": 3333,
+        "protocol": "tcp",
+        "required": true,
+        "proxmox_behavior": "listener-on-dedicated-lxc-address-no-nat"
+      }
+    ],
+    "related_services": [],
+    "restart": "unless-stopped",
+    "stop_grace_period": null,
+    "original_compose": "name: convertx\nservices:\n  convertx:\n    image: c4illin/convertx:latest\n    container_name: convertx\n    restart: unless-stopped\n    deploy:\n      resources:\n        reservations:\n          memory: 500M\n    ports:\n    - 3333:3000\n    environment:\n    - JWT_SECRET=${GENERATED_JWT_SECRET}\n    - HTTP_ALLOWED=true\n    volumes:\n    - type: bind\n      source: /DATA/AppData/$AppID/data\n      target: /app/data\n    network_mode: bridge\n"
+  },
+  "compose_stack": {
+    "project_name": "convertx",
+    "deployment_model": "one-native-oci-lxc-per-compose-service",
+    "user_experience": "single-application-install",
+    "main_service": "convertx",
+    "service_count": 1,
+    "services": [
+      {
+        "name": "convertx",
+        "image": "c4illin/convertx:latest",
+        "is_main": true,
+        "role": "frontend",
+        "vmid_offset": 0,
+        "depends_on": [],
+        "frontend_network": true,
+        "private_network": false,
+        "compose": {
+          "image": "c4illin/convertx:latest",
+          "container_name": "convertx",
+          "restart": "unless-stopped",
+          "deploy": {
+            "resources": {
+              "reservations": {
+                "memory": "500M"
+              }
+            }
+          },
+          "ports": [
+            "3333:3000"
+          ],
+          "environment": [
+            "JWT_SECRET=${GENERATED_JWT_SECRET}",
+            "HTTP_ALLOWED=true"
+          ],
+          "volumes": [
+            {
+              "type": "bind",
+              "source": "/DATA/AppData/$AppID/data",
+              "target": "/app/data"
+            }
+          ],
+          "network_mode": "bridge"
+        }
+      }
+    ],
+    "top_level": {
+      "name": "convertx"
+    },
+    "networking": {
+      "frontend": "selected-proxmox-bridge",
+      "private_required": false,
+      "private_creation": "automatic-create-if-missing",
+      "private_address_allocation": "automatic-static-address-per-service",
+      "service_discovery": "private-addresses-with-compose-service-host-aliases",
+      "dependency_external_access": "disabled-unless-service-publishes-ports",
+      "prompt_user_for_private_network": false
+    },
+    "storage": [
+      {
+        "id": "convertx-volume-0",
+        "service": "convertx",
+        "container_path": "/app/data",
+        "mode": "managed-volume",
+        "user_selectable": false,
+        "backup": true,
+        "shared_with_other_lxc": false,
+        "source_path": null,
+        "source_path_prompt": null
+      }
+    ],
+    "orchestration": {
+      "reserve_vmids_atomically": 1,
+      "start_order": [
+        "convertx"
+      ],
+      "stop_order": [
+        "convertx"
+      ],
+      "dependency_readiness": "compose-healthcheck-then-port-or-process-fallback",
+      "rollback_on_failure": "remove-new-rootfs-preserve-created-persistent-volumes"
+    },
+    "installer_inputs": {
+      "prompted": [
+        "stack_name",
+        "base_vmid",
+        "rootfs_storage",
+        "persistent_data_destinations",
+        "frontend_bridge",
+        "frontend_ipv4_mode"
+      ],
+      "automatic": [
+        "dependent_vmids",
+        "private_bridge",
+        "private_subnet",
+        "private_service_addresses",
+        "compose_service_aliases",
+        "generated_secrets",
+        "dependency_start_and_stop_order"
+      ],
+      "generated_secrets": [
+        {
+          "id": "jwt-secret",
+          "strategy": "generate-cryptographically-random-at-install",
+          "bindings": [
+            {
+              "service": "convertx",
+              "environment_variable": "JWT_SECRET"
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "first_run": {
+    "endpoints": [
+      {
+        "label": "Web UI",
+        "scheme": "http",
+        "port": 3000,
+        "path": "/",
+        "source": "compose-metadata"
+      }
+    ],
+    "credentials": []
+  },
+  "proxmox": {
+    "runtime": "native-oci-lxc",
+    "technology_status": "proxmox-technology-preview",
+    "defaults": {
+      "unprivileged": true,
+      "ostype": "auto-from-image",
+      "cores": 2,
+      "memory_mb": 500,
+      "swap_mb": 512,
+      "rootfs_size_gb": 8,
+      "rootfs_storage": "local-lvm",
+      "volume_storage": "local-lvm",
+      "template_storage": "local",
+      "bridge": "vmbr0",
+      "ipv4": "dhcp",
+      "firewall": true,
+      "host_managed_network": true,
+      "onboot": false,
+      "features": [
+        "nesting=1"
+      ],
+      "shutdown_timeout_seconds": 30
+    },
+    "image_metadata_policy": {
+      "entrypoint": "import-from-oci-image",
+      "cmd": "import-from-oci-image",
+      "environment": "import-image-env-then-apply-compose-overrides",
+      "user": "import-from-oci-image",
+      "working_dir": "import-from-oci-image",
+      "stop_signal": "import-from-oci-image"
+    },
+    "adaptations": [
+      {
+        "id": "imported-compose-source",
+        "upstream_behavior": "The source definition deploys the complete Docker Compose application model.",
+        "native_lxc_behavior": "The source model is preserved and remains blocked until every service option has a reviewed native Proxmox mapping.",
+        "reason": "Catalog import must not imply runtime compatibility.",
+        "behavioral_impact": "No automatic installation before review.",
+        "validation": "pending-per-application"
+      },
+      {
+        "id": "rolling-latest-image",
+        "upstream_behavior": "A discovered Compose may pin a release tag or digest.",
+        "native_lxc_behavior": "ProxMenux selects the same image repository with the latest tag for catalog installations.",
+        "reason": "The automatic catalog intentionally offers rolling latest images; pinned versions belong to the future manual installer.",
+        "behavioral_impact": "The installed release can be newer than the discovered Compose revision.",
+        "validation": "pending-per-application"
+      },
+      {
+        "id": "dedicated-lxc-network",
+        "upstream_behavior": "Docker publishes selected container ports on the Docker host.",
+        "native_lxc_behavior": "A reviewed native application will listen on its original container ports at a dedicated LXC address.",
+        "reason": "A native LXC has its own address and does not require Docker port NAT.",
+        "behavioral_impact": "Published ports are metadata; ProxMenux URLs use the matching container target port.",
+        "validation": "pending-per-application"
+      },
+      {
+        "id": "compose-shm-size",
+        "upstream_behavior": "Compose sets the size of the container /dev/shm tmpfs.",
+        "native_lxc_behavior": "ProxMenux mounts a native LXC tmpfs at /dev/shm with the same requested capacity.",
+        "reason": "The OCI image runs directly as an LXC and therefore needs the equivalent Proxmox mount entry.",
+        "behavioral_impact": "None expected.",
+        "validation": "not-requested-by-compose"
+      },
+      {
+        "id": "compose-command",
+        "upstream_behavior": "Compose replaces the image Cmd while retaining its Entrypoint.",
+        "native_lxc_behavior": "ProxMenux reads the official OCI Entrypoint and combines it with the Compose command as the native LXC init command.",
+        "reason": "Proxmox stores the effective OCI process as one entrypoint string.",
+        "behavioral_impact": "None expected.",
+        "validation": "not-requested-by-compose"
+      },
+      {
+        "id": "compose-privileged-mode",
+        "upstream_behavior": "Compose selects whether the container runs in privileged mode.",
+        "native_lxc_behavior": "ProxMenux uses a privileged LXC only after an explicit high-risk confirmation; otherwise it keeps the LXC unprivileged.",
+        "reason": "The native OCI-LXC deployment must preserve the requested privilege level without silently weakening isolation.",
+        "behavioral_impact": "A privileged LXC has weaker isolation from the Proxmox host.",
+        "validation": "native-equivalent"
+      },
+      {
+        "id": "compose-process-runtime",
+        "upstream_behavior": "Compose can replace Entrypoint, User and WorkingDir and request an init process or interactive terminal.",
+        "native_lxc_behavior": "ProxMenux applies the process overrides through native LXC init directives; lxc-init provides PID 1 supervision and the CT console provides terminal access.",
+        "reason": "The OCI process must start with the same identity, command and working directory without Docker.",
+        "behavioral_impact": "Compose stdin_open and tty become access through the Proxmox LXC console.",
+        "validation": "not-requested-by-compose"
+      },
+      {
+        "id": "compose-healthcheck",
+        "upstream_behavior": "Docker periodically executes the declared container healthcheck.",
+        "native_lxc_behavior": "For a single-service LXC, ProxMenux translates HTTP localhost checks into a mandatory first-start service check.",
+        "reason": "Proxmox has no persistent Docker health state, while the installer still must detect a failed first boot.",
+        "behavioral_impact": "The check runs during installation rather than continuously after installation.",
+        "validation": "not-requested-by-compose"
+      },
+      {
+        "id": "compose-cpu-priority",
+        "upstream_behavior": "Docker cpu_shares sets a relative scheduling weight with 1024 as its neutral value.",
+        "native_lxc_behavior": "ProxMenux converts the relative weight to Proxmox cpuunits with 100 as its neutral value and lets the user review it.",
+        "reason": "Both settings express relative CPU priority on different scales.",
+        "behavioral_impact": "Rounding and Proxmox minimum limits can slightly change very low weights.",
+        "validation": "not-requested-by-compose"
+      },
+      {
+        "id": "compose-network-identity",
+        "upstream_behavior": "Compose can set hostname, MAC address, extra hosts and attach a service to Docker networks.",
+        "native_lxc_behavior": "ProxMenux applies hostname and MAC to net0, writes additional host aliases into the LXC and uses its dedicated bridge connection for single-service networks.",
+        "reason": "A dedicated LXC has its own network namespace and does not need a Docker bridge per service.",
+        "behavioral_impact": "host-gateway resolves to the IPv4 address of the selected Proxmox bridge.",
+        "validation": "not-requested-by-compose"
+      },
+      {
+        "id": "docker-engine-metadata",
+        "upstream_behavior": "Compose labels annotate Docker objects and the json-file logging driver rotates Docker-managed logs.",
+        "native_lxc_behavior": "Labels remain source metadata; Docker json-file settings are not applied because the OCI process runs directly under LXC.",
+        "reason": "There is no Docker object or Docker json-file log behind a native OCI-LXC application.",
+        "behavioral_impact": "Docker-only label consumers and Docker log-driver rotation do not exist in the native deployment.",
+        "validation": "not-requested-by-compose"
+      },
+      {
+        "id": "compose-device-passthrough",
+        "upstream_behavior": "Compose passes host character devices or requests an NVIDIA runtime GPU.",
+        "native_lxc_behavior": "ProxMenux converts recognized device declarations to native Proxmox dev resources; NVIDIA profiles also inject compatible host driver libraries read-only.",
+        "reason": "Native OCI-LXC does not execute Docker device or NVIDIA runtime hooks.",
+        "behavioral_impact": "Hardware is exposed only after explicit user confirmation and host-path validation.",
+        "validation": "not-requested-by-compose"
+      },
+      {
+        "id": "compose-host-ipc",
+        "upstream_behavior": "ipc: host shares the Docker host IPC namespace, commonly to avoid Docker's small default shared-memory allocation.",
+        "native_lxc_behavior": "The application keeps the LXC IPC namespace and receives a configurable 1 GiB /dev/shm instead of sharing Proxmox host IPC.",
+        "reason": "Processes in a single native LXC already share one IPC namespace; retaining isolation is safer than exposing host IPC.",
+        "behavioral_impact": "The application cannot exchange IPC objects with processes on the Proxmox host.",
+        "validation": "not-requested-by-compose"
+      }
+    ]
+  },
+  "compatibility": {
+    "automatic_install_candidate": true,
+    "validated": false,
+    "supported_compose_keys": [
+      "command",
+      "container_name",
+      "cpu_shares",
+      "deploy",
+      "devices",
+      "entrypoint",
+      "environment",
+      "extra_hosts",
+      "healthcheck",
+      "hostname",
+      "image",
+      "init",
+      "ipc",
+      "labels",
+      "logging",
+      "mac_address",
+      "network_mode",
+      "networks",
+      "ports",
+      "privileged",
+      "restart",
+      "runtime",
+      "shm_size",
+      "stdin_open",
+      "stop_grace_period",
+      "tty",
+      "user",
+      "volumes",
+      "working_dir"
+    ],
+    "untranslated_blockers": [],
+    "policy": "Single-image definitions are installable when every declared Compose option has a native Proxmox translation. Multi-image and unsupported runtime features remain blocked until their orchestrator or mapping is available."
+  },
+  "validation": {
+    "schema": "passed-at-generation",
+    "clean_install": "pending",
+    "service_health": "pending",
+    "restart_persistence": "pending",
+    "backup_restore": "pending",
+    "update_preserves_data": "pending"
+  },
+  "lifecycle": {
+    "update_strategy": "resolve-latest-image-then-apply-reviewed-native-lxc-update",
+    "registry_state": {
+      "resolved_architecture": null,
+      "resolved_digest": null,
+      "image_version_label": null,
+      "image_created": null
+    },
+    "change_detection": "compare-compose-sha256-and-resolved-latest-image-digest",
+    "automatic_unattended_updates": false
+  }
+}

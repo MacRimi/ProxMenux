@@ -1,0 +1,275 @@
+{
+  "schema_version": "0.3.0",
+  "kind": "proxmenux.oci-template",
+  "id": "linuxserver-sonarr",
+  "status": "generated-unvalidated",
+  "catalog_ui": {
+    "title": {
+      "en_US": "Sonarr"
+    },
+    "tagline": {
+      "en_US": "Sonarr (formerly NZBdrone) is a PVR for usenet and bittorrent users. It can monitor multiple RSS feeds for new episodes of your favorite shows and will grab, sort and rename them. It can also be configured to automatically upgrade the quality of files already downloaded when a better quality format becomes available."
+    },
+    "description": {
+      "en_US": "Sonarr (formerly NZBdrone) is a PVR for usenet and bittorrent users. It can monitor multiple RSS feeds for new episodes of your favorite shows and will grab, sort and rename them. It can also be configured to automatically upgrade the quality of files already downloaded when a better quality format becomes available."
+    },
+    "category": "arr",
+    "category_label": "*Arr Suite",
+    "author": "LinuxServer.io",
+    "developer": null,
+    "icon": "https://raw.githubusercontent.com/linuxserver/docker-templates/master/linuxserver.io/img/sonarr-icon.png",
+    "thumbnail": "https://raw.githubusercontent.com/linuxserver/docker-templates/master/linuxserver.io/img/sonarr-banner.png",
+    "screenshots": [],
+    "architectures": [
+      "amd64",
+      "arm64"
+    ],
+    "launch": {
+      "scheme": "http",
+      "port": 8989,
+      "path": "/"
+    },
+    "website": "https://sonarr.tv/",
+    "documentation": "https://docs.linuxserver.io/images/docker-sonarr/",
+    "repository": "https://github.com/linuxserver/docker-sonarr",
+    "tips": [],
+    "mini_changelog": [
+      {
+        "date": "2026-07-09",
+        "note": "Workaround malformed ncurses database."
+      },
+      {
+        "date": "2026-07-04",
+        "note": "Rebase to Alpine 3.24."
+      },
+      {
+        "date": "2026-01-15",
+        "note": "Rebase to Alpine 3.23."
+      },
+      {
+        "date": "2025-07-05",
+        "note": "Rebase to Alpine 3.22."
+      },
+      {
+        "date": "2025-01-09",
+        "note": "Fix rootless entrypoint."
+      }
+    ],
+    "display_version": null,
+    "updated_at": "2026-07-09"
+  },
+  "source": {
+    "provider": "linuxserver.io",
+    "repository": "https://github.com/linuxserver/docker-sonarr",
+    "default_branch": "master",
+    "revision": "e9da3fa2a7d36fe9ac80022bf5f2f222e6b906eb",
+    "readme_raw_url": "https://raw.githubusercontent.com/linuxserver/docker-sonarr/e9da3fa2a7d36fe9ac80022bf5f2f222e6b906eb/README.md",
+    "readme_pushed_at": "2026-09-12T01:31:34Z",
+    "compose_sha256": "d55907541f016ebd5a7fda5b5988a7b96fc384921a632dcab67b5c8081550d9a",
+    "generated_at": "2026-09-12T14:37:36+00:00"
+  },
+  "container_contract": {
+    "service_name": "sonarr",
+    "container_name": "sonarr",
+    "image": {
+      "reference": "lscr.io/linuxserver/sonarr:latest",
+      "registry": "lscr.io",
+      "repository": "lscr.io/linuxserver/sonarr",
+      "tag": "latest",
+      "digest": null,
+      "pull_policy": "resolve-selected-tag-to-architecture-digest-at-install"
+    },
+    "environment": [
+      {
+        "name": "PUID",
+        "example": "1000",
+        "required": true,
+        "sensitive": false,
+        "source": "linuxserver-compose"
+      },
+      {
+        "name": "PGID",
+        "example": "1000",
+        "required": true,
+        "sensitive": false,
+        "source": "linuxserver-compose"
+      },
+      {
+        "name": "TZ",
+        "example": "Etc/UTC",
+        "required": true,
+        "sensitive": false,
+        "source": "linuxserver-compose"
+      }
+    ],
+    "volumes": [
+      {
+        "id": "volume-0",
+        "container_path": "/config",
+        "compose_source_example": "/path/to/sonarr/data",
+        "read_only": false,
+        "required": true,
+        "installation_choice": [
+          "managed-volume",
+          "host-bind"
+        ],
+        "default": "managed-volume",
+        "managed_volume": {
+          "backup": true,
+          "default_size_gb": 4
+        }
+      },
+      {
+        "id": "volume-1",
+        "container_path": "/tv",
+        "compose_source_example": "/path/to/tvseries",
+        "read_only": false,
+        "required": false,
+        "installation_choice": [
+          "managed-volume",
+          "host-bind",
+          "skip"
+        ],
+        "default": "skip",
+        "managed_volume": {
+          "backup": true,
+          "default_size_gb": 8
+        }
+      },
+      {
+        "id": "volume-2",
+        "container_path": "/downloads",
+        "compose_source_example": "/path/to/downloadclient-downloads",
+        "read_only": false,
+        "required": false,
+        "installation_choice": [
+          "managed-volume",
+          "host-bind",
+          "skip"
+        ],
+        "default": "skip",
+        "managed_volume": {
+          "backup": true,
+          "default_size_gb": 8
+        }
+      }
+    ],
+    "ports": [
+      {
+        "container_port": 8989,
+        "published_example": 8989,
+        "protocol": "tcp",
+        "required": true,
+        "proxmox_behavior": "listener-on-dedicated-lxc-address-no-nat"
+      }
+    ],
+    "related_services": [],
+    "restart": "unless-stopped",
+    "stop_grace_period": null,
+    "original_compose": "---\nservices:\n  sonarr:\n    image: lscr.io/linuxserver/sonarr:latest\n    container_name: sonarr\n    environment:\n      - PUID=1000\n      - PGID=1000\n      - TZ=Etc/UTC\n    volumes:\n      - /path/to/sonarr/data:/config\n      - /path/to/tvseries:/tv #optional\n      - /path/to/downloadclient-downloads:/downloads #optional\n    ports:\n      - 8989:8989\n    restart: unless-stopped\n"
+  },
+  "first_run": {
+    "endpoints": [
+      {
+        "label": "Web UI",
+        "scheme": "http",
+        "port": 8989,
+        "path": "/",
+        "source": "compose-first-tcp-port-fallback"
+      }
+    ],
+    "credentials": []
+  },
+  "proxmox": {
+    "runtime": "native-oci-lxc",
+    "technology_status": "proxmox-technology-preview",
+    "defaults": {
+      "unprivileged": true,
+      "ostype": "auto-from-image",
+      "cores": 2,
+      "memory_mb": 1024,
+      "swap_mb": 512,
+      "rootfs_size_gb": 8,
+      "rootfs_storage": "local-lvm",
+      "volume_storage": "local-lvm",
+      "template_storage": "local",
+      "bridge": "vmbr0",
+      "ipv4": "dhcp",
+      "firewall": true,
+      "host_managed_network": true,
+      "onboot": false,
+      "features": [
+        "nesting=1"
+      ],
+      "shutdown_timeout_seconds": 30
+    },
+    "image_metadata_policy": {
+      "entrypoint": "import-from-oci-image",
+      "cmd": "import-from-oci-image",
+      "environment": "import-image-env-then-apply-compose-overrides",
+      "user": "import-from-oci-image",
+      "working_dir": "import-from-oci-image",
+      "stop_signal": "import-from-oci-image"
+    },
+    "adaptations": [
+      {
+        "id": "dedicated-lxc-network",
+        "upstream_behavior": "Docker publishes selected container ports on the Docker host.",
+        "native_lxc_behavior": "The application listens on the same container ports at its dedicated LXC address.",
+        "reason": "A native LXC has its own address and does not require Docker port NAT.",
+        "behavioral_impact": "Users open the LXC address instead of the Proxmox host address.",
+        "validation": "pending-per-application"
+      },
+      {
+        "id": "compose-environment-overlay",
+        "upstream_behavior": "Compose environment values override OCI image environment values.",
+        "native_lxc_behavior": "ProxMenux merges the same values into lxc.environment.runtime while the CT is stopped.",
+        "reason": "PVE imports image Env automatically; Compose values still need to override it.",
+        "behavioral_impact": "None expected.",
+        "validation": "pending-per-application"
+      },
+      {
+        "id": "stop-grace-period",
+        "upstream_behavior": "Docker waits for Compose stop_grace_period before forcing termination.",
+        "native_lxc_behavior": "ProxMenux records the same timeout for its pct shutdown lifecycle operations.",
+        "reason": "Proxmox has no equivalent per-CT persistent restart-policy field; startup.down is not a shutdown timeout.",
+        "behavioral_impact": "Normal Proxmox node shutdown remains governed by the node-wide shutdown policy.",
+        "validation": "not-requested-by-compose"
+      }
+    ]
+  },
+  "compatibility": {
+    "automatic_install_candidate": true,
+    "validated": false,
+    "supported_compose_keys": [
+      "container_name",
+      "environment",
+      "image",
+      "ports",
+      "restart",
+      "stop_grace_period",
+      "volumes"
+    ],
+    "untranslated_blockers": [],
+    "policy": "A generated template is never promoted to validated without install, health, restart and persistence tests."
+  },
+  "validation": {
+    "schema": "passed-at-generation",
+    "clean_install": "pending",
+    "service_health": "pending",
+    "restart_persistence": "pending",
+    "backup_restore": "pending",
+    "update_preserves_data": "pending"
+  },
+  "lifecycle": {
+    "update_strategy": "replace-rootfs-from-new-oci-image-preserve-managed-volumes",
+    "registry_state": {
+      "resolved_architecture": null,
+      "resolved_digest": null,
+      "image_version_label": null,
+      "image_created": null
+    },
+    "change_detection": "compare-resolved-architecture-digest",
+    "automatic_unattended_updates": false
+  }
+}

@@ -10,7 +10,7 @@ import { Badge } from "./ui/badge"
 import { Progress } from "./ui/progress"
 import { Button } from "./ui/button"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "./ui/dialog"
-import { Server, Play, Square, Cpu, MemoryStick, HardDrive, Network, Power, RotateCcw, StopCircle, Container, ChevronDown, ChevronUp, ChevronRight, Terminal, Archive, Plus, PlusCircle, Loader2, Clock, Database, Shield, Bell, FileText, Settings2, Activity, Package, RefreshCw, EthernetPort, ArrowUpCircle, Info, CheckCircle2, EyeOff, Eye, Trash2, Check, X, AlertTriangle, AlertCircle, Search, Tag as TagIcon } from 'lucide-react'
+import { Server, Play, Square, Cpu, MemoryStick, HardDrive, Network, Power, RotateCcw, StopCircle, Container, ChevronDown, ChevronUp, ChevronRight, Terminal, Archive, Plus, PlusCircle, Loader2, Clock, Database, Shield, Bell, FileText, Settings2, Activity, Package, RefreshCw, EthernetPort, ArrowUpCircle, Info, CheckCircle2, EyeOff, Eye, Trash2, Check, X, AlertTriangle, AlertCircle, Search, Pin, Tag as TagIcon } from 'lucide-react'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select"
 import { Checkbox } from "./ui/checkbox"
 import { Switch } from "./ui/switch"
@@ -100,6 +100,7 @@ interface LxcAppWatch {
   // once, through the image.
   docker_available_version?: string | null
   docker_update_available?: boolean | null
+  docker_pinned?: boolean | null
   docker_image_reference?: string | null
   docker_binding_error?: string | null
   ports?: LxcAppPort[]
@@ -179,6 +180,7 @@ interface LxcDockerImageUpdate {
   update_targets?: LxcDockerComposeTarget[]
   standalone_containers?: string[]
   update_available: boolean | null
+  pinned?: boolean
   error: string | null
 }
 
@@ -5740,7 +5742,7 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                                                     ) : (
                                                       <span className={image.update_available === false ? "text-green-500" : undefined}>
                                                         {t("vmLxc.updates.imageInstalledTag")} {" "}
-                                                        <code className={image.update_available === false ? "text-green-500" : "text-foreground/80"}>{image.tag}</code>
+                                                        <code className={image.update_available === false ? "text-green-500" : "text-foreground/80"}>{image.tag || image.local_digest?.slice(0, 19)}</code>
                                                       </span>
                                                     )}
                                                   </div>
@@ -5758,9 +5760,15 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                                                       {t("vmLxc.updates.imageUpToDate")}
                                                     </span>
                                                   )}
-                                                  {image.update_available === null && (
+                                                  {image.update_available === null && !image.pinned && (
                                                     <span className="sm:hidden mt-1 text-xs text-muted-foreground inline-flex" title={image.error || undefined}>
                                                       {t("vmLxc.updates.imageDigestUnknown")}
+                                                    </span>
+                                                  )}
+                                                  {image.pinned && (
+                                                    <span className="sm:hidden mt-1 text-xs text-muted-foreground inline-flex items-center gap-1.5" title={t("vmLxc.updates.imagePinnedTitle")}>
+                                                      <Pin className="h-3.5 w-3.5 flex-shrink-0" />
+                                                      {t("vmLxc.updates.imagePinned")}
                                                     </span>
                                                   )}
                                                 </div>
@@ -5772,9 +5780,15 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                                                     {t("vmLxc.updates.imageUpToDate")}
                                                   </span>
                                                 )}
-                                                {image.update_available === null && (
+                                                {image.update_available === null && !image.pinned && (
                                                   <span className="hidden sm:inline-flex text-xs text-muted-foreground flex-shrink-0" title={image.error || undefined}>
                                                     {t("vmLxc.updates.imageDigestUnknown")}
+                                                  </span>
+                                                )}
+                                                {image.pinned && (
+                                                  <span className="hidden sm:inline-flex items-center gap-1.5 text-xs text-muted-foreground flex-shrink-0" title={t("vmLxc.updates.imagePinnedTitle")}>
+                                                    <Pin className="h-3.5 w-3.5 flex-shrink-0" />
+                                                    {t("vmLxc.updates.imagePinned")}
                                                   </span>
                                                 )}
                                                 {image.update_available === true && (image.update_targets || []).map((target) => (
@@ -6065,6 +6079,11 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                                                   <div className="flex items-center gap-2 text-green-500">
                                                     <CheckCircle2 className="h-4 w-4 flex-shrink-0" />
                                                     <span>{t("vmLxc.updates.imageUpToDate")}</span>
+                                                  </div>
+                                                ) : aw.docker_pinned ? (
+                                                  <div className="flex items-center gap-2" title={t("vmLxc.updates.imagePinnedTitle")}>
+                                                    <Pin className="h-4 w-4 flex-shrink-0" />
+                                                    <span>{t("vmLxc.updates.imagePinned")}</span>
                                                   </div>
                                                 ) : null
                                               ) : (

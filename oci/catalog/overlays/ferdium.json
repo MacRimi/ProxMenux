@@ -1,0 +1,15 @@
+{
+  "proxmox": {
+    "installer_profile": {
+      "selkies": {
+        "base": "FROM ghcr.io/linuxserver/baseimage-selkies:debiantrixie",
+        "dockerfile_url": "https://raw.githubusercontent.com/linuxserver/docker-ferdium/master/Dockerfile",
+        "dockerfile_sha256": "c47d21332c5d5516c76e7593905690c85c42a5d58aabfe0d0e099161b03b4755",
+        "reviewed_on": "2026-09-16",
+        "documentation": "https://docs.linuxserver.io/images/docker-baseimage-selkies/",
+        "nvidia": "not-offered-until-specific-host-and-image-validation",
+        "validation": "profile-generated; real streaming workload pending"
+      }
+    }
+  }
+}

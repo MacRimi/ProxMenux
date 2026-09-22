@@ -1,0 +1,15 @@
+{
+  "proxmox": {
+    "installer_profile": {
+      "selkies": {
+        "base": "FROM ghcr.io/linuxserver/baseimage-selkies:debiantrixie",
+        "dockerfile_url": "https://raw.githubusercontent.com/linuxserver/docker-freecad/master/Dockerfile",
+        "dockerfile_sha256": "3e76dc197f77f9256bf7af2d507ff11e0ccedeb1f65a79ab05ee8ce9d3e42421",
+        "reviewed_on": "2026-09-16",
+        "documentation": "https://docs.linuxserver.io/images/docker-baseimage-selkies/",
+        "nvidia": "not-offered-until-specific-host-and-image-validation",
+        "validation": "profile-generated; real streaming workload pending"
+      }
+    }
+  }
+}

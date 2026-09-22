@@ -229,12 +229,19 @@ def init_db() -> None:
                 -- Accepted risks outlive the run that surfaced them, so they
                 -- are keyed by check rather than by finding. expires_at NULL
                 -- means the acceptance does not lapse on its own.
+                --
+                -- review_at is deliberately not expires_at. Expiry withdraws
+                -- the decision and the finding becomes a problem again on its
+                -- own; a review date leaves the decision standing and only
+                -- brings it back to the reader, so "remind me in a year" no
+                -- longer has to be spelled as "stop accepting this in a year".
                 CREATE TABLE IF NOT EXISTS audit_exceptions (
                     check_id      TEXT PRIMARY KEY,
                     reason        TEXT NOT NULL,
                     accepted_by   TEXT NOT NULL,
                     accepted_at   INTEGER NOT NULL,
-                    expires_at    INTEGER
+                    expires_at    INTEGER,
+                    review_at     INTEGER
                 );
 
                 CREATE INDEX IF NOT EXISTS idx_audit_findings_run
@@ -250,7 +257,7 @@ def init_db() -> None:
                 "audit_findings": {"raw_state": "TEXT", "exception_snapshot": "TEXT",
                     "scope": "TEXT", "details": "TEXT", "classification": "TEXT",
                     "raw_classification": "TEXT", "decision": "TEXT"},
-                "audit_exceptions": {"scope": "TEXT"},
+                "audit_exceptions": {"scope": "TEXT", "review_at": "INTEGER"},
             }.items():
                 present = {row[1] for row in conn.execute(f"PRAGMA table_info({table})")}
                 for name, kind in columns.items():
@@ -503,12 +510,17 @@ def check_history(check_id: str, limit: int = 30) -> list[dict[str, Any]]:
 # ---------------------------------------------------------------------------
 
 def accept_risk(check_id: str, reason: str, accepted_by: str,
-                expires_at: Optional[int] = None, *, scope: str) -> None:
+                expires_at: Optional[int] = None, *, scope: str,
+                review_at: Optional[int] = None) -> None:
     """Record a deliberate decision to leave a finding unresolved.
 
     A reason is mandatory: an acceptance without one is indistinguishable
     from having silenced the check, which is what this register exists to
     prevent.
+
+    ``review_at`` asks to be reminded of the decision on a date without
+    withdrawing it. It is independent of ``expires_at``: an acceptance
+    can stand indefinitely and still come back for review.
     """
     if not (reason or "").strip():
         raise ValueError("an accepted risk requires a reason")
@@ -516,18 +528,21 @@ def accept_risk(check_id: str, reason: str, accepted_by: str,
         raise ValueError("an accepted risk requires an assessed scope")
     if expires_at is not None and expires_at <= time.time():
         raise ValueError("expiry must be in the future")
+    if review_at is not None and review_at <= time.time():
+        raise ValueError("the review date must be in the future")
     init_db()
     conn = _connect()
     try:
         conn.execute("BEGIN IMMEDIATE")
         decision = dict(check_id=check_id, reason=reason.strip(), accepted_by=accepted_by,
-                        accepted_at=int(time.time()), expires_at=expires_at, scope=scope)
+                        accepted_at=int(time.time()), expires_at=expires_at, scope=scope,
+                        review_at=review_at)
         conn.execute(
             "INSERT OR REPLACE INTO audit_exceptions "
-            "(check_id, reason, accepted_by, accepted_at, expires_at, scope) "
-            "VALUES (?, ?, ?, ?, ?, ?)",
+            "(check_id, reason, accepted_by, accepted_at, expires_at, scope, review_at) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?)",
             (check_id, reason.strip(), accepted_by, int(time.time()),
-             expires_at, scope),
+             expires_at, scope, review_at),
         )
         conn.execute("INSERT INTO audit_exception_events (check_id, action, happened_at, decision) "
                      "VALUES (?, 'accepted', ?, ?)",
@@ -642,6 +657,13 @@ def all_exceptions() -> list[dict[str, Any]]:
             item = dict(r)
             item["lapsed"] = bool(
                 item["expires_at"] is not None and item["expires_at"] <= now
+            )
+            # Due for review, and still in force: the decision holds, it is
+            # only asking to be looked at again.
+            item["review_due"] = bool(
+                item.get("review_at") is not None
+                and item["review_at"] <= now
+                and not item["lapsed"]
             )
             out.append(item)
         return out

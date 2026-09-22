@@ -5,6 +5,7 @@ Flask routes for health monitoring with persistence support
 from flask import Blueprint, jsonify, request
 from health_monitor import health_monitor
 from health_persistence import health_persistence
+from jwt_middleware import require_auth, require_admin_scope
 
 # Sprint 13: remote-mount monitor (NFS/CIFS/SMB) — separate module so a
 # missing helper doesn't crash the health blueprint.
@@ -17,6 +18,7 @@ except ImportError:
 health_bp = Blueprint('health', __name__)
 
 @health_bp.route('/api/health/status', methods=['GET'])
+@require_auth
 def get_health_status():
     """Get overall health status summary"""
     try:
@@ -26,6 +28,7 @@ def get_health_status():
         return jsonify({'error': str(e)}), 500
 
 @health_bp.route('/api/health/details', methods=['GET'])
+@require_auth
 def get_health_details():
     """Get detailed health status with all checks"""
     try:
@@ -58,6 +61,7 @@ def get_system_info():
         return jsonify({'error': str(e)}), 500
 
 @health_bp.route('/api/health/acknowledge', methods=['POST'])
+@require_admin_scope
 def acknowledge_error():
     """
     Acknowledge/dismiss an error manually.
@@ -156,6 +160,7 @@ def acknowledge_error():
         return jsonify({'error': str(e)}), 500
 
 @health_bp.route('/api/health/un-acknowledge', methods=['POST'])
+@require_admin_scope
 def unacknowledge_error():
     """
     Re-enable a previously dismissed error.
@@ -203,6 +208,7 @@ def unacknowledge_error():
 
 
 @health_bp.route('/api/health/active-errors', methods=['GET'])
+@require_auth
 def get_active_errors():
     """Get all active persistent errors"""
     try:
@@ -213,6 +219,7 @@ def get_active_errors():
         return jsonify({'error': str(e)}), 500
 
 @health_bp.route('/api/health/dismissed', methods=['GET'])
+@require_auth
 def get_dismissed_errors():
     """
     Get dismissed errors that are still within their suppression period.
@@ -225,6 +232,7 @@ def get_dismissed_errors():
         return jsonify({'error': str(e)}), 500
 
 @health_bp.route('/api/health/full', methods=['GET'])
+@require_auth
 def get_full_health():
     """
     Get complete health data in a single request: detailed status + active errors + dismissed.
@@ -271,6 +279,7 @@ def get_full_health():
         return jsonify({'error': str(e)}), 500
 
 @health_bp.route('/api/health/cleanup-orphans', methods=['POST'])
+@require_admin_scope
 def cleanup_orphan_errors():
     """
     Clean up errors for devices that no longer exist in the system.
@@ -331,6 +340,7 @@ def cleanup_orphan_errors():
         return jsonify({'error': str(e)}), 500
 
 @health_bp.route('/api/health/pending-notifications', methods=['GET'])
+@require_auth
 def get_pending_notifications():
     """
     Get events pending notification (for future Telegram/Gotify/Discord integration).
@@ -343,6 +353,7 @@ def get_pending_notifications():
         return jsonify({'error': str(e)}), 500
 
 @health_bp.route('/api/health/mark-notified', methods=['POST'])
+@require_admin_scope
 def mark_events_notified():
     """
     Mark events as notified after notification was sent successfully.
@@ -364,6 +375,7 @@ def mark_events_notified():
 
 
 @health_bp.route('/api/health/settings', methods=['GET'])
+@require_auth
 def get_health_settings():
     """
     Get per-category suppression duration settings.
@@ -377,6 +389,7 @@ def get_health_settings():
 
 
 @health_bp.route('/api/health/settings', methods=['POST'])
+@require_admin_scope
 def save_health_settings():
     """
     Save per-category suppression duration settings.
@@ -422,6 +435,7 @@ def save_health_settings():
 # ── Remote Storage Exclusions Endpoints ──
 
 @health_bp.route('/api/health/remote-storages', methods=['GET'])
+@require_auth
 def get_remote_storages():
     """
     Get list of all remote storages with their exclusion status.
@@ -472,6 +486,7 @@ def get_remote_storages():
 
 
 @health_bp.route('/api/health/storage-exclusions', methods=['GET'])
+@require_auth
 def get_storage_exclusions():
     """Get all storage exclusions."""
     try:
@@ -482,6 +497,7 @@ def get_storage_exclusions():
 
 
 @health_bp.route('/api/health/storage-exclusions', methods=['POST'])
+@require_admin_scope
 def save_storage_exclusion():
     """
     Add or update a storage exclusion.
@@ -535,6 +551,7 @@ def save_storage_exclusion():
 
 
 @health_bp.route('/api/health/storage-exclusions/<storage_name>', methods=['DELETE'])
+@require_admin_scope
 def delete_storage_exclusion(storage_name):
     """Remove a storage from the exclusion list."""
     try:
@@ -555,6 +572,7 @@ def delete_storage_exclusion(storage_name):
 # ═══════════════════════════════════════════════════════════════════════════
 
 @health_bp.route('/api/health/interfaces', methods=['GET'])
+@require_auth
 def get_network_interfaces():
     """Get all network interfaces with their exclusion status."""
     try:
@@ -615,6 +633,7 @@ def get_network_interfaces():
 
 
 @health_bp.route('/api/health/interface-exclusions', methods=['GET'])
+@require_auth
 def get_interface_exclusions():
     """Get all interface exclusions."""
     try:
@@ -625,6 +644,7 @@ def get_interface_exclusions():
 
 
 @health_bp.route('/api/health/interface-exclusions', methods=['POST'])
+@require_admin_scope
 def save_interface_exclusion():
     """
     Add or update an interface exclusion.
@@ -677,6 +697,7 @@ def save_interface_exclusion():
 
 
 @health_bp.route('/api/health/interface-exclusions/<interface_name>', methods=['DELETE'])
+@require_admin_scope
 def delete_interface_exclusion(interface_name):
     """Remove an interface from the exclusion list."""
     try:
@@ -692,7 +713,102 @@ def delete_interface_exclusion(interface_name):
         return jsonify({'error': str(e)}), 500
 
 
+@health_bp.route('/api/health/disks', methods=['GET'])
+@require_auth
+def get_disks_for_exclusion():
+    """Physical disks with whether each is excluded from periodic reads.
+
+    Listed from udev and /sys only, so opening the settings page does not
+    touch a disk the user is about to exclude precisely to leave it alone.
+    """
+    try:
+        from disk_identity import list_physical_disks
+        import disk_temperature_history as _dth
+        excluded = {e['disk_key']: e for e in health_persistence.get_excluded_disks()}
+        present = set()
+        result = []
+        for disk in list_physical_disks():
+            present.add(disk['key'])
+            entry = excluded.get(disk['key'])
+            result.append({
+                **disk,
+                'excluded': entry is not None,
+                'excluded_at': entry.get('excluded_at') if entry else None,
+                'idle': _dth.is_disk_idle(disk['name']),
+                'present': True,
+            })
+        # An excluded disk that is not connected right now — an unplugged USB
+        # drive — stays in the list, so its exclusion can still be seen and
+        # removed rather than silently waiting for it to come back.
+        for key, entry in excluded.items():
+            if key in present:
+                continue
+            result.append({
+                'name': entry.get('disk_name') or '',
+                'key': key,
+                'model': entry.get('model') or '',
+                'serial': entry.get('serial') or '',
+                'size_bytes': 0,
+                'transport': '',
+                'rotational': False,
+                'excluded': True,
+                'excluded_at': entry.get('excluded_at'),
+                'idle': False,
+                'present': False,
+            })
+        result.sort(key=lambda d: (not d['present'], d['name']))
+        return jsonify({'disks': result})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@health_bp.route('/api/health/disk-exclusions', methods=['POST'])
+@require_admin_scope
+def save_disk_exclusion():
+    """Exclude a disk from periodic reads.
+
+    Request body: {"disk_key": "serial:WD-...", "disk_name": "sdb",
+                   "model": "...", "serial": "...", "reason": "..."}
+    The key is the one /api/health/disks reports; it follows the disk
+    across kernel renames.
+    """
+    try:
+        data = request.get_json(silent=True) or {}
+        disk_key = str(data.get('disk_key') or '').strip()
+        if not disk_key or ':' not in disk_key or len(disk_key) > 200:
+            return jsonify({'error': 'a valid disk_key is required'}), 400
+        ok = health_persistence.exclude_disk(
+            disk_key,
+            disk_name=str(data.get('disk_name') or '')[:64] or None,
+            model=str(data.get('model') or '')[:128] or None,
+            serial=str(data.get('serial') or '')[:128] or None,
+            reason=str(data.get('reason') or '')[:500] or None,
+        )
+        if not ok:
+            return jsonify({'error': 'Failed to save exclusion'}), 500
+        import disk_temperature_history as _dth
+        _dth.invalidate_disk_exclusions()
+        return jsonify({'success': True, 'disk_key': disk_key})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@health_bp.route('/api/health/disk-exclusions/<path:disk_key>', methods=['DELETE'])
+@require_admin_scope
+def delete_disk_exclusion(disk_key):
+    """Put a disk back under periodic reads."""
+    try:
+        if not health_persistence.remove_disk_exclusion(disk_key):
+            return jsonify({'error': 'Disk not found in exclusions'}), 404
+        import disk_temperature_history as _dth
+        _dth.invalidate_disk_exclusions()
+        return jsonify({'success': True, 'disk_key': disk_key})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
 @health_bp.route('/api/mounts', methods=['GET'])
+@require_auth
 def get_remote_mounts():
     """Sprint 13: list NFS/CIFS/SMB mounts on the host AND inside every
     running LXC, with per-mount health (reachable / stale / read-only).

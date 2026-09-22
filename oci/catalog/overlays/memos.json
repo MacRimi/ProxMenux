@@ -1,0 +1,8 @@
+{
+  "container_contract": {
+    "image": {
+      "reference": "neosmemo/memos:stable",
+      "tag": "stable"
+    }
+  }
+}

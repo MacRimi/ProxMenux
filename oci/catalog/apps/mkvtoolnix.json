@@ -1,0 +1,376 @@
+{
+  "schema_version": "0.5.0",
+  "kind": "proxmenux.oci-template",
+  "id": "image-mkvtoolnix",
+  "status": "generated-unvalidated",
+  "catalog_ui": {
+    "title": {
+      "en_US": "MKVToolNix"
+    },
+    "tagline": {
+      "en_US": "Create and edit Matroska files from a browser"
+    },
+    "description": {
+      "en_US": "The maintained jlesage MKVToolNix image with browser GUI, persistent settings and user-selectable shared storage."
+    },
+    "category": "media",
+    "category_label": "Media & Streaming",
+    "author": "jlesage",
+    "developer": "jlesage",
+    "icon": null,
+    "thumbnail": null,
+    "screenshots": [],
+    "architectures": [
+      "amd64",
+      "arm64"
+    ],
+    "launch": {
+      "scheme": "http",
+      "port": 5800,
+      "path": "/"
+    },
+    "website": "https://github.com/jlesage/docker-mkvtoolnix",
+    "documentation": "https://github.com/jlesage/docker-mkvtoolnix",
+    "repository": "https://github.com/jlesage/docker-mkvtoolnix",
+    "tips": [
+      "/storage can point to the common directory used by Jellyfin, Plex, MakeMKV or other media applications."
+    ],
+    "mini_changelog": [],
+    "display_version": null,
+    "updated_at": "2026-08-26"
+  },
+  "source": {
+    "provider": "jlesage",
+    "repository": "https://github.com/jlesage/docker-mkvtoolnix",
+    "default_branch": "master",
+    "revision": "8a51f353e1b186dff36465a27c201d8614f80dc3",
+    "readme_raw_url": "https://raw.githubusercontent.com/jlesage/docker-mkvtoolnix/master/README.md",
+    "image_repository_url": "https://hub.docker.com/r/jlesage/mkvtoolnix",
+    "readme_pushed_at": "2026-08-26T22:06:48Z",
+    "compose_sha256": "4c11b71b299901116f68d039b11a4c86900882c4df45b3082a85215bdb42f757",
+    "generated_at": "2026-09-14T15:24:39+00:00"
+  },
+  "container_contract": {
+    "service_name": "mkvtoolnix",
+    "container_name": "mkvtoolnix",
+    "image": {
+      "reference": "jlesage/mkvtoolnix:latest",
+      "registry": "docker.io",
+      "repository": "jlesage/mkvtoolnix",
+      "tag": "latest",
+      "digest": null,
+      "pull_policy": "resolve-selected-tag-to-architecture-digest-at-install"
+    },
+    "environment": [
+      {
+        "name": "USER_ID",
+        "example": "1000",
+        "required": true,
+        "sensitive": false,
+        "source": "upstream-documentation"
+      },
+      {
+        "name": "GROUP_ID",
+        "example": "1000",
+        "required": true,
+        "sensitive": false,
+        "source": "upstream-documentation"
+      },
+      {
+        "name": "TZ",
+        "example": "Europe/Madrid",
+        "required": true,
+        "sensitive": false,
+        "source": "upstream-documentation"
+      }
+    ],
+    "volumes": [
+      {
+        "id": "config",
+        "container_path": "/config",
+        "compose_source_example": "mkvtoolnix-config",
+        "read_only": false,
+        "required": true,
+        "installation_choice": [
+          "managed-volume",
+          "host-bind"
+        ],
+        "default": "managed-volume",
+        "managed_volume": {
+          "backup": true,
+          "default_size_gb": 4
+        }
+      },
+      {
+        "id": "storage",
+        "container_path": "/storage",
+        "compose_source_example": "/mnt/oci-shared/media",
+        "read_only": false,
+        "required": true,
+        "installation_choice": [
+          "managed-volume",
+          "host-bind"
+        ],
+        "default": "host-bind",
+        "managed_volume": {
+          "backup": true,
+          "default_size_gb": 32
+        }
+      }
+    ],
+    "ports": [
+      {
+        "container_port": 5800,
+        "published_example": 5800,
+        "protocol": "tcp",
+        "required": true,
+        "proxmox_behavior": "listener-on-dedicated-lxc-address-no-nat"
+      }
+    ],
+    "related_services": [],
+    "restart": "unless-stopped",
+    "stop_grace_period": null,
+    "original_compose": "{\n  \"services\": {\n    \"mkvtoolnix\": {\n      \"image\": \"jlesage/mkvtoolnix:latest\",\n      \"ports\": [\n        \"5800:5800\"\n      ],\n      \"environment\": {\n        \"USER_ID\": \"1000\",\n        \"GROUP_ID\": \"1000\",\n        \"TZ\": \"Europe/Madrid\"\n      },\n      \"volumes\": [\n        \"mkvtoolnix-config:/config\",\n        \"/mnt/oci-shared/media:/storage\"\n      ],\n      \"restart\": \"unless-stopped\"\n    }\n  }\n}"
+  },
+  "compose_stack": {
+    "project_name": "mkvtoolnix",
+    "deployment_model": "one-native-oci-lxc-per-compose-service",
+    "user_experience": "single-application-install",
+    "main_service": "mkvtoolnix",
+    "service_count": 1,
+    "services": [
+      {
+        "name": "mkvtoolnix",
+        "image": "jlesage/mkvtoolnix:latest",
+        "is_main": true,
+        "role": "frontend",
+        "vmid_offset": 0,
+        "depends_on": [],
+        "frontend_network": true,
+        "private_network": false,
+        "compose": {
+          "image": "jlesage/mkvtoolnix:latest",
+          "ports": [
+            "5800:5800"
+          ],
+          "environment": {
+            "USER_ID": "1000",
+            "GROUP_ID": "1000",
+            "TZ": "Europe/Madrid"
+          },
+          "volumes": [
+            "mkvtoolnix-config:/config",
+            "/mnt/oci-shared/media:/storage"
+          ],
+          "restart": "unless-stopped"
+        }
+      }
+    ],
+    "top_level": {},
+    "networking": {
+      "frontend": "selected-proxmox-bridge",
+      "private_required": false,
+      "private_creation": "not-required",
+      "private_address_allocation": "not-required",
+      "service_discovery": "dedicated-lxc-address",
+      "dependency_external_access": "not-applicable",
+      "prompt_user_for_private_network": false
+    },
+    "storage": [
+      {
+        "id": "mkvtoolnix-config",
+        "service": "mkvtoolnix",
+        "container_path": "/config",
+        "mode": "user-selectable",
+        "user_selectable": true,
+        "backup": true,
+        "shared_with_other_lxc": false,
+        "default": "managed-volume",
+        "installation_choice": [
+          "managed-volume",
+          "host-bind"
+        ]
+      },
+      {
+        "id": "mkvtoolnix-storage",
+        "service": "mkvtoolnix",
+        "container_path": "/storage",
+        "mode": "user-selectable",
+        "user_selectable": true,
+        "backup": true,
+        "shared_with_other_lxc": true,
+        "default": "host-bind",
+        "installation_choice": [
+          "managed-volume",
+          "host-bind"
+        ]
+      }
+    ],
+    "orchestration": {
+      "reserve_vmids_atomically": 1,
+      "start_order": [
+        "mkvtoolnix"
+      ],
+      "stop_order": [
+        "mkvtoolnix"
+      ],
+      "dependency_readiness": "mandatory-http-first-start-healthcheck",
+      "rollback_on_failure": "remove-new-rootfs-preserve-external-host-data"
+    },
+    "installer_inputs": {
+      "prompted": [
+        "base_vmid",
+        "rootfs_storage",
+        "persistent_data_destinations",
+        "frontend_bridge",
+        "frontend_ipv4_mode"
+      ],
+      "automatic": [
+        "image_digest_resolution",
+        "managed_volume_preparation"
+      ],
+      "generated_secrets": []
+    }
+  },
+  "proxmox": {
+    "runtime": "native-oci-lxc",
+    "technology_status": "proxmox-technology-preview",
+    "catalog": {
+      "replaces_discovered_ids": [
+        "mkvtoolnix"
+      ]
+    },
+    "defaults": {
+      "unprivileged": true,
+      "ostype": "auto-from-image",
+      "cores": 2,
+      "memory_mb": 2048,
+      "swap_mb": 512,
+      "rootfs_size_gb": 8,
+      "rootfs_storage": "local-lvm",
+      "volume_storage": "local-lvm",
+      "template_storage": "local",
+      "bridge": "vmbr0",
+      "ipv4": "dhcp",
+      "firewall": true,
+      "host_managed_network": true,
+      "onboot": false,
+      "features": [
+        "nesting=1"
+      ],
+      "shutdown_timeout_seconds": 30
+    },
+    "image_metadata_policy": {
+      "entrypoint": "import-from-oci-image",
+      "cmd": "import-from-oci-image",
+      "environment": "import-image-env-then-apply-compose-overrides",
+      "user": "import-from-oci-image",
+      "working_dir": "import-from-oci-image",
+      "stop_signal": "import-from-oci-image"
+    },
+    "adaptations": [
+      {
+        "id": "native-persistent-volumes",
+        "upstream_behavior": "Docker bind mounts persistent directories into the image.",
+        "native_lxc_behavior": "ProxMenux attaches native Proxmox volumes or explicit host bind mounts at the same container paths.",
+        "reason": "Preserve the official image contract while making persistence visible to Proxmox backup policy.",
+        "behavioral_impact": "None expected.",
+        "validation": "pending-clean-install"
+      },
+      {
+        "id": "native-device-passthrough",
+        "upstream_behavior": "Docker exposes explicitly selected host devices to the container.",
+        "native_lxc_behavior": "ProxMenux maps each selected device with the native Proxmox dev resource.",
+        "reason": "The OCI process runs directly inside an LXC rather than through Docker.",
+        "behavioral_impact": "Only devices explicitly selected by the user are exposed.",
+        "validation": "not-required"
+      }
+    ],
+    "installer_profile": {
+      "network": {
+        "compose_mode": "bridge"
+      },
+      "device_requests": [],
+      "volume_preparations": [
+        {
+          "container_path": "/config",
+          "remove_lost_found": true,
+          "owner_strategy": "mapped-application-user",
+          "only_when_mount_type": "managed-volume"
+        },
+        {
+          "container_path": "/storage",
+          "remove_lost_found": true,
+          "owner_strategy": "mapped-application-user",
+          "only_when_mount_type": "managed-volume"
+        }
+      ],
+      "startup_healthcheck": {
+        "scheme": "http",
+        "port": 5800,
+        "path": "/",
+        "timeout_seconds": 180,
+        "request_timeout_seconds": 10,
+        "stability_seconds": 4,
+        "verify_tls": false
+      }
+    },
+    "security_profile": {
+      "requires_privileged_lxc": false,
+      "source_requests_privileged_lxc": false,
+      "optional_privileged_lxc": false,
+      "requires_host_pid_namespace": false,
+      "source_requests_relaxed_confinement": false,
+      "requires_relaxed_confinement": false,
+      "optional_relaxed_confinement": false,
+      "risk_level": "normal",
+      "confirmation_required": false,
+      "warning": "No security relaxation is required for the reviewed profile."
+    }
+  },
+  "compatibility": {
+    "automatic_install_candidate": true,
+    "validated": false,
+    "supported_compose_keys": [
+      "devices",
+      "environment",
+      "image",
+      "ports",
+      "restart",
+      "volumes"
+    ],
+    "untranslated_blockers": [],
+    "policy": "The official single-image contract has a reviewed native OCI-LXC mapping; clean-install validation remains pending."
+  },
+  "first_run": {
+    "endpoints": [
+      {
+        "label": "Web UI",
+        "scheme": "http",
+        "port": 5800,
+        "path": "/",
+        "source": "upstream-documentation"
+      }
+    ],
+    "credentials": []
+  },
+  "validation": {
+    "schema": "passed-at-generation",
+    "clean_install": "pending",
+    "service_health": "pending",
+    "restart_persistence": "pending",
+    "backup_restore": "pending",
+    "update_preserves_data": "pending"
+  },
+  "lifecycle": {
+    "update_strategy": "resolve-latest-image-then-apply-reviewed-native-lxc-update",
+    "registry_state": {
+      "resolved_architecture": null,
+      "resolved_digest": null,
+      "image_version_label": null,
+      "image_created": null
+    },
+    "change_detection": "compare-readme-revision-and-resolved-latest-image-digest",
+    "automatic_unattended_updates": false
+  }
+}

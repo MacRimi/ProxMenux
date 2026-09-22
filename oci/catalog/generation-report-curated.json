@@ -1,0 +1,27 @@
+{
+  "generated": [
+    "emby-official",
+    "fileflows",
+    "frigate",
+    "haos-one",
+    "immich",
+    "jdownloader",
+    "jellyfin-official",
+    "llamacpp",
+    "makemkv",
+    "mkvtoolnix",
+    "nextcloud-stack",
+    "open-webui",
+    "open-webui-cuda",
+    "open-webui-ollama",
+    "paperless-ngx",
+    "plex-official",
+    "rclone",
+    "roonserver",
+    "stremio",
+    "tandoor"
+  ],
+  "generated_count": 20,
+  "failed": [],
+  "failed_count": 0
+}

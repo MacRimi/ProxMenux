@@ -1,0 +1,390 @@
+{
+  "schema_version": "0.5.0",
+  "kind": "proxmenux.oci-template",
+  "id": "image-filebrowser-quantum",
+  "status": "laboratory-validated",
+  "catalog_ui": {
+    "title": {
+      "en_US": "FileBrowser Quantum"
+    },
+    "tagline": {
+      "en_US": "FileBrowser Quantum"
+    },
+    "description": {
+      "en_US": "Official image with managed persistent configuration and selectable content storage. Validated on amd64: clean install, authenticated login, same-digest recreation and interrupted-candidate recovery. Cross-release migration and arm64 runtime not tested."
+    },
+    "category": "tools",
+    "category_label": "Tools",
+    "author": "gtsteffaniak",
+    "developer": "gtsteffaniak",
+    "icon": null,
+    "thumbnail": null,
+    "screenshots": [],
+    "architectures": [
+      "amd64",
+      "arm64"
+    ],
+    "launch": {
+      "scheme": "http",
+      "port": 80,
+      "path": "/"
+    },
+    "website": "https://github.com/gtsteffaniak/filebrowser",
+    "documentation": "https://github.com/gtsteffaniak/filebrowser",
+    "repository": "https://github.com/gtsteffaniak/filebrowser",
+    "tips": [
+      "Official image with managed persistent configuration and selectable content storage. Validated on amd64: clean install, authenticated login, same-digest recreation and interrupted-candidate recovery. Cross-release migration and arm64 runtime not tested."
+    ],
+    "mini_changelog": [],
+    "display_version": null,
+    "updated_at": "2026-09-16",
+    "hidden": false
+  },
+  "source": {
+    "provider": "gtsteffaniak",
+    "repository": "https://github.com/gtsteffaniak/filebrowser",
+    "default_branch": "main",
+    "revision": "fa58eac9c06d769597652712ef9f093971a916d1",
+    "readme_raw_url": "https://raw.githubusercontent.com/gtsteffaniak/filebrowser/fa58eac9c06d769597652712ef9f093971a916d1/README.md",
+    "image_repository_url": "https://hub.docker.com/r/gtstef/filebrowser",
+    "compose_sha256": "1bc09f5ad7bf878a96e53861e52e6274ebc335ed63933b7e195dab0321ce5cdd",
+    "generated_at": "2026-09-16T22:00:00+02:00"
+  },
+  "container_contract": {
+    "service_name": "filebrowser-quantum",
+    "container_name": "filebrowser-quantum",
+    "image": {
+      "reference": "gtstef/filebrowser:latest",
+      "registry": "docker.io",
+      "repository": "gtstef/filebrowser",
+      "tag": "latest",
+      "digest": null,
+      "pull_policy": "resolve-selected-tag-to-architecture-digest-at-install"
+    },
+    "environment": [
+      {
+        "name": "FILEBROWSER_ADMIN_PASSWORD",
+        "example": "",
+        "required": true,
+        "sensitive": true,
+        "source": "upstream-documentation",
+        "prompt_user": true
+      }
+    ],
+    "volumes": [
+      {
+        "id": "config",
+        "container_path": "/home/filebrowser/data",
+        "compose_source_example": "config-data",
+        "read_only": false,
+        "required": true,
+        "installation_choice": [
+          "managed-volume",
+          "host-bind"
+        ],
+        "default": "managed-volume",
+        "managed_volume": {
+          "backup": true,
+          "default_size_gb": 4
+        }
+      },
+      {
+        "id": "files",
+        "container_path": "/folder",
+        "compose_source_example": "/mnt/oci-shared/files",
+        "read_only": false,
+        "required": true,
+        "installation_choice": [
+          "managed-volume",
+          "host-bind"
+        ],
+        "default": "host-bind",
+        "managed_volume": {
+          "backup": true,
+          "default_size_gb": 32
+        }
+      }
+    ],
+    "ports": [
+      {
+        "container_port": 80,
+        "published_example": 80,
+        "protocol": "tcp",
+        "required": true,
+        "proxmox_behavior": "listener-on-dedicated-lxc-address-no-nat"
+      }
+    ],
+    "related_services": [],
+    "restart": "unless-stopped",
+    "stop_grace_period": null,
+    "original_compose": "{\n  \"services\": {\n    \"filebrowser-quantum\": {\n      \"image\": \"gtstef/filebrowser:latest\",\n      \"volumes\": [\n        \"config-data:/home/filebrowser/data\",\n        \"/mnt/oci-shared/files:/folder\"\n      ],\n      \"ports\": [\n        \"80:80\"\n      ],\n      \"environment\": {\n        \"FILEBROWSER_ADMIN_PASSWORD\": \"\"\n      },\n      \"restart\": \"unless-stopped\"\n    }\n  }\n}"
+  },
+  "compose_stack": {
+    "project_name": "mkvtoolnix",
+    "deployment_model": "one-native-oci-lxc-per-compose-service",
+    "user_experience": "single-application-install",
+    "main_service": "mkvtoolnix",
+    "service_count": 1,
+    "services": [
+      {
+        "name": "mkvtoolnix",
+        "image": "jlesage/mkvtoolnix:latest",
+        "is_main": true,
+        "role": "frontend",
+        "vmid_offset": 0,
+        "depends_on": [],
+        "frontend_network": true,
+        "private_network": false,
+        "compose": {
+          "image": "jlesage/mkvtoolnix:latest",
+          "ports": [
+            "5800:5800"
+          ],
+          "environment": {
+            "USER_ID": "1000",
+            "GROUP_ID": "1000",
+            "TZ": "Europe/Madrid"
+          },
+          "volumes": [
+            "mkvtoolnix-config:/config",
+            "/mnt/oci-shared/media:/storage"
+          ],
+          "restart": "unless-stopped"
+        }
+      }
+    ],
+    "top_level": {},
+    "networking": {
+      "frontend": "selected-proxmox-bridge",
+      "private_required": false,
+      "private_creation": "not-required",
+      "private_address_allocation": "not-required",
+      "service_discovery": "dedicated-lxc-address",
+      "dependency_external_access": "not-applicable",
+      "prompt_user_for_private_network": false
+    },
+    "storage": [
+      {
+        "id": "mkvtoolnix-config",
+        "service": "mkvtoolnix",
+        "container_path": "/config",
+        "mode": "user-selectable",
+        "user_selectable": true,
+        "backup": true,
+        "shared_with_other_lxc": false,
+        "default": "managed-volume",
+        "installation_choice": [
+          "managed-volume",
+          "host-bind"
+        ]
+      },
+      {
+        "id": "mkvtoolnix-storage",
+        "service": "mkvtoolnix",
+        "container_path": "/storage",
+        "mode": "user-selectable",
+        "user_selectable": true,
+        "backup": true,
+        "shared_with_other_lxc": true,
+        "default": "host-bind",
+        "installation_choice": [
+          "managed-volume",
+          "host-bind"
+        ]
+      }
+    ],
+    "orchestration": {
+      "reserve_vmids_atomically": 1,
+      "start_order": [
+        "mkvtoolnix"
+      ],
+      "stop_order": [
+        "mkvtoolnix"
+      ],
+      "dependency_readiness": "mandatory-http-first-start-healthcheck",
+      "rollback_on_failure": "remove-new-rootfs-preserve-external-host-data"
+    },
+    "installer_inputs": {
+      "prompted": [
+        "base_vmid",
+        "rootfs_storage",
+        "persistent_data_destinations",
+        "frontend_bridge",
+        "frontend_ipv4_mode"
+      ],
+      "automatic": [
+        "image_digest_resolution",
+        "managed_volume_preparation"
+      ],
+      "generated_secrets": []
+    }
+  },
+  "proxmox": {
+    "runtime": "native-oci-lxc",
+    "technology_status": "proxmox-technology-preview",
+    "catalog": {
+      "replaces_discovered_ids": []
+    },
+    "defaults": {
+      "unprivileged": true,
+      "ostype": "auto-from-image",
+      "cores": 2,
+      "memory_mb": 2048,
+      "swap_mb": 512,
+      "rootfs_size_gb": 8,
+      "rootfs_storage": "local-lvm",
+      "volume_storage": "local-lvm",
+      "template_storage": "local",
+      "bridge": "vmbr0",
+      "ipv4": "dhcp",
+      "firewall": true,
+      "host_managed_network": true,
+      "onboot": false,
+      "features": [
+        "nesting=1"
+      ],
+      "shutdown_timeout_seconds": 30
+    },
+    "image_metadata_policy": {
+      "entrypoint": "import-from-oci-image",
+      "cmd": "import-from-oci-image",
+      "environment": "import-image-env-then-apply-compose-overrides",
+      "user": "import-from-oci-image",
+      "working_dir": "import-from-oci-image",
+      "stop_signal": "import-from-oci-image"
+    },
+    "adaptations": [
+      {
+        "id": "native-persistent-volumes",
+        "upstream_behavior": "Docker bind mounts persistent directories into the image.",
+        "native_lxc_behavior": "ProxMenux attaches native Proxmox volumes or explicit host bind mounts at the same container paths.",
+        "reason": "Preserve the official image contract while making persistence visible to Proxmox backup policy.",
+        "behavioral_impact": "None expected.",
+        "validation": "passed-amd64-install-recreate-recovery"
+      },
+      {
+        "id": "native-device-passthrough",
+        "upstream_behavior": "Docker exposes explicitly selected host devices to the container.",
+        "native_lxc_behavior": "ProxMenux maps each selected device with the native Proxmox dev resource.",
+        "reason": "The OCI process runs directly inside an LXC rather than through Docker.",
+        "behavioral_impact": "Only devices explicitly selected by the user are exposed.",
+        "validation": "not-required"
+      }
+    ],
+    "installer_profile": {
+      "volume_owner": {
+        "uid": 1000,
+        "gid": 1000
+      },
+      "volume_preparations": [
+        {
+          "container_path": "/home/filebrowser/data",
+          "remove_lost_found": true,
+          "owner_strategy": "mapped-application-user",
+          "only_when_mount_type": "managed-volume"
+        },
+        {
+          "container_path": "/folder",
+          "remove_lost_found": true,
+          "owner_strategy": "mapped-application-user",
+          "only_when_mount_type": "managed-volume"
+        }
+      ],
+      "security": {
+        "sysctls": [
+          {
+            "name": "net.ipv4.ip_unprivileged_port_start",
+            "value": "0"
+          }
+        ]
+      },
+      "generated_files": [
+        {
+          "container_path": "/home/filebrowser/data/config.yaml",
+          "mode": "0644",
+          "owner": "mapped-application-user",
+          "only_if_missing": true,
+          "content": "server:\n  port: 80\n  cacheDir: /home/filebrowser/data/tmp\n  sources:\n    - path: /folder\n      config:\n        defaultEnabled: true\nauth:\n  adminUsername: admin\n"
+        }
+      ],
+      "startup_healthcheck": {
+        "scheme": "http",
+        "port": 80,
+        "path": "/health",
+        "timeout_seconds": 300,
+        "request_timeout_seconds": 10,
+        "stability_seconds": 4,
+        "verify_tls": false
+      }
+    },
+    "security_profile": {
+      "requires_privileged_lxc": false,
+      "source_requests_privileged_lxc": false,
+      "optional_privileged_lxc": false,
+      "requires_host_pid_namespace": false,
+      "source_requests_relaxed_confinement": false,
+      "requires_relaxed_confinement": false,
+      "optional_relaxed_confinement": false,
+      "risk_level": "normal",
+      "confirmation_required": false,
+      "warning": "No security relaxation is required for the reviewed profile."
+    }
+  },
+  "compatibility": {
+    "automatic_install_candidate": true,
+    "validated": true,
+    "supported_compose_keys": [
+      "devices",
+      "environment",
+      "image",
+      "ports",
+      "restart",
+      "volumes"
+    ],
+    "untranslated_blockers": [],
+    "policy": "Official image with managed persistent configuration and selectable content storage. Validated on amd64: clean install, authenticated login, same-digest recreation and interrupted-candidate recovery. Cross-release migration and arm64 runtime not tested."
+  },
+  "first_run": {
+    "endpoints": [
+      {
+        "label": "Web UI",
+        "scheme": "http",
+        "port": 80,
+        "path": "/",
+        "source": "https://github.com/gtsteffaniak/filebrowser"
+      }
+    ],
+    "credentials": [
+      {
+        "label": "FileBrowser Quantum (new installation)",
+        "type": "configured-or-installer-generated",
+        "username": "admin",
+        "password": null,
+        "password_environment": "FILEBROWSER_ADMIN_PASSWORD",
+        "change_required": false,
+        "source": "https://filebrowserquantum.com/en/docs/reference/cli/"
+      }
+    ]
+  },
+  "validation": {
+    "schema": "passed-at-generation",
+    "clean_install": "passed-amd64",
+    "service_health": "passed-amd64",
+    "restart_persistence": "passed-through-recreation-amd64",
+    "backup_restore": "passed-managed-configuration-amd64",
+    "update_preserves_data": "passed-same-digest-recreation-amd64",
+    "cross_release_upgrade": "not-tested",
+    "evidence": "docs/lab/new-images-validation-20260918.json"
+  },
+  "lifecycle": {
+    "update_strategy": "resolve-latest-image-then-apply-reviewed-native-lxc-update",
+    "registry_state": {
+      "resolved_architecture": null,
+      "resolved_digest": null,
+      "image_version_label": null,
+      "image_created": null
+    },
+    "change_detection": "compare-readme-revision-and-resolved-latest-image-digest",
+    "automatic_unattended_updates": false
+  }
+}

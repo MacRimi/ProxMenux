@@ -1,0 +1,19 @@
+{
+  "container_contract": {
+    "image": {
+      "reference": "mongo:4",
+      "tag": "4"
+    }
+  },
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "MongoDB 4.4, the last series that runs on a CPU without AVX."
+    },
+    "description": {
+      "en_US": "The 4.4 series of MongoDB, the document-oriented NoSQL database. MongoDB 5 and later require a CPU with AVX support and will not start without it, which leaves the low-power processors common in home servers unable to run them at all. This entry exists for those machines: it is pinned to the 4.4 series rather than following the latest release. The series reached its end of life in February 2024 and receives no further fixes, so where the processor does support AVX, the MongoDB entry installs a maintained release instead."
+    }
+  },
+  "proxmox": {
+    "image_selection_note": "The upstream recipe is named mongodb4 and points at mongo:latest, so the entry promised a series it did not install. It is pinned to mongo:4 here, which is what the name says and the only series a processor without AVX can run."
+  }
+}

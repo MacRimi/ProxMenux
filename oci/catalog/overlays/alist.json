@@ -1,0 +1,19 @@
+{
+  "first_run": {
+    "credentials": [
+      {
+        "label": "AList initial login",
+        "type": "runtime-generated",
+        "username": "admin",
+        "password": null,
+        "change_required": true,
+        "source": "alist-initial-admin-password-on-first-start",
+        "retrieval": {
+          "method": "container-console-pattern",
+          "pattern": "initial password is:\\s*(\\S+)",
+          "timeout_seconds": 180
+        }
+      }
+    ]
+  }
+}

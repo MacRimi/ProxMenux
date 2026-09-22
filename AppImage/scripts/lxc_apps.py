@@ -2622,6 +2622,7 @@ def annotate_delegated_apps(apps: list, docker_inventory: dict) -> None:
             # showing the version of an image it no longer runs.
             app['docker_available_version'] = None
             app['docker_update_available'] = None
+            app['docker_pinned'] = None
             link = resolve_docker_image_for_app(app, docker_inventory)
             app['docker_image_reference'] = link.get('image_reference')
             app['docker_binding_error'] = link.get('error')
@@ -2633,6 +2634,7 @@ def annotate_delegated_apps(apps: list, docker_inventory: dict) -> None:
                     continue
                 app['docker_available_version'] = image.get('available_version')
                 app['docker_update_available'] = image.get('update_available')
+                app['docker_pinned'] = image.get('pinned')
                 break
     except Exception:
         pass
@@ -2903,6 +2905,7 @@ def _docker_inventory_from_ct(vmid) -> dict:
                 "architecture": str(inspected_image.get("Architecture") or ""),
                 "variant": str(inspected_image.get("Variant") or ""),
             },
+            "pinned": False,
             "available_version": None,
             "available_version_source": None,
             "update_available": None,
@@ -2911,13 +2914,78 @@ def _docker_inventory_from_ct(vmid) -> dict:
         if len(images) >= _DOCKER_MAX_IMAGES:
             break
 
+    # A container pinned by digest runs exactly the image it names; a newer
+    # tag upstream does not move it, only an edit to its reference does. It is
+    # listed under that reference with its installed version, and is never
+    # compared with the registry nor offered an update.
+    pinned_groups: dict[str, list[dict]] = {}
+    for item in containers:
+        reference = str(item.get("image_reference") or item.get("image") or "").strip()
+        if "@" in reference:
+            pinned_groups.setdefault(reference, []).append(item)
+    for reference in sorted(pinned_groups):
+        if len(images) >= _DOCKER_MAX_IMAGES:
+            break
+        name, _, pinned_digest = reference.partition("@")
+        if not re.fullmatch(r"sha256:[0-9a-f]{64}", pinned_digest):
+            continue
+        final_component = name.rsplit("/", 1)[-1]
+        repository, tag = name.rsplit(":", 1) if ":" in final_component else (name, "")
+        parsed = _parse_docker_reference(repository, tag or pinned_digest)
+        if not parsed or reference in seen:
+            continue
+        seen.add(reference)
+        parsed = {**parsed, "tag": tag, "reference": reference}
+        group = pinned_groups[reference]
+        image_id = next((str(item.get("image_id")) for item in group if item.get("image_id")), "")
+        inspected_image = (
+            inspected_images.get(image_id)
+            or inspected_images.get(image_id.removeprefix("sha256:"))
+            or {}
+        )
+        installed_version, installed_version_source = _docker_version_from_image_inspect(
+            parsed, inspected_image,
+        )
+        primary_compose = group[0].get("compose") or {}
+        display_meta = _docker_service_catalog_meta(
+            str(primary_compose.get("service") or ""),
+            str(group[0].get("name") or ""),
+            reference,
+        )
+        images.append({
+            **parsed,
+            "local_digest": pinned_digest,
+            "remote_digest": None,
+            "image_id": image_id,
+            "used_by": sorted({item["name"] for item in group}),
+            "update_targets": [],
+            "standalone_containers": [],
+            "display_name": display_meta.get("name"),
+            "logo_url": display_meta.get("logo_url"),
+            "installed_version": installed_version,
+            "installed_version_source": installed_version_source,
+            "platform": {
+                "os": str(inspected_image.get("Os") or ""),
+                "architecture": str(inspected_image.get("Architecture") or ""),
+                "variant": str(inspected_image.get("Variant") or ""),
+            },
+            "pinned": True,
+            "available_version": None,
+            "available_version_source": None,
+            "update_available": None,
+            "error": None,
+        })
+
     def _check(item: dict) -> tuple[str, Optional[str], Optional[str]]:
         remote, error = _fetch_registry_manifest_digest(item)
         return item["reference"], remote, error
 
     if images:
-        with concurrent.futures.ThreadPoolExecutor(max_workers=min(4, len(images))) as pool:
-            results = list(pool.map(_check, images))
+        checkable = [item for item in images if not item.get("pinned")]
+        results = []
+        if checkable:
+            with concurrent.futures.ThreadPoolExecutor(max_workers=min(4, len(checkable))) as pool:
+                results = list(pool.map(_check, checkable))
         by_ref = {ref: (digest, error) for ref, digest, error in results}
         for item in images:
             remote, remote_error = by_ref.get(item["reference"], (None, None))

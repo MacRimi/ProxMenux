@@ -1,0 +1,625 @@
+{
+  "schema_version": "0.5.0",
+  "kind": "proxmenux.oci-template",
+  "id": "image-roonserver",
+  "status": "generated-unvalidated",
+  "catalog_ui": {
+    "title": {
+      "en_US": "Roon Server"
+    },
+    "tagline": {
+      "en_US": "Music software that transforms your listening experience"
+    },
+    "description": {
+      "en_US": "Roon music software transforms your listening experience with rich metadata, discovery features, and audiophile sound. It works with streaming services and local files.\n\nRoon brings all your music together and adds bios, reviews, photos, lyrics, tour dates, and cross-linked credits for performers, songwriters, producers, engineers, and composers. Everything about music - browsing, discovery, collecting, and listening - is more engaging with Roon.\n\nRoonServer is the central server component. It runs on a Linux amd64/x86_64 host, stores the Roon database and settings, and serves your library to Roon Remote clients and audio endpoints on your local network. It is controlled from the Roon app and does not provide a browser-based WebUI.\n"
+    },
+    "category": "media",
+    "category_label": "Media & Streaming",
+    "author": "Roon Labs",
+    "developer": "Roon Labs",
+    "icon": null,
+    "thumbnail": null,
+    "screenshots": [],
+    "architectures": [
+      "amd64"
+    ],
+    "launch": {
+      "scheme": "http",
+      "port": null,
+      "path": "/"
+    },
+    "website": "https://roon.app",
+    "documentation": null,
+    "repository": "https://ghcr.io/roonlabs/roonserver",
+    "tips": [],
+    "mini_changelog": [],
+    "display_version": null,
+    "updated_at": null
+  },
+  "source": {
+    "provider": "roonlabs",
+    "repository": "https://ghcr.io/roonlabs/roonserver",
+    "revision": "5887607d4ca3e9334fea6c4e49ff2e0884595935ae057f3976c90dc98b8bd106",
+    "image_repository_url": "https://ghcr.io/roonlabs/roonserver",
+    "readme_pushed_at": "2026-09-11T10:43:22Z",
+    "compose_sha256": "5887607d4ca3e9334fea6c4e49ff2e0884595935ae057f3976c90dc98b8bd106",
+    "generated_at": "2026-09-13T17:20:19+00:00"
+  },
+  "container_contract": {
+    "service_name": "roonserver",
+    "container_name": "roonserver",
+    "image": {
+      "reference": "ghcr.io/roonlabs/roonserver:latest",
+      "registry": "ghcr.io",
+      "repository": "ghcr.io/roonlabs/roonserver",
+      "tag": "latest",
+      "digest": null,
+      "pull_policy": "resolve-selected-tag-to-architecture-digest-at-install"
+    },
+    "environment": [
+      {
+        "name": "ROON_INSTALL_BRANCH",
+        "example": "production",
+        "required": true,
+        "sensitive": false,
+        "source": "docker-compose"
+      },
+      {
+        "name": "TZ",
+        "example": "$TZ",
+        "required": true,
+        "sensitive": false,
+        "source": "docker-compose"
+      }
+    ],
+    "volumes": [
+      {
+        "id": "volume-0",
+        "container_path": "/Roon",
+        "compose_source_example": "/DATA/AppData/$AppID/Roon",
+        "read_only": false,
+        "required": true,
+        "installation_choice": [
+          "managed-volume",
+          "host-bind"
+        ],
+        "default": "managed-volume",
+        "managed_volume": {
+          "backup": true,
+          "default_size_gb": 8
+        }
+      },
+      {
+        "id": "volume-1",
+        "container_path": "/Music",
+        "compose_source_example": "/DATA/Media/Music",
+        "read_only": false,
+        "required": true,
+        "installation_choice": [
+          "managed-volume",
+          "host-bind"
+        ],
+        "default": "managed-volume",
+        "managed_volume": {
+          "backup": true,
+          "default_size_gb": 8
+        }
+      },
+      {
+        "id": "volume-2",
+        "container_path": "/RoonBackups",
+        "compose_source_example": "/DATA/AppData/$AppID/RoonBackups",
+        "read_only": false,
+        "required": true,
+        "installation_choice": [
+          "managed-volume",
+          "host-bind"
+        ],
+        "default": "managed-volume",
+        "managed_volume": {
+          "backup": true,
+          "default_size_gb": 8
+        }
+      },
+      {
+        "id": "volume-3",
+        "container_path": "/run/udev",
+        "compose_source_example": "/run/udev",
+        "read_only": true,
+        "required": true,
+        "installation_choice": [
+          "host-bind"
+        ],
+        "default": "host-bind",
+        "managed_volume": {
+          "backup": true,
+          "default_size_gb": 8
+        }
+      }
+    ],
+    "ports": [],
+    "related_services": [],
+    "restart": "unless-stopped",
+    "stop_grace_period": null,
+    "original_compose": "name: roonserver\nservices:\n  roonserver:\n    image: ghcr.io/roonlabs/roonserver:latest\n    container_name: roonserver\n    network_mode: host\n    restart: unless-stopped\n    environment:\n      ROON_INSTALL_BRANCH: production\n      TZ: $TZ\n    volumes:\n    - type: bind\n      source: /DATA/AppData/$AppID/Roon\n      target: /Roon\n    - type: bind\n      source: /DATA/Media/Music\n      target: /Music\n    - type: bind\n      source: /DATA/AppData/$AppID/RoonBackups\n      target: /RoonBackups\n    - type: bind\n      source: /run/udev\n      target: /run/udev\n      read_only: true\n    cap_add:\n    - SYS_ADMIN\n    - DAC_READ_SEARCH\n    security_opt:\n    - apparmor:unconfined\n    - label:disable\n    devices:\n    - /dev/snd:/dev/snd\n    - /dev/bus/usb:/dev/bus/usb\n    - /dev/dri:/dev/dri\n    group_add:\n    - audio\n    logging:\n      driver: local\n"
+  },
+  "compose_stack": {
+    "project_name": "roonserver",
+    "deployment_model": "one-native-oci-lxc-per-compose-service",
+    "user_experience": "single-application-install",
+    "main_service": "roonserver",
+    "service_count": 1,
+    "services": [
+      {
+        "name": "roonserver",
+        "image": "ghcr.io/roonlabs/roonserver:latest",
+        "is_main": true,
+        "role": "frontend",
+        "vmid_offset": 0,
+        "depends_on": [],
+        "frontend_network": true,
+        "private_network": false,
+        "compose": {
+          "image": "ghcr.io/roonlabs/roonserver:latest",
+          "container_name": "roonserver",
+          "network_mode": "host",
+          "restart": "unless-stopped",
+          "environment": {
+            "ROON_INSTALL_BRANCH": "production",
+            "TZ": "$TZ"
+          },
+          "volumes": [
+            {
+              "type": "bind",
+              "source": "/DATA/AppData/$AppID/Roon",
+              "target": "/Roon"
+            },
+            {
+              "type": "bind",
+              "source": "/DATA/Media/Music",
+              "target": "/Music"
+            },
+            {
+              "type": "bind",
+              "source": "/DATA/AppData/$AppID/RoonBackups",
+              "target": "/RoonBackups"
+            },
+            {
+              "type": "bind",
+              "source": "/run/udev",
+              "target": "/run/udev",
+              "read_only": true
+            }
+          ],
+          "cap_add": [
+            "SYS_ADMIN",
+            "DAC_READ_SEARCH"
+          ],
+          "security_opt": [
+            "apparmor:unconfined",
+            "label:disable"
+          ],
+          "devices": [
+            "/dev/snd:/dev/snd",
+            "/dev/bus/usb:/dev/bus/usb",
+            "/dev/dri:/dev/dri"
+          ],
+          "group_add": [
+            "audio"
+          ],
+          "logging": {
+            "driver": "local"
+          }
+        }
+      }
+    ],
+    "top_level": {
+      "name": "roonserver"
+    },
+    "networking": {
+      "frontend": "selected-proxmox-bridge",
+      "private_required": false,
+      "private_creation": "automatic-create-if-missing",
+      "private_address_allocation": "automatic-static-address-per-service",
+      "service_discovery": "private-addresses-with-compose-service-host-aliases",
+      "dependency_external_access": "disabled-unless-service-publishes-ports",
+      "prompt_user_for_private_network": false
+    },
+    "storage": [
+      {
+        "id": "roonserver-volume-0",
+        "service": "roonserver",
+        "container_path": "/Roon",
+        "mode": "managed-volume",
+        "user_selectable": false,
+        "backup": true,
+        "shared_with_other_lxc": false,
+        "source_path": null,
+        "source_path_prompt": null
+      },
+      {
+        "id": "roonserver-volume-1",
+        "service": "roonserver",
+        "container_path": "/Music",
+        "mode": "host-bind",
+        "user_selectable": true,
+        "backup": false,
+        "shared_with_other_lxc": true,
+        "source_path": null,
+        "source_path_prompt": "Host directory for roonserver:/Music"
+      },
+      {
+        "id": "roonserver-volume-2",
+        "service": "roonserver",
+        "container_path": "/RoonBackups",
+        "mode": "managed-volume",
+        "user_selectable": false,
+        "backup": true,
+        "shared_with_other_lxc": false,
+        "source_path": null,
+        "source_path_prompt": null
+      },
+      {
+        "id": "roonserver-volume-3",
+        "service": "roonserver",
+        "container_path": "/run/udev",
+        "mode": "managed-volume",
+        "user_selectable": false,
+        "backup": true,
+        "shared_with_other_lxc": false,
+        "source_path": null,
+        "source_path_prompt": null
+      }
+    ],
+    "orchestration": {
+      "reserve_vmids_atomically": 1,
+      "start_order": [
+        "roonserver"
+      ],
+      "stop_order": [
+        "roonserver"
+      ],
+      "dependency_readiness": "compose-healthcheck-then-port-or-process-fallback",
+      "rollback_on_failure": "remove-new-rootfs-preserve-created-persistent-volumes"
+    },
+    "installer_inputs": {
+      "prompted": [
+        "stack_name",
+        "base_vmid",
+        "rootfs_storage",
+        "persistent_data_destinations",
+        "frontend_bridge",
+        "frontend_ipv4_mode"
+      ],
+      "automatic": [
+        "dependent_vmids",
+        "private_bridge",
+        "private_subnet",
+        "private_service_addresses",
+        "compose_service_aliases",
+        "generated_secrets",
+        "dependency_start_and_stop_order"
+      ],
+      "generated_secrets": []
+    }
+  },
+  "first_run": {
+    "endpoints": [],
+    "credentials": []
+  },
+  "proxmox": {
+    "runtime": "native-oci-lxc",
+    "technology_status": "proxmox-technology-preview",
+    "defaults": {
+      "unprivileged": true,
+      "ostype": "auto-from-image",
+      "cores": 2,
+      "memory_mb": 1024,
+      "swap_mb": 512,
+      "rootfs_size_gb": 8,
+      "rootfs_storage": "local-lvm",
+      "volume_storage": "local-lvm",
+      "template_storage": "local",
+      "bridge": "vmbr0",
+      "ipv4": "dhcp",
+      "firewall": true,
+      "host_managed_network": true,
+      "onboot": false,
+      "features": [
+        "nesting=1"
+      ],
+      "shutdown_timeout_seconds": 30
+    },
+    "image_metadata_policy": {
+      "entrypoint": "import-from-oci-image",
+      "cmd": "import-from-oci-image",
+      "environment": "import-image-env-then-apply-compose-overrides",
+      "user": "import-from-oci-image",
+      "working_dir": "import-from-oci-image",
+      "stop_signal": "import-from-oci-image"
+    },
+    "installer_profile": {
+      "runtime": {
+        "supplemental_groups": [
+          "audio"
+        ]
+      },
+      "network": {
+        "compose_mode": "host"
+      },
+      "security": {
+        "required_capabilities": [
+          "SYS_ADMIN",
+          "DAC_READ_SEARCH"
+        ],
+        "options": {
+          "apparmor_profile": "unconfined",
+          "selinux_label_disabled": true
+        }
+      },
+      "hardware_acceleration": {
+        "prompt": "Hardware acceleration for Roon Server",
+        "default": "none",
+        "profiles": [
+          {
+            "id": "none",
+            "label": "No acceleration (CPU)",
+            "device_requests": []
+          },
+          {
+            "id": "vaapi",
+            "label": "Intel/AMD (VA-API)",
+            "device_requests": [
+              {
+                "id": "vaapi-render",
+                "kind": "character-device",
+                "purpose": "vaapi",
+                "path_prompt": "GPU render device",
+                "host_path_default": "/dev/dri/renderD128",
+                "container_path_strategy": "same-as-host",
+                "mode": "0660",
+                "deny_write": false,
+                "gid_strategy": "host-device-gid"
+              }
+            ]
+          }
+        ]
+      },
+      "optional_devices": [
+        {
+          "id": "dev-snd",
+          "kind": "character-device-tree",
+          "purpose": "audio",
+          "enable_prompt": "Host audio devices",
+          "enabled_default": false,
+          "required_by_compose": false,
+          "path_prompt": "Audio device directory",
+          "host_path_default": "/dev/snd",
+          "container_path": "/dev/snd",
+          "mode": "preserve-host",
+          "deny_write": false,
+          "gid_strategy": "host-device-gid",
+          "source_mapping": "/dev/snd:/dev/snd"
+        },
+        {
+          "id": "dev-bus-usb",
+          "kind": "character-device-tree",
+          "purpose": "usb",
+          "enable_prompt": "Host USB bus",
+          "enabled_default": false,
+          "required_by_compose": false,
+          "path_prompt": "USB bus directory",
+          "host_path_default": "/dev/bus/usb",
+          "container_path": "/dev/bus/usb",
+          "mode": "preserve-host",
+          "deny_write": false,
+          "gid_strategy": "host-device-gid",
+          "source_mapping": "/dev/bus/usb:/dev/bus/usb"
+        }
+      ]
+    },
+    "security_profile": {
+      "requires_privileged_lxc": false,
+      "source_requests_privileged_lxc": false,
+      "optional_privileged_lxc": false,
+      "requires_host_pid_namespace": false,
+      "source_requests_relaxed_confinement": true,
+      "requires_relaxed_confinement": true,
+      "optional_relaxed_confinement": false,
+      "risk_level": "high",
+      "confirmation_required": true,
+      "warning": "The image requests disabling part of the AppArmor or seccomp confinement. Continue only if you trust the image and accept this risk."
+    },
+    "adaptations": [
+      {
+        "id": "imported-compose-source",
+        "upstream_behavior": "The source definition deploys the complete Docker Compose application model.",
+        "native_lxc_behavior": "The source model is preserved and remains blocked until every service option has a reviewed native Proxmox mapping.",
+        "reason": "Catalog import must not imply runtime compatibility.",
+        "behavioral_impact": "No automatic installation before review.",
+        "validation": "pending-per-application"
+      },
+      {
+        "id": "rolling-latest-image",
+        "upstream_behavior": "A discovered Compose may pin a release tag or digest.",
+        "native_lxc_behavior": "ProxMenux selects the same image repository with the latest tag for catalog installations.",
+        "reason": "The automatic catalog intentionally offers rolling latest images; pinned versions belong to the future manual installer.",
+        "behavioral_impact": "The installed release can be newer than the discovered Compose revision.",
+        "validation": "pending-per-application"
+      },
+      {
+        "id": "dedicated-lxc-network",
+        "upstream_behavior": "Docker publishes selected container ports on the Docker host.",
+        "native_lxc_behavior": "A reviewed native application will listen on its original container ports at a dedicated LXC address.",
+        "reason": "A native LXC has its own address and does not require Docker port NAT.",
+        "behavioral_impact": "Published ports are metadata; ProxMenux URLs use the matching container target port.",
+        "validation": "pending-per-application"
+      },
+      {
+        "id": "compose-shm-size",
+        "upstream_behavior": "Compose sets the size of the container /dev/shm tmpfs.",
+        "native_lxc_behavior": "ProxMenux mounts a native LXC tmpfs at /dev/shm with the same requested capacity.",
+        "reason": "The OCI image runs directly as an LXC and therefore needs the equivalent Proxmox mount entry.",
+        "behavioral_impact": "None expected.",
+        "validation": "not-requested-by-compose"
+      },
+      {
+        "id": "compose-command",
+        "upstream_behavior": "Compose replaces the image Cmd while retaining its Entrypoint.",
+        "native_lxc_behavior": "ProxMenux reads the official OCI Entrypoint and combines it with the Compose command as the native LXC init command.",
+        "reason": "Proxmox stores the effective OCI process as one entrypoint string.",
+        "behavioral_impact": "None expected.",
+        "validation": "not-requested-by-compose"
+      },
+      {
+        "id": "compose-privileged-mode",
+        "upstream_behavior": "Compose selects whether the container runs in privileged mode.",
+        "native_lxc_behavior": "ProxMenux keeps the LXC unprivileged by default and exposes the broad Compose privilege request only as an explicit compatibility option.",
+        "reason": "A Compose privilege request is source metadata, not proof that the image technically requires a privileged LXC.",
+        "behavioral_impact": "A privileged LXC has weaker isolation from the Proxmox host.",
+        "validation": "native-equivalent"
+      },
+      {
+        "id": "compose-process-runtime",
+        "upstream_behavior": "Compose can replace Entrypoint, User and WorkingDir and request an init process or interactive terminal.",
+        "native_lxc_behavior": "ProxMenux applies the process overrides through native LXC init directives; lxc-init provides PID 1 supervision and the CT console provides terminal access.",
+        "reason": "The OCI process must start with the same identity, command and working directory without Docker.",
+        "behavioral_impact": "Compose stdin_open and tty become access through the Proxmox LXC console.",
+        "validation": "pending-per-application"
+      },
+      {
+        "id": "compose-healthcheck",
+        "upstream_behavior": "Docker periodically executes the declared container healthcheck.",
+        "native_lxc_behavior": "For a single-service LXC, ProxMenux translates HTTP localhost checks into a mandatory first-start service check.",
+        "reason": "Proxmox has no persistent Docker health state, while the installer still must detect a failed first boot.",
+        "behavioral_impact": "The check runs during installation rather than continuously after installation.",
+        "validation": "not-requested-by-compose"
+      },
+      {
+        "id": "compose-cpu-priority",
+        "upstream_behavior": "Docker cpu_shares sets a relative scheduling weight with 1024 as its neutral value.",
+        "native_lxc_behavior": "ProxMenux converts the relative weight to Proxmox cpuunits with 100 as its neutral value and lets the user review it.",
+        "reason": "Both settings express relative CPU priority on different scales.",
+        "behavioral_impact": "Rounding and Proxmox minimum limits can slightly change very low weights.",
+        "validation": "not-requested-by-compose"
+      },
+      {
+        "id": "compose-network-identity",
+        "upstream_behavior": "Compose can set hostname, MAC address, extra hosts and attach a service to Docker networks.",
+        "native_lxc_behavior": "ProxMenux applies hostname and MAC to net0, writes additional host aliases into the LXC and uses its dedicated bridge connection for single-service networks.",
+        "reason": "A dedicated LXC has its own network namespace and does not need a Docker bridge per service.",
+        "behavioral_impact": "host-gateway resolves to the IPv4 address of the selected Proxmox bridge.",
+        "validation": "not-requested-by-compose"
+      },
+      {
+        "id": "compose-network-mode",
+        "upstream_behavior": "Docker host mode removes Docker network isolation; bridge and default use a Docker-managed network.",
+        "native_lxc_behavior": "The OCI process uses the dedicated LXC network namespace directly, so host, bridge and default all listen on the LXC address without Docker NAT.",
+        "reason": "The LXC is the application host and already has its own address and port namespace.",
+        "behavioral_impact": "host means the LXC host, never the Proxmox host; this preserves Proxmox network isolation.",
+        "validation": "pending-per-application"
+      },
+      {
+        "id": "compose-capabilities-and-sysctls",
+        "upstream_behavior": "Compose can add Linux capabilities and set kernel parameters in the container network namespace.",
+        "native_lxc_behavior": "ProxMenux validates requested capabilities against the native LXC capability set and writes namespaced network settings as lxc.sysctl directives.",
+        "reason": "A native OCI-LXC already starts with the namespaced capability set; lxc.cap.keep would incorrectly discard unrelated required capabilities.",
+        "behavioral_impact": "Host-global capabilities such as SYS_MODULE remain blocked until their host prerequisite is explicitly adapted.",
+        "validation": "pending-per-application"
+      },
+      {
+        "id": "docker-engine-metadata",
+        "upstream_behavior": "Compose labels annotate Docker objects and the json-file logging driver rotates Docker-managed logs.",
+        "native_lxc_behavior": "Labels remain source metadata; Docker json-file settings are not applied because the OCI process runs directly under LXC.",
+        "reason": "There is no Docker object or Docker json-file log behind a native OCI-LXC application.",
+        "behavioral_impact": "Docker-only label consumers and Docker log-driver rotation do not exist in the native deployment.",
+        "validation": "pending-per-application"
+      },
+      {
+        "id": "compose-device-passthrough",
+        "upstream_behavior": "Compose passes host character devices or requests an NVIDIA runtime GPU.",
+        "native_lxc_behavior": "ProxMenux converts recognized device declarations to native Proxmox dev resources; NVIDIA profiles also inject compatible host driver libraries read-only.",
+        "reason": "Native OCI-LXC does not execute Docker device or NVIDIA runtime hooks.",
+        "behavioral_impact": "Hardware is exposed only after explicit user confirmation and host-path validation.",
+        "validation": "pending-per-application"
+      },
+      {
+        "id": "compose-host-ipc",
+        "upstream_behavior": "ipc: host shares the Docker host IPC namespace, commonly to avoid Docker's small default shared-memory allocation.",
+        "native_lxc_behavior": "The application keeps the LXC IPC namespace and receives a configurable 1 GiB /dev/shm instead of sharing Proxmox host IPC.",
+        "reason": "Processes in a single native LXC already share one IPC namespace; retaining isolation is safer than exposing host IPC.",
+        "behavioral_impact": "The application cannot exchange IPC objects with processes on the Proxmox host.",
+        "validation": "not-requested-by-compose"
+      }
+    ],
+    "deployment_profile": {
+      "variant": "hardware-selectable",
+      "gpu_passthrough": "installer-selection"
+    },
+    "catalog": {
+      "replaces_discovered_ids": [
+        "roonserver"
+      ]
+    }
+  },
+  "compatibility": {
+    "automatic_install_candidate": true,
+    "validated": false,
+    "supported_compose_keys": [
+      "cap_add",
+      "command",
+      "container_name",
+      "cpu_shares",
+      "deploy",
+      "devices",
+      "entrypoint",
+      "environment",
+      "extra_hosts",
+      "group_add",
+      "healthcheck",
+      "hostname",
+      "image",
+      "init",
+      "ipc",
+      "labels",
+      "logging",
+      "mac_address",
+      "network_mode",
+      "networks",
+      "ports",
+      "privileged",
+      "restart",
+      "runtime",
+      "security_opt",
+      "shm_size",
+      "stdin_open",
+      "stop_grace_period",
+      "sysctls",
+      "tty",
+      "user",
+      "volumes",
+      "working_dir"
+    ],
+    "untranslated_blockers": [],
+    "policy": "Single-image definitions are installable when every declared Compose option has a native Proxmox translation. Multi-image and unsupported runtime features remain blocked until their orchestrator or mapping is available."
+  },
+  "validation": {
+    "schema": "passed-at-generation",
+    "clean_install": "pending",
+    "service_health": "pending",
+    "restart_persistence": "pending",
+    "backup_restore": "pending",
+    "update_preserves_data": "pending"
+  },
+  "lifecycle": {
+    "update_strategy": "resolve-latest-image-then-apply-reviewed-native-lxc-update",
+    "registry_state": {
+      "resolved_architecture": null,
+      "resolved_digest": null,
+      "image_version_label": null,
+      "image_created": null
+    },
+    "change_detection": "compare-compose-sha256-and-resolved-latest-image-digest",
+    "automatic_unattended_updates": false
+  }
+}

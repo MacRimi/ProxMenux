@@ -4,8 +4,8 @@ import { useCallback, useEffect, useState } from "react"
 import { Badge } from "./ui/badge"
 import { Button } from "./ui/button"
 import {
-  ChevronDown, ChevronRight, Flag, Loader2, MinusCircle,
-  PlusCircle, ShieldOff, TrendingUp,
+  ArrowDownRight, ArrowUpRight, ChevronDown, ChevronRight, Flag, Loader2,
+  MinusCircle, PlusCircle, ShieldOff, TrendingUp,
 } from "lucide-react"
 import { fetchApi } from "../lib/api-config"
 import { useT, useI18n } from "../lib/i18n/provider"
@@ -24,6 +24,12 @@ import { useT, useI18n } from "../lib/i18n/provider"
  * only the first is progress, and merging them would tell the reader a
  * problem went away when the decision was to live with it.
  *
+ * The same care applies to a finding that is still reported. One that
+ * was already failing has not appeared now, so it is shown as having got
+ * worse or better with where it came from, rather than as new — reading
+ * "new" against work that lowered a critical to a warning would punish
+ * exactly the reader who fixed something.
+ *
  * It sits inside the assessment rather than in a view of its own,
  * because "what changed since last time" is context for the run being
  * read, not a separate place to visit.
@@ -33,12 +39,18 @@ interface Finding {
   check_id: string
   area: string
   classification: string
+  // Only the findings that moved carry where they came from.
+  previous_classification?: string
+  previous_affected?: number
+  affected_count?: number
 }
 
 interface Comparison {
   from: string
   to: string
   new: Finding[]
+  worse: Finding[]
+  better: Finding[]
   resolved: Finding[]
   accepted: Finding[]
   unchanged: Finding[]
@@ -46,8 +58,23 @@ interface Comparison {
   unverified: Finding[]
 }
 
+/** What moved, in the reader's terms: the gravity when that is what
+ *  changed, otherwise how many objects the finding now covers. */
+function movement(f: Finding, t: (k: string) => string): string | null {
+  if (!f.previous_classification) return null
+  if (f.previous_classification !== f.classification) {
+    return `${t(`audit.classifications.${f.previous_classification}`)} → ${t(
+      `audit.classifications.${f.classification}`,
+    )}`
+  }
+  if (f.previous_affected === undefined || f.affected_count === undefined) return null
+  return `${f.previous_affected} → ${f.affected_count}`
+}
+
 const GROUPS = [
   { key: "new", Icon: PlusCircle, tone: "text-amber-500" },
+  { key: "worse", Icon: ArrowUpRight, tone: "text-red-400" },
+  { key: "better", Icon: ArrowDownRight, tone: "text-emerald-400" },
   { key: "resolved", Icon: MinusCircle, tone: "text-green-500" },
   { key: "accepted", Icon: ShieldOff, tone: "text-indigo-400" },
   { key: "retired", Icon: Flag, tone: "text-muted-foreground" },
@@ -199,11 +226,19 @@ export function AuditComparison({ runId, isBaseline, onBaselineSet }: {
                       </span>
                     </p>
                     <div className="flex flex-wrap gap-1.5">
-                      {(comparison[key] || []).map((f) => (
-                        <Badge key={f.check_id} variant="outline" className="text-xs">
-                          {t(`audit.checks.${f.check_id}.title`)}
-                        </Badge>
-                      ))}
+                      {(comparison[key] || []).map((f) => {
+                        const moved = movement(f, t)
+                        return (
+                          <Badge key={f.check_id} variant="outline" className="text-xs">
+                            {t(`audit.checks.${f.check_id}.title`)}
+                            {moved && (
+                              <span className="ml-1.5 font-normal text-muted-foreground tabular-nums">
+                                {moved}
+                              </span>
+                            )}
+                          </Badge>
+                        )
+                      })}
                     </div>
                   </div>
                 ),

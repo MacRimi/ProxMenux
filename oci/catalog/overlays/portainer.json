@@ -1,0 +1,6 @@
+{
+  "catalog_ui": {
+    "hidden": true,
+    "hidden_reason": "Needs a Docker engine; a native OCI LXC has none"
+  }
+}

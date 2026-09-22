@@ -1,0 +1,9 @@
+{
+  "proxmox": {
+    "installer_profile": {
+      "completion_notes": [
+        "ddclient starts with the example configuration and updates nothing yet. Write your provider, login and domains in /config/ddclient.conf inside the container, then restart it."
+      ]
+    }
+  }
+}

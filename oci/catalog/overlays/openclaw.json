@@ -1,0 +1,13 @@
+{
+  "container_contract": {
+    "image": {
+      "reference": "icewhaletech/openclaw:2026.5.7",
+      "tag": "2026.5.7"
+    }
+  },
+  "catalog_ui": {
+    "architectures": [
+      "amd64"
+    ]
+  }
+}

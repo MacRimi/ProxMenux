@@ -1,0 +1,10 @@
+{
+  "proxmox": {
+    "installer_profile": {
+      "completion_notes": [
+        "playit.gg has to claim this agent before it forwards anything. The agent prints a one-time claim link on the container console and keeps it there until the link is opened.",
+        "Read the link with pct console CTID on the Proxmox host, or from the Console panel of the container in the Proxmox web interface, then open the https://playit.gg/claim/ address it shows in a browser and sign in to playit.gg. Ctrl+a q leaves pct console."
+      ]
+    }
+  }
+}

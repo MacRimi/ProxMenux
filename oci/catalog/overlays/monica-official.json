@@ -1,0 +1,17 @@
+{
+  "proxmox": {
+    "stack_environment_overrides": {
+      "monica-db": {"MARIADB_RANDOM_ROOT_PASSWORD": "yes"},
+      "monica": {"DB_DATABASE": "monica", "APP_URL": "http://localhost"}
+    },
+    "stack_generators": {
+      "GENERATED_APP_KEY": {"encoding": "base64", "bytes": 32, "prefix": "base64:"}
+    },
+    "stack_adaptation_notes": [
+      "APP_KEY follows the official base64: plus 32 random bytes format; it is generated once per deployment and persisted in the LXC environment.",
+      "MARIADB_RANDOM_ROOT_PASSWORD is a boolean switch, not a password.",
+      "Create the first Monica account through its web setup. Internet exposure requires HTTPS configuration."
+    ],
+    "stack_references": ["https://github.com/monicahq/docker", "https://github.com/MariaDB/mariadb-docker/blob/master/healthcheck.sh"]
+  }
+}

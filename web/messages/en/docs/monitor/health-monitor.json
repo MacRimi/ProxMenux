@@ -289,7 +289,7 @@
   },
   "rest": {
     "heading": "REST endpoints",
-    "intro": "Everything the modal does is callable from the API — handy for scripts, custom dashboards or your own chat-bot integration.",
+    "intro": "Everything the modal does is callable from the API — handy for scripts, custom dashboards or your own chat-bot integration. Every call needs an API token; calls that change something — dismissing an alert, saving the suppression settings, cleaning up orphans — require one with full_admin scope, and a read_only token receives 403.",
     "headerEndpoint": "Endpoint",
     "headerMethod": "Method",
     "headerUse": "Use",

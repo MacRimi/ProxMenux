@@ -1,0 +1,544 @@
+{
+  "schema_version": "0.5.0",
+  "kind": "proxmenux.oci-template",
+  "id": "image-tandoor",
+  "status": "generated-unvalidated",
+  "catalog_ui": {
+    "title": {
+      "en_US": "Tandoor Recipes"
+    },
+    "tagline": {
+      "en_US": "Self-hosted recipe manager and meal planner"
+    },
+    "description": {
+      "en_US": "Official Tandoor Recipes deployment with its integrated web server and an isolated PostgreSQL dependency."
+    },
+    "category": "productivity",
+    "category_label": "Productivity & Workflows",
+    "author": "Tandoor Recipes",
+    "developer": "Tandoor Recipes",
+    "icon": null,
+    "thumbnail": null,
+    "screenshots": [],
+    "architectures": [
+      "amd64",
+      "arm64"
+    ],
+    "launch": {
+      "scheme": "http",
+      "port": 80,
+      "path": "/"
+    },
+    "website": "https://tandoor.dev/",
+    "documentation": "https://docs.tandoor.dev/install/docker/",
+    "repository": "https://github.com/vabene1111/recipes",
+    "tips": [
+      "The installation creates PostgreSQL in a dependent LXC without access to the home network.",
+      "ALLOWED_HOSTS uses * by default to allow first access through the DHCP IP; restrict it to your domains when publishing the service.",
+      "The installer creates a superuser with the official Django command and shows its password only once."
+    ],
+    "mini_changelog": [],
+    "display_version": null,
+    "updated_at": "2026-09-11"
+  },
+  "source": {
+    "provider": "tandoor",
+    "repository": "https://github.com/vabene1111/recipes",
+    "default_branch": "develop",
+    "revision": "a5179f8a76fd865182df1b62ea212914027e4069",
+    "readme_raw_url": "https://raw.githubusercontent.com/vabene1111/recipes/develop/docs/install/docker/plain/docker-compose.yml",
+    "image_repository_url": "https://hub.docker.com/r/vabene1111/recipes",
+    "readme_pushed_at": "2026-09-11T23:39:42Z",
+    "compose_sha256": "4a996ad284a638050d3997793d9bc273d8591dd5d2284d2ada619c6441a3fd97",
+    "generated_at": "2026-09-14T15:24:39+00:00"
+  },
+  "container_contract": {
+    "service_name": "web_recipes",
+    "container_name": "tandoor",
+    "image": {
+      "reference": "vabene1111/recipes:latest",
+      "registry": "docker.io",
+      "repository": "vabene1111/recipes",
+      "tag": "latest",
+      "digest": null,
+      "pull_policy": "resolve-selected-tag-to-architecture-digest-at-install"
+    },
+    "environment": [
+      {
+        "name": "SECRET_KEY",
+        "example": "${GENERATED_SECRET_KEY}",
+        "required": true,
+        "sensitive": true,
+        "source": "upstream-documentation"
+      },
+      {
+        "name": "TZ",
+        "example": "Europe/Madrid",
+        "required": true,
+        "sensitive": false,
+        "source": "upstream-documentation"
+      },
+      {
+        "name": "ALLOWED_HOSTS",
+        "example": "*",
+        "required": true,
+        "sensitive": false,
+        "source": "upstream-documentation"
+      },
+      {
+        "name": "DB_ENGINE",
+        "example": "django.db.backends.postgresql",
+        "required": true,
+        "sensitive": false,
+        "source": "upstream-documentation",
+        "prompt_user": false
+      },
+      {
+        "name": "POSTGRES_HOST",
+        "example": "db_recipes",
+        "required": true,
+        "sensitive": false,
+        "source": "upstream-documentation",
+        "prompt_user": false
+      },
+      {
+        "name": "POSTGRES_DB",
+        "example": "djangodb",
+        "required": true,
+        "sensitive": false,
+        "source": "upstream-documentation",
+        "prompt_user": false
+      },
+      {
+        "name": "POSTGRES_PORT",
+        "example": "5432",
+        "required": true,
+        "sensitive": false,
+        "source": "upstream-documentation",
+        "prompt_user": false
+      },
+      {
+        "name": "POSTGRES_USER",
+        "example": "djangouser",
+        "required": true,
+        "sensitive": false,
+        "source": "upstream-documentation",
+        "prompt_user": false
+      },
+      {
+        "name": "POSTGRES_PASSWORD",
+        "example": "${GENERATED_DB_PASSWORD}",
+        "required": true,
+        "sensitive": true,
+        "source": "upstream-documentation",
+        "prompt_user": false
+      }
+    ],
+    "volumes": [
+      {
+        "id": "staticfiles",
+        "container_path": "/opt/recipes/staticfiles",
+        "compose_source_example": "staticfiles",
+        "read_only": false,
+        "required": true,
+        "installation_choice": [
+          "managed-volume",
+          "host-bind"
+        ],
+        "default": "managed-volume",
+        "managed_volume": {
+          "backup": true,
+          "default_size_gb": 2
+        }
+      },
+      {
+        "id": "mediafiles",
+        "container_path": "/opt/recipes/mediafiles",
+        "compose_source_example": "mediafiles",
+        "read_only": false,
+        "required": true,
+        "installation_choice": [
+          "managed-volume",
+          "host-bind"
+        ],
+        "default": "managed-volume",
+        "managed_volume": {
+          "backup": true,
+          "default_size_gb": 16
+        }
+      }
+    ],
+    "ports": [
+      {
+        "container_port": 80,
+        "published_example": 80,
+        "protocol": "tcp",
+        "required": true,
+        "proxmox_behavior": "listener-on-dedicated-lxc-address-no-nat"
+      }
+    ],
+    "related_services": [
+      {
+        "name": "db_recipes",
+        "image": "postgres:16-alpine"
+      }
+    ],
+    "restart": "unless-stopped",
+    "stop_grace_period": null,
+    "original_compose": "services:\n  db_recipes:\n    restart: always\n    image: postgres:16-alpine\n    volumes:\n      - ./postgresql:/var/lib/postgresql/data\n    env_file:\n      - ./.env\n\n  web_recipes:\n    restart: always\n    image: vabene1111/recipes\n    env_file:\n      - ./.env\n    ports:\n      - 80:80\n    volumes:\n      - staticfiles:/opt/recipes/staticfiles\n      - ./mediafiles:/opt/recipes/mediafiles\n    depends_on:\n      - db_recipes\n\nvolumes:\n  staticfiles:\n"
+  },
+  "compose_stack": {
+    "project_name": "tandoor",
+    "deployment_model": "one-native-oci-lxc-per-compose-service",
+    "user_experience": "single-application-install",
+    "main_service": "web_recipes",
+    "service_count": 2,
+    "services": [
+      {
+        "name": "db_recipes",
+        "image": "postgres:16-alpine",
+        "is_main": false,
+        "role": "dependency",
+        "vmid_offset": 1,
+        "depends_on": [],
+        "frontend_network": false,
+        "private_network": true,
+        "compose": {
+          "image": "postgres:16-alpine",
+          "restart": "unless-stopped",
+          "volumes": [
+            "postgresql:/var/lib/postgresql/data"
+          ]
+        }
+      },
+      {
+        "name": "web_recipes",
+        "image": "vabene1111/recipes:latest",
+        "is_main": true,
+        "role": "frontend",
+        "vmid_offset": 0,
+        "depends_on": [
+          "db_recipes"
+        ],
+        "frontend_network": true,
+        "private_network": true,
+        "compose": {
+          "image": "vabene1111/recipes:latest",
+          "restart": "unless-stopped",
+          "ports": [
+            "80:80"
+          ],
+          "volumes": [
+            "staticfiles:/opt/recipes/staticfiles",
+            "mediafiles:/opt/recipes/mediafiles"
+          ],
+          "env_file": [
+            ".env"
+          ]
+        }
+      }
+    ],
+    "top_level": {
+      "volumes": {
+        "postgresql": {},
+        "staticfiles": {},
+        "mediafiles": {}
+      }
+    },
+    "networking": {
+      "frontend": "selected-proxmox-bridge",
+      "private_required": true,
+      "private_creation": "automatic-create-if-missing",
+      "private_address_allocation": "automatic-static-address-per-service",
+      "service_discovery": "private-addresses-replace-compose-service-dns",
+      "dependency_external_access": "disabled",
+      "prompt_user_for_private_network": false
+    },
+    "storage": [
+      {
+        "id": "web-staticfiles",
+        "service": "web_recipes",
+        "container_path": "/opt/recipes/staticfiles",
+        "mode": "managed-volume",
+        "user_selectable": false,
+        "backup": true,
+        "shared_with_other_lxc": false
+      },
+      {
+        "id": "web-mediafiles",
+        "service": "web_recipes",
+        "container_path": "/opt/recipes/mediafiles",
+        "mode": "user-selectable",
+        "user_selectable": true,
+        "backup": true,
+        "shared_with_other_lxc": true,
+        "default": "managed-volume",
+        "installation_choice": [
+          "managed-volume",
+          "host-bind"
+        ]
+      },
+      {
+        "id": "database-data",
+        "service": "db_recipes",
+        "container_path": "/var/lib/postgresql/data",
+        "mode": "managed-volume",
+        "user_selectable": false,
+        "backup": true,
+        "shared_with_other_lxc": false
+      }
+    ],
+    "orchestration": {
+      "reserve_vmids_atomically": 2,
+      "start_order": [
+        "db_recipes",
+        "web_recipes"
+      ],
+      "stop_order": [
+        "web_recipes",
+        "db_recipes"
+      ],
+      "dependency_readiness": "healthcheck-before-application",
+      "rollback_on_failure": "remove-all-new-lxc-and-new-managed-volumes"
+    },
+    "installer_inputs": {
+      "prompted": [
+        "stack_name",
+        "base_vmid",
+        "rootfs_storage",
+        "persistent_data_destinations",
+        "frontend_bridge",
+        "timezone",
+        "allowed_hosts",
+        "admin_username",
+        "admin_email"
+      ],
+      "automatic": [
+        "dependent_vmids",
+        "private_bridge",
+        "private_addresses",
+        "generated_secrets",
+        "dependency_start_and_stop_order",
+        "generated_admin_password"
+      ],
+      "generated_secrets": [
+        {
+          "id": "database-password",
+          "strategy": "generate-cryptographically-random-at-install"
+        },
+        {
+          "id": "secret-key",
+          "strategy": "generate-cryptographically-random-at-install"
+        },
+        {
+          "id": "admin-password",
+          "strategy": "generate-cryptographically-random-at-install"
+        }
+      ]
+    }
+  },
+  "proxmox": {
+    "runtime": "native-oci-lxc",
+    "technology_status": "proxmox-technology-preview",
+    "catalog": {
+      "replaces_discovered_ids": [
+        "tandoor"
+      ]
+    },
+    "defaults": {
+      "unprivileged": true,
+      "ostype": "auto-from-image",
+      "cores": 2,
+      "memory_mb": 2048,
+      "swap_mb": 512,
+      "rootfs_size_gb": 8,
+      "rootfs_storage": "local-lvm",
+      "volume_storage": "local-lvm",
+      "template_storage": "local",
+      "bridge": "vmbr0",
+      "ipv4": "dhcp",
+      "firewall": true,
+      "host_managed_network": true,
+      "onboot": false,
+      "features": [
+        "nesting=1"
+      ],
+      "shutdown_timeout_seconds": 30
+    },
+    "image_metadata_policy": {
+      "entrypoint": "import-from-oci-image",
+      "cmd": "import-from-oci-image",
+      "environment": "import-image-env-then-apply-compose-overrides",
+      "user": "import-from-oci-image",
+      "working_dir": "import-from-oci-image",
+      "stop_signal": "import-from-oci-image"
+    },
+    "adaptations": [
+      {
+        "id": "compose-dependency-network",
+        "upstream_behavior": "Docker Compose provides service-name DNS and an isolated application network.",
+        "native_lxc_behavior": "The installer creates or reuses an automatically allocated Proxmox bridge and injects private static addresses.",
+        "reason": "Each Compose service becomes one native OCI LXC.",
+        "behavioral_impact": "PostgreSQL is reachable only on the private bridge.",
+        "validation": "pending-clean-install"
+      },
+      {
+        "id": "generated-compose-secrets",
+        "upstream_behavior": "The administrator supplies SECRET_KEY and POSTGRES_PASSWORD in the Compose .env file.",
+        "native_lxc_behavior": "The installer generates both values and injects them as native LXC runtime environment variables.",
+        "reason": "Fresh installations must not reuse published secrets.",
+        "behavioral_impact": "Secrets remain in the protected Proxmox LXC configuration like other Compose environment variables.",
+        "validation": "pending-clean-install"
+      }
+    ],
+    "installer_profile": {},
+    "security_profile": {
+      "requires_privileged_lxc": false,
+      "source_requests_privileged_lxc": false,
+      "optional_privileged_lxc": false,
+      "requires_host_pid_namespace": false,
+      "source_requests_relaxed_confinement": false,
+      "requires_relaxed_confinement": false,
+      "optional_relaxed_confinement": false,
+      "risk_level": "normal",
+      "confirmation_required": false,
+      "warning": "The reviewed Tandoor stack does not require a privileged LXC."
+    },
+    "laboratory_contract": {
+      "requirements": {
+        "proxmox_min_version": "9.1",
+        "minimum_host_memory_mb": 3072,
+        "recommended_host_memory_mb": 4096,
+        "database_storage": {
+          "must_be_local": true,
+          "network_filesystem_allowed": false
+        }
+      },
+      "defaults": {
+        "stack_name": "tandoor",
+        "timezone": "Europe/Madrid",
+        "allowed_hosts": "*",
+        "rootfs_storage": "local-lvm",
+        "application_storage": "local-lvm",
+        "database_storage": "local-lvm",
+        "shared_media_root": "/mnt/oci-shared/tandoor/${stack_name}/mediafiles",
+        "static_volume_size_gb": 2,
+        "media_volume_size_gb": 16,
+        "database_volume_size_gb": 8,
+        "frontend_network": {
+          "bridge": "vmbr0",
+          "ipv4_mode": "dhcp",
+          "firewall": true,
+          "host_managed": true
+        },
+        "private_network": {
+          "mode": "create-if-missing",
+          "bridge": "vmbr10",
+          "subnet": "10.77.0.0/24",
+          "host_address": "10.77.0.1/24",
+          "application_address": "10.77.0.40/24",
+          "database_address": "10.77.0.41/24",
+          "nat": false
+        },
+        "application": {
+          "admin_username": "admin",
+          "admin_email": "admin@example.local"
+        }
+      },
+      "installer_contract": {
+        "deployment_kind": "tandoor-two-lxc-stack",
+        "reserve_vmids_atomically": 2,
+        "generated_secrets": [
+          "POSTGRES_PASSWORD",
+          "SECRET_KEY",
+          "DJANGO_SUPERUSER_PASSWORD"
+        ],
+        "private_volumes": {
+          "staticfiles": "/opt/recipes/staticfiles",
+          "database": "/var/lib/postgresql/data"
+        },
+        "media_volume": {
+          "container_path": "/opt/recipes/mediafiles",
+          "choices": [
+            "managed-volume",
+            "host-bind"
+          ],
+          "default": "managed-volume"
+        },
+        "start_order": [
+          "db_recipes",
+          "web_recipes"
+        ],
+        "stop_order": [
+          "web_recipes",
+          "db_recipes"
+        ]
+      }
+    }
+  },
+  "compatibility": {
+    "automatic_install_candidate": true,
+    "validated": false,
+    "supported_compose_keys": [
+      "depends_on",
+      "env_file",
+      "environment",
+      "image",
+      "ports",
+      "restart",
+      "volumes"
+    ],
+    "untranslated_blockers": [],
+    "policy": "The official two-service PostgreSQL Compose has a dedicated native LXC orchestrator; clean-install validation remains pending."
+  },
+  "first_run": {
+    "endpoints": [
+      {
+        "label": "Tandoor WebUI",
+        "scheme": "http",
+        "port": 80,
+        "path": "/",
+        "source": "official-compose"
+      }
+    ],
+    "credentials": [
+      {
+        "label": "Generated Tandoor administrator",
+        "type": "runtime-generated",
+        "username": "admin",
+        "password": null,
+        "change_required": true,
+        "source": "proxmenux-installer-generated",
+        "retrieval": null
+      }
+    ]
+  },
+  "validation": {
+    "schema": "passed-at-generation",
+    "clean_install": "pending",
+    "service_health": "pending",
+    "restart_persistence": "pending",
+    "backup_restore": "pending",
+    "update_preserves_data": "pending"
+  },
+  "lifecycle": {
+    "update_strategy": "resolve-latest-images-then-apply-reviewed-native-lxc-update",
+    "registry_state": {
+      "resolved_architecture": null,
+      "resolved_digest": null,
+      "image_version_label": null,
+      "image_created": null
+    },
+    "change_detection": "compare-compose-sha256-and-resolved-image-digests",
+    "automatic_unattended_updates": false,
+    "dependency_lifecycle": {
+      "implementation": "proxmox-hookscript",
+      "trigger": "main-lxc-pre-start",
+      "starts_stopped_dependencies": true,
+      "waits_for_dependency_healthchecks": true,
+      "stops_dependencies_with_main": false,
+      "persistent_contract": "/etc/pve/priv/proxmenux-stack-<main-vmid>.json",
+      "runtime_owner": "proxmox-ve"
+    }
+  }
+}

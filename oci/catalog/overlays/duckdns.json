@@ -1,0 +1,65 @@
+{
+  "container_contract": {
+    "environment": [
+      {
+        "name": "PUID",
+        "example": "1000",
+        "required": false,
+        "sensitive": false,
+        "source": "linuxserver-compose"
+      },
+      {
+        "name": "PGID",
+        "example": "1000",
+        "required": false,
+        "sensitive": false,
+        "source": "linuxserver-compose"
+      },
+      {
+        "name": "TZ",
+        "example": "Etc/UTC",
+        "required": false,
+        "sensitive": false,
+        "source": "linuxserver-compose"
+      },
+      {
+        "name": "SUBDOMAINS",
+        "example": "",
+        "required": true,
+        "sensitive": false,
+        "prompt": "DuckDNS subdomain without .duckdns.org (comma separated for several)",
+        "source": "linuxserver-duckdns-readme"
+      },
+      {
+        "name": "TOKEN",
+        "example": "",
+        "required": true,
+        "sensitive": true,
+        "prompt": "DuckDNS token from your account at duckdns.org",
+        "source": "linuxserver-duckdns-readme"
+      },
+      {
+        "name": "UPDATE_IP",
+        "example": "ipv4",
+        "required": false,
+        "sensitive": false,
+        "prompt": "Addresses to update: ipv4, ipv6 or both (uses an external service)",
+        "source": "linuxserver-compose"
+      },
+      {
+        "name": "LOG_FILE",
+        "example": "false",
+        "required": false,
+        "sensitive": false,
+        "source": "linuxserver-compose"
+      }
+    ]
+  },
+  "proxmox": {
+    "installer_profile": {
+      "completion_notes": [
+        "DuckDNS updates the subdomain every 5 minutes. Without UPDATE_IP, DuckDNS itself detects the public IPv4 address of the request."
+      ]
+    }
+  }
+}

@@ -1,0 +1,45 @@
+{
+  "proxmox": {
+    "deployment_profile": {
+      "variant": "hardware-selectable",
+      "gpu_passthrough": "installer-selection"
+    },
+    "installer_profile": {
+      "hardware_acceleration": {
+        "prompt": "Execution engine for Index-TTS",
+        "default": "cpu",
+        "profiles": [
+          {
+            "id": "cpu",
+            "label": "CPU",
+            "device_requests": []
+          },
+          {
+            "id": "nvidia",
+            "label": "NVIDIA (CUDA)",
+            "device_requests": [
+              {
+                "id": "nvidia-runtime",
+                "kind": "nvidia-runtime",
+                "purpose": "nvidia-cuda",
+                "device_selection": "all-requested-by-compose"
+              }
+            ],
+            "environment": [
+              {
+                "name": "NVIDIA_VISIBLE_DEVICES",
+                "value": "all"
+              }
+            ]
+          }
+        ]
+      }
+    }
+  },
+  "container_contract": {
+    "image": {
+      "reference": "icewhaletech/index-tts:2.0",
+      "tag": "2.0"
+    }
+  }
+}

@@ -1,0 +1,826 @@
+{
+  "schema_version": "0.5.0",
+  "kind": "proxmenux.oci-template",
+  "id": "image-romm",
+  "status": "generated-unvalidated",
+  "catalog_ui": {
+    "title": {
+      "en_US": "RomM"
+    },
+    "tagline": {
+      "en_US": "RomM is a self-hosted ROM manager for managing and playing game collections."
+    },
+    "description": {
+      "en_US": "RomM is a self-hosted game collection management app designed for emulator enthusiasts, offering a convenient way to scan, enrich, browse, and play games. Its responsive Web interface allows users to manage collections via any modern browser, supporting over 400 platforms, ideal for retro gaming fans building personal game libraries.\n\nThe app's core features include robust library management and seamless gameplay. It fetches metadata from IGDB, Screenscraper, and MobyGames, and custom artwork from SteamGridDB, enhancing the visual appeal of collections. Users can play games directly in the browser using EmulatorJS and RuffleRS, with support for multi-disk games, DLCs, patches, and manuals. It also enables parsing and filtering by filename tags for tailored organization. Additionally, it supports multi-user accounts with limited access permissions, allowing library sharing with friends and displaying RetroAchievements.\n\nIt can be flexibly deployed on personal servers or NAS devices, with official apps for Playnite and muOS enhancing cross-device access. Users can upload, update, or delete games via the Web interface, with community support documentation expanding functionality. Whether managing a personal retro game library or sharing with others, the app's intuitive interface and high customizability deliver a modern game management platform, meeting diverse needs.\n\n**Key Features:**\n- Scan and enhance your game library with metadata from IGDB, Screenscraper and MobyGames\n- Fetch custom artwork from SteamGridDB\n- Display your achievements from Retroachievements\n- Metadata available for 400+ platforms\n- Play games directly from the browser using EmulatorJS and RuffleRS\n- Share your library with friends with limited access and permissions\n- Official apps for Playnite and muOS\n- Supports multi-disk games, DLCs, mods, hacks, patches, and manuals\n- Parse and filter by tags in filenames\n- View, upload, update, and delete games from any modern web browser\n\n**Learn More:**\n- [RomM Official Website](https://romm.app)\n- [RomM GitHub Repository](https://github.com/rommapp/romm)\n"
+    },
+    "category": "gaming",
+    "category_label": "Gaming & Leisure",
+    "author": "rommapp",
+    "developer": "rommapp",
+    "icon": null,
+    "thumbnail": null,
+    "screenshots": [],
+    "architectures": [
+      "amd64",
+      "arm64"
+    ],
+    "launch": {
+      "scheme": "http",
+      "port": 8080,
+      "path": "/"
+    },
+    "website": "https://romm.app",
+    "documentation": null,
+    "repository": "https://hub.docker.com/r/rommapp/romm",
+    "tips": [],
+    "mini_changelog": [],
+    "display_version": null,
+    "updated_at": null
+  },
+  "source": {
+    "provider": "official",
+    "repository": "https://hub.docker.com/r/rommapp/romm",
+    "revision": "f1558e8732d595b63401c73b5da7c155cc2f27c664fb12e1bbd67fa15eb06777",
+    "image_repository_url": "https://hub.docker.com/r/rommapp/romm",
+    "readme_pushed_at": "2026-09-11T10:43:22Z",
+    "compose_sha256": "f1558e8732d595b63401c73b5da7c155cc2f27c664fb12e1bbd67fa15eb06777",
+    "generated_at": "2026-09-13T15:48:33+00:00"
+  },
+  "container_contract": {
+    "service_name": "romm",
+    "container_name": "romm",
+    "image": {
+      "reference": "rommapp/romm:latest",
+      "registry": "docker.io",
+      "repository": "rommapp/romm",
+      "tag": "latest",
+      "digest": null,
+      "pull_policy": "resolve-selected-tag-to-architecture-digest-at-install"
+    },
+    "environment": [
+      {
+        "name": "DB_HOST",
+        "example": "romm-db",
+        "required": true,
+        "sensitive": false,
+        "source": "docker-compose"
+      },
+      {
+        "name": "DB_NAME",
+        "example": "romm",
+        "required": true,
+        "sensitive": false,
+        "source": "docker-compose"
+      },
+      {
+        "name": "DB_USER",
+        "example": "romm-user",
+        "required": true,
+        "sensitive": false,
+        "source": "docker-compose"
+      },
+      {
+        "name": "DB_PASSWD",
+        "example": "${GENERATED_DB_PASSWD}",
+        "required": true,
+        "sensitive": true,
+        "source": "docker-compose"
+      },
+      {
+        "name": "ROMM_AUTH_SECRET_KEY",
+        "example": "${GENERATED_ROMM_AUTH_SECRET_KEY}",
+        "required": true,
+        "sensitive": true,
+        "source": "docker-compose"
+      },
+      {
+        "name": "IGDB_CLIENT_ID",
+        "example": "\"\"",
+        "required": true,
+        "sensitive": false,
+        "source": "docker-compose"
+      },
+      {
+        "name": "IGDB_CLIENT_SECRET",
+        "example": "${GENERATED_IGDB_CLIENT_SECRET}",
+        "required": true,
+        "sensitive": true,
+        "source": "docker-compose"
+      },
+      {
+        "name": "SCREENSCRAPER_USER",
+        "example": "\"\"",
+        "required": true,
+        "sensitive": false,
+        "source": "docker-compose"
+      },
+      {
+        "name": "SCREENSCRAPER_PASSWORD",
+        "example": "${GENERATED_SCREENSCRAPER_PASSWORD}",
+        "required": true,
+        "sensitive": true,
+        "source": "docker-compose"
+      },
+      {
+        "name": "STEAMGRIDDB_API_KEY",
+        "example": "${GENERATED_STEAMGRIDDB_API_KEY}",
+        "required": true,
+        "sensitive": true,
+        "source": "docker-compose"
+      }
+    ],
+    "volumes": [
+      {
+        "id": "volume-0",
+        "container_path": "/romm/resources",
+        "compose_source_example": "/DATA/AppData/$AppID/resources",
+        "read_only": false,
+        "required": true,
+        "installation_choice": [
+          "managed-volume",
+          "host-bind"
+        ],
+        "default": "managed-volume",
+        "managed_volume": {
+          "backup": true,
+          "default_size_gb": 8
+        }
+      },
+      {
+        "id": "volume-1",
+        "container_path": "/redis-data",
+        "compose_source_example": "/DATA/AppData/$AppID/redis-data",
+        "read_only": false,
+        "required": true,
+        "installation_choice": [
+          "managed-volume",
+          "host-bind"
+        ],
+        "default": "managed-volume",
+        "managed_volume": {
+          "backup": true,
+          "default_size_gb": 8
+        }
+      },
+      {
+        "id": "volume-2",
+        "container_path": "/romm/library",
+        "compose_source_example": "/DATA/AppData/$AppID/library",
+        "read_only": false,
+        "required": true,
+        "installation_choice": [
+          "managed-volume",
+          "host-bind"
+        ],
+        "default": "managed-volume",
+        "managed_volume": {
+          "backup": true,
+          "default_size_gb": 8
+        }
+      },
+      {
+        "id": "volume-3",
+        "container_path": "/romm/assets",
+        "compose_source_example": "/DATA/AppData/$AppID/assets",
+        "read_only": false,
+        "required": true,
+        "installation_choice": [
+          "managed-volume",
+          "host-bind"
+        ],
+        "default": "managed-volume",
+        "managed_volume": {
+          "backup": true,
+          "default_size_gb": 8
+        }
+      },
+      {
+        "id": "volume-4",
+        "container_path": "/romm/config",
+        "compose_source_example": "/DATA/AppData/$AppID/config",
+        "read_only": false,
+        "required": true,
+        "installation_choice": [
+          "managed-volume",
+          "host-bind"
+        ],
+        "default": "managed-volume",
+        "managed_volume": {
+          "backup": true,
+          "default_size_gb": 8
+        }
+      }
+    ],
+    "ports": [
+      {
+        "container_port": 8080,
+        "published_example": 8285,
+        "protocol": "tcp",
+        "required": true,
+        "proxmox_behavior": "listener-on-dedicated-lxc-address-no-nat"
+      }
+    ],
+    "related_services": [
+      {
+        "name": "romm-db",
+        "image": "mariadb:latest"
+      }
+    ],
+    "restart": "unless-stopped",
+    "stop_grace_period": null,
+    "original_compose": "name: romm\nservices:\n  romm:\n    image: rommapp/romm:latest\n    container_name: romm\n    deploy:\n      resources:\n        reservations:\n          memory: 512M\n    networks:\n    - romm-network\n    restart: unless-stopped\n    ports:\n    - 8285:8080\n    environment:\n    - DB_HOST=romm-db\n    - DB_NAME=romm\n    - DB_USER=romm-user\n    - DB_PASSWD=${GENERATED_DB_PASSWD}\n    - ROMM_AUTH_SECRET_KEY=${GENERATED_ROMM_AUTH_SECRET_KEY}\n    - IGDB_CLIENT_ID=\"\"\n    - IGDB_CLIENT_SECRET=${GENERATED_IGDB_CLIENT_SECRET}\n    - SCREENSCRAPER_USER=\"\"\n    - SCREENSCRAPER_PASSWORD=${GENERATED_SCREENSCRAPER_PASSWORD}\n    - STEAMGRIDDB_API_KEY=${GENERATED_STEAMGRIDDB_API_KEY}\n    volumes:\n    - /DATA/AppData/$AppID/resources:/romm/resources\n    - /DATA/AppData/$AppID/redis-data:/redis-data\n    - /DATA/AppData/$AppID/library:/romm/library\n    - /DATA/AppData/$AppID/assets:/romm/assets\n    - /DATA/AppData/$AppID/config:/romm/config\n    depends_on:\n      romm-db:\n        condition: service_healthy\n        restart: true\n  romm-db:\n    image: mariadb:latest\n    container_name: romm-db\n    restart: unless-stopped\n    networks:\n    - romm-network\n    environment:\n    - MARIADB_ROOT_PASSWORD=${GENERATED_MARIADB_ROOT_PASSWORD}\n    - MARIADB_DATABASE=romm\n    - MARIADB_USER=romm-user\n    - MARIADB_PASSWORD=${GENERATED_MARIADB_PASSWORD}\n    volumes:\n    - /DATA/AppData/$AppID/mysql:/var/lib/mysql\n    healthcheck:\n      test:\n      - CMD\n      - healthcheck.sh\n      - --connect\n      - --innodb_initialized\n      start_period: 30s\n      start_interval: 10s\n      interval: 10s\n      timeout: 5s\n      retries: 5\nnetworks:\n  romm-network:\n    driver: bridge\n"
+  },
+  "compose_stack": {
+    "project_name": "romm",
+    "deployment_model": "one-native-oci-lxc-per-compose-service",
+    "user_experience": "single-application-install",
+    "main_service": "romm",
+    "service_count": 2,
+    "services": [
+      {
+        "name": "romm-db",
+        "image": "mariadb:latest",
+        "is_main": false,
+        "role": "dependency",
+        "vmid_offset": 1,
+        "depends_on": [],
+        "frontend_network": false,
+        "private_network": true,
+        "compose": {
+          "image": "mariadb:latest",
+          "container_name": "romm-db",
+          "restart": "unless-stopped",
+          "networks": [
+            "romm-network"
+          ],
+          "environment": [
+            "MARIADB_ROOT_PASSWORD=${GENERATED_MARIADB_ROOT_PASSWORD}",
+            "MARIADB_DATABASE=romm",
+            "MARIADB_USER=romm-user",
+            "MARIADB_PASSWORD=${GENERATED_MARIADB_PASSWORD}"
+          ],
+          "volumes": [
+            "/DATA/AppData/$AppID/mysql:/var/lib/mysql"
+          ],
+          "healthcheck": {
+            "test": [
+              "CMD",
+              "healthcheck.sh",
+              "--connect",
+              "--innodb_initialized"
+            ],
+            "start_period": "30s",
+            "start_interval": "10s",
+            "interval": "10s",
+            "timeout": "5s",
+            "retries": 5
+          }
+        }
+      },
+      {
+        "name": "romm",
+        "image": "rommapp/romm:latest",
+        "is_main": true,
+        "role": "frontend",
+        "vmid_offset": 0,
+        "depends_on": [
+          "romm-db"
+        ],
+        "frontend_network": true,
+        "private_network": true,
+        "compose": {
+          "image": "rommapp/romm:latest",
+          "container_name": "romm",
+          "deploy": {
+            "resources": {
+              "reservations": {
+                "memory": "512M"
+              }
+            }
+          },
+          "networks": [
+            "romm-network"
+          ],
+          "restart": "unless-stopped",
+          "ports": [
+            "8285:8080"
+          ],
+          "environment": [
+            "DB_HOST=romm-db",
+            "DB_NAME=romm",
+            "DB_USER=romm-user",
+            "DB_PASSWD=${GENERATED_DB_PASSWD}",
+            "ROMM_AUTH_SECRET_KEY=${GENERATED_ROMM_AUTH_SECRET_KEY}",
+            "IGDB_CLIENT_ID=\"\"",
+            "IGDB_CLIENT_SECRET=${GENERATED_IGDB_CLIENT_SECRET}",
+            "SCREENSCRAPER_USER=\"\"",
+            "SCREENSCRAPER_PASSWORD=${GENERATED_SCREENSCRAPER_PASSWORD}",
+            "STEAMGRIDDB_API_KEY=${GENERATED_STEAMGRIDDB_API_KEY}"
+          ],
+          "volumes": [
+            "/DATA/AppData/$AppID/resources:/romm/resources",
+            "/DATA/AppData/$AppID/redis-data:/redis-data",
+            "/DATA/AppData/$AppID/library:/romm/library",
+            "/DATA/AppData/$AppID/assets:/romm/assets",
+            "/DATA/AppData/$AppID/config:/romm/config"
+          ],
+          "depends_on": {
+            "romm-db": {
+              "condition": "service_healthy",
+              "restart": true
+            }
+          }
+        }
+      }
+    ],
+    "top_level": {
+      "name": "romm",
+      "networks": {
+        "romm-network": {
+          "driver": "bridge"
+        }
+      }
+    },
+    "networking": {
+      "frontend": "selected-proxmox-bridge",
+      "private_required": true,
+      "private_creation": "automatic-create-if-missing",
+      "private_address_allocation": "automatic-static-address-per-service",
+      "service_discovery": "private-addresses-with-compose-service-host-aliases",
+      "dependency_external_access": "disabled-unless-service-publishes-ports",
+      "prompt_user_for_private_network": false
+    },
+    "storage": [
+      {
+        "id": "romm-volume-0",
+        "service": "romm",
+        "container_path": "/romm/resources",
+        "mode": "managed-volume",
+        "user_selectable": false,
+        "backup": true,
+        "shared_with_other_lxc": false,
+        "source_path": null,
+        "source_path_prompt": null
+      },
+      {
+        "id": "romm-volume-1",
+        "service": "romm",
+        "container_path": "/redis-data",
+        "mode": "managed-volume",
+        "user_selectable": false,
+        "backup": true,
+        "shared_with_other_lxc": false,
+        "source_path": null,
+        "source_path_prompt": null
+      },
+      {
+        "id": "romm-volume-2",
+        "service": "romm",
+        "container_path": "/romm/library",
+        "mode": "host-bind",
+        "user_selectable": true,
+        "backup": false,
+        "shared_with_other_lxc": true,
+        "source_path": null,
+        "source_path_prompt": "Host directory for romm:/romm/library"
+      },
+      {
+        "id": "romm-volume-3",
+        "service": "romm",
+        "container_path": "/romm/assets",
+        "mode": "managed-volume",
+        "user_selectable": false,
+        "backup": true,
+        "shared_with_other_lxc": false,
+        "source_path": null,
+        "source_path_prompt": null
+      },
+      {
+        "id": "romm-volume-4",
+        "service": "romm",
+        "container_path": "/romm/config",
+        "mode": "managed-volume",
+        "user_selectable": false,
+        "backup": true,
+        "shared_with_other_lxc": false,
+        "source_path": null,
+        "source_path_prompt": null
+      },
+      {
+        "id": "romm-db-volume-0",
+        "service": "romm-db",
+        "container_path": "/var/lib/mysql",
+        "mode": "managed-volume",
+        "user_selectable": false,
+        "backup": true,
+        "shared_with_other_lxc": false,
+        "source_path": null,
+        "source_path_prompt": null
+      }
+    ],
+    "orchestration": {
+      "reserve_vmids_atomically": 2,
+      "start_order": [
+        "romm-db",
+        "romm"
+      ],
+      "stop_order": [
+        "romm",
+        "romm-db"
+      ],
+      "dependency_readiness": "compose-healthcheck-then-port-or-process-fallback",
+      "rollback_on_failure": "remove-new-rootfs-preserve-created-persistent-volumes"
+    },
+    "installer_inputs": {
+      "prompted": [
+        "stack_name",
+        "base_vmid",
+        "rootfs_storage",
+        "persistent_data_destinations",
+        "frontend_bridge",
+        "frontend_ipv4_mode"
+      ],
+      "automatic": [
+        "dependent_vmids",
+        "private_bridge",
+        "private_subnet",
+        "private_service_addresses",
+        "compose_service_aliases",
+        "generated_secrets",
+        "dependency_start_and_stop_order"
+      ],
+      "generated_secrets": [
+        {
+          "id": "db-passwd",
+          "strategy": "generate-cryptographically-random-at-install",
+          "bindings": [
+            {
+              "service": "romm",
+              "environment_variable": "DB_PASSWD"
+            }
+          ]
+        },
+        {
+          "id": "igdb-client-secret",
+          "strategy": "generate-cryptographically-random-at-install",
+          "bindings": [
+            {
+              "service": "romm",
+              "environment_variable": "IGDB_CLIENT_SECRET"
+            }
+          ]
+        },
+        {
+          "id": "mariadb-password",
+          "strategy": "generate-cryptographically-random-at-install",
+          "bindings": [
+            {
+              "service": "romm-db",
+              "environment_variable": "MARIADB_PASSWORD"
+            }
+          ]
+        },
+        {
+          "id": "mariadb-root-password",
+          "strategy": "generate-cryptographically-random-at-install",
+          "bindings": [
+            {
+              "service": "romm-db",
+              "environment_variable": "MARIADB_ROOT_PASSWORD"
+            }
+          ]
+        },
+        {
+          "id": "romm-auth-secret-key",
+          "strategy": "generate-cryptographically-random-at-install",
+          "bindings": [
+            {
+              "service": "romm",
+              "environment_variable": "ROMM_AUTH_SECRET_KEY"
+            }
+          ]
+        },
+        {
+          "id": "screenscraper-password",
+          "strategy": "generate-cryptographically-random-at-install",
+          "bindings": [
+            {
+              "service": "romm",
+              "environment_variable": "SCREENSCRAPER_PASSWORD"
+            }
+          ]
+        },
+        {
+          "id": "steamgriddb-api-key",
+          "strategy": "generate-cryptographically-random-at-install",
+          "bindings": [
+            {
+              "service": "romm",
+              "environment_variable": "STEAMGRIDDB_API_KEY"
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "first_run": {
+    "endpoints": [
+      {
+        "label": "Web UI",
+        "scheme": "http",
+        "port": 8080,
+        "path": "/",
+        "source": "compose-metadata"
+      }
+    ],
+    "credentials": []
+  },
+  "proxmox": {
+    "runtime": "native-oci-lxc",
+    "technology_status": "proxmox-technology-preview",
+    "defaults": {
+      "unprivileged": true,
+      "ostype": "auto-from-image",
+      "cores": 2,
+      "memory_mb": 512,
+      "swap_mb": 512,
+      "rootfs_size_gb": 8,
+      "rootfs_storage": "local-lvm",
+      "volume_storage": "local-lvm",
+      "template_storage": "local",
+      "bridge": "vmbr0",
+      "ipv4": "dhcp",
+      "firewall": true,
+      "host_managed_network": true,
+      "onboot": false,
+      "features": [
+        "nesting=1"
+      ],
+      "shutdown_timeout_seconds": 30
+    },
+    "image_metadata_policy": {
+      "entrypoint": "import-from-oci-image",
+      "cmd": "import-from-oci-image",
+      "environment": "import-image-env-then-apply-compose-overrides",
+      "user": "import-from-oci-image",
+      "working_dir": "import-from-oci-image",
+      "stop_signal": "import-from-oci-image"
+    },
+    "adaptations": [
+      {
+        "id": "imported-compose-source",
+        "upstream_behavior": "The source definition deploys the complete Docker Compose application model.",
+        "native_lxc_behavior": "The source model is preserved and remains blocked until every service option has a reviewed native Proxmox mapping.",
+        "reason": "Catalog import must not imply runtime compatibility.",
+        "behavioral_impact": "No automatic installation before review.",
+        "validation": "pending-per-application"
+      },
+      {
+        "id": "rolling-latest-image",
+        "upstream_behavior": "A discovered Compose may pin a release tag or digest.",
+        "native_lxc_behavior": "ProxMenux selects the same image repository with the latest tag for catalog installations.",
+        "reason": "The automatic catalog intentionally offers rolling latest images; pinned versions belong to the future manual installer.",
+        "behavioral_impact": "The installed release can be newer than the discovered Compose revision.",
+        "validation": "pending-per-application"
+      },
+      {
+        "id": "dedicated-lxc-network",
+        "upstream_behavior": "Docker publishes selected container ports on the Docker host.",
+        "native_lxc_behavior": "A reviewed native application will listen on its original container ports at a dedicated LXC address.",
+        "reason": "A native LXC has its own address and does not require Docker port NAT.",
+        "behavioral_impact": "Published ports are metadata; ProxMenux URLs use the matching container target port.",
+        "validation": "pending-per-application"
+      },
+      {
+        "id": "compose-shm-size",
+        "upstream_behavior": "Compose sets the size of the container /dev/shm tmpfs.",
+        "native_lxc_behavior": "ProxMenux mounts a native LXC tmpfs at /dev/shm with the same requested capacity.",
+        "reason": "The OCI image runs directly as an LXC and therefore needs the equivalent Proxmox mount entry.",
+        "behavioral_impact": "None expected.",
+        "validation": "not-requested-by-compose"
+      },
+      {
+        "id": "compose-command",
+        "upstream_behavior": "Compose replaces the image Cmd while retaining its Entrypoint.",
+        "native_lxc_behavior": "ProxMenux reads the official OCI Entrypoint and combines it with the Compose command as the native LXC init command.",
+        "reason": "Proxmox stores the effective OCI process as one entrypoint string.",
+        "behavioral_impact": "None expected.",
+        "validation": "not-requested-by-compose"
+      },
+      {
+        "id": "compose-privileged-mode",
+        "upstream_behavior": "Compose selects whether the container runs in privileged mode.",
+        "native_lxc_behavior": "ProxMenux uses a privileged LXC only after an explicit high-risk confirmation; otherwise it keeps the LXC unprivileged.",
+        "reason": "The native OCI-LXC deployment must preserve the requested privilege level without silently weakening isolation.",
+        "behavioral_impact": "A privileged LXC has weaker isolation from the Proxmox host.",
+        "validation": "native-equivalent"
+      },
+      {
+        "id": "compose-process-runtime",
+        "upstream_behavior": "Compose can replace Entrypoint, User and WorkingDir and request an init process or interactive terminal.",
+        "native_lxc_behavior": "ProxMenux applies the process overrides through native LXC init directives; lxc-init provides PID 1 supervision and the CT console provides terminal access.",
+        "reason": "The OCI process must start with the same identity, command and working directory without Docker.",
+        "behavioral_impact": "Compose stdin_open and tty become access through the Proxmox LXC console.",
+        "validation": "not-requested-by-compose"
+      },
+      {
+        "id": "compose-healthcheck",
+        "upstream_behavior": "Docker periodically executes the declared container healthcheck.",
+        "native_lxc_behavior": "For a single-service LXC, ProxMenux translates HTTP localhost checks into a mandatory first-start service check.",
+        "reason": "Proxmox has no persistent Docker health state, while the installer still must detect a failed first boot.",
+        "behavioral_impact": "The check runs during installation rather than continuously after installation.",
+        "validation": "not-requested-by-compose"
+      },
+      {
+        "id": "compose-cpu-priority",
+        "upstream_behavior": "Docker cpu_shares sets a relative scheduling weight with 1024 as its neutral value.",
+        "native_lxc_behavior": "ProxMenux converts the relative weight to Proxmox cpuunits with 100 as its neutral value and lets the user review it.",
+        "reason": "Both settings express relative CPU priority on different scales.",
+        "behavioral_impact": "Rounding and Proxmox minimum limits can slightly change very low weights.",
+        "validation": "not-requested-by-compose"
+      },
+      {
+        "id": "compose-network-identity",
+        "upstream_behavior": "Compose can set hostname, MAC address, extra hosts and attach a service to Docker networks.",
+        "native_lxc_behavior": "ProxMenux applies hostname and MAC to net0, writes additional host aliases into the LXC and uses its dedicated bridge connection for single-service networks.",
+        "reason": "A dedicated LXC has its own network namespace and does not need a Docker bridge per service.",
+        "behavioral_impact": "host-gateway resolves to the IPv4 address of the selected Proxmox bridge.",
+        "validation": "pending-per-application"
+      },
+      {
+        "id": "compose-network-mode",
+        "upstream_behavior": "Docker host mode removes Docker network isolation; bridge and default use a Docker-managed network.",
+        "native_lxc_behavior": "The OCI process uses the dedicated LXC network namespace directly, so host, bridge and default all listen on the LXC address without Docker NAT.",
+        "reason": "The LXC is the application host and already has its own address and port namespace.",
+        "behavioral_impact": "host means the LXC host, never the Proxmox host; this preserves Proxmox network isolation.",
+        "validation": "not-requested-by-compose"
+      },
+      {
+        "id": "compose-capabilities-and-sysctls",
+        "upstream_behavior": "Compose can add Linux capabilities and set kernel parameters in the container network namespace.",
+        "native_lxc_behavior": "ProxMenux validates requested capabilities against the native LXC capability set and writes namespaced network settings as lxc.sysctl directives.",
+        "reason": "A native OCI-LXC already starts with the namespaced capability set; lxc.cap.keep would incorrectly discard unrelated required capabilities.",
+        "behavioral_impact": "Host-global capabilities such as SYS_MODULE remain blocked until their host prerequisite is explicitly adapted.",
+        "validation": "not-requested-by-compose"
+      },
+      {
+        "id": "docker-engine-metadata",
+        "upstream_behavior": "Compose labels annotate Docker objects and the json-file logging driver rotates Docker-managed logs.",
+        "native_lxc_behavior": "Labels remain source metadata; Docker json-file settings are not applied because the OCI process runs directly under LXC.",
+        "reason": "There is no Docker object or Docker json-file log behind a native OCI-LXC application.",
+        "behavioral_impact": "Docker-only label consumers and Docker log-driver rotation do not exist in the native deployment.",
+        "validation": "not-requested-by-compose"
+      },
+      {
+        "id": "compose-device-passthrough",
+        "upstream_behavior": "Compose passes host character devices or requests an NVIDIA runtime GPU.",
+        "native_lxc_behavior": "ProxMenux converts recognized device declarations to native Proxmox dev resources; NVIDIA profiles also inject compatible host driver libraries read-only.",
+        "reason": "Native OCI-LXC does not execute Docker device or NVIDIA runtime hooks.",
+        "behavioral_impact": "Hardware is exposed only after explicit user confirmation and host-path validation.",
+        "validation": "not-requested-by-compose"
+      },
+      {
+        "id": "compose-host-ipc",
+        "upstream_behavior": "ipc: host shares the Docker host IPC namespace, commonly to avoid Docker's small default shared-memory allocation.",
+        "native_lxc_behavior": "The application keeps the LXC IPC namespace and receives a configurable 1 GiB /dev/shm instead of sharing Proxmox host IPC.",
+        "reason": "Processes in a single native LXC already share one IPC namespace; retaining isolation is safer than exposing host IPC.",
+        "behavioral_impact": "The application cannot exchange IPC objects with processes on the Proxmox host.",
+        "validation": "not-requested-by-compose"
+      }
+    ],
+    "stack_environment_overrides": {
+      "romm": {
+        "ROMM_DB_DRIVER": "mariadb",
+        "DB_PASSWD": "${GENERATED_MARIADB_PASSWORD}",
+        "IGDB_CLIENT_ID": "",
+        "IGDB_CLIENT_SECRET": "",
+        "SCREENSCRAPER_USER": "",
+        "SCREENSCRAPER_PASSWORD": "",
+        "STEAMGRIDDB_API_KEY": ""
+      }
+    },
+    "stack_optional_environment": [
+      {
+        "service": "romm",
+        "label": "IGDB",
+        "fields": [
+          {
+            "name": "IGDB_CLIENT_ID",
+            "label": "IGDB Client ID",
+            "sensitive": false
+          },
+          {
+            "name": "IGDB_CLIENT_SECRET",
+            "label": "IGDB Client Secret",
+            "sensitive": true
+          }
+        ]
+      },
+      {
+        "service": "romm",
+        "label": "ScreenScraper",
+        "fields": [
+          {
+            "name": "SCREENSCRAPER_USER",
+            "label": "ScreenScraper username",
+            "sensitive": false
+          },
+          {
+            "name": "SCREENSCRAPER_PASSWORD",
+            "label": "ScreenScraper password",
+            "sensitive": true
+          }
+        ]
+      },
+      {
+        "service": "romm",
+        "label": "SteamGridDB",
+        "fields": [
+          {
+            "name": "STEAMGRIDDB_API_KEY",
+            "label": "SteamGridDB API key",
+            "sensitive": true
+          }
+        ]
+      }
+    ],
+    "stack_adaptation_notes": [
+      "DB_PASSWD and MARIADB_PASSWORD share one generated secret. The MariaDB root password is independent.",
+      "External metadata credentials are optional user input, never randomly generated. Without them, associated metadata integrations are not configured.",
+      "Configuration, assets, library, resources and database volumes default to private backed-up Proxmox volumes. Users can select host directories explicitly.",
+      "The hook starts stopped dependencies before RomM. It does not propagate manual dependency restarts to the application like Compose depends_on restart:true.",
+      "Latest tags are retained; first boot, hardware and upstream version compatibility remain unvalidated."
+    ],
+    "stack_references": [
+      "https://docs.romm.app/5.2.0/install/databases/",
+      "https://docs.romm.app/5.2.0/reference/environment-variables/"
+    ],
+    "installer_profile": {
+      "stack_driver": "generic-multi-lxc-stack"
+    }
+  },
+  "compatibility": {
+    "automatic_install_candidate": true,
+    "validated": false,
+    "supported_compose_keys": [
+      "cap_add",
+      "command",
+      "container_name",
+      "cpu_shares",
+      "deploy",
+      "devices",
+      "entrypoint",
+      "environment",
+      "extra_hosts",
+      "healthcheck",
+      "hostname",
+      "image",
+      "init",
+      "ipc",
+      "labels",
+      "logging",
+      "mac_address",
+      "network_mode",
+      "networks",
+      "ports",
+      "privileged",
+      "restart",
+      "runtime",
+      "shm_size",
+      "stdin_open",
+      "stop_grace_period",
+      "sysctls",
+      "tty",
+      "user",
+      "volumes",
+      "working_dir"
+    ],
+    "untranslated_blockers": [],
+    "policy": "Single-image definitions are installable when every declared Compose option has a native Proxmox translation. Multi-image and unsupported runtime features remain blocked until their orchestrator or mapping is available."
+  },
+  "validation": {
+    "schema": "passed-at-generation",
+    "clean_install": "pending",
+    "service_health": "pending",
+    "restart_persistence": "pending",
+    "backup_restore": "pending",
+    "update_preserves_data": "pending"
+  },
+  "lifecycle": {
+    "update_strategy": "resolve-latest-image-then-apply-reviewed-native-lxc-update",
+    "registry_state": {
+      "resolved_architecture": null,
+      "resolved_digest": null,
+      "image_version_label": null,
+      "image_created": null
+    },
+    "change_detection": "compare-compose-sha256-and-resolved-latest-image-digest",
+    "automatic_unattended_updates": false,
+    "dependency_lifecycle": {
+      "implementation": "proxmox-hookscript",
+      "trigger": "main-lxc-pre-start",
+      "waits_for_dependency_healthchecks": true,
+      "stops_dependencies_with_main": false
+    }
+  }
+}

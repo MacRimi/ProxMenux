@@ -1,0 +1,52 @@
+{
+  "container_contract": {
+    "environment": [
+      {
+        "name": "PUID",
+        "example": "1000",
+        "required": true,
+        "sensitive": false,
+        "source": "linuxserver-compose"
+      },
+      {
+        "name": "PGID",
+        "example": "1000",
+        "required": true,
+        "sensitive": false,
+        "source": "linuxserver-compose"
+      },
+      {
+        "name": "TZ",
+        "example": "Etc/UTC",
+        "required": true,
+        "sensitive": false,
+        "source": "linuxserver-compose"
+      },
+      {
+        "name": "EXTERNALURL",
+        "example": "",
+        "required": true,
+        "sensitive": false,
+        "prompt": "Address to reach Pydio Cells (https://domain or https://IP:8080)",
+        "source": "linuxserver-pydio-cells-readme"
+      },
+      {
+        "name": "SERVER_IP",
+        "example": "",
+        "required": true,
+        "sensitive": false,
+        "prompt": "IP address of this container for the certificate (0.0.0.0 if unknown)",
+        "source": "linuxserver-pydio-cells-readme"
+      }
+    ]
+  },
+  "proxmox": {
+    "installer_profile": {
+      "completion_notes": [
+        "Pydio Cells needs an external MySQL or MariaDB database. The setup wizard asks for its address, database name and user on the first start.",
+        "The web interface uses a self-signed certificate, so the browser shows a warning the first time.",
+        "Pydio Cells redirects to the address given in EXTERNALURL. If the container changes address, edit lxc.environment.runtime: EXTERNALURL and SERVER_IP in /etc/pve/lxc/<CTID>.conf with the container stopped, and delete /config/keys/cert.crt to regenerate the certificate."
+      ]
+    }
+  }
+}

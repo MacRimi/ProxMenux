@@ -1,0 +1,82 @@
+{
+  "container_contract": {
+    "environment": [
+      {
+        "name": "AUTH_ENABLED",
+        "example": "true",
+        "required": true,
+        "sensitive": false,
+        "source": "docker-compose"
+      },
+      {
+        "name": "DEFAULT_USERNAME",
+        "example": "admin",
+        "required": true,
+        "sensitive": false,
+        "source": "docker-compose"
+      },
+      {
+        "name": "DEFAULT_PASSWORD",
+        "example": "",
+        "required": true,
+        "sensitive": true,
+        "prompt": "Password of the SnapOtter admin user",
+        "source": "snapotter-documentation"
+      },
+      {
+        "name": "MAX_UPLOAD_SIZE_MB",
+        "example": "0",
+        "required": true,
+        "sensitive": false,
+        "source": "docker-compose"
+      },
+      {
+        "name": "MAX_BATCH_SIZE",
+        "example": "0",
+        "required": true,
+        "sensitive": false,
+        "source": "docker-compose"
+      },
+      {
+        "name": "CONCURRENT_JOBS",
+        "example": "0",
+        "required": true,
+        "sensitive": false,
+        "source": "docker-compose"
+      },
+      {
+        "name": "REDIS_MAXMEMORY",
+        "example": "512mb",
+        "required": true,
+        "sensitive": false,
+        "source": "docker-compose"
+      }
+    ]
+  },
+  "first_run": {
+    "credentials": [
+      {
+        "label": "SnapOtter",
+        "type": "configured-or-installer-generated",
+        "username": "admin",
+        "password": null,
+        "username_environment": "DEFAULT_USERNAME",
+        "password_environment": "DEFAULT_PASSWORD",
+        "change_required": true,
+        "source": "snapotter-documentation",
+        "retrieval": null
+      }
+    ]
+  },
+  "proxmox": {
+    "installer_profile": {
+      "generated_sensitive_environment": {
+        "DEFAULT_PASSWORD": {
+          "strategy": "token-hex",
+          "bytes": 12,
+          "prompt": true
+        }
+      }
+    }
+  }
+}

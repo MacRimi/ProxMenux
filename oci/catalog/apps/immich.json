@@ -1,0 +1,1979 @@
+{
+  "schema_version": "0.5.0",
+  "kind": "proxmenux.oci-template",
+  "id": "image-immich",
+  "status": "laboratory-validated",
+  "catalog_ui": {
+    "title": {
+      "en_US": "Immich"
+    },
+    "tagline": {
+      "en_US": "Photo and video library with optional GPU transcoding and machine learning"
+    },
+    "description": {
+      "en_US": "Immich as a coordinated four-LXC native OCI stack with private PostgreSQL and Valkey services, persistent media and model cache, and selectable hardware acceleration."
+    },
+    "category": "media",
+    "category_label": "Media",
+    "author": "Immich",
+    "developer": "Immich",
+    "icon": null,
+    "thumbnail": null,
+    "screenshots": [],
+    "architectures": [
+      "amd64",
+      "arm64"
+    ],
+    "launch": {
+      "scheme": "http",
+      "port": 2283,
+      "path": "/"
+    },
+    "website": "https://immich.app/",
+    "documentation": "https://docs.immich.app/install/docker-compose/",
+    "repository": "https://github.com/immich-app/immich",
+    "tips": [
+      "The installer creates four coordinated native OCI LXC containers as one application.",
+      "Video transcoding acceleration and machine-learning acceleration are independent selections.",
+      "CPU is the validated safe machine-learning default; a GPU profile must pass a real inference test before cutover.",
+      "PostgreSQL data must remain on local storage and must not be placed on NFS or SMB."
+    ],
+    "mini_changelog": [],
+    "display_version": null,
+    "updated_at": "2026-09-12"
+  },
+  "source": {
+    "provider": "immich",
+    "repository": "https://github.com/immich-app/immich",
+    "revision": "0f93904a4db59b93558d09097e586d168ce6dbfa00a20afb6967259430a8514c",
+    "image_repository_url": "https://github.com/immich-app/immich/pkgs/container/immich-server",
+    "readme_pushed_at": "2026-09-11T10:43:22Z",
+    "compose_sha256": "0f93904a4db59b93558d09097e586d168ce6dbfa00a20afb6967259430a8514c",
+    "generated_at": "2026-09-12T15:45:34+00:00"
+  },
+  "container_contract": {
+    "service_name": "immich-server",
+    "container_name": "immich-server",
+    "image": {
+      "reference": "ghcr.io/immich-app/immich-server:release",
+      "registry": "ghcr.io",
+      "repository": "ghcr.io/immich-app/immich-server",
+      "tag": "release",
+      "digest": null,
+      "pull_policy": "resolve-selected-tag-to-architecture-digest-at-install"
+    },
+    "environment": [
+      {
+        "name": "DB_HOSTNAME",
+        "example": "database",
+        "required": true,
+        "sensitive": false,
+        "source": "official-compose-environment"
+      },
+      {
+        "name": "DB_PORT",
+        "example": "5432",
+        "required": true,
+        "sensitive": false,
+        "source": "official-compose-environment"
+      },
+      {
+        "name": "DB_DATABASE_NAME",
+        "example": "immich",
+        "required": true,
+        "sensitive": false,
+        "source": "official-compose-environment"
+      },
+      {
+        "name": "DB_USERNAME",
+        "example": "postgres",
+        "required": true,
+        "sensitive": false,
+        "source": "official-compose-environment"
+      },
+      {
+        "name": "DB_PASSWORD",
+        "example": "${GENERATED_DB_PASSWORD}",
+        "required": true,
+        "sensitive": true,
+        "source": "official-compose-environment"
+      },
+      {
+        "name": "REDIS_HOSTNAME",
+        "example": "redis",
+        "required": true,
+        "sensitive": false,
+        "source": "official-compose-environment"
+      },
+      {
+        "name": "REDIS_PORT",
+        "example": "6379",
+        "required": true,
+        "sensitive": false,
+        "source": "official-compose-environment"
+      },
+      {
+        "name": "IMMICH_MACHINE_LEARNING_URL",
+        "example": "http://immich-machine-learning:3003",
+        "required": true,
+        "sensitive": false,
+        "source": "official-compose-environment"
+      },
+      {
+        "name": "TZ",
+        "example": "Europe/Madrid",
+        "required": true,
+        "sensitive": false,
+        "source": "official-compose-environment"
+      }
+    ],
+    "volumes": [
+      {
+        "id": "media",
+        "container_path": "/data",
+        "compose_source_example": "${UPLOAD_LOCATION}",
+        "read_only": false,
+        "required": true,
+        "installation_choice": [
+          "managed-volume",
+          "host-bind"
+        ],
+        "default": "managed-volume",
+        "managed_volume": {
+          "backup": true,
+          "default_size_gb": 100
+        }
+      },
+      {
+        "id": "localtime",
+        "container_path": "/etc/localtime",
+        "compose_source_example": "/etc/localtime",
+        "read_only": true,
+        "required": false,
+        "installation_choice": [
+          "host-bind"
+        ],
+        "default": "host-bind",
+        "managed_volume": {
+          "backup": false,
+          "default_size_gb": 1
+        }
+      }
+    ],
+    "ports": [
+      {
+        "container_port": 2283,
+        "published_example": 2283,
+        "protocol": "tcp",
+        "required": true,
+        "proxmox_behavior": "listener-on-dedicated-lxc-address-no-nat"
+      }
+    ],
+    "related_services": [
+      {
+        "name": "immich-machine-learning",
+        "image": "ghcr.io/immich-app/immich-machine-learning:release"
+      },
+      {
+        "name": "redis",
+        "image": "docker.io/valkey/valkey:9@sha256:70739f85ad2ee01a726a965584a0f94895f01b0c60b3cc8b0aeef11eaa6888cf"
+      },
+      {
+        "name": "database",
+        "image": "ghcr.io/immich-app/postgres:14-vectorchord0.4.3-pgvectors0.2.0@sha256:bcf63357191b76a916ae5eb93464d65c07511da41e3bf7a8416db519b40b1c23"
+      }
+    ],
+    "restart": "always",
+    "stop_grace_period": null,
+    "original_compose": "name: immich\nservices:\n  immich-server:\n    deploy:\n      resources:\n        reservations:\n          memory: 1024M\n    container_name: immich-server\n    hostname: immich-server\n    image: ghcr.io/immich-app/immich-server:release\n    volumes:\n    - /DATA/Gallery/immich:/usr/src/app/upload\n    - /etc/localtime:/etc/localtime:ro\n    environment:\n      DB_DATABASE_NAME: immich\n      DB_PASSWORD: ${GENERATED_DB_PASSWORD}\n      DB_USERNAME: postgres\n    ports:\n    - 2283:2283\n    depends_on:\n    - redis\n    - database\n    restart: unless-stopped\n    healthcheck:\n      disable: false\n    networks:\n    - immich\n  immich-machine-learning:\n    container_name: immich-machine-learning\n    hostname: immich-machine-learning\n    image: ghcr.io/immich-app/immich-machine-learning:release\n    environment:\n      DB_DATABASE_NAME: immich\n      DB_PASSWORD: ${GENERATED_DB_PASSWORD}\n      DB_USERNAME: postgres\n    restart: unless-stopped\n    volumes:\n    - /DATA/AppData/immich/model-cache:/cache\n    healthcheck:\n      disable: false\n    networks:\n    - immich\n  redis:\n    container_name: immich-redis\n    hostname: immich-redis\n    image: docker.io/valkey/valkey:9@sha256:70739f85ad2ee01a726a965584a0f94895f01b0c60b3cc8b0aeef11eaa6888cf\n    healthcheck:\n      test: redis-cli ping || exit 1\n    restart: unless-stopped\n    networks:\n    - immich\n  database:\n    container_name: immich-postgres\n    hostname: immich-postgres\n    image: ghcr.io/immich-app/postgres:14-vectorchord0.4.3-pgvectors0.2.0@sha256:bcf63357191b76a916ae5eb93464d65c07511da41e3bf7a8416db519b40b1c23\n    environment:\n      POSTGRES_PASSWORD: ${GENERATED_DB_PASSWORD}\n      POSTGRES_USER: postgres\n      POSTGRES_DB: immich\n      POSTGRES_INITDB_ARGS: --data-checksums\n    volumes:\n    - /DATA/AppData/immich/pgdata:/var/lib/postgresql/data\n    restart: unless-stopped\n    networks:\n    - immich\nnetworks:\n  immich:\n    driver: bridge\n"
+  },
+  "compose_stack": {
+    "project_name": "immich",
+    "deployment_model": "one-native-oci-lxc-per-compose-service",
+    "user_experience": "single-application-install",
+    "main_service": "immich-server",
+    "service_count": 4,
+    "services": [
+      {
+        "name": "database",
+        "image": "ghcr.io/immich-app/postgres:14-vectorchord0.4.3-pgvectors0.2.0",
+        "is_main": false,
+        "role": "dependency",
+        "vmid_offset": 2,
+        "depends_on": [],
+        "frontend_network": false,
+        "private_network": true,
+        "compose": {
+          "container_name": "immich_postgres",
+          "image": "ghcr.io/immich-app/postgres:14-vectorchord0.4.3-pgvectors0.2.0",
+          "environment": {
+            "POSTGRES_PASSWORD": "${GENERATED_DB_PASSWORD}",
+            "POSTGRES_USER": "postgres",
+            "POSTGRES_DB": "immich",
+            "POSTGRES_INITDB_ARGS": "--data-checksums",
+            "PGDATA": "/var/lib/postgresql/data/pgdata"
+          },
+          "volumes": [
+            "postgres-data:/var/lib/postgresql/data"
+          ],
+          "shm_size": "128mb",
+          "restart": "always",
+          "healthcheck": {
+            "disable": false
+          }
+        }
+      },
+      {
+        "name": "redis",
+        "image": "docker.io/valkey/valkey:9",
+        "is_main": false,
+        "role": "dependency",
+        "vmid_offset": 3,
+        "depends_on": [],
+        "frontend_network": false,
+        "private_network": true,
+        "compose": {
+          "container_name": "immich_redis",
+          "image": "docker.io/valkey/valkey:9",
+          "healthcheck": {
+            "test": "valkey-cli ping | grep -q PONG || exit 1"
+          },
+          "restart": "always"
+        }
+      },
+      {
+        "name": "immich-machine-learning",
+        "image": "ghcr.io/immich-app/immich-machine-learning:release",
+        "is_main": false,
+        "role": "dependency",
+        "vmid_offset": 1,
+        "depends_on": [],
+        "frontend_network": true,
+        "private_network": true,
+        "compose": {
+          "container_name": "immich_machine_learning",
+          "image": "ghcr.io/immich-app/immich-machine-learning:release",
+          "volumes": [
+            "model-cache:/cache"
+          ],
+          "environment": {
+            "TZ": "${TIMEZONE}"
+          },
+          "restart": "always",
+          "healthcheck": {
+            "disable": false
+          }
+        }
+      },
+      {
+        "name": "immich-server",
+        "image": "ghcr.io/immich-app/immich-server:release",
+        "is_main": true,
+        "role": "frontend",
+        "vmid_offset": 0,
+        "depends_on": [
+          "database",
+          "redis",
+          "immich-machine-learning"
+        ],
+        "frontend_network": true,
+        "private_network": true,
+        "compose": {
+          "container_name": "immich_server",
+          "image": "ghcr.io/immich-app/immich-server:release",
+          "volumes": [
+            "${UPLOAD_LOCATION}:/data",
+            "/etc/localtime:/etc/localtime:ro"
+          ],
+          "environment": {
+            "TZ": "${TIMEZONE}",
+            "DB_HOSTNAME": "database",
+            "DB_PORT": "5432",
+            "DB_USERNAME": "postgres",
+            "DB_PASSWORD": "${GENERATED_DB_PASSWORD}",
+            "DB_DATABASE_NAME": "immich",
+            "REDIS_HOSTNAME": "redis",
+            "REDIS_PORT": "6379",
+            "IMMICH_MACHINE_LEARNING_URL": "http://immich-machine-learning:3003"
+          },
+          "ports": [
+            "2283:2283"
+          ],
+          "depends_on": [
+            "redis",
+            "database",
+            "immich-machine-learning"
+          ],
+          "restart": "always",
+          "healthcheck": {
+            "disable": false
+          }
+        }
+      }
+    ],
+    "top_level": {
+      "name": "immich",
+      "volumes": {
+        "model-cache": {},
+        "postgres-data": {}
+      }
+    },
+    "networking": {
+      "frontend": "selected-proxmox-bridge",
+      "private_required": true,
+      "private_creation": "automatic-create-if-missing",
+      "private_address_allocation": "automatic-static-address-per-service",
+      "service_discovery": "private-addresses-with-compose-service-host-aliases",
+      "dependency_external_access": "database-and-valkey-private-only",
+      "machine_learning_frontend_access": "enabled-for-model-downloads",
+      "prompt_user_for_private_network": false
+    },
+    "storage": [
+      {
+        "id": "immich-media",
+        "service": "immich-server",
+        "container_path": "/data",
+        "mode": "user-selectable",
+        "installation_choice": [
+          "managed-volume",
+          "host-bind"
+        ],
+        "default": "managed-volume",
+        "user_selectable": true,
+        "backup": false,
+        "backup_by_mode": {
+          "managed-volume": true,
+          "host-bind": false
+        },
+        "shared_with_other_lxc": true,
+        "source_path": null,
+        "source_path_prompt": "Host directory for the Immich media library"
+      },
+      {
+        "id": "localtime",
+        "service": "immich-server",
+        "container_path": "/etc/localtime",
+        "mode": "system-bind",
+        "user_selectable": false,
+        "backup": false,
+        "shared_with_other_lxc": false,
+        "source_path": "/etc/localtime",
+        "source_path_prompt": null
+      },
+      {
+        "id": "model-cache",
+        "service": "immich-machine-learning",
+        "container_path": "/cache",
+        "mode": "managed-volume",
+        "user_selectable": false,
+        "backup": false,
+        "shared_with_other_lxc": false,
+        "source_path": null,
+        "source_path_prompt": null
+      },
+      {
+        "id": "postgres-data",
+        "service": "database",
+        "container_path": "/var/lib/postgresql/data",
+        "mode": "managed-volume",
+        "user_selectable": false,
+        "backup": true,
+        "shared_with_other_lxc": false,
+        "source_path": null,
+        "source_path_prompt": null,
+        "constraints": {
+          "local_storage_required": true,
+          "network_filesystem_allowed": false
+        }
+      }
+    ],
+    "orchestration": {
+      "reserve_vmids_atomically": 4,
+      "start_order": [
+        "database",
+        "redis",
+        "immich-machine-learning",
+        "immich-server"
+      ],
+      "stop_order": [
+        "immich-server",
+        "immich-machine-learning",
+        "redis",
+        "database"
+      ],
+      "dependency_readiness": "healthcheck-required-before-next-service",
+      "rollback_on_failure": "remove-new-rootfs-preserve-created-persistent-volumes",
+      "gpu_failure_policy": "fallback-machine-learning-to-cpu-before-starting-server"
+    },
+    "installer_inputs": {
+      "prompted": [
+        "stack_name",
+        "base_vmid",
+        "rootfs_storage",
+        "database_storage",
+        "media_storage_mode",
+        "media_destination",
+        "database_size_gb",
+        "frontend_bridge",
+        "frontend_ipv4_mode",
+        "timezone",
+        "video_transcoding_acceleration",
+        "machine_learning_acceleration"
+      ],
+      "automatic": [
+        "dependent_vmids",
+        "private_bridge",
+        "private_subnet",
+        "private_service_addresses",
+        "compose_service_aliases",
+        "generated_secrets",
+        "dependency_start_and_stop_order",
+        "gpu_preflight_checks",
+        "machine_learning_cpu_fallback"
+      ],
+      "generated_secrets": [
+        {
+          "id": "db-password",
+          "strategy": "generate-cryptographically-random-alphanumeric-at-install",
+          "bindings": [
+            {
+              "service": "immich-server",
+              "environment_variable": "DB_PASSWORD"
+            },
+            {
+              "service": "database",
+              "environment_variable": "POSTGRES_PASSWORD"
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "first_run": {
+    "endpoints": [
+      {
+        "label": "Web UI",
+        "scheme": "http",
+        "port": 2283,
+        "path": "/",
+        "source": "official-compose"
+      }
+    ],
+    "credentials": []
+  },
+  "proxmox": {
+    "runtime": "native-oci-lxc",
+    "technology_status": "proxmox-technology-preview",
+    "defaults": {
+      "unprivileged": true,
+      "ostype": "auto-from-image",
+      "cores": 4,
+      "memory_mb": 3072,
+      "swap_mb": 1024,
+      "rootfs_size_gb": 16,
+      "rootfs_storage": "local-lvm",
+      "volume_storage": "local-lvm",
+      "template_storage": "local",
+      "bridge": "vmbr0",
+      "ipv4": "dhcp",
+      "firewall": true,
+      "host_managed_network": true,
+      "onboot": false,
+      "features": [
+        "nesting=1"
+      ],
+      "shutdown_timeout_seconds": 30
+    },
+    "image_metadata_policy": {
+      "entrypoint": "import-from-oci-image",
+      "cmd": "import-from-oci-image",
+      "environment": "import-image-env-then-apply-compose-overrides",
+      "user": "import-from-oci-image",
+      "working_dir": "import-from-oci-image",
+      "stop_signal": "import-from-oci-image"
+    },
+    "adaptations": [
+      {
+        "id": "rolling-latest-image",
+        "upstream_behavior": "The official Compose selects an Immich release and pins dependency images.",
+        "native_lxc_behavior": "The automatic catalog resolves the latest tag of each selected image repository at install time.",
+        "reason": "Pinned versions belong to the future manual installer while this catalog intentionally tracks latest.",
+        "behavioral_impact": "A rolling image must be revalidated before unattended updates.",
+        "validation": "pending-for-each-resolved-latest-digest"
+      },
+      {
+        "id": "one-native-lxc-per-service",
+        "upstream_behavior": "Docker Compose starts four containers as one project.",
+        "native_lxc_behavior": "ProxMenux creates four native OCI LXC containers and controls them as one application.",
+        "reason": "Proxmox native OCI imports one image per LXC.",
+        "behavioral_impact": "Equivalent service separation with native Proxmox lifecycle and backup controls.",
+        "validation": "passed-in-laboratory-profile-2026-08-27"
+      },
+      {
+        "id": "private-service-network",
+        "upstream_behavior": "Compose DNS connects services on a private Docker network.",
+        "native_lxc_behavior": "Fixed addresses and service aliases are created on a private Proxmox bridge.",
+        "reason": "The services run in separate LXC network namespaces.",
+        "behavioral_impact": "PostgreSQL and Valkey remain private; machine learning also receives frontend access for model downloads.",
+        "validation": "passed-in-laboratory-profile-2026-08-27"
+      },
+      {
+        "id": "native-persistent-storage",
+        "upstream_behavior": "Compose uses upload and database bind mounts plus a named model-cache volume.",
+        "native_lxc_behavior": "Media uses the selected host bind or managed volume, PostgreSQL uses a local managed backup volume, and model cache uses a reproducible managed volume.",
+        "reason": "Preserve official container paths while applying native Proxmox backup semantics.",
+        "behavioral_impact": "Shared media needs its own backup; PostgreSQL participates in vzdump with backup=1.",
+        "validation": "passed-in-laboratory-profile-2026-08-27"
+      },
+      {
+        "id": "ordered-healthchecked-startup",
+        "upstream_behavior": "Compose starts dependencies and evaluates container health.",
+        "native_lxc_behavior": "The stack orchestrator starts database, Valkey, machine learning and server in health-checked order.",
+        "reason": "Proxmox does not provide Compose depends_on semantics across LXC containers.",
+        "behavioral_impact": "One user action still manages the complete application.",
+        "validation": "passed-in-laboratory-profile-2026-08-27"
+      },
+      {
+        "id": "container-scoped-ld-preload",
+        "upstream_behavior": "Docker applies LD_PRELOAD inside the machine-learning container.",
+        "native_lxc_behavior": "ProxMenux removes LD_PRELOAD from the global LXC runtime environment and reapplies it in the machine-learning entrypoint after entering the container rootfs.",
+        "reason": "Proxmox startup hooks otherwise inherit the container path before chroot and print misleading loader errors.",
+        "behavioral_impact": "None; the Immich process still loads the official mimalloc library.",
+        "validation": "passed-in-ct106-restart-2026-09-13"
+      },
+      {
+        "id": "lxc-route-readiness-wrapper",
+        "upstream_behavior": "Docker prepares networking before the server process starts.",
+        "native_lxc_behavior": "A minimal wrapper waits for the eth0 default route before executing the image command.",
+        "reason": "DHCP route creation can race PID 1 in the native OCI LXC.",
+        "behavioral_impact": "Startup timing only; the official final command remains unchanged.",
+        "validation": "passed-in-ct121"
+      },
+      {
+        "id": "postgres-private-listen",
+        "upstream_behavior": "PostgreSQL listens on the private Compose network.",
+        "native_lxc_behavior": "The official entrypoint receives listen_addresses for loopback and the private LXC address.",
+        "reason": "The database must be reachable without a frontend interface.",
+        "behavioral_impact": "Equivalent private reachability.",
+        "validation": "passed-in-ct123"
+      }
+    ],
+    "catalog": {
+      "replaces_discovered_ids": [
+        "immich"
+      ]
+    },
+    "application_options": {
+      "video_transcoding": {
+        "selectable": true,
+        "independent_from_machine_learning": true,
+        "profiles": [
+          "cpu",
+          "vaapi",
+          "quicksync",
+          "nvenc"
+        ],
+        "laboratory_validated_profile": "vaapi-amd",
+        "validated": true,
+        "configuration_location": "Immich Administration > Video transcoding",
+        "installer_writes_application_setting": false,
+        "device_policy": "run-profile-preflight-and-pass-only-required-host-devices"
+      },
+      "machine_learning": {
+        "selectable": true,
+        "profiles": [
+          "cpu",
+          "openvino",
+          "cuda",
+          "rocm"
+        ],
+        "safe_default": "cpu",
+        "profile_images": {
+          "cpu": "ghcr.io/immich-app/immich-machine-learning:release",
+          "openvino": "ghcr.io/immich-app/immich-machine-learning:release-openvino",
+          "cuda": "ghcr.io/immich-app/immich-machine-learning:release-cuda",
+          "rocm": "ghcr.io/immich-app/immich-machine-learning:release-rocm"
+        },
+        "cpu": {
+          "available": true,
+          "laboratory_validated": true,
+          "hardware_accelerated": false
+        },
+        "openvino": {
+          "available": true,
+          "laboratory_validated": true,
+          "vendor": "intel",
+          "provider": "OpenVINOExecutionProvider",
+          "hardware_accelerated": true,
+          "requires": [
+            "/dev/dri"
+          ],
+          "status": "validated-on-documented-laboratory-hardware",
+          "evidence": "docs/lab/immich-stack-gpu-20260918/README.md"
+        },
+        "cuda": {
+          "available": true,
+          "laboratory_validated": true,
+          "vendor": "nvidia",
+          "provider": "CUDAExecutionProvider",
+          "hardware_accelerated": true,
+          "minimum_compute_capability": "5.2",
+          "minimum_driver": "545",
+          "status": "validated-on-documented-laboratory-hardware",
+          "evidence": "docs/lab/immich-stack-gpu-20260918/README.md"
+        },
+        "rocm": {
+          "available": true,
+          "laboratory_validated": false,
+          "vendor": "amd",
+          "provider": "MIGraphXExecutionProvider",
+          "hardware_accelerated": true,
+          "requires": [
+            "/dev/dri",
+            "/dev/kfd"
+          ],
+          "minimum_free_image_cache_gb": 35,
+          "status": "compatible-gpu-and-real-inference-validation-required",
+          "automatic_denylist": [
+            {
+              "pci_id": "1002:164c",
+              "gpu": "AMD Lucienne integrated graphics",
+              "reason": "Real buffalo_l inference caused SDMA/compute timeouts and repeated host GPU resets.",
+              "tested_on": "2026-08-26"
+            }
+          ]
+        },
+        "validation_protocol": {
+          "ping_is_not_sufficient": true,
+          "required_steps": [
+            "Verify the expected ONNX execution provider is available.",
+            "Run a real facial-recognition detection and embedding request.",
+            "Run visual and textual smart-search embeddings.",
+            "Observe GPU utilization during inference.",
+            "Reject the profile on provider fallback, HTTP 500, kernel timeout or GPU reset.",
+            "Keep the validated CPU ML service available until GPU validation passes."
+          ]
+        },
+        "failure_policy": {
+          "stop_failed_machine_learning_lxc": true,
+          "preserve_failure_metadata_without_secrets": true,
+          "record_gpu_pci_id_and_driver": true,
+          "stop_further_gpu_tests_after_kernel_timeout_or_reset": true,
+          "recommend_host_reboot_when_gpu_clocks_or_power_do_not_return_to_idle": true,
+          "automatic_hsa_override_retry": false,
+          "fallback_profile": "cpu",
+          "reuse_model_cache_when_compatible": true,
+          "start_server_only_after_cpu_fallback_is_healthy": true
+        }
+      }
+    },
+    "laboratory_contract": {
+      "requirements": {
+        "proxmox_min_version": "9.1",
+        "commands": [
+          "pct",
+          "pvesm",
+          "skopeo",
+          "openssl",
+          "jq"
+        ],
+        "features": [
+          "native-oci-lxc",
+          "unprivileged-lxc",
+          "private-service-network"
+        ],
+        "minimum_host_memory_mb": 6144,
+        "recommended_host_memory_mb": 8192,
+        "minimum_free_image_cache_gb": 8,
+        "thin_pool_checks": {
+          "minimum_free_percent": 15,
+          "reject_when_data_percent_above": 85,
+          "warn_when_virtual_allocation_exceeds_pool": true,
+          "require_autoextend_or_explicit_confirmation": true
+        },
+        "database_storage": {
+          "must_be_local": true,
+          "recommended_media": "ssd",
+          "network_filesystem_allowed": false
+        }
+      },
+      "defaults": {
+        "stack_name": "immich",
+        "timezone": "Europe/Madrid",
+        "rootfs_storage": "local-lvm",
+        "database_storage": "local-lvm",
+        "shared_media_root": "/mnt/oci-shared/media/immich/${stack_name}",
+        "database_size_gb": 32,
+        "frontend_network": {
+          "bridge": "vmbr0",
+          "ipv4_mode": "dhcp",
+          "firewall": true,
+          "host_managed": true
+        },
+        "private_network": {
+          "mode": "create-if-missing",
+          "bridge": "vmbr10",
+          "subnet": "10.77.0.0/24",
+          "host_address": "10.77.0.1/24",
+          "host_ip": "10.77.0.1",
+          "server_address": "10.77.0.10/24",
+          "server_ip": "10.77.0.10",
+          "machine_learning_address": "10.77.0.11/24",
+          "machine_learning_ip": "10.77.0.11",
+          "database_address": "10.77.0.12/24",
+          "database_ip": "10.77.0.12",
+          "valkey_address": "10.77.0.13/24",
+          "valkey_ip": "10.77.0.13",
+          "address_offsets": {
+            "host": 1,
+            "server": 10,
+            "machine_learning": 11,
+            "database": 12,
+            "valkey": 13
+          },
+          "firewall": true,
+          "host_managed": true,
+          "nat": false
+        },
+        "database": {
+          "name": "immich",
+          "username": "postgres",
+          "vector_extension": "vectorchord",
+          "storage_type": "SSD"
+        },
+        "video_transcoding": {
+          "acceleration": "vaapi",
+          "render_device": "/dev/dri/renderD128",
+          "driver": "auto"
+        },
+        "machine_learning": {
+          "acceleration": "cpu",
+          "model_cache_size_gb": 8
+        }
+      },
+      "installer_contract": {
+        "variable_syntax": "dollar-brace dotted path",
+        "strict_resolution": true,
+        "reject_unresolved_variables": true,
+        "input_bindings": {
+          "frontend_bridge": "frontend_network.bridge",
+          "frontend_ipv4_mode": "frontend_network.ipv4_mode",
+          "private_bridge": "private_network.bridge",
+          "private_subnet": "private_network.subnet",
+          "database_storage": "database_storage",
+          "media_storage_mode": "storage.media.mode",
+          "media_storage": "storage.media.managed_storage",
+          "media_size_gb": "storage.media.managed_size_gb",
+          "shared_media_root": "shared_media_root",
+          "video_transcoding_acceleration": "video_transcoding.acceleration",
+          "video_render_device": "video_transcoding.render_device",
+          "vaapi_driver": "video_transcoding.driver",
+          "machine_learning_acceleration": "machine_learning.acceleration"
+        },
+        "computed_values": {
+          "vmids": {
+            "server": "base_vmid + services.server.vmid_offset",
+            "machine_learning": "base_vmid + services.machine_learning.vmid_offset",
+            "database": "base_vmid + services.database.vmid_offset",
+            "valkey": "base_vmid + services.valkey.vmid_offset"
+          },
+          "private_addresses": "Derive IP and CIDR values from private_network.subnet and private_network.address_offsets",
+          "host_uid_for_container_uid": "unprivileged_idmap_base + container_uid"
+        },
+        "machine_learning_image_resolution": {
+          "cpu": "machine_learning_cpu",
+          "rocm": "machine_learning_rocm",
+          "openvino": "machine_learning_openvino",
+          "cuda": "machine_learning_cuda"
+        },
+        "machine_learning_resource_profiles": {
+          "cpu": {
+            "rootfs_size_gb": 12,
+            "memory_mb": 2048,
+            "validated": true
+          },
+          "rocm": {
+            "rootfs_size_gb": 48,
+            "memory_mb": 4096,
+            "validated": false
+          },
+          "openvino": {
+            "rootfs_size_gb": 20,
+            "memory_mb": 4096,
+            "validated": false
+          },
+          "cuda": {
+            "rootfs_size_gb": 32,
+            "memory_mb": 4096,
+            "validated": false
+          }
+        },
+        "invariants": [
+          "Reserve four unused VMIDs atomically before creating any LXC.",
+          "Never expose database or Valkey on the frontend bridge.",
+          "Never place PostgreSQL data on network storage.",
+          "Generate the PostgreSQL password during installation and translate it directly to lxc.environment.runtime, matching Compose environment visibility.",
+          "Store PostgreSQL data in a managed Proxmox volume with backup enabled.",
+          "Only the user media library uses a shared host bind by default.",
+          "Preserve all OCI image environment entries and append explicit Compose and native-LXC overrides after them.",
+          "Run Valkey with its official entrypoint and a backed-up managed /data volume, without authentication on the private stack network.",
+          "Start and healthcheck each dependency before starting the next service.",
+          "Do not enable a GPU ML profile until every profile-specific preflight check passes."
+        ]
+      },
+      "services": {
+        "database": {
+          "vmid_offset": 2,
+          "hostname_template": "${stack_name}-db",
+          "image_ref": "database",
+          "ostype": "auto-detect-from-image",
+          "unprivileged": true,
+          "features": [
+            "nesting=1"
+          ],
+          "resources": {
+            "cores": 2,
+            "memory_mb": 2048,
+            "swap_mb": 512,
+            "rootfs_size_gb": 8
+          },
+          "network_interfaces": [
+            {
+              "name": "eth0",
+              "role": "private",
+              "bridge_from": "private_network.bridge",
+              "address_from": "private_network.database_address",
+              "default_gateway": false
+            }
+          ],
+          "entrypoint": "/usr/local/bin/immich-docker-entrypoint.sh postgres -c config_file=/etc/postgresql/postgresql.conf -c listen_addresses=127.0.0.1,${private_network.database_ip}",
+          "halt_signal": "SIGINT",
+          "startup": {
+            "order": 10,
+            "up_delay_seconds": 10,
+            "down_timeout_seconds": 30
+          },
+          "mounts": [
+            "database-data"
+          ],
+          "environment": {
+            "POSTGRES_USER": "${database.username}",
+            "POSTGRES_DB": "${database.name}",
+            "POSTGRES_INITDB_ARGS": "--data-checksums",
+            "PGDATA": "/var/lib/postgresql/data/pgdata",
+            "DB_STORAGE_TYPE": "${database.storage_type}",
+            "POSTGRES_PASSWORD": "${generated.db_password}"
+          },
+          "healthcheck": {
+            "type": "command",
+            "command": [
+              "pg_isready",
+              "-h",
+              "${private_network.database_ip}",
+              "-p",
+              "5432"
+            ],
+            "timeout_seconds": 5,
+            "retries": 30
+          },
+          "entrypoint_override": "official-immich-postgres-entrypoint-with-private-listen-argument",
+          "listen_addresses": [
+            "127.0.0.1",
+            "${private_network.database_ip}"
+          ]
+        },
+        "valkey": {
+          "vmid_offset": 3,
+          "hostname_template": "${stack_name}-valkey",
+          "image_ref": "valkey",
+          "ostype": "auto-detect-from-image",
+          "unprivileged": true,
+          "features": [
+            "nesting=1"
+          ],
+          "resources": {
+            "cores": 1,
+            "memory_mb": 512,
+            "swap_mb": 256,
+            "rootfs_size_gb": 4
+          },
+          "network_interfaces": [
+            {
+              "name": "eth0",
+              "role": "private",
+              "bridge_from": "private_network.bridge",
+              "address_from": "private_network.valkey_address",
+              "default_gateway": false
+            }
+          ],
+          "entrypoint": "docker-entrypoint.sh valkey-server",
+          "working_directory": "/data",
+          "halt_signal": "SIGTERM",
+          "startup": {
+            "order": 20,
+            "up_delay_seconds": 5,
+            "down_timeout_seconds": 15
+          },
+          "mounts": [],
+          "healthcheck": {
+            "type": "command",
+            "command": [
+              "valkey-cli",
+              "-h",
+              "${private_network.valkey_ip}",
+              "ping"
+            ],
+            "expected_output": "PONG",
+            "timeout_seconds": 5,
+            "retries": 30
+          },
+          "entrypoint_override": "official-image-command"
+        },
+        "machine_learning": {
+          "vmid_offset": 1,
+          "hostname_template": "${stack_name}-ml",
+          "image_ref_from": "machine_learning.acceleration",
+          "image_resolution_from": "installer_contract.machine_learning_image_resolution",
+          "resource_profile_from": "installer_contract.machine_learning_resource_profiles",
+          "devices_from": "hardware_profiles.machine_learning.${machine_learning.acceleration}.devices",
+          "preflight_checks_from": "hardware_profiles.machine_learning.${machine_learning.acceleration}.preflight_checks",
+          "ostype": "auto-detect-from-image",
+          "unprivileged": true,
+          "features": [
+            "nesting=1"
+          ],
+          "resources": {
+            "cores": 2,
+            "memory_mb": 2048,
+            "swap_mb": 1024,
+            "rootfs_size_gb": 12
+          },
+          "network_interfaces": [
+            {
+              "name": "eth0",
+              "role": "frontend-downloads",
+              "bridge_from": "frontend_network.bridge",
+              "ipv4_mode_from": "frontend_network.ipv4_mode",
+              "default_gateway": true
+            },
+            {
+              "name": "eth1",
+              "role": "private",
+              "bridge_from": "private_network.bridge",
+              "address_from": "private_network.machine_learning_address",
+              "default_gateway": false
+            }
+          ],
+          "entrypoint": "tini -- python -m immich_ml",
+          "working_directory": "/usr/src",
+          "halt_signal": "SIGTERM",
+          "startup": {
+            "order": 30,
+            "up_delay_seconds": 10,
+            "down_timeout_seconds": 30
+          },
+          "mounts": [
+            "machine-learning-cache"
+          ],
+          "environment": {
+            "IMMICH_HOST": "${private_network.machine_learning_ip}",
+            "IMMICH_PORT": "3003",
+            "MACHINE_LEARNING_CACHE_FOLDER": "/cache",
+            "TRANSFORMERS_CACHE": "/cache",
+            "LD_PRELOAD": "/usr/lib/libmimalloc.so.2"
+          },
+          "healthcheck": {
+            "type": "http",
+            "url": "http://${private_network.machine_learning_ip}:3003/ping",
+            "expected_body": "pong",
+            "timeout_seconds": 5,
+            "retries": 40
+          },
+          "entrypoint_override": "explicit-official-image-command"
+        },
+        "server": {
+          "vmid_offset": 0,
+          "hostname_template": "${stack_name}-server",
+          "image_ref": "server",
+          "ostype": "auto-detect-from-image",
+          "unprivileged": true,
+          "features": [
+            "nesting=1"
+          ],
+          "resources": {
+            "cores": 4,
+            "memory_mb": 3072,
+            "swap_mb": 1024,
+            "rootfs_size_gb": 16
+          },
+          "network_interfaces": [
+            {
+              "name": "eth0",
+              "role": "frontend",
+              "bridge_from": "frontend_network.bridge",
+              "ipv4_mode_from": "frontend_network.ipv4_mode",
+              "default_gateway": true
+            },
+            {
+              "name": "eth1",
+              "role": "private",
+              "bridge_from": "private_network.bridge",
+              "address_from": "private_network.server_address",
+              "default_gateway": false
+            }
+          ],
+          "entrypoint": "tini -- /usr/local/bin/immich-lxc-start",
+          "working_directory": "/usr/src/app",
+          "halt_signal": "SIGTERM",
+          "startup": {
+            "order": 40,
+            "up_delay_seconds": 10,
+            "down_timeout_seconds": 30
+          },
+          "ports": [
+            {
+              "port": 2283,
+              "protocol": "tcp",
+              "purpose": "web-ui-and-api"
+            }
+          ],
+          "mounts": [
+            "media"
+          ],
+          "devices": [
+            "video-render"
+          ],
+          "environment": {
+            "TZ": "${timezone}",
+            "CPU_CORES": "${services.server.resources.cores}",
+            "IMMICH_HOST": "0.0.0.0",
+            "IMMICH_PORT": "2283",
+            "DB_HOSTNAME": "${private_network.database_ip}",
+            "DB_PORT": "5432",
+            "DB_USERNAME": "${database.username}",
+            "DB_DATABASE_NAME": "${database.name}",
+            "DB_VECTOR_EXTENSION": "${database.vector_extension}",
+            "REDIS_HOSTNAME": "${private_network.valkey_ip}",
+            "REDIS_PORT": "6379",
+            "IMMICH_MACHINE_LEARNING_URL": "http://${private_network.machine_learning_ip}:3003",
+            "LIBVA_DRIVER_NAME": "${video_transcoding.driver}",
+            "DB_PASSWORD": "${generated.db_password}"
+          },
+          "healthcheck": {
+            "type": "http",
+            "port": 2283,
+            "path": "/api/server/ping",
+            "expected_json": {
+              "res": "pong"
+            },
+            "timeout_seconds": 5,
+            "retries": 60,
+            "start_period_seconds": 120
+          },
+          "entrypoint_override": "validated-lxc-network-readiness-adaptation"
+        }
+      },
+      "storage": {
+        "media": {
+          "mode": "user-selectable",
+          "installation_choice": [
+            "managed-volume",
+            "host-bind"
+          ],
+          "default": "managed-volume",
+          "managed_storage_from": "rootfs_storage",
+          "managed_size_gb_default": 100,
+          "host_path_when_shared": "${shared_media_root}",
+          "container_path": "/data",
+          "service": "server",
+          "backup_by_mode": {
+            "managed-volume": true,
+            "host-bind": false
+          },
+          "create_if_missing": true,
+          "shareable_with_other_lxc": true
+        },
+        "database-data": {
+          "mode": "managed-volume",
+          "storage_from": "database_storage",
+          "size_gb_from": "database_size_gb",
+          "container_path": "/var/lib/postgresql/data",
+          "service": "database",
+          "backup": true,
+          "local_storage_required": true,
+          "network_filesystem_allowed": false,
+          "initialization": {
+            "data_subdirectory": "pgdata",
+            "reason": "Avoid PostgreSQL initialization failure caused by lost+found at the filesystem root.",
+            "owner_strategy": "resolve-postgres-uid-through-unprivileged-idmap",
+            "mode": "0700"
+          }
+        },
+        "machine-learning-cache": {
+          "mode": "managed-volume",
+          "storage_from": "rootfs_storage",
+          "size_gb_from": "machine_learning.model_cache_size_gb",
+          "container_path": "/cache",
+          "service": "machine_learning",
+          "backup": true
+        },
+        "valkey-data": {
+          "mode": "managed-volume",
+          "storage_from": "rootfs_storage",
+          "size_gb": 4,
+          "container_path": "/data",
+          "service": "redis",
+          "backup": true
+        }
+      },
+      "devices": {
+        "video-render": {
+          "enabled_when": {
+            "field": "video_transcoding.acceleration",
+            "not_equals": "cpu"
+          },
+          "host_path_from": "video_transcoding.render_device",
+          "container_path": "/dev/dri/renderD128",
+          "permissions": "rwm",
+          "mode": "0660",
+          "gid_strategy": "resolve-render-group-on-host",
+          "service": "server"
+        }
+      },
+      "hardware_profiles": {
+        "video_transcoding": {
+          "cpu": {
+            "validated": false,
+            "devices": []
+          },
+          "vaapi": {
+            "validated": true,
+            "service": "server",
+            "devices": [
+              "/dev/dri/renderD128"
+            ],
+            "supported_vendors": [
+              "amd",
+              "intel",
+              "nvidia"
+            ],
+            "post_install_application_setting_required": true,
+            "application_setting": "Administration > Video transcoding > Hardware acceleration > VAAPI"
+          }
+        },
+        "machine_learning": {
+          "cpu": {
+            "validated": true,
+            "image_ref": "machine_learning_cpu",
+            "devices": [],
+            "recognition_accelerated_by_hardware": false
+          },
+          "rocm": {
+            "validated": false,
+            "validation_result_on_reference_host": "failed-gpu-reset",
+            "status": "experimental",
+            "image_ref": "machine_learning_rocm",
+            "vendor": "amd",
+            "provider": "MIGraphXExecutionProvider",
+            "devices": [
+              {
+                "host_path": "/dev/kfd",
+                "container_path": "/dev/kfd",
+                "gid_strategy": "resolve-render-group-on-host"
+              },
+              {
+                "host_path": "/dev/dri/renderD128",
+                "container_path": "/dev/dri/renderD128",
+                "gid_strategy": "resolve-render-group-on-host"
+              },
+              {
+                "host_path": "/dev/dri/card0",
+                "container_path": "/dev/dri/card0",
+                "gid_strategy": "resolve-video-group-on-host"
+              }
+            ],
+            "recognition_accelerated_by_hardware": true,
+            "minimum_free_image_cache_gb": 35,
+            "preflight_checks": [
+              "amdgpu-kernel-driver-loaded",
+              "dev-dri-present",
+              "dev-kfd-present",
+              "gpu-supported-by-rocm"
+            ],
+            "advanced_environment": {
+              "HSA_OVERRIDE_GFX_VERSION": null,
+              "HSA_USE_SVM": null
+            },
+            "automatic_denylist": [
+              {
+                "pci_id": "1002:164c",
+                "gpu": "AMD Lucienne integrated graphics",
+                "reason": "Real buffalo_l inference caused SDMA/compute timeouts and repeated host GPU resets.",
+                "tested_on": "2026-08-26"
+              }
+            ],
+            "warning": "Do not enable automatically on unsupported AMD integrated GPUs. HSA overrides are manual compatibility experiments, not a validated default."
+          },
+          "openvino": {
+            "validated": false,
+            "status": "experimental",
+            "image_ref": "machine_learning_openvino",
+            "vendor": "intel",
+            "provider": "OpenVINOExecutionProvider",
+            "devices": [
+              {
+                "host_path": "/dev/dri/renderD128",
+                "container_path": "/dev/dri/renderD128",
+                "gid_strategy": "resolve-render-group-on-host"
+              }
+            ],
+            "optional_devices": [
+              "/dev/bus/usb"
+            ],
+            "device_cgroup_rules": [
+              "c 189:* rmw"
+            ],
+            "recognition_accelerated_by_hardware": true,
+            "preflight_checks": [
+              "intel-gpu-detected",
+              "dev-dri-present",
+              "kernel-supports-intel-gpu",
+              "openvino-provider-smoke-test"
+            ]
+          },
+          "cuda": {
+            "validated": false,
+            "status": "experimental",
+            "image_ref": "machine_learning_cuda",
+            "vendor": "nvidia",
+            "provider": "CUDAExecutionProvider",
+            "device_strategy": "discover-and-pass-required-dev-nvidia-devices-and-driver-libraries",
+            "recognition_accelerated_by_hardware": true,
+            "preflight_checks": [
+              "nvidia-gpu-compute-capability-at-least-5.2",
+              "nvidia-driver-version-at-least-545",
+              "nvidia-container-runtime-dependencies-present",
+              "cuda-provider-smoke-test"
+            ]
+          }
+        }
+      },
+      "machine_learning_capabilities": {
+        "facial_recognition": {
+          "task": "facial-recognition",
+          "observed_model": "buffalo_l",
+          "pipeline": [
+            "detection",
+            "recognition"
+          ],
+          "gpu_profiles": [
+            "rocm",
+            "openvino",
+            "cuda"
+          ],
+          "configured_by": "Immich administration UI",
+          "installer_writes_application_setting": false
+        },
+        "smart_search": {
+          "task": "clip",
+          "observed_model": "ViT-B-32__openai",
+          "pipeline": [
+            "visual",
+            "textual"
+          ],
+          "gpu_profiles": [
+            "rocm",
+            "openvino",
+            "cuda"
+          ],
+          "configured_by": "Immich administration UI",
+          "installer_writes_application_setting": false
+        },
+        "validation_protocol": {
+          "ping_is_not_sufficient": true,
+          "required_steps": [
+            "Verify the expected ONNX execution provider is available.",
+            "Run a real facial-recognition detection and embedding request.",
+            "Run visual and textual smart-search embeddings.",
+            "Observe GPU utilization during inference.",
+            "Reject the profile on provider fallback, HTTP 500, kernel timeout or GPU reset.",
+            "Keep the validated CPU ML service available until GPU validation passes."
+          ]
+        }
+      },
+      "configuration_schema": {
+        "stack_name": {
+          "type": "string",
+          "required": true,
+          "default": "immich",
+          "validation": {
+            "pattern": "^[a-z0-9][a-z0-9-]{0,31}$"
+          }
+        },
+        "base_vmid": {
+          "type": "integer",
+          "required": false,
+          "default": null,
+          "description": "VMID of the server; the other three VMIDs are reserved using the template's offsets."
+        },
+        "rootfs_storage": {
+          "type": "storage-selector",
+          "required": true,
+          "content_types": [
+            "rootdir"
+          ],
+          "default": "local-lvm"
+        },
+        "database_storage": {
+          "type": "storage-selector",
+          "required": true,
+          "content_types": [
+            "rootdir"
+          ],
+          "default": "local-lvm",
+          "validation": {
+            "must_be_local": true,
+            "network_filesystem_allowed": false
+          }
+        },
+        "media_storage_mode": {
+          "type": "select",
+          "required": true,
+          "default": "managed-volume",
+          "options": [
+            "managed-volume",
+            "host-bind"
+          ]
+        },
+        "media_storage": {
+          "type": "storage-selector",
+          "required_when": {
+            "field": "media_storage_mode",
+            "equals": "managed-volume"
+          },
+          "content_types": [
+            "rootdir"
+          ],
+          "default": "local-lvm"
+        },
+        "media_size_gb": {
+          "type": "integer",
+          "required_when": {
+            "field": "media_storage_mode",
+            "equals": "managed-volume"
+          },
+          "default": 100,
+          "minimum": 8
+        },
+        "shared_media_root": {
+          "type": "host-directory",
+          "required_when": {
+            "field": "media_storage_mode",
+            "equals": "host-bind"
+          },
+          "default": "/mnt/oci-shared/media/immich/${stack_name}",
+          "create_if_missing": true
+        },
+        "database_size_gb": {
+          "type": "integer",
+          "required": true,
+          "default": 32,
+          "minimum": 8
+        },
+        "frontend_bridge": {
+          "type": "network-bridge-selector",
+          "required": true,
+          "default": "vmbr0"
+        },
+        "frontend_ipv4_mode": {
+          "type": "select",
+          "required": true,
+          "default": "dhcp",
+          "options": [
+            "dhcp",
+            "static"
+          ]
+        },
+        "private_bridge": {
+          "type": "network-bridge",
+          "required": true,
+          "default": "vmbr10",
+          "create_if_missing": true
+        },
+        "private_subnet": {
+          "type": "cidr",
+          "required": true,
+          "default": "10.77.0.0/24",
+          "validation": {
+            "must_be_rfc1918": true,
+            "must_not_overlap_existing_networks": true
+          }
+        },
+        "video_transcoding_acceleration": {
+          "type": "select",
+          "required": true,
+          "default": "vaapi",
+          "options": [
+            "cpu",
+            "vaapi"
+          ]
+        },
+        "video_render_device": {
+          "type": "host-device-selector",
+          "required_when": {
+            "field": "video_transcoding_acceleration",
+            "equals": "vaapi"
+          },
+          "default": "/dev/dri/renderD128",
+          "filter": "/dev/dri/renderD*"
+        },
+        "vaapi_driver": {
+          "type": "select",
+          "required": false,
+          "default": "auto",
+          "options": [
+            "auto",
+            "radeonsi",
+            "iHD",
+            "i965"
+          ]
+        },
+        "machine_learning_acceleration": {
+          "type": "select",
+          "required": true,
+          "default": "cpu",
+          "options": [
+            "cpu",
+            "rocm",
+            "openvino",
+            "cuda"
+          ],
+          "automatic_installer_options": [
+            "cpu"
+          ],
+          "experimental_options": [
+            "rocm",
+            "openvino",
+            "cuda"
+          ],
+          "warnings": {
+            "rocm": "Experimental and only for ROCm-compatible AMD GPUs. Requires /dev/dri, /dev/kfd and at least 35 GiB free for the image. PCI 1002:164c is denied automatically after a real GPU-reset failure.",
+            "openvino": "Experimental in native OCI LXC. Intended for compatible Intel GPUs and requires /dev/dri access.",
+            "cuda": "Experimental in native OCI LXC. Requires a supported NVIDIA GPU, driver 545 or newer and the required NVIDIA runtime devices and libraries."
+          }
+        },
+        "timezone": {
+          "type": "timezone",
+          "required": true,
+          "default": "Europe/Madrid"
+        },
+        "onboot": {
+          "type": "boolean",
+          "required": true,
+          "default": false
+        }
+      },
+      "validated_profile": {
+        "id": "pve55-amd-vaapi-ml-cpu",
+        "description": "Reproducible profile based on a validated working deployment.",
+        "validated_on": "2026-08-27",
+        "validation_status": "passed-clean-import-managed-storage-coordinated-restart",
+        "host": {
+          "cpu": "AMD Ryzen 7 5700U",
+          "gpu": "AMD Lucienne integrated graphics",
+          "gpu_pci_id": "1002:164c",
+          "architecture": "amd64",
+          "video_render_device": "/dev/dri/renderD128",
+          "validated_render_gid": 993
+        },
+        "vmids": {
+          "server": 121,
+          "machine_learning": 122,
+          "database": 123,
+          "valkey": 124
+        },
+        "network": {
+          "frontend_bridge": "vmbr0",
+          "private_bridge": "vmbr10",
+          "private_subnet": "10.77.0.0/24",
+          "database_and_valkey_private_only": true
+        },
+        "acceleration": {
+          "video_transcoding": "vaapi-amd",
+          "vaapi_h264_encode": "passed",
+          "machine_learning": "cpu",
+          "machine_learning_hardware_acceleration": false,
+          "safe_machine_learning_default": "cpu",
+          "rocm_on_ryzen_5700u": "failed-unsafe-gpu-reset"
+        },
+        "storage": {
+          "validated_live_profile": {
+            "media": "host-bind,backup=0",
+            "database": "managed-volume,backup=1",
+            "secrets": "none-compose-environment-model",
+            "machine_learning_cache": "managed-volume,backup=0",
+            "valkey": "rootfs-only,ephemeral"
+          },
+          "template_target_model": {
+            "media": "managed-volume,backup=1 or host-bind,backup=0 selected at installation",
+            "database": "managed-volume,backup=1",
+            "valkey": "rootfs-only,ephemeral",
+            "machine_learning_cache": "managed-volume,backup=0"
+          },
+          "target_model_live_migration": "passed"
+        },
+        "validation": {
+          "api_ping": "passed",
+          "web_ui": "passed",
+          "version": "3.1.0",
+          "database_public_tables": 66,
+          "database_persistence": "passed-coordinated-restart",
+          "native_vzdump_database_inclusion": "configured-backup-1-not-yet-restored",
+          "machine_learning_ping": "passed",
+          "rocm_provider_available": "MIGraphXExecutionProvider",
+          "rocm_test_vmid": 127,
+          "rocm_test_private_ip": "10.77.0.14",
+          "rocm_buffalo_l_face_inference": "failed-http-500",
+          "rocm_gpu_busy_max_percent": 85,
+          "rocm_host_gpu_reset_observed": true,
+          "rocm_post_stop_gpu_busy_percent": 99,
+          "rocm_post_stop_gpu_clock_mhz": 1900,
+          "rocm_post_stop_memory_clock_mhz": 1200,
+          "rocm_post_stop_gpu_power_watts": 25,
+          "rocm_post_stop_gpu_temperature_celsius": 57,
+          "rocm_post_stop_device_users": 0,
+          "rocm_host_reboot_recommended": true,
+          "vaapi_after_rocm_reset": "passed",
+          "coordinated_restart": "passed",
+          "historical_custom_valkey_authentication": "passed",
+          "historical_custom_valkey_unauthenticated_rejection": "passed",
+          "target_compose_environment_translation": "passed",
+          "database_data_checksums": "on",
+          "database_extensions": "cube,earthdistance,pg_trgm,plpgsql,unaccent,uuid-ossp,vchord,vector",
+          "database_managed_volume_backup_flag": "passed",
+          "machine_learning_profile": "cpu",
+          "machine_learning_mimalloc_path": "/usr/lib/libmimalloc.so.2",
+          "machine_learning_mimalloc_path_validation": "passed",
+          "vaapi_h264_encode": "passed-encoder-present",
+          "vaapi_hevc_encode": "passed-encoder-present",
+          "media_write": "passed",
+          "runtime_environment_uniqueness": "passed",
+          "private_dependency_network": "passed"
+        },
+        "previous_validation_status": "passed-historical-profile-target-compose-translation-pending-live-migration",
+        "validated_lxc_adapted_profile": {
+          "server_entrypoint": "tini -- /usr/local/bin/immich-lxc-start",
+          "database_private_listen": true,
+          "custom_host_services": false,
+          "validation": "passed-clean-import-managed-storage",
+          "server_route_detection": "/proc/net/route",
+          "requires_iproute2": false,
+          "database_entrypoint": "/usr/local/bin/immich-docker-entrypoint.sh"
+        },
+        "candidate_direct_image_profile": {
+          "entrypoints": "from-oci-image-config",
+          "custom_rootfs_files": false,
+          "validation": "pending-clean-import-and-route-race-test"
+        }
+      },
+      "backup_restore": {
+        "native_proxmox_backup": true,
+        "coordinated_stack_backup_required": true,
+        "included_managed_volumes": [
+          "database-data"
+        ],
+        "excluded_volumes": [
+          "machine-learning-cache"
+        ],
+        "external_backup_required": [
+          "media"
+        ],
+        "application_consistency": {
+          "preferred_mode": "stop",
+          "stop_order": [
+            "server",
+            "machine_learning",
+            "valkey",
+            "database"
+          ],
+          "logical_database_backup": {
+            "required": true,
+            "method": "pg_dump",
+            "store_outside_database_volume": true
+          }
+        },
+        "restore_order": [
+          "restore-all-four-lxc-backups-from-the-same-backup-set",
+          "verify-shared-media-host-path",
+          "start-database",
+          "start-valkey",
+          "start-machine-learning",
+          "start-server",
+          "wait-for-all-healthchecks"
+        ]
+      },
+      "boundaries": {
+        "bundles_internal_immich_configuration": false,
+        "bundles_credentials": false,
+        "bundles_user_accounts": false,
+        "bundles_user_photos_or_videos": false,
+        "installer_generates_credentials": true,
+        "installer_must_not_write_immich_application_settings": true,
+        "installer_must_not_enable_unvalidated_gpu_ml_automatically": true,
+        "installer_must_enforce_gpu_compatibility_denylist": true,
+        "installer_must_fallback_to_cpu_after_gpu_validation_failure": false
+      },
+      "notes": [
+        "Esta plantilla describe la infraestructura OCI necesaria para instalar Immich; no contiene la configuracion interna de la aplicacion ni datos de usuario.",
+        "El servidor y machine learning usan dos interfaces; PostgreSQL y Valkey solo usan la red privada.",
+        "VAAPI acelera la transcodificacion de video, no el reconocimiento facial ni la busqueda inteligente.",
+        "El perfil ML CPU es el unico perfil seguro y validado en el Ryzen 7 5700U del laboratorio.",
+        "ROCm puede acelerar reconocimiento facial y busqueda inteligente en GPU AMD compatibles, pero la Lucienne PCI 1002:164c fallo con un reset real de GPU y queda bloqueada para activacion automatica.",
+        "Tras el fallo ROCm, la GPU Lucienne mantuvo frecuencias y consumo elevados sin procesos asociados; el instalador debe detener las pruebas y recomendar un reinicio del host.",
+        "OpenVINO para Intel y CUDA para NVIDIA estan declarados como opciones futuras, pero deben superar una inferencia real antes de sustituir al perfil CPU.",
+        "La base de datos debe permanecer en almacenamiento local; no debe ubicarse en NFS, SMB ni otro recurso de red.",
+        "New installations use managed backup=1 volumes for PostgreSQL, Valkey /data and the reproducible ML cache; old laboratory layouts are not silently migrated.",
+        "DB_PASSWORD from the official Immich .env is represented directly in lxc.environment.runtime and is therefore visible in PVE configuration, matching Docker inspection behavior.",
+        "La biblioteca multimedia puede utilizar un host-bind compartible, pero necesita una estrategia de backup independiente del LXC.",
+        "El despliegue OCI nativo dentro de LXC es experimental y no es el metodo de instalacion recomendado oficialmente por Immich.",
+        "La instalacion limpia del 2026-08-27 valido los CT121-124, PostgreSQL en volumen administrado backup=1, cache ML administrada, red privada, reinicio coordinado, VAAPI y la ruta oficial de mimalloc."
+      ],
+      "credentials": {
+        "model": "compose-environment",
+        "pve_visibility": "visible-by-design",
+        "explanation": "The DB_PASSWORD value from the official .env is generated or requested by the installer and translated to lxc.environment.runtime. PostgreSQL receives the same value as POSTGRES_PASSWORD.",
+        "db_password": {
+          "generator": "openssl-rand-alphanumeric",
+          "characters": 48,
+          "allowed_characters": "A-Za-z0-9",
+          "targets": [
+            "services.server.environment.DB_PASSWORD",
+            "services.database.environment.POSTGRES_PASSWORD"
+          ],
+          "verify_identical_values": true
+        },
+        "valkey_password": {
+          "enabled": false,
+          "reason": "The official Immich v3.1.0 Compose runs Valkey without authentication on its private network."
+        },
+        "application_accounts": {
+          "managed_by": "Immich",
+          "storage": "Immich application database",
+          "template_contains_accounts": false
+        }
+      },
+      "generated_assets": {
+        "server-network-wrapper": {
+          "target_service": "server",
+          "target_path": "/usr/local/bin/immich-lxc-start",
+          "mode": "0755",
+          "purpose": "Wait for the host-managed frontend default route through /proc/net/route before executing the image-provided command.",
+          "timeout_seconds": 60,
+          "post_route_delay_seconds": 3,
+          "official_final_command": "/bin/bash -c start.sh",
+          "validation": "passed on clean import in CT121",
+          "route_detection": "grep -qE '^eth0[[:space:]]+00000000[[:space:]]' /proc/net/route",
+          "requires_iproute2": false
+        },
+        "postgres-listen-runtime": {
+          "target_service": "database",
+          "type": "proxmox-entrypoint-argument",
+          "value": "/usr/local/bin/immich-docker-entrypoint.sh postgres -c config_file=/etc/postgresql/postgresql.conf -c listen_addresses=127.0.0.1,${private_network.database_ip}",
+          "purpose": "Bind PostgreSQL only to loopback and the private stack address on every start.",
+          "validation": "passed on clean import in CT123"
+        }
+      },
+      "translation_contract": {
+        "id": "docker-compose-to-proxmox-oci-lxc",
+        "version": "1.1.0",
+        "file": "docker-oci-translation-policy.json"
+      },
+      "docker_compatibility": {
+        "policy": "preserve-upstream-compose-contract",
+        "upstream_reference": "https://github.com/immich-app/immich/releases/download/v3.1.0/docker-compose.yml",
+        "mapping": {
+          "compose_env_file": "lxc.environment.runtime",
+          "compose_environment": "lxc.environment.runtime",
+          "upload_bind": "host-bind:/data,backup=0",
+          "database_bind": "managed-volume:/var/lib/postgresql/data,backup=1",
+          "model_cache_named_volume": "managed-volume:/cache,backup=1",
+          "redis_storage": "managed-volume:/data,backup=1",
+          "credential_visibility": "visible-in-pve-config-by-design",
+          "model_cache_environment": "preserve-official-LD_PRELOAD=/usr/lib/libmimalloc.so.2"
+        },
+        "adaptations": [
+          {
+            "id": "private-service-addresses",
+            "upstream_behavior": "Compose service names provide internal DNS discovery.",
+            "native_lxc_behavior": "Use fixed addresses on a private Proxmox bridge.",
+            "reason": "The services run in separate native LXC containers without a Compose DNS network.",
+            "behavioral_impact": "none"
+          },
+          {
+            "id": "database-managed-volume",
+            "upstream_behavior": "DB_DATA_LOCATION bind-mounts PostgreSQL data from the Docker host.",
+            "native_lxc_behavior": "Attach a local managed Proxmox volume at the same container path with backup enabled.",
+            "reason": "The database is private to its LXC and must participate in native Proxmox backup.",
+            "behavioral_impact": "storage-management-only"
+          },
+          {
+            "id": "server-route-wait",
+            "upstream_behavior": "Docker creates the service network and route before starting the server process.",
+            "native_lxc_behavior": "A minimal wrapper reads the eth0 default route from /proc/net/route before executing the official server command.",
+            "reason": "The DHCP frontend route can appear after PID 1 starts in a native OCI LXC.",
+            "behavioral_impact": "startup-only",
+            "validation": "passed in CT121; the image intentionally does not include iproute2"
+          },
+          {
+            "id": "postgres-private-listen",
+            "upstream_behavior": "PostgreSQL listens on the private Compose network.",
+            "native_lxc_behavior": "Preserve /usr/local/bin/immich-docker-entrypoint.sh and the official PostgreSQL config_file argument, then append listen_addresses for loopback and the fixed private LXC address.",
+            "reason": "The database must be reachable from the server LXC without a frontend interface.",
+            "behavioral_impact": "equivalent-private-reachability",
+            "validation": "passed in CT123 on clean import"
+          }
+        ]
+      },
+      "proxmox_oci_contract": {
+        "policy": "docker-compose-to-proxmox-oci-lxc",
+        "version": "1.1.0",
+        "preserve_official_application_contract": true,
+        "documented_lxc_adaptations": "allowed-when-required-and-validated",
+        "candidate_simplifications": "must-pass-equivalent-tests-before-replacement"
+      },
+      "historical_release": {
+        "version": "v3.1.0",
+        "validated_on": "2026-08-27",
+        "note": "Historical validation only; catalog installation resolves rolling latest images."
+      }
+    }
+  },
+  "compatibility": {
+    "automatic_install_candidate": true,
+    "validated": false,
+    "supported_compose_keys": [
+      "depends_on",
+      "environment",
+      "healthcheck",
+      "image",
+      "ports",
+      "restart",
+      "shm_size",
+      "volumes"
+    ],
+    "untranslated_blockers": [],
+    "policy": "The native four-LXC installer and coordinated update adapter support CPU, Intel OpenVINO and NVIDIA CUDA. Real rootfs replacement and full native-backup rollback with GPU inference passed on documented Intel/NVIDIA hardware. A real v3.1.0 to v3.2.2 upgrade and rollback also passed on Intel, preserving a laboratory account and synthetic asset. Not universal GPU or arbitrary release-transition validation; ROCm remains pending."
+  },
+  "validation": {
+    "schema": "passed-at-generation",
+    "clean_install": "passed-historical-profile-2026-08-27",
+    "service_health": "passed-historical-profile",
+    "restart_persistence": "passed-coordinated-restart",
+    "backup_restore": "passed-four-member-native-backup-restore",
+    "update_preserves_data": "passed-real-v3.1.0-to-v3.2.2-coordinated-upgrade-and-rollback-intel",
+    "historical_version": "3.1.0",
+    "historical_profile": "pve55-amd-vaapi-ml-cpu",
+    "private_dependency_network": "passed",
+    "postgres_local_managed_volume": "passed",
+    "machine_learning_cpu": "passed",
+    "video_transcoding_vaapi_amd": "passed",
+    "machine_learning_openvino": "passed-dedicated-native-stack-synthetic-inference-and-principal-restart",
+    "machine_learning_cuda": "passed-dedicated-native-stack-dynamic-toolkit-synthetic-inference-and-principal-restart",
+    "native_ml_gpu_lab_20260918": {
+      "evidence": "docs/lab/immich-native-gpu-20260918/README.md",
+      "environment": "Native OCI through the shared installer on Proxmox .50",
+      "intel": {
+        "cpu_allocation": "quota",
+        "four_model_inferences": "passed on GPU.0",
+        "http_predict": "passed initially and after three shutdown/start cycles",
+        "cpuset_profile": "intermittent SIGSEGV; original CPU set reproduced failure"
+      },
+      "nvidia": {
+        "runtime": "dynamic NVIDIA Container Toolkit",
+        "four_model_inferences": "passed with CUDA execution",
+        "http_predict": "passed initially and after shutdown/start"
+      },
+      "scope": "Synthetic tensors and JPEG; no accuracy benchmark or sustained library workload",
+      "dedicated_stack_gpu_integration": "pending",
+      "coordinated_update_validation": "pending"
+    },
+    "gpu_lab_20260915": {
+      "environment": "Docker inside unprivileged Debian 13 LXC on Proxmox 9.0.6; not native OCI",
+      "immich_version": "v3.2.2",
+      "intel": {
+        "pci_id": "8086:46a3",
+        "gpu": "Alder Lake-P GT1 UHD Graphics",
+        "image_digest": "sha256:4013ec28ccf6344d7ae24554743a116d7f61124b98858f5646a401d5c5df12e2",
+        "provider": "OpenVINOExecutionProvider",
+        "device": "GPU.0",
+        "four_model_inferences": "passed; profiled inference nodes on OpenVINO GPU"
+      },
+      "nvidia": {
+        "pci_id": "10de:1cb1",
+        "gpu": "Quadro P1000 4GB",
+        "driver": "580.178.04",
+        "image_digest": "sha256:38001e84ce46206e9e019d8ee7f567bf55914f019dff8f6a70d02fd93bb14073",
+        "provider": "CUDAExecutionProvider",
+        "four_model_inferences": "passed; CUDA execution confirmed, auxiliary CPU nodes in detection and text"
+      },
+      "models": [
+        "buffalo_l detection",
+        "buffalo_l recognition",
+        "ViT-B-32__openai visual",
+        "ViT-B-32__openai textual"
+      ],
+      "inputs": "Synthetic tensors, synthetic JPEG and text; no personal photographs",
+      "http_predict": "Text and synthetic-image requests passed on both backends; synthetic image contains no faces",
+      "limitations": [
+        "Not a recognition-accuracy benchmark",
+        "Not native OCI validation",
+        "Not universal GPU compatibility",
+        "No long-running library workload"
+      ],
+      "tested_thread_environment": {
+        "MACHINE_LEARNING_MODEL_INTRA_OP_THREADS": "2",
+        "MACHINE_LEARNING_MODEL_INTER_OP_THREADS": "1"
+      },
+      "thread_environment_reason": "Avoid ONNX automatic CPU-affinity warnings within the LXC cpuset; no image patches",
+      "evidence": "docs/lab/immich-gpu-20260915/README.md"
+    },
+    "machine_learning_rocm_amd_lucienne_1002_164c": "failed-unsafe-gpu-reset-auto-denied",
+    "rolling_latest": "passed-release-channel-v3.1.0-to-v3.2.2-intel",
+    "native_stack_gpu_20260918": {
+      "evidence": "docs/lab/immich-stack-gpu-20260918/README.md",
+      "intel": "8086:46a3; quota 4; RAM 8192 MiB",
+      "nvidia": "Quadro P1000; dynamic Container Toolkit; cores 4; RAM 8192 MiB",
+      "scope": "Four real ML models with synthetic inputs, HTTP inference, server-to-ML private-network requests, principal and ML restart, saved profile recipes",
+      "exclusions": [
+        "Full photo-library workflow and recognition accuracy",
+        "Host reboot",
+        "Coordinated stack image updates",
+        "Universal GPU compatibility"
+      ]
+    },
+    "coordinated_update_20260918": {
+      "evidence": "docs/lab/immich-stack-gpu-20260918/README.md",
+      "intel_vmids": [
+        9821,
+        9822,
+        9823,
+        9824
+      ],
+      "nvidia_vmids": [
+        9831,
+        9832,
+        9833,
+        9834
+      ],
+      "replacement": "passed",
+      "injected_failure_full_rollback": "passed",
+      "persistent_data": "library/cache markers, PostgreSQL row, persisted Valkey value",
+      "gpu": "four real models with synthetic inputs after update and rollback on both backends",
+      "scope": "Same registry digests; cross-release migration not yet validated"
+    },
+    "cross_release_upgrade_20260918": {
+      "evidence": "docs/lab/immich-stack-gpu-20260918/README.md",
+      "source_version": "v3.1.0",
+      "target_version": "v3.2.2",
+      "vmids": [
+        9841,
+        9842,
+        9843,
+        9844
+      ],
+      "acceleration": "Intel OpenVINO",
+      "update": "passed",
+      "rollback": "passed-after-upgraded-principal-healthcheck",
+      "application_data": "Laboratory account and synthetic JPEG; identical asset ID/checksum; original download verified after upgrade",
+      "persistent_data": "Library/cache markers, PostgreSQL row and persisted Valkey value",
+      "gpu": "Four real models with synthetic inputs before upgrade, after rollback and after committed upgrade",
+      "scope": "Specific release transition on documented Intel hardware; not arbitrary version jumps or NVIDIA cross-release migration"
+    }
+  },
+  "lifecycle": {
+    "update_strategy": "resolve-latest-image-then-apply-reviewed-native-lxc-update",
+    "registry_state": {
+      "resolved_architecture": null,
+      "resolved_digest": null,
+      "image_version_label": null,
+      "image_created": null
+    },
+    "change_detection": "compare-official-compose-and-resolved-latest-digests-for-all-four-images",
+    "automatic_unattended_updates": false,
+    "coordinated_stack_required": true,
+    "dependency_lifecycle": {
+      "implementation": "proxmox-hookscript",
+      "trigger": "main-lxc-pre-start",
+      "starts_stopped_dependencies": true,
+      "waits_for_dependency_healthchecks": true,
+      "stops_dependencies_with_main": false,
+      "persistent_contract": "/etc/pve/priv/proxmenux-stack-<main-vmid>.json",
+      "runtime_owner": "proxmox-ve"
+    },
+    "start_order": [
+      "database",
+      "redis",
+      "immich-machine-learning",
+      "immich-server"
+    ],
+    "stop_order": [
+      "immich-server",
+      "immich-machine-learning",
+      "redis",
+      "database"
+    ],
+    "backup": {
+      "native_proxmox_backup": true,
+      "coordinated_stack_backup_required": true,
+      "included_managed_volumes": [
+        "database-data"
+      ],
+      "excluded_volumes": [
+        "machine-learning-cache"
+      ],
+      "external_backup_required": [
+        "media"
+      ],
+      "application_consistency": {
+        "preferred_mode": "stop",
+        "stop_order": [
+          "server",
+          "machine_learning",
+          "valkey",
+          "database"
+        ],
+        "logical_database_backup": {
+          "required": true,
+          "method": "pg_dump",
+          "store_outside_database_volume": true
+        }
+      },
+      "restore_order": [
+        "restore-all-four-lxc-backups-from-the-same-backup-set",
+        "verify-shared-media-host-path",
+        "start-database",
+        "start-valkey",
+        "start-machine-learning",
+        "start-server",
+        "wait-for-all-healthchecks"
+      ]
+    },
+    "gpu_profile_failure_policy": {
+      "stop_failed_machine_learning_lxc": true,
+      "preserve_failure_metadata_without_secrets": true,
+      "record_gpu_pci_id_and_driver": true,
+      "stop_further_gpu_tests_after_kernel_timeout_or_reset": true,
+      "recommend_host_reboot_when_gpu_clocks_or_power_do_not_return_to_idle": true,
+      "automatic_hsa_override_retry": false,
+      "fallback_profile": "cpu",
+      "reuse_model_cache_when_compatible": true,
+      "start_server_only_after_cpu_fallback_is_healthy": true
+    },
+    "uninstall": {
+      "remove_rootfs": true,
+      "preserve_media_by_default": true,
+      "preserve_database_by_default": true,
+      "remove_private_bridge_only_if_unused": true
+    }
+  }
+}

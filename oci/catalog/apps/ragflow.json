@@ -1,0 +1,1283 @@
+{
+  "schema_version": "0.5.0",
+  "kind": "proxmenux.oci-template",
+  "id": "image-ragflow",
+  "status": "generated-review-required",
+  "catalog_ui": {
+    "title": {
+      "en_US": "RagFlow"
+    },
+    "tagline": {
+      "en_US": "RagFlow is an open-source RAG engine based on deep document understanding."
+    },
+    "description": {
+      "en_US": "RagFlow is an open-source RAG (Retrieval-Augmented Generation) engine based on deep document understanding. It enables users to build their own private ChatGPT by leveraging the power of large language models and deep document parsing capabilities. RagFlow supports various document formats including PDF, Word, Markdown, and more, allowing users to create intelligent question-answering systems based on their own documents.\n\n**Key Features:**\n- Deep document understanding with advanced parsing capabilities\n- Support for multiple document formats (PDF, Word, Markdown, etc.)\n- Private knowledge base with data security assurance\n- Customizable RAG workflows for different use cases\n- Integration with popular large language models\n- Web-based interface for easy management and interaction\n\n**Hardware Requirements:**\n- CPU >= 4 cores\n- RAM >= 16 GB\n- Disk >= 50 GB\n\n**Learn More:**\n- [RagFlow Official Website](https://ragflow.io)\n- [RagFlow GitHub Repository](https://github.com/infiniflow/ragflow)\n"
+    },
+    "category": "ai",
+    "category_label": "AI / Coding & Dev-Tools",
+    "author": "RagFlow",
+    "developer": "RagFlow",
+    "icon": null,
+    "thumbnail": null,
+    "screenshots": [],
+    "architectures": [
+      "amd64"
+    ],
+    "launch": {
+      "scheme": "http",
+      "port": 80,
+      "path": "/"
+    },
+    "website": "https://ragflow.io",
+    "documentation": null,
+    "repository": "https://hub.docker.com/r/icewhaletech/ragflow",
+    "tips": [],
+    "mini_changelog": [],
+    "display_version": null,
+    "updated_at": null,
+    "hidden": true,
+    "hidden_reason": "Pending multi-container adaptation; retained for future work"
+  },
+  "source": {
+    "provider": "icewhaletech",
+    "repository": "https://hub.docker.com/r/icewhaletech/ragflow",
+    "revision": "2481edea5fc620a90beaff48f4a39b34de4279fbc34b73e5a2f562fde77fe6f0",
+    "image_repository_url": "https://hub.docker.com/r/icewhaletech/ragflow",
+    "readme_pushed_at": "2026-09-11T10:43:22Z",
+    "compose_sha256": "2481edea5fc620a90beaff48f4a39b34de4279fbc34b73e5a2f562fde77fe6f0",
+    "generated_at": "2026-09-13T15:53:11+00:00"
+  },
+  "container_contract": {
+    "service_name": "ragflow",
+    "container_name": "ragflow-server",
+    "image": {
+      "reference": "icewhaletech/ragflow:latest",
+      "registry": "docker.io",
+      "repository": "icewhaletech/ragflow",
+      "tag": "latest",
+      "digest": null,
+      "pull_policy": "resolve-selected-tag-to-architecture-digest-at-install"
+    },
+    "environment": [
+      {
+        "name": "ES_HOST",
+        "example": "ragflow-es01",
+        "required": true,
+        "sensitive": false,
+        "source": "docker-compose"
+      },
+      {
+        "name": "INFINITY_HOST",
+        "example": "ragflow-infinity",
+        "required": true,
+        "sensitive": false,
+        "source": "docker-compose"
+      },
+      {
+        "name": "MINIO_HOST",
+        "example": "ragflow-minio",
+        "required": true,
+        "sensitive": false,
+        "source": "docker-compose"
+      },
+      {
+        "name": "MYSQL_HOST",
+        "example": "ragflow-mysql",
+        "required": true,
+        "sensitive": false,
+        "source": "docker-compose"
+      },
+      {
+        "name": "OS_HOST",
+        "example": "ragflow-opensearch01",
+        "required": true,
+        "sensitive": false,
+        "source": "docker-compose"
+      },
+      {
+        "name": "REDIS_HOST",
+        "example": "ragflow-redis",
+        "required": true,
+        "sensitive": false,
+        "source": "docker-compose"
+      },
+      {
+        "name": "TZ",
+        "example": "$TZ",
+        "required": true,
+        "sensitive": false,
+        "source": "docker-compose"
+      }
+    ],
+    "volumes": [
+      {
+        "id": "volume-0",
+        "container_path": "/ragflow/logs",
+        "compose_source_example": "/DATA/AppData/$AppID/ragflow-logs",
+        "read_only": false,
+        "required": true,
+        "installation_choice": [
+          "managed-volume",
+          "host-bind"
+        ],
+        "default": "managed-volume",
+        "managed_volume": {
+          "backup": true,
+          "default_size_gb": 8
+        }
+      },
+      {
+        "id": "volume-1",
+        "container_path": "/ragflow/history_data_agent",
+        "compose_source_example": "/DATA/AppData/$AppID/history_data_agent",
+        "read_only": false,
+        "required": true,
+        "installation_choice": [
+          "managed-volume",
+          "host-bind"
+        ],
+        "default": "managed-volume",
+        "managed_volume": {
+          "backup": true,
+          "default_size_gb": 8
+        }
+      }
+    ],
+    "ports": [
+      {
+        "container_port": 9380,
+        "published_example": 9380,
+        "protocol": "tcp",
+        "required": true,
+        "proxmox_behavior": "listener-on-dedicated-lxc-address-no-nat"
+      },
+      {
+        "container_port": 80,
+        "published_example": 30080,
+        "protocol": "tcp",
+        "required": true,
+        "proxmox_behavior": "listener-on-dedicated-lxc-address-no-nat"
+      },
+      {
+        "container_port": 443,
+        "published_example": 10443,
+        "protocol": "tcp",
+        "required": true,
+        "proxmox_behavior": "listener-on-dedicated-lxc-address-no-nat"
+      },
+      {
+        "container_port": 5678,
+        "published_example": 5678,
+        "protocol": "tcp",
+        "required": true,
+        "proxmox_behavior": "listener-on-dedicated-lxc-address-no-nat"
+      },
+      {
+        "container_port": 5679,
+        "published_example": 5679,
+        "protocol": "tcp",
+        "required": true,
+        "proxmox_behavior": "listener-on-dedicated-lxc-address-no-nat"
+      },
+      {
+        "container_port": 9382,
+        "published_example": 9382,
+        "protocol": "tcp",
+        "required": true,
+        "proxmox_behavior": "listener-on-dedicated-lxc-address-no-nat"
+      }
+    ],
+    "related_services": [
+      {
+        "name": "ragflow-es01",
+        "image": "elasticsearch:latest"
+      },
+      {
+        "name": "ragflow-infinity",
+        "image": "icewhaletech/ragflow-infinity:latest"
+      },
+      {
+        "name": "ragflow-minio",
+        "image": "quay.io/minio/minio:latest"
+      },
+      {
+        "name": "ragflow-mysql",
+        "image": "icewhaletech/ragflow-mysql:latest"
+      },
+      {
+        "name": "ragflow-opensearch01",
+        "image": "opensearchproject/opensearch:latest"
+      },
+      {
+        "name": "ragflow-redis",
+        "image": "valkey/valkey:latest"
+      },
+      {
+        "name": "ragflow-sandbox-executor-manager",
+        "image": "infiniflow/sandbox-executor-manager:latest"
+      }
+    ],
+    "restart": "unless-stopped",
+    "stop_grace_period": null,
+    "original_compose": "name: ragflow\nservices:\n  ragflow:\n    container_name: ragflow-server\n    depends_on:\n      ragflow-mysql:\n        condition: service_healthy\n        required: true\n    deploy:\n      resources:\n        reservations:\n          memory: 8G\n    environment:\n    - ES_HOST=ragflow-es01\n    - INFINITY_HOST=ragflow-infinity\n    - MINIO_HOST=ragflow-minio\n    - MYSQL_HOST=ragflow-mysql\n    - OS_HOST=ragflow-opensearch01\n    - REDIS_HOST=ragflow-redis\n    - TZ=$TZ\n    extra_hosts:\n    - host.docker.internal:host-gateway\n    image: icewhaletech/ragflow:latest\n    ports:\n    - target: 9380\n      published: '9380'\n      protocol: tcp\n    - target: 80\n      published: '30080'\n      protocol: tcp\n    - target: 443\n      published: '10443'\n      protocol: tcp\n    - target: 5678\n      published: '5678'\n      protocol: tcp\n    - target: 5679\n      published: '5679'\n      protocol: tcp\n    - target: 9382\n      published: '9382'\n      protocol: tcp\n    restart: unless-stopped\n    volumes:\n    - type: bind\n      source: /DATA/AppData/$AppID/ragflow-logs\n      target: /ragflow/logs\n      bind:\n        create_host_path: true\n    - type: bind\n      source: /DATA/AppData/$AppID/history_data_agent\n      target: /ragflow/history_data_agent\n      bind:\n        create_host_path: true\n    networks:\n    - ragflow\n    privileged: false\n    cpu_shares: 90\n  ragflow-es01:\n    container_name: ragflow-es01\n    deploy:\n      resources:\n        reservations:\n          memory: 3G\n    environment:\n    - ELASTIC_PASSWORD=${GENERATED_ELASTIC_PASSWORD}\n    - TZ=$TZ\n    - bootstrap.memory_lock=false\n    - cluster.routing.allocation.disk.watermark.flood_stage=2gb\n    - cluster.routing.allocation.disk.watermark.high=3gb\n    - cluster.routing.allocation.disk.watermark.low=5gb\n    - discovery.type=single-node\n    - node.name=es01\n    - xpack.security.enabled=true\n    - xpack.security.http.ssl.enabled=false\n    - xpack.security.transport.ssl.enabled=false\n    healthcheck:\n      test:\n      - CMD-SHELL\n      - curl http://localhost:9200\n      timeout: 10s\n      interval: 10s\n      retries: 120\n    image: elasticsearch:latest\n    ports:\n    - target: 9200\n      published: '9200'\n      protocol: tcp\n    restart: unless-stopped\n    volumes:\n    - type: bind\n      source: /DATA/AppData/$AppID/es01\n      target: /usr/share/elasticsearch/data\n    networks:\n    - ragflow\n    privileged: false\n    cpu_shares: 90\n  ragflow-infinity:\n    container_name: ragflow-infinity\n    environment:\n    - TZ=$TZ\n    healthcheck:\n      test:\n      - CMD\n      - curl\n      - http://localhost:23820/admin/node/current\n      timeout: 10s\n      interval: 10s\n      retries: 120\n    image: icewhaletech/ragflow-infinity:latest\n    ports:\n    - target: 23817\n      published: '23817'\n      protocol: tcp\n    - target: 23820\n      published: '23820'\n      protocol: tcp\n    - target: 5432\n      published: '15432'\n      protocol: tcp\n    restart: unless-stopped\n    ulimits:\n      nofile:\n        soft: 500000\n        hard: 500000\n    volumes:\n    - type: bind\n      source: /DATA/AppData/$AppID/infinity\n      target: /var/infinity\n    networks:\n    - ragflow\n    privileged: false\n    cpu_shares: 90\n    deploy:\n      resources:\n        reservations:\n          memory: 1.5G\n  ragflow-minio:\n    command:\n    - server\n    - --console-address\n    - :9001\n    - /data\n    container_name: ragflow-minio\n    deploy:\n      resources:\n        reservations:\n          memory: 512M\n    environment:\n    - MINIO_ROOT_PASSWORD=${GENERATED_MINIO_ROOT_PASSWORD}\n    - MINIO_ROOT_USER=rag_flow\n    - TZ=$TZ\n    healthcheck:\n      test:\n      - CMD\n      - curl\n      - -f\n      - http://localhost:9000/minio/health/live\n      timeout: 20s\n      interval: 30s\n      retries: 3\n    image: quay.io/minio/minio:latest\n    ports:\n    - target: 9000\n      published: '9000'\n      protocol: tcp\n    - target: 9001\n      published: '9001'\n      protocol: tcp\n    restart: unless-stopped\n    volumes:\n    - type: bind\n      source: /DATA/AppData/$AppID/minio\n      target: /data\n    networks:\n    - ragflow\n    privileged: false\n    cpu_shares: 90\n  ragflow-mysql:\n    command:\n    - --max_connections=1000\n    - --character-set-server=utf8mb4\n    - --collation-server=utf8mb4_unicode_ci\n    - --default-authentication-plugin=mysql_native_password\n    - --tls_version=TLSv1.2,TLSv1.3\n    - --binlog_expire_logs_seconds=604800\n    container_name: ragflow-mysql\n    deploy:\n      resources:\n        reservations:\n          memory: 512M\n    environment:\n    - MYSQL_PASSWORD=${GENERATED_MYSQL_PASSWORD}\n    - MYSQL_ROOT_PASSWORD=${GENERATED_MYSQL_ROOT_PASSWORD}\n    - TZ=$TZ\n    healthcheck:\n      test:\n      - CMD\n      - mysqladmin\n      - ping\n      - -uroot\n      - -pinfini_rag_flow\n      timeout: 10s\n      interval: 10s\n      retries: 10\n      start_period: 90s\n    image: icewhaletech/ragflow-mysql:latest\n    ports:\n    - target: 3306\n      published: '5455'\n      protocol: tcp\n    restart: unless-stopped\n    volumes:\n    - type: bind\n      source: /DATA/AppData/$AppID/mysql\n      target: /var/lib/mysql\n    networks:\n    - ragflow\n    privileged: false\n    cpu_shares: 90\n  ragflow-opensearch01:\n    container_name: ragflow-opensearch-01\n    deploy:\n      resources:\n        reservations:\n          memory: 2G\n    environment:\n    - OPENSEARCH_INITIAL_ADMIN_PASSWORD=${GENERATED_OPENSEARCH_INITIAL_ADMIN_PASSWORD}\n    - OPENSEARCH_PASSWORD=${GENERATED_OPENSEARCH_PASSWORD}\n    - TZ=$TZ\n    - bootstrap.memory_lock=false\n    - cluster.routing.allocation.disk.watermark.flood_stage=2gb\n    - cluster.routing.allocation.disk.watermark.high=3gb\n    - cluster.routing.allocation.disk.watermark.low=5gb\n    - discovery.type=single-node\n    - http.port=9201\n    - node.name=opensearch01\n    - plugins.security.disabled=false\n    - plugins.security.ssl.http.enabled=false\n    - plugins.security.ssl.transport.enabled=true\n    healthcheck:\n      test:\n      - CMD-SHELL\n      - curl http://localhost:9201\n      timeout: 10s\n      interval: 10s\n      retries: 120\n    image: opensearchproject/opensearch:latest\n    ports:\n    - target: 9201\n      published: '9201'\n      protocol: tcp\n    restart: unless-stopped\n    volumes:\n    - type: bind\n      source: /DATA/AppData/$AppID/opensearch01\n      target: /usr/share/opensearch/data\n    networks:\n    - ragflow\n    privileged: false\n    cpu_shares: 90\n  ragflow-redis:\n    command:\n    - redis-server\n    - --requirepass\n    - infini_rag_flow\n    - --maxmemory\n    - 128mb\n    - --maxmemory-policy\n    - allkeys-lru\n    container_name: ragflow-redis\n    deploy:\n      resources:\n        reservations:\n          memory: 512M\n    healthcheck:\n      test:\n      - CMD\n      - redis-cli\n      - -a\n      - infini_rag_flow\n      - ping\n      timeout: 3s\n      interval: 5s\n      retries: 3\n      start_period: 10s\n    image: valkey/valkey:latest\n    ports:\n    - target: 6379\n      published: '6379'\n      protocol: tcp\n    restart: unless-stopped\n    volumes:\n    - type: bind\n      source: /DATA/AppData/$AppID/redis\n      target: /data\n    networks:\n    - ragflow\n    privileged: false\n    cpu_shares: 90\n  ragflow-sandbox-executor-manager:\n    container_name: ragflow-sandbox-executor-manager\n    deploy:\n      resources:\n        limits:\n          memory: 7656M\n        reservations:\n          memory: 512M\n    environment:\n    - SANDBOX_BASE_NODEJS_IMAGE=infiniflow/sandbox-base-nodejs:latest\n    - SANDBOX_BASE_PYTHON_IMAGE=infiniflow/sandbox-base-python:latest\n    - SANDBOX_ENABLE_SECCOMP=false\n    - SANDBOX_EXECUTOR_MANAGER_POOL_SIZE=3\n    - SANDBOX_MAX_MEMORY=256m\n    - SANDBOX_TIMEOUT=10s\n    - TZ=$TZ\n    healthcheck:\n      test:\n      - CMD\n      - curl\n      - http://localhost:9385/healthz\n      timeout: 5s\n      interval: 10s\n      retries: 5\n    image: infiniflow/sandbox-executor-manager:latest\n    ports:\n    - target: 9385\n      published: '9385'\n      protocol: tcp\n    privileged: true\n    restart: unless-stopped\n    security_opt:\n    - no-new-privileges:true\n    volumes:\n    - type: bind\n      source: /var/run/docker.sock\n      target: /var/run/docker.sock\n      bind:\n        create_host_path: true\n    networks:\n    - ragflow\n    cpu_shares: 90\nnetworks:\n  ragflow:\n    driver: bridge\n"
+  },
+  "compose_stack": {
+    "project_name": "ragflow",
+    "deployment_model": "one-native-oci-lxc-per-compose-service",
+    "user_experience": "single-application-install",
+    "main_service": "ragflow",
+    "service_count": 8,
+    "services": [
+      {
+        "name": "ragflow-es01",
+        "image": "elasticsearch:latest",
+        "is_main": false,
+        "role": "dependency",
+        "vmid_offset": 1,
+        "depends_on": [],
+        "frontend_network": true,
+        "private_network": true,
+        "compose": {
+          "container_name": "ragflow-es01",
+          "deploy": {
+            "resources": {
+              "reservations": {
+                "memory": "3G"
+              }
+            }
+          },
+          "environment": [
+            "ELASTIC_PASSWORD=${GENERATED_ELASTIC_PASSWORD}",
+            "TZ=$TZ",
+            "bootstrap.memory_lock=false",
+            "cluster.routing.allocation.disk.watermark.flood_stage=2gb",
+            "cluster.routing.allocation.disk.watermark.high=3gb",
+            "cluster.routing.allocation.disk.watermark.low=5gb",
+            "discovery.type=single-node",
+            "node.name=es01",
+            "xpack.security.enabled=true",
+            "xpack.security.http.ssl.enabled=false",
+            "xpack.security.transport.ssl.enabled=false"
+          ],
+          "healthcheck": {
+            "test": [
+              "CMD-SHELL",
+              "curl http://localhost:9200"
+            ],
+            "timeout": "10s",
+            "interval": "10s",
+            "retries": 120
+          },
+          "image": "elasticsearch:latest",
+          "ports": [
+            {
+              "target": 9200,
+              "published": "9200",
+              "protocol": "tcp"
+            }
+          ],
+          "restart": "unless-stopped",
+          "volumes": [
+            {
+              "type": "bind",
+              "source": "/DATA/AppData/$AppID/es01",
+              "target": "/usr/share/elasticsearch/data"
+            }
+          ],
+          "networks": [
+            "ragflow"
+          ],
+          "privileged": false,
+          "cpu_shares": 90
+        }
+      },
+      {
+        "name": "ragflow-infinity",
+        "image": "icewhaletech/ragflow-infinity:latest",
+        "is_main": false,
+        "role": "dependency",
+        "vmid_offset": 2,
+        "depends_on": [],
+        "frontend_network": true,
+        "private_network": true,
+        "compose": {
+          "container_name": "ragflow-infinity",
+          "environment": [
+            "TZ=$TZ"
+          ],
+          "healthcheck": {
+            "test": [
+              "CMD",
+              "curl",
+              "http://localhost:23820/admin/node/current"
+            ],
+            "timeout": "10s",
+            "interval": "10s",
+            "retries": 120
+          },
+          "image": "icewhaletech/ragflow-infinity:latest",
+          "ports": [
+            {
+              "target": 23817,
+              "published": "23817",
+              "protocol": "tcp"
+            },
+            {
+              "target": 23820,
+              "published": "23820",
+              "protocol": "tcp"
+            },
+            {
+              "target": 5432,
+              "published": "15432",
+              "protocol": "tcp"
+            }
+          ],
+          "restart": "unless-stopped",
+          "ulimits": {
+            "nofile": {
+              "soft": 500000,
+              "hard": 500000
+            }
+          },
+          "volumes": [
+            {
+              "type": "bind",
+              "source": "/DATA/AppData/$AppID/infinity",
+              "target": "/var/infinity"
+            }
+          ],
+          "networks": [
+            "ragflow"
+          ],
+          "privileged": false,
+          "cpu_shares": 90,
+          "deploy": {
+            "resources": {
+              "reservations": {
+                "memory": "1.5G"
+              }
+            }
+          }
+        }
+      },
+      {
+        "name": "ragflow-minio",
+        "image": "quay.io/minio/minio:latest",
+        "is_main": false,
+        "role": "dependency",
+        "vmid_offset": 3,
+        "depends_on": [],
+        "frontend_network": true,
+        "private_network": true,
+        "compose": {
+          "command": [
+            "server",
+            "--console-address",
+            ":9001",
+            "/data"
+          ],
+          "container_name": "ragflow-minio",
+          "deploy": {
+            "resources": {
+              "reservations": {
+                "memory": "512M"
+              }
+            }
+          },
+          "environment": [
+            "MINIO_ROOT_PASSWORD=${GENERATED_MINIO_ROOT_PASSWORD}",
+            "MINIO_ROOT_USER=rag_flow",
+            "TZ=$TZ"
+          ],
+          "healthcheck": {
+            "test": [
+              "CMD",
+              "curl",
+              "-f",
+              "http://localhost:9000/minio/health/live"
+            ],
+            "timeout": "20s",
+            "interval": "30s",
+            "retries": 3
+          },
+          "image": "quay.io/minio/minio:latest",
+          "ports": [
+            {
+              "target": 9000,
+              "published": "9000",
+              "protocol": "tcp"
+            },
+            {
+              "target": 9001,
+              "published": "9001",
+              "protocol": "tcp"
+            }
+          ],
+          "restart": "unless-stopped",
+          "volumes": [
+            {
+              "type": "bind",
+              "source": "/DATA/AppData/$AppID/minio",
+              "target": "/data"
+            }
+          ],
+          "networks": [
+            "ragflow"
+          ],
+          "privileged": false,
+          "cpu_shares": 90
+        }
+      },
+      {
+        "name": "ragflow-mysql",
+        "image": "icewhaletech/ragflow-mysql:latest",
+        "is_main": false,
+        "role": "dependency",
+        "vmid_offset": 4,
+        "depends_on": [],
+        "frontend_network": true,
+        "private_network": true,
+        "compose": {
+          "command": [
+            "--max_connections=1000",
+            "--character-set-server=utf8mb4",
+            "--collation-server=utf8mb4_unicode_ci",
+            "--default-authentication-plugin=mysql_native_password",
+            "--tls_version=TLSv1.2,TLSv1.3",
+            "--binlog_expire_logs_seconds=604800"
+          ],
+          "container_name": "ragflow-mysql",
+          "deploy": {
+            "resources": {
+              "reservations": {
+                "memory": "512M"
+              }
+            }
+          },
+          "environment": [
+            "MYSQL_PASSWORD=${GENERATED_MYSQL_PASSWORD}",
+            "MYSQL_ROOT_PASSWORD=${GENERATED_MYSQL_ROOT_PASSWORD}",
+            "TZ=$TZ"
+          ],
+          "healthcheck": {
+            "test": [
+              "CMD",
+              "mysqladmin",
+              "ping",
+              "-uroot",
+              "-pinfini_rag_flow"
+            ],
+            "timeout": "10s",
+            "interval": "10s",
+            "retries": 10,
+            "start_period": "90s"
+          },
+          "image": "icewhaletech/ragflow-mysql:latest",
+          "ports": [
+            {
+              "target": 3306,
+              "published": "5455",
+              "protocol": "tcp"
+            }
+          ],
+          "restart": "unless-stopped",
+          "volumes": [
+            {
+              "type": "bind",
+              "source": "/DATA/AppData/$AppID/mysql",
+              "target": "/var/lib/mysql"
+            }
+          ],
+          "networks": [
+            "ragflow"
+          ],
+          "privileged": false,
+          "cpu_shares": 90
+        }
+      },
+      {
+        "name": "ragflow-opensearch01",
+        "image": "opensearchproject/opensearch:latest",
+        "is_main": false,
+        "role": "dependency",
+        "vmid_offset": 5,
+        "depends_on": [],
+        "frontend_network": true,
+        "private_network": true,
+        "compose": {
+          "container_name": "ragflow-opensearch-01",
+          "deploy": {
+            "resources": {
+              "reservations": {
+                "memory": "2G"
+              }
+            }
+          },
+          "environment": [
+            "OPENSEARCH_INITIAL_ADMIN_PASSWORD=${GENERATED_OPENSEARCH_INITIAL_ADMIN_PASSWORD}",
+            "OPENSEARCH_PASSWORD=${GENERATED_OPENSEARCH_PASSWORD}",
+            "TZ=$TZ",
+            "bootstrap.memory_lock=false",
+            "cluster.routing.allocation.disk.watermark.flood_stage=2gb",
+            "cluster.routing.allocation.disk.watermark.high=3gb",
+            "cluster.routing.allocation.disk.watermark.low=5gb",
+            "discovery.type=single-node",
+            "http.port=9201",
+            "node.name=opensearch01",
+            "plugins.security.disabled=false",
+            "plugins.security.ssl.http.enabled=false",
+            "plugins.security.ssl.transport.enabled=true"
+          ],
+          "healthcheck": {
+            "test": [
+              "CMD-SHELL",
+              "curl http://localhost:9201"
+            ],
+            "timeout": "10s",
+            "interval": "10s",
+            "retries": 120
+          },
+          "image": "opensearchproject/opensearch:latest",
+          "ports": [
+            {
+              "target": 9201,
+              "published": "9201",
+              "protocol": "tcp"
+            }
+          ],
+          "restart": "unless-stopped",
+          "volumes": [
+            {
+              "type": "bind",
+              "source": "/DATA/AppData/$AppID/opensearch01",
+              "target": "/usr/share/opensearch/data"
+            }
+          ],
+          "networks": [
+            "ragflow"
+          ],
+          "privileged": false,
+          "cpu_shares": 90
+        }
+      },
+      {
+        "name": "ragflow-redis",
+        "image": "valkey/valkey:latest",
+        "is_main": false,
+        "role": "dependency",
+        "vmid_offset": 6,
+        "depends_on": [],
+        "frontend_network": true,
+        "private_network": true,
+        "compose": {
+          "command": [
+            "redis-server",
+            "--requirepass",
+            "infini_rag_flow",
+            "--maxmemory",
+            "128mb",
+            "--maxmemory-policy",
+            "allkeys-lru"
+          ],
+          "container_name": "ragflow-redis",
+          "deploy": {
+            "resources": {
+              "reservations": {
+                "memory": "512M"
+              }
+            }
+          },
+          "healthcheck": {
+            "test": [
+              "CMD",
+              "redis-cli",
+              "-a",
+              "infini_rag_flow",
+              "ping"
+            ],
+            "timeout": "3s",
+            "interval": "5s",
+            "retries": 3,
+            "start_period": "10s"
+          },
+          "image": "valkey/valkey:latest",
+          "ports": [
+            {
+              "target": 6379,
+              "published": "6379",
+              "protocol": "tcp"
+            }
+          ],
+          "restart": "unless-stopped",
+          "volumes": [
+            {
+              "type": "bind",
+              "source": "/DATA/AppData/$AppID/redis",
+              "target": "/data"
+            }
+          ],
+          "networks": [
+            "ragflow"
+          ],
+          "privileged": false,
+          "cpu_shares": 90
+        }
+      },
+      {
+        "name": "ragflow-sandbox-executor-manager",
+        "image": "infiniflow/sandbox-executor-manager:latest",
+        "is_main": false,
+        "role": "dependency",
+        "vmid_offset": 7,
+        "depends_on": [],
+        "frontend_network": true,
+        "private_network": true,
+        "compose": {
+          "container_name": "ragflow-sandbox-executor-manager",
+          "deploy": {
+            "resources": {
+              "limits": {
+                "memory": "7656M"
+              },
+              "reservations": {
+                "memory": "512M"
+              }
+            }
+          },
+          "environment": [
+            "SANDBOX_BASE_NODEJS_IMAGE=infiniflow/sandbox-base-nodejs:latest",
+            "SANDBOX_BASE_PYTHON_IMAGE=infiniflow/sandbox-base-python:latest",
+            "SANDBOX_ENABLE_SECCOMP=false",
+            "SANDBOX_EXECUTOR_MANAGER_POOL_SIZE=3",
+            "SANDBOX_MAX_MEMORY=256m",
+            "SANDBOX_TIMEOUT=10s",
+            "TZ=$TZ"
+          ],
+          "healthcheck": {
+            "test": [
+              "CMD",
+              "curl",
+              "http://localhost:9385/healthz"
+            ],
+            "timeout": "5s",
+            "interval": "10s",
+            "retries": 5
+          },
+          "image": "infiniflow/sandbox-executor-manager:latest",
+          "ports": [
+            {
+              "target": 9385,
+              "published": "9385",
+              "protocol": "tcp"
+            }
+          ],
+          "privileged": true,
+          "restart": "unless-stopped",
+          "security_opt": [
+            "no-new-privileges:true"
+          ],
+          "volumes": [
+            {
+              "type": "bind",
+              "source": "/var/run/docker.sock",
+              "target": "/var/run/docker.sock",
+              "bind": {
+                "create_host_path": true
+              }
+            }
+          ],
+          "networks": [
+            "ragflow"
+          ],
+          "cpu_shares": 90
+        }
+      },
+      {
+        "name": "ragflow",
+        "image": "icewhaletech/ragflow:latest",
+        "is_main": true,
+        "role": "frontend",
+        "vmid_offset": 0,
+        "depends_on": [
+          "ragflow-mysql"
+        ],
+        "frontend_network": true,
+        "private_network": true,
+        "compose": {
+          "container_name": "ragflow-server",
+          "depends_on": {
+            "ragflow-mysql": {
+              "condition": "service_healthy",
+              "required": true
+            }
+          },
+          "deploy": {
+            "resources": {
+              "reservations": {
+                "memory": "8G"
+              }
+            }
+          },
+          "environment": [
+            "ES_HOST=ragflow-es01",
+            "INFINITY_HOST=ragflow-infinity",
+            "MINIO_HOST=ragflow-minio",
+            "MYSQL_HOST=ragflow-mysql",
+            "OS_HOST=ragflow-opensearch01",
+            "REDIS_HOST=ragflow-redis",
+            "TZ=$TZ"
+          ],
+          "extra_hosts": [
+            "host.docker.internal:host-gateway"
+          ],
+          "image": "icewhaletech/ragflow:latest",
+          "ports": [
+            {
+              "target": 9380,
+              "published": "9380",
+              "protocol": "tcp"
+            },
+            {
+              "target": 80,
+              "published": "30080",
+              "protocol": "tcp"
+            },
+            {
+              "target": 443,
+              "published": "10443",
+              "protocol": "tcp"
+            },
+            {
+              "target": 5678,
+              "published": "5678",
+              "protocol": "tcp"
+            },
+            {
+              "target": 5679,
+              "published": "5679",
+              "protocol": "tcp"
+            },
+            {
+              "target": 9382,
+              "published": "9382",
+              "protocol": "tcp"
+            }
+          ],
+          "restart": "unless-stopped",
+          "volumes": [
+            {
+              "type": "bind",
+              "source": "/DATA/AppData/$AppID/ragflow-logs",
+              "target": "/ragflow/logs",
+              "bind": {
+                "create_host_path": true
+              }
+            },
+            {
+              "type": "bind",
+              "source": "/DATA/AppData/$AppID/history_data_agent",
+              "target": "/ragflow/history_data_agent",
+              "bind": {
+                "create_host_path": true
+              }
+            }
+          ],
+          "networks": [
+            "ragflow"
+          ],
+          "privileged": false,
+          "cpu_shares": 90
+        }
+      }
+    ],
+    "top_level": {
+      "name": "ragflow",
+      "networks": {
+        "ragflow": {
+          "driver": "bridge"
+        }
+      }
+    },
+    "networking": {
+      "frontend": "selected-proxmox-bridge",
+      "private_required": true,
+      "private_creation": "automatic-create-if-missing",
+      "private_address_allocation": "automatic-static-address-per-service",
+      "service_discovery": "private-addresses-with-compose-service-host-aliases",
+      "dependency_external_access": "disabled-unless-service-publishes-ports",
+      "prompt_user_for_private_network": false
+    },
+    "storage": [
+      {
+        "id": "ragflow-volume-0",
+        "service": "ragflow",
+        "container_path": "/ragflow/logs",
+        "mode": "managed-volume",
+        "user_selectable": false,
+        "backup": true,
+        "shared_with_other_lxc": false,
+        "source_path": null,
+        "source_path_prompt": null
+      },
+      {
+        "id": "ragflow-volume-1",
+        "service": "ragflow",
+        "container_path": "/ragflow/history_data_agent",
+        "mode": "managed-volume",
+        "user_selectable": false,
+        "backup": true,
+        "shared_with_other_lxc": false,
+        "source_path": null,
+        "source_path_prompt": null
+      },
+      {
+        "id": "ragflow-es01-volume-0",
+        "service": "ragflow-es01",
+        "container_path": "/usr/share/elasticsearch/data",
+        "mode": "managed-volume",
+        "user_selectable": false,
+        "backup": true,
+        "shared_with_other_lxc": false,
+        "source_path": null,
+        "source_path_prompt": null
+      },
+      {
+        "id": "ragflow-infinity-volume-0",
+        "service": "ragflow-infinity",
+        "container_path": "/var/infinity",
+        "mode": "managed-volume",
+        "user_selectable": false,
+        "backup": true,
+        "shared_with_other_lxc": false,
+        "source_path": null,
+        "source_path_prompt": null
+      },
+      {
+        "id": "ragflow-minio-volume-0",
+        "service": "ragflow-minio",
+        "container_path": "/data",
+        "mode": "host-bind",
+        "user_selectable": true,
+        "backup": false,
+        "shared_with_other_lxc": true,
+        "source_path": null,
+        "source_path_prompt": "Host directory for ragflow-minio:/data"
+      },
+      {
+        "id": "ragflow-mysql-volume-0",
+        "service": "ragflow-mysql",
+        "container_path": "/var/lib/mysql",
+        "mode": "managed-volume",
+        "user_selectable": false,
+        "backup": true,
+        "shared_with_other_lxc": false,
+        "source_path": null,
+        "source_path_prompt": null
+      },
+      {
+        "id": "ragflow-opensearch01-volume-0",
+        "service": "ragflow-opensearch01",
+        "container_path": "/usr/share/opensearch/data",
+        "mode": "managed-volume",
+        "user_selectable": false,
+        "backup": true,
+        "shared_with_other_lxc": false,
+        "source_path": null,
+        "source_path_prompt": null
+      },
+      {
+        "id": "ragflow-redis-volume-0",
+        "service": "ragflow-redis",
+        "container_path": "/data",
+        "mode": "host-bind",
+        "user_selectable": true,
+        "backup": false,
+        "shared_with_other_lxc": true,
+        "source_path": null,
+        "source_path_prompt": "Host directory for ragflow-redis:/data"
+      },
+      {
+        "id": "ragflow-sandbox-executor-manager-volume-0",
+        "service": "ragflow-sandbox-executor-manager",
+        "container_path": "/var/run/docker.sock",
+        "mode": "runtime-bind",
+        "user_selectable": false,
+        "backup": false,
+        "shared_with_other_lxc": false,
+        "source_path": null,
+        "source_path_prompt": null
+      }
+    ],
+    "orchestration": {
+      "reserve_vmids_atomically": 8,
+      "start_order": [
+        "ragflow-es01",
+        "ragflow-infinity",
+        "ragflow-minio",
+        "ragflow-mysql",
+        "ragflow-opensearch01",
+        "ragflow-redis",
+        "ragflow-sandbox-executor-manager",
+        "ragflow"
+      ],
+      "stop_order": [
+        "ragflow",
+        "ragflow-sandbox-executor-manager",
+        "ragflow-redis",
+        "ragflow-opensearch01",
+        "ragflow-mysql",
+        "ragflow-minio",
+        "ragflow-infinity",
+        "ragflow-es01"
+      ],
+      "dependency_readiness": "compose-healthcheck-then-port-or-process-fallback",
+      "rollback_on_failure": "remove-new-rootfs-preserve-created-persistent-volumes"
+    },
+    "installer_inputs": {
+      "prompted": [
+        "stack_name",
+        "base_vmid",
+        "rootfs_storage",
+        "persistent_data_destinations",
+        "frontend_bridge",
+        "frontend_ipv4_mode"
+      ],
+      "automatic": [
+        "dependent_vmids",
+        "private_bridge",
+        "private_subnet",
+        "private_service_addresses",
+        "compose_service_aliases",
+        "generated_secrets",
+        "dependency_start_and_stop_order"
+      ],
+      "generated_secrets": [
+        {
+          "id": "elastic-password",
+          "strategy": "generate-cryptographically-random-at-install",
+          "bindings": [
+            {
+              "service": "ragflow-es01",
+              "environment_variable": "ELASTIC_PASSWORD"
+            }
+          ]
+        },
+        {
+          "id": "minio-root-password",
+          "strategy": "generate-cryptographically-random-at-install",
+          "bindings": [
+            {
+              "service": "ragflow-minio",
+              "environment_variable": "MINIO_ROOT_PASSWORD"
+            }
+          ]
+        },
+        {
+          "id": "mysql-password",
+          "strategy": "generate-cryptographically-random-at-install",
+          "bindings": [
+            {
+              "service": "ragflow-mysql",
+              "environment_variable": "MYSQL_PASSWORD"
+            }
+          ]
+        },
+        {
+          "id": "mysql-root-password",
+          "strategy": "generate-cryptographically-random-at-install",
+          "bindings": [
+            {
+              "service": "ragflow-mysql",
+              "environment_variable": "MYSQL_ROOT_PASSWORD"
+            }
+          ]
+        },
+        {
+          "id": "opensearch-initial-admin-password",
+          "strategy": "generate-cryptographically-random-at-install",
+          "bindings": [
+            {
+              "service": "ragflow-opensearch01",
+              "environment_variable": "OPENSEARCH_INITIAL_ADMIN_PASSWORD"
+            }
+          ]
+        },
+        {
+          "id": "opensearch-password",
+          "strategy": "generate-cryptographically-random-at-install",
+          "bindings": [
+            {
+              "service": "ragflow-opensearch01",
+              "environment_variable": "OPENSEARCH_PASSWORD"
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "first_run": {
+    "endpoints": [
+      {
+        "label": "Web UI",
+        "scheme": "http",
+        "port": 80,
+        "path": "/",
+        "source": "compose-metadata"
+      }
+    ],
+    "credentials": []
+  },
+  "proxmox": {
+    "runtime": "native-oci-lxc",
+    "technology_status": "proxmox-technology-preview",
+    "defaults": {
+      "unprivileged": true,
+      "ostype": "auto-from-image",
+      "cores": 2,
+      "memory_mb": 8192,
+      "swap_mb": 512,
+      "rootfs_size_gb": 8,
+      "rootfs_storage": "local-lvm",
+      "volume_storage": "local-lvm",
+      "template_storage": "local",
+      "bridge": "vmbr0",
+      "ipv4": "dhcp",
+      "firewall": true,
+      "host_managed_network": true,
+      "onboot": false,
+      "features": [
+        "nesting=1"
+      ],
+      "shutdown_timeout_seconds": 30
+    },
+    "image_metadata_policy": {
+      "entrypoint": "import-from-oci-image",
+      "cmd": "import-from-oci-image",
+      "environment": "import-image-env-then-apply-compose-overrides",
+      "user": "import-from-oci-image",
+      "working_dir": "import-from-oci-image",
+      "stop_signal": "import-from-oci-image"
+    },
+    "installer_profile": {
+      "resources": {
+        "cpu_shares": 90
+      },
+      "extra_hosts": [
+        {
+          "hostname": "host.docker.internal",
+          "address": "host-gateway"
+        }
+      ]
+    },
+    "adaptations": [
+      {
+        "id": "imported-compose-source",
+        "upstream_behavior": "The source definition deploys the complete Docker Compose application model.",
+        "native_lxc_behavior": "The source model is preserved and remains blocked until every service option has a reviewed native Proxmox mapping.",
+        "reason": "Catalog import must not imply runtime compatibility.",
+        "behavioral_impact": "No automatic installation before review.",
+        "validation": "pending-per-application"
+      },
+      {
+        "id": "rolling-latest-image",
+        "upstream_behavior": "A discovered Compose may pin a release tag or digest.",
+        "native_lxc_behavior": "ProxMenux selects the same image repository with the latest tag for catalog installations.",
+        "reason": "The automatic catalog intentionally offers rolling latest images; pinned versions belong to the future manual installer.",
+        "behavioral_impact": "The installed release can be newer than the discovered Compose revision.",
+        "validation": "pending-per-application"
+      },
+      {
+        "id": "dedicated-lxc-network",
+        "upstream_behavior": "Docker publishes selected container ports on the Docker host.",
+        "native_lxc_behavior": "A reviewed native application will listen on its original container ports at a dedicated LXC address.",
+        "reason": "A native LXC has its own address and does not require Docker port NAT.",
+        "behavioral_impact": "Published ports are metadata; ProxMenux URLs use the matching container target port.",
+        "validation": "pending-per-application"
+      },
+      {
+        "id": "compose-shm-size",
+        "upstream_behavior": "Compose sets the size of the container /dev/shm tmpfs.",
+        "native_lxc_behavior": "ProxMenux mounts a native LXC tmpfs at /dev/shm with the same requested capacity.",
+        "reason": "The OCI image runs directly as an LXC and therefore needs the equivalent Proxmox mount entry.",
+        "behavioral_impact": "None expected.",
+        "validation": "not-requested-by-compose"
+      },
+      {
+        "id": "compose-command",
+        "upstream_behavior": "Compose replaces the image Cmd while retaining its Entrypoint.",
+        "native_lxc_behavior": "ProxMenux reads the official OCI Entrypoint and combines it with the Compose command as the native LXC init command.",
+        "reason": "Proxmox stores the effective OCI process as one entrypoint string.",
+        "behavioral_impact": "None expected.",
+        "validation": "not-requested-by-compose"
+      },
+      {
+        "id": "compose-privileged-mode",
+        "upstream_behavior": "Compose selects whether the container runs in privileged mode.",
+        "native_lxc_behavior": "ProxMenux uses a privileged LXC only after an explicit high-risk confirmation; otherwise it keeps the LXC unprivileged.",
+        "reason": "The native OCI-LXC deployment must preserve the requested privilege level without silently weakening isolation.",
+        "behavioral_impact": "A privileged LXC has weaker isolation from the Proxmox host.",
+        "validation": "native-equivalent"
+      },
+      {
+        "id": "compose-process-runtime",
+        "upstream_behavior": "Compose can replace Entrypoint, User and WorkingDir and request an init process or interactive terminal.",
+        "native_lxc_behavior": "ProxMenux applies the process overrides through native LXC init directives; lxc-init provides PID 1 supervision and the CT console provides terminal access.",
+        "reason": "The OCI process must start with the same identity, command and working directory without Docker.",
+        "behavioral_impact": "Compose stdin_open and tty become access through the Proxmox LXC console.",
+        "validation": "not-requested-by-compose"
+      },
+      {
+        "id": "compose-healthcheck",
+        "upstream_behavior": "Docker periodically executes the declared container healthcheck.",
+        "native_lxc_behavior": "For a single-service LXC, ProxMenux translates HTTP localhost checks into a mandatory first-start service check.",
+        "reason": "Proxmox has no persistent Docker health state, while the installer still must detect a failed first boot.",
+        "behavioral_impact": "The check runs during installation rather than continuously after installation.",
+        "validation": "not-requested-by-compose"
+      },
+      {
+        "id": "compose-cpu-priority",
+        "upstream_behavior": "Docker cpu_shares sets a relative scheduling weight with 1024 as its neutral value.",
+        "native_lxc_behavior": "ProxMenux converts the relative weight to Proxmox cpuunits with 100 as its neutral value and lets the user review it.",
+        "reason": "Both settings express relative CPU priority on different scales.",
+        "behavioral_impact": "Rounding and Proxmox minimum limits can slightly change very low weights.",
+        "validation": "pending-per-application"
+      },
+      {
+        "id": "compose-network-identity",
+        "upstream_behavior": "Compose can set hostname, MAC address, extra hosts and attach a service to Docker networks.",
+        "native_lxc_behavior": "ProxMenux applies hostname and MAC to net0, writes additional host aliases into the LXC and uses its dedicated bridge connection for single-service networks.",
+        "reason": "A dedicated LXC has its own network namespace and does not need a Docker bridge per service.",
+        "behavioral_impact": "host-gateway resolves to the IPv4 address of the selected Proxmox bridge.",
+        "validation": "pending-per-application"
+      },
+      {
+        "id": "compose-network-mode",
+        "upstream_behavior": "Docker host mode removes Docker network isolation; bridge and default use a Docker-managed network.",
+        "native_lxc_behavior": "The OCI process uses the dedicated LXC network namespace directly, so host, bridge and default all listen on the LXC address without Docker NAT.",
+        "reason": "The LXC is the application host and already has its own address and port namespace.",
+        "behavioral_impact": "host means the LXC host, never the Proxmox host; this preserves Proxmox network isolation.",
+        "validation": "not-requested-by-compose"
+      },
+      {
+        "id": "compose-capabilities-and-sysctls",
+        "upstream_behavior": "Compose can add Linux capabilities and set kernel parameters in the container network namespace.",
+        "native_lxc_behavior": "ProxMenux validates requested capabilities against the native LXC capability set and writes namespaced network settings as lxc.sysctl directives.",
+        "reason": "A native OCI-LXC already starts with the namespaced capability set; lxc.cap.keep would incorrectly discard unrelated required capabilities.",
+        "behavioral_impact": "Host-global capabilities such as SYS_MODULE remain blocked until their host prerequisite is explicitly adapted.",
+        "validation": "not-requested-by-compose"
+      },
+      {
+        "id": "docker-engine-metadata",
+        "upstream_behavior": "Compose labels annotate Docker objects and the json-file logging driver rotates Docker-managed logs.",
+        "native_lxc_behavior": "Labels remain source metadata; Docker json-file settings are not applied because the OCI process runs directly under LXC.",
+        "reason": "There is no Docker object or Docker json-file log behind a native OCI-LXC application.",
+        "behavioral_impact": "Docker-only label consumers and Docker log-driver rotation do not exist in the native deployment.",
+        "validation": "not-requested-by-compose"
+      },
+      {
+        "id": "compose-device-passthrough",
+        "upstream_behavior": "Compose passes host character devices or requests an NVIDIA runtime GPU.",
+        "native_lxc_behavior": "ProxMenux converts recognized device declarations to native Proxmox dev resources; NVIDIA profiles also inject compatible host driver libraries read-only.",
+        "reason": "Native OCI-LXC does not execute Docker device or NVIDIA runtime hooks.",
+        "behavioral_impact": "Hardware is exposed only after explicit user confirmation and host-path validation.",
+        "validation": "not-requested-by-compose"
+      },
+      {
+        "id": "compose-host-ipc",
+        "upstream_behavior": "ipc: host shares the Docker host IPC namespace, commonly to avoid Docker's small default shared-memory allocation.",
+        "native_lxc_behavior": "The application keeps the LXC IPC namespace and receives a configurable 1 GiB /dev/shm instead of sharing Proxmox host IPC.",
+        "reason": "Processes in a single native LXC already share one IPC namespace; retaining isolation is safer than exposing host IPC.",
+        "behavioral_impact": "The application cannot exchange IPC objects with processes on the Proxmox host.",
+        "validation": "not-requested-by-compose"
+      },
+      {
+        "id": "compose-resource-limits",
+        "upstream_behavior": "mem_limit sets the memory ceiling; ulimits sets process soft/hard resource limits.",
+        "native_lxc_behavior": "mem_limit supplies the editable Proxmox memory default, rounded up to MiB; ulimits maps to lxc.prlimit with -1 represented as unlimited.",
+        "reason": "Use native Proxmox memory and LXC prlimits, without a wrapper or changing the host kernel configuration.",
+        "behavioral_impact": "User-selected memory overrides Compose. Swap is a separate choice. Kernel restrictions still apply; nproc counts processes by real UID, not by container.",
+        "validation": "not-requested-by-compose"
+      }
+    ],
+    "generic_stack_review": [
+      "montaje de sistema pendiente",
+      "opciones de volumen pendientes",
+      "ragflow-es01: perfil de salud y persistencia pendiente",
+      "ragflow-infinity: perfil de salud y persistencia pendiente",
+      "ragflow-minio: perfil de salud y persistencia pendiente",
+      "ragflow-mysql: perfil de salud y persistencia pendiente",
+      "ragflow-opensearch01: perfil de salud y persistencia pendiente",
+      "ragflow-redis: comando de dependencia personalizado pendiente",
+      "ragflow-sandbox-executor-manager: perfil de salud y persistencia pendiente",
+      "ragflow-sandbox-executor-manager: privileged necesita revision de pila",
+      "ragflow-sandbox-executor-manager: security_opt necesita revision de pila",
+      "ragflow: extra_hosts necesita revision de pila"
+    ]
+  },
+  "compatibility": {
+    "automatic_install_candidate": false,
+    "validated": false,
+    "supported_compose_keys": [
+      "cap_add",
+      "command",
+      "container_name",
+      "cpu_shares",
+      "deploy",
+      "devices",
+      "entrypoint",
+      "environment",
+      "extra_hosts",
+      "healthcheck",
+      "hostname",
+      "image",
+      "init",
+      "ipc",
+      "labels",
+      "logging",
+      "mac_address",
+      "network_mode",
+      "networks",
+      "ports",
+      "privileged",
+      "restart",
+      "runtime",
+      "security_opt",
+      "shm_size",
+      "stdin_open",
+      "stop_grace_period",
+      "sysctls",
+      "tty",
+      "user",
+      "volumes",
+      "working_dir"
+    ],
+    "untranslated_blockers": [
+      "multi-service-compose",
+      "compose-key:depends_on",
+      "service:ragflow-mysql:healthcheck-format",
+      "service:ragflow-redis:healthcheck-format",
+      "native-multi-lxc-orchestrator-not-yet-implemented"
+    ],
+    "policy": "Single-image definitions are installable when every declared Compose option has a native Proxmox translation. Multi-image and unsupported runtime features remain blocked until their orchestrator or mapping is available."
+  },
+  "validation": {
+    "schema": "passed-at-generation",
+    "clean_install": "pending",
+    "service_health": "pending",
+    "restart_persistence": "pending",
+    "backup_restore": "pending",
+    "update_preserves_data": "pending"
+  },
+  "lifecycle": {
+    "update_strategy": "resolve-latest-image-then-apply-reviewed-native-lxc-update",
+    "registry_state": {
+      "resolved_architecture": null,
+      "resolved_digest": null,
+      "image_version_label": null,
+      "image_created": null
+    },
+    "change_detection": "compare-compose-sha256-and-resolved-latest-image-digest",
+    "automatic_unattended_updates": false
+  }
+}

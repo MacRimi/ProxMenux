@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { HardDrive, Database, AlertTriangle, CheckCircle2, XCircle, Square, Thermometer, Archive, Info, Clock, Usb, Server, Activity, FileText, Play, Loader2, Download, Plus, Trash2, Settings, Power } from "lucide-react"
+import { HardDrive, Database, AlertTriangle, CheckCircle2, XCircle, Square, Thermometer, Archive, Info, Clock, Usb, Server, Activity, FileText, Play, Loader2, Download, Plus, Trash2, Settings, Power, Moon, EyeOff } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
@@ -70,6 +70,8 @@ interface DiskInfo {
   // badge AND to suppress the (stale) temperature value, so the
   // operator understands the graph is frozen on purpose — issue #232.
   standby?: boolean
+  idle?: boolean
+  excluded?: boolean
   health: string
   power_on_hours?: number
   smart_status?: string
@@ -434,7 +436,21 @@ export function StorageOverview() {
   // spun-down drive. Centralised here because the same pattern shows up
   // in 4 different disk-list views (system / data / pool / other) and we
   // want them all to behave identically — issue #232 fix.
-  const renderDiskTempOrStandby = (disk: DiskInfo) => {
+  // Why a disk shows no live temperature, when it doesn't: excluded by the
+  // user, parked, or idle and deliberately not read. Shared by every view
+  // that paints a disk's temperature, so they cannot disagree.
+  const renderNoReadingBadge = (disk: DiskInfo) => {
+    if (disk.excluded) {
+      return (
+        <Badge
+          className="bg-muted text-muted-foreground border-border gap-1"
+          title={t("storage.diskExcludedTitle")}
+        >
+          <EyeOff className="h-3 w-3" />
+          {t("storage.diskExcluded")}
+        </Badge>
+      )
+    }
     if (disk.standby) {
       return (
         <Badge
@@ -446,6 +462,23 @@ export function StorageOverview() {
         </Badge>
       )
     }
+    if (disk.idle) {
+      return (
+        <Badge
+          className="bg-muted text-muted-foreground border-border gap-1"
+          title={t("storage.idleTitle")}
+        >
+          <Moon className="h-3 w-3" />
+          {t("storage.idle")}
+        </Badge>
+      )
+    }
+    return null
+  }
+
+  const renderDiskTempOrStandby = (disk: DiskInfo) => {
+    const noReading = renderNoReadingBadge(disk)
+    if (noReading) return noReading
     if (disk.temperature > 0) {
       return (
         <div className="flex items-center gap-1">
@@ -533,14 +566,8 @@ export function StorageOverview() {
         {/* Header line 2: size + temperature/standby. */}
         <div className="flex items-center justify-between gap-3 mt-1">
           <span className="text-sm text-muted-foreground">{disk.size_formatted}</span>
-          {disk.standby ? (
-            <Badge
-              className="bg-blue-500/10 text-blue-300 border-blue-500/30 gap-1"
-              title={t("storage.standbyTitle")}
-            >
-              <Power className="h-3 w-3" />
-              {t("storage.standby")}
-            </Badge>
+          {renderNoReadingBadge(disk) ? (
+            renderNoReadingBadge(disk)
           ) : disk.temperature > 0 ? (
             <span
               className={`text-base font-semibold ${getTempColor(

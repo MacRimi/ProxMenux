@@ -1,0 +1,58 @@
+{
+  "container_contract": {
+    "environment": [
+      {
+        "name": "UMASK",
+        "example": "022",
+        "required": true,
+        "sensitive": false,
+        "source": "docker-compose"
+      },
+      {
+        "name": "OPENLIST_ADMIN_PASSWORD",
+        "example": "",
+        "required": true,
+        "sensitive": true,
+        "prompt": "Password of the OpenList admin user",
+        "source": "openlist-initial-admin"
+      }
+    ]
+  },
+  "first_run": {
+    "credentials": [
+      {
+        "label": "OpenList",
+        "type": "configured-or-installer-generated",
+        "username": "admin",
+        "password": null,
+        "password_environment": "OPENLIST_ADMIN_PASSWORD",
+        "change_required": false,
+        "source": "openlist-initial-admin",
+        "retrieval": null
+      }
+    ]
+  },
+  "proxmox": {
+    "installer_profile": {
+      "generated_sensitive_environment": {
+        "OPENLIST_ADMIN_PASSWORD": {
+          "strategy": "token-hex",
+          "bytes": 12,
+          "prompt": true
+        }
+      },
+      "volume_preparations": [
+        {
+          "container_path": "/opt/openlist/data",
+          "remove_lost_found": true,
+          "owner_strategy": "mapped-application-user",
+          "only_when_mount_type": "managed-volume"
+        }
+      ],
+      "volume_owner": {
+        "uid": 999,
+        "gid": 1000
+      }
+    }
+  }
+}

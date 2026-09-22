@@ -1,0 +1,159 @@
+{
+  "status": "generated-unvalidated",
+  "catalog_ui": {
+    "tips": [
+      "Monitors host processes, CPU, memory and network; uses the host IP, not its own IP.",
+      "Privileged access to the host PID/network and unconfined AppArmor: requires confirmation. Trusted networks only; the host firewall is the one that applies.",
+      "Neither docker.sock nor the host root directory is mounted. Docker inventory, SMART and capacity of all filesystems are not guaranteed.",
+      "LXCFS is skipped only in the monitor CT so that the limited container RAM/CPU is not shown.",
+      "Uses lxc.include with /etc/pve/lxc/proxmenux-host-monitor; this file is not included in vzdump and must be kept when restoring on another host.",
+      "The CPU limit is applied as cpulimit, without hiding processors through affinity."
+    ]
+  },
+  "container_contract": {
+    "volumes": [
+      {
+        "id": "volume-0",
+        "container_path": "/etc/netdata",
+        "compose_source_example": "/DATA/AppData/Netdata/config",
+        "read_only": false,
+        "required": true,
+        "installation_choice": [
+          "managed-volume",
+          "host-bind"
+        ],
+        "default": "managed-volume",
+        "managed_volume": {
+          "backup": true,
+          "default_size_gb": 8
+        }
+      },
+      {
+        "id": "volume-1",
+        "container_path": "/var/lib/netdata",
+        "compose_source_example": "/DATA/AppData/Netdata/lib",
+        "read_only": false,
+        "required": true,
+        "installation_choice": [
+          "managed-volume",
+          "host-bind"
+        ],
+        "default": "managed-volume",
+        "managed_volume": {
+          "backup": true,
+          "default_size_gb": 8
+        }
+      },
+      {
+        "id": "volume-2",
+        "container_path": "/var/cache/netdata",
+        "compose_source_example": "/DATA/AppData/Netdata/cache",
+        "read_only": false,
+        "required": true,
+        "installation_choice": [
+          "managed-volume",
+          "host-bind"
+        ],
+        "default": "managed-volume",
+        "managed_volume": {
+          "backup": true,
+          "default_size_gb": 8
+        }
+      }
+    ]
+  },
+  "proxmox": {
+    "defaults": {
+      "unprivileged": false,
+      "ostype": "unmanaged",
+      "memory_mb": 1024,
+      "features": []
+    },
+    "security_profile": {
+      "requires_privileged_lxc": true,
+      "requires_host_pid_namespace": true,
+      "optional_privileged_lxc": false,
+      "requires_relaxed_confinement": true,
+      "optional_relaxed_confinement": false,
+      "confirmation_required": true,
+      "risk_level": "high",
+      "warning": "Host monitor: shared PID/network and privileged access. A compromised image could affect Proxmox. Use only on trusted networks."
+    },
+    "installer_profile": {
+      "host_monitor": "netdata",
+      "host_monitor_mounts": [
+        {
+          "source": "/proc",
+          "target": "/host/proc"
+        },
+        {
+          "source": "/sys",
+          "target": "/host/sys"
+        },
+        {
+          "source": "/etc/passwd",
+          "target": "/host/etc/passwd"
+        },
+        {
+          "source": "/etc/group",
+          "target": "/host/etc/group"
+        },
+        {
+          "source": "/etc/os-release",
+          "target": "/host/etc/os-release"
+        },
+        {
+          "source": "/sys/fs/cgroup",
+          "target": "/host/sys/fs/cgroup"
+        }
+      ],
+      "startup_healthcheck": {
+        "scheme": "http",
+        "port": 19999,
+        "path": "/",
+        "timeout_seconds": 180,
+        "request_timeout_seconds": 5,
+        "verify_tls": false
+      },
+      "security": {
+        "required_capabilities": [
+          "SYS_PTRACE",
+          "SYS_ADMIN"
+        ],
+        "options": {
+          "apparmor_profile": "unconfined"
+        }
+      }
+    }
+  },
+  "compatibility": {
+    "automatic_install_candidate": true,
+    "validated": false,
+    "untranslated_blockers": []
+  },
+  "validation": {
+    "service_health": "passed-observed-2026-09-14",
+    "restart_persistence": "passed-observed-2026-09-14",
+    "backup_restore": "pending",
+    "update_preserves_data": "pending",
+    "latest_runtime_observation": {
+      "date": "2026-09-14",
+      "vmid": 105,
+      "architecture": "amd64",
+      "proxmox": "9.2.18",
+      "image_digest": "sha256:9317b3621e0a1f7406051d2dda6b94bf81ecebc79f24447aedaa92405b0a171e",
+      "image_version": "v2.11.0-340-nightly",
+      "http_port": 19999,
+      "host_pid_namespace": true,
+      "host_network_namespace": true,
+      "host_memory_bytes": 16110522368,
+      "shutdown_start_passed": true,
+      "companion_include": "/etc/pve/lxc/proxmenux-host-monitor",
+      "companion_included_in_vzdump": false,
+      "rolling_tag_validation": "only-observed-digest",
+      "cgroup_charts_observed": 144,
+      "persistent_registry_uid_unchanged": true,
+      "managed_volumes_backup": true
+    }
+  }
+}

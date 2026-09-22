@@ -1,0 +1,68 @@
+{
+  "container_contract": {
+    "environment": [
+      {
+        "name": "USE_HTTPS",
+        "example": "true",
+        "required": true,
+        "sensitive": false,
+        "source": "docker-compose"
+      },
+      {
+        "name": "SERVER_PORT",
+        "example": "8443",
+        "required": true,
+        "sensitive": false,
+        "source": "docker-compose"
+      },
+      {
+        "name": "USER_NAME",
+        "example": "mc",
+        "required": true,
+        "sensitive": false,
+        "source": "docker-compose"
+      },
+      {
+        "name": "USER_UID",
+        "example": "1000",
+        "required": true,
+        "sensitive": false,
+        "source": "docker-compose"
+      },
+      {
+        "name": "USER_PASSWORD",
+        "example": "",
+        "required": true,
+        "sensitive": true,
+        "prompt": "Password of the MineOS web interface user",
+        "source": "mineos-node-entrypoint"
+      }
+    ]
+  },
+  "first_run": {
+    "credentials": [
+      {
+        "label": "MineOS web interface",
+        "type": "configured-or-installer-generated",
+        "username": "mc",
+        "password": null,
+        "username_environment": "USER_NAME",
+        "password_environment": "USER_PASSWORD",
+        "change_required": false,
+        "source": "mineos-node-entrypoint",
+        "retrieval": null
+      }
+    ]
+  },
+  "proxmox": {
+    "installer_profile": {
+      "generated_sensitive_environment": {
+        "USER_PASSWORD": {
+          "strategy": "token-hex",
+          "bytes": 12,
+          "prompt": true
+        }
+      }
+    }
+  }
+}

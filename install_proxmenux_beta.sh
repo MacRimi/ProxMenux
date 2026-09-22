@@ -738,9 +738,13 @@ install_beta() {
         pmx_record_install "dialog jq curl git" "1.0"
     fi
 
+    # The OCI engine is replaced on every install; instance records and
+    # addon state stored next to it in $BASE_DIR/oci are preserved.
     if [ -d "./oci" ]; then
-        mkdir -p "$BASE_DIR/oci"
-        cp -r "./oci/"* "$BASE_DIR/oci/" 2>/dev/null || true
+        rm -rf "$BASE_DIR/oci/engine"
+        mkdir -p "$BASE_DIR/oci/engine"
+        cp -r "./oci/"* "$BASE_DIR/oci/engine/"
+        find "$BASE_DIR/oci/engine" -type f -name '*.sh' -exec chmod +x {} +
     fi
     chmod +x "$INSTALL_DIR/$MENU_SCRIPT"
     [ -f "$BASE_DIR/install_proxmenux.sh" ]      && chmod +x "$BASE_DIR/install_proxmenux.sh"

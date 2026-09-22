@@ -3,10 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "sync:scripts": "rm -rf public/scripts && rsync -a ../scripts/ public/scripts/",
-    "predev": "npm run sync:scripts",
     "dev": "next dev",
-    "prebuild": "npm run sync:scripts",
     "build": "next build && pagefind --site out --output-path public/pagefind && cp -r public/pagefind out/pagefind",
     "start": "next start",
     "lint": "next lint",

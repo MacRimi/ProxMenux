@@ -1,0 +1,51 @@
+{
+  "container_contract": {
+    "environment": [
+      {
+        "name": "APP_KEY",
+        "example": "",
+        "required": true,
+        "sensitive": true,
+        "source": "2fauth-env-example"
+      }
+    ]
+  },
+  "proxmox": {
+    "installer_profile": {
+      "generated_sensitive_environment": {
+        "APP_KEY": {
+          "strategy": "token-hex",
+          "bytes": 16,
+          "prompt": true
+        }
+      },
+      "volume_preparations": [
+        {
+          "container_path": "/2fauth",
+          "remove_lost_found": true,
+          "owner_strategy": "mapped-application-user",
+          "only_when_mount_type": "managed-volume"
+        }
+      ],
+      "volume_owner": {
+        "uid": 1000,
+        "gid": 1000
+      },
+      "tmpfs_mounts": [
+        {
+          "id": "2fauth-nginx-run",
+          "container_path": "/run/nginx",
+          "default_size_mb": 8,
+          "minimum_size_mb": 1,
+          "prompt_size": false,
+          "mount_options": [
+            "rw",
+            "nosuid",
+            "nodev",
+            "mode=0777"
+          ]
+        }
+      ]
+    }
+  }
+}

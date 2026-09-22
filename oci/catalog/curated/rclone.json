@@ -1,0 +1,946 @@
+{
+  "schema_version": "0.5.0",
+  "kind": "proxmenux.oci-template",
+  "id": "image-rclone",
+  "status": "laboratory-validated",
+  "catalog_ui": {
+    "title": {
+      "en_US": "Rclone WebUI"
+    },
+    "tagline": {
+      "en_US": "Cloud storage synchronization and FUSE mounts"
+    },
+    "description": {
+      "en_US": "Official Rclone image adapted as a native Proxmox OCI LXC with persistent configuration, authenticated WebUI and optional FUSE publication for other LXCs."
+    },
+    "category": "backup",
+    "category_label": "Backup & Recovery",
+    "author": "Rclone",
+    "developer": "Rclone",
+    "icon": null,
+    "thumbnail": null,
+    "screenshots": [],
+    "architectures": [
+      "amd64",
+      "arm64"
+    ],
+    "launch": {
+      "scheme": "http",
+      "port": 5572,
+      "path": "/"
+    },
+    "website": "https://rclone.org/",
+    "documentation": "https://rclone.org/install/#docker-installation",
+    "repository": "https://github.com/rclone/rclone",
+    "tips": [
+      "The installer generates WebUI credentials; the user creates and authorizes their own remote.",
+      "FUSE publication is optional and requires a privileged LXC plus explicit Proxmox host adaptations."
+    ],
+    "mini_changelog": [],
+    "display_version": null,
+    "updated_at": "2026-09-12"
+  },
+  "source": {
+    "provider": "rclone",
+    "repository": "https://github.com/rclone/rclone",
+    "revision": "049e11eb7df3d9b30e6e5d400945866db980041bdc0c50b4ede09e079b2e9f52",
+    "image_repository_url": "https://hub.docker.com/r/rclone/rclone",
+    "readme_pushed_at": "2026-09-12T11:36:50Z",
+    "compose_sha256": "049e11eb7df3d9b30e6e5d400945866db980041bdc0c50b4ede09e079b2e9f52",
+    "generated_at": "2026-09-12T15:54:10+00:00",
+    "default_branch": "master"
+  },
+  "container_contract": {
+    "service_name": "rclone",
+    "container_name": "rclone",
+    "image": {
+      "reference": "rclone/rclone:latest",
+      "registry": "docker.io",
+      "repository": "rclone/rclone",
+      "tag": "latest",
+      "digest": null,
+      "pull_policy": "resolve-selected-tag-to-architecture-digest-at-install"
+    },
+    "environment": [
+      {
+        "name": "XDG_CONFIG_HOME",
+        "example": "/config",
+        "required": true,
+        "sensitive": false,
+        "source": "docker-compose"
+      }
+    ],
+    "volumes": [
+      {
+        "id": "volume-0",
+        "container_path": "/config/rclone",
+        "compose_source_example": "rclone-config",
+        "read_only": false,
+        "required": true,
+        "installation_choice": [
+          "managed-volume",
+          "host-bind"
+        ],
+        "default": "managed-volume",
+        "managed_volume": {
+          "backup": true,
+          "default_size_gb": 8
+        }
+      },
+      {
+        "id": "volume-1",
+        "container_path": "/data",
+        "compose_source_example": "/mnt/oci-shared/rclone/data",
+        "read_only": false,
+        "required": true,
+        "installation_choice": [
+          "managed-volume",
+          "host-bind"
+        ],
+        "default": "managed-volume",
+        "managed_volume": {
+          "backup": true,
+          "default_size_gb": 8
+        }
+      }
+    ],
+    "ports": [
+      {
+        "container_port": 5572,
+        "published_example": 5572,
+        "protocol": "tcp",
+        "required": true,
+        "proxmox_behavior": "listener-on-dedicated-lxc-address-no-nat"
+      },
+      {
+        "container_port": 5573,
+        "published_example": 5573,
+        "protocol": "tcp",
+        "required": true,
+        "proxmox_behavior": "listener-on-dedicated-lxc-address-no-nat"
+      }
+    ],
+    "related_services": [],
+    "restart": "unless-stopped",
+    "stop_grace_period": null,
+    "original_compose": "name: rclone\nservices:\n  rclone:\n    image: rclone/rclone:latest\n    command:\n    - gui\n    - --no-open-browser\n    - --addr=:5572\n    - --api-addr=:5573\n    - --config=/config/rclone/rclone.conf\n    environment:\n      XDG_CONFIG_HOME: /config\n    ports:\n    - 5572:5572\n    - 5573:5573\n    volumes:\n    - rclone-config:/config/rclone\n    - /mnt/oci-shared/rclone/data:/data\n    devices:\n    - /dev/fuse:/dev/fuse\n    cap_add:\n    - SYS_ADMIN\n    security_opt:\n    - apparmor:unconfined\n    restart: unless-stopped\nvolumes:\n  rclone-config: {}\n"
+  },
+  "compose_stack": {
+    "project_name": "rclone",
+    "deployment_model": "one-native-oci-lxc-per-compose-service",
+    "user_experience": "single-application-install",
+    "main_service": "rclone",
+    "service_count": 1,
+    "services": [
+      {
+        "name": "rclone",
+        "image": "rclone/rclone:latest",
+        "is_main": true,
+        "role": "frontend",
+        "vmid_offset": 0,
+        "depends_on": [],
+        "frontend_network": true,
+        "private_network": false,
+        "compose": {
+          "image": "rclone/rclone:latest",
+          "command": [
+            "gui",
+            "--no-open-browser",
+            "--addr=:5572",
+            "--api-addr=:5573",
+            "--config=/config/rclone/rclone.conf"
+          ],
+          "environment": {
+            "XDG_CONFIG_HOME": "/config"
+          },
+          "ports": [
+            "5572:5572",
+            "5573:5573"
+          ],
+          "volumes": [
+            "rclone-config:/config/rclone",
+            "/mnt/oci-shared/rclone/data:/data"
+          ],
+          "devices": [
+            "/dev/fuse:/dev/fuse"
+          ],
+          "cap_add": [
+            "SYS_ADMIN"
+          ],
+          "security_opt": [
+            "apparmor:unconfined"
+          ],
+          "restart": "unless-stopped"
+        }
+      }
+    ],
+    "top_level": {
+      "name": "rclone",
+      "volumes": {
+        "rclone-config": {}
+      }
+    },
+    "networking": {
+      "frontend": "selected-proxmox-bridge",
+      "private_required": false,
+      "private_creation": "automatic-create-if-missing",
+      "private_address_allocation": "automatic-static-address-per-service",
+      "service_discovery": "private-addresses-with-compose-service-host-aliases",
+      "dependency_external_access": "disabled-unless-service-publishes-ports",
+      "prompt_user_for_private_network": false
+    },
+    "storage": [
+      {
+        "id": "rclone-volume-0",
+        "service": "rclone",
+        "container_path": "/config/rclone",
+        "mode": "managed-volume",
+        "user_selectable": false,
+        "backup": true,
+        "shared_with_other_lxc": false,
+        "source_path": null,
+        "source_path_prompt": null
+      },
+      {
+        "id": "rclone-volume-1",
+        "service": "rclone",
+        "container_path": "/data",
+        "mode": "host-bind",
+        "user_selectable": true,
+        "backup": false,
+        "shared_with_other_lxc": true,
+        "source_path": null,
+        "source_path_prompt": "Host directory for rclone:/data"
+      }
+    ],
+    "orchestration": {
+      "reserve_vmids_atomically": 1,
+      "start_order": [
+        "rclone"
+      ],
+      "stop_order": [
+        "rclone"
+      ],
+      "dependency_readiness": "compose-healthcheck-then-port-or-process-fallback",
+      "rollback_on_failure": "remove-new-rootfs-preserve-created-persistent-volumes"
+    },
+    "installer_inputs": {
+      "prompted": [
+        "stack_name",
+        "base_vmid",
+        "rootfs_storage",
+        "persistent_data_destinations",
+        "frontend_bridge",
+        "frontend_ipv4_mode"
+      ],
+      "automatic": [
+        "dependent_vmids",
+        "private_bridge",
+        "private_subnet",
+        "private_service_addresses",
+        "compose_service_aliases",
+        "generated_secrets",
+        "dependency_start_and_stop_order"
+      ],
+      "generated_secrets": []
+    }
+  },
+  "first_run": {
+    "endpoints": [
+      {
+        "label": "Rclone WebUI",
+        "scheme": "http",
+        "port": 5572,
+        "path": "/",
+        "source": "validated-laboratory-profile"
+      }
+    ],
+    "credentials": [
+      {
+        "label": "Rclone WebUI",
+        "type": "configured-or-installer-generated",
+        "username": "admin",
+        "password": null,
+        "username_environment": "RCLONE_RC_USER",
+        "password_environment": "RCLONE_RC_PASS",
+        "change_required": false,
+        "source": "official-rclone-rc-environment",
+        "retrieval": null
+      }
+    ]
+  },
+  "proxmox": {
+    "runtime": "native-oci-lxc",
+    "technology_status": "proxmox-technology-preview",
+    "catalog": {
+      "replaces_discovered_ids": []
+    },
+    "defaults": {
+      "unprivileged": false,
+      "privileged_required": true,
+      "ostype": "auto-from-image",
+      "cores": 1,
+      "memory_mb": 512,
+      "swap_mb": 256,
+      "rootfs_size_gb": 4,
+      "rootfs_storage": "local-lvm",
+      "volume_storage": "local-lvm",
+      "template_storage": "local",
+      "bridge": "vmbr0",
+      "ipv4": "dhcp",
+      "firewall": true,
+      "host_managed_network": true,
+      "onboot": true,
+      "features": [
+        "nesting=1",
+        "fuse=1"
+      ],
+      "shutdown_timeout_seconds": 30
+    },
+    "image_metadata_policy": {
+      "entrypoint": "import-from-oci-image-or-reviewed-generated-wrapper",
+      "cmd": "apply-selected-rclone-mode",
+      "environment": "preserve-image-env-then-apply-user-values",
+      "user": "import-from-oci-image",
+      "working_dir": "import-from-oci-image",
+      "stop_signal": "import-from-oci-image"
+    },
+    "adaptations": [
+      {
+        "id": "fuse-inside-oci-lxc",
+        "upstream_behavior": "The official Rclone Docker deployment receives /dev/fuse and SYS_ADMIN to run rclone mount.",
+        "native_lxc_behavior": "Create a privileged Proxmox OCI LXC with features fuse=1; a minimal wrapper reads persistent RC credentials, waits for host-managed networking and execs the official Rclone binary as PID 1.",
+        "reason": "FUSE is the core function, and the OCI process can start before Proxmox finishes host-managed networking.",
+        "behavioral_impact": "Equivalent mount and RC behavior; credentials remain at the official persistent configuration boundary.",
+        "validation": "Passed on CT138 with gdrive:; official Rclone became PID 1 and the internal fuse.rclone mount survived stop/start."
+      },
+      {
+        "id": "publish-fuse-submount",
+        "upstream_behavior": "Docker can publish a FUSE submount through a bind configured with shared propagation.",
+        "native_lxc_behavior": "A Proxmox hook starts a transient one-shot waiter after post-start. The waiter clones the FUSE tree from the LXC mount namespace with open_tree, creates canonical read/write and recursive read-only views with mount_setattr, and publishes both in the host namespace with move_mount; pre-stop removes them.",
+        "reason": "LXC makes the container mount tree a slave of the host, so rshared alone cannot propagate a container-created mount back to the host.",
+        "behavioral_impact": "Namespace topology only; no Rclone process, remote protocol or application data is moved to the host.",
+        "validation": "Passed on Proxmox VE 9.2.11/kernel 7.0.14-14-pve: canonical read/write publication, recursive read-only publication, clean unpublish, republish, and simultaneous Plex/Jellyfin consumption."
+      },
+      {
+        "id": "consumer-parent-plus-exact-mounts",
+        "upstream_behavior": "Consumers bind the published Docker host path with the requested read/write policy.",
+        "native_lxc_behavior": "Read-only consumers receive the shared remotes-ro root first and one exact mpN from that same intrinsically read-only publication per selected remote second.",
+        "reason": "The parent mount carries future mount/unmount propagation while the exact mpN includes an already-published FUSE tree during consumer startup; the host publication itself enforces read-only after Rclone mount replacement.",
+        "behavioral_impact": "Equivalent consumer path with explicit Proxmox storage metadata.",
+        "validation": "Validated with CT131 Plex and CT128 Jellyfin before and after restarting CT138 Rclone; both exposed the remote through the recursive read-only publication."
+      }
+    ],
+    "laboratory_contract": {
+      "requirements": {
+        "proxmox_min_version": "9.1",
+        "commands": [
+          "pct",
+          "pvesm",
+          "skopeo",
+          "curl",
+          "jq",
+          "openssl"
+        ],
+        "features": [
+          "native-oci-lxc",
+          "privileged-lxc",
+          "fuse=1",
+          "documented-mount-propagation",
+          "managed-volume-backup",
+          "authenticated-webui"
+        ],
+        "thin_pool_checks": {
+          "minimum_free_percent": 15,
+          "warn_when_virtual_allocation_exceeds_pool": true,
+          "require_autoextend_or_explicit_confirmation": true
+        },
+        "security": {
+          "privileged_container_warning": true,
+          "dedicated_service_lxc": true,
+          "never_expose_rc_webui_to_untrusted_networks": true,
+          "consumer_paths_read_only_by_default": true
+        }
+      },
+      "configuration_schema": {
+        "vmid": {
+          "type": "integer",
+          "required": false,
+          "default": null
+        },
+        "hostname": {
+          "type": "string",
+          "required": true,
+          "default": "rclone",
+          "validation": {
+            "pattern": "^[a-z0-9][a-z0-9-]{0,62}$"
+          }
+        },
+        "rootfs_storage": {
+          "type": "storage-selector",
+          "required": true,
+          "content_types": [
+            "rootdir"
+          ],
+          "default": "local-lvm"
+        },
+        "rootfs_size_gb": {
+          "type": "integer",
+          "required": true,
+          "default": 4,
+          "minimum": 2
+        },
+        "config_storage": {
+          "type": "storage-selector",
+          "required": true,
+          "content_types": [
+            "rootdir"
+          ],
+          "default": "local-lvm"
+        },
+        "config_size_gb": {
+          "type": "integer",
+          "required": true,
+          "default": 2,
+          "minimum": 1
+        },
+        "data_host_path": {
+          "type": "host-directory",
+          "required": true,
+          "default": "/mnt/oci-shared/rclone/data",
+          "create_if_missing": true,
+          "description": "Directorio local para operaciones copy y sync. No contiene la configuracion persistente."
+        },
+        "webui_username": {
+          "type": "string",
+          "required": true,
+          "default": "admin",
+          "validation": {
+            "pattern": "^[A-Za-z0-9._-]{1,64}$"
+          }
+        },
+        "webui_password": {
+          "type": "generated-password",
+          "required": true,
+          "generate_when_empty": true,
+          "minimum_length": 24,
+          "sensitive": true
+        },
+        "webui_port": {
+          "type": "port",
+          "required": true,
+          "default": 5572
+        },
+        "api_port": {
+          "type": "port",
+          "required": true,
+          "default": 5573
+        },
+        "bridge": {
+          "type": "network-bridge-selector",
+          "required": true,
+          "default": "vmbr0"
+        },
+        "ipv4_mode": {
+          "type": "select",
+          "required": true,
+          "default": "dhcp",
+          "options": [
+            "dhcp",
+            "static"
+          ]
+        },
+        "ipv4_address": {
+          "type": "ipv4-cidr",
+          "required_when": {
+            "field": "ipv4_mode",
+            "equals": "static"
+          }
+        },
+        "gateway": {
+          "type": "ipv4",
+          "required_when": {
+            "field": "ipv4_mode",
+            "equals": "static"
+          }
+        },
+        "onboot": {
+          "type": "boolean",
+          "required": true,
+          "default": true
+        },
+        "shared_mount_root": {
+          "type": "host-directory",
+          "required": true,
+          "default": "/mnt/oci-shared/remotes",
+          "create_if_missing": true,
+          "description": "Host root where the remote mounts appear, to be assigned afterwards to Plex, Jellyfin, qBittorrent or other OCI containers."
+        },
+        "mount_name": {
+          "type": "string",
+          "required": true,
+          "default": "remote",
+          "validation": {
+            "pattern": "^[A-Za-z0-9._-]{1,64}$"
+          }
+        },
+        "remote_name": {
+          "type": "rclone-remote-selector",
+          "required_after": "authorize_remote",
+          "description": "Remote created by the user; it is never included in the template."
+        },
+        "remote_path": {
+          "type": "string",
+          "required": true,
+          "default": ""
+        },
+        "vfs_cache_mode": {
+          "type": "select",
+          "required": true,
+          "default": "full",
+          "options": [
+            "off",
+            "minimal",
+            "writes",
+            "full"
+          ]
+        },
+        "shared_mount_root_parent": {
+          "type": "host-directory",
+          "required": true,
+          "default": "/mnt/oci-shared",
+          "create_if_missing": true,
+          "description": "Punto de montaje del host que contiene las publicaciones de lectura/escritura y de solo lectura; el hook lo configura como rshared."
+        },
+        "shared_mount_read_only_root": {
+          "type": "host-directory",
+          "required": true,
+          "default": "/mnt/oci-shared/remotes-ro",
+          "create_if_missing": true,
+          "description": "Vista FUSE recursivamente de solo lectura para consumidores multimedia como Plex y Jellyfin."
+        }
+      },
+      "mounts": [
+        {
+          "id": "config",
+          "container_path": "/config/rclone",
+          "source": "managed-volume",
+          "storage_field": "config_storage",
+          "size_field": "config_size_gb",
+          "backup": true,
+          "required": true,
+          "contains_secrets": true,
+          "contains": [
+            "rclone.conf",
+            "rclone.log",
+            "cache"
+          ]
+        },
+        {
+          "id": "internal-fuse-root",
+          "container_path": "/data/mounts",
+          "source": "container-rootfs-directory",
+          "read_only": false,
+          "backup": false,
+          "required_in_mount_mode": true,
+          "purpose": "Internal target for official rclone mount before host publication."
+        }
+      ],
+      "environment": [
+        {
+          "name": "XDG_CONFIG_HOME",
+          "value": "/config"
+        }
+      ],
+      "deployment": {
+        "runtime": "proxmox-native-oci-lxc",
+        "unprivileged": false,
+        "privileged_container_required": true,
+        "fuse_device_inside_container_required": true,
+        "entrypoint": "/usr/local/bin/rclone gui --no-open-browser --addr=:${webui_port} --api-addr=:${api_port} --config=/config/rclone/rclone.conf --cache-dir=/config/rclone/cache --log-file=/config/rclone/rclone.log --log-level=${log_level}",
+        "working_directory": "/data",
+        "hostname_default": "rclone",
+        "onboot_default": true,
+        "startup_order_default": 10,
+        "startup_delay_seconds_default": 20,
+        "shutdown_timeout_seconds": 30,
+        "halt_signal": "SIGTERM",
+        "features": [
+          "nesting=1",
+          "fuse=1"
+        ],
+        "ports": [
+          {
+            "port_from": "webui_port",
+            "protocol": "tcp",
+            "purpose": "authenticated-web-ui"
+          },
+          {
+            "port_from": "api_port",
+            "protocol": "tcp",
+            "purpose": "authenticated-remote-control-api"
+          }
+        ],
+        "preserve_image_environment": true,
+        "restart_method": "clean-stop-then-start",
+        "restart_note": "On some OCI containers, pct reboot left a residual lxc-start monitor behind. The installer prefers pct stop followed by pct start, and checks the new PID.",
+        "entrypoint_source": "setup-direct-command-or-generated-mount-wrapper",
+        "entrypoint_override": "setup-mode-official-rclone-gui-command",
+        "runtime_modes": {
+          "setup": {
+            "purpose": "Create and authorize the user's own remote through the authenticated WebUI.",
+            "entrypoint": "/usr/local/bin/rclone gui --no-open-browser --addr=:${webui_port} --api-addr=:${api_port} --config=/config/rclone/rclone.conf --cache-dir=/config/rclone/cache --log-file=/config/rclone/rclone.log --log-level=${log_level}"
+          },
+          "mount": {
+            "purpose": "Mount one selected remote, keep the authenticated RC WebUI/API available and publish the FUSE tree for native Proxmox consumers.",
+            "entrypoint": "/usr/local/bin/rclone-mount-lxc-start",
+            "wrapper_behavior": "Read RC credentials from /config, wait for host-managed networking, then exec the official Rclone binary.",
+            "official_command": "/usr/local/bin/rclone mount ${remote_name}:${remote_path} /data/mounts/${mount_name}",
+            "webui_assets": "official-rclone-webui-selected-by---rc-web-gui",
+            "webui_serving": "official --rc-web-gui flags on the RC listener",
+            "pid1": "official-rclone-binary-after-wrapper-exec",
+            "restart_persistence": "Proxmox starts the generated mount wrapper on every boot.",
+            "credentials": {
+              "source": "/config/rclone/webui.credentials",
+              "mode": "0600",
+              "exported_only_inside_lxc": [
+                "RCLONE_RC_USER",
+                "RCLONE_RC_PASS"
+              ],
+              "stored_in_pve_config": false
+            }
+          }
+        }
+      },
+      "bootstrap": {
+        "mode": "two-phase-official-rclone-process",
+        "steps": [
+          "validate-privileged-fuse-and-propagation-requirements",
+          "pull-oci-image-by-digest",
+          "create-managed-config-volume",
+          "create-shared-mount-root",
+          "generate-webui-password-when-empty",
+          "apply-webui-credentials-to-proxmox-env",
+          "create-privileged-container-with-fuse",
+          "start-setup-mode",
+          "verify-authenticated-webui-and-api",
+          "show-authorize-remote-next-action"
+        ],
+        "credentials_policy": {
+          "delivery": "Proxmox env property",
+          "environment": [
+            "RCLONE_RC_USER",
+            "RCLONE_RC_PASS"
+          ],
+          "pve_visibility": "visible-by-design",
+          "remote_credentials_storage": "/config/rclone/rclone.conf"
+        }
+      },
+      "post_install_workflows": {
+        "authorize_remote": {
+          "when": "after-base-install",
+          "performed_by": "user-in-authenticated-webui",
+          "requires_terminal": false,
+          "initial_state": {
+            "rclone_config": "empty",
+            "preconfigured_remotes": 0,
+            "import_remote_from_another_installation": false
+          },
+          "steps": [
+            "open-generated-webui-access-url",
+            "select-new-remote-provider",
+            "create-new-remote-from-scratch",
+            "complete-provider-oauth",
+            "verify-remote-with-authenticated-rc-api"
+          ],
+          "result": {
+            "config_path": "/config/rclone/rclone.conf",
+            "tokens_persist_in_managed_config_volume": true
+          }
+        },
+        "publish_remote": {
+          "when": "after-authorize-remote",
+          "performed_by": "installer-with-explicit-user-selection",
+          "requires_terminal": false,
+          "steps": [
+            "list-user-created-remotes-through-authenticated-rc-api",
+            "ask-user-for-remote-path-and-mount-name",
+            "stop-setup-mode",
+            "apply-official-rclone-mount-entrypoint",
+            "start-container",
+            "verify-fuse-inside-container",
+            "verify-submount-visible-on-host",
+            "optionally-assign-published-path-to-selected-consumer-lxc"
+          ],
+          "consumer_policy": "Consumers are never modified unless the user selects them explicitly.",
+          "status": "installer-implemented"
+        }
+      },
+      "healthcheck": {
+        "type": "authenticated-http-and-api",
+        "webui": {
+          "port_from": "webui_port",
+          "path": "/",
+          "expected_status": 200
+        },
+        "api": {
+          "port_from": "api_port",
+          "method": "POST",
+          "path": "/core/version",
+          "expected_version": "v1.75.0",
+          "credentials_from": "lxc.environment.runtime:RCLONE_RC_USER,RCLONE_RC_PASS"
+        },
+        "retries": 30,
+        "start_period_seconds": 60
+      },
+      "backup_restore": {
+        "native_proxmox_backup": true,
+        "included_mounts": [
+          "/config/rclone"
+        ],
+        "excluded_mounts": [
+          "/data"
+        ],
+        "external_backup_recommended": [
+          "data_host_path-if-it-contains-unique-local-data"
+        ],
+        "restore_order": [
+          "restore-vzdump",
+          "verify-managed-config-volume",
+          "verify-data-host-path",
+          "start-rclone-oci",
+          "verify-authenticated-webui-and-api"
+        ],
+        "application_consistency": "Use stop mode when active copy or sync jobs require a consistent snapshot. OAuth tokens in rclone.conf are included in the managed config volume."
+      },
+      "boundaries": {
+        "bundles_webui_credentials": false,
+        "bundles_remote_credentials": false,
+        "bundles_rclone_remotes": false,
+        "bundles_user_data": false,
+        "installer_must_not_create_external_remotes": true,
+        "installer_must_not_import_remotes_from_other_lxcs": true,
+        "template_starts_with_empty_rclone_config": true,
+        "user_must_create_and_authorize_own_remote": true,
+        "cross_lxc_fuse_publication_supported": "laboratory-validated",
+        "consumer_assignments_require_explicit_user_selection": true,
+        "rclone_runs_inside_its_oci_lxc": true,
+        "no_host_rclone_binary_or_application_supervisor": true
+      },
+      "post_install_output": {
+        "url_template": "http://${container_ip}:${webui_port}/login?pass=${urlencode(webui_password)}&url=${urlencode(http://${container_ip}:${api_port}/)}&user=${urlencode(webui_username)}",
+        "sensitive": true,
+        "display_once_after_install": true,
+        "never_log": true
+      },
+      "generated_assets": {
+        "mount-mode-wrapper": {
+          "target": "lxc:/usr/local/bin/rclone-mount-lxc-start",
+          "mode": "0755",
+          "content_template": "#!/bin/sh\nset -eu\n\ncredentials=/config/rclone/webui.credentials\nexport RCLONE_RC_USER=\"$(sed -n 's/^username=//p' \"$credentials\")\"\nexport RCLONE_RC_PASS=\"$(sed -n 's/^password=//p' \"$credentials\")\"\nremote_name=\"$(printf '%s' '{{remote_name_base64}}' | base64 -d)\"\nremote_path=\"$(printf '%s' '{{remote_path_base64}}' | base64 -d)\"\n\ntest -n \"$RCLONE_RC_USER\"\ntest -n \"$RCLONE_RC_PASS\"\ntest -n \"$remote_name\"\n\nnetwork_ready=false\nfor _ in $(seq 1 120); do\n  if ip route get 1.1.1.1 >/dev/null 2>&1; then\n    network_ready=true\n    break\n  fi\n  sleep 1\ndone\ntest \"$network_ready\" = true\n\nexec /usr/local/bin/rclone mount \"${remote_name}:${remote_path}\" /data/mounts/{{mount_name}} \\\n  --config /config/rclone/rclone.conf \\\n  --allow-other \\\n  --vfs-cache-mode {{vfs_cache_mode}} \\\n  --cache-dir /config/rclone/cache \\\n  --rc \\\n  --rc-addr :{{webui_port}} \\\n  --rc-web-gui \\\n  --rc-web-gui-no-open-browser \\\n  --log-file /config/rclone/rclone.log \\\n  --log-level ERROR\n"
+        },
+        "mount-tree-publisher-source": {
+          "target": "host:/usr/local/libexec/proxmenux-oci-mount-publish",
+          "runtime": "python3-from-proxmox-host",
+          "mode": "0755",
+          "content": "#!/usr/bin/env python3\n\"\"\"Clone a FUSE mount from an LXC namespace into the Proxmox host namespace.\"\"\"\n\nfrom __future__ import annotations\n\nimport ctypes\nimport os\nimport platform\nimport sys\n\n\nAT_FDCWD = -100\nAT_EMPTY_PATH = 0x1000\nAT_RECURSIVE = 0x8000\nCLONE_NEWNS = 0x00020000\nMOVE_MOUNT_F_EMPTY_PATH = 0x00000004\nMOUNT_ATTR_RDONLY = 0x00000001\nOPEN_TREE_CLONE = 1\n\nSYSCALLS = {\n    \"x86_64\": (428, 429, 442),\n    \"amd64\": (428, 429, 442),\n    \"aarch64\": (428, 429, 442),\n    \"arm64\": (428, 429, 442),\n}\n\n\nclass MountAttr(ctypes.Structure):\n    _fields_ = [\n        (\"attr_set\", ctypes.c_uint64),\n        (\"attr_clr\", ctypes.c_uint64),\n        (\"propagation\", ctypes.c_uint64),\n        (\"userns_fd\", ctypes.c_uint64),\n    ]\n\n\ndef fail(step: str) -> None:\n    error = ctypes.get_errno()\n    raise OSError(error, f\"{step}: {os.strerror(error)}\")\n\n\ndef main() -> int:\n    if len(sys.argv) != 5 or sys.argv[4] not in {\"rw\", \"ro\"}:\n        print(f\"usage: {sys.argv[0]} PID SOURCE TARGET rw|ro\", file=sys.stderr)\n        return 2\n    machine = platform.machine().lower()\n    if machine not in SYSCALLS:\n        print(f\"unsupported host architecture: {machine}\", file=sys.stderr)\n        return 2\n    open_tree_nr, move_mount_nr, mount_setattr_nr = SYSCALLS[machine]\n    pid, source, target, mode = sys.argv[1:]\n    libc = ctypes.CDLL(None, use_errno=True)\n    libc.syscall.restype = ctypes.c_long\n    libc.setns.argtypes = (ctypes.c_int, ctypes.c_int)\n    libc.setns.restype = ctypes.c_int\n\n    host_ns = os.open(\"/proc/self/ns/mnt\", os.O_RDONLY | os.O_CLOEXEC)\n    host_root = os.open(\"/\", os.O_PATH | os.O_DIRECTORY | os.O_CLOEXEC)\n    ct_ns = os.open(f\"/proc/{pid}/ns/mnt\", os.O_RDONLY | os.O_CLOEXEC)\n    ct_root = os.open(f\"/proc/{pid}/root\", os.O_PATH | os.O_DIRECTORY | os.O_CLOEXEC)\n    try:\n        if libc.setns(ct_ns, CLONE_NEWNS) != 0:\n            fail(\"enter container namespace\")\n        os.fchdir(ct_root)\n        os.chroot(\".\")\n        os.chdir(\"/\")\n        tree = libc.syscall(\n            open_tree_nr,\n            AT_FDCWD,\n            os.fsencode(source),\n            OPEN_TREE_CLONE | os.O_CLOEXEC,\n        )\n        if tree < 0:\n            fail(\"clone source mount tree\")\n        try:\n            if mode == \"ro\":\n                attributes = MountAttr(attr_set=MOUNT_ATTR_RDONLY)\n                result = libc.syscall(\n                    mount_setattr_nr,\n                    tree,\n                    ctypes.c_char_p(b\"\"),\n                    AT_EMPTY_PATH | AT_RECURSIVE,\n                    ctypes.byref(attributes),\n                    ctypes.sizeof(attributes),\n                )\n                if result != 0:\n                    fail(\"make cloned mount tree read-only\")\n            if libc.setns(host_ns, CLONE_NEWNS) != 0:\n                fail(\"return to host namespace\")\n            os.fchdir(host_root)\n            os.chroot(\".\")\n            os.chdir(\"/\")\n            result = libc.syscall(\n                move_mount_nr,\n                tree,\n                ctypes.c_char_p(b\"\"),\n                AT_FDCWD,\n                os.fsencode(target),\n                MOVE_MOUNT_F_EMPTY_PATH,\n            )\n            if result != 0:\n                fail(\"publish mount tree\")\n        finally:\n            os.close(tree)\n    finally:\n        for descriptor in (ct_root, ct_ns, host_root, host_ns):\n            os.close(descriptor)\n    return 0\n\n\nif __name__ == \"__main__\":\n    try:\n        raise SystemExit(main())\n    except OSError as exc:\n        print(exc, file=sys.stderr)\n        raise SystemExit(1)\n"
+        },
+        "mount-publication-waiter": {
+          "target": "host:/usr/local/libexec/proxmenux-oci-mount-wait",
+          "mode": "0755",
+          "lifecycle": "transient-systemd-oneshot-only",
+          "content": "#!/usr/bin/env bash\nset -euo pipefail\n\nvmid=${1:?missing VMID}\ninside=${2:?missing source path}\npublished=${3:?missing target path}\npublished_ro=${4:?missing read-only target path}\nhelper=${5:?missing publisher helper}\n\nunpublish() {\n  local target=$1\n  if mountpoint -q \"$target\"; then\n    umount \"$target\" || umount -l \"$target\"\n  fi\n}\n\nfor _ in $(seq 1 300); do\n  pid=$(lxc-info -n \"$vmid\" -pH 2>/dev/null || true)\n  if [[ -n $pid ]] && awk -v path=\"$inside\" '$5 == path && $0 ~ / - fuse(\\.rclone)? / { found=1 } END { exit !found }' \"/proc/$pid/mountinfo\"; then\n    unpublish \"$published_ro\"\n    unpublish \"$published\"\n    \"$helper\" \"$pid\" \"$inside\" \"$published\" rw\n    if ! \"$helper\" \"$pid\" \"$inside\" \"$published_ro\" ro; then\n      unpublish \"$published\"\n      exit 1\n    fi\n    findmnt -T \"$published\" -n -o FSTYPE | grep -q '^fuse'\n    findmnt -T \"$published_ro\" -n -o FSTYPE | grep -q '^fuse'\n    findmnt -T \"$published_ro\" -n -o VFS-OPTIONS | tr ',' '\n' | grep -qx ro\n    logger -t proxmenux-rclone \"Published CT $vmid $inside at $published (rw) and $published_ro (ro)\"\n    exit 0\n  fi\n  sleep 1\ndone\n\nlogger -t proxmenux-rclone \"Timed out waiting for CT $vmid FUSE mount at $inside\"\nexit 1\n"
+        },
+        "proxmox-hookscript": {
+          "target": "snippet-storage:proxmenux-rclone-${ctid}-fuse-hook.sh",
+          "mode": "0755",
+          "phases": [
+            "pre-start",
+            "post-start",
+            "pre-stop",
+            "post-stop"
+          ],
+          "content_template": "#!/usr/bin/env bash\nset -euo pipefail\n\nvmid=${1:?missing VMID}\nphase=${2:?missing phase}\ninside=/data/mounts/{{mount_name}}\npublished={{shared_mount_root}}/{{mount_name}}\npublished_ro={{shared_mount_read_only_root}}/{{mount_name}}\nhelper=/usr/local/libexec/proxmenux-oci-mount-publish\nwaiter=/usr/local/libexec/proxmenux-oci-mount-wait\nunit=\"proxmenux-rclone-publish-$vmid.service\"\n\nunpublish() {\n  local target=$1\n  if mountpoint -q \"$target\"; then\n    umount \"$target\" || umount -l \"$target\"\n  fi\n}\n\nstop_waiter() {\n  systemctl stop \"$unit\" >/dev/null 2>&1 || true\n  systemctl reset-failed \"$unit\" >/dev/null 2>&1 || true\n}\n\ncase \"$phase\" in\n  pre-start)\n    install -d -m 0755 \"$published\" \"$published_ro\"\n    if ! mountpoint -q {{shared_mount_root_parent}}; then\n      mount --bind {{shared_mount_root_parent}} {{shared_mount_root_parent}}\n    fi\n    mount --make-rshared {{shared_mount_root_parent}}\n    stop_waiter\n    unpublish \"$published_ro\"\n    unpublish \"$published\"\n    ;;\n  post-start)\n    stop_waiter\n    systemd-run --quiet --collect --unit=\"$unit\" -- \\\n      \"$waiter\" \"$vmid\" \"$inside\" \"$published\" \"$published_ro\" \"$helper\"\n    ;;\n  pre-stop|post-stop)\n    stop_waiter\n    unpublish \"$published_ro\"\n    unpublish \"$published\"\n    ;;\nesac\n"
+        }
+      },
+      "consumer_integration": {
+        "optional": true,
+        "canonical_read_write_root_host_path": "${shared_mount_root}",
+        "read_only_root_host_path": "${shared_mount_read_only_root}",
+        "read_only_remote_host_path": "${shared_mount_read_only_root}/${mount_name}",
+        "required_mount_order": [
+          "shared-root-parent",
+          "exact-published-remote"
+        ],
+        "plex_example": {
+          "parent": "${shared_mount_read_only_root},mp=/data/remotes,backup=0,ro=1",
+          "exact": "${shared_mount_read_only_root}/${mount_name},mp=/data/remotes/${mount_name},backup=0,ro=1"
+        },
+        "jellyfin_example": {
+          "parent": "${shared_mount_read_only_root},mp=/media/remotes,backup=0,ro=1",
+          "exact": "${shared_mount_read_only_root}/${mount_name},mp=/media/remotes/${mount_name},backup=0,ro=1"
+        },
+        "restart_rule": "Keep both parent and exact mpN declarations so consumers recover when the Rclone FUSE publication is replaced."
+      },
+      "notes": [
+        "La configuracion, los tokens y las credenciales RC permanecen en /config/rclone dentro del volumen backup=1.",
+        "El usuario crea y autoriza su propio remote desde la WebUI; la plantilla no incluye remotes del laboratorio.",
+        "El modo mount usa un wrapper minimo que termina con exec del binario oficial; Rclone queda como PID 1.",
+        "La publicacion usa un hookscript oficial de Proxmox y una tarea systemd transitoria; no instala Rclone ni un supervisor permanente en el host.",
+        "Cada remoto se publica en una raiz canonica de lectura/escritura y en otra raiz recursivamente de solo lectura; cada consumidor selecciona la politica adecuada.",
+        "Los consumidores son opcionales y deben declarar el padre compartido mas un mpN exacto por remoto.",
+        "El perfil fue validado con reinicios de Rclone, Plex y Jellyfin."
+      ],
+      "references": {
+        "official_docker_install": "https://rclone.org/install/#docker-installation",
+        "official_gui_command": "https://rclone.org/commands/rclone_gui/",
+        "official_mount_command": "https://rclone.org/commands/rclone_mount/",
+        "official_vfs_documentation": "https://rclone.org/commands/rclone_mount/#vfs-file-caching"
+      }
+    },
+    "security_profile": {
+      "requires_privileged_lxc": true,
+      "risk_level": "high",
+      "confirmation_required": true,
+      "warning": "Rclone mount requires a privileged LXC with FUSE access. Use this profile only on a trusted node and network."
+    },
+    "installer_profile": {
+      "generated_files": [
+        {
+          "id": "rclone-setup-wrapper",
+          "container_path": "/usr/local/bin/rclone-setup-lxc-start",
+          "owner": "mapped-root",
+          "mode": "0755",
+          "content": "#!/bin/sh\nset -eu\nmkdir -p /config/rclone/cache\nexec /usr/local/bin/rclone gui --no-open-browser --addr=:5572 --api-addr=:5573 --config=/config/rclone/rclone.conf --cache-dir=/config/rclone/cache --log-file=/config/rclone/rclone.log --log-level=ERROR\n"
+        }
+      ],
+      "volume_preparations": [
+        {
+          "container_path": "/config/rclone",
+          "remove_lost_found": true,
+          "owner_strategy": "mapped-root"
+        }
+      ],
+      "runtime": {
+        "entrypoint": "/usr/local/bin/rclone-setup-lxc-start",
+        "working_directory": "/data",
+        "halt_signal": "SIGTERM"
+      },
+      "startup_healthcheck": {
+        "scheme": "http",
+        "port": 5572,
+        "path": "/",
+        "verify_tls": false,
+        "timeout_seconds": 180,
+        "request_timeout_seconds": 5,
+        "stability_seconds": 0
+      }
+    }
+  },
+  "compatibility": {
+    "automatic_install_candidate": true,
+    "validated": true,
+    "supported_compose_keys": [
+      "container_name",
+      "environment",
+      "image",
+      "ports",
+      "restart",
+      "stop_grace_period",
+      "volumes"
+    ],
+    "untranslated_blockers": [],
+    "policy": "Automatic installation implements the validated privileged FUSE LXC, generated wrappers, and host publication workflow with explicit user consent."
+  },
+  "validation": {
+    "schema": "passed-at-generation",
+    "profile": {
+      "reference_host": "Proxmox VE 9.2.11, kernel 7.0.14-16-pve",
+      "reference_lxc": "CT120",
+      "internal_fuse_mount": "passed",
+      "host_publication": "passed",
+      "host_read_write_publication": "passed",
+      "host_recursive_read_only_publication": "passed",
+      "host_to_lxc_visibility": "passed",
+      "lxc_to_host_visibility": "passed",
+      "stop_unpublish": "passed",
+      "restart_republish_seconds": 2,
+      "plex_consumer": "passed-read-only",
+      "jellyfin_consumer": "passed-read-only",
+      "credentials_outside_config": false,
+      "transient_waiter_after_success": "inactive",
+      "installer_base_mode": "passed",
+      "privileged_oci_import_conversion": "passed-preserving-xattrs",
+      "official_rclone_version": "1.75.1",
+      "webui_mode": "passed-official-embedded-webui"
+    },
+    "validated_profile": {
+      "id": "pve55-rclone-direct-fuse",
+      "container_id": 120,
+      "validation_status": "passed",
+      "passed": [
+        "allow-other",
+        "consumer-lxc-read-only-policy",
+        "fuse-mount-inside-lxc",
+        "host-read-write-and-recursive-read-only-views",
+        "managed-config-volume",
+        "no-host-rclone-supervisor",
+        "official-rclone-binary-as-pid1",
+        "restart-with-published-host-mount",
+        "reverse-submount-publication-to-host"
+      ],
+      "pending": []
+    },
+    "source_profile": "rclone-oci.json"
+  },
+  "lifecycle": {
+    "update_strategy": "replace-rootfs-from-latest-oci-image-preserve-managed-config-volume-and-reapply-reviewed-assets",
+    "registry_state": {
+      "resolved_architecture": null,
+      "resolved_digest": null,
+      "image_version_label": null,
+      "image_created": null
+    },
+    "change_detection": "compare-resolved-architecture-digest",
+    "automatic_unattended_updates": false,
+    "validated_workflows": {
+      "install": [
+        "validate-requirements",
+        "pull-oci-image-by-digest",
+        "create-managed-config-volume",
+        "create-shared-mount-root",
+        "create-privileged-fuse-container",
+        "install-generated-fuse-publication-assets-on-host",
+        "attach-proxmox-hookscript",
+        "start-setup-mode",
+        "wait-for-authenticated-healthcheck",
+        "show-authorize-remote-next-action"
+      ],
+      "update": [
+        "stop-active-mount-cleanly-and-unpublish-host-tree",
+        "backup-container",
+        "pull-version-pinned-image",
+        "recreate-rootfs-preserving-managed-config-volume",
+        "reinstall-generated-wrapper-and-publication-assets",
+        "restore-selected-runtime-mode",
+        "start-container",
+        "verify-authenticated-api-internal-fuse-host-publication-and-consumers"
+      ],
+      "uninstall": {
+        "remove_rootfs": true,
+        "preserve_config_by_default": true,
+        "preserve_data_by_default": true
+      },
+      "activate_mount": [
+        "validate-selected-remote",
+        "generate-mount-wrapper-without-embedding-secrets",
+        "remove-legacy-rclone-rc-runtime-secret-lines-from-pve-config",
+        "set-mount-wrapper-as-entrypoint",
+        "stop-then-start-container",
+        "wait-for-host-published-fuse-tree",
+        "attach-shared-root-and-exact-remote-mounts-to-selected-consumers",
+        "validate-read-policy-from-each-consumer"
+      ]
+    }
+  }
+}

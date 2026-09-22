@@ -1,0 +1,14 @@
+{
+  "proxmox": {
+    "stack_environment_overrides": {
+      "linkwarden": {"NEXT_PUBLIC_CREDENTIALS_ENABLED": "true", "STORAGE_FOLDER": "/data/data"}
+    },
+    "stack_adaptation_notes": [
+      "Credential login is a boolean option, never a generated secret.",
+      "STORAGE_FOLDER points to the persisted /data/data mount.",
+      "The same generated MEILI_MASTER_KEY is used by Linkwarden and Meilisearch.",
+      "Latest dependency tags remain selected; application compatibility must be checked by an actual installation."
+    ],
+    "stack_references": ["https://github.com/linkwarden/linkwarden/blob/main/docker-compose.yml", "https://docs.linkwarden.app/self-hosting/environment-variables", "https://www.meilisearch.com/docs/reference/api/health/get-health"]
+  }
+}

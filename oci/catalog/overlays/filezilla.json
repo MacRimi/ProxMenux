@@ -1,0 +1,15 @@
+{
+  "proxmox": {
+    "installer_profile": {
+      "selkies": {
+        "base": "FROM ghcr.io/linuxserver/baseimage-selkies:ubunturesolute",
+        "dockerfile_url": "https://raw.githubusercontent.com/linuxserver/docker-filezilla/master/Dockerfile",
+        "dockerfile_sha256": "57086f8b98f9470374b0c2a5144e4fe931db0d35efa9c81dc65b2066d5cc3982",
+        "reviewed_on": "2026-09-16",
+        "documentation": "https://docs.linuxserver.io/images/docker-baseimage-selkies/",
+        "nvidia": "not-offered-until-specific-host-and-image-validation",
+        "validation": "profile-generated; real streaming workload pending"
+      }
+    }
+  }
+}

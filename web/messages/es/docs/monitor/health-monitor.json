@@ -289,7 +289,7 @@
   },
   "rest": {
     "heading": "Endpoints REST",
-    "intro": "Todo lo que hace el modal se puede llamar desde la API — útil para scripts, paneles propios o tu propia integración de chat-bot.",
+    "intro": "Todo lo que hace el modal se puede llamar desde la API — útil para scripts, paneles propios o tu propia integración de chat-bot. Cada llamada necesita un token de API; las que modifican algo — descartar una alerta, guardar los ajustes de supresión o limpiar huérfanos — requieren uno con scope full_admin, y un token read_only recibe 403.",
     "headerEndpoint": "Endpoint",
     "headerMethod": "Método",
     "headerUse": "Uso",

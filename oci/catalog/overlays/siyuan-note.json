@@ -1,0 +1,15 @@
+{
+  "first_run": {
+    "credentials": [
+      {
+        "label": "SiYuan access code",
+        "type": "static-default",
+        "username": "Not required (access code only)",
+        "password": "casaos",
+        "change_required": true,
+        "source": "casaos-tips",
+        "retrieval": null
+      }
+    ]
+  }
+}

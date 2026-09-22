@@ -1,0 +1,53 @@
+{
+  "container_contract": {
+    "environment": [
+      {
+        "name": "PHOTOPRISM_ADMIN_PASSWORD",
+        "example": "",
+        "required": true,
+        "sensitive": true,
+        "prompt": "Password of the PhotoPrism admin user (at least 8 characters)",
+        "source": "photoprism-config-flags"
+      },
+      {
+        "name": "PHOTOPRISM_UPLOAD_NSFW",
+        "example": "true",
+        "required": true,
+        "sensitive": false,
+        "source": "docker-compose"
+      },
+      {
+        "name": "TZ",
+        "example": "$TZ",
+        "required": true,
+        "sensitive": false,
+        "source": "docker-compose"
+      }
+    ]
+  },
+  "first_run": {
+    "credentials": [
+      {
+        "label": "PhotoPrism",
+        "type": "configured-or-installer-generated",
+        "username": "admin",
+        "password": null,
+        "password_environment": "PHOTOPRISM_ADMIN_PASSWORD",
+        "change_required": false,
+        "source": "photoprism-config-flags",
+        "retrieval": null
+      }
+    ]
+  },
+  "proxmox": {
+    "installer_profile": {
+      "generated_sensitive_environment": {
+        "PHOTOPRISM_ADMIN_PASSWORD": {
+          "strategy": "token-hex",
+          "bytes": 12,
+          "prompt": true
+        }
+      }
+    }
+  }
+}

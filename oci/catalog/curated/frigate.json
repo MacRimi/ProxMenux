@@ -1,0 +1,1130 @@
+{
+  "schema_version": "0.5.0",
+  "kind": "proxmenux.oci-template",
+  "id": "image-frigate",
+  "status": "laboratory-validated",
+  "catalog_ui": {
+    "title": {
+      "en_US": "Frigate"
+    },
+    "tagline": {
+      "en_US": "NVR with optional VA-API video acceleration and hardware object detectors"
+    },
+    "description": {
+      "en_US": "Frigate adapted as a native Proxmox OCI LXC with persistent configuration, selectable recording storage, tmpfs cache and optional GPU or detector devices."
+    },
+    "category": "nvr",
+    "category_label": "NVR & Cameras",
+    "author": "Frigate",
+    "developer": "Frigate",
+    "icon": null,
+    "thumbnail": null,
+    "screenshots": [],
+    "architectures": [
+      "amd64",
+      "arm64"
+    ],
+    "launch": {
+      "scheme": "http",
+      "port": 5000,
+      "path": "/"
+    },
+    "website": "https://frigate.video/",
+    "documentation": "https://docs.frigate.video/",
+    "repository": "https://github.com/blakeblackshear/frigate",
+    "tips": [
+      "The template installs infrastructure only and never bundles cameras or a Frigate configuration file.",
+      "VA-API accelerates video decode/encode; it is separate from object detection with Coral, OpenVINO, ROCm or TensorRT.",
+      "The rolling stable image is kept intact. If unrelated native modules fail intermittently, validate host RAM and CPU stability before changing packages inside the image.",
+      "GPU passthrough is independent of Coral. Configure Frigate FFmpeg hwaccel_args using preset-vaapi or preset-nvidia; passing devices does not change existing camera configuration. NVIDIA channel workload validation pending."
+    ],
+    "mini_changelog": [],
+    "display_version": null,
+    "updated_at": "2026-09-12"
+  },
+  "source": {
+    "provider": "frigate",
+    "repository": "https://github.com/blakeblackshear/frigate",
+    "revision": "37f338d5d6d0c8a117a262aacb7e6184660fd157",
+    "image_repository_url": "https://ghcr.io/blakeblackshear/frigate",
+    "readme_pushed_at": "2026-09-12T13:30:04Z",
+    "compose_sha256": "2aa1dc599c69aaac422305d0d653e3980080f2491ca74e615d08b0e9f402b722",
+    "generated_at": "2026-09-12T15:58:20+00:00",
+    "default_branch": "dev",
+    "readme_raw_url": "https://raw.githubusercontent.com/blakeblackshear/frigate/dev/README.md"
+  },
+  "container_contract": {
+    "service_name": "frigate",
+    "container_name": "frigate",
+    "image": {
+      "reference": "ghcr.io/blakeblackshear/frigate:stable",
+      "registry": "ghcr.io",
+      "repository": "ghcr.io/blakeblackshear/frigate",
+      "tag": "stable",
+      "digest": null,
+      "pull_policy": "resolve-rolling-stable-tag-to-architecture-digest-at-install"
+    },
+    "environment": [
+      {
+        "name": "TZ",
+        "example": "Europe/Madrid",
+        "required": true,
+        "sensitive": false,
+        "source": "official-compose-environment"
+      }
+    ],
+    "volumes": [
+      {
+        "id": "volume-0",
+        "container_path": "/etc/localtime",
+        "compose_source_example": "/etc/localtime",
+        "read_only": true,
+        "required": true,
+        "installation_choice": [
+          "host-bind"
+        ],
+        "default": "host-bind",
+        "managed_volume": {
+          "backup": false,
+          "default_size_gb": 1
+        }
+      },
+      {
+        "id": "volume-1",
+        "container_path": "/config",
+        "compose_source_example": "/DATA/AppData/$AppID/config",
+        "read_only": false,
+        "required": true,
+        "installation_choice": [
+          "managed-volume",
+          "host-bind"
+        ],
+        "default": "managed-volume",
+        "managed_volume": {
+          "backup": true,
+          "default_size_gb": 8
+        }
+      },
+      {
+        "id": "volume-2",
+        "container_path": "/media/frigate",
+        "compose_source_example": "/mnt/oci-shared/recordings/frigate",
+        "read_only": false,
+        "required": true,
+        "installation_choice": [
+          "managed-volume",
+          "host-bind"
+        ],
+        "default": "host-bind",
+        "managed_volume": {
+          "backup": false,
+          "default_size_gb": 100
+        }
+      }
+    ],
+    "ports": [
+      {
+        "container_port": 8971,
+        "published_example": 8971,
+        "protocol": "tcp",
+        "required": true,
+        "proxmox_behavior": "listener-on-dedicated-lxc-address-no-nat"
+      },
+      {
+        "container_port": 8554,
+        "published_example": 8554,
+        "protocol": "tcp",
+        "required": true,
+        "proxmox_behavior": "listener-on-dedicated-lxc-address-no-nat"
+      },
+      {
+        "container_port": 8555,
+        "published_example": 8555,
+        "protocol": "tcp",
+        "required": true,
+        "proxmox_behavior": "listener-on-dedicated-lxc-address-no-nat"
+      },
+      {
+        "container_port": 8555,
+        "published_example": 8555,
+        "protocol": "udp",
+        "required": true,
+        "proxmox_behavior": "listener-on-dedicated-lxc-address-no-nat"
+      }
+    ],
+    "related_services": [],
+    "restart": "unless-stopped",
+    "stop_grace_period": "30s",
+    "original_compose": "name: frigate\nservices:\n  frigate:\n    container_name: frigate\n    image: ghcr.io/blakeblackshear/frigate:stable\n    deploy:\n      resources:\n        reservations:\n          memory: 256M\n    devices:\n    - /dev/bus/usb:/dev/bus/usb\n    - /dev/apex_0:/dev/apex_0\n    - /dev/video11:/dev/video11\n    - /dev/dri/renderD128:/dev/dri/renderD128\n    network_mode: bridge\n    privileged: true\n    ports:\n    - target: 8971\n      published: '8971'\n      protocol: tcp\n    - target: 8554\n      published: '8554'\n      protocol: tcp\n    - target: 8555\n      published: '8555'\n      protocol: tcp\n    - target: 8555\n      published: '8555'\n      protocol: udp\n    restart: unless-stopped\n    stop_grace_period: 30s\n    shm_size: 512mb\n    tmpfs:\n    - /tmp/cache:size=1000000000\n    volumes:\n    - type: bind\n      source: /etc/localtime\n      target: /etc/localtime\n      read_only: true\n    - type: bind\n      source: /DATA/AppData/$AppID/config\n      target: /config\n    - type: bind\n      source: /DATA/Media\n      target: /media/frigate\n"
+  },
+  "compose_stack": {
+    "project_name": "frigate",
+    "deployment_model": "one-native-oci-lxc-per-compose-service",
+    "user_experience": "single-application-install",
+    "main_service": "frigate",
+    "service_count": 1,
+    "services": [
+      {
+        "name": "frigate",
+        "image": "ghcr.io/blakeblackshear/frigate:stable",
+        "is_main": true,
+        "role": "frontend",
+        "vmid_offset": 0,
+        "depends_on": [],
+        "frontend_network": true,
+        "private_network": false,
+        "compose": {
+          "container_name": "frigate",
+          "image": "ghcr.io/blakeblackshear/frigate:stable",
+          "deploy": {
+            "resources": {
+              "reservations": {
+                "memory": "256M"
+              }
+            }
+          },
+          "devices": [
+            "/dev/bus/usb:/dev/bus/usb",
+            "/dev/apex_0:/dev/apex_0",
+            "/dev/video11:/dev/video11",
+            "/dev/dri/renderD128:/dev/dri/renderD128"
+          ],
+          "network_mode": "bridge",
+          "privileged": true,
+          "ports": [
+            {
+              "target": 8971,
+              "published": "8971",
+              "protocol": "tcp"
+            },
+            {
+              "target": 8554,
+              "published": "8554",
+              "protocol": "tcp"
+            },
+            {
+              "target": 8555,
+              "published": "8555",
+              "protocol": "tcp"
+            },
+            {
+              "target": 8555,
+              "published": "8555",
+              "protocol": "udp"
+            }
+          ],
+          "restart": "unless-stopped",
+          "stop_grace_period": "30s",
+          "shm_size": "512mb",
+          "tmpfs": [
+            "/tmp/cache:size=1000000000"
+          ],
+          "volumes": [
+            {
+              "type": "bind",
+              "source": "/etc/localtime",
+              "target": "/etc/localtime",
+              "read_only": true
+            },
+            {
+              "type": "bind",
+              "source": "/DATA/AppData/$AppID/config",
+              "target": "/config"
+            },
+            {
+              "type": "bind",
+              "source": "/DATA/Media",
+              "target": "/media/frigate"
+            }
+          ]
+        }
+      }
+    ],
+    "top_level": {
+      "name": "frigate"
+    },
+    "networking": {
+      "frontend": "selected-proxmox-bridge",
+      "private_required": false,
+      "private_creation": "automatic-create-if-missing",
+      "private_address_allocation": "automatic-static-address-per-service",
+      "service_discovery": "private-addresses-with-compose-service-host-aliases",
+      "dependency_external_access": "disabled-unless-service-publishes-ports",
+      "prompt_user_for_private_network": false
+    },
+    "storage": [
+      {
+        "id": "frigate-volume-0",
+        "service": "frigate",
+        "container_path": "/etc/localtime",
+        "mode": "system-bind",
+        "user_selectable": false,
+        "backup": false,
+        "shared_with_other_lxc": false,
+        "source_path": "/etc/localtime",
+        "source_path_prompt": null
+      },
+      {
+        "id": "frigate-volume-1",
+        "service": "frigate",
+        "container_path": "/config",
+        "mode": "managed-volume",
+        "user_selectable": false,
+        "backup": true,
+        "shared_with_other_lxc": false,
+        "source_path": null,
+        "source_path_prompt": null
+      },
+      {
+        "id": "frigate-volume-2",
+        "service": "frigate",
+        "container_path": "/media/frigate",
+        "mode": "host-bind",
+        "user_selectable": true,
+        "backup": false,
+        "shared_with_other_lxc": true,
+        "source_path": null,
+        "source_path_prompt": "Host directory for frigate:/media/frigate"
+      }
+    ],
+    "orchestration": {
+      "reserve_vmids_atomically": 1,
+      "start_order": [
+        "frigate"
+      ],
+      "stop_order": [
+        "frigate"
+      ],
+      "dependency_readiness": "compose-healthcheck-then-port-or-process-fallback",
+      "rollback_on_failure": "remove-new-rootfs-preserve-created-persistent-volumes"
+    },
+    "installer_inputs": {
+      "prompted": [
+        "stack_name",
+        "base_vmid",
+        "rootfs_storage",
+        "persistent_data_destinations",
+        "frontend_bridge",
+        "frontend_ipv4_mode"
+      ],
+      "automatic": [
+        "dependent_vmids",
+        "private_bridge",
+        "private_subnet",
+        "private_service_addresses",
+        "compose_service_aliases",
+        "generated_secrets",
+        "dependency_start_and_stop_order"
+      ],
+      "generated_secrets": []
+    }
+  },
+  "first_run": {
+    "endpoints": [
+      {
+        "label": "Frigate WebUI",
+        "scheme": "http",
+        "port": 5000,
+        "path": "/",
+        "source": "laboratory-validated-native-oci-endpoint"
+      },
+      {
+        "label": "go2rtc WebUI",
+        "scheme": "http",
+        "port": 1984,
+        "path": "/",
+        "source": "integrated-go2rtc-native-oci-endpoint"
+      }
+    ],
+    "credentials": []
+  },
+  "proxmox": {
+    "runtime": "native-oci-lxc",
+    "technology_status": "proxmox-technology-preview",
+    "catalog": {
+      "replaces_discovered_ids": [
+        "frigate"
+      ]
+    },
+    "defaults": {
+      "unprivileged": true,
+      "ostype": "auto-from-image",
+      "cores": 4,
+      "cpuset_requirement": "none-for-current-openvino-lxc-repair",
+      "memory_mb": 4096,
+      "swap_mb": 1024,
+      "rootfs_size_gb": 16,
+      "rootfs_storage": "local-lvm",
+      "volume_storage": "local-lvm",
+      "template_storage": "local",
+      "bridge": "vmbr0",
+      "ipv4": "dhcp",
+      "firewall": false,
+      "host_managed_network": true,
+      "onboot": false,
+      "features": [
+        "nesting=1"
+      ],
+      "shutdown_timeout_seconds": 30
+    },
+    "image_metadata_policy": {
+      "entrypoint": "import-from-oci-image",
+      "cmd": "import-from-oci-image",
+      "environment": "import-image-env-then-apply-user-values",
+      "user": "import-from-oci-image",
+      "working_dir": "import-from-oci-image",
+      "stop_signal": "import-from-oci-image"
+    },
+    "adaptations": [
+      {
+        "id": "persistent-config-and-recording-storage",
+        "upstream_behavior": "Docker mounts /config and /media/frigate.",
+        "native_lxc_behavior": "Use a backup-enabled managed volume for /config and let the user choose a managed volume or host bind for /media/frigate.",
+        "reason": "Configuration is private state while recordings can be large shared data.",
+        "behavioral_impact": "Recordings are excluded from vzdump by default.",
+        "validation": "passed-laboratory-profile"
+      },
+      {
+        "id": "tmpfs-cache",
+        "upstream_behavior": "The official Compose mounts a bounded tmpfs at /tmp/cache.",
+        "native_lxc_behavior": "Create the equivalent size-limited LXC tmpfs mount.",
+        "reason": "Avoid persistent cache writes and preserve Frigate memory behavior.",
+        "behavioral_impact": "Cache is cleared on restart.",
+        "validation": "passed-laboratory-profile"
+      },
+      {
+        "id": "optional-vaapi-device",
+        "upstream_behavior": "Docker passes a selected /dev/dri render device.",
+        "native_lxc_behavior": "Resolve the host render GID and grant only the selected render device to the unprivileged LXC.",
+        "reason": "Frigate can hardware-accelerate video decode without making the LXC privileged.",
+        "behavioral_impact": "Requires host-specific device and GID validation.",
+        "validation": "passed-amd-radeonsi-laboratory-profile"
+      },
+      {
+        "id": "openvino-lxc-cpu-compatibility",
+        "upstream_behavior": "Frigate ships its detector runtime in the image.",
+        "native_lxc_behavior": "On amd64, ensure OpenVINO is at least 2026.1.0 and install that exact version with --no-deps only when the bundled runtime is older.",
+        "reason": "The 2025.4.1 CPU plugin bundled by Frigate 0.18 stable intermittently segfaults while compiling the default model inside an unprivileged LXC.",
+        "behavioral_impact": "Only the OpenVINO wheel is replaced; NumPy and every other image dependency remain unchanged.",
+        "validation": "passed-frigate-0.18.0-stable-amd64-three-starts-twenty-compiles"
+      }
+    ],
+    "laboratory_contract": {
+      "requirements": {
+        "proxmox_min_version": "9.1",
+        "commands": [
+          "pct",
+          "pvesm",
+          "skopeo"
+        ],
+        "features": [
+          "native-oci-lxc"
+        ]
+      },
+      "deployment": {
+        "runtime": "proxmox-native-oci-lxc",
+        "unprivileged": true,
+        "entrypoint": "/init",
+        "working_directory": "/opt/frigate/",
+        "hostname_default": "frigate",
+        "onboot_default": false,
+        "startup_order_default": 30,
+        "startup_delay_seconds_default": 10,
+        "features": [
+          "nesting=1"
+        ],
+        "ports": [
+          {
+            "port": 5000,
+            "protocol": "tcp",
+            "purpose": "native-oci-web-ui"
+          },
+          {
+            "port": 1984,
+            "protocol": "tcp",
+            "purpose": "integrated-go2rtc-web-ui-api"
+          },
+          {
+            "port": 8554,
+            "protocol": "tcp",
+            "purpose": "rtsp-restream"
+          },
+          {
+            "port": 8555,
+            "protocol": "tcp",
+            "purpose": "webrtc"
+          },
+          {
+            "port": 8555,
+            "protocol": "udp",
+            "purpose": "webrtc"
+          }
+        ],
+        "entrypoint_override": "explicit-validated-image-command",
+        "entrypoint_source": "validated-lxc-oci-profile"
+      },
+      "defaults": {
+        "resources": {
+          "cores": 4,
+          "memory_mb": 4096,
+          "swap_mb": 1024,
+          "rootfs_size_gb": 16
+        },
+        "network": {
+          "bridge": "vmbr0",
+          "ipv4_mode": "dhcp",
+          "ipv4_address": null,
+          "ipv4_gateway": null,
+          "firewall": false,
+          "host_managed": true
+        },
+        "environment": {
+          "TZ": "Europe/Madrid",
+          "LIBVA_DRIVER_NAME": null
+        }
+      },
+      "configuration_schema": {
+        "vmid": {
+          "type": "integer",
+          "required": false,
+          "default": null,
+          "description": "Identificador manual o siguiente VMID libre si se omite."
+        },
+        "hostname": {
+          "type": "string",
+          "required": true,
+          "default": "frigate",
+          "validation": {
+            "pattern": "^[a-z0-9][a-z0-9-]{0,62}$"
+          }
+        },
+        "rootfs_storage": {
+          "type": "storage-selector",
+          "required": true,
+          "content_types": [
+            "rootdir"
+          ]
+        },
+        "rootfs_size_gb": {
+          "type": "integer",
+          "required": true,
+          "default": 16,
+          "minimum": 8
+        },
+        "cores": {
+          "type": "integer",
+          "required": true,
+          "default": 4,
+          "minimum": 2
+        },
+        "memory_mb": {
+          "type": "integer",
+          "required": true,
+          "default": 4096,
+          "minimum": 2048
+        },
+        "swap_mb": {
+          "type": "integer",
+          "required": true,
+          "default": 1024,
+          "minimum": 0
+        },
+        "bridge": {
+          "type": "network-bridge-selector",
+          "required": true,
+          "default": "vmbr0"
+        },
+        "ipv4_mode": {
+          "type": "select",
+          "required": true,
+          "default": "dhcp",
+          "options": [
+            "dhcp",
+            "static"
+          ]
+        },
+        "ipv4_address": {
+          "type": "cidr",
+          "required_when": {
+            "field": "ipv4_mode",
+            "equals": "static"
+          }
+        },
+        "ipv4_gateway": {
+          "type": "ipv4",
+          "required_when": {
+            "field": "ipv4_mode",
+            "equals": "static"
+          }
+        },
+        "config_storage": {
+          "type": "storage-selector",
+          "required": true,
+          "content_types": [
+            "rootdir"
+          ],
+          "description": "Volumen persistente e independiente para /config."
+        },
+        "config_size_gb": {
+          "type": "integer",
+          "required": true,
+          "default": 8,
+          "minimum": 2
+        },
+        "media_storage_mode": {
+          "type": "select",
+          "required": true,
+          "default": "host-bind",
+          "options": [
+            "managed-volume",
+            "host-bind",
+            "rootfs"
+          ],
+          "description": "Destino persistente de /media/frigate."
+        },
+        "media_storage": {
+          "type": "storage-selector",
+          "required_when": {
+            "field": "media_storage_mode",
+            "equals": "managed-volume"
+          },
+          "content_types": [
+            "rootdir"
+          ]
+        },
+        "media_size_gb": {
+          "type": "integer",
+          "required_when": {
+            "field": "media_storage_mode",
+            "equals": "managed-volume"
+          },
+          "default": 100,
+          "minimum": 10
+        },
+        "media_host_path": {
+          "type": "host-directory",
+          "required_when": {
+            "field": "media_storage_mode",
+            "equals": "host-bind"
+          },
+          "default": "/mnt/oci-shared/recordings/frigate/ct${vmid}",
+          "create_if_missing": true,
+          "description": "Host path that can be shared with other containers."
+        },
+        "cache_size_mb": {
+          "type": "integer",
+          "required": true,
+          "default": 1024,
+          "minimum": 256
+        },
+        "gpu_enabled": {
+          "type": "boolean",
+          "required": true,
+          "default": true
+        },
+        "gpu_render_device": {
+          "type": "host-device-selector",
+          "required_when": {
+            "field": "gpu_enabled",
+            "equals": true
+          },
+          "default": "/dev/dri/renderD128",
+          "filter": "/dev/dri/renderD*"
+        },
+        "vaapi_driver": {
+          "type": "select",
+          "required": false,
+          "default": "auto",
+          "options": [
+            "auto",
+            "radeonsi",
+            "iHD",
+            "i965"
+          ]
+        },
+        "timezone": {
+          "type": "timezone",
+          "required": true,
+          "default": "Europe/Madrid"
+        },
+        "onboot": {
+          "type": "boolean",
+          "required": true,
+          "default": false
+        },
+        "openvino_cpu_compatibility": {
+          "type": "boolean",
+          "required": false,
+          "default": false,
+          "hidden": true,
+          "description": "Reservado para una futura adaptacion validada en hardware estable; no modifica la imagen oficial."
+        }
+      },
+      "mounts": [
+        {
+          "id": "config",
+          "container_path": "/config",
+          "source": "managed-volume",
+          "storage_field": "config_storage",
+          "size_field": "config_size_gb",
+          "backup": true,
+          "required": true
+        },
+        {
+          "id": "media",
+          "container_path": "/media/frigate",
+          "source_field": "media_storage_mode",
+          "storage_field": "media_storage",
+          "size_field": "media_size_gb",
+          "host_path_field": "media_host_path",
+          "backup": false,
+          "required": false
+        },
+        {
+          "id": "cache",
+          "container_path": "/tmp/cache",
+          "source": "tmpfs",
+          "size_field": "cache_size_mb",
+          "mount_options": [
+            "rw",
+            "noexec",
+            "nosuid",
+            "nodev"
+          ],
+          "required": true
+        }
+      ],
+      "devices": [
+        {
+          "id": "gpu-render",
+          "enabled_field": "gpu_enabled",
+          "host_path_field": "gpu_render_device",
+          "container_path": "/dev/dri/renderD128",
+          "permissions": "rwm",
+          "optional": true
+        }
+      ],
+      "environment": [
+        {
+          "name": "TZ",
+          "value_from": "timezone"
+        },
+        {
+          "name": "LIBVA_DRIVER_NAME",
+          "value_from": "vaapi_driver",
+          "omit_when": "auto"
+        }
+      ],
+      "compatibility": {
+        "openvino_cpu": {
+          "enabled_field": "openvino_cpu_compatibility",
+          "status": "pending-validation-on-stable-hardware",
+          "runtime_policy": "preserve-official-image-runtime",
+          "automatic_internal_configuration": false,
+          "description": "No se aplica ninguna sustitucion de paquetes mientras la prueba del host presente errores de memoria."
+        }
+      },
+      "healthcheck": {
+        "type": "http",
+        "port": 5000,
+        "path": "/api/version",
+        "verify_tls": true,
+        "interval_seconds": 30,
+        "timeout_seconds": 10,
+        "retries": 10,
+        "start_period_seconds": 120
+      },
+      "boundaries": {
+        "bundles_internal_configuration": false,
+        "bundles_credentials": false,
+        "bundles_user_data": false,
+        "installer_must_not_write_config_yaml": true
+      },
+      "notes": [
+        "Esta plantilla describe la instalacion OCI y su infraestructura persistente.",
+        "La configuracion funcional de Frigate se realiza despues desde la aplicacion.",
+        "La WebUI validada para el LXC OCI nativo se publica como http://IP:5000.",
+        "La imagen incluye go2rtc 1.9.14 y su WebUI/API queda disponible como http://IP:1984.",
+        "Frigate stable 0.18.0 en amd64 incluye un wheel de Pandas 2.2.3 que provoca SIGSEGV en el Ryzen 7 5700U del laboratorio; el instalador comprueba el import y solo si falla reinstala la misma version desde PyPI.",
+        "La configuracion inicial de Frigate 0.18 activa OpenVINO CPU. La version 2025.4.1 incluida falla de forma intermitente al compilar el modelo dentro de LXC; en amd64 el instalador asegura OpenVINO 2026.1.0 con --no-deps y conserva NumPy 1.26.4.",
+        "El modo host-bind permite compartir el almacenamiento multimedia del host entre varios LXC OCI.",
+        "La opcion rootfs para multimedia es solo adecuada para pruebas breves.",
+        "La GPU es opcional; el instalador debe validar el dispositivo antes de arrancar el contenedor."
+      ]
+    },
+    "application_options": {
+      "video_acceleration": {
+        "selectable": true,
+        "profiles": [
+          "none",
+          "vaapi"
+        ],
+        "validated_profile": "amd-radeonsi-vaapi"
+      },
+      "object_detector": {
+        "selectable": true,
+        "profiles": [
+          "cpu",
+          "coral",
+          "openvino",
+          "rocm",
+          "tensorrt"
+        ],
+        "openvino": {
+          "available": true,
+          "laboratory_validated": false,
+          "validated_device": "CPU",
+          "observed_inference_ms": 13.92,
+          "configuration_location": "/config/config.yaml",
+          "installer_writes_detector_configuration": false,
+          "runtime_policy": "preserve-official-image-runtime",
+          "current_stable_validation": "blocked-by-host-memory-failure",
+          "compatibility_workaround": null
+        },
+        "configuration_owned_by_user": true,
+        "warning": "Video acceleration and object detection are independent choices; the installer does not write camera or detector YAML."
+      }
+    },
+    "installer_profile": {
+      "pre_start_repairs": [],
+      "startup_healthcheck": {
+        "type": "http",
+        "scheme": "http",
+        "port": 5000,
+        "path": "/api/config",
+        "timeout_seconds": 120,
+        "request_timeout_seconds": 3,
+        "stability_seconds": 0,
+        "verify_tls": true,
+        "required": true
+      },
+      "host_bind_policies": {
+        "/media/frigate": {
+          "create_if_missing": true,
+          "purpose": "large-recording-storage-outside-native-lxc-backup"
+        }
+      },
+      "tmpfs_mounts": [
+        {
+          "id": "frigate-cache",
+          "container_path": "/tmp/cache",
+          "default_size_mb": 1024,
+          "minimum_size_mb": 256,
+          "size_prompt": "Size of the Frigate temporary cache in MB",
+          "mount_options": [
+            "rw",
+            "noexec",
+            "nosuid",
+            "nodev"
+          ]
+        }
+      ],
+      "optional_devices": [
+        {
+          "id": "coral-pcie",
+          "kind": "character-device",
+          "enable_prompt": "Add a Coral PCIe/M.2 device?",
+          "enabled_default": false,
+          "path_prompt": "Coral PCIe/M.2 node (e.g. /dev/apex_0)",
+          "host_path_default": "/dev/apex_0",
+          "container_path_strategy": "same-as-host",
+          "mode": "0660",
+          "deny_write": false,
+          "gid_strategy": "host-device-gid"
+        }
+      ],
+      "version_aware_adaptations": {},
+      "hardware_acceleration": {
+        "prompt": "Hardware acceleration for Frigate",
+        "default": "none",
+        "profiles": [
+          {
+            "id": "none",
+            "label": "No acceleration (CPU)",
+            "image": {
+              "reference": "ghcr.io/blakeblackshear/frigate:stable",
+              "registry": "ghcr.io",
+              "repository": "ghcr.io/blakeblackshear/frigate",
+              "tag": "stable",
+              "digest": null,
+              "pull_policy": "resolve-rolling-stable-tag-to-architecture-digest-at-install"
+            },
+            "device_requests": []
+          },
+          {
+            "id": "vaapi",
+            "label": "Intel/AMD VA-API",
+            "image": {
+              "reference": "ghcr.io/blakeblackshear/frigate:stable",
+              "registry": "ghcr.io",
+              "repository": "ghcr.io/blakeblackshear/frigate",
+              "tag": "stable",
+              "digest": null,
+              "pull_policy": "resolve-rolling-stable-tag-to-architecture-digest-at-install"
+            },
+            "device_requests": [
+              {
+                "id": "gpu-render",
+                "path_prompt": "GPU render device",
+                "host_path_default": "/dev/dri/renderD128",
+                "mode": "0660",
+                "deny_write": false,
+                "gid_strategy": "host-device-gid",
+                "kind": "character-device",
+                "container_path_strategy": "same-as-host",
+                "drm_vendor_ids": [
+                  "0x8086",
+                  "0x1002"
+                ]
+              }
+            ]
+          },
+          {
+            "id": "nvidia",
+            "label": "NVIDIA (NVDEC/CUDA)",
+            "architectures": [
+              "amd64"
+            ],
+            "image": {
+              "reference": "ghcr.io/blakeblackshear/frigate:stable-tensorrt",
+              "registry": "ghcr.io",
+              "repository": "ghcr.io/blakeblackshear/frigate",
+              "tag": "stable-tensorrt",
+              "digest": null,
+              "pull_policy": "resolve-rolling-stable-tag-to-architecture-digest-at-install"
+            },
+            "device_requests": [
+              {
+                "id": "nvidia-runtime",
+                "kind": "nvidia-runtime",
+                "purpose": "nvidia-video",
+                "device_selection": "all-requested-by-compose"
+              }
+            ],
+            "environment": [
+              {
+                "name": "NVIDIA_VISIBLE_DEVICES",
+                "value": "all"
+              },
+              {
+                "name": "NVIDIA_DRIVER_CAPABILITIES",
+                "value": "compute,video,utility"
+              }
+            ]
+          }
+        ]
+      },
+      "gpu_validation": {
+        "device_inventory": "host-sysfs-and-stat",
+        "application_acceleration": "requires-workload-test",
+        "tone_mapping": "not-implied-by-device-access"
+      }
+    },
+    "image_channel_policy": {
+      "channel": "stable",
+      "rolling": true,
+      "version_pinned": false,
+      "reason": "Frigate publishes stable as its official rolling production tag and does not publish latest.",
+      "official_reference": "https://docs.frigate.video/frigate/installation/"
+    }
+  },
+  "compatibility": {
+    "automatic_install_candidate": true,
+    "validated": true,
+    "supported_compose_keys": [
+      "container_name",
+      "environment",
+      "image",
+      "ports",
+      "restart",
+      "stop_grace_period",
+      "volumes"
+    ],
+    "untranslated_blockers": [],
+    "policy": "The native single-LXC installation path translates persistent storage, the bounded tmpfs cache and optional VA-API device mapping. Frigate cameras and detector configuration remain owned by the user. The rolling stable image and its bundled Python runtime are preserved without package replacement."
+  },
+  "validation": {
+    "schema": "passed-at-generation",
+    "validated_profile": {
+      "id": "pve55-amd-vaapi-openvino",
+      "description": "Reproducible profile based on a validated working deployment.",
+      "validated_on": "2026-08-26",
+      "validation_status": "passed",
+      "image": {
+        "repository": "blakeblackshear/frigate",
+        "tag": "0.17.1",
+        "architecture": "amd64"
+      },
+      "container": {
+        "ostype": "debian",
+        "cmode": "console",
+        "unprivileged": true,
+        "entrypoint": "/init",
+        "working_directory": "/opt/frigate/",
+        "halt_signal": "SIGTERM",
+        "features": [
+          "nesting=1"
+        ],
+        "onboot": false
+      },
+      "resources": {
+        "cores": 4,
+        "cpuset": "0-3",
+        "cpuset_requirement": "must-include-cpu0",
+        "memory_mb": 4096,
+        "swap_mb": 1024,
+        "rootfs_storage": "local-lvm",
+        "rootfs_size_gb": 16
+      },
+      "network": {
+        "interface": "eth0",
+        "type": "veth",
+        "bridge": "vmbr0",
+        "ipv4_mode": "dhcp",
+        "host_managed": true,
+        "firewall": false
+      },
+      "storage": {
+        "config": {
+          "mode": "managed-volume",
+          "storage": "local-lvm",
+          "size_gb": 8,
+          "container_path": "/config",
+          "backup": true
+        },
+        "media": {
+          "mode": "host-bind",
+          "host_path_template": "/mnt/oci-shared/frigate/ct${vmid}/media",
+          "container_path": "/media/frigate",
+          "backup": false,
+          "create_if_missing": true,
+          "pre_start_check": {
+            "type": "host-mountpoint",
+            "path": "/mnt/oci-shared",
+            "failure_mode": "abort-start"
+          }
+        },
+        "cache": {
+          "mode": "tmpfs",
+          "size_mb": 1024,
+          "container_path": "/tmp/cache",
+          "mount_options": [
+            "rw",
+            "nosuid",
+            "nodev"
+          ]
+        }
+      },
+      "gpu": {
+        "enabled": true,
+        "host_path": "/dev/dri/renderD128",
+        "container_path": "/dev/dri/renderD128",
+        "mode": "0660",
+        "gid_strategy": "resolve-render-group-on-host",
+        "validated_host_gid": 993,
+        "vaapi_driver": "radeonsi"
+      },
+      "environment_overrides": {
+        "TZ": "Europe/Madrid",
+        "LIBVA_DRIVER_NAME": "radeonsi"
+      },
+      "preserve_image_environment": true,
+      "openvino": {
+        "enabled": true,
+        "device": "CPU",
+        "package": "openvino==2026.1.0",
+        "installed_version": "2026.1.0-21367-63e31528c62-releases/2026/1",
+        "installation_scope": "oci-rootfs",
+        "install_command": [
+          "python3",
+          "-m",
+          "pip",
+          "install",
+          "--no-cache-dir",
+          "--break-system-packages",
+          "openvino==2026.1.0"
+        ],
+        "detector_configuration_managed_by_installer": false,
+        "reason": "Evita el fallo del plugin CPU de la version OpenVINO incluida originalmente en Frigate 0.17.1 bajo LXC."
+      },
+      "validation": {
+        "web_ui": "healthy",
+        "gpu_vaapi": "passed",
+        "persistent_config": "passed",
+        "persistent_media": "passed",
+        "tmpfs_cache": "passed",
+        "openvino_cpu": "passed",
+        "real_streams": "passed",
+        "openvino_inference_ms_observed": 13.92,
+        "cpu_detector_inference_ms_observed": 21.23
+      }
+    },
+    "stable_validation": {
+      "validated_on": "2026-09-13",
+      "host": "pve55-amd-ryzen-7-5700u",
+      "image": {
+        "tag": "stable",
+        "version": "0.18.0-77a66e7",
+        "digest": "sha256:9678a83a76e4730ac7d9ea7428370e32ae656d6b312aaad30d6c69f3fef14d35"
+      },
+      "status": "blocked-by-host-hardware-instability",
+      "observed_failure": {
+        "result": "intermittent-native-faults-across-openvino-shapely-pandas-pvesh-and-perl",
+        "host_memtester": "failed-possible-bad-address-line",
+        "storage_health": "nvme-smart-passed-zero-media-errors"
+      },
+      "verification": {
+        "clean_install": "invalid-until-host-memory-is-repaired",
+        "official_runtime_preserved": true
+      }
+    },
+    "source_profile": "frigate-oci.json",
+    "automatic_installer_translation": {
+      "persistent_config": "covered",
+      "recording_storage": "covered-managed-volume-or-created-host-bind",
+      "tmpfs_cache": "covered-native-lxc-mount-entry",
+      "vaapi_device": "covered-native-proxmox-dev-property-with-host-gid",
+      "openvino_stable": "preserve-official-image-runtime-pending-healthy-host-validation",
+      "clean_install_stable": "blocked-by-confirmed-host-memory-error"
+    },
+    "stable_channel_image": "pending-revalidation-after-host-memory-repair"
+  },
+  "lifecycle": {
+    "update_strategy": "resolve-stable-image-then-replace-rootfs-preserve-/config-and-selected-/media/frigate-storage",
+    "registry_state": {
+      "resolved_architecture": null,
+      "resolved_digest": null,
+      "image_version_label": null,
+      "image_created": null
+    },
+    "change_detection": "compare-source-revision-and-resolved-stable-image-digest",
+    "automatic_unattended_updates": false,
+    "validated_workflows": {
+      "install": [
+        "validate-requirements",
+        "resolve-options",
+        "pull-oci-image",
+        "create-container",
+        "attach-persistent-storage",
+        "attach-optional-devices",
+        "apply-runtime-environment",
+        "apply-optional-compatibility",
+        "start-container",
+        "wait-for-healthcheck"
+      ],
+      "update": [
+        "stop-container",
+        "backup-container-definition",
+        "pull-oci-image",
+        "recreate-rootfs-preserving-mounts",
+        "start-container",
+        "wait-for-healthcheck"
+      ],
+      "uninstall": {
+        "remove_rootfs": true,
+        "preserve_config_by_default": true,
+        "preserve_media_by_default": true
+      }
+    }
+  }
+}

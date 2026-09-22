@@ -1,0 +1,79 @@
+{
+  "first_run": {
+    "credentials": [
+      {
+        "label": "Duplicati web interface (password only)",
+        "type": "configured-or-installer-generated",
+        "username": "Not required (password only)",
+        "password": null,
+        "password_environment": "DUPLICATI__WEBSERVICE_PASSWORD",
+        "change_required": false,
+        "source": "linuxserver-readme-parameters",
+        "retrieval": null
+      }
+    ]
+  },
+  "container_contract": {
+    "environment": [
+      {
+        "name": "PUID",
+        "example": "1000",
+        "required": true,
+        "sensitive": false,
+        "source": "linuxserver-compose"
+      },
+      {
+        "name": "PGID",
+        "example": "1000",
+        "required": true,
+        "sensitive": false,
+        "source": "linuxserver-compose"
+      },
+      {
+        "name": "TZ",
+        "example": "Etc/UTC",
+        "required": true,
+        "sensitive": false,
+        "source": "linuxserver-compose"
+      },
+      {
+        "name": "SETTINGS_ENCRYPTION_KEY",
+        "example": "",
+        "required": true,
+        "sensitive": true,
+        "source": "linuxserver-compose"
+      },
+      {
+        "name": "CLI_ARGS",
+        "example": "",
+        "required": false,
+        "sensitive": false,
+        "source": "linuxserver-compose"
+      },
+      {
+        "name": "DUPLICATI__WEBSERVICE_PASSWORD",
+        "example": "",
+        "required": true,
+        "sensitive": true,
+        "prompt": "Password of the Duplicati web interface",
+        "source": "linuxserver-compose"
+      }
+    ]
+  },
+  "proxmox": {
+    "installer_profile": {
+      "generated_sensitive_environment": {
+        "SETTINGS_ENCRYPTION_KEY": {
+          "strategy": "token-hex",
+          "bytes": 16,
+          "prompt": false
+        },
+        "DUPLICATI__WEBSERVICE_PASSWORD": {
+          "strategy": "token-hex",
+          "bytes": 12,
+          "prompt": true
+        }
+      }
+    }
+  }
+}

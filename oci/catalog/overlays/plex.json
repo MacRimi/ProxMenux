@@ -1,0 +1,58 @@
+{
+  "catalog_ui": {
+    "launch": {"scheme": "http", "port": 32400, "path": "/web"}
+  },
+  "container_contract": {
+    "ports": [{
+      "container_port": 32400,
+      "published_example": 32400,
+      "protocol": "tcp",
+      "required": true,
+      "proxmox_behavior": "listener-on-dedicated-lxc-address-no-nat"
+    }]
+  },
+  "first_run": {
+    "endpoints": [{
+      "label": "Plex WebUI",
+      "scheme": "http",
+      "port": 32400,
+      "path": "/web",
+      "source": "linuxserver-application-setup"
+    }]
+  },
+  "proxmox": {
+    "deployment_profile": {
+      "variant": "hardware-selectable",
+      "gpu_passthrough": "installer-selection"
+    },
+    "installer_profile": {
+      "hardware_acceleration": {
+        "prompt": "Hardware acceleration for Plex",
+        "default": "none",
+        "profiles": [
+          {"id": "none", "label": "No acceleration (CPU)", "device_requests": []},
+          {
+            "id": "vaapi",
+            "label": "Intel/AMD (VA-API)",
+            "environment_from_devices": {"ATTACHED_DEVICES_PERMS": ["vaapi-render"]},
+            "device_requests": [{
+              "id": "vaapi-render", "kind": "character-device", "purpose": "vaapi",
+              "path_prompt": "GPU render device", "host_path_default": "/dev/dri/renderD128",
+              "container_path_strategy": "same-as-host", "mode": "0660", "deny_write": false,
+              "gid_strategy": "host-device-gid"
+            }]
+          },
+          {
+            "id": "nvidia",
+            "label": "NVIDIA (NVENC/NVDEC)",
+            "device_requests": [{
+              "id": "nvidia-runtime", "kind": "nvidia-runtime",
+              "purpose": "nvidia-cuda-nvenc-nvdec", "device_selection": "all-requested-by-compose"
+            }],
+            "environment": [{"name": "NVIDIA_VISIBLE_DEVICES", "value": "all"}]
+          }
+        ]
+      }
+    }
+  }
+}

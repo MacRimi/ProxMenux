@@ -1,0 +1,528 @@
+{
+  "schema_version": "0.4.0",
+  "kind": "proxmenux.oci-template",
+  "id": "image-jellyfin-official",
+  "status": "generated-unvalidated",
+  "catalog_ui": {
+    "title": {
+      "en_US": "Jellyfin Official"
+    },
+    "tagline": {
+      "en_US": "Official Jellyfin image with optional VA-API or NVIDIA acceleration."
+    },
+    "description": {
+      "en_US": "Jellyfin is a Free Software Media System that puts you in control of managing and streaming your media. It is an alternative to the proprietary Emby and Plex, to provide media from a dedicated server to end-user devices via multiple apps. Jellyfin is descended from Emby's 3.5.2 release and ported to the .NET Core framework to enable full cross-platform support. There are no strings attached, no premium licenses or features, and no hidden agendas: just a team who want to build something better and work together to achieve it."
+    },
+    "category": "media",
+    "category_label": "Media & Streaming",
+    "author": "Jellyfin Team",
+    "developer": "Jellyfin Team",
+    "icon": "https://raw.githubusercontent.com/linuxserver/docker-templates/master/linuxserver.io/img/jellyfin-icon.png",
+    "thumbnail": "https://raw.githubusercontent.com/linuxserver/docker-templates/master/linuxserver.io/img/jellyfin-banner.png",
+    "screenshots": [],
+    "architectures": [
+      "amd64",
+      "arm64"
+    ],
+    "launch": {
+      "scheme": "http",
+      "port": 8096,
+      "path": "/"
+    },
+    "website": "https://jellyfin.org/",
+    "documentation": "https://jellyfin.org/docs/general/installation/container/",
+    "repository": "https://github.com/jellyfin/jellyfin-packaging",
+    "tips": [
+      "Configuration and cache use persistent Proxmox volumes by default; media defaults to a shared host directory.",
+      "Hardware tone mapping is configured persistently after first start when VA-API or NVIDIA is selected.",
+      "DLNA multicast behavior depends on the selected Proxmox bridge and firewall."
+    ],
+    "mini_changelog": [],
+    "display_version": null,
+    "updated_at": null
+  },
+  "source": {
+    "provider": "jellyfin",
+    "repository": "https://github.com/jellyfin/jellyfin-packaging",
+    "default_branch": "master",
+    "revision": "19f2efc7528cc0ec6c04276e1c62d9cdbfb13b6a",
+    "image_repository_url": "https://github.com/jellyfin/jellyfin-packaging",
+    "compose_sha256": "db04ff7885b26ca276b747f7d031e9f76f82a1b113c3ba17bcc09bd3a7082f9a",
+    "generated_at": "2026-09-13T21:08:59+00:00"
+  },
+  "container_contract": {
+    "service_name": "jellyfin",
+    "container_name": "jellyfin",
+    "image": {
+      "reference": "jellyfin/jellyfin:latest",
+      "registry": "docker.io",
+      "repository": "jellyfin/jellyfin",
+      "tag": "latest",
+      "digest": null,
+      "pull_policy": "resolve-selected-tag-to-architecture-digest-at-install"
+    },
+    "environment": [
+      {
+        "name": "JELLYFIN_PublishedServerUrl",
+        "example": "",
+        "required": false,
+        "sensitive": false,
+        "source": "official-container-documentation",
+        "prompt": "Optional published URL for Jellyfin"
+      }
+    ],
+    "volumes": [
+      {
+        "id": "config",
+        "container_path": "/config",
+        "compose_source_example": "/path/to/config",
+        "read_only": false,
+        "required": true,
+        "installation_choice": [
+          "managed-volume",
+          "host-bind"
+        ],
+        "default": "managed-volume",
+        "managed_volume": {
+          "backup": true,
+          "default_size_gb": 8
+        }
+      },
+      {
+        "id": "cache",
+        "container_path": "/cache",
+        "compose_source_example": "/path/to/cache",
+        "read_only": false,
+        "required": true,
+        "installation_choice": [
+          "managed-volume",
+          "host-bind"
+        ],
+        "default": "managed-volume",
+        "managed_volume": {
+          "backup": false,
+          "default_size_gb": 8
+        }
+      },
+      {
+        "id": "media",
+        "container_path": "/media",
+        "compose_source_example": "/path/to/media",
+        "read_only": false,
+        "required": true,
+        "installation_choice": [
+          "managed-volume",
+          "host-bind"
+        ],
+        "default": "host-bind",
+        "managed_volume": {
+          "backup": false,
+          "default_size_gb": 32
+        }
+      }
+    ],
+    "ports": [
+      {
+        "container_port": 8096,
+        "published_example": 8096,
+        "protocol": "tcp",
+        "required": true,
+        "proxmox_behavior": "listener-on-dedicated-lxc-address-no-nat"
+      },
+      {
+        "container_port": 7359,
+        "published_example": 7359,
+        "protocol": "udp",
+        "required": false,
+        "proxmox_behavior": "listener-on-dedicated-lxc-address-no-nat"
+      }
+    ],
+    "related_services": [],
+    "restart": "unless-stopped",
+    "stop_grace_period": null,
+    "original_compose": "services:\n  jellyfin:\n    image: jellyfin/jellyfin:latest\n    container_name: jellyfin\n    ports:\n      - 8096:8096/tcp\n      - 7359:7359/udp\n    environment:\n      - JELLYFIN_PublishedServerUrl=\n    volumes:\n      - /path/to/config:/config\n      - /path/to/cache:/cache\n      - /path/to/media:/media\n    restart: unless-stopped\n"
+  },
+  "first_run": {
+    "endpoints": [
+      {
+        "label": "Jellyfin WebUI",
+        "scheme": "http",
+        "port": 8096,
+        "path": "/",
+        "source": "official-container-documentation"
+      }
+    ],
+    "credentials": []
+  },
+  "proxmox": {
+    "runtime": "native-oci-lxc",
+    "technology_status": "proxmox-technology-preview",
+    "defaults": {
+      "unprivileged": true,
+      "ostype": "auto-from-image",
+      "cores": 2,
+      "memory_mb": 2048,
+      "swap_mb": 512,
+      "rootfs_size_gb": 8,
+      "rootfs_storage": "local-lvm",
+      "volume_storage": "local-lvm",
+      "template_storage": "local",
+      "bridge": "vmbr0",
+      "ipv4": "dhcp",
+      "firewall": true,
+      "host_managed_network": true,
+      "onboot": false,
+      "features": [
+        "nesting=1"
+      ],
+      "shutdown_timeout_seconds": 30
+    },
+    "image_metadata_policy": {
+      "entrypoint": "import-from-oci-image",
+      "cmd": "import-from-oci-image",
+      "environment": "import-image-env-then-apply-compose-overrides",
+      "user": "import-from-oci-image",
+      "working_dir": "import-from-oci-image",
+      "stop_signal": "import-from-oci-image"
+    },
+    "adaptations": [
+      {
+        "id": "dedicated-lxc-network",
+        "upstream_behavior": "Docker publishes selected container ports on the Docker host.",
+        "native_lxc_behavior": "The application listens on the same container ports at its dedicated LXC address.",
+        "reason": "A native LXC has its own address and does not require Docker port NAT.",
+        "behavioral_impact": "Users open the LXC address instead of the Proxmox host address.",
+        "validation": "pending-per-application"
+      },
+      {
+        "id": "compose-environment-overlay",
+        "upstream_behavior": "Compose environment values override OCI image environment values.",
+        "native_lxc_behavior": "ProxMenux merges the same values into lxc.environment.runtime while the CT is stopped.",
+        "reason": "PVE imports image Env automatically; Compose values still need to override it.",
+        "behavioral_impact": "None expected.",
+        "validation": "pending-per-application"
+      },
+      {
+        "id": "stop-grace-period",
+        "upstream_behavior": "Docker waits for Compose stop_grace_period before forcing termination.",
+        "native_lxc_behavior": "ProxMenux records the same timeout for its pct shutdown lifecycle operations.",
+        "reason": "Proxmox has no equivalent per-CT persistent restart-policy field; startup.down is not a shutdown timeout.",
+        "behavioral_impact": "Normal Proxmox node shutdown remains governed by the node-wide shutdown policy.",
+        "validation": "not-requested-by-compose"
+      },
+      {
+        "id": "compose-shm-size",
+        "upstream_behavior": "Compose sets the size of the container /dev/shm tmpfs.",
+        "native_lxc_behavior": "ProxMenux mounts a native LXC tmpfs at /dev/shm with the same requested capacity.",
+        "reason": "The OCI image runs directly as an LXC and therefore needs the equivalent Proxmox mount entry.",
+        "behavioral_impact": "None expected.",
+        "validation": "not-requested-by-compose"
+      },
+      {
+        "id": "compose-command",
+        "upstream_behavior": "Compose replaces the image Cmd while retaining its Entrypoint.",
+        "native_lxc_behavior": "ProxMenux reads the official OCI Entrypoint and combines it with the Compose command as the native LXC init command.",
+        "reason": "Proxmox stores the effective OCI process as one entrypoint string.",
+        "behavioral_impact": "None expected.",
+        "validation": "not-requested-by-compose"
+      },
+      {
+        "id": "compose-process-runtime",
+        "upstream_behavior": "Compose can replace Entrypoint, User and WorkingDir and request an init process or interactive terminal.",
+        "native_lxc_behavior": "ProxMenux applies the process overrides through native LXC init directives; lxc-init provides PID 1 supervision and the CT console provides terminal access.",
+        "reason": "The OCI process must start with the same identity, command and working directory without Docker.",
+        "behavioral_impact": "Compose stdin_open and tty become access through the Proxmox LXC console.",
+        "validation": "not-requested-by-compose"
+      },
+      {
+        "id": "compose-healthcheck",
+        "upstream_behavior": "Docker periodically executes the declared container healthcheck.",
+        "native_lxc_behavior": "For a single-service LXC, ProxMenux translates HTTP localhost checks into a mandatory first-start service check.",
+        "reason": "Proxmox has no persistent Docker health state, while the installer still must detect a failed first boot.",
+        "behavioral_impact": "The check runs during installation rather than continuously after installation.",
+        "validation": "not-requested-by-compose"
+      },
+      {
+        "id": "compose-cpu-priority",
+        "upstream_behavior": "Docker cpu_shares sets a relative scheduling weight with 1024 as its neutral value.",
+        "native_lxc_behavior": "ProxMenux converts the relative weight to Proxmox cpuunits with 100 as its neutral value and lets the user review it.",
+        "reason": "Both settings express relative CPU priority on different scales.",
+        "behavioral_impact": "Rounding and Proxmox minimum limits can slightly change very low weights.",
+        "validation": "not-requested-by-compose"
+      },
+      {
+        "id": "compose-network-identity",
+        "upstream_behavior": "Compose can set hostname, MAC address, extra hosts and attach a service to Docker networks.",
+        "native_lxc_behavior": "ProxMenux applies hostname and MAC to net0, writes additional host aliases into the LXC and uses its dedicated bridge connection for single-service networks.",
+        "reason": "A dedicated LXC has its own network namespace and does not need a Docker bridge per service.",
+        "behavioral_impact": "host-gateway resolves to the IPv4 address of the selected Proxmox bridge.",
+        "validation": "not-requested-by-compose"
+      },
+      {
+        "id": "compose-network-mode",
+        "upstream_behavior": "Docker host mode removes Docker network isolation; bridge and default use a Docker-managed network.",
+        "native_lxc_behavior": "The OCI process uses the dedicated LXC network namespace directly, so host, bridge and default all listen on the LXC address without Docker NAT.",
+        "reason": "The LXC is the application host and already has its own address and port namespace.",
+        "behavioral_impact": "host means the LXC host, never the Proxmox host; this preserves Proxmox network isolation.",
+        "validation": "not-requested-by-compose"
+      },
+      {
+        "id": "compose-capabilities-and-sysctls",
+        "upstream_behavior": "Compose can add Linux capabilities and set kernel parameters in the container network namespace.",
+        "native_lxc_behavior": "ProxMenux validates requested capabilities against the native LXC capability set and writes namespaced network settings as lxc.sysctl directives.",
+        "reason": "A native OCI-LXC already starts with the namespaced capability set; lxc.cap.keep would incorrectly discard unrelated required capabilities.",
+        "behavioral_impact": "Host-global capabilities such as SYS_MODULE remain blocked until their host prerequisite is explicitly adapted.",
+        "validation": "not-requested-by-compose"
+      },
+      {
+        "id": "docker-engine-metadata",
+        "upstream_behavior": "Compose labels annotate Docker objects and the json-file logging driver rotates Docker-managed logs.",
+        "native_lxc_behavior": "Labels remain source metadata; Docker json-file settings are not applied because the OCI process runs directly under LXC.",
+        "reason": "There is no Docker object or Docker json-file log behind a native OCI-LXC application.",
+        "behavioral_impact": "Docker-only label consumers and Docker log-driver rotation do not exist in the native deployment.",
+        "validation": "not-requested-by-compose"
+      },
+      {
+        "id": "compose-device-passthrough",
+        "upstream_behavior": "Compose passes host character devices or requests an NVIDIA runtime GPU.",
+        "native_lxc_behavior": "ProxMenux converts recognized device declarations to native Proxmox dev resources; NVIDIA profiles also inject compatible host driver libraries read-only.",
+        "reason": "Native OCI-LXC does not execute Docker device or NVIDIA runtime hooks.",
+        "behavioral_impact": "Hardware is exposed only after explicit user confirmation and host-path validation.",
+        "validation": "not-requested-by-compose"
+      },
+      {
+        "id": "compose-host-ipc",
+        "upstream_behavior": "ipc: host shares the Docker host IPC namespace, commonly to avoid Docker's small default shared-memory allocation.",
+        "native_lxc_behavior": "The application keeps the LXC IPC namespace and receives a configurable 1 GiB /dev/shm instead of sharing Proxmox host IPC.",
+        "reason": "Processes in a single native LXC already share one IPC namespace; retaining isolation is safer than exposing host IPC.",
+        "behavioral_impact": "The application cannot exchange IPC objects with processes on the Proxmox host.",
+        "validation": "not-requested-by-compose"
+      }
+    ],
+    "deployment_profile": {
+      "variant": "hardware-selectable",
+      "gpu_passthrough": "installer-selection"
+    },
+    "installer_profile": {
+      "hardware_acceleration": {
+        "prompt": "Hardware acceleration for Jellyfin",
+        "default": "none",
+        "profiles": [
+          {
+            "id": "none",
+            "label": "No acceleration (CPU)",
+            "device_requests": []
+          },
+          {
+            "id": "vaapi",
+            "label": "Intel/AMD (VA-API)",
+            "device_requests": [
+              {
+                "id": "vaapi-render",
+                "kind": "character-device",
+                "purpose": "vaapi",
+                "path_prompt": "GPU render device",
+                "host_path_default": "/dev/dri/renderD128",
+                "container_path_strategy": "same-as-host",
+                "mode": "0660",
+                "deny_write": false,
+                "gid_strategy": "host-device-gid",
+                "environment": [
+                  {
+                    "name": "LIBVA_DRIVER_NAME",
+                    "prompt": "VA-API driver",
+                    "choices": [
+                      "auto",
+                      "radeonsi",
+                      "iHD",
+                      "i965"
+                    ],
+                    "default": "auto",
+                    "omit_values": [
+                      "auto"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "post_start_configurations": [
+              {
+                "id": "jellyfin-vaapi-hdr-tone-mapping",
+                "type": "jellyfin-encoding-xml",
+                "enable_prompt": "Enable VA-API transcoding and HDR10/Dolby Vision to SDR tone mapping",
+                "enabled_default": true,
+                "required": true,
+                "timeout_seconds": 120,
+                "candidate_paths": [
+                  "/config/encoding.xml",
+                  "/config/config/encoding.xml"
+                ],
+                "settings": {
+                  "HardwareAccelerationType": "vaapi",
+                  "VaapiDevice": {
+                    "device_path_from": "vaapi-render"
+                  },
+                  "EnableDecodingColorDepth10Hevc": "true",
+                  "EnableHardwareEncoding": "true",
+                  "EnableTonemapping": "true",
+                  "EnableVppTonemapping": "false",
+                  "TonemappingAlgorithm": "bt2390",
+                  "TonemappingMode": "auto",
+                  "TonemappingRange": "auto"
+                },
+                "lists": {
+                  "HardwareDecodingCodecs": [
+                    "h264",
+                    "hevc",
+                    "vc1"
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "id": "nvidia",
+            "label": "NVIDIA (NVENC/NVDEC)",
+            "device_requests": [
+              {
+                "id": "nvidia-runtime",
+                "kind": "nvidia-runtime",
+                "purpose": "nvidia-cuda-nvenc-nvdec",
+                "device_selection": "all-requested-by-compose"
+              }
+            ],
+            "environment": [
+              {
+                "name": "NVIDIA_VISIBLE_DEVICES",
+                "value": "all"
+              }
+            ],
+            "post_start_configurations": [
+              {
+                "id": "jellyfin-nvidia-hdr-tone-mapping",
+                "type": "jellyfin-encoding-xml",
+                "enable_prompt": "Enable NVIDIA transcoding and HDR10/Dolby Vision to SDR tone mapping",
+                "enabled_default": true,
+                "required": true,
+                "timeout_seconds": 120,
+                "candidate_paths": [
+                  "/config/encoding.xml",
+                  "/config/config/encoding.xml"
+                ],
+                "settings": {
+                  "HardwareAccelerationType": "nvenc",
+                  "EnableDecodingColorDepth10Hevc": "true",
+                  "EnableEnhancedNvdecDecoder": "true",
+                  "EnableHardwareEncoding": "true",
+                  "EnableTonemapping": "true",
+                  "EnableVppTonemapping": "false",
+                  "TonemappingAlgorithm": "bt2390",
+                  "TonemappingMode": "auto",
+                  "TonemappingRange": "auto"
+                },
+                "lists": {
+                  "HardwareDecodingCodecs": [
+                    "h264",
+                    "hevc",
+                    "vc1"
+                  ]
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "startup_healthcheck": {
+        "scheme": "http",
+        "port": 8096,
+        "path": "/System/Info/Public",
+        "timeout_seconds": 180,
+        "request_timeout_seconds": 10,
+        "stability_seconds": 4,
+        "verify_tls": false
+      },
+      "network": {
+        "compose_mode": "bridge"
+      },
+      "gpu_validation": {
+        "device_inventory": "host-sysfs-and-stat",
+        "application_acceleration": "requires-workload-test",
+        "tone_mapping": "not-implied-by-device-access"
+      }
+    },
+    "application_options": {
+      "hdr10_dolby_vision_tone_mapping": {
+        "show_in_catalog": true,
+        "selectable": true,
+        "reason": "The installer configures persistent tone mapping according to the selected hardware backend after Jellyfin creates encoding.xml.",
+        "persistent_configuration_paths": [
+          "/config/encoding.xml",
+          "/config/config/encoding.xml"
+        ],
+        "validated_profile": "pending-official-image-validation"
+      }
+    },
+    "catalog": {
+      "replaces_discovered_ids": []
+    }
+  },
+  "compatibility": {
+    "automatic_install_candidate": true,
+    "validated": false,
+    "supported_compose_keys": [
+      "cap_add",
+      "command",
+      "container_name",
+      "cpu_shares",
+      "devices",
+      "entrypoint",
+      "environment",
+      "extra_hosts",
+      "group_add",
+      "healthcheck",
+      "hostname",
+      "image",
+      "init",
+      "ipc",
+      "labels",
+      "logging",
+      "mac_address",
+      "network_mode",
+      "networks",
+      "ports",
+      "privileged",
+      "restart",
+      "runtime",
+      "security_opt",
+      "shm_size",
+      "stdin_open",
+      "stop_grace_period",
+      "sysctls",
+      "tty",
+      "user",
+      "volumes",
+      "working_dir"
+    ],
+    "untranslated_blockers": [],
+    "policy": "A generated template is never promoted to validated without install, health, restart and persistence tests."
+  },
+  "validation": {
+    "schema": "passed-at-generation",
+    "clean_install": "pending",
+    "service_health": "pending",
+    "restart_persistence": "pending",
+    "backup_restore": "pending",
+    "update_preserves_data": "pending"
+  },
+  "lifecycle": {
+    "update_strategy": "replace-rootfs-from-new-oci-image-preserve-managed-volumes",
+    "registry_state": {
+      "resolved_architecture": null,
+      "resolved_digest": null,
+      "image_version_label": null,
+      "image_created": null
+    },
+    "change_detection": "compare-resolved-architecture-digest",
+    "automatic_unattended_updates": false
+  }
+}

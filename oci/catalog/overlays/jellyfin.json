@@ -1,0 +1,317 @@
+{
+  "catalog_ui": {
+    "title": {
+      "en_US": "Jellyfin"
+    },
+    "tagline": {
+      "en_US": "LinuxServer Jellyfin with optional GPU passthrough"
+    },
+    "tips": [
+      "VA-API and OpenCL tone mapping are separate capabilities. The tested LinuxServer image provides AMD VA-API; AMD OpenCL required the official jellyfin-amd mod.",
+      "Choose AMD + OpenCL or Intel + OpenCL to install the corresponding official LinuxServer mod at startup. These are options for the same image, not additional catalog variants.",
+      "ProxMenux passes explicit device paths through ATTACHED_DEVICES_PERMS so the native LinuxServer init grants the service user access. No privileged LXC or mode 0777 is needed.",
+      "Optional Jellyfin settings are persisted in /config/encoding.xml. AMD OpenCL and VA-API were tested on Lucienne; Intel OpenCL remains untested in this laboratory. Dolby Vision support depends on the source profile and FFmpeg/GPU capabilities."
+    ]
+  },
+  "proxmox": {
+    "deployment_profile": {
+      "variant": "hardware-selectable",
+      "gpu_passthrough": "installer-selection"
+    },
+    "installer_profile": {
+      "hardware_acceleration": {
+        "prompt": "Hardware acceleration for Jellyfin",
+        "default": "none",
+        "profiles": [
+          {
+            "id": "none",
+            "label": "No acceleration (CPU)",
+            "device_requests": []
+          },
+          {
+            "id": "vaapi",
+            "label": "Intel/AMD VA-API      (no OpenCL mod)",
+            "device_requests": [
+              {
+                "id": "vaapi-render",
+                "kind": "character-device",
+                "purpose": "vaapi",
+                "path_prompt": "GPU render device",
+                "host_path_default": "/dev/dri/renderD128",
+                "container_path_strategy": "same-as-host",
+                "mode": "0660",
+                "deny_write": false,
+                "gid_strategy": "host-device-gid",
+                "environment": [
+                  {
+                    "name": "LIBVA_DRIVER_NAME",
+                    "prompt": "VA-API driver",
+                    "choices": [
+                      "auto",
+                      "radeonsi",
+                      "iHD",
+                      "i965"
+                    ],
+                    "default": "auto",
+                    "omit_values": [
+                      "auto"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "environment_from_devices": {
+              "ATTACHED_DEVICES_PERMS": [
+                "vaapi-render"
+              ]
+            }
+          },
+          {
+            "id": "amd-opencl",
+            "label": "AMD VA-API + OpenCL   (official mod)",
+            "device_requests": [
+              {
+                "id": "vaapi-render",
+                "kind": "character-device",
+                "purpose": "vaapi",
+                "path_prompt": "GPU render device",
+                "host_path_default": "/dev/dri/renderD128",
+                "container_path_strategy": "same-as-host",
+                "mode": "0660",
+                "deny_write": false,
+                "gid_strategy": "host-device-gid",
+                "drm_vendor_ids": [
+                  "0x1002",
+                  "0x1022"
+                ]
+              },
+              {
+                "id": "amd-kfd",
+                "kind": "character-device",
+                "purpose": "amd-opencl",
+                "path_prompt": "AMD KFD device",
+                "host_path_default": "/dev/kfd",
+                "container_path_strategy": "same-as-host",
+                "mode": "0660",
+                "deny_write": false,
+                "gid_strategy": "host-device-gid"
+              }
+            ],
+            "environment_from_devices": {
+              "ATTACHED_DEVICES_PERMS": [
+                "vaapi-render",
+                "amd-kfd"
+              ]
+            },
+            "environment": [
+              {
+                "name": "DOCKER_MODS",
+                "value": "linuxserver/mods:jellyfin-amd"
+              }
+            ],
+            "post_start_configurations": [
+              {
+                "id": "jellyfin-amd-opencl",
+                "type": "jellyfin-encoding-xml",
+                "enable_prompt": "Enable VA-API, hardware encoding and OpenCL tone mapping in Jellyfin",
+                "enabled_default": true,
+                "required": true,
+                "timeout_seconds": 120,
+                "candidate_paths": [
+                  "/config/encoding.xml"
+                ],
+                "settings": {
+                  "HardwareAccelerationType": "vaapi",
+                  "VaapiDevice": {
+                    "device_path_from": "vaapi-render"
+                  },
+                  "EnableHardwareEncoding": "true",
+                  "EnableTonemapping": "true",
+                  "EnableVppTonemapping": "false"
+                }
+              }
+            ],
+            "architectures": [
+              "amd64"
+            ]
+          },
+          {
+            "id": "intel-opencl",
+            "label": "Intel VA-API + OpenCL (official mod)",
+            "device_requests": [
+              {
+                "id": "vaapi-render",
+                "kind": "character-device",
+                "purpose": "vaapi",
+                "path_prompt": "GPU render device",
+                "host_path_default": "/dev/dri/renderD128",
+                "container_path_strategy": "same-as-host",
+                "mode": "0660",
+                "deny_write": false,
+                "gid_strategy": "host-device-gid",
+                "drm_vendor_ids": [
+                  "0x8086"
+                ]
+              }
+            ],
+            "environment_from_devices": {
+              "ATTACHED_DEVICES_PERMS": [
+                "vaapi-render"
+              ]
+            },
+            "environment": [
+              {
+                "name": "DOCKER_MODS",
+                "value": "linuxserver/mods:jellyfin-opencl-intel"
+              }
+            ],
+            "post_start_configurations": [
+              {
+                "id": "jellyfin-intel-opencl",
+                "type": "jellyfin-encoding-xml",
+                "enable_prompt": "Enable VA-API, hardware encoding and OpenCL tone mapping in Jellyfin",
+                "enabled_default": true,
+                "required": true,
+                "timeout_seconds": 120,
+                "candidate_paths": [
+                  "/config/encoding.xml"
+                ],
+                "settings": {
+                  "HardwareAccelerationType": "vaapi",
+                  "VaapiDevice": {
+                    "device_path_from": "vaapi-render"
+                  },
+                  "EnableHardwareEncoding": "true",
+                  "EnableTonemapping": "true",
+                  "EnableVppTonemapping": "false"
+                }
+              }
+            ],
+            "architectures": [
+              "amd64"
+            ]
+          },
+          {
+            "id": "nvidia",
+            "label": "NVIDIA (NVENC/NVDEC)",
+            "device_requests": [
+              {
+                "id": "nvidia-runtime",
+                "kind": "nvidia-runtime",
+                "purpose": "nvidia-cuda-nvenc-nvdec",
+                "device_selection": "all-requested-by-compose"
+              }
+            ],
+            "environment": [
+              {
+                "name": "NVIDIA_VISIBLE_DEVICES",
+                "value": "all"
+              }
+            ]
+          }
+        ]
+      },
+      "startup_healthcheck": {
+        "scheme": "http",
+        "port": 8096,
+        "path": "/System/Info/Public",
+        "timeout_seconds": 600,
+        "request_timeout_seconds": 10,
+        "stability_seconds": 4,
+        "verify_tls": false
+      }
+    },
+    "application_options": {
+      "hdr10_dolby_vision_tone_mapping": {
+        "show_in_catalog": true,
+        "selectable": true,
+        "provided_by_image": false,
+        "configuration": "Optional official LinuxServer GPU mod and persistent Jellyfin encoding settings",
+        "scope": "OpenCL tone mapping; not a guarantee for every HDR/Dolby Vision source"
+      }
+    },
+    "defaults": {
+      "cores": 2,
+      "memory_mb": 2048
+    },
+    "gpu_lab_references": {
+      "amd_mod": "https://github.com/linuxserver/docker-mods/tree/jellyfin-amd",
+      "intel_mod": "https://github.com/linuxserver/docker-mods/tree/jellyfin-opencl-intel"
+    }
+  },
+  "container_contract": {
+    "environment": [
+      {
+        "name": "PUID",
+        "example": "1000",
+        "required": true,
+        "sensitive": false,
+        "source": "linuxserver-compose"
+      },
+      {
+        "name": "PGID",
+        "example": "1000",
+        "required": true,
+        "sensitive": false,
+        "source": "linuxserver-compose"
+      },
+      {
+        "name": "TZ",
+        "example": "Etc/UTC",
+        "required": true,
+        "sensitive": false,
+        "source": "linuxserver-compose"
+      }
+    ],
+    "volumes": [
+      {
+        "id": "volume-0",
+        "container_path": "/config",
+        "compose_source_example": "/path/to/jellyfin/library",
+        "read_only": false,
+        "required": true,
+        "installation_choice": [
+          "managed-volume",
+          "host-bind"
+        ],
+        "default": "managed-volume",
+        "managed_volume": {
+          "backup": true,
+          "default_size_gb": 16
+        }
+      },
+      {
+        "id": "volume-1",
+        "container_path": "/data/tvshows",
+        "compose_source_example": "/path/to/tvseries",
+        "read_only": false,
+        "required": true,
+        "installation_choice": [
+          "managed-volume",
+          "host-bind"
+        ],
+        "default": "managed-volume",
+        "managed_volume": {
+          "backup": true,
+          "default_size_gb": 8
+        }
+      },
+      {
+        "id": "volume-2",
+        "container_path": "/data/movies",
+        "compose_source_example": "/path/to/movies",
+        "read_only": false,
+        "required": true,
+        "installation_choice": [
+          "managed-volume",
+          "host-bind"
+        ],
+        "default": "managed-volume",
+        "managed_volume": {
+          "backup": true,
+          "default_size_gb": 8
+        }
+      }
+    ]
+  }
+}

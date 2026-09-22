@@ -1,0 +1,15 @@
+{
+  "proxmox": {
+    "installer_profile": {
+      "selkies": {
+        "base": "FROM ghcr.io/linuxserver/baseimage-selkies:ubunturesolute",
+        "dockerfile_url": "https://raw.githubusercontent.com/linuxserver/docker-audacity/master/Dockerfile",
+        "dockerfile_sha256": "3feef0cf6583765091dae20ab79c21095c9a651e9d8b0f8edd05b3154c12584f",
+        "reviewed_on": "2026-09-16",
+        "documentation": "https://docs.linuxserver.io/images/docker-baseimage-selkies/",
+        "nvidia": "not-offered-until-specific-host-and-image-validation",
+        "validation": "profile-generated; real streaming workload pending"
+      }
+    }
+  }
+}

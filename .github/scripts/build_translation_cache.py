@@ -79,6 +79,21 @@ PROTECTED_TECHNICAL_TERMS = (
     "ZFS",
     "SSH",
     "fork",
+    # Vendor, API and acceleration names. A label like "NVIDIA (NVDEC/CUDA)"
+    # is a product name end to end: every provider hands it back as it came,
+    # and without these entries that correct answer is read as a failure and
+    # the string is dropped from the catalogue.
+    "VA-API",
+    "NVIDIA",
+    "NVDEC",
+    "NVENC",
+    "WebUI",
+    "Intel",
+    "CUDA",
+    "KFD",
+    "GPU",
+    "CPU",
+    "AMD",
 )
 TECHNICAL_TERM_RE = re.compile(
     "|".join(
@@ -91,6 +106,36 @@ TRANSLATE_CALL_RE = re.compile(
     r"""translate\s+(?P<quote>["'])(?P<text>(?:\\.|(?! (?P=quote) ).)*?)(?P=quote)""",
     re.VERBOSE | re.DOTALL,
 )
+# Providers that answer the same thing every time for the same input, so a
+# second attempt cannot produce a different result. `appimage` shells out to a
+# binary that may reach a network service, so it is not on the list.
+DETERMINISTIC_PROVIDERS = frozenset({"argos"})
+
+
+def protect_catalog_titles(directories) -> None:
+    """Add every application name in the catalog to the protected glossary.
+
+    They are product names, and a translator treats them as words: "HAOS One"
+    comes back as "HAOS Man". Protecting them costs nothing and the failure it
+    prevents reaches the reader as an application that does not exist.
+    """
+    global TECHNICAL_TERM_RE
+    titles: set[str] = set()
+    for directory in directories:
+        for path in sorted(Path(directory).rglob("*.json")):
+            try:
+                data = json.loads(path.read_text(encoding="utf-8"))
+            except (OSError, ValueError):
+                continue
+            title = ((data.get("catalog_ui") or {}).get("title") or {}).get("en_US")
+            if isinstance(title, str) and title.strip():
+                titles.add(title.strip())
+    if not titles:
+        return
+    terms = tuple(sorted(set(PROTECTED_TECHNICAL_TERMS) | titles, key=len, reverse=True))
+    TECHNICAL_TERM_RE = re.compile(
+        "|".join(re.escape(term) for term in terms), re.IGNORECASE)
+    print(f"Protected application names: {len(titles)}", flush=True)
 
 
 def protect_technical_terms(text: str) -> tuple[str, list[str]]:
@@ -99,7 +144,7 @@ def protect_technical_terms(text: str) -> tuple[str, list[str]]:
 
     def _swap(match: re.Match[str]) -> str:
         protected.append(match.group(0))
-        return f"__PMX_TERM_{len(protected) - 1}__"
+        return f"PMXTERM{len(protected) - 1:03d}"
 
     return TECHNICAL_TERM_RE.sub(_swap, text), protected
 
@@ -107,7 +152,7 @@ def protect_technical_terms(text: str) -> tuple[str, list[str]]:
 def restore_technical_terms(text: str, protected: list[str]) -> str:
     """Restore glossary terms exactly as they appeared in the source."""
     for index, original in enumerate(protected):
-        text = text.replace(f"__PMX_TERM_{index}__", original)
+        text = text.replace(f"PMXTERM{index:03d}", original)
     return text
 
 
@@ -159,6 +204,93 @@ def extract_translate_texts(
                 found.setdefault(text, None)
 
     return sorted(found)
+
+
+PYTHON_TRANSLATE_CALLS = {"translate", "N_"}
+CATALOG_TEXT_KEYS = {"prompt", "enable_prompt", "path_prompt", "size_prompt", "label", "warning"}
+CATALOG_TEXT_LISTS = {"stack_completion_notes", "completion_notes"}
+
+
+def extract_python_texts(directories: Iterable[Path]) -> list[str]:
+    """translate("...") and N_("...") calls with a literal argument. The parser
+    joins implicitly concatenated literals, so wrapped strings are found whole."""
+    found: dict[str, None] = {}
+    for directory in directories:
+        for path in sorted(directory.rglob("*.py")):
+            try:
+                tree = ast.parse(path.read_text(encoding="utf-8"))
+            except (SyntaxError, UnicodeDecodeError):
+                continue
+            for node in ast.walk(tree):
+                if (isinstance(node, ast.Call) and getattr(node.func, "id", None) in PYTHON_TRANSLATE_CALLS
+                        and node.args and isinstance(node.args[0], ast.Constant)
+                        and isinstance(node.args[0].value, str)):
+                    text = node.args[0].value.strip()
+                    if text:
+                        found.setdefault(text, None)
+    return sorted(found)
+
+
+def extract_catalog_texts(directories: Iterable[Path]) -> list[str]:
+    """User-visible text stored in the OCI catalog JSON: prompts, labels,
+    warnings, completion notes, category labels and descriptive usernames."""
+    found: dict[str, None] = {}
+
+    def add(value: object) -> None:
+        if isinstance(value, str) and value.strip():
+            found.setdefault(value.strip(), None)
+
+    def walk(value: object, key: str = "") -> None:
+        if isinstance(value, dict):
+            for child_key, child in value.items():
+                if child_key in CATALOG_TEXT_KEYS:
+                    add(child)
+                elif child_key in CATALOG_TEXT_LISTS and isinstance(child, list):
+                    for item in child:
+                        add(item)
+                elif child_key == "username" and isinstance(child, str) and " " in child:
+                    add(child)
+                elif child_key == "catalog_ui" and isinstance(child, dict):
+                    # What the application detail screen shows: the tagline,
+                    # and the description only where there is no tagline. The
+                    # catalog stores the source English; the translation lives
+                    # in the language cache with every other string.
+                    tagline = (child.get("tagline") or {}).get("en_US")
+                    add(tagline or (child.get("description") or {}).get("en_US"))
+                elif child_key == "labels" and key == "" and isinstance(child, dict):
+                    for item in child.values():
+                        add(item)
+                walk(child, child_key)
+        elif isinstance(value, list):
+            for item in value:
+                walk(item, key)
+
+    for directory in directories:
+        for path in sorted(directory.rglob("*.json")):
+            try:
+                walk(json.loads(path.read_text(encoding="utf-8")))
+            except (OSError, ValueError):
+                continue
+    return sorted(found)
+
+
+def translate_argos(text: str, dest_lang: str) -> str:
+    """LibreTranslate's engine, running locally.
+
+    A public endpoint answers a few thousand strings and then starts
+    refusing — and the library wrapper around it returns the English
+    unchanged rather than raising, which writes the source text into the
+    catalogue as if it were a translation. Local models have no quota and
+    no silent failure mode.
+    """
+    try:
+        import argostranslate.translate as argos  # type: ignore
+    except Exception as exc:
+        raise RuntimeError(
+            "argostranslate is not installed. Install argostranslate and the "
+            "en->target packages, or run with another provider."
+        ) from exc
+    return argos.translate(text, "en", dest_lang)
 
 
 def translate_googletrans(text: str, dest_lang: str, context: str) -> str:
@@ -302,7 +434,9 @@ def translate_text(
     appimage_path: Path,
 ) -> str:
     protected_text, protected_terms = protect_technical_terms(text)
-    if provider == "googletrans":
+    if provider == "argos":
+        translated = translate_argos(protected_text, dest_lang)
+    elif provider == "googletrans":
         translated = translate_googletrans(protected_text, dest_lang, context)
     elif provider == "google-web":
         translated = translate_google_web(protected_text, dest_lang, context, timeout)
@@ -328,6 +462,32 @@ def load_language_cache(path: Path) -> dict[str, str]:
     return {str(text): str(value) for text, value in data.items()}
 
 
+def is_fully_protected(source: str) -> bool:
+    """Whether the string is glossary terms and punctuation, nothing else.
+
+    "Docker Volume Backup" and "NVIDIA (NVDEC/CUDA)" are product and API
+    names from end to end. Coming back unchanged is the right answer for
+    them, so the guard below must not read it as a silent failure and throw
+    the result away.
+    """
+    return not re.search(r"[A-Za-z]{2,}", TECHNICAL_TERM_RE.sub(" ", source))
+
+
+def looks_untranslated(source: str, result: str) -> bool:
+    """Whether a provider handed back the text it was given.
+
+    A single technical word legitimately survives translation — Docker, GPU,
+    LXC — but a sentence coming back byte-identical means the provider failed
+    without saying so. Accepting it writes English into the catalogue, where
+    it counts as translated and is never looked at again.
+    """
+    if source.strip() != result.strip():
+        return False
+    if is_fully_protected(source):
+        return False
+    return len([word for word in re.findall(r"[A-Za-z]{2,}", source)]) >= 3
+
+
 def write_language_cache(path: Path, cache: dict[str, str]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     tmp_path = path.with_suffix(path.suffix + ".tmp")
@@ -343,6 +503,30 @@ def build_arg_parser() -> argparse.ArgumentParser:
         description="Extract translate calls from scripts/ and build json/cache.json."
     )
     parser.add_argument("--scripts-dir", default="scripts", type=Path)
+    parser.add_argument(
+        "--extra-dir",
+        action="append",
+        default=[],
+        type=Path,
+        metavar="PATH",
+        help="Extra directory scanned for translate calls in .sh files. Repeatable.",
+    )
+    parser.add_argument(
+        "--python-dir",
+        action="append",
+        default=[],
+        type=Path,
+        metavar="PATH",
+        help="Directory scanned for translate()/N_() calls in .py files. Repeatable.",
+    )
+    parser.add_argument(
+        "--catalog-dir",
+        action="append",
+        default=[],
+        type=Path,
+        metavar="PATH",
+        help="Directory of OCI catalog JSON files with user-visible text. Repeatable.",
+    )
     parser.add_argument(
         "--extra-file",
         action="append",
@@ -375,7 +559,7 @@ def build_arg_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument(
         "--provider",
-        choices=("appimage", "googletrans", "google-web"),
+        choices=("argos", "appimage", "googletrans", "google-web"),
         default="appimage",
         help="Translation provider to use. Default: appimage",
     )
@@ -388,6 +572,10 @@ def build_arg_parser() -> argparse.ArgumentParser:
     parser.add_argument("--context", default=DEFAULT_CONTEXT)
     parser.add_argument("--timeout", default=30, type=int)
     parser.add_argument("--sleep", default=0.15, type=float)
+    parser.add_argument("--retries", default=4, type=int,
+                        help="Attempts per string before giving up on it.")
+    parser.add_argument("--retry-wait", default=15, type=float,
+                        help="Seconds before the first retry; it doubles each time.")
     parser.add_argument(
         "--refresh",
         action="store_true",
@@ -430,13 +618,26 @@ def main() -> int:
         return 1
 
     texts = extract_translate_texts(scripts_dir, args.extra_file)
+    for directory in args.extra_dir:
+        if directory.is_dir():
+            texts += extract_translate_texts(directory.resolve())
+    texts += extract_python_texts(d.resolve() for d in args.python_dir if d.is_dir())
+    catalog_dirs = [d.resolve() for d in args.catalog_dir if d.is_dir()]
+    protect_catalog_titles(catalog_dirs)
+    texts += extract_catalog_texts(catalog_dirs)
+    texts = sorted(dict.fromkeys(text for text in texts if "$" not in text and "`" not in text))
     if args.limit > 0:
         texts = texts[: args.limit]
     existing_by_lang = {
         lang: load_language_cache(output_dir / f"{lang}.json")
         for lang in languages
     }
-    next_by_lang: dict[str, dict[str, str]] = {lang: {} for lang in languages}
+    # Seeded with what is already translated so a periodic save — or an
+    # interrupted run — writes a superset of the file it replaces, never a
+    # truncated one.
+    next_by_lang: dict[str, dict[str, str]] = {
+        lang: dict(existing_by_lang.get(lang, {})) for lang in languages
+    }
     print(f"Found {len(texts)} unique translate strings.", flush=True)
     print(f"Output directory: {output_dir}", flush=True)
     print(f"Languages: {', '.join(languages)}", flush=True)
@@ -459,20 +660,51 @@ def main() -> int:
                 continue
 
             print(f"[{done}/{total}] {lang} ({index}/{len(texts)}): {text[:80]}", flush=True)
-            try:
-                next_by_lang[lang][text] = translate_text(
-                    text,
-                    lang,
-                    args.provider,
-                    args.context,
-                    args.timeout,
-                    args.appimage_path,
-                )
-                print(f"  => {next_by_lang[lang][text][:100]}", flush=True)
-            except Exception as exc:
-                next_by_lang[lang][text] = existing.get(text, text)
-                failures.append((text, lang, str(exc)))
-                print(f"  failed: {exc}", file=sys.stderr, flush=True)
+            # A rate limit is a "come back later", not an answer. Retrying with
+            # a growing wait recovers it; giving up on the first one is what
+            # left thousands of strings untranslated.
+            value, last_error = None, None
+            for attempt in range(1, args.retries + 1):
+                unchanged = False
+                try:
+                    value = translate_text(
+                        text,
+                        lang,
+                        args.provider,
+                        args.context,
+                        args.timeout,
+                        args.appimage_path,
+                    )
+                    if looks_untranslated(text, value):
+                        value = None
+                        unchanged = True
+                        raise RuntimeError("the provider returned the source text unchanged")
+                    break
+                except Exception as exc:
+                    last_error = exc
+                    # Unchanged text from a remote provider is how a rate limit
+                    # shows up, so it is worth waiting for. A local engine is
+                    # deterministic: asking again returns the same string, and
+                    # the backoff only buys minutes of sleeping per phrase.
+                    if unchanged and args.provider in DETERMINISTIC_PROVIDERS:
+                        break
+                    if attempt < args.retries:
+                        wait = args.retry_wait * (2 ** (attempt - 1))
+                        print(f"  retry {attempt}/{args.retries - 1} in {wait}s: {exc}",
+                              file=sys.stderr, flush=True)
+                        time.sleep(wait)
+            if value is not None:
+                next_by_lang[lang][text] = value
+                print(f"  => {value[:100]}", flush=True)
+            else:
+                # The key is left out on purpose. Writing the English here
+                # would count as a translation on the next run and the string
+                # would never be translated again.
+                previous = existing.get(text)
+                if previous:
+                    next_by_lang[lang][text] = previous
+                failures.append((text, lang, str(last_error)))
+                print(f"  failed: {last_error}", file=sys.stderr, flush=True)
             if args.save_every > 0 and index % args.save_every == 0:
                 write_language_cache(output_dir / f"{lang}.json", next_by_lang[lang])
             time.sleep(args.sleep)

@@ -1,0 +1,73 @@
+{
+  "container_contract": {
+    "environment": [
+      {
+        "name": "PORT",
+        "example": "3025",
+        "required": true,
+        "sensitive": false,
+        "source": "docker-compose"
+      },
+      {
+        "name": "DATABASE_PATH",
+        "example": "/root/.flowise",
+        "required": true,
+        "sensitive": false,
+        "source": "docker-compose"
+      },
+      {
+        "name": "APIKEY_PATH",
+        "example": "/root/.flowise",
+        "required": true,
+        "sensitive": false,
+        "prompt_user": false,
+        "source": "flowise-documentation"
+      },
+      {
+        "name": "SECRETKEY_PATH",
+        "example": "/root/.flowise",
+        "required": true,
+        "sensitive": false,
+        "prompt_user": false,
+        "source": "flowise-documentation"
+      },
+      {
+        "name": "LOG_PATH",
+        "example": "/root/.flowise/logs",
+        "required": true,
+        "sensitive": false,
+        "source": "docker-compose"
+      },
+      {
+        "name": "BLOB_STORAGE_PATH",
+        "example": "/root/.flowise/storage",
+        "required": true,
+        "sensitive": false,
+        "source": "docker-compose"
+      },
+      {
+        "name": "FLOWISE_USERNAME",
+        "example": "flowise",
+        "required": false,
+        "sensitive": false,
+        "prompt": "User name of the deprecated Flowise application login (only read by Flowise versions before 3.0.1)",
+        "source": "flowise-documentation"
+      },
+      {
+        "name": "FLOWISE_PASSWORD",
+        "example": "",
+        "required": false,
+        "sensitive": true,
+        "prompt": "Password of the deprecated Flowise application login (only read by Flowise versions before 3.0.1)",
+        "source": "flowise-documentation"
+      }
+    ]
+  },
+  "proxmox": {
+    "installer_profile": {
+      "completion_notes": [
+        "Flowise 3.0.1 and later create the administrator account from the web interface, the first time it is opened."
+      ]
+    }
+  }
+}

@@ -1,0 +1,280 @@
+{
+  "schema_version": "0.3.0",
+  "kind": "proxmenux.oci-template",
+  "id": "linuxserver-firefox",
+  "status": "generated-unvalidated",
+  "catalog_ui": {
+    "title": {
+      "en_US": "Firefox"
+    },
+    "tagline": {
+      "en_US": "Firefox Browser, also known as Mozilla Firefox or simply Firefox, is a free and open-source web browser developed by the Mozilla Foundation and its subsidiary, the Mozilla Corporation. Firefox uses the Gecko layout engine to render web pages, which implements current and anticipated web standards."
+    },
+    "description": {
+      "en_US": "Firefox Browser, also known as Mozilla Firefox or simply Firefox, is a free and open-source web browser developed by the Mozilla Foundation and its subsidiary, the Mozilla Corporation. Firefox uses the Gecko layout engine to render web pages, which implements current and anticipated web standards."
+    },
+    "category": "misc",
+    "category_label": "Miscellaneous",
+    "author": "LinuxServer.io",
+    "developer": null,
+    "icon": "https://raw.githubusercontent.com/linuxserver/docker-templates/master/linuxserver.io/img/firefox-icon.png",
+    "thumbnail": "https://raw.githubusercontent.com/linuxserver/docker-templates/master/linuxserver.io/img/firefox-banner.png",
+    "screenshots": [],
+    "architectures": [
+      "amd64",
+      "arm64"
+    ],
+    "launch": {
+      "scheme": "https",
+      "port": 3001,
+      "path": "/"
+    },
+    "website": "https://www.mozilla.org/en-US/firefox/",
+    "documentation": "https://docs.linuxserver.io/images/docker-firefox/",
+    "repository": "https://github.com/linuxserver/docker-firefox",
+    "tips": [],
+    "mini_changelog": [
+      {
+        "date": "2026-07-04",
+        "note": "Deprecate Kasm branch."
+      },
+      {
+        "date": "2026-04-19",
+        "note": "Rebase to resolute."
+      },
+      {
+        "date": "2026-03-31",
+        "note": "Make Wayland default disable with PIXELFLUX_WAYLAND=false."
+      },
+      {
+        "date": "2025-12-20",
+        "note": "Add Wayland init logic."
+      },
+      {
+        "date": "2025-08-26",
+        "note": "Suppress sandbox security warning as it's misleading inside a container."
+      }
+    ],
+    "display_version": null,
+    "updated_at": "2026-07-04"
+  },
+  "source": {
+    "provider": "linuxserver.io",
+    "repository": "https://github.com/linuxserver/docker-firefox",
+    "default_branch": "master",
+    "revision": "b0424c506af53f07a35604ff6656170fc43f3a14",
+    "readme_raw_url": "https://raw.githubusercontent.com/linuxserver/docker-firefox/b0424c506af53f07a35604ff6656170fc43f3a14/README.md",
+    "readme_pushed_at": "2026-09-09T23:03:18Z",
+    "compose_sha256": "eec0a6e3ffc2d05c9e72d9d7b0ca2ef22cd899a318fb2408a113768d127a2870",
+    "generated_at": "2026-09-12T14:37:46+00:00"
+  },
+  "container_contract": {
+    "service_name": "firefox",
+    "container_name": "firefox",
+    "image": {
+      "reference": "lscr.io/linuxserver/firefox:latest",
+      "registry": "lscr.io",
+      "repository": "lscr.io/linuxserver/firefox",
+      "tag": "latest",
+      "digest": null,
+      "pull_policy": "resolve-selected-tag-to-architecture-digest-at-install"
+    },
+    "environment": [
+      {
+        "name": "PUID",
+        "example": "1000",
+        "required": true,
+        "sensitive": false,
+        "source": "linuxserver-compose"
+      },
+      {
+        "name": "PGID",
+        "example": "1000",
+        "required": true,
+        "sensitive": false,
+        "source": "linuxserver-compose"
+      },
+      {
+        "name": "TZ",
+        "example": "Etc/UTC",
+        "required": true,
+        "sensitive": false,
+        "source": "linuxserver-compose"
+      },
+      {
+        "name": "FIREFOX_CLI",
+        "example": "https://www.linuxserver.io/",
+        "required": false,
+        "sensitive": false,
+        "source": "linuxserver-compose"
+      }
+    ],
+    "volumes": [
+      {
+        "id": "volume-0",
+        "container_path": "/config",
+        "compose_source_example": "/path/to/firefox/config",
+        "read_only": false,
+        "required": true,
+        "installation_choice": [
+          "managed-volume",
+          "host-bind"
+        ],
+        "default": "managed-volume",
+        "managed_volume": {
+          "backup": true,
+          "default_size_gb": 4
+        }
+      }
+    ],
+    "ports": [
+      {
+        "container_port": 3000,
+        "published_example": 3000,
+        "protocol": "tcp",
+        "required": true,
+        "proxmox_behavior": "listener-on-dedicated-lxc-address-no-nat"
+      },
+      {
+        "container_port": 3001,
+        "published_example": 3001,
+        "protocol": "tcp",
+        "required": true,
+        "proxmox_behavior": "listener-on-dedicated-lxc-address-no-nat"
+      }
+    ],
+    "related_services": [],
+    "restart": "unless-stopped",
+    "stop_grace_period": null,
+    "original_compose": "---\nservices:\n  firefox:\n    image: lscr.io/linuxserver/firefox:latest\n    container_name: firefox\n    environment:\n      - PUID=1000\n      - PGID=1000\n      - TZ=Etc/UTC\n      - FIREFOX_CLI=https://www.linuxserver.io/ #optional\n    volumes:\n      - /path/to/firefox/config:/config\n    ports:\n      - 3000:3000\n      - 3001:3001\n    shm_size: \"1gb\"\n    restart: unless-stopped\n"
+  },
+  "first_run": {
+    "endpoints": [
+      {
+        "label": "Web UI",
+        "scheme": "https",
+        "port": 3001,
+        "path": "/",
+        "source": "linuxserver-readme-application-setup"
+      }
+    ],
+    "credentials": []
+  },
+  "proxmox": {
+    "runtime": "native-oci-lxc",
+    "technology_status": "proxmox-technology-preview",
+    "defaults": {
+      "unprivileged": true,
+      "ostype": "auto-from-image",
+      "cores": 2,
+      "memory_mb": 1024,
+      "swap_mb": 512,
+      "rootfs_size_gb": 8,
+      "rootfs_storage": "local-lvm",
+      "volume_storage": "local-lvm",
+      "template_storage": "local",
+      "bridge": "vmbr0",
+      "ipv4": "dhcp",
+      "firewall": true,
+      "host_managed_network": true,
+      "onboot": false,
+      "features": [
+        "nesting=1"
+      ],
+      "shutdown_timeout_seconds": 30
+    },
+    "image_metadata_policy": {
+      "entrypoint": "import-from-oci-image",
+      "cmd": "import-from-oci-image",
+      "environment": "import-image-env-then-apply-compose-overrides",
+      "user": "import-from-oci-image",
+      "working_dir": "import-from-oci-image",
+      "stop_signal": "import-from-oci-image"
+    },
+    "adaptations": [
+      {
+        "id": "dedicated-lxc-network",
+        "upstream_behavior": "Docker publishes selected container ports on the Docker host.",
+        "native_lxc_behavior": "The application listens on the same container ports at its dedicated LXC address.",
+        "reason": "A native LXC has its own address and does not require Docker port NAT.",
+        "behavioral_impact": "Users open the LXC address instead of the Proxmox host address.",
+        "validation": "pending-per-application"
+      },
+      {
+        "id": "compose-environment-overlay",
+        "upstream_behavior": "Compose environment values override OCI image environment values.",
+        "native_lxc_behavior": "ProxMenux merges the same values into lxc.environment.runtime while the CT is stopped.",
+        "reason": "PVE imports image Env automatically; Compose values still need to override it.",
+        "behavioral_impact": "None expected.",
+        "validation": "pending-per-application"
+      },
+      {
+        "id": "stop-grace-period",
+        "upstream_behavior": "Docker waits for Compose stop_grace_period before forcing termination.",
+        "native_lxc_behavior": "ProxMenux records the same timeout for its pct shutdown lifecycle operations.",
+        "reason": "Proxmox has no equivalent per-CT persistent restart-policy field; startup.down is not a shutdown timeout.",
+        "behavioral_impact": "Normal Proxmox node shutdown remains governed by the node-wide shutdown policy.",
+        "validation": "not-requested-by-compose"
+      },
+      {
+        "id": "compose-shm-size",
+        "upstream_behavior": "Compose sets the size of the container /dev/shm tmpfs.",
+        "native_lxc_behavior": "ProxMenux mounts a native LXC tmpfs at /dev/shm with the same requested capacity.",
+        "reason": "The OCI image runs directly as an LXC and therefore needs the equivalent Proxmox mount entry.",
+        "behavioral_impact": "None expected.",
+        "validation": "pending-per-application"
+      }
+    ],
+    "installer_profile": {
+      "tmpfs_mounts": [
+        {
+          "id": "compose-shm",
+          "container_path": "/dev/shm",
+          "default_size_mb": 1024,
+          "minimum_size_mb": 1,
+          "size_prompt": "Size of the /dev/shm shared memory in MB",
+          "mount_options": [
+            "rw",
+            "nosuid",
+            "nodev"
+          ]
+        }
+      ]
+    }
+  },
+  "compatibility": {
+    "automatic_install_candidate": true,
+    "validated": false,
+    "supported_compose_keys": [
+      "container_name",
+      "environment",
+      "image",
+      "ports",
+      "restart",
+      "shm_size",
+      "stop_grace_period",
+      "volumes"
+    ],
+    "untranslated_blockers": [],
+    "policy": "A generated template is never promoted to validated without install, health, restart and persistence tests."
+  },
+  "validation": {
+    "schema": "passed-at-generation",
+    "clean_install": "pending",
+    "service_health": "pending",
+    "restart_persistence": "pending",
+    "backup_restore": "pending",
+    "update_preserves_data": "pending"
+  },
+  "lifecycle": {
+    "update_strategy": "replace-rootfs-from-new-oci-image-preserve-managed-volumes",
+    "registry_state": {
+      "resolved_architecture": null,
+      "resolved_digest": null,
+      "image_version_label": null,
+      "image_created": null
+    },
+    "change_detection": "compare-resolved-architecture-digest",
+    "automatic_unattended_updates": false
+  }
+}

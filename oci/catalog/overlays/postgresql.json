@@ -1,0 +1,80 @@
+{
+  "container_contract": {
+    "environment": [
+      {
+        "name": "PUID",
+        "example": "$PUID",
+        "required": true,
+        "sensitive": false,
+        "source": "docker-compose"
+      },
+      {
+        "name": "PGID",
+        "example": "$PGID",
+        "required": true,
+        "sensitive": false,
+        "source": "docker-compose"
+      },
+      {
+        "name": "TZ",
+        "example": "$TZ",
+        "required": true,
+        "sensitive": false,
+        "source": "docker-compose"
+      },
+      {
+        "name": "POSTGRES_USER",
+        "example": "postgresql",
+        "required": true,
+        "sensitive": false,
+        "prompt": "Name of the PostgreSQL user created on the first start",
+        "source": "postgres-official-image"
+      },
+      {
+        "name": "POSTGRES_PASSWORD",
+        "example": "",
+        "required": true,
+        "sensitive": true,
+        "prompt": "Password of the PostgreSQL user",
+        "source": "postgres-official-image"
+      },
+      {
+        "name": "POSTGRES_DB",
+        "example": "postgresql",
+        "required": true,
+        "sensitive": false,
+        "prompt": "Name of the database created on the first start",
+        "source": "postgres-official-image"
+      }
+    ]
+  },
+  "first_run": {
+    "credentials": [
+      {
+        "label": "PostgreSQL",
+        "type": "configured-or-installer-generated",
+        "username": "postgresql",
+        "password": null,
+        "username_environment": "POSTGRES_USER",
+        "password_environment": "POSTGRES_PASSWORD",
+        "change_required": false,
+        "source": "postgres-official-image",
+        "retrieval": null
+      }
+    ]
+  },
+  "proxmox": {
+    "installer_profile": {
+      "generated_sensitive_environment": {
+        "POSTGRES_PASSWORD": {
+          "strategy": "token-hex",
+          "bytes": 16,
+          "prompt": true
+        }
+      },
+      "completion_notes": [
+        "PostgreSQL creates the database named in POSTGRES_DB on the first start. The installer default is postgresql."
+      ]
+    }
+  }
+}

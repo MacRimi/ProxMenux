@@ -2672,7 +2672,7 @@ hb_configure_borg_manual() {
 
     _borg_repo_ref_new="$repo"
     if [[ -n "$ssh_key" ]]; then
-        local rsh_cmd="ssh -i $ssh_key -o StrictHostKeyChecking=accept-new"
+        local rsh_cmd="ssh -i $ssh_key -o IdentitiesOnly=yes -o StrictHostKeyChecking=accept-new"
         [[ -n "${port:-}" && "$port" != "22" ]] && rsh_cmd="$rsh_cmd -p $port"
         export BORG_RSH="$rsh_cmd"
     elif [[ -n "${port:-}" && "$port" != "22" ]]; then
@@ -2779,7 +2779,7 @@ hb_select_borg_repo() {
     _borg_repo_ref="${HB_BORG_REPOS[$sel]}"
     local key="${HB_BORG_KEYS[$sel]}"
     if [[ -n "$key" && -f "$key" ]]; then
-        export BORG_RSH="ssh -i $key -o StrictHostKeyChecking=accept-new"
+        export BORG_RSH="ssh -i $key -o IdentitiesOnly=yes -o StrictHostKeyChecking=accept-new"
     else
         unset BORG_RSH
     fi

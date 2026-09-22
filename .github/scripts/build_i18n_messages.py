@@ -131,6 +131,25 @@ def restore_placeholders(text: str, placeholders: list[str]) -> str:
     return text
 
 
+def translate_argos(text: str, lang: str) -> str:
+    """LibreTranslate's engine, running locally.
+
+    The remote providers answer a few thousand strings and then start
+    refusing, and a refusal here hands back the English and stores it as
+    a translation. Local models have no quota and no silent failure mode,
+    which is what makes them the right choice for filling a catalogue by
+    hand before it is committed.
+    """
+    try:
+        import argostranslate.translate as argos  # type: ignore
+    except Exception as exc:  # noqa: BLE001
+        raise RuntimeError(
+            "argostranslate is not installed. Install argostranslate and the "
+            "en->target packages, or run with another provider."
+        ) from exc
+    return argos.translate(text, "en", lang)
+
+
 def translate_one(
     text: str,
     lang: str,
@@ -139,7 +158,7 @@ def translate_one(
     timeout: int,
     appimage_path: Path,
 ) -> str:
-    """Dispatch to the correct provider. Reuses the same three
+    """Dispatch to the correct provider. Reuses the same
     implementations as build_translation_cache.py so there is exactly
     one place to fix if a provider changes upstream."""
     if provider == "googletrans":
@@ -148,6 +167,8 @@ def translate_one(
         raw = translate_google_web(text, lang, context, timeout)
     elif provider == "appimage":
         raw = translate_appimage(text, lang, context, timeout, appimage_path)
+    elif provider == "argos":
+        raw = translate_argos(text, lang)
     else:
         raise ValueError(f"Unknown provider: {provider}")
     return clean_translation(raw) or text
@@ -200,9 +221,13 @@ def build_arg_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument(
         "--provider",
-        choices=("appimage", "googletrans", "google-web"),
+        choices=("argos", "appimage", "googletrans", "google-web"),
         default="googletrans",
-        help="Translation provider. Default matches build_translation_cache.",
+        help=(
+            "Translation provider. The default matches build_translation_cache "
+            "and is what CI uses; `argos` runs locally with no quota and is the "
+            "one to reach for when filling a catalogue before committing it."
+        ),
     )
     parser.add_argument(
         "--appimage-path",

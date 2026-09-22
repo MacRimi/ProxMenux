@@ -1,0 +1,59 @@
+{
+  "container_contract": {
+    "environment": [
+      {
+        "name": "PUID",
+        "example": "1000",
+        "required": true,
+        "sensitive": false,
+        "source": "linuxserver-compose"
+      },
+      {
+        "name": "PGID",
+        "example": "1000",
+        "required": true,
+        "sensitive": false,
+        "source": "linuxserver-compose"
+      },
+      {
+        "name": "TZ",
+        "example": "Etc/UTC",
+        "required": true,
+        "sensitive": false,
+        "source": "linuxserver-compose"
+      },
+      {
+        "name": "PMA_ARBITRARY",
+        "example": "1",
+        "required": true,
+        "sensitive": false,
+        "prompt_user": false,
+        "source": "linuxserver-phpmyadmin-readme"
+      },
+      {
+        "name": "PMA_HOST",
+        "example": "",
+        "required": false,
+        "sensitive": false,
+        "prompt": "Database server proposed on the login page (empty = typed at each login)",
+        "source": "phpmyadmin-docker-environment-variables"
+      },
+      {
+        "name": "PMA_ABSOLUTE_URI",
+        "example": "",
+        "required": false,
+        "sensitive": false,
+        "prompt": "Public URL of phpMyAdmin when it is served behind a reverse proxy",
+        "source": "linuxserver-phpmyadmin-readme"
+      }
+    ]
+  },
+  "proxmox": {
+    "installer_profile": {
+      "completion_notes": [
+        "phpMyAdmin is installed with arbitrary server connections enabled: the login page has a Server field where the address of the MySQL or MariaDB server is entered, together with its user and password.",
+        "The database server must accept connections from the IP address of this container, with a user that is not limited to localhost."
+      ]
+    }
+  }
+}
