@@ -6209,7 +6209,6 @@
   "This installer will:": "Tento inštalátor urobí toto:",
   "This interface is configured but doesn't exist physically": "Toto rozhranie je nastavené, ale fyzicky neexistuje",
   "This interface runs on the Proxmox node as root. Open OCI manager Apps from the ProxMenux menu on the Proxmox host.": "Toto rozhranie beží na uzle Proxmox ako root. Otvorte aplikácie správcu OCI z ponuky ProxMenux na hostiteľovi Proxmox.",
-  "This interface runs on the Proxmox node as root. Open proxmenux-oci.sh on the Proxmox host.": "Toto rozhranie beží na uzle Proxmox ako koreň. Otvorte proxmenux-oci.sh na hostiteľovi Proxmox.",
   "This is IRREVERSIBLE.": "Toto je NEVRATNÉ.",
   "This is a destructive action": "Toto je deštruktívna akcia",
   "This is a simple configuration change": "Ide o jednoduchú zmenu nastavenia",
