@@ -99,6 +99,11 @@ PROTECTED_TECHNICAL_TERMS = (
     # and the reader is told about something Proxmox does not call that.
     "CT",
     "VM",
+    # Open Container Initiative. Read as a word it becomes "BEC" in French,
+    # which named nothing, across thirty-one strings of the OCI section.
+    "OCI manager Apps",
+    "OCI",
+    "beta",
 )
 TECHNICAL_TERM_RE = re.compile(
     "|".join(
@@ -114,6 +119,20 @@ TRANSLATE_CALL_RE = re.compile(
 # Same shape the Monitor's generator uses, so a message reads identically
 # whichever of the two catalogues it comes from.
 PLACEHOLDER_RE = re.compile(r"\{[A-Za-z_][A-Za-z0-9_]*\}")
+# Literals a reader copies and runs. Translated as words they stop working:
+# /dev/apex_0 came back as "/dev/apex 0", --auto-uninstall as "desinstalación
+# automática", and "pct config 110" as "configuration PCT 110". A glossary can
+# only hold what someone listed; these are recognised by shape.
+STRUCTURAL_LITERAL_RE = re.compile(
+    r"""
+      /(?:dev|etc|usr|var|opt|srv|proc|sys|run|boot|tmp)/[\w./+-]*[\w/+-]
+    | (?<![\w-])--[A-Za-z][\w-]*
+    | \b[\w.-]+\.(?:sh|py|json|yml|yaml|conf|service|timer|func|cfg|list|log)\b
+    | \b(?:pct|qm|pvesm|pveam|pveum|pvecm|apt-get|dpkg|systemctl|journalctl
+        |zpool|smartctl|modprobe|blkid|lsblk|mkfs)\s+[a-z][\w-]*
+    """,
+    re.VERBOSE,
+)
 # Providers that answer the same thing every time for the same input, so a
 # second attempt cannot produce a different result. `appimage` shells out to a
 # binary that may reach a network service, so it is not on the list.
@@ -180,13 +199,20 @@ def restore_placeholders(text: str, found: list[str]) -> str:
 
 
 def protect_technical_terms(text: str) -> tuple[str, list[str]]:
-    """Replace glossary terms with stable tokens before translation."""
+    """Replace glossary terms with stable tokens before translation.
+
+    Structural literals go first. A glossary can only list what someone
+    thought of, and what reaches the reader as a broken command is never on
+    that list: an absolute path, a long option, a filename. They are
+    recognised by shape instead, which also covers the next one added.
+    """
     protected: list[str] = []
 
     def _swap(match: re.Match[str]) -> str:
         protected.append(match.group(0))
         return f"PMXTERM{len(protected) - 1:03d}"
 
+    text = STRUCTURAL_LITERAL_RE.sub(_swap, text)
     return TECHNICAL_TERM_RE.sub(_swap, text), protected
 
 
@@ -195,6 +221,24 @@ def restore_technical_terms(text: str, protected: list[str]) -> str:
     for index, original in enumerate(protected):
         text = text.replace(f"PMXTERM{index:03d}", original)
     return text
+
+
+# A provider can alter a token instead of carrying it through: argos returned
+# MPXTERM000 for PMXTERM000, the replace found nothing, and the token shipped
+# to the reader — "MPXTERM000 configuré" is in the French catalogue now.
+SENTINEL_RESIDUE_RE = re.compile(r"[MP][MPX]X?\s?(?:TERM|PH)\s?\d{2,4}", re.IGNORECASE)
+
+
+def assert_no_sentinel_residue(text: str) -> None:
+    """Fail the translation when a protection token did not survive intact.
+
+    Leaving the key out is recoverable: the next run tries again. Storing a
+    string with a token in it is not, because nothing looks at a value that
+    already exists.
+    """
+    found = SENTINEL_RESIDUE_RE.search(text)
+    if found:
+        raise RuntimeError(f"the provider altered a protection token: {found.group(0)!r}")
 
 
 def iter_script_files(
@@ -490,6 +534,7 @@ def translate_text(
         raise ValueError(f"Unknown provider: {provider}")
     translated = restore_technical_terms(clean_translation(translated), protected_terms)
     translated = restore_placeholders(translated, placeholders)
+    assert_no_sentinel_residue(translated)
     return restore_sentence_spacing(translated) if translated else text
 
 

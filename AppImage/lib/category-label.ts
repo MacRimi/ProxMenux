@@ -22,7 +22,7 @@ const CATEGORY_KEY_BY_VALUE: Record<string, string> = {
   "Host Management": "hostManagement",
   "IoT & Smart Home": "iotSmartHome",
   "Media & Streaming": "mediaStreaming",
-  "Messaging & Queues": "messagingQueues",
+  "Messaging & Notifications": "messagingNotifications",
   "Miscellaneous": "miscellaneous",
   "Monitoring & Analytics": "monitoringAnalytics",
   "NVR & Cameras": "nvrCameras",

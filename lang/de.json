@@ -4043,7 +4043,7 @@
   "OCI management could not be completed. Check the backend status; no additional cleanup has been authorized.": "Das OCI-Management konnte nicht abgeschlossen werden. Überprüfen Sie den Backend-Status; es wurde keine zusätzliche Bereinigung autorisiert.",
   "OCI manager Apps (beta)": "OCI Manager Apps (Beta)",
   "OCI manager Apps is a beta: if something does not work as expected, please report it on GitHub with the application name.": "OCI Manager Apps ist eine Beta: Wenn etwas nicht wie erwartet funktioniert, melden Sie es bitte auf GitHub mit dem Anwendungsnamen.",
-  "OCI metadata integrity mismatch": "Unstimmigkeiten bei den Metadaten",
+  "OCI metadata integrity mismatch": "OCI Unstimmigkeiten bei Metadaten",
   "OCI metadata too large": "OCI-Metadaten zu groß",
   "OCI stack management": "OCI-Stackmanagement",
   "OCI verification failed:": "OCI-Überprüfung fehlgeschlagen:",

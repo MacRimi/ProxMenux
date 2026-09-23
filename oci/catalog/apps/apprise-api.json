@@ -14,7 +14,7 @@
       "en_US": "Apprise-api Takes advantage of Apprise through your network with a user-friendly API."
     },
     "category": "messaging",
-    "category_label": "Messaging & Queues",
+    "category_label": "Messaging & Notifications",
     "author": "LinuxServer.io",
     "developer": null,
     "icon": "https://raw.githubusercontent.com/linuxserver/docker-templates/master/linuxserver.io/img/apprise-api-icon.png",
