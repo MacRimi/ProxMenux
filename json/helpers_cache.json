@@ -4470,7 +4470,9 @@
       "Cloud-Init is optional and off by default. Choosing it switches the image from nocloud to genericcloud; configure your SSH key and credentials in the Proxmox Cloud-Init tab before starting the VM.",
       "If you use Cloud-init, checkout cloud-init discussion: `https://github.com/community-scripts/ProxmoxVE/discussions/272`"
     ],
-    "warnings": [],
+    "warnings": [
+      "Debian and Ubuntu Cloud Images use a serial console by default. In the Proxmox WebUI, use xterm.js instead of noVNC to enable console access and copy-paste."
+    ],
     "port": 0,
     "website": "https://www.debian.org/",
     "documentation": "https://www.debian.org/doc/",
@@ -23285,7 +23287,9 @@
       "Cloud-Init is enabled by default. Configure your SSH key and credentials in the Proxmox Cloud-Init tab before starting the VM.",
       "If you use Cloud-init, checkout cloud-init discussion: `https://github.com/community-scripts/ProxmoxVE/discussions/272`"
     ],
-    "warnings": [],
+    "warnings": [
+      "Debian and Ubuntu Cloud Images use a serial console by default. In the Proxmox WebUI, use xterm.js instead of noVNC to enable console access and copy-paste."
+    ],
     "port": 0,
     "website": "https://ubuntu.com/",
     "documentation": "https://help.ubuntu.com/",
