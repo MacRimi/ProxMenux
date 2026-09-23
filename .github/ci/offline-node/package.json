@@ -1,0 +1,12 @@
+{
+  "name": "proxmenux-offline-node-tests",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Only the dependencies of the qualified tests/*.cjs CI lane",
+  "dependencies": {
+    "typescript": "5.9.3",
+    "react": "19.2.6",
+    "react-dom": "19.2.6",
+    "lucide-react": "0.454.0"
+  }
+}
