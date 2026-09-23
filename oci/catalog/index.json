@@ -472,7 +472,7 @@
       "updated_at": "2025-07-05",
       "main_image": "lscr.io/linuxserver/apprise-api:latest",
       "category": "messaging",
-      "category_label": "Messaging & Queues",
+      "category_label": "Messaging & Notifications",
       "template": "apps/apprise-api.json",
       "template_status": "generated-unvalidated",
       "content_hash": "48ea1b2eea8523bcb7ab2c03e5e9129ba46effa855528c171414270c2f3b4366",
