@@ -10,6 +10,10 @@ on:
       - 'AppImage/lib/i18n/**'
       - 'AppImage/components/terminal-panel.tsx'
       - 'CONTRIBUTING.md'
+      # Scheduler consumers and the offline extractor's .sh/.func inputs.
+      - 'scripts/**/*.sh'
+      - 'scripts/**/*.func'
+      - 'lang/*.json'
   push:
     branches: [main, develop]
     paths:
@@ -20,6 +24,10 @@ on:
       - 'AppImage/lib/i18n/**'
       - 'AppImage/components/terminal-panel.tsx'
       - 'CONTRIBUTING.md'
+      # Scheduler consumers and the offline extractor's .sh/.func inputs.
+      - 'scripts/**/*.sh'
+      - 'scripts/**/*.func'
+      - 'lang/*.json'
   workflow_dispatch:
 
 permissions:
@@ -39,6 +47,10 @@ jobs:
       - uses: actions/setup-node@v6
         with:
           node-version: '22.14.0'
+      - name: Check scheduler test dependencies
+        run: |
+          test -x /bin/bash
+          test -x /usr/bin/jq
       - name: Run complete offline script test suite
         env:
           PYTHONDONTWRITEBYTECODE: '1'

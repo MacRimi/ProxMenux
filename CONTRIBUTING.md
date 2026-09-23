@@ -826,7 +826,8 @@ From the repository root, run the complete script suite:
 python3 -m unittest discover -s .github/scripts/tests -v
 ```
 
-Prerequisites: Python 3.11+ (standard library only) and Node **22.14+**
+Prerequisites: Python 3.11+ (Python standard library only), Node **22.14+**,
+`/bin/bash`, and `/usr/bin/jq` for the isolated scheduler fixtures.
 (Node 22 LTS is the CI baseline). Node 20 can still build the Monitor, but
 cannot run this suite's native TypeScript consumer test. The test passes
 `--experimental-strip-types` explicitly and executes the actual pure lookup
@@ -834,6 +835,17 @@ functions extracted from `AppImage/lib/i18n/provider.tsx`, not a reimplementatio
 It does not launch React or require `npm install`, `pip install`, a Proxmox host,
 API keys, or a translation provider. Generator tests use isolated temporary
 catalogs and fake/forbidden providers; repository catalogs are not regenerated.
+
+Scheduler fixtures discover every shipped `lang/*.json` cache and run the actual
+`translate` lookup at both empty-job consumers for PBS and local archive backends.
+They accept English fallback for missing/empty entries; complete translations are
+not required. Unconditional synthetic cases cover English bypass, missing files,
+missing keys and translated messages/hints. Only bounded shell functions are
+extracted: no administrative script is sourced or run in full. These scheduler
+messages have no placeholders; named-token preservation is tested separately by
+the existing cache-generator tests, not by scheduler/count-message assertions.
+The workflow watches all `lang/*.json` catalogs plus `.sh` and `.func` inputs
+under `scripts/`, and checks the Bash/jq prerequisites before running the suite.
 
 If Node is not on `PATH`, select a local executable without a global install:
 
