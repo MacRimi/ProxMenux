@@ -1508,6 +1508,7 @@
       "containerNameLabel": "Názov kontajnera",
       "containerNamePlaceholder": "napr. <your-container-name>",
       "ociLabelKeyLabel": "Kľúč OCI labelu",
+      "ociLabelPlaceholder": "org.opencontainers.image.version",
       "pythonInterpreterLabel": "Cesta k Python interpreteru",
       "pythonInterpreterPlaceholder": "napr. /opt/<your-app>/venv/bin/python",
       "pipDistLabel": "Názov distribúcie (pip balík)",
