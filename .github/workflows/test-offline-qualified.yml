@@ -1,0 +1,83 @@
+name: Qualified offline tests
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/test-offline-qualified.yml'
+      - '.github/scripts/run_offline_qualified.py'
+      - '.github/ci/offline-node/**'
+      - 'CONTRIBUTING.md'
+      - 'tests/**'
+      - 'AppImage/package.json'
+      - 'AppImage/package-lock.json'
+      - 'AppImage/scripts/*.py'
+      - 'AppImage/app/**'
+      - 'AppImage/components/**'
+      - 'AppImage/hooks/**'
+      - 'AppImage/lib/**'
+      - 'AppImage/messages/**'
+      - 'lang/*.json'
+      - 'scripts/**/*.sh'
+      - 'scripts/**/*.func'
+  push:
+    branches: [main, develop]
+    paths:
+      - '.github/workflows/test-offline-qualified.yml'
+      - '.github/scripts/run_offline_qualified.py'
+      - '.github/ci/offline-node/**'
+      - 'CONTRIBUTING.md'
+      - 'tests/**'
+      - 'AppImage/package.json'
+      - 'AppImage/package-lock.json'
+      - 'AppImage/scripts/*.py'
+      - 'AppImage/app/**'
+      - 'AppImage/components/**'
+      - 'AppImage/hooks/**'
+      - 'AppImage/lib/**'
+      - 'AppImage/messages/**'
+      - 'lang/*.json'
+      - 'scripts/**/*.sh'
+      - 'scripts/**/*.func'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  offline-python:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Run seven qualified Python files
+        env:
+          PYTHONDONTWRITEBYTECODE: '1'
+        run: python3 -I -B .github/scripts/run_offline_qualified.py --lane python
+
+  offline-node:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '22.14.0'
+      - name: Install only locked fixture dependencies (no lifecycle scripts)
+        run: |
+          npm ci --prefix .github/ci/offline-node --legacy-peer-deps --ignore-scripts --no-audit --no-fund
+          ln -s ../.github/ci/offline-node/node_modules AppImage/node_modules
+      - name: Run ten qualified Node files
+        env:
+          NODE_PATH: ${{ github.workspace }}/AppImage/node_modules
+          PYTHONDONTWRITEBYTECODE: '1'
+        run: python3 -I -B .github/scripts/run_offline_qualified.py --lane node
