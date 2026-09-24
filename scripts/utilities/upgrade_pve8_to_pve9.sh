@@ -135,7 +135,7 @@ ask_run_mode() {
                        --menu "$text" 20 70 8 \
                        1 "$(translate "Automatic/Unattended")" \
                        2 "$(translate "Interactive (guided, prompts visible)")" \
-                       3 "$(translate "Run PVE 8 to 9") check" \
+                       3 "$(translate "Run PVE 8 to 9 check")" \
                        4 "$(translate "Manual upgrade guide step by step")" \
                        3>&1 1>&2 2>&3
             ); status=$?
@@ -178,7 +178,7 @@ ask_run_mode() {
                          --menu "$(translate "Choose how to perform the upgrade:")" 20 70 8 \
                          "1" "$(translate "Automatic/Unattended")" \
                          "2" "$(translate "Interactive (guided, prompts visible)")" \
-                         "3" "$(translate "Run PVE 8 to 9") check" \
+                         "3" "$(translate "Run PVE 8 to 9 check")" \
                          "4" "$(translate "Manual upgrade guide step by step")" \
                          3>&1 1>&2 2>&3
             ); then
@@ -777,7 +777,11 @@ run_pve8to9_check() {
               echo -e
             done
             echo -e
-            msg_info2 "$(translate "Once finished, re-run 'PVE 8 to 9 check' to verify that all issues are resolved \n    before executing the PVE 8 → PVE 9 upgrade.")"
+            local check_help
+            check_help="$(translate "Once finished, repeat the check ({check}) to review any remaining issues before starting the PVE 8 → PVE 9 upgrade.")"
+            [[ "$check_help" == *'{check}'* ]] || check_help="Once finished, repeat the check ({check}) to review any remaining issues before starting the PVE 8 → PVE 9 upgrade."
+            check_help="${check_help//\{check\}/$(translate "Run PVE 8 to 9 check")}"
+            msg_info2 "$check_help"
             echo -e
             msg_success "$(translate "Press Enter to exit the script after reading instructions...")"
             read -r
@@ -1143,7 +1147,11 @@ run_pve8to9_check2() {
               echo -e
             done
             echo -e
-            msg_info2 "$(translate "Once finished, re-run the script 'PVE 8 to 9 check' to verify that all issues are resolved \n   before rebooting.")"
+            local check_help
+            check_help="$(translate "Once finished, repeat the check ({check}) to review any remaining issues before rebooting.")"
+            [[ "$check_help" == *'{check}'* ]] || check_help="Once finished, repeat the check ({check}) to review any remaining issues before rebooting."
+            check_help="${check_help//\{check\}/$(translate "Run PVE 8 to 9 check")}"
+            msg_info2 "$check_help"
             echo -e
             msg_success "$(translate "Press Enter to exit the script after reading instructions...")"
             read -r

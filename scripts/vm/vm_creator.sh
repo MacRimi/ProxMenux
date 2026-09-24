@@ -234,7 +234,12 @@ function run_gpu_passthrough_wizard() {
   fi
 
   if [[ ! -f "$gpu_script" ]]; then
-    msg_warn "$(translate "GPU passthrough assistant not found. You can run it later from Hardware Graphics.")"
+    local gpu_notice
+    gpu_notice="$(translate "GPU passthrough assistant not found. Later, open {menu} → {action} from the main menu to try again.")"
+    [[ "$gpu_notice" == *'{menu}'* && "$gpu_notice" == *'{action}'* ]] || gpu_notice="GPU passthrough assistant not found. Later, open {menu} → {action} from the main menu to try again."
+    gpu_notice="${gpu_notice//\{menu\}/$(translate "Hardware: GPUs and Coral-TPU")}"
+    gpu_notice="${gpu_notice//\{action\}/$(translate "Add GPU to VM    (Intel | AMD | NVIDIA)")}"
+    msg_warn "$gpu_notice"
     return 0
   fi
 

@@ -471,7 +471,7 @@ test_iscsi_connectivity() {
                     if nc -z -w 2 "$portal_host" "$portal_port" 2>/dev/null; then
                         echo -e " | iSCSI port $portal_port: ${GN}$(translate "Open")${CL}"
                     else
-                        echo -e " | iSCSI port $portal_port: ${RD}$(translate "Closed")${CL}"
+                        echo -e " | iSCSI port $portal_port: ${RD}$(translate "Probe failed")${CL}"
                     fi
                 else
                     echo -e "${RD}$(translate "Unreachable")${CL}"

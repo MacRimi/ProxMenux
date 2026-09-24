@@ -839,7 +839,7 @@ test_nfs_connectivity() {
                     if nc -z -w 2 "$server" 2049 2>/dev/null; then
                         echo -e " | NFS port 2049: ${GN}$(translate "Open")${CL}"
                     else
-                        echo -e " | NFS port 2049: ${RD}$(translate "Closed")${CL}"
+                        echo -e " | NFS port 2049: ${RD}$(translate "Probe failed")${CL}"
                     fi
 
                     if showmount -e "$server" >/dev/null 2>&1; then
@@ -882,7 +882,7 @@ test_nfs_connectivity() {
                 if nc -z -w 2 "$server" 2049 2>/dev/null; then
                     echo -e " | NFS port 2049: ${GN}$(translate "Open")${CL}"
                 else
-                    echo -e " | NFS port 2049: ${RD}$(translate "Closed")${CL}"
+                    echo -e " | NFS port 2049: ${RD}$(translate "Probe failed")${CL}"
                 fi
             else
                 echo -e "${RD}$(translate "Unreachable")${CL}"
