@@ -4969,10 +4969,10 @@
     "category_names": [
       "Containers & Docker"
     ],
-    "notes": [],
-    "warnings": [
-      "The update function may modify or recreate Portainer containers (portainer/portainer-ce), even if they were created manually."
+    "notes": [
+      "You can choose the add-on of your choice later; we offer many options, such as Arcane, Komodo, Dockhand, Dockge, Portainer..."
     ],
+    "warnings": [],
     "port": 0,
     "website": "https://www.docker.com/",
     "documentation": "",
@@ -5002,10 +5002,10 @@
     "category_names": [
       "Containers & Docker"
     ],
-    "notes": [],
-    "warnings": [
-      "The update function may modify or recreate Portainer containers (portainer/portainer-ce), even if they were created manually."
+    "notes": [
+      "You can choose the add-on of your choice later; we offer many options, such as Arcane, Komodo, Dockhand, Dockge, Portainer..."
     ],
+    "warnings": [],
     "port": 0,
     "website": "https://www.docker.com/",
     "documentation": "",
@@ -5113,7 +5113,7 @@
     "warnings": [],
     "port": 3000,
     "website": "https://dockhand.pro/",
-    "documentation": "",
+    "documentation": "https://dockhand.pro/manual/",
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/dockhand.webp",
     "updateable": true,
     "privileged": false,
