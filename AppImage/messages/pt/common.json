@@ -1069,7 +1069,8 @@
       "backups": "Cópias de segurança",
       "updates": "Atualizações",
       "firewall": "Firewall",
-      "app": "Aplicativo"
+      "app": "Aplicativo",
+      "logs": "Logs"
     },
     "actions": {
       "start": "Começar",
@@ -1168,6 +1169,44 @@
       "readFailed": "Falha ao ler o log do firewall",
       "empty": "Nenhum evento de firewall registrado ainda.",
       "emptyHint": "Regras com log: info ou superior preencherão esta visualização conforme os pacotes chegam."
+    },
+    "consoleLog": {
+      "title": "Saída da consola",
+      "description": "Saída padrão e de erro do processo principal da imagem.",
+      "stopped": "O contentor está parado; o log conserva a saída das execuções anteriores.",
+      "lastLines": "Últimas {count} linhas",
+      "follow": "Seguir",
+      "pause": "Pausar",
+      "refresh": "Atualizar",
+      "download": "Transferir",
+      "filter": "Filtrar linhas",
+      "loading": "A carregar a saída da consola...",
+      "empty": "Ainda não há saída registada.",
+      "emptyHint": "As linhas aparecem aqui à medida que o contentor escreve na sua consola.",
+      "noMatches": "Nenhuma linha corresponde ao filtro.",
+      "readFailed": "Não foi possível ler o log da consola",
+      "notAvailableTitle": "Este contentor não tem log da consola",
+      "notAvailableHint": "O log da consola é configurado quando o ProxMenux instala o contentor a partir da sua imagem OCI."
+    },
+    "ociUpdates": {
+      "notTracked": "Ao registar a aplicação no separador App, a sua imagem é acompanhada aqui.",
+      "installedImage": "Imagem instalada",
+      "newImage": "Nova imagem {image} disponível",
+      "stackNote": "Faz parte de uma aplicação com vários contentores (CT principal {primary}, {count} contentores): a atualização abrange todos.",
+      "pendingNote": "Uma operação neste contentor foi interrompida; Recuperar abre a sua recuperação.",
+      "update": "Atualizar",
+      "recreate": "Recriar",
+      "recover": "Recuperar",
+      "terminalTitleUpdate": "Atualizar aplicação OCI",
+      "terminalTitleRecreate": "Recriar aplicação OCI",
+      "terminalDescription": "O mesmo percurso de OCI manager Apps → Gerir aplicações OCI instaladas.",
+      "keepBackup": "Manter o backup feito antes da atualização",
+      "noKeepBackup": "O backup feito antes da atualização não é mantido",
+      "keepBackupHelp": "Cada atualização faz um backup do contentor antes de substituir a sua imagem, para o restaurar se a atualização falhar. Com esta opção esse backup é mantido no armazenamento escolhido; no Proxmox Backup Server é escrito um backup antes da atualização.",
+      "scheduleHelp": "Só a imagem é atualizada, e apenas quando o seu registo publica uma nova.",
+      "releaseDelayHelp": "Uma imagem nova só é instalada quando tem pelo menos esta idade.",
+      "ackExternal": "Os diretórios do host não são revertidos pelo backup",
+      "ackExternalHelp": "Este contentor usa diretórios do host. Uma atualização agendada só é executada com esta confirmação."
     },
     "options": {
       "title": "Opções",
@@ -1429,6 +1468,14 @@
       "loadFailed": "não foi possível carregar a configuração de atualização em massa."
     },
     "appEditor": {
+      "methodOciImage": "Imagem OCI (instalada pelo ProxMenux)",
+      "ociImageHelp": "A versão e as suas atualizações são lidas da imagem a partir da qual este contentor foi criado. O ProxMenux instalou-o, pelo que não há nada a configurar: a imagem instalada é comparada com a que o seu registo publica hoje.",
+      "ociAppVersion": "Aplicação",
+      "ociImage": "Imagem",
+      "ociNewImage": "Nova imagem",
+      "ociImageCurrent": "Versão",
+      "refreshData": "Atualizar dados",
+      "refreshingData": "A atualizar…",
       "dockerDetectedWithWorkloads": "Docker detetado com {count} aplicações em contentores",
       "dockerWorkloadsHeading": "Aplicações no Docker",
       "runsInsideDocker": "Atualizada através da sua imagem Docker",

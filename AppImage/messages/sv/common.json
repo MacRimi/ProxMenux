@@ -1069,7 +1069,8 @@
       "backups": "Säkerhetskopieringar",
       "updates": "Uppdateringar",
       "firewall": "Brandvägg",
-      "app": "App"
+      "app": "App",
+      "logs": "Loggar"
     },
     "actions": {
       "start": "Start",
@@ -1168,6 +1169,44 @@
       "readFailed": "Det gick inte att läsa brandväggsloggen",
       "empty": "Inga brandväggshändelser har registrerats ännu.",
       "emptyHint": "Regler med log: info eller högre kommer att fylla denna vy när paket anländer."
+    },
+    "consoleLog": {
+      "title": "Konsolutdata",
+      "description": "Standardutdata och standardfel från avbildens huvudprocess.",
+      "stopped": "Containern är stoppad; loggen behåller utdata från tidigare körningar.",
+      "lastLines": "Senaste {count} raderna",
+      "follow": "Följ",
+      "pause": "Pausa",
+      "refresh": "Uppdatera",
+      "download": "Ladda ned",
+      "filter": "Filtrera rader",
+      "loading": "Läser in konsolutdata...",
+      "empty": "Ingen utdata registrerad ännu.",
+      "emptyHint": "Rader visas här när containern skriver till sin konsol.",
+      "noMatches": "Inga rader matchar filtret.",
+      "readFailed": "Det gick inte att läsa konsolloggen",
+      "notAvailableTitle": "Den här containern har ingen konsollogg",
+      "notAvailableHint": "Konsolloggen konfigureras när ProxMenux installerar containern från dess OCI-avbild."
+    },
+    "ociUpdates": {
+      "notTracked": "När applikationen registreras i fliken App följs dess avbild här.",
+      "installedImage": "Installerad avbild",
+      "newImage": "Ny avbild {image} tillgänglig",
+      "stackNote": "Del av en applikation med flera containrar (huvud-CT {primary}, {count} containrar): uppdateringen omfattar alla.",
+      "pendingNote": "En åtgärd på den här containern avbröts; Återställ öppnar dess återställning.",
+      "update": "Uppdatera",
+      "recreate": "Återskapa",
+      "recover": "Återställ",
+      "terminalTitleUpdate": "Uppdatera OCI-applikation",
+      "terminalTitleRecreate": "Återskapa OCI-applikation",
+      "terminalDescription": "Samma flöde som OCI manager Apps → Hantera installerade OCI-applikationer.",
+      "keepBackup": "Behåll säkerhetskopian som tas före uppdateringen",
+      "noKeepBackup": "Säkerhetskopian som tas före uppdateringen behålls inte",
+      "keepBackupHelp": "Varje uppdatering säkerhetskopierar containern innan dess avbild ersätts, för att återställa den om uppdateringen misslyckas. Med det här alternativet behålls säkerhetskopian i den valda lagringen; på Proxmox Backup Server skrivs en säkerhetskopia före uppdateringen.",
+      "scheduleHelp": "Endast avbilden uppdateras, och bara när dess register publicerar en ny.",
+      "releaseDelayHelp": "En ny avbild installeras först när den är minst så här gammal.",
+      "ackExternal": "Värdkataloger återställs inte av säkerhetskopian",
+      "ackExternalHelp": "Den här containern använder värdkataloger. En schemalagd uppdatering körs bara när detta är bekräftat."
     },
     "options": {
       "title": "Alternativ",
@@ -1429,6 +1468,14 @@
       "loadFailed": "Det gick inte att läsa in massuppdateringskonfigurationen."
     },
     "appEditor": {
+      "methodOciImage": "OCI-avbild (installerad av ProxMenux)",
+      "ociImageHelp": "Versionen och dess uppdateringar läses från avbilden som containern skapades från. ProxMenux installerade den, så det finns inget att konfigurera: den installerade avbilden jämförs med den som registret publicerar i dag.",
+      "ociAppVersion": "Applikation",
+      "ociImage": "Avbild",
+      "ociNewImage": "Ny avbild",
+      "ociImageCurrent": "Version",
+      "refreshData": "Uppdatera data",
+      "refreshingData": "Uppdaterar…",
       "dockerDetectedWithWorkloads": "Docker hittades med {count} applikationer i containrar",
       "dockerWorkloadsHeading": "Applikationer i Docker",
       "runsInsideDocker": "Uppdateras med sin Docker-avbildning",

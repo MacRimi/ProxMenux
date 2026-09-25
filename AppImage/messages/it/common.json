@@ -1069,7 +1069,8 @@
       "backups": "Backup",
       "updates": "Aggiornamenti",
       "firewall": "Firewall",
-      "app": "App"
+      "app": "App",
+      "logs": "Logs"
     },
     "actions": {
       "start": "Inizio",
@@ -1168,6 +1169,44 @@
       "readFailed": "Impossibile leggere il registro del firewall",
       "empty": "Nessun evento firewall ancora registrato.",
       "emptyHint": "Le regole con log: info o superiore popoleranno questa visualizzazione all'arrivo dei pacchetti."
+    },
+    "consoleLog": {
+      "title": "Output della console",
+      "description": "Output standard e di errore del processo principale dell'immagine.",
+      "stopped": "Il container è fermo; il log conserva l'output delle esecuzioni precedenti.",
+      "lastLines": "Ultime {count} righe",
+      "follow": "Segui",
+      "pause": "Pausa",
+      "refresh": "Aggiorna",
+      "download": "Scarica",
+      "filter": "Filtra righe",
+      "loading": "Caricamento dell'output della console...",
+      "empty": "Nessun output registrato finora.",
+      "emptyHint": "Le righe compaiono qui man mano che il container scrive sulla sua console.",
+      "noMatches": "Nessuna riga corrisponde al filtro.",
+      "readFailed": "Impossibile leggere il log della console",
+      "notAvailableTitle": "Questo container non ha un log della console",
+      "notAvailableHint": "Il log della console viene configurato quando ProxMenux installa il container dalla sua immagine OCI."
+    },
+    "ociUpdates": {
+      "notTracked": "Registrando l'applicazione nella scheda App, qui se ne segue l'immagine.",
+      "installedImage": "Immagine installata",
+      "newImage": "Nuova immagine {image} disponibile",
+      "stackNote": "Parte di un'applicazione multi-container (CT principale {primary}, {count} container): l'aggiornamento li comprende tutti.",
+      "pendingNote": "Un'operazione su questo container è stata interrotta; Recupera ne apre il ripristino.",
+      "update": "Aggiorna",
+      "recreate": "Ricrea",
+      "recover": "Recupera",
+      "terminalTitleUpdate": "Aggiorna applicazione OCI",
+      "terminalTitleRecreate": "Ricrea applicazione OCI",
+      "terminalDescription": "Lo stesso percorso di OCI manager Apps → Gestisci le applicazioni OCI installate.",
+      "keepBackup": "Conserva il backup eseguito prima dell'aggiornamento",
+      "noKeepBackup": "Il backup eseguito prima dell'aggiornamento non viene conservato",
+      "keepBackupHelp": "Ogni aggiornamento esegue il backup del container prima di sostituirne l'immagine, per ripristinarlo se l'aggiornamento fallisce. Con questa opzione quel backup viene conservato nello storage scelto; su Proxmox Backup Server viene scritto un backup prima dell'aggiornamento.",
+      "scheduleHelp": "Viene aggiornata solo l'immagine, e solo quando il suo registro ne pubblica una nuova.",
+      "releaseDelayHelp": "Una nuova immagine viene installata solo quando ha almeno questa età.",
+      "ackExternal": "Le directory dell'host non vengono ripristinate dal backup",
+      "ackExternalHelp": "Questo container usa directory dell'host. Un aggiornamento pianificato viene eseguito solo con questa conferma."
     },
     "options": {
       "title": "Opzioni",
@@ -1429,6 +1468,14 @@
       "loadFailed": "impossibile caricare la configurazione dell'aggiornamento collettivo."
     },
     "appEditor": {
+      "methodOciImage": "Immagine OCI (installata da ProxMenux)",
+      "ociImageHelp": "La versione e i suoi aggiornamenti vengono letti dall'immagine da cui è stato creato questo container. ProxMenux lo ha installato, quindi non c'è nulla da configurare: l'immagine installata viene confrontata con quella che il suo registro pubblica oggi.",
+      "ociAppVersion": "Applicazione",
+      "ociImage": "Immagine",
+      "ociNewImage": "Nuova immagine",
+      "ociImageCurrent": "Versione",
+      "refreshData": "Aggiorna dati",
+      "refreshingData": "Aggiornamento…",
       "dockerDetectedWithWorkloads": "Docker rilevato con {count} applicazioni in container",
       "dockerWorkloadsHeading": "Applicazioni in Docker",
       "runsInsideDocker": "Si aggiorna con la sua immagine Docker",

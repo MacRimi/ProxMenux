@@ -1069,7 +1069,8 @@
       "backups": "Sauvegardes",
       "updates": "Mises à jour",
       "firewall": "Pare-feu",
-      "app": "Application"
+      "app": "Application",
+      "logs": "Logs"
     },
     "actions": {
       "start": "Commencer",
@@ -1168,6 +1169,44 @@
       "readFailed": "Échec de la lecture du journal du pare-feu",
       "empty": "Aucun événement de pare-feu enregistré pour le moment.",
       "emptyHint": "Règles avec journal : informations ou supérieures rempliront cette vue à mesure que les paquets arrivent."
+    },
+    "consoleLog": {
+      "title": "Sortie console",
+      "description": "Sortie standard et sortie d'erreur du processus principal de l'image.",
+      "stopped": "Le conteneur est arrêté ; le log conserve la sortie de ses exécutions précédentes.",
+      "lastLines": "{count} dernières lignes",
+      "follow": "Suivre",
+      "pause": "Pause",
+      "refresh": "Actualiser",
+      "download": "Télécharger",
+      "filter": "Filtrer les lignes",
+      "loading": "Chargement de la sortie console...",
+      "empty": "Aucune sortie enregistrée pour l'instant.",
+      "emptyHint": "Les lignes apparaissent ici à mesure que le conteneur écrit sur sa console.",
+      "noMatches": "Aucune ligne ne correspond au filtre.",
+      "readFailed": "Impossible de lire le log de la console",
+      "notAvailableTitle": "Ce conteneur n'a pas de log de console",
+      "notAvailableHint": "Le log de la console est configuré lorsque ProxMenux installe le conteneur depuis son image OCI."
+    },
+    "ociUpdates": {
+      "notTracked": "En enregistrant l'application dans l'onglet App, son image est suivie ici.",
+      "installedImage": "Image installée",
+      "newImage": "Nouvelle image {image} disponible",
+      "stackNote": "Fait partie d'une application multi-conteneurs (CT principal {primary}, {count} conteneurs) : la mise à jour les couvre tous.",
+      "pendingNote": "Une opération sur ce conteneur a été interrompue ; Récupérer ouvre sa récupération.",
+      "update": "Mettre à jour",
+      "recreate": "Recréer",
+      "recover": "Récupérer",
+      "terminalTitleUpdate": "Mettre à jour l'application OCI",
+      "terminalTitleRecreate": "Recréer l'application OCI",
+      "terminalDescription": "Le même parcours que OCI manager Apps → Gérer les applications OCI installées.",
+      "keepBackup": "Conserver la sauvegarde prise avant la mise à jour",
+      "noKeepBackup": "La sauvegarde prise avant la mise à jour n'est pas conservée",
+      "keepBackupHelp": "Chaque mise à jour sauvegarde le conteneur avant de remplacer son image, pour le restaurer si la mise à jour échoue. Avec cette option, cette sauvegarde est conservée dans le stockage choisi ; sur Proxmox Backup Server, une sauvegarde est écrite avant la mise à jour.",
+      "scheduleHelp": "Seule l'image est mise à jour, et seulement lorsque son registre en publie une nouvelle.",
+      "releaseDelayHelp": "Une nouvelle image n'est installée qu'une fois qu'elle a au moins cette ancienneté.",
+      "ackExternal": "Les répertoires de l'hôte ne sont pas rétablis par la sauvegarde",
+      "ackExternalHelp": "Ce conteneur utilise des répertoires de l'hôte. Une mise à jour planifiée ne s'exécute qu'avec cette confirmation."
     },
     "options": {
       "title": "Possibilités",
@@ -1429,6 +1468,14 @@
       "loadFailed": "Impossible de charger la configuration de la mise à jour groupée."
     },
     "appEditor": {
+      "methodOciImage": "Image OCI (installée par ProxMenux)",
+      "ociImageHelp": "La version et ses mises à jour sont lues depuis l'image à partir de laquelle ce conteneur a été créé. ProxMenux l'a installé, il n'y a donc rien à configurer : l'image installée est comparée à celle que son registre publie aujourd'hui.",
+      "ociAppVersion": "Application",
+      "ociImage": "Image",
+      "ociNewImage": "Nouvelle image",
+      "ociImageCurrent": "Version",
+      "refreshData": "Actualiser les données",
+      "refreshingData": "Actualisation…",
       "dockerDetectedWithWorkloads": "Docker détecté avec {count} applications conteneurisées",
       "dockerWorkloadsHeading": "Applications dans Docker",
       "runsInsideDocker": "Mise à jour avec son image Docker",

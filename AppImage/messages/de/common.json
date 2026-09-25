@@ -1069,7 +1069,8 @@
       "backups": "Backups",
       "updates": "Aktualisierungen",
       "firewall": "Firewall",
-      "app": "App"
+      "app": "App",
+      "logs": "Logs"
     },
     "actions": {
       "start": "Start",
@@ -1168,6 +1169,44 @@
       "readFailed": "Das Firewall-Protokoll konnte nicht gelesen werden",
       "empty": "Es wurden noch keine Firewall-Ereignisse aufgezeichnet.",
       "emptyHint": "Regeln mit log:info oder höher füllen diese Ansicht, wenn Pakete eintreffen."
+    },
+    "consoleLog": {
+      "title": "Konsolenausgabe",
+      "description": "Standardausgabe und Fehlerausgabe des Hauptprozesses des Images.",
+      "stopped": "Der Container ist gestoppt; das Log enthält die Ausgabe seiner vorherigen Läufe.",
+      "lastLines": "Letzte {count} Zeilen",
+      "follow": "Folgen",
+      "pause": "Pausieren",
+      "refresh": "Aktualisieren",
+      "download": "Herunterladen",
+      "filter": "Zeilen filtern",
+      "loading": "Konsolenausgabe wird geladen...",
+      "empty": "Noch keine Ausgabe aufgezeichnet.",
+      "emptyHint": "Zeilen erscheinen hier, sobald der Container auf seine Konsole schreibt.",
+      "noMatches": "Keine Zeile entspricht dem Filter.",
+      "readFailed": "Das Konsolen-Log konnte nicht gelesen werden",
+      "notAvailableTitle": "Dieser Container hat kein Konsolen-Log",
+      "notAvailableHint": "Das Konsolen-Log wird eingerichtet, wenn ProxMenux den Container aus seinem OCI-Image installiert."
+    },
+    "ociUpdates": {
+      "notTracked": "Wird die Anwendung in der App-Registerkarte registriert, wird ihr Image hier verfolgt.",
+      "installedImage": "Installiertes Image",
+      "newImage": "Neues Image {image} verfügbar",
+      "stackNote": "Teil einer Multi-Container-Anwendung (Haupt-CT {primary}, {count} Container): Das Update umfasst alle.",
+      "pendingNote": "Ein Vorgang an diesem Container wurde unterbrochen; Wiederherstellen öffnet seine Wiederherstellung.",
+      "update": "Aktualisieren",
+      "recreate": "Neu erstellen",
+      "recover": "Wiederherstellen",
+      "terminalTitleUpdate": "OCI-Anwendung aktualisieren",
+      "terminalTitleRecreate": "OCI-Anwendung neu erstellen",
+      "terminalDescription": "Derselbe Ablauf wie OCI manager Apps → Installierte OCI-Anwendungen verwalten.",
+      "keepBackup": "Das vor dem Update erstellte Backup behalten",
+      "noKeepBackup": "Das vor dem Update erstellte Backup wird nicht behalten",
+      "keepBackupHelp": "Jedes Update sichert den Container, bevor sein Image ersetzt wird, um ihn wiederherzustellen, falls das Update fehlschlägt. Mit dieser Option wird dieses Backup im gewählten Speicher behalten; auf Proxmox Backup Server wird vor dem Update ein Backup geschrieben.",
+      "scheduleHelp": "Nur das Image wird aktualisiert, und nur wenn seine Registry ein neues veröffentlicht.",
+      "releaseDelayHelp": "Ein neues Image wird erst installiert, wenn es mindestens so alt ist.",
+      "ackExternal": "Host-Verzeichnisse werden durch das Backup nicht zurückgesetzt",
+      "ackExternalHelp": "Dieser Container nutzt Host-Verzeichnisse. Ein geplantes Update läuft nur, wenn dies bestätigt ist."
     },
     "options": {
       "title": "Optionen",
@@ -1429,6 +1468,14 @@
       "loadFailed": "Die Massenaktualisierungskonfiguration konnte nicht geladen werden."
     },
     "appEditor": {
+      "methodOciImage": "OCI-Image (von ProxMenux installiert)",
+      "ociImageHelp": "Version und Updates werden aus dem Image gelesen, aus dem dieser Container erstellt wurde. ProxMenux hat ihn installiert, daher gibt es nichts zu konfigurieren: Das installierte Image wird mit dem verglichen, das seine Registry heute veröffentlicht.",
+      "ociAppVersion": "Anwendung",
+      "ociImage": "Image",
+      "ociNewImage": "Neues Image",
+      "ociImageCurrent": "Version",
+      "refreshData": "Daten aktualisieren",
+      "refreshingData": "Wird aktualisiert…",
       "dockerDetectedWithWorkloads": "Docker mit {count} Anwendungen in Containern erkannt",
       "dockerWorkloadsHeading": "Anwendungen in Docker",
       "runsInsideDocker": "Wird mit dem Docker-Image aktualisiert",
