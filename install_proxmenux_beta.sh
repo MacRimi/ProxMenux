@@ -611,12 +611,15 @@ install_beta() {
     show_progress $current_step $total_steps "Installing system dependencies"
 
     msg_info "Refreshing apt cache..."
-    apt-get update -y > /dev/null 2>&1 || true
-    msg_ok "apt cache refreshed."
+    if apt-get update -y; then
+        msg_ok "apt cache refreshed."
+    else
+        msg_warn "apt cache refresh failed; checking available packages."
+    fi
 
     msg_info "Installing jq..."
     if ! command -v jq > /dev/null 2>&1; then
-        if apt-get install -y jq > /dev/null 2>&1 && command -v jq > /dev/null 2>&1; then
+        if apt-get install -y jq && command -v jq > /dev/null 2>&1; then
             update_config "jq" "installed"
         else
             local jq_url="https://github.com/jqlang/jq/releases/download/jq-1.7.1/jq-linux-amd64"
@@ -640,7 +643,7 @@ install_beta() {
         # dpkg-query for the EXACT package name — `dpkg -l | grep -qw python3`
         # falsely matches `python3-pip`. Issue #205.
         if ! dpkg-query -W -f='${Status}' "$pkg" 2>/dev/null | grep -q "ok installed"; then
-            if apt-get install -y "$pkg" > /dev/null 2>&1; then
+            if apt-get install -y "$pkg"; then
                 update_config "$pkg" "installed"
             else
                 msg_error "Failed to install $pkg. Please install it manually."
@@ -814,7 +817,10 @@ else
     show_beta_welcome
     msg_title "Installing ProxMenux Beta — branch: develop"
 fi
-install_beta
+if ! install_beta; then
+    msg_error "Beta installation stopped before completion. Resolve the error above and rerun the installer."
+    exit 1
+fi
 
 # Load utils if available
 [ -f "$UTILS_FILE" ] && source "$UTILS_FILE"

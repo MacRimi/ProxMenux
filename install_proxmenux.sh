@@ -680,12 +680,15 @@ install_normal_version() {
     show_progress $current_step $total_steps "Installing basic dependencies."
 
     msg_info "Refreshing apt cache..."
-    apt-get update -y > /dev/null 2>&1 || true
-    msg_ok "apt cache refreshed."
+    if apt-get update -y; then
+        msg_ok "apt cache refreshed."
+    else
+        msg_warn "apt cache refresh failed; checking available packages."
+    fi
 
     msg_info "Installing jq..."
     if ! command -v jq > /dev/null 2>&1; then
-        if apt-get install -y jq > /dev/null 2>&1 && command -v jq > /dev/null 2>&1; then
+        if apt-get install -y jq && command -v jq > /dev/null 2>&1; then
             update_config "jq" "installed"
         else
             local jq_url="https://github.com/jqlang/jq/releases/download/jq-1.7.1/jq-linux-amd64"
@@ -715,7 +718,7 @@ install_normal_version() {
         # dpkg-query for the EXACT package — `dpkg -l | grep -qw python3`
         # falsely matches `python3-pip`. Issue #205.
         if ! dpkg-query -W -f='${Status}' "$pkg" 2>/dev/null | grep -q "ok installed"; then
-            if apt-get install -y "$pkg" > /dev/null 2>&1; then
+            if apt-get install -y "$pkg"; then
                 update_config "$pkg" "installed"
             else
                 msg_error "Failed to install $pkg. Please install it manually."
@@ -901,12 +904,12 @@ install_proxmenux() {
         # /usr/local/bin/menu — the new copy is the only thing parsed.
         show_proxmenux_logo
         msg_title "Updating ProxMenux"
-        install_normal_version
+        install_normal_version || return $?
     else
         show_installation_options
         show_proxmenux_logo
         msg_title "Installing ProxMenux"
-        install_normal_version
+        install_normal_version || return $?
     fi
 
     if [[ -f "$UTILS_FILE" ]]; then
@@ -964,4 +967,4 @@ if [ "$(id -u)" -ne 0 ]; then
 fi
 
 cleanup_corrupted_files
-install_proxmenux
+install_proxmenux || exit $?
