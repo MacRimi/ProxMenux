@@ -13,11 +13,11 @@
     "description": {
       "en_US": "MongoDB is a free and open-source cross-platform document-oriented database program. Classified as a NoSQL database program, MongoDB uses JSON-like documents with schemata. MongoDB is developed by MongoDB Inc., and is published under a combination of the Server Side Public License and the Apache License."
     },
-    "category": "ai",
-    "category_label": "AI / Coding & Dev-Tools",
+    "category": "databases",
+    "category_label": "Databases",
     "author": "MongoDB Inc.",
     "developer": "MongoDB Inc.",
-    "icon": null,
+    "icon": "https://cdn.jsdelivr.net/gh/IceWhaleTech/CasaOS-AppStore@main/Apps/MongoDB4/icon.png",
     "thumbnail": null,
     "screenshots": [],
     "architectures": [

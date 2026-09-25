@@ -59,7 +59,7 @@ def fetch_directory_json(api_url: str) -> list[dict]:
     r.raise_for_status()
     data = r.json()
     if not isinstance(data, list):
-        raise RuntimeError("GitHub API no devolvió una lista.")
+        raise RuntimeError("The GitHub API did not return a list.")
     return data
 
 
@@ -67,7 +67,7 @@ def main() -> int:
     try:
         directory = fetch_directory_json(API_URL)
     except Exception as e:
-        print(f"ERROR: No se pudo leer el índice de JSONs: {e}", file=sys.stderr)
+        print(f"ERROR: Could not read the JSON index: {e}", file=sys.stderr)
         return 1
 
     cache: list[dict] = []

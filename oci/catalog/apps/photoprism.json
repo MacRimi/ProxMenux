@@ -17,7 +17,7 @@
     "category_label": "Media & Streaming",
     "author": "PhotoPrism",
     "developer": "PhotoPrism",
-    "icon": null,
+    "icon": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/photoprism.webp",
     "thumbnail": null,
     "screenshots": [],
     "architectures": [

@@ -160,6 +160,8 @@ class NativeAdapter:
         primary = self.records[plan['primary_vmid']]
         self.services = {s['vmid']: s for s in primary['stack']['deployment']['services']}
         self.acknowledge = acknowledge_external_data
+        # Storage where the verified backups of this update are kept.
+        self.keep_backup = None
 
     def state(self):
         return json.loads(self.journal.read_text())
@@ -558,6 +560,12 @@ class NativeAdapter:
             instances.write(instances.location(self.root, vmid), record)
         try:
             self.release_stages()
+            if self.keep_backup and state['phase'] == 'committed':
+                import oci_keep_backup
+                for backup in sorted(self.journal.parent.glob('backup-*/vzdump-lxc-*.tar.zst')):
+                    kept = oci_keep_backup.keep(backup, self.keep_backup)
+                    if kept:
+                        msg_ok(f"{translate('Backup kept in')} {self.keep_backup}: {Path(kept).name}")
             self.prune_backups(include_current=state['phase'] == 'committed')
             for path, _ in image_cache.prune(self.root, lock=False):
                 member_tx.log(f'removed unused image archive: {path}')
@@ -598,7 +606,7 @@ class NativeAdapter:
 _current = {'journal': None, 'primary': None}
 
 
-def run(vmid, recover=False, acknowledge_external_data=False):
+def run(vmid, recover=False, acknowledge_external_data=False, keep_backup=None):
     root = instances.ROOT
     msg_info(translate('Checking the interrupted stack operation...') if recover
              else translate('Checking the stack before the update...'))
@@ -658,6 +666,16 @@ def run(vmid, recover=False, acknowledge_external_data=False):
         adapter = NativeAdapter(root, journal, plan, acknowledge_external_data)
         adapter.preflight()
         msg_ok(f"{translate('Stack checked:')} {len(plan['members'])} {translate('containers')}")
+        if keep_backup:
+            import oci_keep_backup
+            oci_keep_backup.validate(keep_backup)
+            if oci_keep_backup.dump_dir(keep_backup) is None:
+                for member in plan['members']:
+                    msg_info(f"{translate('Creating a backup in')} {keep_backup}: CT {member['vmid']}...")
+                    oci_keep_backup.before_update(member['vmid'], keep_backup)
+                msg_ok(f"{translate('Backup created in')} {keep_backup}")
+            else:
+                adapter.keep_backup = keep_backup
         if any(mount['type'] == 'host-bind' for member in plan['members']
                for mount in member.get('deployment', {}).get('mounts', [])):
             msg_warn(translate('Host directories are not included in the backups and are not reverted by a recovery.'))
@@ -699,11 +717,12 @@ def main():
     parser.add_argument('vmid', type=int)
     parser.add_argument('--recover', action='store_true')
     parser.add_argument('--acknowledge-external-data', action='store_true')
+    parser.add_argument('--keep-backup', metavar='STORAGE')
     args = parser.parse_args()
     if os.geteuid() != 0:
         parser.error(translate('Root privileges on the Proxmox node are required'))
     try:
-        run(args.vmid, args.recover, args.acknowledge_external_data)
+        run(args.vmid, args.recover, args.acknowledge_external_data, args.keep_backup)
         return 0
     except BlockingIOError:
         msg_error(translate('Another OCI operation is using the registry. This operation was not started.'))

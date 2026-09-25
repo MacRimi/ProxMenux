@@ -1,0 +1,383 @@
+{
+  "meta": {
+    "title": "Multi-container applications | ProxMenux",
+    "description": "How OCI manager Apps turns an application with its database and cache into coordinated native LXCs: plan, private network, dependency hook, validation and transactional updates."
+  },
+  "header": {
+    "title": "Multi-container applications",
+    "description": "An application with its database, cache and other services becomes several coordinated native LXCs, installed and updated as one.",
+    "section": "OCI manager Apps"
+  },
+  "sections": [
+    {
+      "id": "intro",
+      "blocks": [
+        {
+          "calloutInfo": {
+            "title": "One application for the user, several LXCs for Proxmox VE",
+            "body": "A multi-container definition is one entry of the catalog. The installer creates one native LXC per service and keeps their dependencies explicit. Immich, Nextcloud, Paperless-ngx and Tandoor are installed this way."
+          }
+        },
+        {
+          "mermaid": {
+            "chartCode": "flowchart LR\n C[\"Docker Compose\"] --> O[\"{{plan}}\"]\n O --> A[\"{{app}}<br/>{{appNet}}\"]\n O --> D[\"{{db}}<br/>{{private}}\"]\n O --> R[\"{{cache}}<br/>{{private}}\"]\n V1[(\"config\")] --> A\n V2[(\"database\")] --> D\n V3[(\"cache\")] --> R\n D --> A\n R --> A",
+            "labels": {
+              "plan": "Stack plan",
+              "app": "Application LXC",
+              "appNet": "LAN + private",
+              "db": "PostgreSQL LXC",
+              "cache": "Valkey LXC",
+              "private": "private"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "plan",
+      "title": "1. The plan, before any container exists",
+      "blocks": [
+        {
+          "p": "No LXC is created while the Compose definition is interpreted. A complete plan comes first, with every member, image, VMID, network, path, secret, order and health check. If the plan is not consistent, the installation does not start."
+        },
+        {
+          "table": {
+            "headers": [
+              "Plan element",
+              "Contents",
+              "Checked before creating anything"
+            ],
+            "rows": [
+              [
+                "Members",
+                "Main application, database, cache, machine learning and other dependencies",
+                "Unique VMIDs, known roles and exactly one main member"
+              ],
+              [
+                "Images",
+                "Rolling reference, architecture and resolved digest of each service",
+                "All exist, support the architecture and pass the OCI integrity check"
+              ],
+              [
+                "Network",
+                "Private bridge, subnet, a fixed address per service and LAN access for the main member",
+                "No collision with existing bridges or subnets and no repeated address"
+              ],
+              [
+                "Persistence",
+                "Container disks, host directories, owners and backup",
+                "No overlapping paths, storage available and declared permissions"
+              ],
+              [
+                "Secrets",
+                "Database password, application keys and initial credentials",
+                "Generated once and given only to the members that use them"
+              ],
+              [
+                "Lifecycle",
+                "Start order, stop order and a health check per member",
+                "The main application starts last and stops first"
+              ]
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "create",
+      "title": "2. Creation, member by member",
+      "blocks": [
+        {
+          "steps": {
+            "items": [
+              {
+                "title": "Reserve every VMID",
+                "body": "The Proxmox VE inventory and the instance registry are checked. An existing CT is not adopted and a contract that still belongs to another instance is not reused."
+              },
+              {
+                "title": "Prepare every image",
+                "body": "All images are resolved, downloaded and verified before the first container is created."
+              },
+              {
+                "title": "Create each rootfs",
+                "body": "The official OCI metadata is imported, and the ProxMenux instance identity and the member role are added."
+              },
+              {
+                "title": "Private network",
+                "body": "A bridge and subnet are created and each member gets its fixed address; only the main member also gets the LAN interface."
+              },
+              {
+                "title": "Persistence",
+                "body": "Each database and configuration gets its own container disk; only data meant to be shared uses host directories."
+              },
+              {
+                "title": "Environment",
+                "body": "Internal endpoints, shared secrets and service variables are written. The application reaches its dependencies at their reserved private addresses."
+              },
+              {
+                "title": "Record",
+                "body": "Each member records its native configuration, the rootfs changes that updates have to reproduce and its relation to the stack."
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "checks",
+      "title": "3. Start and check each container",
+      "intro": "A created LXC does not mean a ready service. Dependencies start in order and each one passes a check specific to its service.",
+      "blocks": [
+        {
+          "table": {
+            "headers": [
+              "Service",
+              "Check",
+              "What it shows"
+            ],
+            "rows": [
+              [
+                "PostgreSQL",
+                "<code>pg_isready</code> in the CT with the expected host, user and database",
+                "The server accepts connections for the configured database"
+              ],
+              [
+                "Redis / Valkey",
+                "<code>redis-cli</code> or <code>valkey-cli</code> <code>PING</code> against its private address",
+                "The broker listens and answers"
+              ],
+              [
+                "Immich machine learning",
+                "HTTP <code>GET /ping</code>, plus a check of the selected GPU runtime",
+                "The service answers and the requested acceleration has not fallen back to CPU"
+              ],
+              [
+                "Nextcloud",
+                "<code>GET /status.php</code> with <code>installed=true</code>, <code>maintenance=false</code> and <code>needsDbUpgrade=false</code>",
+                "Initialisation finished with no pending migration"
+              ],
+              [
+                "Paperless-ngx / Tandoor",
+                "HTTP on the LAN address and real port of the service",
+                "The frontend and its dependencies serve the application"
+              ],
+              [
+                "Main application",
+                "The endpoint of its template, for example <code>/api/server/ping</code> in Immich",
+                "The whole stack works through the application that uses the dependencies"
+              ]
+            ]
+          }
+        },
+        {
+          "calloutWarning": {
+            "title": "running is not healthy",
+            "body": "The running state only says that the LXC process exists. Where the service offers a better check, an exec or HTTP check with a timeout is used. If a member stops or fails its check, the stack is not declared installed."
+          }
+        }
+      ]
+    },
+    {
+      "id": "hook",
+      "title": "4. The dependency hook",
+      "blocks": [
+        {
+          "p": "The hook is set only on the main container of a dependent stack. Proxmox VE keeps the script as a snippet and runs it as the <code>hookscript</code> of that CT. The stack recipe is not written in the script: it lives in a separate private contract."
+        },
+        {
+          "codeGrid": {
+            "items": [
+              {
+                "title": "Main CT configuration",
+                "code": "hookscript: local:snippets/proxmenux-stack-dependencies.sh"
+              },
+              {
+                "title": "Private contract (example)",
+                "code": "/etc/pve/priv/proxmenux-stack-VMID.json\n{\n  \"schema\": 1,\n  \"stack\": \"immich\",\n  \"dependencies\": [\n    {\"vmid\": 107, \"label\": \"PostgreSQL\", \"healthcheck\": {...}},\n    {\"vmid\": 108, \"label\": \"Valkey\", \"healthcheck\": {...}},\n    {\"vmid\": 106, \"label\": \"Machine Learning\", \"healthcheck\": {...}}\n  ]\n}"
+              }
+            ]
+          }
+        },
+        {
+          "snippet": {
+            "summary": "Complete source of proxmenux-stack-dependencies.sh",
+            "pathCode": "local:snippets/proxmenux-stack-dependencies.sh",
+            "snippetCode": "stackDependencyHook"
+          }
+        },
+        {
+          "p": "The script is the same for every stack. VMIDs, names, check types and timeouts come from the private contract <code>/etc/pve/priv/proxmenux-stack-VMID.json</code> of each stack."
+        },
+        {
+          "steps": {
+            "items": [
+              {
+                "title": "Proxmox VE calls pre-start",
+                "body": "Before the main CT starts, the hook runs with its VMID and the lifecycle phase."
+              },
+              {
+                "title": "A lock per stack",
+                "body": "<code>flock</code> on <code>/run/lock/proxmenux-stack-VMID.lock</code> prevents two start sequences at the same time."
+              },
+              {
+                "title": "The contract is read and validated",
+                "body": "A known schema, numeric dependencies, labels, an exec, http or running check and a positive timeout are required."
+              },
+              {
+                "title": "Dependencies in order",
+                "body": "Each CT must exist; a stopped one is started and one already running is not restarted."
+              },
+              {
+                "title": "Wait for health",
+                "body": "The check runs every two seconds, and the CT is also confirmed to be still running."
+              },
+              {
+                "title": "The main CT starts",
+                "body": "When every dependency is ready, pre-start ends and Proxmox VE starts the application."
+              }
+            ]
+          }
+        },
+        {
+          "calloutInfo": {
+            "title": "The hook does not stop dependencies",
+            "body": "The post-start, pre-stop and post-stop phases do nothing. Stopping the main CT leaves PostgreSQL, Redis, Valkey or machine learning running. The hook orders the start; it does not turn several LXCs into one process."
+          }
+        },
+        {
+          "table": {
+            "headers": [
+              "Type",
+              "Example",
+              "Later starts"
+            ],
+            "rows": [
+              [
+                "Dependent stack",
+                "Immich, Nextcloud, application with PostgreSQL",
+                "The hook of the main CT starts the dependencies and waits for them"
+              ],
+              [
+                "Application suite",
+                "Arr suite",
+                "No main member: each LXC follows its own <code>onboot</code>"
+              ],
+              [
+                "Single application",
+                "Jellyfin",
+                "Proxmox VE starts that LXC directly"
+              ]
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "stack-checks",
+      "title": "5. Checks on the stack as a whole",
+      "blocks": [
+        {
+          "list": {
+            "items": [
+              "Every VMID exists, is unique and keeps the expected instance identity.",
+              "Every contract belongs to the same stack, keeps its role and its recorded native configuration.",
+              "The main member is last in <code>start_order</code> and first in <code>stop_order</code>.",
+              "No member, volume or rootfs adaptation is missing.",
+              "The hook points to the official snippet, its content is unchanged and its contract matches the stack recipe.",
+              "The observed images and digests match the prepared OCI archives.",
+              "Devices, GPU profiles, mounts, secrets and endpoints still match the contracts.",
+              "After every dependency passes, the endpoint of the main application checks the integration between members."
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "manage",
+      "title": "Managing an installed stack",
+      "intro": "In <strong>Manage installed OCI applications</strong>, any member leads to the whole stack. The menu of a stack offers <strong>Update every container of the application</strong> and <strong>Remove: delete the application and its containers</strong>.",
+      "blocks": [
+        {
+          "steps": {
+            "items": [
+              {
+                "title": "Any member",
+                "body": "The contract of the member names the main VMID and the complete list of members."
+              },
+              {
+                "title": "The stack is reproducible",
+                "body": "Identities, contracts, hook, adaptations and a coordinated replay for that recipe are validated."
+              },
+              {
+                "title": "Images first",
+                "body": "The application is not stopped until every digest has been resolved, downloaded and verified."
+              },
+              {
+                "title": "Stop and back up the set",
+                "body": "Verified native backups are taken with the stack stopped, so application and databases belong to the same moment."
+              },
+              {
+                "title": "Update and check each member",
+                "body": "Adaptation, network, mounts, secrets and devices are applied again before the health check of each member."
+              },
+              {
+                "title": "Publish or recover everything",
+                "body": "The new contracts are published only when every member passes. If one fails, every member is restored."
+              }
+            ]
+          }
+        },
+        {
+          "calloutWarning": {
+            "title": "A stack without a coordinated replay is not updated",
+            "body": "If the preparation of a stack cannot be reproduced, the update is refused before the stack is stopped. The application keeps running as it is."
+          }
+        }
+      ]
+    },
+    {
+      "id": "failure",
+      "title": "6. When something fails",
+      "blocks": [
+        {
+          "p": "During an installation, an error stops and removes the incomplete containers that operation created, and the private bridge if the operation created it. A stack is not published as valid until the whole sequence finishes."
+        },
+        {
+          "p": "An update is transactional: all images are prepared first, then the stack stops, each member is backed up and the backup verified, and only then is each rootfs replaced. Members start one by one with their health check; if one fails, every member is restored from the same set of backups, so the database and the application never belong to different moments."
+        },
+        {
+          "mermaid": {
+            "chartCode": "flowchart LR\n P[\"{{prepare}}\"] --> S[\"{{stop}}\"]\n S --> B[\"{{backup}}\"]\n B --> R[\"{{replace}}\"]\n R --> H{\"{{healthy}}\"}\n H -- \"{{yes}}\" --> C[\"{{commit}}\"]\n H -- \"{{no}}\" --> X[\"{{rollback}}\"]",
+            "labels": {
+              "prepare": "Prepare every image",
+              "stop": "Stop, main member first",
+              "backup": "Verified backup of every CT",
+              "replace": "Replace rootfs",
+              "healthy": "All healthy?",
+              "yes": "Yes",
+              "no": "No",
+              "commit": "Publish contracts",
+              "rollback": "Restore every member"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "not-assumed",
+      "title": "What a stack does not include",
+      "blocks": [
+        {
+          "list": {
+            "items": [
+              "A suite installed in one flow, such as the Arr suite, is not a dependent stack: its containers have no start order between them.",
+              "The private network does not replace authentication, TLS or the configuration of each application.",
+              "The backup of one LXC does not contain the bridge, the hook or the contracts of the rest of the stack.",
+              "Prowlarr, Sonarr or Radarr receive no indexers, profiles or providers from ProxMenux."
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

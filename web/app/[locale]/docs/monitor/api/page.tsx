@@ -63,7 +63,7 @@ export default async function MonitorApiPage({
       auth: { rows: EndpointRow[]; items: string[] }
       conventions: { items: string[] }
       system: { rows: EndpointRow[] }
-      actions: { rows: EndpointRow[] }
+      actions: { rows: EndpointRow[]; shapeCode: string; curlCode: string; haCode: string }
       health: { rows: EndpointRow[] }
       storage: { rows: EndpointRow[] }
       network: { rows: EndpointRow[] }
@@ -188,7 +188,7 @@ export default async function MonitorApiPage({
 
       <h3 className="text-lg font-semibold mt-6 mb-2 text-gray-900">{t("actions.shapeTitle")}</h3>
       <p className="mb-2 text-gray-800 leading-relaxed">{t("actions.shapeIntro")}</p>
-      <CopyableCode code={t("actions.shapeCode")} className="my-4" />
+      <CopyableCode code={messages.docs.monitor.apiReference.actions.shapeCode} className="my-4" />
 
       <h3 className="text-lg font-semibold mt-6 mb-2 text-gray-900">{t("actions.concurrencyTitle")}</h3>
       <p className="mb-4 text-gray-800 leading-relaxed">{t.rich("actions.concurrencyBody", { code })}</p>
@@ -200,11 +200,11 @@ export default async function MonitorApiPage({
 
       <h3 className="text-lg font-semibold mt-6 mb-2 text-gray-900">{t("actions.curlTitle")}</h3>
       <p className="mb-2 text-gray-800 leading-relaxed">{t("actions.curlBody")}</p>
-      <CopyableCode code={t("actions.curlCode")} className="my-4" />
+      <CopyableCode code={messages.docs.monitor.apiReference.actions.curlCode} className="my-4" />
 
       <h3 className="text-lg font-semibold mt-6 mb-2 text-gray-900">{t("actions.haTitle")}</h3>
       <p className="mb-2 text-gray-800 leading-relaxed">{t.rich("actions.haBody", { code })}</p>
-      <CopyableCode code={t("actions.haCode")} className="my-4" />
+      <CopyableCode code={messages.docs.monitor.apiReference.actions.haCode} className="my-4" />
 
       <h2 className="text-2xl font-semibold mt-10 mb-4 text-gray-900">{t("health.heading")}</h2>
       {endpointTable(healthRows, "health.rows")}

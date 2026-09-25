@@ -1,0 +1,203 @@
+{
+  "meta": {
+    "title": "OCI containers in ProxMenux Monitor | ProxMenux",
+    "description": "What ProxMenux Monitor shows for a container installed by OCI manager Apps: application and image versions, new images, console output and the Proxmox VE terminal."
+  },
+  "header": {
+    "title": "In ProxMenux Monitor",
+    "description": "A container installed by OCI manager Apps appears in VMs & LXCs like any other LXC. Its modal reads the installation record: application and image versions, new images, console output and terminal.",
+    "section": "OCI manager Apps"
+  },
+  "sections": [
+    {
+      "id": "intro",
+      "blocks": [
+        {
+          "calloutInfo": {
+            "title": "The record is the source",
+            "body": "OCI manager Apps knows what it installed and where it came from. The Monitor reads that installation record instead of probing the container, so the data is the same whether the container is running or stopped."
+          }
+        },
+        {
+          "table": {
+            "headers": [
+              "Tab",
+              "What changes for an OCI container"
+            ],
+            "rows": [
+              [
+                "App",
+                "The application is identified from the record, and updates are tracked by image"
+              ],
+              [
+                "Updates",
+                "The image is updated or the container recreated, with the same flow as the OCI menu"
+              ],
+              [
+                "Mounts",
+                "Container disks and host directories, with their usage"
+              ],
+              [
+                "Logs",
+                "Only for OCI containers: the console output of the application"
+              ]
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "app",
+      "title": "App",
+      "intro": "The <appLink>App</appLink> tab offers the installed application as a detection, with the name, logo, port and scheme of the record. Registering it opens the editor with the method <strong>OCI image (installed by ProxMenux)</strong>, which needs no configuration.",
+      "blocks": [
+        {
+          "cards": {
+            "items": [
+              {
+                "icon": "boxes",
+                "title": "Application",
+                "body": "The version of the application inside the image, read from the image itself: its environment or its <code>org.opencontainers.image.version</code> label. It is informative."
+              },
+              {
+                "icon": "archive",
+                "title": "Image",
+                "body": "The build date and digest of the installed image. The update is decided here: the installed digest is compared with the one the registry publishes today for the same tag."
+              }
+            ]
+          }
+        },
+        {
+          "list": {
+            "items": [
+              "When the registry publishes a new digest, the card shows <strong>New image</strong> with its date and digest, even if the application version inside did not change: a rebuild on an updated base is an update.",
+              "When the digests match, the card reads <strong>Version</strong>.",
+              "The card links to the repository of the image: its GitHub project, or its Docker Hub page for an official image.",
+              "The access link uses the LAN address of the container, also for the main member of a multi-container application, which has a second address on its private network.",
+              "The button <strong>Refresh data</strong> reads the record and the registry again. The options to search for applications or register another one are not offered: the container holds exactly the application of its record."
+            ]
+          }
+        },
+        {
+          "figure": {
+            "src": "/oci-manager/monitor-app-tab.png",
+            "alt": "App tab of an OCI container with the application version, the image and the repository link",
+            "caption": "App tab of a container installed by OCI manager Apps."
+          }
+        },
+        {
+          "p": "The check runs once a day with the update checks of the Monitor, and <strong>Refresh data</strong> runs it at once. A new image is sent as a notification through the channels configured in <notificationsLink>Notifications</notificationsLink>. The update is applied from the Updates tab."
+        }
+      ]
+    },
+    {
+      "id": "updates",
+      "title": "Updates",
+      "intro": "For a container installed by OCI manager Apps the Updates tab shows the application with its installed image and, when the registry publishes one, the new image, in the same format as any other application. The package and application updaters of an ordinary LXC do not appear.",
+      "blocks": [
+        {
+          "table": {
+            "headers": [
+              "Button",
+              "What it opens"
+            ],
+            "rows": [
+              [
+                "Update",
+                "The update of <lifecycleLink>Manage installed OCI applications</lifecycleLink> for this container, in the Monitor terminal. It can run whether or not there is a new image; with none, nothing is changed. In a multi-container application it updates every member."
+              ],
+              [
+                "Recreate",
+                "The recreation editor (resources, network, paths and GPU). It is not offered for a multi-container application."
+              ],
+              [
+                "Recover",
+                "Replaces Update when an operation on the container was interrupted, and opens its recovery."
+              ]
+            ]
+          }
+        },
+        {
+          "p": "External changes, host directories and multi-container applications are handled as in the OCI menu. When the terminal closes, the image, the record and the mounts are read again."
+        },
+        {
+          "table": {
+            "headers": [
+              "Option",
+              "Behaviour"
+            ],
+            "rows": [
+              [
+                "Keep the backup taken before updating",
+                "Every update backs up the container to restore it if the update fails. With this option that same backup is kept in the chosen storage and appears among the backups of the CT; on Proxmox Backup Server a backup is written before the update."
+              ],
+              [
+                "Scheduled updates",
+                "The image is updated at the chosen time only when the registry publishes a new one, and optionally only once it is 1, 3, 7 or 14 days old. A container with changes made outside ProxMenux is skipped and reported; one with host directories runs only when that was confirmed when the schedule was saved."
+              ]
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "logs",
+      "title": "Logs",
+      "intro": "The Logs tab appears only for containers installed by OCI manager Apps, between Mounts and Backups. It shows the standard output and error of the main process of the image, the same output <code>docker logs</code> shows for a Docker container.",
+      "blocks": [
+        {
+          "list": {
+            "items": [
+              "The output is kept on the host in <code>/var/log/proxmenux/oci/VMID.console.log</code> (mode 0600), from the first start and across restarts, so it can be read with the container stopped.",
+              "The file is rotated at 10 MB, keeping three compressed copies (<code>/etc/logrotate.d/proxmenux-oci</code>).",
+              "The last 100, 500 or 1000 lines are shown. While the container runs, new lines are followed live; scrolling up pauses the follow, and <strong>Follow</strong> resumes it.",
+              "A filter shows only the lines that contain a text, and <strong>Download</strong> saves the lines loaded.",
+              "Colour codes are removed and a line that a progress bar redraws is shown in its final state.",
+              "The tab reads the file on every open; it is not cached."
+            ]
+          }
+        },
+        {
+          "calloutInfo": {
+            "title": "First-start credentials",
+            "body": "Images that print a generated password on their first start leave it in this output, as <code>docker logs</code> does. The installer reads it from there to show it in its summary."
+          }
+        },
+        {
+          "figure": {
+            "src": "/oci-manager/monitor-logs-tab.png",
+            "alt": "Logs tab with the console output of an OCI container, the line selector, the filter and the follow button",
+            "caption": "Console output of an OCI container."
+          }
+        }
+      ]
+    },
+    {
+      "id": "terminal",
+      "title": "Proxmox VE console",
+      "blocks": [
+        {
+          "p": "An OCI image runs its own process as PID 1 and no login service, so the default console of an LXC would open a terminal nothing answers on. Containers installed by OCI manager Apps are created with <code>cmode: shell</code>: the Proxmox VE console opens a shell with <code>lxc-attach</code>, the equivalent of <code>docker exec</code>, with the running application untouched."
+        },
+        {
+          "list": {
+            "items": [
+              "The shell is the one <code>/etc/passwd</code> gives to root in the image. An image whose root has no shell, or ships none, keeps the default console.",
+              "The shell is root inside the container, without a password. Who can open it is decided by the <code>VM.Console</code> permission of Proxmox VE.",
+              "The terminal of the Monitor enters the container with <code>pct enter</code>, which works the same way."
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "mounts",
+      "title": "Mounts",
+      "blocks": [
+        {
+          "p": "The <mountsLink>Mounts</mountsLink> tab lists the container disks and host directories of the container. The usage of a container disk on block storage such as LVM-thin is read from the filesystem of the disk, which is mounted only inside the container."
+        }
+      ]
+    }
+  ]
+}

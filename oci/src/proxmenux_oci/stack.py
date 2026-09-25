@@ -247,8 +247,8 @@ class DefaultsUI:
         pass
 
 
-def build_stack(template, ui):
-    from .installer import build_deployment, _hostname_default
+def build_stack(template, ui, mode='advanced'):
+    from .installer import build_deployment, _hostname_default, DEFAULT_MODE
     problems = assess(template)
     if problems:
         raise StackError('; '.join(problems))
@@ -259,10 +259,10 @@ def build_stack(template, ui):
     from . import host
     from . import network as access
     from .installer import ask_bridge, ask_storage
-    root = ask_storage(ui, translate('Storage for rootfs'), 'rootdir', defaults['rootfs_storage'])
-    volumes = ask_storage(ui, translate('Storage for persistent data'), 'rootdir', defaults['volume_storage'])
-    cache = ask_storage(ui, translate('Storage for the OCI image cache'), 'vztmpl', defaults['template_storage'])
-    bridge = ask_bridge(ui, translate('Access bridge'), defaults['bridge'])
+    root = ask_storage(ui, translate('Storage for rootfs'), 'rootdir', defaults['rootfs_storage'], mode)
+    volumes = ask_storage(ui, translate('Storage for persistent data'), 'rootdir', defaults['volume_storage'], mode)
+    cache = ask_storage(ui, translate('Storage for the OCI image cache'), 'vztmpl', defaults['template_storage'], mode)
+    bridge = ask_bridge(ui, translate('Access bridge'), defaults['bridge'], mode)
     addresses, gateway = access.ask_addresses(ui, bridge, [''])
     timezone = ui.ask(translate('Timezone'), host.timezone())
     onboot = ui.confirm(translate('Start the stack with Proxmox'), False)
@@ -302,7 +302,7 @@ def build_stack(template, ui):
         for e in single['container_contract']['environment']:
             e['required'] = bool(e['example'])
             e['example'] = 'stack-resolved-value' if e['example'] else ''
-        plan = build_deployment(single, DefaultsUI())
+        plan = build_deployment(single, DefaultsUI(), DEFAULT_MODE)
         # Values are already resolved; do not reinterpret user credentials as Compose variables.
         plan['environment'] = [{'name':key,'value':value,'sensitive':True} for key,value in env.items() if value != '']
         plan.update(hostname=_hostname_default(name+'-'+s['name']), template_storage=cache,
@@ -311,19 +311,20 @@ def build_stack(template, ui):
         if 'memory_default_mb' not in single['proxmox'].get('installer_profile', {}).get('resources', {}):
             plan['resources']['memory_mb'] = max(1024 if k in {'postgres','mariadb','linuxserver/mariadb','mongo','getmeili/meilisearch'} else 512, plan['resources']['memory_mb'])
         for m in plan['mounts']:
-            mode = ui.choose(f"{s['name']}: {m['container_path']}", [('managed-volume',translate('Container volume (included in backups)')),('host-bind',translate('Host directory'))], 'managed-volume')
-            if mode is None:
+            mount_mode = ('managed-volume' if mode == DEFAULT_MODE else
+                          ui.choose(f"{s['name']}: {m['container_path']}",
+                                    [('managed-volume',translate('Container volume (included in backups)')),
+                                     ('host-bind',translate('Host directory'))], 'managed-volume'))
+            if mount_mode is None:
                 raise StackError(translate('Storage selection cancelled'))
-            m.update(type=mode, source=volumes, backup=mode=='managed-volume')
-            if mode == 'host-bind':
+            m.update(type=mount_mode, source=volumes, backup=mount_mode=='managed-volume')
+            if mount_mode == 'host-bind':
                 m['source'] = ui.ask(translate('Host directory'), '/mnt/oci-shared/'+name+'/'+s['name']+'/'+m['container_path'].strip('/').replace('/','-'))
                 m['size_gb'] = None
-            else:
+            elif mode != DEFAULT_MODE:
                 m['size_gb'] = int(ui.ask(translate('Volume size in GB'), str(max(8,m['size_gb'] or 8))))
             if m['size_gb'] is not None and m['size_gb'] < 1:
                 raise StackError(translate('Invalid volume size'))
-        from .custom_mounts import ask_custom_mounts
-        plan['mounts'] = ask_custom_mounts(ui, plan['mounts'], volumes)
         if k == 'postgres':
             health = {'type':'exec','timeout_seconds':180,'argv':['pg_isready','-h','127.0.0.1','-U',env.get('POSTGRES_USER','postgres'),'-d',env.get('POSTGRES_DB',env.get('POSTGRES_USER','postgres'))]}
         elif k == 'mariadb':
@@ -351,6 +352,9 @@ def build_stack(template, ui):
                       'template':single,'deployment':plan,'healthcheck':health})
         if main:
             plans[-1]['frontend_ipv4'] = addresses['']
+    if mode != DEFAULT_MODE:
+        from .custom_mounts import ask_stack_custom_mounts
+        ask_stack_custom_mounts(ui, plans, volumes)
     return {'deployment_kind':'generic-multi-lxc-stack','stack_name':name,'base_vmid':int(vmid) if vmid else None,
             'completion_notes':template.get('proxmox',{}).get('stack_completion_notes',[]),
             'rootfs_storage':root,'template_storage':cache,'onboot':onboot,'start_after_create':True,

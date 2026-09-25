@@ -13,11 +13,11 @@
     "description": {
       "en_US": "hiSHtory is a better shell history. It stores your shell history in context (what directory you ran the command in, whether it succeeded or failed, how long it took, etc). This is all stored locally and end-to-end encrypted for syncing to to all your other computers."
     },
-    "category": "misc",
-    "category_label": "Miscellaneous",
+    "category": "ai",
+    "category_label": "AI / Coding & Dev-Tools",
     "author": "LinuxServer.io",
     "developer": null,
-    "icon": "https://raw.githubusercontent.com/linuxserver/docker-templates/master/linuxserver.io/img/hishtory-server-icon.png",
+    "icon": "https://cdn.jsdelivr.net/gh/linuxserver/docker-templates@master/linuxserver.io/img/hishtory-server-icon.png",
     "thumbnail": "https://raw.githubusercontent.com/linuxserver/docker-templates/master/linuxserver.io/img/hishtory-server-banner.png",
     "screenshots": [],
     "architectures": [

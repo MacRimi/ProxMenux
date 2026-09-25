@@ -249,7 +249,7 @@ export default async function NvidiaHostPage({
         </Steps.Step>
 
         <Steps.Step title={t("walkthrough.version.title")}>
-          <p className="mb-3 text-gray-800">{t.rich("walkthrough.version.body1", { strong, em })}</p>
+          <p className="mb-3 text-gray-800">{t.rich("walkthrough.version.body1", { strong, em, code })}</p>
           <p className="mb-3 text-gray-800">{t("walkthrough.version.body2")}</p>
 
           <Callout variant="tip" title={t("walkthrough.version.whyTitle")}>
@@ -312,7 +312,7 @@ sh NVIDIA-Linux-x86_64-<version>.run \\
 
         <Steps.Step title={t("walkthrough.propagate.title")}>
           <p className="mb-3 text-gray-800">{t.rich("walkthrough.propagate.body1", { code, strong })}</p>
-          <p className="mb-3 text-gray-800">{t.rich("walkthrough.propagate.body2", { code })}</p>
+          <p className="mb-3 text-gray-800">{t.rich("walkthrough.propagate.body2", { code, strong })}</p>
           <Image
             src="/gpu-tpu/nvidia-host-05-lxc-update.png"
             alt={t("walkthrough.propagate.imageAlt")}
@@ -353,7 +353,7 @@ sh NVIDIA-Linux-x86_64-<version>.run \\
       <p className="mb-4 text-gray-800 leading-relaxed">{t("reinstallUninstall.uninstallIntro")}</p>
       <ul className="list-disc pl-6 mb-4 text-gray-800 leading-relaxed space-y-1">
         {uninstallItems.map((_, idx) => (
-          <li key={idx}>{t.rich(`reinstallUninstall.uninstallItems.${idx}`, { code })}</li>
+          <li key={idx}>{t.rich(`reinstallUninstall.uninstallItems.${idx}`, { code, em })}</li>
         ))}
       </ul>
 

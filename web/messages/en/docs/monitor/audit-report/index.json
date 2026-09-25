@@ -1,0 +1,83 @@
+{
+  "meta": {
+    "title": "Audit & Report | ProxMenux Monitor",
+    "description": "Assess a Proxmox VE node, record what ProxMenux changed on it and declare what is expected from its guests and storage, with printable reports."
+  },
+  "header": {
+    "title": "Audit & Report",
+    "description": "An assessment of the node, the journal of what ProxMenux changed on it and the declaration of what is expected from it, with documents that can be printed or saved as PDF.",
+    "section": "ProxMenux Monitor"
+  },
+  "sections": [
+    {
+      "id": "views",
+      "blocks": [
+        {
+          "calloutInfo": {
+            "title": "Three views, three questions",
+            "body": "Audit & Report keeps apart the facts of the node, the interventions of ProxMenux and the expectations declared for it. A configuration the assessment cannot place against a declared purpose is described, not reported as a failure."
+          }
+        },
+        {
+          "cards": {
+            "items": [
+              { "icon": "shield", "title": "Assessment — how is the node?", "body": "Runs the checks of the chosen profile, composes the inventory and classifies what needs attention, with the evidence of each result." },
+              { "icon": "refresh", "title": "Changes — what did ProxMenux do?", "body": "Lists the files, packages, services and commands the instrumented ProxMenux scripts changed, with what was there before when it was captured." },
+              { "icon": "fileText", "title": "Policy — what is expected?", "body": "Declares which guests need a backup or must start with the host, which storage is essential and the thresholds of the checks." }
+            ]
+          }
+        },
+        {
+          "flow": {
+            "nodes": [
+              { "label": "Assessment", "detail": "facts" },
+              { "label": "Policy", "detail": "context" },
+              { "label": "Changes", "detail": "interventions" }
+            ],
+            "caption": "The assessment provides the facts, the policy gives them context and the journal records what ProxMenux did."
+          }
+        },
+        {
+          "figure": {
+            "src": "/monitor/audit/assessment-view.png",
+            "alt": "Audit & Report in ProxMenux Monitor with the Assessment, Changes and Policy views",
+            "caption": "Audit & Report, with the Assessment view open."
+          }
+        }
+      ]
+    },
+    {
+      "id": "boundaries",
+      "title": "Three different functions",
+      "blocks": [
+        {
+          "table": {
+            "headers": ["Function", "What it does"],
+            "rows": [
+              ["<healthLink>Health Monitor</healthLink>", "Observes metrics and events continuously and can raise notifications."],
+              ["Audit & Report", "Runs an assessment when it is asked for, documents the node and compares runs with each other."],
+              ["Change journal", "Records the operations ProxMenux performs through its audit primitives."]
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "pages",
+      "title": "Pages of this section",
+      "blocks": [
+        {
+          "next": {
+            "items": [
+              { "label": "Assessment and inventory", "href": "/docs/monitor/audit-report/assessment", "tail": "profiles, results, accepted risks and inventory." },
+              { "label": "Changes", "href": "/docs/monitor/audit-report/changes", "tail": "the journal of what ProxMenux changed on the host." },
+              { "label": "Policy", "href": "/docs/monitor/audit-report/policy", "tail": "guests, storage and thresholds." },
+              { "label": "Reports and comparisons", "href": "/docs/monitor/audit-report/reports", "tail": "the six documents and the reference run." },
+              { "label": "Scope and guarantees", "href": "/docs/monitor/audit-report/scope", "tail": "sources, limits and stored data." }
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

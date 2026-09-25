@@ -13,11 +13,11 @@
     "description": {
       "en_US": "SickGear provides management of TV shows and/or Anime, it detects new episodes, links downloader apps, and more.."
     },
-    "category": "misc",
-    "category_label": "Miscellaneous",
+    "category": "arr",
+    "category_label": "*Arr Suite",
     "author": "LinuxServer.io",
     "developer": null,
-    "icon": "https://raw.githubusercontent.com/linuxserver/docker-templates/master/linuxserver.io/img/sickgear-icon.png",
+    "icon": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons@main/webp/sickgear.webp",
     "thumbnail": "https://raw.githubusercontent.com/linuxserver/docker-templates/master/linuxserver.io/img/sickgear-banner.png",
     "screenshots": [],
     "architectures": [

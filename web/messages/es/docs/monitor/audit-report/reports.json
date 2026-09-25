@@ -1,0 +1,160 @@
+{
+  "meta": {
+    "title": "Informes y comparaciones | Auditoría e informes",
+    "description": "Los seis documentos de Auditoría e informes, cómo se imprimen o guardan como PDF y cómo se comparan las ejecuciones con una ejecución de referencia."
+  },
+  "header": {
+    "title": "Informes y comparaciones",
+    "description": "Seis documentos, cada uno compuesto para una pregunta distinta, y la comparación de cada ejecución con una ejecución de referencia.",
+    "section": "Auditoría e informes"
+  },
+  "sections": [
+    {
+      "id": "intro",
+      "blocks": [
+        {
+          "calloutInfo": {
+            "title": "Seis documentos, no seis estilos",
+            "body": "El motor selecciona las comprobaciones y las secciones antes de componer el documento. Un diagnóstico rápido no es una auditoría completa con menos páginas, y un inventario no presenta resultados de evaluación. Los documentos de muestra usan datos ficticios."
+          }
+        }
+      ]
+    },
+    {
+      "id": "documents",
+      "title": "Los seis documentos",
+      "blocks": [
+        {
+          "downloads": {
+            "items": [
+              {
+                "title": "Auditoría completa",
+                "body": "Documenta el nodo de extremo a extremo como registro técnico.",
+                "href": "/monitor/audit/sample-audit-full-report.pdf",
+                "facts": [
+                  { "label": "Comprobaciones", "value": "Todas las disponibles." },
+                  { "label": "Contenido", "value": "Resumen ejecutivo; identidad y clúster; hardware; red y latencia; almacenamiento; invitados; passthrough; aplicaciones; hallazgos con evidencia; fuentes y alcance." }
+                ]
+              },
+              {
+                "title": "Diagnóstico rápido",
+                "body": "Muestra lo que requiere atención sin el inventario completo.",
+                "href": "/monitor/audit/sample-audit-diagnostic-report.pdf",
+                "facts": [
+                  { "label": "Comprobaciones", "value": "Las mismas que la auditoría completa." },
+                  { "label": "Contenido", "value": "Identidad mínima; hallazgos críticos; advertencias; observaciones relevantes; lecturas sin verificar y acciones prioritarias. Deja fuera diagramas, inventario y anexos extensos." }
+                ]
+              },
+              {
+                "title": "Inventario",
+                "body": "Describe lo que existe en el nodo sin evaluarlo.",
+                "href": "/monitor/audit/sample-audit-inventory-report.pdf",
+                "facts": [
+                  { "label": "Comprobaciones", "value": "Ninguna; no se clasifica ningún hallazgo." },
+                  { "label": "Contenido", "value": "Identidad; clúster; CPU y memoria; placa, BIOS y controladoras; red; almacenamiento; VM y LXC; passthrough; aplicaciones y elementos gestionados por ProxMenux." }
+                ]
+              },
+              {
+                "title": "Revisión de seguridad",
+                "body": "Abarca la exposición y los controles de acceso al nodo.",
+                "href": "/monitor/audit/sample-audit-security-report.pdf",
+                "facts": [
+                  { "label": "Comprobaciones", "value": "El área de seguridad, más los privilegios de los contenedores, las actualizaciones, los repositorios y la cadena APT." },
+                  { "label": "Contenido", "value": "Identidad y clúster; red y latencia; acceso; cortafuegos; 2FA; certificados; privilegios; actualizaciones; repositorios; estado y antigüedad de Lynis." }
+                ]
+              },
+              {
+                "title": "Garantía de backups",
+                "body": "Comprueba que la protección declarada existe y que sus backups son utilizables.",
+                "href": "/monitor/audit/sample-audit-backup-report.pdf",
+                "facts": [
+                  { "label": "Comprobaciones", "value": "El área de backups, más la conectividad del almacenamiento y la entrega de notificaciones." },
+                  { "label": "Contenido", "value": "Cobertura por invitado; objetivo de recuperación declarado; antigüedad y resultado; destino; retención; verificación; trabajos fallidos; recuperación y fuentes incompletas." }
+                ]
+              },
+              {
+                "title": "Capacidad y desgaste",
+                "body": "Mide el margen de crecimiento y las señales de agotamiento o envejecimiento.",
+                "href": "/monitor/audit/sample-audit-capacity-report.pdf",
+                "facts": [
+                  { "label": "Comprobaciones", "value": "Las áreas de almacenamiento y hardware, más memoria, swap, journal y el sistema de archivos del host." },
+                  { "label": "Contenido", "value": "Ocupación y umbrales; thin pools; sobreaprovisionamiento; memoria; inodos; ZFS; temperaturas; horas de funcionamiento; errores SMART y vida útil de NVMe/SSD." }
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "figure": {
+            "src": "/monitor/audit/audit-report-preview.png",
+            "alt": "Primera página de un informe de auditoría completa",
+            "caption": "Todos los documentos comparten el identificador del informe, las secciones numeradas, la fecha, el nodo, el perfil y el pie de página."
+          }
+        },
+        {
+          "p": "Un documento contiene la identidad del nodo y la fecha de la evaluación, el resultado ejecutivo, un resumen por áreas, la estructura de hardware, red y almacenamiento, la protección de los invitados, los hallazgos con su evidencia, las fuentes que no pudieron leerse, y el alcance y la política aplicada, en la medida en que cada perfil los incluye."
+        }
+      ]
+    },
+    {
+      "id": "print",
+      "title": "Imprimir o guardar como PDF",
+      "blocks": [
+        {
+          "steps": {
+            "items": [
+              { "title": "Ejecutar", "body": "Una evaluación se ejecuta con el perfil seleccionado en <strong>Informe</strong>." },
+              { "title": "Revisar", "body": "La ejecución terminada muestra sus hallazgos, las fuentes que no pudo leer y la política que aplicó." },
+              { "title": "Generar informe", "body": "<strong>Generar informe</strong> abre la vista preparada como documento." },
+              { "title": "Imprimir", "body": "<strong>Imprimir o guardar como PDF</strong> abre el diálogo de impresión del navegador, donde se selecciona una impresora o <em>Guardar como PDF</em>." }
+            ]
+          }
+        },
+        {
+          "calloutTip": {
+            "title": "La impresión es un documento, no una captura",
+            "body": "La barra de acciones se oculta, una tabla que continúa en la página siguiente repite su cabecera, los bloques evitan cortes innecesarios y cada página conserva la identificación y la numeración."
+          }
+        }
+      ]
+    },
+    {
+      "id": "compare",
+      "title": "Comparar con una ejecución de referencia",
+      "intro": "<strong>Usar como referencia</strong> marca una ejecución terminada como referencia. Las ejecuciones posteriores se comparan con ella y sus hallazgos se separan en:",
+      "blocks": [
+        {
+          "table": {
+            "headers": ["Grupo", "Significado"],
+            "rows": [
+              ["Nuevos", "Presentes ahora y no antes."],
+              ["Empeoraron", "Siguen presentes, y son más graves o afectan a más que antes."],
+              ["Mejoraron", "Siguen presentes, pero son menos graves o afectan a menos que antes."],
+              ["Resueltos", "Ya no aparecen, y nadie los aceptó."],
+              ["Aceptados", "Ya no cuentan porque se aceptó un riesgo, no porque haya cambiado el host."],
+              ["Ya no se evalúan", "Estaban antes y no aparecen en esta ejecución; nada ha verificado que hayan dejado de existir."]
+            ]
+          }
+        },
+        {
+          "table": {
+            "headers": ["Ejecución de referencia", "Comportamiento"],
+            "rows": [
+              ["Marcarla", "Puede marcarse cualquier ejecución terminada; ninguna se marca automáticamente."],
+              ["Cambiarla", "Marcar otra ejecución mueve la referencia sin borrar el historial."],
+              ["Comparar", "Si no se seleccionan dos ejecuciones, la comparación usa la referencia y la ejecución seleccionada o la más reciente."],
+              ["Conservar ejecuciones", "Se conservan las 30 ejecuciones más recientes, y la ejecución de referencia nunca se elimina."],
+              ["Sin referencia", "La vista indica que todavía no se ha elegido una ejecución de referencia, así que no hay con qué comparar."]
+            ]
+          }
+        },
+        {
+          "calloutWarning": {
+            "title": "Un informe describe un momento",
+            "body": "Una evaluación no certifica un periodo completo. Los resultados antiguos dejan de describir el estado actual; la vista muestra la antigüedad de la última ejecución y cada fuente conserva el momento en que se recogió."
+          }
+        }
+      ]
+    }
+  ]
+}

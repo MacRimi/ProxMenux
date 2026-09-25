@@ -13,11 +13,11 @@
     "description": {
       "en_US": "Pwndrop is a self-deployable file hosting service for sending out red teaming payloads or securely sharing your private files over HTTP and WebDAV."
     },
-    "category": "misc",
-    "category_label": "Miscellaneous",
+    "category": "downloads",
+    "category_label": "Files & Downloads",
     "author": "LinuxServer.io",
     "developer": null,
-    "icon": "https://raw.githubusercontent.com/linuxserver/docker-templates/master/linuxserver.io/img/pwndrop-icon.png",
+    "icon": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons@main/webp/pwndrop.webp",
     "thumbnail": "https://raw.githubusercontent.com/linuxserver/docker-templates/master/linuxserver.io/img/pwndrop-banner.png",
     "screenshots": [],
     "architectures": [

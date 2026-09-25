@@ -1,0 +1,146 @@
+{
+  "meta": {
+    "title": "Evaluación e inventario | Auditoría e informes",
+    "description": "La evaluación de Auditoría e informes: perfiles de informe, clasificación de los resultados, riesgos aceptados, fuentes ilegibles, Lynis e inventario del nodo."
+  },
+  "header": {
+    "title": "Evaluación e inventario",
+    "description": "La evaluación inspecciona el nodo, conserva sus hallazgos y responde a preguntas distintas según el perfil de informe.",
+    "section": "Auditoría e informes"
+  },
+  "sections": [
+    {
+      "id": "read-only",
+      "blocks": [
+        {
+          "calloutInfo": {
+            "title": "Una evaluación inspecciona; no cambia la configuración",
+            "body": "Lee la configuración y el estado del host. Escribe sus resultados, informes y logs, y las comprobaciones de arranque pueden montar un momento las particiones de sistema EFI. La configuración que evalúa no se modifica."
+          }
+        },
+        {
+          "p": "<strong>Ejecutar evaluación</strong> inicia una ejecución con el perfil seleccionado en <strong>Informe</strong>. La vista muestra la fecha de la última ejecución y cuánto tiempo ha pasado."
+        }
+      ]
+    },
+    {
+      "id": "profiles",
+      "title": "Perfiles de informe",
+      "intro": "Cada perfil responde a una pregunta distinta. Las comprobaciones y las secciones se seleccionan antes de componer el documento.",
+      "blocks": [
+        {
+          "table": {
+            "headers": ["Perfil", "Qué abarca"],
+            "rows": [
+              ["Auditoría completa", "Todas las comprobaciones y toda la estructura disponible."],
+              ["Diagnóstico rápido", "Todas las comprobaciones; el resultado empieza por los hallazgos críticos, las advertencias y las lecturas que no pudieron verificarse."],
+              ["Inventario", "Una descripción del nodo, sin comprobaciones ni clasificación."],
+              ["Revisión de seguridad", "Exposición, acceso, privilegios, certificados, actualizaciones, repositorios y Lynis."],
+              ["Garantía de backups", "Cobertura, antigüedad, resultados, verificación, retención y recuperación de los backups."],
+              ["Capacidad y desgaste", "Margen de crecimiento, memoria, ocupación y vida útil de los discos."]
+            ]
+          }
+        },
+        {
+          "p": "El contenido de cada documento se describe en <reportsLink>Informes y comparaciones</reportsLink>."
+        }
+      ]
+    },
+    {
+      "id": "results",
+      "title": "Cómo se clasifican los resultados",
+      "blocks": [
+        {
+          "table": {
+            "headers": ["Clasificación", "Significado"],
+            "rows": [
+              ["Crítico", "Una condición fallida con prioridad."],
+              ["Advertencia", "Una condición que requiere revisión, según la evidencia o la política."],
+              ["Observación", "Información sobre el nodo que no se presenta como fallo."],
+              ["Sin verificar", "La fuente que necesita la comprobación no pudo leerse. No significa que el problema no exista."],
+              ["Conforme", "La condición cumple el criterio aplicado."],
+              ["No aplicable", "Dentro del alcance de la comprobación no hay nada a lo que aplicarla."],
+              ["Riesgo aceptado", "El hallazgo existe y hay registrada una decisión sobre él."],
+              ["Excluido por política", "La política declara que el elemento queda fuera del recuento."]
+            ]
+          }
+        },
+        {
+          "p": "Los hallazgos pueden filtrarse por área: Sistema, Almacenamiento, Red, Seguridad, Backups, Invitados y Hardware. Cada hallazgo conserva su evidencia, con la fuente de la que se leyó."
+        }
+      ]
+    },
+    {
+      "id": "unverified",
+      "title": "Cuando una fuente no puede leerse",
+      "blocks": [
+        {
+          "table": {
+            "headers": ["Caso", "Comportamiento"],
+            "rows": [
+              ["Sin verificar", "La comprobación conserva su identidad, indica en su evidencia qué fuente falló y no convierte la falta de datos en un resultado conforme."],
+              ["Evidencia incompleta", "El informe nombra la fuente y el momento de la recogida, de modo que un problema real puede distinguirse de una lectura insuficiente."],
+              ["Una nueva ejecución", "Una vez corregido el acceso, el paquete o el servicio, el mismo perfil se ejecuta de nuevo y la comparación muestra si el resultado pudo verificarse."]
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "lynis",
+      "title": "Lynis",
+      "blocks": [
+        {
+          "p": "La revisión de seguridad usa el informe de Lynis del host. Cuando Lynis no se ha ejecutado todavía, o su informe supera el umbral de antigüedad de la política, un diálogo ofrece <strong>Ejecutar con Lynis</strong>, que tarda unos minutos más, o <strong>Ejecutar sin Lynis</strong>, que usa el informe existente."
+        },
+        {
+          "figure": {
+            "src": "/monitor/audit/lynis-dialog.png",
+            "alt": "Diálogo que ofrece ejecutar la evaluación con o sin Lynis",
+            "caption": "El diálogo de Lynis antes de una revisión de seguridad."
+          }
+        }
+      ]
+    },
+    {
+      "id": "accept",
+      "title": "Aceptar un riesgo",
+      "blocks": [
+        {
+          "p": "<strong>Aceptar riesgo</strong> registra una decisión sobre un hallazgo. El motivo es obligatorio y se guarda junto al autor y la fecha."
+        },
+        {
+          "table": {
+            "headers": ["Campo", "Opciones"],
+            "rows": [
+              ["Motivo", "Texto libre, obligatorio."],
+              ["Deja de aplicarse tras", "90 días, 180 días, 1 año o no caduca. Al cumplirse el plazo, el hallazgo vuelve a estar activo."],
+              ["Recordarme revisarla", "Un recordatorio que devuelve la decisión a la atención mientras sigue en vigor."]
+            ]
+          }
+        },
+        {
+          "p": "Un hallazgo aceptado sigue visible con su decisión, y <strong>Volver a activo</strong> la revoca. Un riesgo aceptado no es una corrección: la comparación lo presenta como aceptado, no como resuelto."
+        }
+      ]
+    },
+    {
+      "id": "inventory",
+      "title": "Inventario",
+      "blocks": [
+        {
+          "list": {
+            "items": [
+              "Identidad, versión de Proxmox VE, kernel, suscripción y clúster.",
+              "CPU, memoria, placa, BIOS, controladoras e IOMMU.",
+              "Discos, SMART, horas de funcionamiento y eventos registrados.",
+              "Adaptadores, bonds, bridges, latencia y conexiones.",
+              "Almacenamiento, invitados con sus discos e interfaces, y backups.",
+              "Passthrough PCI y el software que gestiona ProxMenux."
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

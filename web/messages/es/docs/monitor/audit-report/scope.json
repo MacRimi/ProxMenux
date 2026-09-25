@@ -1,0 +1,97 @@
+{
+  "meta": {
+    "title": "Alcance y garantías | Auditoría e informes",
+    "description": "De dónde proceden los datos de Auditoría e informes, qué queda fuera de su alcance, las garantías de su diseño y dónde se guardan sus datos."
+  },
+  "header": {
+    "title": "Alcance y garantías",
+    "description": "De dónde proceden los datos de una evaluación, qué queda fuera de su alcance y dónde guarda Auditoría e informes sus datos.",
+    "section": "Auditoría e informes"
+  },
+  "sections": [
+    {
+      "id": "sees",
+      "title": "Qué observa",
+      "blocks": [
+        {
+          "list": {
+            "items": [
+              "La configuración y el estado del nodo local.",
+              "La configuración declarada de las VM y los LXC.",
+              "El estado del almacenamiento tal como lo conoce Proxmox VE.",
+              "El historial disponible de backups y verificaciones.",
+              "Los datos SMART y los eventos que ha recogido el Monitor.",
+              "El estado de los servicios, el clúster, HA y las fuentes locales."
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "outside",
+      "title": "Qué queda fuera de su alcance",
+      "blocks": [
+        {
+          "list": {
+            "items": [
+              "El interior de los invitados, más allá de lo que declaran a Proxmox VE.",
+              "El equipamiento de red fuera del host.",
+              "Las dependencias remotas que el nodo no puede observar.",
+              "El estado físico que el hardware no expone.",
+              "Las acciones manuales o de otro software, en el registro de cambios."
+            ]
+          }
+        },
+        {
+          "calloutWarning": {
+            "title": "La ausencia de evidencia no es evidencia de ausencia",
+            "body": "Una fuente que no puede leerse da un resultado sin verificar o incompleto, nunca uno conforme. El informe enumera las fuentes que no estuvieron disponibles."
+          }
+        }
+      ]
+    },
+    {
+      "id": "guarantees",
+      "title": "Garantías del diseño",
+      "blocks": [
+        {
+          "list": {
+            "items": [
+              "Identificadores estables para las comprobaciones.",
+              "Historial de ejecuciones y hallazgos.",
+              "Una política validada y guardada de forma atómica.",
+              "Riesgos aceptados con motivo y visibles.",
+              "Atribución de los cambios al script y a la función.",
+              "Captura del estado anterior y posterior cuando está disponible.",
+              "Un resultado explícito cuando algo no puede medirse o capturarse."
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "storage",
+      "title": "Dónde se guardan los datos",
+      "blocks": [
+        {
+          "table": {
+            "headers": ["Datos", "Ubicación"],
+            "rows": [
+              ["Política", "<code>/usr/local/share/proxmenux/audit_policy.json</code>"],
+              ["Evaluaciones", "La base de datos de auditoría del Monitor"],
+              ["Objetos capturados", "<code>/usr/local/share/proxmenux/changes/objects/</code>"],
+              ["Entradas pendientes", "<code>/usr/local/share/proxmenux/changes/spool/</code>"],
+              ["Registro consolidado", "<code>/usr/local/share/proxmenux/changes.db</code>"]
+            ]
+          }
+        },
+        {
+          "calloutInfo": {
+            "title": "Una herramienta de revisión, no una certificación",
+            "body": "Auditoría e informes revisa, compara y documenta el nodo. Sus resultados se leen junto con la finalidad del sistema, la política declarada y las fuentes disponibles."
+          }
+        }
+      ]
+    }
+  ]
+}

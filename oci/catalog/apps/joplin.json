@@ -13,11 +13,11 @@
     "description": {
       "en_US": "Joplin is a free, open source note taking and to-do application, which can handle a large number of notes organised into notebooks."
     },
-    "category": "misc",
-    "category_label": "Miscellaneous",
+    "category": "documents",
+    "category_label": "Documents & Notes",
     "author": "LinuxServer.io",
     "developer": null,
-    "icon": "https://raw.githubusercontent.com/linuxserver/docker-templates/master/linuxserver.io/img/joplin-icon.png",
+    "icon": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/joplin.webp",
     "thumbnail": "https://raw.githubusercontent.com/linuxserver/docker-templates/master/linuxserver.io/img/joplin-banner.png",
     "screenshots": [],
     "architectures": [

@@ -13,11 +13,11 @@
     "description": {
       "en_US": "LibreOffice is a free and powerful office suite, and a successor to OpenOffice.org (commonly known as OpenOffice). Its clean interface and feature-rich tools help you unleash your creativity and enhance your productivity."
     },
-    "category": "misc",
-    "category_label": "Miscellaneous",
+    "category": "documents",
+    "category_label": "Documents & Notes",
     "author": "LinuxServer.io",
     "developer": null,
-    "icon": "https://raw.githubusercontent.com/linuxserver/docker-templates/master/linuxserver.io/img/libreoffice-icon.png",
+    "icon": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/libreoffice.webp",
     "thumbnail": "https://raw.githubusercontent.com/linuxserver/docker-templates/master/linuxserver.io/img/libreoffice-banner.png",
     "screenshots": [],
     "architectures": [

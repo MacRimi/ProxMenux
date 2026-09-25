@@ -15,7 +15,7 @@ import { useT } from "../lib/i18n/provider"
 import {
   Bell, BellOff, Send, CheckCircle2, XCircle, Loader2,
   AlertTriangle, Info, Settings2, Zap, Eye, EyeOff,
-  Trash2, ChevronDown, ChevronUp, ChevronRight, TestTube2, Mail, Webhook,
+  Trash2, ChevronRight, TestTube2, Mail, Webhook,
   Copy, Server, Shield, ExternalLink, RefreshCw, Download, Upload,
   Cloud, Brain, Globe, MessageSquareText, Sparkles, Pencil, Save, RotateCcw, Lightbulb,
   Moon, Newspaper
@@ -343,7 +343,6 @@ export function NotificationSettings() {
   const [testing, setTesting] = useState<string | null>(null)
   const [testResult, setTestResult] = useState<{ channel: string; success: boolean; message: string } | null>(null)
   const [showHistory, setShowHistory] = useState(false)
-  const [showAdvanced, setShowAdvanced] = useState(false)
   const [showSecrets, setShowSecrets] = useState<Record<string, boolean>>({})
   // Cleartext secrets cached only while the eye toggle is "on" for
   // that field. Settings GET returns "************" for everything in
@@ -508,13 +507,6 @@ export function NotificationSettings() {
   useEffect(() => {
     if (showHistory) loadHistory()
   }, [showHistory, loadHistory])
-
-  // Auto-expand AI section when AI is enabled
-  useEffect(() => {
-    if (config.ai_enabled) {
-      setShowAdvanced(true)
-    }
-  }, [config.ai_enabled])
 
   const updateConfig = (updater: (prev: NotificationConfig) => NotificationConfig) => {
     setConfig(prev => {
@@ -919,13 +911,13 @@ export function NotificationSettings() {
     return flat
   }
 
-  const handleSave = async () => {
+  const saveConfig = async (nextConfig: NotificationConfig): Promise<boolean> => {
     setSaving(true)
     setSaveError(null)
     try {
       // If notifications are being disabled, clean up PVE webhook first
       const wasEnabled = originalConfig.enabled
-      const isNowDisabled = !config.enabled
+      const isNowDisabled = !nextConfig.enabled
 
       if (wasEnabled && isNowDisabled) {
         try {
@@ -935,24 +927,31 @@ export function NotificationSettings() {
         }
       }
 
-      const payload = flattenConfig(config)
+      const payload = flattenConfig(nextConfig)
       await fetchApi("/api/notifications/settings", {
         method: "POST",
         body: JSON.stringify(payload),
       })
-      setOriginalConfig(config)
+      setConfig(nextConfig)
+      setOriginalConfig(nextConfig)
       setHasChanges(false)
       setEditMode(false)
       setSaved(true)
       setTimeout(() => setSaved(false), 3000)
       loadStatus()
+      return true
     } catch (err) {
       console.error("Failed to save notification settings:", err)
       const msg = err instanceof Error ? err.message : t("settings.notifications.errors.saveFailed")
       setSaveError(msg)
+      return false
     } finally {
       setSaving(false)
     }
+  }
+
+  const handleSave = async () => {
+    await saveConfig(config)
   }
 
   const handleCancel = () => {
@@ -2226,74 +2225,45 @@ export function NotificationSettings() {
               </p>
             </div>
 
-            {/* ── Advanced: AI Enhancement ── */}
-            <div>
-              <div className="flex items-center justify-between py-1">
-                <button
-                  className="flex items-center gap-2 text-sm text-foreground hover:bg-muted/60 rounded-md px-2 py-1.5 -mx-2 transition-colors"
-                  onClick={() => setShowAdvanced(!showAdvanced)}
-                >
-                  {showAdvanced ? (
-                    <ChevronUp className="h-4 w-4 text-muted-foreground" />
-                  ) : (
-                    <ChevronDown className="h-4 w-4 text-muted-foreground" />
-                  )}
-                  <Sparkles className="h-4 w-4 text-purple-400" />
-                  <span className="font-medium">{t("settings.notifications.ai.title")}</span>
-                  {config.ai_enabled ? (
-                    <Badge variant="outline" className="text-[10px] border-purple-500/40 text-purple-400 ml-1">
-                      {t("status.active")}
-                    </Badge>
-                  ) : (
-                    <Badge variant="outline" className="text-[10px] border-border text-muted-foreground ml-1">
-                      {t("settings.notifications.ui.optional")}
-                    </Badge>
-                  )}
-                </button>
-                {showAdvanced && (
-                  <div className="flex items-center gap-2">
-                    {editMode ? (
-                      <>
-                        <button
-                          className="h-6 px-2 text-xs rounded-md border border-border bg-background hover:bg-muted transition-colors text-muted-foreground"
-                          onClick={handleCancel}
-                          disabled={saving}
-                        >
-                          {t("actions.cancel")}
-                        </button>
-                        <button
-                          className="h-6 px-2 text-xs rounded-md bg-blue-600 hover:bg-blue-700 text-white transition-colors disabled:opacity-50 flex items-center gap-1"
-                          onClick={handleSave}
-                          disabled={saving || !hasChanges}
-                        >
-                          {saving ? <Loader2 className="h-3 w-3 animate-spin" /> : <CheckCircle2 className="h-3 w-3" />}
-                          {t("actions.save")}
-                        </button>
-                      </>
-                    ) : (
-                      <button
-                        className="h-6 px-2 text-xs rounded-md border border-border bg-background hover:bg-muted transition-colors flex items-center gap-1"
-                        onClick={() => setEditMode(true)}
-                      >
-                        <Settings2 className="h-3 w-3" />
-                        {t("actions.edit")}
-                      </button>
-                    )}
+            {/* ── AI Enhancement ── */}
+            <div className="space-y-3">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between py-1">
+                <div className="flex items-start gap-3">
+                  <Sparkles className="h-5 w-5 text-purple-400 mt-0.5 shrink-0" />
+                  <div>
+                    <span className="text-sm font-medium">{t("settings.notifications.ai.title")}</span>
+                    <p className="text-xs sm:text-sm text-muted-foreground">{t("settings.notifications.ai.enhancedMessagesDescription")}</p>
                   </div>
-                )}
-              </div>
-
-{showAdvanced && (
-                  <div className="space-y-4 mt-3 p-4 rounded-lg bg-muted/30 border border-border/50">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-start gap-3">
-                        <Sparkles className="h-5 w-5 text-purple-400 mt-0.5 shrink-0" />
-                        <div>
-                          <span className="text-sm font-medium">{t("settings.notifications.ai.enhancedMessages")}</span>
-                          <p className="text-xs sm:text-sm text-muted-foreground">{t("settings.notifications.ai.enhancedMessagesDescription")}</p>
-                        </div>
-                      </div>
+                </div>
+                <div className="flex items-center justify-end gap-2">
+                  {editMode ? (
+                    <>
                       <button
+                        className="h-7 px-2 text-xs rounded-md border border-border bg-background hover:bg-muted transition-colors text-muted-foreground"
+                        onClick={handleCancel}
+                        disabled={saving}
+                      >
+                        {t("actions.cancel")}
+                      </button>
+                      <button
+                        className="h-7 px-2 text-xs rounded-md bg-blue-600 hover:bg-blue-700 text-white transition-colors disabled:opacity-50 flex items-center gap-1"
+                        onClick={handleSave}
+                        disabled={saving || !hasChanges}
+                      >
+                        {saving ? <Loader2 className="h-3 w-3 animate-spin" /> : <CheckCircle2 className="h-3 w-3" />}
+                        {t("actions.save")}
+                      </button>
+                    </>
+                  ) : (
+                    <button
+                      className="h-7 px-2 text-xs rounded-md border border-border bg-background hover:bg-muted transition-colors flex items-center gap-1"
+                      onClick={() => setEditMode(true)}
+                    >
+                      <Settings2 className="h-3 w-3" />
+                      {t("actions.edit")}
+                    </button>
+                  )}
+                  <button
                       className={`relative w-9 h-[18px] rounded-full transition-colors ${
                         config.ai_enabled ? "bg-purple-600" : "bg-muted-foreground/20 border border-muted-foreground/40"
                       } ${!editMode ? "opacity-60 cursor-not-allowed" : "cursor-pointer"}`}
@@ -2305,10 +2275,12 @@ export function NotificationSettings() {
                       <span className={`absolute top-[1px] left-[1px] h-4 w-4 rounded-full bg-white shadow transition-transform ${
                         config.ai_enabled ? "translate-x-[18px]" : "translate-x-0"
                       }`} />
-                    </button>
-                  </div>
+                  </button>
+                </div>
+              </div>
 
-                  {config.ai_enabled && (
+              {config.ai_enabled && (
+                <div className="space-y-4 p-4 rounded-lg bg-muted/30 border border-border/50">
                     <>
                       {/* Provider + Info button */}
                       <div className="space-y-2">
@@ -2661,10 +2633,12 @@ export function NotificationSettings() {
                                       <Button
                                         variant="outline"
                                         size="sm"
-                                        onClick={() => {
-                                          updateConfig(p => ({ ...p, ai_custom_prompt: customPromptDraft }))
-                                          setEditingCustomPrompt(false)
-                                          handleSave()
+                                        onClick={async () => {
+                                          const nextConfig = { ...config, ai_custom_prompt: customPromptDraft }
+                                          if (await saveConfig(nextConfig)) {
+                                            setEditingCustomPrompt(false)
+                                            setCustomPromptDraft("")
+                                          }
                                         }}
                                         className="h-7 px-2 text-xs flex items-center gap-1 bg-blue-600 hover:bg-blue-700 text-white border-blue-600"
                                       >
@@ -2714,8 +2688,8 @@ export function NotificationSettings() {
                                     const file = (e.target as HTMLInputElement).files?.[0]
                                     if (file) {
                                       const text = await file.text()
-                                      updateConfig(p => ({ ...p, ai_custom_prompt: text }))
-                                      handleSave()
+                                      const nextConfig = { ...config, ai_custom_prompt: text }
+                                      await saveConfig(nextConfig)
                                     }
                                   }
                                   input.click()
@@ -2783,7 +2757,6 @@ export function NotificationSettings() {
                         )}
                       </div>
                     </>
-                  )}
                 </div>
               )}
             </div>

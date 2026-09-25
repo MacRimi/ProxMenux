@@ -97,8 +97,7 @@ class RateLimiter:
         # Counter of events dropped while over the rate limit. Surfaced via
         # `consume_drop_count()` so the dispatch loop can periodically log
         # "X events suppressed by rate-limit" instead of letting them
-        # disappear silently. Audit Tier 6 — `RateLimiter` descarta
-        # silenciosamente eventos sobre el límite.
+        # disappear silently.
         self._dropped: int = 0
 
     def allow(self) -> bool:

@@ -48,7 +48,7 @@ CASAOS_TRANSLATED_SERVICE_KEYS = SUPPORTED_SERVICE_KEYS | {"deploy", "network_mo
 def normalize_app_id(value: str) -> str:
     normalized = re.sub(r"[^a-z0-9]+", "-", value.casefold()).strip("-")
     if not normalized:
-        raise ConversionError(f"No se puede normalizar el identificador CasaOS: {value!r}")
+        raise ConversionError(f"Cannot normalise the CasaOS identifier: {value!r}")
     return normalized
 
 
@@ -76,7 +76,7 @@ def _json_safe(value: Any) -> Any:
 def _main_service(compose: dict[str, Any], metadata: dict[str, Any]) -> tuple[str, dict[str, Any]]:
     services = compose.get("services")
     if not isinstance(services, dict) or not services:
-        raise ConversionError("El Compose CasaOS no contiene servicios")
+        raise ConversionError("The CasaOS Compose file has no services")
     service_name = metadata.get("main")
     if not service_name and len(services) == 1:
         service_name = next(iter(services))
@@ -84,7 +84,7 @@ def _main_service(compose: dict[str, Any], metadata: dict[str, Any]) -> tuple[st
         raise ConversionError("x-casaos.main no identifica un servicio valido")
     service = services[service_name]
     if not isinstance(service, dict) or not service.get("image"):
-        raise ConversionError("El servicio principal CasaOS no declara una imagen")
+        raise ConversionError("The main CasaOS service declares no image")
     return str(service_name), service
 
 
@@ -214,10 +214,10 @@ def parse_casaos_compose(compose_text: str) -> tuple[dict[str, Any], dict[str, A
     except yaml.YAMLError as exc:
         raise ConversionError(f"Docker Compose CasaOS no valido: {exc}") from exc
     if not isinstance(compose, dict):
-        raise ConversionError("El documento CasaOS no es un objeto Compose")
+        raise ConversionError("The CasaOS document is not a Compose mapping")
     metadata = compose.get("x-casaos")
     if not isinstance(metadata, dict):
-        raise ConversionError("El Compose no contiene metadatos x-casaos")
+        raise ConversionError("The Compose file has no x-casaos metadata")
     service_name, service = _main_service(compose, metadata)
     return compose, metadata, service_name, service
 

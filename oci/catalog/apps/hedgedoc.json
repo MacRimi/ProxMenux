@@ -13,11 +13,11 @@
     "description": {
       "en_US": "HedgeDoc gives you access to all your files wherever you are."
     },
-    "category": "misc",
-    "category_label": "Miscellaneous",
+    "category": "documents",
+    "category_label": "Documents & Notes",
     "author": "LinuxServer.io",
     "developer": null,
-    "icon": "https://raw.githubusercontent.com/linuxserver/docker-templates/master/linuxserver.io/img/hedgedoc-icon.png",
+    "icon": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/hedgedoc.webp",
     "thumbnail": "https://raw.githubusercontent.com/linuxserver/docker-templates/master/linuxserver.io/img/hedgedoc-banner.png",
     "screenshots": [],
     "architectures": [

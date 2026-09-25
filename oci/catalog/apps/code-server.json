@@ -13,11 +13,11 @@
     "description": {
       "en_US": "Code-server is VS Code running on a remote server, accessible through the browser."
     },
-    "category": "misc",
-    "category_label": "Miscellaneous",
+    "category": "ai",
+    "category_label": "AI / Coding & Dev-Tools",
     "author": "LinuxServer.io",
     "developer": null,
-    "icon": "https://raw.githubusercontent.com/linuxserver/docker-templates/master/linuxserver.io/img/code-server-icon.png",
+    "icon": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons@main/webp/code-server.webp",
     "thumbnail": "https://raw.githubusercontent.com/linuxserver/docker-templates/master/linuxserver.io/img/code-server-banner.png",
     "screenshots": [],
     "architectures": [

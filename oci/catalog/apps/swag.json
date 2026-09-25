@@ -13,11 +13,11 @@
     "description": {
       "en_US": "Nginx webserver and reverse proxy with php support and a built-in Certbot (Let's Encrypt) client. It also contains fail2ban for intrusion prevention."
     },
-    "category": "misc",
-    "category_label": "Miscellaneous",
+    "category": "web",
+    "category_label": "Webservers & Proxies",
     "author": "LinuxServer.io",
     "developer": null,
-    "icon": "https://raw.githubusercontent.com/linuxserver/docker-templates/master/linuxserver.io/img/swag-icon.png",
+    "icon": "https://cdn.jsdelivr.net/gh/linuxserver/docker-templates@master/linuxserver.io/img/linuxserver-ls-logo.png",
     "thumbnail": "https://raw.githubusercontent.com/linuxserver/docker-templates/master/linuxserver.io/img/swag-banner.png",
     "screenshots": [],
     "architectures": [

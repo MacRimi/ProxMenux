@@ -8,7 +8,7 @@
       "en_US": "DeepSeekHarness"
     },
     "tagline": {
-      "en_US": "DeepSeek Harness \u201cEverything is a Plugin\u201c."
+      "en_US": "DeepSeek Harness “Everything is a Plugin“."
     },
     "description": {
       "en_US": "DeepSeek Harness (dsh) is an open-source agent harness developed by DeepSeek AI."
@@ -17,7 +17,7 @@
     "category_label": "AI / Coding & Dev-Tools",
     "author": "DeepSeek",
     "developer": "DeepSeek",
-    "icon": null,
+    "icon": "https://cdn.jsdelivr.net/gh/deepseek-ai/deepseek-harness@master/apps/web/public/favicon.svg",
     "thumbnail": null,
     "screenshots": [],
     "architectures": [

@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 import sys
 import textwrap
 import unicodedata
@@ -401,11 +402,8 @@ def _rclone_mount(catalog: Catalog, ui) -> None:
 def _app_detail(catalog: Catalog, ui, item: dict[str, Any]) -> None:
     template = catalog.compose(item["id"])
     actions = []
-    if item.get("multi_container"):
-        actions.append(("advanced", translate("Install (experimental)")))
-    else:
-        actions += [("default", translate("Install with default settings")),
-                    ("advanced", translate("Install with advanced settings"))]
+    actions += [("default", translate("Install with default settings")),
+                ("advanced", translate("Install with advanced settings"))]
     if item["id"] == "rclone":
         actions.append(("mount", translate("Enable a mount on an existing Rclone OCI container")))
     numbered = {str(number): action for number, (action, _) in enumerate(actions, 1)}
@@ -538,6 +536,7 @@ def build_parser() -> argparse.ArgumentParser:
     generate_all_parser = subparsers.add_parser("generate-all", help="Regenerate the catalog templates")
     generate_all_parser.add_argument("--provider", choices=["all", "linuxserver.io", "imported", "curated"],
                                      default="all")
+    subparsers.add_parser("apply-icons", help="Resolve catalog icons against the jsdelivr icon sets")
     show_parser = subparsers.add_parser("show", help="Show the summary of a template")
     show_parser.add_argument("app")
     install_parser = subparsers.add_parser("install", help="Configure and install an application")
@@ -548,6 +547,16 @@ def build_parser() -> argparse.ArgumentParser:
     rclone_parser = subparsers.add_parser("rclone-mount", help="Enable a mount on an installed Rclone OCI")
     rclone_parser.add_argument("--host", default="auto")
     rclone_parser.add_argument("--dry-run", action="store_true")
+    manage_parser = subparsers.add_parser("manage", help="Update or recreate one installed OCI instance")
+    manage_parser.add_argument("vmid", type=int)
+    manage_parser.add_argument("--action", choices=("update", "recreate"), required=True)
+    manage_parser.add_argument("--keep-backup", metavar="STORAGE",
+                               help="Keep the backup taken before the update in this Proxmox storage")
+    manage_parser.add_argument("--unattended", action="store_true",
+                               help="Scheduled run: no questions; stops where a person has to decide")
+    manage_parser.add_argument("--acknowledge-external-data", action="store_true",
+                               help="Host directories are not reverted by the backup (confirmed beforehand)")
+    manage_parser.add_argument("--min-image-age-days", type=int, default=0)
     return parser
 
 
@@ -583,6 +592,11 @@ def main(argv: list[str] | None = None) -> int:
             print(f"\nGenerated: {report['generated_count']}; failed: {report['failed_count']}; "
                   f"family: {args.provider}")
             return 0 if not report["failed"] else 2
+        if args.command == "apply-icons":
+            report = catalog.apply_icons()
+            print(f"Icons resolved: {report['resolved']}; cleared: {report['cleared']}; "
+                  f"unchanged: {report['unchanged']}; with a theme variant: {report['themed']}")
+            return 0
         if args.command == "show":
             print(_template_summary_text(catalog.compose(args.app)))
             return 0
@@ -599,6 +613,17 @@ def main(argv: list[str] | None = None) -> int:
             if result:
                 _print_installation_summary(result)
             return 0
+        if args.command == "manage":
+            from .management import direct_management
+            lifecycle_args = []
+            if args.keep_backup:
+                if not re.fullmatch(r"[A-Za-z0-9._-]{1,64}", args.keep_backup):
+                    raise InstallError(translate("Invalid storage name"))
+                lifecycle_args += ["--keep-backup", args.keep_backup]
+            if args.acknowledge_external_data:
+                lifecycle_args.append("--acknowledge-external-data")
+            return direct_management(PROJECT_ROOT, args.vmid, args.action, lifecycle_args,
+                                     args.unattended, max(0, args.min_image_age_days))
         if args.command == "rclone-mount":
             template = catalog.compose("rclone")
             deployment = build_rclone_mount_deployment(template)

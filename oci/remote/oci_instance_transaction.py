@@ -40,7 +40,10 @@ BASIC = {'arch', 'cmode', 'console', 'tty', 'cores', 'cpulimit', 'cpuunits', 'de
          'entrypoint', 'env', 'features', 'hostname', 'memory', 'net0', 'onboot',
          'ostype', 'rootfs', 'swap', 'tags', 'unprivileged',
          'lxc.init.cwd', 'lxc.init.uid', 'lxc.init.gid', 'lxc.init.groups',
-         'lxc.signal.halt', 'lxc.environment.runtime'}
+         'lxc.signal.halt', 'lxc.environment.runtime',
+         # The container's console log, set by the installer on every
+         # creation; the rebuilt container gets it again the same way.
+         'lxc.console.logfile'}
 # Their output is data (and may hold saved secrets); it is never logged.
 DATA_COMMANDS = {('pct', 'config'), ('pvesh', 'get')}
 LOG_DIR = Path(os.environ.get('OCI_LOG_DIR', '/var/log/proxmenux/oci'))
@@ -759,7 +762,8 @@ def check_archive(archive):
 
 
 def apply(root, vmid, archive, operation, proposal=None, registry_digest=None, interrupt_after=None,
-          backup_compression='zstd', acknowledge_external_data=False, coordinated=None, progress=None):
+          backup_compression='zstd', acknowledge_external_data=False, coordinated=None, progress=None,
+          keep_backup=None):
     # A coordinated member is shown by its stack; progress prefixes the installer steps.
     show = not coordinated
     update = operation == 'update'
@@ -944,6 +948,11 @@ def apply(root, vmid, archive, operation, proposal=None, registry_digest=None, i
     freed = 0
     try:
         release_stage(state)
+        if keep_backup and state.get('backup'):
+            import oci_keep_backup
+            kept = oci_keep_backup.keep(state['backup'], keep_backup)
+            if kept:
+                msg_ok(f"{translate('Backup kept in')} {keep_backup}: {Path(kept).name}")
         prune_backups(root, vmid)
         for path, size in image_cache.prune(root, lock=False):
             log(f'removed unused image archive: {path}')

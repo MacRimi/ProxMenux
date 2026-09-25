@@ -13,11 +13,11 @@
     "description": {
       "en_US": "WineGUI is a user-interface friendly Wine manager that provides a graphical frontend for creating and managing Wine bottles."
     },
-    "category": "misc",
-    "category_label": "Miscellaneous",
+    "category": "desktop",
+    "category_label": "Browsers & Web Desktops",
     "author": "LinuxServer.io",
     "developer": null,
-    "icon": "https://raw.githubusercontent.com/linuxserver/docker-templates/master/linuxserver.io/img/winegui-icon.png",
+    "icon": "https://cdn.jsdelivr.net/gh/linuxserver/docker-templates@master/linuxserver.io/img/winegui-logo.png",
     "thumbnail": "https://raw.githubusercontent.com/linuxserver/docker-templates/master/linuxserver.io/img/winegui-banner.png",
     "screenshots": [],
     "architectures": [

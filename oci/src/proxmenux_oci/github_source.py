@@ -93,11 +93,11 @@ class GitHubSource:
                 remaining = exc.headers.get("X-RateLimit-Remaining")
                 if exc.code == 403 and remaining == "0":
                     raise SourceError(
-                        f"GitHub devolvio HTTP 403 para {url}. "
-                        "Define GITHUB_TOKEN para ampliar el limite de la API."
+                        f"GitHub returned HTTP 403 for {url}. "
+                        "Set GITHUB_TOKEN to raise the API rate limit."
                     ) from exc
                 if exc.code not in {429, 500, 502, 503, 504}:
-                    raise SourceError(f"GitHub devolvio HTTP {exc.code} para {url}.") from exc
+                    raise SourceError(f"GitHub returned HTTP {exc.code} para {url}.") from exc
             except (urllib.error.URLError, TimeoutError) as exc:
                 last_error = exc
             if attempt < 2:
@@ -142,7 +142,7 @@ class GitHubSource:
     def proxmenux_app_metadata(self) -> dict[str, dict[str, Any]]:
         payload = self.get_json(PROXMENUX_HELPERS_URL)
         if not isinstance(payload, list):
-            raise SourceError("El catalogo de aplicaciones de ProxMenux no es una lista")
+            raise SourceError("The ProxMenux application catalogue is not a list")
         result: dict[str, dict[str, Any]] = {}
         for item in payload:
             if not isinstance(item, dict) or not item.get("slug"):
@@ -160,7 +160,7 @@ class GitHubSource:
         revision = str(commit["sha"])
         tree = self.get_json(f"/repos/{CASAOS_REPOSITORY}/git/trees/{revision}?recursive=1")
         if tree.get("truncated"):
-            raise SourceError("GitHub devolvio truncado el arbol del catalogo CasaOS")
+            raise SourceError("GitHub returned a truncated tree for the CasaOS catalogue")
         paths = sorted(
             str(item["path"])
             for item in tree.get("tree", [])
@@ -168,7 +168,7 @@ class GitHubSource:
             and re.fullmatch(r"Apps/[^/]+/docker-compose\.yml", str(item.get("path", "")))
         )
         if not paths:
-            raise SourceError("No se encontraron Compose en el catalogo CasaOS")
+            raise SourceError("No Compose files were found in the CasaOS catalogue")
         return {
             "repository": CASAOS_REPOSITORY_URL,
             "revision": revision,

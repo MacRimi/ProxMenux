@@ -1,0 +1,232 @@
+{
+  "meta": {
+    "title": "Dispositivos y aceleración | ProxMenux",
+    "description": "Cómo entrega OCI manager Apps GPU, NVIDIA, Coral, USB, FUSE y otros dispositivos a un contenedor OCI como recursos nativos y validados de Proxmox VE."
+  },
+  "header": {
+    "title": "Dispositivos y aceleración",
+    "description": "GPU, NVIDIA, Coral, USB, FUSE y dispositivos de bloques se convierten en recursos nativos y validados de Proxmox VE del contenedor.",
+    "section": "OCI manager Apps"
+  },
+  "sections": [
+    {
+      "id": "principle",
+      "title": "El dispositivo que necesita la aplicación, no todo el host",
+      "blocks": [
+        {
+          "p": "Un dispositivo solicitado por el archivo Compose o por el perfil de la aplicación se convierte en una entrada <code>devN</code> o un montaje LXC concreto. Pedir una GPU, un dispositivo USB o un Coral no convierte el contenedor en privilegiado."
+        },
+        {
+          "flow": {
+            "nodes": [
+              { "label": "Inventario del host", "detail": "/dev/dri/renderD128\nGID 993 · Intel" },
+              { "label": "ProxMenux", "detail": "fabricante y\npermisos comprobados" },
+              { "label": "LXC", "detail": "mismo dispositivo\nGID efectivo" }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "origin",
+      "title": "De dónde procede la petición de un dispositivo",
+      "blocks": [
+        {
+          "table": {
+            "headers": ["Origen", "Qué se lee", "Qué hace el instalador"],
+            "rows": [
+              ["Docker Compose", "<code>devices</code>, <code>group_add</code>, <code>deploy.resources</code> y peticiones NVIDIA", "Cada requisito se convierte en una petición de dispositivo que se muestra para revisión"],
+              ["Perfil del catálogo", "El soporte de GPU, Coral, OpenCL, USB o FUSE que tiene realmente la aplicación", "Solo se ofrecen las opciones validadas para esa imagen"],
+              ["Metadatos y documentación de la imagen", "VA-API, Selkies, mods de LinuxServer o el runtime NVIDIA", "Se añaden las variables y la preparación documentadas"],
+              ["Selección del usuario", "Solo CPU, Intel/AMD, OpenCL, NVIDIA o un dispositivo opcional", "La selección se guarda en el contrato de la instancia"]
+            ]
+          }
+        },
+        {
+          "calloutWarning": {
+            "title": "Los dispositivos detectados no se conectan por sí solos",
+            "body": "El host se inventaría, pero solo se ofrecen y conectan los dispositivos que declaran el archivo Compose o un perfil compatible. Una GPU, un dongle USB o un Coral presentes en el host no se exponen a todos los LXC."
+          }
+        }
+      ]
+    },
+    {
+      "id": "identify",
+      "title": "Cómo se identifica el dispositivo en el host",
+      "intro": "Antes de modificar el LXC, el dispositivo se lee en el host y se compara con el perfil elegido.",
+      "blocks": [
+        {
+          "table": {
+            "headers": ["Tipo", "Identificación", "Validación"],
+            "rows": [
+              ["Intel/AMD DRM", "<code>/dev/dri/renderD*</code> y <code>/sys/class/drm/NODO/device/vendor</code>", "Un dispositivo de caracteres con fabricante <code>0x8086</code> (Intel) o <code>0x1002</code> (AMD)"],
+              ["OpenCL AMD", "El render node, más <code>/dev/kfd</code> cuando el perfil lo necesita", "Existencia, tipo, fabricante, permisos y compatibilidad declarada"],
+              ["NVIDIA", "<code>nvidia-smi</code> y <code>nvidia-container-cli</code>", "GPU, UUID, bus PCI, versión del driver, Toolkit, nodos <code>/dev/nvidia*</code>, binarios y librerías"],
+              ["Coral PCIe/M.2", "<code>/dev/apex_N</code> y su enlace en <code>/sys/dev/char/MAJOR:MINOR</code>", "Nodo de caracteres, major/minor, propietario, GID y permisos"],
+              ["USB y serie", "<code>/dev/ttyUSB*</code>, <code>/dev/ttyACM*</code> o <code>/dev/bus/usb/BBB/DDD</code>", "Nodo de caracteres; en USB también fabricante, producto y número de serie cuando sysfs los publica"],
+              ["KVM, TUN, FUSE, vídeo y SCSI genérico", "<code>/dev/kvm</code>, <code>/dev/net/tun</code>, <code>/dev/fuse</code>, <code>/dev/videoN</code> o <code>/dev/sgN</code>", "Ruta admitida, tipo de nodo y permisos efectivos"],
+              ["Unidad óptica", "<code>/dev/srN</code>", "Un dispositivo de bloques"]
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "install",
+      "title": "Qué ocurre durante la instalación",
+      "blocks": [
+        {
+          "steps": {
+            "items": [
+              { "title": "La plantilla ofrece sus perfiles", "body": "Por ejemplo solo CPU, Intel/AMD VA-API, OpenCL AMD, OpenCL Intel o NVIDIA. Las opciones pertenecen a la imagen, no a un menú común." },
+              { "title": "Se elige un perfil", "body": "Define los nodos de dispositivo, el entorno, los mods o el runtime que necesita la aplicación." },
+              { "title": "Se propone una ruta", "body": "Para DRM, <code>/dev/dri/renderD128</code>, que puede cambiarse en un host con varios render nodes. Para USB o serie se selecciona el nodo concreto." },
+              { "title": "Validación", "body": "Se comprueban existencia, tipo, fabricante admitido, permisos y GID. Una discrepancia detiene la operación." },
+              { "title": "Se escribe el contrato", "body": "Ruta, modo, GID, acceso de escritura y perfil quedan registrados para las actualizaciones y las recreaciones." },
+              { "title": "Conexión y prueba", "body": "<code>pct set</code> añade la entrada <code>devN</code> y después se comprueba el acceso dentro del LXC. Las imágenes de LinuxServer se comprueban también como usuario <code>abc</code>." }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "config",
+      "title": "Cómo aparece en la configuración del LXC",
+      "intro": "Valores ilustrativos: <code>dev0</code> y <code>dev1</code> son las posiciones libres que asigna Proxmox VE, y <code>renderD128</code>, <code>apex_0</code> y el GID dependen del hardware del nodo.",
+      "blocks": [
+        {
+          "codeGrid": {
+            "items": [
+              { "title": "Intel/AMD VA-API", "code": "dev0: path=/dev/dri/renderD128,mode=0660,gid=993,deny-write=0" },
+              { "title": "Coral PCIe/M.2", "code": "dev0: path=/dev/apex_0,mode=0660,gid=GID,deny-write=0" },
+              { "title": "Un dispositivo USB concreto", "code": "dev0: path=/dev/bus/usb/003/004,mode=0660,gid=GID,deny-write=0" },
+              { "title": "OpenCL AMD", "code": "dev0: path=/dev/dri/renderD128,mode=0660,gid=GID,deny-write=0\ndev1: path=/dev/kfd,mode=0660,gid=GID,deny-write=0" }
+            ]
+          }
+        },
+        {
+          "p": "El GID se lee con <code>stat</code> en el host y se escribe en la entrada <code>devN</code>; no se da por hecho que los grupos <code>render</code> y <code>video</code> tengan un número fijo. El dispositivo conserva la misma ruta <code>/dev</code> dentro del LXC, que es donde lo buscan los mecanismos propios de la aplicación."
+        }
+      ]
+    },
+    {
+      "id": "profiles",
+      "title": "Perfiles que puede ofrecer una imagen",
+      "blocks": [
+        {
+          "table": {
+            "headers": ["Perfil", "Traducción", "Se ofrece cuando"],
+            "rows": [
+              ["Intel/AMD VA-API", "Render node de <code>/dev/dri</code>", "La aplicación admite aceleración de vídeo"],
+              ["OpenCL", "Render node, <code>/dev/kfd</code> si hace falta y el mod oficial", "La imagen o el perfil lo documentan"],
+              ["NVIDIA", "Dispositivos y librerías del driver del host", "El host tiene un driver operativo y NVIDIA Container Toolkit"],
+              ["Coral", "<code>/dev/apex_0</code> o el bus USB", "El perfil declara soporte de Coral (Frigate)"],
+              ["USB, serie, FUSE", "Un dispositivo concreto, un árbol validado o una función LXC", "El contrato lo pide"]
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "nvidia",
+      "title": "NVIDIA",
+      "blocks": [
+        {
+          "calloutWarning": {
+            "title": "Requisito del nodo: NVIDIA Container Toolkit",
+            "body": "Un driver operativo en Proxmox VE no basta para entregar una GPU NVIDIA a una imagen OCI. OCI manager Apps usa <code>nvidia-container-cli</code>, de NVIDIA Container Toolkit, para identificar los dispositivos y obtener los binarios y las librerías que corresponden al driver cargado."
+          }
+        },
+        {
+          "p": "El <nvidiaLink>instalador NVIDIA de ProxMenux</nvidiaLink> instala NVIDIA Container Toolkit desde el repositorio oficial de NVIDIA junto con el driver. Comprueba sus cuatro paquetes, valida <code>nvidia-container-cli</code> y registra el resultado en el diario de cambios de <auditLink>Auditoría e informes</auditLink>."
+        },
+        {
+          "p": "Estos dos comandos, en el host, muestran si el driver y el Toolkit están disponibles:"
+        },
+        {
+          "shell": { "code": "nvidia-smi -L\nnvidia-container-cli --version" }
+        },
+        {
+          "p": "En un host cuyo driver se instaló por otros medios, el Toolkit se instala desde el repositorio estable oficial:"
+        },
+        {
+          "shell": {
+            "code": "apt-get update\napt-get install -y --no-install-recommends ca-certificates curl gnupg2\n\ncurl -fsSL https://nvidia.github.io/libnvidia-container/gpgkey \\\n  | gpg --dearmor -o /usr/share/keyrings/nvidia-container-toolkit-keyring.gpg\n\ncurl -s -L https://nvidia.github.io/libnvidia-container/stable/deb/nvidia-container-toolkit.list \\\n  | sed 's#deb https://#deb [signed-by=/usr/share/keyrings/nvidia-container-toolkit-keyring.gpg] https://#g' \\\n  > /etc/apt/sources.list.d/nvidia-container-toolkit.list\n\napt-get update\napt-get install -y nvidia-container-toolkit libnvidia-container-tools"
+          }
+        },
+        {
+          "p": "El inventario que usa OCI manager Apps es la salida de:"
+        },
+        {
+          "shell": { "code": "nvidia-container-cli list --device all --libraries --binaries --firmwares --ipcs" }
+        },
+        {
+          "calloutInfo": {
+            "title": "La configuración del runtime de Docker no interviene",
+            "body": "Los contenedores son LXC nativos y no se usa ningún daemon de Docker, así que <code>nvidia-ctk runtime configure --runtime=docker</code> no forma parte del proceso: ProxMenux consulta directamente <code>nvidia-container-cli</code> y escribe los dispositivos y montajes del LXC. Los comandos y las plataformas compatibles se mantienen en la <toolkitLink>guía de instalación de NVIDIA Container Toolkit</toolkitLink>."
+          }
+        },
+        {
+          "cards": {
+            "items": [
+              { "icon": "cpu", "title": "Inventario desde el driver", "body": "<code>nvidia-container-cli</code> enumera los nodos de dispositivo, los binarios, el firmware y las librerías del driver instalado." },
+              { "icon": "refresh", "title": "Sin versión fija", "body": "La plantilla no nombra archivos de librería. El perfil se genera a partir del host actual." },
+              { "icon": "shield", "title": "Montajes de solo lectura", "body": "Las librerías del host se montan en solo lectura en lugar de copiarse dentro del contenedor." },
+              { "icon": "hardDrive", "title": "Cambios de driver", "body": "Tras un cambio de driver, el inventario se genera de nuevo antes de que arranquen los LXC afectados." }
+            ]
+          }
+        },
+        {
+          "code": {
+            "title": "Resultado NVIDIA (simplificado)",
+            "code": "devN: path=/dev/nvidia0,...\ndevN: path=/dev/nvidiactl,...\ndevN: path=/dev/nvidia-uvm,...\nlxc.mount.entry: HOST_LIBRARY CONTAINER_LIBRARY none ro,bind,create=file 0 0"
+          }
+        },
+        {
+          "p": "Entregar solo <code>/dev/nvidia0</code> no es suficiente. Los componentes de espacio de usuario del driver cargado se montan en solo lectura y después <code>nvidia-smi</code> se ejecuta dentro del LXC para comparar GPU, UUID, bus PCI y versión con el inventario del host."
+        }
+      ]
+    },
+    {
+      "id": "usb",
+      "title": "USB, serie y Coral USB",
+      "blocks": [
+        {
+          "calloutWarning": {
+            "title": "La numeración USB puede cambiar",
+            "body": "Una ruta como <code>/dev/bus/usb/003/004</code> puede cambiar al reconectar el dispositivo o reiniciar el host. El perfil registra fabricante, producto y número de serie cuando están disponibles, pero una nueva dirección de bus no se reasigna automáticamente."
+          }
+        },
+        {
+          "p": "Un periférico se indica por su nodo concreto: <code>/dev/ttyUSB0</code>, <code>/dev/ttyACM0</code>, <code>/dev/apex_0</code> o <code>/dev/bus/usb/BBB/DDD</code>. No se admite entregar todo <code>/dev</code>. Coral solo se ofrece a las aplicaciones cuyo perfil lo declara."
+        }
+      ]
+    },
+    {
+      "id": "trees",
+      "title": "Árboles de dispositivos y funciones LXC",
+      "blocks": [
+        {
+          "table": {
+            "headers": ["Petición", "Traducción", "Alcance"],
+            "rows": [
+              ["<code>/dev/dvb</code>, <code>/dev/snd</code> o <code>/dev/bus/usb</code>", "Cada nodo de caracteres del árbol recibe su propia entrada <code>devN</code> con el modo y el GID del host", "Solo el árbol pedido, no el resto de <code>/dev</code>"],
+              ["<code>/dev/fuse</code>", "El nodo y, cuando el perfil lo necesita, la función <code>fuse=1</code>", "FUSE por sí solo no publica montajes a otros LXC"],
+              ["<code>/dev/net/tun</code>", "Una entrada <code>devN</code> en la misma ruta dentro del LXC", "La configuración de la VPN o de la red queda en la aplicación"],
+              ["<code>/dev/kvm</code>", "Una entrada <code>devN</code> validada", "Solo se ofrece cuando el contrato lo pide"]
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "security",
+      "title": "Confirmaciones según el nivel de riesgo",
+      "blocks": [
+        {
+          "p": "Los dispositivos concretos, el privilegio opcional, el privilegio obligatorio, la relajación de AppArmor o seccomp y el acceso al espacio de nombres PID del host se tratan como casos distintos, no bajo una etiqueta genérica de privilegiado. Cada opción con riesgo se explica y se confirma durante la instalación."
+        }
+      ]
+    }
+  ]
+}

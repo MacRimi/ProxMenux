@@ -1,8 +1,89 @@
 {
   "schema_version": 1,
-  "observed_at": "2026-08-21",
-  "notes": "Runtime-verified detectors for the LXC app catalog. Every entry is a detector proven to work on a real container, either in maintainer testing or a reviewed community confirmation. Contribution rules \u2014 accept ONLY: `detector` (required, with installed_via + method-specific fields + repo/tag_regex), optional `alt_detectors` (cross-method fallbacks), optional `file_fallbacks` (same-method secondary paths). REJECT anything that identifies a host: no IP addresses, no VMIDs, no hostnames, no `evidence` blocks with those fields. Report reproduction context in the PR description instead \u2014 the committed JSON must stay generic.",
+  "observed_at": "2026-09-24",
+  "notes": "Runtime-verified detectors for the LXC app catalog. Every entry is a detector proven to work on a real container, either in maintainer testing or a reviewed community confirmation. Contribution rules — accept ONLY: `detector` (required, with installed_via + method-specific fields + repo/tag_regex), optional `alt_detectors` (cross-method fallbacks), optional `file_fallbacks` (same-method secondary paths). REJECT anything that identifies a host: no IP addresses, no VMIDs, no hostnames, no `evidence` blocks with those fields. Report reproduction context in the PR description instead — the committed JSON must stay generic.",
   "apps": {
+    "adguard": {
+      "detector": {
+        "installed_via": "binary",
+        "binary_path": "/opt/AdGuardHome/AdGuardHome",
+        "repo": "AdguardTeam/AdGuardHome",
+        "github_source": "releases",
+        "tag_regex": "v?(\\d+\\.\\d+\\.\\d+)"
+      }
+    },
+    "agentdvr": {
+      "detector": {
+        "installed_via": "file",
+        "file_path": "/root/.agentdvr",
+        "file_regex": "Agent_[^/]+_([0-9]+(?:_[0-9]+){3})\\.zip",
+        "repo": "ispysoftware/agent-install-scripts",
+        "github_source": "releases",
+        "tag_regex": "v?(\\d+(?:\\.\\d+){3})"
+      }
+    },
+    "audiobookshelf": {
+      "operational": true,
+      "name": "Audiobookshelf",
+      "install_scope": [
+        "community-script",
+        "manual-if-same-package"
+      ],
+      "evidence": [
+        "community-confirmed:github-discussion-306"
+      ],
+      "detector": {
+        "installed_via": "dpkg",
+        "package": "audiobookshelf",
+        "repo": "advplyr/audiobookshelf",
+        "github_source": "releases",
+        "tag_regex": "(?i)(?:v|release[-_/]?)?(\\d+(?:\\.\\d+){1,3}(?:[-+._][0-9A-Za-z.-]+)?)"
+      }
+    },
+    "changedetection": {
+      "operational": true,
+      "name": "Changedetection.io",
+      "install_scope": [
+        "community-script",
+        "manual"
+      ],
+      "evidence": [
+        "community-confirmed:github-discussion-306"
+      ],
+      "detector": {
+        "installed_via": "command",
+        "command_argv": [
+          "/opt/changedetection/.venv/bin/changedetection.io",
+          "--version"
+        ],
+        "installed_regex": "v?(\\d+\\.\\d+\\.\\d+)",
+        "repo": "dgtlmoon/changedetection.io",
+        "github_source": "releases",
+        "tag_regex": "v?(\\d+\\.\\d+\\.\\d+)"
+      },
+      "default_ports": [
+        5000
+      ],
+      "website": "https://changedetection.io/"
+    },
+    "dispatcharr": {
+      "operational": true,
+      "name": "Dispatcharr",
+      "install_scope": [
+        "community-script"
+      ],
+      "evidence": [
+        "community-confirmed:github-discussion-306"
+      ],
+      "detector": {
+        "installed_via": "file",
+        "file_path": "/root/.dispatcharr",
+        "file_regex": "(\\d+\\.\\d+\\.\\d+)",
+        "repo": "Dispatcharr/Dispatcharr",
+        "github_source": "releases",
+        "tag_regex": "v?(\\d+\\.\\d+\\.\\d+)"
+      }
+    },
     "docker": {
       "operational": true,
       "install_scope": [
@@ -18,6 +99,249 @@
         "repo": "moby/moby",
         "github_source": "releases",
         "tag_regex": "v?(\\d+\\.\\d+\\.\\d+)"
+      }
+    },
+    "docmost": {
+      "detector": {
+        "installed_via": "file",
+        "file_path": "/opt/docmost/package.json",
+        "file_regex": "\"version\"\\s*:\\s*\"(\\d+\\.\\d+\\.\\d+)\"",
+        "repo": "docmost/docmost",
+        "github_source": "releases",
+        "tag_regex": "v?(\\d+\\.\\d+\\.\\d+)"
+      },
+      "file_fallbacks": [
+        {
+          "path": "/root/.docmost",
+          "regex": "v?(\\d+\\.\\d+\\.\\d+)"
+        }
+      ]
+    },
+    "gitea": {
+      "operational": true,
+      "name": "Gitea",
+      "install_scope": [
+        "community-script",
+        "manual-if-same-package"
+      ],
+      "evidence": [
+        "community-confirmed:github-discussion-306"
+      ],
+      "detector": {
+        "installed_via": "apk",
+        "package": "gitea",
+        "repo": "go-gitea/gitea",
+        "github_source": "releases",
+        "tag_regex": "v?(\\d+\\.\\d+\\.\\d+)"
+      }
+    },
+    "grafana": {
+      "operational": false,
+      "detector": {
+        "installed_via": "docker_exec",
+        "container_name": "grafana",
+        "binary_path": "grafana",
+        "binary_args": [
+          "server",
+          "-v"
+        ],
+        "repo": "grafana/grafana",
+        "github_source": "releases",
+        "tag_regex": "v?(\\d+\\.\\d+\\.\\d+)"
+      }
+    },
+    "immich": {
+      "detector": {
+        "installed_via": "file",
+        "file_path": "/root/.immich",
+        "file_regex": "(?i)(?:v|release[-_/]?)?(\\d+(?:\\.\\d+){1,3}(?:[-+._][0-9A-Za-z.-]+)?)",
+        "repo": "immich-app/immich",
+        "github_source": "releases",
+        "tag_regex": "(?i)(?:v|release[-_/]?)?(\\d+(?:\\.\\d+){1,3}(?:[-+._][0-9A-Za-z.-]+)?)"
+      },
+      "alt_detectors": [
+        {
+          "installed_via": "docker_label",
+          "container_name": "immich_server",
+          "label": "org.opencontainers.image.version"
+        }
+      ]
+    },
+    "jellyfin": {
+      "detector": {
+        "installed_via": "dpkg",
+        "package": "jellyfin",
+        "repo": "jellyfin/jellyfin",
+        "github_source": "releases",
+        "tag_regex": "(?i)(?:v|release[-_/]?)?(\\d+(?:\\.\\d+){1,3}(?:[-+._][0-9A-Za-z.-]+)?)"
+      }
+    },
+    "kavita": {
+      "operational": true,
+      "name": "Kavita",
+      "install_scope": [
+        "community-script"
+      ],
+      "evidence": [
+        "community-confirmed:github-discussion-306"
+      ],
+      "detector": {
+        "installed_via": "file",
+        "file_path": "/root/.kavita",
+        "file_regex": "(\\d+\\.\\d+\\.\\d+)",
+        "repo": "Kareadita/Kavita",
+        "github_source": "releases",
+        "tag_regex": "v?(\\d+\\.\\d+\\.\\d+)"
+      }
+    },
+    "lazylibrarian": {
+      "operational": true,
+      "name": "LazyLibrarian",
+      "install_scope": [
+        "community-script"
+      ],
+      "detector": {
+        "installed_via": "command",
+        "command_argv": [
+          "git",
+          "-C",
+          "/opt/LazyLibrarian",
+          "rev-parse",
+          "HEAD"
+        ],
+        "installed_regex": "([0-9a-fA-F]{40})",
+        "upstream_type": "http_json",
+        "upstream_url": "https://gitlab.com/api/v4/projects/LazyLibrarian%2FLazyLibrarian/repository/commits/master",
+        "upstream_json_path": "id",
+        "tag_regex": "([0-9a-fA-F]{40})"
+      },
+      "default_ports": [
+        5299
+      ],
+      "website": "https://lazylibrarian.gitlab.io/"
+    },
+    "netalertx": {
+      "name": "NetAlertX",
+      "install_scope": [
+        "docker"
+      ],
+      "detector": {
+        "installed_via": "docker_label",
+        "container_name": "netalertx",
+        "label": "org.opencontainers.image.version",
+        "repo": "netalertx/NetAlertX",
+        "github_source": "releases",
+        "tag_regex": "v?(\\d+(?:\\.\\d+){1,3})"
+      }
+    },
+    "nginxproxymanager": {
+      "detector": {
+        "installed_via": "file",
+        "file_path": "/opt/nginxproxymanager/backend/package.json",
+        "file_regex": "\"version\"\\s*:\\s*\"(\\d+\\.\\d+\\.\\d+)\"",
+        "repo": "NginxProxyManager/nginx-proxy-manager",
+        "github_source": "releases",
+        "tag_regex": "v?(\\d+\\.\\d+\\.\\d+)"
+      },
+      "file_fallbacks": [
+        {
+          "path": "/app/package.json",
+          "regex": "\"version\"\\s*:\\s*\"(\\d+\\.\\d+\\.\\d+)\""
+        },
+        {
+          "path": "/root/.nginxproxymanager",
+          "regex": "v?(\\d+\\.\\d+\\.\\d+)"
+        }
+      ]
+    },
+    "odoo": {
+      "detector": {
+        "installed_via": "dpkg",
+        "package": "odoo",
+        "tag_regex": "(\\d+\\.\\d+(?:\\.\\d+)?)"
+      },
+      "alt_detectors": [
+        {
+          "installed_via": "binary",
+          "binary_path": "/usr/bin/odoo"
+        }
+      ]
+    },
+    "openwebui": {
+      "operational": true,
+      "detector": {
+        "installed_via": "python_dist",
+        "python_path": "/root/.local/share/uv/tools/open-webui/bin/python",
+        "distribution": "open-webui",
+        "repo": "open-webui/open-webui",
+        "github_source": "releases",
+        "tag_regex": "v?(\\d+\\.\\d+\\.\\d+)"
+      }
+    },
+    "pairdrop": {
+      "detector": {
+        "installed_via": "file",
+        "file_path": "/opt/pairdrop/package.json",
+        "file_regex": "\"version\"\\s*:\\s*\"(\\d+\\.\\d+\\.\\d+)\"",
+        "repo": "schlagmichdoch/PairDrop",
+        "github_source": "releases",
+        "tag_regex": "v?(\\d+\\.\\d+\\.\\d+)"
+      },
+      "file_fallbacks": [
+        {
+          "path": "/root/.pairdrop",
+          "regex": "v?(\\d+\\.\\d+\\.\\d+)"
+        }
+      ]
+    },
+    "paperless-ngx": {
+      "operational": false,
+      "detector": {
+        "installed_via": "docker_label",
+        "container_name": "paperless-webserver-1",
+        "label": "org.opencontainers.image.version",
+        "repo": "paperless-ngx/paperless-ngx",
+        "github_source": "releases",
+        "tag_regex": "v?(\\d+\\.\\d+\\.\\d+)"
+      },
+      "alt_detectors": [
+        {
+          "installed_via": "file",
+          "file_path": "/opt/paperless/src/paperless/version.py",
+          "file_regex": "__version__[^\\n=]*=\\s*\\((\\d+)\\s*,\\s*(\\d+)\\s*,\\s*(\\d+)\\)"
+        }
+      ]
+    },
+    "peanut": {
+      "operational": true,
+      "name": "PeaNUT",
+      "install_scope": [
+        "community-script"
+      ],
+      "detector": {
+        "installed_via": "file",
+        "file_path": "/opt/peanut/package.json",
+        "file_regex": "\"version\"\\s*:\\s*\"v?(\\d+\\.\\d+\\.\\d+)\"",
+        "upstream_type": "github",
+        "repo": "Brandawg93/PeaNUT",
+        "github_source": "releases",
+        "tag_regex": "v?(\\d+\\.\\d+\\.\\d+)"
+      },
+      "default_ports": [
+        8080
+      ],
+      "website": "https://github.com/Brandawg93/PeaNUT"
+    },
+    "plex": {
+      "operational": true,
+      "detector": {
+        "installed_via": "dpkg",
+        "package": "plexmediaserver",
+        "installed_regex": "(\\d+\\.\\d+\\.\\d+\\.\\d+)",
+        "upstream_type": "http_json",
+        "upstream_url": "https://plex.tv/api/downloads/5.json?channel=8",
+        "upstream_json_path": "computer.Linux.version",
+        "tag_regex": "(\\d+\\.\\d+\\.\\d+\\.\\d+)"
       }
     },
     "portainer": {
@@ -44,76 +368,25 @@
       "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/portainer.webp",
       "website": "https://www.portainer.io/"
     },
-    "audiobookshelf": {
-      "operational": true,
-      "name": "Audiobookshelf",
-      "install_scope": [
-        "community-script",
-        "manual-if-same-package"
-      ],
-      "evidence": [
-        "community-confirmed:github-discussion-306"
-      ],
+    "prometheus": {
+      "operational": false,
+      "detector": {
+        "installed_via": "docker_exec",
+        "container_name": "prometheus",
+        "binary_path": "/bin/prometheus",
+        "binary_args": [
+          "--version"
+        ],
+        "repo": "prometheus/prometheus",
+        "github_source": "releases",
+        "tag_regex": "v?(\\d+\\.\\d+\\.\\d+)"
+      }
+    },
+    "proxmox-backup-server": {
       "detector": {
         "installed_via": "dpkg",
-        "package": "audiobookshelf",
-        "repo": "advplyr/audiobookshelf",
-        "github_source": "releases",
-        "tag_regex": "(?i)(?:v|release[-_/]?)?(\\d+(?:\\.\\d+){1,3}(?:[-+._][0-9A-Za-z.-]+)?)"
-      }
-    },
-    "gitea": {
-      "operational": true,
-      "name": "Gitea",
-      "install_scope": [
-        "community-script",
-        "manual-if-same-package"
-      ],
-      "evidence": [
-        "community-confirmed:github-discussion-306"
-      ],
-      "detector": {
-        "installed_via": "apk",
-        "package": "gitea",
-        "repo": "go-gitea/gitea",
-        "github_source": "releases",
-        "tag_regex": "v?(\\d+\\.\\d+\\.\\d+)"
-      }
-    },
-    "dispatcharr": {
-      "operational": true,
-      "name": "Dispatcharr",
-      "install_scope": [
-        "community-script"
-      ],
-      "evidence": [
-        "community-confirmed:github-discussion-306"
-      ],
-      "detector": {
-        "installed_via": "file",
-        "file_path": "/root/.dispatcharr",
-        "file_regex": "(\\d+\\.\\d+\\.\\d+)",
-        "repo": "Dispatcharr/Dispatcharr",
-        "github_source": "releases",
-        "tag_regex": "v?(\\d+\\.\\d+\\.\\d+)"
-      }
-    },
-    "kavita": {
-      "operational": true,
-      "name": "Kavita",
-      "install_scope": [
-        "community-script"
-      ],
-      "evidence": [
-        "community-confirmed:github-discussion-306"
-      ],
-      "detector": {
-        "installed_via": "file",
-        "file_path": "/root/.kavita",
-        "file_regex": "(\\d+\\.\\d+\\.\\d+)",
-        "repo": "Kareadita/Kavita",
-        "github_source": "releases",
-        "tag_regex": "v?(\\d+\\.\\d+\\.\\d+)"
+        "package": "proxmox-backup-server",
+        "tag_regex": "(\\d+\\.\\d+\\.\\d+)"
       }
     },
     "qbittorrent": {
@@ -123,6 +396,19 @@
         "repo": "userdocs/qbittorrent-nox-static",
         "github_source": "releases",
         "tag_regex": "(?i)(?:release-)?(\\d+\\.\\d+\\.\\d+)"
+      }
+    },
+    "searxng": {
+      "operational": true,
+      "install_scope": [
+        "community-script",
+        "manual-if-same-venv"
+      ],
+      "detector": {
+        "installed_via": "python_dist",
+        "python_path": "/usr/local/searxng/searx-pyenv/bin/python",
+        "distribution": "searxng",
+        "installed_regex": "(\\d+\\.\\d+\\.\\d+\\+[0-9a-f]+)"
       }
     },
     "tandoor": {
@@ -141,77 +427,20 @@
         }
       ]
     },
-    "openwebui": {
-      "operational": true,
-      "detector": {
-        "installed_via": "python_dist",
-        "python_path": "/root/.local/share/uv/tools/open-webui/bin/python",
-        "distribution": "open-webui",
-        "repo": "open-webui/open-webui",
-        "github_source": "releases",
-        "tag_regex": "v?(\\d+\\.\\d+\\.\\d+)"
-      }
-    },
-    "proxmox-backup-server": {
-      "detector": {
-        "installed_via": "dpkg",
-        "package": "proxmox-backup-server",
-        "tag_regex": "(\\d+\\.\\d+\\.\\d+)"
-      }
-    },
-    "jellyfin": {
-      "detector": {
-        "installed_via": "dpkg",
-        "package": "jellyfin",
-        "repo": "jellyfin/jellyfin",
-        "github_source": "releases",
-        "tag_regex": "(?i)(?:v|release[-_/]?)?(\\d+(?:\\.\\d+){1,3}(?:[-+._][0-9A-Za-z.-]+)?)"
-      }
-    },
-    "adguard": {
-      "detector": {
-        "installed_via": "binary",
-        "binary_path": "/opt/AdGuardHome/AdGuardHome",
-        "repo": "AdguardTeam/AdGuardHome",
-        "github_source": "releases",
-        "tag_regex": "v?(\\d+\\.\\d+\\.\\d+)"
-      }
-    },
-    "nginxproxymanager": {
+    "technitiumdns": {
+      "name": "Technitium DNS Server",
       "detector": {
         "installed_via": "file",
-        "file_path": "/opt/nginxproxymanager/backend/package.json",
-        "file_regex": "\"version\"\\s*:\\s*\"(\\d+\\.\\d+\\.\\d+)\"",
-        "repo": "NginxProxyManager/nginx-proxy-manager",
-        "github_source": "releases",
-        "tag_regex": "v?(\\d+\\.\\d+\\.\\d+)"
+        "file_path": "/root/.technitium",
+        "file_regex": "(\\d+(?:\\.\\d+){1,3})",
+        "upstream_type": "http_json",
+        "upstream_url": "https://go.technitium.com/?id=42",
+        "upstream_json_path": "updateVersion"
       },
-      "file_fallbacks": [
-        {
-          "path": "/app/package.json",
-          "regex": "\"version\"\\s*:\\s*\"(\\d+\\.\\d+\\.\\d+)\""
-        },
-        {
-          "path": "/root/.nginxproxymanager",
-          "regex": "v?(\\d+\\.\\d+\\.\\d+)"
-        }
-      ]
-    },
-    "pairdrop": {
-      "detector": {
-        "installed_via": "file",
-        "file_path": "/opt/pairdrop/package.json",
-        "file_regex": "\"version\"\\s*:\\s*\"(\\d+\\.\\d+\\.\\d+)\"",
-        "repo": "schlagmichdoch/PairDrop",
-        "github_source": "releases",
-        "tag_regex": "v?(\\d+\\.\\d+\\.\\d+)"
-      },
-      "file_fallbacks": [
-        {
-          "path": "/root/.pairdrop",
-          "regex": "v?(\\d+\\.\\d+\\.\\d+)"
-        }
-      ]
+      "default_ports": [
+        5380
+      ],
+      "website": "https://technitium.com/dns/"
     },
     "traefik": {
       "operational": true,
@@ -259,189 +488,6 @@
           "installed_regex": "(?im)^Vaultwarden\\s+v?(\\d+\\.\\d+\\.\\d+)"
         }
       ]
-    },
-    "docmost": {
-      "detector": {
-        "installed_via": "file",
-        "file_path": "/opt/docmost/package.json",
-        "file_regex": "\"version\"\\s*:\\s*\"(\\d+\\.\\d+\\.\\d+)\"",
-        "repo": "docmost/docmost",
-        "github_source": "releases",
-        "tag_regex": "v?(\\d+\\.\\d+\\.\\d+)"
-      },
-      "file_fallbacks": [
-        {
-          "path": "/root/.docmost",
-          "regex": "v?(\\d+\\.\\d+\\.\\d+)"
-        }
-      ]
-    },
-    "agentdvr": {
-      "detector": {
-        "installed_via": "file",
-        "file_path": "/root/.agentdvr",
-        "file_regex": "Agent_[^/]+_([0-9]+(?:_[0-9]+){3})\\.zip",
-        "repo": "ispysoftware/agent-install-scripts",
-        "github_source": "releases",
-        "tag_regex": "v?(\\d+(?:\\.\\d+){3})"
-      }
-    },
-    "odoo": {
-      "detector": {
-        "installed_via": "dpkg",
-        "package": "odoo",
-        "tag_regex": "(\\d+\\.\\d+(?:\\.\\d+)?)"
-      },
-      "alt_detectors": [
-        {
-          "installed_via": "binary",
-          "binary_path": "/usr/bin/odoo"
-        }
-      ]
-    },
-    "paperless-ngx": {
-      "operational": false,
-      "detector": {
-        "installed_via": "docker_label",
-        "container_name": "paperless-webserver-1",
-        "label": "org.opencontainers.image.version",
-        "repo": "paperless-ngx/paperless-ngx",
-        "github_source": "releases",
-        "tag_regex": "v?(\\d+\\.\\d+\\.\\d+)"
-      },
-      "alt_detectors": [
-        {
-          "installed_via": "file",
-          "file_path": "/opt/paperless/src/paperless/version.py",
-          "file_regex": "__version__[^\\n=]*=\\s*\\((\\d+)\\s*,\\s*(\\d+)\\s*,\\s*(\\d+)\\)"
-        }
-      ]
-    },
-    "plex": {
-      "operational": true,
-      "detector": {
-        "installed_via": "dpkg",
-        "package": "plexmediaserver",
-        "installed_regex": "(\\d+\\.\\d+\\.\\d+\\.\\d+)",
-        "upstream_type": "http_json",
-        "upstream_url": "https://plex.tv/api/downloads/5.json?channel=8",
-        "upstream_json_path": "computer.Linux.version",
-        "tag_regex": "(\\d+\\.\\d+\\.\\d+\\.\\d+)"
-      }
-    },
-    "prometheus": {
-      "operational": false,
-      "detector": {
-        "installed_via": "docker_exec",
-        "container_name": "prometheus",
-        "binary_path": "/bin/prometheus",
-        "binary_args": [
-          "--version"
-        ],
-        "repo": "prometheus/prometheus",
-        "github_source": "releases",
-        "tag_regex": "v?(\\d+\\.\\d+\\.\\d+)"
-      }
-    },
-    "grafana": {
-      "operational": false,
-      "detector": {
-        "installed_via": "docker_exec",
-        "container_name": "grafana",
-        "binary_path": "grafana",
-        "binary_args": [
-          "server",
-          "-v"
-        ],
-        "repo": "grafana/grafana",
-        "github_source": "releases",
-        "tag_regex": "v?(\\d+\\.\\d+\\.\\d+)"
-      }
-    },
-    "searxng": {
-      "operational": true,
-      "install_scope": [
-        "community-script",
-        "manual-if-same-venv"
-      ],
-      "detector": {
-        "installed_via": "python_dist",
-        "python_path": "/usr/local/searxng/searx-pyenv/bin/python",
-        "distribution": "searxng",
-        "installed_regex": "(\\d+\\.\\d+\\.\\d+\\+[0-9a-f]+)"
-      }
-    },
-    "technitiumdns": {
-      "name": "Technitium DNS Server",
-      "detector": {
-        "installed_via": "file",
-        "file_path": "/root/.technitium",
-        "file_regex": "(\\d+(?:\\.\\d+){1,3})",
-        "upstream_type": "http_json",
-        "upstream_url": "https://go.technitium.com/?id=42",
-        "upstream_json_path": "updateVersion"
-      },
-      "default_ports": [
-        5380
-      ],
-      "website": "https://technitium.com/dns/"
-    },
-    "netalertx": {
-      "name": "NetAlertX",
-      "install_scope": [
-        "docker"
-      ],
-      "detector": {
-        "installed_via": "docker_label",
-        "container_name": "netalertx",
-        "label": "org.opencontainers.image.version",
-        "repo": "netalertx/NetAlertX",
-        "github_source": "releases",
-        "tag_regex": "v?(\\d+(?:\\.\\d+){1,3})"
-      }
-    },
-    "immich": {
-      "detector": {
-        "installed_via": "file",
-        "file_path": "/root/.immich",
-        "file_regex": "(?i)(?:v|release[-_/]?)?(\\d+(?:\\.\\d+){1,3}(?:[-+._][0-9A-Za-z.-]+)?)",
-        "repo": "immich-app/immich",
-        "github_source": "releases",
-        "tag_regex": "(?i)(?:v|release[-_/]?)?(\\d+(?:\\.\\d+){1,3}(?:[-+._][0-9A-Za-z.-]+)?)"
-      },
-      "alt_detectors": [
-        {
-          "installed_via": "docker_label",
-          "container_name": "immich_server",
-          "label": "org.opencontainers.image.version"
-        }
-      ]
-    },
-    "changedetection": {
-      "operational": true,
-      "name": "Changedetection.io",
-      "install_scope": [
-        "community-script",
-        "manual"
-      ],
-      "evidence": [
-        "community-confirmed:github-discussion-306"
-      ],
-      "detector": {
-        "installed_via": "command",
-        "command_argv": [
-          "/opt/changedetection/.venv/bin/changedetection.io",
-          "--version"
-        ],
-        "installed_regex": "v?(\\d+\\.\\d+\\.\\d+)",
-        "repo": "dgtlmoon/changedetection.io",
-        "github_source": "releases",
-        "tag_regex": "v?(\\d+\\.\\d+\\.\\d+)"
-      },
-      "default_ports": [
-        5000
-      ],
-      "website": "https://changedetection.io/"
     }
   }
 }

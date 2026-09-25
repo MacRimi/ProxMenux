@@ -166,8 +166,7 @@ done <<< "$IMAGES"
 # `--separate-output` prints each selected tag on its own line with no
 # quoting, so we never need `eval` to split the output. The previous form
 # `eval "declare -a A=($SELECTED)"` would execute backticks / $(...) baked
-# into a filename — perfectly legal on ext4 — as shell commands. Audit
-# Tier 6 — `import-disk-image.sh` `eval` sobre salida del dialog.
+# into a filename — perfectly legal on ext4 — as shell commands.
 SELECTED_IMAGES_STR=$(dialog --backtitle "$BACKTITLE" \
   --separate-output \
   --title "$(translate 'Select Disk Images')" \

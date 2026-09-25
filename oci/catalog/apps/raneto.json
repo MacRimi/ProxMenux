@@ -13,11 +13,11 @@
     "description": {
       "en_US": "Raneto - is an open source Knowledgebase platform that uses static Markdown files to power your Knowledgebase."
     },
-    "category": "misc",
-    "category_label": "Miscellaneous",
+    "category": "documents",
+    "category_label": "Documents & Notes",
     "author": "LinuxServer.io",
     "developer": null,
-    "icon": "https://raw.githubusercontent.com/linuxserver/docker-templates/master/linuxserver.io/img/raneto-icon.png",
+    "icon": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/raneto.webp",
     "thumbnail": "https://raw.githubusercontent.com/linuxserver/docker-templates/master/linuxserver.io/img/raneto-banner.png",
     "screenshots": [],
     "architectures": [

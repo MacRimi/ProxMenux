@@ -678,6 +678,36 @@ def _warmup_lxc_ip_cache() -> int:
     return count
 
 
+def _lxc_isolated_ips(vmid):
+    """Static addresses on interfaces that have no way out of the host.
+
+    lxc-info lists a container's addresses without saying which interface
+    carries each, so a container with a second network leg could be offered
+    at an address nobody can open: a ProxMenux stack wires its members through
+    a private bridge, and Paperless-ngx answered on 10.77.0.30 instead of its
+    LAN address. The interface a reader reaches is the one with a route out —
+    DHCP, or a static address with a gateway. A static address with no gateway
+    is local to the host, and is kept only as a last resort.
+    """
+    try:
+        with open(f"/etc/pve/lxc/{int(vmid)}.conf", encoding="utf-8") as handle:
+            text = handle.read()
+    except (OSError, ValueError):
+        return set()
+    isolated = set()
+    for line in text.splitlines():
+        if line.startswith("["):
+            break  # snapshot sections describe past states, not this one
+        match = re.match(r"net\d+:\s*(.*)", line)
+        if not match:
+            continue
+        options = dict(part.split("=", 1) for part in match.group(1).split(",") if "=" in part)
+        address = options.get("ip", "")
+        if address and address not in ("dhcp", "manual") and "gw" not in options:
+            isolated.add(address.split("/", 1)[0])
+    return isolated
+
+
 def get_lxc_ip_from_lxc_info(vmid):
     """Get LXC IP addresses using lxc-info command (for DHCP containers)
     Returns a dict with all IPs and classification"""
@@ -705,6 +735,9 @@ def get_lxc_ip_from_lxc_info(vmid):
                     else:
                         # Real network IPs (192.168.x.x, 10.x.x.x, etc.)
                         real_ips.append(ip)
+                isolated = _lxc_isolated_ips(vmid)
+                if isolated:
+                    real_ips.sort(key=lambda ip: ip in isolated)
                 
                 return {
                     'all_ips': ips,
@@ -3369,7 +3402,7 @@ def get_available_updates():
     _system_info_cache['available_updates_stamp'] = stamp
     return available_updates
 
-# AGREGANDO FUNCIÓN PARA PARSEAR PROCESOS DE INTEL_GPU_TOP (SIN -J)
+# Parse intel_gpu_top process output without -J.
 def get_intel_gpu_processes_from_text():
     """Parse processes from intel_gpu_top text output (more reliable than JSON)"""
     try:
@@ -3384,7 +3417,7 @@ def get_intel_gpu_processes_from_text():
                 bufsize=1
             )
         except FileNotFoundError:
-            # intel_gpu_top no está instalado, retornar lista vacía
+            # intel_gpu_top is not installed; return an empty list
             return []
         
         # Wait 2 seconds for intel_gpu_top to collect data
@@ -5519,7 +5552,7 @@ def _get_proxmox_storage_uncached():
         for resource in resources:
             node = resource.get('node', '')
             
-            # Filtrar solo storage del nodo local
+            # Keep only the local node storage
             if node != local_node:
                 # print(f"[v0] Skipping storage {resource.get('storage')} from remote node: {node}")
                 pass
@@ -5538,7 +5571,7 @@ def _get_proxmox_storage_uncached():
                 pass
                 continue
             
-            # No filtrar storages no disponibles - mantenerlos para mostrar errores
+            # Keep unavailable storages so their errors stay visible
             # Calcular porcentaje
             percent = (used / total * 100) if total > 0 else 0.0
             
@@ -7832,7 +7865,7 @@ def get_detailed_gpu_info(gpu):
                 else:
                     # print(f"[v0] WARNING: No valid JSON objects found", flush=True)
                     pass
-                    # CHANGE: Evitar bloqueo al leer stderr - usar communicate() con timeout
+                    # communicate() with a timeout: reading stderr directly blocks
                     try:
                         # Use communicate() with timeout instead of read() to avoid blocking
                         _, stderr_output = process.communicate(timeout=0.5)
@@ -8312,8 +8345,7 @@ def get_detailed_gpu_info(gpu):
                                 # print(f"[v0] Parsing fdinfo with {len(fdinfo)} entries", flush=True)
                                 pass
                                 
-                                # CHANGE: Corregir parseo de fdinfo con estructura anidada
-                                # fdinfo es un diccionario donde las claves son los PIDs (como strings)
+                                # fdinfo is nested: the keys are the PIDs, as strings
                                 for pid_str, proc_data in fdinfo.items():
                                     try:
                                         process_info = {
@@ -13764,6 +13796,13 @@ def api_vm_apps_suggestions(vmid):
         return jsonify({'error': str(e)}), 500
 
 
+@app.route('/api/vms/<int:vmid>/apps/adguard-setup', methods=['GET'])
+@require_auth
+def api_vm_apps_adguard_setup(vmid):
+    import lxc_apps
+    return jsonify({'available': lxc_apps.oci_adguard_setup_available(vmid)})
+
+
 @app.route('/api/vms/<int:vmid>/docker/inventory', methods=['GET'])
 @require_auth
 def api_vm_docker_inventory(vmid):
@@ -14113,6 +14152,8 @@ def _lxc_update_target_labels(
             label = 'Applications'
         elif target == 'docker-engine':
             label = 'Docker Engine'
+        elif target == 'oci_image':
+            label = 'OCI image'
         elif target.startswith('app:'):
             app_item = apps.get(target.split(':', 1)[1]) or {}
             label = str(app_item.get('name') or 'Application')
@@ -15077,7 +15118,7 @@ def api_vms_modal_cache_all():
         return jsonify({'error': str(e)}), 500
 
 
-# CHANGE: Modificar el endpoint para incluir la información completa de IPs
+# The endpoint returns the complete IP information.
 @app.route('/api/vms/<int:vmid>', methods=['GET'])
 @require_auth
 def get_vm_config(vmid):
@@ -15211,6 +15252,38 @@ def api_lxc_mount_points_runtime(vmid):
         if not result.get("ok"):
             return jsonify(result), 400
         return jsonify(result)
+    except Exception as e:
+        return jsonify({"ok": False, "error": str(e)}), 500
+
+
+@app.route('/api/lxc/<int:vmid>/console-log', methods=['GET'])
+@require_auth
+def api_lxc_console_log(vmid):
+    """Console output of a native OCI container. Never cached: the first
+    request returns the last `lines` lines, later ones pass back `offset`
+    and `inode` to receive only what was appended since."""
+    try:
+        import oci_console_logs
+    except ImportError as e:
+        return jsonify({"ok": False, "error": f"helper unavailable: {e}"}), 503
+    try:
+        lines = request.args.get('lines', default=200, type=int)
+        offset = request.args.get('offset', type=int)
+        inode = request.args.get('inode', type=int)
+        return jsonify(oci_console_logs.read(vmid, lines=lines, offset=offset, inode=inode))
+    except Exception as e:
+        return jsonify({"ok": False, "error": str(e)}), 500
+
+
+@app.route('/api/lxc/<int:vmid>/oci-instance', methods=['GET'])
+@require_auth
+def api_lxc_oci_instance(vmid):
+    """Whether the container was installed by OCI manager Apps, its stack,
+    host directories and pending operation, read from its record. Never
+    cached; it also says whether the console log exists (Logs tab)."""
+    try:
+        import oci_instance_info
+        return jsonify(oci_instance_info.info(vmid))
     except Exception as e:
         return jsonify({"ok": False, "error": str(e)}), 500
 
@@ -22161,6 +22234,41 @@ def _run_scheduled_update(vmid: int, sched: dict) -> dict:
         }
 
     requested_target = sched.get("target") or "both"
+    if requested_targets == ['oci_image']:
+        # A container installed by OCI manager Apps is updated by replacing
+        # its image, through the same flow as the OCI menu, unattended.
+        command = ['bash', '/usr/local/share/proxmenux/scripts/oci/oci_manager_apps.sh',
+                   'manage', str(vmid), '--action', 'update', '--unattended']
+        storage = (sched.get('backup_storage') or '').strip()
+        if sched.get('backup') and storage:
+            command += ['--keep-backup', storage]
+        if sched.get('acknowledge_external_data'):
+            command.append('--acknowledge-external-data')
+        delay = int(sched.get('release_delay_days') or 0)
+        if delay > 0:
+            command += ['--min-image-age-days', str(delay)]
+        try:
+            proc = subprocess.run(command, stdin=subprocess.DEVNULL, capture_output=True, text=True,
+                                  timeout=4 * 3600, env=dict(os.environ, TERM='dumb'))
+        except subprocess.TimeoutExpired:
+            reasons.append('the OCI image update did not finish in time')
+            return finish('failure', 'oci_image', [])
+        output = re.sub(r'\x1b\[[0-9;?]*[ -/]*[@-~]|\x1b[()][A-Z0-9]|\r', '', (proc.stdout or '') + (proc.stderr or ''))
+        _append_lxc_update_log(log_path, output)
+        if proc.returncode == 0:
+            return finish('success', 'oci_image', ['oci_image'])
+        if proc.returncode == 5:
+            deferred_targets.append('oci_image')
+            reasons.append(f'the new image is younger than {delay} days')
+            return finish('deferred', 'oci_image', [])
+        if proc.returncode == 4:
+            reasons.append('the container has changes made outside ProxMenux; review them in OCI manager Apps')
+            return finish('skipped', 'oci_image', [])
+        if proc.returncode == 3:
+            reasons.append('another OCI operation was running')
+            return finish('skipped', 'oci_image', [])
+        reasons.append('the OCI image update failed; the previous installation is restored when the update started')
+        return finish('failure', 'oci_image', [])
     if not os.path.isfile(_APPLY_UPDATES_SCRIPT):
         reasons.append('update runner is not installed')
         return finish('skipped', requested_target, [])
@@ -22744,6 +22852,18 @@ if __name__ == '__main__':
         print(f"[ProxMenux] SSL config error, falling back to HTTP: {e}")
         ssl_ctx = None
     
+    # With HTTPS on, PVE cannot validate the Monitor certificate against the
+    # system CA store, so its webhook is delivered to this plain-HTTP
+    # listener instead. It binds 127.0.0.1 only and answers nothing but the
+    # webhook route.
+    from flask_notification_routes import WEBHOOK_LOOPBACK_PORT
+
+    def _webhook_loopback_app(environ, start_response):
+        if environ.get('PATH_INFO') == '/api/notifications/webhook':
+            return app(environ, start_response)
+        start_response('404 Not Found', [('Content-Type', 'text/plain')])
+        return [b'Not found']
+
     # Use gevent for SSL+WebSocket support, or fallback to Flask dev server
     gevent_available = False
     ssl_loaded = False
@@ -22842,11 +22962,26 @@ if __name__ == '__main__':
                     ssl_context=ssl_context
                 )
                 gevent_available = True
+                try:
+                    webhook_server = pywsgi.WSGIServer(
+                        ('127.0.0.1', WEBHOOK_LOOPBACK_PORT), _webhook_loopback_app, log=None)
+                    webhook_server.start()
+                    print(f"[ProxMenux] PVE webhook listener on 127.0.0.1:{WEBHOOK_LOOPBACK_PORT}")
+                except Exception as _e:
+                    print(f"[ProxMenux] WARN: PVE webhook listener could not start on "
+                          f"127.0.0.1:{WEBHOOK_LOOPBACK_PORT} ({_e}); PVE notifications will not arrive", flush=True)
                 server.serve_forever()
             except ImportError as e:
                 print(f"[ProxMenux] gevent not available ({e})")
                 # Fallback: Flask dev server with SSL - flask-sock handles WebSockets
                 ssl_context = auth_manager.create_reloadable_ssl_context(ssl_cert, ssl_key)
+                try:
+                    from werkzeug.serving import make_server
+                    _webhook_srv = make_server('127.0.0.1', WEBHOOK_LOOPBACK_PORT, _webhook_loopback_app, threaded=True)
+                    threading.Thread(target=_webhook_srv.serve_forever, daemon=True).start()
+                    print(f"[ProxMenux] PVE webhook listener on 127.0.0.1:{WEBHOOK_LOOPBACK_PORT}")
+                except Exception as _e:
+                    print(f"[ProxMenux] WARN: PVE webhook listener could not start ({_e})", flush=True)
                 print("[ProxMenux] Starting Flask server with SSL (using flask-sock for WebSockets)...")
                 app.run(host='::', port=8008, debug=False, ssl_context=ssl_context, threaded=True)
         else:

@@ -5,19 +5,19 @@
   "status": "laboratory-validated",
   "catalog_ui": {
     "title": {
-      "en_US": "Alby Hub \u2728"
+      "en_US": "Alby Hub ✨"
     },
     "tagline": {
       "en_US": "Self-custodial Bitcoin Lightning wallet with integrated node and app connections."
     },
     "description": {
-      "en_US": "Alby Hub is an open-source, self-custodial Bitcoin Lightning wallet, with the easiest-to-use Lightning Network node for everyone.\nWhether you're an individual, creator, or developer, Alby Hub is your centre for seamless Bitcoin payments.\nEffortlessly connect to a variety of apps like the Alby Browser Extension or Alby Go mobile app, create sub-wallets for family and friends, and take full control of your funds\u2014all within an intuitive interface and developer-ready APIs.\n\n**USEFUL LINKS**\n- [Source Repository](https://github.com/getAlby/hub)\n- [Support](https://support.getalby.com/)\n- [Marketing Site](https://albyhub.com/)\n- [Community of users and developers](https://discord.getalby.com)\n- [Feedback Board, feature requests, bug reports[(https://feedback.getalby.com)\n"
+      "en_US": "Alby Hub is an open-source, self-custodial Bitcoin Lightning wallet, with the easiest-to-use Lightning Network node for everyone.\nWhether you're an individual, creator, or developer, Alby Hub is your centre for seamless Bitcoin payments.\nEffortlessly connect to a variety of apps like the Alby Browser Extension or Alby Go mobile app, create sub-wallets for family and friends, and take full control of your funds—all within an intuitive interface and developer-ready APIs.\n\n**USEFUL LINKS**\n- [Source Repository](https://github.com/getAlby/hub)\n- [Support](https://support.getalby.com/)\n- [Marketing Site](https://albyhub.com/)\n- [Community of users and developers](https://discord.getalby.com)\n- [Feedback Board, feature requests, bug reports[(https://feedback.getalby.com)\n"
     },
     "category": "finance",
     "category_label": "Finance & Budgeting",
     "author": "getalby",
     "developer": null,
-    "icon": null,
+    "icon": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/alby-hub.webp",
     "thumbnail": null,
     "screenshots": [],
     "architectures": [

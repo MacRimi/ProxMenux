@@ -1,0 +1,148 @@
+{
+  "meta": {
+    "title": "Cambios | Auditoría e informes",
+    "description": "El registro de cambios de Auditoría e informes: qué ha cambiado ProxMenux en el host, qué había antes, la diferencia y si puede deshacerse."
+  },
+  "header": {
+    "title": "Cambios",
+    "description": "El registro de las operaciones que ProxMenux realiza en el host y, cuando se capturó, el estado antes y después de cada una.",
+    "section": "Auditoría e informes"
+  },
+  "sections": [
+    {
+      "id": "purpose",
+      "blocks": [
+        {
+          "calloutInfo": {
+            "title": "Del script que se ejecutó al cambio que hizo",
+            "body": "Una función extensa puede cambiar solo dos líneas. El registro conserva cada operación concreta con el script, la función y la versión responsables, el recurso afectado, la diferencia y si puede deshacerse."
+          }
+        },
+        {
+          "flow": {
+            "nodes": [
+              { "label": "Script", "detail": "función + versión" },
+              { "label": "Captura", "detail": "contenido previo" },
+              { "label": "Operación", "detail": "archivo · paquete · servicio" },
+              { "label": "Registro", "detail": "atribución + diferencia" }
+            ],
+            "caption": "La captura se toma al ejecutarse la operación y se consolida cuando el Monitor lee el registro."
+          }
+        },
+        {
+          "figure": {
+            "src": "/monitor/audit/changes-view.png",
+            "alt": "Vista Cambios de Auditoría e informes con las entradas agrupadas por opción de post-install y por script",
+            "caption": "La vista Cambios, con la diferencia de un archivo editado por ProxMenux."
+          }
+        }
+      ]
+    },
+    {
+      "id": "types",
+      "title": "Tipos de entrada",
+      "intro": "El filtro de la parte superior separa las entradas por tipo.",
+      "blocks": [
+        {
+          "table": {
+            "headers": ["Tipo", "Qué registra"],
+            "rows": [
+              ["Configuración", "ProxMenux escribió, editó o eliminó un archivo, cambió un ajuste o alteró un servicio."],
+              ["Instalaciones", "ProxMenux añadió un paquete o componente, y se registran los paquetes que aparecieron realmente."],
+              ["Ejecuciones", "ProxMenux ejecutó un comando; lo que cambió depende del propio comando."],
+              ["Aplicado", "Una función se aplicó antes de que existiera el registro; el estado previo no se capturó."]
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "groups",
+      "title": "Cómo se organiza la vista",
+      "blocks": [
+        {
+          "table": {
+            "headers": ["Sección", "Contenido"],
+            "rows": [
+              ["Optimizaciones de post-install", "Agrupadas por la opción de post-install que seleccionó el usuario."],
+              ["Scripts de ProxMenux", "GPU, Coral, red, almacenamiento, seguridad, utilidades y el resto de scripts instrumentados, incluidos el instalador de ProxMenux y ProxMenux Monitor."],
+              ["Paquetes y utilidades instalados", "Software que ProxMenux instaló en el host."]
+            ]
+          }
+        },
+        {
+          "p": "Dentro de cada sección, <strong>Por función</strong> agrupa las entradas bajo la función que las hizo."
+        }
+      ]
+    },
+    {
+      "id": "entry",
+      "title": "Qué muestra cada entrada",
+      "blocks": [
+        {
+          "list": {
+            "items": [
+              "El script, la función y la versión responsables.",
+              "La fecha y el recurso afectado.",
+              "El estado conocido antes y después del cambio.",
+              "Las líneas añadidas y eliminadas.",
+              "Los paquetes que se añadieron realmente.",
+              "La transición de estado de un servicio.",
+              "<strong>Deshacer esto</strong>: <em>Restaura exactamente lo que había</em>, <em>Elimina el fichero (no había ninguno antes)</em>, <em>Se puede desinstalar el paquete</em>, un deshacer parcial o <em>No se puede deshacer desde el registro</em>."
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "before",
+      "title": "Qué significa el estado previo",
+      "blocks": [
+        {
+          "p": "El estado previo puede ser contenido capturado, un archivo creado por primera vez o un estado desconocido. Los cambios hechos antes de que existiera el registro no pueden reconstruirse; al volver a ejecutar la función se captura primero el estado encontrado en ese momento."
+        }
+      ]
+    },
+    {
+      "id": "limits",
+      "title": "Alcance del registro",
+      "blocks": [
+        {
+          "list": {
+            "items": [
+              "Los cambios manuales y los de otro software no se registran.",
+              "Solo se cubren las operaciones que pasan por las primitivas de auditoría de ProxMenux.",
+              "El registro nunca bloquea la operación que describe: si la entrada no puede escribirse, la operación continúa.",
+              "Los cambios sucesivos de un mismo recurso se muestran como el origen conocido frente al estado actual."
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "retention",
+      "title": "Evidencia guardada",
+      "blocks": [
+        {
+          "table": {
+            "headers": ["Elemento", "Comportamiento"],
+            "rows": [
+              ["Entradas", "Se conservan en el host; del registro no se elimina nada automáticamente."],
+              ["Contenido capturado", "Un objeto capturado se conserva mientras alguna entrada lo referencia."],
+              ["Tamaño de una captura", "El contenido de más de 1 MiB no se guarda entero; la entrada registra que la captura se omitió por su tamaño."],
+              ["Lectura", "El Monitor no carga objetos guardados de más de 2 MiB."],
+              ["Diferencia", "Se muestran como máximo 400 líneas, y una diferencia más larga se marca como truncada."],
+              ["Listado", "La API devuelve 200 entradas por petición por defecto y hasta 1000."]
+            ]
+          }
+        },
+        {
+          "calloutWarning": {
+            "title": "Conservar el contenido no es deshacer automáticamente",
+            "body": "El contenido previo a un cambio puede consultarse y restaurarse a mano, pero la vista Cambios no revierte operaciones. Una entrada de ejecución registra el comando sin conocer todos los efectos de la herramienta que ejecutó."
+          }
+        }
+      ]
+    }
+  ]
+}

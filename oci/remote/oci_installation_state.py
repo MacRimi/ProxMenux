@@ -21,6 +21,34 @@ from oci_ui import translate, msg_error, msg_ok
 
 ROOT = Path('/var/lib/proxmenux/oci-installations')
 FIELDS = ('Entrypoint', 'Cmd', 'Env', 'User', 'WorkingDir', 'StopSignal', 'Volumes', 'ExposedPorts', 'Healthcheck')
+VERSION_ENV_RE = re.compile(r'^([A-Z][A-Z0-9_]*)_VERSION$')
+# Repositories whose version variable is not named after the image.
+VERSION_ENV_NAMES = {'postgres': 'PG'}
+
+
+def version_from_environment(repository, environment):
+    """The application version an image states in its own environment.
+
+    Official library images publish no labels at all, yet they carry the
+    version as NEXTCLOUD_VERSION, REDIS_VERSION, MONGO_VERSION. Most also
+    carry their dependencies there — GOSU_VERSION, PHP_VERSION, NJS_VERSION —
+    so only a variable that names this image is accepted. A version variable
+    that names something else is never taken for the application's, not even
+    when it is the only one: an application built on a Python base carries
+    PYTHON_VERSION alone, and Paperless-ngx would read as 3.14.7. Anything
+    that does not name the image is left to the label.
+    """
+    found = {}
+    for entry in environment or []:
+        name, _, value = entry.partition('=')
+        match = VERSION_ENV_RE.match(name)
+        if match and value.strip():
+            found[match.group(1)] = value.strip()
+    if not found:
+        return None
+    basename = repository.rsplit('/', 1)[-1]
+    expected = VERSION_ENV_NAMES.get(basename, basename.replace('-', '_')).upper()
+    return found.get(expected)
 
 
 def command(*args):
@@ -151,8 +179,19 @@ def resolve_candidate(reference, architecture):
     if config.get('architecture') != architecture or config.get('os') != 'linux':
         raise ValueError(translate('Incompatible image platform'))
     labels = config.get('config', {}).get('Labels') or {}
-    return {'manifest_digest': digest, 'defaults': {k: config.get('config', {}).get(k) for k in FIELDS},
-            'version': labels.get('org.opencontainers.image.version') or labels.get('build_version')}
+    defaults = {k: config.get('config', {}).get(k) for k in FIELDS}
+    # The environment is read first because a self-naming variable cannot be
+    # inherited: `org.opencontainers.image.version` is copied from the base
+    # image by enough publishers that mongo and rabbitmq both report the
+    # Ubuntu release there instead of their own version.
+    version = (version_from_environment(repo, defaults.get('Env'))
+               or labels.get('org.opencontainers.image.version')
+               or labels.get('build_version'))
+    # The build date identifies the image as the publisher released it: it is
+    # what changes when an image is rebuilt, whether or not the application
+    # version inside it moved.
+    return {'manifest_digest': digest, 'defaults': defaults, 'version': version,
+            'created': config.get('created')}
 
 
 def compare(record, current, candidate=None):
@@ -189,12 +228,24 @@ def compare(record, current, candidate=None):
               'automatic_update_enabled': False, 'blockers': blockers,
               'requires': ['consistent-backup', 'review-rootfs-only-data', 'transactional-updater-not-implemented']}
     if candidate:
-        report['update_available'] = candidate['manifest_digest'] != record['image']['manifest_digest']
-        report['changed_image_fields'] = [key for key in FIELDS if record['image']['defaults'].get(key) != candidate['defaults'].get(key)]
+        replaced = candidate['manifest_digest'] != record['image']['manifest_digest']
+        report['update_available'] = replaced
+        report['candidate_digest'] = candidate['manifest_digest']
+        # The two sides read the image configuration through different paths:
+        # the record from the archive's own config blob, the candidate from
+        # `skopeo inspect --config`, which normalises to the OCI schema and
+        # drops Docker extensions such as Healthcheck. A field the candidate
+        # cannot report is unknown, not changed, and an identical digest means
+        # the configuration is byte-identical whatever either side returns.
+        report['changed_image_fields'] = [
+            key for key in FIELDS
+            if replaced and candidate['defaults'].get(key) is not None
+            and record['image']['defaults'].get(key) != candidate['defaults'].get(key)
+        ]
         old_env = dict(v.split('=', 1) for v in record['image']['defaults'].get('Env') or [] if '=' in v)
         new_env = dict(v.split('=', 1) for v in candidate['defaults'].get('Env') or [] if '=' in v)
-        report['changed_environment_names'] = sorted(k for k in old_env.keys() | new_env.keys() if old_env.get(k) != new_env.get(k))
-        report['candidate_digest'] = candidate['manifest_digest']
+        report['changed_environment_names'] = sorted(
+            k for k in old_env.keys() | new_env.keys() if replaced and old_env.get(k) != new_env.get(k))
     return report
 
 

@@ -239,8 +239,7 @@ export function ProxmoxDashboard() {
   fetchHealthInfoCount()
   fetchUpdateStatus()
 
-    // En overview: cada 30 segundos para actualización frecuente del estado de salud
-    // En otras tabs: cada 60 segundos para reducir carga
+    // Overview polls health every 30 s; the other tabs every 60 s.
     let interval: ReturnType<typeof setInterval> | null = null
     let healthInterval: ReturnType<typeof setInterval> | null = null
     if (activeTab === "overview") {

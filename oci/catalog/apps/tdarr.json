@@ -17,7 +17,7 @@
     "category_label": "Media",
     "author": "HaveAGitGat",
     "developer": null,
-    "icon": "https://raw.githubusercontent.com/HaveAGitGat/Tdarr/master/assets/tdarr.png",
+    "icon": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/tdarr.webp",
     "thumbnail": null,
     "screenshots": [],
     "architectures": [

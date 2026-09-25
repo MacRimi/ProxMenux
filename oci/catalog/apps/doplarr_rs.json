@@ -13,11 +13,11 @@
     "description": {
       "en_US": "Doplarr_rs is a Discord bot for requesting media through *arr backends, written in Rust."
     },
-    "category": "misc",
-    "category_label": "Miscellaneous",
+    "category": "arr",
+    "category_label": "*Arr Suite",
     "author": "LinuxServer.io",
     "developer": null,
-    "icon": "https://raw.githubusercontent.com/linuxserver/docker-templates/master/linuxserver.io/img/doplarr_rs-icon.png",
+    "icon": "https://cdn.jsdelivr.net/gh/linuxserver/docker-templates@master/linuxserver.io/img/doplarr_rs-logo.png",
     "thumbnail": "https://raw.githubusercontent.com/linuxserver/docker-templates/master/linuxserver.io/img/doplarr_rs-banner.png",
     "screenshots": [],
     "architectures": [

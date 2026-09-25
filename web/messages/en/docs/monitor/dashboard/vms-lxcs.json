@@ -52,7 +52,7 @@
   },
   "drillIn": {
     "heading": "Per-guest drill-in modal",
-    "intro": "The modal opens with the guest name, VMID, type, state and uptime. Its navigation adapts to the guest: <strong>Status</strong>, <strong>App</strong> and <strong>Updates</strong> for LXC application management, <strong>Mounts</strong> when an LXC has mount points, plus <strong>Backups</strong> and <strong>Firewall</strong>. The fixed action bar keeps the lifecycle controls and the LXC terminal available from every tab.",
+    "intro": "The modal opens with the guest name, VMID, type, state and uptime. Its navigation adapts to the guest: <strong>Status</strong>, <strong>App</strong> and <strong>Updates</strong> for LXC application management, <strong>Mounts</strong> when an LXC has mount points, <strong>Logs</strong> for containers installed by OCI manager Apps, plus <strong>Backups</strong> and <strong>Firewall</strong>. The fixed action bar keeps the lifecycle controls and the LXC terminal available from every tab.",
     "statusTitle": "Tab 1 — Status",
     "statusImageAlt": "Per-guest drill-in modal — Status tab with CPU / Memory / Disk live cards, Disk and Network I/O totals, the OS distro logo, and the Resources / IP Addresses block",
     "statusImageCaption": "Status tab — live CPU / Memory / Disk with progress bars at the top, accumulated I/O totals (disk read/write, network down/up) below, then the static Resources block with Notes and + Info expansions and the IP Addresses pill list.",
@@ -106,7 +106,9 @@
     ],
     "mountsCalloutTitle": "What this gives you over the native UI",
     "mountsCalloutBody": "A truthful, capacity-aware view of every place the container reads or writes. NFS or CIFS shares mounted from inside the CT — invisible to the Proxmox web UI — appear here with the same look and the same health probe as any configured mount point. Stale remote mounts and zombie binds are flagged before they bite during a backup.",
-    "backupsTitle": "Tab 5 — Backups",
+    "logsTitle": "Tab 5 — Logs (OCI containers only)",
+    "logsBody": "Appears only for containers installed by OCI manager Apps. It shows the console output of the main process of the image, kept on the host in <code>/var/log/proxmenux/oci/VMID.console.log</code>: the last 100, 500 or 1000 lines, followed live while the container runs, with a filter and a download. It reads the file on every open, so it also works with the container stopped. The details are in <ociLink>OCI containers in ProxMenux Monitor</ociLink>.",
+    "backupsTitle": "Tab 6 — Backups",
     "backupsImageAlt": "Per-guest drill-in modal — Backups tab with the available backups list, destination tag, sizes and the Create Backup button",
     "backupsImageCaption": "Backups tab — every backup stored on configured Proxmox storages for this guest, sorted newest first. The tab header carries the count badge.",
     "backupsIntro": "Lists every backup stored across configured Proxmox storages for this guest, sorted newest first. The tab title carries a count badge so you see at a glance whether the guest is backed up. Per row:",
@@ -116,7 +118,7 @@
       "<strong>Size</strong> — final on-disk size of the backup."
     ],
     "backupsOutro": "The <strong>+ Create Backup</strong> button at the top right kicks off a new run on the storage marked as \"Backup target\" in the Proxmox storage config. Restore lives in the Proxmox web UI — the Monitor exposes the \"is this guest backed up recently?\" view, not the recovery flow.",
-    "firewallTitle": "Tab 6 — Firewall",
+    "firewallTitle": "Tab 7 — Firewall",
     "firewallIntro": "Reads the per-guest Proxmox firewall log straight from the host (no extra service, no polling). The tab is always present in the navigation strip; the panel decides what to render depending on whether the firewall is enabled for that guest and whether any rule is actually logging:",
     "firewallItems": [
       "<strong>Firewall disabled</strong> — an amber notice explains exactly where to enable it in the Proxmox UI (<em>&lt;Container|VM&gt; → Firewall → Options</em>) and reminds you that at least one rule needs <code>log: info</code> (or higher) before packets show up.",

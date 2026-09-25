@@ -865,108 +865,28 @@ _PVE_OUR_HEADERS = {
 }
 
 
-def _ssl_cert_hostname(cert_path: str) -> str:
-    """Pull the most useful hostname out of an x509 cert.
-
-    Preference order: first DNS SAN → CN. Returns '' on any failure.
-    Used to build a webhook URL that won't fail PVE's TLS verification
-    (issue #239 — PVE has no `--insecure` flag and the user's ACME cert
-    is bound to a hostname, not to `127.0.0.1`).
-    """
-    try:
-        import subprocess
-        out = subprocess.run(
-            ['openssl', 'x509', '-in', cert_path, '-noout',
-             '-ext', 'subjectAltName', '-subject'],
-            capture_output=True, text=True, timeout=5,
-        )
-        if out.returncode != 0:
-            return ''
-        text = out.stdout or ''
-        # SAN line example: "    DNS:pve.example.com, DNS:pve, IP Address:..."
-        import re
-        for line in text.splitlines():
-            m = re.search(r'DNS:([A-Za-z0-9.\-]+)', line)
-            if m:
-                return m.group(1)
-        # CN fallback. "subject= CN = pve.example.com" or "...CN=pve.example.com"
-        m = re.search(r'CN\s*=\s*([A-Za-z0-9.\-]+)', text)
-        if m:
-            return m.group(1)
-    except Exception:
-        pass
-    return ''
-
-
-def _hostname_resolves_locally(hostname: str) -> bool:
-    """True when `hostname` resolves to one of this host's own IPs.
-
-    Anti-misconfig: refuse to build a webhook URL that points
-    elsewhere (a stale DNS entry pointing at the previous host, a CN
-    that names a different node in the cluster, etc.). PVE delivers
-    webhooks from the same node, so the URL has to round-trip to
-    ourselves.
-    """
-    try:
-        import socket
-        import ipaddress
-        target_ips = set()
-        for info in socket.getaddrinfo(hostname, None):
-            ip = info[4][0]
-            target_ips.add(ipaddress.ip_address(ip).compressed)
-        # Collect our own IPs from /proc/net/fib_trie isn't portable; use
-        # psutil if available, otherwise fall back to socket on the
-        # hostname itself.
-        local_ips = {'127.0.0.1', '::1'}
-        try:
-            import psutil
-            for _iface, addrs in psutil.net_if_addrs().items():
-                for a in addrs:
-                    if a.family in (socket.AF_INET, socket.AF_INET6):
-                        local_ips.add(ipaddress.ip_address(a.address.split('%')[0]).compressed)
-        except Exception:
-            pass
-        return bool(target_ips & local_ips)
-    except Exception:
-        return False
+# With HTTPS enabled, PVE delivers its notifications to a plain-HTTP listener
+# the Monitor opens on loopback only for this route (see flask_server). PVE's
+# webhook client validates certificates against the system CA store, which
+# does not hold a self-signed, ACME-staging or PVE-CA-signed Monitor
+# certificate, so an https target fails with "unable to get local issuer
+# certificate" on every notification.
+WEBHOOK_LOOPBACK_PORT = 8009
 
 
 def _pve_webhook_url() -> str:
-    """Return the URL we register with PVE as our webhook target.
-
-    Three branches:
-      1. SSL off → http://127.0.0.1:8008 (always works, no cert).
-      2. SSL on + cert hostname extractable and resolves locally →
-         https://<cert-hostname>:8008. This is what PVE's TLS layer
-         actually validates against. Without this, PVE rejects the
-         self/ACME cert with "IP address mismatch" (issue #239).
-      3. SSL on but hostname extraction/check failed → fall back to
-         https://127.0.0.1:8008 and accept that the user may still
-         hit the cert-mismatch error. We log so the operator can
-         diagnose. Better than silently emitting a wrong URL.
-    """
+    """Return the URL we register with PVE as our webhook target: the
+    Monitor itself over HTTP when SSL is off, and its loopback-only HTTP
+    listener when SSL is on. Both stay on 127.0.0.1, so nothing crosses
+    the network and no certificate is involved."""
     try:
         from auth_manager import load_ssl_config
         cfg = load_ssl_config() or {}
-        if not cfg.get('enabled'):
-            return 'http://127.0.0.1:8008/api/notifications/webhook'
-
-        cert_path = cfg.get('cert_path') or ''
-        if cert_path:
-            host = _ssl_cert_hostname(cert_path)
-            if host and _hostname_resolves_locally(host):
-                return f'https://{host}:8008/api/notifications/webhook'
-            if host:
-                print(
-                    f"[ProxMenux] webhook URL fallback to 127.0.0.1: "
-                    f"cert hostname '{host}' does not resolve to a local "
-                    f"IP — PVE will likely report a TLS verification "
-                    f"error. Fix by ensuring the FQDN resolves on this "
-                    f"host (e.g. /etc/hosts entry)."
-                )
-        return 'https://127.0.0.1:8008/api/notifications/webhook'
+        if cfg.get('enabled'):
+            return f'http://127.0.0.1:{WEBHOOK_LOOPBACK_PORT}/api/notifications/webhook'
     except Exception:
-        return 'http://127.0.0.1:8008/api/notifications/webhook'
+        pass
+    return 'http://127.0.0.1:8008/api/notifications/webhook'
 
 
 # Backward-compat alias for callers that read this at import time. Most
@@ -988,15 +908,48 @@ def _pve_read_file(path):
         return None, str(e)
 
 
+_PVE_BACKUPS_KEPT = 3
+
+
 def _pve_backup_file(path):
-    """Create timestamped backup if file exists. Never fails fatally."""
+    """Create timestamped backup if file exists. Never fails fatally.
+
+    The backups live next to the file, inside the cluster filesystem, whose
+    size is limited: a copy identical to the newest one is not written again
+    and only the newest few are kept. Restore uses the newest.
+    """
     import os, shutil
     from datetime import datetime
     try:
-        if os.path.exists(path):
+        if not os.path.exists(path):
+            return
+        directory, name = os.path.split(path)
+        prefix = f"{name}.proxmenux_backup_"
+        existing = sorted(
+            (os.path.join(directory, f) for f in os.listdir(directory) if f.startswith(prefix)),
+            key=os.path.getmtime, reverse=True,
+        )
+        with open(path, 'rb') as f:
+            current = f.read()
+        newest_matches = False
+        if existing:
+            try:
+                with open(existing[0], 'rb') as f:
+                    newest_matches = f.read() == current
+            except OSError:
+                pass
+        if not newest_matches:
             ts = datetime.now().strftime('%Y%m%d_%H%M%S')
-            backup = f"{path}.proxmenux_backup_{ts}"
-            shutil.copy2(path, backup)
+            shutil.copy2(path, os.path.join(directory, prefix + ts))
+            existing = sorted(
+                (os.path.join(directory, f) for f in os.listdir(directory) if f.startswith(prefix)),
+                key=os.path.getmtime, reverse=True,
+            )
+        for stale in existing[_PVE_BACKUPS_KEPT:]:
+            try:
+                os.remove(stale)
+            except OSError:
+                pass
     except Exception:
         pass
 

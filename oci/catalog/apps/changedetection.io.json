@@ -13,11 +13,11 @@
     "description": {
       "en_US": "Changedetection.io provides free, open-source web page monitoring, notification and change detection."
     },
-    "category": "misc",
-    "category_label": "Miscellaneous",
+    "category": "monitoring",
+    "category_label": "Monitoring & Analytics",
     "author": "LinuxServer.io",
     "developer": null,
-    "icon": "https://raw.githubusercontent.com/linuxserver/docker-templates/master/linuxserver.io/img/changedetection.io-icon.png",
+    "icon": "https://cdn.jsdelivr.net/gh/linuxserver/docker-templates@master/linuxserver.io/img/changedetection-icon.png",
     "thumbnail": "https://raw.githubusercontent.com/linuxserver/docker-templates/master/linuxserver.io/img/changedetection.io-banner.png",
     "screenshots": [],
     "architectures": [

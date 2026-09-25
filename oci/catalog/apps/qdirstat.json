@@ -13,11 +13,11 @@
     "description": {
       "en_US": "QDirStat Qt-based directory statistics: KDirStat without any KDE -- from the author of the original KDirStat."
     },
-    "category": "misc",
-    "category_label": "Miscellaneous",
+    "category": "tools",
+    "category_label": "Tools",
     "author": "LinuxServer.io",
     "developer": null,
-    "icon": "https://raw.githubusercontent.com/linuxserver/docker-templates/master/linuxserver.io/img/qdirstat-icon.png",
+    "icon": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/qdirstat.webp",
     "thumbnail": "https://raw.githubusercontent.com/linuxserver/docker-templates/master/linuxserver.io/img/qdirstat-banner.png",
     "screenshots": [],
     "architectures": [

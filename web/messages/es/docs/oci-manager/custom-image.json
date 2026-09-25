@@ -1,0 +1,134 @@
+{
+  "meta": {
+    "title": "Instalar una imagen que no está en el catálogo | ProxMenux",
+    "description": "Traducción de una imagen OCI desde un archivo Compose, una URL, un comando docker run o una referencia de imagen, con revisión de lo que ProxMenux puede reproducir antes de instalarla."
+  },
+  "header": {
+    "title": "Instalar una imagen que no está en el catálogo",
+    "description": "Una imagen propia se traduce desde su archivo Compose, un comando docker run o solo su referencia, y el resultado se presenta para revisión antes de crear ningún LXC.",
+    "section": "OCI manager Apps"
+  },
+  "sections": [
+    {
+      "id": "intro",
+      "blocks": [
+        {
+          "calloutInfo": {
+            "title": "El mismo conversor, el mismo instalador",
+            "body": "La opción <strong>Instalar una imagen que no está en el catálogo</strong> utiliza el conversor y el instalador de las plantillas del catálogo. La diferencia es que el contrato se genera en ese momento a partir de la definición aportada y se valida antes de crear ningún LXC."
+          }
+        }
+      ]
+    },
+    {
+      "id": "sources",
+      "title": "Cómo se describe la imagen",
+      "intro": "La primera pantalla pregunta cómo se describe la imagen. Hay cuatro formas de aportar una definición completa y una quinta que usa solo el nombre de la imagen.",
+      "blocks": [
+        {
+          "table": {
+            "headers": ["Opción", "Qué lee"],
+            "rows": [
+              ["Pegar su archivo Compose en la terminal", "El YAML se pega en la terminal y termina con Ctrl+D en una línea vacía."],
+              ["Leer su archivo Compose desde un archivo de este host", "Una ruta del nodo, <code>/root/docker-compose.yml</code> por defecto. El archivo debe existir y ocupar como máximo 256 KiB."],
+              ["Descargar su archivo Compose desde una dirección", "Una dirección <code>http://</code> o <code>https://</code> que sirva el YAML sin procesar. Se descargan como máximo 256 KiB."],
+              ["Pegar su comando docker run en la terminal", "El comando que publica el proyecto. Se traducen puertos, entorno, volúmenes, dispositivos, capacidades, usuario, memoria compartida y el resto de opciones admitidas."],
+              ["Solo la referencia de la imagen, sin archivo Compose", "Una referencia como <code>ghcr.io/usuario/aplicacion:latest</code>. Se consulta el registro y se conservan los metadatos OCI de la imagen."]
+            ]
+          }
+        },
+        {
+          "figure": {
+            "src": "/oci-manager/custom-source-menu.png",
+            "alt": "Menú que pregunta cómo se describe una imagen que no está en el catálogo",
+            "caption": "Las cinco formas de describir una imagen que no está en el catálogo."
+          }
+        }
+      ]
+    },
+    {
+      "id": "reference-only",
+      "title": "Qué aporta solo la referencia de la imagen",
+      "intro": "Una imagen lleva sus metadatos de proceso, pero no todo lo que un archivo Compose suele añadir a su alrededor.",
+      "blocks": [
+        {
+          "table": {
+            "headers": ["Se lee de la imagen", "No está en la imagen", "Consecuencia"],
+            "rows": [
+              ["<code>Entrypoint</code>, <code>Cmd</code>, <code>User</code>, <code>WorkingDir</code> y entorno integrado", "Variables que solo aparecen en la documentación", "Se añaden durante la instalación o una recreación"],
+              ["Volúmenes declarados por la imagen", "Directorios del host que solo nombra un archivo Compose", "Las rutas adicionales se añaden antes de instalar"],
+              ["Puertos <code>EXPOSE</code>", "La URL, el protocolo o un healthcheck funcional", "Se confirman el puerto y la forma de comprobar el servicio"],
+              ["Arquitecturas y digest del registro", "Dispositivos, privilegios o dependencias externas", "Ninguno se activa sin una definición que lo pida"]
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "review",
+      "title": "Revisión antes de instalar",
+      "intro": "Tras traducir la definición, ProxMenux muestra lo que ha entendido antes de pedir VMID, recursos o almacenamiento.",
+      "blocks": [
+        {
+          "steps": {
+            "items": [
+              { "title": "Analizar", "body": "Se leen servicios, imagen, puertos, rutas, entorno, dispositivos, seguridad y healthcheck." },
+              { "title": "Consultar el registro", "body": "La imagen debe existir en un registro público, y se enumeran las arquitecturas que publica." },
+              { "title": "Enumerar lo que no se aplica", "body": "Se enumeran las etiquetas, las redes Docker, los ajustes de Swarm y el resto de claves que no tienen efecto en un LXC." },
+              { "title": "Bloquear lo que no puede traducirse", "body": "Una clave sin equivalencia segura aparece en <strong>Lo que no puede traducirse</strong> y la instalación no continúa. Nada se descarta en silencio." },
+              { "title": "Pedir los secretos", "body": "Las variables cuyo nombre corresponde a una contraseña, un token o una clave se convierten en preguntas sensibles de la instalación." }
+            ]
+          }
+        },
+        {
+          "figure": {
+            "src": "/oci-manager/custom-review.png",
+            "alt": "Resumen de lo que ProxMenux ha entendido de un archivo Compose",
+            "caption": "El resumen que se muestra antes de que la instalación pida VMID y recursos."
+          }
+        },
+        {
+          "p": "Tras aceptar el resumen, el recorrido es el del catálogo: nombre, modo predeterminado o avanzado, VMID, CPU, memoria, red, arranque con el nodo, rutas persistentes, rutas adicionales, dispositivos compatibles y resumen final."
+        }
+      ]
+    },
+    {
+      "id": "examples",
+      "title": "Ejemplos de entrada",
+      "blocks": [
+        {
+          "codeGrid": {
+            "items": [
+              {
+                "title": "Compose",
+                "code": "services:\n  app:\n    image: ghcr.io/example/app:latest\n    ports:\n      - \"8080:8080\"\n    volumes:\n      - ./config:/config\n      - /srv/media:/media\n    environment:\n      TZ: Europe/Madrid"
+              },
+              {
+                "title": "docker run",
+                "code": "docker run -d \\\n  --name app \\\n  -p 8080:8080 \\\n  -e TZ=Europe/Madrid \\\n  -v app-config:/config \\\n  -v /srv/media:/media \\\n  ghcr.io/example/app:latest"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "limits",
+      "title": "Definiciones que no se instalan",
+      "blocks": [
+        {
+          "list": {
+            "items": [
+              "Imágenes en registros privados: no se piden credenciales del registro.",
+              "Un Dockerfile sin imagen publicada: la imagen debe construirse y publicarse antes en un registro OCI.",
+              "Un archivo Compose con varios servicios: queda bloqueado porque describe más de una imagen. Esta opción instala un único contenedor.",
+              "<code>configs</code>, secretos externos o formatos de dispositivo que no pueden traducirse sin ambigüedad.",
+              "Sustituciones del shell como <code>$(comando)</code>: debe escribirse el valor resultante.",
+              "Opciones de <code>docker run</code> no reconocidas y <code>--env-file</code>: se lee en su lugar un archivo Compose explícito."
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

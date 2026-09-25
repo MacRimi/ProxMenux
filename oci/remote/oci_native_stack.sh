@@ -2,7 +2,7 @@
 oci_native_begin() {
   OCI_NATIVE_PRIMARY=$1
   shift
-  local root=/usr/local/share/proxmenux/oci/apps
+  local root=/usr/local/share/proxmenux/oci/instances
   [[ ! -L $root && ! -L $root/.lock ]] || die "$(translate "The instance registry is not safe")"
   oci_quiet install -d -m 0700 "$root"
   exec 8>>"$root/.lock"

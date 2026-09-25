@@ -13,11 +13,11 @@
     "description": {
       "en_US": "DB Browser for SQLite is a high quality, visual, open source tool to create, design, and edit database files compatible with SQLite."
     },
-    "category": "misc",
-    "category_label": "Miscellaneous",
+    "category": "databases",
+    "category_label": "Databases",
     "author": "LinuxServer.io",
     "developer": null,
-    "icon": "https://raw.githubusercontent.com/linuxserver/docker-templates/master/linuxserver.io/img/sqlitebrowser-icon.png",
+    "icon": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons@main/webp/sqlitebrowser.webp",
     "thumbnail": "https://raw.githubusercontent.com/linuxserver/docker-templates/master/linuxserver.io/img/sqlitebrowser-banner.png",
     "screenshots": [],
     "architectures": [

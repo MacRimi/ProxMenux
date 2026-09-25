@@ -1090,7 +1090,8 @@
       "backups": "Backups",
       "updates": "Updates",
       "firewall": "Firewall",
-      "app": "App"
+      "app": "App",
+      "logs": "Logs"
     },
     "actions": {
       "start": "Start",
@@ -1189,6 +1190,44 @@
       "readFailed": "Failed to read firewall log",
       "empty": "No firewall events recorded yet.",
       "emptyHint": "Rules with log: info or higher will populate this view as packets arrive."
+    },
+    "consoleLog": {
+      "title": "Console output",
+      "description": "Standard output and error of the image's main process.",
+      "stopped": "The container is stopped; the log keeps the output of its previous runs.",
+      "lastLines": "Last {count} lines",
+      "follow": "Follow",
+      "pause": "Pause",
+      "refresh": "Refresh",
+      "download": "Download",
+      "filter": "Filter lines",
+      "loading": "Loading console output...",
+      "empty": "No output recorded yet.",
+      "emptyHint": "Lines appear here as the container writes to its console.",
+      "noMatches": "No lines match the filter.",
+      "readFailed": "Failed to read the console log",
+      "notAvailableTitle": "This container has no console log",
+      "notAvailableHint": "The console log is set up when ProxMenux installs the container from its OCI image."
+    },
+    "ociUpdates": {
+      "notTracked": "Registering the application in the App tab follows its image here.",
+      "installedImage": "Installed image",
+      "newImage": "New image {image} available",
+      "stackNote": "Part of a multi-container application (main CT {primary}, {count} containers): the update covers all of them.",
+      "pendingNote": "An operation on this container was interrupted; Recover opens its recovery.",
+      "update": "Update",
+      "recreate": "Recreate",
+      "recover": "Recover",
+      "terminalTitleUpdate": "Update OCI application",
+      "terminalTitleRecreate": "Recreate OCI application",
+      "terminalDescription": "The same flow as OCI manager Apps → Manage installed OCI applications.",
+      "keepBackup": "Keep the backup taken before updating",
+      "noKeepBackup": "The backup taken before updating is not kept",
+      "keepBackupHelp": "Every update backs up the container before replacing its image, to restore it if the update fails. With this option that backup is kept in the chosen storage; on Proxmox Backup Server a backup is written before the update.",
+      "scheduleHelp": "Only the image is updated, and only when its registry publishes a new one.",
+      "releaseDelayHelp": "A new image is installed only once it is at least this old.",
+      "ackExternal": "Host directories are not reverted by the backup",
+      "ackExternalHelp": "This container uses host directories. A scheduled update runs only with this confirmed."
     },
     "options": {
       "title": "Options",
@@ -1393,7 +1432,7 @@
       "otherPackagesPending": "+{count} other packages pending in the container",
       "noManagedUpdateInfo": "No update information yet — check from Security → Secure Gateway.",
       "ociTitle": "OCI image container",
-      "ociBody": "This container was created from an OCI (Docker) image. Update management for OCI containers is coming with the upcoming OCI install feature — updates will rebuild the container from a newer image tag rather than patching packages inside.",
+      "ociBody": "This container was created from an OCI image outside OCI manager Apps. It is updated by replacing its image, which ProxMenux does not manage for it.",
       "dockerImagesTitle": "Docker images",
       "dockerAppTitle": "Docker",
       "dockerImagesSubheading": "Images",
@@ -1652,7 +1691,15 @@
       "notifyUpstreamLabel": "Notify me when a new upstream version is available",
       "notifyUpstreamHelp": "Sends `app_update_available` to the channels enabled in Settings → Notifications. Turn off if this app can't be updated on your box.",
       "excludeFromBadgeLabel": "Exclude from the LXC updates counter",
-      "excludeFromBadgeHelp": "Don't count this app in the aggregate updates badge on the LXC list card. Useful when you're pinned to a specific version on purpose (tracker requirement, compatibility freeze). Doesn't affect the App tab's own state or the outbound notification."
+      "excludeFromBadgeHelp": "Don't count this app in the aggregate updates badge on the LXC list card. Useful when you're pinned to a specific version on purpose (tracker requirement, compatibility freeze). Doesn't affect the App tab's own state or the outbound notification.",
+      "methodOciImage": "OCI image (installed by ProxMenux)",
+      "ociImageHelp": "The version and its updates are read from the image this container was created from. ProxMenux installed it, so there is nothing to configure: the installed image is compared with the one its registry publishes today.",
+      "ociAppVersion": "Application",
+      "ociImage": "Image",
+      "ociNewImage": "New image",
+      "ociImageCurrent": "Version",
+      "refreshData": "Refresh data",
+      "refreshingData": "Refreshing…"
     }
   },
   "settings": {
@@ -3320,7 +3367,14 @@
       "auditReports": "Reports — a full audit plus focused Security review, Backup assurance and Capacity & wear reports, each opening on its own posture header, and a printable Inventory; all export to PDF. A security assessment asks before running Lynis so a run stays fast.",
       "auditPolicyBaseline": "Policy and baseline — declare what the host is expected to be (backup requirements, firewall, root SSH login) so findings grade against it, mark a run as the reference, and see what changed since, with new, resolved and accepted findings kept apart.",
       "groupedAppUpdates": "Grouped application update notifications — one complete message per scan instead of one per application, grouped by LXC with the installed and available versions.",
-      "adminTokenScope": "Administrative scope — opening a Monitor terminal and disabling authentication now require a full-admin token, so a read-only API token issued to a monitoring integration stays read-only (reported by @f3rs3n)."
+      "adminTokenScope": "Administrative scope — opening a Monitor terminal and disabling authentication now require a full-admin token, so a read-only API token issued to a monitoring integration stays read-only (reported by @f3rs3n).",
+      "ociAppTab": "OCI containers in the App tab — a container installed by OCI manager Apps is recognised from its installation record: the application and its image, a new image detected by digest, and a link to the image repository.",
+      "ociUpdatesTab": "Updates for OCI containers — Update and Recreate open the same flow as the OCI menu, the backup taken before updating can be kept in a backup storage, and the image can be updated on a schedule.",
+      "ociLogsTab": "Logs tab for OCI containers — the console output of the application, kept on the host and followed live, with a filter and a download. The Proxmox console of these containers opens a shell.",
+      "appsUpdateShortcut": "The update icon on the Apps page opens the container straight on its Updates tab.",
+      "webhookHttps": "Proxmox notifications reach the Monitor with HTTPS enabled — they are delivered on a local-only address and no longer fail with a certificate error.",
+      "persistentLogs": "A burst of log errors that ended is no longer reported as persistent: a pattern has to keep appearing for 15 minutes, and its warning clears on its own (reported by @Joshua1264).",
+      "mountsLanAddress": "Mount points on LVM-thin and other block storage show their usage, and multi-container applications open at their LAN address."
     }
   },
   "network": {
@@ -5034,6 +5088,8 @@
     "customLinkNewTitle": "New web link",
     "customLinkEditTitle": "Edit web link",
     "customLinkEditAria": "Edit custom link {name}",
+    "openUpdatesAria": "Open the Updates tab of {name}",
+    "openUpdatesTitle": "Update available — open the Updates tab",
     "customLinkName": "Name",
     "customLinkNamePlaceholder": "e.g. My app",
     "customLinkUrl": "URL",

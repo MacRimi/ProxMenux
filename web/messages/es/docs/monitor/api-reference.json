@@ -157,12 +157,12 @@
       {
         "endpoint": "/api/vms/<vmid>/control",
         "method": "POST",
-        "use": "Encender / apagar / apagar limpio / reiniciar una VM o contenedor LXC (las mismas operaciones que expone la modal VM & LXC del Monitor). Body: {\"action\": \"start|stop|shutdown|reboot\"}. Síncrono — devuelve el resultado directo sin necesidad de polling."
+        "use": "Encender / apagar / apagar limpio / reiniciar una VM o contenedor LXC (las mismas operaciones que expone la modal VM & LXC del Monitor). El cuerpo lleva <code>action</code>: <code>start</code>, <code>stop</code>, <code>shutdown</code> o <code>reboot</code>. Síncrono — devuelve el resultado directo sin necesidad de polling."
       },
       {
         "endpoint": "/api/vms/<vmid>/backup",
         "method": "POST",
-        "use": "Crear un backup vzdump de una VM o LXC. Body (todo opcional excepto cuando los defaults no encajan con tu layout de storage): {\"storage\": \"<pve-storage>\", \"mode\": \"snapshot|suspend|stop\", \"compress\": \"zstd|lzo|gz|none\", \"protected\": true, \"notes\": \"…\", \"notification\": \"auto|always|failure|never\", \"pbs_change_detection\": \"default|legacy|data\"}. Devuelve el UPID de la tarea PVE."
+        "use": "Crear un backup vzdump de una VM o LXC. Campos del cuerpo, todos opcionales salvo cuando los valores por defecto no encajan con la distribución del almacenamiento: <code>storage</code> (un almacenamiento de PVE), <code>mode</code> (<code>snapshot</code>, <code>suspend</code> o <code>stop</code>), <code>compress</code> (<code>zstd</code>, <code>lzo</code>, <code>gz</code> o <code>none</code>), <code>protected</code> (<code>true</code> o <code>false</code>), <code>notes</code>, <code>notification</code> (<code>auto</code>, <code>always</code>, <code>failure</code> o <code>never</code>) y <code>pbs_change_detection</code> (<code>default</code>, <code>legacy</code> o <code>data</code>). Devuelve el UPID de la tarea PVE."
       },
       {
         "endpoint": "/api/vms/<vmid>/backups",

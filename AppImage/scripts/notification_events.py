@@ -2502,8 +2502,7 @@ class TaskWatcher:
         # Manual starts (onboot=0) within the grace period also bypass the
         # aggregator: a user manually starting a VM right after boot wants
         # the individual confirmation, not their action silently rolled into
-        # the autostart summary. Audit Tier 6 — `system_startup` aggregation
-        # puede tragar VM starts manuales del usuario durante grace period.
+        # the autostart summary.
         _STARTUP_EVENTS = {'vm_start', 'ct_start'}
         if event_type in _STARTUP_EVENTS and not is_error and not is_warning:
             if _shared_state.is_startup_period():

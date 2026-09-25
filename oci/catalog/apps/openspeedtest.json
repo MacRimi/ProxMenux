@@ -17,7 +17,7 @@
     "category_label": "Network & Firewall",
     "author": "OpenSpeedTest",
     "developer": "OpenSpeedTest",
-    "icon": null,
+    "icon": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/openspeedtest.webp",
     "thumbnail": null,
     "screenshots": [],
     "architectures": [

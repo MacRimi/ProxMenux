@@ -287,8 +287,7 @@ const initMessage = {
     // Snapshot the open-state at call time. After the dynamic xterm
     // imports resolve, bail out if the modal has since been closed —
     // otherwise we attach a Terminal to a stale ref and open a WS that
-    // nobody reads. Audit Tier 6 — useEffect con `import("xterm")` sin
-    // cancelación.
+    // nobody reads.
     const wasOpenAtCall = isOpenRef.current
     const [TerminalClass, FitAddonClass] = await Promise.all([
       import("xterm").then((mod) => mod.Terminal),

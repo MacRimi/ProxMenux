@@ -13,11 +13,11 @@
     "description": {
       "en_US": "Librespeed is a very lightweight Speedtest implemented in Javascript, using XMLHttpRequest and Web Workers."
     },
-    "category": "misc",
-    "category_label": "Miscellaneous",
+    "category": "network",
+    "category_label": "Network & Firewall",
     "author": "LinuxServer.io",
     "developer": null,
-    "icon": "https://raw.githubusercontent.com/linuxserver/docker-templates/master/linuxserver.io/img/librespeed-icon.png",
+    "icon": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/librespeed.webp",
     "thumbnail": "https://raw.githubusercontent.com/linuxserver/docker-templates/master/linuxserver.io/img/librespeed-banner.png",
     "screenshots": [],
     "architectures": [

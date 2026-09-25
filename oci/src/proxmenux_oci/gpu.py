@@ -56,27 +56,54 @@ def apply_selkies_contract(template):
         mounts.append({'id': 'nginx-runtime', 'container_path': '/run/nginx',
                        'default_size_mb': 1, 'minimum_size_mb': 1, 'prompt_size': False,
                        'mount_options': ['rw', 'nosuid', 'nodev', 'mode=0755']})
-    if profile.get('hardware_acceleration') or profile.get('device_requests'):
+    if not profile.get('hardware_acceleration'):
+        # Fold optional Compose DRI devices into the Selkies GPU choice rather
+        # than asking twice or bypassing the acceleration menu.
+        removable = lambda device: (str(device.get('host_path_default', '')).startswith('/dev/dri')
+                                    and not device.get('required_by_compose'))
+        profile['device_requests'] = [d for d in profile.get('device_requests', []) if not removable(d)]
+        profile['optional_devices'] = [d for d in profile.get('optional_devices', [])
+                                       if not removable(d)]
+        profile['hardware_acceleration'] = {
+            'prompt': 'Selkies desktop and streaming acceleration', 'default': 'none',
+            'profiles': [
+                {'id': 'none', 'label': 'No GPU (CPU)', 'device_requests': [],
+                 'environment': [{'name': 'AUTO_GPU', 'value': 'false'}]},
+                {'id': 'vaapi', 'label': 'Intel/AMD (streaming rendering and encoding)',
+                 'device_requests': [{'id': 'selkies-render', 'kind': 'character-device',
+                     'path_prompt': 'Intel/AMD render node', 'host_path_default': '/dev/dri/renderD128',
+                     'container_path_strategy': 'same-as-host', 'mode': '0660',
+                     'deny_write': False, 'gid_strategy': 'host-device-gid',
+                     'drm_vendor_ids': ['0x8086', '0x1002']}],
+                 'environment': [{'name': 'PIXELFLUX_WAYLAND', 'value': 'true'},
+                                 {'name': 'AUTO_GPU', 'value': 'false'}],
+                 'environment_from_devices': {'DRINODE': ['selkies-render'],
+                                              'DRI_NODE': ['selkies-render'],
+                                              'ATTACHED_DEVICES_PERMS': ['selkies-render']}}
+            ],
+        }
+
+    # NVIDIA needs the host driver/Toolkit and is unsupported by Alpine Selkies images.
+    hardware = profile.get('hardware_acceleration')
+    if not hardware or 'alpine' in profile['selkies'].get('base', '').lower():
         return
-    profile['optional_devices'] = [d for d in profile.get('optional_devices', [])
-                                   if not str(d.get('host_path_default', '')).startswith('/dev/dri')]
-    profile['hardware_acceleration'] = {
-        'prompt': 'Selkies desktop and streaming acceleration', 'default': 'none',
-        'profiles': [
-            {'id': 'none', 'label': 'No GPU (CPU)', 'device_requests': [],
-             'environment': [{'name': 'AUTO_GPU', 'value': 'false'}]},
-            {'id': 'vaapi', 'label': 'Intel/AMD (streaming rendering and encoding)',
-             'device_requests': [{'id': 'selkies-render', 'kind': 'character-device',
-                 'path_prompt': 'Intel/AMD render node', 'host_path_default': '/dev/dri/renderD128',
-                 'container_path_strategy': 'same-as-host', 'mode': '0660',
-                 'deny_write': False, 'gid_strategy': 'host-device-gid',
-                 'drm_vendor_ids': ['0x8086', '0x1002']}],
-             'environment': [{'name': 'PIXELFLUX_WAYLAND', 'value': 'true'},
-                             {'name': 'AUTO_GPU', 'value': 'false'}],
-             'environment_from_devices': {'DRINODE': ['selkies-render'],
-                                          'DRI_NODE': ['selkies-render'],
-                                          'ATTACHED_DEVICES_PERMS': ['selkies-render']}}
-        ]}
+    profile['selkies']['nvidia'] = 'available-in-advanced-mode-with-compatible-host-driver-and-toolkit'
+    profiles = hardware.setdefault('profiles', [])
+    if any(item.get('id') == 'nvidia' for item in profiles):
+        return
+    profiles.append({
+        'id': 'nvidia',
+        'label': 'NVIDIA (Selkies rendering and NVENC)',
+        'device_requests': [{
+            'id': 'selkies-nvidia', 'kind': 'nvidia-runtime',
+            'device_selection': 'all-requested-by-compose',
+        }],
+        'environment': [
+            {'name': 'AUTO_GPU', 'value': 'true'},
+            {'name': 'NVIDIA_VISIBLE_DEVICES', 'value': 'all'},
+            {'name': 'NVIDIA_DRIVER_CAPABILITIES', 'value': 'compute,video,graphics,utility,display'},
+        ],
+    })
 
 
 def apply_profile_image(template, hardware_profile):

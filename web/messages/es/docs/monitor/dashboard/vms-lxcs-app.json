@@ -96,7 +96,8 @@
       { "method": "docker label / docker exec", "use": "Lee una etiqueta de versión OCI o ejecuta un comando de versión dentro de un contenedor Docker." },
       { "method": "python distribution", "use": "Usa importlib.metadata mediante el intérprete de Python seleccionado." },
       { "method": "command", "use": "Ejecuta un comando avanzado en formato argv, sin shell, y extrae la versión de su salida." },
-      { "method": "manual", "use": "Guarda una versión introducida manualmente; debe cambiarse después de actualizar la app." }
+      { "method": "manual", "use": "Guarda una versión introducida manualmente; debe cambiarse después de actualizar la app." },
+      { "method": "OCI image", "use": "Para contenedores instalados por OCI manager Apps. Lee las versiones de la aplicación y de la imagen del registro de la instalación y compara el digest instalado con el que publica el registro; no necesita configuración." }
     ],
     "sourcesHeading": "Fuentes para la versión disponible",
     "sources": [

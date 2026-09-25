@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react"
 import { Button } from "./ui/button"
 import { Dialog, DialogContent, DialogTitle } from "./ui/dialog"
-import { X, Sparkles, Thermometer, Activity, HardDrive, Shield, Globe, Cpu, Zap, Sliders, Wrench, RefreshCw, Server, BellOff, Bell, Calendar, DatabaseBackup, Smartphone, Languages } from "lucide-react"
+import { X, Sparkles, Thermometer, Activity, HardDrive, Shield, Globe, Cpu, Zap, Sliders, Wrench, RefreshCw, Server, BellOff, Bell, Calendar, DatabaseBackup, Smartphone, Languages, Package, ScrollText, ArrowUpCircle } from "lucide-react"
 import { Checkbox } from "./ui/checkbox"
 import { useT } from "../lib/i18n/provider"
 import { APP_VERSION } from "../lib/version"
@@ -305,34 +305,39 @@ export const CHANGELOG: Record<string, ReleaseNote> = {
 // that haven't been curated by hand.
 const CURRENT_VERSION_FEATURES = [
   {
-    icon: <Activity className="h-5 w-5" />,
-    key: "releaseNotes.currentFeatures.auditAssessment",
-    text: "Audit & Report — a new page that documents and assesses the node. The Assessment runs a catalogue of checks across security, backups, capacity, storage, network, hardware, guests and system, classifying each finding as critical, warning, observation or conformant and stating what it read rather than judging it.",
+    icon: <Package className="h-5 w-5" />,
+    key: "releaseNotes.currentFeatures.ociAppTab",
+    text: "OCI containers in the App tab — a container installed by OCI manager Apps is recognised from its installation record: the application and its image, a new image detected by digest, and a link to the image repository.",
   },
   {
-    icon: <Sliders className="h-5 w-5" />,
-    key: "releaseNotes.currentFeatures.changeJournal",
-    text: "Change journal — a Changes view that lists exactly what ProxMenux modified on this host: every configuration file, package and service it touched, with the prior state of each, deduplicated to a current-state view that shows the host as it stands now rather than a log of every run.",
+    icon: <RefreshCw className="h-5 w-5" />,
+    key: "releaseNotes.currentFeatures.ociUpdatesTab",
+    text: "Updates for OCI containers — Update and Recreate open the same flow as the OCI menu, the backup taken before updating can be kept in a backup storage, and the image can be updated on a schedule.",
   },
   {
-    icon: <Sparkles className="h-5 w-5" />,
-    key: "releaseNotes.currentFeatures.auditReports",
-    text: "Reports — a full audit plus focused Security review, Backup assurance and Capacity & wear reports, each opening on its own posture header, and a printable Inventory; all export to PDF. A security assessment asks before running Lynis so a run stays fast.",
+    icon: <ScrollText className="h-5 w-5" />,
+    key: "releaseNotes.currentFeatures.ociLogsTab",
+    text: "Logs tab for OCI containers — the console output of the application, kept on the host and followed live, with a filter and a download. The Proxmox console of these containers opens a shell.",
   },
   {
-    icon: <Calendar className="h-5 w-5" />,
-    key: "releaseNotes.currentFeatures.auditPolicyBaseline",
-    text: "Policy and baseline — declare what the host is expected to be (backup requirements, firewall, root SSH login) so findings grade against it, mark a run as the reference, and see what changed since, with new, resolved and accepted findings kept apart.",
+    icon: <ArrowUpCircle className="h-5 w-5" />,
+    key: "releaseNotes.currentFeatures.appsUpdateShortcut",
+    text: "The update icon on the Apps page opens the container straight on its Updates tab.",
   },
   {
     icon: <Bell className="h-5 w-5" />,
-    key: "releaseNotes.currentFeatures.groupedAppUpdates",
-    text: "Grouped application update notifications — one complete message per scan instead of one per application, grouped by LXC with the installed and available versions.",
+    key: "releaseNotes.currentFeatures.webhookHttps",
+    text: "Proxmox notifications reach the Monitor with HTTPS enabled — they are delivered on a local-only address and no longer fail with a certificate error.",
   },
   {
-    icon: <Shield className="h-5 w-5" />,
-    key: "releaseNotes.currentFeatures.adminTokenScope",
-    text: "Administrative scope — opening a Monitor terminal and disabling authentication now require a full-admin token, so a read-only API token issued to a monitoring integration stays read-only (reported by @f3rs3n).",
+    icon: <Activity className="h-5 w-5" />,
+    key: "releaseNotes.currentFeatures.persistentLogs",
+    text: "A burst of log errors that ended is no longer reported as persistent: a pattern has to keep appearing for 15 minutes, and its warning clears on its own (reported by @Joshua1264).",
+  },
+  {
+    icon: <HardDrive className="h-5 w-5" />,
+    key: "releaseNotes.currentFeatures.mountsLanAddress",
+    text: "Mount points on LVM-thin and other block storage show their usage, and multi-container applications open at their LAN address.",
   },
 ]
 

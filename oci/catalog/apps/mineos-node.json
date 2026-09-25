@@ -13,11 +13,11 @@
     "description": {
       "en_US": "MineOS is a server front-end to ease managing Minecraft administrative tasks. This iteration using Node.js aims to enhance previous MineOS scripts (Python-based), by leveraging the event-triggering, asyncronous model of Node.JS and websockets."
     },
-    "category": "media",
-    "category_label": "Media & Streaming",
+    "category": "gaming",
+    "category_label": "Gaming & Leisure",
     "author": "hexparrot",
     "developer": "hexparrot",
-    "icon": null,
+    "icon": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons@main/webp/mineos.webp",
     "thumbnail": null,
     "screenshots": [],
     "architectures": [

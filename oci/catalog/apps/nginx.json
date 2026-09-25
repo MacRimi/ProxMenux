@@ -13,11 +13,11 @@
     "description": {
       "en_US": "Nginx is an HTTP web server, reverse proxy, content cache, load balancer, TCP/UDP proxy server, and mail proxy server."
     },
-    "category": "misc",
-    "category_label": "Miscellaneous",
+    "category": "web",
+    "category_label": "Webservers & Proxies",
     "author": "LinuxServer.io",
     "developer": null,
-    "icon": "https://raw.githubusercontent.com/linuxserver/docker-templates/master/linuxserver.io/img/nginx-icon.png",
+    "icon": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/nginx.webp",
     "thumbnail": "https://raw.githubusercontent.com/linuxserver/docker-templates/master/linuxserver.io/img/nginx-banner.png",
     "screenshots": [],
     "architectures": [

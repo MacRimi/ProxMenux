@@ -291,7 +291,7 @@ RateLimitIntervalSec=30s
 RateLimitBurst=1000
 # Disable Journald forwarding to syslog
 ForwardToSyslog=no
-# Don't forward to wall (para evitar mensajes en terminales)
+# Don't forward to wall: it would print on every open terminal
 ForwardToWall=no
 # Disable signing of the logs, save cpu resources
 Seal=no

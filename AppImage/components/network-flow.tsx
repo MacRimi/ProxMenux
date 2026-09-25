@@ -665,9 +665,8 @@ function renderVertical(data: NetworkFlowData, labels: FlowLabels, unit: Network
   const NIC_PATH_START_OFFSET = 46    // clears SUB_OFFSET_Y + text height
   const NIC_VERTICAL_LEG = 56
   const HOST_GAP_FROM_CONVERGE = 56
-  const GUEST_ROW_H = 100          // más separación vertical entre
-                                   // guests para que sub no toque
-                                   // el círculo del siguiente
+  const GUEST_ROW_H = 100          // enough vertical room that one guest's
+                                   // sub clears the next guest's circle
   const BRIDGE_PITCH_PAD = 36
   // Vertical positions of the label and the sub (rate) BELOW each
   // node's circle. Both grew when the font went up to 12.5 px; this

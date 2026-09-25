@@ -226,19 +226,10 @@ INSTALL_COMPLETE=0
 PRESERVE_FAILED_CT=0
 
 cleanup_runtime_console_log() {
-  [[ -n $RUNTIME_CONSOLE_LOG ]] || return 0
-  if [[ -f ${CONF:-} ]]; then
-    local temporary_conf
-    temporary_conf=$(mktemp)
-    awk '
-      $0 !~ /^lxc\.console\.logfile:/ &&
-      $0 !~ /^lxc\.console\.size:/ &&
-      $0 !~ /^lxc\.console\.rotate:/
-    ' "$CONF" >"$temporary_conf"
-    cat "$temporary_conf" >"$CONF"
-    rm -f "$temporary_conf"
-  fi
-  rm -f "$RUNTIME_CONSOLE_LOG" "${RUNTIME_CONSOLE_LOG}.1"
+  # The console log is the container's own log from here on, and its line in
+  # the configuration stays with it: there is nothing to undo. A failed
+  # installation keeps the file too, since it holds why the application did
+  # not come up.
   RUNTIME_CONSOLE_LOG=""
 }
 
@@ -1113,7 +1104,7 @@ if [[ $DRY_RUN == 1 ]]; then
 fi
 
 # Hold the registry lock through installation so reconciliation cannot race it.
-INSTANCE_ROOT=${PROXMENUX_OCI_INSTANCE_ROOT:-/usr/local/share/proxmenux/oci/apps}
+INSTANCE_ROOT=${PROXMENUX_OCI_INSTANCE_ROOT:-/usr/local/share/proxmenux/oci/instances}
 if [[ -n ${PROXMENUX_OCI_TRANSACTION:-} ]]; then
   INSTANCE_ID=$(python3 "${SCRIPT_DIR}/oci_instance_transaction.py" --root "$INSTANCE_ROOT" \
     authorize-candidate "$VMID" --journal "$PROXMENUX_OCI_TRANSACTION" \
@@ -1303,8 +1294,7 @@ if [[ ! -s $ARCHIVE_PATH ]]; then
 fi
 fi
 
-DESCRIPTION="ProxMenux OCI: ${APP_ID}; image=${IMAGE_REF}; digest=${DIGEST}; source=${REVISION}; status=${STATUS}"
-DESCRIPTION="${DESCRIPTION}; proxmenux-instance=${INSTANCE_ID}"
+DESCRIPTION="proxmenux-instance=${INSTANCE_ID}"
 UNPRIVILEGED=$(jq -r 'if .security | has("unprivileged") then .security.unprivileged else true end' "$DEPLOYMENT_FILE")
 case "$UNPRIVILEGED" in
   true) UNPRIVILEGED_FLAG=1 ;;
@@ -1663,13 +1653,14 @@ CREDENTIALS=$(jq -c --argjson environment "$DEPLOYMENT_ENVIRONMENT" '
 ' "$TEMPLATE_FILE")
 RUNTIME_CREDENTIALS=$(jq '[.[] | select(.retrieval.method? == "container-console-pattern")] | length' <<<"$CREDENTIALS")
 
-if [[ $START_AFTER == 1 && ( $RUNTIME_CREDENTIALS -gt 0 || $HAS_STARTUP_HEALTHCHECK == 1 || $HAS_RUNNING_CHECK == 1 || $HAOS_HEALTHCHECK != 0 ) ]]; then
-  RUNTIME_CONSOLE_DIR="/run/proxmenux-oci"
-  install -d -m 700 "$RUNTIME_CONSOLE_DIR"
-  RUNTIME_CONSOLE_LOG="${RUNTIME_CONSOLE_DIR}/ct-${VMID}.console.log"
-  install -m 600 /dev/null "$RUNTIME_CONSOLE_LOG"
-  printf 'lxc.console.logfile: %s\n' "$RUNTIME_CONSOLE_LOG" >>"$CONF"
-fi
+# The console of the container is kept as its log, the way `docker logs` keeps
+# it, and the Proxmox console opens a shell when the image has one. Both are
+# set before the configuration is recorded, so the record carries them and an
+# update, which rebuilds the container through this installer, sets them again.
+# The first-boot credentials are read from the same log.
+CONSOLE_STATE=$(python3 "${SCRIPT_DIR}/oci_console.py" configure "$VMID") \
+  || die "$(translate "The console of the container could not be configured")"
+RUNTIME_CONSOLE_LOG=$(jq -r '.log' <<<"$CONSOLE_STATE")
 
 oci_log "Configuration created for CT $VMID"
 PASSWORD_STATE=""
@@ -1869,6 +1860,12 @@ if [[ $START_AFTER == 1 && $HAOS_HEALTHCHECK != 0 ]]; then
 fi
 
 cleanup_runtime_console_log
+
+UPDATED_DESCRIPTION=$(python3 "${SCRIPT_DIR}/oci_description.py" --template "$TEMPLATE_FILE" \
+  --digest "$DIGEST" --instance "$INSTANCE_ID" --ip "$IP") \
+  || die "Could not prepare the OCI notes"
+oci_quiet pct set "$VMID" --description "$UPDATED_DESCRIPTION" \
+  || die "Could not write the OCI notes in Proxmox"
 
 URLS=$(jq -c --arg ip "$IP" '
   if $ip == "" then []

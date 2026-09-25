@@ -13,11 +13,11 @@
     "description": {
       "en_US": "Grocy is an ERP system for your kitchen! Cut down on food waste, and manage your chores with this brilliant utility."
     },
-    "category": "gaming",
-    "category_label": "Gaming & Leisure",
+    "category": "productivity",
+    "category_label": "Productivity & Workflows",
     "author": "LinuxServer.io",
     "developer": null,
-    "icon": "https://raw.githubusercontent.com/linuxserver/docker-templates/master/linuxserver.io/img/grocy-icon.png",
+    "icon": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/grocy.webp",
     "thumbnail": "https://raw.githubusercontent.com/linuxserver/docker-templates/master/linuxserver.io/img/grocy-banner.png",
     "screenshots": [],
     "architectures": [

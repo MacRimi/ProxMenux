@@ -8,16 +8,16 @@
       "en_US": "Radarr"
     },
     "tagline": {
-      "en_US": "Radarr - A fork of Sonarr to work with movies \u00e0 la Couchpotato."
+      "en_US": "Radarr - A fork of Sonarr to work with movies à la Couchpotato."
     },
     "description": {
-      "en_US": "Radarr - A fork of Sonarr to work with movies \u00e0 la Couchpotato."
+      "en_US": "Radarr - A fork of Sonarr to work with movies à la Couchpotato."
     },
     "category": "arr",
     "category_label": "*Arr Suite",
     "author": "LinuxServer.io",
     "developer": null,
-    "icon": "https://raw.githubusercontent.com/linuxserver/docker-templates/master/linuxserver.io/img/radarr-icon.png",
+    "icon": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/radarr.webp",
     "thumbnail": "https://raw.githubusercontent.com/linuxserver/docker-templates/master/linuxserver.io/img/radarr-banner.png",
     "screenshots": [],
     "architectures": [

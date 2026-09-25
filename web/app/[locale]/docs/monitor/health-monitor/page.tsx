@@ -173,7 +173,7 @@ export default async function HealthMonitorPage({
               <tr key={row.category} className={idx < categoryRows.length - 1 ? "border-b border-gray-100" : ""}>
                 <td className="px-3 py-2 align-top whitespace-nowrap"><strong>{row.category}</strong></td>
                 <td className="px-3 py-2 align-top">{t.rich(`categories.rows.${idx}.checks`, { code })}</td>
-                <td className="px-3 py-2 align-top">{t.rich(`categories.rows.${idx}.events`, { code })}</td>
+                <td className="px-3 py-2 align-top">{t.rich(`categories.rows.${idx}.events`, { code, em })}</td>
               </tr>
             ))}
           </tbody>

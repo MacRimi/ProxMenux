@@ -5,9 +5,11 @@ import copy
 import json
 import os
 from pathlib import Path
+import re
 import subprocess
 import sys
 
+import oci_console
 import oci_instances as instances
 from oci_installation_state import command, image_from_archive, sha
 import oci_stack_replay
@@ -63,17 +65,21 @@ def create(root, args):
     if record['status'] != 'installing' or args[1] != record['deployment']['archive_volume']:
         raise ValueError(translate('The container creation does not match the prepared instance'))
     argv = list(args)
-    description = ''
     if '--description' in argv:
         index = argv.index('--description')
-        description = argv[index + 1]
         del argv[index:index + 2]
-    argv += ['--description', description + '; ' + instances.MARKER + record['installation_id']]
+    argv += ['--description', instances.MARKER + record['installation_id']]
     record['deployment']['create_arguments'] = argv
     instances.write(instances.location(root, vmid), record)
     # No inherited registry/network locks in long-lived Proxmox processes.
     # Keep PVE extraction directories traversable inside its standard idmap.
-    return subprocess.run(['pct', 'create', *argv], close_fds=True, umask=0o022).returncode
+    code = subprocess.run(['pct', 'create', *argv], close_fds=True, umask=0o022).returncode
+    if code == 0:
+        # Every member keeps its console as its own log and opens a Proxmox
+        # console as a shell, set before the stack records its configuration
+        # so an update rebuilds them the same way.
+        oci_console.configure(vmid)
+    return code
 
 
 def capture_rootfs(root, vmid):
@@ -102,6 +108,20 @@ def finalize(root, primary):
         vmid = member['vmid']
         record = instances.read(root, vmid)
         plan = record['deployment']
+        from oci_description import render
+        presentation = copy.deepcopy(record['template'])
+        if vmid == primary:
+            stack_ui = intent['template'].get('catalog_ui') or {}
+            presentation['catalog_ui'] = {**stack_ui, **(presentation.get('catalog_ui') or {})}
+            if not (presentation.get('first_run') or {}).get('endpoints'):
+                presentation['first_run'] = intent['template'].get('first_run') or {}
+        ip_result = subprocess.run(['lxc-info', '-n', str(vmid), '-iH'],
+                                   capture_output=True, text=True, timeout=5)
+        ip = next((line.strip() for line in ip_result.stdout.splitlines()
+                   if re.fullmatch(r'[0-9]+(?:\.[0-9]+){3}', line.strip())), '')
+        description = render(presentation, plan['image']['manifest_digest'],
+                             record['installation_id'], ip)
+        subprocess.run(['pct', 'set', str(vmid), '--description', description], check=True)
         instances.finish(root, vmid, plan['archive_path'], plan['image']['manifest_digest'])
         record = instances.read(root, vmid)
         plan = record['deployment']

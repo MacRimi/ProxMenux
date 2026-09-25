@@ -13,11 +13,11 @@
     "description": {
       "en_US": "Duckdns is a free service which will point a DNS (sub domains of duckdns.org) to an IP of your choice. The service is completely free, and doesn't require reactivation or forum posts to maintain its existence."
     },
-    "category": "misc",
-    "category_label": "Miscellaneous",
+    "category": "network",
+    "category_label": "Network & Firewall",
     "author": "LinuxServer.io",
     "developer": null,
-    "icon": "https://raw.githubusercontent.com/linuxserver/docker-templates/master/linuxserver.io/img/duckdns-icon.png",
+    "icon": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/duckdns.webp",
     "thumbnail": "https://raw.githubusercontent.com/linuxserver/docker-templates/master/linuxserver.io/img/duckdns-banner.png",
     "screenshots": [],
     "architectures": [

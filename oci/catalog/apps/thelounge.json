@@ -13,11 +13,11 @@
     "description": {
       "en_US": "Thelounge (a fork of shoutIRC) is a web IRC client that you host on your own server."
     },
-    "category": "misc",
-    "category_label": "Miscellaneous",
+    "category": "communication",
+    "category_label": "Communication & Community",
     "author": "LinuxServer.io",
     "developer": null,
-    "icon": "https://raw.githubusercontent.com/linuxserver/docker-templates/master/linuxserver.io/img/thelounge-icon.png",
+    "icon": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/the-lounge.webp",
     "thumbnail": "https://raw.githubusercontent.com/linuxserver/docker-templates/master/linuxserver.io/img/thelounge-banner.png",
     "screenshots": [],
     "architectures": [

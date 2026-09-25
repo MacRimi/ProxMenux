@@ -11,13 +11,13 @@
       "en_US": "Empowering the smart home"
     },
     "description": {
-      "en_US": "The open Home Automation Bus (openHAB, pronounced \u02c8\u0259\u028ap\u0259n\u02c8h\u00e6b) is an open source, technology agnostic home automation platform which runs as the center of your smart home! Its ability to integrate a multitude of other devices and systems. openHAB includes other home automation systems, (smart) devices and other technologies into a single solution. To provide a uniform user interface and a common approach to automation rules across the entire system, regardless of the number of manufacturers and sub-systems involved. Giving you the most flexible tool available to make almost any home automation wish come true; if you can think it, odds are that you can implement it with openHAB."
+      "en_US": "The open Home Automation Bus (openHAB, pronounced ˈəʊpənˈhæb) is an open source, technology agnostic home automation platform which runs as the center of your smart home! Its ability to integrate a multitude of other devices and systems. openHAB includes other home automation systems, (smart) devices and other technologies into a single solution. To provide a uniform user interface and a common approach to automation rules across the entire system, regardless of the number of manufacturers and sub-systems involved. Giving you the most flexible tool available to make almost any home automation wish come true; if you can think it, odds are that you can implement it with openHAB."
     },
     "category": "smarthome",
     "category_label": "IoT & Smart Home",
     "author": "openHAB",
     "developer": "openHAB",
-    "icon": null,
+    "icon": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/openhab.webp",
     "thumbnail": null,
     "screenshots": [],
     "architectures": [

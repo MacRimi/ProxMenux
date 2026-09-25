@@ -22,7 +22,7 @@ from oci_host_mounts import capture_sources
 from oci_accelerators import capture as capture_gpu_devices
 from oci_ui import translate, msg_error, msg_ok
 
-ROOT = Path('/usr/local/share/proxmenux/oci/apps')
+ROOT = Path('/usr/local/share/proxmenux/oci/instances')
 MARKER = 'proxmenux-instance='
 ACTIVE = {'installing', 'assembling', 'updating', 'recovering'}
 

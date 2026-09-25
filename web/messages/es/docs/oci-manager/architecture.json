@@ -1,0 +1,114 @@
+{
+  "meta": {
+    "title": "Cómo se traduce una imagen OCI | ProxMenux",
+    "description": "Del repositorio de la imagen y su archivo Compose a una plantilla revisable, un plan de despliegue y un LXC nativo de Proxmox VE, sin Docker dentro."
+  },
+  "header": {
+    "title": "Cómo se traduce una imagen OCI",
+    "description": "Del repositorio de la imagen y su archivo Compose a una plantilla revisable, un plan de despliegue y un LXC nativo, sin instalar Docker dentro.",
+    "section": "OCI manager Apps"
+  },
+  "sections": [
+    {
+      "id": "pipeline",
+      "title": "La cadena de traducción",
+      "blocks": [
+        {
+          "mermaid": {
+            "chartCode": "flowchart LR\n A[\"{{repo}}\"] --> B[\"Compose + README\"]\n B --> C[\"{{converter}}\"]\n C --> D[\"{{template}}\"]\n D --> E{\"{{blockers}}\"}\n E -- \"{{no}}\" --> F[\"{{review}}\"]\n F --> D\n E -- \"{{yes}}\" --> G[\"{{plan}}\"]\n G --> H[\"pct create\"]\n H --> I[\"{{lxc}}\"]",
+            "labels": {
+              "repo": "Repositorio de la imagen",
+              "converter": "Conversor",
+              "template": "Plantilla JSON",
+              "blockers": "¿Sin bloqueos?",
+              "no": "No",
+              "yes": "Sí",
+              "review": "Revisión / overlay",
+              "plan": "Plan de despliegue",
+              "lxc": "LXC nativo"
+            }
+          }
+        },
+        {
+          "p": "El conversor lee la imagen y el archivo Compose que publica su proyecto y escribe una plantilla JSON. Una plantilla con bloqueos sin traducir pasa por revisión, donde un overlay curado los resuelve, antes de publicarse en el catálogo. Solo las plantillas sin bloqueos se ofrecen para instalar."
+        }
+      ]
+    },
+    {
+      "id": "template",
+      "title": "Qué conserva la plantilla",
+      "blocks": [
+        {
+          "cards": {
+            "items": [
+              { "icon": "archive", "title": "Identidad de la imagen", "body": "Repositorio, etiqueta rolling, arquitectura, digest resuelto y revisión del origen." },
+              { "icon": "braces", "title": "Contrato del contenedor", "body": "Entrypoint, Cmd, entorno, usuario, directorio de trabajo, señal de parada, puertos y volúmenes." },
+              { "icon": "layers", "title": "Traducción a Proxmox VE", "body": "Recursos, seguridad, puntos de montaje, dispositivos, sysctls, healthchecks y las adaptaciones que necesita cada uno, con su motivo." },
+              { "icon": "shield", "title": "Compatibilidad", "body": "Claves admitidas, bloqueos sin traducir y el estado de cada validación." }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "sources",
+      "title": "OCI aporta el proceso; Compose aporta el entorno",
+      "blocks": [
+        {
+          "table": {
+            "headers": ["Origen", "Ejemplo", "Resultado nativo"],
+            "rows": [
+              ["Metadatos OCI", "<code>Entrypoint</code>, <code>Cmd</code>, <code>User</code>", "Proxmox VE los importa al crear el CT"],
+              ["Docker Compose", "<code>environment</code>, <code>volumes</code>, <code>devices</code>", "entradas de entorno del LXC, <code>mpN</code> y <code>devN</code>"],
+              ["Perfil de ProxMenux", "GPU, healthcheck, credenciales", "preguntas y adaptaciones revisadas"],
+              ["Usuario", "VMID, almacenamiento, red", "el contrato de la instancia"]
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "install",
+      "title": "Qué ocurre durante una instalación",
+      "blocks": [
+        {
+          "steps": {
+            "items": [
+              { "title": "Resolver", "body": "Se consulta el registro, se selecciona la arquitectura del host y se fija el digest efectivo de la etiqueta rolling." },
+              { "title": "Descargar y verificar", "body": "Skopeo descarga la imagen como archivo OCI, y cada capa se comprueba contra su digest y se descomprime antes de crear nada. Una descarga dañada se repite una vez antes de detener la instalación." },
+              { "title": "Construir", "body": "<code>pct create</code> construye el rootfs a partir del archivo y conserva los metadatos oficiales de proceso de la imagen." },
+              { "title": "Conectar", "body": "Se añaden los volúmenes, la red, el entorno, los dispositivos y los perfiles de seguridad declarados." },
+              { "title": "Consola", "body": "La salida de consola del contenedor se guarda en el host, y la consola de Proxmox VE abre un shell cuando la imagen incluye uno." },
+              { "title": "Comprobar", "body": "El primer arranque espera una dirección y la respuesta del servicio; un fallo no se presenta como instalación correcta." },
+              { "title": "Registrar", "body": "La configuración efectiva se escribe en el contrato de la instancia que usan las actualizaciones y las recreaciones." }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "example",
+      "title": "Ejemplo: una imagen con /config y /downloads",
+      "intro": "Una definición habitual de Compose y la configuración de Proxmox VE en la que se convierte. Las rutas que espera la aplicación no cambian.",
+      "blocks": [
+        {
+          "codeGrid": {
+            "items": [
+              {
+                "title": "Docker Compose",
+                "code": "image: lscr.io/linuxserver/example:latest\nenvironment:\n  - PUID=1000\n  - PGID=1000\nvolumes:\n  - config:/config\n  - /srv/downloads:/downloads\nports:\n  - 8080:8080"
+              },
+              {
+                "title": "/etc/pve/lxc/VMID.conf (extracto)",
+                "code": "entrypoint: /init\nmp0: local-lvm:vm-VMID-disk-1,mp=/config,backup=1,size=8G\nmp1: /srv/downloads,mp=/downloads\nnet0: name=eth0,bridge=vmbr0,ip=dhcp,type=veth\nlxc.environment.runtime: PUID=1000\nlxc.environment.runtime: PGID=1000"
+              }
+            ]
+          }
+        },
+        {
+          "p": "<code>mp0</code> es un segundo disco que pertenece al contenedor, con el nombre <code>vm-VMID-disk-N</code> en el almacenamiento elegido. Se monta en <code>/config</code> y, con <code>backup=1</code>, forma parte del backup del contenedor. <code>mp1</code> no crea ningún disco: enlaza el directorio del host <code>/srv/downloads</code> con <code>/downloads</code> dentro del LXC. El puerto 8080 no se mapea: el LXC tiene una dirección propia y el servicio responde en ella."
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,134 @@
+{
+  "meta": {
+    "title": "Install an image that is not in the catalog | ProxMenux",
+    "description": "Translate an OCI image from a Compose file, a URL, a docker run command or an image reference, and review what ProxMenux can reproduce before installing it."
+  },
+  "header": {
+    "title": "Install an image that is not in the catalog",
+    "description": "An image of your own is translated from its Compose file, a docker run command or its reference alone, and the result is shown for review before any LXC is created.",
+    "section": "OCI manager Apps"
+  },
+  "sections": [
+    {
+      "id": "intro",
+      "blocks": [
+        {
+          "calloutInfo": {
+            "title": "Same converter, same installer",
+            "body": "The option <strong>Install an image that is not in the catalog</strong> uses the converter and the installer of the catalog templates. The difference is that the contract is generated at that moment from the definition given, and validated before any LXC is created."
+          }
+        }
+      ]
+    },
+    {
+      "id": "sources",
+      "title": "How the image is described",
+      "intro": "The first screen asks how the image is described. There are four ways to give a complete definition and a fifth that uses only the image name.",
+      "blocks": [
+        {
+          "table": {
+            "headers": ["Option", "What it reads"],
+            "rows": [
+              ["Paste its Compose file in the terminal", "The YAML is pasted in the terminal and ends with Ctrl+D on an empty line."],
+              ["Read its Compose file from a file of this host", "A path on the node, <code>/root/docker-compose.yml</code> by default. The file must exist and be at most 256 KiB."],
+              ["Download its Compose file from an address", "An <code>http://</code> or <code>https://</code> address that serves the raw YAML. At most 256 KiB are downloaded."],
+              ["Paste its docker run command in the terminal", "The command published by the project. Ports, environment, volumes, devices, capabilities, user, shared memory and the other supported options are translated."],
+              ["Only the image reference, with no Compose file", "A reference such as <code>ghcr.io/user/application:latest</code>. The registry is queried and the OCI metadata of the image is kept."]
+            ]
+          }
+        },
+        {
+          "figure": {
+            "src": "/oci-manager/custom-source-menu.png",
+            "alt": "Menu that asks how an image that is not in the catalog is described",
+            "caption": "The five ways to describe an image that is not in the catalog."
+          }
+        }
+      ]
+    },
+    {
+      "id": "reference-only",
+      "title": "What an image reference alone provides",
+      "intro": "An image carries its process metadata, but not everything a Compose file usually adds around it.",
+      "blocks": [
+        {
+          "table": {
+            "headers": ["Read from the image", "Not in the image", "Consequence"],
+            "rows": [
+              ["<code>Entrypoint</code>, <code>Cmd</code>, <code>User</code>, <code>WorkingDir</code> and embedded environment", "Variables that only appear in the documentation", "They are added during the installation or a recreation"],
+              ["Volumes declared by the image", "Host directories that only a Compose file names", "Additional paths are added before installing"],
+              ["<code>EXPOSE</code> ports", "The URL, protocol or functional healthcheck", "The port and the way the service is checked are confirmed"],
+              ["Architectures and digest in the registry", "Devices, privileges or external dependencies", "None of them is enabled without a definition that asks for it"]
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "review",
+      "title": "Review before installing",
+      "intro": "After translating the definition, ProxMenux shows what it understood before asking for VMID, resources or storage.",
+      "blocks": [
+        {
+          "steps": {
+            "items": [
+              { "title": "Analyse", "body": "Services, image, ports, paths, environment, devices, security and healthcheck are read." },
+              { "title": "Query the registry", "body": "The image must exist in a public registry, and its published architectures are listed." },
+              { "title": "List what is not applied", "body": "Labels, Docker networks, Swarm settings and other keys that have no effect on an LXC are listed." },
+              { "title": "Block what cannot be translated", "body": "A key with no safe equivalent is shown under <strong>What cannot be translated</strong> and the installation does not continue. Nothing is dropped silently." },
+              { "title": "Ask for secrets", "body": "Variables whose names read as a password, token or key become sensitive questions of the installation." }
+            ]
+          }
+        },
+        {
+          "figure": {
+            "src": "/oci-manager/custom-review.png",
+            "alt": "Summary of what ProxMenux understood from a Compose file",
+            "caption": "The summary shown before the installation asks for VMID and resources."
+          }
+        },
+        {
+          "p": "After accepting the summary, the flow is the one of the catalog: name, default or advanced mode, VMID, CPU, memory, network, start with the node, persistent paths, additional paths, compatible devices and a final summary."
+        }
+      ]
+    },
+    {
+      "id": "examples",
+      "title": "Input examples",
+      "blocks": [
+        {
+          "codeGrid": {
+            "items": [
+              {
+                "title": "Compose",
+                "code": "services:\n  app:\n    image: ghcr.io/example/app:latest\n    ports:\n      - \"8080:8080\"\n    volumes:\n      - ./config:/config\n      - /srv/media:/media\n    environment:\n      TZ: Europe/Madrid"
+              },
+              {
+                "title": "docker run",
+                "code": "docker run -d \\\n  --name app \\\n  -p 8080:8080 \\\n  -e TZ=Europe/Madrid \\\n  -v app-config:/config \\\n  -v /srv/media:/media \\\n  ghcr.io/example/app:latest"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "limits",
+      "title": "Definitions that are not installed",
+      "blocks": [
+        {
+          "list": {
+            "items": [
+              "Images in private registries: registry credentials are not requested.",
+              "A Dockerfile without a published image: the image has to be built and published in an OCI registry first.",
+              "A Compose file with several services: it is blocked because it describes more than one image. This option installs a single container.",
+              "<code>configs</code>, external secrets or device formats that cannot be translated unambiguously.",
+              "Shell substitutions such as <code>$(command)</code>: the resulting value has to be written instead.",
+              "<code>docker run</code> options that are not recognised, and <code>--env-file</code>: an explicit Compose file is read instead."
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

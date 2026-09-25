@@ -13,11 +13,11 @@
     "description": {
       "en_US": "syslog-ng allows you to flexibly collect, parse, classify, rewrite and correlate logs from across your infrastructure and store or route them to log analysis tools."
     },
-    "category": "misc",
-    "category_label": "Miscellaneous",
+    "category": "monitoring",
+    "category_label": "Monitoring & Analytics",
     "author": "LinuxServer.io",
     "developer": null,
-    "icon": "https://raw.githubusercontent.com/linuxserver/docker-templates/master/linuxserver.io/img/syslog-ng-icon.png",
+    "icon": "https://cdn.jsdelivr.net/gh/linuxserver/docker-templates@master/linuxserver.io/img/syslog-ng-logo.png",
     "thumbnail": "https://raw.githubusercontent.com/linuxserver/docker-templates/master/linuxserver.io/img/syslog-ng-banner.png",
     "screenshots": [],
     "architectures": [

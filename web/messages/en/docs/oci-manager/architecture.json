@@ -1,0 +1,114 @@
+{
+  "meta": {
+    "title": "How an OCI image is translated | ProxMenux",
+    "description": "From the image repository and its Compose file to a reviewable template, a deployment plan and a native Proxmox VE LXC, without Docker inside."
+  },
+  "header": {
+    "title": "How an OCI image is translated",
+    "description": "From the image repository and its Compose file to a reviewable template, a deployment plan and a native LXC, without installing Docker inside.",
+    "section": "OCI manager Apps"
+  },
+  "sections": [
+    {
+      "id": "pipeline",
+      "title": "The translation pipeline",
+      "blocks": [
+        {
+          "mermaid": {
+            "chartCode": "flowchart LR\n A[\"{{repo}}\"] --> B[\"Compose + README\"]\n B --> C[\"{{converter}}\"]\n C --> D[\"{{template}}\"]\n D --> E{\"{{blockers}}\"}\n E -- \"{{no}}\" --> F[\"{{review}}\"]\n F --> D\n E -- \"{{yes}}\" --> G[\"{{plan}}\"]\n G --> H[\"pct create\"]\n H --> I[\"{{lxc}}\"]",
+            "labels": {
+              "repo": "Image repository",
+              "converter": "Converter",
+              "template": "JSON template",
+              "blockers": "No blockers?",
+              "no": "No",
+              "yes": "Yes",
+              "review": "Review / overlay",
+              "plan": "Deployment plan",
+              "lxc": "Native LXC"
+            }
+          }
+        },
+        {
+          "p": "The converter reads the image and the Compose file its project publishes and writes a JSON template. A template with untranslated blockers goes through review, where a curated overlay resolves them, before it is published in the catalog. Only templates without blockers are offered for installation."
+        }
+      ]
+    },
+    {
+      "id": "template",
+      "title": "What the template keeps",
+      "blocks": [
+        {
+          "cards": {
+            "items": [
+              { "icon": "archive", "title": "Image identity", "body": "Repository, rolling tag, architecture, resolved digest and source revision." },
+              { "icon": "braces", "title": "Container contract", "body": "Entrypoint, Cmd, environment, user, working directory, stop signal, ports and volumes." },
+              { "icon": "layers", "title": "Proxmox VE translation", "body": "Resources, security, mount points, devices, sysctls, healthchecks and the adaptations each one needs, with their reason." },
+              { "icon": "shield", "title": "Compatibility", "body": "Supported keys, untranslated blockers and the state of each validation." }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "sources",
+      "title": "OCI provides the process; Compose provides the environment",
+      "blocks": [
+        {
+          "table": {
+            "headers": ["Source", "Example", "Native result"],
+            "rows": [
+              ["OCI metadata", "<code>Entrypoint</code>, <code>Cmd</code>, <code>User</code>", "Proxmox VE imports them when the CT is created"],
+              ["Docker Compose", "<code>environment</code>, <code>volumes</code>, <code>devices</code>", "LXC environment entries, <code>mpN</code> and <code>devN</code>"],
+              ["ProxMenux profile", "GPU, healthcheck, credentials", "questions and reviewed adaptations"],
+              ["User", "VMID, storage, network", "the instance contract"]
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "install",
+      "title": "What happens during an installation",
+      "blocks": [
+        {
+          "steps": {
+            "items": [
+              { "title": "Resolve", "body": "The registry is queried, the host architecture is selected and the effective digest of the rolling tag is fixed." },
+              { "title": "Download and verify", "body": "Skopeo downloads the image as an OCI archive, and every layer is checked against its digest and decompressed before anything is created. A damaged download is fetched a second time before the installation stops." },
+              { "title": "Build", "body": "<code>pct create</code> builds the rootfs from the archive and keeps the official process metadata of the image." },
+              { "title": "Connect", "body": "The declared volumes, network, environment, devices and security profiles are attached." },
+              { "title": "Console", "body": "The console output of the container is kept on the host, and the Proxmox VE console opens a shell when the image ships one." },
+              { "title": "Check", "body": "The first start waits for an address and for the service to answer; a failure is not reported as a successful installation." },
+              { "title": "Register", "body": "The effective configuration is written to the instance contract that updates and recreations use." }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "example",
+      "title": "Example: an image with /config and /downloads",
+      "intro": "A common Compose definition and the Proxmox VE configuration it becomes. The paths the application expects do not change.",
+      "blocks": [
+        {
+          "codeGrid": {
+            "items": [
+              {
+                "title": "Docker Compose",
+                "code": "image: lscr.io/linuxserver/example:latest\nenvironment:\n  - PUID=1000\n  - PGID=1000\nvolumes:\n  - config:/config\n  - /srv/downloads:/downloads\nports:\n  - 8080:8080"
+              },
+              {
+                "title": "/etc/pve/lxc/VMID.conf (excerpt)",
+                "code": "entrypoint: /init\nmp0: local-lvm:vm-VMID-disk-1,mp=/config,backup=1,size=8G\nmp1: /srv/downloads,mp=/downloads\nnet0: name=eth0,bridge=vmbr0,ip=dhcp,type=veth\nlxc.environment.runtime: PUID=1000\nlxc.environment.runtime: PGID=1000"
+              }
+            ]
+          }
+        },
+        {
+          "p": "<code>mp0</code> is a second disk that belongs to the container, named <code>vm-VMID-disk-N</code> on the selected storage. It is mounted at <code>/config</code> and, with <code>backup=1</code>, it is part of the container backup. <code>mp1</code> creates no disk: it binds the host directory <code>/srv/downloads</code> to <code>/downloads</code> inside the LXC. Port 8080 is not mapped: the LXC has an address of its own and the service answers on it."
+        }
+      ]
+    }
+  ]
+}

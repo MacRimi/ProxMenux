@@ -40,8 +40,8 @@ class SuiteChildUI(DefaultsUI):
         return self.ui.password(text,required=required)
 
 
-def build_suite(template, ui):
-    from .installer import build_deployment, _hostname_default
+def build_suite(template, ui, mode='advanced'):
+    from .installer import build_deployment, _hostname_default, DEFAULT_MODE
     choices = template['proxmox']['installer_profile']['applications']
     profile = template['proxmox']['installer_profile']
     selected = ui.checklist(translate('Arr suite: applications to install'), [(x, x.capitalize()) for x in choices],
@@ -61,9 +61,9 @@ def build_suite(template, ui):
     from . import host
     from . import network as access
     from .installer import ask_bridge, ask_storage
-    storage = ask_storage(ui, translate('Storage for rootfs and private configuration'), 'rootdir', 'local-lvm')
-    cache = ask_storage(ui, translate('Storage for the OCI image cache'), 'vztmpl', 'local')
-    bridge = ask_bridge(ui, translate('Access bridge'), 'vmbr0')
+    storage = ask_storage(ui, translate('Storage for rootfs and private configuration'), 'rootdir', 'local-lvm', mode)
+    cache = ask_storage(ui, translate('Storage for the OCI image cache'), 'vztmpl', 'local', mode)
+    bridge = ask_bridge(ui, translate('Access bridge'), 'vmbr0', mode)
     reachable = [app for app in selected if app != 'unpackerr']
     labels, gateway = access.ask_addresses(ui, bridge, [app.capitalize() for app in reachable])
     addresses = dict(zip(reachable, labels.values()))
@@ -85,7 +85,9 @@ def build_suite(template, ui):
         child = json.loads(path.read_text())
         if not child['compatibility']['automatic_install_candidate']:
             raise StackError(f"{app}: {translate('individual template is blocked')}")
-        plan = build_deployment(copy.deepcopy(child), SuiteChildUI(ui,child['proxmox'].get('installer_profile',{})))
+        child_ui = (DefaultsUI() if mode == DEFAULT_MODE else
+                    SuiteChildUI(ui, child['proxmox'].get('installer_profile', {})))
+        plan = build_deployment(copy.deepcopy(child), child_ui, mode)
         plan.update(hostname=_hostname_default(name+'-'+app), start_after_create=False, onboot=onboot, template_storage=cache)
         plan['rootfs']['storage'] = storage
         for env in plan['environment']:
@@ -97,9 +99,6 @@ def build_suite(template, ui):
         plan['mounts'] = [config]
         if app in MEDIA_APPS:
             plan['mounts'].append({'type':'host-bind','source':shared,'container_path':'/data','size_gb':None,'backup':False,'read_only':False,'create_if_missing':True})
-        from .custom_mounts import ask_custom_mounts
-        ui.info(f"{translate('Additional paths for')} {app}")
-        plan['mounts'] = ask_custom_mounts(ui, plan['mounts'], storage)
         endpoint = child['first_run']['endpoints'][0] if child['first_run']['endpoints'] else None
         health = {'type':'http','timeout_seconds':360,'endpoint':endpoint} if endpoint else {'type':'running','timeout_seconds':60}
         if app == 'qbittorrent':
@@ -113,6 +112,9 @@ def build_suite(template, ui):
             services[-1]['deferred_setup'] = True
         if app == 'qbittorrent':
             services[-1]['setup_credentials'] = credentials
+    if mode != DEFAULT_MODE:
+        from .custom_mounts import ask_stack_custom_mounts
+        ask_stack_custom_mounts(ui, services, storage)
     return {'deployment_kind':'generic-multi-lxc-stack','suite_arr':True,'lifecycle_mode':'independent','stack_name':name,
             'base_vmid':int(base) if base else None,'services':services,'shared_media':shared,'media_player':player,
             'completion_notes':[

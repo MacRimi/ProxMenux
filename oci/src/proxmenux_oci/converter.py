@@ -80,7 +80,7 @@ def extract_compose(readme: str) -> str:
         None,
     )
     if heading_index is None:
-        raise ConversionError("El README no contiene una seccion docker-compose reconocible")
+        raise ConversionError("The README has no recognisable docker-compose section")
 
     fence_start = next(
         (index for index in range(heading_index + 1, len(lines)) if lines[index].strip().startswith("```")),
@@ -93,11 +93,11 @@ def extract_compose(readme: str) -> str:
         None,
     )
     if fence_end is None:
-        raise ConversionError("El bloque docker-compose no esta cerrado")
+        raise ConversionError("The docker-compose block is not closed")
 
     compose = "\n".join(lines[fence_start + 1 : fence_end]).strip() + "\n"
     if "services:" not in compose:
-        raise ConversionError("El bloque encontrado no parece un Docker Compose")
+        raise ConversionError("The block found does not look like a Docker Compose file")
     return compose
 
 
@@ -141,7 +141,7 @@ def _environment_contract(value: Any, optional: set[str]) -> list[dict[str, Any]
             name, separator, raw_value = text.partition("=")
             entries.append((name, raw_value if separator else None))
     else:
-        raise ConversionError("environment debe ser una lista o un objeto")
+        raise ConversionError("environment must be a list or a mapping")
 
     for name, raw_value in entries:
         name = str(name)
@@ -178,7 +178,7 @@ def _mount_contract(value: Any, optional: set[str]) -> list[dict[str, Any]]:
     if value is None:
         return []
     if not isinstance(value, list):
-        raise ConversionError("volumes debe ser una lista")
+        raise ConversionError("volumes must be a list")
     result: list[dict[str, Any]] = []
     for index, item in enumerate(value):
         if isinstance(item, dict):
@@ -245,7 +245,7 @@ def _port_contract(value: Any, optional: set[str]) -> list[dict[str, Any]]:
     if value is None:
         return []
     if not isinstance(value, list):
-        raise ConversionError("ports debe ser una lista")
+        raise ConversionError("ports must be a list")
     result: list[dict[str, Any]] = []
     for item in value:
         if isinstance(item, dict):
@@ -326,7 +326,7 @@ def _image_name(image: Any) -> str:
 def _catalog_identifier(app_id: str) -> str:
     normalized = re.sub(r"[^a-z0-9]+", "-", app_id.casefold()).strip("-")
     if not normalized:
-        raise ConversionError(f"No se puede normalizar el identificador: {app_id!r}")
+        raise ConversionError(f"Cannot normalise the identifier: {app_id!r}")
     return f"linuxserver-{normalized}"
 
 
@@ -1404,7 +1404,7 @@ def summarize_readme(repo: Repository, readme: str) -> dict[str, Any]:
         raise ConversionError(f"Docker Compose no valido: {exc}") from exc
     services = compose.get("services") if isinstance(compose, dict) else None
     if not isinstance(services, dict) or not services:
-        raise ConversionError("El Compose no contiene services")
+        raise ConversionError("The Compose file has no services")
     candidates = [
         value
         for value in services.values()
@@ -1427,7 +1427,10 @@ def summarize_readme(repo: Repository, readme: str) -> dict[str, Any]:
         "description": description or repo.description,
         "website": website,
         "architectures": architectures,
-        "icon": f"https://raw.githubusercontent.com/linuxserver/docker-templates/master/linuxserver.io/img/{repo.app_id}-icon.png",
+        # Resolved by `apply-icons` against the published icon sets. Building
+        # the URL here from the application id named a file that does not
+        # exist for most of the catalog.
+        "icon": None,
         "updated_at": changelog[0]["date"] if changelog else repo.pushed_at,
         "main_image": str(main_service["image"]),
     }
@@ -1445,7 +1448,7 @@ def convert_readme(
     except yaml.YAMLError as exc:
         raise ConversionError(f"Docker Compose no valido: {exc}") from exc
     if not isinstance(compose, dict) or not isinstance(compose.get("services"), dict):
-        raise ConversionError("El Compose no contiene services")
+        raise ConversionError("The Compose file has no services")
     services = compose["services"]
     multi_service = len(services) > 1
     if multi_service:
@@ -1511,7 +1514,10 @@ def convert_readme(
             "category_label": repo.category_label,
             "author": "LinuxServer.io",
             "developer": None,
-            "icon": f"https://raw.githubusercontent.com/linuxserver/docker-templates/master/linuxserver.io/img/{repo.app_id}-icon.png",
+            # Resolved by `apply-icons` against the published icon sets. Building
+        # the URL here from the application id named a file that does not
+        # exist for most of the catalog.
+        "icon": None,
             "thumbnail": f"https://raw.githubusercontent.com/linuxserver/docker-templates/master/linuxserver.io/img/{repo.app_id}-banner.png",
             "screenshots": [],
             "architectures": _architectures(readme),

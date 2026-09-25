@@ -4146,7 +4146,8 @@ class HealthMonitor:
         New thresholds:
         - CASCADE: ≥15 errors (increased from 10)
         - SPIKE: ≥5 errors AND 4x increase (more restrictive)
-        - PERSISTENT: Same error in 3 consecutive checks
+        - PERSISTENT: the same pattern seen in at least 3 checks whose
+          occurrences span 15+ minutes, and still present in this check
         """
         cache_key = 'logs_analysis'
         current_time = time.time()
@@ -4193,6 +4194,8 @@ class HealthMonitor:
                 
                 recent_patterns = defaultdict(int)
                 previous_patterns = defaultdict(int)
+                # Patterns present in this check; each counts one check once.
+                seen_this_check = set()
                 critical_errors_found = {} # To store unique critical error lines for persistence
                 
                 for line in recent_lines:
@@ -4363,10 +4366,15 @@ class HealthMonitor:
                     else:
                         self.persistent_log_patterns[pattern] = {
                             'count': 1,
+                            'checks': 0,
                             'first_seen': current_time,
                             'last_seen': current_time,
                             'sample': line.strip()[:200],  # Original line for display
                         }
+                    if pattern not in seen_this_check:
+                        seen_this_check.add(pattern)
+                        self.persistent_log_patterns[pattern]['checks'] = \
+                            self.persistent_log_patterns[pattern].get('checks', 0) + 1
                 
                 for line in previous_lines:
                     if not line.strip():
@@ -4409,10 +4417,23 @@ class HealthMonitor:
                         samples.append(clean[:120])
                     return samples
                 
+                # A pattern that stopped appearing is forgotten before the
+                # evaluation, and its own warning (if it had one) is closed.
+                patterns_to_remove = [
+                    p for p, data in self.persistent_log_patterns.items()
+                    if current_time - data['last_seen'] > 1800
+                ]
+                for pattern in patterns_to_remove:
+                    del self.persistent_log_patterns[pattern]
+
+                # Persistent means recurring: present in this check, seen in at
+                # least three checks, and with occurrences spanning 15 minutes.
+                # A burst that ended is not persistent however long ago it began.
                 persistent_errors = {}
                 for pattern, data in self.persistent_log_patterns.items():
-                    time_span = current_time - data['first_seen']
-                    if data['count'] >= 3 and time_span >= 900:  # 15 minutes
+                    span = data['last_seen'] - data['first_seen']
+                    if (pattern in seen_this_check and data.get('checks', 1) >= 3
+                            and data['count'] >= 3 and span >= 900):
                         persistent_errors[pattern] = data['count']
                         
                         # Record as warning if not already recorded
@@ -4437,12 +4458,14 @@ class HealthMonitor:
                                          'dismissable': True, 'occurrences': data['count']}
                             )
                 
-                patterns_to_remove = [
-                    p for p, data in self.persistent_log_patterns.items()
-                    if current_time - data['last_seen'] > 1800
-                ]
-                for pattern in patterns_to_remove:
-                    del self.persistent_log_patterns[pattern]
+                # Close the per-pattern warnings of patterns that are no
+                # longer persistent: the burst ended, or it was forgotten.
+                for pattern in list(self.persistent_log_patterns.keys()) + patterns_to_remove:
+                    if pattern in persistent_errors:
+                        continue
+                    stale_key = f'log_persistent_{hashlib.md5(pattern.encode()).hexdigest()[:8]}'
+                    if health_persistence.is_error_active(stale_key, category='logs'):
+                        health_persistence.clear_error(stale_key)
                 
                 # B5 fix: Cap size to prevent unbounded memory growth under high error load
                 MAX_LOG_PATTERNS = 500

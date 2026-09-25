@@ -304,21 +304,56 @@ def _df_via_host_pid(host_pid: str, ct_target: str) -> dict[str, Optional[int]]:
             ["df", "-B1", "--output=size,used,avail", full],
             capture_output=True, text=True, timeout=_STAT_TIMEOUT,
         )
+    except subprocess.TimeoutExpired:
+        # A filesystem that does not answer df will not answer statfs
+        # either; asking again would only double the wait.
+        return empty
+    except OSError:
+        return empty
+    if proc.returncode == 0:
+        lines = [ln for ln in proc.stdout.strip().splitlines() if ln.strip()]
+        parts = lines[-1].split() if len(lines) >= 2 else []
+        if len(parts) >= 3:
+            try:
+                return {
+                    "total_bytes": int(parts[0]),
+                    "used_bytes": int(parts[1]),
+                    "available_bytes": int(parts[2]),
+                }
+            except ValueError:
+                pass
+    return _statfs_via_host(full)
+
+
+def _statfs_via_host(full: str) -> dict[str, Optional[int]]:
+    """Capacity of a path read from its filesystem rather than the mount table.
+
+    df names a path by finding the mount that holds it in the host's own
+    table, and a volume of a native OCI container is not in that table: df
+    answers "no file systems processed" and the tab showed no usage for any
+    of its volumes. statfs asks the filesystem of the path directly and
+    returns the same three figures df prints. It is only reached when df
+    completes without an answer, so every mount df can measure keeps the
+    value it had.
+    """
+    empty = {"total_bytes": None, "used_bytes": None, "available_bytes": None}
+    try:
+        proc = subprocess.run(
+            ["stat", "-f", "-c", "%S %b %f %a", full],
+            capture_output=True, text=True, timeout=_STAT_TIMEOUT,
+        )
         if proc.returncode != 0:
             return empty
-        lines = [ln for ln in proc.stdout.strip().splitlines() if ln.strip()]
-        if len(lines) < 2:
-            return empty
-        parts = lines[-1].split()
-        if len(parts) < 3:
-            return empty
-        return {
-            "total_bytes": int(parts[0]),
-            "used_bytes": int(parts[1]),
-            "available_bytes": int(parts[2]),
-        }
+        block, total, free, available = (int(value) for value in proc.stdout.split())
     except (subprocess.TimeoutExpired, OSError, ValueError):
         return empty
+    if block <= 0 or total <= 0:
+        return empty
+    return {
+        "total_bytes": total * block,
+        "used_bytes": (total - free) * block,
+        "available_bytes": available * block,
+    }
 
 
 def _df_via_pct_exec(vmid: str, ct_target: str,

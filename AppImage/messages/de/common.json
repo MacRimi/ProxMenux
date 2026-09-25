@@ -1487,7 +1487,6 @@
       "containerNameLabel": "Containername",
       "containerNamePlaceholder": "z. B. <Ihr-Container-Name>",
       "ociLabelKeyLabel": "OCI-Labelschlüssel",
-      "ociLabelPlaceholder": "org.opencontainers.image.version",
       "pythonInterpreterLabel": "Pfad des Python-Interpreters",
       "pythonInterpreterPlaceholder": "z. B. /opt/<your-app>/venv/bin/python",
       "pipDistLabel": "Distributionsname (Pip-Paket)",
@@ -1534,11 +1533,8 @@
       "portHttps": "https",
       "portLogoLabel": "Logo-URL für diesen Link (optional)",
       "portLogoPlaceholder": "z. B. https://example.com/logo.webp",
-      "portCategoryPlaceholder": "Category for the Apps dashboard (optional)",
       "portCategoryNone": "No category",
       "portCategoryAddNew": "+ Add new category…",
-      "portCategoryCustomPlaceholder": "Type a category and press Enter (Esc to cancel)",
-      "portCustomUrlPlaceholder": "Custom URL (e.g. https://vault.example.com) — overrides IP:port",
       "removePortTooltip": "Port entfernen",
       "detectMethodDpkg": "dpkg ·",
       "detectMethodApk": "apk ·",
@@ -1631,7 +1627,11 @@
       "notifyUpstreamLabel": "Benachrichtigen Sie mich, wenn eine neue Upstream-Version verfügbar ist",
       "notifyUpstreamHelp": "Sendet „app_update_available“ an die Kanäle, die in Einstellungen → Benachrichtigungen aktiviert sind. Deaktivieren Sie diese Option, wenn diese App auf Ihrer Box nicht aktualisiert werden kann.",
       "excludeFromBadgeLabel": "Vom LXC-Aktualisierungszähler ausschließen",
-      "excludeFromBadgeHelp": "Zählen Sie diese App nicht im Abzeichen „Aggregate Updates“ auf der LXC-Listenkarte. Nützlich, wenn Sie absichtlich an eine bestimmte Version gebunden sind (Tracker-Anforderung, Kompatibilitätsstopp).Hat keinen Einfluss auf den eigenen Status der App-Registerkarte oder die ausgehende Benachrichtigung."
+      "excludeFromBadgeHelp": "Zählen Sie diese App nicht im Abzeichen „Aggregate Updates“ auf der LXC-Listenkarte. Nützlich, wenn Sie absichtlich an eine bestimmte Version gebunden sind (Tracker-Anforderung, Kompatibilitätsstopp).Hat keinen Einfluss auf den eigenen Status der App-Registerkarte oder die ausgehende Benachrichtigung.",
+      "ociLabelPlaceholder": "org.opencontainers.image.version",
+      "portCategoryPlaceholder": "Kategorie für das Apps-Dashboard (optional)",
+      "portCategoryCustomPlaceholder": "Geben Sie eine Kategorie ein und drücken Sie Enter (Esc to cancel)",
+      "portCustomUrlPlaceholder": "Benutzerdefinierte URL (z. B. https://vault.example.com) überschreibt IP:port"
     },
     "statusFilter": {
       "ariaLabel": "Virtuelle Maschinen und Container filtern",
@@ -2515,10 +2515,10 @@
       "scope": {
         "label": "Token permissions",
         "readOnly": "Read-only",
-        "readOnlyHint": "Reads metrics and status. Recommended for dashboards and integrations.",
         "fullAdmin": "Full admin",
-        "fullAdminHint": "Full control, like your own session.",
-        "fullAdminWarning": "A full-admin token can do everything you can: power off or reboot the host, run updates and open a terminal. Share it only with fully trusted integrations."
+        "readOnlyHint": "Lesen Sie Metriken und Status. Empfohlen für Dashboards und Integrationen.",
+        "fullAdminHint": "Volle Kontrolle, wie Ihre eigene Sitzung.",
+        "fullAdminWarning": "Ein Full-Admin-Token kann alles tun, was Sie können: den Host ausschalten oder neu starten, Updates ausführen und ein Terminal öffnen. Teilen Sie es nur mit vollständig vertrauenswürdigen Integrationen."
       }
     },
     "firewall": {
@@ -3302,26 +3302,33 @@
     "gotIt": "Habe es!",
     "dontShowAgain": "Für diese Version nicht mehr anzeigen",
     "currentFeatures": {
-      "appDetection": "Smarter app detection in the App tab: Docker is correctly promoted as the parent workload during cold start (Portainer/SearXNG no longer briefly show up as native apps), unregistered suggestions live in the startup cache, and 'Find applications' runs a fresh catalog-backed scan on demand.",
-      "dockerUpdates": "The Updates tab now covers Docker end-to-end: Docker Engine and per-image update tracking follow the same 24-hour rolling cycle as OS packages, with a 'Check now' action for on-demand digest comparison — no more waiting for the daily collector.",
-      "appCatalog": "New application detection catalog with over 380 tracked workloads, generated live from community-scripts across seven detector methods (file, binary, dpkg, apk, Python, Docker exec, Docker label). Primary and fallback detectors cover both new and historical LXC layouts.",
-      "pushover": "Pushover joins Telegram, Gotify, Discord, Email and Apprise as a native notification channel — user/API key, device and sound selectors, priority 0 for regular messages, optional priority 1 for CRITICAL events. Suggested by @benginx (#308).",
-      "appsDashboard": "New top-level Apps dashboard — a single launcher for every Web Link across the node. LXC-registered apps and user-defined Custom Web Links share the same grid with category badges, search, and one-click deep-links back to the guest modal.",
-      "lxcAppsUpdates": "App tab inside every LXC modal registers installed apps, captures weblinks and tracks upstream versions. Reworked Updates tab applies OS packages and app updates from a single button; Docker Engine and per-image tracking follow the same 24-hour cycle, with a 'Check now' action on demand.",
-      "multilingual": "The Monitor now speaks 8 languages: English, Spanish, German, French, Italian, Portuguese, Swedish and Slovak. Huge thanks to @vaso73 for building the i18n scaffolding that made this possible.",
-      "nvidiaMultiGpu": "NVIDIA driver lifecycle moves to per-BDF ownership so a multi-GPU host can pass one card to a VM and keep the other operational on the host or in LXCs, plus a kernel + branch + GPU-aware version picker (#298).",
-      "aiCustomEndpoint": "AI Assistant custom OpenAI endpoint — LiteLLM, LM Studio, LocalAI, vLLM, OmniRoute and any self-hosted proxy on private IPs, loopback or Docker networks are recognised when loading the model catalogue. The dropdown surfaces the server's error (or the underlying network reason) directly under the Load button (#325, reported by @jorgeffonte).",
-      "secureGatewayArch": "Secure Gateway wizard — the Alpine template download, local template selection and pct create all match the host's real architecture, so x86_64 hosts receive amd64 containers and arm64 hosts receive arm64 containers (#324, reported by @N0X4DD0).",
-      "atomicNotifications": "Notification events reserve their deduplication fingerprint atomically before AI processing and channel delivery, so concurrent collectors, completion callbacks or parallel Monitor processes cannot send the same event twice. The reservation is released when no channel succeeds, preserving retries.",
-      "borgSshPort": "Borg remote target — the Add Borg destination dialog and the shell TUI accept a custom SSH port. BORG_RSH, the auto key install flow and the capacity probe all honour it. Fully backwards compatible with existing entries created without an explicit port (suggested by @songochain in discussion #236).",
-      "githubToken": "Settings → GitHub API accepts an optional personal access token for release and tag checks when the anonymous quota is exhausted. The token is encrypted at rest and never returned to the browser; the rate-limit error is translated in every Monitor language (suggested by @SystemIdleProcess in discussion #306).",
-      "replicationContext": "Native Proxmox replication failure notifications resolve the replication job ID, affected VM/LXC ID and guest name; the exact error block from Proxmox is preserved as the reason, and each replication job deduplicates independently (reported by Ale R.).",
-      "auditAssessment": "Audit & Report — a new page that documents and assesses the node. The Assessment runs a catalogue of checks across security, backups, capacity, storage, network, hardware, guests and system, classifying each finding as critical, warning, observation or conformant and stating what it read rather than judging it.",
-      "changeJournal": "Change journal — a Changes view that lists exactly what ProxMenux modified on this host: every configuration file, package and service it touched, with the prior state of each, deduplicated to a current-state view that shows the host as it stands now rather than a log of every run.",
-      "auditReports": "Reports — a full audit plus focused Security review, Backup assurance and Capacity & wear reports, each opening on its own posture header, and a printable Inventory; all export to PDF. A security assessment asks before running Lynis so a run stays fast.",
-      "auditPolicyBaseline": "Policy and baseline — declare what the host is expected to be (backup requirements, firewall, root SSH login) so findings grade against it, mark a run as the reference, and see what changed since, with new, resolved and accepted findings kept apart.",
-      "groupedAppUpdates": "Grouped application update notifications — one complete message per scan instead of one per application, grouped by LXC with the installed and available versions.",
-      "adminTokenScope": "Administrative scope — opening a Monitor terminal and disabling authentication now require a full-admin token, so a read-only API token issued to a monitoring integration stays read-only (reported by @f3rs3n)."
+      "appDetection": "Intelligentere App-Erkennung im App-Tab: Docker wird korrekt gefördert, da der übergeordnete Workload während des Kaltstarts (Portainer/SearXNG wird nicht mehr kurzzeitig als native Apps angezeigt), nicht registrierte Vorschläge live im Start-Cache und \"Anwendungen finden\" führt bei Bedarf einen neuen kataloggestützten Scan aus.",
+      "dockerUpdates": "Die Registerkarte Updates umfasst jetzt Docker Ende-zu-Ende: Docker Engine und Per-Image-Update-Tracking folgen dem gleichen 24-Stunden-Rollenzyklus wie OS-Pakete, mit einer \"Check now\" -Aktion für den On-Demand-Digest-Vergleich - nicht mehr auf den täglichen Sammler warten.",
+      "appCatalog": "Neuer Anwendungserkennungskatalog mit über 380 verfolgten Workloads, der live aus Community-Scripts über sieben Detektormethoden generiert wurde (Datei, Binär, dpkg, apk, Python, Docker exec, Docker Label). Primär- und Fallbackdetektoren decken sowohl neue als auch historische LXC-Layouts ab.",
+      "pushover": "Pushover verbindet Telegram, Gotify, Discord, E-Mail und Apprise als nativen Benachrichtigungskanal - Benutzer / API-Schlüssel, Geräte- und Sound-Selektoren, Priorität 0 für reguläre Nachrichten, optionale Priorität 1 für kritische Ereignisse. Vorgeschlagen von @benginx (#308).",
+      "appsDashboard": "Neues Top-Level-Apps-Dashboard - ein einziger Launcher für jeden Weblink über den Knoten. LXC-registrierte Apps und benutzerdefiniertes Custom Web Links teilen sich das gleiche Raster mit Kategorieabzeichen, Suche und Ein-Klick-Deep-Links zurück zum Gastmodal.",
+      "lxcAppsUpdates": "Die App-Registerkarte in jedem LXC-Modal registriert installierte Apps, erfasst Weblinks und verfolgt Upstream-Versionen. Überarbeitete Updates Tab wendet OS-Pakete und App-Updates von einer einzigen Schaltfläche; Docker Engine und Per-Image-Tracking folgen dem gleichen 24-Stunden-Zyklus, mit einer \"Check now\" -Aktion auf Anfrage.",
+      "multilingual": "Der Monitor spricht jetzt 8 Sprachen: Englisch, Spanisch, Deutsch, Französisch, Italienisch, Portugiesisch, Schwedisch und Slowakisch. Großer Dank an @vaso73 für den Bau des i18n-Gerüsts, das dies ermöglicht hat.",
+      "nvidiaMultiGpu": "Der NVIDIA-Treiber-Lebenszyklus bewegt sich in den Besitz pro BDF, so dass ein Multi-GPU-Host eine Karte an einen VM übergeben und den anderen auf dem Host oder in LXCs betriebsbereit halten kann, sowie einen Kernel + Branch + GPU-fähige Versionsauswahl (# 298).",
+      "aiCustomEndpoint": "AI Assistant benutzerdefinierte OpenAI-Endpunkte – LiteLLM, LM Studio, LocalAI, vLLM, OmniRoute und jeder selbst gehostete Proxy auf privaten IPs, Loopback- oder Docker-Netzwerken werden beim Laden des Modellkatalogs erkannt. Der Dropdown zeigt den Fehler des Servers (oder den zugrunde liegenden Netzwerkgrund) direkt unter der Schaltfläche Laden (#325, berichtet von @jorgeffonte).",
+      "secureGatewayArch": "Secure Gateway-Assistent - der Alpine Template-Download, die lokale Template-Auswahl und pct create passen alle zur realen Architektur des Hosts, so dass x86 64-Hosts amd64-Container und arm64-Hosts arm64-Container erhalten (#324, berichtet von @N0X4DD0).",
+      "atomicNotifications": "Benachrichtigungsereignisse reservieren ihren Deduplizierungs-Fingerabdruck atomar vor der KI-Verarbeitung und Kanalzustellung, so dass gleichzeitige Sammler, Abschlussrückrufe oder parallele Monitorprozesse dasselbe Ereignis nicht zweimal senden können. Die Reservierung wird freigegeben, wenn kein Kanal erfolgreich ist, wobei Wiederholungen beibehalten werden.",
+      "borgSshPort": "Borg-Remoteziel – der Add Borg-Zieldialog und die Shell TUI akzeptieren einen benutzerdefinierten SSH-Port. BORG RSH, der Autoschlüssel-Installationsfluss und die Kapazitätssonde ehren dies. Vollständig rückwärtskompatibel mit vorhandenen Einträgen, die ohne expliziten Port erstellt wurden (vorgeschlagen von @songochain in Diskussion #236).",
+      "githubToken": "Einstellungen → GitHub API akzeptiert ein optionales persönliches Zugriffstoken für die Freigabe und Tag-Prüfung, wenn das anonyme Kontingent erschöpft ist. Das Token wird im Ruhezustand verschlüsselt und niemals an den Browser zurückgegeben; der Rate-Limit-Fehler wird in jede Monitorsprache übersetzt (vorgeschlagen von @SystemIdleProcess in Diskussion #306).",
+      "replicationContext": "Native Proxmox Replikationsfehlermeldungen lösen die Replikationsauftrags-ID, die betroffene VM/LXC ID und den Gastnamen; der genaue Fehlerblock aus Proxmox bleibt als Grund erhalten, und jeder Replikationsauftrag wird unabhängig dedupliziert (von Ale R. berichtet).",
+      "auditAssessment": "Audit & Report - eine neue Seite, die den Knoten dokumentiert und bewertet. Die Bewertung führt einen Katalog von Prüfungen über Sicherheit, Backups, Kapazität, Speicher, Netzwerk, Hardware, Gäste und System durch, wobei jeder Befund als kritisch, Warnung, Beobachtung oder konform eingestuft wird und angegeben wird, was er gelesen hat, anstatt ihn zu beurteilen.",
+      "changeJournal": "Änderungsjournal - eine Änderungsansicht, in der genau aufgeführt ist, was ProxMenux auf diesem Host geändert hat: jede Konfigurationsdatei, jedes Paket und jeder Dienst, die es berührt hat, mit dem vorherigen Status von jedem, dedupliziert zu einer aktuellen Zustandsansicht, die den Host so zeigt, wie er jetzt steht, anstatt ein Protokoll von jedem Lauf.",
+      "auditReports": "Berichte - ein vollständiges Audit sowie eine fokussierte Sicherheitsüberprüfung, Backup Assurance und Capacity & Wear-Berichte, jede Öffnung auf einem eigenen Haltungskopf und ein druckbares Inventar; alle exportieren in PDF. Eine Sicherheitsbewertung fragt vor dem Ausführen von Lynis, damit ein Lauf schnell bleibt.",
+      "auditPolicyBaseline": "Policy und Baseline - Deklarieren Sie, was der Host sein soll (Backup-Anforderungen, Firewall, Root SSH-Login), damit die Ergebnisse dagegen bewertet werden, markieren Sie einen Lauf als Referenz und sehen Sie, was sich seitdem geändert hat, wobei neue, gelöste und akzeptierte Ergebnisse auseinandergehalten werden.",
+      "groupedAppUpdates": "Gruppierte Anwendungsaktualisierungsbenachrichtigungen — eine vollständige Nachricht pro Scan statt einer pro Anwendung, gruppiert nach LXC mit den installierten und verfügbaren Versionen.",
+      "adminTokenScope": "Administrativer Umfang: Das Öffnen eines Monitor-Terminals und das Deaktivieren der Authentifizierung erfordern jetzt ein Full-Admin-Token, so dass ein schreibgeschütztes API-Token, das an eine Überwachungsintegration ausgegeben wird, schreibgeschützt bleibt (berichtet von @f3rs3n).",
+      "ociAppTab": "OCI-Container in der App-Registerkarte — ein von OCI manager Apps installierter Container wird anhand seines Installationsdatensatzes erkannt: Anwendung und Image, ein neues Image per Digest erkannt und ein Link zum Image-Repository.",
+      "ociUpdatesTab": "Updates für OCI-Container — Aktualisieren und Neu erstellen öffnen denselben Ablauf wie das OCI-Menü, das vor dem Update erstellte Backup kann in einem Backup-Speicher behalten werden und das Image lässt sich zeitgesteuert aktualisieren.",
+      "ociLogsTab": "Logs-Registerkarte für OCI-Container — die Konsolenausgabe der Anwendung, auf dem Host gespeichert und live verfolgt, mit Filter und Download. Die Proxmox-Konsole dieser Container öffnet eine Shell.",
+      "appsUpdateShortcut": "Das Update-Symbol auf der Apps-Seite öffnet den Container direkt auf seiner Registerkarte Updates.",
+      "webhookHttps": "Proxmox-Benachrichtigungen erreichen den Monitor auch mit aktiviertem HTTPS — sie werden über eine nur lokale Adresse zugestellt und scheitern nicht mehr an einem Zertifikatsfehler.",
+      "persistentLogs": "Eine beendete Häufung von Log-Fehlern wird nicht mehr als dauerhaft gemeldet: Ein Muster muss 15 Minuten lang weiter auftreten, und seine Warnung schließt sich von selbst (gemeldet von @Joshua1264).",
+      "mountsLanAddress": "Mountpunkte auf LVM-thin und anderem Blockspeicher zeigen ihre Belegung, und Multi-Container-Anwendungen öffnen sich unter ihrer LAN-Adresse."
     }
   },
   "network": {
@@ -5027,23 +5034,20 @@
     "uncategorized": "Uncategorized",
     "openAriaLabel": "Open {name} in a new tab",
     "openGuestAriaLabel": "{name} öffnen ({type} {id})",
-    "emptyTitle": "No apps with a web link yet.",
-    "emptyHint": "Register a Web Link for any app (App tab of a CT) to see it here.",
     "customLinkAdd": "Add link",
     "editModeToggle": "Edit",
     "editModeDone": "Done",
     "customLinkNewTitle": "New web link",
     "customLinkEditTitle": "Edit web link",
     "customLinkEditAria": "Benutzerdefinierten Link {name} bearbeiten",
+    "openUpdatesAria": "Registerkarte Updates von {name} öffnen",
+    "openUpdatesTitle": "Update verfügbar — Registerkarte Updates öffnen",
     "customLinkName": "Name",
     "customLinkNamePlaceholder": "e.g. My app",
     "customLinkUrl": "URL",
     "customLinkLogo": "Logo URL (optional)",
-    "customLinkLogoPlaceholder": "e.g., https://example.com/logo.webp",
     "customLinkCategory": "Category (optional)",
     "customLinkBinding": "Bound to",
-    "customLinkBindingNone": "Not bound to any guest",
-    "customLinkBindingHelp": "Bind this link to a VM or CT to add its ID + name to the card and jump to the guest with one click.",
     "customLinkSave": "Save",
     "customLinkCreate": "Create",
     "customLinkCancel": "Cancel",
@@ -5079,7 +5083,12 @@
       "remoteAccessVpn": "Remote Access & VPN",
       "webserversProxies": "Webservers & Proxies",
       "zigbeeZwaveMatter": "ZigBee, Z-Wave & Matter"
-    }
+    },
+    "emptyTitle": "Noch keine Apps mit einem Weblink.",
+    "emptyHint": "Registrieren Sie einen Weblink für eine beliebige App (App-Tab eines CT), um ihn hier zu sehen.",
+    "customLinkLogoPlaceholder": "z. B. https://example.com/logo.webp",
+    "customLinkBindingNone": "Nicht an einen Gast gebunden",
+    "customLinkBindingHelp": "Binden Sie diesen Link an eine VM oder CT, um die ID + den Namen der Karte hinzuzufügen und mit einem Klick zum Gast zu springen."
   },
   "audit": {
     "presentation": {
@@ -5234,13 +5243,10 @@
     "loading": "Loading assessment…",
     "run": "Run assessment",
     "running": "Assessing…",
-    "neverRun": "This host has not been assessed yet.",
     "lastRun": "Last assessed on {when}",
     "stale": "{days} days ago",
     "unverifiedChecks": "Nicht erhoben: {checks}. Jede nennt in ihrer Evidenz, was sie nicht lesen konnte.",
-    "noFindings": "No findings match the current filter.",
     "affectedCount": "{count} affected",
-    "acceptedNotice": "{count} accepted risk(s) recorded on this host.",
     "reviewOn": "Überprüfen am: {when}",
     "reviewDue": "Zur Überprüfung fällig — die Entscheidung gilt weiter",
     "reviewDueNotice": "{count} akzeptierte Entscheidung(en) stehen zur Überprüfung an.",
@@ -5272,7 +5278,7 @@
       "sources": "Quellen und Erfassungszeitpunkte"
     },
     "errors": {
-      "runFailed": "The assessment could not be started."
+      "runFailed": "Mit der Bewertung konnte nicht begonnen werden."
     },
     "checks": {
       "backup": {
@@ -5285,7 +5291,7 @@
             "uncovered": "{count} von {total} Gästen werden von keinem aktivierten Sicherungsauftrag ausgewählt",
             "excludedData": "{count} Datenträger- oder Mountpoint-Ausschlüsse prüfen",
             "uncoveredExpected": "{required} Gäste, für die eine Sicherung erklärt wurde, wählt kein aktivierter Auftrag aus",
-            "evaluationFailed": "The check could not be evaluated"
+            "evaluationFailed": "Die Überprüfung konnte nicht ausgewertet werden"
           },
           "nextStep": {
             "noJobs": "Erstellen Sie einen Backup-Job auf diesem Knoten und wählen Sie die Gäste mit Daten aus, die Sie nicht von Hand neu erstellen möchten. Ein Job, der existiert, aber deaktiviert ist, wählt nichts aus.",
@@ -5300,10 +5306,10 @@
           "rationale": "Alter: vergangene Zeit seit der letzten gespeicherten Sicherung. Verwendeter Grenzwert: das Referenzalter, mit dem diese Sicherung verglichen wird.",
           "summary": {
             "recent": "Alle {total} Gast-/Zielprüfungen erfüllen die angegebene Altersrichtlinie",
-            "stale": "{count} of {total} guests have no backup from the last 30 days",
-            "noBackups": "No stored backup matches a guest on this node",
             "attention": "{count} von {total} Gast-/Zielprüfungen erfordern eine Überprüfung",
-            "evaluationFailed": "The check could not be evaluated"
+            "stale": "{count} von {total}-Gästen haben kein Backup der letzten 30 Tage",
+            "noBackups": "Kein gespeichertes Backup passt zu einem Gast auf diesem Knoten",
+            "evaluationFailed": "Die Überprüfung konnte nicht ausgewertet werden"
           },
           "nextStep": {
             "stale": "Finden Sie heraus, warum der Job aufhörte, Kopien für diese Gäste zu produzieren: Möglicherweise wurde er deaktiviert, sein Zeitplan wird möglicherweise nie ausgelöst oder seine Läufe können fehlschlagen. Der Run Results Check berichtet, wie jeder Job zuletzt beendet wurde.",
@@ -5317,10 +5323,10 @@
           "rationale": "Die Aufbewahrung, wie Proxmox sie auflöst: Einstellung des Auftrags, dann des Speichers, dann der Knotenstandard. Aufbewahrung, die ein Sicherungsserver anwendet, ist von diesem Knoten aus nicht lesbar.",
           "summary": {
             "allDefined": "Alle {total} Aufträge lösen eine Aufbewahrungseinstellung auf",
-            "missing": "{count} of {total} enabled job(s) declare no retention",
             "notDeclared": "{count} von {total} Aufträgen behalten jede Kopie: für sie ist keine Aufbewahrung erklärt",
             "onServer": "{count} von {total} Aufträgen schreiben auf einen Sicherungsserver, der sie mit eigenen Aufträgen bereinigt",
-            "evaluationFailed": "The check could not be evaluated"
+            "missing": "{count} von {total}-fähigen Job(s) erklären keine Aufbewahrung",
+            "evaluationFailed": "Die Überprüfung konnte nicht ausgewertet werden"
           },
           "nextStep": {
             "missing": "Legen Sie eine Aufbewahrung für diese Jobs oder für den Speicher fest, an den sie schreiben. Proxmox nimmt zuerst die Einstellung des Jobs, dann den Speicher und dann den Node Default an.",
@@ -5383,36 +5389,36 @@
           "summary": {
             "none": "Nichts hat einen Neustart angefordert",
             "pending": "{count} Elemente sind installiert und warten auf einen Neustart",
-            "evaluationFailed": "The check could not be evaluated"
+            "evaluationFailed": "Die Überprüfung konnte nicht ausgewertet werden"
           }
         },
         "enterprise_repo_without_subscription": {
           "title": "Enterprise repository",
           "rationale": "Verweise auf `enterprise.proxmox.com` in `/etc/apt/sources.list` und `sources.list.d`, gegenüber dem Status aus `pvesubscription get`.",
           "summary": {
-            "notEnabled": "The enterprise repository is not enabled",
-            "subscribed": "The enterprise repository is backed by a subscription",
-            "unsubscribed": "The enterprise repository is enabled without an active subscription",
-            "evaluationFailed": "The check could not be evaluated"
+            "notEnabled": "Das Enterprise Repository ist nicht aktiviert",
+            "subscribed": "Das Enterprise-Repository wird durch ein Abonnement gesichert",
+            "unsubscribed": "Das Enterprise-Repository ist ohne aktives Abonnement aktiviert",
+            "evaluationFailed": "Die Überprüfung konnte nicht ausgewertet werden"
           }
         },
         "memory_overcommit": {
           "title": "Memory allocation",
           "rationale": "Die `memory`-Obergrenze jeder Gastkonfiguration gegenüber MemTotal, laufende Gäste getrennt gezählt. Container verbrauchen bis zu dieser Grenze; virtuelle Maschinen ohne Ballooning reservieren sie.",
           "summary": {
-            "withinRatio": "Guests are allocated {percent}% of host memory",
-            "aboveRatio": "Guests are allocated {percent}% of host memory",
-            "evaluationFailed": "The check could not be evaluated"
+            "withinRatio": "Gäste erhalten {percent}% des Host-Speichers",
+            "aboveRatio": "Gäste erhalten {percent}% des Host-Speichers",
+            "evaluationFailed": "Die Überprüfung konnte nicht ausgewertet werden"
           }
         },
         "time_synchronisation": {
           "title": "Time synchronisation",
           "rationale": "NTP und NTPSynchronized, wie `timedatectl` sie meldet. Clusterzugehörigkeit, Zertifikatsprüfung und Protokollreihenfolge hängen von übereinstimmenden Uhren ab. Ein anderer Mechanismus kann die Uhr führen.",
           "summary": {
-            "synchronised": "The clock is synchronised with a time source",
             "disabled": "Time synchronisation is disabled",
-            "notSynchronised": "Time synchronisation is enabled but the clock is not synchronised",
-            "evaluationFailed": "The check could not be evaluated"
+            "synchronised": "Die Uhr wird mit einer Zeitquelle synchronisiert",
+            "notSynchronised": "Zeitsynchronisation ist aktiviert, aber die Uhr ist nicht synchronisiert",
+            "evaluationFailed": "Die Überprüfung konnte nicht ausgewertet werden"
           }
         },
         "kernel_current": {
@@ -5420,21 +5426,21 @@
           "rationale": "Der laufende Kernel gegenüber dem, den der Host als Nächstes starten würde, wie `proxmox-boot-tool` ihn meldet. Ein lediglich installierter neuerer Kernel kann bewusst zurückgehalten sein; ein Unterschied nach einem Neustart bedeutet einen Start, der nicht griff.",
           "summary": {
             "current": "Der laufende Kernel {version} ist der, den der Host als Nächstes starten würde",
-            "newerAvailable": "The host runs {running} while {newest} is installed",
             "newerSelected": "Der Host führt {running} aus und würde beim nächsten Neustart {selected} starten",
             "wouldDowngrade": "Der Host führt {running} aus, würde beim nächsten Neustart aber das ältere {selected} starten",
             "bootTargetUnknown": "Der Host führt {version} aus; der für den nächsten Start gewählte Kernel war nicht lesbar",
-            "evaluationFailed": "The check could not be evaluated"
+            "newerAvailable": "Der Host führt {running} aus, während {newest} installiert ist",
+            "evaluationFailed": "Die Überprüfung konnte nicht ausgewertet werden"
           }
         },
         "security_updates": {
           "title": "Security updates",
           "rationale": "Ausstehende Pakete, deren Quelle ein Sicherheits-Repository ist, aus einem simulierten `apt-get upgrade`. Die Zahl gibt wieder, was apt meldet, nicht die Schwere dessen, was jedes Paket behebt.",
           "summary": {
-            "none": "No package updates are pending",
-            "noSecurity": "{total} update(s) pending, none from a security repository",
-            "pending": "{count} of {total} pending update(s) come from a security repository",
-            "evaluationFailed": "The check could not be evaluated"
+            "none": "Keine Paket-Updates stehen aus",
+            "noSecurity": "{total}-Update(s) ausstehend, keine aus einem Sicherheitsrepository",
+            "pending": "{count} von {total} ausstehende Updates stammen aus einem Sicherheitsrepository",
+            "evaluationFailed": "Die Überprüfung konnte nicht ausgewertet werden"
           }
         },
         "journal_size": {
@@ -5442,10 +5448,10 @@
           "rationale": "Das Journal auf der Platte gegenüber der für es geltenden Obergrenze: SystemMaxUse, sofern gesetzt, sonst der journald-Standard von einem Zehntel des Dateisystems, auf dem es liegt.",
           "summary": {
             "bounded": "Das Journal belegt {size} und bleibt unter seiner wirksamen Obergrenze",
-            "large": "The journal holds {size} on disk",
             "nearCap": "Das Journal belegt {size} und liegt bei {percent}% seiner wirksamen Obergrenze",
             "capUnknown": "Das Journal belegt {size}; die wirksame Obergrenze war nicht zu ermitteln",
-            "evaluationFailed": "The check could not be evaluated"
+            "large": "Das Journal hält {size} auf der Festplatte",
+            "evaluationFailed": "Die Überprüfung konnte nicht ausgewertet werden"
           }
         },
         "swap_configured": {
@@ -5454,7 +5460,7 @@
           "summary": {
             "active": "{size} of swap is active",
             "none": "No swap area is active",
-            "evaluationFailed": "The check could not be evaluated"
+            "evaluationFailed": "Die Überprüfung konnte nicht ausgewertet werden"
           }
         },
         "filesystem_capacity": {
@@ -5500,7 +5506,7 @@
           "summary": {
             "synchronised": "Die {total} Bootpartitionen tragen dieselben Kernel",
             "attention": "{count} von {total} Bootpartitionen bedürfen der Prüfung",
-            "evaluationFailed": "The check could not be evaluated"
+            "evaluationFailed": "Die Überprüfung konnte nicht ausgewertet werden"
           },
           "rationale": "Die EFI-Systempartitionen proxmox-boot-tool-Berichte und die Kernel, die jeder trägt. proxmox-boot-tool-Status kann EFI-Systempartitionen vorübergehend bereitstellen; Es wird kein Bootversuch unternommen."
         },
@@ -5510,7 +5516,7 @@
           "summary": {
             "allRunning": "Die {total} wesentlichen Dienste sind aktiv und keine Unit ist fehlgeschlagen",
             "attention": "{count} Feststellung(en) unter den Units",
-            "evaluationFailed": "The check could not be evaluated"
+            "evaluationFailed": "Die Überprüfung konnte nicht ausgewertet werden"
           }
         },
         "ha_state": {
@@ -5519,7 +5525,7 @@
           "summary": {
             "managed": "Die {total} verwalteten Dienste sind auf {nodes} Knoten in einem gesetzten Zustand",
             "attention": "{count} Feststellung(en) zu {total} verwalteten Diensten",
-            "evaluationFailed": "The check could not be evaluated"
+            "evaluationFailed": "Die Überprüfung konnte nicht ausgewertet werden"
           }
         }
       },
@@ -5528,27 +5534,27 @@
           "title": "Container privileges",
           "rationale": "Die Einstellung `unprivileged` jeder Containerkonfiguration. Ihr Fehlen bedeutet, dass der Container den Benutzernamensraum des Hosts teilt, was manche Arbeitslasten benötigen.",
           "summary": {
-            "allUnprivileged": "All {total} containers are unprivileged",
             "privileged": "{count} of {total} containers run privileged",
-            "evaluationFailed": "The check could not be evaluated"
+            "allUnprivileged": "Alle {total} Container sind unprivilegiert",
+            "evaluationFailed": "Die Überprüfung konnte nicht ausgewertet werden"
           }
         },
         "qemu_without_agent": {
-          "title": "Guest agent on virtual machines",
           "rationale": "Die Einstellung `agent` in jeder Konfiguration einer virtuellen Maschine. Die Einstellung besagt, dass der Agent deklariert ist, nicht dass er antwortet.",
           "summary": {
-            "allHaveAgent": "All {total} virtual machines declare the guest agent",
-            "missingAgent": "{count} of {total} virtual machines do not declare the guest agent",
-            "evaluationFailed": "The check could not be evaluated"
-          }
+            "allHaveAgent": "Alle virtuellen {total}-Maschinen erklären den Gastagenten",
+            "missingAgent": "{count} von virtuellen {total} Maschinen deklarieren nicht den Gastagenten",
+            "evaluationFailed": "Die Überprüfung konnte nicht ausgewertet werden"
+          },
+          "title": "Gastagent auf virtuellen Maschinen"
         },
         "autostart": {
           "title": "Automatic start",
           "rationale": "Die Einstellung `onboot` jedes Gastes, ohne Vorlagen und von HA verwaltete Gäste. Ob ein Gast von selbst zurückkehren soll, ergibt sich aus der erklärten Richtlinie.",
           "summary": {
-            "allAutostart": "All {total} guests start with the host",
-            "notAutostart": "{count} of {total} guests do not start with the host",
-            "evaluationFailed": "The check could not be evaluated"
+            "allAutostart": "Alle {total} Gäste beginnen mit dem Gastgeber",
+            "notAutostart": "{count} der {total} Gäste starten nicht mit dem Gastgeber",
+            "evaluationFailed": "Die Überprüfung konnte nicht ausgewertet werden"
           }
         },
         "stuck_snapshots": {
@@ -5556,28 +5562,28 @@
           "rationale": "Zustand und Alter der Snapshots sowie aktive Aufgaben. Ein kürzlicher oder undatierter Vorgang gilt nicht als unterbrochen.",
           "summary": {
             "noSnapshots": "No guest holds snapshots",
-            "allComplete": "The {total} snapshot(s) are complete",
-            "stuck": "{count} of {total} snapshot(s) were left mid-operation",
-            "evaluationFailed": "The check could not be evaluated"
+            "allComplete": "Die {total} Snapshots sind vollständig",
+            "stuck": "{count} von {total} Snapshot(s) wurden mitten in Betrieb gelassen",
+            "evaluationFailed": "Die Überprüfung konnte nicht ausgewertet werden"
           }
         },
         "cpu_host_type": {
           "title": "Virtual CPU model",
           "rationale": "Der Wert `cpu` jeder virtuellen Maschine. `host` gibt den Funktionsumfang des physischen Prozessors weiter, was die Knoten einschränkt, auf die der Gast migrieren kann. Unverträglichkeit mit einem bestimmten Ziel wird hier nicht ermittelt.",
           "summary": {
-            "none": "None of the {total} virtual machines is pinned to the host processor",
-            "pinned": "{count} of {total} virtual machines are pinned to the host processor",
-            "evaluationFailed": "The check could not be evaluated"
+            "none": "Keine der virtuellen {total}-Maschinen ist an den Host-Prozessor gebunden",
+            "pinned": "{count} von virtuellen {total}-Maschinen werden an den Host-Prozessor angeheftet",
+            "evaluationFailed": "Die Überprüfung konnte nicht ausgewertet werden"
           }
         },
         "replication_state": {
           "title": "Replication",
           "rationale": "Replikationsaufträge aus der API: Fehlerzahl, letzter Fehler, letzte Synchronisierung und der Kalender, den jeder Auftrag angibt. Pausierte Aufträge werden als solche ausgewiesen.",
           "summary": {
-            "healthy": "The {total} replication job(s) report no error",
-            "failing": "{count} of {total} replication job(s) report an error",
-            "statusUnavailable": "Replication jobs are defined but their status could not be read",
-            "evaluationFailed": "The check could not be evaluated"
+            "healthy": "Die {total} Replikationsjob(s) melden keinen Fehler",
+            "failing": "{count} von {total} Replikationsjob(s) melden einen Fehler",
+            "statusUnavailable": "Replikationsjobs sind definiert, aber ihr Status konnte nicht gelesen werden",
+            "evaluationFailed": "Die Überprüfung konnte nicht ausgewertet werden"
           }
         }
       },
@@ -5589,39 +5595,39 @@
             "bothEnabled": "Die Firewall-Aktivierung ist auf Datacenter- und Knotenebene konfiguriert",
             "datacenterOff": "Die Firewall ist auf Datacenter-Ebene deaktiviert; Knotenregeln werden daher nicht angewendet",
             "nodeOff": "Die Firewall ist auf Datacenter-Ebene aktiviert, aber nicht auf diesem Knoten",
-            "evaluationFailed": "The check could not be evaluated"
+            "evaluationFailed": "Die Überprüfung konnte nicht ausgewertet werden"
           }
         },
         "lynis_warnings": {
           "title": "Lynis warnings",
           "rationale": "Warnungen der letzten Lynis-Prüfung, jeweils mit Test-Kennung, und das Alter dieser Prüfung. Eine Prüfung läuft nur, wenn Lynis installiert ist und kein vollständiger Bericht vorliegt. Vorschläge sind nicht enthalten.",
           "summary": {
-            "none": "The last Lynis audit recorded no warnings",
-            "found": "The last Lynis audit recorded {count} warning(s)",
-            "incomplete": "The Lynis report is incomplete",
-            "evaluationFailed": "The check could not be evaluated",
             "noneStale": "Die letzte Lynis-Prüfung verzeichnete keine Warnungen, und ihr Bericht ist {days} Tag(e) alt",
-            "foundStale": "Die letzte Lynis-Prüfung verzeichnete {count} Warnung(en), und ihr Bericht ist {days} Tag(e) alt"
+            "foundStale": "Die letzte Lynis-Prüfung verzeichnete {count} Warnung(en), und ihr Bericht ist {days} Tag(e) alt",
+            "none": "Das letzte Lynis-Audit verzeichnete keine Warnungen",
+            "found": "Das letzte Lynis-Audit hat {count}-Warnungen aufgezeichnet",
+            "incomplete": "Der Bericht Lynis ist unvollständig",
+            "evaluationFailed": "Die Überprüfung konnte nicht ausgewertet werden"
           }
         },
         "certificate_expiry": {
           "title": "Certificate validity",
           "rationale": "Das Ablaufdatum des Zertifikats, das pveproxy aus /etc/pve/local ausliefert. Ein eigenes Zertifikat hat Vorrang vor dem von Proxmox erzeugten.",
           "summary": {
-            "valid": "The certificate is valid for {days} more day(s)",
-            "expiring": "The certificate expires in {days} day(s)",
-            "expired": "The certificate expired {days} day(s) ago",
-            "evaluationFailed": "The check could not be evaluated"
+            "valid": "Das Zertifikat gilt für {days} weitere Tage",
+            "expiring": "Das Zertifikat läuft in {days} Tagen ab",
+            "expired": "Das Zertifikat ist vor {days} Tagen abgelaufen",
+            "evaluationFailed": "Die Überprüfung konnte nicht ausgewertet werden"
           }
         },
         "ssh_root_login": {
           "title": "SSH root access",
           "rationale": "PermitRootLogin in der effektiven `sshd -T`-Konfiguration samt den kombinierten Authentifizierungsmethoden. Proxmox liefert `yes` aus, was ein Passwort zulässt.",
           "summary": {
-            "password": "Root may sign in over SSH with a password",
-            "keyOnly": "Root may sign in over SSH with a key only",
-            "denied": "Root may not sign in over SSH",
-            "evaluationFailed": "The check could not be evaluated"
+            "password": "Root kann sich über SSH mit einem Passwort anmelden",
+            "keyOnly": "Root kann sich über SSH nur mit einem Schlüssel anmelden",
+            "denied": "Root kann sich nicht über SSH anmelden",
+            "evaluationFailed": "Die Überprüfung konnte nicht ausgewertet werden"
           }
         }
       },
@@ -5630,9 +5636,9 @@
           "title": "Volume assignment",
           "rationale": "Gastvolumes auf lokalem Speicher gegenüber den Verweisen in aktuellen, ausstehenden und Snapshot-Konfigurationen. Sicherungen, ISOs und Vorlagen bleiben außerhalb des Vergleichs. Ein Volume ohne Verweis ist ein Kandidat zur Prüfung.",
           "summary": {
-            "none": "No orphaned volumes were found",
             "found": "{count} Volumes ohne Verweis in den geprüften Konfigurationen",
-            "evaluationFailed": "The check could not be evaluated"
+            "none": "Es wurden keine verwaisten Volumen gefunden",
+            "evaluationFailed": "Die Überprüfung konnte nicht ausgewertet werden"
           }
         },
         "zfs_arc_max": {
@@ -5640,21 +5646,21 @@
           "rationale": "Effektive Werte von c_min, c_max und ARC-Größe, der geladene Modulparameter und die persistenten Einstellungen in /etc/modprobe.d. Ein konfigurierter Wert von null wählt den Modulstandard; der ARC ist eine Obergrenze, und der belegte Speicher ist rückgewinnbar.",
           "summary": {
             "bounded": "Die ARC-Grenze liegt bei {percent}% des Hostspeichers, und der belegte Speicher ist rückgewinnbar",
-            "high": "The ARC may use {percent}% of host memory",
-            "unset": "The ARC has no explicit limit set",
             "conflicting": "{count} ARC-Einstellungen widersprechen einander",
             "pending": "Eine persistente ARC-Einstellung weicht vom Wert des laufenden Moduls ab",
-            "evaluationFailed": "The check could not be evaluated"
+            "high": "Der ARC kann {percent}% des Hostspeichers verwenden",
+            "unset": "Der ARC hat kein explizites Limit",
+            "evaluationFailed": "Die Überprüfung konnte nicht ausgewertet werden"
           }
         },
         "zfs_scrub_age": {
           "title": "ZFS scrub",
           "rationale": "Der letzte abgeschlossene Scrub, den `zpool status` je Pool meldet. Ein Resilver ist kein Scrub. Ein kürzlich erstellter Pool hatte noch keine Gelegenheit dazu.",
           "summary": {
-            "recent": "The {total} pool(s) were scrubbed within the last 35 days",
-            "overdue": "{count} of {total} pool(s) have not been scrubbed in 35 days",
             "neverScrubbed": "{count} pool(s) record no scrub",
-            "evaluationFailed": "The check could not be evaluated"
+            "recent": "Die {total}-Pools wurden innerhalb der letzten 35 Tage gewaschen",
+            "overdue": "{count} von {total} Pool(s) wurden in 35 Tagen nicht geschrubbt",
+            "evaluationFailed": "Die Überprüfung konnte nicht ausgewertet werden"
           }
         },
         "thin_pool_overprovisioning": {
@@ -5664,7 +5670,7 @@
             "withinRatio": "Die {total} Thin-Pools liegen unter den angewendeten Prüfgrenzen",
             "aboveRatio": "{count} von {total} Thin-Pools vergeben mehr Kapazität, als sie besitzen",
             "pressure": "{pressure} von {total} Thin-Pools füllen ihre Daten oder Metadaten fast aus",
-            "evaluationFailed": "The check could not be evaluated"
+            "evaluationFailed": "Die Überprüfung konnte nicht ausgewertet werden"
           }
         },
         "connected_storage": {
@@ -5673,7 +5679,7 @@
           "summary": {
             "available": "PVE meldet alle {total} Speicher als verfügbar; interne Remote-Komponenten und Schreibzugriff wurden nicht geprüft",
             "attention": "{count} von {total} Speichern müssen geprüft werden",
-            "evaluationFailed": "The check could not be evaluated"
+            "evaluationFailed": "Die Überprüfung konnte nicht ausgewertet werden"
           }
         },
         "pool_integrity": {
@@ -5691,7 +5697,7 @@
           "summary": {
             "healthy": "Ceph meldet HEALTH_OK",
             "degraded": "Ceph meldet {state}, mit {count} benannten Prüfung(en)",
-            "evaluationFailed": "The check could not be evaluated"
+            "evaluationFailed": "Die Überprüfung konnte nicht ausgewertet werden"
           }
         },
         "array_integrity": {
@@ -5700,7 +5706,7 @@
           "summary": {
             "intact": "Die {total} Arrays und Maps halten ihre Redundanz",
             "degraded": "{count} von {total} Arrays oder Maps fehlt sie",
-            "evaluationFailed": "The check could not be evaluated"
+            "evaluationFailed": "Die Überprüfung konnte nicht ausgewertet werden"
           }
         }
       },
@@ -5712,7 +5718,7 @@
             "withinLife": "Die {total} Datenträgermessungen liegen unter der Fünfjahresschwelle",
             "pastLife": "{count} von {total} Datenträgermessungen liegen über fünf Betriebsjahren",
             "noReadings": "Keine Festplatte meldet verwertbare SMART-Werte ({skipped} ohne Messwerte)",
-            "evaluationFailed": "The check could not be evaluated"
+            "evaluationFailed": "Die Überprüfung konnte nicht ausgewertet werden"
           }
         },
         "disk_errors": {
@@ -5729,23 +5735,22 @@
           "title": "Bond members",
           "rationale": "Der MII-Status jedes Bond-Mitglieds aus /proc/net/bonding und wie viele Verbindungen bleiben. In active-backup meldet sich ein Reservemitglied als aktiv und überträgt nichts.",
           "summary": {
-            "allUp": "All members of the {total} bond(s) are up",
-            "membersDown": "{count} bond member(s) are not up",
-            "evaluationFailed": "The check could not be evaluated"
+            "allUp": "Alle Mitglieder der {total} Bond (s) sind up",
+            "membersDown": "{count} Bond Mitglied (s) sind nicht oben",
+            "evaluationFailed": "Die Überprüfung konnte nicht ausgewertet werden"
           }
         },
         "bridge_without_ports": {
           "title": "Bridge ports",
           "rationale": "Die Portkonfiguration jeder Bridge. Eine Bridge ohne physischen Port bedient ein internes oder geroutetes Netz.",
           "summary": {
-            "allConnected": "The {total} bridge(s) carry a port",
             "isolated": "{count} of {total} bridge(s) carry no port",
-            "evaluationFailed": "The check could not be evaluated"
+            "allConnected": "Die {total} Bridge(s) tragen einen Port",
+            "evaluationFailed": "Die Überprüfung konnte nicht ausgewertet werden"
           }
         }
       }
     },
-    "summaryFallback": "The check could not be evaluated",
     "acceptRisk": {
       "action": "Risiko akzeptieren",
       "revoke": "Wieder aktivieren",
@@ -5779,17 +5784,15 @@
       "OK": "OK"
     },
     "viewSwitch": {
-      "ariaLabel": "Switch between assessment and inventory",
       "assessment": "Assessment",
       "inventory": "Inventory",
       "policy": "Richtlinie",
-      "changes": "Änderungen"
+      "changes": "Änderungen",
+      "ariaLabel": "Wechsel zwischen Assessment und Inventar"
     },
     "inventory": {
       "loading": "Loading inventory…",
-      "failed": "The inventory could not be composed.",
       "collectedAt": "Composed on {when}",
-      "unavailable": "Not read in this inventory",
       "unresolved": "path not resolved",
       "noUplink": "no uplink",
       "identity": "Node identity",
@@ -5832,12 +5835,10 @@
       "protection": "Backup",
       "passthrough": "Passthrough",
       "noBackup": "No backup",
-      "noBackupDetail": "No enabled backup job selects this guest.",
       "applications": "Applications",
       "versionUnknown": "version not detected",
       "passthroughTitle": "PCI passthrough",
       "iommuGroup": "IOMMU group {group}",
-      "sharedGroup": "{count} more device(s) in the same group",
       "proxmenux": "ProxMenux optimizations",
       "latency": "Netzwerklatenz",
       "subscriptionStatus": {
@@ -5848,7 +5849,11 @@
         "suspended": "Ausgesetzt",
         "new": "Aktivierung ausstehend",
         "unknown": "Unbekannt"
-      }
+      },
+      "failed": "Das Inventar konnte nicht zusammengestellt werden.",
+      "unavailable": "Nicht in diesem Inventar lesen",
+      "noBackupDetail": "Kein aktivierter Backup-Job wählt diesen Gast aus.",
+      "sharedGroup": "{count} weitere Geräte in derselben Gruppe"
     },
     "profile": {
       "label": "Report",
@@ -5871,7 +5876,6 @@
       "area": "Area",
       "inventoryAnnex": "Inventory annex",
       "scopeTitle": "Scope of this report",
-      "scopeBody": "This report describes the Proxmox VE node named above, as observed from the node itself at the time stated. It does not cover the interior of the guests beyond what they declare, network equipment outside the host, physical infrastructure, or any dependency not visible from this node. Findings marked as not determined were not measured and are not evidence of absence.",
       "building": "Bericht wird zusammengestellt…",
       "node": "Knoten",
       "profile": "Profil",
@@ -6020,11 +6024,12 @@
       "structureSubtitle": "Wie {node} aufgebaut und konfiguriert ist",
       "postureTitle": "Posture",
       "posture": {
-        "security": "Host exposure and access.",
-        "backup": "Guest protection and whether it is real.",
-        "capacity": "Room to grow and the wear on the disks."
+        "security": "Host Exposition und Zugang.",
+        "backup": "Gästeschutz und ob es real ist.",
+        "capacity": "Raum zum Wachsen und der Verschleiß an den Scheiben."
       },
-      "scopeReadOnly": "Die Bewertung überprüft die Hosteinstellungen und den Zustand. Es kann Berichte und Protokolle schreiben; Boot-Statusprüfungen können EFI-Systempartitionen vorübergehend bereitstellen."
+      "scopeReadOnly": "Die Bewertung überprüft die Hosteinstellungen und den Zustand. Es kann Berichte und Protokolle schreiben; Boot-Statusprüfungen können EFI-Systempartitionen vorübergehend bereitstellen.",
+      "scopeBody": "Dieser Bericht beschreibt den oben genannten Proxmox VE-Knoten, wie er vom Knoten selbst zum angegebenen Zeitpunkt beobachtet wurde. Es umfasst nicht das Innere der Gäste über das hinaus, was sie deklarieren, Netzwerkausrüstung außerhalb des Hosts, physische Infrastruktur oder jede Abhängigkeit, die von diesem Knoten nicht sichtbar ist. Befunde, die als nicht bestimmt markiert wurden, wurden nicht gemessen und sind kein Hinweis auf Abwesenheit."
     },
     "results": "Ergebnisse",
     "classifications": {
@@ -6178,15 +6183,19 @@
     "notApplicableScope": "Im geprüften Umfang gibt es nichts, worauf diese Prüfung zutrifft.",
     "lynis": {
       "title": "Run Lynis",
-      "bodyNotRun": "Lynis is installed but has not been run yet. Running it now completes the security review, but the process can take a few minutes.",
-      "bodyStale": "The Lynis report is {days} days old. You can run it now to refresh the data (it takes a little longer) or continue with the existing report.",
       "withLynis": "Run with Lynis",
       "withoutLynis": "Run without Lynis",
-      "cancel": "Cancel"
+      "cancel": "Cancel",
+      "bodyNotRun": "Lynis ist installiert, wurde aber noch nicht ausgeführt. Die Ausführung vervollständigt nun die Sicherheitsüberprüfung, aber der Prozess kann einige Minuten dauern.",
+      "bodyStale": "Der Lynis-Bericht ist {days} Tage alt. Sie können es jetzt ausführen, um die Daten zu aktualisieren (es dauert etwas länger) oder mit dem vorhandenen Bericht fortzufahren."
     },
     "readOnlyNotice": "Die Bewertung überprüft die Hosteinstellungen und den Zustand. Es kann Berichte und Protokolle schreiben; Boot-Statusprüfungen können EFI-Systempartitionen vorübergehend bereitstellen.",
     "noActionNeeded": "Nichts zu tun. Dieser Check hat herausgefunden, was er erwartet.",
-    "couldNotEvaluate": "Diese Überprüfung konnte nicht ausgewertet werden, so dass sie nichts meldet. Die Beweise dokumentieren, was sie nicht lesen konnten."
+    "couldNotEvaluate": "Diese Überprüfung konnte nicht ausgewertet werden, so dass sie nichts meldet. Die Beweise dokumentieren, was sie nicht lesen konnten.",
+    "neverRun": "Dieser Gastgeber wurde noch nicht bewertet.",
+    "noFindings": "Keine Ergebnisse stimmen mit dem aktuellen Filter überein.",
+    "acceptedNotice": "{count} akzeptierte Risiken, die auf diesem Host aufgezeichnet wurden.",
+    "summaryFallback": "Die Überprüfung konnte nicht ausgewertet werden"
   },
   "runtime": {
     "notifications": {

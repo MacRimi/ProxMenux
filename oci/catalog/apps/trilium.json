@@ -17,7 +17,7 @@
     "category_label": "Documents & Notes",
     "author": "zadam",
     "developer": "zadam",
-    "icon": null,
+    "icon": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons@main/webp/trilium.webp",
     "thumbnail": null,
     "screenshots": [],
     "architectures": [

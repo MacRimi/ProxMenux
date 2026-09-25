@@ -13,11 +13,11 @@
     "description": {
       "en_US": "Bitcoin Knots can be used as a desktop client for regular payments or as a full node server utility for merchants and other payment services."
     },
-    "category": "misc",
-    "category_label": "Miscellaneous",
+    "category": "finance",
+    "category_label": "Finance & Budgeting",
     "author": "LinuxServer.io",
     "developer": null,
-    "icon": "https://raw.githubusercontent.com/linuxserver/docker-templates/master/linuxserver.io/img/bitcoin-knots-icon.png",
+    "icon": "https://cdn.jsdelivr.net/gh/linuxserver/docker-templates@master/linuxserver.io/img/bitcoin-knots-logo.png",
     "thumbnail": "https://raw.githubusercontent.com/linuxserver/docker-templates/master/linuxserver.io/img/bitcoin-knots-banner.png",
     "screenshots": [],
     "architectures": [
