@@ -66,8 +66,8 @@
       },
       {
         "category": "Binarios ProxMenux y root",
-        "paths": "/usr/local/bin, /usr/local/sbin, /usr/local/share/proxmenux, /root (subdirs volátiles excluidos)",
-        "why": "Binarios instalados por ProxMenux y configuración por usuario bajo <code>/root</code>. Las rutas volátiles (<code>.bash_history</code>, <code>.cache/</code>, <code>tmp/</code>, <code>.local/share/Trash/</code>) quedan fuera de la copia."
+        "paths": "/usr/local/bin, /usr/local/sbin, /usr/local/share/proxmenux, /var/lib/proxmenux, /root (subdirs volátiles excluidos)",
+        "why": "Binarios instalados por ProxMenux y configuración por usuario bajo <code>/root</code>. Las rutas volátiles (<code>.bash_history</code>, <code>.cache/</code>, <code>tmp/</code>, <code>.local/share/Trash/</code>) quedan fuera de la copia. <code>/var/lib/proxmenux</code> guarda los trabajos de backup programados y el estado del host que mantiene ProxMenux; quedan fuera la preparación de una restauración, las copias de rollback y las marcas posteriores a la restauración, porque pertenecen al host que la ejecuta."
       },
       {
         "category": "Estado ZFS (condicional)",

@@ -131,7 +131,7 @@ hb_default_profile_paths() {
         "/usr/local/bin"
         "/usr/local/sbin"
         "/usr/local/share/proxmenux"
-        "$HB_BACKUP_JOBS_DIR"
+        "/var/lib/proxmenux"   # backup jobs and host state; restore machinery excluded
 
         # ── Root home (rsync excludes volatile dirs) ─────────
         "/root"
@@ -142,6 +142,22 @@ hb_default_profile_paths() {
         paths+=("/etc/zfs")
     fi
     printf '%s\n' "${paths[@]}"
+}
+
+# rsync excludes for /var/lib/proxmenux, relative to that directory.
+# Restore staging, rollback copies and post-restore markers belong to the
+# host that runs the restore: they are neither backed up nor overwritten.
+hb_state_dir_excludes() {
+    printf '%s\n' \
+        --exclude=/restore-pending/ \
+        --exclude=/pre-restore/ \
+        --exclude=/recovery/ \
+        --exclude=/restore-history/ \
+        --exclude=/restore-state.json \
+        --exclude=/cluster-apply-pending \
+        --exclude=/post-restore-maintenance-pending \
+        --exclude=/exports/ \
+        --exclude=/helpers_cache.json
 }
 
 # ==========================================================
@@ -713,6 +729,12 @@ hb_prepare_staging() {
                     --exclude "ProxMenux-Monitor.AppImage*"
                     --exclude "install_proxmenux*.sh"
                 )
+            fi
+
+            if (( ! operator_added )) && [[ "$rel" == "var/lib/proxmenux" ]]; then
+                local -a state_excludes=()
+                mapfile -t state_excludes < <(hb_state_dir_excludes)
+                rsync_opts+=("${state_excludes[@]}")
             fi
 
             if rsync "${rsync_opts[@]}" "$p/" "$target/"; then

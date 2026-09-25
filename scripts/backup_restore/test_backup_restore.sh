@@ -230,7 +230,7 @@ staging_state_tests() {
   # shellcheck source=/dev/null
   source "$LIB_SCRIPT"
 
-  if hb_default_profile_paths | grep -Fxq '/var/lib/proxmenux/backup-jobs'; then
+  if hb_default_profile_paths | grep -Fxq '/var/lib/proxmenux'; then
     pass "Default profile includes scheduled backup job definitions"
   else
     fail "Default profile does not include scheduled backup job definitions"
@@ -579,6 +579,83 @@ EOJ
   fi
 }
 
+pending_state_dir_restore_tests() {
+  log "\n=== Pending restore of the ProxMenux state directory (sandbox) ==="
+  if ! help mapfile >/dev/null 2>&1; then
+    skip "Pending state-directory restore test requires the Linux runtime."
+    return
+  fi
+  local pending_base="$TMP_ROOT/state-restore-pending"
+  local logs_dir="$TMP_ROOT/state-restore-logs"
+  local target_root="$TMP_ROOT/state-restore-target"
+  local target_state="$target_root/var/lib/proxmenux"
+  local pre_backup_base="$target_state/pre-restore"
+  local recovery_base="$target_state/recovery"
+  local source_state="$pending_base/r3/rootfs/var/lib/proxmenux"
+
+  mkdir -p "$source_state/backup-jobs" "$source_state/oci-installations" \
+           "$source_state/restore-pending/old" "$target_state/restore-history" \
+           "$target_state/exports" "$pre_backup_base/earlier"
+  cat > "$source_state/backup-jobs/stateful.env" <<'EOJ'
+JOB_ID=stateful
+BACKEND=local
+ON_CALENDAR=daily
+PROFILE_MODE=custom
+ENABLED=1
+LOCAL_DEST_DIR=/var/lib/vz/dump
+LOCAL_ARCHIVE_EXT=tar.gz
+EOJ
+  echo "/etc/hosts" > "$source_state/backup-jobs/stateful.paths"
+  echo '{}' > "$source_state/oci-installations/app.json"
+  echo "source" > "$source_state/restore-pending/old/marker"
+  echo "source" > "$source_state/cluster-apply-pending"
+  echo "target" > "$target_state/restore-history/entry.json"
+  echo "target" > "$target_state/exports/report.pdf"
+  echo "target" > "$target_state/stale.json"
+  echo "target" > "$pre_backup_base/earlier/keep"
+  echo "var/lib/proxmenux" > "$pending_base/r3/apply-on-boot.list"
+  echo "HB_RESTORE_INCLUDE_ZFS=0" > "$pending_base/r3/plan.env"
+  ln -sfn "$pending_base/r3" "$pending_base/current"
+
+  if PMX_RESTORE_PENDING_BASE="$pending_base" PMX_RESTORE_LOG_DIR="$logs_dir" \
+     PMX_RESTORE_DEST_PREFIX="$target_root" PMX_RESTORE_PRE_BACKUP_BASE="$pre_backup_base" \
+     PMX_RESTORE_RECOVERY_BASE="$recovery_base" \
+     bash "$APPLY_ONBOOT" >>"$REPORT_FILE" 2>&1; then
+    pass "Pending restore applies the state directory"
+  else
+    fail "Pending restore failed while applying the state directory"
+    return
+  fi
+
+  if [[ -f "$target_state/backup-jobs/stateful.env" && -f "$target_state/oci-installations/app.json" && \
+        -f "$target_root/etc/systemd/system/proxmenux-backup-stateful.timer" ]]; then
+    pass "State directory restore brings jobs and state, and rebuilds the timer"
+  else
+    fail "State directory restore did not bring jobs, state or the timer"
+  fi
+
+  if [[ ! -e "$target_state/restore-pending/old" && ! -e "$target_state/cluster-apply-pending" ]]; then
+    pass "Restore staging and post-boot markers from the backup are not applied"
+  else
+    fail "Restore staging or post-boot markers from the backup were applied"
+  fi
+
+  if [[ -f "$target_state/restore-history/entry.json" && -f "$target_state/exports/report.pdf" && \
+        -f "$pre_backup_base/earlier/keep" && ! -e "$target_state/stale.json" ]]; then
+    pass "Excluded host entries survive the restore; other entries follow the backup"
+  else
+    fail "The restore removed excluded host entries or kept entries absent from the backup"
+  fi
+
+  local saved
+  saved=$(find "$pre_backup_base" -mindepth 1 -maxdepth 1 -name '*-onboot' | head -1)
+  if [[ -n "$saved" && -f "$saved/var/lib/proxmenux/stale.json" && ! -e "$saved/var/lib/proxmenux/pre-restore" ]]; then
+    pass "Previous state is saved without copying the rollback directory into itself"
+  else
+    fail "Previous state was not saved, or the rollback directory was copied into itself"
+  fi
+}
+
 main() {
   log "ProxMenux backup/restore test matrix"
   log "Report: $REPORT_FILE"
@@ -591,6 +668,7 @@ main() {
   scheduler_e2e_tests
   pending_restore_tests
   pending_jobs_restore_tests
+  pending_state_dir_restore_tests
 
   log "\n=== Summary ==="
   log "PASS=$PASS"

@@ -1754,10 +1754,19 @@ _rs_apply() {
             [[ "${HB_RESTORE_INCLUDE_ZFS:-0}" != "1" ]] && { ((skipped++)); continue; }
         fi
 
+        local -a state_excludes=()
+        [[ "$rel" == "var/lib/proxmenux" ]] && mapfile -t state_excludes < <(hb_state_dir_excludes)
+
         # Save current before overwriting
         if [[ -e "$dst" ]]; then
             mkdir -p "$backup_root/$(dirname "$rel")"
-            cp -a "$dst" "$backup_root/$rel" 2>/dev/null || true
+            if (( ${#state_excludes[@]} )); then
+                # backup_root lives inside /var/lib/proxmenux/pre-restore.
+                mkdir -p "$backup_root/$rel"
+                rsync -aAXH "${state_excludes[@]}" "$dst/" "$backup_root/$rel/" 2>/dev/null || true
+            else
+                cp -a "$dst" "$backup_root/$rel" 2>/dev/null || true
+            fi
         fi
 
         # Apply
@@ -1787,9 +1796,11 @@ _rs_apply() {
                     --exclude "restore-pending/"
                 )
             fi
+            rsync_extra+=("${state_excludes[@]}")
             if rsync -aAXH --delete "${rsync_extra[@]}" "$src/" "$dst/" 2>/dev/null; then
                 ((applied++))
                 [[ "$rel" == "var/lib/proxmenux/backup-jobs" || "$rel" == "var/lib/proxmenux/backup-jobs/"* ]] && jobs_restored=1
+                [[ "$rel" == "var/lib/proxmenux" && -d "$src/backup-jobs" ]] && jobs_restored=1
             else
                 ((skipped++))
             fi

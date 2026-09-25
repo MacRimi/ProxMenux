@@ -10,6 +10,18 @@ LOG_DIR="${PMX_RESTORE_LOG_DIR:-/var/log/proxmenux}"
 DEST_PREFIX="${PMX_RESTORE_DEST_PREFIX:-/}"
 PRE_BACKUP_BASE="${PMX_RESTORE_PRE_BACKUP_BASE:-/var/lib/proxmenux/pre-restore}"
 RECOVERY_BASE="${PMX_RESTORE_RECOVERY_BASE:-/var/lib/proxmenux/recovery}"
+# Same list as hb_state_dir_excludes: restore machinery stays with this host.
+STATE_DIR_EXCLUDES=(
+    --exclude=/restore-pending/
+    --exclude=/pre-restore/
+    --exclude=/recovery/
+    --exclude=/restore-history/
+    --exclude=/restore-state.json
+    --exclude=/cluster-apply-pending
+    --exclude=/post-restore-maintenance-pending
+    --exclude=/exports/
+    --exclude=/helpers_cache.json
+)
 
 mkdir -p "$LOG_DIR" "$PENDING_BASE/completed" >/dev/null 2>&1 || true
 LOG_FILE="${LOG_DIR}/proxmenux-restore-onboot-$(date +%Y%m%d_%H%M%S).log"
@@ -157,27 +169,39 @@ while IFS= read -r rel; do
         fi
     fi
 
+    state_excludes=()
+    [[ "$rel" == "var/lib/proxmenux" ]] && state_excludes=("${STATE_DIR_EXCLUDES[@]}")
+
     if [[ -e "$dst" ]]; then
         mkdir -p "$backup_root/$(dirname "$rel")" >/dev/null 2>&1 || true
-        cp -a "$dst" "$backup_root/$rel" >/dev/null 2>&1 || true
+        if (( ${#state_excludes[@]} )); then
+            # backup_root lives inside /var/lib/proxmenux/pre-restore.
+            mkdir -p "$backup_root/$rel" >/dev/null 2>&1 || true
+            rsync -aAXH "${state_excludes[@]}" "$dst/" "$backup_root/$rel/" >/dev/null 2>&1 || true
+        else
+            cp -a "$dst" "$backup_root/$rel" >/dev/null 2>&1 || true
+        fi
     fi
 
     if [[ -d "$src" ]]; then
         mkdir -p "$dst" >/dev/null 2>&1 || true
+        [[ "$rel" == "var/lib/proxmenux" && -d "$src/backup-jobs" ]] && state_jobs=1 || state_jobs=0
         # When an exclude list is present, drop --delete so the host's
         # copy of the excluded file isn't removed by rsync after being
         # skipped from the source side.
         if [[ ${#RSYNC_EXCLUDES[@]} -gt 0 ]]; then
-            if rsync -aAXH "${RSYNC_EXCLUDES[@]}" "$src/" "$dst/" >/dev/null 2>&1; then
+            if rsync -aAXH "${RSYNC_EXCLUDES[@]}" "${state_excludes[@]}" "$src/" "$dst/" >/dev/null 2>&1; then
                 ((applied++))
                 [[ "$rel" == "var/lib/proxmenux/backup-jobs" || "$rel" == "var/lib/proxmenux/backup-jobs/"* ]] && jobs_restored=1
+                (( state_jobs )) && jobs_restored=1
             else
                 ((failed++))
             fi
         else
-            if rsync -aAXH --delete "$src/" "$dst/" >/dev/null 2>&1; then
+            if rsync -aAXH --delete "${state_excludes[@]}" "$src/" "$dst/" >/dev/null 2>&1; then
                 ((applied++))
                 [[ "$rel" == "var/lib/proxmenux/backup-jobs" || "$rel" == "var/lib/proxmenux/backup-jobs/"* ]] && jobs_restored=1
+                (( state_jobs )) && jobs_restored=1
             else
                 ((failed++))
             fi

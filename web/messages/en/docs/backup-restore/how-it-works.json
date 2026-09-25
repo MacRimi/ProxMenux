@@ -66,8 +66,8 @@
       },
       {
         "category": "ProxMenux binaries & root",
-        "paths": "/usr/local/bin, /usr/local/sbin, /usr/local/share/proxmenux, /root (volatile subdirs excluded)",
-        "why": "ProxMenux-installed binaries and per-user configuration under <code>/root</code>. Volatile paths (<code>.bash_history</code>, <code>.cache/</code>, <code>tmp/</code>, <code>.local/share/Trash/</code>) are excluded from the copy."
+        "paths": "/usr/local/bin, /usr/local/sbin, /usr/local/share/proxmenux, /var/lib/proxmenux, /root (volatile subdirs excluded)",
+        "why": "ProxMenux-installed binaries and per-user configuration under <code>/root</code>. Volatile paths (<code>.bash_history</code>, <code>.cache/</code>, <code>tmp/</code>, <code>.local/share/Trash/</code>) are excluded from the copy. <code>/var/lib/proxmenux</code> holds the scheduled backup jobs and the host state kept by ProxMenux; the restore staging, the rollback copies and the post-restore markers are excluded, because they belong to the host that runs a restore."
       },
       {
         "category": "ZFS state (conditional)",
