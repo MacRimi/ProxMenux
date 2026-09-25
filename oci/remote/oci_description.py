@@ -60,11 +60,7 @@ def render(template, digest, instance_id, ip=''):
     source = template.get('source') or {}
     image_url = (source.get('image_repository_url') or image_page(reference)
                  or ui.get('repository') or source.get('repository'))
-    resources = [('Image', image_url), ('App', ui.get('website')),
-                 ('App docs', ui.get('documentation'))]
-    repository = ui.get('repository') or source.get('repository')
-    if safe_url(repository) and repository != image_url:
-        resources.append(('Repository', repository))
+    resources = [('Image', image_url), ('App', ui.get('website'))]
     resources = [link(label, url) for label, url in resources]
     resources = [item for item in resources if item]
     try:
@@ -88,7 +84,7 @@ def render(template, digest, instance_id, ip=''):
             if not isinstance(path, str) or not path.startswith('/'):
                 path = '/'
             url = f'{scheme}://{address}:{port}{path}'
-            item = f'{link(str(endpoint.get("label") or "Web UI"), url)}: {link(url, url)}'
+            item = f'&#127760; {link(str(endpoint.get("label") or "Web UI"), url)}: {link(url, url)}'
             if item:
                 access.append(item)
     badges = (

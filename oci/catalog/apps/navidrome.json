@@ -82,7 +82,7 @@
       {
         "name": "ND_BASEURL",
         "example": "",
-        "required": true,
+        "required": false,
         "sensitive": false,
         "source": "docker-compose"
       },

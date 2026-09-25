@@ -115,6 +115,8 @@ def build_suite(template, ui, mode='advanced'):
     if mode != DEFAULT_MODE:
         from .custom_mounts import ask_stack_custom_mounts
         ask_stack_custom_mounts(ui, services, storage)
+        from .extra_devices import ask_stack_extra_devices
+        ask_stack_extra_devices(ui, services)
     return {'deployment_kind':'generic-multi-lxc-stack','suite_arr':True,'lifecycle_mode':'independent','stack_name':name,
             'base_vmid':int(base) if base else None,'services':services,'shared_media':shared,'media_player':player,
             'completion_notes':[

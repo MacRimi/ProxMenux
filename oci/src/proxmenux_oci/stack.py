@@ -355,6 +355,8 @@ def build_stack(template, ui, mode='advanced'):
     if mode != DEFAULT_MODE:
         from .custom_mounts import ask_stack_custom_mounts
         ask_stack_custom_mounts(ui, plans, volumes)
+        from .extra_devices import ask_stack_extra_devices
+        ask_stack_extra_devices(ui, plans)
     return {'deployment_kind':'generic-multi-lxc-stack','stack_name':name,'base_vmid':int(vmid) if vmid else None,
             'completion_notes':template.get('proxmox',{}).get('stack_completion_notes',[]),
             'rootfs_storage':root,'template_storage':cache,'onboot':onboot,'start_after_create':True,

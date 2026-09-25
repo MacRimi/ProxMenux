@@ -20,6 +20,7 @@ from . import network as access
 from .i18n import translate
 from .ui import DialogUI, TerminalUI, UserCancelled
 from .custom_mounts import ask_custom_mounts
+from .extra_devices import device_permissions
 
 
 class InstallError(RuntimeError):
@@ -379,6 +380,15 @@ def build_deployment(
     devices, selected_hardware_profile, post_start_configurations, environment = configure_acceleration(
         installer_profile, environment, unprivileged, ui, mode)
 
+    if advanced:
+        from .extra_devices import ask_extra_devices
+        reference = template['container_contract']['image']['reference']
+        repository = reference.split('@', 1)[0].rsplit(':', 1)[0]
+        devices = ask_extra_devices(
+            ui, devices, unprivileged,
+            allow_coral=repository in ('ghcr.io/blakeblackshear/frigate',
+                                        'codeproject/ai-server', 'docker.io/codeproject/ai-server'))
+
     from .gpu import apply_profile_image
     apply_profile_image(template, selected_hardware_profile)
 
@@ -455,7 +465,9 @@ def build_deployment(
         "tmpfs_mounts": tmpfs_mounts,
         "devices": devices,
         "hardware_profile": selected_hardware_profile,
-        "device_permissions": installer_profile.get("device_permissions") if devices else None,
+        "device_permissions": (device_permissions(template['container_contract']['image']['reference'],
+                                                   devices, installer_profile.get('device_permissions'))
+                               if devices else None),
         "post_start_configurations": post_start_configurations,
         "extra_hosts": installer_profile.get("extra_hosts", []),
     }

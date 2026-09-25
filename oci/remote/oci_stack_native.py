@@ -191,7 +191,7 @@ class NativeAdapter:
                 config = instances.command('pct', 'config', str(vmid))
                 if instances.identity(config) != record['installation_id']:
                     raise ValueError(translate('The identity of a member was replaced'))
-                if (not self.journal.exists() or not self.state().get('replacement_intent')) and sha(config) != record['observed']['config_sha256']:
+                if (not self.journal.exists() or not self.state().get('replacement_intent')) and not instances.same_config_except_notes(record, config):
                     raise ValueError(translate('A member configuration changed during the preparation'))
             else:
                 if Path('/etc/pve/lxc/%s.conf' % vmid).exists():
@@ -321,13 +321,9 @@ class NativeAdapter:
         self.validate(self.plan)
         directory = self.journal.parent / ('backup-%s' % vmid)
         private_directory(directory)
-        member_tx.run('vzdump', str(vmid), '--mode', 'stop', '--compress', 'zstd',
-                      '--dumpdir', str(directory), '--tmpdir', '/var/tmp')
-        backups = list(directory.glob('vzdump-lxc-*.tar.zst'))
-        if len(backups) != 1:
-            raise ValueError(translate('The backup of a member could not be identified'))
-        member_tx.run('zstd', '-t', str(backups[0]))
-        return {'archive': str(backups[0]), 'sha256': member_tx.filehash(backups[0])}
+        archive = member_tx.verified_backup(vmid, directory, 'zstd',
+                                            translate('The backup of a member could not be identified'))
+        return {'archive': str(archive), 'sha256': member_tx.filehash(archive)}
 
     def verify_backups(self, backups):
         for backup in backups.values():

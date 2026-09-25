@@ -366,10 +366,24 @@ def _install(catalog: Catalog, ui, item: dict[str, Any], mode: str) -> None:
 def install_template(ui, template: dict[str, Any], identifier: str, mode: str) -> dict[str, Any] | None:
     """Configures and installs one template, from the catalog or written from a
     definition the user gave."""
-    deployment = build_deployment(template, ui, mode)
-    if not ui.review(_deployment_summary_text(template, deployment), translate("Installation summary"),
-                     question=translate("Install with this configuration?")):
+    from .ui import BacktrackUI, RestartWizard
+    wizard = BacktrackUI(ui)
+    try:
+        while True:
+            candidate = copy.deepcopy(template)
+            try:
+                deployment = build_deployment(candidate, wizard, mode)
+                approved = wizard.review(_deployment_summary_text(candidate, deployment),
+                                         translate("Installation summary"),
+                                         question=translate("Install with this configuration?"))
+                break
+            except RestartWizard:
+                wizard.restart()
+    finally:
+        wizard.close()
+    if not approved:
         return None
+    template = candidate
     console.show_logo()
     console.msg_title(f"{source_text(template['catalog_ui']['title']) or identifier} · {APP_TITLE}")
     try:

@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import json
-import hashlib
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timezone
 from pathlib import Path
@@ -176,7 +175,6 @@ class Catalog:
                 ),
                 "template": f"apps/{repo.app_id}.json" if repo.app_id in existing else None,
                 "template_status": existing.get(repo.app_id),
-                "content_hash": self._template_hash(repo.app_id) if repo.app_id in existing else None,
             }
             for repo, summary in discovered
         ]
@@ -291,7 +289,6 @@ class Catalog:
                     "category_label": metadata.get("category_label"),
                     "template": f"apps/{catalog_id}.json" if catalog_id in existing else None,
                     "template_status": existing.get(catalog_id),
-                    "content_hash": self._template_hash(catalog_id) if catalog_id in existing else None,
                 }
             )
 
@@ -515,6 +512,24 @@ class Catalog:
         except (OSError, json.JSONDecodeError, KeyError, TypeError):
             return
 
+    def _preserve_optional_environment(self, app_id: str, template: dict[str, Any]) -> None:
+        existing_path = self.apps_dir / f"{app_id}.json"
+        if not existing_path.is_file():
+            return
+        try:
+            existing = json.loads(existing_path.read_text(encoding="utf-8"))
+            if (existing["container_contract"]["image"]["repository"] !=
+                    template["container_contract"]["image"]["repository"]):
+                return
+            optional = {item["name"]: item for item in existing["container_contract"]["environment"]
+                        if item.get("required") is False}
+            for item in template["container_contract"]["environment"]:
+                previous = optional.get(item["name"])
+                if previous and previous.get("example") == item.get("example"):
+                    item["required"] = False
+        except (OSError, json.JSONDecodeError, KeyError, TypeError):
+            return
+
     def generate(self, app_id: str) -> tuple[Path, dict[str, Any]]:
         item = self.find_item(app_id)
         provider = item.get("provider", "linuxserver.io")
@@ -541,6 +556,7 @@ class Catalog:
             raise ConversionError(f"Proveedor no soportado: {provider}")
         catalog_id = item["id"]
         self._apply_overlay(catalog_id, template)
+        self._preserve_optional_environment(catalog_id, template)
         self._preserve_registry_state(catalog_id, template)
         self.validate(template)
         self.apps_dir.mkdir(parents=True, exist_ok=True)
@@ -593,6 +609,7 @@ class Catalog:
             else:
                 raise ConversionError(f"Proveedor no soportado: {item_provider}")
             self._apply_overlay(item["id"], template)
+            self._preserve_optional_environment(item["id"], template)
             self._preserve_registry_state(item["id"], template)
             self.validate(template)
             return item["id"], template
@@ -661,7 +678,6 @@ class Catalog:
             item["architectures"] = supported_architectures(
                 template["catalog_ui"]["architectures"]
             )
-            item["content_hash"] = self._template_hash(app_id)
         self._write_json(self.index_path, index)
         generated.sort()
         failed.sort(key=lambda item: item["id"])
@@ -759,7 +775,6 @@ class Catalog:
                     "curated_path": str(path.relative_to(self.root)),
                     "template": f"apps/{app_id}.json" if app_id in existing else None,
                     "template_status": existing.get(app_id),
-                    "content_hash": self._template_hash(app_id) if app_id in existing else None,
                 }
             )
         return result
@@ -768,7 +783,11 @@ class Catalog:
         path = self.overlays_dir / f"{app_id}.json"
         if path.exists():
             overlay = json.loads(path.read_text(encoding="utf-8"))
+            environment_overrides = overlay.pop("environment_overrides", {})
             self._deep_merge(template, overlay)
+            for item in template.get("container_contract", {}).get("environment", []):
+                if item.get("name") in environment_overrides:
+                    item.update(environment_overrides[item["name"]])
         from .stack import apply_stack_support
         apply_stack_support(template)
         from .gpu import apply_gpu_contract
@@ -809,7 +828,6 @@ class Catalog:
                         "untranslated_blockers": template["compatibility"][
                             "untranslated_blockers"
                         ],
-                        "content_hash": self._template_hash(app_id),
                     }
                 )
                 if item.get("template_family") == "curated-profile":
@@ -826,6 +844,3 @@ class Catalog:
         temporary = path.with_suffix(path.suffix + ".tmp")
         temporary.write_text(json.dumps(payload, ensure_ascii=True, indent=2) + "\n", encoding="utf-8")
         temporary.replace(path)
-
-    def _template_hash(self, app_id: str) -> str:
-        return hashlib.sha256((self.apps_dir / f"{app_id}.json").read_bytes()).hexdigest()

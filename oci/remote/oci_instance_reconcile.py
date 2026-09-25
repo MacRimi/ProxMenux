@@ -97,6 +97,10 @@ def propose(record, config):
     before = parse_config(record['observed']['config'].encode())
     current = parse_config(config)
     changed = sorted(key for key in before.keys() | current.keys() if before.get(key) != current.get(key))
+    # Notes do not describe a mount, device or runtime setting. The OCI marker
+    # was checked above, so a presentation-only change needs no adoption.
+    if 'description' in changed:
+        changed.remove('description')
     new_keys = [key for key in changed if key not in before and re.fullmatch(r'(mp|dev)[0-9]+', key)]
     unsupported = [key for key in changed if key not in new_keys and key not in transaction.ADOPTABLE]
     if unsupported:

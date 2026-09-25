@@ -216,10 +216,21 @@ def manage_instance(project, ui, row, action=None, lifecycle_args=()):
         if action == 'recreate':
             from .recreation import edit_recreation
             from .cli import _deployment_summary_text
-            proposal = edit_recreation(record, ui)
-            if not ui.review(_deployment_summary_text(proposal['candidate']['template'],
-                             proposal['candidate']['deployment']), translate('Recreate OCI'),
-                             question=translate('Recreate with these options?'), default=True):
+            from .ui import BacktrackUI, RestartWizard
+            wizard = BacktrackUI(ui)
+            try:
+                while True:
+                    try:
+                        proposal = edit_recreation(record, wizard)
+                        approved = wizard.review(_deployment_summary_text(proposal['candidate']['template'],
+                                                 proposal['candidate']['deployment']), translate('Recreate OCI'),
+                                                 question=translate('Recreate with these options?'), default=True)
+                        break
+                    except RestartWizard:
+                        wizard.restart()
+            finally:
+                wizard.close()
+            if not approved:
                 return False
         elif not ui.review(translate('The current image of the saved channel will be checked and downloaded. Resources, paths and GPU are kept. The CT is stopped during the replacement and a native backup is created first.'),
                            translate('Update OCI'), question=translate('Update now?'), default=True):

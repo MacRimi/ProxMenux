@@ -3598,7 +3598,7 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
           // user tapped the terminal's Close button and got kicked
           // all the way back to the guest list.
           if (open) return
-          if (applyOpen || terminalOpen) return
+          if (applyOpen || terminalOpen || ociAction) return
           setSelectedVM(null)
           setVMDetails(null)
           setCurrentView("main")
@@ -3624,10 +3624,10 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
           // remaining vectors (mobile tap slop reaching the parent's
           // scrim, ESC not consumed by the child) at the DOM level.
           onInteractOutside={(e) => {
-            if (applyOpen || terminalOpen) e.preventDefault()
+            if (applyOpen || terminalOpen || ociAction) e.preventDefault()
           }}
           onEscapeKeyDown={(e) => {
-            if (applyOpen || terminalOpen) e.preventDefault()
+            if (applyOpen || terminalOpen || ociAction) e.preventDefault()
           }}
         >
           {currentView === "main" ? (

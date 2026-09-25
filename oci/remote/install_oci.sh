@@ -20,6 +20,28 @@ die() {
   exit 1
 }
 
+container_is_running() {
+  local status attempt
+  for (( attempt=1; attempt<=3; attempt++ )); do
+    if status=$(pct status "$VMID" 2>/dev/null); then
+      case "$status" in
+        'status: running') return 0 ;;
+        'status: stopped') return 1 ;;
+      esac
+    fi
+    # A failed pct probe must not be mistaken for a stopped container.
+    oci_log "pct status could not confirm CT $VMID (attempt $attempt); checking lxc-info"
+    if status=$(lxc-info -n "$VMID" -sH 2>/dev/null); then
+      case "$status" in
+        RUNNING) return 0 ;;
+        STOPPED) return 1 ;;
+      esac
+    fi
+    (( attempt < 3 )) && sleep 1
+  done
+  return 1
+}
+
 mount_ct_rootfs() {
   oci_quiet pct mount "$VMID" || die "$(translate "Could not mount the container filesystem:") CT $VMID"
 }
@@ -107,7 +129,7 @@ check_native_device_permissions() {
   msg_info "$(translate "Checking the device permissions for the application user...")"
   oci_log "Checking device access as abc (this is not a codec test)."
   for (( attempt=0; attempt<60; attempt++ )); do
-    pct status "$VMID" | grep -q 'status: running' \
+    container_is_running \
       || die "$(translate "The container stopped before the GPU permissions were verified:") CT $VMID"
     if pct exec "$VMID" -- s6-setuidgid abc sh -c \
       'for path do test -r "$path" && test -w "$path" || exit 1; done' \
@@ -1792,7 +1814,7 @@ if [[ $START_AFTER == 1 && $HAS_STARTUP_HEALTHCHECK == 1 ]]; then
   oci_log "Waiting for the service: $HC_URL"
   msg_info "$(translate "Waiting for the application to respond...")"
   while (( HC_ELAPSED < HC_TIMEOUT )); do
-    if [[ $(pct status "$VMID" 2>/dev/null || true) != "status: running" ]]; then
+    if ! container_is_running; then
       oci_log "The container stopped during its first start. Last console messages:"
       [[ -s $RUNTIME_CONSOLE_LOG ]] && tr -d '\r' <"$RUNTIME_CONSOLE_LOG" | tail -n 100 >>"${OCI_LOG:-/dev/stderr}"
       die "$(translate "The container stopped before the application responded:") CT $VMID"
@@ -1838,7 +1860,7 @@ if [[ $START_AFTER == 1 && $HAS_RUNNING_CHECK == 1 ]]; then
   msg_info "$(translate "Checking that the container keeps running...")"
   RC_START=$(date +%s)
   while (( $(date +%s) - RC_START < RC_STABILITY )); do
-    if [[ $(pct status "$VMID" 2>/dev/null || true) != "status: running" ]]; then
+    if ! container_is_running; then
       oci_log "The container stopped after starting. Last console messages:"
       [[ -s $RUNTIME_CONSOLE_LOG ]] && tr -d '\r' <"$RUNTIME_CONSOLE_LOG" | tail -n 100 >>"${OCI_LOG:-/dev/stderr}"
       die "$(translate "The container stopped after starting:") CT $VMID"

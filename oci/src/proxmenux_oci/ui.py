@@ -16,17 +16,96 @@ class UserCancelled(RuntimeError):
     pass
 
 
+class BackRequested(RuntimeError):
+    pass
+
+
+class RestartWizard(RuntimeError):
+    pass
+
+
+class BacktrackUI:
+    """Replay prior answers when returning to a previous wizard question."""
+
+    def __init__(self, base):
+        self.base = base
+        self.answers = []
+        self.cursor = 0
+        self.previous_back_enabled = getattr(base, 'back_enabled', False)
+        base.back_enabled = True
+
+    def __getattr__(self, name):
+        return getattr(self.base, name)
+
+    def close(self):
+        self.base.back_enabled = self.previous_back_enabled
+
+    def restart(self):
+        self.cursor = 0
+
+    def _call(self, name, *args, **kwargs):
+        if self.cursor < len(self.answers):
+            saved_name, value = self.answers[self.cursor]
+            if saved_name != name:
+                self.answers = self.answers[:self.cursor]
+            else:
+                self.cursor += 1
+                return value
+        try:
+            value = getattr(self.base, name)(*args, **kwargs)
+        except BackRequested:
+            if self.cursor:
+                self.answers = self.answers[:self.cursor - 1]
+                self.cursor = 0
+                raise RestartWizard()
+            raise UserCancelled(translate('Wizard cancelled'))
+        self.answers.append((name, value))
+        self.cursor += 1
+        return value
+
+    def ask(self, *args, **kwargs):
+        return self._call('ask', *args, **kwargs)
+
+    def password(self, *args, **kwargs):
+        return self._call('password', *args, **kwargs)
+
+    def confirm(self, *args, **kwargs):
+        return self._call('confirm', *args, **kwargs)
+
+    def choose(self, *args, **kwargs):
+        return self._call('choose', *args, **kwargs)
+
+    def checklist(self, *args, **kwargs):
+        return self._call('checklist', *args, **kwargs)
+
+    def detail_menu(self, *args, **kwargs):
+        return self._call('detail_menu', *args, **kwargs)
+
+    def review(self, *args, **kwargs):
+        try:
+            return self.base.review(*args, **kwargs)
+        except BackRequested:
+            if self.cursor:
+                self.answers = self.answers[:self.cursor - 1]
+                self.cursor = 0
+                raise RestartWizard()
+            raise UserCancelled(translate('Wizard cancelled'))
+
+
 APP_TITLE = "OCI manager Apps (beta)"
 
 
 @dataclass
 class TerminalUI:
     title: str = APP_TITLE
+    back_enabled: bool = False
 
     def ask(self, text: str, default: str | None = None, required: bool = True) -> str:
         suffix = f" [{default}]" if default not in (None, "") else ""
         while True:
             value = input(f"{text}{suffix}: ").strip()
+            if self.back_enabled and value == ':back':
+                raise BackRequested()
             if value:
                 return value
             if default is not None:
@@ -38,18 +117,25 @@ class TerminalUI:
     def password(self, text: str, required: bool = True) -> str:
         while True:
             value = getpass.getpass(f"{text}: ")
+            if self.back_enabled and value == ':back':
+                raise BackRequested()
             if not value:
                 if not required:
                     return ""
                 print(translate("This value is required."))
                 continue
-            if value == getpass.getpass(f"{translate('Repeat to confirm')}: "):
+            repeated = getpass.getpass(f"{translate('Repeat to confirm')}: ")
+            if self.back_enabled and repeated == ':back':
+                raise BackRequested()
+            if value == repeated:
                 return value
             print(translate("The values do not match. Enter them again."))
 
     def confirm(self, text: str, default: bool = False) -> bool:
         suffix = " [Y/n]" if default else " [y/N]"
         value = input(f"{text}{suffix}: ").strip().casefold()
+        if self.back_enabled and value == ':back':
+            raise BackRequested()
         if not value:
             return default
         return value in {"y", "yes", "s", "si"}
@@ -93,6 +179,7 @@ class DialogUI:
 
     title: str = APP_TITLE
     backtitle: str = "ProxMenux"
+    back_enabled: bool = False
 
     @staticmethod
     def available() -> bool:
@@ -103,10 +190,16 @@ class DialogUI:
         if environment.get("TERM", "").casefold() in {"", "dumb", "unknown"}:
             environment["TERM"] = "xterm-256color"
         # dialog draws on the terminal and writes the selection to stderr.
-        return subprocess.run(
-            ["dialog", "--no-collapse", "--backtitle", self.backtitle, "--title", title or self.title, *widget],
+        back_widget = ['--extra-button', '--extra-label', 'Volver'] if self.back_enabled and any(
+            flag in widget for flag in ('--inputbox', '--passwordbox', '--yesno', '--menu', '--checklist')) else []
+        result = subprocess.run(
+            ["dialog", "--no-collapse", "--backtitle", self.backtitle, "--title", title or self.title,
+             *back_widget, *widget],
             stdout=None, stderr=subprocess.PIPE, text=True, check=False, env=environment,
         )
+        if result.returncode == 3 and back_widget:
+            raise BackRequested()
+        return result
 
     @staticmethod
     def _size(text: str, min_height: int, width: int, extra: int = 6) -> tuple[str, str]:

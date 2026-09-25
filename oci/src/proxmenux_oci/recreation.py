@@ -104,31 +104,6 @@ def edit_environment(deployment, ui):
             environment.append(item)
 
 
-def edit_peripherals(deployment, ui, allow_coral=False):
-    devices = deployment.setdefault('devices', [])
-    label = 'Coral/USB' if allow_coral else 'USB'
-    example = '/dev/apex_0, ' if allow_coral else ''
-    while ui.confirm(f"{translate('Add or change a device')} ({label})?", False):
-        path = ui.ask(f"{translate('Host device node')} ({translate('e.g.')} {example}/dev/ttyACM0, /dev/bus/usb/003/004)")
-        if not re.fullmatch(r'/dev/(apex_[0-9]+|ttyUSB[0-9]+|ttyACM[0-9]+|bus/usb/[0-9]{3}/[0-9]{3})', path):
-            raise ValueError(translate('Select a specific Coral or USB node, not the whole /dev'))
-        if path.startswith('/dev/apex_') and not allow_coral:
-            raise ValueError(translate('Coral is only offered for Frigate and CodeProject.AI'))
-        if '/bus/usb/' in path:
-            ui.info(translate('The USB number can change after reconnecting or rebooting. This profile does not remap it automatically or handle Coral USB re-enumeration. Do not share a dongle already used by another service.'))
-        old = next((d for d in devices if d.get('host_path') == path), None)
-        mode = ui.ask(translate('Node octal permissions (e.g. 0660)'), (old or {}).get('mode', '0660'))
-        if not re.fullmatch(r'0?[0-7]{3}', mode):
-            raise ValueError(translate('Invalid octal permissions'))
-        item = dict(old or {}, id=(old or {}).get('id', 'peripheral-' + path.removeprefix('/dev/').replace('/', '-')),
-                    kind='character-device', host_path=path, container_path=path,
-                    mode=mode, gid_strategy='host-device-gid', deny_write=False)
-        if old:
-            devices[devices.index(old)] = item
-        else:
-            devices.append(item)
-
-
 def edit_recreation(record, ui):
     candidate = copy.deepcopy(record)
     refresh_template(candidate, ui)
@@ -136,32 +111,21 @@ def edit_recreation(record, ui):
     resources = deployment['resources']
     resources['cores'] = positive_integer(ui, translate('Cores'), resources['cores'])
     resources['memory_mb'] = positive_integer(ui, translate('RAM in MiB'), resources['memory_mb'], 128)
-    while ui.confirm(translate('Add a custom data path?'), False):
-        target = absolute_path(ui.ask(translate('Path inside the container'), '/data/custom'))
-        existing = [m['container_path'].rstrip('/') for m in deployment['mounts']]
-        if any(target == p or target.startswith(p + '/') or p.startswith(target + '/') for p in existing):
-            raise ValueError(translate('The path overlaps an existing mount'))
-        mode = ui.choose(translate('Persistence for the new path'),
-                         [('managed-volume', translate('Container volume (included in backups)')),
-                          ('host-bind', translate('Host directory (not included in Proxmox backups)'))],
-                         'managed-volume')
-        if mode is None:
-            raise UserCancelled(translate('Custom path cancelled'))
-        mount = {'type': mode, 'container_path': target, 'read_only': False}
-        if mode == 'managed-volume':
-            mount.update(source=ui.ask(translate('Proxmox storage for the volume'), deployment['rootfs']['storage']),
-                         size_gb=positive_integer(ui, translate('Volume size in GB'), 4), backup=True)
-        else:
-            mount.update(source=absolute_path(ui.ask(translate('Host directory'),
-                         '/mnt/oci-shared/custom')), size_gb=None, backup=False,
-                         create_if_missing=True)
-        deployment['mounts'].append(mount)
+    from .custom_mounts import ask_custom_mounts
+    deployment['mounts'] = ask_custom_mounts(
+        ui, deployment['mounts'], deployment['rootfs']['storage'])
     if ui.confirm(translate('Change the access network?'), False):
         edit_network(deployment, ui)
     edit_acceleration(candidate, ui)
+    from .extra_devices import ask_extra_devices
     reference = candidate.get('template', {}).get('container_contract', {}).get('image', {}).get('reference', '')
     repository = reference.split('@')[0].rsplit(':', 1)[0]
-    edit_peripherals(deployment, ui, repository in ('ghcr.io/blakeblackshear/frigate', 'codeproject/ai-server', 'docker.io/codeproject/ai-server'))
+    deployment['devices'] = ask_extra_devices(
+        ui, deployment.get('devices', []), deployment.get('security', {}).get('unprivileged', True),
+        allow_coral=repository in ('ghcr.io/blakeblackshear/frigate', 'codeproject/ai-server', 'docker.io/codeproject/ai-server'))
+    from .extra_devices import device_permissions
+    deployment['device_permissions'] = device_permissions(
+        reference, deployment['devices'], deployment.get('device_permissions'))
     edit_environment(deployment, ui)
     proposal = {'operation': 'recreate', 'candidate': candidate}
     if record.get('observed', {}).get('config_sha256'):
@@ -172,14 +136,19 @@ def edit_recreation(record, ui):
 def refresh_template(candidate, ui):
     from .catalog import Catalog
     old = candidate.get('template', {})
-    name = old.get('id', '').removeprefix('image-')
-    if not re.fullmatch(r'[a-z0-9][a-z0-9-]+', name):
+    template_id = old.get('id', '')
+    if not re.fullmatch(r'[a-z0-9][a-z0-9-]+', template_id):
         return
     root = Path(__file__).resolve().parents[2]
-    path = root / 'catalog' / 'apps' / (name + '.json')
-    if not path.is_file() or not old.get('container_contract', {}).get('image'):
+    if not old.get('container_contract', {}).get('image'):
         return
-    latest = Catalog(root).load_template(name, generate_if_missing=False)
+    catalog = Catalog(root)
+    matching = [item for item in catalog.load_index()['applications']
+                if item.get('template_id') == template_id]
+    if len(matching) != 1:
+        return
+    name = matching[0]['id']
+    latest = catalog.compose(name)
     if latest == old:
         return
     if not ui.confirm(translate('Apply the options from the current catalog template? Your data and configuration are kept.'), True):

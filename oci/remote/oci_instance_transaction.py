@@ -24,6 +24,7 @@ import stat
 import sys
 import time
 import uuid
+from urllib.parse import unquote
 
 import oci_instances as instances
 from oci_installation_state import image_from_archive, parse_config, private_directory, sha
@@ -204,6 +205,23 @@ def recovery_hint(after_recovery=False):
         msg_warn(translate('The operation stopped halfway. Choose "Recover" for this container in the OCI management menu to restore the previous installation.'))
 
 
+def recover_untouched(root, journal):
+    """Close an operation that failed before the container was changed:
+    start the container again and restore its record, so nothing is left to
+    recover by hand. Returns whether it did."""
+    try:
+        state = json.loads(Path(journal).read_text())
+        if state.get('coordinated') or state.get('phase') in TERMINAL:
+            return False
+        if run('pct', 'config', str(state['vmid'])).decode() != state['before_config']:
+            return False
+        recover(root, Path(journal))
+        return True
+    except (OSError, ValueError, KeyError, RuntimeError, subprocess.SubprocessError) as error:
+        log(f'automatic recovery skipped: {error}')
+        return False
+
+
 def fit(text):
     """A step line that is rewritten in place must not wrap."""
     width = max(shutil.get_terminal_size((80, 24)).columns - 8, 30)
@@ -211,7 +229,11 @@ def fit(text):
 
 
 def run(*args):
-    log('$ ' + shlex.join(str(arg) for arg in args))
+    private_description = args[:2] == ('pct', 'set') and '--description' in args
+    shown = [str(arg) for arg in args]
+    if private_description:
+        shown[shown.index('--description') + 1] = '[notes redacted]'
+    log('$ ' + shlex.join(shown))
     # OCI extraction enters an unprivileged user namespace; PVE's newly created
     # traversal directories must not inherit a caller's restrictive umask.
     pve_creation = (args[:2] in (('pct', 'create'), ('pct', 'restore'))
@@ -224,10 +246,35 @@ def run(*args):
         raise
     if result.returncode:
         log(f'  exit {result.returncode}')
-    log_output(None if tuple(args[:2]) in DATA_COMMANDS else result.stdout, result.stderr)
+    log_output(None if private_description or tuple(args[:2]) in DATA_COMMANDS else result.stdout,
+               None if private_description else result.stderr)
     if result.returncode:
         raise RuntimeError(f"{args[0]} {translate('failed with exit code')} {result.returncode}")
     return result.stdout
+
+
+def verified_backup(vmid, directory, compression, unidentified, show=False):
+    """A stop-mode vzdump of vmid in directory that passes its integrity
+    check. An archive that fails the check is written once more before the
+    operation gives up."""
+    suffix = 'zst' if compression == 'zstd' else 'gz'
+    for attempt in (1, 2):
+        run('vzdump', str(vmid), '--mode', 'stop', '--compress', compression,
+            '--dumpdir', str(directory), '--tmpdir', '/var/tmp')
+        backups = list(directory.glob(f'vzdump-lxc-*.tar.{suffix}'))
+        if len(backups) != 1:
+            raise ValueError(unidentified)
+        try:
+            run('zstd' if compression == 'zstd' else 'gzip', '-t', str(backups[0]))
+            return backups[0]
+        except RuntimeError:
+            if attempt == 2:
+                raise
+        log('backup attempt 1/2 failed its integrity check')
+        for damaged in directory.glob('vzdump-lxc-*'):
+            damaged.unlink()
+        if show:
+            msg_warn(translate('The backup did not pass its integrity check; creating it again...'))
 
 
 def filehash(path):
@@ -322,6 +369,10 @@ def external_changes(record, config, adopt=True):
         return {}
     before, now = parse_config(record['observed']['config'].encode()), parse_config(config)
     changed = sorted(key for key in before.keys() | now.keys() if before.get(key) != now.get(key))
+    if ('description' in changed
+            and instances.identity(record['observed']['config'].encode()) == record['installation_id']
+            and instances.identity(config) == record['installation_id']):
+        changed.remove('description')
     cores_key = 'cpulimit' if 'cpulimit' in before and 'cores' not in before else 'cores'
     values = {}
     for key in changed if adopt else ():
@@ -682,6 +733,22 @@ def restore_firewall(vmid, state):
         Path(f'/etc/pve/firewall/{vmid}.fw').write_text(saved)
 
 
+def original_description(state):
+    """Return the user's original Notes, including text added outside ProxMenux."""
+    description = state.get('original_description')
+    if description is None:
+        # Journals created before this safeguard only have pct's escaped config.
+        description = unquote(parse_config(state['before_config'].encode()).get('description', ''))
+    if not isinstance(description, str) or instances.identity(
+            json.dumps({'description': description}).encode()) != state['record']['installation_id']:
+        raise ValueError(translate('The container identity changed; nothing was adopted'))
+    return description
+
+
+def restore_description(vmid, state):
+    run('pct', 'set', str(vmid), '--description', original_description(state))
+
+
 def release_stage(state):
     """After a commit the holder CT only keeps its own rootfs: every parked
     volume went back to the application. Anything still attached keeps it."""
@@ -791,6 +858,7 @@ def apply(root, vmid, archive, operation, proposal=None, registry_digest=None, i
     candidate = candidate_contract(record, operation, proposal)
     before = run('pct', 'config', str(vmid))
     cfg, actual, mac = preflight(record, candidate, before, coordinated)
+    description = original_description({'record': record, 'before_config': before.decode()})
     original_sources, desired_sources = freeze_host_sources(record, candidate, acknowledge_external_data)
     original_gpu = gpu_devices.planned(record['deployment'])
     desired_gpu = gpu_devices.planned(candidate['deployment'])
@@ -823,6 +891,7 @@ def apply(root, vmid, archive, operation, proposal=None, registry_digest=None, i
                                   for p, m in actual.items() if p in required and not m['volume'].startswith('/')])
     state = {'schema_version': 1, 'id': directory.name, 'vmid': vmid, 'operation': operation,
              'record': record, 'candidate_contract': candidate, 'before_config': before.decode(),
+             'original_description': description,
              'archive': str(archive), 'archive_sha256': filehash(archive),
              'registry_digest': registry_digest or image['manifest_digest'],
              'runtime_template': candidate['template'], 'runtime_deployment': runtime_deployment,
@@ -867,14 +936,9 @@ def apply(root, vmid, archive, operation, proposal=None, registry_digest=None, i
     else:
         backup_dir = directory / 'backup'
         private_directory(backup_dir)
-        run('vzdump', str(vmid), '--mode', 'stop', '--compress', backup_compression,
-            '--dumpdir', str(backup_dir), '--tmpdir', '/var/tmp')
-        suffix = 'zst' if backup_compression == 'zstd' else 'gz'
-        backups = list(backup_dir.glob(f'vzdump-lxc-*.tar.{suffix}'))
-        if len(backups) != 1:
-            raise ValueError(translate('The backup could not be identified; the image is not replaced'))
-        run('zstd' if backup_compression == 'zstd' else 'gzip', '-t', str(backups[0]))
-        state.update(backup=str(backups[0]), backup_sha256=filehash(backups[0]))
+        backup = verified_backup(vmid, backup_dir, backup_compression,
+                                 translate('The backup could not be identified; the image is not replaced'), show)
+        state.update(backup=str(backup), backup_sha256=filehash(backup))
     checkpoint(journal, state, 'backup-ready')
     if show:
         msg_ok(translate('Backup created'))
@@ -920,6 +984,7 @@ def apply(root, vmid, archive, operation, proposal=None, registry_digest=None, i
     if show:
         progress = translate('Installing the new image:') if update else translate('Recreating the container:')
     install_candidate(root, journal, state, progress)
+    restore_description(vmid, state)
     restore_firewall(vmid, state)
     if coordinated:
         for key, value in state['preserved_stack_config'].items():
@@ -1239,7 +1304,8 @@ def main():
     except (OSError, ValueError, KeyError, RuntimeError, subprocess.SubprocessError) as error:
         with contextlib.redirect_stdout(output):
             report_error(error, f'oci-{args.action}-{args.vmid}')
-            if pending_journal():
+            journal = pending_journal()
+            if journal and (args.action == 'recover' or not recover_untouched(args.root, journal)):
                 recovery_hint(after_recovery=args.action == 'recover')
         return 1
 

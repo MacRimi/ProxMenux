@@ -76,8 +76,7 @@ def refresh(root, vmid, apply=False):
         if not nv.enabled(record['deployment']):
             raise ValueError(translate('The instance does not use NVIDIA'))
         config = instances.command('pct', 'config', str(vmid))
-        if (instances.identity(config) != record['installation_id']
-                or instances.sha(config) != record['observed']['config_sha256']):
+        if not instances.same_config_except_notes(record, config):
             raise ValueError(translate('The container identity or configuration changed'))
         previous = record['observed']['gpu_devices'][nv.KEY]
         plan = nv.refresh_plan(config, previous)

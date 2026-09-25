@@ -5,6 +5,7 @@ import sys
 import tempfile
 import unittest
 from unittest.mock import patch
+from subprocess import CompletedProcess
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'remote'))
 
@@ -35,6 +36,63 @@ class MountTests(unittest.TestCase):
 
 
 class ProposalTests(unittest.TestCase):
+    def test_note_only_comparison_keeps_other_lxc_settings_strict(self):
+        marker = '11111111-1111-1111-1111-111111111111'
+        before = f'description: Old proxmenux-instance={marker}\ncores: 2\n'.encode()
+        record = {'installation_id': marker, 'observed': {'config': before.decode()}}
+        updated = f'description: New proxmenux-instance={marker}\ncores: 2\n'.encode()
+        self.assertTrue(reconcile.instances.same_config_except_notes(record, updated))
+        self.assertFalse(reconcile.instances.same_config_except_notes(record, updated.replace(b'cores: 2', b'cores: 4')))
+        self.assertFalse(reconcile.instances.same_config_except_notes(record, b'description: Other instance\ncores: 2\n'))
+
+    def test_replacement_restores_user_notes_verbatim(self):
+        marker = '11111111-1111-1111-1111-111111111111'
+        notes = f'<p>Nota personal: no borrar</p><!-- proxmenux-instance={marker} -->'
+        state = {'record': {'installation_id': marker}, 'original_description': notes}
+        with patch.object(reconcile.transaction, 'run') as run:
+            reconcile.transaction.restore_description(200, state)
+        run.assert_called_once_with('pct', 'set', '200', '--description', notes)
+        state.pop('original_description')
+        state['before_config'] = f'description: {notes.replace("%", "%25").replace("<", "%3C").replace(">", "%3E")}\n'
+        self.assertEqual(reconcile.transaction.original_description(state), notes)
+
+    def test_restoring_notes_does_not_log_their_contents(self):
+        notes = '<p>Nota privada del usuario</p>'
+        with (patch.object(reconcile.transaction, 'log') as log,
+              patch.object(reconcile.transaction.subprocess, 'run',
+                           return_value=CompletedProcess([], 0, b'', b'')) as command):
+            reconcile.transaction.run('pct', 'set', '200', '--description', notes)
+        command.assert_called_once()
+        self.assertNotIn(notes, str(log.call_args))
+
+    def test_notes_only_change_does_not_require_adoption_or_block_update(self):
+        marker = '11111111-1111-1111-1111-111111111111'
+        config = f'description: Old notes proxmenux-instance={marker}\n'.encode()
+        updated = f'description: New notes proxmenux-instance={marker}\n'.encode()
+        record = {
+            'vmid': 200, 'status': 'installed', 'installation_id': marker,
+            'deployment': {'mounts': [], 'devices': []},
+            'observed': {'config': config.decode(), 'config_sha256': sha(config)},
+        }
+        self.assertIsNone(reconcile.propose(record, updated))
+        self.assertEqual(reconcile.transaction.external_changes(record, updated), {})
+
+    def test_notes_cannot_hide_identity_or_network_changes(self):
+        marker = '11111111-1111-1111-1111-111111111111'
+        config = f'description: Old notes proxmenux-instance={marker}\n'.encode()
+        record = {
+            'vmid': 200, 'status': 'installed', 'installation_id': marker,
+            'deployment': {'mounts': [], 'devices': []},
+            'observed': {'config': config.decode(), 'config_sha256': sha(config)},
+        }
+        with self.assertRaises(ValueError):
+            reconcile.propose(record, b'description: Different instance\n')
+        changed = f'description: New notes proxmenux-instance={marker}\nnet0: name=eth0,bridge=vmbr1\n'.encode()
+        with self.assertRaises(ValueError):
+            reconcile.propose(record, changed)
+        with self.assertRaises(ValueError):
+            reconcile.transaction.external_changes(record, changed)
+
     def test_new_volume_requires_confirmation_before_contract_changes(self):
         config = b'description: proxmenux-instance=11111111-1111-1111-1111-111111111111\n'
         added = config + b'mp2: local-lvm:vm-200-disk-3,mp=/media,size=8G,backup=1\n'

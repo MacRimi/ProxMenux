@@ -223,6 +223,24 @@ def identity(config):
     return match.group(1) if match else None
 
 
+def same_config_except_notes(record, config):
+    """Accept a presentation-only note edit, never a changed OCI identity or LXC setting."""
+    previous = record['observed']['config'].encode()
+    expected = record['installation_id']
+    if identity(previous) != expected or identity(config) != expected:
+        return False
+
+    def without_notes(value):
+        lines = value.splitlines(keepends=True)
+        notes = [line for line in lines if line.startswith(b'description: ')]
+        if len(notes) != 1:
+            return None
+        return b''.join(line for line in lines if not line.startswith(b'description: '))
+
+    original = without_notes(previous)
+    return original is not None and original == without_notes(config)
+
+
 def save_assembly(root, primary_id, template, deployment, members):
     path = location(root, primary_id).parent / 'stack-assembly.json'
     if path.exists() or path.is_symlink():
