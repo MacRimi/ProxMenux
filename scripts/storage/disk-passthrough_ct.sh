@@ -457,7 +457,7 @@ for DISK in $SELECTED; do
     if lsblk "$DISK" | grep -q "raid" || grep -q "${DISK##*/}" /proc/mdstat; then
         dialog --backtitle "$BACKTITLE" \
                --title "$(translate "RAID Detected")" \
-               --msgbox "\n$(translate "The disk") $DISK_INFO $(translate "appears to be part of a") RAID. $(translate "For security reasons, the system cannot format it.")\\n\\n$(translate "If you are sure you want to use it, please remove the") RAID metadata $(translate "or format it manually using external tools.")\\n\\n$(translate "After that, run this script again to add it.")" $UI_RESULT_H $UI_RESULT_W
+               --msgbox "\n$(translate "The disk") $DISK_INFO $(translate "appears to be part of a") RAID. $(translate "For security reasons, the system cannot format it.")\\n\\n$(translate "If you are sure you want to use it, remove the RAID metadata or format it manually using external tools.")\\n\\n$(translate "After that, run this script again to add it.")" $UI_RESULT_H $UI_RESULT_W
         continue
     fi
 

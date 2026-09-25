@@ -646,7 +646,13 @@ mount_existing_disk() {
     mkdir -p "$mount_path"
     msg_ok "$(translate "Mount point created")"
 
-    msg_info "$(translate "Mounting existing") $existing_fs $(translate "filesystem...")"
+    local mount_message
+    mount_message="$(translate "Mounting existing filesystem ({filesystem})...")"
+    if [[ "$mount_message" != *'{filesystem}'* ]]; then
+        mount_message="Mounting existing filesystem ({filesystem})..."
+    fi
+    mount_message="${mount_message//\{filesystem\}/$existing_fs}"
+    msg_info "$mount_message"
     if ! mount "$disk" "$mount_path" 2>/dev/null; then
         msg_error "$(translate "Failed to mount disk")"
         return 1

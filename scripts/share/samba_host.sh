@@ -918,7 +918,7 @@ test_samba_connectivity() {
                     elif nc -z -w 2 "$server" 139 2>/dev/null; then
                         echo -e " | NetBIOS 139: ${GN}$(translate "Open")${CL}"
                     else
-                        echo -e " | SMB ports: ${RD}$(translate "Closed")${CL}"
+                        echo -e " | SMB ports: ${RD}$(translate "Probe failed")${CL}"
                     fi
 
                     echo -n "    $(translate "Guest access test:"): "
@@ -964,7 +964,7 @@ test_samba_connectivity() {
                 elif nc -z -w 2 "$server" 139 2>/dev/null; then
                     echo -e " | NetBIOS 139: ${GN}$(translate "Open")${CL}"
                 else
-                    echo -e " | SMB ports: ${RD}$(translate "Closed")${CL}"
+                    echo -e " | SMB ports: ${RD}$(translate "Probe failed")${CL}"
                 fi
             else
                 echo -e "${RD}$(translate "Unreachable")${CL}"

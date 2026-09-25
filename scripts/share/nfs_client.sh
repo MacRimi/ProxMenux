@@ -678,7 +678,7 @@ test_nfs_connectivity() {
                         if pct exec "$CTID" -- nc -z -w 2 "$server" 2049 2>/dev/null; then
                             echo -e "\033[1;92m$(translate "Open")\033[0m"
                         else
-                            echo -e "\033[1;91m$(translate "Closed")\033[0m"
+                            echo -e "\033[1;91m$(translate "Probe failed")\033[0m"
                         fi
                         
                         # Try to list exports

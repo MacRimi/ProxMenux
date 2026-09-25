@@ -1459,9 +1459,8 @@ check_switch_mode() {
             msg="\n$(translate 'The selected GPU is already assigned to another VM that is currently running:')\n\n"
             msg+="  VM ${vm_src_id} (${vm_src_name:-VM-${vm_src_id}})\n\n"
             msg+="$(translate 'The same GPU cannot be used by two VMs at the same time.')\n\n"
-            msg+="$(translate 'Next step: stop that VM first, then run')\n"
-            msg+="  Hardware Graphics → Add GPU to VM\n"
-            msg+="$(translate 'to move the GPU safely.')"
+            msg+="$(translate 'Stop that VM, then choose:')\n"
+            msg+="  $(translate 'Hardware: GPUs and Coral-TPU') → $(translate 'Add GPU to VM    (Intel | AMD | NVIDIA)')\n"
 
             _pmx_msgbox "$(translate 'GPU Busy in Running VM')" "$msg" 16 78
             exit 0
