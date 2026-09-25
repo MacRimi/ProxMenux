@@ -27,6 +27,7 @@ import { AppUpdaterEditor, type AppUpdateMethod } from "./app-updater-editor"
 import { formatStorage } from "../lib/utils"
 import { formatNetworkTraffic, getNetworkUnit } from "../lib/format-network"
 import { fetchApi } from "../lib/api-config"
+import { matchesVmSearch, normalizeVmSearchValue } from "../lib/vm-search"
 import DOMPurify from "dompurify"
 import { marked } from "marked"
 import { getCountFormKey, useI18n, useT } from "@/lib/i18n/provider"
@@ -234,6 +235,9 @@ interface VMData {
   diskread?: number
   diskwrite?: number
   ip?: string
+  // All LXC addresses reported by lxc-info. `ip` remains the primary
+  // address for backwards compatibility and compact card rendering.
+  ips?: string[]
   update_check?: LxcUpdateCheck
   // Proxmox tags as a raw string ("prod;web;monitoring" — PVE
   // separator is ';' but ',' is also accepted). Rendered as
@@ -249,36 +253,6 @@ interface VMData {
   // Incremented by the server after it has rebuilt this guest's complete
   // modal/app/Docker snapshot following a start, reboot or restore.
   modal_cache_revision?: number
-}
-
-function normalizeVmSearchValue(value: unknown): string {
-  return String(value ?? "")
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .toLocaleLowerCase()
-}
-
-// Type synonyms come from the active locale so a user can search by the
-// word they'd naturally use ("contenedor", "machine virtuelle", …) rather
-// than only the internal type token. "lxc" / "qemu" already match through
-// vm.type, so the catalog entries only carry the natural-language terms.
-function matchesVmSearch(
-  vm: VMData,
-  terms: string[],
-  typeSynonyms: { lxc: string; qemu: string },
-): boolean {
-  if (terms.length === 0) return true
-  const searchable = normalizeVmSearchValue([
-    vm.name,
-    vm.vmid,
-    vm.type,
-    vm.type === "lxc" ? typeSynonyms.lxc : typeSynonyms.qemu,
-    vm.tags,
-    vm.description,
-    vm.ip,
-    ...(vm.app_watches || []).map((app) => app.name || ""),
-  ].join(" "))
-  return terms.every((term) => searchable.includes(term))
 }
 
 function hasLxcPendingUpdates(vm: VMData): boolean {
@@ -3295,13 +3269,16 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                 //      immediately without waiting for the batch.
                 let lxcIP: string | null | undefined = null
                 if (vm.type === "lxc") {
-                  lxcIP = vmConfigs[vm.vmid]
+                  lxcIP = vm.ip || vmConfigs[vm.vmid]
                   if (!lxcIP) {
                     const cached = vmModalCacheRef.current.details.get(vm.vmid) as any
                     lxcIP = cached?.lxc_ip_info?.primary_ip
                       || (cached?.config ? extractIPFromConfig(cached.config, cached.lxc_ip_info) : null)
                   }
                 }
+                const additionalIpCount = lxcIP
+                  ? (vm.ips || []).filter((ip) => ip !== lxcIP).length
+                  : 0
 
                 return (
                   <div key={vm.vmid}>
@@ -3380,6 +3357,14 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                                 <span className="text-sm text-foreground flex items-center gap-1">
                                   <Network className="h-3 w-3 text-green-500" />
                                   {lxcIP}
+                                  {additionalIpCount > 0 && (
+                                    <span
+                                      className="text-xs text-muted-foreground"
+                                      title={(vm.ips || []).join(", ")}
+                                    >
+                                      +{additionalIpCount}
+                                    </span>
+                                  )}
                                 </span>
                               )}
                             </div>

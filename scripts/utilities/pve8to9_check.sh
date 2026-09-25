@@ -187,7 +187,11 @@ run_pve8to9_check2() {
               echo -e
             done
             echo -e
-            msg_info2 "$(translate "Once finished, re-run the script 'PVE 8 to 9 check' to verify that all issues.")"
+            local check_help
+            check_help="$(translate "Once finished, repeat the check ({check}) to review any remaining issues.")"
+            [[ "$check_help" == *'{check}'* ]] || check_help="Once finished, repeat the check ({check}) to review any remaining issues."
+            check_help="${check_help//\{check\}/$(translate "Run PVE 8 to 9 check")}"
+            msg_info2 "$check_help"
             echo -e
             msg_success "$(translate "Press Enter to exit the script after reading instructions...")"
             read -r

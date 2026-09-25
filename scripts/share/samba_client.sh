@@ -1044,7 +1044,7 @@ test_samba_connectivity() {
                         elif pct exec "$CTID" -- nc -z -w 2 "$server" 139 2>/dev/null; then
                             echo "  $(translate "NetBIOS port 139:"): ${GN}$(translate "Open")${CL}"
                         else
-                            echo "  $(translate "SMB ports:"): ${RD}$(translate "Closed")${CL}"
+                            echo "  $(translate "SMB ports:"): ${RD}$(translate "Probe failed")${CL}"
                         fi
                         
 
