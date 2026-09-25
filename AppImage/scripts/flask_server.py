@@ -611,13 +611,14 @@ def parse_lxc_hardware_config(vmid, node):
     return hardware_info
 
 
-def _get_lxc_primary_ip_cached(vmid):
-    """Return the LXC's primary non-Docker IP with an indefinite
-    cache. First read per CT spawns one `lxc-info` subprocess;
-    subsequent reads are free until the CT's lifecycle event drops
-    the entry via `_invalidate_lxc_ip`. A running CT's IP doesn't
-    change on its own — the invalidation on start/stop/reboot is the
-    only path that requires re-probing.
+def _get_lxc_ip_info_cached(vmid):
+    """Return an LXC's complete IP classification from the lifecycle cache.
+
+    First read per CT spawns one `lxc-info` subprocess; subsequent reads are
+    free until the CT's lifecycle event drops the entry via
+    `_invalidate_lxc_ip`. Keeping the complete result (rather than only the
+    primary address) lets `/api/vms` expose every address without changing
+    the cache's lifecycle semantics.
     """
     try:
         vmid_int = int(vmid)
@@ -626,11 +627,39 @@ def _get_lxc_primary_ip_cached(vmid):
     if vmid_int in _lxc_ip_cache:
         return _lxc_ip_cache[vmid_int]
     info = get_lxc_ip_from_lxc_info(vmid_int)
-    ip = None
-    if info:
-        ip = info.get('primary_ip') or (info.get('real_ips') or [None])[0]
-    _lxc_ip_cache[vmid_int] = ip
-    return ip
+    _lxc_ip_cache[vmid_int] = info
+    return info
+
+
+def _get_lxc_primary_ip_cached(vmid):
+    """Return the primary IP for legacy callers of the LXC IP cache."""
+    info = _get_lxc_ip_info_cached(vmid)
+    if not info:
+        return None
+    return info.get('primary_ip') or (info.get('real_ips') or [None])[0]
+
+
+def _normalise_lxc_ips(ip_info):
+    """Return a stable, JSON-safe ordered list of LXC addresses.
+
+    `lxc-info` already decides which addresses are real or Docker addresses;
+    this helper deliberately does not reclassify or filter them. It merely
+    protects the list endpoint from malformed cache data and removes exact
+    duplicates while retaining the original order.
+    """
+    if not isinstance(ip_info, dict):
+        return []
+    raw_ips = ip_info.get('all_ips')
+    if not isinstance(raw_ips, (list, tuple)):
+        return []
+    ips = []
+    seen = set()
+    for raw_ip in raw_ips:
+        ip = str(raw_ip).strip() if raw_ip is not None else ''
+        if ip and ip not in seen:
+            seen.add(ip)
+            ips.append(ip)
+    return ips
 
 
 def _invalidate_lxc_ip(vmid):
@@ -669,11 +698,7 @@ def _warmup_lxc_ip_cache() -> int:
             continue
         if parts[1].lower() != 'running':
             continue
-        info = get_lxc_ip_from_lxc_info(vmid_int)
-        ip = None
-        if info:
-            ip = info.get('primary_ip') or (info.get('real_ips') or [None])[0]
-        _lxc_ip_cache[vmid_int] = ip
+        _lxc_ip_cache[vmid_int] = get_lxc_ip_from_lxc_info(vmid_int)
         count += 1
     return count
 
@@ -1719,7 +1744,7 @@ _vm_mounts_cache: dict = {}       # vmid -> (ts, payload) — LXC only
 _VM_LIST_SEARCH_NOTES_TTL = 30
 _vm_list_search_notes_cache: dict = {"ts": 0.0, "signature": (), "notes": {}}
 _vm_list_search_notes_lock = threading.Lock()
-# LXC primary IP cache — populated on first read, held indefinitely.
+# LXC IP classification cache — populated on first read, held indefinitely.
 # A running CT's IP doesn't change; the cache is invalidated only when
 # the CT's lifecycle event fires (start/stop/reboot), so no periodic
 # polling is needed. See `_handle_guest_lifecycle`.
@@ -6716,6 +6741,20 @@ def get_proxmox_vms():
                         upd = lxc_updates_map.get(str(resource.get('vmid')))
                         if upd is not None:
                             vm_data['update_check'] = upd
+                        # IP addresses are core LXC inventory, not an App
+                        # Watch feature.  Keep `ip` for callers that expect
+                        # a primary address and add `ips` for search and
+                        # detail-aware clients.  The cache is still warmed
+                        # at startup and invalidated by LXC lifecycle events.
+                        vm_data['ips'] = []
+                        if resource.get('status') == 'running':
+                            lxc_ip_info = _get_lxc_ip_info_cached(resource.get('vmid'))
+                            lxc_ips = _normalise_lxc_ips(lxc_ip_info)
+                            vm_data['ips'] = lxc_ips
+                            if lxc_ip_info:
+                                primary_ip = lxc_ip_info.get('primary_ip')
+                                if isinstance(primary_ip, str) and primary_ip.strip():
+                                    vm_data['ip'] = primary_ip.strip()
                         # App Watch (Phase 2c) — list of registered
                         # apps per CT (0..N). Populates header badge,
                         # Updates modal connected row, and the App
@@ -6738,15 +6777,6 @@ def get_proxmox_vms():
                         app_list = lxc_app_map.get(str(resource.get('vmid'))) or []
                         if app_list:
                             vm_data['app_watches'] = app_list
-                            # Apps dashboard reads this to build
-                            # weblinks. Only paid on CTs that have
-                            # registered apps; the IP is cached
-                            # indefinitely and invalidated by the
-                            # guest lifecycle hook on start/stop/reboot.
-                            if vm_type == 'lxc' and resource.get('status') == 'running':
-                                _ip = _get_lxc_primary_ip_cached(resource.get('vmid'))
-                                if _ip:
-                                    vm_data['ip'] = _ip
                         docker_inventory = lxc_docker_map.get(str(resource.get('vmid')))
                         # Docker image drift is an Updates-tab feature,
                         # not an automatic app detection.  Do not attach
