@@ -29,9 +29,6 @@ def ask_extra_devices(ui, devices, unprivileged, allow_coral=False):
         if kind == 'nvidia':
             if any(item.get('kind') == 'nvidia-runtime' for item in result):
                 raise ValueError(translate('NVIDIA is already attached'))
-            if not ui.confirm(translate('Passing NVIDIA does not enable acceleration inside the application. '
-                                        'The host needs NVIDIA Container Toolkit and a compatible image. Continue?'), False):
-                continue
             result.append({'id': 'manual-nvidia', 'kind': 'nvidia-runtime',
                            'device_selection': 'all-requested-by-compose',
                            'runtime_mode': 'dynamic' if unprivileged else 'static'})
