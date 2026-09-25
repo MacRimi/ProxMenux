@@ -122,10 +122,15 @@ def build_deployment(
     ui = ui or TerminalUI()
     if template.get('proxmox', {}).get('installer_profile', {}).get('stack_driver') == 'arr-suite':
         from .arr_suite import build_suite
-        return build_suite(template, ui)
+        return build_suite(template, ui, mode)
     if template.get('proxmox', {}).get('installer_profile', {}).get('stack_driver') == 'generic-multi-lxc-stack':
         from .stack import build_stack
-        return build_stack(template, ui)
+        return build_stack(template, ui, mode)
+    if mode == DEFAULT_MODE and template.get('id') in {
+        'image-immich', 'image-nextcloud-stack', 'image-paperless-ngx', 'image-tandoor'
+    }:
+        from .stack import DefaultsUI
+        ui = DefaultsUI()
     if template.get("id") == "image-immich":
         return _build_immich_deployment(template, ui)
     if template.get("id") == "image-nextcloud-stack":
@@ -1159,7 +1164,7 @@ def _run_remote_install(
             shutil.copy2(project_root / 'remote' / 'haos_healthcheck.py', temporary / 'haos_healthcheck.py')
             shutil.copy2(project_root / 'remote' / 'oci_installation_state.py', temporary / 'oci_installation_state.py')
             shutil.copy2(project_root / 'remote' / 'oci_instances.py', temporary / 'oci_instances.py')
-            for helper in ('oci_ui.sh', 'oci_ui.py', 'oci_native_stack.py', 'oci_native_stack.sh', 'oci_instance_transaction.py', 'oci_host_mounts.py', 'oci_runtime_settings.py', 'oci_gpu_devices.py', 'oci_accelerators.py', 'oci_nvidia_runtime.py', 'oci_nvidia_refresh.py', 'oci_nvidia_dynamic.py', 'oci_update_current.py', 'oci_stack_replay.py', 'oci_stack_plan.py', 'oci_stack_transaction.py', 'oci_stack_native.py', 'oci_image_cache.py', 'nvidia_lxc_mount_lab.sh', 'oci_nvidia_setup.sh', 'oci_immich_ml.sh'):
+            for helper in ('oci_ui.sh', 'oci_ui.py', 'oci_description.py', 'oci_console.py', 'oci_native_stack.py', 'oci_native_stack.sh', 'oci_instance_transaction.py', 'oci_host_mounts.py', 'oci_runtime_settings.py', 'oci_gpu_devices.py', 'oci_accelerators.py', 'oci_nvidia_runtime.py', 'oci_nvidia_refresh.py', 'oci_nvidia_dynamic.py', 'oci_update_current.py', 'oci_stack_replay.py', 'oci_stack_plan.py', 'oci_stack_transaction.py', 'oci_stack_native.py', 'oci_image_cache.py', 'nvidia_lxc_mount_lab.sh', 'oci_nvidia_setup.sh', 'oci_immich_ml.sh'):
                 shutil.copy2(project_root / 'remote' / helper, temporary / helper)
             if deployment_kind == 'generic-multi-lxc-stack':
                 shutil.copy2(project_root / 'remote' / 'install_generic_stack.py', temporary / 'install_generic_stack.py')
@@ -1196,7 +1201,7 @@ def _run_remote_install(
             archive.add(project_root / 'remote' / 'haos_healthcheck.py', arcname='haos_healthcheck.py')
             archive.add(project_root / 'remote' / 'oci_installation_state.py', arcname='oci_installation_state.py')
             archive.add(project_root / 'remote' / 'oci_instances.py', arcname='oci_instances.py')
-            for helper in ('oci_ui.sh', 'oci_ui.py', 'oci_native_stack.py', 'oci_native_stack.sh', 'oci_instance_transaction.py', 'oci_host_mounts.py', 'oci_runtime_settings.py', 'oci_gpu_devices.py', 'oci_accelerators.py', 'oci_nvidia_runtime.py', 'oci_nvidia_refresh.py', 'oci_nvidia_dynamic.py', 'oci_update_current.py', 'oci_stack_replay.py', 'oci_stack_plan.py', 'oci_stack_transaction.py', 'oci_stack_native.py', 'oci_image_cache.py', 'nvidia_lxc_mount_lab.sh', 'oci_nvidia_setup.sh', 'oci_immich_ml.sh'):
+            for helper in ('oci_ui.sh', 'oci_ui.py', 'oci_description.py', 'oci_console.py', 'oci_native_stack.py', 'oci_native_stack.sh', 'oci_instance_transaction.py', 'oci_host_mounts.py', 'oci_runtime_settings.py', 'oci_gpu_devices.py', 'oci_accelerators.py', 'oci_nvidia_runtime.py', 'oci_nvidia_refresh.py', 'oci_nvidia_dynamic.py', 'oci_update_current.py', 'oci_stack_replay.py', 'oci_stack_plan.py', 'oci_stack_transaction.py', 'oci_stack_native.py', 'oci_image_cache.py', 'nvidia_lxc_mount_lab.sh', 'oci_nvidia_setup.sh', 'oci_immich_ml.sh'):
                 archive.add(project_root / 'remote' / helper, arcname=helper)
             if deployment_kind == 'generic-multi-lxc-stack':
                 archive.add(project_root / 'remote' / 'install_generic_stack.py', arcname='install_generic_stack.py')
@@ -1368,10 +1373,13 @@ def configure_acceleration(installer_profile, environment, unprivileged, ui, mod
     if hardware:
         profiles = hardware.get("profiles", [])
         options = [(item["id"], item["label"]) for item in profiles]
-        selected_hardware_profile = ui.choose(
-            translate(hardware.get("prompt", "Hardware acceleration")),
-            [(tag, translate(label)) for tag, label in options],
-            hardware.get("default", profiles[0]["id"] if profiles else None),
+        default_profile = hardware.get("default", profiles[0]["id"] if profiles else None)
+        selected_hardware_profile = (
+            ui.choose(
+                translate(hardware.get("prompt", "Hardware acceleration")),
+                [(tag, translate(label)) for tag, label in options],
+                default_profile,
+            ) if advanced or not installer_profile.get("selkies") else default_profile
         )
         if selected_hardware_profile is None:
             raise UserCancelled(translate("Acceleration configuration cancelled"))

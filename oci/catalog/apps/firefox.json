@@ -13,11 +13,11 @@
     "description": {
       "en_US": "Firefox Browser, also known as Mozilla Firefox or simply Firefox, is a free and open-source web browser developed by the Mozilla Foundation and its subsidiary, the Mozilla Corporation. Firefox uses the Gecko layout engine to render web pages, which implements current and anticipated web standards."
     },
-    "category": "misc",
-    "category_label": "Miscellaneous",
+    "category": "desktop",
+    "category_label": "Browsers & Web Desktops",
     "author": "LinuxServer.io",
     "developer": null,
-    "icon": "https://raw.githubusercontent.com/linuxserver/docker-templates/master/linuxserver.io/img/firefox-icon.png",
+    "icon": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/firefox.webp",
     "thumbnail": "https://raw.githubusercontent.com/linuxserver/docker-templates/master/linuxserver.io/img/firefox-banner.png",
     "screenshots": [],
     "architectures": [

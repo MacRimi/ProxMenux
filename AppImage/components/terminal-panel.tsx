@@ -639,7 +639,7 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
   }
 
   const handleKeyButton = (key: string, e?: React.MouseEvent | React.TouchEvent) => {
-    // Prevenir comportamientos por defecto del navegador
+    // Stop the browser default for this key
     if (e) {
       e.preventDefault()
       e.stopPropagation()

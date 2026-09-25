@@ -17,7 +17,7 @@
     "category_label": "Media",
     "author": "Immich",
     "developer": "Immich",
-    "icon": null,
+    "icon": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/immich.webp",
     "thumbnail": null,
     "screenshots": [],
     "architectures": [

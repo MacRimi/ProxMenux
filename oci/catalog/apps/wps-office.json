@@ -13,11 +13,11 @@
     "description": {
       "en_US": "WPS Office is a lightweight, feature-rich comprehensive office suite with high compatibility. As a handy and professional office software, WPS Office allows you to edit files in Writer, Presentation, Spreadsheet, and PDF to improve your work efficiency."
     },
-    "category": "misc",
-    "category_label": "Miscellaneous",
+    "category": "documents",
+    "category_label": "Documents & Notes",
     "author": "LinuxServer.io",
     "developer": null,
-    "icon": "https://raw.githubusercontent.com/linuxserver/docker-templates/master/linuxserver.io/img/wps-office-icon.png",
+    "icon": "https://cdn.jsdelivr.net/gh/linuxserver/docker-templates@master/linuxserver.io/img/wps-office-icon.png",
     "thumbnail": "https://raw.githubusercontent.com/linuxserver/docker-templates/master/linuxserver.io/img/wps-office-banner.png",
     "screenshots": [],
     "architectures": [

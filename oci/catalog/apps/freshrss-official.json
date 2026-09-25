@@ -8,7 +8,7 @@
       "en_US": "FreshRSS"
     },
     "tagline": {
-      "en_US": "A free, self-hostable news aggregator\u2026"
+      "en_US": "A free, self-hostable news aggregator…"
     },
     "description": {
       "en_US": "FreshRSS is a self-hosted RSS and Atom feed aggregator. It is lightweight, easy to work with, powerful, and customizable."
@@ -17,7 +17,7 @@
     "category_label": "Media & Streaming",
     "author": "FreshRSS",
     "developer": "FreshRSS",
-    "icon": null,
+    "icon": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/freshrss.webp",
     "thumbnail": null,
     "screenshots": [],
     "architectures": [

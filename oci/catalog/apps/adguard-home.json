@@ -17,7 +17,7 @@
     "category_label": "Network & Firewall",
     "author": "AdguardTeam",
     "developer": "AdguardTeam",
-    "icon": null,
+    "icon": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/adguard-home.webp",
     "thumbnail": null,
     "screenshots": [],
     "architectures": [

@@ -13,11 +13,11 @@
     "description": {
       "en_US": "Remmina is a remote desktop client written in GTK, aiming to be useful for system administrators and travellers, who need to work with lots of remote computers in front of either large or tiny screens. Remmina supports multiple network protocols, in an integrated and consistent user interface. Currently RDP, VNC, SPICE, SSH and EXEC are supported."
     },
-    "category": "misc",
-    "category_label": "Miscellaneous",
+    "category": "remote",
+    "category_label": "Remote Access & VPN",
     "author": "LinuxServer.io",
     "developer": null,
-    "icon": "https://raw.githubusercontent.com/linuxserver/docker-templates/master/linuxserver.io/img/remmina-icon.png",
+    "icon": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/remmina.webp",
     "thumbnail": "https://raw.githubusercontent.com/linuxserver/docker-templates/master/linuxserver.io/img/remmina-banner.png",
     "screenshots": [],
     "architectures": [

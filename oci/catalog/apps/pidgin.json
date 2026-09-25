@@ -13,11 +13,11 @@
     "description": {
       "en_US": "Pidgin is a chat program which lets you log into accounts on multiple chat networks simultaneously. This means that you can be chatting with friends on XMPP and sitting in an IRC channel at the same time."
     },
-    "category": "misc",
-    "category_label": "Miscellaneous",
+    "category": "communication",
+    "category_label": "Communication & Community",
     "author": "LinuxServer.io",
     "developer": null,
-    "icon": "https://raw.githubusercontent.com/linuxserver/docker-templates/master/linuxserver.io/img/pidgin-icon.png",
+    "icon": "https://cdn.jsdelivr.net/gh/linuxserver/docker-templates@master/linuxserver.io/img/pidgin-logo.png",
     "thumbnail": "https://raw.githubusercontent.com/linuxserver/docker-templates/master/linuxserver.io/img/pidgin-banner.png",
     "screenshots": [],
     "architectures": [

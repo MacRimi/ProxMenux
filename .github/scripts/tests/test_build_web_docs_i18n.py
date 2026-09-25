@@ -58,7 +58,7 @@ class WebDocsI18nTests(unittest.TestCase):
     def test_human_translation_is_not_pending(self):
         source = {"title": "Updates", "url": "https://example.com"}
         target = {"title": "Actualizaciones", "url": "https://example.com"}
-        self.assertEqual(MODULE.pending_leaves(source, target, refresh=False), [])
+        self.assertEqual(MODULE.pending_leaves(source, target), [])
 
     def test_changed_source_text_is_pending_even_with_existing_translation(self):
         source = {"title": "Updated installation guidance"}
@@ -67,7 +67,6 @@ class WebDocsI18nTests(unittest.TestCase):
         leaves = MODULE.pending_leaves(
             source,
             target,
-            refresh=False,
             forced_tokens={token},
         )
         self.assertEqual([leaf.path for leaf in leaves], [("title",)])

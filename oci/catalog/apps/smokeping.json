@@ -17,7 +17,7 @@
     "category_label": "Network & Firewall",
     "author": "LinuxServer.io",
     "developer": null,
-    "icon": "https://raw.githubusercontent.com/linuxserver/docker-templates/master/linuxserver.io/img/smokeping-icon.png",
+    "icon": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/smokeping.webp",
     "thumbnail": "https://raw.githubusercontent.com/linuxserver/docker-templates/master/linuxserver.io/img/smokeping-banner.png",
     "screenshots": [],
     "architectures": [

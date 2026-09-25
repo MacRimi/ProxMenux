@@ -13,11 +13,11 @@
     "description": {
       "en_US": "Dolphin Emulator lets you play GameCube and Wii games with various graphical enhancements and other features are available to improve your game experience."
     },
-    "category": "misc",
-    "category_label": "Miscellaneous",
+    "category": "gaming",
+    "category_label": "Gaming & Leisure",
     "author": "LinuxServer.io",
     "developer": null,
-    "icon": "https://raw.githubusercontent.com/linuxserver/docker-templates/master/linuxserver.io/img/dolphin-icon.png",
+    "icon": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons@main/webp/dolphin.webp",
     "thumbnail": "https://raw.githubusercontent.com/linuxserver/docker-templates/master/linuxserver.io/img/dolphin-banner.png",
     "screenshots": [],
     "architectures": [

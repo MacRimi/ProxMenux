@@ -13,7 +13,7 @@ import tempfile
 import oci_instances as instances
 import oci_instance_transaction as transaction
 from oci_installation_state import image_from_archive
-from oci_ui import translate, msg_info, msg_ok, msg_error, msg_info2
+from oci_ui import translate, msg_info, msg_ok, msg_warn, msg_error, msg_info2
 
 
 def repository(reference):
@@ -78,9 +78,28 @@ def resolve_archive(desired, config, current=None, check=None):
     if archive.is_symlink():
         raise ValueError(translate('Unsafe OCI archive path'))
     verifier = Path(__file__).with_name('verify_oci_archive.py')
-    cached = archive.exists()
-    if not cached:
+
+    def intact(path):
+        try:
+            run_quiet([sys.executable, str(verifier), str(path)],
+                      translate('The image did not pass the integrity check'))
+        except RuntimeError:
+            return False
+        return image_from_archive(str(path))['manifest_digest'] == digest
+
+    if archive.exists():
+        msg_info(translate('Verifying the image integrity...'))
+        if intact(archive):
+            msg_ok(translate('Using the verified image from the cache'))
+            return archive, digest
+        msg_warn(translate('The cached image is damaged; it will be downloaded again.'))
+        archive.unlink()
+    # A download can come back complete yet damaged when the connection drops
+    # and the transfer resumes; the integrity check catches it, and a second
+    # download is what repairs it.
+    for attempt in (1, 2):
         msg_info(transaction.fit(f"{translate('Downloading the image:')} {reference}"))
+        transaction.log(f'download attempt {attempt}/2')
         fd, name = tempfile.mkstemp(prefix='.proxmenux-update-', suffix='.tar', dir=archive.parent)
         os.close(fd)
         partial = Path(name)
@@ -90,22 +109,19 @@ def resolve_archive(desired, config, current=None, check=None):
                 'oci-archive:' + str(partial)], translate('Could not download the image'))
             msg_ok(translate('Image downloaded'))
             msg_info(translate('Verifying the image integrity...'))
-            run_quiet([sys.executable, str(verifier), str(partial)],
-                      translate('The image did not pass the integrity check'))
-            if image_from_archive(str(partial))['manifest_digest'] != digest:
-                raise ValueError(translate('The downloaded image does not match its manifest'))
-            partial.chmod(0o644)
-            os.replace(partial, archive)
+            if intact(partial):
+                partial.chmod(0o644)
+                os.replace(partial, archive)
+                msg_ok(translate('Image integrity verified'))
+                return archive, digest
+        except RuntimeError:
+            if attempt == 2:
+                raise
         finally:
             partial.unlink(missing_ok=True)
-    else:
-        msg_info(translate('Verifying the image integrity...'))
-    run_quiet([sys.executable, str(verifier), str(archive)],
-              translate('The image did not pass the integrity check'))
-    if image_from_archive(str(archive))['manifest_digest'] != digest:
-        raise ValueError(translate('The cached image does not match the current digest'))
-    msg_ok(translate('Using the verified image from the cache') if cached else translate('Image integrity verified'))
-    return archive, digest
+        if attempt == 2:
+            raise RuntimeError(translate('Could not obtain an intact image after two attempts'))
+        msg_warn(translate('The image download did not complete correctly; downloading it again...'))
 
 
 def kept_settings(changes, deployment):
@@ -121,7 +137,7 @@ def kept_settings(changes, deployment):
     return kept
 
 
-def update(vmid, acknowledge_external_data=False, proposal=None):
+def update(vmid, acknowledge_external_data=False, proposal=None, keep_backup=None):
     operation = 'recreate' if proposal is not None else 'update'
     msg_info(translate('Checking the container before the update...') if operation == 'update'
              else translate('Checking the container before recreating it...'))
@@ -140,11 +156,22 @@ def update(vmid, acknowledge_external_data=False, proposal=None):
         if archive is None:
             msg_ok(translate('The image is already up to date; nothing was changed.'))
             return
+        file_storage = None
+        if keep_backup:
+            import oci_keep_backup
+            oci_keep_backup.validate(keep_backup)
+            if oci_keep_backup.dump_dir(keep_backup) is None:
+                msg_info(f"{translate('Creating a backup in')} {keep_backup}...")
+                oci_keep_backup.before_update(vmid, keep_backup)
+                msg_ok(f"{translate('Backup created in')} {keep_backup}")
+            else:
+                file_storage = keep_backup
         kept = kept_settings(changes, desired['deployment'])
         if kept:
             msg_info2(f"{translate('Keeping the settings changed in Proxmox:')} {', '.join(kept)}")
         transaction.apply(instances.ROOT, vmid, archive, operation, proposal=proposal,
-                          registry_digest=digest, acknowledge_external_data=acknowledge_external_data)
+                          registry_digest=digest, acknowledge_external_data=acknowledge_external_data,
+                          keep_backup=file_storage)
 
 
 def main():
@@ -152,12 +179,13 @@ def main():
     parser.add_argument('vmid', type=int)
     parser.add_argument('--acknowledge-external-data', action='store_true')
     parser.add_argument('--proposal', type=Path)
+    parser.add_argument('--keep-backup', metavar='STORAGE')
     args = parser.parse_args()
     if os.geteuid() != 0:
         parser.error(translate('Root privileges are required'))
     try:
         proposal = json.loads(args.proposal.read_text()) if args.proposal else None
-        update(args.vmid, args.acknowledge_external_data, proposal)
+        update(args.vmid, args.acknowledge_external_data, proposal, args.keep_backup)
         return 0
     except BlockingIOError:
         msg_error(translate('Another OCI operation is using the registry. This operation was not started.'))

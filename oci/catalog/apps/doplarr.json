@@ -13,11 +13,11 @@
     "description": {
       "en_US": "Doplarr is an *arr request bot for Discord.\""
     },
-    "category": "misc",
-    "category_label": "Miscellaneous",
+    "category": "arr",
+    "category_label": "*Arr Suite",
     "author": "LinuxServer.io",
     "developer": null,
-    "icon": "https://raw.githubusercontent.com/linuxserver/docker-templates/master/linuxserver.io/img/doplarr-icon.png",
+    "icon": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons@main/webp/doplarr.webp",
     "thumbnail": "https://raw.githubusercontent.com/linuxserver/docker-templates/master/linuxserver.io/img/doplarr-banner.png",
     "screenshots": [],
     "architectures": [

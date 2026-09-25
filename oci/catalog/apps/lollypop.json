@@ -13,11 +13,11 @@
     "description": {
       "en_US": "Lollypop is a lightweight modern music player designed to work excellently on the GNOME desktop environment."
     },
-    "category": "misc",
-    "category_label": "Miscellaneous",
+    "category": "media",
+    "category_label": "Media & Streaming",
     "author": "LinuxServer.io",
     "developer": null,
-    "icon": "https://raw.githubusercontent.com/linuxserver/docker-templates/master/linuxserver.io/img/lollypop-icon.png",
+    "icon": "https://cdn.jsdelivr.net/gh/linuxserver/docker-templates@master/linuxserver.io/img/lollypop-icon.png",
     "thumbnail": "https://raw.githubusercontent.com/linuxserver/docker-templates/master/linuxserver.io/img/lollypop-banner.png",
     "screenshots": [],
     "architectures": [

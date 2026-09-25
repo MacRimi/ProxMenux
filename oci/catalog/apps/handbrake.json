@@ -13,11 +13,11 @@
     "description": {
       "en_US": "HandBrake is an open-source tool, built by volunteers, for converting video from nearly any format to a selection of modern, widely supported codecs."
     },
-    "category": "misc",
-    "category_label": "Miscellaneous",
+    "category": "media",
+    "category_label": "Media & Streaming",
     "author": "LinuxServer.io",
     "developer": null,
-    "icon": "https://raw.githubusercontent.com/linuxserver/docker-templates/master/linuxserver.io/img/handbrake-icon.png",
+    "icon": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/handbrake.webp",
     "thumbnail": "https://raw.githubusercontent.com/linuxserver/docker-templates/master/linuxserver.io/img/handbrake-banner.png",
     "screenshots": [],
     "architectures": [

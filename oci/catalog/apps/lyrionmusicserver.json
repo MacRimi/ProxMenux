@@ -17,7 +17,7 @@
     "category_label": "Media & Streaming",
     "author": "LMS-Community",
     "developer": "LMS-Community",
-    "icon": null,
+    "icon": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/lyrion-music-server.webp",
     "thumbnail": null,
     "screenshots": [],
     "architectures": [

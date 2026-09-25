@@ -13,11 +13,11 @@
     "description": {
       "en_US": "Microsoft Edge is a cross-platform web browser developed by Microsoft and based on Chromium."
     },
-    "category": "misc",
-    "category_label": "Miscellaneous",
+    "category": "desktop",
+    "category_label": "Browsers & Web Desktops",
     "author": "LinuxServer.io",
     "developer": null,
-    "icon": "https://raw.githubusercontent.com/linuxserver/docker-templates/master/linuxserver.io/img/msedge-icon.png",
+    "icon": "https://cdn.jsdelivr.net/gh/linuxserver/docker-templates@master/linuxserver.io/img/edge-logo.png",
     "thumbnail": "https://raw.githubusercontent.com/linuxserver/docker-templates/master/linuxserver.io/img/msedge-banner.png",
     "screenshots": [],
     "architectures": [

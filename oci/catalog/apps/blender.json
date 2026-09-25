@@ -13,11 +13,11 @@
     "description": {
       "en_US": "Blender is a free and open-source 3D computer graphics software toolset used for creating animated films, visual effects, art, 3D printed models, motion graphics, interactive 3D applications, virtual reality, and computer games. **This image does not support GPU rendering out of the box only accelerated workspace experience**"
     },
-    "category": "misc",
-    "category_label": "Miscellaneous",
+    "category": "creative",
+    "category_label": "Creative & Design",
     "author": "LinuxServer.io",
     "developer": null,
-    "icon": "https://raw.githubusercontent.com/linuxserver/docker-templates/master/linuxserver.io/img/blender-icon.png",
+    "icon": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/blender.webp",
     "thumbnail": "https://raw.githubusercontent.com/linuxserver/docker-templates/master/linuxserver.io/img/blender-banner.png",
     "screenshots": [],
     "architectures": [

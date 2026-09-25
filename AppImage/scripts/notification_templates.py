@@ -1353,8 +1353,7 @@ TEMPLATES = {
         # `system-mail` event, and the Monitor forwards it to every enabled
         # channel. Most operators want smartd alerts but NOT noisy cron
         # output — without a visible toggle the only fix is editing
-        # /etc/aliases or removing MAILTO from the cron job. Audit Tier 6
-        # — `system_mail` toggle no visible en UI / reportado por usuario.
+        # /etc/aliases or removing MAILTO from the cron job.
     },
     'apt_listchanges': {
         'title': '{hostname}: {pve_title}',

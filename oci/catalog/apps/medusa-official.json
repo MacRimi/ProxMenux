@@ -17,7 +17,7 @@
     "category_label": "Media & Streaming",
     "author": "pyMedusa (https://github.com/pymedusa)",
     "developer": "pyMedusa (https://github.com/pymedusa)",
-    "icon": null,
+    "icon": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/medusa.webp",
     "thumbnail": null,
     "screenshots": [],
     "architectures": [

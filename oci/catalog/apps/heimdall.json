@@ -13,11 +13,11 @@
     "description": {
       "en_US": "Heimdall is a way to organise all those links to your most used web sites and web applications in a simple way."
     },
-    "category": "misc",
-    "category_label": "Miscellaneous",
+    "category": "productivity",
+    "category_label": "Productivity & Workflows",
     "author": "LinuxServer.io",
     "developer": null,
-    "icon": "https://raw.githubusercontent.com/linuxserver/docker-templates/master/linuxserver.io/img/heimdall-icon.png",
+    "icon": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/heimdall.webp",
     "thumbnail": "https://raw.githubusercontent.com/linuxserver/docker-templates/master/linuxserver.io/img/heimdall-banner.png",
     "screenshots": [],
     "architectures": [

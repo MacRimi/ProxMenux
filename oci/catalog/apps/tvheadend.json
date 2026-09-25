@@ -13,11 +13,11 @@
     "description": {
       "en_US": "Tvheadend works as a proxy server: is a TV streaming server and recorder for Linux, FreeBSD and Android supporting DVB-S, DVB-S2, DVB-C, DVB-T, ATSC, ISDB-T, IPTV, SAT>IP and HDHomeRun as input sources."
     },
-    "category": "misc",
-    "category_label": "Miscellaneous",
+    "category": "media",
+    "category_label": "Media & Streaming",
     "author": "LinuxServer.io",
     "developer": null,
-    "icon": "https://raw.githubusercontent.com/linuxserver/docker-templates/master/linuxserver.io/img/tvheadend-icon.png",
+    "icon": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/tvheadend.webp",
     "thumbnail": "https://raw.githubusercontent.com/linuxserver/docker-templates/master/linuxserver.io/img/tvheadend-banner.png",
     "screenshots": [],
     "architectures": [

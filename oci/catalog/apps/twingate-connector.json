@@ -17,7 +17,7 @@
     "category_label": "Remote Access & VPN",
     "author": "Twingate",
     "developer": "Twingate",
-    "icon": null,
+    "icon": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/twingate.webp",
     "thumbnail": null,
     "screenshots": [],
     "architectures": [

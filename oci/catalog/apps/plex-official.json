@@ -17,7 +17,7 @@
     "category_label": "Media & Streaming",
     "author": "Plex, Inc.",
     "developer": "Plex, Inc.",
-    "icon": "https://raw.githubusercontent.com/linuxserver/docker-templates/master/linuxserver.io/img/plex-icon.png",
+    "icon": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/plex.webp",
     "thumbnail": "https://raw.githubusercontent.com/linuxserver/docker-templates/master/linuxserver.io/img/plex-banner.png",
     "screenshots": [],
     "architectures": [

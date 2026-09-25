@@ -561,8 +561,11 @@ def normalize(record):
     preserved = {key: single(key) for key in ('arch', 'ostype', 'cmode', 'console', 'tty', 'cpuunits',
                  'net0', 'net1', 'startup', 'hookscript', 'features', 'tags') if key in values}
     devices = [{'key': key, 'value': single(key)} for key in values if re.fullmatch(r'dev[0-9]+', key)]
+    # The console log line is not replayed: the installer that rebuilds the
+    # member sets it itself, and replaying it too would leave two of them.
     raw_runtime = [line for line in config.splitlines() if line.startswith('lxc.')
-                   and line.partition(': ')[0] not in ('lxc.environment.runtime', 'lxc.init.cwd', 'lxc.signal.halt')]
+                   and line.partition(': ')[0] not in ('lxc.environment.runtime', 'lxc.init.cwd',
+                                                       'lxc.signal.halt', 'lxc.console.logfile')]
     return {'schema_version': 1, 'deployment': plan, 'runtime': runtime,
             'preserved_native': preserved, 'generated_files': copy.deepcopy(files),
             'native_devices': devices, 'preserved_raw_runtime': raw_runtime,

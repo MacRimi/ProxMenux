@@ -13,11 +13,11 @@
     "description": {
       "en_US": "Flexget is a multipurpose automation tool for all of your media."
     },
-    "category": "misc",
-    "category_label": "Miscellaneous",
+    "category": "arr",
+    "category_label": "*Arr Suite",
     "author": "LinuxServer.io",
     "developer": null,
-    "icon": "https://raw.githubusercontent.com/linuxserver/docker-templates/master/linuxserver.io/img/flexget-icon.png",
+    "icon": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons@main/webp/flexget.webp",
     "thumbnail": "https://raw.githubusercontent.com/linuxserver/docker-templates/master/linuxserver.io/img/flexget-banner.png",
     "screenshots": [],
     "architectures": [

@@ -17,7 +17,7 @@
     "category_label": "Network & Firewall",
     "author": "Patrick Lorio",
     "developer": "Patrick Lorio",
-    "icon": null,
+    "icon": "https://cdn.jsdelivr.net/gh/IceWhaleTech/CasaOS-AppStore@main/Apps/playit-agent/icon.png",
     "thumbnail": null,
     "screenshots": [],
     "architectures": [

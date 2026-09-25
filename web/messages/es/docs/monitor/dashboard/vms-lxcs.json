@@ -52,8 +52,8 @@
   },
   "drillIn": {
     "heading": "Modal de vista en detalle por guest",
-    "intro": "El modal se abre con el nombre, VMID, tipo, estado y tiempo de actividad del sistema. La navegación se adapta al elemento: <strong>Estado</strong>, <strong>App</strong> y <strong>Actualizaciones</strong> para gestionar aplicaciones LXC, <strong>Montajes</strong> cuando existen puntos de montaje, además de <strong>Copias</strong> y <strong>Cortafuegos</strong>. La barra inferior mantiene los controles de ciclo de vida y el terminal LXC disponibles desde cualquier pestaña.",
-    "statusTitle": "Pestaña 1 — Status",
+    "intro": "El modal se abre con el nombre, VMID, tipo, estado y tiempo de actividad del sistema. La navegación se adapta al elemento: <strong>Estado</strong>, <strong>App</strong> y <strong>Actualizaciones</strong> para gestionar aplicaciones LXC, <strong>Montajes</strong> cuando existen puntos de montaje, <strong>Logs</strong> en los contenedores instalados por OCI manager Apps, además de <strong>Backups</strong> y <strong>Cortafuegos</strong>. La barra inferior mantiene los controles de ciclo de vida y el terminal LXC disponibles desde cualquier pestaña.",
+    "statusTitle": "Pestaña 1 — Estado",
     "statusImageAlt": "Modal de vista en detalle por guest — pestaña Status con tarjetas en vivo de CPU / Memoria / Disco, totales de E/S de disco y red, el logo de distro del SO y el bloque Resources / IP Addresses",
     "statusImageCaption": "Pestaña Status — CPU / Memoria / Disco en vivo con barras de progreso arriba, totales de E/S acumulados (lectura/escritura de disco, descarga/subida de red) abajo, después el bloque estático Resources con expansiones de Notes y + Info y la lista de pastillas IP Addresses.",
     "statusIntro": "La pestaña por defecto — la vista \"¿este guest se está portando?\". Tres bloques:",
@@ -106,7 +106,9 @@
     ],
     "mountsCalloutTitle": "Lo que esto te da sobre la UI nativa",
     "mountsCalloutBody": "Una vista veraz y consciente de la capacidad de cada sitio donde el contenedor lee o escribe. Shares NFS o CIFS montados desde dentro del CT — invisibles para la UI web de Proxmox — aparecen aquí con el mismo aspecto y la misma sonda de salud que cualquier mount point configurado. Mounts remotos stale y zombie binds salen marcados antes de que muerdan durante un backup.",
-    "backupsTitle": "Pestaña 5 — Copias",
+    "logsTitle": "Pestaña 5 — Logs (solo contenedores OCI)",
+    "logsBody": "Solo aparece en los contenedores instalados por OCI manager Apps. Muestra la salida de consola del proceso principal de la imagen, guardada en el host en <code>/var/log/proxmenux/oci/VMID.console.log</code>: las últimas 100, 500 o 1000 líneas, seguidas en directo con el contenedor en marcha, con un filtro y una descarga. Lee el archivo cada vez que se abre, así que también funciona con el contenedor detenido. Los detalles están en <ociLink>Contenedores OCI en ProxMenux Monitor</ociLink>.",
+    "backupsTitle": "Pestaña 6 — Backups",
     "backupsImageAlt": "Modal de vista en detalle por guest — pestaña Backups con la lista de backups disponibles, etiqueta de destino, tamaños y el botón Create Backup",
     "backupsImageCaption": "Pestaña Backups — cada backup almacenado en los almacenamientos Proxmox configurados para este guest, ordenados de más nuevo a más viejo. La cabecera de la pestaña lleva la insignia de recuento.",
     "backupsIntro": "Lista cada backup almacenado en los almacenamientos Proxmox configurados para este guest, ordenados de más nuevo a más viejo. El título de la pestaña lleva una insignia de recuento para que veas de un vistazo si el guest está backupeado. Por fila:",
@@ -116,7 +118,7 @@
       "<strong>Size</strong> — tamaño final en disco del backup."
     ],
     "backupsOutro": "El botón <strong>+ Create Backup</strong> arriba a la derecha arranca una nueva ejecución en el almacenamiento marcado como \"Backup target\" en la config de almacenamiento de Proxmox. El restore vive en la UI web de Proxmox — el Monitor expone la vista \"¿este guest tiene backup reciente?\", no el flujo de recuperación.",
-    "firewallTitle": "Pestaña 6 — Cortafuegos",
+    "firewallTitle": "Pestaña 7 — Cortafuegos",
     "firewallIntro": "Lee el log de firewall de Proxmox por guest directamente del host (sin servicio extra, sin polling). La pestaña siempre está presente en la barra de navegación; el panel decide qué renderizar dependiendo de si el firewall está activo para ese guest y si alguna regla está logueando realmente:",
     "firewallItems": [
       "<strong>Firewall disabled</strong> — un aviso ámbar explica exactamente dónde activarlo en la UI de Proxmox (<em>&lt;Container|VM&gt; → Firewall → Options</em>) y te recuerda que al menos una regla necesita <code>log: info</code> (o superior) antes de que aparezcan paquetes.",

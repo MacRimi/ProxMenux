@@ -13,11 +13,11 @@
     "description": {
       "en_US": ""
     },
-    "category": "misc",
-    "category_label": "Miscellaneous",
+    "category": "network",
+    "category_label": "Network & Firewall",
     "author": "LinuxServer.io",
     "developer": null,
-    "icon": "https://raw.githubusercontent.com/linuxserver/docker-templates/master/linuxserver.io/img/unifi-network-application-icon.png",
+    "icon": "https://cdn.jsdelivr.net/gh/IceWhaleTech/CasaOS-AppStore@main/Apps/Unifi-Network-Application/icon.png",
     "thumbnail": "https://raw.githubusercontent.com/linuxserver/docker-templates/master/linuxserver.io/img/unifi-network-application-banner.png",
     "screenshots": [],
     "architectures": [

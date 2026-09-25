@@ -13,11 +13,11 @@
     "description": {
       "en_US": "RustDesk is a full-featured open source remote control alternative for self-hosting and security with minimal configuration."
     },
-    "category": "misc",
-    "category_label": "Miscellaneous",
+    "category": "remote",
+    "category_label": "Remote Access & VPN",
     "author": "LinuxServer.io",
     "developer": null,
-    "icon": "https://raw.githubusercontent.com/linuxserver/docker-templates/master/linuxserver.io/img/rustdesk-icon.png",
+    "icon": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/rustdesk.webp",
     "thumbnail": "https://raw.githubusercontent.com/linuxserver/docker-templates/master/linuxserver.io/img/rustdesk-banner.png",
     "screenshots": [],
     "architectures": [

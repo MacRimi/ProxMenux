@@ -21,7 +21,8 @@ import useSWR from "swr"
 import { MetricsView } from "./metrics-dialog"
 import { LxcTerminalModal } from "./lxc-terminal-modal"
 import { ScriptTerminalModal } from "./script-terminal-modal"
-import { LxcAppPanel, ThemeAwareLogo } from "./lxc-app-panel"
+import { LxcAppPanel, ThemeAwareLogo, ociImageLabel } from "./lxc-app-panel"
+import { OciConsoleLogPanel } from "./oci-console-log-panel"
 import { AppUpdaterEditor, type AppUpdateMethod } from "./app-updater-editor"
 import { formatStorage } from "../lib/utils"
 import { formatNetworkTraffic, getNetworkUnit } from "../lib/format-network"
@@ -41,6 +42,17 @@ interface LxcPackageUpdate {
   latest: string
   security: boolean
 }
+// A container installed by OCI manager Apps, read from its record.
+interface OciInstanceInfo {
+  oci_instance: boolean
+  console_log: boolean
+  stack: boolean
+  primary_vmid: number
+  members: number[]
+  host_directories: boolean
+  pending: boolean
+}
+
 interface LxcUpdateCheck {
   available: boolean
   count: number
@@ -115,6 +127,12 @@ interface LxcAppWatch {
   error: string | null
   checked_at: string | null
   has_repo?: boolean
+  // OCI image of an application installed by OCI manager Apps.
+  image_reference?: string | null
+  image_created?: string | null
+  installed_digest?: string | null
+  latest_image_created?: string | null
+  latest_digest?: string | null
   // Set for the synthetic entry that represents a ProxMenux-managed
   // OCI app (Secure Gateway). The frontend renders it read-only +
   // wires the Update action to /api/oci/installed/<id>/update.
@@ -925,7 +943,15 @@ export function VirtualMachines() {
   const [backupPbsChangeMode, setBackupPbsChangeMode] = useState<string>("default")
   
   // Tab state for modal
-  const [activeModalTab, setActiveModalTab] = useState<"status" | "mounts" | "backups" | "app" | "updates" | "firewall">("status")
+  const [activeModalTab, setActiveModalTab] = useState<"status" | "mounts" | "backups" | "app" | "updates" | "firewall" | "logs">("status")
+  // OCI containers keep their console output on the host; the Logs tab is
+  // offered only when the backend finds that log for the open container.
+  const [consoleLogAvailable, setConsoleLogAvailable] = useState(false)
+  // Set when the open container was installed by OCI manager Apps: its
+  // Updates tab replaces the image instead of updating packages.
+  const [ociInstance, setOciInstance] = useState<OciInstanceInfo | null>(null)
+  const [ociAction, setOciAction] = useState<{ vmid: number; action: "update" | "recreate" } | null>(null)
+  const [scheduleAckExternal, setScheduleAckExternal] = useState(false)
 
   // Firewall log state — fetched only when the operator opens that tab
   // so a CT/VM without firewall use doesn't pay the pvesh cost on every
@@ -1068,9 +1094,10 @@ export function VirtualMachines() {
       if (!vm) return
       handleVMClick(vm)
       // handleVMClick resets the inner tab to "status"; override to
-      // "app" in the same render tick — React batches these and the
+      // the requested tab ("app" by default, "updates" from the update
+      // icon) in the same render tick — React batches these and the
       // last setActiveModalTab wins.
-      setActiveModalTab("app")
+      setActiveModalTab(detail.tab === "updates" ? "updates" : "app")
     }
     window.addEventListener("openLxcAppModal", handler as EventListener)
     return () => window.removeEventListener("openLxcAppModal", handler as EventListener)
@@ -1126,6 +1153,7 @@ export function VirtualMachines() {
       cache.details.delete(vm.vmid)
       cache.backups.delete(vm.vmid)
       cache.mountPoints.delete(vm.vmid)
+      if (vm.type === "lxc") reseedMountPoints(vm.vmid)
       cache.schedule.delete(vm.vmid)
       cache.firewall.delete(vm.vmid)
       dockerInventoryRequestedRef.current.delete(vm.vmid)
@@ -1223,6 +1251,8 @@ export function VirtualMachines() {
     setFirewallLogs([])
     setFirewallLogError(null)
     setFirewallEnabled(true)
+    setConsoleLogAvailable(false)
+    setOciInstance(null)
 
     // Prime UI from last-known payloads so a reopened guest never
     // flashes "Loading…" — the backend and this cache both revalidate
@@ -1264,6 +1294,7 @@ export function VirtualMachines() {
     // extends the same idea to the two tabs still on lazy-fetch.
     if (vm.type === "lxc") {
       fetchMountPoints(vm.vmid)
+      fetchOciInstance(vm.vmid)
       // Shared cache dedup: if a hover already fired this, we share
       // the same promise (no duplicate backend work). The App panel
       // reads from the same cache, so switching to that tab either
@@ -1325,7 +1356,8 @@ export function VirtualMachines() {
   useEffect(() => {
     if (!vmData || vmData.length === 0) return
     let cancelled = false
-    fetchApi<{
+    let retryTimer: ReturnType<typeof setTimeout> | undefined
+    const hydrate = (attempt: number) => fetchApi<{
       guests: Array<{
         vmid: number
         type: "qemu" | "lxc"
@@ -1340,6 +1372,10 @@ export function VirtualMachines() {
       .then((payload) => {
         if (cancelled || !payload?.guests) return
         const cache = vmModalCacheRef.current
+        // Guests the server has not warmed yet come back null; ask again
+        // shortly so their mount tab is seeded before the modal opens.
+        const pending = payload.guests.some((g) => g.type === "lxc" && !g.mount_points)
+        if (pending && attempt < 3) retryTimer = setTimeout(() => hydrate(attempt + 1), 20000)
         for (const g of payload.guests) {
           if (g.details) cache.details.set(g.vmid, g.details)
           if (g.backups?.backups) {
@@ -1373,9 +1409,24 @@ export function VirtualMachines() {
         // Silent — modal open handlers fall back to individual
         // fetches if the ref cache is empty.
       })
-    return () => { cancelled = true }
+    hydrate(0)
+    return () => {
+      cancelled = true
+      if (retryTimer) clearTimeout(retryTimer)
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [vmidsKey])
+
+  const fetchOciInstance = (vmid: number) =>
+    fetchApi<OciInstanceInfo>(`/api/lxc/${vmid}/oci-instance`)
+      .then((r) => {
+        setConsoleLogAvailable(!!r?.console_log)
+        setOciInstance(r?.oci_instance ? r : null)
+      })
+      .catch(() => {
+        setConsoleLogAvailable(false)
+        setOciInstance(null)
+      })
 
   const fetchMountPoints = async (vmid: number) => {
     // Two fetches in parallel:
@@ -1390,49 +1441,66 @@ export function VirtualMachines() {
     //      user perceives no lag.
     const hasSeed = mountPoints.length > 0
     if (!hasSeed) setLoadingMounts(true)
-    try {
-      const [staticResp, runtimeResp] = await Promise.all([
-        fetchApi<{
-          ok: boolean
-          mount_points: LxcMountPoint[]
-          ad_hoc_hint_count?: number
-        }>(`/api/lxc/${vmid}/mount-points`).catch((e) => {
-          console.error("Error fetching static mount points:", e)
-          return null
-        }),
-        fetchApi<{
-          ok: boolean
-          running: boolean
-          runtime: Record<string, Partial<LxcMountPoint>>
-          ad_hoc: LxcMountPoint[]
-        }>(`/api/lxc/${vmid}/mount-points/runtime`).catch((e) => {
-          console.error("Error fetching runtime mount points:", e)
-          return null
-        }),
-      ])
-      if (staticResp?.ok) {
-        const mp = staticResp.mount_points || []
-        const hint = staticResp.ad_hoc_hint_count ?? 0
-        setMountPoints(mp)
-        setMountsAdHocHint(hint)
-        vmModalCacheRef.current.mountPoints.set(vmid, { mount_points: mp, ad_hoc_hint_count: hint })
-      } else if (!hasSeed) {
-        setMountPoints([])
-      }
-      if (runtimeResp?.ok) {
-        setMountPointsRuntime(runtimeResp.runtime || {})
-        setAdHocMounts(runtimeResp.ad_hoc || [])
-      } else {
+    // Each half is applied as soon as it lands: the static list decides
+    // whether the tab exists and must not wait for df/stat.
+    const staticReq = fetchApi<{
+      ok: boolean
+      mount_points: LxcMountPoint[]
+      ad_hoc_hint_count?: number
+    }>(`/api/lxc/${vmid}/mount-points`)
+      .then((staticResp) => {
+        if (staticResp?.ok) {
+          const mp = staticResp.mount_points || []
+          const hint = staticResp.ad_hoc_hint_count ?? 0
+          setMountPoints(mp)
+          setMountsAdHocHint(hint)
+          vmModalCacheRef.current.mountPoints.set(vmid, { mount_points: mp, ad_hoc_hint_count: hint })
+        } else if (!hasSeed) {
+          setMountPoints([])
+        }
+      })
+      .catch((e) => {
+        console.error("Error fetching static mount points:", e)
+        if (!hasSeed) setMountPoints([])
+      })
+      .finally(() => setLoadingMounts(false))
+    const runtimeReq = fetchApi<{
+      ok: boolean
+      running: boolean
+      runtime: Record<string, Partial<LxcMountPoint>>
+      ad_hoc: LxcMountPoint[]
+    }>(`/api/lxc/${vmid}/mount-points/runtime`)
+      .then((runtimeResp) => {
+        if (runtimeResp?.ok) {
+          setMountPointsRuntime(runtimeResp.runtime || {})
+          setAdHocMounts(runtimeResp.ad_hoc || [])
+        } else {
+          setMountPointsRuntime({})
+          setAdHocMounts([])
+        }
+      })
+      .catch((e) => {
+        console.error("Error fetching runtime mount points:", e)
         setMountPointsRuntime({})
         setAdHocMounts([])
-      }
-    } catch (error) {
-      console.error("Error fetching LXC mount points:", error)
-      if (!hasSeed) setMountPoints([])
-      setAdHocMounts([])
-    } finally {
-      setLoadingMounts(false)
-    }
+      })
+    await Promise.all([staticReq, runtimeReq])
+  }
+
+  // Background refill of the static mount list after a lifecycle event,
+  // so the next open of that guest renders its tab bar complete.
+  const reseedMountPoints = (vmid: number) => {
+    fetchApi<{ ok: boolean; mount_points: LxcMountPoint[]; ad_hoc_hint_count?: number }>(
+      `/api/lxc/${vmid}/mount-points`,
+    )
+      .then((r) => {
+        if (!r?.ok) return
+        vmModalCacheRef.current.mountPoints.set(vmid, {
+          mount_points: r.mount_points || [],
+          ad_hoc_hint_count: r.ad_hoc_hint_count ?? 0,
+        })
+      })
+      .catch(() => {})
   }
 
   const handleMetricsClick = () => {
@@ -1967,6 +2035,7 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
       ? s.targets.map((value: any) => String(value))
       : ([...(legacyTarget !== "app" ? ["os"] : []), ...(legacyTarget !== "os" ? ["apps"] : [])]))
     setScheduleReleaseDelayDays(Number.isInteger(Number(s.release_delay_days)) ? Number(s.release_delay_days) : 0)
+    setScheduleAckExternal(s.acknowledge_external_data === true)
     if (s.backup !== undefined) setApplyBackup(!!s.backup)
     if (s.backup_storage) setApplyBackupStorage(s.backup_storage)
     if (s.restart !== undefined) setApplyRestart(!!s.restart)
@@ -2118,8 +2187,11 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
     // leave scheduleConfigured=false and Save PUTs cron="" so the
     // backend doesn't resurrect the schedule.
     const cronToSave = scheduleEnabled || scheduleConfigured ? scheduleCron : ""
-    const hasOsTarget = scheduleTargets.includes("os")
-    const hasAppTarget = scheduleTargets.some((value) => value !== "os")
+    // A container installed by OCI manager Apps has one thing to update on
+    // a schedule: its image.
+    const targetsToSave = ociInstance ? ["oci_image"] : scheduleTargets
+    const hasOsTarget = targetsToSave.includes("os")
+    const hasAppTarget = targetsToSave.some((value) => value !== "os")
     const derivedTarget: "os" | "app" | "both" = hasOsTarget && hasAppTarget ? "both" : hasOsTarget ? "os" : "app"
     try {
       await fetchApi(`/api/vms/${vmid}/schedule`, {
@@ -2129,11 +2201,12 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
           enabled: scheduleEnabled,
           cron: cronToSave,
           target: derivedTarget,
-          targets: scheduleTargets,
+          targets: targetsToSave,
           release_delay_days: scheduleReleaseDelayDays,
           backup: applyBackup,
           backup_storage: applyBackupStorage || selectedBackupStorage || "",
-          restart: applyRestart,
+          restart: ociInstance ? false : applyRestart,
+          acknowledge_external_data: ociInstance ? scheduleAckExternal : false,
         }),
       })
       if (cronToSave.trim()) setScheduleConfigured(true)
@@ -2155,6 +2228,7 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
       scheduleTarget: scheduleTarget,
       scheduleTargets: [...scheduleTargets],
       scheduleReleaseDelayDays: scheduleReleaseDelayDays,
+      scheduleAckExternal: scheduleAckExternal,
     })
     setOptionsEditMode(true)
   }
@@ -2169,6 +2243,7 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
       setScheduleTarget(optionsSnapshot.scheduleTarget)
       setScheduleTargets(optionsSnapshot.scheduleTargets || ["os", "apps"])
       setScheduleReleaseDelayDays(optionsSnapshot.scheduleReleaseDelayDays)
+      setScheduleAckExternal(!!optionsSnapshot.scheduleAckExternal)
     }
     setOptionsSnapshot(null)
     setOptionsEditMode(false)
@@ -3746,6 +3821,24 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                     </Badge>
                   </button>
                 )}
+                {/* Logs tab — native OCI containers only: the console
+                    output of the image's main process, read live from
+                    the host on every open. */}
+                {selectedVM?.type === "lxc" && (consoleLogAvailable || selectedVM?.update_check?.is_oci_lxc) && (
+                  <button
+                    onClick={() => setActiveModalTab("logs")}
+                    className={`flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-4 py-2.5 text-sm font-medium transition-colors border-b-2 -mb-px whitespace-nowrap shrink-0 ${
+                      activeModalTab === "logs"
+                        ? "border-sky-500 text-sky-500"
+                        : "border-transparent text-muted-foreground hover:text-foreground"
+                    }`}
+                  >
+                    <FileText className="h-4 w-4" />
+                    <span className={activeModalTab === "logs" ? "" : "hidden sm:inline"}>
+                      {t("vmLxc.tabs.logs")}
+                    </span>
+                  </button>
+                )}
                 <button
                   onClick={() => setActiveModalTab("backups")}
                   className={`flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-4 py-2.5 text-sm font-medium transition-colors border-b-2 -mb-px whitespace-nowrap shrink-0 ${
@@ -5115,8 +5208,299 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                       )
                     })()}
 
-                    {/* Branch 1 — OCI-image container */}
-                    {!selectedVM.update_check?.managed_oci_app &&
+                    {/* Branch 0b — container installed by OCI manager Apps. It is
+                        updated by replacing its image, through the same flow as
+                        the OCI menu; nothing of the package or app updaters of an
+                        ordinary LXC applies. */}
+                    {!selectedVM.update_check?.managed_oci_app && ociInstance && (() => {
+                      const ociApp = (selectedVM.app_watches || []).find((a) => a.installed_via === "oci_image")
+                      const hasUpdate = ociApp?.update_available === true
+                      const upToDate = ociApp?.update_available === false
+                      const installedLabel = ociApp ? ociImageLabel(ociApp.image_created, ociApp.installed_digest) : ""
+                      const latestLabel = ociApp ? ociImageLabel(ociApp.latest_image_created, ociApp.latest_digest) : ""
+                      const updateBtnCls = hasUpdate
+                        ? "bg-purple-600/15 hover:bg-purple-600/25 border border-purple-500/40 text-purple-300 hover:text-purple-200"
+                        : "bg-green-500/10 hover:bg-green-500/20 border border-green-500/30 text-green-400 hover:text-green-300"
+                      const neutralBtnCls = "border border-input bg-background text-foreground/80 hover:bg-accent hover:text-accent-foreground"
+                      const storageForBackup = applyBackupStorage || selectedBackupStorage
+                      return (
+                        <>
+                          <Card className="border border-border bg-card/50">
+                            <CardContent className="p-4">
+                              <div className="flex items-center gap-2 mb-3 min-w-0">
+                                <Package className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                                <h3 className="text-sm font-semibold text-foreground truncate">
+                                  {ociApp?.name || selectedVM.name}
+                                </h3>
+                              </div>
+                              {ociApp?.checked_at && (
+                                <div className="text-xs text-muted-foreground mb-3 leading-relaxed">
+                                  {t("vmLxc.updates.lastCheckedPrefix")} {new Date(ociApp.checked_at).toLocaleString()}
+                                </div>
+                              )}
+                              {!ociApp ? (
+                                <div className="text-sm text-muted-foreground">{t("vmLxc.ociUpdates.notTracked")}</div>
+                              ) : hasUpdate ? (
+                                <div className="space-y-2 text-sm">
+                                  <div className="flex items-center gap-2">
+                                    <Package className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                                    <span>{t("vmLxc.ociUpdates.installedImage")} <code className="text-foreground/80">{installedLabel}</code></span>
+                                  </div>
+                                  <div className="flex items-center gap-2">
+                                    <ArrowUpCircle className="h-4 w-4 text-purple-400 flex-shrink-0" />
+                                    <span>{t("vmLxc.ociUpdates.newImage", { image: latestLabel })}</span>
+                                  </div>
+                                </div>
+                              ) : upToDate ? (
+                                <div className="text-sm text-muted-foreground flex items-center gap-2">
+                                  <CheckCircle2 className="h-4 w-4 text-green-500 flex-shrink-0" />
+                                  <span>{t("vmLxc.updates.upToDateAtLabel")} <code className="text-foreground/80">{installedLabel}</code></span>
+                                </div>
+                              ) : (
+                                <div className="text-sm text-muted-foreground flex items-center gap-2">
+                                  <Package className="h-4 w-4 flex-shrink-0" />
+                                  <span>{t("vmLxc.ociUpdates.installedImage")} <code className="text-foreground/80">{installedLabel || "—"}</code></span>
+                                </div>
+                              )}
+                              {ociInstance.stack && (
+                                <div className="text-xs text-muted-foreground mt-3 leading-relaxed">
+                                  {t("vmLxc.ociUpdates.stackNote", { primary: ociInstance.primary_vmid, count: ociInstance.members.length })}
+                                </div>
+                              )}
+                              {ociInstance.pending && (
+                                <div className="text-xs text-amber-400 mt-3 leading-relaxed">{t("vmLxc.ociUpdates.pendingNote")}</div>
+                              )}
+                              <div className="mt-4 pt-4 border-t border-border/50 flex flex-wrap justify-end gap-2">
+                                {!ociInstance.stack && !ociInstance.pending && (
+                                  <Button
+                                    size="sm"
+                                    className={neutralBtnCls}
+                                    onClick={() => setOciAction({ vmid: selectedVM.vmid, action: "recreate" })}
+                                  >
+                                    <RotateCcw className="h-4 w-4 mr-1.5" />
+                                    {t("vmLxc.ociUpdates.recreate")}
+                                  </Button>
+                                )}
+                                <Button
+                                  size="sm"
+                                  className={updateBtnCls}
+                                  onClick={() => setOciAction({ vmid: selectedVM.vmid, action: "update" })}
+                                >
+                                  {hasUpdate
+                                    ? <ArrowUpCircle className="h-4 w-4 mr-1.5" />
+                                    : <RefreshCw className="h-4 w-4 mr-1.5" />}
+                                  {ociInstance.pending ? t("vmLxc.ociUpdates.recover") : t("vmLxc.ociUpdates.update")}
+                                </Button>
+                              </div>
+                            </CardContent>
+                          </Card>
+
+                          {/* Options — the backup the update keeps and the
+                              scheduled image update. */}
+                          <Card className={optionsEditMode ? "border border-border bg-card" : "border border-border bg-card/50"}>
+                            <CardContent className="p-4 space-y-4">
+                              <h3 className="text-sm font-semibold text-foreground">{t("vmLxc.options.title")}</h3>
+                              {!optionsEditMode ? (
+                                <div className="text-sm flex items-center gap-2">
+                                  {applyBackup ? (
+                                    <CheckCircle2 className="h-4 w-4 text-green-500 flex-shrink-0" />
+                                  ) : (
+                                    <div className="h-4 w-4 rounded-full border border-muted-foreground/40 flex-shrink-0" />
+                                  )}
+                                  <span>
+                                    {applyBackup
+                                      ? <>{t("vmLxc.ociUpdates.keepBackup")} <span className="text-muted-foreground">{t("vmLxc.options.snapshotOn", { storage: storageForBackup || t("vmLxc.options.storageAuto") })}</span></>
+                                      : <span className="text-muted-foreground">{t("vmLxc.ociUpdates.noKeepBackup")}</span>}
+                                  </span>
+                                </div>
+                              ) : (
+                                <div className="space-y-3">
+                                  <div className="flex items-start gap-2 text-sm">
+                                    <Checkbox
+                                      id="oci-keep-backup"
+                                      checked={applyBackup}
+                                      onCheckedChange={(v) => setApplyBackup(Boolean(v))}
+                                      className="mt-0.5"
+                                    />
+                                    <Label htmlFor="oci-keep-backup" className="leading-tight cursor-pointer">
+                                      <span>{t("vmLxc.ociUpdates.keepBackup")}</span>
+                                      <div className="text-xs text-muted-foreground mt-0.5">{t("vmLxc.ociUpdates.keepBackupHelp")}</div>
+                                    </Label>
+                                  </div>
+                                  {applyBackup && backupStorages.length > 0 && (
+                                    <div className="pl-6">
+                                      <Label className="text-xs text-muted-foreground">{t("vmLxc.options.backupStorage")}</Label>
+                                      <Select value={storageForBackup} onValueChange={setApplyBackupStorage}>
+                                        <SelectTrigger className="h-8 text-sm mt-1 max-w-xs">
+                                          <SelectValue placeholder={t("vmLxc.options.pickStorage")} />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                          {backupStorages.map((st) => (
+                                            <SelectItem key={st.storage} value={st.storage}>{st.storage}</SelectItem>
+                                          ))}
+                                        </SelectContent>
+                                      </Select>
+                                    </div>
+                                  )}
+                                </div>
+                              )}
+
+                              <div className="pt-4 border-t border-border/50 space-y-3">
+                                <div className="flex items-start justify-between gap-3">
+                                  <div className="min-w-0">
+                                    <div className="text-sm font-medium text-foreground">{t("vmLxc.scheduled.title")}</div>
+                                    {optionsEditMode && (
+                                      <div className="text-xs text-muted-foreground mt-0.5">{t("vmLxc.ociUpdates.scheduleHelp")}</div>
+                                    )}
+                                  </div>
+                                  <Switch
+                                    checked={scheduleEnabled}
+                                    onCheckedChange={(v) => { if (optionsEditMode) setScheduleEnabled(v) }}
+                                    disabled={!optionsEditMode}
+                                    className="data-[state=checked]:bg-blue-600 data-[state=unchecked]:bg-input border border-border"
+                                  />
+                                </div>
+                                {!optionsEditMode && scheduleConfigured && (
+                                  <div className="text-sm space-y-1.5">
+                                    <div className="flex items-center gap-2 flex-wrap">
+                                      <span className={"h-2 w-2 rounded-full flex-shrink-0 " + (scheduleEnabled ? "bg-green-500" : "bg-muted-foreground/40")} />
+                                      <span className={scheduleEnabled ? "" : "text-muted-foreground"}>
+                                        <span className="text-foreground/80">{t("vmLxc.scheduled.chipLabel")}</span> — {humanCron(scheduleCron)}
+                                        {!scheduleEnabled && <span className="text-muted-foreground"> {t("vmLxc.scheduled.disabledSuffix")}</span>}
+                                      </span>
+                                    </div>
+                                    {scheduleReleaseDelayDays > 0 && (
+                                      <div className="text-xs text-muted-foreground pl-4">
+                                        {t("vmLxc.scheduled.releaseDelaySummary", { days: scheduleReleaseDelayDays })}
+                                      </div>
+                                    )}
+                                    {renderScheduleRunDetails(true)}
+                                  </div>
+                                )}
+                                {!optionsEditMode && !scheduleConfigured && (
+                                  <div className="text-sm flex items-center gap-2 text-muted-foreground">
+                                    <div className="h-4 w-4 rounded-full border border-muted-foreground/40 flex-shrink-0" />
+                                    <span>{t("vmLxc.scheduled.notScheduled")}</span>
+                                  </div>
+                                )}
+                                {optionsEditMode && scheduleEnabled && (
+                                  <div className="space-y-3">
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                      <div>
+                                        <Label className="text-xs text-muted-foreground">{t("vmLxc.scheduled.frequency")}</Label>
+                                        <Select
+                                          value={schedulePreset}
+                                          onValueChange={(v) => {
+                                            setSchedulePreset(v)
+                                            const preset = CRON_PRESETS.find((p) => p.value === v)
+                                            if (preset && preset.cron) setScheduleCron(preset.cron)
+                                          }}
+                                        >
+                                          <SelectTrigger className="h-8 text-sm mt-1"><SelectValue /></SelectTrigger>
+                                          <SelectContent>
+                                            {CRON_PRESETS.map((p) => (
+                                              <SelectItem key={p.value} value={p.value}>{p.label}</SelectItem>
+                                            ))}
+                                          </SelectContent>
+                                        </Select>
+                                      </div>
+                                      <div>
+                                        <Label className="text-xs text-muted-foreground">{t("vmLxc.scheduled.cronExpression")}</Label>
+                                        <Input
+                                          value={scheduleCron}
+                                          onChange={(e) => { setScheduleCron(e.target.value); setSchedulePreset("custom") }}
+                                          placeholder={t("vmLxc.scheduled.cronPlaceholder")}
+                                          className="h-8 text-sm mt-1 font-mono"
+                                        />
+                                      </div>
+                                    </div>
+                                    <div>
+                                      <Label className="text-xs text-muted-foreground">{t("vmLxc.scheduled.releaseDelayLabel")}</Label>
+                                      <Select value={String(scheduleReleaseDelayDays)} onValueChange={(v) => setScheduleReleaseDelayDays(Number(v))}>
+                                        <SelectTrigger className="h-8 text-sm mt-1 max-w-xs"><SelectValue /></SelectTrigger>
+                                        <SelectContent>
+                                          <SelectItem value="0">{t("vmLxc.scheduled.releaseDelayNone")}</SelectItem>
+                                          {[1, 3, 7, 14].map((days) => (
+                                            <SelectItem key={days} value={String(days)}>{t("vmLxc.scheduled.releaseDelayDays", { days })}</SelectItem>
+                                          ))}
+                                        </SelectContent>
+                                      </Select>
+                                      <div className="text-[10px] text-muted-foreground mt-1 max-w-xl">{t("vmLxc.ociUpdates.releaseDelayHelp")}</div>
+                                    </div>
+                                    {ociInstance.host_directories && (
+                                      <div className="flex items-start gap-2 text-sm">
+                                        <Checkbox
+                                          id="oci-ack-external"
+                                          checked={scheduleAckExternal}
+                                          onCheckedChange={(v) => setScheduleAckExternal(Boolean(v))}
+                                          className="mt-0.5"
+                                        />
+                                        <Label htmlFor="oci-ack-external" className="leading-tight cursor-pointer">
+                                          <span>{t("vmLxc.ociUpdates.ackExternal")}</span>
+                                          <div className="text-xs text-muted-foreground mt-0.5">{t("vmLxc.ociUpdates.ackExternalHelp")}</div>
+                                        </Label>
+                                      </div>
+                                    )}
+                                    {renderScheduleRunDetails()}
+                                  </div>
+                                )}
+                                {optionsEditMode && scheduleConfigured && (
+                                  <div className="flex justify-end">
+                                    <button
+                                      type="button"
+                                      onClick={deleteScheduleFromOptions}
+                                      disabled={scheduleSaving}
+                                      className="h-8 px-3 text-xs rounded-md border border-red-500/30 bg-red-500/10 hover:bg-red-500/20 text-red-400 transition-colors inline-flex items-center gap-1.5 disabled:opacity-60"
+                                    >
+                                      <Trash2 className="h-3.5 w-3.5" />
+                                      {t("vmLxc.scheduled.deleteButton")}
+                                    </button>
+                                  </div>
+                                )}
+                                {scheduleError && <div className="text-xs text-red-400">{scheduleError}</div>}
+                              </div>
+
+                              <div className="pt-4 border-t border-border/50 flex items-center justify-end gap-2">
+                                {!optionsEditMode ? (
+                                  <button
+                                    type="button"
+                                    onClick={enterOptionsEdit}
+                                    className="h-8 px-3 text-xs rounded-md border border-border bg-background hover:bg-muted transition-colors inline-flex items-center gap-1.5"
+                                  >
+                                    <Settings2 className="h-3.5 w-3.5" />
+                                    {t("vmLxc.options.editButton")}
+                                  </button>
+                                ) : (
+                                  <>
+                                    <button
+                                      type="button"
+                                      onClick={cancelOptionsEdit}
+                                      disabled={scheduleSaving}
+                                      className="h-8 px-3 text-xs rounded-md border border-border bg-background hover:bg-muted transition-colors inline-flex items-center gap-1.5 disabled:opacity-60"
+                                    >
+                                      {t("vmLxc.options.cancelButton")}
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={saveOptionsEdit}
+                                      disabled={scheduleSaving || (scheduleEnabled && ociInstance.host_directories && !scheduleAckExternal)}
+                                      className="h-8 px-3 text-xs rounded-md bg-blue-600 hover:bg-blue-700 text-white transition-colors disabled:opacity-40 inline-flex items-center gap-1.5"
+                                    >
+                                      {scheduleSaving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5" />}
+                                      {t("vmLxc.options.saveButton")}
+                                    </button>
+                                  </>
+                                )}
+                              </div>
+                            </CardContent>
+                          </Card>
+                        </>
+                      )
+                    })()}
+
+                    {/* Branch 1 — OCI-image container not installed by
+                        OCI manager Apps */}
+                    {!selectedVM.update_check?.managed_oci_app && !ociInstance &&
                       selectedVM.update_check?.is_oci_lxc && (
                       <Card className="border border-border bg-card/50">
                         <CardContent className="p-4 space-y-2">
@@ -5149,7 +5533,7 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                         Individual actions stay with their section. The
                         optional reusable bulk action is configured in its
                         own card immediately before Options. */}
-                    {!selectedVM.update_check?.managed_oci_app &&
+                    {!selectedVM.update_check?.managed_oci_app && !ociInstance &&
                       !selectedVM.update_check?.is_oci_lxc && (() => {
                         const uc = selectedVM.update_check
                         const osUpdateStatusKnown = !!uc && !uc.error
@@ -6942,6 +7326,14 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                     </Card>
                   </div>
                 )}
+
+                {activeModalTab === "logs" && selectedVM?.type === "lxc" && (
+                  <OciConsoleLogPanel
+                    key={selectedVM.vmid}
+                    vmid={selectedVM.vmid}
+                    running={selectedVM.status === "running"}
+                  />
+                )}
               </div>
 
               <div className="border-t border-border bg-background px-6 py-4 mt-auto shrink-0">
@@ -7372,6 +7764,37 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
             DOCKER_STANDALONE_TARGETS: applyDockerStandaloneTargets,
             UPDATE_DOCKER_ENGINE: applyDockerEngine ? "1" : "0",
             REFRESH_DOCKER_INVENTORY: applyDockerRefresh ? "1" : "0",
+          }}
+        />
+      )}
+
+      {/* Update or recreate an OCI instance: the same flow as OCI manager
+          Apps -> Manage installed OCI applications, for this container. */}
+      {ociAction && (
+        <ScriptTerminalModal
+          open={!!ociAction}
+          onClose={() => {
+            const vmid = ociAction.vmid
+            setOciAction(null)
+            // The image, the digest and the record changed: read them again.
+            fetchApi(`/api/vms/${vmid}/apps/check`, { method: "POST" })
+              .catch(() => undefined)
+              .finally(() => {
+                invalidateLxcApps(vmid)
+                vmModalCacheRef.current.mountPoints.delete(vmid)
+                fetchOciInstance(vmid)
+                fetchMountPoints(vmid)
+                mutate()
+              })
+          }}
+          scriptPath="/usr/local/share/proxmenux/scripts/oci/manage_instance.sh"
+          scriptName="oci_manage_instance"
+          title={ociAction.action === "update" ? t("vmLxc.ociUpdates.terminalTitleUpdate") : t("vmLxc.ociUpdates.terminalTitleRecreate")}
+          description={t("vmLxc.ociUpdates.terminalDescription")}
+          params={{
+            VMID: String(ociAction.vmid),
+            ACTION: ociAction.action,
+            KEEP_BACKUP: ociAction.action === "update" && applyBackup ? (applyBackupStorage || selectedBackupStorage || "") : "",
           }}
         />
       )}

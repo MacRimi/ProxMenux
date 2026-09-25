@@ -1,0 +1,243 @@
+{
+  "meta": {
+    "title": "Install, update and recreate | ProxMenux",
+    "description": "The instance contract of an OCI container and the operations that use it: update, recreate, remove and recovery of an interrupted operation."
+  },
+  "header": {
+    "title": "Install, update and recreate",
+    "description": "Each instance keeps a reproducible contract, so its rootfs can be replaced without losing configuration or persistent data.",
+    "section": "OCI manager Apps"
+  },
+  "sections": [
+    {
+      "id": "contract",
+      "title": "The instance contract",
+      "blocks": [
+        {
+          "p": "After an installation, the effective configuration is stored in <code>/usr/local/share/proxmenux/oci/instances/VMID/oci-compose.json</code>. It is not a copy of the original Compose file: it is the reproducible contract of the LXC that exists on this host."
+        },
+        {
+          "code": {
+            "code": "instances/\n└── 105/\n    └── oci-compose.json\n        ├── image and resolved digest\n        ├── resources and network\n        ├── environment (secrets protected)\n        ├── container disks and host directories\n        ├── hardware profile and devices\n        ├── console log and terminal mode\n        └── stack membership and lifecycle"
+          }
+        }
+      ]
+    },
+    {
+      "id": "manage",
+      "title": "Manage installed OCI applications",
+      "intro": "This option of the main screen lists the registered instances with their application and image. Each one is checked against its contract before any action; a CT that no longer matches its record is neither modified nor deleted. The same update and recreation are offered in the Updates tab of <monitorLink>ProxMenux Monitor</monitorLink>.",
+      "blocks": [
+        {
+          "table": {
+            "headers": [
+              "Option",
+              "What changes",
+              "What is kept"
+            ],
+            "rows": [
+              [
+                "Update the image with the saved configuration",
+                "The rootfs is replaced by the image the saved channel publishes today",
+                "Contract, container disks, host directories, network and devices"
+              ],
+              [
+                "Recreate: edit resources, network, paths and GPU",
+                "The editor opens with the current contract; the CT is rebuilt with the changes",
+                "The data of container disks and host directories"
+              ],
+              [
+                "Remove: delete the application and its containers",
+                "The LXC, or every member of a stack, and their contracts are deleted",
+                "Host directories, with their content"
+              ]
+            ]
+          }
+        },
+        {
+          "p": "For a multi-container application the menu offers <strong>Update every container of the application</strong> and the removal. A stack is not recreated."
+        },
+        {
+          "figure": {
+            "src": "/oci-manager/manage-menu.png",
+            "alt": "List of installed OCI applications and the update, recreate and remove options",
+            "caption": "Manage installed OCI applications."
+          }
+        }
+      ]
+    },
+    {
+      "id": "update",
+      "title": "A transactional update",
+      "blocks": [
+        {
+          "mermaid": {
+            "chartCode": "sequenceDiagram\n participant U as {{user}}\n participant P as ProxMenux\n participant R as {{registry}}\n participant X as Proxmox VE\n U->>P: {{update}}\n P->>R: {{resolve}}\n R-->>P: digest\n P->>P: {{verify}}\n P->>X: {{backup}}\n P->>X: {{import}}\n P->>X: {{reapply}}\n X-->>P: healthcheck\n alt {{healthy}}\n  P-->>U: {{commit}}\n else {{failure}}\n  P->>X: Rollback\n  P-->>U: {{restored}}\n end",
+            "labels": {
+              "user": "User",
+              "registry": "OCI registry",
+              "update": "Update instance",
+              "resolve": "Resolve the tag",
+              "verify": "Verify archive and preflight",
+              "backup": "Stop and back up the CT",
+              "import": "Import the new rootfs",
+              "reapply": "Apply the contract again",
+              "healthy": "healthy",
+              "failure": "failure",
+              "commit": "Contract published with the new digest",
+              "restored": "Previous instance restored"
+            }
+          }
+        },
+        {
+          "list": {
+            "items": [
+              "When the registry still serves the installed digest, nothing is downloaded and the instance is not touched.",
+              "The new image is verified layer by layer before the CT stops. A download that arrives damaged is fetched a second time; an image already cached that fails the check is downloaded again.",
+              "Settings changed in Proxmox VE after the installation (memory, swap, cores, CPU limit, CPU priority, start with the node) are kept and carried into the new contract.",
+              "Any other difference between the CT and its contract stops the update before the CT is stopped."
+            ]
+          }
+        },
+        {
+          "flow": {
+            "nodes": [
+              {
+                "label": "Before",
+                "detail": "rootfs A\n/config mp0\n/media host directory"
+              },
+              {
+                "label": "Update",
+                "detail": "replaces only\nthe rootfs"
+              },
+              {
+                "label": "After",
+                "detail": "rootfs B\n/config mp0\n/media host directory"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "recovery",
+      "title": "Recovering an interrupted operation",
+      "intro": "Update and recreation use a persistent transaction. If the process, the terminal or the node is interrupted after the CT stops, the operation is not taken as finished.",
+      "blocks": [
+        {
+          "steps": {
+            "items": [
+              {
+                "title": "Pending marker",
+                "body": "When Manage installed OCI applications opens, the saved state shows that the replacement was never published."
+              },
+              {
+                "title": "View status",
+                "body": "Shows the phase that was reached without changing containers or data."
+              },
+              {
+                "title": "Recover the previous installation",
+                "body": "Restores the verified native backup taken before the replacement and the previous contract."
+              },
+              {
+                "title": "Stacks as a unit",
+                "body": "For a multi-container application, every member is recovered from the same transaction point, not only the selected one."
+              }
+            ]
+          }
+        },
+        {
+          "calloutWarning": {
+            "title": "Host directories are outside the rollback",
+            "body": "The backup covers the rootfs and the container disks it includes. A host directory is not reverted, because other LXCs may use its data. Updating, recreating or recovering an instance with host directories asks for a confirmation of this first."
+          }
+        }
+      ]
+    },
+    {
+      "id": "remove",
+      "title": "Removing an OCI application",
+      "blocks": [
+        {
+          "p": "Before the confirmation, a summary is built from the real configuration: the containers that are removed, the data deleted with them, the private network that is released and the host directories that are kept. The confirmation defaults to <strong>No</strong>, since the data of the deleted disks cannot be recovered afterwards."
+        },
+        {
+          "table": {
+            "headers": [
+              "Resource",
+              "On removal",
+              "Reason"
+            ],
+            "rows": [
+              [
+                "rootfs and container disks",
+                "Deleted",
+                "They belong only to the container"
+              ],
+              [
+                "Host directory",
+                "Kept, with its content",
+                "Other applications may use it"
+              ],
+              [
+                "Instance contract",
+                "Retired after a successful removal",
+                "No CT is associated with it any more"
+              ],
+              [
+                "Private bridge of a stack",
+                "Released with the stack",
+                "It has no members left to connect"
+              ],
+              [
+                "A single member of a stack",
+                "Not removed on its own",
+                "The whole application is removed, so no stack is left incomplete"
+              ]
+            ]
+          }
+        },
+        {
+          "figure": {
+            "src": "/oci-manager/remove-summary.png",
+            "alt": "Removal summary with the containers, data and host directories affected",
+            "caption": "The removal summary, built from the real configuration."
+          }
+        }
+      ]
+    },
+    {
+      "id": "archives",
+      "title": "Downloaded images and host space",
+      "blocks": [
+        {
+          "p": "The OCI archive is used to build the rootfs; the running CT does not read it. After an installation or an update, the downloaded archives of that operation are listed with their size and their deletion is offered. Deleting them frees the space without affecting the container or its data."
+        },
+        {
+          "calloutInfo": {
+            "title": "Updates do not need the archive",
+            "body": "Without the archive, an update resolves the saved channel and downloads the new digest. With it, an archive is reused only when its reference and integrity match what is requested."
+          }
+        }
+      ]
+    },
+    {
+      "id": "registry",
+      "title": "Registry and cleanup",
+      "blocks": [
+        {
+          "p": "The registered contracts are compared with the real CTs. A contract is orphaned only when its VMID no longer exists or no longer carries the expected instance identity. The cleanup does not delete volumes or external data by inference."
+        }
+      ]
+    },
+    {
+      "id": "channel",
+      "title": "A rolling tag is not an unattended update",
+      "blocks": [
+        {
+          "p": "The catalog installs the rolling tag its maintainer publishes, but the effective digest is resolved, recorded and changed only through an explicit update with preflight and rollback. <monitorLink>ProxMenux Monitor</monitorLink> compares the installed digest with the one the registry publishes and shows, and notifies, when a new image is available."
+        }
+      ]
+    }
+  ]
+}

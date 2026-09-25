@@ -178,8 +178,7 @@ export function LxcTerminalModal({
     // `cancelled` short-circuits the async init if the modal closes
     // before the dynamic xterm import resolves. Without this, we'd
     // construct a Terminal instance, attach it to a now-stale ref, and
-    // open a WebSocket that nobody listens to. Audit Tier 6 — useEffect
-    // con `import("xterm")` sin cancelación.
+    // open a WebSocket that nobody listens to.
     let cancelled = false
 
     // Small delay to ensure Dialog content is rendered

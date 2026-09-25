@@ -97,9 +97,22 @@ class I18nMessagesTests(unittest.TestCase):
             if text == "Two":
                 raise RuntimeError("offline fixture failure")
             return "IT " + text
+        # --refresh alone never replaces an existing translation.
         result, actual, calls, output, _ = self.run_generator(
             {"items": ["One", "Two", "Three"]}, {"items": ["Uno", "Due"]},
             "--refresh", "--save-every", "1", provider=provider)
+        self.assertEqual(result, 0)
+        self.assertEqual(actual, {"items": ["Uno", "Due", "IT Three"]})
+        self.assertEqual(len(calls), 1)
+        # Named keys are retranslated; a provider failure keeps the value.
+        with tempfile.NamedTemporaryFile("w", suffix=".txt", delete=False) as keys:
+            keys.write("items.0\nitems.1\n")
+        try:
+            result, actual, calls, output, _ = self.run_generator(
+                {"items": ["One", "Two", "Three"]}, {"items": ["Uno", "Due"]},
+                "--refresh", "--refresh-keys", keys.name, "--save-every", "1", provider=provider)
+        finally:
+            Path(keys.name).unlink()
         self.assertEqual(result, 0)
         self.assertEqual(actual, {"items": ["IT One", "Due", "IT Three"]})
         self.assertEqual(len(calls), 3)
@@ -178,9 +191,10 @@ class I18nMessagesTests(unittest.TestCase):
                         mock.patch.object(MODULE, "write_json", wraps=MODULE.write_json) as writer, \
                         redirect_stderr(output), redirect_stdout(output):
                     self.assertEqual(MODULE.main(), 1)
+                # --refresh without --refresh-keys keeps the existing value.
                 self.assertEqual(json.loads((root / "sk/common.json").read_text()),
-                                 {"items": ["SK One" if options else "Human", "SK Two"]})
-                self.assertEqual(provider.call_count, 2 if options else 1)
+                                 {"items": ["Human", "SK Two"]})
+                self.assertEqual(provider.call_count, 1)
                 self.assertTrue(all(call.args[0].parent.name == "sk" for call in writer.call_args_list))
                 for lang in ["en", "it", "de"]:
                     self.assertEqual((root / lang / "common.json").read_bytes(), before[lang])

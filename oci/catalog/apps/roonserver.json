@@ -17,7 +17,7 @@
     "category_label": "Media & Streaming",
     "author": "Roon Labs",
     "developer": "Roon Labs",
-    "icon": null,
+    "icon": "https://cdn.jsdelivr.net/gh/IceWhaleTech/CasaOS-AppStore@main/Apps/RoonServer/icon.png",
     "thumbnail": null,
     "screenshots": [],
     "architectures": [

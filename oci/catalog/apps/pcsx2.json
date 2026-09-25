@@ -13,11 +13,11 @@
     "description": {
       "en_US": "PCSX2 is an open source PS2 Emulator."
     },
-    "category": "misc",
-    "category_label": "Miscellaneous",
+    "category": "gaming",
+    "category_label": "Gaming & Leisure",
     "author": "LinuxServer.io",
     "developer": null,
-    "icon": "https://raw.githubusercontent.com/linuxserver/docker-templates/master/linuxserver.io/img/pcsx2-icon.png",
+    "icon": "https://cdn.jsdelivr.net/gh/linuxserver/docker-templates@master/linuxserver.io/img/pcsx2-logo.png",
     "thumbnail": "https://raw.githubusercontent.com/linuxserver/docker-templates/master/linuxserver.io/img/pcsx2-banner.png",
     "screenshots": [],
     "architectures": [

@@ -13,11 +13,11 @@
     "description": {
       "en_US": "A GTK Broadway web UI for libvirt and virt-manager, to run virtual machines using QEMU/KVM."
     },
-    "category": "ai",
-    "category_label": "AI / Coding & Dev-Tools",
+    "category": "management",
+    "category_label": "Host Management",
     "author": "Red Hat",
     "developer": "Red Hat",
-    "icon": null,
+    "icon": "https://cdn.jsdelivr.net/gh/IceWhaleTech/CasaOS-AppStore@main/Apps/VirtualMachineManager/icon.png",
     "thumbnail": null,
     "screenshots": [],
     "architectures": [

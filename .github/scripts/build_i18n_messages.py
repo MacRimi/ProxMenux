@@ -116,7 +116,9 @@ def protect_placeholders(text: str) -> tuple[str, list[str]]:
 
     def _swap(match: re.Match) -> str:
         placeholders.append(match.group(0))
-        return f"__PMX_PH_{len(placeholders) - 1}__"
+        # No underscores: a local model splits on them and returns
+        # "PMX PH 0", so the placeholder never comes back.
+        return f"PMXPH{len(placeholders) - 1:03d}"
 
     return PLACEHOLDER_RE.sub(_swap, text), placeholders
 
@@ -127,7 +129,7 @@ def restore_placeholders(text: str, placeholders: list[str]) -> str:
     fallback assignment (target = existing or EN) upstream catches
     the worst case."""
     for i, original in enumerate(placeholders):
-        text = text.replace(f"__PMX_PH_{i}__", original)
+        text = text.replace(f"PMXPH{i:03d}", original)
     return text
 
 
@@ -241,9 +243,16 @@ def build_arg_parser() -> argparse.ArgumentParser:
         "--refresh",
         action="store_true",
         help=(
-            "Re-translate EVERY key, ignoring existing translations. "
-            "Dangerous: this DOES overwrite human-curated strings. "
-            "Use only when you know what you are doing."
+            "Retranslate the keys named by --refresh-keys. On its own it has "
+            "no effect: an existing translation is never replaced."
+        ),
+    )
+    parser.add_argument(
+        "--refresh-keys",
+        type=Path,
+        help=(
+            "File with one dotted message key per line. Only these may be "
+            "retranslated over an existing value, and only with --refresh."
         ),
     )
     parser.add_argument(
@@ -282,6 +291,21 @@ def main() -> int:
     print(f"Target locales: {', '.join(languages)}", flush=True)
     print(f"Provider: {args.provider}", flush=True)
     print(f"Sleep between calls: {args.sleep}s", flush=True)
+
+    refresh_keys: set[str] = set()
+    if args.refresh_keys is not None:
+        if not args.refresh:
+            print("--refresh-keys needs --refresh.", file=sys.stderr)
+            return 1
+        refresh_keys = {
+            line.strip()
+            for line in args.refresh_keys.read_text(encoding="utf-8").splitlines()
+            if line.strip()
+        }
+        print(f"Refreshing {len(refresh_keys)} named keys.", flush=True)
+    elif args.refresh:
+        print("--refresh without --refresh-keys: existing translations are kept.",
+              flush=True)
 
     total_failures: list[tuple[str, CatalogPath, str]] = []
 
@@ -331,8 +355,9 @@ def main() -> int:
         #   3. Auto-fills from prior runs whose output happened to
         #      match EN — leaving them alone is the intended
         #      steady-state, not a bug.
-        # When someone genuinely wants to redo everything, --refresh
-        # is still available (and is destructive by design).
+        # An existing translation is never replaced. --refresh only reaches
+        # the keys named in --refresh-keys, so an overwrite is always one
+        # somebody asked for by name rather than a side effect of a run.
         # Seed structural nodes and non-text leaves before any checkpoint.
         # Only strings are sent to a translation provider.
         original_flat = target_flat.copy()
@@ -348,7 +373,7 @@ def main() -> int:
             if not isinstance(en_value, str) or not en_value:
                 continue
             existing = target_flat.get(key, "")
-            if args.refresh or not existing:
+            if not existing or ".".join(str(part) for part in key) in refresh_keys:
                 missing.append(key)
 
         if args.limit > 0:

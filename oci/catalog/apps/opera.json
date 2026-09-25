@@ -13,11 +13,11 @@
     "description": {
       "en_US": "Opera is a multi-platform web browser developed by its namesake company Opera. The browser is based on Chromium, but distinguishes itself from other Chromium-based browsers (Chrome, Edge, etc.) through its user interface and other features."
     },
-    "category": "misc",
-    "category_label": "Miscellaneous",
+    "category": "desktop",
+    "category_label": "Browsers & Web Desktops",
     "author": "LinuxServer.io",
     "developer": null,
-    "icon": "https://raw.githubusercontent.com/linuxserver/docker-templates/master/linuxserver.io/img/opera-icon.png",
+    "icon": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/opera.webp",
     "thumbnail": "https://raw.githubusercontent.com/linuxserver/docker-templates/master/linuxserver.io/img/opera-banner.png",
     "screenshots": [],
     "architectures": [

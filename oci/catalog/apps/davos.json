@@ -13,11 +13,11 @@
     "description": {
       "en_US": "Davos is an FTP automation tool that periodically scans given host locations for new files. It can be configured for various purposes, including listening for specific files to appear in the host location, ready for it to download and then move, if required. It also supports completion notifications as well as downstream API calls, to further the workflow."
     },
-    "category": "misc",
-    "category_label": "Miscellaneous",
+    "category": "downloads",
+    "category_label": "Files & Downloads",
     "author": "LinuxServer.io",
     "developer": null,
-    "icon": "https://raw.githubusercontent.com/linuxserver/docker-templates/master/linuxserver.io/img/davos-icon.png",
+    "icon": "https://cdn.jsdelivr.net/gh/linuxserver/docker-templates@master/linuxserver.io/img/davos-logo.png",
     "thumbnail": "https://raw.githubusercontent.com/linuxserver/docker-templates/master/linuxserver.io/img/davos-banner.png",
     "screenshots": [],
     "architectures": [

@@ -11,13 +11,13 @@
       "en_US": "Fast, modern web interface for qBittorrent"
     },
     "description": {
-      "en_US": "**One dashboard for all your qBittorrent instances.** Qui is a fast, modern web interface for qBittorrent. Instead of juggling several separate WebUI tabs, you connect every qBittorrent instance to Qui and manage them all from a single, responsive dashboard. It ships as a lightweight single binary, so it stays quick and resource-friendly even when you are watching thousands of torrents.\n\n**Automation and cross-seeding built in.** Built by the team behind autobrr, Qui goes well beyond basic torrent listing. It adds powerful rule-based automation, built-in cross-seeding that automatically finds and adds matching torrents across your trackers, scheduled backups with restore, and a clean multi-language interface. Point it at your Torznab-compatible indexers \u2014 such as Prowlarr or Jackett \u2014 to put cross-seeding on autopilot, then filter, search, and bulk-manage torrents across every instance at once.\n\n**Made for your private cloud.** Running Qui on a private cloud device like self-hosted server keeps everything in one place on hardware you control. Pair it with your qBittorrent containers for local-network speeds, full ownership of your data, and a single tidy interface for your entire download stack \u2014 accessible from any device in your home.\n"
+      "en_US": "**One dashboard for all your qBittorrent instances.** Qui is a fast, modern web interface for qBittorrent. Instead of juggling several separate WebUI tabs, you connect every qBittorrent instance to Qui and manage them all from a single, responsive dashboard. It ships as a lightweight single binary, so it stays quick and resource-friendly even when you are watching thousands of torrents.\n\n**Automation and cross-seeding built in.** Built by the team behind autobrr, Qui goes well beyond basic torrent listing. It adds powerful rule-based automation, built-in cross-seeding that automatically finds and adds matching torrents across your trackers, scheduled backups with restore, and a clean multi-language interface. Point it at your Torznab-compatible indexers — such as Prowlarr or Jackett — to put cross-seeding on autopilot, then filter, search, and bulk-manage torrents across every instance at once.\n\n**Made for your private cloud.** Running Qui on a private cloud device like self-hosted server keeps everything in one place on hardware you control. Pair it with your qBittorrent containers for local-network speeds, full ownership of your data, and a single tidy interface for your entire download stack — accessible from any device in your home.\n"
     },
     "category": "downloads",
     "category_label": "Files & Downloads",
     "author": "autobrr",
     "developer": "autobrr",
-    "icon": null,
+    "icon": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/qui.webp",
     "thumbnail": null,
     "screenshots": [],
     "architectures": [

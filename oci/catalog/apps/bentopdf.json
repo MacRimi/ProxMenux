@@ -11,13 +11,13 @@
       "en_US": "Privacy-first, self-hosted PDF toolkit"
     },
     "description": {
-      "en_US": "**Your PDFs never leave your device.** BentoPDF is a privacy-first PDF toolkit that runs entirely in your browser. Every merge, split, conversion, and edit happens locally on your machine \u2014 no file is ever uploaded to a server. More than 50 tools are bundled into one clean, fast, ad-free interface.\n\n**One app for every PDF job.** Organize and edit your documents (merge, split, reorder, rotate, crop, watermark, page numbers, redaction, annotations and forms), convert to and from PDF (images, Word, Excel, PowerPoint, EPUB, Markdown and more), run OCR, and secure your files with compression, encryption, digital signatures, and metadata cleanup.\n\n**Made for your private cloud.** Self-hosting BentoPDF on a private cloud device like self-hosted server gives your whole household or team a single, ad-free PDF workshop on hardware you control \u2014 fast over the local network, with your documents staying private by design.\n"
+      "en_US": "**Your PDFs never leave your device.** BentoPDF is a privacy-first PDF toolkit that runs entirely in your browser. Every merge, split, conversion, and edit happens locally on your machine — no file is ever uploaded to a server. More than 50 tools are bundled into one clean, fast, ad-free interface.\n\n**One app for every PDF job.** Organize and edit your documents (merge, split, reorder, rotate, crop, watermark, page numbers, redaction, annotations and forms), convert to and from PDF (images, Word, Excel, PowerPoint, EPUB, Markdown and more), run OCR, and secure your files with compression, encryption, digital signatures, and metadata cleanup.\n\n**Made for your private cloud.** Self-hosting BentoPDF on a private cloud device like self-hosted server gives your whole household or team a single, ad-free PDF workshop on hardware you control — fast over the local network, with your documents staying private by design.\n"
     },
     "category": "documents",
     "category_label": "Documents & Notes",
     "author": "BentoPDF",
     "developer": "BentoPDF",
-    "icon": null,
+    "icon": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/bentopdf.webp",
     "thumbnail": null,
     "screenshots": [],
     "architectures": [

@@ -11,13 +11,13 @@
       "en_US": "Firefly, the easiest using of WireGuard VPN server, plus version of wg-easy."
     },
     "description": {
-      "en_US": "Firefly is a simple and easy to install WireGuard server software, which can be widely used in scenarios such as remote networking, remote work, and expose a local server behind a NAT or firewall to the internet.  \ud83c\udfaf Features \ud83d\udfe2 Provide a simple and easy-to-use web management UI  \ud83d\udfe3 Supports access to all WireGuard clients  \ud83d\udfe1 No need for system installation of WireGuard components  \ud83d\udfe0 Single file, no additional library dependencies  \ud83d\udd34 Automatically apply for free SSL certificate"
+      "en_US": "Firefly is a simple and easy to install WireGuard server software, which can be widely used in scenarios such as remote networking, remote work, and expose a local server behind a NAT or firewall to the internet.  🎯 Features 🟢 Provide a simple and easy-to-use web management UI  🟣 Supports access to all WireGuard clients  🟡 No need for system installation of WireGuard components  🟠 Single file, no additional library dependencies  🔴 Automatically apply for free SSL certificate"
     },
     "category": "finance",
     "category_label": "Finance & Budgeting",
     "author": "Safe3",
     "developer": "Safe3",
-    "icon": null,
+    "icon": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons@main/webp/firefly.webp",
     "thumbnail": null,
     "screenshots": [],
     "architectures": [

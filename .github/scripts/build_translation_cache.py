@@ -104,6 +104,15 @@ PROTECTED_TECHNICAL_TERMS = (
     "OCI manager Apps",
     "OCI",
     "beta",
+    # Debian release names. "Bookworm" is a bird and a reader of books, and
+    # came back as "el libro de Debian"; the others are equally ordinary
+    # words in the languages that borrowed them.
+    "Bookworm",
+    "Trixie",
+    "Bullseye",
+    "Buster",
+    "Noble",
+    "Jammy",
 )
 TECHNICAL_TERM_RE = re.compile(
     "|".join(
@@ -127,9 +136,37 @@ STRUCTURAL_LITERAL_RE = re.compile(
     r"""
       /(?:dev|etc|usr|var|opt|srv|proc|sys|run|boot|tmp)/[\w./+-]*[\w/+-]
     | (?<![\w-])--[A-Za-z][\w-]*
+    # Angle-bracket placeholders a reader substitutes: <CTID> came back as
+    # "■CTID confiar", with the closing bracket translated as a verb.
+    | <[A-Za-z][\w-]*>
+    # Shell operators. "&&" became the HTML entity "&apos;" in Spanish, and
+    # the command it joined stopped being one command; a lone pipe came back
+    # as the word "Silencio".
+    | &&|\|\||(?<!\|)\|(?!\|)
+    # Environment variable names. THELOUNGE_HOME lost its underscore and
+    # became two words, so the command no longer set anything.
+    | \b[A-Z][A-Z0-9]*(?:_[A-Z0-9]+)+\b
     | \b[\w.-]+\.(?:sh|py|json|yml|yaml|conf|service|timer|func|cfg|list|log)\b
-    | \b(?:pct|qm|pvesm|pveam|pveum|pvecm|apt-get|dpkg|systemctl|journalctl
-        |zpool|smartctl|modprobe|blkid|lsblk|mkfs)\s+[a-z][\w-]*
+    # Reverse-DNS identifiers: org.opencontainers.image.version came back as
+    # "org.open containers.image.version" — a label name with a space in it.
+    | \b[a-z][a-z0-9-]*(?:\.[a-z][a-z0-9-]*){2,}\b
+    # A command plus a real subcommand. An allowlist, not "any word": with
+    # a wildcard, "pvesm command not found" and "apt-get exited" were read as
+    # invocations, and the strings a contributor had already translated by
+    # hand were discarded as damaged.
+    | \b(?:pct|qm)\s+(?:config|start|stop|shutdown|reboot|destroy|create|clone
+        |enter|exec|push|pull|set|list|status|snapshot|rollback|resize|migrate
+        |template|unlock|mount|unmount|df|fsck|restore|suspend|resume|monitor)\b
+    | \bpvesm\s+(?:path|status|list|alloc|free|add|remove|set|scan|export|import)\b
+    | \b(?:pveam|pveum|pvecm)\s+(?:available|download|list|update|remove|add|create
+        |delete|status|nodes|keygen|expected|modify|set|useradd|userdel|passwd)\b
+    | \bapt-get\s+(?:install|update|upgrade|remove|purge|autoremove|dist-upgrade|clean)\b
+    | \bdpkg\s+(?:-l|-i|-r|-P|--configure|--get-selections)\b
+    | \b(?:systemctl|journalctl)\s+(?:start|stop|restart|reload|enable|disable|status
+        |daemon-reload|mask|unmask|is-active|is-enabled|list-units|-u|-f|-b)\b
+    | \bzpool\s+(?:status|list|import|export|scrub|trim|get|set|history)\b
+    | \bsmartctl\s+(?:-a|-A|-H|-i|-t|-l|-x|--all|--health|--info)\b
+    | \b(?:modprobe|blkid|lsblk|mkfs)\s+(?:-a|-r|-n|-o|-f|-t|\.[a-z0-9]+)\b
     """,
     re.VERBOSE,
 )
@@ -551,14 +588,17 @@ def load_language_cache(path: Path) -> dict[str, str]:
 
 
 def is_fully_protected(source: str) -> bool:
-    """Whether the string is glossary terms and punctuation, nothing else.
+    """Whether the string is protected material and punctuation, nothing else.
 
     "Docker Volume Backup" and "NVIDIA (NVDEC/CUDA)" are product and API
-    names from end to end. Coming back unchanged is the right answer for
-    them, so the guard below must not read it as a silent failure and throw
-    the result away.
+    names from end to end, and "apt-get exited" is a command with a word
+    the command itself supplies. Coming back unchanged is the right answer
+    for all of them, so the guard below must not read it as a silent
+    failure and throw the result away. Both kinds of protection count:
+    the glossary catches the names, the structural pattern the rest.
     """
-    return not re.search(r"[A-Za-z]{2,}", TECHNICAL_TERM_RE.sub(" ", source))
+    remainder = STRUCTURAL_LITERAL_RE.sub(" ", source)
+    return not re.search(r"[A-Za-z]{2,}", TECHNICAL_TERM_RE.sub(" ", remainder))
 
 
 def looks_untranslated(source: str, result: str) -> bool:
@@ -667,7 +707,14 @@ def build_arg_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--refresh",
         action="store_true",
-        help="Translate all entries again instead of reusing existing cache values.",
+        help="Retranslate the strings named by --refresh-keys. On its own it has "
+             "no effect: an existing translation is never replaced.",
+    )
+    parser.add_argument(
+        "--refresh-keys",
+        type=Path,
+        help="File with one source string per line. Only these may be "
+             "retranslated over an existing value, and only with --refresh.",
     )
     parser.add_argument(
         "--extract-only",
@@ -730,6 +777,21 @@ def main() -> int:
     print(f"Output directory: {output_dir}", flush=True)
     print(f"Languages: {', '.join(languages)}", flush=True)
 
+    refresh_keys: set[str] = set()
+    if args.refresh_keys is not None:
+        if not args.refresh:
+            print("--refresh-keys needs --refresh.", file=sys.stderr)
+            return 1
+        refresh_keys = {
+            line.rstrip("\n")
+            for line in args.refresh_keys.read_text(encoding="utf-8").splitlines()
+            if line.strip()
+        }
+        print(f"Refreshing {len(refresh_keys)} named strings.", flush=True)
+    elif args.refresh:
+        print("--refresh without --refresh-keys: existing translations are kept.",
+              flush=True)
+
     failures: list[tuple[str, str, str]] = []
     total = len(texts) * len(languages)
     done = 0
@@ -740,7 +802,13 @@ def main() -> int:
 
         for index, text in enumerate(texts, start=1):
             done += 1
-            if not args.refresh and existing.get(text):
+            # A translation that is already there is never replaced. Most of
+            # this catalogue is hand-written by the people who speak the
+            # language, and a machine pass over it trades their wording for
+            # something worse without anyone seeing the swap. Only a string
+            # named in --refresh-keys may be overwritten, so every overwrite
+            # is one somebody asked for by name.
+            if existing.get(text) and text not in refresh_keys:
                 next_by_lang[lang][text] = existing[text]
                 continue
             if args.extract_only:

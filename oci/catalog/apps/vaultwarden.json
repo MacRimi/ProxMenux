@@ -15,9 +15,9 @@
     },
     "category": "security",
     "category_label": "Authentication & Security",
-    "author": "Daniel Garc\u00eda",
-    "developer": "Daniel Garc\u00eda",
-    "icon": null,
+    "author": "Daniel García",
+    "developer": "Daniel García",
+    "icon": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/vaultwarden.webp",
     "thumbnail": null,
     "screenshots": [],
     "architectures": [

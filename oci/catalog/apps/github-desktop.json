@@ -13,11 +13,11 @@
     "description": {
       "en_US": "Github Desktop is an open source Electron-based GitHub app. It is written in TypeScript and uses React."
     },
-    "category": "misc",
-    "category_label": "Miscellaneous",
+    "category": "ai",
+    "category_label": "AI / Coding & Dev-Tools",
     "author": "LinuxServer.io",
     "developer": null,
-    "icon": "https://raw.githubusercontent.com/linuxserver/docker-templates/master/linuxserver.io/img/github-desktop-icon.png",
+    "icon": "https://cdn.jsdelivr.net/gh/linuxserver/docker-templates@master/linuxserver.io/img/github-desktop-icon.png",
     "thumbnail": "https://raw.githubusercontent.com/linuxserver/docker-templates/master/linuxserver.io/img/github-desktop-banner.png",
     "screenshots": [],
     "architectures": [

@@ -64,7 +64,7 @@
     "heading": "How it works under the hood",
     "items": [
       "Dialog menu lists the 6 codes; you pick one.",
-      "If <code>config.json</code> exists: <code>jq --arg lang \"$new_language\" '.language = $lang'</code> updates the field in place.",
+      "If <code>config.json</code> exists: <code>jq --arg lang \"$new_language\" '.language = $lang''</code> updates the field in place.",
       "If <code>config.json</code> doesn't exist: a fresh one is created with the language code in a single-field object.",
       "Confirmation dialog: <em>\"Language changed to [code]\"</em>.",
       "<code>exec bash config_menu.sh</code> reloads the Settings menu with the new language active."

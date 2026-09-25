@@ -17,7 +17,7 @@
     "category_label": "Files & Downloads",
     "author": "rogerfar",
     "developer": null,
-    "icon": null,
+    "icon": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons@main/webp/rdt-client.webp",
     "thumbnail": null,
     "screenshots": [],
     "architectures": [

@@ -13,11 +13,11 @@
     "description": {
       "en_US": "VLC Media Player is a free and open source cross-platform multimedia player and framework that delivers dependable performance across multiple devices."
     },
-    "category": "misc",
-    "category_label": "Miscellaneous",
+    "category": "media",
+    "category_label": "Media & Streaming",
     "author": "LinuxServer.io",
     "developer": null,
-    "icon": "https://raw.githubusercontent.com/linuxserver/docker-templates/master/linuxserver.io/img/vlc-icon.png",
+    "icon": "https://cdn.jsdelivr.net/gh/linuxserver/docker-templates@master/linuxserver.io/img/vlc-logo.png",
     "thumbnail": "https://raw.githubusercontent.com/linuxserver/docker-templates/master/linuxserver.io/img/vlc-banner.png",
     "screenshots": [],
     "architectures": [

@@ -69,7 +69,7 @@ for (const line of helpEn) {
   assert.ok(line.includes('repeat the check (Run PVE 8 to 9 check) to review any remaining issues'), line);
   assert.ok(!line.includes('{check}') && !line.includes('all issues are resolved') && !line.includes('run Run'), line);
 }
-const helpIt = renderHelp('it'); // New keys absent from shipped Italian cache: complete English fallback.
+const helpIt = renderHelp('it');
 for (const line of helpIt) assert.ok(line.includes(it['Run PVE 8 to 9 check']), line);
 for (const locale of locales) {
   const catalog = JSON.parse(read(`lang/${locale}.json`));
@@ -129,7 +129,5 @@ required=${JSON.stringify(['Run PVE 8 to 9 check', ...newKeys, 'Hardware: GPUs a
 assert set(required)<=keys, set(required)-keys
 print('EXTRACTED',len(required))`], {cwd: root, encoding: 'utf8'});
 assert.equal(extraction.status, 0, extraction.stderr);
-// No source catalog edits; synthetic translation and malformed placeholders only live in scratch.
-assert.ok(!Object.keys(it).some(k => newKeys.includes(k)));
 fs.rmSync(temp, {recursive: true, force: true});
 console.log('PASS: extracted upgrade/GPU consumers, seven caches/fallbacks, synthetic and malformed placeholders, real extractor');

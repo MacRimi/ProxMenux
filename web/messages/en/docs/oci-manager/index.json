@@ -1,0 +1,116 @@
+{
+  "meta": {
+    "title": "OCI manager Apps | ProxMenux",
+    "description": "Run official OCI images as native Proxmox VE LXC containers, with persistent data, devices, multi-container applications and transactional updates."
+  },
+  "header": {
+    "title": "OCI manager Apps",
+    "description": "Official OCI images run as native Proxmox VE LXC containers. The image stays the one its maintainer publishes; ProxMenux reproduces the environment Docker Compose would have created around it.",
+    "section": "OCI manager Apps"
+  },
+  "sections": [
+    {
+      "id": "model",
+      "blocks": [
+        {
+          "calloutInfo": {
+            "title": "One OCI image, one native LXC",
+            "body": "No Docker engine runs inside the containers. Proxmox VE imports the image's filesystem and its OCI metadata, and the application becomes the main process of a native LXC, managed with the same tools as any other container of the node."
+          }
+        },
+        {
+          "flow": {
+            "nodes": [
+              { "label": "Source", "detail": "OCI image\nCompose and documentation" },
+              { "label": "ProxMenux", "detail": "JSON contract\nvalidation and plan" },
+              { "label": "Proxmox VE", "detail": "native LXC\nvolumes and devices" }
+            ],
+            "caption": "The application is not rebuilt: its environment is reproduced declaratively."
+          }
+        }
+      ]
+    },
+    {
+      "id": "where",
+      "title": "Where it is",
+      "intro": "OCI manager Apps opens from option <strong>OCI manager Apps (beta)</strong> of the ProxMenux main menu, on the Proxmox node and as root. Its first screen offers:",
+      "blocks": [
+        {
+          "list": {
+            "items": [
+              "<strong>Search applications</strong> — search by name across the catalog.",
+              "<strong>All applications</strong> — the complete catalog, with the number of applications.",
+              "<strong>Manage installed OCI applications</strong> — update, recreate, remove or recover what was installed.",
+              "<strong>Install an image that is not in the catalog</strong> — translate a Compose file, a <code>docker run</code> command or an image reference.",
+              "The catalog categories, each with its number of applications."
+            ]
+          }
+        },
+        {
+          "figure": {
+            "src": "/oci-manager/main-menu.png",
+            "alt": "Main screen of OCI manager Apps with search, all applications, management, custom image and the catalog categories",
+            "caption": "Main screen of OCI manager Apps."
+          }
+        },
+        {
+          "p": "Selecting an application shows its description, the image it runs and two installation modes: <strong>Install with default settings</strong>, which asks almost nothing, and <strong>Install with advanced settings</strong>, which offers the real storage, bridge and resource selectors of the node."
+        }
+      ]
+    },
+    {
+      "id": "translation",
+      "title": "What Docker expresses and what OCI manager Apps turns it into",
+      "blocks": [
+        {
+          "table": {
+            "headers": ["Requirement", "Docker expresses it as", "OCI manager Apps turns it into"],
+            "rows": [
+              ["Run the application", "<code>image</code>, <code>entrypoint</code>, <code>command</code>", "OCI rootfs and the main process of the LXC"],
+              ["Keep configuration", "<code>volumes: /config</code>", "a persistent <code>mpN</code> disk included in the backup, or a host directory"],
+              ["Publish the service", "<code>ports</code>", "an address of its own for the LXC and the access URL of the service"],
+              ["Use hardware", "<code>devices</code>, <code>group_add</code>", "<code>devN</code> entries with the effective host GID and a validated profile"],
+              ["Connect dependencies", "<code>networks</code>, <code>depends_on</code>", "a private bridge, fixed addresses, start order and healthchecks"],
+              ["Update", "<code>pull</code> and recreate", "a new rootfs with the same persistent contract"]
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "kept",
+      "title": "What is kept and what changes",
+      "blocks": [
+        {
+          "cards": {
+            "items": [
+              { "icon": "archive", "title": "Kept", "body": "The official image, its internal paths, its environment, its startup process and its functional documentation." },
+              { "icon": "boxes", "title": "Adapted", "body": "The runtime environment: network, persistence, devices, permissions and dependencies use native Proxmox VE LXC primitives." },
+              { "icon": "shield", "title": "Not translated", "body": "A Compose key with no safe equivalent is listed as a blocker. Templates with blockers are not offered, and sensitive options are confirmed during the installation." },
+              { "icon": "refresh", "title": "Recorded", "body": "Image digest, resources, paths, network, devices and stack membership are stored in the instance contract, which updates and recreations reproduce." }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "pages",
+      "title": "Pages of this section",
+      "blocks": [
+        {
+          "next": {
+            "items": [
+              { "label": "How an OCI image is translated", "href": "/docs/oci-manager/architecture", "tail": "from the image and its Compose file to a native LXC." },
+              { "label": "Install an image that is not in the catalog", "href": "/docs/oci-manager/custom-image", "tail": "Compose, docker run or an image reference." },
+              { "label": "Data, paths and networking", "href": "/docs/oci-manager/storage-network", "tail": "container disks, host directories, Rclone mounts and addresses." },
+              { "label": "Devices and acceleration", "href": "/docs/oci-manager/hardware", "tail": "GPU, NVIDIA, Coral, USB and other devices." },
+              { "label": "Multi-container applications", "href": "/docs/oci-manager/stacks", "tail": "application, database and cache as coordinated LXCs." },
+              { "label": "Install, update and recreate", "href": "/docs/oci-manager/lifecycle", "tail": "the instance contract and its operations." },
+              { "label": "In ProxMenux Monitor", "href": "/docs/oci-manager/monitor", "tail": "versions, updates, console output and terminal." }
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

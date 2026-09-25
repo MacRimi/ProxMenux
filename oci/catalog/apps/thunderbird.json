@@ -13,11 +13,11 @@
     "description": {
       "en_US": "Thunderbird is a free and open-source personal information manager primarily used as an e-mail client with a calendar and contactbook, as well as an RSS feed reader, chat client, and news client."
     },
-    "category": "misc",
-    "category_label": "Miscellaneous",
+    "category": "communication",
+    "category_label": "Communication & Community",
     "author": "LinuxServer.io",
     "developer": null,
-    "icon": "https://raw.githubusercontent.com/linuxserver/docker-templates/master/linuxserver.io/img/thunderbird-icon.png",
+    "icon": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/thunderbird.webp",
     "thumbnail": "https://raw.githubusercontent.com/linuxserver/docker-templates/master/linuxserver.io/img/thunderbird-banner.png",
     "screenshots": [],
     "architectures": [

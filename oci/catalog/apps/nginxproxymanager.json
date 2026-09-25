@@ -17,7 +17,7 @@
     "category_label": "Webservers & Proxies",
     "author": "Nginx Proxy Manager",
     "developer": "Nginx Proxy Manager",
-    "icon": null,
+    "icon": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/nginx-proxy-manager.webp",
     "thumbnail": null,
     "screenshots": [],
     "architectures": [

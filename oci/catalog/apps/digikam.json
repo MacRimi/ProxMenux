@@ -13,11 +13,11 @@
     "description": {
       "en_US": "digiKam: Professional Photo Management with the Power of Open Source"
     },
-    "category": "misc",
-    "category_label": "Miscellaneous",
+    "category": "creative",
+    "category_label": "Creative & Design",
     "author": "LinuxServer.io",
     "developer": null,
-    "icon": "https://raw.githubusercontent.com/linuxserver/docker-templates/master/linuxserver.io/img/digikam-icon.png",
+    "icon": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/digikam.webp",
     "thumbnail": "https://raw.githubusercontent.com/linuxserver/docker-templates/master/linuxserver.io/img/digikam-banner.png",
     "screenshots": [],
     "architectures": [

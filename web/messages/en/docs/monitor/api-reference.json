@@ -157,12 +157,12 @@
       {
         "endpoint": "/api/vms/<vmid>/control",
         "method": "POST",
-        "use": "Start / stop / shutdown / reboot a VM or LXC container (the same operations the Monitor's VM & LXC modal exposes). Body: {\"action\": \"start|stop|shutdown|reboot\"}. Synchronous — returns the outcome directly with no polling needed."
+        "use": "Start / stop / shutdown / reboot a VM or LXC container (the same operations the Monitor's VM & LXC modal exposes). The body carries <code>action</code>: <code>start</code>, <code>stop</code>, <code>shutdown</code> or <code>reboot</code>. Synchronous — returns the outcome directly with no polling needed."
       },
       {
         "endpoint": "/api/vms/<vmid>/backup",
         "method": "POST",
-        "use": "Create a vzdump backup of a VM or LXC. Body (all optional except when the defaults don't match your storage layout): {\"storage\": \"<pve-storage>\", \"mode\": \"snapshot|suspend|stop\", \"compress\": \"zstd|lzo|gz|none\", \"protected\": true, \"notes\": \"…\", \"notification\": \"auto|always|failure|never\", \"pbs_change_detection\": \"default|legacy|data\"}. Returns the PVE task UPID."
+        "use": "Create a vzdump backup of a VM or LXC. Body fields, all optional unless the defaults do not match the storage layout: <code>storage</code> (a PVE storage), <code>mode</code> (<code>snapshot</code>, <code>suspend</code> or <code>stop</code>), <code>compress</code> (<code>zstd</code>, <code>lzo</code>, <code>gz</code> or <code>none</code>), <code>protected</code> (<code>true</code> or <code>false</code>), <code>notes</code>, <code>notification</code> (<code>auto</code>, <code>always</code>, <code>failure</code> or <code>never</code>) and <code>pbs_change_detection</code> (<code>default</code>, <code>legacy</code> or <code>data</code>). Returns the PVE task UPID."
       },
       {
         "endpoint": "/api/vms/<vmid>/backups",

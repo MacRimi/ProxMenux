@@ -13,11 +13,11 @@
     "description": {
       "en_US": "Xbackbone is a simple, self-hosted, lightweight PHP file manager that support the instant sharing tool ShareX and *NIX systems. It supports uploading and displaying images, GIF, video, code, formatted text, and file downloading and uploading. Also have a web UI with multi user management, past uploads history and search support."
     },
-    "category": "misc",
-    "category_label": "Miscellaneous",
+    "category": "downloads",
+    "category_label": "Files & Downloads",
     "author": "LinuxServer.io",
     "developer": null,
-    "icon": "https://raw.githubusercontent.com/linuxserver/docker-templates/master/linuxserver.io/img/xbackbone-icon.png",
+    "icon": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/xbackbone.webp",
     "thumbnail": "https://raw.githubusercontent.com/linuxserver/docker-templates/master/linuxserver.io/img/xbackbone-banner.png",
     "screenshots": [],
     "architectures": [

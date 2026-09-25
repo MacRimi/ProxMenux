@@ -1,0 +1,95 @@
+{
+  "meta": {
+    "title": "Política | Auditoría e informes",
+    "description": "La política del nodo en Auditoría e informes: backup, arranque y objetivo de recuperación de cada invitado, el papel de cada almacenamiento y los umbrales de las comprobaciones."
+  },
+  "header": {
+    "title": "Política",
+    "description": "La política declara lo que ninguna inspección puede deducir: para qué sirve cada invitado y almacenamiento y los umbrales que aplican las comprobaciones.",
+    "section": "Auditoría e informes"
+  },
+  "sections": [
+    {
+      "id": "principle",
+      "blocks": [
+        {
+          "calloutInfo": {
+            "title": "Sin declaración, el informe describe; con ella, evalúa",
+            "body": "Una evaluación ve lo que hace el host, no para qué sirve. Un invitado sin backup cuya finalidad no está declarada se presenta como observación. Si su backup se declara obligatorio, la misma ausencia se presenta como advertencia. No es obligatorio declarar nada."
+          }
+        },
+        {
+          "figure": {
+            "src": "/monitor/audit/policy-view.png",
+            "alt": "Vista Política con los invitados, el almacenamiento y los umbrales del nodo",
+            "caption": "La vista Política."
+          }
+        }
+      ]
+    },
+    {
+      "id": "guests",
+      "title": "Invitados",
+      "intro": "Cada VM y LXC del nodo tiene tres campos. Un valor que se deja por defecto toma el valor general, que se muestra a su lado.",
+      "blocks": [
+        {
+          "table": {
+            "headers": ["Campo", "Valores", "Efecto en la evaluación"],
+            "rows": [
+              ["Backup", "Obligatorio, No obligatorio, Sin especificar", "La falta de backup es una advertencia si es obligatorio, una observación si no se especifica, y queda fuera del recuento si no es obligatorio."],
+              ["Arranque", "Obligatorio, No obligatorio, Sin especificar", "Si el invitado debe arrancar con el host."],
+              ["Objetivo de recuperación", "Horas", "La antigüedad máxima aceptable del último backup."]
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "storage",
+      "title": "Almacenamiento",
+      "intro": "Cada almacenamiento del nodo se declara Esencial, Opcional o Sin especificar.",
+      "blocks": [
+        {
+          "p": "Un almacenamiento inaccesible se presenta como crítico cuando se declara esencial o sirve a un invitado en marcha, como advertencia cuando su papel no se especifica, y como observación cuando se declara opcional."
+        }
+      ]
+    },
+    {
+      "id": "thresholds",
+      "title": "Umbrales",
+      "intro": "Un umbral vacío usa el valor de fábrica, que se muestra como texto de ejemplo.",
+      "blocks": [
+        {
+          "list": {
+            "items": [
+              "Revisión de capacidad de almacenamiento (%) y revisión de ocupación de thin pool (%).",
+              "Ratio de sobreaprovisionamiento thin y ratio de sobreasignación de memoria.",
+              "Intervalo de scrub de ZFS (días).",
+              "Plazo de respaldo para la antigüedad (días) y margen sobre el calendario (ratio).",
+              "Aviso de caducidad de certificado (días).",
+              "Vida útil del disco (horas) y ventana de errores de disco recientes (días).",
+              "Antigüedad del informe de Lynis (días) y antigüedad de los índices de paquetes (días).",
+              "Journal frente a su tope (%).",
+              "Revisión de espacio del sistema de archivos (%) y revisión de inodos del sistema de archivos (%)."
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "save",
+      "title": "Cómo se guarda la política",
+      "blocks": [
+        {
+          "p": "La declaración se valida y se guarda de forma atómica en <code>/usr/local/share/proxmenux/audit_policy.json</code>. Cada guardado lleva una revisión: si la declaración cambió en otra sesión, el borrador no se guarda y la vista ofrece recargar la declaración guardada."
+        },
+        {
+          "calloutWarning": {
+            "title": "La política nunca se deduce",
+            "body": "ProxMenux no añade ningún requisito por su cuenta. Un campo vacío conserva el valor de fábrica o queda sin especificar, y una declaración parcial solo afecta a los elementos que nombra."
+          }
+        }
+      ]
+    }
+  ]
+}

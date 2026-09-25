@@ -13,11 +13,11 @@
     "description": {
       "en_US": "Chrome is the official web browser from Google, built to be fast, secure, and customizable."
     },
-    "category": "misc",
-    "category_label": "Miscellaneous",
+    "category": "desktop",
+    "category_label": "Browsers & Web Desktops",
     "author": "LinuxServer.io",
     "developer": null,
-    "icon": "https://raw.githubusercontent.com/linuxserver/docker-templates/master/linuxserver.io/img/chrome-icon.png",
+    "icon": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons@main/webp/chrome.webp",
     "thumbnail": "https://raw.githubusercontent.com/linuxserver/docker-templates/master/linuxserver.io/img/chrome-banner.png",
     "screenshots": [],
     "architectures": [

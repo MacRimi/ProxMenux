@@ -13,11 +13,11 @@
     "description": {
       "en_US": "Shotcut is a free, open source, cross-platform video editor."
     },
-    "category": "misc",
-    "category_label": "Miscellaneous",
+    "category": "creative",
+    "category_label": "Creative & Design",
     "author": "LinuxServer.io",
     "developer": null,
-    "icon": "https://raw.githubusercontent.com/linuxserver/docker-templates/master/linuxserver.io/img/shotcut-icon.png",
+    "icon": "https://cdn.jsdelivr.net/gh/linuxserver/docker-templates@master/linuxserver.io/img/shotcut-logo.png",
     "thumbnail": "https://raw.githubusercontent.com/linuxserver/docker-templates/master/linuxserver.io/img/shotcut-banner.png",
     "screenshots": [],
     "architectures": [

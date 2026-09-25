@@ -595,9 +595,9 @@ function CardsGrid({
 // `changeTab` switches the outer tab (dashboard-level) and
 // `openLxcAppModal` tells VirtualMachines which guest to open and on
 // which inner tab to land. Both fire in the same tick.
-function openLxcModalOnAppTab(vmid: number) {
+function openLxcModalOnAppTab(vmid: number, tab: "app" | "updates" = "app") {
   window.dispatchEvent(new CustomEvent("changeTab", { detail: { tab: "vms" } }))
-  window.dispatchEvent(new CustomEvent("openLxcAppModal", { detail: { vmid } }))
+  window.dispatchEvent(new CustomEvent("openLxcAppModal", { detail: { vmid, tab } }))
 }
 
 // Same pattern for a QEMU guest: land on the modal's Status tab
@@ -635,6 +635,15 @@ function AppCard({
     } else {
       openLxcModalOnAppTab(link.vmid)
     }
+  }
+
+  // The update icon leads to where the update is applied: the Updates
+  // tab of the container.
+  const goToUpdates = (e: React.MouseEvent | React.KeyboardEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    if (link.vmid == null) return
+    openLxcModalOnAppTab(link.vmid, "updates")
   }
 
   const goToEditor = (e: React.MouseEvent | React.KeyboardEvent) => {
@@ -682,7 +691,20 @@ function AppCard({
             <Pencil className="h-4 w-4" />
           </button>
         ) : link.updateAvailable && (
-          <ArrowUpCircle className="h-5 w-5 text-purple-400 flex-shrink-0 self-start mt-0.5" aria-hidden="true" />
+          link.vmid != null && link.guestType !== "qemu" ? (
+            <button
+              type="button"
+              onClick={goToUpdates}
+              onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") goToUpdates(e) }}
+              className="rounded-full flex-shrink-0 self-start mt-0.5 text-purple-400 hover:text-purple-300 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              aria-label={t("apps.openUpdatesAria", { name: link.appName })}
+              title={t("apps.openUpdatesTitle")}
+            >
+              <ArrowUpCircle className="h-5 w-5" />
+            </button>
+          ) : (
+            <ArrowUpCircle className="h-5 w-5 text-purple-400 flex-shrink-0 self-start mt-0.5" aria-hidden="true" />
+          )
         )}
       </div>
 

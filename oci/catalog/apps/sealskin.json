@@ -8,16 +8,16 @@
       "en_US": "Sealskin"
     },
     "tagline": {
-      "en_US": "Sealskin is a self-hosted, client-server platform that enables users to run powerful, containerized desktop applications streamed directly to a web browser. It uses a browser extension to intercept user actions\u2014such as clicking a link or downloading a file and redirects them to a secure, isolated application environment running on a remote server."
+      "en_US": "Sealskin is a self-hosted, client-server platform that enables users to run powerful, containerized desktop applications streamed directly to a web browser. It uses a browser extension to intercept user actions—such as clicking a link or downloading a file and redirects them to a secure, isolated application environment running on a remote server."
     },
     "description": {
-      "en_US": "Sealskin is a self-hosted, client-server platform that enables users to run powerful, containerized desktop applications streamed directly to a web browser. It uses a browser extension to intercept user actions\u2014such as clicking a link or downloading a file and redirects them to a secure, isolated application environment running on a remote server."
+      "en_US": "Sealskin is a self-hosted, client-server platform that enables users to run powerful, containerized desktop applications streamed directly to a web browser. It uses a browser extension to intercept user actions—such as clicking a link or downloading a file and redirects them to a secure, isolated application environment running on a remote server."
     },
-    "category": "misc",
-    "category_label": "Miscellaneous",
+    "category": "desktop",
+    "category_label": "Browsers & Web Desktops",
     "author": "LinuxServer.io",
     "developer": null,
-    "icon": "https://raw.githubusercontent.com/linuxserver/docker-templates/master/linuxserver.io/img/sealskin-icon.png",
+    "icon": null,
     "thumbnail": "https://raw.githubusercontent.com/linuxserver/docker-templates/master/linuxserver.io/img/sealskin-banner.png",
     "screenshots": [],
     "architectures": [

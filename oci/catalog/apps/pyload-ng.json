@@ -13,11 +13,11 @@
     "description": {
       "en_US": "pyLoad is a Free and Open Source download manager written in Python and designed to be extremely lightweight, easily extensible and fully manageable via web."
     },
-    "category": "misc",
-    "category_label": "Miscellaneous",
+    "category": "downloads",
+    "category_label": "Files & Downloads",
     "author": "LinuxServer.io",
     "developer": null,
-    "icon": "https://raw.githubusercontent.com/linuxserver/docker-templates/master/linuxserver.io/img/pyload-ng-icon.png",
+    "icon": "https://cdn.jsdelivr.net/gh/linuxserver/docker-templates@master/linuxserver.io/img/pyload-logo.png",
     "thumbnail": "https://raw.githubusercontent.com/linuxserver/docker-templates/master/linuxserver.io/img/pyload-ng-banner.png",
     "screenshots": [],
     "architectures": [

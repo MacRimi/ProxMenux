@@ -13,11 +13,11 @@
     "description": {
       "en_US": "budge is an open source 'budgeting with envelopes' personal finance app."
     },
-    "category": "misc",
-    "category_label": "Miscellaneous",
+    "category": "finance",
+    "category_label": "Finance & Budgeting",
     "author": "LinuxServer.io",
     "developer": null,
-    "icon": "https://raw.githubusercontent.com/linuxserver/docker-templates/master/linuxserver.io/img/budge-icon.png",
+    "icon": "https://cdn.jsdelivr.net/gh/linuxserver/budge@master/frontend/public/logo512.png",
     "thumbnail": "https://raw.githubusercontent.com/linuxserver/docker-templates/master/linuxserver.io/img/budge-banner.png",
     "screenshots": [],
     "architectures": [

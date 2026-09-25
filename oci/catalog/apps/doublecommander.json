@@ -13,11 +13,11 @@
     "description": {
       "en_US": "Double Commander is a free cross platform open source file manager with two panels side by side. It is inspired by Total Commander and features some new ideas."
     },
-    "category": "misc",
-    "category_label": "Miscellaneous",
+    "category": "tools",
+    "category_label": "Tools",
     "author": "LinuxServer.io",
     "developer": null,
-    "icon": "https://raw.githubusercontent.com/linuxserver/docker-templates/master/linuxserver.io/img/doublecommander-icon.png",
+    "icon": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons@main/webp/double-commander.webp",
     "thumbnail": "https://raw.githubusercontent.com/linuxserver/docker-templates/master/linuxserver.io/img/doublecommander-banner.png",
     "screenshots": [],
     "architectures": [

@@ -13,11 +13,11 @@
     "description": {
       "en_US": "RetroArch-web is a web-based classic game emulator that enables users to enjoy a wide range of retro games directly in modern browsers. Supporting platforms like GBA, N64, DOS games, and NES (FC), it brings nostalgic gaming to life. Built on the open-source RetroArch project, RetroArch-web delivers robust features, including high-quality graphics rendering, audio processing, input controls, and save/load game progress, ensuring a precise and smooth emulation experience.\n\nDesigned for ease of use, RetroArch-web requires no complex software installation, running seamlessly in browsers. Its flexible configuration options let users customize controller setups, visual filters, and audio settings to suit individual preferences. With broad cross-platform compatibility, it ensures stable performance across devices, offering retro gaming enthusiasts a consistent experience on the go.\n\nBacked by an active open-source community, RetroArch-web continually improves performance and expands supported game platforms. Whether revisiting classic arcade titles or exploring vintage console games, RetroArch-web stands out as the ideal choice for retro gamers, combining powerful emulation with a user-friendly interface.\n\n**Key Features:**\n- Polished interface for browsing game collections with thumbnails and animated backgrounds\n- Supports multiple emulators and game engines for running classic games and discs\n- Next-frame response time for near-native hardware low-latency experience\n- Highly configurable settings to tweak game performance and display options\n- Automatic controller configuration for easy multiplayer gaming\n- Shaders to enhance old game rendering and mimic CRT monitor effects\n- Netplay for multiplayer gaming and spectator mode\n- Achievements system to unlock trophies and badges in classic games\n- Recording and streaming for capturing gameplay or live streaming\n\n**Learn More:**\n- [RetroArch Official Website](https://www.retroarch.com)\n- [RetroArch GitHub Repository](https://github.com/libretro/RetroArch)\n"
     },
-    "category": "media",
-    "category_label": "Media & Streaming",
+    "category": "gaming",
+    "category_label": "Gaming & Leisure",
     "author": "inglebard",
     "developer": "inglebard",
-    "icon": null,
+    "icon": "https://cdn.jsdelivr.net/gh/IceWhaleTech/CasaOS-AppStore@main/Apps/RetroArch/icon.png",
     "thumbnail": null,
     "screenshots": [],
     "architectures": [

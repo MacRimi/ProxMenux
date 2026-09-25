@@ -13,11 +13,11 @@
     "description": {
       "en_US": "EmulatorJS is a Docker-based emulator application that can simulate various operating systems and device environments within containers for development, testing, and learning purposes."
     },
-    "category": "media",
-    "category_label": "Media & Streaming",
+    "category": "gaming",
+    "category_label": "Gaming & Leisure",
     "author": "linuxserver.io",
     "developer": null,
-    "icon": null,
+    "icon": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/emulatorjs.webp",
     "thumbnail": null,
     "screenshots": [],
     "architectures": [

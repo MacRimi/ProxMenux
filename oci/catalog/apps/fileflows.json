@@ -11,13 +11,13 @@
       "en_US": "File processing made easy!"
     },
     "description": {
-      "en_US": "Save storage space with efficient file processing.\n\nFileFlows lets you monitor and process any file type with custom flows. Videos, audio, images, archives, comics, eBooks\u2014you name it!\n"
+      "en_US": "Save storage space with efficient file processing.\n\nFileFlows lets you monitor and process any file type with custom flows. Videos, audio, images, archives, comics, eBooks—you name it!\n"
     },
     "category": "media",
     "category_label": "Media & Streaming",
     "author": "FileFlows",
     "developer": "FileFlows",
-    "icon": null,
+    "icon": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/fileflows.webp",
     "thumbnail": null,
     "screenshots": [],
     "architectures": [

@@ -8,16 +8,16 @@
       "en_US": "NetBird"
     },
     "tagline": {
-      "en_US": "Connect your devices into a secure WireGuard\u00ae-based overlay network with SSO, MFA and granular access controls."
+      "en_US": "Connect your devices into a secure WireGuard®-based overlay network with SSO, MFA and granular access controls."
     },
     "description": {
-      "en_US": "NetBird combines a WireGuard\u00ae-based overlay network with Zero Trust Network Access, providing a unified open source platform for reliable and secure connectivity.\n\n- Secure Remote Access \u2013 Enable least privilege network access in a few clicks\n- Zero-Config Deployment \u2013 Replace legacy VPNs with a peer-to-peer WireGuard\u00ae-based network\n- Seamless SSO with MFA \u2013 Secure your network access with session-based SSO & MFA\n- Dynamic Posture Checks \u2013 Grant access only to devices meeting your security rules\n- Centralized Network Management \u2013 Control your private network from a single place\n- Detailed Activity Logging \u2013 Identify who did what, and when in your network\n\n**Learn More:**\n- [NetBird Website](https://netbird.io)\n- [Documentation](https://docs.netbird.io)\n- [Self-Hosting Guide](https://docs.netbird.io/selfhosted/selfhosted-quickstart)\n- [NetBird GitHub](https://github.com/netbirdio/netbird)\n- [Slack Community](https://docs.netbird.io/slack-url)\n"
+      "en_US": "NetBird combines a WireGuard®-based overlay network with Zero Trust Network Access, providing a unified open source platform for reliable and secure connectivity.\n\n- Secure Remote Access – Enable least privilege network access in a few clicks\n- Zero-Config Deployment – Replace legacy VPNs with a peer-to-peer WireGuard®-based network\n- Seamless SSO with MFA – Secure your network access with session-based SSO & MFA\n- Dynamic Posture Checks – Grant access only to devices meeting your security rules\n- Centralized Network Management – Control your private network from a single place\n- Detailed Activity Logging – Identify who did what, and when in your network\n\n**Learn More:**\n- [NetBird Website](https://netbird.io)\n- [Documentation](https://docs.netbird.io)\n- [Self-Hosting Guide](https://docs.netbird.io/selfhosted/selfhosted-quickstart)\n- [NetBird GitHub](https://github.com/netbirdio/netbird)\n- [Slack Community](https://docs.netbird.io/slack-url)\n"
     },
     "category": "remote",
     "category_label": "Remote Access & VPN",
     "author": "NetBird GmbH",
     "developer": "NetBird GmbH",
-    "icon": null,
+    "icon": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/netbird.webp",
     "thumbnail": null,
     "screenshots": [],
     "architectures": [

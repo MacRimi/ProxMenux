@@ -8,16 +8,16 @@
       "en_US": "Cops"
     },
     "tagline": {
-      "en_US": "Cops by S\u00e9bastien Lucas, now maintained by MikesPub, stands for Calibre OPDS (and HTML) Php Server."
+      "en_US": "Cops by Sébastien Lucas, now maintained by MikesPub, stands for Calibre OPDS (and HTML) Php Server."
     },
     "description": {
-      "en_US": "Cops by S\u00e9bastien Lucas, now maintained by MikesPub, stands for Calibre OPDS (and HTML) Php Server."
+      "en_US": "Cops by Sébastien Lucas, now maintained by MikesPub, stands for Calibre OPDS (and HTML) Php Server."
     },
-    "category": "misc",
-    "category_label": "Miscellaneous",
+    "category": "media",
+    "category_label": "Media & Streaming",
     "author": "LinuxServer.io",
     "developer": null,
-    "icon": "https://raw.githubusercontent.com/linuxserver/docker-templates/master/linuxserver.io/img/cops-icon.png",
+    "icon": "https://cdn.jsdelivr.net/gh/linuxserver/docker-templates@master/linuxserver.io/img/cops-icon.png",
     "thumbnail": "https://raw.githubusercontent.com/linuxserver/docker-templates/master/linuxserver.io/img/cops-banner.png",
     "screenshots": [],
     "architectures": [

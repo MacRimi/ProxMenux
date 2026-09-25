@@ -13,11 +13,11 @@
     "description": {
       "en_US": "Chromium is an open-source browser project that aims to build a safer, faster, and more stable way for all users to experience the web."
     },
-    "category": "misc",
-    "category_label": "Miscellaneous",
+    "category": "desktop",
+    "category_label": "Browsers & Web Desktops",
     "author": "LinuxServer.io",
     "developer": null,
-    "icon": "https://raw.githubusercontent.com/linuxserver/docker-templates/master/linuxserver.io/img/chromium-icon.png",
+    "icon": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/chromium.webp",
     "thumbnail": "https://raw.githubusercontent.com/linuxserver/docker-templates/master/linuxserver.io/img/chromium-banner.png",
     "screenshots": [],
     "architectures": [

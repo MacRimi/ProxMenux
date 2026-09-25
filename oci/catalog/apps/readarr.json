@@ -17,7 +17,7 @@
     "category_label": "Media & Streaming",
     "author": "Readarr Team",
     "developer": "Readarr Team",
-    "icon": null,
+    "icon": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/readarr.webp",
     "thumbnail": null,
     "screenshots": [],
     "architectures": [

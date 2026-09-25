@@ -17,7 +17,7 @@
     "category_label": "Documents & Notes",
     "author": "ArchiveBox",
     "developer": "ArchiveBox",
-    "icon": null,
+    "icon": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/archivebox.webp",
     "thumbnail": null,
     "screenshots": [],
     "architectures": [

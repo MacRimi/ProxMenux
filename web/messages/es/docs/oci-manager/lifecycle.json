@@ -1,0 +1,243 @@
+{
+  "meta": {
+    "title": "Instalar, actualizar y recrear | ProxMenux",
+    "description": "El contrato de instancia de un contenedor OCI y las operaciones que lo usan: actualizar, recrear, eliminar y recuperar una operación interrumpida."
+  },
+  "header": {
+    "title": "Instalar, actualizar y recrear",
+    "description": "Cada instancia conserva un contrato reproducible, de modo que su rootfs puede sustituirse sin perder la configuración ni los datos persistentes.",
+    "section": "OCI manager Apps"
+  },
+  "sections": [
+    {
+      "id": "contract",
+      "title": "El contrato de la instancia",
+      "blocks": [
+        {
+          "p": "Tras una instalación, la configuración efectiva se guarda en <code>/usr/local/share/proxmenux/oci/instances/VMID/oci-compose.json</code>. No es una copia del archivo Compose original: es el contrato reproducible del LXC que existe en este host."
+        },
+        {
+          "code": {
+            "code": "instances/\n└── 105/\n    └── oci-compose.json\n        ├── imagen y digest resuelto\n        ├── recursos y red\n        ├── entorno (secretos protegidos)\n        ├── discos del contenedor y directorios del host\n        ├── perfil de hardware y dispositivos\n        ├── log de consola y modo de terminal\n        └── pertenencia a una pila y ciclo de vida"
+          }
+        }
+      ]
+    },
+    {
+      "id": "manage",
+      "title": "Gestionar aplicaciones OCI instaladas",
+      "intro": "Esta opción de la pantalla principal enumera las instancias registradas con su aplicación y su imagen. Cada una se contrasta con su contrato antes de cualquier acción; un CT que ya no coincide con su registro no se modifica ni se elimina. La misma actualización y la misma recreación se ofrecen en la pestaña Actualizaciones de <monitorLink>ProxMenux Monitor</monitorLink>.",
+      "blocks": [
+        {
+          "table": {
+            "headers": [
+              "Opción",
+              "Qué cambia",
+              "Qué se conserva"
+            ],
+            "rows": [
+              [
+                "Actualizar la imagen con la configuración guardada",
+                "El rootfs se sustituye por la imagen que publica hoy el canal guardado",
+                "Contrato, discos del contenedor, directorios del host, red y dispositivos"
+              ],
+              [
+                "Recrear: editar recursos, red, rutas y GPU",
+                "El editor se abre con el contrato actual; el CT se reconstruye con los cambios",
+                "Los datos de los discos del contenedor y de los directorios del host"
+              ],
+              [
+                "Eliminar: la aplicación y sus contenedores",
+                "Se eliminan el LXC, o todos los miembros de una pila, y sus contratos",
+                "Los directorios del host, con su contenido"
+              ]
+            ]
+          }
+        },
+        {
+          "p": "Para una aplicación multicontenedor el menú ofrece <strong>Actualizar cada contenedor de la aplicación</strong> y la eliminación. Una pila no se recrea."
+        },
+        {
+          "figure": {
+            "src": "/oci-manager/manage-menu.png",
+            "alt": "Lista de aplicaciones OCI instaladas y las opciones de actualizar, recrear y eliminar",
+            "caption": "Gestionar aplicaciones OCI instaladas."
+          }
+        }
+      ]
+    },
+    {
+      "id": "update",
+      "title": "Una actualización transaccional",
+      "blocks": [
+        {
+          "mermaid": {
+            "chartCode": "sequenceDiagram\n participant U as {{user}}\n participant P as ProxMenux\n participant R as {{registry}}\n participant X as Proxmox VE\n U->>P: {{update}}\n P->>R: {{resolve}}\n R-->>P: digest\n P->>P: {{verify}}\n P->>X: {{backup}}\n P->>X: {{import}}\n P->>X: {{reapply}}\n X-->>P: healthcheck\n alt {{healthy}}\n  P-->>U: {{commit}}\n else {{failure}}\n  P->>X: Rollback\n  P-->>U: {{restored}}\n end",
+            "labels": {
+              "user": "Usuario",
+              "registry": "Registro OCI",
+              "update": "Actualizar la instancia",
+              "resolve": "Resolver la etiqueta",
+              "verify": "Verificar el archivo y preflight",
+              "backup": "Detener y respaldar el CT",
+              "import": "Importar el rootfs nuevo",
+              "reapply": "Aplicar de nuevo el contrato",
+              "healthy": "correcto",
+              "failure": "fallo",
+              "commit": "Contrato publicado con el digest nuevo",
+              "restored": "Instancia anterior restaurada"
+            }
+          }
+        },
+        {
+          "list": {
+            "items": [
+              "Cuando el registro sigue sirviendo el digest instalado, no se descarga nada y la instancia no se toca.",
+              "La imagen nueva se verifica capa a capa antes de detener el CT. Una descarga que llega dañada se repite una vez; una imagen ya almacenada que no supera la comprobación se descarga de nuevo.",
+              "Los ajustes cambiados en Proxmox VE después de la instalación (memoria, swap, núcleos, límite de CPU, prioridad de CPU, arranque con el nodo) se conservan y pasan al contrato nuevo.",
+              "Cualquier otra diferencia entre el CT y su contrato detiene la actualización antes de detener el CT."
+            ]
+          }
+        },
+        {
+          "flow": {
+            "nodes": [
+              {
+                "label": "Antes",
+                "detail": "rootfs A\n/config mp0\n/media directorio del host"
+              },
+              {
+                "label": "Actualización",
+                "detail": "sustituye solo\nel rootfs"
+              },
+              {
+                "label": "Después",
+                "detail": "rootfs B\n/config mp0\n/media directorio del host"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "recovery",
+      "title": "Recuperar una operación interrumpida",
+      "intro": "La actualización y la recreación usan una transacción persistente. Si el proceso, la terminal o el nodo se interrumpen después de detener el CT, la operación no se da por terminada.",
+      "blocks": [
+        {
+          "steps": {
+            "items": [
+              {
+                "title": "Marcador pendiente",
+                "body": "Al abrir Gestionar aplicaciones OCI instaladas, el estado guardado indica que la sustitución no llegó a publicarse."
+              },
+              {
+                "title": "Ver estado",
+                "body": "Muestra la fase alcanzada sin modificar contenedores ni datos."
+              },
+              {
+                "title": "Recuperar la instalación anterior",
+                "body": "Restaura el backup nativo verificado tomado antes de la sustitución y el contrato anterior."
+              },
+              {
+                "title": "Pilas como una unidad",
+                "body": "En una aplicación multicontenedor se recuperan todos los miembros desde el mismo punto de la transacción, no solo el seleccionado."
+              }
+            ]
+          }
+        },
+        {
+          "calloutWarning": {
+            "title": "Los directorios del host quedan fuera de la restauración",
+            "body": "El backup cubre el rootfs y los discos del contenedor que incluye. Un directorio del host no se revierte, porque otros LXC pueden usar sus datos. Actualizar, recrear o recuperar una instancia con directorios del host pide antes una confirmación de ello."
+          }
+        }
+      ]
+    },
+    {
+      "id": "remove",
+      "title": "Eliminar una aplicación OCI",
+      "blocks": [
+        {
+          "p": "Antes de la confirmación se compone un resumen a partir de la configuración real: los contenedores que se eliminan, los datos que se eliminan con ellos, la red privada que se libera y los directorios del host que se conservan. La confirmación sale en <strong>No</strong> por defecto, porque los datos de los discos eliminados no pueden recuperarse después."
+        },
+        {
+          "table": {
+            "headers": [
+              "Recurso",
+              "Al eliminar",
+              "Motivo"
+            ],
+            "rows": [
+              [
+                "rootfs y discos del contenedor",
+                "Se eliminan",
+                "Solo pertenecen al contenedor"
+              ],
+              [
+                "Directorio del host",
+                "Se conserva, con su contenido",
+                "Otras aplicaciones pueden usarlo"
+              ],
+              [
+                "Contrato de la instancia",
+                "Se retira tras una eliminación correcta",
+                "Ya no tiene ningún CT asociado"
+              ],
+              [
+                "Bridge privado de una pila",
+                "Se libera con la pila",
+                "Ya no le quedan miembros que conectar"
+              ],
+              [
+                "Un único miembro de una pila",
+                "No se elimina por separado",
+                "Se elimina la aplicación completa, para no dejar ninguna pila incompleta"
+              ]
+            ]
+          }
+        },
+        {
+          "figure": {
+            "src": "/oci-manager/remove-summary.png",
+            "alt": "Resumen de eliminación con los contenedores, los datos y los directorios del host afectados",
+            "caption": "El resumen de eliminación, compuesto a partir de la configuración real."
+          }
+        }
+      ]
+    },
+    {
+      "id": "archives",
+      "title": "Imágenes descargadas y espacio del host",
+      "blocks": [
+        {
+          "p": "El archivo OCI se usa para construir el rootfs; el CT en marcha no lo lee. Tras una instalación o una actualización se enumeran los archivos descargados en esa operación con su tamaño y se ofrece eliminarlos. Eliminarlos libera el espacio sin afectar al contenedor ni a sus datos."
+        },
+        {
+          "calloutInfo": {
+            "title": "Las actualizaciones no necesitan el archivo",
+            "body": "Sin el archivo, una actualización resuelve el canal guardado y descarga el digest nuevo. Con él, un archivo solo se reutiliza cuando su referencia y su integridad coinciden con lo pedido."
+          }
+        }
+      ]
+    },
+    {
+      "id": "registry",
+      "title": "Registro y limpieza",
+      "blocks": [
+        {
+          "p": "Los contratos registrados se comparan con los CT reales. Un contrato solo queda huérfano cuando su VMID ya no existe o ya no lleva la identidad de instancia esperada. La limpieza no elimina volúmenes ni datos externos por deducción."
+        }
+      ]
+    },
+    {
+      "id": "channel",
+      "title": "Una etiqueta rolling no es una actualización desatendida",
+      "blocks": [
+        {
+          "p": "El catálogo instala la etiqueta rolling que publica su responsable, pero el digest efectivo se resuelve, se registra y solo cambia con una actualización explícita, con preflight y restauración. <monitorLink>ProxMenux Monitor</monitorLink> compara el digest instalado con el que publica el registro y muestra, y notifica, cuándo hay una imagen nueva."
+        }
+      ]
+    }
+  ]
+}

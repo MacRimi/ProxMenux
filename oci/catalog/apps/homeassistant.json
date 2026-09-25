@@ -17,7 +17,7 @@
     "category_label": "IoT & Smart Home",
     "author": "LinuxServer.io",
     "developer": null,
-    "icon": "https://raw.githubusercontent.com/linuxserver/docker-templates/master/linuxserver.io/img/homeassistant-icon.png",
+    "icon": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/home-assistant.webp",
     "thumbnail": "https://raw.githubusercontent.com/linuxserver/docker-templates/master/linuxserver.io/img/homeassistant-banner.png",
     "screenshots": [],
     "architectures": [

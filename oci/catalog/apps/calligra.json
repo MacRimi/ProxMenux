@@ -13,11 +13,11 @@
     "description": {
       "en_US": "Calligra is an office and graphic art suite by KDE. It is available for desktop PCs, tablet computers, and smartphones. It contains applications for word processing, spreadsheets, presentation, vector graphics, and editing databases."
     },
-    "category": "misc",
-    "category_label": "Miscellaneous",
+    "category": "documents",
+    "category_label": "Documents & Notes",
     "author": "LinuxServer.io",
     "developer": null,
-    "icon": "https://raw.githubusercontent.com/linuxserver/docker-templates/master/linuxserver.io/img/calligra-icon.png",
+    "icon": "https://cdn.jsdelivr.net/gh/linuxserver/docker-templates@master/linuxserver.io/img/calligra-logo.png",
     "thumbnail": "https://raw.githubusercontent.com/linuxserver/docker-templates/master/linuxserver.io/img/calligra-banner.png",
     "screenshots": [],
     "architectures": [

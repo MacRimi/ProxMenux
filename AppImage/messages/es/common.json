@@ -377,7 +377,7 @@
       "criticalStatus": "Crítico: requiere atención inmediata",
       "warningStatus": "Advertencia: debe ser monitoreado",
       "moreIssues": "...y {count} problemas más (ver detalles a continuación)",
-      "dismissed": "Despedido",
+      "dismissed": "Descartado",
       "occurrences": "Ocurrencias",
       "errorSignature": "Firma de error",
       "rawMessage": "Mensaje sin procesar",
@@ -1066,10 +1066,11 @@
     "tabs": {
       "status": "Estado",
       "mounts": "Montajes",
-      "backups": "Copias",
+      "backups": "Backups",
       "updates": "Actualiz.",
       "firewall": "Cortafuegos",
-      "app": "App"
+      "app": "App",
+      "logs": "Logs"
     },
     "actions": {
       "start": "Iniciar",
@@ -1087,9 +1088,9 @@
       "guest": "Invitado:"
     },
     "guestTypes": {
-      "container": "recipiente",
+      "container": "contenedor",
       "vm": "VM",
-      "containerUi": "Recipiente"
+      "containerUi": "Contenedor"
     },
     "backups": {
       "title": "Copias de seguridad",
@@ -1146,7 +1147,7 @@
       "variables": "Variables: {{cluster}}, {{guestname}}, {{node}}, {{vmid}}",
       "creating": "Creando...",
       "submit": "Backup",
-      "typeContainer": "recipiente",
+      "typeContainer": "contenedor",
       "typeVirtualMachine": "máquina virtual",
       "modes": {
         "snapshot": "Instantánea",
@@ -1169,16 +1170,54 @@
       "empty": "Aún no se han registrado eventos del cortafuegos.",
       "emptyHint": "Las reglas con log: info o superior completarán esta vista a medida que lleguen los paquetes."
     },
+    "consoleLog": {
+      "title": "Salida de consola",
+      "description": "Salida estándar y de errores del proceso principal de la imagen.",
+      "stopped": "El contenedor está detenido; el log conserva la salida de sus ejecuciones anteriores.",
+      "lastLines": "Últimas {count} líneas",
+      "follow": "Seguir",
+      "pause": "Pausar",
+      "refresh": "Actualizar",
+      "download": "Descargar",
+      "filter": "Filtrar líneas",
+      "loading": "Cargando la salida de consola...",
+      "empty": "Todavía no hay salida registrada.",
+      "emptyHint": "Las líneas aparecen aquí a medida que el contenedor escribe en su consola.",
+      "noMatches": "Ninguna línea coincide con el filtro.",
+      "readFailed": "No se pudo leer el log de consola",
+      "notAvailableTitle": "Este contenedor no tiene log de consola",
+      "notAvailableHint": "El log de consola se configura cuando ProxMenux instala el contenedor desde su imagen OCI."
+    },
+    "ociUpdates": {
+      "notTracked": "Al registrar la aplicación en la pestaña App, aquí se sigue su imagen.",
+      "installedImage": "Imagen instalada",
+      "newImage": "Nueva imagen {image} disponible",
+      "stackNote": "Forma parte de una aplicación multicontenedor (CT principal {primary}, {count} contenedores): la actualización los abarca a todos.",
+      "pendingNote": "Una operación sobre este contenedor quedó interrumpida; Recuperar abre su recuperación.",
+      "update": "Actualizar",
+      "recreate": "Recrear",
+      "recover": "Recuperar",
+      "terminalTitleUpdate": "Actualizar aplicación OCI",
+      "terminalTitleRecreate": "Recrear aplicación OCI",
+      "terminalDescription": "El mismo recorrido que OCI manager Apps → Gestionar aplicaciones OCI instaladas.",
+      "keepBackup": "Conservar el backup previo a la actualización",
+      "noKeepBackup": "El backup previo a la actualización no se conserva",
+      "keepBackupHelp": "Cada actualización hace un backup del contenedor antes de sustituir su imagen, para restaurarlo si la actualización falla. Con esta opción ese backup se conserva en el almacenamiento elegido; en Proxmox Backup Server se escribe un backup antes de actualizar.",
+      "scheduleHelp": "Solo se actualiza la imagen, y solo cuando su registro publica una nueva.",
+      "releaseDelayHelp": "Una imagen nueva solo se instala cuando tiene al menos esta antigüedad.",
+      "ackExternal": "Los directorios del host no se revierten con el backup",
+      "ackExternalHelp": "Este contenedor usa directorios del host. Una actualización programada solo se ejecuta con esto confirmado."
+    },
     "options": {
       "title": "Opciones",
-      "snapshotBefore": "Instantánea antes de aplicar",
-      "snapshotOn": "— el {storage}",
-      "noSnapshot": "Sin instantánea previa a la solicitud",
-      "restartAfter": "Reiniciar el contenedor después de aplicar.",
-      "noRestart": "Sin reinicio posterior a la aplicación",
+      "snapshotBefore": "Backup antes de aplicar",
+      "snapshotOn": "— en {storage}",
+      "noSnapshot": "Sin backup antes de aplicar",
+      "restartAfter": "Reiniciar el contenedor después de aplicar",
+      "noRestart": "Sin reinicio después de aplicar",
       "snapshotLabel": "Backup del contenedor antes de aplicar (vzdump)",
       "appliesToBoth": "Aplica para ejecuciones manuales + programadas.",
-      "backupStorage": "Almacenamiento de respaldo",
+      "backupStorage": "Almacenamiento de backups",
       "pickStorage": "Elige un almacenamiento",
       "editButton": "Editar",
       "cancelButton": "Cancelar",
@@ -1372,7 +1411,7 @@
       "otherPackagesPending": "+{count} otros paquetes pendientes en el contenedor",
       "noManagedUpdateInfo": "Aún no hay información de actualización: verifique desde Seguridad → Secure Gateway.",
       "ociTitle": "Contenedor de imágenes OCI",
-      "ociBody": "Este contenedor se creó a partir de una imagen OCI (Docker). La gestión de actualizaciones para contenedores OCI viene con la próxima función de instalación de OCI: las actualizaciones reconstruirán el contenedor a partir de una etiqueta de imagen más nueva en lugar de aplicar parches a los paquetes internos.",
+      "ociBody": "Este contenedor se creó desde una imagen OCI fuera de OCI manager Apps. Se actualiza sustituyendo su imagen, algo que ProxMenux no gestiona en este caso.",
       "dockerImagesTitle": "Imágenes Docker",
       "dockerAppTitle": "Docker",
       "dockerImagesSubheading": "Imágenes",
@@ -1487,7 +1526,6 @@
       "containerNameLabel": "Nombre del contenedor",
       "containerNamePlaceholder": "por ejemplo, <nombre-de-su-contenedor>",
       "ociLabelKeyLabel": "Clave de etiqueta OCI",
-      "ociLabelPlaceholder": "org.opencontainers.image.version",
       "pythonInterpreterLabel": "Ruta del intérprete de Python",
       "pythonInterpreterPlaceholder": "por ejemplo, /opt/<tu-aplicación>/venv/bin/python",
       "pipDistLabel": "Nombre de distribución (paquete pip)",
@@ -1631,7 +1669,16 @@
       "notifyUpstreamLabel": "Notificarme cuando haya una nueva versión disponible",
       "notifyUpstreamHelp": "Envía `app_update_available` a los canales activos en Ajustes → Notificaciones. Desactívalo si esta app no se puede actualizar en tu instalación.",
       "excludeFromBadgeLabel": "Excluir del contador de actualizaciones del LXC",
-      "excludeFromBadgeHelp": "No sumar esta app al contador agregado de actualizaciones del card del LXC. Útil cuando mantienes una versión concreta a propósito (requisito de tracker, compatibilidad). No afecta al estado que se muestra en la pestaña App ni al envío de la notificación."
+      "excludeFromBadgeHelp": "No sumar esta app al contador agregado de actualizaciones del card del LXC. Útil cuando mantienes una versión concreta a propósito (requisito de tracker, compatibilidad). No afecta al estado que se muestra en la pestaña App ni al envío de la notificación.",
+      "ociLabelPlaceholder": "org.opencontainers.image.version",
+      "methodOciImage": "Imagen OCI (instalada por ProxMenux)",
+      "ociImageHelp": "La versión y sus actualizaciones se leen de la imagen con la que se creó este contenedor. La instaló ProxMenux, así que no hay nada que configurar: la imagen instalada se compara con la que publica hoy su registro.",
+      "ociAppVersion": "Aplicación",
+      "ociImage": "Imagen",
+      "ociNewImage": "Nueva imagen",
+      "ociImageCurrent": "Versión",
+      "refreshData": "Actualizar datos",
+      "refreshingData": "Actualizando…"
     },
     "statusFilter": {
       "ariaLabel": "Filtrar máquinas virtuales y contenedores",
@@ -1702,7 +1749,7 @@
       "labels": {
         "category": "categoría",
         "severity": "gravedad",
-        "dismissed": "despedido"
+        "dismissed": "descartado"
       },
       "errorNames": {
         "security_login_attempts": "Intentos de inicio de sesión de seguridad"
@@ -3321,7 +3368,14 @@
       "auditReports": "Informes — una auditoría completa más informes enfocados de Revisión de seguridad, Garantía de backups y Capacidad y desgaste, cada uno con su propia cabecera de postura, y un Inventario imprimible; todos se exportan a PDF. La evaluación de seguridad pregunta antes de ejecutar Lynis para que sea rápida.",
       "auditPolicyBaseline": "Política y referencia — declara qué se espera del host (backups requeridos, firewall, acceso SSH de root) para que los hallazgos se evalúen contra ello, marca una ejecución como referencia y ve qué cambió desde entonces, con los hallazgos nuevos, resueltos y aceptados por separado.",
       "groupedAppUpdates": "Notificaciones de actualización de aplicaciones agrupadas — un mensaje completo por escaneo en lugar de uno por aplicación, agrupado por LXC con las versiones instalada y disponible.",
-      "adminTokenScope": "Ámbito administrativo — abrir un terminal del Monitor y desactivar la autenticación ahora requieren un token de administrador completo, así que un token de API de solo lectura se mantiene de solo lectura (reportado por @f3rs3n)."
+      "adminTokenScope": "Ámbito administrativo — abrir un terminal del Monitor y desactivar la autenticación ahora requieren un token de administrador completo, así que un token de API de solo lectura se mantiene de solo lectura (reportado por @f3rs3n).",
+      "ociAppTab": "Contenedores OCI en la pestaña App — un contenedor instalado por OCI manager Apps se reconoce desde su registro de instalación: la aplicación y su imagen, una imagen nueva detectada por digest y el enlace al repositorio de la imagen.",
+      "ociUpdatesTab": "Actualizaciones de contenedores OCI — Actualizar y Recrear abren el mismo recorrido que el menú OCI, el backup previo a la actualización puede conservarse en un almacenamiento de backups y la imagen puede actualizarse de forma programada.",
+      "ociLogsTab": "Pestaña Logs para contenedores OCI — la salida de consola de la aplicación, guardada en el host y seguida en directo, con filtro y descarga. La consola de Proxmox de estos contenedores abre un shell.",
+      "appsUpdateShortcut": "El icono de actualización de la página Apps abre el contenedor directamente en su pestaña Actualizaciones.",
+      "webhookHttps": "Las notificaciones de Proxmox llegan al Monitor con HTTPS activado — se entregan en una dirección solo local y ya no fallan por un error de certificado.",
+      "persistentLogs": "Una ráfaga de errores en los logs que ya terminó no se presenta como persistente: el patrón tiene que seguir apareciendo durante 15 minutos, y su aviso se cierra solo (reportado por @Joshua1264).",
+      "mountsLanAddress": "Los puntos de montaje en LVM-thin y otros almacenamientos de bloques muestran su uso, y las aplicaciones multicontenedor se abren en su dirección de la LAN."
     }
   },
   "network": {
@@ -4668,7 +4722,7 @@
     "updateNow": "Actualizar ahora",
     "dismissedItems": "Artículos descartados ({count})",
     "permanent": "Permanente",
-    "dismissed": "Despedido",
+    "dismissed": "Descartado",
     "wasStatus": "era {status}",
     "permanentlySuppressed": "Permanentemente suprimido",
     "suppressedForMore": "Suprimido por {duration} más",
@@ -4677,7 +4731,7 @@
     "lastUpdated": "Última actualización: {date}",
     "updateTerminalTitle": "Actualización del sistema Proxmox",
     "updateTerminalDescription": "Ejecuta apt-get update + dist-upgrade y limpieza posterior a la actualización en el host.",
-    "dismiss": "Despedir",
+    "dismiss": "Descartar",
     "silenceFor": "Silencia esta alerta por",
     "permanently": "Permanentemente",
     "duration": {
@@ -5035,6 +5089,8 @@
     "customLinkNewTitle": "Nuevo enlace web",
     "customLinkEditTitle": "Editar enlace web",
     "customLinkEditAria": "Editar el enlace personalizado {name}",
+    "openUpdatesAria": "Abrir la pestaña Actualizaciones de {name}",
+    "openUpdatesTitle": "Actualización disponible — abrir la pestaña Actualizaciones",
     "customLinkName": "Nombre",
     "customLinkNamePlaceholder": "p. ej. Mi app",
     "customLinkUrl": "URL",

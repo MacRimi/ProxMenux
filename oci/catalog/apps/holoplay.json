@@ -15,9 +15,9 @@
     },
     "category": "media",
     "category_label": "Media & Streaming",
-    "author": "St\u00e9phane Richin",
-    "developer": "St\u00e9phane Richin",
-    "icon": null,
+    "author": "Stéphane Richin",
+    "developer": "Stéphane Richin",
+    "icon": "https://cdn.jsdelivr.net/gh/IceWhaleTech/CasaOS-AppStore@main/Apps/HoloPlay/icon.png",
     "thumbnail": null,
     "screenshots": [],
     "architectures": [

@@ -61,3 +61,43 @@ def ask_custom_mounts(ui, mounts, storage):
         mount['container_path'] = validate_mount(mount, result)
         result.append(mount)
     return result
+
+
+def ask_stack_custom_mounts(ui, services, storage):
+    """Collect extra paths once, then attach each path to selected stack members."""
+    if not ui.confirm(translate('Add extra paths to this stack'), False):
+        return
+    options = [(service['name'], service['name']) for service in services]
+    defaults = [service['name'] for service in services if service.get('main')]
+    while True:
+        selected = ui.checklist(translate('Containers that will receive this path'),
+                                options, defaults or [options[0][0]])
+        if not selected or set(selected) - {name for name, _ in options}:
+            raise ValueError(translate('Select at least one stack container'))
+        mode = ui.choose(translate('Data location'), [
+            ('managed-volume', translate('Container volume (included in backups)')),
+            ('host-bind', translate('Host directory (not included in Proxmox backups)')),
+        ], 'host-bind' if len(selected) > 1 else 'managed-volume')
+        if mode is None:
+            raise UserCancelled(translate('Custom path cancelled'))
+        source = (ui.ask(translate('Proxmox storage for the volume'), storage)
+                  if mode == 'managed-volume' else
+                  ui.ask(translate('Host directory (created if it does not exist)'), '/mnt/oci-shared/custom'))
+        size = int(ui.ask(translate('Volume size in GB'), '8')) if mode == 'managed-volume' else None
+        read_only = ui.confirm(translate('Mount read-only'), False)
+        default_target = '/media-extra'
+        additions = []
+        for service in services:
+            if service['name'] not in selected:
+                continue
+            target = ui.ask(f"{service['name']}: {translate('Path inside the container')}", default_target)
+            mount = {'type': mode, 'container_path': target, 'custom': True,
+                     'source': source, 'size_gb': size, 'backup': mode == 'managed-volume',
+                     'read_only': read_only, 'create_if_missing': mode == 'host-bind'}
+            mount['container_path'] = validate_mount(mount, service['deployment']['mounts'])
+            additions.append((service, mount))
+            default_target = target
+        for service, mount in additions:
+            service['deployment']['mounts'].append(mount)
+        if not ui.confirm(translate('Add another extra path to this stack'), False):
+            break

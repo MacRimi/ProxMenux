@@ -13,11 +13,11 @@
     "description": {
       "en_US": "FIleZilla Client is a fast and reliable cross-platform FTP, FTPS and SFTP client with lots of useful features and an intuitive graphical user interface."
     },
-    "category": "misc",
-    "category_label": "Miscellaneous",
+    "category": "downloads",
+    "category_label": "Files & Downloads",
     "author": "LinuxServer.io",
     "developer": null,
-    "icon": "https://raw.githubusercontent.com/linuxserver/docker-templates/master/linuxserver.io/img/filezilla-icon.png",
+    "icon": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/filezilla.webp",
     "thumbnail": "https://raw.githubusercontent.com/linuxserver/docker-templates/master/linuxserver.io/img/filezilla-banner.png",
     "screenshots": [],
     "architectures": [

@@ -17,7 +17,7 @@
     "category_label": "Adblock & DNS",
     "author": "Pi-hole",
     "developer": "Pi-hole",
-    "icon": null,
+    "icon": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/pi-hole.webp",
     "thumbnail": null,
     "screenshots": [],
     "architectures": [

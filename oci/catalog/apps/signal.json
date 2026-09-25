@@ -13,11 +13,11 @@
     "description": {
       "en_US": "Signal is a messaging app with privacy at its core. It is free and easy to use, with strong end-to-end encryption that keeps your communication completely private."
     },
-    "category": "misc",
-    "category_label": "Miscellaneous",
+    "category": "communication",
+    "category_label": "Communication & Community",
     "author": "LinuxServer.io",
     "developer": null,
-    "icon": "https://raw.githubusercontent.com/linuxserver/docker-templates/master/linuxserver.io/img/signal-icon.png",
+    "icon": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/signal.webp",
     "thumbnail": "https://raw.githubusercontent.com/linuxserver/docker-templates/master/linuxserver.io/img/signal-banner.png",
     "screenshots": [],
     "architectures": [

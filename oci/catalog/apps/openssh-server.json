@@ -13,11 +13,11 @@
     "description": {
       "en_US": "Openssh-server is a sandboxed environment that allows ssh access without giving keys to the entire server."
     },
-    "category": "misc",
-    "category_label": "Miscellaneous",
+    "category": "remote",
+    "category_label": "Remote Access & VPN",
     "author": "LinuxServer.io",
     "developer": null,
-    "icon": "https://raw.githubusercontent.com/linuxserver/docker-templates/master/linuxserver.io/img/openssh-server-icon.png",
+    "icon": "https://cdn.jsdelivr.net/gh/linuxserver/docker-templates@master/linuxserver.io/img/openssh-server-icon.png",
     "thumbnail": "https://raw.githubusercontent.com/linuxserver/docker-templates/master/linuxserver.io/img/openssh-server-banner.png",
     "screenshots": [],
     "architectures": [

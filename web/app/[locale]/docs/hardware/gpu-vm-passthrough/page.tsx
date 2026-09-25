@@ -288,7 +288,7 @@ export default async function GpuVmPassthroughPage({
           <p className="mb-3 text-gray-800">{t("walkthrough.switchMode.intro")}</p>
           <ul className="list-disc pl-6 space-y-1 text-gray-800 mb-3">
             {switchModeItems.map((_, idx) => (
-              <li key={idx}>{t.rich(`walkthrough.switchMode.items.${idx}`, { strong, code })}</li>
+              <li key={idx}>{t.rich(`walkthrough.switchMode.items.${idx}`, { strong, code, em })}</li>
             ))}
           </ul>
           <Image
@@ -333,7 +333,7 @@ export default async function GpuVmPassthroughPage({
           <p className="mb-3 text-gray-800">{t("walkthrough.hostApply.intro")}</p>
           <ul className="list-disc pl-6 space-y-1 text-gray-800 mb-3">
             {hostApplyItems.map((_, idx) => (
-              <li key={idx}>{t.rich(`walkthrough.hostApply.items.${idx}`, { strong, code })}</li>
+              <li key={idx}>{t.rich(`walkthrough.hostApply.items.${idx}`, { strong, code, em })}</li>
             ))}
           </ul>
         </Steps.Step>

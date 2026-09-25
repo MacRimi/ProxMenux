@@ -17,7 +17,7 @@
     "category_label": "Databases",
     "author": "Gani Georgiev",
     "developer": "Gani Georgiev",
-    "icon": null,
+    "icon": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/pocketbase.webp",
     "thumbnail": null,
     "screenshots": [],
     "architectures": [

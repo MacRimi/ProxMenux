@@ -1,0 +1,83 @@
+{
+  "meta": {
+    "title": "Auditoría e informes | ProxMenux Monitor",
+    "description": "Evaluación de un nodo Proxmox VE, registro de lo que ProxMenux ha cambiado en él y declaración de lo que se espera de sus invitados y almacenamientos, con informes imprimibles."
+  },
+  "header": {
+    "title": "Auditoría e informes",
+    "description": "Una evaluación del nodo, el registro de lo que ProxMenux ha cambiado en él y la declaración de lo que se espera de él, con documentos que pueden imprimirse o guardarse como PDF.",
+    "section": "ProxMenux Monitor"
+  },
+  "sections": [
+    {
+      "id": "views",
+      "blocks": [
+        {
+          "calloutInfo": {
+            "title": "Tres vistas, tres preguntas",
+            "body": "Auditoría e informes separa los hechos del nodo, las intervenciones de ProxMenux y las expectativas declaradas para él. Una configuración que la evaluación no puede contrastar con una finalidad declarada se describe, no se presenta como un fallo."
+          }
+        },
+        {
+          "cards": {
+            "items": [
+              { "icon": "shield", "title": "Evaluación: ¿cómo está el nodo?", "body": "Ejecuta las comprobaciones del perfil elegido, compone el inventario y clasifica lo que requiere atención, con la evidencia de cada resultado." },
+              { "icon": "refresh", "title": "Cambios: ¿qué ha hecho ProxMenux?", "body": "Enumera los archivos, paquetes, servicios y comandos que han cambiado los scripts instrumentados de ProxMenux, con lo que había antes cuando se capturó." },
+              { "icon": "fileText", "title": "Política: ¿qué se espera?", "body": "Declara qué invitados necesitan backup o deben arrancar con el host, qué almacenamiento es esencial y los umbrales de las comprobaciones." }
+            ]
+          }
+        },
+        {
+          "flow": {
+            "nodes": [
+              { "label": "Evaluación", "detail": "hechos" },
+              { "label": "Política", "detail": "contexto" },
+              { "label": "Cambios", "detail": "intervenciones" }
+            ],
+            "caption": "La evaluación aporta los hechos, la política les da contexto y el registro recoge lo que ha hecho ProxMenux."
+          }
+        },
+        {
+          "figure": {
+            "src": "/monitor/audit/assessment-view.png",
+            "alt": "Auditoría e informes en ProxMenux Monitor con las vistas Evaluación, Cambios y Política",
+            "caption": "Auditoría e informes, con la vista Evaluación abierta."
+          }
+        }
+      ]
+    },
+    {
+      "id": "boundaries",
+      "title": "Tres funciones distintas",
+      "blocks": [
+        {
+          "table": {
+            "headers": ["Función", "Qué hace"],
+            "rows": [
+              ["<healthLink>Health Monitor</healthLink>", "Observa métricas y eventos de forma continua y puede generar notificaciones."],
+              ["Auditoría e informes", "Ejecuta una evaluación cuando se pide, documenta el nodo y compara ejecuciones entre sí."],
+              ["Registro de cambios", "Registra las operaciones que ProxMenux realiza a través de sus primitivas de auditoría."]
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "pages",
+      "title": "Páginas de esta sección",
+      "blocks": [
+        {
+          "next": {
+            "items": [
+              { "label": "Evaluación e inventario", "href": "/docs/monitor/audit-report/assessment", "tail": "perfiles, resultados, riesgos aceptados e inventario." },
+              { "label": "Cambios", "href": "/docs/monitor/audit-report/changes", "tail": "el registro de lo que ProxMenux ha cambiado en el host." },
+              { "label": "Política", "href": "/docs/monitor/audit-report/policy", "tail": "invitados, almacenamiento y umbrales." },
+              { "label": "Informes y comparaciones", "href": "/docs/monitor/audit-report/reports", "tail": "los seis documentos y la ejecución de referencia." },
+              { "label": "Alcance y garantías", "href": "/docs/monitor/audit-report/scope", "tail": "fuentes, límites y datos guardados." }
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

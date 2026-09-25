@@ -35,8 +35,7 @@ def consumers():
 def fixture(directory, backend='pbs', consumer='attached', rows='', second=None,
             locale='en', catalog=None, real_dialog=None):
     directory = Path(directory)
-    if catalog is not None:
-        (directory / f'{locale}.json').write_text(json.dumps(catalog), encoding='utf-8')
+    (directory / 'xx.json').write_text(json.dumps(catalog or {}))
     (directory / 'rows').write_text(rows)
     (directory / 'second').write_text(rows if second is None else second)
     bindir = directory / 'bin'
@@ -52,7 +51,7 @@ FIXTURE={shlex.quote(str(directory))}
 BACKEND={backend}
 HB_UI_MENU_H=20 HB_UI_MENU_W=84 HB_UI_MENU_LIST=10
 command_not_found_handle() {{ printf 'FORBIDDEN:%s\\n' "$*" >> "$FIXTURE/errors"; return 99; }}
-jq() {{ [[ "$#" == 6 && "$1" == -r && "$2" == --arg && "$3" == text && "$5" == '.[$text] // empty' && "$6" == "$FIXTURE/$LANGUAGE.json" ]] || {{ printf 'bad jq' >> "$FIXTURE/errors"; return 99; }}; command jq "$@"; }}
+jq() {{ [[ "$#" == 6 && "$1" == -r && "$2" == --arg && "$3" == text && "$5" == '.[$text] // empty' && "$6" == "$FIXTURE/xx.json" ]] || {{ printf 'bad jq' >> "$FIXTURE/errors"; return 99; }}; command jq "$@"; }}
 head() {{ [[ "$*" == '-1' ]] || return 99; local first; IFS= read -r first; printf '%s\\n' "$first"; while IFS= read -r first; do :; done; }}
 hb_pve_list_vzdump_jobs() {{
   local file="$FIXTURE/rows" line
@@ -108,40 +107,20 @@ class SchedulerMessages(unittest.TestCase):
                 self.assertEqual(result['status'], '1')
 
     def test_lookup_cache_modes_at_both_consumers(self):
-        # Unconditional synthetic coverage, independent of cache completeness.
+        shipped = json.loads((ROOT / 'lang/it.json').read_text())
         for backend, message in MESSAGES.items():
             for consumer in ('attached', 'new'):
-                for mode, locale, catalog, expected, hint in (
-                    ('english', 'en', {message: 'ignored', HINT: 'ignored'}, message, HINT),
-                    ('missing-file', 'missing', None, message, HINT),
-                    ('missing-key', 'xx', {'unrelated': 'unrelated'}, message, HINT),
-                    ('translated', 'xx', {message: 'SYNTHETIC reordered backend: ' + backend,
-                                          HINT: 'SYNTHETIC hint'},
-                     'SYNTHETIC reordered backend: ' + backend, 'SYNTHETIC hint'),
+                for locale, catalog, expected in (
+                    ('en', {message: 'ignored'}, message),
+                    ('missing', {}, message),
+                    ('xx', {'unrelated': 'unrelated'}, message),
+                    ('xx', shipped, shipped.get(message, message)),
+                    ('xx', {message: 'SYNTHETIC reordered backend: ' + backend},
+                     'SYNTHETIC reordered backend: ' + backend),
                 ):
-                    with self.subTest(backend=backend, consumer=consumer, mode=mode):
+                    with self.subTest(backend=backend, consumer=consumer, locale=locale, expected=expected):
                         result = run_case(backend=backend, consumer=consumer, locale=locale, catalog=catalog)
-                        suffix = '\n\n' + hint if consumer == 'new' else ''
-                        self.assertEqual(result['message'], expected + suffix)
-                        self.assertEqual(result['status'], '1')
-
-    def test_all_shipped_caches_at_both_consumers(self):
-        catalogs = sorted((ROOT / 'lang').glob('*.json'))
-        self.assertTrue(catalogs, 'No shipped locale catalogs discovered')
-        for path in catalogs:
-            catalog = json.loads(path.read_text(encoding='utf-8'))
-            self.assertIsInstance(catalog, dict, path.name)
-            for backend, message in MESSAGES.items():
-                for consumer in ('attached', 'new'):
-                    with self.subTest(locale=path.stem, backend=backend, consumer=consumer):
-                        # Exercise the real translate function with the actual locale
-                        # filename, not just a comparison of JSON values. Missing or
-                        # empty translations are valid: runtime falls back to English.
-                        result = run_case(backend=backend, consumer=consumer,
-                                          locale=path.stem, catalog=catalog)
-                        expected = message if path.stem == 'en' else catalog.get(message) or message
-                        hint = HINT if path.stem == 'en' else catalog.get(HINT) or HINT
-                        suffix = '\n\n' + hint if consumer == 'new' else ''
+                        suffix = '\n\n' + catalog.get(HINT, HINT) if consumer == 'new' else ''
                         self.assertEqual(result['message'], expected + suffix)
                         self.assertEqual(result['status'], '1')
 

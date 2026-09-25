@@ -199,7 +199,7 @@ def search_command():
                         'command': stripped
                     })
                     
-                    # Resetear descripciones para el siguiente comando
+                    # Reset the descriptions for the next command
                     current_description = []
             
             return jsonify({

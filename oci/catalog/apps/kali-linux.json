@@ -8,16 +8,16 @@
       "en_US": "Kali Linux"
     },
     "tagline": {
-      "en_US": "Kali-linux - is an Advanced Penetration Testing Linux distribution used for Penetration Testing, Ethical Hacking and network security assessments. KALI LINUX \u2122 is a trademark of OffSec."
+      "en_US": "Kali-linux - is an Advanced Penetration Testing Linux distribution used for Penetration Testing, Ethical Hacking and network security assessments. KALI LINUX ™ is a trademark of OffSec."
     },
     "description": {
-      "en_US": "Kali-linux - is an Advanced Penetration Testing Linux distribution used for Penetration Testing, Ethical Hacking and network security assessments. KALI LINUX \u2122 is a trademark of OffSec."
+      "en_US": "Kali-linux - is an Advanced Penetration Testing Linux distribution used for Penetration Testing, Ethical Hacking and network security assessments. KALI LINUX ™ is a trademark of OffSec."
     },
-    "category": "misc",
-    "category_label": "Miscellaneous",
+    "category": "security",
+    "category_label": "Authentication & Security",
     "author": "LinuxServer.io",
     "developer": null,
-    "icon": "https://raw.githubusercontent.com/linuxserver/docker-templates/master/linuxserver.io/img/kali-linux-icon.png",
+    "icon": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/kali-linux.webp",
     "thumbnail": "https://raw.githubusercontent.com/linuxserver/docker-templates/master/linuxserver.io/img/kali-linux-banner.png",
     "screenshots": [],
     "architectures": [

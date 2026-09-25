@@ -13,11 +13,11 @@
     "description": {
       "en_US": "KeePassXC is a free and open-source password manager. It started as a community fork of KeePassX (itself a cross-platform port of KeePass)."
     },
-    "category": "misc",
-    "category_label": "Miscellaneous",
+    "category": "security",
+    "category_label": "Authentication & Security",
     "author": "LinuxServer.io",
     "developer": null,
-    "icon": "https://raw.githubusercontent.com/linuxserver/docker-templates/master/linuxserver.io/img/keepassxc-icon.png",
+    "icon": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/keepassxc.webp",
     "thumbnail": "https://raw.githubusercontent.com/linuxserver/docker-templates/master/linuxserver.io/img/keepassxc-banner.png",
     "screenshots": [],
     "architectures": [

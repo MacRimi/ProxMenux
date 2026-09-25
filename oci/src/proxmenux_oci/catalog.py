@@ -69,6 +69,69 @@ class Catalog:
         self.schema_path = root / "schemas" / "oci-template.schema.json"
         self.source = source or GitHubSource()
 
+    def apply_icons(self) -> dict[str, int]:
+        """Point every catalog_ui icon at an icon that is known to exist.
+
+        Rewrites the index and the application templates from the jsdelivr
+        icon sets. An application neither set covers is left without an icon
+        on purpose: the panel then draws its placeholder, which reads better
+        than the broken image a stale URL produces.
+        """
+        from .icons import IconResolver
+
+        resolver = IconResolver()
+        index_path = self.catalog_dir / "index.json"
+        index = json.loads(index_path.read_text(encoding="utf-8"))
+        report = {"resolved": 0, "kept": 0, "cleared": 0, "unchanged": 0, "themed": 0,
+                  "missing": []}
+        icons: dict[str, str | None] = {}
+        for item in index.get("applications", []):
+            match = resolver.resolve(item.get("id"), item.get("title"))
+            url = match["url"] if match else None
+            if not url:
+                # Neither icon set covers it. The publisher's own URL is kept
+                # only when it answers, so nothing points at a missing file.
+                inherited = item.get("icon")
+                if resolver.reachable(inherited):
+                    url = inherited
+                    report["kept"] += 1
+                elif not item.get("hidden"):
+                    report["missing"].append(item.get("id"))
+            icons[item["id"]] = url
+            if match and match["themed"]:
+                report["themed"] += 1
+            if item.get("icon") == url:
+                report["unchanged"] += 1
+            elif url:
+                report["resolved"] += 1
+            else:
+                report["cleared"] += 1
+            item["icon"] = url
+        template_ids: dict[str, str] = {}
+        for app_id, url in icons.items():
+            path = self.apps_dir / f"{app_id}.json"
+            if not path.is_file():
+                continue
+            template = json.loads(path.read_text(encoding="utf-8"))
+            # An installation records the template id, not the catalog id, so
+            # the index carries both and the panel can find the icon of what
+            # it installed without opening every template.
+            if isinstance(template.get("id"), str):
+                template_ids[app_id] = template["id"]
+            ui = template.get("catalog_ui")
+            if not isinstance(ui, dict) or ui.get("icon") == url:
+                continue
+            ui["icon"] = url
+            path.write_text(json.dumps(template, ensure_ascii=False, indent=2) + "\n",
+                            encoding="utf-8")
+        for item in index.get("applications", []):
+            template_id = template_ids.get(item["id"])
+            if template_id:
+                item["template_id"] = template_id
+        index_path.write_text(json.dumps(index, ensure_ascii=True, indent=2) + "\n",
+                              encoding="utf-8")
+        return report
+
     def sync_index(self) -> dict[str, Any]:
         repos = self.source.list_linuxserver_repositories()
         try:
@@ -333,6 +396,12 @@ class Catalog:
 
     def _enrich_index_from_templates(self, payload: dict[str, Any]) -> None:
         for item in payload.get("applications", []):
+            # categories.json is the hand-maintained classification and has the
+            # final word. The index took its category from the Helper-Scripts
+            # catalogue, which does not list the LinuxServer desktop
+            # applications at all: 138 of them reached the reader under
+            # Miscellaneous while their category sat here all along.
+            self._apply_category(item["id"], item)
             overlay_path = self.overlays_dir / f"{item['id']}.json"
             overlay_ui = json.loads(overlay_path.read_text(encoding="utf-8")).get("catalog_ui", {}) if overlay_path.exists() else {}
             item["hidden"] = overlay_ui.get("hidden", False)

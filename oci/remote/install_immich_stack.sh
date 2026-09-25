@@ -261,7 +261,7 @@ resolve_image_manifest() {
 
 ensure_image() {
   local key=$1 image=$2 transport_image inspect digest short archive_name archive_volume archive_path
-  local partial log pid bytes elapsed status process_bytes pull_name
+  local partial log pid bytes elapsed status process_bytes pull_name attempt
   msg_info "$(translate "Checking the image in the registry...")"
   oci_log "Resolving ${key}: ${image}"
   transport_image=$(skopeo_transport_reference "$image")
@@ -285,34 +285,49 @@ ensure_image() {
     oci_log "Reusing ${archive_volume}"
   else
     rm -f "$archive_path"
-    partial="${archive_path}.partial.$$"
-    log="${partial}.log"
-    oci_log "Downloading ${image} by digest ${digest}"
-    pull_name=${transport_image%@sha256:*}
-    [[ ${pull_name##*/} != *:* ]] || pull_name=${pull_name%:*}
-    skopeo copy --override-os linux --override-arch "$ARCH" --retry-times 3 \
-      --retry-delay 5s --image-parallel-copies 1 \
-      "docker://${pull_name}@${digest}" "oci-archive:${partial}:image-immich-${key}" >"$log" 2>&1 &
-    pid=$!
-    elapsed=0
-    while kill -0 "$pid" 2>/dev/null; do
-      bytes=$(stat -c %s "$partial" 2>/dev/null || printf 0)
-      process_bytes=$(awk '$1 == "rchar:" { print $2 }' "/proc/${pid}/io" 2>/dev/null || printf 0)
-      process_bytes=${process_bytes:-0}
-      (( process_bytes <= bytes )) || bytes=$process_bytes
-      msg_progress "$(translate "Downloading the image:") ${key} · $((bytes / 1048576)) MiB · ${elapsed}s"
-      sleep 2
-      elapsed=$((elapsed + 2))
+    # A download can come back complete yet damaged when the connection drops
+    # and the transfer resumes; the integrity check catches it, and a second
+    # download is what repairs it.
+    for attempt in 1 2; do
+      partial="${archive_path}.partial.$$"
+      log="${partial}.log"
+      oci_log "Downloading ${image} by digest ${digest} (attempt ${attempt}/2)"
+      pull_name=${transport_image%@sha256:*}
+      [[ ${pull_name##*/} != *:* ]] || pull_name=${pull_name%:*}
+      skopeo copy --override-os linux --override-arch "$ARCH" --retry-times 3 \
+        --retry-delay 5s --image-parallel-copies 1 \
+        "docker://${pull_name}@${digest}" "oci-archive:${partial}:image-immich-${key}" >"$log" 2>&1 &
+      pid=$!
+      elapsed=0
+      while kill -0 "$pid" 2>/dev/null; do
+        bytes=$(stat -c %s "$partial" 2>/dev/null || printf 0)
+        process_bytes=$(awk '$1 == "rchar:" { print $2 }' "/proc/${pid}/io" 2>/dev/null || printf 0)
+        process_bytes=${process_bytes:-0}
+        (( process_bytes <= bytes )) || bytes=$process_bytes
+        msg_progress "$(translate "Downloading the image:") ${key} · $((bytes / 1048576)) MiB · ${elapsed}s"
+        sleep 2
+        elapsed=$((elapsed + 2))
+      done
+      status=0
+      wait "$pid" || status=$?
+      cat "$log" >>"$OCI_LOG"
+      rm -f "$log"
+      if (( status != 0 )); then
+        rm -f "$partial"
+        (( attempt < 2 )) || die "$(translate "Image download failed:") $image"
+        msg_warn "$(translate "The image download did not complete correctly; downloading it again...")"
+        continue
+      fi
+      msg_info "$(translate "Verifying the image integrity...")"
+      if ! oci_quiet python3 "$VERIFY_OCI_ARCHIVE" "$partial"; then
+        rm -f "$partial"
+        (( attempt < 2 )) || die "$(translate "The downloaded image is corrupt:") $image"
+        msg_warn "$(translate "The image download did not complete correctly; downloading it again...")"
+        continue
+      fi
+      mv -f "$partial" "$archive_path"
+      break
     done
-    status=0
-    wait "$pid" || status=$?
-    cat "$log" >>"$OCI_LOG"
-    rm -f "$log"
-    (( status == 0 )) || { rm -f "$partial"; die "$(translate "Image download failed:") $image"; }
-    msg_info "$(translate "Verifying the image integrity...")"
-    oci_quiet python3 "$VERIFY_OCI_ARCHIVE" "$partial" \
-      || { rm -f "$partial"; die "$(translate "The downloaded image is corrupt:") $image"; }
-    mv -f "$partial" "$archive_path"
   fi
   msg_ok "$(translate "Image:") $image"
   RESOLVED_ARCHIVE=$archive_volume

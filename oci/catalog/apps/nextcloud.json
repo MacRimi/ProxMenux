@@ -13,11 +13,11 @@
     "description": {
       "en_US": "Nextcloud gives you access to all your files wherever you are."
     },
-    "category": "misc",
-    "category_label": "Miscellaneous",
+    "category": "productivity",
+    "category_label": "Productivity & Workflows",
     "author": "LinuxServer.io",
     "developer": null,
-    "icon": "https://raw.githubusercontent.com/linuxserver/docker-templates/master/linuxserver.io/img/nextcloud-icon.png",
+    "icon": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/nextcloud.webp",
     "thumbnail": "https://raw.githubusercontent.com/linuxserver/docker-templates/master/linuxserver.io/img/nextcloud-banner.png",
     "screenshots": [],
     "architectures": [

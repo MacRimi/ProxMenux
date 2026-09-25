@@ -13,11 +13,11 @@
     "description": {
       "en_US": "Ardour is an open source, collaborative effort of a worldwide team including musicians, programmers, and professional recording engineers."
     },
-    "category": "misc",
-    "category_label": "Miscellaneous",
+    "category": "creative",
+    "category_label": "Creative & Design",
     "author": "LinuxServer.io",
     "developer": null,
-    "icon": "https://raw.githubusercontent.com/linuxserver/docker-templates/master/linuxserver.io/img/ardour-icon.png",
+    "icon": "https://cdn.jsdelivr.net/gh/linuxserver/docker-templates@master/linuxserver.io/img/ardour-logo.png",
     "thumbnail": "https://raw.githubusercontent.com/linuxserver/docker-templates/master/linuxserver.io/img/ardour-banner.png",
     "screenshots": [],
     "architectures": [

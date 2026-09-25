@@ -29,6 +29,7 @@ import datetime
 import copy
 import concurrent.futures
 import hashlib
+import ipaddress
 import json
 import os
 import re
@@ -36,6 +37,7 @@ import signal
 import shlex
 import socket
 import subprocess
+import sys
 import threading
 import time
 import urllib.error
@@ -62,7 +64,7 @@ _UPSTREAM_CACHE_TTL_SEC = 24 * 3600
 
 _VALID_METHODS = ("dpkg", "apk", "file", "binary",
                   "python_dist", "docker_label", "docker_exec",
-                  "command", "manual")
+                  "command", "manual", "oci_image")
 _DETECTOR_FIELDS = (
     "package", "file_path", "file_regex", "binary_path", "binary_args",
     "python_path", "distribution", "container_name", "label",
@@ -93,7 +95,7 @@ _VALID_UPSTREAM_TYPES = ("github", "http_json", "docker_hub")
 # exposes and the freeform "custom" text field.
 _VALID_SCHEDULE_TARGETS = ("os", "app", "both")
 _SCHEDULE_TARGET_ID_RE = re.compile(
-    r"^(?:os|apps|app:[A-Za-z0-9_-]{1,64}|docker-engine|docker-(?:compose|container):[A-Za-z0-9][A-Za-z0-9_.-]{0,127}|docker-unit:[a-f0-9]{20})$"
+    r"^(?:os|apps|oci_image|app:[A-Za-z0-9_-]{1,64}|docker-engine|docker-(?:compose|container):[A-Za-z0-9][A-Za-z0-9_.-]{0,127}|docker-unit:[a-f0-9]{20})$"
 )
 _BULK_TARGET_ID_RE = re.compile(
     r"^(?:os|app:[A-Za-z0-9_-]{1,64}|docker-engine|docker-unit:[a-f0-9]{20})$"
@@ -886,6 +888,10 @@ def validate_schedule(payload: Any) -> tuple[bool, Any]:
         "backup_storage": backup_storage,
         "restart": restart,
         "release_delay_days": release_delay_days,
+        # Host directories of an OCI container are not reverted by its
+        # backup; a scheduled image update runs only when this was
+        # confirmed when the schedule was saved.
+        "acknowledge_external_data": bool(payload.get("acknowledge_external_data")),
     }
     # Preserve `last_run_at` / `last_run_status` when the caller sent
     # them (typical when the scheduler writes back after firing);
@@ -951,7 +957,12 @@ def validate_config(payload: dict) -> tuple[bool, Any]:
     if method:
         conf["installed_via"] = method
 
-    if method in ("dpkg", "apk"):
+    if method == "oci_image":
+        # Everything it needs is in the installation record ProxMenux wrote:
+        # the image, the digest and the registry. There is no field to fill
+        # and no upstream to configure.
+        pass
+    elif method in ("dpkg", "apk"):
         pkg = (payload.get("package") or "").strip()
         if not pkg or not _PACKAGE_RE.match(pkg):
             return _err("package is required (letters/digits/._+@:/ up to 127 chars)")
@@ -1344,6 +1355,15 @@ def detect_installed_version(vmid, config: dict) -> tuple[Optional[str], Optiona
     # is for the upstream tag string. When installed_regex isn't set,
     # tag_regex is reused (backward-compat with older hints).
     pattern = config.get("installed_regex") or config.get("tag_regex") or r"(\d+[.\d]+)"
+
+    if method == "oci_image":
+        result = _oci_image_versions(vmid, with_latest=False)
+        if result.get("error"):
+            return None, result["error"]
+        # An image that states no application version is still an image with
+        # a build date and a digest, which is what its updates are decided on.
+        return (result.get("installed_version")
+                or _oci_image_label(None, result.get("image_created"), result.get("installed_digest"))), None
 
     if method == "dpkg":
         rc, out, err = _pct_exec(vmid, ["dpkg-query", "-W", "-f=${Version}", config["package"]])
@@ -3767,9 +3787,14 @@ def partition_scheduled_release_targets(
         # A delegated app has no updater of its own and never resolves a
         # release date, so including it would hold the whole schedule back
         # waiting for a date that will never arrive.
+        # An application ProxMenux installed from an OCI image is updated by
+        # replacing its image through the OCI engine's own transaction, not by
+        # a helper or a command inside the guest, so a scripted plan has
+        # nothing it could run for it.
         if (not app_id or app.get("managed_oci_app_id")
                 or app.get("helper_slug") == "docker"
-                or app.get("update_via") == "docker"):
+                or app.get("update_via") == "docker"
+                or app.get("installed_via") == "oci_image"):
             continue
         if not select_all_apps and app_id not in selected_app_ids:
             continue
@@ -3962,13 +3987,20 @@ def _app_update_notification_payload(vmid, app: dict) -> Optional[dict]:
         return None
     state = app.get("state") or {}
     latest = state.get("latest_version")
+    installed = state.get("installed_version")
+    if app.get("installed_via") == "oci_image" and state.get("latest_digest"):
+        # What is published is an image. Naming it by version, build date and
+        # digest keeps two rebuilds of the same version from being taken for
+        # one notification, and tells the reader what actually changed.
+        latest = _oci_image_label(latest, state.get("latest_image_created"), state.get("latest_digest"))
+        installed = _oci_image_label(installed, state.get("image_created"), state.get("installed_digest"))
     if not state.get("update_available") or not latest:
         return None
     return {
         "vmid": int(vmid),
         "ct_name": app.get("name") or f"CT-{vmid}",
         "app_name": app.get("name") or "app",
-        "installed": state.get("installed_version") or "unknown",
+        "installed": installed or "unknown",
         "latest": latest,
         "app_id": str(app.get("id") or ""),
     }
@@ -4291,6 +4323,28 @@ def check_app(
             except (ValueError, TypeError):
                 pass
 
+        if app.get("installed_via") == "oci_image":
+            result = _oci_image_versions(vmid, known=state)
+            app["state"] = {
+                "installed_version": result.get("installed_version"),
+                "latest_version": result.get("latest_version"),
+                "latest_published_at": None,
+                "update_available": result.get("update_available"),
+                "error": result.get("error"),
+                "checked_at": _now_iso(),
+                "installed_digest": result.get("installed_digest"),
+                "latest_digest": result.get("latest_digest"),
+                "image_created": result.get("image_created"),
+                "latest_image_created": result.get("latest_image_created"),
+                "image_reference": result.get("image_reference"),
+                "image_repository": result.get("image_repository"),
+            }
+            sidecar["updated_at"] = _now_iso()
+            _write_sidecar(vmid, sidecar)
+            if notify and app["state"]["update_available"] and app["state"]["latest_version"]:
+                _fire_update_notification(vmid, app)
+            return sidecar
+
         installed, inst_err, _healed = _detect_with_alt_healing(vmid, app)
         # Trigger the upstream fetch when ANY upstream source is
         # configured. The dispatcher inside `fetch_latest_upstream`
@@ -4511,6 +4565,12 @@ def _summarise_app(app: dict) -> dict:
         # match this registered app against the CT's helper_slug and
         # display its installed/upstream versions.
         "helper_slug": app.get("helper_slug") or "",
+        # OCI image identity, for the Updates tab of an OCI container.
+        "image_reference": state.get("image_reference"),
+        "image_created": state.get("image_created"),
+        "installed_digest": state.get("installed_digest"),
+        "latest_image_created": state.get("latest_image_created"),
+        "latest_digest": state.get("latest_digest"),
     }
 
 
@@ -5238,6 +5298,276 @@ def _helper_slug_meta(vmid) -> Optional[dict]:
     return None
 
 
+_OCI_INSTANCE_ROOT = "/usr/local/share/proxmenux/oci/instances"
+_OCI_CATALOG_INDEX = "/usr/local/share/proxmenux/oci/engine/catalog/index.json"
+_oci_catalog_cache: tuple[float, dict] | None = None
+
+
+def _oci_catalog_icons() -> dict:
+    """Current icon per catalog application, keyed by template id.
+
+    The installation record keeps a copy of the catalog entry as it stood on
+    the day of the install, which freezes the icon along with everything else.
+    Icons get corrected — most of the catalog used to point at a URL that
+    answered 404 — so the panel reads the catalog and keeps the record as the
+    fallback for an application the catalog no longer lists.
+    """
+    global _oci_catalog_cache
+    now = time.time()
+    if _oci_catalog_cache and now - _oci_catalog_cache[0] < 600:
+        return _oci_catalog_cache[1]
+    icons: dict = {}
+    try:
+        with open(_OCI_CATALOG_INDEX, encoding="utf-8") as handle:
+            for item in (json.load(handle) or {}).get("applications", []):
+                icon = (item or {}).get("icon")
+                if not isinstance(icon, str) or not icon.startswith("http"):
+                    continue
+                # An installation records the template id; the catalog is keyed
+                # by the application id and carries both.
+                for key in (item.get("template_id"), item.get("id")):
+                    if key:
+                        icons.setdefault(key, icon)
+    except (OSError, ValueError, TypeError):
+        pass
+    _oci_catalog_cache = (now, icons)
+    return icons
+
+
+def _oci_localised(value) -> str:
+    """A catalog_ui text field, which is either a string or a locale map."""
+    if isinstance(value, str):
+        return value.strip()
+    if isinstance(value, dict):
+        for key in ("en_US", "en", *sorted(value)):
+            text = value.get(key)
+            if isinstance(text, str) and text.strip():
+                return text.strip()
+    return ""
+
+
+def _oci_name_from_image(reference: str | None) -> str:
+    """A presentable name for an image that carries no catalog entry.
+
+    A stack member records the image it runs and the role it plays, not a
+    title: `nextcloud:latest` as the `application` of a Nextcloud stack.
+    """
+    repository = str(reference or "").split("@", 1)[0]
+    basename = repository.rsplit("/", 1)[-1].rsplit(":", 1)[0].strip()
+    if not basename:
+        return ""
+    return " ".join(word.capitalize() for word in re.split(r"[-_.]+", basename) if word)
+
+
+def _oci_instance_meta(vmid) -> Optional[dict]:
+    """What ProxMenux itself recorded when it installed this container.
+
+    The sibling of `_helper_slug_meta`, and stronger evidence: a helper slug
+    is a hint read back out of the guest, while this is the contract the
+    installer wrote. It needs no `pct exec`, so it also answers for a stopped
+    container, and it cannot mistake an incidental binary for the application
+    — CT 152 runs Chromium and happens to have Docker inside, which the
+    runtime probe reported as the only candidate.
+    """
+    try:
+        with open(f"{_OCI_INSTANCE_ROOT}/{int(vmid)}/oci-compose.json", encoding="utf-8") as handle:
+            record = json.load(handle)
+    except (OSError, ValueError, TypeError):
+        return None
+    if not isinstance(record, dict) or record.get("status") not in ("installed", "assembling"):
+        return None
+    template = record.get("template") or {}
+    contract = template.get("container_contract") or {}
+    image = contract.get("image") or {}
+    observed_image = (record.get("observed") or {}).get("image") or {}
+    # A stack member carries only its own image contract; the presentation
+    # belongs to the stack it is part of, which records its title, site,
+    # category and the endpoint the stack is reached on.
+    stack = record.get("stack") if isinstance(record.get("stack"), dict) else {}
+    stack_template = stack.get("template") if isinstance(stack.get("template"), dict) else {}
+    role = str((record.get("stack_member") or {}).get("name") or "").strip()
+
+    member = record.get("stack_member") or {}
+    is_primary = not stack_template or member.get("primary_vmid") in (None, record.get("vmid"))
+    ui = template.get("catalog_ui") or stack_template.get("catalog_ui") or {}
+    if not template.get("catalog_ui") and stack_template and is_primary:
+        # Only the member the stack is reached on inherits the stack endpoint.
+        # The cache and the database of a Nextcloud stack do not answer on its
+        # web port, and offering it would register a service that is not there.
+        template = {**stack_template, "id": template.get("id") or stack_template.get("id")}
+    elif not template.get("catalog_ui") and stack_template:
+        ui = {key: value for key, value in ui.items()
+              if key in ("category", "category_label")}
+    # `container_contract.ports` lists every port the image exposes; the
+    # endpoint is the one the application is actually reached on, with its
+    # scheme. Chromium exposes 3000 and 3001 and serves on 3001 over https.
+    endpoint = next((e for e in (template.get("first_run") or {}).get("endpoints") or []
+                     if isinstance(e, dict) and e.get("port")), None) or ui.get("launch") or {}
+    ports = []
+    for entry in contract.get("ports") or []:
+        try:
+            port = int((entry or {}).get("container_port"))
+        except (TypeError, ValueError):
+            continue
+        if 1 <= port <= 65535 and port not in ports:
+            ports.append(port)
+    template_id = str(template.get("id") or "").strip()
+    catalog_icons = _oci_catalog_icons()
+    logo = catalog_icons.get(template_id) or ""
+    if not logo:
+        # A stack or a one-off image has no catalog entry of its own, but the
+        # image it runs usually does: the Nextcloud stack wears Nextcloud's.
+        repository = str(image.get("reference") or "").split("@", 1)[0]
+        basename = repository.rsplit("/", 1)[-1].rsplit(":", 1)[0].strip().lower()
+        logo = catalog_icons.get(basename) or ""
+    if not logo:
+        logo = ui.get("icon") if isinstance(ui.get("icon"), str) else ""
+    website = ui.get("website") if isinstance(ui.get("website"), str) else ""
+    return {
+        "template_id": template_id or None,
+        "name": (_oci_localised(ui.get("title"))
+                 or _oci_name_from_image(image.get("reference"))
+                 or str(template.get("id") or "").strip() or None),
+        "role": role or None,
+        "logo": logo if logo.startswith(("http://", "https://")) else "",
+        "website": website if website.startswith(("http://", "https://")) else "",
+        "category": str(ui.get("category") or "").strip() or None,
+        "category_label": str(ui.get("category_label") or "").strip() or None,
+        "image_reference": str(image.get("reference") or "").strip() or None,
+        # The repository of the image — its GitHub project, or its page on the
+        # registry for an official image — which is where its updates come from.
+        "repository": (str(ui.get("repository") or "").strip()
+                       or str((template.get("source") or {}).get("repository") or "").strip() or None),
+        "endpoint_port": endpoint.get("port") if isinstance(endpoint.get("port"), int) else None,
+        "endpoint_scheme": str(endpoint.get("scheme") or "").strip().lower() or None,
+        "endpoint_path": str(endpoint.get("path") or "").strip() or None,
+        "ports": ports,
+        # The exact image this container was created from. Its digest is what
+        # an update is decided on; the version label is only for reading.
+        "installed_digest": str(observed_image.get("manifest_digest") or "").strip() or None,
+        "architecture": str(observed_image.get("architecture") or "").strip() or None,
+    }
+
+
+def oci_adguard_setup_available(vmid) -> bool:
+    """Probe only this OCI application's setup endpoint, without caching it."""
+    meta = _oci_instance_meta(vmid)
+    if not meta or meta.get('template_id') != 'image-adguard-home':
+        return False
+    try:
+        result = subprocess.run(['lxc-info', '-n', str(int(vmid)), '-iH'],
+                                capture_output=True, text=True, timeout=3, check=True)
+        ip = next(str(ipaddress.IPv4Address(value.strip()))
+                  for value in result.stdout.splitlines()
+                  if value.strip() and ipaddress.ip_address(value.strip()).version == 4)
+        with socket.create_connection((ip, 3000), timeout=1) as connection:
+            connection.settimeout(1)
+            connection.sendall(b'GET / HTTP/1.0\r\nHost: localhost\r\n\r\n')
+            return connection.recv(32).startswith(b'HTTP/')
+    except (OSError, ValueError, StopIteration, subprocess.SubprocessError):
+        return False
+
+
+_OCI_REMOTE_DIR = "/usr/local/share/proxmenux/oci/engine/remote"
+
+
+def _oci_state_module():
+    """The OCI engine's own reader of image versions.
+
+    Reused rather than copied: it resolves the platform manifest, reads the
+    version the image states in its environment before the label it may
+    have inherited from its base, and it is the same code the engine
+    installs and updates with, so the panel and the updater cannot disagree
+    about what an image is.
+    """
+    if _OCI_REMOTE_DIR not in sys.path:
+        sys.path.insert(0, _OCI_REMOTE_DIR)
+    import oci_installation_state
+    return oci_installation_state
+
+
+def _oci_repository(reference: str) -> str:
+    repository = reference.split("@", 1)[0]
+    if ":" in repository.rsplit("/", 1)[-1]:
+        repository = repository.rsplit(":", 1)[0]
+    return repository
+
+
+def _oci_resolve(module, reference: str, architecture: str) -> dict:
+    # One retry: an anonymous registry answers the occasional request with an
+    # error that the next one does not repeat.
+    try:
+        return module.resolve_candidate(reference, architecture)
+    except RuntimeError:
+        time.sleep(2)
+        return module.resolve_candidate(reference, architecture)
+
+
+def _oci_image_versions(vmid, known: Optional[dict] = None, with_latest: bool = True) -> dict:
+    """Installed and published version of a container ProxMenux installed.
+
+    Nothing is inferred. The installation record names the image and the
+    exact digest the container was created from; the registry says which
+    digest the same tag points at today. An update is available when those
+    two differ — the version strings only say which one it is, and they are
+    not compared, because a rebuild can keep its number and a build id such
+    as ``b1ee1dc8-ls55`` has no order to compare.
+
+    The installed version is read by digest, which never changes, so a
+    previous answer for the same digest is reused instead of asked again.
+    """
+    meta = _oci_instance_meta(vmid)
+    if not meta or not meta.get("image_reference") or not meta.get("installed_digest"):
+        return {"error": "no OCI installation record for this container"}
+    reference = meta["image_reference"]
+    architecture = meta.get("architecture") or "amd64"
+    installed_digest = meta["installed_digest"]
+    result: dict = {"installed_digest": installed_digest, "image_reference": reference,
+                    "image_repository": meta.get("repository")}
+    try:
+        module = _oci_state_module()
+    except Exception as exc:
+        return {**result, "error": f"OCI engine unavailable: {exc}"}
+
+    known = known or {}
+    if (known.get("installed_digest") == installed_digest
+            and (known.get("installed_version") or known.get("image_created"))):
+        result["installed_version"] = known.get("installed_version")
+        result["image_created"] = known.get("image_created")
+    else:
+        try:
+            installed = _oci_resolve(
+                module, f"{_oci_repository(reference)}@{installed_digest}", architecture)
+            result["installed_version"] = installed.get("version")
+            result["image_created"] = installed.get("created")
+        except Exception as exc:
+            return {**result, "error": f"could not read the installed image: {exc}"}
+    if not with_latest:
+        return result
+    try:
+        latest = _oci_resolve(module, reference, architecture)
+    except Exception as exc:
+        return {**result, "error": f"could not read {reference} from its registry: {exc}"}
+    latest_digest = latest.get("manifest_digest")
+    # The image decides. An application whose version did not move can still
+    # have a new image — a rebuild on a patched base — and that is an update
+    # for a container whose application only changes when its image does.
+    replaced = bool(latest_digest) and latest_digest != installed_digest
+    result.update(latest_digest=latest_digest, latest_version=latest.get("version"),
+                  latest_image_created=latest.get("created"), update_available=replaced)
+    return result
+
+
+def _oci_image_label(version: Optional[str], created: Optional[str], digest: Optional[str]) -> str:
+    """One image, as a line a reader can compare: version, build date, digest."""
+    parts = [version] if version else []
+    if created:
+        parts.append(str(created)[:10])
+    if digest:
+        parts.append(str(digest).split(":", 1)[-1][:8])
+    return " · ".join(parts) or "unknown"
+
+
 def _catalog_lookup(slug: str) -> Optional[dict]:
     """Fetch the community-scripts catalog entry for a slug.
     Returns {name, updateable, default_port, logo} or None.
@@ -5292,6 +5622,7 @@ def get_suggestions(vmid, force: bool = False) -> dict:
         if p in _KNOWN_WEB_PORTS:
             web_hint = "/"
             break
+    oci_meta = _oci_instance_meta(vmid)
     meta = _helper_slug_meta(vmid) or {}
     slug = meta.get("slug")
     # Suppress base-OS helper slugs from the suggestion pipeline.
@@ -5318,7 +5649,10 @@ def get_suggestions(vmid, force: bool = False) -> dict:
         detector.get("installed_via") in ("docker_label", "docker_exec")
         for detector in primary_matches
     )
-    if "docker" in detected_map and primary_is_docker_workload:
+    # An OCI container installed by ProxMenux is the application named in its
+    # own record. Promoting a probed binary over that would offer Docker for a
+    # Chromium container just because the image ships a docker client.
+    if "docker" in detected_map and primary_is_docker_workload and not oci_meta:
         slug = "docker"
         meta = {"slug": "docker", "name": "Docker"}
     # Tracking hint pipeline: catalog + curated hints merged.
@@ -5560,6 +5894,47 @@ def get_suggestions(vmid, force: bool = False) -> dict:
             "tracking_suggestion": det_tracking,
         })
 
+    if oci_meta:
+        # The record states what this container runs, so a probe finding is
+        # noise: CT 152 runs Chromium and ships a docker client, and offering
+        # to register Docker there invites the user to track the wrong thing.
+        extras = []
+        # Recorded facts replace every probed guess: the name, the logo, the
+        # site and the endpoint the application is served on. The version is
+        # not filled here — the image has no detector among the guest-side
+        # methods — so the entry registers without version tracking until the
+        # OCI detector exists.
+        name_sug = oci_meta["name"] or name_sug
+        logo_url = oci_meta["logo"] or logo_url
+        category_suggestion = oci_meta["category_label"] or suggest_category_for(slug)
+        if oci_meta["endpoint_port"]:
+            default_ports = [oci_meta["endpoint_port"]]
+            ports = [oci_meta["endpoint_port"]] + [p for p in (oci_meta["ports"] or ports)
+                                                   if p != oci_meta["endpoint_port"]]
+        elif oci_meta["ports"]:
+            default_ports = list(oci_meta["ports"])
+        web_hint = oci_meta["endpoint_path"] or web_hint
+        if oci_meta["template_id"] == "image-adguard-home":
+            # The first-run endpoint disappears once setup switches to :80.
+            default_ports = [80]
+            ports = [80, 3000]
+        # Version tracking comes with the registration. Its updates are
+        # decided by the image, which always has a build date and a digest,
+        # so it applies even to an image that states no application version.
+        versions = _oci_image_versions(vmid, with_latest=False)
+        if not versions.get("error"):
+            tracking = {
+                "installed_via": "oci_image",
+                "detected_version": versions.get("installed_version") or _oci_image_label(
+                    None, versions.get("image_created"), versions.get("installed_digest")),
+                "detector_verified": True,
+                "detector_source": "oci_instance_record",
+                "logo": logo_url or None,
+                "website": oci_meta["website"] or None,
+            }
+    else:
+        category_suggestion = suggest_category_for(slug)
+
     return {
         "name_suggestion": name_sug,
         "helper_slug": slug,
@@ -5568,9 +5943,20 @@ def get_suggestions(vmid, force: bool = False) -> dict:
         "tracking_suggestion": tracking,
         "default_ports": default_ports,
         "logo_url": logo_url or None,
+        # Identity of a ProxMenux OCI install: the scheme the endpoint is
+        # served on, the image it was created from, and the upstream source.
+        "oci_instance": {
+            "template_id": oci_meta["template_id"],
+            "image_reference": oci_meta["image_reference"],
+            "repository": oci_meta["repository"],
+            "scheme": oci_meta["endpoint_scheme"],
+            "port": oci_meta["endpoint_port"],
+            "path": oci_meta["endpoint_path"],
+            "website": oci_meta["website"],
+        } if oci_meta else None,
         # Categoría preset for the primary detection — same lookup as
         # get_catalog_entry so the Register button pre-selects it.
-        "category": suggest_category_for(slug),
+        "category": category_suggestion,
         "extras": extras,
         "docker_workloads": sorted(docker_workloads, key=lambda item: item["name"].lower()),
         "docker_web_links": docker_web_links,

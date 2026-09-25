@@ -1,0 +1,146 @@
+{
+  "meta": {
+    "title": "Assessment and inventory | Audit & Report",
+    "description": "The Audit & Report assessment: report profiles, how results are classified, accepted risks, unreadable sources, Lynis and the inventory of the node."
+  },
+  "header": {
+    "title": "Assessment and inventory",
+    "description": "The assessment inspects the node, keeps its findings and answers different questions depending on the report profile.",
+    "section": "Audit & Report"
+  },
+  "sections": [
+    {
+      "id": "read-only",
+      "blocks": [
+        {
+          "calloutInfo": {
+            "title": "An assessment inspects; it does not change the configuration",
+            "body": "It reads the configuration and state of the host. It writes its results, reports and logs, and the boot checks can mount EFI system partitions for a moment. The configuration it assesses is not modified."
+          }
+        },
+        {
+          "p": "<strong>Run assessment</strong> starts a run with the profile selected in <strong>Report</strong>. The view shows the date of the last run and how long ago it was."
+        }
+      ]
+    },
+    {
+      "id": "profiles",
+      "title": "Report profiles",
+      "intro": "Each profile answers a different question. The checks and sections are selected before the document is composed.",
+      "blocks": [
+        {
+          "table": {
+            "headers": ["Profile", "What it covers"],
+            "rows": [
+              ["Full audit", "Every check and all the structure available."],
+              ["Quick diagnosis", "Every check; the result opens with the critical findings, the warnings and the readings that could not be verified."],
+              ["Inventory", "A description of the node, with no checks and no classification."],
+              ["Security review", "Exposure, access, privileges, certificates, updates, repositories and Lynis."],
+              ["Backup assurance", "Coverage, age, results, verification, retention and recovery of the backups."],
+              ["Capacity and wear", "Growth margin, memory, space usage and the service life of the disks."]
+            ]
+          }
+        },
+        {
+          "p": "The contents of each document are described in <reportsLink>Reports and comparisons</reportsLink>."
+        }
+      ]
+    },
+    {
+      "id": "results",
+      "title": "How results are classified",
+      "blocks": [
+        {
+          "table": {
+            "headers": ["Classification", "Meaning"],
+            "rows": [
+              ["Critical", "A failed condition that has priority."],
+              ["Warning", "A condition that needs a review, given the evidence or the policy."],
+              ["Observation", "Information about the node that is not reported as a failure."],
+              ["Unverified", "The source the check needs could not be read. It does not mean the problem is absent."],
+              ["Conformant", "The condition meets the criterion applied."],
+              ["Not applicable", "Nothing within the scope of the check applies."],
+              ["Accepted risk", "The finding exists and a decision about it has been recorded."],
+              ["Excluded by policy", "The policy declares that the element is left out of the count."]
+            ]
+          }
+        },
+        {
+          "p": "Findings can be filtered by area: System, Storage, Network, Security, Backup, Guests and Hardware. Each finding keeps its evidence, with the source it was read from."
+        }
+      ]
+    },
+    {
+      "id": "unverified",
+      "title": "When a source cannot be read",
+      "blocks": [
+        {
+          "table": {
+            "headers": ["Case", "Behaviour"],
+            "rows": [
+              ["Unverified", "The check keeps its identity, states in its evidence which source failed and does not turn missing data into a conformant result."],
+              ["Incomplete evidence", "The report names the source and the time of collection, so a real problem can be told apart from an insufficient reading."],
+              ["A new run", "Once the access, package or service is corrected, the same profile runs again and the comparison shows whether the result could be verified."]
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "lynis",
+      "title": "Lynis",
+      "blocks": [
+        {
+          "p": "The security review uses the Lynis report of the host. When Lynis has not been run yet, or its report is older than the threshold of the policy, a dialog offers <strong>Run with Lynis</strong>, which takes a few minutes longer, or <strong>Run without Lynis</strong>, which uses the existing report."
+        },
+        {
+          "figure": {
+            "src": "/monitor/audit/lynis-dialog.png",
+            "alt": "Dialog that offers to run the assessment with or without Lynis",
+            "caption": "The Lynis dialog before a security review."
+          }
+        }
+      ]
+    },
+    {
+      "id": "accept",
+      "title": "Accepting a risk",
+      "blocks": [
+        {
+          "p": "<strong>Accept risk</strong> records a decision on a finding. The reason is required and is stored with the author and the date."
+        },
+        {
+          "table": {
+            "headers": ["Field", "Options"],
+            "rows": [
+              ["Reason", "Free text, required."],
+              ["Stops applying after", "90 days, 180 days, 1 year or does not expire. When the period ends the finding becomes active again."],
+              ["Remind me to review", "A reminder that brings the decision back to attention while it stays in force."]
+            ]
+          }
+        },
+        {
+          "p": "An accepted finding stays visible with its decision, and <strong>Return to active</strong> revokes it. An accepted risk is not a correction: the comparison reports it as accepted, not as resolved."
+        }
+      ]
+    },
+    {
+      "id": "inventory",
+      "title": "Inventory",
+      "blocks": [
+        {
+          "list": {
+            "items": [
+              "Identity, Proxmox VE version, kernel, subscription and cluster.",
+              "CPU, memory, board, BIOS, controllers and IOMMU.",
+              "Disks, SMART, power-on hours and recorded events.",
+              "Adapters, bonds, bridges, latency and connections.",
+              "Storage, guests with their disks and interfaces, and backups.",
+              "PCI passthrough and the software ProxMenux manages."
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

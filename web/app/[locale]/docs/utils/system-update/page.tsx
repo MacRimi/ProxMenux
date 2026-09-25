@@ -175,11 +175,11 @@ export default async function SystemUpdatePage({
 
       <h2 className="text-2xl font-semibold mt-10 mb-4 text-gray-900">{t("noSub.heading")}</h2>
       <p className="mb-6 text-gray-800 leading-relaxed">
-        {t.rich("noSub.intro", { code })}
+        {t.rich("noSub.intro", { code, strong })}
       </p>
       <ol className="list-decimal pl-6 mb-6 text-gray-800 leading-relaxed space-y-1">
         {noSubItems.map((_, idx) => (
-          <li key={idx}>{t.rich(`noSub.items.${idx}`, { code })}</li>
+          <li key={idx}>{t.rich(`noSub.items.${idx}`, { code, strong })}</li>
         ))}
       </ol>
       <p className="mb-6 text-gray-800 leading-relaxed">{t("noSub.outro")}</p>

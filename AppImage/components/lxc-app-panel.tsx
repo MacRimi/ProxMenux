@@ -43,7 +43,7 @@ import { useT } from "@/lib/i18n/provider"
 // apps and casual "just want a link" registrations use this default.
 type InstalledVia = "" | "dpkg" | "apk" | "file" | "binary" |
                     "python_dist" | "docker_label" | "docker_exec" |
-                    "command" | "manual"
+                    "command" | "manual" | "oci_image"
 type GithubSource = "releases" | "tags"
 
 interface PortEntry {
@@ -120,6 +120,10 @@ interface DetectedApp {
   // auto-fill the Web Link editor when the user clicks "Register".
   category?: string | null
   tracking_suggestion?: TrackingSuggestion | null
+  // The scheme the application is served on, when it is known rather than
+  // guessed. A ProxMenux OCI install records it; Chromium answers on 3001
+  // over https, which no port heuristic can tell from 3000 over http.
+  scheme?: "http" | "https" | null
 }
 
 interface AppState {
@@ -129,7 +133,30 @@ interface AppState {
   update_available: boolean | null
   error: string | null
   checked_at: string | null
+  // An application installed from an OCI image: the image it runs and the
+  // one its registry publishes today. The image decides whether there is an
+  // update; the version above only says which application it carries.
+  installed_digest?: string | null
+  latest_digest?: string | null
+  image_created?: string | null
+  latest_image_created?: string | null
+  image_reference?: string | null
+  image_repository?: string | null
 }
+
+// The repository of an OCI image, shown the way the repository of a tracked
+// application is: owner/name for GitHub, the image name for Docker Hub.
+export const ociRepoLabel = (url: string) =>
+  url.replace(/^https?:\/\/(www\.)?/, "")
+    .replace(/^github\.com\//, "")
+    .replace(/^hub\.docker\.com\/(r|_)\//, "")
+    .replace(/\/$/, "")
+
+// "2026-09-24 · a3f21c08": an image as a reader can compare two of them.
+export const ociImageLabel = (created?: string | null, digest?: string | null) =>
+  [created ? created.slice(0, 10) : null, digest ? digest.split(":").pop()!.slice(0, 8) : null]
+    .filter(Boolean)
+    .join(" · ")
 
 interface AppEntry extends AppConfig {
   id: string
@@ -219,10 +246,25 @@ interface DockerWebLinkSuggestion {
   logo_url?: string | null
 }
 
+// Identity of a container ProxMenux installed from an OCI image. It comes
+// from the installation record rather than a probe, so it names the
+// application even when the guest also ships something else — CT 152 runs
+// Chromium and carries a docker client the probe reported instead.
+interface OciInstance {
+  template_id: string | null
+  image_reference: string | null
+  repository: string | null
+  scheme: string | null
+  port: number | null
+  path: string | null
+  website: string | null
+}
+
 interface Suggestions {
   ready?: boolean
   name_suggestion: string | null
   helper_slug: string | null
+  oci_instance?: OciInstance | null
   port_suggestions: number[]
   web_path_hint: string | null
   tracking_suggestion?: TrackingSuggestion | null
@@ -400,6 +442,7 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed, initialData }: Prop
   const [loading, setLoading] = useState(!seed)
   const [sidecar, setSidecar] = useState<SidecarResponse | null>(seed?.sidecar ?? null)
   const [suggestions, setSuggestions] = useState<Suggestions | null>(seed?.suggestions ?? null)
+  const [adguardSetupAvailable, setAdguardSetupAvailable] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [searchingApplications, setSearchingApplications] = useState(false)
   const [detectionNotice, setDetectionNotice] = useState<{ found: boolean; text: string } | null>(null)
@@ -589,14 +632,19 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed, initialData }: Prop
   const detectedList: DetectedApp[] = useMemo(() => {
     if (!suggestions) return []
     const out: DetectedApp[] = []
-    if (suggestions.helper_slug && suggestions.name_suggestion) {
+    // A ProxMenux OCI install has no helper slug — nothing was installed by a
+    // community script — so its template id identifies it instead.
+    const primarySlug = suggestions.helper_slug || suggestions.oci_instance?.template_id
+    if (primarySlug && suggestions.name_suggestion) {
       out.push({
-        slug: suggestions.helper_slug,
+        slug: primarySlug,
         name: suggestions.name_suggestion,
         logo_url: suggestions.logo_url,
         default_ports: suggestions.default_ports,
         category: suggestions.category,
         tracking_suggestion: suggestions.tracking_suggestion,
+        scheme: suggestions.oci_instance?.scheme === "https" ? "https"
+          : suggestions.oci_instance?.scheme === "http" ? "http" : null,
       })
     }
     const seen = new Set(out.map((d) => d.slug))
@@ -638,6 +686,43 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed, initialData }: Prop
   // different-app panel. Not affected by registration state.
   const hiddenDetections = [...detectedList, ...(suggestions?.docker_workloads || [])]
     .filter((d, index, items) => dismissedSlugs.has(d.slug) && items.findIndex(item => item.slug === d.slug) === index)
+
+  // A container installed from an OCI image holds exactly the application its
+  // record names, so there is nothing to search for and nothing else to add.
+  // What can go stale is what the record and the registry say, and this
+  // reads both again.
+  const isOciInstall = !!suggestions?.oci_instance
+  const isOciAdguard = suggestions?.oci_instance?.template_id === "image-adguard-home"
+  useEffect(() => {
+    if (!isOciAdguard) return
+    let cancelled = false
+    fetchApi<{ available: boolean }>(`/api/vms/${vmid}/apps/adguard-setup`)
+      .then((result) => { if (!cancelled) setAdguardSetupAvailable(result.available === true) })
+      .catch(() => { if (!cancelled) setAdguardSetupAvailable(false) })
+    return () => { cancelled = true }
+  }, [vmid, isOciAdguard])
+  const refreshOciData = async () => {
+    setSearchingApplications(true)
+    setDetectionNotice(null)
+    setError(null)
+    try {
+      const result: Suggestions = await fetchApi(`/api/vms/${vmid}/apps/suggestions`, {
+        method: "POST",
+      })
+      setSuggestions(result)
+      let next = sidecar
+      if (apps.length > 0) {
+        next = await fetchApi(`/api/vms/${vmid}/apps/check`, { method: "POST" })
+        setSidecar(next)
+      }
+      if (next) setLxcAppsCached(vmid, next, result)
+      onChange?.()
+    } catch (e: any) {
+      setError(e?.message || t("vmLxc.appEditor.checkFailed"))
+    } finally {
+      setSearchingApplications(false)
+    }
+  }
 
   const searchInstalledApplications = async () => {
     const before = new Set([...visibleDetected, ...visibleWorkloads].map((item) => item.slug))
@@ -756,10 +841,16 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed, initialData }: Prop
         // Docker endpoints come from the real published host-port mappings
         // listed under Web links.  Do not pre-save a catalog default such as
         // 9000; the user explicitly chooses which workload links to add.
-        if (p.slug !== "docker" && p.default_ports?.length) {
-          seed.ports = p.default_ports.map((port) => ({
+        const suggestedPorts = isOciAdguard && p.slug === "image-adguard-home"
+          ? [80, ...(adguardSetupAvailable ? [3000] : [])]
+          : p.default_ports || []
+        if (p.slug !== "docker" && suggestedPorts.length) {
+          seed.ports = suggestedPorts.map((port) => ({
             port,
-            scheme: defaultSchemeFor(port),
+            ...(isOciAdguard && port === 3000 ? { description: "Config" } : {}),
+            // A recorded scheme beats the port heuristic: getting this wrong
+            // hands the user a link that cannot connect.
+            scheme: p.scheme || defaultSchemeFor(port),
             web_path: s?.web_path_hint || "",
             // Auto-fill Categoría from helpers_cache.category_names[0]
             // when the catalog entry carries one. User can still change
@@ -822,7 +913,7 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed, initialData }: Prop
     setEditing({ appId: existing?.id || null, draft: seed })
     setDetectorTest(null)
     setError(null)
-  }, [suggestions, vmid, sidecar])
+  }, [suggestions, vmid, sidecar, isOciAdguard, adguardSetupAvailable])
 
   const closeEditor = () => {
     setEditing(null)
@@ -1686,9 +1777,25 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed, initialData }: Prop
                           <SelectItem value="docker_exec">{t("vmLxc.appEditor.methodDockerExec")}</SelectItem>
                           <SelectItem value="command">{t("vmLxc.appEditor.methodCommand")}</SelectItem>
                           <SelectItem value="manual">{t("vmLxc.appEditor.methodManual")}</SelectItem>
+                          {/* Only meaningful on a container ProxMenux installed
+                              from an image: the record it reads exists nowhere else. */}
+                          {(method === "oci_image" || suggestions?.oci_instance) && (
+                            <SelectItem value="oci_image">{t("vmLxc.appEditor.methodOciImage")}</SelectItem>
+                          )}
                         </SelectContent>
                       </Select>
                     </div>
+
+                    {method === "oci_image" && (
+                      <div className="sm:col-span-2 text-xs text-muted-foreground leading-relaxed">
+                        {t("vmLxc.appEditor.ociImageHelp")}
+                        {suggestions?.oci_instance?.image_reference && (
+                          <div className="mt-1">
+                            <code className="text-foreground/80">{suggestions.oci_instance.image_reference}</code>
+                          </div>
+                        )}
+                      </div>
+                    )}
 
                     {isPackaged && (
                       <div>
@@ -1892,7 +1999,9 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed, initialData }: Prop
                     </div>
                   )}
 
-                  {method && (() => {
+                  {/* The registry of the image is the upstream of an OCI
+                      install, and the record already names it. */}
+                  {method && method !== "oci_image" && (() => {
                     // Upstream source selector — 3 methods (github,
                     // http_json, docker_hub). Legacy sidecars with a
                     // `repo` set but no `upstream_type` default to
@@ -2466,17 +2575,20 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed, initialData }: Prop
             )}
             <div className="pt-1 flex flex-wrap justify-center gap-2">
               <Button
-                onClick={searchInstalledApplications}
+                onClick={isOciInstall ? refreshOciData : searchInstalledApplications}
                 disabled={searchingApplications}
                 className="bg-blue-500 hover:bg-blue-600 text-white"
               >
                 {searchingApplications
                   ? <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />
-                  : <Search className="h-4 w-4 mr-1.5" />}
-                {searchingApplications
-                  ? t("vmLxc.appEditor.searchingApplications")
-                  : t("vmLxc.appEditor.searchApplications")}
+                  : isOciInstall ? <RefreshCw className="h-4 w-4 mr-1.5" /> : <Search className="h-4 w-4 mr-1.5" />}
+                {isOciInstall
+                  ? t(searchingApplications ? "vmLxc.appEditor.refreshingData" : "vmLxc.appEditor.refreshData")
+                  : searchingApplications
+                    ? t("vmLxc.appEditor.searchingApplications")
+                    : t("vmLxc.appEditor.searchApplications")}
               </Button>
+              {!isOciInstall && (
               <Button
                 onClick={openBrowseOrEditor}
                 className="bg-blue-500 hover:bg-blue-600 text-white"
@@ -2489,6 +2601,7 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed, initialData }: Prop
                   </span>
                 )}
               </Button>
+              )}
             </div>
             {detectionNotice && (
               <p className={`text-xs text-center ${detectionNotice.found ? "text-emerald-400" : "text-muted-foreground"}`}>
@@ -2524,6 +2637,7 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed, initialData }: Prop
                         {app.installed_via === "apk" && app.package && <>apk · <code className="text-foreground/80">{app.package}</code></>}
                         {app.installed_via === "file" && app.file_path && <>file · <code className="text-foreground/80">{app.file_path}</code></>}
                         {app.installed_via === "binary" && app.binary_path && <>binary · <code className="text-foreground/80">{app.binary_path}</code></>}
+                        {app.installed_via === "oci_image" && st?.image_reference && <>OCI · <code className="text-foreground/80 break-all">{st.image_reference}</code></>}
                       </div>
                     )}
                     {tracking && st?.checked_at && (
@@ -2535,6 +2649,17 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed, initialData }: Prop
                         stack below Checked, full-width so long repo
                         names wrap cleanly instead of competing with
                         the top-right on narrow screens. */}
+                    {app.installed_via === "oci_image" && tracking && st?.image_repository && (
+                      <a
+                        href={st.image_repository}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="md:hidden mt-1 text-xs text-muted-foreground hover:text-foreground inline-flex items-center gap-1 min-w-0"
+                      >
+                        <span className="truncate">{ociRepoLabel(st.image_repository)}</span>
+                        <ExternalLink className="h-3 w-3 flex-shrink-0" />
+                      </a>
+                    )}
                     {app.repo && tracking && (
                       <a
                         href={`https://github.com/${app.repo}`}
@@ -2551,6 +2676,17 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed, initialData }: Prop
                 {/* Desktop-only repo link: same row as the title on md+,
                     hidden on mobile where the stacked variant above
                     handles it. */}
+                {app.installed_via === "oci_image" && tracking && st?.image_repository && (
+                  <a
+                    href={st.image_repository}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="hidden md:inline-flex text-xs text-muted-foreground hover:text-foreground items-center gap-1 flex-shrink-0 mt-1"
+                  >
+                    {ociRepoLabel(st.image_repository)}
+                    <ExternalLink className="h-3 w-3" />
+                  </a>
+                )}
                 {app.repo && tracking && (
                   <a
                     href={`https://github.com/${app.repo}`}
@@ -2565,6 +2701,41 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed, initialData }: Prop
               </div>
 
               {(() => {
+                // An application installed from an OCI image changes when its
+                // image does. Both are shown — the application version it
+                // carries and the image it runs — and the image decides.
+                if (app.installed_via === "oci_image") {
+                  if (!tracking) return null
+                  const newImage = st?.update_available === true
+                  const appMoved = !!(st?.latest_version && st.latest_version !== st.installed_version)
+                  return (
+                    <div className="mb-3 grid gap-3 grid-cols-1 sm:grid-cols-2">
+                      <div className="p-3 rounded-md bg-muted/40">
+                        <div className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">{t("vmLxc.appEditor.ociAppVersion")}</div>
+                        <div className="text-lg font-semibold font-mono text-foreground break-all">
+                          {st?.installed_version || "—"}
+                        </div>
+                        {appMoved && (
+                          <div className="text-xs font-mono text-purple-400 mt-1 break-all">→ {st!.latest_version}</div>
+                        )}
+                      </div>
+                      <div className="p-3 rounded-md bg-muted/40">
+                        <div className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">{t("vmLxc.appEditor.ociImage")}</div>
+                        <div className="text-sm font-semibold font-mono text-foreground">
+                          {ociImageLabel(st?.image_created, st?.installed_digest) || "—"}
+                        </div>
+                        {newImage ? (
+                          <div className="text-sm font-semibold font-mono text-purple-400 mt-1 flex items-center gap-2">
+                            {t("vmLxc.appEditor.ociNewImage")}: {ociImageLabel(st?.latest_image_created, st?.latest_digest)}
+                            <ArrowUpCircle className="h-5 w-5 text-purple-400 flex-shrink-0" aria-label={t("vmLxc.appEditor.updateAvailableBadge")} />
+                          </div>
+                        ) : st?.latest_digest ? (
+                          <div className="text-xs text-muted-foreground mt-1">{t("vmLxc.appEditor.ociImageCurrent")}</div>
+                        ) : null}
+                      </div>
+                    </div>
+                  )
+                }
                 // A delegated app has no upstream of its own; the version to
                 // compare against comes from the image it updates with.
                 const delegated = app.update_via === "docker"
@@ -2614,9 +2785,14 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed, initialData }: Prop
                   Logo is optional (per-port `logo_url`); when absent
                   the row indents naturally to align with the text.
                   If we can't resolve an IP for the CT we hide the row. */}
-              {app.ports && app.ports.length > 0 && (
+              {(isOciAdguard ? true : !!app.ports?.length) && (
                 <div className="mb-3 space-y-4">
-                  {app.ports.map((p) => {
+                  {(isOciAdguard
+                    ? [
+                        { port: 80, description: app.name, scheme: "http" as const },
+                        ...(adguardSetupAvailable ? [{ port: 3000, description: "Config", scheme: "http" as const }] : []),
+                      ]
+                    : app.ports).map((p) => {
                     const url = buildWebUrl(ctIp, p.port, p.scheme, p.custom_url)
                     if (!url) return null
                     const label = p.description || app.name
@@ -2766,22 +2942,27 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed, initialData }: Prop
           <Button
             variant="outline"
             size="sm"
-            onClick={searchInstalledApplications}
+            onClick={isOciInstall ? refreshOciData : searchInstalledApplications}
             disabled={searchingApplications || editMode}
             className="min-w-[7rem] sm:min-w-0 px-2.5 sm:px-3"
-            aria-label={searchingApplications
-              ? t("vmLxc.appEditor.searchingApplications")
-              : t("vmLxc.appEditor.searchApplications")}
+            aria-label={isOciInstall
+              ? t(searchingApplications ? "vmLxc.appEditor.refreshingData" : "vmLxc.appEditor.refreshData")
+              : searchingApplications
+                ? t("vmLxc.appEditor.searchingApplications")
+                : t("vmLxc.appEditor.searchApplications")}
           >
             {searchingApplications
               ? <Loader2 className="h-4 w-4 sm:mr-1.5 animate-spin" />
-              : <Search className="h-4 w-4 sm:mr-1.5" />}
+              : isOciInstall ? <RefreshCw className="h-4 w-4 sm:mr-1.5" /> : <Search className="h-4 w-4 sm:mr-1.5" />}
             <span className="hidden sm:inline">
-              {searchingApplications
-                ? t("vmLxc.appEditor.searchingApplications")
-                : t("vmLxc.appEditor.searchApplications")}
+              {isOciInstall
+                ? t(searchingApplications ? "vmLxc.appEditor.refreshingData" : "vmLxc.appEditor.refreshData")
+                : searchingApplications
+                  ? t("vmLxc.appEditor.searchingApplications")
+                  : t("vmLxc.appEditor.searchApplications")}
             </span>
           </Button>
+          {!isOciInstall && (
           <Button
             variant="outline"
             size="sm"
@@ -2800,6 +2981,7 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed, initialData }: Prop
               )}
             </span>
           </Button>
+          )}
           <button
             type="button"
             onClick={() => setEditMode((v) => !v)}

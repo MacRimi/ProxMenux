@@ -119,7 +119,7 @@ export default async function SwitchGpuModePage({
         items={[
           { label: <>{t.rich("prereqs.assigned", { strong })}</> },
           {
-            label: <>{t.rich("prereqs.iommu", { strong, em })}</>,
+            label: <>{t.rich("prereqs.iommu", { strong, em, code })}</>,
             check: t("prereqs.iommuCheck"),
           },
           { label: <>{t.rich("prereqs.reboot", { strong })}</> },

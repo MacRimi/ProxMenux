@@ -211,7 +211,7 @@ function configure_guest_agent() {
 
   msg_info "$(translate "Adding QEMU Guest Agent support...")"
 
-  # Habilitar el agente en la VM
+  # Enable the agent on the VM
   qm set "$VMID" -agent enabled=1 >/dev/null 2>&1
 
   # Añadir canal de comunicación virtio
