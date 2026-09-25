@@ -1153,6 +1153,7 @@ export function VirtualMachines() {
       cache.details.delete(vm.vmid)
       cache.backups.delete(vm.vmid)
       cache.mountPoints.delete(vm.vmid)
+      if (vm.type === "lxc") reseedMountPoints(vm.vmid)
       cache.schedule.delete(vm.vmid)
       cache.firewall.delete(vm.vmid)
       dockerInventoryRequestedRef.current.delete(vm.vmid)
@@ -1355,7 +1356,8 @@ export function VirtualMachines() {
   useEffect(() => {
     if (!vmData || vmData.length === 0) return
     let cancelled = false
-    fetchApi<{
+    let retryTimer: ReturnType<typeof setTimeout> | undefined
+    const hydrate = (attempt: number) => fetchApi<{
       guests: Array<{
         vmid: number
         type: "qemu" | "lxc"
@@ -1370,6 +1372,10 @@ export function VirtualMachines() {
       .then((payload) => {
         if (cancelled || !payload?.guests) return
         const cache = vmModalCacheRef.current
+        // Guests the server has not warmed yet come back null; ask again
+        // shortly so their mount tab is seeded before the modal opens.
+        const pending = payload.guests.some((g) => g.type === "lxc" && !g.mount_points)
+        if (pending && attempt < 3) retryTimer = setTimeout(() => hydrate(attempt + 1), 20000)
         for (const g of payload.guests) {
           if (g.details) cache.details.set(g.vmid, g.details)
           if (g.backups?.backups) {
@@ -1403,7 +1409,11 @@ export function VirtualMachines() {
         // Silent — modal open handlers fall back to individual
         // fetches if the ref cache is empty.
       })
-    return () => { cancelled = true }
+    hydrate(0)
+    return () => {
+      cancelled = true
+      if (retryTimer) clearTimeout(retryTimer)
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [vmidsKey])
 
@@ -1431,49 +1441,66 @@ export function VirtualMachines() {
     //      user perceives no lag.
     const hasSeed = mountPoints.length > 0
     if (!hasSeed) setLoadingMounts(true)
-    try {
-      const [staticResp, runtimeResp] = await Promise.all([
-        fetchApi<{
-          ok: boolean
-          mount_points: LxcMountPoint[]
-          ad_hoc_hint_count?: number
-        }>(`/api/lxc/${vmid}/mount-points`).catch((e) => {
-          console.error("Error fetching static mount points:", e)
-          return null
-        }),
-        fetchApi<{
-          ok: boolean
-          running: boolean
-          runtime: Record<string, Partial<LxcMountPoint>>
-          ad_hoc: LxcMountPoint[]
-        }>(`/api/lxc/${vmid}/mount-points/runtime`).catch((e) => {
-          console.error("Error fetching runtime mount points:", e)
-          return null
-        }),
-      ])
-      if (staticResp?.ok) {
-        const mp = staticResp.mount_points || []
-        const hint = staticResp.ad_hoc_hint_count ?? 0
-        setMountPoints(mp)
-        setMountsAdHocHint(hint)
-        vmModalCacheRef.current.mountPoints.set(vmid, { mount_points: mp, ad_hoc_hint_count: hint })
-      } else if (!hasSeed) {
-        setMountPoints([])
-      }
-      if (runtimeResp?.ok) {
-        setMountPointsRuntime(runtimeResp.runtime || {})
-        setAdHocMounts(runtimeResp.ad_hoc || [])
-      } else {
+    // Each half is applied as soon as it lands: the static list decides
+    // whether the tab exists and must not wait for df/stat.
+    const staticReq = fetchApi<{
+      ok: boolean
+      mount_points: LxcMountPoint[]
+      ad_hoc_hint_count?: number
+    }>(`/api/lxc/${vmid}/mount-points`)
+      .then((staticResp) => {
+        if (staticResp?.ok) {
+          const mp = staticResp.mount_points || []
+          const hint = staticResp.ad_hoc_hint_count ?? 0
+          setMountPoints(mp)
+          setMountsAdHocHint(hint)
+          vmModalCacheRef.current.mountPoints.set(vmid, { mount_points: mp, ad_hoc_hint_count: hint })
+        } else if (!hasSeed) {
+          setMountPoints([])
+        }
+      })
+      .catch((e) => {
+        console.error("Error fetching static mount points:", e)
+        if (!hasSeed) setMountPoints([])
+      })
+      .finally(() => setLoadingMounts(false))
+    const runtimeReq = fetchApi<{
+      ok: boolean
+      running: boolean
+      runtime: Record<string, Partial<LxcMountPoint>>
+      ad_hoc: LxcMountPoint[]
+    }>(`/api/lxc/${vmid}/mount-points/runtime`)
+      .then((runtimeResp) => {
+        if (runtimeResp?.ok) {
+          setMountPointsRuntime(runtimeResp.runtime || {})
+          setAdHocMounts(runtimeResp.ad_hoc || [])
+        } else {
+          setMountPointsRuntime({})
+          setAdHocMounts([])
+        }
+      })
+      .catch((e) => {
+        console.error("Error fetching runtime mount points:", e)
         setMountPointsRuntime({})
         setAdHocMounts([])
-      }
-    } catch (error) {
-      console.error("Error fetching LXC mount points:", error)
-      if (!hasSeed) setMountPoints([])
-      setAdHocMounts([])
-    } finally {
-      setLoadingMounts(false)
-    }
+      })
+    await Promise.all([staticReq, runtimeReq])
+  }
+
+  // Background refill of the static mount list after a lifecycle event,
+  // so the next open of that guest renders its tab bar complete.
+  const reseedMountPoints = (vmid: number) => {
+    fetchApi<{ ok: boolean; mount_points: LxcMountPoint[]; ad_hoc_hint_count?: number }>(
+      `/api/lxc/${vmid}/mount-points`,
+    )
+      .then((r) => {
+        if (!r?.ok) return
+        vmModalCacheRef.current.mountPoints.set(vmid, {
+          mount_points: r.mount_points || [],
+          ad_hoc_hint_count: r.ad_hoc_hint_count ?? 0,
+        })
+      })
+      .catch(() => {})
   }
 
   const handleMetricsClick = () => {
