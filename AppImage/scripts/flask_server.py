@@ -13040,77 +13040,117 @@ def api_create_backup(vmid):
         if pbs_change_detection and pbs_change_detection != 'default' and vm_type == 'lxc':
             cmd.extend(['--pbs-change-detection-mode', pbs_change_detection])
         
-        # Start vzdump detached from the Flask worker.
-        # subprocess.run(timeout=60) SIGKILLs pvesh (and vzdump with it)
-        # the moment a backup runs longer than 60s — a 100 GB VM easily
-        # needs 2+ min and lands as `interrupted by signal`, leaving
-        # `.tar.dat` orphans and vzdumptmp dirs on disk. GH #295.
-        # Instead spawn pvesh in its own session so this endpoint can
-        # return as soon as the UPID is on stdout, and let the backup
-        # run to completion on its own. The frontend can then poll
-        # /api/task-log/<upid> for progress.
-        try:
-            proc = subprocess.Popen(
-                cmd,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.STDOUT,
-                text=True,
-                start_new_session=True,
-            )
-        except Exception as e:
-            return jsonify({
-                'success': False,
-                'error': f'Failed to spawn pvesh: {e}',
-                'command': ' '.join(cmd),
-            }), 500
-
-        # Wait up to 10s for the UPID line (typically appears in <1s).
-        # If pvesh exits with error before that, surface the real cause.
-        upid = None
-        buf = ''
-        deadline = time.time() + 10.0
+        # Start vzdump in its own transient systemd unit. A child of this
+        # service lives in its cgroup and is killed with it on any Monitor
+        # restart (an update, a deploy), taking the backup down mid-upload.
+        # pvesh writes the task UPID to a file, read back here; the backup
+        # then runs to completion on its own and the frontend polls
+        # /api/task-log/<upid> for progress. GH #295 covers the older
+        # 60-second kill this also avoids.
         upid_re = re.compile(
             r'UPID:[^:\s]+:[^:\s]+:[^:\s]+:[^:\s]+:vzdump:[^:\s]+:[^:\s]+:'
         )
-        while time.time() < deadline:
-            remaining = max(0.05, deadline - time.time())
-            rlist, _, _ = select.select([proc.stdout], [], [], min(remaining, 1.0))
-            if rlist:
-                chunk = proc.stdout.readline()
-                if not chunk:
-                    break
-                buf += chunk
+        upid = None
+        buf = ''
+        if shutil.which('systemd-run'):
+            run_dir = '/run/proxmenux'
+            try:
+                os.makedirs(run_dir, mode=0o700, exist_ok=True)
+                now = time.time()
+                for old in os.listdir(run_dir):
+                    old_path = os.path.join(run_dir, old)
+                    if old.startswith('vzdump-') and now - os.path.getmtime(old_path) > 86400:
+                        os.remove(old_path)
+            except OSError:
+                pass
+            unit = f'proxmenux-vzdump-{vmid}-{uuid.uuid4().hex[:8]}'
+            out_path = os.path.join(run_dir, f'vzdump-{unit}.out')
+            launch = subprocess.run(
+                ['systemd-run', f'--unit={unit}', '--collect', '--quiet',
+                 f'--description=ProxMenux backup of {vm_type.upper()} {vmid}',
+                 f'--property=StandardOutput=file:{out_path}', *cmd],
+                capture_output=True, text=True, timeout=15,
+            )
+            if launch.returncode != 0:
+                return jsonify({
+                    'success': False,
+                    'error': f'Failed to start the backup: {(launch.stderr or launch.stdout).strip()}',
+                    'command': ' '.join(cmd),
+                }), 500
+            deadline = time.time() + 10.0
+            while time.time() < deadline:
+                try:
+                    with open(out_path, encoding='utf-8', errors='replace') as handle:
+                        buf = handle.read()
+                except OSError:
+                    buf = ''
                 m = upid_re.search(buf)
                 if m:
                     upid = m.group(0).rstrip(':')
                     break
-            elif proc.poll() is not None:
-                break
-
-        if upid is None and proc.poll() is not None and proc.returncode != 0:
-            tail = buf.strip() or 'pvesh exited without producing a UPID'
-            return jsonify({
-                'success': False,
-                'error': f'Backup failed: {tail}',
-                'command': ' '.join(cmd),
-            }), 500
-
-        # Drain stdout in the background so the pipe doesn't fill and
-        # stall pvesh once vzdump starts emitting progress lines. We
-        # don't wait() — the backup outlives this HTTP request; PVE
-        # cleans up the task itself.
-        def _drain(p):
+                state = subprocess.run(['systemctl', 'is-active', unit],
+                                       capture_output=True, text=True).stdout.strip()
+                if state not in ('active', 'activating'):
+                    break
+                time.sleep(0.3)
+            if upid is None:
+                tail = buf.strip() or 'pvesh exited without producing a UPID'
+                return jsonify({
+                    'success': False,
+                    'error': f'Backup failed: {tail[-800:]}',
+                    'command': ' '.join(cmd),
+                }), 500
+        else:
             try:
-                for _ in iter(p.stdout.readline, ''):
-                    pass
-            except Exception:
-                pass
-            finally:
+                proc = subprocess.Popen(
+                    cmd,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.STDOUT,
+                    text=True,
+                    start_new_session=True,
+                )
+            except Exception as e:
+                return jsonify({
+                    'success': False,
+                    'error': f'Failed to spawn pvesh: {e}',
+                    'command': ' '.join(cmd),
+                }), 500
+            deadline = time.time() + 10.0
+            while time.time() < deadline:
+                remaining = max(0.05, deadline - time.time())
+                rlist, _, _ = select.select([proc.stdout], [], [], min(remaining, 1.0))
+                if rlist:
+                    chunk = proc.stdout.readline()
+                    if not chunk:
+                        break
+                    buf += chunk
+                    m = upid_re.search(buf)
+                    if m:
+                        upid = m.group(0).rstrip(':')
+                        break
+                elif proc.poll() is not None:
+                    break
+            if upid is None and proc.poll() is not None and proc.returncode != 0:
+                tail = buf.strip() or 'pvesh exited without producing a UPID'
+                return jsonify({
+                    'success': False,
+                    'error': f'Backup failed: {tail}',
+                    'command': ' '.join(cmd),
+                }), 500
+
+            # Drain stdout so the pipe doesn't fill and stall pvesh.
+            def _drain(p):
                 try:
-                    p.stdout.close()
+                    for _ in iter(p.stdout.readline, ''):
+                        pass
                 except Exception:
                     pass
-        threading.Thread(target=_drain, args=(proc,), daemon=True).start()
+                finally:
+                    try:
+                        p.stdout.close()
+                    except Exception:
+                        pass
+            threading.Thread(target=_drain, args=(proc,), daemon=True).start()
 
         # New task started — the backups list will change soon (either
         # the new archive appears, or the task fails and something is
@@ -14644,6 +14684,7 @@ def api_health_unacknowledge():
 
         result = health_persistence.unacknowledge_error(error_key)
         # Invalidate caches so the next health fetch reflects the new state.
+        from health_monitor import health_monitor
         for ck in ['_bg_overall', '_bg_detailed', 'overall_health',
                    'storage_check', 'vms_check', 'logs_analysis',
                    'pve_services', 'updates_check', 'security_check',
