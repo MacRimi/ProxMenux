@@ -1,6 +1,4 @@
 {
-  "Unsupported kept setting:": "Ajuste conservado no admitido:",
-  "Could not restore the container setting:": "No se pudo restaurar el ajuste del contenedor:",
   "# Alternative if you prefer screen": "# Alternativa si prefieres la pantalla",
   "# Recommended: avoids disconnection during upgrade": "# Recomendado: evita la desconexión durante la actualización",
   "(Checked entries will be removed. Uncheck to keep in VM.)": "(Las entradas marcadas se eliminarán. Desmarque para mantener en VM).",
@@ -1277,6 +1275,7 @@
   "Could not resolve the OCI manifest:": "No podía resolver el manifiesto de la OCI:",
   "Could not restart ProxMenux Monitor service.": "No se pudo reiniciar el servicio ProxMenux Monitor.",
   "Could not restart the service — start it manually with systemctl start": "No se pudo reiniciar el servicio; inícielo manualmente con systemctl start",
+  "Could not restore the container setting:": "No se pudo restaurar el ajuste del contenedor:",
   "Could not retrieve versions list from NVIDIA. Please check your internet connection.": "No se pudo recuperar la lista de versiones de NVIDIA. Por favor verifique su conexión a Internet.",
   "Could not reuse the persistent disk:": "No podía reutilizar el disco persistente:",
   "Could not run NVIDIA patch script. Please verify repository and driver version.": "No se pudo ejecutar el script de parche de NVIDIA. Verifique el repositorio y la versión del controlador.",
@@ -6542,6 +6541,7 @@
   "Unsupported device type:": "Tipo de dispositivo sin soporte:",
   "Unsupported dynamic NVIDIA capabilities:": "Capacidades dinámicas de NVIDIA sin apoyo:",
   "Unsupported format. Only .ova and .ovf files are supported.": "Formato no compatible. Sólo se admiten archivos .ova y .ovf.",
+  "Unsupported kept setting:": "Ajuste conservado no admitido:",
   "Unsupported media storage mode:": "Modo de almacenamiento multimedia sin soporte:",
   "Unsupported mount options": "Opciones de montaje no admitidas",
   "Unsupported mount type": "Tipo de montaje sin soporte",
