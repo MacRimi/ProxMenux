@@ -780,7 +780,7 @@ run_pve8to9_check() {
             local check_help
             check_help="$(translate "Once finished, repeat the check ({check}) to review any remaining issues before starting the PVE 8 → PVE 9 upgrade.")"
             [[ "$check_help" == *'{check}'* ]] || check_help="Once finished, repeat the check ({check}) to review any remaining issues before starting the PVE 8 → PVE 9 upgrade."
-            check_help="${check_help//\{check\}/$(translate "Run PVE 8 to 9 check")}"
+            check_help="${check_help//\{check\}/"$(translate "Run PVE 8 to 9 check")"}"
             msg_info2 "$check_help"
             echo -e
             msg_success "$(translate "Press Enter to exit the script after reading instructions...")"
@@ -1150,7 +1150,7 @@ run_pve8to9_check2() {
             local check_help
             check_help="$(translate "Once finished, repeat the check ({check}) to review any remaining issues before rebooting.")"
             [[ "$check_help" == *'{check}'* ]] || check_help="Once finished, repeat the check ({check}) to review any remaining issues before rebooting."
-            check_help="${check_help//\{check\}/$(translate "Run PVE 8 to 9 check")}"
+            check_help="${check_help//\{check\}/"$(translate "Run PVE 8 to 9 check")"}"
             msg_info2 "$check_help"
             echo -e
             msg_success "$(translate "Press Enter to exit the script after reading instructions...")"

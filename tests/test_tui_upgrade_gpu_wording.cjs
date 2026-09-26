@@ -58,9 +58,9 @@ const checkHelp = checker.match(/^\s*check_help="\$\(translate "Once finished,[^
 const upgradeHelp = [...menuSrc.matchAll(/^\s*check_help="\$\(translate "Once finished,[^\n]+\n(?:[^\n]*\n){2}\s*msg_info2 "\$check_help"/gm)].map(m => m[0]);
 assert.equal(upgradeHelp.length, 2);
 const helpLines = [checkHelp, ...upgradeHelp];
-const renderHelp = (locale, entries) => {
+const renderHelp = (locale, entries, patsub = 'on') => {
   if (entries) store(locale, entries);
-  return helpLines.map(l => bash(setup + '\n' + l.trim() + '\n', {LANGUAGE: locale}));
+  return helpLines.map(l => bash(setup + `\nshopt -${patsub === 'on' ? 's' : 'u'} patsub_replacement\n` + l.trim() + '\n', {LANGUAGE: locale}));
 };
 const helpEn = renderHelp('en');
 assert.equal(helpEn.length, 3);
@@ -71,6 +71,10 @@ for (const line of helpEn) {
 }
 const helpIt = renderHelp('it');
 for (const line of helpIt) assert.ok(line.includes(it['Run PVE 8 to 9 check']), line);
+for (const patsub of ['on', 'off']) {
+  assert.deepEqual(renderHelp('en', undefined, patsub), helpEn, `English check: patsub_replacement ${patsub}`);
+  assert.deepEqual(renderHelp('it', undefined, patsub), helpIt, `Italian check: patsub_replacement ${patsub}`);
+}
 for (const locale of locales) {
   const catalog = JSON.parse(read(`lang/${locale}.json`));
   store(locale, catalog);
@@ -79,11 +83,18 @@ for (const locale of locales) {
 }
 const helpSynthetic = renderHelp('synthetic');
 for (const [i, line] of helpSynthetic.entries()) assert.equal(line, `TRADOTTO_${i} CONTROLLO_LOCALIZZATO fine`);
+const ampCheck = {...marker, 'Run PVE 8 to 9 check': 'CHECK & REVIEW'};
+for (const patsub of ['on', 'off']) {
+  const lines = renderHelp('amp-check', ampCheck, patsub);
+  for (const [i, line] of lines.entries()) assert.equal(line, `TRADOTTO_${i} CHECK & REVIEW fine`, `check: patsub_replacement ${patsub}`);
+  const fallback = renderHelp('amp-check-fallback', {...ampCheck, [newKeys[0]]: 'NON_VALIDA {wrong}'}, patsub);
+  assert.equal(fallback[0], 'Once finished, repeat the check (CHECK & REVIEW) to review any remaining issues.', `check fallback: patsub_replacement ${patsub}`);
+}
 const brokenHelp = renderHelp('malformed', {...marker, 'Run PVE 8 to 9 check': 'CONTROLLO_LOCALIZZATO', [newKeys[0]]: 'NON_VALIDA {wrong}'});
 assert.ok(brokenHelp[0].includes('Once finished, repeat the check (CONTROLLO_LOCALIZZATO)'), brokenHelp[0]);
 const vmPaths = ['scripts/vm/synology.sh', 'scripts/vm/vm_creator.sh', 'scripts/vm/zimaos.sh'];
 const vmFunctions = vmPaths.map(p => func(read(p), 'run_gpu_passthrough_wizard'));
-const renderVm = locale => vmFunctions.map(fn => bash(setup + `\nLOCAL_SCRIPTS=${JSON.stringify(path.join(temp, 'absent'))}; WIZARD_ADD_GPU=yes; ` + fn + '\nrun_gpu_passthrough_wizard\n', {LANGUAGE: locale}));
+const renderVm = (locale, patsub = 'on') => vmFunctions.map(fn => bash(setup + `\nshopt -${patsub === 'on' ? 's' : 'u'} patsub_replacement\nLOCAL_SCRIPTS=${JSON.stringify(path.join(temp, 'absent'))}; WIZARD_ADD_GPU=yes; ` + fn + '\nrun_gpu_passthrough_wizard\n', {LANGUAGE: locale}));
 for (const line of renderVm('en')) {
   assert.ok(line.includes('Hardware: GPUs and Coral-TPU → Add GPU to VM    (Intel | AMD | NVIDIA)'), line);
   assert.ok(!line.includes('Hardware Graphics') && !line.includes('{menu}') && !line.includes('{action}'), line);
@@ -92,6 +103,10 @@ for (const line of renderVm('it')) {
   assert.ok(line.includes(`${it['Hardware: GPUs and Coral-TPU']} → ${it['Add GPU to VM    (Intel | AMD | NVIDIA)']}`), line);
   assert.ok(!line.includes('Hardware Graphics'), line);
 }
+for (const patsub of ['on', 'off']) {
+  assert.deepEqual(renderVm('en', patsub), renderVm('en'), `English GPU: patsub_replacement ${patsub}`);
+  assert.deepEqual(renderVm('it', patsub), renderVm('it'), `Italian GPU: patsub_replacement ${patsub}`);
+}
 for (const locale of locales) {
   const catalog = JSON.parse(read(`lang/${locale}.json`));
   const menu = catalog['Hardware: GPUs and Coral-TPU'] || 'Hardware: GPUs and Coral-TPU';
@@ -99,12 +114,48 @@ for (const locale of locales) {
   for (const line of renderVm(locale)) assert.ok(line.includes(`${menu} → ${action}`) && !line.includes('{menu}') && !line.includes('{action}'), `${locale}: ${line}`);
 }
 for (const line of renderVm('synthetic')) assert.ok(line.includes('AZIONE_LOCALIZZATA HARDWARE_LOCALIZZATO'), line);
+const ampMenu = {...marker, 'Hardware: GPUs and Coral-TPU': 'GPU & TPU', 'Add GPU to VM    (Intel | AMD | NVIDIA)': 'ADD & CONNECT'};
+for (const patsub of ['on', 'off']) {
+  store('amp-menu', ampMenu);
+  for (const line of renderVm('amp-menu', patsub)) assert.equal(line, 'TRADOTTO_3 ADD & CONNECT GPU & TPU', `menu: patsub_replacement ${patsub}`);
+  store('amp-menu-fallback', {...ampMenu, [newKeys[3]]: 'BROKEN {wrong}'});
+  for (const line of renderVm('amp-menu-fallback', patsub)) assert.equal(line, 'GPU passthrough assistant not found. Later, open GPU & TPU → ADD & CONNECT from the main menu to try again.', `menu fallback: patsub_replacement ${patsub}`);
+}
 store('malformed', {...marker, 'Hardware: GPUs and Coral-TPU': 'MENU', 'Add GPU to VM    (Intel | AMD | NVIDIA)': 'ACTION', [newKeys[3]]: 'BROKEN {menu} {wrong}'});
 for (const line of renderVm('malformed')) assert.ok(line.startsWith('GPU passthrough assistant not found.') && line.includes('MENU → ACTION'), line);
 store('malformed', {...marker, 'Hardware: GPUs and Coral-TPU': 'MENU', 'Add GPU to VM    (Intel | AMD | NVIDIA)': 'ACTION', [newKeys[3]]: 'BROKEN {action} {wrong}'});
 for (const line of renderVm('malformed')) assert.ok(line.startsWith('GPU passthrough assistant not found.') && line.includes('MENU → ACTION'), line);
 store('malformed', {...marker, 'Hardware: GPUs and Coral-TPU': 'MENU', 'Add GPU to VM    (Intel | AMD | NVIDIA)': 'ACTION', [newKeys[3]]: 'BROKEN {wrong}'});
 for (const line of renderVm('malformed')) assert.ok(line.startsWith('GPU passthrough assistant not found.') && line.includes('MENU → ACTION'), line);
+// Replacement data must remain literal; this does not define recursive placeholder semantics.
+const literalLabels = [
+  String.raw`A \& B`,
+  String.raw`A \\ B`,
+  String.raw`C:\new\test`,
+  `A / B ' C " D`,
+  'A * ? [x] B',
+  'A $HOME $(printf INJECTED) `printf INJECTED`',
+];
+for (const [index, label] of literalLabels.entries()) {
+  for (const patsub of ['on', 'off']) {
+    const locale = `literal-${index}-${patsub}`;
+    const entries = {...marker, 'Run PVE 8 to 9 check': label,
+      'Hardware: GPUs and Coral-TPU': label, 'Add GPU to VM    (Intel | AMD | NVIDIA)': label};
+    for (const [i, line] of renderHelp(locale, entries, patsub).entries()) {
+      assert.equal(line, `TRADOTTO_${i} ${label} fine`, `${locale}: check literal`);
+    }
+    for (const line of renderVm(locale, patsub)) {
+      assert.equal(line, `TRADOTTO_3 ${label} ${label}`, `${locale}: GPU literal`);
+    }
+    const fallback = {...entries, ...Object.fromEntries(newKeys.map(key => [key, 'BROKEN {wrong}']))};
+    for (const [i, line] of renderHelp(locale, fallback, patsub).entries()) {
+      assert.equal(line, newKeys[i].replace('{check}', () => label), `${locale}: check fallback`);
+    }
+    for (const line of renderVm(locale, patsub)) {
+      assert.equal(line, newKeys[3].replace('{menu}', () => label).replace('{action}', () => label), `${locale}: GPU fallback`);
+    }
+  }
+}
 const additionalLead = read('scripts/gpu_tpu/add_gpu_vm.sh').split('\n').find(l => l.includes('Stop that VM, then choose:') && l.includes('msg+='));
 assert.ok(additionalLead, 'busy-VM guidance has a standalone instruction before the rendered labels');
 assert.equal(bash(setup + '\n' + additionalLead.trim() + '\nprintf \'%b\\n\' "$msg"', {LANGUAGE: 'synthetic'}), 'SCELTA_LOCALIZZATA:');
