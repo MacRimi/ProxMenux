@@ -319,10 +319,10 @@ def _removal_summary(project, vmid):
     if bridge:
         text += ['', f"{translate('Private network of the application that is released:')} {bridge}"]
     if kept:
-        text += ['', translate('Host directories that are kept, with their content:'),
+        text += ['', translate('Host paths found in container configs or saved records (not targeted for removal):'),
                  *[f'  {path}' for path in kept]]
     else:
-        text += ['', translate('No host directory is used by this application.')]
+        text += ['', translate('No host directories found in the available container configs or saved records.')]
     return '\n'.join(text)
 
 
@@ -372,11 +372,11 @@ def _manage_stack(project, ui, row, action=None, lifecycle_args=()):
             return _remove(project, ui, primary_id)
         if not ui.review(f"{translate('All stack members are updated together. Main CT:')} {primary_id}, "
                 f"{translate('members:')} {len(members)}. "
-                f"{translate('All images are downloaded and verified first, and native backups are taken with the stack stopped. Contracts are published after the whole set is checked. If anything fails, all members are recovered.')}",
+                f"{translate('All images are downloaded and verified first, and native backups are taken with the stack stopped. Contracts are published after the whole set is checked. If a step fails, recovery is attempted where needed; recovery can also fail.')}",
                 translate('Update OCI stack'), question=translate('Update the whole stack?'), default=True):
             return False
     else:
-        if not ui.review(translate('A coordinated operation is pending. The whole previous stack will be recovered, not only the selected member. If the operation already finished, the cleanup of its markers is completed.'), translate('Recover OCI stack'),
+        if not ui.review(translate('A coordinated operation has a saved journal. Continuing attempts to recover the previous stack where needed, or finish cleanup for a completed operation. Recovery or cleanup can fail.'), translate('Recover OCI stack'),
                 question=translate('Recover or complete the operation?'), default=True):
             return False
         import json

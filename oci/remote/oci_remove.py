@@ -140,7 +140,7 @@ def remove(root, vmid):
     for path, size in image_cache.prune(root, lock=False):
         msg_ok(f"{translate('Unused image removed from the cache:')} {path.name}")
     for path in kept:
-        msg_warn(f"{translate('Host directory kept, with its content:')} {path}")
+        msg_warn(f"{translate('Host directory listed in saved records (not targeted for removal):')} {path}")
 
 
 def main():
