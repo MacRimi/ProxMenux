@@ -237,12 +237,10 @@ def manage_instance(project, ui, row, action=None, lifecycle_args=()):
             return False
         command = [sys.executable, str(project / 'remote/oci_update_current.py'), str(row['vmid']),
                    *lifecycle_args]
-        desired = proposal['candidate'] if proposal else record
-        if any(m['type'] == 'host-bind' for m in desired['deployment'].get('mounts', [])):
-            if '--acknowledge-external-data' not in command:
-                if not ui.confirm(translate('Shared host data is not reverted by the backup. Continue?'), False):
-                    return False
-                command.append('--acknowledge-external-data')
+        # Host directories are configured by the user, who knows they are
+        # outside the container and its backup.
+        if '--acknowledge-external-data' not in command:
+            command.append('--acknowledge-external-data')
         title = translate('Recreate OCI') if proposal else translate('Update OCI')
         if proposal is None:
             completed = _run_lifecycle(command, title)
@@ -388,12 +386,8 @@ def _manage_stack(project, ui, row, action=None, lifecycle_args=()):
         command.append('--recover')
     else:
         command.extend(lifecycle_args)
-    if any(mount['type'] == 'host-bind' for member in members
-           for mount in member.get('deployment', {}).get('mounts', [])):
-        if '--acknowledge-external-data' not in command:
-            if not ui.confirm(translate('Shared host data is not reverted by the backups. Continue?'), False):
-                return False
-            command.append('--acknowledge-external-data')
+    if '--acknowledge-external-data' not in command:
+        command.append('--acknowledge-external-data')
     completed = _run_lifecycle(command, translate('Recover OCI stack') if pending else translate('Update OCI stack'))
     if completed and not pending and not getattr(ui, 'unattended', False):
         images.offer_removal(ui, [int(member['vmid']) for member in members])

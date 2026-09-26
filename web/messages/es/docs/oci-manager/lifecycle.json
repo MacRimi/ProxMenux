@@ -149,7 +149,7 @@
         {
           "calloutWarning": {
             "title": "Los directorios del host quedan fuera de la restauración",
-            "body": "El backup cubre el rootfs y los discos del contenedor que incluye. Un directorio del host no se revierte, porque otros LXC pueden usar sus datos. Actualizar, recrear o recuperar una instancia con directorios del host pide antes una confirmación de ello."
+            "body": "El backup cubre el rootfs y los discos del contenedor que incluye. Un directorio del host no se revierte, porque otros LXC pueden usar sus datos."
           }
         }
       ]

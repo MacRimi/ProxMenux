@@ -1206,9 +1206,7 @@
       "noKeepBackup": "No se conserva el backup realizado antes de actualizar",
       "keepBackupHelp": "Cada actualización hace un backup del contenedor antes de sustituir su imagen, para restaurarlo si la actualización falla. Con esta opción ese backup se conserva en el almacenamiento elegido; en Proxmox Backup Server se escribe un backup antes de actualizar.",
       "scheduleHelp": "Solo se actualiza la imagen, y solo cuando su registro publica una nueva.",
-      "releaseDelayHelp": "Una imagen nueva solo se instala cuando tiene al menos esta antigüedad.",
-      "ackExternal": "Los directorios del host no se revierten con el backup",
-      "ackExternalHelp": "Este contenedor usa directorios del host. Una actualización programada solo se ejecuta con esto confirmado."
+      "releaseDelayHelp": "Una imagen nueva solo se instala cuando tiene al menos esta antigüedad."
     },
     "options": {
       "title": "Opciones",

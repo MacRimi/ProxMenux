@@ -133,7 +133,7 @@
               ],
               [
                 "Scheduled updates",
-                "The image is updated at the chosen time only when the registry publishes a new one, and optionally only once it is 1, 3, 7 or 14 days old. A container with changes made outside ProxMenux is skipped and reported; one with host directories runs only when that was confirmed when the schedule was saved."
+                "The image is updated at the chosen time only when the registry publishes a new one, and optionally only once it is 1, 3, 7 or 14 days old. A container with changes made outside ProxMenux is skipped and reported."
               ]
             ]
           }

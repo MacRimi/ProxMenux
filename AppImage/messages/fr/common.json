@@ -1206,9 +1206,7 @@
       "noKeepBackup": "La sauvegarde prise avant la mise à jour n'est pas conservée",
       "keepBackupHelp": "Chaque mise à jour sauvegarde le conteneur avant de remplacer son image, pour le restaurer si la mise à jour échoue. Avec cette option, cette sauvegarde est conservée dans le stockage choisi ; sur Proxmox Backup Server, une sauvegarde est écrite avant la mise à jour.",
       "scheduleHelp": "Seule l'image est mise à jour, et seulement lorsque son registre en publie une nouvelle.",
-      "releaseDelayHelp": "Une nouvelle image n'est installée qu'une fois qu'elle a au moins cette ancienneté.",
-      "ackExternal": "Les répertoires de l'hôte ne sont pas rétablis par la sauvegarde",
-      "ackExternalHelp": "Ce conteneur utilise des répertoires de l'hôte. Une mise à jour planifiée ne s'exécute qu'avec cette confirmation."
+      "releaseDelayHelp": "Une nouvelle image n'est installée qu'une fois qu'elle a au moins cette ancienneté."
     },
     "options": {
       "title": "Possibilités",

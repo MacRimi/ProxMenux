@@ -22272,8 +22272,7 @@ def _run_scheduled_update(vmid: int, sched: dict) -> dict:
         storage = (sched.get('backup_storage') or '').strip()
         if sched.get('backup') and storage:
             command += ['--keep-backup', storage]
-        if sched.get('acknowledge_external_data'):
-            command.append('--acknowledge-external-data')
+        command.append('--acknowledge-external-data')
         delay = int(sched.get('release_delay_days') or 0)
         if delay > 0:
             command += ['--min-image-age-days', str(delay)]

@@ -1227,9 +1227,7 @@
       "noKeepBackup": "Záloha vytvorená pred aktualizáciou sa neponecháva",
       "keepBackupHelp": "Každá aktualizácia zálohuje kontajner pred nahradením jeho obrazu, aby ho bolo možné obnoviť, ak aktualizácia zlyhá. S touto možnosťou sa táto záloha ponechá vo zvolenom úložisku; na Proxmox Backup Server sa pred aktualizáciou zapíše záloha.",
       "scheduleHelp": "Aktualizuje sa iba obraz, a to len keď jeho register zverejní nový.",
-      "releaseDelayHelp": "Nový obraz sa nainštaluje až vtedy, keď je aspoň takto starý.",
-      "ackExternal": "Adresáre hostiteľa sa zálohou neobnovia",
-      "ackExternalHelp": "Tento kontajner používa adresáre hostiteľa. Plánovaná aktualizácia sa spustí iba s týmto potvrdením."
+      "releaseDelayHelp": "Nový obraz sa nainštaluje až vtedy, keď je aspoň takto starý."
     },
     "options": {
       "title": "Možnosti",

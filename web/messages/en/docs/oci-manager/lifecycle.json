@@ -149,7 +149,7 @@
         {
           "calloutWarning": {
             "title": "Host directories are outside the rollback",
-            "body": "The backup covers the rootfs and the container disks it includes. A host directory is not reverted, because other LXCs may use its data. Updating, recreating or recovering an instance with host directories asks for a confirmation of this first."
+            "body": "The backup covers the rootfs and the container disks it includes. A host directory is not reverted, because other LXCs may use its data."
           }
         }
       ]

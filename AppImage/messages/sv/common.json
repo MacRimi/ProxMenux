@@ -1206,9 +1206,7 @@
       "noKeepBackup": "Säkerhetskopian som tas före uppdateringen behålls inte",
       "keepBackupHelp": "Varje uppdatering säkerhetskopierar containern innan dess avbild ersätts, för att återställa den om uppdateringen misslyckas. Med det här alternativet behålls säkerhetskopian i den valda lagringen; på Proxmox Backup Server skrivs en säkerhetskopia före uppdateringen.",
       "scheduleHelp": "Endast avbilden uppdateras, och bara när dess register publicerar en ny.",
-      "releaseDelayHelp": "En ny avbild installeras först när den är minst så här gammal.",
-      "ackExternal": "Värdkataloger återställs inte av säkerhetskopian",
-      "ackExternalHelp": "Den här containern använder värdkataloger. En schemalagd uppdatering körs bara när detta är bekräftat."
+      "releaseDelayHelp": "En ny avbild installeras först när den är minst så här gammal."
     },
     "options": {
       "title": "Alternativ",

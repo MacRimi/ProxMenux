@@ -951,7 +951,6 @@ export function VirtualMachines() {
   // Updates tab replaces the image instead of updating packages.
   const [ociInstance, setOciInstance] = useState<OciInstanceInfo | null>(null)
   const [ociAction, setOciAction] = useState<{ vmid: number; action: "update" | "recreate" } | null>(null)
-  const [scheduleAckExternal, setScheduleAckExternal] = useState(false)
 
   // Firewall log state — fetched only when the operator opens that tab
   // so a CT/VM without firewall use doesn't pay the pvesh cost on every
@@ -2035,7 +2034,6 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
       ? s.targets.map((value: any) => String(value))
       : ([...(legacyTarget !== "app" ? ["os"] : []), ...(legacyTarget !== "os" ? ["apps"] : [])]))
     setScheduleReleaseDelayDays(Number.isInteger(Number(s.release_delay_days)) ? Number(s.release_delay_days) : 0)
-    setScheduleAckExternal(s.acknowledge_external_data === true)
     if (s.backup !== undefined) setApplyBackup(!!s.backup)
     if (s.backup_storage) setApplyBackupStorage(s.backup_storage)
     if (s.restart !== undefined) setApplyRestart(!!s.restart)
@@ -2206,7 +2204,6 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
           backup: applyBackup,
           backup_storage: applyBackupStorage || selectedBackupStorage || "",
           restart: ociInstance ? false : applyRestart,
-          acknowledge_external_data: ociInstance ? scheduleAckExternal : false,
         }),
       })
       if (cronToSave.trim()) setScheduleConfigured(true)
@@ -2228,7 +2225,6 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
       scheduleTarget: scheduleTarget,
       scheduleTargets: [...scheduleTargets],
       scheduleReleaseDelayDays: scheduleReleaseDelayDays,
-      scheduleAckExternal: scheduleAckExternal,
     })
     setOptionsEditMode(true)
   }
@@ -2243,7 +2239,6 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
       setScheduleTarget(optionsSnapshot.scheduleTarget)
       setScheduleTargets(optionsSnapshot.scheduleTargets || ["os", "apps"])
       setScheduleReleaseDelayDays(optionsSnapshot.scheduleReleaseDelayDays)
-      setScheduleAckExternal(!!optionsSnapshot.scheduleAckExternal)
     }
     setOptionsSnapshot(null)
     setOptionsEditMode(false)
@@ -5460,20 +5455,6 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                                       </Select>
                                       <div className="text-[10px] text-muted-foreground mt-1 max-w-xl">{t("vmLxc.ociUpdates.releaseDelayHelp")}</div>
                                     </div>
-                                    {ociInstance.host_directories && (
-                                      <div className="flex items-start gap-2 text-sm">
-                                        <Checkbox
-                                          id="oci-ack-external"
-                                          checked={scheduleAckExternal}
-                                          onCheckedChange={(v) => setScheduleAckExternal(Boolean(v))}
-                                          className="mt-0.5"
-                                        />
-                                        <Label htmlFor="oci-ack-external" className="leading-tight cursor-pointer">
-                                          <span>{t("vmLxc.ociUpdates.ackExternal")}</span>
-                                          <div className="text-xs text-muted-foreground mt-0.5">{t("vmLxc.ociUpdates.ackExternalHelp")}</div>
-                                        </Label>
-                                      </div>
-                                    )}
                                     {renderScheduleRunDetails()}
                                   </div>
                                 )}
@@ -5516,7 +5497,7 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                                     <button
                                       type="button"
                                       onClick={saveOptionsEdit}
-                                      disabled={scheduleSaving || (scheduleEnabled && ociInstance.host_directories && !scheduleAckExternal)}
+                                      disabled={scheduleSaving}
                                       className="h-8 px-3 text-xs rounded-md bg-blue-600 hover:bg-blue-700 text-white transition-colors disabled:opacity-40 inline-flex items-center gap-1.5"
                                     >
                                       {scheduleSaving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5" />}

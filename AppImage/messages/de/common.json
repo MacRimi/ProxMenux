@@ -1206,9 +1206,7 @@
       "noKeepBackup": "Das vor dem Update erstellte Backup wird nicht behalten",
       "keepBackupHelp": "Jedes Update sichert den Container, bevor sein Image ersetzt wird, um ihn wiederherzustellen, falls das Update fehlschlägt. Mit dieser Option wird dieses Backup im gewählten Speicher behalten; auf Proxmox Backup Server wird vor dem Update ein Backup geschrieben.",
       "scheduleHelp": "Nur das Image wird aktualisiert, und nur wenn seine Registry ein neues veröffentlicht.",
-      "releaseDelayHelp": "Ein neues Image wird erst installiert, wenn es mindestens so alt ist.",
-      "ackExternal": "Host-Verzeichnisse werden durch das Backup nicht zurückgesetzt",
-      "ackExternalHelp": "Dieser Container nutzt Host-Verzeichnisse. Ein geplantes Update läuft nur, wenn dies bestätigt ist."
+      "releaseDelayHelp": "Ein neues Image wird erst installiert, wenn es mindestens so alt ist."
     },
     "options": {
       "title": "Optionen",
