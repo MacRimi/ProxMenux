@@ -95,6 +95,7 @@
               "Cuando el registro sigue sirviendo el digest instalado, no se descarga nada y la instancia no se toca.",
               "La imagen nueva se verifica capa a capa antes de detener el CT. Una descarga que llega dañada se repite una vez; una imagen ya almacenada que no supera la comprobación se descarga de nuevo.",
               "Los ajustes cambiados en Proxmox VE después de la instalación (memoria, swap, núcleos, límite de CPU, prioridad de CPU, arranque con el nodo) se conservan y pasan al contrato nuevo.",
+              "La interfaz de la LAN que añaden la suite Arr y las aplicaciones multicontenedor (<code>net1</code>) y el orden de arranque (<code>startup</code>) se devuelven tal cual al contenedor nuevo.",
               "Cualquier otra diferencia entre el CT y su contrato detiene la actualización antes de detener el CT."
             ]
           }

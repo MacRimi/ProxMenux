@@ -757,6 +757,19 @@ apply_extra_hosts() {
   (( failed == 0 )) || die "$(translate "Could not apply the Compose extra hosts")"
 }
 
+# Settings an update gives back to the rebuilt container before it starts:
+# the LAN leg of a suite or stack member and its start order.
+apply_kept_settings() {
+  local key value
+  while IFS=$'\t' read -r key value; do
+    [[ -n $key ]] || continue
+    [[ $key == net1 || $key == startup ]] \
+      || die "$(translate "Unsupported kept setting:") $key"
+    oci_quiet pct set "$VMID" "--$key" "$value" \
+      || die "$(translate "Could not restore the container setting:") $key"
+  done < <(jq -r '.kept_proxmox_settings // {} | to_entries[] | [.key, .value] | @tsv' "$DEPLOYMENT_FILE")
+}
+
 apply_runtime_user() {
   local user_spec=$1 rootfs passwd_file group_file user_part group_part uid gid failed=0
   rootfs="/var/lib/lxc/${VMID}/rootfs"
@@ -1653,6 +1666,7 @@ apply_extra_hosts
 apply_installer_profile
 apply_rlimits
 apply_host_monitor
+apply_kept_settings
 
 while IFS= read -r REPAIR_ENCODED; do
   [[ -n $REPAIR_ENCODED ]] || continue

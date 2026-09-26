@@ -2015,6 +2015,12 @@ def _refresh_started_guest(vmid: int, vm_type: str) -> None:
                     lxc_apps.invalidate_docker_inventory(vmid)
                     lxc_apps.get_docker_inventory(vmid, force=True)
 
+        if vm_type == 'lxc':
+            try:
+                import lxc_apps
+                lxc_apps.ensure_oci_registration(vmid)
+            except Exception as exc:
+                print(f'[ProxMenux] lifecycle refresh lxc {vmid}: OCI registration: {exc}', flush=True)
         handlers = [
             (f'/api/vms/{vmid}', get_vm_config),
             (f'/api/vms/{vmid}/backups', api_vm_backups),
@@ -12318,6 +12324,7 @@ def _vm_modal_prewarmer_pass():
         ]
         if vm_type == 'lxc':
             import lxc_apps
+            lxc_apps.ensure_oci_registration(vmid)
             lxc_apps.load_sidecar(vmid)
             endpoints.extend([
                 (_vm_schedule_cache, _VM_SCHEDULE_TTL, api_vm_apps_schedule,
@@ -13552,6 +13559,7 @@ def api_lxc_updates_detection_set():
 def api_vm_apps_get(vmid):
     try:
         import lxc_apps
+        lxc_apps.ensure_oci_registration(vmid)
         sidecar = lxc_apps.load_sidecar(vmid)
         payload = sidecar if sidecar else {'vmid': vmid, 'apps': []}
         lxc_apps.annotate_delegated_apps(payload.get('apps') or [], _get_lxc_docker_inventory_map().get(str(vmid)))

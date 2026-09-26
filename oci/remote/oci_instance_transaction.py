@@ -357,6 +357,9 @@ def candidate_contract(record, operation, proposal=None):
 
 
 # Resource settings edited in Proxmox that the new container keeps.
+# Proxmox settings the rebuilt container gets back exactly as they are: the
+# LAN leg ProxMenux adds to a suite or stack member, and the start order.
+KEPT_AS_IS = ('net1', 'startup')
 ADOPTABLE = {'memory': ('resources', 'memory_mb'), 'swap': ('resources', 'swap_mb'),
              'cores': ('resources', 'cores'), 'cpulimit': ('resources', 'cores'),
              'cpuunits': ('resources', 'cpu_units'), 'onboot': (None, 'onboot')}
@@ -384,7 +387,7 @@ def external_changes(record, config, adopt=True):
         elif key in ('memory', 'swap', 'cpuunits', cores_key) and value and re.fullmatch(r'[0-9]+', value):
             if int(value) > 0 or key == 'swap':
                 values[key] = int(value)
-    refused = [key for key in changed if key not in values]
+    refused = [key for key in changed if key not in values and key not in KEPT_AS_IS]
     if refused:
         raise ValueError(f"{translate('The container was changed outside ProxMenux and an update would discard those changes:')} "
                          f"{', '.join(refused)}")
@@ -421,14 +424,13 @@ def preflight(record, candidate, config, coordinated=None):
     if deployment.get('security', {}).get('sysctls'):
         runtime_keys.add('lxc.include')
     runtime_settings.check(config, deployment, record['vmid'])
-    coordinated_keys = {'net1', 'startup', 'hookscript'} if coordinated else set()
+    coordinated_keys = {'hookscript', *KEPT_AS_IS} if coordinated else set(KEPT_AS_IS)
     if '[' in config.decode() or keys - BASIC - runtime_keys - coordinated_keys - {k for k in keys if re.fullmatch(r'(mp|dev)[0-9]+', k)}:
         raise ValueError(translate('The container has advanced Proxmox settings outside the supported profile'))
     for plan in (deployment, desired):
         security = plan.get('security', {})
         if (security.get('unprivileged') is not True
                 or security.get('options') or plan.get('host_monitor')
-                or plan.get('extra_hosts')
                 or plan.get('resources', {}).get('rlimits')):
             raise ValueError(translate('Updates are not available yet in this beta for applications that use '
                                        'a privileged container or advanced LXC settings'))
@@ -900,6 +902,11 @@ def apply(root, vmid, archive, operation, proposal=None, registry_digest=None, i
              'external_data_acknowledged': acknowledge_external_data,
              'original_gpu_devices': original_gpu, 'desired_gpu_devices': desired_gpu,
              'was_running': run('pct', 'status', str(vmid)).strip() == b'status: running'}
+    state['kept_config'] = {key: cfg[key] for key in KEPT_AS_IS if key in cfg}
+    if not coordinated and state['kept_config']:
+        # Applied by the installer before the new container starts, so the
+        # application has its LAN leg from the first second.
+        state['runtime_deployment']['kept_proxmox_settings'] = state['kept_config']
     if coordinated:
         state['coordinated'] = coordinated
         state['preserved_stack_config'] = {key: cfg[key] for key in ('net1', 'startup', 'hookscript') if key in cfg}
@@ -919,8 +926,6 @@ def apply(root, vmid, archive, operation, proposal=None, registry_digest=None, i
     gpu_devices.verify(desired_gpu)
     if show:
         msg_ok(translate('Update prepared') if update else translate('Recreation prepared'))
-        if original_sources or desired_sources:
-            msg_warn(translate('Host directories are not included in the backup and are not reverted by a recovery.'))
         msg_info(translate('Stopping the container...'))
     stop(vmid)
     if show:

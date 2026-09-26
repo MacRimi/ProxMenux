@@ -1427,6 +1427,16 @@ export function VirtualMachines() {
         setOciInstance(null)
       })
 
+  // An operation that is still running when the modal opens clears on its
+  // own: the record is read again until it is published.
+  useEffect(() => {
+    if (!ociInstance?.pending || !selectedVM) return
+    const vmid = selectedVM.vmid
+    const timer = setInterval(() => fetchOciInstance(vmid), 15000)
+    return () => clearInterval(timer)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ociInstance?.pending, selectedVM?.vmid])
+
   const fetchMountPoints = async (vmid: number) => {
     // Two fetches in parallel:
     //   1) STATIC — configured mp entries + PVE classification. Backed

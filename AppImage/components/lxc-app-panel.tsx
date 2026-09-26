@@ -1773,7 +1773,11 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed, initialData }: Prop
                           <SelectItem value="binary">{t("vmLxc.appEditor.binaryVersionHint")}</SelectItem>
                           <SelectItem value="file">{t("vmLxc.appEditor.methodFile")}</SelectItem>
                           <SelectItem value="python_dist">{t("vmLxc.appEditor.methodPython")}</SelectItem>
-                          <SelectItem value="docker_label" disabled>{t("vmLxc.appEditor.methodDockerLabel")}</SelectItem>
+                          {/* Chosen by detection for a Docker workload; kept only so an
+                              application already using it shows its method. */}
+                          {method === "docker_label" && (
+                            <SelectItem value="docker_label">{t("vmLxc.appEditor.methodDockerLabel")}</SelectItem>
+                          )}
                           <SelectItem value="docker_exec">{t("vmLxc.appEditor.methodDockerExec")}</SelectItem>
                           <SelectItem value="command">{t("vmLxc.appEditor.methodCommand")}</SelectItem>
                           <SelectItem value="manual">{t("vmLxc.appEditor.methodManual")}</SelectItem>

@@ -102,7 +102,8 @@ def propose(record, config):
     if 'description' in changed:
         changed.remove('description')
     new_keys = [key for key in changed if key not in before and re.fullmatch(r'(mp|dev)[0-9]+', key)]
-    unsupported = [key for key in changed if key not in new_keys and key not in transaction.ADOPTABLE]
+    unsupported = [key for key in changed if key not in new_keys and key not in transaction.ADOPTABLE
+                   and key not in transaction.KEPT_AS_IS]
     if unsupported:
         raise ValueError(f"{translate('These manual changes cannot be adopted safely:')} {', '.join(unsupported)}")
     if not new_keys:

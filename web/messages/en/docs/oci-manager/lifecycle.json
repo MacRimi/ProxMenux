@@ -95,6 +95,7 @@
               "When the registry still serves the installed digest, nothing is downloaded and the instance is not touched.",
               "The new image is verified layer by layer before the CT stops. A download that arrives damaged is fetched a second time; an image already cached that fails the check is downloaded again.",
               "Settings changed in Proxmox VE after the installation (memory, swap, cores, CPU limit, CPU priority, start with the node) are kept and carried into the new contract.",
+              "The LAN interface that the Arr suite and multi-container applications add (<code>net1</code>) and the start order (<code>startup</code>) are given back to the new container as they are.",
               "Any other difference between the CT and its contract stops the update before the CT is stopped."
             ]
           }

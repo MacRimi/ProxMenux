@@ -1358,6 +1358,8 @@ def detect_installed_version(vmid, config: dict) -> tuple[Optional[str], Optiona
 
     if method == "oci_image":
         result = _oci_image_versions(vmid, with_latest=False)
+        if result.get("busy"):
+            return None, "an OCI operation on this container is running"
         if result.get("error"):
             return None, result["error"]
         # An image that states no application version is still an image with
@@ -3372,7 +3374,7 @@ def _find_app(sidecar: dict, app_id: str) -> Optional[dict]:
     return None
 
 
-def add_app(vmid, payload: dict) -> tuple[bool, Any]:
+def add_app(vmid, payload: dict, notify: bool = True) -> tuple[bool, Any]:
     ok, cfg = validate_config(payload)
     if not ok:
         return False, cfg
@@ -3393,7 +3395,7 @@ def add_app(vmid, payload: dict) -> tuple[bool, Any]:
         if not _write_sidecar(vmid, sidecar):
             return False, "could not persist sidecar (permission?)"
     # Kick a first check so the UI shows real numbers immediately
-    check_app(vmid, new_id, force=True)
+    check_app(vmid, new_id, force=True, notify=notify)
     return True, _read_sidecar(vmid)
 
 
@@ -3461,6 +3463,9 @@ def delete_app(vmid, app_id: str) -> bool:
         sidecar = _read_sidecar(vmid)
         if not sidecar:
             return True
+        if any(a.get("id") == app_id and a.get("installed_via") == "oci_image"
+               for a in sidecar.get("apps") or []):
+            _dismiss_oci_registration(vmid)
         before = len(sidecar.get("apps") or [])
         sidecar["apps"] = [a for a in sidecar.get("apps") or [] if a.get("id") != app_id]
         sidecar["updated_at"] = _now_iso()
@@ -3478,6 +3483,9 @@ def delete_app(vmid, app_id: str) -> bool:
 
 
 def delete_all(vmid) -> bool:
+    sidecar = _read_sidecar(vmid) or {}
+    if any(a.get("installed_via") == "oci_image" for a in sidecar.get("apps") or []):
+        _dismiss_oci_registration(vmid)
     try:
         os.unlink(_sidecar_path(vmid))
         return True
@@ -4325,6 +4333,9 @@ def check_app(
 
         if app.get("installed_via") == "oci_image":
             result = _oci_image_versions(vmid, known=state)
+            if result.get("busy"):
+                _recheck_after_oci_operation(vmid, app_id)
+                return sidecar
             app["state"] = {
                 "installed_version": result.get("installed_version"),
                 "latest_version": result.get("latest_version"),
@@ -4341,7 +4352,9 @@ def check_app(
             }
             sidecar["updated_at"] = _now_iso()
             _write_sidecar(vmid, sidecar)
-            if notify and app["state"]["update_available"] and app["state"]["latest_version"]:
+            # The payload names an image by its build date and digest when it
+            # states no version, so it decides whether there is anything to send.
+            if notify and app["state"]["update_available"]:
                 _fire_update_notification(vmid, app)
             return sidecar
 
@@ -5359,6 +5372,124 @@ def _oci_name_from_image(reference: str | None) -> str:
     return " ".join(word.capitalize() for word in re.split(r"[-_.]+", basename) if word)
 
 
+# Registrations of OCI applications the user removed, by VMID and the
+# installation they belonged to, so they are not registered again.
+_OCI_DISMISSED_FILE = f"{_APPS_DIR}/.oci-dismissed.json"
+
+
+def _read_oci_record(vmid) -> Optional[dict]:
+    try:
+        with open(f"{_OCI_INSTANCE_ROOT}/{int(vmid)}/oci-compose.json", encoding="utf-8") as handle:
+            record = json.load(handle)
+    except (OSError, ValueError, TypeError):
+        return None
+    return record if isinstance(record, dict) else None
+
+
+def _oci_dismissed() -> dict:
+    try:
+        with open(_OCI_DISMISSED_FILE, encoding="utf-8") as handle:
+            data = json.load(handle)
+    except (OSError, ValueError):
+        return {}
+    return data if isinstance(data, dict) else {}
+
+
+def _dismiss_oci_registration(vmid) -> None:
+    record = _read_oci_record(vmid)
+    if not record or not record.get("installation_id"):
+        return
+    data = _oci_dismissed()
+    data[str(int(vmid))] = record["installation_id"]
+    _ensure_dir()
+    tmp = f"{_OCI_DISMISSED_FILE}.tmp.{os.getpid()}"
+    try:
+        with open(tmp, "w", encoding="utf-8") as handle:
+            json.dump(data, handle, indent=2, sort_keys=True)
+        os.chmod(tmp, 0o600)
+        os.replace(tmp, _OCI_DISMISSED_FILE)
+    except OSError as exc:
+        print(f"[ProxMenux] lxc_apps: could not save the OCI dismissal: {exc}")
+
+
+def ensure_oci_registration(vmid) -> bool:
+    """Register the application ProxMenux installed from an OCI image the
+    first time the Monitor sees its container, with version tracking by the
+    image. The auxiliary members of a stack are not registered, nor is a
+    container that already has applications, nor one whose registration the
+    user removed."""
+    record = _read_oci_record(vmid)
+    if not record or record.get("status") != "installed":
+        return False
+    member = record.get("stack_member") if isinstance(record.get("stack_member"), dict) else {}
+    if member.get("primary_vmid") not in (None, record.get("vmid")):
+        return False
+    if _oci_dismissed().get(str(int(vmid))) == record.get("installation_id"):
+        return False
+    with _cache_lock:
+        sidecar = _read_sidecar(vmid)
+        if sidecar and sidecar.get("apps"):
+            return False
+    meta = _oci_instance_meta(vmid)
+    if not meta or not meta.get("name") or not _NAME_RE.match(str(meta["name"])):
+        return False
+    port = meta.get("endpoint_port") or next(iter(meta.get("ports") or []), None)
+    payload = {
+        "name": meta["name"],
+        "installed_via": "oci_image",
+        "helper_slug": meta.get("template_id") or "",
+        "logo_url": meta.get("logo") or "",
+        "update_method": "none",
+        "ports": [{
+            "port": port,
+            "scheme": meta.get("endpoint_scheme") or "http",
+            "web_path": meta.get("endpoint_path") or "/",
+            "category": meta.get("category_label") or meta.get("category") or "",
+            "description": "",
+        }] if isinstance(port, int) else [],
+    }
+    # Registrations made at startup would each announce their update on their
+    # own; the scheduled sweep sends pending updates together instead.
+    ok, result = add_app(vmid, payload, notify=False)
+    if not ok:
+        print(f"[ProxMenux] lxc_apps: automatic OCI registration of CT {vmid} failed: {result}")
+    return ok
+
+
+def _oci_operation_running(vmid) -> bool:
+    """Whether an update or recreation of this container is still running;
+    its record is only published again when the operation commits."""
+    try:
+        with open(f"{_OCI_INSTANCE_ROOT}/{int(vmid)}/oci-compose.json", encoding="utf-8") as handle:
+            record = json.load(handle)
+    except (OSError, ValueError, TypeError):
+        return False
+    return isinstance(record, dict) and record.get("status") == "updating"
+
+
+_oci_rechecks: set = set()
+
+
+def _recheck_after_oci_operation(vmid, app_id: str) -> None:
+    """Check the application again once the running operation has finished."""
+    key = (int(vmid), app_id)
+    if key in _oci_rechecks:
+        return
+    _oci_rechecks.add(key)
+
+    def wait_and_check():
+        try:
+            for _ in range(60):
+                time.sleep(15)
+                if not _oci_operation_running(vmid):
+                    check_app(vmid, app_id, force=True)
+                    return
+        finally:
+            _oci_rechecks.discard(key)
+
+    threading.Thread(target=wait_and_check, name=f"oci-recheck-{vmid}", daemon=True).start()
+
+
 def _oci_instance_meta(vmid) -> Optional[dict]:
     """What ProxMenux itself recorded when it installed this container.
 
@@ -5374,7 +5505,9 @@ def _oci_instance_meta(vmid) -> Optional[dict]:
             record = json.load(handle)
     except (OSError, ValueError, TypeError):
         return None
-    if not isinstance(record, dict) or record.get("status") not in ("installed", "assembling"):
+    # While an update or recreation runs, the record is the copy taken before
+    # it: still the right identity for the container, not yet its new image.
+    if not isinstance(record, dict) or record.get("status") not in ("installed", "assembling", "updating"):
         return None
     template = record.get("template") or {}
     contract = template.get("container_contract") or {}
@@ -5516,6 +5649,8 @@ def _oci_image_versions(vmid, known: Optional[dict] = None, with_latest: bool = 
     The installed version is read by digest, which never changes, so a
     previous answer for the same digest is reused instead of asked again.
     """
+    if _oci_operation_running(vmid):
+        return {"busy": True}
     meta = _oci_instance_meta(vmid)
     if not meta or not meta.get("image_reference") or not meta.get("installed_digest"):
         return {"error": "no OCI installation record for this container"}
@@ -5922,7 +6057,7 @@ def get_suggestions(vmid, force: bool = False) -> dict:
         # decided by the image, which always has a build date and a digest,
         # so it applies even to an image that states no application version.
         versions = _oci_image_versions(vmid, with_latest=False)
-        if not versions.get("error"):
+        if not versions.get("error") and not versions.get("busy"):
             tracking = {
                 "installed_via": "oci_image",
                 "detected_version": versions.get("installed_version") or _oci_image_label(

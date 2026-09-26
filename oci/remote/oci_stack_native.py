@@ -672,9 +672,6 @@ def run(vmid, recover=False, acknowledge_external_data=False, keep_backup=None):
                 msg_ok(f"{translate('Backup created in')} {keep_backup}")
             else:
                 adapter.keep_backup = keep_backup
-        if any(mount['type'] == 'host-bind' for member in plan['members']
-               for mount in member.get('deployment', {}).get('mounts', [])):
-            msg_warn(translate('Host directories are not included in the backups and are not reverted by a recovery.'))
         result = stack_tx.execute(journal, adapter, plan)
         msg_ok(translate('Stack update completed. Data kept.'))
         return result

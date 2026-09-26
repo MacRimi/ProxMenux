@@ -647,9 +647,19 @@ def script_websocket(ws, session_id):
                     break
                 continue
             
+            # Keystrokes arrive as raw text. A lone number or word such as
+            # "4" or "true" is valid JSON too, so only an object is a
+            # control message.
             try:
                 msg = json.loads(data)
-                
+            except (json.JSONDecodeError, TypeError):
+                msg = None
+            if not isinstance(msg, dict):
+                try:
+                    os.write(master_fd, data.encode('utf-8'))
+                except OSError:
+                    break
+            else:
                 if msg.get('type') == 'interaction_response':
                     interaction_id = msg.get('id')
                     value = msg.get('value')
@@ -677,13 +687,6 @@ def script_websocket(ws, session_id):
                     rows = int(msg.get('rows', 30))
                     set_winsize(master_fd, rows, cols)
                     continue
-                    
-            except json.JSONDecodeError:
-                # Raw text input, send to script
-                try:
-                    os.write(master_fd, data.encode('utf-8'))
-                except OSError as e:
-                    break
             
             if script_process.poll() is not None:
                 # The output worker owns the final PTY drain and emits both

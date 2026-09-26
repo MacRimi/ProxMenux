@@ -649,7 +649,7 @@ const initMessage = {
       return
     }
 
-    if (value === "cancel") {
+    if (value === "cancel" || value === "") {
       setCurrentInteraction(null)
       setInteractionInput("")
       handleCloseModal()
@@ -755,7 +755,7 @@ const initMessage = {
 
   return (
     <>
-      <Dialog open={isOpen} onOpenChange={(open) => { if (!open) onClose() }}>
+      <Dialog open={isOpen} onOpenChange={onClose}>
         <DialogContent
           className="max-w-7xl p-0 flex flex-col gap-0 overflow-hidden"
           style={{
