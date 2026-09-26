@@ -114,8 +114,8 @@ def template_from_compose(text: str, title: str | None = None) -> dict[str, Any]
     services = _services(compose)
     if len(services) > 1:
         raise ConversionError(
-            f"{translate('The Compose file describes several images:')} {', '.join(services)}. "
-            f"{translate('Only one image at a time can be installed this way.')}")
+            f"{translate('The Compose file describes several services:')} {', '.join(services)}. "
+            f"{translate('Only one service at a time can be installed this way.')}")
     name = next(iter(services))
     service = services[name] or {}
     if not service.get('image'):
@@ -158,8 +158,8 @@ def template_from_compose(text: str, title: str | None = None) -> dict[str, Any]
              if Path(volume['container_path']).suffix]
     if files:
         raise ConversionError(
-            f"{translate('The image expects files that are given to it one by one:')} {', '.join(files)}. "
-            f"{translate('ProxMenux attaches directories, not single files, so this image cannot be installed yet.')}")
+            f"{translate('These container mount paths have an extension-like suffix:')} {', '.join(files)}. "
+            f"{translate('This import rejects these paths without checking whether they are files or directories.')}")
     return template
 
 
@@ -316,7 +316,8 @@ def _read_pasted(ui, title: str | None = None) -> str:
     print()
     text = sys.stdin.read(MAX_COMPOSE_BYTES + 1)
     if not text.strip():
-        raise UserCancelled(translate('No Compose file was given'))
+        raise UserCancelled(translate('No docker run command was given') if title is not None
+                            else translate('No Compose file was given'))
     return text
 
 
@@ -331,7 +332,7 @@ def read_definition(ui) -> tuple[str, str]:
         ('image', translate('Only the image reference, with no Compose file')),
     ], 'paste', title=translate('Image that is not in the catalog'), size=MENU_SIZE)
     if source is None:
-        raise UserCancelled(translate('No image was given'))
+        raise UserCancelled(translate('Image selection was cancelled'))
     if source == 'paste':
         return _read_pasted(ui), translate('pasted Compose file')
     if source == 'file':
@@ -415,7 +416,7 @@ def registry_report(reference: str) -> tuple[bool, str]:
     result = subprocess.run(['skopeo', 'inspect', '--raw', f'docker://{reference}'],
                             capture_output=True, text=True, check=False, timeout=120)
     if result.returncode != 0:
-        return False, f"{translate('The image was not found in its registry, or it is private:')} {reference}"
+        return False, f"{translate('Could not inspect the image in its registry:')} {reference}"
     try:
         document = json.loads(result.stdout)
     except ValueError:
@@ -493,12 +494,12 @@ def describe(template: dict[str, Any]) -> str:
                   for item in devices]
     warnings = []
     if security.get('requires_privileged_lxc'):
-        warnings.append(translate('It needs a privileged container, which is not isolated from the host.'))
+        warnings.append(translate('This profile requires a privileged LXC, which reduces isolation from the host.'))
     elif security.get('source_requests_privileged_lxc') or security.get('optional_privileged_lxc'):
         warnings.append(translate('Its Compose file asks for privileged mode; the container is created '
                                   'unprivileged and that mode is only offered as an option.'))
     if security.get('requires_relaxed_confinement') or security.get('source_requests_relaxed_confinement'):
-        warnings.append(translate('It asks for capabilities or a relaxed confinement profile.'))
+        warnings.append(translate('A relaxed AppArmor or seccomp profile is requested; this may be optional.'))
     if security.get('requires_host_pid_namespace'):
         warnings.append(translate('It asks to see the processes of the host.'))
     if warnings:
@@ -548,9 +549,8 @@ def explore(ui) -> None:
     if notes:
         summary += '\n\n' + '\n'.join(notes)
     if not available:
-        advice = translate('Some projects publish a Dockerfile and not an image: it has to be built '
-                           'and published to a registry before it can be installed this way. An image '
-                           'of a private registry needs credentials, which are not supported yet.')
+        advice = translate('Check the image reference and registry access. If the registry is unavailable, '
+                           'try again later. A private registry needs credentials, which are not supported yet.')
         ui.message(f'{summary}\n\n{advice}', title)
         return
     if not template.get('compatibility', {}).get('automatic_install_candidate'):

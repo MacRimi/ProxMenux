@@ -200,9 +200,14 @@ def pending_journal():
 
 def recovery_hint(after_recovery=False):
     if after_recovery:
-        msg_warn(translate('The recovery did not complete. Review the log and choose "Recover" again for this container in the OCI management menu.'))
+        source = 'The recovery did not complete. Review the log and choose "{choice}" again for this container in the OCI management menu.'
+        message = translate('The recovery did not complete. Review the log and choose "{choice}" again for this container in the OCI management menu.')
     else:
-        msg_warn(translate('The operation stopped halfway. Choose "Recover" for this container in the OCI management menu to restore the previous installation.'))
+        source = 'The operation stopped halfway. Choose "{choice}" for this container in the OCI management menu.'
+        message = translate('The operation stopped halfway. Choose "{choice}" for this container in the OCI management menu.')
+    # A malformed cache entry must not leave the user without the menu choice.
+    msg_warn((message if '{choice}' in message else source).replace(
+        '{choice}', translate('Recover the previous installation')))
 
 
 def recover_untouched(root, journal):

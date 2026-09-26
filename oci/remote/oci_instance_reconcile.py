@@ -44,12 +44,12 @@ def _mount(key, value, vmid):
                 'size_gb': None, 'backup': False, 'read_only': read_only,
                 'create_if_missing': False}
     if options.get('backup') != '1' or ':' not in source:
-        raise ValueError(f'{key}: {translate("Only backed-up Proxmox volumes can be adopted")}')
+        raise ValueError(f'{key}: {translate("Proxmox volume adoption requires backup=1 and a volume ID")}')
     storage, volume = source.split(':', 1)
     if not re.fullmatch(r'[A-Za-z0-9_-]+', storage) or not volume:
         raise ValueError(f'{key}: {translate("Invalid Proxmox volume ID")}')
     if not re.search(rf'(?:^|/)(?:vm|subvol)-{vmid}-disk-[0-9]+(?:\.|$)', volume):
-        raise ValueError(f'{key}: {translate("The disk does not belong to this CT; automatic adoption is unsafe")}')
+        raise ValueError(f'{key}: {translate("The volume ID does not contain a disk name for this CT; automatic adoption is unsafe")}')
     return {'type': 'managed-volume', 'container_path': target, 'source': storage,
             'size_gb': _managed_size(options.get('size')), 'backup': True,
             'read_only': read_only}
