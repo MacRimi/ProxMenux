@@ -92,7 +92,7 @@ class BacktrackUI:
             raise UserCancelled(translate('Wizard cancelled'))
 
 
-APP_TITLE = "OCI manager Apps (beta)"
+APP_TITLE = translate("OCI manager Apps (beta)")
 
 
 @dataclass
@@ -190,10 +190,10 @@ class DialogUI:
         if environment.get("TERM", "").casefold() in {"", "dumb", "unknown"}:
             environment["TERM"] = "xterm-256color"
         # dialog draws on the terminal and writes the selection to stderr.
-        back_widget = ['--extra-button', '--extra-label', 'Volver'] if self.back_enabled and any(
+        back_widget = ['--extra-button', '--extra-label', translate('Back')] if self.back_enabled and any(
             flag in widget for flag in ('--inputbox', '--passwordbox', '--yesno', '--menu', '--checklist')) else []
         result = subprocess.run(
-            ["dialog", "--no-collapse", "--backtitle", self.backtitle, "--title", title or self.title,
+            ["dialog", "--no-collapse", "--cancel-label", translate('Cancel'), "--backtitle", self.backtitle, "--title", title or self.title,
              *back_widget, *widget],
             stdout=None, stderr=subprocess.PIPE, text=True, check=False, env=environment,
         )
