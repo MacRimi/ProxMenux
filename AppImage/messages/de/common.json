@@ -1193,6 +1193,8 @@
       "installedImage": "Installiertes Image",
       "newImage": "Neues Image {image} verfügbar",
       "stackNote": "Teil einer Multi-Container-Anwendung (Haupt-CT {primary}, {count} Container): Das Update umfasst alle.",
+      "memberNote": "Dieser Container gehört zu einer Multi-Container-Anwendung mit dem Haupt-CT {primary} und wird nicht einzeln aktualisiert. Die Aktualisierung erfolgt über den Haupt-CT, der alle {count} Container gemeinsam aktualisiert.",
+      "openPrimary": "Haupt-CT öffnen",
       "pendingNote": "Ein Vorgang an diesem Container wurde unterbrochen; Wiederherstellen öffnet seine Wiederherstellung.",
       "update": "Aktualisieren",
       "recreate": "Neu erstellen",

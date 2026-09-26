@@ -149,7 +149,7 @@
           }
         },
         {
-          "p": "El contrato de la pila guarda el bridge, la subred, las direcciones y las relaciones entre servicios. Actualizar o recrear un miembro reutiliza la misma topología. ProxMenux Monitor abre el contenedor principal en su dirección de la LAN, no en la de la red privada."
+          "p": "El contrato de la pila guarda el bridge, la subred, las direcciones y las relaciones entre servicios. La actualización de la aplicación reutiliza la misma topología en todos sus miembros. ProxMenux Monitor abre el contenedor principal en su dirección de la LAN, no en la de la red privada."
         }
       ]
     },

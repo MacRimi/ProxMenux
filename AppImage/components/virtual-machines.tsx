@@ -5223,6 +5223,13 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                         : "bg-green-500/10 hover:bg-green-500/20 border border-green-500/30 text-green-400 hover:text-green-300"
                       const neutralBtnCls = "border border-input bg-background text-foreground/80 hover:bg-accent hover:text-accent-foreground"
                       const storageForBackup = applyBackupStorage || selectedBackupStorage
+                      // A stack is updated as a whole from its main container;
+                      // the other members only show their image.
+                      const stackMember = ociInstance.stack && ociInstance.primary_vmid !== selectedVM.vmid
+                      const primaryVM = (vmData || []).find((v) => v.vmid === ociInstance.primary_vmid)
+                      const primaryLabel = primaryVM
+                        ? `${primaryVM.name} (CT ${ociInstance.primary_vmid})`
+                        : `CT ${ociInstance.primary_vmid}`
                       return (
                         <>
                           <Card className="border border-border bg-card/50">
@@ -5262,6 +5269,29 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                                   <span>{t("vmLxc.ociUpdates.installedImage")} <code className="text-foreground/80">{installedLabel || "—"}</code></span>
                                 </div>
                               )}
+                              {stackMember ? (
+                                <div className="mt-4 pt-4 border-t border-border/50 space-y-3">
+                                  <div className="text-sm text-muted-foreground flex items-start gap-2 leading-relaxed">
+                                    <Info className="h-4 w-4 text-blue-400 flex-shrink-0 mt-0.5" />
+                                    <span>{t("vmLxc.ociUpdates.memberNote", { primary: primaryLabel, count: ociInstance.members.length })}</span>
+                                  </div>
+                                  {primaryVM && (
+                                    <div className="flex justify-end">
+                                      <Button
+                                        size="sm"
+                                        className={neutralBtnCls}
+                                        onClick={() => window.dispatchEvent(new CustomEvent("openLxcAppModal", {
+                                          detail: { vmid: ociInstance.primary_vmid, tab: "updates" },
+                                        }))}
+                                      >
+                                        <ChevronRight className="h-4 w-4 mr-1.5" />
+                                        {t("vmLxc.ociUpdates.openPrimary")}
+                                      </Button>
+                                    </div>
+                                  )}
+                                </div>
+                              ) : (
+                              <>
                               {ociInstance.stack && (
                                 <div className="text-xs text-muted-foreground mt-3 leading-relaxed">
                                   {t("vmLxc.ociUpdates.stackNote", { primary: ociInstance.primary_vmid, count: ociInstance.members.length })}
@@ -5292,11 +5322,14 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                                   {ociInstance.pending ? t("vmLxc.ociUpdates.recover") : t("vmLxc.ociUpdates.update")}
                                 </Button>
                               </div>
+                              </>
+                              )}
                             </CardContent>
                           </Card>
 
                           {/* Options — the backup the update keeps and the
                               scheduled image update. */}
+                          {!stackMember && (
                           <Card className={optionsEditMode ? "border border-border bg-card" : "border border-border bg-card/50"}>
                             <CardContent className="p-4 space-y-4">
                               <h3 className="text-sm font-semibold text-foreground">{t("vmLxc.options.title")}</h3>
@@ -5494,6 +5527,7 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                               </div>
                             </CardContent>
                           </Card>
+                          )}
                         </>
                       )
                     })()}

@@ -149,7 +149,7 @@
           }
         },
         {
-          "p": "The stack contract stores bridge, subnet, addresses and the relations between services. Updating or recreating a member reuses the same topology. ProxMenux Monitor opens the main container at its LAN address, not at its address on the private network."
+          "p": "The stack contract stores bridge, subnet, addresses and the relations between services. Updating the application reuses the same topology for every member. ProxMenux Monitor opens the main container at its LAN address, not at its address on the private network."
         }
       ]
     },

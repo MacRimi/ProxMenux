@@ -118,7 +118,7 @@
           }
         },
         {
-          "p": "Los cambios externos, los directorios del host y las aplicaciones multicontenedor se tratan como en el menú OCI. Al cerrar la terminal se vuelven a leer la imagen, el registro y los montajes."
+          "p": "Los cambios externos, los directorios del host y las aplicaciones multicontenedor se tratan como en el menú OCI. En una aplicación multicontenedor, los botones y las opciones solo aparecen en el contenedor principal; los demás miembros muestran su imagen, una nota de que se actualizan desde el contenedor principal y un botón que lo abre. Al cerrar la terminal se vuelven a leer la imagen, el registro y los montajes."
         },
         {
           "table": {
@@ -128,7 +128,7 @@
             ],
             "rows": [
               [
-                "Conservar el backup previo a la actualización",
+                "Conservar el backup realizado antes de actualizar",
                 "Cada actualización hace un backup del contenedor para restaurarlo si falla. Con esta opción ese mismo backup se conserva en el almacenamiento elegido y aparece entre los backups del CT; en Proxmox Backup Server se escribe un backup antes de actualizar."
               ],
               [

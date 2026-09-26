@@ -1214,6 +1214,8 @@
       "installedImage": "Installed image",
       "newImage": "New image {image} available",
       "stackNote": "Part of a multi-container application (main CT {primary}, {count} containers): the update covers all of them.",
+      "memberNote": "This container belongs to a multi-container application whose main container is {primary}, and it is not updated on its own. Updates are applied from the main container, which updates all {count} containers together.",
+      "openPrimary": "Open the main container",
       "pendingNote": "An operation on this container was interrupted; Recover opens its recovery.",
       "update": "Update",
       "recreate": "Recreate",

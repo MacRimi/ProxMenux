@@ -1193,6 +1193,8 @@
       "installedImage": "Installerad avbild",
       "newImage": "Ny avbild {image} tillgänglig",
       "stackNote": "Del av en applikation med flera containrar (huvud-CT {primary}, {count} containrar): uppdateringen omfattar alla.",
+      "memberNote": "Den här containern ingår i en applikation med flera containrar vars huvud-CT är {primary} och uppdateras inte separat. Uppdateringen görs från huvud-CT:n, som uppdaterar alla {count} containrar tillsammans.",
+      "openPrimary": "Öppna huvud-CT:n",
       "pendingNote": "En åtgärd på den här containern avbröts; Återställ öppnar dess återställning.",
       "update": "Uppdatera",
       "recreate": "Återskapa",

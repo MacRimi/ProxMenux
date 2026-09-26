@@ -1193,6 +1193,8 @@
       "installedImage": "Imagem instalada",
       "newImage": "Nova imagem {image} disponível",
       "stackNote": "Faz parte de uma aplicação com vários contentores (CT principal {primary}, {count} contentores): a atualização abrange todos.",
+      "memberNote": "Este contentor faz parte de uma aplicação com vários contentores cujo CT principal é {primary} e não é atualizado individualmente. A atualização é feita a partir do CT principal, que atualiza os {count} contentores em conjunto.",
+      "openPrimary": "Abrir o CT principal",
       "pendingNote": "Uma operação neste contentor foi interrompida; Recuperar abre a sua recuperação.",
       "update": "Atualizar",
       "recreate": "Recriar",

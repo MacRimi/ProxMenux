@@ -1193,6 +1193,8 @@
       "installedImage": "Image installée",
       "newImage": "Nouvelle image {image} disponible",
       "stackNote": "Fait partie d'une application multi-conteneurs (CT principal {primary}, {count} conteneurs) : la mise à jour les couvre tous.",
+      "memberNote": "Ce conteneur fait partie d'une application multi-conteneurs dont le CT principal est {primary} et n'est pas mis à jour séparément. La mise à jour se fait depuis le CT principal, qui met à jour les {count} conteneurs ensemble.",
+      "openPrimary": "Ouvrir le CT principal",
       "pendingNote": "Une opération sur ce conteneur a été interrompue ; Récupérer ouvre sa récupération.",
       "update": "Mettre à jour",
       "recreate": "Recréer",

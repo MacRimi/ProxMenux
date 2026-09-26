@@ -1214,6 +1214,8 @@
       "installedImage": "Nainštalovaný obraz",
       "newImage": "K dispozícii je nový obraz {image}",
       "stackNote": "Súčasť aplikácie s viacerými kontajnermi (hlavný CT {primary}, {count} kontajnerov): aktualizácia sa týka všetkých.",
+      "memberNote": "Tento kontajner patrí do aplikácie s viacerými kontajnermi, ktorej hlavný CT je {primary}, a neaktualizuje sa samostatne. Aktualizácia sa vykonáva z hlavného CT, ktorý aktualizuje všetkých {count} kontajnerov naraz.",
+      "openPrimary": "Otvoriť hlavný CT",
       "pendingNote": "Operácia na tomto kontajneri bola prerušená; Obnoviť otvorí jej obnovenie.",
       "update": "Aktualizovať",
       "recreate": "Znovu vytvoriť",

@@ -118,7 +118,7 @@
           }
         },
         {
-          "p": "External changes, host directories and multi-container applications are handled as in the OCI menu. When the terminal closes, the image, the record and the mounts are read again."
+          "p": "External changes, host directories and multi-container applications are handled as in the OCI menu. In a multi-container application, the buttons and the options appear only on the main container; the other members show their image, a note that they are updated from the main container and a button that opens it. When the terminal closes, the image, the record and the mounts are read again."
         },
         {
           "table": {

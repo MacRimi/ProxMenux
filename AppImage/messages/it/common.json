@@ -1193,6 +1193,8 @@
       "installedImage": "Immagine installata",
       "newImage": "Nuova immagine {image} disponibile",
       "stackNote": "Parte di un'applicazione multi-container (CT principale {primary}, {count} container): l'aggiornamento li comprende tutti.",
+      "memberNote": "Questo container fa parte di un'applicazione multi-container il cui CT principale è {primary} e non viene aggiornato singolarmente. L'aggiornamento si esegue dal CT principale, che aggiorna insieme tutti i {count} container.",
+      "openPrimary": "Apri il CT principale",
       "pendingNote": "Un'operazione su questo container è stata interrotta; Recupera ne apre il ripristino.",
       "update": "Aggiorna",
       "recreate": "Ricrea",
