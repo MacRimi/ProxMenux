@@ -51,6 +51,8 @@ jobs:
         run: |
           test -x /bin/bash
           test -x /usr/bin/jq
+      - name: Install OCI wording test dependency
+        run: python3 -m pip install 'PyYAML>=6,<7'
       - name: Run complete offline script test suite
         env:
           PYTHONDONTWRITEBYTECODE: '1'
