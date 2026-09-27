@@ -1,5 +1,4 @@
 {
-  "Tested by the community": "Probado por la comunidad",
   "# Alternative if you prefer screen": "# Alternativa si prefieres la pantalla",
   "# Recommended: avoids disconnection during upgrade": "# Recomendado: evita la desconexión durante la actualización",
   "(Checked entries will be removed. Uncheck to keep in VM.)": "(Las entradas marcadas se eliminarán. Desmarque para mantener en VM).",
@@ -5773,6 +5772,7 @@
   "Test runs on the drive hardware — safe to close this terminal.": "Ejecuciones de prueba en el hardware de la unidad: es seguro cerrar este terminal.",
   "Test share visibility:": "Pruebe la visibilidad del recurso compartido:",
   "Test typically completes in ~2 minutes.": "La prueba normalmente se completa en aproximadamente 2 minutos.",
+  "Tested by the community": "Probado por la comunidad",
   "Testing": "Pruebas",
   "Testing NFS connection...": "Probando conexión NFS...",
   "Testing comprehensive guest access to server": "Probando el acceso integral de invitados al servidor",
