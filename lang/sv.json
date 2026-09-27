@@ -1267,6 +1267,7 @@
   "Could not mount the container filesystem:": "Kunde inte montera containerfilsystemet:",
   "Could not obtain an intact image after two attempts": "Kan inte få en intakt bild efter två försök",
   "Could not parse OVF file, or no disk image references found.": "Det gick inte att analysera OVF-filen eller så hittades inga referenser till diskbilden.",
+  "Could not prepare canonical installation inputs": "Kunde inte förbereda kanoniska installationsingångar",
   "Could not prepare on-boot restore service. Nothing new was scheduled.": "Kunde inte förbereda återställningstjänst vid uppstart. Inget nytt var inplanerat.",
   "Could not prepare the NVIDIA driver links": "Kan inte förbereda NVIDIA-förarlänkar",
   "Could not prepare the file bind mount target:": "Kunde inte förbereda filbindningsmålet:",

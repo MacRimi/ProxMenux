@@ -1267,6 +1267,7 @@
   "Could not mount the container filesystem:": "Konnte das Container-Dateisystem nicht einhängen:",
   "Could not obtain an intact image after two attempts": "Konnte nach zwei Versuchen kein intaktes Bild erhalten",
   "Could not parse OVF file, or no disk image references found.": "Die OVF-Datei konnte nicht analysiert werden oder es wurden keine Disk-Image-Referenzen gefunden.",
+  "Could not prepare canonical installation inputs": "Eingaben für die kanonische Installation konnten nicht vorbereitet werden",
   "Could not prepare on-boot restore service. Nothing new was scheduled.": "Der On-Boot-Wiederherstellungsdienst konnte nicht vorbereitet werden. Es war nichts Neues geplant.",
   "Could not prepare the NVIDIA driver links": "Konnte die NVIDIA-Treiberlinks nicht vorbereiten",
   "Could not prepare the file bind mount target:": "Konnte das File Bind Mount-Ziel nicht vorbereiten:",

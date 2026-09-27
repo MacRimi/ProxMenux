@@ -1267,6 +1267,7 @@
   "Could not mount the container filesystem:": "Nepodarilo sa pripojiť súborový systém kontajnera:",
   "Could not obtain an intact image after two attempts": "Nepodarilo sa získať neporušený obraz po dvoch pokusoch",
   "Could not parse OVF file, or no disk image references found.": "OVF súbor sa nepodarilo spracovať alebo neobsahuje odkazy na diskové obrazy.",
+  "Could not prepare canonical installation inputs": "Nepodarilo sa pripraviť kanonické inštalačné vstupy",
   "Could not prepare on-boot restore service. Nothing new was scheduled.": "Nepodarilo sa pripraviť službu obnovenia pri spustení. Nič nové nebolo naplánované.",
   "Could not prepare the NVIDIA driver links": "Nepodarilo sa pripraviť odkazy na ovládač NVIDIA",
   "Could not prepare the file bind mount target:": "Nepodarilo sa pripraviť cieľ pripojenia súboru:",
