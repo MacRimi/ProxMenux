@@ -1,15 +1,18 @@
 """Glances' Web UI is the only listener used by the native ``-w`` profile."""
 
 from pathlib import Path
+import sys
 import unittest
+
+ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT / "src"))
 
 from proxmenux_oci.catalog import Catalog
 
 
 class GlancesPortContractTests(unittest.TestCase):
     def test_web_profile_exposes_only_the_web_ui_port(self):
-        root = Path(__file__).resolve().parents[1]
-        template = Catalog(root).compose("glances")
+        template = Catalog(ROOT).compose("glances")
 
         ports = template["container_contract"]["ports"]
         self.assertEqual([item["container_port"] for item in ports], [61208])
