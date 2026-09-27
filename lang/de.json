@@ -1,5 +1,4 @@
 {
-  "If you restore this container on another Proxmox host, copy this file to the same path first, because the container backup does not include it:": "Wenn Sie diesen Container auf einem anderen Proxmox-Host wiederherstellen, kopieren Sie zuerst diese Datei in denselben Pfad, da das Backup des Containers sie nicht enthält:",
   "# Alternative if you prefer screen": "# Alternative, wenn Sie den Bildschirm bevorzugen",
   "# Recommended: avoids disconnection during upgrade": "# Empfohlen: Verhindert Verbindungsabbrüche während des Upgrades",
   "(Checked entries will be removed. Uncheck to keep in VM.)": "(Überprüfte Einträge werden entfernt. Deaktivieren Sie die Markierung, um sie in VM zu behalten.)",
@@ -2722,6 +2721,7 @@
   "If you have a Coral M.2 / PCIe device that is physically installed but not detected by lspci, cancel here and check your hardware first before proceeding.": "Wenn Sie ein Coral M.2/PCIe-Gerät haben, das physisch installiert ist, aber von lspci nicht erkannt wird, brechen Sie hier ab und überprüfen Sie zunächst Ihre Hardware, bevor Sie fortfahren.",
   "If you lose connectivity, you can restore from backup using the console.": "Wenn die Verbindung unterbrochen wird, können Sie über die Konsole eine Wiederherstellung aus dem Backup durchführen.",
   "If you lose or reinstall this host without a copy of the passphrase somewhere else (password manager, offline note, another host, USB stick...), every encrypted archive in this Borg repository becomes UNRECOVERABLE.": "Wenn Sie diesen Host verlieren oder ohne eine Kopie der Passphrase woanders (Passwort-Manager, Offline-Notiz, anderer Host, USB-Stick...) neu installieren, wird jedes verschlüsselte Archiv in diesem Borg-Repository UNWIEDERHERSTELLBAR.",
+  "If you restore this container on another Proxmox host, copy this file to the same path first, because the container backup does not include it:": "Wenn Sie diesen Container auf einem anderen Proxmox-Host wiederherstellen, kopieren Sie zuerst diese Datei in denselben Pfad, da das Backup des Containers sie nicht enthält:",
   "If you want HDMI/analog audio inside the VM, select the audio controller(s) to pass through along with the GPU.": "Wenn Sie HDMI/analoges Audio innerhalb der VM wünschen, wählen Sie die Audio-Controller aus, die zusammen mit der GPU weitergeleitet werden sollen.",
   "If you want to use a physical monitor on the passthrough GPU:": "Wenn Sie einen physischen Monitor auf der Passthrough-GPU verwenden möchten:",
   "If your DHCP has a static reservation for the old MAC, update it.": "Wenn Ihr DHCP eine statische Reservierung für den alten MAC hat, aktualisieren Sie diese.",

@@ -1,5 +1,4 @@
 {
-  "If you restore this container on another Proxmox host, copy this file to the same path first, because the container backup does not include it:": "Om du återställer den här containern på en annan Proxmox-värd, kopiera först den här filen till samma sökväg, eftersom containerns säkerhetskopia inte innehåller den:",
   "# Alternative if you prefer screen": "# Alternativ om du föredrar skärm",
   "# Recommended: avoids disconnection during upgrade": "# Rekommenderas: undviker frånkoppling under uppgradering",
   "(Checked entries will be removed. Uncheck to keep in VM.)": "(Markerade poster kommer att tas bort. Avmarkera för att behålla i VM.)",
@@ -2722,6 +2721,7 @@
   "If you have a Coral M.2 / PCIe device that is physically installed but not detected by lspci, cancel here and check your hardware first before proceeding.": "Om du har en Coral M.2/PCIe-enhet som är fysiskt installerad men inte detekteras av lspci, avbryt här och kontrollera din hårdvara innan du fortsätter.",
   "If you lose connectivity, you can restore from backup using the console.": "Om du förlorar anslutningen kan du återställa från säkerhetskopia med hjälp av konsolen.",
   "If you lose or reinstall this host without a copy of the passphrase somewhere else (password manager, offline note, another host, USB stick...), every encrypted archive in this Borg repository becomes UNRECOVERABLE.": "Om du förlorar eller installerar om denna värd utan en kopia av lösenfrasen någon annanstans (lösenordshanterare, offlineanteckning, en annan värd, USB-minne...), blir alla krypterade arkiv i detta Borg-förråd OÅTERSTÄLLBAR.",
+  "If you restore this container on another Proxmox host, copy this file to the same path first, because the container backup does not include it:": "Om du återställer den här containern på en annan Proxmox-värd, kopiera först den här filen till samma sökväg, eftersom containerns säkerhetskopia inte innehåller den:",
   "If you want HDMI/analog audio inside the VM, select the audio controller(s) to pass through along with the GPU.": "Om du vill ha HDMI/analogt ljud inuti VM:n, välj ljudkontrollerna som ska passera tillsammans med GPU:n.",
   "If you want to use a physical monitor on the passthrough GPU:": "Om du vill använda en fysisk bildskärm på passthrough-GPU:n:",
   "If your DHCP has a static reservation for the old MAC, update it.": "Om din DHCP har en statisk reservation för den gamla MAC, uppdatera den.",

@@ -1,5 +1,4 @@
 {
-  "If you restore this container on another Proxmox host, copy this file to the same path first, because the container backup does not include it:": "Ak tento kontajner obnovíte na inom hostiteľovi Proxmox, najprv skopírujte tento súbor na rovnakú cestu, pretože záloha kontajnera ho neobsahuje:",
   "# Alternative if you prefer screen": "# Alternatíva, ak preferujete screen",
   "# Recommended: avoids disconnection during upgrade": "# Odporúčané: zabráni odpojeniu počas aktualizácie",
   "(Checked entries will be removed. Uncheck to keep in VM.)": "(Označené položky sa odstránia. Zrušte označenie, ak ich chcete ponechať vo VM.)",
@@ -2722,6 +2721,7 @@
   "If you have a Coral M.2 / PCIe device that is physically installed but not detected by lspci, cancel here and check your hardware first before proceeding.": "Ak máte zariadenie Coral M.2 / PCIe, ktoré je fyzicky nainštalované, ale nie je detekované lspci, zrušte to tu a pred pokračovaním najskôr skontrolujte hardvér.",
   "If you lose connectivity, you can restore from backup using the console.": "Ak stratíte pripojenie, môžete obnoviť zálohu cez konzolu.",
   "If you lose or reinstall this host without a copy of the passphrase somewhere else (password manager, offline note, another host, USB stick...), every encrypted archive in this Borg repository becomes UNRECOVERABLE.": "Ak tento host stratíte alebo preinštalujete bez kópie frázy niekde inde (správca hesiel, offline poznámka, iný host, USB kľúč...), každý šifrovaný archív v tomto Borg repozitári bude NEOBNOVITEĽNÝ.",
+  "If you restore this container on another Proxmox host, copy this file to the same path first, because the container backup does not include it:": "Ak tento kontajner obnovíte na inom hostiteľovi Proxmox, najprv skopírujte tento súbor na rovnakú cestu, pretože záloha kontajnera ho neobsahuje:",
   "If you want HDMI/analog audio inside the VM, select the audio controller(s) to pass through along with the GPU.": "Ak chcete mať vo VM HDMI/analógový zvuk, vyberte aj audio radiče, ktoré sa majú priradiť spolu s GPU.",
   "If you want to use a physical monitor on the passthrough GPU:": "Ak chcete použiť fyzický monitor na priamo priradenej GPU:",
   "If your DHCP has a static reservation for the old MAC, update it.": "Ak máte v DHCP statickú rezerváciu pre starú MAC adresu, aktualizujte ju.",

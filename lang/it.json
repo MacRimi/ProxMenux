@@ -1,5 +1,4 @@
 {
-  "If you restore this container on another Proxmox host, copy this file to the same path first, because the container backup does not include it:": "Se si ripristina questo container su un altro host Proxmox, copiare prima questo file nello stesso percorso, perché il backup del container non lo include:",
   "# Alternative if you prefer screen": "# Alternativa se preferisci lo schermo",
   "# Recommended: avoids disconnection during upgrade": "# Consigliato: evita la disconnessione durante l'aggiornamento",
   "(Checked entries will be removed. Uncheck to keep in VM.)": "(Le voci selezionate verranno rimosse. Deseleziona per mantenerle nella VM.)",
@@ -2722,6 +2721,7 @@
   "If you have a Coral M.2 / PCIe device that is physically installed but not detected by lspci, cancel here and check your hardware first before proceeding.": "se disponi di un dispositivo Coral M.2 / PCIe installato fisicamente ma non rilevato da lspci, annulla qui e controlla l'hardware prima di procedere.",
   "If you lose connectivity, you can restore from backup using the console.": "Se perdi la connettività, puoi ripristinare dal backup utilizzando la console.",
   "If you lose or reinstall this host without a copy of the passphrase somewhere else (password manager, offline note, another host, USB stick...), every encrypted archive in this Borg repository becomes UNRECOVERABLE.": "se perdi o reinstalli questo host senza una copia della passphrase da qualche altra parte (gestore password, nota offline, un altro host, chiavetta USB...), ogni archivio crittografato in questo repository Borg diventa IRREVERSIBILE.",
+  "If you restore this container on another Proxmox host, copy this file to the same path first, because the container backup does not include it:": "Se si ripristina questo container su un altro host Proxmox, copiare prima questo file nello stesso percorso, perché il backup del container non lo include:",
   "If you want HDMI/analog audio inside the VM, select the audio controller(s) to pass through along with the GPU.": "Se desideri l'audio HDMI/analogico all'interno della VM, seleziona i controller audio da far passare insieme alla GPU.",
   "If you want to use a physical monitor on the passthrough GPU:": "Se desideri utilizzare un monitor fisico sulla GPU passthrough:",
   "If your DHCP has a static reservation for the old MAC, update it.": "se il tuo DHCP ha una prenotazione statica per il vecchio MAC, aggiornalo.",
