@@ -21,7 +21,16 @@
         "prompt_user": false
       }
     ],
-    "volumes": []
+    "volumes": [],
+    "ports": [
+      {
+        "container_port": 61208,
+        "published_example": 61208,
+        "protocol": "tcp",
+        "required": true,
+        "proxmox_behavior": "listener-on-dedicated-lxc-address-no-nat"
+      }
+    ]
   },
   "proxmox": {
     "defaults": {
