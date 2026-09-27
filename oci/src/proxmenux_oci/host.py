@@ -61,6 +61,23 @@ def default_bridge(preferred: str) -> str:
     return names[0]
 
 
+def ipv4_subnet(bridge: str) -> str | None:
+    """The IPv4 subnet configured on ``bridge``, if it has one.
+
+    This is deliberately taken from the node's bridge configuration instead
+    of guessing from a container address.  A host-monitor shares the host
+    network namespace, so its firewall source scope must be the selected
+    host bridge's network.
+    """
+    row = next((item for item in bridges(include_private=True)
+                if item.get("iface") == bridge), None)
+    try:
+        interface = ipaddress.ip_interface(str((row or {}).get("cidr") or ""))
+    except ValueError:
+        return None
+    return str(interface.network) if interface.version == 4 else None
+
+
 def timezone() -> str:
     try:
         value = Path("/etc/timezone").read_text(encoding="utf-8").strip()
