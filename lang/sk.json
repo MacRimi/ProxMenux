@@ -1,5 +1,4 @@
 {
-  "Tested by the community": "Otestované komunitou",
   "# Alternative if you prefer screen": "# Alternatíva, ak preferujete screen",
   "# Recommended: avoids disconnection during upgrade": "# Odporúčané: zabráni odpojeniu počas aktualizácie",
   "(Checked entries will be removed. Uncheck to keep in VM.)": "(Označené položky sa odstránia. Zrušte označenie, ak ich chcete ponechať vo VM.)",
@@ -5773,6 +5772,7 @@
   "Test runs on the drive hardware — safe to close this terminal.": "Test beží priamo na hardvéri disku - tento terminál môžete bezpečne zatvoriť.",
   "Test share visibility:": "Otestovať viditeľnosť zdieľania:",
   "Test typically completes in ~2 minutes.": "Test sa zvyčajne dokončí približne za 2 minúty.",
+  "Tested by the community": "Otestované komunitou",
   "Testing": "Testujem",
   "Testing NFS connection...": "Testujem NFS pripojenie...",
   "Testing comprehensive guest access to server": "Testujem podrobne prístup hosťa k serveru",

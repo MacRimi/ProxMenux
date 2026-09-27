@@ -1,5 +1,4 @@
 {
-  "Tested by the community": "Testad av communityn",
   "# Alternative if you prefer screen": "# Alternativ om du föredrar skärm",
   "# Recommended: avoids disconnection during upgrade": "# Rekommenderas: undviker frånkoppling under uppgradering",
   "(Checked entries will be removed. Uncheck to keep in VM.)": "(Markerade poster kommer att tas bort. Avmarkera för att behålla i VM.)",
@@ -5773,6 +5772,7 @@
   "Test runs on the drive hardware — safe to close this terminal.": "Testkörningar på hårdvaran – säkert att stänga denna terminal.",
   "Test share visibility:": "Testandels synlighet:",
   "Test typically completes in ~2 minutes.": "Testet slutförs vanligtvis inom ~2 minuter.",
+  "Tested by the community": "Testad av communityn",
   "Testing": "Testning",
   "Testing NFS connection...": "Testar NFS-anslutning...",
   "Testing comprehensive guest access to server": "Testar omfattande gäståtkomst till servern",
