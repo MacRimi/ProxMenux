@@ -67,4 +67,13 @@ if [[ $# -gt 0 ]]; then
     PYTHONPATH="$OCI_ENGINE_DIR/src" exec python3 -m proxmenux_oci "$@"
 fi
 PYTHONPATH="$OCI_ENGINE_DIR/src" python3 -m proxmenux_oci
+OCI_STATUS=$?
+
+# Do not replace an OCI engine traceback with the main menu.  Returning to the
+# menu is correct after a normal cancellation, but an unexpected non-zero exit
+# must remain visible so the user can report and diagnose it.
+if [[ $OCI_STATUS -ne 0 ]]; then
+    exit "$OCI_STATUS"
+fi
+
 exec bash "$LOCAL_SCRIPTS/menus/main_menu.sh"

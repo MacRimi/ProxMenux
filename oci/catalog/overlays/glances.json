@@ -52,6 +52,10 @@
     "installer_profile": {
       "host_monitor": "glances",
       "host_monitor_optional": true,
+      "host_monitor_firewall": {
+        "protocol": "tcp",
+        "web_port": 61208
+      },
       "host_monitor_mounts": [
         {
           "source": "/etc/os-release",

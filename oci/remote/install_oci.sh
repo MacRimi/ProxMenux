@@ -204,6 +204,78 @@ validate_host_monitor() {
   [[ -z $(ss -H -ltn "sport = :${port}") ]] || die "$(translate "The host port is already in use:") ${port}"
 }
 
+validate_host_monitor_firewall() {
+  HOST_FIREWALL_ENABLED=0
+  HOST_FIREWALL_BRIDGE=""
+  HOST_FIREWALL_SOURCE=""
+  HOST_FIREWALL_PORT=""
+  [[ $(jq -r '.host_firewall == null or .host_firewall == {}' "$DEPLOYMENT_FILE") == true ]] && return 0
+  [[ -n ${HOST_MONITOR:-} ]] || die "$(translate "A host firewall rule is only valid for a host-monitor profile")"
+  jq -e '.host_firewall | type == "object"
+    and (.confirmed == true)
+    and (.bridge | type == "string" and test("^[A-Za-z0-9_.-]+$"))
+    and (.source | type == "string" and test("^[0-9./]+$"))
+    and (.protocol == "tcp")
+    and (.port | type == "number" and floor == . and . >= 1 and . <= 65535)' \
+    "$DEPLOYMENT_FILE" >/dev/null \
+    || die "$(translate "Invalid host-monitor firewall plan")"
+  HOST_FIREWALL_BRIDGE=$(jq -r '.host_firewall.bridge' "$DEPLOYMENT_FILE")
+  HOST_FIREWALL_SOURCE=$(jq -r '.host_firewall.source' "$DEPLOYMENT_FILE")
+  HOST_FIREWALL_PORT=$(jq -r '.host_firewall.port' "$DEPLOYMENT_FILE")
+  [[ $HOST_FIREWALL_BRIDGE == "$BRIDGE" ]] \
+    || die "$(translate "The host-monitor firewall bridge does not match the selected bridge")"
+  local cidr subnet declared_port contract_count
+  cidr=$(ip -4 -o addr show dev "$BRIDGE" scope global | awk 'NR==1 {print $4}')
+  [[ -n $cidr ]] || die "$(translate "The selected bridge has no IPv4 subnet for the host-monitor firewall")"
+  subnet=$(python3 - "$cidr" <<'PY'
+import ipaddress
+import sys
+try:
+    print(ipaddress.ip_interface(sys.argv[1]).network)
+except ValueError:
+    raise SystemExit(1)
+PY
+) || die "$(translate "The selected bridge has no IPv4 subnet for the host-monitor firewall")"
+  [[ $HOST_FIREWALL_SOURCE == "$subnet" ]] \
+    || die "$(translate "The host-monitor firewall subnet changed; no firewall rule was added")"
+  declared_port=$(jq -r '.proxmox.installer_profile.host_monitor_firewall.web_port // empty' "$TEMPLATE_FILE")
+  [[ $declared_port == "$HOST_FIREWALL_PORT" ]] \
+    || die "$(translate "The host-monitor firewall port is not declared by this profile")"
+  contract_count=$(jq --argjson port "$HOST_FIREWALL_PORT" '[.container_contract.ports[]? | select(
+    .protocol == "tcp" and .container_port == $port)] | length' "$TEMPLATE_FILE")
+  [[ $contract_count == 1 ]] \
+    || die "$(translate "The host-monitor firewall port is not declared as the web port")"
+  HOST_FIREWALL_ENABLED=1
+}
+
+apply_host_monitor_firewall() {
+  [[ ${HOST_FIREWALL_ENABLED:-0} == 1 ]] || return 0
+  # Updates/recreates use a saved plan non-interactively.  They never add a
+  # missing host rule; only the original, separately confirmed installation
+  # may modify the host firewall.
+  if [[ -n ${PROXMENUX_OCI_TRANSACTION:-} ]]; then
+    oci_log "Host firewall plan retained without changing firewall during an OCI transaction"
+    return 0
+  fi
+  local node comment rules existing
+  node=$(hostname)
+  comment="ProxMenux OCI host monitor CT ${VMID}"
+  rules=$(pvesh get "/nodes/${node}/firewall/rules" --output-format json) \
+    || die "$(translate "Could not read the host firewall rules")"
+  existing=$(jq -r --arg source "$HOST_FIREWALL_SOURCE" --arg port "$HOST_FIREWALL_PORT" '
+    [.[]? | select((.type | ascii_downcase) == "in" and (.action | ascii_upcase) == "ACCEPT"
+      and (.proto | ascii_downcase) == "tcp" and (.source // "") == $source
+      and ((.dport | tostring) == $port))] | length' <<<"$rules")
+  if (( existing > 0 )); then
+    msg_ok "$(translate "Host firewall already allows:") TCP ${HOST_FIREWALL_PORT} $(translate "from") ${HOST_FIREWALL_SOURCE}"
+    return 0
+  fi
+  pvesh create "/nodes/${node}/firewall/rules" --type in --action ACCEPT --proto tcp \
+    --dport "$HOST_FIREWALL_PORT" --source "$HOST_FIREWALL_SOURCE" --comment "$comment" \
+    || die "$(translate "Could not add the confirmed host firewall rule")"
+  msg_ok "$(translate "Host firewall rule added:") TCP ${HOST_FIREWALL_PORT} $(translate "from") ${HOST_FIREWALL_SOURCE}"
+}
+
 apply_host_monitor() {
   [[ -n ${HOST_MONITOR:-} ]] || return 0
   # PVE permits lxc.include but not namespace keys directly in the CT config.
@@ -1101,6 +1173,7 @@ MAC_ADDRESS=$(jq -r '.network.mac_address // empty' "$DEPLOYMENT_FILE")
 GATEWAY=$(jq -r '.network.gateway // empty' "$DEPLOYMENT_FILE")
 FIREWALL=$(json_value '.network.firewall | if . then 1 else 0 end' "$DEPLOYMENT_FILE")
 validate_host_monitor
+validate_host_monitor_firewall
 ONBOOT=$(json_value '.onboot | if . then 1 else 0 end' "$DEPLOYMENT_FILE")
 START_AFTER=$(json_value '.start_after_create | if . then 1 else 0 end' "$DEPLOYMENT_FILE")
 SHUTDOWN_TIMEOUT=$(json_value '.shutdown_timeout_seconds' "$DEPLOYMENT_FILE")
@@ -1923,6 +1996,7 @@ elif [[ $HAOS_HEALTHCHECK != 0 ]]; then
   URLS='[]'
   msg_info2 "$(translate "Home Assistant OS was not started: its addresses will be known once Core is running.")"
 fi
+apply_host_monitor_firewall
 INSTALL_COMPLETE=1
 if [[ $(jq -r '.stack_managed // false' "$DEPLOYMENT_FILE") == true ]]; then
   msg_ok "$(translate "Container prepared for the stack:") CT $VMID ($HOSTNAME)"

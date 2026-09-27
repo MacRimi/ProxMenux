@@ -291,6 +291,14 @@ def _deployment_summary_text(template: dict[str, Any], deployment: dict[str, Any
     network = plan.get("network", {})
     if plan.get("host_monitor"):
         row(translate("Network"), translate("IP address and firewall of the host"))
+        firewall = plan.get("host_firewall")
+        if firewall:
+            row(translate("Host firewall"),
+                translate("allow TCP {port} from {subnet} via {bridge}").format(
+                    port=firewall["port"], subnet=firewall["source"], bridge=firewall["bridge"]
+                ))
+        else:
+            row(translate("Host firewall"), translate("not changed"))
     elif "frontend_bridge" in network:
         addresses = [network[key] for key in ("frontend_ipv4", "machine_learning_frontend_ipv4") if network.get(key)]
         addresses += [service["frontend_ipv4"] for service in plan.get("services", []) if service.get("frontend_ipv4")]

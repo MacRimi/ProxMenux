@@ -111,6 +111,45 @@ def ask_bridge(ui, text: str, default: str, mode: str = ADVANCED_MODE) -> str:
     return selected
 
 
+def host_monitor_firewall_plan(template: dict[str, Any], bridge: str) -> dict[str, Any] | None:
+    """Build the narrow firewall change a host-monitor profile explicitly declares.
+
+    Profiles without this opt-in declaration never propose a host firewall
+    change.  The source network comes from the selected Proxmox bridge, not
+    from a catalog constant or the address of a particular test lab.
+    """
+    profile = template.get("proxmox", {}).get("installer_profile", {})
+    declared = profile.get("host_monitor_firewall")
+    if declared is None:
+        return None
+    if not isinstance(declared, dict) or declared.get("protocol") != "tcp":
+        raise InstallError(translate("The host-monitor firewall declaration is invalid"))
+    port = declared.get("web_port")
+    if not isinstance(port, int) or not 1 <= port <= 65535:
+        raise InstallError(translate("The host-monitor firewall port is invalid"))
+    subnet = host.ipv4_subnet(bridge)
+    if not subnet:
+        raise InstallError(translate("The selected bridge has no IPv4 subnet for the host-monitor firewall"))
+    return {"bridge": bridge, "source": subnet, "protocol": "tcp", "port": port,
+            "confirmed": True}
+
+
+def confirm_host_monitor_firewall(ui, template: dict[str, Any], bridge: str) -> dict[str, Any] | None:
+    """Ask separately before allowing a narrowly-scoped host firewall rule."""
+    plan = host_monitor_firewall_plan(template, bridge)
+    if plan is None:
+        return None
+    summary = translate("The host-monitor web interface uses the host network.")
+    question = translate("Allow TCP port {port} from {subnet} through the host firewall? Existing firewall rules are not changed.").format(
+        port=plan["port"], subnet=plan["source"]
+    )
+    if ui.confirm(f"{summary}\n\n{translate('Selected bridge:')} {plan['bridge']}\n"
+                  f"{translate('Allowed source subnet:')} {plan['source']}\n"
+                  f"{translate('Allowed web port:')} TCP {plan['port']}\n\n{question}", False):
+        return plan
+    return None
+
+
 def _confirm_warning(ui, warning: str | None, fallback: str, question: str) -> bool:
     return ui.confirm(f"{translate(warning) if warning else translate(fallback)}\n\n{translate(question)}", False)
 
@@ -257,6 +296,8 @@ def build_deployment(
         gateway = None
         onboot = bool(defaults["onboot"])
         start_after = True
+
+    host_firewall = confirm_host_monitor_firewall(ui, template, bridge) if host_monitor else None
 
     environment: list[dict[str, str]] = []
     for item in template["container_contract"]["environment"]:
@@ -423,6 +464,7 @@ def build_deployment(
     return {
         "host_monitor": host_monitor,
         "monitor_scope": monitor_scope,
+        "host_firewall": host_firewall,
         "vmid": int(vmid_text) if vmid_text else None,
         "ostype": defaults.get("ostype", "auto-from-image"),
         "hostname": hostname,
