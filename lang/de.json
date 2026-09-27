@@ -3795,7 +3795,7 @@
   "Nginx is an HTTP web server, reverse proxy, content cache, load balancer, TCP/UDP proxy server, and mail proxy server.": "Nginx ist ein HTTP-Webserver, Reverse-Proxy, Content-Cache, Load Balancer, TCP/UDP-Proxy-Server und Mail-Proxy-Server.",
   "Nginx webserver and reverse proxy with php support and a built-in Certbot (Let's Encrypt) client. It also contains fail2ban for intrusion prevention.": "Nginx Webserver und Reverse Proxy mit PHP-Unterstützung und einem eingebauten Certbot-Client (Let's Encrypt). Es enthält auch fail2ban zur Intrusionsprävention.",
   "Ngircd is a free, portable and lightweight Internet Relay Chat server for small or private networks, developed under the GNU General Public License (GPL). It is easy to configure, can cope with dynamic IP addresses, and supports IPv6, SSL-protected connections as well as PAM for authentication. It is written from scratch and not based on the original IRCd.": "Ngircd ist ein kostenloser, tragbarer und leichter Internet Relay Chat Server für kleine oder private Netzwerke, der unter der GNU General Public License (GPL) entwickelt wurde. Es ist einfach zu konfigurieren, kann mit dynamischen IP-Adressen umgehen und unterstützt IPv6, SSL-geschützte Verbindungen sowie PAM für die Authentifizierung. Es ist von grund auf neu geschrieben und basiert nicht auf der ursprünglichen ircd.",
-  "No": "NEIN",
+  "No": "Nein",
   "No .ova or .ovf files found in:": "Keine .ova- oder .ovf-Dateien gefunden in:",
   "No .ovf descriptor found inside OVA.": "In OVA wurde kein .ovf-Deskriptor gefunden.",
   "No .pxar archives were found in this backup:": "In diesem Backup wurden keine .pxar-Archive gefunden:",
