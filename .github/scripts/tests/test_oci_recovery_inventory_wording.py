@@ -74,6 +74,7 @@ class InventoryMessages(unittest.TestCase):
                  'guest_config': lambda vmid: b'description: owned',
                  'host_directories': lambda root, members: ['/bind/saved'],
                  'private_bridge': lambda primary: None,
+                 'remove_owned_host_firewall': lambda primary: None,
                  'run': lambda *args: events.append(('run', args)),
                  'subprocess': SimpleNamespace(run=lambda *args, **kwargs: None),
                  'Path': Path, 'shutil': SimpleNamespace(rmtree=lambda path: None),
