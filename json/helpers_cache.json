@@ -8458,7 +8458,7 @@
       "This VM boots an installer image. Open the console after creation and complete the installation there."
     ],
     "warnings": [],
-    "port": 8123,
+    "port": 80,
     "website": "https://www.home-assistant.io/",
     "documentation": "https://www.home-assistant.io/docs/",
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/home-assistant.webp",
