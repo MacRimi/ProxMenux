@@ -318,6 +318,11 @@ SECCOMP_PROFILE_FILE=""
 CT_CREATED=0
 INSTALL_COMPLETE=0
 PRESERVE_FAILED_CT=0
+VOLUME_SEED_STAGE_ROOT=""
+VOLUME_SEED_TARGETS=()
+VOLUME_SEED_STAGES=()
+VOLUME_SEED_MOUNT_TYPES=()
+CANONICAL_INPUT_DIR=""
 
 cleanup_runtime_console_log() {
   # The console log is the container's own log from here on, and its line in
@@ -325,6 +330,14 @@ cleanup_runtime_console_log() {
   # installation keeps the file too, since it holds why the application did
   # not come up.
   RUNTIME_CONSOLE_LOG=""
+}
+
+cleanup_canonical_inputs() {
+  [[ -n ${CANONICAL_INPUT_DIR:-} ]] || return 0
+  [[ $CANONICAL_INPUT_DIR == "/var/tmp/proxmenux-oci-inputs-${VMID}."* && -d $CANONICAL_INPUT_DIR && ! -L $CANONICAL_INPUT_DIR ]] \
+    || { oci_log "Refusing to remove an unexpected canonical input directory: ${CANONICAL_INPUT_DIR}"; return 1; }
+  rm -rf -- "$CANONICAL_INPUT_DIR" || return 1
+  CANONICAL_INPUT_DIR=""
 }
 
 # A derived check accepts any HTTP answer below 500: the application is up,
@@ -342,6 +355,8 @@ healthcheck_probe() {
 cleanup_failed_install() {
   local status=$?
   stop_spinner
+  cleanup_volume_seed_staging || true
+  cleanup_canonical_inputs || true
   if [[ -n ${PROXMENUX_OCI_TRANSACTION:-} ]]; then
     # The transaction owns recovery. Destroying this CT could destroy reused data.
     cleanup_runtime_console_log || true
@@ -396,6 +411,121 @@ ensure_rootfs_directory() {
     chown --reference="$parent" "${missing[$i]}"
     chmod 0755 "${missing[$i]}"
   done
+}
+
+is_reused_managed_mount() {
+  local target=$1
+  [[ -n ${PROXMENUX_OCI_TRANSACTION:-} ]] || return 1
+  jq -e --arg path "$target" \
+    '[.transaction_reuse_mounts[]? | select(.container_path == $path)] | length > 0' \
+    "$DEPLOYMENT_FILE" >/dev/null
+}
+
+cleanup_volume_seed_staging() {
+  [[ -n ${VOLUME_SEED_STAGE_ROOT:-} ]] || return 0
+  [[ $VOLUME_SEED_STAGE_ROOT == "/var/tmp/proxmenux-oci-seed-${VMID}."* && -d $VOLUME_SEED_STAGE_ROOT && ! -L $VOLUME_SEED_STAGE_ROOT ]] \
+    || { oci_log "Refusing to remove an unexpected image-volume staging directory: ${VOLUME_SEED_STAGE_ROOT}"; return 1; }
+  rm -rf -- "$VOLUME_SEED_STAGE_ROOT" || return 1
+  VOLUME_SEED_STAGE_ROOT=""
+}
+
+capture_volume_seeds() {
+  local seed_count=0 rootfs="/var/lib/lxc/${VMID}/rootfs"
+  local encoded item target source_path selected_mount_type mount_types source stage index=0 mounted=0 failed=0
+
+  seed_count=$(jq '.proxmox.installer_profile.volume_seeds? // [] | length' "$TEMPLATE_FILE")
+  (( seed_count > 0 )) || return 0
+
+  mount_ct_rootfs
+  mounted=1
+  VOLUME_SEED_STAGE_ROOT=$(mktemp -d "/var/tmp/proxmenux-oci-seed-${VMID}.XXXXXX") || failed=1
+  while (( failed == 0 )) && IFS= read -r encoded; do
+    [[ -n $encoded ]] || continue
+    item=$(printf '%s' "$encoded" | base64 -d)
+    target=$(jq -er '.container_path' <<<"$item")
+    source_path=$(jq -er '.source_path' <<<"$item")
+    mount_types=$(jq -c '.mount_types // ["managed-volume"]' <<<"$item")
+    selected_mount_type=$(jq -r --arg target "$target" \
+      '[.mounts[]? | select(.container_path == $target) | .type] | first // empty' \
+      "$DEPLOYMENT_FILE")
+    [[ $target == /* && $target != *[[:space:]]* && $target != *","* ]] \
+      || { oci_log "Invalid volume seed target: $target"; failed=1; break; }
+    [[ $source_path == /* && $source_path != *[[:space:]]* && $source_path != *","* ]] \
+      || { oci_log "Invalid image volume seed source: $source_path"; failed=1; break; }
+    jq -e --arg type "$selected_mount_type" '
+      type == "array" and length > 0
+      and all(.[]; . == "managed-volume" or . == "host-bind")
+      and index($type) != null' <<<"$mount_types" >/dev/null \
+      || { oci_log "Skipping image volume seed for $target: the selected mount type is not allowed"; continue; }
+    if [[ $selected_mount_type != managed-volume && $selected_mount_type != host-bind ]]; then
+      oci_log "Skipping image volume seed for $target: unsupported mount type ${selected_mount_type:-none}"
+      continue
+    fi
+    if [[ $selected_mount_type == managed-volume ]] && is_reused_managed_mount "$target"; then
+      oci_log "Keeping the reused persistent disk without seeding it: $target"
+      continue
+    fi
+    [[ ! -L "${rootfs}${source_path}" ]] \
+      || { oci_log "The image volume seed source must not be a link: $source_path"; failed=1; break; }
+    source=$(readlink -e -- "${rootfs}${source_path}") \
+      || { oci_log "The image volume seed source does not exist: $source_path"; failed=1; break; }
+    [[ $source == "${rootfs}"/* && -d $source ]] \
+      || { oci_log "The image volume seed source escapes the rootfs or is not a directory: $source_path"; failed=1; break; }
+    stage="${VOLUME_SEED_STAGE_ROOT}/${index}"
+    install -d -m 0700 "$stage" && cp -a -- "${source}/." "${stage}/" || { failed=1; break; }
+    VOLUME_SEED_TARGETS+=("$target")
+    VOLUME_SEED_STAGES+=("$stage")
+    VOLUME_SEED_MOUNT_TYPES+=("$selected_mount_type")
+    index=$((index + 1))
+  done < <(jq -r '.proxmox.installer_profile.volume_seeds[]? | @base64' "$TEMPLATE_FILE")
+
+  if (( mounted == 1 )); then
+    oci_quiet pct unmount "$VMID" || failed=1
+  fi
+  if (( failed != 0 )); then
+    oci_log "Could not capture the image data for a persistent volume"
+    die "$(translate "Could not apply the installer profile")"
+  fi
+  if (( ${#VOLUME_SEED_TARGETS[@]} == 0 )); then
+    cleanup_volume_seed_staging || die "$(translate "Could not apply the installer profile")"
+  fi
+}
+
+apply_volume_seeds() {
+  local rootfs="/var/lib/lxc/${VMID}/rootfs" index target stage mount_type destination existing failed=0
+  (( ${#VOLUME_SEED_TARGETS[@]} > 0 )) || return 0
+
+  for index in "${!VOLUME_SEED_TARGETS[@]}"; do
+    target=${VOLUME_SEED_TARGETS[$index]}
+    stage=${VOLUME_SEED_STAGES[$index]}
+    mount_type=${VOLUME_SEED_MOUNT_TYPES[$index]}
+    [[ -d $stage && ! -L $stage ]] \
+      || { oci_log "The prepared image data is not available for the persistent volume: $target"; failed=1; break; }
+    [[ ! -L "${rootfs}${target}" ]] \
+      || { oci_log "The persistent volume target must not be a link: $target"; failed=1; break; }
+    destination=$(readlink -e -- "${rootfs}${target}") \
+      || { oci_log "The persistent volume target does not exist: $target"; failed=1; break; }
+    [[ $destination == "${rootfs}"/* && -d $destination ]] \
+      || { oci_log "The persistent volume target escapes the rootfs or is not a directory: $target"; failed=1; break; }
+    existing=$(find "$destination" -mindepth 1 -maxdepth 1 ! -name lost+found -print -quit)
+    if [[ -n $existing ]]; then
+      if [[ $mount_type == host-bind ]]; then
+        oci_log "Keeping existing host data without seeding it: $target"
+        rm -rf -- "$stage" || { failed=1; break; }
+        continue
+      fi
+      oci_log "Refusing to seed a persistent volume that already contains data: $target"
+      failed=1
+      break
+    fi
+    cp -a -- "${stage}/." "${destination}/" \
+      || { oci_log "Could not seed the persistent volume from the image: $target"; failed=1; break; }
+    rm -rf -- "$stage" \
+      || { oci_log "Could not remove the temporary image data: $target"; failed=1; break; }
+    oci_log "Image data copied into the new persistent volume: $target"
+  done
+  cleanup_volume_seed_staging || { oci_log "Could not remove the temporary image-volume staging directory"; failed=1; }
+  (( failed == 0 ))
 }
 
 prepare_file_mount_target() {
@@ -902,7 +1032,7 @@ apply_runtime_groups() {
 }
 
 apply_installer_profile() {
-  local generated_count preparation_count tls_count mounted=0 failed=0
+  local generated_count preparation_count tls_count seeded_volumes mounted=0 failed=0
   local rootfs="/var/lib/lxc/${VMID}/rootfs"
   local encoded item path mode owner destination target remove_lost_found owner_strategy
   local only_when_mount_type selected_mount_type
@@ -914,9 +1044,14 @@ apply_installer_profile() {
   generated_count=$(jq '.proxmox.installer_profile.generated_files? // [] | length' "$TEMPLATE_FILE")
   preparation_count=$(jq '.proxmox.installer_profile.volume_preparations? // [] | length' "$TEMPLATE_FILE")
   tls_count=$(jq 'if .proxmox.installer_profile.self_signed_tls? then 1 else 0 end' "$TEMPLATE_FILE")
-  if (( generated_count > 0 || preparation_count > 0 || tls_count > 0 )); then
+  seeded_volumes=${#VOLUME_SEED_TARGETS[@]}
+  if (( generated_count > 0 || preparation_count > 0 || tls_count > 0 || seeded_volumes > 0 )); then
     mount_ct_rootfs
     mounted=1
+  fi
+
+  if (( seeded_volumes > 0 )); then
+    apply_volume_seeds || failed=1
   fi
 
   while IFS= read -r encoded; do
@@ -1230,8 +1365,13 @@ INSTANCE_ID=$(python3 "${SCRIPT_DIR}/oci_instances.py" prepare "$VMID" \
   --template "$TEMPLATE_FILE" --deployment "$DEPLOYMENT_FILE")
 INSTANCE_CONTRACT="$INSTANCE_ROOT/$VMID/oci-compose.json"
 # The persisted contract is the source for the actual installation inputs.
-jq '.template' "$INSTANCE_CONTRACT" >"$TEMPLATE_FILE"
-jq '.deployment' "$INSTANCE_CONTRACT" >"$DEPLOYMENT_FILE"
+# Do not rewrite caller-owned files, notably a regular user's file in sticky /tmp.
+CANONICAL_INPUT_DIR=$(mktemp -d "/var/tmp/proxmenux-oci-inputs-${VMID}.XXXXXX") \
+  || die "$(translate "Could not prepare canonical installation inputs")"
+jq '.template' "$INSTANCE_CONTRACT" >"${CANONICAL_INPUT_DIR}/template.json"
+jq '.deployment' "$INSTANCE_CONTRACT" >"${CANONICAL_INPUT_DIR}/deployment.json"
+TEMPLATE_FILE="${CANONICAL_INPUT_DIR}/template.json"
+DEPLOYMENT_FILE="${CANONICAL_INPUT_DIR}/deployment.json"
 fi
 
 skopeo_transport_reference() {
@@ -1491,6 +1631,7 @@ if [[ $UNPRIVILEGED_FLAG == 0 ]]; then
     || die "$(translate "Could not enable the privileged profile before the first start")"
   msg_ok "$(translate "Container converted to privileged")"
 fi
+capture_volume_seeds
 MOUNT_INDEX=0
 CONTAINER_PUID=$(jq -r '[.environment[]? | select(.name == "PUID" or .name == "USER_ID" or .name == "UID") | .value] | last // "0"' "$DEPLOYMENT_FILE")
 CONTAINER_PGID=$(jq -r '[.environment[]? | select(.name == "PGID" or .name == "GROUP_ID" or .name == "GID") | .value] | last // "0"' "$DEPLOYMENT_FILE")
