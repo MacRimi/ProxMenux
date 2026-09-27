@@ -2595,6 +2595,8 @@
   "Host directory:": "Priečinok hosta:",
   "Host firewall": "Firewall hostiteľa",
   "Host firewall already allows:": "Firewall hostiteľa už povoľuje:",
+  "Host firewall rule removed:": "Pravidlo firewallu hostiteľa odstránené:",
+  "The managed host firewall rule could not be removed and was left unchanged.": "Spravované pravidlo firewallu hostiteľa sa nepodarilo odstrániť a zostalo bez zmeny.",
   "Host firewall rule added:": "Pravidlo firewallu hostiteľa bolo pridané:",
   "Host fstab CIFS Mounts:": "CIFS mounty v host fstab:",
   "Host fstab CIFS mounts (not registered with pvesm):": "CIFS mounty v host fstab (nie sú registrované cez pvesm):",

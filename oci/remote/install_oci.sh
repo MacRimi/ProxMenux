@@ -259,7 +259,9 @@ apply_host_monitor_firewall() {
   fi
   local node comment rules existing
   node=$(hostname)
-  comment="ProxMenux OCI host monitor CT ${VMID}"
+  # This UUID makes removal safe even after a VMID is reused.  Only a rule
+  # carrying this exact marker belongs to this installation.
+  comment="ProxMenux OCI firewall ${INSTANCE_ID}"
   rules=$(pvesh get "/nodes/${node}/firewall/rules" --output-format json) \
     || die "$(translate "Could not read the host firewall rules")"
   existing=$(jq -r --arg source "$HOST_FIREWALL_SOURCE" --arg port "$HOST_FIREWALL_PORT" '
@@ -270,9 +272,13 @@ apply_host_monitor_firewall() {
     msg_ok "$(translate "Host firewall already allows:") TCP ${HOST_FIREWALL_PORT} $(translate "from") ${HOST_FIREWALL_SOURCE}"
     return 0
   fi
-  pvesh create "/nodes/${node}/firewall/rules" --type in --action ACCEPT --proto tcp \
-    --dport "$HOST_FIREWALL_PORT" --source "$HOST_FIREWALL_SOURCE" --comment "$comment" \
-    || die "$(translate "Could not add the confirmed host firewall rule")"
+  if ! pvesh create "/nodes/${node}/firewall/rules" --type in --action ACCEPT --proto tcp \
+    --dport "$HOST_FIREWALL_PORT" --source "$HOST_FIREWALL_SOURCE" --enable 1 --comment "$comment"; then
+    # The CT and its saved contract are already complete.  Do not destroy a
+    # usable installation merely because the optional network exposure failed.
+    msg_warn "$(translate "Could not add the confirmed host firewall rule")"
+    return 0
+  fi
   msg_ok "$(translate "Host firewall rule added:") TCP ${HOST_FIREWALL_PORT} $(translate "from") ${HOST_FIREWALL_SOURCE}"
 }
 

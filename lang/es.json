@@ -2595,6 +2595,8 @@
   "Host directory:": "Directorio del host:",
   "Host firewall": "Cortafuegos del host",
   "Host firewall already allows:": "El cortafuegos del host ya permite:",
+  "Host firewall rule removed:": "Regla del cortafuegos del host eliminada:",
+  "The managed host firewall rule could not be removed and was left unchanged.": "No se pudo eliminar la regla administrada del cortafuegos del host y se dejó sin cambios.",
   "Host firewall rule added:": "Regla añadida al cortafuegos del host:",
   "Host fstab CIFS Mounts:": "Montajes CIFS del host fstab:",
   "Host fstab CIFS mounts (not registered with pvesm):": "Montajes CIFS del host fstab (no registrados con pvesm):",
