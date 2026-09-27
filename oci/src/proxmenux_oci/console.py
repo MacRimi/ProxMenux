@@ -8,7 +8,7 @@ import sys
 import textwrap
 import threading
 
-from .i18n import BASE_DIR
+from .i18n import BASE_DIR, translate
 
 MG = "\033[1;35m"
 GN = "\033[1;92m"
@@ -101,6 +101,7 @@ def ask_yes_no(text: str, default_yes: bool = True) -> bool:
     width = 74
     lines = sum(max(1, len(textwrap.wrap(line, width - 6) or [''])) for line in text.splitlines() or [''])
     widget = ['whiptail', '--backtitle', 'ProxMenux', '--title', 'ProxMenux',
+              '--yes-button', translate('Yes'), '--no-button', translate('No'),
               '--yesno', text, str(min(lines + 8, 20)), str(width)]
     if not default_yes:
         widget.insert(1, '--defaultno')

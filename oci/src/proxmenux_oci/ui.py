@@ -192,9 +192,10 @@ class DialogUI:
         # dialog draws on the terminal and writes the selection to stderr.
         back_widget = ['--extra-button', '--extra-label', translate('Back')] if self.back_enabled and any(
             flag in widget for flag in ('--inputbox', '--passwordbox', '--yesno', '--menu', '--checklist')) else []
+        confirmation_labels = ['--yes-label', translate('Yes'), '--no-label', translate('No')] if '--yesno' in widget else []
         result = subprocess.run(
             ["dialog", "--no-collapse", "--cancel-label", translate('Cancel'), "--backtitle", self.backtitle, "--title", title or self.title,
-             *back_widget, *widget],
+             *confirmation_labels, *back_widget, *widget],
             stdout=None, stderr=subprocess.PIPE, text=True, check=False, env=environment,
         )
         if result.returncode == 3 and back_widget:
