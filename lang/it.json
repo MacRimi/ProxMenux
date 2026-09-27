@@ -1,4 +1,5 @@
 {
+  "If you restore this container on another Proxmox host, copy this file to the same path first, because the container backup does not include it:": "Se si ripristina questo container su un altro host Proxmox, copiare prima questo file nello stesso percorso, perché il backup del container non lo include:",
   "# Alternative if you prefer screen": "# Alternativa se preferisci lo schermo",
   "# Recommended: avoids disconnection during upgrade": "# Consigliato: evita la disconnessione durante l'aggiornamento",
   "(Checked entries will be removed. Uncheck to keep in VM.)": "(Le voci selezionate verranno rimosse. Deseleziona per mantenerle nella VM.)",

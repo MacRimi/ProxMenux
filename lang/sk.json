@@ -1,4 +1,5 @@
 {
+  "If you restore this container on another Proxmox host, copy this file to the same path first, because the container backup does not include it:": "Ak tento kontajner obnovíte na inom hostiteľovi Proxmox, najprv skopírujte tento súbor na rovnakú cestu, pretože záloha kontajnera ho neobsahuje:",
   "# Alternative if you prefer screen": "# Alternatíva, ak preferujete screen",
   "# Recommended: avoids disconnection during upgrade": "# Odporúčané: zabráni odpojeniu počas aktualizácie",
   "(Checked entries will be removed. Uncheck to keep in VM.)": "(Označené položky sa odstránia. Zrušte označenie, ak ich chcete ponechať vo VM.)",

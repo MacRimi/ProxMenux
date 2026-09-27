@@ -294,7 +294,7 @@ apply_host_monitor() {
   # Do not remove the Proxmox pre-start, autodev or post-stop hooks.
   set_lxc_directive lxc.hook.mount ""
   msg_ok "$(translate "Host monitor configured: shared PID and network namespaces, LXCFS disabled in this container")"
-  msg_info2 "$(translate "To restore it on another host, keep this file (not included in the vzdump backup):") $include"
+  msg_info2 "$(translate "If you restore this container on another Proxmox host, copy this file to the same path first, because the container backup does not include it:") $include"
 }
 
 verify_host_monitor() {

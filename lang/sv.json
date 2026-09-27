@@ -1,4 +1,5 @@
 {
+  "If you restore this container on another Proxmox host, copy this file to the same path first, because the container backup does not include it:": "Om du återställer den här containern på en annan Proxmox-värd, kopiera först den här filen till samma sökväg, eftersom containerns säkerhetskopia inte innehåller den:",
   "# Alternative if you prefer screen": "# Alternativ om du föredrar skärm",
   "# Recommended: avoids disconnection during upgrade": "# Rekommenderas: undviker frånkoppling under uppgradering",
   "(Checked entries will be removed. Uncheck to keep in VM.)": "(Markerade poster kommer att tas bort. Avmarkera för att behålla i VM.)",
