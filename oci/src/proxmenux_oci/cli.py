@@ -167,8 +167,13 @@ def _app_detail_text(catalog: Catalog, item: dict[str, Any], template: dict[str,
         lines.append(f"{label + ':':<17} {value}")
 
     row(translate("Source"), publisher(item))
-    row(translate("Status"), translate("Verified by ProxMenux") if is_tested(item)
-        else translate("Not yet verified by ProxMenux (beta)"))
+    # Only a real test is shown; OCI manager Apps is labelled beta as a whole.
+    community = item.get("community_tested") or {}
+    if is_tested(item):
+        row(translate("Status"), translate("Verified by ProxMenux"))
+    elif community.get("by"):
+        who = " · ".join(part for part in (f"@{community['by']}", community.get("date")) if part)
+        row(translate("Status"), f"{translate('Tested by the community')} ({who})")
     row(translate("Architectures"), _display_architectures(ui))
     endpoints = template.get("first_run", {}).get("endpoints", [])
     if endpoints:

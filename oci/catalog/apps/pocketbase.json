@@ -396,5 +396,9 @@
     },
     "change_detection": "compare-compose-sha256-and-resolved-latest-image-digest",
     "automatic_unattended_updates": false
+  },
+  "community_tested": {
+    "by": "Vaso73",
+    "date": "2026-09-27"
   }
 }

@@ -733,6 +733,36 @@ def _lxc_isolated_ips(vmid):
     return isolated
 
 
+def _lxc_shares_host_network(vmid):
+    """Whether the container uses the host's network namespace instead of its
+    own, as a ProxMenux host-monitor (Glances, Netdata) does: lxc-info then
+    lists every address of the host, private bridges included."""
+    try:
+        with open(f"/etc/pve/lxc/{int(vmid)}.conf", encoding="utf-8") as handle:
+            text = handle.read().split("\n[", 1)[0]
+    except (OSError, ValueError):
+        return False
+    return ("lxc.include: /etc/pve/lxc/proxmenux-host-monitor" in text
+            or ("lxc.net.0.type: none" in text and not re.search(r"^net\d+:", text, re.M)))
+
+
+def _host_default_route_ipv4():
+    """The host's IPv4 address on the interface that carries its default
+    route: the one a reader on the LAN reaches."""
+    try:
+        route = subprocess.run(['ip', '-4', 'route', 'show', 'default'],
+                               capture_output=True, text=True, timeout=3).stdout
+        match = re.search(r"\bdev\s+(\S+)", route)
+        if not match:
+            return None
+        addr = subprocess.run(['ip', '-4', '-o', 'addr', 'show', 'dev', match.group(1), 'scope', 'global'],
+                              capture_output=True, text=True, timeout=3).stdout
+        found = re.search(r"\binet\s+([0-9.]+)/", addr)
+        return found.group(1) if found else None
+    except (OSError, subprocess.SubprocessError):
+        return None
+
+
 def get_lxc_ip_from_lxc_info(vmid):
     """Get LXC IP addresses using lxc-info command (for DHCP containers)
     Returns a dict with all IPs and classification"""
@@ -763,6 +793,10 @@ def get_lxc_ip_from_lxc_info(vmid):
                 isolated = _lxc_isolated_ips(vmid)
                 if isolated:
                     real_ips.sort(key=lambda ip: ip in isolated)
+                if _lxc_shares_host_network(vmid):
+                    host_ip = _host_default_route_ipv4()
+                    if host_ip in real_ips:
+                        real_ips.sort(key=lambda ip: ip != host_ip)
                 
                 return {
                     'all_ips': ips,
@@ -15349,7 +15383,9 @@ def api_lxc_console_log(vmid):
         lines = request.args.get('lines', default=200, type=int)
         offset = request.args.get('offset', type=int)
         inode = request.args.get('inode', type=int)
-        return jsonify(oci_console_logs.read(vmid, lines=lines, offset=offset, inode=inode))
+        since_start = request.args.get('since_start', '') in ('1', 'true')
+        return jsonify(oci_console_logs.read(vmid, lines=lines, offset=offset, inode=inode,
+                                             since_start=since_start))
     except Exception as e:
         return jsonify({"ok": False, "error": str(e)}), 500
 

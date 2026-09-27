@@ -55,6 +55,9 @@
         },
         {
           "p": "Al seleccionar una aplicación se muestra su descripción, la imagen que ejecuta y dos modos de instalación: <strong>Instalar con la configuración predeterminada</strong>, que apenas hace preguntas, e <strong>Instalar con la configuración avanzada</strong>, que ofrece los selectores reales de almacenamiento, bridge y recursos del nodo."
+        },
+        {
+          "p": "Una aplicación probada en real lo indica en esa vista: <strong>Verificado por ProxMenux</strong> si se probó en el laboratorio de ProxMenux, marcada con ✓ en las listas, o <strong>Probado por la comunidad</strong>, con quién la probó y cuándo."
         }
       ]
     },

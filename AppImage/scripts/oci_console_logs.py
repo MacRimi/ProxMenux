@@ -78,7 +78,11 @@ def clean(text: str) -> list[str]:
     return lines
 
 
-def _read_tail(handle, size: int, lines: int) -> tuple[list[str], bool]:
+# Written by the container's pre-start hook at every start (oci_console_mark.sh).
+START_MARK = "=== ProxMenux: container started "
+
+
+def _read_tail(handle, size: int, lines: int, since_start: bool = False) -> tuple[list[str], bool, bool]:
     start = max(0, size - TAIL_READ_LIMIT)
     handle.seek(start)
     data = handle.read(size - start).decode("utf-8", errors="replace")
@@ -87,11 +91,15 @@ def _read_tail(handle, size: int, lines: int) -> tuple[list[str], bool]:
         result = result[1:]   # the first line was cut by the read window
     if result and result[-1] == "":
         result = result[:-1]
-    head_cut = start > 0 or len(result) > lines
-    return result[-lines:], head_cut
+    marks = [index for index, line in enumerate(result) if line.startswith(START_MARK)]
+    if since_start and marks:
+        result = result[marks[-1]:]
+    head_cut = (start > 0 and not (since_start and marks)) or len(result) > lines
+    return result[-lines:], head_cut, bool(marks)
 
 
-def read(vmid: int, lines: int = 200, offset: int | None = None, inode: int | None = None) -> dict:
+def read(vmid: int, lines: int = 200, offset: int | None = None, inode: int | None = None,
+         since_start: bool = False) -> dict:
     """The last `lines` lines, or what was appended after `offset`.
 
     `lines=0` reads nothing: it only says whether the container has a
@@ -115,9 +123,9 @@ def read(vmid: int, lines: int = 200, offset: int | None = None, inode: int | No
         if offset is None or replaced or offset > size:
             # First open, or the file the viewer followed is gone: rotated by
             # copytruncate, or recreated with the container.
-            result, head_cut = _read_tail(handle, size, max(lines, 1))
+            result, head_cut, has_marks = _read_tail(handle, size, max(lines, 1), since_start)
             return {**base, "lines": result, "offset": size, "reset": offset is not None,
-                    "head_truncated": head_cut}
+                    "head_truncated": head_cut, "start_marks": has_marks}
         handle.seek(offset)
         chunk = handle.read(min(size - offset, FOLLOW_READ_LIMIT))
     # Only whole lines are returned; an unfinished last line is left for the

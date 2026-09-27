@@ -18,6 +18,7 @@ import sys
 import oci_image_cache as image_cache
 import oci_instances as instances
 from oci_installation_state import parse_config
+import oci_console
 from oci_ui import translate, msg_info, msg_ok, msg_warn, msg_error
 
 # The private networks ProxMenux creates for multi-container applications.
@@ -118,11 +119,13 @@ def remove(root, vmid):
         config = guest_config(member)
         if config is None:
             msg_warn(f"{translate('The container no longer exists:')} CT {member}")
+            oci_console.remove_log(member)
         elif instances.identity(config) != record['installation_id']:
             msg_warn(f"{translate('The VMID belongs to another container now and is not touched:')} CT {member}")
         else:
             subprocess.run(['pct', 'stop', str(member), '--skiplock', '1'], check=False, capture_output=True)
             run('pct', 'destroy', str(member), '--purge', '1', '--destroy-unreferenced-disks', '1')
+            oci_console.remove_log(member)
             msg_ok(f"{translate('Container removed:')} CT {member}")
     if bridge and not bridge_in_use(bridge, set(members)):
         release_bridge(bridge)

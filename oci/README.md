@@ -227,6 +227,12 @@ Generated templates start as `generated-unvalidated`. Promotion requires:
 5. Image replacement with persistent volumes preserved.
 6. Review of every platform adaptation and unsupported feature.
 
+Real tests are recorded in `catalog/verification.json`, which the catalog
+applies on top of the generated templates and the overlays, so a regeneration
+keeps them: `"status": "laboratory-validated"` for an application tested in
+the ProxMenux lab, or `"community_tested": {"by": "<GitHub user>", "date":
+"<YYYY-MM-DD>"}` for one tested by the community.
+
 The mini changelog comes from the LinuxServer README `Versions` section. At
 installation, the architecture-specific registry digest and image labels are
 recorded back into the local app JSON for future update comparisons.

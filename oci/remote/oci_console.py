@@ -25,6 +25,17 @@ import sys
 
 NO_LOGIN = ('nologin', 'false')
 LOG_DIR = Path('/var/log/proxmenux/oci')
+# Each start is marked in the console log by a pre-start hook. The hook runs
+# the script only when it exists and always succeeds: a hook that fails would
+# stop the container from starting.
+START_MARK_SCRIPT = Path(__file__).resolve().with_name('oci_console_mark.sh')
+START_MARK = '=== ProxMenux: container started '
+
+
+def start_mark_hook(vmid: int) -> str:
+    script = START_MARK_SCRIPT
+    # `test`, not `[`: a bracket in the configuration reads as a snapshot section.
+    return f"lxc.hook.pre-start: /bin/sh -c 'test -x {script} && {script} {int(vmid)}; exit 0'"
 LOGROTATE = Path('/etc/logrotate.d/proxmenux-oci')
 # copytruncate, because liblxc keeps the file open for as long as the
 # container runs; moving it away would leave the application writing into the
@@ -165,8 +176,9 @@ def enable_log(vmid: int) -> Path:
     text = conf.read_text()
     current, _, snapshots = text.partition('\n[')
     wanted = f'lxc.console.logfile: {path}'
-    kept = [line for line in current.splitlines() if not line.startswith('lxc.console.logfile:')]
-    kept.append(wanted)
+    kept = [line for line in current.splitlines()
+            if not line.startswith('lxc.console.logfile:') and START_MARK_SCRIPT.name not in line]
+    kept += [wanted, start_mark_hook(vmid)]
     rebuilt = '\n'.join(kept) + '\n'
     if snapshots:
         rebuilt += '\n[' + snapshots
@@ -174,6 +186,14 @@ def enable_log(vmid: int) -> Path:
         conf.write_text(rebuilt)
     _ensure_logrotate()
     return path
+
+
+def remove_log(vmid: int) -> None:
+    """Delete the console log of a removed container and its rotated copies."""
+    base = log_path(vmid)
+    for path in [base, *LOG_DIR.glob(f'{base.name}.*')]:
+        if path.is_file() and not path.is_symlink():
+            path.unlink()
 
 
 def configure(vmid: int) -> dict:

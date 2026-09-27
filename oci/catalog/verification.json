@@ -1,0 +1,125 @@
+{
+  "_comment": "Applications tested for real. \"status\": \"laboratory-validated\" when tested in the ProxMenux lab; \"community_tested\" with the tester's GitHub user and the date when tested by the community. Applied on top of the generated templates and the overlays, so a catalog regeneration keeps it.",
+  "applications": {
+    "2fauth": {
+      "status": "laboratory-validated"
+    },
+    "adguardhome-sync": {
+      "status": "laboratory-validated"
+    },
+    "albyhub": {
+      "status": "laboratory-validated"
+    },
+    "alist": {
+      "status": "laboratory-validated"
+    },
+    "amule": {
+      "status": "laboratory-validated"
+    },
+    "codeproject-ai": {
+      "status": "laboratory-validated"
+    },
+    "copyparty": {
+      "status": "laboratory-validated"
+    },
+    "crafty": {
+      "status": "laboratory-validated"
+    },
+    "ddclient": {
+      "status": "laboratory-validated"
+    },
+    "duplicati": {
+      "status": "laboratory-validated"
+    },
+    "etherpad": {
+      "status": "laboratory-validated"
+    },
+    "filebrowser-quantum": {
+      "status": "laboratory-validated"
+    },
+    "flaresolverr": {
+      "status": "laboratory-validated"
+    },
+    "flexget": {
+      "status": "laboratory-validated"
+    },
+    "frigate": {
+      "status": "laboratory-validated"
+    },
+    "glances": {
+      "community_tested": {
+        "by": "Vaso73",
+        "date": "2026-09-27"
+      }
+    },
+    "grafana": {
+      "status": "laboratory-validated"
+    },
+    "immich": {
+      "status": "laboratory-validated"
+    },
+    "jdownloader": {
+      "status": "laboratory-validated"
+    },
+    "jenkins": {
+      "status": "laboratory-validated"
+    },
+    "linkwarden": {
+      "status": "laboratory-validated"
+    },
+    "memos": {
+      "status": "laboratory-validated"
+    },
+    "mineos-node": {
+      "status": "laboratory-validated"
+    },
+    "motioneye": {
+      "status": "laboratory-validated"
+    },
+    "nextcloud": {
+      "status": "laboratory-validated"
+    },
+    "openlist": {
+      "status": "laboratory-validated"
+    },
+    "openssh-server": {
+      "status": "laboratory-validated"
+    },
+    "paperless-ngx": {
+      "status": "laboratory-validated"
+    },
+    "phpmyadmin": {
+      "status": "laboratory-validated"
+    },
+    "pocketbase": {
+      "community_tested": {
+        "by": "Vaso73",
+        "date": "2026-09-27"
+      }
+    },
+    "qbittorrent": {
+      "status": "laboratory-validated"
+    },
+    "rclone": {
+      "status": "laboratory-validated"
+    },
+    "rdtclient": {
+      "status": "laboratory-validated"
+    },
+    "snapotter": {
+      "status": "laboratory-validated"
+    },
+    "thelounge": {
+      "status": "laboratory-validated"
+    },
+    "trilium": {
+      "status": "laboratory-validated"
+    },
+    "wg-easy": {
+      "status": "laboratory-validated"
+    },
+    "wireguard": {
+      "status": "laboratory-validated"
+    }
+  }
+}

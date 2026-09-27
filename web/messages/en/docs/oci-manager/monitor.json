@@ -150,6 +150,8 @@
             "items": [
               "The output is kept on the host in <code>/var/log/proxmenux/oci/VMID.console.log</code> (mode 0600), from the first start and across restarts, so it can be read with the container stopped.",
               "The file is rotated at 10 MB, keeping three compressed copies (<code>/etc/logrotate.d/proxmenux-oci</code>).",
+              "Each start of the container is marked in the output. The tab shows the output since the last start by default; <strong>Full history</strong> also shows the previous ones.",
+              "When the application is removed, its output is removed with it.",
               "The last 100, 500 or 1000 lines are shown. While the container runs, new lines are followed live; scrolling up pauses the follow, and <strong>Follow</strong> resumes it.",
               "A filter shows only the lines that contain a text, and <strong>Download</strong> saves the lines loaded.",
               "Colour codes are removed and a line that a progress bar redraws is shown in its final state.",

@@ -24,11 +24,19 @@ interface ConsoleLogResponse {
   inode: number | null
   reset?: boolean
   head_truncated?: boolean
+  start_marks?: boolean
   error?: string
 }
 
 const LINE_OPTIONS = [100, 500, 1000] as const
 const POLL_MS = 2000
+
+// Written into the log by the container's pre-start hook at every start.
+const START_MARK_RE = /^=== ProxMenux: container started (\d{4}-\d{2}-\d{2}) (\d{2}:\d{2}:\d{2}) ===$/
+const lastStart = (lines: string[]) => {
+  for (let i = lines.length - 1; i >= 0; i--) if (START_MARK_RE.test(lines[i])) return i
+  return -1
+}
 
 const lineTone = (line: string) => {
   if (/\b(error|fatal|panic|critical|exception)\b/i.test(line)) return "text-red-400"
@@ -45,6 +53,7 @@ export function OciConsoleLogPanel({ vmid, running }: { vmid: number; running: b
   const [error, setError] = useState<string | null>(null)
   const [follow, setFollow] = useState(true)
   const [filter, setFilter] = useState("")
+  const [sinceStart, setSinceStart] = useState(true)
   const position = useRef<{ offset: number; inode: number | null } | null>(null)
   const scroller = useRef<HTMLDivElement>(null)
   const inFlight = useRef(false)
@@ -53,7 +62,9 @@ export function OciConsoleLogPanel({ vmid, running }: { vmid: number; running: b
     setLoading(true)
     setError(null)
     try {
-      const r = await fetchApi<ConsoleLogResponse>(`/api/lxc/${vmid}/console-log?lines=${lineCount}`)
+      const r = await fetchApi<ConsoleLogResponse>(
+        `/api/lxc/${vmid}/console-log?lines=${lineCount}${sinceStart ? "&since_start=1" : ""}`,
+      )
       setEnabled(r.enabled)
       setLines(r.lines || [])
       position.current = { offset: r.offset, inode: r.inode }
@@ -63,7 +74,7 @@ export function OciConsoleLogPanel({ vmid, running }: { vmid: number; running: b
     } finally {
       setLoading(false)
     }
-  }, [vmid, lineCount])
+  }, [vmid, lineCount, sinceStart])
 
   const poll = useCallback(async () => {
     const pos = position.current
@@ -79,7 +90,10 @@ export function OciConsoleLogPanel({ vmid, running }: { vmid: number; running: b
         setLines(r.lines || [])
       } else if (r.lines?.length) {
         setLines((prev) => {
-          const next = prev.concat(r.lines)
+          let next = prev.concat(r.lines)
+          // A restart while following opens a new session.
+          const mark = sinceStart ? lastStart(next) : -1
+          if (mark > 0) next = next.slice(mark)
           return next.length > lineCount ? next.slice(next.length - lineCount) : next
         })
       }
@@ -88,7 +102,7 @@ export function OciConsoleLogPanel({ vmid, running }: { vmid: number; running: b
     } finally {
       inFlight.current = false
     }
-  }, [vmid, lineCount])
+  }, [vmid, lineCount, sinceStart])
 
   useEffect(() => {
     load()
@@ -105,7 +119,7 @@ export function OciConsoleLogPanel({ vmid, running }: { vmid: number; running: b
 
   const shown = useMemo(() => {
     const needle = filter.trim().toLowerCase()
-    return needle ? lines.filter((l) => l.toLowerCase().includes(needle)) : lines
+    return needle ? lines.filter((l) => START_MARK_RE.test(l) || l.toLowerCase().includes(needle)) : lines
   }, [lines, filter])
 
   useEffect(() => {
@@ -145,6 +159,15 @@ export function OciConsoleLogPanel({ vmid, running }: { vmid: number; running: b
             </div>
             {enabled && (
               <div className="flex items-center gap-2 flex-wrap">
+                <Select value={sinceStart ? "start" : "all"} onValueChange={(v) => setSinceStart(v === "start")}>
+                  <SelectTrigger className="h-7 w-auto text-xs gap-1">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="start" className="text-xs">{t("vmLxc.consoleLog.sinceStart")}</SelectItem>
+                    <SelectItem value="all" className="text-xs">{t("vmLxc.consoleLog.allHistory")}</SelectItem>
+                  </SelectContent>
+                </Select>
                 <Select value={String(lineCount)} onValueChange={(v) => setLineCount(Number(v))}>
                   <SelectTrigger className="h-7 w-auto text-xs gap-1">
                     <SelectValue />
@@ -242,9 +265,22 @@ export function OciConsoleLogPanel({ vmid, running }: { vmid: number; running: b
               className="rounded-md border border-border bg-background/50 flex-1 overflow-y-auto min-h-0"
             >
               <pre className="text-[11px] font-mono leading-snug whitespace-pre-wrap break-all p-3">
-                {shown.map((line, idx) => (
-                  <div key={idx} className={lineTone(line)}>{line || " "}</div>
-                ))}
+                {shown.map((line, idx) => {
+                  const mark = START_MARK_RE.exec(line)
+                  if (mark) {
+                    const when = new Date(`${mark[1]}T${mark[2]}`)
+                    return (
+                      <div key={idx} className="my-1.5 flex items-center gap-2 text-sky-400/90 select-none">
+                        <span className="h-px flex-1 bg-sky-500/30" />
+                        <span>{t("vmLxc.consoleLog.startedAt", {
+                          date: Number.isNaN(when.getTime()) ? `${mark[1]} ${mark[2]}` : when.toLocaleString(),
+                        })}</span>
+                        <span className="h-px flex-1 bg-sky-500/30" />
+                      </div>
+                    )
+                  }
+                  return <div key={idx} className={lineTone(line)}>{line || " "}</div>
+                })}
               </pre>
             </div>
           )}

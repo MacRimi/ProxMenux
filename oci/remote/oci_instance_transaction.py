@@ -44,7 +44,9 @@ BASIC = {'arch', 'cmode', 'console', 'tty', 'cores', 'cpulimit', 'cpuunits', 'de
          'lxc.signal.halt', 'lxc.environment.runtime',
          # The container's console log, set by the installer on every
          # creation; the rebuilt container gets it again the same way.
-         'lxc.console.logfile'}
+         'lxc.console.logfile',
+         # The hook that marks each start in that log, set the same way.
+         'lxc.hook.pre-start'}
 # Their output is data (and may hold saved secrets); it is never logged.
 DATA_COMMANDS = {('pct', 'config'), ('pvesh', 'get')}
 LOG_DIR = Path(os.environ.get('OCI_LOG_DIR', '/var/log/proxmenux/oci'))

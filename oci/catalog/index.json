@@ -3644,6 +3644,10 @@
       "category_label": "Monitoring & Analytics",
       "template": "apps/glances.json",
       "template_status": "generated-unvalidated",
+      "community_tested": {
+        "by": "Vaso73",
+        "date": "2026-09-27"
+      },
       "automatic_install_candidate": true,
       "untranslated_blockers": [],
       "requires_privileged_lxc": true,
@@ -8548,6 +8552,10 @@
       "category_label": "Databases",
       "template": "apps/pocketbase.json",
       "template_status": "generated-unvalidated",
+      "community_tested": {
+        "by": "Vaso73",
+        "date": "2026-09-27"
+      },
       "automatic_install_candidate": true,
       "untranslated_blockers": [],
       "requires_privileged_lxc": false,

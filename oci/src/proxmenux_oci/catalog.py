@@ -414,6 +414,7 @@ class Catalog:
                 ui = template["catalog_ui"]
                 item["hidden"] = overlay_ui.get("hidden", ui.get("hidden", False))
                 item["template_status"] = template["status"]
+                self._index_community_tested(item, template)
                 item["automatic_install_candidate"] = compatibility[
                     "automatic_install_candidate"
                 ]
@@ -639,6 +640,7 @@ class Catalog:
             item = index_items[app_id]
             item["template"] = f"apps/{app_id}.json"
             item["template_status"] = template["status"]
+            self._index_community_tested(item, template)
             item["automatic_install_candidate"] = template["compatibility"][
                 "automatic_install_candidate"
             ]
@@ -792,6 +794,33 @@ class Catalog:
         apply_stack_support(template)
         from .gpu import apply_gpu_contract
         apply_gpu_contract(template)
+        # Last, so the stack compiler does not reset it.
+        self._apply_verification(app_id, template)
+
+    def _apply_verification(self, app_id: str, template: dict[str, Any]) -> None:
+        """Real tests recorded in verification.json, kept across regenerations."""
+        path = self.catalog_dir / "verification.json"
+        if not path.exists():
+            return
+        entry = json.loads(path.read_text(encoding="utf-8")).get("applications", {}).get(app_id)
+        if not isinstance(entry, dict):
+            return
+        # An application that can no longer be installed is not shown as verified.
+        installable = template.get("compatibility", {}).get("automatic_install_candidate", False)
+        if entry.get("status") == "laboratory-validated" and installable:
+            template["status"] = "laboratory-validated"
+        if isinstance(entry.get("community_tested"), dict):
+            template["community_tested"] = dict(entry["community_tested"])
+
+    @staticmethod
+    def _index_community_tested(item: dict[str, Any], template: dict[str, Any]) -> None:
+        """Who tested the application for real outside the ProxMenux lab, and
+        when, as recorded in its overlay."""
+        tested = template.get("community_tested")
+        if isinstance(tested, dict) and tested.get("by"):
+            item["community_tested"] = {"by": str(tested["by"]), "date": str(tested.get("date") or "")}
+        else:
+            item.pop("community_tested", None)
 
     @classmethod
     def _deep_merge(cls, target: dict[str, Any], overlay: dict[str, Any]) -> None:

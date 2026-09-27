@@ -150,6 +150,8 @@
             "items": [
               "La salida se guarda en el host en <code>/var/log/proxmenux/oci/VMID.console.log</code> (modo 0600), desde el primer arranque y entre reinicios, así que puede leerse con el contenedor detenido.",
               "El archivo se rota al llegar a 10 MB y se conservan tres copias comprimidas (<code>/etc/logrotate.d/proxmenux-oci</code>).",
+              "Cada arranque del contenedor queda marcado en la salida. La pestaña muestra por defecto la salida desde el último arranque; <strong>Todo el historial</strong> muestra también los anteriores.",
+              "Al eliminar la aplicación, su salida se elimina con ella.",
               "Se muestran las últimas 100, 500 o 1000 líneas. Con el contenedor en marcha, las líneas nuevas se siguen en directo; al desplazarse hacia arriba el seguimiento se pausa, y <strong>Seguir</strong> lo reanuda.",
               "Un filtro muestra solo las líneas que contienen un texto, y <strong>Descargar</strong> guarda las líneas cargadas.",
               "Los códigos de color se eliminan y una línea que redibuja una barra de progreso se muestra en su estado final.",
