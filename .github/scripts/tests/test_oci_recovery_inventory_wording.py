@@ -78,6 +78,7 @@ class InventoryMessages(unittest.TestCase):
                  'subprocess': SimpleNamespace(run=lambda *args, **kwargs: None),
                  'Path': Path, 'shutil': SimpleNamespace(rmtree=lambda path: None),
                  'image_cache': SimpleNamespace(prune=lambda root, lock: []),
+                 'oci_console': SimpleNamespace(remove_log=lambda vmid: events.append(('log', vmid))),
                  'translate': lambda text: text,
                  'msg_info': lambda text: events.append(('info', text)),
                  'msg_ok': lambda text: events.append(('ok', text)),
@@ -86,6 +87,7 @@ class InventoryMessages(unittest.TestCase):
         remove(Path('/inert'), 101)
         self.assertIn(('warn', POST_HOST + ' /bind/saved'), events)
         self.assertIn(('run', ('pct', 'destroy', '101', '--purge', '1', '--destroy-unreferenced-disks', '1')), events)
+        self.assertIn(('log', 101), events)
         scope['translate'] = lambda text: 'Tradotto: ' + text if text == POST_HOST else text
         events.clear()
         remove(Path('/inert'), 101)
