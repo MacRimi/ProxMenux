@@ -4555,6 +4555,44 @@
     "os": "debian"
   },
   {
+    "name": "Deemix",
+    "slug": "deemix",
+    "desc": "Deemix is a Deezer music downloader with a web interface. It searches the Deezer catalogue and downloads tracks, albums, playlists and artist discographies with tags and cover art, in MP3 or FLAC depending on the account. This is the maintained community fork by bambanah, which revived the discontinued original.",
+    "script": "ct/deemix.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/deemix.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/deemix.sh",
+    "type": "lxc",
+    "type_id": "nm9bra8mzye2scg",
+    "categories": [
+      "scriptcat00013"
+    ],
+    "category_names": [
+      "Media & Streaming"
+    ],
+    "notes": [
+      "Downloading requires the ARL cookie of your Deezer account. Log in at deezer.com in a browser, copy the value of the arl cookie from the developer tools (Application or Storage tab), then paste it in Deemix under Settings > Login > Log in with ARL. An ARL expires after about three months.",
+      "Music is saved to /opt/deemix_data/music. To store it on a NAS or media share, bind-mount that share onto the same path, e.g. pct set <CTID> -mp0 /mnt/media/music,mp=/opt/deemix_data/music. In an unprivileged container the host directory must be writable by UID 100000.",
+      "Settings, the saved ARL and logs live in /opt/deemix_data/config, outside the app directory, so updates keep them.",
+      "Deemix downloads through your own Deezer account. Whether that is allowed depends on Deezer's terms of use and the law where you live."
+    ],
+    "warnings": [
+      "Deemix has no login of its own, and the saved ARL is used for every visitor. Anyone who can reach port 6595 can download with your Deezer account, so keep it on a trusted network or behind an authenticating reverse proxy."
+    ],
+    "port": 6595,
+    "website": "https://github.com/bambanah/deemix",
+    "documentation": "https://github.com/bambanah/deemix#readme",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/deemix.webp",
+    "updateable": true,
+    "privileged": false,
+    "has_arm": false,
+    "is_dev": true,
+    "execute_in": [
+      "lxc"
+    ],
+    "config_path": "",
+    "os": "debian"
+  },
+  {
     "name": "Defguard",
     "slug": "defguard",
     "desc": "Defguard is a WireGuard VPN server combined with an identity provider. It adds user enrollment, multi-factor authentication, OpenID Connect SSO and per-user access control on top of WireGuard, all managed from a web interface. This installs the Defguard Core service; gateways are deployed separately on the machines that terminate the VPN tunnels.",
@@ -6906,6 +6944,43 @@
     "os": "debian"
   },
   {
+    "name": "Folding@home",
+    "slug": "foldingathome",
+    "desc": "Folding@home is a distributed computing project that simulates protein dynamics to help research diseases such as cancer, Alzheimer's and infectious diseases. This script installs the official v8.5 client, which runs headless and folds work units on the container's CPUs and on any passed-through GPU, managed remotely through the Folding@home Web Control.",
+    "script": "ct/foldingathome.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/foldingathome.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/foldingathome.sh",
+    "type": "lxc",
+    "type_id": "nm9bra8mzye2scg",
+    "categories": [
+      "scriptcat00000"
+    ],
+    "category_names": [
+      "Miscellaneous"
+    ],
+    "notes": [
+      "There is no local web interface. Manage the client from the Web Control at https://app.foldingathome.org/ once it is linked to your Folding@home account - the client's own port 7396 only listens on localhost.",
+      "A new client starts paused: press Fold in the Web Control. By default it leaves one of the container's cores free; the CPU count and which GPUs fold are set in the machine settings there.",
+      "GPU folding needs GPU passthrough, which the script enables when the host has a GPU. Supported NVIDIA, AMD and some Intel GPUs then appear in the machine settings, where each has to be enabled."
+    ],
+    "warnings": [
+      "Linking needs the account token from Account Settings in the Web Control. If you skipped it, set it in /etc/fah-client/config.xml as <account-token v=\"...\"/> and run systemctl restart fah-client. Generate a fresh token afterwards - only the newest token can add machines."
+    ],
+    "port": 0,
+    "website": "https://foldingathome.org/",
+    "documentation": "https://foldingathome.org/guides/v8-5",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/folding-home.webp",
+    "updateable": true,
+    "privileged": false,
+    "has_arm": false,
+    "is_dev": true,
+    "execute_in": [
+      "lxc"
+    ],
+    "config_path": "",
+    "os": "debian"
+  },
+  {
     "name": "Forgejo",
     "slug": "forgejo",
     "desc": "Forgejo is an open-source, self-hosted Git service that allows individuals and teams to manage their code repositories.",
@@ -8508,6 +8583,43 @@
       "username": "admin@community-scripts.org",
       "password": ""
     },
+    "os": "debian"
+  },
+  {
+    "name": "HedgeDoc",
+    "slug": "hedgedoc",
+    "desc": "HedgeDoc (formerly CodiMD) is a self-hosted, real-time collaborative Markdown editor. Several people can write the same note at once in the browser, with support for diagrams, math, slide presentations and per-note sharing permissions.",
+    "script": "ct/hedgedoc.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/hedgedoc.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/hedgedoc.sh",
+    "type": "lxc",
+    "type_id": "nm9bra8mzye2scg",
+    "categories": [
+      "scriptcat00012"
+    ],
+    "category_names": [
+      "Documents & Notes"
+    ],
+    "notes": [
+      "There is no default account. Use Sign In to register the first user with an email address and password. Guests can read notes but cannot create them.",
+      "Configuration, the session secret and uploaded images live in /opt/hedgedoc_data and survive updates. Notes are stored in the PostgreSQL database hedgedoc."
+    ],
+    "warnings": [
+      "Registration is open to anyone who can reach the instance. Once your accounts exist, set \"allowEmailRegister\": false in /opt/hedgedoc_data/config.json and run systemctl restart hedgedoc. Further users can then be added from the shell: cd /opt/hedgedoc && NODE_ENV=production CMD_CONFIG_FILE=/opt/hedgedoc_data/config.json bin/manage_users --add user@example.com",
+      "The domain in config.json must match the address in the browser, otherwise the page loads without scripts. It is set to the container IP with urlAddPort. Behind a reverse proxy set domain to your hostname, urlAddPort to false and protocolUseSSL to true for HTTPS, then restart hedgedoc."
+    ],
+    "port": 3000,
+    "website": "https://hedgedoc.org/",
+    "documentation": "https://docs.hedgedoc.org/",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/hedgedoc.webp",
+    "updateable": true,
+    "privileged": false,
+    "has_arm": false,
+    "is_dev": true,
+    "execute_in": [
+      "lxc"
+    ],
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -11388,6 +11500,44 @@
     ],
     "config_path": "",
     "os": "ubuntu"
+  },
+  {
+    "name": "Listenarr",
+    "slug": "listenarr",
+    "desc": "Listenarr automates audiobook collection management in the style of Sonarr and Radarr. It searches torrent and NZB indexers, hands grabs to your download client, and imports and organizes the finished audiobooks with metadata from Audible and other sources.",
+    "script": "ct/listenarr.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/listenarr.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/listenarr.sh",
+    "type": "lxc",
+    "type_id": "nm9bra8mzye2scg",
+    "categories": [
+      "scriptcat00014"
+    ],
+    "category_names": [
+      "*Arr Suite"
+    ],
+    "notes": [
+      "Only amd64 is supported: upstream ships no arm64 build.",
+      "Add a download client (qBittorrent, Transmission, SABnzbd or NZBGet) under Settings > Download Clients, then add Torznab/Newznab indexers under Settings > Indexers or import them from Prowlarr. If the download client runs in another container, mount its download folder here and set a remote path mapping.",
+      "Settings, database, logs and image cache live in /opt/listenarr_data/config. On first start Listenarr downloads its own ffprobe into that folder."
+    ],
+    "warnings": [
+      "Listenarr only publishes canary builds, all flagged as GitHub pre-releases. This script installs and updates from that channel, so expect breaking changes and keep backups of /opt/listenarr_data.",
+      "Authentication is disabled on first start. Turn on the login screen and create the admin account under Settings > General > Authentication, or keep the container on a trusted network."
+    ],
+    "port": 4545,
+    "website": "https://getlistenarr.com/",
+    "documentation": "https://getlistenarr.com/docs/",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/listenarr.webp",
+    "updateable": true,
+    "privileged": false,
+    "has_arm": false,
+    "is_dev": true,
+    "execute_in": [
+      "lxc"
+    ],
+    "config_path": "",
+    "os": "debian"
   },
   {
     "name": "listmonk",
@@ -17759,6 +17909,46 @@
     "os": "debian"
   },
   {
+    "name": "PriceBuddy",
+    "slug": "pricebuddy",
+    "desc": "PriceBuddy is a self-hosted price tracker. Paste a product URL from almost any store and it checks price and stock on a schedule, keeps the price history, compares the same product across retailers, and notifies you by email, Pushover, Gotify, ntfy, Telegram, Discord or Apprise when a deal moves in your favour.",
+    "script": "ct/pricebuddy.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/pricebuddy.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/pricebuddy.sh",
+    "type": "lxc",
+    "type_id": "nm9bra8mzye2scg",
+    "categories": [
+      "scriptcat00023"
+    ],
+    "category_names": [
+      "Finance & Budgeting"
+    ],
+    "notes": [
+      "Stores set to the API (browser) scraper service are rendered by the bundled SeleniumBase Scrapper, a headless Google Chrome on 127.0.0.1:3000 (service seleniumbase-scrapper). The default HTTP scraper does not use it.",
+      "The configuration is cached. After editing /opt/pricebuddy/.env (for example APP_URL and ASSET_URL behind a reverse proxy), run 'php artisan config:cache' in /opt/pricebuddy and restart pricebuddy-worker."
+    ],
+    "warnings": [
+      "The admin password is generated at install and stored as APP_USER_PASSWORD in /opt/pricebuddy/.env. Log in with admin@example.com, then change the email and password under Account settings."
+    ],
+    "port": 80,
+    "website": "https://pricebuddy.jez.me/",
+    "documentation": "https://pricebuddy.jez.me/",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/pricebuddy.webp",
+    "updateable": true,
+    "privileged": false,
+    "has_arm": false,
+    "is_dev": true,
+    "execute_in": [
+      "lxc"
+    ],
+    "config_path": "",
+    "default_credentials": {
+      "username": "admin@example.com",
+      "password": ""
+    },
+    "os": "debian"
+  },
+  {
     "name": "PrivateBin",
     "slug": "privatebin",
     "desc": "PrivateBin is a minimalist, open-source pastebin where the server has zero knowledge of pasted data. Data is encrypted/decrypted in the browser using 256-bit AES.",
@@ -18108,6 +18298,39 @@
     "is_dev": false,
     "execute_in": [
       "pve"
+    ],
+    "config_path": "",
+    "os": "debian"
+  },
+  {
+    "name": "ProxCenter",
+    "slug": "proxcenter",
+    "desc": "ProxCenter is a web console for running several Proxmox VE clusters and Proxmox Backup Server instances from one place: inventory and topology, in-browser noVNC/SPICE consoles, backup visibility, migrations from VMware, Hyper-V, Nutanix and XCP-ng, RBAC and SSO. This script installs the open-source Community Edition with its PostgreSQL database.",
+    "script": "ct/proxcenter.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/proxcenter.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/proxcenter.sh",
+    "type": "lxc",
+    "type_id": "nm9bra8mzye2scg",
+    "categories": [],
+    "category_names": [],
+    "notes": [
+      "This is the Community Edition. DRS load balancing, alerts, reports and notifications, MSP mode and high availability are Enterprise features that need ProxCenter's closed-source orchestrator, which this script does not install. A license key alone does not unlock them here.",
+      "NEXTAUTH_URL and APP_URL in /opt/proxcenter_data/.env point at the container IP. If the IP changes, or you put ProxCenter behind a reverse proxy or a domain, update both and run systemctl restart proxcenter."
+    ],
+    "warnings": [
+      "There is no default account. The first visit to port 3000 opens a setup page that creates the administrator, and anyone who reaches that port can use it until then, so create the account right after the install.",
+      "Connect your clusters with a dedicated Proxmox user and API token rather than root@pam. Keep Privilege Separation on and grant only what the features you use need: https://docs.proxcenter.io/getting-started/connect-proxmox#proxmox-permissions. On PBS, grant the ACL to the token itself as well, since PBS tokens inherit nothing from their user."
+    ],
+    "port": 3000,
+    "website": "https://proxcenter.io/",
+    "documentation": "https://docs.proxcenter.io/",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/proxcenter.webp",
+    "updateable": true,
+    "privileged": false,
+    "has_arm": false,
+    "is_dev": true,
+    "execute_in": [
+      "lxc"
     ],
     "config_path": "",
     "os": "debian"
@@ -20310,6 +20533,46 @@
       "pve"
     ],
     "config_path": "",
+    "os": "debian"
+  },
+  {
+    "name": "Silo",
+    "slug": "silo",
+    "desc": "Silo is an S3-compatible object storage server, a community-maintained fork of the open-source MinIO server by PGSTY. It carries on the AGPL release line after upstream MinIO stopped community distribution, with security fixes and the full web console restored. It keeps the MinIO storage format, MINIO_* variables and S3 API, so existing MinIO data and clients keep working.",
+    "script": "ct/silo.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/silo.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/silo.sh",
+    "type": "lxc",
+    "type_id": "nm9bra8mzye2scg",
+    "categories": [
+      "scriptcat00011"
+    ],
+    "category_names": [
+      "Files & Downloads"
+    ],
+    "notes": [
+      "Two ports: 9000 serves the S3 API, 9001 the web console. Object data lives in /opt/silo_data - back that up, or better, give the container a dedicated disk and point MINIO_VOLUMES at it.",
+      "Coming from MinIO? Silo reads the same data directory and MINIO_* settings. See https://silo.pgsty.com/compatibility/migration/ before moving an existing deployment."
+    ],
+    "warnings": [
+      "The root password is generated at install and stored as MINIO_ROOT_PASSWORD in /etc/default/silo. Use it to log into the console on port 9001, then create dedicated access keys for your S3 clients."
+    ],
+    "port": 9001,
+    "website": "https://silo.pgsty.com/",
+    "documentation": "https://silo.pgsty.com/docs/",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/pgsty-silo.webp",
+    "updateable": true,
+    "privileged": false,
+    "has_arm": false,
+    "is_dev": true,
+    "execute_in": [
+      "lxc"
+    ],
+    "config_path": "",
+    "default_credentials": {
+      "username": "silo-admin",
+      "password": ""
+    },
     "os": "debian"
   },
   {
@@ -25223,6 +25486,42 @@
       "username": "admin",
       "password": "Generated during install"
     },
+    "os": "debian"
+  },
+  {
+    "name": "Youtarr",
+    "slug": "youtarr",
+    "desc": "Youtarr is a self-hosted YouTube downloader that subscribes to channels and playlists and downloads new videos on a schedule with yt-dlp. Videos are organized per channel with NFO files, posters and embedded MP4 metadata, so they show up cleanly in Plex, Jellyfin, Emby or Kodi. It also mirrors playlists into those servers, syncs watch status back, supports SponsorBlock and age, space or watched-based cleanup, and plays videos in its own web UI.",
+    "script": "ct/youtarr.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/youtarr.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/youtarr.sh",
+    "type": "lxc",
+    "type_id": "nm9bra8mzye2scg",
+    "categories": [
+      "scriptcat00013"
+    ],
+    "category_names": [
+      "Media & Streaming"
+    ],
+    "notes": [
+      "Videos are downloaded to /opt/youtarr_data/videos (DATA_PATH in /opt/youtarr_data/.env). To store them on a NAS or share them with Plex, Jellyfin or Emby, bind-mount the media folder there, e.g. pct set <CTID> -mp0 /mnt/media/youtube,mp=/opt/youtarr_data/videos, then restart the container. In an unprivileged container the host folder must be writable by UID 100000.",
+      "Settings live in /opt/youtarr_data/config/config.json (edited through the web UI), database credentials in /opt/youtarr_data/.env. Both survive updates. Running update also refreshes yt-dlp; Youtarr can additionally auto-update it from its settings."
+    ],
+    "warnings": [
+      "There is no default login. On first start Youtarr writes a one-time setup token to /opt/youtarr_data/config/setup-token (also shown in journalctl -u youtarr). Open the web UI, paste the token and create the admin account."
+    ],
+    "port": 3011,
+    "website": "https://youtarr.com/",
+    "documentation": "https://dialmasterorg.github.io/Youtarr/docs/installation/",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/youtarr.webp",
+    "updateable": true,
+    "privileged": false,
+    "has_arm": false,
+    "is_dev": true,
+    "execute_in": [
+      "lxc"
+    ],
+    "config_path": "",
     "os": "debian"
   },
   {
