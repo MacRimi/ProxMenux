@@ -250,6 +250,7 @@ VOLUME_SEED_STAGE_ROOT=""
 VOLUME_SEED_TARGETS=()
 VOLUME_SEED_STAGES=()
 VOLUME_SEED_MOUNT_TYPES=()
+CANONICAL_INPUT_DIR=""
 
 cleanup_runtime_console_log() {
   # The console log is the container's own log from here on, and its line in
@@ -257,6 +258,14 @@ cleanup_runtime_console_log() {
   # installation keeps the file too, since it holds why the application did
   # not come up.
   RUNTIME_CONSOLE_LOG=""
+}
+
+cleanup_canonical_inputs() {
+  [[ -n ${CANONICAL_INPUT_DIR:-} ]] || return 0
+  [[ $CANONICAL_INPUT_DIR == "/var/tmp/proxmenux-oci-inputs-${VMID}."* && -d $CANONICAL_INPUT_DIR && ! -L $CANONICAL_INPUT_DIR ]] \
+    || { oci_log "Refusing to remove an unexpected canonical input directory: ${CANONICAL_INPUT_DIR}"; return 1; }
+  rm -rf -- "$CANONICAL_INPUT_DIR" || return 1
+  CANONICAL_INPUT_DIR=""
 }
 
 # A derived check accepts any HTTP answer below 500: the application is up,
@@ -275,6 +284,7 @@ cleanup_failed_install() {
   local status=$?
   stop_spinner
   cleanup_volume_seed_staging || true
+  cleanup_canonical_inputs || true
   if [[ -n ${PROXMENUX_OCI_TRANSACTION:-} ]]; then
     # The transaction owns recovery. Destroying this CT could destroy reused data.
     cleanup_runtime_console_log || true
@@ -1282,8 +1292,13 @@ INSTANCE_ID=$(python3 "${SCRIPT_DIR}/oci_instances.py" prepare "$VMID" \
   --template "$TEMPLATE_FILE" --deployment "$DEPLOYMENT_FILE")
 INSTANCE_CONTRACT="$INSTANCE_ROOT/$VMID/oci-compose.json"
 # The persisted contract is the source for the actual installation inputs.
-jq '.template' "$INSTANCE_CONTRACT" >"$TEMPLATE_FILE"
-jq '.deployment' "$INSTANCE_CONTRACT" >"$DEPLOYMENT_FILE"
+# Do not rewrite caller-owned files, notably a regular user's file in sticky /tmp.
+CANONICAL_INPUT_DIR=$(mktemp -d "/var/tmp/proxmenux-oci-inputs-${VMID}.XXXXXX") \
+  || die "$(translate "Could not prepare canonical installation inputs")"
+jq '.template' "$INSTANCE_CONTRACT" >"${CANONICAL_INPUT_DIR}/template.json"
+jq '.deployment' "$INSTANCE_CONTRACT" >"${CANONICAL_INPUT_DIR}/deployment.json"
+TEMPLATE_FILE="${CANONICAL_INPUT_DIR}/template.json"
+DEPLOYMENT_FILE="${CANONICAL_INPUT_DIR}/deployment.json"
 fi
 
 skopeo_transport_reference() {
