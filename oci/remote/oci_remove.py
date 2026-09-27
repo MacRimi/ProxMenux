@@ -104,6 +104,43 @@ def release_bridge(bridge):
     subprocess.run(['pvesh', 'delete', f'/nodes/{node}/network/{bridge}'], check=False, capture_output=True)
 
 
+def remove_owned_host_firewall(record):
+    """Remove only the narrowly scoped rule created by this installation.
+
+    A matching port alone is never evidence of ownership: administrators and
+    other applications may legitimately use it.  Older CT-number comments are
+    deliberately left alone as well.
+    """
+    plan = record.get('deployment', {}).get('host_firewall') or {}
+    installation_id = record.get('installation_id', '')
+    if not isinstance(plan, dict) or not re.fullmatch(r'[0-9a-f-]{36}', installation_id):
+        return
+    source, port = plan.get('source'), plan.get('port')
+    if not isinstance(source, str) or not isinstance(port, int):
+        return
+    comment = f'ProxMenux OCI firewall {installation_id}'
+    node = socket.gethostname().split('.', 1)[0]
+    try:
+        result = subprocess.run(['pvesh', 'get', f'/nodes/{node}/firewall/rules', '--output-format', 'json'],
+                                check=True, capture_output=True, text=True)
+        rules = json.loads(result.stdout)
+        matches = [rule for rule in rules if rule.get('comment') == comment
+                   and str(rule.get('dport')) == str(port)
+                   and rule.get('source') == source
+                   and str(rule.get('proto', '')).lower() == 'tcp'
+                   and str(rule.get('type', '')).lower() == 'in'
+                   and str(rule.get('action', '')).upper() == 'ACCEPT']
+        if len(matches) != 1 or not isinstance(matches[0].get('pos'), int):
+            return
+        subprocess.run(['pvesh', 'delete', f"/nodes/{node}/firewall/rules/{matches[0]['pos']}"],
+                       check=True, capture_output=True)
+        msg_ok(f"{translate('Host firewall rule removed:')} TCP {port} {translate('from')} {source}")
+    except (OSError, ValueError, subprocess.CalledProcessError, json.JSONDecodeError):
+        # Removal already destroyed the CT.  A firewall API failure must not
+        # turn that successful lifecycle operation into a failed one.
+        msg_warn(translate('The managed host firewall rule could not be removed and was left unchanged.'))
+
+
 def remove(root, vmid):
     primary_id, primary, members = members_of(root, vmid)
     for member in members:
@@ -132,6 +169,7 @@ def remove(root, vmid):
         msg_ok(f"{translate('Private network of the application released:')} {bridge}")
     elif bridge:
         msg_warn(f"{translate('The private network is still used by another container and is kept:')} {bridge}")
+    remove_owned_host_firewall(primary)
     lifecycle = Path(f'/etc/pve/priv/proxmenux-stack-{primary_id}.json')
     if lifecycle.exists() and not lifecycle.is_symlink():
         lifecycle.unlink()

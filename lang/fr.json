@@ -2595,6 +2595,8 @@
   "Host directory:": "Répertoire hôte :",
   "Host firewall": "Pare-feu hôte",
   "Host firewall already allows:": "Le pare-feu hôte permet déjà :",
+  "Host firewall rule removed:": "Règle du pare-feu hôte supprimée :",
+  "The managed host firewall rule could not be removed and was left unchanged.": "La règle gérée du pare-feu hôte n’a pas pu être supprimée et est restée inchangée.",
   "Host firewall rule added:": "Règle de pare-feu hôte ajoutée :",
   "Host fstab CIFS Mounts:": "Hôte des montages fstab CIFS :",
   "Host fstab CIFS mounts (not registered with pvesm):": "Hôte des montages fstab CIFS (non enregistrés auprès de pvesm) :",

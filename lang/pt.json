@@ -2595,6 +2595,8 @@
   "Host directory:": "Diretório de host:",
   "Host firewall": "Firewall de host",
   "Host firewall already allows:": "O firewall do host já permite:",
+  "Host firewall rule removed:": "Regra do firewall do host removida:",
+  "The managed host firewall rule could not be removed and was left unchanged.": "Não foi possível remover a regra gerida do firewall do host, que permaneceu inalterada.",
   "Host firewall rule added:": "regra de firewall do host adicionada:",
   "Host fstab CIFS Mounts:": "Host fstab montagens CIFS:",
   "Host fstab CIFS mounts (not registered with pvesm):": "Host fstab montagens CIFS (não registradas no pvesm):",

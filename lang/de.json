@@ -2595,6 +2595,8 @@
   "Host directory:": "Hostverzeichnis:",
   "Host firewall": "Host-Firewall",
   "Host firewall already allows:": "Die Host-Firewall erlaubt bereits:",
+  "Host firewall rule removed:": "Host-Firewallregel entfernt:",
+  "The managed host firewall rule could not be removed and was left unchanged.": "Die verwaltete Host-Firewallregel konnte nicht entfernt werden und blieb unverändert.",
   "Host firewall rule added:": "Host-Firewall-Regel hinzugefügt:",
   "Host fstab CIFS Mounts:": "Host fstab CIFS-Mounts:",
   "Host fstab CIFS mounts (not registered with pvesm):": "Host fstab CIFS-Mounts (nicht bei pvesm registriert):",

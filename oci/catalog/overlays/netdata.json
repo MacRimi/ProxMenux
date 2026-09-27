@@ -81,6 +81,10 @@
     },
     "installer_profile": {
       "host_monitor": "netdata",
+      "host_monitor_firewall": {
+        "protocol": "tcp",
+        "web_port": 19999
+      },
       "host_monitor_mounts": [
         {
           "source": "/proc",
