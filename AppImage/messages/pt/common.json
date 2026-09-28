@@ -6523,7 +6523,7 @@
         },
         "split_brain": {
           "title": "{hostname}: evento do cluster comunicado",
-          "body": "Foi comunicado um evento do cluster. Verifique o estado do cluster e o evento original para obter mais detalhes.",
+          "body": "Foi comunicado um evento do cluster:\n{reason}",
           "label": "Evento do cluster"
         },
         "node_disconnect": {

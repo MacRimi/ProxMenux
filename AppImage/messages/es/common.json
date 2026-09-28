@@ -6523,7 +6523,7 @@
         },
         "split_brain": {
           "title": "{hostname}: evento del clúster notificado",
-          "body": "Se ha notificado un evento del clúster. Consulta el estado del clúster y el evento original para obtener más detalles.",
+          "body": "Se ha notificado un evento del clúster:\n{reason}",
           "label": "Evento del clúster"
         },
         "node_disconnect": {

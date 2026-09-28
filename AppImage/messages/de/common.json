@@ -6523,7 +6523,7 @@
         },
         "split_brain": {
           "title": "{hostname}: Clusterereignis gemeldet",
-          "body": "Ein Clusterereignis wurde gemeldet. Prüfen Sie den Clusterstatus und das ursprüngliche Ereignis für weitere Informationen.",
+          "body": "Ein Clusterereignis wurde gemeldet:\n{reason}",
           "label": "Clusterereignis"
         },
         "node_disconnect": {

@@ -1218,7 +1218,7 @@ TEMPLATES = {
     # ── Cluster events ──
     'split_brain': {
         'title': '{hostname}: Cluster event reported',
-        'body': 'A cluster event was reported. Review cluster status and the source event for details.',
+        'body': 'A cluster event was reported:\n{reason}',
         'label': 'Cluster event',
         'group': 'cluster',
         'default_enabled': True,

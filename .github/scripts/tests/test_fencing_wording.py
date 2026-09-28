@@ -82,7 +82,9 @@ class FencingWordingTests(unittest.TestCase):
                 rendered = self.render(event.event_type, event.data, lang)
                 expected = catalog['runtime']['notifications']['templates']['split_brain']
                 self.assertEqual(rendered['title'], expected['title'].format(hostname='node-a'), lang)
-                self.assertEqual(rendered['body'], expected['body'], lang)
+                # The body names the source event, as received, and adds no diagnosis of its own.
+                self.assertEqual(rendered['body'], expected['body'].replace('{reason}', event.data['reason']), lang)
+                self.assertIn('Check node state', rendered['body'], lang)
                 self.assertNotIn('split-brain', '\n'.join((rendered['title'], rendered['body'])).lower(), lang)
                 self.assertNotIn('quorum', rendered['body'].lower(), lang)
         self.assertEqual(webhook(receiver, {'type': 'fencing', 'severity': 'warning',
@@ -107,7 +109,8 @@ class FencingWordingTests(unittest.TestCase):
             self.assertEqual(args[0], 'split_brain')
             for lang, catalog in self.catalogs.items():
                 rendered = self.render(args[0], args[2], lang)
-                self.assertEqual(rendered['body'], catalog['runtime']['notifications']['templates']['split_brain']['body'], lang)
+                body = catalog['runtime']['notifications']['templates']['split_brain']['body']
+                self.assertEqual(rendered['body'], body.replace('{reason}', message), lang)
         journal = Journal()
         method(journal, 'quorum lost', 'syslog')
         self.assertEqual(journal.events[0][0][0], 'node_disconnect')
@@ -126,13 +129,13 @@ class FencingWordingTests(unittest.TestCase):
 
     def test_every_shipped_locale_renders_cluster_event_without_diagnosis(self):
         expected = {
-            'de': ('{hostname}: Clusterereignis gemeldet', 'Ein Clusterereignis wurde gemeldet. Prüfen Sie den Clusterstatus und das ursprüngliche Ereignis für weitere Informationen.', 'Clusterereignis', 'Clusterereignisse'),
-            'es': ('{hostname}: evento del clúster notificado', 'Se ha notificado un evento del clúster. Consulta el estado del clúster y el evento original para obtener más detalles.', 'Evento del clúster', 'Eventos del clúster'),
-            'fr': ('{hostname}\u00a0: événement du cluster signalé', 'Un événement du cluster a été signalé. Vérifiez l’état du cluster et l’événement d’origine pour plus de détails.', 'Événement du cluster', 'Événements du cluster'),
-            'it': ('{hostname}: evento del cluster segnalato', "È stato segnalato un evento del cluster. Controlla lo stato del cluster e l'evento originale per maggiori dettagli.", 'Evento del cluster', 'Eventi del cluster'),
-            'pt': ('{hostname}: evento do cluster comunicado', 'Foi comunicado um evento do cluster. Verifique o estado do cluster e o evento original para obter mais detalhes.', 'Evento do cluster', 'Eventos do cluster'),
-            'sk': ('{hostname}: hlásená udalosť klastra', 'Bola hlásená udalosť klastra. Skontrolujte stav klastra a pôvodnú udalosť, kde nájdete ďalšie podrobnosti.', 'Udalosť klastra', 'Udalosti klastra'),
-            'sv': ('{hostname}: klusterhändelse rapporterad', 'En klusterhändelse har rapporterats. Kontrollera klusterstatus och den ursprungliga händelsen för mer information.', 'Klusterhändelse', 'Klusterhändelser'),
+            'de': ('{hostname}: Clusterereignis gemeldet', 'Ein Clusterereignis wurde gemeldet:\n{reason}', 'Clusterereignis', 'Clusterereignisse'),
+            'es': ('{hostname}: evento del clúster notificado', 'Se ha notificado un evento del clúster:\n{reason}', 'Evento del clúster', 'Eventos del clúster'),
+            'fr': ('{hostname}\u00a0: événement du cluster signalé', 'Un événement du cluster a été signalé\u00a0:\n{reason}', 'Événement du cluster', 'Événements du cluster'),
+            'it': ('{hostname}: evento del cluster segnalato', 'È stato segnalato un evento del cluster:\n{reason}', 'Evento del cluster', 'Eventi del cluster'),
+            'pt': ('{hostname}: evento do cluster comunicado', 'Foi comunicado um evento do cluster:\n{reason}', 'Evento do cluster', 'Eventos do cluster'),
+            'sk': ('{hostname}: hlásená udalosť klastra', 'Bola hlásená udalosť klastra:\n{reason}', 'Udalosť klastra', 'Udalosti klastra'),
+            'sv': ('{hostname}: klusterhändelse rapporterad', 'En klusterhändelse har rapporterats:\n{reason}', 'Klusterhändelse', 'Klusterhändelser'),
         }
         self.assertEqual(set(self.catalogs), {'en', *expected})
         for lang, (title, body, label, settings) in expected.items():
@@ -141,9 +144,9 @@ class FencingWordingTests(unittest.TestCase):
                 self.assertEqual((leaves['title'], leaves['body'], leaves['label'],
                                   self.catalogs[lang]['settings']['notifications']['eventTypes']['split_brain']),
                                  (title, body, label, settings))
-                result = self.render('split_brain', {}, lang)
+                result = self.render('split_brain', {'reason': 'fencing node node-b'}, lang)
                 self.assertEqual(result['title'], title.format(hostname='node-a'))
-                self.assertEqual(result['body'], body)
+                self.assertEqual(result['body'], body.replace('{reason}', 'fencing node node-b'))
                 self.assertNotIn('quorum', result['body'].lower())
 
     def test_fallback_and_translated_lookup_are_real_for_missing_and_synthetic_values(self):
@@ -152,8 +155,8 @@ class FencingWordingTests(unittest.TestCase):
         for field in FIELDS:
             catalogs['it']['runtime']['notifications']['templates']['split_brain'].pop(field)
         _, render = notification_renderer(catalogs)
-        self.assertEqual(render('split_brain', {}, 'it')['body'],
-                         'A cluster event was reported. Review cluster status and the source event for details.')
+        self.assertEqual(render('split_brain', {'reason': 'fencing node node-b'}, 'it')['body'],
+                         'A cluster event was reported:\nfencing node node-b')
         catalogs['it']['runtime']['notifications']['templates']['split_brain']['body'] = 'Evento del cluster segnalato.'
         _, render = notification_renderer(catalogs)
         self.assertEqual(render('split_brain', {}, 'it')['body'], 'Evento del cluster segnalato.')

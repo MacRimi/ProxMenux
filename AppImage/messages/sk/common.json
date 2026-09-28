@@ -6522,7 +6522,7 @@
         },
         "split_brain": {
           "title": "{hostname}: hlásená udalosť klastra",
-          "body": "Bola hlásená udalosť klastra. Skontrolujte stav klastra a pôvodnú udalosť, kde nájdete ďalšie podrobnosti.",
+          "body": "Bola hlásená udalosť klastra:\n{reason}",
           "label": "Udalosť klastra"
         },
         "node_disconnect": {

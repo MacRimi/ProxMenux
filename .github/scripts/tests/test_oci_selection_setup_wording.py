@@ -40,6 +40,7 @@ class SelectionSetupWording(TestCase):
         ui = SimpleNamespace(message=Mock(), choose=Mock())
         fn = extracted('_interactive_management', os=SimpleNamespace(geteuid=lambda: 0),
             shutil=SimpleNamespace(which=lambda _: '/fake/pct'), saved_inventory=lambda _: [],
+            _clean_orphans=lambda project: None,
             translate=lambda s: s)
         fn(Path('/fixture'), ui)
         ui.message.assert_called_once_with(EMPTY, 'OCI management')

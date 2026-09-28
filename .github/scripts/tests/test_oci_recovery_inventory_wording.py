@@ -80,6 +80,9 @@ class InventoryMessages(unittest.TestCase):
                  'Path': Path, 'shutil': SimpleNamespace(rmtree=lambda path: None),
                  'image_cache': SimpleNamespace(prune=lambda root, lock: []),
                  'oci_console': SimpleNamespace(remove_log=lambda vmid: events.append(('log', vmid))),
+                 're': re, 'guest_node': lambda vmid: None,
+                 'remove_host_state': lambda vmid: events.append(('host', vmid)),
+                 'release_shared_host_files': lambda hookscripts: None,
                  'translate': lambda text: text,
                  'msg_info': lambda text: events.append(('info', text)),
                  'msg_ok': lambda text: events.append(('ok', text)),
@@ -89,6 +92,7 @@ class InventoryMessages(unittest.TestCase):
         self.assertIn(('info', POST_HOST + ' /bind/saved'), events)
         self.assertIn(('run', ('pct', 'destroy', '101', '--purge', '1', '--destroy-unreferenced-disks', '1')), events)
         self.assertIn(('log', 101), events)
+        self.assertIn(('host', 101), events)
         scope['translate'] = lambda text: 'Tradotto: ' + text if text == POST_HOST else text
         events.clear()
         remove(Path('/inert'), 101)

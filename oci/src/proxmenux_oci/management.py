@@ -140,10 +140,23 @@ def interactive_management(project, ui):
         ui.message(translate('OCI management could not be completed. Check the backend status; no additional cleanup has been authorized.'), translate('OCI management'))
 
 
+def _clean_orphans(project):
+    """Remove, silently, what is left of containers that exist on no node of the cluster."""
+    sys.path.insert(0, str(project / 'remote'))
+    import oci_instances as instances
+    import oci_remove
+    try:
+        with instances.locked(instances.ROOT):
+            oci_remove.sweep_orphans(instances.ROOT)
+    except (BlockingIOError, OSError, ValueError):
+        pass
+
+
 def _interactive_management(project, ui):
     if os.geteuid() != 0 or not shutil.which('pct'):
         ui.message(translate('This interface runs on the Proxmox node as root. Open OCI manager Apps from the ProxMenux menu on the Proxmox host.'), translate('OCI management'))
         return
+    _clean_orphans(project)
     rows = saved_inventory(project)
     if not rows:
         ui.message(translate('No registered OCI containers are available for selection on this host.'), translate('OCI management'))
@@ -316,8 +329,10 @@ def _removal_summary(project, vmid):
                  f"{translate('containers of')} {application}. {alone}", '']
     text += [translate('Containers targeted for removal:'), *lines, '',
              translate('Container data targeted for deletion:'), *volumes]
-    if bridge:
+    if bridge and not oci_remove.bridge_in_use(bridge, set(members)):
         text += ['', f"{translate('Private network targeted for release if no other guest uses it:')} {bridge}"]
+    elif bridge:
+        text += ['', f"{translate('Private network kept, because other containers still use it:')} {bridge}"]
     if (primary.get('deployment') or {}).get('host_firewall'):
         text += ['', translate('A matching managed host firewall rule may also be removed.')]
     if kept:

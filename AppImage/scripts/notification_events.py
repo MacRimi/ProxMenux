@@ -4367,8 +4367,9 @@ class ProxmoxHookWatcher:
         # "🔵 constructor: Problema del sistema detectado" / "+1 problema
         # más del sistema (Problemas adicionales: - problema_del_sistema)"
         # messages the operator sees on Telegram. Preserve the PVE payload
-        # as `reason` so both surfaces have concrete text to render.
-        if event_type == 'system_problem':
+        # as `reason` so both surfaces have concrete text to render. A cluster
+        # event (fencing) renders it too: the message is what happened.
+        if event_type in ('system_problem', 'split_brain'):
             reason_text = (message or title or '').strip()
             if reason_text:
                 data['reason'] = reason_text[:500]

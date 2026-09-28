@@ -51,6 +51,7 @@ class RemovalWordings(unittest.TestCase):
         remover.guest_config = lambda member: None
         remover.host_directories = lambda root, members: []
         remover.private_bridge = lambda primary: bridge
+        remover.bridge_in_use = lambda bridge, removed: False
         state = ModuleType('oci_installation_state')
         state.parse_config = lambda raw: {}
         scope = {'sys': SimpleNamespace(path=[]), 'source_text': lambda value: value or '',
@@ -117,6 +118,7 @@ class RemovalWordings(unittest.TestCase):
                  'shutil': SimpleNamespace(rmtree=lambda path: None),
                  'image_cache': SimpleNamespace(prune=lambda root, lock: []),
                  'oci_console': SimpleNamespace(remove_log=lambda vmid: None),
+                 'guest_node': lambda vmid: None, 'remove_host_state': lambda vmid: None, 'release_shared_host_files': lambda hookscripts: None, 're': re,
                  'translate': lambda text: text,
                  'msg_info': lambda text: events.append(('info', text)),
                  'msg_ok': lambda text: events.append(('ok', text)),
@@ -185,6 +187,7 @@ class RemovalWordings(unittest.TestCase):
                  'shutil': SimpleNamespace(rmtree=lambda path: None),
                  'image_cache': SimpleNamespace(prune=lambda root, lock: []),
                  'oci_console': SimpleNamespace(remove_log=lambda vmid: None),
+                 'guest_node': lambda vmid: None, 'remove_host_state': lambda vmid: None, 'release_shared_host_files': lambda hookscripts: None,
                  'translate': lambda text: text,
                  'msg_info': lambda text: events.append(('info', text)),
                  'msg_ok': lambda text: events.append(('ok', text)),
@@ -262,6 +265,7 @@ class RemovalWordings(unittest.TestCase):
                  'shutil': SimpleNamespace(rmtree=lambda path: None),
                  'image_cache': SimpleNamespace(prune=lambda root, lock: []),
                  'oci_console': SimpleNamespace(remove_log=lambda vmid: None),
+                 'guest_node': lambda vmid: None, 'remove_host_state': lambda vmid: None, 'release_shared_host_files': lambda hookscripts: None, 're': re,
                  'translate': lambda text: text, 'msg_info': lambda text: None,
                  'msg_ok': lambda text: events.append(('ok', text)), 'msg_warn': lambda text: None}
         extract(REMOVE, 'remove', scope)(Path('/inert'), 101)
