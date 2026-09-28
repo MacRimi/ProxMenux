@@ -215,7 +215,7 @@ die() { printf 'error:%%s\\n' "$1"; exit 1; }
              'GUIDA RCLONE', 'EDITOR COLLABORATIVO')):
             with self.subTest(values=values):
                 cache['_cache'] = values
-                ui = SimpleNamespace(message=Mock(), ask=lambda *_args, **_kw: (_ for _ in ()).throw(StopIteration()))
+                ui = SimpleNamespace(message=Mock(), ask=Mock(side_effect=StopIteration))
                 rclone = extract_function(INSTALLER, 'build_rclone_mount_deployment',
                                           TerminalUI=object, DialogUI=object, translate=lookup,
                                           re=re, InstallError=ValueError,
