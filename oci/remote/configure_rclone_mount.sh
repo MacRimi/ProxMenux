@@ -98,7 +98,11 @@ grep -Fxq "${REMOTE_NAME}:" <<<"$REMOTES" \
 msg_ok "$(translate "Remote verified:") ${REMOTE_NAME}:"
 
 if [[ $DRY_RUN == 1 ]]; then
-  msg_ok "$(translate "Dry run completed; the container and the mounts were not changed.")"
+  if [[ $STATUS == running ]]; then
+    msg_ok "$(translate "Dry run completed; mount configuration was not applied. The CT was already running.")"
+  else
+    msg_ok "$(translate "Dry run completed; mount configuration was not applied. The CT was started for the remote check.")"
+  fi
   exit 0
 fi
 

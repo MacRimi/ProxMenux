@@ -402,6 +402,10 @@ class Catalog:
             overlay_path = self.overlays_dir / f"{item['id']}.json"
             overlay_ui = json.loads(overlay_path.read_text(encoding="utf-8")).get("catalog_ui", {}) if overlay_path.exists() else {}
             item["hidden"] = overlay_ui.get("hidden", False)
+            # The index is rebuilt from upstream README summaries; preserve a
+            # locally curated English description from the existing overlay.
+            item["description"] = overlay_ui.get("description", {}).get(
+                "en_US", item.get("description"))
             path = self.apps_dir / f"{item['id']}.json"
             if not path.exists():
                 item["architectures"] = supported_architectures(
