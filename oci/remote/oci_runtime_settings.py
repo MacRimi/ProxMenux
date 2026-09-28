@@ -44,7 +44,17 @@ def tmpfs_lines(deployment):
     return result
 
 
+# /etc/pve/lxc is the folder of the local node only; this one is the same on
+# every node of a cluster, so a migrated container still finds its include.
+CLUSTER_DIR = Path('/etc/pve/proxmenux')
+
+
 def include_path(vmid):
+    return CLUSTER_DIR / f'{int(vmid)}.sysctls'
+
+
+def legacy_include_path(vmid):
+    """Where installations made before the cluster folder keep the include."""
     return Path(f'/etc/pve/lxc/{int(vmid)}.proxmenux-sysctls')
 
 
@@ -56,10 +66,11 @@ def check(config, deployment, vmid):
         raise ValueError(translate('The tmpfs mounts of the container differ from the saved record'))
     includes = [line.split(': ',1)[1] for line in lines if line.startswith('lxc.include: ')]
     content = sysctl_content(deployment)
-    if includes != ([str(include_path(vmid))] if content else []):
+    allowed = [[str(include_path(vmid))], [str(legacy_include_path(vmid))]] if content else [[]]
+    if includes not in allowed:
         raise ValueError(translate('The sysctl include is unknown or differs from the saved record'))
     if content:
-        path = include_path(vmid)
+        path = Path(includes[0])
         info = path.lstat()
         if not stat.S_ISREG(info.st_mode) or info.st_uid != 0 or info.st_mode & 0o022:
             raise ValueError(translate('The sysctl include is not a safe host file'))
@@ -82,8 +93,8 @@ def check_recovery(config, state):
         if line.startswith('lxc.mount.entry: tmpfs ') and line.split(': ', 1)[1] not in permitted:
             raise ValueError(translate('A tmpfs mount is not part of the journal; recovery blocked'))
         if line.startswith('lxc.include: '):
-            path = include_path(state['vmid'])
-            if line.split(': ', 1)[1] != str(path):
+            path = Path(line.split(': ', 1)[1])
+            if path not in (include_path(state['vmid']), legacy_include_path(state['vmid'])):
                 raise ValueError(translate('An include is not part of the journal; recovery blocked'))
             contents = {sysctl_content(plan) for plan in plans} - {''}
             info = path.lstat()
@@ -99,6 +110,7 @@ def restore(deployment, vmid):
     path = include_path(vmid)
     if path.is_symlink():
         raise ValueError(translate('The sysctl include is not restored over a symbolic link'))
+    path.parent.mkdir(parents=True, exist_ok=True)
     fd, temporary = tempfile.mkstemp(dir=path.parent, prefix='.oci-sysctl-')
     try:
         with os.fdopen(fd, 'w') as output:
@@ -107,7 +119,7 @@ def restore(deployment, vmid):
             os.fsync(output.fileno())
         # pmxcfs uses fixed permissions; ordinary filesystem fixtures still
         # receive an explicit restrictive mode.
-        if path.parent != Path('/etc/pve/lxc'):
+        if Path('/etc/pve') not in path.parents:
             os.chmod(temporary, 0o640)
         os.replace(temporary, path)
     finally:

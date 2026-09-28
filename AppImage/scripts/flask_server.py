@@ -742,7 +742,8 @@ def _lxc_shares_host_network(vmid):
             text = handle.read().split("\n[", 1)[0]
     except (OSError, ValueError):
         return False
-    return ("lxc.include: /etc/pve/lxc/proxmenux-host-monitor" in text
+    return ("lxc.include: /etc/pve/proxmenux/host-monitor" in text
+            or "lxc.include: /etc/pve/lxc/proxmenux-host-monitor" in text
             or ("lxc.net.0.type: none" in text and not re.search(r"^net\d+:", text, re.M)))
 
 

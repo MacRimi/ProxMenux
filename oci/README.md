@@ -485,9 +485,11 @@ so the monitor sees the host's real processor count.
 
 Proxmox does not accept `lxc.namespace.share.*` directly in CT configuration.
 The installer uses supported `lxc.include` referencing the static companion
-`/etc/pve/lxc/proxmenux-host-monitor`. This file persists across host reboots but
-is NOT included in a CT vzdump. Preserve/recreate it when restoring on another
-host, in addition to restoring managed volumes. Full restore/image replacement
+`/etc/pve/proxmenux/host-monitor`. `/etc/pve/proxmenux` is the same on every node
+of a cluster, unlike `/etc/pve/lxc`, which is the folder of the local node, so a
+migrated container finds it. It is NOT included in a CT vzdump: copy it when
+restoring outside the cluster, in addition to restoring managed volumes.
+Installations made before this keep `/etc/pve/lxc/proxmenux-host-monitor`. Full restore/image replacement
 have not been tested. No custom supervisor or image entrypoint is introduced.
 
 DeepSeek OCR remains deferred at the user's request: registry inspection on

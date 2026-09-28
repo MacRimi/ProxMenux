@@ -6,7 +6,7 @@
       "Privileged access to the host PID/network and unconfined AppArmor: requires confirmation. Trusted networks only; the host firewall is the one that applies.",
       "Neither docker.sock nor the host root directory is mounted. Docker inventory, SMART and capacity of all filesystems are not guaranteed.",
       "LXCFS is skipped only in the monitor CT so that the limited container RAM/CPU is not shown.",
-      "Uses lxc.include with /etc/pve/lxc/proxmenux-host-monitor; this file is not included in vzdump and must be kept when restoring on another host.",
+      "Uses lxc.include with /etc/pve/proxmenux/host-monitor, which every node of the cluster shares; vzdump does not include it, so it must be copied when restoring outside the cluster.",
       "The CPU limit is applied as cpulimit, without hiding processors through affinity."
     ]
   },
@@ -152,7 +152,7 @@
       "host_network_namespace": true,
       "host_memory_bytes": 16110522368,
       "shutdown_start_passed": true,
-      "companion_include": "/etc/pve/lxc/proxmenux-host-monitor",
+      "companion_include": "/etc/pve/proxmenux/host-monitor",
       "companion_included_in_vzdump": false,
       "rolling_tag_validation": "only-observed-digest",
       "cgroup_charts_observed": 144,

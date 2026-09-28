@@ -286,8 +286,11 @@ apply_host_monitor() {
   [[ -n ${HOST_MONITOR:-} ]] || return 0
   # PVE permits lxc.include but not namespace keys directly in the CT config.
   # This static, cluster-persistent companion must accompany cross-host restores.
-  local include=/etc/pve/lxc/proxmenux-host-monitor native
+  # /etc/pve/proxmenux is the same on every node of a cluster; /etc/pve/lxc
+  # is the folder of this node only.
+  local include=/etc/pve/proxmenux/host-monitor native
   native=$'lxc.namespace.share.pid = 1\nlxc.namespace.share.net = 1'
+  mkdir -p /etc/pve/proxmenux || die "$(translate "Could not create the ProxMenux folder in /etc/pve")"
   if [[ -e $include ]]; then
     [[ $(cat "$include") == "$native" ]] || die "$(translate "A different host monitor include already exists; it is not overwritten:") $include"
   else
@@ -300,7 +303,7 @@ apply_host_monitor() {
   # Do not remove the Proxmox pre-start, autodev or post-stop hooks.
   set_lxc_directive lxc.hook.mount ""
   msg_ok "$(translate "Host monitor configured: shared PID and network namespaces, LXCFS disabled in this container")"
-  msg_info2 "$(translate "If you restore this container on another Proxmox host, copy this file to the same path first, because the container backup does not include it:") $include"
+  msg_info2 "$(translate "Every node of this cluster already has this file. If you restore this container on any other Proxmox host, copy it to the same path first, because the container backup does not include it:") $include"
 }
 
 verify_host_monitor() {
@@ -1661,7 +1664,8 @@ fi
 
 SYSCTL_COUNT=$(jq '.security.sysctls? // [] | length' "$DEPLOYMENT_FILE")
 if (( SYSCTL_COUNT > 0 )); then
-  SYSCTL_INCLUDE="/etc/pve/lxc/${VMID}.proxmenux-sysctls"
+  SYSCTL_INCLUDE="/etc/pve/proxmenux/${VMID}.sysctls"
+  mkdir -p /etc/pve/proxmenux || die "$(translate "Could not create the ProxMenux folder in /etc/pve")"
   SYSCTL_TEMP=$(mktemp)
   while IFS=$'\t' read -r SYSCTL_NAME SYSCTL_VALUE; do
     [[ -n $SYSCTL_NAME ]] || continue

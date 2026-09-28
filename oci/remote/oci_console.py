@@ -28,14 +28,20 @@ LOG_DIR = Path('/var/log/proxmenux/oci')
 # Each start is marked in the console log by a pre-start hook. The hook runs
 # the script only when it exists and always succeeds: a hook that fails would
 # stop the container from starting.
-START_MARK_SCRIPT = Path(__file__).resolve().with_name('oci_console_mark.sh')
+# The installed engine, not this file: the installer runs a copy of the
+# engine from a temporary directory that is gone once it finishes.
+START_MARK_SCRIPT = Path('/usr/local/share/proxmenux/oci/engine/remote/oci_console_mark.sh')
 START_MARK = '=== ProxMenux: container started '
 
 
 def start_mark_hook(vmid: int) -> str:
     script = START_MARK_SCRIPT
+    # The hook runs before liblxc opens the console log, and liblxc refuses to
+    # start a container whose log directory is missing: on another cluster
+    # node, after a migration, it may never have been created.
     # `test`, not `[`: a bracket in the configuration reads as a snapshot section.
-    return f"lxc.hook.pre-start: /bin/sh -c 'test -x {script} && {script} {int(vmid)}; exit 0'"
+    return (f"lxc.hook.pre-start: /bin/sh -c 'mkdir -p {LOG_DIR}; "
+            f"test -x {script} && {script} {int(vmid)}; exit 0'")
 LOGROTATE = Path('/etc/logrotate.d/proxmenux-oci')
 # copytruncate, because liblxc keeps the file open for as long as the
 # container runs; moving it away would leave the application writing into the
