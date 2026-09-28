@@ -244,7 +244,7 @@ PY
   contract_count=$(jq --argjson port "$HOST_FIREWALL_PORT" '[.container_contract.ports[]? | select(
     .protocol == "tcp" and .container_port == $port)] | length' "$TEMPLATE_FILE")
   [[ $contract_count == 1 ]] \
-    || die "$(translate "The host-monitor firewall port is not declared as the web port")"
+    || die "$(translate "The host-monitor firewall port does not match exactly one TCP port in the container contract")"
   HOST_FIREWALL_ENABLED=1
 }
 

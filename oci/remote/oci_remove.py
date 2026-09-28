@@ -138,7 +138,7 @@ def remove_owned_host_firewall(record):
     except (OSError, ValueError, subprocess.CalledProcessError, json.JSONDecodeError):
         # Removal already destroyed the CT.  A firewall API failure must not
         # turn that successful lifecycle operation into a failed one.
-        msg_warn(translate('The managed host firewall rule could not be removed and was left unchanged.'))
+        msg_warn(translate('Could not verify removal of the managed host firewall rule.'))
 
 
 def remove(root, vmid):
@@ -166,7 +166,7 @@ def remove(root, vmid):
             msg_ok(f"{translate('Container removed:')} CT {member}")
     if bridge and not bridge_in_use(bridge, set(members)):
         release_bridge(bridge)
-        msg_ok(f"{translate('Private network of the application released:')} {bridge}")
+        msg_ok(f"{translate('Private network release attempted:')} {bridge}")
     elif bridge:
         msg_warn(f"{translate('The private network is still used by another container and is kept:')} {bridge}")
     remove_owned_host_firewall(primary)
@@ -200,7 +200,7 @@ def main():
     except (OSError, ValueError, KeyError, RuntimeError, subprocess.CalledProcessError) as error:
         msg_error(str(error) or type(error).__name__)
         return 1
-    msg_ok(translate('The application was removed'))
+    msg_ok(translate('Removal command finished; review any warnings above.'))
     return 0
 
 
