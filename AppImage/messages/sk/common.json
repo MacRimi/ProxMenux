@@ -2250,8 +2250,8 @@
         }
       },
       "swapPressure": "Tlak na pamäť",
-      "swapPressureHint": "Kritickú udalosť označí len vtedy, keď sú splnené obe podmienky: využitie súboru swap je nad prvým limitom a dostupná RAM pod druhým. Upozorňovanie iba na swap bolo na serveroch Proxmox príliš hlučné, pretože Linux odsúva neaktívne stránky aj pri dostatočne dostupnej RAM.",
-      "swapHighLabel": "Využitie súboru swap",
+      "swapPressureHint": "Táto kontrola zaťaženia swapu označí kritickú udalosť po opakovaných meraniach, pri ktorých celkové využitie swapu prekročí prvý limit a dostupná RAM klesne pod druhý. Dlhodobo vysoké využitie RAM môže nezávisle spustiť ďalšiu kritickú udalosť.",
+      "swapHighLabel": "Celkové využitie swapu",
       "availableMinLabel": "Minimálna dostupná RAM"
     },
     "navOrder": {
@@ -2372,6 +2372,10 @@
       "down": "Nebeží"
     },
     "errors": {
+      "deleteReportNoFiles": "Nenašli sa žiadne súbory správy ani logov Lynis na odstránenie.",
+      "lynisUninstallNoFiles": "Nenašli sa žiadne inštalačné súbory, správy ani logy Lynis na odstránenie.",
+      "lynisRemovalPartial": "Odstránenie sa nedokončilo. Niektoré súbory Lynis boli odstránené; pred ďalším pokusom skontrolujte, čo zostalo.",
+      "lynisRemovalUnconfirmed": "Výsledok odstránenia Lynis sa nepodarilo potvrdiť. Niektoré súbory už mohli byť odstránené; pred ďalším pokusom to skontrolujte.",
       "passwordMinLength": "Heslo musí mať aspoň 10 znakov.",
       "passwordComplexity": "Použite aspoň tri z týchto možností: malé písmeno, veľké písmeno, číslo, symbol.",
       "passwordCommon": "Toto heslo je príliš bežné. Vyberte niečo ťažšie uhádnuteľné.",
@@ -2447,7 +2451,7 @@
       "disableAuth": "Vypnúť prihlásenie? Každý, kto sa dostane k dashboardu, ho bude môcť otvoriť.",
       "revokeToken": "Zrušiť tento API token?",
       "disableHttps": "Vypnúť HTTPS a vrátiť sa na obyčajné HTTP?",
-      "deleteAuditReport": "Vymazať túto správu z auditu?",
+      "deleteAuditReport": "Odstrániť správu z auditu Lynis a jej logy?",
       "cannotBeUndone": "Tento krok sa nedá vrátiť späť."
     },
     "auth": {
@@ -2810,10 +2814,10 @@
       "installationTitle": "Inštalácia Lynis",
       "installationDescription": "Terminál nainštaluje Lynis a pripraví podporu reportov.",
       "uninstallConfirmTitle": "Odinštalovať Lynis?",
-      "uninstallConfirmDescription": "Odstráni sa Lynis aj správy z auditu vytvorené Monitorom.",
+      "uninstallConfirmDescription": "Odinštalovať Lynis a odstrániť jeho správu z auditu a logy.",
       "removeInstallation": "Odstrániť inštaláciu Lynis",
       "removeWrapper": "Odstrániť Monitor wrapper pre Lynis",
-      "removeReports": "Odstrániť uložené správy z auditu",
+      "removeReports": "Odstrániť správu z auditu Lynis a logy",
       "counts": {
         "tests": {
           "one": "{count} test",
@@ -2887,10 +2891,10 @@
         "proxmoxScoreWithLabel": "Skóre pre Proxmox ({label})",
         "actionableWarningsLabel": "Varovania na riešenie",
         "actionableSuggestionsLabel": "Odporúčania na riešenie",
-        "warningsDescription": "Varovania, ktoré sa oplatí skontrolovať ako prvé. Očakávané Proxmox nálezy sú tu skryté.",
+        "warningsDescription": "Varovania, ktoré treba preveriť ako prvé. Nálezy očakávané na Proxmoxe sa zobrazujú s označením.",
         "noWarningsDetected": "Nenašli sa žiadne varovania na riešenie.",
         "recommendation": "Odporúčanie",
-        "suggestionsDescription": "Menej urgentné odporúčania na spevnenie. Očakávané Proxmox nálezy sú skryté aj tu.",
+        "suggestionsDescription": "Menej naliehavé odporúčania na spevnenie. Nálezy očakávané na Proxmoxe sa tiež zobrazujú s označením.",
         "incompleteDescription": "Lynis vytvoril neúplnú správu bez skóre alebo počtu testov. Spustite audit znova, aby sa zobrazil spoľahlivý výsledok.",
         "detailedChecks": "Podrobné kontroly",
         "categoriesCount": "{count} kategórií",

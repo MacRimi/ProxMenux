@@ -2251,8 +2251,8 @@
         }
       },
       "swapPressure": "Pression mémoire",
-      "swapPressureHint": "Marque un événement critique uniquement quand LES DEUX conditions sont vraies en même temps — utilisation du fichier swap au-dessus du premier seuil ET RAM disponible en-dessous du second. Alerter uniquement sur le swap était bruyant sur les hôtes Proxmox où Linux échange des pages inactives alors que la RAM reste abondamment disponible.",
-      "swapHighLabel": "Utilisation du fichier swap",
+      "swapPressureHint": "Ce contrôle de la pression sur le swap signale un événement critique après plusieurs mesures où l’utilisation totale du swap dépasse le premier seuil et la RAM disponible passe sous le second. Une utilisation de la RAM élevée et persistante peut aussi déclencher un événement critique distinct.",
+      "swapHighLabel": "Utilisation totale du swap",
       "availableMinLabel": "RAM disponible minimale"
     },
     "navOrder": {
@@ -2373,6 +2373,10 @@
       "down": "Vers le bas"
     },
     "errors": {
+      "deleteReportNoFiles": "Aucun rapport ni journal Lynis à supprimer n’a été trouvé.",
+      "lynisUninstallNoFiles": "Aucun fichier d’installation, rapport ou journal Lynis à supprimer n’a été trouvé.",
+      "lynisRemovalPartial": "La suppression ne s’est pas terminée. Certains fichiers Lynis ont été supprimés ; vérifiez ce qui reste avant de réessayer.",
+      "lynisRemovalUnconfirmed": "Le résultat de la suppression de Lynis n’a pas pu être confirmé. Certains fichiers ont peut-être déjà été supprimés ; vérifiez avant de réessayer.",
       "passwordMinLength": "Le mot de passe doit comporter au moins 10 caractères.",
       "passwordComplexity": "Utilisez-en au moins trois : minuscules, majuscules, chiffres, symboles.",
       "passwordCommon": "Ce mot de passe est trop courant. Choisissez quelque chose de plus difficile à deviner.",
@@ -2448,7 +2452,7 @@
       "disableAuth": "Désactiver l'authentification ? Toute personne pouvant accéder au tableau de bord pourra l’ouvrir.",
       "revokeToken": "Révoquer ce jeton API ?",
       "disableHttps": "Désactiver HTTPS et revenir au HTTP simple ?",
-      "deleteAuditReport": "Supprimer ce rapport d'audit ?",
+      "deleteAuditReport": "Supprimer le rapport d’audit et les journaux Lynis ?",
       "cannotBeUndone": "Cela ne peut pas être annulé."
     },
     "auth": {
@@ -2811,10 +2815,10 @@
       "installationTitle": "Installer Lynis",
       "installationDescription": "Le terminal installera Lynis et préparera le support des rapports.",
       "uninstallConfirmTitle": "Désinstaller Lynis ?",
-      "uninstallConfirmDescription": "Cela supprime les fichiers de rapport d'audit créés par Lynis et Monitor.",
+      "uninstallConfirmDescription": "Désinstaller Lynis et supprimer son rapport d’audit ainsi que ses journaux.",
       "removeInstallation": "Supprimer l'installation de Lynis",
       "removeWrapper": "Supprimer le wrapper Monitor Lynis",
-      "removeReports": "Supprimer les rapports d'audit enregistrés",
+      "removeReports": "Supprimer le rapport d’audit et les journaux Lynis",
       "counts": {
         "tests": {
           "one": "Test {count}",
@@ -2888,10 +2892,10 @@
         "proxmoxScoreWithLabel": "Score Proxmox ({label})",
         "actionableWarningsLabel": "Avertissements exploitables",
         "actionableSuggestionsLabel": "Suggestions exploitables",
-        "warningsDescription": "Avertissements qui méritent d’être examinés en premier. Les résultats attendus de Proxmox sont cachés ici.",
+        "warningsDescription": "Avertissements à examiner en priorité. Les résultats attendus sur Proxmox sont affichés avec un badge.",
         "noWarningsDetected": "Aucun avertissement exploitable n’a été détecté.",
         "recommendation": "Recommandation",
-        "suggestionsDescription": "Suggestions de durcissement de moindre priorité. Les résultats attendus de Proxmox sont également cachés ici.",
+        "suggestionsDescription": "Suggestions de renforcement moins prioritaires. Les résultats attendus sur Proxmox sont aussi affichés avec un badge.",
         "incompleteDescription": "Lynis a créé un rapport incomplet sans score ni décompte de tests. Réexécutez l’audit pour afficher un résultat fiable.",
         "detailedChecks": "Vérifications détaillées",
         "categoriesCount": "Catégories {count}",

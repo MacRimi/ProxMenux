@@ -2251,8 +2251,8 @@
         }
       },
       "swapPressure": "Minnestryck",
-      "swapPressureHint": "Markerar en kritisk händelse endast när BÅDA villkoren är sanna samtidigt — swap-filanvändning över första tröskeln OCH tillgängligt RAM under andra. Att larma enbart på swap var störande på Proxmox-värdar där Linux växlar ut inaktiva sidor medan RAM förblir rikligt tillgängligt.",
-      "swapHighLabel": "Swap-filanvändning",
+      "swapPressureHint": "Den här kontrollen av swaptryck markerar en kritisk händelse efter upprepade mätningar där den totala swapanvändningen överskrider den första tröskeln och tillgängligt RAM understiger den andra. Ihållande hög RAM-användning kan också utlösa en separat kritisk händelse.",
+      "swapHighLabel": "Total swapanvändning",
       "availableMinLabel": "Minsta tillgängliga RAM"
     },
     "navOrder": {
@@ -2373,6 +2373,10 @@
       "down": "Ner"
     },
     "errors": {
+      "deleteReportNoFiles": "Inga Lynis-rapport- eller loggfiler hittades att ta bort.",
+      "lynisUninstallNoFiles": "Inga installations-, rapport- eller loggfiler för Lynis hittades att ta bort.",
+      "lynisRemovalPartial": "Borttagningen slutfördes inte. Vissa Lynis-filer togs bort; kontrollera vad som finns kvar innan du försöker igen.",
+      "lynisRemovalUnconfirmed": "Det gick inte att bekräfta resultatet av borttagningen av Lynis. Vissa filer kan redan ha tagits bort; kontrollera innan du försöker igen.",
       "passwordMinLength": "Lösenordet måste vara minst 10 tecken långt.",
       "passwordComplexity": "Använd minst tre av dessa: gemener, versaler, nummer, symbol.",
       "passwordCommon": "Det här lösenordet är för vanligt. Välj något som är svårare att gissa.",
@@ -2448,7 +2452,7 @@
       "disableAuth": "Inaktivera autentisering? Alla som kan nå instrumentpanelen kommer att kunna öppna den.",
       "revokeToken": "Återkalla denna API-token?",
       "disableHttps": "Inaktivera HTTPS och gå tillbaka till vanlig HTTP?",
-      "deleteAuditReport": "Vill du ta bort den här revisionsrapporten?",
+      "deleteAuditReport": "Ta bort Lynis granskningsrapport och loggar?",
       "cannotBeUndone": "Detta kan inte ångras."
     },
     "auth": {
@@ -2811,10 +2815,10 @@
       "installationTitle": "Installera Lynis",
       "installationDescription": "Terminalen kommer att installera Lynis och förbereda rapportstöd.",
       "uninstallConfirmTitle": "Avinstallera Lynis?",
-      "uninstallConfirmDescription": "Detta tar bort revisionsrapportfiler som skapats av Lynis och Monitor.",
+      "uninstallConfirmDescription": "Avinstallera Lynis och ta bort dess granskningsrapport och loggar.",
       "removeInstallation": "Ta bort Lynis-installationen",
       "removeWrapper": "Ta bort Monitor Lynis-omslaget",
-      "removeReports": "Ta bort sparade revisionsrapporter",
+      "removeReports": "Ta bort Lynis granskningsrapport och loggar",
       "counts": {
         "tests": {
           "one": "{count} test",
@@ -2888,10 +2892,10 @@
         "proxmoxScoreWithLabel": "Proxmox-poäng ({label})",
         "actionableWarningsLabel": "Handlingsbara varningar",
         "actionableSuggestionsLabel": "Handlingsbara förslag",
-        "warningsDescription": "Varningar värda att granska först. Proxmox-förväntade fynd är dolda här.",
+        "warningsDescription": "Varningar som bör granskas först. Förväntade fynd på Proxmox visas med en markering.",
         "noWarningsDetected": "Inga åtgärdsbara varningar upptäcktes.",
         "recommendation": "Rekommendation",
-        "suggestionsDescription": "Förslag på lägre prioritet härdning. Proxmox-förväntade fynd är dolda här också.",
+        "suggestionsDescription": "Förslag på härdning med lägre prioritet. Förväntade fynd på Proxmox visas också med en markering.",
         "incompleteDescription": "Lynis skapade en ofullständig rapport utan poäng eller testräkning. Kör granskningen igen för att visa ett tillförlitligt resultat.",
         "detailedChecks": "Detaljerade kontroller",
         "categoriesCount": "{count} kategorier",

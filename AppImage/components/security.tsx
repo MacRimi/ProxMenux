@@ -382,18 +382,19 @@ export function Security() {
     setSuccess("")
     setShowLynisUninstallConfirm(false)
     try {
-      const data = await fetchApi("/api/security/lynis/uninstall", {
+      const data = await fetchApi<{ success: boolean; partial?: boolean; outcome?: string }>("/api/security/lynis/uninstall", {
         method: "POST",
       })
-      if (data.success) {
+      if (data.success === true) {
         setSuccess(st("messages.lynisUninstalled"))
         loadSecurityTools()
         setLynisReport(null)
       } else {
-        setError(data.message || st("errors.lynisUninstallFailed"))
+        setError(data.outcome === "no_files" ? st("errors.lynisUninstallNoFiles") : data.partial ? st("errors.lynisRemovalPartial") : st("errors.lynisRemovalUnconfirmed"))
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : st("errors.lynisUninstallFailed"))
+      const body = err instanceof Error && "body" in err ? err.body as { partial?: boolean } | undefined : undefined
+      setError(body?.partial ? st("errors.lynisRemovalPartial") : st("errors.lynisRemovalUnconfirmed"))
     } finally {
       setUninstallingLynis(false)
     }
@@ -4377,14 +4378,25 @@ ${(report.sections && report.sections.length > 0) ? `
                           onClick={(e) => {
                             e.stopPropagation()
                             if (confirm(st("confirm.deleteAuditReport"))) {
-                              fetchApi("/api/security/lynis/report", { method: "DELETE" })
-                                .then(() => {
-                                  setLynisReport(null)
-                                  setLynisShowReport(false)
-                                  setSuccess(st("messages.reportDeleted"))
-                                  loadSecurityTools()
+                              setError("")
+                              setSuccess("")
+                              fetchApi<{ success: boolean; outcome?: string; partial?: boolean }>("/api/security/lynis/report", { method: "DELETE" })
+                                .then((data) => {
+                                  if (data.success === true) {
+                                    setLynisReport(null)
+                                    setLynisShowReport(false)
+                                    setSuccess(st("messages.reportDeleted"))
+                                    loadSecurityTools()
+                                  } else if (data.outcome === "no_files") {
+                                    setError(st("errors.deleteReportNoFiles"))
+                                  } else {
+                                    setError(data.partial ? st("errors.lynisRemovalPartial") : st("errors.lynisRemovalUnconfirmed"))
+                                  }
                                 })
-                                .catch(() => setError(st("errors.deleteReportFailed")))
+                                .catch((err) => {
+                                  const body = err instanceof Error && "body" in err ? err.body as { partial?: boolean } | undefined : undefined
+                                  setError(body?.partial ? st("errors.lynisRemovalPartial") : st("errors.lynisRemovalUnconfirmed"))
+                                })
                             }
                           }}
                           className="h-7 px-2 text-xs text-red-500 hover:text-red-400 hover:bg-red-500/10 ml-2 sm:ml-0"
