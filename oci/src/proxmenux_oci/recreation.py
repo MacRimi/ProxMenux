@@ -151,10 +151,10 @@ def refresh_template(candidate, ui):
     latest = catalog.compose(name)
     if latest == old:
         return
-    if not ui.confirm(translate('Apply the options from the current catalog template? Your data and configuration are kept.'), True):
+    if not ui.confirm(translate('Apply options from the current catalog template? New required paths and settings may be requested. Review the resulting configuration before recreating the CT.'), True):
         return
     if latest['id'] != old['id'] or latest['container_contract']['image']['repository'] != old['container_contract']['image']['repository']:
-        raise ValueError(translate('The current template changes the image or identity; an explicit migration is required'))
+        raise ValueError(translate('The current template changes the template identity or image repository; an explicit migration is required'))
     deployment = candidate['deployment']
     mounted = {m['container_path'] for m in deployment.get('mounts', [])}
     for volume in latest['container_contract'].get('volumes', []):
