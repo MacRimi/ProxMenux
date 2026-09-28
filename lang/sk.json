@@ -5806,7 +5806,6 @@
   "The GPU is being detached from VM": "GPU sa odpája z VM",
   "The GPU vendor differs from the requested profile": "Predajca GPU sa líši od požadovaného profilu",
   "The GPU vendor does not match the selected GPU profile:": "Dodávateľ GPU nezodpovedá zvolenému profilu GPU:",
-  "The HTTP check for the application failed:": "Kontrola HTTP pre aplikáciu zlyhala:",
   "The Immich CPU quota cannot be reproduced": "Kvóta Immich CPU nemôže byť reprodukovaná",
   "The Immich library needs at least 8 GB": "Knižnica Immich potrebuje aspoň 8 GB",
   "The Immich startup was modified or cannot be reproduced": "Spustenie Immich bolo upravené alebo nemožno reprodukovať",

@@ -16,7 +16,7 @@ EMPTY = 'No registered OCI containers are available for selection on this host.'
 OLD_REPLAY = 'This stack requires replaying specific rootfs adaptations. Coordinated updates are not yet enabled for it.'
 NO_MEMBERS = 'This stack has no saved members to update.'
 REPLAY = 'This stack needs rootfs adaptations that coordinated updates cannot replay yet.'
-HTTP = 'The HTTP check for the application failed:'
+HTTP = 'The application did not pass its HTTP check:'
 
 
 def extracted(name, **dependencies):

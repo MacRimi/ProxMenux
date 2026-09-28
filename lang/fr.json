@@ -5806,7 +5806,6 @@
   "The GPU is being detached from VM": "Le GPU est détaché de la VM",
   "The GPU vendor differs from the requested profile": "Le fournisseur GPU diffère du profil demandé",
   "The GPU vendor does not match the selected GPU profile:": "Le fournisseur GPU ne correspond pas au profil GPU sélectionné :",
-  "The HTTP check for the application failed:": "La vérification HTTP de l'application a échoué :",
   "The Immich CPU quota cannot be reproduced": "Le quota de CPU Immich ne peut pas être reproduit",
   "The Immich library needs at least 8 GB": "La bibliothèque Immich a besoin d'au moins 8 Go",
   "The Immich startup was modified or cannot be reproduced": "Le démarrage de Immich a été modifié ou ne peut pas être reproduit",

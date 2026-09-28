@@ -513,7 +513,7 @@ if (( START_AFTER == 1 )); then
   [[ -n $APPLICATION_LAN_IP ]] \
     || die "$(translate "The application did not get an address on the access network:") Paperless-ngx"
   curl -fsS "http://${APPLICATION_LAN_IP}:8000/" >/dev/null 2>>"$OCI_LOG" \
-    || die "$(translate "The HTTP check for the application failed:") Paperless-ngx"
+    || die "$(translate "The application did not pass its HTTP check:") Paperless-ngx"
   msg_ok "$(translate "Application responding:") http://${APPLICATION_LAN_IP}:8000/"
 fi
 
