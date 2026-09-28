@@ -146,7 +146,7 @@ def _interactive_management(project, ui):
         return
     rows = saved_inventory(project)
     if not rows:
-        ui.message(translate('No OCI instances are registered.'), translate('OCI management'))
+        ui.message(translate('No registered OCI containers are available for selection on this host.'), translate('OCI management'))
         return
     # Same layout as the catalog lists; only an unusual state is shown.
     tag_width = max(len(str(r['vmid'])) for r in rows)
@@ -352,12 +352,15 @@ def _manage_stack(project, ui, row, action=None, lifecycle_args=()):
         import oci_stack_replay
         needs_replay = any(m.get('native_stack_intent') or
                 m.get('deployment', {}).get('rootfs_adaptation_replay_required') for m in members)
-        if not members or (needs_replay and not (
+        if not members:
+            ui.message(translate('This stack has no saved members to update.'), translate('OCI stack management'))
+            return False
+        if needs_replay and not (
                 oci_stack_replay.nextcloud_menu_ready(primary) or
                 oci_stack_replay.paperless_menu_ready(primary) or
                 oci_stack_replay.tandoor_menu_ready(primary) or
-                oci_stack_replay.immich_menu_ready(primary))):
-            ui.message(translate('This stack requires replaying specific rootfs adaptations. Coordinated updates are not yet enabled for it.'), translate('OCI stack management'))
+                oci_stack_replay.immich_menu_ready(primary)):
+            ui.message(translate('This stack needs rootfs adaptations that coordinated updates cannot replay yet.'), translate('OCI stack management'))
             return False
         if action == 'recreate':
             ui.message(translate('A multi-container application is not recreated: its containers are updated together.'), translate('OCI stack management'))
