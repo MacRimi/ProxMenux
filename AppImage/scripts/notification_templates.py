@@ -1217,9 +1217,9 @@ TEMPLATES = {
     
     # ── Cluster events ──
     'split_brain': {
-        'title': '{hostname}: SPLIT-BRAIN detected',
-        'body': 'A cluster split-brain condition has been detected. Quorum may be lost.\nQuorum status: {quorum}',
-        'label': 'SPLIT-BRAIN detected',
+        'title': '{hostname}: Cluster event reported',
+        'body': 'A cluster event was reported. Review cluster status and the source event for details.',
+        'label': 'Cluster event',
         'group': 'cluster',
         'default_enabled': True,
     },

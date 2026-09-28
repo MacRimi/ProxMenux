@@ -1960,7 +1960,7 @@
         "burst_service_fail": "Zlyhanie viacerých služieb",
         "burst_system": "Viacero systémových problémov",
         "burst_generic": "Viacero súvisiacich udalostí",
-        "split_brain": "Zistený split-brain",
+        "split_brain": "Udalosti klastra",
         "node_disconnect": "Server sa odpojil",
         "node_reconnect": "Server sa znova pripojil",
         "system_startup": "Súhrn po spustení systému",
@@ -6521,9 +6521,9 @@
           "label": "Zmena oprávnení používateľa"
         },
         "split_brain": {
-          "title": "{hostname}: Zistený SPLIT-BRAIN",
-          "body": "V klastri bol zistený stav split-brain. Kvórum môže byť stratené.\nStav kvóra: {quorum}",
-          "label": "Zistený split-brain"
+          "title": "{hostname}: hlásená udalosť klastra",
+          "body": "Bola hlásená udalosť klastra. Skontrolujte stav klastra a pôvodnú udalosť, kde nájdete ďalšie podrobnosti.",
+          "label": "Udalosť klastra"
         },
         "node_disconnect": {
           "title": "{hostname}: Uzol {node_name} odpojený",

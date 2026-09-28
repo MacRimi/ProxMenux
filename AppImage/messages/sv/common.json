@@ -1959,7 +1959,7 @@
         "burst_service_fail": "Flera tjänstefel",
         "burst_system": "Flera systemproblem",
         "burst_generic": "Flera relaterade händelser",
-        "split_brain": "Split-brain upptäckt",
+        "split_brain": "Klusterhändelser",
         "node_disconnect": "Noden frånkopplad",
         "node_reconnect": "Noden återansluten",
         "system_startup": "Systemstartrapport",
@@ -6522,9 +6522,9 @@
           "label": "Användarbehörighet har ändrats"
         },
         "split_brain": {
-          "title": "{hostname}: SPLIT-BRAIN upptäckt",
-          "body": "Ett split-brain-tillstånd har upptäckts i klustret. Quorum kan gå förlorat.\nKvorumsstatus: {quorum}",
-          "label": "SPLIT-BRAIN upptäckt"
+          "title": "{hostname}: klusterhändelse rapporterad",
+          "body": "En klusterhändelse har rapporterats. Kontrollera klusterstatus och den ursprungliga händelsen för mer information.",
+          "label": "Klusterhändelse"
         },
         "node_disconnect": {
           "title": "{hostname}: Nod {node_name} frånkopplad",

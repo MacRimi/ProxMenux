@@ -1959,7 +1959,7 @@
         "burst_service_fail": "Mehrere Dienstausfälle",
         "burst_system": "Mehrere Systemprobleme",
         "burst_generic": "Mehrere verwandte Ereignisse",
-        "split_brain": "Split-Brain erkannt",
+        "split_brain": "Clusterereignisse",
         "node_disconnect": "Knoten getrennt",
         "node_reconnect": "Knoten wieder verbunden",
         "system_startup": "Systemstartbericht",
@@ -6522,9 +6522,9 @@
           "label": "Benutzerberechtigung geändert"
         },
         "split_brain": {
-          "title": "{hostname}: SPLIT-BRAIN erkannt",
-          "body": "Es wurde ein Split-Brain-Zustand im Cluster festgestellt. Das Quorum kann verloren gehen.\nQuorumsstatus: {quorum}",
-          "label": "SPLIT-BRAIN erkannt"
+          "title": "{hostname}: Clusterereignis gemeldet",
+          "body": "Ein Clusterereignis wurde gemeldet. Prüfen Sie den Clusterstatus und das ursprüngliche Ereignis für weitere Informationen.",
+          "label": "Clusterereignis"
         },
         "node_disconnect": {
           "title": "{hostname}: Knoten {node_name} getrennt",
