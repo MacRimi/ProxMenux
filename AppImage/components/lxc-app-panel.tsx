@@ -111,11 +111,22 @@ interface AppConfig {
   exclude_from_badge?: boolean
 }
 
+// A port as the installation record states it: the application answers on
+// the first one, and any other is a service of its own (go2rtc next to Frigate).
+interface PortDetail {
+  port: number
+  scheme: string | null
+  path: string | null
+  description: string
+  logo_url: string
+}
+
 interface DetectedApp {
   slug: string
   name: string
   logo_url?: string | null
   default_ports?: number[]
+  port_details?: PortDetail[] | null
   // Categoría preset from helpers_cache.category_names[0] — used to
   // auto-fill the Web Link editor when the user clicks "Register".
   category?: string | null
@@ -269,6 +280,7 @@ interface Suggestions {
   web_path_hint: string | null
   tracking_suggestion?: TrackingSuggestion | null
   default_ports?: number[]
+  port_details?: PortDetail[] | null
   logo_url?: string | null
   category?: string | null
   extras?: DetectedApp[]
@@ -641,6 +653,7 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed, initialData }: Prop
         name: suggestions.name_suggestion,
         logo_url: suggestions.logo_url,
         default_ports: suggestions.default_ports,
+        port_details: suggestions.port_details,
         category: suggestions.category,
         tracking_suggestion: suggestions.tracking_suggestion,
         scheme: suggestions.oci_instance?.scheme === "https" ? "https"
@@ -844,7 +857,17 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed, initialData }: Prop
         const suggestedPorts = isOciAdguard && p.slug === "image-adguard-home"
           ? [80, ...(adguardSetupAvailable ? [3000] : [])]
           : p.default_ports || []
-        if (p.slug !== "docker" && suggestedPorts.length) {
+        if (p.port_details?.length && !(isOciAdguard && p.slug === "image-adguard-home")) {
+          seed.ports = p.port_details.map((d) => ({
+            port: d.port,
+            ...(d.description ? { description: d.description } : {}),
+            scheme: d.scheme === "https" ? "https" as const
+              : d.scheme === "http" ? "http" as const : defaultSchemeFor(d.port),
+            web_path: d.path || s?.web_path_hint || "",
+            ...(d.logo_url ? { logo_url: d.logo_url } : {}),
+            ...(p.category ? { category: p.category } : {}),
+          }))
+        } else if (p.slug !== "docker" && suggestedPorts.length) {
           seed.ports = suggestedPorts.map((port) => ({
             port,
             ...(isOciAdguard && port === 3000 ? { description: "Config" } : {}),

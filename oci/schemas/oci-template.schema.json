@@ -29,7 +29,8 @@
       "additionalProperties": false,
       "properties": {
         "by": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9-]{0,38}$"},
-        "date": {"type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"}
+        "date": {"type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"},
+        "report": {"type": "string", "pattern": "^https://github\\.com/MacRimi/ProxMenux/(issues/[0-9]+|discussions/[0-9]+(#discussioncomment-[0-9]+)?)$"}
       }
     },
     "catalog_ui": {
@@ -216,10 +217,20 @@
               "scheme": {"enum": ["http", "https"]},
               "port": {"type": "integer", "minimum": 1, "maximum": 65535},
               "path": {"type": "string", "pattern": "^/"},
-              "source": {"type": "string"}
+              "source": {"type": "string"},
+              "icon": {"type": "string", "pattern": "^https://"}
             },
             "additionalProperties": false
           }
+        },
+        "version_file": {
+          "type": "object",
+          "required": ["path", "regex"],
+          "properties": {
+            "path": {"type": "string", "pattern": "^/"},
+            "regex": {"type": "string"}
+          },
+          "additionalProperties": false
         },
         "credentials": {
           "type": "array",

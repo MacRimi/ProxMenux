@@ -333,9 +333,14 @@
         "scheme": "http",
         "port": 1984,
         "path": "/",
-        "source": "integrated-go2rtc-native-oci-endpoint"
+        "source": "integrated-go2rtc-native-oci-endpoint",
+        "icon": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/go2rtc.webp"
       }
     ],
+    "version_file": {
+      "path": "/opt/frigate/frigate/version.py",
+      "regex": "VERSION = \"([0-9]+(?:\\.[0-9]+)+)"
+    },
     "credentials": []
   },
   "proxmox": {

@@ -5313,7 +5313,7 @@ def _helper_slug_meta(vmid) -> Optional[dict]:
 
 _OCI_INSTANCE_ROOT = "/usr/local/share/proxmenux/oci/instances"
 _OCI_CATALOG_INDEX = "/usr/local/share/proxmenux/oci/engine/catalog/index.json"
-_oci_catalog_cache: tuple[float, dict] | None = None
+_oci_catalog_cache: tuple[float, dict, dict] | None = None
 
 
 def _oci_catalog_icons() -> dict:
@@ -5325,26 +5325,72 @@ def _oci_catalog_icons() -> dict:
     answered 404 — so the panel reads the catalog and keeps the record as the
     fallback for an application the catalog no longer lists.
     """
+    return _oci_catalog_entries()[0]
+
+
+def _oci_catalog_entries() -> tuple[dict, dict]:
+    """Icons and template files of the catalog, keyed by template id and by
+    application id."""
     global _oci_catalog_cache
     now = time.time()
     if _oci_catalog_cache and now - _oci_catalog_cache[0] < 600:
-        return _oci_catalog_cache[1]
+        return _oci_catalog_cache[1], _oci_catalog_cache[2]
     icons: dict = {}
+    templates: dict = {}
     try:
         with open(_OCI_CATALOG_INDEX, encoding="utf-8") as handle:
             for item in (json.load(handle) or {}).get("applications", []):
-                icon = (item or {}).get("icon")
-                if not isinstance(icon, str) or not icon.startswith("http"):
-                    continue
+                item = item or {}
+                icon = item.get("icon")
+                template = item.get("template")
                 # An installation records the template id; the catalog is keyed
                 # by the application id and carries both.
                 for key in (item.get("template_id"), item.get("id")):
-                    if key:
+                    if not key:
+                        continue
+                    if isinstance(icon, str) and icon.startswith("http"):
                         icons.setdefault(key, icon)
+                    if isinstance(template, str) and template.startswith("apps/"):
+                        templates.setdefault(key, template)
     except (OSError, ValueError, TypeError):
         pass
-    _oci_catalog_cache = (now, icons)
-    return icons
+    _oci_catalog_cache = (now, icons, templates)
+    return icons, templates
+
+
+def _oci_catalog_first_run(template_id) -> dict:
+    """The first_run contract of the current catalog template. An existing
+    install keeps a copy from the day it was created; what the catalog added
+    since, such as a service icon, is read here."""
+    template = _oci_catalog_entries()[1].get(template_id or "")
+    if not template:
+        return {}
+    try:
+        with open(os.path.join(os.path.dirname(_OCI_CATALOG_INDEX), template), encoding="utf-8") as handle:
+            first_run = (json.load(handle) or {}).get("first_run")
+    except (OSError, ValueError, TypeError, AttributeError):
+        return {}
+    return first_run if isinstance(first_run, dict) else {}
+
+
+def _oci_catalog_endpoint_icons(template_id) -> dict:
+    """Icon of each service a catalog application serves on a port of its own,
+    keyed by port."""
+    endpoints = _oci_catalog_first_run(template_id).get("endpoints") or []
+    return {entry["port"]: entry["icon"] for entry in endpoints
+            if isinstance(entry, dict) and isinstance(entry.get("port"), int)
+            and isinstance(entry.get("icon"), str) and entry["icon"].startswith("https://")}
+
+
+# "Web UI 2" names no service: the LinuxServer templates list the same
+# interface over http and https, or a port devices report to, that way.
+_OCI_GENERIC_ENDPOINT = re.compile(r"(web\s*ui|ui)?\s*\d*", re.IGNORECASE)
+
+
+def _oci_service_name(label) -> str:
+    """The service an endpoint label names: "go2rtc WebUI" is go2rtc."""
+    label = str(label or "").strip()
+    return re.sub(r"\s*(web\s*ui|ui)$", "", label, flags=re.IGNORECASE).strip() or label
 
 
 def _oci_localised(value) -> str:
@@ -5433,20 +5479,27 @@ def ensure_oci_registration(vmid) -> bool:
     meta = _oci_instance_meta(vmid)
     if not meta or not meta.get("name") or not _NAME_RE.match(str(meta["name"])):
         return False
-    port = meta.get("endpoint_port") or next(iter(meta.get("ports") or []), None)
+    category = meta.get("category_label") or meta.get("category") or ""
+    endpoints = meta.get("endpoints") or []
+    if not endpoints:
+        port = meta.get("endpoint_port") or next(iter(meta.get("ports") or []), None)
+        endpoints = [{"port": port, "scheme": meta.get("endpoint_scheme"), "path": meta.get("endpoint_path"),
+                      "description": "", "logo_url": ""}] if isinstance(port, int) else []
+    ports = []
+    for endpoint in endpoints:
+        entry = {"port": endpoint["port"], "scheme": endpoint.get("scheme") or "http",
+                 "web_path": endpoint.get("path") or "/", "category": category,
+                 "description": endpoint.get("description") or ""}
+        if endpoint.get("logo_url"):
+            entry["logo_url"] = endpoint["logo_url"]
+        ports.append(entry)
     payload = {
         "name": meta["name"],
         "installed_via": "oci_image",
         "helper_slug": meta.get("template_id") or "",
         "logo_url": meta.get("logo") or "",
         "update_method": "none",
-        "ports": [{
-            "port": port,
-            "scheme": meta.get("endpoint_scheme") or "http",
-            "web_path": meta.get("endpoint_path") or "/",
-            "category": meta.get("category_label") or meta.get("category") or "",
-            "description": "",
-        }] if isinstance(port, int) else [],
+        "ports": ports,
     }
     # Registrations made at startup would each announce their update on their
     # own; the scheduled sweep sends pending updates together instead.
@@ -5545,6 +5598,29 @@ def _oci_instance_meta(vmid) -> Optional[dict]:
         if 1 <= port <= 65535 and port not in ports:
             ports.append(port)
     template_id = str(template.get("id") or "").strip()
+    # The application is reached on its first endpoint and carries its own
+    # name and logo. Any other endpoint is a service of its own, such as
+    # go2rtc next to Frigate, and is described by its name and icon.
+    endpoints = []
+    endpoint_icons = None
+    for entry in (template.get("first_run") or {}).get("endpoints") or []:
+        port = entry.get("port") if isinstance(entry, dict) else None
+        if not isinstance(port, int) or not 1 <= port <= 65535 or port in [e["port"] for e in endpoints]:
+            continue
+        detail = {"port": port,
+                  "scheme": str(entry.get("scheme") or "").strip().lower() or None,
+                  "path": str(entry.get("path") or "").strip() or None,
+                  "description": "", "logo_url": ""}
+        if endpoints:
+            if _OCI_GENERIC_ENDPOINT.fullmatch(str(entry.get("label") or "").strip()):
+                continue
+            if endpoint_icons is None:
+                endpoint_icons = _oci_catalog_endpoint_icons(template_id)
+            icon = entry.get("icon") if isinstance(entry.get("icon"), str) else ""
+            icon = endpoint_icons.get(port) or icon
+            detail["description"] = _oci_service_name(entry.get("label"))
+            detail["logo_url"] = icon if icon.startswith("https://") else ""
+        endpoints.append(detail)
     catalog_icons = _oci_catalog_icons()
     logo = catalog_icons.get(template_id) or ""
     if not logo:
@@ -5575,6 +5651,7 @@ def _oci_instance_meta(vmid) -> Optional[dict]:
         "endpoint_scheme": str(endpoint.get("scheme") or "").strip().lower() or None,
         "endpoint_path": str(endpoint.get("path") or "").strip() or None,
         "ports": ports,
+        "endpoints": endpoints,
         # The exact image this container was created from. Its digest is what
         # an update is decided on; the version label is only for reading.
         "installed_digest": str(observed_image.get("manifest_digest") or "").strip() or None,
@@ -5677,6 +5754,10 @@ def _oci_image_versions(vmid, known: Optional[dict] = None, with_latest: bool = 
             result["image_created"] = installed.get("created")
         except Exception as exc:
             return {**result, "error": f"could not read the installed image: {exc}"}
+    if not result.get("installed_version"):
+        # The container runs the installed digest, so what it states is the
+        # version of that image; once read it is kept with the digest.
+        result["installed_version"] = _oci_guest_version(vmid, meta.get("template_id"))
     if not with_latest:
         return result
     try:
@@ -5691,6 +5772,18 @@ def _oci_image_versions(vmid, known: Optional[dict] = None, with_latest: bool = 
     result.update(latest_digest=latest_digest, latest_version=latest.get("version"),
                   latest_image_created=latest.get("created"), update_available=replaced)
     return result
+
+
+def _oci_guest_version(vmid, template_id) -> Optional[str]:
+    """The application version for an image that publishes none, read from
+    the file the catalog template names. Frigate states it only in
+    /opt/frigate/frigate/version.py. Needs the container running."""
+    spec = _oci_catalog_first_run(template_id).get("version_file") or {}
+    path, pattern = spec.get("path"), spec.get("regex")
+    if not (isinstance(path, str) and path.startswith("/") and isinstance(pattern, str)):
+        return None
+    rc, out, _err = _pct_exec(vmid, ["cat", path])
+    return _extract_version(out, pattern) if rc == 0 else None
 
 
 def _oci_image_label(version: Optional[str], created: Optional[str], digest: Optional[str]) -> str:
@@ -6029,6 +6122,7 @@ def get_suggestions(vmid, force: bool = False) -> dict:
             "tracking_suggestion": det_tracking,
         })
 
+    port_details = None
     if oci_meta:
         # The record states what this container runs, so a probe finding is
         # noise: CT 152 runs Chromium and ships a docker client, and offering
@@ -6042,7 +6136,11 @@ def get_suggestions(vmid, force: bool = False) -> dict:
         name_sug = oci_meta["name"] or name_sug
         logo_url = oci_meta["logo"] or logo_url
         category_suggestion = oci_meta["category_label"] or suggest_category_for(slug)
-        if oci_meta["endpoint_port"]:
+        if oci_meta["endpoints"]:
+            port_details = oci_meta["endpoints"]
+            default_ports = [e["port"] for e in port_details]
+            ports = default_ports + [p for p in (oci_meta["ports"] or ports) if p not in default_ports]
+        elif oci_meta["endpoint_port"]:
             default_ports = [oci_meta["endpoint_port"]]
             ports = [oci_meta["endpoint_port"]] + [p for p in (oci_meta["ports"] or ports)
                                                    if p != oci_meta["endpoint_port"]]
@@ -6053,6 +6151,7 @@ def get_suggestions(vmid, force: bool = False) -> dict:
             # The first-run endpoint disappears once setup switches to :80.
             default_ports = [80]
             ports = [80, 3000]
+            port_details = None
         # Version tracking comes with the registration. Its updates are
         # decided by the image, which always has a build date and a digest,
         # so it applies even to an image that states no application version.
@@ -6077,6 +6176,9 @@ def get_suggestions(vmid, force: bool = False) -> dict:
         "web_path_hint": web_hint,
         "tracking_suggestion": tracking,
         "default_ports": default_ports,
+        # Scheme, path, description and icon of each suggested port, when the
+        # installation record states them.
+        "port_details": port_details,
         "logo_url": logo_url or None,
         # Identity of a ProxMenux OCI install: the scheme the endpoint is
         # served on, the image it was created from, and the upstream source.
