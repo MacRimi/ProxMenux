@@ -5957,7 +5957,7 @@
   "The container is not modified because a host directory is not available:": "Kontajner nie je modifikovaný, pretože adresár hostiteľa nie je k dispozícii:",
   "The container no longer exists:": "Obal už neexistuje:",
   "The container of a member was replaced; the assembly is not resumed": "Zásobník člena bol nahradený; zhromaždenie sa neobnovuje",
-  "The container runs on another node of the cluster; migrate it back to this node to remove it:": "Kontajner beží na inom uzle klastra;migrujte ho späť do tohto uzla, aby ste ho odstránili:",
+  "The container runs on another node of the cluster; migrate it back to this node to remove it:": "Kontajner beží na inom uzle klastra; migrujte ho späť do tohto uzla, aby ste ho odstránili:",
   "The container should now start as privileged": "Kontajner by sa teraz mal spustiť ako privilegovaný",
   "The container should now start as unprivileged": "Kontajner by sa teraz mal spustiť ako neprivilegovaný",
   "The container stopped after starting:": "Nádoba sa zastavila po začatí:",

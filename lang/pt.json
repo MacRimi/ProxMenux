@@ -5958,7 +5958,7 @@
   "The container is not modified because a host directory is not available:": "O recipiente não é modificado porque não está disponível uma pasta de máquinas:",
   "The container no longer exists:": "O recipiente já não existe:",
   "The container of a member was replaced; the assembly is not resumed": "O recipiente de um membro foi substituído; a montagem não é retomada",
-  "The container runs on another node of the cluster; migrate it back to this node to remove it:": "O contêiner é executado em outro nó do cluster;migre-o de volta para este nó para removê-lo:",
+  "The container runs on another node of the cluster; migrate it back to this node to remove it:": "O contêiner é executado em outro nó do cluster; migre-o de volta para este nó para removê-lo:",
   "The container should now start as privileged": "O contêiner agora deve começar como privilegiado",
   "The container should now start as unprivileged": "O contêiner agora deve começar como sem privilégios",
   "The container stopped after starting:": "O recipiente parou após iniciar:",
