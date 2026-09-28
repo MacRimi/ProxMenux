@@ -100,8 +100,14 @@ def bridge_in_use(bridge, removed):
 
 def release_bridge(bridge):
     node = socket.gethostname().split('.', 1)[0]
-    subprocess.run(['ip', 'link', 'delete', bridge, 'type', 'bridge'], check=False, capture_output=True)
-    subprocess.run(['pvesh', 'delete', f'/nodes/{node}/network/{bridge}'], check=False, capture_output=True)
+    succeeded = []
+    for command in (['ip', 'link', 'delete', bridge, 'type', 'bridge'],
+                    ['pvesh', 'delete', f'/nodes/{node}/network/{bridge}']):
+        try:
+            succeeded.append(subprocess.run(command, check=False, capture_output=True).returncode == 0)
+        except (OSError, subprocess.CalledProcessError):
+            succeeded.append(False)
+    return all(succeeded)
 
 
 def remove_owned_host_firewall(record):
@@ -112,12 +118,16 @@ def remove_owned_host_firewall(record):
     deliberately left alone as well.
     """
     plan = record.get('deployment', {}).get('host_firewall') or {}
+    if not plan:
+        return True
     installation_id = record.get('installation_id', '')
     if not isinstance(plan, dict) or not re.fullmatch(r'[0-9a-f-]{36}', installation_id):
-        return
+        msg_warn(translate('Could not verify removal of the managed host firewall rule.'))
+        return False
     source, port = plan.get('source'), plan.get('port')
     if not isinstance(source, str) or not isinstance(port, int):
-        return
+        msg_warn(translate('Could not verify removal of the managed host firewall rule.'))
+        return False
     comment = f'ProxMenux OCI firewall {installation_id}'
     node = socket.gethostname().split('.', 1)[0]
     try:
@@ -130,15 +140,20 @@ def remove_owned_host_firewall(record):
                    and str(rule.get('proto', '')).lower() == 'tcp'
                    and str(rule.get('type', '')).lower() == 'in'
                    and str(rule.get('action', '')).upper() == 'ACCEPT']
+        if not matches:
+            return True
         if len(matches) != 1 or not isinstance(matches[0].get('pos'), int):
-            return
+            msg_warn(translate('Could not verify removal of the managed host firewall rule.'))
+            return False
         subprocess.run(['pvesh', 'delete', f"/nodes/{node}/firewall/rules/{matches[0]['pos']}"],
                        check=True, capture_output=True)
         msg_ok(f"{translate('Host firewall rule removed:')} TCP {port} {translate('from')} {source}")
+        return True
     except (OSError, ValueError, subprocess.CalledProcessError, json.JSONDecodeError):
-        # Removal already destroyed the CT.  A firewall API failure must not
-        # turn that successful lifecycle operation into a failed one.
-        msg_warn(translate('The managed host firewall rule could not be removed and was left unchanged.'))
+        # A firewall API failure must not abort remaining record cleanup;
+        # report the unverified outcome without claiming the rule survived.
+        msg_warn(translate('Could not verify removal of the managed host firewall rule.'))
+        return False
 
 
 def remove(root, vmid):
@@ -150,26 +165,33 @@ def remove(root, vmid):
                                        'recover it from the management menu before removing it'))
     kept = host_directories(root, members)
     bridge = private_bridge(primary)
+    incomplete = False
     msg_info(translate('Removing the containers...'))
     for member in members:
         record = instances.read(root, member)
         config = guest_config(member)
         if config is None:
             msg_warn(f"{translate('The container no longer exists:')} CT {member}")
+            incomplete = True
             oci_console.remove_log(member)
         elif instances.identity(config) != record['installation_id']:
             msg_warn(f"{translate('The VMID belongs to another container now and is not touched:')} CT {member}")
+            incomplete = True
         else:
             subprocess.run(['pct', 'stop', str(member), '--skiplock', '1'], check=False, capture_output=True)
             run('pct', 'destroy', str(member), '--purge', '1', '--destroy-unreferenced-disks', '1')
             oci_console.remove_log(member)
             msg_ok(f"{translate('Container removed:')} CT {member}")
     if bridge and not bridge_in_use(bridge, set(members)):
-        release_bridge(bridge)
-        msg_ok(f"{translate('Private network of the application released:')} {bridge}")
+        released = release_bridge(bridge)
+        msg_ok(f"{translate('Private network release attempted:')} {bridge}")
+        if not released:
+            msg_warn(f"{translate('Could not complete private network release:')} {bridge}")
+            incomplete = True
     elif bridge:
-        msg_warn(f"{translate('The private network is still used by another container and is kept:')} {bridge}")
-    remove_owned_host_firewall(primary)
+        msg_info(f"{translate('The private network is still used by another container and is kept:')} {bridge}")
+    if not remove_owned_host_firewall(primary):
+        incomplete = True
     lifecycle = Path(f'/etc/pve/priv/proxmenux-stack-{primary_id}.json')
     if lifecycle.exists() and not lifecycle.is_symlink():
         lifecycle.unlink()
@@ -181,7 +203,8 @@ def remove(root, vmid):
     for path, size in image_cache.prune(root, lock=False):
         msg_ok(f"{translate('Unused image removed from the cache:')} {path.name}")
     for path in kept:
-        msg_warn(f"{translate('Host directory listed in saved records (not targeted for removal):')} {path}")
+        msg_info(f"{translate('Host directory listed in saved records (not targeted for removal):')} {path}")
+    return incomplete
 
 
 def main():
@@ -193,14 +216,15 @@ def main():
         parser.error(translate('Root privileges are required'))
     try:
         with instances.locked(args.root):
-            remove(args.root, args.vmid)
+            incomplete = remove(args.root, args.vmid)
     except BlockingIOError:
         msg_error(translate('Another OCI operation is using the instance registry'))
         return 1
     except (OSError, ValueError, KeyError, RuntimeError, subprocess.CalledProcessError) as error:
         msg_error(str(error) or type(error).__name__)
         return 1
-    msg_ok(translate('The application was removed'))
+    msg_ok(translate('Removal command finished; review any warnings above.') if incomplete
+           else translate('The application was removed'))
     return 0
 
 

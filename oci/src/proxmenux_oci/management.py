@@ -308,16 +308,18 @@ def _removal_summary(project, vmid):
     text = []
     if len(members) > 1 and vmid == primary_id:
         text += [f"{application} {translate('runs in')} {len(members)} {translate('containers')}. "
-                 f"{translate('All of them are removed.')}", '']
+                 f"{translate('All of them are targeted for removal.')}", '']
     elif len(members) > 1:
         alone = translate('It cannot be removed on its own, because the application would stop '
-                          'working: continuing removes the whole application.')
+                          'working: continuing targets the whole application for removal.')
         text += [f"CT {vmid} {translate('is one of the')} {len(members)} "
                  f"{translate('containers of')} {application}. {alone}", '']
-    text += [translate('Containers that are removed:'), *lines, '',
-             translate('Data that is deleted with them:'), *volumes]
+    text += [translate('Containers targeted for removal:'), *lines, '',
+             translate('Container data targeted for deletion:'), *volumes]
     if bridge:
-        text += ['', f"{translate('Private network of the application that is released:')} {bridge}"]
+        text += ['', f"{translate('Private network targeted for release if no other guest uses it:')} {bridge}"]
+    if (primary.get('deployment') or {}).get('host_firewall'):
+        text += ['', translate('A matching managed host firewall rule may also be removed.')]
     if kept:
         text += ['', translate('Host paths found in container configs or saved records (not targeted for removal):'),
                  *[f'  {path}' for path in kept]]
@@ -333,7 +335,8 @@ def _remove(project, ui, vmid):
         ui.message(f"{translate('The removal could not be prepared:')} {error}", translate('Remove OCI'))
         return False
     if not ui.review(summary, translate('Remove OCI'),
-                     question=translate('Remove it? The data of its containers cannot be recovered afterwards.'),
+                     question=translate('Remove the application? Its container disks are deleted, '
+                                        'and only a backup can bring them back.'),
                      default=False):
         return False
     return _run_lifecycle([sys.executable, str(project / 'remote/oci_remove.py'), str(vmid)],
