@@ -57,7 +57,7 @@
           "p": "Selecting an application shows its description, the image it runs and two installation modes: <strong>Install with default settings</strong>, which asks almost nothing, and <strong>Install with advanced settings</strong>, which offers the real storage, bridge and resource selectors of the node."
         },
         {
-          "p": "An application that has been tested for real shows it in that view: <strong>Verified by ProxMenux</strong> when it was tested in the ProxMenux lab, marked with ✓ in the lists, or <strong>Tested by the community</strong>, with who tested it and when."
+          "p": "An application that has been tested for real shows <strong>Verified</strong> in that view and is marked with ✓ in the lists, whether it was tested in the ProxMenux lab or by the community."
         }
       ]
     },

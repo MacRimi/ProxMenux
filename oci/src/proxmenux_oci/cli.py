@@ -60,7 +60,9 @@ def publisher(item: dict[str, Any]) -> str:
 
 
 def is_tested(item: dict[str, Any]) -> bool:
-    return item.get("template_status") == "laboratory-validated"
+    """Tested for real, in the ProxMenux lab or by the community."""
+    return (item.get("template_status") == "laboratory-validated"
+            or bool((item.get("community_tested") or {}).get("by")))
 
 
 MENU_SIZE = (22, 75, 15)
@@ -168,12 +170,8 @@ def _app_detail_text(catalog: Catalog, item: dict[str, Any], template: dict[str,
 
     row(translate("Source"), publisher(item))
     # Only a real test is shown; OCI manager Apps is labelled beta as a whole.
-    community = item.get("community_tested") or {}
     if is_tested(item):
-        row(translate("Status"), translate("Verified by ProxMenux"))
-    elif community.get("by"):
-        who = " · ".join(part for part in (f"@{community['by']}", community.get("date")) if part)
-        row(translate("Status"), f"{translate('Tested by the community')} ({who})")
+        row(translate("Status"), translate("Verified"))
     row(translate("Architectures"), _display_architectures(ui))
     endpoints = template.get("first_run", {}).get("endpoints", [])
     if endpoints:
