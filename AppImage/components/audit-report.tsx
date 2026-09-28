@@ -669,7 +669,7 @@ export function AuditReport() {
                 type="button"
                 onClick={() => toggle(f.check_id)}
                 aria-expanded={open}
-                className="w-full text-left p-4 flex items-start gap-3 rounded-lg hover:bg-white/5 transition-colors cursor-pointer"
+                className="w-full text-left p-4 flex max-[359px]:flex-wrap items-start gap-3 rounded-lg hover:bg-white/5 transition-colors cursor-pointer"
               >
                 {open
                   ? <ChevronDown className="h-4 w-4 mt-1 shrink-0 text-muted-foreground" />
@@ -678,7 +678,7 @@ export function AuditReport() {
                   <Icon className="h-3.5 w-3.5" />
                   {t(`audit.classifications.${shown}`)}
                 </Badge>
-                <div className="min-w-0 flex-1">
+                <div className="min-w-0 flex-1 max-[359px]:basis-full">
                   <div className="flex flex-wrap items-center gap-2">
                     <span className="font-medium text-foreground">
                       {t(`audit.checks.${f.check_id}.title`)}
