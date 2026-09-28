@@ -948,7 +948,8 @@
             ]
           }
         ]
-      }
+      },
+      "cpu_allocation": "quota"
     },
     "image_channel_policy": {
       "channel": "stable",

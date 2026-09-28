@@ -77,6 +77,11 @@ class ObjectDetectorTests(unittest.TestCase):
         self.assertEqual(configure_detector({}, [], ui, self.host(["/dev/apex_0"])), ([], []))
         ui.choose.assert_not_called()
 
+    def test_frigate_cpu_is_limited_by_time_not_pinned(self):
+        # OpenVINO's CPU plugin aborts on some AMD CPUs when the container is
+        # pinned to a few threads while /sys shows them all.
+        self.assertEqual(PROFILE["cpu_allocation"], "quota")
+
     def test_npu_node_is_a_supported_device_for_updates_and_adoption(self):
         self.assertTrue(oci_gpu_devices.peripheral_path("/dev/accel/accel0"))
         self.assertFalse(oci_gpu_devices.peripheral_path("/dev/accel/accel"))
