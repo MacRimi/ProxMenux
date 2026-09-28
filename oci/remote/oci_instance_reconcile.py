@@ -64,7 +64,7 @@ def _device(key, value):
         raise ValueError(f'{key}: {translate("Unsupported device options")}')
     path = fields.get('path')
     if not (gpu_devices.gpu_path(path) or gpu_devices.peripheral_path(path)):
-        raise ValueError(f'{key}: {translate("Only Intel/AMD DRM, Coral and USB nodes can be adopted automatically")}')
+        raise ValueError(f'{key}: {translate("Only Intel/AMD DRM, Coral, NPU and USB nodes can be adopted automatically")}')
     snapshot = gpu_devices.snapshot(path)
     mode = fields.get('mode', '0660')
     if not re.fullmatch(r'0?[0-7]{3}', mode):
@@ -120,7 +120,7 @@ def propose(record, config):
         else:
             device = _device(key, current[key])
             deployment.setdefault('devices', []).append(device)
-            kind = 'GPU' if gpu_devices.gpu_path(device['host_path']) else 'USB/Coral'
+            kind = 'GPU' if gpu_devices.gpu_path(device['host_path']) else 'USB/Coral/NPU'
             details.append(f"{key}: {device['host_path']} ({kind})")
     filtered = b'\n'.join(line for line in config.splitlines()
                           if not any(line.startswith(key.encode() + b': ') for key in new_keys)) + b'\n'

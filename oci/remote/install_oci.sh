@@ -2154,7 +2154,10 @@ if [[ -z ${PROXMENUX_OCI_TRANSACTION:-} ]] && ! oci_quiet python3 "${SCRIPT_DIR}
   --archive "$ARCHIVE_PATH" --digest "$DIGEST"; then
   msg_warn "$(translate "Container installed, but without a verifiable record for future updates.")"
 fi
-COMPLETION_NOTES=$(jq -c '.proxmox.installer_profile.completion_notes // []' "$TEMPLATE_FILE")
+# The template's notes, then those of this installation's choices, such as the
+# detector configuration for a device the user attached.
+COMPLETION_NOTES=$(jq -cs '(.[0].proxmox.installer_profile.completion_notes // [])
+  + (.[1].completion_notes // [])' "$TEMPLATE_FILE" "$DEPLOYMENT_FILE")
 RESULT=$(jq -cn \
   --arg app_id "$APP_ID" \
   --arg image "$IMAGE_REF" \

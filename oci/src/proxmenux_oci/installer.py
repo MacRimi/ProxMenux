@@ -420,6 +420,7 @@ def build_deployment(
 
     devices, selected_hardware_profile, post_start_configurations, environment = configure_acceleration(
         installer_profile, environment, unprivileged, ui, mode)
+    devices, completion_notes = configure_detector(installer_profile, devices, ui)
 
     if advanced:
         from .extra_devices import ask_extra_devices
@@ -506,6 +507,7 @@ def build_deployment(
         "mounts": mounts,
         "tmpfs_mounts": tmpfs_mounts,
         "devices": devices,
+        **({"completion_notes": completion_notes} if completion_notes else {}),
         "hardware_profile": selected_hardware_profile,
         "device_permissions": (device_permissions(template['container_contract']['image']['reference'],
                                                    devices, installer_profile.get('device_permissions'))
@@ -1416,6 +1418,54 @@ def _stream_process(command: list[str], standard_input: bytes | None = None) -> 
     if return_code != 0:
         raise InstallError(f"{translate('The installation ended with exit code')} {return_code}")
     return result
+
+def detected_detector_devices(installer_profile, root=Path("/")):
+    """Object detection devices the template accepts and this host has.
+
+    A device is offered only when its node exists and, when the template names
+    a vendor, the device behind it is from that vendor: an AMD NPU is also
+    /dev/accel/accel0, and Frigate runs on Intel's only.
+    """
+    found = []
+    for item in (installer_profile.get("object_detector") or {}).get("devices", []):
+        pattern = re.compile(item["path_pattern"])
+        for node in sorted((root / "dev").glob(item["host_glob"].removeprefix("/dev/"))):
+            path = "/" + str(node.relative_to(root))
+            if not pattern.fullmatch(path) or not node.is_char_device():
+                continue
+            vendor = item.get("sysfs_vendor")
+            if vendor:
+                sysfs = root / "sys/class" / item["sysfs_class"] / node.name / "device/vendor"
+                try:
+                    if sysfs.read_text().strip() != vendor:
+                        continue
+                except OSError:
+                    continue
+            found.append({**item, "host_path": path})
+    return found
+
+
+def configure_detector(installer_profile, devices, ui, root=Path("/")):
+    """Offer the object detection devices found on the host; ask nothing when
+    there are none. Returns the devices and the note that tells how to use it."""
+    attached = {item.get("host_path") for item in devices}
+    candidates = [item for item in detected_detector_devices(installer_profile, root)
+                  if item["host_path"] not in attached]
+    if not candidates or any(item.get("id", "").startswith("detector-") for item in devices):
+        return devices, []
+    options = [("none", translate("No detector device (CPU)"))] + [
+        (item["host_path"], f"{translate(item['label'])} ({item['host_path']})") for item in candidates]
+    selected = ui.choose(translate(installer_profile["object_detector"].get("prompt", "Object detector")), options, "none")
+    if selected is None:
+        raise UserCancelled(translate("Device configuration cancelled"))
+    chosen = next((item for item in candidates if item["host_path"] == selected), None)
+    if chosen is None:
+        return devices, []
+    device = {"id": f"detector-{chosen['id']}", "kind": "character-device",
+              "host_path": chosen["host_path"], "container_path": chosen["host_path"],
+              "mode": "0660", "deny_write": False, "gid_strategy": "host-device-gid"}
+    return [*devices, device], list(chosen.get("completion_notes", []))
+
 
 def configure_acceleration(installer_profile, environment, unprivileged, ui, mode=ADVANCED_MODE):
     advanced = mode != DEFAULT_MODE

@@ -15,8 +15,9 @@ def gpu_path(path):
 
 
 def peripheral_path(path):
+    """Coral, NPU (/dev/accel), USB and serial nodes, identified by their sysfs path."""
     return isinstance(path, str) and re.fullmatch(
-        r'/dev/(apex_[0-9]+|ttyUSB[0-9]+|ttyACM[0-9]+|bus/usb/[0-9]{3}/[0-9]{3})', path) is not None
+        r'/dev/(apex_[0-9]+|accel/accel[0-9]+|ttyUSB[0-9]+|ttyACM[0-9]+|bus/usb/[0-9]{3}/[0-9]{3})', path) is not None
 
 
 def system_path(path):

@@ -117,6 +117,11 @@ def edit_recreation(record, ui):
     if ui.confirm(translate('Change the access network?'), False):
         edit_network(deployment, ui)
     edit_acceleration(candidate, ui)
+    from .installer import configure_detector
+    installer_profile = candidate.get('template', {}).get('proxmox', {}).get('installer_profile', {})
+    deployment['devices'], notes = configure_detector(installer_profile, deployment.get('devices', []), ui)
+    if notes:
+        deployment['completion_notes'] = notes
     from .extra_devices import ask_extra_devices
     reference = candidate.get('template', {}).get('container_contract', {}).get('image', {}).get('reference', '')
     repository = reference.split('@')[0].rsplit(':', 1)[0]

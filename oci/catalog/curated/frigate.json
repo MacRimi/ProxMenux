@@ -923,6 +923,31 @@
         "device_inventory": "host-sysfs-and-stat",
         "application_acceleration": "requires-workload-test",
         "tone_mapping": "not-implied-by-device-access"
+      },
+      "object_detector": {
+        "prompt": "Object detector for Frigate",
+        "devices": [
+          {
+            "id": "intel-npu",
+            "label": "Intel NPU",
+            "host_glob": "/dev/accel/accel*",
+            "path_pattern": "/dev/accel/accel[0-9]+",
+            "sysfs_class": "accel",
+            "sysfs_vendor": "0x8086",
+            "completion_notes": [
+              "Frigate uses the Intel NPU once /config/config.yaml defines a detector with type: openvino and device: NPU."
+            ]
+          },
+          {
+            "id": "coral-pcie",
+            "label": "Coral PCIe/M.2",
+            "host_glob": "/dev/apex_*",
+            "path_pattern": "/dev/apex_[0-9]+",
+            "completion_notes": [
+              "Frigate uses the Coral once /config/config.yaml defines a detector with type: edgetpu and device: pci."
+            ]
+          }
+        ]
       }
     },
     "image_channel_policy": {
