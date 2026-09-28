@@ -4699,6 +4699,7 @@
       "pendingPackages": "{count} paket väntar",
       "updatedDaysAgo": "Senast uppdaterad för {count} dagar sedan",
       "storageAvailable": "{type} lagringsutrymme är tillgängligt",
+      "storageUsage": "{percent} % använt",
       "mountReachable": "{type}-monteringen kan nåbar",
       "rootfsUsed": "rootfs-användning: {percent}% ({size})",
       "runningCtsSafe": "{count} som kör CT:er har säker rootfs-användning",

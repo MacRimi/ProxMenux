@@ -4699,6 +4699,7 @@
       "pendingPackages": "{count} colis en attente",
       "updatedDaysAgo": "Dernière mise à jour il y a {count} jours",
       "storageAvailable": "Le stockage {type} est disponible",
+      "storageUsage": "{percent} % utilisé",
       "mountReachable": "La monture {type} est accessible",
       "rootfsUsed": "Utilisation de rootfs : {percent}% ({size})",
       "runningCtsSafe": "{count} les CT en cours d'exécution ont une utilisation sécurisée de rootfs",

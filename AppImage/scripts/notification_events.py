@@ -265,6 +265,22 @@ def capture_journal_context(keywords: list, lines: int = 30,
         return ""
 
 
+# Errors fstrim reports for a filesystem whose device cannot discard.
+_FSTRIM_UNSUPPORTED = ('remote i/o error', 'operation not supported', 'inappropriate ioctl for device')
+
+
+def _fstrim_failed_only_unsupported() -> bool:
+    """True when every filesystem the last fstrim run failed on cannot discard."""
+    try:
+        output = subprocess.run(
+            ['journalctl', '-u', 'fstrim.service', '--since', '-15min', '-o', 'cat', '--no-pager'],
+            capture_output=True, text=True, timeout=5).stdout
+    except (OSError, subprocess.SubprocessError):
+        return False
+    failures = [line.lower() for line in output.splitlines() if 'fitrim ioctl failed' in line.lower()]
+    return bool(failures) and all(any(text in line for text in _FSTRIM_UNSUPPORTED) for line in failures)
+
+
 # ─── smartd observation helper (shared by JournalWatcher & ProxmoxHookWatcher) ──
 #
 # Both watchers receive smartd messages — JournalWatcher via local journal,
@@ -1316,6 +1332,12 @@ class JournalWatcher:
         for noise in _NOISE_PATTERNS:
             if re.search(noise, msg) or re.search(noise, unit):
                 return
+
+        # fstrim exits non-zero when a mounted disk does not support discard,
+        # as a USB bridge or a remote share does, every time the timer runs.
+        # That is what the disk can do, not a failure to act on.
+        if ('fstrim.service' in msg or unit == 'fstrim.service') and _fstrim_failed_only_unsupported():
+            return
         
         service_patterns = [
             r'Failed to start (.+)',

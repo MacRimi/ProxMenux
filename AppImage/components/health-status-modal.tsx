@@ -347,6 +347,8 @@ export function HealthStatusModal({ open, onOpenChange, getApiUrl }: HealthStatu
     if (match) return t("healthStatus.details.startupStorageUnavailable", { storage: match[1] })
     match = value.match(/^\[Startup\] Storage '(.+)' has status: (.+)\. \(checking\.\.\.\)$/)
     if (match) return t("healthStatus.details.startupStorageStatus", { storage: match[1], status: match[2] })
+    match = value.match(/^([\d.]+)% used$/)
+    if (match) return t("healthStatus.details.storageUsage", { percent: match[1] })
     match = value.match(/^(.+) storage available$/)
     if (match) return t("healthStatus.details.storageAvailable", { type: match[1] })
     match = value.match(/^(.+) mount reachable$/)

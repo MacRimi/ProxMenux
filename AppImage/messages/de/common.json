@@ -4699,6 +4699,7 @@
       "pendingPackages": "{count} Pakete stehen aus",
       "updatedDaysAgo": "Zuletzt aktualisiert vor {count} Tagen",
       "storageAvailable": "{type} Speicher ist verfügbar",
+      "storageUsage": "{percent} % belegt",
       "mountReachable": "{type} Mount ist erreichbar",
       "rootfsUsed": "Rootfs-Nutzung: {percent} % ({size})",
       "runningCtsSafe": "{count} laufende CTs haben eine sichere Rootfs-Nutzung",

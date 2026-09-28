@@ -4699,6 +4699,7 @@
       "pendingPackages": "{count} pacotes pendentes",
       "updatedDaysAgo": "Última atualização há {count} dias",
       "storageAvailable": "O armazenamento {type} está disponível",
+      "storageUsage": "{percent}% em uso",
       "mountReachable": "A montagem {type} está acessível",
       "rootfsUsed": "Uso de rootfs: {percent}% ({size})",
       "runningCtsSafe": "{count} CTs em execução têm uso seguro de rootfs",

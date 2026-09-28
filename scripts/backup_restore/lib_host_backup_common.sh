@@ -680,8 +680,10 @@ hb_prepare_staging() {
         target="$staging_root/rootfs/$rel"
         if [[ -d "$p" ]]; then
             mkdir -p "$target"
+            # The SELinux label belongs to the host that wrote the file: pmxcfs
+            # has none, and rsync cannot remove the one /tmp gives the copy.
             local -a rsync_opts=(
-                -aAXH --numeric-ids
+                -aAXH --numeric-ids --filter='-x security.selinux'
             )
 
             # /var/lib/pve-cluster: skip the raw config.db and its WAL/SHM

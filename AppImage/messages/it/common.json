@@ -4699,6 +4699,7 @@
       "pendingPackages": "{count} pacchetti in sospeso",
       "updatedDaysAgo": "Ultimo aggiornamento {count} giorni fa",
       "storageAvailable": "{type} spazio di archiviazione disponibile",
+      "storageUsage": "{percent}% utilizzato",
       "mountReachable": "La montatura {type} è raggiungibile",
       "rootfsUsed": "Utilizzo di rootfs: {percent}% ({size})",
       "runningCtsSafe": "I {count} CT in esecuzione hanno un utilizzo sicuro di rootfs",

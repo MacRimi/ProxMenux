@@ -1763,7 +1763,7 @@ _rs_apply() {
             if (( ${#state_excludes[@]} )); then
                 # backup_root lives inside /var/lib/proxmenux/pre-restore.
                 mkdir -p "$backup_root/$rel"
-                rsync -aAXH "${state_excludes[@]}" "$dst/" "$backup_root/$rel/" 2>/dev/null || true
+                rsync -aAXH --filter='-x security.selinux' "${state_excludes[@]}" "$dst/" "$backup_root/$rel/" 2>/dev/null || true
             else
                 cp -a "$dst" "$backup_root/$rel" 2>/dev/null || true
             fi
@@ -1797,7 +1797,7 @@ _rs_apply() {
                 )
             fi
             rsync_extra+=("${state_excludes[@]}")
-            if rsync -aAXH --delete "${rsync_extra[@]}" "$src/" "$dst/" 2>/dev/null; then
+            if rsync -aAXH --filter='-x security.selinux' --delete "${rsync_extra[@]}" "$src/" "$dst/" 2>/dev/null; then
                 ((applied++))
                 [[ "$rel" == "var/lib/proxmenux/backup-jobs" || "$rel" == "var/lib/proxmenux/backup-jobs/"* ]] && jobs_restored=1
                 [[ "$rel" == "var/lib/proxmenux" && -d "$src/backup-jobs" ]] && jobs_restored=1
@@ -2337,7 +2337,7 @@ _rs_prepare_pending_restore() {
             mkdir -p "$(dirname "$dst")" || exit 1
             if [[ -d "$src" ]]; then
                 mkdir -p "$dst" || exit 1
-                if ! rsync -aAXH --delete "$src/" "$dst/" 2>/dev/null; then
+                if ! rsync -aAXH --filter='-x security.selinux' --delete "$src/" "$dst/" 2>/dev/null; then
                     msg_error "$(translate "Could not stage pending restore path:") $rel"
                     exit 1
                 fi

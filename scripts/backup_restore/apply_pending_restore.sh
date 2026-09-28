@@ -177,7 +177,7 @@ while IFS= read -r rel; do
         if (( ${#state_excludes[@]} )); then
             # backup_root lives inside /var/lib/proxmenux/pre-restore.
             mkdir -p "$backup_root/$rel" >/dev/null 2>&1 || true
-            rsync -aAXH "${state_excludes[@]}" "$dst/" "$backup_root/$rel/" >/dev/null 2>&1 || true
+            rsync -aAXH --filter='-x security.selinux' "${state_excludes[@]}" "$dst/" "$backup_root/$rel/" >/dev/null 2>&1 || true
         else
             cp -a "$dst" "$backup_root/$rel" >/dev/null 2>&1 || true
         fi
@@ -190,7 +190,7 @@ while IFS= read -r rel; do
         # copy of the excluded file isn't removed by rsync after being
         # skipped from the source side.
         if [[ ${#RSYNC_EXCLUDES[@]} -gt 0 ]]; then
-            if rsync -aAXH "${RSYNC_EXCLUDES[@]}" "${state_excludes[@]}" "$src/" "$dst/" >/dev/null 2>&1; then
+            if rsync -aAXH --filter='-x security.selinux' "${RSYNC_EXCLUDES[@]}" "${state_excludes[@]}" "$src/" "$dst/" >/dev/null 2>&1; then
                 ((applied++))
                 [[ "$rel" == "var/lib/proxmenux/backup-jobs" || "$rel" == "var/lib/proxmenux/backup-jobs/"* ]] && jobs_restored=1
                 (( state_jobs )) && jobs_restored=1
@@ -198,7 +198,7 @@ while IFS= read -r rel; do
                 ((failed++))
             fi
         else
-            if rsync -aAXH --delete "${state_excludes[@]}" "$src/" "$dst/" >/dev/null 2>&1; then
+            if rsync -aAXH --filter='-x security.selinux' --delete "${state_excludes[@]}" "$src/" "$dst/" >/dev/null 2>&1; then
                 ((applied++))
                 [[ "$rel" == "var/lib/proxmenux/backup-jobs" || "$rel" == "var/lib/proxmenux/backup-jobs/"* ]] && jobs_restored=1
                 (( state_jobs )) && jobs_restored=1

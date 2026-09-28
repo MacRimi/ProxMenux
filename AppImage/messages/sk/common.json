@@ -4703,6 +4703,7 @@
       "startupStorageUnavailable": "Po štarte sa ešte overuje úložisko {storage}; zatiaľ nie je pripravené",
       "startupStorageStatus": "Po štarte sa ešte overuje úložisko {storage} (aktuálny stav: {status})",
       "storageAvailable": "Úložisko {type} je dostupné",
+      "storageUsage": "{percent} % využité",
       "mountReachable": "Pripojenie {type} je dostupné",
       "rootfsUsed": "Využitie rootfs: {percent} % ({size})",
       "runningCtsSafe": "Bežiace CT s bezpečným využitím rootfs: {count}",

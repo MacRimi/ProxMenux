@@ -4703,6 +4703,7 @@
       "startupStorageUnavailable": "Checking Proxmox storage after startup: {storage} is not ready yet",
       "startupStorageStatus": "Checking Proxmox storage after startup: {storage} (current status: {status})",
       "storageAvailable": "{type} storage is available",
+      "storageUsage": "{percent}% used",
       "mountReachable": "{type} mount is reachable",
       "rootfsUsed": "rootfs usage: {percent}% ({size})",
       "runningCtsSafe": "{count} running CTs have safe rootfs usage",

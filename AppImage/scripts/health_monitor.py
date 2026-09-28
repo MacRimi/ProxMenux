@@ -199,6 +199,16 @@ def _is_disk_usb(disk_name: str) -> bool:
     """True when sysfs places the disk behind a USB bus."""
     return resolver_is_usb_disk(disk_name)
 
+
+# smartd lines about its own configuration, not about a disk's health.
+_SMARTD_CONFIGURATION_NOTICES = (
+    'ignoring -n directive',
+    'not found in smartd database',
+    'is in standby mode',
+    'is in sleep mode',
+)
+
+
 class HealthMonitor:
     """
     Monitors system health across multiple components with minimal impact.
@@ -5496,6 +5506,12 @@ class HealthMonitor:
                 if not line.strip():
                     continue
                 line_lower = line.lower()
+                # smartd reports its own configuration at the same priority as
+                # a failing disk: a USB bridge without ATA CHECK POWER STATUS
+                # makes it ignore -n, a disk it does not know is monitored with
+                # defaults. Those lines say nothing about the disk's health.
+                if 'smartd' in line_lower and any(text in line_lower for text in _SMARTD_CONFIGURATION_NOTICES):
+                    continue
                 
                 # Extract disk name -- multiple patterns for different log formats:
                 #   /dev/sdh, /dev/nvme0n1
@@ -6609,6 +6625,7 @@ class HealthMonitor:
             name = st.get('name', 'unknown')
             label = f'{name} ({stype})'
             entry = {
+                'detail': f'{pct:.1f}% used',
                 'usage_percent': round(pct, 1),
                 'storage_name': name,
                 'storage_type': stype,
@@ -6732,6 +6749,7 @@ class HealthMonitor:
             except ValueError:
                 continue
             entry = {
+                'detail': f'{pct}% used',
                 'usage_percent': pct,
                 'pool_name': name,
             }
