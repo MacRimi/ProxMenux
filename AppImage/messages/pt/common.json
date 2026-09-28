@@ -1959,7 +1959,7 @@
         "burst_service_fail": "Várias falhas de serviço",
         "burst_system": "Vários problemas do sistema",
         "burst_generic": "Vários eventos relacionados",
-        "split_brain": "Cérebro dividido detectado",
+        "split_brain": "Eventos do cluster",
         "node_disconnect": "Nó desconectado",
         "node_reconnect": "Nó reconectado",
         "system_startup": "Relatório de inicialização do sistema",
@@ -6522,9 +6522,9 @@
           "label": "Permissão do usuário alterada"
         },
         "split_brain": {
-          "title": "{hostname}: SPLIT-BRAIN detectado",
-          "body": "Uma condição de split-brain foi detectada no cluster. O quórum pode ser perdido.\nStatus do quórum: {quorum}",
-          "label": "SPLIT-BRAIN detectado"
+          "title": "{hostname}: evento do cluster comunicado",
+          "body": "Foi comunicado um evento do cluster. Verifique o estado do cluster e o evento original para obter mais detalhes.",
+          "label": "Evento do cluster"
         },
         "node_disconnect": {
           "title": "{hostname}: Nó {node_name} desconectado",

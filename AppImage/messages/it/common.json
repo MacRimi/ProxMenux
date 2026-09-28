@@ -1959,7 +1959,7 @@
         "burst_service_fail": "Diversi errori di servizio",
         "burst_system": "Diversi problemi di sistema",
         "burst_generic": "Molti eventi correlati",
-        "split_brain": "Rilevato cervello diviso",
+        "split_brain": "Eventi del cluster",
         "node_disconnect": "Nodo disconnesso",
         "node_reconnect": "Nodo ricollegato",
         "system_startup": "Rapporto di avvio del sistema",
@@ -6522,9 +6522,9 @@
           "label": "Autorizzazione utente modificata"
         },
         "split_brain": {
-          "title": "{hostname}: SPLIT-BRAIN rilevato",
-          "body": "È stata rilevata una condizione di split-brain nel cluster. Il quorum potrebbe essere perso.\nStato del quorum: {quorum}",
-          "label": "Rilevato SPLIT-BRAIN"
+          "title": "{hostname}: evento del cluster segnalato",
+          "body": "È stato segnalato un evento del cluster. Controlla lo stato del cluster e l'evento originale per maggiori dettagli.",
+          "label": "Evento del cluster"
         },
         "node_disconnect": {
           "title": "{hostname}: Nodo {node_name} disconnesso",
