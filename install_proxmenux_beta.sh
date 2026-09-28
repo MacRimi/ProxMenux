@@ -139,6 +139,31 @@ msg_title() {
     echo -e "\n"
 }
 
+# apt output goes to a temporary file: shown only when the command fails, so
+# the reader sees why. Non-interactive, because a hidden prompt would hang.
+APT_ERROR_LOG=""
+run_apt() {
+    APT_ERROR_LOG=$(mktemp /tmp/proxmenux-apt.XXXXXX)
+    if DEBIAN_FRONTEND=noninteractive apt-get "$@" >"$APT_ERROR_LOG" 2>&1; then
+        rm -f "$APT_ERROR_LOG"
+        APT_ERROR_LOG=""
+        return 0
+    fi
+    return 1
+}
+
+show_apt_error() {
+    [ -n "$APT_ERROR_LOG" ] && [ -f "$APT_ERROR_LOG" ] || return 0
+    tail -n 15 "$APT_ERROR_LOG" | sed 's/^/    /'
+    rm -f "$APT_ERROR_LOG"
+    APT_ERROR_LOG=""
+}
+
+discard_apt_error() {
+    [ -n "$APT_ERROR_LOG" ] && rm -f "$APT_ERROR_LOG"
+    APT_ERROR_LOG=""
+}
+
 show_progress() {
     echo -e "\n${BOLD}${BL}${TAB}Installing ProxMenux Beta: Step ${1} of ${2}${CL}"
     echo
@@ -611,17 +636,19 @@ install_beta() {
     show_progress $current_step $total_steps "Installing system dependencies"
 
     msg_info "Refreshing apt cache..."
-    if apt-get update -y; then
+    if run_apt update -y; then
         msg_ok "apt cache refreshed."
     else
         msg_warn "apt cache refresh failed; checking available packages."
+        show_apt_error
     fi
 
     msg_info "Installing jq..."
     if ! command -v jq > /dev/null 2>&1; then
-        if apt-get install -y jq && command -v jq > /dev/null 2>&1; then
+        if run_apt install -y jq && command -v jq > /dev/null 2>&1; then
             update_config "jq" "installed"
         else
+            discard_apt_error
             local jq_url="https://github.com/jqlang/jq/releases/download/jq-1.7.1/jq-linux-amd64"
             if wget -q -O /usr/local/bin/jq "$jq_url" 2>/dev/null && chmod +x /usr/local/bin/jq \
                && command -v jq > /dev/null 2>&1; then
@@ -643,10 +670,11 @@ install_beta() {
         # dpkg-query for the EXACT package name — `dpkg -l | grep -qw python3`
         # falsely matches `python3-pip`. Issue #205.
         if ! dpkg-query -W -f='${Status}' "$pkg" 2>/dev/null | grep -q "ok installed"; then
-            if apt-get install -y "$pkg"; then
+            if run_apt install -y "$pkg"; then
                 update_config "$pkg" "installed"
             else
                 msg_error "Failed to install $pkg. Please install it manually."
+                show_apt_error
                 update_config "$pkg" "failed"
                 return 1
             fi

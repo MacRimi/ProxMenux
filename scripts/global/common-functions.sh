@@ -114,15 +114,26 @@ cleanup_duplicate_repos_pve9() {
     }
 
     # Helper: back up a file once before modifying, so an accidental
-    # comment-out is always recoverable next to the original.
+    # comment-out is always recoverable. Outside sources.list.d: apt reads
+    # every file there and warns about each copy on every update.
+    local backup_dir="/var/backups/proxmenux/apt"
     _backup_once() {
         local file="$1"
         [[ -f "$file" ]] || return 0
         local ts backup
         ts=$(date +%Y%m%d_%H%M%S)
-        backup="${file}.proxmenux-backup.${ts}"
+        mkdir -p "$backup_dir"
+        backup="${backup_dir}/$(basename "$file").${ts}"
         [[ -f "$backup" ]] || cp -a "$file" "$backup"
     }
+
+    # Copies an earlier version left next to the originals move there too.
+    local stray
+    for stray in /etc/apt/sources.list.proxmenux-backup.* /etc/apt/sources.list.d/*.proxmenux-backup.*; do
+        [[ -f "$stray" ]] || continue
+        mkdir -p "$backup_dir"
+        mv -f "$stray" "${backup_dir}/$(basename "${stray/.proxmenux-backup./.}")"
+    done
 
     # ── Phase 1 — comment intra-file duplicates in sources.list by URL+Suite ──
     if [ -s "$sources_file" ]; then
@@ -207,7 +218,7 @@ cleanup_duplicate_repos_pve9() {
                 esc_uri=$(printf '%s' "$uri" | sed 's/[][\.^$*/]/\\&/g')
                 esc_suite=$(printf '%s' "$suite" | sed 's/[][\.^$*/]/\\&/g')
                 esc_comp=$(printf '%s' "$first_comp" | sed 's/[][\.^$*/]/\\&/g')
-                pmx_edit_file "$target_file" -E "/^deb[[:space:]]+${esc_uri}[[:space:]]+${esc_suite}[[:space:]]+.*(^| )${esc_comp}( |$)/s/^/# /"
+                pmx_edit_file "$target_file" -E "/^deb[[:space:]]+${esc_uri}[[:space:]]+${esc_suite}[[:space:]](.*[[:space:]])?${esc_comp}([[:space:]]|$)/s/^/# /"
                 cleaned_count=$((cleaned_count + 1))
             fi
         }
