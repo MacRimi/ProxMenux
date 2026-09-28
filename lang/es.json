@@ -6750,7 +6750,6 @@
   "Username on the Borg server that runs \"borg serve\" (typically \"borg\"). This is NOT the admin/root user of the server — that one is asked later only if you choose \"Generate a new key and authorize it\".": "nombre de usuario en el servidor Borg que ejecuta \"borg server\" (normalmente \"borg\").Este NO es el usuario administrador/root del servidor; ese se solicita más tarde solo si elige \"Generar una nueva clave y autorizarla\".",
   "Username:": "Nombre de usuario:",
   "Users:": "Usuarios:",
-  "Uses lxc.include with /etc/pve/proxmenux/host-monitor, which every node of the cluster shares; vzdump does not include it, so it must be copied when restoring outside the cluster.": "Usa lxc.include con /etc/pve/proxmenux/host-monitor, que comparten todos los nodos del clúster; vzdump no lo incluye, así que hay que copiarlo al restaurar fuera del clúster.",
   "Using UUID is recommended over /dev/sdX.": "Se recomienda usar UUID en lugar de /dev/sdX.",
   "Using advanced configuration": "Usando configuración avanzada",
   "Using default Proxmox logo...": "Usando el logotipo predeterminado de Proxmox...",
