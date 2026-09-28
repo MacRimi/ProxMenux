@@ -479,7 +479,7 @@ if (( START_AFTER == 1 )); then
   fi
   curl -fsS "http://${APPLICATION_LAN_IP}/" >/dev/null 2>>"$OCI_LOG" \
     || { print_first_boot_diagnostics "$APPLICATION_ID" tandoor; \
-      die "$(translate "The application did not complete its initial setup:") Tandoor"; }
+      die "$(translate "The HTTP check for the application failed:") Tandoor"; }
   msg_ok "$(translate "Application responding:") http://${APPLICATION_LAN_IP}/"
   msg_info "$(translate "Creating the initial administrator...")"
   oci_quiet pct exec "$APPLICATION_ID" -- env DJANGO_SUPERUSER_PASSWORD="$ADMIN_PASSWORD" \
