@@ -1,0 +1,105 @@
+name: OCI validation report
+description: Report a real test of an application from the OCI manager catalog.
+title: "OCI validation: "
+labels: ["oci-validation"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        One report describes one application and the scenario you tested. Once it is reviewed, the application is recorded as verified: it shows with a ✓ in the OCI installer and is listed in [oci/VALIDATION.md](https://github.com/MacRimi/ProxMenux/blob/develop/oci/VALIDATION.md) with your GitHub user, the date and a link to this report.
+
+        Reports that an application does not work are just as useful: they tell others what to expect and what needs fixing.
+  - type: input
+    id: application
+    attributes:
+      label: Application
+      description: Name or ID as it appears in the OCI catalog, for example "Glances" or "glances".
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Image version
+      description: Version or tag shown by the installer.
+    validations:
+      required: true
+  - type: input
+    id: digest
+    attributes:
+      label: Image digest
+      description: Shown in the App tab of the container in ProxMenux Monitor, after the build date — for example "2026-09-06 · b1f339cf". The full sha256 digest is also accepted.
+      placeholder: b1f339cf
+    validations:
+      required: true
+  - type: input
+    id: proxmox
+    attributes:
+      label: Proxmox VE version
+      placeholder: "9.1"
+    validations:
+      required: true
+  - type: dropdown
+    id: install
+    attributes:
+      label: Install mode
+      options:
+        - Default configuration
+        - Advanced configuration
+    validations:
+      required: true
+  - type: dropdown
+    id: storage
+    attributes:
+      label: Data storage
+      options:
+        - Volume on Proxmox storage
+        - Host directory
+        - Both
+        - No persistent data
+    validations:
+      required: true
+  - type: dropdown
+    id: network
+    attributes:
+      label: Network
+      options:
+        - DHCP
+        - Static address
+    validations:
+      required: true
+  - type: dropdown
+    id: gpu
+    attributes:
+      label: GPU
+      options:
+        - No GPU
+        - Intel
+        - AMD
+        - NVIDIA
+    validations:
+      required: true
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: What was checked
+      options:
+        - label: Installs cleanly
+        - label: The application responds (web interface or service)
+        - label: Keeps working after a container restart
+        - label: Survives a Proxmox backup and restore
+        - label: An image update keeps the data
+  - type: dropdown
+    id: result
+    attributes:
+      label: Result
+      options:
+        - Works
+        - Works with problems
+        - Does not work
+    validations:
+      required: true
+  - type: textarea
+    id: notes
+    attributes:
+      label: Notes
+      description: Anything worth knowing. If something failed, what you saw and how to reproduce it.

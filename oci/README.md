@@ -228,10 +228,17 @@ Generated templates start as `generated-unvalidated`. Promotion requires:
 6. Review of every platform adaptation and unsupported feature.
 
 Real tests are recorded in `catalog/verification.json`, which the catalog
-applies on top of the generated templates and the overlays, so a regeneration
-keeps them: `"status": "laboratory-validated"` for an application tested in
-the ProxMenux lab, or `"community_tested": {"by": "<GitHub user>", "date":
-"<YYYY-MM-DD>"}` for one tested by the community.
+reads when it loads and applies on top of the generated templates and the
+overlays, so a new entry shows without regenerating and a regeneration keeps
+it: `"status": "laboratory-validated"` for an application tested in the
+ProxMenux lab, or `"community_tested": {"by": "<GitHub user>", "date":
+"<YYYY-MM-DD>", "report": "<link to the report>"}` for one tested by the
+community. Both show as verified in the OCI installer.
+
+[VALIDATION.md](VALIDATION.md) lists the verified applications and explains
+how to take part. It is generated from `catalog/verification.json` with
+`python3 .github/scripts/oci_validation.py render`, and CI checks that it is
+current.
 
 The mini changelog comes from the LinuxServer README `Versions` section. At
 installation, the architecture-specific registry digest and image labels are

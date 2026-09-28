@@ -341,6 +341,7 @@ class Catalog:
             return self.sync_index()
         payload = json.loads(self.index_path.read_text(encoding="utf-8"))
         self._enrich_index_from_templates(payload)
+        self._apply_verification_to_index(payload)
         return payload
 
     def categories(self) -> dict[str, Any]:
@@ -816,13 +817,29 @@ class Catalog:
         if isinstance(entry.get("community_tested"), dict):
             template["community_tested"] = dict(entry["community_tested"])
 
+    def _apply_verification_to_index(self, payload: dict[str, Any]) -> None:
+        """verification.json is read at load time, so a new entry shows without
+        regenerating the templates."""
+        path = self.catalog_dir / "verification.json"
+        try:
+            entries = json.loads(path.read_text(encoding="utf-8")).get("applications", {})
+        except (OSError, json.JSONDecodeError, AttributeError):
+            return
+        for item in payload.get("applications", []):
+            entry = entries.get(item.get("id"))
+            if not isinstance(entry, dict):
+                entry = {}
+            if entry.get("status") == "laboratory-validated" and item.get("automatic_install_candidate"):
+                item["template_status"] = "laboratory-validated"
+            self._index_community_tested(item, entry)
+
     @staticmethod
     def _index_community_tested(item: dict[str, Any], template: dict[str, Any]) -> None:
         """Who tested the application for real outside the ProxMenux lab, and
-        when, as recorded in its overlay."""
+        when, as recorded in verification.json."""
         tested = template.get("community_tested")
         if isinstance(tested, dict) and tested.get("by"):
-            item["community_tested"] = {"by": str(tested["by"]), "date": str(tested.get("date") or "")}
+            item["community_tested"] = {key: str(tested[key]) for key in ("by", "date", "report") if tested.get(key)}
         else:
             item.pop("community_tested", None)
 

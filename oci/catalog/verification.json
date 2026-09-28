@@ -1,5 +1,5 @@
 {
-  "_comment": "Applications tested for real. \"status\": \"laboratory-validated\" when tested in the ProxMenux lab; \"community_tested\" with the tester's GitHub user and the date when tested by the community. Applied on top of the generated templates and the overlays, so a catalog regeneration keeps it.",
+  "_comment": "Applications tested for real. \"status\": \"laboratory-validated\" when tested in the ProxMenux lab; \"community_tested\" with the tester's GitHub user, the date and a link to the report when tested by the community. Read when the catalog loads and applied on top of the generated templates and the overlays, so a new entry shows without regenerating and a regeneration keeps it. oci/VALIDATION.md is generated from this file.",
   "applications": {
     "2fauth": {
       "status": "laboratory-validated"
@@ -49,7 +49,8 @@
     "glances": {
       "community_tested": {
         "by": "Vaso73",
-        "date": "2026-09-27"
+        "date": "2026-09-27",
+        "report": "https://github.com/MacRimi/ProxMenux/discussions/392#discussioncomment-18623868"
       }
     },
     "grafana": {
@@ -94,7 +95,8 @@
     "pocketbase": {
       "community_tested": {
         "by": "Vaso73",
-        "date": "2026-09-27"
+        "date": "2026-09-27",
+        "report": "https://github.com/MacRimi/ProxMenux/discussions/392#discussioncomment-18623868"
       }
     },
     "qbittorrent": {
