@@ -3995,7 +3995,7 @@
       "title": "Hedgedoc",
       "repository_name": "docker-hedgedoc",
       "repository": "https://github.com/linuxserver/docker-hedgedoc",
-      "description": "HedgeDoc gives you access to all your files wherever you are.",
+      "description": "HedgeDoc is a self-hosted collaborative Markdown editor for notes.",
       "website": "https://hedgedoc.org/",
       "icon": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/hedgedoc.webp",
       "architectures": [

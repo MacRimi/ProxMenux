@@ -621,8 +621,9 @@ def build_rclone_mount_deployment(
 ) -> dict[str, Any]:
     ui = ui or TerminalUI()
     schema = template["proxmox"]["laboratory_contract"]["configuration_schema"]
-    ui.message(translate("The remote must already be created and authorized in the Rclone web UI. This "
-                         "operation restarts the CT and publishes two FUSE views on the host."))
+    ui.message(translate("Configure the remote in the Rclone Web UI first. Checking its name may start a "
+                         "stopped CT, even in a dry run. Applying the mount restarts the CT and attempts "
+                         "to publish two FUSE views on the host; a dry run does not publish them."))
     vmid = int(ui.ask(translate("VMID of the Rclone OCI container")))
     remote_name = ui.ask(translate("Exact name of the remote"))
     if not re.fullmatch(r"[A-Za-z0-9._-]{1,64}", remote_name):

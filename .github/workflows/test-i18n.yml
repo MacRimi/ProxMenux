@@ -14,6 +14,9 @@ on:
       - 'scripts/**/*.sh'
       - 'scripts/**/*.func'
       - 'lang/*.json'
+      - 'oci/src/**/*.py'
+      - 'oci/catalog/**/*.json'
+      - 'oci/remote/**/*.sh'
   push:
     branches: [main, develop]
     paths:
@@ -28,6 +31,9 @@ on:
       - 'scripts/**/*.sh'
       - 'scripts/**/*.func'
       - 'lang/*.json'
+      - 'oci/src/**/*.py'
+      - 'oci/catalog/**/*.json'
+      - 'oci/remote/**/*.sh'
   workflow_dispatch:
 
 permissions:

@@ -1,6 +1,12 @@
 {
   "catalog_ui": {
     "hidden": true,
-    "hidden_reason": "Needs MariaDB or PostgreSQL in its own container; planned as a multi-container application"
+    "hidden_reason": "Needs MariaDB or PostgreSQL in its own container; planned as a multi-container application",
+    "tagline": {
+      "en_US": "HedgeDoc is a self-hosted collaborative Markdown editor for notes."
+    },
+    "description": {
+      "en_US": "HedgeDoc is a self-hosted collaborative Markdown editor for notes."
+    }
   }
 }
