@@ -318,7 +318,8 @@ def _removal_summary(project, vmid):
              translate('Container data targeted for deletion:'), *volumes]
     if bridge:
         text += ['', f"{translate('Private network targeted for release if no other guest uses it:')} {bridge}"]
-    text += ['', translate('A matching managed host firewall rule may also be removed.')]
+    if (primary.get('deployment') or {}).get('host_firewall'):
+        text += ['', translate('A matching managed host firewall rule may also be removed.')]
     if kept:
         text += ['', translate('Host paths found in container configs or saved records (not targeted for removal):'),
                  *[f'  {path}' for path in kept]]
@@ -334,8 +335,8 @@ def _remove(project, ui, vmid):
         ui.message(f"{translate('The removal could not be prepared:')} {error}", translate('Remove OCI'))
         return False
     if not ui.review(summary, translate('Remove OCI'),
-                     question=translate('Remove the application? Its container disks are targeted for deletion; '
-                                        'recovery from backups is not checked here.'),
+                     question=translate('Remove the application? Its container disks are deleted, '
+                                        'and only a backup can bring them back.'),
                      default=False):
         return False
     return _run_lifecycle([sys.executable, str(project / 'remote/oci_remove.py'), str(vmid)],

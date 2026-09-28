@@ -18,10 +18,11 @@ MENU = ROOT / 'oci/src/proxmenux_oci/management.py'
 REMOVE = ROOT / 'oci/remote/oci_remove.py'
 INSTALL = ROOT / 'oci/remote/install_oci.sh'
 PREVIEW = 'Private network targeted for release if no other guest uses it:'
-CONFIRM = ('Remove the application? Its container disks are targeted for deletion; '
-           'recovery from backups is not checked here.')
+CONFIRM = 'Remove the application? Its container disks are deleted, and only a backup can bring them back.'
 RESULT = 'Removal command finished; review any warnings above.'
 BRIDGE = 'Private network release attempted:'
+BRIDGE_FAILURE = 'Could not complete private network release:'
+SUCCESS = 'The application was removed'
 FIREWALL = 'Could not verify removal of the managed host firewall rule.'
 PORT = 'The host-monitor firewall port does not match exactly one TCP port in the container contract'
 OPTIONAL = 'A matching managed host firewall rule may also be removed.'
@@ -30,7 +31,7 @@ WHOLE = ('It cannot be removed on its own, because the application would stop '
          'working: continuing targets the whole application for removal.')
 TARGETS = 'Containers targeted for removal:'
 DATA = 'Container data targeted for deletion:'
-KEYS = (PREVIEW, CONFIRM, RESULT, BRIDGE, FIREWALL, PORT, OPTIONAL, MEMBERS, WHOLE, TARGETS, DATA)
+KEYS = (PREVIEW, CONFIRM, RESULT, BRIDGE, BRIDGE_FAILURE, SUCCESS, FIREWALL, PORT, OPTIONAL, MEMBERS, WHOLE, TARGETS, DATA)
 
 
 def extract(path, name, scope):
@@ -40,12 +41,13 @@ def extract(path, name, scope):
 
 
 class RemovalWordings(unittest.TestCase):
-    def preview(self, bridge='vmbr9', translated=None):
+    def preview(self, bridge='vmbr9', translated=None, firewall=True):
         instances = ModuleType('oci_instances')
         instances.ROOT = Path('/inert')
         instances.read = lambda root, vmid: {'installation_id': 'owned'}
         remover = ModuleType('oci_remove')
-        remover.members_of = lambda root, vmid: (101, {'stack': {}}, [102, 101])
+        remover.members_of = lambda root, vmid: (101, {'stack': {}, 'deployment':
+            {'host_firewall': {'port': 8080}} if firewall else {}}, [102, 101])
         remover.guest_config = lambda member: None
         remover.host_directories = lambda root, members: []
         remover.private_bridge = lambda primary: bridge
@@ -66,6 +68,7 @@ class RemovalWordings(unittest.TestCase):
         self.assertIn(DATA, preview)
         self.assertNotIn('Private network of the application that is released:', preview)
         self.assertNotIn(PREVIEW, self.preview(bridge=None))
+        self.assertNotIn(OPTIONAL, self.preview(firewall=False))
 
     def test_member_preview_does_not_promise_whole_stack_removed(self):
         instances = ModuleType('oci_instances')
@@ -110,7 +113,8 @@ class RemovalWordings(unittest.TestCase):
                  'remove_owned_host_firewall': lambda record: None,
                  'run': lambda *args: events.append(('run', args)),
                  'subprocess': SimpleNamespace(run=lambda *args, **kwargs: None),
-                 'Path': Path, 'shutil': SimpleNamespace(rmtree=lambda path: None),
+                 'Path': lambda value: Path('/inert/no-lifecycle') if str(value).startswith('/etc/pve/') else Path(value),
+                 'shutil': SimpleNamespace(rmtree=lambda path: None),
                  'image_cache': SimpleNamespace(prune=lambda root, lock: []),
                  'oci_console': SimpleNamespace(remove_log=lambda vmid: None),
                  'translate': lambda text: text,
@@ -126,7 +130,7 @@ class RemovalWordings(unittest.TestCase):
                 self.assertEqual([x for x in events if x[0] == 'run'],
                                  [('run', ('pct', 'destroy', '101', '--purge', '1', '--destroy-unreferenced-disks', '1'))])
                 self.assertFalse(any(x == ('ok', 'The application was removed') for x in events))
-                self.assertTrue(any('still used' in x[1] for x in events if x[0] == 'warn'))
+                self.assertTrue(any('still used' in x[1] for x in events if x[0] == 'info'))
                 self.assertTrue(any('no longer exists' in x[1] if skipped_config is None
                                     else 'belongs to another container' in x[1]
                                     for x in events if x[0] == 'warn'))
@@ -136,19 +140,113 @@ class RemovalWordings(unittest.TestCase):
         self.assertIn(RESULT, [n.value for n in ast.walk(main) if isinstance(n, ast.Constant) and isinstance(n.value, str)])
 
     def test_actual_main_success_is_completion_not_all_members_removed(self):
-        events = []
-        scope = {'argparse': argparse, 'Path': Path, 'instances': SimpleNamespace(ROOT=Path('/inert'),
-                    locked=lambda root: nullcontext()),
-                 'os': SimpleNamespace(geteuid=lambda: 0),
-                 'sys': SimpleNamespace(argv=['oci_remove.py', '101']),
-                 'remove': lambda root, vmid: events.append(('warn', 'Skipped CT 102')),
+        events = self.lifecycle_events(missing=True)
+        self.assertIn(('warn', 'The container no longer exists: CT 102'), events)
+        self.assertEqual(events[-1], ('ok', RESULT))
+
+    def lifecycle_events(self, *, missing=False, reassigned=False, bridge='none',
+                         ip_rc=0, pvesh_rc=0, ip_error=False, firewall_failure=False,
+                         firewall_success=False, kept=False):
+        events, commands = [], []
+        self.last_commands = commands
+        record = {'installation_id': 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'}
+        if firewall_failure or firewall_success:
+            record['deployment'] = {'host_firewall': {'source': '192.0.2.0/24', 'port': 8080}}
+        records = {101: record, 102: {'installation_id': 'owned'}}
+
+        def fake_command(args, **kwargs):
+            commands.append(tuple(args))
+            if ip_error and args[:2] == ['ip', 'link']:
+                raise OSError('ip unavailable')
+            if args[:2] == ['pvesh', 'get']:
+                return SimpleNamespace(stdout=json.dumps([{'comment': 'ProxMenux OCI firewall ' + record['installation_id'],
+                    'dport': '8080', 'source': '192.0.2.0/24', 'proto': 'tcp', 'type': 'in',
+                    'action': 'ACCEPT', 'pos': 2}]), returncode=0)
+            if args[:2] == ['pvesh', 'delete'] and '/firewall/' in args[2] and firewall_failure:
+                raise subprocess.CalledProcessError(1, args)
+            return SimpleNamespace(returncode=ip_rc if args[:2] == ['ip', 'link'] else
+                                   pvesh_rc if args[:2] == ['pvesh', 'delete'] else 0)
+
+        fake_subprocess = SimpleNamespace(run=fake_command, CalledProcessError=subprocess.CalledProcessError)
+        scope = {'members_of': lambda root, vmid: (101, record, [102, 101]),
+                 'instances': SimpleNamespace(ROOT=Path('/inert'), locked=lambda root: nullcontext(),
+                     read=lambda root, vmid: records[vmid],
+                     identity=lambda cfg: record['installation_id'] if cfg == b'primary' else
+                         'other' if cfg == b'reassigned' else 'owned',
+                     location=lambda root, vmid: Path('/inert/absent/record.json')),
+                 'guest_config': lambda vmid: (None if missing else b'reassigned' if reassigned else b'owned')
+                     if vmid == 102 else b'primary',
+                 'host_directories': lambda *args: ['/retained'] if kept else [],
+                 'private_bridge': lambda primary: 'vmbr9' if bridge != 'none' else None,
+                 'bridge_in_use': lambda *args: bridge == 'shared',
+                 'run': lambda *args: commands.append(args), 'subprocess': fake_subprocess,
+                 'socket': SimpleNamespace(gethostname=lambda: 'node'), 'json': json, 're': re,
+                 'Path': lambda value: Path('/inert/no-lifecycle') if str(value).startswith('/etc/pve/') else Path(value),
+                 'shutil': SimpleNamespace(rmtree=lambda path: None),
+                 'image_cache': SimpleNamespace(prune=lambda root, lock: []),
+                 'oci_console': SimpleNamespace(remove_log=lambda vmid: None),
                  'translate': lambda text: text,
-                 'msg_error': lambda text: events.append(('error', text)),
+                 'msg_info': lambda text: events.append(('info', text)),
                  'msg_ok': lambda text: events.append(('ok', text)),
-                 'subprocess': subprocess}
+                 'msg_warn': lambda text: events.append(('warn', text)),
+                 'msg_error': lambda text: events.append(('error', text)),
+                 'argparse': argparse, 'os': SimpleNamespace(geteuid=lambda: 0),
+                 'sys': SimpleNamespace(argv=['oci_remove.py', '101'])}
+        scope['release_bridge'] = extract(REMOVE, 'release_bridge', scope)
+        scope['remove_owned_host_firewall'] = extract(REMOVE, 'remove_owned_host_firewall', scope)
+        scope['remove'] = extract(REMOVE, 'remove', scope)
         with patch.object(sys, 'argv', ['oci_remove.py', '101']):
             self.assertEqual(extract(REMOVE, 'main', scope)(), 0)
-        self.assertEqual(events, [('warn', 'Skipped CT 102'), ('ok', RESULT)])
+        return events
+
+    def test_clean_removal_has_clear_success(self):
+        events = self.lifecycle_events()
+        self.assertEqual(events[-1], ('ok', 'The application was removed'))
+        self.assertFalse(any(kind == 'warn' for kind, _ in events))
+
+    def test_skipped_identity_and_kept_bridge_have_partial_result(self):
+        events = self.lifecycle_events(reassigned=True, bridge='shared')
+        self.assertIn(('warn', 'The VMID belongs to another container now and is not touched: CT 102'), events)
+        self.assertEqual(events[-1], ('ok', RESULT))
+
+    def test_shared_bridge_intentionally_kept_does_not_taint_clean_removal(self):
+        events = self.lifecycle_events(bridge='shared')
+        self.assertTrue(any('still used' in text for kind, text in events if kind == 'info'))
+        self.assertEqual(events[-1], ('ok', 'The application was removed'))
+
+    def test_failed_bridge_commands_have_partial_result(self):
+        for ip_rc, pvesh_rc in ((1, 0), (0, 1), (1, 1)):
+            with self.subTest(ip_rc=ip_rc, pvesh_rc=pvesh_rc):
+                events = self.lifecycle_events(bridge='private', ip_rc=ip_rc, pvesh_rc=pvesh_rc)
+                self.assertTrue(any(kind == 'warn' and 'private network' in text.lower()
+                                    for kind, text in events), events)
+                self.assertEqual(events[-1], ('ok', RESULT))
+
+    def test_successful_bridge_release_and_retained_paths_are_clean(self):
+        events = self.lifecycle_events(bridge='private', kept=True)
+        self.assertIn(('ok', BRIDGE + ' vmbr9'), events)
+        self.assertTrue(any(kind == 'info' and '/retained' in text for kind, text in events))
+        self.assertFalse(any(kind == 'warn' for kind, _ in events))
+        self.assertEqual(events[-1], ('ok', SUCCESS))
+
+    def test_bridge_exception_is_reported_but_cleanup_continues(self):
+        events = self.lifecycle_events(bridge='private', ip_error=True)
+        self.assertEqual([cmd[:2] for cmd in self.last_commands],
+                         [('pct', 'stop'), ('pct', 'destroy'), ('pct', 'stop'),
+                          ('pct', 'destroy'), ('ip', 'link'), ('pvesh', 'delete')])
+        self.assertTrue(any(kind == 'warn' and 'private network' in text.lower()
+                            for kind, text in events), events)
+        self.assertEqual(events[-1], ('ok', RESULT))
+
+    def test_successful_firewall_delete_is_clean(self):
+        events = self.lifecycle_events(firewall_success=True)
+        self.assertTrue(any('Host firewall rule removed:' in text for kind, text in events if kind == 'ok'))
+        self.assertEqual(events[-1], ('ok', SUCCESS))
+
+    def test_firewall_delete_failure_has_partial_result(self):
+        events = self.lifecycle_events(firewall_failure=True)
+        self.assertIn(('warn', FIREWALL), events)
+        self.assertEqual(events[-1], ('ok', RESULT))
 
     def test_ignored_bridge_command_failures_do_not_claim_release(self):
         events = []
@@ -160,7 +258,8 @@ class RemovalWordings(unittest.TestCase):
                  'release_bridge': lambda bridge: events.append(('attempt', bridge)),
                  'remove_owned_host_firewall': lambda record: None, 'run': lambda *args: None,
                  'subprocess': SimpleNamespace(run=lambda *args, **kwargs: None),
-                 'Path': Path, 'shutil': SimpleNamespace(rmtree=lambda path: None),
+                 'Path': lambda value: Path('/inert/no-lifecycle') if str(value).startswith('/etc/pve/') else Path(value),
+                 'shutil': SimpleNamespace(rmtree=lambda path: None),
                  'image_cache': SimpleNamespace(prune=lambda root, lock: []),
                  'oci_console': SimpleNamespace(remove_log=lambda vmid: None),
                  'translate': lambda text: text, 'msg_info': lambda text: None,
@@ -169,6 +268,36 @@ class RemovalWordings(unittest.TestCase):
         self.assertIn(('attempt', 'vmbr9'), events)
         self.assertIn(('ok', BRIDGE + ' vmbr9'), events)
         self.assertNotIn(('ok', 'Private network of the application released: vmbr9'), events)
+
+    def test_invalid_managed_firewall_metadata_warns_instead_of_silent_clean(self):
+        events = []
+        scope = {'re': re, 'socket': SimpleNamespace(gethostname=lambda: 'node'), 'json': json,
+                 'subprocess': subprocess, 'translate': lambda text: text,
+                 'msg_ok': lambda text: events.append(('ok', text)),
+                 'msg_warn': lambda text: events.append(('warn', text))}
+        result = extract(REMOVE, 'remove_owned_host_firewall', scope)(
+            {'installation_id': 'invalid', 'deployment': {'host_firewall': {'source': '192.0.2.0/24', 'port': 8080}}})
+        self.assertFalse(result)
+        self.assertEqual(events, [('warn', FIREWALL)])
+
+    def test_ambiguous_firewall_match_warns_without_deleting_other_rules(self):
+        events, commands = [], []
+        installation_id = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'
+        rule = {'comment': 'ProxMenux OCI firewall ' + installation_id, 'dport': '8080',
+                'source': '192.0.2.0/24', 'proto': 'tcp', 'type': 'in', 'action': 'ACCEPT', 'pos': 2}
+        def fake_run(args, **kwargs):
+            commands.append(args)
+            return SimpleNamespace(stdout=json.dumps([rule, {**rule, 'pos': 3}]))
+        scope = {'re': re, 'socket': SimpleNamespace(gethostname=lambda: 'node'), 'json': json,
+                 'subprocess': SimpleNamespace(run=fake_run, CalledProcessError=subprocess.CalledProcessError),
+                 'translate': lambda text: text, 'msg_ok': lambda text: events.append(('ok', text)),
+                 'msg_warn': lambda text: events.append(('warn', text))}
+        result = extract(REMOVE, 'remove_owned_host_firewall', scope)(
+            {'installation_id': installation_id,
+             'deployment': {'host_firewall': {'source': '192.0.2.0/24', 'port': 8080}}})
+        self.assertFalse(result)
+        self.assertEqual(events, [('warn', FIREWALL)])
+        self.assertEqual([command[1] for command in commands], ['get'])
 
     def test_firewall_delete_exception_has_unknown_outcome_not_unchanged_rule(self):
         events = []

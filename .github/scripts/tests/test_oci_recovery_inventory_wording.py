@@ -74,7 +74,7 @@ class InventoryMessages(unittest.TestCase):
                  'guest_config': lambda vmid: b'description: owned',
                  'host_directories': lambda root, members: ['/bind/saved'],
                  'private_bridge': lambda primary: None,
-                 'remove_owned_host_firewall': lambda primary: None,
+                 'remove_owned_host_firewall': lambda primary: True,
                  'run': lambda *args: events.append(('run', args)),
                  'subprocess': SimpleNamespace(run=lambda *args, **kwargs: None),
                  'Path': Path, 'shutil': SimpleNamespace(rmtree=lambda path: None),
@@ -86,13 +86,13 @@ class InventoryMessages(unittest.TestCase):
                  'msg_warn': lambda text: events.append(('warn', text))}
         remove = extracted(REMOVE, 'remove', scope)
         remove(Path('/inert'), 101)
-        self.assertIn(('warn', POST_HOST + ' /bind/saved'), events)
+        self.assertIn(('info', POST_HOST + ' /bind/saved'), events)
         self.assertIn(('run', ('pct', 'destroy', '101', '--purge', '1', '--destroy-unreferenced-disks', '1')), events)
         self.assertIn(('log', 101), events)
         scope['translate'] = lambda text: 'Tradotto: ' + text if text == POST_HOST else text
         events.clear()
         remove(Path('/inert'), 101)
-        self.assertIn(('warn', 'Tradotto: ' + POST_HOST + ' /bind/saved'), events)
+        self.assertIn(('info', 'Tradotto: ' + POST_HOST + ' /bind/saved'), events)
 
 
 class RecoveryMessages(unittest.TestCase):
