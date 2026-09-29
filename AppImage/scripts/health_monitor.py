@@ -6616,6 +6616,7 @@ class HealthMonitor:
 
         warn_pct, crit_pct = self._read_capacity_thresholds("pve_storage")
         available_storages = storage_status.get('available', []) or []
+        excluded_names = health_persistence.get_excluded_storage_names('health')
         checks: Dict[str, Dict[str, Any]] = {}
         critical_labels: list[str] = []
         warning_labels: list[str] = []
@@ -6631,6 +6632,8 @@ class HealthMonitor:
                 continue
             pct = (used / total) * 100
             name = st.get('name', 'unknown')
+            if name in excluded_names:
+                continue
             label = f'{name} ({stype})'
             entry = {
                 'detail': f'{pct:.1f}% used',

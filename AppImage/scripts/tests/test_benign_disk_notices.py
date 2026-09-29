@@ -45,12 +45,34 @@ class StorageUsageDetail(unittest.TestCase):
         persistence = health_monitor.health_persistence
         with patch.dict(sys.modules, {'proxmox_storage_monitor': module}), \
              patch.object(health_monitor, 'PROXMOX_STORAGE_AVAILABLE', True), \
+             patch.object(persistence, 'get_excluded_storage_names', return_value=set()), \
              patch.object(persistence, 'is_error_acknowledged', return_value=False), \
              patch.object(persistence, 'record_error'), \
              patch.object(persistence, 'get_active_errors', return_value=[]):
             result = monitor._check_pve_storage_capacity()
         entry = result['checks']['PBS-Cloud (pbs)']
         self.assertEqual((entry['status'], entry['detail']), ('WARNING', '92.4% used'))
+
+    def test_a_storage_excluded_from_health_is_not_checked(self):
+        # Excluded in Health -> Exclusions, it raises nothing and its earlier
+        # error is cleared on the next cycle.
+        monitor = health_monitor.HealthMonitor.__new__(health_monitor.HealthMonitor)
+        monitor._read_capacity_thresholds = lambda section: (85, 95)
+        status = {'available': [{'name': 'Pluton', 'type': 'pbs', 'total': 1000, 'used': 860}]}
+        module = MagicMock()
+        module.proxmox_storage_monitor.get_storage_status.return_value = status
+        persistence = health_monitor.health_persistence
+        with patch.dict(sys.modules, {'proxmox_storage_monitor': module}), \
+             patch.object(health_monitor, 'PROXMOX_STORAGE_AVAILABLE', True), \
+             patch.object(persistence, 'get_excluded_storage_names', return_value={'Pluton'}), \
+             patch.object(persistence, 'record_error') as record, \
+             patch.object(persistence, 'clear_error') as clear, \
+             patch.object(persistence, 'get_active_errors',
+                          return_value=[{'error_key': 'pve_storage_full_Pluton'}]):
+            result = monitor._check_pve_storage_capacity()
+        self.assertIsNone(result)
+        record.assert_not_called()
+        clear.assert_called_once_with('pve_storage_full_Pluton')
 
 
 class FstrimUnsupportedDevices(unittest.TestCase):

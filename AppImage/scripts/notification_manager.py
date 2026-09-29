@@ -1277,7 +1277,8 @@ class NotificationManager:
         
         # Check storage exclusions for storage-related events.
         # If the storage is excluded from notifications, suppress the event entirely.
-        _STORAGE_EVENTS = {'storage_unavailable', 'storage_low_space', 'storage_warning', 'storage_error'}
+        _STORAGE_EVENTS = {'storage_unavailable', 'storage_low_space', 'storage_warning', 'storage_error',
+                           'pve_storage_full'}
         if event.event_type in _STORAGE_EVENTS:
             storage_name = event.data.get('storage_name') or event.data.get('name')
             if storage_name:
