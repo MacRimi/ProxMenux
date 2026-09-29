@@ -352,7 +352,7 @@ fi
 TAGS="productivity;oci;proxmenux"
 
 msg_info "$(translate "Creating the container...")"
-oci_quiet pct create "$DATABASE_ID" "$DATABASE_ARCHIVE" --rootfs "${ROOTFS_STORAGE}:4" \
+oci_create_container "$DATABASE_ID" "$DATABASE_ARCHIVE" --rootfs "${ROOTFS_STORAGE}:4" \
   --mp0 "${DATABASE_STORAGE}:${DATABASE_SIZE},mp=/var/lib/postgresql/data,backup=1" \
   --hostname "${STACK_NAME}-db" --cores 2 --memory 1024 --swap 512 \
   --net0 "name=eth0,bridge=${PRIVATE_BRIDGE},firewall=1,host-managed=1,ip=${DATABASE_ADDRESS},type=veth" \
@@ -389,7 +389,7 @@ set_runtime_env "$DATABASE_ID" TZ "$TIMEZONE"
 msg_ok "$(translate "Container created:") CT $DATABASE_ID (PostgreSQL)"
 
 msg_info "$(translate "Creating the container...")"
-oci_quiet pct create "$APPLICATION_ID" "$APPLICATION_ARCHIVE" --rootfs "${ROOTFS_STORAGE}:8" \
+oci_create_container "$APPLICATION_ID" "$APPLICATION_ARCHIVE" --rootfs "${ROOTFS_STORAGE}:8" \
   --mp0 "${APPLICATION_STORAGE}:${STATIC_SIZE},mp=/opt/recipes/staticfiles,backup=1" \
   --mp1 "$MEDIA_MOUNT" --hostname "$STACK_NAME" \
   --cores 2 --memory 2048 --swap 512 \

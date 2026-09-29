@@ -80,14 +80,16 @@ def _ask_size(ui, container_path: str, default: int) -> int:
 
 
 def ask_storage(ui, text: str, content: str, default: str, mode: str = ADVANCED_MODE) -> str:
-    """A storage of this node that accepts `content`, picked from a list; in
-    default mode the preferred one when it exists, otherwise the one with most
-    free space."""
+    """A storage of this node that accepts `content`, picked from a list unless
+    it is the only one; in default mode the preferred one when it exists,
+    otherwise the one with most free space."""
     if mode == DEFAULT_MODE:
         return host.default_storage(content, default)
     rows = host.storages(content)
     if not rows:
         return ui.ask(text, default)
+    if len(rows) == 1:
+        return rows[0]["storage"]
     options = [(row["storage"], f"{row.get('type', '')}  {host.gib(row.get('avail'))} GB {translate('free')}")
                for row in rows]
     names = [name for name, _ in options]
@@ -259,27 +261,18 @@ def build_deployment(
     if advanced:
         vmid_text = ui.ask(translate("VMID (empty = next free)"), "", required=False)
         hostname = ui.ask(translate("Hostname"), hostname_default)
-        rootfs_storage = ask_storage(ui, translate("Storage for rootfs"), "rootdir", defaults["rootfs_storage"])
-        volume_storage = ask_storage(ui, translate("Storage for persistent data"), "rootdir",
-                                     defaults["volume_storage"])
-        template_storage = ask_storage(ui, translate("Storage for the OCI image cache"), "vztmpl",
-                                       defaults["template_storage"])
-        rootfs_size = int(ui.ask(translate("Rootfs size in GB"), str(defaults["rootfs_size_gb"])))
         cores = int(ui.ask(translate("CPU cores"), str(defaults["cores"])))
         cpu_units = (int(ui.ask(translate("Relative CPU priority (cpuunits)"),
                                 str(_cpu_units_default(int(cpu_shares)))))
                      if cpu_shares is not None else None)
         memory = int(ui.ask(translate("Memory in MB"), str(memory_default)))
         swap = int(ui.ask(translate("Swap in MB"), str(defaults["swap_mb"])))
-        bridge = ask_bridge(ui, translate("Network bridge"), defaults["bridge"])
-        if mac_address:
-            mac_address = ui.ask(translate("MAC address"), mac_address)
-        if host_monitor:
-            ipv4, gateway = "host", None
-        else:
-            ipv4, gateway = access.ask_ipv4(ui, bridge)
-        onboot = ui.confirm(translate("Start with Proxmox"), defaults["onboot"])
-        start_after = ui.confirm(translate("Start when finished"), True)
+        rootfs_storage = ask_storage(ui, translate("Storage for rootfs"), "rootdir", defaults["rootfs_storage"])
+        rootfs_size = int(ui.ask(translate("Rootfs size in GB"), str(defaults["rootfs_size_gb"])))
+        template_storage = ask_storage(ui, translate("Storage for the OCI image cache"), "vztmpl",
+                                       defaults["template_storage"])
+        # Each container volume asks for its own storage; this is the first one proposed.
+        volume_storage = rootfs_storage
     else:
         vmid_text = ""
         hostname = hostname_default
@@ -291,11 +284,99 @@ def build_deployment(
         cpu_units = _cpu_units_default(int(cpu_shares)) if cpu_shares is not None else None
         memory = int(memory_default)
         swap = int(defaults["swap_mb"])
+
+    mounts: list[dict[str, Any]] = []
+    host_bind_policies = installer_profile.get("host_bind_policies", {})
+    labels = {"managed-volume": translate("Container volume (included in backups)"),
+              "host-bind": translate("Host directory (not included in Proxmox backups)"),
+              "skip": translate("Do not mount")}
+    for item in template["container_contract"]["volumes"]:
+        choices = item["installation_choice"]
+        # A path that holds content of the user accepts a container volume or a
+        # host directory, and that decision is the user's in both modes; a path
+        # with a single option is never offered as a choice.
+        offered = list(choices)
+        chosen = advanced or {"managed-volume", "host-bind"} <= set(choices)
+        if chosen and len(offered) > 1:
+            # The answer is the user's: a host directory is never proposed.
+            proposed = "managed-volume" if item["default"] == "host-bind" else item["default"]
+            volume_mode = ui.choose(f"{translate('Where to store')} {item['container_path']}",
+                                    [(choice, labels[choice]) for choice in offered], proposed)
+            if volume_mode is None:
+                raise UserCancelled(translate("Volume configuration cancelled"))
+        else:
+            volume_mode = item["default"]
+        if volume_mode == "skip":
+            continue
+        if volume_mode == "managed-volume":
+            size = item["managed_volume"]["default_size_gb"]
+            if advanced:
+                volume_storage = ask_storage(ui, f"{translate('Storage for')} {item['container_path']}",
+                                             "rootdir", volume_storage)
+            # Whoever chooses a container volume also chooses how big it is.
+            if advanced or chosen:
+                size = _ask_size(ui, item["container_path"], size)
+            source = volume_storage
+            backup = item["managed_volume"]["backup"]
+        else:
+            source = _shared_host_path_default(template, item)
+            if chosen and not _is_system_bind(item):
+                source = ui.ask(f"{translate('Host path for')} {item['container_path']}", source)
+            size = None
+            backup = False
+        policy = host_bind_policies.get(item["container_path"], {})
+        mounts.append(
+            {
+                "type": volume_mode,
+                "container_path": item["container_path"],
+                "source": source,
+                "size_gb": size,
+                "backup": backup,
+                "read_only": item["read_only"],
+                "create_if_missing": bool(
+                    policy.get("create_if_missing", not _is_system_bind(item))
+                ),
+            }
+        )
+
+    if advanced:
+        mounts = ask_custom_mounts(ui, mounts, volume_storage)
+
+    if host_monitor:
+        for item in installer_profile.get("host_monitor_mounts", []):
+            mounts.append({"type": "host-bind", "container_path": item["target"],
+                           "source": item["source"], "size_gb": None, "backup": False,
+                           "read_only": True, "create_if_missing": False})
+
+    tmpfs_mounts: list[dict[str, Any]] = []
+    for item in installer_profile.get("tmpfs_mounts", []):
+        size_mb = int(item["default_size_mb"])
+        if advanced and item.get("prompt_size", True):
+            size_prompt = (translate(item["size_prompt"]) if item.get("size_prompt")
+                           else f"{translate('tmpfs size in MB for')} {item['container_path']}")
+            size_mb = int(ui.ask(size_prompt, str(size_mb)))
+        if size_mb < int(item.get("minimum_size_mb", 1)):
+            raise InstallError(f"{translate('tmpfs size too small for')} {item['container_path']}")
+        tmpfs_mounts.append(
+            {
+                "container_path": item["container_path"],
+                "size_mb": size_mb,
+                "mount_options": item.get("mount_options", ["rw", "nosuid", "nodev"]),
+            }
+        )
+
+    if advanced:
+        bridge = ask_bridge(ui, translate("Network bridge"), defaults["bridge"])
+        if mac_address:
+            mac_address = ui.ask(translate("MAC address"), mac_address)
+        if host_monitor:
+            ipv4, gateway = "host", None
+        else:
+            ipv4, gateway = access.ask_ipv4(ui, bridge)
+    else:
         bridge = ask_bridge(ui, "", defaults["bridge"], DEFAULT_MODE)
         ipv4 = "host" if host_monitor else defaults["ipv4"]
         gateway = None
-        onboot = bool(defaults["onboot"])
-        start_after = True
 
     host_firewall = confirm_host_monitor_firewall(ui, template, bridge) if host_monitor else None
 
@@ -341,83 +422,6 @@ def build_deployment(
         if value or item["required"]:
             environment.append({"name": name, "value": value, "sensitive": item["sensitive"]})
 
-    mounts: list[dict[str, Any]] = []
-    host_bind_policies = installer_profile.get("host_bind_policies", {})
-    labels = {"managed-volume": translate("Container volume (included in backups)"),
-              "host-bind": translate("Host directory (not included in Proxmox backups)"),
-              "skip": translate("Do not mount")}
-    for item in template["container_contract"]["volumes"]:
-        choices = item["installation_choice"]
-        # A path that holds content of the user accepts a container volume or a
-        # host directory, and that decision is the user's in both modes; a path
-        # with a single option is never asked outside the advanced mode.
-        offered = list(choices)
-        chosen = advanced or {"managed-volume", "host-bind"} <= set(choices)
-        if chosen:
-            # The answer is the user's: a host directory is never proposed.
-            proposed = "managed-volume" if item["default"] == "host-bind" else item["default"]
-            volume_mode = ui.choose(f"{translate('Where to store')} {item['container_path']}",
-                                    [(choice, labels[choice]) for choice in offered], proposed)
-            if volume_mode is None:
-                raise UserCancelled(translate("Volume configuration cancelled"))
-        else:
-            volume_mode = item["default"]
-        if volume_mode == "skip":
-            continue
-        if volume_mode == "managed-volume":
-            size = item["managed_volume"]["default_size_gb"]
-            # Whoever chooses a container volume also chooses how big it is.
-            if advanced or chosen:
-                size = _ask_size(ui, item["container_path"], size)
-            source = volume_storage
-            backup = item["managed_volume"]["backup"]
-        else:
-            source = _shared_host_path_default(template, item)
-            if chosen:
-                source = ui.ask(f"{translate('Host path for')} {item['container_path']}", source)
-            size = None
-            backup = False
-        policy = host_bind_policies.get(item["container_path"], {})
-        mounts.append(
-            {
-                "type": volume_mode,
-                "container_path": item["container_path"],
-                "source": source,
-                "size_gb": size,
-                "backup": backup,
-                "read_only": item["read_only"],
-                "create_if_missing": bool(
-                    policy.get("create_if_missing", not _is_system_bind(item))
-                ),
-            }
-        )
-
-    if advanced:
-        mounts = ask_custom_mounts(ui, mounts, volume_storage)
-
-    if host_monitor:
-        for item in installer_profile.get("host_monitor_mounts", []):
-            mounts.append({"type": "host-bind", "container_path": item["target"],
-                           "source": item["source"], "size_gb": None, "backup": False,
-                           "read_only": True, "create_if_missing": False})
-
-    tmpfs_mounts: list[dict[str, Any]] = []
-    for item in installer_profile.get("tmpfs_mounts", []):
-        size_mb = int(item["default_size_mb"])
-        if advanced and item.get("prompt_size", True):
-            size_prompt = (translate(item["size_prompt"]) if item.get("size_prompt")
-                           else f"{translate('tmpfs size in MB for')} {item['container_path']}")
-            size_mb = int(ui.ask(size_prompt, str(size_mb)))
-        if size_mb < int(item.get("minimum_size_mb", 1)):
-            raise InstallError(f"{translate('tmpfs size too small for')} {item['container_path']}")
-        tmpfs_mounts.append(
-            {
-                "container_path": item["container_path"],
-                "size_mb": size_mb,
-                "mount_options": item.get("mount_options", ["rw", "nosuid", "nodev"]),
-            }
-        )
-
     devices, selected_hardware_profile, post_start_configurations, environment = configure_acceleration(
         installer_profile, environment, unprivileged, ui, mode)
     devices, completion_notes = configure_detector(installer_profile, devices, ui)
@@ -434,13 +438,6 @@ def build_deployment(
     from .gpu import apply_profile_image
     apply_profile_image(template, selected_hardware_profile)
 
-    if post_start_configurations and not start_after:
-        if not ui.confirm(translate("The application configuration needs a first start to complete.")
-                          + "\n\n" + translate("Start the LXC when finished to apply the selected configuration?"),
-                          True):
-            raise UserCancelled(translate("The post-start configuration cannot be applied with the LXC stopped"))
-        start_after = True
-
     host_modules: list[str] = []
     for item in installer_profile.get("security", {}).get("host_modules", []):
         enabled = (ui.confirm(translate(item["enable_prompt"]), item.get("enabled_default", True))
@@ -450,6 +447,20 @@ def build_deployment(
                 raise UserCancelled(f"{translate('This image requires the host module')} {item['name']}")
             continue
         host_modules.append(item["name"])
+
+    if advanced:
+        onboot = ui.confirm(translate("Start with Proxmox"), defaults["onboot"])
+        start_after = ui.confirm(translate("Start when finished"), True)
+    else:
+        onboot = bool(defaults["onboot"])
+        start_after = True
+
+    if post_start_configurations and not start_after:
+        if not ui.confirm(translate("The application configuration needs a first start to complete.")
+                          + "\n\n" + translate("Start the LXC when finished to apply the selected configuration?"),
+                          True):
+            raise UserCancelled(translate("The post-start configuration cannot be applied with the LXC stopped"))
+        start_after = True
 
     if installer_profile.get("haos_healthcheck"):
         data = [m for m in mounts if m['container_path'] == '/mnt/data']
@@ -674,10 +685,9 @@ def _build_immich_deployment(
     if not re.fullmatch(r"[a-z0-9][a-z0-9-]{0,31}", stack_name):
         raise InstallError(translate("The stack name only accepts lowercase letters, numbers and hyphens"))
     rootfs_storage = ask_storage(ui, translate("Storage for rootfs"), "rootdir", defaults["rootfs_storage"])
-    database_storage = ask_storage(ui, translate("Local storage for PostgreSQL"), "rootdir", defaults["database_storage"])
     template_storage = ask_storage(ui, translate("Storage for the OCI image cache"), "vztmpl", pve_defaults["template_storage"])
     media_mode = ui.choose(
-        translate("Storage for the Immich library"),
+        translate("Where to store the Immich library"),
         [
             ("managed-volume", translate("Dedicated container volume (included in backups)")),
             ("host-bind", translate("Shared host directory (not included in Proxmox backups)")),
@@ -697,6 +707,7 @@ def _build_immich_deployment(
         media_root = ui.ask(translate("Shared host directory"), media_default)
         media_storage = None
         media_size = None
+    database_storage = ask_storage(ui, translate("Local storage for PostgreSQL"), "rootdir", defaults["database_storage"])
     database_size = int(
         ui.ask(translate("PostgreSQL volume size in GB"), str(defaults["database_size_gb"]))
     )
@@ -809,7 +820,7 @@ def _build_nextcloud_stack_deployment(
     rootfs_storage = ask_storage(ui, translate("Storage for rootfs"), "rootdir", defaults["rootfs_storage"])
     template_storage = ask_storage(ui, translate("Storage for the OCI image cache"), "vztmpl", pve_defaults["template_storage"])
     application_mode = ui.choose(
-        translate("Storage for Nextcloud files, configuration and data"),
+        translate("Where to store the Nextcloud files, configuration and data"),
         [
             ("managed-volume", translate("Dedicated container volume (included in backups)")),
             ("host-bind", translate("Shared host directory (not included in Proxmox backups)")),
@@ -910,10 +921,9 @@ def _build_paperless_stack_deployment(
         raise InstallError(translate("The stack name only accepts lowercase letters, numbers and hyphens"))
 
     rootfs_storage = ask_storage(ui, translate("Storage for rootfs"), "rootdir", defaults["rootfs_storage"])
-    application_storage = ask_storage(ui, translate("Storage for Paperless data and documents"), "rootdir", defaults["application_storage"])
-    database_storage = ask_storage(ui, translate("Local storage for PostgreSQL"), "rootdir", defaults["database_storage"])
     template_storage = ask_storage(ui, translate("Storage for the OCI image cache"), "vztmpl", pve_defaults["template_storage"])
 
+    application_storage = ask_storage(ui, translate("Storage for Paperless data and documents"), "rootdir", defaults["application_storage"])
     data_size = int(
         ui.ask(translate("Data volume size in GB"), str(defaults["data_volume_size_gb"]))
     )
@@ -923,6 +933,7 @@ def _build_paperless_stack_deployment(
             str(defaults["media_volume_size_gb"]),
         )
     )
+    database_storage = ask_storage(ui, translate("Local storage for PostgreSQL"), "rootdir", defaults["database_storage"])
     database_size = int(
         ui.ask(
             translate("PostgreSQL volume size in GB"),
@@ -933,7 +944,7 @@ def _build_paperless_stack_deployment(
         raise InstallError(translate("The Paperless persistent volumes need at least 8 GB"))
 
     transfer_mode = ui.choose(
-        translate("Storage for the consume and export folders"),
+        translate("Where to store the consume and export folders"),
         [
             ("host-bind", translate("Shared host directories (not included in Proxmox backups)")),
             ("managed-volume", translate("Dedicated container volumes (included in backups)")),
@@ -1029,11 +1040,10 @@ def _build_tandoor_stack_deployment(
         raise InstallError(translate("The stack name only accepts lowercase letters, numbers and hyphens"))
 
     rootfs_storage = ask_storage(ui, translate("Storage for rootfs"), "rootdir", defaults["rootfs_storage"])
-    database_storage = ask_storage(ui, translate("Local storage for PostgreSQL"), "rootdir", defaults["database_storage"])
     template_storage = ask_storage(ui, translate("Storage for the OCI image cache"), "vztmpl", pve_defaults["template_storage"])
 
     media_mode = ui.choose(
-        translate("Storage for recipe images and files"),
+        translate("Where to store the recipe images and files"),
         [
             ("managed-volume", translate("Dedicated container volume (included in backups)")),
             ("host-bind", translate("Shared host directory (not included in Proxmox backups)")),
@@ -1061,12 +1071,14 @@ def _build_tandoor_stack_deployment(
         media_storage = None
         media_size = None
 
+    static_storage = ask_storage(ui, translate("Storage for staticfiles"), "rootdir", defaults["application_storage"])
     static_size = int(
         ui.ask(
             translate("staticfiles volume size in GB"),
             str(defaults["static_volume_size_gb"]),
         )
     )
+    database_storage = ask_storage(ui, translate("Local storage for PostgreSQL"), "rootdir", defaults["database_storage"])
     database_size = int(
         ui.ask(
             translate("PostgreSQL volume size in GB"),
@@ -1098,6 +1110,7 @@ def _build_tandoor_stack_deployment(
     if not re.fullmatch(r"[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}", admin_email):
         raise InstallError(translate("The administrator email is not valid"))
 
+    onboot = ui.confirm(translate("Start the stack with Proxmox"), pve_defaults["onboot"])
     start_after = ui.confirm(translate("Start when finished"), True)
     if not start_after:
         raise UserCancelled(
@@ -1111,7 +1124,7 @@ def _build_tandoor_stack_deployment(
         "stack_name": stack_name,
         "template_storage": template_storage,
         "rootfs_storage": rootfs_storage,
-        "application_storage": defaults["application_storage"],
+        "application_storage": static_storage,
         "static_size_gb": static_size,
         "database_storage": database_storage,
         "database_size_gb": database_size,
@@ -1128,7 +1141,7 @@ def _build_tandoor_stack_deployment(
             "admin_email": admin_email,
         },
         "timezone": timezone,
-        "onboot": ui.confirm(translate("Start the stack with Proxmox"), pve_defaults["onboot"]),
+        "onboot": onboot,
         "start_after_create": start_after,
         "network": {
             "frontend_bridge": frontend_bridge,
@@ -1547,8 +1560,14 @@ def configure_acceleration(installer_profile, environment, unprivileged, ui, mod
                 ]
             devices.append(device)
         else:
-            host_path = (ui.ask(translate(item["path_prompt"]), item["host_path_default"]) if advanced
-                         else item["host_path_default"])
+            if not advanced:
+                host_path = item["host_path_default"]
+            elif item.get("purpose") in ("serial", "user-selected-device"):
+                from .extra_devices import choose_usb_device
+                host_path = choose_usb_device(ui, translate(item["path_prompt"]), item["host_path_default"],
+                                              {device.get("host_path") for device in devices})
+            else:
+                host_path = ui.ask(translate(item["path_prompt"]), item["host_path_default"])
             container_path = (
                 host_path
                 if item.get("container_path_strategy") == "same-as-host"

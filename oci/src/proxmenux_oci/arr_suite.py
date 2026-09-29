@@ -63,16 +63,23 @@ def build_suite(template, ui, mode='advanced'):
     from .installer import ask_bridge, ask_storage
     storage = ask_storage(ui, translate('Storage for rootfs and private configuration'), 'rootdir', 'local-lvm', mode)
     cache = ask_storage(ui, translate('Storage for the OCI image cache'), 'vztmpl', 'local', mode)
+    shared = ui.ask(translate('Shared host media directory'), '/mnt/oci-shared/media') if set(selected) & MEDIA_APPS else None
+    if shared and (not shared.startswith('/') or shared == '/' or '..' in shared.split('/') or any(c in shared for c in ',\n\r')):
+        raise StackError(translate('Invalid shared path'))
+    ordered = list(selected)
+    # Extra paths are asked with the data, against the paths each application will mount.
+    drafts = [{'name': app, 'main': False, 'deployment': {'mounts': [
+        {'type': 'managed-volume', 'container_path': '/app/config' if app == 'seerr' else '/config'},
+        *([{'type': 'host-bind', 'container_path': '/data'}] if app in MEDIA_APPS else [])]}}
+        for app in ordered]
+    if mode != DEFAULT_MODE:
+        from .custom_mounts import ask_stack_custom_mounts
+        ask_stack_custom_mounts(ui, drafts, storage)
     bridge = ask_bridge(ui, translate('Access bridge'), 'vmbr0', mode)
     reachable = [app for app in selected if app != 'unpackerr']
     labels, gateway = access.ask_addresses(ui, bridge, [app.capitalize() for app in reachable])
     addresses = dict(zip(reachable, labels.values()))
     timezone = ui.ask(translate('Timezone'), host.timezone())
-    onboot = ui.confirm(translate('Start each LXC with Proxmox (no coordinated startup)'), False)
-    shared = ui.ask(translate('Shared host media directory'), '/mnt/oci-shared/media') if set(selected) & MEDIA_APPS else None
-    if shared and (not shared.startswith('/') or shared == '/' or '..' in shared.split('/') or any(c in shared for c in ',\n\r')):
-        raise StackError(translate('Invalid shared path'))
-    ordered = list(selected)
     services = []
     credentials = None
     if 'qbittorrent' in selected:
@@ -88,7 +95,7 @@ def build_suite(template, ui, mode='advanced'):
         child_ui = (DefaultsUI() if mode == DEFAULT_MODE else
                     SuiteChildUI(ui, child['proxmox'].get('installer_profile', {})))
         plan = build_deployment(copy.deepcopy(child), child_ui, mode)
-        plan.update(hostname=_hostname_default(name+'-'+app), start_after_create=False, onboot=onboot, template_storage=cache)
+        plan.update(hostname=_hostname_default(name+'-'+app), start_after_create=False, template_storage=cache)
         plan['rootfs']['storage'] = storage
         for env in plan['environment']:
             if env['name'] == 'TZ': env['value'] = timezone
@@ -112,11 +119,14 @@ def build_suite(template, ui, mode='advanced'):
             services[-1]['deferred_setup'] = True
         if app == 'qbittorrent':
             services[-1]['setup_credentials'] = credentials
+    for service, draft in zip(services, drafts):
+        service['deployment']['mounts'] += [m for m in draft['deployment']['mounts'] if m.get('custom')]
     if mode != DEFAULT_MODE:
-        from .custom_mounts import ask_stack_custom_mounts
-        ask_stack_custom_mounts(ui, services, storage)
         from .extra_devices import ask_stack_extra_devices
         ask_stack_extra_devices(ui, services)
+    onboot = ui.confirm(translate('Start each LXC with Proxmox (no coordinated startup)'), False)
+    for service in services:
+        service['deployment']['onboot'] = onboot
     return {'deployment_kind':'generic-multi-lxc-stack','suite_arr':True,'lifecycle_mode':'independent','stack_name':name,
             'base_vmid':int(base) if base else None,'services':services,'shared_media':shared,'media_player':player,
             'completion_notes':[

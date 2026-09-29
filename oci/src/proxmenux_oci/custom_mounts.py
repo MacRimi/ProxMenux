@@ -54,7 +54,8 @@ def ask_custom_mounts(ui, mounts, storage):
                  'read_only': ui.confirm(translate('Mount read-only'), False),
                  'create_if_missing': mode == 'host-bind'}
         if mode == 'managed-volume':
-            mount['source'] = ui.ask(translate('Proxmox storage for the volume'), storage)
+            from .installer import ask_storage
+            mount['source'] = ask_storage(ui, translate('Proxmox storage for the volume'), 'rootdir', storage)
             mount['size_gb'] = int(ui.ask(translate('Volume size in GB'), '8'))
         else:
             mount['source'] = ui.ask(translate('Host directory (created if it does not exist)'), '/mnt/oci-shared/custom')

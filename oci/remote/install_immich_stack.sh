@@ -361,7 +361,7 @@ fi
 TAGS="media;oci;proxmenux"
 
 msg_info "$(translate "Creating the container...")"
-oci_quiet pct create "$DB_ID" "$DB_ARCHIVE" --rootfs "${ROOTFS_STORAGE}:8" \
+oci_create_container "$DB_ID" "$DB_ARCHIVE" --rootfs "${ROOTFS_STORAGE}:8" \
   --mp0 "${DATABASE_STORAGE}:${DATABASE_SIZE},mp=/var/lib/postgresql/data,backup=1" \
   --hostname "${STACK_NAME}-db" --cores 2 --memory 2048 --swap 512 \
   --net0 "name=eth0,bridge=${PRIVATE_BRIDGE},firewall=1,host-managed=1,ip=${DB_ADDRESS},type=veth" \
@@ -390,7 +390,7 @@ oci_quiet pct unmount "$DB_ID"
 msg_ok "$(translate "Container created:") CT $DB_ID (PostgreSQL)"
 
 msg_info "$(translate "Creating the container...")"
-oci_quiet pct create "$VALKEY_ID" "$VALKEY_ARCHIVE" --rootfs "${ROOTFS_STORAGE}:4" \
+oci_create_container "$VALKEY_ID" "$VALKEY_ARCHIVE" --rootfs "${ROOTFS_STORAGE}:4" \
   --mp0 "${ROOTFS_STORAGE}:4,mp=/data,backup=1" \
   --hostname "${STACK_NAME}-valkey" --cores 1 --memory 512 --swap 256 \
   --net0 "name=eth0,bridge=${PRIVATE_BRIDGE},firewall=1,host-managed=1,ip=${VALKEY_ADDRESS},type=veth" \
@@ -412,7 +412,7 @@ set_lxc_directive "$VALKEY_ID" lxc.signal.halt SIGTERM
 msg_ok "$(translate "Container created:") CT $VALKEY_ID (Valkey)"
 
 msg_info "$(translate "Creating the container...")"
-oci_quiet pct create "$ML_ID" "$ML_ARCHIVE" --rootfs "${ROOTFS_STORAGE}:12" \
+oci_create_container "$ML_ID" "$ML_ARCHIVE" --rootfs "${ROOTFS_STORAGE}:12" \
   --mp0 "${ROOTFS_STORAGE}:${MODEL_CACHE_SIZE},mp=/cache,backup=1" \
   --hostname "${STACK_NAME}-ml" "${ML_CPU_ARGS[@]}" --memory "$ML_MEMORY" --swap "$ML_SWAP" \
   --net0 "name=eth0,bridge=${FRONTEND_BRIDGE},firewall=1,host-managed=1,${ML_FRONTEND_NET},type=veth" \
@@ -447,7 +447,7 @@ if [[ $VIDEO_ACCELERATION == vaapi ]]; then
 fi
 
 msg_info "$(translate "Creating the container...")"
-oci_quiet pct create "$SERVER_ID" "$SERVER_ARCHIVE" --rootfs "${ROOTFS_STORAGE}:16" \
+oci_create_container "$SERVER_ID" "$SERVER_ARCHIVE" --rootfs "${ROOTFS_STORAGE}:16" \
   --mp0 "$SERVER_MEDIA_MOUNT" --hostname "${STACK_NAME}-server" \
   --cores 4 --memory 3072 --swap 1024 \
   --net0 "name=eth0,bridge=${FRONTEND_BRIDGE},firewall=1,host-managed=1,${FRONTEND_NET},type=veth" \

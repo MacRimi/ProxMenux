@@ -30,7 +30,7 @@
             "items": [
               { "title": "Required paths", "body": "<code>/config</code>, <code>/data</code>, libraries, downloads and every volume the application declares are listed." },
               { "title": "Location", "body": "Each path is placed on a disk of the container or on an existing host directory." },
-              { "title": "Storage and size", "body": "A container disk is created on a Proxmox VE storage, <code>local-lvm</code> by default, with the size given. It appears as <code>vm-VMID-disk-N</code> and is attached as <code>mpN</code>." },
+              { "title": "Storage and size", "body": "A container disk is created on a Proxmox VE storage with the size given. The default installation uses <code>local-lvm</code>; the advanced installation asks the storage of each path right before its size and proposes the one of the rootfs. It appears as <code>vm-VMID-disk-N</code> and is attached as <code>mpN</code>." },
               { "title": "Host directory", "body": "A host directory is given by its path. A directory that does not exist is created, owned by the user the container maps." },
               { "title": "Additional paths", "body": "More pairs of host path or volume and container path can be added before installing." },
               { "title": "Summary", "body": "The complete mapping is shown before the CT is created and is stored in its instance contract." }

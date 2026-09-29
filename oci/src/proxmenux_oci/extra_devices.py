@@ -3,6 +3,7 @@ import copy
 import re
 from pathlib import Path
 
+from . import host
 from .i18n import translate
 from .ui import UserCancelled
 
@@ -10,6 +11,21 @@ from .ui import UserCancelled
 GPU_NODE = re.compile(r'/dev/dri/(?:renderD|card)[0-9]+|/dev/kfd')
 USB_NODE = re.compile(r'/dev/(?:ttyUSB[0-9]+|ttyACM[0-9]+|bus/usb/[0-9]{3}/[0-9]{3})')
 CORAL_NODE = re.compile(r'/dev/apex_[0-9]+')
+
+
+def choose_usb_device(ui, title, default=None, attached=()):
+    """A USB device of the host picked by its name, or a node typed by hand."""
+    options = [(row['path'], f"{row['name']} · {translate(row['kind'])}")
+               for row in host.usb_devices() if row['path'] not in attached]
+    manual_prompt = translate('Host USB node (e.g. /dev/ttyACM0 or /dev/bus/usb/003/004)')
+    if not options:
+        ui.message(translate('No USB device was found on this host.'))
+        return ui.ask(manual_prompt, default or '/dev/ttyACM0')
+    options.append(('manual', translate('Another node, typed by hand')))
+    selected = ui.choose(title, options, default if default in dict(options) else options[0][0])
+    if selected is None:
+        raise UserCancelled(translate('Device configuration cancelled'))
+    return ui.ask(manual_prompt, default or '/dev/ttyACM0') if selected == 'manual' else selected
 
 
 def ask_extra_devices(ui, devices, unprivileged, allow_coral=False):
@@ -39,8 +55,8 @@ def ask_extra_devices(ui, devices, unprivileged, allow_coral=False):
             path = ui.ask(translate('Host DRM node (e.g. /dev/dri/renderD128)'), default)
             valid = GPU_NODE.fullmatch(path)
         elif kind == 'usb':
-            path = ui.ask(translate('Host USB node (e.g. /dev/ttyACM0 or /dev/bus/usb/003/004)'),
-                          '/dev/ttyACM0')
+            path = choose_usb_device(ui, translate('USB device to attach'),
+                                     attached={item.get('host_path') for item in result})
             valid = USB_NODE.fullmatch(path)
         else:
             path = ui.ask(translate('Host Coral node (e.g. /dev/apex_0)'), '/dev/apex_0')

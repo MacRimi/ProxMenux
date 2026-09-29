@@ -5,7 +5,9 @@ from __future__ import annotations
 
 import argparse
 import hashlib
+import json
 import os
+import struct
 import sys
 import tarfile
 import zlib
@@ -114,10 +116,63 @@ def verify_archive(path: Path) -> None:
     progress(f"OCI integrity verified: {path}")
 
 
+def _layer_extracted_size(raw, member: tarfile.TarInfo) -> int | None:
+    """What a layer takes once unpacked: the gzip trailer, the frame header of
+    zstd or the tar itself."""
+    raw.seek(member.offset_data)
+    head = raw.read(18)
+    if head.startswith(b"\x1f\x8b"):
+        raw.seek(member.offset_data + member.size - 4)
+        size = struct.unpack("<I", raw.read(4))[0]
+        # The trailer keeps the size modulo 4 GiB.
+        while size < member.size:
+            size += 1 << 32
+        return size
+    if head.startswith(b"\x28\xb5\x2f\xfd") and len(head) >= 6:
+        descriptor = head[4]
+        single_segment = descriptor >> 5 & 1
+        field = (1 if single_segment else 0, 2, 4, 8)[descriptor >> 6]
+        if not field:
+            return None
+        start = 5 + (0 if single_segment else 1) + (0, 1, 2, 4)[descriptor & 3]
+        value = int.from_bytes(head[start:start + field], "little")
+        return value + 256 if field == 2 else value
+    return member.size
+
+
+def extracted_size(path: Path) -> int | None:
+    """Estimated size of the image once its layers are unpacked, or None when
+    a layer does not record it."""
+    with tarfile.open(path, mode="r:") as archive, path.open("rb") as raw:
+        members = {member.name.lstrip("./"): member for member in archive.getmembers()}
+
+        def blob(digest: str) -> tarfile.TarInfo:
+            return members["blobs/" + digest.replace(":", "/")]
+
+        index = json.load(archive.extractfile(members["index.json"]))
+        manifest = json.load(archive.extractfile(blob(index["manifests"][0]["digest"])))
+        total = 0
+        for layer in manifest.get("layers", []):
+            size = _layer_extracted_size(raw, blob(layer["digest"]))
+            if size is None:
+                return None
+            total += size
+        return total
+
+
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("archive", type=Path)
+    parser.add_argument("--extracted-mib", action="store_true",
+                        help="print the estimated unpacked size in MiB (0 when unknown)")
     args = parser.parse_args()
+    if args.extracted_mib:
+        try:
+            size = extracted_size(args.archive)
+        except (tarfile.TarError, OSError, KeyError, ValueError, IndexError):
+            size = None
+        print((size or 0) >> 20)
+        return 0
     try:
         verify_archive(args.archive)
     except VerificationError as exc:

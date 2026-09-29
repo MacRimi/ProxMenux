@@ -30,7 +30,7 @@
             "items": [
               { "title": "Rutas requeridas", "body": "Se enumeran <code>/config</code>, <code>/data</code>, bibliotecas, descargas y cualquier volumen que declare la aplicación." },
               { "title": "Ubicación", "body": "Cada ruta se sitúa en un disco del contenedor o en un directorio existente del host." },
-              { "title": "Almacenamiento y tamaño", "body": "Un disco del contenedor se crea en un almacenamiento de Proxmox VE, <code>local-lvm</code> por defecto, con el tamaño indicado. Aparece como <code>vm-VMID-disk-N</code> y se conecta como <code>mpN</code>." },
+              { "title": "Almacenamiento y tamaño", "body": "Un disco del contenedor se crea en un almacenamiento de Proxmox VE con el tamaño indicado. La instalación por defecto usa <code>local-lvm</code>; la instalación avanzada pregunta el almacenamiento de cada ruta justo antes de su tamaño y propone el del rootfs. Aparece como <code>vm-VMID-disk-N</code> y se conecta como <code>mpN</code>." },
               { "title": "Directorio del host", "body": "Un directorio del host se indica por su ruta. Si no existe, se crea con el propietario que mapea el contenedor." },
               { "title": "Rutas adicionales", "body": "Antes de instalar pueden añadirse más pares de ruta del host o volumen y ruta del contenedor." },
               { "title": "Resumen", "body": "La relación completa se muestra antes de crear el CT y se guarda en su contrato de instancia." }

@@ -1,8 +1,10 @@
-"""Facts read from the local Proxmox node: storages, bridges and the timezone."""
+"""Facts read from the local Proxmox node: storages, bridges, the timezone and
+its USB devices."""
 from __future__ import annotations
 
 import ipaddress
 import json
+import re
 import subprocess
 from pathlib import Path
 from typing import Any
@@ -97,3 +99,70 @@ def gib(value: Any) -> int:
         return int(value) // 2**30
     except (TypeError, ValueError):
         return 0
+
+
+# USB classes as the Monitor labels them.
+_USB_CLASSES = {
+    "01": "Audio", "02": "Communications", "03": "HID", "06": "Imaging", "07": "Printer",
+    "0a": "CDC Data", "0b": "Smart Card", "0e": "Video", "10": "Audio/Video",
+    "e0": "Wireless Controller", "ef": "Miscellaneous", "fe": "Application Specific",
+    "ff": "Vendor Specific",
+}
+# UPS makers, whose devices report the HID class.
+_USB_UPS_VENDORS = {"0463", "051d", "0764", "0d9f", "06da", "09ae", "047c", "075d", "10af", "0665"}
+_USB_LEFT_OUT = {"08", "09"}  # storage and hubs are not handed to an LXC as a device node
+_SERIAL_NODE = re.compile(r"tty(?:ACM|USB)[0-9]+")
+_LSUSB_LINE = re.compile(r"Bus\s+(\d+)\s+Device\s+(\d+):\s+ID\s+[0-9a-f]{4}:[0-9a-f]{4}\s*(.*)", re.IGNORECASE)
+
+
+def _sysfs(path: Path) -> str:
+    try:
+        return path.read_text(encoding="utf-8", errors="replace").strip()
+    except OSError:
+        return ""
+
+
+def usb_devices(root: Path = Path("/"), lsusb: str | None = None) -> list[dict[str, str]]:
+    """USB peripherals of this node an LXC can receive, named as the Monitor
+    names them: a serial adapter by its tty node, any other device by its bus
+    node."""
+    if lsusb is None:
+        try:
+            lsusb = subprocess.run(["lsusb"], capture_output=True, text=True, timeout=5,
+                                   check=False).stdout
+        except (OSError, subprocess.TimeoutExpired):
+            lsusb = ""
+    names = {}
+    for line in lsusb.splitlines():
+        match = _LSUSB_LINE.match(line)
+        if match:
+            names[(int(match[1]), int(match[2]))] = match[3].strip()
+    serial: dict[str, list[str]] = {}
+    for tty in sorted((root / "sys/class/tty").glob("tty*")):
+        if not _SERIAL_NODE.fullmatch(tty.name):
+            continue
+        device = (tty / "device").resolve()
+        while device != device.parent and not (device / "idVendor").exists():
+            device = device.parent
+        if (device / "idVendor").exists():
+            serial.setdefault(device.name, []).append(tty.name)
+    rows = []
+    for device in sorted((root / "sys/bus/usb/devices").glob("*")):
+        vendor = _sysfs(device / "idVendor").lower()
+        if ":" in device.name or not vendor or vendor == "1d6b":
+            continue
+        device_class = _sysfs(device / "bDeviceClass").lower() or "00"
+        if device_class == "00":
+            device_class = _sysfs(device / f"{device.name}:1.0" / "bInterfaceClass").lower()
+        if device_class in _USB_LEFT_OUT:
+            continue
+        kind = "UPS" if device_class == "03" and vendor in _USB_UPS_VENDORS else _USB_CLASSES.get(device_class, "USB")
+        try:
+            bus, number = int(_sysfs(device / "busnum")), int(_sysfs(device / "devnum"))
+        except ValueError:
+            continue
+        name = (_sysfs(device / "product") or names.get((bus, number))
+                or f"{vendor}:{_sysfs(device / 'idProduct').lower()}")
+        for node in serial.get(device.name) or [f"bus/usb/{bus:03d}/{number:03d}"]:
+            rows.append({"path": f"/dev/{node}", "name": name, "kind": kind})
+    return rows

@@ -115,6 +115,49 @@ oci_quiet() {
   fi
 }
 
+# `pct create` of an OCI archive, showing how much of the image is already
+# unpacked into the rootfs. Arguments: VMID ARCHIVE [pct create options...]
+oci_create_container() {
+  local vmid=$1 archive=$2
+  shift 2
+  local path=$archive rootfs="/var/lib/lxc/${vmid}/rootfs" log=${OCI_LOG:-/dev/null}
+  local total_mib=0 base_mib="" used_mib extracted_mib percentage pid status=0 elapsed=0 mounted=0 extracting=0
+  [[ $path == /* ]] || path=$(pvesm path "$archive" 2>/dev/null || true)
+  if [[ -n ${VERIFY_OCI_ARCHIVE:-} && -f $path ]]; then
+    total_mib=$(python3 "$VERIFY_OCI_ARCHIVE" --extracted-mib "$path" 2>/dev/null || printf '0')
+    [[ $total_mib =~ ^[0-9]+$ ]] || total_mib=0
+  fi
+  pct create "$vmid" "$archive" "$@" >>"$log" 2>&1 &
+  pid=$!
+  while kill -0 "$pid" 2>/dev/null; do
+    if mountpoint -q "$rootfs" 2>/dev/null; then
+      mounted=1
+      used_mib=$(df -BM --output=used "$rootfs" 2>/dev/null | tail -n 1 | tr -dc '0-9' || true)
+      used_mib=${used_mib:-0}
+      base_mib=${base_mib:-$used_mib}
+      extracted_mib=$(( used_mib > base_mib ? used_mib - base_mib : 0 ))
+      (( extracted_mib > 0 )) && extracting=1
+      if (( ! extracting )); then
+        msg_progress "$(translate "Creating the container: reading the image...") ${elapsed}s"
+      elif (( total_mib > 0 )); then
+        (( extracted_mib < total_mib )) || extracted_mib=$(( total_mib * 99 / 100 ))
+        percentage=$(( extracted_mib * 100 / total_mib ))
+        msg_progress "$(translate "Creating the container: extracting the image") ${extracted_mib} / ${total_mib} MiB (${percentage}%), ${elapsed}s"
+      else
+        msg_progress "$(translate "Creating the container: extracting the image") ${extracted_mib} MiB, ${elapsed}s"
+      fi
+    elif (( mounted )); then
+      msg_progress "$(translate "Creating the container: applying the image configuration...") ${elapsed}s"
+    else
+      msg_progress "$(translate "Creating the container: preparing its disk...") ${elapsed}s"
+    fi
+    sleep 1
+    elapsed=$((elapsed + 1))
+  done
+  wait "$pid" || status=$?
+  return "$status"
+}
+
 # Last lines of the log, for the error report.
 oci_log_tail() {
   [[ -n $OCI_LOG && -s $OCI_LOG ]] || return 0

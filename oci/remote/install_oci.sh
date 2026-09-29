@@ -1630,7 +1630,7 @@ fi
 
 # pct keeps the OCI Entrypoint/Cmd/Env/User/WorkingDir/StopSignal metadata.
 msg_info "$(translate "Creating the container...")"
-oci_quiet pct create "${CREATE_ARGS[@]}" \
+oci_create_container "${CREATE_ARGS[@]}" \
   || die "$(translate "Could not create the container:") CT $VMID"
 CT_CREATED=1
 msg_ok "$(translate "Container created:") CT $VMID ($HOSTNAME)"

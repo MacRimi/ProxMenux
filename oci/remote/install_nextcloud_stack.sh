@@ -343,7 +343,7 @@ fi
 TAGS="productivity;oci;proxmenux"
 
 msg_info "$(translate "Creating the container...")"
-oci_quiet pct create "$DATABASE_ID" "$DATABASE_ARCHIVE" --rootfs "${ROOTFS_STORAGE}:8" \
+oci_create_container "$DATABASE_ID" "$DATABASE_ARCHIVE" --rootfs "${ROOTFS_STORAGE}:8" \
   --mp0 "${DATABASE_STORAGE}:${DATABASE_SIZE},mp=/var/lib/postgresql,backup=1" \
   --hostname "${STACK_NAME}-db" --cores 2 --memory 1024 --swap 512 \
   --net0 "name=eth0,bridge=${PRIVATE_BRIDGE},firewall=1,host-managed=1,ip=${DATABASE_ADDRESS},type=veth" \
@@ -380,7 +380,7 @@ set_runtime_env "$DATABASE_ID" TZ "$TIMEZONE"
 msg_ok "$(translate "Container created:") CT $DATABASE_ID (PostgreSQL)"
 
 msg_info "$(translate "Creating the container...")"
-oci_quiet pct create "$CACHE_ID" "$CACHE_ARCHIVE" --rootfs "${ROOTFS_STORAGE}:4" \
+oci_create_container "$CACHE_ID" "$CACHE_ARCHIVE" --rootfs "${ROOTFS_STORAGE}:4" \
   --hostname "${STACK_NAME}-redis" --cores 1 --memory 512 --swap 256 \
   --net0 "name=eth0,bridge=${PRIVATE_BRIDGE},firewall=1,host-managed=1,ip=${CACHE_ADDRESS},type=veth" \
   --unprivileged 1 --features nesting=1 --cmode console --onboot "$ONBOOT" \
@@ -393,7 +393,7 @@ set_lxc_directive "$CACHE_ID" lxc.signal.halt SIGTERM
 msg_ok "$(translate "Container created:") CT $CACHE_ID (Redis)"
 
 msg_info "$(translate "Creating the container...")"
-oci_quiet pct create "$APPLICATION_ID" "$APPLICATION_ARCHIVE" --rootfs "${ROOTFS_STORAGE}:8" \
+oci_create_container "$APPLICATION_ID" "$APPLICATION_ARCHIVE" --rootfs "${ROOTFS_STORAGE}:8" \
   --mp0 "$APPLICATION_MOUNT" --hostname "$STACK_NAME" \
   --cores 2 --memory 2048 --swap 1024 \
   --net0 "name=eth0,bridge=${FRONTEND_BRIDGE},firewall=1,host-managed=1,${FRONTEND_NET},type=veth" \

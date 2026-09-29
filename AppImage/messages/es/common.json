@@ -1632,7 +1632,7 @@
       "restoreFailed": "No se pudo restaurar la detección",
       "managedApp": "aplicación administrada",
       "managedStatus": "administrado",
-      "checkedAt": "Marcado {date}",
+      "checkedAt": "Comprobado {date}",
       "latestUpstream": "Última",
       "loadingApplications": "Cargando aplicaciones…",
       "nameSearchPlaceholder": "Escribe para buscar más de 700 aplicaciones o escribe la tuya propia",
