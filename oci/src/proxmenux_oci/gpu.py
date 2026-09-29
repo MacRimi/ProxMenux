@@ -8,6 +8,32 @@ from .i18n import translate
 
 LSIO_DEVICE_INIT = {"boinc", "emby", "jellyfin", "plex", "tvheadend"}
 
+# Images that run their own bare nginx (no s6-overlay/LinuxServer init and no
+# Selkies profile) to serve their web UI. LXC's volatile /run hides the
+# /run/nginx directory shipped in the OCI rootfs, so nginx fails to start
+# with "open() '/run/nginx/nginx.pid' failed (2: No such file or directory)".
+# Add repositories here as they are discovered; see apply_selkies_contract
+# and the linuxserver/libreoffice case in converter.py for the same fix
+# applied through other code paths.
+BARE_NGINX_RUNTIME_INIT = {"tsaridas/stremio-docker"}
+
+
+def apply_nginx_runtime_contract(template: dict[str, Any]) -> None:
+    """Ensure /run/nginx exists for images with a bare nginx that does not
+    create it itself (see BARE_NGINX_RUNTIME_INIT)."""
+    profile = template.get("proxmox", {}).get("installer_profile", {})
+    if profile.get("selkies"):
+        return  # already handled by apply_selkies_contract
+    image = template.get("container_contract", {}).get("image", {}).get("reference", "")
+    repository = image.split("@", 1)[0].split(":", 1)[0]
+    if repository not in BARE_NGINX_RUNTIME_INIT:
+        return
+    mounts = profile.setdefault("tmpfs_mounts", [])
+    if not any(m.get("container_path") == "/run/nginx" for m in mounts):
+        mounts.append({"id": "nginx-runtime", "container_path": "/run/nginx",
+                       "default_size_mb": 1, "minimum_size_mb": 1, "prompt_size": False,
+                       "mount_options": ["rw", "nosuid", "nodev", "mode=0755"]})
+
 
 def apply_gpu_contract(template: dict[str, Any]) -> None:
     profile = template.get("proxmox", {}).get("installer_profile", {})
