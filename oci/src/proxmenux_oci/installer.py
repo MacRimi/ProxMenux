@@ -43,6 +43,31 @@ def _example_default(name: str, example: str | None, timezone: str | None = None
     return example
 
 
+def _compose_example(template: dict[str, Any], name: str) -> str | None:
+    """The value the image's own Compose file shows for a variable, as a hint."""
+    try:
+        import yaml
+        compose = yaml.safe_load(template["container_contract"].get("original_compose") or "") or {}
+    except Exception:
+        return None
+    for service in (compose.get("services") or {}).values():
+        environment = (service or {}).get("environment") or {}
+        if isinstance(environment, list):
+            environment = dict(str(entry).split("=", 1) for entry in environment if "=" in str(entry))
+        value = environment.get(name) if isinstance(environment, dict) else None
+        if value in (None, "") or re.search(r"\$\{?[A-Za-z_]", str(value)):
+            continue
+        value = " ".join(str(value).split())
+        return value if len(value) <= 60 else value[:57] + "..."
+    return None
+
+
+def _image_documentation(template: dict[str, Any]) -> str | None:
+    ui = template.get("catalog_ui", {})
+    return next((ui[key] for key in ("documentation", "repository", "website")
+                 if str(ui.get(key) or "").startswith(("http://", "https://"))), None)
+
+
 def _hostname_default(value: str) -> str:
     hostname = re.sub(r"[^a-z0-9-]+", "-", value.casefold()).strip("-")[:63].rstrip("-")
     return hostname or "oci-app"
@@ -381,6 +406,7 @@ def build_deployment(
     host_firewall = confirm_host_monitor_firewall(ui, template, bridge) if host_monitor else None
 
     environment: list[dict[str, str]] = []
+    optional_explained = False
     for item in template["container_contract"]["environment"]:
         name = item["name"]
         if item.get("prompt"):
@@ -401,8 +427,24 @@ def build_deployment(
             # The image keeps its own default for every optional setting.
             if not advanced:
                 continue
-            if default in (None, "") and not ui.confirm(f"{translate('Configure')} {label}", False):
-                continue
+            if default in (None, ""):
+                question = f"{translate('Configure the optional variable')} {name}?"
+                if item.get("prompt"):
+                    question = f"{translate(item['prompt'])}\n\n{question}"
+                example = _compose_example(template, name)
+                if example:
+                    question += f"\n\n{translate('Example value:')} {example}"
+                if not optional_explained:
+                    # Said once, with the first optional variable.
+                    notice = translate("If you do not know what a variable does, answer No: the image keeps "
+                                       "its own value.")
+                    documentation = _image_documentation(template)
+                    if documentation:
+                        notice += f"\n{translate('The image documentation describes them:')} {documentation}"
+                    question = f"{notice}\n\n{question}"
+                    optional_explained = True
+                if not ui.confirm(question, False):
+                    continue
         if item["sensitive"]:
             if generated and (not advanced or not generated.get("prompt", True)):
                 value = ""

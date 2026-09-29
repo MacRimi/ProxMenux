@@ -104,6 +104,7 @@
       },
       {
         "name": "MOD_AUTO_RESTART_ENABLED",
+        "prompt": "Restart aMule automatically on a schedule (true or false)",
         "example": "",
         "required": false,
         "sensitive": false,
@@ -111,6 +112,7 @@
       },
       {
         "name": "MOD_AUTO_RESTART_CRON",
+        "prompt": "Schedule of the automatic restart, in cron format (for example 0 6 * * * for every day at 6:00)",
         "example": "",
         "required": false,
         "sensitive": false,
@@ -118,6 +120,7 @@
       },
       {
         "name": "MOD_AUTO_SHARE_ENABLED",
+        "prompt": "Share folders automatically (true or false)",
         "example": "",
         "required": false,
         "sensitive": false,
@@ -125,6 +128,7 @@
       },
       {
         "name": "MOD_AUTO_SHARE_DIRECTORIES",
+        "prompt": "Folders to share, separated by ; (for example /downloads/incoming;/my_movies)",
         "example": "",
         "required": false,
         "sensitive": false,
