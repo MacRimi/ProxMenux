@@ -863,7 +863,8 @@ publication workflow and has read-only repository permissions.
 #### Qualified offline `tests/` CI lanes
 
 `.github/workflows/test-offline-qualified.yml` runs **only** the explicitly listed
-seven Python files and ten Node files in `.github/scripts/run_offline_qualified.py`.
+eight Python files (including the inert active-notification payload fixture) and ten
+Node files in `.github/scripts/run_offline_qualified.py`.
 Run the same allowlist locally from the root of a clean, disposable checkout
 with no `AppImage/node_modules`. Do not run this over a normal Monitor install:
 the commands refuse an existing directory, file, or symlink (including a

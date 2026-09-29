@@ -19,6 +19,7 @@ PYTHON_FILES = (
     "tests/test_audit_catalog.py",
     "tests/storage/test_nvme_status_message.py",
     "tests/test_fastfetch_config_generation.py",
+    "tests/test_notification_active_payloads.py",
 )
 NODE_FILES = (
     "tests/lxc_updates/test_docker_delegated_ui.cjs",
