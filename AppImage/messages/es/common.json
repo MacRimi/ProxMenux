@@ -6557,7 +6557,7 @@
         },
         "system_restore_completed": {
           "title": "{hostname}: restauración del host finalizada",
-          "body": "Tareas posteriores a la restauración completadas en segundo plano.\n\nConfiguraciones de máquinas virtuales y contenedores aplicadas: {guests}\nDirectorios auxiliares de montajes bind: {stubs}\nDirectorios de nodos obsoletos eliminados: {stale_nodes}\nComponentes reinstalados: {components}\nDuración: {duration}\n{warnings_block}",
+          "body": "Tareas posteriores a la restauración completadas en segundo plano.\n\nConfiguraciones de guests aplicadas: {guests}\nDirectorios auxiliares de montajes bind: {stubs}\nDirectorios de nodos obsoletos eliminados: {stale_nodes}\nComponentes reinstalados: {components}\nDuración: {duration}\n{warnings_block}",
           "label": "Restauración del host completada"
         },
         "system_problem": {

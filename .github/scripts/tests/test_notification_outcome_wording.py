@@ -88,7 +88,38 @@ class OutcomeWording(unittest.TestCase):
         self.assertIn('Post-restore tasks completed',restored['body'])
         self.assertNotIn('úplne pripravený',restored['body'])
 
-    def test_spanish_restore_names_vms_and_containers_not_invitados(self):
+    def test_slovak_fallback_is_per_stale_leaf_not_unrelated_key_presence(self):
+        import importlib.util
+        spec = importlib.util.spec_from_file_location('isolated_slovak_future', SCRIPTS / 'notification_templates.py')
+        assert spec is not None and spec.loader is not None
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        upstream = json.loads((ROOT / 'AppImage/messages/sk/common.json').read_text())['runtime']['notifications']
+        english = self.catalog['runtime']['notifications']
+        data = {'hostname': 'node-a', 'category': 'temperature', 'reason': 'old',
+                'duration': '3d', 'original_severity': 'WARNING', 'guests': 3}
+        for event, field in (('error_resolved', 'title'), ('error_resolved', 'body'),
+                             ('system_restore_completed', 'body'),
+                             ('backup_complete', 'title'), ('backup_complete', 'body')):
+            # A new translation must work independently of another family's key.
+            translated = copy.deepcopy(upstream)
+            translated['templates'][event][field] = 'REVIEWED TRANSLATION {hostname}'
+            with self.subTest(event=event, field=field, case='future translation'):
+                with patch.object(module, '_load_runtime_catalog', side_effect=lambda lang: translated if lang == 'sk' else english):
+                    result = module.render_template(event, data, 'sk')
+                self.assertEqual(result[field], 'REVIEWED TRANSLATION node-a')
+            # Adding outcome keys must not re-enable unrelated stale claims.
+            stale = copy.deepcopy(upstream)
+            stale.setdefault('backup', {})['unconfirmedBody'] = 'REVIEWED OUTCOME'
+            with self.subTest(event=event, field=field, case='stale after key addition'):
+                with patch.object(module, '_load_runtime_catalog', side_effect=lambda lang: stale if lang == 'sk' else english):
+                    result = module.render_template(event, data, 'sk')
+                self.assertEqual(result[field], module.render_template(event, data, 'en')[field])
+        # The unchanged restore title is not an unsafe readiness claim.
+        self.assertEqual(module.render_template('system_restore_completed', data, 'sk')['title'],
+                         upstream['templates']['system_restore_completed']['title'].format(**data))
+
+    def test_spanish_restore_uses_maintainer_guests_terminology(self):
         import importlib.util
         spec = importlib.util.spec_from_file_location('isolated_spanish_restore', SCRIPTS / 'notification_templates.py')
         assert spec is not None and spec.loader is not None
@@ -97,7 +128,7 @@ class OutcomeWording(unittest.TestCase):
         result = module.render_template('system_restore_completed', {
             'hostname':'node-a','guests':3,'stubs':0,'stale_nodes':0,
             'components':1,'duration':'2m','warnings_block':''}, 'es')
-        self.assertIn('máquinas virtuales y contenedores', result['body'])
+        self.assertIn('Configuraciones de guests aplicadas: 3', result['body'])
         self.assertNotIn('invitados', result['body'].lower())
 
     def test_settings_labels_stay_at_upstream_values_in_all_locales(self):

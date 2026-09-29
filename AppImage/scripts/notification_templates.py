@@ -1856,12 +1856,18 @@ def render_template(event_type: str, data: Dict[str, Any],
             _catalog_value(requested_catalog, key)
             or _catalog_value(english_catalog, key)
         )
-        # A catalog without the outcome keys predates this report contract.
-        # Keep its Settings labels, but do not render old recovery, restore
-        # or backup success claims (e.g. the exact upstream Slovak catalog).
-        if (event_type in ('backup_complete', 'error_resolved', 'system_restore_completed')
-                and field in ('title', 'body')
-                and not _catalog_value(requested_catalog, 'backup.unconfirmedBody')):
+        # Keep the Slovak catalog with its maintainer. Suppress only the
+        # exact stale report leaves, not future translations or safe titles.
+        # An unrelated outcome key cannot version recovery/restore wording.
+        stale_slovak_reports = {
+            'templates.backup_complete.title': '{hostname} → {storage}: Záloha dokončená — {vmname} ({vmid})',
+            'templates.backup_complete.body': 'Záloha {vmname} (ID: {vmid}) na úložisku {storage} bola úspešne dokončená.\nVeľkosť: {size}',
+            'templates.error_resolved.title': '{hostname}: Vyriešené - {category}{entity_suffix}',
+            'templates.error_resolved.body': 'Problém v kategórii {category} bol vyriešený.\n{reason}\n🚦 Predchádzajúca závažnosť: {original_severity}\n⏱️ Trvanie: {duration}',
+            'templates.system_restore_completed.body': 'Úlohy po obnove boli dokončené na pozadí.\n\nPoužité VM a LXC: {guests}\nZástupné priečinky bind mountov: {stubs}\nOdstránené zastarané priečinky uzlov: {stale_nodes}\nPreinštalované súčasti: {components}\nTrvanie: {duration}\n{warnings_block}\nUzol je teraz úplne pripravený na použitie.',
+        }
+        if (requested_language == 'sk' and key in stale_slovak_reports
+                and localized == stale_slovak_reports[key]):
             localized = _catalog_value(english_catalog, key)
         if localized:
             template[field] = localized
