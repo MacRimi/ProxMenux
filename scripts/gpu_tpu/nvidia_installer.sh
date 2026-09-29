@@ -525,21 +525,24 @@ offer_lxc_updates_if_any() {
 # ==========================================================
 ensure_repos_and_headers() {
   pmx_journal_context "ensure_repos_and_headers" "1.3" "nvidia_installer.sh"
-  # Bootstrap APT repos FIRST. On a fresh Proxmox install the
-  # pve-no-subscription / debian repos aren't configured by default
-  # → `pve-headers-$(uname -r)` and `build-essential` come back as
-  # "Unable to locate package" and the NVIDIA install bails out with
-  # "no cc found". We delegate to the shared helper (same one the
-  # post-install flow uses), which owns its own spinner pair — that's
-  # why this block has to run BEFORE we open our own msg_info.
+  # Check repositories before opening the headers spinner. A fresh ISO may
+  # have Enterprise enabled but no subscription; the shared policy asks the
+  # operator before switching. Refusal stops before driver removal.
   if ! declare -F ensure_repositories >/dev/null 2>&1; then
     local _utils_install="$LOCAL_SCRIPTS/global/utils-install-functions.sh"
     [[ ! -f "$_utils_install" ]] && _utils_install="/usr/local/share/proxmenux/scripts/global/utils-install-functions.sh"
     # shellcheck source=/dev/null
     [[ -f "$_utils_install" ]] && source "$_utils_install"
   fi
-  if declare -F ensure_repositories >/dev/null 2>&1; then
-    ensure_repositories >>"$LOG_FILE" 2>&1 || true
+  if ! declare -F ensure_repositories >/dev/null 2>&1; then
+    msg_error "$(translate 'Repository helper unavailable. NVIDIA installation stopped.')"
+    return 1
+  fi
+  # Keep the consent dialog and diagnostic visible, not just in the log.
+  ensure_repositories 2>&1 | tee -a "$LOG_FILE"
+  if (( PIPESTATUS[0] != 0 )); then
+    msg_error "$(translate 'Repository check failed. NVIDIA installation stopped.')"
+    return 1
   fi
 
   # Now own the spinner for the headers + build-tools check.
@@ -548,7 +551,10 @@ ensure_repos_and_headers() {
   local kver
   kver=$(uname -r)
 
-  apt-get update -qq >>"$LOG_FILE" 2>&1
+  if ! apt-get update -qq >>"$LOG_FILE" 2>&1; then
+    msg_error "$(translate 'APT update failed. Check repository access; NVIDIA installation stopped.')"
+    return 1
+  fi
 
   if ! dpkg -s "pve-headers-$kver" >/dev/null 2>&1 && \
      ! dpkg -s "proxmox-headers-$kver" >/dev/null 2>&1; then
@@ -2184,7 +2190,7 @@ main() {
 
         # Headers before anything else: the build check below needs them,
         # and so does DKMS afterwards.
-        ensure_repos_and_headers
+        ensure_repos_and_headers || exit 1
 
         installer=$(download_nvidia_installer "$DRIVER_VERSION")
         local download_result=$?
@@ -2442,7 +2448,7 @@ auto_reinstall_from_state() {
   # dialogs and confirmations.
   echo "Reinstalling NVIDIA driver $DRIVER_VERSION non-interactively..." | tee -a "$LOG_FILE"
   ensure_workdir
-  ensure_repos_and_headers          >>"$LOG_FILE" 2>&1
+  ensure_repos_and_headers          >>"$LOG_FILE" 2>&1 || return 2
   blacklist_nouveau                 >>"$LOG_FILE" 2>&1
   ensure_modules_config             >>"$LOG_FILE" 2>&1
 
