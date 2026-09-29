@@ -1053,11 +1053,13 @@ class EmailChannel(NotificationChannel):
                 status = 'unconfirmed'
             sev['label'] = _runtime_text(f'email.status.{status}', data)
         group = data.get('_group', 'other')
-        # Keep unbroken recorded text inside the temperature email's table.
-        # Both properties are inline for mail clients; other events retain
-        # their original markup and layout.
-        temp_cell_wrap = 'word-wrap:break-word;overflow-wrap:break-word;word-break:break-word;' if event_type == 'temp_high' else ''
-        temp_table_layout = 'table-layout:fixed;' if event_type == 'temp_high' else ''
+        # Scoped inline mail-compatible wrapping: temperature measurements
+        # and backup identities/raw diagnostics. Other events retain layout.
+        backup_email = event_type in {'backup_complete', 'backup_fail'}
+        temp_cell_wrap = 'word-wrap:break-word;overflow-wrap:break-word;word-break:break-word;' if event_type == 'temp_high' or backup_email else ''
+        temp_table_layout = 'table-layout:fixed;' if event_type == 'temp_high' or backup_email else ''
+        backup_title_wrap = temp_cell_wrap if backup_email else ''
+        backup_metadata_layout = 'table-layout:fixed;' if backup_email else ''
         section_label = _runtime_text(f'email.groups.{group}', data)
         report_label = _runtime_text('email.report', data, group=section_label)
         host_label = _runtime_text('email.host', data)
@@ -1088,6 +1090,13 @@ class EmailChannel(NotificationChannel):
                 ('', html_mod.escape(line.strip()))
                 for line in body.split('\n') if line.strip()
             )
+
+        if event_type in {'system_restore_completed', 'error_resolved'}:
+            # Observation age/disappearance must not become a green OK row.
+            # The endpoint's warnings_block and task counts live in the
+            # localized body, not the generic services Event row.
+            detail_rows = [('', html_mod.escape(line.strip()))
+                           for line in body.split('\n') if line.strip()]
 
         # ── Fallback: if no structured rows, render body text lines ──
         if not detail_rows:
@@ -1155,15 +1164,15 @@ class EmailChannel(NotificationChannel):
 
   <!-- Title bar -->
   <div style="padding:16px 28px;background:{sev['bg']};border-bottom:1px solid {sev['border']};">
-    <h2 style="margin:0;font-size:15px;font-weight:600;color:{sev['color']};">{html_mod.escape(display_title)}</h2>
+    <h2 style="margin:0;font-size:15px;font-weight:600;color:{sev['color']};{backup_title_wrap}">{html_mod.escape(display_title)}</h2>
   </div>
 
   <!-- Body -->
   <div style="padding:24px 28px;">
     <!-- Metadata -->
-    <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom:16px;">
+    <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom:16px;{backup_metadata_layout}">
       <tr>
-        <td style="font-size:12px;color:#4b5563;">
+        <td style="font-size:12px;color:#4b5563;{backup_title_wrap}">
           {html_mod.escape(host_label)}: <strong style="color:#111827;">{html_mod.escape(data.get('hostname', ''))}</strong>
         </td>
         <td style="font-size:12px;color:#4b5563;text-align:right;">

@@ -10,6 +10,7 @@ import unittest
 from pathlib import Path
 from typing import Any
 from unittest.mock import patch
+from notification_fixture import templates as actual_templates
 
 ROOT = Path(__file__).resolve().parents[3]
 SCRIPTS = ROOT / 'AppImage/scripts'
@@ -292,10 +293,9 @@ class OutcomeWording(unittest.TestCase):
                 build = extract(path, '_build_detail_rows', 'EmailChannel', ns)
                 fmt = extract(path, '_format_html', 'EmailChannel', ns)
                 class Email:
-                    _SEV_STYLE = {'OK': {'color':'#16a34a','bg':'#f0fdf4','border':'#bbf7d0'},
-                                  'CRITICAL': {'color':'#dc2626','bg':'#fef2f2','border':'#fecaca'},
-                                  'INFO': {'color':'blue','bg':'white','border':'gray'}}
-                    _SEV_DEFAULT = {'color':'#6b7280','bg':'#f9fafb','border':'#e5e7eb'}
+                    from notification_channels import EmailChannel
+                    _SEV_STYLE = EmailChannel._SEV_STYLE
+                    _SEV_DEFAULT = EmailChannel._SEV_DEFAULT
                     subject_prefix = 'ProxMenux'
                     _build_detail_rows = staticmethod(build)
                 badge = catalog['channels']['email']['severity'].get('observation') or english['channels']['email']['severity']['observation']

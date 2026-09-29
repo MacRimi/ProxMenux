@@ -77,9 +77,16 @@ class RuntimeCatalogTests(unittest.TestCase):
                           "channels.email.severity.observation", "channels.email.status.unconfirmed"}
         for language, catalog in self.catalogs.items():
             translated = flatten(catalog)
-            expected = set(en) - pending_slovak if language == 'sk' else set(en)
-            self.assertEqual(set(translated), expected, language)
-            for key in expected:
+            if language == 'sk':
+                # Missing maintainer-owned leaves may be generated later.
+                # Accept only this bounded gap, and validate every present leaf.
+                self.assertTrue(set(en) - pending_slovak <= set(translated), language)
+                self.assertTrue(set(translated) <= set(en), language)
+            else:
+                self.assertEqual(set(translated), set(en), language)
+            for key in translated:
+                self.assertIsInstance(translated[key], str, f"{language}:{key}")
+                self.assertTrue(translated[key].strip(), f"{language}:{key}")
                 if language == 'sk' and key in ('templates.backup_complete.title',
                                                 'templates.backup_complete.body'):
                     continue  # exact upstream SK, superseded only at render time

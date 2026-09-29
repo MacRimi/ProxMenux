@@ -4294,7 +4294,7 @@ class ProxmoxHookWatcher:
         """Distinguish explicit failure, complete guest logs and unknown results."""
         text = str(message or '')
         if severity in ('error', 'err', 'critical') or re.search(
-                r'(?im)^\s*(?:ERROR:|TASK ERROR:|.*\bStatus\s+ERROR\b)', text):
+                r'(?im)^\s*(?:\d+:\s*)?(?:\d{4}-\d{2}-\d{2}\s+\S+\s+)?(?:ERROR:|TASK ERROR:|.*\bStatus\s+ERROR\b)', text):
             return 'failed'
         starts = re.findall(r'(?im)\bStarting Backup of VM (\d+)\s*\(', text)
         finished = re.findall(r'(?im)\bFinished Backup of VM (\d+)\s*\(', text)
@@ -4303,7 +4303,7 @@ class ProxmoxHookWatcher:
         if table is not None and any(guest['status'].lower() == 'error' for guest in table['vms']):
             return 'failed'
         if severity not in ('info', 'ok', 'success') or re.search(
-                r'(?im)(?:^\s*WARNING:|\bWARNINGS\s*:\s*\d+)', text):
+                r'(?im)(?:^\s*(?:\d+:\s*)?(?:\d{4}-\d{2}-\d{2}\s+\S+\s+)?WARN(?:ING)?:|\bWARNINGS\s*:\s*\d+)', text):
             return 'unconfirmed'
         # A present table is authoritative: do not certify an incomplete table
         # from a finished guest log, or reject a complete OK table merely
@@ -4313,7 +4313,16 @@ class ProxmoxHookWatcher:
                     all(guest['status'].lower() == 'ok' for guest in table['vms'])
                     else 'unconfirmed')
         if starts:
-            return 'confirmed' if sorted(starts) == sorted(finished) else 'unconfirmed'
+            pending = {}
+            for match in re.finditer(r'(?im)\b(Starting|Finished) Backup of VM (\d+)\s*\(', text):
+                action, vmid = match.groups()
+                if action.lower() == 'starting':
+                    pending[vmid] = pending.get(vmid, 0) + 1
+                elif not pending.get(vmid):
+                    return 'unconfirmed'  # A finish before its start is not evidence.
+                else:
+                    pending[vmid] -= 1
+            return 'confirmed' if not any(pending.values()) else 'unconfirmed'
         if re.search(
                 r'(?im)^\s*(?:INFO:\s*)?TASK OK\s*$', text):
             return 'confirmed'
@@ -4379,10 +4388,10 @@ class ProxmoxHookWatcher:
         }
         if event_type in ('backup_complete', 'backup_fail'):
             # This is presentation metadata, not a new event/toggle/delivery path.
+            outcome = self._backup_outcome(severity_raw, message)
             data['backup_outcome'] = (
-                'failed' if event_type == 'backup_fail' else
-                self._backup_outcome(severity_raw, message) if pve_type == 'vzdump'
-                else 'unconfirmed'
+                'failed' if event_type == 'backup_fail' or outcome == 'failed' else
+                outcome if pve_type == 'vzdump' else 'unconfirmed'
             )
 
         if pve_type == 'replication':
