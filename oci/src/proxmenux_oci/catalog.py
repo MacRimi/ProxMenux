@@ -797,8 +797,9 @@ class Catalog:
                     item.update(environment_overrides[item["name"]])
         from .stack import apply_stack_support
         apply_stack_support(template)
-        from .gpu import apply_gpu_contract
+        from .gpu import apply_gpu_contract, apply_nginx_runtime_contract
         apply_gpu_contract(template)
+        apply_nginx_runtime_contract(template)
         # Last, so the stack compiler does not reset it.
         self._apply_verification(app_id, template)
 
