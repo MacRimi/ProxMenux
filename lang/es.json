@@ -6625,6 +6625,7 @@
   "Unsupported native device type:": "Tipo de dispositivo nativo sin soporte:",
   "Unsupported operation": "operación sin soporte",
   "Unsupported output format:": "Formato de salida no admitido:",
+  "Unsupported owner strategy:": "estrategia de propietario no admitida:",
   "Unsupported post-start configuration:": "Configuración sin soporte post-start:",
   "Unsupported pre-start check:": "Comprobación sin soporte previo:",
   "Unsupported pre-start repair:": "Reparación sin soporte previo al arranque:",
