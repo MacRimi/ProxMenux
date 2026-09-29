@@ -4298,41 +4298,20 @@ class ProxmoxHookWatcher:
             return 'failed'
         starts = re.findall(r'(?im)\bStarting Backup of VM (\d+)\s*\(', text)
         finished = re.findall(r'(?im)\bFinished Backup of VM (\d+)\s*\(', text)
-        lines = text.splitlines()
-        table_outcome = None
-        for index, header in enumerate(lines):
-            if not re.match(r'\s*VMID\s+Name\s+Status\b', header, re.IGNORECASE):
-                continue
-            status_start = header.find('Status')
-            status_end = header.find('Time', status_start)
-            if status_start < 0 or status_end < 0:
-                break
-            rows = []
-            for line in lines[index + 1:]:
-                if re.match(r'\s*Total\b', line, re.IGNORECASE):
-                    table_outcome = ('confirmed' if rows and all(status == 'OK' for status in rows)
-                                     else 'unconfirmed')
-                    break
-                if not line.strip():
-                    break
-                if not re.match(r'\s*\d+\s+', line):
-                    break
-                status = line[status_start:status_end].strip().upper()
-                if status in ('ERROR', 'ERR'):
-                    return 'failed'
-                rows.append(status)
-            break
+        from notification_templates import _parse_vzdump_table
+        table = _parse_vzdump_table(text)
+        if table is not None and any(guest['status'].lower() == 'error' for guest in table['vms']):
+            return 'failed'
         if severity not in ('info', 'ok', 'success') or re.search(
                 r'(?im)(?:^\s*WARNING:|\bWARNINGS\s*:\s*\d+)', text):
             return 'unconfirmed'
         # A present table is authoritative: do not certify an incomplete table
         # from a finished guest log, or reject a complete OK table merely
         # because the extra diagnostic log was truncated before its finishes.
-        if table_outcome is not None:
-            return table_outcome
-        if any(re.match(r'\s*VMID\s+Name\s+Status\b', line, re.IGNORECASE)
-               for line in lines):
-            return 'unconfirmed'
+        if table is not None:
+            return ('confirmed' if table['complete'] and
+                    all(guest['status'].lower() == 'ok' for guest in table['vms'])
+                    else 'unconfirmed')
         if starts:
             return 'confirmed' if sorted(starts) == sorted(finished) else 'unconfirmed'
         if re.search(
@@ -4498,10 +4477,17 @@ class ProxmoxHookWatcher:
             if vmids:
                 data['vmid'] = vmids[0]
                 entity_id = vmids[0]
-            # Try to extract VM name from the table line
-            name_m = re.search(r'(\d+)\s+(\S+)\s+(?:OK|ERROR|WARNINGS)', message)
-            if name_m:
-                data['vmname'] = name_m.group(2)
+            from notification_templates import _parse_vzdump_message
+            parsed = _parse_vzdump_message(message) or {}
+            guests = parsed.get('vms', [])
+            if data.get('backup_outcome') == 'failed':
+                guests = [guest for guest in guests if guest.get('status', '').lower() == 'error']
+            if len(guests) == 1:
+                data['vmid'] = guests[0]['vmid']
+                data['vmname'] = guests[0]['name']
+            else:
+                # Do not make one successful guest the subject of a batch failure.
+                data.pop('vmid', None)
             # Extract size from "Total size: X"
             size_m = re.search(r'Total size:\s*(.+?)(?:\n|$)', message)
             if size_m:

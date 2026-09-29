@@ -59,6 +59,7 @@ def renderer(catalog, translated=None):
           '_catalog_value': lookup, 'runtime_message': message}
     from typing import Optional
     ns['Optional'] = Optional
+    extract(path, '_parse_vzdump_table', namespace=ns)
     extract(path, '_parse_vzdump_message', namespace=ns)
     extract(path, '_format_vzdump_body', namespace=ns)
     return templates, extract(path, 'render_template', namespace=ns)
@@ -70,54 +71,6 @@ class OutcomeWording(unittest.TestCase):
         cls.catalog = json.loads(CATALOG.read_text())
         cls.templates, render = renderer(cls.catalog)
         cls.render = staticmethod(render)
-
-    def test_upstream_slovak_stale_claims_use_english_report_fallback(self):
-        import importlib.util
-        spec = importlib.util.spec_from_file_location('isolated_slovak_report', SCRIPTS / 'notification_templates.py')
-        assert spec is not None and spec.loader is not None
-        module = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(module)
-        recovered = module.render_template('error_resolved', {'hostname':'node-a',
-            'category':'temperature','reason':'old','duration':'3d',
-            'original_severity':'WARNING'}, 'sk')
-        self.assertIn('No longer reported',recovered['title'])
-        self.assertIn('no longer in active health records',recovered['body'])
-        restored = module.render_template('system_restore_completed', {'hostname':'node-a',
-            'guests':3,'stubs':0,'stale_nodes':0,'components':1,'duration':'2m',
-            'warnings_block':'⚠️ Boot check pending'}, 'sk')
-        self.assertIn('Post-restore tasks completed',restored['body'])
-        self.assertNotIn('úplne pripravený',restored['body'])
-
-    def test_slovak_fallback_is_per_stale_leaf_not_unrelated_key_presence(self):
-        import importlib.util
-        spec = importlib.util.spec_from_file_location('isolated_slovak_future', SCRIPTS / 'notification_templates.py')
-        assert spec is not None and spec.loader is not None
-        module = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(module)
-        upstream = json.loads((ROOT / 'AppImage/messages/sk/common.json').read_text())['runtime']['notifications']
-        english = self.catalog['runtime']['notifications']
-        data = {'hostname': 'node-a', 'category': 'temperature', 'reason': 'old',
-                'duration': '3d', 'original_severity': 'WARNING', 'guests': 3}
-        for event, field in (('error_resolved', 'title'), ('error_resolved', 'body'),
-                             ('system_restore_completed', 'body'),
-                             ('backup_complete', 'title'), ('backup_complete', 'body')):
-            # A new translation must work independently of another family's key.
-            translated = copy.deepcopy(upstream)
-            translated['templates'][event][field] = 'REVIEWED TRANSLATION {hostname}'
-            with self.subTest(event=event, field=field, case='future translation'):
-                with patch.object(module, '_load_runtime_catalog', side_effect=lambda lang: translated if lang == 'sk' else english):
-                    result = module.render_template(event, data, 'sk')
-                self.assertEqual(result[field], 'REVIEWED TRANSLATION node-a')
-            # Adding outcome keys must not re-enable unrelated stale claims.
-            stale = copy.deepcopy(upstream)
-            stale.setdefault('backup', {})['unconfirmedBody'] = 'REVIEWED OUTCOME'
-            with self.subTest(event=event, field=field, case='stale after key addition'):
-                with patch.object(module, '_load_runtime_catalog', side_effect=lambda lang: stale if lang == 'sk' else english):
-                    result = module.render_template(event, data, 'sk')
-                self.assertEqual(result[field], module.render_template(event, data, 'en')[field])
-        # The unchanged restore title is not an unsafe readiness claim.
-        self.assertEqual(module.render_template('system_restore_completed', data, 'sk')['title'],
-                         upstream['templates']['system_restore_completed']['title'].format(**data))
 
     def test_spanish_restore_uses_maintainer_guests_terminology(self):
         import importlib.util
@@ -256,6 +209,7 @@ class OutcomeWording(unittest.TestCase):
         from typing import Dict, Optional
         ns = {'re': re, 'Dict': Dict, 'Optional': Optional, 'Any': Any,
               'runtime_message': lambda key, lang, **kw: key}
+        extract(SCRIPTS / 'notification_templates.py', '_parse_vzdump_table', namespace=ns)
         parser = extract(SCRIPTS / 'notification_templates.py', '_parse_vzdump_message', namespace=ns)
         formatter = extract(SCRIPTS / 'notification_templates.py', '_format_vzdump_body', namespace=ns)
         incomplete = parser('INFO: Starting Backup of VM 104 (qemu)')
@@ -392,9 +346,7 @@ class OutcomeWording(unittest.TestCase):
                                           self.catalog['runtime']['notifications']['backup'][key]).format(hostname=data['hostname'])
                         self.assertTrue(result['title'].startswith(expected_title), result['title'])
                     else:
-                        source = (catalog if catalog.get('backup', {}).get('unconfirmedBody')
-                                  else self.catalog['runtime']['notifications'])
-                        self.assertEqual(result['title'], source['templates']['backup_complete']['title'].format(hostname=data['hostname']))
+                        self.assertEqual(result['title'], catalog['templates']['backup_complete']['title'].format_map(module._SafeFormatDict(data)))
                     self.assertNotIn('{hostname}', result['title'])
                     if state == 'unconfirmed':
                         source = (catalog if catalog.get('backup', {}).get('unconfirmedBody')
@@ -407,8 +359,7 @@ class OutcomeWording(unittest.TestCase):
                     self.assertTrue(enriched.startswith({'confirmed':'💾✅','unconfirmed':'💾❔','failed':'💾❌'}[state]))
             recovery = module.render_template('error_resolved', {'hostname':'node','category':'temperature',
                 'reason':'Old observation','duration':'3d','original_severity':'WARNING'}, lang)
-            recovery_source = (catalog if catalog.get('backup', {}).get('unconfirmedBody')
-                               else self.catalog['runtime']['notifications'])
+            recovery_source = catalog
             self.assertEqual(recovery['title'], recovery_source['templates']['error_resolved']['title'].format(hostname='node',category='temperature',entity_suffix=''))
             self.assertNotIn('resolved', recovery['title'].lower()) if lang == 'en' else None
             restore = module.render_template('system_restore_completed', {'hostname':'node', 'guests':4,

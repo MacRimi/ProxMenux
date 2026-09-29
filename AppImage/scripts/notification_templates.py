@@ -206,6 +206,51 @@ def _format_lxc_update_details(data: Dict[str, Any], language: str) -> str:
 
 # ─── vzdump message parser ───────────────────────────────────────
 
+def _parse_vzdump_table(message: str) -> Optional[Dict[str, Any]]:
+    """Read the bounded fixed-column summary for both outcomes and guest details."""
+    lines = message.splitlines()
+    for index, header in enumerate(lines):
+        if not re.match(r'\s*VMID\s+Name\s+Status\b', header, re.IGNORECASE):
+            continue
+        columns = [re.search(r'\b' + name + r'\b', header, re.IGNORECASE)
+                   for name in ('VMID', 'Name', 'Status', 'Time', 'Size', 'Filename')]
+        if not all(columns):
+            return {'vms': [], 'complete': False}
+        starts = [column.start() for column in columns if column is not None]
+        if starts != sorted(starts):
+            return {'vms': [], 'complete': False}
+        rows = []
+        valid = True
+        complete = False
+        for line in lines[index + 1:]:
+            if not line.strip():
+                continue
+            if re.match(r'\s*Total running time:\s*\S', line, re.IGNORECASE):
+                complete = valid and bool(rows)
+                break
+            # Blanks are allowed, but no unrelated section can extend the table.
+            if not re.match(r'\s*\d+\s+', line):
+                break
+            values = [line[a:b].strip() for a, b in
+                      zip(starts, starts[1:] + [len(line)])]
+            vmid, name, status, duration, size, filename = values
+            if not vmid.isdigit():
+                valid = False
+                break
+            valid = bool(valid and all(values)
+                         and re.fullmatch(r'(?:\d+:\d{2}:\d{2}|(?:\d+[dhms]\s*)+)', duration)
+                         and re.fullmatch(r'\d+(?:\.\d+)?\s*(?:[KMGTPE]i?B?|B)', size, re.IGNORECASE))
+            if status.lower() in ('err', 'error'):
+                status = 'error'
+            kind = ('lxc' if 'lxc' in filename or filename.startswith('ct/') else
+                    'qemu' if 'qemu' in filename or filename.startswith('vm/') else '')
+            rows.append({'vmid': vmid, 'name': name, 'status': status,
+                         'time': duration, 'size': size, 'filename': filename,
+                         'type': kind})
+        return {'vms': rows, 'complete': bool(complete)}
+    return None
+
+
 def _parse_vzdump_message(message: str) -> Optional[Dict[str, Any]]:
     """Parse a PVE vzdump notification message into structured data.
     
@@ -225,55 +270,10 @@ def _parse_vzdump_message(message: str) -> Optional[Dict[str, Any]]:
     
     lines = message.split('\n')
     
-    # ── Strategy 1: classic table (local/NFS/CIFS storage) ──
-    header_idx = -1
-    for i, line in enumerate(lines):
-        if re.match(r'\s*VMID\s+Name\s+Status', line, re.IGNORECASE):
-            header_idx = i
-            break
-    
-    if header_idx >= 0:
-        # Use column positions from the header to slice each row.
-        # Header: "VMID    Name           Status    Time      Size          Filename"
-        header = lines[header_idx]
-        col_starts = []
-        for col_name in ['VMID', 'Name', 'Status', 'Time', 'Size', 'Filename']:
-            idx = header.find(col_name)
-            if idx >= 0:
-                col_starts.append(idx)
-        
-        if len(col_starts) == 6:
-            for line in lines[header_idx + 1:]:
-                stripped = line.strip()
-                if not stripped or stripped.startswith('Total') or stripped.startswith('Logs') or stripped.startswith('='):
-                    break
-                # Pad line to avoid index errors
-                padded = line.ljust(col_starts[-1] + 50)
-                vmid = padded[col_starts[0]:col_starts[1]].strip()
-                name = padded[col_starts[1]:col_starts[2]].strip()
-                status = padded[col_starts[2]:col_starts[3]].strip()
-                if status.lower() in ('err', 'error'):
-                    status = 'error'
-                time_val = padded[col_starts[3]:col_starts[4]].strip()
-                size = padded[col_starts[4]:col_starts[5]].strip()
-                filename = padded[col_starts[5]:].strip()
-                
-                if vmid and vmid.isdigit():
-                    # Infer type from filename (vzdump-lxc-NNN or vzdump-qemu-NNN)
-                    vm_type = ''
-                    if 'lxc' in filename:
-                        vm_type = 'lxc'
-                    elif 'qemu' in filename:
-                        vm_type = 'qemu'
-                    vms.append({
-                        'vmid': vmid,
-                        'name': name,
-                        'status': status,
-                        'time': time_val,
-                        'size': size,
-                        'filename': filename,
-                        'type': vm_type,
-                    })
+    # The same summary rows drive classification, rich bodies and identities.
+    table = _parse_vzdump_table(message)
+    if table is not None:
+        vms = table['vms']
     
     # ── Strategy 2: log-style (PBS / Proxmox Backup Server) ──
     # Parse from the full vzdump log lines.
@@ -1856,19 +1856,6 @@ def render_template(event_type: str, data: Dict[str, Any],
             _catalog_value(requested_catalog, key)
             or _catalog_value(english_catalog, key)
         )
-        # Keep the Slovak catalog with its maintainer. Suppress only the
-        # exact stale report leaves, not future translations or safe titles.
-        # An unrelated outcome key cannot version recovery/restore wording.
-        stale_slovak_reports = {
-            'templates.backup_complete.title': '{hostname} → {storage}: Záloha dokončená — {vmname} ({vmid})',
-            'templates.backup_complete.body': 'Záloha {vmname} (ID: {vmid}) na úložisku {storage} bola úspešne dokončená.\nVeľkosť: {size}',
-            'templates.error_resolved.title': '{hostname}: Vyriešené - {category}{entity_suffix}',
-            'templates.error_resolved.body': 'Problém v kategórii {category} bol vyriešený.\n{reason}\n🚦 Predchádzajúca závažnosť: {original_severity}\n⏱️ Trvanie: {duration}',
-            'templates.system_restore_completed.body': 'Úlohy po obnove boli dokončené na pozadí.\n\nPoužité VM a LXC: {guests}\nZástupné priečinky bind mountov: {stubs}\nOdstránené zastarané priečinky uzlov: {stale_nodes}\nPreinštalované súčasti: {components}\nTrvanie: {duration}\n{warnings_block}\nUzol je teraz úplne pripravený na použitie.',
-        }
-        if (requested_language == 'sk' and key in stale_slovak_reports
-                and localized == stale_slovak_reports[key]):
-            localized = _catalog_value(english_catalog, key)
         if localized:
             template[field] = localized
     backup_title_target = ''
@@ -1877,25 +1864,28 @@ def render_template(event_type: str, data: Dict[str, Any],
         if outcome == 'confirmed':
             template['title'] = runtime_message('backup.confirmedTitle', language,
                                                 hostname=data.get('hostname') or _get_hostname())
-            parsed_backup = _parse_vzdump_message(str(data.get('pve_message') or ''))
-            storage = str((parsed_backup or {}).get('storage_name') or data.get('storage') or '').strip()
-            guests = (parsed_backup or {}).get('vms') or []
-            target = []
-            if storage:
-                target.append(storage)
-            if len(guests) == 1:
-                guest = guests[0]
-                kind = 'VM' if guest.get('type') == 'qemu' else 'CT' if guest.get('type') == 'lxc' else 'VM/CT'
-                name = guest.get('name') or kind
-                target.append(f"{kind} {name} ({guest['vmid']})" if name != kind
-                              else f"{kind} {guest['vmid']}")
-            if target:
-                backup_title_target = ' — ' + ' · '.join(target)
             template['body'] = runtime_message('backup.confirmedBody', language)
         elif outcome == 'failed':
             template['title'] = runtime_message('backup.errorTitle', language,
                                                 hostname=data.get('hostname') or _get_hostname())
             template['body'] = runtime_message('backup.errorBody', language)
+    if event_type == 'backup_complete' and data.get('backup_outcome') in ('confirmed', 'failed'):
+        parsed_backup = _parse_vzdump_message(str(data.get('pve_message') or ''))
+        storage = str((parsed_backup or {}).get('storage_name') or data.get('storage') or '').strip()
+        guests = (parsed_backup or {}).get('vms') or []
+        if data.get('backup_outcome') == 'failed':
+            guests = [guest for guest in guests if guest.get('status', '').lower() == 'error']
+        target = []
+        if storage:
+            target.append(storage)
+        if len(guests) == 1:
+            guest = guests[0]
+            kind = 'VM' if guest.get('type') == 'qemu' else 'CT' if guest.get('type') == 'lxc' else 'VM/CT'
+            name = guest.get('name') or kind
+            target.append(f"{kind} {name} ({guest['vmid']})" if name != kind
+                          else f"{kind} {guest['vmid']}")
+        if target:
+            backup_title_target = ' — ' + ' · '.join(target)
     
     # Ensure hostname is always available
     variables = {
