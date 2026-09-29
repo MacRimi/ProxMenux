@@ -3967,11 +3967,11 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                                 <div className="space-y-1">
                                   <div className="text-sm text-green-500 flex items-center gap-1">
                                     <span>↓</span>
-                                    <span>{((selectedVM.diskread || 0) / 1024 ** 2).toFixed(2)} MB</span>
+                                    <span>{formatBytes(selectedVM.diskread, false)}</span>
                                   </div>
                                   <div className="text-sm text-blue-500 flex items-center gap-1">
                                     <span>↑</span>
-                                    <span>{((selectedVM.diskwrite || 0) / 1024 ** 2).toFixed(2)} MB</span>
+                                    <span>{formatBytes(selectedVM.diskwrite, false)}</span>
                                   </div>
                                 </div>
                               </div>

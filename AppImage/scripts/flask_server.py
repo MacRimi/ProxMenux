@@ -1913,6 +1913,35 @@ def _vm_cache_put(cache: dict, vmid: int, value) -> None:
     with _vm_modal_cache_lock:
         cache[vmid] = (time.time(), value)
 
+# The details and mount-point caches come from the guest's .conf, and an edit
+# made from the Proxmox interface or `pct/qm set` raises no event the Monitor
+# sees. Each entry remembers the .conf it was built from and is rebuilt when
+# the file changes.
+_vm_conf_built: dict = {}   # (cache name, vmid) -> .conf signature
+
+def _vm_conf_signature(vmid: int):
+    for path in (f'/etc/pve/lxc/{int(vmid)}.conf', f'/etc/pve/qemu-server/{int(vmid)}.conf'):
+        try:
+            info = os.stat(path)
+        except OSError:
+            continue
+        return (info.st_mtime_ns, info.st_size)
+    return None
+
+def _vm_conf_cache_get(cache: dict, name: str, vmid: int, ttl: int):
+    """Cached payload for vmid only while its .conf is unchanged."""
+    cached = _vm_cache_get(cache, vmid, ttl)
+    if cached is None:
+        return None
+    with _vm_modal_cache_lock:
+        built = _vm_conf_built.get((name, vmid))
+    return cached if built == _vm_conf_signature(vmid) else None
+
+def _vm_conf_cache_put(cache: dict, name: str, vmid: int, value, signature) -> None:
+    _vm_cache_put(cache, vmid, value)
+    with _vm_modal_cache_lock:
+        _vm_conf_built[(name, vmid)] = signature
+
 def _vm_cache_invalidate(vmid: int, *caches) -> None:
     """Drop this vmid's entries from the given caches. With no argument
     hits every per-VM modal cache — used by write actions that could
@@ -15214,7 +15243,7 @@ def api_vms_modal_cache_all():
             entry = {
                 'vmid': vmid,
                 'type': vm_type,
-                'details': _vm_cache_get(_vm_details_cache, vmid, _VM_DETAILS_TTL),
+                'details': _vm_conf_cache_get(_vm_details_cache, 'details', vmid, _VM_DETAILS_TTL),
                 'backups': _vm_cache_get(_vm_backups_cache, vmid, _VM_BACKUPS_TTL),
             }
             if vm_type == 'lxc':
@@ -15225,7 +15254,7 @@ def api_vms_modal_cache_all():
                     _VM_APP_SUGGESTIONS_TTL,
                 )
                 entry['schedule'] = _vm_cache_get(_vm_schedule_cache, vmid, _VM_SCHEDULE_TTL)
-                entry['mount_points'] = _vm_cache_get(_vm_mounts_cache, vmid, _VM_MOUNTS_TTL)
+                entry['mount_points'] = _vm_conf_cache_get(_vm_mounts_cache, 'mounts', vmid, _VM_MOUNTS_TTL)
             guests.append(entry)
         return jsonify({'guests': guests, 'ts': int(time.time())})
     except Exception as e:
@@ -15238,7 +15267,9 @@ def api_vms_modal_cache_all():
 def get_vm_config(vmid):
     """Get detailed configuration for a specific VM/LXC"""
     try:
-        cached = _vm_cache_get(_vm_details_cache, vmid, _VM_DETAILS_TTL)
+        # Taken before reading the .conf, so an edit during the build is seen next time.
+        signature = _vm_conf_signature(vmid)
+        cached = _vm_conf_cache_get(_vm_details_cache, 'details', vmid, _VM_DETAILS_TTL)
         if cached is not None:
             return jsonify(cached)
 
@@ -15308,7 +15339,7 @@ def get_vm_config(vmid):
         if hardware_info:
             response_data['hardware_info'] = hardware_info
 
-        _vm_cache_put(_vm_details_cache, vmid, response_data)
+        _vm_conf_cache_put(_vm_details_cache, 'details', vmid, response_data, signature)
         return jsonify(response_data)
 
     except Exception as e:
@@ -15328,7 +15359,8 @@ def api_lxc_mount_points(vmid):
     start/stop of the guest, since config-visible fields normally
     only change through a guest reboot). The runtime endpoint is
     NEVER cached — it must reflect the live state at click time."""
-    cached = _vm_cache_get(_vm_mounts_cache, vmid, _VM_MOUNTS_TTL)
+    signature = _vm_conf_signature(vmid)
+    cached = _vm_conf_cache_get(_vm_mounts_cache, 'mounts', vmid, _VM_MOUNTS_TTL)
     if cached is not None:
         return jsonify(cached)
     try:
@@ -15339,7 +15371,7 @@ def api_lxc_mount_points(vmid):
         result = lxc_mount_points.get_lxc_mount_points_static(str(vmid))
         if not result.get("ok"):
             return jsonify(result), 400
-        _vm_cache_put(_vm_mounts_cache, vmid, result)
+        _vm_conf_cache_put(_vm_mounts_cache, 'mounts', vmid, result, signature)
         return jsonify(result)
     except Exception as e:
         return jsonify({"ok": False, "error": str(e)}), 500
