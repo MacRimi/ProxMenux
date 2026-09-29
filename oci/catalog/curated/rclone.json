@@ -819,6 +819,12 @@
           "container_path": "/config/rclone",
           "remove_lost_found": true,
           "owner_strategy": "mapped-root"
+        },
+        {
+          "container_path": "/data",
+          "remove_lost_found": true,
+          "owner_strategy": "mapped-root",
+          "only_when_mount_type": "managed-volume"
         }
       ],
       "runtime": {

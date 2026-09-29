@@ -416,6 +416,26 @@
           "gid_strategy": "host-device-gid",
           "source_mapping": "/dev/bus/usb:/dev/bus/usb"
         }
+      ],
+      "volume_preparations": [
+        {
+          "container_path": "/Roon",
+          "remove_lost_found": true,
+          "owner_strategy": "mapped-root",
+          "only_when_mount_type": "managed-volume"
+        },
+        {
+          "container_path": "/Music",
+          "remove_lost_found": true,
+          "owner_strategy": "mapped-root",
+          "only_when_mount_type": "managed-volume"
+        },
+        {
+          "container_path": "/RoonBackups",
+          "remove_lost_found": true,
+          "owner_strategy": "mapped-root",
+          "only_when_mount_type": "managed-volume"
+        }
       ]
     },
     "security_profile": {

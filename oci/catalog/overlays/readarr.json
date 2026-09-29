@@ -2,5 +2,29 @@
   "catalog_ui": {
     "hidden": true,
     "hidden_reason": "Retired upstream: only nightly builds are published, with no stable release"
+  },
+  "proxmox": {
+    "installer_profile": {
+      "volume_preparations": [
+        {
+          "container_path": "/config",
+          "remove_lost_found": true,
+          "owner_strategy": "mapped-root",
+          "only_when_mount_type": "managed-volume"
+        },
+        {
+          "container_path": "/books",
+          "remove_lost_found": true,
+          "owner_strategy": "mapped-root",
+          "only_when_mount_type": "managed-volume"
+        },
+        {
+          "container_path": "/downloads",
+          "remove_lost_found": true,
+          "owner_strategy": "mapped-root",
+          "only_when_mount_type": "managed-volume"
+        }
+      ]
+    }
   }
 }

@@ -37,6 +37,14 @@
       "completion_notes": [
         "wallabag listens on port 80 of the container and stores its data in SQLite.",
         "wallabag builds its links from the address given during the installation. If it does not match the address of the container, edit lxc.environment.runtime: SYMFONY__ENV__DOMAIN_NAME in /etc/pve/lxc/<CTID>.conf with the container stopped, and start it again."
+      ],
+      "volume_preparations": [
+        {
+          "container_path": "/var/www/wallabag/web/assets/images",
+          "remove_lost_found": true,
+          "owner_strategy": "mapped-root",
+          "only_when_mount_type": "managed-volume"
+        }
       ]
     }
   }

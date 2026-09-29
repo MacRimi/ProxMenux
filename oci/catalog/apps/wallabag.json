@@ -278,7 +278,15 @@
         "verify_tls": true,
         "required": true,
         "source": "compose-healthcheck"
-      }
+      },
+      "volume_preparations": [
+        {
+          "container_path": "/var/www/wallabag/web/assets/images",
+          "remove_lost_found": true,
+          "owner_strategy": "mapped-root",
+          "only_when_mount_type": "managed-volume"
+        }
+      ]
     },
     "adaptations": [
       {

@@ -4,6 +4,14 @@
       "completion_notes": [
         "Limnoria joins no IRC network until its configuration file exists. Create it with the setup wizard from the Proxmox host: pct exec <CTID> -- bash -c 'cd /config && limnoria-wizard'",
         "The wizard writes a .conf file in /config. Restart the container afterwards so the bot starts with that configuration."
+      ],
+      "volume_preparations": [
+        {
+          "container_path": "/config",
+          "remove_lost_found": true,
+          "owner_strategy": "mapped-root",
+          "only_when_mount_type": "managed-volume"
+        }
       ]
     }
   }

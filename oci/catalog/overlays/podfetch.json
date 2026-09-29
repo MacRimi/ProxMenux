@@ -1,0 +1,20 @@
+{
+  "proxmox": {
+    "installer_profile": {
+      "volume_preparations": [
+        {
+          "container_path": "/app/podcasts",
+          "remove_lost_found": true,
+          "owner_strategy": "mapped-root",
+          "only_when_mount_type": "managed-volume"
+        },
+        {
+          "container_path": "/app/db",
+          "remove_lost_found": true,
+          "owner_strategy": "mapped-root",
+          "only_when_mount_type": "managed-volume"
+        }
+      ]
+    }
+  }
+}

@@ -556,7 +556,17 @@
     "generic_stack_review": [
       "karakeep-chrome: perfil de salud y persistencia pendiente",
       "karakeep: credencial externa o booleano GENERATED_OPENAI_API_KEY pendiente"
-    ]
+    ],
+    "installer_profile": {
+      "volume_preparations": [
+        {
+          "container_path": "/data",
+          "remove_lost_found": true,
+          "owner_strategy": "mapped-root",
+          "only_when_mount_type": "managed-volume"
+        }
+      ]
+    }
   },
   "compatibility": {
     "automatic_install_candidate": false,

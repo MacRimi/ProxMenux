@@ -75,7 +75,15 @@
           "bytes": 32,
           "prompt": true
         }
-      }
+      },
+      "volume_preparations": [
+        {
+          "container_path": "/app/data",
+          "remove_lost_found": true,
+          "owner_strategy": "mapped-root",
+          "only_when_mount_type": "managed-volume"
+        }
+      ]
     }
   }
 }

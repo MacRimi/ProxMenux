@@ -332,7 +332,15 @@
         "service_user": "abc",
         "environment": "ATTACHED_DEVICES_PERMS",
         "paths": "all-resolved-selected-character-devices"
-      }
+      },
+      "volume_preparations": [
+        {
+          "container_path": "/config",
+          "remove_lost_found": true,
+          "owner_strategy": "mapped-root",
+          "only_when_mount_type": "managed-volume"
+        }
+      ]
     }
   },
   "compatibility": {

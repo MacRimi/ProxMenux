@@ -261,7 +261,23 @@
         "behavioral_impact": "Normal Proxmox node shutdown remains governed by the node-wide shutdown policy.",
         "validation": "pending-per-application"
       }
-    ]
+    ],
+    "installer_profile": {
+      "volume_preparations": [
+        {
+          "container_path": "/config",
+          "remove_lost_found": true,
+          "owner_strategy": "mapped-root",
+          "only_when_mount_type": "managed-volume"
+        },
+        {
+          "container_path": "/downloads",
+          "remove_lost_found": true,
+          "owner_strategy": "mapped-root",
+          "only_when_mount_type": "managed-volume"
+        }
+      ]
+    }
   },
   "compatibility": {
     "automatic_install_candidate": true,

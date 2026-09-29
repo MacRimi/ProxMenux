@@ -322,7 +322,15 @@
         "timeout_seconds": 180,
         "request_timeout_seconds": 5,
         "stability_seconds": 4
-      }
+      },
+      "volume_preparations": [
+        {
+          "container_path": "/opt/data",
+          "remove_lost_found": true,
+          "owner_strategy": "mapped-root",
+          "only_when_mount_type": "managed-volume"
+        }
+      ]
     },
     "adaptations": [
       {

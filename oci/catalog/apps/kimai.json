@@ -357,7 +357,15 @@
       "https://docs.linuxserver.io/images/docker-mariadb/"
     ],
     "installer_profile": {
-      "stack_driver": "generic-multi-lxc-stack"
+      "stack_driver": "generic-multi-lxc-stack",
+      "volume_preparations": [
+        {
+          "container_path": "/config",
+          "remove_lost_found": true,
+          "owner_strategy": "mapped-root",
+          "only_when_mount_type": "managed-volume"
+        }
+      ]
     },
     "stack_completion_notes": [
       "Kimai has no default account. Enter the container with: pct enter {main_vmid}",

@@ -5,7 +5,23 @@
       "The upstream original_compose uses Elasticsearch 7.17.22. The normalized catalog candidate uses latest; tag availability and application compatibility must be reviewed before enabling installation.",
       "The privileged elasticsearch-helper modifies host vm.max_map_count. No host sysctl is changed and this helper must not be discarded silently.",
       "Elasticsearch persistence, healthchecks and host requirements still block the native stack."
-    ]
+    ],
+    "installer_profile": {
+      "volume_preparations": [
+        {
+          "container_path": "/config",
+          "remove_lost_found": true,
+          "owner_strategy": "mapped-root",
+          "only_when_mount_type": "managed-volume"
+        },
+        {
+          "container_path": "/data",
+          "remove_lost_found": true,
+          "owner_strategy": "mapped-root",
+          "only_when_mount_type": "managed-volume"
+        }
+      ]
+    }
   },
   "catalog_ui": {
     "hidden": true,

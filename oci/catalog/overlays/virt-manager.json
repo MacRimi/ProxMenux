@@ -2,5 +2,29 @@
   "catalog_ui": {
     "hidden": true,
     "hidden_reason": "Manages libvirt hosts, and Proxmox VE does not use libvirt"
+  },
+  "proxmox": {
+    "installer_profile": {
+      "volume_preparations": [
+        {
+          "container_path": "/var/run/libvirt/libvirt-sock",
+          "remove_lost_found": true,
+          "owner_strategy": "mapped-root",
+          "only_when_mount_type": "managed-volume"
+        },
+        {
+          "container_path": "/var/lib/libvirt",
+          "remove_lost_found": true,
+          "owner_strategy": "mapped-root",
+          "only_when_mount_type": "managed-volume"
+        },
+        {
+          "container_path": "/DATA/Downloads",
+          "remove_lost_found": true,
+          "owner_strategy": "mapped-root",
+          "only_when_mount_type": "managed-volume"
+        }
+      ]
+    }
   }
 }

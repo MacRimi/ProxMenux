@@ -272,7 +272,22 @@
         "validation": "not-required"
       }
     ],
-    "installer_profile": {},
+    "installer_profile": {
+      "volume_preparations": [
+        {
+          "container_path": "/config",
+          "remove_lost_found": true,
+          "owner_strategy": "mapped-root",
+          "only_when_mount_type": "managed-volume"
+        },
+        {
+          "container_path": "/backup",
+          "remove_lost_found": true,
+          "owner_strategy": "mapped-root",
+          "only_when_mount_type": "managed-volume"
+        }
+      ]
+    },
     "security_profile": {
       "requires_privileged_lxc": false,
       "source_requests_privileged_lxc": false,

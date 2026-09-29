@@ -353,7 +353,21 @@
             ]
           }
         ]
-      }
+      },
+      "volume_preparations": [
+        {
+          "container_path": "/etc/codeproject/ai",
+          "remove_lost_found": true,
+          "owner_strategy": "mapped-root",
+          "only_when_mount_type": "managed-volume"
+        },
+        {
+          "container_path": "/app/modules",
+          "remove_lost_found": true,
+          "owner_strategy": "mapped-root",
+          "only_when_mount_type": "managed-volume"
+        }
+      ]
     },
     "security_profile": {
       "requires_privileged_lxc": false,

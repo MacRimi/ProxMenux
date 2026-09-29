@@ -1107,7 +1107,17 @@ apply_installer_profile() {
     generated_created=$((generated_created + 1))
   done < <(jq -r '.proxmox.installer_profile.generated_files[]? | @base64' "$TEMPLATE_FILE")
 
-  if (( failed == 0 )); then
+  # For a generic-multi-lxc-stack service (stack_managed: true in
+  # DEPLOYMENT_FILE), create_service() invokes this script per-service
+  # with an always-empty DEPLOYMENT_FILE.mounts (the real mount is
+  # attached afterwards, in Python, by attach_mounts()) — so
+  # only_when_mount_type here would never match, and this loop would
+  # always print a misleading "for mount type none" and skip. The stack
+  # path applies volume_preparations itself, after the real mount is
+  # attached (see apply_volume_preparation() in install_generic_stack.py).
+  # generated_files, self_signed_tls and everything else in this
+  # function are unaffected by this condition.
+  if (( failed == 0 )) && [[ $(jq -r '.stack_managed // false' "$DEPLOYMENT_FILE") != true ]]; then
     while IFS= read -r encoded; do
       [[ -n $encoded ]] || continue
       item=$(printf '%s' "$encoded" | base64 -d)

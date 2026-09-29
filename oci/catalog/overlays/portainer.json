@@ -2,5 +2,17 @@
   "catalog_ui": {
     "hidden": true,
     "hidden_reason": "Needs a Docker engine; a native OCI LXC has none"
+  },
+  "proxmox": {
+    "installer_profile": {
+      "volume_preparations": [
+        {
+          "container_path": "/data",
+          "remove_lost_found": true,
+          "owner_strategy": "mapped-root",
+          "only_when_mount_type": "managed-volume"
+        }
+      ]
+    }
   }
 }

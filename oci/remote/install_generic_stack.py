@@ -252,6 +252,121 @@ def lan_access_urls(services, subnet, strict=True):
     return urls
 
 
+def _last_int_env(service, names):
+    """Last matching PUID/PGID-style value from deployment.environment,
+    or 0 if absent/unparsable — mirrors install_oci.sh's
+    `[.environment[]? | select(.name == ...) | .value] | last // "0"`
+    plus its numeric-guard `[[ $X =~ ^[0-9]+$ ]] || X=0`."""
+    value = None
+    for entry in service['deployment'].get('environment', []):
+        if entry.get('name') in names:
+            value = entry.get('value')
+    try:
+        parsed = int(value)
+    except (TypeError, ValueError):
+        return 0
+    return parsed if parsed >= 0 else 0
+
+
+def resolve_volume_owner(service, owner_strategy):
+    """(uid, gid) for a given volume_preparations owner_strategy,
+    mirroring install_oci.sh's HOST_ROOT_UID/HOST_ROOT_GID (mapped-root)
+    and HOST_BIND_UID/HOST_BIND_GID (mapped-application-user) — these
+    are deliberately DIFFERENT values, not the same computation:
+
+    - mapped-root: 100000:100000 for an unprivileged container, 0:0
+      otherwise. Never depends on PUID/PGID or volume_owner (matches
+      install_oci.sh's HOST_ROOT_UID/HOST_ROOT_GID, which are pinned
+      constants that do not read CONTAINER_PUID/CONTAINER_PGID at all).
+    - mapped-application-user: the container's own PUID/PGID (last of
+      PUID/USER_ID/UID and PGID/GROUP_ID/GID in deployment.environment,
+      overridden by the template's volume_owner.uid/gid when present —
+      matches install_oci.sh's IMAGE_VOLUME_UID/GID override of
+      CONTAINER_PUID/CONTAINER_PGID before the offset is applied),
+      offset by 100000 for an unprivileged container (matches
+      HOST_BIND_UID/HOST_BIND_GID). volume_owner only ever overrides
+      this application-user value, never mapped-root's.
+
+    Any value that cannot be parsed as a non-negative integer is
+    treated as 0, matching install_oci.sh's `[[ ... =~ ^[0-9]+$ ]] ||
+    ...=0` guard.
+    """
+    unprivileged = bool(service['deployment']['security']['unprivileged'])
+    if owner_strategy == 'mapped-root':
+        return (100000, 100000) if unprivileged else (0, 0)
+    if owner_strategy != 'mapped-application-user':
+        raise RuntimeError(f"{translate('Unsupported owner strategy:')} {owner_strategy}")
+
+    puid = _last_int_env(service, ('PUID', 'USER_ID', 'UID'))
+    pgid = _last_int_env(service, ('PGID', 'GROUP_ID', 'GID'))
+
+    volume_owner = service.get('template', {}).get('proxmox', {}) \
+        .get('installer_profile', {}).get('volume_owner') or {}
+    if 'uid' in volume_owner:
+        try:
+            parsed = int(volume_owner['uid'])
+            puid = parsed if parsed >= 0 else 0
+        except (TypeError, ValueError):
+            puid = 0
+    if 'gid' in volume_owner:
+        try:
+            parsed = int(volume_owner['gid'])
+            pgid = parsed if parsed >= 0 else 0
+        except (TypeError, ValueError):
+            pgid = 0
+
+    offset = 100000 if unprivileged else 0
+    return (puid + offset, pgid + offset)
+
+
+def apply_volume_preparation(service, mount, target):
+    """Declarative volume_preparations for one already-attached (but
+    still empty/freshly-mounted) mount, mirroring install_oci.sh's
+    apply_installer_profile() semantics (only_when_mount_type /
+    remove_lost_found / owner_strategy) for the generic-multi-lxc-stack
+    path, where install_oci.sh's own volume_preparations loop never
+    sees the real mount (it is invoked per-service with an empty
+    DEPLOYMENT_FILE.mounts — see create_service()). container_path in
+    volume_preparations is always already the final, normalized path by
+    the time it reaches this service's own template (service_template()
+    in stack.py performs that normalization before this function ever
+    runs).
+
+    remove_lost_found (if declared) is applied immediately, since it
+    must run before the image seed is copied back onto this mount.
+    owner_strategy is only RESOLVED here, not applied: attach_mounts()
+    must chown with this returned owner AFTER it copies the image seed
+    back and AFTER its own fallback `os.chown(target, *owner[:2])` —
+    otherwise that fallback (which always runs, to preserve the image's
+    ownership for mounts with no declared preparation) would silently
+    overwrite a declared owner_strategy's result. Returns (applied,
+    owner) where owner is an (uid, gid) tuple when applied is True, and
+    None when applied is False (no preparation declared for this mount,
+    or only_when_mount_type did not match the real mount type) — in
+    that case attach_mounts() must fall back to its own unconditional
+    lost+found removal and image-owner chown.
+    """
+    preparations = service.get('template', {}).get('proxmox', {}) \
+        .get('installer_profile', {}).get('volume_preparations', [])
+    match = next((p for p in preparations
+                  if p.get('container_path') == mount['container_path']), None)
+    if match is None:
+        return False, None
+    only_when_mount_type = match.get('only_when_mount_type')
+    if only_when_mount_type and mount['type'] != only_when_mount_type:
+        log(LOG, f"Skipping the preparation of {mount['container_path']} "
+                 f"for mount type {mount['type']}")
+        return False, None
+    if match.get('remove_lost_found'):
+        lost = target / 'lost+found'
+        if lost.is_dir() and not lost.is_symlink():
+            lost.rmdir()
+    owner_strategy = match.get('owner_strategy')
+    owner = resolve_volume_owner(service, owner_strategy)
+    log(LOG, f"Volume prepared before the first start: {mount['container_path']}")
+    return True, owner
+
+
 def attach_mounts(service, temporary):
     """Populate new managed volumes from the image, preserving its ownership."""
     vmid = service['vmid']
@@ -290,12 +405,21 @@ def attach_mounts(service, temporary):
         if mount['type']=='managed-volume':
             run('pct','mount',vmid)
             try:
-                lost=target/'lost+found'
-                if lost.is_dir() and not lost.is_symlink():
-                    lost.rmdir()
+                applied, declared_owner = apply_volume_preparation(service, mount, target)
+                if not applied:
+                    lost=target/'lost+found'
+                    if lost.is_dir() and not lost.is_symlink():
+                        lost.rmdir()
                 run('cp','-a',str(seed)+'/.',str(target))
+                # The image-owner chown always runs first, to preserve
+                # the seeded content's ownership for a mount with no
+                # declared preparation; a declared owner_strategy is
+                # applied last so it is the mount's final ownership,
+                # not silently overwritten by this fallback.
                 os.chown(target,*owner[:2])
                 target.chmod(owner[2])
+                if applied:
+                    os.chown(target, *declared_owner)
             finally:
                 run('pct','unmount',vmid)
 

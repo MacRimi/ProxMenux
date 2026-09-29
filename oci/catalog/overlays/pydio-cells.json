@@ -46,6 +46,14 @@
         "Pydio Cells needs an external MySQL or MariaDB database. The setup wizard asks for its address, database name and user on the first start.",
         "The web interface uses a self-signed certificate, so the browser shows a warning the first time.",
         "Pydio Cells redirects to the address given in EXTERNALURL. If the container changes address, edit lxc.environment.runtime: EXTERNALURL and SERVER_IP in /etc/pve/lxc/<CTID>.conf with the container stopped, and delete /config/keys/cert.crt to regenerate the certificate."
+      ],
+      "volume_preparations": [
+        {
+          "container_path": "/config",
+          "remove_lost_found": true,
+          "owner_strategy": "mapped-root",
+          "only_when_mount_type": "managed-volume"
+        }
       ]
     }
   }

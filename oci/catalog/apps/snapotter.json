@@ -361,7 +361,21 @@
         "verify_tls": true,
         "required": true,
         "source": "compose-healthcheck"
-      }
+      },
+      "volume_preparations": [
+        {
+          "container_path": "/data",
+          "remove_lost_found": true,
+          "owner_strategy": "mapped-root",
+          "only_when_mount_type": "managed-volume"
+        },
+        {
+          "container_path": "/tmp/workspace",
+          "remove_lost_found": true,
+          "owner_strategy": "mapped-root",
+          "only_when_mount_type": "managed-volume"
+        }
+      ]
     },
     "adaptations": [
       {

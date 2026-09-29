@@ -397,7 +397,15 @@
         "device_inventory": "host-sysfs-and-stat",
         "application_acceleration": "requires-workload-test",
         "tone_mapping": "not-implied-by-device-access"
-      }
+      },
+      "volume_preparations": [
+        {
+          "container_path": "/root/.ollama",
+          "remove_lost_found": true,
+          "owner_strategy": "mapped-root",
+          "only_when_mount_type": "managed-volume"
+        }
+      ]
     }
   },
   "compatibility": {

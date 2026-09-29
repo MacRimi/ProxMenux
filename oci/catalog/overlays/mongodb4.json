@@ -14,6 +14,22 @@
     }
   },
   "proxmox": {
-    "image_selection_note": "The upstream recipe is named mongodb4 and points at mongo:latest, so the entry promised a series it did not install. It is pinned to mongo:4 here, which is what the name says and the only series a processor without AVX can run."
+    "image_selection_note": "The upstream recipe is named mongodb4 and points at mongo:latest, so the entry promised a series it did not install. It is pinned to mongo:4 here, which is what the name says and the only series a processor without AVX can run.",
+    "installer_profile": {
+      "volume_preparations": [
+        {
+          "container_path": "/data/configdb",
+          "remove_lost_found": true,
+          "owner_strategy": "mapped-root",
+          "only_when_mount_type": "managed-volume"
+        },
+        {
+          "container_path": "/data/db",
+          "remove_lost_found": true,
+          "owner_strategy": "mapped-root",
+          "only_when_mount_type": "managed-volume"
+        }
+      ]
+    }
   }
 }

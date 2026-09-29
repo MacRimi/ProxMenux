@@ -6,6 +6,22 @@
     }
   },
   "proxmox": {
-    "image_selection_note": "The develop tag carries the current aMule build, which is the one this catalog installs. The latest tag still points at 3.0.1-2 (21 August 2026); move back to latest once that release includes what develop carries today (develop-20260919-13a8c9f)."
+    "image_selection_note": "The develop tag carries the current aMule build, which is the one this catalog installs. The latest tag still points at 3.0.1-2 (21 August 2026); move back to latest once that release includes what develop carries today (develop-20260919-13a8c9f).",
+    "installer_profile": {
+      "volume_preparations": [
+        {
+          "container_path": "/home/amule/.aMule",
+          "remove_lost_found": true,
+          "owner_strategy": "mapped-root",
+          "only_when_mount_type": "managed-volume"
+        },
+        {
+          "container_path": "/downloads",
+          "remove_lost_found": true,
+          "owner_strategy": "mapped-root",
+          "only_when_mount_type": "managed-volume"
+        }
+      ]
+    }
   }
 }
