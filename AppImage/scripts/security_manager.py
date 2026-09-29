@@ -2577,18 +2577,21 @@ def uninstall_fail2ban():
 def uninstall_lynis():
     """
     Uninstall Lynis and clean up all files.
-    Returns (success, message).
+    Returns (success, message, partial, outcome). Partial records completed removals only.
     """
+    removed = []
     try:
         import shutil
         
         # Remove installation directory
         if os.path.exists("/opt/lynis"):
             shutil.rmtree("/opt/lynis")
+            removed.append("/opt/lynis")
         
         # Remove wrapper script
         if os.path.exists("/usr/local/bin/lynis"):
             os.remove("/usr/local/bin/lynis")
+            removed.append("/usr/local/bin/lynis")
         
         # Remove report files
         for report_file in [
@@ -2598,6 +2601,7 @@ def uninstall_lynis():
         ]:
             if os.path.exists(report_file):
                 os.remove(report_file)
+                removed.append(report_file)
         
         # Update component status
         base_dir = "/usr/local/share/proxmenux"
@@ -2615,6 +2619,9 @@ def uninstall_lynis():
             except Exception:
                 pass
         
-        return True, "Lynis has been uninstalled successfully"
+        if not removed:
+            return False, "No Lynis files found to remove", False, "no_files"
+
+        return True, "Lynis has been uninstalled successfully", False, "removed"
     except Exception as e:
-        return False, f"Error uninstalling Lynis: {str(e)}"
+        return False, f"Error uninstalling Lynis: {str(e)}", bool(removed), "failed"

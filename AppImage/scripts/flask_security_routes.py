@@ -388,9 +388,9 @@ def lynis_report_delete():
     """Delete Lynis audit report files"""
     if not security_manager:
         return jsonify({"success": False, "message": "Security manager not available"}), 500
+    deleted = []
     try:
         import os
-        deleted = []
         for f in ["/var/log/lynis-report.dat", "/var/log/lynis.log", "/var/log/lynis-output.log"]:
             if os.path.isfile(f):
                 os.remove(f)
@@ -398,9 +398,9 @@ def lynis_report_delete():
         if deleted:
             return jsonify({"success": True, "message": f"Deleted: {', '.join(deleted)}"})
         else:
-            return jsonify({"success": False, "message": "No report files found to delete"})
+            return jsonify({"success": False, "outcome": "no_files", "message": "No report files found to delete"})
     except Exception as e:
-        return jsonify({"success": False, "message": str(e)}), 500
+        return jsonify({"success": False, "partial": bool(deleted), "message": str(e)}), 500
 
 
 # -------------------------------------------------------------------
@@ -427,8 +427,8 @@ def lynis_uninstall():
     if not security_manager:
         return jsonify({"success": False, "message": "Security manager not available"}), 500
     try:
-        success, message = security_manager.uninstall_lynis()
-        return jsonify({"success": success, "message": message})
+        success, message, partial, outcome = security_manager.uninstall_lynis()
+        return jsonify({"success": success, "message": message, "partial": partial, "outcome": outcome})
     except Exception as e:
         return jsonify({"success": False, "message": str(e)}), 500
 

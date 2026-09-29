@@ -2251,8 +2251,8 @@
         }
       },
       "swapPressure": "Speicherdruck",
-      "swapPressureHint": "Markiert ein kritisches Ereignis nur, wenn BEIDE Bedingungen gleichzeitig zutreffen — Swap-Nutzung über dem ersten Schwellenwert UND verfügbarer RAM unter dem zweiten. Alarmierung nur wegen Swap war auf Proxmox-Hosts laut, da Linux inaktive Seiten auslagert, während der RAM reichlich verfügbar bleibt.",
-      "swapHighLabel": "Swap-Datei-Nutzung",
+      "swapPressureHint": "Diese Prüfung des Swap-Drucks markiert nach wiederholten Messungen ein kritisches Ereignis, wenn die gesamte Swap-Nutzung den ersten Schwellenwert überschreitet und der verfügbare RAM unter den zweiten fällt. Anhaltend hohe RAM-Nutzung kann unabhängig davon ein weiteres kritisches Ereignis auslösen.",
+      "swapHighLabel": "Gesamte Swap-Nutzung",
       "availableMinLabel": "Mindestens verfügbarer RAM"
     },
     "navOrder": {
@@ -2373,6 +2373,10 @@
       "down": "Runter"
     },
     "errors": {
+      "deleteReportNoFiles": "Es wurden keine Lynis-Berichts- oder Protokolldateien zum Entfernen gefunden.",
+      "lynisUninstallNoFiles": "Es wurden keine Lynis-Installations-, Berichts- oder Protokolldateien zum Entfernen gefunden.",
+      "lynisRemovalPartial": "Das Entfernen wurde nicht abgeschlossen. Einige Lynis-Dateien wurden entfernt; prüfen Sie vor einem erneuten Versuch, was noch vorhanden ist.",
+      "lynisRemovalUnconfirmed": "Das Ergebnis der Lynis-Entfernung konnte nicht bestätigt werden. Einige Dateien könnten bereits entfernt worden sein; prüfen Sie dies vor einem erneuten Versuch.",
       "passwordMinLength": "Das Passwort muss mindestens 10 Zeichen lang sein.",
       "passwordComplexity": "Verwenden Sie mindestens drei davon: Kleinbuchstaben, Großbuchstaben, Zahlen, Symbole.",
       "passwordCommon": "Dieses Passwort ist zu häufig. Wählen Sie etwas, das schwerer zu erraten ist.",
@@ -2448,7 +2452,7 @@
       "disableAuth": "Authentifizierung deaktivieren? Jeder, der das Dashboard erreichen kann, kann es öffnen.",
       "revokeToken": "Dieses API-Token widerrufen?",
       "disableHttps": "HTTPS deaktivieren und zu einfachem HTTP zurückkehren?",
-      "deleteAuditReport": "Diesen Prüfbericht löschen?",
+      "deleteAuditReport": "Lynis-Prüfbericht und Protokolle löschen?",
       "cannotBeUndone": "Dies kann nicht rückgängig gemacht werden."
     },
     "auth": {
@@ -2811,10 +2815,10 @@
       "installationTitle": "Installieren Sie Lynis",
       "installationDescription": "Das Terminal installiert Lynis und bereitet die Berichtsunterstützung vor.",
       "uninstallConfirmTitle": "Lynis deinstallieren?",
-      "uninstallConfirmDescription": "Dadurch werden von Lynis und Monitor erstellte Prüfberichtsdateien entfernt.",
+      "uninstallConfirmDescription": "Lynis deinstallieren und den Prüfbericht sowie die Protokolle entfernen.",
       "removeInstallation": "Entfernen Sie die Lynis-Installation",
       "removeWrapper": "Entfernen Sie den Monitor Lynis-Wrapper",
-      "removeReports": "Entfernen Sie gespeicherte Prüfberichte",
+      "removeReports": "Lynis-Prüfbericht und Protokolle entfernen",
       "counts": {
         "tests": {
           "one": "{count}-Test",
@@ -2888,10 +2892,10 @@
         "proxmoxScoreWithLabel": "Proxmox-Score ({label})",
         "actionableWarningsLabel": "Umsetzbare Warnungen",
         "actionableSuggestionsLabel": "Umsetzbare Vorschläge",
-        "warningsDescription": "Warnungen, die es wert sind, zuerst gelesen zu werden. Die von Proxmox erwarteten Erkenntnisse sind hier versteckt.",
+        "warningsDescription": "Warnungen, die zuerst geprüft werden sollten. Auf Proxmox erwartete Befunde werden mit einer Kennzeichnung angezeigt.",
         "noWarningsDetected": "Es wurden keine umsetzbaren Warnungen erkannt.",
         "recommendation": "Empfehlung",
-        "suggestionsDescription": "Härtungsvorschläge mit niedrigerer Priorität. Auch hier verbergen sich die von Proxmox erwarteten Erkenntnisse.",
+        "suggestionsDescription": "Weniger dringende Vorschläge zur Härtung. Auf Proxmox erwartete Befunde werden ebenfalls mit einer Kennzeichnung angezeigt.",
         "incompleteDescription": "Lynis hat einen unvollständigen Bericht ohne Ergebnis oder Testanzahl erstellt. Führen Sie die Prüfung erneut durch, um ein zuverlässiges Ergebnis anzuzeigen.",
         "detailedChecks": "Detaillierte Kontrollen",
         "categoriesCount": "{count} Kategorien",

@@ -2251,8 +2251,8 @@
         }
       },
       "swapPressure": "Pressão de memória",
-      "swapPressureHint": "Marca um evento crítico apenas quando AMBAS as condições forem verdadeiras ao mesmo tempo — uso do arquivo de swap acima do primeiro limite E RAM disponível abaixo do segundo. Alertar apenas por swap era ruidoso em hosts Proxmox onde o Linux troca páginas inativas enquanto a RAM permanece amplamente disponível.",
-      "swapHighLabel": "Uso do arquivo de swap",
+      "swapPressureHint": "Esta verificação da pressão de swap marca um evento crítico após amostras repetidas em que o uso total de swap ultrapassa o primeiro limite e a RAM disponível fica abaixo do segundo. O uso elevado e persistente de RAM também pode acionar outro evento crítico separadamente.",
+      "swapHighLabel": "Uso total de swap",
       "availableMinLabel": "RAM disponível mínima"
     },
     "navOrder": {
@@ -2373,6 +2373,10 @@
       "down": "Abaixo"
     },
     "errors": {
+      "deleteReportNoFiles": "Nenhum arquivo de relatório ou log do Lynis foi encontrado para remoção.",
+      "lynisUninstallNoFiles": "Nenhum arquivo de instalação, relatório ou log do Lynis foi encontrado para remoção.",
+      "lynisRemovalPartial": "A remoção não foi concluída. Alguns arquivos do Lynis foram removidos; verifique o que resta antes de tentar novamente.",
+      "lynisRemovalUnconfirmed": "Não foi possível confirmar o resultado da remoção do Lynis. Alguns arquivos podem já ter sido removidos; verifique antes de tentar novamente.",
       "passwordMinLength": "A senha deve ter pelo menos 10 caracteres.",
       "passwordComplexity": "Use pelo menos três destes: letras minúsculas, maiúsculas, número, símbolo.",
       "passwordCommon": "Esta senha é muito comum. Escolha algo mais difícil de adivinhar.",
@@ -2448,7 +2452,7 @@
       "disableAuth": "Desativar autenticação? Qualquer pessoa que conseguir acessar o painel poderá abri-lo.",
       "revokeToken": "Revogar este token de API?",
       "disableHttps": "Desativar HTTPS e voltar para HTTP simples?",
-      "deleteAuditReport": "Excluir este relatório de auditoria?",
+      "deleteAuditReport": "Excluir o relatório de auditoria e os logs do Lynis?",
       "cannotBeUndone": "Isto não pode ser desfeito."
     },
     "auth": {
@@ -2811,10 +2815,10 @@
       "installationTitle": "Instale o Lynis",
       "installationDescription": "O terminal instalará o Lynis e preparará o suporte de relatório.",
       "uninstallConfirmTitle": "Desinstalar Lynis?",
-      "uninstallConfirmDescription": "Isso remove os arquivos de relatório de auditoria criados pelo Lynis e pelo Monitor.",
+      "uninstallConfirmDescription": "Desinstalar o Lynis e remover seu relatório de auditoria e seus logs.",
       "removeInstallation": "Remover instalação do Lynis",
       "removeWrapper": "Remover o wrapper do Monitor Lynis",
-      "removeReports": "Remover relatórios de auditoria salvos",
+      "removeReports": "Remover o relatório de auditoria e os logs do Lynis",
       "counts": {
         "tests": {
           "one": "Teste {count}",
@@ -2888,10 +2892,10 @@
         "proxmoxScoreWithLabel": "Pontuação Proxmox ({label})",
         "actionableWarningsLabel": "Avisos acionáveis",
         "actionableSuggestionsLabel": "Sugestões acionáveis",
-        "warningsDescription": "Avisos que valem a pena revisar primeiro. As descobertas esperadas do Proxmox estão ocultas aqui.",
+        "warningsDescription": "Avisos que devem ser analisados primeiro. Os resultados esperados no Proxmox são exibidos com um marcador.",
         "noWarningsDetected": "Nenhum aviso acionável foi detectado.",
         "recommendation": "Recomendação",
-        "suggestionsDescription": "Sugestões de proteção de baixa prioridade. As descobertas esperadas do Proxmox também estão ocultas aqui.",
+        "suggestionsDescription": "Sugestões de reforço de menor prioridade. Os resultados esperados no Proxmox também são exibidos com um marcador.",
         "incompleteDescription": "Lynis criou um relatório incompleto sem pontuação ou contagem de testes. Execute a auditoria novamente para mostrar um resultado confiável.",
         "detailedChecks": "Verificações detalhadas",
         "categoriesCount": "{count} categorias",

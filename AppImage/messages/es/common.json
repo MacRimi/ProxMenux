@@ -2251,8 +2251,8 @@
         }
       },
       "swapPressure": "Presión de memoria",
-      "swapPressureHint": "Marca un evento crítico solo cuando se cumplen AMBAS condiciones a la vez: uso del archivo de swap por encima del primer umbral Y RAM disponible por debajo del segundo. Alertar solo por swap era ruidoso en Proxmox porque Linux swapea páginas inactivas mientras la RAM sigue disponible.",
-      "swapHighLabel": "Uso del archivo de swap",
+      "swapPressureHint": "Esta comprobación de presión de swap marca un evento crítico tras muestras repetidas en las que el uso total de swap supera el primer umbral y la RAM disponible cae por debajo del segundo. Un uso de RAM elevado y sostenido también puede activar otro evento crítico por separado.",
+      "swapHighLabel": "Uso total de swap",
       "availableMinLabel": "RAM disponible mínima"
     },
     "navOrder": {
@@ -2373,6 +2373,10 @@
       "down": "Abajo"
     },
     "errors": {
+      "deleteReportNoFiles": "No se encontraron archivos de informe ni registros de Lynis para eliminar.",
+      "lynisUninstallNoFiles": "No se encontraron archivos de instalación, informe ni registros de Lynis para eliminar.",
+      "lynisRemovalPartial": "La eliminación no terminó. Se eliminaron algunos archivos de Lynis; comprueba lo que queda antes de intentarlo de nuevo.",
+      "lynisRemovalUnconfirmed": "No se pudo confirmar el resultado de la eliminación de Lynis. Puede que ya se hayan eliminado algunos archivos; compruébalo antes de intentarlo de nuevo.",
       "passwordMinLength": "La contraseña debe tener al menos 10 caracteres.",
       "passwordComplexity": "Utilice al menos tres de estos: minúscula, mayúscula, número y símbolo.",
       "passwordCommon": "Esta contraseña es demasiado común. Elija algo más difícil de adivinar.",
@@ -2448,7 +2452,7 @@
       "disableAuth": "¿Desactivar la autenticación? Cualquiera que pueda alcanzar el tablero podrá abrirlo.",
       "revokeToken": "¿Revocar este token API?",
       "disableHttps": "¿Desactivar HTTPS y volver a HTTP simple?",
-      "deleteAuditReport": "¿Eliminar este informe de auditoría?",
+      "deleteAuditReport": "¿Eliminar el informe de auditoría y los registros de Lynis?",
       "cannotBeUndone": "Esto no se puede deshacer."
     },
     "auth": {
@@ -2811,10 +2815,10 @@
       "installationTitle": "Instalar Lynis",
       "installationDescription": "La terminal instalará Lynis y preparará el informe de soporte.",
       "uninstallConfirmTitle": "¿Desinstalar Lynis?",
-      "uninstallConfirmDescription": "Esto elimina los archivos de informes de auditoría creados por Lynis y Monitor.",
+      "uninstallConfirmDescription": "Desinstalar Lynis y eliminar su informe de auditoría y sus registros.",
       "removeInstallation": "Quitar la instalación de Lynis",
       "removeWrapper": "Eliminar el contenedor Monitor Lynis",
-      "removeReports": "Eliminar informes de auditoría guardados",
+      "removeReports": "Eliminar el informe de auditoría y los registros de Lynis",
       "counts": {
         "tests": {
           "one": "{count} prueba",
@@ -2888,10 +2892,10 @@
         "proxmoxScoreWithLabel": "Puntuación de Proxmox ({label})",
         "actionableWarningsLabel": "Advertencias procesables",
         "actionableSuggestionsLabel": "Sugerencias procesables",
-        "warningsDescription": "Advertencias que vale la pena revisar primero. Los hallazgos esperados por Proxmox están ocultos aquí.",
+        "warningsDescription": "Advertencias que conviene revisar primero. Los hallazgos esperados en Proxmox se muestran con una etiqueta.",
         "noWarningsDetected": "No se detectaron advertencias procesables.",
         "recommendation": "Recomendación",
-        "suggestionsDescription": "Sugerencias de endurecimiento de menor prioridad. Los hallazgos esperados por Proxmox también están ocultos aquí.",
+        "suggestionsDescription": "Sugerencias de refuerzo de menor prioridad. Los hallazgos esperados en Proxmox también se muestran con una etiqueta.",
         "incompleteDescription": "Lynis creó un informe incompleto sin puntuación ni recuento de pruebas. Ejecute la auditoría nuevamente para mostrar un resultado confiable.",
         "detailedChecks": "Controles detallados",
         "categoriesCount": "{count} categorías",

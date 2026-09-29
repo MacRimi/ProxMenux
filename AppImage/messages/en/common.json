@@ -2250,8 +2250,8 @@
         }
       },
       "swapPressure": "Swap pressure",
-      "swapPressureHint": "Marks a critical event only when BOTH conditions hold at the same time — swap file usage above the first threshold AND available RAM below the second. Alerting on swap alone is noisy on Proxmox hosts where Linux swaps out inactive pages while RAM is still plentifully available.",
-      "swapHighLabel": "Swap file usage",
+      "swapPressureHint": "This swap-pressure check marks a critical event after repeated samples where overall swap usage exceeds the first threshold and available RAM falls below the second. Sustained high RAM usage can also trigger a separate critical event.",
+      "swapHighLabel": "Overall swap usage",
       "availableMinLabel": "Minimum available RAM"
     },
     "navOrder": {
@@ -2372,6 +2372,10 @@
       "down": "Down"
     },
     "errors": {
+      "deleteReportNoFiles": "No Lynis report or log files were found to remove.",
+      "lynisUninstallNoFiles": "No Lynis installation, report or log files were found to remove.",
+      "lynisRemovalPartial": "Removal did not finish. Some Lynis files were removed; check what remains before trying again.",
+      "lynisRemovalUnconfirmed": "Could not confirm the Lynis removal result. Some files may already have been removed; check before trying again.",
       "passwordMinLength": "Password must be at least 10 characters long.",
       "passwordComplexity": "Use at least three of these: lowercase, uppercase, number, symbol.",
       "passwordCommon": "This password is too common. Choose something harder to guess.",
@@ -2447,7 +2451,7 @@
       "disableAuth": "Disable authentication? Anyone who can reach the dashboard will be able to open it.",
       "revokeToken": "Revoke this API token?",
       "disableHttps": "Disable HTTPS and go back to plain HTTP?",
-      "deleteAuditReport": "Delete this audit report?",
+      "deleteAuditReport": "Delete the Lynis audit report and logs?",
       "cannotBeUndone": "This cannot be undone."
     },
     "auth": {
@@ -2810,10 +2814,10 @@
       "installationTitle": "Install Lynis",
       "installationDescription": "The terminal will install Lynis and prepare report support.",
       "uninstallConfirmTitle": "Uninstall Lynis?",
-      "uninstallConfirmDescription": "This removes Lynis and Monitor-created audit report files.",
+      "uninstallConfirmDescription": "Uninstall Lynis and remove its audit report and logs.",
       "removeInstallation": "Remove Lynis installation",
       "removeWrapper": "Remove Monitor Lynis wrapper",
-      "removeReports": "Remove saved audit reports",
+      "removeReports": "Remove Lynis audit report and logs",
       "counts": {
         "tests": {
           "one": "{count} test",
@@ -2887,10 +2891,10 @@
         "proxmoxScoreWithLabel": "Proxmox score ({label})",
         "actionableWarningsLabel": "Actionable warnings",
         "actionableSuggestionsLabel": "Actionable suggestions",
-        "warningsDescription": "Warnings worth reviewing first. Proxmox-expected findings are hidden here.",
+        "warningsDescription": "Warnings worth reviewing first. Proxmox-expected findings are shown with a badge.",
         "noWarningsDetected": "No actionable warnings were detected.",
         "recommendation": "Recommendation",
-        "suggestionsDescription": "Lower-priority hardening suggestions. Proxmox-expected findings are hidden here too.",
+        "suggestionsDescription": "Lower-priority hardening suggestions. Proxmox-expected findings are shown with a badge too.",
         "incompleteDescription": "Lynis created an incomplete report without a score or test count. Run the audit again to show a reliable result.",
         "detailedChecks": "Detailed checks",
         "categoriesCount": "{count} categories",
