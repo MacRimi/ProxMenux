@@ -289,6 +289,18 @@
           "remove_lost_found": true,
           "owner_strategy": "mapped-application-user",
           "only_when_mount_type": "managed-volume"
+        },
+        {
+          "container_path": "/mnt/share1",
+          "remove_lost_found": true,
+          "owner_strategy": "mapped-root",
+          "only_when_mount_type": "managed-volume"
+        },
+        {
+          "container_path": "/mnt/share2",
+          "remove_lost_found": true,
+          "owner_strategy": "mapped-root",
+          "only_when_mount_type": "managed-volume"
         }
       ],
       "gpu_validation": {

@@ -139,6 +139,14 @@
         "Certificate errors are logged in /config/log/letsencrypt inside the container.",
         "SWAG serves HTTPS on port 443. Plain HTTP on port 80 is disabled in /config/nginx/site-confs/default.conf.",
         "Reverse proxy samples for other applications are in /config/nginx/proxy_confs inside the container."
+      ],
+      "volume_preparations": [
+        {
+          "container_path": "/config",
+          "remove_lost_found": true,
+          "owner_strategy": "mapped-root",
+          "only_when_mount_type": "managed-volume"
+        }
       ]
     }
   }

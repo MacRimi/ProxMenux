@@ -94,6 +94,14 @@
         "Copy a peer configuration to the host with: pct pull <CTID> /config/peer1/peer1.conf peer1.conf",
         "Peers reach the server through the public address and the UDP port given during the installation, so that port must be forwarded to this container.",
         "Adding peers later means raising PEERS in /etc/pve/lxc/<CTID>.conf and restarting the container. The existing peer keys are kept."
+      ],
+      "volume_preparations": [
+        {
+          "container_path": "/config",
+          "remove_lost_found": true,
+          "owner_strategy": "mapped-root",
+          "only_when_mount_type": "managed-volume"
+        }
       ]
     }
   }

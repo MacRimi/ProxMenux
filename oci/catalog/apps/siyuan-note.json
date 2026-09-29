@@ -258,7 +258,15 @@
     "installer_profile": {
       "runtime": {
         "command": "--accessAuthCode=casaos --workspace=/siyuan/workspace/"
-      }
+      },
+      "volume_preparations": [
+        {
+          "container_path": "/siyuan/workspace",
+          "remove_lost_found": true,
+          "owner_strategy": "mapped-root",
+          "only_when_mount_type": "managed-volume"
+        }
+      ]
     },
     "adaptations": [
       {

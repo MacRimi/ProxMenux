@@ -394,7 +394,21 @@
         "request_timeout_seconds": 10,
         "stability_seconds": 4,
         "verify_tls": false
-      }
+      },
+      "volume_preparations": [
+        {
+          "container_path": "/home/amule/.aMule",
+          "remove_lost_found": true,
+          "owner_strategy": "mapped-root",
+          "only_when_mount_type": "managed-volume"
+        },
+        {
+          "container_path": "/downloads",
+          "remove_lost_found": true,
+          "owner_strategy": "mapped-root",
+          "only_when_mount_type": "managed-volume"
+        }
+      ]
     }
   },
   "compatibility": {

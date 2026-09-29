@@ -307,7 +307,15 @@
             "required_by_compose": true
           }
         ]
-      }
+      },
+      "volume_preparations": [
+        {
+          "container_path": "/firefly/conf",
+          "remove_lost_found": true,
+          "owner_strategy": "mapped-root",
+          "only_when_mount_type": "managed-volume"
+        }
+      ]
     },
     "adaptations": [
       {

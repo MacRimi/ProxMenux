@@ -391,7 +391,22 @@
         "validation": "pending-clean-install"
       }
     ],
-    "installer_profile": {},
+    "installer_profile": {
+      "volume_preparations": [
+        {
+          "container_path": "/opt/recipes/staticfiles",
+          "remove_lost_found": true,
+          "owner_strategy": "mapped-root",
+          "only_when_mount_type": "managed-volume"
+        },
+        {
+          "container_path": "/opt/recipes/mediafiles",
+          "remove_lost_found": true,
+          "owner_strategy": "mapped-root",
+          "only_when_mount_type": "managed-volume"
+        }
+      ]
+    },
     "security_profile": {
       "requires_privileged_lxc": false,
       "source_requests_privileged_lxc": false,

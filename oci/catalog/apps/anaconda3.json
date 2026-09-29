@@ -266,7 +266,15 @@
           "-c",
           "conda install -c conda-forge jupyterlab -y --quiet && jupyter lab --notebook-dir=/opt/notebooks --ip='*' --port=8888 --no-browser --allow-root"
         ]
-      }
+      },
+      "volume_preparations": [
+        {
+          "container_path": "/opt/notebooks",
+          "remove_lost_found": true,
+          "owner_strategy": "mapped-root",
+          "only_when_mount_type": "managed-volume"
+        }
+      ]
     },
     "adaptations": [
       {

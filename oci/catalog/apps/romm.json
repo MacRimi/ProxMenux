@@ -756,7 +756,39 @@
       "https://docs.romm.app/5.2.0/reference/environment-variables/"
     ],
     "installer_profile": {
-      "stack_driver": "generic-multi-lxc-stack"
+      "stack_driver": "generic-multi-lxc-stack",
+      "volume_preparations": [
+        {
+          "container_path": "/romm/resources",
+          "remove_lost_found": true,
+          "owner_strategy": "mapped-root",
+          "only_when_mount_type": "managed-volume"
+        },
+        {
+          "container_path": "/redis-data",
+          "remove_lost_found": true,
+          "owner_strategy": "mapped-root",
+          "only_when_mount_type": "managed-volume"
+        },
+        {
+          "container_path": "/romm/library",
+          "remove_lost_found": true,
+          "owner_strategy": "mapped-root",
+          "only_when_mount_type": "managed-volume"
+        },
+        {
+          "container_path": "/romm/assets",
+          "remove_lost_found": true,
+          "owner_strategy": "mapped-root",
+          "only_when_mount_type": "managed-volume"
+        },
+        {
+          "container_path": "/romm/config",
+          "remove_lost_found": true,
+          "owner_strategy": "mapped-root",
+          "only_when_mount_type": "managed-volume"
+        }
+      ]
     }
   },
   "compatibility": {

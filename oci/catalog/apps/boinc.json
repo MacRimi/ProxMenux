@@ -263,7 +263,15 @@
         "documentation": "https://docs.linuxserver.io/images/docker-baseimage-selkies/",
         "nvidia": "not-offered-until-specific-host-and-image-validation",
         "validation": "profile-generated; real streaming workload pending"
-      }
+      },
+      "volume_preparations": [
+        {
+          "container_path": "/config",
+          "remove_lost_found": true,
+          "owner_strategy": "mapped-root",
+          "only_when_mount_type": "managed-volume"
+        }
+      ]
     },
     "adaptations": [
       {

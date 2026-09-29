@@ -12,17 +12,49 @@
       }
     },
     "stack_optional_environment": [
-      {"service": "romm", "label": "IGDB", "fields": [
-        {"name": "IGDB_CLIENT_ID", "label": "IGDB Client ID", "sensitive": false},
-        {"name": "IGDB_CLIENT_SECRET", "label": "IGDB Client Secret", "sensitive": true}
-      ]},
-      {"service": "romm", "label": "ScreenScraper", "fields": [
-        {"name": "SCREENSCRAPER_USER", "label": "ScreenScraper username", "sensitive": false},
-        {"name": "SCREENSCRAPER_PASSWORD", "label": "ScreenScraper password", "sensitive": true}
-      ]},
-      {"service": "romm", "label": "SteamGridDB", "fields": [
-        {"name": "STEAMGRIDDB_API_KEY", "label": "SteamGridDB API key", "sensitive": true}
-      ]}
+      {
+        "service": "romm",
+        "label": "IGDB",
+        "fields": [
+          {
+            "name": "IGDB_CLIENT_ID",
+            "label": "IGDB Client ID",
+            "sensitive": false
+          },
+          {
+            "name": "IGDB_CLIENT_SECRET",
+            "label": "IGDB Client Secret",
+            "sensitive": true
+          }
+        ]
+      },
+      {
+        "service": "romm",
+        "label": "ScreenScraper",
+        "fields": [
+          {
+            "name": "SCREENSCRAPER_USER",
+            "label": "ScreenScraper username",
+            "sensitive": false
+          },
+          {
+            "name": "SCREENSCRAPER_PASSWORD",
+            "label": "ScreenScraper password",
+            "sensitive": true
+          }
+        ]
+      },
+      {
+        "service": "romm",
+        "label": "SteamGridDB",
+        "fields": [
+          {
+            "name": "STEAMGRIDDB_API_KEY",
+            "label": "SteamGridDB API key",
+            "sensitive": true
+          }
+        ]
+      }
     ],
     "stack_adaptation_notes": [
       "DB_PASSWD and MARIADB_PASSWORD share one generated secret. The MariaDB root password is independent.",
@@ -31,6 +63,43 @@
       "The hook starts stopped dependencies before RomM. It does not propagate manual dependency restarts to the application like Compose depends_on restart:true.",
       "Latest tags are retained; first boot, hardware and upstream version compatibility remain unvalidated."
     ],
-    "stack_references": ["https://docs.romm.app/5.2.0/install/databases/", "https://docs.romm.app/5.2.0/reference/environment-variables/"]
+    "stack_references": [
+      "https://docs.romm.app/5.2.0/install/databases/",
+      "https://docs.romm.app/5.2.0/reference/environment-variables/"
+    ],
+    "installer_profile": {
+      "volume_preparations": [
+        {
+          "container_path": "/romm/resources",
+          "remove_lost_found": true,
+          "owner_strategy": "mapped-root",
+          "only_when_mount_type": "managed-volume"
+        },
+        {
+          "container_path": "/redis-data",
+          "remove_lost_found": true,
+          "owner_strategy": "mapped-root",
+          "only_when_mount_type": "managed-volume"
+        },
+        {
+          "container_path": "/romm/library",
+          "remove_lost_found": true,
+          "owner_strategy": "mapped-root",
+          "only_when_mount_type": "managed-volume"
+        },
+        {
+          "container_path": "/romm/assets",
+          "remove_lost_found": true,
+          "owner_strategy": "mapped-root",
+          "only_when_mount_type": "managed-volume"
+        },
+        {
+          "container_path": "/romm/config",
+          "remove_lost_found": true,
+          "owner_strategy": "mapped-root",
+          "only_when_mount_type": "managed-volume"
+        }
+      ]
+    }
   }
 }

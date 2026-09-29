@@ -58,6 +58,18 @@ DEPENDENCY_VOLUMES = {'mariadb':['/var/lib/mysql'], 'linuxserver/mariadb':['/con
                       'getmeili/meilisearch':['/meili_data']}
 
 
+def normalized_dependency_mount_path(container_path, image):
+    """PostgreSQL 18+ 'postgres:latest' stores versioned PGDATA directly
+    under /var/lib/postgresql instead of /var/lib/postgresql/data (the path
+    declared in the source Compose file). Both the volume rename below and
+    volume_preparations matching in service_template() must agree on this
+    one normalized path, or a preparation keyed to either form gets
+    silently dropped or ends up orphaned against the renamed mount."""
+    if container_path == '/var/lib/postgresql/data' and str(image).endswith(':latest'):
+        return '/var/lib/postgresql'
+    return container_path
+
+
 def authenticated_redis(service):
     c = service['compose']
     return (kind(service['image']) == 'redis' and not c.get('entrypoint')
@@ -112,10 +124,11 @@ def ordered_services(template):
 def service_template(parent, service, main=False):
     c = copy.deepcopy(service['compose'])
     mounts = normalized_mounts(c.get('volumes', []))
-    targets = {m['target'] for m in mounts}
+    explicit_targets = {m['target'] for m in mounts}
     for target in DEPENDENCY_VOLUMES.get(kind(service['image']), []):
-        if not any(target == t or target.startswith(t.rstrip('/')+'/') for t in targets):
+        if not any(target == t or target.startswith(t.rstrip('/')+'/') for t in explicit_targets):
             mounts.append({'type':'volume','target':target})
+    targets = {m['target'] for m in mounts}
     c['volumes'] = mounts
     for key in ('depends_on', 'networks', 'healthcheck', 'expose'):
         c.pop(key, None)
@@ -139,6 +152,17 @@ def service_template(parent, service, main=False):
     single['first_run'] = {'endpoints': [],
                            'credentials': copy.deepcopy(parent.get('first_run', {}).get('credentials', [])) if main else []}
     single['proxmox'].setdefault('installer_profile', {}).pop('startup_healthcheck', None)
+    parent_preparations = parent.get('proxmox', {}).get('installer_profile', {}).get('volume_preparations', [])
+    normalized_targets = {normalized_dependency_mount_path(t, service['image']) for t in targets}
+    own_preparations = []
+    for p in parent_preparations:
+        normalized_path = normalized_dependency_mount_path(p.get('container_path'), service['image'])
+        if normalized_path in normalized_targets:
+            entry = copy.deepcopy(p)
+            entry['container_path'] = normalized_path
+            own_preparations.append(entry)
+    if own_preparations:
+        single['proxmox'].setdefault('installer_profile', {})['volume_preparations'] = own_preparations
     return single
 
 
@@ -298,7 +322,7 @@ def build_stack(template, ui, mode='advanced'):
             # Official PostgreSQL 18+ stores versioned PGDATA under this parent.
             for m in single['container_contract']['volumes']:
                 if m['container_path'] == '/var/lib/postgresql/data' and s['image'].endswith(':latest'):
-                    m['container_path'] = '/var/lib/postgresql'
+                    m['container_path'] = normalized_dependency_mount_path(m['container_path'], s['image'])
         for e in single['container_contract']['environment']:
             e['required'] = bool(e['example'])
             e['example'] = 'stack-resolved-value' if e['example'] else ''
@@ -378,7 +402,10 @@ def apply_stack_support(template):
             template['status'] = 'generated-review-required'
         return
     template['proxmox'].pop('generic_stack_review',None)
+    preserved_preparations = template['proxmox'].get('installer_profile',{}).get('volume_preparations')
     template['proxmox']['installer_profile'] = {'stack_driver':'generic-multi-lxc-stack'}
+    if preserved_preparations:
+        template['proxmox']['installer_profile']['volume_preparations'] = preserved_preparations
     template['compatibility']['untranslated_blockers'] = []
     template['compatibility']['automatic_install_candidate'] = True
     template['status'] = 'generated-unvalidated'

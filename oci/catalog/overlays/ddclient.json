@@ -3,6 +3,14 @@
     "installer_profile": {
       "completion_notes": [
         "ddclient starts with the example configuration and updates nothing yet. Write your provider, login and domains in /config/ddclient.conf inside the container, then restart it."
+      ],
+      "volume_preparations": [
+        {
+          "container_path": "/config",
+          "remove_lost_found": true,
+          "owner_strategy": "mapped-root",
+          "only_when_mount_type": "managed-volume"
+        }
       ]
     }
   }

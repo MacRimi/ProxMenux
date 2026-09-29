@@ -47,7 +47,21 @@
           "bytes": 12,
           "prompt": true
         }
-      }
+      },
+      "volume_preparations": [
+        {
+          "container_path": "/photoprism/storage",
+          "remove_lost_found": true,
+          "owner_strategy": "mapped-root",
+          "only_when_mount_type": "managed-volume"
+        },
+        {
+          "container_path": "/photoprism/originals",
+          "remove_lost_found": true,
+          "owner_strategy": "mapped-root",
+          "only_when_mount_type": "managed-volume"
+        }
+      ]
     }
   }
 }

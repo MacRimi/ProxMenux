@@ -511,7 +511,15 @@
       }
     ],
     "installer_profile": {
-      "stack_driver": "generic-multi-lxc-stack"
+      "stack_driver": "generic-multi-lxc-stack",
+      "volume_preparations": [
+        {
+          "container_path": "/app/.blinko",
+          "remove_lost_found": true,
+          "owner_strategy": "mapped-root",
+          "only_when_mount_type": "managed-volume"
+        }
+      ]
     }
   },
   "compatibility": {

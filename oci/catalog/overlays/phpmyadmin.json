@@ -53,6 +53,14 @@
       "completion_notes": [
         "phpMyAdmin is installed with arbitrary server connections enabled: the login page has a Server field where the address of the MySQL or MariaDB server is entered, together with its user and password.",
         "The database server must accept connections from the IP address of this container, with a user that is not limited to localhost."
+      ],
+      "volume_preparations": [
+        {
+          "container_path": "/config",
+          "remove_lost_found": true,
+          "owner_strategy": "mapped-root",
+          "only_when_mount_type": "managed-volume"
+        }
       ]
     }
   }

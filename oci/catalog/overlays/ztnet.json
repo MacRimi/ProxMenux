@@ -2,5 +2,17 @@
   "catalog_ui": {
     "hidden": true,
     "hidden_reason": "Pending multi-container adaptation; retained for future work"
+  },
+  "proxmox": {
+    "installer_profile": {
+      "volume_preparations": [
+        {
+          "container_path": "/var/lib/zerotier-one",
+          "remove_lost_found": true,
+          "owner_strategy": "mapped-root",
+          "only_when_mount_type": "managed-volume"
+        }
+      ]
+    }
   }
 }

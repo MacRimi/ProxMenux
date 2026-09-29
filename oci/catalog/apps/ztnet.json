@@ -409,7 +409,15 @@
     "installer_profile": {
       "runtime": {
         "working_directory": "/app"
-      }
+      },
+      "volume_preparations": [
+        {
+          "container_path": "/var/lib/zerotier-one",
+          "remove_lost_found": true,
+          "owner_strategy": "mapped-root",
+          "only_when_mount_type": "managed-volume"
+        }
+      ]
     },
     "adaptations": [
       {

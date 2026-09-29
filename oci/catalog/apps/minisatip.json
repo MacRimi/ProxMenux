@@ -215,6 +215,14 @@
           "gid_strategy": "host-device-gid",
           "source_mapping": "/dev/dvb:/dev/dvb"
         }
+      ],
+      "volume_preparations": [
+        {
+          "container_path": "/config",
+          "remove_lost_found": true,
+          "owner_strategy": "mapped-root",
+          "only_when_mount_type": "managed-volume"
+        }
       ]
     },
     "adaptations": [

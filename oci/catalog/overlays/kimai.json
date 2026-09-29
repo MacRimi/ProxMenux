@@ -25,6 +25,19 @@
       "Create the first administrator using the upstream console kimai:user:create command inside the Kimai LXC; no default account is fabricated.",
       "Installation, migrations, administrator creation and persistence remain unvalidated in a real OCI LXC."
     ],
-    "stack_references": ["https://docs.linuxserver.io/images/docker-kimai/", "https://docs.linuxserver.io/images/docker-mariadb/"]
+    "stack_references": [
+      "https://docs.linuxserver.io/images/docker-kimai/",
+      "https://docs.linuxserver.io/images/docker-mariadb/"
+    ],
+    "installer_profile": {
+      "volume_preparations": [
+        {
+          "container_path": "/config",
+          "remove_lost_found": true,
+          "owner_strategy": "mapped-root",
+          "only_when_mount_type": "managed-volume"
+        }
+      ]
+    }
   }
 }

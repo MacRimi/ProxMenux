@@ -124,6 +124,14 @@
         "The web interface is served over plain HTTP on port 51821 (INSECURE=true). Keep it inside the local network or publish it through a reverse proxy with TLS.",
         "The initial user name and password stay written in /etc/pve/lxc/<CTID>.conf as INIT_USERNAME and INIT_PASSWORD. They can be removed after the first login, with the container stopped.",
         "Clients reach the VPN through the public address and the UDP port given during the installation, so that port must be forwarded to this container."
+      ],
+      "volume_preparations": [
+        {
+          "container_path": "/etc/wireguard",
+          "remove_lost_found": true,
+          "owner_strategy": "mapped-root",
+          "only_when_mount_type": "managed-volume"
+        }
       ]
     }
   }

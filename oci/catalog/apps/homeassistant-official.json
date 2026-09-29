@@ -315,7 +315,15 @@
     "installer_profile": {
       "network": {
         "compose_mode": "host"
-      }
+      },
+      "volume_preparations": [
+        {
+          "container_path": "/config",
+          "remove_lost_found": true,
+          "owner_strategy": "mapped-root",
+          "only_when_mount_type": "managed-volume"
+        }
+      ]
     },
     "security_profile": {
       "requires_privileged_lxc": false,

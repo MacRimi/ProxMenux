@@ -287,6 +287,20 @@
             "nodev"
           ]
         }
+      ],
+      "volume_preparations": [
+        {
+          "container_path": "/app/backend/data",
+          "remove_lost_found": true,
+          "owner_strategy": "mapped-root",
+          "only_when_mount_type": "managed-volume"
+        },
+        {
+          "container_path": "/root/.ollama",
+          "remove_lost_found": true,
+          "owner_strategy": "mapped-root",
+          "only_when_mount_type": "managed-volume"
+        }
       ]
     },
     "adaptations": [

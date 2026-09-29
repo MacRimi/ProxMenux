@@ -331,6 +331,26 @@
           "gid_strategy": "host-device-gid",
           "source_mapping": "/dev/kvm:/dev/kvm"
         }
+      ],
+      "volume_preparations": [
+        {
+          "container_path": "/var/run/libvirt/libvirt-sock",
+          "remove_lost_found": true,
+          "owner_strategy": "mapped-root",
+          "only_when_mount_type": "managed-volume"
+        },
+        {
+          "container_path": "/var/lib/libvirt",
+          "remove_lost_found": true,
+          "owner_strategy": "mapped-root",
+          "only_when_mount_type": "managed-volume"
+        },
+        {
+          "container_path": "/DATA/Downloads",
+          "remove_lost_found": true,
+          "owner_strategy": "mapped-root",
+          "only_when_mount_type": "managed-volume"
+        }
       ]
     },
     "adaptations": [
