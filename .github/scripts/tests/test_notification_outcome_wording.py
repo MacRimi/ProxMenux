@@ -132,14 +132,14 @@ class OutcomeWording(unittest.TestCase):
         self.assertNotIn('invitados', result['body'].lower())
 
     def test_settings_labels_stay_at_upstream_values_in_all_locales(self):
-        import subprocess
-        for lang in ('en','de','es','fr','it','pt','sk','sv'):
+        # Frozen from develop eb7cc548; CI shallow checkouts have no base history.
+        labels = {'en': {'backup_complete': 'Backup complete', 'error_resolved': 'Recovery notification'}, 'de': {'backup_complete': 'Sicherung abgeschlossen', 'error_resolved': 'Wiederherstellungsbenachrichtigung'}, 'es': {'backup_complete': 'Backup completado', 'error_resolved': 'Notificación de recuperación'}, 'fr': {'backup_complete': 'Sauvegarde terminée', 'error_resolved': 'Notification de récupération'}, 'it': {'backup_complete': 'Backup completato', 'error_resolved': 'Notifica di recupero'}, 'pt': {'backup_complete': 'Backup concluído', 'error_resolved': 'Notificação de recuperação'}, 'sk': {'backup_complete': 'Záloha bola dokončená', 'error_resolved': 'Problém bol vyriešený'}, 'sv': {'backup_complete': 'Säkerhetskopieringen är klar', 'error_resolved': 'Återställningsmeddelande'}}
+        for lang in labels:
             path = f'AppImage/messages/{lang}/common.json'
-            upstream = json.loads(subprocess.check_output(['git','show',f'eb7cc548:{path}'], cwd=ROOT))
             current = json.loads((ROOT / path).read_text())
             for event in ('backup_complete', 'error_resolved'):
                 with self.subTest(lang=lang, event=event):
-                    expected = upstream['runtime']['notifications']['templates'][event]['label']
+                    expected = labels[lang][event]
                     self.assertEqual(current['runtime']['notifications']['templates'][event]['label'], expected)
                     if lang == 'en': self.assertEqual(self.templates[event]['label'], expected)
 
