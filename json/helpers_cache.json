@@ -946,7 +946,7 @@
     "updateable": true,
     "privileged": false,
     "has_arm": true,
-    "is_dev": true,
+    "is_dev": false,
     "execute_in": [
       "lxc"
     ],
@@ -7619,6 +7619,78 @@
     ],
     "config_path": "",
     "os": "debian"
+  },
+  {
+    "name": "Gitea Runner",
+    "slug": "gitea-runner",
+    "desc": "Gitea Runner (act_runner) is the daemon that executes CI/CD jobs for Gitea Actions. It connects to your Gitea instance, polls for queued workflow runs, and executes tasks using either host execution or containerized engines.",
+    "script": "ct/gitea-runner.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/gitea-runner.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/gitea-runner.sh",
+    "type": "lxc",
+    "type_id": "nm9bra8mzye2scg",
+    "categories": [
+      "scriptcat00020"
+    ],
+    "category_names": [
+      "AI / Coding & Dev-Tools"
+    ],
+    "notes": [
+      "Supports both Debian 13 and Alpine 3.24. The installer prompts for the OS or accepts var_os=alpine / var_os=debian.",
+      "To register the runner, obtain a registration token in Gitea under Site Administration > Actions > Runners, then run: `gitea-runner -c /etc/gitea-runner/config.yaml register --instance <URL> --token <TOKEN>`.",
+      "After registering, start the runner daemon service with `systemctl start gitea-runner` (Debian) or `rc-service gitea-runner start` (Alpine).",
+      "Docker is installed and enabled by default for containerized workflow execution. Ensure nested virtualization is enabled on the LXC."
+    ],
+    "warnings": [],
+    "port": 0,
+    "website": "https://gitea.com/gitea/runner",
+    "documentation": "https://docs.gitea.com/runner/",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/gitea.webp",
+    "updateable": true,
+    "privileged": false,
+    "has_arm": false,
+    "is_dev": true,
+    "execute_in": [
+      "lxc"
+    ],
+    "config_path": "",
+    "os": "debian"
+  },
+  {
+    "name": "Gitea Runner",
+    "slug": "gitea-runner",
+    "desc": "Gitea Runner (act_runner) is the daemon that executes CI/CD jobs for Gitea Actions. It connects to your Gitea instance, polls for queued workflow runs, and executes tasks using either host execution or containerized engines.",
+    "script": "ct/gitea-runner.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/gitea-runner.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/gitea-runner.sh",
+    "type": "lxc",
+    "type_id": "nm9bra8mzye2scg",
+    "categories": [
+      "scriptcat00020"
+    ],
+    "category_names": [
+      "AI / Coding & Dev-Tools"
+    ],
+    "notes": [
+      "Supports both Debian 13 and Alpine 3.24. The installer prompts for the OS or accepts var_os=alpine / var_os=debian.",
+      "To register the runner, obtain a registration token in Gitea under Site Administration > Actions > Runners, then run: `gitea-runner -c /etc/gitea-runner/config.yaml register --instance <URL> --token <TOKEN>`.",
+      "After registering, start the runner daemon service with `systemctl start gitea-runner` (Debian) or `rc-service gitea-runner start` (Alpine).",
+      "Docker is installed and enabled by default for containerized workflow execution. Ensure nested virtualization is enabled on the LXC."
+    ],
+    "warnings": [],
+    "port": 0,
+    "website": "https://gitea.com/gitea/runner",
+    "documentation": "https://docs.gitea.com/runner/",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/gitea.webp",
+    "updateable": true,
+    "privileged": false,
+    "has_arm": false,
+    "is_dev": true,
+    "execute_in": [
+      "lxc"
+    ],
+    "config_path": "",
+    "os": "alpine"
   },
   {
     "name": "GitHub Runner",
@@ -23424,6 +23496,44 @@
       "pve"
     ],
     "config_path": "",
+    "os": "debian"
+  },
+  {
+    "name": "Tvheadend",
+    "slug": "tvheadend",
+    "desc": "Tvheadend is a TV streaming server and Digital Video Recorder for Linux, supporting DVB-S/S2, DVB-C, DVB-T/T2, ATSC, IPTV, SAT>IP and HDHomeRun as input sources, with HTSP and HTTP streaming output.",
+    "script": "ct/tvheadend.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/tvheadend.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/tvheadend.sh",
+    "type": "lxc",
+    "type_id": "nm9bra8mzye2scg",
+    "categories": [
+      "scriptcat00013"
+    ],
+    "category_names": [
+      "Media & Streaming"
+    ],
+    "notes": [
+      "The admin account is created by the Debian package itself during install and cannot be changed from within Tvheadend afterwards — only by re-running the install with new var_admin_user/var_admin_pass values.",
+      "IPTV, SAT>IP and HDHomeRun (network) sources work without extra container configuration. A physical DVB/USB tuner requires passing the device through to the container yourself (e.g. bind-mounting /dev/dvb) — this script does not automate hardware passthrough."
+    ],
+    "warnings": [],
+    "port": 9981,
+    "website": "https://tvheadend.org/",
+    "documentation": "https://docs.tvheadend.org",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/tvheadend.webp",
+    "updateable": true,
+    "privileged": false,
+    "has_arm": false,
+    "is_dev": true,
+    "execute_in": [
+      "lxc"
+    ],
+    "config_path": "",
+    "default_credentials": {
+      "username": "admin",
+      "password": "auto-generated"
+    },
     "os": "debian"
   },
   {
