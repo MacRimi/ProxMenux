@@ -3254,7 +3254,7 @@ class PollingCollector:
             reason_lines = (reason or '').split('\n')
             reason_summary = reason_lines[0] if reason_lines else ''
             
-            # Try to extract device info for a clean "Device: xxx (recovered)" line
+            # Keep the earlier device context without asserting recovery.
             device_line = ''
             for line in reason_lines:
                 if 'Device:' in line or 'Device not currently' in line or '/dev/' in line:
@@ -3267,11 +3267,11 @@ class PollingCollector:
                         break
             
             if reason_summary and device_line:
-                clean_reason = f'{reason_summary}\n{device_line} (recovered)'
+                clean_reason = f'{reason_summary}\n{device_line} (no longer reported)'
             elif reason_summary:
-                clean_reason = f'{reason_summary} (recovered)'
+                clean_reason = f'{reason_summary} (no longer reported)'
             else:
-                clean_reason = 'Condition resolved'
+                clean_reason = 'Condition no longer reported'
             
             # `original_severity` must match what the user actually saw
             # in the most-recent notification for this error, not the
@@ -4289,6 +4289,51 @@ class ProxmoxHookWatcher:
     def _hostname(self) -> str:
         return _hostname()
 
+    @staticmethod
+    def _backup_outcome(severity: str, message: str) -> str:
+        """Distinguish explicit failure, complete guest logs and unknown results."""
+        text = str(message or '')
+        if severity in ('error', 'err', 'critical') or re.search(
+                r'(?im)^\s*(?:ERROR:|TASK ERROR:|.*\bStatus\s+ERROR\b)', text):
+            return 'failed'
+        if severity not in ('info', 'ok', 'success') or re.search(
+                r'(?im)(?:^\s*WARNING:|\bWARNINGS\s*:\s*\d+)', text):
+            return 'unconfirmed'
+        starts = re.findall(r'(?im)\bStarting Backup of VM (\d+)\s*\(', text)
+        finished = re.findall(r'(?im)\bFinished Backup of VM (\d+)\s*\(', text)
+        lines = text.splitlines()
+        table_outcome = None
+        for index, header in enumerate(lines):
+            if not re.match(r'\s*VMID\s+Name\s+Status\b', header, re.IGNORECASE):
+                continue
+            status_start = header.find('Status')
+            status_end = header.find('Time', status_start)
+            if status_start < 0 or status_end < 0:
+                break
+            rows = []
+            for line in lines[index + 1:]:
+                if re.match(r'\s*Total\b', line, re.IGNORECASE):
+                    table_outcome = ('confirmed' if rows and all(status == 'OK' for status in rows)
+                                     else 'unconfirmed')
+                    break
+                if not line.strip():
+                    break
+                if not re.match(r'\s*\d+\s+', line):
+                    break
+                status = line[status_start:status_end].strip().upper()
+                if status == 'ERROR':
+                    return 'failed'
+                rows.append(status)
+            break
+        if table_outcome == 'unconfirmed':
+            return 'unconfirmed'
+        if starts:
+            return 'confirmed' if sorted(starts) == sorted(finished) else 'unconfirmed'
+        if table_outcome == 'confirmed' or re.search(
+                r'(?im)^\s*(?:INFO:\s*)?TASK OK\s*$', text):
+            return 'confirmed'
+        return 'unconfirmed'
+
     def process_webhook(self, payload: dict) -> dict:
         """Process an incoming Proxmox webhook payload.
         
@@ -4347,6 +4392,13 @@ class ProxmoxHookWatcher:
             'title': title or event_type,
             'job_id': pve_job_id,
         }
+        if event_type in ('backup_complete', 'backup_fail'):
+            # This is presentation metadata, not a new event/toggle/delivery path.
+            data['backup_outcome'] = (
+                'failed' if event_type == 'backup_fail' else
+                self._backup_outcome(severity_raw, message) if pve_type == 'vzdump'
+                else 'unconfirmed'
+            )
 
         if pve_type == 'replication':
             replication = self._extract_replication_context(

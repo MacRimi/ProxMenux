@@ -312,6 +312,7 @@ class RuntimeCatalogTests(unittest.TestCase):
             "backup_complete",
             {
                 "hostname": "pve01", "storage": "pbs-main", "vmname": "alpha", "vmid": "100",
+                "backup_outcome": "confirmed",
                 "pve_title": "Backup job finished",
                 "pve_message": (
                     "INFO: Starting Backup of VM 100 (qemu)\n"
@@ -322,7 +323,7 @@ class RuntimeCatalogTests(unittest.TestCase):
             },
             language="sk",
         )
-        self.assertIn("Záloha dokončená", backup["title"])
+        self.assertIn("záloha dokončená", backup["title"])
         self.assertNotIn("Backup job finished", backup["title"])
         self.assertIn("Veľkosť: 1.5 GiB", backup["body"])
         self.assertIn("Trvanie: 00:00:10", backup["body"])
@@ -627,6 +628,7 @@ class RuntimeCatalogTests(unittest.TestCase):
                     "_notification_language": "sk", "_event_type": event_type,
                     "_group": "backup", "hostname": "pve01", "vmid": "100",
                     "vmname": "alpha", "storage": "pbs-main",
+                    "backup_outcome": "confirmed" if event_type == "backup_complete" else "unconfirmed",
                 },
             )
             self.assertIn(f">{localized_status}<", backup_html)

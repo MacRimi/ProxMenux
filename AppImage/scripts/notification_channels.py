@@ -1037,6 +1037,21 @@ class EmailChannel(NotificationChannel):
 
         # Determine group for section header
         event_type = data.get('_event_type', '')
+        if event_type == 'error_resolved':
+            sev.update(self._SEV_DEFAULT)
+            sev['label'] = _runtime_text('email.severity.observation', data)
+        elif event_type == 'backup_complete':
+            outcome = data.get('backup_outcome')
+            if outcome == 'confirmed':
+                sev.update(self._SEV_STYLE['OK'])
+                status = 'completed'
+            elif outcome == 'failed':
+                sev.update(self._SEV_STYLE['CRITICAL'])
+                status = 'failed'
+            else:
+                sev.update(self._SEV_DEFAULT)
+                status = 'unconfirmed'
+            sev['label'] = _runtime_text(f'email.status.{status}', data)
         group = data.get('_group', 'other')
         # Keep unbroken recorded text inside the temperature email's table.
         # Both properties are inline for mail clients; other events retain
@@ -1221,7 +1236,9 @@ class EmailChannel(NotificationChannel):
             v = str(value).strip() if value else ''
             if not v or v == '0' and original_label not in ('Failures',):
                 return
-            if fmt == 'severity':
+            if fmt == 'backup_error':
+                rows.append((esc(label), f'<span style="color:#dc2626;font-weight:600;">{esc(v)}</span>'))
+            elif fmt == 'severity':
                 sev_colors = {
                     'CRITICAL': '#dc2626', 'WARNING': '#d97706',
                     'INFO': '#2563eb', 'OK': '#16a34a',
@@ -1254,9 +1271,13 @@ class EmailChannel(NotificationChannel):
             # tell which target the backup ran against. Reported gap: emails
             # showed no way to distinguish which PBS failed with 2+ configured.
             _add('Storage', data.get('storage') or data.get('storage_name'), 'code')
-            status_key = 'failed' if 'fail' in event_type else 'completed' if 'complete' in event_type else 'started'
+            if event_type == 'backup_complete' and data.get('backup_outcome') != 'confirmed':
+                status_key = ('failed' if data.get('backup_outcome') == 'failed'
+                              else 'unconfirmed')
+            else:
+                status_key = 'failed' if 'fail' in event_type else 'completed' if 'complete' in event_type else 'started'
             _add('Status', _runtime_text(f'email.status.{status_key}', language_data),
-                 'severity' if 'fail' in event_type else '')
+                 'backup_error' if status_key == 'failed' else '')
             _add('Size', data.get('size'))
             _add('Duration', data.get('duration'))
             _add('Snapshot', data.get('snapshot_name'), 'code')

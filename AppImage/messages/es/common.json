@@ -6266,8 +6266,8 @@
           "label": "Nuevo problema de salud"
         },
         "error_resolved": {
-          "title": "{hostname}: Resuelto - {category}{entity_suffix}",
-          "body": "El problema {category} se ha resuelto.\n{reason}\n🚦 Gravedad anterior: {original_severity}\n⏱️ Duración: {duration}",
+          "title": "{hostname}: Ya no se informa de {category}{entity_suffix}",
+          "body": "El problema de {category} ya no figura entre las incidencias de salud activas.\n{reason}\n🚦 Gravedad anterior: {original_severity}\n⏱️ Tiempo desde la primera observación: {duration}",
           "label": "Notificación de recuperación"
         },
         "error_escalated": {
@@ -6396,8 +6396,8 @@
           "label": "Backup iniciado"
         },
         "backup_complete": {
-          "title": "{hostname} → {storage}: Backup completado — {vmname} ({vmid})",
-          "body": "El backup de {vmname} (ID: {vmid}) se ha completado correctamente en {storage}.\nTamaño: {size}",
+          "title": "{hostname}: resultado del backup sin confirmar",
+          "body": "Esta notificación no permite confirmar el resultado del backup.",
           "label": "Backup completado"
         },
         "backup_warning": {
@@ -6557,7 +6557,7 @@
         },
         "system_restore_completed": {
           "title": "{hostname}: restauración del host finalizada",
-          "body": "Tareas posteriores a la restauración completadas en segundo plano.\n\nGuests aplicados: {guests}\nStubs de bind mount: {stubs}\nDirectorios de nodos obsoletos eliminados: {stale_nodes}\nComponentes reinstalados: {components}\nDuración: {duration}\n{warnings_block}\nEl nodo está listo para usarse.",
+          "body": "Tareas posteriores a la restauración completadas en segundo plano.\n\nConfiguraciones de invitados aplicadas: {guests}\nDirectorios auxiliares de montajes bind: {stubs}\nDirectorios de nodos obsoletos eliminados: {stale_nodes}\nComponentes reinstalados: {components}\nDuración: {duration}\n{warnings_block}",
           "label": "Restauración del host completada"
         },
         "system_problem": {
@@ -6910,7 +6910,8 @@
             "warning": "Advertencia",
             "info": "Información",
             "ok": "Resuelto",
-            "default": "Aviso"
+            "default": "Aviso",
+            "observation": "Ya no se informa"
           },
           "groups": {
             "vm_ct": "Máquina virtual / Contenedor",
@@ -6978,7 +6979,8 @@
           "status": {
             "failed": "Fallido",
             "completed": "Completado",
-            "started": "Iniciado"
+            "started": "Iniciado",
+            "unconfirmed": "Sin confirmar"
           },
           "report": "Informe de {group}",
           "details": "Detalles",
@@ -6988,6 +6990,13 @@
       },
       "temperature": {
         "sampleSpan": "Lecturas altas registradas a lo largo de {duration}."
+      },
+      "backup": {
+        "confirmedTitle": "{hostname}: backup completado",
+        "confirmedBody": "Backup completado correctamente.",
+        "errorTitle": "{hostname}: error notificado en el backup",
+        "errorBody": "El informe del backup contiene un error.",
+        "unconfirmedBody": "El resultado del backup no está confirmado."
       }
     }
   }

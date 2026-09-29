@@ -299,7 +299,7 @@ def _parse_vzdump_message(message: str) -> Optional[Dict[str, Any]]:
                 current_vm = {
                     'vmid': m_start.group(1),
                     'name': '',
-                    'status': 'ok',
+                    'status': 'unknown',
                     'time': '',
                     'size': '',
                     'filename': '',
@@ -338,15 +338,16 @@ def _parse_vzdump_message(message: str) -> Optional[Dict[str, Any]]:
                 # Finished -> duration
                 m_finish = re.match(
                     r'Finished Backup of VM (\d+)\s+\(([^)]+)\)', clean)
-                if m_finish:
+                if m_finish and m_finish.group(1) == current_vm['vmid']:
                     current_vm['time'] = m_finish.group(2)
-                    current_vm['status'] = 'ok'
+                    if current_vm['status'] != 'error':
+                        current_vm['status'] = 'ok'
                     vms.append(current_vm)
                     current_vm = None
                     continue
                 
                 # Error
-                if clean.startswith('ERROR:') or clean.startswith('TASK ERROR'):
+                if re.match(r'^\s*(?:ERROR:|TASK ERROR)', line, re.IGNORECASE):
                     if current_vm:
                         current_vm['status'] = 'error'
         
@@ -439,7 +440,7 @@ def _format_vzdump_body(parsed: Dict[str, Any], is_success: bool,
     
     for vm in parsed.get('vms', []):
         status = vm.get('status', '').lower()
-        icon = '\u2705' if status == 'ok' else '\u274C'
+        icon = '\u2705' if status == 'ok' else '\u274C' if status == 'error' else '\u2754'
         
         # Determine VM/CT type prefix
         vm_type = vm.get('type', '')
@@ -501,7 +502,8 @@ def _format_vzdump_body(parsed: Dict[str, Any], is_success: bool,
     if vm_count > 0 or parsed.get('total_size'):
         ok_count = sum(1 for v in parsed.get('vms', [])
                        if v.get('status', '').lower() == 'ok')
-        fail_count = vm_count - ok_count
+        fail_count = sum(1 for v in parsed.get('vms', [])
+                         if v.get('status', '').lower() == 'error')
         
         summary_parts = []
         if vm_count:
@@ -779,11 +781,11 @@ TEMPLATES = {
         # `{entity}` is populated by health_persistence.resolve_error()
         # (via _entity_from_details) and by PollingCollector's spread of
         # the original details blob. When absent, _SafeDict elides the
-        # placeholder and the title collapses back to "Resolved - <cat>"
+        # placeholder and the title collapses back to "No longer reported - <cat>"
         # without a trailing dash.
-        'title': '{hostname}: Resolved - {category}{entity_suffix}',
-        'body': 'The {category} issue has been resolved.\n{reason}\n\U0001F6A6 Previous severity: {original_severity}\n\u23F1\uFE0F Duration: {duration}',
-        'label': 'Recovery notification',
+        'title': '{hostname}: No longer reported - {category}{entity_suffix}',
+        'body': 'The {category} issue is no longer in active health records.\n{reason}\n\U0001F6A6 Previous severity: {original_severity}\n\u23F1\uFE0F Time since first observation: {duration}',
+        'label': 'Health issue no longer reported',
         'group': 'health',
         'default_enabled': True,
     },
@@ -999,9 +1001,9 @@ TEMPLATES = {
         'default_enabled': False,
     },
     'backup_complete': {
-        'title': '{hostname} → {storage}: Backup complete — {vmname} ({vmid})',
-        'body': 'Backup of {vmname} (ID: {vmid}) completed successfully on {storage}.\nSize: {size}',
-        'label': 'Backup complete',
+        'title': '{hostname}: Backup outcome unconfirmed',
+        'body': 'The backup outcome could not be confirmed from this notice.',
+        'label': 'Backup report',
         'group': 'backup',
         'default_enabled': True,
     },
@@ -1270,8 +1272,7 @@ TEMPLATES = {
             'Stale node dirs removed: {stale_nodes}\n'
             'Components reinstalled: {components}\n'
             'Duration: {duration}\n'
-            '{warnings_block}\n'
-            'The node is now fully ready to use.'
+            '{warnings_block}'
         ),
         'label': 'Host restore completed',
         'group': 'services',
@@ -1855,6 +1856,16 @@ def render_template(event_type: str, data: Dict[str, Any],
         )
         if localized:
             template[field] = localized
+    if event_type == 'backup_complete':
+        outcome = data.get('backup_outcome')
+        if outcome == 'confirmed':
+            template['title'] = runtime_message('backup.confirmedTitle', language,
+                                                hostname=data.get('hostname') or _get_hostname())
+            template['body'] = runtime_message('backup.confirmedBody', language)
+        elif outcome == 'failed':
+            template['title'] = runtime_message('backup.errorTitle', language,
+                                                hostname=data.get('hostname') or _get_hostname())
+            template['body'] = runtime_message('backup.errorBody', language)
     
     # Ensure hostname is always available
     variables = {
@@ -1997,7 +2008,6 @@ def render_template(event_type: str, data: Dict[str, Any],
     # When the event came from PVE webhook with a full vzdump message,
     # parse the table/logs and format a rich body instead of the sparse template.
     pve_message = data.get('pve_message', '')
-    pve_title = data.get('pve_title', '')
     
     # Check for custom formatter function
     formatter_name = template.get('formatter')
@@ -2016,13 +2026,18 @@ def render_template(event_type: str, data: Dict[str, Any],
         if parsed:
             is_success = (event_type == 'backup_complete')
             body_text = _format_vzdump_body(parsed, is_success, language=language)
-            # Preserve PVE's source title for English, but never leak it into a
-            # deterministic localized notification.
-            if pve_title and requested_language == 'en':
-                title = pve_title
+            if event_type == 'backup_complete' and data.get('backup_outcome') == 'failed':
+                error_lines = [line.strip() for line in pve_message.splitlines()
+                               if re.match(r'^\s*(?:ERROR:|TASK ERROR)', line, re.IGNORECASE)]
+                if error_lines:
+                    body_text += '\n' + '\n'.join(error_lines)
         else:
             # Couldn't parse -- use PVE raw message as body
             body_text = pve_message.strip()
+        if event_type == 'backup_complete' and data.get('backup_outcome') != 'confirmed':
+            key = ('backup.errorBody' if data.get('backup_outcome') == 'failed'
+                   else 'backup.unconfirmedBody')
+            body_text = runtime_message(key, language) + '\n' + body_text
     elif event_type == 'system_mail' and pve_message:
         # System mail -- use PVE message directly (mail bounce, cron, smartd)
         body_text = pve_message.strip()[:1000]
@@ -2166,7 +2181,7 @@ EVENT_EMOJI = {
     'host_backup_start':    '\U0001F5C4️\U0001F680',     # 🗄️🚀 cabinet + rocket
     'host_backup_complete': '\U0001F5C4️✅',         # 🗄️✅ cabinet + check
     'host_backup_fail':     '\U0001F5C4️❌',         # 🗄️❌ cabinet + cross
-    'backup_complete':      '\U0001F4BE\u2705',       # 💾✅ floppy + check
+    'backup_complete':      '\U0001F4BE',             # 💾 neutral for digests without outcome metadata
     'backup_warning':       '\U0001F4BE\u26A0\uFE0F', # 💾⚠️ floppy + warning
     'backup_fail':          '\U0001F4BE\u274C',       # 💾❌ floppy + cross
     'snapshot_complete':    '\U0001F4F8',         # camera with flash
@@ -2204,14 +2219,14 @@ EVENT_EMOJI = {
     'system_startup':       '\U0001F680',         # rocket (startup)
     'system_shutdown':      '\u23FB\uFE0F',       # power symbol (Unicode)
     'system_reboot':        '\U0001F504',
-    'system_restore_completed': '✅',          # check mark
+    'system_restore_completed': '\U0001F4CB',  # post-restore task report (boot may have warnings)
     'system_problem':       '\u26A0\uFE0F',
     'kernel_warning':       '\u26A0\uFE0F',
     'service_fail':         '\u274C',
     'oom_kill':             '\U0001F4A3',         # bomb
     # Health
     'new_error':            '\U0001F198',         # SOS
-    'error_resolved':       '\u2705',
+    'error_resolved':       '\U0001F4CB',  # no longer active in health records, not proven recovery
     'error_escalated':      '\U0001F53A',         # red triangle up
     'health_degraded':      '\u26A0\uFE0F',
     'health_persistent':    '\U0001F4CB',         # clipboard
@@ -2363,6 +2378,10 @@ def enrich_with_emojis(event_type: str, title: str, body: str,
     severity = data.get('severity', 'INFO')
     
     icon = EVENT_EMOJI.get(event_type) or CATEGORY_EMOJI.get(group) or SEVERITY_ICONS.get(severity, '')
+    if event_type == 'backup_complete':
+        icon = {
+            'confirmed': '💾✅', 'failed': '💾❌',
+        }.get(str(data.get('backup_outcome') or ''), '💾❔')
     
     # Build enriched title: replace severity circle with event-specific icon
     # Current format: "hostname: Something"  -> "ICON hostname: Something"
