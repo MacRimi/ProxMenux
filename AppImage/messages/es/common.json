@@ -6987,7 +6987,7 @@
         }
       },
       "temperature": {
-        "sampleSpan": "Las muestras elevadas abarcan {duration}."
+        "sampleSpan": "Lecturas altas registradas a lo largo de {duration}."
       }
     }
   }

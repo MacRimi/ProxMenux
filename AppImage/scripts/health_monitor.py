@@ -1574,7 +1574,8 @@ class HealthMonitor:
                     duration_str = f'{actual_minutes}m {actual_seconds}s' if actual_minutes > 0 else f'{actual_seconds}s'
                     
                     status = 'WARNING'
-                    reason = f'Sensor temperature {max_temp}°C >80°C; high samples span {duration_str}'
+                    shown_temp = round(max_temp, 1)  # as the widget shows it
+                    reason = f'Sensor temperature {shown_temp}°C >80°C; high samples span {duration_str}'
                     
                     # Record the existing dismissable error contract
                     health_persistence.record_error(
@@ -1583,8 +1584,8 @@ class HealthMonitor:
                         severity='WARNING',
                         reason=reason,
                         details={
-                            'temperature': max_temp, 'duration': actual_duration,
-                            'dismissable': True, 'value': max_temp, 'threshold': 80,
+                            'temperature': shown_temp, 'duration': actual_duration,
+                            'dismissable': True, 'value': shown_temp, 'threshold': 80,
                             'details': f'High samples span {duration_str}.',
                             # Explicit provenance for render-time localization;
                             # older/manual detail strings remain verbatim.
