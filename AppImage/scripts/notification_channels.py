@@ -1038,6 +1038,11 @@ class EmailChannel(NotificationChannel):
         # Determine group for section header
         event_type = data.get('_event_type', '')
         group = data.get('_group', 'other')
+        # Keep unbroken recorded text inside the temperature email's table.
+        # Both properties are inline for mail clients; other events retain
+        # their original markup and layout.
+        temp_cell_wrap = 'word-wrap:break-word;overflow-wrap:break-word;word-break:break-word;' if event_type == 'temp_high' else ''
+        temp_table_layout = 'table-layout:fixed;' if event_type == 'temp_high' else ''
         section_label = _runtime_text(f'email.groups.{group}', data)
         report_label = _runtime_text('email.report', data, group=section_label)
         host_label = _runtime_text('email.host', data)
@@ -1089,12 +1094,12 @@ class EmailChannel(NotificationChannel):
             if label:
                 rows_html += f'''<tr>
   <td style="padding:8px 12px;font-size:13px;color:#374151;font-weight:500;white-space:nowrap;vertical-align:top;border-bottom:1px solid #e5e7eb;">{label}</td>
-  <td style="padding:8px 12px;font-size:13px;color:#111827;border-bottom:1px solid #e5e7eb;">{value}</td>
+  <td style="padding:8px 12px;font-size:13px;color:#111827;border-bottom:1px solid #e5e7eb;{temp_cell_wrap}">{value}</td>
 </tr>'''
             else:
                 # Full-width row (no label, just description text)
                 rows_html += f'''<tr>
-  <td colspan="2" style="padding:8px 12px;font-size:13px;color:#1f2937;border-bottom:1px solid #e5e7eb;">{value}</td>
+  <td colspan="2" style="padding:8px 12px;font-size:13px;color:#1f2937;border-bottom:1px solid #e5e7eb;{temp_cell_wrap}">{value}</td>
 </tr>'''
 
         # ── Reason / details block (long text, displayed separately) ──
@@ -1104,7 +1109,7 @@ class EmailChannel(NotificationChannel):
             reason_html = f'''
 <div style="margin:16px 0 0;padding:12px 16px;border:1px solid #d1d5db;border-radius:6px;">
   <p style="margin:0 0 4px;font-size:11px;font-weight:600;color:#374151;text-transform:uppercase;letter-spacing:0.05em;">{_runtime_text('email.details', data)}</p>
-  <p style="margin:0;font-size:13px;color:#1f2937;line-height:1.6;white-space:pre-wrap;">{html_mod.escape(reason)}</p>
+  <p style="margin:0;font-size:13px;color:#1f2937;line-height:1.6;white-space:pre-wrap;{temp_cell_wrap}">{html_mod.escape(reason)}</p>
 </div>'''
 
         # ── Clean subject for display (remove prefix if present) ──
@@ -1153,7 +1158,7 @@ class EmailChannel(NotificationChannel):
     </table>
 
     <!-- Detail table -->
-    <table width="100%" cellpadding="0" cellspacing="0" border="0" style="border:1px solid #d1d5db;border-radius:6px;overflow:hidden;">
+    <table width="100%" cellpadding="0" cellspacing="0" border="0" style="border:1px solid #d1d5db;border-radius:6px;overflow:hidden;{temp_table_layout}">
       {rows_html}
     </table>
 
