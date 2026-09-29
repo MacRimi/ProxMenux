@@ -110,7 +110,12 @@ class RuntimeCatalogTests(unittest.TestCase):
         values.update({"hostname": "HOST-ŽILINA", "severity": "WARNING"})
         with mock.patch.object(notification_templates, "_get_hostname", return_value="HOST-ŽILINA"):
             for event_type in notification_templates.TEMPLATES:
-                rendered = notification_templates.render_template(event_type, values, language="sk")
+                event_values = dict(values)
+                if event_type == "temp_high":
+                    # Temperature is a measured numeric contract; arbitrary
+                    # DYNAMIC_VALUE is correctly rejected by its fallback.
+                    event_values.update(value="89", threshold="80")
+                rendered = notification_templates.render_template(event_type, event_values, language="sk")
                 combined = rendered["title"] + "\n" + rendered["body"]
                 if notification_templates.TEMPLATES[event_type].get("formatter"):
                     continue
@@ -119,7 +124,7 @@ class RuntimeCatalogTests(unittest.TestCase):
                     + notification_templates.TEMPLATES[event_type]["body"]
                 ):
                     if name not in {"entity_suffix", "title_or_default"}:
-                        self.assertIn(str(values[name]), combined, f"{event_type}:{name}")
+                        self.assertIn(str(event_values[name]), combined, f"{event_type}:{name}")
 
     def test_lxc_update_result_and_details_render_in_slovak(self):
         data = {

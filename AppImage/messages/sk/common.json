@@ -6445,8 +6445,8 @@
           "label": "Vysoké využitie pamäte"
         },
         "temp_high": {
-          "title": "{hostname}: Vysoká teplota CPU — {value}°C",
-          "body": "Teplota CPU dosiahla {value}°C (prahová hodnota: {threshold}°C).\n{details}",
+          "title": "{hostname}: Vysoká teplota snímača — {value}°C",
+          "body": "Teplota snímača dosiahla {value}°C (prahová hodnota: {threshold}°C).\n{details}",
           "label": "Vysoká teplota"
         },
         "disk_space_low": {
@@ -6780,7 +6780,11 @@
       "fallback": {
         "unknownTitle": "{hostname}: {event_type}",
         "healthCheckDegraded": "Zhoršený stav kontroly",
-        "none": "žiadne"
+        "none": "žiadne",
+        "temperatureAlertTitle": "{hostname}: Upozornenie na teplotu snímača",
+        "temperatureAlertBody": "Upozornenie na teplotu bolo zaznamenané bez úplných údajov o meraní.",
+        "recordedReason": "Zaznamenaný dôvod: {reason}",
+        "recordedDetails": "Zaznamenané podrobnosti: {details}"
       },
       "fields": {
         "vmid": "VM/CT",
@@ -6980,6 +6984,9 @@
             "started": "Spustené"
           }
         }
+      },
+      "temperature": {
+        "sampleSpan": "Vysoké vzorky pokrývajú interval {duration}."
       }
     }
   }

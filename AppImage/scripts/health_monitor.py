@@ -1503,10 +1503,10 @@ class HealthMonitor:
     
     def _check_cpu_temperature(self) -> Optional[Dict[str, Any]]:
         """
-        Check CPU temperature with temporal logic:
+        Check the maximum reported sensor temperature with temporal logic:
         - WARNING if temp >80°C sustained for >3 minutes
         - Auto-clears if temp ≤80°C for 30 seconds
-        - No dismiss button (non-dismissable)
+        - Recorded errors retain their current dismissable flag
         """
         cache_key = 'cpu_temp'
         current_time = time.time()
@@ -1574,15 +1574,22 @@ class HealthMonitor:
                     duration_str = f'{actual_minutes}m {actual_seconds}s' if actual_minutes > 0 else f'{actual_seconds}s'
                     
                     status = 'WARNING'
-                    reason = f'CPU temperature {max_temp}°C >80°C sustained for {duration_str}'
+                    reason = f'Sensor temperature {max_temp}°C >80°C; high samples span {duration_str}'
                     
-                    # Record non-dismissable error
+                    # Record the existing dismissable error contract
                     health_persistence.record_error(
                         error_key='cpu_temperature',
                         category='temperature',
                         severity='WARNING',
                         reason=reason,
-                        details={'temperature': max_temp, 'duration': actual_duration, 'dismissable': True}
+                        details={
+                            'temperature': max_temp, 'duration': actual_duration,
+                            'dismissable': True, 'value': max_temp, 'threshold': 80,
+                            'details': f'High samples span {duration_str}.',
+                            # Explicit provenance for render-time localization;
+                            # older/manual detail strings remain verbatim.
+                            'temperature_detail_kind': 'high_samples_span',
+                        }
                     )
                 elif len(recovery_samples) >= 3:
                     # Temperature has been ≤80°C for 30 seconds - clear the error
@@ -1595,7 +1602,7 @@ class HealthMonitor:
                     if health_persistence.is_error_active('cpu_temperature', category='temperature'):
                         # Keep the warning active
                         status = 'WARNING'
-                        reason = f'CPU temperature {max_temp}°C still elevated'
+                        reason = f'Sensor temperature {max_temp}°C still elevated'
                     else:
                         # No active warning yet
                         status = 'OK'

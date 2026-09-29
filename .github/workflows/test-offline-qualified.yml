@@ -54,7 +54,7 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-      - name: Run seven qualified Python files
+      - name: Run eight qualified Python files
         env:
           PYTHONDONTWRITEBYTECODE: '1'
         run: python3 -I -B .github/scripts/run_offline_qualified.py --lane python

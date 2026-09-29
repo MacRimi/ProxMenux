@@ -6446,8 +6446,8 @@
           "label": "Hohe Speichernutzung"
         },
         "temp_high": {
-          "title": "{hostname}: Hohe CPU-Temperatur – {value}°C",
-          "body": "Die CPU-Temperatur hat {value}°C erreicht (Schwellenwert: {threshold}°C).\n{details}",
+          "title": "{hostname}: Hohe Sensortemperatur – {value}°C",
+          "body": "Die Sensortemperatur hat {value}°C erreicht (Schwellenwert: {threshold}°C).\n{details}",
           "label": "Hohe Temperatur"
         },
         "disk_space_low": {
@@ -6781,7 +6781,11 @@
       "fallback": {
         "unknownTitle": "{hostname}: {event_type}",
         "healthCheckDegraded": "Gesundheitsprüfung beeinträchtigt",
-        "none": "keine"
+        "none": "keine",
+        "temperatureAlertTitle": "{hostname}: Warnung zur Sensortemperatur",
+        "temperatureAlertBody": "Ein Temperaturalarm wurde ohne vollständige Messdaten erfasst.",
+        "recordedReason": "Erfasster Grund: {reason}",
+        "recordedDetails": "Erfasste Details: {details}"
       },
       "fields": {
         "vmid": "VM/CT",
@@ -6981,6 +6985,9 @@
           "host": "Gastgeber",
           "footer": "ProxMenux Benachrichtigungsdienst"
         }
+      },
+      "temperature": {
+        "sampleSpan": "Die hohen Messwerte erstrecken sich über {duration}."
       }
     }
   }

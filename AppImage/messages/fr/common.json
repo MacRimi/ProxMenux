@@ -6446,8 +6446,8 @@
           "label": "Utilisation élevée de la mémoire"
         },
         "temp_high": {
-          "title": "{hostname} : température élevée du processeur – {value}°C",
-          "body": "La température du processeur a atteint {value}°C (seuil : {threshold}°C).\n{details}",
+          "title": "{hostname} : température élevée du capteur – {value}°C",
+          "body": "La température du capteur a atteint {value}°C (seuil : {threshold}°C).\n{details}",
           "label": "Haute température"
         },
         "disk_space_low": {
@@ -6781,7 +6781,11 @@
       "fallback": {
         "unknownTitle": "{hostname} : {event_type}",
         "healthCheckDegraded": "Bilan de santé dégradé",
-        "none": "aucun"
+        "none": "aucun",
+        "temperatureAlertTitle": "{hostname} : alerte de température du capteur",
+        "temperatureAlertBody": "Une alerte de température a été enregistrée sans données de mesure complètes.",
+        "recordedReason": "Motif enregistré : {reason}",
+        "recordedDetails": "Détails enregistrés : {details}"
       },
       "fields": {
         "vmid": "VM/CT",
@@ -6981,6 +6985,9 @@
           "host": "Hôte",
           "footer": "ProxMenux Service de notification"
         }
+      },
+      "temperature": {
+        "sampleSpan": "Les relevés élevés s'étendent sur {duration}."
       }
     }
   }

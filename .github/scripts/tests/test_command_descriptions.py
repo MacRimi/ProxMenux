@@ -122,6 +122,15 @@ class CommandDescriptionsTests(unittest.TestCase):
                         "temperatureIncomplete", "temperatureUnavailableCount",
                     ):
                         temporary["storage"].setdefault(key, catalog("en")["storage"][key])
+                    # The temperature alert fallback is new English-only runtime
+                    # text until locale migration. Seed only its four new keys
+                    # in this disposable steady-state catalog; shipped locales
+                    # remain unchanged and runtime fallback is tested separately.
+                    source_fallback = catalog("en")["runtime"]["notifications"]["fallback"]
+                    fallback = temporary["runtime"]["notifications"]["fallback"]
+                    for key in ("temperatureAlertTitle", "temperatureAlertBody",
+                                "recordedReason", "recordedDetails"):
+                        fallback.setdefault(key, source_fallback[key])
                     path.write_text(json.dumps(temporary, ensure_ascii=False))
                 # Model steady state after the bot fills these intentional new
                 # messages; keep repository locales and all other leaves intact.

@@ -680,7 +680,7 @@ def _format_health_degraded(data: Dict[str, Any],
         return str(data.get('title') or ''), str(data.get('reason') or '')
 
     def category_label(item: Dict[str, Any]) -> str:
-        category = str(item.get('key') or '')
+        category = str(item.get('key') or item.get('cat_key') or '')
         return (
             runtime_message(f'healthDegraded.categories.{category}', language)
             or str(item.get('category') or category)
@@ -695,7 +695,7 @@ def _format_health_degraded(data: Dict[str, Any],
 
     def localized_reason(item: Dict[str, Any]) -> str:
         reason = str(item.get('reason') or '')
-        if str(item.get('key') or '') == 'cpu':
+        if str(item.get('key') or item.get('cat_key') or '') == 'cpu':
             match = _CPU_SUSTAINED_REASON.fullmatch(reason)
             if match:
                 return runtime_message(
@@ -1081,8 +1081,8 @@ TEMPLATES = {
         'default_enabled': True,
     },
     'temp_high': {
-        'title': '{hostname}: High CPU temperature — {value}°C',
-        'body': 'CPU temperature has reached {value}°C (threshold: {threshold}°C).\n{details}',
+        'title': '{hostname}: High sensor temperature — {value}°C',
+        'body': 'Sensor temperature has reached {value}°C (threshold: {threshold}°C).\n{details}',
         'label': 'High temperature',
         'group': 'resources',
         'default_enabled': True,
@@ -1884,6 +1884,50 @@ def render_template(event_type: str, data: Dict[str, Any],
         'log_file': '',
     }
     variables.update(data)
+
+    # Old persisted errors and manual events may lack a complete reading.
+    # Accept plain numeric strings, but never interpret booleans or objects as
+    # measurements, nor display an infinite value or an overflowing integer.
+    if event_type == 'temp_high':
+        import math as _math
+        def finite_measurement(key):
+            raw = data.get(key)
+            if type(raw) not in (int, float, str):
+                return False
+            try:
+                return _math.isfinite(float(raw))
+            except (OverflowError, ValueError, TypeError):
+                return False
+
+        # Only the known sampler-generated detail is eligible: duration alone
+        # cannot establish provenance and manual/legacy text is not rewritten.
+        seconds = data.get('duration')
+        if (data.get('temperature_detail_kind') == 'high_samples_span'
+                and type(seconds) is int and 0 <= seconds <= 240):
+            span = (f'{seconds // 60}m {seconds % 60}s'
+                    if seconds >= 60 else f'{seconds}s')
+            if data.get('details') == f'High samples span {span}.':
+                variables['details'] = runtime_message(
+                    'temperature.sampleSpan', language, duration=span)
+
+        if not all(finite_measurement(key) for key in ('value', 'threshold')):
+            variables['_temperature_fallback_title'] = runtime_message(
+                'fallback.temperatureAlertTitle', language, hostname=variables['hostname'],
+            )
+            template['title'] = '{_temperature_fallback_title}'
+            lines = [runtime_message('fallback.temperatureAlertBody', language)]
+            reason = data.get('reason')
+            details = variables.get('details')
+            reason = reason.strip() if isinstance(reason, str) else ''
+            details = details.strip() if isinstance(details, str) else ''
+            if reason:
+                lines.append(runtime_message('fallback.recordedReason', language, reason=reason))
+            if details and details != reason:
+                lines.append(runtime_message('fallback.recordedDetails', language, details=details))
+            # Format the localized labels once; do not interpret braces in
+            # recorded raw text as template placeholders a second time.
+            variables['_temperature_fallback_body'] = '\n'.join(lines)
+            template['body'] = '{_temperature_fallback_body}'
 
     if event_type == 'lxc_update_applied' and isinstance(data.get('lxc_update'), dict):
         status = str(data['lxc_update'].get('status') or '')
