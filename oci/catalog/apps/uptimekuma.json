@@ -50,10 +50,10 @@
     "service_name": "uptimekuma",
     "container_name": "uptimekuma",
     "image": {
-      "reference": "louislam/uptime-kuma:latest",
+      "reference": "louislam/uptime-kuma:2",
       "registry": "docker.io",
       "repository": "louislam/uptime-kuma",
-      "tag": "latest",
+      "tag": "2",
       "digest": null,
       "pull_policy": "resolve-selected-tag-to-architecture-digest-at-install"
     },
@@ -88,7 +88,7 @@
     "related_services": [],
     "restart": "unless-stopped",
     "stop_grace_period": null,
-    "original_compose": "name: uptimekuma\nservices:\n  uptimekuma:\n    image: louislam/uptime-kuma:latest\n    deploy:\n      resources:\n        reservations:\n          memory: 128M\n    network_mode: bridge\n    ports:\n    - target: 3001\n      published: '3001'\n      protocol: tcp\n    restart: unless-stopped\n    volumes:\n    - type: bind\n      source: /DATA/AppData/$AppID/app/data\n      target: /app/data\n    container_name: uptimekuma\n"
+    "original_compose": "name: uptimekuma\nservices:\n  uptimekuma:\n    image: louislam/uptime-kuma:2\n    deploy:\n      resources:\n        reservations:\n          memory: 128M\n    network_mode: bridge\n    ports:\n    - target: 3001\n      published: '3001'\n      protocol: tcp\n    restart: unless-stopped\n    volumes:\n    - type: bind\n      source: /DATA/AppData/$AppID/app/data\n      target: /app/data\n    container_name: uptimekuma\n"
   },
   "compose_stack": {
     "project_name": "uptimekuma",
@@ -99,7 +99,7 @@
     "services": [
       {
         "name": "uptimekuma",
-        "image": "louislam/uptime-kuma:latest",
+        "image": "louislam/uptime-kuma:2",
         "is_main": true,
         "role": "frontend",
         "vmid_offset": 0,
@@ -107,7 +107,7 @@
         "frontend_network": true,
         "private_network": false,
         "compose": {
-          "image": "louislam/uptime-kuma:latest",
+          "image": "louislam/uptime-kuma:2",
           "deploy": {
             "resources": {
               "reservations": {
