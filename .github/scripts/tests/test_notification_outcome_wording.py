@@ -18,7 +18,7 @@ EXPECTED = {
     'error_resolved': {
         'title': '{hostname}: No longer reported - {category}{entity_suffix}',
         'body': 'The {category} issue is no longer in active health records.\n{reason}\n🚦 Previous severity: {original_severity}\n⏱️ Time since first observation: {duration}',
-        'label': 'Health issue no longer reported',
+        'label': 'Recovery notification',
     },
 
     'system_restore_completed': {
@@ -71,6 +71,47 @@ class OutcomeWording(unittest.TestCase):
         cls.templates, render = renderer(cls.catalog)
         cls.render = staticmethod(render)
 
+    def test_upstream_slovak_stale_claims_use_english_report_fallback(self):
+        import importlib.util
+        spec = importlib.util.spec_from_file_location('isolated_slovak_report', SCRIPTS / 'notification_templates.py')
+        assert spec is not None and spec.loader is not None
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        recovered = module.render_template('error_resolved', {'hostname':'node-a',
+            'category':'temperature','reason':'old','duration':'3d',
+            'original_severity':'WARNING'}, 'sk')
+        self.assertIn('No longer reported',recovered['title'])
+        self.assertIn('no longer in active health records',recovered['body'])
+        restored = module.render_template('system_restore_completed', {'hostname':'node-a',
+            'guests':3,'stubs':0,'stale_nodes':0,'components':1,'duration':'2m',
+            'warnings_block':'⚠️ Boot check pending'}, 'sk')
+        self.assertIn('Post-restore tasks completed',restored['body'])
+        self.assertNotIn('úplne pripravený',restored['body'])
+
+    def test_spanish_restore_names_vms_and_containers_not_invitados(self):
+        import importlib.util
+        spec = importlib.util.spec_from_file_location('isolated_spanish_restore', SCRIPTS / 'notification_templates.py')
+        assert spec is not None and spec.loader is not None
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        result = module.render_template('system_restore_completed', {
+            'hostname':'node-a','guests':3,'stubs':0,'stale_nodes':0,
+            'components':1,'duration':'2m','warnings_block':''}, 'es')
+        self.assertIn('máquinas virtuales y contenedores', result['body'])
+        self.assertNotIn('invitados', result['body'].lower())
+
+    def test_settings_labels_stay_at_upstream_values_in_all_locales(self):
+        import subprocess
+        for lang in ('en','de','es','fr','it','pt','sk','sv'):
+            path = f'AppImage/messages/{lang}/common.json'
+            upstream = json.loads(subprocess.check_output(['git','show',f'eb7cc548:{path}'], cwd=ROOT))
+            current = json.loads((ROOT / path).read_text())
+            for event in ('backup_complete', 'error_resolved'):
+                with self.subTest(lang=lang, event=event):
+                    expected = upstream['runtime']['notifications']['templates'][event]['label']
+                    self.assertEqual(current['runtime']['notifications']['templates'][event]['label'], expected)
+                    if lang == 'en': self.assertEqual(self.templates[event]['label'], expected)
+
     def test_exact_four_english_leaves_match_source_and_catalog(self):
         for event, fields in EXPECTED.items():
             for field, value in fields.items():
@@ -101,7 +142,19 @@ class OutcomeWording(unittest.TestCase):
         row_ok = '{:<8}{:<22}{:<10}{:<10}{:<14}{}'.format('104','alpha','OK','00:01:00','1.5 GiB','archive')
         row_warning = '{:<8}{:<22}{:<10}{:<10}{:<14}{}'.format('105','beta','WARNINGS','00:01:00','1.5 GiB','archive')
         row_error = '{:<8}{:<22}{:<10}{:<10}{:<14}{}'.format('105','beta','ERROR','00:01:00','1.5 GiB','archive')
+        row_err = '{:<8}{:<22}{:<10}{:<10}{:<14}{}'.format('105','beta','err','00:01:00','1.5 GiB','archive')
+        truncated = 'INFO: Log output was too long to be displayed. Please see task log for details.'
         cases = [
+            ('vzdump', 'info', header+'\n'+row_ok+'\n'+row_err+'\nTotal running time: 00:02:00', 'failed'),
+            ('vzdump', 'info', 'INFO: Starting Backup of VM 104 (qemu)\n'+header+'\n'+row_ok+'\nTotal running time: 00:01:00\n'+truncated, 'confirmed'),
+            ('vzdump', 'info', header+'\n'+row_ok+'\nTotal running time: 00:01:00\n'+truncated, 'confirmed'),
+            ('vzdump', 'info', header+'\n'+row_err+'\nTotal running time: 00:01:00\n'+truncated, 'failed'),
+            ('vzdump', 'warning', header+'\n'+row_ok+'\nTotal running time: 00:01:00', 'unconfirmed'),
+            ('vzdump', 'info', header+'\n'+row_ok, 'unconfirmed'),
+            ('vzdump', 'info', 'INFO: Starting Backup of VM 104 (qemu)\nINFO: Finished Backup of VM 104 (00:01:00)\n'+header+'\n'+row_ok, 'unconfirmed'),
+            ('vzdump', 'warning', header+'\n'+row_err+'\nTotal running time: 00:01:00', 'failed'),
+            ('vzdump', 'info', header+'\n'+row_ok+'\n'+row_warning+'\nTotal running time: 00:02:00\n'+truncated, 'unconfirmed'),
+            ('vzdump', 'info', header+'\n'+row_ok+'\nTotal running time: 00:01:00\nERROR: archive write failed', 'failed'),
             ('vzdump', 'info', header+'\n'+row_ok+'\n'+row_error+'\nTotal running time: 00:02:00', 'failed'),
             ('vzdump', 'info', 'INFO: Starting Backup of VM 104 (qemu)\nINFO: Finished Backup of VM 104 (00:01:00)\n'+header+'\n'+row_error+'\nTotal running time: 00:02:00', 'failed'),
             ('vzdump', 'info', header+'\n'+row_error, 'failed'),
@@ -175,6 +228,11 @@ class OutcomeWording(unittest.TestCase):
         parser = extract(SCRIPTS / 'notification_templates.py', '_parse_vzdump_message', namespace=ns)
         formatter = extract(SCRIPTS / 'notification_templates.py', '_format_vzdump_body', namespace=ns)
         incomplete = parser('INFO: Starting Backup of VM 104 (qemu)')
+        table_header = '{:<8}{:<22}{:<10}{:<10}{:<14}{}'.format('VMID','Name','Status','Time','Size','Filename')
+        table_err = '{:<8}{:<22}{:<10}{:<10}{:<14}{}'.format('104','alpha','err','00:01:00','1.5 GiB','archive')
+        failed_table = parser(table_header+'\n'+table_err+'\nTotal running time: 00:01:00')
+        self.assertEqual(failed_table['vms'][0]['status'].lower(), 'error')
+        self.assertIn('❌', formatter(failed_table, False, 'en'))
         self.assertEqual(incomplete['vms'][0]['status'], 'unknown')
         self.assertNotIn('✅', formatter(incomplete, False, 'en'))
         mixed = parser('INFO: Starting Backup of VM 104 (qemu)\nINFO: Finished Backup of VM 104 (00:01:00)\nINFO: Starting Backup of VM 105 (lxc)')
@@ -205,16 +263,45 @@ class OutcomeWording(unittest.TestCase):
         self.assertIn('ERROR: archive write failed', conflict['body'])
         self.assertNotIn('Backup complete', conflict['title'])
 
+    def test_confirmed_title_keeps_single_guest_and_destination_without_misnaming_batches(self):
+        import importlib.util
+        spec = importlib.util.spec_from_file_location('isolated_backup_title', SCRIPTS / 'notification_templates.py')
+        assert spec is not None and spec.loader is not None
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        actual_render = module.render_template
+        log = ('INFO: starting new backup job: vzdump 104 --storage PBS-Cloud --mode snapshot\n'
+               'INFO: Starting Backup of VM 104 (qemu)\nINFO: VM Name: Alpha\n'
+               'INFO: Finished Backup of VM 104 (00:01:00)')
+        single = actual_render('backup_complete', {'hostname':'node-a','backup_outcome':'confirmed',
+                               'pve_message':log}, 'en')
+        self.assertIn('PBS-Cloud',single['title'])
+        self.assertIn('VM Alpha (104)',single['title'])
+        batch = actual_render('backup_complete', {'hostname':'node-a','backup_outcome':'confirmed',
+                              'pve_message':log+'\nINFO: Starting Backup of VM 105 (lxc)\n'
+                                            'INFO: Finished Backup of VM 105 (00:01:00)'}, 'en')
+        self.assertIn('PBS-Cloud',batch['title'])
+        self.assertNotIn('Alpha (104)',batch['title'])
+        no_context = actual_render('backup_complete', {'hostname':'node-a','backup_outcome':'confirmed'}, 'en')
+        self.assertEqual(no_context['title'], 'node-a: Backup complete')
+        named = actual_render('backup_complete', {'hostname':'node-a','backup_outcome':'confirmed',
+            'pve_message':log.replace('Alpha','Alpha {literal}')}, 'en')
+        self.assertIn('Alpha {literal} (104)', named['title'])
+
     def test_html_email_badge_and_backup_status_are_context_specific(self):
         import html
         path = SCRIPTS / 'notification_channels.py'
         for lang in ('en', 'de', 'es', 'fr', 'it', 'pt', 'sk', 'sv'):
             with self.subTest(lang=lang):
                 catalog = json.loads((ROOT / 'AppImage/messages' / lang / 'common.json').read_text())['runtime']['notifications']
+                english = self.catalog['runtime']['notifications']
                 def text(key, data=None, **values):
-                    value = catalog['channels']
-                    for part in key.split('.'): value = value[part]
-                    return value.format(**values)
+                    def lookup(source):
+                        value = source['channels']
+                        for part in key.split('.'):
+                            value = value.get(part) if isinstance(value, dict) else None
+                        return value
+                    return (lookup(catalog) or lookup(english) or '').format(**values)
                 ns = {'Dict': dict, 'Optional': __import__('typing').Optional,
                       '_runtime_text': text, '_runtime_notification_text': lambda key, data=None: ''}
                 build = extract(path, '_build_detail_rows', 'EmailChannel', ns)
@@ -226,7 +313,7 @@ class OutcomeWording(unittest.TestCase):
                     _SEV_DEFAULT = {'color':'#6b7280','bg':'#f9fafb','border':'#e5e7eb'}
                     subject_prefix = 'ProxMenux'
                     _build_detail_rows = staticmethod(build)
-                badge = catalog['channels']['email']['severity']['observation']
+                badge = catalog['channels']['email']['severity'].get('observation') or english['channels']['email']['severity']['observation']
                 recovery = fmt(Email(), 'No longer reported', 'Body', 'OK', {'_event_type': 'error_resolved',
                     '_notification_language': lang, '_group': 'health'})
                 self.assertIn('>' + badge.upper() + '</span>', recovery)
@@ -237,8 +324,9 @@ class OutcomeWording(unittest.TestCase):
                 for outcome, status in [('confirmed', 'completed'), ('unconfirmed','unconfirmed'), ('failed','failed')]:
                     email = fmt(Email(), 'Backup', 'Details', 'INFO', {'_event_type': 'backup_complete',
                         'backup_outcome': outcome, '_notification_language': lang, '_group': 'backup'})
-                    self.assertIn(catalog['channels']['email']['status'][status], html.unescape(email))
-                    badge_label = catalog['channels']['email']['status'][status].upper()
+                    label = catalog['channels']['email']['status'].get(status) or english['channels']['email']['status'][status]
+                    self.assertIn(label, html.unescape(email))
+                    badge_label = label.upper()
                     self.assertIn('>' + badge_label + '</span>', html.unescape(email))
                     if outcome == 'failed':
                         self.assertIn('color:#dc2626;font-weight:600;', email)
@@ -269,16 +357,28 @@ class OutcomeWording(unittest.TestCase):
                     result = module.render_template('backup_complete', data, lang)
                     if state != 'unconfirmed':
                         key = 'confirmedTitle' if state == 'confirmed' else 'errorTitle'
-                        self.assertEqual(result['title'], catalog['backup'][key].format(hostname=data['hostname']))
-                    else: self.assertEqual(result['title'], catalog['templates']['backup_complete']['title'].format(hostname=data['hostname']))
+                        expected_title = (catalog.get('backup', {}).get(key) or
+                                          self.catalog['runtime']['notifications']['backup'][key]).format(hostname=data['hostname'])
+                        self.assertTrue(result['title'].startswith(expected_title), result['title'])
+                    else:
+                        source = (catalog if catalog.get('backup', {}).get('unconfirmedBody')
+                                  else self.catalog['runtime']['notifications'])
+                        self.assertEqual(result['title'], source['templates']['backup_complete']['title'].format(hostname=data['hostname']))
                     self.assertNotIn('{hostname}', result['title'])
-                    if state == 'unconfirmed': self.assertIn(catalog['backup']['unconfirmedBody'], result['body'])
-                    if state == 'failed': self.assertIn(catalog['backup']['errorBody'], result['body'])
+                    if state == 'unconfirmed':
+                        source = (catalog if catalog.get('backup', {}).get('unconfirmedBody')
+                                  else self.catalog['runtime']['notifications'])
+                        self.assertIn(source['backup']['unconfirmedBody'], result['body'])
+                    if state == 'failed':
+                        self.assertIn(catalog.get('backup', {}).get('errorBody') or
+                                      self.catalog['runtime']['notifications']['backup']['errorBody'], result['body'])
                     enriched, _ = module.enrich_with_emojis('backup_complete', result['title'], result['body'], data)
                     self.assertTrue(enriched.startswith({'confirmed':'💾✅','unconfirmed':'💾❔','failed':'💾❌'}[state]))
             recovery = module.render_template('error_resolved', {'hostname':'node','category':'temperature',
                 'reason':'Old observation','duration':'3d','original_severity':'WARNING'}, lang)
-            self.assertEqual(recovery['title'],catalog['templates']['error_resolved']['title'].format(hostname='node',category='temperature',entity_suffix=''))
+            recovery_source = (catalog if catalog.get('backup', {}).get('unconfirmedBody')
+                               else self.catalog['runtime']['notifications'])
+            self.assertEqual(recovery['title'], recovery_source['templates']['error_resolved']['title'].format(hostname='node',category='temperature',entity_suffix=''))
             self.assertNotIn('resolved', recovery['title'].lower()) if lang == 'en' else None
             restore = module.render_template('system_restore_completed', {'hostname':'node', 'guests':4,
                 'stubs':1,'stale_nodes':2,'components':1,'duration':'2m','warnings_block':'Missing module'},lang)

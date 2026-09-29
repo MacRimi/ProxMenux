@@ -252,6 +252,8 @@ def _parse_vzdump_message(message: str) -> Optional[Dict[str, Any]]:
                 vmid = padded[col_starts[0]:col_starts[1]].strip()
                 name = padded[col_starts[1]:col_starts[2]].strip()
                 status = padded[col_starts[2]:col_starts[3]].strip()
+                if status.lower() in ('err', 'error'):
+                    status = 'error'
                 time_val = padded[col_starts[3]:col_starts[4]].strip()
                 size = padded[col_starts[4]:col_starts[5]].strip()
                 filename = padded[col_starts[5]:].strip()
@@ -785,7 +787,7 @@ TEMPLATES = {
         # without a trailing dash.
         'title': '{hostname}: No longer reported - {category}{entity_suffix}',
         'body': 'The {category} issue is no longer in active health records.\n{reason}\n\U0001F6A6 Previous severity: {original_severity}\n\u23F1\uFE0F Time since first observation: {duration}',
-        'label': 'Health issue no longer reported',
+        'label': 'Recovery notification',
         'group': 'health',
         'default_enabled': True,
     },
@@ -1003,7 +1005,7 @@ TEMPLATES = {
     'backup_complete': {
         'title': '{hostname}: Backup outcome unconfirmed',
         'body': 'The backup outcome could not be confirmed from this notice.',
-        'label': 'Backup report',
+        'label': 'Backup complete',
         'group': 'backup',
         'default_enabled': True,
     },
@@ -1854,13 +1856,35 @@ def render_template(event_type: str, data: Dict[str, Any],
             _catalog_value(requested_catalog, key)
             or _catalog_value(english_catalog, key)
         )
+        # A catalog without the outcome keys predates this report contract.
+        # Keep its Settings labels, but do not render old recovery, restore
+        # or backup success claims (e.g. the exact upstream Slovak catalog).
+        if (event_type in ('backup_complete', 'error_resolved', 'system_restore_completed')
+                and field in ('title', 'body')
+                and not _catalog_value(requested_catalog, 'backup.unconfirmedBody')):
+            localized = _catalog_value(english_catalog, key)
         if localized:
             template[field] = localized
+    backup_title_target = ''
     if event_type == 'backup_complete':
         outcome = data.get('backup_outcome')
         if outcome == 'confirmed':
             template['title'] = runtime_message('backup.confirmedTitle', language,
                                                 hostname=data.get('hostname') or _get_hostname())
+            parsed_backup = _parse_vzdump_message(str(data.get('pve_message') or ''))
+            storage = str((parsed_backup or {}).get('storage_name') or data.get('storage') or '').strip()
+            guests = (parsed_backup or {}).get('vms') or []
+            target = []
+            if storage:
+                target.append(storage)
+            if len(guests) == 1:
+                guest = guests[0]
+                kind = 'VM' if guest.get('type') == 'qemu' else 'CT' if guest.get('type') == 'lxc' else 'VM/CT'
+                name = guest.get('name') or kind
+                target.append(f"{kind} {name} ({guest['vmid']})" if name != kind
+                              else f"{kind} {guest['vmid']}")
+            if target:
+                backup_title_target = ' — ' + ' · '.join(target)
             template['body'] = runtime_message('backup.confirmedBody', language)
         elif outcome == 'failed':
             template['title'] = runtime_message('backup.errorTitle', language,
@@ -2003,6 +2027,7 @@ def render_template(event_type: str, data: Dict[str, Any],
         title = template['title'].format_map(safe_vars)
     except (ValueError, IndexError):
         title = template['title']
+    title += backup_title_target
     
     # ── PVE vzdump special formatting ──
     # When the event came from PVE webhook with a full vzdump message,

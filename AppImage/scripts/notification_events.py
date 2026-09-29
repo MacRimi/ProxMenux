@@ -4296,9 +4296,6 @@ class ProxmoxHookWatcher:
         if severity in ('error', 'err', 'critical') or re.search(
                 r'(?im)^\s*(?:ERROR:|TASK ERROR:|.*\bStatus\s+ERROR\b)', text):
             return 'failed'
-        if severity not in ('info', 'ok', 'success') or re.search(
-                r'(?im)(?:^\s*WARNING:|\bWARNINGS\s*:\s*\d+)', text):
-            return 'unconfirmed'
         starts = re.findall(r'(?im)\bStarting Backup of VM (\d+)\s*\(', text)
         finished = re.findall(r'(?im)\bFinished Backup of VM (\d+)\s*\(', text)
         lines = text.splitlines()
@@ -4321,15 +4318,24 @@ class ProxmoxHookWatcher:
                 if not re.match(r'\s*\d+\s+', line):
                     break
                 status = line[status_start:status_end].strip().upper()
-                if status == 'ERROR':
+                if status in ('ERROR', 'ERR'):
                     return 'failed'
                 rows.append(status)
             break
-        if table_outcome == 'unconfirmed':
+        if severity not in ('info', 'ok', 'success') or re.search(
+                r'(?im)(?:^\s*WARNING:|\bWARNINGS\s*:\s*\d+)', text):
+            return 'unconfirmed'
+        # A present table is authoritative: do not certify an incomplete table
+        # from a finished guest log, or reject a complete OK table merely
+        # because the extra diagnostic log was truncated before its finishes.
+        if table_outcome is not None:
+            return table_outcome
+        if any(re.match(r'\s*VMID\s+Name\s+Status\b', line, re.IGNORECASE)
+               for line in lines):
             return 'unconfirmed'
         if starts:
             return 'confirmed' if sorted(starts) == sorted(finished) else 'unconfirmed'
-        if table_outcome == 'confirmed' or re.search(
+        if re.search(
                 r'(?im)^\s*(?:INFO:\s*)?TASK OK\s*$', text):
             return 'confirmed'
         return 'unconfirmed'
