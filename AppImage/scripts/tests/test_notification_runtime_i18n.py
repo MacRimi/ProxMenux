@@ -341,7 +341,10 @@ class RuntimeCatalogTests(unittest.TestCase):
             },
             language="sk",
         )
-        self.assertIn("Backup complete", backup["title"])
+        expected_title = notification_templates.runtime_message(
+            "backup.confirmedTitle", "sk", hostname="pve01",
+        )
+        self.assertTrue(backup["title"].startswith(expected_title + " — "))
         self.assertIn("pbs-main", backup["title"])
         self.assertIn("VM alpha (100)", backup["title"])
         self.assertNotIn("Backup job finished", backup["title"])

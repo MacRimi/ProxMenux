@@ -2090,8 +2090,19 @@ def render_template(event_type: str, data: Dict[str, Any],
             diagnostic_lines = [line.strip() for line in pve_message.splitlines()
                                 if re.match(r'^\s*(?:\d+:\s*)?(?:\d{4}-\d{2}-\d{2}\s+\S+\s+)?(?:WARN(?:ING)?:|ERROR:|TASK ERROR)',
                                             line, re.IGNORECASE)]
+            if event_type == 'backup_fail' or data.get('backup_outcome') == 'failed':
+                # Native send_notification puts multiline job/setup errors
+                # before Details, while its subject says only "multiple problems".
+                # Keep that raw block when inventory replaces the producer body;
+                # it is job context, not evidence that every guest failed.
+                error_block = re.match(r'\A(.*?)^Details\r?\n=+\s*$',
+                                       pve_message, re.MULTILINE | re.DOTALL)
+                if error_block:
+                    diagnostic_lines = error_block.group(1).rstrip('\r\n').splitlines() + diagnostic_lines
             if diagnostic_lines:
-                body_text += '\n' + '\n'.join(dict.fromkeys(diagnostic_lines))
+                body_text += '\n' + '\n'.join(
+                    line for line in dict.fromkeys(diagnostic_lines)
+                    if line.strip() and line not in body_text.splitlines())
         else:
             # Couldn't parse -- use PVE raw message as body
             body_text = pve_message.strip()

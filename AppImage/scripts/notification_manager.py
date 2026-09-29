@@ -1821,7 +1821,8 @@ class NotificationManager:
             print(f"[NotificationManager] digest cleanup failed for "
                   f"{ch_name}: {e}")
 
-    def _compose_digest_body(self, rows: list, use_icons: bool = False) -> str:
+    def _compose_digest_body(self, rows: list, use_icons: bool = False,
+                             quiet_release: bool = False) -> str:
         """Render a grouped summary body. rows is a list of
         (id, event_type, event_group, ts, title, body) tuples ordered
         by timestamp ASC.
@@ -1830,16 +1831,23 @@ class NotificationManager:
         groups: OrderedDict[str, list] = OrderedDict()
         for _id, ev_type, group, ts, title, body in rows:
             label = group or 'other'
-            groups.setdefault(label, []).append((ts, ev_type, title))
+            groups.setdefault(label, []).append((ts, ev_type, title, body))
 
         language = self._notification_language()
-        lines = [runtime_message('digest.lead', language, count=len(rows))]
+        # The quiet summary title already carries the total; the daily lead
+        # incorrectly calls every buffered WARNING an INFO event.
+        lines = [] if quiet_release else [runtime_message('digest.lead', language, count=len(rows))]
         for group, items in groups.items():
             group_label = runtime_message(f'digest.groups.{group}', language) or group.title()
             group_icon = CATEGORY_EMOJI.get(group, '') if use_icons else ''
             group_prefix = f'{group_icon} ' if group_icon else ''
             lines.append(f"{group_prefix}{group_label}: {len(items)}")
-            for ts, ev_type, title in items[:8]:
+            # Quiet hours can buffer restore warnings, unlike the daily INFO
+            # digest. Keep their complete recorded body, even past the usual
+            # title preview limit, without changing either delivery policy.
+            visible_items = [item for index, item in enumerate(items)
+                             if index < 8 or (quiet_release and item[1] == 'system_restore_completed')]
+            for ts, ev_type, title, body in visible_items:
                 hhmm = datetime.fromtimestamp(ts).strftime('%H:%M')
                 short_title = title.split(': ', 1)[-1] if ': ' in title else title
                 event_icon = (
@@ -1847,10 +1855,15 @@ class NotificationManager:
                 ) if use_icons else ''
                 event_prefix = f'{event_icon} ' if event_icon else ''
                 lines.append(f"  • {event_prefix}{hhmm}  {short_title}")
-            if len(items) > 8:
-                lines.append(runtime_message('digest.more', language, count=len(items) - 8))
+                if quiet_release and ev_type == 'system_restore_completed' and body:
+                    lines.extend(line for line in body.splitlines() if line.strip())
+            if len(items) > len(visible_items):
+                lines.append(runtime_message('digest.more', language, count=len(items) - len(visible_items)))
             lines.append('')
-        lines.append(runtime_message('digest.footer', language))
+        # The daily footer describes live warning delivery, which is not true
+        # for warnings buffered during quiet hours. Do not repeat that claim.
+        if not quiet_release:
+            lines.append(runtime_message('digest.footer', language))
         return '\n'.join(lines).rstrip() + '\n'
 
     # ─── Quiet Hours buffer + flush ────────────────────────────
@@ -1985,13 +1998,14 @@ class NotificationManager:
             'digest.quietTitle', language, hostname=host, count=len(rows),
         )
         use_icons = self._config.get(f'{ch_name}.rich_format', 'false') == 'true'
-        summary_body = self._compose_digest_body(rows, use_icons=use_icons)
+        summary_body = self._compose_digest_body(rows, use_icons=use_icons, quiet_release=True)
 
         result: dict = {'success': False, 'error': ''}
         try:
             result = channel.send(
                 summary_title, summary_body, severity='INFO',
                 data={'_quiet_hours_summary': True, '_count': len(rows),
+                      '_restore_summary': any(row[1] == 'system_restore_completed' for row in rows),
                       '_notification_language': language},
             ) or result
         except Exception as e:

@@ -1053,11 +1053,13 @@ class EmailChannel(NotificationChannel):
                 status = 'unconfirmed'
             sev['label'] = _runtime_text(f'email.status.{status}', data)
         group = data.get('_group', 'other')
-        # Scoped inline mail-compatible wrapping: temperature measurements
-        # and backup identities/raw diagnostics. Other events retain layout.
+        # Scoped inline mail-compatible wrapping for authoritative raw-context
+        # bodies, including restore bodies released from quiet hours.
         backup_email = event_type in {'backup_complete', 'backup_fail'}
-        temp_cell_wrap = 'word-wrap:break-word;overflow-wrap:break-word;word-break:break-word;' if event_type == 'temp_high' or backup_email else ''
-        temp_table_layout = 'table-layout:fixed;' if event_type == 'temp_high' or backup_email else ''
+        wrap_body = (event_type in {'temp_high', 'system_restore_completed', 'error_resolved'}
+                     or backup_email or data.get('_restore_summary'))
+        temp_cell_wrap = 'word-wrap:break-word;overflow-wrap:break-word;word-break:break-word;' if wrap_body else ''
+        temp_table_layout = 'table-layout:fixed;' if wrap_body else ''
         backup_title_wrap = temp_cell_wrap if backup_email else ''
         backup_metadata_layout = 'table-layout:fixed;' if backup_email else ''
         section_label = _runtime_text(f'email.groups.{group}', data)
@@ -1090,8 +1092,14 @@ class EmailChannel(NotificationChannel):
                 ('', html_mod.escape(line.strip()))
                 for line in body.split('\n') if line.strip()
             )
+            # A metadata-only/manual body may be generic. Keep actionable raw
+            # context once, without restoring duplicated inventory metadata.
+            reason = data.get('reason', '')
+            if reason and len(reason) <= 80 and reason not in body:
+                detail_rows.append((html_mod.escape(_runtime_text('email.fields.reason', data)),
+                                    html_mod.escape(reason)))
 
-        if event_type in {'system_restore_completed', 'error_resolved'}:
+        if event_type in {'system_restore_completed', 'error_resolved'} or data.get('_restore_summary'):
             # Observation age/disappearance must not become a green OK row.
             # The endpoint's warnings_block and task counts live in the
             # localized body, not the generic services Event row.
@@ -1129,7 +1137,8 @@ class EmailChannel(NotificationChannel):
         # ── Reason / details block (long text, displayed separately) ──
         reason = data.get('reason', '')
         reason_html = ''
-        if reason and len(reason) > 80 and not (event_type == 'temp_high' and reason in body):
+        if reason and len(reason) > 80 and not (
+                (event_type in {'temp_high', 'error_resolved'} or backup_email) and reason in body):
             reason_html = f'''
 <div style="margin:16px 0 0;padding:12px 16px;border:1px solid #d1d5db;border-radius:6px;">
   <p style="margin:0 0 4px;font-size:11px;font-weight:600;color:#374151;text-transform:uppercase;letter-spacing:0.05em;">{_runtime_text('email.details', data)}</p>
