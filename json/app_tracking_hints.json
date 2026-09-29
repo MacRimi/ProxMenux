@@ -130,6 +130,19 @@
     "tag_regex": "(?i)(?:v|release[-_/]?)?(\\d+(?:\\.\\d+){1,3}(?:[-+._][0-9A-Za-z.-]+)?)",
     "website": "https://github.com/ZhFahim/anchor"
   },
+  "anki-sync-server": {
+    "default_ports": [
+      8080
+    ],
+    "file_path": "/root/.anki-sync-server",
+    "file_regex": "(?i)(?:v|release[-_/]?)?(\\d+(?:\\.\\d+){1,3}(?:[-+._][0-9A-Za-z.-]+)?)",
+    "github_source": "releases",
+    "installed_via": "file",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/anki.webp",
+    "repo": "ankitects/anki",
+    "tag_regex": "(?i)(?:v|release[-_/]?)?(\\d+(?:\\.\\d+){1,3}(?:[-+._][0-9A-Za-z.-]+)?)",
+    "website": "https://apps.ankiweb.net/"
+  },
   "anytype-server": {
     "default_ports": [
       33010
