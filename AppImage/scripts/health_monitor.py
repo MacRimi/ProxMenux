@@ -1586,6 +1586,9 @@ class HealthMonitor:
                             'temperature': max_temp, 'duration': actual_duration,
                             'dismissable': True, 'value': max_temp, 'threshold': 80,
                             'details': f'High samples span {duration_str}.',
+                            # Explicit provenance for render-time localization;
+                            # older/manual detail strings remain verbatim.
+                            'temperature_detail_kind': 'high_samples_span',
                         }
                     )
                 elif len(recovery_samples) >= 3:

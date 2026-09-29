@@ -6446,8 +6446,8 @@
           "label": "Hög minnesanvändning"
         },
         "temp_high": {
-          "title": "{hostname}: Hög CPU-temperatur — {value}°C",
-          "body": "CPU-temperaturen har nått {value}°C (tröskel: {threshold}°C).\n{details}",
+          "title": "{hostname}: Hög sensortemperatur — {value}°C",
+          "body": "Sensortemperaturen har nått {value}°C (tröskel: {threshold}°C).\n{details}",
           "label": "Hög temperatur"
         },
         "disk_space_low": {
@@ -6781,7 +6781,11 @@
       "fallback": {
         "unknownTitle": "{hostname}: {event_type}",
         "healthCheckDegraded": "Hälsokontroll försämrad",
-        "none": "ingen"
+        "none": "ingen",
+        "temperatureAlertTitle": "{hostname}: Varning om sensortemperatur",
+        "temperatureAlertBody": "En temperaturvarning registrerades utan fullständiga mätdata.",
+        "recordedReason": "Registrerad orsak: {reason}",
+        "recordedDetails": "Registrerade detaljer: {details}"
       },
       "fields": {
         "vmid": "VM/CT",
@@ -6981,6 +6985,9 @@
           "host": "Värd",
           "footer": "ProxMenux Notification Service"
         }
+      },
+      "temperature": {
+        "sampleSpan": "De höga mätvärdena sträcker sig över {duration}."
       }
     }
   }

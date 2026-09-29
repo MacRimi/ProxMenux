@@ -32,9 +32,17 @@ def extracted(path, name, cls=None, namespace=None):
     return scope[name]
 
 
-def render_fixture(language='en', overlays=None):
+def render_fixture(language='en', overlays=None, missing=(), translations=None):
     catalogs = {lang: json.loads((MESSAGES / lang / 'common.json').read_text())['runtime']['notifications']
-                for lang in ('en', 'it')}
+                for lang in ('en', 'de', 'es', 'fr', 'it', 'pt', 'sk', 'sv')}
+    if language == 'synthetic':
+        catalogs[language] = {'templates': {'temp_high': {
+            'title': 'Synthetic {value}°C', 'body': 'Synthetic {threshold}°C\n{details}'}}}
+    if translations:
+        catalogs[language].update(translations)
+    for key in missing:
+        section, leaf = key.split('.', 1)
+        catalogs[language].get(section, {}).pop(leaf, None)
     if overlays:
         for lang, title, body in overlays:
             catalogs[lang]['templates']['temp_high'].update(title=title, body=body)
@@ -43,9 +51,7 @@ def render_fixture(language='en', overlays=None):
         for segment in key.split('.'):
             value = value.get(segment) if isinstance(value, dict) else None
         return value if isinstance(value, str) and value else None
-    def message(key, lang, **kw):
-        value = lookup(lang, key) or lookup('en', key) or ''
-        return value.format(**kw) if value else ''
+
     src = ast.parse((SCRIPTS / 'notification_templates.py').read_text())
     definition = next(n for n in src.body if isinstance(n, ast.Assign)
                       and any(isinstance(t, ast.Name) and t.id == 'TEMPLATES' for t in n.targets))
@@ -57,10 +63,15 @@ def render_fixture(language='en', overlays=None):
     assert isinstance(cpu_pattern.value.func, ast.Attribute) and cpu_pattern.value.func.attr == 'compile'
     assert len(cpu_pattern.value.args) == 1
     scope = {'TEMPLATES': templates, '_load_runtime_catalog': lambda lang: catalogs.get(lang, {}),
-             '_catalog_value': lambda cat, key: lookup(language if cat is catalogs.get(language) else 'en', key),
-             'runtime_message': message, '_get_hostname': lambda: 'node.example',
-             'time': time, 'html': html, 're': re, 'Dict': dict, 'Any': object, 'Tuple': tuple,
+             '_get_hostname': lambda: 'node.example',
+             'time': time, 'html': html, 're': re, 'Dict': dict, 'Any': object,
+             'Optional': __import__('typing').Optional, 'Tuple': tuple,
              '_CPU_SUSTAINED_REASON': re.compile(ast.literal_eval(cpu_pattern.value.args[0]))}
+    safe_dict = next(n for n in src.body if isinstance(n, ast.ClassDef) and n.name == '_SafeFormatDict')
+    exec(compile(ast.fix_missing_locations(ast.Module(body=[safe_dict], type_ignores=[])),
+                 '<safe formatting>', 'exec'), scope)
+    extracted('notification_templates.py', '_catalog_value', namespace=scope)
+    extracted('notification_templates.py', 'runtime_message', namespace=scope)
     extracted('notification_templates.py', '_format_health_degraded', namespace=scope)
     render = extracted('notification_templates.py', 'render_template', namespace=scope)
     return lambda kind, data: render(kind, data, language=language)
@@ -186,11 +197,12 @@ class ActivePayloadTests(unittest.TestCase):
         event = polled_event({'error_key': 'cpu_temperature', 'category': 'temperature',
                               'severity': 'WARNING', 'reason': 'legacy raw reason',
                               'details': {'duration': 90}})
-        for lang in ('en', 'it'):
+        for lang in ('en', 'de', 'es', 'fr', 'it', 'pt', 'sk', 'sv'):
             out = render_fixture(lang)('temp_high', event.data)
             self.assertNotIn('°C', out['title'] + out['body'])
             self.assertNotIn('CPU', out['title'] + out['body'])
-            self.assertIn('temperature', (out['title'] + out['body']).lower())
+            expected = json.loads((MESSAGES / lang / 'common.json').read_text())['runtime']['notifications']['fallback']['temperatureAlertTitle']
+            self.assertIn(expected.replace('{hostname}', 'node.example'), out['title'])
 
     def test_nonfinite_temperature_payload_is_not_presented_as_a_reading(self):
         render = render_fixture()
@@ -229,6 +241,15 @@ class ActivePayloadTests(unittest.TestCase):
                     self.assertEqual(out['body'].count('old raw text'), 1)
         self.assertNotIn('Recorded', render('temp_high', {})['body'])
 
+    def test_incomplete_title_keeps_raw_brace_bearing_hostname_in_every_locale(self):
+        for lang in ('en', 'de', 'es', 'fr', 'it', 'pt', 'sk', 'sv'):
+            fallback = json.loads((MESSAGES / lang / 'common.json').read_text())['runtime']['notifications']['fallback']['temperatureAlertTitle']
+            for hostname in ('host{value}', 'host{value.__class__}'):
+                with self.subTest(lang=lang, hostname=hostname):
+                    out = render_fixture(lang)('temp_high', {'hostname': hostname})
+                    self.assertEqual(out['title'], fallback.replace('{hostname}', hostname))
+                    self.assertNotIn('°C', out['title'])
+
     def test_incomplete_measurement_keeps_literal_braces_in_raw_context(self):
         out = render_fixture()('temp_high', {
             'reason': 'legacy {value} at {unknown}', 'details': 'sensor {threshold}',
@@ -236,17 +257,152 @@ class ActivePayloadTests(unittest.TestCase):
         self.assertIn('Recorded reason: legacy {value} at {unknown}', out['body'])
         self.assertIn('Recorded details: sensor {threshold}', out['body'])
 
-    def test_shipped_italian_stale_override_and_isolated_locale_overlay(self):
+    def test_shipped_locales_use_sensor_wording_and_localized_sample_span(self):
         event = polled_event(produced_temperature())
-        shipped = render_fixture('it')('temp_high', event.data)
-        self.assertIn('CPU', shipped['title'] + shipped['body'])  # delivery gate, not a pass
-        overlay = render_fixture('it', overlays=[('it',
-            '{hostname}: temperatura elevata del sensore — {value}°C',
-            'La temperatura del sensore ha raggiunto {value}°C (soglia: {threshold}°C).\n{details}')])
-        proposed = overlay('temp_high', event.data)
-        self.assertNotIn('CPU', proposed['title'] + proposed['body'])
-        self.assertIn('89', proposed['title'])
-        self.assertIn('80', proposed['body'])
+        for lang in ('en', 'de', 'es', 'fr', 'it', 'pt', 'sk', 'sv'):
+            with self.subTest(lang=lang):
+                out = render_fixture(lang)('temp_high', event.data)
+                self.assertNotIn('CPU', out['title'] + out['body'])
+                self.assertNotIn('High samples span', out['body'] if lang != 'en' else '')
+                self.assertIn('89', out['title'])
+                self.assertIn('80', out['body'])
+                expected = json.loads((MESSAGES / lang / 'common.json').read_text())['runtime']['notifications']['temperature']['sampleSpan'].replace('{duration}', '1m 40s')
+                self.assertIn(expected, out['body'])
+
+    def test_structured_span_does_not_replace_unrelated_or_unmarked_details(self):
+        producer = polled_event(produced_temperature()).data
+        for changed in ({'temperature_detail_kind': None}, {'details': 'Manual {duration} remains'},
+                        {'duration': 'Infinity'}, {'duration': 10**400}, {'duration': -1},
+                        {'duration': True}, {'duration': 1.5}):
+            with self.subTest(changed=changed):
+                data = {**producer, **changed}
+                out = render_fixture('it')('temp_high', data)
+                self.assertIn(data['details'], out['body'])
+        raw = render_fixture('it')('temp_high', {'value': 89, 'threshold': 80,
+            'duration': 100, 'details': 'Manual {duration} remains'})
+        self.assertIn('Manual {duration} remains', raw['body'])
+
+    def test_synthetic_locale_and_missing_key_fallback_for_every_temperature_key(self):
+        keys = ('fallback.temperatureAlertTitle', 'fallback.temperatureAlertBody',
+                'fallback.recordedReason', 'fallback.recordedDetails', 'temperature.sampleSpan')
+        producer = polled_event(produced_temperature()).data
+        synthetic = render_fixture('synthetic')
+        for key in keys:
+            with self.subTest(key=key):
+                data = producer if key.endswith('sampleSpan') else {'reason': 'raw R', 'details': 'raw D'}
+                output = synthetic('temp_high', data)
+                english = render_fixture('en')('temp_high', data)
+                if key.endswith('sampleSpan'):
+                    self.assertIn('High samples span 1m 40s.', output['body'])
+                else:
+                    self.assertEqual(output['body'] if not key.endswith('Title') else output['title'],
+                                     english['body'] if not key.endswith('Title') else english['title'])
+        for key in keys:
+            # Exercise actual fallback per missing key even after catalog migration.
+            with self.subTest(missing=key):
+                if key.endswith('sampleSpan'):
+                    self.assertIn('High samples span 1m 40s.',
+                        render_fixture('it', missing=[key])('temp_high', producer)['body'])
+                else:
+                    data = {'reason': 'raw R', 'details': 'raw D'}
+                    result = render_fixture('it', missing=[key])('temp_high', data)
+                    en_value = json.loads((MESSAGES / 'en' / 'common.json').read_text())['runtime']['notifications']
+                    self.assertIn(en_value['fallback'][key.split('.')[1]].format(
+                        hostname='node.example', reason='raw R', details='raw D'),
+                        result['title'] if key.endswith('Title') else result['body'])
+        # A synthetic translated value proves the runtime consumer uses lookup.
+        translated = render_fixture('synthetic', overlays=[('synthetic', 'Translated {value}°C',
+            'Translated {threshold}°C\n{details}')])('temp_high', producer)
+        self.assertIn('Translated', translated['title'])
+        custom = render_fixture('synthetic', translations={
+            'fallback': {'temperatureAlertTitle': 'CUSTOM {hostname}',
+                         'temperatureAlertBody': 'CUSTOM incomplete.',
+                         'recordedReason': 'CUSTOM R {reason}',
+                         'recordedDetails': 'CUSTOM D {details}'},
+            'temperature': {'sampleSpan': 'CUSTOM span {duration}.'},
+        })
+        complete = custom('temp_high', producer)
+        self.assertIn('CUSTOM span 1m 40s.', complete['body'])
+        incomplete = custom('temp_high', {'reason': 'raw R', 'details': 'raw D'})
+        self.assertIn('CUSTOM node.example', incomplete['title'])
+        for fragment in ('CUSTOM incomplete.', 'CUSTOM R raw R', 'CUSTOM D raw D'):
+            self.assertIn(fragment, incomplete['body'])
+
+    def test_email_contains_complete_and_incomplete_localized_temperature_body(self):
+        # The actual channel formats structured fields; the temperature body
+        # must not disappear merely because those rows exist.
+        import importlib.util
+        spec = importlib.util.spec_from_file_location('notification_channels_fixture',
+                                                     SCRIPTS / 'notification_channels.py')
+        channels = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(channels)
+        old = sys.path[:]
+        sys.path.insert(0, str(SCRIPTS))
+        try:
+            channel = object.__new__(channels.EmailChannel)
+            channel.subject_prefix = '[ProxMenux]'
+            produced = polled_event(produced_temperature()).data
+            for lang in ('en', 'de', 'es', 'fr', 'it', 'pt', 'sk', 'sv'):
+                for name, data in (('complete', produced), ('incomplete', {
+                    'hostname': 'node.example', 'reason': 'legacy {token}',
+                    'details': 'raw {details}', 'value': 89,
+                })):
+                    with self.subTest(lang=lang, name=name):
+                        rendered = render_fixture(lang)('temp_high', data)
+                        message = channel._format_html(rendered['title'], rendered['body'],
+                            'WARNING', {**data, '_notification_language': lang,
+                                        '_event_type': 'temp_high', '_group': rendered['group']})
+                        # HTML escaping may replace apostrophes/angle brackets.
+                        for line in rendered['body'].splitlines():
+                            if ':' in line and len(line.partition(':')[0]) < 40:
+                                label, _, value = line.partition(':')
+                                self.assertIn(html.escape(label.strip()), message)
+                                self.assertIn(html.escape(value.strip()), message)
+                            else:
+                                self.assertIn(html.escape(line), message)
+                        if name == 'incomplete':
+                            self.assertNotIn('89C', message)
+        finally:
+            sys.path[:] = old
+
+    def test_long_reason_email_once_if_temperature_body_already_contains_it(self):
+        import importlib.util
+        spec = importlib.util.spec_from_file_location('notification_channels_fixture',
+                                                     SCRIPTS / 'notification_channels.py')
+        channels = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(channels)
+        old = sys.path[:]
+        sys.path.insert(0, str(SCRIPTS))
+        try:
+            channel = object.__new__(channels.EmailChannel)
+            channel.subject_prefix = '[ProxMenux]'
+            reason = 'Recorded observation ' + 'R' * 90 + ' <i> & {value}'
+            escaped = html.escape(reason)
+            for lang in ('en', 'de', 'es', 'fr', 'it', 'pt', 'sk', 'sv'):
+                render = render_fixture(lang)
+                for kind, fields in (('incomplete', {'details': 'raw {details}'}),
+                                     ('complete', {'value': 89, 'threshold': 80})):
+                    with self.subTest(lang=lang, kind=kind):
+                        data = {'hostname': 'host{value.__class__}', 'reason': reason, **fields}
+                        rendered = render('temp_high', data)
+                        message = channel._format_html(rendered['title'], rendered['body'],
+                            'WARNING', {**data, '_notification_language': lang,
+                                        '_event_type': 'temp_high', '_group': rendered['group']})
+                        self.assertEqual(message.count(escaped), 1)
+                        self.assertNotIn('<i>', message)
+                        self.assertIn(html.escape(rendered['title']), message)
+                        if kind == 'incomplete':
+                            self.assertIn(reason, rendered['body'])
+                            self.assertIn('raw {details}', rendered['body'])
+                        else:
+                            self.assertNotIn(reason, rendered['body'])
+                            self.assertIn('89', message)
+            # An unrelated event retains its existing long-reason block.
+            other = channel._format_html('Other alert', reason, 'WARNING',
+                {'reason': reason, '_event_type': 'other', '_group': 'other'})
+            self.assertEqual(other.count(escaped), 2)
+        finally:
+            sys.path[:] = old
 
     def test_collector_schema_categories_and_cpu_reason_are_localized(self):
         # Execute actual collector-to-formatter path against inert per-cycle inputs.

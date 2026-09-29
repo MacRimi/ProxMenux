@@ -1049,6 +1049,13 @@ class EmailChannel(NotificationChannel):
         # ── Build structured detail rows from known data fields ──
         detail_rows = self._build_detail_rows(data, event_type, group, html_mod)
 
+        # The temperature renderer has already validated whether both
+        # measurements exist and localized its sampled-span detail. Its body
+        # is authoritative: raw fields can otherwise print a misleading °C
+        # value for an incomplete manual/persisted payload and hide the body.
+        if event_type == 'temp_high':
+            detail_rows = []
+
         # Vzdump bodies are authoritative multi-item inventories. Keep their
         # lines exactly once, but retain the localized structured status row;
         # the remaining structured backup metadata only duplicates the report.
@@ -1093,7 +1100,7 @@ class EmailChannel(NotificationChannel):
         # ── Reason / details block (long text, displayed separately) ──
         reason = data.get('reason', '')
         reason_html = ''
-        if reason and len(reason) > 80:
+        if reason and len(reason) > 80 and not (event_type == 'temp_high' and reason in body):
             reason_html = f'''
 <div style="margin:16px 0 0;padding:12px 16px;border:1px solid #d1d5db;border-radius:6px;">
   <p style="margin:0 0 4px;font-size:11px;font-weight:600;color:#374151;text-transform:uppercase;letter-spacing:0.05em;">{_runtime_text('email.details', data)}</p>

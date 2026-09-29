@@ -1899,13 +1899,25 @@ def render_template(event_type: str, data: Dict[str, Any],
             except (OverflowError, ValueError, TypeError):
                 return False
 
+        # Only the known sampler-generated detail is eligible: duration alone
+        # cannot establish provenance and manual/legacy text is not rewritten.
+        seconds = data.get('duration')
+        if (data.get('temperature_detail_kind') == 'high_samples_span'
+                and type(seconds) is int and 0 <= seconds <= 240):
+            span = (f'{seconds // 60}m {seconds % 60}s'
+                    if seconds >= 60 else f'{seconds}s')
+            if data.get('details') == f'High samples span {span}.':
+                variables['details'] = runtime_message(
+                    'temperature.sampleSpan', language, duration=span)
+
         if not all(finite_measurement(key) for key in ('value', 'threshold')):
-            template['title'] = runtime_message(
+            variables['_temperature_fallback_title'] = runtime_message(
                 'fallback.temperatureAlertTitle', language, hostname=variables['hostname'],
             )
+            template['title'] = '{_temperature_fallback_title}'
             lines = [runtime_message('fallback.temperatureAlertBody', language)]
             reason = data.get('reason')
-            details = data.get('details')
+            details = variables.get('details')
             reason = reason.strip() if isinstance(reason, str) else ''
             details = details.strip() if isinstance(details, str) else ''
             if reason:
