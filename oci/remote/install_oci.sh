@@ -1011,6 +1011,37 @@ apply_runtime_user() {
   set_lxc_directive lxc.init.gid "$gid"
 }
 
+set_runtime_environment() {
+  local name=$1 value=$2 temporary
+  [[ $name =~ ^[A-Za-z_][A-Za-z0-9_]*$ ]] || die "$(translate "Invalid variable name:") $name"
+  [[ $value != *$'\n'* && $value != *$'\r'* ]] || die "$(translate "The variable contains line breaks:") $name"
+  if LC_ALL=C grep -q '[[:cntrl:]]' <<<"$value"; then
+    die "$(translate "The variable contains control characters:") $name"
+  fi
+  temporary=$(mktemp)
+  awk -v prefix="lxc.environment.runtime: ${name}=" 'index($0, prefix) != 1' "$CONF" >"$temporary"
+  printf 'lxc.environment.runtime: %s=%s\n' "$name" "$value" >>"$temporary"
+  cat "$temporary" >"$CONF"
+  rm -f "$temporary"
+}
+
+ensure_runtime_home() {
+  local uid home rootfs passwd_file
+  grep -q '^lxc.environment.runtime: HOME=' "$CONF" && return 0
+  uid=$(awk -F': ' '$1 == "lxc.init.uid" {print $2; exit}' "$CONF" 2>/dev/null || true)
+  uid=${uid:-0}
+  [[ $uid =~ ^[0-9]+$ ]] || return 0
+  rootfs="/var/lib/lxc/${VMID}/rootfs"
+  passwd_file="${rootfs}/etc/passwd"
+  mount_ct_rootfs
+  if ! home=$(python3 "$OCI_RUNTIME_RESOLVER" --home "$passwd_file" "$uid" 2>>"${OCI_LOG:-/dev/stderr}"); then
+    oci_quiet pct unmount "$VMID" || true
+    return 0
+  fi
+  oci_quiet pct unmount "$VMID" || die "$(translate "Could not unmount the container filesystem")"
+  set_runtime_environment HOME "$home"
+}
+
 apply_runtime_groups() {
   local groups_csv=$1 rootfs="/var/lib/lxc/${VMID}/rootfs"
   local group_file="${rootfs}/etc/group" existing resolved group failed=0
@@ -1883,21 +1914,13 @@ apply_native_device_permissions
 # PVE represents the public env property as repeated native LXC runtime lines.
 # Merge only Compose overrides while the newly-created CT is stopped.
 while IFS=$'\t' read -r NAME ENCODED; do
-  [[ $NAME =~ ^[A-Za-z_][A-Za-z0-9_]*$ ]] || die "$(translate "Invalid variable name:") $NAME"
   VALUE=$(printf '%s' "$ENCODED" | base64 -d)
-  [[ $VALUE != *$'\n'* && $VALUE != *$'\r'* ]] || die "$(translate "The variable contains line breaks:") $NAME"
-  if LC_ALL=C grep -q '[[:cntrl:]]' <<<"$VALUE"; then
-    die "$(translate "The variable contains control characters:") $NAME"
-  fi
-  TEMP_CONF=$(mktemp)
-  awk -v prefix="lxc.environment.runtime: ${NAME}=" 'index($0, prefix) != 1' "$CONF" >"$TEMP_CONF"
-  printf 'lxc.environment.runtime: %s=%s\n' "$NAME" "$VALUE" >>"$TEMP_CONF"
-  cat "$TEMP_CONF" >"$CONF"
-  rm -f "$TEMP_CONF"
+  set_runtime_environment "$NAME" "$VALUE"
 done < <(jq -r '.environment[] | [.name, (.value | @base64)] | @tsv' "$DEPLOYMENT_FILE")
 
 apply_extra_hosts
 apply_installer_profile
+ensure_runtime_home
 apply_rlimits
 apply_host_monitor
 apply_kept_settings
