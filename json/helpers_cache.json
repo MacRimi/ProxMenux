@@ -2952,6 +2952,43 @@
     "os": "debian"
   },
   {
+    "name": "CertMate",
+    "slug": "certmate",
+    "desc": "CertMate is a self-hosted SSL/TLS certificate manager. It issues and renews certificates over ACME (Let's Encrypt, ZeroSSL or a private ACME CA) with DNS-01 across many DNS providers or HTTP-01, renews them on a schedule, and exposes a web UI and a REST API for issuing, downloading and deploying certificates, with encrypted backups and webhook notifications.",
+    "script": "ct/certmate.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/certmate.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/certmate.sh",
+    "type": "lxc",
+    "type_id": "nm9bra8mzye2scg",
+    "categories": [
+      "scriptcat00006"
+    ],
+    "category_names": [
+      "Authentication & Security"
+    ],
+    "notes": [
+      "CertMate listens on plain HTTP on port 8000 on every interface. To expose it beyond your LAN, put an HTTPS reverse proxy in front and set BEHIND_PROXY=true in /opt/certmate_data/.env, then run systemctl restart certmate.",
+      "Certificates, settings, backups and logs live in /opt/certmate_data and survive updates."
+    ],
+    "warnings": [
+      "There is no default login. The first page creates the administrator account and asks for the API token, which the install generated: grep API_BEARER_TOKEN /opt/certmate_data/.env",
+      "Keep a copy of /opt/certmate_data/.env off the container. CERTMATE_BACKUP_PASSPHRASE encrypts the backups, and SECRET_KEY must match for a backup to restore the API token."
+    ],
+    "port": 8000,
+    "website": "https://www.certmate.org",
+    "documentation": "https://github.com/fabriziosalmi/certmate/blob/main/docs/installation.md",
+    "logo": "https://cdn.jsdelivr.net/gh/fabriziosalmi/certmate@main/certmate_logo.png",
+    "updateable": true,
+    "privileged": false,
+    "has_arm": false,
+    "is_dev": true,
+    "execute_in": [
+      "lxc"
+    ],
+    "config_path": "",
+    "os": "debian"
+  },
+  {
     "name": "Change Detection",
     "slug": "changedetection",
     "desc": "Change Detection is a service that allows you to monitor changes to web pages and receive notifications when changes occur. It can be used for a variety of purposes such as keeping track of online price changes, monitoring news websites for updates, or tracking changes to online forums.",
@@ -20684,7 +20721,7 @@
     "updateable": true,
     "privileged": false,
     "has_arm": false,
-    "is_dev": true,
+    "is_dev": false,
     "execute_in": [
       "lxc"
     ],
@@ -20753,7 +20790,7 @@
     "updateable": true,
     "privileged": false,
     "has_arm": false,
-    "is_dev": true,
+    "is_dev": false,
     "execute_in": [
       "lxc"
     ],
