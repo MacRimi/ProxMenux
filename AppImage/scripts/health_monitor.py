@@ -1452,7 +1452,11 @@ class HealthMonitor:
                 status = 'OK'
                 reason = None
                 # CPU is normal - auto-resolve any existing CPU errors
-                health_persistence.resolve_error('cpu_usage', 'CPU usage returned to normal')
+                evidence = None
+                if cpu_percent < self.CPU_RECOVERY and len(recovery_samples) >= RECOVERY_MIN_SAMPLES:
+                    evidence = {'check': 'cpu_usage', 'checked_at': current_time}
+                health_persistence.resolve_error('cpu_usage', 'CPU usage returned to normal',
+                                                 check_evidence=evidence)
             
             temp_status = self._check_cpu_temperature()
             

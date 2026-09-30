@@ -1038,13 +1038,23 @@ class EmailChannel(NotificationChannel):
         # Determine group for section header
         event_type = data.get('_event_type', '')
         if event_type == 'error_resolved':
-            sev.update(self._SEV_DEFAULT)
-            sev['label'] = _runtime_text('email.severity.observation', data)
+            if (data.get('recovery_outcome') == 'resolved'
+                    and data.get('is_recovery') is True
+                    and isinstance(data.get('check_evidence'), dict)
+                    and data['check_evidence'].get('check') == 'cpu_usage'):
+                sev.update(self._SEV_STYLE['OK'])
+                sev['label'] = _runtime_notification_text('healthRecovery.status', data)
+            else:
+                sev.update(self._SEV_DEFAULT)
+                sev['label'] = _runtime_text('email.severity.observation', data)
         elif event_type == 'backup_complete':
             outcome = data.get('backup_outcome')
             if outcome == 'confirmed':
                 sev.update(self._SEV_STYLE['OK'])
                 status = 'completed'
+            elif outcome == 'completed_with_warnings':
+                sev.update(self._SEV_STYLE['WARNING'])
+                status = 'completed_with_warnings'
             elif outcome == 'failed':
                 sev.update(self._SEV_STYLE['CRITICAL'])
                 status = 'failed'
@@ -1057,7 +1067,7 @@ class EmailChannel(NotificationChannel):
         # bodies, including restore bodies released from quiet hours.
         backup_email = event_type in {'backup_complete', 'backup_fail'}
         wrap_body = (event_type in {'temp_high', 'system_restore_completed', 'error_resolved'}
-                     or backup_email or data.get('_restore_summary'))
+                     or backup_email or data.get('_restore_summary') or data.get('_backup_summary'))
         temp_cell_wrap = 'word-wrap:break-word;overflow-wrap:break-word;word-break:break-word;' if wrap_body else ''
         temp_table_layout = 'table-layout:fixed;' if wrap_body else ''
         backup_title_wrap = temp_cell_wrap if backup_email else ''
@@ -1103,7 +1113,7 @@ class EmailChannel(NotificationChannel):
             # Observation age/disappearance must not become a green OK row.
             # The endpoint's warnings_block and task counts live in the
             # localized body, not the generic services Event row.
-            detail_rows = [('', html_mod.escape(line.strip()))
+            detail_rows = [('', html_mod.escape(line if data.get('_quiet_hours_summary') else line.strip()))
                            for line in body.split('\n') if line.strip()]
 
         # ── Fallback: if no structured rows, render body text lines ──
@@ -1122,6 +1132,7 @@ class EmailChannel(NotificationChannel):
 
         # ── Render detail rows as HTML table ──
         rows_html = ''
+        summary_whitespace = 'white-space:pre-wrap;' if data.get('_quiet_hours_summary') and data.get('_restore_summary') else ''
         for label, value in detail_rows:
             if label:
                 rows_html += f'''<tr>
@@ -1131,7 +1142,7 @@ class EmailChannel(NotificationChannel):
             else:
                 # Full-width row (no label, just description text)
                 rows_html += f'''<tr>
-  <td colspan="2" style="padding:8px 12px;font-size:13px;color:#1f2937;border-bottom:1px solid #e5e7eb;{temp_cell_wrap}">{value}</td>
+  <td colspan="2" style="padding:8px 12px;font-size:13px;color:#1f2937;border-bottom:1px solid #e5e7eb;{temp_cell_wrap}{summary_whitespace}">{value}</td>
 </tr>'''
 
         # ── Reason / details block (long text, displayed separately) ──
@@ -1291,6 +1302,7 @@ class EmailChannel(NotificationChannel):
             _add('Storage', data.get('storage') or data.get('storage_name'), 'code')
             if event_type == 'backup_complete' and data.get('backup_outcome') != 'confirmed':
                 status_key = ('failed' if data.get('backup_outcome') == 'failed'
+                              else 'completed_with_warnings' if data.get('backup_outcome') == 'completed_with_warnings'
                               else 'unconfirmed')
             else:
                 status_key = 'failed' if 'fail' in event_type else 'completed' if 'complete' in event_type else 'started'

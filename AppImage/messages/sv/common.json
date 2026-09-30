@@ -6980,7 +6980,8 @@
             "failed": "Misslyckades",
             "completed": "Klar",
             "started": "Startat",
-            "unconfirmed": "Obekräftat"
+            "unconfirmed": "Obekräftat",
+            "completed_with_warnings": "Klar med varningar"
           },
           "report": "{group} Rapportera",
           "details": "Detaljer",
@@ -6991,12 +6992,16 @@
       "temperature": {
         "sampleSpan": "De höga mätvärdena sträcker sig över {duration}."
       },
+      "healthRecovery": {"title": "{hostname}: Åtgärdat - {category}{entity_suffix}", "body": "En aktuell hälsokontroll bekräftar att tillståndet för {category} återgått till det normala.\nTidigare observation: {reason}\nTidigare allvarlighetsgrad: {original_severity}\nTid sedan första observationen: {duration}", "status": "Åtgärdat"},
       "backup": {
         "confirmedTitle": "{hostname}: säkerhetskopiering klar",
         "confirmedBody": "Säkerhetskopieringen slutfördes utan fel.",
         "errorTitle": "{hostname}: fel rapporterat vid säkerhetskopiering",
         "errorBody": "Rapporten om säkerhetskopieringen innehåller ett fel.",
-        "unconfirmedBody": "Säkerhetskopieringens resultat är inte bekräftat."
+        "unconfirmedBody": "Säkerhetskopieringens resultat är inte bekräftat.",
+        "warningTitle": "{hostname}: Säkerhetskopiering klar med varningar",
+        "warningBody": "Säkerhetskopiering klar med varningar.",
+        "diagnosticsOmitted": "Utelämnade diagnosrader eller text: {count}. Originalrapporten bevaras."
       }
     }
   }

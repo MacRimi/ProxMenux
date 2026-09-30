@@ -74,7 +74,10 @@ class RuntimeCatalogTests(unittest.TestCase):
         en = flatten(self.catalogs["en"])
         pending_slovak = {"backup.confirmedTitle", "backup.confirmedBody",
                           "backup.errorTitle", "backup.errorBody", "backup.unconfirmedBody",
-                          "channels.email.severity.observation", "channels.email.status.unconfirmed"}
+                          "channels.email.severity.observation", "channels.email.status.unconfirmed",
+                          "backup.warningTitle", "backup.warningBody", "backup.diagnosticsOmitted",
+                          "channels.email.status.completed_with_warnings",
+                          "healthRecovery.title", "healthRecovery.body", "healthRecovery.status"}
         for language, catalog in self.catalogs.items():
             translated = flatten(catalog)
             if language == 'sk':

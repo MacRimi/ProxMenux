@@ -3223,6 +3223,13 @@ class PollingCollector:
                     self._last_notified.pop(key, None)
                     continue
             
+            # Disappearance is not recovery. Only same-incident proof written
+            # by a successful existing native check can certify normality.
+            try:
+                recovery_evidence = health_persistence.get_recovery_evidence(key, first_seen)
+            except Exception:
+                recovery_evidence = None
+
             # Calculate duration
             duration = ''
             if first_seen:
@@ -3273,6 +3280,9 @@ class PollingCollector:
             else:
                 clean_reason = 'Condition no longer reported'
             
+            if recovery_evidence:
+                clean_reason = reason_summary
+
             # `original_severity` must match what the user actually saw
             # in the most-recent notification for this error, not the
             # latest DB severity. See `_notified_severity` docstring at
@@ -3299,7 +3309,9 @@ class PollingCollector:
                 'original_severity': original_severity,
                 'first_seen': first_seen,
                 'duration': duration_label,
-                'is_recovery': True,
+                'is_recovery': bool(recovery_evidence),
+                'recovery_outcome': 'resolved' if recovery_evidence else 'no_longer_reported',
+                'check_evidence': recovery_evidence,
             }
             # Spread the original details blob so the resolved notification
             # can use the same {storage_name}/{vm_name}/{device} placeholders
@@ -4302,14 +4314,16 @@ class ProxmoxHookWatcher:
         table = _parse_vzdump_table(text)
         if table is not None and any(guest['status'].lower() == 'error' for guest in table['vms']):
             return 'failed'
-        if severity not in ('info', 'ok', 'success') or re.search(
-                r'(?im)(?:^\s*(?:\d+:\s*)?(?:\d{4}-\d{2}-\d{2}\s+\S+\s+)?WARN(?:ING)?:|\bWARNINGS\s*:\s*\d+)', text):
+        warnings = severity in ('warning', 'warn') or bool(re.search(
+                r'(?im)(?:^\s*(?:\d+:\s*)?(?:\d{4}-\d{2}-\d{2}\s+\S+\s+)?WARN(?:ING)?:|\bWARNINGS\s*:\s*[1-9]\d*)', text))
+        if severity not in ('info', 'ok', 'success', 'warning', 'warn'):
             return 'unconfirmed'
+        completed = 'completed_with_warnings' if warnings else 'confirmed'
         # A present table is authoritative: do not certify an incomplete table
         # from a finished guest log, or reject a complete OK table merely
         # because the extra diagnostic log was truncated before its finishes.
         if table is not None:
-            return ('confirmed' if table['complete'] and
+            return (completed if table['complete'] and
                     all(guest['status'].lower() == 'ok' for guest in table['vms'])
                     else 'unconfirmed')
         if starts:
@@ -4322,10 +4336,10 @@ class ProxmoxHookWatcher:
                     return 'unconfirmed'  # A finish before its start is not evidence.
                 else:
                     pending[vmid] -= 1
-            return 'confirmed' if not any(pending.values()) else 'unconfirmed'
+            return completed if not any(pending.values()) else 'unconfirmed'
         if re.search(
                 r'(?im)^\s*(?:INFO:\s*)?TASK OK\s*$', text):
-            return 'confirmed'
+            return completed
         return 'unconfirmed'
 
     def process_webhook(self, payload: dict) -> dict:

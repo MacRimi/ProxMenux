@@ -217,10 +217,10 @@ class CorrectionTests(unittest.TestCase):
                 self.assertIn('✅ VM web (100)', result['body'])
 
 
-    def test_official_prefixed_warning_is_uncertain_and_retained(self):
+    def test_official_completed_report_warning_is_distinct_and_retained(self):
         warning = '100: 2026-09-29 17:00:00 WARN: unable to add notes - permission denied'
         event = receive(REPORT + '\n' + warning)
-        self.assertEqual(event.data['backup_outcome'], 'unconfirmed')
+        self.assertEqual(event.data['backup_outcome'], 'completed_with_warnings')
         for language in LANGUAGES:
             result, markup = email(event.event_type, event.data, event.severity, language)
             self.assertIn(warning, result['body'])

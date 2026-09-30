@@ -744,12 +744,12 @@ class HealthPersistence:
         
         return event_info
     
-    def resolve_error(self, error_key: str, reason: str = 'auto-resolved'):
+    def resolve_error(self, error_key: str, reason: str = 'auto-resolved', *, check_evidence=None):
         """Mark an error as resolved"""
         with self._db_lock:
-            return self._resolve_error_impl(error_key, reason)
+            return self._resolve_error_impl(error_key, reason, check_evidence=check_evidence)
     
-    def _resolve_error_impl(self, error_key, reason):
+    def _resolve_error_impl(self, error_key, reason, *, check_evidence=None):
         with self._db_connection() as conn:
             cursor = conn.cursor()
             now = datetime.now().isoformat()
@@ -788,12 +788,59 @@ class HealthPersistence:
                         stored_details = None
                 self._record_event(cursor, 'resolved', error_key, {
                     'reason': reason,
+                    # Only explicit current-check callers attach this proof.
+                    # Generic resolve/cleanup remains neutral.
+                    'check_evidence': check_evidence,
                     'entity': self._entity_from_details(stored_details),
                     'details': stored_details or {},
                 })
 
             conn.commit()
     
+    def get_recovery_evidence(self, error_key: str, first_seen: str):
+        """Return fresh same-incident native check proof, never absence of errors.
+
+        Initially only the host CPU check has a stable condition identity. Other
+        checks, generic clears, excluded/deleted records and legacy events stay
+        neutral until they have equivalent per-condition provenance.
+        """
+        if error_key != 'cpu_usage' or not first_seen:
+            return None
+        try:
+            with self._db_connection() as conn:
+                row = conn.execute('''
+                    SELECT first_seen, last_seen, resolved_at, acknowledged
+                    FROM errors WHERE error_key = ? ORDER BY id DESC LIMIT 1
+                ''', (error_key,)).fetchone()
+                if not row or row[0] != first_seen or not row[2] or row[3]:
+                    return None
+                event = conn.execute('''
+                    SELECT timestamp, data FROM events
+                    WHERE error_key = ? AND event_type = 'resolved'
+                    ORDER BY id DESC LIMIT 1
+                ''', (error_key,)).fetchone()
+            if not event:
+                return None
+            proof = json.loads(event[1]).get('check_evidence')
+            if not isinstance(proof, dict) or proof.get('check') != error_key:
+                return None
+            checked = proof.get('checked_at')
+            if not isinstance(checked, (int, float)) or isinstance(checked, bool):
+                return None
+            checked = float(checked)
+            # Reuse the collector's existing two-hour freshness boundary.
+            now = datetime.now().timestamp()
+            if not 0 <= now - checked <= 7200:
+                return None
+            last_seen = datetime.fromisoformat(row[1]).timestamp()
+            resolved = datetime.fromisoformat(row[2]).timestamp()
+            recorded = datetime.fromisoformat(event[0]).timestamp()
+            if not last_seen <= checked <= resolved <= recorded:
+                return None
+            return proof
+        except (ValueError, TypeError, AttributeError, OverflowError):
+            return None
+
     def is_error_active(self, error_key: str, category: Optional[str] = None) -> bool:
         """
         Check if an error is currently active OR suppressed (dismissed but within suppression period).

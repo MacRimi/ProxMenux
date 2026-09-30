@@ -6980,7 +6980,8 @@
             "failed": "Fallito",
             "completed": "Completato",
             "started": "Iniziato",
-            "unconfirmed": "Non confermato"
+            "unconfirmed": "Non confermato",
+            "completed_with_warnings": "Completato con avvisi"
           },
           "report": "{group} Rapporto",
           "details": "Dettagli",
@@ -6991,12 +6992,16 @@
       "temperature": {
         "sampleSpan": "Intervallo dei campioni sopra soglia: {duration}."
       },
+      "healthRecovery": {"title": "{hostname}: Risolto - {category}{entity_suffix}", "body": "Un controllo recente conferma che la condizione {category} è tornata nella norma.\nOsservazione precedente: {reason}\nGravità precedente: {original_severity}\nTempo dalla prima osservazione: {duration}", "status": "Risolto"},
       "backup": {
         "confirmedTitle": "{hostname}: backup completato",
         "confirmedBody": "Backup completato correttamente.",
         "errorTitle": "{hostname}: errore segnalato nel backup",
         "errorBody": "Il rapporto del backup contiene un errore.",
-        "unconfirmedBody": "L’esito del backup non è confermato."
+        "unconfirmedBody": "L’esito del backup non è confermato.",
+        "warningTitle": "{hostname}: Backup completato con avvisi",
+        "warningBody": "Backup completato con avvisi.",
+        "diagnosticsOmitted": "Righe o testo diagnostico omessi: {count}. Il report originale è conservato."
       }
     }
   }

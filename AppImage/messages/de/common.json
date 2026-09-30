@@ -6980,7 +6980,8 @@
             "failed": "Fehlgeschlagen",
             "completed": "Abgeschlossen",
             "started": "Gestartet",
-            "unconfirmed": "Nicht bestätigt"
+            "unconfirmed": "Nicht bestätigt",
+            "completed_with_warnings": "Mit Warnungen abgeschlossen"
           },
           "report": "{group} Bericht",
           "details": "Details",
@@ -6991,12 +6992,16 @@
       "temperature": {
         "sampleSpan": "Die hohen Messwerte erstrecken sich über {duration}."
       },
+      "healthRecovery": {"title": "{hostname}: Behoben - {category}{entity_suffix}", "body": "Eine aktuelle Zustandsprüfung hat für {category} wieder einen normalen Zustand festgestellt.\nVorherige Beobachtung: {reason}\nVorheriger Schweregrad: {original_severity}\nZeit seit der ersten Beobachtung: {duration}", "status": "Behoben"},
       "backup": {
         "confirmedTitle": "{hostname}: Backup abgeschlossen",
         "confirmedBody": "Backup erfolgreich abgeschlossen.",
         "errorTitle": "{hostname}: Backup-Fehler gemeldet",
         "errorBody": "Der Backup-Bericht enthält einen Fehler.",
-        "unconfirmedBody": "Das Backup-Ergebnis ist nicht bestätigt."
+        "unconfirmedBody": "Das Backup-Ergebnis ist nicht bestätigt.",
+        "warningTitle": "{hostname}: Sicherung mit Warnungen abgeschlossen",
+        "warningBody": "Sicherung mit Warnungen abgeschlossen.",
+        "diagnosticsOmitted": "Weitere Diagnosezeilen oder Text ausgelassen: {count}. Originalbericht bleibt erhalten."
       }
     }
   }

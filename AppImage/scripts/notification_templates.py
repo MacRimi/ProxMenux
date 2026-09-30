@@ -244,6 +244,13 @@ def _parse_vzdump_table(message: str) -> Optional[Dict[str, Any]]:
                 status = 'error'
             kind = ('lxc' if 'lxc' in filename or filename.startswith('ct/') else
                     'qemu' if 'qemu' in filename or filename.startswith('vm/') else '')
+            if filename.lower() == 'null':
+                # Native failed rows lack archives. Match only this row's VMID;
+                # multiple inconsistent starts are not authoritative identity.
+                kinds = set(re.findall(
+                    r'(?im)\bStarting Backup of VM ' + re.escape(vmid) + r'\s+\((lxc|qemu)\)',
+                    message))
+                kind = kinds.pop() if len(kinds) == 1 else ''
             rows.append({'vmid': vmid, 'name': name, 'status': status,
                          'time': duration, 'size': size, 'filename': filename,
                          'type': kind})
@@ -1892,6 +1899,10 @@ def render_template(event_type: str, data: Dict[str, Any],
             template['title'] = runtime_message('backup.confirmedTitle', language,
                                                 hostname=data.get('hostname') or _get_hostname())
             template['body'] = runtime_message('backup.confirmedBody', language)
+        elif outcome == 'completed_with_warnings':
+            template['title'] = runtime_message('backup.warningTitle', language,
+                                                hostname=data.get('hostname') or _get_hostname())
+            template['body'] = runtime_message('backup.warningBody', language)
         elif outcome == 'failed':
             template['title'] = runtime_message('backup.errorTitle', language,
                                                 hostname=data.get('hostname') or _get_hostname())
@@ -1899,7 +1910,7 @@ def render_template(event_type: str, data: Dict[str, Any],
     if event_type == 'backup_fail':
         template['title'] = runtime_message('backup.errorTitle', language,
                                             hostname=data.get('hostname') or _get_hostname())
-    if event_type == 'backup_fail' or (event_type == 'backup_complete' and data.get('backup_outcome') in ('confirmed', 'failed')):
+    if event_type == 'backup_fail' or (event_type == 'backup_complete' and data.get('backup_outcome') in ('confirmed', 'completed_with_warnings', 'failed')):
         parsed_backup = _parse_vzdump_message(str(data.get('pve_message') or ''))
         storage = str((parsed_backup or {}).get('storage_name') or data.get('storage') or '').strip()
         guests = (parsed_backup or {}).get('vms') or []
@@ -1950,7 +1961,7 @@ def render_template(event_type: str, data: Dict[str, Any],
         'log_file': '',
     }
     variables.update(data)
-    if event_type == 'backup_fail' or (event_type == 'backup_complete' and data.get('backup_outcome') in ('confirmed', 'failed')):
+    if event_type == 'backup_fail' or (event_type == 'backup_complete' and data.get('backup_outcome') in ('confirmed', 'completed_with_warnings', 'failed')):
         # The provider has already substituted raw Display Names. Insert the
         # resolved title as a value, never reinterpret its literal braces.
         variables['_backup_title'] = template['title']
@@ -2059,6 +2070,14 @@ def render_template(event_type: str, data: Dict[str, Any],
             return ''
 
     safe_vars = _SafeDict(variables)
+    if (event_type == 'error_resolved' and data.get('recovery_outcome') == 'resolved'
+            and data.get('is_recovery') is True
+            and isinstance(data.get('check_evidence'), dict)
+            and data['check_evidence'].get('check') == 'cpu_usage'):
+        safe_vars['_health_title'] = runtime_message('healthRecovery.title', language, **variables)
+        safe_vars['_health_body'] = runtime_message('healthRecovery.body', language, **variables)
+        template['title'] = '{_health_title}'
+        template['body'] = '{_health_body}'
     try:
         title = template['title'].format_map(safe_vars)
     except (ValueError, IndexError):
@@ -2069,6 +2088,30 @@ def render_template(event_type: str, data: Dict[str, Any],
     # When the event came from PVE webhook with a full vzdump message,
     # parse the table/logs and format a rich body instead of the sparse template.
     pve_message = data.get('pve_message', '')
+    backup_diagnostics = []
+
+    def bounded_backup_diagnostics(lines):
+        # 1024 chars matches the repository's small-channel message convention;
+        # 8 lines keeps repeated producer warnings readable. Inventory/title
+        # size is separate: this is not a one-Telegram-message guarantee.
+        unique = list(dict.fromkeys(line for line in lines if line.strip()))
+        principal = next((line for line in unique if re.search(r'\b(?:ERROR:|TASK ERROR:)', line, re.IGNORECASE)), None)
+        if principal:
+            unique.remove(principal)
+            unique.insert(0, principal)
+        shown, budget, omitted = [], 1024, 0
+        for line in unique:
+            if len(shown) >= 8 or budget < 2:
+                omitted += 1
+                continue
+            line_budget = min(budget, 512)
+            rendered = line if len(line) <= line_budget else line[:line_budget - 1] + '…'
+            omitted += int(rendered != line)
+            shown.append(rendered)
+            budget -= len(rendered) + 1
+        if omitted:
+            shown.append(runtime_message('backup.diagnosticsOmitted', language, count=omitted))
+        return '\n'.join(shown)
     
     # Check for custom formatter function
     formatter_name = template.get('formatter')
@@ -2099,15 +2142,15 @@ def render_template(event_type: str, data: Dict[str, Any],
                                        pve_message, re.MULTILINE | re.DOTALL)
                 if error_block:
                     diagnostic_lines = error_block.group(1).rstrip('\r\n').splitlines() + diagnostic_lines
-            if diagnostic_lines:
-                body_text += '\n' + '\n'.join(
-                    line for line in dict.fromkeys(diagnostic_lines)
-                    if line.strip() and line not in body_text.splitlines())
+            backup_diagnostics = [line for line in diagnostic_lines
+                                  if line.strip() and line not in body_text.splitlines()]
         else:
-            # Couldn't parse -- use PVE raw message as body
-            body_text = pve_message.strip()
+            # Unparsed diagnostic-only reports remain visible but bounded.
+            body_text = ''
+            backup_diagnostics = pve_message.strip().splitlines()
         if event_type == 'backup_complete' and data.get('backup_outcome') != 'confirmed':
             key = ('backup.errorBody' if data.get('backup_outcome') == 'failed'
+                   else 'backup.warningBody' if data.get('backup_outcome') == 'completed_with_warnings'
                    else 'backup.unconfirmedBody')
             body_text = runtime_message(key, language) + '\n' + body_text
     elif event_type == 'system_mail' and pve_message:
@@ -2138,8 +2181,20 @@ def render_template(event_type: str, data: Dict[str, Any],
     if event_type in ('backup_complete', 'backup_fail') and (
             event_type == 'backup_fail' or data.get('backup_outcome') == 'failed'):
         source_subject = str(data.get('pve_title') or '').strip()
+        guest_context = (_parse_vzdump_message(str(pve_message or '')) or {}).get('vms')
+        if guest_context:
+            # Native single-line job errors live only in the subject. Retain
+            # that cause, not the redundant job/host envelope or generic count.
+            cause = re.search(r'\bbackup failed:\s*(.+)', source_subject, re.IGNORECASE)
+            source_subject = cause.group(1).strip() if cause else ''
+            if source_subject.lower() == 'multiple problems':
+                source_subject = ''
         if source_subject and source_subject not in body_text:
-            body_text += '\n' + source_subject
+            # A unique job/setup cause must survive a warning-heavy report.
+            backup_diagnostics.insert(0, source_subject)
+
+    if backup_diagnostics:
+        body_text += '\n' + bounded_backup_diagnostics(backup_diagnostics)
 
     # Clean up: collapse runs of 3+ blank lines into 1, remove trailing whitespace
     import re as _re
@@ -2472,9 +2527,14 @@ def enrich_with_emojis(event_type: str, title: str, body: str,
     severity = data.get('severity', 'INFO')
     
     icon = EVENT_EMOJI.get(event_type) or CATEGORY_EMOJI.get(group) or SEVERITY_ICONS.get(severity, '')
+    if (event_type == 'error_resolved' and data.get('recovery_outcome') == 'resolved'
+            and data.get('is_recovery') is True
+            and isinstance(data.get('check_evidence'), dict)
+            and data['check_evidence'].get('check') == 'cpu_usage'):
+        icon = '✅'
     if event_type == 'backup_complete':
         icon = {
-            'confirmed': '💾✅', 'failed': '💾❌',
+            'confirmed': '💾✅', 'completed_with_warnings': '💾⚠️', 'failed': '💾❌',
         }.get(str(data.get('backup_outcome') or ''), '💾❔')
     
     # Build enriched title: replace severity circle with event-specific icon

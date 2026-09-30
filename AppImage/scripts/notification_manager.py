@@ -1364,6 +1364,12 @@ class NotificationManager:
         
         # Get journal context if available (will be enriched per-channel based on detail_level)
         raw_journal_context = data.get('_journal_context', '')
+        # Persist a presentation token in the existing title column: buffers
+        # otherwise discard outcome metadata before composition. Old rows
+        # without a token remain neutral; routing and schema are unchanged.
+        buffer_title = title
+        if event_type in ('backup_complete', 'backup_fail'):
+            buffer_title, _ = enrich_with_emojis(event_type, title, '', data)
         
         for ch_name, channel in channels.items():
             # ── Per-channel category check ──
@@ -1393,7 +1399,7 @@ class NotificationManager:
             # delivered after Quiet Hours + Daily Digest were merged.
             if severity != 'CRITICAL' and self._in_quiet_hours(ch_name):
                 self._buffer_quiet_event(ch_name, event_type, event_group,
-                                          severity, title, body)
+                                          severity, buffer_title, body)
                 continue
 
             # ── Per-channel daily digest ──
@@ -1406,7 +1412,7 @@ class NotificationManager:
             # excluded from the digest by `_DIGEST_EXEMPT_EVENTS`.
             if self._should_buffer_for_digest(ch_name, severity, event_type):
                 self._buffer_digest_event(ch_name, event_type, event_group,
-                                          severity, title, body)
+                                          severity, buffer_title, body)
                 continue
             
             try:
@@ -1849,14 +1855,22 @@ class NotificationManager:
                              if index < 8 or (quiet_release and item[1] == 'system_restore_completed')]
             for ts, ev_type, title, body in visible_items:
                 hhmm = datetime.fromtimestamp(ts).strftime('%H:%M')
+                backup_icon = ''
+                if ev_type in ('backup_complete', 'backup_fail'):
+                    for token in ('💾✅', '💾⚠️', '💾❌', '💾❔', '💾'):
+                        if title.startswith(token + ' '):
+                            backup_icon = token
+                            title = title[len(token) + 1:]
+                            break
+                    backup_icon = backup_icon or ('💾❌' if ev_type == 'backup_fail' else '💾❔')
                 short_title = title.split(': ', 1)[-1] if ': ' in title else title
                 event_icon = (
-                    EVENT_EMOJI.get(ev_type) or CATEGORY_EMOJI.get(group, '')
+                    backup_icon or EVENT_EMOJI.get(ev_type) or CATEGORY_EMOJI.get(group, '')
                 ) if use_icons else ''
                 event_prefix = f'{event_icon} ' if event_icon else ''
                 lines.append(f"  • {event_prefix}{hhmm}  {short_title}")
                 if quiet_release and ev_type == 'system_restore_completed' and body:
-                    lines.extend(line for line in body.splitlines() if line.strip())
+                    lines.extend('    ' + line.strip() for line in body.splitlines() if line.strip())
             if len(items) > len(visible_items):
                 lines.append(runtime_message('digest.more', language, count=len(items) - len(visible_items)))
             lines.append('')
@@ -2006,6 +2020,7 @@ class NotificationManager:
                 summary_title, summary_body, severity='INFO',
                 data={'_quiet_hours_summary': True, '_count': len(rows),
                       '_restore_summary': any(row[1] == 'system_restore_completed' for row in rows),
+                      '_backup_summary': any(row[1] in ('backup_complete', 'backup_fail') for row in rows),
                       '_notification_language': language},
             ) or result
         except Exception as e:

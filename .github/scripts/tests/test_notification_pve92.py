@@ -128,10 +128,10 @@ class PVE92Tests(unittest.TestCase):
         self.assertEqual(event_for(message).data['backup_outcome'], 'confirmed')
         for message, severity, expected in (
             (PVE92.replace('ok ', 'OK '), 'info', 'confirmed'),
-            (message, 'warning', 'unconfirmed'),
+            (message, 'warning', 'completed_with_warnings'),
             (message, 'error', 'failed'),
             (message + '\nERROR: archive write failed', 'info', 'failed'),
-            (message + '\nWARNING: skipped file', 'info', 'unconfirmed'),
+            (message + '\nWARNING: skipped file', 'info', 'completed_with_warnings'),
             (PVE92.replace('ok        ', 'WARNINGS  '), 'info', 'unconfirmed'),
         ):
             with self.subTest(message=message, severity=severity):
