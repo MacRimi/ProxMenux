@@ -129,6 +129,14 @@ class MaintainerFollowupTests(unittest.TestCase):
             self.assertIn('white-space:pre-wrap;',result['html'])
             self.assertNotIn(templates.runtime_message('digest.footer',lang),result['body'])
 
+    def test_concrete_subject_cause_already_in_error_log_is_not_repeated(self):
+        event=receive(NATIVE_REPORT+'\n100: ERROR: job-end hook denied','error',
+                      'vzdump backup status (raw-host): backup failed: job-end hook denied')
+        for lang in LANGUAGES:
+            result=deliver(event.event_type,event.data,event.severity,lang)
+            self.assertEqual(result['text'].count('job-end hook denied'),1)
+            self.assertIn('100: ERROR: job-end hook denied',result['body'])
+
     def test_job_level_subject_cause_survives_warning_cap(self):
         raw=NATIVE_REPORT+'\n'+'\n'.join('WARN: repeated diagnostic '+str(i) for i in range(80))
         event=receive(raw,'error','vzdump backup status (raw-host): backup failed: job-end hook denied')

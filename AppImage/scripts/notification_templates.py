@@ -2189,7 +2189,11 @@ def render_template(event_type: str, data: Dict[str, Any],
             source_subject = cause.group(1).strip() if cause else ''
             if source_subject.lower() == 'multiple problems':
                 source_subject = ''
-        if source_subject and source_subject not in body_text:
+        cause_in_diagnostics = any(
+            line.strip() == source_subject or
+            re.split(r'\b(?:TASK ERROR:|ERROR:)\s*', line, maxsplit=1, flags=re.IGNORECASE)[-1].strip() == source_subject
+            for line in backup_diagnostics)
+        if source_subject and source_subject not in body_text and not cause_in_diagnostics:
             # A unique job/setup cause must survive a warning-heavy report.
             backup_diagnostics.insert(0, source_subject)
 
