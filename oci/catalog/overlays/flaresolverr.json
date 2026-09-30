@@ -1,0 +1,9 @@
+{
+  "proxmox": {
+    "installer_profile": {
+      "non_persistent_image_volumes": [
+        "/config"
+      ]
+    }
+  }
+}

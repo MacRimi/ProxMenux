@@ -19,6 +19,12 @@
           "remove_lost_found": true,
           "owner_strategy": "mapped-root",
           "only_when_mount_type": "managed-volume"
+        },
+        {
+          "container_path": "/anime",
+          "remove_lost_found": true,
+          "owner_strategy": "mapped-root",
+          "only_when_mount_type": "managed-volume"
         }
       ]
     }

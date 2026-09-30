@@ -57,6 +57,11 @@ SPINNER_FRAME = re.compile('^ ?[' + ''.join(oci_ui.FRAMES) + ']')
 _run = {'log': None, 'pending': [], 'journal': None, 'failed_log': None, 'failed_lines': None}
 
 
+def non_persistent_image_volumes(template):
+    """Image volumes the template states hold no data, which stay in the rootfs."""
+    return set(template.get('proxmox', {}).get('installer_profile', {}).get('non_persistent_image_volumes', []))
+
+
 def screen_text(line):
     """What a terminal shows for one output line, without colours."""
     parts = [SPINNER_FRAME.sub('', ANSI.sub('', part)).rstrip() for part in line.split('\r')]
@@ -488,7 +493,8 @@ def preflight(record, candidate, config, coordinated=None):
         required = {v['container_path'] for v in template['container_contract'].get('volumes', []) if v.get('required', True)}
         if not required <= {m['container_path'] for m in plan.get('mounts', [])}:
             raise ValueError(translate('Required persistent paths cannot be removed'))
-    image_paths = record['observed']['image']['defaults'].get('Volumes') or {}
+    image_paths = set(record['observed']['image']['defaults'].get('Volumes') or {})
+    image_paths -= non_persistent_image_volumes(record['template'])
     if any(not any(p == target or p.startswith(target.rstrip('/') + '/') for target in old) for p in image_paths):
         raise ValueError(translate('The image declares data paths that are still stored in the rootfs'))
     check = effective_healthcheck(candidate['template'])
@@ -885,7 +891,7 @@ def apply(root, vmid, archive, operation, proposal=None, registry_digest=None, i
         return None
     required = {m['container_path'] for m in candidate['deployment'].get('mounts', [])}
     if any(not any(p == target or p.startswith(target.rstrip('/') + '/') for target in required)
-           for p in (image['defaults'].get('Volumes') or {})):
+           for p in set(image['defaults'].get('Volumes') or {}) - non_persistent_image_volumes(candidate['template'])):
         raise ValueError(translate('The new image requires additional persistent paths; use Recreate'))
     directory = instances.location(root, vmid).parent / 'transactions' / uuid.uuid4().hex
     private_directory(directory)

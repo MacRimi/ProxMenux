@@ -245,7 +245,7 @@ def manage_instance(project, ui, row, action=None, lifecycle_args=()):
                 wizard.close()
             if not approved:
                 return False
-        elif not ui.review(translate('The saved image channel is checked for a newer image. If replacement is needed, the CT is stopped and a native backup is verified before its root is replaced. Host directories are outside that backup.'),
+        elif not ui.review(translate('If the image channel has a new version, the CT is stopped, backed up and verified, and replaced with the new image to update the container. If anything fails, the backup is restored.'),
                            translate('Update OCI'), question=translate('Update now?'), default=True):
             return False
         command = [sys.executable, str(project / 'remote/oci_update_current.py'), str(row['vmid']),

@@ -74,6 +74,22 @@
           "backup": true,
           "default_size_gb": 4
         }
+      },
+      {
+        "id": "volume-1",
+        "container_path": "/root/.cloudflared",
+        "compose_source_example": "/DATA/AppData/$AppID/cloudflared",
+        "read_only": false,
+        "required": true,
+        "installation_choice": [
+          "managed-volume",
+          "host-bind"
+        ],
+        "default": "managed-volume",
+        "managed_volume": {
+          "backup": true,
+          "default_size_gb": 4
+        }
       }
     ],
     "ports": [
@@ -122,6 +138,11 @@
               "type": "bind",
               "source": "/DATA/AppData/cloudflared-cloudflared/config",
               "target": "/config"
+            },
+            {
+              "type": "bind",
+              "source": "/DATA/AppData/$AppID/cloudflared",
+              "target": "/root/.cloudflared"
             }
           ],
           "container_name": "cloudflared"
@@ -145,6 +166,17 @@
         "id": "cloudflared-volume-0",
         "service": "cloudflared",
         "container_path": "/config",
+        "mode": "managed-volume",
+        "user_selectable": false,
+        "backup": true,
+        "shared_with_other_lxc": false,
+        "source_path": null,
+        "source_path_prompt": null
+      },
+      {
+        "id": "cloudflared-volume-1",
+        "service": "cloudflared",
+        "container_path": "/root/.cloudflared",
         "mode": "managed-volume",
         "user_selectable": false,
         "backup": true,
@@ -338,6 +370,12 @@
       "volume_preparations": [
         {
           "container_path": "/config",
+          "remove_lost_found": true,
+          "owner_strategy": "mapped-root",
+          "only_when_mount_type": "managed-volume"
+        },
+        {
+          "container_path": "/root/.cloudflared",
           "remove_lost_found": true,
           "owner_strategy": "mapped-root",
           "only_when_mount_type": "managed-volume"

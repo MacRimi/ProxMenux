@@ -114,6 +114,22 @@
           "backup": true,
           "default_size_gb": 8
         }
+      },
+      {
+        "id": "volume-3",
+        "container_path": "/anime",
+        "compose_source_example": "/DATA/AppData/$AppID/Media/Anime",
+        "read_only": false,
+        "required": true,
+        "installation_choice": [
+          "managed-volume",
+          "host-bind"
+        ],
+        "default": "managed-volume",
+        "managed_volume": {
+          "backup": true,
+          "default_size_gb": 8
+        }
       }
     ],
     "ports": [
@@ -182,6 +198,11 @@
               "type": "bind",
               "source": "/DATA/AppData/$AppID/Media/Television",
               "target": "/tv"
+            },
+            {
+              "type": "bind",
+              "source": "/DATA/AppData/$AppID/Media/Anime",
+              "target": "/anime"
             }
           ],
           "network_mode": "bridge",
@@ -234,6 +255,17 @@
         "shared_with_other_lxc": true,
         "source_path": null,
         "source_path_prompt": "Host directory for medusa:/tv"
+      },
+      {
+        "id": "medusa-volume-3",
+        "service": "medusa",
+        "container_path": "/anime",
+        "mode": "host-bind",
+        "user_selectable": true,
+        "backup": false,
+        "shared_with_other_lxc": true,
+        "source_path": null,
+        "source_path_prompt": "Host directory for medusa:/anime"
       }
     ],
     "orchestration": {
@@ -433,6 +465,12 @@
         },
         {
           "container_path": "/tv",
+          "remove_lost_found": true,
+          "owner_strategy": "mapped-root",
+          "only_when_mount_type": "managed-volume"
+        },
+        {
+          "container_path": "/anime",
           "remove_lost_found": true,
           "owner_strategy": "mapped-root",
           "only_when_mount_type": "managed-volume"

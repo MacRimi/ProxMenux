@@ -21,10 +21,10 @@ CONFIRM = ('Apply options from the current catalog template? New required paths 
            'Review the resulting configuration before recreating the CT.')
 OLD_GUARD = 'The current template changes the image or identity; an explicit migration is required'
 GUARD = 'The current template changes the template identity or image repository; an explicit migration is required'
-OLD_PREVIEW = ('The current image of the saved channel will be checked and downloaded. Resources, paths and GPU are kept. '
-               'The CT is stopped during the replacement and a native backup is created first.')
-PREVIEW = ('The saved image channel is checked for a newer image. If replacement is needed, the CT is stopped and '
-           'a native backup is verified before its root is replaced. Host directories are outside that backup.')
+OLD_PREVIEW = ('The saved image channel is checked for a newer image. If replacement is needed, the CT is stopped and '
+               'a native backup is verified before its root is replaced. Host directories are outside that backup.')
+PREVIEW = ('If the image channel has a new version, the CT is stopped, backed up and verified, and replaced with '
+           'the new image to update the container. If anything fails, the backup is restored.')
 
 
 def extracted(path, name, scope):

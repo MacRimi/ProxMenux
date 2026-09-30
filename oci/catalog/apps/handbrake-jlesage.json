@@ -132,6 +132,22 @@
         }
       },
       {
+        "id": "volume-4",
+        "container_path": "/trash",
+        "compose_source_example": "/DATA/AppData/$AppID/trash",
+        "read_only": false,
+        "required": true,
+        "installation_choice": [
+          "managed-volume",
+          "host-bind"
+        ],
+        "default": "managed-volume",
+        "managed_volume": {
+          "backup": true,
+          "default_size_gb": 8
+        }
+      },
+      {
         "id": "volume-3",
         "container_path": "/config",
         "compose_source_example": "/DATA/AppData/$AppID/config",
@@ -208,6 +224,11 @@
             },
             {
               "type": "bind",
+              "source": "/DATA/AppData/$AppID/trash",
+              "target": "/trash"
+            },
+            {
+              "type": "bind",
               "source": "/DATA/AppData/$AppID/config",
               "target": "/config"
             }
@@ -255,6 +276,17 @@
         "id": "handbrake-volume-2",
         "service": "handbrake",
         "container_path": "/output",
+        "mode": "managed-volume",
+        "user_selectable": false,
+        "backup": true,
+        "shared_with_other_lxc": false,
+        "source_path": null,
+        "source_path_prompt": null
+      },
+      {
+        "id": "handbrake-volume-4",
+        "service": "handbrake",
+        "container_path": "/trash",
         "mode": "managed-volume",
         "user_selectable": false,
         "backup": true,
@@ -392,6 +424,12 @@
         },
         {
           "container_path": "/output",
+          "remove_lost_found": true,
+          "owner_strategy": "mapped-application-user",
+          "only_when_mount_type": "managed-volume"
+        },
+        {
+          "container_path": "/trash",
           "remove_lost_found": true,
           "owner_strategy": "mapped-application-user",
           "only_when_mount_type": "managed-volume"

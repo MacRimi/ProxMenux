@@ -3,17 +3,14 @@
     "installer_profile": {
       "volume_preparations": [
         {
-          "container_path": "/home/threadfin/conf/data",
-          "remove_lost_found": true,
-          "owner_strategy": "mapped-root",
-          "only_when_mount_type": "managed-volume"
-        },
-        {
-          "container_path": "/home/threadfin/conf/backup",
+          "container_path": "/home/threadfin/conf",
           "remove_lost_found": true,
           "owner_strategy": "mapped-root",
           "only_when_mount_type": "managed-volume"
         }
+      ],
+      "non_persistent_image_volumes": [
+        "/tmp/threadfin"
       ]
     }
   }

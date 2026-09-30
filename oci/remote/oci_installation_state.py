@@ -211,6 +211,8 @@ def compare(record, current, candidate=None):
         if not managed or options.get('backup') != '1':
             blockers.append('persistent-mount-needs-backup:' + key)
     declared = set(record['image']['defaults'].get('Volumes') or {})
+    declared -= set(record['template'].get('proxmox', {}).get('installer_profile', {})
+                    .get('non_persistent_image_volumes', []))
     declared.update(v['container_path'] for v in record['template'].get('container_contract', {}).get('volumes', []) if v.get('container_path'))
     for path in sorted(declared):
         if path not in mounts:

@@ -76,24 +76,8 @@
     "volumes": [
       {
         "id": "volume-0",
-        "container_path": "/home/threadfin/conf/data",
+        "container_path": "/home/threadfin/conf",
         "compose_source_example": "/DATA/AppData/threadfin/config",
-        "read_only": false,
-        "required": true,
-        "installation_choice": [
-          "managed-volume",
-          "host-bind"
-        ],
-        "default": "managed-volume",
-        "managed_volume": {
-          "backup": true,
-          "default_size_gb": 8
-        }
-      },
-      {
-        "id": "volume-1",
-        "container_path": "/home/threadfin/conf/backup",
-        "compose_source_example": "/DATA/AppData/threadfin/backup",
         "read_only": false,
         "required": true,
         "installation_choice": [
@@ -155,12 +139,7 @@
             {
               "type": "bind",
               "source": "/DATA/AppData/threadfin/config",
-              "target": "/home/threadfin/conf/data"
-            },
-            {
-              "type": "bind",
-              "source": "/DATA/AppData/threadfin/backup",
-              "target": "/home/threadfin/conf/backup"
+              "target": "/home/threadfin/conf"
             }
           ],
           "container_name": "threadfin"
@@ -183,18 +162,7 @@
       {
         "id": "threadfin-volume-0",
         "service": "threadfin",
-        "container_path": "/home/threadfin/conf/data",
-        "mode": "managed-volume",
-        "user_selectable": false,
-        "backup": true,
-        "shared_with_other_lxc": false,
-        "source_path": null,
-        "source_path_prompt": null
-      },
-      {
-        "id": "threadfin-volume-1",
-        "service": "threadfin",
-        "container_path": "/home/threadfin/conf/backup",
+        "container_path": "/home/threadfin/conf",
         "mode": "managed-volume",
         "user_selectable": false,
         "backup": true,
@@ -387,17 +355,14 @@
     "installer_profile": {
       "volume_preparations": [
         {
-          "container_path": "/home/threadfin/conf/data",
-          "remove_lost_found": true,
-          "owner_strategy": "mapped-root",
-          "only_when_mount_type": "managed-volume"
-        },
-        {
-          "container_path": "/home/threadfin/conf/backup",
+          "container_path": "/home/threadfin/conf",
           "remove_lost_found": true,
           "owner_strategy": "mapped-root",
           "only_when_mount_type": "managed-volume"
         }
+      ],
+      "non_persistent_image_volumes": [
+        "/tmp/threadfin"
       ]
     }
   },

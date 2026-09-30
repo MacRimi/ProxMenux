@@ -114,7 +114,9 @@ def captured_menu_ready(primary, adapter, convert, expected_roles):
             return False
         for member in converted:
             targets = [m['container_path'] for m in member['deployment']['mounts']]
-            declared = member['observed']['image']['defaults'].get('Volumes') or {}
+            declared = set(member['observed']['image']['defaults'].get('Volumes') or {})
+            declared -= set(member.get('template', {}).get('proxmox', {}).get('installer_profile', {})
+                            .get('non_persistent_image_volumes', []))
             if any(not any(p == target or p.startswith(target.rstrip('/') + '/') for target in targets)
                    for p in declared):
                 return False

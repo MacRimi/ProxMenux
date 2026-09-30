@@ -104,7 +104,7 @@
     "volumes": [
       {
         "id": "volume-0",
-        "container_path": "/var/lib/postgresql/data",
+        "container_path": "/var/lib/postgresql",
         "compose_source_example": "/DATA/AppData/postgresql/data",
         "read_only": false,
         "required": true,
@@ -178,7 +178,7 @@
             {
               "type": "bind",
               "source": "/DATA/AppData/postgresql/data",
-              "target": "/var/lib/postgresql/data"
+              "target": "/var/lib/postgresql"
             }
           ],
           "container_name": "postgresql"
@@ -201,7 +201,7 @@
       {
         "id": "postgresql-volume-0",
         "service": "postgresql",
-        "container_path": "/var/lib/postgresql/data",
+        "container_path": "/var/lib/postgresql",
         "mode": "managed-volume",
         "user_selectable": false,
         "backup": true,
@@ -397,7 +397,7 @@
     "installer_profile": {
       "volume_preparations": [
         {
-          "container_path": "/var/lib/postgresql/data",
+          "container_path": "/var/lib/postgresql",
           "remove_lost_found": true,
           "owner_strategy": "mapped-root",
           "only_when_mount_type": "managed-volume"

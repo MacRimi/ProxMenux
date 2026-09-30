@@ -304,7 +304,12 @@
         "behavioral_impact": "The application cannot exchange IPC objects with processes on the Proxmox host.",
         "validation": "not-requested-by-compose"
       }
-    ]
+    ],
+    "installer_profile": {
+      "non_persistent_image_volumes": [
+        "/var/log/letsencrypt"
+      ]
+    }
   },
   "compatibility": {
     "automatic_install_candidate": true,

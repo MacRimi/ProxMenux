@@ -83,6 +83,12 @@
           "remove_lost_found": true,
           "owner_strategy": "mapped-application-user",
           "only_when_mount_type": "managed-volume"
+        },
+        {
+          "container_path": "/trash",
+          "remove_lost_found": true,
+          "owner_strategy": "mapped-application-user",
+          "only_when_mount_type": "managed-volume"
         }
       ],
       "startup_healthcheck": {

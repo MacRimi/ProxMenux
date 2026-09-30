@@ -267,7 +267,10 @@
       },
       "resources": {
         "cpu_shares": 50
-      }
+      },
+      "non_persistent_image_volumes": [
+        "/config"
+      ]
     },
     "adaptations": [
       {

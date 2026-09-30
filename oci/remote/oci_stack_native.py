@@ -269,8 +269,10 @@ class NativeAdapter:
         if image['architecture'] != old['architecture'] or image['os'] != 'linux':
             raise ValueError(translate('Incompatible image platform'))
         paths = [m['container_path'] for m in record['deployment'].get('mounts', [])]
+        transient = set(record.get('template', {}).get('proxmox', {}).get('installer_profile', {})
+                        .get('non_persistent_image_volumes', []))
         if any(not any(p == target or p.startswith(target.rstrip('/') + '/') for target in paths)
-               for p in (image['defaults'].get('Volumes') or {})):
+               for p in set(image['defaults'].get('Volumes') or {}) - transient):
             raise ValueError(translate('The new image requires additional persistent paths'))
         profile = record['deployment'].get('replay_profile', {})
         if profile.get('adapter') in ('install_nextcloud_stack.sh', 'install_paperless_stack.sh', 'install_tandoor_stack.sh', 'install_immich_stack.sh'):
