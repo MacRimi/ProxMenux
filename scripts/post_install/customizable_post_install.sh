@@ -1666,14 +1666,14 @@ configure_pigz() {
     if [ ! -f /bin/pigzwrapper ] || ! cmp -s /bin/pigzwrapper - <<EOF
 #!/bin/sh
 PATH=/bin:\$PATH
-GZIP="-1"
+export GZIP="-1"
 exec /usr/bin/pigz "\$@"
 EOF
     then
         pmx_write_file /bin/pigzwrapper <<EOF
 #!/bin/sh
 PATH=/bin:\$PATH
-GZIP="-1"
+export GZIP="-1"
 exec /usr/bin/pigz "\$@"
 EOF
         chmod +x /bin/pigzwrapper
@@ -1686,6 +1686,10 @@ EOF
     msg_info "$(translate "Replacing gzip with pigz wrapper...")"
     if [ ! -f /bin/gzip.original ]; then
         mv -f /bin/gzip /bin/gzip.original && \
+        pmx_write_file /bin/gzip < /bin/pigzwrapper && \
+        chmod +x /bin/gzip
+        msg_ok "$(translate "gzip replaced with pigz wrapper successfully")"
+    elif ! cmp -s /bin/gzip /bin/pigzwrapper; then
         pmx_write_file /bin/gzip < /bin/pigzwrapper && \
         chmod +x /bin/gzip
         msg_ok "$(translate "gzip replaced with pigz wrapper successfully")"
