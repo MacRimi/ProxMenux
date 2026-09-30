@@ -2070,12 +2070,13 @@ def render_template(event_type: str, data: Dict[str, Any],
             return ''
 
     safe_vars = _SafeDict(variables)
-    from health_recovery import presents_recovery
-    if event_type == 'error_resolved' and presents_recovery(data):
-        safe_vars['_health_title'] = runtime_message('healthRecovery.title', language, **variables)
-        safe_vars['_health_body'] = runtime_message('healthRecovery.body', language, **variables)
-        template['title'] = '{_health_title}'
-        template['body'] = '{_health_body}'
+    if event_type == 'error_resolved':
+        from health_recovery import presents_recovery
+        if presents_recovery(data):
+            safe_vars['_health_title'] = runtime_message('healthRecovery.title', language, **variables)
+            safe_vars['_health_body'] = runtime_message('healthRecovery.body', language, **variables)
+            template['title'] = '{_health_title}'
+            template['body'] = '{_health_body}'
     try:
         title = template['title'].format_map(safe_vars)
     except (ValueError, IndexError):
@@ -2532,9 +2533,10 @@ def enrich_with_emojis(event_type: str, title: str, body: str,
     severity = data.get('severity', 'INFO')
     
     icon = EVENT_EMOJI.get(event_type) or CATEGORY_EMOJI.get(group) or SEVERITY_ICONS.get(severity, '')
-    from health_recovery import presents_recovery
-    if event_type == 'error_resolved' and presents_recovery(data):
-        icon = '✅'
+    if event_type == 'error_resolved':
+        from health_recovery import presents_recovery
+        if presents_recovery(data):
+            icon = '✅'
     if event_type == 'backup_complete':
         icon = {
             'confirmed': '💾✅', 'completed_with_warnings': '💾⚠️', 'failed': '💾❌',
