@@ -89,7 +89,29 @@ def effective_entrypoint(
     return " ".join(shlex.quote(item) for item in process)
 
 
+def home_directory(passwd_path: Path, uid: int) -> str | None:
+    """Return the safe home directory recorded for a container UID."""
+    for line in passwd_path.read_text(encoding="utf-8").splitlines():
+        fields = line.split(":")
+        if len(fields) < 7 or fields[2] != str(uid):
+            continue
+        home = fields[5]
+        return home if home.startswith("/") else None
+    return None
+
+
 def main() -> int:
+    if len(sys.argv) == 4 and sys.argv[1] == "--home":
+        try:
+            uid = int(sys.argv[3])
+            home = home_directory(Path(sys.argv[2]), uid)
+        except (OSError, ValueError) as exc:
+            print(f"{translate('Cannot resolve the container home directory:')} {exc}", file=sys.stderr)
+            return 1
+        if home is None:
+            return 1
+        print(home)
+        return 0
     if len(sys.argv) not in (3, 4):
         print(
             f"{translate('Usage:')} {sys.argv[0]} OCI_ARCHIVE COMMAND_JSON [ENTRYPOINT_JSON]",
