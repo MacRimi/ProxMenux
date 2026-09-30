@@ -2070,10 +2070,8 @@ def render_template(event_type: str, data: Dict[str, Any],
             return ''
 
     safe_vars = _SafeDict(variables)
-    if (event_type == 'error_resolved' and data.get('recovery_outcome') == 'resolved'
-            and data.get('is_recovery') is True
-            and isinstance(data.get('check_evidence'), dict)
-            and data['check_evidence'].get('check') == 'cpu_usage'):
+    from health_recovery import presents_recovery
+    if event_type == 'error_resolved' and presents_recovery(data):
         safe_vars['_health_title'] = runtime_message('healthRecovery.title', language, **variables)
         safe_vars['_health_body'] = runtime_message('healthRecovery.body', language, **variables)
         template['title'] = '{_health_title}'
@@ -2089,13 +2087,14 @@ def render_template(event_type: str, data: Dict[str, Any],
     # parse the table/logs and format a rich body instead of the sparse template.
     pve_message = data.get('pve_message', '')
     backup_diagnostics = []
+    principal_cause = None
 
-    def bounded_backup_diagnostics(lines):
+    def bounded_backup_diagnostics(lines, principal_cause=None):
         # 1024 chars matches the repository's small-channel message convention;
         # 8 lines keeps repeated producer warnings readable. Inventory/title
         # size is separate: this is not a one-Telegram-message guarantee.
         unique = list(dict.fromkeys(line for line in lines if line.strip()))
-        principal = next((line for line in unique if re.search(r'\b(?:ERROR:|TASK ERROR:)', line, re.IGNORECASE)), None)
+        principal = principal_cause or next((line for line in unique if re.search(r'\b(?:ERROR:|TASK ERROR:)', line, re.IGNORECASE)), None)
         if principal:
             unique.remove(principal)
             unique.insert(0, principal)
@@ -2189,16 +2188,18 @@ def render_template(event_type: str, data: Dict[str, Any],
             source_subject = cause.group(1).strip() if cause else ''
             if source_subject.lower() == 'multiple problems':
                 source_subject = ''
-        cause_in_diagnostics = any(
-            line.strip() == source_subject or
-            re.split(r'\b(?:TASK ERROR:|ERROR:)\s*', line, maxsplit=1, flags=re.IGNORECASE)[-1].strip() == source_subject
-            for line in backup_diagnostics)
-        if source_subject and source_subject not in body_text and not cause_in_diagnostics:
-            # A unique job/setup cause must survive a warning-heavy report.
-            backup_diagnostics.insert(0, source_subject)
+        if source_subject and source_subject not in body_text:
+            # Reserve the subject-equivalent diagnostic BEFORE the cap. Finding
+            # it in uncapped logs is not enough: that late line could be omitted.
+            principal_cause = next((line for line in backup_diagnostics
+                if line.strip() == source_subject or
+                re.split(r'\b(?:TASK ERROR:|ERROR:)\s*', line, maxsplit=1, flags=re.IGNORECASE)[-1].strip() == source_subject), None)
+            if not principal_cause:
+                principal_cause = source_subject
+                backup_diagnostics.insert(0, source_subject)
 
     if backup_diagnostics:
-        body_text += '\n' + bounded_backup_diagnostics(backup_diagnostics)
+        body_text += '\n' + bounded_backup_diagnostics(backup_diagnostics, principal_cause)
 
     # Clean up: collapse runs of 3+ blank lines into 1, remove trailing whitespace
     import re as _re
@@ -2531,10 +2532,8 @@ def enrich_with_emojis(event_type: str, title: str, body: str,
     severity = data.get('severity', 'INFO')
     
     icon = EVENT_EMOJI.get(event_type) or CATEGORY_EMOJI.get(group) or SEVERITY_ICONS.get(severity, '')
-    if (event_type == 'error_resolved' and data.get('recovery_outcome') == 'resolved'
-            and data.get('is_recovery') is True
-            and isinstance(data.get('check_evidence'), dict)
-            and data['check_evidence'].get('check') == 'cpu_usage'):
+    from health_recovery import presents_recovery
+    if event_type == 'error_resolved' and presents_recovery(data):
         icon = '✅'
     if event_type == 'backup_complete':
         icon = {

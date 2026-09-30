@@ -1038,10 +1038,8 @@ class EmailChannel(NotificationChannel):
         # Determine group for section header
         event_type = data.get('_event_type', '')
         if event_type == 'error_resolved':
-            if (data.get('recovery_outcome') == 'resolved'
-                    and data.get('is_recovery') is True
-                    and isinstance(data.get('check_evidence'), dict)
-                    and data['check_evidence'].get('check') == 'cpu_usage'):
+            from health_recovery import presents_recovery
+            if presents_recovery(data):
                 sev.update(self._SEV_STYLE['OK'])
                 sev['label'] = _runtime_notification_text('healthRecovery.status', data)
             else:
@@ -1070,8 +1068,11 @@ class EmailChannel(NotificationChannel):
                      or backup_email or data.get('_restore_summary') or data.get('_backup_summary'))
         temp_cell_wrap = 'word-wrap:break-word;overflow-wrap:break-word;word-break:break-word;' if wrap_body else ''
         temp_table_layout = 'table-layout:fixed;' if wrap_body else ''
-        backup_title_wrap = temp_cell_wrap if backup_email else ''
-        backup_metadata_layout = 'table-layout:fixed;' if backup_email else ''
+        # Recovery exposes the same literal host context as backup notices.
+        # Keep wrapping event-scoped; unrelated mail remains byte-identical.
+        context_email = backup_email or event_type == 'error_resolved'
+        backup_title_wrap = temp_cell_wrap if context_email else ''
+        backup_metadata_layout = 'table-layout:fixed;' if context_email else ''
         section_label = _runtime_text(f'email.groups.{group}', data)
         report_label = _runtime_text('email.report', data, group=section_label)
         host_label = _runtime_text('email.host', data)

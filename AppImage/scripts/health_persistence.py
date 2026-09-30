@@ -600,7 +600,7 @@ class HealthPersistence:
 
             cursor.execute('''
                 SELECT id, acknowledged, resolved_at, category, severity, first_seen,
-                       notification_sent, suppression_hours, acknowledged_at
+                       notification_sent, suppression_hours, acknowledged_at, details
                 FROM errors WHERE error_key = ?
             ''', (error_key,))
             existing = cursor.fetchone()
@@ -609,7 +609,7 @@ class HealthPersistence:
 
             if existing:
                 (err_id, ack, resolved_at, old_cat, old_severity, first_seen,
-                 notif_sent, stored_suppression, acknowledged_at) = existing
+                 notif_sent, stored_suppression, acknowledged_at, old_details_json) = existing
 
                 if ack == 1:
                     # SAFETY OVERRIDE: Critical CPU temperature ALWAYS re-triggers
@@ -680,6 +680,18 @@ class HealthPersistence:
                     conn.commit()
                     return event_info
 
+                # Original CPU policy is immutable for this row's incident.
+                # Never upgrade a legacy row from later/current settings.
+                if error_key == 'cpu_usage':
+                    try:
+                        old_details = json.loads(old_details_json or '{}')
+                    except (ValueError, TypeError):
+                        old_details = {}
+                    details = dict(details) if isinstance(details, dict) else {}
+                    details.pop('cpu_policy', None)
+                    if isinstance(old_details, dict) and 'cpu_policy' in old_details:
+                        details['cpu_policy'] = old_details['cpu_policy']
+                    details_json = json.dumps(details)
                 # Not acknowledged - update existing active error
                 cursor.execute('''
                     UPDATE errors
@@ -776,7 +788,7 @@ class HealthPersistence:
                 # was created — otherwise "Storage 'Tuxis' unavailable"
                 # comes back as "Resolved - Storage" with no identity.
                 cursor.execute(
-                    'SELECT details FROM errors WHERE error_key = ? ORDER BY id DESC LIMIT 1',
+                    'SELECT details, id, first_seen, resolved_at FROM errors WHERE error_key = ? ORDER BY id DESC LIMIT 1',
                     (error_key,),
                 )
                 row = cursor.fetchone()
@@ -786,11 +798,18 @@ class HealthPersistence:
                         stored_details = json.loads(row[0])
                     except Exception:
                         stored_details = None
+                # Legacy/mismatched original policy cannot certify normality.
+                if error_key == 'cpu_usage' and (not isinstance(stored_details, dict)
+                        or not isinstance(check_evidence, dict)
+                        or check_evidence.get('policy') != stored_details.get('cpu_policy')
+                        or not stored_details.get('cpu_policy')):
+                    check_evidence = None
                 self._record_event(cursor, 'resolved', error_key, {
                     'reason': reason,
                     # Only explicit current-check callers attach this proof.
                     # Generic resolve/cleanup remains neutral.
                     'check_evidence': check_evidence,
+                    'incident': {'id': row[1], 'first_seen': row[2], 'resolved_at': row[3]},
                     'entity': self._entity_from_details(stored_details),
                     'details': stored_details or {},
                 })
@@ -800,41 +819,40 @@ class HealthPersistence:
     def get_recovery_evidence(self, error_key: str, first_seen: str):
         """Return fresh same-incident native check proof, never absence of errors.
 
-        Initially only the host CPU check has a stable condition identity. Other
+        Host CPU and exact per-service active checks carry provenance. Other
         checks, generic clears, excluded/deleted records and legacy events stay
         neutral until they have equivalent per-condition provenance.
         """
-        if error_key != 'cpu_usage' or not first_seen:
+        if not isinstance(error_key, str) or not first_seen or not (
+                error_key == 'cpu_usage' or error_key.startswith('pve_service_')):
             return None
         try:
-            with self._db_connection() as conn:
+            # One SQLite statement is one consistent row/ack/closure snapshot.
+            # Latest closure by event id, never search past a generic clear.
+            with self._db_lock, self._db_connection() as conn:
                 row = conn.execute('''
-                    SELECT first_seen, last_seen, resolved_at, acknowledged
-                    FROM errors WHERE error_key = ? ORDER BY id DESC LIMIT 1
+                    SELECT e.first_seen, e.last_seen, e.resolved_at, e.acknowledged,
+                           e.id, v.timestamp, v.data
+                    FROM errors e JOIN events v ON v.id = (
+                        SELECT id FROM events WHERE error_key = e.error_key
+                        AND event_type IN ('resolved', 'cleared') ORDER BY id DESC LIMIT 1
+                    ) WHERE e.error_key = ?
                 ''', (error_key,)).fetchone()
-                if not row or row[0] != first_seen or not row[2] or row[3]:
-                    return None
-                event = conn.execute('''
-                    SELECT timestamp, data FROM events
-                    WHERE error_key = ? AND event_type = 'resolved'
-                    ORDER BY id DESC LIMIT 1
-                ''', (error_key,)).fetchone()
-            if not event:
+            if not row or row[0] != first_seen or not row[2] or row[3]:
                 return None
-            proof = json.loads(event[1]).get('check_evidence')
-            if not isinstance(proof, dict) or proof.get('check') != error_key:
+            event_data = json.loads(row[6])
+            if event_data.get('incident') != {'id': row[4], 'first_seen': row[0], 'resolved_at': row[2]}:
                 return None
-            checked = proof.get('checked_at')
-            if not isinstance(checked, (int, float)) or isinstance(checked, bool):
+            proof = event_data.get('check_evidence')
+            from health_recovery import valid_check_evidence
+            if not valid_check_evidence(error_key, proof, now=datetime.now().timestamp()):
                 return None
-            checked = float(checked)
-            # Reuse the collector's existing two-hour freshness boundary.
-            now = datetime.now().timestamp()
-            if not 0 <= now - checked <= 7200:
+            if error_key == 'cpu_usage' and proof.get('policy') != event_data.get('details', {}).get('cpu_policy'):
                 return None
+            checked = float(proof['checked_at'])
             last_seen = datetime.fromisoformat(row[1]).timestamp()
             resolved = datetime.fromisoformat(row[2]).timestamp()
-            recorded = datetime.fromisoformat(event[0]).timestamp()
+            recorded = datetime.fromisoformat(row[5]).timestamp()
             if not last_seen <= checked <= resolved <= recorded:
                 return None
             return proof
@@ -906,7 +924,7 @@ class HealthPersistence:
         
         return False
     
-    def clear_error(self, error_key: str):
+    def clear_error(self, error_key: str, *, check_evidence=None):
         """
         Remove/resolve a specific error immediately.
         Used when the condition that caused the error no longer exists
@@ -928,7 +946,7 @@ class HealthPersistence:
 
             # Check if this error was acknowledged (dismissed)
             cursor.execute('''
-                SELECT acknowledged FROM errors WHERE error_key = ?
+                SELECT acknowledged, id, first_seen FROM errors WHERE error_key = ?
             ''', (error_key,))
             row = cursor.fetchone()
 
@@ -947,7 +965,10 @@ class HealthPersistence:
                 ''', (now, error_key))
 
                 if cursor.rowcount > 0:
-                    self._record_event(cursor, 'cleared', error_key, {'reason': 'condition_resolved'})
+                    self._record_event(cursor, 'cleared', error_key, {
+                        'reason': 'condition_resolved', 'check_evidence': check_evidence,
+                        'incident': {'id': row[1], 'first_seen': row[2], 'resolved_at': now},
+                    })
 
             conn.commit()
     
