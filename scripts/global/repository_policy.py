@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Proxmox repository policy via its own parsed APT repository API.
 
-Only `notfound` permits an offered switch. Never print raw subscription or
+Only `notfound` or `expired` permits an offered switch. Never print raw subscription or
 repository API responses: they can contain subscription keys or credentials.
 """
 import copy
@@ -26,8 +26,8 @@ def subscription_status():
     # including a secret key and server ID. Only parse the exact status line.
     output = run(['pvesubscription', 'get'])
     statuses = re.findall(r'^status: ([a-z]+)$', output, re.MULTILINE)
-    if len(statuses) != 1 or statuses[0] not in ('active', 'notfound'):
-        raise ValueError('Subscription status is not unambiguously active or notfound. Check pvesubscription get locally; no repository changed.')
+    if len(statuses) != 1 or statuses[0] not in ('active', 'notfound', 'expired'):
+        raise ValueError('Subscription status is not unambiguously active, notfound or expired. Check pvesubscription get locally; no repository changed.')
     return statuses[0]
 
 
@@ -45,11 +45,44 @@ def repository_state(suite):
                     raise ValueError()
                 # Flat repositories (e.g. suite './') legitimately omit this.
                 row.setdefault('Components', [])
-                if not isinstance(row['Enabled'], bool) or not all(
+                # Captured PVE 9.2 JSON uses integer 0/1; older fixtures use bool.
+                # Reject float/string coercions and retain the authoritative state.
+                if type(row['Enabled']) not in (bool, int) or row['Enabled'] not in (0, 1):
+                    raise ValueError()
+                row['Enabled'] = bool(row['Enabled'])
+                if not all(
                     isinstance(row[k], list) and all(isinstance(value, str) for value in row[k])
                     for k in ('Types', 'URIs', 'Suites', 'Components')
                 ):
                     raise ValueError()
+                # deb822 write/readback can insert Options/Enabled. It is
+                # redundant only when well-formed and consistent with Enabled;
+                # never discard the authoritative field or unrelated options.
+                options = row.get('Options', [])
+                if not isinstance(options, list):
+                    raise ValueError()
+                remaining = []
+                seen_enabled = False
+                boolean_options = {'true': True, 'yes': True, '1': True,
+                                   'false': False, 'no': False, '0': False}
+                for option in options:
+                    if not isinstance(option, dict) or not isinstance(option['Key'], str) \
+                       or not isinstance(option['Values'], list) \
+                       or not all(isinstance(value, str) for value in option['Values']):
+                        raise ValueError()
+                    if option['Key'].lower() != 'enabled':
+                        remaining.append(option)
+                        continue
+                    if seen_enabled or set(option) != {'Key', 'Values'} or len(option['Values']) != 1:
+                        raise ValueError()
+                    value = boolean_options.get(option['Values'][0].lower())
+                    if value is None or value != row['Enabled']:
+                        raise ValueError()
+                    seen_enabled = True
+                if remaining:
+                    row['Options'] = remaining
+                else:
+                    row.pop('Options', None)
                 entries.append((file['path'], index, row))
         return data, entries
     except (KeyError, TypeError, ValueError, IndexError) as exc:
@@ -59,7 +92,6 @@ def repository_state(suite):
 def evaluate(suite, apply=False):
     if suite not in ('bookworm', 'trixie'):
         raise ValueError('Unsupported Proxmox suite; no repository changed.')
-    status = subscription_status()  # fail closed before inventory or any write
     data, entries = repository_state(suite)
     pve = []
     ceph = []
@@ -79,11 +111,14 @@ def evaluate(suite, apply=False):
                 raise ValueError('Enterprise Ceph repository suite does not match this PVE version; correct it in the Proxmox repository UI before switching.')
             ceph.append((path, index, row))
 
+    if any(set(row['Components']) & {'pve-no-subscription', 'pve-test', 'pvetest'} for _, _, row in pve):
+        return 'preserve'
+    # Entitlement lookup is only needed when considering a switch. Existing
+    # public/test channels are the operator's choice, even if lookup fails.
+    status = subscription_status()  # fail closed before any write
     if status == 'active':
         if not pve:
             raise ValueError('Host has an active subscription but no active PVE repository. Configure its Enterprise source in Node > Updates > Repositories; no repository changed.')
-        return 'preserve'
-    if any(set(row['Components']) & {'pve-no-subscription', 'pve-test', 'pvetest'} for _, _, row in pve):
         return 'preserve'
     if not debian:
         raise ValueError('No active Debian base repository for this suite; configure it in the Proxmox repository UI before continuing.')

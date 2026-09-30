@@ -68,6 +68,206 @@ class RepositoryPolicyTest(unittest.TestCase):
         with patch.object(self.module, 'run', side_effect=run):
             return self.module.evaluate(suite, apply=apply)
 
+    def test_authentic_pve92_public_capture_preserved_without_subscription_or_writes(self):
+        capture = (ROOT / 'tests/fixtures/pr407-macrimi-pve9.2-no-subscription.json').read_bytes()
+        for apply in (False, True):
+            with self.subTest(apply=apply):
+                self.setUp()
+                self.repositories = json.loads(capture)
+                self.subscription = RuntimeError('must not query subscription')
+                before = json.dumps(self.repositories)
+                self.assertEqual(self.run_policy(apply=apply), 'preserve')
+                self.assertEqual(json.dumps(self.repositories), before)
+                self.assertEqual(self.writes, 0)
+                self.assertEqual([c[:2] for c in self.calls], [['pvesh', 'get']])
+
+    def simulated_enterprise_capture(self):
+        # GENERATED scenario, NOT a maintainer before capture: remove public PVE,
+        # enable Enterprise PVE/Ceph, and omit their serialized Enabled option.
+        data = json.loads((ROOT / 'tests/fixtures/pr407-macrimi-pve9.2-no-subscription.json').read_bytes())
+        data['files'] = [file for file in data['files']
+                         if file['path'] != '/etc/apt/sources.list.d/proxmox.sources']
+        for file in data['files']:
+            for row in file['repositories']:
+                if row['Components'] in (['pve-enterprise'], ['enterprise']):
+                    row['Enabled'] = 1
+                    row['Options'] = [option for option in row['Options']
+                                      if option['Key'] != 'Enabled']
+        data['digest'] = 'simulated-enterprise-before'
+        return data
+
+    def test_simulated_capture_disable_accepts_equivalent_enabled_option_serialization(self):
+        for explicit_before in (False, True):
+            with self.subTest(explicit_before=explicit_before):
+                self.setUp()
+                self.repositories = self.simulated_enterprise_capture()
+                if explicit_before:
+                    for file in self.repositories['files'][:2]:
+                        file['repositories'][0]['Options'].append({'Key': 'Enabled', 'Values': ['true']})
+                original_options = [file['repositories'][0]['Options'][0].copy()
+                                    for file in self.repositories['files'][:2]]
+
+                def serialize():
+                    for file in self.repositories['files']:
+                        file['digest'] = [self.writes] * 32
+                        for row in file['repositories']:
+                            row['Enabled'] = int(row['Enabled'])
+                            if row['Components'] in (['pve-enterprise'], ['enterprise']):
+                                row['Options'] = [option for option in row['Options']
+                                                  if option['Key'] != 'Enabled']
+                                row['Options'].append({'Key': 'Enabled', 'Values': [
+                                    'true' if row['Enabled'] else 'false']})
+
+                self.after_write = serialize
+                self.assertEqual(self.run_policy(), 'offer')
+                self.assertEqual(self.writes, 0)
+                self.assertEqual(self.run_policy(apply=True), 'changed')
+                self.assertEqual(self.writes, 3)
+                for file, option in zip(self.repositories['files'][:2], original_options):
+                    row = file['repositories'][0]
+                    self.assertEqual(row['Enabled'], 0)
+                    self.assertEqual(row['Options'], [option, {'Key': 'Enabled', 'Values': ['false']}])
+                self.assertEqual([c[c.index('--path') + 1] for c in self.calls if c[1] == 'create'],
+                                 ['/etc/apt/sources.list.d/pve-enterprise.sources',
+                                  '/etc/apt/sources.list.d/ceph.sources'])
+                self.assertEqual([c[:2] for c in self.calls if c[1] in ('create', 'set')],
+                                 [['pvesh', 'create'], ['pvesh', 'create'], ['pvesh', 'set']])
+
+    def test_malformed_or_conflicting_enabled_options_stop_before_any_write(self):
+        invalid_options = (
+            None, {}, 'Enabled: false', [None], [{'Key': 'Enabled'}],
+            [{'Key': 'Enabled', 'Values': 'false'}],
+            [{'Key': 'Enabled', 'Values': [False]}],
+            [{'Key': 'Enabled', 'Values': []}],
+            [{'Key': 'Enabled', 'Values': ['false', 'false']}],
+            [{'Key': 'Enabled', 'Values': ['unknown']}],
+            [{'Key': 'Enabled', 'Values': ['true']}],  # conflicts with Enabled=0
+            [{'Key': 'Enabled', 'Values': ['false'], 'extra': 'unexpected'}],
+            [{'Key': 'Enabled', 'Values': ['false']}] * 2,
+            [{'Values': ['false']}], [{'Key': 1, 'Values': ['false']}],
+            [{'Key': 'Signed-By', 'Values': [42]}],
+        )
+        for options in invalid_options:
+            with self.subTest(options=options):
+                self.setUp()
+                self.repositories = json.loads((ROOT / 'tests/fixtures/pr407-macrimi-pve9.2-no-subscription.json').read_bytes())
+                self.repositories['files'][0]['repositories'][0]['Options'] = options
+                with self.assertRaisesRegex(ValueError, 'inventory'):
+                    self.run_policy(apply=True)
+                self.assertEqual(self.writes, 0)
+                self.assertEqual([c[:2] for c in self.calls], [['pvesh', 'get']])
+
+    def test_enabled_normalizes_only_booleans_and_integer_zero_one(self):
+        for enabled in (True, False, 0, 1):
+            with self.subTest(enabled=enabled):
+                self.setUp()
+                self.repositories['files'][0]['repositories'][0]['Enabled'] = enabled
+                with patch.object(self.module, 'run', return_value=json.dumps(self.repositories)):
+                    data, entries = self.module.repository_state('trixie')
+                self.assertIs(entries[0][2]['Enabled'], bool(enabled))
+                self.assertIs(data['files'][0]['repositories'][0]['Enabled'], bool(enabled))
+        for enabled in (None, 0.0, 1.0, 0.5, -1, 2, '0', '1', 'false', [], {}):
+            with self.subTest(invalid=enabled):
+                self.setUp()
+                self.repositories['files'][0]['repositories'][0]['Enabled'] = enabled
+                with self.assertRaisesRegex(ValueError, 'inventory'):
+                    self.run_policy(apply=True)
+                self.assertEqual(self.writes, 0)
+                self.assertEqual([c[:2] for c in self.calls], [['pvesh', 'get']])
+
+    def test_redundant_enabled_option_keeps_authoritative_state_and_other_options(self):
+        for enabled, values in ((True, ('true', 'yes', '1', 'TRUE')),
+                                (False, ('false', 'no', '0', 'FALSE'))):
+            for key in ('Enabled', 'enabled'):
+                for value in values:
+                    with self.subTest(enabled=enabled, key=key, value=value):
+                        self.setUp()
+                        row = self.repositories['files'][0]['repositories'][0]
+                        row['Enabled'] = enabled
+                        signed_by = {'Key': 'Signed-By', 'Values': ['/operator/keyring.gpg']}
+                        row['Options'] = [signed_by, {'Key': key, 'Values': [value]}]
+                        with patch.object(self.module, 'run', return_value=json.dumps(self.repositories)):
+                            data, entries = self.module.repository_state('trixie')
+                        self.assertIs(entries[0][2]['Enabled'], enabled)
+                        self.assertEqual(data['files'][0]['repositories'][0]['Options'], [signed_by])
+                        self.assertEqual(len(row['Options']), 2)  # input untouched
+
+    def test_simulated_capture_unrelated_state_edits_abort_before_next_mutation(self):
+        for field in ('Enabled', 'Signed-By', 'option-added', 'URIs', 'Suites', 'Components'):
+            with self.subTest(field=field):
+                self.setUp()
+                self.repositories = self.simulated_enterprise_capture()
+                target = self.repositories['files'][0]['repositories'][0]
+                unrelated = self.repositories['files'][2]['repositories'][0]
+
+                def external_edit():
+                    target['Options'].append({'Key': 'Enabled', 'Values': ['false']})
+                    if field == 'Enabled':
+                        unrelated['Enabled'] = 0
+                        unrelated['Options'].append({'Key': 'Enabled', 'Values': ['false']})
+                    elif field == 'Signed-By':
+                        unrelated['Options'][0]['Values'] = ['/external/keyring.gpg']
+                    elif field == 'option-added':
+                        unrelated['Options'].append({'Key': 'Trusted', 'Values': ['yes']})
+                    else:
+                        unrelated[field].append('external-edit')
+                    self.repositories['digest'] = 'external-edit'
+
+                self.after_write = external_edit
+                with self.assertRaisesRegex(ValueError, 'partial.*unknown'):
+                    self.run_policy(apply=True)
+                self.assertEqual(self.writes, 1)
+                self.assertTrue(self.repositories['files'][1]['repositories'][0]['Enabled'])
+                self.assertFalse(any(c[1] == 'set' for c in self.calls))
+
+    def test_simulated_capture_conflicting_readback_stops_after_first_write(self):
+        for mode in ('conflicting-option', 'malformed-option', 'reenabled-target'):
+            with self.subTest(mode=mode):
+                self.setUp()
+                self.repositories = self.simulated_enterprise_capture()
+                target = self.repositories['files'][0]['repositories'][0]
+
+                def external_edit():
+                    value = 'unknown' if mode == 'malformed-option' else 'true'
+                    if mode == 'reenabled-target':
+                        target['Enabled'] = 1
+                    target['Options'].append({'Key': 'Enabled', 'Values': [value]})
+
+                self.after_write = external_edit
+                with self.assertRaisesRegex(ValueError, 'partial.*unknown') as error:
+                    self.run_policy(apply=True)
+                self.assertNotIn('no repository changed', str(error.exception))
+                self.assertEqual(self.writes, 1)
+                self.assertTrue(self.repositories['files'][1]['repositories'][0]['Enabled'])
+                self.assertFalse(any(c[1] == 'set' for c in self.calls))
+
+    def test_synthetic_pve8_list_inventory_supports_boolean_and_integer_enabled(self):
+        for integer in (False, True):
+            with self.subTest(integer=integer):
+                self.setUp()
+                self.repositories = fixture(
+                    ('/etc/apt/sources.list.d/enterprise.list', [repo('pve-enterprise', suite='bookworm')]),
+                    ('/etc/apt/sources.list', [repo('main', uri='https://deb.example/debian', suite='bookworm')]),
+                )
+                for file in self.repositories['files']:
+                    file['file-type'] = 'list'
+                    for row in file['repositories']:
+                        row['FileType'] = 'list'
+                        row['Enabled'] = 1 if integer else True
+                def serialize():
+                    for file in self.repositories['files']:
+                        for row in file['repositories']:
+                            if integer:
+                                row['Enabled'] = int(row['Enabled'])
+                            # Synthetic standard handle adds the requested suite.
+                            if row['Components'] == ['pve-no-subscription']:
+                                row['Suites'] = ['bookworm']
+                self.after_write = serialize
+                self.assertEqual(self.run_policy(suite='bookworm'), 'offer')
+                self.assertEqual(self.writes, 0)
+                self.assertEqual(self.run_policy(apply=True, suite='bookworm'), 'changed')
+                self.assertEqual(self.writes, 2)
+
     def test_concurrent_inventory_edit_aborts_before_second_mutation(self):
         for edit in ('replace', 'reorder', 'unrelated'):
             with self.subTest(edit=edit):
@@ -133,6 +333,17 @@ class RepositoryPolicyTest(unittest.TestCase):
         self.assertEqual(self.run_policy(), 'offer')
         self.assertFalse(any(c[1] in ('create', 'set') for c in self.calls))
 
+    def test_expired_subscription_offers_switch_then_applies_with_consent(self):
+        self.subscription = 'key: FIXTURE-SECRET\nstatus: expired\nserverid: FIXTURE-SECRET\n'
+        before = json.dumps(self.repositories)
+        self.assertEqual(self.run_policy(), 'offer')
+        self.assertEqual(json.dumps(self.repositories), before)
+        self.assertEqual(self.writes, 0)
+        self.assertEqual([c[:2] for c in self.calls],
+                         [['pvesh', 'get'], ['pvesubscription', 'get']])
+        self.assertEqual(self.run_policy(apply=True), 'changed')
+        self.assertEqual(self.writes, 2)
+
     def test_consented_switch_disables_enterprise_then_adds_public_pve(self):
         self.assertEqual(self.run_policy(apply=True), 'changed')
         writes = [c for c in self.calls if c[1] in ('create', 'set')]
@@ -178,11 +389,29 @@ class RepositoryPolicyTest(unittest.TestCase):
             self.run_policy(apply=True)
         self.assertFalse(any(c[1] in ('create', 'set') for c in self.calls))
 
-    def test_existing_public_or_test_preserved_without_switch(self):
-        for channel in ('pve-no-subscription', 'pve-test'):
-            with self.subTest(channel=channel):
-                self.repositories['files'][0]['repositories'] = [repo(channel)]
-                self.assertEqual(self.run_policy(), 'preserve')
+    def test_existing_public_or_test_preserved_without_subscription_lookup(self):
+        # Synthetic inventory only: this does not model real pvesh serialization.
+        for channel in ('pve-no-subscription', 'pve-test', 'pvetest'):
+            for subscription in ('active', 'notfound', 'expired', 'new', 'suspended',
+                                 'invalid', 'unknown', RuntimeError('lookup failed')):
+                for apply in (False, True):
+                    with self.subTest(channel=channel, subscription=subscription, apply=apply):
+                        self.setUp()
+                        self.subscription = (subscription if isinstance(subscription, Exception)
+                                             else f'status: {subscription}\n')
+                        self.repositories['files'][0]['repositories'].append(repo(channel))
+                        before = json.dumps(self.repositories)
+                        self.assertEqual(self.run_policy(apply=apply), 'preserve')
+                        self.assertEqual(json.dumps(self.repositories), before)
+                        self.assertEqual(self.writes, 0)
+                        self.assertEqual([c[:2] for c in self.calls], [['pvesh', 'get']])
+
+    def test_invalid_inventory_stops_before_subscription_lookup(self):
+        self.repositories['errors'] = [{'error': 'fixture parse failure'}]
+        with self.assertRaisesRegex(ValueError, 'inventory'):
+            self.run_policy(apply=True)
+        self.assertEqual([c[:2] for c in self.calls], [['pvesh', 'get']])
+        self.assertEqual(self.writes, 0)
 
     def test_legacy_pvetest_list_on_pve8_is_preserved(self):
         self.repositories = fixture(
@@ -197,7 +426,8 @@ class RepositoryPolicyTest(unittest.TestCase):
         self.assertFalse(any(c[1] == 'create' for c in self.calls))
 
     def test_unrecognized_and_failed_subscription_cannot_mutate(self):
-        for response in ('status: unknown\n', 'status: invalid\n', 'status: active\nstatus: notfound\n',
+        for response in ('status: unknown\n', 'status: invalid\n', 'status: new\n',
+                         'status: suspended\n', 'status: active\nstatus: notfound\n',
                          'key: secret\n', RuntimeError('service unavailable')):
             with self.subTest(response=response):
                 self.subscription = response
@@ -334,6 +564,143 @@ class CallerPropagationTest(unittest.TestCase):
 
 
 class ShellFlowTest(unittest.TestCase):
+    def test_expired_and_notfound_consent_use_real_policy_with_synthetic_api(self):
+        helper = ROOT / 'scripts/global/repository-functions.sh'
+        # The runner replaces every API command; bool Enabled is synthetic and
+        # deliberately does not claim to reproduce the maintainer's JSON.
+        runner_source = f'''import importlib.util
+import json
+import os
+from pathlib import Path
+spec = importlib.util.spec_from_file_location('policy', {str(POLICY)!r})
+policy = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(policy)
+root = Path(os.environ['TEST_ROOT'])
+state_path = root / 'inventory.json'
+state = json.loads(state_path.read_text())
+def run(args):
+    verb = args[:2]
+    with (root / 'calls').open('a') as log:
+        log.write(' '.join(verb) + '\\n')
+    if verb == ['pvesubscription', 'get']:
+        return 'key: FIXTURE-SECRET\\nstatus: ' + os.environ['STATUS'] + '\\n'
+    if verb == ['pvesh', 'get']:
+        return json.dumps(state)
+    if verb == ['pvesh', 'create']:
+        path = args[args.index('--path') + 1]
+        index = int(args[args.index('--index') + 1])
+        next(f for f in state['files'] if f['path'] == path)['repositories'][index]['Enabled'] = False
+    elif verb == ['pvesh', 'set']:
+        row = dict(state['files'][0]['repositories'][0])
+        row['Enabled'] = True
+        row['Components'] = ['pve-no-subscription']
+        state['files'].append({{'path': '/etc/apt/sources.list.d/public.sources', 'repositories': [row]}})
+    else:
+        raise AssertionError('Unexpected fixture API command')
+    state['digest'] += '-write'
+    state_path.write_text(json.dumps(state))
+    return ''
+policy.run = run
+raise SystemExit(policy.main())
+'''
+        for status, consent, refresh_rc in (('expired', False, 0), ('expired', True, 0),
+                                            ('expired', True, 100), ('notfound', False, 0),
+                                            ('notfound', True, 0)):
+            with self.subTest(status=status, consent=consent, refresh_rc=refresh_rc):
+                with tempfile.TemporaryDirectory(dir=os.environ.get('TMPDIR')) as d:
+                    root = Path(d)
+                    runner = root / 'fixture_policy.py'
+                    runner.write_text(runner_source)
+                    state_path = root / 'inventory.json'
+                    state_path.write_text(json.dumps(fixture(
+                        ('/etc/apt/sources.list.d/operator.sources', [repo('pve-enterprise')]),
+                        ('/etc/apt/sources.list.d/base.sources', [repo('main')]))))
+                    before = state_path.read_bytes()
+                    script = f'''source "{helper}"
+                        pveversion() {{ echo pve-manager/9.0; }}
+                        translate() {{ printf %s "$1"; }}
+                        msg_error() {{ printf '%s\\n' "$1" >&2; }}
+                        is_web_mode() {{ return 0; }}
+                        hybrid_yesno() {{ printf 'prompt\\n' >> "$TEST_ROOT/calls";
+                            printf '%s\\n' "$2" >&2; {'return 0' if consent else 'return 1'}; }}
+                        repository_policy() {{ python3 "{runner}" "$@"; }}
+                        apt-get() {{ printf 'apt %s\\n' "$*" >> "$TEST_ROOT/calls"; return {refresh_rc}; }}
+                        if ensure_repositories; then printf 'consumer\\n' >> "$TEST_ROOT/calls"; exit 0;
+                        else exit $?; fi
+                    '''
+                    result = subprocess.run(['bash', '-c', script], input='', text=True,
+                                            capture_output=True, timeout=15,
+                                            env=dict(os.environ, TEST_ROOT=d, STATUS=status))
+                    calls = (root / 'calls').read_text().splitlines()
+                    self.assertEqual(calls[:3], ['pvesh get', 'pvesubscription get', 'prompt'])
+                    self.assertIn('no active subscription', result.stderr)
+                    self.assertNotIn('FIXTURE-SECRET', result.stdout + result.stderr)
+                    if not consent:
+                        self.assertEqual(calls, ['pvesh get', 'pvesubscription get', 'prompt'])
+                        self.assertEqual(state_path.read_bytes(), before)
+                        self.assertNotEqual(result.returncode, 0)
+                    else:
+                        self.assertEqual(calls[3:10], ['pvesh get', 'pvesubscription get',
+                            'pvesh create', 'pvesh get', 'pvesh set', 'pvesh get', 'apt update'])
+                        state = json.loads(state_path.read_text())
+                        self.assertFalse(state['files'][0]['repositories'][0]['Enabled'])
+                        self.assertEqual(state['files'][-1]['repositories'][0]['Components'],
+                                         ['pve-no-subscription'])
+                        self.assertEqual(result.returncode, refresh_rc)
+                        if refresh_rc:
+                            self.assertNotIn('consumer', calls)
+                            self.assertIn('sources changed, but APT', result.stderr)
+                        else:
+                            self.assertEqual(calls[-1], 'consumer')
+
+    def test_refresh_only_after_changed_apply_and_failure_stops_consumer(self):
+        helper = ROOT / 'scripts/global/repository-functions.sh'
+        for plan, apply, refresh_rc in (('offer', 'changed', 0), ('offer', 'changed', 100),
+                                       ('offer', 'preserve', 0), ('preserve', 'changed', 0),
+                                       ('offer', 'unexpected', 0), ('offer', 'failed', 0)):
+            for pipefail in (False, True):
+                with self.subTest(plan=plan, apply=apply, refresh_rc=refresh_rc, pipefail=pipefail):
+                    with tempfile.TemporaryDirectory(dir=os.environ.get('TMPDIR')) as d:
+                        log = Path(d) / 'calls'
+                        script = f'''source "{helper}"
+                            set -e; set {'-o' if pipefail else '+o'} pipefail
+                            pveversion() {{ echo pve-manager/9.0; }}
+                            translate() {{ printf %s "$1"; }}
+                            msg_error() {{ printf '%s\\n' "$1" >&2; }}
+                            is_web_mode() {{ return 0; }}
+                            hybrid_yesno() {{ printf 'prompt\\n' >> "{log}"; }}
+                            repository_policy() {{
+                                printf '%s\\n' "$1" >> "{log}"
+                                if [[ "$1" == plan ]]; then echo {plan};
+                                elif [[ {apply} == failed ]]; then return 1;
+                                else echo {apply}; fi
+                            }}
+                            apt-get() {{ printf 'apt %s\\n' "$*" >> "{log}"; return {refresh_rc}; }}
+                            # Exercise the conditional context used by most callers:
+                            # inherited errexit cannot be relied on inside the helper.
+                            if ensure_repositories; then
+                                printf 'consumer\\n' >> "{log}"; exit 0
+                            else exit $?; fi
+                        '''
+                        result = subprocess.run(['bash', '-c', script], input='', text=True,
+                                                capture_output=True, timeout=15)
+                        calls = log.read_text().splitlines()
+                        expected = ['plan']
+                        if plan == 'offer':
+                            expected += ['prompt', 'apply']
+                            if apply == 'changed':
+                                expected += ['apt update']
+                        success = (plan == 'preserve' or apply in ('changed', 'preserve')) and refresh_rc == 0
+                        if success:
+                            expected += ['consumer']
+                        self.assertEqual(calls, expected)
+                        self.assertEqual(result.returncode == 0, success, result.stderr)
+                        if refresh_rc:
+                            self.assertRegex(result.stderr, 'sources changed|repositories changed')
+                            self.assertIn('APT', result.stderr)
+                            self.assertNotIn('no APT source changed', result.stderr)
+                            self.assertNotIn('success', result.stdout.lower())
+
     def test_web_consent_applies_only_after_prompt(self):
         helper = ROOT / 'scripts/global/repository-functions.sh'
         with tempfile.TemporaryDirectory(dir=os.environ.get('TMPDIR')) as d:
@@ -343,13 +710,14 @@ class ShellFlowTest(unittest.TestCase):
                 translate() {{ printf %s "$1"; }}
                 msg_error() {{ :; }}
                 is_web_mode() {{ return 0; }}
-                hybrid_yesno() {{ printf 'prompt\\n' >> "{log}"; [[ "$2" == *'This host has no subscription, switch to the no-subscription repository?'* ]]; }}
+                hybrid_yesno() {{ printf 'prompt\\n' >> "{log}"; [[ "$2" == *'This host has no active subscription, switch to the no-subscription repository?'* ]]; }}
                 repository_policy() {{ printf '%s\\n' "$1" >> "{log}"; [[ "$1" == plan ]] && echo offer || echo changed; }}
+                apt-get() {{ printf 'apt %s\\n' "$*" >> "{log}"; }}
                 ensure_repositories
             '''
             result = subprocess.run(['bash', '-c', script], input='', text=True, capture_output=True)
             self.assertEqual(result.returncode, 0, result.stderr)
-            self.assertEqual(log.read_text().splitlines(), ['plan', 'prompt', 'apply'])
+            self.assertEqual(log.read_text().splitlines(), ['plan', 'prompt', 'apply', 'apt update'])
 
     def test_refusal_and_noninteractive_never_apply(self):
         helper = ROOT / 'scripts/global/repository-functions.sh'
@@ -370,6 +738,7 @@ class ShellFlowTest(unittest.TestCase):
                     is_web_mode() {{ {'return 0' if web else 'return 1'}; }}
                     hybrid_yesno() {{ {'return 0' if confirm else 'return 1'}; }}
                     repository_policy() {{ python3 "{mock}" "{log}" "$1"; }}
+                    apt-get() {{ printf 'apt %s\\n' "$*" >> "{log}"; }}
                     ensure_repositories
                     '''
                     result = subprocess.run(['bash', '-c', script], input='', text=True, capture_output=True)
