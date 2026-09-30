@@ -1682,20 +1682,34 @@ EOF
         msg_ok "$(translate "pigz wrapper script created")"
     fi
 
-    # Replace gzip with pigz wrapper
+    # Replace gzip with pigz wrapper. gzip is diverted so package updates
+    # land in gzip.distrib instead of overwriting the wrapper.
     msg_info "$(translate "Replacing gzip with pigz wrapper...")"
-    if [ ! -f /bin/gzip.original ]; then
-        mv -f /bin/gzip /bin/gzip.original && \
-        pmx_write_file /bin/gzip < /bin/pigzwrapper && \
-        chmod +x /bin/gzip
-        msg_ok "$(translate "gzip replaced with pigz wrapper successfully")"
-    elif ! cmp -s /bin/gzip /bin/pigzwrapper; then
-        pmx_write_file /bin/gzip < /bin/pigzwrapper && \
-        chmod +x /bin/gzip
-        msg_ok "$(translate "gzip replaced with pigz wrapper successfully")"
-    else
-        msg_ok "$(translate "gzip replaced with pigz wrapper successfully")"
+    local gz src
+    gz=$(dpkg -L gzip 2>/dev/null | grep -m1 -xE '(/usr)?/bin/gzip')
+    gz=${gz:-/usr/bin/gzip}
+    if [ -z "$(dpkg-divert --listpackage "$gz")" ]; then
+        # Older versions swapped gzip by hand and kept it as gzip.original.
+        # Use that as the real binary, unless a gzip update already put a
+        # newer one back.
+        src="$gz"
+        [ -f /bin/gzip.original ] && [ "$(head -c 2 "$gz")" = "#!" ] && src=/bin/gzip.original
+        pmx_write_file "$gz.distrib" < "$src" && chmod 755 "$gz.distrib"
+        pmx_remove_file /bin/gzip.original
+        pmx_record_execution "Divert gzip" "dpkg-divert --local --no-rename --divert $gz.distrib --add $gz"
+        dpkg-divert --local --no-rename --divert "$gz.distrib" --add "$gz" >/dev/null
+        # Bookworm ships /bin/gzip, trixie /usr/bin/gzip. Divert the /usr
+        # path too so a PVE 8 -> 9 upgrade doesn't overwrite the wrapper.
+        # It needs its own target: /bin/gzip.distrib is the same file, and
+        # dpkg deletes it when it drops the old /bin/gzip (DEP17).
+        [ "$gz" = /bin/gzip ] && dpkg-divert --local --no-rename --divert /usr/bin/gzip.distrib-usr --add /usr/bin/gzip >/dev/null
     fi
+    # Left over from the bookworm diversion after upgrading to trixie.
+    [ "$gz" = /usr/bin/gzip ] && [ -n "$(dpkg-divert --listpackage /bin/gzip)" ] && dpkg-divert --local --no-rename --remove /bin/gzip >/dev/null
+    if ! cmp -s "$gz" /bin/pigzwrapper; then
+        pmx_write_file "$gz" < /bin/pigzwrapper
+    fi
+    msg_ok "$(translate "gzip replaced with pigz wrapper successfully")"
 
     msg_success "$(translate "pigz configuration completed")"
     register_tool "pigz" true "$FUNC_VERSION"

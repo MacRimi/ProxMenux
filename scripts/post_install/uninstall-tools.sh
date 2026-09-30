@@ -1068,11 +1068,30 @@ uninstall_pigz() {
     local FUNC_VERSION="1.0"
     pmx_journal_context "uninstall_pigz" "$FUNC_VERSION"
     msg_info2 "$(translate 'Reverting pigz wrapper...')"
-    if [[ -f /bin/gzip.original ]]; then
-        pmx_write_file /bin/gzip < /bin/gzip.original
+    local gz p real
+    gz=$(dpkg -L gzip 2>/dev/null | grep -m1 -xE '(/usr)?/bin/gzip')
+    gz=${gz:-/usr/bin/gzip}
+    real=$(dpkg-divert --truename "$gz")
+    if [[ "$real" != "$gz" ]]; then
+        pmx_write_file "$gz" < "$real"
+        pmx_record_execution "Remove gzip diversion" "dpkg-divert --local --no-rename --remove $gz"
+        dpkg-divert --local --no-rename --remove "$gz" >/dev/null
+        pmx_remove_file "$real"
+        msg_ok "$(translate 'Restored original /bin/gzip')"
+    elif [[ -f /bin/gzip.original ]]; then
+        # Older, non-diverted install. A gzip update may already have put a
+        # newer binary back; don't overwrite that with the stale copy.
+        [[ "$(head -c 2 "$gz")" == "#!" ]] && pmx_write_file "$gz" < /bin/gzip.original
         pmx_remove_file /bin/gzip.original
         msg_ok "$(translate 'Restored original /bin/gzip')"
     fi
+    # Second diversion added on bookworm (see configure_pigz).
+    for p in /bin/gzip /usr/bin/gzip; do
+        real=$(dpkg-divert --truename "$p")
+        [[ "$real" == "$p" ]] && continue
+        dpkg-divert --local --no-rename --remove "$p" >/dev/null
+        rm -f "$real"
+    done
     pmx_remove_file /bin/pigzwrapper
     pmx_edit_file /etc/vzdump.conf 's/^pigz: 1/#pigz: 1/' 2>/dev/null || true
     pmx_record_execution "Purge pigz package" "apt-get purge -y pigz"
