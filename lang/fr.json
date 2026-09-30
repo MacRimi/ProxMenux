@@ -2737,6 +2737,7 @@
   "If pvesm path returned a DIRECTORY (ZFS/BTRFS):": "Si le chemin pvesm renvoie un RÉPERTOIRE (ZFS/BTRFS) :",
   "If repositories error:": "Si erreur de référentiels :",
   "If the host freezes, remove hostpci entries from": "Si l'hôte se bloque, supprimez les entrées hostpci de",
+  "If the image channel has a new version, the CT is stopped, backed up and verified, and replaced with the new image to update the container. If anything fails, the backup is restored.": "si le canal d'image a une nouvelle version, le CT est arrêté, sauvegardé et vérifié, puis remplacé par la nouvelle image pour mettre à jour le conteneur. Si quelque chose échoue, la sauvegarde est restaurée.",
   "If this happens, you can restore the backup from the 'Subscription Banner Removal' option in 'Uninstall optimizations'.": "Si cela se produit, vous pouvez restaurer la sauvegarde à partir de l'option « Suppression de la bannière d'abonnement » dans « Désinstaller les optimisations ».",
   "If this node runs hyper-converged Ceph: ensure Ceph is 19.x (Squid) BEFORE upgrading PVE.": "Si ce nœud exécute Ceph hyper-convergé : assurez-vous que Ceph est 19.x (Squid) AVANT de mettre à niveau PVE.",
   "If upgrade fails:": "Si la mise à niveau échoue :",

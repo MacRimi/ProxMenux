@@ -2737,6 +2737,7 @@
   "If pvesm path returned a DIRECTORY (ZFS/BTRFS):": "Om pvesm-sökvägen returnerade en DIRECTORY (ZFS/BTRFS):",
   "If repositories error:": "Om förrådsfel:",
   "If the host freezes, remove hostpci entries from": "Om värden fryser, ta bort hostpci-poster från",
+  "If the image channel has a new version, the CT is stopped, backed up and verified, and replaced with the new image to update the container. If anything fails, the backup is restored.": "Om bildkanalen har en ny version stoppas CT, säkerhetskopieras och verifieras och ersätts med den nya bilden för att uppdatera behållaren. Om något misslyckas återställs säkerhetskopian.",
   "If this happens, you can restore the backup from the 'Subscription Banner Removal' option in 'Uninstall optimizations'.": "Om detta händer kan du återställa säkerhetskopian från alternativet \"Ta bort prenumerationsbanner\" i \"Avinstallera optimeringar\".",
   "If this node runs hyper-converged Ceph: ensure Ceph is 19.x (Squid) BEFORE upgrading PVE.": "Om denna nod kör hyperkonvergerad Ceph: se till att Ceph är 19.x (Squid) INNAN du uppgraderar PVE.",
   "If upgrade fails:": "Om uppgraderingen misslyckas:",

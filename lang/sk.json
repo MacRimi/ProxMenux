@@ -2737,6 +2737,7 @@
   "If pvesm path returned a DIRECTORY (ZFS/BTRFS):": "Ak pvesm path vrátil PRIEČINOK (ZFS/BTRFS):",
   "If repositories error:": "Ak zlyhajú repozitáre:",
   "If the host freezes, remove hostpci entries from": "Ak server zamrzne, odstráňte položky hostpci z",
+  "If the image channel has a new version, the CT is stopped, backed up and verified, and replaced with the new image to update the container. If anything fails, the backup is restored.": "Ak má kanál obrázkov novú verziu, CT sa zastaví, zálohuje a overí a nahradí sa novým obrázkom, aby sa aktualizoval kontajner. Ak niečo zlyhá, záloha sa obnoví.",
   "If this happens, you can restore the backup from the 'Subscription Banner Removal' option in 'Uninstall optimizations'.": "Ak sa to stane, zálohu môžete obnoviť cez možnosť 'Subscription Banner Removal' v časti 'Uninstall optimizations'.",
   "If this node runs hyper-converged Ceph: ensure Ceph is 19.x (Squid) BEFORE upgrading PVE.": "Ak tento uzol používa hyper-konvergovaný Ceph: pred aktualizáciou PVE overte, že Ceph je 19.x (Squid).",
   "If upgrade fails:": "Ak aktualizácia zlyhá:",
