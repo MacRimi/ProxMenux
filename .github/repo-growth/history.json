@@ -1,11 +1,11 @@
 {
   "version": 1,
   "repository": "MacRimi/ProxMenux",
-  "updatedAt": "2026-09-29T10:44:01.708Z",
+  "updatedAt": "2026-09-30T10:31:58.382Z",
   "backfilledAt": "2026-07-22T18:09:20.834Z",
   "totals": {
     "downloads": 0,
-    "clones": 36921
+    "clones": 42132
   },
   "assets": {},
   "traffic": {
@@ -221,6 +221,30 @@
       "2026-09-23": {
         "count": 436,
         "uniques": 293
+      },
+      "2026-09-24": {
+        "count": 377,
+        "uniques": 276
+      },
+      "2026-09-25": {
+        "count": 526,
+        "uniques": 350
+      },
+      "2026-09-26": {
+        "count": 723,
+        "uniques": 397
+      },
+      "2026-09-27": {
+        "count": 994,
+        "uniques": 620
+      },
+      "2026-09-28": {
+        "count": 1548,
+        "uniques": 1091
+      },
+      "2026-09-29": {
+        "count": 1043,
+        "uniques": 692
       }
     }
   },
@@ -3611,42 +3635,49 @@
       "stars": 2991,
       "forks": 156,
       "downloads": 0,
-      "clones": 36921
+      "clones": 37298
     },
     {
       "date": "2026-09-25",
       "stars": 2993,
       "forks": 156,
       "downloads": 0,
-      "clones": 36921
+      "clones": 37824
     },
     {
       "date": "2026-09-26",
       "stars": 2996,
       "forks": 156,
       "downloads": 0,
-      "clones": 36921
+      "clones": 38547
     },
     {
       "date": "2026-09-27",
       "stars": 3007,
       "forks": 156,
       "downloads": 0,
-      "clones": 36921
+      "clones": 39541
     },
     {
       "date": "2026-09-28",
       "stars": 3041,
       "forks": 156,
       "downloads": 0,
-      "clones": 36921
+      "clones": 41089
     },
     {
       "date": "2026-09-29",
       "stars": 3052,
       "forks": 157,
       "downloads": 0,
-      "clones": 36921
+      "clones": 42132
+    },
+    {
+      "date": "2026-09-30",
+      "stars": 3062,
+      "forks": 157,
+      "downloads": 0,
+      "clones": 42132
     }
   ]
 }
