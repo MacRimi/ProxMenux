@@ -6981,12 +6981,25 @@
           "status": {
             "failed": "Zlyhalo",
             "completed": "Dokončené",
-            "started": "Spustené"
+            "started": "Spustené",
+            "unconfirmed": "Nepotvrdené",
+            "completed_with_warnings": "Dokončené s upozorneniami"
           }
         }
       },
       "temperature": {
         "sampleSpan": "Vysoké vzorky pokrývajú interval {duration}."
+      },
+      "backup": {
+        "unconfirmedTitle": "{hostname}: Výsledok zálohovania nepotvrdený",
+        "confirmedTitle": "{hostname}: Zálohovanie je dokončené",
+        "confirmedBody": "Zálohovanie bolo úspešne dokončené.",
+        "errorTitle": "{hostname}: Bola hlásená chyba zálohovania",
+        "errorBody": "Správa o zálohovaní obsahuje chybu.",
+        "unconfirmedBody": "Výsledok zálohovania nie je potvrdený.",
+        "warningTitle": "{hostname}: Zálohovanie dokončené s upozorneniami",
+        "warningBody": "Zálohovanie bolo dokončené s upozorneniami.",
+        "diagnosticsOmitted": "Ďalšie diagnostické riadky alebo text vynechaný: {count}.Pôvodná správa sa zachovala."
       }
     }
   }
