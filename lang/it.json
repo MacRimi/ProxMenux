@@ -7261,6 +7261,7 @@
   "go2rtc WebUI": "go2rtc WebUI",
   "google/gasket-driver cloned (fallback — will apply local patches).": "google/gasket-driver clonato (fallback: applicherà le patch locali).",
   "gpg not found; trying apt-key fallback": "gpg non trovato; provando il fallback con la chiave apt",
+  "gzip could not be verified, leaving it unchanged": "non è stato possibile verificare gzip, lasciandolo invariato",
   "gzip replaced with pigz wrapper successfully": "gzip sostituito con successo con il wrapper pigz",
   "has": "ha",
   "has a different MAC than the backup — update any DHCP static reservation": "ha un MAC diverso da quello del backup: aggiorna qualsiasi prenotazione statica DHCP",
