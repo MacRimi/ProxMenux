@@ -160,7 +160,7 @@ pmx_write_file() {
     local path="$1"
     local temp before="" after="" existed="false"
     temp="$(mktemp)" || { cat > "$path"; return $?; }
-    cat > "$temp"
+    cat > "$temp" || { rm -f "$temp"; return 1; }
 
     local kept="true"
     if [ -f "$path" ]; then
@@ -247,7 +247,7 @@ pmx_append_file() {
     local path="$1"
     local temp before="" after="" existed="false"
     temp="$(mktemp)" || { cat >> "$path"; return $?; }
-    cat > "$temp"
+    cat > "$temp" || { rm -f "$temp"; return 1; }
 
     local kept="true"
     if [ -f "$path" ]; then
