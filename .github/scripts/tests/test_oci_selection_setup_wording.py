@@ -61,23 +61,26 @@ class SelectionSetupWording(TestCase):
         fake.read.assert_not_called()
 
     def test_stack_without_members_is_not_diagnosed_as_replay_failure(self):
-        self._stack({}, NO_MEMBERS)
+        self._stack({}, NO_MEMBERS).choose.assert_not_called()
 
     def test_stack_unsupported_replay_retains_distinct_verdict(self):
-        self._stack({'members': [{'native_stack_intent': {'adapt': True}}]}, REPLAY)
+        # It cannot be updated, but it can still be changed or removed.
+        ui = self._stack({'members': [{'native_stack_intent': {'adapt': True}}]}, REPLAY)
+        ui.choose.assert_called_once()
+        self.assertEqual([tag for tag, _ in ui.choose.call_args.args[1]], ['recreate', 'remove'])
 
     def _stack(self, stack, expected):
         record = {'stack': stack}
         fake = SimpleNamespace(ROOT=Path('/fixture'), read=lambda *args: record)
         replay = SimpleNamespace(**{n + '_menu_ready': lambda _: False
             for n in ('nextcloud', 'paperless', 'tandoor', 'immich')})
-        ui = SimpleNamespace(message=Mock(), choose=Mock(), review=Mock())
+        ui = SimpleNamespace(message=Mock(), choose=Mock(return_value=None), review=Mock())
         fn = extracted('_manage_stack', sys=SimpleNamespace(path=[]), instances=fake,
             oci_stack_replay=replay, translate=lambda s: s)
         self.assertFalse(fn(Path('/fixture'), ui, {'vmid': 101}))
         ui.message.assert_called_once_with(expected, 'OCI stack management')
-        ui.choose.assert_not_called()
         ui.review.assert_not_called()
+        return ui
 
     def test_actual_http_failure_seams_preserve_app_and_log_redirect(self):
         for app, port in (('paperless', ':8000'), ('tandoor', '')):
