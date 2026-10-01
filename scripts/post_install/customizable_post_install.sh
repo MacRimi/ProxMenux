@@ -1633,6 +1633,19 @@ disable_rpc() {
 
 
 
+# True if $1 is a working gzip binary rather than the pigz wrapper script.
+gzip_is_binary() {
+    [ -f "$1" ] && [ "$(head -c 2 "$1")" != "#!" ] && "$1" --version >/dev/null 2>&1
+}
+
+# Makes sure $1 is a working gzip, reinstalling the package if it isn't.
+ensure_gzip_binary() {
+    gzip_is_binary "$1" && return 0
+    pmx_record_execution "Reinstall gzip" "apt-get install --reinstall -y gzip"
+    apt-get install --reinstall -y gzip >/dev/null 2>&1
+    gzip_is_binary "$1"
+}
+
 configure_pigz() {
     local FUNC_VERSION="1.0"
     pmx_journal_context "configure_pigz" "$FUNC_VERSION"
@@ -1682,20 +1695,47 @@ EOF
         msg_ok "$(translate "pigz wrapper script created")"
     fi
 
-    # Replace gzip with pigz wrapper
+    # Replace gzip with pigz wrapper. gzip is diverted so package updates
+    # land in gzip.distrib instead of overwriting the wrapper.
     msg_info "$(translate "Replacing gzip with pigz wrapper...")"
-    if [ ! -f /bin/gzip.original ]; then
-        mv -f /bin/gzip /bin/gzip.original && \
-        pmx_write_file /bin/gzip < /bin/pigzwrapper && \
-        chmod +x /bin/gzip
-        msg_ok "$(translate "gzip replaced with pigz wrapper successfully")"
-    elif ! cmp -s /bin/gzip /bin/pigzwrapper; then
-        pmx_write_file /bin/gzip < /bin/pigzwrapper && \
-        chmod +x /bin/gzip
-        msg_ok "$(translate "gzip replaced with pigz wrapper successfully")"
-    else
-        msg_ok "$(translate "gzip replaced with pigz wrapper successfully")"
+    local gz src real
+    gz=$(dpkg -L gzip 2>/dev/null | grep -m1 -xE '(/usr)?/bin/gzip')
+    gz=${gz:-/usr/bin/gzip}
+    if [ -z "$(dpkg-divert --listpackage "$gz")" ]; then
+        # Older versions swapped gzip by hand and kept it as gzip.original.
+        # Prefer whichever is a real gzip; reinstall if neither is.
+        src="$gz"
+        gzip_is_binary "$src" || src=/bin/gzip.original
+        if ! gzip_is_binary "$src"; then
+            ensure_gzip_binary "$gz" || { msg_error "$(translate "gzip could not be verified, leaving it unchanged")"; return 1; }
+            src="$gz"
+        fi
+        if ! pmx_write_file "$gz.distrib" < "$src" || ! chmod 755 "$gz.distrib" || ! gzip_is_binary "$gz.distrib"; then
+            rm -f "$gz.distrib"
+            msg_error "$(translate "gzip could not be verified, leaving it unchanged")"
+            return 1
+        fi
+        pmx_remove_file /bin/gzip.original
+        pmx_record_execution "Divert gzip" "dpkg-divert --local --no-rename --divert $gz.distrib --add $gz"
+        dpkg-divert --local --no-rename --divert "$gz.distrib" --add "$gz" >/dev/null
+        # Bookworm ships /bin/gzip, trixie /usr/bin/gzip. Divert the /usr
+        # path too so a PVE 8 -> 9 upgrade doesn't overwrite the wrapper.
+        # It needs its own target: /bin/gzip.distrib is the same file, and
+        # dpkg deletes it when it drops the old /bin/gzip (DEP17).
+        [ "$gz" = /bin/gzip ] && dpkg-divert --local --no-rename --divert /usr/bin/gzip.distrib-usr --add /usr/bin/gzip >/dev/null
     fi
+    # Left over from the bookworm diversion after upgrading to trixie.
+    [ "$gz" = /usr/bin/gzip ] && [ -n "$(dpkg-divert --listpackage /bin/gzip)" ] && dpkg-divert --local --no-rename --remove /bin/gzip >/dev/null
+    # Never put the wrapper in place without a real gzip behind it. With the
+    # diversion active, a reinstall writes straight into gzip.distrib.
+    real=$(dpkg-divert --truename "$gz")
+    ensure_gzip_binary "$real" || { msg_error "$(translate "gzip could not be verified, leaving it unchanged")"; return 1; }
+    if ! cmp -s "$gz" /bin/pigzwrapper && ! pmx_write_file "$gz" < /bin/pigzwrapper; then
+        pmx_write_file "$gz" < "$real"
+        msg_error "$(translate "gzip could not be verified, leaving it unchanged")"
+        return 1
+    fi
+    msg_ok "$(translate "gzip replaced with pigz wrapper successfully")"
 
     msg_success "$(translate "pigz configuration completed")"
     register_tool "pigz" true "$FUNC_VERSION"

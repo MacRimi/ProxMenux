@@ -1064,15 +1064,54 @@ uninstall_ovh_rtm() {
     register_tool "ovh_rtm" false
 }
 
+# True if $1 is a working gzip binary rather than the pigz wrapper script.
+gzip_is_binary() {
+    [ -f "$1" ] && [ "$(head -c 2 "$1")" != "#!" ] && "$1" --version >/dev/null 2>&1
+}
+
+# Makes sure $1 is a working gzip, reinstalling the package if it isn't.
+ensure_gzip_binary() {
+    gzip_is_binary "$1" && return 0
+    pmx_record_execution "Reinstall gzip" "apt-get install --reinstall -y gzip"
+    apt-get install --reinstall -y gzip >/dev/null 2>&1
+    gzip_is_binary "$1"
+}
+
 uninstall_pigz() {
     local FUNC_VERSION="1.0"
     pmx_journal_context "uninstall_pigz" "$FUNC_VERSION"
     msg_info2 "$(translate 'Reverting pigz wrapper...')"
-    if [[ -f /bin/gzip.original ]]; then
-        pmx_write_file /bin/gzip < /bin/gzip.original
+    local gz p real
+    gz=$(dpkg -L gzip 2>/dev/null | grep -m1 -xE '(/usr)?/bin/gzip')
+    gz=${gz:-/usr/bin/gzip}
+    real=$(dpkg-divert --truename "$gz")
+    if [[ "$real" != "$gz" ]]; then
+        # With the diversion still active, a reinstall writes into $real.
+        if ! ensure_gzip_binary "$real" || ! pmx_write_file "$gz" < "$real"; then
+            pmx_write_file "$gz" < /bin/pigzwrapper
+            msg_error "$(translate "gzip could not be verified, leaving it unchanged")"
+            return 1
+        fi
+        pmx_record_execution "Remove gzip diversion" "dpkg-divert --local --no-rename --remove $gz"
+        dpkg-divert --local --no-rename --remove "$gz" >/dev/null
+        pmx_remove_file "$real"
+        msg_ok "$(translate 'Restored original /bin/gzip')"
+    elif [[ -f /bin/gzip.original ]]; then
+        # Older, non-diverted install. A gzip update may already have put a
+        # newer binary back; don't overwrite that with the stale copy.
+        gzip_is_binary "$gz" || { gzip_is_binary /bin/gzip.original && pmx_write_file "$gz" < /bin/gzip.original; }
         pmx_remove_file /bin/gzip.original
         msg_ok "$(translate 'Restored original /bin/gzip')"
     fi
+    # Second diversion added on bookworm (see configure_pigz).
+    for p in /bin/gzip /usr/bin/gzip; do
+        real=$(dpkg-divert --truename "$p")
+        [[ "$real" == "$p" ]] && continue
+        dpkg-divert --local --no-rename --remove "$p" >/dev/null
+        rm -f "$real"
+    done
+    # pigz is still what gzip runs if anything above went wrong.
+    ensure_gzip_binary "$gz" || { msg_error "$(translate "gzip could not be verified, leaving it unchanged")"; return 1; }
     pmx_remove_file /bin/pigzwrapper
     pmx_edit_file /etc/vzdump.conf 's/^pigz: 1/#pigz: 1/' 2>/dev/null || true
     pmx_record_execution "Purge pigz package" "apt-get purge -y pigz"
