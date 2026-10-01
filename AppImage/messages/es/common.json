@@ -6556,7 +6556,7 @@
           "label": "Reinicio del sistema"
         },
         "system_restore_completed": {
-          "title": "{hostname}: restauración del host finalizada",
+          "title": "{hostname}: Restauración del host finalizada",
           "body": "Tareas posteriores a la restauración completadas en segundo plano.\n\nGuests aplicados: {guests}\nStubs de bind mount: {stubs}\nDirectorios de nodos obsoletos eliminados: {stale_nodes}\nComponentes reinstalados: {components}\nDuración: {duration}\n{warnings_block}\nEl nodo está listo para usarse.",
           "label": "Restauración del host completada"
         },
@@ -6978,7 +6978,9 @@
           "status": {
             "failed": "Fallido",
             "completed": "Completado",
-            "started": "Iniciado"
+            "started": "Iniciado",
+            "unconfirmed": "Sin confirmar",
+            "completed_with_warnings": "Completado con advertencias"
           },
           "report": "Informe de {group}",
           "details": "Detalles",
@@ -6988,6 +6990,17 @@
       },
       "temperature": {
         "sampleSpan": "Lecturas altas registradas a lo largo de {duration}."
+      },
+      "backup": {
+        "unconfirmedTitle": "{hostname}: Resultado del backup sin confirmar",
+        "confirmedTitle": "{hostname}: Backup completado",
+        "confirmedBody": "Backup completado correctamente.",
+        "errorTitle": "{hostname}: Backup fallido",
+        "errorBody": "El informe del backup contiene un error.",
+        "unconfirmedBody": "El resultado del backup no está confirmado.",
+        "warningTitle": "{hostname}: Backup completado con advertencias",
+        "warningBody": "Backup completado con advertencias.",
+        "diagnosticsOmitted": "Líneas o texto de diagnóstico omitidos: {count}. Se conserva el informe original."
       }
     }
   }

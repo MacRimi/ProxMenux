@@ -1364,6 +1364,12 @@ class NotificationManager:
         
         # Get journal context if available (will be enriched per-channel based on detail_level)
         raw_journal_context = data.get('_journal_context', '')
+        # Persist a presentation token in the existing title column: buffers
+        # otherwise discard outcome metadata before composition. Old rows
+        # without a token remain neutral; routing and schema are unchanged.
+        buffer_title = title
+        if event_type in ('backup_complete', 'backup_fail'):
+            buffer_title, _ = enrich_with_emojis(event_type, title, '', data)
         
         for ch_name, channel in channels.items():
             # ── Per-channel category check ──
@@ -1393,7 +1399,7 @@ class NotificationManager:
             # delivered after Quiet Hours + Daily Digest were merged.
             if severity != 'CRITICAL' and self._in_quiet_hours(ch_name):
                 self._buffer_quiet_event(ch_name, event_type, event_group,
-                                          severity, title, body)
+                                          severity, buffer_title, body)
                 continue
 
             # ── Per-channel daily digest ──
@@ -1406,7 +1412,7 @@ class NotificationManager:
             # excluded from the digest by `_DIGEST_EXEMPT_EVENTS`.
             if self._should_buffer_for_digest(ch_name, severity, event_type):
                 self._buffer_digest_event(ch_name, event_type, event_group,
-                                          severity, title, body)
+                                          severity, buffer_title, body)
                 continue
             
             try:
@@ -1821,7 +1827,8 @@ class NotificationManager:
             print(f"[NotificationManager] digest cleanup failed for "
                   f"{ch_name}: {e}")
 
-    def _compose_digest_body(self, rows: list, use_icons: bool = False) -> str:
+    def _compose_digest_body(self, rows: list, use_icons: bool = False,
+                             quiet_release: bool = False) -> str:
         """Render a grouped summary body. rows is a list of
         (id, event_type, event_group, ts, title, body) tuples ordered
         by timestamp ASC.
@@ -1830,27 +1837,47 @@ class NotificationManager:
         groups: OrderedDict[str, list] = OrderedDict()
         for _id, ev_type, group, ts, title, body in rows:
             label = group or 'other'
-            groups.setdefault(label, []).append((ts, ev_type, title))
+            groups.setdefault(label, []).append((ts, ev_type, title, body))
 
         language = self._notification_language()
-        lines = [runtime_message('digest.lead', language, count=len(rows))]
+        # The quiet summary title already carries the total; the daily lead
+        # incorrectly calls every buffered WARNING an INFO event.
+        lines = [] if quiet_release else [runtime_message('digest.lead', language, count=len(rows))]
         for group, items in groups.items():
             group_label = runtime_message(f'digest.groups.{group}', language) or group.title()
             group_icon = CATEGORY_EMOJI.get(group, '') if use_icons else ''
             group_prefix = f'{group_icon} ' if group_icon else ''
             lines.append(f"{group_prefix}{group_label}: {len(items)}")
-            for ts, ev_type, title in items[:8]:
+            # Quiet hours can buffer restore warnings, unlike the daily INFO
+            # digest. Keep their complete recorded body, even past the usual
+            # title preview limit, without changing either delivery policy.
+            visible_items = [item for index, item in enumerate(items)
+                             if index < 8 or (quiet_release and item[1] == 'system_restore_completed')]
+            for ts, ev_type, title, body in visible_items:
                 hhmm = datetime.fromtimestamp(ts).strftime('%H:%M')
+                backup_icon = ''
+                if ev_type in ('backup_complete', 'backup_fail'):
+                    for token in ('💾✅', '💾⚠️', '💾❌', '💾❔', '💾'):
+                        if title.startswith(token + ' '):
+                            backup_icon = token
+                            title = title[len(token) + 1:]
+                            break
+                    backup_icon = backup_icon or ('💾❌' if ev_type == 'backup_fail' else '💾❔')
                 short_title = title.split(': ', 1)[-1] if ': ' in title else title
                 event_icon = (
-                    EVENT_EMOJI.get(ev_type) or CATEGORY_EMOJI.get(group, '')
+                    backup_icon or EVENT_EMOJI.get(ev_type) or CATEGORY_EMOJI.get(group, '')
                 ) if use_icons else ''
                 event_prefix = f'{event_icon} ' if event_icon else ''
                 lines.append(f"  • {event_prefix}{hhmm}  {short_title}")
-            if len(items) > 8:
-                lines.append(runtime_message('digest.more', language, count=len(items) - 8))
+                if quiet_release and ev_type == 'system_restore_completed' and body:
+                    lines.extend('    ' + line.strip() for line in body.splitlines() if line.strip())
+            if len(items) > len(visible_items):
+                lines.append(runtime_message('digest.more', language, count=len(items) - len(visible_items)))
             lines.append('')
-        lines.append(runtime_message('digest.footer', language))
+        # The daily footer describes live warning delivery, which is not true
+        # for warnings buffered during quiet hours. Do not repeat that claim.
+        if not quiet_release:
+            lines.append(runtime_message('digest.footer', language))
         return '\n'.join(lines).rstrip() + '\n'
 
     # ─── Quiet Hours buffer + flush ────────────────────────────
@@ -1985,13 +2012,17 @@ class NotificationManager:
             'digest.quietTitle', language, hostname=host, count=len(rows),
         )
         use_icons = self._config.get(f'{ch_name}.rich_format', 'false') == 'true'
-        summary_body = self._compose_digest_body(rows, use_icons=use_icons)
+        quiet_details = any(row[1] in ('backup_complete', 'backup_fail', 'system_restore_completed')
+                            for row in rows)
+        summary_body = self._compose_digest_body(rows, use_icons=use_icons, quiet_release=quiet_details)
 
         result: dict = {'success': False, 'error': ''}
         try:
             result = channel.send(
                 summary_title, summary_body, severity='INFO',
                 data={'_quiet_hours_summary': True, '_count': len(rows),
+                      '_restore_summary': any(row[1] == 'system_restore_completed' for row in rows),
+                      '_backup_summary': any(row[1] in ('backup_complete', 'backup_fail') for row in rows),
                       '_notification_language': language},
             ) or result
         except Exception as e:
@@ -2467,6 +2498,11 @@ class NotificationManager:
             runtime_data.get('hostname'), self._config,
         )
         runtime_data.setdefault('_notification_language', self._notification_language())
+        # Match queued dispatch's presentation context for these outcome
+        # notices; this does not alter event/severity or direct-send policy.
+        if event_type in ('backup_complete', 'backup_fail', 'system_restore_completed'):
+            runtime_data['_event_type'] = event_type
+            runtime_data['_group'] = TEMPLATES[event_type].get('group', 'other')
 
         # Render template if available
         if event_type in TEMPLATES and not message:

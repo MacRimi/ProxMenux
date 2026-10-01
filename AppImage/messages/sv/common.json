@@ -6978,7 +6978,9 @@
           "status": {
             "failed": "Misslyckades",
             "completed": "Klar",
-            "started": "Startat"
+            "started": "Startat",
+            "unconfirmed": "Obekräftat",
+            "completed_with_warnings": "Klar med varningar"
           },
           "report": "{group} Rapportera",
           "details": "Detaljer",
@@ -6988,6 +6990,17 @@
       },
       "temperature": {
         "sampleSpan": "De höga mätvärdena sträcker sig över {duration}."
+      },
+      "backup": {
+        "unconfirmedTitle": "{hostname}: säkerhetskopians resultat obekräftat",
+        "confirmedTitle": "{hostname}: säkerhetskopiering klar",
+        "confirmedBody": "Säkerhetskopieringen slutfördes utan fel.",
+        "errorTitle": "{hostname}: fel rapporterat vid säkerhetskopiering",
+        "errorBody": "Rapporten om säkerhetskopieringen innehåller ett fel.",
+        "unconfirmedBody": "Säkerhetskopieringens resultat är inte bekräftat.",
+        "warningTitle": "{hostname}: Säkerhetskopiering klar med varningar",
+        "warningBody": "Säkerhetskopiering klar med varningar.",
+        "diagnosticsOmitted": "Utelämnade diagnosrader eller text: {count}. Originalrapporten bevaras."
       }
     }
   }

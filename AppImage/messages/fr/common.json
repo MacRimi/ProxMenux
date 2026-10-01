@@ -6978,7 +6978,9 @@
           "status": {
             "failed": "Échec",
             "completed": "Terminé",
-            "started": "Commencé"
+            "started": "Commencé",
+            "unconfirmed": "Non confirmé",
+            "completed_with_warnings": "Terminée avec avertissements"
           },
           "report": "Rapport {group}",
           "details": "Détails",
@@ -6988,6 +6990,17 @@
       },
       "temperature": {
         "sampleSpan": "Les relevés élevés s'étendent sur {duration}."
+      },
+      "backup": {
+        "unconfirmedTitle": "{hostname} : résultat de la sauvegarde non confirmé",
+        "confirmedTitle": "{hostname} : sauvegarde terminée",
+        "confirmedBody": "Sauvegarde terminée avec succès.",
+        "errorTitle": "{hostname} : erreur signalée lors de la sauvegarde",
+        "errorBody": "Le rapport de sauvegarde contient une erreur.",
+        "unconfirmedBody": "Le résultat de la sauvegarde n’est pas confirmé.",
+        "warningTitle": "{hostname}: Sauvegarde terminée avec avertissements",
+        "warningBody": "Sauvegarde terminée avec avertissements.",
+        "diagnosticsOmitted": "Lignes ou texte de diagnostic omis : {count}. Rapport original conservé."
       }
     }
   }

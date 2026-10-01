@@ -275,8 +275,14 @@ class VzdumpAIIntegrityTests(unittest.TestCase):
             rendered["body"], "CRITICAL", data,
         )
 
+        # The failure title now identifies the unique failed guest; inventory
+        # remains exactly once in the detail table, not suppressed from body.
+        inventory = html.split('<!-- Detail table -->', 1)[1].split('</table>', 1)[0]
         for vmid in range(100, 149):
-            self.assertEqual(html.count(f"guest-{vmid} ({vmid})"), 1, vmid)
+            self.assertEqual(inventory.count(f"guest-{vmid} ({vmid})"), 1, vmid)
+        self.assertIn('guest-148 (148)', rendered['title'])
+        self.assertNotIn('guest-100 (100)', rendered['title'])
+        self.assertEqual(html.count('guest-148 (148)'), 2)  # title + inventory
         self.assertEqual(html.count("49 backups"), 1)
         self.assertEqual(html.count("1 failed"), 1)
         self.assertEqual(html.count(">Zlyhalo<"), 1)

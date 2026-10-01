@@ -4289,6 +4289,47 @@ class ProxmoxHookWatcher:
     def _hostname(self) -> str:
         return _hostname()
 
+    @staticmethod
+    def _backup_outcome(severity: str, message: str) -> str:
+        """Distinguish explicit failure, complete guest logs and unknown results."""
+        text = str(message or '')
+        if severity in ('error', 'err', 'critical') or re.search(
+                r'(?im)^\s*(?:\d+:\s*)?(?:\d{4}-\d{2}-\d{2}\s+\S+\s+)?(?:ERROR:|TASK ERROR:|.*\bStatus\s+ERROR\b)', text):
+            return 'failed'
+        starts = re.findall(r'(?im)\bStarting Backup of VM (\d+)\s*\(', text)
+        finished = re.findall(r'(?im)\bFinished Backup of VM (\d+)\s*\(', text)
+        from notification_templates import _parse_vzdump_table
+        table = _parse_vzdump_table(text)
+        if table is not None and any(guest['status'].lower() == 'error' for guest in table['vms']):
+            return 'failed'
+        warnings = severity in ('warning', 'warn') or bool(re.search(
+                r'(?im)(?:^\s*(?:\d+:\s*)?(?:\d{4}-\d{2}-\d{2}\s+\S+\s+)?WARN(?:ING)?:|\bWARNINGS\s*:\s*[1-9]\d*)', text))
+        if severity not in ('info', 'ok', 'success', 'warning', 'warn'):
+            return 'unconfirmed'
+        completed = 'completed_with_warnings' if warnings else 'confirmed'
+        # A present table is authoritative: do not certify an incomplete table
+        # from a finished guest log, or reject a complete OK table merely
+        # because the extra diagnostic log was truncated before its finishes.
+        if table is not None:
+            return (completed if table['complete'] and
+                    all(guest['status'].lower() == 'ok' for guest in table['vms'])
+                    else 'unconfirmed')
+        if starts:
+            pending = {}
+            for match in re.finditer(r'(?im)\b(Starting|Finished) Backup of VM (\d+)\s*\(', text):
+                action, vmid = match.groups()
+                if action.lower() == 'starting':
+                    pending[vmid] = pending.get(vmid, 0) + 1
+                elif not pending.get(vmid):
+                    return 'unconfirmed'  # A finish before its start is not evidence.
+                else:
+                    pending[vmid] -= 1
+            return completed if not any(pending.values()) else 'unconfirmed'
+        if re.search(
+                r'(?im)^\s*(?:INFO:\s*)?TASK OK\s*$', text):
+            return completed
+        return 'unconfirmed'
+
     def process_webhook(self, payload: dict) -> dict:
         """Process an incoming Proxmox webhook payload.
         
@@ -4347,6 +4388,13 @@ class ProxmoxHookWatcher:
             'title': title or event_type,
             'job_id': pve_job_id,
         }
+        if event_type in ('backup_complete', 'backup_fail'):
+            # This is presentation metadata, not a new event/toggle/delivery path.
+            outcome = self._backup_outcome(severity_raw, message)
+            data['backup_outcome'] = (
+                'failed' if event_type == 'backup_fail' or outcome == 'failed' else
+                outcome if pve_type == 'vzdump' else 'unconfirmed'
+            )
 
         if pve_type == 'replication':
             replication = self._extract_replication_context(
@@ -4440,10 +4488,17 @@ class ProxmoxHookWatcher:
             if vmids:
                 data['vmid'] = vmids[0]
                 entity_id = vmids[0]
-            # Try to extract VM name from the table line
-            name_m = re.search(r'(\d+)\s+(\S+)\s+(?:OK|ERROR|WARNINGS)', message)
-            if name_m:
-                data['vmname'] = name_m.group(2)
+            from notification_templates import _parse_vzdump_message
+            parsed = _parse_vzdump_message(message) or {}
+            guests = parsed.get('vms', [])
+            if data.get('backup_outcome') == 'failed':
+                guests = [guest for guest in guests if guest.get('status', '').lower() == 'error']
+            if len(guests) == 1:
+                data['vmid'] = guests[0]['vmid']
+                data['vmname'] = guests[0]['name']
+            else:
+                # Do not make one successful guest the subject of a batch failure.
+                data.pop('vmid', None)
             # Extract size from "Total size: X"
             size_m = re.search(r'Total size:\s*(.+?)(?:\n|$)', message)
             if size_m:

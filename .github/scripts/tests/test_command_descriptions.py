@@ -130,6 +130,18 @@ class CommandDescriptionsTests(unittest.TestCase):
                     for key in ("temperatureAlertTitle", "temperatureAlertBody",
                                 "recordedReason", "recordedDetails"):
                         fallback.setdefault(key, source_fallback[key])
+                    # Slovak remains the exact upstream catalog; model the
+                    # pending outcome-key generator additions in disposable
+                    # copies rather than modifying its curated values.
+                    if lang == 'sk':
+                        local = temporary['runtime']['notifications']
+                        source = catalog('en')['runtime']['notifications']
+                        for key, value in source['backup'].items():
+                            local.setdefault('backup', {}).setdefault(key, value)
+                        local['channels']['email']['status'].setdefault(
+                            'unconfirmed', source['channels']['email']['status']['unconfirmed'])
+                        local['channels']['email']['status'].setdefault(
+                            'completed_with_warnings', source['channels']['email']['status']['completed_with_warnings'])
                     path.write_text(json.dumps(temporary, ensure_ascii=False))
                 # Model steady state after the bot fills these intentional new
                 # messages; keep repository locales and all other leaves intact.

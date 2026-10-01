@@ -1037,12 +1037,33 @@ class EmailChannel(NotificationChannel):
 
         # Determine group for section header
         event_type = data.get('_event_type', '')
+        if event_type == 'backup_complete':
+            outcome = data.get('backup_outcome')
+            if outcome == 'confirmed':
+                sev.update(self._SEV_STYLE['OK'])
+                status = 'completed'
+            elif outcome == 'completed_with_warnings':
+                sev.update(self._SEV_STYLE['WARNING'])
+                status = 'completed_with_warnings'
+            elif outcome == 'failed':
+                sev.update(self._SEV_STYLE['CRITICAL'])
+                status = 'failed'
+            else:
+                sev.update(self._SEV_DEFAULT)
+                status = 'unconfirmed'
+            sev['label'] = _runtime_text(f'email.status.{status}', data)
         group = data.get('_group', 'other')
-        # Keep unbroken recorded text inside the temperature email's table.
-        # Both properties are inline for mail clients; other events retain
-        # their original markup and layout.
-        temp_cell_wrap = 'word-wrap:break-word;overflow-wrap:break-word;word-break:break-word;' if event_type == 'temp_high' else ''
-        temp_table_layout = 'table-layout:fixed;' if event_type == 'temp_high' else ''
+        # Scoped inline mail-compatible wrapping for authoritative raw-context
+        # bodies, including restore bodies released from quiet hours.
+        backup_email = event_type in {'backup_complete', 'backup_fail'}
+        wrap_body = (event_type in {'temp_high', 'system_restore_completed'}
+                     or backup_email or data.get('_restore_summary') or data.get('_backup_summary'))
+        temp_cell_wrap = 'word-wrap:break-word;overflow-wrap:break-word;word-break:break-word;' if wrap_body else ''
+        temp_table_layout = 'table-layout:fixed;' if wrap_body else ''
+        # Keep wrapping event-scoped; unrelated mail remains byte-identical.
+        context_email = backup_email
+        backup_title_wrap = temp_cell_wrap if context_email else ''
+        backup_metadata_layout = 'table-layout:fixed;' if context_email else ''
         section_label = _runtime_text(f'email.groups.{group}', data)
         report_label = _runtime_text('email.report', data, group=section_label)
         host_label = _runtime_text('email.host', data)
@@ -1073,6 +1094,18 @@ class EmailChannel(NotificationChannel):
                 ('', html_mod.escape(line.strip()))
                 for line in body.split('\n') if line.strip()
             )
+            # A metadata-only/manual body may be generic. Keep actionable raw
+            # context once, without restoring duplicated inventory metadata.
+            reason = data.get('reason', '')
+            if backup_email and reason and len(reason) <= 80 and reason not in body:
+                detail_rows.append((html_mod.escape(_runtime_text('email.fields.reason', data)),
+                                    html_mod.escape(reason)))
+
+        if event_type == 'system_restore_completed' or data.get('_restore_summary'):
+            # The endpoint's warnings_block and task counts live in the
+            # localized body, not the generic services Event row.
+            detail_rows = [('', html_mod.escape(line if data.get('_quiet_hours_summary') else line.strip()))
+                           for line in body.split('\n') if line.strip()]
 
         # ── Fallback: if no structured rows, render body text lines ──
         if not detail_rows:
@@ -1090,6 +1123,7 @@ class EmailChannel(NotificationChannel):
 
         # ── Render detail rows as HTML table ──
         rows_html = ''
+        summary_whitespace = 'white-space:pre-wrap;' if data.get('_quiet_hours_summary') and data.get('_restore_summary') else ''
         for label, value in detail_rows:
             if label:
                 rows_html += f'''<tr>
@@ -1099,13 +1133,14 @@ class EmailChannel(NotificationChannel):
             else:
                 # Full-width row (no label, just description text)
                 rows_html += f'''<tr>
-  <td colspan="2" style="padding:8px 12px;font-size:13px;color:#1f2937;border-bottom:1px solid #e5e7eb;{temp_cell_wrap}">{value}</td>
+  <td colspan="2" style="padding:8px 12px;font-size:13px;color:#1f2937;border-bottom:1px solid #e5e7eb;{temp_cell_wrap}{summary_whitespace}">{value}</td>
 </tr>'''
 
         # ── Reason / details block (long text, displayed separately) ──
         reason = data.get('reason', '')
         reason_html = ''
-        if reason and len(reason) > 80 and not (event_type == 'temp_high' and reason in body):
+        if reason and len(reason) > 80 and not (
+                (event_type == 'temp_high' or backup_email) and reason in body):
             reason_html = f'''
 <div style="margin:16px 0 0;padding:12px 16px;border:1px solid #d1d5db;border-radius:6px;">
   <p style="margin:0 0 4px;font-size:11px;font-weight:600;color:#374151;text-transform:uppercase;letter-spacing:0.05em;">{_runtime_text('email.details', data)}</p>
@@ -1140,15 +1175,15 @@ class EmailChannel(NotificationChannel):
 
   <!-- Title bar -->
   <div style="padding:16px 28px;background:{sev['bg']};border-bottom:1px solid {sev['border']};">
-    <h2 style="margin:0;font-size:15px;font-weight:600;color:{sev['color']};">{html_mod.escape(display_title)}</h2>
+    <h2 style="margin:0;font-size:15px;font-weight:600;color:{sev['color']};{backup_title_wrap}">{html_mod.escape(display_title)}</h2>
   </div>
 
   <!-- Body -->
   <div style="padding:24px 28px;">
     <!-- Metadata -->
-    <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom:16px;">
+    <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom:16px;{backup_metadata_layout}">
       <tr>
-        <td style="font-size:12px;color:#4b5563;">
+        <td style="font-size:12px;color:#4b5563;{backup_title_wrap}">
           {html_mod.escape(host_label)}: <strong style="color:#111827;">{html_mod.escape(data.get('hostname', ''))}</strong>
         </td>
         <td style="font-size:12px;color:#4b5563;text-align:right;">
@@ -1221,7 +1256,9 @@ class EmailChannel(NotificationChannel):
             v = str(value).strip() if value else ''
             if not v or v == '0' and original_label not in ('Failures',):
                 return
-            if fmt == 'severity':
+            if fmt == 'backup_error':
+                rows.append((esc(label), f'<span style="color:#dc2626;font-weight:600;">{esc(v)}</span>'))
+            elif fmt == 'severity':
                 sev_colors = {
                     'CRITICAL': '#dc2626', 'WARNING': '#d97706',
                     'INFO': '#2563eb', 'OK': '#16a34a',
@@ -1254,9 +1291,14 @@ class EmailChannel(NotificationChannel):
             # tell which target the backup ran against. Reported gap: emails
             # showed no way to distinguish which PBS failed with 2+ configured.
             _add('Storage', data.get('storage') or data.get('storage_name'), 'code')
-            status_key = 'failed' if 'fail' in event_type else 'completed' if 'complete' in event_type else 'started'
+            if event_type == 'backup_complete' and data.get('backup_outcome') != 'confirmed':
+                status_key = ('failed' if data.get('backup_outcome') == 'failed'
+                              else 'completed_with_warnings' if data.get('backup_outcome') == 'completed_with_warnings'
+                              else 'unconfirmed')
+            else:
+                status_key = 'failed' if 'fail' in event_type else 'completed' if 'complete' in event_type else 'started'
             _add('Status', _runtime_text(f'email.status.{status_key}', language_data),
-                 'severity' if 'fail' in event_type else '')
+                 'backup_error' if status_key == 'failed' else '')
             _add('Size', data.get('size'))
             _add('Duration', data.get('duration'))
             _add('Snapshot', data.get('snapshot_name'), 'code')

@@ -206,6 +206,58 @@ def _format_lxc_update_details(data: Dict[str, Any], language: str) -> str:
 
 # ─── vzdump message parser ───────────────────────────────────────
 
+def _parse_vzdump_table(message: str) -> Optional[Dict[str, Any]]:
+    """Read the bounded fixed-column summary for both outcomes and guest details."""
+    lines = message.splitlines()
+    for index, header in enumerate(lines):
+        if not re.match(r'\s*VMID\s+Name\s+Status\b', header, re.IGNORECASE):
+            continue
+        columns = [re.search(r'\b' + name + r'\b', header, re.IGNORECASE)
+                   for name in ('VMID', 'Name', 'Status', 'Time', 'Size', 'Filename')]
+        if not all(columns):
+            return {'vms': [], 'complete': False}
+        starts = [column.start() for column in columns if column is not None]
+        if starts != sorted(starts):
+            return {'vms': [], 'complete': False}
+        rows = []
+        valid = True
+        complete = False
+        for line in lines[index + 1:]:
+            if not line.strip():
+                continue
+            if re.match(r'\s*Total running time:\s*\S', line, re.IGNORECASE):
+                complete = valid and bool(rows)
+                break
+            # Blanks are allowed, but no unrelated section can extend the table.
+            if not re.match(r'\s*\d+\s+', line):
+                break
+            values = [line[a:b].strip() for a, b in
+                      zip(starts, starts[1:] + [len(line)])]
+            vmid, name, status, duration, size, filename = values
+            if not vmid.isdigit():
+                valid = False
+                break
+            valid = bool(valid and all(values)
+                         and re.fullmatch(r'(?:\d+:\d{2}:\d{2}|(?:\d+[yMwdhms]\s*)+)', duration)
+                         and re.fullmatch(r'\d+(?:\.\d+)?\s*(?:[KMGTPE]i?B?|B)', size, re.IGNORECASE))
+            if status.lower() in ('err', 'error'):
+                status = 'error'
+            kind = ('lxc' if 'lxc' in filename or filename.startswith('ct/') else
+                    'qemu' if 'qemu' in filename or filename.startswith('vm/') else '')
+            if filename.lower() == 'null':
+                # Native failed rows lack archives. Match only this row's VMID;
+                # multiple inconsistent starts are not authoritative identity.
+                kinds = set(re.findall(
+                    r'(?im)\bStarting Backup of VM ' + re.escape(vmid) + r'\s+\((lxc|qemu)\)',
+                    message))
+                kind = kinds.pop() if len(kinds) == 1 else ''
+            rows.append({'vmid': vmid, 'name': name, 'status': status,
+                         'time': duration, 'size': size, 'filename': filename,
+                         'type': kind})
+        return {'vms': rows, 'complete': bool(complete)}
+    return None
+
+
 def _parse_vzdump_message(message: str) -> Optional[Dict[str, Any]]:
     """Parse a PVE vzdump notification message into structured data.
     
@@ -225,53 +277,10 @@ def _parse_vzdump_message(message: str) -> Optional[Dict[str, Any]]:
     
     lines = message.split('\n')
     
-    # ── Strategy 1: classic table (local/NFS/CIFS storage) ──
-    header_idx = -1
-    for i, line in enumerate(lines):
-        if re.match(r'\s*VMID\s+Name\s+Status', line, re.IGNORECASE):
-            header_idx = i
-            break
-    
-    if header_idx >= 0:
-        # Use column positions from the header to slice each row.
-        # Header: "VMID    Name           Status    Time      Size          Filename"
-        header = lines[header_idx]
-        col_starts = []
-        for col_name in ['VMID', 'Name', 'Status', 'Time', 'Size', 'Filename']:
-            idx = header.find(col_name)
-            if idx >= 0:
-                col_starts.append(idx)
-        
-        if len(col_starts) == 6:
-            for line in lines[header_idx + 1:]:
-                stripped = line.strip()
-                if not stripped or stripped.startswith('Total') or stripped.startswith('Logs') or stripped.startswith('='):
-                    break
-                # Pad line to avoid index errors
-                padded = line.ljust(col_starts[-1] + 50)
-                vmid = padded[col_starts[0]:col_starts[1]].strip()
-                name = padded[col_starts[1]:col_starts[2]].strip()
-                status = padded[col_starts[2]:col_starts[3]].strip()
-                time_val = padded[col_starts[3]:col_starts[4]].strip()
-                size = padded[col_starts[4]:col_starts[5]].strip()
-                filename = padded[col_starts[5]:].strip()
-                
-                if vmid and vmid.isdigit():
-                    # Infer type from filename (vzdump-lxc-NNN or vzdump-qemu-NNN)
-                    vm_type = ''
-                    if 'lxc' in filename:
-                        vm_type = 'lxc'
-                    elif 'qemu' in filename:
-                        vm_type = 'qemu'
-                    vms.append({
-                        'vmid': vmid,
-                        'name': name,
-                        'status': status,
-                        'time': time_val,
-                        'size': size,
-                        'filename': filename,
-                        'type': vm_type,
-                    })
+    # The same summary rows drive classification, rich bodies and identities.
+    table = _parse_vzdump_table(message)
+    if table is not None:
+        vms = table['vms']
     
     # ── Strategy 2: log-style (PBS / Proxmox Backup Server) ──
     # Parse from the full vzdump log lines.
@@ -299,7 +308,7 @@ def _parse_vzdump_message(message: str) -> Optional[Dict[str, Any]]:
                 current_vm = {
                     'vmid': m_start.group(1),
                     'name': '',
-                    'status': 'ok',
+                    'status': 'unknown',
                     'time': '',
                     'size': '',
                     'filename': '',
@@ -307,6 +316,18 @@ def _parse_vzdump_message(message: str) -> Optional[Dict[str, Any]]:
                 }
                 continue
             
+            # A finish can belong to a guest already stored when another
+            # start arrived. Preserve that guest's actual completion too.
+            prior_finish = re.match(r'Finished Backup of VM (\d+)\s+\(([^)]+)\)', clean)
+            if prior_finish:
+                prior = next((vm for vm in reversed(vms)
+                              if vm['vmid'] == prior_finish.group(1)), None)
+                if prior is not None:
+                    prior['time'] = prior_finish.group(2)
+                    if prior['status'] != 'error':
+                        prior['status'] = 'ok'
+                    continue
+
             if current_vm:
                 # Guest name
                 m_name = re.match(r'(?:CT|VM) Name:\s*(.+)', clean)
@@ -338,15 +359,16 @@ def _parse_vzdump_message(message: str) -> Optional[Dict[str, Any]]:
                 # Finished -> duration
                 m_finish = re.match(
                     r'Finished Backup of VM (\d+)\s+\(([^)]+)\)', clean)
-                if m_finish:
+                if m_finish and m_finish.group(1) == current_vm['vmid']:
                     current_vm['time'] = m_finish.group(2)
-                    current_vm['status'] = 'ok'
+                    if current_vm['status'] != 'error':
+                        current_vm['status'] = 'ok'
                     vms.append(current_vm)
                     current_vm = None
                     continue
                 
                 # Error
-                if clean.startswith('ERROR:') or clean.startswith('TASK ERROR'):
+                if re.match(r'^\s*(?:ERROR:|TASK ERROR)', line, re.IGNORECASE):
                     if current_vm:
                         current_vm['status'] = 'error'
         
@@ -354,6 +376,21 @@ def _parse_vzdump_message(message: str) -> Optional[Dict[str, Any]]:
         if current_vm:
             vms.append(current_vm)
     
+    # Explicit guest-linked failures outrank a contradictory summary OK row.
+    # Job-level/prune errors do not invalidate unrelated successfully saved guests.
+    for line in lines:
+        error = re.match(r'^\s*(?:\d+:\s*)?(?:\d{4}-\d{2}-\d{2}\s+\S+\s+)?(?:ERROR:|TASK ERROR:)\s*(.*)',
+                         line, re.IGNORECASE)
+        if not error:
+            continue
+        failed_guest = re.search(r'\bBackup of (?:VM|CT) (\d+) failed\b|\bbackup failed for (?:VM|CT) (\d+)\b',
+                                 error.group(1), re.IGNORECASE)
+        if failed_guest:
+            vmid = failed_guest.group(1) or failed_guest.group(2)
+            for vm in vms:
+                if vm['vmid'] == vmid:
+                    vm['status'] = 'error'
+
     # ── Extract totals ──
     for line in lines:
         m_time = re.search(r'Total running time:\s*(.+)', line)
@@ -369,7 +406,7 @@ def _parse_vzdump_message(message: str) -> Optional[Dict[str, Any]]:
         sizes_gib = 0.0
         for vm in vms:
             s = vm.get('size', '')
-            m = re.match(r'([\d.]+)\s+(.*)', s)
+            m = re.fullmatch(r'(\d+(?:\.\d+)?)\s+([KMGTPE]i?B|B)', s, re.IGNORECASE)
             if m:
                 val = float(m.group(1))
                 unit = m.group(2).strip().upper()
@@ -439,7 +476,7 @@ def _format_vzdump_body(parsed: Dict[str, Any], is_success: bool,
     
     for vm in parsed.get('vms', []):
         status = vm.get('status', '').lower()
-        icon = '\u2705' if status == 'ok' else '\u274C'
+        icon = '\u2705' if status == 'ok' else '\u274C' if status == 'error' else '\u2754'
         
         # Determine VM/CT type prefix
         vm_type = vm.get('type', '')
@@ -501,7 +538,8 @@ def _format_vzdump_body(parsed: Dict[str, Any], is_success: bool,
     if vm_count > 0 or parsed.get('total_size'):
         ok_count = sum(1 for v in parsed.get('vms', [])
                        if v.get('status', '').lower() == 'ok')
-        fail_count = vm_count - ok_count
+        fail_count = sum(1 for v in parsed.get('vms', [])
+                         if v.get('status', '').lower() == 'error')
         
         summary_parts = []
         if vm_count:
@@ -1855,6 +1893,50 @@ def render_template(event_type: str, data: Dict[str, Any],
         )
         if localized:
             template[field] = localized
+    backup_title_target = ''
+    if event_type == 'backup_complete':
+        template['title'] = runtime_message('backup.unconfirmedTitle', language,
+            hostname=data.get('hostname') or _get_hostname()) or (
+            str(data.get('hostname') or _get_hostname()) + ': Backup outcome unconfirmed')
+        template['body'] = runtime_message('backup.unconfirmedBody', language) or 'The backup outcome is not confirmed.'
+        outcome = data.get('backup_outcome')
+        if outcome == 'confirmed':
+            template['title'] = runtime_message('backup.confirmedTitle', language,
+                                                hostname=data.get('hostname') or _get_hostname())
+            template['body'] = runtime_message('backup.confirmedBody', language)
+        elif outcome == 'completed_with_warnings':
+            template['title'] = runtime_message('backup.warningTitle', language,
+                                                hostname=data.get('hostname') or _get_hostname())
+            template['body'] = runtime_message('backup.warningBody', language)
+        elif outcome == 'failed':
+            template['title'] = runtime_message('backup.errorTitle', language,
+                                                hostname=data.get('hostname') or _get_hostname())
+            template['body'] = runtime_message('backup.errorBody', language)
+    if event_type == 'backup_fail':
+        template['title'] = runtime_message('backup.errorTitle', language,
+                                            hostname=data.get('hostname') or _get_hostname())
+    if event_type == 'backup_fail' or (event_type == 'backup_complete' and data.get('backup_outcome') in ('confirmed', 'completed_with_warnings', 'failed')):
+        parsed_backup = _parse_vzdump_message(str(data.get('pve_message') or ''))
+        storage = str((parsed_backup or {}).get('storage_name') or data.get('storage') or '').strip()
+        guests = (parsed_backup or {}).get('vms') or []
+        # Explicit confirmed manual metadata is useful context, not evidence
+        # about an unparsed batch. Only use it when there is no raw report.
+        if not data.get('pve_message') and data.get('backup_outcome') == 'confirmed' and data.get('vmid'):
+            guests = [{'vmid': str(data['vmid']), 'name': str(data.get('vmname') or ''),
+                       'type': str(data.get('vm_type') or ''), 'status': 'ok'}]
+        if event_type == 'backup_fail' or data.get('backup_outcome') == 'failed':
+            guests = [guest for guest in guests if guest.get('status', '').lower() == 'error']
+        target = []
+        if storage:
+            target.append(storage)
+        if len(guests) == 1:
+            guest = guests[0]
+            kind = 'VM' if guest.get('type') == 'qemu' else 'CT' if guest.get('type') == 'lxc' else 'VM/CT'
+            name = guest.get('name') or kind
+            target.append(f"{kind} {name} ({guest['vmid']})" if name != kind
+                          else f"{kind} {guest['vmid']}")
+        if target:
+            backup_title_target = ' — ' + ' · '.join(target)
     
     # Ensure hostname is always available
     variables = {
@@ -1884,6 +1966,11 @@ def render_template(event_type: str, data: Dict[str, Any],
         'log_file': '',
     }
     variables.update(data)
+    if event_type in ('backup_fail', 'backup_complete'):
+        # The provider has already substituted raw Display Names. Insert the
+        # resolved title as a value, never reinterpret its literal braces.
+        variables['_backup_title'] = template['title']
+        template['title'] = '{_backup_title}'
 
     # Old persisted errors and manual events may lack a complete reading.
     # Accept plain numeric strings, but never interpret booleans or objects as
@@ -1992,12 +2079,37 @@ def render_template(event_type: str, data: Dict[str, Any],
         title = template['title'].format_map(safe_vars)
     except (ValueError, IndexError):
         title = template['title']
+    title += backup_title_target
     
     # ── PVE vzdump special formatting ──
     # When the event came from PVE webhook with a full vzdump message,
     # parse the table/logs and format a rich body instead of the sparse template.
     pve_message = data.get('pve_message', '')
-    pve_title = data.get('pve_title', '')
+    backup_diagnostics = []
+    principal_cause = None
+
+    def bounded_backup_diagnostics(lines, principal_cause=None):
+        # 1024 chars matches the repository's small-channel message convention;
+        # 8 lines keeps repeated producer warnings readable. Inventory/title
+        # size is separate: this is not a one-Telegram-message guarantee.
+        unique = list(dict.fromkeys(line for line in lines if line.strip()))
+        principal = principal_cause or next((line for line in unique if re.search(r'\b(?:ERROR:|TASK ERROR:)', line, re.IGNORECASE)), None)
+        if principal:
+            unique.remove(principal)
+            unique.insert(0, principal)
+        shown, budget, omitted = [], 1024, 0
+        for line in unique:
+            if len(shown) >= 8 or budget < 2:
+                omitted += 1
+                continue
+            line_budget = min(budget, 512)
+            rendered = line if len(line) <= line_budget else line[:line_budget - 1] + '…'
+            omitted += int(rendered != line)
+            shown.append(rendered)
+            budget -= len(rendered) + 1
+        if omitted:
+            shown.append(runtime_message('backup.diagnosticsOmitted', language, count=omitted))
+        return '\n'.join(shown)
     
     # Check for custom formatter function
     formatter_name = template.get('formatter')
@@ -2016,13 +2128,29 @@ def render_template(event_type: str, data: Dict[str, Any],
         if parsed:
             is_success = (event_type == 'backup_complete')
             body_text = _format_vzdump_body(parsed, is_success, language=language)
-            # Preserve PVE's source title for English, but never leak it into a
-            # deterministic localized notification.
-            if pve_title and requested_language == 'en':
-                title = pve_title
+            diagnostic_lines = [line.strip() for line in pve_message.splitlines()
+                                if re.match(r'^\s*(?:\d+:\s*)?(?:\d{4}-\d{2}-\d{2}\s+\S+\s+)?(?:WARN(?:ING)?:|ERROR:|TASK ERROR)',
+                                            line, re.IGNORECASE)]
+            if event_type == 'backup_fail' or data.get('backup_outcome') == 'failed':
+                # Native send_notification puts multiline job/setup errors
+                # before Details, while its subject says only "multiple problems".
+                # Keep that raw block when inventory replaces the producer body;
+                # it is job context, not evidence that every guest failed.
+                error_block = re.match(r'\A(.*?)^Details\r?\n=+\s*$',
+                                       pve_message, re.MULTILINE | re.DOTALL)
+                if error_block:
+                    diagnostic_lines = error_block.group(1).rstrip('\r\n').splitlines() + diagnostic_lines
+            backup_diagnostics = [line for line in diagnostic_lines
+                                  if line.strip() and line not in body_text.splitlines()]
         else:
-            # Couldn't parse -- use PVE raw message as body
-            body_text = pve_message.strip()
+            # Unparsed diagnostic-only reports remain visible but bounded.
+            body_text = ''
+            backup_diagnostics = pve_message.strip().splitlines()
+        if event_type == 'backup_complete' and data.get('backup_outcome') != 'confirmed':
+            key = ('backup.errorBody' if data.get('backup_outcome') == 'failed'
+                   else 'backup.warningBody' if data.get('backup_outcome') == 'completed_with_warnings'
+                   else 'backup.unconfirmedBody')
+            body_text = (runtime_message(key, language) or template['body']) + '\n' + body_text
     elif event_type == 'system_mail' and pve_message:
         # System mail -- use PVE message directly (mail bounce, cron, smartd)
         body_text = pve_message.strip()[:1000]
@@ -2032,6 +2160,51 @@ def render_template(event_type: str, data: Dict[str, Any],
         except (ValueError, IndexError):
             body_text = template['body']
     
+    if event_type == 'backup_complete' and data.get('backup_outcome') == 'confirmed' and not pve_message:
+        context = []
+        if data.get('vmid'):
+            name = str(data.get('vmname') or '')
+            context.append(f"{name} ({data['vmid']})" if name else str(data['vmid']))
+        if data.get('storage'):
+            context.append(str(data['storage']))
+        if data.get('size'):
+            context.append(runtime_message('vzdump.size', language, value=data['size']))
+        if data.get('duration'):
+            context.append(runtime_message('vzdump.duration', language, value=data['duration']))
+        if context:
+            body_text += '\n' + '\n'.join(context)
+
+    # PVE can move a one-line setup/abort reason exclusively into its subject.
+    # Preserve that raw failure context, without using it as a localized title.
+    if event_type in ('backup_complete', 'backup_fail') and (
+            event_type == 'backup_fail' or data.get('backup_outcome') == 'failed'):
+        source_subject = str(data.get('pve_title') or '').strip()
+        native_failure = re.fullmatch(
+            r'vzdump backup status \([^\r\n]*\): backup failed(?::\s*(.*))?',
+            source_subject, re.IGNORECASE)
+        guest_context = (_parse_vzdump_message(str(pve_message or '')) or {}).get('vms')
+        if native_failure:
+            # Before the first guest, too, only the native cause is diagnostic;
+            # the original host/job envelope is not display-name context.
+            source_subject = (native_failure.group(1) or '').strip()
+        elif guest_context:
+            cause = re.search(r'\bbackup failed:\s*(.+)', source_subject, re.IGNORECASE)
+            source_subject = cause.group(1).strip() if cause else ''
+        if source_subject.lower() == 'multiple problems':
+            source_subject = ''
+        if source_subject and source_subject not in {line.strip() for line in body_text.splitlines()}:
+            # Reserve the subject-equivalent diagnostic BEFORE the cap. Finding
+            # it in uncapped logs is not enough: that late line could be omitted.
+            principal_cause = next((line for line in backup_diagnostics
+                if line.strip() == source_subject or
+                re.split(r'\b(?:TASK ERROR:|ERROR:)\s*', line, maxsplit=1, flags=re.IGNORECASE)[-1].strip() == source_subject), None)
+            if not principal_cause:
+                principal_cause = source_subject
+                backup_diagnostics.insert(0, source_subject)
+
+    if backup_diagnostics:
+        body_text += '\n' + bounded_backup_diagnostics(backup_diagnostics, principal_cause)
+
     # Clean up: collapse runs of 3+ blank lines into 1, remove trailing whitespace
     import re as _re
     body_text = _re.sub(r'\n{3,}', '\n\n', body_text.strip())
@@ -2166,7 +2339,7 @@ EVENT_EMOJI = {
     'host_backup_start':    '\U0001F5C4️\U0001F680',     # 🗄️🚀 cabinet + rocket
     'host_backup_complete': '\U0001F5C4️✅',         # 🗄️✅ cabinet + check
     'host_backup_fail':     '\U0001F5C4️❌',         # 🗄️❌ cabinet + cross
-    'backup_complete':      '\U0001F4BE\u2705',       # 💾✅ floppy + check
+    'backup_complete':      '\U0001F4BE',             # 💾 neutral for digests without outcome metadata
     'backup_warning':       '\U0001F4BE\u26A0\uFE0F', # 💾⚠️ floppy + warning
     'backup_fail':          '\U0001F4BE\u274C',       # 💾❌ floppy + cross
     'snapshot_complete':    '\U0001F4F8',         # camera with flash
@@ -2363,6 +2536,10 @@ def enrich_with_emojis(event_type: str, title: str, body: str,
     severity = data.get('severity', 'INFO')
     
     icon = EVENT_EMOJI.get(event_type) or CATEGORY_EMOJI.get(group) or SEVERITY_ICONS.get(severity, '')
+    if event_type == 'backup_complete':
+        icon = {
+            'confirmed': '💾✅', 'completed_with_warnings': '💾⚠️', 'failed': '💾❌',
+        }.get(str(data.get('backup_outcome') or ''), '💾❔')
     
     # Build enriched title: replace severity circle with event-specific icon
     # Current format: "hostname: Something"  -> "ICON hostname: Something"

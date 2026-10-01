@@ -6978,7 +6978,9 @@
           "status": {
             "failed": "Falhou",
             "completed": "Concluído",
-            "started": "Iniciado"
+            "started": "Iniciado",
+            "unconfirmed": "Não confirmado",
+            "completed_with_warnings": "Concluído com avisos"
           },
           "report": "Relatório {group}",
           "details": "Detalhes",
@@ -6988,6 +6990,17 @@
       },
       "temperature": {
         "sampleSpan": "As amostras elevadas abrangem {duration}."
+      },
+      "backup": {
+        "unconfirmedTitle": "{hostname}: resultado do backup não confirmado",
+        "confirmedTitle": "{hostname}: backup concluído",
+        "confirmedBody": "Backup concluído com sucesso.",
+        "errorTitle": "{hostname}: erro comunicado no backup",
+        "errorBody": "O relatório do backup contém um erro.",
+        "unconfirmedBody": "O resultado do backup não está confirmado.",
+        "warningTitle": "{hostname}: Backup concluído com avisos",
+        "warningBody": "Backup concluído com avisos.",
+        "diagnosticsOmitted": "Linhas ou texto de diagnóstico omitidos: {count}. Relatório original preservado."
       }
     }
   }
