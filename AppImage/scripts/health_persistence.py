@@ -828,14 +828,18 @@ class HealthPersistence:
             return None
         try:
             # One SQLite statement is one consistent row/ack/closure snapshot.
-            # Latest closure by event id, never search past a generic clear.
+            # Latest native observation/closure by durable event id: a later
+            # abnormal record supersedes proof even when a resolved row is
+            # reused and wall-clock time moves backward. No-op clears create
+            # no event, so they do not invalidate a genuine closure.
             with self._db_lock, self._db_connection() as conn:
                 row = conn.execute('''
                     SELECT e.first_seen, e.last_seen, e.resolved_at, e.acknowledged,
                            e.id, v.timestamp, v.data
                     FROM errors e JOIN events v ON v.id = (
                         SELECT id FROM events WHERE error_key = e.error_key
-                        AND event_type IN ('resolved', 'cleared') ORDER BY id DESC LIMIT 1
+                        AND event_type IN ('resolved', 'cleared', 'new', 'updated', 'escalated')
+                        ORDER BY id DESC LIMIT 1
                     ) WHERE e.error_key = ?
                 ''', (error_key,)).fetchone()
             if not row or row[0] != first_seen or not row[2] or row[3]:

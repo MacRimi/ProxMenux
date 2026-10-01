@@ -2189,7 +2189,7 @@ def render_template(event_type: str, data: Dict[str, Any],
             source_subject = cause.group(1).strip() if cause else ''
             if source_subject.lower() == 'multiple problems':
                 source_subject = ''
-        if source_subject and source_subject not in body_text:
+        if source_subject and source_subject not in {line.strip() for line in body_text.splitlines()}:
             # Reserve the subject-equivalent diagnostic BEFORE the cap. Finding
             # it in uncapped logs is not enough: that late line could be omitted.
             principal_cause = next((line for line in backup_diagnostics
