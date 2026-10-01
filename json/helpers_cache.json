@@ -2389,6 +2389,37 @@
     "os": "debian"
   },
   {
+    "name": "Blocky",
+    "slug": "blocky",
+    "desc": "Blocky is a software tool designed for blocking unwanted ads and trackers on local networks. It functions as a DNS proxy and runs on the Go programming language. Blocky intercepts requests to advertisements and other unwanted content and blocks them before they reach the end user. This results in a cleaner, faster, and more secure online experience for users connected to the local network. Blocky is open-source, easy to configure and can be run on a variety of devices, making it a versatile solution for small to medium-sized local networks.",
+    "script": "ct/blocky.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/blocky.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/blocky.sh",
+    "type": "lxc",
+    "type_id": "nm9bra8mzye2scg",
+    "categories": [
+      "scriptcat00005"
+    ],
+    "category_names": [
+      "Adblock & DNS"
+    ],
+    "notes": [],
+    "warnings": [],
+    "port": 4000,
+    "website": "https://0xerr0r.github.io/blocky/",
+    "documentation": "https://0xerr0r.github.io/blocky/latest/configuration/",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/blocky.webp",
+    "updateable": true,
+    "privileged": false,
+    "has_arm": true,
+    "is_dev": false,
+    "execute_in": [
+      "pve"
+    ],
+    "config_path": "",
+    "os": "alpine"
+  },
+  {
     "name": "BookLore",
     "slug": "booklore",
     "desc": "BookLore is a self-hosted digital library for managing and reading books, offering a beautiful interface and support for metadata management. Built with a modern tech stack, it provides support for importing, organizing, and reading EPUBs and PDFs, while also managing cover images and book metadata.",
@@ -7874,6 +7905,37 @@
     ],
     "config_path": "",
     "os": "debian"
+  },
+  {
+    "name": "Glance",
+    "slug": "glance",
+    "desc": "A self-hosted dashboard that puts all your feeds in one place",
+    "script": "ct/glance.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/glance.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/glance.sh",
+    "type": "lxc",
+    "type_id": "nm9bra8mzye2scg",
+    "categories": [
+      "scriptcat00010"
+    ],
+    "category_names": [
+      "Dashboards & Frontends"
+    ],
+    "notes": [],
+    "warnings": [],
+    "port": 8080,
+    "website": "https://github.com/glanceapp/glance",
+    "documentation": "https://github.com/glanceapp/glance/blob/main/docs/configuration.md",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/glance.webp",
+    "updateable": true,
+    "privileged": false,
+    "has_arm": true,
+    "is_dev": false,
+    "execute_in": [
+      "pve"
+    ],
+    "config_path": "",
+    "os": "alpine"
   },
   {
     "name": "Glances",
