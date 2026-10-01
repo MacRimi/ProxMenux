@@ -5306,7 +5306,7 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                                 <div className="text-xs text-amber-400 mt-3 leading-relaxed">{t("vmLxc.ociUpdates.pendingNote")}</div>
                               )}
                               <div className="mt-4 pt-4 border-t border-border/50 flex flex-wrap justify-end gap-2">
-                                {!ociInstance.stack && !ociInstance.pending && (
+                                {!ociInstance.pending && (
                                   <Button
                                     size="sm"
                                     className={neutralBtnCls}
