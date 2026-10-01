@@ -35,6 +35,11 @@ msg_success() { :; }
 show_proxmenux_logo() { :; }
 clear() { :; }
 
+# The scripts record their changes through the journal helpers.
+PMX_JOURNAL_ROOT="$TEST_ROOT/journal"
+# shellcheck disable=SC1091
+source "$SCRIPT_ROOT/../global/pmx_journal.sh"
+
 sed \
     -e "s|^LOCAL_SCRIPTS=.*|LOCAL_SCRIPTS=\"$TEST_ROOT/missing-scripts\"|" \
     -e "s|^BASE_DIR=.*|BASE_DIR=\"$TEST_ROOT/state\"|" \
