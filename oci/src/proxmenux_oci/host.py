@@ -101,6 +101,20 @@ def gib(value: Any) -> int:
         return 0
 
 
+
+def address_answers(address: str, bridge: str) -> bool:
+    """Whether a device of the network already answers on this address. The
+    neighbour table tells, so a device that drops pings is found too; without a
+    host address on that network nothing can be asked and nothing is assumed."""
+    try:
+        subprocess.run(["ping", "-c", "1", "-W", "1", "-I", bridge, address],
+                       capture_output=True, timeout=5, check=False)
+        result = subprocess.run(["ip", "-4", "neigh", "show", address, "dev", bridge],
+                                capture_output=True, text=True, timeout=5, check=False)
+    except (OSError, subprocess.TimeoutExpired):
+        return False
+    return " lladdr " in f" {result.stdout} "
+
 # USB classes as the Monitor labels them.
 _USB_CLASSES = {
     "01": "Audio", "02": "Communications", "03": "HID", "06": "Imaging", "07": "Printer",

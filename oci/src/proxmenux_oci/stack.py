@@ -261,6 +261,11 @@ def resolve_environments(services, timezone, generators=None):
 
 
 class DefaultsUI:
+    """Answers every question with the value of the recipe. `real` is the
+    interface the installer uses for the few questions a default installation
+    still asks."""
+    def __init__(self, real=None):
+        self.real = real
     def ask(self, text, default=None, required=True):
         return default if default is not None else ''
     def choose(self, text, options, default=None):
@@ -295,29 +300,44 @@ def build_stack(template, ui, mode='advanced'):
         raise StackError('; '.join(problems))
     services = copy.deepcopy(ordered_services(template))
     defaults = template['proxmox']['defaults']
-    name = _hostname_default(ui.ask(translate('Stack name'), template['compose_stack']['project_name']))
-    vmid = ui.ask(translate('Base VMID (empty = next free block)'), '', required=False)
+    # A default installation takes the name, the VMID and the settings from the
+    # recipe; it still asks the storage, the address and how the stack starts.
+    quiet = DefaultsUI() if mode == DEFAULT_MODE else ui
+    name = _hostname_default(quiet.ask(translate('Stack name'), template['compose_stack']['project_name']))
+    vmid = quiet.ask(translate('Base VMID (empty = next free block)'), '', required=False)
     from . import host
     from . import network as access
     from .installer import _ask_size, ask_bridge, ask_storage
-    root = ask_storage(ui, translate('Storage for rootfs'), 'rootdir', defaults['rootfs_storage'], mode)
+    if mode == DEFAULT_MODE:
+        root = ask_storage(ui, translate('Storage for the containers and their data'), 'rootdir',
+                           defaults['rootfs_storage'])
+    else:
+        root = ask_storage(ui, translate('Storage for rootfs'), 'rootdir', defaults['rootfs_storage'])
     cache = ask_storage(ui, translate('Storage for the OCI image cache'), 'vztmpl', defaults['template_storage'], mode)
     generators = template.get('proxmox', {}).get('stack_generators', {})
     # The data paths of every member are settled before the network and the settings.
-    volumes = (ask_storage(ui, '', 'rootdir', defaults['volume_storage'], mode) if mode == DEFAULT_MODE else root)
+    volumes = root
     draft_envs = resolve_environments(copy.deepcopy(services), host.timezone(), generators)
     drafts = []
     for s in services:
         draft = copy.deepcopy(s)
         draft['compose']['environment'] = draft_envs[s['name']]
         _, plan = _service_plan(template, draft)
+        if mode != DEFAULT_MODE and s['name'] == template['compose_stack']['main_service']:
+            resources = {'cores': int(ui.ask(translate('CPU cores'), str(plan['resources']['cores']))),
+                         'memory_mb': int(ui.ask(translate('Memory in MB'), str(plan['resources']['memory_mb'])))}
+            if resources['cores'] < 1 or resources['memory_mb'] < 256:
+                raise StackError(translate('Invalid resources'))
+        # The paths of the application itself hold the user's data, so where
+        # they go is asked in a default installation too; the databases and
+        # caches beside it keep the values of the recipe.
+        asked = mode != DEFAULT_MODE or s['name'] == template['compose_stack']['main_service']
         for m in plan['mounts']:
             label = f"{s['name']}: {m['container_path']}"
-            mount_mode = ('managed-volume' if mode == DEFAULT_MODE else
-                          ui.choose(f"{translate('Where to store')} {label}",
+            mount_mode = (ui.choose(f"{translate('Where to store')} {label}",
                                     [('managed-volume', translate('Container volume (included in backups)')),
                                      ('host-bind', translate('Host directory (not included in Proxmox backups)'))],
-                                    'managed-volume'))
+                                    'managed-volume') if asked else 'managed-volume')
             if mount_mode is None:
                 raise StackError(translate('Storage selection cancelled'))
             m.update(type=mount_mode, source=volumes, backup=mount_mode=='managed-volume')
@@ -325,9 +345,10 @@ def build_stack(template, ui, mode='advanced'):
                 m['source'] = ui.ask(f"{translate('Host path for')} {label}",
                                      '/mnt/oci-shared/'+name+'/'+s['name']+'/'+m['container_path'].strip('/').replace('/','-'))
                 m['size_gb'] = None
-            elif mode != DEFAULT_MODE:
-                volumes = ask_storage(ui, f"{translate('Storage for')} {label}", 'rootdir', volumes)
-                m['source'] = volumes
+            elif asked:
+                if mode != DEFAULT_MODE:
+                    volumes = ask_storage(ui, f"{translate('Storage for')} {label}", 'rootdir', volumes)
+                    m['source'] = volumes
                 m['size_gb'] = _ask_size(ui, label, max(8, m['size_gb'] or 8))
             if m['size_gb'] is not None and m['size_gb'] < 1:
                 raise StackError(translate('Invalid volume size'))
@@ -338,13 +359,13 @@ def build_stack(template, ui, mode='advanced'):
         ask_stack_custom_mounts(ui, drafts, volumes)
     bridge = ask_bridge(ui, translate('Access bridge'), defaults['bridge'], mode)
     addresses, gateway = access.ask_addresses(ui, bridge, [''])
-    timezone = ui.ask(translate('Timezone'), host.timezone())
+    timezone = quiet.ask(translate('Timezone'), host.timezone())
     envs = resolve_environments(services, timezone, generators)
     for group in template.get('proxmox', {}).get('stack_optional_environment', []):
         service_name = group['service']
         if service_name not in envs:
             raise StackError(f"{translate('Unknown credential service:')} {service_name}")
-        if not ui.confirm(f"{translate('Configure')} {group['label']} ({translate('optional')})", False):
+        if not quiet.confirm(f"{translate('Configure')} {group['label']} ({translate('optional')})", False):
             continue
         for field in group['fields']:
             if field['name'] not in envs[service_name] or envs[service_name][field['name']] != '':
@@ -375,6 +396,8 @@ def build_stack(template, ui, mode='advanced'):
         if 'memory_default_mb' not in single['proxmox'].get('installer_profile', {}).get('resources', {}):
             plan['resources']['memory_mb'] = max(1024 if k in {'postgres','mariadb','linuxserver/mariadb','mongo','getmeili/meilisearch'} else 512, plan['resources']['memory_mb'])
         plan['mounts'] = drafts[index]['deployment']['mounts']
+        if main and mode != DEFAULT_MODE:
+            plan['resources'].update(resources)
         if k == 'postgres':
             health = {'type':'exec','timeout_seconds':180,'argv':['pg_isready','-h','127.0.0.1','-U',env.get('POSTGRES_USER','postgres'),'-d',env.get('POSTGRES_DB',env.get('POSTGRES_USER','postgres'))]}
         elif k == 'mariadb':

@@ -103,11 +103,16 @@ class AdvancedFlowOrderTests(unittest.TestCase):
         localtime = next(m for m in plan["mounts"] if m["container_path"] == "/etc/localtime")
         self.assertEqual((localtime["type"], localtime["source"]), ("host-bind", "/etc/localtime"))
 
-    def test_default_mode_asks_no_storage(self, *_):
-        ui = RecordingUI()
+    def test_default_mode_asks_one_storage_the_address_and_the_start(self, *_):
+        ui = RecordingUI({"Storage for the container and its data": "Public"})
         plan = self.build("jellyfin", ui, DEFAULT_MODE)
-        self.assertFalse([text for text in ui.asked if text.startswith("Storage for")])
-        self.assertEqual({m["source"] for m in plan["mounts"]}, {"local-lvm"})
+        self.assertEqual(ui.asked[0], "Storage for the container and its data")
+        self.assertEqual(ui.asked[-2:], ["Start with Proxmox", "Start when finished"])
+        self.assertFalse([text for text in ui.asked if text.startswith("Storage for /")])
+        self.assertEqual(plan["rootfs"]["storage"], "Public")
+        self.assertEqual({m["source"] for m in plan["mounts"]}, {"Public"})
+        plan = self.build("jellyfin", RecordingUI(), DEFAULT_MODE)
+        self.assertEqual({plan["rootfs"]["storage"]} | {m["source"] for m in plan["mounts"]}, {"local-lvm"})
 
     def assert_follows(self, asked, *texts):
         positions = [asked.index(text) for text in texts]

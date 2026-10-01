@@ -6,7 +6,6 @@ the same profile.
 """
 from pathlib import Path
 import hashlib
-import re
 
 import oci_console
 import oci_nvidia_runtime as nv
@@ -15,8 +14,7 @@ from oci_ui import translate
 
 def console_start_hook(value):
     """The hook ProxMenux adds to mark each start in the console log."""
-    vmid = re.search(r' (\d+); exit 0\'$', value)
-    return bool(vmid) and oci_console.start_mark_hook(int(vmid[1])) == f'lxc.hook.pre-start: {value}'
+    return oci_console.is_start_mark_hook(f'lxc.hook.pre-start: {value}')
 
 
 def gpu_identity(inventory):

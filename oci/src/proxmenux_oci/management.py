@@ -373,27 +373,34 @@ def _manage_stack(project, ui, row, action=None, lifecycle_args=()):
         if not members:
             ui.message(translate('This stack has no saved members to update.'), translate('OCI stack management'))
             return False
-        if needs_replay and not (
+        updatable = not needs_replay or (
                 oci_stack_replay.nextcloud_menu_ready(primary) or
                 oci_stack_replay.paperless_menu_ready(primary) or
                 oci_stack_replay.tandoor_menu_ready(primary) or
-                oci_stack_replay.immich_menu_ready(primary)):
+                oci_stack_replay.immich_menu_ready(primary))
+        if not updatable and action in (None, 'update'):
             ui.message(translate('This stack needs rootfs adaptations that coordinated updates cannot replay yet.'), translate('OCI stack management'))
-            return False
-        if action == 'recreate':
-            ui.message(translate('A multi-container application is not recreated: its containers are updated together.'), translate('OCI stack management'))
-            return False
+            if action == 'update':
+                return False
         if action is None:
-            action = ui.choose(translate('Manage OCI stack'),
-                               [('update', translate('Update every container of the application')),
-                                ('remove', translate('Remove: delete the application and its containers'))], 'update')
+            # A stack that cannot be updated can still be removed.
+            options = [('update', translate('Update every container of the application'))] if updatable else []
+            options.append(('recreate', translate('Recreate: add or remove extra paths and devices')))
+            options.append(('remove', translate('Remove: delete the application and its containers')))
+            action = ui.choose(translate('Manage OCI stack'), options, options[0][0])
         if action is None:
             return False
         if action == 'remove':
             return _remove(project, ui, primary_id)
-        if not ui.review(f"{translate('All stack members are updated together. Main CT:')} {primary_id}, "
-                f"{translate('members:')} {len(members)}. "
-                f"{translate('All images are downloaded and verified first, and native backups are taken with the stack stopped. Contracts are published after the whole set is checked. If a step fails, recovery is attempted where needed; recovery can also fail.')}",
+        if action == 'recreate':
+            # Nothing is rebuilt: only the extra paths and devices of the
+            # application container change.
+            from .stack_recreation import recreate_stack
+            return recreate_stack(project, ui, primary, _run_lifecycle)
+        if not ui.review(translate('All {count} containers of the application are updated together (main CT: {vmid}). '
+                                   'If there are new versions, all images are downloaded and verified, the application '
+                                   'is stopped, each container is backed up and replaced with its new image. If anything '
+                                   'fails, the backups are restored.').format(count=len(members), vmid=primary_id),
                 translate('Update OCI stack'), question=translate('Update the whole stack?'), default=True):
             return False
     else:

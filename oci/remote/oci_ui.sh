@@ -158,6 +158,68 @@ oci_create_container() {
   return "$status"
 }
 
+# The extra paths the user added to the application container of a
+# multi-container application, from `.extra_mounts` of the deployment.
+# Argument: VMID. A path on the host is created for the root of the container.
+oci_apply_extra_mounts() {
+  local vmid=$1 type target source size read_only index value count=0
+  while IFS=$'\t' read -r type target source size read_only; do
+    [[ -n $type ]] || continue
+    [[ $target == /* && $target != *","* && $target != *[[:space:]]* ]] \
+      || die "$(translate "Invalid container path:") $target"
+    index=0
+    while pct config "$vmid" | grep -q "^mp${index}:"; do index=$((index + 1)); done
+    if [[ $type == managed-volume ]]; then
+      [[ $size =~ ^[0-9]+$ && $size -ge 1 && $source != /* && $source != *","* ]] \
+        || die "$(translate "Invalid volume size:") $target"
+      value="${source}:${size},mp=${target},backup=1"
+    elif [[ $type == host-bind ]]; then
+      [[ $source == /* && $source != *","* ]] || die "$(translate "Invalid host path:") $source"
+      if [[ ! -e $source ]]; then
+        install -d -m 0775 -o 100000 -g 100000 "$source"
+        oci_log "Shared directory created: $source (uid=100000 gid=100000)"
+      fi
+      [[ -d $source ]] || die "$(translate "The host bind source is not a regular file or directory:") $source"
+      value="${source},mp=${target},backup=0"
+    else
+      die "$(translate "Unsupported mount type:") $type"
+    fi
+    [[ $read_only == true ]] && value="${value},ro=1"
+    oci_quiet pct set "$vmid" "--mp${index}" "$value" \
+      || die "$(translate "Could not add the mount point:") $target"
+    count=$((count + 1))
+  done < <(jq -r '.extra_mounts[]? | [.type, .container_path, .source, (.size_gb // "-"), (.read_only // false)] | @tsv' "$DEPLOYMENT_FILE")
+  if (( count > 0 )); then
+    msg_ok "$(translate "Mount points added:") $count"
+  fi
+  return 0
+}
+
+# The USB, serial or GPU nodes the user added to the application container of
+# a multi-container application, from `.extra_devices` of the deployment.
+# Argument: VMID. Each node keeps its path, with the group it has on the host.
+oci_apply_extra_devices() {
+  local vmid=$1 path mode deny_write gid index count=0
+  while IFS=$'\t' read -r path mode deny_write; do
+    [[ -n $path ]] || continue
+    [[ $path == /dev/* && $path != *","* && $path != *[[:space:]]* && $path != *".."* ]] \
+      || die "$(translate "Invalid device path:") $path"
+    [[ -c $path ]] || die "$(translate "The character device does not exist:") $path"
+    [[ $mode =~ ^0?[0-7]{3}$ ]] || die "$(translate "Invalid device mode:") $mode"
+    pct config "$vmid" | grep -Eq "^dev[0-9]+: (.*,)?path=${path}(,|$)" && continue
+    index=0
+    while pct config "$vmid" | grep -q "^dev${index}:"; do index=$((index + 1)); done
+    gid=$(stat -c '%g' "$path")
+    oci_quiet pct set "$vmid" "--dev${index}" "path=${path},mode=${mode},deny-write=${deny_write},gid=${gid}" \
+      || die "$(translate "Could not add the device to the container:") $path"
+    count=$((count + 1))
+  done < <(jq -r '.extra_devices[]? | select(.kind == "character-device") | [.host_path, (.mode // "0660"), (if .deny_write then 1 else 0 end)] | @tsv' "$DEPLOYMENT_FILE")
+  if (( count > 0 )); then
+    msg_ok "$(translate "Devices added:") $count"
+  fi
+  return 0
+}
+
 # Last lines of the log, for the error report.
 oci_log_tail() {
   [[ -n $OCI_LOG && -s $OCI_LOG ]] || return 0

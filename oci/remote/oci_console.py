@@ -20,6 +20,7 @@ import contextlib
 import json
 import os
 from pathlib import Path
+import re
 import subprocess
 import sys
 
@@ -42,6 +43,12 @@ def start_mark_hook(vmid: int) -> str:
     # `test`, not `[`: a bracket in the configuration reads as a snapshot section.
     return (f"lxc.hook.pre-start: /bin/sh -c 'mkdir -p {LOG_DIR}; "
             f"test -x {script} && {script} {int(vmid)}; exit 0'")
+
+
+def is_start_mark_hook(line: str) -> bool:
+    """Whether a configuration line is exactly the start hook written here."""
+    vmid = re.search(r" (\d+); exit 0'$", line)
+    return bool(vmid) and line == start_mark_hook(int(vmid[1]))
 LOGROTATE = Path('/etc/logrotate.d/proxmenux-oci')
 # copytruncate, because liblxc keeps the file open for as long as the
 # container runs; moving it away would leave the application writing into the

@@ -129,6 +129,11 @@ ALLOWED_HOSTS=$(jqr '.application.allowed_hosts')
 ADMIN_USERNAME=$(jqr '.application.admin_username')
 ADMIN_EMAIL=$(jqr '.application.admin_email')
 TIMEZONE=$(jqr '.timezone')
+APPLICATION_CORES=$(jqr '.resources.cores // 2')
+APPLICATION_MEMORY=$(jqr '.resources.memory_mb // 2048')
+APPLICATION_SWAP=$(jqr '.resources.swap_mb // 512')
+[[ $APPLICATION_CORES =~ ^[1-9][0-9]*$ && $APPLICATION_MEMORY =~ ^[1-9][0-9]*$ && $APPLICATION_SWAP =~ ^[0-9]+$ ]] \
+  || die "$(translate "Invalid resources")"
 ONBOOT=$(jqr '.onboot | if . then 1 else 0 end')
 START_AFTER=$(jqr '.start_after_create | if . then 1 else 0 end')
 FRONTEND_BRIDGE=$(jqr '.network.frontend_bridge')
@@ -392,13 +397,15 @@ msg_info "$(translate "Creating the container...")"
 oci_create_container "$APPLICATION_ID" "$APPLICATION_ARCHIVE" --rootfs "${ROOTFS_STORAGE}:8" \
   --mp0 "${APPLICATION_STORAGE}:${STATIC_SIZE},mp=/opt/recipes/staticfiles,backup=1" \
   --mp1 "$MEDIA_MOUNT" --hostname "$STACK_NAME" \
-  --cores 2 --memory 2048 --swap 512 \
+  --cores "$APPLICATION_CORES" --memory "$APPLICATION_MEMORY" --swap "$APPLICATION_SWAP" \
   --net0 "name=eth0,bridge=${FRONTEND_BRIDGE},firewall=1,host-managed=1,${FRONTEND_NET},type=veth" \
   --net1 "name=eth1,bridge=${PRIVATE_BRIDGE},firewall=1,host-managed=1,ip=${APPLICATION_ADDRESS},type=veth" \
   --unprivileged 1 --features nesting=1 --cmode console --onboot "$ONBOOT" \
   --startup order=20,up=15,down=30 --tags "$TAGS" \
   --description 'Tandoor Recipes native OCI'
 created_ids+=("$APPLICATION_ID")
+oci_apply_extra_mounts "$APPLICATION_ID"
+oci_apply_extra_devices "$APPLICATION_ID"
 
 oci_quiet pct mount "$APPLICATION_ID"
 APPLICATION_ROOTFS="/var/lib/lxc/${APPLICATION_ID}/rootfs"

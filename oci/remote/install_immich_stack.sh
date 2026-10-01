@@ -120,6 +120,11 @@ MEDIA_STORAGE=$(jq -r '.media.storage // empty' "$DEPLOYMENT_FILE")
 MEDIA_SIZE=$(jq -r '.media.size_gb // empty' "$DEPLOYMENT_FILE")
 MEDIA_ROOT=$(jq -r '.media.host_path // empty' "$DEPLOYMENT_FILE")
 TIMEZONE=$(jqr '.timezone')
+APPLICATION_CORES=$(jqr '.resources.cores // 4')
+APPLICATION_MEMORY=$(jqr '.resources.memory_mb // 3072')
+APPLICATION_SWAP=$(jqr '.resources.swap_mb // 1024')
+[[ $APPLICATION_CORES =~ ^[1-9][0-9]*$ && $APPLICATION_MEMORY =~ ^[1-9][0-9]*$ && $APPLICATION_SWAP =~ ^[0-9]+$ ]] \
+  || die "$(translate "Invalid resources")"
 ONBOOT=$(jqr '.onboot | if . then 1 else 0 end')
 START_AFTER=$(jqr '.start_after_create | if . then 1 else 0 end')
 FRONTEND_BRIDGE=$(jqr '.network.frontend_bridge')
@@ -449,13 +454,15 @@ fi
 msg_info "$(translate "Creating the container...")"
 oci_create_container "$SERVER_ID" "$SERVER_ARCHIVE" --rootfs "${ROOTFS_STORAGE}:16" \
   --mp0 "$SERVER_MEDIA_MOUNT" --hostname "${STACK_NAME}-server" \
-  --cores 4 --memory 3072 --swap 1024 \
+  --cores "$APPLICATION_CORES" --memory "$APPLICATION_MEMORY" --swap "$APPLICATION_SWAP" \
   --net0 "name=eth0,bridge=${FRONTEND_BRIDGE},firewall=1,host-managed=1,${FRONTEND_NET},type=veth" \
   --net1 "name=eth1,bridge=${PRIVATE_BRIDGE},firewall=1,host-managed=1,ip=${SERVER_ADDRESS},type=veth" \
   "${SERVER_DEVICE_ARGS[@]}" --unprivileged 1 --features nesting=1 --cmode console \
   --onboot "$ONBOOT" --startup order=40,up=10,down=30 --tags "$TAGS" \
   --description 'Immich server native OCI'
 created_ids+=("$SERVER_ID")
+oci_apply_extra_mounts "$SERVER_ID"
+oci_apply_extra_devices "$SERVER_ID"
 
 oci_quiet pct mount "$SERVER_ID"
 SERVER_ROOT="/var/lib/lxc/${SERVER_ID}/rootfs"

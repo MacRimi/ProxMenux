@@ -124,6 +124,57 @@ def ask_storage(ui, text: str, content: str, default: str, mode: str = ADVANCED_
     return selected
 
 
+def essential_ui(ui):
+    """The interface for what every installation decides — its storage, its
+    address and how it starts — which a default installation asks as well."""
+    return getattr(ui, "real", None) or ui
+
+
+def _answers_from_recipe(ui) -> bool:
+    """Whether this container is being planned as a member of a stack, which
+    has already asked what the user decides."""
+    from .stack import DefaultsUI
+    return isinstance(ui, DefaultsUI)
+
+
+def ask_application_extra_paths(ui, existing: list[str], storage: str) -> list[dict[str, Any]]:
+    """Extra paths for the application container of a multi-container
+    application. An advanced installation asks them; a default one does not."""
+    if _answers_from_recipe(ui):
+        return []
+    planned = [{"type": "managed-volume", "container_path": path} for path in existing]
+    return [mount for mount in ask_custom_mounts(ui, planned, storage) if mount.get("custom")]
+
+
+def ask_application_extra_devices(ui, kinds: tuple[str, ...] = ("gpu", "usb")) -> list[dict[str, Any]]:
+    """USB, serial or GPU nodes for the application container of a
+    multi-container application; asked in an advanced installation only."""
+    if _answers_from_recipe(ui):
+        return []
+    from .extra_devices import ask_extra_devices
+    return ask_extra_devices(ui, [], True, kinds=kinds)
+
+
+def ask_application_resources(ui, cores: int, memory_mb: int, swap_mb: int) -> dict[str, int]:
+    """CPU and memory of the application container of a multi-container
+    application. An advanced installation asks them; a default one does not."""
+    if not _answers_from_recipe(ui):
+        cores = int(ui.ask(translate("CPU cores"), str(cores)))
+        memory_mb = int(ui.ask(translate("Memory in MB"), str(memory_mb)))
+    if cores < 1 or memory_mb < 256:
+        raise InstallError(translate("Invalid resources"))
+    return {"cores": cores, "memory_mb": memory_mb, "swap_mb": swap_mb}
+
+
+def ask_default_storage(ui, preferred: str) -> str | None:
+    """In a default installation, the one storage that holds the containers and
+    their data; None in an advanced one, which asks each storage separately."""
+    real = getattr(ui, "real", None)
+    if real is None:
+        return None
+    return ask_storage(real, translate("Storage for the containers and their data"), "rootdir", preferred)
+
+
 def ask_bridge(ui, text: str, default: str, mode: str = ADVANCED_MODE) -> str:
     if mode == DEFAULT_MODE:
         return host.default_bridge(default)
@@ -197,7 +248,7 @@ def build_deployment(
         'image-immich', 'image-nextcloud-stack', 'image-paperless-ngx', 'image-tandoor'
     }:
         from .stack import DefaultsUI
-        ui = DefaultsUI()
+        ui = DefaultsUI(ui)
     if template.get("id") == "image-immich":
         return _build_immich_deployment(template, ui)
     if template.get("id") == "image-nextcloud-stack":
@@ -283,6 +334,9 @@ def build_deployment(
     memory_default = installer_profile.get('resources', {}).get('memory_default_mb', defaults['memory_mb'])
     mac_address = installer_profile.get("network", {}).get("mac_address")
     timezone = host.timezone()
+    # A default installation still asks its storage, its address and how it
+    # starts, unless a stack is planning this container and asked them itself.
+    silent = not advanced and _answers_from_recipe(ui)
     if advanced:
         vmid_text = ui.ask(translate("VMID (empty = next free)"), "", required=False)
         hostname = ui.ask(translate("Hostname"), hostname_default)
@@ -301,8 +355,15 @@ def build_deployment(
     else:
         vmid_text = ""
         hostname = hostname_default
-        rootfs_storage = ask_storage(ui, "", "rootdir", defaults["rootfs_storage"], DEFAULT_MODE)
-        volume_storage = ask_storage(ui, "", "rootdir", defaults["volume_storage"], DEFAULT_MODE)
+        if silent:
+            rootfs_storage = ask_storage(ui, "", "rootdir", defaults["rootfs_storage"], DEFAULT_MODE)
+            volume_storage = ask_storage(ui, "", "rootdir", defaults["volume_storage"], DEFAULT_MODE)
+        else:
+            # One storage for the container and its data; the advanced
+            # installation is where each one is chosen separately.
+            rootfs_storage = ask_storage(ui, translate("Storage for the container and its data"), "rootdir",
+                                         defaults["rootfs_storage"])
+            volume_storage = rootfs_storage
         template_storage = ask_storage(ui, "", "vztmpl", defaults["template_storage"], DEFAULT_MODE)
         rootfs_size = int(defaults["rootfs_size_gb"])
         cores = int(defaults["cores"])
@@ -400,8 +461,12 @@ def build_deployment(
             ipv4, gateway = access.ask_ipv4(ui, bridge)
     else:
         bridge = ask_bridge(ui, "", defaults["bridge"], DEFAULT_MODE)
-        ipv4 = "host" if host_monitor else defaults["ipv4"]
-        gateway = None
+        if host_monitor:
+            ipv4, gateway = "host", None
+        elif silent:
+            ipv4, gateway = defaults["ipv4"], None
+        else:
+            ipv4, gateway = access.ask_ipv4(ui, bridge)
 
     host_firewall = confirm_host_monitor_firewall(ui, template, bridge) if host_monitor else None
 
@@ -493,9 +558,12 @@ def build_deployment(
     if advanced:
         onboot = ui.confirm(translate("Start with Proxmox"), defaults["onboot"])
         start_after = ui.confirm(translate("Start when finished"), True)
-    else:
+    elif silent:
         onboot = bool(defaults["onboot"])
         start_after = True
+    else:
+        onboot = ui.confirm(translate("Start with Proxmox"), defaults["onboot"])
+        start_after = ui.confirm(translate("Start when finished"), True)
 
     if post_start_configurations and not start_after:
         if not ui.confirm(translate("The application configuration needs a first start to complete.")
@@ -583,6 +651,10 @@ def _build_rclone_deployment(
 
     vmid_text = ui.ask(translate("VMID (empty = next free)"), "", required=False)
     hostname = ui.ask(translate("Hostname"), schema["hostname"]["default"])
+    cores = int(ui.ask(translate("CPU cores"), str(defaults["cores"])))
+    memory = int(ui.ask(translate("Memory in MB"), str(defaults["memory_mb"])))
+    if cores < 1 or memory < 256:
+        raise InstallError(translate("Invalid resources"))
     rootfs_storage = ask_storage(ui, translate("Storage for rootfs"), "rootdir", schema["rootfs_storage"]["default"])
     config_storage = ask_storage(ui, translate("Storage for the persistent configuration"), "rootdir",
                                  schema["config_storage"]["default"])
@@ -613,8 +685,8 @@ def _build_rclone_deployment(
         "template_storage": template_storage,
         "rootfs": {"storage": rootfs_storage, "size_gb": rootfs_size},
         "resources": {
-            "cores": defaults["cores"],
-            "memory_mb": defaults["memory_mb"],
+            "cores": cores,
+            "memory_mb": memory,
             "swap_mb": defaults["swap_mb"],
             "cpu_units": None,
         },
@@ -726,9 +798,12 @@ def _build_immich_deployment(
     stack_name = ui.ask(translate("Stack name"), defaults["stack_name"])
     if not re.fullmatch(r"[a-z0-9][a-z0-9-]{0,31}", stack_name):
         raise InstallError(translate("The stack name only accepts lowercase letters, numbers and hyphens"))
-    rootfs_storage = ask_storage(ui, translate("Storage for rootfs"), "rootdir", defaults["rootfs_storage"])
+    resources = ask_application_resources(ui, 4, 3072, 1024)
+    chosen_storage = ask_default_storage(ui, defaults["rootfs_storage"])
+    rootfs_storage = ask_storage(ui, translate("Storage for rootfs"), "rootdir",
+                                 chosen_storage or defaults["rootfs_storage"])
     template_storage = ask_storage(ui, translate("Storage for the OCI image cache"), "vztmpl", pve_defaults["template_storage"])
-    media_mode = ui.choose(
+    media_mode = essential_ui(ui).choose(
         translate("Where to store the Immich library"),
         [
             ("managed-volume", translate("Dedicated container volume (included in backups)")),
@@ -739,25 +814,26 @@ def _build_immich_deployment(
     if media_mode is None:
         raise UserCancelled(translate("Immich configuration cancelled"))
     if media_mode == "managed-volume":
-        media_storage = ask_storage(ui, translate("Storage for the Immich library"), "rootdir", pve_defaults["volume_storage"])
-        media_size = int(ui.ask(translate("Library size in GB"), "100"))
+        media_storage = ask_storage(ui, translate("Storage for the Immich library"), "rootdir", chosen_storage or pve_defaults["volume_storage"])
+        media_size = int(essential_ui(ui).ask(translate("Library size in GB"), "100"))
         if media_size < 8:
             raise InstallError(translate("The Immich library needs at least 8 GB"))
         media_root = None
     else:
         media_default = defaults["shared_media_root"].replace("${stack_name}", stack_name)
-        media_root = ui.ask(translate("Shared host directory"), media_default)
+        media_root = essential_ui(ui).ask(translate("Shared host directory"), media_default)
         media_storage = None
         media_size = None
-    database_storage = ask_storage(ui, translate("Local storage for PostgreSQL"), "rootdir", defaults["database_storage"])
+    database_storage = ask_storage(ui, translate("Local storage for PostgreSQL"), "rootdir", chosen_storage or defaults["database_storage"])
     database_size = int(
         ui.ask(translate("PostgreSQL volume size in GB"), str(defaults["database_size_gb"]))
     )
     if database_size < 8:
         raise InstallError(translate("The PostgreSQL volume needs at least 8 GB"))
+    extra_mounts = ask_application_extra_paths(ui, ["/data"], media_storage or rootfs_storage)
     frontend_bridge = ask_bridge(ui, translate("Access bridge for Immich"), defaults["frontend_network"]["bridge"])
     addresses, frontend_gateway = access.ask_addresses(
-        ui, frontend_bridge, [translate("Immich server"), translate("Immich machine learning")])
+        essential_ui(ui), frontend_bridge, [translate("Immich server"), translate("Immich machine learning")])
     server_ipv4, ml_ipv4 = addresses.values()
     timezone = ui.ask(translate("Timezone"), host.timezone())
     video_acceleration = ui.choose(
@@ -800,10 +876,14 @@ def _build_immich_deployment(
                              "were tested in the lab and are not a universal minimum. Compatibility depends on the "
                              "GPU, the models and the kernel. NVIDIA uses the GPUs of the Toolkit inventory; Intel "
                              "keeps the CPU topology."))
+    extra_devices = ask_application_extra_devices(ui, ("usb",))
     return {
         "deployment_kind": "immich-four-lxc-stack",
         "base_vmid": int(vmid_text) if vmid_text else None,
         "stack_name": stack_name,
+        "resources": resources,
+        "extra_mounts": extra_mounts,
+        "extra_devices": extra_devices,
         "template_storage": template_storage,
         "rootfs_storage": rootfs_storage,
         "database_storage": database_storage,
@@ -816,8 +896,8 @@ def _build_immich_deployment(
             "backup": media_mode == "managed-volume",
         },
         "timezone": timezone,
-        "onboot": ui.confirm(translate("Start the stack with Proxmox"), pve_defaults["onboot"]),
-        "start_after_create": ui.confirm(translate("Start when finished"), True),
+        "onboot": essential_ui(ui).confirm(translate("Start the stack with Proxmox"), pve_defaults["onboot"]),
+        "start_after_create": essential_ui(ui).confirm(translate("Start when finished"), True),
         "network": {
             "frontend_bridge": frontend_bridge,
             "frontend_ipv4": server_ipv4,
@@ -858,10 +938,13 @@ def _build_nextcloud_stack_deployment(
     stack_name = ui.ask(translate("Stack name"), defaults["stack_name"])
     if not re.fullmatch(r"[a-z0-9][a-z0-9-]{0,31}", stack_name):
         raise InstallError(translate("The stack name only accepts lowercase letters, numbers and hyphens"))
+    resources = ask_application_resources(ui, 2, 2048, 1024)
 
-    rootfs_storage = ask_storage(ui, translate("Storage for rootfs"), "rootdir", defaults["rootfs_storage"])
+    chosen_storage = ask_default_storage(ui, defaults["rootfs_storage"])
+    rootfs_storage = ask_storage(ui, translate("Storage for rootfs"), "rootdir",
+                                 chosen_storage or defaults["rootfs_storage"])
     template_storage = ask_storage(ui, translate("Storage for the OCI image cache"), "vztmpl", pve_defaults["template_storage"])
-    application_mode = ui.choose(
+    application_mode = essential_ui(ui).choose(
         translate("Where to store the Nextcloud files, configuration and data"),
         [
             ("managed-volume", translate("Dedicated container volume (included in backups)")),
@@ -872,9 +955,9 @@ def _build_nextcloud_stack_deployment(
     if application_mode is None:
         raise UserCancelled(translate("Nextcloud configuration cancelled"))
     if application_mode == "managed-volume":
-        application_storage = ask_storage(ui, translate("Storage for the Nextcloud data"), "rootdir", defaults["application_storage"])
+        application_storage = ask_storage(ui, translate("Storage for the Nextcloud data"), "rootdir", chosen_storage or defaults["application_storage"])
         application_size = int(
-            ui.ask(
+            essential_ui(ui).ask(
                 translate("Nextcloud volume size in GB"),
                 str(defaults["application_volume_size_gb"]),
             )
@@ -886,11 +969,11 @@ def _build_nextcloud_stack_deployment(
         shared_default = defaults["shared_application_root"].replace(
             "${stack_name}", stack_name
         )
-        application_root = ui.ask(translate("Shared host directory"), shared_default)
+        application_root = essential_ui(ui).ask(translate("Shared host directory"), shared_default)
         application_storage = None
         application_size = None
 
-    database_storage = ask_storage(ui, translate("Local storage for PostgreSQL"), "rootdir", defaults["database_storage"])
+    database_storage = ask_storage(ui, translate("Local storage for PostgreSQL"), "rootdir", chosen_storage or defaults["database_storage"])
     database_size = int(
         ui.ask(
             translate("PostgreSQL volume size in GB"),
@@ -900,8 +983,9 @@ def _build_nextcloud_stack_deployment(
     if database_size < 8:
         raise InstallError(translate("The PostgreSQL volume needs at least 8 GB"))
 
+    extra_mounts = ask_application_extra_paths(ui, ["/var/www/html"], application_storage or rootfs_storage)
     frontend_bridge = ask_bridge(ui, translate("Access bridge for Nextcloud"), defaults["frontend_network"]["bridge"])
-    addresses, frontend_gateway = access.ask_addresses(ui, frontend_bridge, [""])
+    addresses, frontend_gateway = access.ask_addresses(essential_ui(ui), frontend_bridge, [""])
     timezone = ui.ask(translate("Timezone"), host.timezone())
     admin_username = ui.ask(
         translate("Initial administrator user"), defaults["application"]["admin_username"]
@@ -909,11 +993,15 @@ def _build_nextcloud_stack_deployment(
     if not re.fullmatch(r"[A-Za-z0-9_.@-]+", admin_username):
         raise InstallError(translate("The administrator user contains characters that are not allowed"))
 
+    extra_devices = ask_application_extra_devices(ui)
     private = defaults["private_network"]
     return {
         "deployment_kind": "nextcloud-three-lxc-stack",
         "base_vmid": int(vmid_text) if vmid_text else None,
         "stack_name": stack_name,
+        "resources": resources,
+        "extra_mounts": extra_mounts,
+        "extra_devices": extra_devices,
         "template_storage": template_storage,
         "rootfs_storage": rootfs_storage,
         "application": {
@@ -932,8 +1020,8 @@ def _build_nextcloud_stack_deployment(
         "timezone": timezone,
         "maintenance_window_start_utc": defaults["maintenance_window_start_utc"],
         "default_phone_region": defaults["default_phone_region"],
-        "onboot": ui.confirm(translate("Start the stack with Proxmox"), pve_defaults["onboot"]),
-        "start_after_create": ui.confirm(translate("Start when finished"), True),
+        "onboot": essential_ui(ui).confirm(translate("Start the stack with Proxmox"), pve_defaults["onboot"]),
+        "start_after_create": essential_ui(ui).confirm(translate("Start when finished"), True),
         "network": {
             "frontend_bridge": frontend_bridge,
             "frontend_ipv4": addresses[""],
@@ -961,21 +1049,24 @@ def _build_paperless_stack_deployment(
     stack_name = ui.ask(translate("Stack name"), defaults["stack_name"])
     if not re.fullmatch(r"[a-z0-9][a-z0-9-]{0,31}", stack_name):
         raise InstallError(translate("The stack name only accepts lowercase letters, numbers and hyphens"))
+    resources = ask_application_resources(ui, 2, 2048, 1024)
 
-    rootfs_storage = ask_storage(ui, translate("Storage for rootfs"), "rootdir", defaults["rootfs_storage"])
+    chosen_storage = ask_default_storage(ui, defaults["rootfs_storage"])
+    rootfs_storage = ask_storage(ui, translate("Storage for rootfs"), "rootdir",
+                                 chosen_storage or defaults["rootfs_storage"])
     template_storage = ask_storage(ui, translate("Storage for the OCI image cache"), "vztmpl", pve_defaults["template_storage"])
 
-    application_storage = ask_storage(ui, translate("Storage for Paperless data and documents"), "rootdir", defaults["application_storage"])
+    application_storage = ask_storage(ui, translate("Storage for Paperless data and documents"), "rootdir", chosen_storage or defaults["application_storage"])
     data_size = int(
         ui.ask(translate("Data volume size in GB"), str(defaults["data_volume_size_gb"]))
     )
     media_size = int(
-        ui.ask(
+        essential_ui(ui).ask(
             translate("Documents volume size in GB"),
             str(defaults["media_volume_size_gb"]),
         )
     )
-    database_storage = ask_storage(ui, translate("Local storage for PostgreSQL"), "rootdir", defaults["database_storage"])
+    database_storage = ask_storage(ui, translate("Local storage for PostgreSQL"), "rootdir", chosen_storage or defaults["database_storage"])
     database_size = int(
         ui.ask(
             translate("PostgreSQL volume size in GB"),
@@ -985,7 +1076,7 @@ def _build_paperless_stack_deployment(
     if min(data_size, database_size) < 8 or media_size < 8:
         raise InstallError(translate("The Paperless persistent volumes need at least 8 GB"))
 
-    transfer_mode = ui.choose(
+    transfer_mode = essential_ui(ui).choose(
         translate("Where to store the consume and export folders"),
         [
             ("host-bind", translate("Shared host directories (not included in Proxmox backups)")),
@@ -999,7 +1090,7 @@ def _build_paperless_stack_deployment(
     transfer_root = None
     if transfer_mode == "managed-volume":
         transfer_size = int(
-            ui.ask(
+            essential_ui(ui).ask(
                 translate("Size of each consume/export volume in GB"),
                 str(defaults["transfer_volume_size_gb"]),
             )
@@ -1010,12 +1101,15 @@ def _build_paperless_stack_deployment(
         transfer_default = defaults["shared_transfer_root"].replace(
             "${stack_name}", stack_name
         )
-        transfer_root = ui.ask(
+        transfer_root = essential_ui(ui).ask(
             translate("Shared directory for consume and export"), transfer_default
         )
 
+    extra_mounts = ask_application_extra_paths(
+        ui, ["/usr/src/paperless/data", "/usr/src/paperless/media", "/usr/src/paperless/consume",
+             "/usr/src/paperless/export"], application_storage)
     frontend_bridge = ask_bridge(ui, translate("Access bridge for Paperless"), defaults["frontend_network"]["bridge"])
-    addresses, frontend_gateway = access.ask_addresses(ui, frontend_bridge, [""])
+    addresses, frontend_gateway = access.ask_addresses(essential_ui(ui), frontend_bridge, [""])
     timezone = ui.ask(translate("Timezone"), host.timezone())
     ocr_language = ui.ask(translate("OCR language (Tesseract code)"), defaults["ocr_language"])
     if not re.fullmatch(r"[a-z]{3}(?:\+[a-z]{3})*", ocr_language):
@@ -1026,11 +1120,15 @@ def _build_paperless_stack_deployment(
     if not re.fullmatch(r"[A-Za-z0-9_.@-]+", admin_username):
         raise InstallError(translate("The administrator user contains characters that are not allowed"))
 
+    extra_devices = ask_application_extra_devices(ui)
     private = defaults["private_network"]
     return {
         "deployment_kind": "paperless-three-lxc-stack",
         "base_vmid": int(vmid_text) if vmid_text else None,
         "stack_name": stack_name,
+        "resources": resources,
+        "extra_mounts": extra_mounts,
+        "extra_devices": extra_devices,
         "template_storage": template_storage,
         "rootfs_storage": rootfs_storage,
         "application_storage": application_storage,
@@ -1051,8 +1149,8 @@ def _build_paperless_stack_deployment(
             "ocr_language": ocr_language,
         },
         "timezone": timezone,
-        "onboot": ui.confirm(translate("Start the stack with Proxmox"), pve_defaults["onboot"]),
-        "start_after_create": ui.confirm(translate("Start when finished"), True),
+        "onboot": essential_ui(ui).confirm(translate("Start the stack with Proxmox"), pve_defaults["onboot"]),
+        "start_after_create": essential_ui(ui).confirm(translate("Start when finished"), True),
         "network": {
             "frontend_bridge": frontend_bridge,
             "frontend_ipv4": addresses[""],
@@ -1080,11 +1178,14 @@ def _build_tandoor_stack_deployment(
     stack_name = ui.ask(translate("Stack name"), defaults["stack_name"])
     if not re.fullmatch(r"[a-z0-9][a-z0-9-]{0,31}", stack_name):
         raise InstallError(translate("The stack name only accepts lowercase letters, numbers and hyphens"))
+    resources = ask_application_resources(ui, 2, 2048, 512)
 
-    rootfs_storage = ask_storage(ui, translate("Storage for rootfs"), "rootdir", defaults["rootfs_storage"])
+    chosen_storage = ask_default_storage(ui, defaults["rootfs_storage"])
+    rootfs_storage = ask_storage(ui, translate("Storage for rootfs"), "rootdir",
+                                 chosen_storage or defaults["rootfs_storage"])
     template_storage = ask_storage(ui, translate("Storage for the OCI image cache"), "vztmpl", pve_defaults["template_storage"])
 
-    media_mode = ui.choose(
+    media_mode = essential_ui(ui).choose(
         translate("Where to store the recipe images and files"),
         [
             ("managed-volume", translate("Dedicated container volume (included in backups)")),
@@ -1095,9 +1196,9 @@ def _build_tandoor_stack_deployment(
     if media_mode is None:
         raise UserCancelled(translate("Tandoor configuration cancelled"))
     if media_mode == "managed-volume":
-        media_storage = ask_storage(ui, translate("Storage for Tandoor files"), "rootdir", defaults["application_storage"])
+        media_storage = ask_storage(ui, translate("Storage for Tandoor files"), "rootdir", chosen_storage or defaults["application_storage"])
         media_size = int(
-            ui.ask(
+            essential_ui(ui).ask(
                 translate("Files volume size in GB"),
                 str(defaults["media_volume_size_gb"]),
             )
@@ -1109,18 +1210,18 @@ def _build_tandoor_stack_deployment(
         media_default = defaults["shared_media_root"].replace(
             "${stack_name}", stack_name
         )
-        media_root = ui.ask(translate("Shared host directory"), media_default)
+        media_root = essential_ui(ui).ask(translate("Shared host directory"), media_default)
         media_storage = None
         media_size = None
 
-    static_storage = ask_storage(ui, translate("Storage for staticfiles"), "rootdir", defaults["application_storage"])
+    static_storage = ask_storage(ui, translate("Storage for staticfiles"), "rootdir", chosen_storage or defaults["application_storage"])
     static_size = int(
         ui.ask(
             translate("staticfiles volume size in GB"),
             str(defaults["static_volume_size_gb"]),
         )
     )
-    database_storage = ask_storage(ui, translate("Local storage for PostgreSQL"), "rootdir", defaults["database_storage"])
+    database_storage = ask_storage(ui, translate("Local storage for PostgreSQL"), "rootdir", chosen_storage or defaults["database_storage"])
     database_size = int(
         ui.ask(
             translate("PostgreSQL volume size in GB"),
@@ -1132,8 +1233,10 @@ def _build_tandoor_stack_deployment(
             translate("Tandoor needs at least 1 GB for staticfiles and 4 GB for PostgreSQL")
         )
 
+    extra_mounts = ask_application_extra_paths(
+        ui, ["/opt/recipes/mediafiles", "/opt/recipes/staticfiles"], static_storage)
     frontend_bridge = ask_bridge(ui, translate("Access bridge for Tandoor"), defaults["frontend_network"]["bridge"])
-    addresses, frontend_gateway = access.ask_addresses(ui, frontend_bridge, [""])
+    addresses, frontend_gateway = access.ask_addresses(essential_ui(ui), frontend_bridge, [""])
     timezone = ui.ask(translate("Timezone"), host.timezone())
     allowed_hosts = ui.ask(
         translate("Allowed hosts (comma separated; * allows access through the assigned IP)"),
@@ -1152,7 +1255,9 @@ def _build_tandoor_stack_deployment(
     if not re.fullmatch(r"[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}", admin_email):
         raise InstallError(translate("The administrator email is not valid"))
 
-    onboot = ui.confirm(translate("Start the stack with Proxmox"), pve_defaults["onboot"])
+    extra_devices = ask_application_extra_devices(ui)
+    onboot = essential_ui(ui).confirm(translate("Start the stack with Proxmox"), pve_defaults["onboot"])
+    # The first start creates the administrator, so a default installation does not ask it.
     start_after = ui.confirm(translate("Start when finished"), True)
     if not start_after:
         raise UserCancelled(
@@ -1164,6 +1269,9 @@ def _build_tandoor_stack_deployment(
         "deployment_kind": "tandoor-two-lxc-stack",
         "base_vmid": int(vmid_text) if vmid_text else None,
         "stack_name": stack_name,
+        "resources": resources,
+        "extra_mounts": extra_mounts,
+        "extra_devices": extra_devices,
         "template_storage": template_storage,
         "rootfs_storage": rootfs_storage,
         "application_storage": static_storage,

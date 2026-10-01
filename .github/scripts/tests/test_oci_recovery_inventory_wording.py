@@ -17,9 +17,9 @@ REMOVE = ROOT / 'oci/remote/oci_remove.py'
 PREVIEW_HOST = 'Host paths found in container configs or saved records (not targeted for removal):'
 EMPTY_HOST = 'No host directories found in the available container configs or saved records.'
 POST_HOST = 'Host directory listed in saved records (not targeted for removal):'
-UPDATE = ('All images are downloaded and verified first, and native backups are taken with the stack stopped. '
-          'Contracts are published after the whole set is checked. If a step fails, recovery is attempted '
-          'where needed; recovery can also fail.')
+UPDATE = ('All {count} containers of the application are updated together (main CT: {vmid}). If there are new '
+          'versions, all images are downloaded and verified, the application is stopped, each container is backed '
+          'up and replaced with its new image. If anything fails, the backups are restored.')
 PENDING = ('A coordinated operation has a saved journal. Continuing attempts to recover the previous stack '
            'where needed, or finish cleanup for a completed operation. Recovery or cleanup can fail.')
 KEYS = (PREVIEW_HOST, EMPTY_HOST, POST_HOST, UPDATE, PENDING)
@@ -126,10 +126,9 @@ class RecoveryMessages(unittest.TestCase):
             extracted(MENU, '_manage_stack', self.scope)(Path('/inert'), self.ui, {'vmid': 101})
         return next(message for kind, message in self.calls if kind == 'review')
 
-    def test_update_preview_describes_recovery_attempt_not_guarantee(self):
+    def test_update_preview_names_the_stack_and_what_happens(self):
         message = self.manage()
-        self.assertIn(UPDATE, message)
-        self.assertNotIn('all members are recovered', message)
+        self.assertIn(UPDATE.format(count=len(self.members), vmid=101), message)
 
     def test_pending_terminal_and_recovery_failed_states_share_bounded_wording(self):
         for phase in ('committed', 'rolled-back', 'recovery-failed'):
@@ -210,7 +209,7 @@ class RecoveryMessages(unittest.TestCase):
         self.assertIn('Tradotto: ' + PREVIEW_HOST + '\n  /bind', preview)
         # Exercise the actual management consumer, not just the provider.
         self.scope['translate'] = module.translate
-        self.assertIn('Tradotto: ' + UPDATE, self.manage())
+        self.assertIn(('Tradotto: ' + UPDATE).format(count=len(self.members), vmid=101), self.manage())
         self.journal.write_text(json.dumps({'phase': 'committed', 'plan': {'members': self.members}}))
         self.primary['pending_stack_transaction'] = str(self.journal)
         self.calls.clear()

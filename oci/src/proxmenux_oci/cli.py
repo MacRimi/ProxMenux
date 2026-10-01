@@ -267,6 +267,18 @@ def _deployment_summary_text(template: dict[str, Any], deployment: dict[str, Any
                     row(translate(label), f"{translate('host directory')} {storage.get('host_path', '-')}")
                 else:
                     row(translate(label), f"{storage.get('size_gb', '-')} GB {on} {storage.get('storage', '-')}")
+        if isinstance(plan.get("resources"), dict):
+            row(translate("Resources"), f"{plan['resources']['cores']} CPU, {plan['resources']['memory_mb']} MB RAM")
+        if plan.get("extra_mounts"):
+            lines.append(f"{translate('Extra paths') + ':':<16}")
+            for mount in plan["extra_mounts"]:
+                target = (f"{translate('host directory')} {mount['source']}" if mount["type"] == "host-bind"
+                          else f"{translate('Container volume')} {mount.get('size_gb', '-')} GB {on} {mount['source']}")
+                if mount.get("read_only"):
+                    target += f" ({translate('read-only')})"
+                lines.append(f"  {mount['container_path']} → {target}")
+        if plan.get("extra_devices"):
+            row(translate("Devices"), ", ".join(device["host_path"] for device in plan["extra_devices"]))
     else:
         row(translate("Container"), f"CT {plan.get('vmid') or translate('next free')} · {plan.get('hostname', '-')}")
 

@@ -12,8 +12,11 @@ MEDIA_APPS = {'sonarr','radarr','lidarr','qbittorrent','sabnzbd','bazarr','unpac
 
 class SuiteChildUI(DefaultsUI):
     """Reuse image hardware questions without repeating the stack storage wizard."""
-    def __init__(self, ui, profile):
+    def __init__(self, ui, profile, label=''):
         self.ui = ui
+        self.label = label
+        # Each application of the suite asks its own CPU and memory.
+        self.resources = {translate('CPU cores'), translate('Memory in MB')}
         self.prompts = set()
         def visit(value):
             if isinstance(value, dict):
@@ -28,6 +31,8 @@ class SuiteChildUI(DefaultsUI):
         visit(profile)
 
     def ask(self, text, default=None, required=True):
+        if text in self.resources:
+            return self.ui.ask(f"{self.label}: {text}", default, required)
         return self.ui.ask(text,default,required) if text in self.prompts else super().ask(text,default,required)
 
     def choose(self, text, options, default=None):
@@ -56,12 +61,16 @@ def build_suite(template, ui, mode='advanced'):
         raise StackError(translate('Select at least one suite application'))
     if 'unpackerr' in selected and not set(selected) & {'sonarr','radarr','lidarr'}:
         raise StackError(translate('Unpackerr requires Sonarr, Radarr or Lidarr in this suite'))
-    name = _hostname_default(ui.ask(translate('Stack name'), 'suite-arr'))
-    base = ui.ask(translate('Base VMID (empty = next free block)'), '', required=False)
+    # A default installation takes the name, the VMID and the timezone from the
+    # recipe; it still asks the storage, the addresses and how the suite starts.
+    quiet = DefaultsUI() if mode == DEFAULT_MODE else ui
+    name = _hostname_default(quiet.ask(translate('Stack name'), 'suite-arr'))
+    base = quiet.ask(translate('Base VMID (empty = next free block)'), '', required=False)
     from . import host
     from . import network as access
     from .installer import ask_bridge, ask_storage
-    storage = ask_storage(ui, translate('Storage for rootfs and private configuration'), 'rootdir', 'local-lvm', mode)
+    storage = ask_storage(ui, translate('Storage for the containers and their data') if mode == DEFAULT_MODE
+                          else translate('Storage for rootfs and private configuration'), 'rootdir', 'local-lvm')
     cache = ask_storage(ui, translate('Storage for the OCI image cache'), 'vztmpl', 'local', mode)
     shared = ui.ask(translate('Shared host media directory'), '/mnt/oci-shared/media') if set(selected) & MEDIA_APPS else None
     if shared and (not shared.startswith('/') or shared == '/' or '..' in shared.split('/') or any(c in shared for c in ',\n\r')):
@@ -79,7 +88,7 @@ def build_suite(template, ui, mode='advanced'):
     reachable = [app for app in selected if app != 'unpackerr']
     labels, gateway = access.ask_addresses(ui, bridge, [app.capitalize() for app in reachable])
     addresses = dict(zip(reachable, labels.values()))
-    timezone = ui.ask(translate('Timezone'), host.timezone())
+    timezone = quiet.ask(translate('Timezone'), host.timezone())
     services = []
     credentials = None
     if 'qbittorrent' in selected:
@@ -93,7 +102,7 @@ def build_suite(template, ui, mode='advanced'):
         if not child['compatibility']['automatic_install_candidate']:
             raise StackError(f"{app}: {translate('individual template is blocked')}")
         child_ui = (DefaultsUI() if mode == DEFAULT_MODE else
-                    SuiteChildUI(ui, child['proxmox'].get('installer_profile', {})))
+                    SuiteChildUI(ui, child['proxmox'].get('installer_profile', {}), app))
         plan = build_deployment(copy.deepcopy(child), child_ui, mode)
         plan.update(hostname=_hostname_default(name+'-'+app), start_after_create=False, template_storage=cache)
         plan['rootfs']['storage'] = storage

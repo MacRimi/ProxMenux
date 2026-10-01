@@ -7,6 +7,8 @@ import stat
 import shlex
 import os
 
+import oci_console
+import oci_gpu_devices
 from oci_ui import translate
 
 
@@ -74,6 +76,9 @@ def immich_record(record):
         fields = dict(p.split('=', 1) for p in item['value'].split(',') if '=' in p)
         path = fields.get('path')
         if cuda and path and path.startswith('/dev/nvidia'):
+            continue
+        if oci_gpu_devices.peripheral_path(path):
+            devices.append(peripheral_device(fields))
             continue
         if not path or not re.fullmatch(r'/dev/dri/renderD[0-9]+', path):
             raise ValueError(translate('Immich device without a validated translation'))
@@ -219,25 +224,59 @@ def adapter_prerequisites(rootfs, role, image, adapter, required):
     return checked
 
 
+def peripheral_device(fields):
+    """A native devN entry as the device the installer attaches again."""
+    path = fields['path']
+    device = {'id': 'native-' + path.removeprefix('/dev/').replace('/', '-'), 'kind': 'character-device',
+              'host_path': path, 'container_path': path, 'mode': fields.get('mode', '0660'),
+              'deny_write': fields.get('deny-write', '0') == '1',
+              'gid_strategy': 'host-device-gid' if 'gid' in fields else 'none'}
+    if 'uid' in fields:
+        device['uid'] = int(fields['uid'])
+    return device
+
+
+def translated_devices(projection):
+    """The devices of a member the update keeps: USB, serial and GPU nodes.
+    Anything else has no translation and stops the update before it starts."""
+    devices = []
+    for item in projection['native_devices']:
+        fields = dict(part.split('=', 1) for part in item['value'].split(',') if '=' in part)
+        path = fields.get('path')
+        if not (oci_gpu_devices.gpu_path(path) or oci_gpu_devices.peripheral_path(path)):
+            raise ValueError(translate('The stack contains devices or directives without a translation'))
+        devices.append(peripheral_device(fields))
+    return devices
+
+
+def with_devices(record, result):
+    result['deployment']['devices'] = translated_devices(normalize(record))
+    return result
+
+
 def nextcloud_record(record):
     """Build portable desired state from evidence, without writing the registry."""
-    return portable_record(record, nextcloud_installer_profile(record))
+    return with_devices(record, portable_record(record, nextcloud_installer_profile(record)))
 
 
 def paperless_record(record):
     """Translate captured Paperless state; native activation remains separate."""
-    return portable_record(record, paperless_installer_profile(record))
+    return with_devices(record, portable_record(record, paperless_installer_profile(record)))
 
 
 def tandoor_record(record):
     """Project the two-member Tandoor recipe without activating replacement."""
-    return portable_record(record, tandoor_installer_profile(record))
+    return with_devices(record, portable_record(record, tandoor_installer_profile(record)))
 
 
 def portable_record(record, profile):
     """Preserve data mounts and provenance without first-install preparations."""
     projection = normalize(record)
     saved = record['deployment'].get('member_replay_projection')
+    if saved is not None:
+        # A projection saved while the start hook was still listed carries it.
+        saved = dict(saved, preserved_raw_runtime=[line for line in saved.get('preserved_raw_runtime', [])
+                                                   if not oci_console.is_start_mark_hook(line)])
     if saved is not None and saved != projection:
         raise ValueError(translate('The saved projection does not match the native evidence'))
     result = copy.deepcopy(record)
@@ -297,8 +336,9 @@ def official_application_profile(record, adapter, adapted_entrypoints):
     recipe = record['deployment']['rootfs_replay']
     if recipe['adapter'] != adapter:
         raise ValueError(translate('Stack adapter not recognized by the translator'))
-    if projection.get('native_devices') or projection.get('preserved_raw_runtime'):
+    if projection.get('preserved_raw_runtime'):
         raise ValueError(translate('The stack contains devices or directives without a translation'))
+    translated_devices(projection)
     runtime = projection['runtime']
     entrypoint = runtime.get('entrypoint', '')
     if not entrypoint or '\0' in entrypoint or '\n' in entrypoint:
@@ -338,8 +378,9 @@ def nextcloud_installer_profile(record):
     recipe = record['deployment']['rootfs_replay']
     if recipe['adapter'] != 'install_nextcloud_stack.sh':
         raise ValueError(translate('This translator only supports the Nextcloud stack'))
-    if projection.get('native_devices') or projection.get('preserved_raw_runtime'):
+    if projection.get('preserved_raw_runtime'):
         raise ValueError(translate('The stack contains devices or directives without a translation'))
+    translated_devices(projection)
     runtime = projection['runtime']
     entrypoint = runtime.get('entrypoint', '')
     if not entrypoint or '\0' in entrypoint or '\n' in entrypoint:
@@ -563,11 +604,13 @@ def normalize(record):
     preserved = {key: single(key) for key in ('arch', 'ostype', 'cmode', 'console', 'tty', 'cpuunits',
                  'net0', 'net1', 'startup', 'hookscript', 'features', 'tags') if key in values}
     devices = [{'key': key, 'value': single(key)} for key in values if re.fullmatch(r'dev[0-9]+', key)]
-    # The console log line is not replayed: the installer that rebuilds the
-    # member sets it itself, and replaying it too would leave two of them.
+    # The console log line and its start hook are not replayed: the installer
+    # that rebuilds the member sets them itself, and replaying them too would
+    # leave two of each.
     raw_runtime = [line for line in config.splitlines() if line.startswith('lxc.')
                    and line.partition(': ')[0] not in ('lxc.environment.runtime', 'lxc.init.cwd',
-                                                       'lxc.signal.halt', 'lxc.console.logfile')]
+                                                       'lxc.signal.halt', 'lxc.console.logfile')
+                   and not oci_console.is_start_mark_hook(line)]
     return {'schema_version': 1, 'deployment': plan, 'runtime': runtime,
             'preserved_native': preserved, 'generated_files': copy.deepcopy(files),
             'native_devices': devices, 'preserved_raw_runtime': raw_runtime,

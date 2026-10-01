@@ -28,15 +28,15 @@ def choose_usb_device(ui, title, default=None, attached=()):
     return ui.ask(manual_prompt, default or '/dev/ttyACM0') if selected == 'manual' else selected
 
 
-def ask_extra_devices(ui, devices, unprivileged, allow_coral=False):
+def ask_extra_devices(ui, devices, unprivileged, allow_coral=False, kinds=('gpu', 'nvidia', 'usb')):
     """Keep manual attachments separate from image-owned GPU profiles."""
     result = list(devices)
     while ui.confirm(translate('Add another GPU or USB device manually?'), False):
-        options = [
+        options = [option for option in (
             ('gpu', translate('Intel/AMD DRM node (device only)')),
             ('nvidia', translate('NVIDIA runtime (device and host driver libraries)')),
             ('usb', translate('USB or serial device node')),
-        ]
+        ) if option[0] in kinds]
         if allow_coral:
             options.append(('coral', translate('Coral PCIe/M.2 device node')))
         kind = ui.choose(translate('Device to attach'), options)

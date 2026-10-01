@@ -71,6 +71,10 @@ def _static_address(ui, bridge: str, label: str, default: str, taken: set[str]) 
         if str(interface.ip) in taken:
             ui.message(f"{translate('The address is already assigned on this host or cluster:')} {interface.ip}")
             continue
+        # The address this container already has answers because it is its own.
+        if value != default and host.address_answers(str(interface.ip), bridge):
+            ui.message(f"{translate('Another device of the network already answers on this address:')} {interface.ip}")
+            continue
         return interface
 
 

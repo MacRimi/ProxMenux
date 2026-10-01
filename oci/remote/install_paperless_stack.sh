@@ -116,6 +116,11 @@ TRANSFER_ROOT=$(jq -r '.transfer.host_path // empty' "$DEPLOYMENT_FILE")
 ADMIN_USERNAME=$(jqr '.application.admin_username')
 OCR_LANGUAGE=$(jqr '.application.ocr_language')
 TIMEZONE=$(jqr '.timezone')
+APPLICATION_CORES=$(jqr '.resources.cores // 2')
+APPLICATION_MEMORY=$(jqr '.resources.memory_mb // 2048')
+APPLICATION_SWAP=$(jqr '.resources.swap_mb // 1024')
+[[ $APPLICATION_CORES =~ ^[1-9][0-9]*$ && $APPLICATION_MEMORY =~ ^[1-9][0-9]*$ && $APPLICATION_SWAP =~ ^[0-9]+$ ]] \
+  || die "$(translate "Invalid resources")"
 ONBOOT=$(jqr '.onboot | if . then 1 else 0 end')
 START_AFTER=$(jqr '.start_after_create | if . then 1 else 0 end')
 FRONTEND_BRIDGE=$(jqr '.network.frontend_bridge')
@@ -414,13 +419,15 @@ oci_create_container "$APPLICATION_ID" "$APPLICATION_ARCHIVE" --rootfs "${ROOTFS
   --mp0 "${APPLICATION_STORAGE}:${DATA_SIZE},mp=/usr/src/paperless/data,backup=1" \
   --mp1 "${APPLICATION_STORAGE}:${MEDIA_SIZE},mp=/usr/src/paperless/media,backup=1" \
   --mp2 "$EXPORT_MOUNT" --mp3 "$CONSUME_MOUNT" --hostname "$STACK_NAME" \
-  --cores 2 --memory 2048 --swap 1024 \
+  --cores "$APPLICATION_CORES" --memory "$APPLICATION_MEMORY" --swap "$APPLICATION_SWAP" \
   --net0 "name=eth0,bridge=${FRONTEND_BRIDGE},firewall=1,host-managed=1,${FRONTEND_NET},type=veth" \
   --net1 "name=eth1,bridge=${PRIVATE_BRIDGE},firewall=1,host-managed=1,ip=${APPLICATION_ADDRESS},type=veth" \
   --unprivileged 1 --features nesting=1 --cmode console --onboot "$ONBOOT" \
   --startup order=30,up=15,down=30 --tags "$TAGS" \
   --description 'Paperless-ngx native OCI'
 created_ids+=("$APPLICATION_ID")
+oci_apply_extra_mounts "$APPLICATION_ID"
+oci_apply_extra_devices "$APPLICATION_ID"
 
 oci_quiet pct mount "$APPLICATION_ID"
 APPLICATION_ROOTFS="/var/lib/lxc/${APPLICATION_ID}/rootfs"

@@ -13,6 +13,9 @@ from proxmenux_oci.extra_devices import (ask_extra_devices, ask_stack_extra_devi
 from proxmenux_oci.ui import BackRequested, BacktrackUI, DialogUI, RestartWizard
 
 
+USB = [{'path': '/dev/ttyACM0', 'name': 'ConBee II', 'kind': 'Communications'}]
+
+
 class SequenceUI:
     def __init__(self, answers):
         self.answers = iter(answers)
@@ -69,7 +72,8 @@ class WizardTests(unittest.TestCase):
         finally:
             wizard.close()
 
-    def test_manual_usb_is_available_without_profile(self):
+    @patch('proxmenux_oci.extra_devices.host.usb_devices', return_value=USB)
+    def test_manual_usb_is_available_without_profile(self, _usb):
         ui = SequenceUI([True, 'usb', '/dev/ttyACM0', False])
         devices = ask_extra_devices(ui, [], True)
         self.assertEqual(devices[0]['host_path'], '/dev/ttyACM0')
@@ -80,7 +84,8 @@ class WizardTests(unittest.TestCase):
                                          [{'kind': 'character-device'}])
         self.assertEqual(permissions['strategy'], 'linuxserver-native-init')
 
-    def test_stack_device_goes_only_to_selected_member(self):
+    @patch('proxmenux_oci.extra_devices.host.usb_devices', return_value=USB)
+    def test_stack_device_goes_only_to_selected_member(self, _usb):
         ui = SequenceUI([True, 'usb', '/dev/ttyACM0', False, ['server']])
         services = [
             {'name': name, 'main': name == 'server',
