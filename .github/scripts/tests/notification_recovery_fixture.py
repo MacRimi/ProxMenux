@@ -83,4 +83,4 @@ def service(store, rc=0, stdout='active\n', raised=False, services=('pvedaemon',
 @contextlib.contextmanager
 def case():
     Clock.epoch=BASE
-    with tempfile.TemporaryDirectory(prefix='recovery-review-db-',dir=os.environ['TMPDIR']) as d:yield make_store(d)
+    with tempfile.TemporaryDirectory(prefix='recovery-review-db-',dir=os.environ.get('TMPDIR')) as d:yield make_store(d)
