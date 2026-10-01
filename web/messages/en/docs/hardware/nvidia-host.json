@@ -60,6 +60,7 @@
       "title": "Prepare the system",
       "body": "Behind a single confirmation, the script:",
       "items": [
+        "Checks the repositories of the host before anything is removed or installed: a host with no active subscription and only the Enterprise repository is asked before switching to no-subscription, and the installation stops when the switch is declined.",
         "Installs <code>pve-headers-$(uname -r)</code> (or <code>proxmox-headers-$(uname -r)</code>), <code>build-essential</code> and <code>dkms</code>.",
         "Creates the ProxMenux-owned <code>/etc/modprobe.d/proxmenux-nouveau-blacklist.conf</code> with <code>blacklist nouveau</code> and <code>options nouveau modeset=0</code>, records whether it added the companion line to <code>blacklist.conf</code>, and tries to unload the module immediately.",
         "Writes <code>/etc/modules-load.d/nvidia-vfio.conf</code> with <code>nvidia</code> and <code>nvidia_uvm</code> so the modules load early at boot."

@@ -85,14 +85,17 @@ apt-get -y install pigz
 cat > /bin/pigzwrapper <<'EOF'
 #!/bin/sh
 PATH=/bin:$PATH
-GZIP="-1"
+export GZIP="-1"
 exec /usr/bin/pigz "$@"
 EOF
 chmod +x /bin/pigzwrapper
 
-# Only replaces gzip if not already replaced (idempotent)
-[ ! -f /bin/gzip.original ] && mv /bin/gzip /bin/gzip.original \\
-  && cp /bin/pigzwrapper /bin/gzip && chmod +x /bin/gzip`}
+# gzip is diverted: the real binary is kept as gzip.distrib, package updates
+# land there, and the wrapper takes the place of gzip.
+# Path on Proxmox VE 9; on Proxmox VE 8 it is /bin/gzip.
+cp -p /usr/bin/gzip /usr/bin/gzip.distrib
+dpkg-divert --local --no-rename --divert /usr/bin/gzip.distrib --add /usr/bin/gzip
+cat /bin/pigzwrapper > /usr/bin/gzip`}
         className="my-4"
       />
 
@@ -106,8 +109,9 @@ chmod +x /bin/pigzwrapper
 
       <CopyableCode
         code={`# Manual rollback of pigz
-mv /bin/gzip.original /bin/gzip    # restore original binary
-rm /bin/pigzwrapper
+cat /usr/bin/gzip.distrib > /usr/bin/gzip    # restore the real binary
+dpkg-divert --local --no-rename --remove /usr/bin/gzip
+rm /usr/bin/gzip.distrib /bin/pigzwrapper
 sed -i 's/^pigz: 1/#pigz: 1/' /etc/vzdump.conf
 # Optional: remove the package
 apt purge pigz`}

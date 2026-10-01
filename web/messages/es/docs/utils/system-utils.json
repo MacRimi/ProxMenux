@@ -12,7 +12,7 @@
   },
   "info": {
     "title": "Qué hace",
-    "body": "Instala herramientas CLI de una lista curada de 26 paquetes. Cada instalación pasa por el mismo flujo canónico: <code>ensure_repositories</code> configura los repos Proxmox + Debian para la versión mayor de PVE en ejecución, después <code>install_single_package</code> ejecuta la instalación y verifica que el comando resultante esté en PATH."
+    "body": "Instala herramientas CLI de una lista curada de 26 paquetes. Cada instalación pasa por el mismo flujo canónico: <code>ensure_repositories</code> comprueba que el host tiene un repositorio de Proxmox utilizable para la versión mayor de PVE en ejecución, después <code>install_single_package</code> ejecuta la instalación y verifica que el comando resultante esté en PATH."
   },
   "opening": {
     "heading": "Abrir el instalador",
@@ -204,7 +204,7 @@
   "howItWorks": {
     "heading": "Cómo funciona la instalación de un paquete",
     "items": [
-      "<code>ensure_repositories</code> detecta PVE 8 o 9, escribe los archivos de fuentes Proxmox sin suscripción + Debian si faltan, ejecuta <code>apt-get update</code>.",
+      "<code>ensure_repositories</code> detecta PVE 8 o 9 y lee los repositorios a través de la API de Proxmox. Un host con un repositorio de Proxmox utilizable se deja sin cambios; en un host sin suscripción activa y solo con el repositorio Enterprise se pregunta antes de cambiar a sin suscripción, y <code>apt-get update</code> se ejecuta tras un cambio aceptado.",
       "<code>install_single_package \"pkg\" \"verify_cmd\" \"description\"</code> ejecuta <code>apt-get install -y \"$pkg\"</code> con feedback (<code>msg_info</code> / <code>msg_ok</code> / <code>msg_error</code>)."
     ],
     "verifyIntro": "Tras instalar, el comando de verificación se comprueba con <code>command -v \"$verify_cmd\"</code>. Tres desenlaces:",
@@ -224,7 +224,7 @@
   "troubleshoot": {
     "heading": "Solución de problemas",
     "reposTitle": "\"Failed to configure repositories. Installation aborted.\"",
-    "reposBody": "El host no puede alcanzar los repos de Proxmox o Debian, o no tiene la configuración base esperada. Desde una consola: <code>cat /etc/apt/sources.list /etc/apt/sources.list.d/*.sources</code> y <code>apt-get update</code> manualmente para ver el error real.",
+    "reposBody": "La comprobación de repositorios no se superó: se rechazó el cambio al repositorio sin suscripción, no se pudo leer el estado de la suscripción o una entrada de repositorio requiere atención. El mensaje impreso justo encima indica la causa. Los repositorios se listan en <em>Nodo → Actualizaciones → Repositorios</em>, y <code>apt-get update</code> desde una consola muestra el error que reporta apt.",
     "warningsTitle": "Un paquete se reporta como \"With warnings\" pero el comando funciona tras cerrar el menú",
     "warningsBody": "Esperado. Tras <code>apt-get install</code>, el nuevo binario está en disco pero la caché de PATH del shell actual (<code>hash -t</code>) aún no lo sabe. ProxMenux ejecuta <code>hash -r</code> tras cada instalación, pero en algunos shells el refresco solo surte efecto en el siguiente prompt. Abre un nuevo shell y el comando funcionará.",
     "hangsTitle": "Un apt install se queda colgado",
@@ -232,7 +232,7 @@
   },
   "files": {
     "heading": "Archivos implicados",
-    "code": "scripts/utilities/system_utils.sh                    # this script\nscripts/global/utils-install-functions.sh            # PROXMENUX_UTILS, ensure_repositories,\n                                                     # install_single_package\n/etc/apt/sources.list                                # may be touched by ensure_repositories\n/etc/apt/sources.list.d/proxmox.sources              # created if missing (PVE 9)\n/etc/apt/sources.list.d/debian.sources               # created if missing (PVE 9)\n/etc/apt/sources.list.d/pve-no-subscription.list     # created if missing (PVE 8)"
+    "code": "scripts/utilities/system_utils.sh                    # este script\nscripts/global/utils-install-functions.sh            # PROXMENUX_UTILS, install_single_package\nscripts/global/repository-functions.sh               # ensure_repositories\nscripts/global/repository_policy.py                  # lee y cambia los repositorios a través de la API de Proxmox\n/etc/apt/sources.list.d/proxmox.sources              # fuente sin suscripción, escrita por Proxmox al aceptar el cambio"
   },
   "related": {
     "heading": "Relacionado",

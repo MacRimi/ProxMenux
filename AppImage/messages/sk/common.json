@@ -6999,7 +6999,7 @@
         "unconfirmedBody": "Výsledok zálohovania nie je potvrdený.",
         "warningTitle": "{hostname}: Zálohovanie dokončené s upozorneniami",
         "warningBody": "Zálohovanie bolo dokončené s upozorneniami.",
-        "diagnosticsOmitted": "Ďalšie diagnostické riadky alebo text vynechaný: {count}.Pôvodná správa sa zachovala."
+        "diagnosticsOmitted": "Ďalšie diagnostické riadky alebo text vynechaný: {count}. Pôvodná správa sa zachovala."
       }
     }
   }

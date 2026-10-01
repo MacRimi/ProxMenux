@@ -21,12 +21,13 @@
       "Sets <code>pigz: 1</code> in <code>/etc/vzdump.conf</code> so Proxmox's backup tool uses pigz natively.",
       "Installs the <code>pigz</code> apt package if not already present.",
       "Writes a wrapper script at <code>/bin/pigzwrapper</code> that forwards every argument to <code>/usr/bin/pigz</code>.",
-      "Moves the original <code>/bin/gzip</code> aside to <code>/bin/gzip.original</code> and replaces <code>/bin/gzip</code> with the wrapper. From now on, <em>anything</em> that calls <code>gzip</code> — logrotate, <code>tar czf</code>, scripts, vzdump — uses pigz transparently."
+      "Registers a dpkg diversion for the system's <code>gzip</code> binary (<code>/usr/bin/gzip</code> on Proxmox VE 9, <code>/bin/gzip</code> on Proxmox VE 8): the real binary is kept beside it as <code>gzip.distrib</code> and the wrapper takes its place. From now on, <em>anything</em> that calls <code>gzip</code> — logrotate, <code>tar czf</code>, scripts, vzdump — uses pigz transparently.",
+      "Checks that the file kept as <code>gzip.distrib</code> is a working gzip before the wrapper is put in place, and reinstalls the <code>gzip</code> package first when it is not. A host that still has the earlier <code>/bin/gzip.original</code> swap is moved to the diversion when the option is applied again."
     ],
     "replacesTitle": "This replaces a system binary",
-    "replacesBody": "Replacing <code>/bin/gzip</code> with a wrapper is unusual. It is safe (the wrapper produces gzip-compatible output), but worth knowing: scripts that hardcode paths, run inside restrictive chroots, or verify binary hashes may behave differently. The original binary is preserved as <code>/bin/gzip.original</code> so you can always swap it back.",
+    "replacesBody": "Putting a wrapper in the place of <code>gzip</code> is unusual. It is safe (the wrapper produces gzip-compatible output), but worth knowing: scripts that hardcode paths, run inside restrictive chroots, or verify binary hashes may behave differently. The real binary is preserved as <code>gzip.distrib</code>, and because the replacement is a dpkg diversion, an update of the <code>gzip</code> package — or the upgrade from Proxmox VE 8 to 9 — updates that file and leaves the wrapper in place.",
     "revertTitle": "Reversible from the Uninstall menu",
-    "revertBody": "This optimization is tracked. <link>Uninstall Optimizations</link> restores <code>/bin/gzip.original</code> back into place, removes the <code>pigzwrapper</code>, reverts the two lines added to <code>/etc/vzdump.conf</code>, and runs <code>apt purge pigz</code>. Manual equivalent:",
+    "revertBody": "This optimization is tracked. <link>Uninstall Optimizations</link> copies the real binary from <code>gzip.distrib</code> back over the wrapper, removes the diversion and the <code>pigzwrapper</code>, comments out the <code>pigz</code> line in <code>/etc/vzdump.conf</code>, and runs <code>apt purge pigz</code> once gzip is verified to work. Manual equivalent on Proxmox VE 9:",
     "verifyTitle": "Verification",
     "verifyBody": "After applying, <code>gzip --version</code> should mention pigz. A quick benchmark also shows the speed difference on a multi-core host:",
     "whenTitle": "When this matters most",

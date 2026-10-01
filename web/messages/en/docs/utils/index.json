@@ -78,7 +78,7 @@
       },
       {
         "title": "Proxmox System Update",
-        "description": "Repo hygiene + apt update + apt dist-upgrade with reboot prompt. Detects PVE major version (8 or 9) and routes to the matching worker. Switches to no-subscription, removes conflicting packages, runs autoremove.",
+        "description": "Repository check + apt update + apt dist-upgrade with reboot prompt. Detects the PVE major version (8 or 9), keeps the configured repositories and asks before switching a host without subscription to no-subscription, then runs autoremove.",
         "href": "/docs/utils/system-update"
       },
       {

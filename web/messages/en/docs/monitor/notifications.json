@@ -400,7 +400,43 @@
         "events": "<code>gpu_mode_switch</code>, <code>gpu_passthrough_blocked</code>, <code>pci_passthrough_conflict</code>, <code>ai_model_migrated</code>."
       }
     ],
-    "burstNote": "A handful of <code>burst_*</code> aggregation types (<code>burst_auth_fail</code>, <code>burst_ip_block</code>, <code>burst_disk_io</code>, etc.) exist only in the dispatcher — they replace bursts of individual events with a single summary message and are not exposed as toggles in the UI. They inherit the on/off state of their parent event type."
+    "burstNote": "A handful of <code>burst_*</code> aggregation types (<code>burst_auth_fail</code>, <code>burst_ip_block</code>, <code>burst_disk_io</code>, etc.) exist only in the dispatcher — they replace bursts of individual events with a single summary message and are not exposed as toggles in the UI. They inherit the on/off state of their parent event type.",
+    "backupResults": {
+      "heading": "Backup results",
+      "intro": "A notification about a Proxmox backup job states how the job ended. The result is read from the report Proxmox sends, and it sets the title, the icon shown with <em>Rich messages</em> on, and the status row of the email.",
+      "headerIcon": "Icon",
+      "headerResult": "Result",
+      "headerWhen": "When",
+      "rows": [
+        {
+          "icon": "💾✅",
+          "result": "Backup complete",
+          "when": "Every guest of the job finished and the report carries no warnings."
+        },
+        {
+          "icon": "💾⚠️",
+          "result": "Backup completed with warnings",
+          "when": "Every guest finished and the report carries at least one warning line."
+        },
+        {
+          "icon": "💾❌",
+          "result": "Backup error reported",
+          "when": "A guest failed, or the job stopped with an error."
+        },
+        {
+          "icon": "💾❔",
+          "result": "Backup outcome unconfirmed",
+          "when": "The report is incomplete or does not state a result for every guest."
+        }
+      ],
+      "items": [
+        "<strong>The title names what the job was about.</strong> It carries the storage and, for a job with a single guest, its type, name and ID. A failed job names the guest that failed.",
+        "<strong>The body lists each guest</strong> with its own result, size, duration and archive, followed by a line with the totals of the job.",
+        "<strong>Warnings and errors are listed once.</strong> Repeated lines are shown a single time with the main cause first; past eight lines, the rest is counted in a closing line and stays in the Proxmox task log.",
+        "<strong>A job that fails before its first guest</strong> shows the cause Proxmox gave, for example a storage that does not exist.",
+        "<strong>Summaries keep the result.</strong> A backup listed in the Quiet Hours summary or the Daily Digest carries the icon of its own result."
+      ]
+    }
   },
   "history": {
     "heading": "History",

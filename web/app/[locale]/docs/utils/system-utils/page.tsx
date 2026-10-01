@@ -157,7 +157,7 @@ export default async function SystemUtilsPage({
       <h2 className="text-2xl font-semibold mt-10 mb-4 text-gray-900">{t("troubleshoot.heading")}</h2>
 
       <Callout variant="troubleshoot" title={t("troubleshoot.reposTitle")}>
-        {t.rich("troubleshoot.reposBody", { code })}
+        {t.rich("troubleshoot.reposBody", { code, em })}
       </Callout>
 
       <Callout variant="troubleshoot" title={t("troubleshoot.warningsTitle")}>

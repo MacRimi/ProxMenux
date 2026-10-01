@@ -49,6 +49,7 @@ export async function generateMetadata({
 type SourceRow = { collector: string; watches: string; events: string }
 type DispatchRow = { stage: string; what: string; tunable: string }
 type CatalogueRow = { group: string; events: string }
+type BackupResultRow = { icon: string; result: string; when: string }
 type ApiRow = { endpoint: string; method: string; use: string }
 type WhereNextItem = { label: string; href: string; tail?: string; tailRich?: string }
 
@@ -88,7 +89,7 @@ export default async function NotificationsPage({
         securityItems: string[]
         actionsItems: string[]
       }
-      catalogue: { rows: CatalogueRow[] }
+      catalogue: { rows: CatalogueRow[]; backupResults: { rows: BackupResultRow[]; items: string[] } }
       api: { rows: ApiRow[] }
       whereNext: { items: WhereNextItem[] }
     } } }
@@ -117,6 +118,8 @@ export default async function NotificationsPage({
   const pveSecurity = n.pveWebhook.securityItems
   const pveActions = n.pveWebhook.actionsItems
   const catalogueRows = n.catalogue.rows
+  const backupResultRows = n.catalogue.backupResults.rows
+  const backupResultItems = n.catalogue.backupResults.items
   const apiRows = n.api.rows
   const whereNextItems = n.whereNext.items
 
@@ -721,6 +724,37 @@ running on node pve-01
       <p className="mb-4 text-gray-800 leading-relaxed">
         {t.rich("catalogue.burstNote", { code })}
       </p>
+
+      <h3 id="backup-results" className="text-lg font-semibold mt-6 mb-2 text-gray-900">{t("catalogue.backupResults.heading")}</h3>
+
+      <p className="mb-4 text-gray-800 leading-relaxed">{t.rich("catalogue.backupResults.intro", { em })}</p>
+
+      <div className="overflow-x-auto mb-6">
+        <table className="w-full text-sm border border-gray-200 rounded-md">
+          <thead className="bg-gray-50 text-gray-900">
+            <tr>
+              <th className="text-left px-3 py-2 border-b border-gray-200">{t("catalogue.backupResults.headerIcon")}</th>
+              <th className="text-left px-3 py-2 border-b border-gray-200">{t("catalogue.backupResults.headerResult")}</th>
+              <th className="text-left px-3 py-2 border-b border-gray-200">{t("catalogue.backupResults.headerWhen")}</th>
+            </tr>
+          </thead>
+          <tbody className="text-gray-800">
+            {backupResultRows.map((row, idx) => (
+              <tr key={row.icon} className={idx < backupResultRows.length - 1 ? "border-b border-gray-100" : ""}>
+                <td className="px-3 py-2 align-top whitespace-nowrap">{row.icon}</td>
+                <td className="px-3 py-2 align-top whitespace-nowrap"><strong>{row.result}</strong></td>
+                <td className="px-3 py-2 align-top">{row.when}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      <ul className="list-disc pl-6 mb-6 text-gray-800 leading-relaxed space-y-1">
+        {backupResultItems.map((_, idx) => (
+          <li key={idx}>{t.rich(`catalogue.backupResults.items.${idx}`, { strong })}</li>
+        ))}
+      </ul>
 
       <h2 className="text-2xl font-semibold mt-10 mb-4 text-gray-900">{t("history.heading")}</h2>
 

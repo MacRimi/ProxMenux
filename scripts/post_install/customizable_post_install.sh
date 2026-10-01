@@ -1647,7 +1647,7 @@ ensure_gzip_binary() {
 }
 
 configure_pigz() {
-    local FUNC_VERSION="1.0"
+    local FUNC_VERSION="1.1"
     pmx_journal_context "configure_pigz" "$FUNC_VERSION"
     # description: Replace gzip with pigz (parallel implementation) for faster vzdump backup compression.
     msg_info2 "$(translate "Configuring pigz as a faster replacement for gzip...")"

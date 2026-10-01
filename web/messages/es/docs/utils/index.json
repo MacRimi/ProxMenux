@@ -78,7 +78,7 @@
       },
       {
         "title": "Actualización del sistema Proxmox",
-        "description": "Higiene de repos + apt update + apt dist-upgrade con preguntar antes de reiniciar. Detecta la versión mayor de PVE (8 o 9) y enruta al worker correspondiente. Cambia a sin suscripción, elimina paquetes conflictivos, ejecuta autoremove.",
+        "description": "Comprobación de repositorios + apt update + apt dist-upgrade con preguntar antes de reiniciar. Detecta la versión mayor de PVE (8 o 9), mantiene los repositorios configurados y pregunta antes de cambiar a sin suscripción un host que no la tiene, y después ejecuta autoremove.",
         "href": "/docs/utils/system-update"
       },
       {

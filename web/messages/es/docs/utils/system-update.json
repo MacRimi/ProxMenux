@@ -7,7 +7,7 @@
   },
   "header": {
     "title": "Actualización del sistema Proxmox",
-    "description": "Wrapper que delega en un único worker seguro (<code>update-pve-safe.sh</code>) que detecta la versión mayor de Proxmox por sí mismo. Los repositorios se limpian cuando se solapan con las fuentes base de Proxmox / Debian, se actualizan todos los paquetes, se recompilan los drivers DKMS gestionados por ProxMenux si aterriza un kernel nuevo y el prompt de reinicio solo se dispara cuando el kernel realmente cambió. También lanzable desde el botón <em>Update Now</em> de la cabecera del dashboard de ProxMenux Monitor cuando se detectan actualizaciones pendientes.",
+    "description": "Wrapper que delega en un único worker seguro (<code>update-pve-safe.sh</code>) que detecta la versión mayor de Proxmox por sí mismo. Los repositorios configurados se leen a través de la API de Proxmox y se mantienen como están; en un host sin suscripción activa cuyo único repositorio de Proxmox es Enterprise se pregunta antes de cambiar a sin suscripción. Se actualizan todos los paquetes, se recompilan los drivers DKMS gestionados por ProxMenux si aterriza un kernel nuevo y el prompt de reinicio solo se dispara cuando el kernel realmente cambió. También lanzable desde el botón <em>Update Now</em> de la cabecera del dashboard de ProxMenux Monitor cuando se detectan actualizaciones pendientes.",
     "section": "Utilidades"
   },
   "calloutWhat": {
@@ -25,7 +25,7 @@
     "intro": "Esta opción ejecuta <strong>exactamente</strong> el comando apt de arriba, envuelto con la higiene de repos, la recompilación DKMS de los drivers gestionados por ProxMenux y la limpieza post-upgrade que la guía oficial de upgrade también recomienda. Todo lo de abajo mapea 1:1 a <code>scripts/utilities/proxmox_update.sh</code> y al único worker seguro <code>scripts/global/update-pve-safe.sh</code> — nada implícito, cada paso está en el código:",
     "items": [
       "<strong>Detecta la versión mayor de PVE</strong> desde dentro del worker (<code>pveversion | grep -oP ''pve-manager/\\K[0-9]+''</code>) y adapta las URLs base de repo Proxmox / Debian (bookworm en PVE 8, trixie en PVE 9). No hay reparto a scripts worker por versión — un único worker seguro maneja ambas.",
-      "<strong>Limpia los repositorios de forma conservadora.</strong> <code>ensure_repositories</code> se ejecuta primero pero solo cuando faltan las fuentes base de Proxmox / Debian — un host bare las recibe escritas, un host configurado es un no-op. <code>cleanup_duplicate_repos</code> elimina después duplicados exactos por URL + Suite + Component solo contra <code>proxmox.sources</code> / <code>debian.sources</code>; los archivos propios del usuario (enterprise, Ceph, mirrors NTP alternativos, entradas custom de <code>download.proxmox.com/*</code> o <code>pve-*.list</code> escritos a mano) no se tocan, y cada archivo se respalda antes de editarse.",
+      "<strong>Mantiene los repositorios configurados.</strong> <code>ensure_repositories</code> lee los repositorios a través de la API de repositorios de Proxmox, junto con el estado de la suscripción. Un host con suscripción activa, o que ya usa el repositorio sin suscripción o el de test, se deja sin cambios. En un host sin suscripción activa cuyo único repositorio de Proxmox es Enterprise se pregunta si se cambia a sin suscripción; al rechazarlo, la actualización se detiene sin modificar ninguna fuente.",
       "<strong>Ejecuta el upgrade no interactivamente</strong> con <code>DEBIAN_FRONTEND=noninteractive</code> y <code>--force-confdef --force-confold</code> — si un archivo de configuración que ya modificaste también cambió upstream, tu versión se queda en su sitio. Sin sobrescrituras silenciosas de configuraciones propias.",
       "<strong>No fuerza utilidades opcionales.</strong> El worker seguro no empuja <code>zfsutils-linux</code>, <code>chrony</code>, <code>ifupdown2</code> ni paquetes similares al host — una instalación de Proxmox que optó por no tener alguno de ellos conserva su elección. La ausencia de paquetes la surface los flujos de instalación de alto nivel, no la ruta de actualización.",
       "<strong>Comprobación de sanity de metadatos LVM</strong> contra cabeceras PV sueltas de discos en passthrough (solo aviso, sin arreglo automático).",
@@ -63,10 +63,9 @@
     "heading": "Qué hace el worker",
     "intro": "Un único worker (<code>scripts/global/update-pve-safe.sh</code>) maneja tanto PVE 8 como PVE 9. Detecta la versión mayor internamente y usa el codename propio de cada versión (<code>bookworm</code> o <code>trixie</code>) para sus fuentes base. Las etapas son:",
     "items": [
-      "<strong>Comprobaciones previas.</strong> Verifica al menos ~1 GB libres en <code>/var/cache/apt/archives</code> y hace ping a <code>download.proxmox.com</code>. Aborta pronto con un mensaje claro cuando falla cualquiera de las dos, para que la ejecución no muera a mitad de una transacción apt.",
-      "<strong>Bootstrap de repos.</strong> <code>ensure_repositories</code> escribe las fuentes base Proxmox / Debian solo cuando faltan (un host fresco o limpiado a mano); en un host configurado no hace nada.",
+      "<strong>Comprobaciones previas.</strong> Verifica al menos ~1 GB libres en <code>/var/cache/apt/archives</code>. Aborta pronto con un mensaje claro cuando falla, para que la ejecución no muera a mitad de una transacción apt.",
+      "<strong>Comprobación de repositorios.</strong> <code>ensure_repositories</code> lee los repositorios y el estado de la suscripción. En un host con un repositorio de Proxmox utilizable no cambia nada; en un host sin suscripción activa y solo con el repositorio Enterprise pregunta antes de cambiar a sin suscripción, y detiene la actualización cuando la respuesta es no.",
       "<strong>Apt update con auto-recuperación de GPG.</strong> Ante un <code>NO_PUBKEY</code> de cualquier repo (los propios o uno de terceros), el worker importa la clave que falta y vuelve a intentar automáticamente antes de fallar.",
-      "<strong>Limpieza conservadora de duplicados.</strong> <code>cleanup_duplicate_repos</code> elimina solo coincidencias exactas por URL + Suite + Component contra <code>proxmox.sources</code> / <code>debian.sources</code>. Los archivos propios del usuario — enterprise, Ceph, mirrors NTP alternativos, entradas custom de <code>download.proxmox.com/*</code>, <code>pve-*.list</code> escritos a mano — se dejan intactos. Cada archivo se respalda antes de modificarse.",
       "<strong>Actualizaciones pendientes + conteo de seguridad.</strong> Reporta cuántos paquetes van a cambiar y cuántos de esos vienen de la suite de seguridad, para que el diálogo de confirmación tenga números reales que mostrar.",
       "<strong>Diálogo de confirmación.</strong> El wrapper pide un sí explícito antes de tocar apt.",
       "<strong>apt full-upgrade.</strong> Se ejecuta con <code>DEBIAN_FRONTEND=noninteractive</code> y <code>--force-confdef --force-confold</code> para que cualquier archivo de configuración que personalizaste mantenga su contenido actual cuando upstream también lo cambió. Nunca sobrescribe silenciosamente configs editados por el usuario.",
@@ -96,14 +95,16 @@
     "body": "Correr en un kernel antiguo tras actualizar <code>linux-image-*</code> significa que estás en un sistema medio actualizado: userspace nuevo, kernel viejo. La mayoría del tiempo las cosas funcionan, pero los módulos ZFS, grupos IOMMU, KSMBD y cualquier driver fuera del árbol solo cuadran con el kernel para el que fueron construidos — un desajuste produce fallos oscuros. Reinicia en el primer momento razonable."
   },
   "noSub": {
-    "heading": "Cómo trata el worker seguro al repo enterprise",
-    "intro": "Proxmox entrega los hosts con el repo enterprise habilitado por defecto. Sin una suscripción de pago, ese repo devuelve 401 en <code>apt-get update</code>. El worker seguro deliberadamente <strong>no</strong> toca los repositorios enterprise ni Ceph — un host corriendo con una suscripción real no debe verse la configuración reescrita en silencio. Lo que ocurre en su lugar:",
+    "heading": "Cómo trata el worker seguro al repositorio Enterprise",
+    "intro": "Proxmox entrega los hosts con el repositorio Enterprise habilitado por defecto. Sin una suscripción activa, ese repositorio devuelve 401 en <code>apt-get update</code>. El worker seguro cambia los repositorios solo en ese caso, solo tras preguntar, y a través de la API de repositorios de Proxmox — la misma que hay detrás de <em>Nodo → Actualizaciones → Repositorios</em>. Lo que ocurre en cada caso:",
     "items": [
-      "En un <strong>host bare</strong> sin fuentes base de Proxmox / Debian, <code>ensure_repositories</code> escribe la fuente sin suscripción en formato deb822 (<code>proxmox.sources</code>) con el codename correspondiente a la versión mayor detectada (<code>bookworm</code> para PVE 8, <code>trixie</code> para PVE 9) y las fuentes Debian correspondientes.",
-      "En un <strong>host configurado</strong>, <code>ensure_repositories</code> es un no-op — lo que el usuario haya elegido (sin suscripción, enterprise o una mezcla) se preserva.",
-      "Los archivos enterprise <code>pve-enterprise.sources</code> / <code>ceph.sources</code> nunca son modificados por la ruta de actualización. La eliminación del repo enterprise cuando no se quiere se gestiona desde otra parte de ProxMenux (el script post-instalación automatizado), no desde aquí."
+      "Con una <strong>suscripción activa</strong>, los repositorios se dejan sin cambios y Enterprise dirige la actualización.",
+      "Con el <strong>repositorio sin suscripción o el de test ya habilitado</strong>, los repositorios se dejan sin cambios, sea lo que sea lo que haya configurado a su lado.",
+      "<strong>Sin suscripción activa y solo con el repositorio Enterprise</strong>, un diálogo ofrece el cambio. Al aceptar, se deshabilita la fuente Enterprise, se habilita la de sin suscripción y se refrescan las listas de paquetes; el cambio queda registrado en la vista <em>Changes</em> de Audit & Report. Al rechazarlo, la actualización se detiene sin modificar ninguna fuente.",
+      "Las <strong>fuentes Enterprise de Ceph</strong>, cuando existen, se deshabilitan en el mismo cambio sin elegir otro canal de Ceph; un host que usa Ceph configura su canal por separado.",
+      "Cuando la ejecución <strong>no tiene un terminal en el que preguntar</strong>, no se modifica ninguna fuente y la actualización se detiene con un mensaje que remite a <em>Nodo → Actualizaciones → Repositorios</em>."
     ],
-    "outro": "Si tienes una suscripción de pago, mantén <code>pve-enterprise.sources</code> habilitado y el worker seguro lo dejará dirigir el upgrade sin cambios. Si no la tienes, o bien ejecuta primero el post-instalación automatizado (que hace el cambio y lo registra) o comenta la fuente enterprise a mano — la ruta de actualización no lo hará por ti."
+    "outro": "Las fuentes de Debian y cualquier otro archivo de repositorios nunca se editan desde la ruta de actualización. Una fuente que mezcla Enterprise con otros componentes en la misma entrada no se cambia: la actualización se detiene y pide separarla desde la vista de repositorios de Proxmox."
   },
   "cluster": {
     "heading": "Consideraciones de clúster",
@@ -124,7 +125,7 @@
     "items": [
       {
         "title": "apt update falla con 401 Unauthorized",
-        "body": "El repo enterprise sigue habilitado pero no tienes suscripción. El worker debería detectarlo y cambiar automáticamente; si no lo hizo, comenta la línea en <code>/etc/apt/sources.list.d/pve-enterprise.list</code> (o pon <code>Enabled: false</code> en el deb822 <code>pve-enterprise.sources</code>) y vuelve a ejecutar."
+        "body": "El repositorio Enterprise está habilitado y el host no tiene suscripción activa. El worker ofrece el cambio a sin suscripción antes de <code>apt-get update</code>; si se rechazó, ejecuta de nuevo la actualización y acéptalo, o deshabilita la fuente Enterprise en <em>Nodo → Actualizaciones → Repositorios</em> y habilita la de sin suscripción."
       },
       {
         "title": "dist-upgrade se queda colgado en \"Configuring grub-pc\"",
@@ -142,7 +143,7 @@
   },
   "files": {
     "heading": "Archivos implicados",
-    "code": "scripts/utilities/proxmox_update.sh              # este script (wrapper)\nscripts/global/update-pve-safe.sh                # único worker seguro (PVE 8 + PVE 9)\nscripts/global/common-functions.sh               # cleanup_duplicate_repos usado por el worker\nscripts/global/utils-install-functions.sh        # ensure_repositories + pmx_rebuild_dkms_after_kernel\n/usr/local/share/proxmenux/components_status.json # registro de drivers DKMS gestionados por ProxMenux\n/etc/apt/sources.list.d/proxmox.sources          # fuente deb822 sin suscripción (bootstrap host bare)\n/etc/apt/sources.list.d/debian.sources           # fuentes deb822 de Debian (bootstrap host bare)\n/var/run/reboot-required                         # se lee para decidir el prompt de reinicio\n# Fallback de reinicio cuando needrestart no está instalado:\n# dpkg-query -W 'proxmox-kernel-*-pve-signed' 'pve-kernel-*-pve' vs. uname -r"
+    "code": "scripts/utilities/proxmox_update.sh              # este script (wrapper)\nscripts/global/update-pve-safe.sh                # único worker seguro (PVE 8 + PVE 9)\nscripts/global/repository-functions.sh           # ensure_repositories\nscripts/global/repository_policy.py              # lee y cambia los repositorios a través de la API de Proxmox\nscripts/global/utils-install-functions.sh        # pmx_rebuild_dkms_after_kernel\n/usr/local/share/proxmenux/components_status.json # registro de drivers DKMS gestionados por ProxMenux\n/etc/apt/sources.list.d/proxmox.sources          # fuente sin suscripción, escrita por Proxmox al aceptar el cambio\n/var/run/reboot-required                         # se lee para decidir el prompt de reinicio\n# Fallback de reinicio cuando needrestart no está instalado:\n# dpkg-query -W 'proxmox-kernel-*-pve-signed' 'pve-kernel-*-pve' vs. uname -r"
   },
   "related": {
     "heading": "Relacionado",

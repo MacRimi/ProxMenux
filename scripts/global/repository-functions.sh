@@ -33,6 +33,14 @@ ensure_repositories() {
     decision=$(repository_policy apply "$suite") || return 1
     [[ "$decision" == changed || "$decision" == preserve ]] || return 1
     if [[ "$decision" == changed ]]; then
+        # The switch goes through the Proxmox API; leave it in the changes journal.
+        if declare -F pmx_record_execution >/dev/null; then
+            local journal_function="${PMX_JOURNAL_FUNCTION:-}" journal_version="${PMX_JOURNAL_VERSION:-}"
+            pmx_journal_context "ensure_repositories" "" "${PMX_JOURNAL_SOURCE:-}"
+            pmx_record_execution "Switch to the PVE no-subscription repository" \
+                "pvesh set /nodes/localhost/apt/repositories --handle no-subscription"
+            PMX_JOURNAL_FUNCTION="$journal_function" PMX_JOURNAL_VERSION="$journal_version"
+        fi
         # Direct callers may install immediately; refresh their package indexes
         # before returning. Preserve paths must not trigger an extra refresh.
         if apt-get update; then

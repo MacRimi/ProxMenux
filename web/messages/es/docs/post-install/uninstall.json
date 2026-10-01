@@ -205,7 +205,7 @@
           },
           {
             "tool": "pigz (gzip paralelo)",
-            "restores": "Devuelve /bin/gzip.original a su sitio, elimina /bin/pigzwrapper, revierte las líneas pigz y bwlimit en /etc/vzdump.conf y hace apt purge pigz."
+            "restores": "Copia el gzip real desde gzip.distrib, elimina la desviación de dpkg y /bin/pigzwrapper, comenta la línea pigz en /etc/vzdump.conf y hace apt purge pigz una vez verificado gzip."
           },
           {
             "tool": "High Availability services",

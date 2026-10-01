@@ -12,7 +12,7 @@
   },
   "info": {
     "title": "What this does",
-    "body": "Installs CLI tools from a curated list of 26 packages. Every installation goes through the same canonical flow: <code>ensure_repositories</code> sets up Proxmox + Debian repos for the running PVE major version, then <code>install_single_package</code> runs the install and verifies the resulting command is in PATH."
+    "body": "Installs CLI tools from a curated list of 26 packages. Every installation goes through the same canonical flow: <code>ensure_repositories</code> checks that the host has a usable Proxmox repository for the running PVE major version, then <code>install_single_package</code> runs the install and verifies the resulting command is in PATH."
   },
   "opening": {
     "heading": "Opening the installer",
@@ -204,7 +204,7 @@
   "howItWorks": {
     "heading": "How a single package install works",
     "items": [
-      "<code>ensure_repositories</code> detects PVE 8 or 9, writes Proxmox no-subscription + Debian sources files if missing, runs <code>apt-get update</code>.",
+      "<code>ensure_repositories</code> detects PVE 8 or 9 and reads the repositories through the Proxmox API. A host with a usable Proxmox repository is left unchanged; a host with no active subscription and only the Enterprise repository is asked before switching to no-subscription, and <code>apt-get update</code> runs after an accepted switch.",
       "<code>install_single_package \"pkg\" \"verify_cmd\" \"description\"</code> runs <code>apt-get install -y \"$pkg\"</code> with feedback (<code>msg_info</code> / <code>msg_ok</code> / <code>msg_error</code>)."
     ],
     "verifyIntro": "After install, the verify command is checked with <code>command -v \"$verify_cmd\"</code>. Three outcomes:",
@@ -224,7 +224,7 @@
   "troubleshoot": {
     "heading": "Troubleshooting",
     "reposTitle": "\"Failed to configure repositories. Installation aborted.\"",
-    "reposBody": "The host can't reach the Proxmox or Debian repos, or doesn't have the expected base config. From a console: <code>cat /etc/apt/sources.list /etc/apt/sources.list.d/*.sources</code> and <code>apt-get update</code> manually to see the actual error.",
+    "reposBody": "The repository check did not pass: the switch to the no-subscription repository was declined, the subscription status could not be read, or a repository entry needs attention. The message printed above it states the cause. The repositories are listed in <em>Node → Updates → Repositories</em>, and <code>apt-get update</code> from a console shows the error apt reports.",
     "warningsTitle": "A package is reported \"With warnings\" but the command works after I close the menu",
     "warningsBody": "Expected. After <code>apt-get install</code>, the new binary is on disk but the current shell's PATH cache (<code>hash -t</code>) doesn't know yet. ProxMenux runs <code>hash -r</code> after each install, but in some shells the refresh only takes effect on the next prompt. Open a new shell and the command will work.",
     "hangsTitle": "An apt install hangs",
@@ -232,7 +232,7 @@
   },
   "files": {
     "heading": "Files involved",
-    "code": "scripts/utilities/system_utils.sh                    # this script\nscripts/global/utils-install-functions.sh            # PROXMENUX_UTILS, ensure_repositories,\n                                                     # install_single_package\n/etc/apt/sources.list                                # may be touched by ensure_repositories\n/etc/apt/sources.list.d/proxmox.sources              # created if missing (PVE 9)\n/etc/apt/sources.list.d/debian.sources               # created if missing (PVE 9)\n/etc/apt/sources.list.d/pve-no-subscription.list     # created if missing (PVE 8)"
+    "code": "scripts/utilities/system_utils.sh                    # this script\nscripts/global/utils-install-functions.sh            # PROXMENUX_UTILS, install_single_package\nscripts/global/repository-functions.sh               # ensure_repositories\nscripts/global/repository_policy.py                  # reads and switches repositories through the Proxmox API\n/etc/apt/sources.list.d/proxmox.sources              # no-subscription source, written by Proxmox when the switch is accepted"
   },
   "related": {
     "heading": "Related",

@@ -74,7 +74,7 @@ export default async function SystemUpdatePage({
     <div>
       <DocHeader
         title={t("header.title")}
-        description={t("header.description")}
+        description={t.rich("header.description", { code, em })}
         section={t("header.section")}
         estimatedMinutes={5}
         scriptPath="utilities/proxmox_update.sh"
@@ -175,14 +175,14 @@ export default async function SystemUpdatePage({
 
       <h2 className="text-2xl font-semibold mt-10 mb-4 text-gray-900">{t("noSub.heading")}</h2>
       <p className="mb-6 text-gray-800 leading-relaxed">
-        {t.rich("noSub.intro", { code, strong })}
+        {t.rich("noSub.intro", { code, strong, em })}
       </p>
-      <ol className="list-decimal pl-6 mb-6 text-gray-800 leading-relaxed space-y-1">
+      <ul className="list-disc pl-6 mb-6 text-gray-800 leading-relaxed space-y-1">
         {noSubItems.map((_, idx) => (
-          <li key={idx}>{t.rich(`noSub.items.${idx}`, { code, strong })}</li>
+          <li key={idx}>{t.rich(`noSub.items.${idx}`, { code, strong, em })}</li>
         ))}
-      </ol>
-      <p className="mb-6 text-gray-800 leading-relaxed">{t("noSub.outro")}</p>
+      </ul>
+      <p className="mb-6 text-gray-800 leading-relaxed">{t.rich("noSub.outro", { code, em })}</p>
 
       <h2 className="text-2xl font-semibold mt-10 mb-4 text-gray-900">{t("cluster.heading")}</h2>
       <Callout variant="warning" title={t("cluster.calloutTitle")}>
@@ -200,7 +200,7 @@ export default async function SystemUpdatePage({
 
       {troubleItems.map((_, idx) => (
         <Callout key={idx} variant="troubleshoot" title={t(`troubleshooting.items.${idx}.title`)}>
-          {t.rich(`troubleshooting.items.${idx}.body`, { code, kbd })}
+          {t.rich(`troubleshooting.items.${idx}.body`, { code, kbd, em })}
         </Callout>
       ))}
 

@@ -205,7 +205,7 @@
           },
           {
             "tool": "pigz (parallel gzip)",
-            "restores": "Puts /bin/gzip.original back in place, removes the /bin/pigzwrapper, reverts the pigz and bwlimit lines in /etc/vzdump.conf and apt purges pigz."
+            "restores": "Copies the real gzip back from gzip.distrib, removes the dpkg diversion and /bin/pigzwrapper, comments out the pigz line in /etc/vzdump.conf and apt purges pigz once gzip is verified."
           },
           {
             "tool": "High Availability services",

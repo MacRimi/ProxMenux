@@ -400,7 +400,43 @@
         "events": "<code>gpu_mode_switch</code>, <code>gpu_passthrough_blocked</code>, <code>pci_passthrough_conflict</code>, <code>ai_model_migrated</code>."
       }
     ],
-    "burstNote": "Un puñado de tipos de agregación <code>burst_*</code> (<code>burst_auth_fail</code>, <code>burst_ip_block</code>, <code>burst_disk_io</code>, etc.) existen solo en el dispatcher — reemplazan ráfagas de eventos individuales con un único mensaje de resumen y no se exponen como toggles en la UI. Heredan el estado on/off de su tipo de evento padre."
+    "burstNote": "Un puñado de tipos de agregación <code>burst_*</code> (<code>burst_auth_fail</code>, <code>burst_ip_block</code>, <code>burst_disk_io</code>, etc.) existen solo en el dispatcher — reemplazan ráfagas de eventos individuales con un único mensaje de resumen y no se exponen como toggles en la UI. Heredan el estado on/off de su tipo de evento padre.",
+    "backupResults": {
+      "heading": "Resultados de backup",
+      "intro": "Una notificación sobre un trabajo de backup de Proxmox indica cómo terminó el trabajo. El resultado se lee del informe que envía Proxmox, y determina el título, el icono que se muestra con <em>Rich messages</em> activado y la fila de estado del email.",
+      "headerIcon": "Icono",
+      "headerResult": "Resultado",
+      "headerWhen": "Cuándo",
+      "rows": [
+        {
+          "icon": "💾✅",
+          "result": "Backup completado",
+          "when": "Todos los guests del trabajo terminaron y el informe no contiene advertencias."
+        },
+        {
+          "icon": "💾⚠️",
+          "result": "Backup completado con advertencias",
+          "when": "Todos los guests terminaron y el informe contiene al menos una línea de advertencia."
+        },
+        {
+          "icon": "💾❌",
+          "result": "Backup fallido",
+          "when": "Un guest falló, o el trabajo se detuvo con un error."
+        },
+        {
+          "icon": "💾❔",
+          "result": "Resultado del backup sin confirmar",
+          "when": "El informe está incompleto o no indica un resultado para cada guest."
+        }
+      ],
+      "items": [
+        "<strong>El título indica sobre qué era el trabajo.</strong> Incluye el almacenamiento y, en un trabajo con un solo guest, su tipo, nombre e ID. Un trabajo fallido nombra el guest que falló.",
+        "<strong>El cuerpo lista cada guest</strong> con su propio resultado, tamaño, duración y archivo, seguido de una línea con los totales del trabajo.",
+        "<strong>Las advertencias y los errores se listan una vez.</strong> Las líneas repetidas se muestran una sola vez con la causa principal primero; a partir de ocho líneas, el resto se cuenta en una línea de cierre y permanece en el log de la tarea de Proxmox.",
+        "<strong>Un trabajo que falla antes de su primer guest</strong> muestra la causa que dio Proxmox, por ejemplo un almacenamiento que no existe.",
+        "<strong>Los resúmenes conservan el resultado.</strong> Un backup listado en el resumen de Quiet Hours o en el Daily Digest lleva el icono de su propio resultado."
+      ]
+    }
   },
   "history": {
     "heading": "Historial",

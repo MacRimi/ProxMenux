@@ -60,6 +60,7 @@
       "title": "Preparar el sistema",
       "body": "Tras una única confirmación, el script:",
       "items": [
+        "Comprueba los repositorios del host antes de eliminar o instalar nada: en un host sin suscripción activa y solo con el repositorio Enterprise se pregunta antes de cambiar a sin suscripción, y la instalación se detiene cuando el cambio se rechaza.",
         "Instala <code>pve-headers-$(uname -r)</code> (o <code>proxmox-headers-$(uname -r)</code>), <code>build-essential</code> y <code>dkms</code>.",
         "Crea el archivo propiedad de ProxMenux <code>/etc/modprobe.d/proxmenux-nouveau-blacklist.conf</code> con <code>blacklist nouveau</code> y <code>options nouveau modeset=0</code>, registra si añadió la línea complementaria a <code>blacklist.conf</code> e intenta descargar el módulo inmediatamente.",
         "Escribe <code>/etc/modules-load.d/nvidia-vfio.conf</code> con <code>nvidia</code> y <code>nvidia_uvm</code> para que los módulos se carguen pronto en el arranque."

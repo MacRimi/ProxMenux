@@ -250,7 +250,7 @@ export default async function NvidiaHostPage({
 
         <Steps.Step title={t("walkthrough.version.title")}>
           <p className="mb-3 text-gray-800">{t.rich("walkthrough.version.body1", { strong, em, code })}</p>
-          <p className="mb-3 text-gray-800">{t("walkthrough.version.body2")}</p>
+          <p className="mb-3 text-gray-800">{t.rich("walkthrough.version.body2", { em })}</p>
 
           <Callout variant="tip" title={t("walkthrough.version.whyTitle")}>
             {t("walkthrough.version.whyBody")}
