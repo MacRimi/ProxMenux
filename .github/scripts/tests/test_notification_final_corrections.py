@@ -77,23 +77,13 @@ class FinalCorrectionsTests(unittest.TestCase):
             self.assertNotIn('script', result['tags'])
 
 
-    def test_long_disappearance_reason_is_present_once_in_actual_dispatch(self):
-        reason = 'Temperature exceeded configured limit; the source stopped reporting this observation after expiry.'
-        for language in LANGUAGES:
-            for manual in (False, True):
-                result = deliver('error_resolved', {'hostname':'node-a','category':'temperature',
-                    'reason':reason,'duration':'3d 2h','original_severity':'WARNING'}, 'OK', language, manual=manual)
-                self.assertEqual(result['text'].count(reason), 1)
-                self.assertNotIn('>OK</span>', result['html'])
-                self.assertNotIn('>RESOLVED</span>', result['html'])
 
 
-    def test_raw_restore_and_observation_cells_use_event_scoped_mail_wrapping(self):
+    def test_raw_restore_cells_use_event_scoped_mail_wrapping(self):
         token = 'b' * 64
         event = restore_event('Boot check: recorded token ' + token + '; verification pending')
         for language in LANGUAGES:
             results = [deliver(event['event_type'],event['data'],event['severity'],language,quiet=quiet) for quiet in (False,True)]
-            results.append(deliver('error_resolved',{'hostname':'node-a','reason':token,'category':'temperature','duration':'3d 2h'},'OK',language))
             for result in results:
                 self.assertIn('table-layout:fixed;', result['html'])
                 self.assertIn('word-wrap:break-word;', result['html'])

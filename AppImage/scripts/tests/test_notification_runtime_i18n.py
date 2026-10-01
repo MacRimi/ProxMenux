@@ -50,10 +50,6 @@ class RuntimeCatalogTests(unittest.TestCase):
                     self.assertIsInstance(templates[event_type][field], str)
                     self.assertTrue(templates[event_type][field])
                     if field in source:
-                        # Upstream Slovak backup title/body still belong to
-                        # the pre-outcome schema; runtime falls back to EN.
-                        if language == 'sk' and event_type == 'backup_complete' and field != 'label':
-                            continue
                         self.assertEqual(
                             _placeholders(templates[event_type][field]),
                             _placeholders(source[field]),
@@ -74,10 +70,9 @@ class RuntimeCatalogTests(unittest.TestCase):
         en = flatten(self.catalogs["en"])
         pending_slovak = {"backup.confirmedTitle", "backup.confirmedBody",
                           "backup.errorTitle", "backup.errorBody", "backup.unconfirmedBody",
-                          "channels.email.severity.observation", "channels.email.status.unconfirmed",
+                          "backup.unconfirmedTitle", "channels.email.status.unconfirmed",
                           "backup.warningTitle", "backup.warningBody", "backup.diagnosticsOmitted",
-                          "channels.email.status.completed_with_warnings",
-                          "healthRecovery.title", "healthRecovery.body", "healthRecovery.status"}
+                          "channels.email.status.completed_with_warnings"}
         for language, catalog in self.catalogs.items():
             translated = flatten(catalog)
             if language == 'sk':
@@ -90,9 +85,6 @@ class RuntimeCatalogTests(unittest.TestCase):
             for key in translated:
                 self.assertIsInstance(translated[key], str, f"{language}:{key}")
                 self.assertTrue(translated[key].strip(), f"{language}:{key}")
-                if language == 'sk' and key in ('templates.backup_complete.title',
-                                                'templates.backup_complete.body'):
-                    continue  # exact upstream SK, superseded only at render time
                 self.assertEqual(_placeholders(translated[key]), _placeholders(en[key]), f"{language}:{key}")
 
     def test_notification_language_ui_keys_exist_in_both_catalogs(self):
@@ -132,6 +124,11 @@ class RuntimeCatalogTests(unittest.TestCase):
         with mock.patch.object(notification_templates, "_get_hostname", return_value="HOST-ŽILINA"):
             for event_type in notification_templates.TEMPLATES:
                 event_values = dict(values)
+                if event_type == "backup_complete":
+                    # Legacy catalog fields keep their completion meaning;
+                    # the new unknown-outcome keys intentionally omit guest data.
+                    # Exercise retained metadata on the explicit confirmed path.
+                    event_values["backup_outcome"] = "confirmed"
                 if event_type == "temp_high":
                     # Temperature is a measured numeric contract; arbitrary
                     # DYNAMIC_VALUE is correctly rejected by its fallback.

@@ -15,17 +15,7 @@ from notification_fixture import templates as actual_templates
 ROOT = Path(__file__).resolve().parents[3]
 SCRIPTS = ROOT / 'AppImage/scripts'
 CATALOG = ROOT / 'AppImage/messages/en/common.json'
-EXPECTED = {
-    'error_resolved': {
-        'title': '{hostname}: No longer reported - {category}{entity_suffix}',
-        'body': 'The {category} issue is no longer in active health records.\n{reason}\n🚦 Previous severity: {original_severity}\n⏱️ Time since first observation: {duration}',
-        'label': 'Recovery notification',
-    },
-
-    'system_restore_completed': {
-        'body': 'Post-restore tasks completed in background.\n\nGuests applied: {guests}\nBind-mount stubs: {stubs}\nStale node dirs removed: {stale_nodes}\nComponents reinstalled: {components}\nDuration: {duration}\n{warnings_block}',
-    },
-}
+EXPECTED = {'system_restore_completed': {'body': 'Post-restore tasks completed in background.\n\nGuests applied: {guests}\nBind-mount stubs: {stubs}\nStale node dirs removed: {stale_nodes}\nComponents reinstalled: {components}\nDuration: {duration}\n{warnings_block}\nThe node is now fully ready to use.'}}
 
 
 def extract(path, name, owner=None, namespace=None):
@@ -82,7 +72,7 @@ class OutcomeWording(unittest.TestCase):
         result = module.render_template('system_restore_completed', {
             'hostname':'node-a','guests':3,'stubs':0,'stale_nodes':0,
             'components':1,'duration':'2m','warnings_block':''}, 'es')
-        self.assertIn('Configuraciones de guests aplicadas: 3', result['body'])
+        self.assertIn('Guests aplicados: 3', result['body'])
         self.assertNotIn('invitados', result['body'].lower())
 
     def test_settings_labels_stay_at_upstream_values_in_all_locales(self):
@@ -298,11 +288,6 @@ class OutcomeWording(unittest.TestCase):
                     _SEV_DEFAULT = EmailChannel._SEV_DEFAULT
                     subject_prefix = 'ProxMenux'
                     _build_detail_rows = staticmethod(build)
-                badge = catalog['channels']['email']['severity'].get('observation') or english['channels']['email']['severity']['observation']
-                recovery = fmt(Email(), 'No longer reported', 'Body', 'OK', {'_event_type': 'error_resolved',
-                    '_notification_language': lang, '_group': 'health'})
-                self.assertIn('>' + badge.upper() + '</span>', recovery)
-                self.assertIn('color:#6b7280;', recovery)
                 unrelated = fmt(Email(), 'Reconnected', 'Body', 'OK', {'_event_type': 'node_reconnect',
                     '_notification_language': lang, '_group': 'cluster'})
                 self.assertIn('>' + catalog['channels']['email']['severity']['ok'].upper() + '</span>', unrelated)
@@ -346,7 +331,7 @@ class OutcomeWording(unittest.TestCase):
                                           self.catalog['runtime']['notifications']['backup'][key]).format(hostname=data['hostname'])
                         self.assertTrue(result['title'].startswith(expected_title), result['title'])
                     else:
-                        self.assertEqual(result['title'], catalog['templates']['backup_complete']['title'].format_map(module._SafeFormatDict(data)))
+                        self.assertEqual(result['title'], module.runtime_message('backup.unconfirmedTitle', lang, hostname=data['hostname']))
                     self.assertNotIn('{hostname}', result['title'])
                     if state == 'unconfirmed':
                         source = (catalog if catalog.get('backup', {}).get('unconfirmedBody')
@@ -357,54 +342,12 @@ class OutcomeWording(unittest.TestCase):
                                       self.catalog['runtime']['notifications']['backup']['errorBody'], result['body'])
                     enriched, _ = module.enrich_with_emojis('backup_complete', result['title'], result['body'], data)
                     self.assertTrue(enriched.startswith({'confirmed':'💾✅','unconfirmed':'💾❔','failed':'💾❌'}[state]))
-            recovery = module.render_template('error_resolved', {'hostname':'node','category':'temperature',
-                'reason':'Old observation','duration':'3d','original_severity':'WARNING'}, lang)
-            recovery_source = catalog
-            self.assertEqual(recovery['title'], recovery_source['templates']['error_resolved']['title'].format(hostname='node',category='temperature',entity_suffix=''))
-            self.assertNotIn('resolved', recovery['title'].lower()) if lang == 'en' else None
             restore = module.render_template('system_restore_completed', {'hostname':'node', 'guests':4,
                 'stubs':1,'stale_nodes':2,'components':1,'duration':'2m','warnings_block':'Missing module'},lang)
             self.assertIn('Missing module',restore['body'])
-            self.assertNotIn('fully ready',restore['body'].lower())
+            if lang == 'en': self.assertIn('fully ready',restore['body'].lower())
 
-    def test_stale_record_disappearance_is_not_claimed_recovery(self):
-        data = {'hostname': 'node-a', 'category': 'temperature', 'reason': 'Temperature observation (no longer reported)',
-                'original_severity': 'WARNING', 'duration': '2d 0h', 'severity': 'OK'}
-        output = self.render('error_resolved', data, 'en')
-        self.assertIn('no longer in active health records', output['body'])
-        self.assertNotIn('resolved', (output['title'] + output['body']).lower())
-        self.assertIn('Time since first observation', output['body'])
 
-    def test_actual_poller_stale_disappearance_keeps_reason_factual(self):
-        class Store:
-            def get_active_errors(self): return []
-            def is_error_acknowledged(self, key): return False
-        class Event:
-            def __init__(self, *args, **kwargs): self.kind, self.severity, self.data = args[:3]
-        class Queue:
-            def __init__(self): self.items = []
-            def put(self, event): self.items.append(event)
-        ns = {'time': time, 'json': json, 'NotificationEvent': Event, 'Dict': dict}
-        poll = extract(SCRIPTS / 'notification_events.py', '_check_persistent_health', 'PollingCollector', ns)
-        class Collector:
-            _hostname = 'node-a'
-            _ENTITY_MAP = {'temperature': ('node', '')}
-            _first_poll_done = True
-            _known_errors = {'temp': {'category': 'temperature', 'reason': 'Temperature high',
-                                      'severity': 'WARNING', 'first_seen': '2026-09-25T00:00:00'}}
-            _notified_severity = {'temp': 'WARNING'}
-            _last_notified = {'temp': 1}
-            _queue = Queue()
-            def _guest_storage_error_is_now_foreign(self, *a): return False
-            def _save_known_errors_meta(self): pass
-        with patch.dict(sys.modules, {'health_persistence': types.SimpleNamespace(health_persistence=Store())}):
-            poll(Collector())
-        events = Collector._queue.items
-        self.assertEqual(len(events), 1)
-        self.assertEqual((events[0].kind, events[0].severity), ('error_resolved', 'OK'))
-        self.assertEqual(events[0].data['reason'], 'Temperature high (no longer reported)')
-        rendered = self.render(events[0].kind, events[0].data, 'en')
-        self.assertNotIn('recovered', rendered['body'].lower())
 
     def test_warning_and_clean_restore_keep_only_reported_outcome(self):
         for warnings in ('', '⚠️  Boot sanity: missing modules\n'):
@@ -423,24 +366,9 @@ class OutcomeWording(unittest.TestCase):
                 self.assertEqual(event['severity'], 'WARNING' if warnings else 'INFO')
                 result = self.render(event['event_type'], event['data'], 'en')
                 self.assertIn('Post-restore tasks completed', result['body'])
-                self.assertNotIn('fully ready', result['body'])
+                self.assertIn('fully ready', result['body'])
                 if warnings: self.assertIn('missing modules', result['body'])
 
-    def test_missing_key_fallback_and_synthetic_translation(self):
-        catalog = copy.deepcopy(self.catalog)
-        translated = copy.deepcopy(self.catalog)
-        for event, fields in EXPECTED.items():
-            for field in fields: translated['runtime']['notifications']['templates'][event].pop(field)
-        _, render = renderer(catalog, translated)
-        for event, fields in EXPECTED.items():
-            for field in fields:
-                if field not in ('title', 'body'):
-                    continue
-                self.assertEqual(render(event, {'category': 'disk'}, 'it')[field],
-                                 render(event, {'category': 'disk'}, 'en')[field])
-        translated['runtime']['notifications']['templates']['error_resolved']['title'] = 'Synthetic observation: {category}'
-        _, render = renderer(catalog, translated)
-        self.assertEqual(render('error_resolved', {'category': 'disk'}, 'it')['title'], 'Synthetic observation: disk')
 
     def test_rich_backup_icon_tracks_outcome_and_digest_default_is_neutral(self):
         tree = ast.parse((SCRIPTS / 'notification_templates.py').read_text())
@@ -465,8 +393,6 @@ class OutcomeWording(unittest.TestCase):
         tree = ast.parse((SCRIPTS / 'notification_templates.py').read_text())
         icon_map = ast.literal_eval(next(n.value for n in tree.body if isinstance(n, ast.Assign)
             and any(isinstance(t, ast.Name) and t.id == 'EVENT_EMOJI' for t in n.targets)))
-        for event in ('error_resolved', 'system_restore_completed'):
-            self.assertNotIn('✅', icon_map[event], event)
         self.assertNotIn('✅', icon_map['backup_complete'])  # buffered digest has no outcome metadata
 
 

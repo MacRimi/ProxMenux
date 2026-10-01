@@ -103,9 +103,7 @@ class PVE92Tests(unittest.TestCase):
                 'warnings_block': ''}
         slovak = templates._load_runtime_catalog('sk')
         english = templates._load_runtime_catalog('en')
-        for event, field in (('error_resolved', 'title'), ('error_resolved', 'body'),
-                             ('system_restore_completed', 'body'),
-                             ('backup_complete', 'title'), ('backup_complete', 'body')):
+        for event, field in (('system_restore_completed', 'body'),):
             with self.subTest(event=event, field=field):
                 value = slovak['templates'][event][field]
                 result = templates.render_template(event, data, 'sk')

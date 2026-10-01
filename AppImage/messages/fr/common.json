@@ -6266,8 +6266,8 @@
           "label": "Nouveau problème de santé"
         },
         "error_resolved": {
-          "title": "{hostname} : Plus signalé – {category}{entity_suffix}",
-          "body": "Le problème {category} ne figure plus parmi les alertes de santé actives.\n{reason}\n🚦 Gravité précédente : {original_severity}\n⏱️ Temps depuis la première observation : {duration}",
+          "title": "{hostname} : Résolu - {category}{entity_suffix}",
+          "body": "Le problème {category} a été résolu.\n{reason}\n🚦 Gravité précédente : {original_severity}\n⏱️ Durée : {duration}",
           "label": "Notification de récupération"
         },
         "error_escalated": {
@@ -6396,8 +6396,8 @@
           "label": "Sauvegarde démarrée"
         },
         "backup_complete": {
-          "title": "{hostname} : résultat de la sauvegarde non confirmé",
-          "body": "Cette notification ne permet pas de confirmer le résultat de la sauvegarde.",
+          "title": "{hostname} → {storage} : Sauvegarde terminée — {vmname} ({vmid})",
+          "body": "La sauvegarde de {vmname} (ID : {vmid}) s'est terminée avec succès le {storage}.\nTaille : {size}",
           "label": "Sauvegarde terminée"
         },
         "backup_warning": {
@@ -6557,7 +6557,7 @@
         },
         "system_restore_completed": {
           "title": "{hostname} : restauration de l'hôte terminée",
-          "body": "Tâches après restauration terminées en arrière-plan.\n\nInvités appliqués : {guests}\nRépertoires de support des montages bind : {stubs}\nRépertoires de nœuds obsolètes supprimés : {stale_nodes}\nComposants réinstallés : {components}\nDurée : {duration}\n{warnings_block}",
+          "body": "Tâches post-restauration effectuées en arrière-plan.\n\nInvités postulés : {guests}\nTalons de montage liés : {stubs}\nRépertoires de nœuds obsolètes supprimés : {stale_nodes}\nComposants réinstallés : {components}\nDurée : {duration}\n{warnings_block}\nLe nœud est maintenant entièrement prêt à être utilisé.",
           "label": "Restauration de l'hôte terminée"
         },
         "system_problem": {
@@ -6910,8 +6910,7 @@
             "warning": "Avertissement",
             "info": "Informations",
             "ok": "Résolu",
-            "default": "Avis",
-            "observation": "Plus signalé"
+            "default": "Avis"
           },
           "groups": {
             "vm_ct": "Machine Virtuelle / Conteneur",
@@ -6992,8 +6991,8 @@
       "temperature": {
         "sampleSpan": "Les relevés élevés s'étendent sur {duration}."
       },
-      "healthRecovery": {"title": "{hostname} : Résolu - {category}{entity_suffix}", "body": "Un contrôle récent confirme le retour à la normale de la condition {category}.\nObservation précédente : {reason}\nGravité précédente : {original_severity}\nTemps depuis la première observation : {duration}", "status": "Résolu"},
       "backup": {
+        "unconfirmedTitle": "{hostname} : résultat de la sauvegarde non confirmé",
         "confirmedTitle": "{hostname} : sauvegarde terminée",
         "confirmedBody": "Sauvegarde terminée avec succès.",
         "errorTitle": "{hostname} : erreur signalée lors de la sauvegarde",

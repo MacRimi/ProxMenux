@@ -6266,8 +6266,8 @@
           "label": "Nuovo problema sanitario"
         },
         "error_resolved": {
-          "title": "{hostname}: segnalazione non più attiva - {category}{entity_suffix}",
-          "body": "Il problema relativo a {category} non figura più tra le segnalazioni di salute attive.\n{reason}\n🚦 Gravità precedente: {original_severity}\n⏱️ Tempo dalla prima segnalazione: {duration}",
+          "title": "{hostname}: risolto - {category}{entity_suffix}",
+          "body": "Il problema {category} è stato risolto.\n{reason}\n🚦 Gravità precedente: {original_severity}\n⏱️ Durata: {duration}",
           "label": "Notifica di recupero"
         },
         "error_escalated": {
@@ -6396,8 +6396,8 @@
           "label": "Backup avviato"
         },
         "backup_complete": {
-          "title": "{hostname}: esito del backup non confermato",
-          "body": "Questa notifica non consente di confermare l’esito del backup.",
+          "title": "{hostname} → {storage}: Backup completato — {vmname} ({vmid})",
+          "body": "Backup di {vmname} (ID: {vmid}) completato con successo su {storage}.\nTaglia: {size}",
           "label": "Backup completato"
         },
         "backup_warning": {
@@ -6557,7 +6557,7 @@
         },
         "system_restore_completed": {
           "title": "{hostname}: ripristino dell'host terminato",
-          "body": "Attività post-ripristino completate in background.\n\nConfigurazioni guest copiate: {guests}\nDirectory di supporto per montaggi bind create: {stubs}\nDirectory obsolete dei nodi rimosse: {stale_nodes}\nComponenti reinstallati: {components}\nDurata: {duration}\n{warnings_block}",
+          "body": "Attività post-ripristino completate in background.\n\nGli ospiti hanno presentato domanda: {guests}\nStub con montaggio tramite collegamento: {stubs}\nDirectory dei nodi obsolete rimosse: {stale_nodes}\nComponenti reinstallati: {components}\nDurata: {duration}\n{warnings_block}\nIl nodo è ora completamente pronto per l'uso.",
           "label": "Ripristino dell'host completato"
         },
         "system_problem": {
@@ -6910,8 +6910,7 @@
             "warning": "Avvertimento",
             "info": "Informazioni",
             "ok": "Risolto",
-            "default": "Avviso",
-            "observation": "Non più segnalato"
+            "default": "Avviso"
           },
           "groups": {
             "vm_ct": "Macchina virtuale/Contenitore",
@@ -6992,8 +6991,8 @@
       "temperature": {
         "sampleSpan": "Intervallo dei campioni sopra soglia: {duration}."
       },
-      "healthRecovery": {"title": "{hostname}: Risolto - {category}{entity_suffix}", "body": "Un controllo recente conferma che la condizione {category} è tornata nella norma.\nOsservazione precedente: {reason}\nGravità precedente: {original_severity}\nTempo dalla prima osservazione: {duration}", "status": "Risolto"},
       "backup": {
+        "unconfirmedTitle": "{hostname}: esito del backup non confermato",
         "confirmedTitle": "{hostname}: backup completato",
         "confirmedBody": "Backup completato correttamente.",
         "errorTitle": "{hostname}: errore segnalato nel backup",

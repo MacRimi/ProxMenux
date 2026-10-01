@@ -817,10 +817,10 @@ TEMPLATES = {
         # `{entity}` is populated by health_persistence.resolve_error()
         # (via _entity_from_details) and by PollingCollector's spread of
         # the original details blob. When absent, _SafeDict elides the
-        # placeholder and the title collapses back to "No longer reported - <cat>"
+        # placeholder and the title collapses back to "Resolved - <cat>"
         # without a trailing dash.
-        'title': '{hostname}: No longer reported - {category}{entity_suffix}',
-        'body': 'The {category} issue is no longer in active health records.\n{reason}\n\U0001F6A6 Previous severity: {original_severity}\n\u23F1\uFE0F Time since first observation: {duration}',
+        'title': '{hostname}: Resolved - {category}{entity_suffix}',
+        'body': 'The {category} issue has been resolved.\n{reason}\n\U0001F6A6 Previous severity: {original_severity}\n\u23F1\uFE0F Duration: {duration}',
         'label': 'Recovery notification',
         'group': 'health',
         'default_enabled': True,
@@ -1037,8 +1037,8 @@ TEMPLATES = {
         'default_enabled': False,
     },
     'backup_complete': {
-        'title': '{hostname}: Backup outcome unconfirmed',
-        'body': 'The backup outcome could not be confirmed from this notice.',
+        'title': '{hostname} → {storage}: Backup complete — {vmname} ({vmid})',
+        'body': 'Backup of {vmname} (ID: {vmid}) completed successfully on {storage}.\nSize: {size}',
         'label': 'Backup complete',
         'group': 'backup',
         'default_enabled': True,
@@ -1308,7 +1308,8 @@ TEMPLATES = {
             'Stale node dirs removed: {stale_nodes}\n'
             'Components reinstalled: {components}\n'
             'Duration: {duration}\n'
-            '{warnings_block}'
+            '{warnings_block}\n'
+            'The node is now fully ready to use.'
         ),
         'label': 'Host restore completed',
         'group': 'services',
@@ -1894,6 +1895,10 @@ def render_template(event_type: str, data: Dict[str, Any],
             template[field] = localized
     backup_title_target = ''
     if event_type == 'backup_complete':
+        template['title'] = runtime_message('backup.unconfirmedTitle', language,
+            hostname=data.get('hostname') or _get_hostname()) or (
+            str(data.get('hostname') or _get_hostname()) + ': Backup outcome unconfirmed')
+        template['body'] = runtime_message('backup.unconfirmedBody', language) or 'The backup outcome is not confirmed.'
         outcome = data.get('backup_outcome')
         if outcome == 'confirmed':
             template['title'] = runtime_message('backup.confirmedTitle', language,
@@ -1961,7 +1966,7 @@ def render_template(event_type: str, data: Dict[str, Any],
         'log_file': '',
     }
     variables.update(data)
-    if event_type == 'backup_fail' or (event_type == 'backup_complete' and data.get('backup_outcome') in ('confirmed', 'completed_with_warnings', 'failed')):
+    if event_type in ('backup_fail', 'backup_complete'):
         # The provider has already substituted raw Display Names. Insert the
         # resolved title as a value, never reinterpret its literal braces.
         variables['_backup_title'] = template['title']
@@ -2070,13 +2075,6 @@ def render_template(event_type: str, data: Dict[str, Any],
             return ''
 
     safe_vars = _SafeDict(variables)
-    if event_type == 'error_resolved':
-        from health_recovery import presents_recovery
-        if presents_recovery(data):
-            safe_vars['_health_title'] = runtime_message('healthRecovery.title', language, **variables)
-            safe_vars['_health_body'] = runtime_message('healthRecovery.body', language, **variables)
-            template['title'] = '{_health_title}'
-            template['body'] = '{_health_body}'
     try:
         title = template['title'].format_map(safe_vars)
     except (ValueError, IndexError):
@@ -2152,7 +2150,7 @@ def render_template(event_type: str, data: Dict[str, Any],
             key = ('backup.errorBody' if data.get('backup_outcome') == 'failed'
                    else 'backup.warningBody' if data.get('backup_outcome') == 'completed_with_warnings'
                    else 'backup.unconfirmedBody')
-            body_text = runtime_message(key, language) + '\n' + body_text
+            body_text = (runtime_message(key, language) or template['body']) + '\n' + body_text
     elif event_type == 'system_mail' and pve_message:
         # System mail -- use PVE message directly (mail bounce, cron, smartd)
         body_text = pve_message.strip()[:1000]
@@ -2181,14 +2179,19 @@ def render_template(event_type: str, data: Dict[str, Any],
     if event_type in ('backup_complete', 'backup_fail') and (
             event_type == 'backup_fail' or data.get('backup_outcome') == 'failed'):
         source_subject = str(data.get('pve_title') or '').strip()
+        native_failure = re.fullmatch(
+            r'vzdump backup status \([^\r\n]*\): backup failed(?::\s*(.*))?',
+            source_subject, re.IGNORECASE)
         guest_context = (_parse_vzdump_message(str(pve_message or '')) or {}).get('vms')
-        if guest_context:
-            # Native single-line job errors live only in the subject. Retain
-            # that cause, not the redundant job/host envelope or generic count.
+        if native_failure:
+            # Before the first guest, too, only the native cause is diagnostic;
+            # the original host/job envelope is not display-name context.
+            source_subject = (native_failure.group(1) or '').strip()
+        elif guest_context:
             cause = re.search(r'\bbackup failed:\s*(.+)', source_subject, re.IGNORECASE)
             source_subject = cause.group(1).strip() if cause else ''
-            if source_subject.lower() == 'multiple problems':
-                source_subject = ''
+        if source_subject.lower() == 'multiple problems':
+            source_subject = ''
         if source_subject and source_subject not in {line.strip() for line in body_text.splitlines()}:
             # Reserve the subject-equivalent diagnostic BEFORE the cap. Finding
             # it in uncapped logs is not enough: that late line could be omitted.
@@ -2374,14 +2377,14 @@ EVENT_EMOJI = {
     'system_startup':       '\U0001F680',         # rocket (startup)
     'system_shutdown':      '\u23FB\uFE0F',       # power symbol (Unicode)
     'system_reboot':        '\U0001F504',
-    'system_restore_completed': '\U0001F4CB',  # post-restore task report (boot may have warnings)
+    'system_restore_completed': '✅',          # check mark
     'system_problem':       '\u26A0\uFE0F',
     'kernel_warning':       '\u26A0\uFE0F',
     'service_fail':         '\u274C',
     'oom_kill':             '\U0001F4A3',         # bomb
     # Health
     'new_error':            '\U0001F198',         # SOS
-    'error_resolved':       '\U0001F4CB',  # no longer active in health records, not proven recovery
+    'error_resolved':       '\u2705',
     'error_escalated':      '\U0001F53A',         # red triangle up
     'health_degraded':      '\u26A0\uFE0F',
     'health_persistent':    '\U0001F4CB',         # clipboard
@@ -2533,10 +2536,6 @@ def enrich_with_emojis(event_type: str, title: str, body: str,
     severity = data.get('severity', 'INFO')
     
     icon = EVENT_EMOJI.get(event_type) or CATEGORY_EMOJI.get(group) or SEVERITY_ICONS.get(severity, '')
-    if event_type == 'error_resolved':
-        from health_recovery import presents_recovery
-        if presents_recovery(data):
-            icon = '✅'
     if event_type == 'backup_complete':
         icon = {
             'confirmed': '💾✅', 'completed_with_warnings': '💾⚠️', 'failed': '💾❌',

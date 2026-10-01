@@ -61,7 +61,7 @@ class MaintainerFollowupTests(unittest.TestCase):
                         report+'\nINFO: Starting Backup of VM 100 (lxc)'):
             self.assertEqual(templates._parse_vzdump_message(message)['vms'][0]['type'],'')
 
-    def test_original_subject_only_retained_when_no_guest_context(self):
+    def test_native_subject_keeps_cause_without_host_envelope(self):
         subject = 'vzdump backup status (raw-host): backup failed: multiple problems'
         event = receive('ERROR: archive write failed\n'+NATIVE_REPORT,'error',subject)
         event.data['hostname']='configured-alias'
@@ -72,7 +72,8 @@ class MaintainerFollowupTests(unittest.TestCase):
             self.assertIn('configured-alias',result['title'])
         setup=receive('Details\n=======\nVMID    Name    Status    Time     Size     Filename\n\nTotal running time: 0s\nTotal size: 0 B','error',subject.replace('multiple problems','unable to open storage'))
         result=deliver(setup.event_type,setup.data,setup.severity)
-        self.assertEqual(result['text'].count(setup.data['pve_title']),1)
+        self.assertEqual(result['text'].count('unable to open storage'),1)
+        self.assertNotIn(setup.data['pve_title'],result['text'])
         unique=receive(NATIVE_REPORT,'error',subject.replace('multiple problems','job-end hook denied'))
         result=deliver(unique.event_type,unique.data,unique.severity)
         self.assertIn('job-end hook denied',result['body'])

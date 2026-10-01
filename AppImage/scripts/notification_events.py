@@ -3223,13 +3223,6 @@ class PollingCollector:
                     self._last_notified.pop(key, None)
                     continue
             
-            # Disappearance is not recovery. Only same-incident proof written
-            # by a successful existing native check can certify normality.
-            try:
-                recovery_evidence = health_persistence.get_recovery_evidence(key, first_seen)
-            except Exception:
-                recovery_evidence = None
-
             # Calculate duration
             duration = ''
             if first_seen:
@@ -3261,7 +3254,7 @@ class PollingCollector:
             reason_lines = (reason or '').split('\n')
             reason_summary = reason_lines[0] if reason_lines else ''
             
-            # Keep the earlier device context without asserting recovery.
+            # Try to extract device info for a clean "Device: xxx (recovered)" line
             device_line = ''
             for line in reason_lines:
                 if 'Device:' in line or 'Device not currently' in line or '/dev/' in line:
@@ -3274,15 +3267,12 @@ class PollingCollector:
                         break
             
             if reason_summary and device_line:
-                clean_reason = f'{reason_summary}\n{device_line} (no longer reported)'
+                clean_reason = f'{reason_summary}\n{device_line} (recovered)'
             elif reason_summary:
-                clean_reason = f'{reason_summary} (no longer reported)'
+                clean_reason = f'{reason_summary} (recovered)'
             else:
-                clean_reason = 'Condition no longer reported'
+                clean_reason = 'Condition resolved'
             
-            if recovery_evidence:
-                clean_reason = reason_summary
-
             # `original_severity` must match what the user actually saw
             # in the most-recent notification for this error, not the
             # latest DB severity. See `_notified_severity` docstring at
@@ -3309,9 +3299,7 @@ class PollingCollector:
                 'original_severity': original_severity,
                 'first_seen': first_seen,
                 'duration': duration_label,
-                'is_recovery': bool(recovery_evidence),
-                'recovery_outcome': 'resolved' if recovery_evidence else 'no_longer_reported',
-                'check_evidence': recovery_evidence,
+                'is_recovery': True,
             }
             # Spread the original details blob so the resolved notification
             # can use the same {storage_name}/{vm_name}/{device} placeholders

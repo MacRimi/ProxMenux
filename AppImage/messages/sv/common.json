@@ -6266,8 +6266,8 @@
           "label": "Nytt hälsoproblem"
         },
         "error_resolved": {
-          "title": "{hostname}: Rapporteras inte längre – {category}{entity_suffix}",
-          "body": "Problemet i kategorin {category} finns inte längre bland aktiva hälsoposter.\n{reason}\n🚦 Tidigare allvarlighetsgrad: {original_severity}\n⏱️ Tid sedan första observationen: {duration}",
+          "title": "{hostname}: Löst - {category}{entity_suffix}",
+          "body": "{category}-problemet har lösts.\n{reason}\n🚦 Tidigare svårighetsgrad: {original_severity}\n⏱️ Varaktighet: {duration}",
           "label": "Återställningsmeddelande"
         },
         "error_escalated": {
@@ -6396,8 +6396,8 @@
           "label": "Säkerhetskopiering startade"
         },
         "backup_complete": {
-          "title": "{hostname}: säkerhetskopians resultat obekräftat",
-          "body": "Det går inte att bekräfta säkerhetskopians resultat utifrån denna avisering.",
+          "title": "{hostname} → {storage}: Säkerhetskopiering klar — {vmname} ({vmid})",
+          "body": "Säkerhetskopiering av {vmname} (ID: {vmid}) slutfördes framgångsrikt på {storage}.\nStorlek: {size}",
           "label": "Säkerhetskopieringen är klar"
         },
         "backup_warning": {
@@ -6557,7 +6557,7 @@
         },
         "system_restore_completed": {
           "title": "{hostname}: Värdåterställning avslutad",
-          "body": "Åtgärder efter återställning slutfördes i bakgrunden.\n\nGäster tillämpade: {guests}\nHjälpkataloger för bind-monteringar: {stubs}\nFöråldrade nodkataloger borttagna: {stale_nodes}\nKomponenter ominstallerade: {components}\nVaraktighet: {duration}\n{warnings_block}",
+          "body": "Uppgifter efter återställning slutförda i bakgrunden.\n\nGäster ansökte: {guests}\nBind-monterade stubbar: {stubs}\nInaktuella nodkataloger har tagits bort: {stale_nodes}\nKomponenter installerade om: {components}\nVaraktighet: {duration}\n{warnings_block}\nNoden är nu helt redo att användas.",
           "label": "Värdåterställning slutförd"
         },
         "system_problem": {
@@ -6910,8 +6910,7 @@
             "warning": "Varning",
             "info": "Information",
             "ok": "Löst",
-            "default": "Observera",
-            "observation": "Rapporteras inte längre"
+            "default": "Observera"
           },
           "groups": {
             "vm_ct": "Virtuell maskin / behållare",
@@ -6992,8 +6991,8 @@
       "temperature": {
         "sampleSpan": "De höga mätvärdena sträcker sig över {duration}."
       },
-      "healthRecovery": {"title": "{hostname}: Åtgärdat - {category}{entity_suffix}", "body": "En aktuell hälsokontroll bekräftar att tillståndet för {category} återgått till det normala.\nTidigare observation: {reason}\nTidigare allvarlighetsgrad: {original_severity}\nTid sedan första observationen: {duration}", "status": "Åtgärdat"},
       "backup": {
+        "unconfirmedTitle": "{hostname}: säkerhetskopians resultat obekräftat",
         "confirmedTitle": "{hostname}: säkerhetskopiering klar",
         "confirmedBody": "Säkerhetskopieringen slutfördes utan fel.",
         "errorTitle": "{hostname}: fel rapporterat vid säkerhetskopiering",

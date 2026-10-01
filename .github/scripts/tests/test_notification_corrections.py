@@ -54,8 +54,6 @@ class CorrectionTests(unittest.TestCase):
         probe.catalogs = {lang: copy.deepcopy(templates._load_runtime_catalog(lang)) for lang in LANGUAGES}
         parity(probe)  # shipped missing keys remain allowed
         probe.catalogs['sk']['backup'] = copy.deepcopy(probe.catalogs['en']['backup'])
-        for key in ('observation',):
-            probe.catalogs['sk']['channels']['email']['severity'][key] = probe.catalogs['en']['channels']['email']['severity'][key]
         probe.catalogs['sk']['channels']['email']['status']['unconfirmed'] = probe.catalogs['en']['channels']['email']['status']['unconfirmed']
         parity(probe)  # generation of exactly the pending keys is legal
         probe.catalogs['sk']['backup']['confirmedTitle'] = 'Missing hostname token'
@@ -63,59 +61,14 @@ class CorrectionTests(unittest.TestCase):
 
 
     def test_actual_neutral_style_is_not_success_green(self):
-        for event, severity, data in (('error_resolved', 'OK', {}),
-                                      ('backup_complete', 'INFO', {'backup_outcome': 'unconfirmed'})):
+        for event, severity, data in (('backup_complete', 'INFO', {'backup_outcome': 'unconfirmed'}),):
             result, markup = email(event, data, severity)
             self.assertIn('background:#f9fafb;', markup)
             self.assertNotIn('background:#f0fdf4;', markup)
 
 
-    def test_actual_manual_caller_carries_event_presentation_context(self):
-        from notification_fixture import extract, SCRIPTS, EmailChannel
-        from typing import Optional, Dict, Any
-        from threading import Lock
-        captured = []
-        channel = object.__new__(EmailChannel)
-        channel.subject_prefix = '[ProxMenux]'
-        class Sink:
-            def send(self, title, body, severity, data):
-                captured.append((data, channel._format_html(title, body, severity, data)))
-                return {'success': True}
-        ns = {'Optional': Optional, 'Dict': Dict, 'Any': Any, 'TEMPLATES': templates.TEMPLATES,
-              'resolve_notification_hostname': lambda host, config: host or 'node-a',
-              'render_template': templates.render_template, '_should_bypass_ai': lambda event: True}
-        send = extract(SCRIPTS / 'notification_manager.py', 'send_notification', 'NotificationManager', ns)
-        class Manager:
-            _channels = {'email': Sink()}
-            _config = {}
-            _lock = Lock()
-            def _notification_language(self): return 'en'
-            def is_event_enabled(self, event): return True
-            def _build_ai_config(self): return {}
-            def _record_history(self, *args): pass
-        data = {'category': 'temperature', 'reason': 'old', 'duration': '3d', 'original_severity': 'WARNING',
-                '_event_type': 'node_reconnect', '_group': 'cluster'}
-        result = send(Manager(), 'error_resolved', 'OK', '', '', data)
-        self.assertTrue(result['success'])
-        context, markup = captured[0]
-        self.assertEqual(context['_event_type'], 'error_resolved')
-        self.assertEqual(context['_group'], 'health')
-        self.assertIn('NO LONGER REPORTED', markup)
-        self.assertNotIn('>RESOLVED</span>', markup)
-        self.assertNotIn('color:#16a34a', markup)
-        self.assertEqual(data['_event_type'], 'node_reconnect')  # caller not mutated
 
 
-    def test_disappearance_body_keeps_observation_age_not_green_severity(self):
-        data = {'hostname': 'node-a', 'category': 'temperature', 'reason': 'old observation',
-                'duration': '3d 2h', 'original_severity': 'WARNING', 'severity': 'OK'}
-        for language in LANGUAGES:
-            result, markup = email('error_resolved', data, 'OK', language)
-            for line in result['body'].splitlines():
-                if line.strip(): self.assertIn(line.strip(), html.unescape(markup))
-            self.assertNotIn('>OK</span>', markup)
-            self.assertNotIn('color:#16a34a', markup)
-            self.assertNotIn('>RESOLVED</span>', markup)
 
 
     def test_actual_restore_endpoint_warnings_and_counts_reach_email(self):

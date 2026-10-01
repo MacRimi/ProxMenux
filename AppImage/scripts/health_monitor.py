@@ -1427,8 +1427,6 @@ class HealthMonitor:
                         'details': f'Sustained for {actual_duration}s above {self.CPU_CRITICAL}%.',
                         'cpu_percent': cpu_percent,
                         'duration': actual_duration,
-                        'cpu_policy': {'warning': self.CPU_WARNING, 'critical': self.CPU_CRITICAL,
-                                       'recovery': self.CPU_RECOVERY},
                     },
                 )
             elif len(warning_samples) >= WARNING_MIN_SAMPLES and len(recovery_samples) < RECOVERY_MIN_SAMPLES:
@@ -1448,32 +1446,13 @@ class HealthMonitor:
                         'details': f'Sustained for {actual_duration}s above {self.CPU_WARNING}%.',
                         'cpu_percent': cpu_percent,
                         'duration': actual_duration,
-                        'cpu_policy': {'warning': self.CPU_WARNING, 'critical': self.CPU_CRITICAL,
-                                       'recovery': self.CPU_RECOVERY},
                     },
                 )
             else:
                 status = 'OK'
                 reason = None
                 # CPU is normal - auto-resolve any existing CPU errors
-                evidence = None
-                # Presentation proof is stricter than operational hysteresis:
-                # a supported warning can be below the fixed recovery cutoff.
-                from health_recovery import _finite_number
-                criterion = min(self.CPU_WARNING, self.CPU_RECOVERY)
-                normal_samples = [entry for entry in self.state_history[state_key]
-                    if _finite_number(entry['value']) and 0 <= entry['value'] < criterion
-                    and _finite_number(entry['time'])
-                    and 0 <= current_time - entry['time'] <= self.CPU_RECOVERY_DURATION]
-                if (_finite_number(cpu_percent) and 0 <= cpu_percent < criterion
-                        and len(normal_samples) >= RECOVERY_MIN_SAMPLES):
-                    evidence = {'check': 'cpu_usage', 'checked_at': current_time,
-                                'value': cpu_percent, 'normal_samples': len(normal_samples),
-                                'max_sample': max(entry['value'] for entry in normal_samples),
-                                'policy': {'warning': self.CPU_WARNING, 'critical': self.CPU_CRITICAL,
-                                           'recovery': self.CPU_RECOVERY}}
-                health_persistence.resolve_error('cpu_usage', 'CPU usage returned to normal',
-                                                 check_evidence=evidence)
+                health_persistence.resolve_error('cpu_usage', 'CPU usage returned to normal')
             
             temp_status = self._check_cpu_temperature()
             
@@ -3921,7 +3900,6 @@ class HealthMonitor:
             
             failed_services = []
             service_details = {}
-            active_evidence = {}
 
             for service in services_to_check:
                 try:
@@ -3936,10 +3914,6 @@ class HealthMonitor:
                     if result.returncode != 0 or status != 'active':
                         failed_services.append(service)
                         service_details[service] = status or 'inactive'
-                    else:
-                        active_evidence[service] = {'check': f'pve_service_{service}',
-                            'checked_at': time.time(), 'service': service, 'state': status,
-                            'returncode': result.returncode}
                 except Exception:
                     failed_services.append(service)
                     service_details[service] = 'error'
@@ -3954,7 +3928,7 @@ class HealthMonitor:
                 if svc not in failed_services:
                     error_key = f'pve_service_{svc}'
                     if health_persistence.is_error_active(error_key):
-                        health_persistence.clear_error(error_key, check_evidence=active_evidence.get(svc))
+                        health_persistence.clear_error(error_key)
             
             # Build checks dict with status per service
             checks = {}

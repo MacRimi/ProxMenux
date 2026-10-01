@@ -2012,7 +2012,9 @@ class NotificationManager:
             'digest.quietTitle', language, hostname=host, count=len(rows),
         )
         use_icons = self._config.get(f'{ch_name}.rich_format', 'false') == 'true'
-        summary_body = self._compose_digest_body(rows, use_icons=use_icons, quiet_release=True)
+        quiet_details = any(row[1] in ('backup_complete', 'backup_fail', 'system_restore_completed')
+                            for row in rows)
+        summary_body = self._compose_digest_body(rows, use_icons=use_icons, quiet_release=quiet_details)
 
         result: dict = {'success': False, 'error': ''}
         try:
@@ -2498,7 +2500,7 @@ class NotificationManager:
         runtime_data.setdefault('_notification_language', self._notification_language())
         # Match queued dispatch's presentation context for these outcome
         # notices; this does not alter event/severity or direct-send policy.
-        if event_type in ('backup_complete', 'backup_fail', 'error_resolved', 'system_restore_completed'):
+        if event_type in ('backup_complete', 'backup_fail', 'system_restore_completed'):
             runtime_data['_event_type'] = event_type
             runtime_data['_group'] = TEMPLATES[event_type].get('group', 'other')
 

@@ -6266,8 +6266,8 @@
           "label": "Novo problema de saúde"
         },
         "error_resolved": {
-          "title": "{hostname}: Já não comunicado – {category}{entity_suffix}",
-          "body": "O problema de {category} já não consta dos registos de saúde ativos.\n{reason}\n🚦 Gravidade anterior: {original_severity}\n⏱️ Tempo desde a primeira observação: {duration}",
+          "title": "{hostname}: Resolvido - {category}{entity_suffix}",
+          "body": "O problema {category} foi resolvido.\n{reason}\n🚦 Gravidade anterior: {original_severity}\n⏱️ Duração: {duration}",
           "label": "Notificação de recuperação"
         },
         "error_escalated": {
@@ -6396,8 +6396,8 @@
           "label": "Backup iniciado"
         },
         "backup_complete": {
-          "title": "{hostname}: resultado do backup não confirmado",
-          "body": "Esta notificação não permite confirmar o resultado do backup.",
+          "title": "{hostname} → {storage}: Backup concluído — {vmname} ({vmid})",
+          "body": "Backup de {vmname} (ID: {vmid}) concluído com sucesso em {storage}.\nTamanho: {size}",
           "label": "Backup concluído"
         },
         "backup_warning": {
@@ -6557,7 +6557,7 @@
         },
         "system_restore_completed": {
           "title": "{hostname}: restauração do host concluída",
-          "body": "Tarefas pós-restauro concluídas em segundo plano.\n\nConvidados aplicados: {guests}\nDiretórios auxiliares de montagens bind: {stubs}\nDiretórios de nós obsoletos removidos: {stale_nodes}\nComponentes reinstalados: {components}\nDuração: {duration}\n{warnings_block}",
+          "body": "Tarefas pós-restauração concluídas em segundo plano.\n\nConvidados inscritos: {guests}\nStubs de montagem de ligação: {stubs}\nDiretórios de nó obsoletos removidos: {stale_nodes}\nComponentes reinstalados: {components}\nDuração: {duration}\n{warnings_block}\nO nó agora está totalmente pronto para uso.",
           "label": "Restauração do host concluída"
         },
         "system_problem": {
@@ -6910,8 +6910,7 @@
             "warning": "Aviso",
             "info": "Informação",
             "ok": "Resolvido",
-            "default": "Aviso",
-            "observation": "Já não comunicado"
+            "default": "Aviso"
           },
           "groups": {
             "vm_ct": "Máquina Virtual/Contêiner",
@@ -6992,8 +6991,8 @@
       "temperature": {
         "sampleSpan": "As amostras elevadas abrangem {duration}."
       },
-      "healthRecovery": {"title": "{hostname}: Resolvido - {category}{entity_suffix}", "body": "Uma verificação recente confirma que a condição de {category} voltou ao normal.\nObservação anterior: {reason}\nGravidade anterior: {original_severity}\nTempo desde a primeira observação: {duration}", "status": "Resolvido"},
       "backup": {
+        "unconfirmedTitle": "{hostname}: resultado do backup não confirmado",
         "confirmedTitle": "{hostname}: backup concluído",
         "confirmedBody": "Backup concluído com sucesso.",
         "errorTitle": "{hostname}: erro comunicado no backup",

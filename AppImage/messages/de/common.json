@@ -6266,8 +6266,8 @@
           "label": "Neues Gesundheitsproblem"
         },
         "error_resolved": {
-          "title": "{hostname}: Nicht mehr gemeldet – {category}{entity_suffix}",
-          "body": "Das Problem in der Kategorie {category} ist nicht mehr in den aktiven Zustandsmeldungen enthalten.\n{reason}\n🚦 Vorheriger Schweregrad: {original_severity}\n⏱️ Zeit seit der ersten Meldung: {duration}",
+          "title": "{hostname}: Gelöst – {category}{entity_suffix}",
+          "body": "Das Problem {category} wurde behoben.\n{reason}\n🚦 Vorheriger Schweregrad: {original_severity}\n⏱️ Dauer: {duration}",
           "label": "Wiederherstellungsbenachrichtigung"
         },
         "error_escalated": {
@@ -6396,8 +6396,8 @@
           "label": "Sicherung gestartet"
         },
         "backup_complete": {
-          "title": "{hostname}: Backup-Ergebnis nicht bestätigt",
-          "body": "Das Backup-Ergebnis lässt sich anhand dieser Meldung nicht bestätigen.",
+          "title": "{hostname} → {storage}: Sicherung abgeschlossen – {vmname} ({vmid})",
+          "body": "Die Sicherung von {vmname} (ID: {vmid}) wurde am {storage} erfolgreich abgeschlossen.\nGröße: {size}",
           "label": "Sicherung abgeschlossen"
         },
         "backup_warning": {
@@ -6557,7 +6557,7 @@
         },
         "system_restore_completed": {
           "title": "{hostname}: Host-Wiederherstellung abgeschlossen",
-          "body": "Aufgaben nach der Wiederherstellung im Hintergrund abgeschlossen.\n\nÜbernommene Gäste: {guests}\nBind-Mount-Platzhalter: {stubs}\nEntfernte veraltete Knotenverzeichnisse: {stale_nodes}\nNeu installierte Komponenten: {components}\nDauer: {duration}\n{warnings_block}",
+          "body": "Aufgaben nach der Wiederherstellung im Hintergrund ausgeführt.\n\nGäste haben sich beworben: {guests}\nBind-Mount-Stubs: {stubs}\nVeraltete Knotenverzeichnisse entfernt: {stale_nodes}\nKomponenten neu installiert: {components}\nDauer: {duration}\n{warnings_block}\nDer Knoten ist nun vollständig einsatzbereit.",
           "label": "Host-Wiederherstellung abgeschlossen"
         },
         "system_problem": {
@@ -6910,8 +6910,7 @@
             "warning": "Warnung",
             "info": "Informationen",
             "ok": "Gelöst",
-            "default": "Hinweis",
-            "observation": "Nicht mehr gemeldet"
+            "default": "Hinweis"
           },
           "groups": {
             "vm_ct": "Virtuelle Maschine / Container",
@@ -6992,8 +6991,8 @@
       "temperature": {
         "sampleSpan": "Die hohen Messwerte erstrecken sich über {duration}."
       },
-      "healthRecovery": {"title": "{hostname}: Behoben - {category}{entity_suffix}", "body": "Eine aktuelle Zustandsprüfung hat für {category} wieder einen normalen Zustand festgestellt.\nVorherige Beobachtung: {reason}\nVorheriger Schweregrad: {original_severity}\nZeit seit der ersten Beobachtung: {duration}", "status": "Behoben"},
       "backup": {
+        "unconfirmedTitle": "{hostname}: Backup-Ergebnis nicht bestätigt",
         "confirmedTitle": "{hostname}: Backup abgeschlossen",
         "confirmedBody": "Backup erfolgreich abgeschlossen.",
         "errorTitle": "{hostname}: Backup-Fehler gemeldet",
