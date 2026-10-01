@@ -9,36 +9,31 @@
 # Description:
 # Update path intended for a Proxmox host ALREADY in
 # production. Unlike scripts/global/update-pve8.sh and
-# update-pve9_2.sh (invoked by post_install), this variant
-# NEVER modifies the operator's own configuration:
+# update-pve9_2.sh (invoked by post_install), this variant preserves
+# operator-maintained sources unless an unsubscribed host explicitly chooses
+# to switch. Otherwise, the operator's source configuration is preserved:
 #
-#   - Does NOT disable Enterprise / Ceph repositories
-#   - Does NOT delete legacy repo files
+#   - Does NOT silently disable Enterprise / Ceph repositories
+#   - Does NOT delete or deduplicate existing repo files
 #   - Does NOT overwrite proxmox.sources / debian.sources
-#     when they already exist
 #   - Does NOT purge alternative NTP services
 #   - Does NOT force-install zfsutils / chrony /
 #     proxmox-backup-restore-image
 #   - Does NOT write no-firmware-warnings.conf
 #
 # What it DOES:
-#   1. Sanity checks (disk space, network)
-#   2. ensure_repositories() — only when repos are MISSING
+#   1. Sanity checks (disk space)
+#   2. ensure_repositories() — check subscription and request consent if needed
 #   3. apt-get update, with automatic GPG key import when apt
 #      reports NO_PUBKEY (any repo, user's or ours)
-#   4. cleanup_duplicate_repos() — exact URL+Suite+Component
-#      match against proxmox.sources / debian.sources; leaves
-#      unrelated custom `download.proxmox.com/*` and
-#      user-authored pve-*.list files alone; backs each file
-#      up before modifying
-#   5. Detect pending upgrades + security count
-#   6. Confirmation dialog
-#   7. apt-get full-upgrade with --force-confdef / --force-confold
+#   4. Detect pending upgrades + security count
+#   5. Confirmation dialog
+#   6. apt-get full-upgrade with --force-confdef / --force-confold
 #      (never overwrites the operator's edited config files)
-#   8. lvm_repair_check() — refreshes VG metadata when disks
+#   7. lvm_repair_check() — refreshes VG metadata when disks
 #      passed through to guest VMs (DSM, TrueNAS, …) come back
 #      with old PV headers
-#   9. apt-get autoremove + autoclean
+#   8. apt-get autoremove + autoclean
 #
 # Reboot detection is handled by the caller (utilities/proxmox_update.sh).
 # ==========================================================
@@ -66,6 +61,8 @@ source_install_functions() {
     local f="$LOCAL_SCRIPTS/global/utils-install-functions.sh"
     if [[ -f "$f" ]]; then
         source "$f"
+    else
+        return 1
     fi
 }
 
@@ -91,8 +88,11 @@ update_pve_safe() {
     local screen_capture="/tmp/proxmenux_screen_capture_$$.txt"
     : > "$screen_capture"
 
-    download_common_functions
-    source_install_functions
+    if ! download_common_functions || ! source_install_functions; then
+        msg_error "$(translate 'Required update helpers unavailable. Update stopped.')"
+        rm -f "$screen_capture"
+        return 1
+    fi
 
     {
         msg_info2 "$(translate "Detected: Proxmox VE $pve_version — running safe update path")"
@@ -110,37 +110,12 @@ update_pve_safe() {
         return 1
     fi
 
-    # Reachability check: probe the public Proxmox repository over the
-    # transport apt is most likely to use. Many PVE installs use the
-    # official HTTP apt URI, while HTTPS may fail before apt ever runs
-    # if the CDN presents a certificate for another Proxmox hostname.
-    # Accept either transport and let apt-get update report repo-specific
-    # errors in the next step.
-    _repo_reachable() {
-        local url attempt
-        for url in "http://download.proxmox.com/" "https://download.proxmox.com/"; do
-            for attempt in 1 2; do
-                if curl -sfI --connect-timeout 5 --max-time 10 -o /dev/null "$url"; then
-                    return 0
-                fi
-                [[ $attempt -eq 1 ]] && sleep 1
-            done
-        done
-        return 1
-    }
-    if ! _repo_reachable; then
-        msg_error "$(translate "Cannot reach download.proxmox.com. Check network, proxy or DNS.")"
-        echo -e
-        msg_success "$(translate "Press Enter to return to menu...")"
-        read -r
+    # Enterprise hosts and custom mirrors need not reach the public CDN.
+    # The configured sources, not that hostname, are checked by APT below.
+    if ! declare -F ensure_repositories >/dev/null 2>&1 || ! ensure_repositories; then
+        msg_error "$(translate 'Repository check failed. Update stopped.')"
         rm -f "$screen_capture"
         return 1
-    fi
-
-    # ── 2. ensure_repositories: adds base Proxmox+Debian repos only if
-    # they don't already exist. On a configured host this is a no-op. ──
-    if declare -f ensure_repositories >/dev/null 2>&1; then
-        ensure_repositories
     fi
 
     # ── 3. apt-get update with automatic key recovery ──
@@ -191,11 +166,8 @@ update_pve_safe() {
         fi
     fi
 
-    # ── 4. Precise duplicate cleanup (exact URL+Suite+Component match,
-    # backs up files before modifying). Skipped if unavailable. ──
-    if declare -f cleanup_duplicate_repos >/dev/null 2>&1; then
-        cleanup_duplicate_repos
-    fi
+    # No duplicate-source rewrite here: even a seemingly duplicate entry may
+    # be operator-maintained. Only the consented switch above edits sources.
 
     # ── 5-6. Detect + confirm ──
     local current_pve_version available_pve_version upgradable security_updates

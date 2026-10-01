@@ -39,95 +39,14 @@ PROXMENUX_UTILS=(
 )
 
 
-# Ensure APT repositories are configured for the current PVE version.
-# Creates missing no-subscription repo entries for PVE8 (bookworm) or PVE9 (trixie).
-# Shared journal helpers, so any script sourcing this file records what
-# it installs without arranging for it.
+# Shared journal helpers for utility installs.
 if [[ -f "${LOCAL_SCRIPTS:-/usr/local/share/proxmenux/scripts}/global/pmx_journal.sh" ]]; then
     source "${LOCAL_SCRIPTS:-/usr/local/share/proxmenux/scripts}/global/pmx_journal.sh"
 fi
 
 
-ensure_repositories() {
-    local FUNC_VERSION="1.0"
-    pmx_journal_context "ensure_repositories" "$FUNC_VERSION"
-    local pve_version need_update=false
-    pve_version=$(pveversion 2>/dev/null | grep -oP 'pve-manager/\K[0-9]+' | head -1)
-
-    if [[ -z "$pve_version" ]]; then
-        msg_error "Unable to detect Proxmox version."
-        return 1
-    fi
-
-    if (( pve_version >= 9 )); then
-        # ===== PVE 9 (Debian 13 - trixie) =====
-        # Force 0644 (world-readable) on every .sources file we drop.
-        # Under the default root umask 0027 the redirect would land at
-        # 0640, which the PVE 9 webgui's repository manager treats as
-        # unparseable and silently hides the source — issue #230.
-        if [[ ! -f /etc/apt/sources.list.d/proxmox.sources ]]; then
-            pmx_write_file /etc/apt/sources.list.d/proxmox.sources <<'EOF'
-Enabled: true
-Types: deb
-URIs: http://download.proxmox.com/debian/pve
-Suites: trixie
-Components: pve-no-subscription
-Signed-By: /usr/share/keyrings/proxmox-archive-keyring.gpg
-EOF
-            chmod 0644 /etc/apt/sources.list.d/proxmox.sources
-            need_update=true
-        fi
-
-        if [[ ! -f /etc/apt/sources.list.d/debian.sources ]]; then
-            pmx_write_file /etc/apt/sources.list.d/debian.sources <<'EOF'
-Types: deb
-URIs: http://deb.debian.org/debian/
-Suites: trixie trixie-updates
-Components: main contrib non-free-firmware
-Signed-By: /usr/share/keyrings/debian-archive-keyring.gpg
-
-Types: deb
-URIs: http://security.debian.org/debian-security/
-Suites: trixie-security
-Components: main contrib non-free-firmware
-Signed-By: /usr/share/keyrings/debian-archive-keyring.gpg
-EOF
-            chmod 0644 /etc/apt/sources.list.d/debian.sources
-            need_update=true
-        fi
-
-    else
-        # ===== PVE 8 (Debian 12 - bookworm) =====
-        local sources_file="/etc/apt/sources.list"
-
-        if ! grep -qE 'deb .* bookworm .* main' "$sources_file" 2>/dev/null; then
-            {
-                echo "deb http://deb.debian.org/debian bookworm main contrib non-free non-free-firmware"
-                echo "deb http://deb.debian.org/debian bookworm-updates main contrib non-free non-free-firmware"
-                echo "deb http://security.debian.org/debian-security bookworm-security main contrib non-free non-free-firmware"
-            } | pmx_append_file "$sources_file"
-            need_update=true
-        fi
-
-        if [[ ! -f /etc/apt/sources.list.d/pve-no-subscription.list ]]; then
-            echo "deb http://download.proxmox.com/debian/pve bookworm pve-no-subscription" \
-                | pmx_write_file /etc/apt/sources.list.d/pve-no-subscription.list
-            need_update=true
-        fi
-    fi
-
-    if [[ "$need_update" == true ]] || [[ ! -d /var/lib/apt/lists || -z "$(ls -A /var/lib/apt/lists 2>/dev/null)" ]]; then
-        msg_info "$(translate "Updating APT package lists...")"
-        apt-get update >/dev/null 2>&1 || apt-get update
-        # Spinner pair: msg_info must be closed before returning.
-        # Without this the next `msg_info` caller spawns a second
-        # spinner on top of ours and the original line never gets
-        # ✓'d — leaving a dangling progress char on screen.
-        msg_ok "$(translate "APT package lists updated")"
-    fi
-
-    return 0
-}
+# Shared subscription and consent policy for all utility callers.
+source "$(dirname "${BASH_SOURCE[0]}")/repository-functions.sh"
 
 
 # Install a single package and verify the resulting command is available.
