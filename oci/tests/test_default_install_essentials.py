@@ -35,6 +35,8 @@ def storages_used(plan):
     return used
 
 
+# The GPUs of the host the tests run on are not part of what they check.
+@patch("proxmenux_oci.installer.host.gpus", return_value={"intel": ["/dev/dri/renderD128"], "amd": [], "nvidia": False})
 @patch("proxmenux_oci.i18n.language", return_value="en")
 @patch("proxmenux_oci.installer.host.storages", side_effect=storages)
 @patch("proxmenux_oci.installer.host.bridges", return_value=[{"iface": "vmbr0", "cidr": "192.0.2.10/24"}])
@@ -61,7 +63,7 @@ class DefaultInstallEssentialsTests(unittest.TestCase):
                                 "Nextcloud volume size in GB", ADDRESS, "Start the stack with Proxmox",
                                 "Start when finished"],
             "immich": [STORAGE, "Where to store the Immich library", "Library size in GB", ADDRESS,
-                       "Start the stack with Proxmox", "Start when finished"],
+                       "Hardware acceleration for Immich", "Start the stack with Proxmox", "Start when finished"],
             "tandoor": [STORAGE, "Where to store the recipe images and files", "Files volume size in GB", ADDRESS,
                         "Start the stack with Proxmox"],
             "paperless-ngx": [STORAGE, "Documents volume size in GB", "Where to store the consume and export folders",

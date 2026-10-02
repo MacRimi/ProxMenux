@@ -1996,6 +1996,10 @@
         "secure_gateway_update_available": "Mise à jour de Secure Gateway disponible",
         "nvidia_driver_update_available": "Mise à jour du pilote NVIDIA disponible",
         "coral_driver_update_available": "Mise à jour du pilote Coral TPU disponible",
+        "oci_update_completed": "Application OCI mise à jour",
+        "oci_update_failed": "Échec de la mise à jour de l'application OCI",
+        "oci_recreate_completed": "Application OCI recréée",
+        "oci_recreate_failed": "Échec de la recréation de l'application OCI",
         "app_update_available": "mise à jour de l'application disponible",
         "lxc_update_applied": "Mise à jour LXC appliquée",
         "docker_stack_update_available": "Docker mises à jour disponibles"
@@ -6289,6 +6293,26 @@
           "title": "{hostname} : LXC {ct_name} ({vmid}) mise à jour {result}",
           "body": "{details}",
           "label": "Mise à jour LXC appliquée"
+        },
+        "oci_update_completed": {
+          "title": "{hostname} : {app_name} mis à jour",
+          "body": "{app_name} a été mis à jour vers sa nouvelle image et ses données ont été conservées.\nConteneurs : {containers}",
+          "label": "Application OCI mise à jour"
+        },
+        "oci_update_failed": {
+          "title": "{hostname} : la mise à jour de {app_name} n'a pas abouti",
+          "body": "La mise à jour de {app_name} n'a pas abouti.\nMotif : {reason}\nConteneurs : {containers}\nOuvrez Gérer les applications OCI installées pour vérifier son état.",
+          "label": "Échec de la mise à jour de l'application OCI"
+        },
+        "oci_recreate_completed": {
+          "title": "{hostname} : {app_name} recréé",
+          "body": "{app_name} a été recréé avec ses nouvelles options et ses données ont été conservées.\nConteneurs : {containers}",
+          "label": "Application OCI recréée"
+        },
+        "oci_recreate_failed": {
+          "title": "{hostname} : la recréation de {app_name} n'a pas abouti",
+          "body": "La recréation de {app_name} n'a pas abouti.\nMotif : {reason}\nConteneurs : {containers}\nOuvrez Gérer les applications OCI installées pour vérifier son état.",
+          "label": "Échec de la recréation de l'application OCI"
         },
         "app_update_available": {
           "title": "{hostname} : mise à jour {app_name} disponible sur CT {vmid}",

@@ -43,6 +43,21 @@ class BacktrackUI:
     def restart(self):
         self.cursor = 0
 
+    def retry_last(self, error) -> bool:
+        """After an answer the wizard could not accept: say why and ask that
+        question again, keeping every answer given before it. False when no
+        answer was given yet, so there is nothing to ask again."""
+        if not self.answers:
+            return False
+        text = str(error)
+        # What Python says about a number it could not read is not for the user.
+        if text.startswith(("invalid literal for int()", "could not convert string to float")):
+            text = f"{translate('The value must be a number:')} {text.rsplit(':', 1)[-1].strip()}"
+        self.base.message(f"{text}\n\n{translate('Enter the value again.')}")
+        self.answers.pop()
+        self.cursor = 0
+        return True
+
     def _call(self, name, *args, **kwargs):
         if self.cursor < len(self.answers):
             saved_name, value = self.answers[self.cursor]

@@ -4332,7 +4332,10 @@ def check_app(
                 pass
 
         if app.get("installed_via") == "oci_image":
-            result = _oci_image_versions(vmid, known=state)
+            # A secondary container of a stack shows the version it runs; the
+            # registry is not asked, because it is not updated on its own.
+            result = _oci_image_versions(
+                vmid, known=state, with_latest=not _oci_secondary_member(_read_oci_record(vmid)))
             if result.get("busy"):
                 _recheck_after_oci_operation(vmid, app_id)
                 return sidecar
@@ -5458,30 +5461,50 @@ def _dismiss_oci_registration(vmid) -> None:
         print(f"[ProxMenux] lxc_apps: could not save the OCI dismissal: {exc}")
 
 
+def _oci_secondary_member(record) -> bool:
+    """Whether the record belongs to a container of a stack other than its main one."""
+    if not isinstance(record, dict):
+        return False
+    member = record.get("stack_member") if isinstance(record.get("stack_member"), dict) else {}
+    return member.get("primary_vmid") not in (None, record.get("vmid"))
+
+
 def ensure_oci_registration(vmid) -> bool:
     """Register the application ProxMenux installed from an OCI image the
     first time the Monitor sees its container, with version tracking by the
-    image. The auxiliary members of a stack are not registered, nor is a
-    container that already has applications, nor one whose registration the
-    user removed."""
+    image. A secondary container of a stack, its database or its cache, is
+    registered with the version it runs and no tracking: the stack is updated
+    as a whole from its main container. A container that already has
+    applications is left alone, and so is one whose registration the user
+    removed."""
     record = _read_oci_record(vmid)
     if not record or record.get("status") != "installed":
         return False
-    member = record.get("stack_member") if isinstance(record.get("stack_member"), dict) else {}
-    if member.get("primary_vmid") not in (None, record.get("vmid")):
-        return False
+    secondary = _oci_secondary_member(record)
     if _oci_dismissed().get(str(int(vmid))) == record.get("installation_id"):
         return False
     with _cache_lock:
         sidecar = _read_sidecar(vmid)
         if sidecar and sidecar.get("apps"):
+            # An application registered before its logo could be resolved
+            # takes it now; nothing else of what is registered is touched.
+            missing = [app for app in sidecar["apps"]
+                       if app.get("installed_via") == "oci_image" and not app.get("logo_url")]
+            logo = (_oci_instance_meta(vmid) or {}).get("logo") if missing else ""
+            if logo:
+                for app in missing:
+                    app["logo_url"] = logo
+                _write_sidecar(vmid, sidecar)
             return False
     meta = _oci_instance_meta(vmid)
     if not meta or not meta.get("name") or not _NAME_RE.match(str(meta["name"])):
         return False
     category = meta.get("category_label") or meta.get("category") or ""
     endpoints = meta.get("endpoints") or []
-    if not endpoints:
+    if secondary:
+        # A database or a cache is reached by the application, not by the user.
+        endpoints = []
+    elif not endpoints:
         port = meta.get("endpoint_port") or next(iter(meta.get("ports") or []), None)
         endpoints = [{"port": port, "scheme": meta.get("endpoint_scheme"), "path": meta.get("endpoint_path"),
                       "description": "", "logo_url": ""}] if isinstance(port, int) else []
@@ -5541,6 +5564,15 @@ def _recheck_after_oci_operation(vmid, app_id: str) -> None:
             _oci_rechecks.discard(key)
 
     threading.Thread(target=wait_and_check, name=f"oci-recheck-{vmid}", daemon=True).start()
+
+
+_OCI_ICON_BASE = "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp"
+# The services a stack runs beside its application, by the name of their image.
+_OCI_SERVICE_ICONS = {
+    name: f"{_OCI_ICON_BASE}/{icon}.webp"
+    for name, icon in (("postgres", "postgresql"), ("valkey", "valkey"), ("redis", "redis"),
+                       ("mariadb", "mariadb"), ("mongo", "mongodb"), ("meilisearch", "meilisearch"))
+}
 
 
 def _oci_instance_meta(vmid) -> Optional[dict]:
@@ -5623,12 +5655,27 @@ def _oci_instance_meta(vmid) -> Optional[dict]:
         endpoints.append(detail)
     catalog_icons = _oci_catalog_icons()
     logo = catalog_icons.get(template_id) or ""
+    repository = str(image.get("reference") or "").split("@", 1)[0]
+    basename = repository.rsplit("/", 1)[-1].rsplit(":", 1)[0].strip().lower()
+    # A container of a stack records its own template id, `image-immich-server`,
+    # which the catalog does not list: the application it belongs to does.
+    stack_id = str(stack_template.get("id") or "").strip()
+    secondary = _oci_secondary_member(record)
+    if not stack_id and secondary:
+        primary = _read_oci_record(member.get("primary_vmid")) or {}
+        stack_id = str(((primary.get("stack") or {}).get("template") or {}).get("id") or "").strip()
+    application = stack_id.removeprefix("image-").removesuffix("-stack")
+    if not logo and stack_id and (not secondary or (application and basename.startswith(application))):
+        # The main container, or one that carries the application in its own
+        # name, such as Immich's machine learning.
+        logo = catalog_icons.get(stack_id) or ""
     if not logo:
         # A stack or a one-off image has no catalog entry of its own, but the
         # image it runs usually does: the Nextcloud stack wears Nextcloud's.
-        repository = str(image.get("reference") or "").split("@", 1)[0]
-        basename = repository.rsplit("/", 1)[-1].rsplit(":", 1)[0].strip().lower()
         logo = catalog_icons.get(basename) or ""
+    if not logo:
+        # The database or the cache beside an application.
+        logo = _OCI_SERVICE_ICONS.get(basename, "")
     if not logo:
         logo = ui.get("icon") if isinstance(ui.get("icon"), str) else ""
     website = ui.get("website") if isinstance(ui.get("website"), str) else ""

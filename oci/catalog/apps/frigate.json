@@ -885,6 +885,49 @@
             ]
           },
           {
+            "id": "rocm",
+            "label": "AMD (VA-API and ROCm detection)",
+            "architectures": [
+              "amd64"
+            ],
+            "image": {
+              "reference": "ghcr.io/blakeblackshear/frigate:stable-rocm",
+              "registry": "ghcr.io",
+              "repository": "ghcr.io/blakeblackshear/frigate",
+              "tag": "stable-rocm",
+              "digest": null,
+              "pull_policy": "resolve-rolling-stable-tag-to-architecture-digest-at-install"
+            },
+            "device_requests": [
+              {
+                "id": "gpu-render",
+                "path_prompt": "GPU render device",
+                "host_path_default": "/dev/dri/renderD128",
+                "mode": "0660",
+                "deny_write": false,
+                "gid_strategy": "host-device-gid",
+                "kind": "character-device",
+                "container_path_strategy": "same-as-host",
+                "drm_vendor_ids": [
+                  "0x1002"
+                ]
+              },
+              {
+                "id": "amd-kfd",
+                "path_prompt": "AMD compute device",
+                "host_path_default": "/dev/kfd",
+                "mode": "0660",
+                "deny_write": false,
+                "gid_strategy": "host-device-gid",
+                "kind": "character-device",
+                "container_path_strategy": "same-as-host"
+              }
+            ],
+            "completion_notes": [
+              "Frigate uses the AMD GPU for detection once /config/config.yaml defines a detector with type: onnx."
+            ]
+          },
+          {
             "id": "nvidia",
             "label": "NVIDIA (NVDEC/CUDA)",
             "architectures": [

@@ -40,6 +40,9 @@ def begin(root, primary, template, deployment, members, adapter):
                 'mounts': []}
         if Path(adapter).name == 'install_immich_stack.sh' and name == 'machine-learning':
             plan['machine_learning'] = copy.deepcopy(deployment.get('machine_learning', {'acceleration': 'cpu'}))
+        if Path(adapter).name == 'install_immich_stack.sh' and name == 'server':
+            # An update must know that the server transcodes with NVIDIA.
+            plan['video_transcoding'] = copy.deepcopy(deployment.get('video_transcoding', {'acceleration': 'cpu'}))
         if Path(adapter).name in oci_stack_replay.FILES:
             plan['replay_profile'] = {'adapter': Path(adapter).name, 'role': name}
             if not oci_stack_replay.FILES[Path(adapter).name][name]:

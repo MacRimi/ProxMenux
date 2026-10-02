@@ -870,6 +870,44 @@ TEMPLATES = {
         'group': 'vm_ct',
         'default_enabled': True,
     },
+    'oci_update_completed': {
+        'title': '{hostname}: {app_name} updated',
+        'body': '{app_name} was updated to its new image and its data was kept.\nContainers: {containers}',
+        'label': 'OCI application updated',
+        'group': 'vm_ct',
+        'default_enabled': True,
+    },
+    'oci_update_failed': {
+        'title': '{hostname}: {app_name} update did not complete',
+        'body': (
+            'The update of {app_name} did not complete.\n'
+            'Reason: {reason}\n'
+            'Containers: {containers}\n'
+            'Open Manage installed OCI applications to check its state.'
+        ),
+        'label': 'OCI application update failed',
+        'group': 'vm_ct',
+        'default_enabled': True,
+    },
+    'oci_recreate_completed': {
+        'title': '{hostname}: {app_name} recreated',
+        'body': '{app_name} was recreated with its new options and its data was kept.\nContainers: {containers}',
+        'label': 'OCI application recreated',
+        'group': 'vm_ct',
+        'default_enabled': True,
+    },
+    'oci_recreate_failed': {
+        'title': '{hostname}: {app_name} recreation did not complete',
+        'body': (
+            'The recreation of {app_name} did not complete.\n'
+            'Reason: {reason}\n'
+            'Containers: {containers}\n'
+            'Open Manage installed OCI applications to check its state.'
+        ),
+        'label': 'OCI application recreation failed',
+        'group': 'vm_ct',
+        'default_enabled': True,
+    },
     'app_update_available': {
         'title': '{hostname}: {app_name} update available on CT {vmid}',
         'body': (
@@ -2314,6 +2352,10 @@ EVENT_EMOJI = {
     'lxc_updates_available': '\U0001F4E6',     # \uD83D\uDCE6 package \u2014 pending CT updates
     'apt_listchanges': '\U0001F4E6',           # package-maintainer NEWS via PVE mail
     'lxc_update_applied':   '\u2705',           # \u2705 check \u2014 update applied
+    'oci_update_completed':   '\u2705',
+    'oci_update_failed':      '\u26A0\uFE0F',
+    'oci_recreate_completed': '\u2705',
+    'oci_recreate_failed':    '\u26A0\uFE0F',
     'app_update_available': '\U0001F195',  # \ud83c\udd95 NEW \u2014 upstream app release
     'docker_stack_update_available': '\U0001F433',
     'vm_start':             '\u25B6\uFE0F',    # play button

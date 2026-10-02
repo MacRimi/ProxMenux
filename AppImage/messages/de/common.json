@@ -1996,6 +1996,10 @@
         "secure_gateway_update_available": "Secure Gateway-Update verfügbar",
         "nvidia_driver_update_available": "NVIDIA-Treiberupdate verfügbar",
         "coral_driver_update_available": "Update des Coral TPU-Treibers verfügbar",
+        "oci_update_completed": "OCI-Anwendung aktualisiert",
+        "oci_update_failed": "Aktualisierung der OCI-Anwendung fehlgeschlagen",
+        "oci_recreate_completed": "OCI-Anwendung neu erstellt",
+        "oci_recreate_failed": "Neuerstellung der OCI-Anwendung fehlgeschlagen",
         "app_update_available": "App-Update verfügbar",
         "lxc_update_applied": "LXC Update angewendet",
         "docker_stack_update_available": "Docker Updates verfügbar"
@@ -6289,6 +6293,26 @@
           "title": "{hostname}: LXC {ct_name} ({vmid}) Update {result}",
           "body": "{details}",
           "label": "LXC Update angewendet"
+        },
+        "oci_update_completed": {
+          "title": "{hostname}: {app_name} aktualisiert",
+          "body": "{app_name} wurde auf das neue Image aktualisiert, die Daten wurden beibehalten.\nContainer: {containers}",
+          "label": "OCI-Anwendung aktualisiert"
+        },
+        "oci_update_failed": {
+          "title": "{hostname}: Aktualisierung von {app_name} nicht abgeschlossen",
+          "body": "Die Aktualisierung von {app_name} wurde nicht abgeschlossen.\nGrund: {reason}\nContainer: {containers}\nÖffnen Sie „Installierte OCI-Anwendungen verwalten“, um den Zustand zu prüfen.",
+          "label": "Aktualisierung der OCI-Anwendung fehlgeschlagen"
+        },
+        "oci_recreate_completed": {
+          "title": "{hostname}: {app_name} neu erstellt",
+          "body": "{app_name} wurde mit den neuen Optionen neu erstellt, die Daten wurden beibehalten.\nContainer: {containers}",
+          "label": "OCI-Anwendung neu erstellt"
+        },
+        "oci_recreate_failed": {
+          "title": "{hostname}: Neuerstellung von {app_name} nicht abgeschlossen",
+          "body": "Die Neuerstellung von {app_name} wurde nicht abgeschlossen.\nGrund: {reason}\nContainer: {containers}\nÖffnen Sie „Installierte OCI-Anwendungen verwalten“, um den Zustand zu prüfen.",
+          "label": "Neuerstellung der OCI-Anwendung fehlgeschlagen"
         },
         "app_update_available": {
           "title": "{hostname}: {app_name} Update verfügbar auf CT {vmid}",

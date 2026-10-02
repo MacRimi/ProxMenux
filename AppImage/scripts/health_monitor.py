@@ -3158,6 +3158,20 @@ class HealthMonitor:
             print(f"[HealthMonitor] Disk/IO check failed: {e}")
             return {'status': 'UNKNOWN', 'reason': f'Disk check unavailable: {str(e)}', 'checks': {}, 'dismissable': True}
     
+    @staticmethod
+    def _bridge_is_idle(interface: str, root: str = '/sys/class/net') -> bool:
+        """Whether a bridge is administratively up with no port attached.
+
+        Such a bridge reports no carrier, which is its normal state and not a
+        failure. A bridge that is set down, or one that has ports and still no
+        carrier, is not idle."""
+        try:
+            with open(f'{root}/{interface}/flags', encoding='ascii') as handle:
+                administratively_up = bool(int(handle.read().strip(), 16) & 0x1)
+            return administratively_up and not os.listdir(f'{root}/{interface}/brif')
+        except (OSError, ValueError):
+            return False
+
     def _check_network_optimized(self) -> Dict[str, Any]:
         """
         Optimized network check - only alerts for interfaces that are actually in use.
@@ -3206,6 +3220,18 @@ class HealthMonitor:
                     
                     # Check if it's a bridge interface (always important for VMs/LXCs)
                     if interface.startswith('vmbr'):
+                        if self._bridge_is_idle(interface):
+                            # A bridge with no port attached has no carrier: the
+                            # private network of an application whose containers
+                            # are stopped, during an update for example. Nothing
+                            # is down; nothing is connected to it.
+                            interface_details[interface] = {
+                                'status': 'OK',
+                                'reason': 'Bridge without attached ports',
+                                'is_up': False,
+                            }
+                            health_persistence.resolve_error(interface, 'Bridge without attached ports')
+                            continue
                         should_alert = True
                         alert_reason = 'Bridge interface DOWN (VMs/LXCs may be affected)'
                     

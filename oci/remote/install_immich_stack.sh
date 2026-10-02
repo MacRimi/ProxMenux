@@ -121,7 +121,7 @@ MEDIA_SIZE=$(jq -r '.media.size_gb // empty' "$DEPLOYMENT_FILE")
 MEDIA_ROOT=$(jq -r '.media.host_path // empty' "$DEPLOYMENT_FILE")
 TIMEZONE=$(jqr '.timezone')
 APPLICATION_CORES=$(jqr '.resources.cores // 4')
-APPLICATION_MEMORY=$(jqr '.resources.memory_mb // 3072')
+APPLICATION_MEMORY=$(jqr '.resources.memory_mb // 4096')
 APPLICATION_SWAP=$(jqr '.resources.swap_mb // 1024')
 [[ $APPLICATION_CORES =~ ^[1-9][0-9]*$ && $APPLICATION_MEMORY =~ ^[1-9][0-9]*$ && $APPLICATION_SWAP =~ ^[0-9]+$ ]] \
   || die "$(translate "Invalid resources")"
@@ -149,6 +149,8 @@ ML_IP=${ML_ADDRESS%/*}
 DB_IP=${DB_ADDRESS%/*}
 VALKEY_IP=${VALKEY_ADDRESS%/*}
 VIDEO_ACCELERATION=$(jqr '.video_transcoding.acceleration')
+[[ $VIDEO_ACCELERATION == cpu || $VIDEO_ACCELERATION == vaapi || $VIDEO_ACCELERATION == nvenc ]] \
+  || die "$(translate "Video transcoding profile not implemented:") $VIDEO_ACCELERATION"
 RENDER_DEVICE=$(jq -r '.video_transcoding.render_device // empty' "$DEPLOYMENT_FILE")
 VAAPI_DRIVER=$(jqr '.video_transcoding.driver')
 MODEL_CACHE_SIZE=$(jqr '.machine_learning.model_cache_size_gb')
@@ -417,7 +419,7 @@ set_lxc_directive "$VALKEY_ID" lxc.signal.halt SIGTERM
 msg_ok "$(translate "Container created:") CT $VALKEY_ID (Valkey)"
 
 msg_info "$(translate "Creating the container...")"
-oci_create_container "$ML_ID" "$ML_ARCHIVE" --rootfs "${ROOTFS_STORAGE}:12" \
+oci_create_container "$ML_ID" "$ML_ARCHIVE" --rootfs "${ROOTFS_STORAGE}:${ML_ROOTFS_SIZE}" \
   --mp0 "${ROOTFS_STORAGE}:${MODEL_CACHE_SIZE},mp=/cache,backup=1" \
   --hostname "${STACK_NAME}-ml" "${ML_CPU_ARGS[@]}" --memory "$ML_MEMORY" --swap "$ML_SWAP" \
   --net0 "name=eth0,bridge=${FRONTEND_BRIDGE},firewall=1,host-managed=1,${ML_FRONTEND_NET},type=veth" \
@@ -442,7 +444,7 @@ rm -rf "$ML_ROOT/cache/lost+found"
 chown 100000:100000 "$ML_ROOT/cache"
 chmod 0755 "$ML_ROOT/cache"
 oci_quiet pct unmount "$ML_ID"
-msg_ok "$(translate "Container created:") CT $ML_ID ($(translate "Machine learning"))"
+msg_ok "$(translate "Container created:") CT $ML_ID (Machine learning)"
 
 SERVER_DEVICE_ARGS=()
 if [[ $VIDEO_ACCELERATION == vaapi ]]; then
@@ -463,6 +465,8 @@ oci_create_container "$SERVER_ID" "$SERVER_ARCHIVE" --rootfs "${ROOTFS_STORAGE}:
 created_ids+=("$SERVER_ID")
 oci_apply_extra_mounts "$SERVER_ID"
 oci_apply_extra_devices "$SERVER_ID"
+# NVENC needs the video capability on top of what recognition uses.
+[[ $VIDEO_ACCELERATION != nvenc ]] || configure_immich_nvidia "$SERVER_ID" "compute,video,utility"
 
 oci_quiet pct mount "$SERVER_ID"
 SERVER_ROOT="/var/lib/lxc/${SERVER_ID}/rootfs"
@@ -555,7 +559,7 @@ if (( START_AFTER == 1 )); then
   oci_quiet pct start "$VALKEY_ID"
   wait_command Valkey 30 pct exec "$VALKEY_ID" -- valkey-cli -h "$VALKEY_IP" ping
   msg_ok "$(translate "Service ready:") Valkey"
-  ML_LABEL=$(translate "Machine learning")
+  ML_LABEL="Machine learning"
   msg_info "$(translate "Starting the service:") $ML_LABEL"
   oci_quiet pct start "$ML_ID"
   wait_command "$ML_LABEL" 60 curl -fsS "http://${ML_IP}:3003/ping"

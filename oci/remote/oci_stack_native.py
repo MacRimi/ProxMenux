@@ -373,6 +373,10 @@ class NativeAdapter:
                 deployment = self.records[vmid]['deployment']
                 if deployment.get('replay_profile') == {'adapter': 'install_immich_stack.sh', 'role': 'machine-learning'}:
                     acceleration = deployment.get('machine_learning', {}).get('acceleration', 'cpu')
+                    if acceleration == 'rocm':
+                        member_tx.run('pct', 'exec', str(vmid), '--', 'python', '-c',
+                            'import onnxruntime as ort; '
+                            'assert "MIGraphXExecutionProvider" in ort.get_available_providers()')
                     if acceleration in ('openvino', 'cuda'):
                         member_tx.run('pct', 'exec', str(vmid), '--', 'python', '-c',
                             'import sys,ctypes,onnxruntime as ort; p=sys.argv[1]; '
@@ -674,7 +678,11 @@ def run(vmid, recover=False, acknowledge_external_data=False, keep_backup=None):
                 msg_ok(f"{translate('Backup created in')} {keep_backup}")
             else:
                 adapter.keep_backup = keep_backup
-        result = stack_tx.execute(journal, adapter, plan)
+        import oci_operation_notice
+        import oci_update_current
+        with oci_operation_notice.operation([member['vmid'] for member in plan['members']], 'update',
+                                            oci_update_current.application_name(primary, primary_id), primary_id):
+            result = stack_tx.execute(journal, adapter, plan)
         msg_ok(translate('Stack update completed. Data kept.'))
         return result
 

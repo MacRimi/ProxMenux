@@ -1716,6 +1716,27 @@ def _store_update_result(item: dict, result: dict) -> None:
             item["update_check"][extra_key] = result[extra_key]
 
 
+def refresh_oci_app(app_id: str) -> Optional[dict]:
+    """Read one OCI-managed application again and store what it reports.
+
+    Its card on the Security page and the Updates tab of its container read
+    different stores; after an update or a forced check from either one, the
+    registry is brought to the same state the application reports now."""
+    with _lock:
+        reg = _read_registry()
+        for it in reg.get("items", []):
+            if (it.get("type") != "oci_app" or it.get("removed_at")
+                    or it.get("_oci_app_id") != app_id):
+                continue
+            result = _check_oci_app(it)
+            _store_update_result(it, result)
+            if result.get("current"):
+                it["current_version"] = result["current"]
+            _write_registry(reg)
+            return it
+    return None
+
+
 def check_for_updates(force: bool = False) -> list[dict]:
     """Run every type-specific checker over active items, persist
     the updated state, return the list of items that have an update

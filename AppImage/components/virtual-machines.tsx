@@ -1102,6 +1102,14 @@ export function VirtualMachines() {
     return () => window.removeEventListener("openLxcAppModal", handler as EventListener)
   }, [vmData])
 
+  // An application ProxMenux manages (Secure Gateway) was updated or checked
+  // from its own card: read the guests again so its Updates tab agrees.
+  useEffect(() => {
+    const refresh = () => { mutate() }
+    window.addEventListener("proxmenuxManagedAppUpdated", refresh)
+    return () => window.removeEventListener("proxmenuxManagedAppUpdated", refresh)
+  }, [mutate])
+
   // Same deep-link but for QEMU guests. VMs don't have the App tab,
   // so we land on Status (which is what handleVMClick already
   // defaults to — no override needed).
@@ -5057,6 +5065,20 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                       ctIp={ctIp}
                       onChange={() => mutate()}
                       initialData={getLxcAppsCached(selectedVM.vmid) ?? null}
+                      oci={ociInstance?.oci_instance ? {
+                        instance: true,
+                        memberOf: ociInstance.stack && ociInstance.primary_vmid !== selectedVM.vmid
+                          ? (() => {
+                              const primaryVM = (vmData || []).find((v) => v.vmid === ociInstance.primary_vmid)
+                              return {
+                                vmid: ociInstance.primary_vmid,
+                                label: primaryVM
+                                  ? `${primaryVM.name} (CT ${ociInstance.primary_vmid})`
+                                  : `CT ${ociInstance.primary_vmid}`,
+                              }
+                            })()
+                          : null,
+                      } : null}
                       managed={
                         managedEntry
                           ? {
@@ -5182,6 +5204,8 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                                     onClick={async () => {
                                       try {
                                         await fetchApi(`/api/oci/installed/${appId}/update`, { method: "POST" })
+                                        // The card of this application on the Security page reads it again.
+                                        window.dispatchEvent(new CustomEvent("proxmenuxManagedAppUpdated", { detail: { appId } }))
                                         mutate()
                                       } catch { /* opening the App tab surfaces the error */ }
                                     }}

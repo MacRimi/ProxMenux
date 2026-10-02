@@ -1601,6 +1601,8 @@
       "hiddenDetectionsHelpPlural": "Tienes {count} detecciones ocultas. Restaure una para recuperarla o registre una aplicación personalizada manualmente.",
       "registerCustom": "Registrar una aplicación personalizada",
       "noAppsTitle": "No hay aplicaciones registradas",
+      "stackMemberTitle": "Forma parte de una aplicación multicontenedor",
+      "stackMemberBody": "Este contenedor da servicio a una aplicación cuyo contenedor principal es {primary}. La aplicación, sus enlaces web y su versión se muestran allí.",
       "noAppsBody": "Registre las aplicaciones que se ejecutan en este contenedor. Obtendrá enlaces web y, opcionalmente, seguimiento de versiones disponibles y notificaciones de nuevos lanzamientos.",
       "registerApplication": "Registrar aplicación",
       "searchApplications": "Buscar aplicaciones",
@@ -1983,6 +1985,10 @@
         "update_summary": "Actualizaciones de paquetes del host",
         "pve_update": "Actualización de Proxmox VE disponible",
         "update_complete": "Actualización del host completada",
+        "oci_update_completed": "Aplicación OCI actualizada",
+        "oci_update_failed": "Actualización de aplicación OCI fallida",
+        "oci_recreate_completed": "Aplicación OCI recreada",
+        "oci_recreate_failed": "Recreación de aplicación OCI fallida",
         "app_update_available": "Actualización de app disponible",
         "ai_model_migrated": "Modelo de IA actualizado automáticamente",
         "proxmenux_update": "Actualización de ProxMenux disponible",
@@ -6289,6 +6295,26 @@
           "title": "{hostname}: LXC {ct_name} ({vmid}) actualización {result}",
           "body": "{details}",
           "label": "Actualización LXC aplicada"
+        },
+        "oci_update_completed": {
+          "title": "{hostname}: {app_name} actualizado",
+          "body": "{app_name} se ha actualizado a su nueva imagen y sus datos se han conservado.\nContenedores: {containers}",
+          "label": "Aplicación OCI actualizada"
+        },
+        "oci_update_failed": {
+          "title": "{hostname}: la actualización de {app_name} no se completó",
+          "body": "La actualización de {app_name} no se completó.\nMotivo: {reason}\nContenedores: {containers}\nAbre Gestionar aplicaciones OCI instaladas para comprobar su estado.",
+          "label": "Actualización de aplicación OCI fallida"
+        },
+        "oci_recreate_completed": {
+          "title": "{hostname}: {app_name} recreado",
+          "body": "{app_name} se ha recreado con sus nuevas opciones y sus datos se han conservado.\nContenedores: {containers}",
+          "label": "Aplicación OCI recreada"
+        },
+        "oci_recreate_failed": {
+          "title": "{hostname}: la recreación de {app_name} no se completó",
+          "body": "La recreación de {app_name} no se completó.\nMotivo: {reason}\nContenedores: {containers}\nAbre Gestionar aplicaciones OCI instaladas para comprobar su estado.",
+          "label": "Recreación de aplicación OCI fallida"
         },
         "app_update_available": {
           "title": "{hostname}: actualización de {app_name} disponible en CT {vmid}",

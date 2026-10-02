@@ -208,6 +208,15 @@ def modify(root, vmid, changes):
     backup = instances.location(root, vmid).parent / f"config-before-recreate-{time.strftime('%Y%m%d-%H%M%S')}.conf"
     backup.write_text(run('pct', 'config', str(vmid)))
     backup.chmod(0o600)
+    import oci_operation_notice
+    import oci_update_current
+    primary_id = (record.get('stack_member') or {}).get('primary_vmid', vmid)
+    name = oci_update_current.application_name(instances.read(root, primary_id), primary_id)
+    with oci_operation_notice.operation([vmid], 'recreate', name, primary_id):
+        _modify(root, vmid, changes)
+
+
+def _modify(root, vmid, changes):
     running = is_running(vmid)
     if running:
         msg_info(translate('Stopping the container...'))

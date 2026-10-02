@@ -532,6 +532,10 @@ def build_deployment(
     devices, selected_hardware_profile, post_start_configurations, environment = configure_acceleration(
         installer_profile, environment, unprivileged, ui, mode)
     devices, completion_notes = configure_detector(installer_profile, devices, ui)
+    # What the selected acceleration profile leaves for the user to set.
+    completion_notes = [*next((profile.get("completion_notes", [])
+                               for profile in installer_profile.get("hardware_acceleration", {}).get("profiles", [])
+                               if profile["id"] == selected_hardware_profile), []), *completion_notes]
 
     if advanced:
         from .extra_devices import ask_extra_devices
@@ -788,6 +792,84 @@ def build_rclone_mount_deployment(
     }
 
 
+def _ask_immich_acceleration(ui, rootfs_storage: str | None = None) -> tuple[str, str | None, str, str, str | None]:
+    """What runs Immich's video transcoding (the server) and its recognition
+    (the Machine learning container), asked in one menu in both modes. Each
+    usable GPU of the host can take both, or only one of them, and the CPU is
+    always there."""
+    software = ("cpu", None, "auto", "cpu", None)
+    real = essential_ui(ui)
+    found = host.gpus()
+    names = {"intel": "Intel", "amd": "AMD", "nvidia": "NVIDIA"}
+    vendors = [vendor for vendor in names if found[vendor]]
+    if not vendors:
+        real.message(translate("No usable GPU was found on this host. Immich will be installed on the CPU."))
+        return software
+    options = [("cpu", translate("No acceleration (CPU)"))]
+    for vendor in vendors:
+        options += [(vendor, f"{names[vendor]}: {translate('video + recognition')}"),
+                    (f"{vendor}-video", f"{names[vendor]}: {translate('video only')}"),
+                    (f"{vendor}-ml", f"{names[vendor]}: {translate('recognition only')}")]
+    if found["nvidia"]:
+        options += [(f"{vendor}+nvidia", f"{names[vendor]}: {translate('video')} · NVIDIA: {translate('recognition')}")
+                    for vendor in ("intel", "amd") if found[vendor]]
+    # The GPU matters for Immich, so the first one is proposed whole.
+    selected = real.choose(translate("Hardware acceleration for Immich"), options, vendors[0])
+    if selected is None:
+        raise UserCancelled(translate("Immich configuration cancelled"))
+    if selected == "cpu":
+        return software
+    if "+" in selected:
+        video_vendor, ml_vendor = selected.split("+", 1)
+    else:
+        vendor, _, use = selected.partition("-")
+        video_vendor = vendor if use in ("", "video") else None
+        ml_vendor = vendor if use in ("", "ml") else None
+
+    video_acceleration, render_device, vaapi_driver = "cpu", None, "auto"
+    if video_vendor == "nvidia":
+        video_acceleration = "nvenc"
+    elif video_vendor:
+        nodes = found[video_vendor]
+        render_device = nodes[0]
+        if len(nodes) > 1:
+            render_device = ui.choose(translate("VA-API render device"), [(node, node) for node in nodes], nodes[0])
+        drivers = ([("auto", translate("Automatic detection")), ("iHD", "Intel iHD"), ("i965", "Intel i965")]
+                   if video_vendor == "intel" else
+                   [("auto", translate("Automatic detection")), ("radeonsi", "AMD radeonsi")])
+        vaapi_driver = ui.choose(translate("VA-API driver"), drivers, "auto")
+        if render_device is None or vaapi_driver is None:
+            raise UserCancelled(translate("Immich configuration cancelled"))
+        video_acceleration = "vaapi"
+
+    ml_acceleration, ml_render = "cpu", None
+    if ml_vendor == "nvidia":
+        ml_acceleration = "cuda"
+    elif ml_vendor == "intel":
+        ml_acceleration, ml_render = "openvino", render_device or found["intel"][0]
+    elif ml_vendor == "amd":
+        # ROCm is checked before it is promised; when the host cannot run it,
+        # recognition stays on the CPU.
+        blocker = host.rocm_blocker(rootfs_storage)
+        if blocker:
+            reason = (translate("The AMD driver does not offer its compute interface (/dev/kfd) on this host.")
+                      if blocker == "kfd" else
+                      translate("The storage has less than 40 GB free for the ROCm image."))
+            real.message(f"{reason}\n\n{translate('Recognition runs on the CPU.')}")
+        else:
+            ml_acceleration, ml_render = "rocm", render_device or found["amd"][0]
+    if ml_acceleration == "rocm":
+        real.message(translate("Recognition on AMD uses ROCm. Its image is several times larger than the others, "
+                               "so the first installation takes longer, and whether a GPU works with it depends "
+                               "on its model."))
+    if ml_acceleration != "cpu":
+        ui.message(translate("GPU recognition uses 8 GB of RAM and a limit of 4 CPU equivalents. These resources "
+                             "were tested in the lab and are not a universal minimum. Compatibility depends on the "
+                             "GPU, the models and the kernel. NVIDIA uses the GPUs of the Toolkit inventory; Intel "
+                             "keeps the CPU topology."))
+    return video_acceleration, render_device, vaapi_driver, ml_acceleration, ml_render
+
+
 def _build_immich_deployment(
     template: dict[str, Any],
     ui: TerminalUI | DialogUI,
@@ -798,7 +880,7 @@ def _build_immich_deployment(
     stack_name = ui.ask(translate("Stack name"), defaults["stack_name"])
     if not re.fullmatch(r"[a-z0-9][a-z0-9-]{0,31}", stack_name):
         raise InstallError(translate("The stack name only accepts lowercase letters, numbers and hyphens"))
-    resources = ask_application_resources(ui, 4, 3072, 1024)
+    resources = ask_application_resources(ui, 4, 4096, 1024)
     chosen_storage = ask_default_storage(ui, defaults["rootfs_storage"])
     rootfs_storage = ask_storage(ui, translate("Storage for rootfs"), "rootdir",
                                  chosen_storage or defaults["rootfs_storage"])
@@ -833,49 +915,11 @@ def _build_immich_deployment(
     extra_mounts = ask_application_extra_paths(ui, ["/data"], media_storage or rootfs_storage)
     frontend_bridge = ask_bridge(ui, translate("Access bridge for Immich"), defaults["frontend_network"]["bridge"])
     addresses, frontend_gateway = access.ask_addresses(
-        essential_ui(ui), frontend_bridge, [translate("Immich server"), translate("Immich machine learning")])
+        essential_ui(ui), frontend_bridge, [translate("Immich server"), "Immich Machine learning"])
     server_ipv4, ml_ipv4 = addresses.values()
     timezone = ui.ask(translate("Timezone"), host.timezone())
-    video_acceleration = ui.choose(
-        translate("Video transcoding acceleration"),
-        [("vaapi", "VA-API"), ("cpu", "CPU")],
-        defaults["video_transcoding"]["acceleration"],
-    )
-    if video_acceleration is None:
-        raise UserCancelled(translate("Immich configuration cancelled"))
-    render_device = None
-    vaapi_driver = "auto"
-    if video_acceleration == "vaapi":
-        render_device = ui.ask(
-            translate("VA-API render device"), defaults["video_transcoding"]["render_device"]
-        )
-        vaapi_driver = ui.choose(
-            translate("VA-API driver"),
-            [("auto", translate("Automatic detection")), ("radeonsi", "AMD radeonsi"), ("iHD", "Intel iHD"), ("i965", "Intel i965")],
-            defaults["video_transcoding"]["driver"],
-        )
-        if vaapi_driver is None:
-            raise UserCancelled(translate("Immich configuration cancelled"))
-    ml_acceleration = ui.choose(
-        translate("Acceleration for Immich smart recognition"),
-        [("cpu", "CPU"), ("openvino", "Intel GPU / OpenVINO"),
-         ("cuda", translate("NVIDIA GPU / CUDA (Toolkit on the host)"))],
-        "cpu",
-    )
-    if ml_acceleration is None:
-        raise UserCancelled(translate("Immich configuration cancelled"))
-    if ml_acceleration not in ("cpu", "openvino", "cuda"):
-        raise InstallError(translate("Recognition profile not implemented"))
-    ml_render = None
-    if ml_acceleration == "openvino":
-        ml_render = ui.ask(translate("Intel render device for recognition"), "/dev/dri/renderD128")
-        if not re.fullmatch(r"/dev/dri/renderD[0-9]+", ml_render):
-            raise InstallError(translate("Invalid Intel render path"))
-    if ml_acceleration != "cpu":
-        ui.message(translate("GPU recognition uses 8 GB of RAM and a limit of 4 CPU equivalents. These resources "
-                             "were tested in the lab and are not a universal minimum. Compatibility depends on the "
-                             "GPU, the models and the kernel. NVIDIA uses the GPUs of the Toolkit inventory; Intel "
-                             "keeps the CPU topology."))
+    (video_acceleration, render_device, vaapi_driver,
+     ml_acceleration, ml_render) = _ask_immich_acceleration(ui, rootfs_storage)
     extra_devices = ask_application_extra_devices(ui, ("usb",))
     return {
         "deployment_kind": "immich-four-lxc-stack",
@@ -919,8 +963,8 @@ def _build_immich_deployment(
         },
         "machine_learning": {"acceleration": ml_acceleration, "render_device": ml_render,
                              "model_cache_size_gb": 8,
-                             "resources": {"cores": 2 if ml_acceleration == "cpu" else 4,
-                                           "memory_mb": 2048 if ml_acceleration == "cpu" else 8192,
+                             "resources": {"cores": 4,
+                                           "memory_mb": 4096 if ml_acceleration == "cpu" else 8192,
                                            "swap_mb": 1024,
                                            "cpu_allocation": "quota" if ml_acceleration == "openvino" else "cpuset"}},
     }
@@ -1630,6 +1674,26 @@ def configure_detector(installer_profile, devices, ui, root=Path("/")):
     return [*devices, device], list(chosen.get("completion_notes", []))
 
 
+def _profile_usable(profile: dict[str, Any], found: dict[str, Any]) -> bool:
+    """Whether the host has what an acceleration profile needs: the NVIDIA
+    runtime, a GPU of the vendor it is written for, or ROCm's compute device."""
+    vendors = {"0x8086": "intel", "0x1002": "amd"}
+    for request in profile.get("device_requests", []):
+        if request.get("kind") == "nvidia-runtime":
+            if not found["nvidia"]:
+                return False
+            continue
+        path = str(request.get("host_path_default") or "")
+        if path == "/dev/kfd":
+            if not Path(path).is_char_device():
+                return False
+        elif path.startswith("/dev/dri/"):
+            wanted = [vendors[item] for item in request.get("drm_vendor_ids", []) if item in vendors] or list(vendors.values())
+            if not any(found[vendor] for vendor in wanted):
+                return False
+    return True
+
+
 def configure_acceleration(installer_profile, environment, unprivileged, ui, mode=ADVANCED_MODE):
     advanced = mode != DEFAULT_MODE
     devices: list[dict[str, Any]] = []
@@ -1640,14 +1704,25 @@ def configure_acceleration(installer_profile, environment, unprivileged, ui, mod
     hardware = installer_profile.get("hardware_acceleration")
     if hardware:
         profiles = hardware.get("profiles", [])
-        options = [(item["id"], item["label"]) for item in profiles]
         default_profile = hardware.get("default", profiles[0]["id"] if profiles else None)
+        # Only what this host can run is offered; the profile already in use
+        # stays in the list so a recreation never loses it.
+        found = host.gpus()
+        usable = [item for item in profiles
+                  if item["id"] == default_profile or _profile_usable(item, found)]
+        options = [(item["id"], item["label"]) for item in usable]
+        asked = advanced or not installer_profile.get("selkies")
+        if asked and len(usable) < len(profiles) and len(usable) == 1:
+            # Nothing but the CPU is left: say why there is nothing to choose.
+            ui.message(translate("No usable GPU was found on this host. The application will be installed "
+                                 "without hardware acceleration."))
+            asked = False
         selected_hardware_profile = (
             ui.choose(
                 translate(hardware.get("prompt", "Hardware acceleration")),
                 [(tag, translate(label)) for tag, label in options],
                 default_profile,
-            ) if advanced or not installer_profile.get("selkies") else default_profile
+            ) if asked else default_profile
         )
         if selected_hardware_profile is None:
             raise UserCancelled(translate("Acceleration configuration cancelled"))
@@ -1710,6 +1785,12 @@ def configure_acceleration(installer_profile, environment, unprivileged, ui, mod
                 ]
             devices.append(device)
         else:
+            # The render node proposed is one of the GPU the profile is for;
+            # renderD128 is not always it on a host with two GPUs.
+            nodes = [node for vendor_id, vendor in (("0x8086", "intel"), ("0x1002", "amd"))
+                     if vendor_id in item.get("drm_vendor_ids", []) for node in host.gpus()[vendor]]
+            if nodes and item["host_path_default"] not in nodes:
+                item = {**item, "host_path_default": nodes[0]}
             if not advanced:
                 host_path = item["host_path_default"]
             elif item.get("purpose") in ("serial", "user-selected-device"):

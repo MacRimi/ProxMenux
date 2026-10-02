@@ -1275,6 +1275,16 @@ class NotificationManager:
             if self._is_backup_running():
                 return
         
+        # The stop, the backup and the start of a container the OCI manager is
+        # updating or recreating are steps of that operation, which reports
+        # its own result when it ends.
+        try:
+            import oci_operations
+            if oci_operations.quiet(event):
+                return
+        except Exception:
+            pass
+
         # Check storage exclusions for storage-related events.
         # If the storage is excluded from notifications, suppress the event entirely.
         _STORAGE_EVENTS = {'storage_unavailable', 'storage_low_space', 'storage_warning', 'storage_error',

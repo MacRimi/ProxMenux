@@ -137,6 +137,17 @@ def kept_settings(changes, deployment):
     return kept
 
 
+def application_name(record, vmid):
+    """The name the user knows the application by, for its notifications."""
+    for template in ((record.get('stack') or {}).get('template') or {}, record.get('template') or {}):
+        title = (template.get('catalog_ui') or {}).get('title')
+        if isinstance(title, dict):
+            title = title.get('en_US') or next(iter(title.values()), '')
+        if isinstance(title, str) and title.strip():
+            return title.strip()
+    return f'CT {vmid}'
+
+
 def update(vmid, acknowledge_external_data=False, proposal=None, keep_backup=None):
     operation = 'recreate' if proposal is not None else 'update'
     msg_info(translate('Checking the container before the update...') if operation == 'update'
@@ -169,9 +180,11 @@ def update(vmid, acknowledge_external_data=False, proposal=None, keep_backup=Non
         kept = kept_settings(changes, desired['deployment'])
         if kept:
             msg_info2(f"{translate('Keeping the settings changed in Proxmox:')} {', '.join(kept)}")
-        transaction.apply(instances.ROOT, vmid, archive, operation, proposal=proposal,
-                          registry_digest=digest, acknowledge_external_data=acknowledge_external_data,
-                          keep_backup=file_storage)
+        import oci_operation_notice
+        with oci_operation_notice.operation([vmid], operation, application_name(record, vmid)):
+            transaction.apply(instances.ROOT, vmid, archive, operation, proposal=proposal,
+                              registry_digest=digest, acknowledge_external_data=acknowledge_external_data,
+                              keep_backup=file_storage)
 
 
 def main():

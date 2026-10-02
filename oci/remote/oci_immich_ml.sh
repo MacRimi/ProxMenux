@@ -1,9 +1,22 @@
 # Immich ML prerequisites and native GPU setup; no host driver installation.
 validate_immich_ml_profile() {
-  ML_CPU_ARGS=(--cores 2)
-  ML_MEMORY=2048
+  ML_CPU_ARGS=(--cores 4)
+  ML_MEMORY=4096
+  ML_ROOTFS_SIZE=12
   case "$ML_ACCELERATION" in
     cpu) ;;
+    rocm)
+      ML_RENDER_DEVICE=$(jq -er '.machine_learning.render_device' "$DEPLOYMENT_FILE")
+      [[ $ML_RENDER_DEVICE =~ ^/dev/dri/renderD[0-9]+$ && -c $ML_RENDER_DEVICE ]] \
+        || die "$(translate "The selected AMD render device does not exist:") $ML_RENDER_DEVICE"
+      [[ $(cat "/sys/class/drm/${ML_RENDER_DEVICE##*/}/device/vendor") == 0x1002 ]] \
+        || die "$(translate "ROCm requires the render device of an AMD GPU")"
+      [[ -c /dev/kfd ]] || die "$(translate "ROCm requires /dev/kfd on the host")"
+      ML_MEMORY=8192
+      # The ROCm image carries the whole AMD runtime and is several times
+      # larger than the others.
+      ML_ROOTFS_SIZE=40
+      ;;
     openvino)
       ML_RENDER_DEVICE=$(jq -er '.machine_learning.render_device' "$DEPLOYMENT_FILE")
       [[ $ML_RENDER_DEVICE =~ ^/dev/dri/renderD[0-9]+$ && -c $ML_RENDER_DEVICE ]] \
@@ -57,34 +70,46 @@ validate_immich_ml_profile() {
   esac
 }
 
+# Gives one container of the stack the NVIDIA GPU through the dynamic hook.
+# Arguments: VMID CAPABILITIES
+configure_immich_nvidia() {
+  # Isolate the shared standalone installer's runtime context from the stack.
+  (
+    VMID=$1
+    CONF="/etc/pve/lxc/${VMID}.conf"
+    UNPRIVILEGED_FLAG=1
+    DEVICE='{"kind":"nvidia-runtime","runtime_mode":"dynamic"}'
+    NVIDIA_GID_ENV=""
+    DEVICE_INDEX=0
+    while grep -q "^dev${DEVICE_INDEX}:" "$CONF"; do DEVICE_INDEX=$((DEVICE_INDEX + 1)); done
+    fragment=$(mktemp)
+    trap 'rm -f "$fragment"' EXIT
+    jq -nc --arg capabilities "$2" \
+      '{environment:[{name:"NVIDIA_DRIVER_CAPABILITIES",value:$capabilities}]}' >"$fragment"
+    DEPLOYMENT_FILE=$fragment
+    add_character_device() {
+      local path=$1 mode gid
+      [[ -c $path && $path == /dev/nvidia* ]] || die "$(translate "Invalid NVIDIA device:") $path"
+      mode="0$(stat -c %a "$path")"
+      gid=$(stat -c %g "$path")
+      oci_quiet pct set "$VMID" "--dev${DEVICE_INDEX}" "path=${path},mode=${mode},gid=${gid},deny-write=0"
+      DEVICE_INDEX=$((DEVICE_INDEX + 1))
+    }
+    configure_nvidia_runtime
+  )
+}
+
 configure_immich_ml_gpu() {
   case "$ML_ACCELERATION" in
     openvino)
       oci_quiet pct set "$ML_ID" --dev0 "path=${ML_RENDER_DEVICE},gid=$(stat -c %g "$ML_RENDER_DEVICE"),mode=0660"
       ;;
+    rocm)
+      oci_quiet pct set "$ML_ID" --dev0 "path=${ML_RENDER_DEVICE},gid=$(stat -c %g "$ML_RENDER_DEVICE"),mode=0660"
+      oci_quiet pct set "$ML_ID" --dev1 "path=/dev/kfd,gid=$(stat -c %g /dev/kfd),mode=0660"
+      ;;
     cuda)
-      # Isolate the shared standalone installer's runtime context from the stack.
-      (
-        VMID=$ML_ID
-        CONF="/etc/pve/lxc/${ML_ID}.conf"
-        UNPRIVILEGED_FLAG=1
-        DEVICE='{"kind":"nvidia-runtime","runtime_mode":"dynamic"}'
-        NVIDIA_GID_ENV=""
-        DEVICE_INDEX=0
-        fragment=$(mktemp)
-        trap 'rm -f "$fragment"' EXIT
-        printf '%s\n' '{"environment":[{"name":"NVIDIA_DRIVER_CAPABILITIES","value":"compute,utility"}]}' >"$fragment"
-        DEPLOYMENT_FILE=$fragment
-        add_character_device() {
-          local path=$1 mode gid
-          [[ -c $path && $path == /dev/nvidia* ]] || die "$(translate "Invalid NVIDIA device:") $path"
-          mode="0$(stat -c %a "$path")"
-          gid=$(stat -c %g "$path")
-          oci_quiet pct set "$VMID" "--dev${DEVICE_INDEX}" "path=${path},mode=${mode},gid=${gid},deny-write=0"
-          DEVICE_INDEX=$((DEVICE_INDEX + 1))
-        }
-        configure_nvidia_runtime
-      )
+      configure_immich_nvidia "$ML_ID" "compute,utility"
       ;;
   esac
 }
@@ -101,6 +126,8 @@ if profile == "openvino":
     assert "OpenVINOExecutionProvider" in ort.get_available_providers()
     devices = ort.capi._pybind_state.get_available_openvino_device_ids()
     assert any(device.startswith("GPU") for device in devices), devices
+elif profile == "rocm":
+    assert "MIGraphXExecutionProvider" in ort.get_available_providers(), ort.get_available_providers()
 else:
     assert profile == "cuda"
     assert "CUDAExecutionProvider" in ort.get_available_providers()

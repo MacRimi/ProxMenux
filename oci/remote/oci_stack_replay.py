@@ -68,9 +68,13 @@ def immich_record(record):
     if shlex.split(runtime.get('entrypoint', '')) != expected[role]:
         raise ValueError(translate('The Immich startup was modified or cannot be reproduced'))
     acceleration = record['deployment'].get('machine_learning', {}).get('acceleration', 'cpu')
-    if role == 'machine-learning' and acceleration not in ('cpu', 'openvino', 'cuda'):
+    if role == 'machine-learning' and acceleration not in ('cpu', 'openvino', 'cuda', 'rocm'):
         raise ValueError(translate('Immich GPU profile not validated'))
-    cuda = role == 'machine-learning' and acceleration == 'cuda'
+    video = record['deployment'].get('video_transcoding', {}).get('acceleration', 'cpu')
+    # NVIDIA reaches Machine learning for recognition and the server for NVENC.
+    capabilities = ('compute,utility' if role == 'machine-learning' and acceleration == 'cuda'
+                    else 'compute,video,utility' if role == 'server' and video == 'nvenc' else None)
+    cuda = capabilities is not None
     devices = [{'kind': 'nvidia-runtime', 'runtime_mode': 'dynamic'}] if cuda else []
     for item in projection['native_devices']:
         fields = dict(p.split('=', 1) for p in item['value'].split(',') if '=' in p)
@@ -80,17 +84,24 @@ def immich_record(record):
         if oci_gpu_devices.peripheral_path(path):
             devices.append(peripheral_device(fields))
             continue
+        rocm = role == 'machine-learning' and acceleration == 'rocm'
+        if rocm and path == '/dev/kfd':
+            # The compute interface ROCm needs beside the render node.
+            devices.append({'kind': 'character-device', 'host_path': path, 'container_path': path,
+                            'gid_strategy': 'host-device-gid', 'mode': fields.get('mode', '0660')})
+            continue
         if not path or not re.fullmatch(r'/dev/dri/renderD[0-9]+', path):
             raise ValueError(translate('Immich device without a validated translation'))
+        vendors = (['0x1002'] if rocm else ['0x8086'] if role == 'machine-learning' else ['0x8086', '0x1002'])
         devices.append({'kind': 'character-device', 'host_path': path, 'container_path': path,
                         'gid_strategy': 'host-device-gid', 'mode': fields.get('mode', '0660'),
-                        'drm_vendor_ids': ['0x8086'] if role == 'machine-learning' else ['0x8086', '0x1002']})
+                        'drm_vendor_ids': vendors})
     if projection['preserved_raw_runtime'] and not cuda:
         raise ValueError(translate('Immich runtime without a validated translation'))
     if cuda:
         import oci_accelerators
         candidate = {'devices': devices, 'environment': [
-            {'name': 'NVIDIA_DRIVER_CAPABILITIES', 'value': 'compute,utility'}]}
+            {'name': 'NVIDIA_DRIVER_CAPABILITIES', 'value': capabilities}]}
         oci_accelerators.check(record['observed']['config'].encode(), candidate)
     translated = {'compose_entrypoint': expected[role], 'command': []}
     for native, target in (('lxc.init.cwd', 'working_directory'), ('lxc.signal.halt', 'halt_signal')):
@@ -101,8 +112,10 @@ def immich_record(record):
     if cuda:
         result['deployment']['environment'] = [e for e in result['deployment']['environment']
                                              if e['name'] != 'NVIDIA_DRIVER_CAPABILITIES']
-        result['deployment']['environment'].append({'name': 'NVIDIA_DRIVER_CAPABILITIES', 'value': 'compute,utility'})
+        result['deployment']['environment'].append({'name': 'NVIDIA_DRIVER_CAPABILITIES', 'value': capabilities})
     result['deployment']['machine_learning'] = copy.deepcopy(record['deployment'].get('machine_learning', {}))
+    if 'video_transcoding' in record['deployment']:
+        result['deployment']['video_transcoding'] = copy.deepcopy(record['deployment']['video_transcoding'])
     return result
 
 

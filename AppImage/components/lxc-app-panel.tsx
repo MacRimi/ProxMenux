@@ -343,6 +343,10 @@ interface Props {
   ctIp?: string | null
   onChange?: () => void
   managed?: ManagedAppInfo | null
+  // What the OCI record says about this container, known without probing
+  // it: whether ProxMenux installed it from an image, and whether it is a
+  // secondary container of a multi-container application.
+  oci?: { instance: boolean; memberOf?: { vmid: number; label: string } | null } | null
   // Optional seed payload from the parent's cross-open ref cache. When
   // supplied, the panel renders with real content on the very first
   // frame and only revalidates silently in the background — no
@@ -443,7 +447,7 @@ function parseArgvInput(value: string): string[] {
   return value.split(",").map((item) => item.trim()).filter(Boolean)
 }
 
-export function LxcAppPanel({ vmid, ctIp, onChange, managed, initialData }: Props) {
+export function LxcAppPanel({ vmid, ctIp, onChange, managed, initialData, oci }: Props) {
   const t = useT()
   const isLightTheme = useIsLightTheme()
   // Seed from `initialData` first, then fall back to the shared cache
@@ -704,7 +708,8 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed, initialData }: Prop
   // record names, so there is nothing to search for and nothing else to add.
   // What can go stale is what the record and the registry say, and this
   // reads both again.
-  const isOciInstall = !!suggestions?.oci_instance
+  const isOciInstall = !!suggestions?.oci_instance || !!oci?.instance
+  const ociMemberOf = oci?.memberOf ?? null
   const isOciAdguard = suggestions?.oci_instance?.template_id === "image-adguard-home"
   useEffect(() => {
     if (!isOciAdguard) return
@@ -2582,7 +2587,36 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed, initialData }: Prop
           many detections there are (0, 1, or many). Below the chips,
           a single "Register a different app" button lets the user
           add something the auto-detector doesn't know about. */}
-      {apps.length === 0 && (
+      {/* A database or a cache of a multi-container application has no
+          application of its own: it is reached from the main container. */}
+      {apps.length === 0 && ociMemberOf && (
+        <Card className="border border-border bg-card/50">
+          <CardContent className="p-6 space-y-3">
+            <div className="mx-auto p-2 rounded-full bg-blue-500/10 w-fit">
+              <Info className="h-5 w-5 text-blue-400" />
+            </div>
+            <h3 className="text-sm font-semibold text-foreground text-center">
+              {t("vmLxc.appEditor.stackMemberTitle")}
+            </h3>
+            <p className="text-xs text-muted-foreground max-w-md mx-auto leading-relaxed text-center">
+              {t("vmLxc.appEditor.stackMemberBody", { primary: ociMemberOf.label })}
+            </p>
+            <div className="pt-1 flex justify-center">
+              <Button
+                onClick={() => window.dispatchEvent(new CustomEvent("openLxcAppModal", {
+                  detail: { vmid: ociMemberOf.vmid, tab: "app" },
+                }))}
+                className="bg-blue-500 hover:bg-blue-600 text-white"
+              >
+                <ChevronRight className="h-4 w-4 mr-1.5" />
+                {t("vmLxc.ociUpdates.openPrimary")}
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {apps.length === 0 && !ociMemberOf && (
         <Card className="border border-border bg-card/50">
           <CardContent className="p-6 space-y-3">
             <div className="mx-auto p-2 rounded-full bg-emerald-500/10 w-fit">

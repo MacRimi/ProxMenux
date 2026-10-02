@@ -371,11 +371,30 @@
           {
             "id": "cpu",
             "label": "CPU",
+            "image": {
+              "reference": "ollama/ollama:latest",
+              "registry": "docker.io",
+              "repository": "ollama/ollama",
+              "tag": "latest",
+              "digest": null,
+              "pull_policy": "resolve-selected-tag-to-architecture-digest-at-install"
+            },
             "device_requests": []
           },
           {
             "id": "nvidia",
             "label": "NVIDIA (CUDA)",
+            "architectures": [
+              "amd64"
+            ],
+            "image": {
+              "reference": "ollama/ollama:latest",
+              "registry": "docker.io",
+              "repository": "ollama/ollama",
+              "tag": "latest",
+              "digest": null,
+              "pull_policy": "resolve-selected-tag-to-architecture-digest-at-install"
+            },
             "device_requests": [
               {
                 "id": "nvidia-runtime",
@@ -388,6 +407,46 @@
               {
                 "name": "NVIDIA_VISIBLE_DEVICES",
                 "value": "all"
+              }
+            ]
+          },
+          {
+            "id": "rocm",
+            "label": "AMD (ROCm)",
+            "architectures": [
+              "amd64"
+            ],
+            "image": {
+              "reference": "ollama/ollama:rocm",
+              "registry": "docker.io",
+              "repository": "ollama/ollama",
+              "tag": "rocm",
+              "digest": null,
+              "pull_policy": "resolve-selected-tag-to-architecture-digest-at-install"
+            },
+            "device_requests": [
+              {
+                "id": "gpu-render",
+                "path_prompt": "GPU render device",
+                "host_path_default": "/dev/dri/renderD128",
+                "mode": "0660",
+                "deny_write": false,
+                "gid_strategy": "host-device-gid",
+                "kind": "character-device",
+                "container_path_strategy": "same-as-host",
+                "drm_vendor_ids": [
+                  "0x1002"
+                ]
+              },
+              {
+                "id": "amd-kfd",
+                "path_prompt": "AMD compute device",
+                "host_path_default": "/dev/kfd",
+                "mode": "0660",
+                "deny_write": false,
+                "gid_strategy": "host-device-gid",
+                "kind": "character-device",
+                "container_path_strategy": "same-as-host"
               }
             ]
           }

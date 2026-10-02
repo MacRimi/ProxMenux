@@ -1625,6 +1625,54 @@ def internal_shutdown_event():
         return jsonify({'error': 'internal_error', 'detail': str(e)}), 500
 
 
+# ─── Internal OCI Event Endpoint ─────────────────────────────────
+
+_OCI_EVENTS = {
+    'oci_update_completed': 'INFO', 'oci_update_failed': 'WARNING',
+    'oci_recreate_completed': 'INFO', 'oci_recreate_failed': 'WARNING',
+}
+
+
+@notification_bp.route('/api/internal/oci-event', methods=['POST'])
+def internal_oci_event():
+    """Called by the OCI engine when an update or a recreation ends, with its
+    result. Only accepts requests from this host."""
+    remote_addr = request.remote_addr or ''
+    try:
+        import ipaddress
+        addr = ipaddress.ip_address(remote_addr.split('%')[0])
+        if isinstance(addr, ipaddress.IPv6Address) and addr.ipv4_mapped is not None:
+            addr = addr.ipv4_mapped
+        is_loopback = addr.is_loopback
+    except (ValueError, TypeError):
+        is_loopback = remote_addr in ('127.0.0.1', '::1', 'localhost')
+    if not is_loopback:
+        return jsonify({'error': 'forbidden', 'detail': 'localhost only'}), 403
+    try:
+        data = request.get_json(silent=True) or {}
+        event_type = str(data.get('event') or '')
+        if event_type not in _OCI_EVENTS:
+            return jsonify({'error': 'invalid_event_type'}), 400
+        vmid = str(data.get('vmid') or '')
+        notification_manager.emit_event(
+            event_type=event_type,
+            severity=_OCI_EVENTS[event_type],
+            data={
+                'hostname': str(data.get('hostname') or 'unknown'),
+                'app_name': str(data.get('app_name') or f'CT {vmid}')[:120],
+                'vmid': vmid,
+                'containers': str(data.get('containers') or '')[:400],
+                'reason': str(data.get('reason') or '')[:600],
+            },
+            source='proxmenux',
+            entity='ct',
+            entity_id=vmid,
+        )
+        return jsonify({'success': True, 'event_type': event_type}), 200
+    except Exception as e:
+        return jsonify({'error': 'internal_error', 'detail': str(e)}), 500
+
+
 # ─── Internal Restore Event Endpoint ─────────────────────────────
 
 @notification_bp.route('/api/internal/restore-event', methods=['POST'])

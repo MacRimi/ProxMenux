@@ -241,6 +241,9 @@ def manage_instance(project, ui, row, action=None, lifecycle_args=()):
                         break
                     except RestartWizard:
                         wizard.restart()
+                    except ValueError as error:
+                        if not wizard.retry_last(error):
+                            raise
             finally:
                 wizard.close()
             if not approved:

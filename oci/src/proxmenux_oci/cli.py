@@ -35,7 +35,7 @@ PUBLISHERS = {"linuxserver.io": "LinuxServer", "official": N_("Official image")}
 STACK_LABELS = {
     "server": N_("Server"),
     "application": N_("Application"),
-    "machine_learning": N_("Machine learning"),
+    "machine_learning": "Machine learning",
     "database": "PostgreSQL",
     "valkey": "Valkey",
     "cache": "Redis",
@@ -129,7 +129,7 @@ def _service_kind(service: dict[str, Any]) -> str:
     if service.get("is_main"):
         return translate("Application")
     if "machine-learning" in name or "machine-learning" in image:
-        return translate("Machine learning")
+        return "Machine learning"
     for key, label in SERVICE_KINDS:
         if key in image:
             return label
@@ -403,6 +403,11 @@ def install_template(ui, template: dict[str, Any], identifier: str, mode: str) -
                 break
             except RestartWizard:
                 wizard.restart()
+            except (ValueError, InstallError) as error:
+                # A mistyped value asks that question again instead of
+                # sending the user back to the start of the wizard.
+                if not wizard.retry_last(error):
+                    raise
     finally:
         wizard.close()
     if not approved:

@@ -1996,6 +1996,10 @@
         "secure_gateway_update_available": "Secure Gateway uppdatering tillgänglig",
         "nvidia_driver_update_available": "NVIDIA drivrutinsuppdatering tillgänglig",
         "coral_driver_update_available": "Coral TPU drivrutinsuppdatering tillgänglig",
+        "oci_update_completed": "OCI-applikation uppdaterad",
+        "oci_update_failed": "Uppdatering av OCI-applikation misslyckades",
+        "oci_recreate_completed": "OCI-applikation återskapad",
+        "oci_recreate_failed": "Återskapande av OCI-applikation misslyckades",
         "app_update_available": "Appuppdatering tillgänglig",
         "lxc_update_applied": "LXC uppdatering tillämpad",
         "docker_stack_update_available": "Docker uppdateringar tillgängliga"
@@ -6289,6 +6293,26 @@
           "title": "{hostname}: LXC {ct_name} ({vmid}) uppdatera {result}",
           "body": "{details}",
           "label": "LXC uppdatering tillämpad"
+        },
+        "oci_update_completed": {
+          "title": "{hostname}: {app_name} uppdaterad",
+          "body": "{app_name} uppdaterades till sin nya avbild och dess data behölls.\nContainrar: {containers}",
+          "label": "OCI-applikation uppdaterad"
+        },
+        "oci_update_failed": {
+          "title": "{hostname}: uppdateringen av {app_name} slutfördes inte",
+          "body": "Uppdateringen av {app_name} slutfördes inte.\nOrsak: {reason}\nContainrar: {containers}\nÖppna Hantera installerade OCI-applikationer för att kontrollera dess tillstånd.",
+          "label": "Uppdatering av OCI-applikation misslyckades"
+        },
+        "oci_recreate_completed": {
+          "title": "{hostname}: {app_name} återskapad",
+          "body": "{app_name} återskapades med sina nya alternativ och dess data behölls.\nContainrar: {containers}",
+          "label": "OCI-applikation återskapad"
+        },
+        "oci_recreate_failed": {
+          "title": "{hostname}: återskapandet av {app_name} slutfördes inte",
+          "body": "Återskapandet av {app_name} slutfördes inte.\nOrsak: {reason}\nContainrar: {containers}\nÖppna Hantera installerade OCI-applikationer för att kontrollera dess tillstånd.",
+          "label": "Återskapande av OCI-applikation misslyckades"
         },
         "app_update_available": {
           "title": "{hostname}: {app_name} uppdatering tillgänglig på CT {vmid}",

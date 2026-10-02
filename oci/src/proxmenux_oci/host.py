@@ -5,6 +5,7 @@ from __future__ import annotations
 import ipaddress
 import json
 import re
+import shutil
 import subprocess
 from pathlib import Path
 from typing import Any
@@ -134,6 +135,36 @@ def _sysfs(path: Path) -> str:
         return path.read_text(encoding="utf-8", errors="replace").strip()
     except OSError:
         return ""
+
+
+def gpus(root: Path = Path("/")) -> dict[str, Any]:
+    """The GPUs an installation can use: the render nodes of each Intel and
+    AMD GPU, and whether NVIDIA is usable on the host."""
+    vendors = {"0x8086": "intel", "0x1002": "amd"}
+    found: dict[str, Any] = {"intel": [], "amd": [], "nvidia": False}
+    for node in sorted((root / "sys/class/drm").glob("renderD*")):
+        vendor = vendors.get(_sysfs(node / "device/vendor").lower())
+        if vendor:
+            found[vendor].append(f"/dev/dri/{node.name}")
+    # NVIDIA is usable when its driver answers and the Container Toolkit is installed.
+    if shutil.which("nvidia-smi") and shutil.which("nvidia-container-cli"):
+        try:
+            found["nvidia"] = subprocess.run(["nvidia-smi", "-L"], capture_output=True, text=True,
+                                             timeout=15, check=False).returncode == 0
+        except (OSError, subprocess.TimeoutExpired):
+            found["nvidia"] = False
+    return found
+
+
+def rocm_blocker(storage: str | None, needed_gb: int = 40) -> str | None:
+    """Why this host cannot run recognition on an AMD GPU with ROCm, or None.
+    ROCm needs the compute interface of the driver and room for its image."""
+    if not Path("/dev/kfd").is_char_device():
+        return "kfd"
+    row = next((item for item in storages("rootdir") if item.get("storage") == storage), None)
+    if row is not None and gib(row.get("avail")) < needed_gb:
+        return "space"
+    return None
 
 
 def usb_devices(root: Path = Path("/"), lsusb: str | None = None) -> list[dict[str, str]]:

@@ -1996,6 +1996,10 @@
         "secure_gateway_update_available": "Aggiornamento Secure Gateway disponibile",
         "nvidia_driver_update_available": "Aggiornamento del driver NVIDIA disponibile",
         "coral_driver_update_available": "Disponibile l'aggiornamento del driver Coral TPU",
+        "oci_update_completed": "Applicazione OCI aggiornata",
+        "oci_update_failed": "Aggiornamento dell'applicazione OCI non riuscito",
+        "oci_recreate_completed": "Applicazione OCI ricreata",
+        "oci_recreate_failed": "Ricreazione dell'applicazione OCI non riuscita",
         "app_update_available": "aggiornamento dell'app disponibile",
         "lxc_update_applied": "Aggiornamento LXC applicato",
         "docker_stack_update_available": "Aggiornamenti Docker disponibili"
@@ -6289,6 +6293,26 @@
           "title": "{hostname}: LXC {ct_name} ({vmid}) aggiornamento {result}",
           "body": "{details}",
           "label": "Aggiornamento LXC applicato"
+        },
+        "oci_update_completed": {
+          "title": "{hostname}: {app_name} aggiornato",
+          "body": "{app_name} è stato aggiornato alla nuova immagine e i dati sono stati conservati.\nContenitori: {containers}",
+          "label": "Applicazione OCI aggiornata"
+        },
+        "oci_update_failed": {
+          "title": "{hostname}: aggiornamento di {app_name} non completato",
+          "body": "L'aggiornamento di {app_name} non è stato completato.\nMotivo: {reason}\nContenitori: {containers}\nApri Gestisci le applicazioni OCI installate per verificarne lo stato.",
+          "label": "Aggiornamento dell'applicazione OCI non riuscito"
+        },
+        "oci_recreate_completed": {
+          "title": "{hostname}: {app_name} ricreato",
+          "body": "{app_name} è stato ricreato con le nuove opzioni e i dati sono stati conservati.\nContenitori: {containers}",
+          "label": "Applicazione OCI ricreata"
+        },
+        "oci_recreate_failed": {
+          "title": "{hostname}: ricreazione di {app_name} non completata",
+          "body": "La ricreazione di {app_name} non è stata completata.\nMotivo: {reason}\nContenitori: {containers}\nApri Gestisci le applicazioni OCI installate per verificarne lo stato.",
+          "label": "Ricreazione dell'applicazione OCI non riuscita"
         },
         "app_update_available": {
           "title": "{hostname}: aggiornamento {app_name} disponibile su CT {vmid}",

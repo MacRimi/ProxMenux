@@ -1996,6 +1996,10 @@
         "secure_gateway_update_available": "Atualização do Secure Gateway disponível",
         "nvidia_driver_update_available": "Atualização de driver NVIDIA disponível",
         "coral_driver_update_available": "Atualização do driver Coral TPU disponível",
+        "oci_update_completed": "Aplicação OCI atualizada",
+        "oci_update_failed": "Falha na atualização da aplicação OCI",
+        "oci_recreate_completed": "Aplicação OCI recriada",
+        "oci_recreate_failed": "Falha na recriação da aplicação OCI",
         "app_update_available": "atualização de aplicativo disponível",
         "lxc_update_applied": "Atualização LXC aplicada",
         "docker_stack_update_available": "Docker atualizações disponíveis"
@@ -6289,6 +6293,26 @@
           "title": "{hostname}: LXC {ct_name} ({vmid}) atualização {result}",
           "body": "{details}",
           "label": "Atualização LXC aplicada"
+        },
+        "oci_update_completed": {
+          "title": "{hostname}: {app_name} atualizado",
+          "body": "{app_name} foi atualizado para a nova imagem e os dados foram mantidos.\nContêineres: {containers}",
+          "label": "Aplicação OCI atualizada"
+        },
+        "oci_update_failed": {
+          "title": "{hostname}: a atualização de {app_name} não foi concluída",
+          "body": "A atualização de {app_name} não foi concluída.\nMotivo: {reason}\nContêineres: {containers}\nAbra Gerir aplicações OCI instaladas para verificar o estado.",
+          "label": "Falha na atualização da aplicação OCI"
+        },
+        "oci_recreate_completed": {
+          "title": "{hostname}: {app_name} recriado",
+          "body": "{app_name} foi recriado com as novas opções e os dados foram mantidos.\nContêineres: {containers}",
+          "label": "Aplicação OCI recriada"
+        },
+        "oci_recreate_failed": {
+          "title": "{hostname}: a recriação de {app_name} não foi concluída",
+          "body": "A recriação de {app_name} não foi concluída.\nMotivo: {reason}\nContêineres: {containers}\nAbra Gerir aplicações OCI instaladas para verificar o estado.",
+          "label": "Falha na recriação da aplicação OCI"
         },
         "app_update_available": {
           "title": "{hostname}: atualização {app_name} disponível no CT {vmid}",

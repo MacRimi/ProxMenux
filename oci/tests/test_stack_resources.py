@@ -15,7 +15,7 @@ from proxmenux_oci.cli import _deployment_summary_text
 from proxmenux_oci.installer import ADVANCED_MODE, DEFAULT_MODE, InstallError, build_deployment
 from test_advanced_flow_order import RecordingUI, addresses, storages
 
-SPECIAL = {"nextcloud-stack": (2, 2048), "paperless-ngx": (2, 2048), "tandoor": (2, 2048), "immich": (4, 3072)}
+SPECIAL = {"nextcloud-stack": (2, 2048), "paperless-ngx": (2, 2048), "tandoor": (2, 2048), "immich": (4, 4096)}
 REMOTE = {"nextcloud-stack": "nextcloud", "paperless-ngx": "paperless", "tandoor": "tandoor", "immich": "immich"}
 
 

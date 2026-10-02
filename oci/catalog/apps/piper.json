@@ -260,7 +260,59 @@
           "owner_strategy": "mapped-root",
           "only_when_mount_type": "managed-volume"
         }
-      ]
+      ],
+      "hardware_acceleration": {
+        "prompt": "Acceleration for Piper",
+        "default": "cpu",
+        "profiles": [
+          {
+            "id": "cpu",
+            "label": "CPU",
+            "image": {
+              "reference": "lscr.io/linuxserver/piper:latest",
+              "registry": "lscr.io",
+              "repository": "lscr.io/linuxserver/piper",
+              "tag": "latest",
+              "digest": null,
+              "pull_policy": "resolve-selected-tag-to-architecture-digest-at-install"
+            },
+            "device_requests": []
+          },
+          {
+            "id": "nvidia",
+            "label": "NVIDIA (CUDA)",
+            "architectures": [
+              "amd64"
+            ],
+            "image": {
+              "reference": "lscr.io/linuxserver/piper:gpu",
+              "registry": "lscr.io",
+              "repository": "lscr.io/linuxserver/piper",
+              "tag": "gpu",
+              "digest": null,
+              "pull_policy": "resolve-selected-tag-to-architecture-digest-at-install"
+            },
+            "device_requests": [
+              {
+                "id": "nvidia-runtime",
+                "kind": "nvidia-runtime",
+                "purpose": "nvidia-cuda",
+                "device_selection": "all-requested-by-compose"
+              }
+            ],
+            "environment": [
+              {
+                "name": "NVIDIA_VISIBLE_DEVICES",
+                "value": "all"
+              },
+              {
+                "name": "NVIDIA_DRIVER_CAPABILITIES",
+                "value": "compute,utility"
+              }
+            ]
+          }
+        ]
+      }
     }
   },
   "compatibility": {

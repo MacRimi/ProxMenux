@@ -1997,6 +1997,10 @@
         "secure_gateway_update_available": "K dispozícii je aktualizácia Secure Gateway",
         "nvidia_driver_update_available": "Dostupná aktualizácia ovládača NVIDIA",
         "coral_driver_update_available": "Dostupná aktualizácia ovládača Coral TPU",
+        "oci_update_completed": "OCI aplikácia aktualizovaná",
+        "oci_update_failed": "Aktualizácia OCI aplikácie zlyhala",
+        "oci_recreate_completed": "OCI aplikácia znovu vytvorená",
+        "oci_recreate_failed": "Opätovné vytvorenie OCI aplikácie zlyhalo",
         "app_update_available": "K dispozícii je aktualizácia aplikácie"
       },
       "ui": {
@@ -6288,6 +6292,26 @@
           "title": "{hostname}: LXC {ct_name} ({vmid}) aktualizácia {result}",
           "body": "{details}",
           "label": "Aktualizácia LXC použitá"
+        },
+        "oci_update_completed": {
+          "title": "{hostname}: {app_name} aktualizovaná",
+          "body": "Aplikácia {app_name} bola aktualizovaná na nový obraz a jej dáta zostali zachované.\nKontajnery: {containers}",
+          "label": "OCI aplikácia aktualizovaná"
+        },
+        "oci_update_failed": {
+          "title": "{hostname}: aktualizácia {app_name} sa nedokončila",
+          "body": "Aktualizácia aplikácie {app_name} sa nedokončila.\nDôvod: {reason}\nKontajnery: {containers}\nOtvorte Spravovať nainštalované OCI aplikácie a skontrolujte jej stav.",
+          "label": "Aktualizácia OCI aplikácie zlyhala"
+        },
+        "oci_recreate_completed": {
+          "title": "{hostname}: {app_name} znovu vytvorená",
+          "body": "Aplikácia {app_name} bola znovu vytvorená s novými možnosťami a jej dáta zostali zachované.\nKontajnery: {containers}",
+          "label": "OCI aplikácia znovu vytvorená"
+        },
+        "oci_recreate_failed": {
+          "title": "{hostname}: opätovné vytvorenie {app_name} sa nedokončilo",
+          "body": "Opätovné vytvorenie aplikácie {app_name} sa nedokončilo.\nDôvod: {reason}\nKontajnery: {containers}\nOtvorte Spravovať nainštalované OCI aplikácie a skontrolujte jej stav.",
+          "label": "Opätovné vytvorenie OCI aplikácie zlyhalo"
         },
         "app_update_available": {
           "title": "{hostname}: Pre {app_name} je na CT {vmid} dostupná aktualizácia",
