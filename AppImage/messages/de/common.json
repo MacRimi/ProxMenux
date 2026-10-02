@@ -1681,7 +1681,9 @@
       "ociLabelPlaceholder": "org.opencontainers.image.version",
       "portCategoryPlaceholder": "Kategorie für das Apps-Dashboard (optional)",
       "portCategoryCustomPlaceholder": "Geben Sie eine Kategorie ein und drücken Sie Enter (Esc to cancel)",
-      "portCustomUrlPlaceholder": "Benutzerdefinierte URL (z. B. https://vault.example.com) überschreibt IP:port"
+      "portCustomUrlPlaceholder": "Benutzerdefinierte URL (z. B. https://vault.example.com) überschreibt IP:port",
+      "stackMemberTitle": "Teil einer Multi-Container-Anwendung",
+      "stackMemberBody": "Dieser Container unterstützt eine Anwendung, deren Hauptcontainer {primary} ist.Dort werden die Anwendung, ihre Weblinks und ihre Version angezeigt."
     },
     "statusFilter": {
       "ariaLabel": "Virtuelle Maschinen und Container filtern",

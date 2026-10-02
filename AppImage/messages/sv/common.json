@@ -1681,7 +1681,9 @@
       "ociLabelPlaceholder": "org.opencontainers.image.version",
       "portCategoryPlaceholder": "Kategori för Apps dashboard (tillval)",
       "portCategoryCustomPlaceholder": "Skriv en kategori och tryck på Enter (Esc för att avbryta)",
-      "portCustomUrlPlaceholder": "Anpassad URL (t.ex. https://vault.example.com) - åsidosätter IP:port"
+      "portCustomUrlPlaceholder": "Anpassad URL (t.ex. https://vault.example.com) - åsidosätter IP:port",
+      "stackMemberTitle": "En del av en multicontainerapplikation",
+      "stackMemberBody": "Den här behållaren stöder en applikation vars huvudbehållare är {primary}.Applikationen, dess webblänkar och dess version visas där."
     },
     "statusFilter": {
       "ariaLabel": "Filtrera virtuella maskiner och containrar",
