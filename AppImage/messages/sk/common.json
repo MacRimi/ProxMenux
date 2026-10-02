@@ -1704,7 +1704,7 @@
       "excludeFromBadgeHelp": "Nezapočítajte túto aplikáciu do odznaku súhrnných aktualizácií na karte zoznamu LXC.Užitočné, keď ste úmyselne pripnutý ku konkrétnej verzii (požiadavka na sledovanie, zmrazenie kompatibility).Nemá vplyv na vlastný stav karty Aplikácia ani na odchádzajúce upozornenie.",
       "ociLabelPlaceholder": "org.opencontainers.image.version",
       "stackMemberTitle": "Časť aplikácie s viacerými kontajnermi",
-      "stackMemberBody": "Tento kontajner podporuje aplikáciu, ktorej hlavný kontajner je {primary}.Zobrazuje sa tam aplikácia, jej webové odkazy a jej verzia."
+      "stackMemberBody": "Tento kontajner podporuje aplikáciu, ktorej hlavný kontajner je {primary}. Zobrazuje sa tam aplikácia, jej webové odkazy a jej verzia."
     }
   },
   "settings": {

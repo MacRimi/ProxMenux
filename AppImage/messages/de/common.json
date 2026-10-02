@@ -1683,7 +1683,7 @@
       "portCategoryCustomPlaceholder": "Geben Sie eine Kategorie ein und drücken Sie Enter (Esc to cancel)",
       "portCustomUrlPlaceholder": "Benutzerdefinierte URL (z. B. https://vault.example.com) überschreibt IP:port",
       "stackMemberTitle": "Teil einer Multi-Container-Anwendung",
-      "stackMemberBody": "Dieser Container unterstützt eine Anwendung, deren Hauptcontainer {primary} ist.Dort werden die Anwendung, ihre Weblinks und ihre Version angezeigt."
+      "stackMemberBody": "Dieser Container gehört zu einer Anwendung, deren Hauptcontainer {primary} ist. Die Anwendung, ihre Weblinks und ihre Version werden dort angezeigt."
     },
     "statusFilter": {
       "ariaLabel": "Virtuelle Maschinen und Container filtern",

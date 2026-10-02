@@ -1682,8 +1682,8 @@
       "portCategoryPlaceholder": "Categoria para o painel de aplicativos (opcional)",
       "portCategoryCustomPlaceholder": "Digite uma categoria e pressione Enter (Esc para cancelar)",
       "portCustomUrlPlaceholder": "URL personalizada (por exemplo, https://vault.example.com) — substitui IP:port",
-      "stackMemberTitle": "parte de um aplicativo multicontêiner",
-      "stackMemberBody": "Este contêiner oferece suporte a um aplicativo cujo contêiner principal é {primary}.O aplicativo, seus links da web e sua versão são mostrados lá."
+      "stackMemberTitle": "Parte de um aplicativo multicontêiner",
+      "stackMemberBody": "Este contêiner faz parte de um aplicativo cujo contêiner principal é {primary}. O aplicativo, seus links da web e sua versão são mostrados lá."
     },
     "statusFilter": {
       "ariaLabel": "Filtrar máquinas virtuais e contêineres",

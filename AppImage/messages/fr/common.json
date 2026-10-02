@@ -1682,8 +1682,8 @@
       "portCategoryPlaceholder": "Catégorie pour le tableau de bord Apps (facultatif)",
       "portCategoryCustomPlaceholder": "Tapez une catégorie et appuyez sur Entrée (Esc pour annuler)",
       "portCustomUrlPlaceholder": "URL personnalisée (par exemple https://vault.example.com) — remplace IP:port",
-      "stackMemberTitle": "partie d'une application multi-conteneurs",
-      "stackMemberBody": "Ce conteneur prend en charge une application dont le conteneur principal est {primary}.L'application, ses liens web et sa version y sont affichés."
+      "stackMemberTitle": "Fait partie d'une application multi-conteneurs",
+      "stackMemberBody": "Ce conteneur fait partie d'une application dont le conteneur principal est {primary}. L'application, ses liens web et sa version y sont affichés."
     },
     "statusFilter": {
       "ariaLabel": "Filtrer les machines virtuelles et les conteneurs",

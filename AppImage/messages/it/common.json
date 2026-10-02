@@ -1682,8 +1682,8 @@
       "portCategoryPlaceholder": "Categoria per il cruscotto App (opzionale)",
       "portCategoryCustomPlaceholder": "Digitare una categoria e premere Invio (Esc per annullare)",
       "portCustomUrlPlaceholder": "URL personalizzato (ad esempio https://vault.example.com) — overrides IP:port",
-      "stackMemberTitle": "parte di un'applicazione multi-contenitore",
-      "stackMemberBody": "questo contenitore supporta un'applicazione il cui contenitore principale è {primary}.Qui vengono mostrati l'applicazione, i suoi collegamenti web e la sua versione."
+      "stackMemberTitle": "Parte di un'applicazione multi-contenitore",
+      "stackMemberBody": "Questo contenitore fa parte di un'applicazione il cui contenitore principale è {primary}. L'applicazione, i suoi collegamenti web e la sua versione sono mostrati lì."
     },
     "statusFilter": {
       "ariaLabel": "Filtra macchine virtuali e container",
