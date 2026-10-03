@@ -2668,6 +2668,45 @@
     "os": "debian"
   },
   {
+    "name": "ByteChef",
+    "slug": "bytechef",
+    "desc": "ByteChef is an open-source API integration and workflow automation platform. Workflows are built in a visual editor from 170+ connectors, flow controls such as conditions, loops and branches, and JavaScript, Python or Ruby code steps, and run manually, on a schedule or from webhooks. This script builds the server and web client from source and runs them with PostgreSQL.",
+    "script": "ct/bytechef.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/bytechef.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/bytechef.sh",
+    "type": "lxc",
+    "type_id": "nm9bra8mzye2scg",
+    "categories": [
+      "scriptcat00019"
+    ],
+    "category_names": [
+      "Automation & Scheduling"
+    ],
+    "notes": [
+      "Webhook triggers and OAuth2 connection redirects are built from BYTECHEF_PUBLIC_URL in /opt/bytechef_data/.env, which points at the container IP. Change it when the IP changes or ByteChef sits behind a reverse proxy or domain, then run systemctl restart bytechef.",
+      "ByteChef is open-core. Like the official image, this build runs the Enterprise Edition (BYTECHEF_EDITION=EE, the default; CE mode does not start in 0.34.x): the modules under the ByteChef Enterprise License (embedded iPaaS, API platform, AI gateway, SSO and SCIM, custom components, audit log) are free for development and testing, production use of them needs a subscription.",
+      "Install and every update compile ByteChef from source (Gradle, around 650 modules, plus the React client), which takes about 15 minutes on 4 cores and needs the 6 GB of RAM. The running server is fine with 2 GB, so the RAM can be lowered after the install and raised again before an update.",
+      "Code steps (JavaScript, Python, Ruby) run on the Temurin JDK in GraalVM's interpreter mode, not with the GraalVM JIT of the official image, so they work but run slower."
+    ],
+    "warnings": [
+      "There is no default account. Open http://<IP>:8080/login and click Create account: the first sign-up becomes the administrator and closes sign-up, further users are invited from the settings. Anyone who reaches the port can claim it until then, so create the account right after the install.",
+      "Back up BYTECHEF_ENCRYPTION_PROPERTY_KEY from /opt/bytechef_data/.env together with the database. It encrypts the stored connection credentials, so a database restored without it is useless for them."
+    ],
+    "port": 8080,
+    "website": "https://www.bytechef.io/",
+    "documentation": "https://docs.bytechef.io/",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/bytechef.webp",
+    "updateable": true,
+    "privileged": false,
+    "has_arm": false,
+    "is_dev": true,
+    "execute_in": [
+      "lxc"
+    ],
+    "config_path": "",
+    "os": "debian"
+  },
+  {
     "name": "ByteStash",
     "slug": "bytestash",
     "desc": "ByteStash is a self-hosted web application designed to store, organise, and manage your code snippets efficiently. With support for creating, editing, and filtering snippets, ByteStash helps you keep track of your code in one secure place.",
