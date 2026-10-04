@@ -87,7 +87,7 @@
         ],
         "default": "managed-volume",
         "managed_volume": {
-          "backup": false,
+          "backup": true,
           "default_size_gb": 8
         }
       }
@@ -190,7 +190,7 @@
         "container_path": "/cache",
         "mode": "managed-volume",
         "user_selectable": false,
-        "backup": false,
+        "backup": true,
         "shared_with_other_lxc": false,
         "source_path": null,
         "source_path_prompt": null

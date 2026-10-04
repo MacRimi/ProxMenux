@@ -285,7 +285,8 @@ apply_host_monitor_firewall() {
 apply_host_monitor() {
   [[ -n ${HOST_MONITOR:-} ]] || return 0
   # PVE permits lxc.include but not namespace keys directly in the CT config.
-  # This static, cluster-persistent companion must accompany cross-host restores.
+  # This static, cluster-persistent companion is written again by the recovery
+  # of a container restored on another host.
   # /etc/pve/proxmenux is the same on every node of a cluster; /etc/pve/lxc
   # is the folder of this node only.
   local include=/etc/pve/proxmenux/host-monitor native
@@ -303,7 +304,7 @@ apply_host_monitor() {
   # Do not remove the Proxmox pre-start, autodev or post-stop hooks.
   set_lxc_directive lxc.hook.mount ""
   msg_ok "$(translate "Host monitor configured: shared PID and network namespaces, LXCFS disabled in this container")"
-  msg_info2 "$(translate "Every node of this cluster already has this file. If you restore this container on any other Proxmox host, copy it to the same path first, because the container backup does not include it:") $include"
+  msg_info2 "$(translate "Every node of this cluster already has this file. A backup of the container does not include it: on another Proxmox host it is written again when the application is recovered from Manage installed OCI applications:") $include"
 }
 
 verify_host_monitor() {

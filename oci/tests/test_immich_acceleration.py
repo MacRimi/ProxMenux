@@ -91,13 +91,56 @@ class ImmichAccelerationTests(unittest.TestCase):
             self.assertIn("No usable GPU", ui.messages[0])
             self.assertEqual(result, ("cpu", "cpu"), mode)
 
-    def test_an_amd_host_that_cannot_run_rocm_says_so_and_recognises_on_the_cpu(self, *_):
-        for blocker, text in (("kfd", "/dev/kfd"), ("space", "40 GB")):
-            with patch("proxmenux_oci.installer.host.rocm_blocker", return_value=blocker):
-                ui, result, _ = self.plan(AMD, DEFAULT_MODE, "amd")
+    def test_an_amd_host_that_cannot_run_rocm_offers_video_only_and_says_why(self, *_):
+        for blocker, text in (("kfd", "/dev/kfd"), ("space", "40 GB"), ("generation", "no support for the AMD GPU")):
+            with patch("proxmenux_oci.installer.host.rocm_blocker", return_value=blocker), \
+                    patch("proxmenux_oci.installer.host.amd_gpu_name", return_value="Lucienne (gfx90c)"):
+                ui, result, _ = self.plan(AMD, DEFAULT_MODE)
+            self.assertEqual(ui.options[PROMPT], ["cpu", "amd-video"], blocker)
+            self.assertEqual(ui.defaults[PROMPT], "amd-video", blocker)
             self.assertEqual(result, ("vaapi", "cpu"), blocker)
-            self.assertTrue(any(text in message and "Recognition runs on the CPU." in message
+            self.assertTrue(any(text in message and "Recognition is not offered" in message
                                 for message in ui.messages), blocker)
+
+    def test_a_gpu_rocm_supports_is_proposed_whole(self, *_):
+        for target in (100300, 110501, None):
+            ui, result, plan = self.plan(dict(AMD, amd_gfx_target=target), DEFAULT_MODE)
+            self.assertEqual(ui.defaults[PROMPT], "amd", target)
+            self.assertEqual(result, ("vaapi", "rocm"), target)
+            self.assertIsNone(plan["machine_learning"]["gfx_override"], target)
+
+    def test_a_gpu_rocm_does_not_support_officially_is_offered_as_experimental(self, *_):
+        gpus = dict(AMD, amd_gfx_target=100305)
+        with patch("proxmenux_oci.installer.host.amd_gpu_name", return_value="Radeon 680M (gfx1035)"):
+            # Never the proposal: left alone, recognition stays on the CPU.
+            ui, result, _ = self.plan(gpus, DEFAULT_MODE)
+            self.assertEqual(ui.options[PROMPT], ["cpu", "amd", "amd-video", "amd-ml"])
+            self.assertEqual(ui.defaults[PROMPT], "amd-video")
+            self.assertEqual(result, ("vaapi", "cpu"))
+            # Chosen and confirmed, it is installed with the generation of its family.
+            ui = OptionsUI({PROMPT: "amd"})
+            ui.confirm = lambda text, default=False: True if "ROCm does not support this GPU" in text else default
+            with patch("proxmenux_oci.installer.host.gpus", return_value=gpus):
+                plan = build_deployment(self.template, ui, DEFAULT_MODE)
+            self.assertEqual(plan["machine_learning"]["acceleration"], "rocm")
+            self.assertEqual(plan["machine_learning"]["gfx_override"], "10.3.0")
+            # Declined, the menu is asked again.
+            answers = iter(["amd", "amd-video"])
+            ui = OptionsUI()
+            ui.choose = lambda text, options, default=None: next(answers) if text == PROMPT else default
+            with patch("proxmenux_oci.installer.host.gpus", return_value=gpus):
+                plan = build_deployment(self.template, ui, DEFAULT_MODE)
+            self.assertEqual(plan["machine_learning"]["acceleration"], "cpu")
+            self.assertEqual(plan["video_transcoding"]["acceleration"], "vaapi")
+
+    def test_the_780m_family_is_presented_as_its_generation(self, *_):
+        gpus = dict(AMD, amd_gfx_target=110003)
+        ui = OptionsUI({PROMPT: "amd-ml"})
+        ui.confirm = lambda text, default=False: True if "ROCm does not support this GPU" in text else default
+        with patch("proxmenux_oci.installer.host.gpus", return_value=gpus), \
+                patch("proxmenux_oci.installer.host.amd_gpu_name", return_value="Radeon 780M (gfx1103)"):
+            plan = build_deployment(self.template, ui, DEFAULT_MODE)
+        self.assertEqual(plan["machine_learning"]["gfx_override"], "11.0.0")
 
     def test_machine_learning_gets_four_cores_and_at_least_four_gigabytes(self, *_):
         _, _, plan = self.plan(BOTH, DEFAULT_MODE, "cpu")

@@ -764,9 +764,11 @@ def restore_description(vmid, state):
     run('pct', 'set', str(vmid), '--description', original_description(state))
 
 
-def release_stage(state):
+def release_stage(state, discard=False):
     """After a commit the holder CT only keeps its own rootfs: every parked
-    volume went back to the application. Anything still attached keeps it."""
+    volume went back to the application. After a verified recovery it holds
+    the disks of the failed attempt, which the restored backup replaced:
+    `discard` removes them with it. Otherwise anything still attached keeps it."""
     stage = state.get('stage')
     if not stage:
         return
@@ -774,9 +776,21 @@ def release_stage(state):
         config = owned(stage, 'proxmenux-transaction=' + state['id'])
     except (ValueError, RuntimeError, subprocess.CalledProcessError):
         return
-    if mounts(config) or any(re.fullmatch(r'unused[0-9]+', key) for key in parse_config(config)):
+    held = mounts(config) or any(re.fullmatch(r'unused[0-9]+', key) for key in parse_config(config))
+    if held and not discard:
         return
+    if discard:
+        stop(stage)
     run('pct', 'destroy', str(stage))
+
+
+def discard_stage(state):
+    """Remove the holder CT of an operation that ended in a verified recovery.
+    A failure here leaves it in place and does not undo the recovery."""
+    try:
+        release_stage(state, discard=True)
+    except (OSError, ValueError, RuntimeError, subprocess.SubprocessError) as error:
+        log(f'cleanup: {error}')
 
 
 def gib(size):
@@ -1124,7 +1138,9 @@ def complete_recovery(root, journal, state):
     instances.write(instances.location(root, vmid), restored)
     checkpoint(journal, state, 'rolled-back')
     if show:
-        msg_ok(translate('Recovery completed. The displaced disks and the backup are kept; nothing was deleted automatically.'))
+        # A member of a stack is released when the whole stack is back.
+        discard_stage(state)
+        msg_ok(translate('Recovery completed. The disks of the failed attempt were removed; the backup is kept.'))
         if state.get('original_host_sources') or state.get('desired_host_sources'):
             msg_info2(translate('Shared host files are kept as they are; the backup does not restore their content.'))
 

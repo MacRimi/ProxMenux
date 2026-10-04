@@ -366,7 +366,7 @@
         "container_path": "/cache",
         "mode": "managed-volume",
         "user_selectable": false,
-        "backup": false,
+        "backup": true,
         "shared_with_other_lxc": false,
         "source_path": null,
         "source_path_prompt": null
@@ -638,8 +638,8 @@
             {
               "pci_id": "1002:164c",
               "gpu": "AMD Lucienne integrated graphics",
-              "reason": "Real buffalo_l inference caused SDMA/compute timeouts and repeated host GPU resets.",
-              "tested_on": "2026-08-26"
+              "reason": "The ROCm image carries no kernels for gfx90c: every inference aborts in rocBLAS. The installer reads the generation from the compute driver and keeps recognition on the CPU.",
+              "tested_on": "2026-10-03"
             }
           ]
         },
@@ -1208,8 +1208,8 @@
               {
                 "pci_id": "1002:164c",
                 "gpu": "AMD Lucienne integrated graphics",
-                "reason": "Real buffalo_l inference caused SDMA/compute timeouts and repeated host GPU resets.",
-                "tested_on": "2026-08-26"
+                "reason": "The ROCm image carries no kernels for gfx90c: every inference aborts in rocBLAS. The installer reads the generation from the compute driver and keeps recognition on the CPU.",
+                "tested_on": "2026-10-03"
               }
             ],
             "warning": "Do not enable automatically on unsupported AMD integrated GPUs. HSA overrides are manual compatibility experiments, not a validated default."

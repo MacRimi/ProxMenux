@@ -377,6 +377,8 @@ class NativeAdapter:
                         member_tx.run('pct', 'exec', str(vmid), '--', 'python', '-c',
                             'import onnxruntime as ort; '
                             'assert "MIGraphXExecutionProvider" in ort.get_available_providers()')
+                        import oci_rocm_check
+                        oci_rocm_check.check(vmid)
                     if acceleration in ('openvino', 'cuda'):
                         member_tx.run('pct', 'exec', str(vmid), '--', 'python', '-c',
                             'import sys,ctypes,onnxruntime as ort; p=sys.argv[1]; '
@@ -561,7 +563,7 @@ class NativeAdapter:
             record.pop('pending_stack_transaction', None)
             instances.write(instances.location(self.root, vmid), record)
         try:
-            self.release_stages()
+            self.release_stages(recovered=state['phase'] == 'rolled-back')
             if self.keep_backup and state['phase'] == 'committed':
                 import oci_keep_backup
                 for backup in sorted(self.journal.parent.glob('backup-*/vzdump-lxc-*.tar.zst')):
@@ -574,18 +576,25 @@ class NativeAdapter:
         except (OSError, ValueError) as exc:
             member_tx.log(f'cleanup: {exc}')
 
-    def release_stages(self):
-        """The temporary containers that held the data of each member; one
-        that still has a disk attached is kept."""
+    def release_stages(self, recovered=False):
+        """The temporary containers that held the data of each member. When
+        the whole stack was recovered they are removed with the disks of the
+        failed attempt; otherwise one that still has a disk attached is kept."""
+        journals = [(path, True) for path in self.journal.parent.glob('recovery-*/transaction.json')]
         for vmid in self.records:
             folder = instances.location(self.root, vmid).parent / 'transactions'
-            for member_journal in folder.glob('*/transaction.json'):
-                try:
-                    state = json.loads(member_journal.read_text())
-                except (OSError, ValueError):
-                    continue
-                if (state.get('coordinated') or {}).get('journal') == str(self.journal):
-                    member_tx.release_stage(state)
+            journals += [(path, False) for path in folder.glob('*/transaction.json')]
+        for member_journal, own in journals:
+            try:
+                state = json.loads(member_journal.read_text())
+            except (OSError, ValueError):
+                continue
+            if not own and (state.get('coordinated') or {}).get('journal') != str(self.journal):
+                continue
+            if recovered and state.get('phase') == 'rolled-back':
+                member_tx.discard_stage(state)
+            else:
+                member_tx.release_stage(state)
 
     def prune_backups(self, include_current):
         """The backups of closed operations are removed, those of this one

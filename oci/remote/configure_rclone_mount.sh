@@ -176,6 +176,12 @@ oci_quiet pct unmount "$VMID"
 sed -i -E '/^lxc\.environment\.runtime: RCLONE_RC_(USER|PASS)=/d' "/etc/pve/lxc/${VMID}.conf"
 oci_quiet pct set "$VMID" --entrypoint /usr/local/bin/rclone-mount-lxc-start
 sed -i -E '/^hookscript:/d' "/etc/pve/lxc/${VMID}.conf"
+# A new Proxmox installation accepts no snippets on `local`.
+if ! pvesm status --content snippets 2>/dev/null | awk 'NR > 1 && $1 == "local" {found=1} END {exit !found}'; then
+  LOCAL_CONTENT=$(pvesh get /storage/local --output-format json 2>/dev/null | jq -r '.content // empty')
+  [[ -n $LOCAL_CONTENT ]] || die "$(translate "The local storage does not accept snippets")"
+  oci_quiet pvesm set local --content "${LOCAL_CONTENT},snippets"
+fi
 oci_quiet pct set "$VMID" --hookscript "local:snippets/$(basename "$HOOK_PATH")"
 msg_ok "$(translate "Mount mode applied")"
 

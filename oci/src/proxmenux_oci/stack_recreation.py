@@ -144,7 +144,78 @@ def summary(member, changes):
     return '\n'.join(lines)
 
 
+def immich_learning(primary):
+    """The machine learning container of an Immich, or None for any other application."""
+    for member in primary.get('stack', {}).get('members', []):
+        if member.get('deployment', {}).get('replay_profile') == {'adapter': 'install_immich_stack.sh',
+                                                                  'role': 'machine-learning'}:
+            return member
+    return None
+
+
+def recognition_choices(storage):
+    """What can run the recognition of Immich on this host, each with the
+    devices it needs."""
+    from . import host
+    found = host.gpus()
+    choices = [('cpu', translate('CPU'), {})]
+    if found['intel']:
+        choices.append(('openvino', 'Intel GPU', {'render': found['intel'][0]}))
+    if found['nvidia']:
+        choices.append(('cuda', 'NVIDIA GPU', {}))
+    if found['amd'] and not host.rocm_blocker(storage):
+        experimental = host.rocm_support(found.get('amd_gfx_target')) == 'experimental'
+        label = 'AMD GPU' + (f" — {translate('experimental on this GPU')}" if experimental else '')
+        choices.append(('rocm', label, {'render': found['amd'][0], 'experimental': experimental,
+                                        'override': host.rocm_override(found.get('amd_gfx_target'))}))
+    return choices
+
+
+def change_recognition(project, ui, primary, member, run_lifecycle):
+    """Move the recognition of Immich between the CPU and a GPU of the host."""
+    from .installer import confirm_experimental_rocm
+    current = (member.get('deployment', {}).get('machine_learning') or {}).get('acceleration', 'cpu')
+    storage = _config(member['vmid']).get('rootfs', 'local-lvm:').split(':', 1)[0]
+    choices = recognition_choices(storage)
+    if [tag for tag, _, _ in choices] == ['cpu'] and current == 'cpu':
+        ui.message(translate('No usable GPU was found on this host. Recognition stays on the CPU.'),
+                   translate('Recreate OCI'))
+        return False
+    selected = ui.choose(translate('What runs the recognition of Immich'),
+                         [(tag, label) for tag, label, _ in choices], current)
+    if selected is None or selected == current:
+        ui.message(translate('Nothing was changed.'), translate('Recreate OCI'))
+        return False
+    details = next(extra for tag, _, extra in choices if tag == selected)
+    if details.get('experimental') and not confirm_experimental_rocm(ui):
+        return False
+    labels = {tag: label for tag, label, _ in choices}
+    text = (f"{translate('Recognition')}: {labels.get(current, current)} → {labels[selected]}\n\n"
+            + translate('The machine learning container is rebuilt with the image of the new choice. Its model '
+                        'cache, the library and the database are kept. The whole application is stopped and '
+                        'updated, as in an update; if anything fails, the previous containers and the previous '
+                        'choice are restored.'))
+    if not ui.review(text, translate('Recreate OCI'), question=translate('Change the recognition now?'), default=True):
+        return False
+    command = [sys.executable, str(project / 'remote/oci_immich_recognition.py'), str(primary['vmid']),
+               '--acceleration', selected]
+    if details.get('render'):
+        command += ['--render-device', details['render']]
+    if details.get('override'):
+        command += ['--gfx-override', details['override']]
+    return run_lifecycle(command, translate('Recreate OCI'))
+
+
 def recreate_stack(project, ui, primary, run_lifecycle):
+    learning = immich_learning(primary)
+    if learning is not None:
+        what = ui.choose(translate('What to recreate'),
+                         [('paths', translate('Add or remove extra paths and devices')),
+                          ('recognition', translate('Change what runs recognition: CPU or GPU'))], 'paths')
+        if what is None:
+            return False
+        if what == 'recognition':
+            return change_recognition(project, ui, primary, learning, run_lifecycle)
     members = application_members(primary)
     if not members:
         ui.message(translate('This stack has no saved members to update.'), translate('OCI stack management'))

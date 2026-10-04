@@ -117,7 +117,7 @@
         ],
         "default": "host-bind",
         "managed_volume": {
-          "backup": false,
+          "backup": true,
           "default_size_gb": 100
         }
       }
@@ -887,6 +887,7 @@
           {
             "id": "rocm",
             "label": "AMD (VA-API and ROCm detection)",
+            "amd_gfx_targets": [100300, 110000, 110001, 110002, 110500, 110501, 120000, 120001],
             "architectures": [
               "amd64"
             ],

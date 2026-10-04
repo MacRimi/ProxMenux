@@ -171,7 +171,7 @@
     {
       "id": "manage",
       "title": "Gestión de una pila instalada",
-      "intro": "En <strong>Gestionar aplicaciones OCI instaladas</strong>, cualquier miembro lleva a la pila completa. El menú de una pila ofrece <strong>Actualizar cada contenedor de la aplicación</strong> y <strong>Eliminar: la aplicación y sus contenedores</strong>.",
+      "intro": "En <strong>Gestionar aplicaciones OCI instaladas</strong>, cualquier miembro lleva a la pila completa. El menú de una pila ofrece <strong>Actualizar cada contenedor de la aplicación</strong>, <strong>Recrear: añadir o eliminar rutas y dispositivos extra</strong> y <strong>Eliminar: la aplicación y sus contenedores</strong>.",
       "blocks": [
         {
           "steps": {
@@ -182,6 +182,15 @@
               { "title": "Detener y respaldar el conjunto", "body": "Los backups nativos verificados se toman con la pila detenida, de modo que aplicación y bases de datos corresponden al mismo momento." },
               { "title": "Actualizar y comprobar cada miembro", "body": "Adaptación, red, montajes, secretos y dispositivos se aplican de nuevo antes de la comprobación de salud de cada miembro." },
               { "title": "Publicar o recuperar todo", "body": "Los contratos nuevos solo se publican cuando todos los miembros pasan. Si uno falla, se restauran todos." }
+            ]
+          }
+        },
+        {
+          "table": {
+            "headers": ["Recrear", "Qué cambia", "Qué se conserva"],
+            "rows": [
+              ["Rutas y dispositivos extra", "Se añaden al contenedor de la aplicación o se eliminan de él, y el contenedor se reinicia. No se reconstruye nada", "Los datos de la aplicación, su base de datos y los demás contenedores"],
+              ["Qué ejecuta el reconocimiento (Immich)", "El contenedor Machine learning toma la imagen y los dispositivos de la CPU o de una GPU del host. Toda la aplicación se detiene y se actualiza, como en una actualización", "La caché de modelos, la biblioteca y la base de datos. Si algo falla, se restauran los contenedores y la opción anteriores"]
             ]
           }
         },

@@ -114,9 +114,41 @@ configure_immich_ml_gpu() {
   esac
 }
 
+# The generation of the AMD GPU as the compute driver names it, e.g. gfx1030.
+amd_gfx_arch() {
+  local target
+  target=$(awk '$1 == "gfx_target_version" && $2 > 0 {print $2}' \
+    /sys/class/kfd/kfd/topology/nodes/*/properties 2>/dev/null | sort -n | tail -1)
+  [[ -n $target ]] || return 1
+  printf 'gfx%d%d%x' $((target / 10000)) $((target / 100 % 100)) $((target % 100))
+}
+
 validate_immich_ml_runtime() {
   [[ $ML_ACCELERATION != cpu ]] || return 0
   msg_info "$(translate "Checking the GPU of the machine learning container...")"
+  if [[ $ML_ACCELERATION == rocm ]]; then
+    # The provider being present says nothing about this GPU: the image
+    # carries kernels for some generations, and on any other every inference
+    # aborts.
+    local arch
+    if [[ -n ${ML_GFX_OVERRIDE:-} ]]; then
+      # ROCm is told to treat this GPU as the generation of its family.
+      arch="gfx${ML_GFX_OVERRIDE//./}"
+    else
+      arch=$(amd_gfx_arch) || arch=""
+    fi
+    if [[ -n $arch ]]; then
+      # Listed first: a match ends grep early, and with pipefail the listing
+      # it cut short would read as a failure.
+      local kernels
+      kernels=$(pct exec "$ML_ID" -- sh -c 'ls /opt/rocm/lib/rocblas/library 2>/dev/null' || true)
+      grep -Eq "[_-]${arch}\\.(dat|co|hsaco)" <<<"$kernels" || {
+          oci_log "The ROCm image has no kernels for $arch"
+          msg_warn "$(translate "The ROCm image has no support for the AMD GPU of this host:") $arch"
+          return 1
+        }
+    fi
+  fi
   oci_quiet pct exec "$ML_ID" -- python -c '
 import ctypes
 import sys
@@ -135,5 +167,12 @@ else:
     assert driver.cuInit(0) == 0, "CUDA driver initialization failed"
 print("Immich ML GPU runtime:", profile, "available; model inference is tested separately")
 ' "$ML_ACCELERATION" || return
+  if [[ $ML_ACCELERATION == rocm ]]; then
+    # One real inference on the GPU: the provider alone does not prove it.
+    python3 "${SCRIPT_DIR}/oci_rocm_check.py" "$ML_ID" >>"${OCI_LOG:-/dev/null}" 2>&1 || {
+      msg_warn "$(translate "The AMD GPU did not complete a test inference with ROCm")"
+      return 1
+    }
+  fi
   msg_ok "$(translate "GPU available for machine learning:") $ML_ACCELERATION"
 }

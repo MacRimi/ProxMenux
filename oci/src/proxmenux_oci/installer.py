@@ -805,20 +805,45 @@ def _ask_immich_acceleration(ui, rootfs_storage: str | None = None) -> tuple[str
     if not vendors:
         real.message(translate("No usable GPU was found on this host. Immich will be installed on the CPU."))
         return software
+    # Recognition on an AMD GPU depends on ROCm: it is offered when the host
+    # can run it, marked as experimental on a GPU ROCm does not support
+    # officially, and left out, with the reason, when it cannot.
+    amd_blocker = host.rocm_blocker(rootfs_storage) if found["amd"] else None
+    amd_experimental = (found["amd"] and not amd_blocker
+                        and host.rocm_support(found.get("amd_gfx_target")) == "experimental")
+    if amd_blocker:
+        reason = (translate("The AMD driver does not offer its compute interface (/dev/kfd) on this host.")
+                  if amd_blocker == "kfd" else
+                  f"{translate('The ROCm image has no support for the AMD GPU of this host:')} {host.amd_gpu_name()}."
+                  if amd_blocker == "generation" else
+                  translate("The storage has less than 40 GB free for the ROCm image."))
+        real.message(f"{reason}\n\n{translate('Recognition is not offered on the AMD GPU; video transcoding is.')}")
+    mark = f" — {translate('experimental on this GPU')}" if amd_experimental else ""
     options = [("cpu", translate("No acceleration (CPU)"))]
     for vendor in vendors:
-        options += [(vendor, f"{names[vendor]}: {translate('video + recognition')}"),
-                    (f"{vendor}-video", f"{names[vendor]}: {translate('video only')}"),
-                    (f"{vendor}-ml", f"{names[vendor]}: {translate('recognition only')}")]
+        recognition = vendor != "amd" or not amd_blocker
+        suffix = mark if vendor == "amd" else ""
+        if recognition:
+            options.append((vendor, f"{names[vendor]}: {translate('video + recognition')}{suffix}"))
+        options.append((f"{vendor}-video", f"{names[vendor]}: {translate('video only')}"))
+        if recognition:
+            options.append((f"{vendor}-ml", f"{names[vendor]}: {translate('recognition only')}{suffix}"))
     if found["nvidia"]:
         options += [(f"{vendor}+nvidia", f"{names[vendor]}: {translate('video')} · NVIDIA: {translate('recognition')}")
                     for vendor in ("intel", "amd") if found[vendor]]
-    # The GPU matters for Immich, so the first one is proposed whole.
-    selected = real.choose(translate("Hardware acceleration for Immich"), options, vendors[0])
-    if selected is None:
-        raise UserCancelled(translate("Immich configuration cancelled"))
-    if selected == "cpu":
-        return software
+    # The GPU matters for Immich, so the first one is proposed whole; what is
+    # experimental or missing is never the proposal.
+    proposed = vendors[0]
+    if proposed == "amd" and (amd_blocker or amd_experimental):
+        proposed = "amd-video"
+    while True:
+        selected = real.choose(translate("Hardware acceleration for Immich"), options, proposed)
+        if selected is None:
+            raise UserCancelled(translate("Immich configuration cancelled"))
+        if selected == "cpu":
+            return software
+        if not (amd_experimental and selected in ("amd", "amd-ml")) or confirm_experimental_rocm(real):
+            break
     if "+" in selected:
         video_vendor, ml_vendor = selected.split("+", 1)
     else:
@@ -848,20 +873,10 @@ def _ask_immich_acceleration(ui, rootfs_storage: str | None = None) -> tuple[str
     elif ml_vendor == "intel":
         ml_acceleration, ml_render = "openvino", render_device or found["intel"][0]
     elif ml_vendor == "amd":
-        # ROCm is checked before it is promised; when the host cannot run it,
-        # recognition stays on the CPU.
-        blocker = host.rocm_blocker(rootfs_storage)
-        if blocker:
-            reason = (translate("The AMD driver does not offer its compute interface (/dev/kfd) on this host.")
-                      if blocker == "kfd" else
-                      translate("The storage has less than 40 GB free for the ROCm image."))
-            real.message(f"{reason}\n\n{translate('Recognition runs on the CPU.')}")
-        else:
-            ml_acceleration, ml_render = "rocm", render_device or found["amd"][0]
-    if ml_acceleration == "rocm":
+        ml_acceleration, ml_render = "rocm", render_device or found["amd"][0]
+    if ml_acceleration == "rocm" and not amd_experimental:
         real.message(translate("Recognition on AMD uses ROCm. Its image is several times larger than the others, "
-                               "so the first installation takes longer, and whether a GPU works with it depends "
-                               "on its model."))
+                               "so the first installation takes longer."))
     if ml_acceleration != "cpu":
         ui.message(translate("GPU recognition uses 8 GB of RAM and a limit of 4 CPU equivalents. These resources "
                              "were tested in the lab and are not a universal minimum. Compatibility depends on the "
@@ -962,6 +977,10 @@ def _build_immich_deployment(
             "driver": vaapi_driver,
         },
         "machine_learning": {"acceleration": ml_acceleration, "render_device": ml_render,
+                             # The generation ROCm is told to use on a GPU of a
+                             # family its image supports, such as the 680M.
+                             "gfx_override": (host.rocm_override(host.gpus().get("amd_gfx_target"))
+                                              if ml_acceleration == "rocm" else None),
                              "model_cache_size_gb": 8,
                              "resources": {"cores": 4,
                                            "memory_mb": 4096 if ml_acceleration == "cpu" else 8192,
@@ -1428,7 +1447,7 @@ def _run_remote_install(
             shutil.copy2(project_root / 'remote' / 'haos_healthcheck.py', temporary / 'haos_healthcheck.py')
             shutil.copy2(project_root / 'remote' / 'oci_installation_state.py', temporary / 'oci_installation_state.py')
             shutil.copy2(project_root / 'remote' / 'oci_instances.py', temporary / 'oci_instances.py')
-            for helper in ('oci_ui.sh', 'oci_ui.py', 'oci_description.py', 'oci_console.py', 'oci_native_stack.py', 'oci_native_stack.sh', 'oci_instance_transaction.py', 'oci_host_mounts.py', 'oci_runtime_settings.py', 'oci_gpu_devices.py', 'oci_accelerators.py', 'oci_nvidia_runtime.py', 'oci_nvidia_refresh.py', 'oci_nvidia_dynamic.py', 'oci_update_current.py', 'oci_stack_replay.py', 'oci_stack_plan.py', 'oci_stack_transaction.py', 'oci_stack_native.py', 'oci_image_cache.py', 'nvidia_lxc_mount_lab.sh', 'oci_nvidia_setup.sh', 'oci_immich_ml.sh'):
+            for helper in ('oci_ui.sh', 'oci_ui.py', 'oci_description.py', 'oci_console.py', 'oci_native_stack.py', 'oci_native_stack.sh', 'oci_instance_transaction.py', 'oci_host_mounts.py', 'oci_runtime_settings.py', 'oci_gpu_devices.py', 'oci_accelerators.py', 'oci_nvidia_runtime.py', 'oci_nvidia_refresh.py', 'oci_nvidia_dynamic.py', 'oci_update_current.py', 'oci_stack_replay.py', 'oci_stack_plan.py', 'oci_stack_transaction.py', 'oci_stack_native.py', 'oci_image_cache.py', 'nvidia_lxc_mount_lab.sh', 'oci_nvidia_setup.sh', 'oci_immich_ml.sh', 'oci_rocm_check.py'):
                 shutil.copy2(project_root / 'remote' / helper, temporary / helper)
             if deployment_kind == 'generic-multi-lxc-stack':
                 shutil.copy2(project_root / 'remote' / 'install_generic_stack.py', temporary / 'install_generic_stack.py')
@@ -1465,7 +1484,7 @@ def _run_remote_install(
             archive.add(project_root / 'remote' / 'haos_healthcheck.py', arcname='haos_healthcheck.py')
             archive.add(project_root / 'remote' / 'oci_installation_state.py', arcname='oci_installation_state.py')
             archive.add(project_root / 'remote' / 'oci_instances.py', arcname='oci_instances.py')
-            for helper in ('oci_ui.sh', 'oci_ui.py', 'oci_description.py', 'oci_console.py', 'oci_native_stack.py', 'oci_native_stack.sh', 'oci_instance_transaction.py', 'oci_host_mounts.py', 'oci_runtime_settings.py', 'oci_gpu_devices.py', 'oci_accelerators.py', 'oci_nvidia_runtime.py', 'oci_nvidia_refresh.py', 'oci_nvidia_dynamic.py', 'oci_update_current.py', 'oci_stack_replay.py', 'oci_stack_plan.py', 'oci_stack_transaction.py', 'oci_stack_native.py', 'oci_image_cache.py', 'nvidia_lxc_mount_lab.sh', 'oci_nvidia_setup.sh', 'oci_immich_ml.sh'):
+            for helper in ('oci_ui.sh', 'oci_ui.py', 'oci_description.py', 'oci_console.py', 'oci_native_stack.py', 'oci_native_stack.sh', 'oci_instance_transaction.py', 'oci_host_mounts.py', 'oci_runtime_settings.py', 'oci_gpu_devices.py', 'oci_accelerators.py', 'oci_nvidia_runtime.py', 'oci_nvidia_refresh.py', 'oci_nvidia_dynamic.py', 'oci_update_current.py', 'oci_stack_replay.py', 'oci_stack_plan.py', 'oci_stack_transaction.py', 'oci_stack_native.py', 'oci_image_cache.py', 'nvidia_lxc_mount_lab.sh', 'oci_nvidia_setup.sh', 'oci_immich_ml.sh', 'oci_rocm_check.py'):
                 archive.add(project_root / 'remote' / helper, arcname=helper)
             if deployment_kind == 'generic-multi-lxc-stack':
                 archive.add(project_root / 'remote' / 'install_generic_stack.py', arcname='install_generic_stack.py')
@@ -1678,6 +1697,11 @@ def _profile_usable(profile: dict[str, Any], found: dict[str, Any]) -> bool:
     """Whether the host has what an acceleration profile needs: the NVIDIA
     runtime, a GPU of the vendor it is written for, or ROCm's compute device."""
     vendors = {"0x8086": "intel", "0x1002": "amd"}
+    # An image built for ROCm carries the kernels of some GPU generations
+    # only; on an older one its compute process aborts.
+    targets = profile.get("amd_gfx_targets")
+    if targets and host.rocm_support(found.get("amd_gfx_target"), tuple(targets)) is None:
+        return False
     for request in profile.get("device_requests", []):
         if request.get("kind") == "nvidia-runtime":
             if not found["nvidia"]:
@@ -1692,6 +1716,20 @@ def _profile_usable(profile: dict[str, Any], found: dict[str, Any]) -> bool:
             if not any(found[vendor] for vendor in wanted):
                 return False
     return True
+
+
+def confirm_experimental_rocm(ui) -> bool:
+    """What using ROCm means on a GPU it does not support officially, said
+    before the larger image is downloaded."""
+    return ui.confirm(
+        f"{host.amd_gpu_name()}\n\n"
+        + translate("ROCm does not support this GPU officially. The application can use it by presenting it as "
+                    "another generation of its family: it is faster than the CPU, but under load the GPU can stop "
+                    "responding, and then the application does not answer until its container is restarted. The "
+                    "ROCm image is also larger than the others.")
+        + "\n\n" + translate("If it does not work well, the acceleration can be changed back from Manage installed "
+                               "OCI applications, without reinstalling.")
+        + "\n\n" + translate("Use the GPU with ROCm anyway?"), False)
 
 
 def configure_acceleration(installer_profile, environment, unprivileged, ui, mode=ADVANCED_MODE):
@@ -1710,22 +1748,35 @@ def configure_acceleration(installer_profile, environment, unprivileged, ui, mod
         found = host.gpus()
         usable = [item for item in profiles
                   if item["id"] == default_profile or _profile_usable(item, found)]
+        experimental = {item["id"] for item in usable if item.get("amd_gfx_targets") and host.rocm_support(
+            found.get("amd_gfx_target"), tuple(item["amd_gfx_targets"])) == "experimental"}
         options = [(item["id"], item["label"]) for item in usable]
         asked = advanced or not installer_profile.get("selkies")
+        if asked and found["amd"] and any(item.get("amd_gfx_targets") and item not in usable and host.rocm_support(
+                found.get("amd_gfx_target"), tuple(item["amd_gfx_targets"])) is None for item in profiles):
+            # Its owner may expect the GPU to be offered: say why it is not.
+            ui.message(f"{translate('The ROCm image of this application has no support for the AMD GPU of this host:')} "
+                       f"{host.amd_gpu_name()}. {translate('Its ROCm profile is not offered.')}")
         if asked and len(usable) < len(profiles) and len(usable) == 1:
             # Nothing but the CPU is left: say why there is nothing to choose.
             ui.message(translate("No usable GPU was found on this host. The application will be installed "
                                  "without hardware acceleration."))
             asked = False
-        selected_hardware_profile = (
-            ui.choose(
-                translate(hardware.get("prompt", "Hardware acceleration")),
-                [(tag, translate(label)) for tag, label in options],
-                default_profile,
-            ) if asked else default_profile
-        )
-        if selected_hardware_profile is None:
-            raise UserCancelled(translate("Acceleration configuration cancelled"))
+        while True:
+            selected_hardware_profile = (
+                ui.choose(
+                    translate(hardware.get("prompt", "Hardware acceleration")),
+                    [(tag, translate(label) + (f" — {translate('experimental on this GPU')}" if tag in experimental else ""))
+                     for tag, label in options],
+                    default_profile,
+                ) if asked else default_profile
+            )
+            if selected_hardware_profile is None:
+                raise UserCancelled(translate("Acceleration configuration cancelled"))
+            # The profile an application already uses is not asked about again.
+            if (selected_hardware_profile not in experimental or not asked
+                    or selected_hardware_profile == default_profile or confirm_experimental_rocm(ui)):
+                break
         selected_profile = next(
             (item for item in profiles if item["id"] == selected_hardware_profile),
             None,
@@ -1736,7 +1787,11 @@ def configure_acceleration(installer_profile, environment, unprivileged, ui, mod
             {**item, "selected_by_hardware_profile": True}
             for item in selected_profile.get("device_requests", [])
         ]
-        for env_item in selected_profile.get("environment", []):
+        profile_environment = list(selected_profile.get("environment", []))
+        if selected_hardware_profile in experimental:
+            profile_environment.append({"name": "HSA_OVERRIDE_GFX_VERSION",
+                                        "value": host.rocm_override(found.get("amd_gfx_target"))})
+        for env_item in profile_environment:
             environment = [
                 entry for entry in environment if entry["name"] != env_item["name"]
             ]

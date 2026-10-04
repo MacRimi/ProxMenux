@@ -2,12 +2,14 @@
 """Instance recording adapter for the existing dedicated stack installers."""
 import argparse
 import copy
+import ipaddress
 import json
 import os
 from pathlib import Path
 import re
 import subprocess
 import sys
+import time
 
 import oci_console
 import oci_instances as instances
@@ -103,6 +105,40 @@ def capture_rootfs(root, vmid):
     instances.write(instances.location(root, vmid), record)
 
 
+PRIVATE_STACK_NETWORK = ipaddress.ip_network('10.77.0.0/16')
+
+
+def access_address(vmid, wait=20):
+    """The address a container is reached at from the local network. A member
+    of a multi-container application also has a leg on its private network,
+    and that address answers from the host only: it is used when the
+    container has no other."""
+    def addresses():
+        result = subprocess.run(['lxc-info', '-n', str(vmid), '-iH'], capture_output=True, text=True, timeout=5)
+        found = []
+        for line in result.stdout.splitlines():
+            try:
+                found.append(ipaddress.IPv4Address(line.strip()))
+            except ValueError:
+                continue
+        return found
+
+    def outside(found):
+        return next((str(address) for address in found if address not in PRIVATE_STACK_NETWORK), '')
+
+    found = addresses()
+    config = subprocess.run(['pct', 'config', str(vmid)], capture_output=True, text=True, timeout=30).stdout
+    legs = re.findall(r'^net[0-9]+: .*?(?:^|,)ip=([^,\s]+)', config, re.MULTILINE)
+    # A leg outside the private network may still be waiting for its lease.
+    expected = any(leg == 'dhcp' or (leg[:1].isdigit() and ipaddress.ip_interface(leg).ip not in PRIVATE_STACK_NETWORK)
+                   for leg in legs)
+    deadline = time.monotonic() + (wait if expected else 0)
+    while not outside(found) and time.monotonic() < deadline:
+        time.sleep(2)
+        found = addresses()
+    return outside(found) or (str(found[0]) if found else '')
+
+
 def finalize(root, primary):
     parent = instances.read(root, primary)
     intent = parent['native_stack_intent']
@@ -118,10 +154,7 @@ def finalize(root, primary):
             presentation['catalog_ui'] = {**stack_ui, **(presentation.get('catalog_ui') or {})}
             if not (presentation.get('first_run') or {}).get('endpoints'):
                 presentation['first_run'] = intent['template'].get('first_run') or {}
-        ip_result = subprocess.run(['lxc-info', '-n', str(vmid), '-iH'],
-                                   capture_output=True, text=True, timeout=5)
-        ip = next((line.strip() for line in ip_result.stdout.splitlines()
-                   if re.fullmatch(r'[0-9]+(?:\.[0-9]+){3}', line.strip())), '')
+        ip = access_address(vmid)
         description = render(presentation, plan['image']['manifest_digest'],
                              record['installation_id'], ip)
         subprocess.run(['pct', 'set', str(vmid), '--description', description], check=True)

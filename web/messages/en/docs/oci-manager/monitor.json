@@ -108,11 +108,15 @@
               ],
               [
                 "Recreate",
-                "The recreation editor (resources, network, paths and GPU). It is not offered for a multi-container application."
+                "The recreation editor (resources, network, paths and GPU). In a multi-container application it adds or removes the extra paths and devices of the application container and, in Immich, changes what runs recognition."
               ],
               [
                 "Recover",
                 "Replaces Update when an operation on the container was interrupted, and opens its recovery."
+              ],
+              [
+                "Recover (restored container)",
+                "Shown for a container restored from a backup that has no contract on this host, under <strong>Restored OCI application</strong>. Opens the <lifecycleLink>recovery</lifecycleLink> in the Monitor terminal; Update and Recreate appear once it is registered."
               ]
             ]
           }

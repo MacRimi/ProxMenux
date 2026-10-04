@@ -575,7 +575,6 @@ def _stack_storage(services: dict[str, Any], markers: dict[str, set[str]]) -> li
         r"^/(?:data|downloads?|media|movies?|music|photos?|pictures?|recordings?|tv|videos?)(?:/|$)|/(?:library|uploads?)(?:/|$)",
         re.I,
     )
-    disposable_targets = {"/cache", "/tmp", "/transcode"}
     system_targets = {"/etc/localtime", "/etc/timezone"}
     runtime_targets = {"/var/run/docker.sock", "/run/docker.sock"}
     for service_name, service in services.items():
@@ -609,7 +608,7 @@ def _stack_storage(services: dict[str, Any], markers: dict[str, set[str]]) -> li
                     "container_path": target,
                     "mode": mode,
                     "user_selectable": shareable,
-                    "backup": mode == "managed-volume" and target not in disposable_targets,
+                    "backup": mode == "managed-volume",
                     "shared_with_other_lxc": shareable,
                     "source_path": str(source) if system_bind else None,
                     "source_path_prompt": (

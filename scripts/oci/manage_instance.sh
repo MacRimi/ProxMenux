@@ -1,6 +1,6 @@
 #!/bin/bash
 # ==========================================================
-# ProxMenux - Update or recreate one OCI instance
+# ProxMenux - Update, recreate or recover OCI instances
 # ==========================================================
 # Author      : MacRimi
 # Copyright   : (c) 2024 MacRimi
@@ -13,8 +13,10 @@
 # OCI manager Apps -> Manage installed OCI applications for one
 # container, without the list:
 #
-#   VMID         - the container (required)
-#   ACTION       - "update" or "recreate" (required)
+#   VMID         - the container (required for update and recreate)
+#   ACTION       - "update", "recreate" or "recover" (required);
+#                  "recover" registers again the applications
+#                  restored from a backup
 #   KEEP_BACKUP  - storage where the backup taken before the
 #                  update is kept (optional)
 # ==========================================================
@@ -29,6 +31,9 @@ fi
 load_language
 initialize_cache
 
+if [[ ${ACTION:-} == "recover" ]]; then
+    exec bash "$LOCAL_SCRIPTS/oci/oci_manager_apps.sh" recover
+fi
 if [[ ! ${VMID:-} =~ ^[0-9]{1,9}$ ]]; then
     msg_error "$(translate "Invalid VMID")"
     exit 1

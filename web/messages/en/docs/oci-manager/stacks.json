@@ -295,7 +295,7 @@
     {
       "id": "manage",
       "title": "Managing an installed stack",
-      "intro": "In <strong>Manage installed OCI applications</strong>, any member leads to the whole stack. The menu of a stack offers <strong>Update every container of the application</strong> and <strong>Remove: delete the application and its containers</strong>.",
+      "intro": "In <strong>Manage installed OCI applications</strong>, any member leads to the whole stack. The menu of a stack offers <strong>Update every container of the application</strong>, <strong>Recreate: add or remove extra paths and devices</strong> and <strong>Remove: delete the application and its containers</strong>.",
       "blocks": [
         {
           "steps": {
@@ -324,6 +324,27 @@
                 "title": "Publish or recover everything",
                 "body": "The new contracts are published only when every member passes. If one fails, every member is restored."
               }
+            ]
+          }
+        },
+        {
+          "table": {
+            "headers": [
+              "Recreate",
+              "What changes",
+              "What is kept"
+            ],
+            "rows": [
+              [
+                "Extra paths and devices",
+                "They are added to or removed from the application container, which restarts. Nothing is rebuilt",
+                "The data of the application, its database and the other containers"
+              ],
+              [
+                "What runs recognition (Immich)",
+                "The machine learning container takes the image and the devices of the CPU or of a GPU of the host. The whole application is stopped and updated, as in an update",
+                "The model cache, the library and the database. If anything fails, the previous containers and the previous choice are restored"
+              ]
             ]
           }
         },

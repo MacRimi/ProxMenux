@@ -141,7 +141,7 @@ def gpus(root: Path = Path("/")) -> dict[str, Any]:
     """The GPUs an installation can use: the render nodes of each Intel and
     AMD GPU, and whether NVIDIA is usable on the host."""
     vendors = {"0x8086": "intel", "0x1002": "amd"}
-    found: dict[str, Any] = {"intel": [], "amd": [], "nvidia": False}
+    found: dict[str, Any] = {"intel": [], "amd": [], "nvidia": False, "amd_gfx_target": None}
     for node in sorted((root / "sys/class/drm").glob("renderD*")):
         vendor = vendors.get(_sysfs(node / "device/vendor").lower())
         if vendor:
@@ -153,14 +153,91 @@ def gpus(root: Path = Path("/")) -> dict[str, Any]:
                                              timeout=15, check=False).returncode == 0
         except (OSError, subprocess.TimeoutExpired):
             found["nvidia"] = False
+    found["amd_gfx_target"] = amd_gfx_target(root)
     return found
+
+
+def amd_gfx_target(root: Path = Path("/")) -> int | None:
+    """The generation of the AMD GPU as its compute driver reports it: 90012
+    for gfx90c (Vega integrated graphics), 100300 for gfx1030 (RDNA2). None
+    when the driver exposes no compute device."""
+    best = None
+    for path in sorted((root / "sys/class/kfd/kfd/topology/nodes").glob("*/properties")):
+        match = re.search(r"^gfx_target_version (\d+)$", _sysfs(path), re.MULTILINE)
+        if match and int(match[1]) > 0:
+            best = max(best or 0, int(match[1]))
+    return best
+
+
+# The GPU generations the ROCm images of the catalog carry kernels for: RDNA2
+# and newer, as gfx_target_version reports them, and the Instinct accelerators.
+# On any other one the compute process of the image aborts.
+ROCM_TARGETS = (100300, 110000, 110001, 110002, 110500, 110501, 120000, 120001)
+ROCM_ACCELERATOR_TARGETS = (90008, 90010, 90402, 90500)
+
+
+def gfx_name(target: int) -> str:
+    """The name ROCm gives a generation: 90012 is gfx90c, 100300 is gfx1030."""
+    return f"gfx{target // 10000}{target // 100 % 100}{target % 100:x}"
+
+
+def rocm_override(target: int | None) -> str | None:
+    """The generation to present to ROCm, as HSA_OVERRIDE_GFX_VERSION, on a
+    GPU its images carry no kernels for but whose family they do: the RDNA2
+    ones (the Radeon 680M among them) as gfx1030 and the RDNA3 ones (the
+    Radeon 780M) as gfx1100. None when the GPU needs none or has none."""
+    if target is None or target in ROCM_TARGETS + ROCM_ACCELERATOR_TARGETS:
+        return None
+    if 100300 < target < 100400:
+        return "10.3.0"
+    if 110000 < target < 110100:
+        return "11.0.0"
+    return None
+
+
+def rocm_support(target: int | None, targets=ROCM_TARGETS + ROCM_ACCELERATOR_TARGETS) -> str | None:
+    """How an image with kernels for `targets` runs on this GPU: "native",
+    "experimental" when the GPU has to be presented as the generation of its
+    family, which ROCm does not support officially and can stop responding
+    under load, or None when it does not run. A driver that does not say the
+    generation does not rule the GPU out."""
+    if target is None or target in targets:
+        return "native"
+    override = rocm_override(target)
+    if override is None:
+        return None
+    major, minor, stepping = (int(part) for part in override.split("."))
+    return "experimental" if major * 10000 + minor * 100 + stepping in targets else None
+
+
+def amd_gpu_name(root: Path = Path("/")) -> str:
+    """The AMD GPU of the host as its owner knows it, with the generation ROCm
+    sees: "Radeon 680M (gfx1035)"."""
+    target = amd_gfx_target(root)
+    generation = gfx_name(target) if target else ""
+    name = ""
+    try:
+        listed = subprocess.run(["lspci", "-nn"], capture_output=True, text=True, timeout=5, check=False).stdout
+    except (OSError, subprocess.TimeoutExpired):
+        listed = ""
+    for line in listed.splitlines():
+        described = re.search(r"\[AMD/ATI\]\s*(.*?)\s*\[1002:", line)
+        if described and re.search(r"VGA|Display|3D", line):
+            marketed = re.search(r"\[([^\]]+)\]", described[1])
+            name = marketed[1] if marketed else described[1]
+            break
+    name = name or "AMD GPU"
+    return f"{name} ({generation})" if generation else name
 
 
 def rocm_blocker(storage: str | None, needed_gb: int = 40) -> str | None:
     """Why this host cannot run recognition on an AMD GPU with ROCm, or None.
-    ROCm needs the compute interface of the driver and room for its image."""
+    ROCm needs the compute interface of the driver, a GPU of a generation its
+    image supports and room for that image."""
     if not Path("/dev/kfd").is_char_device():
         return "kfd"
+    if rocm_support(amd_gfx_target()) is None:
+        return "generation"
     row = next((item for item in storages("rootdir") if item.get("storage") == storage), None)
     if row is not None and gib(row.get("avail")) < needed_gb:
         return "space"

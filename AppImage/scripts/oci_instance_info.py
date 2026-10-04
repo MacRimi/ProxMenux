@@ -3,13 +3,16 @@
 Read-only view of the installation record OCI manager Apps keeps for every
 container it created: whether the container is one, whether it belongs to a
 multi-container application, whether it uses host directories (which its
-backup does not revert) and whether an operation is pending. Nothing here
+backup does not revert), whether an operation is pending and whether it was
+restored from a backup and is not registered on this host yet. Nothing here
 changes the record or runs inside the container.
 """
 from __future__ import annotations
 
 import json
 import os
+import re
+import socket
 
 import oci_console_logs
 
@@ -24,6 +27,30 @@ def _record(vmid: int) -> dict | None:
     except (OSError, ValueError):
         return None
     return record if isinstance(record, dict) else None
+
+
+def _installation(vmid: int) -> str | None:
+    """The installation the container says it belongs to: the mark OCI manager
+    Apps leaves in its notes, which a backup keeps."""
+    path = f"/etc/pve/nodes/{socket.gethostname().split('.', 1)[0]}/lxc/{int(vmid)}.conf"
+    try:
+        with open(path, encoding="utf-8", errors="ignore") as handle:
+            text = handle.read().split("\n[", 1)[0]
+    except OSError:
+        return None
+    match = re.search(r"^#.*proxmenux-instance=([0-9a-f-]{36})(?![0-9a-f-])", text, re.MULTILINE)
+    return match.group(1) if match else None
+
+
+def _unrecoverable(vmid: int, installation: str) -> bool:
+    """A restored container that carries no copy of its record: the menu
+    found nothing to recover it from and left it as an ordinary container."""
+    try:
+        with open(os.path.join(ROOT, ".unrecoverable.json"), encoding="utf-8") as handle:
+            value = json.load(handle)
+    except (OSError, ValueError):
+        return False
+    return isinstance(value, dict) and value.get(str(int(vmid))) == installation
 
 
 def _host_dirs(record: dict) -> bool:
@@ -42,8 +69,14 @@ def info(vmid: int) -> dict:
         "members": [],
         "host_directories": False,
         "pending": False,
+        "restored": False,
     }
     record = _record(vmid)
+    installation = _installation(vmid)
+    if installation and (record is None or record.get("installation_id") != installation):
+        # Restored from a backup: the record stayed on the host it came from.
+        result["restored"] = not _unrecoverable(vmid, installation)
+        return result
     if record is None:
         return result
     primary_id = int((record.get("stack_member") or {}).get("primary_vmid") or vmid)

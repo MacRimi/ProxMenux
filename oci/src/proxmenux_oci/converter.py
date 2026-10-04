@@ -233,7 +233,7 @@ def _mount_contract(value: Any, optional: set[str]) -> list[dict[str, Any]]:
                     else "skip"
                 ),
                 "managed_volume": {
-                    "backup": target not in {"/cache", "/tmp", "/transcode"},
+                    "backup": True,
                     "default_size_gb": 4 if target == "/config" else 8,
                 },
             }
