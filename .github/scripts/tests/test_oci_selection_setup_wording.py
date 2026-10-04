@@ -41,6 +41,8 @@ class SelectionSetupWording(TestCase):
         fn = extracted('_interactive_management', os=SimpleNamespace(geteuid=lambda: 0),
             shutil=SimpleNamespace(which=lambda _: '/fake/pct'), saved_inventory=lambda _: [],
             _clean_orphans=lambda project: None,
+            recover_automatically=lambda project: None, offer_recovery=lambda project, ui: None,
+            carry_records=lambda project, **options: {},
             translate=lambda s: s)
         fn(Path('/fixture'), ui)
         ui.message.assert_called_once_with(EMPTY, 'OCI management')
