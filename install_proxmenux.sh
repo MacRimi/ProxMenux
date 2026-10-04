@@ -360,6 +360,15 @@ discard_apt_error() {
     APT_ERROR_LOG=""
 }
 
+# A Proxmox host without a subscription is refused by the enterprise
+# repositories. Every other repository is refreshed, so that refresh is good.
+apt_only_enterprise_refused() {
+    [ -n "$APT_ERROR_LOG" ] && [ -f "$APT_ERROR_LOG" ] || return 1
+    local failures
+    failures=$(grep -E '^(E: |Err:|W: Failed to fetch)' "$APT_ERROR_LOG") || return 1
+    ! grep -qv 'enterprise\.proxmox\.com' <<<"$failures"
+}
+
 show_progress() {
     local step="$1"
     local total="$2"
@@ -707,6 +716,9 @@ install_normal_version() {
     msg_info "Refreshing apt cache..."
     if run_apt update -y; then
         msg_ok "apt cache refreshed."
+    elif apt_only_enterprise_refused; then
+        discard_apt_error
+        msg_ok "apt cache refreshed. The Proxmox enterprise repositories need a subscription and were skipped."
     else
         msg_warn "apt cache refresh failed; checking available packages."
         show_apt_error
