@@ -1674,6 +1674,7 @@
       "upstreamErrorTimeout": "Nätverkstimeout vid kontakt uppströms",
       "upstreamErrorNetwork": "Nätverksfel: {detail}",
       "upstreamErrorGithubRateLimit": "GitHubs förfrågningsgräns har nåtts. Konfigurera en valfri token under Inställningar → GitHub API eller försök igen senare.",
+      "upstreamErrorRegistry": "Avbildens register kunde inte nås. Det kontrolleras igen om några minuter.",
       "upstreamErrorGeneric": "Uppströmskontroll misslyckades: {detail}",
       "notificationsEnabled": "Uppströmsuppdateringsmeddelanden PÅ – klicka för att stänga av ljudet",
       "notificationsMuted": "Uppströmsuppdateringsmeddelanden AVSTÄLLD – klicka för att aktivera",

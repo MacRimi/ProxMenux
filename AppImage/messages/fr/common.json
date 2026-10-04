@@ -1674,6 +1674,7 @@
       "upstreamErrorTimeout": "expiration du délai d'attente du réseau lors du contact en amont",
       "upstreamErrorNetwork": "Erreur réseau : {detail}",
       "upstreamErrorGithubRateLimit": "La limite de requêtes GitHub a été atteinte. Configurez un jeton facultatif dans Paramètres → API GitHub ou réessayez plus tard.",
+      "upstreamErrorRegistry": "Le registre de l'image n'a pas pu être consulté. Une nouvelle vérification a lieu dans quelques minutes.",
       "upstreamErrorGeneric": "Échec de la vérification en amont : {detail}",
       "notificationsEnabled": "Notifications de mise à jour en amont activées – cliquez pour désactiver le son",
       "notificationsMuted": "Notifications de mise à jour en amont MUTED – cliquez pour activer",

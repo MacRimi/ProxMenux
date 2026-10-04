@@ -1674,6 +1674,7 @@
       "upstreamErrorTimeout": "Netzwerk-Timeout beim Kontaktieren des Upstreams",
       "upstreamErrorNetwork": "Netzwerkfehler: {detail}",
       "upstreamErrorGithubRateLimit": "Das GitHub-Anfragelimit wurde erreicht. Konfigurieren Sie unter Einstellungen → GitHub API ein optionales Token oder versuchen Sie es später erneut.",
+      "upstreamErrorRegistry": "Die Registry des Images war nicht erreichbar. In einigen Minuten wird erneut geprüft.",
       "upstreamErrorGeneric": "Upstream-Prüfung fehlgeschlagen: {detail}",
       "notificationsEnabled": "Upstream-Update-Benachrichtigungen EIN – zum Stummschalten klicken",
       "notificationsMuted": "Upstream-Update-Benachrichtigungen stummgeschaltet – zum Aktivieren klicken",

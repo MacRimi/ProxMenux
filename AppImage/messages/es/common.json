@@ -1574,6 +1574,7 @@
       "upstreamErrorTimeout": "Tiempo de espera agotado al contactar con el origen",
       "upstreamErrorNetwork": "Error de red: {detail}",
       "upstreamErrorGithubRateLimit": "Se ha alcanzado el límite de solicitudes de GitHub. Configure un token opcional en Ajustes → API de GitHub o vuelva a intentarlo más tarde.",
+      "upstreamErrorRegistry": "No se ha podido consultar el registro de la imagen. Se vuelve a comprobar en unos minutos.",
       "upstreamErrorGeneric": "Fallo al comprobar el origen: {detail}",
       "updateAvailableBadge": "Actualización disponible",
       "portDescriptionPlaceholder": "Descripción (por ejemplo, interfaz de usuario web, go2rtc, administrador)",

@@ -68,8 +68,66 @@ class DockerManifestVersionTests(unittest.TestCase):
         self.assertEqual(registry.asked[0], "jellyfin/jellyfin@" + INDEX)
 
     def test_a_record_without_the_registry_digest_is_read_by_its_own(self):
-        result = self.versions(Registry(), registry_digest=None)
-        self.assertIn("could not read the installed image", result["error"])
+        registry = Registry()
+        result = self.versions(registry, registry_digest=None)
+        self.assertEqual(registry.asked[0], "jellyfin/jellyfin@" + ARCHIVE)
+        self.assertEqual(result["error"], "registry unreachable")
+
+
+class Silent(Registry):
+    """A registry that stops answering for the tag."""
+
+    def resolve_candidate(self, reference, architecture):
+        if "@" not in reference:
+            self.asked.append(reference)
+            raise RuntimeError("skopeo failed with exit code 1")
+        return super().resolve_candidate(reference, architecture)
+
+
+class RegistryUnreachableTests(unittest.TestCase):
+    versions = DockerManifestVersionTests.versions
+
+    KNOWN = {"installed_digest": ARCHIVE, "installed_registry_digest": PLATFORM, "installed_version": "12.1",
+             "image_created": "2026-09-15T01:13:55Z", "latest_digest": NEWER, "latest_version": "12.2",
+             "latest_image_created": "2026-09-20T00:00:00Z", "update_available": True}
+
+    def test_the_last_answer_stands_when_the_registry_does_not_answer(self):
+        result = self.versions(Silent(), known=self.KNOWN)
+        self.assertNotIn("error", result)
+        self.assertEqual((result["latest_digest"], result["latest_version"], result["update_available"]),
+                         (NEWER, "12.2", True))
+        self.assertTrue(result["registry_retry"])
+
+    def test_without_a_previous_answer_the_panel_is_told_in_a_way_it_can_translate(self):
+        result = self.versions(Silent())
+        self.assertEqual(result["error"], "registry unreachable")
+        self.assertTrue(result["registry_retry"])
+        self.assertEqual((result["installed_version"], result["installed_digest"]), ("12.1", ARCHIVE))
+
+    def test_an_answer_for_another_image_is_not_reused(self):
+        other = dict(self.KNOWN, installed_digest="sha256:" + "e5" * 32)
+        self.assertEqual(self.versions(Silent(), known=other)["error"], "registry unreachable")
+
+    def test_the_registry_is_asked_again_until_it_answers(self):
+        states = [{"registry_retry": True}, {"registry_retry": False}]
+        checks, waits = [], []
+
+        def check(vmid, app_id, force=False):
+            checks.append((vmid, app_id, force))
+            return {"apps": [{"id": app_id, "state": states[len(checks) - 1]}]}
+
+        started = []
+        with patch.object(lxc_apps, "check_app", side_effect=check), \
+                patch.object(lxc_apps.time, "sleep", side_effect=waits.append), \
+                patch.object(lxc_apps.threading, "Thread", side_effect=lambda target, **_: started.append(target) or self):
+            self.start = lambda: None
+            lxc_apps._retry_oci_registry(105, "jellyfin")
+            lxc_apps._retry_oci_registry(105, "jellyfin")
+            self.assertEqual(len(started), 1)
+            started[0]()
+        self.assertEqual(checks, [(105, "jellyfin", True)] * 2)
+        self.assertEqual(waits, list(lxc_apps._OCI_REGISTRY_RETRY_WAITS[:2]))
+        self.assertNotIn((105, "jellyfin"), lxc_apps._oci_registry_retries)
 
 
 if __name__ == "__main__":

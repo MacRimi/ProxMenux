@@ -1674,6 +1674,7 @@
       "upstreamErrorTimeout": "Tempo limite da rede ao entrar em contato com o upstream",
       "upstreamErrorNetwork": "Erro de rede: {detail}",
       "upstreamErrorGithubRateLimit": "O limite de pedidos do GitHub foi atingido. Configure um token opcional em Definições → API do GitHub ou tente novamente mais tarde.",
+      "upstreamErrorRegistry": "Não foi possível consultar o registro da imagem. É verificado novamente dentro de alguns minutos.",
       "upstreamErrorGeneric": "falha na verificação upstream: {detail}",
       "notificationsEnabled": "Notificações de atualização upstream ATIVADAS – clique para silenciar",
       "notificationsMuted": "notificações de atualização upstream silenciadas – clique para ativar",

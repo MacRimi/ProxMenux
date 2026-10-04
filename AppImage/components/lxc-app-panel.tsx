@@ -607,6 +607,9 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed, initialData, oci }:
     if (lower.includes("github rate limited")) {
       return t("vmLxc.appEditor.upstreamErrorGithubRateLimit")
     }
+    if (lower.startsWith("registry unreachable")) {
+      return t("vmLxc.appEditor.upstreamErrorRegistry")
+    }
     return msg
   }
 

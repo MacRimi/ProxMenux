@@ -1674,6 +1674,7 @@
       "upstreamErrorTimeout": "timeout della rete durante il contatto a monte",
       "upstreamErrorNetwork": "errore di rete: {detail}",
       "upstreamErrorGithubRateLimit": "È stato raggiunto il limite di richieste GitHub. Configura un token facoltativo in Impostazioni → API GitHub oppure riprova più tardi.",
+      "upstreamErrorRegistry": "Non è stato possibile consultare il registro dell'immagine. Viene controllato di nuovo tra qualche minuto.",
       "upstreamErrorGeneric": "controllo upstream non riuscito: {detail}",
       "notificationsEnabled": "notifiche di aggiornamento upstream attivate: fai clic per disattivare l'audio",
       "notificationsMuted": "notifiche di aggiornamento upstream MUTED: fare clic per abilitare",

@@ -1698,6 +1698,7 @@
       "upstreamErrorTimeout": "Časový limit siete pri kontaktovaní upstream",
       "upstreamErrorNetwork": "Chyba siete: {detail}",
       "upstreamErrorGithubRateLimit": "Bol dosiahnutý limit požiadaviek GitHubu. V časti Nastavenia → GitHub API nakonfigurujte voliteľný token alebo to skúste znova neskôr.",
+      "upstreamErrorRegistry": "Register obrazu sa nepodarilo kontaktovať. O niekoľko minút sa skontroluje znova.",
       "upstreamErrorGeneric": "Kontrola proti prúdu zlyhala: {detail}",
       "notificationsEnabled": "Upozornenia na upstream aktualizácie sú ZAPNUTÉ – kliknutím ich stlmíte",
       "notificationsMuted": "Upstream upozornenia na aktualizácie MUTED – kliknutím aktivujete",

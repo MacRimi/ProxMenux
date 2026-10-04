@@ -1592,6 +1592,7 @@
       "upstreamErrorTimeout": "Network timeout while contacting upstream",
       "upstreamErrorNetwork": "Network error: {detail}",
       "upstreamErrorGithubRateLimit": "GitHub's request limit has been reached. Configure an optional token in Settings → GitHub API, or try again later.",
+      "upstreamErrorRegistry": "The image registry could not be reached. It is checked again in a few minutes.",
       "upstreamErrorGeneric": "Upstream check failed: {detail}",
       "portDescriptionPlaceholder": "Description (e.g. Web UI, go2rtc, admin)",
       "portPortPlaceholder": "port",

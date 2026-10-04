@@ -4348,6 +4348,7 @@ def check_app(
                 "checked_at": _now_iso(),
                 "installed_digest": result.get("installed_digest"),
                 "installed_registry_digest": result.get("installed_registry_digest"),
+                "registry_retry": bool(result.get("registry_retry")),
                 "latest_digest": result.get("latest_digest"),
                 "image_created": result.get("image_created"),
                 "latest_image_created": result.get("latest_image_created"),
@@ -4356,6 +4357,8 @@ def check_app(
             }
             sidecar["updated_at"] = _now_iso()
             _write_sidecar(vmid, sidecar)
+            if app["state"]["registry_retry"]:
+                _retry_oci_registry(vmid, app_id)
             # The payload names an image by its build date and digest when it
             # states no version, so it decides whether there is anything to send.
             if notify and app["state"]["update_available"]:
@@ -5765,6 +5768,34 @@ def _oci_resolve(module, reference: str, architecture: str) -> dict:
         return module.resolve_candidate(reference, architecture)
 
 
+# What the panel shows, translated, when the registry of an image did not answer.
+_OCI_REGISTRY_UNREACHABLE = "registry unreachable"
+_OCI_REGISTRY_RETRY_WAITS = (120, 600, 1800)
+_oci_registry_retries: set = set()
+
+
+def _retry_oci_registry(vmid, app_id: str) -> None:
+    """Ask the registry again a few times after it did not answer, so a
+    passing failure does not stay on screen until the next daily check."""
+    key = (int(vmid), app_id)
+    if key in _oci_registry_retries:
+        return
+    _oci_registry_retries.add(key)
+
+    def wait_and_check():
+        try:
+            for wait in _OCI_REGISTRY_RETRY_WAITS:
+                time.sleep(wait)
+                sidecar = check_app(vmid, app_id, force=True)
+                app = _find_app(sidecar, app_id) if sidecar else None
+                if not app or not (app.get("state") or {}).get("registry_retry"):
+                    return
+        finally:
+            _oci_registry_retries.discard(key)
+
+    threading.Thread(target=wait_and_check, name=f"oci-registry-{vmid}", daemon=True).start()
+
+
 def _oci_image_versions(vmid, known: Optional[dict] = None, with_latest: bool = True) -> dict:
     """Installed and published version of a container ProxMenux installed.
 
@@ -5809,8 +5840,8 @@ def _oci_image_versions(vmid, known: Optional[dict] = None, with_latest: bool = 
             result["installed_version"] = installed.get("version")
             result["image_created"] = installed.get("created")
             result["installed_registry_digest"] = installed.get("manifest_digest")
-        except Exception as exc:
-            return {**result, "error": f"could not read the installed image: {exc}"}
+        except Exception:
+            return {**result, "error": _OCI_REGISTRY_UNREACHABLE, "registry_retry": True}
     if not result.get("installed_version"):
         # The container runs the installed digest, so what it states is the
         # version of that image; once read it is kept with the digest.
@@ -5819,8 +5850,15 @@ def _oci_image_versions(vmid, known: Optional[dict] = None, with_latest: bool = 
         return result
     try:
         latest = _oci_resolve(module, reference, architecture)
-    except Exception as exc:
-        return {**result, "error": f"could not read {reference} from its registry: {exc}"}
+    except Exception:
+        # A registry that does not answer says nothing new about the image:
+        # what the last check found for this same image still stands.
+        if known.get("installed_digest") == installed_digest and known.get("latest_digest"):
+            result.update(latest_digest=known.get("latest_digest"), latest_version=known.get("latest_version"),
+                          latest_image_created=known.get("latest_image_created"),
+                          update_available=known.get("update_available"), registry_retry=True)
+            return result
+        return {**result, "error": _OCI_REGISTRY_UNREACHABLE, "registry_retry": True}
     latest_digest = latest.get("manifest_digest")
     # The image decides. An application whose version did not move can still
     # have a new image — a rebuild on a patched base — and that is an update
