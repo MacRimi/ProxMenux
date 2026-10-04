@@ -51,6 +51,7 @@ interface OciInstanceInfo {
   members: number[]
   host_directories: boolean
   pending: boolean
+  restored?: boolean
 }
 
 interface LxcUpdateCheck {
@@ -950,7 +951,10 @@ export function VirtualMachines() {
   // Set when the open container was installed by OCI manager Apps: its
   // Updates tab replaces the image instead of updating packages.
   const [ociInstance, setOciInstance] = useState<OciInstanceInfo | null>(null)
-  const [ociAction, setOciAction] = useState<{ vmid: number; action: "update" | "recreate" } | null>(null)
+  // A container restored from a backup carries the mark of its installation
+  // and has no record on this host until it is recovered from the menu.
+  const [ociRestored, setOciRestored] = useState(false)
+  const [ociAction, setOciAction] = useState<{ vmid: number; action: "update" | "recreate" | "recover" } | null>(null)
 
   // Firewall log state — fetched only when the operator opens that tab
   // so a CT/VM without firewall use doesn't pay the pvesh cost on every
@@ -1260,6 +1264,7 @@ export function VirtualMachines() {
     setFirewallEnabled(true)
     setConsoleLogAvailable(false)
     setOciInstance(null)
+    setOciRestored(false)
 
     // Prime UI from last-known payloads so a reopened guest never
     // flashes "Loading…" — the backend and this cache both revalidate
@@ -1429,10 +1434,12 @@ export function VirtualMachines() {
       .then((r) => {
         setConsoleLogAvailable(!!r?.console_log)
         setOciInstance(r?.oci_instance ? r : null)
+        setOciRestored(!!r?.restored)
       })
       .catch(() => {
         setConsoleLogAvailable(false)
         setOciInstance(null)
+        setOciRestored(false)
       })
 
   // An operation that is still running when the modal opens clears on its
@@ -5550,7 +5557,7 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                     {/* Branch 1 — OCI-image container not installed by
                         OCI manager Apps */}
                     {!selectedVM.update_check?.managed_oci_app && !ociInstance &&
-                      selectedVM.update_check?.is_oci_lxc && (
+                      (ociRestored || selectedVM.update_check?.is_oci_lxc) && (
                       <Card className="border border-border bg-card/50">
                         <CardContent className="p-4 space-y-2">
                           <div className="flex items-center gap-2 mb-1">
@@ -5558,12 +5565,24 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                               <Container className="h-4 w-4 text-blue-400" />
                             </div>
                             <h3 className="text-sm font-semibold text-foreground">
-                              {t("vmLxc.updates.ociTitle")}
+                              {t(ociRestored ? "vmLxc.updates.ociRestoredTitle" : "vmLxc.updates.ociTitle")}
                             </h3>
                           </div>
                           <p className="text-sm text-muted-foreground leading-relaxed">
-                            {t("vmLxc.updates.ociBody")}
+                            {t(ociRestored ? "vmLxc.updates.ociRestoredBody" : "vmLxc.updates.ociBody")}
                           </p>
+                          {ociRestored && (
+                            <div className="mt-4 pt-4 border-t border-border/50 flex flex-wrap justify-end gap-2">
+                              <Button
+                                size="sm"
+                                className="border border-input bg-background text-foreground/80 hover:bg-accent hover:text-accent-foreground"
+                                onClick={() => setOciAction({ vmid: selectedVM.vmid, action: "recover" })}
+                              >
+                                <RotateCcw className="h-4 w-4 mr-1.5" />
+                                {t("vmLxc.ociUpdates.recover")}
+                              </Button>
+                            </div>
+                          )}
                         </CardContent>
                       </Card>
                     )}
@@ -5582,7 +5601,7 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                         Individual actions stay with their section. The
                         optional reusable bulk action is configured in its
                         own card immediately before Options. */}
-                    {!selectedVM.update_check?.managed_oci_app && !ociInstance &&
+                    {!selectedVM.update_check?.managed_oci_app && !ociInstance && !ociRestored &&
                       !selectedVM.update_check?.is_oci_lxc && (() => {
                         const uc = selectedVM.update_check
                         const osUpdateStatusKnown = !!uc && !uc.error
@@ -7838,7 +7857,9 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
           }}
           scriptPath="/usr/local/share/proxmenux/scripts/oci/manage_instance.sh"
           scriptName="oci_manage_instance"
-          title={ociAction.action === "update" ? t("vmLxc.ociUpdates.terminalTitleUpdate") : t("vmLxc.ociUpdates.terminalTitleRecreate")}
+          title={ociAction.action === "update" ? t("vmLxc.ociUpdates.terminalTitleUpdate")
+            : ociAction.action === "recover" ? t("vmLxc.ociUpdates.terminalTitleRecover")
+            : t("vmLxc.ociUpdates.terminalTitleRecreate")}
           description={t("vmLxc.ociUpdates.terminalDescription")}
           params={{
             VMID: String(ociAction.vmid),

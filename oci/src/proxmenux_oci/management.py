@@ -125,9 +125,96 @@ def _run_lifecycle(command, title):
     console.msg_title(title)
     environment = dict(os.environ, OCI_SPINNER='1' if sys.stdout.isatty() else '0')
     completed = subprocess.run(command, env=environment, check=False)
+    carry_records(images.PROJECT_ROOT)
     if sys.stdin.isatty():
         console.wait_for_enter(translate('Press Enter to return to the menu...'))
     return completed.returncode == 0
+
+
+def carry_records(project, mount_stopped=True, vmids=None, verify=False):
+    """Leave inside each container the copy of its record that a restore on
+    another host needs. It is refreshed after every operation. Returns what
+    was found for each container."""
+    sys.path.insert(0, str(project / 'remote'))
+    try:
+        import oci_carried_record
+        return oci_carried_record.sync(oci_carried_record.instances.ROOT, vmids, mount_stopped, verify)
+    except (ImportError, OSError, ValueError, RuntimeError, subprocess.SubprocessError):
+        return {}
+
+
+def recover_automatically(project):
+    """Register, without asking, the containers whose record the cluster
+    keeps: the ones that migrated to this node. Nothing is started."""
+    if not restored_applications(project):
+        return
+    try:
+        subprocess.run([sys.executable, str(project / 'remote/oci_restore_recovery.py'), 'recover', '--automatic'],
+                       capture_output=True, timeout=600, check=False)
+    except (OSError, subprocess.SubprocessError):
+        pass
+
+
+def restored_applications(project):
+    """Restored containers of this node that have no record on this host."""
+    sys.path.insert(0, str(project / 'remote'))
+    try:
+        import oci_restore_recovery
+        return oci_restore_recovery.pending(oci_restore_recovery.instances.ROOT)
+    except (ImportError, OSError, ValueError, RuntimeError):
+        return []
+
+
+def _restored_firewall_rules(project):
+    """The host firewall rules the restored host monitors had, as they would
+    be on this host."""
+    try:
+        result = subprocess.run([sys.executable, str(project / 'remote/oci_restore_recovery.py'), 'plan'],
+                                capture_output=True, text=True, timeout=300, check=False)
+        plans = json.loads(result.stdout) if result.returncode == 0 else []
+    except (OSError, ValueError, subprocess.SubprocessError):
+        return []
+    return [rule for plan in plans if not plan.get('blockers') for rule in plan.get('firewall', [])]
+
+
+def offer_recovery(project, ui):
+    """A restored application cannot be managed until this host knows it
+    again: offer to register it before the list is shown."""
+    found = restored_applications(project)
+    if not found:
+        return
+    lines = '\n'.join(f"  CT {row['vmid']}  {row['hostname']}" for row in found)
+    text = (f"{translate('These containers were restored from a backup and this host has no record of their OCI application:')}"
+            f"\n\n{lines}\n\n"
+            f"{translate('Until they are registered again they cannot be updated or managed from here. The recovery checks first that everything they need is on this host and changes nothing otherwise.')}"
+            f"\n\n{translate('Recover them now?')}")
+    if not ui.confirm(text, default=True):
+        return
+    command = [sys.executable, str(project / 'remote/oci_restore_recovery.py'), 'recover']
+    for rule in _restored_firewall_rules(project):
+        if ui.confirm(translate('CT {vmid} is a host monitor and had a rule in the host firewall. Allow TCP port {port} from {subnet} through the firewall of this host? Existing firewall rules are not changed.').format(
+                vmid=rule['vmid'], port=rule['port'], subnet=rule['source']), default=False):
+            command.append('--host-firewall')
+            break
+    if ui.confirm(translate('Start the applications once they are registered? Answer No if the original containers are still running on another host: both would use the same addresses.'),
+                  default=False):
+        command.append('--start')
+    _run_lifecycle(command, translate('Recover restored OCI applications'))
+
+
+def direct_recovery(project):
+    """The recovery of restored applications without the list of the menu: the
+    entry ProxMenux Monitor uses for its Recover button."""
+    from .ui import interactive_ui
+    ui = interactive_ui()
+    if os.geteuid() != 0 or not shutil.which('pct'):
+        ui.message(translate('This interface runs on the Proxmox node as root. Open OCI manager Apps from the ProxMenux menu on the Proxmox host.'), translate('OCI management'))
+        return EXIT_FAILED
+    if not restored_applications(project):
+        ui.message(translate('No restored OCI application is waiting to be recovered.'), translate('Restored OCI applications'))
+        return EXIT_DONE
+    offer_recovery(project, ui)
+    return EXIT_DONE if not restored_applications(project) else EXIT_FAILED
 
 
 def interactive_management(project, ui):
@@ -157,6 +244,9 @@ def _interactive_management(project, ui):
         ui.message(translate('This interface runs on the Proxmox node as root. Open OCI manager Apps from the ProxMenux menu on the Proxmox host.'), translate('OCI management'))
         return
     _clean_orphans(project)
+    recover_automatically(project)
+    offer_recovery(project, ui)
+    carry_records(project, mount_stopped=False)
     rows = saved_inventory(project)
     if not rows:
         ui.message(translate('No registered OCI containers are available for selection on this host.'), translate('OCI management'))
@@ -184,6 +274,12 @@ def manage_instance(project, ui, row, action=None, lifecycle_args=()):
     """What the menu does with one instance once it is selected. `action`
     skips the choice of operation, as ProxMenux Monitor does; the extra
     `lifecycle_args` are passed to the program that performs it."""
+    # A container that came back from another node or from an older backup
+    # carries the record that describes it; the one of this host is not used.
+    if carry_records(project, vmids=[row['vmid']], verify=True).get(row['vmid']) == 'stale':
+        ui.message(translate('This container was restored or came back from another host after its record on this host was written. Open this menu again to recover it; nothing was changed.'),
+                   translate('OCI management'))
+        return False
     row = check_selected(project, row)
     if row['reason'] != 'matched':
         ui.message(translate('The selected CT does not match its OCI record. Its configuration will not be modified or deleted.'), translate('OCI management'))
@@ -500,6 +596,7 @@ def direct_management(project, vmid, action, lifecycle_args=(), unattended=False
         ui.message(translate('Only the update of the image runs unattended.'), translate('OCI management'))
         return EXIT_FAILED
     try:
+        recover_automatically(project)
         row = next((r for r in saved_inventory(project) if r['vmid'] == vmid), None)
         if row is None:
             ui.message(translate('This container is not a registered OCI instance.'), translate('OCI management'))

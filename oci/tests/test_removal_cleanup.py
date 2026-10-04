@@ -32,6 +32,8 @@ class RemovalCleanupTests(unittest.TestCase):
         self.snippets.mkdir()
         self.apps = self.root / "apps"
         self.apps.mkdir()
+        self.records = self.root / "cluster-records"
+        self.records.mkdir()
         self.cluster = self.root / "proxmenux"
         self.cluster.mkdir()
         self.legacy = self.root / "legacy"
@@ -41,6 +43,7 @@ class RemovalCleanupTests(unittest.TestCase):
             patch.object(oci_remove, "CLUSTER_NODES", self.nodes),
             patch.object(oci_remove, "SNIPPETS", self.snippets),
             patch.object(oci_remove, "MONITOR_APPS", self.apps),
+            patch.object(oci_remove, "CLUSTER_RECORDS", self.records),
             patch.object(oci_remove, "HOST_MONITOR_INCLUDES", self.host_monitor),
             patch.object(runtime_settings, "include_path", lambda vmid: self.cluster / f"{vmid}.sysctls"),
             patch.object(runtime_settings, "legacy_include_path", lambda vmid: self.legacy / f"{vmid}.proxmenux-sysctls"),
@@ -66,6 +69,12 @@ class RemovalCleanupTests(unittest.TestCase):
         self.assertFalse((shared / "rw/drive").exists() or (shared / "ro/drive").exists())
         self.assertFalse((self.apps / "113.json").exists())
         self.assertEqual(json.loads((self.apps / ".oci-dismissed.json").read_text()), {"112": "b"})
+
+    def test_the_copy_of_the_record_in_the_cluster_goes_with_the_container(self):
+        (self.records / "120.json").write_text("{}")
+        (self.records / "121.json").write_text("{}")
+        oci_remove.remove_host_state(120)
+        self.assertEqual([path.name for path in self.records.iterdir()], ["121.json"])
 
     def test_a_published_view_with_content_is_kept(self):
         shared = self.root / "shared"

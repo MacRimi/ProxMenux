@@ -29,6 +29,7 @@ CLUSTER_NODES = Path('/etc/pve/nodes')
 SNIPPETS = Path('/var/lib/vz/snippets')
 # The App tab of ProxMenux Monitor keeps one file per VMID.
 MONITOR_APPS = Path('/etc/proxmenux/apps')
+CLUSTER_RECORDS = Path('/etc/pve/priv/proxmenux/oci')
 HOST_MONITOR_INCLUDES = (Path('/etc/pve/proxmenux/host-monitor'), Path('/etc/pve/lxc/proxmenux-host-monitor'))
 STACK_HOOK = 'proxmenux-stack-dependencies.sh'
 
@@ -136,6 +137,7 @@ def remove_host_state(vmid):
                 except OSError:
                     pass
         _unlink(hook)
+    _unlink(CLUSTER_RECORDS / f'{int(vmid)}.json')
     _unlink(MONITOR_APPS / f'{int(vmid)}.json')
     dismissed = MONITOR_APPS / '.oci-dismissed.json'
     try:
@@ -178,6 +180,7 @@ def _leftovers(vmid):
     """Whether anything of the container is still on the host."""
     paths = [runtime_settings.include_path(vmid), runtime_settings.legacy_include_path(vmid),
              SNIPPETS / f'proxmenux-rclone-{int(vmid)}-fuse-hook.sh', MONITOR_APPS / f'{int(vmid)}.json',
+             CLUSTER_RECORDS / f'{int(vmid)}.json',
              *oci_console.LOG_DIR.glob(f'{int(vmid)}.console.log*')]
     return any(path.exists() for path in paths)
 
@@ -191,7 +194,8 @@ def sweep_orphans(root):
     for directory, pattern in ((runtime_settings.include_path(0).parent, r'([0-9]+)\.sysctls'),
                                (runtime_settings.legacy_include_path(0).parent, r'([0-9]+)\.proxmenux-sysctls'),
                                (oci_console.LOG_DIR, r'([0-9]+)\.console\.log.*'),
-                               (SNIPPETS, r'proxmenux-rclone-([0-9]+)-fuse-hook\.sh')):
+                               (SNIPPETS, r'proxmenux-rclone-([0-9]+)-fuse-hook\.sh'),
+                               (CLUSTER_RECORDS, r'([0-9]+)\.json')):
         if directory.is_dir():
             found.update(int(m.group(1)) for m in (re.fullmatch(pattern, p.name) for p in directory.iterdir()) if m)
     # Only the App tab registrations of OCI installs; the other ones belong to

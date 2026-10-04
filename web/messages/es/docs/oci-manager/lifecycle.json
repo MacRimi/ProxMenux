@@ -1,7 +1,7 @@
 {
   "meta": {
     "title": "Instalar, actualizar y recrear | ProxMenux",
-    "description": "El contrato de instancia de un contenedor OCI y las operaciones que lo usan: actualizar, recrear, eliminar y recuperar una operación interrumpida."
+    "description": "El contrato de instancia de un contenedor OCI y las operaciones que lo usan: actualizar, recrear, eliminar, recuperar una operación interrumpida y recuperar tras una restauración en este u otro host."
   },
   "header": {
     "title": "Instalar, actualizar y recrear",
@@ -20,6 +20,9 @@
           "code": {
             "code": "instances/\n└── 105/\n    └── oci-compose.json\n        ├── imagen y digest resuelto\n        ├── recursos y red\n        ├── entorno (secretos protegidos)\n        ├── discos del contenedor y directorios del host\n        ├── perfil de hardware y dispositivos\n        ├── log de consola y modo de terminal\n        └── pertenencia a una pila y ciclo de vida"
           }
+        },
+        {
+          "p": "Una copia del contrato viaja dentro del contenedor, en <code>/.proxmenux/oci-record.json</code>, legible solo por root del contenedor, así que un backup del contenedor lleva siempre el contrato que tenía en ese momento. Una segunda copia se guarda en <code>/etc/pve/priv/proxmenux/oci</code>, que comparten todos los nodos de un clúster y solo lee root del host. Las dos se escriben tras cada instalación, actualización y recreación."
         }
       ]
     },
@@ -55,7 +58,7 @@
           }
         },
         {
-          "p": "Para una aplicación multicontenedor el menú ofrece <strong>Actualizar cada contenedor de la aplicación</strong> y la eliminación. Una pila no se recrea."
+          "p": "Para una aplicación multicontenedor el menú ofrece <strong>Actualizar cada contenedor de la aplicación</strong>, <strong>Recrear</strong> y la eliminación. Recrear añade o elimina las rutas y los dispositivos extra del contenedor de la aplicación sin reconstruir nada y, en Immich, cambia qué ejecuta el reconocimiento."
         },
         {
           "figure": {
@@ -156,6 +159,138 @@
       ]
     },
     {
+      "id": "restore",
+      "title": "Backup, restauración y otro host",
+      "intro": "Un backup hecho con vzdump o Proxmox Backup Server incluye el contenedor, sus discos y la copia de su contrato. Lo que la instalación guarda en el host no forma parte de él. <strong>Gestionar aplicaciones OCI instaladas</strong> detecta los contenedores restaurados en un host que no tiene su contrato, un Proxmox recién instalado u otro host, y ofrece registrarlos de nuevo.",
+      "blocks": [
+        {
+          "steps": {
+            "items": [
+              {
+                "title": "Restaurar los contenedores en Proxmox",
+                "body": "Desde el almacenamiento de backups, con el ID original o con cualquiera libre. Una aplicación de varios contenedores necesita todos sus contenedores."
+              },
+              {
+                "title": "Abrir Gestionar aplicaciones OCI instaladas",
+                "body": "Se listan los contenedores restaurados y se ofrece la recuperación. El botón <strong>Recuperar</strong> de la pestaña Updates de <monitorLink>ProxMenux Monitor</monitorLink> abre la misma recuperación."
+              },
+              {
+                "title": "Comprobar antes de cambiar",
+                "body": "La recuperación comprueba que el host tiene todo lo que necesita cada aplicación. Una aplicación que no se puede recuperar entera queda como estaba, con el motivo."
+              },
+              {
+                "title": "Registrar y arrancar",
+                "body": "El contrato se registra en este host y se escribe de nuevo lo que la instalación guardaba en él. Arrancar las aplicaciones es una pregunta aparte, que se responde con No cuando los contenedores originales siguen en marcha en otro host."
+              }
+            ]
+          }
+        },
+        {
+          "figure": {
+            "src": "/oci-manager/restore-offer.png",
+            "alt": "Diálogo que lista los contenedores restaurados y ofrece recuperarlos",
+            "caption": "La recuperación que se ofrece al abrir Gestionar aplicaciones OCI instaladas."
+          }
+        },
+        {
+          "table": {
+            "headers": [
+              "Lo que guardaba el host",
+              "Tras la recuperación"
+            ],
+            "rows": [
+              [
+                "Contrato de la instancia",
+                "Se registra desde la copia que lleva el contenedor, comprobada contra la configuración que restauró Proxmox"
+              ],
+              [
+                "Red privada de una aplicación de varios contenedores",
+                "Se crea de nuevo con el mismo bridge y la misma subred; las direcciones fijas de los contenedores no cambian"
+              ],
+              [
+                "Orden de arranque de una aplicación de varios contenedores",
+                "El hookscript de dependencias y su contrato se instalan de nuevo; se activan los snippets en el almacenamiento <code>local</code> cuando ningún almacenamiento los admite"
+              ],
+              [
+                "Sysctl de red y archivo del monitor del host",
+                "Se escriben de nuevo en <code>/etc/pve/proxmenux</code>"
+              ],
+              [
+                "Runtime de NVIDIA",
+                "El hook de un contenedor sin privilegios se instala de nuevo. Un contenedor privilegiado recibe los archivos del driver de este host en lugar de los del host del que viene"
+              ],
+              [
+                "Montaje de Rclone",
+                "El hookscript y los programas que publican el montaje se escriben de nuevo, con las mismas vistas en el host"
+              ],
+              [
+                "Regla del firewall del host de un monitor del host",
+                "Se pregunta de nuevo, para su puerto web y la subred del bridge en este host"
+              ],
+              [
+                "<code>lost+found</code> de cada disco restaurado",
+                "Se elimina cuando está vacío; una restauración lo crea y algunas aplicaciones no arrancan con él entre sus datos"
+              ],
+              [
+                "Discos restaurados en otro almacenamiento",
+                "El contrato se actualiza al almacenamiento en el que están ahora"
+              ]
+            ]
+          }
+        },
+        {
+          "p": "Un contenedor restaurado con otro ID conserva su aplicación. El contrato, su log de consola, sus sysctl de red, el hookscript de un montaje de Rclone y el orden de arranque de una aplicación de varios contenedores se registran con los ID que tienen los contenedores en este host."
+        },
+        {
+          "table": {
+            "headers": [
+              "Qué detiene una recuperación",
+              "Qué hacer"
+            ],
+            "rows": [
+              [
+                "Falta un contenedor de una aplicación de varios contenedores",
+                "Restaurarlo también; la aplicación se recupera entera"
+              ],
+              [
+                "La subred privada ya se usa en este host",
+                "La recuperación se cancela y no se cambia nada: las direcciones de los contenedores son fijas y no se mueven a otra subred"
+              ],
+              [
+                "Un directorio del host no existe",
+                "Montarlo o crearlo con sus datos; un backup del contenedor no incluye los directorios del host"
+              ],
+              [
+                "Un dispositivo no existe en este host",
+                "Conectarlo, o eliminarlo del contenedor en Proxmox"
+              ],
+              [
+                "Una aplicación con NVIDIA en un host sin el driver",
+                "Instalar el driver de NVIDIA y el Container Toolkit"
+              ],
+              [
+                "El backup es anterior a que existiera la copia del contrato",
+                "El contenedor queda como un LXC normal y no se vuelve a ofrecer"
+              ]
+            ]
+          }
+        },
+        {
+          "calloutInfo": {
+            "title": "Un contenedor que vuelve",
+            "body": "Un contenedor restaurado sobre sí mismo desde un backup anterior, devuelto a un snapshot o llegado de vuelta desde otro nodo lleva el contrato del estado en el que está. Al seleccionarlo para una operación, si su contrato es distinto del de este host, la operación no empieza y el contenedor se ofrece para recuperarlo."
+          }
+        },
+        {
+          "figure": {
+            "src": "/oci-manager/restore-result.png",
+            "alt": "Resultado de la recuperación con la red privada, el orden de arranque y los contenedores registrados",
+            "caption": "El resultado de una recuperación, paso a paso."
+          }
+        }
+      ]
+    },
+    {
       "id": "remove",
       "title": "Eliminar una aplicación OCI",
       "blocks": [
@@ -181,8 +316,18 @@
                 "Otras aplicaciones pueden usarlo"
               ],
               [
+                "Archivos del contenedor en el host",
+                "Se eliminan",
+                "Su log de consola, los sysctl de red, el hookscript de montaje del Rclone y su registro en la pestaña App de ProxMenux Monitor no sirven a ningún otro contenedor"
+              ],
+              [
+                "Archivos que comparten varias instalaciones",
+                "Se eliminan con la última instalación que los usa",
+                "El archivo del monitor del host y el hookscript de dependencias de las aplicaciones de varios contenedores"
+              ],
+              [
                 "Contrato de la instancia",
-                "Se retira tras una eliminación correcta",
+                "Se elimina tras una eliminación correcta",
                 "Ya no tiene ningún CT asociado"
               ],
               [
@@ -191,9 +336,19 @@
                 "Ya no le quedan miembros que conectar"
               ],
               [
+                "Red que comparte la suite Arr",
+                "Se libera con la última aplicación de la suite",
+                "Cada aplicación de la suite es independiente y se elimina por separado"
+              ],
+              [
                 "Un único miembro de una pila",
                 "No se elimina por separado",
                 "Se elimina la aplicación completa, para no dejar ninguna pila incompleta"
+              ],
+              [
+                "Un contenedor en otro nodo del clúster",
+                "No se elimina",
+                "Su registro y sus archivos del host están en el nodo donde se instaló: se elimina allí, después de migrarlo de vuelta"
               ]
             ]
           }
@@ -227,7 +382,53 @@
       "title": "Registro y limpieza",
       "blocks": [
         {
-          "p": "Los contratos registrados se comparan con los CT reales. Un contrato solo queda huérfano cuando su VMID ya no existe o ya no lleva la identidad de instancia esperada. La limpieza no elimina volúmenes ni datos externos por deducción."
+          "p": "Al abrir <strong>Gestionar aplicaciones OCI instaladas</strong>, primero se elimina lo que quede de contenedores que no existen en ningún nodo del clúster: el registro guardado de un contenedor borrado desde la interfaz de Proxmox, que se conserva como historial, y los archivos del host que dejara una eliminación. Un registro con una operación a medias se conserva, porque su backup puede hacer falta. Los volúmenes y los directorios del host nunca se eliminan por deducción."
+        }
+      ]
+    },
+    {
+      "id": "cluster",
+      "title": "En un clúster: migración y alta disponibilidad",
+      "intro": "Un contenedor OCI es un LXC normal de Proxmox: se puede migrar o gestionar con HA como cualquier otro, con los mismos límites. Lo que necesita para arrancar se guarda donde lo encuentra cualquier nodo del clúster.",
+      "blocks": [
+        {
+          "table": {
+            "headers": [
+              "Parte",
+              "En otro nodo del clúster"
+            ],
+            "rows": [
+              [
+                "Log de consola",
+                "El contenedor crea <code>/var/log/proxmenux/oci</code> antes de arrancar, en el nodo que lo ejecute. Cada nodo guarda el log de los arranques que ejecutó."
+              ],
+              [
+                "Sysctl de red y monitor del host",
+                "Se guardan en <code>/etc/pve/proxmenux</code>, que comparten todos los nodos del clúster, así que un contenedor migrado los encuentra."
+              ],
+              [
+                "Discos del contenedor",
+                "Proxmox los mueve con el contenedor. HA necesita que estén en un almacenamiento compartido."
+              ],
+              [
+                "Directorios del host y dispositivos",
+                "Las mismas reglas que cualquier LXC: un directorio del host tiene que existir en el nodo de destino y estar marcado como compartido, y una GPU, un Coral o una NPU tienen que estar presentes allí."
+              ],
+              [
+                "Registro de ProxMenux",
+                "El contrato se queda en el nodo donde se instaló la aplicación, y todos los nodos leen la copia guardada en <code>/etc/pve/priv/proxmenux/oci</code>. Una aplicación de un solo contenedor que migra queda registrada en el nodo al que llega al abrir <strong>Gestionar aplicaciones OCI instaladas</strong> o al lanzar una operación sobre ella. Una aplicación de varios contenedores se ofrece para recuperarla allí, porque su red privada tiene que crearse en ese nodo."
+              ]
+            ]
+          }
+        },
+        {
+          "calloutWarning": {
+            "title": "No son para alta disponibilidad",
+            "body": "Una aplicación de varios contenedores comunica a sus miembros por un bridge privado del nodo donde se instaló, así que sus miembros se quedan en ese nodo. Un monitor del host, como Glances en modo host o Netdata, vigila el nodo en el que corre; moverlo haría que vigilara otro nodo."
+          }
+        },
+        {
+          "p": "Un backup restaurado fuera del clúster recibe los archivos de <code>/etc/pve/proxmenux</code> que usa el contenedor al recuperar la aplicación."
         }
       ]
     },

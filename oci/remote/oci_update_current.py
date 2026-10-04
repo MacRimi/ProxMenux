@@ -12,7 +12,7 @@ import tempfile
 
 import oci_instances as instances
 import oci_instance_transaction as transaction
-from oci_installation_state import image_from_archive
+from oci_installation_state import image_from_archive, same_image
 from oci_ui import translate, msg_info, msg_ok, msg_warn, msg_error, msg_info2
 
 
@@ -65,7 +65,7 @@ def resolve_archive(desired, config, current=None, check=None):
     if not re.fullmatch(r'sha256:[a-f0-9]{64}', digest):
         raise ValueError(translate('Invalid registry digest'))
     msg_ok(f"{translate('Image:')} {reference} ({candidate.get('version') or digest[7:19]})")
-    if digest == current:
+    if current and same_image(candidate, current):
         return None, digest
     if check:
         check()
@@ -85,7 +85,7 @@ def resolve_archive(desired, config, current=None, check=None):
                       translate('The image did not pass the integrity check'))
         except RuntimeError:
             return False
-        return image_from_archive(str(path))['manifest_digest'] == digest
+        return same_image(candidate, image_from_archive(str(path)))
 
     if archive.exists():
         msg_info(translate('Verifying the image integrity...'))
@@ -161,7 +161,7 @@ def update(vmid, acknowledge_external_data=False, proposal=None, keep_backup=Non
         changes = transaction.external_changes(record, config)
         transaction.preflight(record, desired, config)
         msg_ok(translate('Container checked'))
-        current = record['observed']['image']['manifest_digest'] if operation == 'update' else None
+        current = record['observed']['image'] if operation == 'update' else None
         archive, digest = resolve_archive(desired, config, current, lambda: transaction.require_backup_space(
             instances.location(instances.ROOT, vmid).parent, [vmid]))
         if archive is None:

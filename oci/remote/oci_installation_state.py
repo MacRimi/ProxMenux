@@ -88,6 +88,8 @@ def image_from_archive(path):
         manifest = blob(digest)
         config = blob(manifest['config']['digest'])
         return {'manifest_digest': digest, 'config_digest': manifest['config']['digest'],
+                'layers': [layer['digest'] for layer in manifest.get('layers', [])],
+                'created': config.get('created'),
                 'architecture': config['architecture'], 'os': config.get('os'),
                 'defaults': {k: config.get('config', {}).get(k) for k in FIELDS}}
 
@@ -190,8 +192,20 @@ def resolve_candidate(reference, architecture):
     # The build date identifies the image as the publisher released it: it is
     # what changes when an image is rebuilt, whether or not the application
     # version inside it moved.
-    return {'manifest_digest': digest, 'defaults': defaults, 'version': version,
-            'created': config.get('created')}
+    return {'manifest_digest': digest, 'layers': [layer['digest'] for layer in json.loads(raw).get('layers', [])],
+            'defaults': defaults, 'version': version, 'created': config.get('created')}
+
+
+def same_image(candidate, image):
+    """Whether what the registry serves is the image of an archive or a record.
+
+    The OCI archive made from a manifest published in the Docker format has
+    another manifest and another configuration digest: both are rewritten. Its
+    layers and the moment the image was built are the same in both."""
+    if candidate['manifest_digest'] == image.get('manifest_digest'):
+        return True
+    return bool(candidate.get('layers') and candidate.get('created')
+                and candidate['layers'] == image.get('layers') and candidate['created'] == image.get('created'))
 
 
 def compare(record, current, candidate=None):

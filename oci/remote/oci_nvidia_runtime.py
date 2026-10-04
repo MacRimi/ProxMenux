@@ -75,11 +75,13 @@ def verify(value):
         raise ValueError(translate('The NVIDIA driver or inventory changed; the operation was stopped'))
 
 
-def refresh_plan(config, previous, current=None):
+def refresh_plan(config, previous, current=None, same_gpu=True):
     """Resolve current host components without treating a driver version as intent.
 
     This only prepares a plan; applying it requires a stopped-CT transaction and
     preparing file destinations/library links before the next native start.
+    A container restored on another host takes the GPU of that host: the
+    application asked for the NVIDIA runtime, not for one card.
     """
     check_devices(config, previous)
     check_mounts(config, previous)
@@ -92,7 +94,7 @@ def refresh_plan(config, previous, current=None):
                 raise ValueError(translate('Incomplete NVIDIA identity'))
             result.append(tuple(fields[:2]))
         return sorted(result)
-    if identities(previous) != identities(current):
+    if same_gpu and identities(previous) != identities(current):
         raise ValueError(translate('The physical NVIDIA selection changed'))
     # Remove only entries already validated against our recorded inventory.
     kept = []

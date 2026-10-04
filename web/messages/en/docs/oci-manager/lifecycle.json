@@ -1,7 +1,7 @@
 {
   "meta": {
     "title": "Install, update and recreate | ProxMenux",
-    "description": "The instance contract of an OCI container and the operations that use it: update, recreate, remove and recovery of an interrupted operation."
+    "description": "The instance contract of an OCI container and the operations that use it: update, recreate, remove, recovery of an interrupted operation and recovery after a restore on this or another host."
   },
   "header": {
     "title": "Install, update and recreate",
@@ -20,6 +20,9 @@
           "code": {
             "code": "instances/\n└── 105/\n    └── oci-compose.json\n        ├── image and resolved digest\n        ├── resources and network\n        ├── environment (secrets protected)\n        ├── container disks and host directories\n        ├── hardware profile and devices\n        ├── console log and terminal mode\n        └── stack membership and lifecycle"
           }
+        },
+        {
+          "p": "A copy of the contract travels inside the container, in <code>/.proxmenux/oci-record.json</code>, readable only by root of the container, so a backup of the container always carries the contract it had at that moment. A second copy is kept in <code>/etc/pve/priv/proxmenux/oci</code>, which every node of a cluster shares and only root of the host reads. Both are written after every installation, update and recreation."
         }
       ]
     },
@@ -55,7 +58,7 @@
           }
         },
         {
-          "p": "For a multi-container application the menu offers <strong>Update every container of the application</strong> and the removal. A stack is not recreated."
+          "p": "For a multi-container application the menu offers <strong>Update every container of the application</strong>, <strong>Recreate</strong> and the removal. Recreate adds or removes the extra paths and devices of the application container without rebuilding anything and, in Immich, changes what runs recognition."
         },
         {
           "figure": {
@@ -156,6 +159,138 @@
       ]
     },
     {
+      "id": "restore",
+      "title": "Backup, restore and another host",
+      "intro": "A backup made with vzdump or Proxmox Backup Server includes the container, its disks and the copy of its contract. What the installation keeps on the host is not part of it. <strong>Manage installed OCI applications</strong> detects the containers restored on a host that has no contract for them, a new Proxmox installation or another host, and offers to register them again.",
+      "blocks": [
+        {
+          "steps": {
+            "items": [
+              {
+                "title": "Restore the containers in Proxmox",
+                "body": "From the backup storage, with the original ID or with any free one. A multi-container application needs every one of its containers."
+              },
+              {
+                "title": "Open Manage installed OCI applications",
+                "body": "The restored containers are listed and the recovery is offered. The <strong>Recover</strong> button of the Updates tab of <monitorLink>ProxMenux Monitor</monitorLink> opens the same recovery."
+              },
+              {
+                "title": "Check before changing",
+                "body": "The recovery checks that the host has everything each application needs. An application that cannot be recovered whole is left as it was found, with the reason."
+              },
+              {
+                "title": "Register and start",
+                "body": "The contract is registered on this host and what the installation kept on it is written again. Starting the applications is a separate question, answered with No when the original containers are still running on another host."
+              }
+            ]
+          }
+        },
+        {
+          "figure": {
+            "src": "/oci-manager/restore-offer.png",
+            "alt": "Dialog that lists the restored containers and offers to recover them",
+            "caption": "The recovery offered when Manage installed OCI applications opens."
+          }
+        },
+        {
+          "table": {
+            "headers": [
+              "What the host kept",
+              "After the recovery"
+            ],
+            "rows": [
+              [
+                "Instance contract",
+                "Registered from the copy the container carries, checked against the configuration Proxmox restored"
+              ],
+              [
+                "Private network of a multi-container application",
+                "Created again with the same bridge and subnet; the fixed addresses of the containers do not change"
+              ],
+              [
+                "Start order of a multi-container application",
+                "The dependency hookscript and its contract are installed again; snippets are enabled on the <code>local</code> storage when no storage accepts them"
+              ],
+              [
+                "Network sysctls and host-monitor file",
+                "Written again in <code>/etc/pve/proxmenux</code>"
+              ],
+              [
+                "NVIDIA runtime",
+                "The hook of an unprivileged container is installed again. A privileged container gets the driver files of this host instead of those of the host it comes from"
+              ],
+              [
+                "Rclone mount",
+                "The hookscript and the programs that publish the mount are written again, with the same views on the host"
+              ],
+              [
+                "Host firewall rule of a host monitor",
+                "Asked again, for its web port and the subnet of the bridge on this host"
+              ],
+              [
+                "<code>lost+found</code> of each restored disk",
+                "Removed when empty; a restore creates it and some applications cannot start with it in their data"
+              ],
+              [
+                "Disks restored on another storage",
+                "The contract is updated to the storage they are on now"
+              ]
+            ]
+          }
+        },
+        {
+          "p": "A container restored with another ID keeps its application. The contract, its console log, its network sysctls, the hookscript of an Rclone mount and the start order of a multi-container application are registered with the IDs the containers have on this host."
+        },
+        {
+          "table": {
+            "headers": [
+              "What stops a recovery",
+              "What to do"
+            ],
+            "rows": [
+              [
+                "A container of a multi-container application is missing",
+                "Restore it too; the application is recovered whole"
+              ],
+              [
+                "The private subnet is already used on this host",
+                "The recovery is cancelled and nothing is changed: the addresses of the containers are fixed and are not moved to another subnet"
+              ],
+              [
+                "A host directory does not exist",
+                "Mount or create it with its data; a backup of the container does not include host directories"
+              ],
+              [
+                "A device does not exist on this host",
+                "Connect it, or remove it from the container in Proxmox"
+              ],
+              [
+                "An application with NVIDIA on a host without the driver",
+                "Install the NVIDIA driver and the Container Toolkit"
+              ],
+              [
+                "The backup was made before the copy of the contract existed",
+                "The container stays as an ordinary LXC and is not offered again"
+              ]
+            ]
+          }
+        },
+        {
+          "calloutInfo": {
+            "title": "A container that comes back",
+            "body": "A container restored over itself from an older backup, rolled back to a snapshot or returned from another node carries the contract of the state it is in. When it is selected for an operation and its contract differs from the one of this host, the operation does not start and the container is offered for recovery."
+          }
+        },
+        {
+          "figure": {
+            "src": "/oci-manager/restore-result.png",
+            "alt": "Result of the recovery with the private network, the start order and the registered containers",
+            "caption": "The result of a recovery, step by step."
+          }
+        }
+      ]
+    },
+    {
       "id": "remove",
       "title": "Removing an OCI application",
       "blocks": [
@@ -181,8 +316,18 @@
                 "Other applications may use it"
               ],
               [
+                "Host files of the container",
+                "Deleted",
+                "Its console log, network sysctls, Rclone mount hookscript and its registration in the App tab of ProxMenux Monitor serve no other container"
+              ],
+              [
+                "Files several installations share",
+                "Deleted with the last installation that uses them",
+                "The host-monitor file and the dependency hookscript of multi-container applications"
+              ],
+              [
                 "Instance contract",
-                "Retired after a successful removal",
+                "Deleted after a successful removal",
                 "No CT is associated with it any more"
               ],
               [
@@ -191,9 +336,19 @@
                 "It has no members left to connect"
               ],
               [
+                "Network shared by the Arr suite",
+                "Released with the last application of the suite",
+                "Each application of the suite is independent and is removed on its own"
+              ],
+              [
                 "A single member of a stack",
                 "Not removed on its own",
                 "The whole application is removed, so no stack is left incomplete"
+              ],
+              [
+                "A container on another node of the cluster",
+                "Not removed",
+                "Its record and host files are on the node where it was installed: it is removed there, after migrating it back"
               ]
             ]
           }
@@ -227,7 +382,53 @@
       "title": "Registry and cleanup",
       "blocks": [
         {
-          "p": "The registered contracts are compared with the real CTs. A contract is orphaned only when its VMID no longer exists or no longer carries the expected instance identity. The cleanup does not delete volumes or external data by inference."
+          "p": "When <strong>Manage installed OCI applications</strong> opens, what is left of containers that exist on no node of the cluster is removed first: the saved record of a container deleted from the Proxmox interface, which is kept as history, and the host files a removal left behind. A record with an operation left halfway is kept, because its backup may still be needed. Volumes and host directories are never deleted by inference."
+        }
+      ]
+    },
+    {
+      "id": "cluster",
+      "title": "In a cluster: migration and high availability",
+      "intro": "An OCI container is an ordinary Proxmox LXC: it can be migrated or managed by HA like any other, within the same limits. What it needs to start is kept where every node of the cluster finds it.",
+      "blocks": [
+        {
+          "table": {
+            "headers": [
+              "Part",
+              "On another node of the cluster"
+            ],
+            "rows": [
+              [
+                "Console log",
+                "The container creates <code>/var/log/proxmenux/oci</code> before it starts, on whichever node runs it. Each node keeps the log of the starts it ran."
+              ],
+              [
+                "Network sysctls and host monitor",
+                "Kept in <code>/etc/pve/proxmenux</code>, which every node of the cluster shares, so a migrated container finds them."
+              ],
+              [
+                "Container disks",
+                "Proxmox moves them with the container. HA needs them on shared storage."
+              ],
+              [
+                "Host directories and devices",
+                "The same rules as any LXC: a host directory must exist on the target node and be marked as shared, and a GPU, Coral or NPU must be present there."
+              ],
+              [
+                "ProxMenux record",
+                "The contract stays on the node where the application was installed, and every node reads the copy kept in <code>/etc/pve/priv/proxmenux/oci</code>. A single-container application that migrates is registered on the node it arrives at when <strong>Manage installed OCI applications</strong> opens or an operation is launched for it. A multi-container application is offered for recovery there, since its private network has to be created on that node."
+              ]
+            ]
+          }
+        },
+        {
+          "calloutWarning": {
+            "title": "Not for high availability",
+            "body": "A multi-container application reaches its members through a private bridge of the node it was installed on, so its members stay on that node. A host monitor, such as Glances in host mode or Netdata, monitors the node it runs on; moving it would monitor another node."
+          }
+        },
+        {
+          "p": "A backup restored outside the cluster gets the files of <code>/etc/pve/proxmenux</code> the container uses when the application is recovered."
         }
       ]
     },

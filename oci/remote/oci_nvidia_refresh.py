@@ -68,6 +68,36 @@ def create_parent(path, root):
     os.chown(path, owner.st_uid, owner.st_gid)
 
 
+def rebuild(root, vmid, same_gpu=False):
+    """Point a stopped container at the NVIDIA driver of this host. The caller
+    holds the registry and the container is not started: it is the step a
+    restore on a host with another driver needs before the first start.
+    Returns whether anything had to change."""
+    record = instances.read(root, vmid)
+    config = instances.command('pct', 'config', str(vmid))
+    if not instances.same_config_except_notes(record, config):
+        raise ValueError(translate('The container identity or configuration changed'))
+    plan = nv.refresh_plan(config, record['observed']['gpu_devices'][nv.KEY], same_gpu=same_gpu)
+    if not plan['changed']:
+        return False
+    if instances.command('pct', 'status', str(vmid)).strip() != b'status: stopped':
+        raise ValueError(translate('Stop the container before the NVIDIA refresh'))
+    instances.command('pct', 'mount', str(vmid))
+    try:
+        candidate = prepare(Path(f'/var/lib/lxc/{vmid}/rootfs'), plan)
+    finally:
+        instances.command('pct', 'unmount', str(vmid))
+    Path(f'/etc/pve/lxc/{vmid}.conf').write_bytes(candidate)
+    updated = copy.deepcopy(record)
+    updated['observed'] = instances.observe(vmid, record['installation_id'],
+        record['observed']['archive_path'], record['observed']['resolved_registry_digest'],
+        record['observed']['image'])
+    nv.check_mounts(updated['observed']['config'].encode(), plan['inventory'])
+    nv.check_devices(updated['observed']['config'].encode(), plan['inventory'])
+    instances.write(instances.location(root, vmid), updated)
+    return True
+
+
 def refresh(root, vmid, apply=False):
     with instances.locked(root):
         record = instances.read(root, vmid)

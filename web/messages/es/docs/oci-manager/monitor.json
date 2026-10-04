@@ -108,11 +108,15 @@
               ],
               [
                 "Recrear",
-                "El editor de la recreación (recursos, red, rutas y GPU). No se ofrece en una aplicación multicontenedor."
+                "El editor de la recreación (recursos, red, rutas y GPU). En una aplicación multicontenedor añade o elimina las rutas y los dispositivos extra del contenedor de la aplicación y, en Immich, cambia qué ejecuta el reconocimiento."
               ],
               [
                 "Recuperar",
                 "Sustituye a Actualizar cuando una operación sobre el contenedor quedó interrumpida, y abre su recuperación."
+              ],
+              [
+                "Recuperar (contenedor restaurado)",
+                "Aparece en un contenedor restaurado desde un backup que no tiene contrato en este host, bajo <strong>Aplicación OCI restaurada</strong>. Abre la <lifecycleLink>recuperación</lifecycleLink> en el terminal del Monitor; Actualizar y Recrear aparecen cuando queda registrado."
               ]
             ]
           }

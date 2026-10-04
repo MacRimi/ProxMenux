@@ -422,6 +422,8 @@ def install_template(ui, template: dict[str, Any], identifier: str, mode: str) -
         console.wait_for_enter(translate("Press Enter to return to the menu..."))
         return None
     if result:
+        from .management import carry_records
+        carry_records(PROJECT_ROOT)
         vmids = {int(v) for v in [result.get("vmid"), *(result.get("stack_vmids") or {}).values()] if v}
         _, removed = images.offer_removal(ui, sorted(vmids))
         _print_installation_summary(result, removed)
@@ -436,6 +438,8 @@ def _rclone_mount(catalog: Catalog, ui) -> None:
     console.msg_title(translate("Rclone mount"))
     result = run_remote_rclone_mount(PROJECT_ROOT, template, deployment, "auto")
     if result:
+        from .management import carry_records
+        carry_records(PROJECT_ROOT)
         console.msg_ok(f"Remote: {result['remote']}:")
         console.msg_ok(f"{translate('Read/write')}: {result['read_write_path']}")
         console.msg_ok(f"{translate('Read-only')}: {result['read_only_path']}")
@@ -590,6 +594,7 @@ def build_parser() -> argparse.ArgumentParser:
     rclone_parser = subparsers.add_parser("rclone-mount", help="Enable a mount on an installed Rclone OCI")
     rclone_parser.add_argument("--host", default="auto")
     rclone_parser.add_argument("--dry-run", action="store_true")
+    subparsers.add_parser("recover", help="Register again the OCI applications restored from a backup")
     manage_parser = subparsers.add_parser("manage", help="Update or recreate one installed OCI instance")
     manage_parser.add_argument("vmid", type=int)
     manage_parser.add_argument("--action", choices=("update", "recreate"), required=True)
@@ -654,8 +659,14 @@ def main(argv: list[str] | None = None) -> int:
                 return 0
             result = run_remote_install(PROJECT_ROOT, template, deployment, args.host, args.dry_run)
             if result:
+                if not args.dry_run:
+                    from .management import carry_records
+                    carry_records(PROJECT_ROOT)
                 _print_installation_summary(result)
             return 0
+        if args.command == "recover":
+            from .management import direct_recovery
+            return direct_recovery(PROJECT_ROOT)
         if args.command == "manage":
             from .management import direct_management
             lifecycle_args = []

@@ -98,6 +98,9 @@ done
 [[ -r $STACK_DEPENDENCY_HOOK ]] || die "$(translate "The stack startup hook was not found")"
 
 ML_ACCELERATION=$(jq -er '.machine_learning.acceleration // "cpu"' "$DEPLOYMENT_FILE")
+ML_GFX_OVERRIDE=$(jq -r '.machine_learning.gfx_override // empty' "$DEPLOYMENT_FILE")
+[[ -z $ML_GFX_OVERRIDE || ( $ML_ACCELERATION == rocm && $ML_GFX_OVERRIDE =~ ^[0-9]{1,2}\.[0-9]\.[0-9]$ ) ]] \
+  || die "$(translate "Invalid ROCm generation override")"
 source "$SCRIPT_DIR/oci_nvidia_setup.sh"
 source "$SCRIPT_DIR/oci_immich_ml.sh"
 validate_immich_ml_profile
@@ -437,6 +440,10 @@ set_runtime_env "$ML_ID" MACHINE_LEARNING_CACHE_FOLDER /cache
 set_runtime_env "$ML_ID" TRANSFORMERS_CACHE /cache
 set_runtime_env "$ML_ID" MACHINE_LEARNING_MODEL_INTRA_OP_THREADS 2
 set_runtime_env "$ML_ID" MACHINE_LEARNING_MODEL_INTER_OP_THREADS 1
+if [[ -n $ML_GFX_OVERRIDE ]]; then
+  set_runtime_env "$ML_ID" HSA_OVERRIDE_GFX_VERSION "$ML_GFX_OVERRIDE"
+  set_runtime_env "$ML_ID" HSA_USE_SVM 0
+fi
 configure_immich_ml_gpu
 oci_quiet pct mount "$ML_ID"
 ML_ROOT="/var/lib/lxc/${ML_ID}/rootfs"

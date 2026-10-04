@@ -17,8 +17,21 @@ find_snippet_storage() {
   fi
   storage=$(pvesm status --content snippets 2>/dev/null \
     | awk 'NR > 1 && $3 == "active" {print $1; exit}')
-  [[ -n $storage ]] || die "No active storage supports snippets"
+  if [[ -z $storage ]]; then
+    # A new Proxmox installation accepts no snippets on any storage.
+    enable_local_snippets || die "No active storage supports snippets"
+    storage=local
+  fi
   printf '%s' "$storage"
+}
+
+enable_local_snippets() {
+  local content
+  content=$(pvesh get /storage/local --output-format json 2>/dev/null | jq -r '.content // empty')
+  [[ -n $content ]] || return 1
+  pvesm set local --content "${content},snippets" >/dev/null 2>&1 || return 1
+  pvesm status --content snippets 2>/dev/null \
+    | awk 'NR > 1 && $1 == "local" && $3 == "active" {found=1} END {exit !found}'
 }
 
 install_hook() {
