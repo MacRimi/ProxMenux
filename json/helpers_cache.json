@@ -35,6 +35,48 @@
     "os": "debian"
   },
   {
+    "name": "8mb.local",
+    "slug": "8mblocal",
+    "desc": "8mb.local is a self-hosted video compressor inspired by 8mb.video. Drop in a video, pick a target size such as 8, 25 or 50 MB, and it calculates the bitrate and encodes to H.264, HEVC or AV1, with NVIDIA NVENC, Intel Quick Sync, VAAPI or CPU encoders, live progress, trimming, batch uploads, presets and a watched folder. This script builds the FastAPI backend, Celery worker and SvelteKit UI from source and runs them with Redis and FFmpeg.",
+    "script": "ct/8mblocal.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/8mblocal.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/8mblocal.sh",
+    "type": "lxc",
+    "type_id": "nm9bra8mzye2scg",
+    "categories": [
+      "scriptcat00013"
+    ],
+    "category_names": [
+      "Media & Streaming"
+    ],
+    "notes": [
+      "The UI and API are protected by HTTP Basic auth. The user is admin, the generated password is AUTH_PASS in /opt/8mblocal_data/.env. It can be changed or switched off under Settings, Authentication.",
+      "Hardware encoding needs GPU passthrough. Intel Quick Sync, Intel and AMD VAAPI and NVIDIA NVENC are probed when the worker starts and only offered when a test encode passes; the CPU encoders x264, x265 and SVT-AV1 always work. For NVENC the NVIDIA libraries in the container must match the host driver version.",
+      "Uploads are written to disk (MEDIA_STORAGE=disk in /opt/8mblocal_data/.env). Upstream defaults to auto, which stages uploads in /dev/shm and counts them against the container RAM."
+    ],
+    "warnings": [
+      "Uploads and compressed results are deleted after 1 hour, checked every 15 minutes. Download results right away, or raise the retention under Settings. Both live in /opt/8mblocal_data, so give the disk room for the largest video you compress.",
+      "8mb.local is licensed CC BY-NC 4.0: free for personal use, not for commercial use."
+    ],
+    "port": 8001,
+    "website": "https://github.com/JMS1717/8mb.local",
+    "documentation": "https://github.com/JMS1717/8mb.local#readme",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/8mb-local.webp",
+    "updateable": true,
+    "privileged": false,
+    "has_arm": false,
+    "is_dev": true,
+    "execute_in": [
+      "lxc"
+    ],
+    "config_path": "",
+    "default_credentials": {
+      "username": "admin",
+      "password": ""
+    },
+    "os": "debian"
+  },
+  {
     "name": "Actual Budget Prometheus Exporter",
     "slug": "actual-budget-prometheus-exporter",
     "desc": "Prometheus exporter for Actual Budget. Exposes account balances, budget balances, transaction counts and uncategorized/transfer counts as metrics on /metrics. Installs as an addon into an existing LXC (e.g. alongside your Actual Budget server) and builds from source with Node.js.",
@@ -3301,6 +3343,45 @@
     "os": "debian"
   },
   {
+    "name": "Cinephage",
+    "slug": "cinephage",
+    "desc": "Cinephage is a self-hosted media manager that covers in one app what usually takes Radarr, Sonarr, Prowlarr, Bazarr and Overseerr: it discovers, searches, downloads and organizes movies and TV shows, manages indexers and subtitles, and adds smart lists, .strm streaming and Live TV. Cloudflare-protected indexers are handled by a built-in headless browser (Camoufox) instead of FlareSolverr. Downloads go to external clients such as qBittorrent, SABnzbd or NZBGet.",
+    "script": "ct/cinephage.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/cinephage.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/cinephage.sh",
+    "type": "lxc",
+    "type_id": "nm9bra8mzye2scg",
+    "categories": [
+      "scriptcat00014"
+    ],
+    "category_names": [
+      "*Arr Suite"
+    ],
+    "notes": [
+      "Cinephage needs a free TMDB API key (themoviedb.org/settings/api), entered in the settings after the first login. Download clients (qBittorrent, SABnzbd, NZBGet, Deluge, Transmission, rTorrent, aria2, Debrid) run outside this container and are added by URL.",
+      "Bind-mount the media library and the download folder into the container (e.g. /media and /downloads) and add them as root folders. The download client has to see the downloads under the same path, otherwise imports fail.",
+      "Behind a reverse proxy or a hostname, set BETTER_AUTH_URL in /opt/cinephage_data/.env to the public URL (or the External URL under Settings > System), then run systemctl restart cinephage.",
+      "Install and updates build Cinephage from source, which peaks at about 3.3 GB RAM on 2 cores (about 3.8 GB on 4). Cloudflare challenges are solved with the bundled Camoufox browser (about 1.3 GB in /root/.cache/camoufox), and each running solve uses another 300 MB to 1 GB."
+    ],
+    "warnings": [
+      "There is no default account. Open http://<IP>:3000 and complete the setup wizard: it creates the only admin account and closes sign-up. Anyone who reaches the port can claim it until then, so finish the setup right after the install.",
+      "Back up BETTER_AUTH_SECRET from /opt/cinephage_data/.env together with the database in /opt/cinephage_data. Losing or changing it signs everyone out and makes the stored API keys unrecoverable."
+    ],
+    "port": 3000,
+    "website": "https://github.com/MoldyTaint/Cinephage",
+    "documentation": "https://docs.cinephage.net/",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/cinephage.webp",
+    "updateable": true,
+    "privileged": false,
+    "has_arm": false,
+    "is_dev": true,
+    "execute_in": [
+      "lxc"
+    ],
+    "config_path": "",
+    "os": "debian"
+  },
+  {
     "name": "PVE LXC Cleaner",
     "slug": "clean-lxcs",
     "desc": "This script provides options to delete logs and cache, and repopulate apt lists for Ubuntu and Debian systems.",
@@ -4374,6 +4455,45 @@
     "privileged": false,
     "has_arm": true,
     "is_dev": false,
+    "execute_in": [
+      "lxc"
+    ],
+    "config_path": "",
+    "os": "debian"
+  },
+  {
+    "name": "Databasement",
+    "slug": "databasement",
+    "desc": "Databasement is a self-hosted database backup manager with a web UI. It registers MySQL, MariaDB, PostgreSQL, MongoDB, SQLite and Redis/Valkey servers, optionally through an SSH tunnel, runs scheduled or on-demand backups with retention and compression or encryption, stores them on local disk, S3, SFTP, FTP, Samba or Azure Blob storage, and restores snapshots to any registered server. This script runs it with PHP-FPM, nginx and SQLite.",
+    "script": "ct/databasement.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/databasement.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/databasement.sh",
+    "type": "lxc",
+    "type_id": "nm9bra8mzye2scg",
+    "categories": [
+      "scriptcat00007"
+    ],
+    "category_names": [
+      "Backup & Recovery"
+    ],
+    "notes": [
+      "Backup and restore jobs run as www-data, so a local volume needs a path www-data can write to. /opt/databasement_data/backups is prepared for that and is also reachable as /data/backups, the path of upstream's sign-up demo backup.",
+      "Installed backup clients: mariadb-dump (used for MySQL as well), pg_dump 18 plus 16 for older servers, mongodump, redis-cli and sqlite3. Microsoft SQL Server and Firebird are not supported by this script: SQL Server needs Microsoft's ODBC driver and sqlpackage, Firebird the upstream gbak and isql tools.",
+      "Schedules run in UTC. Set APP_DISPLAY_TIMEZONE in /opt/databasement_data/.env (e.g. Europe/Berlin) for local times, then run: cd /opt/databasement && php artisan optimize && systemctl restart php8.5-fpm databasement-worker databasement-scheduler",
+      "A lost password is reset with: cd /opt/databasement && runuser -u www-data -- php artisan user:reset-password you@example.com"
+    ],
+    "warnings": [
+      "There is no default account. The first account created at http://<IP>/register becomes the administrator and closes sign-up; further users are invited from the UI. Anyone who reaches the page can claim it until then, so create it right after the install.",
+      "Back up APP_KEY from /opt/databasement_data/.env together with /opt/databasement_data/database.sqlite. It encrypts the stored database server passwords and, unless BACKUP_ENCRYPTION_KEY is set, the encrypted backups, so neither can be read without it."
+    ],
+    "port": 80,
+    "website": "https://david-crty.github.io/databasement/",
+    "documentation": "https://david-crty.github.io/databasement/",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/databasement.webp",
+    "updateable": true,
+    "privileged": false,
+    "has_arm": false,
+    "is_dev": true,
     "execute_in": [
       "lxc"
     ],
@@ -6544,6 +6664,43 @@
     "is_dev": false,
     "execute_in": [
       "pve"
+    ],
+    "config_path": "",
+    "os": "debian"
+  },
+  {
+    "name": "Figranium",
+    "slug": "figranium",
+    "desc": "Figranium is a self-hosted browser automation platform. Workflows are stacked from blocks such as navigate, click, type, wait, loops, conditions, JavaScript and extraction in a visual editor, run in a headless Chromium driven by Playwright, and are triggered from the UI, on a schedule or through the REST API with runtime variables. A built-in noVNC viewer shows a visible browser for picking selectors and debugging runs.",
+    "script": "ct/figranium.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/figranium.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/figranium.sh",
+    "type": "lxc",
+    "type_id": "nm9bra8mzye2scg",
+    "categories": [
+      "scriptcat00019"
+    ],
+    "category_names": [
+      "Automation & Scheduling"
+    ],
+    "notes": [
+      "Tasks are run over the API with POST /api/tasks/<id>/api and the x-api-key header. Generate the key under Settings > API Keys.",
+      "Workflows cannot open private or local network addresses by default (SSRF protection). To automate services in your LAN, set ALLOW_PRIVATE_NETWORKS=true in /opt/figranium_data/.env and run systemctl restart figranium.",
+      "On first start Figranium downloads a local CAPTCHA model (OWL-ViT, about 150 MB; Florence-2 with 8 GB RAM or more) into /opt/figranium_data/data/captcha-model. Set SKIP_LOCAL_CAPTCHA_MODEL=true in /opt/figranium_data/.env to turn it off."
+    ],
+    "warnings": [
+      "There is no default account. The first visitor to http://<IP>:11345 creates the administrator, and anyone who reaches the port can claim it until then, so create the account right after the install."
+    ],
+    "port": 11345,
+    "website": "https://figranium.dev/",
+    "documentation": "https://figranium.dev/docs",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/figranium.webp",
+    "updateable": true,
+    "privileged": false,
+    "has_arm": false,
+    "is_dev": true,
+    "execute_in": [
+      "lxc"
     ],
     "config_path": "",
     "os": "debian"
@@ -9395,6 +9552,44 @@
     "os": "debian"
   },
   {
+    "name": "HomeTube",
+    "slug": "hometube",
+    "desc": "HomeTube is a web UI for yt-dlp that downloads single videos or whole playlists into a clean folder structure for Plex, Jellyfin or Emby. It picks the best AV1/VP9 quality profile automatically, embeds subtitles, chapters and metadata, marks or removes sponsor segments with SponsorBlock, cuts clips, keeps playlists in sync and can trigger a Jellyfin library refresh after each download.",
+    "script": "ct/hometube.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/hometube.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/hometube.sh",
+    "type": "lxc",
+    "type_id": "nm9bra8mzye2scg",
+    "categories": [
+      "scriptcat00013"
+    ],
+    "category_names": [
+      "Media & Streaming"
+    ],
+    "notes": [
+      "Videos are saved to /opt/hometube_data/videos (VIDEOS_FOLDER), into the destination folder chosen in the UI; playlists get a folder of their own. To write straight into a Plex, Jellyfin or Emby library, bind-mount it there, e.g. pct set <CTID> -mp0 /mnt/media/youtube,mp=/opt/hometube_data/videos, then restart the container. In an unprivileged container the host folder must be writable by UID 100000.",
+      "YouTube increasingly needs cookies, even for public videos. Export them with a cookies.txt browser extension and copy the file to /opt/hometube_data/cookies/youtube_cookies.txt, then reload the HomeTube page so it switches to file cookies.",
+      "Settings such as LANGUAGE_PRIMARY, VIDEO_QUALITY_MAX, YTDLP_CUSTOM_ARGS or JELLYFIN_BASE_URL/JELLYFIN_API_KEY go in /opt/hometube_data/.env, then run systemctl restart hometube. Temporary files are removed after each download (REMOVE_TMP_FILES_AFTER_DOWNLOAD=true) so videos are not stored twice; set it to false to keep them as a re-download cache.",
+      "yt-dlp updates itself on every HomeTube restart and with every update run, since YouTube breaks older versions regularly. YouTube challenges are solved with the installed deno."
+    ],
+    "warnings": [
+      "HomeTube has no login. Anyone who can reach port 8501 can download to your media folder, so keep it on a trusted network or put it behind a reverse proxy with authentication."
+    ],
+    "port": 8501,
+    "website": "https://hometube.latentnoise.dev/",
+    "documentation": "https://github.com/EgalitarianMonkey/hometube/blob/main/docs/README.md",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/hometube.webp",
+    "updateable": true,
+    "privileged": false,
+    "has_arm": false,
+    "is_dev": true,
+    "execute_in": [
+      "lxc"
+    ],
+    "config_path": "",
+    "os": "debian"
+  },
+  {
     "name": "HortusFox",
     "slug": "hortusfox",
     "desc": "HortusFox is a collaborative plant management system for plant enthusiasts. Manage, document and track your entire plant collection – self-hosted and privacy-friendly.",
@@ -9519,6 +9714,45 @@
     "is_dev": false,
     "execute_in": [
       "pve"
+    ],
+    "config_path": "",
+    "os": "debian"
+  },
+  {
+    "name": "Ideon",
+    "slug": "ideon",
+    "desc": "Ideon is a self-hosted visual workspace that maps a project on an infinite canvas. Notes, files, links, tasks, kanban boards, sketches and live Git repository blocks (GitHub, GitLab, Gitea, Forgejo) sit side by side, are edited together in real time and can be rewound to earlier snapshots. This script builds Ideon from source and runs it with PostgreSQL.",
+    "script": "ct/ideon.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/ideon.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/ideon.sh",
+    "type": "lxc",
+    "type_id": "nm9bra8mzye2scg",
+    "categories": [
+      "scriptcat00012"
+    ],
+    "category_names": [
+      "Documents & Notes"
+    ],
+    "notes": [
+      "Redirects, invitation and share links are built from APP_URL in /opt/ideon_data/.env, which points at the container IP. Change it when the IP changes or Ideon sits behind a reverse proxy or domain, then run systemctl restart ideon.",
+      "Ideon connects to PostgreSQL as a regular role that is subject to its row-level security, unlike the upstream Docker setup whose database user is a superuser. Canvases, blocks, files and collaboration work, but a few features expect to bypass it: Shell blocks are refused, MCP/API-key clients and access requests to other users' projects report the project as missing, and the admin audit log only lists the admin's own entries.",
+      "Install and every update build Ideon from source (Next.js), which takes about 10 minutes on 2 cores and needs the 4 GB of RAM. The running app uses around 300 MB, so the RAM can be lowered after the install and raised again before an update.",
+      "Email (invitations, password reset, magic links) needs the SMTP_* values in /opt/ideon_data/.env, followed by systemctl restart ideon."
+    ],
+    "warnings": [
+      "There is no default account. The first visit to http://<IP>:3000 opens the setup page that creates the super-admin; anyone who reaches the port can claim it until then, so finish the setup right after the install. Public registration is off afterwards, further users are invited from the Team page.",
+      "Back up SECRET_KEY from /opt/ideon_data/.env together with the database and /opt/ideon_data/storage (uploads, avatars and the canvas documents). Sessions and encrypted values such as Git tokens depend on it."
+    ],
+    "port": 3000,
+    "website": "https://www.theideon.com/",
+    "documentation": "https://www.theideon.com/docs/",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/ideon.webp",
+    "updateable": true,
+    "privileged": false,
+    "has_arm": false,
+    "is_dev": true,
+    "execute_in": [
+      "lxc"
     ],
     "config_path": "",
     "os": "debian"
@@ -14951,6 +15185,44 @@
     "os": "debian"
   },
   {
+    "name": "Note Mark",
+    "slug": "notemark",
+    "desc": "Note Mark is a lightning-fast, minimal web-based Markdown note-taking app. Notes are kept as plain Markdown files in folders on disk, with a SQLite database for users and the folder cache, and can be shared per note with other users or publicly. It offers a CodeMirror editor with optional Vim keybindings, rendered previews, asset uploads, a scratch pad and optional OpenID Connect login. This script builds the Go backend and the SolidJS/WebAssembly frontend from source.",
+    "script": "ct/notemark.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/notemark.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/notemark.sh",
+    "type": "lxc",
+    "type_id": "nm9bra8mzye2scg",
+    "categories": [
+      "scriptcat00012"
+    ],
+    "category_names": [
+      "Documents & Notes"
+    ],
+    "notes": [
+      "PUBLIC_URL in /opt/notemark_data/.env is set to the container IP. It must be the address you open Note Mark at, without a trailing slash. Change it when the IP changes or when Note Mark sits behind a reverse proxy or domain, then run systemctl restart notemark. Upstream recommends a reverse proxy with HTTPS and rate limiting on /api/auth/*. Copy to clipboard and installing the app as a PWA only work over HTTPS.",
+      "Notes are stored as plain Markdown files in /opt/notemark_data/notes, and users plus the folder cache in /opt/notemark_data/db.sqlite. Back up the whole /opt/notemark_data directory. If you change note files outside Note Mark, run the clear-cache command and restart the service.",
+      "The CLI (user add, set-password, clear-cache, clean) needs the service environment: set -a; . /opt/notemark_data/.env; set +a; /opt/notemark/note-mark --help",
+      "Install and every update build the Go backend and the Rust/WebAssembly + SolidJS frontend from source. That takes about 9 minutes on 2 cores and needs around 1 GB of RAM. The running server uses only a few dozen MB."
+    ],
+    "warnings": [
+      "There is no default account. Create one at http://<IP>:8080/auth/signup. Sign-up is open to anyone who can reach the port, so once your accounts exist set ENABLE_INTERNAL_SIGNUP=false in /opt/notemark_data/.env and run systemctl restart notemark."
+    ],
+    "port": 8080,
+    "website": "https://notemark.docs.enchantedcode.co.uk/",
+    "documentation": "https://notemark.docs.enchantedcode.co.uk/docs/",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/note-mark.webp",
+    "updateable": true,
+    "privileged": false,
+    "has_arm": false,
+    "is_dev": true,
+    "execute_in": [
+      "lxc"
+    ],
+    "config_path": "",
+    "os": "debian"
+  },
+  {
     "name": "Notifiarr",
     "slug": "notifiarr",
     "desc": "Notifiarr is a purpose built system to bring many applications together to manage and customize notifications via Discord. You can monitor many aspects of your network(s), be notified of downtime, be notified of health issues, etc",
@@ -19766,6 +20038,49 @@
     "os": "debian"
   },
   {
+    "name": "Reconya",
+    "slug": "reconya",
+    "desc": "Reconya is a network reconnaissance and asset discovery tool written in Go. It sweeps the networks you define with ICMP, ARP and TCP probes, identifies devices by MAC address, hostname and OS fingerprint, scans their top ports with service detection, passively picks up IPv6 neighbours, and raises alerts for new devices, risky open ports or unreachable hosts. Everything is shown in a web console with a topology map and a live event log.",
+    "script": "ct/reconya.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/reconya.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/reconya.sh",
+    "type": "lxc",
+    "type_id": "nm9bra8mzye2scg",
+    "categories": [
+      "scriptcat00004"
+    ],
+    "category_names": [
+      "Network & Firewall"
+    ],
+    "notes": [
+      "The admin password is generated during install and stored as LOGIN_PASSWORD in /opt/reconya_data/.env. To change the username or password, edit that file and run systemctl restart reconya.",
+      "Nothing is scanned until you add a network: open Networks, add the suggested subnet of the container (or any CIDR it can route to), select it and start the scan. MAC addresses and ARP discovery only work on the layer-2 segment the container is attached to, so give it an interface on each bridge or VLAN you want inventoried.",
+      "All outbound lookups are off, so vendor names come from a small built-in table. Set VENDOR_LOOKUP_ONLINE_ENABLED=true in /opt/reconya_data/.env to look up unknown MAC prefixes at api.macvendors.com, then restart the service.",
+      "Screenshots of discovered web services need a browser in the container, for example apt install chromium, which the script does not install.",
+      "Reconya is licensed under CC BY-NC 4.0: free for non-commercial use, commercial use needs permission from the author."
+    ],
+    "warnings": [
+      "Reconya signs login sessions with a key built into the binary, not a per-install secret, so a session cookie from any Reconya installation is accepted by every other one. Keep port 3008 on a trusted network and never expose it to the internet."
+    ],
+    "port": 3008,
+    "website": "https://reconya.com/",
+    "documentation": "https://github.com/Dyneteq/reconya#readme",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/reconya.webp",
+    "updateable": true,
+    "privileged": false,
+    "has_arm": false,
+    "is_dev": true,
+    "execute_in": [
+      "lxc"
+    ],
+    "config_path": "",
+    "default_credentials": {
+      "username": "admin",
+      "password": ""
+    },
+    "os": "debian"
+  },
+  {
     "name": "Recyclarr",
     "slug": "recyclarr",
     "desc": "Recyclarr is an automation tool that integrates with media management software like Sonarr and Radarr. It helps users manage and organize their media libraries by automatically searching for and adding content from indexers, based on user-defined criteria. It streamlines the process of maintaining and updating media collections without manual intervention.",
@@ -21428,6 +21743,51 @@
     "os": "debian"
   },
   {
+    "name": "Soulbeet",
+    "slug": "soulbeet",
+    "desc": "Soulbeet is a self-hosted music downloader and library manager. You search for an album or track, it picks the best source on Soulseek, downloads it through slskd, tags and files it into your library with beets, and can push discovery playlists built from your Last.fm or ListenBrainz history to Navidrome. This script builds Soulbeet from source and installs beets; slskd and Navidrome run separately.",
+    "script": "ct/soulbeet.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/soulbeet.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/soulbeet.sh",
+    "type": "lxc",
+    "type_id": "nm9bra8mzye2scg",
+    "categories": [
+      "scriptcat00013"
+    ],
+    "category_names": [
+      "Media & Streaming"
+    ],
+    "notes": [
+      "Soulbeet needs an slskd 0.26 or newer instance, which is not part of this container (use the slskd script for one). Enter its URL and API key in Settings > Config.",
+      "Add library folders in Settings > Library. /opt/soulbeet_data/music is prepared for that; mount the music share Navidrome reads at that path so imported tracks show up there.",
+      "Discovery playlists, rating sync and Navidrome logins need NAVIDROME_URL in /opt/soulbeet_data/.env. Uncomment it, then run systemctl restart soulbeet.",
+      "beets is installed with the plugin set of upstream's default (light) image: MusicBrainz tagging. Its configuration is /opt/soulbeet_data/beets_config.yaml, and pure-Python plugins can be dropped into /opt/soulbeet_data/beets-plugins.",
+      "Install and every update compile Soulbeet from source (Rust server plus WebAssembly client), which takes about 6 to 9 minutes on 4 cores. The running app needs well under 512 MB, so the RAM can be lowered after the install and raised again before an update."
+    ],
+    "warnings": [
+      "Soulbeet ships a local admin / admin account. Change its password in Settings > Users right after the first login. Once NAVIDROME_URL is set, users log in with their Navidrome credentials instead.",
+      "Soulbeet's sign-up API accepts requests without a login, and any logged-in user can change any other user's password. Anyone who reaches port 9765 can therefore take over the instance, including the slskd API key stored in it. Keep it on a trusted network and do not expose it to the internet.",
+      "Soulbeet imports what slskd downloads straight from disk, so slskd's downloads directory has to be mounted into this container at /opt/soulbeet_data/downloads, e.g. pct set <CTID> -mp0 /path/to/slskd/downloads,mp=/opt/soulbeet_data/downloads."
+    ],
+    "port": 9765,
+    "website": "https://github.com/terry90/soulbeet",
+    "documentation": "https://github.com/terry90/soulbeet#readme",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/soulbeet.webp",
+    "updateable": true,
+    "privileged": false,
+    "has_arm": false,
+    "is_dev": true,
+    "execute_in": [
+      "lxc"
+    ],
+    "config_path": "",
+    "default_credentials": {
+      "username": "admin",
+      "password": "admin"
+    },
+    "os": "debian"
+  },
+  {
     "name": "SoulSync",
     "slug": "soulsync",
     "desc": "SoulSync is an intelligent music discovery and automation platform. It monitors artists, generates playlists, downloads missing tracks from multiple sources, verifies audio fingerprints, enriches metadata, and syncs with your media server.",
@@ -22608,6 +22968,48 @@
       "pve"
     ],
     "config_path": "",
+    "os": "debian"
+  },
+  {
+    "name": "TaskView",
+    "slug": "taskview",
+    "desc": "TaskView is a self-hosted project and task management platform for teams. Projects hold task lists, Kanban boards, a dependency graph and sprints, with priorities, tags, deadlines, assignees, recurring tasks and time tracking, plus organizations with role-based permissions, SSO and SCIM, webhooks, GitHub/GitLab/Gitea issue sync, API tokens and an MCP server for AI assistants. This script builds the API and web client from source and runs them with PostgreSQL behind Nginx.",
+    "script": "ct/taskview.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/taskview.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/taskview.sh",
+    "type": "lxc",
+    "type_id": "nm9bra8mzye2scg",
+    "categories": [
+      "scriptcat00025"
+    ],
+    "category_names": [
+      "Business & ERP"
+    ],
+    "notes": [
+      "Without SMTP only the default account can sign in: sign-up, invitations and magic-link login all confirm the email address by mail. For more users add the SMTP_* settings from https://taskview.tech/docs/configuration/environment-variables to /opt/taskview_data/.env, consider ALLOW_PUBLIC_REGISTRATION=false (invited emails only), then run systemctl restart taskview.",
+      "The API only accepts browser requests from the origins in CORS_ALLOWED_ORIGINS, and builds email and OAuth links from APP_URL, both set to the container IP in /opt/taskview_data/.env. Change them when the IP changes or TaskView is reached through a hostname or reverse proxy (CORS_ALLOWED_ORIGINS takes a comma-separated list), then run systemctl restart taskview.",
+      "TaskView is source-available, not open source: the TaskView Source-Available License allows personal, family and internal company use, but forbids offering it to third parties as a hosted service or building a competing product on it.",
+      "Install and every update build TaskView from source, which needs about 4 GB of RAM (the API bundle is minified with Terser). The running services use far less, so the RAM can be lowered after the install and raised again before an update."
+    ],
+    "warnings": [
+      "The default login user / user1!#Q is publicly documented. Sign in right after the install and claim the account under Account settings > Login and email (set your own login, email and password)."
+    ],
+    "port": 80,
+    "website": "https://taskview.tech/",
+    "documentation": "https://taskview.tech/docs",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/taskview.webp",
+    "updateable": true,
+    "privileged": false,
+    "has_arm": false,
+    "is_dev": true,
+    "execute_in": [
+      "lxc"
+    ],
+    "config_path": "",
+    "default_credentials": {
+      "username": "user",
+      "password": "user1!#Q"
+    },
     "os": "debian"
   },
   {
@@ -24765,6 +25167,44 @@
     "os": "alpine"
   },
   {
+    "name": "Vane",
+    "slug": "vane",
+    "desc": "Vane (formerly Perplexica) is a self-hosted AI answering engine in the style of Perplexity. It searches the web through SearXNG, reads the results and answers with cited sources, using a local LLM through Ollama or a cloud provider such as OpenAI, Anthropic, Gemini or Groq. It also offers speed, balanced and quality modes, academic and discussion search, image and video search, file uploads and a search history. This script builds Vane from source and runs a private SearXNG instance with JSON output next to it.",
+    "script": "ct/vane.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/vane.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/vane.sh",
+    "type": "lxc",
+    "type_id": "nm9bra8mzye2scg",
+    "categories": [
+      "scriptcat00020"
+    ],
+    "category_names": [
+      "AI / Coding & Dev-Tools"
+    ],
+    "notes": [
+      "No AI provider is configured. The first visit to port 3000 opens the setup screen: add Ollama, OpenAI, Anthropic, Gemini, Groq or any OpenAI-compatible server there and pick a chat and an embedding model. Ollama on another host must listen on 0.0.0.0 and be entered as http://<ollama-ip>:11434.",
+      "The bundled SearXNG only listens on 127.0.0.1:8888 and is configured in /etc/searxng/settings.yml (restart with systemctl restart searxng). To use your own instance instead, enable the json format there and change the SearXNG URL in Vane's settings.",
+      "Settings and API keys (config.json), the chat history (db.sqlite) and uploaded files live in /opt/vane_data, which updates leave untouched.",
+      "Install and every update build Vane from source, which takes about 10 minutes on 2 cores and needs the 4 GB of RAM and 12 GB of disk. Vane and SearXNG together idle at about 500 MB, so the RAM can be lowered after the install and raised again before an update."
+    ],
+    "warnings": [
+      "Vane has no login. Anyone who reaches port 3000 can use it, read the chat history and see the provider API keys in the settings, so keep it on a trusted network or behind an authenticating reverse proxy."
+    ],
+    "port": 3000,
+    "website": "https://github.com/ItzCrazyKns/Vane",
+    "documentation": "https://github.com/ItzCrazyKns/Vane/tree/master/docs",
+    "logo": "https://cdn.jsdelivr.net/gh/ItzCrazyKns/Vane@master/public/icon.png",
+    "updateable": true,
+    "privileged": false,
+    "has_arm": false,
+    "is_dev": true,
+    "execute_in": [
+      "lxc"
+    ],
+    "config_path": "",
+    "os": "debian"
+  },
+  {
     "name": "Vaultwarden",
     "slug": "vaultwarden",
     "desc": "Vaultwarden is a self-hosted password manager which provides secure and encrypted password storage. It uses client-side encryption and provides access to passwords through a web interface and mobile apps.",
@@ -25158,6 +25598,44 @@
     "is_dev": false,
     "execute_in": [
       "pve"
+    ],
+    "config_path": "",
+    "os": "debian"
+  },
+  {
+    "name": "WatchState",
+    "slug": "watchstate",
+    "desc": "WatchState syncs play state (watched/unwatched and resume progress) between Plex, Jellyfin and Emby without relying on third-party services. It pulls changes from the media servers through scheduled imports or webhooks and pushes them to the others one-way or two-way, maps the users of each server, keeps portable backups of the play state and audits mismatched records with Media Health. This script builds the PHP backend and the web UI from source and serves them with nginx, PHP-FPM and Redis.",
+    "script": "ct/watchstate.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/watchstate.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/watchstate.sh",
+    "type": "lxc",
+    "type_id": "nm9bra8mzye2scg",
+    "categories": [
+      "scriptcat00013"
+    ],
+    "category_names": [
+      "Media & Streaming"
+    ],
+    "notes": [
+      "Add Plex, Jellyfin or Emby under Backends with the server URL and an API token (the help button in the top-right corner walks through one-way and two-way sync), then enable the Import and Export tasks under Tasks: both are off by default. For real-time sync, paste the webhook URL shown on the Backends page into each media server.",
+      "Settings (WS_* variables from the FAQ) are edited on the Env page of the web UI or in /opt/watchstate_data/config/.env; the database, backups and logs live in /opt/watchstate_data as well and survive updates.",
+      "The built-in player and file checks read media files directly. They only work if the media is mounted into the container under the same paths the media servers use."
+    ],
+    "warnings": [
+      "There is no default account. The first visit to http://<IP>:8080 asks for a system user and password, and anyone who reaches the port can set them until then, so do it right after the install. A forgotten login is cleared with: runuser -u www-data -- php /opt/watchstate/bin/console system:resetpassword, after which the next visit asks for a new one.",
+      "Web UI and worker run as www-data. Run console commands from the Console page of the web UI or as www-data (runuser -u www-data -- php /opt/watchstate/bin/console <command>); run as root, they leave root-owned files in /opt/watchstate_data that WatchState can no longer write."
+    ],
+    "port": 8080,
+    "website": "https://github.com/arabcoders/watchstate",
+    "documentation": "https://github.com/arabcoders/watchstate/blob/master/FAQ.md",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/watchstate.webp",
+    "updateable": true,
+    "privileged": false,
+    "has_arm": false,
+    "is_dev": true,
+    "execute_in": [
+      "lxc"
     ],
     "config_path": "",
     "os": "debian"
