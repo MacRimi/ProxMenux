@@ -5578,6 +5578,44 @@
     "os": "ubuntu"
   },
   {
+    "name": "Dragonfly",
+    "slug": "dragonfly",
+    "desc": "Dragonfly is an in-memory data store compatible with the Redis and Memcached APIs, so existing Redis clients, libraries and tools work against it unchanged. It is multi-threaded with a shared-nothing design that uses every core it is given, and it takes snapshots without forking, which keeps the memory overhead of a save low. This script installs the official package with a generated password and periodic snapshots.",
+    "script": "ct/dragonfly.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/dragonfly.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/dragonfly.sh",
+    "type": "lxc",
+    "type_id": "nm9bra8mzye2scg",
+    "categories": [
+      "scriptcat00008"
+    ],
+    "category_names": [
+      "Databases"
+    ],
+    "notes": [
+      "Once the memory limit is reached, writes fail with 'Out of memory' and nothing is evicted. To use Dragonfly as a cache that drops old keys instead, add --cache_mode=true to /etc/dragonfly/dragonfly.conf and run `systemctl restart dragonfly`.",
+      "Data is snapshotted to /var/lib/dragonfly every 30 minutes (--snapshot_cron) and on every clean stop, and loaded again at start. Back up that directory; updates leave it and the config in place.",
+      "Dragonfly is source-available under the Business Source License 1.1: free to self-host and to use in your own products, but not to offer as a hosted or managed in-memory data store service."
+    ],
+    "warnings": [
+      "Dragonfly listens on port 6379 on all interfaces and requires a password. It is generated at install and stored as --requirepass in /etc/dragonfly/dragonfly.conf. Connect with `redis-cli -h <IP> -a <password>`; redis-cli is also installed inside the container.",
+      "Dragonfly sets its memory limit at every start to 80% of the RAM free in the container and needs at least 256 MiB of that per CPU core, otherwise it refuses to start. Add RAM when you add cores (4 cores need more than 1.25 GB), or pin a limit with --maxmemory=<size> in the config."
+    ],
+    "port": 6379,
+    "website": "https://www.dragonflydb.io/",
+    "documentation": "https://www.dragonflydb.io/docs",
+    "logo": "https://cdn.jsdelivr.net/gh/dragonflydb/dragonfly@main/.github/images/logo-full.svg",
+    "updateable": true,
+    "privileged": false,
+    "has_arm": false,
+    "is_dev": true,
+    "execute_in": [
+      "lxc"
+    ],
+    "config_path": "",
+    "os": "debian"
+  },
+  {
     "name": "DrawDB",
     "slug": "drawdb",
     "desc": "DrawDB is a free, simple, and intuitive database entity relationship (DBER) editor right in your browser. Build diagrams with a few clicks, export SQL scripts, and customize your editor.",
@@ -6333,6 +6371,44 @@
     "privileged": false,
     "has_arm": true,
     "is_dev": false,
+    "execute_in": [
+      "lxc"
+    ],
+    "config_path": "",
+    "os": "debian"
+  },
+  {
+    "name": "FalkorDB",
+    "slug": "falkordb",
+    "desc": "FalkorDB is a low-latency property graph database built on sparse matrices and linear algebra (GraphBLAS), aimed at knowledge graphs and GraphRAG for LLM applications. It runs as a Redis module, is queried with OpenCypher through the GRAPH.* commands from any Redis client, and comes with FalkorDB Browser, a web UI for running queries and exploring graphs.",
+    "script": "ct/falkordb.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/falkordb.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/falkordb.sh",
+    "type": "lxc",
+    "type_id": "nm9bra8mzye2scg",
+    "categories": [
+      "scriptcat00008"
+    ],
+    "category_names": [
+      "Databases"
+    ],
+    "notes": [
+      "Try it from the container: redis-cli -a <password> GRAPH.QUERY social \"CREATE (:Person {name:'Alice'})-[:KNOWS]->(:Person {name:'Bob'})\", then redis-cli -a <password> GRAPH.QUERY social \"MATCH (a)-[:KNOWS]->(b) RETURN a.name, b.name\".",
+      "FalkorDB Browser runs on port 3000. Log in with host localhost, port 6379, an empty username and the requirepass password. If you reach it under another address (new IP, hostname, reverse proxy), set NEXTAUTH_URL in /opt/falkordb-browser_data/.env and restart falkordb-browser.",
+      "FalkorDB is loaded as a module into Redis 8 from packages.redis.io (service redis-server). Module arguments sit on the loadmodule line in /etc/redis/falkordb.conf; graph data (RDB and AOF) lives in /var/lib/redis, and LOAD CSV reads from /var/lib/FalkorDB/import.",
+      "The 4 GB RAM are for building FalkorDB Browser during install and browser updates (peak about 3.4 GB). At runtime FalkorDB and the browser use about 200 MB plus your graph data."
+    ],
+    "warnings": [
+      "The Redis password is generated at install and stored as requirepass in /etc/redis/falkordb.conf. FalkorDB itself listens on port 6379."
+    ],
+    "port": 3000,
+    "website": "https://www.falkordb.com/",
+    "documentation": "https://docs.falkordb.com/",
+    "logo": "https://cdn.jsdelivr.net/gh/FalkorDB/falkordb-browser@main/public/icons/F-light.svg",
+    "updateable": true,
+    "privileged": false,
+    "has_arm": false,
+    "is_dev": true,
     "execute_in": [
       "lxc"
     ],
@@ -12690,6 +12766,43 @@
       "username": "admin",
       "password": "auto-generated"
     },
+    "os": "debian"
+  },
+  {
+    "name": "Mathesar",
+    "slug": "mathesar",
+    "desc": "Mathesar is a spreadsheet-like web interface for PostgreSQL. Users of any technical skill level can view, edit, query and collaborate on Postgres data directly, build relationships between tables, import CSV files and create forms, while access is governed by native PostgreSQL roles and privileges.",
+    "script": "ct/mathesar.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/mathesar.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/mathesar.sh",
+    "type": "lxc",
+    "type_id": "nm9bra8mzye2scg",
+    "categories": [
+      "scriptcat00008"
+    ],
+    "category_names": [
+      "Databases"
+    ],
+    "notes": [
+      "On first visit Mathesar asks you to create the admin account. The two analytics checkboxes on that page (installation confirmation and anonymous usage data) are enabled by default; untick them if you do not want to share data.",
+      "The bundled PostgreSQL server holds Mathesar's internal database (mathesar_django), which cannot itself be used for your data. Use 'Create a new database' to store data in this container (the mathesar role may create databases), or 'Connect to an existing database' with the host, port and credentials of any other PostgreSQL 14+ server.",
+      "ALLOWED_HOSTS is * so the container IP works out of the box. Behind a reverse proxy, restrict it to your domain(s) and forward the Host and X-Forwarded-Proto headers."
+    ],
+    "warnings": [
+      "Settings live in /opt/mathesar_data/.env, including SECRET_KEY, which encrypts the saved database passwords: keep it and back it up with the PostgreSQL databases. Add variables from https://docs.mathesar.org/administration/environment-variables/ there, then run `systemctl restart mathesar`."
+    ],
+    "port": 8000,
+    "website": "https://mathesar.org/",
+    "documentation": "https://docs.mathesar.org/",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/mathesar.webp",
+    "updateable": true,
+    "privileged": false,
+    "has_arm": false,
+    "is_dev": true,
+    "execute_in": [
+      "lxc"
+    ],
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -25507,6 +25620,48 @@
       "pve"
     ],
     "config_path": "",
+    "os": "debian"
+  },
+  {
+    "name": "Windmill",
+    "slug": "windmill",
+    "desc": "Windmill is an open-source developer platform that turns scripts into webhooks, workflows and UIs. Scripts in Python, TypeScript, Bash, SQL and other languages get an auto-generated form and API, can be chained into flows with branches, loops, retries and approval steps, run on schedules or from webhooks and other triggers, and back low-code apps. This script runs the Community Edition binary in standalone mode (server and worker in one process) with PostgreSQL.",
+    "script": "ct/windmill.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/windmill.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/windmill.sh",
+    "type": "lxc",
+    "type_id": "nm9bra8mzye2scg",
+    "categories": [
+      "scriptcat00019"
+    ],
+    "category_names": [
+      "Automation & Scheduling"
+    ],
+    "notes": [
+      "Webhook URLs, OAuth redirects and links in emails are built from BASE_URL in /opt/windmill_data/.env, which points at the container IP. Change it when the IP changes or Windmill sits behind a reverse proxy or domain, then run systemctl restart windmill. A Base URL set in the instance settings takes precedence.",
+      "Python (through uv, which downloads the Python version on first use), TypeScript on Bun, Bash, DuckDB and SQL scripts run out of the box. The other languages the editor offers (TypeScript on Deno, Go, PHP, PowerShell, Rust, C#, Java, Ansible and more) need their runtime installed in the container first.",
+      "Server and worker share one process with a single worker, so jobs run one at a time. For parallel jobs, run more Windmill processes with MODE=worker against the same database.",
+      "The windmill database role has no CREATEDB or CREATEROLE privilege, so the Custom instance database option for Data Tables and DuckLake fails with permission denied. Point Data Tables at a PostgreSQL resource instead."
+    ],
+    "warnings": [
+      "Log in with admin@windmill.dev / changeme right after the install. Windmill then asks for a new superadmin account, which replaces the default one. Until you do that, anyone who reaches port 8000 can log in with the default credentials."
+    ],
+    "port": 8000,
+    "website": "https://www.windmill.dev/",
+    "documentation": "https://www.windmill.dev/docs/intro",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/windmill.webp",
+    "updateable": true,
+    "privileged": false,
+    "has_arm": false,
+    "is_dev": true,
+    "execute_in": [
+      "lxc"
+    ],
+    "config_path": "",
+    "default_credentials": {
+      "username": "admin@windmill.dev",
+      "password": "changeme"
+    },
     "os": "debian"
   },
   {
