@@ -4347,6 +4347,7 @@ def check_app(
                 "error": result.get("error"),
                 "checked_at": _now_iso(),
                 "installed_digest": result.get("installed_digest"),
+                "installed_registry_digest": result.get("installed_registry_digest"),
                 "latest_digest": result.get("latest_digest"),
                 "image_created": result.get("image_created"),
                 "latest_image_created": result.get("latest_image_created"),
@@ -5598,6 +5599,7 @@ def _oci_instance_meta(vmid) -> Optional[dict]:
     contract = template.get("container_contract") or {}
     image = contract.get("image") or {}
     observed_image = (record.get("observed") or {}).get("image") or {}
+    registry_digest = str((record.get("observed") or {}).get("resolved_registry_digest") or "").strip()
     # A stack member carries only its own image contract; the presentation
     # belongs to the stack it is part of, which records its title, site,
     # category and the endpoint the stack is reached on.
@@ -5702,6 +5704,9 @@ def _oci_instance_meta(vmid) -> Optional[dict]:
         # The exact image this container was created from. Its digest is what
         # an update is decided on; the version label is only for reading.
         "installed_digest": str(observed_image.get("manifest_digest") or "").strip() or None,
+        # The digest the registry served that image under. An image published
+        # with a Docker-format manifest is saved under another one.
+        "registry_digest": registry_digest if re.fullmatch(r"sha256:[0-9a-f]{64}", registry_digest) else None,
         "architecture": str(observed_image.get("architecture") or "").strip() or None,
     }
 
@@ -5789,16 +5794,21 @@ def _oci_image_versions(vmid, known: Optional[dict] = None, with_latest: bool = 
         return {**result, "error": f"OCI engine unavailable: {exc}"}
 
     known = known or {}
+    # Deciding an update needs the digest the registry gave the installed image.
     if (known.get("installed_digest") == installed_digest
+            and (known.get("installed_registry_digest") or not with_latest)
             and (known.get("installed_version") or known.get("image_created"))):
         result["installed_version"] = known.get("installed_version")
         result["image_created"] = known.get("image_created")
+        result["installed_registry_digest"] = known.get("installed_registry_digest")
     else:
         try:
             installed = _oci_resolve(
-                module, f"{_oci_repository(reference)}@{installed_digest}", architecture)
+                module, f"{_oci_repository(reference)}@{meta.get('registry_digest') or installed_digest}",
+                architecture)
             result["installed_version"] = installed.get("version")
             result["image_created"] = installed.get("created")
+            result["installed_registry_digest"] = installed.get("manifest_digest")
         except Exception as exc:
             return {**result, "error": f"could not read the installed image: {exc}"}
     if not result.get("installed_version"):
@@ -5815,7 +5825,7 @@ def _oci_image_versions(vmid, known: Optional[dict] = None, with_latest: bool = 
     # The image decides. An application whose version did not move can still
     # have a new image — a rebuild on a patched base — and that is an update
     # for a container whose application only changes when its image does.
-    replaced = bool(latest_digest) and latest_digest != installed_digest
+    replaced = bool(latest_digest) and latest_digest != (result.get("installed_registry_digest") or installed_digest)
     result.update(latest_digest=latest_digest, latest_version=latest.get("version"),
                   latest_image_created=latest.get("created"), update_available=replaced)
     return result
