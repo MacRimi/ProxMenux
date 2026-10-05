@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useMemo, useCallback } from "react"
 import useSWR from "swr"
+import { VmBackupJobs } from "./vm-backup-jobs"
 import { Badge } from "./ui/badge"
 import { Button } from "./ui/button"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs"
@@ -24,6 +25,7 @@ import { getApiUrl, fetchApi } from "../lib/api-config"
 import { TerminalPanel } from "./terminal-panel"
 import { AvatarMenu } from "./avatar-menu"
 import {
+  CalendarClock,
   RefreshCw,
   AlertTriangle,
   CheckCircle,
@@ -842,6 +844,10 @@ export function ProxmoxDashboard() {
 
           <TabsContent value="backup" className="space-y-4 md:space-y-6 mt-0">
             <HostBackup key={`backup-${componentKey}`} />
+          </TabsContent>
+
+       	<TabsContent value="vm-backups" className="space-y-4 md:space-y-6 mt-0">
+            <VmBackupJobs key={`vm-backups-${componentKey}`} />
           </TabsContent>
 
           <TabsContent value="terminal" className="mt-0">
