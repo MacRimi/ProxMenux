@@ -166,6 +166,7 @@ def resolve_candidate(reference, architecture):
     if '@' in reference:
         transport = repo + '@' + reference.split('@', 1)[1]
     raw = command('skopeo', 'inspect', '--raw', 'docker://' + transport)
+    registry_digest = 'sha256:' + sha(raw)
     manifest = json.loads(raw)
     if 'manifests' in manifest:
         matches = [m for m in manifest['manifests'] if m.get('platform', {}).get('architecture') == architecture
@@ -192,7 +193,8 @@ def resolve_candidate(reference, architecture):
     # The build date identifies the image as the publisher released it: it is
     # what changes when an image is rebuilt, whether or not the application
     # version inside it moved.
-    return {'manifest_digest': digest, 'layers': [layer['digest'] for layer in json.loads(raw).get('layers', [])],
+    return {'manifest_digest': digest, 'registry_digest': registry_digest,
+            'layers': [layer['digest'] for layer in json.loads(raw).get('layers', [])],
             'defaults': defaults, 'version': version, 'created': config.get('created')}
 
 

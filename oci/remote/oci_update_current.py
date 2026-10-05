@@ -67,7 +67,10 @@ def resolve_archive(desired, config, current=None, check=None, required_digest=N
     digest = candidate['manifest_digest']
     if not re.fullmatch(r'sha256:[a-f0-9]{64}', digest):
         raise ValueError(translate('Invalid registry digest'))
-    if required_digest is not None and digest != required_digest:
+    registry_digest = candidate.get('registry_digest')
+    if registry_digest is not None and not re.fullmatch(r'sha256:[a-f0-9]{64}', registry_digest):
+        raise ValueError(translate('Invalid registry digest'))
+    if required_digest is not None and registry_digest != required_digest:
         raise ValueError(translate('The registry did not return the saved image digest'))
     msg_ok(f"{translate('Image:')} {reference} ({candidate.get('version') or digest[7:19]})")
     if current and same_image(candidate, current):
