@@ -1559,10 +1559,10 @@
     "type": "lxc",
     "type_id": "nm9bra8mzye2scg",
     "categories": [
-      "scriptcat00014"
+      "scriptcat00012"
     ],
     "category_names": [
-      "*Arr Suite"
+      "Documents & Notes"
     ],
     "notes": [
       "This script will prompt you to select the applications you want to install and configure the network settings."
@@ -1570,7 +1570,7 @@
     "warnings": [],
     "port": 3010,
     "website": "https://community-scripts.org",
-    "documentation": "community-scripts/ProxmoxVED/blob/main/tools/arr-stack.sh",
+    "documentation": "community-scripts/DevScripts/blob/main/tools/arr-stack.sh",
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/ProxmoxVE.webp",
     "updateable": true,
     "privileged": false,
@@ -13409,6 +13409,44 @@
     "is_dev": false,
     "execute_in": [
       "pve"
+    ],
+    "config_path": "",
+    "os": "debian"
+  },
+  {
+    "name": "Meme Search",
+    "slug": "memesearch",
+    "desc": "Meme Search is a self-hosted search engine for your own meme collection. A local vision model writes a description of each image, and the memes can then be found by keyword or by meaning (vector search), tagged, and fetched through a read-only search API. This script runs the Rails app with PostgreSQL and pgvector, plus the Python image-to-text service on the CPU.",
+    "script": "ct/memesearch.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/memesearch.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/memesearch.sh",
+    "type": "lxc",
+    "type_id": "nm9bra8mzye2scg",
+    "categories": [
+      "scriptcat00013"
+    ],
+    "category_names": [
+      "Media & Streaming"
+    ],
+    "notes": [
+      "Rails only answers to host names it knows. MEME_SEARCH_ALLOWED_HOSTS in /opt/memesearch_data/.env holds the container IP from the install. Add any other IP or host name (comma-separated, exact values) and run systemctl restart memesearch when the IP changes or a reverse proxy is in front.",
+      "The meme library is /opt/memesearch_data/memes. Every subfolder can be added as an image path under Settings, and uploads land in direct-uploads. To index memes from the host, bind-mount the folder as a subfolder, for example mp0: /tank/memes,mp=/opt/memesearch_data/memes/mymemes. A symlinked folder is rejected.",
+      "Descriptions are generated on the CPU with Florence-2-base. The first job downloads the model (about 450 MB) to /opt/memesearch_data/models. On 4 cores an image then takes 10 to 30 seconds, and the generator peaks at about 5 GB RAM. The 6 GB default only fits Florence-2-base: Florence-2-large and moondream2 need 8 to 12 GB RAM and more disk. Alternatively, an OpenAI-compatible vision API such as Ollama can be configured under Settings.",
+      "With var_gpu=yes and an NVIDIA GPU passed through, the generator installs CUDA PyTorch instead of the CPU build, which needs about 6 GB more disk."
+    ],
+    "warnings": [
+      "Meme Search has no login. Anyone who can reach port 3000 can browse and delete memes, change settings and create API tokens, so keep the container on a trusted network or behind a VPN."
+    ],
+    "port": 3000,
+    "website": "https://meme-search.neonwatty.com/",
+    "documentation": "https://github.com/meme-search/meme-search#readme",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/meme-search.webp",
+    "updateable": true,
+    "privileged": false,
+    "has_arm": false,
+    "is_dev": true,
+    "execute_in": [
+      "lxc"
     ],
     "config_path": "",
     "os": "debian"
