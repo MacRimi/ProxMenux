@@ -444,8 +444,8 @@ class ActivePayloadTests(unittest.TestCase):
         item = payload['health_degraded']['categories'][0]
         self.assertEqual(item['cat_key'], 'cpu')
         out = render_fixture('it')('health_degraded', {**payload, 'severity': 'WARNING'})
-        self.assertIn('Utilizzo e temperatura della CPU', out['title'])
-        self.assertEqual(out['body'], 'La CPU è superiore al 85% per 300s.')
+        self.assertIn('Utilizzo e temperatura CPU', out['title'])
+        self.assertEqual(out['body'], 'Utilizzo della CPU oltre 85% per 300 s.')
 
     def test_legacy_key_and_unknown_reason_remain_honest(self):
         render = render_fixture('it')
@@ -453,8 +453,8 @@ class ActivePayloadTests(unittest.TestCase):
             return {'hostname': 'node.example', 'health_degraded': {'categories': [item]}}
         legacy = render('health_degraded', payload({'key': 'cpu', 'status': 'WARNING',
                   'reason': 'CPU >85% sustained for 300s'}))
-        self.assertIn('Utilizzo e temperatura della CPU', legacy['title'])
-        self.assertIn('La CPU', legacy['body'])
+        self.assertIn('Utilizzo e temperatura CPU', legacy['title'])
+        self.assertIn('Utilizzo della CPU', legacy['body'])
         raw = render('health_degraded', payload({'cat_key': 'services', 'category': 'PVE Services',
                      'status': 'CRITICAL', 'reason': 'Services inactive: pvedaemon', 'entity': 'pvedaemon'}))
         self.assertIn('Servizi PVE', raw['title'])
@@ -467,13 +467,13 @@ class ActivePayloadTests(unittest.TestCase):
 
         conflicting = render('health_degraded', payload({'key': 'memory', 'cat_key': 'cpu',
             'status': 'WARNING', 'reason': 'CPU >85% sustained for 300s'}))
-        self.assertIn('Memoria e scambio', conflicting['title'])
+        self.assertIn('Memoria e swap', conflicting['title'])
         self.assertEqual(conflicting['body'], 'CPU >85% sustained for 300s')
         multi = render('health_degraded', {'hostname': 'node.example',
             'health_degraded': {'categories': [
                 {'cat_key': 'cpu', 'status': 'WARNING', 'reason': 'CPU >85% sustained for 300s'},
                 {'cat_key': 'services', 'status': 'CRITICAL', 'reason': 'Services inactive: pvedaemon'}]}})
-        self.assertIn('Utilizzo e temperatura della CPU', multi['body'])
+        self.assertIn('Utilizzo e temperatura CPU', multi['body'])
         self.assertIn('Servizi PVE', multi['body'])
         self.assertIn('Services inactive: pvedaemon', multi['body'])
 
