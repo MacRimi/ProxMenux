@@ -483,24 +483,31 @@ def _manage_stack(project, ui, row, action=None, lifecycle_args=()):
         if action is None:
             # A stack that cannot be updated can still be removed.
             options = [('update', translate('Update every container of the application'))] if updatable else []
-            options.append(('recreate', translate('Recreate: add or remove extra paths and devices')))
+            options.append(('modify', translate('Modify extra paths and devices')))
+            options.append(('recreate', translate('Recreate every container with its saved configuration')))
             options.append(('remove', translate('Remove: delete the application and its containers')))
             action = ui.choose(translate('Manage OCI stack'), options, options[0][0])
         if action is None:
             return False
         if action == 'remove':
             return _remove(project, ui, primary_id)
+        if action == 'modify':
+            from .stack_recreation import modify_stack
+            return modify_stack(project, ui, primary, _run_lifecycle)
         if action == 'recreate':
-            # Nothing is rebuilt: only the extra paths and devices of the
-            # application container change.
-            from .stack_recreation import recreate_stack
-            return recreate_stack(project, ui, primary, _run_lifecycle)
-        if not ui.review(translate('All {count} containers of the application are updated together (main CT: {vmid}). '
-                                   'If there are new versions, all images are downloaded and verified, the application '
-                                   'is stopped, each container is backed up and replaced with its new image. If anything '
-                                   'fails, the backups are restored.').format(count=len(members), vmid=primary_id),
-                translate('Update OCI stack'), question=translate('Update the whole stack?'), default=True):
-            return False
+            if not ui.review(translate('All {count} containers of the application will be recreated from their saved '
+                                       'image digests (main CT: {vmid}). The stack is stopped, every container is '
+                                       'backed up and replaced, then checked. If anything fails, the backups are restored.')
+                             .format(count=len(members), vmid=primary_id), translate('Recreate OCI stack'),
+                             question=translate('Recreate the whole stack?'), default=False):
+                return False
+        else:
+            if not ui.review(translate('All {count} containers of the application are updated together (main CT: {vmid}). '
+                                       'If there are new versions, all images are downloaded and verified, the application '
+                                       'is stopped, each container is backed up and replaced with its new image. If anything '
+                                       'fails, the backups are restored.').format(count=len(members), vmid=primary_id),
+                    translate('Update OCI stack'), question=translate('Update the whole stack?'), default=True):
+                return False
     else:
         if not ui.review(translate('A coordinated operation has a saved journal. Continuing attempts to recover the previous stack where needed, or finish cleanup for a completed operation. Recovery or cleanup can fail.'), translate('Recover OCI stack'),
                 question=translate('Recover or complete the operation?'), default=True):
@@ -512,9 +519,13 @@ def _manage_stack(project, ui, row, action=None, lifecycle_args=()):
         command.append('--recover')
     else:
         command.extend(lifecycle_args)
+        if action == 'recreate':
+            command.extend(['--operation', 'recreate'])
     if '--acknowledge-external-data' not in command:
         command.append('--acknowledge-external-data')
-    completed = _run_lifecycle(command, translate('Recover OCI stack') if pending else translate('Update OCI stack'))
+    title = (translate('Recover OCI stack') if pending else translate('Recreate OCI stack')
+             if action == 'recreate' else translate('Update OCI stack'))
+    completed = _run_lifecycle(command, title)
     if completed and not pending and not getattr(ui, 'unattended', False):
         images.offer_removal(ui, [int(member['vmid']) for member in members])
     return completed
