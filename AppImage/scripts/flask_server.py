@@ -227,6 +227,8 @@ app.register_blueprint(proxmenux_bp)
 app.register_blueprint(security_bp)
 app.register_blueprint(notification_bp)
 app.register_blueprint(oci_bp)
+from vm_backup_jobs_routes import vm_backup_jobs_bp
+app.register_blueprint(vm_backup_jobs_bp)
 
 # Initialize terminal / WebSocket routes
 init_terminal_routes(app)
