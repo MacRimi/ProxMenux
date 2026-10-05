@@ -449,15 +449,26 @@ select_lxc_container() {
         return 1
     fi
 
-    local options=()
+    local options=() oci_note="" list_h=15
     while read -r id name status; do
         if [[ -n "$id" ]]; then
+            if pmx_lxc_is_oci "$id"; then
+                list_h=12
+                oci_note="\n\n$(translate "Containers created from an OCI image are not listed: their paths are changed in OCI manager Apps (Recreate).")"
+                continue
+            fi
             options+=("$id" "$name ($status)")
         fi
     done <<< "$ct_list"
 
+    if [[ ${#options[@]} -eq 0 ]]; then
+        dialog --title "$(translate "Error")" \
+            --msgbox "$(translate "No LXC containers available")${oci_note}" 12 66
+        return 1
+    fi
+
     ctid=$(dialog --title "$(translate "Select LXC Container")" \
-        --menu "\n$(translate "Select container:")" 25 80 15 \
+        --menu "\n$(translate "Select container:")${oci_note}" 25 80 "$list_h" \
         "${options[@]}" 3>&1 1>&2 2>&3)
     
     if [[ -z "$ctid" ]]; then
@@ -600,15 +611,24 @@ select_privileged_lxc() {
     # === Select CT ===
     local ct_list ctid ct_status conf unpriv
 
-    ct_list=$(pct list | awk 'NR>1 {print $1, $3}')
+    local oci_note="" list_h=12 id name
+    while read -r id name; do
+        [[ -n "$id" ]] || continue
+        if pmx_lxc_is_oci "$id"; then
+            list_h=8
+            oci_note="\n\n$(translate "Containers created from an OCI image are not listed.")"
+            continue
+        fi
+        ct_list+="${ct_list:+ }$id ${name:-CT-$id}"
+    done < <(pct list | awk 'NR>1 {print $1, $3}')
     if [[ -z "$ct_list" ]]; then
         dialog --backtitle "ProxMenux" --title "$(translate "Error")" \
-            --msgbox "$(translate "No CTs available in the system.")" 8 50
+            --msgbox "$(translate "No CTs available in the system.")${oci_note}" 10 60
         return 1
     fi
 
     ctid=$(dialog --backtitle "ProxMenux" --title "$(translate "Select CT")" \
-        --menu "$(translate "Select the CT to manage NFS/Samba client:")" 20 70 12 \
+        --menu "$(translate "Select the CT to manage NFS/Samba client:")${oci_note}" 20 70 "$list_h" \
         $ct_list 3>&1 1>&2 2>&3)
 
     if [[ -z "$ctid" ]]; then

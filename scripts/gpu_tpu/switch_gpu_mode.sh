@@ -770,7 +770,7 @@ detect_affected_lxc_for_selected() {
 prompt_lxc_action_for_vm_mode() {
   [[ ${#LXC_AFFECTED_CTIDS[@]} -eq 0 ]] && return 0
 
-  local running_count=0 onboot_count=0 i
+  local running_count=0 onboot_count=0 oci_count=0 i
   for i in "${!LXC_AFFECTED_CTIDS[@]}"; do
     [[ "${LXC_AFFECTED_RUNNING[$i]}" == "1" ]] && running_count=$((running_count + 1))
     [[ "${LXC_AFFECTED_ONBOOT[$i]}" == "1" ]] && onboot_count=$((onboot_count + 1))
@@ -783,11 +783,23 @@ prompt_lxc_action_for_vm_mode() {
     st="$(translate 'stopped')"; ob="onboot=0"
     [[ "${LXC_AFFECTED_RUNNING[$i]}" == "1" ]] && st="$(translate 'running')"
     [[ "${LXC_AFFECTED_ONBOOT[$i]}" == "1" ]] && ob="onboot=1"
+    if pmx_lxc_is_oci "${LXC_AFFECTED_CTIDS[$i]}"; then
+      ob+=", OCI"
+      oci_count=$((oci_count + 1))
+    fi
     msg+="  •  CT ${LXC_AFFECTED_CTIDS[$i]} (${LXC_AFFECTED_NAMES[$i]}) [${st}, ${ob}]\n"
   done
+  [[ "$oci_count" -gt 0 ]] && msg+="\n$(translate 'OCI containers keep their configuration: they are stopped and their Start on boot is disabled. Their GPU is removed from OCI manager Apps, with Recreate.')\n"
   msg+="\n$(translate 'Switching to GPU -> VM mode requires exclusive VFIO binding.')\n"
   [[ "$running_count" -gt 0 ]] && msg+="\Z1$(translate 'Running containers detected'): ${running_count}\Zn\n"
   [[ "$onboot_count" -gt 0 ]] && msg+="\Z1\Zb$(translate 'Start on boot enabled'): ${onboot_count}\Zn\n"
+  if [[ "$oci_count" -eq ${#LXC_AFFECTED_CTIDS[@]} ]]; then
+    LXC_ACTION="keep_gpu_disable_onboot"
+    dialog --backtitle "ProxMenux" --colors \
+      --title "$(translate 'LXC Conflict Policy')" \
+      --msgbox "$msg" 22 80
+    return 0
+  fi
   msg+="\n$(translate 'Choose conflict policy:')"
 
   choice=$(dialog --backtitle "ProxMenux" --colors \
@@ -849,13 +861,21 @@ apply_lxc_action_for_vm_mode() {
       fi
     fi
 
-    if [[ "$LXC_ACTION" == "keep_gpu_disable_onboot" && "${LXC_AFFECTED_ONBOOT[$i]}" == "1" ]]; then
+    # OCI manager Apps keeps the record of what an OCI container has: its
+    # configuration is not edited from here.
+    local action="$LXC_ACTION"
+    if pmx_lxc_is_oci "$ctid"; then
+      action="keep_gpu_disable_onboot"
+      msg_warn "$(translate 'OCI container, configuration kept. Remove its GPU from OCI manager Apps, with Recreate: CT') ${ctid}" | tee -a "$screen_capture"
+    fi
+
+    if [[ "$action" == "keep_gpu_disable_onboot" && "${LXC_AFFECTED_ONBOOT[$i]}" == "1" ]]; then
       if pct set "$ctid" -onboot 0 >>"$LOG_FILE" 2>&1; then
         msg_warn "$(translate 'Start on boot disabled for LXC') ${ctid}" | tee -a "$screen_capture"
       fi
     fi
 
-    if [[ "$LXC_ACTION" == "remove_gpu_keep_onboot" && -f "$conf" ]]; then
+    if [[ "$action" == "remove_gpu_keep_onboot" && -f "$conf" ]]; then
       local t
       for t in "${types[@]}"; do
         _remove_type_from_lxc_conf "$conf" "$t"

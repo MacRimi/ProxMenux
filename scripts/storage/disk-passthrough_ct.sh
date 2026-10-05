@@ -196,18 +196,29 @@ disk_referenced_in_config() {
 
 
 
-CT_LIST=$(pct list | awk 'NR>1 {print $1, $3}')
+CT_LIST=""
+OCI_NOTE=""
+CT_LIST_H=$UI_MENU_LIST_H
+while read -r ct_id ct_name; do
+    [[ -n "$ct_id" ]] || continue
+    if pmx_lxc_is_oci "$ct_id"; then
+        CT_LIST_H=$((UI_MENU_LIST_H - 2))
+        OCI_NOTE="\n\n$(translate "Containers created from an OCI image are not listed: their paths are changed in OCI manager Apps (Recreate).")"
+        continue
+    fi
+    CT_LIST+="${CT_LIST:+ }$ct_id ${ct_name:-CT-$ct_id}"
+done < <(pct list | awk 'NR>1 {print $1, $3}')
 if [ -z "$CT_LIST" ]; then
     dialog --backtitle "$BACKTITLE" \
            --title "$(translate "Error")" \
-           --msgbox "$(translate "No CTs available in the system.")" $UI_MSG_H $UI_MSG_W
+           --msgbox "$(translate "No CTs available in the system.")${OCI_NOTE}" 12 $UI_MSG_W
     exit 1
 fi
 
 # shellcheck disable=SC2086  # CT_LIST is intentionally word-split into dialog menu pairs
 CTID=$(dialog --backtitle "$BACKTITLE" \
               --title "$(translate "Select CT for destination disk")" \
-              --menu "$(translate "Select the CT to which you want to add disks:")" $UI_MENU_H $UI_MENU_W $UI_MENU_LIST_H \
+              --menu "$(translate "Select the CT to which you want to add disks:")${OCI_NOTE}" $UI_MENU_H $UI_MENU_W $CT_LIST_H \
               $CT_LIST \
               2>&1 >/dev/tty)
 

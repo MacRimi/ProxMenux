@@ -419,6 +419,13 @@ update_component_status() {
 # Hybrid Dialog Functions (Web/Terminal)
 # ============================================
 
+# A container created from an OCI image declares its entrypoint (or cmd) in
+# its configuration. It has no package manager to install drivers with, and
+# OCI manager Apps is what changes its devices.
+pmx_lxc_is_oci() {
+    grep -qaE '^(entrypoint|cmd):' "/etc/pve/lxc/${1}.conf" 2>/dev/null
+}
+
 # Detect if running in web mode
 is_web_mode() {
     [[ "$EXECUTION_MODE" == "web" ]]

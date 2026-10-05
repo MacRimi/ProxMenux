@@ -251,7 +251,7 @@ detect_host_gpus() {
 # Container selection
 # ============================================================
 select_container() {
-  local menu_items=()
+  local menu_items=() oci_hidden=0
   while IFS= read -r line; do
     [[ "$line" =~ ^VMID ]] && continue
     local ctid status name
@@ -259,19 +259,26 @@ select_container() {
     status=$(echo "$line" | awk '{print $2}')
     name=$(echo "$line" | awk '{print $3}')
     [[ -z "$ctid" ]] && continue
+    if pmx_lxc_is_oci "$ctid"; then
+      oci_hidden=$((oci_hidden + 1))
+      continue
+    fi
     menu_items+=("$ctid" "${name:-CT-${ctid}} (${status})")
   done < <(pct list 2>/dev/null)
+
+  local oci_note="" list_h=12
+  [[ $oci_hidden -gt 0 ]] && list_h=7 && oci_note="\n\n$(translate 'Containers created from an OCI image are not listed: their devices are changed in OCI manager Apps (Recreate).')"
 
   if [[ ${#menu_items[@]} -eq 0 ]]; then
     dialog --backtitle "ProxMenux" \
       --title "$(translate 'Add GPU to LXC')" \
-      --msgbox "\n$(translate 'No LXC containers found on this system.')" 8 60
+      --msgbox "\n$(translate 'No LXC containers found on this system.')${oci_note}" 12 66
     exit 0
   fi
 
   CONTAINER_ID=$(dialog --backtitle "ProxMenux" \
     --title "$(translate 'Add GPU to LXC')" \
-    --menu "\n$(translate 'Select the LXC container:')" 20 72 12 \
+    --menu "\n$(translate 'Select the LXC container:')${oci_note}" 20 72 "$list_h" \
     "${menu_items[@]}" \
     2>&1 >/dev/tty) || exit 0
 }

@@ -266,19 +266,25 @@ select_lxc_container() {
         return 1
     fi
 
-    local options=()
+    local options=() oci_note="" list_h=15
     while read -r id name status; do
-        [[ -n "$id" && "$id" =~ ^[0-9]+$ ]] && options+=("$id" "${name:-unnamed} ($status)")
+        [[ -n "$id" && "$id" =~ ^[0-9]+$ ]] || continue
+        if pmx_lxc_is_oci "$id"; then
+            list_h=12
+            oci_note="\n\n$(translate "Containers created from an OCI image are not listed: their paths are changed in OCI manager Apps (Recreate).")"
+            continue
+        fi
+        options+=("$id" "${name:-unnamed} ($status)")
     done <<< "$ct_list"
 
     if [[ ${#options[@]} -eq 0 ]]; then
-        dialog --title "Error" --msgbox "$(translate "No valid containers found")" 8 50
+        dialog --title "Error" --msgbox "$(translate "No valid containers found")${oci_note}" 12 66
         return 1
     fi
 
     local ctid
     ctid=$(dialog --title "$(translate "Select LXC Container")" \
-        --menu "$(translate "Select container:")" 25 85 15 \
+        --menu "$(translate "Select container:")${oci_note}" 25 85 "$list_h" \
         "${options[@]}" 3>&1 1>&2 2>&3)
 
     [[ $? -ne 0 || -z "$ctid" ]] && return 1

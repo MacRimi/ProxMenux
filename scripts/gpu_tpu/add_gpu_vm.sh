@@ -1402,7 +1402,7 @@ check_switch_mode() {
         SWITCH_FROM_LXC=true
         SWITCH_LXC_LIST=$(IFS=', '; echo "${lxc_affected[*]}")
 
-        local msg action_choice
+        local msg action_choice oci_count=0
         msg="\n$(translate 'The selected GPU is currently used by the following LXC container(s):')\n\n"
         local i
         for i in "${!LXC_AFFECTED_CTIDS[@]}"; do
@@ -1411,8 +1411,13 @@ check_switch_mode() {
             onboot_txt="onboot=0"
             [[ "${LXC_AFFECTED_RUNNING[$i]}" == "1" ]] && status_txt="$(translate 'running')"
             [[ "${LXC_AFFECTED_ONBOOT[$i]}" == "1" ]] && onboot_txt="onboot=1"
+            if pmx_lxc_is_oci "${LXC_AFFECTED_CTIDS[$i]}"; then
+                onboot_txt+=", OCI"
+                oci_count=$((oci_count + 1))
+            fi
             msg+="  •  CT ${LXC_AFFECTED_CTIDS[$i]} (${LXC_AFFECTED_NAMES[$i]}) [${status_txt}, ${onboot_txt}]\n"
         done
+        [[ "$oci_count" -gt 0 ]] && msg+="\n$(translate 'OCI containers keep their configuration: they are stopped and their Start on boot is disabled. Their GPU is removed from OCI manager Apps, with Recreate.')\n"
         msg+="\n$(translate 'VM passthrough requires exclusive VFIO binding of the GPU.')\n"
         msg+="$(translate 'Choose how to handle affected LXC containers before switching to VM mode.')\n\n"
         [[ "$running_count" -gt 0 ]] && \
@@ -1421,17 +1426,22 @@ check_switch_mode() {
             msg+="\Z1\Zb$(translate 'Start on boot enabled (onboot=1)'): ${onboot_count}\Zn\n"
         msg+="\n\Z1$(translate 'After this LXC → VM switch, reboot the host so the new binding state is applied cleanly.')\Zn"
 
-        action_choice=$(_pmx_menu --default-item "2" \
-            "$(translate 'GPU Used in LXC Containers')" \
-            "$msg" 25 96 8 \
-            "1" "$(translate 'Keep GPU in LXC config (disable Start on boot)')" \
-            "2" "$(translate 'Remove GPU from LXC config (keep Start on boot)')") || exit 0
+        if [[ "$oci_count" -eq ${#LXC_AFFECTED_CTIDS[@]} ]]; then
+            LXC_SWITCH_ACTION="keep_gpu_disable_onboot"
+            _pmx_msgbox "$(translate 'GPU Used in LXC Containers')" "$msg" 25 96
+        else
+            action_choice=$(_pmx_menu --default-item "2" \
+                "$(translate 'GPU Used in LXC Containers')" \
+                "$msg" 25 96 8 \
+                "1" "$(translate 'Keep GPU in LXC config (disable Start on boot)')" \
+                "2" "$(translate 'Remove GPU from LXC config (keep Start on boot)')") || exit 0
 
-        case "$action_choice" in
-            1) LXC_SWITCH_ACTION="keep_gpu_disable_onboot" ;;
-            2) LXC_SWITCH_ACTION="remove_gpu_keep_onboot" ;;
-            *) exit 0 ;;
-        esac
+            case "$action_choice" in
+                1) LXC_SWITCH_ACTION="keep_gpu_disable_onboot" ;;
+                2) LXC_SWITCH_ACTION="remove_gpu_keep_onboot" ;;
+                *) exit 0 ;;
+            esac
+        fi
     else
         SWITCH_FROM_LXC=false
     fi
@@ -1942,7 +1952,15 @@ cleanup_lxc_configs() {
             msg_ok "$(translate 'LXC already stopped') ${ctid}" | tee -a "$screen_capture"
         fi
 
-        if [[ "$LXC_SWITCH_ACTION" == "keep_gpu_disable_onboot" ]]; then
+        # OCI manager Apps keeps the record of what an OCI container has: its
+        # configuration is not edited from here.
+        local action="$LXC_SWITCH_ACTION"
+        if pmx_lxc_is_oci "$ctid"; then
+            action="keep_gpu_disable_onboot"
+            msg_warn "$(translate 'OCI container, configuration kept. Remove its GPU from OCI manager Apps, with Recreate: CT') ${ctid}" | tee -a "$screen_capture"
+        fi
+
+        if [[ "$action" == "keep_gpu_disable_onboot" ]]; then
             if [[ "${LXC_AFFECTED_ONBOOT[$i]}" == "1" ]]; then
                 if pct set "$ctid" -onboot 0 >>"$LOG_FILE" 2>&1; then
                     msg_warn "$(translate 'Start on boot disabled for LXC') ${ctid}" | tee -a "$screen_capture"
@@ -1952,7 +1970,7 @@ cleanup_lxc_configs() {
             fi
         fi
 
-        if [[ "$LXC_SWITCH_ACTION" == "remove_gpu_keep_onboot" && -f "$conf" ]]; then
+        if [[ "$action" == "remove_gpu_keep_onboot" && -f "$conf" ]]; then
             _remove_selected_gpu_from_lxc_conf "$conf"
             msg_ok "$(translate 'GPU access removed from LXC') ${ctid}" | tee -a "$screen_capture"
         fi
