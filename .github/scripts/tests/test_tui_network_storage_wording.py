@@ -40,6 +40,14 @@ def network_blocks(path):
     return blocks
 
 
+def raid_dialog():
+    """The dialog that reports a RAID member, wherever it sits in the script."""
+    lines = (SCRIPTS / 'storage/disk-passthrough_ct.sh').read_text().splitlines()
+    message = next(i for i, line in enumerate(lines) if RAID in line)
+    assert lines[message - 2].lstrip().startswith('dialog ')
+    return '\n'.join(lines[message - 2:message + 1])
+
+
 def run(code, translations=None, statuses='1', variables='', dialog=False):
     translations = translations or {}
     with tempfile.TemporaryDirectory(prefix='tui-wording-') as directory:
@@ -106,8 +114,7 @@ class TuiNetworkStorageWording(unittest.TestCase):
                 self.assertNotIn('{filesystem}', output)
 
     def test_raid_warning_is_complete_message_with_disk_identifier_and_fallback(self):
-        source = (SCRIPTS / 'storage/disk-passthrough_ct.sh').read_text().splitlines()
-        invocation = '\n'.join(source[457:460])  # original dialog invocation, not the raid detection command
+        invocation = raid_dialog()  # the dialog invocation, not the raid detection command
         for translation, expected in [({}, RAID), ({RAID: 'SYNTHETIC RAID metadata remains'}, 'SYNTHETIC RAID metadata remains')]:
             with self.subTest(translation=translation):
                 output = run(invocation, translations=translation,
@@ -123,7 +130,7 @@ class TuiNetworkStorageWording(unittest.TestCase):
         source = (SCRIPTS / 'share/disk_host.sh').read_text()
         start = source.index('mount_existing_disk() {')
         mount = source[start:source.index('    if ! mount "$disk"', start)] + '    return 0\n}\nmount_existing_disk /dev/fixture /mnt/fixture'
-        raid = '\n'.join((SCRIPTS / 'storage/disk-passthrough_ct.sh').read_text().splitlines()[457:460])
+        raid = raid_dialog()
         for path in catalogs:
             with self.subTest(locale=path.name):
                 catalog = json.loads(path.read_text())
