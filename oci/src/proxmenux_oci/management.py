@@ -484,7 +484,8 @@ def _manage_stack(project, ui, row, action=None, lifecycle_args=()):
             # A stack that cannot be updated can still be removed.
             options = [('update', translate('Update every container of the application'))] if updatable else []
             options.append(('modify', translate('Modify extra paths and devices')))
-            options.append(('recreate', translate('Recreate every container with its saved configuration')))
+            if updatable:
+                options.append(('recreate', translate('Recreate every container with its saved configuration')))
             options.append(('remove', translate('Remove: delete the application and its containers')))
             action = ui.choose(translate('Manage OCI stack'), options, options[0][0])
         if action is None:

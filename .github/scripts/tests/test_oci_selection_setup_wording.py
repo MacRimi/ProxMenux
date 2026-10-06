@@ -69,7 +69,7 @@ class SelectionSetupWording(TestCase):
         # It cannot be updated, but it can still be changed or removed.
         ui = self._stack({'members': [{'native_stack_intent': {'adapt': True}}]}, REPLAY)
         ui.choose.assert_called_once()
-        self.assertEqual([tag for tag, _ in ui.choose.call_args.args[1]], ['recreate', 'remove'])
+        self.assertEqual([tag for tag, _ in ui.choose.call_args.args[1]], ['modify', 'remove'])
 
     def _stack(self, stack, expected):
         record = {'stack': stack}
