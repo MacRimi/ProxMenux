@@ -3738,6 +3738,19 @@
     "tag_regex": "(?i)(?:v|release[-_/]?)?(\\d+(?:\\.\\d+){1,3}(?:[-+._][0-9A-Za-z.-]+)?)",
     "website": "https://github.com/timothepoznanski/poznote"
   },
+  "pricebuddy": {
+    "default_ports": [
+      80
+    ],
+    "file_path": "/root/.pricebuddy",
+    "file_regex": "(?i)(?:v|release[-_/]?)?(\\d+(?:\\.\\d+){1,3}(?:[-+._][0-9A-Za-z.-]+)?)",
+    "github_source": "releases",
+    "installed_via": "file",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/pricebuddy.webp",
+    "repo": "jez500/pricebuddy",
+    "tag_regex": "(?i)(?:v|release[-_/]?)?(\\d+(?:\\.\\d+){1,3}(?:[-+._][0-9A-Za-z.-]+)?)",
+    "website": "https://pricebuddy.jez.me/"
+  },
   "privatebin": {
     "default_ports": [
       80
