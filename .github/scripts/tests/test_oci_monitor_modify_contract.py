@@ -11,6 +11,9 @@ ROOT = Path(__file__).resolve().parents[3]
 MENU = ROOT / 'oci/src/proxmenux_oci/management.py'
 CLI = ROOT / 'oci/src/proxmenux_oci/cli.py'
 MONITOR = ROOT / 'AppImage/components/virtual-machines.tsx'
+WRAPPER = ROOT / 'scripts/oci/manage_instance.sh'
+EXTRA_DEVICES = ROOT / 'oci/src/proxmenux_oci/extra_devices.py'
+STACK_RECREATION = ROOT / 'oci/src/proxmenux_oci/stack_recreation.py'
 
 
 def extracted_stack_manager(scope):
@@ -29,8 +32,17 @@ class MonitorModifyContractTests(TestCase):
         self.assertIn('action: "update" | "modify" | "recreate" | "recover"', source)
         self.assertIn('action: ociInstance.stack ? "modify" : "recreate"', source)
 
-    def test_cli_accepts_the_monitor_modify_action(self):
+    def test_cli_and_monitor_wrapper_accept_the_modify_action(self):
         self.assertIn('choices=("update", "modify", "recreate")', CLI.read_text(encoding='utf-8'))
+        self.assertIn('${ACTION:-} != "modify"', WRAPPER.read_text(encoding='utf-8'))
+
+    def test_modify_device_filter_matches_the_device_prompt_contract(self):
+        caller = STACK_RECREATION.read_text(encoding='utf-8')
+        device_prompt = EXTRA_DEVICES.read_text(encoding='utf-8')
+        prompt = next(node for node in ast.parse(device_prompt).body
+                      if isinstance(node, ast.FunctionDef) and node.name == 'ask_extra_devices')
+        self.assertIn('kinds', [argument.arg for argument in prompt.args.args])
+        self.assertIn("ask_extra_devices(ui, attached, True, kinds=", caller)
 
     def test_modify_action_opens_the_stack_editor_without_running_lifecycle(self):
         primary = {'stack': {'members': [{'vmid': 101}]}}
