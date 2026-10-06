@@ -4729,7 +4729,7 @@
       "temperatureElevated": "Temperaturen förhöjd",
       "cpuSustained": "CPU >{threshold} % bibehållen för {seconds}s",
       "cpuCheckFailed": "CPU-kontrollen misslyckades: {error}",
-      "sensorHighSamplesSpan": "Sensortemperatur {temperature}°C >80°C;höga samplingar spänner över {duration}",
+      "sensorHighSamplesSpan": "Sensortemperatur {temperature}°C >80°C; höga mätvärden under {duration}",
       "noSwapConfigured": "Inget byte har konfigurerats",
       "ramHighSustained": "Hög RAM-användning bibehålls",
       "swapRamPressure": "Byt nästan fullt med RAM-minne tätt",
@@ -4742,7 +4742,7 @@
       "systemNotUpdatedMonths": "Systemet har inte uppdaterats på {days} dagar (>18 månader)",
       "systemNotUpdatedYear": "Systemet har inte uppdaterats på {days} dagar (>1 år)",
       "runningKernelUpdate": "Kärnuppdatering tillgänglig för att köra {kernel}",
-      "kernelPveUpdates": "Kerneluppdateringar tillgängliga: {kernelCount};Proxmox-uppdateringar tillgängliga: {pveCount}",
+      "kernelPveUpdates": "Kerneluppdateringar tillgängliga: {kernelCount}; Proxmox-uppdateringar tillgängliga: {pveCount}",
       "pendingPackageUpdates": "Paketuppdateringar väntar: {count}",
       "updatesAptError": "Det gick inte att söka efter uppdateringar (apt-get-fel)",
       "updatesAptTimeout": "apt-get tog timeout - arkivet kan vara oåtkomligt",
@@ -4759,9 +4759,9 @@
       "failedLoginsWithinThreshold": "Misslyckade inloggningsförsök inom 24 timmar: {count} (inom tröskelvärdet)",
       "loginCheckUnavailable": "Det går inte att kontrollera inloggningsförsök",
       "securityCheckUnavailable": "Säkerhetskontroll inte tillgänglig: {error}",
-      "certificateExpired": "Certificate expired",
+      "certificateExpired": "Certifikatet har gått ut",
       "certificateExpiresDays": "Certifikats utgång (dagar): {days}",
-      "certificateInconclusive": "Certifikatkontrollen är osäkra"
+      "certificateInconclusive": "Certifikatkontrollen gav inget säkert resultat"
     },
     "time": {
       "justNow": "just nu",
