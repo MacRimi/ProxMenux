@@ -254,7 +254,7 @@ select_compress() {
 input_retention() {
     local default="${1:-keep-last=3}"
     JOB_PRUNE=$(dialog --backtitle "$BACKTITLE" --title "$(translate "Retention")" \
-        --inputbox "\n$(translate "Retention policy (prune-backups syntax).")\n$(translate "Examples:")\n  keep-last=3\n  keep-daily=7,keep-weekly=4,keep-monthly=6\n\n$(translate "Leave empty to keep every backup (not recommended).")" \
+        --inputbox "\n$(translate "Retention policy (prune-backups syntax).")\n$(translate "Examples:")\n  keep-last=3\n  keep-daily=7,keep-weekly=4,keep-monthly=6\n\n$(translate "Leave empty to use the retention of the storage.")" \
         14 74 "$default" 3>&1 1>&2 2>&3)
     [[ $? -ne 0 ]] && return 1
     return 0
@@ -366,7 +366,7 @@ edit_job_wizard() {
                     attached=$(attached_host_backups "$job_id")
                     if [[ -n "$attached" && "$JOB_STORAGE" != "$cur_storage" ]]; then
                         dialog --backtitle "$BACKTITLE" --title "$(translate "Storage")" \
-                            --msgbox "\n$(translate "These host backups run with this job and expect its storage:") $attached\n\n$(translate "With another storage they stop running.")" 12 70
+                            --msgbox "\n$(translate "These host backups run with this job and expect its storage:") $attached\n\n$(translate "With another storage this job no longer starts them. Another job that writes to the original storage still does.")" 14 70
                     fi
                     cur_storage="$JOB_STORAGE"
                 fi
@@ -419,9 +419,9 @@ delete_job() {
     local job_id="$1"
     local attached warning=""
     attached=$(attached_host_backups "$job_id")
-    [[ -n "$attached" ]] && warning="\n\n$(translate "These host backups run with this job and will stop running:") $attached"
+    [[ -n "$attached" ]] && warning="\n\n$(translate "This job will no longer start these host backups:") $attached\n$(translate "Another job that writes to the same storage still starts them.")"
     dialog --backtitle "$BACKTITLE" --title "$(translate "Confirm Delete")" \
-        --yesno "\n$(translate "Delete backup job") '$job_id'?\n\n$(translate "This only removes the schedule. Existing backup archives are NOT deleted.")${warning}" 14 70
+        --yesno "\n$(translate "Delete backup job") '$job_id'?\n\n$(translate "This only removes the schedule. Existing backup archives are NOT deleted.")${warning}" 16 70
     [[ $? -ne 0 ]] && return 1
 
     header

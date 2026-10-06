@@ -186,7 +186,7 @@ def offer_recovery(project, ui):
     lines = '\n'.join(f"  CT {row['vmid']}  {row['hostname']}" for row in found)
     text = (f"{translate('These containers were restored from a backup and this host has no record of their OCI application:')}"
             f"\n\n{lines}\n\n"
-            f"{translate('Until they are registered again they cannot be updated or managed from here. The recovery checks first that everything they need is on this host; an application that lacks something is not registered.')}"
+            f"{translate('Until they are registered again they cannot be updated or managed from here. The recovery checks first what prevents their registration; an application with such a problem is not registered. A Rclone mount that has to be enabled again does not prevent it, but then the applications are not started automatically.')}"
             f"\n\n{translate('Recover them now?')}")
     if not ui.confirm(text, default=True):
         return
@@ -346,7 +346,7 @@ def manage_instance(project, ui, row, action=None, lifecycle_args=()):
                 wizard.close()
             if not approved:
                 return False
-        elif not ui.review(translate('If the image channel has a new version, the CT is stopped, backed up and verified, and replaced with the new image to update the container. If anything fails, the backup is restored.'),
+        elif not ui.review(translate('If the image channel has a new version, the CT is stopped, backed up and verified, and replaced with the new image to update the container. If the update fails after the container was changed, the backup is restored. An update that stops halfway is recovered from the OCI management menu.'),
                            translate('Update OCI'), question=translate('Update now?'), default=True):
             return False
         command = [sys.executable, str(project / 'remote/oci_update_current.py'), str(row['vmid']),
@@ -372,7 +372,7 @@ def manage_instance(project, ui, row, action=None, lifecycle_args=()):
     if action is None:
         return False
     if action == 'recover' and not ui.review(
-            translate('The previous native backup will be restored. Shared host directories are not reverted. The disks of the failed attempt are removed.'),
+            translate('If the container had already been changed, its previous native backup is restored. Shared host directories are not reverted. The disks of the failed attempt are removed when the cleanup succeeds.'),
             translate('Recover OCI'), question=translate('Recover now?'), default=True):
         return False
     return _run_lifecycle([sys.executable, str(project / 'remote/oci_instance_transaction.py'),
@@ -501,15 +501,18 @@ def _manage_stack(project, ui, row, action=None, lifecycle_args=()):
         if action == 'recreate':
             if not ui.review(translate('All {count} containers of the application will be recreated from their saved '
                                        'image digests (main CT: {vmid}). The stack is stopped, every container is '
-                                       'backed up and replaced, then checked. If anything fails, the backups are restored.')
+                                       'backed up and replaced, then checked. If the operation fails after a container was '
+                                       'changed, the backups are restored. An operation that stops halfway is recovered from '
+                                       'the OCI management menu.')
                              .format(count=len(members), vmid=primary_id), translate('Recreate OCI stack'),
                              question=translate('Recreate the whole stack?'), default=False):
                 return False
         else:
             if not ui.review(translate('All {count} containers of the application are updated together (main CT: {vmid}). '
                                        'If there are new versions, all images are downloaded and verified, the application '
-                                       'is stopped, each container is backed up and replaced with its new image. If anything '
-                                       'fails, the backups are restored.').format(count=len(members), vmid=primary_id),
+                                       'is stopped, each container is backed up and replaced with its new image. If the operation '
+                                       'fails after a container was changed, the backups are restored. An operation that stops '
+                                       'halfway is recovered from the OCI management menu.').format(count=len(members), vmid=primary_id),
                     translate('Update OCI stack'), question=translate('Update the whole stack?'), default=True):
                 return False
     else:

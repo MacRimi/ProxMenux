@@ -19,7 +19,8 @@ EMPTY_HOST = 'No host directories found in the available container configs or sa
 POST_HOST = 'Host directory listed in saved records (not targeted for removal):'
 UPDATE = ('All {count} containers of the application are updated together (main CT: {vmid}). If there are new '
           'versions, all images are downloaded and verified, the application is stopped, each container is backed '
-          'up and replaced with its new image. If anything fails, the backups are restored.')
+          'up and replaced with its new image. If the operation fails after a container was changed, the backups are '
+          'restored. An operation that stops halfway is recovered from the OCI management menu.')
 PENDING = ('A coordinated operation has a saved journal. Continuing attempts to recover the previous stack '
            'where needed, or finish cleanup for a completed operation. Recovery or cleanup can fail.')
 KEYS = (PREVIEW_HOST, EMPTY_HOST, POST_HOST, UPDATE, PENDING)

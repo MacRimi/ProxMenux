@@ -24,7 +24,8 @@ GUARD = 'The current template changes the template identity or image repository;
 OLD_PREVIEW = ('The saved image channel is checked for a newer image. If replacement is needed, the CT is stopped and '
                'a native backup is verified before its root is replaced. Host directories are outside that backup.')
 PREVIEW = ('If the image channel has a new version, the CT is stopped, backed up and verified, and replaced with '
-           'the new image to update the container. If anything fails, the backup is restored.')
+           'the new image to update the container. If the update fails after the container was changed, the backup '
+           'is restored. An update that stops halfway is recovered from the OCI management menu.')
 
 
 def extracted(path, name, scope):
