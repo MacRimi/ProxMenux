@@ -35,7 +35,7 @@ def run_fixture(fixture, caller=False, extra='', language='en', lang_dir='/nonex
     # jq is the actual parser, constrained to this fixture/catalog only.
     script += '''
 jq() {
- [[ "$#" == 6 && "$1" == -r && "$2" == --arg && "$3" == text && "$5" == '.[$text] // empty' && "$6" == "$LANG_DIR/$LANGUAGE.json" ]] || { printf 'FORBIDDEN:jq-args\\n' >&4; exit 91; }
+ [[ "$#" == 6 && "$1" == -r && "$2" == --arg && "$3" == text && "$5" == '.[$text] // .[($text | gsub("\\\\\\\\n"; "\\n"))] // empty' && "$6" == "$LANG_DIR/$LANGUAGE.json" ]] || { printf 'FORBIDDEN:jq-args\\n' >&4; exit 91; }
  /usr/bin/jq "$@"
 }
 '''

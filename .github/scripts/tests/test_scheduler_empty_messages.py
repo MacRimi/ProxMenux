@@ -51,7 +51,7 @@ FIXTURE={shlex.quote(str(directory))}
 BACKEND={backend}
 HB_UI_MENU_H=20 HB_UI_MENU_W=84 HB_UI_MENU_LIST=10
 command_not_found_handle() {{ printf 'FORBIDDEN:%s\\n' "$*" >> "$FIXTURE/errors"; return 99; }}
-jq() {{ [[ "$#" == 6 && "$1" == -r && "$2" == --arg && "$3" == text && "$5" == '.[$text] // empty' && "$6" == "$FIXTURE/xx.json" ]] || {{ printf 'bad jq' >> "$FIXTURE/errors"; return 99; }}; command jq "$@"; }}
+jq() {{ [[ "$#" == 6 && "$1" == -r && "$2" == --arg && "$3" == text && "$5" == '.[$text] // .[($text | gsub("\\\\\\\\n"; "\\n"))] // empty' && "$6" == "$FIXTURE/xx.json" ]] || {{ printf 'bad jq' >> "$FIXTURE/errors"; return 99; }}; command jq "$@"; }}
 head() {{ [[ "$*" == '-1' ]] || return 99; local first; IFS= read -r first; printf '%s\\n' "$first"; while IFS= read -r first; do :; done; }}
 hb_pve_list_vzdump_jobs() {{
   local file="$FIXTURE/rows" line

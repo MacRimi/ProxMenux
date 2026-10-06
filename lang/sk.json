@@ -6096,7 +6096,7 @@
   "The backup did not pass its integrity check; creating it again...": "Záloha neprešla kontrolou integrity;vytváram to znova...",
   "The backup metadata was compared against this host. The following items will be SKIPPED to keep the boot safe:": "Metadáta zálohy boli porovnané s týmto hostom. Nasledujúce položky sa PRESKOČIA, aby zostal štart bezpečný:",
   "The backup of a member could not be identified": "Zálohu člena nebolo možné identifikovať",
-  "The backup runs as a Proxmox task; follow it in the task log of Proxmox.": "Záloha beží ako úloha Proxmox;nasledujte ho v protokole úloh Proxmox.",
+  "The backup runs as a Proxmox task; follow it in the task log of Proxmox.": "Záloha beží ako úloha Proxmox; nasledujte ho v protokole úloh Proxmox.",
   "The backup storage does not exist:": "Úložisko záloh neexistuje:",
   "The backup was altered; recovery blocked": "Záloha bola zmenená; obnova zablokovaná",
   "The backup was taken on a different PVE or kernel major.minor. These paths will be SKIPPED to keep the boot safe:": "Záloha bola vytvorená na inom PVE alebo inom major.minor kerneli. Tieto cesty sa PRESKOČIA, aby zostal štart bezpečný:",

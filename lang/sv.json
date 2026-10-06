@@ -6097,7 +6097,7 @@
   "The backup did not pass its integrity check; creating it again...": "Säkerhetskopieringen klarade inte sin integritetskontroll;skapar det igen...",
   "The backup metadata was compared against this host. The following items will be SKIPPED to keep the boot safe:": "Säkerhetskopieringsmetadata jämfördes med denna värd. Följande artiklar HOPPAS över för att hålla uppstarten säker:",
   "The backup of a member could not be identified": "En medlems säkerhetskopia kunde inte identifieras",
-  "The backup runs as a Proxmox task; follow it in the task log of Proxmox.": "Säkerhetskopieringen körs som en Proxmox-uppgift;följ den i uppgiftsloggen för Proxmox.",
+  "The backup runs as a Proxmox task; follow it in the task log of Proxmox.": "Säkerhetskopieringen körs som en Proxmox-uppgift; följ den i uppgiftsloggen för Proxmox.",
   "The backup storage does not exist:": "Säkerhetskopieringslagringen finns inte:",
   "The backup was altered; recovery blocked": "Backupen ändrades; återhämtning blockerad",
   "The backup was taken on a different PVE or kernel major.minor. These paths will be SKIPPED to keep the boot safe:": "Säkerhetskopieringen togs på en annan PVE eller kernel major.minor. Dessa sökvägar HOPPAS över för att hålla uppstarten säker:",

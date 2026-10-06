@@ -194,7 +194,7 @@ def _app_detail_text(catalog: Catalog, item: dict[str, Any], template: dict[str,
         lines.append(f"  {translate('Media server') + ':':<34} Jellyfin, Plex, Emby {translate('or none')}")
     elif item.get("multi_container"):
         services = template.get("compose_stack", {}).get("services", [])
-        row(translate("Type"), translate("Multi-container application (experimental)"))
+        row(translate("Type"), translate("Multi-container application"))
         lines += ["", translate("Containers that will be created (one LXC per service, on a private network):")]
         for service in services:
             lines.append(f"  {_service_kind(service):<20} {_image_label(service.get('image'))}")

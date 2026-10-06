@@ -4,6 +4,9 @@
     "2fauth": {
       "status": "laboratory-validated"
     },
+    "adguard-home": {
+      "status": "laboratory-validated"
+    },
     "adguardhome-sync": {
       "status": "laboratory-validated"
     },
@@ -14,6 +17,9 @@
       "status": "laboratory-validated"
     },
     "amule": {
+      "status": "laboratory-validated"
+    },
+    "chromium": {
       "status": "laboratory-validated"
     },
     "codeproject-ai": {
@@ -80,6 +86,9 @@
     "nextcloud": {
       "status": "laboratory-validated"
     },
+    "nextcloud-stack": {
+      "status": "laboratory-validated"
+    },
     "openlist": {
       "status": "laboratory-validated"
     },
@@ -109,6 +118,9 @@
       "status": "laboratory-validated"
     },
     "snapotter": {
+      "status": "laboratory-validated"
+    },
+    "tandoor": {
       "status": "laboratory-validated"
     },
     "thelounge": {

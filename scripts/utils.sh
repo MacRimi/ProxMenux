@@ -265,7 +265,8 @@ translate() {
     local lang_file="$LANG_DIR/${dest_lang}.json"
     if [ -s "$lang_file" ] && command -v jq >/dev/null 2>&1; then
         local cached
-        cached=$(jq -r --arg text "$text" '.[$text] // empty' "$lang_file" 2>/dev/null)
+        # A text written with \n in a script is stored with real line breaks.
+        cached=$(jq -r --arg text "$text" '.[$text] // .[($text | gsub("\\\\n"; "\n"))] // empty' "$lang_file" 2>/dev/null)
         if [ -n "$cached" ]; then
             echo "$cached"
             return

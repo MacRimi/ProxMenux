@@ -2,7 +2,7 @@
 
 <!-- Generated from oci/catalog/verification.json by .github/scripts/oci_validation.py. Do not edit by hand. -->
 
-38 of 335 applications in the OCI catalog have been tested for real: 36 in the ProxMenux lab and 2 by the community. The OCI installer shows them as verified, with a ✓ in the lists.
+42 of 335 applications in the OCI catalog have been tested for real: 40 in the ProxMenux lab and 2 by the community. The OCI installer shows them as verified, with a ✓ in the lists.
 
 Each test describes the scenario that was run and names the image it ran on. It does not cover every possible configuration of the application, and a newer image has not been tested until someone reports it.
 
@@ -32,10 +32,12 @@ Questions and ideas about OCI testing go in [discussion #360](https://github.com
 | Application | Category |
 |---|---|
 | 2FAuth | Authentication & Security |
+| AdGuard Home | Adblock & DNS |
 | Adguardhome Sync | Adblock & DNS |
 | Alby Hub ✨ | Finance & Budgeting |
 | Alist | Productivity & Workflows |
 | aMule | Files & Downloads |
+| Chromium | Browsers & Web Desktops |
 | CodeProject.AI Server | AI |
 | CopyParty | Files & Downloads |
 | Crafty | Gaming & Leisure |
@@ -55,6 +57,7 @@ Questions and ideas about OCI testing go in [discussion #360](https://github.com
 | MineOS | Gaming & Leisure |
 | Motioneye | NVR & Cameras |
 | Nextcloud | Productivity & Workflows |
+| Nextcloud Stack | Productivity & Workflows |
 | OpenList | Productivity & Workflows |
 | Openssh Server | Remote Access & VPN |
 | Paperless-ngx | Productivity & Workflows |
@@ -63,6 +66,7 @@ Questions and ideas about OCI testing go in [discussion #360](https://github.com
 | Rclone WebUI | Backup & Recovery |
 | Real-Debrid Torrent Client | Files & Downloads |
 | SnapOtter | Media & Streaming |
+| Tandoor Recipes | Productivity & Workflows |
 | Thelounge | Communication & Community |
 | Trilium | Documents & Notes |
 | Wireguard | Remote Access & VPN |
