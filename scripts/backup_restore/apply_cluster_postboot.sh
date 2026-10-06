@@ -805,8 +805,12 @@ if command -v curl >/dev/null 2>&1; then
             "$POSTBOOT_DURATION_FMT" \
             "$SANITY_WARNINGS")
     fi
-    NOTIFY_HTTP=$(curl -s -o /dev/null -w '%{http_code}' \
-        -X POST "http://127.0.0.1:8008/api/internal/restore-event" \
+    # The Monitor answers on the same port over HTTPS once it has a certificate.
+    NOTIFY_SCHEME="http"
+    grep -Eq '"enabled"[[:space:]]*:[[:space:]]*true' /etc/proxmenux/ssl_config.json 2>/dev/null && \
+        NOTIFY_SCHEME="https"
+    NOTIFY_HTTP=$(curl -sk -o /dev/null -w '%{http_code}' \
+        -X POST "${NOTIFY_SCHEME}://127.0.0.1:8008/api/internal/restore-event" \
         -H "Content-Type: application/json" \
         -d "$PAYLOAD" \
         --max-time 5 2>/dev/null || echo "000")

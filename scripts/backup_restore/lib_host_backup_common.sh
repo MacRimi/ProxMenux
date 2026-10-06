@@ -3420,11 +3420,16 @@ Log: ${HB_NOTIFY_LOG_FILE:-}"
                   log_file:$log, reason:$reason}}' \
         2>/dev/null)
     [[ -z "$payload" ]] && return 0
+    # The Monitor answers on the same port over HTTPS once it has a certificate.
+    local scheme="http"
+    [[ -f /etc/proxmenux/ssl_config.json ]] && \
+        jq -e '.enabled' /etc/proxmenux/ssl_config.json >/dev/null 2>&1 && \
+        scheme="https"
     curl -sk --connect-timeout 3 --max-time 5 \
         -X POST \
         -H "Content-Type: application/json" \
         -d "$payload" \
-        http://127.0.0.1:8008/api/notifications/webhook \
+        "${scheme}://127.0.0.1:8008/api/notifications/webhook" \
         >/dev/null 2>&1 || true
 }
 
