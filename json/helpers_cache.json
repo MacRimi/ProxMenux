@@ -23199,7 +23199,9 @@
       "Provider CLIs (Codex, Claude, Grok, OpenCode, GitHub) are included in the install. Login to the CT after creation to authenticate with these services.",
       "Access T3 Code at http://<IP>:3773 and pair a device with the token/QR shown after install. Regenerate it with: `pct exec <CTID> -- t3 pair --base-dir /opt/t3code.`"
     ],
-    "warnings": [],
+    "warnings": [
+      "T3 Code and its agents run as root inside the LXC. The service sets IS_SANDBOX=1 so Claude can use Full access mode without a manual environment override. This does not enable additional sandboxing: agents can modify all container data and any writable host bind mounts. Use an unprivileged container and avoid exposing sensitive host paths."
+    ],
     "port": 3773,
     "website": "https://t3.codes",
     "documentation": "https://github.com/pingdotgg/t3code/tree/main/docs",
