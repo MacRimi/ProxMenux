@@ -2367,6 +2367,43 @@
     "os": "alpine"
   },
   {
+    "name": "Blinko",
+    "slug": "blinko",
+    "desc": "Blinko is a self-hosted, open-source AI note-taking tool. Short \"blinkos\" capture fleeting ideas, longer notes hold everything else, both written in Markdown with tags, todos, attachments and references between notes. With an AI provider of your choice (OpenAI, Anthropic, Ollama and others) it adds RAG search and a chat over your own notes. This script builds the server and web app from source and runs them with PostgreSQL.",
+    "script": "ct/blinko.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/blinko.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/blinko.sh",
+    "type": "lxc",
+    "type_id": "nm9bra8mzye2scg",
+    "categories": [
+      "scriptcat00012"
+    ],
+    "category_names": [
+      "Documents & Notes"
+    ],
+    "notes": [
+      "AI features (RAG search, chat, AI tagging) stay off until you add a model provider under Settings > AI. Blinko works as a plain note app without one.",
+      "Uploads, the vector index and Blinko's own backups live in /opt/blinko_data/storage (Blinko sees it as /opt/blinko/.blinko). Back it up together with the PostgreSQL database.",
+      "Install and every update build Blinko from source, which peaks at about 3.6 GB of RAM. The running server needs around 500 MB, so the RAM can be lowered after the install and raised again before an update."
+    ],
+    "warnings": [
+      "There is no default account. Open http://<IP>:1111 and sign up: the first account becomes the administrator and sign-up closes after it (more users are added from the Settings user list, or by switching on Allow Registration). Anyone who reaches the port can claim it until then, so create the account right after the install."
+    ],
+    "port": 1111,
+    "website": "https://blinko.space/",
+    "documentation": "https://docs.blinko.space/",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/blinko.webp",
+    "updateable": true,
+    "privileged": false,
+    "has_arm": false,
+    "is_dev": true,
+    "execute_in": [
+      "lxc"
+    ],
+    "config_path": "",
+    "os": "debian"
+  },
+  {
     "name": "BlissOS",
     "slug": "blissos-vm",
     "desc": "BlissOS is Android x86 as a full desktop operating system, running on its own kernel rather than inside a host. It suits a VM with a passed-through GPU, where Android apps get real graphics acceleration and their own machine.",
@@ -2954,6 +2991,46 @@
     "os": "debian"
   },
   {
+    "name": "Casdoor",
+    "slug": "casdoor",
+    "desc": "Casdoor is an open-source identity and access management (IAM) and single sign-on platform with a web UI. It acts as an OAuth 2.0, OIDC, SAML and CAS provider, adds LDAP, RADIUS and SCIM endpoints, social and enterprise login providers, MFA and WebAuthn, and manages organizations, users, roles and Casbin-based permissions. This script installs the prebuilt release with a local PostgreSQL database.",
+    "script": "ct/casdoor.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/casdoor.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/casdoor.sh",
+    "type": "lxc",
+    "type_id": "nm9bra8mzye2scg",
+    "categories": [
+      "scriptcat00006"
+    ],
+    "category_names": [
+      "Authentication & Security"
+    ],
+    "notes": [
+      "origin in /opt/casdoor_data/conf/app.conf is the OIDC issuer and the base of the links Casdoor mails out, and points at the container IP. Change it before connecting applications when the IP changes or Casdoor sits behind a reverse proxy or domain, then run systemctl restart casdoor.",
+      "Besides the web UI on port 8000, Casdoor serves its built-in LDAP server on port 389 and a RADIUS server on UDP port 1812. The RADIUS shared secret is generated during the install and stored as radiusSecret in /opt/casdoor_data/conf/app.conf."
+    ],
+    "warnings": [
+      "Log in at http://<IP>:8000 as admin with password 123 (organization built-in). These defaults are public and give full control over every user and application, so change the password right after the install: the user menu in the top right, My Account, Password."
+    ],
+    "port": 8000,
+    "website": "https://casdoor.ai/",
+    "documentation": "https://casdoor.ai/docs/overview",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/casdoor.webp",
+    "updateable": true,
+    "privileged": false,
+    "has_arm": false,
+    "is_dev": true,
+    "execute_in": [
+      "lxc"
+    ],
+    "config_path": "",
+    "default_credentials": {
+      "username": "admin",
+      "password": "123"
+    },
+    "os": "debian"
+  },
+  {
     "name": "Castopod",
     "slug": "castopod",
     "desc": "Castopod is a free and open-source podcast hosting platform with Podcasting 2.0, analytics and ActivityPub federation features.",
@@ -3160,6 +3237,46 @@
     "is_dev": false,
     "execute_in": [
       "pve"
+    ],
+    "config_path": "",
+    "os": "debian"
+  },
+  {
+    "name": "ChartDB",
+    "slug": "chartdb",
+    "desc": "ChartDB is a database diagram editor that runs in the browser. A single query run against PostgreSQL, MySQL, MariaDB, SQL Server, SQLite, ClickHouse or CockroachDB returns the schema as JSON, which ChartDB turns into an editable entity-relationship diagram; diagrams can also be built from scratch, imported from DBML or SQL, and exported as SQL, DBML or images. This script builds the web app from source and serves it with nginx.",
+    "script": "ct/chartdb.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/chartdb.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/chartdb.sh",
+    "type": "lxc",
+    "type_id": "nm9bra8mzye2scg",
+    "categories": [
+      "scriptcat00008",
+      "scriptcat00020"
+    ],
+    "category_names": [
+      "Databases",
+      "AI / Coding & Dev-Tools"
+    ],
+    "notes": [
+      "ChartDB is served over HTTPS with a self-signed certificate (http:// redirects to it): accept the certificate warning on first visit. HTTPS is needed because the AI export and the copy buttons only work in a secure context.",
+      "AI-assisted SQL export to another database dialect is optional. In /opt/chartdb_data/config.js, uncomment OPENAI_API_KEY and fill in the key for OpenAI, or uncomment all three lines for an OpenAI-compatible server such as Ollama or vLLM (set its URL and model, and leave the key empty if the server needs none), then reload the page; no rebuild or restart is needed. The browser calls the endpoint directly, so it has to be reachable from the browser over HTTPS and allow requests from the ChartDB address (CORS).",
+      "Fathom analytics are switched off by DISABLE_ANALYTICS in /opt/chartdb_data/config.js. Install and every update build ChartDB from source and need the 6 GB of RAM; the running site is static files served by nginx, so the RAM can be lowered to 512 MB after the install and raised again before an update."
+    ],
+    "warnings": [
+      "Diagrams are stored in the browser (IndexedDB), not in the container. Another browser or device, cleared site data or a different address (new IP, hostname or reverse proxy) shows an empty diagram list, and container backups do not include them. Export diagrams you want to keep (JSON, DBML or SQL).",
+      "An OPENAI_API_KEY in config.js is sent to every browser that opens ChartDB, so anyone who can reach the container can read it. Use a key with a spending limit and keep ChartDB off the public internet when one is set."
+    ],
+    "port": 443,
+    "website": "https://chartdb.io/",
+    "documentation": "https://docs.chartdb.io/",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/chartdb.webp",
+    "updateable": true,
+    "privileged": false,
+    "has_arm": false,
+    "is_dev": true,
+    "execute_in": [
+      "lxc"
     ],
     "config_path": "",
     "os": "debian"
@@ -8471,6 +8588,49 @@
     "os": "debian"
   },
   {
+    "name": "Gopeed",
+    "slug": "gopeed",
+    "desc": "Gopeed is a fast, modern download manager for HTTP(S), BitTorrent, Magnet links and ed2k, written in Go and Flutter. It adds JavaScript extensions, a REST API, webhooks, post-download scripts and browser integration. This script installs the headless web edition, a single binary that serves the web UI and the API on port 9999 with login enabled.",
+    "script": "ct/gopeed.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/gopeed.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/gopeed.sh",
+    "type": "lxc",
+    "type_id": "nm9bra8mzye2scg",
+    "categories": [
+      "scriptcat00011"
+    ],
+    "category_names": [
+      "Files & Downloads"
+    ],
+    "notes": [
+      "Sign in with the username gopeed and the password generated during the install. Both are in /opt/gopeed_data/config.json (username, password); after changing them run systemctl restart gopeed.",
+      "The REST API and the browser extension's remote mode authenticate with apiToken from /opt/gopeed_data/config.json, sent as the X-Api-Token header.",
+      "Downloads land in /opt/gopeed_data/downloads. To keep them on host storage, bind-mount a host directory there, e.g. pct set <CTID> -mp0 /path/on/host,mp=/opt/gopeed_data/downloads; in an unprivileged container the host directory must be writable by UID 100000. config.json only sets this directory on the first start, later changes are made in the Gopeed settings.",
+      "Settings, the task database, extensions and logs live in /opt/gopeed_data/storage, outside /opt/gopeed, which an update replaces.",
+      "The web UI sends an anonymous usage statistic (Google Analytics) from the browser when it opens. Turn it off per browser under Settings > About > Upload Statistics."
+    ],
+    "warnings": [
+      "Keep /opt/gopeed_data/config.json valid JSON. Gopeed silently ignores a file it cannot parse and then starts without any authentication, on an empty database inside /opt/gopeed."
+    ],
+    "port": 9999,
+    "website": "https://gopeed.com/",
+    "documentation": "https://gopeed.com/docs",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/gopeed.webp",
+    "updateable": true,
+    "privileged": false,
+    "has_arm": false,
+    "is_dev": true,
+    "execute_in": [
+      "lxc"
+    ],
+    "config_path": "",
+    "default_credentials": {
+      "username": "gopeed",
+      "password": ""
+    },
+    "os": "debian"
+  },
+  {
     "name": "Gotenberg",
     "slug": "gotenberg",
     "desc": "Gotenberg is a developer-friendly API for converting numerous document formats (HTML, Markdown, URLs and LibreOffice-supported office documents such as DOCX, XLSX, PPTX and ODF) into PDF. It also merges, splits, flattens and manipulates PDFs using Chromium, LibreOffice, QPDF, pdfcpu, PDFtk and ExifTool. This script builds Gotenberg from source and runs it bare-metal instead of via Docker.",
@@ -8914,6 +9074,45 @@
     "privileged": false,
     "has_arm": true,
     "is_dev": false,
+    "execute_in": [
+      "lxc"
+    ],
+    "config_path": "",
+    "os": "debian"
+  },
+  {
+    "name": "Hanko",
+    "slug": "hanko",
+    "desc": "Hanko is an open-source authentication and user management backend, an alternative to Auth0 or Clerk. It provides passkeys, passwords, email passcodes, TOTP and security-key MFA, OAuth/OIDC and SAML single sign-on, sessions and JWTs, and web apps add the login through the Hanko Elements web components or SDKs. This script runs the Hanko backend (public and admin API) with PostgreSQL.",
+    "script": "ct/hanko.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/hanko.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/hanko.sh",
+    "type": "lxc",
+    "type_id": "nm9bra8mzye2scg",
+    "categories": [
+      "scriptcat00006"
+    ],
+    "category_names": [
+      "Authentication & Security"
+    ],
+    "notes": [
+      "Hanko is a headless authentication API, not a web app. Port 8000 is the public API that your own application's login talks to through Hanko Elements or the SDKs; opened in a browser it only shows an API status page. The self-hosted backend has no admin UI, the Hanko Console is part of the closed-source Hanko Cloud."
+    ],
+    "warnings": [
+      "Before an app can use Hanko, replace the example.com placeholders in /opt/hanko_data/config.yaml: webauthn.relying_party.id is your domain, webauthn.relying_party.origins and cors.allow_origins the https:// URL of the app that embeds the login. Then run systemctl restart hanko. Hanko 3 reads the top-level cors key and ignores the server.public.cors of older upstream examples.",
+      "Passkeys only work over HTTPS on a domain name: browsers refuse WebAuthn on an IP address, and the session cookie is marked Secure. Publish port 8000 through a TLS reverse proxy (e.g. https://auth.example.com) instead of using http://<IP>:8000 directly.",
+      "Sign-up, email verification and passcode login send emails. Set email_delivery (from_address and the smtp host, port, user and password) in /opt/hanko_data/config.yaml to your mail server; until then these flows fail. Users created through the admin API with a password can still sign in.",
+      "The admin API (users, sessions, webhooks) has no authentication of its own, so it only listens on 127.0.0.1:8001, e.g. curl http://127.0.0.1:8001/users inside the container. Change server.admin.address only behind a firewall or an authenticating proxy: anyone who reaches it can create sessions for any user.",
+      "Back up secret_keys from /opt/hanko_data/config.yaml together with the database. It encrypts the JWT signing key stored in PostgreSQL, and without it Hanko can no longer issue session tokens."
+    ],
+    "port": 8000,
+    "website": "https://www.hanko.io/",
+    "documentation": "https://docs.hanko.io/",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/hanko.webp",
+    "updateable": true,
+    "privileged": false,
+    "has_arm": false,
+    "is_dev": true,
     "execute_in": [
       "lxc"
     ],
@@ -14972,6 +15171,46 @@
     "os": "debian"
   },
   {
+    "name": "Nightingale",
+    "slug": "nightingale",
+    "desc": "Nightingale is an open-source monitoring and alerting platform. Like Grafana it connects to existing data sources such as Prometheus, VictoriaMetrics, Elasticsearch, Loki, ClickHouse or MySQL, but its focus is the alerting engine: alert rules, muting, subscriptions, event pipelines and notifications to more than 20 channels, plus dashboards, a host inventory fed by the Categraf agent and a built-in time series database. This script installs the prebuilt release with MariaDB and Redis.",
+    "script": "ct/nightingale.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/nightingale.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/nightingale.sh",
+    "type": "lxc",
+    "type_id": "nm9bra8mzye2scg",
+    "categories": [
+      "scriptcat00009"
+    ],
+    "category_names": [
+      "Monitoring & Analytics"
+    ],
+    "notes": [
+      "No external Prometheus or VictoriaMetrics is needed: metrics pushed by Categraf agents land in Nightingale's built-in time series database, registered as the datasource embedded-tsdb. Install Categraf on the hosts to monitor from Infrastructure, Hosts, which serves the bundled agent and generates the install command. Samples are kept 15 days and capped at 4 GiB, set in [EmbeddedTSDB] of /opt/nightingale_data/config.toml.",
+      "Unlike the upstream default, anonymous queries against the datasources are disabled (PromQuerier = false in [Center.AnonymousAccess] of /opt/nightingale_data/config.toml), because they would let anyone who reaches port 17000 read every datasource. Set it to true for dashboards shared without login, then run systemctl restart nightingale."
+    ],
+    "warnings": [
+      "Log in at http://<IP>:17000 as root with password root.2020. These defaults are public and the account is an administrator, so change the password right after the install: the user menu in the top right, Profile, Change password."
+    ],
+    "port": 17000,
+    "website": "https://n9e.github.io/",
+    "documentation": "https://n9e.github.io/docs/",
+    "logo": "https://cdn.jsdelivr.net/gh/n9e/n9e.github.io@main/static/apple-touch-icon.png",
+    "updateable": true,
+    "privileged": false,
+    "has_arm": false,
+    "is_dev": true,
+    "execute_in": [
+      "lxc"
+    ],
+    "config_path": "",
+    "default_credentials": {
+      "username": "root",
+      "password": "root.2020"
+    },
+    "os": "debian"
+  },
+  {
     "name": "Nightscout",
     "slug": "nightscout",
     "desc": "Nightscout is an open source, DIY project that allows real time access to a CGM data via personal website, smartwatch watchers, or apps and widgets available for smartphones.",
@@ -18687,7 +18926,7 @@
     "updateable": true,
     "privileged": false,
     "has_arm": false,
-    "is_dev": true,
+    "is_dev": false,
     "execute_in": [
       "lxc"
     ],
@@ -24450,6 +24689,48 @@
     ],
     "config_path": "",
     "os": "ubuntu"
+  },
+  {
+    "name": "Typecho",
+    "slug": "typecho",
+    "desc": "Typecho is a lightweight, open-source PHP blogging platform with a Markdown editor, pages, categories and tags, threaded comments, themes, plugins and an XML-RPC API for desktop and mobile editors. This script installs the official release with nginx, PHP-FPM and SQLite and completes the setup with upstream's command-line installer, so no setup page is ever left open.",
+    "script": "ct/typecho.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/typecho.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/typecho.sh",
+    "type": "lxc",
+    "type_id": "nm9bra8mzye2scg",
+    "categories": [
+      "scriptcat00012"
+    ],
+    "category_names": [
+      "Documents & Notes"
+    ],
+    "notes": [
+      "The admin password is generated during install and shown at the end of the install output, together with the username. Log in at http://<IP>/admin/ and replace the placeholder email address admin@localhost.local in your profile.",
+      "Everything that is not core code lives in /opt/typecho_data: config.inc.php, the SQLite database typecho.db, and usr/ with themes, plugins and uploads. /opt/typecho/usr and /opt/typecho/config.inc.php are links into it. Back up /opt/typecho_data.",
+      "Updates replace only the core files, as upstream's upgrade guide does, and leave usr/ alone: the bundled themes are not refreshed, and edits made with the theme editor survive. After an update, open /admin/ and confirm the database upgrade Typecho asks for.",
+      "The interface is set to English using the language pack from typecho/languages, the timezone to UTC instead of upstream's UTC+8, and pretty URLs without index.php are on. All three can be changed in the settings."
+    ],
+    "warnings": [
+      "The site address is set to http://<container IP>, and Typecho builds every link from it. Change it under Settings > Basic when the IP changes or the blog sits behind a reverse proxy or domain."
+    ],
+    "port": 80,
+    "website": "https://typecho.org/",
+    "documentation": "https://docs.typecho.org/",
+    "logo": "https://avatars.githubusercontent.com/u/2030842?v=4",
+    "updateable": true,
+    "privileged": false,
+    "has_arm": false,
+    "is_dev": true,
+    "execute_in": [
+      "lxc"
+    ],
+    "config_path": "",
+    "default_credentials": {
+      "username": "admin",
+      "password": ""
+    },
+    "os": "debian"
   },
   {
     "name": "Ubuntu",
