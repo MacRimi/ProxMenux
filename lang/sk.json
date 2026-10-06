@@ -3685,6 +3685,7 @@
   "Move to target VM (remove from source VM config)": "Presunúť do cieľovej VM (odstrániť zo zdrojovej VM)",
   "Moving the data volumes aside": "Presun dátových objemov bokom",
   "Moving the data volumes aside...": "Presunúť dáta nabok...",
+  "Multi-container application": "Aplikácia s viacerými kontajnermi",
   "Multi-container application (experimental)": "Použitie viacerých kontajnerov (experimentálne)",
   "Multi-line variables are not supported": "Multi-line premenné nie sú podporované",
   "Multiple networks or external networks are not yet supported": "Viaceré siete alebo externé siete zatiaľ nie sú podporované",

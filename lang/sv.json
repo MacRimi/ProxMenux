@@ -3685,6 +3685,7 @@
   "Move to target VM (remove from source VM config)": "Flytta till mål-VM (ta bort från käll-VM-konfiguration)",
   "Moving the data volumes aside": "Flytta datavolymerna åt sidan",
   "Moving the data volumes aside...": "Flytta datavolymerna åt sidan...",
+  "Multi-container application": "Applikation för flera behållare",
   "Multi-container application (experimental)": "Multicontainer-applikation (experimentell)",
   "Multi-line variables are not supported": "Multi-line variabler stöds inte",
   "Multiple networks or external networks are not yet supported": "Flera nätverk eller externa nätverk stöds ännu inte",

@@ -3685,6 +3685,7 @@
   "Move to target VM (remove from source VM config)": "Zur Ziel-VM verschieben (aus der Quell-VM-Konfiguration entfernen)",
   "Moving the data volumes aside": "Verschieben der Datenmengen beiseite",
   "Moving the data volumes aside...": "Verschieben der Datenmengen beiseite...",
+  "Multi-container application": "Multi-Container-Anwendung",
   "Multi-container application (experimental)": "Mehrbehälteranwendung (experimentell)",
   "Multi-line variables are not supported": "Mehrzeilige Variablen werden nicht unterstützt",
   "Multiple networks or external networks are not yet supported": "Mehrere Netzwerke oder externe Netzwerke werden noch nicht unterstützt",
