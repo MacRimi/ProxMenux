@@ -768,29 +768,33 @@ def release_stage(state, discard=False):
     """After a commit the holder CT only keeps its own rootfs: every parked
     volume went back to the application. After a verified recovery it holds
     the disks of the failed attempt, which the restored backup replaced:
-    `discard` removes them with it. Otherwise anything still attached keeps it."""
+    `discard` removes them with it. Otherwise anything still attached keeps it.
+    Returns whether the holder CT was removed."""
     stage = state.get('stage')
     if not stage:
-        return
+        return False
     try:
         config = owned(stage, 'proxmenux-transaction=' + state['id'])
     except (ValueError, RuntimeError, subprocess.CalledProcessError):
-        return
+        return False
     held = mounts(config) or any(re.fullmatch(r'unused[0-9]+', key) for key in parse_config(config))
     if held and not discard:
-        return
+        return False
     if discard:
         stop(stage)
     run('pct', 'destroy', str(stage))
+    return True
 
 
 def discard_stage(state):
     """Remove the holder CT of an operation that ended in a verified recovery.
-    A failure here leaves it in place and does not undo the recovery."""
+    A failure here leaves it in place and does not undo the recovery.
+    Returns whether the holder CT was removed."""
     try:
-        release_stage(state, discard=True)
+        return release_stage(state, discard=True)
     except (OSError, ValueError, RuntimeError, subprocess.SubprocessError) as error:
         log(f'cleanup: {error}')
+        return False
 
 
 def gib(size):
@@ -1139,8 +1143,13 @@ def complete_recovery(root, journal, state):
     checkpoint(journal, state, 'rolled-back')
     if show:
         # A member of a stack is released when the whole stack is back.
-        discard_stage(state)
-        msg_ok(translate('Recovery completed. The disks of the failed attempt were removed; the backup is kept.'))
+        if discard_stage(state):
+            msg_ok(translate('Recovery completed. The disks of the failed attempt were removed; the backup is kept.'))
+        else:
+            msg_ok(translate('Recovery completed; the backup is kept.'))
+            if state.get('stage'):
+                msg_warn(f"{translate('The disks of the failed attempt could not be removed and stay in the temporary container:')} "
+                         f"CT {state['stage']}")
         if state.get('original_host_sources') or state.get('desired_host_sources'):
             msg_info2(translate('Shared host files are kept as they are; the backup does not restore their content.'))
 

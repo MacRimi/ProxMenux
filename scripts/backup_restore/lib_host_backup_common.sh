@@ -2507,7 +2507,7 @@ hb_configure_borg_manual() {
         --menu "\n$(hb_translate "Select repository destination:")" \
         "$HB_UI_MENU_H" "$HB_UI_MENU_W" "$HB_UI_MENU_LIST" \
         "remote" "$(hb_translate 'Remote server via SSH  (recommended — off-host, dedup across machines)')" \
-        "usb"    "$(hb_translate 'Mounted external disk  (offline-safe, single-machine dedup)')" \
+        "usb"    "$(hb_translate 'Mounted external disk  (no network needed, single-machine dedup)')" \
         "local"  "$(hb_translate 'Local directory  (single-machine — only use if it is a SEPARATE disk)')" \
         3>&1 1>&2 2>&3) || return 1
 

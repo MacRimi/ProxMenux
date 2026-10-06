@@ -356,7 +356,7 @@ def _detect_oci_apps() -> list[dict]:
             "type": "oci_app",
             "name": app.get("name") or app_id,
             "current_version": None,  # filled by checker
-            "menu_label": "Settings → Secure Gateway",
+            "menu_label": "Security → Secure Gateway",
             "menu_script": None,  # OCI apps update via the dashboard, no bash script
             # Stash the raw app_id so the checker can find it without
             # parsing the prefixed registry id.

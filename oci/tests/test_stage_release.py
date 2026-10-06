@@ -54,8 +54,24 @@ class StageReleaseTests(unittest.TestCase):
                 patch.object(transaction, "stop"), \
                 patch.object(transaction, "run", side_effect=RuntimeError("pct failed with exit code 255")), \
                 patch.object(transaction, "log") as logged:
-            transaction.discard_stage(STATE)
+            removed = transaction.discard_stage(STATE)
         self.assertIn("pct failed", logged.call_args[0][0])
+        self.assertFalse(removed)
+
+    def test_the_result_says_whether_the_container_was_removed(self):
+        with patch.object(transaction, "owned", return_value=HOLDING), patch.object(transaction, "stop"), \
+                patch.object(transaction, "run"):
+            self.assertTrue(transaction.discard_stage(STATE))
+            self.assertFalse(transaction.release_stage(STATE))
+        with patch.object(transaction, "owned", side_effect=ValueError("not ours")):
+            self.assertFalse(transaction.discard_stage(STATE))
+        self.assertFalse(transaction.discard_stage({"id": "x"}))
+
+    def test_the_recovery_only_says_the_disks_were_removed_when_they_were(self):
+        source = (ROOT / "remote/oci_instance_transaction.py").read_text()
+        claim = source.index("The disks of the failed attempt were removed")
+        self.assertIn("if discard_stage(state):", source[source.rindex("\n", 0, claim - 80):claim])
+        self.assertIn("could not be removed and stay in the temporary container", source)
 
 
 if __name__ == "__main__":

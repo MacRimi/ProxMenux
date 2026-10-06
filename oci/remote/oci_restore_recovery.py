@@ -943,7 +943,7 @@ def start_order(entry):
     return int(order[1]) if order else 9999
 
 
-def recover(root, plan, start=False, host_firewall=False):
+def recover(root, plan, start=False, host_firewall=()):
     for bridge, subnet in plan['bridges'].items():
         msg_info(f"{translate('Creating the private network...')} {bridge}")
         create_bridge(bridge, subnet)
@@ -974,7 +974,8 @@ def recover(root, plan, start=False, host_firewall=False):
         if not rule:
             continue
         text = f"TCP {rule['port']} {translate('from')} {rule['source']}"
-        if not host_firewall:
+        # Each rule is confirmed on its own; one answer does not cover the rest.
+        if rule['vmid'] not in host_firewall:
             plan['notes'].append(f"CT {entry['vmid']}: {translate('its host firewall rule was not added:')} {text}")
         elif add_firewall_rule(rule):
             msg_ok(f"{translate('Host firewall rule added:')} {text}")
@@ -1020,7 +1021,8 @@ def main():
     parser.add_argument('action', choices=('list', 'plan', 'recover'))
     parser.add_argument('--root', type=Path, default=instances.ROOT)
     parser.add_argument('--start', action='store_true')
-    parser.add_argument('--host-firewall', action='store_true')
+    parser.add_argument('--host-firewall', type=int, action='append', default=[], metavar='VMID',
+                        help='Add the host firewall rule of this container; one option for each confirmed rule')
     parser.add_argument('--automatic', action='store_true',
                         help='Only the applications that need no question: the ones the cluster keeps a record of')
     args = parser.parse_args()
@@ -1041,13 +1043,13 @@ def main():
             failed = 0
             if args.automatic:
                 plans = [plan for plan in plans if automatic(plan)]
-                args.start = args.host_firewall = False
+                args.start, args.host_firewall = False, []
             for plan in plans:
                 containers = ', '.join(f"CT {entry['vmid']}" for entry in plan['restored'])
                 msg_info2(f"{plan['title']} · {containers}")
                 if plan['blockers']:
                     failed += 1
-                    msg_error(translate('This application cannot be recovered yet; nothing was changed:'))
+                    msg_error(translate('This application cannot be recovered yet:'))
                     for line in plan['blockers']:
                         msg_info2(f"  - {line}")
                     lost = [entry for entry in plan['restored'] if entry.get('unrecoverable')]

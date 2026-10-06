@@ -546,5 +546,55 @@ class RegistrationTests(unittest.TestCase):
         self.assertNotIn("deployment", services[2])
 
 
+class FirewallConsentTests(unittest.TestCase):
+    """A host firewall rule is added only for the container it was confirmed for."""
+
+    def recover(self, confirmed):
+        rule = lambda vmid, port: {"vmid": vmid, "port": port, "source": "192.0.2.0/24"}
+        plan = {"bridges": {}, "renumbered": {}, "hold": False, "notes": [],
+                "restored": [{"vmid": 120, "firewall": rule(120, 61208)}, {"vmid": 121, "firewall": rule(121, 19999)}]}
+        added = []
+        with patch.object(recovery, "restore_host_files"), patch.object(recovery, "clean_format_directories"), \
+                patch.object(recovery, "register", return_value=[120, 121]), patch.object(recovery.carried, "carry"), \
+                patch.object(recovery, "add_firewall_rule", side_effect=lambda rule: added.append(rule["vmid"]) or True), \
+                patch.object(recovery, "msg_info"), patch.object(recovery, "msg_ok"):
+            recovery.recover(Path("/nonexistent"), plan, host_firewall=confirmed)
+        return added, plan["notes"]
+
+    def test_one_confirmed_rule_does_not_add_the_others(self):
+        added, notes = self.recover([121])
+        self.assertEqual(added, [121])
+        self.assertEqual([note[:7] for note in notes], ["CT 120:"])
+
+    def test_without_an_answer_no_rule_is_added(self):
+        added, notes = self.recover([])
+        self.assertEqual(added, [])
+        self.assertEqual(len(notes), 2)
+
+    def test_the_menu_asks_for_each_rule_and_passes_only_the_confirmed_ones(self):
+        sys.path.insert(0, str(ROOT / "src"))
+        from proxmenux_oci import management
+        rules = [{"vmid": 120, "port": 61208, "source": "192.0.2.0/24"},
+                 {"vmid": 121, "port": 19999, "source": "192.0.2.0/24"}]
+        answers = iter([True, False, True, False])  # recover, rule of 120, rule of 121, start
+
+        class Ui:
+            asked = []
+
+            def confirm(self, text, default=False):
+                self.asked.append(text)
+                return next(answers)
+
+        ui = Ui()
+        with patch.object(management, "restored_applications", return_value=[{"vmid": 120, "hostname": "glances"},
+                                                                             {"vmid": 121, "hostname": "netdata"}]), \
+                patch.object(management, "_restored_firewall_rules", return_value=rules), \
+                patch.object(management, "_run_lifecycle") as run:
+            management.offer_recovery(ROOT, ui)
+        command = run.call_args[0][0]
+        self.assertEqual(len(ui.asked), 4)
+        self.assertEqual(command[command.index("--host-firewall"):], ["--host-firewall", "121"])
+
+
 if __name__ == "__main__":
     unittest.main()

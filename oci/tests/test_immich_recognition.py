@@ -171,7 +171,8 @@ class RevertTests(unittest.TestCase):
                 patch.object(recognition, "stop", side_effect=lambda vmid: calls.append(("stop", vmid))), \
                 patch.object(recognition, "apply", side_effect=lambda *arguments: calls.append(("apply",) + arguments[2:])), \
                 patch.object(recognition.subprocess, "run", side_effect=lambda command, **_: calls.append(tuple(command[:3]))):
-            recognition.revert(Path("/nonexistent"), 100, 101, {"cpu": "image"}, ("cpu", None, None), True)
+            kept = recognition.revert(Path("/nonexistent"), 100, 101, {"cpu": "image"}, ("cpu", None, None), True)
+        self.assertTrue(kept)
         self.assertEqual(calls, [("stop", 101), ("apply", 101, {"cpu": "image"}, "cpu", None, None),
                                  ("pct", "start", "101")])
 
@@ -180,9 +181,26 @@ class RevertTests(unittest.TestCase):
                 patch.object(recognition, "apply", side_effect=RuntimeError("pct set: locked")), \
                 patch.object(recognition, "msg_warn") as warned, \
                 patch.object(recognition.subprocess, "run") as started:
-            recognition.revert(Path("/nonexistent"), 100, 101, {}, ("cpu", None, None), True)
+            kept = recognition.revert(Path("/nonexistent"), 100, 101, {}, ("cpu", None, None), True)
         self.assertIn("pct set: locked", warned.call_args[0][0])
         started.assert_not_called()
+        self.assertFalse(kept)
+
+    def test_the_error_only_says_nothing_changed_when_the_choice_was_kept(self):
+        def reported(error):
+            with patch.object(recognition.os, "geteuid", return_value=0), \
+                    patch.object(recognition.sys, "argv", ["x", "100", "--acceleration", "cpu"]), \
+                    patch.object(recognition, "change", side_effect=error), \
+                    patch.object(recognition, "translate", side_effect=lambda text: text), \
+                    patch.object(recognition, "msg_error") as shown:
+                self.assertEqual(recognition.main(), 1)
+            return shown.call_args[0][0]
+        self.assertIn("was not changed", reported(ValueError("already on that choice")))
+        put_back = RuntimeError("update failed"); put_back.recognition_kept = True
+        self.assertIn("was not changed", reported(put_back))
+        left = RuntimeError("update failed"); left.recognition_kept = False
+        self.assertIn("did not complete", reported(left))
+        self.assertNotIn("was not changed", reported(left))
 
 
 class RocmProbeTests(unittest.TestCase):

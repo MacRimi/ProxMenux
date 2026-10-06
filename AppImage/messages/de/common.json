@@ -6755,12 +6755,12 @@
         },
         "post_install_update": {
           "title": "{hostname}: {count} ProxMenux Optimierungsupdate(s) verfügbar",
-          "body": "{count} ProxMenux Optimierungsupdate(s) auf diesem Host verfügbar.\n\n🛠️ Verfügbare Versionen:\n{tool_list}\n\n💡 Bewerben Sie sich unter:\n  • ProxMenux Monitor → Einstellungen → ProxMenux Optimierungen\n  • Oder führen Sie das Nachinstallationsmenü (Option 2) → „Verfügbare Updates anwenden“ aus.",
+          "body": "{count} ProxMenux Optimierungsupdate(s) auf diesem Host verfügbar.\n\n🛠️ Verfügbare Versionen:\n{tool_list}\n\n💡 Bewerben Sie sich unter:\n  • ProxMenux Monitor → Einstellungen → ProxMenux Optimierungen\n  • Oder öffnen Sie das ProxMenux-Menü → Einstellungen nach der Installation von Proxmox → „Verfügbare Updates anwenden“",
           "label": "ProxMenux Optimierungsupdates verfügbar"
         },
         "secure_gateway_update_available": {
           "title": "{hostname}: {app_name} Update verfügbar{update_title_suffix}",
-          "body": "{app_name} (verwaltet von ProxMenux) hat 📦 {package_count} Paketaktualisierung(en) in seinem Container ausstehend.\n{version_line}\n\n💡 Öffnen Sie ProxMenux Monitor > Einstellungen > Secure Gateway und klicken Sie zum Übernehmen auf „Aktualisieren“.\n\n🗂️ Pakete:\n{package_list}",
+          "body": "{app_name} (verwaltet von ProxMenux) hat 📦 {package_count} Paketaktualisierung(en) in seinem Container ausstehend.\n{version_line}\n\n💡 Öffnen Sie ProxMenux Monitor > Sicherheit > Secure Gateway und klicken Sie zum Übernehmen auf „Aktualisieren“.\n\n🗂️ Pakete:\n{package_list}",
           "label": "Secure Gateway-Update verfügbar"
         },
         "nvidia_driver_update_available": {

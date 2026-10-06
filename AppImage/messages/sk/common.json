@@ -6754,12 +6754,12 @@
         },
         "post_install_update": {
           "title": "{hostname}: {count} ProxMenux dostupných aktualizácií optimalizácií",
-          "body": "Na tomto serveri je dostupných {count} aktualizácií optimalizácií ProxMenux.\n\n🛠️ Dostupné verzie:\n{tool_list}\n\n💡 Použiť cez:\n  • ProxMenux Monitor → Nastavenia → Optimalizácie ProxMenux\n  • Alebo spustite ponuku po inštalácii (možnosť 2) → „Použiť dostupné aktualizácie“",
+          "body": "Na tomto serveri je dostupných {count} aktualizácií optimalizácií ProxMenux.\n\n🛠️ Dostupné verzie:\n{tool_list}\n\n💡 Použiť cez:\n  • ProxMenux Monitor → Nastavenia → Optimalizácie ProxMenux\n  • Alebo otvorte ponuku ProxMenux → Nastavenie Proxmoxu po inštalácii → „Nainštalovať dostupné aktualizácie“",
           "label": "Dostupné aktualizácie optimalizácií ProxMenux"
         },
         "secure_gateway_update_available": {
           "title": "{hostname}: {app_name} dostupná aktualizácia{update_title_suffix}",
-          "body": "Aplikácia {app_name} (spravovaná cez ProxMenux) má vo svojom kontajneri 📦 {package_count} čakajúcich aktualizácií balíkov.\n{version_line}\n\n💡 Otvorte ProxMenux Monitor > Nastavenia > Secure Gateway a kliknite na „Aktualizovať“.\n\n🗂️ Balíky:\n{package_list}",
+          "body": "Aplikácia {app_name} (spravovaná cez ProxMenux) má vo svojom kontajneri 📦 {package_count} čakajúcich aktualizácií balíkov.\n{version_line}\n\n💡 Otvorte ProxMenux Monitor > Bezpečnosť > Secure Gateway a kliknite na „Aktualizovať“.\n\n🗂️ Balíky:\n{package_list}",
           "label": "K dispozícii je aktualizácia Secure Gateway"
         },
         "nvidia_driver_update_available": {

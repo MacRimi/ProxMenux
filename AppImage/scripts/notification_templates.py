@@ -1685,7 +1685,7 @@ TEMPLATES = {
             '🛠️ Available versions:\n{tool_list}\n\n'
             '💡 Apply from:\n'
             '  • ProxMenux Monitor → Settings → ProxMenux Optimizations\n'
-            '  • Or run the post-install menu (option 2) → "Apply available updates"'
+            '  • Or open the ProxMenux menu → Settings post-install Proxmox → "Apply available updates"'
         ),
         'label': 'ProxMenux optimization updates available',
         'group': 'updates',
@@ -1713,7 +1713,7 @@ TEMPLATES = {
             '{app_name} (managed by ProxMenux) has 📦 {package_count} package update(s) '
             'pending in its container.\n'
             '{version_line}\n\n'
-            '💡 Open ProxMenux Monitor > Settings > Secure Gateway and click '
+            '💡 Open ProxMenux Monitor > Security > Secure Gateway and click '
             '"Update" to apply.\n\n'
             '🗂️ Packages:\n{package_list}'
         ),

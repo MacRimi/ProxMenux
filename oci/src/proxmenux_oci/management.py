@@ -186,7 +186,7 @@ def offer_recovery(project, ui):
     lines = '\n'.join(f"  CT {row['vmid']}  {row['hostname']}" for row in found)
     text = (f"{translate('These containers were restored from a backup and this host has no record of their OCI application:')}"
             f"\n\n{lines}\n\n"
-            f"{translate('Until they are registered again they cannot be updated or managed from here. The recovery checks first that everything they need is on this host and changes nothing otherwise.')}"
+            f"{translate('Until they are registered again they cannot be updated or managed from here. The recovery checks first that everything they need is on this host; an application that lacks something is not registered.')}"
             f"\n\n{translate('Recover them now?')}")
     if not ui.confirm(text, default=True):
         return
@@ -194,8 +194,7 @@ def offer_recovery(project, ui):
     for rule in _restored_firewall_rules(project):
         if ui.confirm(translate('CT {vmid} is a host monitor and had a rule in the host firewall. Allow TCP port {port} from {subnet} through the firewall of this host? Existing firewall rules are not changed.').format(
                 vmid=rule['vmid'], port=rule['port'], subnet=rule['source']), default=False):
-            command.append('--host-firewall')
-            break
+            command.extend(['--host-firewall', str(rule['vmid'])])
     if ui.confirm(translate('Start the applications once they are registered? Answer No if the original containers are still running on another host: both would use the same addresses.'),
                   default=False):
         command.append('--start')
@@ -277,7 +276,7 @@ def manage_instance(project, ui, row, action=None, lifecycle_args=()):
     # A container that came back from another node or from an older backup
     # carries the record that describes it; the one of this host is not used.
     if carry_records(project, vmids=[row['vmid']], verify=True).get(row['vmid']) == 'stale':
-        ui.message(translate('This container was restored or came back from another host after its record on this host was written. Open this menu again to recover it; nothing was changed.'),
+        ui.message(translate('This container was restored or came back from another host after its record on this host was written. Open this menu again to recover it; the container was not modified.'),
                    translate('OCI management'))
         return False
     row = check_selected(project, row)
@@ -370,7 +369,7 @@ def manage_instance(project, ui, row, action=None, lifecycle_args=()):
     if action is None:
         return False
     if action == 'recover' and not ui.review(
-            translate('The previous native backup will be restored. Shared host directories are not reverted. Displaced disks are kept.'),
+            translate('The previous native backup will be restored. Shared host directories are not reverted. The disks of the failed attempt are removed.'),
             translate('Recover OCI'), question=translate('Recover now?'), default=True):
         return False
     return _run_lifecycle([sys.executable, str(project / 'remote/oci_instance_transaction.py'),

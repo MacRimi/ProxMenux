@@ -742,7 +742,12 @@ uninstall_persistent_network() {
     done < <(pmx_uninstall_persistent_network)
 
     if (( removed > 0 )); then
-        msg_ok "$(translate "Removed") $removed $(translate "ProxMenux-managed .link file(s). User-authored .link files were left in place.")"
+        local removed_message
+        removed_message="$(translate "ProxMenux-managed .link files removed: {count}. User-authored .link files were left in place.")"
+        if [[ "$removed_message" != *'{count}'* ]]; then
+            removed_message="ProxMenux-managed .link files removed: {count}. User-authored .link files were left in place."
+        fi
+        msg_ok "${removed_message//\{count\}/$removed}"
         msg_info "$(translate "Interface names will return to default systemd behavior.")"
         NECESSARY_REBOOT=1
     else

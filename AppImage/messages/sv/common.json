@@ -6755,12 +6755,12 @@
         },
         "post_install_update": {
           "title": "{hostname}: {count} ProxMenux optimeringsuppdatering(ar) tillgängliga",
-          "body": "{count} ProxMenux optimeringsuppdatering(ar) tillgängliga på denna värd.\n\n🛠️ Tillgängliga versioner:\n{tool_list}\n\n💡 Ansök från:\n  • ProxMenux Bildskärm → Inställningar → ProxMenux Optimering\n  • Eller kör efterinstallationsmenyn (alternativ 2) → \"Använd tillgängliga uppdateringar\"",
+          "body": "{count} ProxMenux optimeringsuppdatering(ar) tillgängliga på denna värd.\n\n🛠️ Tillgängliga versioner:\n{tool_list}\n\n💡 Ansök från:\n  • ProxMenux Bildskärm → Inställningar → ProxMenux Optimering\n  • Eller öppna ProxMenux-menyn → Inställningar efter installation av Proxmox → \"Tillämpa tillgängliga uppdateringar\"",
           "label": "ProxMenux optimeringsuppdateringar tillgängliga"
         },
         "secure_gateway_update_available": {
           "title": "{hostname}: {app_name} uppdatering tillgänglig{update_title_suffix}",
-          "body": "{app_name} (hanteras av ProxMenux) har 📦 {package_count} paketuppdatering(ar) väntande i sin behållare.\n{version_line}\n\n💡 Öppna ProxMenux Monitor > Inställningar > Säker gateway och klicka på \"Uppdatera\" för att ansöka.\n\n🗂️ Paket:\n{package_list}",
+          "body": "{app_name} (hanteras av ProxMenux) har 📦 {package_count} paketuppdatering(ar) väntande i sin behållare.\n{version_line}\n\n💡 Öppna ProxMenux Monitor > Säkerhet > Säker gateway och klicka på \"Uppdatera\" för att ansöka.\n\n🗂️ Paket:\n{package_list}",
           "label": "Säker gateway-uppdatering tillgänglig"
         },
         "nvidia_driver_update_available": {

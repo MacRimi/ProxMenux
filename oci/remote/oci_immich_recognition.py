@@ -228,16 +228,18 @@ def apply(root, primary_id, vmid, images, acceleration, render_device, gfx_overr
 
 
 def revert(root, primary_id, vmid, images, previous, was_running):
-    """Give the container and the records the choice they had."""
+    """Give the container and the records the choice they had. Returns
+    whether they have it again."""
     try:
         if oci_stack_modify.is_running(vmid):
             stop(vmid)
         apply(root, primary_id, vmid, images, *previous)
     except (OSError, ValueError, KeyError, RuntimeError, subprocess.SubprocessError) as error:
         msg_warn(f"{translate('The previous recognition choice could not be put back:')} {error}")
-        return
+        return False
     if was_running:
         subprocess.run(['pct', 'start', str(vmid)], capture_output=True, check=False)
+    return True
 
 
 def change(root, primary_id, acceleration, render_device=None, gfx_override=None):
@@ -262,17 +264,17 @@ def change(root, primary_id, acceleration, render_device=None, gfx_override=None
             msg_info(translate('Preparing the machine learning container for the new choice...'))
             apply(root, primary_id, vmid, images, acceleration, render_device, gfx_override)
             msg_ok(translate('Machine learning container prepared'))
-        except BaseException:
-            revert(root, primary_id, vmid, images, previous, was_running)
+        except BaseException as error:
+            error.recognition_kept = revert(root, primary_id, vmid, images, previous, was_running)
             raise
     try:
         # The image of the new choice replaces the one in use, as an update does.
         oci_stack_native.run(primary_id, acknowledge_external_data=True)
-    except BaseException:
+    except BaseException as error:
         with instances.locked(root):
             # An update left halfway keeps its own record of what to restore.
-            if not instances.read(root, primary_id).get('pending_stack_transaction'):
-                revert(root, primary_id, vmid, images, previous, was_running)
+            error.recognition_kept = (not instances.read(root, primary_id).get('pending_stack_transaction')
+                                      and revert(root, primary_id, vmid, images, previous, was_running))
         raise
     if was_running and not oci_stack_modify.is_running(vmid):
         # An update leaves each container as it found it, and this one was
@@ -297,7 +299,12 @@ def main():
         return 1
     except (OSError, ValueError, KeyError, RuntimeError, StopIteration, subprocess.SubprocessError) as error:
         if not getattr(error, 'oci_reported', False):
-            msg_error(f"{translate('The recognition of Immich was not changed:')} {error}")
+            # Only an error raised before anything was touched, or one that
+            # was put back, leaves the previous choice in place.
+            kept = getattr(error, 'recognition_kept', True)
+            message = (translate('The recognition of Immich was not changed:') if kept
+                       else translate('The recognition change of Immich did not complete:'))
+            msg_error(f"{message} {error}")
         return 1
     msg_ok(translate('Recognition of Immich changed; the application was updated with the new choice.'))
     return 0
