@@ -91,10 +91,10 @@ class CommandDescriptionsTests(unittest.TestCase):
                 path.parent.mkdir()
                 shutil.copyfile(ROOT / f"AppImage/messages/{lang}/common.json", path)
                 # This steady-state fixture assumes generation already finished.
-                # Seed only the keys the two message PRs introduce; keep the
+                # Seed only intentional message additions; keep the
                 # recovered command arrays and the repo catalogs exact. Runtime
                 # missing-key fallback is covered by the JSX seam tests and by
-                # test_storage_messages.cjs.
+                # test_storage_messages.cjs and test_health_text.cjs.
                 if lang != "en":
                     temporary = json.loads(path.read_text())
                     for section, key in (
@@ -114,6 +114,51 @@ class CommandDescriptionsTests(unittest.TestCase):
                     for key in ("passedTitle", "passedText"):
                         report["recommendations"].setdefault(
                             key, source_report["recommendations"][key])
+                    # New health-popup messages deliberately use runtime English
+                    # fallback until each locale is translated. Model generator
+                    # steady state only in this disposable copy, as for thermal keys.
+                    for key in (
+                        'certificateExpired',
+                        'certificateExpiresDays',
+                        'certificateInconclusive',
+                        'cpuCheckFailed',
+                        'cpuHighSustained',
+                        'cpuSustained',
+                        'fail2banCheckUnavailable',
+                        'fail2banInactive',
+                        'failedLoginsWithinThreshold',
+                        'kernelPackagesMore',
+                        'kernelPveUpdates',
+                        'loginCheckUnavailable',
+                        'memoryCheckFailed',
+                        'memoryPressure',
+                        'noFailedLogins',
+                        'noSwapConfigured',
+                        'noTemperatureSensor',
+                        'nonRunningKernelUpdates',
+                        'pendingPackageUpdates',
+                        'pendingSecurityUpdates',
+                        'pendingSecurityUpdatesDays',
+                        'pendingSecurityUpdatesUnpatched',
+                        'pveVersionAvailable',
+                        'ramHighSustained',
+                        'ramSustained',
+                        'runningKernelUpdate',
+                        'securityCheckUnavailable',
+                        'sensorHighSamplesSpan',
+                        'swapRamPressure',
+                        'systemNotUpdatedMonths',
+                        'systemNotUpdatedYear',
+                        'temperatureElevated',
+                        'unknownDetail',
+                        'updatesAptError',
+                        'updatesAptTimeout',
+                        'updatesCheckUnavailable',
+                        'uptimeKernelAdvice',
+                        'uptimeUnavailable',
+                    ):
+                        temporary["healthStatus"]["details"].setdefault(
+                            key, catalog("en")["healthStatus"]["details"][key])
                     # New thermal messages also await automatic translation.
                     # Seed only these intentional additions in the temporary copy.
                     for key in (

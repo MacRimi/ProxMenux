@@ -76,7 +76,7 @@ jobs:
         run: |
           npm ci --prefix .github/ci/offline-node --legacy-peer-deps --ignore-scripts --no-audit --no-fund
           ln -s ../.github/ci/offline-node/node_modules AppImage/node_modules
-      - name: Run ten qualified Node files
+      - name: Run eleven qualified Node files
         env:
           NODE_PATH: ${{ github.workspace }}/AppImage/node_modules
           PYTHONDONTWRITEBYTECODE: '1'

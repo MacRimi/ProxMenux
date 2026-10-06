@@ -299,6 +299,21 @@ export function HealthStatusModal({ open, onOpenChange, getApiUrl }: HealthStatu
   const translateHealthText = (value?: string): string => {
     if (!value) return ""
     const exact: Record<string, string> = {
+      "No temperature sensor detected - install lm-sensors if hardware supports it": t("healthStatus.details.noTemperatureSensor"),
+      "Sustained high CPU usage": t("healthStatus.details.cpuHighSustained"),
+      "Temperature elevated": t("healthStatus.details.temperatureElevated"),
+      "No swap configured": t("healthStatus.details.noSwapConfigured"),
+      "High RAM usage sustained": t("healthStatus.details.ramHighSustained"),
+      "Swap nearly full with RAM tight": t("healthStatus.details.swapRamPressure"),
+      "Failed to check for updates (apt-get error)": t("healthStatus.details.updatesAptError"),
+      "apt-get timed out - repository may be unreachable": t("healthStatus.details.updatesAptTimeout"),
+      "Unknown": t("healthStatus.details.unknownDetail"),
+      "No failed login attempts in 24h": t("healthStatus.details.noFailedLogins"),
+      "Fail2Ban installed but service not active": t("healthStatus.details.fail2banInactive"),
+      "Unable to determine uptime": t("healthStatus.details.uptimeUnavailable"),
+      "Unable to check login attempts": t("healthStatus.details.loginCheckUnavailable"),
+      "Certificate expired": t("healthStatus.details.certificateExpired"),
+      "Certificate check inconclusive": t("healthStatus.details.certificateInconclusive"),
       "All systems operational": t("healthStatus.details.allOperational"),
       "Normal": t("healthStatus.details.normal"),
       "No I/O errors in dmesg": t("healthStatus.details.noIoErrors"),
@@ -321,7 +336,7 @@ export function HealthStatusModal({ open, onOpenChange, getApiUrl }: HealthStatu
       "No VM startup failures": t("healthStatus.details.noVmFailures"),
       "Dismissed by user": t("healthStatus.details.dismissedByUser"),
     }
-    if (exact[value]) return exact[value]
+    if (Object.prototype.hasOwnProperty.call(exact, value)) return exact[value]
 
     let match = value.match(/^Latency ([\d.]+)ms to gateway$/)
     if (match) return t("healthStatus.details.gatewayLatency", { latency: match[1] })
@@ -361,6 +376,52 @@ export function HealthStatusModal({ open, onOpenChange, getApiUrl }: HealthStatu
     if (match) return t("healthStatus.details.pveStorageSafe", { count: match[1] })
     match = value.match(/^(\d+) remote mount\(s\) healthy$/)
     if (match) return t("healthStatus.details.remoteMountsHealthy", { count: match[1] })
+    match = value.match(/^CPU >(\d+(?:\.\d+)?)% sustained for (\d+)s$/)
+    if (match) return t("healthStatus.details.cpuSustained", { threshold: match[1], seconds: match[2] })
+    match = value.match(/^CPU check failed: ([\s\S]*)$/)
+    if (match) return t("healthStatus.details.cpuCheckFailed", { error: match[1] })
+    match = value.match(/^Sensor temperature (\d+(?:\.\d+)?)°C >80°C; high samples span ((?:\d+m )?\d+s)$/)
+    if (match) return t("healthStatus.details.sensorHighSamplesSpan", { temperature: match[1], duration: match[2] })
+    match = value.match(/^RAM >(\d+(?:\.\d+)?)% sustained for (\d+)s$/)
+    if (match) return t("healthStatus.details.ramSustained", { threshold: match[1], seconds: match[2] })
+    match = value.match(/^Memory pressure: swap (\d+)% used and only (\d+)% RAM available$/)
+    if (match) return t("healthStatus.details.memoryPressure", { swapPercent: match[1], ramAvailablePercent: match[2] })
+    match = value.match(/^Memory check failed: ([\s\S]*)$/)
+    if (match) return t("healthStatus.details.memoryCheckFailed", { error: match[1] })
+    match = value.match(/^(\d+) security update\(s\) pending$/)
+    if (match) return t("healthStatus.details.pendingSecurityUpdates", { count: match[1] })
+    match = value.match(/^(\d+) security update\(s\) pending \((\d+) days unpatched\)$/)
+    if (match) return t("healthStatus.details.pendingSecurityUpdatesUnpatched", { count: match[1], days: match[2] })
+    match = value.match(/^(\d+) security update\(s\) pending for (\d+) days$/)
+    if (match) return t("healthStatus.details.pendingSecurityUpdatesDays", { count: match[1], days: match[2] })
+    match = value.match(/^System not updated in (\d+) days \(>18 months\)$/)
+    if (match) return t("healthStatus.details.systemNotUpdatedMonths", { days: match[1] })
+    match = value.match(/^System not updated in (\d+) days \(>1 year\)$/)
+    if (match) return t("healthStatus.details.systemNotUpdatedYear", { days: match[1] })
+    match = value.match(/^Kernel update available for running ([^\s()]+)$/)
+    if (match) return t("healthStatus.details.runningKernelUpdate", { kernel: match[1] })
+    match = value.match(/^(\d+) kernel \+ (\d+) Proxmox update\(s\) available$/)
+    if (match) return t("healthStatus.details.kernelPveUpdates", { kernelCount: match[1], pveCount: match[2] })
+    match = value.match(/^(\d+) package update\(s\) pending$/)
+    if (match) return t("healthStatus.details.pendingPackageUpdates", { count: match[1] })
+    match = value.match(/^([a-z0-9][a-z0-9+.-]+(?::[a-z0-9]+)?(?: [^\s()]+ -> [^\s()]+)?) \(\+(\d+) more\)$/)
+    if (match) return t("healthStatus.details.kernelPackagesMore", { technicalIdentity: match[1], count: match[2] })
+    match = value.match(/^(\d+) kernel update\(s\) available \(none for running kernel( [^\s()]+)?\)$/)
+    if (match) return t("healthStatus.details.nonRunningKernelUpdates", { count: match[1], optionalKernel: match[2] || "" })
+    match = value.match(/^PVE ([^\s()]+) -> ([^\s()]+) available$/)
+    if (match) return t("healthStatus.details.pveVersionAvailable", { current: match[1], new: match[2] })
+    match = value.match(/^Updates check unavailable: ([\s\S]*)$/)
+    if (match) return t("healthStatus.details.updatesCheckUnavailable", { error: match[1] })
+    match = value.match(/^Unable to check Fail2Ban: ([\s\S]*)$/)
+    if (match) return t("healthStatus.details.fail2banCheckUnavailable", { error: match[1] })
+    match = value.match(/^Uptime (\d+) days \(>1 year, consider updating kernel\/system\)$/)
+    if (match) return t("healthStatus.details.uptimeKernelAdvice", { days: match[1] })
+    match = value.match(/^(\d+) failed attempts in 24h \(within threshold\)$/)
+    if (match) return t("healthStatus.details.failedLoginsWithinThreshold", { count: match[1] })
+    match = value.match(/^Security check unavailable: ([\s\S]*)$/)
+    if (match) return t("healthStatus.details.securityCheckUnavailable", { error: match[1] })
+    match = value.match(/^Certificate expires in (\d+) days$/)
+    if (match) return t("healthStatus.details.certificateExpiresDays", { days: match[1] })
     return value
   }
 
