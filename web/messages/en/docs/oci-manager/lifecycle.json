@@ -50,6 +50,11 @@
                 "The data of container disks and host directories"
               ],
               [
+                "Watchdog: restart the application when it crashes",
+                "Whether the application is started again when it stops on its own. Nothing is rebuilt",
+                "The whole installation; only the choice is saved in the contract"
+              ],
+              [
                 "Remove: delete the application and its containers",
                 "The LXC, or every member of a stack, and their contracts are deleted",
                 "Host directories, with their content"
@@ -58,7 +63,7 @@
           }
         },
         {
-          "p": "For a multi-container application the menu offers <strong>Update every container of the application</strong>, <strong>Modify extra paths and devices</strong>, <strong>Recreate every container with its saved configuration</strong> and the removal. Modify adds or removes the extra paths and devices of the application container without rebuilding anything and, in Immich, changes what runs recognition. Recreate rebuilds every container from the image it was installed with, without looking for a newer one."
+          "p": "For a multi-container application the menu offers <strong>Update every container of the application</strong>, <strong>Modify extra paths and devices</strong>, <strong>Recreate every container with its saved configuration</strong>, the watchdog and the removal. Modify adds or removes the extra paths and devices of the application container without rebuilding anything and, in Immich, changes what runs recognition. Recreate rebuilds every container from the image it was installed with, without looking for a newer one."
         },
         {
           "figure": {
@@ -154,6 +159,52 @@
           "calloutWarning": {
             "title": "Host directories are outside the rollback",
             "body": "The backup covers the rootfs and the container disks it includes. A host directory is not reverted, because other LXCs may use its data."
+          }
+        }
+      ]
+    },
+    {
+      "id": "watchdog",
+      "title": "Watchdog: restarting an application that stops",
+      "intro": "Proxmox has no restart policy: when the process of an application container ends, the container stays stopped. With the watchdog on, an application that stops on its own is started again. It does for an OCI application what <code>restart: unless-stopped</code> does in a Compose file.",
+      "blocks": [
+        {
+          "table": {
+            "headers": [
+              "What happens",
+              "With the watchdog on"
+            ],
+            "rows": [
+              [
+                "The application crashes or its process ends",
+                "The container is started again within seconds"
+              ],
+              [
+                "It is stopped or shut down from Proxmox, from the Monitor or with <code>pct</code>",
+                "It stays stopped until somebody starts it"
+              ],
+              [
+                "A backup, a migration or a ProxMenux operation is working on it",
+                "Nothing is done until that ends"
+              ],
+              [
+                "It was already stopped when the host started",
+                "It stays stopped; <strong>Start with Proxmox</strong> decides that"
+              ],
+              [
+                "It keeps stopping right after starting",
+                "An application that stops again within seconds of starting is tried five times, waiting 30 seconds, 1, 2 and 5 minutes between them. Then it is left stopped and a notification is sent"
+              ]
+            ]
+          }
+        },
+        {
+          "p": "The installer asks it in both installation modes and proposes what the recipe of the application declares. It is changed later from <strong>Manage installed OCI applications</strong> or with the <strong>Watchdog</strong> switch of the container in <monitorLink>ProxMenux Monitor</monitorLink>, and it applies to every container of a multi-container application. One service of the host, <code>proxmenux-oci-watchdog.service</code>, watches every application that asked for it; its installation is listed in the Changes tab of Audit & Report."
+        },
+        {
+          "calloutInfo": {
+            "title": "What the host cannot tell",
+            "body": "The exit code of the application does not reach the host, so a clean exit and a crash look the same and both are restarted, as <code>always</code> and <code>unless-stopped</code> do in Docker. A stop asked outside Proxmox, with <code>lxc-stop</code> or <code>systemctl</code>, leaves no stop task and is taken as a stop of its own."
           }
         }
       ]

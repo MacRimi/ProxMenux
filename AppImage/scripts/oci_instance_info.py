@@ -3,8 +3,9 @@
 Read-only view of the installation record OCI manager Apps keeps for every
 container it created: whether the container is one, whether it belongs to a
 multi-container application, whether it uses host directories (which its
-backup does not revert), whether an operation is pending and whether it was
-restored from a backup and is not registered on this host yet. Nothing here
+backup does not revert), whether an operation is pending, whether it is
+restarted when it stops on its own and whether it was restored from a backup
+and is not registered on this host yet. Nothing here
 changes the record or runs inside the container.
 """
 from __future__ import annotations
@@ -70,6 +71,7 @@ def info(vmid: int) -> dict:
         "host_directories": False,
         "pending": False,
         "restored": False,
+        "watchdog": False,
     }
     record = _record(vmid)
     installation = _installation(vmid)
@@ -91,5 +93,6 @@ def info(vmid: int) -> dict:
         members=members,
         host_directories=any(_host_dirs(r) for r in records),
         pending=bool(record.get("pending_transaction") or primary.get("pending_stack_transaction")),
+        watchdog=all((r.get("deployment") or {}).get("watchdog") is True for r in records),
     )
     return result

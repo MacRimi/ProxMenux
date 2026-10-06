@@ -53,6 +53,7 @@ class StackRecreateV1Tests(unittest.TestCase):
                                  "base_config_sha256": "saved-config"}}
         with patch.object(adapter, "validate"), \
                 patch.object(adapter, "state", return_value={"backups": {"138": {"archive": "/backup"}}}), \
+                patch.object(native, "translate", side_effect=lambda text: text), \
                 patch.object(native.member_tx, "apply") as apply:
             adapter.replace(138, prepared, "transaction-id")
 

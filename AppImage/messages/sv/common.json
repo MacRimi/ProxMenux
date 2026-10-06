@@ -1049,6 +1049,8 @@
         "mounted": "monterad"
       },
       "startOnBoot": "Börja vid start",
+      "watchdog": "Watchdog",
+      "watchdogHelp": "Startar om den här applikationen automatiskt när den kraschar.",
       "tags": "Taggar",
       "tagsPlaceholder": "Lägg till tagg...",
       "tagsNone": "Inga taggar",
@@ -2008,6 +2010,8 @@
         "oci_recreate_failed": "Återskapande av OCI-applikation misslyckades",
         "oci_modify_completed": "OCI-applikation ändrad",
         "oci_modify_failed": "Ändring av OCI-applikation misslyckades",
+        "oci_watchdog_restarted": "OCI-applikation omstartad av watchdog",
+        "oci_watchdog_failed": "OCI-applikation stannar om och om igen",
         "app_update_available": "Appuppdatering tillgänglig",
         "lxc_update_applied": "LXC uppdatering tillämpad",
         "docker_stack_update_available": "Docker uppdateringar tillgängliga"
@@ -6440,6 +6444,16 @@
           "title": "{hostname}: ändringen av {app_name} slutfördes inte",
           "body": "Ändringen av {app_name} slutfördes inte.\nOrsak: {reason}\nContainrar: {containers}\nÖppna Hantera installerade OCI-applikationer för att kontrollera dess tillstånd.",
           "label": "Ändring av OCI-applikation misslyckades"
+        },
+        "oci_watchdog_restarted": {
+          "title": "{hostname}: {app_name} omstartad efter att ha stannat",
+          "body": "{app_name} stannade av sig själv och watchdog startade den igen.\nContainrar: {containers}",
+          "label": "OCI-applikation omstartad av watchdog"
+        },
+        "oci_watchdog_failed": {
+          "title": "{hostname}: {app_name} stannar om och om igen",
+          "body": "{app_name} fortsätter att stanna av sig själv och watchdog startar inte längre om den.\nContainrar: {containers}\nStarta den manuellt när orsaken är löst; watchdog övervakar den sedan igen.",
+          "label": "OCI-applikation stannar om och om igen"
         },
         "app_update_available": {
           "title": "{hostname}: {app_name} uppdatering tillgänglig på CT {vmid}",

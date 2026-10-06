@@ -1631,12 +1631,13 @@ _OCI_EVENTS = {
     'oci_update_completed': 'INFO', 'oci_update_failed': 'WARNING',
     'oci_recreate_completed': 'INFO', 'oci_recreate_failed': 'WARNING',
     'oci_modify_completed': 'INFO', 'oci_modify_failed': 'WARNING',
+    'oci_watchdog_restarted': 'WARNING', 'oci_watchdog_failed': 'CRITICAL',
 }
 
 
 @notification_bp.route('/api/internal/oci-event', methods=['POST'])
 def internal_oci_event():
-    """Called by the OCI engine when an update, a change or a recreation ends, with its
+    """Called by the OCI engine when an operation ends or the watchdog acts, with its
     result. Only accepts requests from this host."""
     remote_addr = request.remote_addr or ''
     try:

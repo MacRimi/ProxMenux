@@ -7,6 +7,7 @@ from unittest import TestCase
 ROOT = Path(__file__).resolve().parents[3]
 LOCALES = ('en', 'es', 'de', 'fr', 'it', 'pt', 'sk', 'sv')
 EVENTS = [f'oci_{kind}_{result}' for kind in ('update', 'modify', 'recreate') for result in ('completed', 'failed')]
+EVENTS += ['oci_watchdog_restarted', 'oci_watchdog_failed']
 
 
 class OciOperationEvents(TestCase):
@@ -17,7 +18,7 @@ class OciOperationEvents(TestCase):
         for event in EVENTS:
             self.assertIn(f"'{event}':", accepted, event)
             self.assertEqual(len(re.findall(rf"^    '{event}': \{{$", templates, re.MULTILINE)), 1, event)
-            self.assertEqual(len(re.findall(rf"^    '{event}': +'\\u", templates, re.MULTILINE)), 1, event)
+            self.assertEqual(len(re.findall(rf"^    '{event}': +'\\[uU]", templates, re.MULTILINE)), 1, event)
 
     def test_every_language_has_the_label_and_the_message_of_every_event(self):
         fields = lambda text: sorted(re.findall(r'\{(\w+)\}', text))

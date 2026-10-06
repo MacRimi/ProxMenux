@@ -927,6 +927,24 @@ TEMPLATES = {
         'group': 'vm_ct',
         'default_enabled': True,
     },
+    'oci_watchdog_restarted': {
+        'title': '{hostname}: {app_name} restarted after it stopped',
+        'body': '{app_name} stopped on its own and the watchdog started it again.\nContainers: {containers}',
+        'label': 'OCI application restarted by the watchdog',
+        'group': 'vm_ct',
+        'default_enabled': True,
+    },
+    'oci_watchdog_failed': {
+        'title': '{hostname}: {app_name} keeps stopping',
+        'body': (
+            '{app_name} keeps stopping on its own and the watchdog no longer restarts it.\n'
+            'Containers: {containers}\n'
+            'Start it by hand once the cause is solved; the watchdog then watches it again.'
+        ),
+        'label': 'OCI application keeps stopping',
+        'group': 'vm_ct',
+        'default_enabled': True,
+    },
     'app_update_available': {
         'title': '{hostname}: {app_name} update available on CT {vmid}',
         'body': (
@@ -2377,6 +2395,8 @@ EVENT_EMOJI = {
     'oci_recreate_failed':    '\u26A0\uFE0F',
     'oci_modify_completed':   '\u2705',
     'oci_modify_failed':      '\u26A0\uFE0F',
+    'oci_watchdog_restarted': '\U0001F504',
+    'oci_watchdog_failed':    '\u26A0\uFE0F',
     'app_update_available': '\U0001F195',  # \ud83c\udd95 NEW \u2014 upstream app release
     'docker_stack_update_available': '\U0001F433',
     'vm_start':             '\u25B6\uFE0F',    # play button

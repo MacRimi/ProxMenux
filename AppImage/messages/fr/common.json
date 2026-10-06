@@ -1049,6 +1049,8 @@
         "mounted": "monté"
       },
       "startOnBoot": "Démarrer au démarrage",
+      "watchdog": "Surveillance",
+      "watchdogHelp": "Redémarre automatiquement cette application lorsqu'elle plante.",
       "tags": "balises",
       "tagsPlaceholder": "Ajouter une balise…",
       "tagsNone": "Aucune balise",
@@ -2008,6 +2010,8 @@
         "oci_recreate_failed": "Échec de la recréation de l'application OCI",
         "oci_modify_completed": "Application OCI modifiée",
         "oci_modify_failed": "Échec de la modification de l'application OCI",
+        "oci_watchdog_restarted": "Application OCI redémarrée par la surveillance",
+        "oci_watchdog_failed": "Application OCI qui s'arrête sans cesse",
         "app_update_available": "mise à jour de l'application disponible",
         "lxc_update_applied": "Mise à jour LXC appliquée",
         "docker_stack_update_available": "Docker mises à jour disponibles"
@@ -6440,6 +6444,16 @@
           "title": "{hostname} : la modification de {app_name} n'a pas abouti",
           "body": "La modification de {app_name} n'a pas abouti.\nMotif : {reason}\nConteneurs : {containers}\nOuvrez Gérer les applications OCI installées pour vérifier son état.",
           "label": "Échec de la modification de l'application OCI"
+        },
+        "oci_watchdog_restarted": {
+          "title": "{hostname} : {app_name} redémarré après un arrêt",
+          "body": "{app_name} s'est arrêté tout seul et la surveillance l'a redémarré.\nConteneurs : {containers}",
+          "label": "Application OCI redémarrée par la surveillance"
+        },
+        "oci_watchdog_failed": {
+          "title": "{hostname} : {app_name} s'arrête sans cesse",
+          "body": "{app_name} continue de s'arrêter tout seul et la surveillance ne le redémarre plus.\nConteneurs : {containers}\nDémarrez-le à la main une fois la cause résolue ; la surveillance le reprend alors.",
+          "label": "Application OCI qui s'arrête sans cesse"
         },
         "app_update_available": {
           "title": "{hostname} : mise à jour {app_name} disponible sur CT {vmid}",

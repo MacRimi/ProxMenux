@@ -898,6 +898,7 @@ install_normal_version() {
         mkdir -p "$BASE_DIR/oci/engine"
         cp -r "./oci/"* "$BASE_DIR/oci/engine/"
         find "$BASE_DIR/oci/engine" -type f -name '*.sh' -exec chmod +x {} +
+        systemctl try-restart proxmenux-oci-watchdog.service >/dev/null 2>&1 || true
     fi
     chmod +x "$BASE_DIR/install_proxmenux.sh"
     msg_ok "Necessary files created."

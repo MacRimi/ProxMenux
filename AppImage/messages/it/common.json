@@ -1049,6 +1049,8 @@
         "mounted": "montato"
       },
       "startOnBoot": "Avvio al boot",
+      "watchdog": "Watchdog",
+      "watchdogHelp": "Riavvia automaticamente questa applicazione quando si arresta in modo anomalo.",
       "tags": "Tag",
       "tagsPlaceholder": "Aggiungi tag…",
       "tagsNone": "Nessun tag",
@@ -2008,6 +2010,8 @@
         "oci_recreate_failed": "Ricreazione app OCI non riuscita",
         "oci_modify_completed": "App OCI modificata",
         "oci_modify_failed": "Modifica app OCI non riuscita",
+        "oci_watchdog_restarted": "App OCI riavviata dal watchdog",
+        "oci_watchdog_failed": "App OCI che continua ad arrestarsi",
         "app_update_available": "Aggiornamento app disponibile",
         "lxc_update_applied": "Aggiornamento LXC applicato",
         "docker_stack_update_available": "Aggiornamenti Docker disponibili"
@@ -6440,6 +6444,16 @@
           "title": "{hostname}: modifica di {app_name} non completata",
           "body": "La modifica di {app_name} non è stata completata.\nMotivo: {reason}\nContainer: {containers}\nApri «Gestisci le applicazioni OCI installate» per verificarne lo stato.",
           "label": "Modifica app OCI non riuscita"
+        },
+        "oci_watchdog_restarted": {
+          "title": "{hostname}: {app_name} riavviato dopo un arresto",
+          "body": "{app_name} si è arrestato da solo e il watchdog lo ha riavviato.\nContainer: {containers}",
+          "label": "App OCI riavviata dal watchdog"
+        },
+        "oci_watchdog_failed": {
+          "title": "{hostname}: {app_name} continua ad arrestarsi",
+          "body": "{app_name} continua ad arrestarsi da solo e il watchdog non lo riavvia più.\nContainer: {containers}\nAvvialo a mano una volta risolta la causa; il watchdog tornerà a sorvegliarlo.",
+          "label": "App OCI che continua ad arrestarsi"
         },
         "app_update_available": {
           "title": "{hostname}: aggiornamento {app_name} disponibile su CT {vmid}",

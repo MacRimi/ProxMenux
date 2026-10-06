@@ -1049,6 +1049,8 @@
         "mounted": "montado"
       },
       "startOnBoot": "Iniciar na inicialização",
+      "watchdog": "Vigilância",
+      "watchdogHelp": "Reinicia automaticamente esta aplicação quando falha.",
       "tags": "Etiquetas",
       "tagsPlaceholder": "Adicionar tag…",
       "tagsNone": "sem tags",
@@ -2008,6 +2010,8 @@
         "oci_recreate_failed": "Falha na recriação da aplicação OCI",
         "oci_modify_completed": "Aplicação OCI modificada",
         "oci_modify_failed": "Falha na modificação da aplicação OCI",
+        "oci_watchdog_restarted": "Aplicação OCI reiniciada pela vigilância",
+        "oci_watchdog_failed": "Aplicação OCI que continua a parar",
         "app_update_available": "atualização de aplicativo disponível",
         "lxc_update_applied": "Atualização LXC aplicada",
         "docker_stack_update_available": "Docker atualizações disponíveis"
@@ -6440,6 +6444,16 @@
           "title": "{hostname}: a modificação de {app_name} não foi concluída",
           "body": "A modificação de {app_name} não foi concluída.\nMotivo: {reason}\nContêineres: {containers}\nAbra Gerir aplicações OCI instaladas para verificar o estado.",
           "label": "Falha na modificação da aplicação OCI"
+        },
+        "oci_watchdog_restarted": {
+          "title": "{hostname}: {app_name} reiniciado depois de parar",
+          "body": "{app_name} parou sozinho e a vigilância voltou a iniciá-lo.\nContêineres: {containers}",
+          "label": "Aplicação OCI reiniciada pela vigilância"
+        },
+        "oci_watchdog_failed": {
+          "title": "{hostname}: {app_name} continua a parar",
+          "body": "{app_name} continua a parar sozinho e a vigilância já não o reinicia.\nContêineres: {containers}\nInicie-o à mão quando a causa estiver resolvida; a vigilância volta então a vigiá-lo.",
+          "label": "Aplicação OCI que continua a parar"
         },
         "app_update_available": {
           "title": "{hostname}: atualização {app_name} disponível no CT {vmid}",

@@ -50,6 +50,11 @@
                 "Los datos de los discos del contenedor y de los directorios del host"
               ],
               [
+                "Vigilancia: reiniciar la aplicación cuando falla",
+                "Si la aplicación se inicia de nuevo cuando se detiene sola. No se reconstruye nada",
+                "Toda la instalación; solo se guarda la elección en el contrato"
+              ],
+              [
                 "Eliminar: la aplicación y sus contenedores",
                 "Se eliminan el LXC, o todos los miembros de una pila, y sus contratos",
                 "Los directorios del host, con su contenido"
@@ -58,7 +63,7 @@
           }
         },
         {
-          "p": "Para una aplicación multicontenedor el menú ofrece <strong>Actualizar cada contenedor de la aplicación</strong>, <strong>Modificar rutas extra y dispositivos</strong>, <strong>Recrear todos los contenedores con su configuración guardada</strong> y la eliminación. Modificar añade o elimina las rutas y los dispositivos extra del contenedor de la aplicación sin reconstruir nada y, en Immich, cambia qué ejecuta el reconocimiento. Recrear reconstruye cada contenedor desde la imagen con la que se instaló, sin buscar una más nueva."
+          "p": "Para una aplicación multicontenedor el menú ofrece <strong>Actualizar cada contenedor de la aplicación</strong>, <strong>Modificar rutas extra y dispositivos</strong>, <strong>Recrear todos los contenedores con su configuración guardada</strong>, la vigilancia y la eliminación. Modificar añade o elimina las rutas y los dispositivos extra del contenedor de la aplicación sin reconstruir nada y, en Immich, cambia qué ejecuta el reconocimiento. Recrear reconstruye cada contenedor desde la imagen con la que se instaló, sin buscar una más nueva."
         },
         {
           "figure": {
@@ -154,6 +159,52 @@
           "calloutWarning": {
             "title": "Los directorios del host quedan fuera de la restauración",
             "body": "El backup cubre el rootfs y los discos del contenedor que incluye. Un directorio del host no se revierte, porque otros LXC pueden usar sus datos."
+          }
+        }
+      ]
+    },
+    {
+      "id": "watchdog",
+      "title": "Vigilancia: reiniciar una aplicación que se detiene",
+      "intro": "Proxmox no tiene política de reinicio: cuando termina el proceso de un contenedor de aplicación, el contenedor se queda parado. Con la vigilancia activada, una aplicación que se detiene sola se inicia de nuevo. Hace por una aplicación OCI lo que <code>restart: unless-stopped</code> hace en un fichero Compose.",
+      "blocks": [
+        {
+          "table": {
+            "headers": [
+              "Qué ocurre",
+              "Con la vigilancia activada"
+            ],
+            "rows": [
+              [
+                "La aplicación falla o su proceso termina",
+                "El contenedor se inicia de nuevo en segundos"
+              ],
+              [
+                "Se detiene o se apaga desde Proxmox, desde el Monitor o con <code>pct</code>",
+                "Se queda parado hasta que alguien lo inicia"
+              ],
+              [
+                "Un backup, una migración o una operación de ProxMenux está trabajando en él",
+                "No se hace nada hasta que termina"
+              ],
+              [
+                "Ya estaba parado cuando arrancó el host",
+                "Se queda parado; eso lo decide <strong>Iniciar con Proxmox</strong>"
+              ],
+              [
+                "No deja de detenerse nada más arrancar",
+                "Una aplicación que vuelve a detenerse a los pocos segundos de arrancar se intenta cinco veces, con esperas de 30 segundos, 1, 2 y 5 minutos entre ellas. Después se deja parada y se envía una notificación"
+              ]
+            ]
+          }
+        },
+        {
+          "p": "El instalador lo pregunta en los dos modos de instalación y propone lo que declara la receta de la aplicación. Después se cambia desde <strong>Gestionar aplicaciones OCI instaladas</strong> o con el interruptor <strong>Vigilancia</strong> del contenedor en <monitorLink>ProxMenux Monitor</monitorLink>, y se aplica a todos los contenedores de una aplicación multicontenedor. Un único servicio del host, <code>proxmenux-oci-watchdog.service</code>, vigila todas las aplicaciones que lo pidieron; su instalación aparece en la pestaña Cambios de Audit & Report."
+        },
+        {
+          "calloutInfo": {
+            "title": "Lo que el host no puede distinguir",
+            "body": "El código de salida de la aplicación no llega al host, así que una salida limpia y un fallo se ven igual y ambos se reinician, como hacen <code>always</code> y <code>unless-stopped</code> en Docker. Una parada pedida fuera de Proxmox, con <code>lxc-stop</code> o <code>systemctl</code>, no deja tarea de parada y se toma como una parada propia."
           }
         }
       ]

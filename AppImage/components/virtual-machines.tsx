@@ -52,6 +52,7 @@ interface OciInstanceInfo {
   host_directories: boolean
   pending: boolean
   restored?: boolean
+  watchdog?: boolean
 }
 
 interface LxcUpdateCheck {
@@ -887,6 +888,8 @@ export function VirtualMachines() {
   //   savedOnboot       → 2 s ack pill after successful save.
   const [resourcesEditMode, setResourcesEditMode] = useState(false)
   const [pendingOnboot, setPendingOnboot] = useState<boolean | null>(null)
+  // Watchdog of an OCI application: same edit-gate as the toggle above.
+  const [pendingWatchdog, setPendingWatchdog] = useState<boolean | null>(null)
   const [pendingTags, setPendingTags] = useState<string[] | null>(null)
   const [newTagDraft, setNewTagDraft] = useState<string>("")
   // When set (in edit mode), the pill at this index renders as an
@@ -1251,6 +1254,7 @@ export function VirtualMachines() {
     // start in view mode with no pending change.
     setResourcesEditMode(false)
     setPendingOnboot(null)
+    setPendingWatchdog(null)
     setPendingTags(null)
     setNewTagDraft("")
     setEditingTagIndex(null)
@@ -1682,6 +1686,7 @@ export function VirtualMachines() {
 
   const handleCancelResourcesEdit = () => {
     setPendingOnboot(null)
+    setPendingWatchdog(null)
     setPendingTags(null)
     setNewTagDraft("")
     setEditingTagIndex(null)
@@ -1702,16 +1707,26 @@ export function VirtualMachines() {
     if (pendingTags !== null && stringifyTags(pendingTags) !== stringifyTags(currentTags)) {
       payload.tags = pendingTags
     }
-    if (Object.keys(payload).length === 0) {
+    const watchdogChanged = !!ociInstance?.oci_instance && pendingWatchdog !== null && pendingWatchdog !== !!ociInstance.watchdog
+    if (Object.keys(payload).length === 0 && !watchdogChanged) {
       handleCancelResourcesEdit()
       return
     }
     setSavingOnboot(true)
     try {
-      await fetchApi(`/api/vms/${selectedVM.vmid}/config`, {
-        method: "POST",
-        body: JSON.stringify(payload),
-      })
+      if (Object.keys(payload).length > 0) {
+        await fetchApi(`/api/vms/${selectedVM.vmid}/config`, {
+          method: "POST",
+          body: JSON.stringify(payload),
+        })
+      }
+      if (watchdogChanged) {
+        const updated = await fetchApi<OciInstanceInfo>(`/api/lxc/${selectedVM.vmid}/oci-watchdog`, {
+          method: "POST",
+          body: JSON.stringify({ enabled: pendingWatchdog }),
+        })
+        setOciInstance((prev) => (prev ? { ...prev, watchdog: !!updated?.watchdog } : prev))
+      }
       // Optimistic local reflect so the UI doesn't wait a poll cycle.
       if (payload.onboot !== undefined) {
         setVMDetails((prev) => (prev ? { ...prev, config: { ...prev.config, onboot: payload.onboot as number } } : prev))
@@ -1725,6 +1740,7 @@ export function VirtualMachines() {
       // list card too without waiting up to 2.5 s.
       void mutate()
       setPendingOnboot(null)
+      setPendingWatchdog(null)
       setPendingTags(null)
       setNewTagDraft("")
       setEditingTagIndex(null)
@@ -4091,6 +4107,7 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                                           savingOnboot ||
                                           (
                                             (pendingOnboot === null || pendingOnboot === !!vmDetails.config.onboot) &&
+                                            (pendingWatchdog === null || !ociInstance?.oci_instance || pendingWatchdog === !!ociInstance.watchdog) &&
                                             (pendingTags === null || stringifyTags(pendingTags) === stringifyTags(parseTags(selectedVM?.tags)))
                                           )
                                         }
@@ -4322,6 +4339,34 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                                   className={`data-[state=checked]:bg-blue-600 data-[state=unchecked]:bg-input border border-border ${!resourcesEditMode ? "opacity-60" : ""}`}
                                 />
                               </div>
+
+                              {/* Watchdog of an OCI application: started
+                                  again when it stops on its own. */}
+                              {ociInstance?.oci_instance && (
+                                <div
+                                  className={`mt-1 rounded-md p-3 flex items-center justify-between gap-3 ${
+                                    resourcesEditMode ? "bg-accent" : ""
+                                  }`}
+                                >
+                                  <div className="flex items-start gap-2 min-w-0">
+                                    <Eye className="h-4 w-4 text-blue-500 shrink-0 mt-0.5" />
+                                    <div className="min-w-0">
+                                      <div className="text-sm font-medium text-foreground">
+                                        {t("vmLxc.details.watchdog")}
+                                      </div>
+                                      <div className="text-xs text-muted-foreground leading-relaxed">
+                                        {t("vmLxc.details.watchdogHelp")}
+                                      </div>
+                                    </div>
+                                  </div>
+                                  <Switch
+                                    checked={pendingWatchdog ?? !!ociInstance.watchdog}
+                                    disabled={!resourcesEditMode || savingOnboot}
+                                    onCheckedChange={(v) => setPendingWatchdog(v)}
+                                    className={`data-[state=checked]:bg-blue-600 data-[state=unchecked]:bg-input border border-border ${!resourcesEditMode ? "opacity-60" : ""}`}
+                                  />
+                                </div>
+                              )}
 
                               {/* IP Addresses with proper keys */}
                               {selectedVM?.type === "lxc" && vmDetails?.lxc_ip_info && (

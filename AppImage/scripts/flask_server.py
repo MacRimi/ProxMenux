@@ -15438,6 +15438,39 @@ def api_lxc_oci_instance(vmid):
         return jsonify({"ok": False, "error": str(e)}), 500
 
 
+@app.route('/api/lxc/<int:vmid>/oci-watchdog', methods=['POST'])
+@require_admin_scope
+def api_lxc_oci_watchdog(vmid):
+    """Turn the watchdog of an OCI application on or off: whether it is
+    started again when it stops on its own. The OCI engine keeps the choice
+    in the record of every container of the application.
+
+    Body: {"enabled": true|false}
+    """
+    data = request.get_json(silent=True) or {}
+    enabled = data.get('enabled')
+    if not isinstance(enabled, bool):
+        return jsonify({'error': 'enabled must be true or false'}), 400
+    try:
+        import oci_instance_info
+        if not oci_instance_info.info(vmid).get('oci_instance'):
+            return jsonify({'error': 'not an OCI application'}), 404
+        result = subprocess.run(
+            [sys.executable, '/usr/local/share/proxmenux/oci/engine/remote/oci_watchdog.py',
+             'set', str(int(vmid)), 'on' if enabled else 'off'],
+            capture_output=True, text=True, timeout=60,
+            env={k: v for k, v in os.environ.items() if k not in ('PYTHONPATH', 'LD_LIBRARY_PATH')})
+        if result.returncode == 3:
+            return jsonify({'error': 'busy', 'detail': 'Another OCI operation is in progress'}), 409
+        if result.returncode != 0:
+            return jsonify({'error': (result.stderr or result.stdout).strip()[-300:] or 'failed'}), 500
+        return jsonify({'ok': True, 'watchdog': enabled, **oci_instance_info.info(vmid)})
+    except subprocess.TimeoutExpired:
+        return jsonify({'error': 'timeout'}), 504
+    except Exception as e:
+        return jsonify({'ok': False, 'error': str(e)}), 500
+
+
 @app.route('/api/vms/<int:vmid>/logs', methods=['GET'])
 @require_auth
 def api_vm_logs(vmid):

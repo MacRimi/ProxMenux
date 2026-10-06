@@ -346,6 +346,8 @@ def _deployment_summary_text(template: dict[str, Any], deployment: dict[str, Any
     lines.append("")
     row(translate("Start"), f"{translate('when finished')}: {_yes_no(plan.get('start_after_create'))} · "
                             f"{translate('with Proxmox')}: {_yes_no(plan.get('onboot'))}")
+    if "watchdog" in plan:
+        row(translate("Watchdog"), _yes_no(plan["watchdog"]))
     return "\n".join(lines)
 
 
@@ -383,6 +385,14 @@ def _print_installation_summary(result: dict[str, Any], images_removed: str | No
 
 # ---------------------------------------------------------------- menus
 
+def watchdog_default(template: dict[str, Any]) -> bool:
+    """Whether the recipe of the application asks Docker to restart it."""
+    policies = [template.get("container_contract", {}).get("restart")]
+    policies += [service.get("compose", {}).get("restart")
+                 for service in template.get("compose_stack", {}).get("services", []) if isinstance(service, dict)]
+    return any(policy in ("always", "unless-stopped", "on-failure") for policy in policies)
+
+
 def _install(catalog: Catalog, ui, item: dict[str, Any], mode: str) -> None:
     install_template(ui, catalog.compose(item["id"]), item["id"], mode)
 
@@ -397,6 +407,10 @@ def install_template(ui, template: dict[str, Any], identifier: str, mode: str) -
             candidate = copy.deepcopy(template)
             try:
                 deployment = build_deployment(candidate, wizard, mode)
+                # Every installation decides it, the default one as well.
+                deployment["watchdog"] = wizard.confirm(
+                    translate("Put this application under watchdog? It is restarted automatically when it crashes."),
+                    watchdog_default(candidate))
                 approved = wizard.review(_deployment_summary_text(candidate, deployment),
                                          translate("Installation summary"),
                                          question=translate("Install with this configuration?"))
@@ -413,6 +427,8 @@ def install_template(ui, template: dict[str, Any], identifier: str, mode: str) -
     if not approved:
         return None
     template = candidate
+    # The engine installs the application; the watchdog is turned on once it is there.
+    watchdog = bool(deployment.pop("watchdog", False))
     console.show_logo()
     console.msg_title(f"{source_text(template['catalog_ui']['title']) or identifier} · {APP_TITLE}")
     try:
@@ -427,6 +443,12 @@ def install_template(ui, template: dict[str, Any], identifier: str, mode: str) -
         vmids = {int(v) for v in [result.get("vmid"), *(result.get("stack_vmids") or {}).values()] if v}
         _, removed = images.offer_removal(ui, sorted(vmids))
         _print_installation_summary(result, removed)
+        if watchdog:
+            from .management import set_watchdog
+            if set_watchdog(PROJECT_ROOT, sorted(vmids), True):
+                console.msg_ok(translate("Watchdog enabled: the application is restarted when it crashes."))
+            else:
+                console.msg_warn(translate("The watchdog could not be enabled. Turn it on from Manage installed OCI applications."))
     console.wait_for_enter(translate("Press Enter to return to the menu..."))
     return result
 

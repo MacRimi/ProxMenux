@@ -269,6 +269,39 @@ def _interactive_management(project, ui):
     manage_instance(project, ui, row)
 
 
+def set_watchdog(project, vmids, enabled):
+    """Turn the watchdog of the applications these containers belong to on or
+    off. False when the registry is busy or a record cannot be read."""
+    sys.path.insert(0, str(project / 'remote'))
+    import oci_instances as instances
+    import oci_watchdog
+    done = set()
+    for vmid in vmids:
+        if vmid in done:
+            continue
+        try:
+            done.update(oci_watchdog.set_watchdog(instances.ROOT, vmid, enabled))
+        except (OSError, ValueError, KeyError):
+            return False
+    return True
+
+
+def _toggle_watchdog(project, ui, vmid, enabled):
+    """Ask and change the watchdog of an application from its menu."""
+    question = (translate('This application is under watchdog: it is restarted automatically when it crashes. Turn the watchdog off?')
+                if enabled else
+                translate('Put this application under watchdog? It is restarted automatically when it crashes. A stop or a shutdown you ask for is never undone.'))
+    if not ui.confirm(question, not enabled):
+        return False
+    if not set_watchdog(project, [vmid], not enabled):
+        ui.message(translate('Another OCI operation is using the instance registry. Wait for it to finish and open this menu again; no container is modified.'),
+                   translate('OCI management'))
+        return False
+    ui.message(translate('Watchdog disabled.') if enabled else translate('Watchdog enabled: the application is restarted when it crashes.'),
+               translate('OCI management'))
+    return True
+
+
 def manage_instance(project, ui, row, action=None, lifecycle_args=()):
     """What the menu does with one instance once it is selected. `action`
     skips the choice of operation, as ProxMenux Monitor does; the extra
@@ -292,15 +325,21 @@ def manage_instance(project, ui, row, action=None, lifecycle_args=()):
         if row['status'] != 'installed' or row['reason'] != 'matched':
             ui.message(translate('The instance identity or status must be reviewed before updating.'), translate('OCI management'))
             return False
-        if action is None:
-            action = ui.choose(translate('Manage OCI'), [('update', translate('Update the image with the saved configuration')),
-                                                         ('modify', translate('Modify: edit resources, network, paths and GPU')),
-                                                         ('remove', translate('Remove: delete the application and its containers'))], 'update')
-        if action is None:
-            return False
         sys.path.insert(0, str(project / 'remote'))
         import oci_instances as instances
         record = instances.read(instances.ROOT, row['vmid'])
+        watched = record.get('deployment', {}).get('watchdog') is True
+        watchdog_label = (translate('Watchdog (on): restart the application when it crashes') if watched
+                          else translate('Watchdog (off): restart the application when it crashes'))
+        if action is None:
+            action = ui.choose(translate('Manage OCI'), [('update', translate('Update the image with the saved configuration')),
+                                                         ('modify', translate('Modify: edit resources, network, paths and GPU')),
+                                                         ('watchdog', watchdog_label),
+                                                         ('remove', translate('Remove: delete the application and its containers'))], 'update')
+        if action is None:
+            return False
+        if action == 'watchdog':
+            return _toggle_watchdog(project, ui, row['vmid'], watched)
         if action == 'remove':
             return _remove(project, ui, row['vmid'])
         import oci_instance_reconcile as reconcile
@@ -489,10 +528,15 @@ def _manage_stack(project, ui, row, action=None, lifecycle_args=()):
             options.append(('modify', translate('Modify extra paths and devices')))
             if updatable:
                 options.append(('recreate', translate('Recreate every container with its saved configuration')))
+            watched = primary.get('deployment', {}).get('watchdog') is True
+            options.append(('watchdog', translate('Watchdog (on): restart the application when it crashes') if watched
+                            else translate('Watchdog (off): restart the application when it crashes')))
             options.append(('remove', translate('Remove: delete the application and its containers')))
             action = ui.choose(translate('Manage OCI stack'), options, options[0][0])
         if action is None:
             return False
+        if action == 'watchdog':
+            return _toggle_watchdog(project, ui, primary_id, primary.get('deployment', {}).get('watchdog') is True)
         if action == 'remove':
             return _remove(project, ui, primary_id)
         if action == 'modify':

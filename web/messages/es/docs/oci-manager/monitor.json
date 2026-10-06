@@ -26,6 +26,10 @@
             ],
             "rows": [
               [
+                "Estado",
+                "Un interruptor <strong>Vigilancia</strong> bajo Iniciar al arrancar: la aplicación se inicia de nuevo cuando se detiene sola"
+              ],
+              [
                 "App",
                 "La aplicación se identifica desde el registro y sus actualizaciones se siguen por la imagen"
               ],

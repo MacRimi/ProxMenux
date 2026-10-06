@@ -26,6 +26,10 @@
             ],
             "rows": [
               [
+                "Status",
+                "A <strong>Watchdog</strong> switch under Start at boot: the application is started again when it stops on its own"
+              ],
+              [
                 "App",
                 "The application is identified from the record, and updates are tracked by image"
               ],
