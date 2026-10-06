@@ -285,7 +285,8 @@ def manage_instance(project, ui, row, action=None, lifecycle_args=()):
         return False
     if row['stack']:
         return _manage_stack(project, ui, row, action, lifecycle_args)
-    if action == 'modify':
+    # Rebuilding as it is exists only for a multi-container application.
+    if action == 'recreate':
         return False
     if not row['pending']:
         if row['status'] != 'installed' or row['reason'] != 'matched':
@@ -293,7 +294,7 @@ def manage_instance(project, ui, row, action=None, lifecycle_args=()):
             return False
         if action is None:
             action = ui.choose(translate('Manage OCI'), [('update', translate('Update the image with the saved configuration')),
-                                                         ('recreate', translate('Recreate: edit resources, network, paths and GPU')),
+                                                         ('modify', translate('Modify: edit resources, network, paths and GPU')),
                                                          ('remove', translate('Remove: delete the application and its containers'))], 'update')
         if action is None:
             return False
@@ -323,7 +324,7 @@ def manage_instance(project, ui, row, action=None, lifecycle_args=()):
                 ui.message(str(error), translate('Review external OCI changes'))
                 return False
         proposal = None
-        if action == 'recreate':
+        if action == 'modify':
             from .recreation import edit_recreation
             from .cli import _deployment_summary_text
             from .ui import BacktrackUI, RestartWizard
@@ -333,8 +334,8 @@ def manage_instance(project, ui, row, action=None, lifecycle_args=()):
                     try:
                         proposal = edit_recreation(record, wizard)
                         approved = wizard.review(_deployment_summary_text(proposal['candidate']['template'],
-                                                 proposal['candidate']['deployment']), translate('Recreate OCI'),
-                                                 question=translate('Recreate with these options?'), default=True)
+                                                 proposal['candidate']['deployment']), translate('Modify OCI'),
+                                                 question=translate('Apply these changes?'), default=True)
                         break
                     except RestartWizard:
                         wizard.restart()
@@ -354,7 +355,7 @@ def manage_instance(project, ui, row, action=None, lifecycle_args=()):
         # outside the container and its backup.
         if '--acknowledge-external-data' not in command:
             command.append('--acknowledge-external-data')
-        title = translate('Recreate OCI') if proposal else translate('Update OCI')
+        title = translate('Modify OCI') if proposal else translate('Update OCI')
         if proposal is None:
             completed = _run_lifecycle(command, title)
         else:
@@ -598,7 +599,7 @@ def _image_too_recent(project, vmid, min_age_days):
 
 def direct_management(project, vmid, action, lifecycle_args=(), unattended=False, min_image_age_days=0):
     """One operation on one instance, without the list of the menu: the entry
-    ProxMenux Monitor uses for its Update and Recreate buttons and for
+    ProxMenux Monitor uses for its Update and Modify buttons and for
     scheduled updates."""
     from .ui import interactive_ui
     ui = UnattendedUI() if unattended else interactive_ui()

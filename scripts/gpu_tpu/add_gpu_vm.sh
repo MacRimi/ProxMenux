@@ -1417,7 +1417,7 @@ check_switch_mode() {
             fi
             msg+="  •  CT ${LXC_AFFECTED_CTIDS[$i]} (${LXC_AFFECTED_NAMES[$i]}) [${status_txt}, ${onboot_txt}]\n"
         done
-        [[ "$oci_count" -gt 0 ]] && msg+="\n$(translate 'OCI containers keep their configuration: they are stopped and their Start on boot is disabled. Their GPU is removed from OCI manager Apps, with Recreate.')\n"
+        [[ "$oci_count" -gt 0 ]] && msg+="\n$(translate 'OCI containers keep their configuration: they are stopped and their Start on boot is disabled. Their GPU is removed from OCI manager Apps.')\n"
         msg+="\n$(translate 'VM passthrough requires exclusive VFIO binding of the GPU.')\n"
         msg+="$(translate 'Choose how to handle affected LXC containers before switching to VM mode.')\n\n"
         [[ "$running_count" -gt 0 ]] && \
@@ -1957,7 +1957,7 @@ cleanup_lxc_configs() {
         local action="$LXC_SWITCH_ACTION"
         if pmx_lxc_is_oci "$ctid"; then
             action="keep_gpu_disable_onboot"
-            msg_warn "$(translate 'OCI container, configuration kept. Remove its GPU from OCI manager Apps, with Recreate: CT') ${ctid}" | tee -a "$screen_capture"
+            msg_warn "$(translate 'OCI container, configuration kept. Remove its GPU from OCI manager Apps: CT') ${ctid}" | tee -a "$screen_capture"
         fi
 
         if [[ "$action" == "keep_gpu_disable_onboot" ]]; then

@@ -27,10 +27,31 @@ def extracted_stack_manager(scope):
 
 
 class MonitorModifyContractTests(TestCase):
-    def test_monitor_sends_modify_for_a_stack_and_recreate_for_a_single_instance(self):
+    def test_monitor_sends_modify_for_every_instance(self):
         source = MONITOR.read_text(encoding='utf-8')
-        self.assertIn('action: "update" | "modify" | "recreate" | "recover"', source)
-        self.assertIn('action: ociInstance.stack ? "modify" : "recreate"', source)
+        self.assertIn('action: "update" | "modify" | "recover"', source)
+        self.assertIn('action: "modify",', source)
+        self.assertNotIn('"recreate"', source)
+
+    def test_the_editor_has_one_name_for_one_container_and_for_several(self):
+        menu = MENU.read_text(encoding='utf-8')
+        self.assertIn("('modify', translate('Modify: edit resources, network, paths and GPU'))", menu)
+        self.assertIn("('modify', translate('Modify extra paths and devices'))", menu)
+        self.assertEqual(menu.count("('recreate', translate("), 1)
+        self.assertIn("('recreate', translate('Recreate every container with its saved configuration'))", menu)
+
+    def test_recreate_on_a_single_instance_changes_nothing(self):
+        node = next(item for item in ast.parse(MENU.read_text(encoding='utf-8')).body
+                    if isinstance(item, ast.FunctionDef) and item.name == 'manage_instance')
+        row = {'vmid': 101, 'reason': 'matched', 'stack': None, 'pending': False, 'status': 'installed'}
+        run_lifecycle = Mock()
+        scope = {'carry_records': lambda *_, **__: {}, 'check_selected': lambda _project, selected: selected,
+                 'translate': lambda text: text, '_run_lifecycle': run_lifecycle, '_manage_stack': Mock()}
+        exec(compile(ast.fix_missing_locations(ast.Module(body=[node], type_ignores=[])), str(MENU), 'exec'), scope)
+        ui = Mock()
+        self.assertFalse(scope['manage_instance'](Path('/inert'), ui, row, action='recreate'))
+        self.assertEqual(ui.method_calls, [])
+        run_lifecycle.assert_not_called()
 
     def test_cli_and_monitor_wrapper_accept_the_modify_action(self):
         self.assertIn('choices=("update", "modify", "recreate")', CLI.read_text(encoding='utf-8'))

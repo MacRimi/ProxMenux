@@ -354,7 +354,7 @@ def candidate_contract(record, operation, proposal=None):
         raise ValueError(translate('Recreating requires a confirmed proposal'))
     if (proposal.get('base_config_sha256') is not None
             and proposal['base_config_sha256'] != record['observed']['config_sha256']):
-        raise ValueError(translate('The instance changed while it was being edited; configure Recreate again'))
+        raise ValueError(translate('The instance changed while it was being edited; open Modify again'))
     candidate = proposal['candidate']
     if (candidate.get('vmid') != record['vmid']
             or candidate.get('installation_id') != record['installation_id']
@@ -872,7 +872,7 @@ def apply(root, vmid, archive, operation, proposal=None, registry_digest=None, i
     if coordinated and backup_compression != 'zstd':
         raise ValueError(translate('Coordinated backups require zstd'))
     if show:
-        msg_info(translate('Preparing the update...') if update else translate('Preparing the recreation...'))
+        msg_info(translate('Preparing the update...') if update else translate('Preparing the changes...'))
     record = instances.read(root, vmid)
     if coordinated and any(coordinated.get(flag) for flag in
                            ('nextcloud_replay', 'paperless_replay', 'tandoor_replay', 'immich_replay')):
@@ -910,7 +910,7 @@ def apply(root, vmid, archive, operation, proposal=None, registry_digest=None, i
     required = {m['container_path'] for m in candidate['deployment'].get('mounts', [])}
     if any(not any(p == target or p.startswith(target.rstrip('/') + '/') for target in required)
            for p in set(image['defaults'].get('Volumes') or {}) - non_persistent_image_volumes(candidate['template'])):
-        raise ValueError(translate('The new image requires additional persistent paths; use Recreate'))
+        raise ValueError(translate('The new image requires additional persistent paths; use Modify'))
     directory = instances.location(root, vmid).parent / 'transactions' / uuid.uuid4().hex
     private_directory(directory)
     open_log(directory)
@@ -956,7 +956,7 @@ def apply(root, vmid, archive, operation, proposal=None, registry_digest=None, i
     gpu_devices.verify(original_gpu)
     gpu_devices.verify(desired_gpu)
     if show:
-        msg_ok(translate('Update prepared') if update else translate('Recreation prepared'))
+        msg_ok(translate('Update prepared') if update else translate('Changes prepared'))
         msg_info(translate('Stopping the container...'))
     stop(vmid)
     if show:
@@ -1062,7 +1062,7 @@ def apply(root, vmid, archive, operation, proposal=None, registry_digest=None, i
         cleanup_error = exc
         log(f'cleanup: {exc}')
     msg_ok(translate('Update completed. Data kept.') if update
-           else translate('Recreation completed. Data kept.'))
+           else translate('Changes applied. Data kept.'))
     if freed:
         msg_ok(f"{translate('Unused images removed from the cache:')} {gib(freed)}")
     if cleanup_error is not None:
@@ -1275,7 +1275,7 @@ def phase_label(phase):
 
 
 def show_status(path, state):
-    operations = {'update': translate('Update'), 'recreate': translate('Recreate')}
+    operations = {'update': translate('Update'), 'recreate': translate('Modify')}
     msg_info2(f"{translate('Interrupted operation:')} {operations.get(state.get('operation'), state.get('operation'))} (CT {state['vmid']})")
     msg_info2(f"{translate('Stopped at:')} {phase_label(state.get('phase'))}")
     if state.get('stage'):

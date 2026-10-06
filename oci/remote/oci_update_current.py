@@ -159,7 +159,7 @@ def application_name(record, vmid):
 def update(vmid, acknowledge_external_data=False, proposal=None, keep_backup=None):
     operation = 'recreate' if proposal is not None else 'update'
     msg_info(translate('Checking the container before the update...') if operation == 'update'
-             else translate('Checking the container before recreating it...'))
+             else translate('Checking the container before modifying it...'))
     with instances.locked(instances.ROOT):
         record = instances.read(instances.ROOT, vmid)
         if record['status'] != 'installed' or record.get('pending_transaction') or record.get('pending_stack_transaction'):

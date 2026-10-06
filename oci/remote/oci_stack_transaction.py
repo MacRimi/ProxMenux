@@ -120,6 +120,7 @@ def _apply(path, plan, adapter):
     running = {str(vmid): adapter.is_running(vmid) for vmid in plan['start_order']}
     if any(type(value) is not bool for value in running.values()):
         raise ValueError(translate('Invalid running state'))
+    recreate = plan['operation'] == 'recreate'
     state = {'schema_version': 1, 'id': str(uuid.uuid4()),
              'plan': copy.deepcopy(plan), 'running': running,
              'prepared': {}, 'backups': {}, 'stop_intent': False,
@@ -152,9 +153,9 @@ def _apply(path, plan, adapter):
         state['replacement_intent'] = True
         save(path, state, 'replacing')
         for vmid in plan['start_order']:
-            msg_info(f"{translate('Updating')} {member(adapter, vmid)}...")
+            msg_info(f"{translate('Recreating') if recreate else translate('Updating')} {member(adapter, vmid)}...")
             adapter.replace(vmid, state['prepared'][str(vmid)], state['id'])
-            msg_ok(f"{translate('Updated:')} {member(adapter, vmid)}")
+            msg_ok(f"{translate('Recreated:') if recreate else translate('Updated:')} {member(adapter, vmid)}")
         save(path, state, 'starting')
         for vmid in plan['start_order']:
             msg_info(f"{translate('Starting')} {member(adapter, vmid)}...")
@@ -162,10 +163,10 @@ def _apply(path, plan, adapter):
             adapter.healthcheck(vmid)
             msg_ok(f"{translate('Service responding:')} {member(adapter, vmid)}")
         save(path, state, 'checking')
-        msg_info(translate('Checking the updated stack...'))
+        msg_info(translate('Checking the recreated stack...') if recreate else translate('Checking the updated stack...'))
         adapter.validate_candidates(state)
         adapter.restore_running_state(running, plan['start_order'])
-        msg_ok(translate('Updated stack checked'))
+        msg_ok(translate('Recreated stack checked') if recreate else translate('Updated stack checked'))
         save(path, state, 'publishing')
         msg_info(translate('Saving the stack records...'))
         adapter.publish(state)

@@ -312,7 +312,7 @@ const CURRENT_VERSION_FEATURES = [
   {
     icon: <RefreshCw className="h-5 w-5" />,
     key: "releaseNotes.currentFeatures.ociUpdatesTab",
-    text: "Updates for OCI containers — Update and Recreate open the same flow as the OCI menu, the backup taken before updating can be kept in a backup storage, and the image can be updated on a schedule.",
+    text: "Updates for OCI containers — Update and Modify open the same flow as the OCI menu, the backup taken before updating can be kept in a backup storage, and the image can be updated on a schedule.",
   },
   {
     icon: <ScrollText className="h-5 w-5" />,

@@ -954,7 +954,7 @@ export function VirtualMachines() {
   // A container restored from a backup carries the mark of its installation
   // and has no record on this host until it is recovered from the menu.
   const [ociRestored, setOciRestored] = useState(false)
-  const [ociAction, setOciAction] = useState<{ vmid: number; action: "update" | "modify" | "recreate" | "recover" } | null>(null)
+  const [ociAction, setOciAction] = useState<{ vmid: number; action: "update" | "modify" | "recover" } | null>(null)
 
   // Firewall log state — fetched only when the operator opens that tab
   // so a CT/VM without firewall use doesn't pay the pvesh cost on every
@@ -5343,11 +5343,11 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                                     className={neutralBtnCls}
                                     onClick={() => setOciAction({
                                       vmid: selectedVM.vmid,
-                                      action: ociInstance.stack ? "modify" : "recreate",
+                                      action: "modify",
                                     })}
                                   >
-                                    <RotateCcw className="h-4 w-4 mr-1.5" />
-                                    {t("vmLxc.ociUpdates.recreate")}
+                                    <Settings2 className="h-4 w-4 mr-1.5" />
+                                    {t("vmLxc.ociUpdates.modify")}
                                   </Button>
                                 )}
                                 <Button
@@ -7839,7 +7839,7 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
         />
       )}
 
-      {/* Update or recreate an OCI instance: the same flow as OCI manager
+      {/* Update or modify an OCI instance: the same flow as OCI manager
           Apps -> Manage installed OCI applications, for this container. */}
       {ociAction && (
         <ScriptTerminalModal
@@ -7862,7 +7862,7 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
           scriptName="oci_manage_instance"
           title={ociAction.action === "update" ? t("vmLxc.ociUpdates.terminalTitleUpdate")
             : ociAction.action === "recover" ? t("vmLxc.ociUpdates.terminalTitleRecover")
-            : t("vmLxc.ociUpdates.terminalTitleRecreate")}
+            : t("vmLxc.ociUpdates.terminalTitleModify")}
           description={t("vmLxc.ociUpdates.terminalDescription")}
           params={{
             VMID: String(ociAction.vmid),

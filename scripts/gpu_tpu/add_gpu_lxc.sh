@@ -267,7 +267,7 @@ select_container() {
   done < <(pct list 2>/dev/null)
 
   local oci_note="" list_h=12
-  [[ $oci_hidden -gt 0 ]] && list_h=7 && oci_note="\n\n$(translate 'Containers created from an OCI image are not listed: their devices are changed in OCI manager Apps (Recreate).')"
+  [[ $oci_hidden -gt 0 ]] && list_h=7 && oci_note="\n\n$(translate 'Containers created from an OCI image are not listed: their devices are changed in OCI manager Apps.')"
 
   if [[ ${#menu_items[@]} -eq 0 ]]; then
     dialog --backtitle "ProxMenux" \

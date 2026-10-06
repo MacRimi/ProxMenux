@@ -180,12 +180,12 @@ def change_recognition(project, ui, primary, member, run_lifecycle):
     choices = recognition_choices(storage)
     if [tag for tag, _, _ in choices] == ['cpu'] and current == 'cpu':
         ui.message(translate('No usable GPU was found on this host. Recognition stays on the CPU.'),
-                   translate('Recreate OCI'))
+                   translate('Modify OCI stack'))
         return False
     selected = ui.choose(translate('What runs the recognition of Immich'),
                          [(tag, label) for tag, label, _ in choices], current)
     if selected is None or selected == current:
-        ui.message(translate('Nothing was changed.'), translate('Recreate OCI'))
+        ui.message(translate('Nothing was changed.'), translate('Modify OCI stack'))
         return False
     details = next(extra for tag, _, extra in choices if tag == selected)
     if details.get('experimental') and not confirm_experimental_rocm(ui):
@@ -196,7 +196,7 @@ def change_recognition(project, ui, primary, member, run_lifecycle):
                         'cache, the library and the database are kept. The whole application is stopped and '
                         'updated, as in an update; if anything fails, the previous containers and the previous '
                         'choice are restored.'))
-    if not ui.review(text, translate('Recreate OCI'), question=translate('Change the recognition now?'), default=True):
+    if not ui.review(text, translate('Modify OCI stack'), question=translate('Change the recognition now?'), default=True):
         return False
     command = [sys.executable, str(project / 'remote/oci_immich_recognition.py'), str(primary['vmid']),
                '--acceleration', selected]
@@ -204,13 +204,13 @@ def change_recognition(project, ui, primary, member, run_lifecycle):
         command += ['--render-device', details['render']]
     if details.get('override'):
         command += ['--gfx-override', details['override']]
-    return run_lifecycle(command, translate('Recreate OCI'))
+    return run_lifecycle(command, translate('Modify OCI stack'))
 
 
 def modify_stack(project, ui, primary, run_lifecycle):
     learning = immich_learning(primary)
     if learning is not None:
-        what = ui.choose(translate('What to recreate'),
+        what = ui.choose(translate('What to modify'),
                          [('paths', translate('Add or remove extra paths and devices')),
                           ('recognition', translate('Change what runs recognition: CPU or GPU'))], 'paths')
         if what is None:

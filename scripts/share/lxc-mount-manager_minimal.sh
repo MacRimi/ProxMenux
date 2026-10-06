@@ -271,7 +271,7 @@ select_lxc_container() {
         [[ -n "$id" && "$id" =~ ^[0-9]+$ ]] || continue
         if pmx_lxc_is_oci "$id"; then
             list_h=12
-            oci_note="\n\n$(translate "Containers created from an OCI image are not listed: their paths are changed in OCI manager Apps (Recreate).")"
+            oci_note="\n\n$(translate "Containers created from an OCI image are not listed: their paths are changed in OCI manager Apps.")"
             continue
         fi
         options+=("$id" "${name:-unnamed} ($status)")

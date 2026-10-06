@@ -203,7 +203,7 @@ while read -r ct_id ct_name; do
     [[ -n "$ct_id" ]] || continue
     if pmx_lxc_is_oci "$ct_id"; then
         CT_LIST_H=$((UI_MENU_LIST_H - 2))
-        OCI_NOTE="\n\n$(translate "Containers created from an OCI image are not listed: their paths are changed in OCI manager Apps (Recreate).")"
+        OCI_NOTE="\n\n$(translate "Containers created from an OCI image are not listed: their paths are changed in OCI manager Apps.")"
         continue
     fi
     CT_LIST+="${CT_LIST:+ }$ct_id ${ct_name:-CT-$ct_id}"

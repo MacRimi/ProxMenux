@@ -254,9 +254,9 @@ def main():
         msg_error(translate('Another OCI operation is using the instance registry. Wait for it to finish.'))
         return 1
     except (OSError, ValueError, KeyError, RuntimeError, StopIteration, subprocess.TimeoutExpired) as error:
-        msg_error(f"{translate('The application could not be recreated:')} {error}")
+        msg_error(f"{translate('The application could not be modified:')} {error}")
         return 1
-    msg_ok(translate('The application has been recreated with the new options.'))
+    msg_ok(translate('The application has been modified with the new options.'))
     return 0
 
 
