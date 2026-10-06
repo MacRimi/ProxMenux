@@ -17,7 +17,7 @@ import { Settings } from "./settings"
 import { Security } from "./security"
 import { Profile } from "./profile"
 import { About } from "./about"
-import { HostBackup } from "./host-backup"
+import { BackupTab } from "./backup-tab"
 import { OnboardingCarousel } from "./onboarding-carousel"
 import { HealthStatusModal } from "./health-status-modal"
 import { ReleaseNotesModal, useVersionCheck } from "./release-notes-modal"
@@ -849,7 +849,7 @@ export function ProxmoxDashboard() {
           </TabsContent>
 
           <TabsContent value="backup" className="space-y-4 md:space-y-6 mt-0">
-            <HostBackup key={`backup-${componentKey}`} />
+            <BackupTab key={`backup-${componentKey}`} />
           </TabsContent>
 
           <TabsContent value="terminal" className="mt-0">

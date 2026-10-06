@@ -49,7 +49,7 @@ import { ScriptTerminalModal } from "./script-terminal-modal"
 import { RestoreProgressCard } from "./restore-progress-card"
 import { fetchApi, getApiUrl } from "../lib/api-config"
 import { fetchTerminalTicket } from "../lib/terminal-ws"
-import { formatStorage, formatBytes } from "../lib/utils"
+import { formatStorage, formatBytes, cancelButtonClass } from "../lib/utils"
 import { getStorageUsageColor } from "../lib/storage-usage-color"
 import { useI18n, useT } from "../lib/i18n/provider"
 
@@ -1513,7 +1513,7 @@ export function HostBackup() {
           )}
           <div className="flex justify-end gap-2 mt-2">
             <Button
-              variant="ghost"
+              variant="outline" className={cancelButtonClass}
               onClick={() => setJobToDelete(null)}
               disabled={busyJobId === jobToDelete?.id}
             >
@@ -2308,7 +2308,7 @@ function InspectModal({
             </DialogHeader>
             {kf && <KeyfileErrorBlock err={kf} />}
             <div className="flex justify-end">
-              <Button variant="ghost" onClick={() => setRestoreError(null)}>{t("actions.close")}</Button>
+              <Button variant="outline" className={cancelButtonClass} onClick={() => setRestoreError(null)}>{t("actions.close")}</Button>
             </div>
           </DialogContent>
         </Dialog>
@@ -2414,7 +2414,7 @@ function InspectModal({
           {archive?.source === "local" ? localArc?.id : remoteArc?.snapshot}
         </div>
         <div className="flex justify-end gap-2">
-          <Button variant="ghost" onClick={() => setShowDeleteArchiveConfirm(false)} disabled={deletingArchive}>
+          <Button variant="outline" className={cancelButtonClass} onClick={() => setShowDeleteArchiveConfirm(false)} disabled={deletingArchive}>
             {t("actions.cancel")}
           </Button>
           <Button variant="destructive" onClick={deleteArchive} disabled={deletingArchive}>
@@ -2445,7 +2445,7 @@ function InspectModal({
 {archiveLog?.content ?? ""}
         </pre>
         <div className="flex justify-end">
-          <Button variant="ghost" onClick={() => setShowArchiveFullLog(false)}>{t("actions.close")}</Button>
+          <Button variant="outline" className={cancelButtonClass} onClick={() => setShowArchiveFullLog(false)}>{t("actions.close")}</Button>
         </div>
       </DialogContent>
     </Dialog>
@@ -4316,7 +4316,7 @@ function CreateJobDialog({
         {/* Footer navigation */}
         <div className="flex items-center justify-between gap-2 pt-3 border-t border-border">
           <Button
-            variant="ghost"
+            variant="outline" className={cancelButtonClass}
             onClick={onClose}
             disabled={submitting}
           >
@@ -5213,7 +5213,7 @@ function ManualBackupDialog({
         </div>
 
         <div className="flex items-center justify-between gap-2 pt-3 border-t border-border">
-          <Button variant="ghost" onClick={onClose} disabled={submitting}>
+          <Button variant="outline" className={cancelButtonClass} onClick={onClose} disabled={submitting}>
             {t("actions.cancel")}
           </Button>
           <div className="flex items-center gap-2">
@@ -5728,7 +5728,7 @@ function DestinationsSection({
                 </div>
               )}
               <div className="flex justify-end gap-2">
-                <Button variant="ghost" onClick={() => setConfirmingDest(null)}>
+                <Button variant="outline" className={cancelButtonClass} onClick={() => setConfirmingDest(null)}>
                   {t("actions.cancel")}
                 </Button>
                 <Button variant="destructive" onClick={confirmDeleteDest}>
@@ -6052,7 +6052,7 @@ function ConfigureDestinationWizard({
           ))}
         </div>
         <div className="flex justify-end">
-          <Button variant="ghost" onClick={onClose}>{t("actions.cancel")}</Button>
+          <Button variant="outline" className={cancelButtonClass} onClick={onClose}>{t("actions.cancel")}</Button>
         </div>
       </DialogContent>
     </Dialog>
@@ -6613,7 +6613,7 @@ function AddDestinationDialog({
           )}
         </div>
         <div className="flex justify-end gap-2 pt-3 border-t border-border">
-          <Button variant="ghost" onClick={onClose} disabled={submitting}>{t("actions.cancel")}</Button>
+          <Button variant="outline" className={cancelButtonClass} onClick={onClose} disabled={submitting}>{t("actions.cancel")}</Button>
           <Button
             onClick={handleSave}
             disabled={!canSubmit || submitting}
@@ -6862,7 +6862,7 @@ function UsbPicker({
           )}
           <div className="flex justify-end gap-2">
             <Button
-              variant="ghost"
+              variant="outline" className={cancelButtonClass}
               onClick={() => { setFormatTarget(null); setFormatTyped("") }}
               disabled={busyKey === formatTarget?.path_or_device}
             >
@@ -7285,7 +7285,7 @@ function UsbDrivesSection() {
             </div>
           )}
           <div className="flex justify-end gap-2 mt-2">
-            <Button variant="ghost" onClick={() => { setFormatTarget(null); setFormatTyped("") }} disabled={busyKey === formatTarget?.path_or_device}>
+            <Button variant="outline" className={cancelButtonClass} onClick={() => { setFormatTarget(null); setFormatTyped("") }} disabled={busyKey === formatTarget?.path_or_device}>
               {t("actions.cancel")}
             </Button>
             <Button
@@ -7781,7 +7781,7 @@ function JobDetailModal({
             {detail?.id}
           </div>
           <div className="flex justify-end gap-2">
-            <Button variant="ghost" onClick={() => setShowDisableConfirm(false)}>
+            <Button variant="outline" className={cancelButtonClass} onClick={() => setShowDisableConfirm(false)}>
               {t("actions.cancel")}
             </Button>
             <Button
@@ -8164,7 +8164,7 @@ function PbsKeyfileRecoveryDialog({
         )}
 
         <div className="flex justify-end gap-2">
-          <Button variant="ghost" onClick={onClose} disabled={busy}>
+          <Button variant="outline" className={cancelButtonClass} onClick={onClose} disabled={busy}>
             {t("actions.cancel")}
           </Button>
           <Button
@@ -9039,7 +9039,7 @@ function RestoreOptionsModal({
               {t("backup.actions.back")}
             </Button>
           )}
-          <Button variant="ghost" onClick={onClose}>
+          <Button variant="outline" className={cancelButtonClass} onClick={onClose}>
             {t("actions.cancel")}
           </Button>
           {step === "custom" && (

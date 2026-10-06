@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
+import { cancelButtonClass } from "../lib/utils"
 import { Trash2 } from "lucide-react"
 import { fetchApi } from "../lib/api-config"
 import { useT } from "../lib/i18n/provider"
@@ -289,7 +290,7 @@ export function CustomLinkEditor({
             </Button>
           ) : <div />}
           <div className="flex gap-2">
-            <Button variant="ghost" onClick={() => onOpenChange(false)} disabled={saving}>
+            <Button variant="outline" className={cancelButtonClass} onClick={() => onOpenChange(false)} disabled={saving}>
               {t("apps.customLinkCancel")}
             </Button>
             <Button
