@@ -7856,5 +7856,17 @@
   "⚠ Disk data will NOT be erased.": "⚠ Festplattendaten werden NICHT gelöscht.",
   "⚠ Disk will be unmounted and removed from /etc/fstab.": "⚠ Die Festplatte wird ausgehängt und aus /etc/fstab entfernt.",
   "⚠ The /etc/fstab entry will be removed.": "⚠ Der /etc/fstab-Eintrag wird entfernt.",
-  "⚠ The disk will be unmounted.": "⚠ Die Festplatte wird ausgehängt."
+  "⚠ The disk will be unmounted.": "⚠ Die Festplatte wird ausgehängt.",
+  "Apply these changes?": "Apply these changes?",
+  "All {count} containers of the application will be recreated from their saved image digests (main CT: {vmid}). The stack is stopped, every container is backed up and replaced, then checked. If anything fails, the backups are restored.": "All {count} containers of the application will be recreated from their saved image digests (main CT: {vmid}). The stack is stopped, every container is backed up and replaced, then checked. If anything fails, the backups are restored.",
+  "Checking the stack before recreating...": "Checking the stack before recreating...",
+  "Invalid saved image digest": "Invalid saved image digest",
+  "Modify extra paths and devices": "Modify extra paths and devices",
+  "Modify OCI stack": "Modify OCI stack",
+  "Recreate every container with its saved configuration": "Recreate every container with its saved configuration",
+  "Recreate OCI stack": "Recreate OCI stack",
+  "Recreate the whole stack?": "Recreate the whole stack?",
+  "Recreating": "Recreating",
+  "Stack recreation completed. Data kept.": "Stack recreation completed. Data kept.",
+  "The registry did not return the saved image digest": "The registry did not return the saved image digest"
 }

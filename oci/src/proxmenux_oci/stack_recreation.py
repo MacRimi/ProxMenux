@@ -1,6 +1,7 @@
-"""Recreate for a multi-container application: add or remove the extra paths
-and devices of its application container. Its own data, its database and the
-other containers are never part of it."""
+"""Modify the extra paths and devices of a multi-container application.
+
+Only its application container is restarted. Its own data, its database and
+the other containers are never part of this operation."""
 from __future__ import annotations
 
 import json
@@ -206,7 +207,7 @@ def change_recognition(project, ui, primary, member, run_lifecycle):
     return run_lifecycle(command, translate('Recreate OCI'))
 
 
-def recreate_stack(project, ui, primary, run_lifecycle):
+def modify_stack(project, ui, primary, run_lifecycle):
     learning = immich_learning(primary)
     if learning is not None:
         what = ui.choose(translate('What to recreate'),
@@ -230,13 +231,13 @@ def recreate_stack(project, ui, primary, run_lifecycle):
         member = next(m for m in members if str(m['vmid']) == selected)
     changes = plan_changes(ui, member)
     if changes is None:
-        ui.message(translate('Nothing was changed.'), translate('Recreate OCI'))
+        ui.message(translate('Nothing was changed.'), translate('Modify OCI stack'))
         return False
-    if not ui.review(summary(member, changes), translate('Recreate OCI'),
-                     question=translate('Recreate with these options?'), default=True):
+    if not ui.review(summary(member, changes), translate('Modify OCI stack'),
+                     question=translate('Apply these changes?'), default=True):
         return False
     with tempfile.NamedTemporaryFile(mode='w', suffix='.json') as file:
         json.dump(changes, file)
         file.flush()
         return run_lifecycle([sys.executable, str(project / 'remote/oci_stack_modify.py'),
-                              str(member['vmid']), '--changes', file.name], translate('Recreate OCI'))
+                              str(member['vmid']), '--changes', file.name], translate('Modify OCI stack'))

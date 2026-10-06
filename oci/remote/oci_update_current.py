@@ -50,20 +50,28 @@ def run_quiet(args, error, capture=False):
                 process.wait()
 
 
-def resolve_archive(desired, config, current=None, check=None):
+def resolve_archive(desired, config, current=None, check=None, required_digest=None):
     # Shared by individual and coordinated operations; no guest mutation here.
     # When the registry still serves the current digest nothing is downloaded.
     reference = desired['template']['container_contract']['image']['reference']
     architecture = transaction.parse_config(config)['arch']
     msg_info(translate('Checking the image in the registry...'))
     transaction.log(f'image: {reference} ({architecture})')
+    if required_digest is not None and not re.fullmatch(r'sha256:[a-f0-9]{64}', required_digest):
+        raise ValueError(translate('Invalid saved image digest'))
+    lookup = repository(reference) + '@' + required_digest if required_digest else reference
     code = ('import json,sys; from oci_installation_state import resolve_candidate; '
             'print(json.dumps(resolve_candidate(sys.argv[1],sys.argv[2])))')
-    candidate = json.loads(run_quiet([sys.executable, '-c', code, reference, architecture],
+    candidate = json.loads(run_quiet([sys.executable, '-c', code, lookup, architecture],
                                      translate('Could not query the image registry'), capture=True))
     digest = candidate['manifest_digest']
     if not re.fullmatch(r'sha256:[a-f0-9]{64}', digest):
         raise ValueError(translate('Invalid registry digest'))
+    registry_digest = candidate.get('registry_digest')
+    if registry_digest is not None and not re.fullmatch(r'sha256:[a-f0-9]{64}', registry_digest):
+        raise ValueError(translate('Invalid registry digest'))
+    if required_digest is not None and registry_digest != required_digest:
+        raise ValueError(translate('The registry did not return the saved image digest'))
     msg_ok(f"{translate('Image:')} {reference} ({candidate.get('version') or digest[7:19]})")
     if current and same_image(candidate, current):
         return None, digest

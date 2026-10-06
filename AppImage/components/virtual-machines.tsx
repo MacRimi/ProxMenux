@@ -954,7 +954,7 @@ export function VirtualMachines() {
   // A container restored from a backup carries the mark of its installation
   // and has no record on this host until it is recovered from the menu.
   const [ociRestored, setOciRestored] = useState(false)
-  const [ociAction, setOciAction] = useState<{ vmid: number; action: "update" | "recreate" | "recover" } | null>(null)
+  const [ociAction, setOciAction] = useState<{ vmid: number; action: "update" | "modify" | "recreate" | "recover" } | null>(null)
 
   // Firewall log state — fetched only when the operator opens that tab
   // so a CT/VM without firewall use doesn't pay the pvesh cost on every
@@ -5341,7 +5341,10 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                                   <Button
                                     size="sm"
                                     className={neutralBtnCls}
-                                    onClick={() => setOciAction({ vmid: selectedVM.vmid, action: "recreate" })}
+                                    onClick={() => setOciAction({
+                                      vmid: selectedVM.vmid,
+                                      action: ociInstance.stack ? "modify" : "recreate",
+                                    })}
                                   >
                                     <RotateCcw className="h-4 w-4 mr-1.5" />
                                     {t("vmLxc.ociUpdates.recreate")}

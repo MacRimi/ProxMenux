@@ -595,9 +595,9 @@ def build_parser() -> argparse.ArgumentParser:
     rclone_parser.add_argument("--host", default="auto")
     rclone_parser.add_argument("--dry-run", action="store_true")
     subparsers.add_parser("recover", help="Register again the OCI applications restored from a backup")
-    manage_parser = subparsers.add_parser("manage", help="Update or recreate one installed OCI instance")
+    manage_parser = subparsers.add_parser("manage", help="Update, modify or recreate one installed OCI instance")
     manage_parser.add_argument("vmid", type=int)
-    manage_parser.add_argument("--action", choices=("update", "recreate"), required=True)
+    manage_parser.add_argument("--action", choices=("update", "modify", "recreate"), required=True)
     manage_parser.add_argument("--keep-backup", metavar="STORAGE",
                                help="Keep the backup taken before the update in this Proxmox storage")
     manage_parser.add_argument("--unattended", action="store_true",

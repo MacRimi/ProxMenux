@@ -7855,5 +7855,17 @@
   "⚠ Disk data will NOT be erased.": "⚠ Dáta na disku sa NEVYMAŽÚ.",
   "⚠ Disk will be unmounted and removed from /etc/fstab.": "⚠ Disk sa odpojí a odstráni z /etc/fstab.",
   "⚠ The /etc/fstab entry will be removed.": "⚠ Záznam v /etc/fstab bude odstránený.",
-  "⚠ The disk will be unmounted.": "⚠ Disk bude odpojený."
+  "⚠ The disk will be unmounted.": "⚠ Disk bude odpojený.",
+  "Apply these changes?": "Použiť tieto zmeny?",
+  "All {count} containers of the application will be recreated from their saved image digests (main CT: {vmid}). The stack is stopped, every container is backed up and replaced, then checked. If anything fails, the backups are restored.": "Všetkých {count} kontajnerov aplikácie sa znovu vytvorí z uložených image digestov (hlavný CT: {vmid}). Stack sa zastaví, každý kontajner sa zazálohuje, nahradí a skontroluje. Ak niečo zlyhá, zálohy sa obnovia.",
+  "Checking the stack before recreating...": "Kontrolujem stack pred opätovným vytvorením...",
+  "Invalid saved image digest": "Uložený image digest nie je platný",
+  "Modify extra paths and devices": "Upraviť prídavné cesty a zariadenia",
+  "Modify OCI stack": "Upraviť OCI stack",
+  "Recreate every container with its saved configuration": "Znovu vytvoriť každý kontajner s uloženými nastaveniami",
+  "Recreate OCI stack": "Znovu vytvoriť OCI stack",
+  "Recreate the whole stack?": "Znovu vytvoriť celý stack?",
+  "Recreating": "Znovu vytváram",
+  "Stack recreation completed. Data kept.": "Opätovné vytvorenie stacku je hotové. Dáta zostali zachované.",
+  "The registry did not return the saved image digest": "Register nevrátil uložený image digest"
 }

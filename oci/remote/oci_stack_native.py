@@ -32,7 +32,7 @@ def validate_database_transition(previous, candidate):
         raise ValueError(translate('The new image changes the PostgreSQL major version; the data must be migrated before updating'))
 
 
-def nextcloud_plan(primary, records, inventory, lifecycle):
+def nextcloud_plan(primary, records, inventory, lifecycle, operation):
     """Translate only the known three-member stack and retain rollback contracts."""
     intent = primary.get('native_stack_intent', {})
     if intent.get('adapter', {}).get('name') != 'install_nextcloud_stack.sh':
@@ -60,13 +60,13 @@ def nextcloud_plan(primary, records, inventory, lifecycle):
         snapshot = copy.deepcopy(translated[service['vmid']])
         snapshot.pop('stack', None)
         parent['stack']['members'].append(snapshot)
-    plan = oci_stack_plan.build(parent, translated, inventory, 'update')
+    plan = oci_stack_plan.build(parent, translated, inventory, operation)
     plan['original_members'] = copy.deepcopy(list(records.values()))
     plan['nextcloud_replay'] = True
     return plan
 
 
-def paperless_plan(primary, records, inventory, lifecycle):
+def paperless_plan(primary, records, inventory, lifecycle, operation):
     """Prepare the known Paperless stack without publishing translated recipes."""
     if primary.get('native_stack_intent', {}).get('adapter', {}).get('name') != 'install_paperless_stack.sh':
         raise ValueError(f"{translate('Unrecognized stack adapter:')} Paperless")
@@ -89,13 +89,13 @@ def paperless_plan(primary, records, inventory, lifecycle):
         snapshot = copy.deepcopy(translated[service['vmid']])
         snapshot.pop('stack', None)
         parent['stack']['members'].append(snapshot)
-    plan = oci_stack_plan.build(parent, translated, inventory, 'update')
+    plan = oci_stack_plan.build(parent, translated, inventory, operation)
     plan['original_members'] = copy.deepcopy(list(records.values()))
     plan['paperless_replay'] = True
     return plan
 
 
-def tandoor_plan(primary, records, inventory, lifecycle):
+def tandoor_plan(primary, records, inventory, lifecycle, operation):
     """Prepare exactly the application and PostgreSQL without publishing state."""
     if primary.get('native_stack_intent', {}).get('adapter', {}).get('name') != 'install_tandoor_stack.sh':
         raise ValueError(f"{translate('Unrecognized stack adapter:')} Tandoor")
@@ -118,13 +118,13 @@ def tandoor_plan(primary, records, inventory, lifecycle):
         snapshot = copy.deepcopy(translated[service['vmid']])
         snapshot.pop('stack', None)
         parent['stack']['members'].append(snapshot)
-    plan = oci_stack_plan.build(parent, translated, inventory, 'update')
+    plan = oci_stack_plan.build(parent, translated, inventory, operation)
     plan['original_members'] = copy.deepcopy(list(records.values()))
     plan['tandoor_replay'] = True
     return plan
 
 
-def immich_plan(primary, records, inventory, lifecycle):
+def immich_plan(primary, records, inventory, lifecycle, operation):
     if primary.get('native_stack_intent', {}).get('adapter', {}).get('name') != 'install_immich_stack.sh':
         raise ValueError(f"{translate('Unrecognized stack adapter:')} Immich")
     translated = {vmid: replay.immich_record(record) for vmid, record in records.items()}
@@ -145,7 +145,7 @@ def immich_plan(primary, records, inventory, lifecycle):
         snapshot = copy.deepcopy(translated[service['vmid']])
         snapshot.pop('stack', None)
         parent['stack']['members'].append(snapshot)
-    plan = oci_stack_plan.build(parent, translated, inventory, 'update')
+    plan = oci_stack_plan.build(parent, translated, inventory, operation)
     plan['original_members'] = copy.deepcopy(list(records.values()))
     plan['immich_replay'] = True
     return plan
@@ -262,7 +262,11 @@ class NativeAdapter:
             current['pending_stack_transaction'] = str(self.journal)
             instances.write(instances.location(self.root, vmid), current)
         config = instances.command('pct', 'config', str(record['vmid']))
-        archive, digest = resolve_archive(record, config)
+        if operation == 'recreate':
+            digest = record.get('observed', {}).get('resolved_registry_digest')
+            archive, digest = resolve_archive(record, config, required_digest=digest)
+        else:
+            archive, digest = resolve_archive(record, config)
         image = image_from_archive(str(archive))
         old = record['observed']['image']
         validate_database_transition(old, image)
@@ -279,7 +283,13 @@ class NativeAdapter:
             msg_info(f"{translate('Checking the new image without starting it:')} {self.describe(record['vmid'])}")
             self.probe_nextcloud_image(record, archive, image)
             msg_ok(f"{translate('New image compatible:')} {self.describe(record['vmid'])}")
-        return {'archive': str(archive), 'digest': digest}
+        proposal = None
+        if operation == 'recreate':
+            proposal = {'operation': 'recreate', 'candidate': copy.deepcopy(record)}
+            config_hash = record.get('observed', {}).get('config_sha256')
+            if config_hash:
+                proposal['base_config_sha256'] = config_hash
+        return {'archive': str(archive), 'digest': digest, 'proposal': proposal}
 
     def probe_nextcloud_image(self, record, archive, image):
         """Import but never start a disposable rootfs before stopping the stack."""
@@ -346,9 +356,12 @@ class NativeAdapter:
             context.update(tandoor_replay=True, effective_record=self.records[vmid])
         if self.plan.get('immich_replay'):
             context.update(immich_replay=True, effective_record=self.records[vmid])
-        member_tx.apply(self.root, vmid, Path(prepared['archive']), 'update',
-            registry_digest=prepared['digest'], acknowledge_external_data=self.acknowledge,
-            coordinated=context, progress=f"{translate('Updating')} {self.describe(vmid)}:")
+        operation = self.plan['operation']
+        member_tx.apply(self.root, vmid, Path(prepared['archive']), operation,
+            proposal=prepared.get('proposal'), registry_digest=prepared['digest'],
+            acknowledge_external_data=self.acknowledge, coordinated=context,
+            progress=f"{translate('Recreating') if operation == 'recreate' else translate('Updating')} "
+                     f"{self.describe(vmid)}:")
 
     def start(self, vmid):
         self.validate(self.plan)
@@ -617,10 +630,13 @@ class NativeAdapter:
 _current = {'journal': None, 'primary': None}
 
 
-def run(vmid, recover=False, acknowledge_external_data=False, keep_backup=None):
+def run(vmid, recover=False, acknowledge_external_data=False, keep_backup=None, operation='update'):
+    if operation not in ('update', 'recreate'):
+        raise ValueError(translate('Invalid stack operation'))
     root = instances.ROOT
     msg_info(translate('Checking the interrupted stack operation...') if recover
-             else translate('Checking the stack before the update...'))
+             else (translate('Checking the stack before recreating...') if operation == 'recreate'
+                   else translate('Checking the stack before the update...')))
     with instances.locked(root):
         selected = instances.read(root, vmid)
         primary_id = selected.get('stack_member', {}).get('primary_vmid', vmid)
@@ -665,9 +681,9 @@ def run(vmid, recover=False, acknowledge_external_data=False, keep_backup=None):
             if not stat.S_ISREG(info.st_mode) or info.st_uid != 0 or info.st_mode & 0o077:
                 raise ValueError(translate('Unsafe dependency contract'))
             builder = builders[adapter_name]
-            plan = builder(primary, records, inventory, json.loads(lifecycle.read_text()))
+            plan = builder(primary, records, inventory, json.loads(lifecycle.read_text()), operation)
         else:
-            plan = oci_stack_plan.build(primary, records, inventory, 'update')
+            plan = oci_stack_plan.build(primary, records, inventory, operation)
         stack_tx.validate_plan(plan)
         directory = instances.location(root, primary_id).parent / 'stack-transactions' / uuid.uuid4().hex
         private_directory(directory)
@@ -689,10 +705,11 @@ def run(vmid, recover=False, acknowledge_external_data=False, keep_backup=None):
                 adapter.keep_backup = keep_backup
         import oci_operation_notice
         import oci_update_current
-        with oci_operation_notice.operation([member['vmid'] for member in plan['members']], 'update',
+        with oci_operation_notice.operation([member['vmid'] for member in plan['members']], operation,
                                             oci_update_current.application_name(primary, primary_id), primary_id):
             result = stack_tx.execute(journal, adapter, plan)
-        msg_ok(translate('Stack update completed. Data kept.'))
+        msg_ok(translate('Stack recreation completed. Data kept.') if operation == 'recreate'
+               else translate('Stack update completed. Data kept.'))
         return result
 
 
@@ -728,13 +745,14 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('vmid', type=int)
     parser.add_argument('--recover', action='store_true')
+    parser.add_argument('--operation', choices=['update', 'recreate'], default='update')
     parser.add_argument('--acknowledge-external-data', action='store_true')
     parser.add_argument('--keep-backup', metavar='STORAGE')
     args = parser.parse_args()
     if os.geteuid() != 0:
         parser.error(translate('Root privileges on the Proxmox node are required'))
     try:
-        run(args.vmid, args.recover, args.acknowledge_external_data, args.keep_backup)
+        run(args.vmid, args.recover, args.acknowledge_external_data, args.keep_backup, args.operation)
         return 0
     except BlockingIOError:
         msg_error(translate('Another OCI operation is using the registry. This operation was not started.'))

@@ -7856,5 +7856,22 @@
   "⚠ Disk data will NOT be erased.": "⚠ I dati del disco NON verranno cancellati.",
   "⚠ Disk will be unmounted and removed from /etc/fstab.": "⚠ Il disco verrà smontato e rimosso da /etc/fstab.",
   "⚠ The /etc/fstab entry will be removed.": "⚠ La voce /etc/fstab verrà rimossa.",
-  "⚠ The disk will be unmounted.": "⚠ Il disco verrà smontato."
+  "⚠ The disk will be unmounted.": "⚠ Il disco verrà smontato.",
+  "OCI containers keep their configuration: they are stopped and their Start on boot is disabled. Their GPU is removed from OCI manager Apps, with Recreate.": "I container OCI mantengono la configurazione: vengono arrestati e l'avvio automatico viene disabilitato. Rimuovi la GPU da OCI manager Apps con Ricrea.",
+  "OCI container, configuration kept. Remove its GPU from OCI manager Apps, with Recreate: CT": "Container OCI, configurazione mantenuta. Rimuovi la GPU da OCI manager Apps con Ricrea: CT",
+  "Containers created from an OCI image are not listed: their paths are changed in OCI manager Apps (Recreate).": "I container creati da un'immagine OCI non sono elencati: modifica i percorsi in OCI manager Apps (Ricrea).",
+  "Containers created from an OCI image are not listed: their devices are changed in OCI manager Apps (Recreate).": "I container creati da un'immagine OCI non sono elencati: modifica i dispositivi in OCI manager Apps (Ricrea).",
+  "Containers created from an OCI image are not listed.": "I container creati da un'immagine OCI non sono elencati.",
+  "Apply these changes?": "Applicare queste modifiche?",
+  "All {count} containers of the application will be recreated from their saved image digests (main CT: {vmid}). The stack is stopped, every container is backed up and replaced, then checked. If anything fails, the backups are restored.": "Tutti i {count} container dell'applicazione verranno ricreati dai digest delle immagini salvati (CT principale: {vmid}). Lo stack viene arrestato, ogni container viene sottoposto a backup e sostituito, quindi controllato. Se qualcosa non riesce, i backup vengono ripristinati.",
+  "Checking the stack before recreating...": "Controllo dello stack prima della ricreazione...",
+  "Invalid saved image digest": "Digest dell'immagine salvato non valido",
+  "Modify extra paths and devices": "Modifica percorsi aggiuntivi e dispositivi",
+  "Modify OCI stack": "Modifica stack OCI",
+  "Recreate every container with its saved configuration": "Ricrea ogni container con la configurazione salvata",
+  "Recreate OCI stack": "Ricrea stack OCI",
+  "Recreate the whole stack?": "Ricreare l'intero stack?",
+  "Recreating": "Ricreazione in corso",
+  "Stack recreation completed. Data kept.": "Ricreazione dello stack completata. Dati mantenuti.",
+  "The registry did not return the saved image digest": "Il registro non ha restituito il digest dell'immagine salvato"
 }
