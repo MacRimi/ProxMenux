@@ -55,7 +55,7 @@
           "table": {
             "headers": ["Se lee de la imagen", "No está en la imagen", "Consecuencia"],
             "rows": [
-              ["<code>Entrypoint</code>, <code>Cmd</code>, <code>User</code>, <code>WorkingDir</code> y entorno integrado", "Variables que solo aparecen en la documentación", "Se añaden durante la instalación o una recreación"],
+              ["<code>Entrypoint</code>, <code>Cmd</code>, <code>User</code>, <code>WorkingDir</code> y entorno integrado", "Variables que solo aparecen en la documentación", "Se añaden durante la instalación o con Modificar"],
               ["Volúmenes declarados por la imagen", "Directorios del host que solo nombra un archivo Compose", "Las rutas adicionales se añaden antes de instalar"],
               ["Puertos <code>EXPOSE</code>", "La URL, el protocolo o un healthcheck funcional", "Se confirman el puerto y la forma de comprobar el servicio"],
               ["Arquitecturas y digest del registro", "Dispositivos, privilegios o dependencias externas", "Ninguno se activa sin una definición que lo pida"]

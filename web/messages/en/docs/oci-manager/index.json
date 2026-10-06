@@ -40,7 +40,7 @@
             "items": [
               "<strong>Search applications</strong> — search by name across the catalog.",
               "<strong>All applications</strong> — the complete catalog, with the number of applications.",
-              "<strong>Manage installed OCI applications</strong> — update, recreate, remove or recover what was installed.",
+              "<strong>Manage installed OCI applications</strong> — update, modify, remove or recover what was installed.",
               "<strong>Install an image that is not in the catalog</strong> — translate a Compose file, a <code>docker run</code> command or an image reference.",
               "The catalog categories, each with its number of applications."
             ]
@@ -108,7 +108,7 @@
               { "label": "Data, paths and networking", "href": "/docs/oci-manager/storage-network", "tail": "container disks, host directories, Rclone mounts and addresses." },
               { "label": "Devices and acceleration", "href": "/docs/oci-manager/hardware", "tail": "GPU, NVIDIA, Coral, USB and other devices." },
               { "label": "Multi-container applications", "href": "/docs/oci-manager/stacks", "tail": "application, database and cache as coordinated LXCs." },
-              { "label": "Install, update and recreate", "href": "/docs/oci-manager/lifecycle", "tail": "the instance contract and its operations." },
+              { "label": "Install, update and modify", "href": "/docs/oci-manager/lifecycle", "tail": "the instance contract and its operations." },
               { "label": "In ProxMenux Monitor", "href": "/docs/oci-manager/monitor", "tail": "versions, updates, console output and terminal." }
             ]
           }

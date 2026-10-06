@@ -2006,6 +2006,8 @@
         "oci_update_failed": "Falha na atualização da aplicação OCI",
         "oci_recreate_completed": "Aplicação OCI recriada",
         "oci_recreate_failed": "Falha na recriação da aplicação OCI",
+        "oci_modify_completed": "Aplicação OCI modificada",
+        "oci_modify_failed": "Falha na modificação da aplicação OCI",
         "app_update_available": "atualização de aplicativo disponível",
         "lxc_update_applied": "Atualização LXC aplicada",
         "docker_stack_update_available": "Docker atualizações disponíveis"
@@ -6421,13 +6423,23 @@
         },
         "oci_recreate_completed": {
           "title": "{hostname}: {app_name} recriado",
-          "body": "{app_name} foi recriado com as novas opções e os dados foram mantidos.\nContêineres: {containers}",
+          "body": "{app_name} foi recriado com a configuração guardada e os dados foram mantidos.\nContêineres: {containers}",
           "label": "Aplicação OCI recriada"
         },
         "oci_recreate_failed": {
           "title": "{hostname}: a recriação de {app_name} não foi concluída",
           "body": "A recriação de {app_name} não foi concluída.\nMotivo: {reason}\nContêineres: {containers}\nAbra Gerir aplicações OCI instaladas para verificar o estado.",
           "label": "Falha na recriação da aplicação OCI"
+        },
+        "oci_modify_completed": {
+          "title": "{hostname}: {app_name} modificado",
+          "body": "{app_name} foi modificado com as novas opções e os dados foram mantidos.\nContêineres: {containers}",
+          "label": "Aplicação OCI modificada"
+        },
+        "oci_modify_failed": {
+          "title": "{hostname}: a modificação de {app_name} não foi concluída",
+          "body": "A modificação de {app_name} não foi concluída.\nMotivo: {reason}\nContêineres: {containers}\nAbra Gerir aplicações OCI instaladas para verificar o estado.",
+          "label": "Falha na modificação da aplicação OCI"
         },
         "app_update_available": {
           "title": "{hostname}: atualização {app_name} disponível no CT {vmid}",

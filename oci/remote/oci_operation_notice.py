@@ -63,8 +63,8 @@ def notify(event, data):
 
 @contextlib.contextmanager
 def operation(vmids, kind, application, primary=None):
-    """Mark the containers for the length of an update or a recreation and
-    report how it ended. `kind` is 'update' or 'recreate'."""
+    """Mark the containers for the length of an operation and report how it
+    ended. `kind` is 'update', 'modify' or 'recreate'."""
     vmids = [int(vmid) for vmid in vmids]
     data = {'app_name': str(application), 'vmid': int(primary if primary is not None else vmids[0]),
             'containers': ', '.join(f'CT {vmid}' for vmid in vmids)}

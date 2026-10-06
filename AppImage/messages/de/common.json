@@ -2006,6 +2006,8 @@
         "oci_update_failed": "Aktualisierung der OCI-Anwendung fehlgeschlagen",
         "oci_recreate_completed": "OCI-Anwendung neu erstellt",
         "oci_recreate_failed": "Neuerstellung der OCI-Anwendung fehlgeschlagen",
+        "oci_modify_completed": "OCI-Anwendung geändert",
+        "oci_modify_failed": "Änderung der OCI-Anwendung fehlgeschlagen",
         "app_update_available": "App-Update verfügbar",
         "lxc_update_applied": "LXC Update angewendet",
         "docker_stack_update_available": "Docker Updates verfügbar"
@@ -6421,13 +6423,23 @@
         },
         "oci_recreate_completed": {
           "title": "{hostname}: {app_name} neu erstellt",
-          "body": "{app_name} wurde mit den neuen Optionen neu erstellt, die Daten wurden beibehalten.\nContainer: {containers}",
+          "body": "{app_name} wurde mit der gespeicherten Konfiguration neu erstellt, die Daten wurden beibehalten.\nContainer: {containers}",
           "label": "OCI-Anwendung neu erstellt"
         },
         "oci_recreate_failed": {
           "title": "{hostname}: Neuerstellung von {app_name} nicht abgeschlossen",
           "body": "Die Neuerstellung von {app_name} wurde nicht abgeschlossen.\nGrund: {reason}\nContainer: {containers}\nÖffnen Sie „Installierte OCI-Anwendungen verwalten“, um den Zustand zu prüfen.",
           "label": "Neuerstellung der OCI-Anwendung fehlgeschlagen"
+        },
+        "oci_modify_completed": {
+          "title": "{hostname}: {app_name} geändert",
+          "body": "{app_name} wurde mit den neuen Optionen geändert, die Daten wurden beibehalten.\nContainer: {containers}",
+          "label": "OCI-Anwendung geändert"
+        },
+        "oci_modify_failed": {
+          "title": "{hostname}: Änderung von {app_name} nicht abgeschlossen",
+          "body": "Die Änderung von {app_name} wurde nicht abgeschlossen.\nGrund: {reason}\nContainer: {containers}\nÖffnen Sie „Installierte OCI-Anwendungen verwalten“, um den Zustand zu prüfen.",
+          "label": "Änderung der OCI-Anwendung fehlgeschlagen"
         },
         "app_update_available": {
           "title": "{hostname}: {app_name} Update verfügbar auf CT {vmid}",

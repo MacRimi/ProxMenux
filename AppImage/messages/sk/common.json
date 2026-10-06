@@ -2007,6 +2007,8 @@
         "oci_update_failed": "Aktualizácia OCI aplikácie zlyhala",
         "oci_recreate_completed": "OCI aplikácia znovu vytvorená",
         "oci_recreate_failed": "Opätovné vytvorenie OCI aplikácie zlyhalo",
+        "oci_modify_completed": "OCI aplikácia upravená",
+        "oci_modify_failed": "Úprava OCI aplikácie zlyhala",
         "app_update_available": "K dispozícii je aktualizácia aplikácie"
       },
       "ui": {
@@ -6420,13 +6422,23 @@
         },
         "oci_recreate_completed": {
           "title": "{hostname}: {app_name} znovu vytvorená",
-          "body": "Aplikácia {app_name} bola znovu vytvorená s novými možnosťami a jej dáta zostali zachované.\nKontajnery: {containers}",
+          "body": "Aplikácia {app_name} bola znovu vytvorená s uloženými nastaveniami a jej dáta zostali zachované.\nKontajnery: {containers}",
           "label": "OCI aplikácia znovu vytvorená"
         },
         "oci_recreate_failed": {
           "title": "{hostname}: opätovné vytvorenie {app_name} sa nedokončilo",
           "body": "Opätovné vytvorenie aplikácie {app_name} sa nedokončilo.\nDôvod: {reason}\nKontajnery: {containers}\nOtvorte Spravovať nainštalované OCI aplikácie a skontrolujte jej stav.",
           "label": "Opätovné vytvorenie OCI aplikácie zlyhalo"
+        },
+        "oci_modify_completed": {
+          "title": "{hostname}: {app_name} upravená",
+          "body": "Aplikácia {app_name} bola upravená s novými možnosťami a jej dáta zostali zachované.\nKontajnery: {containers}",
+          "label": "OCI aplikácia upravená"
+        },
+        "oci_modify_failed": {
+          "title": "{hostname}: úprava {app_name} sa nedokončila",
+          "body": "Úprava aplikácie {app_name} sa nedokončila.\nDôvod: {reason}\nKontajnery: {containers}\nOtvorte Spravovať nainštalované OCI aplikácie a skontrolujte jej stav.",
+          "label": "Úprava OCI aplikácie zlyhala"
         },
         "app_update_available": {
           "title": "{hostname}: Pre {app_name} je na CT {vmid} dostupná aktualizácia",

@@ -89,7 +89,7 @@
       "ociStorageNetwork": "Datos, rutas y red",
       "ociHardware": "Dispositivos y aceleración",
       "ociStacks": "Aplicaciones multicontenedor",
-      "ociLifecycle": "Instalar, actualizar y recrear",
+      "ociLifecycle": "Instalar, actualizar y modificar",
       "ociMonitor": "En ProxMenux Monitor",
       "proxmenuxScripts": "ProxMenux Scripts",
       "postInstallScript": "Script Post-instalación",

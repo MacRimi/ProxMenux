@@ -1,10 +1,10 @@
 {
   "meta": {
-    "title": "Install, update and recreate | ProxMenux",
-    "description": "The instance contract of an OCI container and the operations that use it: update, recreate, remove, recovery of an interrupted operation and recovery after a restore on this or another host."
+    "title": "Install, update and modify | ProxMenux",
+    "description": "The instance contract of an OCI container and the operations that use it: update, modify, remove, recovery of an interrupted operation and recovery after a restore on this or another host."
   },
   "header": {
-    "title": "Install, update and recreate",
+    "title": "Install, update and modify",
     "description": "Each instance keeps a reproducible contract, so its rootfs can be replaced without losing configuration or persistent data.",
     "section": "OCI manager Apps"
   },
@@ -22,14 +22,14 @@
           }
         },
         {
-          "p": "A copy of the contract travels inside the container, in <code>/.proxmenux/oci-record.json</code>, readable only by root of the container, so a backup of the container always carries the contract it had at that moment. A second copy is kept in <code>/etc/pve/priv/proxmenux/oci</code>, which every node of a cluster shares and only root of the host reads. Both are written after every installation, update and recreation."
+          "p": "A copy of the contract travels inside the container, in <code>/.proxmenux/oci-record.json</code>, readable only by root of the container, so a backup of the container always carries the contract it had at that moment. A second copy is kept in <code>/etc/pve/priv/proxmenux/oci</code>, which every node of a cluster shares and only root of the host reads. Both are written after every installation, update and change."
         }
       ]
     },
     {
       "id": "manage",
       "title": "Manage installed OCI applications",
-      "intro": "This option of the main screen lists the registered instances with their application and image. Each one is checked against its contract before any action; a CT that no longer matches its record is neither modified nor deleted. The same update and recreation are offered in the Updates tab of <monitorLink>ProxMenux Monitor</monitorLink>.",
+      "intro": "This option of the main screen lists the registered instances with their application and image. Each one is checked against its contract before any action; a CT that no longer matches its record is neither modified nor deleted. The same update and the same editor are offered in the Updates tab of <monitorLink>ProxMenux Monitor</monitorLink>.",
       "blocks": [
         {
           "table": {
@@ -45,7 +45,7 @@
                 "Contract, container disks, host directories, network and devices"
               ],
               [
-                "Recreate: edit resources, network, paths and GPU",
+                "Modify: edit resources, network, paths and GPU",
                 "The editor opens with the current contract; the CT is rebuilt with the changes",
                 "The data of container disks and host directories"
               ],
@@ -58,12 +58,12 @@
           }
         },
         {
-          "p": "For a multi-container application the menu offers <strong>Update every container of the application</strong>, <strong>Recreate</strong> and the removal. Recreate adds or removes the extra paths and devices of the application container without rebuilding anything and, in Immich, changes what runs recognition."
+          "p": "For a multi-container application the menu offers <strong>Update every container of the application</strong>, <strong>Modify extra paths and devices</strong>, <strong>Recreate every container with its saved configuration</strong> and the removal. Modify adds or removes the extra paths and devices of the application container without rebuilding anything and, in Immich, changes what runs recognition. Recreate rebuilds every container from the image it was installed with, without looking for a newer one."
         },
         {
           "figure": {
             "src": "/oci-manager/manage-menu.png",
-            "alt": "List of installed OCI applications and the update, recreate and remove options",
+            "alt": "List of installed OCI applications and the update, modify and remove options",
             "caption": "Manage installed OCI applications."
           }
         }
@@ -126,7 +126,7 @@
     {
       "id": "recovery",
       "title": "Recovering an interrupted operation",
-      "intro": "Update and recreation use a persistent transaction. If the process, the terminal or the node is interrupted after the CT stops, the operation is not taken as finished.",
+      "intro": "An update and a change use a persistent transaction. If the process, the terminal or the node is interrupted after the CT stops, the operation is not taken as finished.",
       "blocks": [
         {
           "steps": {

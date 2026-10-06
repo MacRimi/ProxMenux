@@ -2006,6 +2006,8 @@
         "oci_update_failed": "Aggiornamento app OCI non riuscito",
         "oci_recreate_completed": "App OCI ricreata",
         "oci_recreate_failed": "Ricreazione app OCI non riuscita",
+        "oci_modify_completed": "App OCI modificata",
+        "oci_modify_failed": "Modifica app OCI non riuscita",
         "app_update_available": "Aggiornamento app disponibile",
         "lxc_update_applied": "Aggiornamento LXC applicato",
         "docker_stack_update_available": "Aggiornamenti Docker disponibili"
@@ -6421,13 +6423,23 @@
         },
         "oci_recreate_completed": {
           "title": "{hostname}: ricreazione di {app_name} completata",
-          "body": "{app_name} è stato ricreato con le nuove opzioni e i dati sono stati conservati.\nContenitori: {containers}",
+          "body": "{app_name} è stato ricreato con la configurazione salvata e i dati sono stati conservati.\nContenitori: {containers}",
           "label": "Applicazione OCI ricreata"
         },
         "oci_recreate_failed": {
           "title": "{hostname}: ricreazione di {app_name} non completata",
           "body": "La ricreazione di {app_name} non è stata completata.\nMotivo: {reason}\nContainer: {containers}\nApri «Gestisci le applicazioni OCI installate» per verificarne lo stato.",
           "label": "Ricreazione app OCI non riuscita"
+        },
+        "oci_modify_completed": {
+          "title": "{hostname}: modifica di {app_name} completata",
+          "body": "{app_name} è stato modificato con le nuove opzioni e i dati sono stati conservati.\nContenitori: {containers}",
+          "label": "Applicazione OCI modificata"
+        },
+        "oci_modify_failed": {
+          "title": "{hostname}: modifica di {app_name} non completata",
+          "body": "La modifica di {app_name} non è stata completata.\nMotivo: {reason}\nContainer: {containers}\nApri «Gestisci le applicazioni OCI installate» per verificarne lo stato.",
+          "label": "Modifica app OCI non riuscita"
         },
         "app_update_available": {
           "title": "{hostname}: aggiornamento {app_name} disponibile su CT {vmid}",

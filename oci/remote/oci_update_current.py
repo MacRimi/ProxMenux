@@ -189,7 +189,9 @@ def update(vmid, acknowledge_external_data=False, proposal=None, keep_backup=Non
         if kept:
             msg_info2(f"{translate('Keeping the settings changed in Proxmox:')} {', '.join(kept)}")
         import oci_operation_notice
-        with oci_operation_notice.operation([vmid], operation, application_name(record, vmid)):
+        # A single container is only recreated to apply the changes of Modify.
+        kind = 'update' if operation == 'update' else 'modify'
+        with oci_operation_notice.operation([vmid], kind, application_name(record, vmid)):
             transaction.apply(instances.ROOT, vmid, archive, operation, proposal=proposal,
                               registry_digest=digest, acknowledge_external_data=acknowledge_external_data,
                               keep_backup=file_storage)

@@ -2006,6 +2006,8 @@
         "oci_update_failed": "Uppdatering av OCI-applikation misslyckades",
         "oci_recreate_completed": "OCI-applikation återskapad",
         "oci_recreate_failed": "Återskapande av OCI-applikation misslyckades",
+        "oci_modify_completed": "OCI-applikation ändrad",
+        "oci_modify_failed": "Ändring av OCI-applikation misslyckades",
         "app_update_available": "Appuppdatering tillgänglig",
         "lxc_update_applied": "LXC uppdatering tillämpad",
         "docker_stack_update_available": "Docker uppdateringar tillgängliga"
@@ -6421,13 +6423,23 @@
         },
         "oci_recreate_completed": {
           "title": "{hostname}: {app_name} återskapad",
-          "body": "{app_name} återskapades med sina nya alternativ och dess data behölls.\nContainrar: {containers}",
+          "body": "{app_name} återskapades med sin sparade konfiguration och dess data behölls.\nContainrar: {containers}",
           "label": "OCI-applikation återskapad"
         },
         "oci_recreate_failed": {
           "title": "{hostname}: återskapandet av {app_name} slutfördes inte",
           "body": "Återskapandet av {app_name} slutfördes inte.\nOrsak: {reason}\nContainrar: {containers}\nÖppna Hantera installerade OCI-applikationer för att kontrollera dess tillstånd.",
           "label": "Återskapande av OCI-applikation misslyckades"
+        },
+        "oci_modify_completed": {
+          "title": "{hostname}: {app_name} ändrad",
+          "body": "{app_name} ändrades med sina nya alternativ och dess data behölls.\nContainrar: {containers}",
+          "label": "OCI-applikation ändrad"
+        },
+        "oci_modify_failed": {
+          "title": "{hostname}: ändringen av {app_name} slutfördes inte",
+          "body": "Ändringen av {app_name} slutfördes inte.\nOrsak: {reason}\nContainrar: {containers}\nÖppna Hantera installerade OCI-applikationer för att kontrollera dess tillstånd.",
+          "label": "Ändring av OCI-applikation misslyckades"
         },
         "app_update_available": {
           "title": "{hostname}: {app_name} uppdatering tillgänglig på CT {vmid}",

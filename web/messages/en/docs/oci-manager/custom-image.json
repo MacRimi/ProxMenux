@@ -55,7 +55,7 @@
           "table": {
             "headers": ["Read from the image", "Not in the image", "Consequence"],
             "rows": [
-              ["<code>Entrypoint</code>, <code>Cmd</code>, <code>User</code>, <code>WorkingDir</code> and embedded environment", "Variables that only appear in the documentation", "They are added during the installation or a recreation"],
+              ["<code>Entrypoint</code>, <code>Cmd</code>, <code>User</code>, <code>WorkingDir</code> and embedded environment", "Variables that only appear in the documentation", "They are added during the installation or with Modify"],
               ["Volumes declared by the image", "Host directories that only a Compose file names", "Additional paths are added before installing"],
               ["<code>EXPOSE</code> ports", "The URL, protocol or functional healthcheck", "The port and the way the service is checked are confirmed"],
               ["Architectures and digest in the registry", "Devices, privileges or external dependencies", "None of them is enabled without a definition that asks for it"]

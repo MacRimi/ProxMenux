@@ -891,7 +891,7 @@ TEMPLATES = {
     },
     'oci_recreate_completed': {
         'title': '{hostname}: {app_name} recreated',
-        'body': '{app_name} was recreated with its new options and its data was kept.\nContainers: {containers}',
+        'body': '{app_name} was recreated with its saved configuration and its data was kept.\nContainers: {containers}',
         'label': 'OCI application recreated',
         'group': 'vm_ct',
         'default_enabled': True,
@@ -905,6 +905,25 @@ TEMPLATES = {
             'Open Manage installed OCI applications to check its state.'
         ),
         'label': 'OCI application recreation failed',
+        'group': 'vm_ct',
+        'default_enabled': True,
+    },
+    'oci_modify_completed': {
+        'title': '{hostname}: {app_name} modified',
+        'body': '{app_name} was modified with its new options and its data was kept.\nContainers: {containers}',
+        'label': 'OCI application modified',
+        'group': 'vm_ct',
+        'default_enabled': True,
+    },
+    'oci_modify_failed': {
+        'title': '{hostname}: {app_name} modification did not complete',
+        'body': (
+            'The modification of {app_name} did not complete.\n'
+            'Reason: {reason}\n'
+            'Containers: {containers}\n'
+            'Open Manage installed OCI applications to check its state.'
+        ),
+        'label': 'OCI application modification failed',
         'group': 'vm_ct',
         'default_enabled': True,
     },
@@ -2356,6 +2375,8 @@ EVENT_EMOJI = {
     'oci_update_failed':      '\u26A0\uFE0F',
     'oci_recreate_completed': '\u2705',
     'oci_recreate_failed':    '\u26A0\uFE0F',
+    'oci_modify_completed':   '\u2705',
+    'oci_modify_failed':      '\u26A0\uFE0F',
     'app_update_available': '\U0001F195',  # \ud83c\udd95 NEW \u2014 upstream app release
     'docker_stack_update_available': '\U0001F433',
     'vm_start':             '\u25B6\uFE0F',    # play button

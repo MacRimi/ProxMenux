@@ -31,7 +31,7 @@
               ],
               [
                 "Updates",
-                "The image is updated or the container recreated, with the same flow as the OCI menu"
+                "The image is updated or the application modified, with the same flow as the OCI menu"
               ],
               [
                 "Mounts",
@@ -107,8 +107,8 @@
                 "The update of <lifecycleLink>Manage installed OCI applications</lifecycleLink> for this container, in the Monitor terminal. It can run whether or not there is a new image; with none, nothing is changed. In a multi-container application it updates every member."
               ],
               [
-                "Recreate",
-                "The recreation editor (resources, network, paths and GPU). In a multi-container application it adds or removes the extra paths and devices of the application container and, in Immich, changes what runs recognition."
+                "Modify",
+                "The editor of the application (resources, network, paths and GPU). In a multi-container application it adds or removes the extra paths and devices of the application container and, in Immich, changes what runs recognition."
               ],
               [
                 "Recover",
@@ -116,7 +116,7 @@
               ],
               [
                 "Recover (restored container)",
-                "Shown for a container restored from a backup that has no contract on this host, under <strong>Restored OCI application</strong>. Opens the <lifecycleLink>recovery</lifecycleLink> in the Monitor terminal; Update and Recreate appear once it is registered."
+                "Shown for a container restored from a backup that has no contract on this host, under <strong>Restored OCI application</strong>. Opens the <lifecycleLink>recovery</lifecycleLink> in the Monitor terminal; Update and Modify appear once it is registered."
               ]
             ]
           }

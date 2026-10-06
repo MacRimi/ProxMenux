@@ -295,7 +295,7 @@
     {
       "id": "manage",
       "title": "Managing an installed stack",
-      "intro": "In <strong>Manage installed OCI applications</strong>, any member leads to the whole stack. The menu of a stack offers <strong>Update every container of the application</strong>, <strong>Recreate: add or remove extra paths and devices</strong> and <strong>Remove: delete the application and its containers</strong>.",
+      "intro": "In <strong>Manage installed OCI applications</strong>, any member leads to the whole stack. The menu of a stack offers <strong>Update every container of the application</strong>, <strong>Modify extra paths and devices</strong>, <strong>Recreate every container with its saved configuration</strong> and <strong>Remove: delete the application and its containers</strong>. Recreate rebuilds every container from the image it was installed with, by its saved digest and without looking for a newer one, with the same steps as an update; it is offered for the stacks that can be updated.",
       "blocks": [
         {
           "steps": {
@@ -330,7 +330,7 @@
         {
           "table": {
             "headers": [
-              "Recreate",
+              "Modify",
               "What changes",
               "What is kept"
             ],

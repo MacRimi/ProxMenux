@@ -212,7 +212,7 @@ def modify(root, vmid, changes):
     import oci_update_current
     primary_id = (record.get('stack_member') or {}).get('primary_vmid', vmid)
     name = oci_update_current.application_name(instances.read(root, primary_id), primary_id)
-    with oci_operation_notice.operation([vmid], 'recreate', name, primary_id):
+    with oci_operation_notice.operation([vmid], 'modify', name, primary_id):
         _modify(root, vmid, changes)
 
 

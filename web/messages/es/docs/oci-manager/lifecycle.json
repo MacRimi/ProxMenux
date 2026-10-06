@@ -1,10 +1,10 @@
 {
   "meta": {
-    "title": "Instalar, actualizar y recrear | ProxMenux",
-    "description": "El contrato de instancia de un contenedor OCI y las operaciones que lo usan: actualizar, recrear, eliminar, recuperar una operación interrumpida y recuperar tras una restauración en este u otro host."
+    "title": "Instalar, actualizar y modificar | ProxMenux",
+    "description": "El contrato de instancia de un contenedor OCI y las operaciones que lo usan: actualizar, modificar, eliminar, recuperar una operación interrumpida y recuperar tras una restauración en este u otro host."
   },
   "header": {
-    "title": "Instalar, actualizar y recrear",
+    "title": "Instalar, actualizar y modificar",
     "description": "Cada instancia conserva un contrato reproducible, de modo que su rootfs puede sustituirse sin perder la configuración ni los datos persistentes.",
     "section": "OCI manager Apps"
   },
@@ -22,14 +22,14 @@
           }
         },
         {
-          "p": "Una copia del contrato viaja dentro del contenedor, en <code>/.proxmenux/oci-record.json</code>, legible solo por root del contenedor, así que un backup del contenedor lleva siempre el contrato que tenía en ese momento. Una segunda copia se guarda en <code>/etc/pve/priv/proxmenux/oci</code>, que comparten todos los nodos de un clúster y solo lee root del host. Las dos se escriben tras cada instalación, actualización y recreación."
+          "p": "Una copia del contrato viaja dentro del contenedor, en <code>/.proxmenux/oci-record.json</code>, legible solo por root del contenedor, así que un backup del contenedor lleva siempre el contrato que tenía en ese momento. Una segunda copia se guarda en <code>/etc/pve/priv/proxmenux/oci</code>, que comparten todos los nodos de un clúster y solo lee root del host. Las dos se escriben tras cada instalación, actualización y modificación."
         }
       ]
     },
     {
       "id": "manage",
       "title": "Gestionar aplicaciones OCI instaladas",
-      "intro": "Esta opción de la pantalla principal enumera las instancias registradas con su aplicación y su imagen. Cada una se contrasta con su contrato antes de cualquier acción; un CT que ya no coincide con su registro no se modifica ni se elimina. La misma actualización y la misma recreación se ofrecen en la pestaña Actualizaciones de <monitorLink>ProxMenux Monitor</monitorLink>.",
+      "intro": "Esta opción de la pantalla principal enumera las instancias registradas con su aplicación y su imagen. Cada una se contrasta con su contrato antes de cualquier acción; un CT que ya no coincide con su registro no se modifica ni se elimina. La misma actualización y el mismo editor se ofrecen en la pestaña Actualizaciones de <monitorLink>ProxMenux Monitor</monitorLink>.",
       "blocks": [
         {
           "table": {
@@ -45,7 +45,7 @@
                 "Contrato, discos del contenedor, directorios del host, red y dispositivos"
               ],
               [
-                "Recrear: editar recursos, red, rutas y GPU",
+                "Modificar: editar recursos, red, rutas y GPU",
                 "El editor se abre con el contrato actual; el CT se reconstruye con los cambios",
                 "Los datos de los discos del contenedor y de los directorios del host"
               ],
@@ -58,12 +58,12 @@
           }
         },
         {
-          "p": "Para una aplicación multicontenedor el menú ofrece <strong>Actualizar cada contenedor de la aplicación</strong>, <strong>Recrear</strong> y la eliminación. Recrear añade o elimina las rutas y los dispositivos extra del contenedor de la aplicación sin reconstruir nada y, en Immich, cambia qué ejecuta el reconocimiento."
+          "p": "Para una aplicación multicontenedor el menú ofrece <strong>Actualizar cada contenedor de la aplicación</strong>, <strong>Modificar rutas extra y dispositivos</strong>, <strong>Recrear todos los contenedores con su configuración guardada</strong> y la eliminación. Modificar añade o elimina las rutas y los dispositivos extra del contenedor de la aplicación sin reconstruir nada y, en Immich, cambia qué ejecuta el reconocimiento. Recrear reconstruye cada contenedor desde la imagen con la que se instaló, sin buscar una más nueva."
         },
         {
           "figure": {
             "src": "/oci-manager/manage-menu.png",
-            "alt": "Lista de aplicaciones OCI instaladas y las opciones de actualizar, recrear y eliminar",
+            "alt": "Lista de aplicaciones OCI instaladas y las opciones de actualizar, modificar y eliminar",
             "caption": "Gestionar aplicaciones OCI instaladas."
           }
         }
@@ -126,7 +126,7 @@
     {
       "id": "recovery",
       "title": "Recuperar una operación interrumpida",
-      "intro": "La actualización y la recreación usan una transacción persistente. Si el proceso, la terminal o el nodo se interrumpen después de detener el CT, la operación no se da por terminada.",
+      "intro": "La actualización y la modificación usan una transacción persistente. Si el proceso, la terminal o el nodo se interrumpen después de detener el CT, la operación no se da por terminada.",
       "blocks": [
         {
           "steps": {

@@ -31,7 +31,7 @@
               ],
               [
                 "Actualizaciones",
-                "Se actualiza la imagen o se recrea el contenedor, con el mismo recorrido que el menú OCI"
+                "Se actualiza la imagen o se modifica la aplicación, con el mismo recorrido que el menú OCI"
               ],
               [
                 "Montajes",
@@ -107,8 +107,8 @@
                 "La actualización de <lifecycleLink>Gestionar aplicaciones OCI instaladas</lifecycleLink> para este contenedor, en la terminal del Monitor. Puede ejecutarse haya o no imagen nueva; sin ella, no cambia nada. En una aplicación multicontenedor actualiza todos los miembros."
               ],
               [
-                "Recrear",
-                "El editor de la recreación (recursos, red, rutas y GPU). En una aplicación multicontenedor añade o elimina las rutas y los dispositivos extra del contenedor de la aplicación y, en Immich, cambia qué ejecuta el reconocimiento."
+                "Modificar",
+                "El editor de la aplicación (recursos, red, rutas y GPU). En una aplicación multicontenedor añade o elimina las rutas y los dispositivos extra del contenedor de la aplicación y, en Immich, cambia qué ejecuta el reconocimiento."
               ],
               [
                 "Recuperar",
@@ -116,7 +116,7 @@
               ],
               [
                 "Recuperar (contenedor restaurado)",
-                "Aparece en un contenedor restaurado desde un backup que no tiene contrato en este host, bajo <strong>Aplicación OCI restaurada</strong>. Abre la <lifecycleLink>recuperación</lifecycleLink> en el terminal del Monitor; Actualizar y Recrear aparecen cuando queda registrado."
+                "Aparece en un contenedor restaurado desde un backup que no tiene contrato en este host, bajo <strong>Aplicación OCI restaurada</strong>. Abre la <lifecycleLink>recuperación</lifecycleLink> en el terminal del Monitor; Actualizar y Modificar aparecen cuando queda registrado."
               ]
             ]
           }

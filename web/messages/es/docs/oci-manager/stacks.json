@@ -171,7 +171,7 @@
     {
       "id": "manage",
       "title": "Gestión de una pila instalada",
-      "intro": "En <strong>Gestionar aplicaciones OCI instaladas</strong>, cualquier miembro lleva a la pila completa. El menú de una pila ofrece <strong>Actualizar cada contenedor de la aplicación</strong>, <strong>Recrear: añadir o eliminar rutas y dispositivos extra</strong> y <strong>Eliminar: la aplicación y sus contenedores</strong>.",
+      "intro": "En <strong>Gestionar aplicaciones OCI instaladas</strong>, cualquier miembro lleva a la pila completa. El menú de una pila ofrece <strong>Actualizar cada contenedor de la aplicación</strong>, <strong>Modificar rutas extra y dispositivos</strong>, <strong>Recrear todos los contenedores con su configuración guardada</strong> y <strong>Eliminar: la aplicación y sus contenedores</strong>. Recrear reconstruye cada contenedor desde la imagen con la que se instaló, por su digest guardado y sin buscar una más nueva, con los mismos pasos que una actualización; se ofrece en las pilas que se pueden actualizar.",
       "blocks": [
         {
           "steps": {
@@ -187,7 +187,7 @@
         },
         {
           "table": {
-            "headers": ["Recrear", "Qué cambia", "Qué se conserva"],
+            "headers": ["Modificar", "Qué cambia", "Qué se conserva"],
             "rows": [
               ["Rutas y dispositivos extra", "Se añaden al contenedor de la aplicación o se eliminan de él, y el contenedor se reinicia. No se reconstruye nada", "Los datos de la aplicación, su base de datos y los demás contenedores"],
               ["Qué ejecuta el reconocimiento (Immich)", "El contenedor Machine learning toma la imagen y los dispositivos de la CPU o de una GPU del host. Toda la aplicación se detiene y se actualiza, como en una actualización", "La caché de modelos, la biblioteca y la base de datos. Si algo falla, se restauran los contenedores y la opción anteriores"]
