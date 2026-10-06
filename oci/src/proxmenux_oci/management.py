@@ -285,6 +285,8 @@ def manage_instance(project, ui, row, action=None, lifecycle_args=()):
         return False
     if row['stack']:
         return _manage_stack(project, ui, row, action, lifecycle_args)
+    if action == 'modify':
+        return False
     if not row['pending']:
         if row['status'] != 'installed' or row['reason'] != 'matched':
             ui.message(translate('The instance identity or status must be reviewed before updating.'), translate('OCI management'))
