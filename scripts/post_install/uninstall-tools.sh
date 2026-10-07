@@ -1094,7 +1094,7 @@ uninstall_pigz() {
         # With the diversion still active, a reinstall writes into $real.
         if ! ensure_gzip_binary "$real" || ! pmx_write_file "$gz" < "$real"; then
             pmx_write_file "$gz" < /bin/pigzwrapper
-            msg_error "$(translate "gzip could not be verified, leaving it unchanged")"
+            msg_error "$(translate "gzip could not be verified; the change was not completed")"
             return 1
         fi
         pmx_record_execution "Remove gzip diversion" "dpkg-divert --local --no-rename --remove $gz"
@@ -1116,7 +1116,7 @@ uninstall_pigz() {
         rm -f "$real"
     done
     # pigz is still what gzip runs if anything above went wrong.
-    ensure_gzip_binary "$gz" || { msg_error "$(translate "gzip could not be verified, leaving it unchanged")"; return 1; }
+    ensure_gzip_binary "$gz" || { msg_error "$(translate "gzip could not be verified; the change was not completed")"; return 1; }
     pmx_remove_file /bin/pigzwrapper
     pmx_edit_file /etc/vzdump.conf 's/^pigz: 1/#pigz: 1/' 2>/dev/null || true
     pmx_record_execution "Purge pigz package" "apt-get purge -y pigz"

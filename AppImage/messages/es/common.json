@@ -1998,7 +1998,7 @@
         "oci_modify_completed": "Aplicación OCI modificada",
         "oci_modify_failed": "Modificación de aplicación OCI fallida",
         "oci_watchdog_restarted": "Aplicación OCI reiniciada por la vigilancia",
-        "oci_watchdog_failed": "Aplicación OCI que se detiene una y otra vez",
+        "oci_watchdog_failed": "Aplicación OCI que la vigilancia deja parada",
         "app_update_available": "Actualización de app disponible",
         "ai_model_migrated": "Modelo de IA actualizado automáticamente",
         "proxmenux_update": "Actualización de ProxMenux disponible",
@@ -6451,9 +6451,9 @@
           "label": "Aplicación OCI reiniciada por la vigilancia"
         },
         "oci_watchdog_failed": {
-          "title": "{hostname}: {app_name} se detiene una y otra vez",
-          "body": "{app_name} sigue deteniéndose solo y la vigilancia ya no lo reinicia.\nContenedores: {containers}\nInícialo a mano cuando la causa esté resuelta; la vigilancia volverá a vigilarlo.",
-          "label": "Aplicación OCI que se detiene una y otra vez"
+          "title": "{hostname}: {app_name} no se ha podido mantener en marcha",
+          "body": "La vigilancia no ha podido mantener {app_name} en marcha: volvió a detenerse o no arrancó tras varios intentos, y se deja parado.\nContenedores: {containers}\nInícialo a mano cuando la causa esté resuelta; la vigilancia volverá a vigilarlo.",
+          "label": "Aplicación OCI que la vigilancia deja parada"
         },
         "app_update_available": {
           "title": "{hostname}: actualización de {app_name} disponible en CT {vmid}",
@@ -6722,7 +6722,7 @@
         },
         "system_restore_completed": {
           "title": "{hostname}: Restauración del host finalizada",
-          "body": "Tareas posteriores a la restauración completadas en segundo plano.\n\nGuests aplicados: {guests}\nStubs de bind mount: {stubs}\nDirectorios de nodos obsoletos eliminados: {stale_nodes}\nComponentes reinstalados: {components}\nDuración: {duration}\n{warnings_block}\nEl nodo está listo para usarse.",
+          "body": "Tareas posteriores a la restauración completadas en segundo plano.\n\nConfiguración de guests copiada: {guests}\nDirectorios vacíos creados para bind mounts: {stubs}\nDirectorios de nodos obsoletos eliminados: {stale_nodes}\nComponentes reinstalados: {components}\nDuración: {duration}\n{warnings_block}",
           "label": "Restauración del host completada"
         },
         "system_problem": {

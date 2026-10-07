@@ -2012,7 +2012,7 @@
         "oci_modify_completed": "OCI aplikácia upravená",
         "oci_modify_failed": "Úprava OCI aplikácie zlyhala",
         "oci_watchdog_restarted": "OCI aplikácia reštartovaná watchdogom",
-        "oci_watchdog_failed": "OCI aplikácia sa opakovane zastavuje",
+        "oci_watchdog_failed": "OCI aplikácia ponechaná zastavená watchdogom",
         "app_update_available": "K dispozícii je aktualizácia aplikácie"
       },
       "ui": {
@@ -6450,9 +6450,9 @@
           "label": "OCI aplikácia reštartovaná watchdogom"
         },
         "oci_watchdog_failed": {
-          "title": "{hostname}: {app_name} sa opakovane zastavuje",
-          "body": "Aplikácia {app_name} sa stále sama zastavuje a watchdog ju už nereštartuje.\nKontajnery: {containers}\nPo odstránení príčiny ju spustite ručne; watchdog ju potom bude znova sledovať.",
-          "label": "OCI aplikácia sa opakovane zastavuje"
+          "title": "{hostname}: {app_name} sa nepodarilo udržať v chode",
+          "body": "Watchdogu sa nepodarilo udržať aplikáciu {app_name} v chode: znova sa zastavila alebo sa po viacerých pokusoch nespustila a zostáva zastavená.\nKontajnery: {containers}\nPo odstránení príčiny ju spustite ručne; watchdog ju potom bude znova sledovať.",
+          "label": "OCI aplikácia ponechaná zastavená watchdogom"
         },
         "app_update_available": {
           "title": "{hostname}: Pre {app_name} je na CT {vmid} dostupná aktualizácia",
@@ -6721,7 +6721,7 @@
         },
         "system_restore_completed": {
           "title": "{hostname}: Obnova servera dokončená",
-          "body": "Úlohy po obnove boli dokončené na pozadí.\n\nPoužité VM a LXC: {guests}\nZástupné priečinky bind mountov: {stubs}\nOdstránené zastarané priečinky uzlov: {stale_nodes}\nPreinštalované súčasti: {components}\nTrvanie: {duration}\n{warnings_block}\nUzol je teraz úplne pripravený na použitie.",
+          "body": "Úlohy po obnove boli dokončené na pozadí.\n\nPoužité VM a LXC: {guests}\nZástupné priečinky bind mountov: {stubs}\nOdstránené zastarané priečinky uzlov: {stale_nodes}\nPreinštalované súčasti: {components}\nTrvanie: {duration}\n{warnings_block}",
           "label": "Obnova servera bola dokončená"
         },
         "system_problem": {

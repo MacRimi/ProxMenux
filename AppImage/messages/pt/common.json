@@ -2011,7 +2011,7 @@
         "oci_modify_completed": "Aplicação OCI modificada",
         "oci_modify_failed": "Falha na modificação da aplicação OCI",
         "oci_watchdog_restarted": "Aplicação OCI reiniciada pela vigilância",
-        "oci_watchdog_failed": "Aplicação OCI que continua a parar",
+        "oci_watchdog_failed": "Aplicação OCI deixada parada pela vigilância",
         "app_update_available": "atualização de aplicativo disponível",
         "lxc_update_applied": "Atualização LXC aplicada",
         "docker_stack_update_available": "Docker atualizações disponíveis"
@@ -6451,9 +6451,9 @@
           "label": "Aplicação OCI reiniciada pela vigilância"
         },
         "oci_watchdog_failed": {
-          "title": "{hostname}: {app_name} continua a parar",
-          "body": "{app_name} continua a parar sozinho e a vigilância já não o reinicia.\nContêineres: {containers}\nInicie-o à mão quando a causa estiver resolvida; a vigilância volta então a vigiá-lo.",
-          "label": "Aplicação OCI que continua a parar"
+          "title": "{hostname}: não foi possível manter {app_name} em execução",
+          "body": "A vigilância não conseguiu manter {app_name} em execução: voltou a parar ou não arrancou após várias tentativas, e fica parado.\nContêineres: {containers}\nInicie-o à mão quando a causa estiver resolvida; a vigilância volta então a vigiá-lo.",
+          "label": "Aplicação OCI deixada parada pela vigilância"
         },
         "app_update_available": {
           "title": "{hostname}: atualização {app_name} disponível no CT {vmid}",
@@ -6722,7 +6722,7 @@
         },
         "system_restore_completed": {
           "title": "{hostname}: restauração do host concluída",
-          "body": "Tarefas pós-restauração concluídas em segundo plano.\n\nConvidados inscritos: {guests}\nStubs de montagem de ligação: {stubs}\nDiretórios de nó obsoletos removidos: {stale_nodes}\nComponentes reinstalados: {components}\nDuração: {duration}\n{warnings_block}\nO nó agora está totalmente pronto para uso.",
+          "body": "Tarefas pós-restauração concluídas em segundo plano.\n\nConfigurações de VM e CT copiadas: {guests}\nDiretórios vazios criados para bind mounts: {stubs}\nDiretórios de nó obsoletos removidos: {stale_nodes}\nComponentes reinstalados: {components}\nDuração: {duration}\n{warnings_block}",
           "label": "Restauração do host concluída"
         },
         "system_problem": {

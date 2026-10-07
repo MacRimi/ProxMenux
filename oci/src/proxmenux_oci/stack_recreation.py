@@ -140,8 +140,10 @@ def summary(member, changes):
     lines += [f"- {path}" for path in changes['remove_mounts']]
     lines += [f"+ {device['host_path']}" for device in changes['add_devices']]
     lines += [f"- {path}" for path in changes['remove_devices']]
-    lines += ['', translate('The container is restarted to apply the changes. Its own data, the database '
-                            'and the other containers of the application are not touched.')]
+    lines += ['', translate('A running container is restarted to apply the changes; a stopped one is left stopped. '
+                            'The data of the application, its database and the configuration of the other '
+                            'containers are not changed. A container volume removed here is deleted with the '
+                            'data in it.')]
     return '\n'.join(lines)
 
 
@@ -194,8 +196,9 @@ def change_recognition(project, ui, primary, member, run_lifecycle):
     text = (f"{translate('Recognition')}: {labels.get(current, current)} → {labels[selected]}\n\n"
             + translate('The machine learning container is rebuilt with the image of the new choice. Its model '
                         'cache, the library and the database are kept. The whole application is stopped and '
-                        'updated, as in an update; if anything fails, the previous containers and the previous '
-                        'choice are restored.'))
+                        'updated, as in an update. If the operation fails after a container was changed, the '
+                        'previous containers and the previous choice are restored. An operation that stops '
+                        'halfway is recovered from the OCI management menu.'))
     if not ui.review(text, translate('Modify OCI stack'), question=translate('Change the recognition now?'), default=True):
         return False
     command = [sys.executable, str(project / 'remote/oci_immich_recognition.py'), str(primary['vmid']),

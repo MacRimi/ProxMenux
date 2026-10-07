@@ -193,7 +193,7 @@
               ],
               [
                 "It keeps stopping right after starting",
-                "An application that stops again within seconds of starting is tried five times, waiting 30 seconds, 1, 2 and 5 minutes between them. Then it is left stopped and a notification is sent"
+                "An application that stops again within seconds of starting, or that does not start, is tried five times, waiting 30 seconds, 1, 2 and 5 minutes between them. Then it is left stopped and a notification is sent"
               ]
             ]
           }

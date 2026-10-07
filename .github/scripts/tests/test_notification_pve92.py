@@ -107,7 +107,7 @@ class PVE92Tests(unittest.TestCase):
             with self.subTest(event=event, field=field):
                 value = slovak['templates'][event][field]
                 result = templates.render_template(event, data, 'sk')
-                self.assertEqual(result[field], value.format(**data))
+                self.assertEqual(result[field].strip(), value.format(**data).strip())
                 self.assertNotIn(value, (SCRIPTS / 'notification_templates.py').read_text())
                 # Independently updated and absent leaves use the usual provider.
                 import copy

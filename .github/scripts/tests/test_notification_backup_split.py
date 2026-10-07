@@ -76,22 +76,28 @@ class BackupSplitTests(unittest.TestCase):
             self.assertEqual(result['title'], 'alias: Backup outcome unconfirmed')
             self.assertEqual(result['body'], 'The backup outcome is not confirmed.')
 
-    def test_restore_keeps_original_ready_line_and_success_icon_with_warnings(self):
+    def test_restore_reports_its_tasks_without_calling_the_node_ready_and_keeps_the_success_icon(self):
+        import json
+        from pathlib import Path
         from notification_final_fixture import restore_event
-        ready = {'en': 'The node is now fully ready to use.', 'de': 'Der Knoten ist nun vollständig einsatzbereit.', 'es': 'El nodo está listo para usarse.', 'fr': 'Le nœud est maintenant entièrement prêt à être utilisé.', 'it': "Il nodo è ora completamente pronto per l'uso.", 'pt': 'O nó agora está totalmente pronto para uso.', 'sk': 'Uzol je teraz úplne pripravený na použitie.', 'sv': 'Noden är nu helt redo att användas.'}
+        messages = Path(__file__).resolve().parents[3] / 'AppImage/messages'
+        first = {language: json.loads((messages / language / 'common.json').read_text())
+                 ['runtime']['notifications']['templates']['system_restore_completed']['body'].split('\n')[0]
+                 for language in LANGUAGES}
         for warning in ('', 'missing module zfs'):
             event = restore_event(warning)
             for language in LANGUAGES:
                 result = deliver(event['event_type'], event['data'], event['severity'], language)
                 self.assertTrue(result['title'].startswith('✅ '))
-                self.assertIn(ready[language], result['body'])
-                self.assertIn(ready[language], result['text'])
+                self.assertIn(first[language], result['body'])
+                self.assertIn(first[language], result['text'])
+                self.assertNotIn('fully ready', result['body'])
                 self.assertIn('2m', result['text'])
                 if warning:
                     self.assertIn(warning, result['text'])
                 quiet = deliver(event['event_type'], event['data'], event['severity'], language, quiet=True)
                 self.assertIn('✅', quiet['body'])
-                self.assertIn('    ' + ready[language], quiet['body'])
+                self.assertIn(first[language], quiet['body'])
                 self.assertIn('white-space:pre-wrap;', quiet['html'])
 
     def test_spanish_outcome_and_restore_titles_are_capitalized_and_failure_is_exact(self):

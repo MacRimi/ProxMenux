@@ -19,7 +19,7 @@ def choose_usb_device(ui, title, default=None, attached=()):
                for row in host.usb_devices() if row['path'] not in attached]
     manual_prompt = translate('Host USB node (e.g. /dev/ttyACM0 or /dev/bus/usb/003/004)')
     if not options:
-        ui.message(translate('No USB device was found on this host.'))
+        ui.message(translate('No selectable USB device was found. Type the host node by hand.'))
         return ui.ask(manual_prompt, default or '/dev/ttyACM0')
     options.append(('manual', translate('Another node, typed by hand')))
     selected = ui.choose(title, options, default if default in dict(options) else options[0][0])

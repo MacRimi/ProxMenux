@@ -68,7 +68,7 @@ class StackRecreationTests(unittest.TestCase):
             {"host_path": "/dev/ttyACM0"}], "add_mounts": [
             {"type": "host-bind", "container_path": "/scans", "source": "/mnt/scans"}]}
         text = stack_recreation.summary(MEMBER, changes)
-        for expected in ("CT 129", "+ /scans", "- /media-extra", "+ /dev/ttyACM0", "are not touched"):
+        for expected in ("CT 129", "+ /scans", "- /media-extra", "+ /dev/ttyACM0", "are not changed"):
             self.assertIn(expected, text)
 
 

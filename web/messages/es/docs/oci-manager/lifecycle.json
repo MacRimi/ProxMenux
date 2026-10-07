@@ -193,7 +193,7 @@
               ],
               [
                 "No deja de detenerse nada más arrancar",
-                "Una aplicación que vuelve a detenerse a los pocos segundos de arrancar se intenta cinco veces, con esperas de 30 segundos, 1, 2 y 5 minutos entre ellas. Después se deja parada y se envía una notificación"
+                "Una aplicación que vuelve a detenerse a los pocos segundos de arrancar, o que no arranca, se intenta cinco veces, con esperas de 30 segundos, 1, 2 y 5 minutos entre ellas. Después se deja parada y se envía una notificación"
               ]
             ]
           }

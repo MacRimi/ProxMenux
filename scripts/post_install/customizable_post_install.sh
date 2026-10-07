@@ -1707,12 +1707,12 @@ EOF
         src="$gz"
         gzip_is_binary "$src" || src=/bin/gzip.original
         if ! gzip_is_binary "$src"; then
-            ensure_gzip_binary "$gz" || { msg_error "$(translate "gzip could not be verified, leaving it unchanged")"; return 1; }
+            ensure_gzip_binary "$gz" || { msg_error "$(translate "gzip could not be verified; the change was not completed")"; return 1; }
             src="$gz"
         fi
         if ! pmx_write_file "$gz.distrib" < "$src" || ! chmod 755 "$gz.distrib" || ! gzip_is_binary "$gz.distrib"; then
             rm -f "$gz.distrib"
-            msg_error "$(translate "gzip could not be verified, leaving it unchanged")"
+            msg_error "$(translate "gzip could not be verified; the change was not completed")"
             return 1
         fi
         pmx_remove_file /bin/gzip.original
@@ -1729,10 +1729,10 @@ EOF
     # Never put the wrapper in place without a real gzip behind it. With the
     # diversion active, a reinstall writes straight into gzip.distrib.
     real=$(dpkg-divert --truename "$gz")
-    ensure_gzip_binary "$real" || { msg_error "$(translate "gzip could not be verified, leaving it unchanged")"; return 1; }
+    ensure_gzip_binary "$real" || { msg_error "$(translate "gzip could not be verified; the change was not completed")"; return 1; }
     if ! cmp -s "$gz" /bin/pigzwrapper && ! pmx_write_file "$gz" < /bin/pigzwrapper; then
         pmx_write_file "$gz" < "$real"
-        msg_error "$(translate "gzip could not be verified, leaving it unchanged")"
+        msg_error "$(translate "gzip could not be verified; the change was not completed")"
         return 1
     fi
     msg_ok "$(translate "gzip replaced with pigz wrapper successfully")"

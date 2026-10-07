@@ -472,7 +472,7 @@ def _removal_summary(project, vmid):
     if bridge and not oci_remove.bridge_in_use(bridge, set(members)):
         text += ['', f"{translate('Private network targeted for release if no other guest uses it:')} {bridge}"]
     elif bridge:
-        text += ['', f"{translate('Private network kept, because other containers still use it:')} {bridge}"]
+        text += ['', f"{translate('Private network kept, because other guests still use it:')} {bridge}"]
     if (primary.get('deployment') or {}).get('host_firewall'):
         text += ['', translate('A matching managed host firewall rule may also be removed.')]
     if kept:

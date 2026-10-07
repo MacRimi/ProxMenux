@@ -15,7 +15,7 @@ from notification_fixture import templates as actual_templates
 ROOT = Path(__file__).resolve().parents[3]
 SCRIPTS = ROOT / 'AppImage/scripts'
 CATALOG = ROOT / 'AppImage/messages/en/common.json'
-EXPECTED = {'system_restore_completed': {'body': 'Post-restore tasks completed in background.\n\nGuests applied: {guests}\nBind-mount stubs: {stubs}\nStale node dirs removed: {stale_nodes}\nComponents reinstalled: {components}\nDuration: {duration}\n{warnings_block}\nThe node is now fully ready to use.'}}
+EXPECTED = {'system_restore_completed': {'body': 'Post-restore tasks completed in background.\n\nGuest configurations copied: {guests}\nBind-mount stub directories created: {stubs}\nStale node dirs removed: {stale_nodes}\nComponents reinstalled: {components}\nDuration: {duration}\n{warnings_block}'}}
 
 
 def extract(path, name, owner=None, namespace=None):
@@ -72,7 +72,7 @@ class OutcomeWording(unittest.TestCase):
         result = module.render_template('system_restore_completed', {
             'hostname':'node-a','guests':3,'stubs':0,'stale_nodes':0,
             'components':1,'duration':'2m','warnings_block':''}, 'es')
-        self.assertIn('Guests aplicados: 3', result['body'])
+        self.assertIn('Configuración de guests copiada: 3', result['body'])
         self.assertNotIn('invitados', result['body'].lower())
 
     def test_settings_labels_stay_at_upstream_values_in_all_locales(self):
@@ -345,7 +345,7 @@ class OutcomeWording(unittest.TestCase):
             restore = module.render_template('system_restore_completed', {'hostname':'node', 'guests':4,
                 'stubs':1,'stale_nodes':2,'components':1,'duration':'2m','warnings_block':'Missing module'},lang)
             self.assertIn('Missing module',restore['body'])
-            if lang == 'en': self.assertIn('fully ready',restore['body'].lower())
+            if lang == 'en': self.assertNotIn('fully ready',restore['body'].lower())
 
 
 
@@ -366,7 +366,7 @@ class OutcomeWording(unittest.TestCase):
                 self.assertEqual(event['severity'], 'WARNING' if warnings else 'INFO')
                 result = self.render(event['event_type'], event['data'], 'en')
                 self.assertIn('Post-restore tasks completed', result['body'])
-                self.assertIn('fully ready', result['body'])
+                self.assertNotIn('fully ready', result['body'])
                 if warnings: self.assertIn('missing modules', result['body'])
 
 

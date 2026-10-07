@@ -199,7 +199,7 @@ def look(states, now):
             if started and notice_due(state, now):
                 oci_operation_notice.notify('oci_watchdog_restarted', data)
         elif action == 'give-up':
-            print(f'CT {vmid} ({name}) keeps stopping; it is left stopped', flush=True)
+            print(f'CT {vmid} ({name}) could not be kept running; it is left stopped', flush=True)
             oci_operation_notice.notify('oci_watchdog_failed', data)
 
 

@@ -49,3 +49,23 @@ class OutcomePromises(TestCase):
             for key in ('deleteAttached', 'storageAttached'):
                 self.assertEqual(texts[key].count('{ids}'), 1, f'{locale} {key}')
             self.assertEqual(texts['disableBody'].count('. '), 1, f'{locale} disableBody')
+
+    def test_the_host_restore_notice_reports_tasks_and_does_not_call_the_node_ready(self):
+        for locale in LOCALES:
+            body = json.loads((ROOT / f'AppImage/messages/{locale}/common.json').read_text())['runtime']['notifications']['templates']['system_restore_completed']['body']
+            self.assertEqual(body.split('\n')[-1], '{warnings_block}', locale)
+            self.assertEqual(body.count('\n'), 7, locale)
+
+    def test_the_watchdog_failure_covers_an_application_that_did_not_start(self):
+        english = json.loads((ROOT / 'AppImage/messages/en/common.json').read_text())['runtime']['notifications']['templates']['oci_watchdog_failed']
+        self.assertNotIn('keeps stopping', english['title'] + english['body'] + english['label'])
+        self.assertIn('did not start', english['body'])
+
+    def test_other_wording_that_promised_too_much(self):
+        texts = oci_menu_texts()
+        self.assertIn('Private network kept, because other guests still use it:', texts)
+        recreation = (ROOT / 'oci/src/proxmenux_oci/stack_recreation.py').read_text()
+        self.assertNotIn('if anything fails', recreation)
+        self.assertIn('a stopped one is left stopped', recreation)
+        for script in ('scripts/post_install/customizable_post_install.sh', 'scripts/post_install/uninstall-tools.sh'):
+            self.assertNotIn('leaving it unchanged', (ROOT / script).read_text(), script)

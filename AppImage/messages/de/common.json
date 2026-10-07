@@ -2011,7 +2011,7 @@
         "oci_modify_completed": "OCI-Anwendung geändert",
         "oci_modify_failed": "Änderung der OCI-Anwendung fehlgeschlagen",
         "oci_watchdog_restarted": "OCI-Anwendung vom Watchdog neu gestartet",
-        "oci_watchdog_failed": "OCI-Anwendung stoppt immer wieder",
+        "oci_watchdog_failed": "OCI-Anwendung vom Watchdog gestoppt belassen",
         "app_update_available": "App-Update verfügbar",
         "lxc_update_applied": "LXC Update angewendet",
         "docker_stack_update_available": "Docker Updates verfügbar"
@@ -6451,9 +6451,9 @@
           "label": "OCI-Anwendung vom Watchdog neu gestartet"
         },
         "oci_watchdog_failed": {
-          "title": "{hostname}: {app_name} stoppt immer wieder",
-          "body": "{app_name} stoppt immer wieder von selbst und wird vom Watchdog nicht mehr neu gestartet.\nContainer: {containers}\nStarten Sie die Anwendung von Hand, sobald die Ursache behoben ist; der Watchdog überwacht sie dann wieder.",
-          "label": "OCI-Anwendung stoppt immer wieder"
+          "title": "{hostname}: {app_name} konnte nicht am Laufen gehalten werden",
+          "body": "Der Watchdog konnte {app_name} nicht am Laufen halten: Die Anwendung stoppte erneut oder startete nach mehreren Versuchen nicht und bleibt gestoppt.\nContainer: {containers}\nStarten Sie die Anwendung von Hand, sobald die Ursache behoben ist; der Watchdog überwacht sie dann wieder.",
+          "label": "OCI-Anwendung vom Watchdog gestoppt belassen"
         },
         "app_update_available": {
           "title": "{hostname}: {app_name} Update verfügbar auf CT {vmid}",
@@ -6722,7 +6722,7 @@
         },
         "system_restore_completed": {
           "title": "{hostname}: Host-Wiederherstellung abgeschlossen",
-          "body": "Aufgaben nach der Wiederherstellung im Hintergrund ausgeführt.\n\nGäste haben sich beworben: {guests}\nBind-Mount-Stubs: {stubs}\nVeraltete Knotenverzeichnisse entfernt: {stale_nodes}\nKomponenten neu installiert: {components}\nDauer: {duration}\n{warnings_block}\nDer Knoten ist nun vollständig einsatzbereit.",
+          "body": "Aufgaben nach der Wiederherstellung im Hintergrund ausgeführt.\n\nGastkonfigurationen kopiert: {guests}\nPlatzhalterverzeichnisse für Bind-Mounts erstellt: {stubs}\nVeraltete Knotenverzeichnisse entfernt: {stale_nodes}\nKomponenten neu installiert: {components}\nDauer: {duration}\n{warnings_block}",
           "label": "Host-Wiederherstellung abgeschlossen"
         },
         "system_problem": {

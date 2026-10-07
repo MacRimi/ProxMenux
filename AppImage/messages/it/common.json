@@ -2011,7 +2011,7 @@
         "oci_modify_completed": "App OCI modificata",
         "oci_modify_failed": "Modifica app OCI non riuscita",
         "oci_watchdog_restarted": "App OCI riavviata dal watchdog",
-        "oci_watchdog_failed": "App OCI che continua ad arrestarsi",
+        "oci_watchdog_failed": "App OCI lasciata ferma dal watchdog",
         "app_update_available": "Aggiornamento app disponibile",
         "lxc_update_applied": "Aggiornamento LXC applicato",
         "docker_stack_update_available": "Aggiornamenti Docker disponibili"
@@ -6451,9 +6451,9 @@
           "label": "App OCI riavviata dal watchdog"
         },
         "oci_watchdog_failed": {
-          "title": "{hostname}: {app_name} continua ad arrestarsi",
-          "body": "{app_name} continua ad arrestarsi da solo e il watchdog non lo riavvia più.\nContainer: {containers}\nAvvialo a mano una volta risolta la causa; il watchdog tornerà a sorvegliarlo.",
-          "label": "App OCI che continua ad arrestarsi"
+          "title": "{hostname}: non è stato possibile mantenere {app_name} in esecuzione",
+          "body": "Il watchdog non è riuscito a mantenere {app_name} in esecuzione: si è arrestato di nuovo o non si è avviato dopo diversi tentativi, e viene lasciato fermo.\nContainer: {containers}\nAvvialo a mano una volta risolta la causa; il watchdog tornerà a sorvegliarlo.",
+          "label": "App OCI lasciata ferma dal watchdog"
         },
         "app_update_available": {
           "title": "{hostname}: aggiornamento {app_name} disponibile su CT {vmid}",
@@ -6722,7 +6722,7 @@
         },
         "system_restore_completed": {
           "title": "{hostname}: ripristino host terminato",
-          "body": "Attività post-ripristino completate in background.\n\nGli ospiti hanno presentato domanda: {guests}\nStub con montaggio tramite collegamento: {stubs}\nDirectory dei nodi obsolete rimosse: {stale_nodes}\nComponenti reinstallati: {components}\nDurata: {duration}\n{warnings_block}\nIl nodo è ora completamente pronto per l'uso.",
+          "body": "Attività post-ripristino completate in background.\n\nConfigurazioni dei guest copiate: {guests}\nDirectory stub per i bind mount create: {stubs}\nDirectory dei nodi obsolete rimosse: {stale_nodes}\nComponenti reinstallati: {components}\nDurata: {duration}\n{warnings_block}",
           "label": "Ripristino host completato"
         },
         "system_problem": {

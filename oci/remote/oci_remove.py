@@ -338,7 +338,7 @@ def remove(root, vmid):
             msg_warn(f"{translate('Could not complete private network release:')} {bridge}")
             incomplete = True
     elif bridge:
-        msg_info(f"{translate('The private network is still used by another container and is kept:')} {bridge}")
+        msg_info(f"{translate('The private network is still used by another guest and is kept:')} {bridge}")
     if not remove_owned_host_firewall(primary):
         incomplete = True
     release_shared_host_files(hookscripts)

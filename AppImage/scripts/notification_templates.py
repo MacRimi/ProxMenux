@@ -935,13 +935,13 @@ TEMPLATES = {
         'default_enabled': True,
     },
     'oci_watchdog_failed': {
-        'title': '{hostname}: {app_name} keeps stopping',
+        'title': '{hostname}: {app_name} could not be kept running',
         'body': (
-            '{app_name} keeps stopping on its own and the watchdog no longer restarts it.\n'
+            'The watchdog could not keep {app_name} running: it stopped again or did not start after several attempts, and it is left stopped.\n'
             'Containers: {containers}\n'
             'Start it by hand once the cause is solved; the watchdog then watches it again.'
         ),
-        'label': 'OCI application keeps stopping',
+        'label': 'OCI application left stopped by the watchdog',
         'group': 'vm_ct',
         'default_enabled': True,
     },
@@ -1378,13 +1378,12 @@ TEMPLATES = {
         'title': '{hostname}: Host restore finished',
         'body': (
             'Post-restore tasks completed in background.\n\n'
-            'Guests applied: {guests}\n'
-            'Bind-mount stubs: {stubs}\n'
+            'Guest configurations copied: {guests}\n'
+            'Bind-mount stub directories created: {stubs}\n'
             'Stale node dirs removed: {stale_nodes}\n'
             'Components reinstalled: {components}\n'
             'Duration: {duration}\n'
-            '{warnings_block}\n'
-            'The node is now fully ready to use.'
+            '{warnings_block}'
         ),
         'label': 'Host restore completed',
         'group': 'services',
