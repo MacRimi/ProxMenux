@@ -1050,7 +1050,7 @@
       },
       "startOnBoot": "Avvio al boot",
       "watchdog": "Watchdog",
-      "watchdogHelp": "Riavvia automaticamente questa applicazione quando si arresta in modo anomalo.",
+      "watchdogHelp": "Riavvia automaticamente questa applicazione in caso di arresto anomalo.",
       "tags": "Tag",
       "tagsPlaceholder": "Aggiungi tag…",
       "tagsNone": "Nessun tag",
@@ -2853,12 +2853,12 @@
         },
         "testsExecuted": {
           "one": "È stato eseguito {count} test.",
-          "few": "Sono stati eseguiti i test {count}.",
+          "few": "Sono stati eseguiti {count} test.",
           "many": "Sono stati eseguiti {count} test."
         },
         "actionableWarnings": {
           "one": "{count} avviso su cui intervenire",
-          "few": "{count} avvisi utili",
+          "few": "{count} avvisi su cui intervenire",
           "many": "{count} avvisi su cui intervenire"
         },
         "actionableSuggestions": {
@@ -4620,29 +4620,29 @@
       "newJob": "Nuovo job",
       "loadFailed": "Impossibile leggere i job di backup",
       "empty": "Nessun job di backup. Crea il primo con “Nuovo job”.",
-      "allGuests": "Tutte le VM/CT",
-      "noGuests": "Nessuna selezione",
-      "storageDefault": "predefinita dello storage",
+      "allGuests": "Tutte le VM e i CT",
+      "noGuests": "Nessun guest selezionato",
+      "storageDefault": "Conservazione predefinita dello storage",
       "hostBackup": "Backup host",
       "attachedHost": "Backup dell’host eseguiti con questo job: {ids}",
       "created": "Job creato",
       "updated": "Job aggiornato",
       "deleted": "Job {id} eliminato",
-      "toggledOn": "Job {id} attivato",
-      "toggledOff": "Job {id} disattivato",
+      "toggledOn": "Job {id} abilitato",
+      "toggledOff": "Job {id} disabilitato",
       "started": "Backup di {id} avviato come task di Proxmox su: {nodes}.",
       "startedPartial": "Impossibile avviarlo su: {nodes}.",
       "dialogNew": "Nuovo job di backup",
       "dialogEdit": "Modifica job {id}",
       "fieldName": "Nome (facoltativo)",
-      "fieldNameHint": "Lettere, numeri e trattini. Vuoto: lo genera Proxmox.",
-      "fieldGuests": "Guest da salvare",
+      "fieldNameHint": "Lettere, numeri e trattini. Se lasci vuoto, Proxmox genera il nome.",
+      "fieldGuests": "Guest da includere nel backup",
       "fieldAll": "Tutte le VM e i container",
       "fieldStorage": "Storage di destinazione",
       "selectStorage": "Seleziona…",
       "noStorage": "Nessuno storage accetta backup. Aggiungine uno in Proxmox, Datacenter → Storage.",
       "fieldSchedule": "Pianificazione",
-      "scheduleCustom": "Personalizzato",
+      "scheduleCustom": "Personalizzata",
       "schedulePlaceholder": "es. mon..fri 01:30",
       "fieldMode": "Modalità",
       "modeSnapshot": "Snapshot (senza interruzione)",
@@ -4655,15 +4655,15 @@
       "save": "Salva",
       "saving": "Salvataggio…",
       "needStorage": "Scegli lo storage di destinazione",
-      "needGuests": "Seleziona almeno una VM/CT",
+      "needGuests": "Seleziona almeno una VM o un CT",
       "saveFailed": "Salvataggio non riuscito",
       "actionFailed": "Operazione non riuscita",
       "deleteTitle": "Elimina job {id}",
       "deleteBody": "Viene rimossa solo la pianificazione. Gli archivi di backup già creati restano sullo storage.",
       "deleteAttached": "Questo job non avvierà più questi backup dell’host: {ids}. Un altro job che scrive sullo stesso storage continua ad avviarli.",
-      "storageAttached": "Questi backup dell’host vengono eseguiti con questo job e si aspettano il suo storage: {ids}. Con un altro storage questo job non li avvia più; un altro job che scrive sullo storage originale continua ad avviarli.",
+      "storageAttached": "Questi backup dell’host vengono eseguiti con questo job e richiedono il suo storage: {ids}. Con un altro storage questo job non li avvia più; un altro job che scrive sullo storage originale continua ad avviarli.",
       "deleteConfirm": "Elimina job",
-      "disableTitle": "Disattiva job {id}",
+      "disableTitle": "Disabilita job {id}",
       "disableBody": "Il job resta configurato, ma le esecuzioni pianificate si fermano finché non viene riattivato. Può comunque essere eseguito a mano.",
       "runTitle": "Esegui ora il job {id}",
       "runBody": "Il backup parte ora con le impostazioni del job, come task di Proxmox.",
@@ -4671,7 +4671,7 @@
       "labelSchedule": "Pianificazione",
       "labelStorage": "Storage",
       "labelMode": "Modalità",
-      "labelRetention": "Retention",
+      "labelRetention": "Conservazione",
       "presets": {
         "daily02": "Ogni giorno alle 02:00",
         "daily03": "Ogni giorno alle 03:00",
@@ -6417,7 +6417,7 @@
         },
         "oci_update_completed": {
           "title": "{hostname}: aggiornamento di {app_name} completato",
-          "body": "{app_name} è stato aggiornato alla nuova immagine e i dati sono stati conservati.\nContenitori: {containers}",
+          "body": "{app_name} è stato aggiornato alla nuova immagine e i dati sono stati conservati.\nContainer: {containers}",
           "label": "Applicazione OCI aggiornata"
         },
         "oci_update_failed": {
@@ -6427,7 +6427,7 @@
         },
         "oci_recreate_completed": {
           "title": "{hostname}: ricreazione di {app_name} completata",
-          "body": "{app_name} è stato ricreato con la configurazione salvata e i dati sono stati conservati.\nContenitori: {containers}",
+          "body": "{app_name} è stato ricreato con la configurazione salvata e i dati sono stati conservati.\nContainer: {containers}",
           "label": "Applicazione OCI ricreata"
         },
         "oci_recreate_failed": {
@@ -6451,8 +6451,8 @@
           "label": "App OCI riavviata dal watchdog"
         },
         "oci_watchdog_failed": {
-          "title": "{hostname}: non è stato possibile mantenere {app_name} in esecuzione",
-          "body": "Il watchdog non è riuscito a mantenere {app_name} in esecuzione: si è arrestato di nuovo o non si è avviato dopo diversi tentativi, e viene lasciato fermo.\nContainer: {containers}\nAvvialo a mano una volta risolta la causa; il watchdog tornerà a sorvegliarlo.",
+          "title": "{hostname}: impossibile mantenere {app_name} in esecuzione",
+          "body": "Il watchdog non è riuscito a mantenere {app_name} in esecuzione: si è arrestato di nuovo o non si è avviato dopo diversi tentativi e resta fermo.\nContainer: {containers}\nAvvialo manualmente dopo aver risolto la causa; il watchdog riprenderà a monitorarlo.",
           "label": "App OCI lasciata ferma dal watchdog"
         },
         "app_update_available": {
@@ -6722,7 +6722,7 @@
         },
         "system_restore_completed": {
           "title": "{hostname}: ripristino host terminato",
-          "body": "Attività post-ripristino completate in background.\n\nConfigurazioni dei guest copiate: {guests}\nDirectory stub per i bind mount create: {stubs}\nDirectory dei nodi obsolete rimosse: {stale_nodes}\nComponenti reinstallati: {components}\nDurata: {duration}\n{warnings_block}",
+          "body": "Attività post-ripristino completate in background.\n\nConfigurazioni guest copiate: {guests}\nDirectory segnaposto per bind mount create: {stubs}\nDirectory obsolete dei nodi rimosse: {stale_nodes}\nComponenti reinstallati: {components}\nDurata: {duration}\n{warnings_block}",
           "label": "Ripristino host completato"
         },
         "system_problem": {
@@ -6852,12 +6852,12 @@
         },
         "post_install_update": {
           "title": "{hostname}: aggiornamenti ottimizzazioni ProxMenux disponibili: {count}",
-          "body": "{count} aggiornamenti delle ottimizzazioni ProxMenux disponibili su questo host.\n\n🛠️ Versioni disponibili:\n{tool_list}\n\n💡 Per applicarli:\n  • ProxMenux Monitor → Settings → ProxMenux Optimizations\n  • Oppure aprire il menu ProxMenux → Impostazioni post-installazione Proxmox → \"Applica aggiornamenti disponibili\"",
+          "body": "Aggiornamenti disponibili per le ottimizzazioni ProxMenux su questo host: {count}.\n\n🛠️ Versioni disponibili:\n{tool_list}\n\n💡 Per applicarli:\n  • ProxMenux Monitor → Impostazioni → Ottimizzazioni ProxMenux\n  • Oppure menu ProxMenux → Impostazioni post-installazione Proxmox → \"Applica aggiornamenti disponibili\"",
           "label": "Aggiornamenti ottimizzazioni ProxMenux disponibili"
         },
         "secure_gateway_update_available": {
           "title": "{hostname}: aggiornamento disponibile per {app_name}{update_title_suffix}",
-          "body": "{app_name} (gestita da ProxMenux) ha 📦 {package_count} aggiornamenti dei pacchetti in sospeso nel proprio container.\n{version_line}\n\n💡 Aprire ProxMenux Monitor > Sicurezza > Secure Gateway e fare clic su \"Update\" per applicarli.\n\n🗂️ Pacchetti:\n{package_list}",
+          "body": "Aggiornamenti dei pacchetti in sospeso nel container di {app_name} (gestita da ProxMenux): 📦 {package_count}.\n{version_line}\n\n💡 Aprire ProxMenux Monitor → Sicurezza → Secure Gateway e fare clic su \"Aggiorna\" per applicarli.\n\n🗂️ Pacchetti:\n{package_list}",
           "label": "Aggiornamento Secure Gateway disponibile"
         },
         "nvidia_driver_update_available": {
