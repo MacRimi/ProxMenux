@@ -25038,6 +25038,44 @@
     "os": "debian"
   },
   {
+    "name": "UniFi Protect Backup",
+    "slug": "unifi-protect-backup",
+    "desc": "Backs up UniFi Protect motion and smart-detection event clips to local or rclone-supported off-site storage in real time.",
+    "script": "ct/unifi-protect-backup.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/unifi-protect-backup.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/unifi-protect-backup.sh",
+    "type": "lxc",
+    "type_id": "nm9bra8mzye2scg",
+    "categories": [
+      "scriptcat00007",
+      "scriptcat00015"
+    ],
+    "category_names": [
+      "Backup & Recovery",
+      "NVR & Cameras"
+    ],
+    "notes": [
+      "Create a dedicated local UniFi Protect user with access to the cameras before installation.",
+      "The initial configuration stores clips locally. Configure an rclone remote and update RCLONE_DESTINATION in /opt/unifi-protect-backup/.env for off-site storage."
+    ],
+    "warnings": [
+      "The default container disk is 4 GB. Select Advanced Install to choose a larger disk when retaining clips locally."
+    ],
+    "port": 0,
+    "website": "https://github.com/ep1cman/unifi-protect-backup",
+    "documentation": "https://github.com/ep1cman/unifi-protect-backup/blob/main/README.md",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/unifi.webp",
+    "updateable": true,
+    "privileged": false,
+    "has_arm": false,
+    "is_dev": true,
+    "execute_in": [
+      "lxc"
+    ],
+    "config_path": "",
+    "os": "debian"
+  },
+  {
     "name": "Unmanic",
     "slug": "unmanic",
     "desc": "Unmanic is a simple tool for optimising your file library. You can use it to convert your files into a single, uniform format, manage file movements based on timestamps, or execute custom commands against a file based on its file size.",
