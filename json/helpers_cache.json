@@ -6710,7 +6710,7 @@
     "updateable": true,
     "privileged": false,
     "has_arm": false,
-    "is_dev": true,
+    "is_dev": false,
     "execute_in": [
       "vm"
     ],
@@ -13826,12 +13826,15 @@
       "Network & Firewall"
     ],
     "notes": [
-      "This VM boots an installer image. Open the console after creation and complete the installation there."
+      "This VM imports a preinstalled MikroTik Cloud Hosted Router (CHR) disk image. No installer needs to be run.",
+      "Run /ip address print and /ip dhcp-client print in RouterOS to check the management IP and DHCP status. Use the configured IP in WinBox or WebFig; if no IP exists, configure networking through the console. Keep CHR on a trusted network until its password and firewall are configured. Factory credentials no longer apply after changing the password."
     ],
-    "warnings": [],
+    "warnings": [
+      "For a fresh official CHR image, open the Proxmox console and log in as admin with an empty password (press Enter). Follow the first-login prompts and set a strong password immediately, or run /password in RouterOS."
+    ],
     "port": 0,
     "website": "https://mikrotik.com/software",
-    "documentation": "https://help.mikrotik.com/docs/",
+    "documentation": "https://help.mikrotik.com/docs/spaces/ROS/pages/18350234/Cloud+Hosted+Router+CHR",
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/mikrotik.webp",
     "updateable": false,
     "privileged": false,
@@ -13841,6 +13844,10 @@
       "vm"
     ],
     "config_path": "",
+    "default_credentials": {
+      "username": "admin",
+      "password": ""
+    },
     "os": ""
   },
   {
