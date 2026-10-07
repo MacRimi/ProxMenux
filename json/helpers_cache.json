@@ -22872,6 +22872,43 @@
     "os": "debian"
   },
   {
+    "name": "Stump",
+    "slug": "stump",
+    "desc": "Stump is a free and open-source comics, manga and digital book server with OPDS support. It scans folders of CBZ, CBR, EPUB and PDF files into libraries and series, reads them in the browser with progress tracking, and serves them to OPDS readers and the Stump mobile apps. This script installs the official Linux server release together with PDFium for PDF support.",
+    "script": "ct/stump.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/stump.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/stump.sh",
+    "type": "lxc",
+    "type_id": "nm9bra8mzye2scg",
+    "categories": [
+      "scriptcat00013"
+    ],
+    "category_names": [
+      "Media & Streaming"
+    ],
+    "notes": [
+      "Books are not added automatically. Create a library in Stump and point it at a folder inside the container. /opt/stump_data/library exists for this; to use a folder from the Proxmox host, bind-mount it there with pct set <CTID> -mp0 /path/on/host,mp=/opt/stump_data/library. In an unprivileged container the files must be readable by host UID 100000.",
+      "OPDS readers connect to http://<IP>:10801/opds/v1.2/catalog (or /opds/v2.0/catalog) with a Stump username and password.",
+      "The database, Stump.toml, thumbnails and logs live in /opt/stump_data/config. STUMP_CONFIG_DIR, STUMP_CLIENT_DIR and PDFIUM_PATH are set in stump.service and take precedence over Stump.toml; run systemctl restart stump after changing either."
+    ],
+    "warnings": [
+      "There is no default account. Open http://<IP>:10801 and complete the onboarding: the first account becomes the server owner and closes sign-up, further users are added from the settings. Anyone who reaches the port can claim the server until then, so do it right after the install."
+    ],
+    "port": 10801,
+    "website": "https://www.stumpapp.dev/",
+    "documentation": "https://www.stumpapp.dev/docs",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/stump.webp",
+    "updateable": true,
+    "privileged": false,
+    "has_arm": false,
+    "is_dev": true,
+    "execute_in": [
+      "lxc"
+    ],
+    "config_path": "",
+    "os": "debian"
+  },
+  {
     "name": "Stylus",
     "slug": "stylus",
     "desc": "Stylus (style + status) is a lightweight status page for infrastructure and networks. Configure a set of bash scripts that test the various parts of your infrastructure, set up visualizations with minimal configuration, and Stylus will generate you a dashboard for your system.",
@@ -23197,7 +23234,7 @@
     ],
     "notes": [
       "Provider CLIs (Codex, Claude, Grok, OpenCode, GitHub) are included in the install. Login to the CT after creation to authenticate with these services.",
-      "Access T3 Code at http://<IP>:3773 and pair a device with the token/QR shown after install. Regenerate it with: `pct exec <CTID> -- t3 pair --base-dir /opt/t3code.`"
+      "Access T3 Code at http://<IP>:3773 and pair a device with the token/QR shown after install. Regenerate it with: `pct exec <CTID> -- t3 pair --base-dir /opt/t3code`."
     ],
     "warnings": [
       "T3 Code and its agents run as root inside the LXC. The service sets IS_SANDBOX=1 so Claude can use Full access mode without a manual environment override. This does not enable additional sandboxing: agents can modify all container data and any writable host bind mounts. Use an unprivileged container and avoid exposing sensitive host paths."
@@ -25669,6 +25706,42 @@
     "os": "debian"
   },
   {
+    "name": "VictoriaLogs",
+    "slug": "victorialogs",
+    "desc": "VictoriaLogs is a fast, cost-effective and scalable open-source log database that can efficiently handle terabytes of logs with minimal resources.",
+    "script": "ct/victorialogs.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/victorialogs.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/victorialogs.sh",
+    "type": "lxc",
+    "type_id": "nm9bra8mzye2scg",
+    "categories": [
+      "scriptcat00009"
+    ],
+    "category_names": [
+      "Monitoring & Analytics"
+    ],
+    "notes": [
+      "Data is stored in /opt/victorialogs_data and persists across updates.",
+      "vlutils (vlogscli, vlagent) are installed in /opt/vlutils."
+    ],
+    "warnings": [
+      "VictoriaLogs has no built-in authentication. Use a reverse proxy with authentication for production deployments."
+    ],
+    "port": 9428,
+    "website": "https://victoriametrics.com/products/victorialogs/",
+    "documentation": "https://docs.victoriametrics.com/victorialogs/",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/victoriametrics.webp",
+    "updateable": true,
+    "privileged": false,
+    "has_arm": false,
+    "is_dev": true,
+    "execute_in": [
+      "lxc"
+    ],
+    "config_path": "",
+    "os": "debian"
+  },
+  {
     "name": "VictoriaMetrics",
     "slug": "victoriametrics",
     "desc": "VictoriaMetrics is a fast, cost-saving, and scalable solution for monitoring and managing time series data. It delivers high performance and reliability, making it an ideal choice for businesses of all sizes.",
@@ -26639,6 +26712,45 @@
     "is_dev": false,
     "execute_in": [
       "pve"
+    ],
+    "config_path": "",
+    "os": "debian"
+  },
+  {
+    "name": "Woodpecker CI",
+    "slug": "woodpecker-ci",
+    "desc": "Woodpecker CI is a simple, community-driven CI/CD engine. Pipelines are YAML files in the repository that run on push, pull request, tag, release, cron or manual events, with matrix builds, secrets, approvals for forks and a web UI with live logs. This script installs the official server and one agent with the local backend and SQLite, and connects it to Forgejo, Gitea, GitHub, GitLab or Bitbucket.",
+    "script": "ct/woodpecker-ci.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/woodpecker-ci.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/woodpecker-ci.sh",
+    "type": "lxc",
+    "type_id": "nm9bra8mzye2scg",
+    "categories": [
+      "scriptcat00020"
+    ],
+    "category_names": [
+      "AI / Coding & Dev-Tools"
+    ],
+    "notes": [
+      "Registration is closed (WOODPECKER_OPEN=false): only the logins in WOODPECKER_ADMIN can sign in until an admin adds more users under Settings > Users.",
+      "WOODPECKER_HOST is set to http://<IP>:8000 and the forge must be able to reach it for webhooks. Forgejo and Gitea refuse webhooks to private addresses unless ALLOWED_HOST_LIST under [webhook] in their app.ini allows them; github.com, gitlab.com and Bitbucket Cloud need Woodpecker CI reachable from the internet. Change WOODPECKER_HOST and the OAuth callback URL together when the IP or domain changes.",
+      "With the local backend, image: names the shell (bash, sh) or a plugin executable, not a container image, so steps like image: golang do not work, and services: are not supported. Install the toolchains your pipelines need in the container. For container-isolated pipelines, add an agent with the Docker or Podman backend on another host, pointed at <IP>:9000 with WOODPECKER_AGENT_SECRET from server.env.",
+      "Everything that is not a binary lives in /opt/woodpecker_data: server.env and agent.env, the SQLite database woodpecker.sqlite and the agent ID in agent.conf. Back up /opt/woodpecker_data."
+    ],
+    "warnings": [
+      "Woodpecker CI has no local accounts, users sign in through the forge. Without the forge settings at install time, create an OAuth app on the forge with the callback URL http://<IP>:8000/authorize, fill in the forge block and WOODPECKER_ADMIN in /opt/woodpecker_data/server.env and run systemctl enable --now woodpecker-server woodpecker-agent.",
+      "The agent uses the local backend: pipeline steps run directly in this container as root, without isolation, so any pipeline can read the database with the users' forge tokens and the secrets in /opt/woodpecker_data. Only build repositories you trust."
+    ],
+    "port": 8000,
+    "website": "https://woodpecker-ci.org/",
+    "documentation": "https://woodpecker-ci.org/docs/intro",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/woodpecker-ci.webp",
+    "updateable": true,
+    "privileged": false,
+    "has_arm": false,
+    "is_dev": true,
+    "execute_in": [
+      "lxc"
     ],
     "config_path": "",
     "os": "debian"
