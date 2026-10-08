@@ -2560,7 +2560,7 @@ class HealthPersistence:
             cursor.execute('''
                 SELECT id FROM disk_registry 
                 WHERE device_name = ? AND serial != '' 
-                ORDER BY last_seen DESC LIMIT 1
+                ORDER BY removed ASC, last_seen DESC LIMIT 1
             ''', (clean_dev,))
             row = cursor.fetchone()
             if row:
@@ -2691,14 +2691,86 @@ class HealthPersistence:
         except Exception as e:
             print(f"[HealthPersistence] Error recording disk observation: {e}")
 
+    # A disk whose serial could not be read is recorded with none, or with the
+    # word the interface shows for it: neither identifies a disk.
+    _NO_SERIAL = "(serial IS NULL OR serial = '' OR serial = 'Unknown')"
+
+    @staticmethod
+    def _known_serial(serial: Optional[str]) -> str:
+        serial = (serial or '').strip()
+        return '' if serial.lower() in ('', 'unknown', 'n/a') else serial
+
+    def _disk_observation_scope(self, cursor, device_name: Optional[str], serial: Optional[str]):
+        """Which observations belong to the disk now known as `device_name`.
+
+        A disk is its serial number: its history follows it to whatever name
+        the kernel gives it. The name alone is a connector, and the disk that
+        was plugged there before keeps its own history. Observations recorded
+        under the name without a serial count for the current disk only from
+        the moment the previous disk with a serial was last seen there.
+
+        Returns (WHERE clause, parameters), or None when nothing is known.
+        """
+        clean_dev = (device_name or '').replace('/dev/', '')
+        serial = self._known_serial(serial)
+        if not serial and clean_dev:
+            cursor.execute(
+                f'SELECT serial FROM disk_registry WHERE device_name = ? AND NOT {self._NO_SERIAL} '
+                'ORDER BY removed ASC, last_seen DESC LIMIT 1', (clean_dev,))
+            row = cursor.fetchone()
+            serial = row[0] if row else ''
+        own = []
+        if serial:
+            cursor.execute('SELECT id FROM disk_registry WHERE serial = ?', (serial,))
+            own = [row[0] for row in cursor.fetchall()]
+        unidentified, since = [], None
+        if clean_dev:
+            cursor.execute(
+                f'SELECT id FROM disk_registry WHERE device_name = ? AND {self._NO_SERIAL}', (clean_dev,))
+            unidentified = [row[0] for row in cursor.fetchall()]
+            cursor.execute(
+                f'SELECT MAX(last_seen) FROM disk_registry '
+                f'WHERE device_name = ? AND NOT {self._NO_SERIAL} AND serial != ?',
+                (clean_dev, serial))
+            since = cursor.fetchone()[0]
+        if not own and not unidentified:
+            return None
+        cursor.execute('PRAGMA table_info(disk_observations)')
+        columns = [col[1] for col in cursor.fetchall()]
+        last_col = 'last_occurrence' if 'last_occurrence' in columns else 'last_seen'
+        clauses, params = [], []
+        if own:
+            clauses.append(f"o.disk_registry_id IN ({','.join('?' * len(own))})")
+            params += own
+        if unidentified:
+            clause = f"o.disk_registry_id IN ({','.join('?' * len(unidentified))})"
+            params += unidentified
+            if since:
+                clause = f'({clause} AND o.{last_col} >= ?)'
+                params.append(since)
+            clauses.append(clause)
+        return '(' + ' OR '.join(clauses) + ')', params
+
+    def count_disk_observations(self, device_name: str, serial: Optional[str] = None) -> int:
+        """Active observations of one disk: the number its badge shows, counted
+        the way `get_disk_observations` lists them."""
+        try:
+            with self._db_connection() as conn:
+                cursor = conn.cursor()
+                scope = self._disk_observation_scope(cursor, device_name, serial)
+                if scope is None:
+                    return 0
+                where, params = scope
+                cursor.execute(
+                    f'SELECT COUNT(*) FROM disk_observations o WHERE {where} AND o.dismissed = 0', params)
+                return int(cursor.fetchone()[0])
+        except Exception as e:
+            print(f"[HealthPersistence] Error counting observations: {e}")
+            return 0
+
     def get_disk_observations(self, device_name: Optional[str] = None,
                                serial: Optional[str] = None) -> List[Dict[str, Any]]:
-        """Get active (non-dismissed) observations for one disk or all disks.
-        
-        For USB disks that may have multiple registry entries (one with serial,
-        one without), this searches ALL registry entries matching the device_name
-        to ensure observations are found regardless of which entry recorded them.
-        """
+        """Get active (non-dismissed) observations for one disk or all disks."""
         try:
             conn = self._get_conn()
             cursor = conn.cursor()
@@ -2712,29 +2784,11 @@ class HealthPersistence:
             last_col = 'last_occurrence' if 'last_occurrence' in columns else 'last_seen'
             
             if device_name or serial:
-                clean_dev = (device_name or '').replace('/dev/', '')
-                
-                # Get ALL disk_registry IDs that match this device_name
-                # This handles USB disks with multiple registry entries
-                cursor.execute(
-                    'SELECT id FROM disk_registry WHERE device_name = ?',
-                    (clean_dev,))
-                all_ids = [row[0] for row in cursor.fetchall()]
-                
-                # Also try to find by serial if provided
-                if serial:
-                    cursor.execute(
-                        'SELECT id FROM disk_registry WHERE serial = ? AND serial != ""',
-                        (serial,))
-                    serial_ids = [row[0] for row in cursor.fetchall()]
-                    all_ids = list(set(all_ids + serial_ids))
-                
-                if not all_ids:
+                scope = self._disk_observation_scope(cursor, device_name, serial)
+                if scope is None:
                     conn.close()
                     return []
-                
-                # Query observations for ALL matching registry entries
-                placeholders = ','.join('?' * len(all_ids))
+                where, params = scope
                 cursor.execute(f'''
                     SELECT o.id, o.{type_col}, o.error_signature,
                            o.{first_col}, o.{last_col},
@@ -2742,9 +2796,9 @@ class HealthPersistence:
                            d.device_name, d.serial, d.model
                     FROM disk_observations o
                     JOIN disk_registry d ON o.disk_registry_id = d.id
-                    WHERE o.disk_registry_id IN ({placeholders}) AND o.dismissed = 0
+                    WHERE {where} AND o.dismissed = 0
                     ORDER BY o.{last_col} DESC
-                ''', all_ids)
+                ''', params)
             else:
                 cursor.execute(f'''
                     SELECT o.id, o.{type_col}, o.error_signature,
@@ -2802,86 +2856,6 @@ class HealthPersistence:
             print(f"[HealthPersistence] get_all_observed_devices failed: {e}")
             return []
     
-    def get_disks_observation_counts(self) -> Dict[str, int]:
-        """Return {device_name: count} of active observations per disk.
-        
-        Groups by serial when available to consolidate counts across device name changes
-        (e.g., ata8 -> sdh). Also includes serial-keyed entries for cross-device matching.
-        """
-        try:
-            conn = self._get_conn()
-            cursor = conn.cursor()
-            
-            # For disks WITH serial: group by serial to consolidate across device renames
-            cursor.execute('''
-                SELECT d.serial, COUNT(o.id) as cnt
-                FROM disk_observations o
-                JOIN disk_registry d ON o.disk_registry_id = d.id
-                WHERE o.dismissed = 0 AND d.serial IS NOT NULL AND d.serial != ''
-                GROUP BY d.serial
-            ''')
-            serial_counts = {row[0]: row[1] for row in cursor.fetchall()}
-            
-            # Get current device_name for each serial (prefer non-ata names)
-            cursor.execute('''
-                SELECT serial, device_name FROM disk_registry
-                WHERE serial IS NOT NULL AND serial != ''
-                ORDER BY 
-                    CASE WHEN device_name LIKE 'ata%' THEN 1 ELSE 0 END,
-                    last_seen DESC
-            ''')
-            serial_to_device = {}
-            for serial, device_name in cursor.fetchall():
-                if serial not in serial_to_device:
-                    serial_to_device[serial] = device_name
-            
-            # Resolve which serial currently OWNS each device_name. The
-            # kernel reuses NVMe / SD device names across reboots
-            # (e.g. the disk that was nvme4n1 with 5 NVMes plugged in
-            # comes back as nvme0n1 once 4 are removed), and
-            # disk_registry keeps a row for every (device_name, serial)
-            # combination it has ever seen. Without this check we would
-            # mirror an observation's count onto its serial's
-            # "most-recent" device_name even when that name is now in
-            # use by a DIFFERENT serial — surfacing a "1 obs." badge on
-            # a disk that has no observations of its own and a clean
-            # modal, since the modal correctly scopes by current
-            # (device_name, serial) pair.
-            cursor.execute('''
-                SELECT device_name, serial FROM disk_registry
-                WHERE device_name IS NOT NULL AND device_name != ''
-                ORDER BY last_seen DESC
-            ''')
-            current_owner = {}
-            for device_name, dev_serial in cursor.fetchall():
-                if device_name not in current_owner:
-                    current_owner[device_name] = dev_serial
-
-            # Build result
-            result = {}
-            for serial, cnt in serial_counts.items():
-                result[f'serial:{serial}'] = cnt
-                device_name = serial_to_device.get(serial)
-                if device_name and current_owner.get(device_name) == serial:
-                    result[device_name] = max(result.get(device_name, 0), cnt)
-            
-            # For disks WITHOUT serial: group by device_name
-            cursor.execute('''
-                SELECT d.device_name, COUNT(o.id) as cnt
-                FROM disk_observations o
-                JOIN disk_registry d ON o.disk_registry_id = d.id
-                WHERE o.dismissed = 0 AND (d.serial IS NULL OR d.serial = '')
-                GROUP BY d.device_name
-            ''')
-            for device_name, cnt in cursor.fetchall():
-                result[device_name] = max(result.get(device_name, 0), cnt)
-            
-            conn.close()
-            return result
-        except Exception as e:
-            print(f"[HealthPersistence] Error getting observation counts: {e}")
-            return {}
-
     def dismiss_disk_observation(self, observation_id: int):
         """Mark a single observation as dismissed."""
         try:
@@ -2918,8 +2892,11 @@ class HealthPersistence:
         except Exception as e:
             print(f"[HealthPersistence] Error cleaning stale observations: {e}")
 
-    def mark_removed_disks(self, active_device_names: List[str]):
-        """Mark disks not in active_device_names as removed."""
+    def mark_removed_disks(self, active_device_names: List[str],
+                           active_serials: Optional[Dict[str, str]] = None):
+        """Mark disks not in active_device_names as removed. With
+        `active_serials` ({device name: serial of the disk there now}), a disk
+        whose name was taken by a different one is marked removed as well."""
         try:
             now = datetime.now().isoformat()
             conn = self._get_conn()
@@ -2930,6 +2907,14 @@ class HealthPersistence:
                     UPDATE disk_registry SET removed = 1
                     WHERE device_name NOT IN ({placeholders}) AND removed = 0
                 ''', active_device_names)
+            for device_name, serial in (active_serials or {}).items():
+                serial = self._known_serial(serial)
+                if serial:
+                    cursor.execute(f'''
+                        UPDATE disk_registry SET removed = 1
+                        WHERE device_name = ? AND NOT {self._NO_SERIAL}
+                          AND serial != ? AND removed = 0
+                    ''', (device_name, serial))
             conn.commit()
             conn.close()
         except Exception as e:

@@ -5596,7 +5596,11 @@ def _oci_instance_meta(vmid) -> Optional[dict]:
         return None
     # While an update or recreation runs, the record is the copy taken before
     # it: still the right identity for the container, not yet its new image.
-    if not isinstance(record, dict) or record.get("status") not in ("installed", "assembling", "updating"):
+    # While the installation runs it already names what the container holds:
+    # the first start of an image that carries Docker inside is long enough
+    # for a probe to find that binary and offer it as an application.
+    if not isinstance(record, dict) or record.get("status") not in (
+            "installed", "installing", "assembling", "updating", "recovering"):
         return None
     template = record.get("template") or {}
     contract = template.get("container_contract") or {}

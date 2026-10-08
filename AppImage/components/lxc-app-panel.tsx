@@ -422,7 +422,8 @@ function buildWebUrl(ip: string | undefined | null, port: number | "", scheme?: 
   const custom = (customUrl || "").trim()
   if (custom) return custom
   if (!ip || ip === "DHCP" || !port) return null
-  return `${scheme || defaultSchemeFor(port)}://${ip}:${port}`
+  const host = ip.includes(":") && !ip.startsWith("[") ? `[${ip}]` : ip
+  return `${scheme || defaultSchemeFor(port)}://${host}:${port}`
 }
 
 // Suggest a dpkg/apk package name from a friendly app name — lowercase,
