@@ -189,6 +189,8 @@
   "Access bridge for Nextcloud": "Puente de acceso para Nextcloud",
   "Access bridge for Paperless": "Puente de acceso para Paperless",
   "Access bridge for Tandoor": "Puente de acceso para Tandoor",
+  "Access could not be granted; the application cannot write to:": "No se pudo conceder el acceso; la aplicación no puede escribir en:",
+  "Access granted to the application on:": "Acceso concedido a la aplicación en:",
   "Access profile:": "Perfil de acceso:",
   "Access token of the Jupyter Lab web interface": "Token de acceso de la interfaz web de Jupyter Lab",
   "Account is not locked": "La cuenta no está bloqueada",
@@ -6105,6 +6107,7 @@
   "The Valkey volume needs at least 1 GB": "El volumen Valkey necesita al menos 1 GB",
   "The acceleration evidence differs from the verified inventory": "Las pruebas de aceleración difieren del inventario verificado",
   "The acceleration profile does not support this architecture:": "El perfil de aceleración no apoya esta arquitectura:",
+  "The access rule added to this host directory is kept:": "La regla de acceso añadida a este directorio del host se conserva:",
   "The active kernel driver is not vfio-pci, but the entry in": "El controlador del kernel activo no es vfio-pci, sino la entrada en",
   "The active kernel driver is not vfio-pci, but the entry will rebind the GPU to vfio-pci on the next reboot, breaking the LXC passthrough about to be configured.": "El controlador del kernel activo no es vfio-pci, pero la entrada volverá a vincular la GPU a vfio-pci en el próximo reinicio, interrumpiendo el passthrough de LXC que está a punto de configurarse.",
   "The active kernel driver is not vfio-pci, but the entry will rebind the GPU to vfio-pci on the next reboot.": "el controlador del kernel activo no es vfio-pci, pero la entrada volverá a vincular la GPU a vfio-pci en el próximo reinicio.",
@@ -7881,6 +7884,7 @@
   "zfs-auto-snapshot removed (existing snapshots preserved on the pool)": "zfs-auto-snapshot eliminado (las instantáneas existentes se conservan en el grupo)",
   "zpool command not found. Install zfsutils-linux and retry.": "Comando zpool no encontrado. Instale zfsutils-linux y vuelva a intentarlo.",
   "zpool not found. Install zfsutils-linux and retry.": "zpool no encontrado. Instale zfsutils-linux y vuelva a intentarlo.",
+  "{path} already exists and belongs to another user of the host, so {app} cannot write to it.\n\nProxMenux can add an access rule (ACL) for the identity {app} uses on the host (UID {uid}). Nothing that is there changes owner or permissions: whatever reads or writes those files today keeps doing so, and the owner of the directory also gets access to the files {app} creates.\n\nGrant {app} access to this directory?": "{path} ya existe y pertenece a otro usuario del host, así que {app} no puede escribir en él.\n\nProxMenux puede añadir una regla de acceso (ACL) para la identidad que {app} usa en el host (UID {uid}). Nada de lo que hay cambia de propietario ni de permisos: lo que hoy lee o escribe esos archivos lo sigue haciendo, y el propietario del directorio también tiene acceso a los archivos que cree {app}.\n\n¿Dar acceso a {app} a este directorio?",
   "— Full/Custom restore will skip kernel-tied paths": "— La restauración completa/personalizada omitirá las rutas vinculadas al kernel",
   "— disk may be busy. Skipping fstab removal.": "— el disco puede estar ocupado. Saltarse la eliminación de fstab.",
   "— restore proceeds as same-version (verified safe)": "- la restauración procede como la misma versión (segura verificada)",
@@ -7912,9 +7916,5 @@
   "⚠ Disk data will NOT be erased.": "⚠ Los datos del disco NO se borrarán.",
   "⚠ Disk will be unmounted and removed from /etc/fstab.": "⚠ El disco se desmontará y se eliminará de /etc/fstab.",
   "⚠ The /etc/fstab entry will be removed.": "⚠ Se eliminará la entrada /etc/fstab.",
-  "⚠ The disk will be unmounted.": "⚠ El disco se desmontará.",
-  "{path} already exists and belongs to another user of the host, so {app} cannot write to it.\n\nProxMenux can add an access rule (ACL) for the identity {app} uses on the host (UID {uid}). Nothing that is there changes owner or permissions: whatever reads or writes those files today keeps doing so, and the owner of the directory also gets access to the files {app} creates.\n\nGrant {app} access to this directory?": "{path} ya existe y pertenece a otro usuario del host, así que {app} no puede escribir en él.\n\nProxMenux puede añadir una regla de acceso (ACL) para la identidad que {app} usa en el host (UID {uid}). Nada de lo que hay cambia de propietario ni de permisos: lo que hoy lee o escribe esos archivos lo sigue haciendo, y el propietario del directorio también tiene acceso a los archivos que cree {app}.\n\n¿Dar acceso a {app} a este directorio?",
-  "Access granted to the application on:": "Acceso concedido a la aplicación en:",
-  "Access could not be granted; the application cannot write to:": "No se pudo conceder el acceso; la aplicación no puede escribir en:",
-  "The access rule added to this host directory is kept:": "La regla de acceso añadida a este directorio del host se conserva:"
+  "⚠ The disk will be unmounted.": "⚠ El disco se desmontará."
 }
