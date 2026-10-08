@@ -35,16 +35,16 @@ Questions and ideas about OCI testing go in [discussion #360](https://github.com
 | AdGuard Home | Adblock & DNS |
 | Adguardhome Sync | Adblock & DNS |
 | Alby Hub ✨ | Finance & Budgeting |
-| Alist | Productivity & Workflows |
+| Alist | Files & Sharing |
 | aMule | Files & Downloads |
 | Chromium | Browsers & Web Desktops |
 | CodeProject.AI Server | AI |
-| CopyParty | Files & Downloads |
+| CopyParty | Files & Sharing |
 | Crafty | Gaming & Leisure |
 | Ddclient | Adblock & DNS |
 | Duplicati | Backup & Recovery |
 | Etherpad | Documents & Notes |
-| FileBrowser Quantum | Tools |
+| FileBrowser Quantum | Files & Sharing |
 | FlareSolverr | *Arr Suite |
 | Flexget | *Arr Suite |
 | Frigate | NVR & Cameras |
@@ -58,7 +58,7 @@ Questions and ideas about OCI testing go in [discussion #360](https://github.com
 | Motioneye | NVR & Cameras |
 | Nextcloud | Productivity & Workflows |
 | Nextcloud Stack | Productivity & Workflows |
-| OpenList | Productivity & Workflows |
+| OpenList | Files & Sharing |
 | Openssh Server | Remote Access & VPN |
 | Paperless-ngx | Productivity & Workflows |
 | Phpmyadmin | Databases |

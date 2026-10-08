@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import ipaddress
 import json
+import os
 import re
 import shutil
 import subprocess
@@ -79,6 +80,33 @@ def ipv4_subnet(bridge: str) -> str | None:
     except ValueError:
         return None
     return str(interface.network) if interface.version == 4 else None
+
+
+def can_write(path: str, uid: int, gid: int) -> bool:
+    """Whether this identity of the host can create files in an existing
+    directory, by its owner, its group, everybody else or an ACL entry."""
+    try:
+        status = os.stat(path)
+    except OSError:
+        return False
+    if status.st_uid == uid:
+        bits = status.st_mode >> 6
+    elif status.st_gid == gid:
+        bits = status.st_mode >> 3
+    else:
+        bits = status.st_mode
+    if bits & 3 == 3:
+        return True
+    try:
+        listing = subprocess.run(["getfacl", "-cpn", path], capture_output=True, text=True, check=False).stdout
+    except OSError:
+        return False
+    for line in listing.splitlines():
+        fields = line.split(":")
+        if (len(fields) >= 3 and fields[0] in ("user", "group") and fields[1] == str(uid if fields[0] == "user" else gid)
+                and "w" in fields[2][:3] and "x" in fields[2][:3]):
+            return True
+    return False
 
 
 def timezone() -> str:

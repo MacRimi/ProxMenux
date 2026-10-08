@@ -115,7 +115,8 @@ def edit_recreation(record, ui):
     if template.get('proxmox', {}).get('installer_profile', {}).get('shared_directories'):
         from .installer import ask_shared_directories
         deployment['mounts'] += ask_shared_directories(
-            ui, template, deployment['mounts'], deployment['rootfs']['storage'], True, optional=True)
+            ui, template, deployment['mounts'], deployment['rootfs']['storage'], True, optional=True,
+            unprivileged=deployment.get('security', {}).get('unprivileged', True))
     from .custom_mounts import ask_custom_mounts
     deployment['mounts'] = ask_custom_mounts(
         ui, deployment['mounts'], deployment['rootfs']['storage'])

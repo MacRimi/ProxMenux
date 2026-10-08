@@ -47,6 +47,7 @@ class InventoryMessages(unittest.TestCase):
         remover.members_of = lambda root, vmid: (101, {}, [102, 101])
         remover.guest_config = lambda vmid: configs.get(vmid)
         remover.host_directories = lambda root, members: cache or []
+        remover.granted_directories = lambda root, members: []
         remover.private_bridge = lambda primary: None
         state = ModuleType('oci_installation_state')
         state.parse_config = lambda raw: dict(line.split(': ', 1) for line in raw.decode().splitlines())
@@ -73,7 +74,7 @@ class InventoryMessages(unittest.TestCase):
                  'instances': SimpleNamespace(read=lambda root, vmid: {'installation_id': 'owned'},
                     identity=lambda raw: 'owned', location=lambda root, vmid: Path('/inert/absent/record.json')),
                  'guest_config': lambda vmid: b'description: owned',
-                 'host_directories': lambda root, members: ['/bind/saved'],
+                 'host_directories': lambda root, members: ['/bind/saved'], 'granted_directories': lambda *args: [],
                  'private_bridge': lambda primary: None,
                  'remove_owned_host_firewall': lambda primary: True,
                  'run': lambda *args: events.append(('run', args)),

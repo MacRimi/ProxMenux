@@ -17,7 +17,7 @@ from typing import Any
 
 from . import host
 from . import network as access
-from .i18n import translate
+from .i18n import source_text, translate
 from .ui import DialogUI, TerminalUI, UserCancelled
 from .custom_mounts import ask_custom_mounts
 from .extra_devices import device_permissions
@@ -141,7 +141,7 @@ SHARED_DIRECTORY_NAME = re.compile(r"[a-z][a-z0-9_-]{0,31}")
 
 
 def ask_shared_directories(ui, template: dict[str, Any], mounts: list[dict[str, Any]], storage: str,
-                           advanced: bool, optional: bool = False) -> list[dict[str, Any]]:
+                           advanced: bool, optional: bool = False, unprivileged: bool = True) -> list[dict[str, Any]]:
     """The directories an application exists to share. Its profile declares one
     container directory, and each directory the user names is mounted below
     it, on a container volume or from a directory of the host. A new
@@ -185,6 +185,22 @@ def ask_shared_directories(ui, template: dict[str, Any], mounts: list[dict[str, 
         else:
             mount["source"] = ui.ask(f"{translate('Host path for')} {target}",
                                      f"/mnt/oci-shared/{app_id}/{name}")
+            # A directory that is already there belongs to whoever made it. The
+            # identity the application writes with is the one of its volumes,
+            # shifted by the range of an unprivileged container.
+            owner = profile.get("volume_owner") or {}
+            shift = 100000 if unprivileged else 0
+            uid, gid = int(owner.get("uid", 0)) + shift, int(owner.get("gid", 0)) + shift
+            if os.path.isdir(mount["source"]) and not host.can_write(mount["source"], uid, gid):
+                title = source_text(template["catalog_ui"]["title"]) or app_id
+                if ui.confirm(translate(
+                        "{path} already exists and belongs to another user of the host, so {app} cannot "
+                        "write to it.\n\nProxMenux can add an access rule (ACL) for the identity {app} uses "
+                        "on the host (UID {uid}). Nothing that is there changes owner or permissions: "
+                        "whatever reads or writes those files today keeps doing so, and the owner of the "
+                        "directory also gets access to the files {app} creates.\n\nGrant {app} access to "
+                        "this directory?").format(path=mount["source"], app=title, uid=uid), True):
+                    mount["grant_access"] = True
         from .custom_mounts import validate_mount
         mount["container_path"] = validate_mount(mount, [*mounts, *added])
         added.append(mount)
@@ -485,7 +501,8 @@ def build_deployment(
         )
 
     if installer_profile.get("shared_directories"):
-        mounts += ask_shared_directories(ui, template, mounts, volume_storage, advanced)
+        mounts += ask_shared_directories(ui, template, mounts, volume_storage, advanced,
+                                         unprivileged=unprivileged)
 
     if advanced:
         mounts = ask_custom_mounts(ui, mounts, volume_storage)

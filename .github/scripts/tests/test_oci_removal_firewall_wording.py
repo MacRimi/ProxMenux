@@ -50,6 +50,7 @@ class RemovalWordings(unittest.TestCase):
             {'host_firewall': {'port': 8080}} if firewall else {}}, [102, 101])
         remover.guest_config = lambda member: None
         remover.host_directories = lambda root, members: []
+        remover.granted_directories = lambda root, members: []
         remover.private_bridge = lambda primary: bridge
         remover.bridge_in_use = lambda bridge, removed: False
         state = ModuleType('oci_installation_state')
@@ -79,6 +80,7 @@ class RemovalWordings(unittest.TestCase):
         remover.members_of = lambda root, vmid: (101, {'stack': {}}, [102, 101])
         remover.guest_config = lambda member: None
         remover.host_directories = lambda root, members: []
+        remover.granted_directories = lambda root, members: []
         remover.private_bridge = lambda primary: None
         state = ModuleType('oci_installation_state')
         state.parse_config = lambda raw: {}
@@ -108,7 +110,7 @@ class RemovalWordings(unittest.TestCase):
                      identity=lambda raw: 'reassigned' if raw == b'reassigned' else 'owned',
                      location=lambda root, vmid: Path('/inert/absent/record.json')),
                  'guest_config': lambda vmid: b'reassigned' if vmid == 102 else b'owned',
-                 'host_directories': lambda root, members: [], 'private_bridge': lambda primary: 'vmbr9',
+                 'host_directories': lambda root, members: [], 'granted_directories': lambda *args: [], 'private_bridge': lambda primary: 'vmbr9',
                  'bridge_in_use': lambda bridge, removed: True,
                  'release_bridge': lambda bridge: self.fail('shared bridge release'),
                  'remove_owned_host_firewall': lambda record: None,
@@ -179,7 +181,7 @@ class RemovalWordings(unittest.TestCase):
                      location=lambda root, vmid: Path('/inert/absent/record.json')),
                  'guest_config': lambda vmid: (None if missing else b'reassigned' if reassigned else b'owned')
                      if vmid == 102 else b'primary',
-                 'host_directories': lambda *args: ['/retained'] if kept else [],
+                 'host_directories': lambda *args: ['/retained'] if kept else [], 'granted_directories': lambda *args: [],
                  'private_bridge': lambda primary: 'vmbr9' if bridge != 'none' else None,
                  'bridge_in_use': lambda *args: bridge == 'shared',
                  'run': lambda *args: commands.append(args), 'subprocess': fake_subprocess,
@@ -258,7 +260,7 @@ class RemovalWordings(unittest.TestCase):
         scope = {'members_of': lambda root, vmid: (101, {}, [101]),
                  'instances': SimpleNamespace(read=lambda root, vmid: {'installation_id': 'owned'},
                      identity=lambda cfg: 'owned', location=lambda root, vmid: Path('/inert/absent/record.json')),
-                 'guest_config': lambda vmid: b'owned', 'host_directories': lambda *args: [],
+                 'guest_config': lambda vmid: b'owned', 'host_directories': lambda *args: [], 'granted_directories': lambda *args: [],
                  'private_bridge': lambda primary: 'vmbr9', 'bridge_in_use': lambda *args: False,
                  'release_bridge': lambda bridge: events.append(('attempt', bridge)),
                  'remove_owned_host_firewall': lambda record: None, 'run': lambda *args: None,

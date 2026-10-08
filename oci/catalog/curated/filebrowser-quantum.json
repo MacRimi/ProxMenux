@@ -13,8 +13,8 @@
     "description": {
       "en_US": "Official image with managed persistent configuration and selectable content storage. Validated on amd64: clean install, authenticated login, same-digest recreation and interrupted-candidate recovery. Cross-release migration and arm64 runtime not tested."
     },
-    "category": "tools",
-    "category_label": "Tools",
+    "category": "sharing",
+    "category_label": "Files & Sharing",
     "author": "gtsteffaniak",
     "developer": "gtsteffaniak",
     "icon": null,

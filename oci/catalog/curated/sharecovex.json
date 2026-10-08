@@ -89,7 +89,7 @@
         "default": "managed-volume",
         "managed_volume": {
           "backup": true,
-          "default_size_gb": 16
+          "default_size_gb": 1
         }
       }
     ],

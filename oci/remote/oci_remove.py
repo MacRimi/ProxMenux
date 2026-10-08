@@ -79,6 +79,20 @@ def host_directories(root, members):
     return paths
 
 
+def granted_directories(root, members):
+    """The host directories the installation was given access to with an ACL."""
+    paths = []
+    for vmid in members:
+        try:
+            record = instances.read(root, vmid)
+        except (OSError, ValueError, KeyError):
+            continue
+        for mount in record.get('deployment', {}).get('mounts', []):
+            if mount.get('grant_access') is True and mount.get('source') not in paths:
+                paths.append(mount['source'])
+    return paths
+
+
 def private_bridge(primary):
     network = (primary.get('stack') or {}).get('deployment', {}).get('network', {})
     bridge = network.get('private_bridge')
@@ -313,6 +327,7 @@ def remove(root, vmid):
             raise ValueError(f"{translate('The container runs on another node of the cluster; migrate it back to this node to remove it:')} "
                              f"CT {member} ({node})")
     kept = host_directories(root, members)
+    granted = granted_directories(root, members)
     bridge = private_bridge(primary)
     incomplete = False
     msg_info(translate('Removing the containers...'))
@@ -359,6 +374,9 @@ def remove(root, vmid):
         msg_ok(f"{translate('Unused image removed from the cache:')} {path.name}")
     for path in kept:
         msg_info(f"{translate('Host directory listed in saved records (not targeted for removal):')} {path}")
+    for path in granted:
+        # Another container may write to it with the same identity.
+        msg_info(f"{translate('The access rule added to this host directory is kept:')} {path}")
     return incomplete
 
 

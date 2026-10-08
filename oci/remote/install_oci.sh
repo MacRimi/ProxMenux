@@ -1779,12 +1779,42 @@ fi
 if [[ $SELINUX_LABEL_DISABLED == true ]]; then
   oci_log "label:disable kept as metadata; Proxmox uses AppArmor, not SELinux, for this LXC"
 fi
+# Gives the identity the application writes with access to a host directory
+# that belongs to someone else, with an ACL: the owner and the permissions of
+# what is there stay as they are, and the owner of the directory keeps access
+# to what the application creates in it.
+grant_shared_access() {
+  local source=$1 owner group triplet default_spec
+  command -v setfacl >/dev/null 2>&1 && command -v getfacl >/dev/null 2>&1 || return 1
+  # Granted already: an update or a modification installs the container again.
+  if getfacl -cpn "$source" 2>/dev/null | grep -q "^user:${HOST_BIND_UID}:rwx" \
+     && getfacl -cpn "$source" 2>/dev/null | grep -q "^default:user:${HOST_BIND_UID}:rwx"; then
+    return 0
+  fi
+  owner=$(stat -c '%u' "$source") || return 1
+  group=$(stat -c '%g' "$source") || return 1
+  default_spec="d:u:${HOST_BIND_UID}:rwx,d:g:${HOST_BIND_GID}:rwx"
+  if [[ $owner != 0 && $owner != "$HOST_BIND_UID" ]]; then
+    default_spec="${default_spec},d:u:${owner}:rwx"
+  fi
+  if [[ $group != 0 && $group != "$HOST_BIND_GID" ]]; then
+    triplet=$(stat -c '%A' "$source")
+    triplet=${triplet:4:3}
+    triplet=${triplet//s/x}
+    triplet=${triplet//S/-}
+    default_spec="${default_spec},d:g:${group}:${triplet}"
+  fi
+  setfacl -R -P -m "u:${HOST_BIND_UID}:rwX,g:${HOST_BIND_GID}:rwX" "$source" 2>>"${OCI_LOG:-/dev/null}" || return 1
+  find "$source" -xdev -type d -exec setfacl -m "$default_spec" {} + 2>>"${OCI_LOG:-/dev/null}" || return 1
+}
+
 MOUNT_ENTRIES=$(jq '.mounts | if type == "array" then length else 0 end' "$DEPLOYMENT_FILE")
 MOUNT_NOTES=()
+MOUNT_WARNINGS=()
 if (( MOUNT_ENTRIES > 0 )); then
   msg_info "$(translate "Adding the mount points...")"
 fi
-while IFS=$'\t' read -r TYPE TARGET SOURCE SIZE BACKUP READ_ONLY CREATE_IF_MISSING; do
+while IFS=$'\t' read -r TYPE TARGET SOURCE SIZE BACKUP READ_ONLY CREATE_IF_MISSING GRANT_ACCESS; do
   [[ -n $TYPE ]] || continue
   [[ $TARGET == /* && $TARGET != *","* ]] || die "$(translate "Invalid container path:") $TARGET"
   RO_OPT=""
@@ -1821,6 +1851,15 @@ while IFS=$'\t' read -r TYPE TARGET SOURCE SIZE BACKUP READ_ONLY CREATE_IF_MISSI
       MOUNT_NOTES+=("$(translate "Shared directory created:") $SOURCE")
     fi
     [[ -e $SOURCE ]] || die "$(translate "The host bind source does not exist:") $SOURCE"
+    if [[ -d $SOURCE && $GRANT_ACCESS == true ]]; then
+      if grant_shared_access "$SOURCE"; then
+        oci_log "Access granted with an ACL: $SOURCE (uid=$HOST_BIND_UID gid=$HOST_BIND_GID)"
+        MOUNT_NOTES+=("$(translate "Access granted to the application on:") $SOURCE")
+      else
+        oci_log "Could not grant access with an ACL: $SOURCE"
+        MOUNT_WARNINGS+=("$(translate "Access could not be granted; the application cannot write to:") $SOURCE")
+      fi
+    fi
     if [[ -d $SOURCE ]]; then
       if [[ -n ${PROXMENUX_OCI_TRANSACTION:-} ]]; then
         python3 "${SCRIPT_DIR}/oci_instance_transaction.py" --root "$INSTANCE_ROOT" \
@@ -1847,12 +1886,15 @@ while IFS=$'\t' read -r TYPE TARGET SOURCE SIZE BACKUP READ_ONLY CREATE_IF_MISSI
   oci_quiet pct set "$VMID" "--mp${MOUNT_INDEX}" "$MP_VALUE" \
     || die "$(translate "Could not add the mount point:") $TARGET"
   MOUNT_INDEX=$((MOUNT_INDEX + 1))
-done < <(jq -r '.mounts[] | [.type,.container_path,.source,(.size_gb // "-"),(.backup | if . then 1 else 0 end),.read_only,(.create_if_missing // false)] | @tsv' "$DEPLOYMENT_FILE")
+done < <(jq -r '.mounts[] | [.type,.container_path,.source,(.size_gb // "-"),(.backup | if . then 1 else 0 end),.read_only,(.create_if_missing // false),(.grant_access // false)] | @tsv' "$DEPLOYMENT_FILE")
 if (( MOUNT_ENTRIES > 0 )); then
   msg_ok "$(translate "Mount points added:") $MOUNT_ENTRIES"
 fi
 for MOUNT_NOTE in ${MOUNT_NOTES[@]+"${MOUNT_NOTES[@]}"}; do
   msg_ok "$MOUNT_NOTE"
+done
+for MOUNT_WARNING in ${MOUNT_WARNINGS[@]+"${MOUNT_WARNINGS[@]}"}; do
+  msg_warn "$MOUNT_WARNING"
 done
 
 while IFS=$'\t' read -r TARGET SIZE_MB OPTIONS; do

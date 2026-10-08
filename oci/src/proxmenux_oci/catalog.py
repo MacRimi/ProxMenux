@@ -368,7 +368,8 @@ class Catalog:
             except (OSError, json.JSONDecodeError):
                 data = {}
             self._volume_policy = {"shared_paths": set(data.get("shared_paths", [])),
-                                   "applications": data.get("applications", {})}
+                                   "applications": data.get("applications", {}),
+                                   "sizes": data.get("sizes", {})}
         return self._volume_policy
 
     def _apply_volume_policy(self, app_id: str, contract: dict[str, Any]) -> None:
@@ -377,6 +378,8 @@ class Catalog:
         state of the application stays in a container volume without asking."""
         policy = self.volume_policy()
         shared = policy["shared_paths"] | set(policy["applications"].get(app_id, []))
+        # A volume known to stay small is created at its stated size.
+        sizes = policy.get("sizes", {}).get(app_id, {})
         for volume in contract.get("volumes", []):
             choices = volume.get("installation_choice", [])
             if "managed-volume" not in choices:
@@ -390,7 +393,9 @@ class Catalog:
                 volume["default"] = "managed-volume"
             managed = volume.get("managed_volume")
             if isinstance(managed, dict):
-                managed["default_size_gb"] = max(int(managed.get("default_size_gb") or 0), MINIMUM_VOLUME_GB)
+                stated = sizes.get(volume["container_path"])
+                managed["default_size_gb"] = (int(stated) if stated else
+                                              max(int(managed.get("default_size_gb") or 0), MINIMUM_VOLUME_GB))
 
     def _enrich_index_from_templates(self, payload: dict[str, Any]) -> None:
         for item in payload.get("applications", []):

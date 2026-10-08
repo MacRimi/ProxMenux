@@ -116,5 +116,10 @@
     "unpackerr": [
       "/data"
     ]
+  },
+  "sizes": {
+    "sharecovex": {
+      "/config": 1
+    }
   }
 }
