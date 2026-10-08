@@ -92,7 +92,7 @@ def check(config, deployment, vmid):
     includes = [line.split(': ',1)[1] for line in lines if line.startswith('lxc.include: ')]
     if deployment.get('host_monitor'):
         if not host_monitor_include(includes):
-            raise ValueError(translate('The sysctl include is unknown or differs from the saved record'))
+            raise ValueError(translate('The host monitor include is unknown or differs from the saved record'))
         return
     content = sysctl_content(deployment)
     allowed = [[str(include_path(vmid))], [str(legacy_include_path(vmid))]] if content else [[]]

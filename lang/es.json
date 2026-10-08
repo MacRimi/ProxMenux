@@ -189,7 +189,7 @@
   "Access bridge for Nextcloud": "Puente de acceso para Nextcloud",
   "Access bridge for Paperless": "Puente de acceso para Paperless",
   "Access bridge for Tandoor": "Puente de acceso para Tandoor",
-  "Access could not be granted; the application cannot write to:": "No se pudo conceder el acceso; la aplicación no puede escribir en:",
+  "Access could not be granted completely; the application may be unable to write to:": "No se pudo conceder el acceso por completo; puede que la aplicación no pueda escribir en:",
   "Access granted to the application on:": "Acceso concedido a la aplicación en:",
   "Access profile:": "Perfil de acceso:",
   "Access token of the Jupyter Lab web interface": "Token de acceso de la interfaz web de Jupyter Lab",
@@ -6175,7 +6175,7 @@
   "The container devices do not match the saved record": "Los dispositivos del contenedor no coinciden con el registro guardado",
   "The container did not stop to update its persistent configuration:": "El contenedor no se detuvo para actualizar su configuración persistente:",
   "The container did not stop; its disks are not touched": "El contenedor no se detuvo; sus discos no se tocan",
-  "The container disks do not match the saved record": "Los discos de contenedores no coinciden con el disco guardado",
+  "The container disks do not match the saved record": "Los discos del contenedor no coinciden con el registro guardado",
   "The container does not exist:": "El contenedor no existe:",
   "The container does not have the fuse=1 feature enabled": "El contenedor no tiene activada la función fuse=1",
   "The container does not need it any more; an update downloads the new version when there is one.": "El contenedor ya no lo necesita; una actualización descarga la nueva versión cuando la hay.",
@@ -7885,7 +7885,7 @@
   "zfs-auto-snapshot removed (existing snapshots preserved on the pool)": "zfs-auto-snapshot eliminado (las instantáneas existentes se conservan en el grupo)",
   "zpool command not found. Install zfsutils-linux and retry.": "Comando zpool no encontrado. Instale zfsutils-linux y vuelva a intentarlo.",
   "zpool not found. Install zfsutils-linux and retry.": "zpool no encontrado. Instale zfsutils-linux y vuelva a intentarlo.",
-  "{path} already exists and belongs to another user of the host, so {app} cannot write to it.\n\nProxMenux can add an access rule (ACL) for the identity {app} uses on the host (UID {uid}). Nothing that is there changes owner or permissions: whatever reads or writes those files today keeps doing so, and the owner of the directory also gets access to the files {app} creates.\n\nGrant {app} access to this directory?": "{path} ya existe y pertenece a otro usuario del host, así que {app} no puede escribir en él.\n\nProxMenux puede añadir una regla de acceso (ACL) para la identidad que {app} usa en el host (UID {uid}). Nada de lo que hay cambia de propietario ni de permisos: lo que hoy lee o escribe esos archivos lo sigue haciendo, y el propietario del directorio también tiene acceso a los archivos que cree {app}.\n\n¿Dar acceso a {app} a este directorio?",
+  "{path} already exists and belongs to another user of the host, so {app} cannot write to it.\n\nProxMenux can add access rules (ACL) to this directory, to everything inside it and to what is created there later, for the users and groups {app} runs as on the host (IDs {ids}). The owner of the files does not change and whatever reads or writes them today keeps doing so; the owner of the directory also gets access to the files {app} creates.\n\nGrant {app} access to this directory?": "{path} ya existe y pertenece a otro usuario del host, así que {app} no puede escribir en él.\n\nProxMenux puede añadir reglas de acceso (ACL) a este directorio, a todo lo que contiene y a lo que se cree en él después, para los usuarios y grupos con los que {app} se ejecuta en el host (ID {ids}). El propietario de los archivos no cambia y lo que hoy los lee o escribe lo sigue haciendo; el propietario del directorio también tiene acceso a los archivos que cree {app}.\n\n¿Dar acceso a {app} a este directorio?",
   "— Full/Custom restore will skip kernel-tied paths": "— La restauración completa/personalizada omitirá las rutas vinculadas al kernel",
   "— disk may be busy. Skipping fstab removal.": "— el disco puede estar ocupado. Saltarse la eliminación de fstab.",
   "— restore proceeds as same-version (verified safe)": "- la restauración procede como la misma versión (segura verificada)",
@@ -7917,5 +7917,7 @@
   "⚠ Disk data will NOT be erased.": "⚠ Los datos del disco NO se borrarán.",
   "⚠ Disk will be unmounted and removed from /etc/fstab.": "⚠ El disco se desmontará y se eliminará de /etc/fstab.",
   "⚠ The /etc/fstab entry will be removed.": "⚠ Se eliminará la entrada /etc/fstab.",
-  "⚠ The disk will be unmounted.": "⚠ El disco se desmontará."
+  "⚠ The disk will be unmounted.": "⚠ El disco se desmontará.",
+  "The privilege mode of the container does not match the saved record": "El modo de privilegios del contenedor no coincide con el registro guardado",
+  "The host monitor include is unknown or differs from the saved record": "El include del monitor del host es desconocido o difiere del registro guardado"
 }

@@ -194,13 +194,17 @@ def ask_shared_directories(ui, template: dict[str, Any], mounts: list[dict[str, 
             uid, gid = int(owner.get("uid", 0)) + shift, int(owner.get("gid", 0)) + shift
             if os.path.isdir(mount["source"]) and not host.can_write(mount["source"], uid, gid):
                 title = source_text(template["catalog_ui"]["title"]) or app_id
+                # The rules name the identity of the application and, in an
+                # unprivileged container, the one its root has on the host.
+                ids = ", ".join(str(value) for value in dict.fromkeys([uid, gid, *([shift] if shift else [])]))
                 if ui.confirm(translate(
                         "{path} already exists and belongs to another user of the host, so {app} cannot "
-                        "write to it.\n\nProxMenux can add an access rule (ACL) for the identity {app} uses "
-                        "on the host (UID {uid}). Nothing that is there changes owner or permissions: "
-                        "whatever reads or writes those files today keeps doing so, and the owner of the "
-                        "directory also gets access to the files {app} creates.\n\nGrant {app} access to "
-                        "this directory?").format(path=mount["source"], app=title, uid=uid), True):
+                        "write to it.\n\nProxMenux can add access rules (ACL) to this directory, to "
+                        "everything inside it and to what is created there later, for the users and groups "
+                        "{app} runs as on the host (IDs {ids}). The owner of the files does not change and "
+                        "whatever reads or writes them today keeps doing so; the owner of the directory "
+                        "also gets access to the files {app} creates.\n\nGrant {app} access to this "
+                        "directory?").format(path=mount["source"], app=title, ids=ids), True):
                     mount["grant_access"] = True
         from .custom_mounts import validate_mount
         mount["container_path"] = validate_mount(mount, [*mounts, *added])

@@ -1876,7 +1876,7 @@ while IFS=$'\t' read -r TYPE TARGET SOURCE SIZE BACKUP READ_ONLY CREATE_IF_MISSI
         MOUNT_NOTES+=("$(translate "Access granted to the application on:") $SOURCE")
       else
         oci_log "Could not grant access with an ACL: $SOURCE"
-        MOUNT_WARNINGS+=("$(translate "Access could not be granted; the application cannot write to:") $SOURCE")
+        MOUNT_WARNINGS+=("$(translate "Access could not be granted completely; the application may be unable to write to:") $SOURCE")
       fi
     fi
     if [[ -d $SOURCE ]]; then

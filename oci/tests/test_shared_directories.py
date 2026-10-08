@@ -145,8 +145,9 @@ class SharedDirectoriesTests(unittest.TestCase):
                 question = next(text for text in ui.asked if "Grant ShareCoveX access" in text)
                 # The identity is the one of the volumes, in the range of an unprivileged container.
                 check.assert_called_once_with(directory, 101000, 101000)
-                self.assertIn("UID 101000", question)
-                self.assertIn("changes owner or permissions", question)
+                # The identity and the root of the container, as the host sees them.
+                self.assertIn("(IDs 101000, 100000)", question)
+                self.assertIn("everything inside it and to what is created there later", question)
                 self.assertIs(plan["mounts"][1]["grant_access"], True)
                 _ui, _template, declined = self.build({**answers, question: [False]})
                 self.assertNotIn("grant_access", declined["mounts"][1])
@@ -162,9 +163,10 @@ class SharedDirectoriesTests(unittest.TestCase):
                 first = build_deployment(template, ui, ADVANCED_MODE)
                 prompt = next(text for text in ui.asked if nfsv4 in text)
                 check.reset_mock()
-                build_deployment(self.catalog.compose("sharecovex"), ScriptedUI({**answers, prompt: [True]}),
-                                 ADVANCED_MODE)
+                privileged = ScriptedUI({**answers, prompt: [True]})
+                build_deployment(self.catalog.compose("sharecovex"), privileged, ADVANCED_MODE)
                 check.assert_called_once_with(directory, 1000, 1000)
+                self.assertTrue(any("(IDs 1000)" in text for text in privileged.asked))
                 self.assertIsNotNone(first)
 
     def test_a_directory_that_does_not_exist_yet_is_created_for_the_application(self, *_):

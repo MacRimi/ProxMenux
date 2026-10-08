@@ -520,7 +520,9 @@ def preflight(record, candidate, config, coordinated=None):
             else:
                 raise ValueError(translate('Unsupported mount type'))
             paths.append(target)
-    if cfg.get('unprivileged', '0') != ('1' if unprivileged else '0') or ':' not in cfg.get('rootfs', ''):
+    if cfg.get('unprivileged', '0') != ('1' if unprivileged else '0'):
+        raise ValueError(translate('The privilege mode of the container does not match the saved record'))
+    if ':' not in cfg.get('rootfs', ''):
         raise ValueError(translate('The container disks do not match the saved record'))
     if desired['rootfs'] != deployment['rootfs']:
         raise ValueError(translate('Changing the rootfs or its storage requires a separate migration'))
