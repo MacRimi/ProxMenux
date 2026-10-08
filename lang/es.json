@@ -6270,6 +6270,7 @@
   "The host has no IPv4 address on the selected bridge": "El host no tiene dirección IPv4 en el puente seleccionado",
   "The host monitor does not see the real host memory": "El monitor host no ve la memoria real del host",
   "The host monitor does not share this host namespace:": "El monitor host no comparte este espacio de nombres de host:",
+  "The host monitor include is unknown or differs from the saved record": "El include del monitor del host es desconocido o difiere del registro guardado",
   "The host monitor needs consent for privileged access to the host": "El monitor host necesita el consentimiento para el acceso privilegiado al host",
   "The host monitor profile does not support another sysctl include": "El perfil de monitor host no soporta otro sísctl incluye",
   "The host monitor uses the host network, without DHCP or its own gateway": "El monitor host utiliza la red host, sin DHCP o su propia puerta de entrada",
@@ -6403,6 +6404,7 @@
   "The private network is still used by another guest and is kept:": "Otra VM u otro CT sigue usando la red privada, así que se conserva:",
   "The private network must be assigned automatically": "La red privada debe ser asignada automáticamente",
   "The private network of the application is already in use on this host:": "La red privada de la aplicación ya está en uso en este host:",
+  "The privilege mode of the container does not match the saved record": "El modo de privilegios del contenedor no coincide con el registro guardado",
   "The privileged deployment does not include the required explicit consent": "El despliegue privilegiado no incluye el consentimiento explícito necesario",
   "The prlimit soft value exceeds the hard value": "El valor prlimit blando supera el valor duro",
   "The profile sets SETUP_PORT=8123. Port 80 is only used when that variable is emptied.": "El perfil establece SETUP_PORT=8123. El puerto 80 solo se usa cuando esa variable se deja vacía.",
@@ -7917,7 +7919,5 @@
   "⚠ Disk data will NOT be erased.": "⚠ Los datos del disco NO se borrarán.",
   "⚠ Disk will be unmounted and removed from /etc/fstab.": "⚠ El disco se desmontará y se eliminará de /etc/fstab.",
   "⚠ The /etc/fstab entry will be removed.": "⚠ Se eliminará la entrada /etc/fstab.",
-  "⚠ The disk will be unmounted.": "⚠ El disco se desmontará.",
-  "The privilege mode of the container does not match the saved record": "El modo de privilegios del contenedor no coincide con el registro guardado",
-  "The host monitor include is unknown or differs from the saved record": "El include del monitor del host es desconocido o difiere del registro guardado"
+  "⚠ The disk will be unmounted.": "⚠ El disco se desmontará."
 }
