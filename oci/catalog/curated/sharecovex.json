@@ -2,7 +2,7 @@
   "schema_version": "0.5.0",
   "kind": "proxmenux.oci-template",
   "id": "image-sharecovex",
-  "status": "generated-unvalidated",
+  "status": "laboratory-validated",
   "catalog_ui": {
     "title": {
       "en_US": "ShareCoveX"
@@ -534,8 +534,8 @@
   },
   "validation": {
     "schema": "passed-at-generation",
-    "clean_install": "pending",
-    "service_health": "pending",
+    "clean_install": "passed-amd64",
+    "service_health": "passed-amd64",
     "restart_persistence": "pending",
     "backup_restore": "pending",
     "update_preserves_data": "pending"

@@ -9785,7 +9785,7 @@
       "replaces_discovered_ids": [],
       "curated_path": "catalog/curated/sharecovex.json",
       "template": "apps/sharecovex.json",
-      "template_status": "generated-unvalidated",
+      "template_status": "laboratory-validated",
       "automatic_install_candidate": true,
       "untranslated_blockers": [],
       "requires_privileged_lxc": false,
