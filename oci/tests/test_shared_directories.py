@@ -92,6 +92,10 @@ class SharedDirectoriesTests(unittest.TestCase):
         prepared = {item["container_path"]: item["owner_strategy"]
                     for item in template["proxmox"]["installer_profile"]["volume_preparations"]}
         self.assertEqual(prepared, {"/config": "mapped-root", "/shares/backups": "mapped-application-user"})
+        # Its group writes as well, for when each Samba user acts as itself.
+        modes = {item["container_path"]: item.get("mode")
+                 for item in template["proxmox"]["installer_profile"]["volume_preparations"]}
+        self.assertEqual(modes, {"/config": None, "/shares/backups": "2775"})
 
     def test_a_default_installation_stays_unprivileged_and_generates_the_panel_password(self, *_):
         ui, _template, plan = self.build({NAME: ["media"]})
@@ -194,7 +198,14 @@ class SharedDirectoriesTests(unittest.TestCase):
         self.assertNotIn("chown", grant)
         self.assertNotIn("chmod", grant)
         self.assertIn('grep -q "^default:user:${HOST_BIND_UID}:rwx"', grant)
-        self.assertIn('setfacl -R -P -m "u:${HOST_BIND_UID}:rwX,g:${HOST_BIND_GID}:rwX"', grant)
+        self.assertIn('spec="u:${HOST_BIND_UID}:rwX,g:${HOST_BIND_GID}:rwX"', grant)
+        self.assertIn('setfacl -R -P -m "$spec" "$source"', grant)
+        # In an unprivileged container its root user is named too: it lists the folders.
+        self.assertIn('spec="${spec},u:${HOST_ROOT_UID}:rwX,g:${HOST_ROOT_GID}:rwX"', grant)
+        self.assertIn("apt-get install -y acl", grant)
+        # A preparation may state the mode of its directory.
+        self.assertIn('chmod "$preparation_mode" "${rootfs}${target}"', script)
+        self.assertIn("[[ $preparation_mode =~ ^[0-7]{3,4}$ ]]", script)
 
     def test_a_name_that_cannot_identify_a_share_is_refused(self, *_):
         for name in ("Media", "my files", "9lives", "config", "", "a" * 33):

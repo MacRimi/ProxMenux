@@ -767,6 +767,7 @@
   "Changing between a privileged and an unprivileged container, or the host monitor mode, requires installing the application again": "Cambiar entre contenedor privilegiado y sin privilegios, o el modo de monitor del host, requiere instalar la aplicación de nuevo",
   "Changing the machine type on an existing installed VM is not safe: it changes the chipset and PCI slot layout, which typically prevents the guest OS from booting.": "Cambiar el tipo de máquina de una VM ya instalada no es seguro: cambia el chipset y la disposición de las ranuras PCI, lo que normalmente impide que arranque el sistema operativo de la VM.",
   "Changing the rootfs or its storage requires a separate migration": "Cambiar los rootfs o su almacenamiento requiere una migración separada",
+  "Changing the shared identity (1000:1000) in Settings of the panel means giving the new one access on the host again: the volumes and the access rules are prepared for 1000:1000.": "Cambiar la identidad compartida (1000:1000) en Ajustes del panel obliga a dar acceso de nuevo a la nueva en el host: los volúmenes y las reglas de acceso se preparan para 1000:1000.",
   "Changing the storage or size of a disk requires a migration; empty disks are not created": "Cambiar el almacenamiento o el tamaño de un disco requiere una migración; los discos vacíos no se crean",
   "Check": "Controlar",
   "Check BIOS/UEFI in Hardware > BIOS — must match what the original VM used": "Verifique BIOS/UEFI en Hardware > BIOS: debe coincidir con lo que usó la VM original",

@@ -176,9 +176,10 @@ def ask_shared_directories(ui, template: dict[str, Any], mounts: list[dict[str, 
             if advanced:
                 mount["source"] = ask_storage(ui, f"{translate('Storage for')} {target}", "rootdir", storage)
             mount["size_gb"] = _ask_size(ui, target, int(declared.get("default_size_gb", 32)))
-            # The application writes to it as its own user, not as root.
+            # The application writes to it as its own user, not as root, and
+            # its group writes too: what is created inside keeps that group.
             preparation = {"container_path": target, "remove_lost_found": True,
-                           "owner_strategy": "mapped-application-user",
+                           "owner_strategy": "mapped-application-user", "mode": "2775",
                            "only_when_mount_type": "managed-volume"}
             if preparation not in profile.setdefault("volume_preparations", []):
                 profile["volume_preparations"].append(preparation)

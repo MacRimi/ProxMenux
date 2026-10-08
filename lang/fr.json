@@ -190,7 +190,7 @@
   "Access bridge for Nextcloud": "Pont d'accès pour Nextcloud",
   "Access bridge for Paperless": "Pont d'accès pour sans papier",
   "Access bridge for Tandoor": "Pont d'accès pour Tandoor",
-  "Access could not be granted; the application cannot write to:": "L'accès n'a pas pu être accordé ;l'application ne peut pas écrire dans :",
+  "Access could not be granted; the application cannot write to:": "L'accès n'a pas pu être accordé ; l'application ne peut pas écrire dans :",
   "Access granted to the application on:": "Accès accordé à l’application sur :",
   "Access profile:": "Profil d'accès :",
   "Access token of the Jupyter Lab web interface": "Jeton d'accès de l'interface web Jupyter Lab",

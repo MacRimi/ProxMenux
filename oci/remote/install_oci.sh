@@ -1093,7 +1093,7 @@ apply_installer_profile() {
   local generated_count preparation_count tls_count seeded_volumes mounted=0 failed=0
   local rootfs="/var/lib/lxc/${VMID}/rootfs"
   local encoded item path mode owner destination target remove_lost_found owner_strategy
-  local only_when_mount_type selected_mount_type
+  local only_when_mount_type selected_mount_type preparation_mode
   local entrypoint working_directory halt_signal command_json compose_entrypoint_json user_spec
   local supplemental_groups tls_config cert_path key_path cert_destination key_destination
   local tls_directory valid_days common_name san
@@ -1198,6 +1198,13 @@ apply_installer_profile() {
         *) oci_log "Unsupported owner strategy: $owner_strategy"; failed=1 ;;
       esac
       (( failed == 0 )) || break
+      # A mode the preparation states, for a directory several users write to.
+      preparation_mode=$(jq -r '.mode // empty' <<<"$item")
+      if [[ -n $preparation_mode ]]; then
+        [[ $preparation_mode =~ ^[0-7]{3,4}$ ]] \
+          || { oci_log "Invalid volume preparation mode: $preparation_mode"; failed=1; break; }
+        chmod "$preparation_mode" "${rootfs}${target}" || { failed=1; break; }
+      fi
       oci_log "Volume prepared before the first start: $target"
       volumes_prepared=$((volumes_prepared + 1))
     done < <(jq -r '.proxmox.installer_profile.volume_preparations[]? | @base64' "$TEMPLATE_FILE")
@@ -1779,21 +1786,33 @@ fi
 if [[ $SELINUX_LABEL_DISABLED == true ]]; then
   oci_log "label:disable kept as metadata; Proxmox uses AppArmor, not SELinux, for this LXC"
 fi
-# Gives the identity the application writes with access to a host directory
-# that belongs to someone else, with an ACL: the owner and the permissions of
-# what is there stay as they are, and the owner of the directory keeps access
-# to what the application creates in it.
+# Gives the application access to a host directory that belongs to someone
+# else, with an ACL: the owner and the permissions of what is there stay as
+# they are, and the owner of the directory keeps access to what the
+# application creates in it. The rule names the identity the application
+# writes with and, in an unprivileged container, its root user as well, which
+# is who lists the folders and answers the access checks of an NFS client.
 grant_shared_access() {
-  local source=$1 owner group triplet default_spec
-  command -v setfacl >/dev/null 2>&1 && command -v getfacl >/dev/null 2>&1 || return 1
+  local source=$1 owner group triplet spec default_spec
+  if ! command -v setfacl >/dev/null 2>&1 || ! command -v getfacl >/dev/null 2>&1; then
+    # A host installed on ZFS does not bring the ACL tools.
+    oci_log "Installing the acl package to grant access to $source"
+    DEBIAN_FRONTEND=noninteractive apt-get install -y acl >>"${OCI_LOG:-/dev/null}" 2>&1 || return 1
+  fi
+  spec="u:${HOST_BIND_UID}:rwX,g:${HOST_BIND_GID}:rwX"
+  default_spec="d:u:${HOST_BIND_UID}:rwx,d:g:${HOST_BIND_GID}:rwx"
+  if [[ $HOST_ROOT_UID != 0 ]]; then
+    spec="${spec},u:${HOST_ROOT_UID}:rwX,g:${HOST_ROOT_GID}:rwX"
+    default_spec="${default_spec},d:u:${HOST_ROOT_UID}:rwx,d:g:${HOST_ROOT_GID}:rwx"
+  fi
   # Granted already: an update or a modification installs the container again.
   if getfacl -cpn "$source" 2>/dev/null | grep -q "^user:${HOST_BIND_UID}:rwx" \
-     && getfacl -cpn "$source" 2>/dev/null | grep -q "^default:user:${HOST_BIND_UID}:rwx"; then
+     && getfacl -cpn "$source" 2>/dev/null | grep -q "^default:user:${HOST_BIND_UID}:rwx" \
+     && { [[ $HOST_ROOT_UID == 0 ]] || getfacl -cpn "$source" 2>/dev/null | grep -q "^user:${HOST_ROOT_UID}:rwx"; }; then
     return 0
   fi
   owner=$(stat -c '%u' "$source") || return 1
   group=$(stat -c '%g' "$source") || return 1
-  default_spec="d:u:${HOST_BIND_UID}:rwx,d:g:${HOST_BIND_GID}:rwx"
   if [[ $owner != 0 && $owner != "$HOST_BIND_UID" ]]; then
     default_spec="${default_spec},d:u:${owner}:rwx"
   fi
@@ -1804,7 +1823,7 @@ grant_shared_access() {
     triplet=${triplet//S/-}
     default_spec="${default_spec},d:g:${group}:${triplet}"
   fi
-  setfacl -R -P -m "u:${HOST_BIND_UID}:rwX,g:${HOST_BIND_GID}:rwX" "$source" 2>>"${OCI_LOG:-/dev/null}" || return 1
+  setfacl -R -P -m "$spec" "$source" 2>>"${OCI_LOG:-/dev/null}" || return 1
   find "$source" -xdev -type d -exec setfacl -m "$default_spec" {} + 2>>"${OCI_LOG:-/dev/null}" || return 1
 }
 

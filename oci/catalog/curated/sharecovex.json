@@ -35,6 +35,7 @@
     "tips": [
       "Each directory to share is mounted under /shares with the name given to it during the installation; more can be added later with Modify.",
       "A directory of the host keeps the owner it already has. The panel shows whether the shared identity (1000:1000 by default) can write to it.",
+      "Changing the shared identity (1000:1000) in Settings of the panel means giving the new one access on the host again: the volumes and the access rules are prepared for 1000:1000.",
       "Create the Samba users in Settings of the panel, then publish each directory from Resources.",
       "NFS is served as NFSv3. NFSv4 needs the privileged profile offered by the advanced installation.",
       "/config: Proxmox volume included in backup and kept when the application is updated or modified."
