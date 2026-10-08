@@ -342,7 +342,7 @@
     "practiceBody": "El setup de PVE escribe el destino como <code>http://127.0.0.1:8008</code>, así que las notificaciones emitidas por PVE siempre pasan por el camino loopback con seguridad solo rate-limit. El camino de llamador remoto con shared secret es opt-in para integraciones personalizadas — apunta un servicio externo a <code>https://&lt;host-monitor&gt;:&lt;port&gt;/api/notifications/webhook</code> y suministra la cabecera <code>X-Webhook-Secret</code> para usarlo.",
     "actionsIntro": "El Monitor gestiona este destino a través de tres acciones en la pestaña Settings:",
     "actionsItems": [
-      "<strong>Setup</strong> — corre automáticamente cuando activas Notifications. Crea la entrada en <code>/etc/pve/notifications.cfg</code> tras hacer backup del archivo actual.",
+      "<strong>Setup</strong> — corre automáticamente cuando activas Notifications. Crea la entrada en <code>/etc/pve/notifications.cfg</code>. El archivo solo se escribe cuando su contenido tiene que cambiar, y se guarda un backup del anterior en <code>/usr/local/share/proxmenux/backups/pve-notifications/</code> (los tres más recientes). No se escribe nada mientras <code>/etc/pve</code> no está montado: un Monitor que arranca durante un reinicio de <code>pve-cluster</code> registra la entrada cuando vuelve.",
       "<strong>Cleanup</strong> — elimina la entrada. El backup previo del archivo se conserva.",
       "<strong>Read config</strong> — muestra los destinos y matchers actuales como PVE los ve. Así es como confirmas que la entrada del Monitor es la que dispara cuando PVE tiene múltiples rutas de notificación configuradas."
     ],

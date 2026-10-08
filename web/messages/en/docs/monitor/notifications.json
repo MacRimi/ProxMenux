@@ -342,7 +342,7 @@
     "practiceBody": "The PVE setup writes the target as <code>http://127.0.0.1:8008</code>, so PVE-emitted notifications always go through the loopback path with rate-limit-only security. The remote-caller path with the shared secret is opt-in for custom integrations — point an external service at <code>https://&lt;monitor-host&gt;:&lt;port&gt;/api/notifications/webhook</code> and supply the <code>X-Webhook-Secret</code> header to use it.",
     "actionsIntro": "The Monitor manages this target through three actions on the Settings tab:",
     "actionsItems": [
-      "<strong>Setup</strong> — runs automatically when you enable Notifications. Creates the entry in <code>/etc/pve/notifications.cfg</code> after backing up the current file.",
+      "<strong>Setup</strong> — runs automatically when you enable Notifications. Creates the entry in <code>/etc/pve/notifications.cfg</code>. The file is written only when its content has to change, and a copy of the previous one is kept in <code>/usr/local/share/proxmenux/backups/pve-notifications/</code> (the three newest). Nothing is written while <code>/etc/pve</code> is not mounted: a Monitor that starts during a restart of <code>pve-cluster</code> registers the entry once it is back.",
       "<strong>Cleanup</strong> — removes the entry. The previous backup of the file is kept.",
       "<strong>Read config</strong> — shows the current targets and matchers as PVE sees them. This is how you confirm the Monitor's entry is the one firing when PVE has multiple notification routes configured."
     ],
