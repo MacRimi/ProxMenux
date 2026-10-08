@@ -587,6 +587,33 @@ def _disk_observations() -> dict[str, list[dict[str, Any]]]:
     return grouped
 
 
+def _observations_of(name: str, serial: str, by_name: dict[str, list[dict[str, Any]]]) -> list[dict[str, Any]]:
+    """The events of the disk that is plugged there now.
+
+    A device name is a connector: the disk that was there before keeps its
+    own history. The Monitor tells them apart by serial number; the events
+    grouped by name are only used when it cannot be asked.
+    """
+    server = sys.modules.get("flask_server") or sys.modules.get("__main__")
+    getter = getattr(getattr(server, "health_persistence", None), "get_disk_observations", None)
+    if getter is None:
+        return by_name.get(name, [])
+    try:
+        records = getter(name, serial or None) or []
+    except Exception:
+        return by_name.get(name, [])
+    entries = [{
+        "type": record.get("error_type", ""),
+        "severity": record.get("severity", ""),
+        "count": record.get("occurrence_count", 0),
+        "first_seen": record.get("first_occurrence"),
+        "last_seen": record.get("last_occurrence"),
+        "message": (record.get("raw_message") or "")[:400],
+    } for record in records]
+    entries.sort(key=lambda e: e.get("last_seen") or 0, reverse=True)
+    return entries
+
+
 def _physical_disks(ctx) -> list[dict[str, Any]]:
     observations = _disk_observations()
     # The SMART cache is keyed by device, each entry a (collected_at, data)
@@ -613,7 +640,7 @@ def _physical_disks(ctx) -> list[dict[str, Any]]:
             "health": health.get("smart_status"),
             "temperature": health.get("temperature"),
             "power_on_hours": health.get("power_on_hours"),
-            "observations": observations.get(name, []),
+            "observations": _observations_of(name, (row.get("SERIAL") or "").strip(), observations),
         })
     return sorted(disks, key=lambda d: d["name"])
 

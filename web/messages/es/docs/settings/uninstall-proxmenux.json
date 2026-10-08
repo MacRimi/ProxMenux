@@ -19,7 +19,7 @@
     "items": [
       "<strong>Diálogo de confirmación.</strong> Sí/no — \"¿Seguro que quieres desinstalar ProxMenux?\"",
       "<strong>Checklist de eliminación de dependencias.</strong> La lista preseleccionada depende del tipo de instalación (mira la tabla de abajo). Todas las casillas por defecto en OFF — te apuntas a eliminar cada dependencia.",
-      "<strong>La eliminación corre con una barra de progreso.</strong> Elimina el venv (solo instalación con traducción), el lanzador <code>menu</code>, el árbol <code>/usr/local/share/proxmenux/</code>, el servicio ProxMenux Monitor si está presente, las dependencias que marcaste y, por último, restaura los backups de archivos del sistema (mira abajo).",
+      "<strong>La eliminación corre con una barra de progreso.</strong> Elimina el venv (solo instalación con traducción), el lanzador <code>menu</code>, el árbol <code>/usr/local/share/proxmenux/</code>, el servicio ProxMenux Monitor si está presente junto con el destino de notificaciones que registró en Proxmox VE (<code>proxmenux-webhook</code> y su matcher), las dependencias que marcaste y, por último, restaura los backups de archivos del sistema (mira abajo).",
       "<strong>Diálogo de finalización.</strong> Lista las dependencias eliminadas y sale."
     ]
   },

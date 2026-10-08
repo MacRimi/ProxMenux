@@ -71,6 +71,17 @@ BACKTITLE="$(translate "$BACKTITLE")"
 
 # ==========================================================
 
+# Proxmox would keep sending every notification to a Monitor that is gone.
+# Its own interface removes the target and the rule that feeds it; the copies
+# of the settings that earlier versions left in /etc/pve are removed too.
+remove_monitor_notification_target() {
+    mountpoint -q /etc/pve || return 0
+    pvesh delete /cluster/notifications/matchers/proxmenux-default > /dev/null 2>&1 || true
+    pvesh delete /cluster/notifications/endpoints/webhook/proxmenux-webhook > /dev/null 2>&1 || true
+    rm -f /etc/pve/notifications.cfg.proxmenux_backup_* /etc/pve/priv/notifications.cfg.proxmenux_backup_*
+    echo " - Notification target removed from Proxmox"
+}
+
 uninstall_proxmenux_monitor() {
 
     # 1. Stop service if it is running
@@ -80,6 +91,8 @@ uninstall_proxmenux_monitor() {
     else
     echo " - Service is not running (ok)"
     fi
+
+    remove_monitor_notification_target
 
     # 2. Disable service if enabled
     if systemctl is-enabled --quiet "${MONITOR_SERVICE}"; then
@@ -213,7 +226,7 @@ normalize_stable_monitor_service() {
     cat > "$MONITOR_UNIT_FILE" << EOF
 [Unit]
 Description=ProxMenux Monitor - Web Dashboard
-After=network.target
+After=network.target pve-cluster.service
 
 [Service]
 Type=simple

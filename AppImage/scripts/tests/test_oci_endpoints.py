@@ -36,10 +36,10 @@ class CatalogFixture(unittest.TestCase):
             item.start()
             self.addCleanup(item.stop)
 
-    def install(self, endpoints, template_id='image-frigate'):
+    def install(self, endpoints, template_id='image-frigate', status='installed'):
         (self.root / 'instances/190').mkdir(parents=True)
         (self.root / 'instances/190/oci-compose.json').write_text(json.dumps({
-            'vmid': 190, 'status': 'installed', 'installation_id': 'install-190',
+            'vmid': 190, 'status': status, 'installation_id': 'install-190',
             'observed': {'image': {'manifest_digest': 'sha256:' + 'b1' * 32, 'architecture': 'amd64'}},
             'template': {'id': template_id, 'catalog_ui': {'title': 'Frigate'},
                          'first_run': {'endpoints': endpoints},
@@ -57,6 +57,12 @@ class OciEndpointTests(CatalogFixture):
             {'port': 1984, 'scheme': 'http', 'path': '/', 'description': 'go2rtc', 'logo_url': ICON},
         ])
         self.assertEqual(meta['endpoint_port'], 5000)
+
+    def test_the_record_names_the_container_while_it_is_being_installed(self):
+        self.assertEqual(self.install(ENDPOINTS, status='installing')['template_id'], 'image-frigate')
+
+    def test_a_failed_installation_names_nothing(self):
+        self.assertIsNone(self.install(ENDPOINTS, status='failed'))
 
     def test_single_endpoint_and_unknown_template(self):
         meta = self.install([ENDPOINTS[0]], template_id='image-other')

@@ -629,8 +629,20 @@ def _get_lxc_ip_info_cached(vmid):
     if vmid_int in _lxc_ip_cache:
         return _lxc_ip_cache[vmid_int]
     info = get_lxc_ip_from_lxc_info(vmid_int)
-    _lxc_ip_cache[vmid_int] = info
+    _remember_lxc_ip(vmid_int, info)
     return info
+
+
+def _remember_lxc_ip(vmid, info):
+    """Keep the addresses of a container until its next lifecycle event.
+
+    A container that shows addresses but no IPv4 of its own is still waiting
+    for its lease, or lost it when it rebooted from inside: that answer is not
+    kept, so the next read looks again instead of serving an address of its
+    inner bridges until the container is restarted.
+    """
+    if info is None or any(':' not in ip for ip in info.get('real_ips') or []):
+        _lxc_ip_cache[vmid] = info
 
 
 def _get_lxc_primary_ip_cached(vmid):
@@ -673,6 +685,27 @@ def _invalidate_lxc_ip(vmid):
         pass
 
 
+def _restore_lxc_dhcp_clients():
+    """Start the DHCP clients that ended with the previous Monitor.
+
+    Proxmox runs the DHCP client of a host-managed interface as a process of
+    whatever started the container. One started from the Monitor, or from its
+    terminal, ends when the Monitor is restarted or updated, and the container
+    would lose its address when the lease runs out.
+    """
+    script = '/usr/local/share/proxmenux/oci/engine/remote/oci_dhcp_lease.py'
+    if not os.path.isfile(script):
+        return
+    try:
+        result = subprocess.run(
+            [sys.executable, script, '--all'], capture_output=True, text=True, timeout=900,
+            env={k: v for k, v in os.environ.items() if k not in ('PYTHONPATH', 'LD_LIBRARY_PATH')})
+        for line in result.stdout.splitlines():
+            print(f"[ProxMenux] {line}", flush=True)
+    except (OSError, subprocess.SubprocessError) as e:
+        print(f"[ProxMenux] DHCP client check failed: {e}", file=sys.stderr, flush=True)
+
+
 def _warmup_lxc_ip_cache() -> int:
     """Populate the LXC IP cache for every running CT at Monitor
     startup. After this runs, /api/vms serves the IPs from memory
@@ -700,7 +733,7 @@ def _warmup_lxc_ip_cache() -> int:
             continue
         if parts[1].lower() != 'running':
             continue
-        _lxc_ip_cache[vmid_int] = get_lxc_ip_from_lxc_info(vmid_int)
+        _remember_lxc_ip(vmid_int, get_lxc_ip_from_lxc_info(vmid_int))
         count += 1
     return count
 
@@ -793,6 +826,8 @@ def get_lxc_ip_from_lxc_info(vmid):
                     else:
                         # Real network IPs (192.168.x.x, 10.x.x.x, etc.)
                         real_ips.append(ip)
+                # A link is built on an IPv4 address when the container has one.
+                real_ips.sort(key=lambda ip: ':' in ip)
                 isolated = _lxc_isolated_ips(vmid)
                 if isolated:
                     real_ips.sort(key=lambda ip: ip in isolated)
@@ -4573,22 +4608,18 @@ def get_storage_info():
                     size_bytes=disk_info.get('size_bytes'),
                 )
             
-            # Fetch observation counts AFTER registration so consolidated
-            # entries are already merged (ata8 -> sdh).
-            obs_counts = health_persistence.get_disks_observation_counts()
-            
+            # Mark disks no longer present as removed, including the one whose
+            # connector now holds a different disk.
+            health_persistence.mark_removed_disks(
+                active_dev_names,
+                {name: info.get('serial', '') for name, info in physical_disks.items()})
+
+            # Counted AFTER registration so consolidated entries are already
+            # merged (ata8 -> sdh), and per disk: the badge shows what the
+            # detail of that disk lists.
             for disk_name, disk_info in physical_disks.items():
-                # Attach observation count: try serial match first, then device name
-                serial = disk_info.get('serial', '')
-                count = obs_counts.get(f'serial:{serial}', 0) if serial else 0
-                if count == 0:
-                    count = obs_counts.get(disk_name, 0)
-                disk_info['observations_count'] = count
-            
-            # Mark disks no longer present as removed
-            health_persistence.mark_removed_disks(active_dev_names)
-            # Auto-dismiss stale observations (> 30 days old)
-            health_persistence.cleanup_stale_observations()
+                disk_info['observations_count'] = health_persistence.count_disk_observations(
+                    disk_name, disk_info.get('serial', ''))
         except Exception:
             pass
         
@@ -22844,6 +22875,7 @@ if __name__ == '__main__':
             except Exception as e:
                 print(f"[ProxMenux] LXC IP warmup failed: {e}",
                       file=sys.stderr, flush=True)
+            threading.Thread(target=_restore_lxc_dhcp_clients, daemon=True).start()
             # Preload custom weblinks so the first Apps dashboard fetch
             # is served straight from memory (0 disk I/O).
             try:

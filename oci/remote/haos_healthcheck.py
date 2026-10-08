@@ -27,6 +27,9 @@ def note(text):
     """Detail for the run log; without one, for stderr."""
     try:
         if OCI_LOG:
+            if not sys.stderr.isatty():
+                # The progress line goes to a file, which may be this log: end it first.
+                print(file=sys.stderr, flush=True)
             log(OCI_LOG, text)
             return
     except OSError:
@@ -110,7 +113,7 @@ def probe(vmid, ip, remaining):
         raise Pending(translate('Supervisor does not confirm healthy and supported yet'))
     if not http_ready(f'http://{ip}:4357/', max(0.1, min(5, remaining()))):
         raise Pending(translate('Observer is not responding on port 4357'))
-    for port in (80, 8123):
+    for port in (8123, 80):
         if http_ready(f'http://{ip}:{port}/', max(0.1, min(5, remaining()))):
             return [{'label': 'Home Assistant', 'url': f'http://{ip}:{port}/'},
                     {'label': 'Home Assistant Observer', 'url': f'http://{ip}:4357/'}]

@@ -117,6 +117,9 @@
     "rdtclient": {
       "status": "laboratory-validated"
     },
+    "sharecovex": {
+      "status": "laboratory-validated"
+    },
     "snapotter": {
       "status": "laboratory-validated"
     },

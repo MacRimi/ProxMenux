@@ -3268,15 +3268,12 @@ def _disk_errors(ctx):
     """
     records = _recorded_disk_events()
     if not records:
-        # An empty store and a store whose entries were all dismissed
-        # look the same from here, and neither supports the claim that
-        # no disk reported an error. Saying which of the two it is is
-        # not possible; saying there is nothing to grade is.
+        # An empty store does not support the claim that no disk ever
+        # reported an error: the monitor may not have been running when
+        # one did. Saying there is nothing to grade is what can be said.
         return {"classification": CLASS_NOT_APPLICABLE,
                 "summary_key": "noEvents",
-                "evidence": "The health monitor holds no undismissed disk "
-                            "event. A dismissed observation is dropped by "
-                            "the monitor and is not read back here."}
+                "evidence": "The health monitor holds no disk event."}
 
     now = time.time()
     recent_days = ctx.policy.threshold("disk_error_recent_days")
@@ -3316,9 +3313,8 @@ def _disk_errors(ctx):
     evidence += ("\nRecorded because Linux reported them; neither SMART nor "
                  "Proxmox surfaces these, and both may report the device as "
                  "healthy. Stated as separate warnings without overriding "
-                 "that current health result. Events the reader dismissed are not "
-                 "listed: the "
-                 "monitor drops them and this reads what the monitor keeps. "
+                 "that current health result. Every recorded event is "
+                 "listed: the history of a disk is permanent. "
                  "Recorded by the health monitor as events occurred. SMART "
                  "reports the device's present opinion of itself and is read "
                  "by a separate check; a device can report healthy while its "

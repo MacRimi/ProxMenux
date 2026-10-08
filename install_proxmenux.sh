@@ -623,7 +623,7 @@ _proxmenux_rewrite_monitor_unit_for_apprun() {
         cat > "$MONITOR_SERVICE_FILE" << EOF
 [Unit]
 Description=ProxMenux Monitor - Web Dashboard
-After=network.target
+After=network.target pve-cluster.service
 
 [Service]
 Type=simple
@@ -655,7 +655,7 @@ create_monitor_service() {
         cat > "$MONITOR_SERVICE_FILE" << EOF
 [Unit]
 Description=ProxMenux Monitor - Web Dashboard
-After=network.target
+After=network.target pve-cluster.service
 
 [Service]
 Type=simple

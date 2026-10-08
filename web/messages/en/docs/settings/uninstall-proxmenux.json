@@ -19,7 +19,7 @@
     "items": [
       "<strong>Confirmation dialog.</strong> Yes/no — “Are you sure you want to uninstall ProxMenux?”",
       "<strong>Dependency removal checklist.</strong> Pre-selected list depends on install type (see table below). All boxes default to OFF — you opt in to removing each dependency.",
-      "<strong>Removal runs with a progress bar.</strong> Removes the venv (Translation install only), the <code>menu</code> launcher, the <code>/usr/local/share/proxmenux/</code> tree, the ProxMenux Monitor service if present, the dependencies you ticked, and finally restores the system file backups (see below).",
+      "<strong>Removal runs with a progress bar.</strong> Removes the venv (Translation install only), the <code>menu</code> launcher, the <code>/usr/local/share/proxmenux/</code> tree, the ProxMenux Monitor service if present together with the notification target it registered in Proxmox VE (<code>proxmenux-webhook</code> and its matcher), the dependencies you ticked, and finally restores the system file backups (see below).",
       "<strong>Completion dialog.</strong> Lists removed dependencies and exits."
     ]
   },

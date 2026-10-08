@@ -286,6 +286,44 @@ def set_watchdog(project, vmids, enabled):
     return True
 
 
+def _work_backup_ready(project, ui, vmid):
+    """Before an operation that backs the application up: when the backup
+    does not fit on the system disk of the host, the user chooses the storage
+    where it is made. False when there is nowhere to make it."""
+    if getattr(ui, 'unattended', False):
+        # The engine uses the storage chosen earlier, or says why it stops.
+        return True
+    sys.path.insert(0, str(project / 'remote'))
+    import oci_instances as instances
+    import oci_work_backup
+    try:
+        state = oci_work_backup.status(instances.ROOT, vmid)
+    except (OSError, ValueError, KeyError, subprocess.SubprocessError):
+        return True
+    if state['fits'] or state['saved_fits']:
+        return True
+    lacking = (f"{translate('The backup made before changing the application does not fit on the system disk of the host.')} "
+               f"{translate('Needed:')} {oci_work_backup.gib(state['needed'])}. {translate('Free:')} {oci_work_backup.gib(state['free'])}.")
+    candidates = sorted(state['candidates'], key=lambda item: item['free'], reverse=True)
+    if not candidates:
+        ui.message(f"{lacking}\n\n{translate('No other storage of this host that accepts backups has that much free space. Free space and try again; the application was not modified.')}",
+                   translate('OCI management'))
+        return False
+    ui.message(f"{lacking}\n\n{translate('It can be made on another storage of this host. This backup is temporary: it is deleted when the operation ends. The choice is remembered for the next operations of this application.')}",
+               translate('OCI management'))
+    options = [(item['storage'], f"{item['storage']} - {oci_work_backup.gib(item['free'])} {translate('free')}") for item in candidates]
+    selected = ui.choose(translate('Storage for the backup of this operation'), options, options[0][0])
+    if selected is None:
+        return False
+    try:
+        oci_work_backup.choose(instances.ROOT, vmid, selected)
+    except (OSError, ValueError, KeyError):
+        ui.message(translate('Another OCI operation is using the instance registry. Wait for it to finish and open this menu again; no container is modified.'),
+                   translate('OCI management'))
+        return False
+    return True
+
+
 def _toggle_watchdog(project, ui, vmid, enabled):
     """Ask and change the watchdog of an application from its menu."""
     question = (translate('This application is under watchdog: it is restarted automatically when it crashes. Turn the watchdog off?')
@@ -342,6 +380,9 @@ def manage_instance(project, ui, row, action=None, lifecycle_args=()):
             return _toggle_watchdog(project, ui, row['vmid'], watched)
         if action == 'remove':
             return _remove(project, ui, row['vmid'])
+        if not _work_backup_ready(project, ui, row['vmid']):
+            return False
+        record = instances.read(instances.ROOT, row['vmid'])
         import oci_instance_reconcile as reconcile
         try:
             current_config = instances.command('pct', 'config', str(row['vmid']))
@@ -565,6 +606,8 @@ def _manage_stack(project, ui, row, action=None, lifecycle_args=()):
             return False
         import json
         members = json.loads(Path(pending).read_text())['plan']['members']
+    if not pending and not _work_backup_ready(project, ui, primary_id):
+        return False
     command = [sys.executable, str(project / 'remote/oci_stack_native.py'), str(primary_id)]
     if pending:
         command.append('--recover')

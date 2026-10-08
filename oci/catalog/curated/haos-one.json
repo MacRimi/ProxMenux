@@ -11,12 +11,12 @@
       "en_US": "Community single-container Home Assistant OS image"
     },
     "description": {
-      "en_US": "Community HAOS One image adapted as a native Proxmox OCI LXC with persistent Supervisor, Core, add-ons and backups under /mnt/data."
+      "en_US": "Community Home Assistant OS image, derived from HAOS One, adapted as a native Proxmox OCI LXC with persistent Supervisor, Core, add-ons and backups under /mnt/data."
     },
     "category": "smarthome",
     "category_label": "IoT & Smart Home",
-    "author": "qweritos",
-    "developer": "qweritos",
+    "author": "sevenrats",
+    "developer": "sevenrats",
     "icon": null,
     "thumbnail": null,
     "screenshots": [],
@@ -26,42 +26,42 @@
     ],
     "launch": {
       "scheme": "http",
-      "port": 80,
+      "port": 8123,
       "path": "/"
     },
-    "website": "https://github.com/qweritos/haos-one",
-    "documentation": "https://github.com/qweritos/haos-one#readme",
-    "repository": "https://github.com/qweritos/haos-one",
+    "website": "https://github.com/sevenrats/docker-haos",
+    "documentation": "https://github.com/sevenrats/docker-haos#readme",
+    "repository": "https://github.com/sevenrats/docker-haos",
     "tips": [
       "This is a third-party community image and is not affiliated with Home Assistant.",
       "The validated profile uses a managed /mnt/data volume; preserve it during every image replacement.",
-      "Port 80 is used by current Core releases in the validated profile; port 8123 may appear during setup or on older releases.",
+      "Home Assistant answers on port 8123, during the first setup and afterwards.",
       "Experimental unprivileged profile with nesting and keyctl. Internal AppArmor profiles may not be available.",
       "The first start downloads internal images. Success is confirmed only with Supervisor healthy/supported and a real Core, internal services and Observer running.",
-      "The web port is detected between 80 and 8123. If the check fails, the CT, data and log are kept for diagnosis; success is not confirmed.",
-      "/mnt/data: Proxmox volume of 32 GB by default, minimum 16 GB, included in backup. Full restore and external image update pending testing."
+      "If the check of the first start fails, the CT, data and log are kept for diagnosis; success is not confirmed.",
+      "/mnt/data: Proxmox volume of 32 GB by default, minimum 16 GB, included in backup and kept when the application is updated or modified."
     ],
     "mini_changelog": [],
     "display_version": null,
-    "updated_at": "2026-08-20"
+    "updated_at": "2026-09-23"
   },
   "source": {
-    "provider": "qweritos",
-    "repository": "https://github.com/qweritos/haos-one",
-    "revision": "b6dd721c4bf06e6f90ee1f8099a82b892e18af64a63015fe5fdfbfd02d538ede",
-    "image_repository_url": "https://hub.docker.com/r/qweritos/haos-one",
-    "readme_pushed_at": "2026-08-20T12:29:50Z",
-    "compose_sha256": "b6dd721c4bf06e6f90ee1f8099a82b892e18af64a63015fe5fdfbfd02d538ede",
-    "generated_at": "2026-09-12T15:54:10+00:00",
+    "provider": "sevenrats",
+    "repository": "https://github.com/sevenrats/docker-haos",
+    "revision": "e7fe7f6728b84763b76658ab5a9669f50cb029b0",
+    "image_repository_url": "https://github.com/sevenrats/docker-haos/pkgs/container/haos",
+    "readme_pushed_at": "2026-09-23T15:30:10Z",
+    "compose_sha256": "4301a2454ca1a5ff58d596dc1f2f99eba52ab77a307f394d81e6d5f66f824111",
+    "generated_at": "2026-10-07T00:00:00+00:00",
     "default_branch": "master"
   },
   "container_contract": {
     "service_name": "haos-one",
     "container_name": "haos-one",
     "image": {
-      "reference": "qweritos/haos-one:latest",
-      "registry": "docker.io",
-      "repository": "qweritos/haos-one",
+      "reference": "ghcr.io/sevenrats/haos:latest",
+      "registry": "ghcr.io",
+      "repository": "sevenrats/haos",
       "tag": "latest",
       "digest": null,
       "pull_policy": "resolve-selected-tag-to-architecture-digest-at-install"
@@ -72,7 +72,7 @@
         "example": "1",
         "required": true,
         "sensitive": false,
-        "source": "docker-compose",
+        "source": "image-default",
         "prompt_user": false
       },
       {
@@ -80,16 +80,31 @@
         "example": "auto",
         "required": true,
         "sensitive": false,
-        "source": "docker-compose",
+        "source": "image-default",
         "prompt_user": false
       },
       {
-        "name": "DEV",
-        "example": "0",
+        "name": "SETUP_PORT",
+        "example": "8123",
         "required": true,
         "sensitive": false,
-        "source": "docker-compose",
+        "source": "image-default",
         "prompt_user": false
+      },
+      {
+        "name": "ENABLE_IPV6",
+        "example": "1",
+        "required": true,
+        "sensitive": false,
+        "source": "image-default",
+        "prompt_user": false
+      },
+      {
+        "name": "TZ",
+        "example": "Europe/Madrid",
+        "required": true,
+        "sensitive": false,
+        "source": "upstream-compose-environment"
       }
     ],
     "volumes": [
@@ -111,8 +126,8 @@
     ],
     "ports": [
       {
-        "container_port": 80,
-        "published_example": 80,
+        "container_port": 8123,
+        "published_example": 8123,
         "protocol": "tcp",
         "required": true,
         "proxmox_behavior": "listener-on-dedicated-lxc-address-no-nat"
@@ -126,9 +141,9 @@
       }
     ],
     "related_services": [],
-    "restart": null,
-    "stop_grace_period": null,
-    "original_compose": "name: haos-one\nservices:\n  haos-one:\n    image: qweritos/haos-one:latest\n    privileged: true\n    environment:\n      USE_DUMMY_NETWORKMANAGER: '1'\n      USE_UDEV_SHIM: auto\n      DEV: '0'\n    ports:\n    - 80:80\n    - 4357:4357\n    volumes:\n    - haos-data:/mnt/data\n    stop_signal: SIGRTMIN+3\nvolumes:\n  haos-data: {}\n"
+    "restart": "unless-stopped",
+    "stop_grace_period": "2m",
+    "original_compose": "name: haos-one\nservices:\n  haos-one:\n    image: ghcr.io/sevenrats/haos:latest\n    privileged: true\n    restart: unless-stopped\n    stop_grace_period: 2m\n    environment:\n      USE_DUMMY_NETWORKMANAGER: '1'\n      USE_UDEV_SHIM: auto\n      SETUP_PORT: '8123'\n      ENABLE_IPV6: '1'\n      TZ: Europe/Madrid\n    ports:\n    - 8123:8123\n    - 4357:4357\n    volumes:\n    - haos-data:/mnt/data\n    stop_signal: SIGRTMIN+3\nvolumes:\n  haos-data: {}\n"
   },
   "compose_stack": {
     "project_name": "haos-one",
@@ -139,7 +154,7 @@
     "services": [
       {
         "name": "haos-one",
-        "image": "qweritos/haos-one:latest",
+        "image": "ghcr.io/sevenrats/haos:latest",
         "is_main": true,
         "role": "frontend",
         "vmid_offset": 0,
@@ -147,15 +162,19 @@
         "frontend_network": true,
         "private_network": false,
         "compose": {
-          "image": "qweritos/haos-one:latest",
+          "image": "ghcr.io/sevenrats/haos:latest",
           "privileged": true,
+          "restart": "unless-stopped",
+          "stop_grace_period": "2m",
           "environment": {
             "USE_DUMMY_NETWORKMANAGER": "1",
             "USE_UDEV_SHIM": "auto",
-            "DEV": "0"
+            "SETUP_PORT": "8123",
+            "ENABLE_IPV6": "1",
+            "TZ": "Europe/Madrid"
           },
           "ports": [
-            "80:80",
+            "8123:8123",
             "4357:4357"
           ],
           "volumes": [
@@ -230,9 +249,9 @@
       {
         "label": "Home Assistant",
         "scheme": "http",
-        "port": 80,
+        "port": 8123,
         "path": "/",
-        "source": "validated-current-core-profile"
+        "source": "image-setup-port"
       },
       {
         "label": "Home Assistant Observer",
@@ -269,7 +288,7 @@
         "nesting=1",
         "keyctl=1"
       ],
-      "shutdown_timeout_seconds": 60
+      "shutdown_timeout_seconds": 120
     },
     "image_metadata_policy": {
       "entrypoint": "import-from-oci-image",
@@ -290,7 +309,7 @@
       },
       {
         "id": "nested-runtime-features",
-        "upstream_behavior": "haos-one starts systemd, Docker, Supervisor and nested Home Assistant containers.",
+        "upstream_behavior": "The image starts systemd, Docker, Supervisor and nested Home Assistant containers.",
         "native_lxc_behavior": "Use an unprivileged LXC with nesting=1 and keyctl=1.",
         "reason": "The inner Docker and containerd runtime require nested namespaces and keyring support.",
         "behavioral_impact": "The LXC remains unprivileged; no AppArmor unconfined override was required.",
@@ -310,13 +329,21 @@
         "native_lxc_behavior": "Use an upstream image digest that contains rewrite_create_request_payload; do not patch files locally.",
         "reason": "Older builds fail to start Core and plug-ins with kernel.domainname permission denied.",
         "behavioral_impact": "Uses the project-provided compatibility behavior unchanged.",
-        "validation": "passed-source-revision-5bffb27-and-runtime"
+        "validation": "passed-source-revision-e7fe7f6-and-runtime"
+      },
+      {
+        "id": "shutdown-grace",
+        "upstream_behavior": "The Compose file gives systemd two minutes to stop Home Assistant and its Docker daemon.",
+        "native_lxc_behavior": "Shut the LXC down with a timeout of 120 seconds.",
+        "reason": "A shorter wait ends the nested containers before they have written their state.",
+        "behavioral_impact": "No application behavior is changed.",
+        "validation": "passed-clean-shutdown-and-start"
       }
     ],
     "laboratory_contract": {
       "requirements": {
         "proxmox_min_version": "9.2",
-        "validated_proxmox_version": "9.2.11",
+        "validated_proxmox_version": "9.2.20",
         "commands": [
           "pct",
           "pvesm",
@@ -358,7 +385,9 @@
         "environment_defaults": {
           "USE_DUMMY_NETWORKMANAGER": "1",
           "USE_UDEV_SHIM": "auto",
-          "SETUP_PORT": null,
+          "SETUP_PORT": "8123",
+          "ENABLE_IPV6": "1",
+          "TZ": "UTC",
           "DEV": "0"
         },
         "preserve_without_override": [
@@ -428,7 +457,7 @@
           "type": "device-list",
           "required": false,
           "default": [],
-          "description": "Optional passthrough of Zigbee, Z-Wave, Bluetooth or other coordinators; not validated in this profile."
+          "description": "Optional passthrough of Zigbee, Z-Wave, Bluetooth or other coordinators."
         }
       },
       "deployment": {
@@ -457,9 +486,9 @@
         ],
         "ports": [
           {
-            "port": 80,
+            "port": 8123,
             "protocol": "tcp",
-            "purpose": "validated-home-assistant-web-for-core-2026.9.1"
+            "purpose": "home-assistant-web-fixed-by-SETUP_PORT"
           },
           {
             "port": 4357,
@@ -469,10 +498,10 @@
         ],
         "conditional_ports": [
           {
-            "port": 8123,
+            "port": 80,
             "protocol": "tcp",
-            "condition": "older-core-or-landing-page-stage-or-explicit-SETUP_PORT",
-            "warning": "Do not assume port 8123 remains active after onboarding on Home Assistant Core 2026.8 or newer."
+            "condition": "SETUP_PORT-emptied-on-core-2026.8-or-newer",
+            "warning": "The profile sets SETUP_PORT=8123. Port 80 is only used when that variable is emptied."
           }
         ]
       },
@@ -495,16 +524,16 @@
         "data_role": "persistent-user-and-supervisor-state",
         "restart_test": {
           "status": "passed",
-          "method": "write-marker-shutdown-start-verify-hash-and-services",
-          "marker_sha256": "6c3762cede4f86dd5eeae16eff1067e188e9b47646f48ccc268c077711bffbd0",
-          "volume_before": "local-lvm:vm-128-disk-1",
-          "volume_after": "local-lvm:vm-128-disk-1",
-          "home_assistant_after_restart": "passed-http-200",
+          "method": "write-marker-reboot-shutdown-start-verify-hash-and-services",
+          "marker_sha256": "ddcc5557ff607ffc6ef0cdc54484f213c28f65b5ebde1c02cd8eefd2fa6b7c5e",
+          "volume_before": "local-lvm:vm-121-disk-1",
+          "volume_after": "local-lvm:vm-121-disk-1",
+          "home_assistant_after_restart": "passed-http-port-8123",
           "inner_containers_after_restart": "passed-all-running"
         },
         "native_backup": {
           "expected": "included-by-mp0-backup-1",
-          "full-vzdump-restore-test": "pending"
+          "full-vzdump-restore-test": "passed"
         }
       },
       "installation_steps": [
@@ -516,7 +545,7 @@
         "Attach a host-managed network interface to the selected bridge.",
         "Preserve the imported /entrypoint.sh /sbin/init command and SIGRTMIN+3 stop signal.",
         "Start the LXC and allow several minutes for the first pull of Supervisor, Core and plug-ins.",
-        "Discover the assigned address and probe both port 80 and port 8123.",
+        "Discover the assigned address and probe port 8123, then port 80.",
         "Require Supervisor healthy=true and supported=true before reporting success.",
         "Verify Core, CLI, DNS, audio, multicast and observer containers are running.",
         "Report non-blocking HAOS resolution issues separately."
@@ -526,8 +555,8 @@
           "name": "home-assistant-web",
           "type": "http",
           "candidate_urls": [
-            "http://${container_ip}/",
-            "http://${container_ip}:8123/"
+            "http://${container_ip}:8123/",
+            "http://${container_ip}/"
           ],
           "expected_status": 200,
           "startup_grace_seconds": 300
@@ -551,14 +580,14 @@
       "update_strategy": {
         "core_supervisor_and_addons": "managed-by-home-assistant-supervisor",
         "outer_oci_image": "resolve-new-image-and-replace-rootfs-while-preserving-/mnt/data",
-        "outer_oci_update_validation": "pending",
+        "outer_oci_update_validation": "rebuild-and-recovery-passed-newer-image-pending",
         "required_before_update": [
           "create-and-download-a-full-home-assistant-backup",
           "create-a-native-proxmox-backup-including-mp0",
           "record-current-image-digest",
           "verify-new-image-contains-required-compatibility-rules"
         ],
-        "warning": "Do not claim in-place OCI image updates are validated until rootfs replacement and rollback have been tested without losing the managed /mnt/data volume."
+        "warning": "Rebuilding the container and recovering it from its backup are tested on the same image; the first update to a newer image is still to be observed."
       },
       "security": {
         "image_is_official_home_assistant": false,
@@ -574,37 +603,30 @@
           "Do not expose Home Assistant or Observer directly to the Internet without an authenticated reverse proxy and normal Home Assistant hardening."
         ]
       },
-      "incompatible_builds": [
-        {
-          "reference": "docker.io/qweritos/haos-one:18.1-amd64",
-          "digest": "sha256:164d579522da0875c3eaa64283c5f7b875afae2013f1b878c86f80c1eac286af",
-          "status": "failed-native-unprivileged-oci",
-          "reason": "The bundled compatibility proxy does not rewrite nested container create requests, causing kernel.domainname permission denied for Core and plug-ins.",
-          "do_not_use_for_this_profile": true
-        }
-      ],
+      "incompatible_builds": [],
       "notes": [
-        "HAOS One is a community image, not an official Home Assistant image.",
+        "This is a community image derived from HAOS One, not an official Home Assistant image.",
         "This is not a simple Home Assistant container: the outer OCI runs systemd, Docker, Supervisor, Core and add-ons.",
-        "The direct Proxmox OCI path removes one extra Docker layer compared with the upstream-tested Proxmox LXC plus Docker plus haos-one deployment.",
-        "Proxmox privileged OCI import failed with setgid(0) Invalid argument; the validated profile is unprivileged and functional.",
+        "The direct Proxmox OCI path removes one extra Docker layer compared with a Proxmox LXC plus Docker plus this image deployment.",
+        "The profile is offered unprivileged only: Supervisor, Core, add-ons and USB devices work without privileges.",
         "Proxmox must use ostype=unmanaged because ID=haos is not recognized by guest distribution detection.",
         "The official /mnt/data path is a Proxmox-managed volume with backup=1, not a shared host bind.",
-        "A clean first boot used approximately 8.6G under /mnt/data after Core and Matter installation; 32G is the recommended starting size.",
-        "Home Assistant Core 2026.9.1 listens on port 80 in this image. Port 8123 was present only during the landing-page stage and must not be hard-coded.",
+        "A clean first boot used approximately 4.7G under /mnt/data; 32G is the recommended starting size.",
+        "The image sets SETUP_PORT=8123: Home Assistant Core keeps port 8123 after onboarding and port 80 stays closed.",
         "Supervisor reports healthy=true and supported=true even though several host-oriented HAOS units cannot run inside LXC.",
         "AppArmor profile loading inside HAOS fails in the current unprivileged LXC; this is a security limitation and must remain visible to users.",
-        "The current tag 18 works because it includes the upstream Docker API create-request rewrite; tag 18.1-amd64 does not.",
+        "Images are tagged by Home Assistant OS version, such as 18.3; latest is the newest build the project published. Builds are started by hand, not on every Home Assistant OS release.",
         "Mutable tags must be resolved to an immutable architecture-specific digest before installation.",
-        "Restart persistence is validated. Full vzdump restore, outer OCI image replacement, USB passthrough and real multicast discovery remain pending."
+        "Restart persistence, USB passthrough, rebuilding the container with its data kept and recovery from its backup are validated. The update to a newer image and real multicast discovery remain pending."
       ],
       "references": {
-        "project": "https://github.com/qweritos/haos-one",
-        "docker_image": "https://hub.docker.com/r/qweritos/haos-one",
-        "dockerfile": "https://github.com/qweritos/haos-one/blob/master/Dockerfile",
-        "compatibility_documentation": "https://github.com/qweritos/haos-one/blob/master/docs/haos-one-compat.md",
+        "project": "https://github.com/sevenrats/docker-haos",
+        "docker_image": "https://github.com/sevenrats/docker-haos/pkgs/container/haos",
+        "dockerfile": "https://github.com/sevenrats/docker-haos/blob/master/Dockerfile",
+        "compatibility_documentation": "https://github.com/sevenrats/docker-haos/blob/master/docs/haos-compat.md",
         "home_assistant_os_releases": "https://github.com/home-assistant/operating-system/releases",
-        "proxmox_pct_manual": "https://pve.proxmox.com/pve-docs/pct.1.html"
+        "proxmox_pct_manual": "https://pve.proxmox.com/pve-docs/pct.1.html",
+        "derived_from": "https://github.com/qweritos/haos-one"
       }
     },
     "installer_profile": {
@@ -634,22 +656,25 @@
       "volumes"
     ],
     "untranslated_blockers": [],
-    "policy": "Native laboratory adaptations implemented. Rolling latest first boot, backup restore and outer-image upgrades still require runtime validation."
+    "policy": "Native laboratory adaptations implemented. Installation, modification with the data kept and recovery from the backup are validated; the update to a newer image waits for the first one the project publishes."
   },
   "validation": {
     "schema": "passed-at-generation",
     "validated_architecture": "amd64",
-    "arm64": "supported-upstream-not-yet-validated-in-proxmenux-laboratory",
+    "arm64": "published-upstream-not-yet-validated-in-proxmenux-laboratory",
     "validated_profile": {
-      "id": "pve55-haos-one-native-oci",
-      "validated_on": "2026-09-08",
-      "validation_status": "passed-functional-restart-persistence-with-known-nonblocking-issues",
-      "proxmox_version": "9.2.11",
-      "container_id": 128,
-      "haos_version": "18.2",
-      "home_assistant_core": "2026.9.1",
-      "supervisor": "2026.09.0",
-      "matter_server": "9.2.0",
+      "id": "pve55-haos-native-oci",
+      "validated_on": "2026-10-07",
+      "validation_status": "passed-install-restart-persistence-with-known-nonblocking-issues",
+      "proxmox_version": "9.2.20",
+      "kernel": "7.0.14-19-pve",
+      "container_id": 121,
+      "image_reference": "ghcr.io/sevenrats/haos:latest",
+      "image_digest": "sha256:5b499b4782e7547fdce746ebd9c37b0de802626f4db7b80b24660da2f3442ba7",
+      "image_created": "2026-09-23",
+      "haos_version": "18.3",
+      "home_assistant_core": "2026.9.4",
+      "supervisor": "2026.09.3",
       "resources": {
         "cores": 4,
         "memory_mb": 4096,
@@ -658,29 +683,33 @@
         "data": "local-lvm:32G,mp=/mnt/data,backup=1"
       },
       "observed_after_first_boot": {
-        "data_used": "approximately-8.6G",
-        "memory_used_bytes": 1368289280,
-        "rootfs_used_bytes": 624910336
+        "data_used": "approximately-4.7G",
+        "first_boot_seconds": 90
       },
       "validation": {
+        "installer_default_mode": "passed",
         "oci_import": "passed-with-ostype-unmanaged",
         "image_entrypoint": "passed-/entrypoint.sh-/sbin/init",
         "halt_signal": "passed-SIGRTMIN+3",
-        "nested_docker": "passed-overlayfs",
-        "compatibility_proxy": "passed",
-        "home_assistant_web": "passed-http-200-port-80",
+        "unprivileged": "passed",
+        "home_assistant_web": "passed-http-port-8123",
+        "port_80": "closed",
         "observer": "passed-http-200-port-4357",
         "supervisor_healthy": true,
         "supervisor_supported": true,
         "core_running": true,
         "plugins_running": true,
-        "matter_addon_running": true,
-        "restart_persistence": "passed",
+        "notes_link_port": 8123,
+        "reboot_from_home_assistant": "passed-container-back-with-its-dhcp-address",
+        "shutdown_from_home_assistant": "passed-started-again-by-the-watchdog",
+        "shutdown_from_proxmox": "passed-25-seconds-left-stopped-by-the-watchdog",
+        "restart_persistence": "passed-marker-in-/mnt/data-unchanged",
+        "usb_passthrough": "passed-maintainer-test-unprivileged",
         "native_volume_backup_flag": "passed-mp0-backup-1",
-        "full_vzdump_restore": "pending",
-        "outer_image_upgrade": "pending",
-        "usb_passthrough": "pending",
-        "multicast_discovery": "pending-functional-device-test"
+        "full_vzdump_restore": "passed-recovery-of-an-interrupted-modification",
+        "outer_image_upgrade": "pending-no-newer-image-published",
+        "multicast_discovery": "pending-functional-device-test",
+        "modification": "passed-cores-changed-data-kept-watchdog-kept"
       },
       "known_nonblocking_resolution_issues": [
         "haos-mglru.service-failed",
@@ -690,43 +719,10 @@
         "dummy-networkmanager-may-report-ipv4-or-dns-diagnostics"
       ]
     },
-    "source_profile": "haos-one-oci.json",
-    "service_health": "passed-observed-2026-09-14",
-    "restart_persistence": "passed-2026-09-14",
-    "backup_restore": "pending",
-    "update_preserves_data": "pending",
-    "latest_runtime_observation": {
-      "date": "2026-09-14",
-      "vmid": 100,
-      "architecture": "amd64",
-      "proxmox": "9.2.18",
-      "kernel": "7.0.14-16-pve",
-      "core_version": "2026.9.2",
-      "supervisor_version": "2026.09.0",
-      "image_reference": "qweritos/haos-one:latest",
-      "outer_image_digest_verified": false,
-      "supervisor_healthy": true,
-      "supervisor_supported": true,
-      "required_internal_containers_running": true,
-      "matter_server_healthy_after_restart": true,
-      "restart_method": "pct shutdown --timeout 90; pct start",
-      "managed_data_volume_unchanged": true,
-      "data_volume_gb": 32,
-      "data_volume_backup_flag": true,
-      "configuration_yaml_sha256_unchanged": true,
-      "temporary_marker_sha256_unchanged": true,
-      "temporary_marker_removed": true,
-      "core_http_port": 80,
-      "observer_http_port": 4357,
-      "lan_address_unchanged": true,
-      "limitations": [
-        "Supervisor AppArmor profile could not be loaded inside this LXC.",
-        "Host kernel config/debug mounts, auditd and MGLRU units fail in this LXC.",
-        "PulseAudio warning appeared during boot; hassio_audio subsequently running, audio functionality not tested.",
-        "Core translation-domain warnings observed; no functionality test of associated integrations.",
-        "Full vzdump restore and outer OCI image replacement remain untested."
-      ]
-    }
+    "service_health": "passed-observed-2026-10-07",
+    "restart_persistence": "passed-2026-10-07",
+    "backup_restore": "passed-2026-10-07",
+    "update_preserves_data": "passed-by-modification-2026-10-07"
   },
   "lifecycle": {
     "update_strategy": "resolve-latest-image-and-replace-rootfs-preserving-managed-/mnt/data",
@@ -741,14 +737,14 @@
     "validated_workflows": {
       "core_supervisor_and_addons": "managed-by-home-assistant-supervisor",
       "outer_oci_image": "resolve-new-image-and-replace-rootfs-while-preserving-/mnt/data",
-      "outer_oci_update_validation": "pending",
+      "outer_oci_update_validation": "rebuild-and-recovery-passed-newer-image-pending",
       "required_before_update": [
         "create-and-download-a-full-home-assistant-backup",
         "create-a-native-proxmox-backup-including-mp0",
         "record-current-image-digest",
         "verify-new-image-contains-required-compatibility-rules"
       ],
-      "warning": "Do not claim in-place OCI image updates are validated until rootfs replacement and rollback have been tested without losing the managed /mnt/data volume."
+      "warning": "Rebuilding the container and recovering it from its backup are tested on the same image; the first update to a newer image is still to be observed."
     }
   }
 }

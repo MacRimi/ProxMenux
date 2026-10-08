@@ -745,6 +745,21 @@ apply_post_start_configuration() {
   esac
 }
 
+# The first address of the container on an interface Proxmox gave it. A
+# container that runs Docker inside also lists the ones of its inner bridges.
+# Fails when the interfaces cannot be read, so the caller takes what is listed.
+own_ipv4() {
+  local name listed found own="" looked=0
+  listed=$(lxc-info -n "$VMID" -iH 2>/dev/null | grep -E '^[0-9]+\.') || return 1
+  for name in $(pct config "$VMID" 2>/dev/null | sed -n 's/^net[0-9]*: .*name=\([A-Za-z0-9_.-]*\).*/\1/p'); do
+    found=$(lxc-attach -n "$VMID" -s NETWORK -- ip -4 -o addr show dev "$name" scope global 2>/dev/null) || continue
+    looked=1
+    own+=$(sed -n 's/.* inet \([0-9.]*\)\/.*/\1/p' <<<"$found")$'\n'
+  done
+  (( looked == 1 )) || return 1
+  grep -m1 -Fx -f <(sed '/^$/d' <<<"$own") <<<"$listed" || true
+}
+
 # $1: optional result label shown before the address.
 detect_container_ipv4() {
   local attempt addresses label=${1:-}
@@ -755,10 +770,12 @@ detect_container_ipv4() {
   fi
   IP=""
   for attempt in $(seq 1 15); do
-    IP=$(lxc-info -n "$VMID" -iH 2>/dev/null | grep -m1 -E '^[0-9]+\.' || true)
-    if [[ -z $IP ]]; then
-      addresses=$(pct exec "$VMID" -- hostname -I 2>/dev/null || true)
-      IP=$(tr ' ' '\n' <<<"$addresses" | grep -m1 -E '^[0-9]+\.' || true)
+    if ! IP=$(own_ipv4); then
+      IP=$(lxc-info -n "$VMID" -iH 2>/dev/null | grep -m1 -E '^[0-9]+\.' || true)
+      if [[ -z $IP ]]; then
+        addresses=$(pct exec "$VMID" -- hostname -I 2>/dev/null || true)
+        IP=$(tr ' ' '\n' <<<"$addresses" | grep -m1 -E '^[0-9]+\.' || true)
+      fi
     fi
     [[ -n $IP ]] && break
     msg_progress "$(translate "Waiting for the network address...") $((attempt * 2))/30 s"
@@ -1705,7 +1722,8 @@ else
 fi
 
 SYSCTL_COUNT=$(jq '.security.sysctls? // [] | length' "$DEPLOYMENT_FILE")
-if (( SYSCTL_COUNT > 0 )); then
+NO_NEW_PRIVILEGES=$(jq -r '.security.options.no_new_privileges? // false' "$DEPLOYMENT_FILE")
+if (( SYSCTL_COUNT > 0 )) || [[ $NO_NEW_PRIVILEGES == true ]]; then
   SYSCTL_INCLUDE="/etc/pve/proxmenux/${VMID}.sysctls"
   mkdir -p /etc/pve/proxmenux || die "$(translate "Could not create the ProxMenux folder in /etc/pve")"
   SYSCTL_TEMP=$(mktemp)
@@ -1718,12 +1736,14 @@ if (( SYSCTL_COUNT > 0 )); then
     printf 'lxc.sysctl.%s = %s\n' "$SYSCTL_NAME" "$SYSCTL_VALUE" >>"$SYSCTL_TEMP"
     oci_log "Network sysctl prepared: ${SYSCTL_NAME}=${SYSCTL_VALUE}"
   done < <(jq -r '.security.sysctls[]? | [.name,.value] | @tsv' "$DEPLOYMENT_FILE")
+  # Proxmox does not take this setting in the configuration of a container.
+  [[ $NO_NEW_PRIVILEGES != true ]] || printf 'lxc.no_new_privs = 1\n' >>"$SYSCTL_TEMP"
   [[ ! -L $SYSCTL_INCLUDE ]] || die "$(translate "The sysctl include is a link:") $SYSCTL_INCLUDE"
   # pmxcfs assigns its own permissions and rejects chmod.
   cat "$SYSCTL_TEMP" >"$SYSCTL_INCLUDE"
   rm -f "$SYSCTL_TEMP"
   set_lxc_directive "lxc.include" "$SYSCTL_INCLUDE"
-  msg_ok "$(translate "Network sysctls prepared:") $SYSCTL_COUNT"
+  (( SYSCTL_COUNT == 0 )) || msg_ok "$(translate "Network sysctls prepared:") $SYSCTL_COUNT"
 fi
 
 REQUIRED_CAPABILITIES=$(jq -r '.security.required_capabilities? // [] | join(",")' "$DEPLOYMENT_FILE")
@@ -1731,13 +1751,9 @@ if [[ -n $REQUIRED_CAPABILITIES ]]; then
   msg_ok "$(translate "Compose capabilities validated in the LXC user namespace:") $REQUIRED_CAPABILITIES"
 fi
 
-NO_NEW_PRIVILEGES=$(jq -r '.security.options.no_new_privileges? // false' "$DEPLOYMENT_FILE")
 APPARMOR_PROFILE=$(jq -r '.security.options.apparmor_profile? // empty' "$DEPLOYMENT_FILE")
 SECCOMP_PROFILE=$(jq -r '.security.options.seccomp_profile? // empty' "$DEPLOYMENT_FILE")
 SELINUX_LABEL_DISABLED=$(jq -r '.security.options.selinux_label_disabled? // false' "$DEPLOYMENT_FILE")
-if [[ $NO_NEW_PRIVILEGES == true ]]; then
-  set_lxc_directive "lxc.no_new_privs" "1"
-fi
 if [[ $(jq -r '.security.options.drop_all_capabilities? // false' "$DEPLOYMENT_FILE") == true ]]; then
   [[ -z $REQUIRED_CAPABILITIES ]] || die "$(translate "Capabilities cannot be kept and all dropped at the same time")"
   set_lxc_directive "lxc.cap.drop" ""
@@ -2057,9 +2073,9 @@ if [[ $START_AFTER == 1 && $HAS_STARTUP_HEALTHCHECK == 1 ]]; then
   HC_PORT=$(jq -er '.port' <<<"$STARTUP_HEALTHCHECK")
   HC_PATH=$(jq -er '.path' <<<"$STARTUP_HEALTHCHECK")
   HC_TIMEOUT=$(jq -er '.timeout_seconds' <<<"$STARTUP_HEALTHCHECK")
-  HC_REQUEST_TIMEOUT=$(jq -er '.request_timeout_seconds' <<<"$STARTUP_HEALTHCHECK")
+  HC_REQUEST_TIMEOUT=$(jq -r '.request_timeout_seconds // 5' <<<"$STARTUP_HEALTHCHECK")
   HC_STABILITY=$(jq -r '.stability_seconds // 0' <<<"$STARTUP_HEALTHCHECK")
-  HC_VERIFY_TLS=$(jq -r '.verify_tls' <<<"$STARTUP_HEALTHCHECK")
+  HC_VERIFY_TLS=$(jq -r '.verify_tls // false' <<<"$STARTUP_HEALTHCHECK")
   [[ $HC_SCHEME == http || $HC_SCHEME == https ]] || die "$(translate "Invalid healthcheck scheme")"
   [[ $HC_PORT =~ ^[0-9]+$ && $HC_PORT -ge 1 && $HC_PORT -le 65535 ]] \
     || die "$(translate "Invalid healthcheck port")"

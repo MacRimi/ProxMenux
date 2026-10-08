@@ -17,6 +17,7 @@ import oci_instance_transaction as member_tx
 import oci_stack_plan
 import oci_stack_transaction as stack_tx
 import oci_stack_replay as replay
+import oci_work_backup as work_backup
 from oci_installation_state import image_from_archive, parse_config, private_directory, sha
 from oci_update_current import resolve_archive
 from oci_ui import translate, msg_info, msg_ok, msg_warn, msg_error
@@ -251,7 +252,17 @@ class NativeAdapter:
                     for s in self.services.values() if s['vmid'] != primary_id and not s.get('deferred_setup')]
         if spec.get('schema') != 1 or spec.get('dependencies') != expected:
             raise ValueError(translate('The dependency hook and the stack recipe differ'))
-        member_tx.require_backup_space(self.journal.parent, list(self.records))
+        self.work_base()
+
+    def work_base(self):
+        """Where the backups of this operation go. It is decided, and checked
+        for room, until the first backup exists; afterwards it is read back,
+        so the space the backups themselves take is not asked for again."""
+        directory = self.journal.parent
+        if (directory / work_backup.MARK).exists() or any(directory.glob('backup-*')):
+            return work_backup.recall(directory)
+        primary = self.plan['primary_vmid']
+        return work_backup.locate(directory, list(self.records), self.records[primary], primary)
 
     def is_running(self, vmid):
         return instances.command('pct', 'status', str(vmid)).strip() == b'status: running'
@@ -331,7 +342,13 @@ class NativeAdapter:
 
     def backup(self, vmid, identity):
         self.validate(self.plan)
-        directory = self.journal.parent / ('backup-%s' % vmid)
+        base = self.work_base()
+        if base != self.journal.parent and not (self.journal.parent / work_backup.MARK).exists():
+            work_backup.prepare(base)
+            work_backup.remember(self.journal.parent, base)
+            msg_warn(f"{translate('This backup does not fit on the system disk of the host; it is made on the storage:')} "
+                     f"{self.records[self.plan['primary_vmid']]['deployment'].get(work_backup.KEY)}")
+        directory = base / ('backup-%s' % vmid)
         private_directory(directory)
         archive = member_tx.verified_backup(vmid, directory, 'zstd',
                                             translate('The backup of a member could not be identified'))
@@ -339,6 +356,8 @@ class NativeAdapter:
 
     def verify_backups(self, backups):
         for backup in backups.values():
+            if not Path(backup['archive']).is_file():
+                raise ValueError(f"{translate('The backup of this operation cannot be read. If it is on another storage, make it available and recover the operation again:')} {backup['archive']}")
             if member_tx.filehash(backup['archive']) != backup['sha256']:
                 raise ValueError(translate('A backup was modified'))
             member_tx.run('zstd', '-t', backup['archive'])
@@ -579,7 +598,7 @@ class NativeAdapter:
             self.release_stages(recovered=state['phase'] == 'rolled-back')
             if self.keep_backup and state['phase'] == 'committed':
                 import oci_keep_backup
-                for backup in sorted(self.journal.parent.glob('backup-*/vzdump-lxc-*.tar.zst')):
+                for backup in sorted(work_backup.recall(self.journal.parent).glob('backup-*/vzdump-lxc-*.tar.zst')):
                     kept = oci_keep_backup.keep(backup, self.keep_backup)
                     if kept:
                         msg_ok(f"{translate('Backup kept in')} {self.keep_backup}: {Path(kept).name}")
@@ -621,9 +640,7 @@ class NativeAdapter:
             except (OSError, ValueError):
                 continue
             if phase in stack_tx.TERMINAL:
-                for backup in directory.glob('backup-*/vzdump-lxc-*'):
-                    if backup.is_file() and not backup.is_symlink():
-                        backup.unlink()
+                work_backup.clear(directory)
 
 
 # The stack journal of this run, for the summary after a failure.

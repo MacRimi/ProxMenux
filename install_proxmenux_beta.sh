@@ -496,7 +496,7 @@ update_monitor_service() {
     cat > "$MONITOR_SERVICE_FILE" << EOF
 [Unit]
 Description=ProxMenux Monitor - Web Dashboard (Beta)
-After=network.target
+After=network.target pve-cluster.service
 Before=shutdown.target reboot.target halt.target
 Conflicts=shutdown.target reboot.target halt.target
 
@@ -535,7 +535,7 @@ create_monitor_service() {
         cat > "$MONITOR_SERVICE_FILE" << EOF
 [Unit]
 Description=ProxMenux Monitor - Web Dashboard (Beta)
-After=network.target
+After=network.target pve-cluster.service
 Before=shutdown.target reboot.target halt.target
 Conflicts=shutdown.target reboot.target halt.target
 

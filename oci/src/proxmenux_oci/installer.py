@@ -137,6 +137,62 @@ def _answers_from_recipe(ui) -> bool:
     return isinstance(ui, DefaultsUI)
 
 
+SHARED_DIRECTORY_NAME = re.compile(r"[a-z][a-z0-9_-]{0,31}")
+
+
+def ask_shared_directories(ui, template: dict[str, Any], mounts: list[dict[str, Any]], storage: str,
+                           advanced: bool, optional: bool = False) -> list[dict[str, Any]]:
+    """The directories an application exists to share. Its profile declares one
+    container directory, and each directory the user names is mounted below
+    it, on a container volume or from a directory of the host. A new
+    installation asks for the first one and then for more until the user says
+    no; `optional` is for an installed application, which may add none."""
+    profile = template["proxmox"]["installer_profile"]
+    declared = profile["shared_directories"]
+    root = declared["container_root"].rstrip("/")
+    reserved = set(declared.get("reserved_names", []))
+    taken = {mount["container_path"] for mount in mounts}
+    app_id = template["id"].removeprefix("image-")
+    labels = [("managed-volume", translate("Container volume (included in backups)")),
+              ("host-bind", translate("Host directory (not included in Proxmox backups)"))]
+    added: list[dict[str, Any]] = []
+    if optional and not ui.confirm(translate("Add a directory to share"), False):
+        return added
+    while True:
+        name = str(ui.ask(translate("Name of the directory to share (lowercase letters, digits, - or _)"))).strip()
+        target = f"{root}/{name}"
+        if not SHARED_DIRECTORY_NAME.fullmatch(name) or name in reserved:
+            raise ValueError(translate("The name must start with a lowercase letter and use only lowercase "
+                                       "letters, digits, - or _"))
+        if target in taken:
+            raise ValueError(f"{translate('This directory is already shared:')} {target}")
+        location = ui.choose(f"{translate('Where to store')} {target}", labels, "managed-volume")
+        if location is None:
+            raise UserCancelled(translate("Volume configuration cancelled"))
+        mount = {"type": location, "container_path": target, "custom": True, "source": storage,
+                 "size_gb": None, "backup": location == "managed-volume", "read_only": False,
+                 "create_if_missing": location == "host-bind"}
+        if location == "managed-volume":
+            if advanced:
+                mount["source"] = ask_storage(ui, f"{translate('Storage for')} {target}", "rootdir", storage)
+            mount["size_gb"] = _ask_size(ui, target, int(declared.get("default_size_gb", 32)))
+            # The application writes to it as its own user, not as root.
+            preparation = {"container_path": target, "remove_lost_found": True,
+                           "owner_strategy": "mapped-application-user",
+                           "only_when_mount_type": "managed-volume"}
+            if preparation not in profile.setdefault("volume_preparations", []):
+                profile["volume_preparations"].append(preparation)
+        else:
+            mount["source"] = ui.ask(f"{translate('Host path for')} {target}",
+                                     f"/mnt/oci-shared/{app_id}/{name}")
+        from .custom_mounts import validate_mount
+        mount["container_path"] = validate_mount(mount, [*mounts, *added])
+        added.append(mount)
+        taken.add(target)
+        if not ui.confirm(translate("Add another directory to share?"), False):
+            return added
+
+
 def ask_application_extra_paths(ui, existing: list[str], storage: str) -> list[dict[str, Any]]:
     """Extra paths for the application container of a multi-container
     application. An advanced installation asks them; a default one does not."""
@@ -327,6 +383,9 @@ def build_deployment(
         if enabled:
             selected_security_options.update(item.get("options", {}))
             security_relaxation_acknowledged = True
+            if item.get("privileged"):
+                unprivileged = False
+                privileged_acknowledged = True
     runtime_profile = installer_profile.get("runtime", {})
     hostname_default = _hostname_default(runtime_profile.get("hostname")
                                          or template["container_contract"]["container_name"])
@@ -425,6 +484,9 @@ def build_deployment(
             }
         )
 
+    if installer_profile.get("shared_directories"):
+        mounts += ask_shared_directories(ui, template, mounts, volume_storage, advanced)
+
     if advanced:
         mounts = ask_custom_mounts(ui, mounts, volume_storage)
 
@@ -522,6 +584,9 @@ def build_deployment(
                 value = secrets.token_hex(int(generated.get("bytes", 16)))
             if not value and item["required"]:
                 raise InstallError(f"{name}: {translate('a value is required')}")
+            minimum = installer_profile.get("minimum_secret_length", {}).get(name)
+            if minimum and len(value) < int(minimum):
+                raise InstallError(f"{name}: {translate('the minimum number of characters is')} {minimum}")
         elif not advanced and default not in (None, ""):
             value = default
         else:

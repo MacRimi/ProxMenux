@@ -89,5 +89,47 @@ class LxcVmIpInventoryTests(unittest.TestCase):
         self.assertNotIn("ip", rows[0])
 
 
+class LxcPrimaryAddressTests(unittest.TestCase):
+    """A container that rebooted from inside shows the addresses of its inner
+    bridges until it has its own again."""
+
+    def setUp(self):
+        self.server = load_server_functions(
+            "_get_lxc_ip_info_cached", "_remember_lxc_ip", "get_lxc_ip_from_lxc_info")
+        self.listed = ""
+
+        class Result:
+            returncode = 0
+
+        def run(_command, **_options):
+            result = Result()
+            result.stdout = self.listed
+            return result
+
+        import types
+        self.server.update({
+            "_lxc_ip_cache": {},
+            "subprocess": types.SimpleNamespace(run=run),
+            "_lxc_isolated_ips": lambda _vmid: set(),
+            "_lxc_shares_host_network": lambda _vmid: False,
+        })
+
+    def read(self, listed):
+        self.listed = listed
+        return self.server["_get_lxc_ip_info_cached"](121)
+
+    def test_ipv4_is_the_primary_address_wherever_it_is_listed(self):
+        info = self.read("fd0c:ac1e:2100::1\n172.30.32.1\n192.168.0.100\n")
+        self.assertEqual(info["primary_ip"], "192.168.0.100")
+        self.assertEqual(info["real_ips"], ["192.168.0.100", "fd0c:ac1e:2100::1"])
+        self.assertIn(121, self.server["_lxc_ip_cache"])
+
+    def test_an_answer_without_ipv4_of_its_own_is_read_again(self):
+        self.read("172.30.232.1\n172.30.32.1\nfd0c:ac1e:2100::1\n")
+        self.assertNotIn(121, self.server["_lxc_ip_cache"])
+        self.assertEqual(self.read("192.168.0.100\n172.30.32.1\n")["primary_ip"], "192.168.0.100")
+        self.assertIn(121, self.server["_lxc_ip_cache"])
+
+
 if __name__ == "__main__":
     unittest.main()

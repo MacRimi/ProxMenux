@@ -103,6 +103,24 @@ def persist_instances(deployment, services, primary_id=None):
             oci_instances.publish_stack(oci_instances.ROOT, None, template, deployment, services)
 
 
+def refresh_notes(services):
+    """The notes of each container were written when it was created, before
+    it had its leg on the local network: write them again with the address
+    the application is reached at."""
+    from oci_description import render
+    from oci_native_stack import access_address as reachable_address
+    for service in services:
+        vmid = int(service['vmid'])
+        try:
+            record = oci_instances.read(oci_instances.ROOT, vmid)
+            running = 'running' in run('pct', 'status', vmid)
+            description = render(record['template'], '', record['installation_id'],
+                                 reachable_address(vmid, wait=20 if running else 0))
+            run('pct', 'set', vmid, '--description', description)
+        except (OSError, ValueError, KeyError, subprocess.SubprocessError) as error:
+            log(LOG, f'Notes of CT {vmid} not refreshed: {error}')
+
+
 def run(*args, capture=True, timeout=180):
     argv = list(map(str,args))
     if capture:
@@ -811,6 +829,7 @@ def main():
                 fcntl.flock(lock,fcntl.LOCK_UN)
                 result = finish_independent_suite(services,subnet)
                 persist_instances(deployment, services)
+                refresh_notes(services)
                 result.update(completion_notes=list(deployment.get('completion_notes',[])), log=LOG)
                 print('PROXMENUX_RESULT='+base64.b64encode(json.dumps(result).encode()).decode(),flush=True)
                 return
@@ -852,6 +871,7 @@ def main():
                 msg_ok(translate('LAN address applied to the application URLs'))
             result=results[primary['name']]
             persist_instances(deployment, services, primary_id)
+            refresh_notes(services)
             # The credentials of the main service come from its own installation.
             result.update(vmid=primary_id,ip=lan,stack_vmids={s['name']:s['vmid'] for s in services},
                           urls=[{'label':'Web UI','url':public_url}],

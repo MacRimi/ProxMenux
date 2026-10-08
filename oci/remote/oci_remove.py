@@ -17,6 +17,7 @@ import subprocess
 import sys
 
 import oci_image_cache as image_cache
+import oci_work_backup as work_backup
 import oci_instances as instances
 from oci_installation_state import parse_config
 import oci_console
@@ -119,9 +120,11 @@ def _unlink(path):
 
 def remove_host_state(vmid):
     """What the installation kept on the host for a container that is gone:
-    its sysctl include, the Rclone mount hookscript and the views it
-    published, and its registration in the App tab of ProxMenux Monitor."""
-    for include in (runtime_settings.include_path(vmid), runtime_settings.legacy_include_path(vmid)):
+    its sysctl include, its seccomp profile, the Rclone mount hookscript and
+    the views it published, and its registration in the App tab of ProxMenux
+    Monitor."""
+    for include in (runtime_settings.include_path(vmid), runtime_settings.legacy_include_path(vmid),
+                    runtime_settings.seccomp_path(vmid)):
         _unlink(include)
     hook = SNIPPETS / f'proxmenux-rclone-{int(vmid)}-fuse-hook.sh'
     if hook.is_file() and not hook.is_symlink():
@@ -179,7 +182,7 @@ def release_shared_host_files(hookscripts):
 def _leftovers(vmid):
     """Whether anything of the container is still on the host."""
     paths = [runtime_settings.include_path(vmid), runtime_settings.legacy_include_path(vmid),
-             SNIPPETS / f'proxmenux-rclone-{int(vmid)}-fuse-hook.sh', MONITOR_APPS / f'{int(vmid)}.json',
+             runtime_settings.seccomp_path(vmid), SNIPPETS / f'proxmenux-rclone-{int(vmid)}-fuse-hook.sh', MONITOR_APPS / f'{int(vmid)}.json',
              CLUSTER_RECORDS / f'{int(vmid)}.json',
              *oci_console.LOG_DIR.glob(f'{int(vmid)}.console.log*')]
     return any(path.exists() for path in paths)
@@ -193,6 +196,7 @@ def sweep_orphans(root):
     found = {int(d.name) for d in root.iterdir() if d.name.isdecimal()} if root.is_dir() else set()
     for directory, pattern in ((runtime_settings.include_path(0).parent, r'([0-9]+)\.sysctls'),
                                (runtime_settings.legacy_include_path(0).parent, r'([0-9]+)\.proxmenux-sysctls'),
+                               (runtime_settings.seccomp_path(0).parent, r'([0-9]+)\.proxmenux-seccomp'),
                                (oci_console.LOG_DIR, r'([0-9]+)\.console\.log.*'),
                                (SNIPPETS, r'proxmenux-rclone-([0-9]+)-fuse-hook\.sh'),
                                (CLUSTER_RECORDS, r'([0-9]+)\.json')):
@@ -347,6 +351,7 @@ def remove(root, vmid):
         lifecycle.unlink()
     for member in members:
         directory = instances.location(root, member).parent
+        work_backup.forget(root, member)
         if directory.is_dir() and not directory.is_symlink():
             shutil.rmtree(directory)
     msg_ok(translate('Saved record removed'))

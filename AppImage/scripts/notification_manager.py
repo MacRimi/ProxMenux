@@ -1141,6 +1141,11 @@ class NotificationManager:
             wh_result = setup_pve_webhook_core()
             if wh_result.get('configured'):
                 print("[NotificationManager] PVE webhook configured OK.")
+            elif wh_result.get('waiting'):
+                # /etc/pve is not mounted yet: nothing is written until it is.
+                print("[NotificationManager] PVE webhook: waiting for /etc/pve to be mounted.")
+                threading.Thread(target=self._configure_pve_webhook_when_mounted, daemon=True,
+                                 name='pve-webhook-setup').start()
             elif wh_result.get('error'):
                 print(f"[NotificationManager] PVE webhook warning: {wh_result['error']}")
         except ImportError:
@@ -2284,6 +2289,18 @@ class NotificationManager:
         # following a Monitor reinstall (Pedro Rico, 19/05).
         'auth_fail',
     )
+
+    def _configure_pve_webhook_when_mounted(self):
+        """Configure the PVE webhook once the cluster filesystem is back."""
+        try:
+            from flask_notification_routes import setup_pve_webhook_when_mounted
+            result = setup_pve_webhook_when_mounted()
+            if result.get('configured'):
+                print("[NotificationManager] PVE webhook configured OK.")
+            elif result.get('error'):
+                print(f"[NotificationManager] PVE webhook warning: {result['error']}")
+        except Exception as e:
+            print(f"[NotificationManager] PVE webhook setup error: {e}")
 
     def _reset_cooldowns_on_start(self):
         """Clear DB rows in notification_last_sent for the curated set of

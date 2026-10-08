@@ -12,6 +12,7 @@ import tempfile
 
 import oci_instances as instances
 import oci_instance_transaction as transaction
+import oci_work_backup as work_backup
 from oci_installation_state import image_from_archive, same_image
 from oci_ui import translate, msg_info, msg_ok, msg_warn, msg_error, msg_info2
 
@@ -102,6 +103,12 @@ def resolve_archive(desired, config, current=None, check=None, required_digest=N
             return archive, digest
         msg_warn(translate('The cached image is damaged; it will be downloaded again.'))
         archive.unlink()
+    # The compressed layers are what the download writes; nothing was changed yet.
+    size, free = int(candidate.get('size') or 0), work_backup.available(archive.parent)
+    if size and free < int(size * 1.1) + 256 * 1024**2:
+        raise ValueError(f"{translate('The new image does not fit on the storage where images are downloaded:')} {storage}. "
+                         f"{translate('Needed:')} {work_backup.gib(int(size * 1.1) + 256 * 1024**2)}. "
+                         f"{translate('Free:')} {work_backup.gib(free)}. {translate('The application was not modified.')}")
     # A download can come back complete yet damaged when the connection drops
     # and the transfer resumes; the integrity check catches it, and a second
     # download is what repairs it.
@@ -170,8 +177,8 @@ def update(vmid, acknowledge_external_data=False, proposal=None, keep_backup=Non
         transaction.preflight(record, desired, config)
         msg_ok(translate('Container checked'))
         current = record['observed']['image'] if operation == 'update' else None
-        archive, digest = resolve_archive(desired, config, current, lambda: transaction.require_backup_space(
-            instances.location(instances.ROOT, vmid).parent, [vmid]))
+        archive, digest = resolve_archive(desired, config, current, lambda: work_backup.locate(
+            instances.location(instances.ROOT, vmid).parent / 'transactions' / 'check', [vmid], record, vmid))
         if archive is None:
             msg_ok(translate('The image is already up to date; nothing was changed.'))
             return

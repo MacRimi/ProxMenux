@@ -408,27 +408,37 @@ compatibility need separate review, not silent removal of these requirements.
 
 ### HAOS One native OCI profile
 
-The community image `qweritos/haos-one:latest` is installable with the laboratory
-adaptation: unprivileged LXC, `ostype=unmanaged`, `nesting=1`, `keyctl=1`, and a
-managed `/mnt/data` volume included in Proxmox backups (32 GB default, 16 GB
-minimum). The image's entrypoint, command and stop signal remain imported from
-OCI metadata. No Docker daemon or compatibility proxy is installed by ProxMenux;
-the nested runtime belongs to the image itself.
+The community image `ghcr.io/sevenrats/haos:latest`, derived from HAOS One, is
+installable with the laboratory adaptation: unprivileged LXC, `ostype=unmanaged`,
+`nesting=1`, `keyctl=1`, and a managed `/mnt/data` volume included in Proxmox
+backups (32 GB default, 16 GB minimum). The image's entrypoint, command and stop
+signal remain imported from OCI metadata. No Docker daemon or compatibility proxy
+is installed by ProxMenux; the nested runtime belongs to the image itself. The
+profile is offered unprivileged only.
 
 The installer asks for explicit acknowledgement of the experimental profile and
 its inner AppArmor limitations. First boot may pull several images. A bounded
 20-minute check reports progress and requires healthy/supported Supervisor, the
 real Core container rather than the landing page, running CLI/DNS/audio/multicast/
-Observer containers, and working Core and Observer HTTP endpoints. The final
-Core URL is detected on port 80 or 8123 instead of assumed. A first-boot failure
-preserves the LXC, data and root-only console log for diagnosis; it never reports
-success. If starting is declined, no unverified URL is printed.
+Observer containers, and working Core and Observer HTTP endpoints. The recipe sets
+`SETUP_PORT=8123`, so Core answers on port 8123 during onboarding and afterwards;
+the check probes 8123 first and then 80. A first-boot failure preserves the LXC,
+data and root-only console log for diagnosis; it never reports success. If
+starting is declined, no unverified URL is printed.
 
-This installer path and the rolling latest image remain runtime-unvalidated.
-The historical lab evidence stays in the template; it is not a guarantee for
-new releases. Full backup restore, outer-image replacement, USB and multicast
-discovery still need explicit tests. See the upstream project:
-https://github.com/qweritos/haos-one
+The upstream Compose file asks Docker to restart the container, so the watchdog
+is proposed by default: a shutdown asked from Home Assistant itself is followed
+by a new start, as it is under Docker. A reboot asked from Home Assistant is
+handled by Proxmox, and the DHCP address of the container is given back by
+`remote/oci_dhcp_lease.py`.
+
+Update and Modify work as for any other application: the installer runs the
+same check on the rebuilt container, and a recovery restores the backup and
+waits for that check too. Rebuilding with the data kept and recovering from the
+backup are tested; the update to a newer image waits for the first one the
+project publishes. Home Assistant Core, Supervisor and add-ons update themselves
+from Home Assistant. See the upstream project:
+https://github.com/sevenrats/docker-haos
 
 ### Native Compose resource limits
 

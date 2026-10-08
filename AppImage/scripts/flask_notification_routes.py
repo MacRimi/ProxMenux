@@ -895,6 +895,20 @@ def _pve_webhook_url() -> str:
 _PVE_WEBHOOK_URL = _pve_webhook_url()
 
 
+_PVE_NOT_MOUNTED = 'The Proxmox cluster filesystem (/etc/pve) is not mounted'
+
+
+def _pve_cluster_fs_mounted() -> bool:
+    """Whether /etc/pve is the Proxmox cluster filesystem.
+
+    While its service is stopped or restarting, /etc/pve is an empty
+    directory of the root disk. A file written there is not a configuration
+    file: it keeps the service from mounting the filesystem again.
+    """
+    import os
+    return os.path.ismount(os.path.dirname(_PVE_NOTIFICATIONS_CFG))
+
+
 def _pve_read_file(path):
     """Read file, return (content, error). Content is '' if missing."""
     try:
@@ -909,26 +923,47 @@ def _pve_read_file(path):
 
 
 _PVE_BACKUPS_KEPT = 3
+# Copies of Proxmox's notification settings, taken before changing them. They
+# are kept with ProxMenux, not next to the files: /etc/pve belongs to Proxmox
+# and is replicated to every node of a cluster.
+_PVE_BACKUP_DIR = '/usr/local/share/proxmenux/backups/pve-notifications'
+_PVE_BACKUP_MARK = '.proxmenux_backup_'
+
+
+def _pve_backup_prefix(path):
+    """Name the copies of a file are kept under. The private file carries
+    its own name, as both are called notifications.cfg."""
+    import os
+    name = os.path.basename(path)
+    return ('priv-' if path == _PVE_PRIV_CFG else '') + name + _PVE_BACKUP_MARK
+
+
+def _pve_backups(path):
+    """The copies kept of a file, newest first."""
+    import os
+    prefix = _pve_backup_prefix(path)
+    try:
+        names = os.listdir(_PVE_BACKUP_DIR)
+    except OSError:
+        return []
+    found = [os.path.join(_PVE_BACKUP_DIR, name) for name in names if name.startswith(prefix)]
+    return sorted(found, key=os.path.getmtime, reverse=True)
 
 
 def _pve_backup_file(path):
-    """Create timestamped backup if file exists. Never fails fatally.
+    """Keep a timestamped copy of the file if it exists. Never fails fatally.
 
-    The backups live next to the file, inside the cluster filesystem, whose
-    size is limited: a copy identical to the newest one is not written again
-    and only the newest few are kept. Restore uses the newest.
+    A copy identical to the newest one is not written again and only the
+    newest few are kept. Restore uses the newest.
     """
     import os, shutil
     from datetime import datetime
     try:
         if not os.path.exists(path):
             return
-        directory, name = os.path.split(path)
-        prefix = f"{name}.proxmenux_backup_"
-        existing = sorted(
-            (os.path.join(directory, f) for f in os.listdir(directory) if f.startswith(prefix)),
-            key=os.path.getmtime, reverse=True,
-        )
+        os.makedirs(_PVE_BACKUP_DIR, mode=0o700, exist_ok=True)
+        os.chmod(_PVE_BACKUP_DIR, 0o700)
+        existing = _pve_backups(path)
         with open(path, 'rb') as f:
             current = f.read()
         newest_matches = False
@@ -940,16 +975,48 @@ def _pve_backup_file(path):
                 pass
         if not newest_matches:
             ts = datetime.now().strftime('%Y%m%d_%H%M%S')
-            shutil.copy2(path, os.path.join(directory, prefix + ts))
-            existing = sorted(
-                (os.path.join(directory, f) for f in os.listdir(directory) if f.startswith(prefix)),
-                key=os.path.getmtime, reverse=True,
-            )
-        for stale in existing[_PVE_BACKUPS_KEPT:]:
-            try:
-                os.remove(stale)
-            except OSError:
-                pass
+            destination = os.path.join(_PVE_BACKUP_DIR, _pve_backup_prefix(path) + ts)
+            shutil.copy2(path, destination)
+            # The private file holds the secrets of every notification target.
+            os.chmod(destination, 0o600)
+        _pve_prune_backups(path)
+    except Exception:
+        pass
+
+
+def _pve_prune_backups(path):
+    """Keep only the newest copies of a file."""
+    import os
+    for stale in _pve_backups(path)[_PVE_BACKUPS_KEPT:]:
+        try:
+            os.remove(stale)
+        except OSError:
+            pass
+
+
+def _pve_collect_legacy_backups(path):
+    """Earlier versions left the copies next to the file, inside /etc/pve.
+    The newest ones are moved with the rest and none is left there."""
+    import os, shutil
+    try:
+        directory, name = os.path.split(path)
+        legacy = sorted(
+            (os.path.join(directory, f) for f in os.listdir(directory) if f.startswith(name + _PVE_BACKUP_MARK)),
+            key=os.path.getmtime, reverse=True,
+        )
+        if not legacy:
+            return
+        os.makedirs(_PVE_BACKUP_DIR, mode=0o700, exist_ok=True)
+        os.chmod(_PVE_BACKUP_DIR, 0o700)
+        for position, source in enumerate(legacy):
+            if position < _PVE_BACKUPS_KEPT:
+                stamp = os.path.basename(source)[len(name + _PVE_BACKUP_MARK):]
+                destination = os.path.join(_PVE_BACKUP_DIR, _pve_backup_prefix(path) + stamp)
+                if not os.path.exists(destination):
+                    shutil.copy2(source, destination)
+                    os.chmod(destination, 0o600)
+            os.remove(source)
+        _pve_prune_backups(path)
     except Exception:
         pass
 
@@ -1091,6 +1158,11 @@ def setup_pve_webhook_core() -> dict:
     }
     
     try:
+        if not _pve_cluster_fs_mounted():
+            result['error'] = _PVE_NOT_MOUNTED
+            result['waiting'] = True
+            return result
+
         # ── Step 1: Ensure webhook secret exists (for our own internal use) ──
         secret = notification_manager.get_webhook_secret()
         if not secret:
@@ -1109,11 +1181,10 @@ def setup_pve_webhook_core() -> dict:
         if err:
             priv_text = None
         
-        # ── Step 4: Create backups before ANY modification ──
-        _pve_backup_file(_PVE_NOTIFICATIONS_CFG)
-        if priv_text is not None:
-            _pve_backup_file(_PVE_PRIV_CFG)
-        
+        # ── Step 4: Backups are taken below, only of a file about to change ──
+        _pve_collect_legacy_backups(_PVE_NOTIFICATIONS_CFG)
+        _pve_collect_legacy_backups(_PVE_PRIV_CFG)
+
         # ── Step 5: Remove any previous proxmenux blocks from BOTH files ──
         cleaned_cfg = _pve_remove_our_blocks(cfg_text, _PVE_OUR_HEADERS)
         
@@ -1161,10 +1232,12 @@ def setup_pve_webhook_core() -> dict:
         
         new_cfg = cleaned_cfg + endpoint_block + '\n' + matcher_block
         
-        # ── Step 8: Write main config ──
+        # ── Step 8: Write main config, when it is not already as wanted ──
         try:
-            with open(_PVE_NOTIFICATIONS_CFG, 'w') as f:
-                f.write(new_cfg)
+            if new_cfg != cfg_text:
+                _pve_backup_file(_PVE_NOTIFICATIONS_CFG)
+                with open(_PVE_NOTIFICATIONS_CFG, 'w') as f:
+                    f.write(new_cfg)
         except PermissionError:
             result['error'] = f'Permission denied writing {_PVE_NOTIFICATIONS_CFG}'
             result['fallback_commands'] = _build_webhook_fallback()
@@ -1214,8 +1287,11 @@ def setup_pve_webhook_core() -> dict:
             new_priv = priv_block
         
         try:
-            with open(_PVE_PRIV_CFG, 'w') as f:
-                f.write(new_priv)
+            if new_priv != priv_text:
+                if priv_text is not None:
+                    _pve_backup_file(_PVE_PRIV_CFG)
+                with open(_PVE_PRIV_CFG, 'w') as f:
+                    f.write(new_priv)
         except PermissionError:
             result['error'] = f'Permission denied writing {_PVE_PRIV_CFG}'
             result['fallback_commands'] = _build_webhook_fallback()
@@ -1238,6 +1314,17 @@ def setup_pve_webhook_core() -> dict:
         return result
 
 
+def setup_pve_webhook_when_mounted(timeout=900, interval=5) -> dict:
+    """Configure the webhook once /etc/pve is mounted. For the Monitor that
+    starts while the cluster service is still starting or being restarted."""
+    deadline = time.monotonic() + timeout
+    while not _pve_cluster_fs_mounted():
+        if time.monotonic() >= deadline:
+            return {'configured': False, 'error': _PVE_NOT_MOUNTED, 'waiting': True}
+        time.sleep(interval)
+    return setup_pve_webhook_core()
+
+
 @notification_bp.route('/api/notifications/proxmox/setup-webhook', methods=['POST'])
 @require_auth
 def setup_proxmox_webhook():
@@ -1254,6 +1341,10 @@ def cleanup_pve_webhook_core() -> dict:
     result = {'cleaned': False, 'error': None}
     
     try:
+        if not _pve_cluster_fs_mounted():
+            result['error'] = _PVE_NOT_MOUNTED
+            return result
+
         # Read both files
         cfg_text, err = _pve_read_file(_PVE_NOTIFICATIONS_CFG)
         if err:
@@ -1336,10 +1427,6 @@ def read_pve_notification_cfg():
         'priv_cfg': '/etc/pve/priv/notifications.cfg',
     }
     
-    # Also look for any backups we created
-    backup_dir = '/etc/pve'
-    priv_backup_dir = '/etc/pve/priv'
-    
     result = {}
     for key, path in files.items():
         try:
@@ -1357,24 +1444,18 @@ def read_pve_notification_cfg():
         except Exception as e:
             result[key] = {'path': path, 'content': None, 'size': 0, 'error': str(e)}
     
-    # Find backups
+    # The copies kept of both files
     backups = []
-    for d in [backup_dir, priv_backup_dir]:
+    for fpath in _pve_backups(_PVE_NOTIFICATIONS_CFG) + _pve_backups(_PVE_PRIV_CFG):
         try:
-            for fname in sorted(os.listdir(d)):
-                if 'proxmenux_backup' in fname:
-                    fpath = os.path.join(d, fname)
-                    try:
-                        with open(fpath, 'r') as f:
-                            backups.append({
-                                'path': fpath,
-                                'content': f.read(),
-                                'size': os.path.getsize(fpath),
-                            })
-                    except Exception:
-                        backups.append({'path': fpath, 'content': None, 'error': 'read_failed'})
+            with open(fpath, 'r') as f:
+                backups.append({
+                    'path': fpath,
+                    'content': f.read(),
+                    'size': os.path.getsize(fpath),
+                })
         except Exception:
-            pass
+            backups.append({'path': fpath, 'content': None, 'error': 'read_failed'})
     
     result['backups'] = backups
     return jsonify(result), 200
@@ -1391,35 +1472,26 @@ def restore_pve_notification_cfg():
     import os
     import shutil
     
-    files_to_restore = {
-        '/etc/pve': '/etc/pve/notifications.cfg',
-        '/etc/pve/priv': '/etc/pve/priv/notifications.cfg',
-    }
-    
     restored = []
     errors = []
-    
-    for search_dir, target_path in files_to_restore.items():
-        try:
-            # Pick the most recent backup by mtime, not lexicographic name.
-            # An attacker (or accidental rename) with a write primitive
-            # could craft `notifications.cfg.proxmenux_backup_99999999_999999`
-            # and have it sort first, hijacking the restore. mtime tracks
-            # the actual file age so renamed/touched files don't fool us.
-            # Audit Tier 3.1 — restore-cfg sort lexicográfico.
-            candidates = [
-                f for f in os.listdir(search_dir)
-                if 'proxmenux_backup' in f and f.startswith('notifications.cfg')
-            ]
 
+    if not _pve_cluster_fs_mounted():
+        return jsonify({'restored': [], 'errors': [{'target': '/etc/pve', 'error': _PVE_NOT_MOUNTED}],
+                        'success': False}), 200
+
+    for target_path in (_PVE_NOTIFICATIONS_CFG, _PVE_PRIV_CFG):
+        try:
+            _pve_collect_legacy_backups(target_path)
+            # The newest by modification time: a name can be crafted to sort
+            # first, a file's age cannot.
+            candidates = _pve_backups(target_path)
             if candidates:
-                candidates.sort(
-                    key=lambda f: os.path.getmtime(os.path.join(search_dir, f)),
-                    reverse=True,
-                )
-                backup_path = os.path.join(search_dir, candidates[0])
-                shutil.copy2(backup_path, target_path)
-                restored.append({'target': target_path, 'from_backup': backup_path})
+                # Content only: the cluster filesystem sets its own permissions.
+                with open(candidates[0], 'rb') as source:
+                    content = source.read()
+                with open(target_path, 'wb') as target:
+                    target.write(content)
+                restored.append({'target': target_path, 'from_backup': candidates[0]})
             else:
                 errors.append({'target': target_path, 'error': 'no_backup_found'})
         except Exception as e:
