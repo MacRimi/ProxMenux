@@ -103,12 +103,67 @@ class DiskObservationIdentityTests(unittest.TestCase):
         self.assertEqual(self.seen('sdd'), ['error_on_sdd'])
         self.assertEqual(self.store.count_disk_observations('sda', 'Unknown'), 1)
 
-    def test_a_dismissed_observation_is_not_counted(self):
+    def test_each_different_observation_is_a_row_and_a_repeated_one_adds_to_its_count(self):
+        self.record('sdb', 'SN-1', 'read_error')
+        self.record('sdb', 'SN-1', 'read_error')
         self.record('sdb', 'SN-1', 'read_error')
         self.record('sdb', 'SN-1', 'crc_error')
-        first = self.store.get_disk_observations('sdb', 'SN-1')[0]['id']
-        self.store.dismiss_disk_observation(first)
+        listed = {o['error_signature']: o['occurrence_count'] for o in self.store.get_disk_observations('sdb', 'SN-1')}
+        self.assertEqual(listed, {'read_error': 3, 'crc_error': 1})
+        self.assertEqual(self.store.count_disk_observations('sdb', 'SN-1'), 2)
+
+    def test_an_observation_cannot_be_dismissed(self):
+        for name in ('dismiss_disk_observation', 'cleanup_stale_observations', 'cleanup_orphan_observations'):
+            self.assertFalse(hasattr(self.store, name), name)
+        self.record('sdb', 'SN-1', 'read_error')
+        self.assertNotIn('dismissed', self.store.get_disk_observations('sdb', 'SN-1')[0])
+        routes = (SCRIPTS / 'flask_health_routes.py').read_text() + (SCRIPTS / 'flask_server.py').read_text()
+        self.assertNotIn('cleanup_orphan_observations', routes)
+        self.assertNotIn('cleanup_stale_observations', routes)
+        panel = (SCRIPTS.parent / 'components/storage-overview.tsx').read_text()
+        self.assertNotIn('obs.dismissed', panel)
+
+    def test_an_old_observation_is_never_hidden(self):
+        self.record('sdb', 'SN-1', 'read_error')
+        self.set_time('disk_observations', 'last_occurrence', '2020-01-01T00:00:00', '1 = 1', ())
+        self.assertEqual(self.seen('sdb', 'SN-1'), ['read_error'])
         self.assertEqual(self.store.count_disk_observations('sdb', 'SN-1'), 1)
+
+    def test_what_earlier_versions_hid_is_in_the_history_again(self):
+        self.record('sdb', 'SN-1', 'read_error')
+        conn = self.store._get_conn()
+        conn.execute('UPDATE disk_observations SET dismissed = 1')
+        conn.execute("DELETE FROM user_settings WHERE setting_key = 'observation_history_version'")
+        conn.commit()
+        conn.close()
+        # Listed whatever the old mark says, and the mark is taken off.
+        self.assertEqual(self.seen('sdb', 'SN-1'), ['read_error'])
+        self.assertEqual(self.store.count_disk_observations('sdb', 'SN-1'), 1)
+        with patch('builtins.print'):
+            self.store._init_database()
+        conn = self.store._get_conn()
+        marked = conn.execute('SELECT COUNT(*) FROM disk_observations WHERE dismissed = 1').fetchone()[0]
+        conn.close()
+        self.assertEqual(marked, 0)
+
+
+class AuditAttributionTests(unittest.TestCase):
+    def test_the_audit_lists_the_events_of_the_disk_that_is_there_now(self):
+        import types
+        import audit_inventory
+        asked = []
+
+        def getter(name=None, serial=None):
+            asked.append((name, serial))
+            return [{'error_type': 'io_error', 'severity': 'warning', 'occurrence_count': 3,
+                     'first_occurrence': '2026-10-01T00:00:00', 'last_occurrence': '2026-10-02T00:00:00',
+                     'raw_message': 'crc'}] if serial == 'NEW-GOOD' else []
+        server = types.SimpleNamespace(health_persistence=types.SimpleNamespace(get_disk_observations=getter))
+        by_name = {'sdb': [{'type': 'io_error', 'count': 99, 'message': 'of the previous disk'}]}
+        with patch.dict(sys.modules, {'flask_server': server}):
+            entries = audit_inventory._observations_of('sdb', 'NEW-GOOD', by_name)
+        self.assertEqual(asked, [('sdb', 'NEW-GOOD')])
+        self.assertEqual([(e['type'], e['count']) for e in entries], [('io_error', 3)])
 
 
 if __name__ == '__main__':

@@ -463,9 +463,8 @@ class HealthPersistence:
         # and looks "new" again on the next boot. Audit Tier 5 — Health stack.
         #
         # IMPORTANT: Only cleans the `errors` table (health monitor state).
-        # The `disk_observations` table is a PERMANENT historical record
-        # and must NEVER be auto-modified on startup. Users dismiss
-        # observations manually from the disk detail UI.
+        # The `disk_observations` table is a PERMANENT historical record:
+        # nothing removes, hides or dismisses an observation.
         #
         # Covers: disk I/O (smart_*, disk_*), VM/CT (vm_*, ct_*, vmct_*),
         # and log errors (log_*) — all journal-sourced categories.
@@ -509,6 +508,30 @@ class HealthPersistence:
                           f"removed {cleaned_errors} stale error(s) from health monitor")
         except Exception as e:
             print(f"[HealthPersistence] Startup cleanup warning: {e}")
+
+        # Earlier versions marked an observation as dismissed once it had not
+        # been seen for 30 days, or when its device was gone, and left it out
+        # of the history of its disk even when the error came back. The mark
+        # is no longer used; it is taken off once so the table says what is
+        # shown.
+        _OBSERVATION_HISTORY_VERSION = '1'
+        try:
+            cursor = conn.cursor()
+            cursor.execute('SELECT setting_value FROM user_settings WHERE setting_key = ?',
+                           ('observation_history_version',))
+            row = cursor.fetchone()
+            if not (row and row[0] == _OBSERVATION_HISTORY_VERSION):
+                cursor.execute('UPDATE disk_observations SET dismissed = 0 WHERE dismissed = 1')
+                restored = cursor.rowcount
+                cursor.execute('''
+                    INSERT OR REPLACE INTO user_settings (setting_key, setting_value, updated_at)
+                    VALUES (?, ?, ?)
+                ''', ('observation_history_version', _OBSERVATION_HISTORY_VERSION, datetime.now().isoformat()))
+                conn.commit()
+                if restored > 0:
+                    print(f"[HealthPersistence] Disk observation history: {restored} observation(s) shown again")
+        except Exception as e:
+            print(f"[HealthPersistence] Observation history warning: {e}")
 
         conn.close()
     
@@ -1437,12 +1460,8 @@ class HealthPersistence:
         # Clean up errors for resources that no longer exist (VMs/CTs deleted, disks removed)
         self._cleanup_stale_resources()
 
-        # NOTE: cleanup_orphan_observations() is deliberately NOT invoked here.
-        # Running it on the 5-minute auto-resolve cycle silently dismissed legitimate
-        # observations (ZFS pool errors, ATA host events, dm-* aliases) before the user
-        # could see them in the UI history, even though notifications were already sent.
-        # The cleanup is still available as an explicit user action via
-        # POST /api/health/cleanup-disconnected-disks (flask_health_routes.py).
+        # NOTE: nothing here touches `disk_observations`. That table is the
+        # permanent history of each disk and no cycle removes or hides rows.
     
     def _cleanup_stale_resources(self):
         """Resolve errors for resources that no longer exist.
@@ -2663,17 +2682,10 @@ class HealthPersistence:
                 first_col = 'first_occurrence' if 'first_occurrence' in columns else 'first_seen'
                 last_col = 'last_occurrence' if 'last_occurrence' in columns else 'last_seen'
 
-                # Upsert observation: if same (disk, type, signature), bump count + update last timestamp.
-                # IMPORTANT: Do NOT reset dismissed — if the user dismissed this observation,
-                # re-detecting the same journal entry must not un-dismiss it. BUT we DO
-                # keep counting + updating last_occurrence even when dismissed, because the
-                # responsible-monitoring contract is: every error counts toward the
-                # accumulated total shown in the disk modal ("324 connection errors"),
-                # even errors of the same signature the user already saw once. Dismissed
-                # only mutes notifications, NOT the per-disk error history surfaced in the
-                # UI. Reverting the earlier "WHERE dismissed=0" gate that froze the
-                # counter and last_occurrence for /dev/sdh on 2026-05-09, leaving 10
-                # silent days of unreported ATA errors (Pedro Rico, 19/05).
+                # The same observation seen again adds to its count and moves its
+                # last date; a different one is a new row. Observations are never
+                # dismissed nor hidden: the `dismissed` column stays in the table
+                # for databases of earlier versions and is not used.
                 cursor.execute(f'''
                     INSERT INTO disk_observations
                         (disk_registry_id, {type_col}, error_signature, {first_col},
@@ -2752,7 +2764,7 @@ class HealthPersistence:
         return '(' + ' OR '.join(clauses) + ')', params
 
     def count_disk_observations(self, device_name: str, serial: Optional[str] = None) -> int:
-        """Active observations of one disk: the number its badge shows, counted
+        """How many observations a disk has: the number its badge shows, counted
         the way `get_disk_observations` lists them."""
         try:
             with self._db_connection() as conn:
@@ -2762,7 +2774,7 @@ class HealthPersistence:
                     return 0
                 where, params = scope
                 cursor.execute(
-                    f'SELECT COUNT(*) FROM disk_observations o WHERE {where} AND o.dismissed = 0', params)
+                    f'SELECT COUNT(*) FROM disk_observations o WHERE {where}', params)
                 return int(cursor.fetchone()[0])
         except Exception as e:
             print(f"[HealthPersistence] Error counting observations: {e}")
@@ -2770,7 +2782,12 @@ class HealthPersistence:
 
     def get_disk_observations(self, device_name: Optional[str] = None,
                                serial: Optional[str] = None) -> List[Dict[str, Any]]:
-        """Get active (non-dismissed) observations for one disk or all disks."""
+        """The observations of one disk, or of every disk.
+
+        The history of a disk is permanent and an observation cannot be
+        dismissed: each different one is listed, with the number of times it
+        was seen.
+        """
         try:
             conn = self._get_conn()
             cursor = conn.cursor()
@@ -2792,22 +2809,21 @@ class HealthPersistence:
                 cursor.execute(f'''
                     SELECT o.id, o.{type_col}, o.error_signature,
                            o.{first_col}, o.{last_col},
-                           o.occurrence_count, o.raw_message, o.severity, o.dismissed,
+                           o.occurrence_count, o.raw_message, o.severity,
                            d.device_name, d.serial, d.model
                     FROM disk_observations o
                     JOIN disk_registry d ON o.disk_registry_id = d.id
-                    WHERE {where} AND o.dismissed = 0
+                    WHERE {where}
                     ORDER BY o.{last_col} DESC
                 ''', params)
             else:
                 cursor.execute(f'''
                     SELECT o.id, o.{type_col}, o.error_signature,
                            o.{first_col}, o.{last_col},
-                           o.occurrence_count, o.raw_message, o.severity, o.dismissed,
+                           o.occurrence_count, o.raw_message, o.severity,
                            d.device_name, d.serial, d.model
                     FROM disk_observations o
                     JOIN disk_registry d ON o.disk_registry_id = d.id
-                    WHERE o.dismissed = 0
                     ORDER BY o.{last_col} DESC
                 ''')
             
@@ -2823,10 +2839,9 @@ class HealthPersistence:
                 'occurrence_count': r[5],
                 'raw_message': r[6] or '',
                 'severity': r[7],
-                'dismissed': bool(r[8]),
-                'device_name': r[9],
-                'serial': r[10],
-                'model': r[11],
+                'device_name': r[8],
+                'serial': r[9],
+                'model': r[10],
             } for r in rows]
         except Exception as e:
             print(f"[HealthPersistence] Error getting observations: {e}")
@@ -2848,7 +2863,6 @@ class HealthPersistence:
                     SELECT DISTINCT dr.device_name, dr.serial
                     FROM disk_observations o
                     JOIN disk_registry dr ON o.disk_registry_id = dr.id
-                    WHERE o.dismissed = 0
                 ''')
                 rows = cursor.fetchall()
                 return [{'device_name': r[0], 'serial': r[1] or ''} for r in rows]
@@ -2856,42 +2870,6 @@ class HealthPersistence:
             print(f"[HealthPersistence] get_all_observed_devices failed: {e}")
             return []
     
-    def dismiss_disk_observation(self, observation_id: int):
-        """Mark a single observation as dismissed."""
-        try:
-            conn = self._get_conn()
-            cursor = conn.cursor()
-            cursor.execute(
-                'UPDATE disk_observations SET dismissed = 1 WHERE id = ?',
-                (observation_id,))
-            conn.commit()
-            conn.close()
-        except Exception as e:
-            print(f"[HealthPersistence] Error dismissing observation: {e}")
-
-    def cleanup_stale_observations(self, max_age_days: int = 30):
-        """Auto-dismiss observations not seen in max_age_days."""
-        try:
-            from datetime import timedelta
-            cutoff = (datetime.now() - timedelta(days=max_age_days)).isoformat()
-            conn = self._get_conn()
-            cursor = conn.cursor()
-            
-            # Detect column name for backward compatibility
-            cursor.execute('PRAGMA table_info(disk_observations)')
-            columns = [col[1] for col in cursor.fetchall()]
-            last_col = 'last_occurrence' if 'last_occurrence' in columns else 'last_seen'
-            
-            cursor.execute(f'''
-                UPDATE disk_observations 
-                SET dismissed = 1 
-                WHERE dismissed = 0 AND {last_col} < ?
-            ''', (cutoff,))
-            conn.commit()
-            conn.close()
-        except Exception as e:
-            print(f"[HealthPersistence] Error cleaning stale observations: {e}")
-
     def mark_removed_disks(self, active_device_names: List[str],
                            active_serials: Optional[Dict[str, str]] = None):
         """Mark disks not in active_device_names as removed. With
@@ -2919,66 +2897,6 @@ class HealthPersistence:
             conn.close()
         except Exception as e:
             print(f"[HealthPersistence] Error marking removed disks: {e}")
-
-    # Logical (non-block) device-name prefixes used as observation keys for events that
-    # don't map to a /dev/<name> entry: ZFS pool names, ATA host identifiers (e.g. "ata8"
-    # from "ata8.00: exception ..." journal lines), device-mapper aliases, etc. These are
-    # never visible in /dev/ by design, so the original presence-based cleanup would
-    # always wrongly dismiss them. They are excluded from automatic cleanup; the user's
-    # explicit "clean up disconnected disks" action also skips them.
-    _LOGICAL_DEVICE_PREFIXES = ('zpool_', 'ata', 'dm-', 'nbd', 'loop', 'sr')
-
-    def cleanup_orphan_observations(self):
-        """
-        Dismiss observations for devices that no longer exist in /dev/.
-        Useful for cleaning up after USB drives or temporary devices are disconnected.
-
-        Observations whose `device_name` uses a logical (non-block) prefix are skipped —
-        ZFS pools, ATA hosts and dm-* aliases never appear under /dev/ by design and were
-        being silently dismissed by the previous version of this routine.
-        """
-        import os
-        import re
-        try:
-            conn = self._get_conn()
-            cursor = conn.cursor()
-
-            # Get all active (non-dismissed) observations with device info from disk_registry
-            cursor.execute('''
-                SELECT do.id, dr.device_name, dr.serial
-                FROM disk_observations do
-                JOIN disk_registry dr ON do.disk_registry_id = dr.id
-                WHERE do.dismissed = 0
-            ''')
-            observations = cursor.fetchall()
-
-            dismissed_count = 0
-            for obs_id, device_name, serial in observations:
-                # Skip non-block observations (ZFS pools, ATA hosts, dm-mapper, etc.)
-                if device_name and device_name.startswith(self._LOGICAL_DEVICE_PREFIXES):
-                    continue
-                # Check if device exists
-                dev_path = f'/dev/{device_name}'
-                # Also check base device (remove partition number)
-                base_dev = disk_base_name(device_name)
-                base_path = f'/dev/{base_dev}'
-
-                if not os.path.exists(dev_path) and not os.path.exists(base_path):
-                    cursor.execute('''
-                        UPDATE disk_observations SET dismissed = 1
-                        WHERE id = ?
-                    ''', (obs_id,))
-                    dismissed_count += 1
-
-            conn.commit()
-            conn.close()
-            if dismissed_count > 0:
-                print(f"[HealthPersistence] Cleaned up {dismissed_count} orphan observations")
-            return dismissed_count
-        except Exception as e:
-            print(f"[HealthPersistence] Error cleaning orphan observations: {e}")
-            return 0
-
 
     # ── Remote Storage Exclusions Methods ──
     

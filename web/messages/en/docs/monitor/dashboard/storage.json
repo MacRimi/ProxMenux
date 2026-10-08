@@ -75,7 +75,7 @@
       "<strong>Capacity</strong> — formatted human-readable.",
       "<strong>Temperature</strong> — current °C, coloured by the disk-type threshold (NVMe runs warmer than SATA).",
       "<strong>SMART status</strong> — passed / failed / unknown.",
-      "<strong>Observations badge</strong> — when the permanent <code>disk_observations</code> history has un-dismissed entries for this disk, a blue badge with the count appears (e.g. <em>3 obs.</em>). Click the disk to drill in and review them.",
+      "<strong>Observations badge</strong> — when the permanent <code>disk_observations</code> history has entries for this disk, a blue badge with the count appears (e.g. <em>3 obs.</em>). Click the disk to drill in and review them.",
       "<strong>Health badge</strong> — Healthy / Warning / Critical, derived from the SMART check + recent observations."
     ],
     "clickHint": "The whole row is clickable and opens the per-disk drill-in described below.",
@@ -185,9 +185,9 @@
     "obsDedupTitle": "How dedup and re-notification work",
     "obsDedupBody1": "Observations are deduplicated by their <strong>signature</strong> — a stable fingerprint of the error type, device and key fields of the kernel line. The same event repeating bumps the <code>occurrence_count</code> on the existing row rather than creating a new one. A <strong>different signature</strong> on the same disk creates a new observation and is treated as a new event for notification purposes.",
     "obsDedupBody2": "Notifications follow an anti-cascade rule: the first occurrence of a given (disk, signature, severity) combination pages the operator, and ProxMenux then waits 24 hours before pinging again about the same combination — even if the count keeps climbing. Escalating severity (WARNING → CRITICAL) breaks the cooldown so the operator is told when things get worse, not just when they happen.",
-    "obsDismissTitle": "Dismissing vs resolving",
-    "obsDismissBody1": "Each row has a <strong>dismiss</strong> action. Dismissing an observation tells ProxMenux \"I've seen this, stop notifying me about it\". It does <strong>not</strong> freeze the occurrence counter — if the same fault keeps happening the count keeps climbing in the background, ready to alert again if it ever escalates to a different severity tier or signature. A dismissed observation stays visible on the card with a muted style, so a future operator can still see \"this disk had history here\".",
-    "obsDismissBody2": "Resolving on the active-error side (Health Monitor) is independent of observation dismiss — the observation persists past the active error's auto-resolve. That's the whole point: it survives, so a transient warning from last week is still visible on the disk card today. See <link>Health Monitor</link> for the active-error side of the same picture."
+    "obsDismissTitle": "Permanent history vs active errors",
+    "obsDismissBody1": "An observation cannot be dismissed, hidden or removed. Each different observation of a disk is one card; the same one seen again adds to its occurrence count and moves its last date instead of creating a new card. The history belongs to the disk, identified by its serial number: a disk plugged where another one was starts with none, and a disk the kernel renames keeps its own.",
+    "obsDismissBody2": "Resolving or dismissing on the active-error side (Health Monitor) is independent of the observations — the observation persists past the active error's auto-resolve. That's the whole point: it survives, so a transient warning from last week is still visible on the disk card today. See <link>Health Monitor</link> for the active-error side of the same picture."
   },
   "dataCollected": {
     "heading": "How the data is collected",

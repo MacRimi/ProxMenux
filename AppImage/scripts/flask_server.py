@@ -4620,8 +4620,6 @@ def get_storage_info():
             for disk_name, disk_info in physical_disks.items():
                 disk_info['observations_count'] = health_persistence.count_disk_observations(
                     disk_name, disk_info.get('serial', ''))
-            # Auto-dismiss stale observations (> 30 days old)
-            health_persistence.cleanup_stale_observations()
         except Exception:
             pass
         

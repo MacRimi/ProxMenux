@@ -116,7 +116,6 @@ interface DiskObservation {
   occurrence_count: number
   raw_message: string
   severity: string
-  dismissed: boolean
   device_name: string
   serial: string
   model: string
@@ -2887,7 +2886,6 @@ function openSmartReport(disk: DiskInfo, testStatus: SmartTestStatus, smartAttri
         const severityLabel = severityText(obs.severity)
         const firstDate = obs.first_occurrence ? new Date(obs.first_occurrence).toLocaleString() : na
         const lastDate = obs.last_occurrence ? new Date(obs.last_occurrence).toLocaleString() : na
-        const dismissedBadge = obs.dismissed ? `<span style="background:#16a34a20;color:#16a34a;padding:2px 6px;border-radius:4px;font-size:10px;margin-left:4px;">${t("storage.smartReport.dismissed")}</span>` : ''
         const errorTypeLabel = observationTypeText(type)
         
         obsItemsHtml += `
@@ -2897,7 +2895,6 @@ function openSmartReport(disk: DiskInfo, testStatus: SmartTestStatus, smartAttri
             <span style="background:${severityBadgeColor}20;color:${severityBadgeColor};padding:2px 8px;border-radius:4px;font-size:11px;font-weight:600;">${severityLabel}</span>
             <span style="background:#64748b20;color:#475569;padding:2px 8px;border-radius:4px;font-size:11px;">ID: #${obs.id}</span>
             <span style="background:#64748b20;color:#475569;padding:2px 8px;border-radius:4px;font-size:11px;">${t("storage.smartReport.occurrences")}: <strong>${obs.occurrence_count}</strong></span>
-            ${dismissedBadge}
           </div>
           
           <div style="margin-bottom:10px;">

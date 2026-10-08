@@ -103,7 +103,6 @@ def main():
             print(f"    First: {obs['first_occurrence']}")
             print(f"    Last: {obs['last_occurrence']}")
             print(f"    Count: {obs['occurrence_count']}")
-            print(f"    Dismissed: {obs['dismissed']}")
             print()
     else:
         print("    No observations found!\n")

@@ -325,12 +325,6 @@ def cleanup_orphan_errors():
                     health_persistence.resolve_error(err_key, 'Device no longer present (manual cleanup)')
                     cleaned.append({'error_key': err_key, 'device': dev_path})
         
-        # Also cleanup disk_observations for non-existent devices
-        try:
-            health_persistence.cleanup_orphan_observations()
-        except Exception:
-            pass
-        
         return jsonify({
             'success': True,
             'cleaned_count': len(cleaned),

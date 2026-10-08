@@ -75,7 +75,7 @@
       "<strong>Capacidad</strong> — formateada de forma legible.",
       "<strong>Temperatura</strong> — °C actuales, coloreada por el umbral de tipo de disco (NVMe corre más caliente que SATA).",
       "<strong>Estado SMART</strong> — passed / failed / unknown.",
-      "<strong>Insignia de observaciones</strong> — cuando el historial permanente <code>disk_observations</code> tiene entradas no descartadas para este disco, aparece una insignia azul con el recuento (p. ej. <em>3 obs.</em>). Pulsa el disco para entrar y revisarlas.",
+      "<strong>Insignia de observaciones</strong> — cuando el historial permanente <code>disk_observations</code> tiene entradas para este disco, aparece una insignia azul con el recuento (p. ej. <em>3 obs.</em>). Pulsa el disco para entrar y revisarlas.",
       "<strong>Insignia de salud</strong> — Healthy / Warning / Critical, derivada del chequeo SMART + observaciones recientes."
     ],
     "clickHint": "La fila entera es pulsable y abre la vista en detalle por disco descrita abajo.",
@@ -185,9 +185,9 @@
     "obsDedupTitle": "Cómo funcionan dedup y re-notificación",
     "obsDedupBody1": "Las observaciones se deduplican por su <strong>signature</strong> — una huella estable del tipo de error, dispositivo y campos clave de la línea del kernel. El mismo evento repitiéndose sube el <code>occurrence_count</code> de la fila existente en lugar de crear una nueva. Una <strong>signature diferente</strong> en el mismo disco crea una nueva observación y se trata como un evento nuevo para efectos de notificación.",
     "obsDedupBody2": "Las notificaciones siguen una regla anti-cascada: la primera ocurrencia de una combinación (disco, signature, severidad) dada avisa al operador, y entonces ProxMenux espera 24 horas antes de volver a pingar sobre la misma combinación — aunque el contador siga subiendo. Una severidad escalando (WARNING → CRITICAL) rompe el cooldown para que se le cuente al operador cuando las cosas empeoran, no solo cuando ocurren.",
-    "obsDismissTitle": "Descartar vs resolver",
-    "obsDismissBody1": "Cada fila tiene una acción <strong>dismiss</strong>. Descartar una observación le dice a ProxMenux \"ya lo he visto, deja de notificarme\". <strong>No</strong> congela el contador de ocurrencias — si la misma falla sigue pasando, el contador sigue subiendo en background, listo para alertar de nuevo si alguna vez escala a un nivel de severidad o signature diferente. Una observación descartada sigue visible en la tarjeta con un estilo atenuado, para que un operador futuro pueda seguir viendo \"este disco tuvo historial aquí\".",
-    "obsDismissBody2": "Resolver del lado de error activo (Monitor de salud) es independiente del dismiss de observaciones — la observación persiste más allá del auto-resolve del error activo. Ese es justo el punto: sobrevive, para que un warning transitorio de la semana pasada siga visible hoy en la tarjeta del disco. Mira <link>Monitor de salud</link> para el lado de error activo de la misma imagen."
+    "obsDismissTitle": "Historial permanente vs errores activos",
+    "obsDismissBody1": "Una observación no se puede descartar, ocultar ni eliminar. Cada observación distinta de un disco es una tarjeta; la misma observación vista de nuevo suma a su contador de ocurrencias y actualiza su última fecha en lugar de crear otra tarjeta. El historial pertenece al disco, identificado por su número de serie: un disco conectado donde había otro empieza sin ninguna, y un disco que el kernel renombra conserva las suyas.",
+    "obsDismissBody2": "Resolver o descartar del lado de error activo (Monitor de salud) es independiente de las observaciones — la observación persiste más allá del auto-resolve del error activo. Ese es justo el punto: sobrevive, para que un warning transitorio de la semana pasada siga visible hoy en la tarjeta del disco. Mira <link>Monitor de salud</link> para el lado de error activo de la misma imagen."
   },
   "dataCollected": {
     "heading": "Cómo se recopilan los datos",
