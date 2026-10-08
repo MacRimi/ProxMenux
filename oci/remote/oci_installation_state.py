@@ -195,6 +195,7 @@ def resolve_candidate(reference, architecture):
     # version inside it moved.
     return {'manifest_digest': digest, 'registry_digest': registry_digest,
             'layers': [layer['digest'] for layer in json.loads(raw).get('layers', [])],
+            'size': sum(int(layer.get('size') or 0) for layer in json.loads(raw).get('layers', [])),
             'defaults': defaults, 'version': version, 'created': config.get('created')}
 
 

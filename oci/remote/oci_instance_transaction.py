@@ -33,6 +33,7 @@ import oci_host_mounts as host_mounts
 import oci_accelerators as gpu_devices
 import oci_runtime_settings as runtime_settings
 import oci_image_cache as image_cache
+import oci_work_backup as work_backup
 import oci_ui
 from oci_ui import translate, msg_info, msg_ok, msg_warn, msg_error, msg_info2
 
@@ -48,7 +49,9 @@ BASIC = {'arch', 'cmode', 'console', 'tty', 'cores', 'cpulimit', 'cpuunits', 'de
          # The hook that marks each start in that log, set the same way.
          'lxc.hook.pre-start'}
 # Their output is data (and may hold saved secrets); it is never logged.
-DATA_COMMANDS = {('pct', 'config'), ('pvesh', 'get')}
+DATA_COMMANDS = {('pct', 'config'), ('pvesh', 'get'), ('pct', 'df')}
+# Kept across a modification: the watchdog and where the backups are made.
+HOST_PREFERENCES = ('watchdog', 'work_storage')
 LOG_DIR = Path(os.environ.get('OCI_LOG_DIR', '/var/log/proxmenux/oci'))
 ANSI = re.compile(r'\x1b\[[0-9;?]*[A-Za-z]')
 SPINNER_FRAME = re.compile('^ ?[' + ''.join(oci_ui.FRAMES) + ']')
@@ -316,13 +319,49 @@ def mounts(config):
     return result
 
 
+def is_file_bind(mount, files=()):
+    return mount['type'] == 'host-bind' and (mount['source'] in files or Path(mount['source']).is_file())
+
+
+def declared_sources(contract):
+    """The host paths the recipe of a host monitor mounts on its own."""
+    if not contract['deployment'].get('host_monitor'):
+        return set()
+    profile = contract['template'].get('proxmox', {}).get('installer_profile', {})
+    return {item['source'] for item in profile.get('host_monitor_mounts', [])}
+
+
+def profile_keys(deployment):
+    """The raw LXC settings the installer writes for what the application
+    declares, and writes again on the rebuilt container."""
+    keys = set()
+    security = deployment.get('security', {})
+    options = security.get('options') or {}
+    if options.get('apparmor_profile'):
+        keys.add('lxc.apparmor.profile')
+    if options.get('seccomp_profile'):
+        keys.add('lxc.seccomp.profile')
+    if options.get('no_new_privileges'):
+        keys.add('lxc.include')
+    if options.get('drop_all_capabilities'):
+        keys.update(('lxc.cap.drop', 'lxc.cap.keep'))
+    keys.update(f"lxc.prlimit.{limit['name']}" for limit in deployment.get('resources', {}).get('rlimits') or [])
+    if deployment.get('host_monitor'):
+        keys.update(('lxc.include', 'lxc.net.0.type', 'lxc.hook.mount'))
+    return keys
+
+
 def effective_healthcheck(template):
     """The template's own health check or, when it has none, one derived from
     its web address: any HTTP answer below 500 means the application is up."""
     profile = template.get('proxmox', {}).get('installer_profile', {})
     check = profile.get('startup_healthcheck')
-    if check or profile.get('haos_healthcheck') or profile.get('host_monitor'):
+    if check:
         return check
+    if profile.get('haos_healthcheck'):
+        # Home Assistant OS has a check of its own: Supervisor, Core and the
+        # services it runs inside. The installer runs it on the new container.
+        return {'type': 'haos', 'timeout_seconds': int(profile['haos_healthcheck'].get('timeout_seconds', 1200))}
     for endpoint in template.get('first_run', {}).get('endpoints', []):
         path = str(endpoint.get('path') or '/')
         if (endpoint.get('scheme') in ('http', 'https') and str(endpoint.get('port', '')).isdigit()
@@ -336,7 +375,7 @@ def effective_healthcheck(template):
 
 def with_default_healthcheck(contract):
     check = effective_healthcheck(contract['template'])
-    if check:
+    if check and check.get('type') != 'haos':
         contract['template'].setdefault('proxmox', {}).setdefault('installer_profile', {})['startup_healthcheck'] = check
     return contract
 
@@ -365,6 +404,13 @@ def candidate_contract(record, operation, proposal=None):
     result = copy.deepcopy(record)
     result.update(template=copy.deepcopy(candidate['template']),
                   deployment=copy.deepcopy(candidate['deployment']))
+    # What ProxMenux was told about how to treat the application is not part
+    # of what is being edited: it stays as the record has it now.
+    for key in HOST_PREFERENCES:
+        if key in record['deployment']:
+            result['deployment'][key] = record['deployment'][key]
+        else:
+            result['deployment'].pop(key, None)
     return with_default_healthcheck(result)
 
 
@@ -435,23 +481,32 @@ def preflight(record, candidate, config, coordinated=None):
         runtime_keys.add('lxc.mount.entry')
     if deployment.get('security', {}).get('sysctls'):
         runtime_keys.add('lxc.include')
+    runtime_keys |= profile_keys(deployment)
+    files = runtime_settings.file_binds(config)
+    if files:
+        runtime_keys.add('lxc.mount.entry')
     runtime_settings.check(config, deployment, record['vmid'])
     coordinated_keys = {'hookscript', *KEPT_AS_IS} if coordinated else set(KEPT_AS_IS)
     if '[' in config.decode() or keys - BASIC - runtime_keys - coordinated_keys - {k for k in keys if re.fullmatch(r'(mp|dev)[0-9]+', k)}:
         raise ValueError(translate('The container has advanced Proxmox settings outside the supported profile'))
-    for plan in (deployment, desired):
-        security = plan.get('security', {})
-        if (security.get('unprivileged') is not True
-                or security.get('options') or plan.get('host_monitor')
-                or plan.get('resources', {}).get('rlimits')):
-            raise ValueError(translate('Updates are not available yet in this beta for applications that use '
-                                       'a privileged container or advanced LXC settings'))
+    unprivileged = deployment.get('security', {}).get('unprivileged', True) is not False
+    if (desired.get('security', {}).get('unprivileged', True) is not False) != unprivileged \
+            or desired.get('host_monitor') != deployment.get('host_monitor'):
+        # The owners of the data belong to one mode, and a monitor of the
+        # host has no network of its own to keep.
+        raise ValueError(translate('Changing between a privileged and an unprivileged container, or the host monitor mode, requires installing the application again'))
+    for template, plan in ((record['template'], deployment), (candidate['template'], desired)):
         runtime_settings.sysctl_content(plan)
         runtime_settings.tmpfs_lines(plan)
         gpu_devices.planned(plan)
         paths = []
+        # What the recipe of a host monitor mounts of the host, such as /sys
+        # and a folder inside it, is read only and laid out by the recipe.
+        declared = declared_sources({'template': template, 'deployment': plan})
         for mount in plan.get('mounts', []):
             target = host_mounts.valid_path(mount['container_path'])
+            if mount['type'] == 'host-bind' and mount['source'] in declared and mount.get('read_only'):
+                continue
             if (any(target == p or target.startswith(p.rstrip('/') + '/')
                            or p.startswith(target.rstrip('/') + '/') for p in paths)):
                 raise ValueError(translate('Mount paths must not overlap'))
@@ -465,15 +520,18 @@ def preflight(record, candidate, config, coordinated=None):
             else:
                 raise ValueError(translate('Unsupported mount type'))
             paths.append(target)
-    if cfg.get('unprivileged') != '1' or ':' not in cfg.get('rootfs', ''):
-        raise ValueError(translate('A managed rootfs and an unprivileged container are required'))
+    if cfg.get('unprivileged', '0') != ('1' if unprivileged else '0') or ':' not in cfg.get('rootfs', ''):
+        raise ValueError(translate('The container disks do not match the saved record'))
     if desired['rootfs'] != deployment['rootfs']:
         raise ValueError(translate('Changing the rootfs or its storage requires a separate migration'))
     actual = mounts(config)
     gpu_devices.check(config, deployment)
     gpu_devices.verify_baseline(record['observed'].get('gpu_devices', {}), deployment)
-    old = {m['container_path']: m for m in deployment.get('mounts', [])}
-    new = {m['container_path']: m for m in desired.get('mounts', [])}
+    recorded_files = {m['source']: bool(m.get('read_only')) for m in deployment.get('mounts', []) if is_file_bind(m, files)}
+    if files != recorded_files:
+        raise ValueError(translate('A container mount has a source, backup or permission different from the saved record'))
+    old = {m['container_path']: m for m in deployment.get('mounts', []) if not is_file_bind(m, files)}
+    new = {m['container_path']: m for m in desired.get('mounts', []) if not is_file_bind(m, files)}
     if set(actual) != set(old):
         raise ValueError(translate('The container disks do not match the saved record'))
     for target, mount in actual.items():
@@ -500,24 +558,31 @@ def preflight(record, candidate, config, coordinated=None):
     check = effective_healthcheck(candidate['template'])
     if not check and not coordinated:
         raise ValueError(translate('Updates are not available yet for this application in this beta'))
-    mac = next((item[7:] for item in cfg['net0'].split(',') if item.startswith('hwaddr=')), None)
+    if deployment.get('host_monitor') and 'net0' not in cfg:
+        return cfg, actual, None
+    mac = next((item[7:] for item in cfg.get('net0', '').split(',') if item.startswith('hwaddr=')), None)
     if not mac:
         raise ValueError(translate('The MAC address of the container cannot be kept'))
     return cfg, actual, mac
 
 
-def freeze_host_sources(record, candidate, acknowledge_external_data):
-    old = {m['source'] for m in record['deployment'].get('mounts', []) if m['type'] == 'host-bind'}
-    wanted = {m['source']: m for m in candidate['deployment'].get('mounts', []) if m['type'] == 'host-bind'}
-    if (old or wanted) and not acknowledge_external_data:
+def freeze_host_sources(record, candidate, acknowledge_external_data, files=()):
+    # A single file mounted from the host holds no data of the application:
+    # the installer mounts it again, and nothing of it is pinned.
+    old = {m['source'] for m in record['deployment'].get('mounts', [])
+           if m['type'] == 'host-bind' and not is_file_bind(m, files)}
+    wanted = {m['source']: m for m in candidate['deployment'].get('mounts', [])
+              if m['type'] == 'host-bind' and not is_file_bind(m, files)}
+    declared = declared_sources(record) | declared_sources(candidate)
+    if (old | set(wanted)) - declared and not acknowledge_external_data:
         raise ValueError(translate('Host data is not restored by the backup; confirm it with --acknowledge-external-data'))
     baseline = record['observed'].get('host_bind_sources', {})
-    original = {p: host_mounts.validate_source(p) for p in old}
+    original = {p: host_mounts.validate_source(p, declared=p in declared) for p in old}
     for source, previous in baseline.items():
         if source in original and not host_mounts.same_source(previous, original[source]):
             raise ValueError(translate('A shared source does not match its recorded identity'))
     desired = {p: original[p] if p in original else
-               host_mounts.validate_source(p, allow_missing=m.get('create_if_missing') is True)
+               host_mounts.validate_source(p, allow_missing=m.get('create_if_missing') is True, declared=p in declared)
                for p, m in wanted.items()}
     if old or wanted:
         log('host directories: not included in the backup and not reverted by a recovery')
@@ -529,7 +594,10 @@ def freeze_host_sources(record, candidate, acknowledge_external_data):
 def check_runtime_mounts(config, deployment):
     runtime_settings.check(config, deployment, deployment['vmid'])
     actual = mounts(config)
-    declared = {m['container_path']: m for m in deployment.get('mounts', [])}
+    files = runtime_settings.file_binds(config)
+    if files != {m['source']: bool(m.get('read_only')) for m in deployment.get('mounts', []) if is_file_bind(m, files)}:
+        raise ValueError(translate('The mounts of the new container do not match the proposal'))
+    declared = {m['container_path']: m for m in deployment.get('mounts', []) if not is_file_bind(m, files)}
     if actual.keys() != declared.keys():
         raise ValueError(translate('The mounts of the new container do not match the proposal'))
     for target, value in actual.items():
@@ -548,7 +616,7 @@ def pin_host_source(root, vmid, journal, source):
             or record['installation_id'] != state['record']['installation_id'] or record['status'] != 'updating'):
         raise ValueError(translate('Mount not authorized by the operation'))
     expected = state['desired_host_sources'][source]
-    current = host_mounts.validate_source(source)
+    current = host_mounts.validate_source(source, declared=expected.get('declared', False))
     if ((expected['exists'] and not host_mounts.same_source(expected, current))
             or current['resolved_path'] != expected['resolved_path']):
         raise ValueError(translate('The host directory changed before it was mounted'))
@@ -582,10 +650,48 @@ def stop(vmid):
         raise ValueError(translate('The container did not stop; its disks are not touched'))
 
 
+def own_addresses(vmid):
+    """The IPv4 addresses of the interfaces Proxmox gave the container. One
+    that runs Docker inside also has the addresses of its inner bridges."""
+    names = re.findall(r'^net[0-9]+: (?:.*,)?name=([A-Za-z0-9_.-]+)', run('pct', 'config', str(vmid)).decode(), re.M)
+    found = []
+    for name in names:
+        try:
+            listed = run('lxc-attach', '-n', str(vmid), '-s', 'NETWORK', '--',
+                         'ip', '-4', '-o', 'addr', 'show', 'dev', name, 'scope', 'global').decode()
+        except RuntimeError:
+            continue
+        found += re.findall(r'\binet ([0-9.]+)/', listed)
+    return found
+
+
+def haos_healthcheck(vmid, timeout):
+    import haos_healthcheck as haos
+    haos.note = log
+    started, ip = time.monotonic(), None
+    while ip is None and time.monotonic() - started < 60:
+        if run('pct', 'status', str(vmid)).strip() != b'status: running':
+            raise ValueError(translate('The restored service stopped; the recovery is not confirmed'))
+        ip = next(iter(own_addresses(vmid)), None)
+        if ip is None:
+            time.sleep(2)
+    try:
+        if ip is None:
+            raise RuntimeError('no address')
+        url = haos.wait_ready(vmid, ip, timeout)[0]['url']
+    except RuntimeError as error:
+        log(f'restored Home Assistant OS not confirmed: {error}')
+        raise ValueError(translate('The restored service did not pass its health check'))
+    log(f'restored service responding: {url}')
+    return url
+
+
 def healthcheck(vmid, template):
     check = effective_healthcheck(template)
     if not check:
         return None
+    if check.get('type') == 'haos':
+        return haos_healthcheck(vmid, int(check['timeout_seconds']))
     if check.get('type') == 'running':
         stability = int(check.get('stability_seconds', 20))
         started = time.monotonic()
@@ -603,10 +709,12 @@ def healthcheck(vmid, template):
             or not 0 <= stability < timeout <= 3600):
         raise ValueError(translate('Invalid health check'))
     started, stable_since = time.monotonic(), None
+    # A monitor of the host answers on the network of the host itself.
+    shared = parse_config(run('pct', 'config', str(vmid))).get('lxc.net.0.type') == 'none'
     while time.monotonic() - started < timeout:
         if run('pct', 'status', str(vmid)).strip() != b'status: running':
             raise ValueError(translate('The restored service stopped; the recovery is not confirmed'))
-        addresses = run('lxc-info', '-n', str(vmid), '-iH').decode().splitlines()
+        addresses = ['127.0.0.1'] if shared else run('lxc-info', '-n', str(vmid), '-iH').decode().splitlines()
         ip = next((a for a in addresses if re.fullmatch(r'[0-9]+(?:\.[0-9]+){3}', a)), None)
         ok = False
         if ip:
@@ -820,16 +928,6 @@ def backup_size(vmid):
     return total
 
 
-def require_backup_space(directory, vmids):
-    """The data in use on the backed-up volumes, plus a margin, must fit in
-    `directory`; data that is already compressed does not shrink."""
-    needed = int(sum(backup_size(vmid) for vmid in vmids) * 1.1) + 1024**3
-    free = shutil.disk_usage(directory).free
-    if free < needed:
-        raise ValueError(f"{translate('Not enough free space for the backup')} "
-                         f"({translate('needed')}: {gib(needed)}, {translate('free')}: {gib(free)}, {directory})")
-
-
 def prune_backups(root, vmid):
     """The backups of closed operations are removed once the container works
     with its new image; their journal and log stay."""
@@ -843,9 +941,7 @@ def prune_backups(root, vmid):
             continue
         if phase not in ('committed', 'rolled-back'):
             continue
-        for backup in (directory / 'backup').glob('vzdump-lxc-*'):
-            if backup.is_file() and not backup.is_symlink():
-                backup.unlink()
+        work_backup.clear(directory)
 
 
 def check_archive(archive):
@@ -892,7 +988,8 @@ def apply(root, vmid, archive, operation, proposal=None, registry_digest=None, i
     before = run('pct', 'config', str(vmid))
     cfg, actual, mac = preflight(record, candidate, before, coordinated)
     description = original_description({'record': record, 'before_config': before.decode()})
-    original_sources, desired_sources = freeze_host_sources(record, candidate, acknowledge_external_data)
+    original_sources, desired_sources = freeze_host_sources(record, candidate, acknowledge_external_data,
+                                                            runtime_settings.file_binds(before))
     original_gpu = gpu_devices.planned(record['deployment'])
     desired_gpu = gpu_devices.planned(candidate['deployment'])
     resources = json.loads(run('pvesh', 'get', '/cluster/ha/resources', '--output-format', 'json'))
@@ -912,10 +1009,17 @@ def apply(root, vmid, archive, operation, proposal=None, registry_digest=None, i
            for p in set(image['defaults'].get('Volumes') or {}) - non_persistent_image_volumes(candidate['template'])):
         raise ValueError(translate('The new image requires additional persistent paths; use Modify'))
     directory = instances.location(root, vmid).parent / 'transactions' / uuid.uuid4().hex
+    # Where the backup goes is settled, and checked for room, before anything
+    # is stopped.
+    work = directory if coordinated else work_backup.locate(directory, [vmid], record, vmid)
     private_directory(directory)
     open_log(directory)
-    if not coordinated:
-        require_backup_space(directory, [vmid])
+    if work != directory:
+        work_backup.prepare(work)
+        work_backup.remember(directory, work)
+        if show:
+            msg_info2(f"{translate('This backup does not fit on the system disk of the host; it is made on the storage:')} "
+                      f"{record['deployment'].get(work_backup.KEY)}")
     journal = directory / 'transaction.json'
     runtime_deployment = copy.deepcopy(candidate['deployment'])
     runtime_deployment['network']['mac_address'] = mac
@@ -970,7 +1074,7 @@ def apply(root, vmid, archive, operation, proposal=None, registry_digest=None, i
         run('zstd', '-t', backup['archive'])
         state.update(backup=backup['archive'], backup_sha256=backup['sha256'])
     else:
-        backup_dir = directory / 'backup'
+        backup_dir = work / 'backup'
         private_directory(backup_dir)
         backup = verified_backup(vmid, backup_dir, backup_compression,
                                  translate('The backup could not be identified; the image is not replaced'), show)
@@ -1195,6 +1299,8 @@ def recover(root, journal):
         if show:
             msg_ok(translate('Recovery completed. The container had not been modified yet.'))
         return
+    if not Path(backup).is_file():
+        raise ValueError(f"{translate('The backup of this operation cannot be read. If it is on another storage, make it available and recover the operation again:')} {backup}")
     if filehash(backup) != state['backup_sha256']:
         raise ValueError(translate('The backup was altered; recovery blocked'))
     run('gzip' if state.get('backup_compression') == 'gzip' else 'zstd', '-t', backup)

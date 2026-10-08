@@ -34,9 +34,13 @@ def snapshot(source, allow_missing=False):
             'mode': stat.S_IMODE(info.st_mode)}
 
 
-def validate_source(source, allow_missing=False):
+def validate_source(source, allow_missing=False, declared=False):
+    """`declared` is a source the recipe of the application names itself, as a
+    host monitor does with /proc and /sys: it is not one the user typed."""
     valid_path(source)
     value = snapshot(source, allow_missing)
+    if declared:
+        return dict(value, declared=True)
     protected = ('/etc', '/usr', '/bin', '/sbin', '/lib', '/lib64', '/dev', '/proc', '/sys', '/run')
     protected += tuple(str(Path(p).resolve()) for p in protected)
     resolved = value['resolved_path']
@@ -52,7 +56,8 @@ def same_source(a, b):
 
 def verify_sources(expected):
     for source, previous in expected.items():
-        current = validate_source(source, allow_missing=not previous['exists'])
+        current = validate_source(source, allow_missing=not previous['exists'],
+                                  declared=previous.get('declared', False))
         if not same_source(previous, current):
             raise ValueError(f"{translate('The operation was stopped because a shared directory changed its identity:')} {source}")
 

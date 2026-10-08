@@ -125,6 +125,9 @@
               }
             ]
           }
+        },
+        {
+          "p": "Before anything is stopped, the operation checks that the backup fits: the data in use on the volumes that are backed up, plus a margin. It is written next to the record of the application, on the system disk of the host. When it does not fit there, the menu asks for another storage of the host that accepts backups: the backup is made there, it is deleted when the operation ends, and the choice is remembered for that application, scheduled updates included. With no storage that has room, the operation is refused and the application stays as it was. The new image is checked the same way before it is downloaded."
         }
       ]
     },

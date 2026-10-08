@@ -125,6 +125,9 @@
               }
             ]
           }
+        },
+        {
+          "p": "Antes de detener nada, la operación comprueba que el backup cabe: los datos en uso de los volúmenes que entran en el backup, más un margen. Se escribe junto al registro de la aplicación, en el disco del sistema del host. Cuando no cabe ahí, el menú pide otro almacenamiento del host que acepte backups: el backup se hace allí, se borra cuando termina la operación y la elección se recuerda para esa aplicación, también en las actualizaciones programadas. Si ningún almacenamiento tiene espacio, la operación se rechaza y la aplicación queda como estaba. La imagen nueva se comprueba igual antes de descargarla."
         }
       ]
     },

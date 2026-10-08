@@ -382,7 +382,10 @@
         "scheme": "http",
         "port": 5055,
         "path": "/api/v1/settings/public",
-        "timeout_seconds": 360
+        "timeout_seconds": 360,
+        "request_timeout_seconds": 5,
+        "verify_tls": false,
+        "stability_seconds": 0
       },
       "security": {
         "options": {
@@ -391,7 +394,20 @@
         }
       },
       "adaptations": [
-        "Compose cap_drop ALL -> lxc.cap.drop reset and lxc.cap.keep none; no-new-privileges -> lxc.no_new_privs 1."
+        "Compose cap_drop ALL -> lxc.cap.drop reset and lxc.cap.keep none; no-new-privileges -> lxc.no_new_privs in the include of the container.",
+        "The configuration volume is given to the user the image runs as, uid 1000."
+      ],
+      "volume_owner": {
+        "uid": 1000,
+        "gid": 1000
+      },
+      "volume_preparations": [
+        {
+          "container_path": "/app/config",
+          "remove_lost_found": true,
+          "owner_strategy": "mapped-application-user",
+          "only_when_mount_type": "managed-volume"
+        }
       ]
     }
   },
