@@ -111,6 +111,11 @@ def edit_recreation(record, ui):
     resources = deployment['resources']
     resources['cores'] = positive_integer(ui, translate('Cores'), resources['cores'])
     resources['memory_mb'] = positive_integer(ui, translate('RAM in MiB'), resources['memory_mb'], 128)
+    template = candidate.get('template', {})
+    if template.get('proxmox', {}).get('installer_profile', {}).get('shared_directories'):
+        from .installer import ask_shared_directories
+        deployment['mounts'] += ask_shared_directories(
+            ui, template, deployment['mounts'], deployment['rootfs']['storage'], True, optional=True)
     from .custom_mounts import ask_custom_mounts
     deployment['mounts'] = ask_custom_mounts(
         ui, deployment['mounts'], deployment['rootfs']['storage'])
