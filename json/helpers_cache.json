@@ -77,6 +77,45 @@
     "os": "debian"
   },
   {
+    "name": "Activepieces",
+    "slug": "activepieces",
+    "desc": "Activepieces is an open-source workflow automation platform and Zapier alternative. Flows are built in a visual editor from several hundred integrations (pieces), branches, loops, human approvals and TypeScript code steps, run on schedules, webhooks or app events, and can call AI agents; every piece is also available as an MCP tool for LLM clients. This script builds the server, worker and web UI from source and runs them with PostgreSQL and Redis.",
+    "script": "ct/activepieces.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/activepieces.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/activepieces.sh",
+    "type": "lxc",
+    "type_id": "nm9bra8mzye2scg",
+    "categories": [
+      "scriptcat00019"
+    ],
+    "category_names": [
+      "Automation & Scheduling"
+    ],
+    "notes": [
+      "Webhook URLs and OAuth2 redirects are built from AP_FRONTEND_URL in /opt/activepieces_data/.env, which points at the container IP. Change it when the IP changes or Activepieces sits behind a reverse proxy or domain, then run systemctl restart activepieces (the worker restarts with it).",
+      "Code steps run with AP_EXECUTION_MODE=UNSANDBOXED, the upstream default: they get network access and npm packages, but are not isolated from the container, so anyone who can edit flows can run code in it. Only give flow access to people you trust with that.",
+      "Activepieces is open-core: the code is MIT except packages/ee and packages/server/api/src/app/ee, which fall under the Activepieces Enterprise License. Like the official image, this build runs the Community Edition (the default AP_EDITION); enterprise features stay off without a license key.",
+      "Install and every update compile Activepieces from source (bun install of the whole monorepo, then turbo builds the API, worker, engine and React UI). That takes about 15 to 20 minutes on 4 cores and peaks at about 3.5 GB RAM and 6 GB disk. The running instance needs about 1 GB, so the RAM can be lowered after the install and raised to at least 4 GB again before an update."
+    ],
+    "warnings": [
+      "There is no default account. Open http://<IP> and sign up: the first account becomes the platform admin and closes sign-up, further users have to be invited. Anyone who reaches the port can claim it until then, so create the account right after the install.",
+      "Back up AP_ENCRYPTION_KEY from /opt/activepieces_data/.env together with the database. It encrypts the stored connection credentials, so a database restored without it is useless for them."
+    ],
+    "port": 80,
+    "website": "https://www.activepieces.com/",
+    "documentation": "https://www.activepieces.com/docs/install/overview",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/activepieces.webp",
+    "updateable": true,
+    "privileged": false,
+    "has_arm": false,
+    "is_dev": true,
+    "execute_in": [
+      "lxc"
+    ],
+    "config_path": "",
+    "os": "debian"
+  },
+  {
     "name": "Actual Budget Prometheus Exporter",
     "slug": "actual-budget-prometheus-exporter",
     "desc": "Prometheus exporter for Actual Budget. Exposes account balances, budget balances, transaction counts and uncategorized/transfer counts as metrics on /metrics. Installs as an addon into an existing LXC (e.g. alongside your Actual Budget server) and builds from source with Node.js.",
@@ -2674,6 +2713,46 @@
     "privileged": false,
     "has_arm": false,
     "is_dev": false,
+    "execute_in": [
+      "lxc"
+    ],
+    "config_path": "",
+    "os": "debian"
+  },
+  {
+    "name": "Budibase",
+    "slug": "budibase",
+    "desc": "Budibase is a low-code platform for building internal tools: forms, portals, admin panels and approval apps on top of its built-in database or external sources such as PostgreSQL, MySQL, REST APIs and Google Sheets, plus automations triggered by events, schedules or webhooks. This script builds the app server and worker from source and runs them with CouchDB, Clouseau, SQS, Redis, Silo object storage and nginx, without Docker.",
+    "script": "ct/budibase.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/budibase.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/budibase.sh",
+    "type": "lxc",
+    "type_id": "nm9bra8mzye2scg",
+    "categories": [
+      "scriptcat00020"
+    ],
+    "category_names": [
+      "AI / Coding & Dev-Tools"
+    ],
+    "notes": [
+      "Without a license key Budibase runs its free self-hosted plan: one workspace, unlimited users and rows, no user groups and no custom AI providers. The paid features live in the source-available @budibase/pro package (Business Source License) and are unlocked with a key from account.budibase.app.",
+      "Budibase itself is GPLv3. Its internal tables are queried through SQS, a proprietary binary by The Neighbourhoodie Software that Budibase ships in every release and licenses for your own internal business use only (SQS_LICENSE in the repository).",
+      "The official image also bundles a LiteLLM proxy for AI agents and custom AI providers, which need a paid plan. It is not installed here; point LITELLM_URL and LITELLM_MASTER_KEY in /opt/budibase_data/.env at your own LiteLLM and run systemctl restart budibase-server to use one.",
+      "Install and every update download about 4 GB of npm packages and compile Budibase from source: expect 15 to 30 minutes, mostly downloading, up to about 3.3 GB of RAM and 9 GB of disk. The running stack uses about 2.5 GB of RAM.",
+      "Services: nginx on port 80 in front of budibase-server (4001) and budibase-worker (4002), plus couchdb, budibase-clouseau (search), budibase-sqs, budibase-silo (S3 object storage, a maintained MinIO fork) and redis-server."
+    ],
+    "warnings": [
+      "There is no default account. Open http://<IP> right after the install and create the admin account on the setup page: until then anyone who reaches port 80 can claim it.",
+      "Back up /opt/budibase_data as a whole: it holds the CouchDB databases, the object storage with uploads and app assets, the search and SQS indexes, and the .env whose JWT_SECRET, API_ENCRYPTION_KEY and ENCRYPTION_KEY sign sessions and encrypt API keys and stored secrets."
+    ],
+    "port": 80,
+    "website": "https://budibase.com/",
+    "documentation": "https://docs.budibase.com/docs/hosting-methods",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/budibase.webp",
+    "updateable": true,
+    "privileged": false,
+    "has_arm": false,
+    "is_dev": true,
     "execute_in": [
       "lxc"
     ],
@@ -7468,7 +7547,7 @@
     "updateable": true,
     "privileged": false,
     "has_arm": false,
-    "is_dev": true,
+    "is_dev": false,
     "execute_in": [
       "lxc"
     ],
@@ -7570,6 +7649,45 @@
     "privileged": false,
     "has_arm": true,
     "is_dev": false,
+    "execute_in": [
+      "lxc"
+    ],
+    "config_path": "",
+    "os": "debian"
+  },
+  {
+    "name": "Formbricks",
+    "slug": "formbricks",
+    "desc": "Formbricks is an open-source survey and experience management platform and an alternative to Qualtrics. It runs link, website and in-app surveys with logic, multiple languages, hidden fields and partial responses, and passes responses on through webhooks, the API and integrations such as Slack, Notion and Zapier. This script builds the web app from source and runs it with PostgreSQL, Valkey and SpiceDB, which Formbricks 6 uses for authorization.",
+    "script": "ct/formbricks.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/formbricks.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/formbricks.sh",
+    "type": "lxc",
+    "type_id": "nm9bra8mzye2scg",
+    "categories": [
+      "scriptcat00025"
+    ],
+    "category_names": [
+      "Business & ERP"
+    ],
+    "notes": [
+      "WEBAPP_URL and NEXTAUTH_URL in /opt/formbricks_data/.env point at the container IP, and logins, survey links and emails are built from them. Change both when the IP changes or Formbricks sits behind a reverse proxy or domain, then run systemctl restart formbricks. Upstream expects HTTPS for production use.",
+      "Install and every update compile Formbricks from source with Turbopack, which takes 15 to 30 minutes on 4 cores and peaks at about 9.5 GB of RAM, hence the 12 GB. The running stack needs about 1.5 GB, so the RAM can be lowered to 3 GB after the install and has to be raised again before an update.",
+      "File uploads (images in surveys, file upload and picture selection questions, logos) need S3-compatible storage: add the S3_* settings to /opt/formbricks_data/.env. Email verification, password reset and invitation emails need the SMTP_* and MAIL_FROM settings; set EMAIL_VERIFICATION_DISABLED and PASSWORD_RESET_DISABLED to 0 once mail works.",
+      "Formbricks is open-core: the core is AGPLv3, apps/web/modules/ee is under the Formbricks Enterprise License. Teams and roles, SSO, contacts and segments, workflows, audit logs, Unify Feedback and dashboards need a license key in ENTERPRISE_LICENSE_KEY. Formbricks Hub and Cube, the extra services behind Unify Feedback, feedback datasets and dashboards, are not installed."
+    ],
+    "warnings": [
+      "There is no default account. Open http://<IP>:3000 right after the install: the first sign-up creates the administrator and closes public sign-up, further users are invited from the organization settings. Anyone who reaches the port can claim the instance until then.",
+      "Authorization lives in SpiceDB, backed by its own spicedb database. Back up both PostgreSQL databases (formbricks and spicedb) together with /opt/formbricks_data; a restore without ENCRYPTION_KEY and AUTHZED_TOKEN from the .env files does not work."
+    ],
+    "port": 3000,
+    "website": "https://formbricks.com/",
+    "documentation": "https://formbricks.com/docs/self-hosting/overview",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/formbricks.webp",
+    "updateable": true,
+    "privileged": false,
+    "has_arm": false,
+    "is_dev": true,
     "execute_in": [
       "lxc"
     ],
@@ -11752,6 +11870,48 @@
     "os": "debian"
   },
   {
+    "name": "Kyoo",
+    "slug": "kyoo",
+    "desc": "Kyoo is a self-hosted media server for movies, series and anime, an alternative to Jellyfin or Plex. It identifies files without a required folder structure, pulls metadata from TheMovieDB and TheTVDB, transcodes on the fly with automatic quality switching and hardware acceleration, detects intros and credits, and renders ASS and PGS subtitles in the browser. This script builds its auth, API, scanner, transcoder and web app from source and runs them with PostgreSQL behind nginx.",
+    "script": "ct/kyoo.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/kyoo.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/kyoo.sh",
+    "type": "lxc",
+    "type_id": "nm9bra8mzye2scg",
+    "categories": [
+      "scriptcat00013"
+    ],
+    "category_names": [
+      "Media & Streaming"
+    ],
+    "notes": [
+      "Kyoo is served over HTTPS with a self-signed certificate (http:// redirects to it): open https://<IP> and accept the certificate warning. HTTPS is needed because the player's subtitle renderer uses SharedArrayBuffer, which browsers only allow on a secure page.",
+      "Until the first video has been scanned and matched, the home page shows only \"Resource not found.\". That, and a 403 on /auth/users/me in the browser console when the settings page is opened while logged out, is how upstream Kyoo behaves with an empty library and guest access.",
+      "A login that answers \"Field validation for 'Login' failed on the 'required' tag\" reached Kyoo with empty fields, which happens when the browser autofills the form without the page noticing. Type or edit the username and password, then log in again.",
+      "Visitors who are not logged in can browse the library but not play it (GUEST_CLAIMS in /opt/kyoo_data/.env). Set GUEST_CLAIMS= to require a login for everything, then run systemctl restart kyoo-auth.",
+      "The library is read from /opt/kyoo_data/media. Bind-mount your media there from the host, e.g. pct set <CTID> -mp0 /path/to/media,mp=/opt/kyoo_data/media, and make it readable for the container's root user. New files are picked up automatically; files on a network share that sends no change events show up after systemctl restart kyoo-scanner.",
+      "PUBLIC_URL and JWT_ISSUER in /opt/kyoo_data/.env (https://<IP>) must stay identical. Change both when Kyoo is reached under another address, e.g. a domain behind a reverse proxy (needed for OIDC logins), then run systemctl restart kyoo-auth kyoo-api kyoo-scanner.",
+      "Hardware transcoding is configured from the GPU passed through at install time (GOCODER_HWACCEL=vaapi for Intel/AMD, nvidia for NVIDIA, disabled otherwise). Change it in /opt/kyoo_data/.env (qsv is also valid) and run systemctl restart kyoo-transcoder.",
+      "Install and every update compile Kyoo from source (Go, Bun, Python and the Expo web app). The first install takes about 6 minutes on 4 idle cores (much longer on a busy host) and the build peaks at about 2.5 GB of RAM; updates take a few minutes because the build caches are kept."
+    ],
+    "warnings": [
+      "There is no default account. The first account registered at https://<IP> becomes the administrator, so create it right after the install. Later sign-ups have to be verified by the administrator before they can play anything."
+    ],
+    "port": 443,
+    "website": "https://kyoo.zoriya.dev/",
+    "documentation": "https://github.com/zoriya/Kyoo/blob/master/INSTALLING.md",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/kyoo.webp",
+    "updateable": true,
+    "privileged": false,
+    "has_arm": false,
+    "is_dev": true,
+    "execute_in": [
+      "lxc"
+    ],
+    "config_path": "",
+    "os": "debian"
+  },
+  {
     "name": "LanguageTool",
     "slug": "languagetool",
     "desc": "LanguageTool is an Open Source proofreading software for English, Spanish, French, German, Portuguese, Polish, Dutch, and more than 20 other languages. It finds many errors that a simple spell checker cannot detect.",
@@ -12610,7 +12770,7 @@
     "updateable": true,
     "privileged": false,
     "has_arm": false,
-    "is_dev": true,
+    "is_dev": false,
     "execute_in": [
       "lxc"
     ],
@@ -15425,6 +15585,45 @@
     "is_dev": false,
     "execute_in": [
       "pve"
+    ],
+    "config_path": "",
+    "os": "debian"
+  },
+  {
+    "name": "Norish",
+    "slug": "norish",
+    "desc": "Norish is a realtime, self-hosted recipe app for families and friends. Recipes are imported from a link, pasted text or photos, organised in cookbooks, planned on a calendar and turned into a shared grocery list that updates live for everyone in the household. This script builds the web app from source and runs it with PostgreSQL, Redis, the bundled recipe parser and the Obscura headless browser that renders pages for URL imports.",
+    "script": "ct/norish.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/norish.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/norish.sh",
+    "type": "lxc",
+    "type_id": "nm9bra8mzye2scg",
+    "categories": [
+      "scriptcat00024"
+    ],
+    "category_names": [
+      "Gaming & Leisure"
+    ],
+    "notes": [
+      "Sign-in and the realtime connection are bound to AUTH_URL in /opt/norish_data/.env, which points at the container IP. Change it when the IP changes or Norish sits behind a reverse proxy or domain (list further origins in TRUSTED_ORIGINS), then run systemctl restart norish.",
+      "Imports from recipe sites work without AI: the local Obscura browser renders the page and the bundled parser reads it. Importing from photos, free text and videos, and the enrichment features, need an AI provider configured under Settings => Admin.",
+      "Offline mode relies on a service worker, which browsers only allow over HTTPS. Put Norish behind a reverse proxy with TLS to use it.",
+      "Install and every update build Norish from source, which peaks at about 4 GB of RAM; the 6 GB default leaves headroom for it. The running app idles at under 1 GB and uses up to about 2 GB while an import transcodes recipe videos."
+    ],
+    "warnings": [
+      "There is no default account. Open http://<IP>:3000 and sign up: the first account becomes the server owner and admin, and sign-up closes after it. Anyone who reaches the port can claim it until then, so create the account right after the install.",
+      "Back up MASTER_KEY from /opt/norish_data/.env together with the database. Norish derives its sign-in secret from it and encrypts account details and stored secrets with it, so a database restored without the key locks every user out."
+    ],
+    "port": 3000,
+    "website": "https://norish.dev/",
+    "documentation": "https://docs.norish.dev/",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/norish.webp",
+    "updateable": true,
+    "privileged": false,
+    "has_arm": false,
+    "is_dev": true,
+    "execute_in": [
+      "lxc"
     ],
     "config_path": "",
     "os": "debian"
@@ -20086,6 +20285,50 @@
     "os": "debian"
   },
   {
+    "name": "Rauthy",
+    "slug": "rauthy",
+    "desc": "Rauthy is a single sign-on identity and access management server. It is an OpenID Connect and OAuth 2 provider with an admin UI, passkey (FIDO2/WebAuthn) and OTP multi-factor login, upstream login providers, SCIM, forward auth and PAM/SSH login. This script builds Rauthy from the release source and runs it with its embedded Hiqlite (Raft-replicated SQLite) database, served over HTTPS with a self-signed certificate.",
+    "script": "ct/rauthy.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/rauthy.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/rauthy.sh",
+    "type": "lxc",
+    "type_id": "nm9bra8mzye2scg",
+    "categories": [
+      "scriptcat00006"
+    ],
+    "category_names": [
+      "Authentication & Security"
+    ],
+    "notes": [
+      "Open https://<IP>:8443/auth/v1/ and accept the self-signed certificate. Sign in as admin@localhost with the password_plain value under [bootstrap] in /opt/rauthy_data/config.toml (only read on the very first start) and change it on the account page right away.",
+      "The OIDC issuer is https://<pub_url>/auth/v1/ (discovery at /auth/v1/.well-known/openid-configuration). server.pub_url in /opt/rauthy_data/config.toml points at the container IP; change it when the IP changes or Rauthy sits behind a domain, then run systemctl restart rauthy. Behind a reverse proxy, proxy to https://<IP>:8443 and also set proxy_mode = true and trusted_proxies = ['<proxy IP>/32'] under [server].",
+      "No mail server is configured, so password reset, user registration and event e-mails are not sent. Set smtp_url, smtp_username, smtp_password and smtp_from under [email] in /opt/rauthy_data/config.toml and restart Rauthy.",
+      "The self-signed certificate in /etc/ssl/rauthy is valid for one year. Replace rauthy.crt and rauthy.key there with your own certificate (or renew it) and restart Rauthy.",
+      "Rauthy publishes no release binaries, so the install and every update compile it from the release source (Rust). This takes about 50 minutes on 4 cores, up to 2.5 GB of RAM and 9 GB of disk; an update builds while the old version keeps running. The server itself uses about 200 MB, so RAM can be lowered after the install and raised again before an update."
+    ],
+    "warnings": [
+      "Passkeys (WebAuthn) only work under a DNS name with a certificate the browser trusts; an IP address is never a valid relying party. So the script sets admin_force_mfa = false, otherwise the admin UI would be unreachable by IP. For production, serve Rauthy under a domain, set server.pub_url, webauthn.rp_id and webauthn.rp_origin to it before anyone registers a passkey (changing rp_id later breaks existing passkeys), register a passkey for the admin and then set admin_force_mfa = true.",
+      "Back up /opt/rauthy_data/config.toml together with the Hiqlite database in /opt/rauthy_data/hiqlite. The [encryption] keys encrypt client secrets and other stored values, a database restored without them is unusable."
+    ],
+    "port": 8443,
+    "website": "https://github.com/sebadob/rauthy",
+    "documentation": "https://sebadob.github.io/rauthy/",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/rauthy.webp",
+    "updateable": true,
+    "privileged": false,
+    "has_arm": false,
+    "is_dev": true,
+    "execute_in": [
+      "lxc"
+    ],
+    "config_path": "",
+    "default_credentials": {
+      "username": "admin@localhost",
+      "password": ""
+    },
+    "os": "debian"
+  },
+  {
     "name": "Razzia",
     "slug": "razzia",
     "desc": "Razzia is a self-hosted, open-source quiz platform for smaller events. A manager hosts a live quiz from the browser while participants join with a room code from their own devices, with quizzes, results and custom branding stored as files in the config folder.",
@@ -20840,6 +21083,44 @@
     ],
     "config_path": "",
     "os": "alpine"
+  },
+  {
+    "name": "Ryot",
+    "slug": "ryot",
+    "desc": "Ryot (Roll Your Own Tracker) is a self-hosted tracker for the media you consume and the workouts you do. It logs progress, ratings and reviews for movies, shows, books, audiobooks, anime, manga, comics, video games, podcasts, music and visual novels, pulls their metadata from providers such as TMDB, IGDB, OpenLibrary and AniList, imports history from Trakt, Goodreads, Jellyfin and others, and records workouts, exercises and body measurements. This script builds the Rust backend and the React frontend from source and runs them with PostgreSQL behind nginx.",
+    "script": "ct/ryot.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/ryot.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/ryot.sh",
+    "type": "lxc",
+    "type_id": "nm9bra8mzye2scg",
+    "categories": [
+      "scriptcat00024"
+    ],
+    "category_names": [
+      "Gaming & Leisure"
+    ],
+    "notes": [
+      "Books (OpenLibrary), anime and manga (AniList), podcasts (iTunes), audiobooks, music and visual novels work out of the box. Movies and shows need MOVIES_AND_SHOWS_TMDB_ACCESS_TOKEN, video games need VIDEO_GAMES_TWITCH_CLIENT_ID and VIDEO_GAMES_TWITCH_CLIENT_SECRET in /opt/ryot_data/.env, then systemctl restart ryot-backend. All options: https://docs.ryot.io/configuration.html",
+      "FRONTEND_URL in /opt/ryot_data/.env points at the container IP and is used for links in notifications and integrations. Change it when the IP changes or Ryot sits behind a reverse proxy or domain, then restart ryot-backend.",
+      "Ryot Pro keys (SERVER_PRO_KEY) are only verified by the official Docker images, which carry the vendor's verification key. A source build cannot validate them and always runs the community edition.",
+      "Install and every update compile the Rust backend and the React frontend from source, which takes about 30 minutes on 4 cores (longer on a busy host) and peaks at about 3 GB of RAM. The running app with PostgreSQL needs about 300 MB, so the RAM can be lowered after the install and raised again before an update."
+    ],
+    "warnings": [
+      "There is no default account. Open http://<IP>:8000 and register: the first account becomes the administrator. Registration stays open to anyone who reaches the port, so once the accounts exist, set USERS_ALLOW_REGISTRATION=false in /opt/ryot_data/.env and run systemctl restart ryot-backend."
+    ],
+    "port": 8000,
+    "website": "https://ryot.io/",
+    "documentation": "https://docs.ryot.io/",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/ryot.webp",
+    "updateable": true,
+    "privileged": false,
+    "has_arm": false,
+    "is_dev": true,
+    "execute_in": [
+      "lxc"
+    ],
+    "config_path": "",
+    "os": "debian"
   },
   {
     "name": "SABnzbd",
@@ -24655,7 +24936,7 @@
     "updateable": true,
     "privileged": false,
     "has_arm": false,
-    "is_dev": true,
+    "is_dev": false,
     "execute_in": [
       "lxc"
     ],
@@ -25458,6 +25739,41 @@
     "is_dev": false,
     "execute_in": [
       "pve"
+    ],
+    "config_path": "",
+    "os": "debian"
+  },
+  {
+    "name": "useSend",
+    "slug": "usesend",
+    "desc": "useSend is an open-source email sending platform and self-hosted alternative to Resend, SendGrid or Postmark. It sends transactional email through a REST API, SDKs or SMTP, and marketing campaigns to contact books from a visual editor, with domain verification, delivery, open and click tracking, bounces, suppression lists and webhooks. Delivery runs through Amazon SES. This script builds the web app and the SMTP proxy from source and runs them with PostgreSQL and Redis.",
+    "script": "ct/usesend.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/usesend.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/usesend.sh",
+    "type": "lxc",
+    "type_id": "nm9bra8mzye2scg",
+    "categories": [],
+    "category_names": [],
+    "notes": [
+      "NEXTAUTH_URL in /opt/usesend_data/.env is http://<IP>:3000. Change it together with the OAuth callback URL when the IP changes or useSend runs behind a domain, then run systemctl restart usesend.",
+      "The SMTP proxy (usesend-smtp) accepts mail on 465 and 2465 (TLS) and 587 and 2587 (STARTTLS), user usesend and a useSend API key as password, and hands it to the API. Its certificate in /etc/ssl/usesend is self-signed and valid for one year. Port 25 is offered too unless another mail server already listens there.",
+      "Install and every update build useSend from source (Next.js), which takes about 15 minutes on 2 cores and needs the 4 GB of RAM. The running services use about 400 MB, so the RAM can be lowered after the install and raised again before an update."
+    ],
+    "warnings": [
+      "useSend has no local accounts. Sign-in is GitHub OAuth (Google OAuth works too, but only behind an HTTPS domain); the email code login cannot work on a fresh instance, because useSend sends that code through its own verified SES domain. Create a GitHub OAuth app with the callback URL http://<IP>:3000/api/auth/callback/github and pass var_github_id and var_github_secret, or fill in GITHUB_ID and GITHUB_SECRET in /opt/usesend_data/.env afterwards and run systemctl enable --now usesend usesend-smtp. The services do not start until then.",
+      "The first sign-in creates the account, after that only email addresses with a team invitation can sign up. Until then anyone with a GitHub account who reaches the port can claim the instance, so sign in right after setting up OAuth.",
+      "Sending needs Amazon SES. useSend installs and runs without it, but no email leaves until AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY of an IAM user with AmazonSESFullAccess and AmazonSNSFullAccess are set in /opt/usesend_data/.env and SES is added under Admin with a region and a callback URL. That URL must be reachable from the internet, because SNS posts delivery, bounce and complaint events to it. New SES accounts start in sandbox mode and only send to verified addresses."
+    ],
+    "port": 3000,
+    "website": "https://usesend.com/",
+    "documentation": "https://docs.usesend.com/",
+    "logo": "https://cdn.jsdelivr.net/gh/usesend/useSend@main/apps/web/public/logo-squircle.png",
+    "updateable": true,
+    "privileged": false,
+    "has_arm": false,
+    "is_dev": true,
+    "execute_in": [
+      "lxc"
     ],
     "config_path": "",
     "os": "debian"
