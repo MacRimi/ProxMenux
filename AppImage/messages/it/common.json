@@ -3403,10 +3403,10 @@
       "ociInMonitor": "Applicazioni OCI nel Monitor: la scheda App le riconosce, la scheda Aggiornamenti le aggiorna e le modifica come fa il menu, e una scheda Log segue in tempo reale l'output della console dell'applicazione.",
       "ociAcceleration": "Accelerazione hardware per le applicazioni OCI: l'installer offre solo i profili che l'host può eseguire: GPU NVIDIA, Intel e AMD e, per Frigate, una NPU Intel o una Coral. NVIDIA Container Toolkit viene installato con il driver.",
       "ociRecovery": "Un'applicazione OCI viaggia con il suo backup: ripristinata su questo host o su un altro, viene di nuovo registrata e gestita, e in un cluster si avvia sul nodo su cui viene spostata.",
-      "ociWatchdog": "Watchdog per le applicazioni OCI: un'applicazione che si arresta da sola viene riavviata e una notifica lo segnala. Un arresto richiesto dall'utente, un backup o una migrazione non vengono mai annullati.",
+      "ociWatchdog": "Watchdog per le applicazioni OCI: un'applicazione che si arresta da sola viene riavviata e una notifica lo segnala. Non interviene sugli arresti richiesti dall'utente o dovuti a un backup o a una migrazione.",
       "shareCoveX": "ShareCoveX entra nel catalogo: un file server con pannello web che condivide directory dell'host o volumi del container tramite SMB, NFS e Time Machine.",
       "guestBackupJobs": "Job di backup di VM e LXC: la scheda Backup elenca i job pianificati di Proxmox e li crea, modifica, abilita ed esegue; sono gli stessi di Datacenter → Backup (contributo di @MattiaC46).",
-      "notificationLanguage": "Notifiche nella tua lingua: titoli, corpi e riepiloghi giornalieri sono scritti nella lingua scelta per le notifiche (contributo di @Vaso73).",
+      "notificationLanguage": "Notifiche nella tua lingua: titoli, testi e riepiloghi giornalieri sono scritti nella lingua scelta per le notifiche (contributo di @Vaso73).",
       "auditReviewDate": "Audit & Report: un risultato accettato può avere una data di revisione che lo ripresenta senza ritirare la decisione, e il confronto indica se un risultato è peggiorato, migliorato o rimasto invariato (con @Vaso73)."
     }
   },
