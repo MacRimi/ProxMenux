@@ -6991,6 +6991,7 @@
   "Updating package lists...": "Aktualizujem zoznamy balíkov...",
   "Updating pve-enterprise.list (if present) to Trixie...": "Aktualizujem pve-enterprise.list na Trixie (ak existuje)...",
   "Updating release channel configuration...": "Aktualizujem nastavenie vetvy vydania...",
+  "Updating the copy of the record...": "Aktualizuje sa kópia záznamu...",
   "Upgrade Ceph to compatible version": "Aktualizovať Ceph na kompatibilnú verziu",
   "Upgrade PVE 8 to PVE 9": "Prechod z PVE 8 na PVE 9",
   "Upgrade assistant: Proxmox VE 8 → 9 (Trixie)": "Asistent aktualizácie: Proxmox VE 8 → 9 (Trixie)",

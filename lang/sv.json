@@ -6992,6 +6992,7 @@
   "Updating package lists...": "Uppdaterar paketlistor...",
   "Updating pve-enterprise.list (if present) to Trixie...": "Uppdaterar pve-enterprise.list (om sådan finns) till Trixie...",
   "Updating release channel configuration...": "Uppdaterar versionskanalkonfiguration...",
+  "Updating the copy of the record...": "Uppdaterar kopian av posten...",
   "Upgrade Ceph to compatible version": "Uppgradera Ceph till en kompatibel version",
   "Upgrade PVE 8 to PVE 9": "Uppgradera PVE 8 till PVE 9",
   "Upgrade assistant: Proxmox VE 8 → 9 (Trixie)": "Uppgraderingsassistent: Proxmox VE 8 → 9 (Ttrixie)",

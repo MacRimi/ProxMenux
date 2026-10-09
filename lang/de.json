@@ -6992,6 +6992,7 @@
   "Updating package lists...": "Paketlisten werden aktualisiert...",
   "Updating pve-enterprise.list (if present) to Trixie...": "Aktualisierung von pve-enterprise.list (falls vorhanden) auf Trixie ...",
   "Updating release channel configuration...": "Konfiguration des Release-Kanals wird aktualisiert...",
+  "Updating the copy of the record...": "Die Kopie des Datensatzes wird aktualisiert...",
   "Upgrade Ceph to compatible version": "Aktualisieren Sie Ceph auf eine kompatible Version",
   "Upgrade PVE 8 to PVE 9": "Aktualisieren Sie PVE 8 auf PVE 9",
   "Upgrade assistant: Proxmox VE 8 → 9 (Trixie)": "Upgrade-Assistent: Proxmox VE 8 → 9 (Trixie)",

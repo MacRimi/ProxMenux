@@ -6965,6 +6965,7 @@
   "Updating package lists...": "Actualizando listas de paquetes...",
   "Updating pve-enterprise.list (if present) to Trixie...": "Actualizando pve-enterprise.list (si está presente) a Trixie...",
   "Updating release channel configuration...": "Actualizando la configuración del canal de release...",
+  "Updating the copy of the record...": "Actualizando la copia del registro...",
   "Upgrade Ceph to compatible version": "Actualice Ceph a una versión compatible",
   "Upgrade PVE 8 to PVE 9": "Actualizar PVE 8 a PVE 9",
   "Upgrade assistant: Proxmox VE 8 → 9 (Trixie)": "Asistente de actualización: Proxmox VE 8 → 9 (Trixie)",
@@ -7919,6 +7920,5 @@
   "⚠ Disk data will NOT be erased.": "⚠ Los datos del disco NO se borrarán.",
   "⚠ Disk will be unmounted and removed from /etc/fstab.": "⚠ El disco se desmontará y se eliminará de /etc/fstab.",
   "⚠ The /etc/fstab entry will be removed.": "⚠ Se eliminará la entrada /etc/fstab.",
-  "⚠ The disk will be unmounted.": "⚠ El disco se desmontará.",
-  "Updating the copy of the record...": "Actualizando la copia del registro..."
+  "⚠ The disk will be unmounted.": "⚠ El disco se desmontará."
 }
