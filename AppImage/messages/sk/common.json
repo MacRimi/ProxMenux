@@ -3402,7 +3402,7 @@
       "ociInMonitor": "OCI aplikácie v Monitore — karta Aplikácie ich rozpozná, karta Aktualizácie ich aktualizuje a upravuje rovnako ako ponuka a karta Logy naživo sleduje výstup konzoly aplikácie.",
       "ociAcceleration": "Hardvérová akcelerácia pre OCI aplikácie — inštalátor ponúka iba profily, ktoré hostiteľ dokáže spustiť: GPU NVIDIA, Intel a AMD a pre Frigate Intel NPU alebo Coral. NVIDIA Container Toolkit sa inštaluje spolu s ovládačom.",
       "ociRecovery": "OCI aplikácia cestuje so svojou zálohou — po obnovení na tomto alebo inom hostiteľovi je znova zaregistrovaná a spravovaná a v klastri sa spustí na uzle, na ktorý sa presunie.",
-      "ociWatchdog": "Watchdog pre OCI aplikácie — aplikácia, ktorá sa sama zastaví, sa znova spustí a upozornenie o tom informuje. Zastavenie vyžiadané používateľom, záloha ani migrácia sa nikdy nerušia.",
+      "ociWatchdog": "Watchdog pre OCI aplikácie — aplikácia, ktorá sa sama zastaví, sa znova spustí a upozornenie o tom informuje. Ak ju zastaví používateľ alebo prebieha záloha či migrácia, Watchdog ju znova nespustí.",
       "shareCoveX": "ShareCoveX pribudol do katalógu — súborový server s webovým panelom, ktorý zdieľa adresáre hostiteľa alebo zväzky kontajnera cez SMB, NFS a Time Machine.",
       "guestBackupJobs": "Úlohy zálohovania VM a LXC — karta Zálohovanie zobrazuje naplánované úlohy Proxmoxu a umožňuje ich vytvárať, upravovať, povoľovať a spúšťať; sú to tie isté ako v Datacenter → Backup (prispel @MattiaC46).",
       "notificationLanguage": "Upozornenia vo vašom jazyku — názvy, texty a denné súhrny sú napísané v jazyku zvolenom pre upozornenia (prispel @Vaso73).",
