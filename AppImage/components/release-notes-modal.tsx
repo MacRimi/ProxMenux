@@ -306,38 +306,48 @@ export const CHANGELOG: Record<string, ReleaseNote> = {
 const CURRENT_VERSION_FEATURES = [
   {
     icon: <Package className="h-5 w-5" />,
-    key: "releaseNotes.currentFeatures.ociAppTab",
-    text: "OCI containers in the App tab — a container installed by OCI manager Apps is recognised from its installation record: the application and its image, a new image detected by digest, and a link to the image repository.",
-  },
-  {
-    icon: <RefreshCw className="h-5 w-5" />,
-    key: "releaseNotes.currentFeatures.ociUpdatesTab",
-    text: "Updates for OCI containers — Update and Modify open the same flow as the OCI menu, the backup taken before updating can be kept in a backup storage, and the image can be updated on a schedule.",
+    key: "releaseNotes.currentFeatures.ociManager",
+    text: "OCI manager Apps (beta) — a new entry in the ProxMenux menu installs applications from their official container images as native Proxmox LXC, with no Docker engine. The catalog carries over 360 applications.",
   },
   {
     icon: <ScrollText className="h-5 w-5" />,
-    key: "releaseNotes.currentFeatures.ociLogsTab",
-    text: "Logs tab for OCI containers — the console output of the application, kept on the host and followed live, with a filter and a download. The Proxmox console of these containers opens a shell.",
+    key: "releaseNotes.currentFeatures.ociInMonitor",
+    text: "OCI applications in the Monitor — the App tab recognises them, the Updates tab updates and modifies them as the menu does, and a Logs tab follows the console output of the application live.",
   },
   {
-    icon: <ArrowUpCircle className="h-5 w-5" />,
-    key: "releaseNotes.currentFeatures.appsUpdateShortcut",
-    text: "The update icon on the Apps page opens the container straight on its Updates tab.",
+    icon: <Cpu className="h-5 w-5" />,
+    key: "releaseNotes.currentFeatures.ociAcceleration",
+    text: "Hardware acceleration for OCI applications — the installer offers only the profiles the host can run: NVIDIA, Intel and AMD GPUs and, for Frigate, an Intel NPU or a Coral. The NVIDIA Container Toolkit installs with the driver.",
   },
   {
-    icon: <Bell className="h-5 w-5" />,
-    key: "releaseNotes.currentFeatures.webhookHttps",
-    text: "Proxmox notifications reach the Monitor with HTTPS enabled — they are delivered on a local-only address and no longer fail with a certificate error.",
+    icon: <DatabaseBackup className="h-5 w-5" />,
+    key: "releaseNotes.currentFeatures.ociRecovery",
+    text: "An OCI application travels with its backup — restored on this host or on another one, it is registered and managed again, and in a cluster it starts on whichever node it moves to.",
   },
   {
-    icon: <Activity className="h-5 w-5" />,
-    key: "releaseNotes.currentFeatures.persistentLogs",
-    text: "A burst of log errors that ended is no longer reported as persistent: a pattern has to keep appearing for 15 minutes, and its warning clears on its own (reported by @Joshua1264).",
+    icon: <RefreshCw className="h-5 w-5" />,
+    key: "releaseNotes.currentFeatures.ociWatchdog",
+    text: "Watchdog for OCI applications — an application that stops on its own is started again and a notification says so. A stop asked by the user, a backup or a migration is never undone.",
   },
   {
-    icon: <HardDrive className="h-5 w-5" />,
-    key: "releaseNotes.currentFeatures.mountsLanAddress",
-    text: "Mount points on LVM-thin and other block storage show their usage, and multi-container applications open at their LAN address.",
+    icon: <Server className="h-5 w-5" />,
+    key: "releaseNotes.currentFeatures.shareCoveX",
+    text: "ShareCoveX joins the catalog — a file server with a web panel that shares host directories or container volumes over SMB, NFS and Time Machine.",
+  },
+  {
+    icon: <Calendar className="h-5 w-5" />,
+    key: "releaseNotes.currentFeatures.guestBackupJobs",
+    text: "Backup jobs of VMs and LXCs — the Backup tab lists the scheduled jobs of Proxmox and creates, edits, enables and runs them; they are the same ones as Datacenter → Backup (contributed by @MattiaC46).",
+  },
+  {
+    icon: <Languages className="h-5 w-5" />,
+    key: "releaseNotes.currentFeatures.notificationLanguage",
+    text: "Notifications in your language — titles, bodies and daily digests are written in the language chosen for notifications (contributed by @Vaso73).",
+  },
+  {
+    icon: <Shield className="h-5 w-5" />,
+    key: "releaseNotes.currentFeatures.auditReviewDate",
+    text: "Audit & Report — an accepted finding can carry a review date that brings it back without withdrawing the decision, and the comparison says whether a finding got worse, got better or held (with @Vaso73).",
   },
 ]
 

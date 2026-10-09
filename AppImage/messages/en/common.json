@@ -3397,7 +3397,16 @@
       "appsUpdateShortcut": "The update icon on the Apps page opens the container straight on its Updates tab.",
       "webhookHttps": "Proxmox notifications reach the Monitor with HTTPS enabled — they are delivered on a local-only address and no longer fail with a certificate error.",
       "persistentLogs": "A burst of log errors that ended is no longer reported as persistent: a pattern has to keep appearing for 15 minutes, and its warning clears on its own (reported by @Joshua1264).",
-      "mountsLanAddress": "Mount points on LVM-thin and other block storage show their usage, and multi-container applications open at their LAN address."
+      "mountsLanAddress": "Mount points on LVM-thin and other block storage show their usage, and multi-container applications open at their LAN address.",
+      "ociManager": "OCI manager Apps (beta) — a new entry in the ProxMenux menu installs applications from their official container images as native Proxmox LXC, with no Docker engine. The catalog carries over 360 applications.",
+      "ociInMonitor": "OCI applications in the Monitor — the App tab recognises them, the Updates tab updates and modifies them as the menu does, and a Logs tab follows the console output of the application live.",
+      "ociAcceleration": "Hardware acceleration for OCI applications — the installer offers only the profiles the host can run: NVIDIA, Intel and AMD GPUs and, for Frigate, an Intel NPU or a Coral. The NVIDIA Container Toolkit installs with the driver.",
+      "ociRecovery": "An OCI application travels with its backup — restored on this host or on another one, it is registered and managed again, and in a cluster it starts on whichever node it moves to.",
+      "ociWatchdog": "Watchdog for OCI applications — an application that stops on its own is started again and a notification says so. A stop asked by the user, a backup or a migration is never undone.",
+      "shareCoveX": "ShareCoveX joins the catalog — a file server with a web panel that shares host directories or container volumes over SMB, NFS and Time Machine.",
+      "guestBackupJobs": "Backup jobs of VMs and LXCs — the Backup tab lists the scheduled jobs of Proxmox and creates, edits, enables and runs them; they are the same ones as Datacenter → Backup (contributed by @MattiaC46).",
+      "notificationLanguage": "Notifications in your language — titles, bodies and daily digests are written in the language chosen for notifications (contributed by @Vaso73).",
+      "auditReviewDate": "Audit & Report — an accepted finding can carry a review date that brings it back without withdrawing the decision, and the comparison says whether a finding got worse, got better or held (with @Vaso73)."
     }
   },
   "network": {
