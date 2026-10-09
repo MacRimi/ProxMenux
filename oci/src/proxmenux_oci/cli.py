@@ -439,7 +439,7 @@ def install_template(ui, template: dict[str, Any], identifier: str, mode: str) -
         return None
     if result:
         from .management import carry_records
-        carry_records(PROJECT_ROOT)
+        carry_records(PROJECT_ROOT, shown=True)
         vmids = {int(v) for v in [result.get("vmid"), *(result.get("stack_vmids") or {}).values()] if v}
         _, removed = images.offer_removal(ui, sorted(vmids))
         _print_installation_summary(result, removed)
@@ -461,7 +461,7 @@ def _rclone_mount(catalog: Catalog, ui) -> None:
     result = run_remote_rclone_mount(PROJECT_ROOT, template, deployment, "auto")
     if result:
         from .management import carry_records
-        carry_records(PROJECT_ROOT)
+        carry_records(PROJECT_ROOT, shown=True)
         console.msg_ok(f"Remote: {result['remote']}:")
         console.msg_ok(f"{translate('Read/write')}: {result['read_write_path']}")
         console.msg_ok(f"{translate('Read-only')}: {result['read_only_path']}")
@@ -562,6 +562,8 @@ def interactive(catalog: Catalog) -> int:
                           f"{translate('All applications')} ({len(applications)})")
             elif selection == "manage":
                 from .management import interactive_management
+                console.show_logo()
+                console.msg_title(translate("Manage installed OCI applications"))
                 interactive_management(PROJECT_ROOT, ui)
             elif selection == "custom":
                 from .custom import explore

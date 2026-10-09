@@ -77,5 +77,43 @@ class CarriedRecordTests(unittest.TestCase):
         self.assertEqual(carried.mapped_root(custom), (200000, 300000))
 
 
+
+class ShownSyncTests(unittest.TestCase):
+    """Every installed application is looked at after an operation, which
+    takes a while with many of them: the screen says what is being done."""
+
+    def setUp(self):
+        sys.path.insert(0, str(ROOT / "src"))
+        from proxmenux_oci import console, management
+        self.console, self.management = console, management
+
+    def run_sync(self, outcome, **options):
+        from unittest.mock import patch
+        events = []
+        with patch.object(self.console, "msg_info", side_effect=lambda text: events.append(("info", text))), \
+                patch.object(self.console, "stop_spinner", side_effect=lambda *a, **k: events.append(("stop",))), \
+                patch.object(carried, "sync", side_effect=outcome) as sync:
+            result = self.management.carry_records(ROOT, **options)
+        return result, events, sync
+
+    def test_the_sync_is_announced_and_the_notice_is_cleared(self):
+        result, events, sync = self.run_sync(lambda *args: {120: "current"}, shown=True)
+        self.assertEqual(result, {120: "current"})
+        self.assertEqual([event[0] for event in events], ["info", "stop"])
+        self.assertEqual(events[0][1], "Updating the copy of the record...")
+        sync.assert_called_once()
+
+    def test_the_notice_is_cleared_when_the_sync_fails(self):
+        result, events, _sync = self.run_sync(OSError("registry"), shown=True)
+        self.assertEqual(result, {})
+        self.assertEqual([event[0] for event in events], ["info", "stop"])
+
+    def test_nothing_is_shown_unless_asked(self):
+        _result, events, sync = self.run_sync(lambda *args: {}, vmids=[120], verify=True)
+        self.assertEqual(events, [])
+        self.assertEqual(sync.call_args.args[1:], ([120], True, True))
+
+
+
 if __name__ == "__main__":
     unittest.main()

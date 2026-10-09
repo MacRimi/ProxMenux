@@ -125,22 +125,29 @@ def _run_lifecycle(command, title):
     console.msg_title(title)
     environment = dict(os.environ, OCI_SPINNER='1' if sys.stdout.isatty() else '0')
     completed = subprocess.run(command, env=environment, check=False)
-    carry_records(images.PROJECT_ROOT)
+    carry_records(images.PROJECT_ROOT, shown=True)
     if sys.stdin.isatty():
         console.wait_for_enter(translate('Press Enter to return to the menu...'))
     return completed.returncode == 0
 
 
-def carry_records(project, mount_stopped=True, vmids=None, verify=False):
+def carry_records(project, mount_stopped=True, vmids=None, verify=False, shown=False):
     """Leave inside each container the copy of its record that a restore on
     another host needs. It is refreshed after every operation. Returns what
-    was found for each container."""
+    was found for each container. Every installed application is looked at,
+    which takes a while with many of them: `shown` says so on the screen."""
+    from . import console
     sys.path.insert(0, str(project / 'remote'))
+    if shown:
+        console.msg_info(translate('Updating the copy of the record...'))
     try:
         import oci_carried_record
         return oci_carried_record.sync(oci_carried_record.instances.ROOT, vmids, mount_stopped, verify)
     except (ImportError, OSError, ValueError, RuntimeError, subprocess.SubprocessError):
         return {}
+    finally:
+        if shown:
+            console.stop_spinner()
 
 
 def recover_automatically(project):
@@ -245,7 +252,7 @@ def _interactive_management(project, ui):
     _clean_orphans(project)
     recover_automatically(project)
     offer_recovery(project, ui)
-    carry_records(project, mount_stopped=False)
+    carry_records(project, mount_stopped=False, shown=True)
     rows = saved_inventory(project)
     if not rows:
         ui.message(translate('No registered OCI containers are available for selection on this host.'), translate('OCI management'))
