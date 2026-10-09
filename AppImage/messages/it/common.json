@@ -3399,15 +3399,15 @@
       "webhookHttps": "Le notifiche Proxmox raggiungono il Monitor con HTTPS attivo: consegnate su un indirizzo solo locale, non falliscono più per errori di certificato.",
       "persistentLogs": "Una raffica di errori di log conclusa non è più segnalata come persistente: un pattern deve continuare a comparire per 15 minuti e l’avviso si chiude da solo (segnalato da @Joshua1264).",
       "mountsLanAddress": "I mount su LVM-thin e altri storage a blocchi mostrano l’utilizzo; le app multi-container si aprono al proprio indirizzo LAN.",
-      "ociManager": "OCI manager Apps (beta): una nuova voce nel menu ProxMenux installa le applicazioni dalle immagini del contenitore ufficiale come Proxmox LXC nativo, senza motore Docker.Il catalogo contiene oltre 360 ​​applicazioni.",
-      "ociInMonitor": "applicazioni OCI nel Monitor: la scheda App le riconosce, la scheda Aggiornamenti le aggiorna e le modifica come fa il menu e una scheda Log segue l'output della console dell'applicazione in tempo reale.",
-      "ociAcceleration": "Accelerazione hardware per applicazioni OCI: il programma di installazione offre solo i profili che l'host può eseguire: GPU NVIDIA, Intel e AMD e, per Frigate, una NPU Intel o Coral.Il NVIDIA Container Toolkit viene installato con il driver.",
-      "ociRecovery": "Un'applicazione OCI viaggia con il suo backup: ripristinata su questo host o su un altro, viene registrata e gestita nuovamente e in un cluster si avvia su qualunque nodo si sposti.",
-      "ociWatchdog": "Watchdog per applicazioni OCI: un'applicazione che si arresta da sola viene riavviata e viene visualizzata una notifica.Un'interruzione richiesta dall'utente, un backup o una migrazione non vengono mai annullati.",
-      "shareCoveX": "ShareCoveX si unisce al catalogo: un file server con un pannello Web che condivide directory host o volumi contenitore su SMB, NFS e Time Machine.",
-      "guestBackupJobs": "Lavori di backup di VM e LXC: la scheda Backup elenca i lavori pianificati di Proxmox e li crea, modifica, abilita ed esegue;sono gli stessi di Datacenter → Backup (contributo di @MattiaC46).",
-      "notificationLanguage": "notifiche nella tua lingua: titoli, corpi e riassunti giornalieri sono scritti nella lingua scelta per le notifiche (contributo di @Vaso73).",
-      "auditReviewDate": "Audit e rapporto: un risultato accettato può portare una data di revisione che lo riporta indietro senza ritirare la decisione, e il confronto indica se un risultato è peggiorato, è migliorato o è stato mantenuto (con @Vaso73)."
+      "ociManager": "OCI manager Apps (beta): una nuova voce nel menu di ProxMenux installa le applicazioni dalle loro immagini container ufficiali come LXC nativi di Proxmox, senza motore Docker. Il catalogo contiene oltre 360 applicazioni.",
+      "ociInMonitor": "Applicazioni OCI nel Monitor: la scheda App le riconosce, la scheda Aggiornamenti le aggiorna e le modifica come fa il menu, e una scheda Log segue in tempo reale l'output della console dell'applicazione.",
+      "ociAcceleration": "Accelerazione hardware per le applicazioni OCI: l'installer offre solo i profili che l'host può eseguire: GPU NVIDIA, Intel e AMD e, per Frigate, una NPU Intel o una Coral. NVIDIA Container Toolkit viene installato con il driver.",
+      "ociRecovery": "Un'applicazione OCI viaggia con il suo backup: ripristinata su questo host o su un altro, viene di nuovo registrata e gestita, e in un cluster si avvia sul nodo su cui viene spostata.",
+      "ociWatchdog": "Watchdog per le applicazioni OCI: un'applicazione che si arresta da sola viene riavviata e una notifica lo segnala. Un arresto richiesto dall'utente, un backup o una migrazione non vengono mai annullati.",
+      "shareCoveX": "ShareCoveX entra nel catalogo: un file server con pannello web che condivide directory dell'host o volumi del container tramite SMB, NFS e Time Machine.",
+      "guestBackupJobs": "Job di backup di VM e LXC: la scheda Backup elenca i job pianificati di Proxmox e li crea, modifica, abilita ed esegue; sono gli stessi di Datacenter → Backup (contributo di @MattiaC46).",
+      "notificationLanguage": "Notifiche nella tua lingua: titoli, corpi e riepiloghi giornalieri sono scritti nella lingua scelta per le notifiche (contributo di @Vaso73).",
+      "auditReviewDate": "Audit & Report: un risultato accettato può avere una data di revisione che lo ripresenta senza ritirare la decisione, e il confronto indica se un risultato è peggiorato, migliorato o rimasto invariato (con @Vaso73)."
     }
   },
   "network": {

@@ -3399,15 +3399,15 @@
       "webhookHttps": "As notificações do Proxmox chegam ao Monitor com HTTPS ativo — são entregues num endereço apenas local e já não falham por um erro de certificado.",
       "persistentLogs": "Uma rajada de erros nos logs que terminou já não é apresentada como persistente: um padrão tem de continuar a aparecer durante 15 minutos, e o seu aviso fecha-se sozinho (reportado por @Joshua1264).",
       "mountsLanAddress": "Os pontos de montagem em LVM-thin e outros armazenamentos em bloco mostram a sua utilização, e as aplicações com vários contentores abrem no seu endereço LAN.",
-      "ociManager": "OCI manager Apps (beta) — uma nova entrada no menu ProxMenux instala aplicativos de suas imagens de contêiner oficiais como Proxmox LXC nativo, sem mecanismo Docker.O catálogo traz mais de 360 ​​aplicativos.",
-      "ociInMonitor": "aplicativos OCI no Monitor - a guia Aplicativo os reconhece, a guia Atualizações os atualiza e modifica conforme o menu faz, e uma guia Logs segue a saída do console do aplicativo ao vivo.",
-      "ociAcceleration": "Aceleração de hardware para aplicativos OCI – o instalador oferece apenas os perfis que o host pode executar: GPUs NVIDIA, Intel e AMD e, para Frigate, uma NPU Intel ou Coral.O NVIDIA Container Toolkit é instalado com o driver.",
-      "ociRecovery": "Um aplicativo OCI viaja com seu backup - restaurado neste host ou em outro, é registrado e gerenciado novamente e em um cluster é iniciado em qualquer nó para o qual for movido.",
-      "ociWatchdog": "Watchdog para aplicativos OCI – um aplicativo que para sozinho é iniciado novamente e uma notificação informa isso.Uma parada solicitada pelo usuário, um backup ou uma migração nunca é desfeita.",
-      "shareCoveX": "ShareCoveX se junta ao catálogo – um servidor de arquivos com um painel da web que compartilha diretórios de host ou volumes de contêiner por SMB, NFS e Time Machine.",
-      "guestBackupJobs": "Trabalhos de backup de VMs e LXCs — a guia Backup lista os trabalhos agendados do Proxmox e os cria, edita, habilita e executa;eles são iguais a Datacenter → Backup (contribuição de @ MattiaC46).",
-      "notificationLanguage": "Notificações no seu idioma — títulos, corpos e resumos diários são escritos no idioma escolhido para notificações (contribuição de @Vaso73).",
-      "auditReviewDate": "Auditoria e Relatório - uma descoberta aceita pode trazer uma data de revisão que a traz de volta sem retirar a decisão, e a comparação diz se uma descoberta piorou, melhorou ou foi mantida (com @Vaso73)."
+      "ociManager": "OCI manager Apps (beta) — uma nova entrada no menu do ProxMenux instala aplicações a partir das suas imagens de contentor oficiais como LXC nativos do Proxmox, sem motor Docker. O catálogo reúne mais de 360 aplicações.",
+      "ociInMonitor": "Aplicações OCI no Monitor — o separador App reconhece-as, o separador Atualizações atualiza-as e modifica-as como o menu, e um separador Logs segue em direto a saída da consola da aplicação.",
+      "ociAcceleration": "Aceleração por hardware para aplicações OCI — o instalador oferece apenas os perfis que o host pode executar: GPU NVIDIA, Intel e AMD e, para o Frigate, uma NPU Intel ou uma Coral. O NVIDIA Container Toolkit é instalado com o driver.",
+      "ociRecovery": "Uma aplicação OCI viaja com o seu backup — restaurada neste host ou noutro, volta a ficar registada e gerida, e num cluster arranca no nó para onde for movida.",
+      "ociWatchdog": "Vigilância para aplicações OCI — uma aplicação que para sozinha é iniciada de novo e uma notificação indica-o. Uma paragem pedida pelo utilizador, um backup ou uma migração nunca são desfeitos.",
+      "shareCoveX": "ShareCoveX junta-se ao catálogo — um servidor de ficheiros com painel web que partilha diretórios do host ou volumes do contentor por SMB, NFS e Time Machine.",
+      "guestBackupJobs": "Tarefas de backup de VM e LXC — o separador Backup lista as tarefas agendadas do Proxmox e permite criá-las, editá-las, ativá-las e executá-las; são as mesmas de Datacenter → Backup (contribuição de @MattiaC46).",
+      "notificationLanguage": "Notificações no seu idioma — títulos, corpos e resumos diários são escritos no idioma escolhido para as notificações (contribuição de @Vaso73).",
+      "auditReviewDate": "Auditoria & Relatório — uma constatação aceite pode ter uma data de revisão que a traz de volta sem retirar a decisão, e a comparação indica se uma constatação piorou, melhorou ou se manteve (com @Vaso73)."
     }
   },
   "network": {

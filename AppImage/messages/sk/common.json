@@ -3398,15 +3398,15 @@
       "webhookHttps": "Upozornenia Proxmoxu sa dostanú do Monitora aj so zapnutým HTTPS — doručujú sa na výhradne lokálnu adresu a už nezlyhávajú na chybe certifikátu.",
       "persistentLogs": "Skončená vlna chýb v logoch sa už nehlási ako trvalá: vzor sa musí opakovať 15 minút a jeho upozornenie sa zatvorí samo (nahlásil @Joshua1264).",
       "mountsLanAddress": "Body pripojenia na LVM-thin a inom blokovom úložisku zobrazujú svoje využitie a aplikácie s viacerými kontajnermi sa otvárajú na svojej LAN adrese.",
-      "ociManager": "OCI manager Apps (beta) — nová položka v ponuke ProxMenux nainštaluje aplikácie z ich oficiálnych obrazov kontajnerov ako natívny Proxmox LXC bez enginu Docker.Katalóg obsahuje viac ako 360 aplikácií.",
-      "ociInMonitor": "Aplikácie OCI v monitore – karta Aplikácia ich rozpozná, karta Aktualizácie ich aktualizuje a upravuje tak, ako to robí ponuka, a karta Protokoly sleduje výstup z konzoly naživo.",
-      "ociAcceleration": "Hardvérová akcelerácia pre aplikácie OCI – inštalačný program ponúka iba profily, ktoré môže hostiteľ spustiť: GPU NVIDIA, Intel a AMD a pre Frigate NPU Intel alebo Coral.Súprava NVIDIA Container Toolkit sa nainštaluje spolu s ovládačom.",
-      "ociRecovery": "Aplikácia OCI cestuje so svojou zálohou – obnovená na tomto hostiteľovi alebo na inom, je znova zaregistrovaná a spravovaná a v klastri sa spustí na ktoromkoľvek uzle, do ktorého sa presunie.",
-      "ociWatchdog": "Watchdog pre aplikácie OCI — aplikácia, ktorá sa sama zastaví, sa znova spustí a upozorní to.Zastavenie na žiadosť používateľa, zálohovanie alebo migrácia sa nikdy nevrátia späť.",
-      "shareCoveX": "ShareCoveX sa pripája ku katalógu – súborovému serveru s webovým panelom, ktorý zdieľa hostiteľské adresáre alebo zväzky kontajnerov cez SMB, NFS a Time Machine.",
-      "guestBackupJobs": "Úlohy zálohovania VM a LXC — záložka Zálohovanie uvádza naplánované úlohy Proxmox a vytvára, upravuje, povoľuje a spúšťa;sú rovnaké ako Datacenter → Backup (prispel @MattiaC46).",
-      "notificationLanguage": "Upozornenia vo vašom jazyku – názvy, texty a denné súhrny sú napísané v jazyku zvolenom pre upozornenia (prispel @Vaso73).",
-      "auditReviewDate": "Audit & Report – akceptované zistenie môže obsahovať dátum kontroly, ktorý ho vráti späť bez stiahnutia rozhodnutia a porovnanie hovorí, či sa nález zhoršil, zlepšil alebo ustál (s @Vaso73)."
+      "ociManager": "OCI manager Apps (beta) — nová položka v ponuke ProxMenux inštaluje aplikácie z ich oficiálnych kontajnerových image ako natívne Proxmox LXC, bez enginu Docker. Katalóg obsahuje viac ako 360 aplikácií.",
+      "ociInMonitor": "OCI aplikácie v Monitore — karta Aplikácie ich rozpozná, karta Aktualizácie ich aktualizuje a upravuje rovnako ako ponuka a karta Logy naživo sleduje výstup konzoly aplikácie.",
+      "ociAcceleration": "Hardvérová akcelerácia pre OCI aplikácie — inštalátor ponúka iba profily, ktoré hostiteľ dokáže spustiť: GPU NVIDIA, Intel a AMD a pre Frigate Intel NPU alebo Coral. NVIDIA Container Toolkit sa inštaluje spolu s ovládačom.",
+      "ociRecovery": "OCI aplikácia cestuje so svojou zálohou — po obnovení na tomto alebo inom hostiteľovi je znova zaregistrovaná a spravovaná a v klastri sa spustí na uzle, na ktorý sa presunie.",
+      "ociWatchdog": "Watchdog pre OCI aplikácie — aplikácia, ktorá sa sama zastaví, sa znova spustí a upozornenie o tom informuje. Zastavenie vyžiadané používateľom, záloha ani migrácia sa nikdy nerušia.",
+      "shareCoveX": "ShareCoveX pribudol do katalógu — súborový server s webovým panelom, ktorý zdieľa adresáre hostiteľa alebo zväzky kontajnera cez SMB, NFS a Time Machine.",
+      "guestBackupJobs": "Úlohy zálohovania VM a LXC — karta Zálohovanie zobrazuje naplánované úlohy Proxmoxu a umožňuje ich vytvárať, upravovať, povoľovať a spúšťať; sú to tie isté ako v Datacenter → Backup (prispel @MattiaC46).",
+      "notificationLanguage": "Upozornenia vo vašom jazyku — názvy, texty a denné súhrny sú napísané v jazyku zvolenom pre upozornenia (prispel @Vaso73).",
+      "auditReviewDate": "Audit a správy — akceptované zistenie môže mať dátum kontroly, ktorý ho znova pripomenie bez zrušenia rozhodnutia, a porovnanie ukáže, či sa zistenie zhoršilo, zlepšilo alebo zostalo rovnaké (s @Vaso73)."
     }
   },
   "network": {
