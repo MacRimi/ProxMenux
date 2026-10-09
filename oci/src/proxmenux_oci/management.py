@@ -305,7 +305,8 @@ def _work_backup_ready(project, ui, vmid):
     import oci_work_backup
     try:
         state = oci_work_backup.status(instances.ROOT, vmid)
-    except (OSError, ValueError, KeyError, subprocess.SubprocessError):
+    except (OSError, ValueError, KeyError, RuntimeError, subprocess.SubprocessError):
+        # What cannot be measured here is told by the engine when it stops.
         return True
     if state['fits'] or state['saved_fits']:
         return True

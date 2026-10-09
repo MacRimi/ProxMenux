@@ -247,11 +247,45 @@ class Menu(unittest.TestCase):
         self.assertEqual(len(shown), 1)
         self.assertIn("No other storage", shown[0])
 
+    def test_a_space_that_cannot_be_measured_leaves_the_answer_to_the_engine(self):
+        sys.path.insert(0, str(ROOT / "src"))
+        from proxmenux_oci import management
+        ui = type("UI", (), {"message": lambda *a, **k: self.fail("nothing is shown"),
+                              "choose": lambda *a, **k: self.fail("nothing is asked")})()
+        for failure in (RuntimeError("pct failed with exit code 255"), ValueError("a host directory is not available")):
+            with patch.object(work, "status", side_effect=failure):
+                self.assertTrue(management._work_backup_ready(ROOT, ui, 109))
+
     def test_a_scheduled_run_asks_nothing_and_lets_the_engine_decide(self):
         result, shown, status, _ = self.ready(self.STATE, unattended=True)
         self.assertTrue(result)
         self.assertEqual(shown, [])
         status.assert_not_called()
+
+
+
+class MissingHostDirectory(unittest.TestCase):
+    """The disk a shared directory is on is not connected: the container is
+    not mounted to be measured, which would leave it locked."""
+
+    def test_the_size_is_not_measured_and_the_directory_is_named(self):
+        import oci_instance_transaction as transaction
+        with tempfile.TemporaryDirectory() as directory:
+            present, missing = Path(directory) / "here", Path(directory) / "gone"
+            present.mkdir()
+            config = (f"rootfs: local-lvm:vm-111-disk-0,size=4G\nmp0: local-lvm:vm-111-disk-1,mp=/config,backup=1,size=1G\n"
+                      f"mp1: {present},mp=/shares/a,backup=0\nmp2: {missing},mp=/shares/b,backup=0\n").encode()
+            calls = []
+
+            def run(*args):
+                calls.append(args[:2])
+                return config if args[1] == "config" else b"MP VOLUME SIZE USED AVAIL USE% PATH\nrootfs x 4G 1G 3G 25% /\n"
+            with patch.object(transaction, "run", side_effect=run):
+                with self.assertRaisesRegex(ValueError, f"host directory is not available: {missing}"):
+                    transaction.backup_size(111)
+                self.assertEqual(calls, [("pct", "config")])
+                missing.mkdir()
+                self.assertEqual(transaction.backup_size(111), 1024 ** 3)
 
 
 if __name__ == "__main__":

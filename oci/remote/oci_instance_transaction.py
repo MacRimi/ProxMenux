@@ -590,6 +590,8 @@ def freeze_host_sources(record, candidate, acknowledge_external_data, files=()):
         log('host directories: not included in the backup and not reverted by a recovery')
     if old - set(baseline):
         log('host directories without a recorded identity: their current identity is pinned')
+    if any('filesystem' not in previous for source, previous in baseline.items() if source in original):
+        log('host directories recorded without the identity of their filesystem: it is pinned now')
     return original, desired
 
 
@@ -914,11 +916,15 @@ def gib(size):
 def backup_size(vmid):
     """Bytes in use on the volumes that vzdump includes: the rootfs and the
     mount points with backup enabled."""
-    cfg = parse_config(run('pct', 'config', str(vmid)))
+    config = run('pct', 'config', str(vmid))
+    cfg = parse_config(config)
     included = {'rootfs'} | {key for key, value in cfg.items()
                              if re.fullmatch(r'mp[0-9]+', key) and 'backup=1' in value.split(',')}
     units = {'': 1, 'K': 1024, 'M': 1024**2, 'G': 1024**3, 'T': 1024**4, 'P': 1024**5}
     total = 0
+    for source in host_mounts.missing_sources(config):
+        # A stopped container is mounted to be measured.
+        raise ValueError(f"{translate('The container is not modified because a host directory is not available:')} {source}")
     for line in run('pct', 'df', str(vmid)).decode().splitlines()[1:]:
         fields = line.split()
         if not fields or fields[0] not in included:

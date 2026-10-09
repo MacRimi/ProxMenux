@@ -58,6 +58,14 @@ def running_pid(vmid):
     return int(pid) if result.returncode == 0 and pid.isdigit() else None
 
 
+def _host_directory_missing(vmid):
+    """Whether the container mounts a directory of the host that is not
+    there. It is not mounted then: Proxmox would leave it locked."""
+    from oci_host_mounts import missing_sources
+    result = _run('pct', 'config', str(int(vmid)))
+    return result.returncode != 0 or bool(missing_sources(result.stdout.encode()))
+
+
 @contextlib.contextmanager
 def container_root(vmid, mount_stopped=True):
     """The root filesystem of the container as the host sees it, or None. A
@@ -67,7 +75,7 @@ def container_root(vmid, mount_stopped=True):
     if pid:
         yield Path(f'/proc/{pid}/root')
         return
-    if not mount_stopped or _run('pct', 'mount', str(int(vmid))).returncode != 0:
+    if not mount_stopped or _host_directory_missing(vmid) or _run('pct', 'mount', str(int(vmid))).returncode != 0:
         yield None
         return
     try:

@@ -78,6 +78,42 @@ class CarriedRecordTests(unittest.TestCase):
 
 
 
+
+class StoppedContainerTests(unittest.TestCase):
+    """A stopped container is mounted to reach its copy of the record, unless
+    a directory of the host it mounts is missing: Proxmox would fail to mount
+    it and leave it locked."""
+
+    def reach(self, config):
+        from types import SimpleNamespace
+        from unittest.mock import patch
+        calls = []
+
+        def run(*args):
+            calls.append(args[:2])
+            if args[0] == "lxc-info":
+                return SimpleNamespace(returncode=1, stdout="")
+            if args[1] == "config":
+                return SimpleNamespace(returncode=0, stdout=config)
+            return SimpleNamespace(returncode=0, stdout="")
+        with patch.object(carried, "_run", side_effect=run):
+            with carried.container_root(120) as rootfs:
+                pass
+        return rootfs, calls
+
+    def test_it_is_mounted_when_its_host_directories_are_there(self):
+        with tempfile.TemporaryDirectory() as directory:
+            rootfs, calls = self.reach(f"rootfs: local:120/disk.raw\nmp0: {directory},mp=/media,backup=0\n")
+        self.assertEqual(rootfs, Path("/var/lib/lxc/120/rootfs"))
+        self.assertEqual(calls, [("lxc-info", "-n"), ("pct", "config"), ("pct", "mount"), ("pct", "unmount")])
+
+    def test_it_is_left_alone_when_one_is_missing(self):
+        with tempfile.TemporaryDirectory() as directory:
+            rootfs, calls = self.reach(f"rootfs: local:120/disk.raw\nmp0: {directory}/gone,mp=/media,backup=0\n")
+        self.assertIsNone(rootfs)
+        self.assertNotIn(("pct", "mount"), calls)
+
+
 class ShownSyncTests(unittest.TestCase):
     """Every installed application is looked at after an operation, which
     takes a while with many of them: the screen says what is being done."""
