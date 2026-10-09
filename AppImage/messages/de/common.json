@@ -3398,7 +3398,16 @@
       "appsUpdateShortcut": "Das Update-Symbol auf der Apps-Seite öffnet den Container direkt auf seiner Registerkarte Updates.",
       "webhookHttps": "Proxmox-Benachrichtigungen erreichen den Monitor auch mit aktiviertem HTTPS — sie werden über eine nur lokale Adresse zugestellt und scheitern nicht mehr an einem Zertifikatsfehler.",
       "persistentLogs": "Eine beendete Häufung von Log-Fehlern wird nicht mehr als dauerhaft gemeldet: Ein Muster muss 15 Minuten lang weiter auftreten, und seine Warnung schließt sich von selbst (gemeldet von @Joshua1264).",
-      "mountsLanAddress": "Mountpunkte auf LVM-thin und anderem Blockspeicher zeigen ihre Belegung, und Multi-Container-Anwendungen öffnen sich unter ihrer LAN-Adresse."
+      "mountsLanAddress": "Mountpunkte auf LVM-thin und anderem Blockspeicher zeigen ihre Belegung, und Multi-Container-Anwendungen öffnen sich unter ihrer LAN-Adresse.",
+      "ociManager": "OCI manager Apps (beta) – ein neuer Eintrag im Menü ProxMenux installiert Anwendungen aus ihren offiziellen Container-Images als natives Proxmox LXC, ohne Docker-Engine.Der Katalog umfasst über 360 Anwendungen.",
+      "ociInMonitor": "OCI-Anwendungen im Monitor – die Registerkarte „App“ erkennt sie, die Registerkarte „Updates“ aktualisiert und ändert sie wie das Menü, und eine Registerkarte „Protokolle“ verfolgt die Konsolenausgabe der Anwendung live.",
+      "ociAcceleration": "Hardwarebeschleunigung für OCI-Anwendungen – das Installationsprogramm bietet nur die Profile an, die der Host ausführen kann: NVIDIA-, Intel- und AMD-GPUs und für Frigate eine Intel-NPU oder eine Coral.Das NVIDIA Container Toolkit wird mit dem Treiber installiert.",
+      "ociRecovery": "Eine OCI-Anwendung reist mit ihrem Backup – wiederhergestellt auf diesem oder einem anderen Host, wird erneut registriert und verwaltet und in einem Cluster wird sie auf dem Knoten gestartet, auf den sie verschoben wird.",
+      "ociWatchdog": "Watchdog für OCI-Anwendungen – eine Anwendung, die von selbst stoppt, wird erneut gestartet und eine Benachrichtigung zeigt dies an.Ein vom Benutzer angeforderter Stopp, ein Backup oder eine Migration wird niemals rückgängig gemacht.",
+      "shareCoveX": "ShareCoveX tritt dem Katalog bei – ein Dateiserver mit einem Webpanel, der Hostverzeichnisse oder Container-Volumes über SMB, NFS und Time Machine teilt.",
+      "guestBackupJobs": "Backup-Jobs von VMs und LXCs – die Registerkarte „Backup“ listet die geplanten Jobs von Proxmox auf und erstellt, bearbeitet, aktiviert und führt sie aus;Es handelt sich um die gleichen wie bei Datacenter → Backup (beigetragen von @MattiaC46).",
+      "notificationLanguage": "Benachrichtigungen in Ihrer Sprache – Titel, Texte und tägliche Zusammenfassungen werden in der für Benachrichtigungen gewählten Sprache verfasst (beigetragen von @Vaso73).",
+      "auditReviewDate": "Audit & Report – ein akzeptierter Befund kann ein Überprüfungsdatum tragen, das ihn zurückbringt, ohne die Entscheidung zurückzuziehen, und der Vergleich gibt an, ob sich ein Befund verschlechtert hat, sich verbessert hat oder beibehalten wurde (mit @Vaso73)."
     }
   },
   "network": {

@@ -3398,7 +3398,16 @@
       "appsUpdateShortcut": "Uppdateringsikonen på sidan Appar öppnar containern direkt på dess flik Uppdateringar.",
       "webhookHttps": "Proxmox-aviseringar når Monitor med HTTPS aktiverat — de levereras till en adress som bara är lokal och misslyckas inte längre på grund av ett certifikatfel.",
       "persistentLogs": "En avslutad skur av loggfel rapporteras inte längre som bestående: ett mönster måste fortsätta att dyka upp i 15 minuter, och dess varning stängs av sig själv (rapporterat av @Joshua1264).",
-      "mountsLanAddress": "Monteringspunkter på LVM-thin och annan blocklagring visar sin användning, och program med flera containrar öppnas på sin LAN-adress."
+      "mountsLanAddress": "Monteringspunkter på LVM-thin och annan blocklagring visar sin användning, och program med flera containrar öppnas på sin LAN-adress.",
+      "ociManager": "OCI manager Apps (beta) — en ny post i ProxMenux-menyn installerar applikationer från deras officiella containerbilder som inbyggd Proxmox LXC, utan Docker-motor.Katalogen innehåller över 360 applikationer.",
+      "ociInMonitor": "OCI-applikationer i monitorn — fliken App känner igen dem, fliken Uppdateringar uppdaterar och modifierar dem som menyn gör, och en flik Loggar följer programmets konsolutgång live.",
+      "ociAcceleration": "Hårdvaruacceleration för OCI-applikationer — installationsprogrammet erbjuder endast de profiler som värden kan köra: NVIDIA, Intel och AMD GPU:er och, för Frigate, en Intel NPU eller en Coral.NVIDIA Container Toolkit installeras med drivrutinen.",
+      "ociRecovery": "En OCI-applikation reser med sin backup — återställd på den här värddatorn eller på en annan, den registreras och hanteras igen, och i ett kluster startar den på vilken nod den än flyttar till.",
+      "ociWatchdog": "Watchdog för OCI-applikationer — en applikation som slutar av sig själv startas igen och ett meddelande säger det.Ett stopp som begärs av användaren, en säkerhetskopia eller en migrering ångras aldrig.",
+      "shareCoveX": "ShareCoveX ansluter sig till katalogen — en filserver med en webbpanel som delar värdkataloger eller containervolymer över SMB, NFS och Time Machine.",
+      "guestBackupJobs": "Säkerhetskopieringsjobb för virtuella datorer och LXC:er — fliken Säkerhetskopiering listar de schemalagda jobben för Proxmox och skapar, redigerar, aktiverar och kör dem;de är samma som Datacenter → Säkerhetskopiering (bidraget av @MattiaC46).",
+      "notificationLanguage": "Meddelanden på ditt språk — titlar, kroppar och dagliga sammanfattningar skrivs på det språk som valts för meddelanden (bidraget av @Vaso73).",
+      "auditReviewDate": "Revision och rapport — ett accepterat fynd kan ha ett granskningsdatum som tar tillbaka det utan att dra tillbaka beslutet, och jämförelsen säger om ett fynd blev värre, blev bättre eller hölls (med @Vaso73)."
     }
   },
   "network": {
