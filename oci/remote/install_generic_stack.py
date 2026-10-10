@@ -25,6 +25,7 @@ import xml.etree.ElementTree as ET
 
 from allocate_private_network import allocate_network, existing_bridges, existing_networks
 import oci_instances
+import oci_nested_mounts
 from oci_ui import translate, msg_info, msg_ok, msg_warn, msg_error, msg_info2, stop_spinner, log
 
 HERE = Path(__file__).resolve().parent
@@ -446,6 +447,7 @@ def attach_mounts(service, temporary):
             current = next(line.split(': ', 1)[1] for line in config.splitlines()
                            if line.startswith(f'mp{index}: '))
             run('pct', 'set', vmid, f'--mp{index}', current + ',ro=1')
+    oci_nested_mounts.follow(vmid)
 
 
 def wait_web(primary, url):

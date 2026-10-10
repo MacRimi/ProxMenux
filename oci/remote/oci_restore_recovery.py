@@ -33,6 +33,7 @@ import oci_carried_record as carried
 import oci_console
 import oci_instances as instances
 import oci_instance_transaction as transaction
+import oci_nested_mounts
 import oci_nvidia_refresh
 import oci_nvidia_runtime as nvidia
 import oci_runtime_settings as runtime_settings
@@ -460,7 +461,7 @@ def check_host_resources(plan):
                     f"{label}: {translate('it uses an NVIDIA GPU and this host has no working NVIDIA driver and Container Toolkit. Install them and run the recovery again.')}")
         for line in lines:
             key, _, value = line.partition(': ')
-            if key == 'lxc.hook.mount' and value:
+            if key == 'lxc.hook.mount' and value and not oci_nested_mounts.own(line):
                 hook = carried.NVIDIA_HOOK.fullmatch(value)
                 if not hook:
                     plan['blockers'].append(f"{label}: {translate('unknown mount hook:')} {value}")
@@ -737,7 +738,8 @@ def restore_host_files(entry):
                 runtime_settings.restore(deployment, vmid)
             else:
                 path.write_text(runtime_settings.sysctl_content(deployment))
-        elif key == 'lxc.hook.mount' and value and not Path(value).is_file():
+        elif (key == 'lxc.hook.mount' and value and not oci_nested_mounts.own(line)
+              and not Path(value).is_file()):
             content = nvidia_hook_source(entry, carried.NVIDIA_HOOK.fullmatch(value)[1])
             Path(value).parent.mkdir(parents=True, exist_ok=True, mode=0o755)
             Path(value).write_text(content)

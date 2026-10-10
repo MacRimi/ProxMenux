@@ -2024,6 +2024,12 @@ CREDENTIALS=$(jq -c --argjson environment "$DEPLOYMENT_ENVIRONMENT" '
 ' "$TEMPLATE_FILE")
 RUNTIME_CREDENTIALS=$(jq '[.[] | select(.retrieval.method? == "container-console-pattern")] | length' <<<"$CREDENTIALS")
 
+# A host directory is mounted with what the host has mounted inside it. Written
+# once every mount point is set and after the host monitor profile, which
+# clears the mount hooks.
+python3 "${SCRIPT_DIR}/oci_nested_mounts.py" follow "$VMID" \
+  || die "$(translate "Could not add the mount point:") CT $VMID"
+
 # The console of the container is kept as its log, the way `docker logs` keeps
 # it, and the Proxmox console opens a shell when the image has one. Both are
 # set before the configuration is recorded, so the record carries them and an

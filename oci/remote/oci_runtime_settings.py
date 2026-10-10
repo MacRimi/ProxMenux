@@ -5,6 +5,7 @@ import re
 import stat
 import tempfile
 
+import oci_nested_mounts as nested_mounts
 from oci_ui import translate
 
 
@@ -125,6 +126,7 @@ def file_binds(config):
 def filter_config(config, deployment):
     """The configuration without the entries of the mounts the deployment
     declares itself: what is left belongs to the acceleration profile."""
+    config = nested_mounts.without(config)
     declared = set(tmpfs_lines(deployment))
     files = {m['source'] for m in deployment.get('mounts', []) if m.get('type') == 'host-bind'}
 

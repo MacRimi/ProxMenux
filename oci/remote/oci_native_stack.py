@@ -13,6 +13,7 @@ import time
 
 import oci_console
 import oci_instances as instances
+import oci_nested_mounts
 from oci_installation_state import command, image_from_archive, sha
 import oci_stack_replay
 from oci_ui import translate
@@ -84,6 +85,7 @@ def create(root, args):
         # console as a shell, set before the stack records its configuration
         # so an update rebuilds them the same way.
         oci_console.configure(vmid)
+        oci_nested_mounts.follow(vmid)
     return code
 
 

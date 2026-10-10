@@ -16,6 +16,7 @@ import oci_gpu_devices as gpu_devices
 import oci_host_mounts as host_mounts
 import oci_instance_reconcile as reconcile
 import oci_instances as instances
+import oci_nested_mounts
 import oci_stack_replay as replay
 from oci_ui import msg_error, msg_info, msg_ok, translate
 
@@ -129,6 +130,8 @@ def apply(vmid, changes):
             if unused:
                 run('pct', 'set', str(vmid), '--delete', unused)
         msg_ok(f"{translate('Path removed:')} {path}")
+    if changes['add_mounts'] or changes['remove_mounts']:
+        oci_nested_mounts.follow(vmid)
 
 
 def recorded_mounts(vmid):

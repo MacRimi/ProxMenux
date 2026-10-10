@@ -30,6 +30,7 @@ import oci_instances as instances
 from oci_installation_state import image_from_archive, parse_config, private_directory, sha
 from verify_oci_archive import verify_archive
 import oci_host_mounts as host_mounts
+import oci_nested_mounts as nested_mounts
 import oci_accelerators as gpu_devices
 import oci_runtime_settings as runtime_settings
 import oci_image_cache as image_cache
@@ -473,7 +474,10 @@ def preflight(record, candidate, config, coordinated=None):
             raise ValueError(translate('The imported OCI user or group is not numeric'))
     if 'lxc.init.groups' in cfg and not re.fullmatch(r'(?:[0-9]+(?:[ ,][0-9]+)*)?', cfg['lxc.init.groups']):
         raise ValueError(translate('The imported OCI groups are not numeric'))
-    keys = {line.split(': ', 1)[0] for line in config.decode().splitlines() if ': ' in line}
+    # What shows the content mounted inside a host directory follows the mount
+    # points: it is checked against them and is not a setting of its own.
+    nested_mounts.check(config)
+    keys = {line.split(': ', 1)[0] for line in nested_mounts.without(config).decode().splitlines() if ': ' in line}
     runtime_keys = {'lxc.mount.entry'} if gpu_devices.nvidia.enabled(deployment) else set()
     if gpu_devices.dynamic_mode(deployment):
         runtime_keys = {'lxc.hook.mount', 'lxc.environment'}
@@ -597,6 +601,7 @@ def freeze_host_sources(record, candidate, acknowledge_external_data, files=()):
 
 def check_runtime_mounts(config, deployment):
     runtime_settings.check(config, deployment, deployment['vmid'])
+    nested_mounts.check(config)
     actual = mounts(config)
     files = runtime_settings.file_binds(config)
     if files != {m['source']: bool(m.get('read_only')) for m in deployment.get('mounts', []) if is_file_bind(m, files)}:

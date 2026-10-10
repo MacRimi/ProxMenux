@@ -190,6 +190,8 @@ oci_apply_extra_mounts() {
     count=$((count + 1))
   done < <(jq -r '.extra_mounts[]? | [.type, .container_path, .source, (.size_gb // "-"), (.read_only // false)] | @tsv' "$DEPLOYMENT_FILE")
   if (( count > 0 )); then
+    python3 "${SCRIPT_DIR}/oci_nested_mounts.py" follow "$vmid" \
+      || die "$(translate "Could not add the mount point:") CT $vmid"
     msg_ok "$(translate "Mount points added:") $count"
   fi
   return 0
