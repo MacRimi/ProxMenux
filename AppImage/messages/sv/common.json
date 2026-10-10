@@ -1207,7 +1207,7 @@
       "terminalTitleUpdate": "Uppdatera OCI-applikation",
       "terminalTitleModify": "Ändra OCI-applikation",
       "terminalTitleRecover": "Återställ återställd OCI-applikation",
-      "terminalDescription": "Samma flöde som OCI manager Apps → Hantera installerade OCI-applikationer.",
+      "terminalDescription": "Samma process körs som i ProxMenux-menyn: OCI manager Apps → Hantera installerade OCI-applikationer.",
       "keepBackup": "Behåll säkerhetskopian som tas före uppdateringen",
       "noKeepBackup": "Säkerhetskopian som tas före uppdateringen behålls inte",
       "keepBackupHelp": "Varje uppdatering säkerhetskopierar containern innan dess avbild ersätts, för att återställa den om uppdateringen misslyckas. Med det här alternativet behålls säkerhetskopian i den valda lagringen; på Proxmox Backup Server skrivs en säkerhetskopia före uppdateringen.",

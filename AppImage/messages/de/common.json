@@ -1207,7 +1207,7 @@
       "terminalTitleUpdate": "OCI-Anwendung aktualisieren",
       "terminalTitleModify": "OCI-Anwendung ändern",
       "terminalTitleRecover": "Wiederhergestellte OCI-Anwendung registrieren",
-      "terminalDescription": "Derselbe Ablauf wie OCI manager Apps → Installierte OCI-Anwendungen verwalten.",
+      "terminalDescription": "Es läuft derselbe Vorgang wie im ProxMenux-Menü: OCI manager Apps → Installierte OCI-Anwendungen verwalten.",
       "keepBackup": "Das vor dem Update erstellte Backup behalten",
       "noKeepBackup": "Das vor dem Update erstellte Backup wird nicht behalten",
       "keepBackupHelp": "Jedes Update sichert den Container, bevor sein Image ersetzt wird, um ihn wiederherzustellen, falls das Update fehlschlägt. Mit dieser Option wird dieses Backup im gewählten Speicher behalten; auf Proxmox Backup Server wird vor dem Update ein Backup geschrieben.",
