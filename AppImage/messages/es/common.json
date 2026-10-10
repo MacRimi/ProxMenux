@@ -3403,7 +3403,7 @@
       "ociInMonitor": "Aplicaciones OCI en el Monitor — la pestaña App las reconoce, la pestaña Actualizaciones las actualiza y modifica igual que el menú, y una pestaña Logs sigue en directo la salida de consola de la aplicación.",
       "ociAcceleration": "Aceleración por hardware para aplicaciones OCI — el instalador ofrece solo los perfiles que el host puede ejecutar: GPU NVIDIA, Intel y AMD y, para Frigate, una NPU de Intel o una Coral. NVIDIA Container Toolkit se instala con el driver.",
       "ociRecovery": "Una aplicación OCI viaja con su backup — restaurada en este host o en otro, vuelve a quedar registrada y gestionada, y en un clúster arranca en el nodo al que se mueva.",
-      "ociWatchdog": "Vigilancia para aplicaciones OCI — una aplicación que se detiene por sí sola se inicia de nuevo y una notificación lo indica. Una parada pedida por el usuario, un backup o una migración nunca se deshacen.",
+      "ociWatchdog": "Vigilancia para aplicaciones OCI — una aplicación que se detiene por sí sola se inicia de nuevo y una notificación lo indica. No se reinicia cuando la detiene el usuario ni durante un backup o una migración.",
       "shareCoveX": "ShareCoveX se suma al catálogo — un servidor de archivos con panel web que comparte directorios del host o volúmenes del contenedor por SMB, NFS y Time Machine.",
       "guestBackupJobs": "Trabajos de backup de VM y LXC — la pestaña Backup lista los trabajos programados de Proxmox y permite crearlos, editarlos, activarlos y ejecutarlos; son los mismos de Datacenter → Backup (aportado por @MattiaC46).",
       "notificationLanguage": "Notificaciones en tu idioma — títulos, cuerpos y resúmenes diarios se escriben en el idioma elegido para las notificaciones (aportado por @Vaso73).",

@@ -3403,7 +3403,7 @@
       "ociInMonitor": "OCI-applikationer i Monitor — fliken App känner igen dem, fliken Uppdateringar uppdaterar och ändrar dem som menyn gör, och fliken Logs följer applikationens konsolutdata live.",
       "ociAcceleration": "Hårdvaruacceleration för OCI-applikationer — installationsprogrammet erbjuder bara de profiler som värden kan köra: NVIDIA-, Intel- och AMD-GPU:er och, för Frigate, en Intel NPU eller en Coral. NVIDIA Container Toolkit installeras med drivrutinen.",
       "ociRecovery": "En OCI-applikation reser med sin säkerhetskopia — återställd på den här värden eller på en annan registreras och hanteras den igen, och i ett kluster startar den på den nod den flyttas till.",
-      "ociWatchdog": "Watchdog för OCI-applikationer — en applikation som stannar av sig själv startas igen och ett meddelande talar om det. Ett stopp som användaren begärt, en säkerhetskopiering eller en migrering ångras aldrig.",
+      "ociWatchdog": "Watchdog för OCI-applikationer — en applikation som stannar av sig själv startas igen och ett meddelande talar om det. Den startas inte om när användaren stoppar den, eller medan en säkerhetskopiering eller en migrering pågår.",
       "shareCoveX": "ShareCoveX läggs till i katalogen — en filserver med webbpanel som delar värdkataloger eller containervolymer över SMB, NFS och Time Machine.",
       "guestBackupJobs": "Säkerhetskopieringsjobb för VM:ar och LXC:er — fliken Säkerhetskopiering listar Proxmox schemalagda jobb och skapar, redigerar, aktiverar och kör dem; de är desamma som i Datacenter → Backup (bidrag från @MattiaC46).",
       "notificationLanguage": "Meddelanden på ditt språk — titlar, brödtexter och dagliga sammanfattningar skrivs på det språk som valts för meddelanden (bidrag från @Vaso73).",

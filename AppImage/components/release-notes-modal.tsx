@@ -327,7 +327,7 @@ const CURRENT_VERSION_FEATURES = [
   {
     icon: <RefreshCw className="h-5 w-5" />,
     key: "releaseNotes.currentFeatures.ociWatchdog",
-    text: "Watchdog for OCI applications — an application that stops on its own is started again and a notification says so. A stop asked by the user, a backup or a migration is never undone.",
+    text: "Watchdog for OCI applications — an application that stops on its own is started again and a notification says so. It is not restarted when the user stops it, or while a backup or a migration is in progress.",
   },
   {
     icon: <Server className="h-5 w-5" />,
