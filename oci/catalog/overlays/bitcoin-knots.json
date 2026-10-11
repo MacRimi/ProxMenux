@@ -1,4 +1,8 @@
 {
+  "catalog_ui": {
+    "hidden": true,
+    "hidden_reason": "Its image stops without closing the application cleanly, also under Docker; hidden until the image is fixed"
+  },
   "proxmox": {
     "installer_profile": {
       "volume_preparations": [

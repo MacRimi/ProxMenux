@@ -921,7 +921,7 @@
       "requires_relaxed_confinement": false,
       "optional_relaxed_confinement": false,
       "requires_security_confirmation": false,
-      "hidden": false,
+      "hidden": true,
       "template_id": "linuxserver-bitcoin-knots"
     },
     {
@@ -2609,6 +2609,38 @@
       "template_id": "linuxserver-duplicati"
     },
     {
+      "id": "duplicati-official",
+      "provider": "duplicati",
+      "template_family": "curated-profile",
+      "title": "Duplicati Official",
+      "repository": "https://github.com/duplicati/duplicati",
+      "description": "Official Duplicati image: encrypted, incremental backups to local, network and cloud storage.",
+      "website": "https://www.duplicati.com/",
+      "icon": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/duplicati.webp",
+      "architectures": [
+        "amd64",
+        "arm64"
+      ],
+      "updated_at": null,
+      "main_image": "duplicati/duplicati:latest",
+      "category": "backup",
+      "category_label": "Backup & Recovery",
+      "replaces_discovered_ids": [],
+      "curated_path": "catalog/curated/duplicati-official.json",
+      "template": "apps/duplicati-official.json",
+      "template_status": "generated-unvalidated",
+      "automatic_install_candidate": true,
+      "untranslated_blockers": [],
+      "requires_privileged_lxc": false,
+      "optional_privileged_lxc": false,
+      "requires_host_pid_namespace": false,
+      "requires_relaxed_confinement": false,
+      "optional_relaxed_confinement": false,
+      "requires_security_confirmation": false,
+      "hidden": false,
+      "template_id": "image-duplicati-official"
+    },
+    {
       "id": "eden",
       "provider": "linuxserver.io",
       "title": "Eden",
@@ -2775,7 +2807,7 @@
       "requires_relaxed_confinement": false,
       "optional_relaxed_confinement": false,
       "requires_security_confirmation": false,
-      "hidden": false,
+      "hidden": true,
       "template_id": "image-emulatorjs"
     },
     {
@@ -9861,7 +9893,7 @@
       "requires_relaxed_confinement": false,
       "optional_relaxed_confinement": false,
       "requires_security_confirmation": false,
-      "hidden": false,
+      "hidden": true,
       "template_id": "image-sickchill"
     },
     {

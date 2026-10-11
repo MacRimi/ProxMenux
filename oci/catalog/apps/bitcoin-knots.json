@@ -48,7 +48,9 @@
       }
     ],
     "display_version": null,
-    "updated_at": "2026-04-03"
+    "updated_at": "2026-04-03",
+    "hidden": true,
+    "hidden_reason": "Its image stops without closing the application cleanly, also under Docker; hidden until the image is fixed"
   },
   "source": {
     "provider": "linuxserver.io",

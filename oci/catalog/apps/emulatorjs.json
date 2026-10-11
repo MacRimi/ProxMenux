@@ -35,7 +35,9 @@
     "tips": [],
     "mini_changelog": [],
     "display_version": null,
-    "updated_at": null
+    "updated_at": null,
+    "hidden": true,
+    "hidden_reason": "Its image no longer publishes a version for any architecture; hidden until it does"
   },
   "source": {
     "provider": "linuxserver.io",
