@@ -2060,6 +2060,60 @@ CONSOLE_STATE=$(python3 "${SCRIPT_DIR}/oci_console.py" configure "$VMID") \
   || die "$(translate "The console of the container could not be configured")"
 RUNTIME_CONSOLE_LOG=$(jq -r '.log' <<<"$CONSOLE_STATE")
 
+# A variable that holds the application's own address takes the one of the
+# container: the fixed one, or the one DHCP gives it. That one is asked for
+# with the application not started yet, so that its first start already has it.
+OWN_ADDRESS_MARK='@CONTAINER_ADDRESS@'
+OWN_ADDRESS=""
+apply_own_address() {
+  local names name value original inert="" candidate attempt
+  names=$(jq -r --arg mark "$OWN_ADDRESS_MARK" \
+    '.environment[]? | select(.value | contains($mark)) | .name' "$DEPLOYMENT_FILE")
+  [[ -n $names ]] || return 0
+  msg_info "$(translate "Waiting for the network address...")"
+  if [[ -n ${HOST_MONITOR:-} ]]; then
+    OWN_ADDRESS=$HOST_MONITOR_IP
+  elif [[ $IPV4 != dhcp ]]; then
+    OWN_ADDRESS=${IPV4%%/*}
+  else
+    mount_ct_rootfs
+    for candidate in /bin/sleep /usr/bin/sleep; do
+      if [[ -e /var/lib/lxc/${VMID}/rootfs${candidate} || -L /var/lib/lxc/${VMID}/rootfs${candidate} ]]; then
+        inert=$candidate
+        break
+      fi
+    done
+    oci_quiet pct unmount "$VMID" || true
+    if [[ -z $inert ]]; then
+      oci_log "The image has no sleep command to wait for the DHCP address with"
+      die "$(translate "No LAN address was obtained")"
+    fi
+    original=$(pct config "$VMID" | sed -n 's/^entrypoint: //p')
+    oci_quiet pct set "$VMID" --entrypoint "$inert 120" \
+      || die "$(translate "Could not set the container entrypoint")"
+    oci_quiet pct start "$VMID" || die "$(translate "The container could not be started:") CT $VMID"
+    for attempt in $(seq 1 60); do
+      OWN_ADDRESS=$(own_ipv4 2>/dev/null) \
+        || OWN_ADDRESS=$(lxc-info -n "$VMID" -iH 2>/dev/null | grep -m1 -E '^[0-9]+\.' || true)
+      [[ -n $OWN_ADDRESS ]] && break
+      sleep 0.5
+    done
+    oci_quiet pct stop "$VMID" || die "$(translate "The container could not be started:") CT $VMID"
+    if [[ -n $original ]]; then
+      oci_quiet pct set "$VMID" --entrypoint "$original" || die "$(translate "Could not set the container entrypoint")"
+    else
+      oci_quiet pct set "$VMID" --delete entrypoint || die "$(translate "Could not set the container entrypoint")"
+    fi
+  fi
+  [[ $OWN_ADDRESS =~ ^[0-9]+(\.[0-9]+){3}$ ]] || die "$(translate "No LAN address was obtained")"
+  while IFS= read -r name; do
+    value=$(jq -r --arg name "$name" '[.environment[] | select(.name == $name) | .value] | last' "$DEPLOYMENT_FILE")
+    set_runtime_environment "$name" "${value//$OWN_ADDRESS_MARK/$OWN_ADDRESS}"
+  done <<<"$names"
+  msg_ok "$(translate "IP address:") $OWN_ADDRESS"
+}
+apply_own_address
+
 oci_log "Configuration created for CT $VMID"
 PASSWORD_STATE=""
 if [[ $START_AFTER == 1 ]]; then
@@ -2279,6 +2333,13 @@ URLS=$(jq -c --arg ip "$IP" '
     }]
   else [] end
 ' "$TEMPLATE_FILE")
+# An application with no web address is reached on the ports of its container.
+SERVICE_ADDRESSES=$(jq -c --arg ip "$IP" '
+  if $ip == "" or ((.first_run.endpoints? // []) | length) > 0 or .catalog_ui.launch.port != null then []
+  else [.container_contract.ports[]?
+        | $ip + ":" + (.container_port | tostring) + (if .protocol == "udp" then "/udp" else "" end)]
+  end
+' "$TEMPLATE_FILE")
 if [[ -n $HAOS_URLS ]]; then
   URLS=$HAOS_URLS
 elif [[ $HAOS_HEALTHCHECK != 0 ]]; then
@@ -2293,7 +2354,7 @@ elif [[ $START_AFTER == 1 ]]; then
   check_native_device_permissions
 fi
 if [[ -z ${PROXMENUX_OCI_TRANSACTION:-} ]] && ! oci_quiet python3 "${SCRIPT_DIR}/oci_instances.py" complete "$VMID" \
-  --archive "$ARCHIVE_PATH" --digest "$DIGEST"; then
+  --archive "$ARCHIVE_PATH" --digest "$DIGEST" ${OWN_ADDRESS:+--address "$OWN_ADDRESS"}; then
   msg_warn "$(translate "Container installed, but without a verifiable record for future updates.")"
 fi
 # The template's notes, then those of this installation's choices, such as the
@@ -2309,9 +2370,10 @@ RESULT=$(jq -cn \
   --arg image_created "$CREATED" \
   --arg ip "$IP" \
   --argjson urls "$URLS" \
+  --argjson service_addresses "$SERVICE_ADDRESSES" \
   --argjson credentials "$CREDENTIALS" \
   --argjson completion_notes "$COMPLETION_NOTES" \
   --argjson vmid "$VMID" \
   --arg log "${OCI_LOG:-}" \
-  '{app_id:$app_id,vmid:$vmid,image:$image,digest:$digest,architecture:$architecture,image_version:$image_version,image_created:$image_created,ip:$ip,urls:$urls,credentials:$credentials,completion_notes:$completion_notes,log:$log}')
+  '{app_id:$app_id,vmid:$vmid,image:$image,digest:$digest,architecture:$architecture,image_version:$image_version,image_created:$image_created,ip:$ip,urls:$urls,service_addresses:$service_addresses,credentials:$credentials,completion_notes:$completion_notes,log:$log}')
 printf 'PROXMENUX_RESULT=%s\n' "$(printf '%s' "$RESULT" | base64 | tr -d '\n')"

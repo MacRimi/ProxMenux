@@ -16,7 +16,8 @@
       "required": false
     },
     "SITE_ROOT": {
-      "prompt": "Address Healthchecks will be opened at (for example http://192.168.1.50:8000)"
+      "prompt": "Address Healthchecks will be opened at (for example http://192.168.1.50:8000)",
+      "container_address": "http://@CONTAINER_ADDRESS@:8000"
     },
     "SITE_NAME": {
       "example": "Healthchecks"

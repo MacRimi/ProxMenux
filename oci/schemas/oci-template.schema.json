@@ -133,6 +133,7 @@
               "example": {"type": ["string", "null"]},
               "prompt": {"type": "string", "minLength": 1},
               "prompt_user": {"type": "boolean"},
+              "container_address": {"type": "string", "pattern": "@CONTAINER_ADDRESS@"},
               "required": {"type": "boolean"},
               "sensitive": {"type": "boolean"},
               "source": {"type": "string"}

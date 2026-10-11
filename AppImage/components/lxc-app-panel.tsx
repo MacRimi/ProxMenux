@@ -269,6 +269,9 @@ interface OciInstance {
   port: number | null
   path: string | null
   website: string | null
+  // The ports of an application with no web address: a service that is
+  // reached on them and has no page to open.
+  service_ports?: { port: number; protocol: string }[] | null
 }
 
 interface Suggestions {
@@ -2901,6 +2904,19 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed, initialData, oci }:
                       </div>
                     )
                   })}
+                </div>
+              )}
+
+              {/* A service has no page to open: its address is shown as
+                  text, on the ports of its container. */}
+              {!app.ports?.length && app.installed_via === "oci_image" && !!ctIp && ctIp !== "DHCP"
+                && !!suggestions?.oci_instance?.service_ports?.length && (
+                <div className="mb-3 flex flex-col gap-1">
+                  {suggestions.oci_instance.service_ports.map((p) => (
+                    <span key={`${p.port}/${p.protocol}`} className="font-mono text-sm text-foreground">
+                      {ctIp.split("/")[0]}:{p.port}{p.protocol === "udp" ? "/udp" : ""}
+                    </span>
+                  ))}
                 </div>
               )}
 

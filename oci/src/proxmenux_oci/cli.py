@@ -17,7 +17,9 @@ from .converter import ConversionError
 from .github_source import SourceError
 from .i18n import N_, source_text, translate
 from .installer import (
+    ADDRESS_SHOWN,
     ADVANCED_MODE,
+    CONTAINER_ADDRESS,
     DEFAULT_MODE,
     InstallError,
     build_deployment,
@@ -345,7 +347,8 @@ def _deployment_summary_text(template: dict[str, Any], deployment: dict[str, Any
             translate("unprivileged LXC") if security.get("unprivileged") else translate("privileged LXC"))
     environment = plan.get("environment", [])
     if environment:
-        row(translate("Variables"), ", ".join(f"{item['name']}={item['value']}" for item in environment))
+        row(translate("Variables"), ", ".join(
+            f"{item['name']}={item['value'].replace(CONTAINER_ADDRESS, ADDRESS_SHOWN)}" for item in environment))
     if plan.get("suite_arr"):
         lines += ["", *[translate(note) for note in plan.get("completion_notes", [])]]
     lines.append("")
@@ -367,6 +370,8 @@ def _print_installation_summary(result: dict[str, Any], images_removed: str | No
         console.msg_ok(f"{translate(STACK_LABELS.get(name, name))}: CT {vmid}")
     for item in result.get("urls") or []:
         console.msg_ok(f"{translate(item['label'])}: {item['url']}")
+    for address in result.get("service_addresses") or []:
+        console.msg_ok(f"{translate('Service:')} {address}")
     for item in result.get("credentials") or []:
         console.msg_info2(translate(item["label"]))
         username = str(item["username"])

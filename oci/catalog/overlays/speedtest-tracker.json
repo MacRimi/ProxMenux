@@ -142,7 +142,8 @@
   },
   "environment_overrides": {
     "APP_URL": {
-      "prompt": "Address Speedtest Tracker will be opened at (for example http://192.168.1.50)"
+      "prompt": "Address Speedtest Tracker will be opened at (for example http://192.168.1.50)",
+      "container_address": "http://@CONTAINER_ADDRESS@"
     },
     "SPEEDTEST_SCHEDULE": {
       "example": "0 */6 * * *",

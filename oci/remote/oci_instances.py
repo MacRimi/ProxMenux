@@ -24,6 +24,8 @@ from oci_ui import translate, msg_error, msg_ok
 
 ROOT = Path('/usr/local/share/proxmenux/oci/instances')
 MARKER = 'proxmenux-instance='
+# Stands for the address of the container until the installation knows it.
+ADDRESS_MARK = '@CONTAINER_ADDRESS@'
 ACTIVE = {'installing', 'assembling', 'updating', 'recovering'}
 
 
@@ -160,8 +162,13 @@ def observe(vmid, installation_id, archive, digest, image=None):
     return observed
 
 
-def finish(root, vmid, archive, digest):
+def finish(root, vmid, archive, digest, address=None):
     value = read(root, vmid)
+    if address:
+        # The address the installation gave the application is recorded as the
+        # value it is, the way one typed by the user would be.
+        for item in value['deployment'].get('environment', []):
+            item['value'] = item['value'].replace(ADDRESS_MARK, address)
     observed = observe(vmid, value['installation_id'], archive, digest)
     value.update(status='assembling' if value['deployment'].get('stack_managed') else 'installed',
                  completed_at=now(), observed=observed)
@@ -356,6 +363,7 @@ def main():
         if action == 'complete':
             p.add_argument('--archive', required=True)
             p.add_argument('--digest', required=True)
+            p.add_argument('--address')
     sub.add_parser('reconcile')
     resume = sub.add_parser('resume-stack-recording')
     resume.add_argument('vmid', type=int)
@@ -372,7 +380,7 @@ def main():
                                 json.loads(Path(args.deployment).read_text()))
                 print(value['installation_id'])
             elif args.action == 'complete':
-                finish(args.root, args.vmid, args.archive, args.digest)
+                finish(args.root, args.vmid, args.archive, args.digest, args.address)
             elif args.action == 'failed':
                 value = read(args.root, args.vmid)
                 value.update(status='failed', failed_at=now())

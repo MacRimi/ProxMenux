@@ -105,6 +105,30 @@ class OciEndpointTests(CatalogFixture):
         self.assertNotIn('logo_url', ports[0])
         self.assertEqual(ports[1]['logo_url'], ICON)
 
+    def test_a_service_with_no_web_address_is_registered_without_a_link(self):
+        # A database or an SSH server: its port is not a page to open.
+        meta = self.install([])
+        self.assertEqual(meta['service_ports'], [{'port': 8971, 'protocol': 'tcp'}])
+        with patch.object(lxc_apps, '_read_sidecar', return_value=None), \
+             patch.object(lxc_apps, '_oci_dismissed', return_value={}), \
+             patch.object(lxc_apps, 'add_app', return_value=(True, {})) as add:
+            self.assertTrue(lxc_apps.ensure_oci_registration(190))
+        self.assertEqual(add.call_args.args[1]['ports'], [])
+
+    def test_a_service_is_shown_by_its_address_and_not_proposed_as_a_link(self):
+        self.install([])
+        with patch.object(lxc_apps, '_probe_listening_ports', return_value=[]), \
+             patch.object(lxc_apps, '_helper_slug_meta', return_value=None), \
+             patch.object(lxc_apps, '_fetch_tracking_hints', return_value={}), \
+             patch.object(lxc_apps, '_oci_image_versions', return_value={'error': 'offline'}), \
+             patch.object(lxc_apps, '_read_sidecar', return_value=None):
+            suggestion = lxc_apps.get_suggestions(190)
+        self.assertEqual(suggestion['default_ports'], [])
+        self.assertEqual(suggestion['oci_instance']['service_ports'], [{'port': 8971, 'protocol': 'tcp'}])
+
+    def test_an_application_with_a_web_address_has_no_service_ports(self):
+        self.assertEqual(self.install(ENDPOINTS)['service_ports'], [])
+
 
 class OciGuestVersionTests(CatalogFixture):
     def test_version_read_from_the_file_the_catalog_names(self):

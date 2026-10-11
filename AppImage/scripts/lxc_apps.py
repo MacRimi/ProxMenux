@@ -5509,7 +5509,9 @@ def ensure_oci_registration(vmid) -> bool:
         # A database or a cache is reached by the application, not by the user.
         endpoints = []
     elif not endpoints:
-        port = meta.get("endpoint_port") or next(iter(meta.get("ports") or []), None)
+        # A recipe that names no web address has none: its ports are the
+        # service itself, a database or an SSH server, and not a page to open.
+        port = meta.get("endpoint_port")
         endpoints = [{"port": port, "scheme": meta.get("endpoint_scheme"), "path": meta.get("endpoint_path"),
                       "description": "", "logo_url": ""}] if isinstance(port, int) else []
     ports = []
@@ -5638,6 +5640,19 @@ def _oci_instance_meta(vmid) -> Optional[dict]:
             continue
         if 1 <= port <= 65535 and port not in ports:
             ports.append(port)
+    # With no web address, the application is a service reached on the ports
+    # of its container; they are shown as an address and never as a link. The
+    # database or the cache of a stack is reached by its application only.
+    service_ports = []
+    if not endpoint.get("port") and not _oci_secondary_member(record):
+        for entry in contract.get("ports") or []:
+            try:
+                port = int((entry or {}).get("container_port"))
+            except (TypeError, ValueError):
+                continue
+            if 1 <= port <= 65535:
+                service_ports.append({"port": port,
+                                      "protocol": "udp" if (entry or {}).get("protocol") == "udp" else "tcp"})
     template_id = str(template.get("id") or "").strip()
     # The application is reached on its first endpoint and carries its own
     # name and logo. Any other endpoint is a service of its own, such as
@@ -5708,6 +5723,7 @@ def _oci_instance_meta(vmid) -> Optional[dict]:
         "endpoint_path": str(endpoint.get("path") or "").strip() or None,
         "ports": ports,
         "endpoints": endpoints,
+        "service_ports": service_ports,
         # The exact image this container was created from. Its digest is what
         # an update is decided on; the version label is only for reading.
         "installed_digest": str(observed_image.get("manifest_digest") or "").strip() or None,
@@ -6244,7 +6260,9 @@ def get_suggestions(vmid, force: bool = False) -> dict:
             ports = [oci_meta["endpoint_port"]] + [p for p in (oci_meta["ports"] or ports)
                                                    if p != oci_meta["endpoint_port"]]
         elif oci_meta["ports"]:
-            default_ports = list(oci_meta["ports"])
+            # A service has no page to open: none of its ports is proposed
+            # as a web link.
+            default_ports = []
         web_hint = oci_meta["endpoint_path"] or web_hint
         if oci_meta["template_id"] == "image-adguard-home":
             # The first-run endpoint disappears once setup switches to :80.
@@ -6289,6 +6307,7 @@ def get_suggestions(vmid, force: bool = False) -> dict:
             "port": oci_meta["endpoint_port"],
             "path": oci_meta["endpoint_path"],
             "website": oci_meta["website"],
+            "service_ports": oci_meta["service_ports"],
         } if oci_meta else None,
         # Categoría preset for the primary detection — same lookup as
         # get_catalog_entry so the Register button pre-selects it.

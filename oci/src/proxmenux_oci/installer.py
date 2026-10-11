@@ -31,6 +31,20 @@ DEFAULT_MODE = "default"
 ADVANCED_MODE = "advanced"
 
 
+# Stands for the address of the container in a variable that holds the
+# application's own address, until the installation knows it.
+CONTAINER_ADDRESS = "@CONTAINER_ADDRESS@"
+ADDRESS_SHOWN = "<IP>"
+
+
+def own_address_value(pattern: str, ipv4: str) -> str:
+    """The application's own address for a container with this network: the
+    fixed address when it has one, its mark when DHCP is still to give it."""
+    if ipv4 in ("dhcp", "host"):
+        return pattern
+    return pattern.replace(CONTAINER_ADDRESS, ipv4.split("/", 1)[0])
+
+
 def _example_default(name: str, example: str | None, timezone: str | None = None) -> str | None:
     defaults = {"PUID": "1000", "PGID": "1000", "TZ": timezone or host.timezone()}
     if name in defaults:
@@ -584,6 +598,15 @@ def build_deployment(
             label = f"{translate('Value for')} {name}"
         default = _example_default(name, item["example"], timezone)
         generated = installer_profile.get("generated_sensitive_environment", {}).get(name)
+        if item.get("container_address"):
+            # The address of the container is known or will be: nothing to ask.
+            # The advanced installation shows it, for a name or a proxy in front.
+            value = own_address_value(item["container_address"], ipv4)
+            if advanced:
+                shown = ui.ask(label, value.replace(CONTAINER_ADDRESS, ADDRESS_SHOWN), required=True)
+                value = shown.replace(ADDRESS_SHOWN, CONTAINER_ADDRESS)
+            environment.append({"name": name, "value": value, "sensitive": False})
+            continue
         if item.get("prompt_user", True) is False:
             if default in (None, "") and item["required"]:
                 raise InstallError(f"{name}: {translate('no declarative value')}")

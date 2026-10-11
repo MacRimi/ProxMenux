@@ -117,7 +117,8 @@
   },
   "environment_overrides": {
     "APP_URL": {
-      "prompt": "Address BookStack will be opened at (for example http://192.168.1.50:6875)"
+      "prompt": "Address BookStack will be opened at (for example http://192.168.1.50)",
+      "container_address": "http://@CONTAINER_ADDRESS@"
     },
     "DB_HOST": {
       "prompt": "Address of the MariaDB server"

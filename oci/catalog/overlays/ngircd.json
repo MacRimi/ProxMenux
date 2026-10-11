@@ -1,4 +1,12 @@
 {
+  "catalog_ui": {
+    "launch": {
+      "port": null
+    }
+  },
+  "first_run": {
+    "endpoints": []
+  },
   "proxmox": {
     "installer_profile": {
       "volume_preparations": [

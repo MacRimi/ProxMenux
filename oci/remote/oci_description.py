@@ -87,6 +87,13 @@ def render(template, digest, instance_id, ip=''):
             item = f'&#127760; {link(str(endpoint.get("label") or "Web UI"), url)}: {link(url, url)}'
             if item:
                 access.append(item)
+        if not access:
+            # With no web address, the application is reached on its ports.
+            for item in (template.get('container_contract') or {}).get('ports') or []:
+                port = item.get('container_port')
+                if isinstance(port, int) and 1 <= port <= 65535:
+                    protocol = '/udp' if item.get('protocol') == 'udp' else ''
+                    access.append(f'&#128268; <code>{address}:{port}{protocol}</code>')
     badges = (
         ('Docs', DOCS, 'https://img.shields.io/badge/%F0%9F%93%9A_Docs-blue'),
         ('Code', CODE, 'https://img.shields.io/badge/%F0%9F%92%BB_Code-green'),

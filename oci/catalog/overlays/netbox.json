@@ -215,7 +215,8 @@
       "prompt": "Email address of the admin account"
     },
     "ALLOWED_HOST": {
-      "prompt": "Name or address NetBox will be opened at (for example netbox.example.com)"
+      "prompt": "Name or address NetBox will be opened at (for example netbox.example.com)",
+      "container_address": "@CONTAINER_ADDRESS@"
     },
     "DB_HOST": {
       "prompt": "Address of the PostgreSQL server"
