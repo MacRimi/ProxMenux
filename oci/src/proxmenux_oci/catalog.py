@@ -21,6 +21,9 @@ SUPPORTED_CATALOG_ARCHITECTURES = ("amd64", "arm64")
 # Size of a container volume the installation does not ask about: its size is
 # not the user's decision, so it is given room to grow.
 MINIMUM_VOLUME_GB = 16
+# The time files of the host that a Compose file mounts. The container takes
+# its time zone from Proxmox.
+TIME_SETTINGS = ("/etc/localtime", "/etc/timezone")
 
 
 def supported_architectures(values: list[str]) -> list[str]:
@@ -372,10 +375,26 @@ class Catalog:
                                    "sizes": data.get("sizes", {})}
         return self._volume_policy
 
-    def _apply_volume_policy(self, app_id: str, contract: dict[str, Any]) -> None:
+    def _apply_volume_policy(self, app_id: str, contract: dict[str, Any],
+                             profile: dict[str, Any] | None = None) -> None:
         """A path that holds content of the user is offered as a container
         volume or as a host directory, and the installation asks which one; the
-        state of the application stays in a container volume without asking."""
+        state of the application stays in a container volume without asking.
+        As a volume it belongs to the user the application writes with, the one
+        a host directory created for the same path is given to. It is always
+        mounted: an image marks it optional because everyone keeps that content
+        somewhere else, not because the application works without it."""
+        # A time file can only be the file of the host: as a volume it would be
+        # a directory in the place of that file, and the container would not start.
+        dropped = {volume["container_path"] for volume in contract.get("volumes", [])
+                   if volume["container_path"] in TIME_SETTINGS
+                   and "managed-volume" in volume.get("installation_choice", [])}
+        if dropped:
+            contract["volumes"] = [volume for volume in contract["volumes"]
+                                   if volume["container_path"] not in dropped]
+            if profile and "volume_preparations" in profile:
+                profile["volume_preparations"] = [item for item in profile["volume_preparations"]
+                                                  if item.get("container_path") not in dropped]
         policy = self.volume_policy()
         shared = policy["shared_paths"] | set(policy["applications"].get(app_id, []))
         # A volume known to stay small is created at its stated size.
@@ -386,7 +405,12 @@ class Catalog:
                 continue
             optional = "skip" in choices
             if volume["container_path"] in shared or volume.get("default") == "host-bind":
-                volume["installation_choice"] = ["managed-volume", "host-bind"] + (["skip"] if optional else [])
+                volume["installation_choice"] = ["managed-volume", "host-bind"]
+                if volume.get("default") == "skip":
+                    volume["default"] = "managed-volume"
+                for preparation in (profile or {}).get("volume_preparations", []):
+                    if preparation.get("container_path") == volume["container_path"]:
+                        preparation["owner_strategy"] = "mapped-application-user"
                 continue
             volume["installation_choice"] = ["managed-volume"] + (["skip"] if optional else [])
             if volume.get("default") not in volume["installation_choice"]:
@@ -732,7 +756,8 @@ class Catalog:
         template = json.loads(path.read_text(encoding="utf-8"))
         self._apply_overlay(item["id"], template)
         self._apply_category(item["id"], template["catalog_ui"])
-        self._apply_volume_policy(item["id"], template["container_contract"])
+        self._apply_volume_policy(item["id"], template["container_contract"],
+                                  template.get("proxmox", {}).get("installer_profile"))
         self.validate(template, required=False)
         return template
 

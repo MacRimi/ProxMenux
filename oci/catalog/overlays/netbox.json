@@ -203,7 +203,55 @@
           "owner_strategy": "mapped-root",
           "only_when_mount_type": "managed-volume"
         }
+      ],
+      "external_services": [
+        "PostgreSQL",
+        "Redis/Valkey"
       ]
+    }
+  },
+  "environment_overrides": {
+    "SUPERUSER_EMAIL": {
+      "prompt": "Email address of the admin account"
+    },
+    "ALLOWED_HOST": {
+      "prompt": "Name or address NetBox will be opened at (for example netbox.example.com)"
+    },
+    "DB_HOST": {
+      "prompt": "Address of the PostgreSQL server"
+    },
+    "DB_PORT": {
+      "example": "5432"
+    },
+    "DB_NAME": {
+      "example": "netbox"
+    },
+    "DB_USER": {
+      "prompt": "User of the PostgreSQL server"
+    },
+    "REDIS_HOST": {
+      "prompt": "Address of the Redis or Valkey server"
+    },
+    "REDIS_PORT": {
+      "example": "6379"
+    },
+    "REDIS_USERNAME": {
+      "required": false
+    },
+    "REDIS_PASSWORD": {
+      "required": false
+    },
+    "REDIS_DB_TASK": {
+      "example": "0"
+    },
+    "REDIS_DB_CACHE": {
+      "example": "1"
+    },
+    "DB_PASSWORD": {
+      "prompt": "Password of the PostgreSQL user"
+    },
+    "SUPERUSER_PASSWORD": {
+      "prompt": "Password of the admin account"
     }
   }
 }

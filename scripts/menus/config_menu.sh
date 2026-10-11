@@ -613,8 +613,18 @@ show_config_menu() {
         menu_options+=("$option_num" "$(translate "Return to Main Menu")")
         option_actions[$option_num]="return_main"
         
+        # An action given as argument, as the menu search does, is opened
+        # first; the menu follows.
+        OPTION=""
+        if [[ -n "$PRESELECTED_OPTION" ]]; then
+            local index
+            for index in "${!option_actions[@]}"; do
+                [[ "${option_actions[$index]}" == "$PRESELECTED_OPTION" ]] && OPTION="$index"
+            done
+            PRESELECTED_OPTION=""
+        fi
         # Show menu
-        OPTION=$(dialog --clear --backtitle "$BACKTITLE" \
+        [[ -n "$OPTION" ]] || OPTION=$(dialog --clear --backtitle "$BACKTITLE" \
                         --title "$(translate "Configuration Menu")" \
                         --menu "$(translate "Select an option:")" 20 70 10 \
                         "${menu_options[@]}" 3>&1 1>&2 2>&3)
@@ -854,4 +864,5 @@ uninstall_proxmenu() {
 
 # ==========================================================
 # Main execution
+PRESELECTED_OPTION="${1:-}"
 show_config_menu

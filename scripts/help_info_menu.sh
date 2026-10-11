@@ -1077,7 +1077,25 @@ show_tools_commands() {
 # ===============================================================
 # Help and Info Menu
 # ===============================================================
+# A section given as argument, as the menu search does, is opened first.
+PRESELECTED_OPTION="${1:-}"
 while true; do
+    if [[ "$PRESELECTED_OPTION" =~ ^[1-9]$ ]]; then
+        OPTION="$PRESELECTED_OPTION"
+        PRESELECTED_OPTION=""
+        case $OPTION in
+            1) show_system_commands ;;
+            2) show_vm_ct_commands ;;
+            3) show_storage_commands ;;
+            4) show_network_commands ;;
+            5) show_update_commands ;;
+            6) show_gpu_commands ;;
+            7) show_zfs_commands ;;
+            8) show_backup_commands ;;
+            9) show_tools_commands ;;
+        esac
+        continue
+    fi
     OPTION=$(dialog --stdout \
         --title "$(translate 'Help and Info')" \
         --menu "$(translate 'Select a category of useful commands:')" 20 70 9 \

@@ -35,7 +35,9 @@
     "tips": [],
     "mini_changelog": [],
     "display_version": null,
-    "updated_at": null
+    "updated_at": null,
+    "hidden": true,
+    "hidden_reason": "Its image no longer publishes a version for any architecture; hidden until it does"
   },
   "source": {
     "provider": "linuxserver.io",
@@ -302,7 +304,7 @@
       "unprivileged": true,
       "ostype": "auto-from-image",
       "cores": 2,
-      "memory_mb": 128,
+      "memory_mb": 1024,
       "swap_mb": 512,
       "rootfs_size_gb": 8,
       "rootfs_storage": "local-lvm",

@@ -22,11 +22,12 @@ from .installer import (
     InstallError,
     build_deployment,
     build_rclone_mount_deployment,
+    external_services_notice,
     redacted,
     run_remote_install,
     run_remote_rclone_mount,
 )
-from .ui import APP_TITLE, UserCancelled, interactive_ui
+from .ui import APP_TITLE, DETAIL_WINDOW_WIDTH, UserCancelled, interactive_ui, menu_size
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
@@ -65,7 +66,7 @@ def is_tested(item: dict[str, Any]) -> bool:
             or bool((item.get("community_tested") or {}).get("by")))
 
 
-MENU_SIZE = (22, 75, 15)
+MENU_SIZE = menu_size()
 MULTI_LABEL = r"\Z4MULTI\Zn"
 TESTED_LABEL = r"\Z2✓\Zn"
 
@@ -114,7 +115,8 @@ def _yes_no(value: Any) -> str:
 
 # ---------------------------------------------------------------- summaries
 
-DETAIL_WIDTH = 92
+# The description fits the page of the application, inside its borders.
+DETAIL_WIDTH = DETAIL_WINDOW_WIDTH - 6
 SERVICE_KINDS = (("postgres", "PostgreSQL"), ("valkey", "Valkey"), ("redis", "Redis"), ("mariadb", "MariaDB"),
                  ("mysql", "MySQL"), ("mongo", "MongoDB"), ("meilisearch", "Meilisearch"))
 
@@ -200,6 +202,9 @@ def _app_detail_text(catalog: Catalog, item: dict[str, Any], template: dict[str,
             lines.append(f"  {_service_kind(service):<20} {_image_label(service.get('image'))}")
     else:
         row(translate("Image"), _image_label(contract["image"]["reference"]))
+        external = profile.get("external_services") or []
+        if external:
+            row(translate("Needs"), f"{', '.join(external)} ({translate('external, already running')})")
         volumes = contract.get("volumes", [])
         if volumes:
             width = max(28, *(len(volume["container_path"]) + 2 for volume in volumes))
@@ -470,6 +475,11 @@ def _rclone_mount(catalog: Catalog, ui) -> None:
 
 def _app_detail(catalog: Catalog, ui, item: dict[str, Any]) -> None:
     template = catalog.compose(item["id"])
+    # Said first, before anything of the application is shown or asked.
+    notice = external_services_notice(template)
+    if notice and not ui.confirm(f"{notice}\n\n{translate('Continue?')}", False,
+                                 title=source_text(template["catalog_ui"]["title"]) or item["id"]):
+        return
     actions = []
     actions += [("default", translate("Install with default settings")),
                 ("advanced", translate("Install with advanced settings"))]
@@ -610,6 +620,8 @@ def build_parser() -> argparse.ArgumentParser:
     subparsers.add_parser("apply-icons", help="Resolve catalog icons against the jsdelivr icon sets")
     show_parser = subparsers.add_parser("show", help="Show the summary of a template")
     show_parser.add_argument("app")
+    open_parser = subparsers.add_parser("open", help="Open the page of an application in the menu")
+    open_parser.add_argument("app")
     install_parser = subparsers.add_parser("install", help="Configure and install an application")
     install_parser.add_argument("app")
     install_parser.add_argument("--host", default="auto", help="'auto'/'local', or root@IP for development")
@@ -672,10 +684,25 @@ def main(argv: list[str] | None = None) -> int:
         if args.command == "show":
             print(_template_summary_text(catalog.compose(args.app)))
             return 0
+        if args.command == "open":
+            item = next((item for item in _installable(catalog.load_index()["applications"])
+                         if item["id"] == args.app), None)
+            ui = interactive_ui()
+            if item is None:
+                ui.message(translate("This application is not in the OCI catalog."))
+                return 1
+            try:
+                _app_detail(catalog, ui, item)
+            except UserCancelled:
+                pass
+            return 0
         if args.command == "install":
             template = catalog.compose(args.app)
             if not template["compatibility"]["automatic_install_candidate"]:
                 raise InstallError("Installation blocked: " + ", ".join(template["compatibility"]["untranslated_blockers"]))
+            notice = external_services_notice(template)
+            if notice:
+                print(notice + "\n")
             deployment = build_deployment(template, None, ADVANCED_MODE if args.advanced else DEFAULT_MODE)
             print(_deployment_summary_text(template, deployment))
             if not args.dry_run and input("\nInstall? [y/N]: ").strip().casefold() not in {"y", "yes"}:

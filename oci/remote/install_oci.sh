@@ -440,11 +440,13 @@ cleanup_volume_seed_staging() {
 }
 
 capture_volume_seeds() {
-  local seed_count=0 rootfs="/var/lib/lxc/${VMID}/rootfs"
+  local seed_count=0 volume_count=0 rootfs="/var/lib/lxc/${VMID}/rootfs"
   local encoded item target source_path selected_mount_type mount_types source stage index=0 mounted=0 failed=0
+  local -A declared_seeds=()
 
   seed_count=$(jq '.proxmox.installer_profile.volume_seeds? // [] | length' "$TEMPLATE_FILE")
-  (( seed_count > 0 )) || return 0
+  volume_count=$(jq '[.mounts[]? | select(.type == "managed-volume")] | length' "$DEPLOYMENT_FILE")
+  (( seed_count > 0 || volume_count > 0 )) || return 0
 
   mount_ct_rootfs
   mounted=1
@@ -453,6 +455,7 @@ capture_volume_seeds() {
     [[ -n $encoded ]] || continue
     item=$(printf '%s' "$encoded" | base64 -d)
     target=$(jq -er '.container_path' <<<"$item")
+    declared_seeds[$target]=1
     source_path=$(jq -er '.source_path' <<<"$item")
     mount_types=$(jq -c '.mount_types // ["managed-volume"]' <<<"$item")
     selected_mount_type=$(jq -r --arg target "$target" \
@@ -488,6 +491,24 @@ capture_volume_seeds() {
     VOLUME_SEED_MOUNT_TYPES+=("$selected_mount_type")
     index=$((index + 1))
   done < <(jq -r '.proxmox.installer_profile.volume_seeds[]? | @base64' "$TEMPLATE_FILE")
+
+  # Docker fills a new volume with what the image has at that path, with its
+  # owner and permissions. Every new container volume gets the same here, so
+  # an image that runs as a user of its own finds its data directory its own.
+  while (( failed == 0 )) && IFS= read -r target; do
+    [[ -n $target && -z ${declared_seeds[$target]:-} ]] || continue
+    [[ $target == /* && $target != *[[:space:]]* && $target != *","* ]] || continue
+    is_reused_managed_mount "$target" && continue
+    [[ -d "${rootfs}${target}" && ! -L "${rootfs}${target}" ]] || continue
+    source=$(readlink -e -- "${rootfs}${target}") || continue
+    [[ $source == "${rootfs}"/* ]] || continue
+    stage="${VOLUME_SEED_STAGE_ROOT}/${index}"
+    install -d -m 0700 "$stage" && cp -a -- "${source}/." "${stage}/" || { failed=1; break; }
+    VOLUME_SEED_TARGETS+=("$target")
+    VOLUME_SEED_STAGES+=("$stage")
+    VOLUME_SEED_MOUNT_TYPES+=("managed-volume")
+    index=$((index + 1))
+  done < <(jq -r '.mounts[]? | select(.type == "managed-volume") | .container_path' "$DEPLOYMENT_FILE")
 
   if (( mounted == 1 )); then
     oci_quiet pct unmount "$VMID" || failed=1

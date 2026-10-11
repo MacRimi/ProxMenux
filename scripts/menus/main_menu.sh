@@ -52,12 +52,20 @@ show_menu() {
 
     while true; do
 
-        local menu_title="Main ProxMenux"
+        local menu_title="Main menu"
+
+        # As tall as its options need, cut to the terminal.
+        local height=24 limit=$(( $(tput lines 2>/dev/null || echo 24) - 2 ))
+        (( height > limit )) && height=$limit
+        local rows=$(( height - 8 ))
+        (( rows < 3 )) && rows=3
 
         dialog --clear \
             --backtitle "ProxMenux" \
             --title "$(translate "$menu_title")" \
-            --menu "\n$(translate "Select an option:")" 22 70 14 \
+            --menu "$(translate "Select an option:")" "$height" 75 "$rows" \
+            search "$(translate "Search options and applications")" \
+            "" "" \
             1 "$(translate "Settings post-install Proxmox")" \
             2 "$(translate "Hardware: GPUs and Coral-TPU")" \
             3 "$(translate "Create VM from template or script")" \
@@ -85,6 +93,21 @@ show_menu() {
         OPTION=$(<"$TEMP_FILE")
 
         case $OPTION in
+            search)
+                # A result that is a sub-menu comes back as its path: it is
+                # opened from here, as the options below are.
+                local handoff
+                local -a target=()
+                handoff=$(mktemp)
+                python3 "$LOCAL_SCRIPTS/menus/search_menu.py" --handoff "$handoff"
+                mapfile -t target < "$handoff"
+                rm -f "$handoff"
+                if [[ "${target[0]:-}" == "$LOCAL_SCRIPTS"/* && -f "${target[0]}" ]]; then
+                    rm -f "$TEMP_FILE"
+                    exec bash "${target[@]}"
+                fi
+                ;;
+            "") ;;
             1) exec bash "$LOCAL_SCRIPTS/menus/menu_post_install.sh" ;;
             2) exec bash "$LOCAL_SCRIPTS/menus/hw_grafics_menu.sh" ;;
             3) exec bash "$LOCAL_SCRIPTS/menus/create_vm_menu.sh" ;;

@@ -139,5 +139,18 @@
         }
       ]
     }
+  },
+  "environment_overrides": {
+    "APP_URL": {
+      "prompt": "Address Speedtest Tracker will be opened at (for example http://192.168.1.50)"
+    },
+    "SPEEDTEST_SCHEDULE": {
+      "example": "0 */6 * * *",
+      "prompt": "Schedule of the tests in cron format"
+    },
+    "SPEEDTEST_SERVERS": {
+      "required": false,
+      "prompt": "Server IDs to test against, separated by commas (optional)"
+    }
   }
 }

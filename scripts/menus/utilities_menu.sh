@@ -44,7 +44,14 @@ load_language
 initialize_cache
 # ==========================================================
 
+    # An option given as argument, as the menu search does, is opened first;
+    # the menu follows.
+    PRESELECTED_OPTION="${1:-}"
     while true; do
+        if [[ "$PRESELECTED_OPTION" =~ ^[1-6]$ ]]; then
+            OPTION="$PRESELECTED_OPTION"
+            PRESELECTED_OPTION=""
+        else
         OPTION=$(dialog --clear --backtitle "ProxMenux" --title "$(translate "Utilities Menu")" \
                         --menu "\n$(translate "Select an option:")" 20 70 11 \
                         "1" "$(translate "UUp Dump ISO creator Custom")" \
@@ -55,6 +62,7 @@ initialize_cache
                         "6" "$(translate "Import VM from OVA or OVF")" \
                         "7" "$(translate "Return to Main Menu")" \
                         2>&1 >/dev/tty)
+        fi
 
         case $OPTION in
             1)

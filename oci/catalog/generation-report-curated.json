@@ -1,5 +1,6 @@
 {
   "generated": [
+    "duplicati-official",
     "emby-official",
     "fileflows",
     "frigate",
@@ -21,7 +22,7 @@
     "stremio",
     "tandoor"
   ],
-  "generated_count": 20,
+  "generated_count": 21,
   "failed": [],
   "failed_count": 0
 }

@@ -47,6 +47,9 @@ if [[ -f "$LOCAL_SCRIPTS/global/utils-install-functions.sh" ]]; then
 fi
 
 # ==========================================================
+# A package given as argument, as the menu search does, opens the custom
+# selection with it marked.
+PRESELECTED_UTILITY="${1:-}"
 install_system_utils() {
 
     show_main_utilities_menu() {
@@ -71,7 +74,9 @@ install_system_utils() {
         local utilities=()
         for util_entry in "${PROXMENUX_UTILS[@]}"; do
             IFS=':' read -r pkg cmd desc <<< "$util_entry"
-            utilities+=("$pkg" "$(translate "$desc")" "OFF")
+            local state="OFF"
+            [[ -n "$PRESELECTED_UTILITY" && "$pkg" == "$PRESELECTED_UTILITY" ]] && state="ON"
+            utilities+=("$pkg" "$(translate "$desc")" "$state")
         done
 
         local selected
@@ -205,10 +210,15 @@ install_system_utils() {
 
     # Main menu loop
     while true; do
-        choice=$(show_main_utilities_menu)
+        if [[ -n "$PRESELECTED_UTILITY" ]]; then
+            choice=1
+        else
+            choice=$(show_main_utilities_menu)
+        fi
         case $choice in
             1)
                 selected=$(show_custom_selection)
+                PRESELECTED_UTILITY=""
                 install_selected_utilities "$selected"
                 ;;
             2)

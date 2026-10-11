@@ -1,4 +1,8 @@
 {
+  "catalog_ui": {
+    "hidden": true,
+    "hidden_reason": "Its image no longer publishes a version for any architecture; hidden until it does"
+  },
   "proxmox": {
     "installer_profile": {
       "volume_preparations": [

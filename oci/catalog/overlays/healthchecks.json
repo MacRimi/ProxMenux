@@ -10,5 +10,22 @@
         }
       ]
     }
+  },
+  "environment_overrides": {
+    "SECRET_KEY": {
+      "required": false
+    },
+    "SITE_ROOT": {
+      "prompt": "Address Healthchecks will be opened at (for example http://192.168.1.50:8000)"
+    },
+    "SITE_NAME": {
+      "example": "Healthchecks"
+    },
+    "SUPERUSER_EMAIL": {
+      "prompt": "Email address of the superuser account"
+    },
+    "SUPERUSER_PASSWORD": {
+      "prompt": "Password of the superuser account"
+    }
   }
 }

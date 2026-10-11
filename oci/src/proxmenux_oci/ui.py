@@ -146,7 +146,7 @@ class TerminalUI:
                 return value
             print(translate("The values do not match. Enter them again."))
 
-    def confirm(self, text: str, default: bool = False) -> bool:
+    def confirm(self, text: str, default: bool = False, title: str | None = None) -> bool:
         suffix = " [Y/n]" if default else " [y/N]"
         value = input(f"{text}{suffix}: ").strip().casefold()
         if self.back_enabled and value == ':back':
@@ -185,6 +185,20 @@ class TerminalUI:
 
     def info(self, text: str) -> None:
         print(text)
+
+
+# Width of the windows of the installer: questions, choices and notices. The
+# final summary and the page of an application, which show tables, are wider.
+MENU_WIDTH = 72
+SUMMARY_WIDTH = 78
+DETAIL_WINDOW_WIDTH = 90
+
+
+def menu_size() -> tuple[int, int, int]:
+    """Height, width and rows of a list of the menu: as tall as the main menu
+    of ProxMenux, cut to the terminal."""
+    height = max(10, min(24, shutil.get_terminal_size((100, 30)).lines - 2))
+    return height, 75, height - 8
 
 
 @dataclass
@@ -227,7 +241,7 @@ class DialogUI:
 
     def ask(self, text: str, default: str | None = None, required: bool = True, title: str | None = None) -> str:
         while True:
-            height, width = self._size(text, 10, 78, 7)
+            height, width = self._size(text, 10, MENU_WIDTH, 7)
             result = self._run(["--inputbox", f"\n{text}", height, width, default or ""], title)
             if result.returncode != 0:
                 raise UserCancelled(text)
@@ -238,7 +252,7 @@ class DialogUI:
 
     def password(self, text: str, required: bool = True, title: str | None = None) -> str:
         while True:
-            height, width = self._size(text, 10, 78, 7)
+            height, width = self._size(text, 10, MENU_WIDTH, 7)
             result = self._run(["--insecure", "--passwordbox", f"\n{text}", height, width], title)
             if result.returncode != 0:
                 raise UserCancelled(text)
@@ -256,7 +270,7 @@ class DialogUI:
             self.message(translate("The values do not match. Enter them again."))
 
     def confirm(self, text: str, default: bool = False, title: str | None = None) -> bool:
-        height, width = self._size(text, 9, 78, 6)
+        height, width = self._size(text, 9, MENU_WIDTH, 6)
         widget = ["--yesno", f"\n{text}", height, width]
         if not default:
             widget = ["--defaultno", *widget]
@@ -275,7 +289,7 @@ class DialogUI:
             return result.stderr.strip() if result.returncode == 0 else None
         terminal = shutil.get_terminal_size((100, 30))
         tag_width = max((len(tag) for tag, _ in options), default=0) + 2 if show_tags else 0
-        width = min(max(60, max((len(label) for _, label in options), default=0) + tag_width + 14,
+        width = min(max(MENU_WIDTH, max((len(label) for _, label in options), default=0) + tag_width + 14,
                         max((len(line) for line in text.splitlines()), default=0) + 6),
                     terminal.columns - 4, 110)
         text_lines = sum(max(1, len(textwrap.wrap(line, width - 6) or [""])) for line in text.splitlines() or [""])
@@ -295,13 +309,14 @@ class DialogUI:
         """A tall menu under a block of information. When the information does
         not fit on screen it is shown first in a scrollable box."""
         terminal = shutil.get_terminal_size((100, 30))
-        width = min(terminal.columns - 4, 104)
+        width = min(terminal.columns - 4, DETAIL_WINDOW_WIDTH)
         text_lines = sum(max(1, len(textwrap.wrap(line, width - 6) or [""])) for line in text.splitlines() or [""])
         available = terminal.lines - 2
         needed = text_lines + len(options) + 9
         if needed > available:
             self._run(["--colors", "--msgbox", f"\n{text}", str(available), str(width)], title)
-            text, needed = translate("Select an option"), len(options) + 10
+            # On its own it is one more menu, as wide as the others.
+            text, needed, width = translate("Select an option"), len(options) + 10, min(width, MENU_WIDTH)
         height = min(available, needed)
         widget = ["--colors"] + (["--default-item", default] if default else [])
         widget += ["--menu", f"\n{text}", str(height), str(width), str(len(options))]
@@ -313,7 +328,7 @@ class DialogUI:
     def checklist(self, text, options, defaults, title: str | None = None):
         terminal = shutil.get_terminal_size((100, 30))
         height = min(max(len(options) + 9, 14), terminal.lines - 2)
-        widget = ["--separate-output", "--checklist", f"\n{text}", str(height), "78",
+        widget = ["--separate-output", "--checklist", f"\n{text}", str(height), str(MENU_WIDTH),
                   str(max(4, min(len(options), height - 8)))]
         for tag, label in options:
             widget += [tag, label, "on" if tag in defaults else "off"]
@@ -323,20 +338,20 @@ class DialogUI:
         return result.stderr.split()
 
     def message(self, text: str, title: str | None = None) -> None:
-        height, width = self._size(text, 8, 84, 6)
+        height, width = self._size(text, 8, MENU_WIDTH, 6)
         self._run(["--msgbox", f"\n{text}", height, width], title)
 
     def review(self, text: str, title: str | None = None, question: str | None = None,
                default: bool = True) -> bool:
         body = f"{text}\n\n{question or translate('Continue?')}"
-        height, width = self._size(body, 12, 90, 6)
+        height, width = self._size(body, 12, SUMMARY_WIDTH, 6)
         widget = ["--yesno", f"\n{body}", height, width]
         if not default:
             widget = ["--defaultno", *widget]
         return self._run(widget, title).returncode == 0
 
     def info(self, text: str, title: str | None = None) -> None:
-        height, width = self._size(text, 6, 70, 5)
+        height, width = self._size(text, 6, MENU_WIDTH, 5)
         self._run(["--infobox", f"\n{text}", height, width], title)
 
 

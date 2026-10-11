@@ -130,27 +130,35 @@ function start_vm_configuration() {
 
 
 
+# A system type given as argument, as the menu search does, is opened first;
+# the menu follows.
+PRESELECTED_OPTION="${1:-}"
 while true; do
   VM_STORAGE_IOMMU_PENDING_REBOOT=0
   WIZARD_CONFLICT_POLICY=""
   WIZARD_CONFLICT_SCOPE=""
   export WIZARD_CONFLICT_POLICY WIZARD_CONFLICT_SCOPE
-  OS_TYPE=$(dialog --colors --backtitle "ProxMenux" \
-    --title "$(translate "Select System Type")" \
-    --menu "\n$(translate "Choose the type of virtual system to install:")" 20 70 10 \
-    1 "$(translate "Create VM System NAS")" \
-    2 "$(translate "Create VM System Windows")" \
-    3 "$(translate "Create VM System Linux")" \
-    ""          "" \
-    ""  "\Z4───────────────── $(translate "Community Scripts") ─────────────────\Zn" \
-    ""          "" \
-    4 "$(translate "Create VM System macOS (OSX-PROXMOX)")" \
-    5 "$(translate "Create VM System Others (based Linux)")" \
-    ""          "" \
-    6 "$(translate "Return to Main Menu")" \
-    3>&1 1>&2 2>&3)
+  if [[ "$PRESELECTED_OPTION" =~ ^[1-5]$ ]]; then
+    OS_TYPE="$PRESELECTED_OPTION"
+    PRESELECTED_OPTION=""
+  else
+    OS_TYPE=$(dialog --colors --backtitle "ProxMenux" \
+      --title "$(translate "Select System Type")" \
+      --menu "\n$(translate "Choose the type of virtual system to install:")" 20 70 10 \
+      1 "$(translate "Create VM System NAS")" \
+      2 "$(translate "Create VM System Windows")" \
+      3 "$(translate "Create VM System Linux")" \
+      ""          "" \
+      ""  "\Z4───────────────── $(translate "Community Scripts") ─────────────────\Zn" \
+      ""          "" \
+      4 "$(translate "Create VM System macOS (OSX-PROXMOX)")" \
+      5 "$(translate "Create VM System Others (based Linux)")" \
+      ""          "" \
+      6 "$(translate "Return to Main Menu")" \
+      3>&1 1>&2 2>&3)
 
-  [[ $? -ne 0 || "$OS_TYPE" == "6" ]] && exec bash "$MENU_REPO/main_menu.sh"
+    [[ $? -ne 0 || "$OS_TYPE" == "6" ]] && exec bash "$MENU_REPO/main_menu.sh"
+  fi
 
   case "$OS_TYPE" in
     1)
