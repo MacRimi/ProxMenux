@@ -27,7 +27,7 @@ from .installer import (
     run_remote_install,
     run_remote_rclone_mount,
 )
-from .ui import APP_TITLE, DETAIL_WINDOW_WIDTH, UserCancelled, interactive_ui
+from .ui import APP_TITLE, DETAIL_WINDOW_WIDTH, UserCancelled, interactive_ui, menu_size
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
@@ -66,7 +66,7 @@ def is_tested(item: dict[str, Any]) -> bool:
             or bool((item.get("community_tested") or {}).get("by")))
 
 
-MENU_SIZE = (22, 75, 15)
+MENU_SIZE = menu_size()
 MULTI_LABEL = r"\Z4MULTI\Zn"
 TESTED_LABEL = r"\Z2✓\Zn"
 
@@ -620,6 +620,8 @@ def build_parser() -> argparse.ArgumentParser:
     subparsers.add_parser("apply-icons", help="Resolve catalog icons against the jsdelivr icon sets")
     show_parser = subparsers.add_parser("show", help="Show the summary of a template")
     show_parser.add_argument("app")
+    open_parser = subparsers.add_parser("open", help="Open the page of an application in the menu")
+    open_parser.add_argument("app")
     install_parser = subparsers.add_parser("install", help="Configure and install an application")
     install_parser.add_argument("app")
     install_parser.add_argument("--host", default="auto", help="'auto'/'local', or root@IP for development")
@@ -681,6 +683,18 @@ def main(argv: list[str] | None = None) -> int:
             return 0
         if args.command == "show":
             print(_template_summary_text(catalog.compose(args.app)))
+            return 0
+        if args.command == "open":
+            item = next((item for item in _installable(catalog.load_index()["applications"])
+                         if item["id"] == args.app), None)
+            ui = interactive_ui()
+            if item is None:
+                ui.message(translate("This application is not in the OCI catalog."))
+                return 1
+            try:
+                _app_detail(catalog, ui, item)
+            except UserCancelled:
+                pass
             return 0
         if args.command == "install":
             template = catalog.compose(args.app)

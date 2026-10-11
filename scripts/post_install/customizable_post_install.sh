@@ -3812,6 +3812,7 @@ main_menu() {
 
   local checklist_items=()
   local i=1
+  local preselected_item=""
   local desc_index=0
   local previous_category=""
 
@@ -3830,7 +3831,12 @@ main_menu() {
     local line
     line="$(format_custom_post_line "$desc_translated" "$category_translated")"
 
-    checklist_items+=("$i" "$line" "off")
+    local state="off"
+    if [[ -n "${PRESELECTED_OPTION:-}" && "$function_name" == "$PRESELECTED_OPTION" ]]; then
+      state="on"
+      preselected_item="$i"
+    fi
+    checklist_items+=("$i" "$line" "$state")
     i=$((i + 1))
     previous_category="$category"
   done
@@ -3839,6 +3845,7 @@ main_menu() {
   selected_indices=$(dialog --clear \
     --backtitle "ProxMenux" \
     --title "$(translate "Post-Installation Options")" \
+    --default-item "${preselected_item:-1}" \
     --checklist "$HEADER" 22 88 15 \
     "${checklist_items[@]}" \
     2>&1 1>&3)
@@ -3967,6 +3974,8 @@ done
 # update wrapper that re-runs a single function), don't trigger the
 # extremeshok warning or the main menu.
 if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
+    # An option given as argument, as the menu search does, comes selected.
+    PRESELECTED_OPTION="${1:-}"
     check_extremeshok_warning
     main_menu
 fi

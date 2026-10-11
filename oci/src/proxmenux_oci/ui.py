@@ -194,6 +194,13 @@ SUMMARY_WIDTH = 78
 DETAIL_WINDOW_WIDTH = 90
 
 
+def menu_size() -> tuple[int, int, int]:
+    """Height, width and rows of a list of the menu: as tall as the main menu
+    of ProxMenux, cut to the terminal."""
+    height = max(10, min(24, shutil.get_terminal_size((100, 30)).lines - 2))
+    return height, 75, height - 8
+
+
 @dataclass
 class DialogUI:
     """dialog widgets with the ProxMenux backtitle, used for every menu shown

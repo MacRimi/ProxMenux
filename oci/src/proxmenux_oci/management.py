@@ -12,6 +12,7 @@ import tempfile
 
 from . import images
 from .i18n import N_, source_text, translate
+from .ui import menu_size
 
 STATUS_LABELS = {'installed': N_('installed'), 'failed': N_('failed'), 'updating': N_('updating'),
                  'recovering': N_('recovering'), 'installing': N_('installing'),
@@ -268,7 +269,7 @@ def _interactive_management(project, ui):
         else:
             line += f"\\Z1{translate(STATUS_LABELS.get(r['status'], r['status']))}\\Zn"
         options.append((str(r['vmid']), f"{line:<72}"))
-    selection = ui.choose(header, options, size=(22, 75, 15), colors=True,
+    selection = ui.choose(header, options, size=menu_size(), colors=True,
                           title=translate('Manage installed OCI applications'))
     if selection is None:
         return

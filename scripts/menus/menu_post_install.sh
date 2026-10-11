@@ -288,6 +288,7 @@ show_menu() {
 
         declare -A script_commands
         local counter=1
+        local preselected=""
 
         # Sprint 12C: re-evaluate available updates on every loop so the
         # entry vanishes after the user has applied everything (and the
@@ -317,6 +318,7 @@ show_menu() {
             formatted_item=$(format_menu_item "$translated_name" "$source")
             menu_items+=("$counter" "$formatted_item")
             script_commands["$counter"]="$command"
+            [[ -n "$PRESELECTED_OPTION" && "$name" == "$PRESELECTED_OPTION" ]] && preselected="$counter"
             ((counter++))
         done
         
@@ -332,6 +334,7 @@ show_menu() {
             formatted_item=$(format_menu_item "$translated_name" "$source")
             menu_items+=("$counter" "$formatted_item")
             script_commands["$counter"]="$command"
+            [[ -n "$PRESELECTED_OPTION" && "$name" == "$PRESELECTED_OPTION" ]] && preselected="$counter"
             ((counter++))
         done
         
@@ -340,15 +343,23 @@ show_menu() {
         menu_items+=("0" "$(translate "Return to Main Menu")")
         
 
-        exec 3>&1
-        script_selection=$(dialog --clear --colors \
-                                 --backtitle "ProxMenux" \
-                                 --title "$(translate "Post-Installation Scripts")" \
-                                 --menu "\n$(translate "Select a post-installation script:")\n" \
-                                 24 84 16 \
-                                 "${menu_items[@]}" 2>&1 1>&3)
-        exit_status=$?
-        exec 3>&-
+        # An option given as argument, as the menu search does, is opened
+        # first; the menu follows.
+        if [[ -n "$preselected" ]]; then
+            script_selection="$preselected"
+            exit_status=0
+            PRESELECTED_OPTION=""
+        else
+            exec 3>&1
+            script_selection=$(dialog --clear --colors \
+                                     --backtitle "ProxMenux" \
+                                     --title "$(translate "Post-Installation Scripts")" \
+                                     --menu "\n$(translate "Select a post-installation script:")\n" \
+                                     24 84 16 \
+                                     "${menu_items[@]}" 2>&1 1>&3)
+            exit_status=$?
+            exec 3>&-
+        fi
         
 
         if [ $exit_status -ne 0 ] || [ "$script_selection" = "0" ]; then
@@ -372,4 +383,5 @@ show_menu() {
 
 # ==========================================================
 
+PRESELECTED_OPTION="${1:-}"
 show_menu
