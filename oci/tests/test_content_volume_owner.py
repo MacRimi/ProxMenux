@@ -71,6 +71,16 @@ class ContentVolumeOwnerTests(unittest.TestCase):
             self.assertNotIn("/etc/timezone", paths, app)
             self.assertNotIn("/etc/localtime", owners(template), app)
 
+    def test_a_new_volume_is_filled_from_the_image_as_docker_does(self):
+        # Declared or not: an image that runs as a user of its own, as Node-RED
+        # or Grafana, finds its data directory with its own owner.
+        installer = (ROOT / "remote" / "install_oci.sh").read_text()
+        capture = installer[installer.index("capture_volume_seeds() {"):installer.index("apply_volume_seeds() {")]
+        self.assertIn('select(.type == "managed-volume") | .container_path\' "$DEPLOYMENT_FILE")', capture)
+        self.assertIn('is_reused_managed_mount "$target" && continue', capture)
+        self.assertIn('cp -a -- "${source}/." "${stage}/"', capture)
+        self.assertIn("[[ -n $target && -z ${declared_seeds[$target]:-} ]] || continue", capture)
+
     def test_a_recipe_without_preparations_is_left_alone(self):
         contract = {"volumes": [{"container_path": "/downloads", "installation_choice": ["managed-volume", "host-bind"]}]}
         self.catalog._apply_volume_policy("an-application", contract, None)
