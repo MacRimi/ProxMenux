@@ -5894,6 +5894,49 @@
     "os": "ubuntu"
   },
   {
+    "name": "Downtify",
+    "slug": "downtify",
+    "desc": "Downtify is a self-hosted music downloader with a web interface. Paste a Spotify, YouTube Music or Deezer link, or search by name, and it reads the metadata without a Spotify account or API key, downloads the matching audio from YouTube Music with yt-dlp and tags it with cover art and lyrics. It also has a library with a built-in player, a Playlist Monitor that downloads new tracks from watched playlists and artists, podcasts, M3U export for Jellyfin, Navidrome and Plex, and accounts for several users.",
+    "script": "ct/downtify.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/downtify.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/downtify.sh",
+    "type": "lxc",
+    "type_id": "nm9bra8mzye2scg",
+    "categories": [
+      "scriptcat00013"
+    ],
+    "category_names": [
+      "Media & Streaming"
+    ],
+    "notes": [
+      "Music is saved to /opt/downtify_data/downloads. To keep it on a NAS or share it with a media server, bind-mount that folder from the host, e.g. pct set <CTID> -mp0 /mnt/media/music,mp=/opt/downtify_data/downloads. In an unprivileged container the host folder must be writable by UID 100000.",
+      "Settings, accounts, the Playlist Monitor database and an uploaded cookies.txt live in /opt/downtify_data/data, outside the app directory, so updates keep them. Optional variables from the documentation (TZ, DOWNTIFY_MONITOR_SYNC_TIME, DOWNTIFY_FORCE_IPV4, ...) go in /opt/downtify_data/.env, followed by systemctl restart downtify.",
+      "If YouTube starts refusing downloads (\"Sign in to confirm you're not a bot\", age-restricted tracks), upload a cookies.txt from a logged-in browser in Settings > YouTube cookies.",
+      "Downtify downloads the audio from YouTube. Whether that is allowed depends on YouTube's terms of service and the law where you live."
+    ],
+    "warnings": [
+      "Every Downtify server starts with the same login, admin / downtify. Change the password right after the first sign-in in Settings > General > Account. If you forget it, reset it to the default with: cd /opt/downtify && set -a && . /opt/downtify_data/.env && set +a && .venv/bin/python main.py auth-reset",
+      "Downtify serves plain HTTP on port 8000. Do not expose it to the internet directly; put it behind a reverse proxy with HTTPS. Add the proxy's address as DOWNTIFY_TRUSTED_PROXIES=<ip> to /opt/downtify_data/.env and have the proxy send X-Forwarded-Host/-Proto/-For, otherwise Downtify answers \"Cross-site request refused\" when the proxy rewrites the Host header, and rate-limits sign-ins by the proxy's address."
+    ],
+    "port": 8000,
+    "website": "https://downtify.henriquesebastiao.com/",
+    "documentation": "https://downtify.henriquesebastiao.com/getting-started/",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/downtify.webp",
+    "updateable": true,
+    "privileged": false,
+    "has_arm": false,
+    "is_dev": true,
+    "execute_in": [
+      "lxc"
+    ],
+    "config_path": "",
+    "default_credentials": {
+      "username": "admin",
+      "password": "downtify"
+    },
+    "os": "debian"
+  },
+  {
     "name": "Dragonfly",
     "slug": "dragonfly",
     "desc": "Dragonfly is an in-memory data store compatible with the Redis and Memcached APIs, so existing Redis clients, libraries and tools work against it unchanged. It is multi-threaded with a shared-nothing design that uses every core it is given, and it takes snapshots without forking, which keeps the memory overhead of a save low. This script installs the official package with a generated password and periodic snapshots.",
@@ -16653,6 +16696,48 @@
     "os": "debian"
   },
   {
+    "name": "openGym",
+    "slug": "opengym",
+    "desc": "openGym is a self-hosted gym and body-weight tracker. Plan weekly routines, log workouts with supersets and cardio, track body weight, measurements and personal records, and browse a library of more than 5,600 exercises with animations. Every profile keeps its own data and syncs across devices; the web app installs to the home screen, and an Android app can pair with your server. This script builds the web app from source and runs the Node.js API behind nginx.",
+    "script": "ct/opengym.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/opengym.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/opengym.sh",
+    "type": "lxc",
+    "type_id": "nm9bra8mzye2scg",
+    "categories": [
+      "scriptcat00024"
+    ],
+    "category_names": [
+      "Gaming & Leisure"
+    ],
+    "notes": [
+      "openGym is served over plain HTTP at http://<IP> with password sign-in switched on (PASSWORD_LOGIN=1): choose Create new profile and pick a name and a password. Passkeys, the app's default, cannot work on an IP address, because browsers only offer them on HTTPS under a hostname, so the sign-in screen offers passwords until you switch as described below.",
+      "ORIGIN in /opt/opengym_data/.env must be exactly the address in the browser bar (http://<IP> as installed). If the container's IP changes or you open openGym under a hostname, set ORIGIN and RP_ID to that address and run systemctl restart opengym; until then sign-ins fail with \"cross-origin request refused\".",
+      "Passkeys: put openGym behind a reverse proxy or tunnel that terminates HTTPS for a real hostname (Caddy, Nginx Proxy Manager, Traefik, Cloudflare Tunnel) and points at http://<IP>:80, set RP_ID=gym.example.com and ORIGIN=https://gym.example.com in /opt/opengym_data/.env, then run systemctl restart opengym. Profiles made with a password keep signing in and can add a passkey under Settings > Account > Passkeys. Settle on the hostname before people register passkeys: changing RP_ID later invalidates every passkey made under the old one.",
+      "There is deliberately no self-signed certificate on the IP: an IP address can never be a passkey hostname, and browsers refuse service workers on untrusted certificates, so it would add a certificate warning and enable nothing. Push notifications, Keep screen awake and offline use also need a trusted HTTPS address.",
+      "The Android app pairs with the plain http://<IP> address: sign in on the website, then use Settings > Account > Pair the mobile app.",
+      "Accounts, workouts, uploaded photos and videos and the key that signs every session live in /opt/opengym_data together with the .env; back up that folder. Updates replace /opt/opengym and leave it untouched.",
+      "Install and every update build the web app from source with Node.js 22, which peaks at about 0.9 GB of RAM. The running app needs about 150 MB."
+    ],
+    "warnings": [
+      "The first profile created becomes the admin (FIRST_USER_ADMIN=1), so create yours right after the install. Anyone who can reach the address can create a profile; to close signup, set INVITE_ONLY=1 (and ALLOW_GUEST=0 to remove guest mode) in /opt/opengym_data/.env after your own profile exists, then run systemctl restart opengym.",
+      "Over plain HTTP the password and the session cookie cross the network unencrypted. Keep openGym on a network you trust, or put it behind HTTPS as described below."
+    ],
+    "port": 80,
+    "website": "https://opengym.ch/",
+    "documentation": "https://github.com/DuarteSantos8/openGym/blob/main/docs/SELF_HOSTING.md",
+    "logo": "https://cdn.jsdelivr.net/gh/DuarteSantos8/openGym@main/frontend/public/icon-512.png",
+    "updateable": true,
+    "privileged": false,
+    "has_arm": false,
+    "is_dev": true,
+    "execute_in": [
+      "lxc"
+    ],
+    "config_path": "",
+    "os": "debian"
+  },
+  {
     "name": "openHAB",
     "slug": "openhab",
     "desc": "openHAB is a popular open-source home automation platform that provides a vendor and technology agnostic solution for integrating and automating various smart home devices and services. It supports a wide range of devices and protocols, making it easy to bring together different systems and devices into a unified smart home ecosystem. With its user-friendly interface and powerful automation capabilities, openHAB makes it easy to create custom automations and monitor and control your smart home devices and systems, all from a single interface.",
@@ -20344,11 +20429,12 @@
       "Gaming & Leisure"
     ],
     "notes": [
-      "The manager password is generated during installation and stored in /opt/razzia-config/game.json. Open the manager interface at http://<IP>:3000/manager and log in with it. Manager access stays blocked while managerPassword is the upstream default value \"PASSWORD\".",
-      "Quizzes, saved results and optional branding live in /opt/razzia-config (quizz/, results/, branding/). An example quiz is created there on first start. Restart the service after editing game.json: systemctl restart razzia"
+      "The manager password is generated during installation and stored as MANAGER_PASSWORD in /opt/razzia/.env. Open the manager interface at http://<IP>:3000/manager and log in with it. Manager access is refused until MANAGER_PASSWORD is set.",
+      "JWT_SECRET in /opt/razzia/.env signs the session tokens and is generated during installation. Leaving it empty makes the server generate a new secret at every start, which logs managers out and gives players a fresh identity on each restart. It must be at least 32 characters; a shorter value is ignored. Restart the service after editing the file: systemctl restart razzia",
+      "Quizzes, saved results, uploaded media and optional branding live in /opt/razzia-config (quizz/, results/, media/, branding/). An example quiz is created there on first start."
     ],
     "warnings": [
-      "Game state is kept in memory by the socket server, so only run a single instance. Behind a reverse proxy, WebSocket upgrade headers must be forwarded to port 3000 or clients stay stuck on connecting."
+      "Game state is kept in memory by the socket server, so only run a single instance. Behind a reverse proxy, WebSocket upgrade headers must be forwarded to port 3000 or clients stay stuck on connecting, and the upload limit must allow 100 MB media files."
     ],
     "port": 3000,
     "website": "https://github.com/Ralex91/Razzia",
