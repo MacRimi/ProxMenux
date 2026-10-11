@@ -10,5 +10,11 @@
         }
       ]
     }
+  },
+  "environment_overrides": {
+    "RUN_OPTS": {
+      "required": false,
+      "prompt": "Extra parameters for minisatip (optional)"
+    }
   }
 }

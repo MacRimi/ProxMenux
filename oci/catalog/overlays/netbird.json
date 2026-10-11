@@ -10,5 +10,14 @@
         }
       ]
     }
+  },
+  "environment_overrides": {
+    "NB_SETUP_KEY": {
+      "prompt": "Setup key from the NetBird dashboard"
+    },
+    "NB_MANAGEMENT_URL": {
+      "example": "https://api.netbird.io:443",
+      "prompt": "Address of the NetBird management server"
+    }
   }
 }

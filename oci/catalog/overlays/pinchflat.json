@@ -14,7 +14,10 @@
           "owner_strategy": "mapped-root",
           "only_when_mount_type": "managed-volume"
         }
-      ]
+      ],
+      "resources": {
+        "memory_default_mb": 1024
+      }
     }
   }
 }

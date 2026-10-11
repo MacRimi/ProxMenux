@@ -10,5 +10,13 @@
         }
       ]
     }
+  },
+  "environment_overrides": {
+    "ACCOUNT_TOKEN": {
+      "prompt": "Account token from the settings of https://app.foldingathome.org"
+    },
+    "MACHINE_NAME": {
+      "prompt": "Name for this machine in Folding@home (no spaces)"
+    }
   }
 }

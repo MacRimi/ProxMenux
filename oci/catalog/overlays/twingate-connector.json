@@ -1,0 +1,16 @@
+{
+  "environment_overrides": {
+    "TWINGATE_NETWORK": {
+      "prompt": "Name of the Twingate network (the part before .twingate.com)"
+    },
+    "TWINGATE_ACCESS_TOKEN": {
+      "prompt": "Access token of the connector, from the Twingate admin console"
+    },
+    "TWINGATE_REFRESH_TOKEN": {
+      "prompt": "Refresh token of the connector, from the Twingate admin console"
+    },
+    "TWINGATE_LABEL_HOSTNAME": {
+      "required": false
+    }
+  }
+}

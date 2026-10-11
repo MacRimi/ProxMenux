@@ -109,7 +109,27 @@
           "owner_strategy": "mapped-root",
           "only_when_mount_type": "managed-volume"
         }
+      ],
+      "external_services": [
+        "MariaDB"
       ]
+    }
+  },
+  "environment_overrides": {
+    "APP_URL": {
+      "prompt": "Address BookStack will be opened at (for example http://192.168.1.50:6875)"
+    },
+    "DB_HOST": {
+      "prompt": "Address of the MariaDB server"
+    },
+    "DB_USERNAME": {
+      "prompt": "User of the MariaDB server"
+    },
+    "DB_DATABASE": {
+      "prompt": "Name of the database on the MariaDB server"
+    },
+    "DB_PASSWORD": {
+      "prompt": "Password of the MariaDB user"
     }
   }
 }

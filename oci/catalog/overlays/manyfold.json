@@ -14,7 +14,22 @@
           "owner_strategy": "mapped-root",
           "only_when_mount_type": "managed-volume"
         }
+      ],
+      "external_services": [
+        "Redis/Valkey"
       ]
+    }
+  },
+  "environment_overrides": {
+    "DATABASE_URL": {
+      "example": "sqlite3:/config/manyfold.sqlite3",
+      "prompt": "Database (a SQLite file, or postgresql://user:password@address:5432/name)"
+    },
+    "REDIS_URL": {
+      "prompt": "Address of Redis or Valkey (for example redis://192.168.1.20:6379/1)"
+    },
+    "SECRET_KEY_BASE": {
+      "required": false
     }
   }
 }
