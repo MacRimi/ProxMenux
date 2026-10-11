@@ -52,7 +52,8 @@ show_menu() {
 
     while true; do
 
-        local menu_title="Main menu"
+        local menu_title
+        menu_title="$(translate "Main menu")"
 
         # As tall as its options need, cut to the terminal.
         local height=24 limit=$(( $(tput lines 2>/dev/null || echo 24) - 2 ))
@@ -62,7 +63,7 @@ show_menu() {
 
         dialog --clear \
             --backtitle "ProxMenux" \
-            --title "$(translate "$menu_title")" \
+            --title "$menu_title" \
             --menu "$(translate "Select an option:")" "$height" 75 "$rows" \
             search "$(translate "Search options and applications")" \
             "" "" \

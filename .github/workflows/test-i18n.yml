@@ -13,6 +13,7 @@ on:
       # Scheduler consumers and the offline extractor's .sh/.func inputs.
       - 'scripts/**/*.sh'
       - 'scripts/**/*.func'
+      - 'scripts/**/*.py'
       - 'lang/*.json'
       - 'oci/src/**/*.py'
       - 'oci/catalog/**/*.json'
@@ -30,6 +31,7 @@ on:
       # Scheduler consumers and the offline extractor's .sh/.func inputs.
       - 'scripts/**/*.sh'
       - 'scripts/**/*.func'
+      - 'scripts/**/*.py'
       - 'lang/*.json'
       - 'oci/src/**/*.py'
       - 'oci/catalog/**/*.json'

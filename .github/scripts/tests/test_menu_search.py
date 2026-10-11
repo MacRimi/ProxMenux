@@ -6,6 +6,7 @@ import importlib.util
 import json
 from pathlib import Path
 import re
+import runpy
 import unittest
 
 ROOT = Path(__file__).resolve().parents[3]
@@ -149,6 +150,32 @@ class OpenedInPlaceTests(unittest.TestCase):
     def test_an_oci_application_opens_its_page(self):
         cli = (ROOT / "oci/src/proxmenux_oci/cli.py").read_text()
         self.assertIn('subparsers.add_parser("open"', cli)
+
+
+class TranslationTests(unittest.TestCase):
+    """What the search and the main menu say reaches the translation workflow,
+    read with the folders the workflow itself passes."""
+
+    @classmethod
+    def setUpClass(cls):
+        workflow = (ROOT / ".github/workflows/build-translation-cache.yml").read_text()
+        extractor = runpy.run_path(str(ROOT / ".github/scripts/build_translation_cache.py"))
+        folders = [ROOT / folder for folder in re.findall(r"--python-dir (\S+)", workflow)]
+        cls.found = set(extractor["extract_python_texts"](folders))
+        cls.found |= set(extractor["extract_translate_texts"](SCRIPTS))
+        cls.triggers = workflow
+
+    def test_every_text_of_the_search_is_found(self):
+        source = (SCRIPTS / "menus/search_menu.py").read_text()
+        said = set(re.findall(r"translate\('([^']+)'\)", source))
+        self.assertIn("No results", said)
+        self.assertEqual(sorted(said - self.found), [])
+
+    def test_the_title_of_the_main_menu_is_found(self):
+        self.assertIn("Main menu", self.found)
+
+    def test_a_change_in_the_search_runs_the_workflow(self):
+        self.assertIn("'scripts/**/*.py'", self.triggers)
 
 
 if __name__ == "__main__":
