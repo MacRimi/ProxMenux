@@ -3891,7 +3891,7 @@
   "Name of this wallabag instance, shown in the interface and in 2FA codes": "Nombre de esta instancia de wallabag, mostrado en la interfaz y en los códigos 2FA",
   "Name or address NetBox will be opened at (for example netbox.example.com)": "Nombre o dirección en la que se abrirá NetBox (por ejemplo netbox.example.com)",
   "Name or part of the description of the application": "Nombre o parte de la descripción de la aplicación",
-  "Name or related words: zima, plex, post…": "Nombre o palabras relacionadas: zima, plex, post…",
+  "Name or part of the option or of the application": "Nombre o parte de la opción o de la aplicación",
   "Name:": "Nombre:",
   "Named accounts need private mode. Stop the container, set public: false in /config/config.js, start it again and create each user with: pct exec <CTID> -- env THELOUNGE_HOME=/config s6-setuidgid abc thelounge add <user>": "Las cuentas con nombre necesitan el modo privado. Detén el contenedor, pon public: false en /config/config.js, vuelve a arrancarlo y crea cada usuario con: pct exec <CTID> -- env THELOUNGE_HOME=/config s6-setuidgid abc thelounge add <user>",
   "Needed:": "Necesario:",

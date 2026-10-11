@@ -293,7 +293,7 @@ def main():
     query = ''
     while True:
         query = dialog('inputbox', translate('Search'),
-                       translate('Name or related words: zima, plex, post…'), initial=query)
+                       translate('Name or part of the option or of the application'), initial=query)
         if query is None:
             return
         matches = search(items, query)
