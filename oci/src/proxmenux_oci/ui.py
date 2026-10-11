@@ -191,7 +191,7 @@ class TerminalUI:
 # final summary and the page of an application, which show tables, are wider.
 MENU_WIDTH = 72
 SUMMARY_WIDTH = 78
-DETAIL_WIDTH = 90
+DETAIL_WINDOW_WIDTH = 90
 
 
 @dataclass
@@ -302,7 +302,7 @@ class DialogUI:
         """A tall menu under a block of information. When the information does
         not fit on screen it is shown first in a scrollable box."""
         terminal = shutil.get_terminal_size((100, 30))
-        width = min(terminal.columns - 4, DETAIL_WIDTH)
+        width = min(terminal.columns - 4, DETAIL_WINDOW_WIDTH)
         text_lines = sum(max(1, len(textwrap.wrap(line, width - 6) or [""])) for line in text.splitlines() or [""])
         available = terminal.lines - 2
         needed = text_lines + len(options) + 9

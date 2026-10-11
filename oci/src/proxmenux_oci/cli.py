@@ -27,7 +27,7 @@ from .installer import (
     run_remote_install,
     run_remote_rclone_mount,
 )
-from .ui import APP_TITLE, DETAIL_WIDTH, UserCancelled, interactive_ui
+from .ui import APP_TITLE, DETAIL_WINDOW_WIDTH, UserCancelled, interactive_ui
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
@@ -116,7 +116,7 @@ def _yes_no(value: Any) -> str:
 # ---------------------------------------------------------------- summaries
 
 # The description fits the page of the application, inside its borders.
-DETAIL_TEXT_WIDTH = DETAIL_WIDTH - 6
+DETAIL_WIDTH = DETAIL_WINDOW_WIDTH - 6
 SERVICE_KINDS = (("postgres", "PostgreSQL"), ("valkey", "Valkey"), ("redis", "Redis"), ("mariadb", "MariaDB"),
                  ("mysql", "MySQL"), ("mongo", "MongoDB"), ("meilisearch", "Meilisearch"))
 
@@ -161,7 +161,7 @@ def _app_detail_text(catalog: Catalog, item: dict[str, Any], template: dict[str,
     # drifting, and it goes through translate() like every other string.
     description = translate(source_text(ui.get("tagline")) or source_text(ui.get("description")))
     if description:
-        wrapped = textwrap.wrap(description, DETAIL_TEXT_WIDTH)
+        wrapped = textwrap.wrap(description, DETAIL_WIDTH)
         if len(wrapped) > 8:
             wrapped = wrapped[:8]
             wrapped[-1] = wrapped[-1].rstrip(" .,;") + "…"
