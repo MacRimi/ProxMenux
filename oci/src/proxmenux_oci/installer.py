@@ -68,6 +68,21 @@ def _image_documentation(template: dict[str, Any]) -> str | None:
                  if str(ui.get(key) or "").startswith(("http://", "https://"))), None)
 
 
+def external_services_notice(template: dict[str, Any]) -> str | None:
+    """What an application needs already running on the network, as a database
+    of its own. Said before its installation asks how to reach it, so it can be
+    left for when that is ready."""
+    services = template.get("proxmox", {}).get("installer_profile", {}).get("external_services") or []
+    if not services:
+        return None
+    lines = [f"{source_text(template['catalog_ui']['title'])} {translate('needs these external services, already running:')} {', '.join(services)}",
+             translate("ProxMenux does not install them. The installation asks how to connect to them.")]
+    documentation = _image_documentation(template)
+    if documentation:
+        lines.append(f"{translate('They are described in the image documentation:')} {documentation}")
+    return "\n\n".join(lines)
+
+
 def _hostname_default(value: str) -> str:
     hostname = re.sub(r"[^a-z0-9-]+", "-", value.casefold()).strip("-")[:63].rstrip("-")
     return hostname or "oci-app"
@@ -498,7 +513,10 @@ def build_deployment(
                 "source": source,
                 "size_gb": size,
                 "backup": backup,
-                "read_only": item["read_only"],
+                # Read-only is for a host directory that already holds the
+                # content. A container volume starts empty, and read-only
+                # nothing could ever be put in it.
+                "read_only": item["read_only"] and volume_mode != "managed-volume",
                 "create_if_missing": bool(
                     policy.get("create_if_missing", not _is_system_bind(item))
                 ),

@@ -15,6 +15,7 @@ import yaml
 
 from . import console
 from .casaos import convert_casaos_compose, normalize_app_id
+from .catalog import TIME_SETTINGS
 from .cli import install_template
 from .i18n import source_text
 from .installer import ADVANCED_MODE, DEFAULT_MODE
@@ -61,7 +62,6 @@ def _published_port(service: dict[str, Any]) -> str | None:
 # settings are the usual exception and are harmless.
 HOST_SYSTEM_PATHS = ('/', '/bin', '/boot', '/dev', '/etc', '/lib', '/lib64', '/proc',
                      '/root', '/run', '/sbin', '/sys', '/usr', '/var')
-TIME_SETTINGS = ('/etc/localtime', '/etc/timezone')
 
 
 def _check_mounts(service: dict[str, Any]) -> None:
