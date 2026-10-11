@@ -102,8 +102,12 @@ install_single_package() {
 # file, so user-authored .link files in /etc/systemd/network/ are
 # never touched.
 
-readonly PMX_NIC_LINK_DIR="/etc/systemd/network"
-readonly PMX_NIC_LINK_MARKER="# Managed by ProxMenux — do not edit"
+# Declared once: this file is sourced by both post-install flows, and an
+# update that runs functions of the two sources it twice in the same shell.
+declare -p PMX_NIC_LINK_DIR >/dev/null 2>&1 \
+    || readonly PMX_NIC_LINK_DIR="/etc/systemd/network"
+declare -p PMX_NIC_LINK_MARKER >/dev/null 2>&1 \
+    || readonly PMX_NIC_LINK_MARKER="# Managed by ProxMenux — do not edit"
 
 # Print the MAC address recorded in a .link file, uppercased, or empty
 # if the file has no MACAddress= line.
@@ -254,13 +258,16 @@ pmx_uninstall_persistent_network() {
 # ProxMenux components against that kernel — so drivers keep
 # working after the reboot without operator intervention.
 
-readonly PMX_COMPONENTS_STATUS="/usr/local/share/proxmenux/components_status.json"
+declare -p PMX_COMPONENTS_STATUS >/dev/null 2>&1 \
+    || readonly PMX_COMPONENTS_STATUS="/usr/local/share/proxmenux/components_status.json"
 
 # component_key : dkms_module_name  (empty module = not DKMS)
-readonly -a PMX_DKMS_COMPONENTS=(
-    "nvidia_driver:nvidia"
-    "coral_driver:gasket"
-)
+if ! declare -p PMX_DKMS_COMPONENTS >/dev/null 2>&1; then
+    readonly -a PMX_DKMS_COMPONENTS=(
+        "nvidia_driver:nvidia"
+        "coral_driver:gasket"
+    )
+fi
 
 # Print the newest installed pve/proxmox kernel version, or empty.
 _pmx_newest_installed_kernel() {
