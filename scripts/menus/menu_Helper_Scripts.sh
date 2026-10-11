@@ -60,14 +60,21 @@ done
 # Without these the menu would hang silently for minutes when the network
 # is down or the upstream is slow, with no signal to the user. Audit
 # Tier 6 — `menu_Helper_Scripts.sh` curl sin --max-time.
-CACHE_JSON=$(curl -s --connect-timeout 5 --max-time 15 "$HELPERS_JSON_URL")
+CACHE_JSON=$(curl -fsSL --connect-timeout 5 --max-time 15 "$HELPERS_JSON_URL")
 
 # Validate that the JSON loaded correctly
 if ! echo "$CACHE_JSON" | jq -e 'if type == "array" and length > 0 then true else false end' >/dev/null 2>&1; then
   dialog --title "Helper Scripts" \
     --msgbox "Error: Could not load helpers cache.\nCheck your internet connection and try again.\n\nURL: $HELPERS_JSON_URL" 10 70
+  # Opened for one script, as the menu search does: back to where it came from.
+  [[ -n "${1:-}" ]] && exit 1
   exec bash "$LOCAL_SCRIPTS/menus/main_menu.sh"
 fi
+
+# The menus are as tall as the main menu, cut to the terminal.
+MENU_HEIGHT=$(( $(tput lines 2>/dev/null || echo 24) - 2 ))
+(( MENU_HEIGHT > 24 )) && MENU_HEIGHT=24
+MENU_ROWS=$(( MENU_HEIGHT - 8 ))
 
 # ---------------------------------------------------------------------------
 # Build category map directly from the cache (id → name).
@@ -107,15 +114,99 @@ get_type_label() {
 # Download and execute a script URL, with optional mirror fallback
 # ---------------------------------------------------------------------------
 download_script() {
-  local url="$1"
+  local url="$1" script_content
 
-  # Same timeouts as the cache fetch above so a stalled mirror can't hang
-  # the menu indefinitely. The HEAD probe and the GET both get bounded.
-  if curl --silent --connect-timeout 5 --max-time 10 --head --fail "$url" >/dev/null; then
-    bash <(curl -s --connect-timeout 5 --max-time 60 "$url")
-  else
+  # The script is downloaded whole before anything runs: a download that
+  # fails or comes back empty runs nothing, on the host or in a container.
+  if ! script_content=$(curl -fsSL --connect-timeout 5 --max-time 60 "$url") || [[ -z "${script_content//[[:space:]]/}" ]]; then
     dialog --title "Helper Scripts" --msgbox "$(translate "Error: Failed to download the script.")" 8 70
+    return 1
   fi
+  clear
+  if [[ -n "${HELPER_LXC_TARGET:-}" ]]; then
+    pct exec "$HELPER_LXC_TARGET" --keep-env 0 -- \
+      env TERM="${TERM:-xterm}" bash -c "$script_content"
+  else
+    bash -c "$script_content"
+  fi
+}
+
+# ---------------------------------------------------------------------------
+# Where an addon runs. The catalog says it for each one: on the Proxmox host,
+# inside a container, or either. Everything that is not an addon runs on the
+# host, which is where a script that creates a container or a VM belongs.
+#   $1 type   $2 the "execute_in" of the catalog, separated by spaces
+# Prints host, lxc or ask.
+# ---------------------------------------------------------------------------
+helper_target_choice() {
+  local type="$1" places=" $2 " host=0 lxc=0
+  [[ "$type" == addon ]] || { echo host; return; }
+  [[ "$places" == *" pve "* ]] && host=1
+  [[ "$places" == *" lxc "* ]] && lxc=1
+  if (( host == 1 && lxc == 0 )); then
+    echo host
+  elif (( lxc == 1 && host == 0 )); then
+    echo lxc
+  else
+    echo ask
+  fi
+}
+
+# The containers an addon can be run in: every LXC but the OCI ones, which
+# are an application image and not a system to add things to.
+helper_lxc_rows() {
+  local ctid status lock name
+  while read -r ctid status lock name; do
+    [[ "$ctid" =~ ^[0-9]+$ ]] || continue
+    pmx_lxc_is_oci "$ctid" && continue
+    # pct list leaves the Lock column blank for a container that has none.
+    [[ -n "$name" ]] || { name="$lock"; lock=""; }
+    printf '%s\t%s · %s%s\n' "$ctid" "$name" "$status" "${lock:+ · $lock}"
+  done < <(pct list)
+}
+
+# Asks where to run an addon and leaves the container in HELPER_LXC_TARGET,
+# empty for the host. Returns 1 when nothing has to run.
+#   $1 name of the addon   $2 host, lxc or ask
+select_helper_target() {
+  HELPER_LXC_TARGET=""
+  local title="$1" target="$2" ctid label state
+  [[ "$target" == host ]] && return 0
+  if [[ "$target" == ask ]]; then
+    target=$(dialog --clear --backtitle "ProxMenux" --title "$title" \
+      --menu "$(translate "Where do you want to run this addon?")" 12 75 2 \
+      lxc "$(translate "In an LXC")" \
+      host "$(translate "On the host")" 3>&1 1>&2 2>&3) || return 1
+    [[ "$target" == host ]] && return 0
+  fi
+  [[ "$target" == lxc ]] || return 1
+  local -a containers=()
+  while IFS=$'\t' read -r ctid label; do
+    containers+=("$ctid" "$label")
+  done < <(helper_lxc_rows)
+  if [[ ${#containers[@]} -eq 0 ]]; then
+    dialog --title "$title" --msgbox "$(translate "There are no LXC containers available. OCI containers are not included.")" 9 75
+    return 1
+  fi
+  ctid=$(dialog --clear --backtitle "ProxMenux" --title "$title · LXC" \
+    --menu "$(translate "Select the LXC. OCI containers are not included.")" "$MENU_HEIGHT" 75 "$MENU_ROWS" \
+    "${containers[@]}" 3>&1 1>&2 2>&3) || return 1
+  [[ "$ctid" =~ ^[0-9]+$ && -f "/etc/pve/lxc/$ctid.conf" ]] || return 1
+  pmx_lxc_is_oci "$ctid" && return 1
+  state=$(pct status "$ctid") || return 1
+  if [[ "$state" != "status: running" ]]; then
+    dialog --backtitle "ProxMenux" --title "$title · LXC $ctid" \
+      --yesno "\n$(translate "The LXC is stopped. Do you want to start it to run the addon?")" 10 75 || return 1
+    if ! pct start "$ctid"; then
+      dialog --title "$title · LXC $ctid" --msgbox "$(translate "The LXC could not be started.")" 8 75
+      return 1
+    fi
+  fi
+  if ! pct exec "$ctid" --keep-env 0 -- sh -c 'command -v bash >/dev/null'; then
+    dialog --title "$title · LXC $ctid" --msgbox "$(translate "The LXC has no Bash to run this script with. The addon was not run.")" 9 75
+    return 1
+  fi
+  HELPER_LXC_TARGET="$ctid"
 }
 
 RETURN_TO_MAIN=false
@@ -172,13 +263,15 @@ run_script_by_slug() {
   local first="${script_infos[0]}"
   local name desc notes warnings port website
   name=$(decode "$first" ".name")
-  desc=$(decode "$first" ".desc")
-  notes=$(decode "$first" '.notes // [] | join("\n")')
+  # The catalog writes some of its texts in HTML.
+  local plain="$LOCAL_SCRIPTS/menus/helper_plain_text.py"
+  desc=$(decode "$first" ".desc" | python3 "$plain")
+  notes=$(decode "$first" '.notes // [] | join("\n")' | python3 "$plain")
   # Sprint 11.7: PocketBase upstream tags certain notes with type=="warning".
   # The cache generator splits them into a separate `warnings` array so the
   # menu can render them in red with a dedicated WARNINGS header instead of
   # burying them inside the regular notes block.
-  warnings=$(decode "$first" '.warnings // [] | join("\n")')
+  warnings=$(decode "$first" '.warnings // [] | join("\n")' | python3 "$plain")
   port=$(decode "$first" ".port // 0")
   website=$(decode "$first" ".website // empty")
 
@@ -270,6 +363,10 @@ run_script_by_slug() {
   local gh_url mirror_url
   gh_url=$(decode "$selected" ".script_url")
   mirror_url=$(decode "$selected" ".script_url_mirror // empty")
+
+  # An addon is run where the catalog says it belongs.
+  select_helper_target "$name" "$(helper_target_choice \
+    "$(decode "$selected" '.type // empty')" "$(decode "$selected" '.execute_in // [] | join(" ")')")" || return
 
   if [[ "$sel_src" == "GH" ]]; then
     download_script "$gh_url"
@@ -388,7 +485,7 @@ search_and_filter_scripts() {
       selected=$(dialog --colors --backtitle "ProxMenux" \
                  --title "$title" \
                  --menu "$(translate "Select a script or action:")" \
-                 22 75 15 "${menu_items[@]}" 3>&1 1>&2 2>&3)
+                 "$MENU_HEIGHT" 75 "$MENU_ROWS" "${menu_items[@]}" 3>&1 1>&2 2>&3)
 
       [[ $? -ne 0 ]] && return
 
@@ -416,6 +513,12 @@ search_and_filter_scripts() {
   done
 }
 
+# A script given as argument, as the menu search does, is opened on its own.
+if [[ -n "${1:-}" ]]; then
+  run_script_by_slug "$1"
+  exit 0
+fi
+
 # ---------------------------------------------------------------------------
 # Main loop — category list built from embedded category data.
 # We map scriptcatXXXXX IDs to short numeric indices so dialog doesn't show
@@ -442,7 +545,7 @@ while true; do
   SELECTED_IDX=$(dialog --backtitle "ProxMenux" \
     --title "Proxmox VE Helper-Scripts" \
     --menu "$(translate "Select a category or search for scripts:")" \
-    22 75 15 "${MENU_ITEMS[@]}" 3>&1 1>&2 2>&3) || {
+    "$MENU_HEIGHT" 75 "$MENU_ROWS" "${MENU_ITEMS[@]}" 3>&1 1>&2 2>&3) || {
       dialog --clear --title "ProxMenux" \
         --msgbox "\n\n$(translate "Visit the website to discover more scripts, stay updated with the latest updates, and support the project:")\n\nhttps://community-scripts.github.io/ProxmoxVE" 15 70
       exec bash "$LOCAL_SCRIPTS/menus/main_menu.sh"
@@ -484,7 +587,7 @@ while true; do
     SCRIPT_INDEX=$(dialog --colors --backtitle "ProxMenux" \
       --title "$(translate "Scripts in") ${CATEGORY_NAMES[$SELECTED]}" \
       --menu "$(translate "Choose a script to execute:"):" \
-      22 75 15 "${SCRIPTS[@]}" 3>&1 1>&2 2>&3) || break
+      "$MENU_HEIGHT" 75 "$MENU_ROWS" "${SCRIPTS[@]}" 3>&1 1>&2 2>&3) || break
 
     SCRIPT_SELECTED="${INDEX_TO_SLUG[$SCRIPT_INDEX]}"
     run_script_by_slug "$SCRIPT_SELECTED"
