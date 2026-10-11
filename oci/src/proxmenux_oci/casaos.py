@@ -702,15 +702,26 @@ def _compose_stack_contract(
     }
 
 
-def _memory_mb(service: dict[str, Any]) -> int:
-    value = (((service.get("deploy") or {}).get("resources") or {}).get("reservations") or {}).get("memory")
+def _megabytes(value: Any) -> int | None:
     match = re.fullmatch(r"\s*(\d+(?:\.\d+)?)\s*([KMG]?)B?\s*", str(value or ""), re.I)
     if not match:
-        return 1024
-    number = float(match.group(1))
-    unit = match.group(2).upper()
+        return None
     factors = {"": 1 / (1024 * 1024), "K": 1 / 1024, "M": 1, "G": 1024}
-    return max(128, int(number * factors[unit]))
+    return int(float(match.group(1)) * factors[match.group(2).upper()])
+
+
+def _memory_mb(service: dict[str, Any]) -> int:
+    """The memory the container is given. What a Compose file reserves is the
+    least the application is promised, not the most it may use: Docker lets it
+    grow past that, and a container limited to it is stopped by the kernel as
+    soon as it needs more. A reservation only raises the default; a limit the
+    file sets is the memory of the container."""
+    resources = (service.get("deploy") or {}).get("resources") or {}
+    limit = _megabytes((resources.get("limits") or {}).get("memory"))
+    reservation = _megabytes((resources.get("reservations") or {}).get("memory")) or 0
+    if limit:
+        return max(128, limit, reservation)
+    return max(1024, reservation)
 
 
 def _blockers(

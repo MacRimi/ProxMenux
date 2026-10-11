@@ -286,7 +286,7 @@
       "unprivileged": true,
       "ostype": "auto-from-image",
       "cores": 2,
-      "memory_mb": 128,
+      "memory_mb": 1024,
       "swap_mb": 512,
       "rootfs_size_gb": 8,
       "rootfs_storage": "local-lvm",
