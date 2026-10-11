@@ -549,12 +549,12 @@
     "default_ports": [
       80
     ],
-    "file_path": "/root/.xcaddy",
+    "file_path": "/root/.caddy",
     "file_regex": "(?i)(?:v|release[-_/]?)?(\\d+(?:\\.\\d+){1,3}(?:[-+._][0-9A-Za-z.-]+)?)",
     "github_source": "releases",
     "installed_via": "file",
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/caddy.webp",
-    "repo": "caddyserver/xcaddy",
+    "repo": "caddyserver/caddy",
     "tag_regex": "(?i)(?:v|release[-_/]?)?(\\d+(?:\\.\\d+){1,3}(?:[-+._][0-9A-Za-z.-]+)?)",
     "website": "https://caddyserver.com/"
   },
@@ -635,6 +635,19 @@
     "repo": "chevereto/chevereto",
     "tag_regex": "(?i)(?:v|release[-_/]?)?(\\d+(?:\\.\\d+){1,3}(?:[-+._][0-9A-Za-z.-]+)?)",
     "website": "https://chevereto.com/"
+  },
+  "cinephage": {
+    "default_ports": [
+      3000
+    ],
+    "file_path": "/root/.cinephage",
+    "file_regex": "(?i)(?:v|release[-_/]?)?(\\d+(?:\\.\\d+){1,3}(?:[-+._][0-9A-Za-z.-]+)?)",
+    "github_source": "releases",
+    "installed_via": "file",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/cinephage.webp",
+    "repo": "MoldyTaint/Cinephage",
+    "tag_regex": "(?i)(?:v|release[-_/]?)?(\\d+(?:\\.\\d+){1,3}(?:[-+._][0-9A-Za-z.-]+)?)",
+    "website": "https://github.com/MoldyTaint/Cinephage"
   },
   "cliproxyapi": {
     "default_ports": [
@@ -4204,7 +4217,7 @@
     "github_source": "releases",
     "installed_via": "file",
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/rustdesk.webp",
-    "repo": "lejianwen/rustdesk-server",
+    "repo": "rustdesk/rustdesk-server",
     "tag_regex": "(?i)(?:v|release[-_/]?)?(\\d+(?:\\.\\d+){1,3}(?:[-+._][0-9A-Za-z.-]+)?)",
     "website": "https://rustdesk.com/"
   },
