@@ -113,16 +113,17 @@ logging.basicConfig(
 # -------------------------------------------------------------------
 _PROXMOX_NODE_CACHE = {"name": None, "timestamp": 0.0}
 _PROXMOX_NODE_CACHE_TTL = 300  # seconds (5 minutes)
+_PVE_LOCAL_NODE_LINK = "/etc/pve/local"
 
 
 def get_proxmox_node_name() -> str:
     """
-    Retrieve the real Proxmox node name for the LOCAL node.
+    The name of the LOCAL node in Proxmox.
 
-    - First tries reading from: `pvesh get /nodes`
-    - In a cluster, matches the local hostname against the node list
-    - Uses an in-memory cache to avoid repeated API calls
-    - Falls back to the short hostname if the API call fails
+    `/etc/pve/local` is a link to the folder of the local node, on a single
+    host and on every node of a cluster, so the name is read from it without
+    asking the API. The short hostname is used while `/etc/pve` is not
+    mounted; that answer is not kept, so the link is read again next time.
     """
     now = time.time()
     cached_name = _PROXMOX_NODE_CACHE.get("name")
@@ -132,52 +133,17 @@ def get_proxmox_node_name() -> str:
     if cached_name and (now - float(cached_ts)) < _PROXMOX_NODE_CACHE_TTL:
         return str(cached_name)
 
-    # Get local hostname for matching
-    local_hostname = socket.gethostname().split(".", 1)[0].lower()
-
-    # Try Proxmox API
     try:
-        result = subprocess.run(
-            ["pvesh", "get", "/nodes", "--output-format", "json"],
-            capture_output=True,
-            text=True,
-            timeout=5,
-            check=False,
-        )
-
-        if result.returncode == 0 and result.stdout:
-            nodes = json.loads(result.stdout)
-            if isinstance(nodes, list) and nodes:
-                # In a cluster, find the node that matches local hostname
-                # Node names in Proxmox typically match the hostname
-                for node_info in nodes:
-                    node_name = node_info.get("node", "")
-                    if node_name.lower() == local_hostname:
-                        _PROXMOX_NODE_CACHE["name"] = node_name
-                        _PROXMOX_NODE_CACHE["timestamp"] = now
-                        return node_name
-                
-                # If no exact match, try partial match (hostname might be truncated)
-                for node_info in nodes:
-                    node_name = node_info.get("node", "")
-                    if local_hostname.startswith(node_name.lower()) or node_name.lower().startswith(local_hostname):
-                        _PROXMOX_NODE_CACHE["name"] = node_name
-                        _PROXMOX_NODE_CACHE["timestamp"] = now
-                        return node_name
-                
-                # Last resort: if single node cluster, use that node
-                if len(nodes) == 1:
-                    node_name = nodes[0].get("node")
-                    if node_name:
-                        _PROXMOX_NODE_CACHE["name"] = node_name
-                        _PROXMOX_NODE_CACHE["timestamp"] = now
-                        return node_name
-
-    except Exception as exc:
-        logger.warning("Failed to get Proxmox node name from API: %s", exc)
+        node_name = os.path.basename(os.readlink(_PVE_LOCAL_NODE_LINK))
+    except OSError:
+        node_name = ""
+    if re.fullmatch(r"[A-Za-z0-9](?:[A-Za-z0-9-]*[A-Za-z0-9])?", node_name):
+        _PROXMOX_NODE_CACHE["name"] = node_name
+        _PROXMOX_NODE_CACHE["timestamp"] = now
+        return node_name
 
     # Fallback: short hostname (without domain)
-    return local_hostname
+    return socket.gethostname().split(".", 1)[0].lower()
 
 
 # -------------------------------------------------------------------
