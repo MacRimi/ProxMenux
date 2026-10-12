@@ -330,6 +330,8 @@ INSTALL_COMPLETE=0
 PRESERVE_FAILED_CT=0
 VOLUME_SEED_STAGE_ROOT=""
 VOLUME_SEED_TARGETS=()
+# The volumes that have just been filled with what the image has at their path.
+VOLUME_SEEDED_NOW=()
 VOLUME_SEED_STAGES=()
 VOLUME_SEED_MOUNT_TYPES=()
 CANONICAL_INPUT_DIR=""
@@ -553,10 +555,21 @@ apply_volume_seeds() {
       || { oci_log "Could not seed the persistent volume from the image: $target"; failed=1; break; }
     rm -rf -- "$stage" \
       || { oci_log "Could not remove the temporary image data: $target"; failed=1; break; }
+    VOLUME_SEEDED_NOW+=("$target")
     oci_log "Image data copied into the new persistent volume: $target"
   done
   cleanup_volume_seed_staging || { oci_log "Could not remove the temporary image-volume staging directory"; failed=1; }
   (( failed == 0 ))
+}
+
+# Whether a path sits in a volume that has just been filled from the image.
+# What is there is the copy the image ships, not a file the user kept.
+filled_from_the_image() {
+  local path=$1 target
+  for target in "${VOLUME_SEEDED_NOW[@]}"; do
+    [[ $path == "$target"/* ]] && return 0
+  done
+  return 1
 }
 
 prepare_file_mount_target() {
@@ -1162,8 +1175,13 @@ apply_installer_profile() {
       rm -f "$merged_file"
     fi
     if [[ $(jq -r '.only_if_missing // false' <<<"$item") == true && -e $destination ]]; then
-      oci_log "Keeping the existing persistent file: $path"
-      continue
+      if ! filled_from_the_image "$path"; then
+        oci_log "Keeping the existing persistent file: $path"
+        continue
+      fi
+      # The file of the recipe is the starting configuration: it takes the
+      # place of the one the image ships, never of one the user already had.
+      oci_log "The generated file replaces the one of the image: $path"
     fi
     install -D -m "$mode" /dev/null "$destination" || { failed=1; break; }
     jq -er '.content' <<<"$item" >"$destination" || { failed=1; break; }

@@ -304,7 +304,7 @@
           "mode": "0644",
           "owner": "mapped-application-user",
           "only_if_missing": true,
-          "content": "server:\n  port: 80\n  cacheDir: /home/filebrowser/data/tmp\n  sources:\n    - path: /folder\n      config:\n        defaultEnabled: true\nauth:\n  adminUsername: admin\n"
+          "content": "http:\n  port: 80\nserver:\n  cacheDir: /home/filebrowser/data/tmp\n  sources:\n    - path: /folder\n      config:\n        defaultEnabled: true\nauth:\n  adminUsername: admin\n"
         }
       ],
       "startup_healthcheck": {
