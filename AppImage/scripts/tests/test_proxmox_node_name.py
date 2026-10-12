@@ -57,5 +57,33 @@ class NodeNameTests(unittest.TestCase):
         self.assertEqual(self.name(), socket.gethostname().split('.', 1)[0].lower())
 
 
+class StorageMonitorNodeNameTests(unittest.TestCase):
+    """The storage monitor finds the node the same way."""
+
+    def setUp(self):
+        import subprocess
+        import sys
+        from unittest.mock import patch
+        sys.path.insert(0, str(SERVER.parent))
+        with patch.object(subprocess, 'run', side_effect=OSError('no Proxmox tools in the test')):
+            import proxmox_storage_monitor
+        self.module = proxmox_storage_monitor
+        folder = tempfile.TemporaryDirectory()
+        self.addCleanup(folder.cleanup)
+        self.link = os.path.join(folder.name, 'local')
+        self.monitor = proxmox_storage_monitor.ProxmoxStorageMonitor.__new__(proxmox_storage_monitor.ProxmoxStorageMonitor)
+        self.monitor._node_name_cache = {'name': None, 'time': 0}
+        self.monitor._PVE_LOCAL_NODE_LINK = self.link
+
+    def test_the_name_comes_from_the_link_without_running_anything(self):
+        from unittest.mock import patch
+        os.symlink('nodes/pve2', self.link)
+        with patch.object(self.module.subprocess, 'run', side_effect=AssertionError('no command')):
+            self.assertEqual(self.monitor._get_node_name(), 'pve2')
+
+    def test_without_the_link_the_hostname_is_used(self):
+        self.assertEqual(self.monitor._get_node_name(), socket.gethostname())
+
+
 if __name__ == '__main__':
     unittest.main()

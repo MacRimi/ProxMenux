@@ -6,6 +6,8 @@ Monitors configured Proxmox storages and tracks unavailable storages
 """
 
 import json
+import os
+import re
 import subprocess
 import socket
 import time
@@ -44,6 +46,7 @@ class ProxmoxStorageMonitor:
     
     # Cache TTL: 177 seconds (~3 min) - offset to avoid sync with other processes
     _CACHE_TTL = 177
+    _PVE_LOCAL_NODE_LINK = "/etc/pve/local"
     
     def __init__(self):
         self.configured_storages: Dict[str, Dict[str, Any]] = {}
@@ -53,38 +56,26 @@ class ProxmoxStorageMonitor:
         self._load_configured_storages()
     
     def _get_node_name(self) -> str:
-        """Get current Proxmox node name (cached)"""
+        """The name of this node in Proxmox (cached). `/etc/pve/local` is a
+        link to the folder of the local node, so reading it does not wait
+        for the API; the hostname is used while `/etc/pve` is not mounted."""
         current_time = time.time()
         cache = self._node_name_cache
-        
+
         # Return cached result if fresh
         if cache['name'] and (current_time - cache['time']) < self._CACHE_TTL:
             return cache['name']
-        
+
         try:
-            result = subprocess.run(
-                ['pvesh', 'get', '/nodes', '--output-format', 'json'],
-                capture_output=True,
-                text=True,
-                timeout=5
-            )
-            if result.returncode == 0:
-                nodes = json.loads(result.stdout)
-                hostname = socket.gethostname()
-                for node in nodes:
-                    if node.get('node') == hostname:
-                        cache['name'] = hostname
-                        cache['time'] = current_time
-                        return hostname
-                if nodes:
-                    name = nodes[0].get('node', hostname)
-                    cache['name'] = name
-                    cache['time'] = current_time
-                    return name
-            return socket.gethostname()
-        except Exception:
-            return socket.gethostname()
-    
+            name = os.path.basename(os.readlink(self._PVE_LOCAL_NODE_LINK))
+        except OSError:
+            name = ''
+        if re.fullmatch(r'[A-Za-z0-9](?:[A-Za-z0-9-]*[A-Za-z0-9])?', name):
+            cache['name'] = name
+            cache['time'] = current_time
+            return name
+        return socket.gethostname()
+
     def _load_configured_storages(self) -> None:
         """Load configured storages from Proxmox configuration"""
         try:
@@ -95,7 +86,7 @@ class ProxmoxStorageMonitor:
                 ['pvesh', 'get', '/storage', '--output-format', 'json'],
                 capture_output=True,
                 text=True,
-                timeout=5
+                timeout=15
             )
             
             if result.returncode != 0:
