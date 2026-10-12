@@ -84,7 +84,7 @@ function undoKey(change: { revert: string; exactness: string }): string {
 
 const FN_LABEL: Record<string, string> = {
   // Internal helpers of a post-install feature show its menu name, not their
-  // raw name — and never the source ("auto"/"customizable").
+  // raw name — and never the source ("auto"/"custom").
   _update_existing_log2ram_auto: "Install and configure Log2RAM",
   _update_existing_log2ram_custom: "Install and configure Log2RAM",
   update_snapshot_schedule: "Install ZFS auto-snapshot",
@@ -130,9 +130,10 @@ const FN_LABEL: Record<string, string> = {
   update_pve_appliance_manager: "Update Proxmox VE Appliance Manager",
 }
 
-// Post-install functions run from the auto/customizable scripts; everything
-// else is a general host script (nvidia/tpu installers, PVE update, vfio…).
-const POST_INSTALL_SOURCES = new Set(["auto", "customizable"])
+// Post-install functions run from the automatic and the customizable scripts,
+// which record themselves as "auto" and "custom"; everything else is a general
+// host script (nvidia/tpu installers, PVE update, vfio…).
+const POST_INSTALL_SOURCES = new Set(["auto", "custom"])
 
 // A few sources deserve a friendly name instead of a raw script identifier;
 // everything else shows the script it came from.
