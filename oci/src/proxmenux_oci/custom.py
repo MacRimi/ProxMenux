@@ -25,6 +25,15 @@ from .ui import UserCancelled
 
 IMAGE_REFERENCE = re.compile(r'^[A-Za-z0-9][A-Za-z0-9._/-]*(?::[A-Za-z0-9._-]+)?(?:@sha256:[a-f0-9]{64})?$')
 MAX_COMPOSE_BYTES = 256 * 1024
+# An oci-compose: the file ProxMenux installs an application from. The catalog
+# keeps one for each of its applications and every installation records its own.
+MAX_OCI_COMPOSE_BYTES = 2 * 1024 * 1024
+OCI_COMPOSE_KIND = 'proxmenux.oci-template'
+# What read_definition() names an oci-compose with, in the place of the origin
+# of a Compose file: it is installed as it is written and not translated.
+OCI_COMPOSE = 'oci-compose'
+# The lists of an oci-compose are completed item by item, each found by this field.
+CONTRACT_LISTS = {'environment': 'name', 'volumes': 'container_path', 'ports': 'container_port'}
 
 
 class _Dumper(yaml.SafeDumper):
@@ -292,20 +301,157 @@ def compose_from_docker_run(command: str, title: str | None = None) -> str:
     return '\n'.join(lines) + '\n'
 
 
-def _read_url(url: str) -> str:
+def _read_url(url: str, limit: int = MAX_COMPOSE_BYTES) -> str:
     if not url.startswith(('http://', 'https://')):
         raise ConversionError(translate('The address must start with http:// or https://'))
     with urllib.request.urlopen(url, timeout=60) as response:  # noqa: S310 - the user gives the address
-        return response.read(MAX_COMPOSE_BYTES + 1).decode('utf-8', errors='replace')
+        return response.read(limit + 1).decode('utf-8', errors='replace')
 
 
-def _read_file(path: str) -> str:
+def _read_file(path: str, limit: int = MAX_COMPOSE_BYTES) -> str:
     file = Path(path).expanduser()
     if not file.is_file():
         raise ConversionError(f"{translate('The file does not exist:')} {file}")
-    if file.stat().st_size > MAX_COMPOSE_BYTES:
-        raise ConversionError(translate('The file is too large to be a Compose file'))
+    if file.stat().st_size > limit:
+        raise ConversionError(translate('The file is too large to be a Compose file') if limit == MAX_COMPOSE_BYTES
+                              else translate('The file is too large to be an oci-compose'))
     return file.read_text(encoding='utf-8', errors='replace')
+
+
+def _catalog():
+    from .catalog import Catalog
+    from .cli import PROJECT_ROOT
+    return Catalog(PROJECT_ROOT)
+
+
+def _errors(template: dict[str, Any]) -> list[str]:
+    """What an oci-compose lacks or gives in another form than the installer reads."""
+    catalog = _catalog()
+    errors = catalog.schema_errors(template)
+    return catalog.shape_errors(template) if errors is None else errors
+
+
+def _lay(target: dict[str, Any], written: dict[str, Any], contract: bool = False) -> None:
+    """Lays what the author wrote on what ProxMenux writes for the same image."""
+    for key, value in written.items():
+        if isinstance(value, dict) and isinstance(target.get(key), dict):
+            _lay(target[key], value, contract or key == 'container_contract')
+        elif contract and key in CONTRACT_LISTS and isinstance(value, list) and isinstance(target.get(key), list):
+            field = CONTRACT_LISTS[key]
+            known = {item[field]: item for item in target[key]}
+            target[key] = []
+            for item in value:
+                complete = json.loads(json.dumps(known.get(item[field], {})))
+                _lay(complete, item)
+                target[key].append(complete)
+        else:
+            target[key] = value
+
+
+def _completed(document: dict[str, Any]) -> dict[str, Any]:
+    """An oci-compose written by hand says what its author decides: the image,
+    its ports, variables and volumes, and how it is installed. The rest is what
+    ProxMenux writes for any image, and is taken from the translation of that
+    same image with those ports, variables and volumes."""
+    contract = document['container_contract']
+    reference = contract['image']['reference']
+    title = (source_text((document.get('catalog_ui') or {}).get('title')) or contract.get('container_name')
+             or reference.rsplit('/', 1)[-1].split(':', 1)[0].split('@', 1)[0])
+    name = normalize_app_id(contract.get('service_name') or title)
+    service: dict[str, Any] = {'image': reference}
+    ports = [f"{port.get('published_example') or port['container_port']}:{port['container_port']}"
+             + ('/udp' if port.get('protocol') == 'udp' else '') for port in contract.get('ports') or []]
+    if ports:
+        service['ports'] = ports
+    volumes = [f"./{Path(volume['container_path']).name or 'data'}:{volume['container_path']}"
+               for volume in contract.get('volumes') or []]
+    if volumes:
+        service['volumes'] = volumes
+    environment = {item['name']: str(item.get('example') or '') for item in contract.get('environment') or []}
+    if environment:
+        service['environment'] = environment
+    template = template_from_compose(_dump({'name': name, 'services': {name: service}}), title)
+    for item in template['container_contract'].get('environment', []):
+        # A value the author left empty is asked for or generated as the file says.
+        if not environment.get(item['name']):
+            item['example'] = ''
+    _lay(template, document)
+    ui = template['catalog_ui']
+    if 'category_label' not in (document.get('catalog_ui') or {}):
+        ui['category_label'] = _catalog().categories()['labels'].get(ui.get('category'), ui.get('category_label'))
+    return template
+
+
+def template_from_oci_compose(text: str) -> dict[str, Any]:
+    """The template of an oci-compose: one written by hand, a file of the
+    catalog or the record of an installed application. Of a record only the
+    template is taken, never the answers of that installation."""
+    if len(text.encode('utf-8', errors='replace')) > MAX_OCI_COMPOSE_BYTES:
+        raise ConversionError(translate('The file is too large to be an oci-compose'))
+    try:
+        document = json.loads(text)
+    except ValueError as error:
+        raise ConversionError(f"{translate('The oci-compose is not valid JSON:')} {error}") from error
+    if isinstance(document, dict) and isinstance(document.get('template'), dict):
+        document = document['template']
+    if not isinstance(document, dict) or document.get('kind') != OCI_COMPOSE_KIND:
+        raise ConversionError(translate('The file is not a ProxMenux oci-compose.'))
+    contract = document.get('container_contract')
+    image = contract.get('image') if isinstance(contract, dict) else None
+    reference = image.get('reference') if isinstance(image, dict) else None
+    if not isinstance(reference, str) or not reference.strip():
+        raise ConversionError(translate('The oci-compose is incomplete: it does not say which image to install.'))
+    if not IMAGE_REFERENCE.fullmatch(reference):
+        raise ConversionError(f"{translate('This is not a valid image reference:')} {reference}")
+    faulty = translate('The oci-compose has errors:')
+
+    def refuse(errors: list[str]) -> None:
+        more = [f'  ... (+{len(errors) - 8})'] if len(errors) > 8 else []
+        raise ConversionError('\n'.join([faulty, *(f'  {error}' for error in errors[:8]), *more]))
+
+    template = json.loads(json.dumps(document))
+    offered = None
+    try:
+        if _errors({'first_run': {'endpoints': [], 'credentials': []}, **template}):
+            # Written by hand: what it says has to be in its form before it is completed.
+            misshapen = [error for error in _catalog().shape_errors(template) if not error.endswith(': required')]
+            misshapen += [f'container_contract/{name}/{position}/{field}: required'
+                          for name, field in CONTRACT_LISTS.items() if isinstance(contract.get(name), list)
+                          for position, item in enumerate(contract[name])
+                          if isinstance(item, dict) and field not in item]
+            if misshapen:
+                refuse(misshapen)
+            # The paths the author gives as a host directory stay offered as one.
+            offered = frozenset(volume['container_path'] for volume in contract.get('volumes') or []
+                                if 'host-bind' in (volume.get('installation_choice') or [])
+                                or volume.get('default') == 'host-bind')
+            template = _completed(template)
+        template.setdefault('first_run', {'endpoints': [], 'credentials': []})
+        template = _catalog().finish(template, offered)
+    except (KeyError, TypeError, AttributeError, IndexError, ValueError) as error:
+        raise ConversionError(f'{faulty} {type(error).__name__} {error}') from error
+    errors = _errors(template)
+    if errors:
+        refuse(errors)
+    return template
+
+
+def describe_oci_compose(template: dict[str, Any]) -> str:
+    """What an oci-compose adds to what a Compose file can say: the containers
+    it is made of and the files it writes in them."""
+    lines = []
+    services = [service.get('name') for service in (template.get('compose_stack') or {}).get('services') or []
+                if isinstance(service, dict) and service.get('name')]
+    if len(services) > 1:
+        lines += ['', translate('Containers of the application:'), f"  {', '.join(services)}"]
+    profile = (template.get('proxmox') or {}).get('installer_profile') or {}
+    written = [item.get('container_path') for item in profile.get('generated_files') or [] if item.get('container_path')]
+    if written:
+        lines += ['', translate('Files it writes in the container:')] + [f'  {path}' for path in written]
+    lines += ['', translate('This file decides what is mounted and with which privileges. '
+                            'Install it only if it comes from a source you trust.')]
+    # It follows the description of the image, after an empty line.
+    return '\n' + '\n'.join(lines)
 
 
 def _read_pasted(ui, title: str | None = None) -> str:
@@ -322,7 +468,8 @@ def _read_pasted(ui, title: str | None = None) -> str:
 
 
 def read_definition(ui) -> tuple[str, str]:
-    """The Compose file of the application and where it came from."""
+    """The Compose file of the application and where it came from, or an
+    oci-compose, named by OCI_COMPOSE."""
     from .cli import MENU_SIZE
     source = ui.choose(translate('How is the image described?'), [
         ('paste', translate('Paste its Compose file in the terminal')),
@@ -330,9 +477,16 @@ def read_definition(ui) -> tuple[str, str]:
         ('url', translate('Download its Compose file from an address')),
         ('run', translate('Paste its docker run command in the terminal')),
         ('image', translate('Only the image reference, with no Compose file')),
+        ('oci-compose', translate('Read an oci-compose from a file of this host')),
+        ('oci-compose-url', translate('Download an oci-compose from an address')),
     ], 'paste', title=translate('Image that is not in the catalog'), size=MENU_SIZE)
     if source is None:
         raise UserCancelled(translate('Image selection was cancelled'))
+    if source == 'oci-compose':
+        return _read_file(ui.ask(translate('Path of the oci-compose file'), '/root/oci-compose.json'),
+                          MAX_OCI_COMPOSE_BYTES), OCI_COMPOSE
+    if source == 'oci-compose-url':
+        return _read_url(ui.ask(translate('Address of the oci-compose file'), ''), MAX_OCI_COMPOSE_BYTES), OCI_COMPOSE
     if source == 'paste':
         return _read_pasted(ui), translate('pasted Compose file')
     if source == 'file':
@@ -536,14 +690,19 @@ def _name(ui, template: dict[str, Any]) -> str:
 
 
 def explore(ui) -> None:
-    """Reads a Compose file, a docker run command or an image reference,
-    reports what ProxMenux would install from it and installs it."""
+    """Reads a Compose file, a docker run command, an image reference or an
+    oci-compose, reports what ProxMenux would install from it and installs it."""
     text, origin = read_definition(ui)
-    notes = [line.partition(':')[2].strip() for line in text.splitlines() if line.startswith('#note:')]
-    notes += ignored_settings(text)
-    template = template_from_compose(text)
+    written = origin == OCI_COMPOSE
+    if written:
+        notes = []
+        template = template_from_oci_compose(text)
+    else:
+        notes = [line.partition(':')[2].strip() for line in text.splitlines() if line.startswith('#note:')]
+        notes += ignored_settings(text)
+        template = template_from_compose(text)
     title = translate('Image that is not in the catalog')
-    summary = describe(template)
+    summary = describe(template) + (describe_oci_compose(template) if written else '')
     available, report = registry_report(template['container_contract']['image']['reference'])
     summary += '\n\n' + report
     if notes:
@@ -556,12 +715,14 @@ def explore(ui) -> None:
     if not template.get('compatibility', {}).get('automatic_install_candidate'):
         ui.message(f"{translate('This image cannot be installed as it is described:')}\n\n{summary}", title)
         return
-    secrets = _ask_secrets(template)
+    # An oci-compose already says which of its values are secret and which it generates.
+    secrets = [] if written else _ask_secrets(template)
     if secrets:
         summary += ('\n\n' + translate('These values are asked during the installation:') + ' '
                     + ', '.join(secrets))
-    if not ui.review(f"{translate('This is what ProxMenux understood from the')} {origin}:\n\n{summary}",
-                     title, question=translate('Install this image?'), default=False):
+    heading = (translate('This is what the oci-compose installs:') if written
+               else f"{translate('This is what ProxMenux understood from the')} {origin}:")
+    if not ui.review(f'{heading}\n\n{summary}', title, question=translate('Install this image?'), default=False):
         return
     mode = ui.choose(translate('How is it installed?'),
                      [(DEFAULT_MODE, translate('Default: only what the application needs')),
@@ -571,4 +732,9 @@ def explore(ui) -> None:
         return
     # The record of the instance keeps the whole template, which is what an
     # update, a recreation or a removal read later.
-    install_template(ui, template, _name(ui, template), mode)
+    if written:
+        # An oci-compose keeps the name it was written with.
+        name = normalize_app_id(source_text(template['catalog_ui'].get('title')) or str(template.get('id') or 'oci-app'))
+    else:
+        name = _name(ui, template)
+    install_template(ui, template, name, mode)

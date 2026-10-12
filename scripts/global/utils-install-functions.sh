@@ -401,3 +401,18 @@ pmx_rebuild_dkms_after_kernel() {
     fi
     return 0
 }
+
+# Log2RAM syncs only the archived journal files, so the active file it found
+# on disk when it was installed stays there. Restored at every boot, it makes
+# journald continue an old sequence and delete its newest archives first.
+# The sync removes that file from the disk copy. Returns 0 when it changes
+# the given Log2RAM script.
+pmx_log2ram_drop_stale_journal() {
+    local log2ram_bin="$1"
+    [[ -f "$log2ram_bin" ]] || return 1
+    grep -q -- '--exclude=journal/\*/\*' "$log2ram_bin" 2>/dev/null || return 1
+    grep -q -- '--delete-excluded' "$log2ram_bin" 2>/dev/null && return 1
+    [[ -e "${log2ram_bin}.proxmenux.bak" ]] || cp -a "$log2ram_bin" "${log2ram_bin}.proxmenux.bak"
+    sed '/optional_params+=("--exclude=journal\/\*\/\*")/a\        optional_params+=("--delete-excluded")' "$log2ram_bin" \
+        | pmx_write_file "$log2ram_bin"
+}

@@ -102,6 +102,9 @@ PROTECTED_TECHNICAL_TERMS = (
     # Open Container Initiative. Read as a word it becomes "BEC" in French,
     # which named nothing, across thirty-one strings of the OCI section.
     "OCI manager Apps",
+    # The file an application is installed from. Its name is the one of the
+    # file on disk; translated, it names something the menu does not offer.
+    "oci-compose",
     "OCI",
     "beta",
     # Debian release names. "Bookworm" is a bird and a reader of books, and

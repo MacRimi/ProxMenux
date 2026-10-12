@@ -3026,6 +3026,11 @@ _update_existing_log2ram_custom() {
         sed 's/rsync -aAXv /rsync -aXv --no-acls /g' "$log2ram_bin" | pmx_write_file "$log2ram_bin"
     fi
 
+    if pmx_log2ram_drop_stale_journal "$log2ram_bin"; then
+        NECESSARY_REBOOT=1
+        msg_ok "$(translate "Log2RAM keeps the journal in order from the next reboot")"
+    fi
+
     if dpkg-query -W -f='${Status}' proxmox-backup-server 2>/dev/null \
         | grep -q 'install ok installed'; then
         tmp_file="$(mktemp /etc/logrotate.d/.proxmox-backup-api.XXXXXX)" || return 1
@@ -3119,7 +3124,7 @@ EOF
 
 
 configure_log2ram() {
-    local FUNC_VERSION="1.6"
+    local FUNC_VERSION="1.7"
     local existing_log2ram_bin=""
     pmx_journal_context "configure_log2ram" "$FUNC_VERSION"
     # description: Install Log2RAM with user-chosen RAM size; prompts for size and SSD/M.2 awareness before applying.
@@ -3242,6 +3247,7 @@ configure_log2ram() {
             cp -a "$_l2r_bin" "${_l2r_bin}.proxmenux.bak"
             pmx_edit_file "$_l2r_bin" 's/rsync -aAXv /rsync -aXv --no-acls /g'
         fi
+        pmx_log2ram_drop_stale_journal "$_l2r_bin" || true
         break
     done
 

@@ -23,7 +23,7 @@
     {
       "id": "sources",
       "title": "Cómo se describe la imagen",
-      "intro": "La primera pantalla pregunta cómo se describe la imagen. Hay cuatro formas de aportar una definición completa y una quinta que usa solo el nombre de la imagen.",
+      "intro": "La primera pantalla pregunta cómo se describe la imagen. Cuatro formas aportan una definición que se traduce, una quinta usa solo el nombre de la imagen y dos leen un oci-compose ya escrito.",
       "blocks": [
         {
           "table": {
@@ -33,7 +33,9 @@
               ["Leer su archivo Compose desde un archivo de este host", "Una ruta del nodo, <code>/root/docker-compose.yml</code> por defecto. El archivo debe existir y ocupar como máximo 256 KiB."],
               ["Descargar su archivo Compose desde una dirección", "Una dirección <code>http://</code> o <code>https://</code> que sirva el YAML sin procesar. Se descargan como máximo 256 KiB."],
               ["Pegar su comando docker run en la terminal", "El comando que publica el proyecto. Se traducen puertos, entorno, volúmenes, dispositivos, capacidades, usuario, memoria compartida y el resto de opciones admitidas."],
-              ["Solo la referencia de la imagen, sin archivo Compose", "Una referencia como <code>ghcr.io/usuario/aplicacion:latest</code>. Se consulta el registro y se conservan los metadatos OCI de la imagen."]
+              ["Solo la referencia de la imagen, sin archivo Compose", "Una referencia como <code>ghcr.io/user/application:latest</code>. Se consulta el registro y se conservan los metadatos OCI de la imagen."],
+              ["Leer un oci-compose desde un archivo de este host", "Un archivo JSON del nodo, <code>/root/oci-compose.json</code> por defecto, de 2 MiB como máximo. No se traduce: se comprueba y se instala tal como está escrito."],
+              ["Descargar un oci-compose desde una dirección", "Una dirección <code>http://</code> o <code>https://</code> que sirva el archivo JSON. Se descargan como máximo 2 MiB."]
             ]
           }
         },
@@ -41,7 +43,7 @@
           "figure": {
             "src": "/oci-manager/custom-source-menu.png",
             "alt": "Menú que pregunta cómo se describe una imagen que no está en el catálogo",
-            "caption": "Las cinco formas de describir una imagen que no está en el catálogo."
+            "caption": "Las formas de describir una imagen que no está en el catálogo."
           }
         }
       ]
@@ -113,6 +115,43 @@
       ]
     },
     {
+      "id": "oci-compose",
+      "title": "Un oci-compose escrito a mano",
+      "intro": "Un oci-compose es el archivo JSON desde el que se instala una aplicación. El catálogo guarda uno por cada aplicación, y el mismo formato puede escribirse a mano e instalarse con esta opción.",
+      "blocks": [
+        {
+          "p": "El que se escribe a mano indica lo que decide su autor: la imagen, sus puertos, variables y volúmenes, y lo que pregunta la instalación. ProxMenux completa el resto al leer el archivo. Puede decir lo que un archivo Compose no puede: el texto de una pregunta, una contraseña generada durante la instalación, un perfil de GPU, el propietario de cada volumen, la comprobación del primer arranque o las credenciales que se muestran al terminar."
+        },
+        {
+          "steps": {
+            "items": [
+              {
+                "title": "Comprobar",
+                "body": "Un archivo con errores no se instala. Cada error indica el campo en el que está, y un archivo que no es JSON válido indica la línea y la columna."
+              },
+              {
+                "title": "Revisar",
+                "body": "Un archivo válido muestra lo que instala: imagen, dirección web, puertos, rutas persistentes, las variables que pide la instalación y los archivos que escribe."
+              },
+              {
+                "title": "Instalar",
+                "body": "La instalación es la de cualquier aplicación del catálogo, con ajustes por defecto o avanzados."
+              }
+            ]
+          }
+        },
+        {
+          "calloutWarning": {
+            "title": "Un archivo que decide privilegios",
+            "body": "Un oci-compose decide qué se monta en el contenedor y con qué privilegios. El resumen lo indica antes de instalar: instala solo archivos que vengan de una fuente de confianza."
+          }
+        },
+        {
+          "p": "El formato se describe bloque a bloque, con dos ejemplos completos, en el <readmeLink>README del motor OCI</readmeLink>. El registro de una instalación se lee de la misma forma: solo se usa la plantilla con la que se instaló, y ninguna de las respuestas de esa instalación."
+        }
+      ]
+    },
+    {
       "id": "limits",
       "title": "Definiciones que no se instalan",
       "blocks": [
@@ -123,7 +162,7 @@
               "Un Dockerfile sin imagen publicada: la imagen debe construirse y publicarse antes en un registro OCI.",
               "Un archivo Compose con varios servicios: queda bloqueado porque describe más de una imagen. Esta opción instala un único contenedor.",
               "<code>configs</code>, secretos externos o formatos de dispositivo que no pueden traducirse sin ambigüedad.",
-              "Sustituciones del shell como <code>$(comando)</code>: debe escribirse el valor resultante.",
+              "Sustituciones del shell como <code>$(command)</code>: debe escribirse el valor resultante.",
               "Opciones de <code>docker run</code> no reconocidas y <code>--env-file</code>: se lee en su lugar un archivo Compose explícito."
             ]
           }

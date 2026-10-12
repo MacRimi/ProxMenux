@@ -376,7 +376,8 @@ class Catalog:
         return self._volume_policy
 
     def _apply_volume_policy(self, app_id: str, contract: dict[str, Any],
-                             profile: dict[str, Any] | None = None) -> None:
+                             profile: dict[str, Any] | None = None,
+                             offered: frozenset[str] = frozenset()) -> None:
         """A path that holds content of the user is offered as a container
         volume or as a host directory, and the installation asks which one; the
         state of the application stays in a container volume without asking.
@@ -396,7 +397,8 @@ class Catalog:
                 profile["volume_preparations"] = [item for item in profile["volume_preparations"]
                                                   if item.get("container_path") not in dropped]
         policy = self.volume_policy()
-        shared = policy["shared_paths"] | set(policy["applications"].get(app_id, []))
+        # `offered` are the paths an oci-compose gives as a host directory.
+        shared = policy["shared_paths"] | set(policy["applications"].get(app_id, [])) | offered
         # A volume known to stay small is created at its stated size.
         sizes = policy.get("sizes", {}).get(app_id, {})
         for volume in contract.get("volumes", []):
@@ -727,20 +729,61 @@ class Catalog:
         self._write_json(self.catalog_dir / report_name, report)
         return report
 
-    def validate(self, template: dict[str, Any], required: bool = True) -> None:
-        # Templates ship already validated; on a node without python3-jsonschema
-        # the installer skips the check instead of adding a package to the host.
+    def schema_errors(self, template: dict[str, Any]) -> list[str] | None:
+        """What a template breaks of the schema, or None on a node without
+        python3-jsonschema, where it cannot be checked."""
         try:
             from jsonschema import Draft202012Validator
         except ImportError:
+            return None
+        schema = json.loads(self.schema_path.read_text(encoding="utf-8"))
+        errors = sorted(Draft202012Validator(schema).iter_errors(template), key=lambda error: list(error.path))
+        return [f"{'/'.join(map(str, error.path))}: {error.message}" for error in errors]
+
+    def shape_errors(self, template: dict[str, Any]) -> list[str]:
+        """The fields a template lacks or gives with another type, read from
+        the schema without python3-jsonschema: what the installer relies on."""
+        schema = json.loads(self.schema_path.read_text(encoding="utf-8"))
+        kinds = {"object": dict, "array": list, "string": str, "boolean": bool,
+                 "integer": int, "number": (int, float), "null": type(None)}
+        errors: list[str] = []
+
+        def check(value: Any, rule: dict[str, Any], path: str) -> None:
+            if "$ref" in rule:
+                target: Any = schema
+                for part in rule["$ref"].lstrip("#/").split("/"):
+                    target = target.get(part, {})
+                rule = target
+            wanted = rule.get("type")
+            wanted = [wanted] if isinstance(wanted, str) else wanted or []
+            if wanted and not any(isinstance(value, kinds[kind]) and not (kind in ("integer", "number")
+                                                                       and isinstance(value, bool))
+                                  for kind in wanted if kind in kinds):
+                errors.append(f"{path}: {' / '.join(wanted)}")
+                return
+            if isinstance(value, dict):
+                errors.extend(f"{path}/{name}".lstrip("/") + ": required" for name in rule.get("required", [])
+                              if name not in value)
+                for name, inner in rule.get("properties", {}).items():
+                    if name in value:
+                        check(value[name], inner, f"{path}/{name}".lstrip("/"))
+            elif isinstance(value, list) and isinstance(rule.get("items"), dict):
+                for position, item in enumerate(value):
+                    check(item, rule["items"], f"{path}/{position}")
+
+        check(template, schema, "")
+        return errors
+
+    def validate(self, template: dict[str, Any], required: bool = True) -> None:
+        # Templates ship already validated; on a node without python3-jsonschema
+        # the installer skips the check instead of adding a package to the host.
+        errors = self.schema_errors(template)
+        if errors is None:
             if required:
                 raise ConversionError("python3-jsonschema is required to generate templates")
             return
-        schema = json.loads(self.schema_path.read_text(encoding="utf-8"))
-        errors = sorted(Draft202012Validator(schema).iter_errors(template), key=lambda error: list(error.path))
         if errors:
-            details = "; ".join(f"{'/'.join(map(str, error.path))}: {error.message}" for error in errors)
-            raise ConversionError(f"La plantilla generada no cumple el esquema: {details}")
+            raise ConversionError(f"La plantilla generada no cumple el esquema: {'; '.join(errors)}")
 
     def compose(self, app_id: str) -> dict[str, Any]:
         """The installable template, built only from the files shipped with
@@ -759,6 +802,32 @@ class Catalog:
         self._apply_volume_policy(item["id"], template["container_contract"],
                                   template.get("proxmox", {}).get("installer_profile"))
         self.validate(template, required=False)
+        return template
+
+    def finish(self, template: dict[str, Any], offered: frozenset[str] | None = None) -> dict[str, Any]:
+        """The last steps of compose() for an oci-compose that does not come
+        from the files of the catalog: one somebody wrote or shared. The
+        overlay, the category and the verification the catalog keeps under a
+        name are not given to it: it is not verified because it says so.
+        `offered` are the paths its author gave as a host directory; without
+        it, the ones the file already offers as one."""
+        from .stack import apply_stack_support
+        apply_stack_support(template)
+        from .gpu import apply_gpu_contract, apply_nginx_runtime_contract
+        apply_gpu_contract(template)
+        apply_nginx_runtime_contract(template)
+        if template.get("status") == "laboratory-validated":
+            template["status"] = "generated-unvalidated"
+        template.pop("community_tested", None)
+        contract = template["container_contract"]
+        # The policy of an application is kept under its name in the catalog,
+        # which a file of the catalog is recognised by.
+        name = next((item["id"] for item in self.load_index().get("applications", [])
+                     if template.get("id") and item.get("template_id") == template.get("id")), "")
+        if offered is None:
+            offered = frozenset(volume["container_path"] for volume in contract.get("volumes", [])
+                                if "host-bind" in volume.get("installation_choice", []))
+        self._apply_volume_policy(name, contract, template.get("proxmox", {}).get("installer_profile"), offered)
         return template
 
     def load_template(self, app_id: str, generate_if_missing: bool = True) -> dict[str, Any]:

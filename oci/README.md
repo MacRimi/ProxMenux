@@ -1,12 +1,487 @@
-# ProxMenux OCI laboratory
+# OCI manager Apps
 
-Prototype that converts official image documentation and discovered Docker
-Compose definitions into one ProxMenux JSON template per distribution or
-deployment profile, then optionally installs reviewed images as native Proxmox
-VE OCI LXC containers.
+OCI manager Apps runs official OCI images, the ones published for Docker, as native Proxmox VE LXC containers. No Docker engine is installed inside them: Proxmox VE imports the filesystem and the process metadata of the image, and the application becomes the main process of an LXC that is managed like any other container of the node.
 
-This repository is a laboratory. Generated templates are not considered
-compatible merely because conversion succeeded.
+The image stays the one its maintainer publishes. What ProxMenux adds is the environment Docker Compose would have created around it: persistent data, network, variables, devices and start order, written with Proxmox VE primitives.
+
+This document describes the engine in this directory: how it is organised, how a container is created and updated, how a Compose file or a `docker run` command becomes an `oci-compose`, and how to write an `oci-compose` by hand and install it. The user documentation, with screenshots, is the [OCI manager Apps section](https://proxmenux.com/en/docs/oci-manager) of the ProxMenux documentation.
+
+- [The model](#the-model)
+- [Structure](#structure)
+- [How a container is created](#how-a-container-is-created)
+- [Update, modify, recreate and remove](#update-modify-recreate-and-remove)
+- [From a Compose file or a docker run command to an oci-compose](#from-a-compose-file-or-a-docker-run-command-to-an-oci-compose)
+- [The oci-compose, block by block](#the-oci-compose-block-by-block)
+- [Writing and testing an oci-compose](#writing-and-testing-an-oci-compose)
+- [Adding an application to the catalog](#adding-an-application-to-the-catalog)
+- [Design and laboratory notes](#design)
+
+## The model
+
+One OCI image becomes one native LXC.
+
+| Requirement | Docker expresses it as | OCI manager Apps turns it into |
+|---|---|---|
+| Run the application | `image`, `entrypoint`, `command` | The rootfs built from the image and the main process of the LXC |
+| Keep data | `volumes` | A container disk (`mpN`) included in the backup, or a host directory |
+| Publish the service | `ports` | An address of its own for the LXC; the service answers on its original port |
+| Use hardware | `devices`, `group_add`, `runtime: nvidia` | `devN` entries with the group of the host device, and a reviewed profile |
+| Connect dependencies | `networks`, `depends_on` | One LXC per service, a private bridge, fixed addresses, start order and healthchecks |
+| Update | `pull` and recreate | A new rootfs with the same data, network and devices |
+
+A Compose key with no safe equivalent is not dropped: it is listed as a blocker and the application is not offered for installation until it is resolved.
+
+## Structure
+
+```
+oci/
+├── catalog/
+│   ├── index.json            list of applications shown by the menu
+│   ├── apps/<app>.json       the oci-compose generated for each image
+│   ├── curated/<app>.json    an oci-compose written and reviewed by hand
+│   ├── overlays/<app>.json   adjustments laid over a generated oci-compose
+│   ├── categories.json       category of each application
+│   ├── volume-policy.json    which paths hold content of the user
+│   └── verification.json     applications tested for real
+├── examples/                 oci-compose files written by hand
+├── schemas/                  the JSON schema every oci-compose follows
+├── src/proxmenux_oci/        menu, converter and deployment plan
+├── remote/                   what creates and maintains the LXC on the node
+└── tests/
+```
+
+An **oci-compose** is the JSON file an application is installed from. Its `kind` is `proxmenux.oci-template`. It says which image runs, which ports, variables and volumes it has, what the installation asks, and how each thing is done in Proxmox VE.
+
+There are three places an oci-compose comes from:
+
+- **The catalog.** The converter writes `catalog/apps/<app>.json` from the Compose file the project of the image publishes. When that file needs something Compose cannot say, such as a question, a generated password or a GPU profile, it goes in `catalog/overlays/<app>.json` and is laid over the generated file each time it is read. An application whose definition is written whole by hand lives in `catalog/curated/`.
+- **A definition given at the moment.** The option *Install an image that is not in the catalog* translates a Compose file, a `docker run` command or an image reference with the same converter.
+- **A file written by hand**, read by the same option. It is described in [Writing and testing an oci-compose](#writing-and-testing-an-oci-compose).
+
+On a node, the engine is installed in `/usr/local/share/proxmenux/oci/engine/`. Every installation keeps its record in `/usr/local/share/proxmenux/oci/instances/<VMID>/oci-compose.json`: the oci-compose it was installed from, under `template`, together with the answers given during the installation and the configuration Proxmox VE ended with. Updates, changes and removals read that record.
+
+## How a container is created
+
+Selecting an application, or giving a definition, opens the same sequence.
+
+1. **Read.** The oci-compose is composed and checked against the schema. One with blockers is not offered.
+2. **Ask.** *Install with default settings* asks what every installation decides: where the data of the user goes, the address, required values with no default, and whether it starts with the node. *Install with advanced settings* opens every decision: VMID, cores, memory, storage of each path, bridge, optional variables and devices.
+3. **Review.** A summary shows image, resources, storage, each path and where it goes, network, acceleration, security and variables, with secrets masked. Nothing has been created yet.
+4. **Resolve.** The registry is queried, the architecture of the host is selected and the digest the tag points to at that moment is fixed.
+5. **Download and verify.** Skopeo downloads the image as an OCI archive. Every layer is checked against its digest before anything is created.
+6. **Build.** `pct create` builds the rootfs from the archive and imports `Entrypoint`, `Cmd`, `Env`, `User`, `WorkingDir` and `StopSignal` from the image.
+7. **Connect.** The volumes are added as mount points, then the devices, the environment, the network and the security settings the oci-compose declares.
+8. **Prepare.** Each new volume is made ready for the first start: `lost+found` is removed and the directory is given to the user the application writes with. The files the oci-compose asks to write are written.
+9. **Start and check.** The container starts, an address is waited for, the settings that need the running application are applied, and the service is checked. A failed first start is reported as a failed installation.
+10. **Register.** The record of the installation is written, and a copy travels inside the container so that a backup carries it.
+
+The result is an ordinary LXC:
+
+```
+entrypoint: /jellyfin/jellyfin
+hostname: jellyfin
+cores: 2
+memory: 2048
+unprivileged: 1
+rootfs: local-zfs:subvol-126-disk-0,size=8G
+mp0: local-zfs:subvol-126-disk-1,mp=/config,backup=1,size=16G
+mp1: local-zfs:subvol-126-disk-2,mp=/cache,backup=1,size=16G
+mp2: local-zfs:subvol-126-disk-3,mp=/media,backup=1,size=32G
+dev0: path=/dev/dri/renderD128,mode=0660,deny-write=0,gid=993
+net0: name=eth0,bridge=vmbr0,firewall=1,host-managed=1,ip=dhcp,type=veth
+tags: media;oci;proxmenux
+```
+
+An application made of several images is one entry of the catalog and one installation. It creates one LXC per service on a private bridge, with fixed addresses and the names the services use to find each other, and starts them in order.
+
+## Update, modify, recreate and remove
+
+*Manage installed OCI applications* lists the registered installations. Before any action a container is compared with its record; one that no longer matches is neither modified nor deleted.
+
+| Operation | What changes | What is kept |
+|---|---|---|
+| **Update** | The rootfs is replaced by the image the saved tag publishes today | Record, container disks, host directories, network and devices |
+| **Modify** | An editor opens with the current resources, network, paths and GPU; the container is rebuilt with the changes | The data of container disks and host directories |
+| **Recreate** (multi-container) | Every container is rebuilt from the image it was installed with | Data, network and devices |
+| **Watchdog** | Whether the application is started again when it stops on its own | Everything; only the choice is saved |
+| **Remove** | The LXC, or every container of the application, its disks and its record | Host directories, with their content |
+
+An update is a transaction:
+
+1. The tag is resolved. When the registry still serves the installed digest, nothing is downloaded and the container is not touched.
+2. The new image is downloaded and verified, and the operation checks that the backup fits, before the container stops.
+3. The container is stopped and backed up.
+4. The new rootfs is imported and the record is applied again: mount points, environment, network, devices and security.
+5. The application is checked. When it answers, the record is published with the new digest. When it does not, the previous container is restored from the backup.
+
+Settings changed in Proxmox VE after the installation, such as memory, cores or start with the node, are carried into the new record. An operation interrupted by a closed terminal or a reboot is detected the next time the menu opens, and the previous installation can be recovered. A container restored from a backup on another host is registered again from the copy of the record it carries.
+
+A rolling tag is not an unattended update: the digest changes only through an explicit update.
+
+## From a Compose file or a docker run command to an oci-compose
+
+The converter reads a Compose file with one service. A `docker run` command and an image reference alone are first written as a Compose file and follow the same path, so the three produce the same kind of oci-compose.
+
+Starting from this definition:
+
+```yaml
+services:
+  app:
+    image: ghcr.io/example/app:latest
+    ports:
+      - 8080:8080
+    volumes:
+      - ./config:/config
+    environment:
+      - TZ=Europe/Madrid
+      - API_KEY=
+    restart: unless-stopped
+```
+
+each key becomes a field of the oci-compose:
+
+| Compose key | Field of the oci-compose | Result in Proxmox VE |
+|---|---|---|
+| `image` | `container_contract.image` | The image that is downloaded; its tag is resolved to a digest at each installation |
+| `ports` | `container_contract.ports`, `first_run.endpoints`, `catalog_ui.launch` | The LXC has its own address, so the published port is not used: the service answers on the container port. The first TCP port is taken as the web address |
+| `volumes` | `container_contract.volumes`, `proxmox.installer_profile.volume_preparations` | A container disk or a host directory for each path |
+| `environment` | `container_contract.environment` | Variables of the LXC. A name that reads as a password, token or key is asked as a secret |
+| `restart` | `container_contract.restart` | The watchdog is proposed by default |
+| `mem_limit` | `proxmox.installer_profile.resources.memory_default_mb` | The memory proposed for the LXC |
+| `cpu_shares` | `proxmox.installer_profile.resources.cpu_shares` | `cpuunits` of the LXC |
+| `ulimits` | `proxmox.installer_profile.resources.rlimits` | `lxc.prlimit.*` |
+| `shm_size` | `proxmox.installer_profile.tmpfs_mounts` | A tmpfs at `/dev/shm` of that size |
+| `user`, `working_dir`, `entrypoint`, `command`, `hostname`, `group_add` | `proxmox.installer_profile.runtime` | The process the LXC starts, its user, directory and groups |
+| `extra_hosts` | `proxmox.installer_profile.extra_hosts` | Entries of `/etc/hosts` in the container |
+| `devices` | `proxmox.installer_profile.device_requests` | A `devN` entry for each device, confirmed during the installation |
+| `runtime: nvidia` | `proxmox.installer_profile.device_requests` | The NVIDIA devices and the driver files of the host |
+| `healthcheck` | `proxmox.installer_profile.startup_healthcheck` | The check of the first start. It runs during installations and updates, not continuously |
+| `cap_add`, `sysctls`, `security_opt` | `proxmox.installer_profile.security` | Capabilities checked against the LXC model, `lxc.sysctl` entries and AppArmor or seccomp settings, each confirmed |
+| `privileged` | `proxmox.security_profile` | The LXC stays unprivileged; the privileged mode is offered as an explicit choice |
+| `network_mode` | `proxmox.installer_profile.network` | `host`, `bridge` and `default` all mean the network of the LXC, never the one of the Proxmox host |
+| `stop_grace_period` | `proxmox.defaults.shutdown_timeout_seconds` | The time a shutdown waits |
+| `labels`, `logging` | Kept in `container_contract.original_compose` only | Not applied: they are read by Docker tools |
+
+What has no translation stops the installation and is named: `pid: host`, a Compose file with several services given to this option, `configs`, external secrets, a `build` section without a published image, and shell substitutions such as `$(command)`.
+
+Besides those fields, the converter writes the blocks that describe the translation itself: where the definition came from, the keys it understood, the adaptations it applied and the state of each validation. They are listed in [Blocks ProxMenux writes](#blocks-proxmenux-writes).
+
+## The oci-compose, block by block
+
+A complete oci-compose has around 550 lines, and most of them are written by the converter. One written by hand contains only what its author decides; ProxMenux completes the rest when it reads the file.
+
+A file written this way describes one image. An application made of several images is read from its complete file, which carries the `compose_stack` block with its services.
+
+Two files of [`examples/`](examples/) are used below. Both install the same as the entry of the catalog with the same name:
+
+- [`jellyfin-official.oci-compose.json`](examples/jellyfin-official.oci-compose.json): two ports, an optional variable, three volumes with different owners, a GPU profile, a setting applied after the first start and a check of the service.
+- [`duplicati-official.oci-compose.json`](examples/duplicati-official.oci-compose.json): two secrets generated during the installation and the credentials shown at the end.
+
+The smallest valid file names the image and nothing else:
+
+```json
+{
+  "kind": "proxmenux.oci-template",
+  "container_contract": {
+    "image": { "reference": "traefik/whoami:latest" }
+  }
+}
+```
+
+### `kind`
+
+Always `"proxmenux.oci-template"`. It is how the file is recognised.
+
+### `catalog_ui`: how the application is presented
+
+```json
+"catalog_ui": {
+  "title": { "en_US": "Jellyfin Official" },
+  "tagline": { "en_US": "Official Jellyfin image with optional VA-API or NVIDIA acceleration." },
+  "category": "media",
+  "icon": "https://raw.githubusercontent.com/linuxserver/docker-templates/master/linuxserver.io/img/jellyfin-icon.png",
+  "website": "https://jellyfin.org/",
+  "documentation": "https://jellyfin.org/docs/general/installation/container/",
+  "repository": "https://github.com/jellyfin/jellyfin-packaging"
+}
+```
+
+| Field | What it is |
+|---|---|
+| `title` | The name shown in the menu, in the notes of the container and in ProxMenux Monitor. The name of the installation is taken from it |
+| `tagline`, `description` | One line and a longer text, shown on the page of the application |
+| `category` | One of the keys of `catalog/categories.json`: `media`, `backup`, `network`, `databases`, `documents`, `downloads`, `sharing`, `monitoring`, `smarthome`, `security`, `ai`, `tools`, `misc` and the others listed there |
+| `icon` | Address of the logo, used in the notes of the container and in the Monitor |
+| `website`, `documentation`, `repository` | Links of the project. The installation shows the documentation link when it asks about an optional variable or names a service the application needs |
+| `launch` | `scheme`, `port` and `path` of the web interface. `"port": null` declares a service with no web interface, together with an empty `first_run.endpoints` |
+
+Without this block the title is taken from the name of the image and the category is `misc`.
+
+### `container_contract`: what the image needs
+
+This block is the equivalent of the service of a Compose file.
+
+```json
+"container_contract": {
+  "service_name": "jellyfin",
+  "container_name": "jellyfin",
+  "image": { "reference": "jellyfin/jellyfin:latest" },
+  "ports": [
+    { "container_port": 8096 },
+    { "container_port": 7359, "protocol": "udp", "required": false }
+  ],
+  "environment": [
+    { "name": "JELLYFIN_PublishedServerUrl", "required": false,
+      "prompt": "Optional published URL for Jellyfin" }
+  ],
+  "volumes": [
+    { "container_path": "/config" },
+    { "container_path": "/cache" },
+    { "container_path": "/media", "default": "host-bind", "managed_volume": { "default_size_gb": 32 } }
+  ],
+  "restart": "unless-stopped"
+}
+```
+
+**`image.reference`** is the only required field of the file: the image as it would be written after `docker pull`, with its tag. The registry, the repository and the tag are worked out from it.
+
+**`service_name`** and **`container_name`** are the name of the service and the hostname proposed for the LXC. Without them both come from the title.
+
+**`ports`**. One entry for each port the application listens on.
+
+| Field | Default | What it is |
+|---|---|---|
+| `container_port` | — | The port inside the container. It is the one the service answers on |
+| `protocol` | `tcp` | `tcp` or `udp` |
+| `required` | `true` | `false` marks a port the application works without; the summary shows it as optional |
+
+The first TCP port is taken as the web address unless `first_run.endpoints` says otherwise.
+
+**`environment`**. One entry for each variable the installation sets.
+
+| Field | Default | What it is |
+|---|---|---|
+| `name` | — | The name of the variable |
+| `example` | empty | The value proposed. A variable with a value is installed with it in default mode and can be changed in advanced mode |
+| `required` | `true` | A required variable with no value is asked in both modes. An optional one is offered only in advanced mode |
+| `sensitive` | `false` | `true` asks the value hidden, asks it twice and masks it in the summary |
+| `prompt` | the name | The text of the question |
+| `container_address` | — | A value built from the address the container gets, written with the mark `@CONTAINER_ADDRESS@`, for example `"http://@CONTAINER_ADDRESS@"`. With a static address it is known before the installation; with DHCP it is resolved when the container gets its lease |
+
+The variables the image itself defines are imported with it and are not written here.
+
+**`volumes`**. One entry for each path that has to survive an update.
+
+| Field | Default | What it is |
+|---|---|---|
+| `container_path` | — | The path inside the container |
+| `installation_choice` | see below | Where the path may go: `managed-volume` (a container disk), `host-bind` (a host directory) |
+| `default` | `managed-volume` | The choice proposed |
+| `managed_volume.default_size_gb` | 16, or 8 for a path with content of the user | The size proposed for the container disk |
+| `managed_volume.backup` | `true` | Whether the disk is part of the backup of the container |
+| `read_only` | `false` | Mounts the path read-only |
+
+Where a path goes follows one rule. A path that holds content of the user, such as `/media`, `/downloads`, `/music` or `/backups`, is offered as a container disk or as a host directory, and the installation asks which. The list is in `catalog/volume-policy.json`. Every other path is state of the application and goes to a container disk without asking. Writing `"installation_choice": ["managed-volume", "host-bind"]` or `"default": "host-bind"` on a volume offers the host directory for a path that is not in that list.
+
+**`restart`**. With `unless-stopped`, `always` or `on-failure`, the watchdog is proposed by default: an application that stops on its own is started again.
+
+### `first_run`: what is shown when the installation ends
+
+```json
+"first_run": {
+  "endpoints": [
+    { "label": "Jellyfin WebUI", "scheme": "http", "port": 8096, "path": "/",
+      "source": "official-container-documentation" }
+  ]
+}
+```
+
+**`endpoints`** are the addresses printed at the end, written in the notes of the container and opened from the Monitor. Each one needs `label`, `scheme`, `port`, `path` and `source`, a free text that says where the address is documented. An empty list declares a service with no web interface: its ports are then shown as `IP:port` text and no link is offered.
+
+**`credentials`** are the logins printed at the end. From the Duplicati example:
+
+```json
+"credentials": [
+  { "label": "Duplicati web interface (password only)",
+    "type": "configured-or-installer-generated",
+    "username": "Not required (password only)", "password": null,
+    "password_environment": "DUPLICATI__WEBSERVICE_PASSWORD",
+    "change_required": false, "source": "duplicati-documentation", "retrieval": null }
+]
+```
+
+| `type` | Meaning |
+|---|---|
+| `static-default` | A login the image documents, written in `username` and `password` |
+| `configured-or-installer-generated` | The value of the variable named in `password_environment`, typed or generated during the installation |
+| `runtime-generated` | A password the application prints at its first start; `retrieval` says how it is read |
+
+### `proxmox.defaults`: the container that is proposed
+
+```json
+"proxmox": {
+  "defaults": { "memory_mb": 2048 }
+}
+```
+
+Only what differs from the defaults is written. The defaults are 2 cores, 1024 MB of memory, 512 MB of swap, an 8 GB rootfs, an unprivileged LXC with `nesting=1`, DHCP on `vmbr0`, the firewall on, and no start with the node. The fields are `cores`, `memory_mb`, `swap_mb`, `rootfs_size_gb`, `unprivileged`, `features`, `onboot` and `shutdown_timeout_seconds`. The storage and the bridge proposed are the ones of the node.
+
+### `proxmox.installer_profile`: what Compose cannot say
+
+This block holds the decisions of the installation. Each part is optional.
+
+**`generated_sensitive_environment`**: secrets the installation generates.
+
+```json
+"generated_sensitive_environment": {
+  "SETTINGS_ENCRYPTION_KEY": { "strategy": "token-hex", "bytes": 16, "prompt": false },
+  "DUPLICATI__WEBSERVICE_PASSWORD": { "strategy": "token-hex", "bytes": 12, "prompt": true }
+}
+```
+
+The variable is declared in `environment` with `"sensitive": true`. In default mode its value is generated. In advanced mode a variable with `"prompt": true` is asked, and left empty it is generated. The generated value is shown at the end when `first_run.credentials` names the variable.
+
+**`volume_preparations`**: who owns each new volume.
+
+```json
+"volume_preparations": [
+  { "container_path": "/config", "remove_lost_found": true,
+    "owner_strategy": "mapped-root", "only_when_mount_type": "managed-volume" },
+  { "container_path": "/media", "remove_lost_found": true,
+    "owner_strategy": "mapped-application-user", "only_when_mount_type": "managed-volume" }
+]
+```
+
+A new container disk is an empty filesystem owned by root that carries a `lost+found` directory. `owner_strategy` gives it to `mapped-root`, the root of the container, for an image that starts as root and takes ownership of its directories itself, or to `mapped-application-user`, the user 1000 the application writes with. Without this list every volume is prepared for `mapped-application-user`.
+
+**`startup_healthcheck`**: how the first start is checked.
+
+```json
+"startup_healthcheck": {
+  "scheme": "http", "port": 8096, "path": "/System/Info/Public",
+  "timeout_seconds": 180, "request_timeout_seconds": 10,
+  "stability_seconds": 4, "verify_tls": false
+}
+```
+
+The installation and every update wait up to `timeout_seconds` for that address to answer, and then `stability_seconds` more to see that it keeps answering. An update that does not pass the check is undone. Without this block the web address is checked, or that the container keeps running when there is no web address.
+
+**`hardware_acceleration`**: the choice of GPU.
+
+```json
+"hardware_acceleration": {
+  "prompt": "Hardware acceleration for Jellyfin",
+  "default": "none",
+  "profiles": [
+    { "id": "none", "label": "No acceleration (CPU)", "device_requests": [] },
+    { "id": "vaapi", "label": "Intel/AMD (VA-API)",
+      "device_requests": [
+        { "id": "vaapi-render", "kind": "character-device", "purpose": "vaapi",
+          "path_prompt": "GPU render device", "host_path_default": "/dev/dri/renderD128",
+          "container_path_strategy": "same-as-host", "mode": "0660", "deny_write": false,
+          "gid_strategy": "host-device-gid",
+          "environment": [
+            { "name": "LIBVA_DRIVER_NAME", "prompt": "VA-API driver",
+              "choices": ["auto", "radeonsi", "iHD", "i965"], "default": "auto", "omit_values": ["auto"] }
+          ] }
+      ] },
+    { "id": "nvidia", "label": "NVIDIA (NVENC/NVDEC)",
+      "device_requests": [
+        { "id": "nvidia-runtime", "kind": "nvidia-runtime", "purpose": "nvidia-cuda-nvenc-nvdec",
+          "device_selection": "all-requested-by-compose" }
+      ],
+      "environment": [ { "name": "NVIDIA_VISIBLE_DEVICES", "value": "all" } ] }
+  ]
+}
+```
+
+The installation shows one option for each profile the host can serve: a profile whose device is not on the host is not listed. Each profile declares the devices it passes and the variables it sets.
+
+| Field of a device request | What it is |
+|---|---|
+| `kind` | `character-device` for a device node such as a render node, or `nvidia-runtime` for an NVIDIA GPU with the driver files of the host |
+| `host_path_default`, `path_prompt` | The device proposed and the text that asks for it |
+| `container_path_strategy` | `same-as-host` keeps the path of the host inside the container |
+| `mode`, `gid_strategy` | The permissions of the device. `host-device-gid` reads the group from the device of the host, so no fixed `video` or `render` number is assumed |
+| `environment` | Variables asked with the device, with `choices` and the values that are left unset (`omit_values`) |
+
+A profile may also change the image, with `image`, for projects that publish one tag for each GPU vendor, and apply settings once the application is running, with `post_start_configurations`. In the Jellyfin example the VA-API and NVIDIA profiles write the transcoding and tone mapping settings to `encoding.xml` after Jellyfin creates it.
+
+**Other parts of the profile.**
+
+| Part | What it does |
+|---|---|
+| `completion_notes` | A list of texts printed when the installation ends, for what is left to do by hand |
+| `external_services` | Names of services the application needs already running, such as `["MariaDB"]`. They are announced before the installation asks how to reach them |
+| `generated_files` | Files written in the container before its first start, each with `container_path`, `content`, `owner` and `mode`. With `"only_if_missing": true` a file that already exists in a kept volume is not replaced |
+| `volume_owner` | `uid` and `gid` of the user the application writes with, when it is not 1000 |
+| `non_persistent_image_volumes` | Paths the image declares as volumes that are left inside the rootfs |
+| `runtime`, `resources`, `security`, `device_requests`, `tmpfs_mounts`, `extra_hosts` | What the Compose keys of the [translation table](#from-a-compose-file-or-a-docker-run-command-to-an-oci-compose) become |
+
+### `proxmox.security_profile`: privileges
+
+Without this block the LXC is unprivileged with the default AppArmor profile. `"optional_privileged_lxc": true` offers the privileged mode as a choice that defaults to no; `"requires_privileged_lxc": true` asks for it with a confirmation that states the risk. A GPU, a USB device or a serial port are passed as individual devices and need neither.
+
+### Blocks ProxMenux writes
+
+These blocks are part of every complete oci-compose. They are not written by hand: when a file does not bring them, they are added as the converter writes them for the same image, ports, variables and volumes.
+
+| Block | What it holds |
+|---|---|
+| `schema_version`, `id`, `status` | The version of the format, the identifier and the state of the review. `laboratory-validated` is given only by `catalog/verification.json`: a file that declares itself verified is read as not verified |
+| `source` | Where the definition came from and when it was generated |
+| `container_contract.original_compose` | The Compose file the oci-compose was translated from |
+| `compose_stack` | The services of the application, their order and their private network. For one image it describes a single service |
+| `compatibility` | The Compose keys that were understood and the blockers left |
+| `proxmox.adaptations` | Each difference with Docker, its reason and its effect |
+| `validation`, `lifecycle` | The state of each test and how updates are detected |
+
+What the author writes always wins over what is added.
+
+## Writing and testing an oci-compose
+
+1. **Write the file.** Start from one of the [`examples/`](examples/) or from the smallest file above, and add the blocks the application needs. Any file of `catalog/apps/` or `catalog/curated/` is also a valid starting point.
+2. **Copy it to the node**, for example to `/root/oci-compose.json`, or publish it where the node can download it.
+3. **Open OCI manager Apps** from the ProxMenux menu and choose *Install an image that is not in the catalog*.
+4. **Choose how it is given**: *Read an oci-compose from a file of this host* or *Download an oci-compose from an address*.
+5. **Read the result.** A file with errors is not installed, and each error names the field:
+
+   ```
+   The oci-compose has errors:
+     container_contract/ports: array
+     container_contract/volumes/3/container_path: required
+     first_run/endpoints/0: 'label' is a required property
+   ```
+
+   A file that is not valid JSON reports the line and the column of the fault.
+6. **Review.** A valid file shows what it installs: image, web address, ports, persistent paths, the variables the installation asks for and the files it writes. The image is looked up in its registry, and its architectures are listed. Answering no leaves the node untouched.
+7. **Install** with default or advanced settings. The installation is the one of any application of the catalog.
+8. **Adjust.** Remove the test installation from *Manage installed OCI applications*, edit the file and read it again.
+
+An oci-compose decides what is mounted and with which privileges, so the review says it before installing. Install only files that come from a source you trust.
+
+The record of an installation, `/usr/local/share/proxmenux/oci/instances/<VMID>/oci-compose.json`, can be read the same way: only its `template` block is used, as it was installed, and none of the answers of that installation. That record also holds the values typed during the installation, passwords included, so it is not a file to publish as it is.
+
+The checks of the engine run with:
+
+```bash
+cd oci
+python3 -m unittest discover -s tests -p 'test_*.py'
+```
+
+`tests/test_install_from_oci_compose.py` checks, among other things, that the two files of `examples/` install what the catalog installs.
+
+## Adding an application to the catalog
+
+An application reaches the catalog in three steps.
+
+1. **Suggest it** in [Discussions](https://github.com/MacRimi/ProxMenux/discussions) with the image, the registry it is published in and the category.
+2. **Try it.** Installing it from its Compose file or its `docker run` command shows whether the image runs as a native LXC. When it needs something Compose cannot say, an oci-compose written by hand lets that be tested as well. The file that worked, attached to the suggestion, is what the entry of the catalog is written from.
+3. **Validate it.** An application tested for real is recorded in `catalog/verification.json` and shown as verified in the installer. [VALIDATION.md](VALIDATION.md) lists the verified applications and describes a test: install, check that it works, restart, update and remove.
+
+---
+
+The sections that follow are the design and laboratory notes of the engine.
 
 ## Design
 
@@ -106,9 +581,10 @@ assuming that every Compose `privileged: true` is an image requirement:
   blocked until a safe native LXC translation is validated; it must never be
   mislabeled as ordinary GPU access or silently promoted to privileged mode.
 
-Before creating an LXC, the tool prints a redacted deployment plan and requires
-the exact confirmation `INSTALAR`. Remote credentials are handled by normal SSH;
-they are never placed in a template or command argument.
+Before creating an LXC, the installer shows the installation summary with every
+secret masked and asks for confirmation: `Install with this configuration?` in
+the menu and `Install? [y/N]` in the `install` command. Remote credentials are
+handled by normal SSH; they are never placed in a template or command argument.
 
 Image downloads run in a pseudo-terminal when `script` is available, allowing
 Skopeo layer progress to remain visible. The final result lists the detected IP,

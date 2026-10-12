@@ -23,7 +23,7 @@
     {
       "id": "sources",
       "title": "How the image is described",
-      "intro": "The first screen asks how the image is described. There are four ways to give a complete definition and a fifth that uses only the image name.",
+      "intro": "The first screen asks how the image is described. Four ways give a definition that is translated, a fifth uses only the image name, and two read an oci-compose that is already written.",
       "blocks": [
         {
           "table": {
@@ -33,7 +33,9 @@
               ["Read its Compose file from a file of this host", "A path on the node, <code>/root/docker-compose.yml</code> by default. The file must exist and be at most 256 KiB."],
               ["Download its Compose file from an address", "An <code>http://</code> or <code>https://</code> address that serves the raw YAML. At most 256 KiB are downloaded."],
               ["Paste its docker run command in the terminal", "The command published by the project. Ports, environment, volumes, devices, capabilities, user, shared memory and the other supported options are translated."],
-              ["Only the image reference, with no Compose file", "A reference such as <code>ghcr.io/user/application:latest</code>. The registry is queried and the OCI metadata of the image is kept."]
+              ["Only the image reference, with no Compose file", "A reference such as <code>ghcr.io/user/application:latest</code>. The registry is queried and the OCI metadata of the image is kept."],
+              ["Read an oci-compose from a file of this host", "A JSON file on the node, <code>/root/oci-compose.json</code> by default, of at most 2 MiB. It is not translated: it is checked and installed as it is written."],
+              ["Download an oci-compose from an address", "An <code>http://</code> or <code>https://</code> address that serves the JSON file. At most 2 MiB are downloaded."]
             ]
           }
         },
@@ -41,7 +43,7 @@
           "figure": {
             "src": "/oci-manager/custom-source-menu.png",
             "alt": "Menu that asks how an image that is not in the catalog is described",
-            "caption": "The five ways to describe an image that is not in the catalog."
+            "caption": "The ways to describe an image that is not in the catalog."
           }
         }
       ]
@@ -109,6 +111,43 @@
               }
             ]
           }
+        }
+      ]
+    },
+    {
+      "id": "oci-compose",
+      "title": "An oci-compose written by hand",
+      "intro": "An oci-compose is the JSON file an application is installed from. The catalog keeps one for each of its applications, and the same format can be written by hand and installed with this option.",
+      "blocks": [
+        {
+          "p": "One written by hand states what its author decides: the image, its ports, variables and volumes, and what the installation asks. ProxMenux completes the rest when it reads the file. It can say what a Compose file cannot: the text of a question, a password generated during the installation, a GPU profile, the owner of each volume, the check of the first start or the credentials shown at the end."
+        },
+        {
+          "steps": {
+            "items": [
+              {
+                "title": "Check",
+                "body": "A file with errors is not installed. Each error names the field it is in, and a file that is not valid JSON reports the line and the column."
+              },
+              {
+                "title": "Review",
+                "body": "A valid file shows what it installs: image, web address, ports, persistent paths, the variables the installation asks for and the files it writes."
+              },
+              {
+                "title": "Install",
+                "body": "The installation is the one of any application of the catalog, with default or advanced settings."
+              }
+            ]
+          }
+        },
+        {
+          "calloutWarning": {
+            "title": "A file that decides privileges",
+            "body": "An oci-compose decides what is mounted in the container and with which privileges. The review says it before installing: install only files that come from a source you trust."
+          }
+        },
+        {
+          "p": "The format is described block by block, with two complete examples, in the <readmeLink>README of the OCI engine</readmeLink>. The record of an installation can be read the same way: only the template it was installed from is used, and none of the answers of that installation."
         }
       ]
     },

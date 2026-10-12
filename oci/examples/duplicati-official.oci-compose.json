@@ -1,0 +1,83 @@
+{
+  "kind": "proxmenux.oci-template",
+  "catalog_ui": {
+    "title": {
+      "en_US": "Duplicati Official"
+    },
+    "tagline": {
+      "en_US": "Official Duplicati image: encrypted, incremental backups to local, network and cloud storage."
+    },
+    "category": "backup",
+    "icon": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/duplicati.webp",
+    "website": "https://www.duplicati.com/",
+    "documentation": "https://docs.duplicati.com/",
+    "repository": "https://github.com/duplicati/duplicati"
+  },
+  "container_contract": {
+    "service_name": "duplicati",
+    "container_name": "duplicati",
+    "image": {
+      "reference": "duplicati/duplicati:latest"
+    },
+    "ports": [
+      {
+        "container_port": 8200
+      }
+    ],
+    "environment": [
+      {
+        "name": "SETTINGS_ENCRYPTION_KEY",
+        "required": true,
+        "sensitive": true
+      },
+      {
+        "name": "DUPLICATI__WEBSERVICE_PASSWORD",
+        "required": true,
+        "sensitive": true,
+        "prompt": "Password of the Duplicati web interface"
+      }
+    ],
+    "volumes": [
+      {
+        "container_path": "/data"
+      },
+      {
+        "container_path": "/backups"
+      },
+      {
+        "container_path": "/source"
+      }
+    ],
+    "restart": "unless-stopped"
+  },
+  "first_run": {
+    "credentials": [
+      {
+        "label": "Duplicati web interface (password only)",
+        "type": "configured-or-installer-generated",
+        "username": "Not required (password only)",
+        "password": null,
+        "password_environment": "DUPLICATI__WEBSERVICE_PASSWORD",
+        "change_required": false,
+        "source": "duplicati-documentation",
+        "retrieval": null
+      }
+    ]
+  },
+  "proxmox": {
+    "installer_profile": {
+      "generated_sensitive_environment": {
+        "SETTINGS_ENCRYPTION_KEY": {
+          "strategy": "token-hex",
+          "bytes": 16,
+          "prompt": false
+        },
+        "DUPLICATI__WEBSERVICE_PASSWORD": {
+          "strategy": "token-hex",
+          "bytes": 12,
+          "prompt": true
+        }
+      }
+    }
+  }
+}
