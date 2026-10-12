@@ -5076,7 +5076,7 @@
       "Miscellaneous"
     ],
     "notes": [
-      "Add extension store repositories in Settings after first start (official repo: https://github.com/fccview/fccview-degoog-extensions).",
+      "Add extension store repositories in Settings after first start (official repo: https://github.com/degoog-org/official-extensions).",
       "If you need to access to settings page, you can find the password here `cat /opt/degoog/.env`."
     ],
     "warnings": [
@@ -6036,6 +6036,43 @@
     "is_dev": false,
     "execute_in": [
       "pve"
+    ],
+    "config_path": "",
+    "os": "debian"
+  },
+  {
+    "name": "Dreeve",
+    "slug": "dreeve",
+    "desc": "Dreeve is a self-hosted dashboard for sports and fitness data. It imports your Strava activities and turns them into statistics, heatmaps, gear tracking, training analysis and yearly overviews - formerly known as Statistics for Strava.",
+    "script": "ct/dreeve.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/dreeve.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/dreeve.sh",
+    "type": "lxc",
+    "type_id": "nm9bra8mzye2scg",
+    "categories": [
+      "scriptcat00009"
+    ],
+    "category_names": [
+      "Monitoring & Analytics"
+    ],
+    "notes": [
+      "Activity data is stored in a SQLite database under /opt/dreeve_data via DATABASE_DIRECTORY. Back up that directory.",
+      "Not included: the Go-based fit-tool and shoutrrr notification binary that the official image bundles. FIT file import and push notifications are therefore unavailable."
+    ],
+    "warnings": [
+      "Dreeve does nothing without Strava credentials. Create an API application at https://www.strava.com/settings/api and put STRAVA_CLIENT_ID, STRAVA_CLIENT_SECRET and STRAVA_REFRESH_TOKEN into /opt/dreeve/.env.local, then restart the service.",
+      "Upstream only documents a Docker deployment. This script reproduces that setup natively - FrankenPHP as the server (the same one their image is based on) plus composer install - but it is not a path the project supports, so an upstream change can break it."
+    ],
+    "port": 8080,
+    "website": "https://dreeve.app/",
+    "documentation": "https://docs.dreeve.app/",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/dreeve.webp",
+    "updateable": true,
+    "privileged": false,
+    "has_arm": false,
+    "is_dev": true,
+    "execute_in": [
+      "lxc"
     ],
     "config_path": "",
     "os": "debian"
