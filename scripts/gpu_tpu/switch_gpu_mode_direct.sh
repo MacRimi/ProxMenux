@@ -58,6 +58,7 @@ declare -a SELECTED_GPU_IDX=()
 
 declare -a SELECTED_IOMMU_IDS=()
 declare -a SELECTED_PCI_SLOTS=()
+declare -a SELECTED_GPU_BDFS=()
 declare -a SELECTED_NVIDIA_BDFS=()
 declare -a SELECTED_LEGACY_IOMMU_IDS=()
 
@@ -510,6 +511,7 @@ validate_vm_mode_blocked_ids() {
 collect_selected_iommu_ids() {
   SELECTED_IOMMU_IDS=()
   SELECTED_PCI_SLOTS=()
+  SELECTED_GPU_BDFS=()
   SELECTED_NVIDIA_BDFS=()
   SELECTED_LEGACY_IOMMU_IDS=()
 
@@ -521,6 +523,7 @@ collect_selected_iommu_ids() {
     slot="${pci#0000:}"
     slot="${slot%.*}"
     SELECTED_PCI_SLOTS+=("$slot")
+    SELECTED_GPU_BDFS+=("$pci")
 
     local -a group_bdfs=()
     mapfile -t group_bdfs < <(_get_iommu_group_bdfs "$pci")
@@ -721,9 +724,12 @@ detect_affected_vms_for_selected() {
   local conf
   for conf in /etc/pve/qemu-server/*.conf; do
     [[ -f "$conf" ]] || continue
-    local matched=false slot
-    for slot in "${SELECTED_PCI_SLOTS[@]}"; do
-      if grep -qE "hostpci[0-9]+:.*(0000:)?${slot}(\\.[0-7])?([,[:space:]]|$)" "$conf"; then
+    # A VM has the GPU when it has the function of the GPU itself. Another
+    # function at the same slot, as a USB controller, is a device of its own.
+    local matched=false gpu
+    for gpu in "${SELECTED_GPU_BDFS[@]}"; do
+      # shellcheck disable=SC2046
+      if [[ -n "$(_vm_gpu_hostpci_indexes "$conf" "$gpu" $(_get_iommu_group_bdfs "$gpu"))" ]]; then
         matched=true
         break
       fi
@@ -806,17 +812,16 @@ apply_vm_action_for_lxc_mode() {
     fi
 
     if [[ "$VM_ACTION" == "remove_gpu_keep_onboot" && -f "$conf" ]]; then
-      # Primary cleanup: strip hostpci lines whose BDF matches any of
-      # the GPU's selected slots. Matches both the PF function (.0) and
-      # sibling audio/HDMI codecs (.1, typical for discrete cards).
-      #
-      # Precise regex: the slot must be followed by ".<function>" and a
-      # delimiter. Kept in sync with switch_gpu_mode.sh — a looser
-      # substring match would wipe unrelated hostpci entries (e.g. slot
-      # "00:02" matching as a substring inside a dGPU BDF 0000:02:00.0).
-      local slot
-      for slot in "${SELECTED_PCI_SLOTS[@]}"; do
-        sed -E -i "/^hostpci[0-9]+:[[:space:]]*(0000:)?${slot}\.[0-7]([,[:space:]]|$)/d" "$conf"
+      # Primary cleanup: remove the entries that carry the GPU — its own
+      # function, the audio at its slot and the devices of its IOMMU
+      # group. Other functions at the same slot stay in the VM.
+      local gpu _gpu_idx
+      for gpu in "${SELECTED_GPU_BDFS[@]}"; do
+        while IFS= read -r _gpu_idx; do
+          [[ -n "$_gpu_idx" ]] || continue
+          _vm_remove_hostpci_index "$vmid" "$_gpu_idx" "$LOG_FILE"
+        # shellcheck disable=SC2046
+        done < <(_vm_gpu_hostpci_indexes "$conf" "$gpu" $(_get_iommu_group_bdfs "$gpu"))
       done
       msg_ok "$(translate 'GPU removed from VM config') ${vmid}" | tee -a "$screen_capture"
 

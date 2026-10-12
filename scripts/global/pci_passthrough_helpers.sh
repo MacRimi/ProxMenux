@@ -156,6 +156,59 @@ function _vm_remove_hostpci_index() {
   qm set "$vmid" --delete "hostpci${idx}" >>"$log" 2>&1
 }
 
+# The hostpciN entries of a VM that carry a GPU, one index per line.
+#
+# A GPU is its own function, the audio functions at its slot (the HDMI codec
+# it is added with) and the other devices of its IOMMU group, which is what
+# the passthrough setup gives a VM. Any other function at the same slot is a
+# device of its own: on an AMD APU the USB controllers share the slot of the
+# integrated graphics and each one sits in its own IOMMU group.
+#
+# Nothing is printed when the VM does not have the GPU itself, so a VM that
+# only uses one of those neighbours is not taken for one that uses the GPU.
+# Only the current configuration is read, not its snapshots.
+#
+# Usage: _vm_gpu_hostpci_indexes <vm.conf> <gpu_bdf> [iommu_group_bdf]...
+function _vm_gpu_hostpci_indexes() {
+  local conf="$1" gpu="$2"
+  shift 2
+  [[ -f "$conf" && -n "$gpu" ]] || return 1
+  [[ "$gpu" == 0000:* ]] || gpu="0000:${gpu}"
+  gpu=$(printf '%s' "$gpu" | tr 'A-F' 'a-f')
+  local slot="${gpu%.*}" sysfs="${PMX_PCI_SYSFS:-/sys/bus/pci/devices}"
+  local line idx value item bdf class member kind has_gpu=0
+  local -a mine=()
+  while IFS= read -r line; do
+    [[ "$line" == \[* ]] && break
+    [[ "$line" =~ ^hostpci([0-9]+):[[:space:]]*([^,[:space:]]+) ]] || continue
+    idx="${BASH_REMATCH[1]}"
+    value="${BASH_REMATCH[2]}"
+    kind=""
+    for item in ${value//;/ }; do
+      [[ "$item" =~ ^(0000:)?([0-9a-fA-F]{2}:[0-9a-fA-F]{2})(\.[0-7])?$ ]] || continue
+      bdf=$(printf '0000:%s%s' "${BASH_REMATCH[2]}" "${BASH_REMATCH[3]}" | tr 'A-F' 'a-f')
+      if [[ "$bdf" == "$gpu" || "$bdf" == "$slot" ]]; then
+        # The GPU, by its function or by its whole slot.
+        kind="gpu"
+        continue
+      fi
+      [[ -n "$kind" ]] && continue
+      if [[ "${bdf%.*}" == "$slot" ]]; then
+        class=$(cat "${sysfs}/${bdf}/class" 2>/dev/null)
+        [[ "${class:2:2}" == "04" ]] && kind="with"
+      fi
+      for member in "$@"; do
+        [[ "$member" == 0000:* ]] || member="0000:${member}"
+        [[ "$(printf '%s' "$member" | tr 'A-F' 'a-f')" == "$bdf" ]] && kind="with"
+      done
+    done
+    [[ "$kind" == "gpu" ]] && has_gpu=1
+    [[ -n "$kind" ]] && mine+=("$idx")
+  done < "$conf"
+  (( has_gpu == 1 )) || return 0
+  printf '%s\n' "${mine[@]}"
+}
+
 # Robust LXC stop for switch-mode / passthrough flows.
 #
 # A plain `pct stop` can hang indefinitely when:
@@ -226,15 +279,18 @@ function _pci_next_hostpci_index() {
   echo "$idx"
 }
 
+# Whether the VM has this device, by its function or by its whole slot.
+# Another function at the same slot is a different device: on an AMD APU the
+# USB controllers share the slot of the integrated graphics.
 function _pci_slot_assigned_to_vm() {
   local pci_full="$1"
   local vmid="$2"
-  local slot_base
-  slot_base="${pci_full#0000:}"
-  slot_base="${slot_base%.*}"
+  local bdf slot_base
+  bdf="${pci_full#0000:}"
+  slot_base="${bdf%.*}"
 
   qm config "$vmid" 2>/dev/null \
-    | grep -qE "^hostpci[0-9]+:.*(0000:)?${slot_base}(\\.[0-7])?([,[:space:]]|$)"
+    | grep -qE "^hostpci[0-9]+:.*(0000:)?(${bdf}|${slot_base})([,;[:space:]]|$)"
 }
 
 function _pci_function_assigned_to_vm() {

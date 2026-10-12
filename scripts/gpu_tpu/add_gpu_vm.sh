@@ -458,12 +458,14 @@ _is_pci_slot_assigned_to_vm() {
 
     local pci_full="$1"
     local vmid="$2"
-    local slot_base
-    slot_base="${pci_full#0000:}"
-    slot_base="${slot_base%.*}"   # 01:00
+    local bdf slot_base
+    bdf="${pci_full#0000:}"       # 01:00.0
+    slot_base="${bdf%.*}"         # 01:00
 
+    # The device itself or its whole slot; another function at the same slot
+    # is a different device.
     qm config "$vmid" 2>/dev/null \
-        | grep -qE "^hostpci[0-9]+:.*(0000:)?${slot_base}(\\.[0-7])?([,[:space:]]|$)"
+        | grep -qE "^hostpci[0-9]+:.*(0000:)?(${bdf}|${slot_base})([,;[:space:]]|$)"
 }
 
 # Match a specific PCI function when possible.
@@ -1453,7 +1455,9 @@ check_switch_mode() {
         local vmid
         vmid=$(basename "$conf" .conf)
         [[ "$vmid" == "$SELECTED_VMID" ]] && continue  # same target VM, no conflict
-        if grep -qE "hostpci[0-9]+:.*${pci_slot}" "$conf"; then
+        # Another VM has the GPU when it has the function of the GPU itself;
+        # a neighbour at the same slot, as a USB controller, is not the GPU.
+        if [[ -n "$(_vm_gpu_hostpci_indexes "$conf" "$SELECTED_GPU_PCI" "${IOMMU_DEVICES[@]}")" ]]; then
             vm_src_id="$vmid"
             vm_src_name=$(grep "^name:" "$conf" 2>/dev/null | awk '{print $2}')
             break
@@ -2008,12 +2012,14 @@ cleanup_vm_config() {
     local src_conf="/etc/pve/qemu-server/${SWITCH_VM_SRC}.conf"
     if [[ -f "$src_conf" ]]; then
         msg_info "$(translate 'Removing GPU from VM') ${SWITCH_VM_SRC}..."
-        # Precise regex: slot must be followed by ".<function>" and a
-        # delimiter. Kept in sync with switch_gpu_mode.sh. A looser
-        # ".*${pci_slot}" would match the slot as a substring and wipe
-        # unrelated hostpci entries (e.g. slot "00:02" matching inside
-        # a dGPU BDF 0000:02:00.0).
-        sed -E -i "/^hostpci[0-9]+:[[:space:]]*(0000:)?${pci_slot}\.[0-7]([,[:space:]]|$)/d" "$src_conf"
+        # Only the entries that carry the GPU are removed: its own function,
+        # the audio at its slot and the devices of its IOMMU group. Other
+        # functions at the same slot stay in the source VM.
+        local _gpu_idx
+        while IFS= read -r _gpu_idx; do
+            [[ -n "$_gpu_idx" ]] || continue
+            _vm_remove_hostpci_index "$SWITCH_VM_SRC" "$_gpu_idx" "$LOG_FILE"
+        done < <(_vm_gpu_hostpci_indexes "$src_conf" "$SELECTED_GPU_PCI" "${IOMMU_DEVICES[@]}")
         msg_ok "$(translate 'GPU removed from VM') ${SWITCH_VM_SRC}" | tee -a "$screen_capture"
 
         # Cascade cleanup: detect audio companions orphaned in the
