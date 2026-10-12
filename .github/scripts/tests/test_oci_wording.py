@@ -44,7 +44,8 @@ def function(path, name, **dependencies):
         node.body = [n for n in node.body if not isinstance(n, ast.ImportFrom)]
     scope = dict(translate=lambda text: text, ConversionError=ConversionError,
                  UserCancelled=UserCancelled, Any=Any, yaml=__import__('yaml'), json=json,
-                 Path=Path, MENU_SIZE=(20, 80), MAX_COMPOSE_BYTES=256*1024)
+                 Path=Path, MENU_SIZE=(20, 80), MAX_COMPOSE_BYTES=256*1024,
+                 MAX_OCI_COMPOSE_BYTES=2*1024*1024, OCI_COMPOSE='oci-compose')
     scope.update(dependencies)
     exec(compile(ast.fix_missing_locations(ast.Module(body=[node], type_ignores=[])),
                  str(path), 'exec'), scope)
