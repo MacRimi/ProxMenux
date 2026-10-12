@@ -791,6 +791,7 @@ class HealthPersistence:
                     resolution_type = COALESCE(resolution_type, 'auto'),
                     resolution_reason = ?
                 WHERE error_key = ? AND resolved_at IS NULL
+                  AND NOT (acknowledged = 1 AND IFNULL(suppression_hours, 0) = -1)
             ''', (now, reason, error_key))
 
             if cursor.rowcount > 0:
@@ -904,10 +905,14 @@ class HealthPersistence:
 
             # Check if this error was acknowledged (dismissed)
             cursor.execute('''
-                SELECT acknowledged FROM errors WHERE error_key = ?
+                SELECT acknowledged, suppression_hours FROM errors WHERE error_key = ?
             ''', (error_key,))
             row = cursor.fetchone()
 
+            if row and row[0] == 1 and row[1] == -1:
+                # Silenced permanently: it stays silenced if the condition
+                # comes back, until the user re-enables it.
+                return
             if row and row[0] == 1:
                 # Dismissed error that naturally resolved - delete entirely
                 cursor.execute('DELETE FROM errors WHERE error_key = ?', (error_key,))
@@ -1297,6 +1302,13 @@ class HealthPersistence:
             now = datetime.now()
             now_iso = now.isoformat()
 
+            # A permanent dismissal that was closed only for its age is kept.
+            cursor.execute(
+                'UPDATE errors SET resolved_at = NULL, resolution_type = NULL, resolution_reason = NULL '
+                'WHERE acknowledged = 1 AND suppression_hours = -1 AND resolution_reason IN (%s)'
+                % ','.join('?' * len(self._AGED_OUT_REASONS)),
+                tuple(sorted(self._AGED_OUT_REASONS)))
+
             # Delete resolved errors older than 7 days
             cutoff_resolved = (now - timedelta(days=7)).isoformat()
             cursor.execute('DELETE FROM errors WHERE resolved_at < ?', (cutoff_resolved,))
@@ -1463,6 +1475,14 @@ class HealthPersistence:
         # NOTE: nothing here touches `disk_observations`. That table is the
         # permanent history of each disk and no cycle removes or hides rows.
     
+    # Why the stale cleanup closes a record when nothing else did: its age.
+    _AGED_OUT_REASONS = frozenset({
+        'Log error aged out (>48h)',
+        'Temperature error stale (>24h no activity)',
+        'Update/security notice aged out (>7d)',
+        'Stale error (no activity >7d)',
+    })
+
     def _cleanup_stale_resources(self):
         """Resolve errors for resources that no longer exist.
         
@@ -1490,7 +1510,8 @@ class HealthPersistence:
         # An error is considered unresolved if resolution_type is NULL or empty
         # (resolved_at alone is not sufficient - it may be in an inconsistent state)
         cursor.execute('''
-            SELECT id, error_key, category, reason, first_seen, last_seen, severity FROM errors 
+            SELECT id, error_key, category, reason, first_seen, last_seen, severity,
+                   acknowledged, suppression_hours FROM errors
             WHERE resolution_type IS NULL OR resolution_type = ''
         ''')
         active_errors = cursor.fetchall()
@@ -1694,7 +1715,9 @@ class HealthPersistence:
                 return 0
         
         for error_row in active_errors:
-            err_id, error_key, category, reason, first_seen, last_seen, severity = error_row
+            (err_id, error_key, category, reason, first_seen, last_seen, severity,
+             acknowledged, suppression_hours) = error_row
+            permanent = acknowledged == 1 and suppression_hours == -1
             should_resolve = False
             resolution_reason = None
             age_hours = get_age_hours(first_seen)
@@ -1899,6 +1922,12 @@ class HealthPersistence:
                 should_resolve = True
                 resolution_reason = 'Stale error (no activity >7d)'
             
+            # A problem silenced permanently is not recorded again on purpose,
+            # so its lack of activity says nothing: only its resource going
+            # away ends it. The user brings it back from Active Suppressions.
+            if should_resolve and permanent and resolution_reason in self._AGED_OUT_REASONS:
+                should_resolve = False
+
             if should_resolve:
                 cursor.execute('''
                     UPDATE errors SET resolved_at = ?, resolution_type = 'auto', resolution_reason = ?
@@ -2348,6 +2377,10 @@ class HealthPersistence:
         
         updated_count = 0
         for err_id, error_key, category, old_hours in dismissed:
+            if old_hours == -1:
+                # A permanent dismissal is the user's choice for that alert,
+                # and only ends from Active Suppressions.
+                continue
             setting_key = None
             for skey, meta in self._get_category_labels().items():
                 if meta['category'] == category:

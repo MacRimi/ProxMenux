@@ -1618,6 +1618,7 @@ class NotificationManager:
     # opt-in. Mirrors the same lists from _passes_cooldown.
     _DIGEST_EXEMPT_EVENTS = frozenset({
         'backup_complete', 'backup_fail', 'backup_start',
+        'host_backup_complete', 'host_backup_fail', 'host_backup_start',
         'replication_complete', 'replication_fail',
         'vm_start', 'vm_stop', 'vm_shutdown', 'vm_restart',
         'ct_start', 'ct_stop', 'ct_shutdown', 'ct_restart',
@@ -2125,6 +2126,7 @@ class NotificationManager:
         # always be delivered. A 10s cooldown prevents exact duplicates
         # (webhook + tasks) but allows repeated backup jobs to report.
         _ALWAYS_DELIVER = {'backup_complete', 'backup_fail', 'backup_start',
+                           'host_backup_complete', 'host_backup_fail', 'host_backup_start',
                            'replication_complete', 'replication_fail'}
         if event.event_type in _ALWAYS_DELIVER and cooldown_str is None:
             cooldown = 10
