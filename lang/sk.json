@@ -4550,7 +4550,7 @@
   "Password reset completed.": "Obnova hesla je dokončená.",
   "Password to access the aMule web interface": "Heslo pre prístup k webovému rozhraniu aMule",
   "Passwords do not match. Please try again.": "Heslá sa nezhodujú. Skúste to znova.",
-  "Paste an oci-compose in the terminal": "Vložte oci-compose do terminálu",
+  "Paste an oci-compose in the terminal": "Vložiť oci-compose do terminálu",
   "Paste it here and press Ctrl+D on an empty line.": "Vložte ho sem a stlačte Ctrl+D na prázdne riadky.",
   "Paste its Compose file in the terminal": "Vložiť súbor Compose v termináli",
   "Paste its docker run command in the terminal": "Vložiť príkaz docker run v termináli",

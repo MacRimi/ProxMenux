@@ -4550,7 +4550,7 @@
   "Password reset completed.": "Redefinição de senha concluída.",
   "Password to access the aMule web interface": "Senha para acessar a interface web aMule",
   "Passwords do not match. Please try again.": "As senhas não coincidem. Por favor, tente novamente.",
-  "Paste an oci-compose in the terminal": "cole um oci-compose no terminal",
+  "Paste an oci-compose in the terminal": "Cole um oci-compose no terminal",
   "Paste it here and press Ctrl+D on an empty line.": "Colar aqui e pressionar Ctrl+D em uma linha vazia.",
   "Paste its Compose file in the terminal": "Colar o seu ficheiro Compor no terminal",
   "Paste its docker run command in the terminal": "Colar seu comando de execução docker no terminal",

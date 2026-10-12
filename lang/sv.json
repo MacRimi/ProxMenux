@@ -7788,7 +7788,7 @@
   "nvidia-smi not found after install. Check log:": "nvidia-smi hittades inte efter installation. Kontrollera logg:",
   "nvidia-smi not found in PATH. Please verify the driver installation.": "nvidia-smi hittades inte i PATH. Vänligen verifiera drivrutinsinstallationen.",
   "nvidia-smi not found in container": "nvidia-smi hittades inte i behållaren",
-  "oci-compose of the application": "oci-compose av ansökan",
+  "oci-compose of the application": "Applikationens oci-compose",
   "of": "av",
   "of free disk space.": "ledigt diskutrymme.",
   "older firmware may increase passthrough instability": "äldre firmware kan öka passthrough-instabiliteten",
