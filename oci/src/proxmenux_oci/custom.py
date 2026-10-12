@@ -454,16 +454,16 @@ def describe_oci_compose(template: dict[str, Any]) -> str:
     return '\n' + '\n'.join(lines)
 
 
-def _read_pasted(ui, title: str | None = None) -> str:
+def _read_pasted(ui, title: str | None = None, limit: int = MAX_COMPOSE_BYTES, missing: str | None = None) -> str:
     """The definition is pasted in the terminal: dialog cannot take it."""
     console.show_logo()
     console.msg_title(title or translate('Compose file of the application'))
     console.msg_info2(translate('Paste it here and press Ctrl+D on an empty line.'))
     print()
-    text = sys.stdin.read(MAX_COMPOSE_BYTES + 1)
+    text = sys.stdin.read(limit + 1)
     if not text.strip():
-        raise UserCancelled(translate('No docker run command was given') if title is not None
-                            else translate('No Compose file was given'))
+        raise UserCancelled(missing or (translate('No docker run command was given') if title is not None
+                                        else translate('No Compose file was given')))
     return text
 
 
@@ -477,11 +477,15 @@ def read_definition(ui) -> tuple[str, str]:
         ('url', translate('Download its Compose file from an address')),
         ('run', translate('Paste its docker run command in the terminal')),
         ('image', translate('Only the image reference, with no Compose file')),
+        ('oci-compose-paste', translate('Paste an oci-compose in the terminal')),
         ('oci-compose', translate('Read an oci-compose from a file of this host')),
         ('oci-compose-url', translate('Download an oci-compose from an address')),
     ], 'paste', title=translate('Image that is not in the catalog'), size=MENU_SIZE)
     if source is None:
         raise UserCancelled(translate('Image selection was cancelled'))
+    if source == 'oci-compose-paste':
+        return _read_pasted(ui, translate('oci-compose of the application'), MAX_OCI_COMPOSE_BYTES,
+                            translate('No oci-compose was given')), OCI_COMPOSE
     if source == 'oci-compose':
         return _read_file(ui.ask(translate('Path of the oci-compose file'), '/root/oci-compose.json'),
                           MAX_OCI_COMPOSE_BYTES), OCI_COMPOSE

@@ -4,20 +4,24 @@ catalog, or the record of an installed application, of which only the template
 is read."""
 
 import copy
+import io
 import json
 from pathlib import Path
 import sys
 import tempfile
+from types import SimpleNamespace
 import unittest
 from unittest.mock import patch
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
-from proxmenux_oci import custom
+from proxmenux_oci import custom, i18n
 from proxmenux_oci.catalog import Catalog
 from proxmenux_oci.converter import ConversionError
 
+# The messages are compared in English, also on a host set to another language.
+i18n._language = "en"
 CATALOG = Catalog(ROOT)
 EXAMPLES = ("jellyfin-official", "duplicati-official")
 # Fields that describe where a template came from and are not read to install it.
@@ -129,7 +133,7 @@ class HandWrittenTests(unittest.TestCase):
                 self.assertEqual(template["first_run"], catalog["first_run"])
                 self.assertEqual(template["catalog_ui"]["category_label"], catalog["catalog_ui"]["category_label"])
                 self.assertTrue(template["compatibility"]["automatic_install_candidate"])
-                self.assertEqual(CATALOG.schema_errors(template), [])
+                self.assertEqual(custom._errors(template), [])
 
     def test_the_least_an_oci_compose_says_is_its_image(self):
         template = custom.template_from_oci_compose(json.dumps(
@@ -137,7 +141,7 @@ class HandWrittenTests(unittest.TestCase):
         self.assertEqual(template["container_contract"]["image"]["repository"], "traefik/whoami")
         self.assertEqual(template["catalog_ui"]["title"], {"en_US": "whoami"})
         self.assertEqual(template["container_contract"]["volumes"], [])
-        self.assertEqual(CATALOG.schema_errors(template), [])
+        self.assertEqual(custom._errors(template), [])
 
     def test_what_the_author_writes_is_kept(self):
         document = json.loads(example("duplicati-official"))
@@ -229,9 +233,22 @@ class MenuTests(unittest.TestCase):
             path.write_text(example("jellyfin-official"), encoding="utf-8")
             ui = FakeUI(["oci-compose"], [str(path)])
             text, origin = custom.read_definition(ui)
-        self.assertEqual(ui.offered[0][-2:], ["oci-compose", "oci-compose-url"])
+        self.assertEqual(ui.offered[0][-3:], ["oci-compose-paste", "oci-compose", "oci-compose-url"])
         self.assertEqual(origin, custom.OCI_COMPOSE)
         self.assertEqual(json.loads(text)["catalog_ui"]["title"], {"en_US": "Jellyfin Official"})
+
+    def test_an_oci_compose_can_be_pasted_in_the_terminal(self):
+        quiet = SimpleNamespace(show_logo=lambda: None, msg_title=lambda *_: None, msg_info2=lambda *_: None)
+        with patch.object(custom, "console", quiet), patch("builtins.print"), \
+                patch.object(custom.sys, "stdin", io.StringIO(example("duplicati-official"))):
+            text, origin = custom.read_definition(FakeUI(["oci-compose-paste"]))
+        self.assertEqual(origin, custom.OCI_COMPOSE)
+        self.assertEqual(custom.template_from_oci_compose(text)["catalog_ui"]["title"], {"en_US": "Duplicati Official"})
+        with patch.object(custom, "console", quiet), patch("builtins.print"), \
+                patch.object(custom.sys, "stdin", io.StringIO("  \n")):
+            with self.assertRaises(custom.UserCancelled) as raised:
+                custom.read_definition(FakeUI(["oci-compose-paste"]))
+        self.assertEqual(str(raised.exception), "No oci-compose was given")
 
     def test_an_oci_compose_keeps_its_name_and_its_own_questions(self):
         with tempfile.TemporaryDirectory() as folder:

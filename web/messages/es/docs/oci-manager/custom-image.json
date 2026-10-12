@@ -23,7 +23,7 @@
     {
       "id": "sources",
       "title": "Cómo se describe la imagen",
-      "intro": "La primera pantalla pregunta cómo se describe la imagen. Cuatro formas aportan una definición que se traduce, una quinta usa solo el nombre de la imagen y dos leen un oci-compose ya escrito.",
+      "intro": "La primera pantalla pregunta cómo se describe la imagen. Cuatro formas aportan una definición que se traduce, una quinta usa solo el nombre de la imagen y tres reciben un oci-compose ya escrito.",
       "blocks": [
         {
           "table": {
@@ -34,7 +34,8 @@
               ["Descargar su archivo Compose desde una dirección", "Una dirección <code>http://</code> o <code>https://</code> que sirva el YAML sin procesar. Se descargan como máximo 256 KiB."],
               ["Pegar su comando docker run en la terminal", "El comando que publica el proyecto. Se traducen puertos, entorno, volúmenes, dispositivos, capacidades, usuario, memoria compartida y el resto de opciones admitidas."],
               ["Solo la referencia de la imagen, sin archivo Compose", "Una referencia como <code>ghcr.io/user/application:latest</code>. Se consulta el registro y se conservan los metadatos OCI de la imagen."],
-              ["Leer un oci-compose desde un archivo de este host", "Un archivo JSON del nodo, <code>/root/oci-compose.json</code> por defecto, de 2 MiB como máximo. No se traduce: se comprueba y se instala tal como está escrito."],
+              ["Pegar un oci-compose en la terminal", "El JSON se pega en la terminal y termina con Ctrl+D en una línea vacía. No se traduce: se comprueba y se instala tal como está escrito."],
+              ["Leer un oci-compose desde un archivo de este host", "Un archivo JSON del nodo, <code>/root/oci-compose.json</code> por defecto, de 2 MiB como máximo."],
               ["Descargar un oci-compose desde una dirección", "Una dirección <code>http://</code> o <code>https://</code> que sirva el archivo JSON. Se descargan como máximo 2 MiB."]
             ]
           }

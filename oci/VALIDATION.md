@@ -18,7 +18,7 @@ Reviewers are listed in [.github/oci-validation-reviewers](../.github/oci-valida
 
 An application that cannot be validated for a reason outside the tester's hands — hardware nobody has, something only Docker provides, a fix still pending in ProxMenux — moves to Blocked on the board, with a line saying why and what would make it worth trying again.
 
-Questions and ideas about OCI testing go in [discussion #360](https://github.com/MacRimi/ProxMenux/discussions/360).
+Questions and ideas about OCI testing go in [discussion #440](https://github.com/MacRimi/ProxMenux/discussions/440).
 
 ## Tested by the community
 

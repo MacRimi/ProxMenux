@@ -19,7 +19,7 @@ REVIEWERS = ROOT / ".github/oci-validation-reviewers"
 REPO = "https://github.com/MacRimi/ProxMenux"
 BOARD = "https://github.com/users/MacRimi/projects/1"
 FORM = f"{REPO}/issues/new?template=oci-validation.yml"
-DISCUSSION = f"{REPO}/discussions/360"
+DISCUSSION = f"{REPO}/discussions/440"
 MAINTAINERS = {"macrimi"}
 LAB = "laboratory-validated"
 
@@ -102,7 +102,7 @@ def render(verification, index):
         "only Docker provides, a fix still pending in ProxMenux — moves to Blocked on the board, with a line saying why "
         "and what would make it worth trying again.",
         "",
-        f"Questions and ideas about OCI testing go in [discussion #360]({DISCUSSION}).",
+        f"Questions and ideas about OCI testing go in [discussion #440]({DISCUSSION}).",
         "",
         "## Tested by the community",
         "",

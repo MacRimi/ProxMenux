@@ -23,7 +23,7 @@
     {
       "id": "sources",
       "title": "How the image is described",
-      "intro": "The first screen asks how the image is described. Four ways give a definition that is translated, a fifth uses only the image name, and two read an oci-compose that is already written.",
+      "intro": "The first screen asks how the image is described. Four ways give a definition that is translated, a fifth uses only the image name, and three take an oci-compose that is already written.",
       "blocks": [
         {
           "table": {
@@ -34,7 +34,8 @@
               ["Download its Compose file from an address", "An <code>http://</code> or <code>https://</code> address that serves the raw YAML. At most 256 KiB are downloaded."],
               ["Paste its docker run command in the terminal", "The command published by the project. Ports, environment, volumes, devices, capabilities, user, shared memory and the other supported options are translated."],
               ["Only the image reference, with no Compose file", "A reference such as <code>ghcr.io/user/application:latest</code>. The registry is queried and the OCI metadata of the image is kept."],
-              ["Read an oci-compose from a file of this host", "A JSON file on the node, <code>/root/oci-compose.json</code> by default, of at most 2 MiB. It is not translated: it is checked and installed as it is written."],
+              ["Paste an oci-compose in the terminal", "The JSON is pasted in the terminal and ends with Ctrl+D on an empty line. It is not translated: it is checked and installed as it is written."],
+              ["Read an oci-compose from a file of this host", "A JSON file on the node, <code>/root/oci-compose.json</code> by default, of at most 2 MiB."],
               ["Download an oci-compose from an address", "An <code>http://</code> or <code>https://</code> address that serves the JSON file. At most 2 MiB are downloaded."]
             ]
           }

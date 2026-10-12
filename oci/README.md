@@ -441,9 +441,9 @@ What the author writes always wins over what is added.
 ## Writing and testing an oci-compose
 
 1. **Write the file.** Start from one of the [`examples/`](examples/) or from the smallest file above, and add the blocks the application needs. Any file of `catalog/apps/` or `catalog/curated/` is also a valid starting point.
-2. **Copy it to the node**, for example to `/root/oci-compose.json`, or publish it where the node can download it.
+2. **Take it to the node.** It can be pasted in the terminal, copied to the node, for example to `/root/oci-compose.json`, or published where the node can download it.
 3. **Open OCI manager Apps** from the ProxMenux menu and choose *Install an image that is not in the catalog*.
-4. **Choose how it is given**: *Read an oci-compose from a file of this host* or *Download an oci-compose from an address*.
+4. **Choose how it is given**: *Paste an oci-compose in the terminal*, *Read an oci-compose from a file of this host* or *Download an oci-compose from an address*.
 5. **Read the result.** A file with errors is not installed, and each error names the field:
 
    ```
@@ -475,7 +475,7 @@ python3 -m unittest discover -s tests -p 'test_*.py'
 
 An application reaches the catalog in three steps.
 
-1. **Suggest it** in [Discussions](https://github.com/MacRimi/ProxMenux/discussions) with the image, the registry it is published in and the category.
+1. **Suggest it** in the thread [Suggest an application for the OCI catalog](https://github.com/MacRimi/ProxMenux/discussions/440) with the image, the registry it is published in and the category.
 2. **Try it.** Installing it from its Compose file or its `docker run` command shows whether the image runs as a native LXC. When it needs something Compose cannot say, an oci-compose written by hand lets that be tested as well. The file that worked, attached to the suggestion, is what the entry of the catalog is written from.
 3. **Validate it.** An application tested for real is recorded in `catalog/verification.json` and shown as verified in the installer. [VALIDATION.md](VALIDATION.md) lists the verified applications and describes a test: install, check that it works, restart, update and remove.
 
