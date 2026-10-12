@@ -25599,14 +25599,12 @@
       "AI / Coding & Dev-Tools"
     ],
     "notes": [
-      "The generated web UI password is saved to /root/unsloth.creds inside the container (user: unsloth). Run 'unsloth studio reset-password' to issue a new one.",
       "Log in as the user 'unsloth'; the generated password is in ~/unsloth.creds inside the container. Rotate it with 'unsloth studio reset-password', which prints a new one and needs no restart.",
-      "Web search only works with an external provider (OpenAI, Anthropic, OpenRouter, Gemini or Kimi) configured in the settings, because the search runs server-side at the provider. Local GGUF models do not offer it and the search button stays hidden for them.",
       "Models and Hugging Face caches land in /opt/unsloth_data, which fills up quickly - a single 7B model at Q4 is roughly 4 GB. Give the container more disk if you plan to keep several, and back that directory up rather than /opt/unsloth.",
-      "PyTorch is installed with uv's --torch-backend=auto, so a CPU-only container gets the CPU wheels and a GPU container the matching CUDA build. Re-run the update after adding a GPU so the right backend is pulled."
+      "The Unsloth installer picks the PyTorch and llama.cpp builds for the GPU it finds (CUDA, ROCm, Intel or CPU). Run the update after adding or changing a GPU so the matching builds are installed."
     ],
     "warnings": [
-      "Fine-tuning requires an NVIDIA GPU. Without one, inference, model management, export and the OpenAI-compatible API work, but training does not. Pass a card through and install the NVIDIA driver in the container to enable it."
+      "Fine-tuning requires an NVIDIA GPU. Without one, inference, model management, export and the OpenAI-compatible API work, but training does not. Select GPU passthrough when creating the container; the matching driver libraries are installed automatically."
     ],
     "port": 8888,
     "website": "https://unsloth.ai/",
@@ -26505,7 +26503,7 @@
     "updateable": true,
     "privileged": false,
     "has_arm": false,
-    "is_dev": true,
+    "is_dev": false,
     "execute_in": [
       "lxc"
     ],
