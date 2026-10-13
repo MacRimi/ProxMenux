@@ -27741,7 +27741,9 @@
     "category_names": [
       "Business & ERP"
     ],
-    "notes": [],
+    "notes": [
+      "Elasticsearch's memory is set to 2 GB in `/etc/elasticsearch/jvm.options.d/heap.options`. If you change the container's RAM, adjust `-Xms`/`-Xmx` there (keep both the same, at most half the container's RAM) and run `systemctl restart elasticsearch`."
+    ],
     "warnings": [],
     "port": 0,
     "website": "https://zammad.org/",
