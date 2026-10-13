@@ -1449,11 +1449,11 @@
       "postApplyPartialSubline": "Aggiornamenti applicati: {applied}. Alcuni aggiornamenti non sono stati completati: esamina l’output del terminale sopra.",
       "imagePinned": "Vincolata a un digest",
       "imagePinnedTitle": "Questo container usa l’immagine identificata esattamente dal suo digest. Un tag più recente non la modifica; occorre aggiornare il riferimento nella configurazione.",
-      "checkNow": "controlla ora",
-      "checkReadOnlyHelp": "legge il sistema operativo corrente e i pacchetti in sospeso dagli indici esistenti.Nessuna installazione o aggiornamento dell'indice dei pacchetti.",
-      "checkCooldown": "controllo già in esecuzione o richiesto di recente.Riprova tra {seconds} secondi.",
-      "checkStale": "Controlla obsoleto",
-      "checkStaleHelp": "questo risultato è più vecchio di 48 ore o non ha una data di controllo valida.Eseguire un nuovo controllo prima di fare affidamento su di esso."
+      "checkNow": "Controlla ora",
+      "checkReadOnlyHelp": "Legge il sistema operativo attuale e i pacchetti in sospeso dagli indici esistenti. Nessuna installazione né aggiornamento degli indici dei pacchetti.",
+      "checkCooldown": "Un controllo è già in corso o è stato richiesto di recente. Riprovare tra {seconds} secondi.",
+      "checkStale": "Controllo obsoleto",
+      "checkStaleHelp": "Questo risultato ha più di 48 ore o non ha una data di controllo valida. Eseguire un nuovo controllo prima di farvi affidamento."
     },
     "bulkUpdate": {
       "title": "Aggiornamento in blocco",
