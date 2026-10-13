@@ -863,8 +863,11 @@ publication workflow and has read-only repository permissions.
 #### Qualified offline `tests/` CI lanes
 
 `.github/workflows/test-offline-qualified.yml` runs **only** the explicitly listed
-eight Python files (including the inert active-notification payload fixture) and eleven
+nine Python files (including the inert active-notification payload fixture and
+the focused health recurrence tests) and eleven
 Node files in `.github/scripts/run_offline_qualified.py`.
+The Python runner gives each test file a private temporary directory through
+`TMPDIR`. It removes that directory after the test file finishes.
 Run the same allowlist locally from the root of a clean, disposable checkout
 with no `AppImage/node_modules`. Do not run this over a normal Monitor install:
 the commands refuse an existing directory, file, or symlink (including a
@@ -892,7 +895,7 @@ React peer constraint against locked React 19; it does not resolve that mismatch
 tests, skipped Python tests, or a nonzero exit from either lane. Node fixtures
 use top-level assertions, not a runner that reports case/skip totals.
 These are local fixture tests, not the whole `tests/` tree, `AppImage/tests/`,
-`AppImage/scripts/tests/`, browser smoke, a live Proxmox host, or an AppImage
+the whole `AppImage/scripts/tests/` tree, browser smoke, a live Proxmox host, or an AppImage
 build. The CI workflow has read-only permissions and runs on relevant PRs and
 main/develop pushes, or manually. Review the input paths and the test's imports
 before extending the explicit manifest.

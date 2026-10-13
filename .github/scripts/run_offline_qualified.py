@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Run only the independently qualified, host-independent tests/ fixtures.
+"""Run only the independently qualified, host-independent fixtures.
 
 No filesystem discovery widens this manifest. Run from the repository root;
 Python and Node have separate CI jobs so either failure blocks the check.
@@ -10,6 +10,7 @@ import os
 from pathlib import Path
 import subprocess
 import sys
+import tempfile
 
 PYTHON_FILES = (
     "tests/test_audit_presentation.py",
@@ -20,6 +21,7 @@ PYTHON_FILES = (
     "tests/storage/test_nvme_status_message.py",
     "tests/test_fastfetch_config_generation.py",
     "tests/test_notification_active_payloads.py",
+    "AppImage/scripts/tests/test_health_persistence_recurrence.py",
 )
 NODE_FILES = (
     "tests/lxc_updates/test_docker_delegated_ui.cjs",
@@ -69,9 +71,13 @@ def main() -> int:
         if args.lane == "python":
             folder, filename = str(Path(path).parent), Path(path).name
             command = [sys.executable, "-I", "-B", "-c", PYTHON_RUN, folder, filename]
+            with tempfile.TemporaryDirectory(prefix="qualified-offline-") as scratch:
+                environment = os.environ.copy()
+                environment["TMPDIR"] = scratch
+                result = subprocess.run(command, cwd=root, env=environment, check=False)
         else:
             command = ["node", path]
-        result = subprocess.run(command, cwd=root, env=os.environ.copy(), check=False)
+            result = subprocess.run(command, cwd=root, env=os.environ.copy(), check=False)
         if result.returncode != 0:
             print(f"FAIL {path}: exit {result.returncode}", file=sys.stderr)
             return 1

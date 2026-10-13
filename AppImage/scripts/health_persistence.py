@@ -630,6 +630,12 @@ class HealthPersistence:
 
             event_info = {'type': 'updated', 'needs_notification': False}
 
+            if existing and existing[1] == 0 and existing[2] is not None:
+                # A resolved, non-dismissed condition returning is a new episode.
+                # Keep event history and reuse normal insertion/suppression policy.
+                cursor.execute('DELETE FROM errors WHERE id = ?', (existing[0],))
+                existing = None
+
             if existing:
                 (err_id, ack, resolved_at, old_cat, old_severity, first_seen,
                  notif_sent, stored_suppression, acknowledged_at) = existing
