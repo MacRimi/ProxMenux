@@ -580,35 +580,34 @@ def parse_lxc_hardware_config(vmid, node):
 
 
 def _get_lxc_ip_info_cached(vmid):
-    """Return an LXC's complete IP classification from the lifecycle cache.
-
-    First read per CT spawns one `lxc-info` subprocess; subsequent reads are
-    free until the CT's lifecycle event drops the entry via
-    `_invalidate_lxc_ip`. Keeping the complete result (rather than only the
-    primary address) lets `/api/vms` expose every address without changing
-    the cache's lifecycle semantics.
-    """
+    """Probe at most once per TTL, also noticing DHCP changes without events."""
     try:
         vmid_int = int(vmid)
     except (TypeError, ValueError):
         return None
-    if vmid_int in _lxc_ip_cache:
-        return _lxc_ip_cache[vmid_int]
-    info = get_lxc_ip_from_lxc_info(vmid_int)
-    _remember_lxc_ip(vmid_int, info)
-    return info
+    # Serialize cold/expired reads so concurrent list polls share one probe.
+    with _lxc_ip_cache_lock:
+        hit = _lxc_ip_cache.get(vmid_int)
+        if hit is not None:
+            info = hit[1]
+            ttl = (_LXC_IP_TTL if info and any(':' not in ip for ip in info.get('real_ips') or [])
+                   else _LXC_IP_RETRY_TTL)
+            if time.monotonic() - hit[0] < ttl:
+                return info
+        _lxc_ip_cache.pop(vmid_int, None)
+        info = get_lxc_ip_from_lxc_info(vmid_int)
+        _remember_lxc_ip(vmid_int, info)
+        return info
 
 
 def _remember_lxc_ip(vmid, info):
-    """Keep the addresses of a container until its next lifecycle event.
+    """Keep the addresses for a short TTL or until its next lifecycle event.
 
-    A container that shows addresses but no IPv4 of its own is still waiting
-    for its lease, or lost it when it rebooted from inside: that answer is not
-    kept, so the next read looks again instead of serving an address of its
-    inner bridges until the container is restarted.
+    Missing leases and failed probes use a shorter retry TTL. Concurrent
+    polling still shares the result instead of spawning a probe per request.
     """
-    if info is None or any(':' not in ip for ip in info.get('real_ips') or []):
-        _lxc_ip_cache[vmid] = info
+    with _lxc_ip_cache_lock:
+        _lxc_ip_cache[int(vmid)] = (time.monotonic(), info)
 
 
 def _get_lxc_primary_ip_cached(vmid):
@@ -617,6 +616,41 @@ def _get_lxc_primary_ip_cached(vmid):
     if not info:
         return None
     return info.get('primary_ip') or (info.get('real_ips') or [None])[0]
+
+
+def _lxc_runtime_details(payload):
+    """Keep live addresses and OS separate from the .conf-versioned payload."""
+    if payload.get('vm_type') != 'lxc':
+        return payload
+    result = dict(payload)
+    result.pop('lxc_ip_info', None)
+    result.pop('os_info', None)
+    vmid = payload['vmid']
+    if _fast_guest_status(vmid, 'lxc') != 'running':
+        return result
+    info = _get_lxc_ip_info_cached(vmid)
+    if info:
+        result['lxc_ip_info'] = info
+    os_info = _vm_cache_get(_lxc_os_info_cache, vmid, _LXC_OS_INFO_TTL)
+    if os_info is None:
+        os_info = {}
+        try:
+            probe = subprocess.run(
+                ['pct', 'exec', str(vmid), '--', 'cat', '/etc/os-release'],
+                capture_output=True, text=True, timeout=5)
+            if probe.returncode == 0:
+                keys = {'ID': 'id', 'VERSION_ID': 'version_id',
+                        'NAME': 'name', 'PRETTY_NAME': 'pretty_name'}
+                for line in probe.stdout.splitlines():
+                    key, sep, value = line.partition('=')
+                    if sep and key.strip() in keys:
+                        os_info[keys[key.strip()]] = value.strip().strip('\"').strip("'")
+        except (OSError, subprocess.SubprocessError):
+            pass
+        _vm_cache_put(_lxc_os_info_cache, vmid, os_info)
+    if os_info:
+        result['os_info'] = os_info
+    return result
 
 
 def _normalise_lxc_ips(ip_info):
@@ -646,7 +680,8 @@ def _invalidate_lxc_ip(vmid):
     """Drop the cached IP so the next request re-probes `lxc-info`.
     Fired from the guest lifecycle handler on start/stop/reboot."""
     try:
-        _lxc_ip_cache.pop(int(vmid), None)
+        with _lxc_ip_cache_lock:
+            _lxc_ip_cache.pop(int(vmid), None)
     except (TypeError, ValueError):
         pass
 
@@ -675,9 +710,8 @@ def _restore_lxc_dhcp_clients():
 def _warmup_lxc_ip_cache() -> int:
     """Populate the LXC IP cache for every running CT at Monitor
     startup. After this runs, /api/vms serves the IPs from memory
-    without spawning `lxc-info` on the request path — the cache only
-    changes when a CT's lifecycle event (start/stop/reboot) fires the
-    invalidator. Returns the count for the startup log line.
+    until the short TTL expires or a lifecycle event invalidates it.
+    Returns the count for the startup log line.
     """
     try:
         result = subprocess.run(
@@ -1815,20 +1849,21 @@ _vm_mounts_cache: dict = {}       # vmid -> (ts, payload) — LXC only
 _VM_LIST_SEARCH_NOTES_TTL = 30
 _vm_list_search_notes_cache: dict = {"ts": 0.0, "signature": (), "notes": {}}
 _vm_list_search_notes_lock = threading.Lock()
-# LXC IP classification cache — populated on first read, held indefinitely.
-# A running CT's IP doesn't change; the cache is invalidated only when
-# the CT's lifecycle event fires (start/stop/reboot), so no periodic
-# polling is needed. See `_handle_guest_lifecycle`.
+# DHCP addresses can change without a lifecycle event.
+_LXC_IP_TTL = 60
+_LXC_IP_RETRY_TTL = 5
 _lxc_ip_cache: dict = {}
+_lxc_ip_cache_lock = threading.RLock()
+_lxc_os_info_cache: dict = {}
+_LXC_OS_INFO_TTL = 60
 # Effective TTL is "indefinite": these caches are refreshed only
 # by explicit event-based invalidation (`_vm_cache_invalidate` calls
 # on start/stop/reboot, add/edit/delete app, apply update, edit
 # schedule, create backup). No periodic poll — the prewarmer runs
 # once at startup and then stays quiet. The rationale is that all
 # of these payloads are backed by files (.conf / sidecar JSON /
-# storage inventory) that only change through actions the Monitor
-# either performs itself (invalidates in-line) or that require a
-# guest restart (start/stop invalidates too). Runtime data that DOES
+# storage inventory). Details and mounts additionally validate the .conf
+# signature on each read, including edits made outside Monitor. Runtime data that DOES
 # change without an invalidation event lives in a different path:
 #   - Live CPU/mem/disk/network per guest → served by /api/vms (SWR
 #     poll every 2.5 s from the client, no cache here).
@@ -1923,12 +1958,16 @@ def _vm_cache_put(cache: dict, vmid: int, value) -> None:
 _vm_conf_built: dict = {}   # (cache name, vmid) -> .conf signature
 
 def _vm_conf_signature(vmid: int):
+    import hashlib
     for path in (f'/etc/pve/lxc/{int(vmid)}.conf', f'/etc/pve/qemu-server/{int(vmid)}.conf'):
         try:
             info = os.stat(path)
+            with open(path, 'rb') as handle:
+                digest = hashlib.sha256(handle.read()).digest()
         except OSError:
             continue
-        return (info.st_mtime_ns, info.st_size)
+        # Same-second, same-size changes must also invalidate the payload.
+        return (path, info.st_mtime_ns, info.st_size, digest)
     return None
 
 def _vm_conf_cache_get(cache: dict, name: str, vmid: int, ttl: int):
@@ -1938,11 +1977,11 @@ def _vm_conf_cache_get(cache: dict, name: str, vmid: int, ttl: int):
         return None
     with _vm_modal_cache_lock:
         built = _vm_conf_built.get((name, vmid))
-    return cached if built == _vm_conf_signature(vmid) else None
+    return cached if built is not None and built == _vm_conf_signature(vmid) else None
 
 def _vm_conf_cache_put(cache: dict, name: str, vmid: int, value, signature) -> None:
-    _vm_cache_put(cache, vmid, value)
     with _vm_modal_cache_lock:
+        cache[vmid] = (time.time(), value)
         _vm_conf_built[(name, vmid)] = signature
 
 def _vm_cache_invalidate(vmid: int, *caches) -> None:
@@ -1953,6 +1992,7 @@ def _vm_cache_invalidate(vmid: int, *caches) -> None:
     targets = caches or (
         _vm_details_cache, _vm_backups_cache,
         _vm_app_suggestions_cache, _vm_schedule_cache, _vm_mounts_cache,
+        _lxc_os_info_cache,
     )
     with _vm_modal_cache_lock:
         for c in targets:
@@ -6635,6 +6675,7 @@ def _get_lxc_update_status_map() -> dict:
             continue
         update = it.get('update_check') or {}
         out[str(vmid)] = {
+            **managed_installs.lxc_update_freshness(update),
             'available': bool(update.get('available')),
             'count': int(update.get('_count') or 0),
             'security_count': int(update.get('_security_count') or 0),
@@ -13594,6 +13635,46 @@ def api_managed_installs_refresh():
         return jsonify({'success': False, 'message': str(e)}), 500
 
 
+_lxc_update_check_lock = threading.Lock()
+_lxc_update_check_attempts: dict = {}
+_lxc_update_check_inflight: set = set()
+_LXC_UPDATE_CHECK_INTERVAL = 60
+
+
+@app.route('/api/vms/<int:vmid>/updates/check', methods=['POST'])
+@require_auth
+def api_lxc_updates_check(vmid):
+    """Explicit read of OS and locally known packages, with no index refresh."""
+    import managed_installs
+    if not managed_installs._lxc_updates_detection_enabled():
+        return jsonify({'error': 'LXC update detection is disabled'}), 403
+    if _detect_vm_type_local(vmid) != 'lxc':
+        return jsonify({'error': 'LXC not found'}), 404
+    if _fast_guest_status(vmid, 'lxc') != 'running':
+        return jsonify({'error': 'LXC is not running'}), 409
+    now = time.monotonic()
+    with _lxc_update_check_lock:
+        last = _lxc_update_check_attempts.get(vmid)
+        if vmid in _lxc_update_check_inflight or (
+                last is not None and now - last < _LXC_UPDATE_CHECK_INTERVAL):
+            retry = max(1, int(_LXC_UPDATE_CHECK_INTERVAL - (now - (last if last is not None else now))) + 1)
+            return jsonify({'error': 'Check already running or recently requested',
+                            'retry_after': retry}), 429, {'Retry-After': str(retry)}
+        _lxc_update_check_attempts[vmid] = now
+        _lxc_update_check_inflight.add(vmid)
+    try:
+        item = managed_installs.refresh_lxc(vmid, refresh_package_cache=False)
+        if item is None:
+            return jsonify({'error': 'No supported running LXC detected'}), 409
+        _vm_cache_invalidate(vmid, _lxc_os_info_cache)
+        return jsonify({'vmid': vmid, 'update_check': _get_lxc_update_status_map().get(str(vmid))})
+    except Exception as exc:
+        return jsonify({'error': str(exc)}), 500
+    finally:
+        with _lxc_update_check_lock:
+            _lxc_update_check_inflight.discard(vmid)
+
+
 # ─── LXC Update Detection toggle ────────────────────────────────────────────
 # Dedicated toggle so the operator can opt out of the per-CT `pct exec apt
 # list --upgradable` scan entirely. The Notifications section keeps its own
@@ -15269,12 +15350,12 @@ def api_vms_modal_cache_all():
 def get_vm_config(vmid):
     """Get detailed configuration for a specific VM/LXC"""
     try:
-        # Taken before reading the .conf, so an edit during the build is seen next time.
-        signature = _vm_conf_signature(vmid)
         cached = _vm_conf_cache_get(_vm_details_cache, 'details', vmid, _VM_DETAILS_TTL)
         if cached is not None:
-            return jsonify(cached)
+            return jsonify(_lxc_runtime_details(cached))
 
+        # Taken before reading the .conf, so an edit during the build is seen next time.
+        signature = _vm_conf_signature(vmid)
         node = get_proxmox_node_name()
 
         # Fast local path — read .conf directly and derive status from
@@ -15294,8 +15375,6 @@ def get_vm_config(vmid):
         if not config:
             return jsonify({'error': 'VM/LXC not found'}), 404
 
-        status = _fast_guest_status(vmid, vm_type)
-
         response_data = {
             'vmid': vmid,
             'config': config,
@@ -15303,46 +15382,17 @@ def get_vm_config(vmid):
             'vm_type': vm_type,
         }
 
-        # For LXC, try to get IP from lxc-info if running
-        if vm_type == 'lxc' and status == 'running':
-            lxc_ip_info = get_lxc_ip_from_lxc_info(vmid)
-            if lxc_ip_info:
-                response_data['lxc_ip_info'] = lxc_ip_info
-
-        # Get OS information for LXC
-        os_info = {}
-        if vm_type == 'lxc' and status == 'running':
-            try:
-                os_release_result = subprocess.run(
-                    ['pct', 'exec', str(vmid), '--', 'cat', '/etc/os-release'],
-                    capture_output=True, text=True, timeout=5)
-                if os_release_result.returncode == 0:
-                    for line in os_release_result.stdout.split('\n'):
-                        line = line.strip()
-                        if line.startswith('ID='):
-                            os_info['id'] = line.split('=', 1)[1].strip('"').strip("'")
-                        elif line.startswith('VERSION_ID='):
-                            os_info['version_id'] = line.split('=', 1)[1].strip('"').strip("'")
-                        elif line.startswith('NAME='):
-                            os_info['name'] = line.split('=', 1)[1].strip('"').strip("'")
-                        elif line.startswith('PRETTY_NAME='):
-                            os_info['pretty_name'] = line.split('=', 1)[1].strip('"').strip("'")
-            except Exception:
-                pass
-
         # Get hardware information for LXC — already reads the .conf
         # directly (no pvesh), so it's cheap.
         hardware_info = {}
         if vm_type == 'lxc':
             hardware_info = parse_lxc_hardware_config(vmid, node)
 
-        if os_info:
-            response_data['os_info'] = os_info
         if hardware_info:
             response_data['hardware_info'] = hardware_info
 
         _vm_conf_cache_put(_vm_details_cache, 'details', vmid, response_data, signature)
-        return jsonify(response_data)
+        return jsonify(_lxc_runtime_details(response_data))
 
     except Exception as e:
         return jsonify({'error': str(e)}), 500
