@@ -1448,7 +1448,12 @@
       "postApplyAllOk": "{count} paquete(s) aplicados correctamente — nada pendiente.",
       "postApplyNothingPending": "Nada pendiente — todo actualizado.",
       "postApplyPartial": "{pending} paquete(s) siguen pendientes tras la ejecución.",
-      "postApplyPartialSubline": "{applied} aplicados. Algunas actualizaciones no finalizaron — revisa la salida del terminal."
+      "postApplyPartialSubline": "{applied} aplicados. Algunas actualizaciones no finalizaron — revisa la salida del terminal.",
+      "checkNow": "Compruébalo ahora",
+      "checkReadOnlyHelp": "lea el sistema operativo actual y los paquetes pendientes de los índices existentes.No hay instalación ni actualización del índice del paquete.",
+      "checkCooldown": "Verificación que ya se está ejecutando o solicitada recientemente.Inténtalo de nuevo en {seconds} segundos.",
+      "checkStale": "Verificar desactualizado",
+      "checkStaleHelp": "este resultado tiene más de 48 horas o no tiene una fecha de verificación válida.Ejecute una nueva verificación antes de confiar en ella."
     },
     "bulkUpdate": {
       "title": "Actualización en bloque",

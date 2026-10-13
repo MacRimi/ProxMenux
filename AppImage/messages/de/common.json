@@ -1448,7 +1448,12 @@
       "postApplyPartial": "{pending} Paket(e) stehen nach der Ausführung noch aus.",
       "postApplyPartialSubline": "{applied} angewendet. Einige Aktualisierungen wurden nicht abgeschlossen – sehen Sie sich die Terminalausgabe oben an.",
       "imagePinned": "Angeheftet an einen Digest",
-      "imagePinnedTitle": "Dieser Container führt das genaue Bild seiner Digest-Namen aus. Ein neueres Tag ändert es nicht; das Bearbeiten der Referenz in seiner Konfiguration tut es."
+      "imagePinnedTitle": "Dieser Container führt das genaue Bild seiner Digest-Namen aus. Ein neueres Tag ändert es nicht; das Bearbeiten der Referenz in seiner Konfiguration tut es.",
+      "checkNow": "Jetzt prüfen",
+      "checkReadOnlyHelp": "Aktuelles Betriebssystem und ausstehende Pakete aus vorhandenen Indizes lesen.Keine Installation oder Aktualisierung des Paketindex.",
+      "checkCooldown": "Prüfung läuft bereits oder wurde kürzlich angefordert.Versuchen Sie es in {seconds} Sekunden erneut.",
+      "checkStale": "Scheck veraltet",
+      "checkStaleHelp": "Dieses Ergebnis ist älter als 48 Stunden oder hat kein gültiges Prüfdatum.Führen Sie eine neue Prüfung durch, bevor Sie sich darauf verlassen."
     },
     "bulkUpdate": {
       "title": "Sammelaktualisierung",

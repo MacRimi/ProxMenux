@@ -1448,7 +1448,12 @@
       "postApplyPartial": "{pending} paket som fortfarande väntar efter körningen.",
       "postApplyPartialSubline": "{applied} tillämpas. Vissa uppdateringar slutfördes inte – granska terminalutgången ovan.",
       "imagePinned": "Pinned till ett smält",
-      "imagePinnedTitle": "Denna behållare kör den exakta bilden dess smältnamn. En nyare tagg ändrar inte den; redigera referensen i dess konfiguration gör."
+      "imagePinnedTitle": "Denna behållare kör den exakta bilden dess smältnamn. En nyare tagg ändrar inte den; redigera referensen i dess konfiguration gör.",
+      "checkNow": "Kontrollera nu",
+      "checkReadOnlyHelp": "Läs aktuellt operativsystem och väntande paket från befintliga index.Ingen installation eller paketindexuppdatering.",
+      "checkCooldown": "Kontrollera redan körs eller har nyligen begärts.Försök igen om {seconds} sekunder.",
+      "checkStale": "Kontrollera föråldrad",
+      "checkStaleHelp": "Detta resultat är äldre än 48 timmar eller har inget giltigt kontrolldatum.Kör en ny kontroll innan du litar på den."
     },
     "bulkUpdate": {
       "title": "Gruppuppdatering",

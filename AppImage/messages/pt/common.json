@@ -1448,7 +1448,12 @@
       "postApplyPartial": "{pending} pacote(s) ainda pendente(s) após a execução.",
       "postApplyPartialSubline": "{applied} aplicado. Algumas atualizações não foram concluídas – revise a saída do terminal acima.",
       "imagePinned": "Preso a uma digestão",
-      "imagePinnedTitle": "Este recipiente executa a imagem exata seus nomes digeridos. Uma etiqueta mais recente não a altera; editar a referência na sua configuração muda."
+      "imagePinnedTitle": "Este recipiente executa a imagem exata seus nomes digeridos. Uma etiqueta mais recente não a altera; editar a referência na sua configuração muda.",
+      "checkNow": "Verifique agora",
+      "checkReadOnlyHelp": "Leia o sistema operacional atual e os pacotes pendentes dos índices existentes.Nenhuma instalação ou atualização de índice de pacote.",
+      "checkCooldown": "Verifique já em execução ou solicitado recentemente.Tente novamente em {seconds} segundos.",
+      "checkStale": "Verifique desatualizado",
+      "checkStaleHelp": "Este resultado tem mais de 48 horas ou não tem data de verificação válida.Execute uma nova verificação antes de confiar nela."
     },
     "bulkUpdate": {
       "title": "Atualização em bloco",

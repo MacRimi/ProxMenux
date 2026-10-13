@@ -1448,7 +1448,12 @@
       "postApplyPartial": "{pending} package(s) toujours en attente après l'exécution.",
       "postApplyPartialSubline": "{applied} appliqué. Certaines mises à jour n'ont pas été terminées – consultez la sortie du terminal ci-dessus.",
       "imagePinned": "Pinné à un digest",
-      "imagePinnedTitle": "Ce conteneur exécute l'image exacte de ses noms de digest. Une balise plus récente ne la modifie pas; modifier la référence dans sa configuration le fait."
+      "imagePinnedTitle": "Ce conteneur exécute l'image exacte de ses noms de digest. Une balise plus récente ne la modifie pas; modifier la référence dans sa configuration le fait.",
+      "checkNow": "Vérifiez maintenant",
+      "checkReadOnlyHelp": "lire le système d'exploitation actuel et les packages en attente à partir des index existants.Aucune installation ou actualisation de l’index du package.",
+      "checkCooldown": "Chèque déjà en cours d'exécution ou récemment demandé.Réessayez dans {seconds} secondes.",
+      "checkStale": "Chèque obsolète",
+      "checkStaleHelp": "Ce résultat date de plus de 48 heures ou n'a pas de date de contrôle valide.Effectuez une nouvelle vérification avant de vous y fier."
     },
     "bulkUpdate": {
       "title": "Mise à jour groupée",
