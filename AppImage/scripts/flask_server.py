@@ -6704,6 +6704,9 @@ def _get_lxc_app_watch_map() -> dict:
     out: dict = {}
     try:
         import lxc_apps
+        # An application installed from the menu since the last look is
+        # registered now and shows with the next refresh of the page.
+        lxc_apps.register_new_oci_installations()
         out.update(lxc_apps.get_active_apps() or {})
     except Exception:
         pass

@@ -5473,6 +5473,12 @@ def _oci_secondary_member(record) -> bool:
     return member.get("primary_vmid") not in (None, record.get("vmid"))
 
 
+# One registration at a time for each container: the sweep at startup, the App
+# tab and the look at new installations can all ask for the same one.
+_oci_registration_locks: dict = {}
+_oci_registration_guard = threading.Lock()
+
+
 def ensure_oci_registration(vmid) -> bool:
     """Register the application ProxMenux installed from an OCI image the
     first time the Monitor sees its container, with version tracking by the
@@ -5481,6 +5487,53 @@ def ensure_oci_registration(vmid) -> bool:
     as a whole from its main container. A container that already has
     applications is left alone, and so is one whose registration the user
     removed."""
+    with _oci_registration_guard:
+        lock = _oci_registration_locks.setdefault(int(vmid), threading.Lock())
+    with lock:
+        return _register_oci_installation(vmid)
+
+
+# The records already looked at, each by the time it was last written.
+_oci_records_seen: dict = {}
+
+
+def register_new_oci_installations(wait: bool = False) -> list:
+    """Register the applications installed from OCI images since the last
+    look, so one installed from the menu shows in the Monitor without opening
+    its container. A record is looked at again only when it is written again,
+    as it is when its installation ends. The registration asks the registry
+    for the version of the image, so it runs apart from the request that
+    noticed the installation. Returns the containers it looks at."""
+    try:
+        folders = [entry for entry in os.scandir(_OCI_INSTANCE_ROOT) if entry.name.isdigit()]
+    except OSError:
+        return []
+    pending = []
+    for folder in folders:
+        try:
+            written = os.stat(os.path.join(folder.path, "oci-compose.json")).st_mtime_ns
+        except OSError:
+            continue
+        vmid = int(folder.name)
+        if _oci_records_seen.get(vmid) != written:
+            _oci_records_seen[vmid] = written
+            pending.append(vmid)
+
+    def register():
+        for vmid in pending:
+            try:
+                ensure_oci_registration(vmid)
+            except Exception as exc:
+                print(f"[ProxMenux] lxc_apps: OCI registration of CT {vmid} failed: {exc}")
+
+    if pending and wait:
+        register()
+    elif pending:
+        threading.Thread(target=register, name="oci-registration", daemon=True).start()
+    return pending
+
+
+def _register_oci_installation(vmid) -> bool:
     record = _read_oci_record(vmid)
     if not record or record.get("status") != "installed":
         return False
