@@ -24,8 +24,18 @@ const now = Date.parse("2026-10-13T12:00:00Z")
 const recent = { last_check: "2026-10-13T11:59:00Z" }
 assert.equal(helpers.isLxcUpdateStale(recent, now), false)
 for (const value of [undefined, {}, { last_check: "bad" }, { last_check: "2026-10-14T00:00:00Z" },
-  { last_check: "2026-10-12T12:00:00Z" }, { ...recent, stale: true }]) {
+  { last_check: "2026-10-11T12:00:00Z" }, { ...recent, stale: true }]) {
   assert.equal(helpers.isLxcUpdateStale(value, now), true)
+}
+for (const age of [86400, 86400 + 600, 172799]) {
+  assert.equal(helpers.isLxcUpdateStale({ last_check: new Date(now - age * 1000).toISOString() }, now), false,
+    'daily checks have a full extra day of freshness margin')
+}
+assert.equal(helpers.isLxcUpdateStale({ ...recent, stale_after_seconds: 60 }, now), true,
+  'the backend-provided threshold still takes precedence')
+for (const lang of ['en', 'sk']) {
+  const catalog = JSON.parse(fs.readFileSync(path.join(root, `messages/${lang}/common.json`), 'utf8'))
+  assert.match(catalog.vmLxc.updates.checkStaleHelp, /48/)
 }
 
 const source = fs.readFileSync(path.join(root, "components/virtual-machines.tsx"), "utf8")

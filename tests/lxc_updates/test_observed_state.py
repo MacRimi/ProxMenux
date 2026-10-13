@@ -285,7 +285,7 @@ class ObservedStateRoutesTests(unittest.TestCase):
         self.assertEqual(self.client.get("/api/vms/100/updates/check").status_code, 405)
         self.assertEqual(self.commands, [])
 
-    def test_failed_os_probe_does_not_keep_old_family_or_claim_zero(self):
+    def test_readable_unsupported_os_replaces_old_family_without_claiming_zero(self):
         self.release = "ID=unsupported\n"
         response = self.client.post("/api/vms/100/updates/check")
         self.assertEqual(response.status_code, 200)
@@ -293,6 +293,58 @@ class ObservedStateRoutesTests(unittest.TestCase):
         self.assertTrue(response.json["update_check"]["error"])
         self.assertNotIn("_count", managed.get_registry()["items"][0]["update_check"])
         self.assertEqual(len(self.commands), 1)
+
+    def test_unreadable_os_keeps_last_known_family_but_clears_old_update_count(self):
+        failures = [subprocess.TimeoutExpired('pct', 5), OSError('transport failed'),
+                    SimpleNamespace(returncode=1, stdout='', stderr='read failed'),
+                    SimpleNamespace(returncode=0, stdout='', stderr='')]
+        for failure in failures:
+            with self.subTest(failure=failure):
+                self.clock.monotonic.return_value += 60
+                with patch.object(subprocess, 'run') as run:
+                    if isinstance(failure, Exception):
+                        run.side_effect = failure
+                    else:
+                        run.return_value = failure
+                    response = self.client.post('/api/vms/100/updates/check')
+                self.assertEqual(response.status_code, 200, response.json)
+                self.assertEqual(response.json['update_check']['os_family'], 'ubuntu')
+                self.assertTrue(response.json['update_check']['error'])
+                stored = managed.get_registry()['items'][0]
+                self.assertEqual(stored['_os_family'], 'ubuntu')
+                self.assertNotIn('_count', stored['update_check'])
+                run.assert_called_once()
+
+    def test_daily_and_global_refresh_keep_os_hint_on_read_failure(self):
+        for global_route in (False, True):
+            with self.subTest(global_route=global_route), \
+                    patch.object(subprocess, 'run', side_effect=OSError('unreadable')), \
+                    patch.object(managed, '_DETECTORS', [managed._detect_lxc_containers]), \
+                    patch.object(managed, '_refresh_lxc_pkg_cache_if_stale') as refresh:
+                if global_route:
+                    self.assertEqual(self.client.post('/api/managed-installs/refresh').status_code, 200)
+                else:
+                    managed.check_for_updates()
+                stored = managed.get_registry()['items'][0]
+                self.assertEqual(stored['_os_family'], 'ubuntu')
+                self.assertTrue(stored['update_check']['error'])
+                self.assertNotIn('_count', stored['update_check'])
+                refresh.assert_not_called()
+
+    def test_legacy_os_detection_returns_none_on_transport_failure(self):
+        with patch.object(subprocess, 'run', side_effect=OSError('unreadable')):
+            self.assertIsNone(managed._probe_lxc_os('100'))
+
+    def test_new_oci_detection_and_check_never_probe_os(self):
+        managed._write_registry({'items': []})
+        for is_oci, membership in ((True, {}), (False, {'100': 'secure-gateway'})):
+            with self.subTest(is_oci=is_oci), \
+                    patch.object(managed, '_probe_lxc_is_oci', return_value=is_oci), \
+                    patch.object(managed, '_get_oci_managed_vmids', return_value=membership), \
+                    patch.object(managed, '_probe_lxc_os', side_effect=AssertionError('OCI OS probe forbidden')):
+                entry = managed._detect_lxc_containers(only_vmid=100)[0]
+                self.assertIsNone(entry['_os_family'])
+                self.assertEqual(managed._check_lxc_updates(entry)['_count'], 0)
 
     def test_registry_write_failure_is_reported_and_releases_inflight(self):
         with patch.object(managed, "_write_registry", return_value=False):
@@ -349,8 +401,8 @@ class ObservedStateRoutesTests(unittest.TestCase):
                 before = len(self.commands)
                 result = managed._check_lxc_updates(entry, refresh_package_cache=False)
                 self.assertEqual(result["_count"], 0)
-                self.assertEqual(entry["_os_family"], "debian")
-                self.assertEqual(len(self.commands) - before, 1)
+                self.assertEqual(entry["_os_family"], "ubuntu")
+                self.assertEqual(len(self.commands) - before, 0)
 
     def test_lifecycle_invalidation_still_forces_probe_and_negative_cache_is_bounded(self):
         self.row()
@@ -375,11 +427,14 @@ class FreshnessTests(unittest.TestCase):
 
     def test_recent_check_and_threshold(self):
         now = datetime.datetime.now(datetime.timezone.utc)
-        for age, stale in ((60, False), (86401, True)):
-            observation = {"last_check": (now - datetime.timedelta(seconds=age)).isoformat()}
-            result = managed.lxc_update_freshness(observation)
-            self.assertEqual(result["stale"], stale)
-            self.assertEqual(result["stale_after_seconds"], 86400)
+        with patch.object(managed.datetime, 'datetime', wraps=datetime.datetime) as clock:
+            clock.now.return_value = now
+            for age, stale in ((60, False), (86400 + 600, False), (172799, False),
+                               (172800, True), (172801, True)):
+                observation = {"last_check": (now - datetime.timedelta(seconds=age)).isoformat()}
+                result = managed.lxc_update_freshness(observation)
+                self.assertEqual(result["stale"], stale)
+                self.assertEqual(result["stale_after_seconds"], 172800)
 
 
 if __name__ == "__main__":

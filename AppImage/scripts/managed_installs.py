@@ -839,7 +839,7 @@ def _infer_helper_slug(vmid: str, hostname: str) -> Optional[str]:
     return _identify_helper_slug(vmid, hostname)[0]
 
 
-def _probe_lxc_os(vmid: str) -> Optional[str]:
+def _probe_lxc_os(vmid: str, *, raise_on_read_error: bool = False) -> Optional[str]:
     """Return a normalized family identifier (``debian`` / ``ubuntu`` /
     ``alpine``) by reading ``/etc/os-release`` inside the running CT.
     Returns None for distributions whose package manager we don't yet
@@ -848,6 +848,8 @@ def _probe_lxc_os(vmid: str) -> Optional[str]:
 
     Detection may reuse the registry hint; each explicit or scheduled update
     check re-probes this file before selecting the package manager.
+    Strict checks distinguish an unreadable file (OSError) from a readable
+    unsupported OS (None); legacy detection retains its Optional contract.
     """
     try:
         r = subprocess.run(
@@ -856,8 +858,12 @@ def _probe_lxc_os(vmid: str) -> Optional[str]:
             timeout=_LXC_OS_PROBE_TIMEOUT_SEC,
         )
     except (subprocess.TimeoutExpired, FileNotFoundError, OSError):
+        if raise_on_read_error:
+            raise OSError('current OS release could not be read') from None
         return None
     if r.returncode != 0:
+        if raise_on_read_error:
+            raise OSError('current OS release could not be read')
         return None
     release = {}
     for line in r.stdout.splitlines():
@@ -865,6 +871,8 @@ def _probe_lxc_os(vmid: str) -> Optional[str]:
         if sep:
             release[key.strip()] = value.strip().strip('\"').strip("'").lower()
     identity = release.get("ID", "")
+    if not identity and raise_on_read_error:
+        raise OSError('current OS release has no usable ID')
     if identity == "ubuntu":
         return "ubuntu"
     if identity == "debian":
@@ -938,13 +946,12 @@ def _detect_lxc_containers(only_vmid: Optional[int] = None) -> list[dict]:
         # future ProxMenux-shipped OCI app).
         managed_oci_app = oci_managed.get(str(vmid))
 
-        # OS family is only meaningful for non-OCI CTs. We still cache
-        # it for OCI (some images ARE Ubuntu/Debian underneath and
-        # future features might use it), but we don't require it.
+        # OCI/managed images have their own updater. Retain an existing OS
+        # hint, but never execute a guest OS probe for generic detection.
         os_family = prior.get("_os_family")
-        if not os_family:
+        if not os_family and not is_oci and not managed_oci_app:
             os_family = _probe_lxc_os(vmid)
-            if not is_oci and os_family not in _SUPPORTED_OS_FAMILIES:
+            if os_family not in _SUPPORTED_OS_FAMILIES:
                 # Non-OCI, non-supported family — the framework has
                 # no way to check its updates. Skip silently.
                 continue
@@ -1447,7 +1454,9 @@ def _refresh_lxc_pkg_cache_if_stale(vmid: str, family: str) -> dict:
         }
 
 
-LXC_UPDATE_STALE_AFTER_SECONDS = 24 * 3600
+# The daily collector persists at cycle end. Allow a full extra day so a
+# normal collection delay never briefly marks every guest's result stale.
+LXC_UPDATE_STALE_AFTER_SECONDS = 48 * 3600
 
 
 def lxc_update_freshness(update: dict) -> dict:
@@ -1490,9 +1499,6 @@ def _check_lxc_updates(entry: dict, *, refresh_package_cache: bool = True) -> di
             "last_check": _now_iso(), "error": "no vmid in entry",
         }
 
-    family = _probe_lxc_os(str(vmid))
-    entry["_os_family"] = family
-
     # OCI-image CTs are immutable by design — apt/apk upgrade inside
     # them is the wrong workflow (update = rebuild from a newer image
     # tag). Skip the package-manager probe entirely so the UI doesn't
@@ -1510,6 +1516,17 @@ def _check_lxc_updates(entry: dict, *, refresh_package_cache: bool = True) -> di
             "last_check": _now_iso(), "error": None,
             "_count": 0, "_security_count": 0, "_packages": [],
         }
+
+    try:
+        family = _probe_lxc_os(str(vmid), raise_on_read_error=True)
+    except OSError:
+        # Keep the last known display hint, but never choose a package
+        # manager from it after a failed read or report a verified zero.
+        return {
+            "available": False, "latest": None, "last_check": _now_iso(),
+            "error": "current OS release could not be read",
+        }
+    entry["_os_family"] = family
 
     if family not in _SUPPORTED_OS_FAMILIES:
         return {

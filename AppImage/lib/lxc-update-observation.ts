@@ -10,7 +10,7 @@ export function isLxcUpdateStale(observation?: UpdateObservation, now = Date.now
   if (!observation || observation.stale === true) return true
   const checked = Date.parse(observation.last_check || "")
   const age = now - checked
-  const limit = (observation.stale_after_seconds ?? 86400) * 1000
+  const limit = (observation.stale_after_seconds ?? 172800) * 1000
   return !Number.isFinite(checked) || age < 0 || age >= limit
 }
 
