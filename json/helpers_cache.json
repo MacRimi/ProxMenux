@@ -7250,13 +7250,13 @@
       "Backup & Recovery"
     ],
     "notes": [
-      "There is no web interface. In Firefox open about:config, set identity.sync.tokenserver.uri to http://<IP>:8000/1.0/sync/1.5, restart Firefox, then sign in to Sync. about:sync-log shows whether it talks to your server. Health check: http://<IP>:8000/__heartbeat__",
+      "There is no web interface. In Firefox open about:config, set identity.sync.tokenserver.uri to http://<IP>:8000/1.0/sync/1.5, restart Firefox, then sign in to Sync. about:sync-log only lists failed syncs; set services.sync.log.appender.file.logOnSuccess to true to see successful ones too. Health check: http://<IP>:8000/__heartbeat__",
       "Sign-in still goes through your Mozilla account at accounts.firefox.com. Only the sync data is stored on this server.",
       "Firefox for Android: in Settings > About Firefox tap the logo repeatedly to unlock the debug menu, set the custom Sync server to the same /1.0/sync/1.5 URL and stop Firefox from that menu. Do this before signing in.",
       "Install and every update compile the server from source with Rust. The 3 GB RAM is sized for that build; the running server itself uses under 100 MB."
     ],
     "warnings": [
-      "Firefox syncs to the storage URL this server hands out, set by SYNC_TOKENSERVER__INIT_NODE_URL in /opt/firefox-syncserver_data/.env (default http://<IP>:8000). If you use HTTPS through a reverse proxy, or the container IP changes, set it to the public origin (e.g. https://sync.example.com) before the first sign-in and point identity.sync.tokenserver.uri at that origin. It is stored in the nodes table of the syncserver database on first start; changing it later only adds a second node, so also update the existing row."
+      "Firefox syncs to the storage URL this server hands out, set by SYNC_TOKENSERVER__INIT_NODE_URL in /opt/firefox-syncserver_data/.env (default http://<IP>:8000). If you use HTTPS through a reverse proxy, or the container IP changes, set it to the public origin (e.g. https://sync.example.com), run systemctl restart firefox-syncserver and point identity.sync.tokenserver.uri at that origin."
     ],
     "port": 8000,
     "website": "https://www.mozilla.org/firefox/features/sync/",
