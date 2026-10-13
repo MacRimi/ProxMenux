@@ -1,10 +1,11 @@
 """Offline recurrence tests against the complete, real persistence module.
 
 From the repository root (stdlib only; no broad test discovery):
-    TMPDIR=/path/to/private/scratch python3 -I -B -m unittest discover \
+    python3 -I -B -m unittest discover \
         -s AppImage/scripts/tests -p test_health_persistence_recurrence.py -v
 
-TMPDIR must already exist and must not be the system temporary directory.
+Each test creates and removes its own private temporary directory.
+No temporary-directory environment variable is required.
 Only the data-directory Path boundary and datetime clock are redirected, before
 module execution (including the real global constructor). No persistence method
 is stubbed. Every test has its own real SQLite DB. Audit guards constrain DB
@@ -101,12 +102,7 @@ class FrozenDatetime(datetime):
 class HealthPersistenceRecurrenceTests(unittest.TestCase):
     def setUp(self):
         global _AUDIT_SCOPE
-        scratch = os.environ.get('TMPDIR')
-        if not scratch or not Path(scratch).is_dir():
-            self.fail('Set TMPDIR to an existing private scratch directory')
-        if Path(scratch).resolve() in (Path('/tmp'), Path('/var/tmp')):
-            self.fail('System temporary directories are not allowed')
-        temporary = tempfile.TemporaryDirectory(prefix='health-recurrence-', dir=scratch)
+        temporary = tempfile.TemporaryDirectory(prefix='health-recurrence-')
         self.addCleanup(temporary.cleanup)
         self.data_dir = Path(temporary.name)
         self.scope = {'root': self.data_dir, 'db': self.data_dir / 'health_monitor.db',

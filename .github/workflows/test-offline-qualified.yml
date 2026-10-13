@@ -60,6 +60,10 @@ jobs:
         env:
           PYTHONDONTWRITEBYTECODE: '1'
         run: python3 -I -B .github/scripts/run_offline_qualified.py --lane python
+      - name: Run health recurrence tests without TMPDIR
+        env:
+          PYTHONDONTWRITEBYTECODE: '1'
+        run: env -u TMPDIR python3 -I -B -m unittest discover -s AppImage/scripts/tests -p test_health_persistence_recurrence.py -v
 
   offline-node:
     runs-on: ubuntu-latest
