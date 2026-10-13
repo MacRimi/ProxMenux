@@ -202,6 +202,13 @@ class CommandDescriptionsTests(unittest.TestCase):
                             key, english["backup"]["destinations"][key])
                     messages["backup"]["actions"].setdefault(
                         "prepareSshKey", english["backup"]["actions"]["prepareSshKey"])
+                    # New LXC observation labels intentionally ship only EN/SK.
+                    # Model the bot's future output in temporary catalogs, just
+                    # like the other pending keys above; never rewrite locales.
+                    for key in ("checkNow", "checkReadOnlyHelp", "checkCooldown",
+                                "checkStale", "checkStaleHelp"):
+                        messages["vmLxc"]["updates"].setdefault(
+                            key, english["vmLxc"]["updates"][key])
                     path.write_text(json.dumps(messages, ensure_ascii=False))
             before = {p: p.read_bytes() for p in root.glob("*/common.json")}
             argv = [str(SCRIPT), "--source", str(root / "en/common.json"),

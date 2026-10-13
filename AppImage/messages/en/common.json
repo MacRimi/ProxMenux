@@ -1332,6 +1332,11 @@
     },
     "updates": {
       "osPackagesTitle": "OS packages",
+      "checkNow": "Check now",
+      "checkReadOnlyHelp": "Read current OS and pending packages from existing indexes. No installation or package index refresh.",
+      "checkCooldown": "Check already running or recently requested. Try again in {seconds} seconds.",
+      "checkStale": "Check outdated",
+      "checkStaleHelp": "This result is older than 24 hours or has no valid check date. Run a new check before relying on it.",
       "lastCheckedPrefix": "Last checked:",
       "familyLabel": "Family:",
       "applyOsUpdate": "Apply OS update",

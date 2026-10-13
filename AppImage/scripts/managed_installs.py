@@ -846,9 +846,8 @@ def _probe_lxc_os(vmid: str) -> Optional[str]:
     speak — those CTs are skipped in detection so the framework
     doesn't keep retrying a checker we can't run.
 
-    Cached per CT in the registry — re-probed only when the entry has
-    no ``_os_family`` yet, since the OS rarely changes for the life of
-    a CT.
+    Detection may reuse the registry hint; each explicit or scheduled update
+    check re-probes this file before selecting the package manager.
     """
     try:
         r = subprocess.run(
@@ -860,13 +859,20 @@ def _probe_lxc_os(vmid: str) -> Optional[str]:
         return None
     if r.returncode != 0:
         return None
-    text = r.stdout.lower()
-    if "id=ubuntu" in text:
+    release = {}
+    for line in r.stdout.splitlines():
+        key, sep, value = line.partition("=")
+        if sep:
+            release[key.strip()] = value.strip().strip('\"').strip("'").lower()
+    identity = release.get("ID", "")
+    if identity == "ubuntu":
         return "ubuntu"
-    if "id=debian" in text or "id_like=debian" in text:
+    if identity == "debian":
         return "debian"
-    if "id=alpine" in text:
+    if identity == "alpine":
         return "alpine"
+    if "debian" in release.get("ID_LIKE", "").split():
+        return "debian"
     # Future Phase 1.5: CentOS/Rocky/Alma (dnf check-update), Arch
     # (checkupdates), openSUSE (zypper list-updates). Each needs a
     # parser similar to apt/apk — skip silently for now.
@@ -877,10 +883,9 @@ def _detect_lxc_containers(only_vmid: Optional[int] = None) -> list[dict]:
     """Enumerate running Debian/Ubuntu CTs as registry entries.
 
     OS detection is cached in the registry entry (`_os_family`), so the
-    expensive ``pct exec cat /etc/os-release`` only runs the first time
-    a CT is seen. CT reinstalls with a different OS will keep the old
-    family cached until the user resets the registry — acceptable
-    trade-off vs paying the probe cost every 24h cycle.
+    expensive ``pct exec cat /etc/os-release`` only runs during detection
+    when a CT is first seen. The checker independently re-reads it on each
+    check, including after a restore or external reinstall.
 
     Detection respects the dedicated `lxc_updates.detection_enabled`
     toggle (Settings → LXC Update Detection). When OFF, this returns []
@@ -1442,12 +1447,33 @@ def _refresh_lxc_pkg_cache_if_stale(vmid: str, family: str) -> dict:
         }
 
 
-def _check_lxc_updates(entry: dict) -> dict:
+LXC_UPDATE_STALE_AFTER_SECONDS = 24 * 3600
+
+
+def lxc_update_freshness(update: dict) -> dict:
+    """Describe a stored observation, without running any guest command."""
+    age = None
+    try:
+        checked = datetime.datetime.fromisoformat(update.get("last_check", "").replace("Z", "+00:00"))
+        if checked.tzinfo is None:
+            checked = checked.replace(tzinfo=datetime.timezone.utc)
+        seconds = (datetime.datetime.now(datetime.timezone.utc) - checked).total_seconds()
+        if seconds >= 0:
+            age = int(seconds)
+    except (ValueError, TypeError, AttributeError):
+        pass
+    stale = age is None or age >= LXC_UPDATE_STALE_AFTER_SECONDS
+    return {"stale": stale, "age_seconds": age,
+            "stale_after_seconds": LXC_UPDATE_STALE_AFTER_SECONDS}
+
+
+def _check_lxc_updates(entry: dict, *, refresh_package_cache: bool = True) -> dict:
     """Inspect pending package updates inside the LXC and report them.
 
-    Dispatches to the right package-manager parser based on the cached
-    ``_os_family``. If the CT's local apt/apk metadata cache is older
-    than 24h, runs a best-effort refresh first via
+    Re-read /etc/os-release on every explicit/scheduled check, so a restore
+    or external reinstall cannot keep the old registry family. If the CT's
+    local apt/apk metadata cache is older than 24h, the existing collector
+    runs a best-effort refresh first via
     ``_refresh_lxc_pkg_cache_if_stale`` — without this, CTs that no
     one ever runs ``apt update`` in (long-running appliances) report
     0 pending updates even when upstream has hundreds queued.
@@ -1458,12 +1484,14 @@ def _check_lxc_updates(entry: dict) -> dict:
     update set does.
     """
     vmid = entry.get("_vmid")
-    family = (entry.get("_os_family") or "").lower()
     if not vmid:
         return {
             "available": False, "latest": None,
             "last_check": _now_iso(), "error": "no vmid in entry",
         }
+
+    family = _probe_lxc_os(str(vmid))
+    entry["_os_family"] = family
 
     # OCI-image CTs are immutable by design — apt/apk upgrade inside
     # them is the wrong workflow (update = rebuild from a newer image
@@ -1483,7 +1511,15 @@ def _check_lxc_updates(entry: dict) -> dict:
             "_count": 0, "_security_count": 0, "_packages": [],
         }
 
-    refresh_diag = _refresh_lxc_pkg_cache_if_stale(vmid, family)
+    if family not in _SUPPORTED_OS_FAMILIES:
+        return {
+            "available": False, "latest": None, "last_check": _now_iso(),
+            "error": "current OS could not be determined or is unsupported",
+        }
+
+    # The manual read-only action must never run apt-get/apk update.
+    refresh_diag = (_refresh_lxc_pkg_cache_if_stale(vmid, family)
+                    if refresh_package_cache else {})
 
     if family in ("debian", "ubuntu"):
         ok, stdout, err = _run_pct_pkg_listing(
@@ -1783,12 +1819,12 @@ def check_for_updates(force: bool = False) -> list[dict]:
     return updates_available
 
 
-def refresh_lxc(vmid: int) -> Optional[dict]:
+def refresh_lxc(vmid: int, *, refresh_package_cache: bool = True) -> Optional[dict]:
     """Detect and refresh exactly one running LXC.
 
-    This is the lifecycle counterpart of the daily collector. It is called
-    after a stopped container starts and deliberately leaves every other
-    guest's registry row untouched.
+    Called by lifecycle/apply finalizers and the explicit read-only action.
+    The latter passes refresh_package_cache=False to forbid index writes.
+    Every other guest's registry row is left untouched.
     """
     try:
         target_vmid = int(vmid)
@@ -1813,7 +1849,8 @@ def refresh_lxc(vmid: int) -> Optional[dict]:
             _merge_detected_entry(target, entry, now)
 
         try:
-            result = _check_lxc_updates(target)
+            result = (_check_lxc_updates(target) if refresh_package_cache else
+                      _check_lxc_updates(target, refresh_package_cache=False))
         except Exception as exc:
             result = {
                 "available": False,
@@ -1825,5 +1862,6 @@ def refresh_lxc(vmid: int) -> Optional[dict]:
         reg["items"] = items
         reg["version"] = _SCHEMA_VERSION
         reg["last_targeted_refresh"] = now
-        _write_registry(reg)
+        if not _write_registry(reg):
+            raise OSError("could not persist LXC update check")
         return dict(target)

@@ -1,5 +1,6 @@
 """The VM/LXC modal caches notice a .conf edited outside the Monitor."""
 import ast
+import io
 from pathlib import Path
 import threading
 import time
@@ -16,6 +17,7 @@ class ConfAwareCacheTests(unittest.TestCase):
         nodes = [n for n in tree.body if isinstance(n, ast.FunctionDef) and n.name in NAMES]
         self.assertEqual(sorted(n.name for n in nodes), sorted(NAMES))
         self.files = {'/etc/pve/lxc/111.conf': (1, 300)}
+        self.contents = {}
 
         def stat(path):
             if path not in self.files:
@@ -24,7 +26,7 @@ class ConfAwareCacheTests(unittest.TestCase):
             return SimpleNamespace(st_mtime_ns=mtime, st_size=size)
 
         self.scope = {'os': SimpleNamespace(stat=stat), 'time': time, '_vm_modal_cache_lock': threading.Lock(),
-                      '_vm_conf_built': {}}
+                      '_vm_conf_built': {}, 'open': lambda path, _: io.BytesIO(self.contents.get(path, b'onboot: 0'))}
         exec(compile(ast.Module(body=nodes, type_ignores=[]), str(SERVER), 'exec'), self.scope)
         self.cache = {}
 
@@ -50,9 +52,19 @@ class ConfAwareCacheTests(unittest.TestCase):
         self.scope['_vm_cache_put'](self.cache, 111, {'old': True})
         self.assertIsNone(self.get())
 
+    def test_same_size_same_mtime_content_edit_is_detected(self):
+        self.build({'onboot': 0})
+        self.contents['/etc/pve/lxc/111.conf'] = b'onboot: 1'
+        self.assertIsNone(self.get())
+
+    def test_deleted_configuration_is_never_served_from_cache(self):
+        self.build({'onboot': 0})
+        self.files.clear()
+        self.assertIsNone(self.get())
+
     def test_vm_conf_path_and_missing_guest(self):
         self.files = {'/etc/pve/qemu-server/200.conf': (5, 10)}
-        self.assertEqual(self.scope['_vm_conf_signature'](200), (5, 10))
+        self.assertEqual(self.scope['_vm_conf_signature'](200)[1:3], (5, 10))
         self.assertIsNone(self.scope['_vm_conf_signature'](999))
 
 

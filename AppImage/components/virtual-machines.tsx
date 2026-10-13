@@ -28,6 +28,7 @@ import { formatStorage } from "../lib/utils"
 import { formatNetworkTraffic, getNetworkUnit } from "../lib/format-network"
 import { fetchApi } from "../lib/api-config"
 import { matchesVmSearch, normalizeVmSearchValue } from "../lib/vm-search"
+import { checkLxcUpdates, isLxcUpdateStale } from "../lib/lxc-update-observation"
 import DOMPurify from "dompurify"
 import { marked } from "marked"
 import { getCountFormKey, useI18n, useT } from "@/lib/i18n/provider"
@@ -84,6 +85,9 @@ interface LxcUpdateCheck {
   helper_app_name?: string | null
   helper_updateable_known?: boolean
   os_family?: string | null
+  stale?: boolean
+  age_seconds?: number | null
+  stale_after_seconds?: number
 }
 
 // Summary attached to LXC rows in /api/vms when the user has
@@ -912,6 +916,8 @@ export function VirtualMachines() {
   //     "settled" when the observed count differs from this baseline
   //     (or after a 15 s safety timeout).
   const [updatesRefreshing, setUpdatesRefreshing] = useState(false)
+  const [osCheckingVmid, setOsCheckingVmid] = useState<number | null>(null)
+  const [osCheckError, setOsCheckError] = useState<string | null>(null)
   const [updatesResult, setUpdatesResult] = useState<{ pendingAfter: number; appliedCount: number } | null>(null)
   const [updatesBaselineCount, setUpdatesBaselineCount] = useState<number | null>(null)
   const selectedVMRef = useRef<VMData | null>(null)
@@ -1188,6 +1194,31 @@ export function VirtualMachines() {
     selectedVMRef.current = selectedVM
   }, [selectedVM])
 
+  // Revalidate only the open modal, independently of the 2.5s list poll.
+  // This reads config, addresses and os-release, never package updates.
+  useEffect(() => {
+    const vmid = selectedVM?.vmid
+    if (vmid === undefined) return
+    let cancelled = false
+    let inFlight = false
+    const timer = setInterval(async () => {
+      if (inFlight) return
+      inFlight = true
+      try {
+        const details = await fetchApi<VMDetails>(`/api/vms/${vmid}`)
+        if (!cancelled) {
+          vmModalCacheRef.current.details.set(vmid, details)
+          setVMDetails(details)
+        }
+      } catch {
+        // Keep the last snapshot; the next interval retries the read.
+      } finally {
+        inFlight = false
+      }
+    }, 30000)
+    return () => { cancelled = true; clearInterval(timer) }
+  }, [selectedVM?.vmid])
+
   useEffect(() => {
     updatesBaselineCountRef.current = updatesBaselineCount
   }, [updatesBaselineCount])
@@ -1239,6 +1270,7 @@ export function VirtualMachines() {
 
   const handleVMClick = async (vm: VMData) => {
     setSelectedVM(vm)
+    setOsCheckError(null)
     setBulkLoaded(null)
     setBulkConfigured(false)
     setBulkTargets(["os"])
@@ -2647,6 +2679,26 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
   // packages" section needs a clean `available`/`count` to avoid a
   // false "N package pending" every time a registered app has an
   // upstream bump.
+  const checkOsUpdates = async (vmid: number) => {
+    setOsCheckingVmid(vmid)
+    setOsCheckError(null)
+    try {
+      await checkLxcUpdates(vmid)
+      const details = await fetchApi<VMDetails>(`/api/vms/${vmid}`)
+      vmModalCacheRef.current.details.set(vmid, details)
+      if (selectedVMRef.current?.vmid === vmid) setVMDetails(details)
+      await mutate()
+    } catch (error: any) {
+      if (selectedVMRef.current?.vmid === vmid) {
+        setOsCheckError(error.status === 429
+          ? t("vmLxc.updates.checkCooldown", { seconds: error.body?.retry_after ?? 60 })
+          : error.message || t("vmLxc.updates.osStatusUnavailable"))
+      }
+    } finally {
+      setOsCheckingVmid(null)
+    }
+  }
+
   const getAggregateUpdateCheck = (vm: VMData): LxcUpdateCheck | undefined => {
     const uc = vm.update_check
     const appCount = (vm.app_watches || []).filter(
@@ -2702,7 +2754,7 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
       count: total,
       available: true,
       packages: [...(uc?.packages || []), ...pendingNames],
-      last_check: uc?.last_check ?? new Date().toISOString(),
+      last_check: uc?.last_check ?? null,
     } as LxcUpdateCheck
   }
 
@@ -2711,7 +2763,9 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
     compact = false,
     onClick?: () => void,
   ) => {
-    if (!uc?.available || !uc.count || uc.count <= 0) return null
+    if (!uc) return null
+    const stale = uc.stale === true || (!!uc.last_check && isLxcUpdateStale(uc))
+    if (!stale && (!uc.available || !uc.count || uc.count <= 0)) return null
     const last = uc.last_check
       ? new Date(uc.last_check).toLocaleString()
       : "—"
@@ -2759,8 +2813,8 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
             space — matters most on the LXC card row where uptime,
             IP and other chips compete for width. Count alone with
             the up-arrow reads unambiguously as "pending updates". */}
-        <ArrowUpCircle className={iconSize} />
-        {uc.count}
+        {stale ? <Clock className={iconSize} /> : <ArrowUpCircle className={iconSize} />}
+        {stale ? t("vmLxc.updates.checkStale") : uc.count}
         {/* Chevron only when the badge is wired up as a clickable
             shortcut — its absence on the dashboard card avoids
             implying interactivity where there isn't any (the whole
@@ -5652,7 +5706,8 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                     {!selectedVM.update_check?.managed_oci_app && !ociInstance && !ociRestored &&
                       !selectedVM.update_check?.is_oci_lxc && (() => {
                         const uc = selectedVM.update_check
-                        const osUpdateStatusKnown = !!uc && !uc.error
+                        const osUpdateStale = isLxcUpdateStale(uc)
+                        const osUpdateStatusKnown = !!uc && !uc.error && !osUpdateStale
                         const hasOsUpdates = osUpdateStatusKnown && !!uc.available
                         const dockerAppWatch = (selectedVM.app_watches || []).find((a) => a.helper_slug === "docker")
                         const dockerRegistered = !!dockerAppWatch
@@ -5925,6 +5980,15 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                                   <div className="flex items-center gap-2 mb-3">
                                     <Package className="h-4 w-4 text-muted-foreground" />
                                     <h3 className="text-sm font-semibold text-foreground">{t("vmLxc.updates.osPackagesTitle")}</h3>
+                                    <Button
+                                      size="sm" variant="outline" className="ml-auto"
+                                      disabled={selectedVM.status !== "running" || osCheckingVmid !== null}
+                                      title={t("vmLxc.updates.checkReadOnlyHelp")}
+                                      onClick={() => checkOsUpdates(selectedVM.vmid)}
+                                    >
+                                      <RefreshCw className={`h-4 w-4 mr-1.5 ${osCheckingVmid === selectedVM.vmid ? "animate-spin" : ""}`} />
+                                      {t("vmLxc.updates.checkNow")}
+                                    </Button>
                                   </div>
                                   <div className="text-xs text-muted-foreground mb-3 leading-relaxed">
                                     {t("vmLxc.updates.lastCheckedPrefix")}{" "}
@@ -5933,7 +5997,10 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                                       <> · {t("vmLxc.updates.familyLabel")} <code className="text-foreground/80">{uc.os_family}</code></>
                                     )}
                                   </div>
-                                  {!osUpdateStatusKnown ? (
+                                  {osCheckError && <p role="alert" className="text-sm text-amber-400 mb-2">{osCheckError}</p>}
+                                  {osUpdateStale && !uc?.error ? (
+                                    <p className="text-sm text-amber-400">{t("vmLxc.updates.checkStaleHelp")}</p>
+                                  ) : !osUpdateStatusKnown ? (
                                     <div
                                       className="text-sm text-muted-foreground flex items-center gap-2"
                                       title={uc?.error || undefined}

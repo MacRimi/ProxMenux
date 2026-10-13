@@ -2,6 +2,7 @@
 
 import ast
 import threading
+from unittest.mock import Mock
 import unittest
 from pathlib import Path
 
@@ -109,6 +110,10 @@ class LxcPrimaryAddressTests(unittest.TestCase):
         import types
         self.server.update({
             "_lxc_ip_cache": {},
+            "_lxc_ip_cache_lock": threading.RLock(),
+            "_LXC_IP_TTL": 60,
+            "_LXC_IP_RETRY_TTL": 5,
+            "time": Mock(monotonic=Mock(return_value=0)),
             "subprocess": types.SimpleNamespace(run=run),
             "_lxc_isolated_ips": lambda _vmid: set(),
             "_lxc_shares_host_network": lambda _vmid: False,
@@ -126,7 +131,8 @@ class LxcPrimaryAddressTests(unittest.TestCase):
 
     def test_an_answer_without_ipv4_of_its_own_is_read_again(self):
         self.read("172.30.232.1\n172.30.32.1\nfd0c:ac1e:2100::1\n")
-        self.assertNotIn(121, self.server["_lxc_ip_cache"])
+        self.assertIn(121, self.server["_lxc_ip_cache"])
+        self.server["time"].monotonic.return_value = 5
         self.assertEqual(self.read("192.168.0.100\n172.30.32.1\n")["primary_ip"], "192.168.0.100")
         self.assertIn(121, self.server["_lxc_ip_cache"])
 
