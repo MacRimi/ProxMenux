@@ -531,6 +531,44 @@
     "os": "ubuntu"
   },
   {
+    "name": "AIOStreams",
+    "slug": "aiostreams",
+    "desc": "AIOStreams consolidates multiple Stremio addons and debrid services into a single, highly customisable super-addon, with filtering, sorting, and formatting of results.",
+    "script": "ct/aiostreams.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/aiostreams.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/aiostreams.sh",
+    "type": "lxc",
+    "type_id": "nm9bra8mzye2scg",
+    "categories": [
+      "scriptcat00013"
+    ],
+    "category_names": [
+      "Media & Streaming"
+    ],
+    "notes": [
+      "Uses SQLite by default (stored under /opt/aiostreams_data, along with every other on-disk cache the addon keeps - all derived from DATABASE_URI's directory). Edit DATABASE_URI in /opt/aiostreams_data/.env to use PostgreSQL instead.",
+      "Most configuration (addons, presets, formatting, proxying) is done from the dashboard Settings page after deployment, not via the .env file.",
+      "The optional \"mount the library as a local folder\" share (Shares > FUSE) needs /dev/fuse, which this container doesn't have by default. It's not required for normal use - the WebDAV and NFS shares work without it - but if you want it, set var_fuse=yes (or answer yes to \"Enable FUSE support?\" in the advanced install) before creating the container; this stays a safe, unprivileged container the whole time."
+    ],
+    "warnings": [
+      "No authentication is enabled by default. Set AIOSTREAMS_AUTH in /opt/aiostreams_data/.env to secure the dashboard.",
+      "SECRET_KEY is generated automatically and cannot be changed after first run without invalidating existing encrypted configs. Back up /opt/aiostreams_data/.env."
+    ],
+    "port": 3000,
+    "website": "https://github.com/Viren070/AIOStreams",
+    "documentation": "https://docs.aiostreams.viren070.me/",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/aiostreams.webp",
+    "updateable": true,
+    "privileged": false,
+    "has_arm": false,
+    "is_dev": true,
+    "execute_in": [
+      "lxc"
+    ],
+    "config_path": "",
+    "os": "debian"
+  },
+  {
     "name": "AirTrail",
     "slug": "airtrail",
     "desc": "AirTrail is a modern, self-hosted personal flight tracking system. Log your flights, visualize them on an interactive world map, view detailed statistics, share flights between multiple users, and import from sources such as MyFlightRadar24, Flighty and OpenFlights.",
@@ -1036,6 +1074,45 @@
       "username": "anki",
       "password": "Generated during installation"
     },
+    "os": "debian"
+  },
+  {
+    "name": "Anubis",
+    "slug": "anubis",
+    "desc": "Anubis is a reverse proxy that sits in front of a web service and stops AI scrapers and abusive bots with a proof-of-work challenge, while letting real browsers and well-behaved crawlers through.",
+    "script": "ct/anubis.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/anubis.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/anubis.sh",
+    "type": "lxc",
+    "type_id": "nm9bra8mzye2scg",
+    "categories": [
+      "scriptcat00021",
+      "scriptcat00006"
+    ],
+    "category_names": [
+      "Webservers & Proxies",
+      "Authentication & Security"
+    ],
+    "notes": [
+      "The container is configured for direct exposure over plain HTTP (COOKIE_SECURE=false, USE_REMOTE_ADDRESS=true). When you put a TLS reverse proxy in front of it, set COOKIE_SECURE=true and remove USE_REMOTE_ADDRESS so client IPs come from X-Forwarded-For.",
+      "One Anubis instance protects one TARGET. For another service, copy /etc/anubis/main.env to /etc/anubis/<name>.env with its own BIND, METRICS_BIND and TARGET and run `systemctl enable --now anubis@<name>`. Alternatively point TARGET at a reverse proxy that routes by Host header and a single instance covers all its sites.",
+      "Bot policies live in /etc/anubis/main.botPolicies.yaml (a copy of the upstream default). Prometheus metrics are exposed on port 9090."
+    ],
+    "warnings": [
+      "Set TARGET in /etc/anubis/main.env to the service you want to protect, then run `systemctl restart anubis@main`. Point your reverse proxy or DNS at this container on port 8923."
+    ],
+    "port": 8923,
+    "website": "https://anubis.techaro.lol/",
+    "documentation": "https://anubis.techaro.lol/docs/",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/anubis.webp",
+    "updateable": true,
+    "privileged": false,
+    "has_arm": false,
+    "is_dev": true,
+    "execute_in": [
+      "lxc"
+    ],
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -2997,6 +3074,38 @@
     ],
     "config_path": "",
     "os": "alpine"
+  },
+  {
+    "name": "Calagopus",
+    "slug": "calagopus",
+    "desc": "Modern game server management panel built in Rust. Deploy, monitor, and manage Minecraft, Hytale, and other game servers with industry-leading performance.",
+    "script": "ct/calagopus.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/calagopus.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/calagopus.sh",
+    "type": "lxc",
+    "type_id": "nm9bra8mzye2scg",
+    "categories": [],
+    "category_names": [],
+    "notes": [
+      "Installs the All-in-One (AIO) build, which bundles the Panel and Wings in a single binary for single-node deployments.",
+      "Docker is installed as a system dependency because Wings uses it to run the actual game server containers; the Panel and Wings processes themselves run natively, not inside Docker."
+    ],
+    "warnings": [
+      "The encryption key is generated automatically and saved to /etc/calagopus/.env. Back it up, losing it will make existing data unreadable."
+    ],
+    "port": 8000,
+    "website": "https://calagopus.com",
+    "documentation": "https://calagopus.com/docs",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/calagopus.webp",
+    "updateable": true,
+    "privileged": false,
+    "has_arm": false,
+    "is_dev": true,
+    "execute_in": [
+      "lxc"
+    ],
+    "config_path": "",
+    "os": "debian"
   },
   {
     "name": "Calibre-Web",
