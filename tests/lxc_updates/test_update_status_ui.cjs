@@ -44,7 +44,7 @@ for (const locale of ['en', 'sk']) {
   const t = key => key.split('.').reduce((o, part) => o?.[part], messages) ?? key
   const calls = []
   const context = {exports: {}, t, customCmdEditingApp: null, uc: null, helperExists: false,
-    helperUsesWebUpdater: false, selectedVM: {vmid: 210}, openCustomCmdEditor() {},
+    helperUsesWebUpdater: false, selectedVM: {vmid: 210, status: 'stopped'}, openCustomCmdEditor() {},
     openApplyTerminal: (...args) => calls.push(args), getUpdateActionButtonClass: () => 'original-style',
     bulkApplying: false, osCheckingVmid: null, updatesRefreshing: false, controlLoading: false,
     applyOpen: false, osUpdateStatusKnown: true, hasOsUpdates: false,
@@ -58,6 +58,7 @@ for (const locale of ['en', 'sk']) {
     latest_version: '2.0', update_available: null, update_command: 'approved-command', checked_at: '2026-10-14T10:43:19Z'}
   const before = JSON.stringify(original)
   const rendered = ui.app(original)
+  assert.equal(ui.check().props.disabled, true, 'a stopped CT must not start an index refresh from the check button')
   assert.match(text(rendered), locale === 'sk' ? /Nainštalovaná verzia nie je overená/ : /Installed version is unverified/)
   assert.doesNotMatch(text(rendered), /Čaká sa|pending|upstreamAvailable/)
   const action = flatten(rendered).find(n => n.type === 'Button')
@@ -108,6 +109,8 @@ for (const locale of ['en', 'sk']) {
   assert.doesNotMatch(text(bulk(pending)), locale === 'sk' ? /nie je overená/ : /is unverified/)
   assert.equal(calls.length, 0, 'all status fixtures are side-effect free')
 }
+assert.match(source, /t\("vmLxc\.updates\.startBeforeCheck"\)/,
+  'the Updates tab must explain why checking a stopped CT is disabled')
 ;(async () => {
   const context = {exports: {}, osCheckRequestRef: {current: null}, applyOpen: false, controlLoading: false,
     selectedVMRef: {current: {vmid: 210}}, vmModalCacheRef: {current: {details: new Map()}},

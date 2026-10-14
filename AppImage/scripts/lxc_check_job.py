@@ -1,7 +1,7 @@
 """Explicit check-only jobs; the shared updater lock protects each CT.
 
-Importing or reading a job never probes a guest. Only start() may launch work.
-Package observations are saved before restoring a temporarily started guest.
+Importing or reading a job never probes a guest. Only start() may launch work
+for an already-running CT; package indexes are never refreshed by starting one.
 """
 import datetime
 import fcntl
@@ -99,51 +99,30 @@ def checked_os(vmid):
 
 
 def run(vmid, job_id, reservation):
-    restore = False
     error = None
+    check_started = False
     invalid = LOCK_DIR / f'proxmenux-lxc-check-invalid-{int(vmid)}'
     try:
         invalid.touch(mode=0o600)
         guard(vmid)
-        original = status(vmid)
-        if original == 'stopped':
-            # Set before start: a timed-out command can still have started CT.
-            restore = True
-            command(vmid, 'start', timeout=60)
-            deadline = time.monotonic() + 60
-            while True:
-                try:
-                    command(vmid, 'exec', '--', 'true', timeout=5)
-                    break
-                except (RuntimeError, subprocess.TimeoutExpired):
-                    if time.monotonic() >= deadline:
-                        raise RuntimeError('Container did not become ready')
-                    time.sleep(1)
+        if status(vmid) != 'running':
+            raise RuntimeError('Container is stopped; start it first')
+        check_started = True
         observation = lxc_update_observation.capture(vmid, job_id, refresh_indexes=True)
         if not managed_installs.store_lxc_update_observation(vmid, observation):
             raise RuntimeError(observation['result'].get('error') or 'Package check failed')
         lxc_update_observation.discard(vmid, job_id)
     except Exception as exc:
         error = str(exc)
-        # Preflight/start failures must revoke a previous positive observation.
-        try:
-            managed_installs.store_lxc_update_observation(vmid, None)
-        except Exception:
-            error += '; package result could not be persisted'
-    finally:
-        if restore:
+        # A failed package operation must block installation. A state change
+        # before the worker runs did not check or alter packages, so keep the
+        # last verified observation but leave the invalid marker in place.
+        if check_started:
             try:
-                if status(vmid) != 'stopped':
-                    command(vmid, 'shutdown', '--timeout', '30', timeout=40)
-                if status(vmid) != 'stopped':
-                    raise RuntimeError('Container is still running')
+                managed_installs.store_lxc_update_observation(vmid, None)
             except Exception:
-                try:
-                    command(vmid, 'stop', timeout=30)
-                    if status(vmid) != 'stopped':
-                        raise RuntimeError('Container is still running')
-                except Exception:
-                    error = (error + '; ' if error else '') + 'Original stopped state could not be restored'
+                error += '; package result could not be persisted'
+    finally:
         if not error:
             try:
                 invalid.unlink()
@@ -167,6 +146,8 @@ def start(vmid):
         reservation = acquire(vmid)
         try:
             guard(vmid)
+            if status(vmid) != 'running':
+                raise RuntimeError('Container is stopped; start it first')
             job_id = uuid.uuid4().hex
             _jobs[job_id] = dict(vmid=vmid, state='running', error=None, created=now)
             _attempts[vmid] = now

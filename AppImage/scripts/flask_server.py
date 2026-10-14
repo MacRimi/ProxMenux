@@ -13697,7 +13697,7 @@ def api_lxc_updates_check(vmid):
 @app.route('/api/vms/<int:vmid>/updates/refresh-check', methods=['POST'])
 @require_auth
 def api_lxc_updates_refresh_check(vmid):
-    """Explicit index refresh/check; never installs. Worker owns restoration."""
+    """Explicit index refresh/check for a running CT; never installs."""
     import lxc_check_job
     try:
         result, code = lxc_check_job.start(vmid)

@@ -6048,7 +6048,7 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                                     <h3 className="text-sm font-semibold text-foreground">{t("vmLxc.updates.osPackagesTitle")}</h3>
                                     <Button
                                       size="sm" variant="outline" className="ml-auto"
-                                      disabled={osCheckingVmid !== null || updatesRefreshing || controlLoading || applyOpen}
+                                      disabled={selectedVM.status !== "running" || osCheckingVmid !== null || updatesRefreshing || controlLoading || applyOpen}
                                       title={t("vmLxc.updates.refreshCheckHelp")}
                                       onClick={() => checkOsUpdates(selectedVM.vmid)}
                                     >
@@ -6056,6 +6056,11 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                                       {t("vmLxc.updates.checkSystemPackages")}
                                     </Button>
                                   </div>
+                                  {selectedVM.status !== "running" && (
+                                    <p className="text-sm text-muted-foreground mb-3">
+                                      {t("vmLxc.updates.startBeforeCheck")}
+                                    </p>
+                                  )}
                                   <div className="text-xs text-muted-foreground mb-3 leading-relaxed">
                                     {t("vmLxc.updates.lastCheckedPrefix")}{" "}
                                     {uc?.last_check ? new Date(uc.last_check).toLocaleString() : "—"}

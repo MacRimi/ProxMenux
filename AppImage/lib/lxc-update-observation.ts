@@ -31,8 +31,8 @@ export function checkLxcUpdates<T>(vmid: number): Promise<T> {
   return fetchApi<T>(`/api/vms/${vmid}/updates/check`, { method: "POST" })
 }
 
-// Separate explicit action: refresh indexes, check only, restore stopped CT.
-// The backend owns the job even if the browser closes or navigates away.
+// Explicit action: refresh indexes and check an already-running CT. The
+// backend owns the job even if the browser closes or navigates away.
 export async function refreshCheckLxcUpdates<T>(vmid: number): Promise<T> {
   const job = await fetchApi<{ job_id: string }>(`/api/vms/${vmid}/updates/refresh-check`, { method: "POST" })
   const deadline = Date.now() + 8 * 60_000

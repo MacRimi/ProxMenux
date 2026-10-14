@@ -63,14 +63,17 @@ class CheckOnlyTests(unittest.TestCase):
             job.run(100, 'run', reservation)
         return job.get(100, 'run'), capture, store
 
-    def test_stopped_check_restores_and_never_installs(self):
-        result, capture, store = self.run_check()
-        self.assertEqual(result['state'], 'complete')
+    def test_stopped_check_is_rejected_before_a_job_or_guest_mutation(self):
+        with patch.object(job, 'command', side_effect=self.transport):
+            with self.assertRaisesRegex(RuntimeError, 'start it first'):
+                job.start(100)
         self.assertEqual(self.state, 'stopped')
-        self.assertEqual(self.calls, ['status', 'start', 'exec', 'status', 'shutdown', 'status'])
-        capture.assert_called_once_with(100, 'run', refresh_indexes=True)
-        store.assert_called_once_with(100, self.result)
+        self.assertEqual(self.calls, ['status'])
+        self.assertEqual(job._jobs, {})
+        self.assertEqual(job._attempts, {})
         self.assertFalse((self.folder / 'proxmenux-lxc-check-invalid-100').exists())
+        reservation = job.acquire(100)
+        reservation.close()
 
     def test_running_check_has_no_lifecycle_effect(self):
         self.state = 'running'
@@ -78,29 +81,36 @@ class CheckOnlyTests(unittest.TestCase):
         self.assertEqual(result['state'], 'complete')
         self.assertEqual(self.calls, ['status'])
         self.assertEqual(self.state, 'running')
+        self.assertFalse((self.folder / 'proxmenux-lxc-check-invalid-100').exists())
 
-    def test_index_read_timeout_and_persistence_errors_restore_stopped(self):
+    def test_successful_running_check_clears_an_older_failure_marker(self):
+        self.state = 'running'
+        (self.folder / 'proxmenux-lxc-check-invalid-100').touch()
+        result, _, _ = self.run_check()
+        self.assertEqual(result['state'], 'complete')
+        self.assertFalse((self.folder / 'proxmenux-lxc-check-invalid-100').exists())
+
+    def test_index_read_timeout_and_persistence_errors_keep_running_guest_running(self):
+        self.state = 'running'
         for error in [RuntimeError('index failed'), OSError('read failed'),
                       subprocess.TimeoutExpired('package listing', 30)]:
             with self.subTest(error=type(error).__name__):
                 result, _, _ = self.run_check(capture_error=error)
                 self.assertEqual(result['state'], 'failed')
-                self.assertEqual(self.state, 'stopped')
+                self.assertEqual(self.state, 'running')
         result, _, _ = self.run_check(persistence_error=OSError('disk full'))
         self.assertEqual(result['state'], 'failed')
-        self.assertEqual(self.state, 'stopped')
+        self.assertEqual(self.state, 'running')
         self.assertIn('could not be persisted', result['error'])
 
-    def test_start_timeout_after_effect_is_restored(self):
-        def transport(vmid, action, *args, **kwargs):
-            value = self.transport(vmid, action, *args, **kwargs)
-            if action == 'start':
-                raise subprocess.TimeoutExpired('start', 60)
-            return value
-        result, capture, _ = self.run_check(transport=transport)
+    def test_unexpected_stopped_worker_never_starts_or_probes_the_guest(self):
+        result, capture, store = self.run_check()
         self.assertEqual(result['state'], 'failed')
         self.assertEqual(self.state, 'stopped')
+        self.assertEqual(self.calls, ['status'])
         capture.assert_not_called()
+        store.assert_not_called()
+        self.assertTrue((self.folder / 'proxmenux-lxc-check-invalid-100').exists())
 
     def test_unknown_status_does_not_start(self):
         self.state = 'unknown'
@@ -108,26 +118,6 @@ class CheckOnlyTests(unittest.TestCase):
         self.assertEqual(result['state'], 'failed')
         self.assertEqual(self.calls, ['status'])
         capture.assert_not_called()
-
-    def test_shutdown_failure_uses_verified_stop(self):
-        def transport(vmid, action, *args, **kwargs):
-            if action == 'shutdown':
-                raise RuntimeError('shutdown failed')
-            return self.transport(vmid, action, *args, **kwargs)
-        result, _, _ = self.run_check(transport=transport)
-        self.assertEqual(result['state'], 'complete')
-        self.assertEqual(self.state, 'stopped')
-        self.assertIn('stop', self.calls)
-
-    def test_failed_restore_revokes_installation(self):
-        def transport(vmid, action, *args, **kwargs):
-            if action in ('shutdown', 'stop'):
-                raise RuntimeError('stop failed')
-            return self.transport(vmid, action, *args, **kwargs)
-        result, _, _ = self.run_check(transport=transport)
-        self.assertEqual(result['state'], 'failed')
-        self.assertIn('could not be restored', result['error'])
-        self.assertTrue((self.folder / 'proxmenux-lxc-check-invalid-100').exists())
 
     def test_guard_oci_config_lock_and_disabled_forbid_all_guest_calls(self):
         for config in ['lxc.environment.runtime: OCI=1\n', 'lock: backup\n']:
@@ -163,7 +153,8 @@ class CheckOnlyTests(unittest.TestCase):
             capture.assert_not_called()
 
     def test_thread_start_failure_releases_lock_and_job(self):
-        with patch.object(job.threading, 'Thread') as thread:
+        with patch.object(job, 'status', return_value='running'), \
+                patch.object(job.threading, 'Thread') as thread:
             thread.return_value.start.side_effect = RuntimeError('cannot create worker')
             with self.assertRaises(RuntimeError):
                 job.start(100)
@@ -201,7 +192,8 @@ class CheckOnlyTests(unittest.TestCase):
             job._attempts[100] = 100
             reservation = Mock()
             with patch.object(job.time, 'monotonic', return_value=100 + elapsed), \
-                 patch.object(job.threading, 'Thread'), patch.object(job, 'acquire', return_value=reservation):
+                 patch.object(job.threading, 'Thread'), patch.object(job, 'acquire', return_value=reservation), \
+                 patch.object(job, 'status', return_value='running'):
                 result, code = job.start(100)
             self.assertEqual(code, expected)
         job._jobs['active'] = dict(vmid=100, state='running', created=100)
@@ -244,7 +236,7 @@ class CheckOnlyTests(unittest.TestCase):
     def test_real_capture_refreshes_lists_and_persists_without_installation(self):
         for count, index_rc in [(0, 0), (2, 0), (2, 1)]:
             with self.subTest(count=count, index_rc=index_rc):
-                self.state = 'stopped'
+                self.state = 'running'
                 reservation = job.acquire(100)
                 job._jobs['real'] = dict(vmid=100, state='running', created=time.monotonic())
                 entry = {'id': 'lxc:100', 'type': 'lxc', '_vmid': '100', '_os_family': 'debian'}
@@ -264,7 +256,7 @@ class CheckOnlyTests(unittest.TestCase):
                      patch.object(job.managed_installs.subprocess, 'run', side_effect=transport):
                     job.run(100, 'real', reservation)
                     stored = job.managed_installs.get_registry()['items'][0]['update_check']
-                self.assertEqual(self.state, 'stopped')
+                self.assertEqual(self.state, 'running')
                 self.assertEqual(job.get(100, 'real')['state'], 'failed' if index_rc else 'complete')
                 self.assertTrue(any('update' in command for command in commands))
                 self.assertFalse(any(any(word in command for word in ('upgrade', 'install', 'full-upgrade'))
