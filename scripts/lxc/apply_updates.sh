@@ -142,10 +142,26 @@ fi
 #    restore their original stopped state on every exit path.
 STATE=$(pct status "$VMID" | awk '{print $2}')
 STARTED_BY_PROXMENUX=0
+OBSERVATION_ATTEMPTED=0
+capture_before_stop() {
+  if [[ "$STARTED_BY_PROXMENUX" == "1" && "$OBSERVATION_ATTEMPTED" == "0" && -z "${RUN_ID:-}" && "${EXECUTION_MODE:-}" == "web" ]]; then
+    OBSERVATION_ATTEMPTED=1
+    echo "WARNING: post-update verification has no RUN_ID; the result cannot be verified." >&2
+  fi
+  if [[ "$STARTED_BY_PROXMENUX" == "1" && "$OBSERVATION_ATTEMPTED" == "0" && -n "${RUN_ID:-}" ]]; then
+    OBSERVATION_ATTEMPTED=1
+    # Capture while pct exec works. Only the backend writes the registry.
+    if ! python3 /usr/local/share/proxmenux/monitor-app/usr/bin/lxc_update_observation.py \
+          --vmid "$VMID" --run-id "$RUN_ID" --include-apps; then
+      echo "WARNING: post-update package verification unavailable; the result will remain unverified." >&2
+    fi
+  fi
+}
 restore_original_state() {
   local rc=$?
   trap - EXIT INT TERM
   if [[ "$STARTED_BY_PROXMENUX" == "1" ]]; then
+    capture_before_stop
     echo
     echo "Restoring original state: stopping CT $VMID…"
     if ! pct shutdown "$VMID" --timeout 60; then
@@ -397,6 +413,9 @@ fi
 #    OCI-style CTs whose PID 1 is a user entrypoint (a plain `apt
 #    upgrade` doesn't restart the app; a CT reboot does).
 if [[ "$RESTART" == "1" ]]; then
+  # A reboot may return before pct exec is usable again. Keep the verified
+  # package snapshot from before reboot, then restore the original state.
+  capture_before_stop
   echo "--- Rebooting CT $VMID ---"
   if ! pct reboot "$VMID"; then
     echo "ERROR: pct reboot failed." >&2

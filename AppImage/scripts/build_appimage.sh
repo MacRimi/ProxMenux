@@ -144,6 +144,8 @@ cp "$SCRIPT_DIR/smartctl_resolver.py" "$APP_DIR/usr/bin/" 2>/dev/null || echo "�
 cp "$SCRIPT_DIR/disk_identity.py" "$APP_DIR/usr/bin/" 2>/dev/null || echo "⚠️  disk_identity.py not found"
 cp "$SCRIPT_DIR/health_thresholds.py" "$APP_DIR/usr/bin/" 2>/dev/null || echo "⚠️  health_thresholds.py not found"
 cp "$SCRIPT_DIR/managed_installs.py" "$APP_DIR/usr/bin/" 2>/dev/null || echo "⚠️  managed_installs.py not found"
+cp "$SCRIPT_DIR/lxc_update_observation.py" "$APP_DIR/usr/bin/"
+cp "$SCRIPT_DIR/lxc_update_finalization.py" "$APP_DIR/usr/bin/"
 cp "$SCRIPT_DIR/lxc_apps.py" "$APP_DIR/usr/bin/" 2>/dev/null || echo "⚠️  lxc_apps.py not found"
 cp "$SCRIPT_DIR/custom_links.py" "$APP_DIR/usr/bin/" 2>/dev/null || echo "⚠️  custom_links.py not found"
 cp "$SCRIPT_DIR/recreate_docker_container.py" "$APP_DIR/usr/bin/" 2>/dev/null || echo "⚠️  recreate_docker_container.py not found"

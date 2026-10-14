@@ -14253,8 +14253,7 @@ def api_vm_apps_dismiss(vmid):
 _LXC_APPLY_UPDATES_SCRIPT = "/usr/local/share/proxmenux/scripts/lxc/apply_updates.sh"
 _LXC_UPDATE_RUN_ID_RE = re.compile(r'^[A-Za-z0-9._:-]{1,128}$')
 _LXC_UPDATE_TARGET_RE = re.compile(r'^[A-Za-z0-9._:-]{1,180}$')
-_lxc_update_finalization_lock = threading.RLock()
-_lxc_update_finalizations: dict[tuple[int, str], dict] = {}
+from lxc_update_finalization import lock as _lxc_update_finalization_lock, runs as _lxc_update_finalizations
 _LXC_UPDATE_FINALIZATION_TTL = 6 * 3600
 
 
@@ -14546,6 +14545,37 @@ def _finalize_lxc_update(
     before = before_snapshot or _lxc_update_snapshot(vmid)
     verification_pending = _fast_guest_status(vmid, 'lxc') != 'running'
     docker_inventory = None
+
+    if verification_pending and status in {'success', 'failure', 'partial'}:
+        try:
+            import managed_installs
+            import lxc_update_observation
+            observation = lxc_update_observation.read(vmid, safe_run_id)
+            verified = managed_installs.store_lxc_update_observation(vmid, observation)
+            print(f'[ProxMenux] stopped LXC verification: vmid={vmid} '
+                  f'run_id={safe_run_id} handoff={observation is not None} '
+                  f'verified={verified}', flush=True)
+            if not verified:
+                verification_errors.append('post-update OS verification unavailable')
+            apps_persisted = True
+            if observation is not None and 'apps' in observation:
+                import lxc_apps
+                try:
+                    app_result = lxc_apps.store_installed_observations(vmid, observation['apps'])
+                    verification_errors.extend(app_result['errors'])
+                    if status == 'success':
+                        lxc_apps.mark_manual_versions_unverified(
+                            vmid, [item[4:] for item in requested if item.startswith('app:')])
+                    _publish_guest_modal_cache_revision(vmid)
+                except Exception:
+                    apps_persisted = False
+                    verification_errors.append('post-update application persistence failed')
+            # Retain a rejected handoff for diagnosis rather than silently
+            # deleting the only evidence. Capture prunes old private files.
+            if observation is not None and verified and apps_persisted:
+                lxc_update_observation.discard(vmid, safe_run_id)
+        except Exception as exc:
+            verification_errors.append(f'post-update OS verification failed: {exc}')
 
     if not verification_pending:
         try:
