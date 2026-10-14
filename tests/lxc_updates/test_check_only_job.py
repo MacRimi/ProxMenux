@@ -290,8 +290,13 @@ class CheckOnlyTests(unittest.TestCase):
 
     def test_control_route_uses_same_lock_and_preserves_qemu(self):
         app = Flask(__name__)
-        command = Mock(return_value=subprocess.CompletedProcess(
-            [], 0, '"UPID:fixture:000A:000B:000C:vzstart:100:root@pam:"\n', ''))
+        def control_result(argv, **_):
+            path = argv[2]
+            vm_type, vmid, action = path.split('/')[3], path.split('/')[4], path.rsplit('/', 1)[1]
+            task_type = ('vz' if vm_type == 'lxc' else 'qm') + action
+            return subprocess.CompletedProcess(
+                [], 0, f'"UPID:fixture:000A:000B:000C:{task_type}:{vmid}:root@pam:"\n', '')
+        command = Mock(side_effect=control_result)
         scope = {'app': app, 'jsonify': jsonify, 'request': request,
                  'require_auth': lambda fn: fn,
                  'get_cached_pvesh_cluster_resources_vm': lambda: [

@@ -57,12 +57,33 @@ class ControlTaskTests(unittest.TestCase):
             self.assertEqual(retained.call_count, 4)
             lock.close.assert_not_called()
 
-    def test_legacy_acceptance_without_task_and_invalid_action(self):
-        self.run.return_value = subprocess.CompletedProcess([], 0, '', '')
-        response = self.client.post('/api/vms/200/control', json={'action': 'start'})
-        self.assertEqual(response.status_code, 200)
-        self.assertTrue(response.json['success'])
-        self.assertIsNone(response.json['task'])
+    def test_control_post_reads_final_upid_after_pvesh_log_output(self):
+        lock = Mock()
+        retained = Mock()
+        module = SimpleNamespace(acquire=lambda _: lock, begin_control=Mock(),
+                                 retain_control=retained, cancel_control=Mock())
+        task = TASK.replace('vzreboot', 'vzstart')
+        self.run.return_value = subprocess.CompletedProcess(
+            [], 0, f'waiting for server lock\n"{task}"\n', '')
+        with patch.dict('sys.modules', {'lxc_check_job': module}):
+            response = self.client.post('/api/vms/100/control', json={'action': 'start'})
+        self.assertEqual(response.status_code, 200, response.json)
+        self.assertEqual(response.json['task'], task)
+        retained.assert_called_once_with(100, task, lock)
+
+    def test_control_post_rejects_success_without_a_confirmable_task(self):
+        lock = Mock()
+        module = SimpleNamespace(acquire=lambda _: lock, begin_control=Mock(),
+                                 retain_control=Mock(), cancel_control=Mock())
+        self.run.return_value = subprocess.CompletedProcess([], 0, 'waiting for server lock\n', '')
+        with patch.dict('sys.modules', {'lxc_check_job': module}):
+            response = self.client.post('/api/vms/100/control', json={'action': 'start'})
+        self.assertEqual(response.status_code, 502, response.json)
+        self.assertFalse(response.json['success'])
+        self.assertIn('task', response.json['error'].lower())
+        module.retain_control.assert_not_called()
+        module.cancel_control.assert_called_once_with(lock)
+        lock.close.assert_called_once()
         self.run.reset_mock()
         self.assertEqual(self.client.post('/api/vms/100/control', json={'action': 'destroy'}).status_code, 400)
         self.run.assert_not_called()
@@ -90,6 +111,18 @@ class ControlTaskTests(unittest.TestCase):
                     self.assertEqual(response.json['guest_status'], expected)
                     self.assertEqual(self.run.call_count, 2)
                     self.assertTrue(all(call.args[0][:2] == ['pvesh', 'get'] for call in self.run.call_args_list))
+
+    def test_ha_start_and_stop_tasks_belong_to_the_guest(self):
+        for action, expected in [('hastart', 'running'), ('hastop', 'stopped')]:
+            with self.subTest(action=action):
+                self.run.reset_mock()
+                self.run.side_effect = [self.result(dict(status='stopped', exitstatus='OK')),
+                                        self.result(dict(status=expected))]
+                task = TASK.replace('vzreboot', action)
+                response = self.get(task)
+                self.assertEqual(response.status_code, 200, response.json)
+                self.assertEqual(response.json['guest_status'], expected)
+                self.assertEqual(self.run.call_count, 2)
 
     def test_wrong_guest_node_type_and_path_make_zero_probes(self):
         for task in [TASK.replace(':100:', ':200:'), TASK.replace('fixture', 'other'),

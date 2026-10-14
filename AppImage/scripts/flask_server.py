@@ -15876,6 +15876,7 @@ def api_vm_config_set(vmid):
 def api_vm_control(vmid):
     """Control VM/LXC (start, stop, shutdown, reboot)"""
     operation_lock = None
+    task_identity_confirmed = False
     try:
         data = request.get_json()
         action = data.get('action')  # start, stop, shutdown, reboot
@@ -15912,6 +15913,35 @@ def api_vm_control(vmid):
                 capture_output=True, text=True, timeout=30)
 
             if control_result.returncode == 0:
+                import re
+                # pvesh can print progress lines before the task identity.
+                # The final non-empty line is the only task associated with
+                # this request; accepting a different log line would make the
+                # frontend poll an unrelated guest operation.
+                lines = [line.strip().strip('"') for line in
+                         (control_result.stdout or '').splitlines() if line.strip()]
+                task = lines[-1] if lines else ''
+                task_types = [f"{'vz' if vm_type == 'lxc' else 'qm'}{action}"]
+                if action == 'start':
+                    task_types.append('hastart')
+                elif action == 'stop':
+                    task_types.append('hastop')
+                task_pattern = (r'UPID:[\w.-]+:[0-9A-Fa-f]+:[0-9A-Fa-f]+:'
+                                r'[0-9A-Fa-f]+:(?:' + '|'.join(task_types) +
+                                rf'):{vmid}:[\w.@!-]+:')
+                if not re.fullmatch(task_pattern, task):
+                    # A successful process exit without a verifiable task
+                    # cannot be polled.  Do not leave a task-less control
+                    # marker that would block this CT forever.
+                    if operation_lock is not None:
+                        lxc_check_job.cancel_control(operation_lock)
+                    return jsonify({
+                        'success': False,
+                        'vmid': vmid,
+                        'action': action,
+                        'error': 'Control task was not confirmed by Proxmox',
+                    }), 502
+                task_identity_confirmed = True
                 # Invalidate VM resources cache so the next /api/vms call
                 # returns fresh status instead of the pre-action snapshot.
                 _pvesh_cache['cluster_resources_vm_time'] = 0
@@ -15919,17 +15949,16 @@ def api_vm_control(vmid):
                 # (lxc_ip_info, os_info) — a start/stop flips those, so
                 # drop the modal caches for this vmid.
                 _vm_cache_invalidate(vmid)
-                # Keep the legacy acceptance response; new clients also wait
-                # for this specific task instead of assuming it has finished.
-                task = (control_result.stdout or '').strip().strip('"')
-                if operation_lock is not None and task.startswith('UPID:'):
+                # The frontend waits for this exact task rather than assuming
+                # that accepting the request means the action completed.
+                if operation_lock is not None:
                     lxc_check_job.retain_control(vmid, task, operation_lock)
                     operation_lock = None
                 return jsonify({
                     'success': True,
                     'vmid': vmid,
                     'action': action,
-                    'task': task if task.startswith('UPID:') else None,
+                    'task': task,
                     'message': f'Successfully executed {action} on {vm_info.get("name")}'
                 })
             else:
@@ -15986,6 +16015,14 @@ def api_vm_control(vmid):
         else:
             return jsonify({'error': 'Failed to get VM details'}), 500
     except Exception as e:
+        # A transport error happens before we have an identity that can be
+        # recovered later.  Leaving the pre-submission marker would otherwise
+        # make the CT permanently busy after one timed-out pvesh invocation.
+        if operation_lock is not None and not task_identity_confirmed:
+            try:
+                lxc_check_job.cancel_control(operation_lock)
+            except Exception:
+                pass
         return jsonify({'error': str(e)}), 500
 
     finally:
@@ -15999,7 +16036,8 @@ def api_vm_control_task(vmid, task):
     import re
     import json
     if not re.fullmatch(r'UPID:[\w.-]+:[0-9A-Fa-f]+:[0-9A-Fa-f]+:[0-9A-Fa-f]+:'
-                        r'(?:vz|qm)(?:start|stop|shutdown|reboot):[0-9]+:[\w.@-]+:', task):
+                        r'(?:(?:vz|qm)(?:start|stop|shutdown|reboot)|ha(?:start|stop)):'
+                        r'[0-9]+:[\w.@!-]+:', task):
         return jsonify({'error': 'Invalid control task'}), 400
     parts = task.split(':')
     resource = next((item for item in get_cached_pvesh_cluster_resources_vm() or []
@@ -16009,7 +16047,11 @@ def api_vm_control_task(vmid, task):
     vm_type = 'lxc' if resource.get('type') == 'lxc' else 'qemu'
     node = resource.get('node', 'pve')
     prefix = 'vz' if vm_type == 'lxc' else 'qm'
-    if parts[1] != node or parts[6] != str(vmid) or not parts[5].startswith(prefix):
+    allowed_task_types = {f'{prefix}{action}' for action in
+                          ('start', 'stop', 'shutdown', 'reboot')}
+    allowed_task_types.update(('hastart', 'hastop'))
+    if (parts[1] != node or parts[6] != str(vmid)
+            or parts[5] not in allowed_task_types):
         return jsonify({'error': 'Control task does not belong to this guest'}), 400
     try:
         result = subprocess.run(['pvesh', 'get', f'/nodes/{node}/tasks/{task}/status',

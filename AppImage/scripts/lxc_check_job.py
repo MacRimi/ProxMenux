@@ -25,6 +25,7 @@ _jobs = {}
 _attempts = {}
 COOLDOWN = 60
 JOB_TTL = 3600
+CONTROL_TASK_WAIT_SECONDS = 180
 
 
 def acquire(vmid):
@@ -104,7 +105,7 @@ def begin_control(handle, node):
 
 
 def cancel_control(handle):
-    """Only a definite submission failure can clear an unconfirmed request."""
+    """Clear a request for which no recoverable task identity was recorded."""
     _write_control(handle, None)
 
 
@@ -129,7 +130,8 @@ def check_control_task(vmid, handle=None):
             raise ValueError('Invalid node')
         if (not isinstance(task, str)
                 or not re.fullmatch(r'UPID:[\w.-]+:[0-9A-Fa-f]+:[0-9A-Fa-f]+:'
-                                    r'[0-9A-Fa-f]+:vz(?:start|stop|shutdown|reboot):'
+                                    r'[0-9A-Fa-f]+:(?:vz(?:start|stop|shutdown|reboot)'
+                                    r'|ha(?:start|stop)):'
                                     r'[0-9]+:[\w.@!-]+:', task)
                 or task.split(':')[1] != node or task.split(':')[6] != str(vmid)):
             raise ValueError('Unconfirmed control task')
@@ -146,14 +148,18 @@ def check_control_task(vmid, handle=None):
 
 
 def _wait_control(vmid, reservation):
+    deadline = time.monotonic() + CONTROL_TASK_WAIT_SECONDS
     try:
-        while True:
+        while time.monotonic() < deadline:
             try:
                 check_control_task(vmid, reservation)
                 return
             except BlockingIOError:
-                # A status timeout must not unlock a task that may still run.
-                time.sleep(2)
+                # Keep the known task record for recovery after this bounded
+                # waiter exits; a later caller asks Proxmox to verify it.
+                remaining = deadline - time.monotonic()
+                if remaining > 0:
+                    time.sleep(min(2, remaining))
     finally:
         reservation.close()
 

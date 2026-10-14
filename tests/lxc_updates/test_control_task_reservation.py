@@ -109,18 +109,38 @@ class ControlReservationTests(unittest.TestCase):
             job.acquire(100).close()
             probe.assert_not_called()
 
-    def test_definite_failure_clears_marker_but_timeout_or_missing_upid_cannot_confirm_completion(self):
+    def test_definite_failure_or_unidentified_submission_never_leaves_a_permanent_reservation(self):
         self.route.run.return_value = self.result({}, code=1)
         self.assertEqual(self.route.client.post('/api/vms/100/control', json={'action': 'start'}).status_code, 500)
         self.assertEqual(self.lock_path.read_text(), '')
         for response in [subprocess.TimeoutExpired('pvesh', 30), self.result('')]:
             self.route.run.side_effect = response if isinstance(response, Exception) else None
             self.route.run.return_value = response
-            self.route.client.post('/api/vms/100/control', json={'action': 'start'})
-            self.assertIsNone(json.loads(self.lock_path.read_text())['task'])
-            with self.assertRaises(BlockingIOError):
-                job.acquire(100)
-            self.lock_path.write_text('')  # fixture reset after explicit assertions
+            response = self.route.client.post('/api/vms/100/control', json={'action': 'start'})
+            self.assertIn(response.status_code, (500, 502), response.json)
+            self.assertEqual(self.lock_path.read_text(), '')
+            job.acquire(100).close()
+
+    def test_ha_task_recovers_like_a_native_lxc_task(self):
+        task = TASK.replace('vzreboot', 'hastop')
+        self.lock_path.write_text(json.dumps({'node': 'fixture', 'task': task}))
+        with patch.object(job.subprocess, 'run', return_value=self.result(
+                {'status': 'stopped', 'exitstatus': 'OK'})) as probe:
+            job.acquire(100).close()
+        self.assertEqual(probe.call_count, 1)
+        self.assertEqual(self.lock_path.read_text(), '')
+
+    def test_wait_deadline_releases_fd_but_keeps_known_task_for_recovery(self):
+        handle = self.accepted()
+        with patch.object(job, 'CONTROL_TASK_WAIT_SECONDS', 0):
+            job._wait_control(100, handle)
+        self.assertTrue(handle.closed)
+        record = json.loads(self.lock_path.read_text())
+        self.assertEqual(record['task'], TASK)
+        with patch.object(job.subprocess, 'run', return_value=self.result(
+                {'status': 'stopped', 'exitstatus': 'OK'})):
+            job.acquire(100).close()
+        self.assertEqual(self.lock_path.read_text(), '')
 
     def test_thread_launch_failure_retains_marker_for_recovery(self):
         self.thread.start.side_effect = RuntimeError('thread failed')
