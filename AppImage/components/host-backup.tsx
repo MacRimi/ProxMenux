@@ -100,11 +100,15 @@ interface RemoteSnapshot {
   encrypted?: boolean
   borg_id?: string             // Borg-only fields when available
   borg_start_iso?: string
+  // The node the backup belongs to, read from its name; null when the name
+  // does not say (another node's backup under a name of its own choosing).
+  node?: string | null
 }
 
 interface RemoteArchivesResp {
   snapshots: RemoteSnapshot[]
   errors: Array<{ backend: string; repo_name: string; error: string }>
+  hostname?: string
 }
 
 interface ExportTask {
@@ -132,6 +136,7 @@ interface UnifiedArchive {
   // One of the two is populated depending on `source`.
   local?: BackupArchive
   remote?: RemoteSnapshot      // for both pbs and borg
+  node: string | null
 }
 
 interface BackupArchive {
@@ -146,6 +151,8 @@ interface BackupArchive {
   kind: "manual" | "scheduled" | "legacy"
   profile: string | null
   source_hostname: string | null
+  node?: string | null           // the node the backup belongs to
+  former_job?: boolean           // made by a job of this node that no longer exists
   // Which detection path identified this archive. Surfaced as a small tooltip
   // hint so the operator knows whether the metadata is authoritative
   // (sidecar) or inferred (filename / tar-peek).
@@ -964,11 +971,14 @@ export function HostBackup() {
     fetcher,
     { refreshInterval: 60000 },
   )
-  const { data: archivesResp, error: archivesErr, mutate: mutateArchives } = useSWR<{ archives: BackupArchive[] }>(
+  const { data: archivesResp, error: archivesErr, mutate: mutateArchives } = useSWR<{ archives: BackupArchive[]; hostname?: string }>(
     "/api/host-backups/archives",
     fetcher,
     { refreshInterval: 30000 },
   )
+  // On a cluster every PBS holds the backups of all nodes: the list shows
+  // this node's by default, and all of them on request.
+  const [archiveScope, setArchiveScope] = useState<"node" | "all">("node")
 
   // Background poll for the pending manual backup, independent of the
   // watch modal being open. Fires mutateArchives/mutateRemoteArchives
@@ -1005,6 +1015,7 @@ export function HostBackup() {
           created_at: a.mtime,
           source_label: a.path.replace(/\/[^/]+$/, "") || "/",
           local: a,
+          node: a.node ?? null,
         })
       }
     }
@@ -1017,12 +1028,21 @@ export function HostBackup() {
           created_at: s.backup_time,
           source_label: `${s.backend.toUpperCase()} ${s.repo_name}`,
           remote: s,
+          node: s.node ?? null,
         })
       }
     }
     out.sort((a, b) => b.created_at - a.created_at)
     return out
   })()
+  const thisNode = archivesResp?.hostname || remoteArchivesResp?.hostname || null
+  // The choice is offered only when some backup belongs to another node or
+  // its node is not known; a single node sees its list as before.
+  const otherNodeArchives = thisNode ? unifiedArchives.filter((u) => u.node !== thisNode).length : 0
+  const visibleArchives = archiveScope === "all" || otherNodeArchives === 0
+    ? unifiedArchives
+    : unifiedArchives.filter((u) => u.node === thisNode)
+  const hiddenArchives = unifiedArchives.length - visibleArchives.length
 
   return (
     <div className="space-y-4 md:space-y-6">
@@ -1278,7 +1298,32 @@ export function HostBackup() {
             <Archive className="h-5 w-5 text-blue-500" />
             <CardTitle className="text-base font-semibold">{t("backup.archives.title")}</CardTitle>
           </div>
-          <Badge variant="outline">{unifiedArchives.length}</Badge>
+          <div className="flex items-center gap-2">
+            {otherNodeArchives > 0 && (
+              <div
+                role="group"
+                aria-label={t("backup.archives.scopeAriaLabel")}
+                className="inline-flex rounded-lg border border-border bg-muted/40 p-1 gap-1"
+              >
+                {(["node", "all"] as const).map((key) => (
+                  <button
+                    key={key}
+                    type="button"
+                    aria-pressed={archiveScope === key}
+                    onClick={() => setArchiveScope(key)}
+                    className={`inline-flex items-center rounded-md px-2.5 py-1 text-xs font-medium transition-colors ${
+                      archiveScope === key
+                        ? "bg-blue-500 text-white shadow-sm"
+                        : "text-muted-foreground hover:text-foreground hover:bg-background/60"
+                    }`}
+                  >
+                    {key === "node" ? t("backup.archives.scopeThisNode") : t("backup.archives.scopeAllNodes")}
+                  </button>
+                ))}
+              </div>
+            )}
+            <Badge variant="outline">{visibleArchives.length}</Badge>
+          </div>
         </CardHeader>
         <CardContent>
           <p className="text-[11px] text-muted-foreground mb-3">
@@ -1301,13 +1346,21 @@ export function HostBackup() {
               <Loader2 className="h-4 w-4 animate-spin" />
               {t("backup.common.loading")}
             </div>
-          ) : unifiedArchives.length === 0 ? (
+          ) : visibleArchives.length === 0 && hiddenArchives === 0 ? (
             <div className="text-sm text-muted-foreground py-4">
               {t("backup.archives.emptyMessage")}
             </div>
           ) : (
             <div className="space-y-2">
-              {unifiedArchives.map((u) => {
+              {hiddenArchives > 0 && (
+                <p className="text-[11px] text-muted-foreground">
+                  {t("backup.archives.hiddenOtherNodes", { count: hiddenArchives })}{" "}
+                  <button type="button" className="text-blue-400 hover:underline" onClick={() => setArchiveScope("all")}>
+                    {t("backup.archives.scopeShowAll")}
+                  </button>
+                </p>
+              )}
+              {visibleArchives.map((u) => {
                 const localKind = u.local?.kind
                 const localJobId = u.local?.job_id
                 const localHost = u.local?.source_hostname
@@ -1366,6 +1419,14 @@ export function HostBackup() {
                             {t("backup.status.manual")}
                           </span>
                         ) : null}
+                        {u.source === "local" && u.local?.former_job && (
+                          <span
+                            className="uppercase tracking-wide text-[10px] px-1.5 py-0.5 rounded bg-amber-500/10 border border-amber-500/40 text-amber-400"
+                            title={t("backup.archives.formerJobTitle")}
+                          >
+                            {t("backup.archives.formerJob")}
+                          </span>
+                        )}
                         {(u.source === "pbs" || u.source === "borg") && u.remote?.backup_id && (
                           <span>{u.source === "pbs" ? t("backup.archives.group") : t("backup.archives.archive")}: <code className="font-mono">{u.remote.backup_id}</code></span>
                         )}
@@ -2035,7 +2096,19 @@ function InspectModal({
                     <div><span className="text-muted-foreground">{t("backup.fields.createdLabel")}</span> {formatMtime(localArc.mtime)}</div>
                     <div><span className="text-muted-foreground">{t("backup.fields.sizeLabel")}</span> {formatBytes(localArc.size_bytes)}</div>
                     <div className="sm:col-span-2"><span className="text-muted-foreground">{t("backup.fields.pathLabel")}</span> <code className="font-mono break-all">{localArc.path}</code></div>
-                    {localArc.job_id && <div><span className="text-muted-foreground">{t("backup.fields.jobIdLabel")}</span> <code className="font-mono">{localArc.job_id}</code></div>}
+                    {localArc.job_id && (
+                      <div>
+                        <span className="text-muted-foreground">{t("backup.fields.jobIdLabel")}</span> <code className="font-mono">{localArc.job_id}</code>
+                        {localArc.former_job && (
+                          <span
+                            className="ml-2 uppercase tracking-wide text-[10px] px-1.5 py-0.5 rounded bg-amber-500/10 border border-amber-500/40 text-amber-400"
+                            title={t("backup.archives.formerJobTitle")}
+                          >
+                            {t("backup.archives.formerJob")}
+                          </span>
+                        )}
+                      </div>
+                    )}
                     {localArc.profile && <div><span className="text-muted-foreground">{t("backup.fields.profileLabel")}</span> <code className="font-mono">{localArc.profile === "default" ? t("backup.profile.default") : localArc.profile === "custom" ? t("backup.profile.custom") : localArc.profile}</code></div>}
                     {localArc.source_hostname && <div><span className="text-muted-foreground">{t("backup.fields.sourceHostLabel")}</span> <code className="font-mono">{localArc.source_hostname}</code></div>}
                     <div><span className="text-muted-foreground">{t("backup.fields.detectedViaLabel")}</span> <code className="font-mono text-[10px]">{localArc.detected_via === "sidecar" ? t("backup.archives.companionFile") : localArc.detected_via}</code></div>

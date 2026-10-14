@@ -99,6 +99,13 @@ class CommandDescriptionsTests(unittest.TestCase):
                     temporary = json.loads(path.read_text())
                     for section, key in (
                         ("archives", "emptyMessage"),
+                        ("archives", "formerJob"),
+                        ("archives", "formerJobTitle"),
+                        ("archives", "hiddenOtherNodes"),
+                        ("archives", "scopeAllNodes"),
+                        ("archives", "scopeAriaLabel"),
+                        ("archives", "scopeShowAll"),
+                        ("archives", "scopeThisNode"),
                         ("destinations", "backupsKeptMessage"),
                         ("destinations", "localAttachHelpMessage"),
                     ):

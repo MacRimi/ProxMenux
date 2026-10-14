@@ -16151,6 +16151,56 @@ def _known_job_ids():
     return {os.path.basename(p)[:-len('.env')] for p in env_files}
 
 
+# The date a host backup carries at the end of its name.
+_HOST_BACKUP_STAMP_RE = re.compile(r'-\d{8}_\d{6}$')
+
+
+def _host_backup_own_names(hostname):
+    """Names this node keeps its host backups under: `hostcfg-<node>`, the
+    id of each of its jobs, which names its archives, and the PBS backup ID
+    each job uses."""
+    import glob
+    names = {f'hostcfg-{hostname}'}
+    try:
+        env_files = glob.glob(f'{_BACKUP_JOBS_DIR}/*.env')
+    except OSError:
+        env_files = []
+    for path in env_files:
+        names.add(os.path.basename(path)[:-len('.env')])
+        backup_id = (_parse_job_env(path).get('PBS_BACKUP_ID') or '').strip()
+        if backup_id:
+            names.add(backup_id)
+    return names
+
+
+def _host_backup_from_former_job(info, hostname, job_ids):
+    """True when the job that made this backup no longer exists on this
+    node. Only the sidecar says which job made it, and only a backup made
+    on this node can be measured against this node's jobs; anything else
+    is left unknown."""
+    if info.get('detected_via') != 'sidecar':
+        return False
+    job_id = info.get('job_id')
+    return bool(job_id) and info.get('source_hostname') == hostname and job_id not in job_ids
+
+
+def _host_backup_node(name, hostname, own_names):
+    """The node a host backup belongs to, read from its name, or None when
+    the name does not say: another node's backup stored under a name of its
+    own choosing."""
+    stem = name or ''
+    for suffix in _BACKUP_TAR_SUFFIXES:
+        if stem.endswith(suffix):
+            stem = stem[:-len(suffix)]
+            break
+    stem = _HOST_BACKUP_STAMP_RE.sub('', stem)
+    if stem in own_names:
+        return hostname
+    if stem.startswith('hostcfg-') and len(stem) > len('hostcfg-'):
+        return stem[len('hostcfg-'):]
+    return None
+
+
 # In-process cache for the tar-peek fallback so we don't re-decompress
 # every archive on every Monitor refresh. Keyed by absolute archive
 # path; the cached tuple is (size, mtime, is_proxmenux_backup_bool).
@@ -20398,7 +20448,11 @@ def api_host_backups_remote_archives():
                 errors.append({'backend': 'borg', 'repo_name': target['name'], 'error': err})
             snapshots.extend(items)
 
-    return jsonify({'snapshots': snapshots, 'errors': errors})
+    hostname = socket.gethostname()
+    own_names = _host_backup_own_names(hostname)
+    for snapshot in snapshots:
+        snapshot['node'] = _host_backup_node(snapshot.get('backup_id'), hostname, own_names)
+    return jsonify({'snapshots': snapshots, 'errors': errors, 'hostname': hostname})
 
 
 @app.route('/api/host-backups/remote-archives', methods=['DELETE'])
@@ -20962,6 +21016,7 @@ def api_host_backups_archives():
     seen: set = set()
     hostname = socket.gethostname()
     job_ids = _known_job_ids()
+    own_names = _host_backup_own_names(hostname)
 
     for d in _collect_backup_scan_dirs():
         try:
@@ -20988,10 +21043,15 @@ def api_host_backups_archives():
                 'size_bytes': st.st_size,
                 'mtime': int(st.st_mtime),
                 **info,
+                # An archive on this node's disk whose origin is not known
+                # is taken as this node's.
+                'node': (info.get('source_hostname')
+                         or _host_backup_node(name, hostname, own_names) or hostname),
+                'former_job': _host_backup_from_former_job(info, hostname, job_ids),
             })
 
     archives.sort(key=lambda a: a['mtime'], reverse=True)
-    return jsonify({'archives': archives})
+    return jsonify({'archives': archives, 'hostname': hostname})
 
 
 # ──────────────────────────────────────────────────────────────
