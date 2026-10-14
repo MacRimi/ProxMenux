@@ -3970,7 +3970,14 @@
       "startingExport": "Download wird vorbereitet...",
       "title": "Backups",
       "viewContentsTitle": "Sicherungsinhalte anzeigen",
-      "emptyMessage": "Keine Sicherungsarchive gefunden."
+      "emptyMessage": "Keine Sicherungsarchive gefunden.",
+      "hiddenOtherNodes": "Backups anderer Knoten werden nicht angezeigt: {count}.",
+      "scopeAllNodes": "Alle Knoten",
+      "scopeAriaLabel": "Backups zum Anzeigen",
+      "scopeShowAll": "Alle anzeigen",
+      "scopeThisNode": "Dieser Knoten",
+      "formerJob": "Ehemaliger Job",
+      "formerJobTitle": "Der Job, der diese Sicherung erstellt hat, ist auf diesem Knoten nicht mehr vorhanden.Das Backup bleibt bis zur Löschung erhalten."
     },
     "backends": {
       "borgDescription": "Borg-Repository für deduplizierte Host-Backups.",

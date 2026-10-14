@@ -3970,7 +3970,14 @@
       "startingExport": "Preparando download...",
       "title": "Cópias de segurança",
       "viewContentsTitle": "Ver o conteúdo do backup",
-      "emptyMessage": "Nenhum arquivo de backup encontrado."
+      "emptyMessage": "Nenhum arquivo de backup encontrado.",
+      "hiddenOtherNodes": "Backups de outros nós não mostrados: {count}.",
+      "scopeAllNodes": "Todos os nós",
+      "scopeAriaLabel": "Backups para mostrar",
+      "scopeShowAll": "Mostrar tudo",
+      "scopeThisNode": "Este nó",
+      "formerJob": "Trabalho anterior",
+      "formerJobTitle": "A tarefa que fez esse backup não existe mais neste nó.O backup é mantido até ser excluído."
     },
     "backends": {
       "borgDescription": "Repositório Borg para backups de host desduplicados.",

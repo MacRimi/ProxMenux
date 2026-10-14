@@ -3969,7 +3969,14 @@
       "startingExport": "Pripravujem stiahnutie...",
       "title": "Zálohy",
       "viewContentsTitle": "Zobraziť obsah zálohy",
-      "emptyMessage": "Nenašli sa žiadne zálohy."
+      "emptyMessage": "Nenašli sa žiadne zálohy.",
+      "hiddenOtherNodes": "Nezobrazené zálohy iných uzlov: {count}.",
+      "scopeAllNodes": "Všetky uzly",
+      "scopeAriaLabel": "Zálohy na zobrazenie",
+      "scopeShowAll": "Zobraziť všetko",
+      "scopeThisNode": "Tento uzol",
+      "formerJob": "Bývalá práca",
+      "formerJobTitle": "Úloha, ktorá vytvorila túto zálohu, už v tomto uzle neexistuje.Záloha sa uchováva, kým sa neodstráni."
     },
     "backends": {
       "borgDescription": "Borg repozitár pre deduplikované zálohy servera.",

@@ -3970,7 +3970,14 @@
       "title": "Säkerhetskopieringar",
       "viewContentsTitle": "Visa säkerhetskopieringsinnehåll",
       "descriptionAfter": "",
-      "emptyMessage": "Inga backup-arkiv hittades."
+      "emptyMessage": "Inga backup-arkiv hittades.",
+      "hiddenOtherNodes": "Säkerhetskopiering av andra noder som inte visas: {count}.",
+      "scopeAllNodes": "All nodes",
+      "scopeAriaLabel": "Backups to show",
+      "scopeShowAll": "Visa alla",
+      "scopeThisNode": "Denna nod",
+      "formerJob": "Former job",
+      "formerJobTitle": "Jobbet som gjorde denna säkerhetskopia finns inte längre på den här noden.Säkerheten sparas tills den raderas."
     },
     "backends": {
       "borgDescription": "Borg-arkiv för deduplicerade värdsäkerhetskopior.",

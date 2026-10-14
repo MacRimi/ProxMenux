@@ -3970,7 +3970,14 @@
       "startingExport": "Préparation du téléchargement...",
       "title": "Sauvegardes",
       "viewContentsTitle": "Afficher le contenu de la sauvegarde",
-      "emptyMessage": "Aucune archive de sauvegarde trouvée."
+      "emptyMessage": "Aucune archive de sauvegarde trouvée.",
+      "hiddenOtherNodes": "Sauvegardes des autres nœuds non affichées : {count}.",
+      "scopeAllNodes": "Tous les nœuds",
+      "scopeAriaLabel": "Sauvegardes à afficher",
+      "scopeShowAll": "Afficher tout",
+      "scopeThisNode": "Ce nœud",
+      "formerJob": "Ancien emploi",
+      "formerJobTitle": "Le travail qui a effectué cette sauvegarde n'existe plus sur ce nœud.La sauvegarde est conservée jusqu'à sa suppression."
     },
     "backends": {
       "borgDescription": "Référentiel Borg pour les sauvegardes d'hôtes dédupliquées.",
