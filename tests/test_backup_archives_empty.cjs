@@ -17,7 +17,7 @@ assert.ok(branch, 'real archives loading/error/empty decision');
 // list with a sentinel: rendering its controls is outside this message test.
 const transformed = ts.transform(branch, [context => root => {
   const visit = node => {
-    if (ts.isConditionalExpression(node) && node.condition.getText(source) === 'unifiedArchives.length === 0') {
+    if (ts.isConditionalExpression(node) && node.condition.getText(source) === 'visibleArchives.length === 0 && hiddenArchives === 0') {
       return ts.factory.updateConditionalExpression(node, node.condition, node.questionToken,
         node.whenTrue, node.colonToken, ts.factory.createStringLiteral('NONEMPTY_ARCHIVES'));
     }
@@ -28,14 +28,14 @@ const transformed = ts.transform(branch, [context => root => {
 const expression = printer.printNode(ts.EmitHint.Expression, transformed.transformed[0], source);
 transformed.dispose();
 const render = new Function('React', 'Loader2', 't', 'archivesErr', 'remoteArchivesErr',
-  'archivesResp', 'remoteArchivesResp', 'unifiedArchives', compile(`const result = ${expression};`) + '\nreturn result;');
+  'archivesResp', 'remoteArchivesResp', 'visibleArchives', 'hiddenArchives', compile(`const result = ${expression};`) + '\nreturn result;');
 // Text-only JSX sink: TypeScript performs the real JSX whitespace conversion.
 const React = { createElement: (tag, props, ...children) => children.flat(Infinity).filter(x => x != null && x !== false).join('') };
 const text = (locale = 'en', overrides = {}, messages = catalogs) => {
   const state = { archivesErr: null, remoteArchivesErr: null, archivesResp: { archives: [] },
-    remoteArchivesResp: { snapshots: [] }, unifiedArchives: [], ...overrides };
+    remoteArchivesResp: { snapshots: [] }, visibleArchives: [], hiddenArchives: 0, ...overrides };
   return render(React, 'spinner', translator(locale, messages), state.archivesErr, state.remoteArchivesErr,
-    state.archivesResp, state.remoteArchivesResp, state.unifiedArchives);
+    state.archivesResp, state.remoteArchivesResp, state.visibleArchives, state.hiddenArchives);
 };
 
 const emptyMessage = 'No backup archives found.';
@@ -54,7 +54,10 @@ for (const locale of locales) {
 assert.ok(locales.some(locale => locale !== 'en' &&
   typeof catalogs[locale].backup?.archives?.emptyMessage === 'string' &&
   catalogs[locale].backup.archives.emptyMessage !== emptyMessage), 'localized shipped archive message exercised');
-for (const count of [1, 3]) assert.equal(text('en', { unifiedArchives: Array(count).fill({}) }), 'NONEMPTY_ARCHIVES');
+for (const count of [1, 3]) assert.equal(text('en', { visibleArchives: Array(count).fill({}) }), 'NONEMPTY_ARCHIVES');
+// Backups of other nodes hidden by the node filter are not an empty list:
+// the list shows the note that offers them.
+assert.equal(text('en', { hiddenArchives: 2 }), 'NONEMPTY_ARCHIVES');
 assert.equal(text('en', { archivesResp: undefined, remoteArchivesResp: undefined }), translator('en')('backup.common.loading'));
 assert.equal(text('en', { archivesErr: true, remoteArchivesErr: true }), translator('en')('backup.archives.loadFailed'));
 // Preserve existing partial-source semantics; no claim that every source was queried.

@@ -3976,8 +3976,8 @@
       "scopeAriaLabel": "Backups zum Anzeigen",
       "scopeShowAll": "Alle anzeigen",
       "scopeThisNode": "Dieser Knoten",
-      "formerJob": "Ehemaliger Job",
-      "formerJobTitle": "Der Job, der diese Sicherung erstellt hat, ist auf diesem Knoten nicht mehr vorhanden.Das Backup bleibt bis zur Löschung erhalten."
+      "formerJob": "Ehemaliger Auftrag",
+      "formerJobTitle": "Der Auftrag, der diese Sicherung erstellt hat, ist auf diesem Knoten nicht mehr vorhanden. Die Sicherung bleibt bis zur Löschung erhalten."
     },
     "backends": {
       "borgDescription": "Borg-Repository für deduplizierte Host-Backups.",

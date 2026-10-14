@@ -3976,8 +3976,8 @@
       "scopeAriaLabel": "Sauvegardes à afficher",
       "scopeShowAll": "Afficher tout",
       "scopeThisNode": "Ce nœud",
-      "formerJob": "Ancien emploi",
-      "formerJobTitle": "Le travail qui a effectué cette sauvegarde n'existe plus sur ce nœud.La sauvegarde est conservée jusqu'à sa suppression."
+      "formerJob": "Ancien travail",
+      "formerJobTitle": "Le travail qui a effectué cette sauvegarde n'existe plus sur ce nœud. La sauvegarde est conservée jusqu'à sa suppression."
     },
     "backends": {
       "borgDescription": "Référentiel Borg pour les sauvegardes d'hôtes dédupliquées.",

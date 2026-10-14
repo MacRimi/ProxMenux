@@ -3975,8 +3975,8 @@
       "scopeAriaLabel": "Zálohy na zobrazenie",
       "scopeShowAll": "Zobraziť všetko",
       "scopeThisNode": "Tento uzol",
-      "formerJob": "Bývalá práca",
-      "formerJobTitle": "Úloha, ktorá vytvorila túto zálohu, už v tomto uzle neexistuje.Záloha sa uchováva, kým sa neodstráni."
+      "formerJob": "Predchádzajúca úloha",
+      "formerJobTitle": "Úloha, ktorá vytvorila túto zálohu, už v tomto uzle neexistuje. Záloha sa uchováva, kým sa neodstráni."
     },
     "backends": {
       "borgDescription": "Borg repozitár pre deduplikované zálohy servera.",

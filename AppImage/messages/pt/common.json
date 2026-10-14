@@ -3976,8 +3976,8 @@
       "scopeAriaLabel": "Backups para mostrar",
       "scopeShowAll": "Mostrar tudo",
       "scopeThisNode": "Este nó",
-      "formerJob": "Trabalho anterior",
-      "formerJobTitle": "A tarefa que fez esse backup não existe mais neste nó.O backup é mantido até ser excluído."
+      "formerJob": "Tarefa anterior",
+      "formerJobTitle": "A tarefa que fez esse backup não existe mais neste nó. O backup é mantido até ser excluído."
     },
     "backends": {
       "borgDescription": "Repositório Borg para backups de host desduplicados.",

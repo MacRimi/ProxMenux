@@ -3971,13 +3971,13 @@
       "title": "Backup",
       "viewContentsTitle": "Visualizza contenuto backup",
       "emptyMessage": "Nessun archivio di backup trovato.",
-      "hiddenOtherNodes": "backup di altri nodi non mostrati: {count}.",
-      "scopeAllNodes": "tutti i nodi",
-      "scopeAriaLabel": "backup da mostrare",
-      "scopeShowAll": "mostra tutto",
-      "scopeThisNode": "questo nodo",
-      "formerJob": "Ex lavoro",
-      "formerJobTitle": "il lavoro che ha effettuato questo backup non esiste più su questo nodo.Il backup viene conservato finché non viene eliminato."
+      "hiddenOtherNodes": "Backup di altri nodi non mostrati: {count}.",
+      "scopeAllNodes": "Tutti i nodi",
+      "scopeAriaLabel": "Backup da mostrare",
+      "scopeShowAll": "Mostra tutto",
+      "scopeThisNode": "Questo nodo",
+      "formerJob": "Attività precedente",
+      "formerJobTitle": "L'attività che ha creato questo backup non esiste più su questo nodo. Il backup viene conservato finché non viene eliminato."
     },
     "backends": {
       "borgDescription": "Repository Borg per backup host deduplicati.",
