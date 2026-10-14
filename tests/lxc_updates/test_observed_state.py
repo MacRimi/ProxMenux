@@ -145,7 +145,25 @@ class ObservedStateRoutesTests(unittest.TestCase):
         self.assertEqual(response.status_code, 200, response.json)
         return response.json[0]
 
+    def test_completed_shutdown_cannot_revert_to_stale_cluster_running(self):
+        self.running = False
+        self.scope['get_cached_pvesh_cluster_resources_vm'] = lambda: [
+            dict(type='lxc', node='fixture-pve', vmid=100, name='dev-trixie', status='running')]
+        for _ in range(3):
+            row = self.row()
+            self.assertEqual(row['status'], 'stopped', 'cached summary cannot override live local state')
+            self.assertEqual(row['ips'], [])
+        self.ip_probe.assert_not_called()
+        self.assertEqual(self.commands, [], 'status polling never enters the guest')
 
+    def test_completed_start_cannot_revert_to_stale_cluster_stopped(self):
+        self.running = True
+        self.scope['get_cached_pvesh_cluster_resources_vm'] = lambda: [
+            dict(type='lxc', node='fixture-pve', vmid=100, name='dev-trixie', status='stopped')]
+        row = self.row()
+        self.assertEqual(row['status'], 'running')
+        self.assertEqual(row['ip'], self.ip)
+        self.assertEqual(self.commands, [])
 
     def test_dhcp_change_after_ttl_without_lifecycle_and_api_compatibility(self):
         first = self.row()

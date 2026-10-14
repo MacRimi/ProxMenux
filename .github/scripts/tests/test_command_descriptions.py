@@ -220,9 +220,14 @@ class CommandDescriptionsTests(unittest.TestCase):
                                 "installedVersionUnverified", "versionStatusUnknown"):
                         messages["vmLxc"]["updates"].setdefault(
                             key, english["vmLxc"]["updates"][key])
+                    for key in ("startPending", "shutdownPending", "rebootPending", "stopPending"):
+                        messages["vmLxc"]["actions"].setdefault(
+                            key, english["vmLxc"]["actions"][key])
                     for key in ("osDockerScope", "dockerImageMethod", "unverifiedTargetsHelp"):
                         messages["vmLxc"]["bulkUpdate"].setdefault(
                             key, english["vmLxc"]["bulkUpdate"][key])
+                    messages["vmLxc"]["errors"].setdefault(
+                        "controlNotConfirmed", english["vmLxc"]["errors"]["controlNotConfirmed"])
                     path.write_text(json.dumps(messages, ensure_ascii=False))
             before = {p: p.read_bytes() for p in root.glob("*/common.json")}
             argv = [str(SCRIPT), "--source", str(root / "en/common.json"),

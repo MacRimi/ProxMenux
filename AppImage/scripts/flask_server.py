@@ -6847,10 +6847,15 @@ def get_proxmox_vms():
                         continue
 
                     vm_type = 'lxc' if resource.get('type') == 'lxc' else 'qemu'
+                    # The PVE summary can lag behind a completed LXC task.
+                    # Use the same direct local cgroup check as the detail
+                    # route; never resurrect a stopped CT from that summary.
+                    vm_status = (_fast_guest_status(resource.get('vmid'), vm_type)
+                                 if vm_type == 'lxc' else resource.get('status', 'unknown'))
                     vm_data = {
                         'vmid': resource.get('vmid'),
                         'name': resource.get('name', f"VM-{resource.get('vmid')}"),
-                        'status': resource.get('status', 'unknown'),
+                        'status': vm_status,
                         'type': vm_type,
                         'cpu': resource.get('cpu', 0),
                         'mem': resource.get('mem', 0),
@@ -6905,7 +6910,7 @@ def get_proxmox_vms():
                         # detail-aware clients.  The cache is still warmed
                         # at startup and invalidated by LXC lifecycle events.
                         vm_data['ips'] = []
-                        if resource.get('status') == 'running':
+                        if vm_data['status'] == 'running':
                             lxc_ip_info = _get_lxc_ip_info_cached(resource.get('vmid'))
                             lxc_ips = _normalise_lxc_ips(lxc_ip_info)
                             vm_data['ips'] = lxc_ips
@@ -15870,6 +15875,7 @@ def api_vm_config_set(vmid):
 @require_auth
 def api_vm_control(vmid):
     """Control VM/LXC (start, stop, shutdown, reboot)"""
+    operation_lock = None
     try:
         data = request.get_json()
         action = data.get('action')  # start, stop, shutdown, reboot
@@ -15892,6 +15898,13 @@ def api_vm_control(vmid):
             
             vm_type = 'lxc' if vm_info.get('type') == 'lxc' else 'qemu'
             node = vm_info.get('node', 'pve')
+            if vm_type == 'lxc':
+                import lxc_check_job
+                try:
+                    operation_lock = lxc_check_job.acquire(vmid)
+                except BlockingIOError:
+                    return jsonify({'error': 'Another container operation is running'}), 409
+                lxc_check_job.begin_control(operation_lock, node)
             
             # Execute action
             control_result = subprocess.run(
@@ -15906,13 +15919,22 @@ def api_vm_control(vmid):
                 # (lxc_ip_info, os_info) — a start/stop flips those, so
                 # drop the modal caches for this vmid.
                 _vm_cache_invalidate(vmid)
+                # Keep the legacy acceptance response; new clients also wait
+                # for this specific task instead of assuming it has finished.
+                task = (control_result.stdout or '').strip().strip('"')
+                if operation_lock is not None and task.startswith('UPID:'):
+                    lxc_check_job.retain_control(vmid, task, operation_lock)
+                    operation_lock = None
                 return jsonify({
                     'success': True,
                     'vmid': vmid,
                     'action': action,
+                    'task': task if task.startswith('UPID:') else None,
                     'message': f'Successfully executed {action} on {vm_info.get("name")}'
                 })
             else:
+                if operation_lock is not None:
+                    lxc_check_job.cancel_control(operation_lock)
                 # `pvesh` failed → fire the matching vm_fail / ct_fail
                 # notification so the user gets paged on their channels
                 # too, not just an in-dashboard alert. Previously this
@@ -15965,6 +15987,55 @@ def api_vm_control(vmid):
             return jsonify({'error': 'Failed to get VM details'}), 500
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+
+    finally:
+        if operation_lock is not None:
+            operation_lock.close()
+
+@app.route('/api/vms/<int:vmid>/control-task/<path:task>', methods=['GET'])
+@require_auth
+def api_vm_control_task(vmid, task):
+    """Read only the power-control task bound to this guest and node."""
+    import re
+    import json
+    if not re.fullmatch(r'UPID:[\w.-]+:[0-9A-Fa-f]+:[0-9A-Fa-f]+:[0-9A-Fa-f]+:'
+                        r'(?:vz|qm)(?:start|stop|shutdown|reboot):[0-9]+:[\w.@-]+:', task):
+        return jsonify({'error': 'Invalid control task'}), 400
+    parts = task.split(':')
+    resource = next((item for item in get_cached_pvesh_cluster_resources_vm() or []
+                     if item.get('vmid') == vmid), None)
+    if resource is None:
+        return jsonify({'error': 'VM/LXC not found'}), 404
+    vm_type = 'lxc' if resource.get('type') == 'lxc' else 'qemu'
+    node = resource.get('node', 'pve')
+    prefix = 'vz' if vm_type == 'lxc' else 'qm'
+    if parts[1] != node or parts[6] != str(vmid) or not parts[5].startswith(prefix):
+        return jsonify({'error': 'Control task does not belong to this guest'}), 400
+    try:
+        result = subprocess.run(['pvesh', 'get', f'/nodes/{node}/tasks/{task}/status',
+                                 '--output-format', 'json'],
+                                capture_output=True, text=True, timeout=5)
+        if result.returncode != 0:
+            return jsonify({'error': 'Control task status unavailable'}), 502
+        status = json.loads(result.stdout)
+        if not isinstance(status, dict) or status.get('status') not in ('running', 'stopped'):
+            return jsonify({'error': 'Invalid control task status'}), 502
+        payload = {'status': status['status'], 'exitstatus': status.get('exitstatus')}
+        if status['status'] == 'stopped' and status.get('exitstatus') == 'OK':
+            current = subprocess.run(['pvesh', 'get', f'/nodes/{node}/{vm_type}/{vmid}/status/current',
+                                      '--output-format', 'json'],
+                                     capture_output=True, text=True, timeout=5)
+            if current.returncode != 0:
+                return jsonify({'error': 'Guest status unavailable'}), 502
+            guest = json.loads(current.stdout)
+            if not isinstance(guest, dict) or guest.get('status') not in ('running', 'stopped'):
+                return jsonify({'error': 'Invalid guest status'}), 502
+            payload['guest_status'] = guest['status']
+            _pvesh_cache['cluster_resources_vm_time'] = 0
+            _vm_cache_invalidate(vmid)
+        return jsonify(payload)
+    except (ValueError, subprocess.TimeoutExpired):
+        return jsonify({'error': 'Control task status unavailable'}), 502
 
 @app.route('/api/vms/<int:vmid>/description', methods=['PUT'])
 @app.route('/api/vms/<int:vmid>/config', methods=['PUT'])  # legacy alias

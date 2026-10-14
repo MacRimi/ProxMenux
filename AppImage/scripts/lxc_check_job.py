@@ -32,6 +32,7 @@ def acquire(vmid):
     handle = os.fdopen(os.open(path, os.O_RDWR | os.O_CREAT | os.O_NOFOLLOW, 0o600), 'r+')
     try:
         fcntl.flock(handle, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        check_control_task(vmid, handle)
         return handle
     except BaseException:
         handle.close()
@@ -83,6 +84,87 @@ def clear_invalid_marker(vmid, *, check_started_ns=None):
             return False
     finally:
         handle.close()
+
+
+def _write_control(handle, record):
+    handle.seek(0)
+    if record is not None:
+        handle.write(json.dumps(record))
+    handle.flush()
+    # Do not erase the old reservation before the replacement was written.
+    # A partial/failed write stays non-empty and therefore fails closed.
+    handle.truncate(handle.tell())
+
+
+def begin_control(handle, node):
+    """Persist uncertainty before submission, including across Monitor restart."""
+    if not isinstance(node, str) or not re.fullmatch(r'[\w.-]+', node):
+        raise ValueError('Invalid control node')
+    _write_control(handle, {'node': node, 'task': None})
+
+
+def cancel_control(handle):
+    """Only a definite submission failure can clear an unconfirmed request."""
+    _write_control(handle, None)
+
+
+def check_control_task(vmid, handle=None):
+    """Called under the shared flock, also by the shell update runner.
+
+    No record means no probe. A restart releases OS file descriptors, but the
+    record still forbids a new operation until PVE confirms task termination.
+    Unknown submission/status cannot safely be treated as completion.
+    """
+    if handle is None:
+        with open(LOCK_DIR / f'proxmenux-lxc-update-{int(vmid)}.lock', 'r+') as stream:
+            return check_control_task(vmid, stream)
+    handle.seek(0)
+    raw = handle.read(1025)
+    if not raw:
+        return
+    try:
+        record = json.loads(raw)
+        node, task = record['node'], record['task']
+        if not isinstance(node, str) or not re.fullmatch(r'[\w.-]+', node):
+            raise ValueError('Invalid node')
+        if (not isinstance(task, str)
+                or not re.fullmatch(r'UPID:[\w.-]+:[0-9A-Fa-f]+:[0-9A-Fa-f]+:'
+                                    r'[0-9A-Fa-f]+:vz(?:start|stop|shutdown|reboot):'
+                                    r'[0-9]+:[\w.@!-]+:', task)
+                or task.split(':')[1] != node or task.split(':')[6] != str(vmid)):
+            raise ValueError('Unconfirmed control task')
+        result = subprocess.run(['pvesh', 'get', f'/nodes/{node}/tasks/{task}/status',
+                                '--output-format', 'json'],
+                               capture_output=True, text=True, timeout=5)
+        status = json.loads(result.stdout) if result.returncode == 0 else None
+        if (not isinstance(status, dict) or status.get('status') != 'stopped'
+                or not isinstance(status.get('exitstatus'), str) or not status['exitstatus']):
+            raise ValueError('Control task completion not confirmed')
+    except (ValueError, KeyError, TypeError, OSError, subprocess.TimeoutExpired) as exc:
+        raise BlockingIOError('Container control completion is not confirmed') from exc
+    _write_control(handle, None)
+
+
+def _wait_control(vmid, reservation):
+    try:
+        while True:
+            try:
+                check_control_task(vmid, reservation)
+                return
+            except BlockingIOError:
+                # A status timeout must not unlock a task that may still run.
+                time.sleep(2)
+    finally:
+        reservation.close()
+
+
+def retain_control(vmid, task, reservation):
+    reservation.seek(0)
+    record = json.loads(reservation.read(1025))
+    record['task'] = task
+    _write_control(reservation, record)
+    # Reservation ownership transfers only after Thread.start succeeds.
+    threading.Thread(target=_wait_control, args=(vmid, reservation), daemon=True).start()
 
 
 def guard(vmid):

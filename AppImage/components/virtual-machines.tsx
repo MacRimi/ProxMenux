@@ -28,6 +28,7 @@ import { AppUpdaterEditor, type AppUpdateMethod } from "./app-updater-editor"
 import { formatStorage } from "../lib/utils"
 import { formatNetworkTraffic, getNetworkUnit } from "../lib/format-network"
 import { fetchApi } from "../lib/api-config"
+import { waitForVmControlTask } from "../lib/vm-control"
 import { matchesVmSearch, normalizeVmSearchValue } from "../lib/vm-search"
 import { refreshCheckLxcUpdates, getLxcOsUpdateState, isLxcUpdateStale } from "../lib/lxc-update-observation"
 import DOMPurify from "dompurify"
@@ -872,6 +873,8 @@ export function VirtualMachines() {
   const lifecycleCacheRevisionsRef = useRef(new Map<number, number>())
   const [dockerInventoryRefreshingVmid, setDockerInventoryRefreshingVmid] = useState<number | null>(null)
   const [controlLoading, setControlLoading] = useState(false)
+  const controlRequestRef = useRef(false)
+  const [controlAction, setControlAction] = useState<{ vmid: number; action: string } | null>(null)
   // Destructive control confirmation. `Force Stop` and `Reboot` skip the OS
   // shutdown sequence and can corrupt running guests; gate them behind a
   // typed-VMID match prompt to prevent misclicks. See audit Tier 2 #17.
@@ -1797,12 +1800,16 @@ export function VirtualMachines() {
   }
 
   const handleVMControl = async (vmid: number, action: string) => {
+    if (controlRequestRef.current) return
+    controlRequestRef.current = true
+    setControlAction({ vmid, action })
     setControlLoading(true)
     try {
-      await fetchApi(`/api/vms/${vmid}/control`, {
+      const accepted = await fetchApi<{ task: string }>(`/api/vms/${vmid}/control`, {
         method: "POST",
         body: JSON.stringify({ action }),
       })
+      const completed = await waitForVmControlTask(vmid, action, accepted.task)
 
       // Any control action can change what the guest reports: a stop
       // hides runtime-only fields, a start may bring a new config that
@@ -1818,16 +1825,37 @@ export function VirtualMachines() {
       cache.firewall.delete(vmid)
       invalidateLxcApps(vmid)
 
-      mutate()
-      setSelectedVM(null)
-      setVMDetails(null)
+      // Publish the confirmed result as an SWR mutation before revalidating.
+      // SWR then discards list requests started before this completion.
+      try {
+        await mutate(current => current?.map(vm => vm.vmid === vmid
+          ? { ...vm, status: completed.guest_status as VMData["status"] } : vm), { revalidate: false })
+        await mutate()
+      } catch { /* Polling will retry; control already succeeded. */ }
+      // Keep the user's tab/scroll and last complete detail while revalidating.
+      // Never resurrect a modal the user closed, or overwrite another guest.
+      if (selectedVMRef.current?.vmid === vmid) {
+        setSelectedVM(current => current?.vmid === vmid
+          ? { ...current, status: completed.guest_status as VMData["status"] } : current)
+        try {
+          const details = await fetchApi<VMDetails>(`/api/vms/${vmid}`)
+          cache.details.set(vmid, details)
+          if (selectedVMRef.current?.vmid === vmid) setVMDetails(details)
+        } catch {
+          // The control succeeded; detail polling will retry independently.
+        }
+      }
     } catch (error) {
       console.error(`Failed to ${action} VM ${vmid}:`, error)
       // Same UX issue as handleCreateBackup: a silent console.error left the
       // user looking at a "Stop"/"Start" button that just never reacted.
-      const msg = error instanceof Error ? error.message : t("vmLxc.errors.unknown")
+      const msg = error instanceof Error
+        ? (error.message === "controlNotConfirmed" ? t("vmLxc.errors.controlNotConfirmed") : error.message)
+        : t("vmLxc.errors.unknown")
       alert(t("vmLxc.errors.controlFailed", { action, vmid, message: msg }))
     } finally {
+      controlRequestRef.current = false
+      setControlAction(null)
       setControlLoading(false)
     }
   }
@@ -7623,8 +7651,11 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                     tab we added. */}
                 {(() => {
                   const hasTerminal = selectedVM?.type === "lxc" && selectedVM?.status === "running"
+                  const pendingAction = controlAction?.vmid === selectedVM?.vmid ? controlAction?.action : null
+                  const controlLabel = (action: string, key: string) => pendingAction === action
+                    ? t(`vmLxc.actions.${action}Pending`) : t(key)
                   return (
-                    <div className={`grid gap-2 sm:gap-3 ${hasTerminal ? "grid-cols-4 lg:grid-cols-5" : "grid-cols-4"}`}>
+                    <div aria-busy={controlLoading} className={`grid gap-2 sm:gap-3 ${hasTerminal ? "grid-cols-4 lg:grid-cols-5" : "grid-cols-4"}`}>
                       {hasTerminal && (
                         <Button
                           className="w-full bg-zinc-600/20 border border-zinc-600/50 text-zinc-300 hover:bg-zinc-600/30 col-span-4 lg:col-span-1"
@@ -7638,19 +7669,19 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                         className="w-full bg-green-600/20 border border-green-600/50 text-green-400 hover:bg-green-600/30"
                         disabled={selectedVM?.status === "running" || controlLoading}
                         onClick={() => selectedVM && handleVMControl(selectedVM.vmid, "start")}
-                        title={t("vmLxc.actions.start")}
+                        title={controlLabel("start", "vmLxc.actions.start")}
                       >
-                        <Play className="h-4 w-4 sm:mr-2" />
-                        <span className="hidden sm:inline">{t("vmLxc.actions.start")}</span>
+                        {pendingAction === "start" ? <Loader2 className="h-4 w-4 sm:mr-2 animate-spin" /> : <Play className="h-4 w-4 sm:mr-2" />}
+                        <span className="hidden sm:inline">{controlLabel("start", "vmLxc.actions.start")}</span>
                       </Button>
                       <Button
                         className="w-full bg-blue-600/20 border border-blue-600/50 text-blue-400 hover:bg-blue-600/30"
                         disabled={selectedVM?.status !== "running" || controlLoading}
                         onClick={() => selectedVM && handleVMControl(selectedVM.vmid, "shutdown")}
-                        title={t("vmLxc.actions.shutdown")}
+                        title={controlLabel("shutdown", "vmLxc.actions.shutdown")}
                       >
-                        <Power className="h-4 w-4 sm:mr-2" />
-                        <span className="hidden sm:inline">{t("vmLxc.actions.shutdown")}</span>
+                        {pendingAction === "shutdown" ? <Loader2 className="h-4 w-4 sm:mr-2 animate-spin" /> : <Power className="h-4 w-4 sm:mr-2" />}
+                        <span className="hidden sm:inline">{controlLabel("shutdown", "vmLxc.actions.shutdown")}</span>
                       </Button>
                       <Button
                         className="w-full bg-blue-600/20 border border-blue-600/50 text-blue-400 hover:bg-blue-600/30"
@@ -7660,10 +7691,10 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                           vmid: selectedVM.vmid,
                           vmName: selectedVM.name,
                         })}
-                        title={t("vmLxc.actions.reboot")}
+                        title={controlLabel("reboot", "vmLxc.actions.reboot")}
                       >
-                        <RotateCcw className="h-4 w-4 sm:mr-2" />
-                        <span className="hidden sm:inline">{t("vmLxc.actions.reboot")}</span>
+                        {pendingAction === "reboot" ? <Loader2 className="h-4 w-4 sm:mr-2 animate-spin" /> : <RotateCcw className="h-4 w-4 sm:mr-2" />}
+                        <span className="hidden sm:inline">{controlLabel("reboot", "vmLxc.actions.reboot")}</span>
                       </Button>
                       <Button
                         className="w-full bg-red-600/20 border border-red-600/50 text-red-400 hover:bg-red-600/30"
@@ -7673,10 +7704,10 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                           vmid: selectedVM.vmid,
                           vmName: selectedVM.name,
                         })}
-                        title={t("vmLxc.actions.forceStop")}
+                        title={controlLabel("stop", "vmLxc.actions.forceStop")}
                       >
-                        <StopCircle className="h-4 w-4 sm:mr-2" />
-                        <span className="hidden sm:inline">{t("vmLxc.actions.forceStop")}</span>
+                        {pendingAction === "stop" ? <Loader2 className="h-4 w-4 sm:mr-2 animate-spin" /> : <StopCircle className="h-4 w-4 sm:mr-2" />}
+                        <span className="hidden sm:inline">{controlLabel("stop", "vmLxc.actions.forceStop")}</span>
                       </Button>
                     </div>
                   )

@@ -1100,7 +1100,11 @@
       "shutdown": "Vypnúť",
       "reboot": "Reštartovať",
       "forceStop": "Vynútiť vypnutie",
-      "working": "Pracujem..."
+      "working": "Pracujem...",
+      "startPending": "Spúšťa sa...",
+      "shutdownPending": "Vypína sa...",
+      "rebootPending": "Reštartuje sa...",
+      "stopPending": "Vypína sa..."
     },
     "confirm": {
       "forceStopTitle": "Vynútiť vypnutie",
@@ -1144,6 +1148,7 @@
       "unknown": "Neznáma chyba",
       "backupStartFailed": "Zálohu sa nepodarilo spustiť: {message}",
       "controlFailed": "Akcia {action} pre VM {vmid} zlyhala: {message}",
+      "controlNotConfirmed": "Dokončenie operácie sa zatiaľ nepodarilo potvrdiť. Pred ďalším pokusom skontrolujte stav VM alebo LXC.",
       "saveNotesFailed": "Poznámky sa nepodarilo uložiť. Skúste to znova.",
       "appNotFound": "Táto aplikácia už nie je dostupná. Obnovte stránku a skúste to znova.",
       "saveCustomCommandFailed": "Vlastný príkaz na aktualizáciu sa nepodarilo uložiť: {message}",

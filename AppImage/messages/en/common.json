@@ -1100,7 +1100,11 @@
       "shutdown": "Shutdown",
       "reboot": "Reboot",
       "forceStop": "Force Stop",
-      "working": "Working..."
+      "working": "Working...",
+      "startPending": "Starting...",
+      "shutdownPending": "Shutting down...",
+      "rebootPending": "Restarting...",
+      "stopPending": "Stopping..."
     },
     "confirm": {
       "forceStopTitle": "Force Stop",
@@ -1144,6 +1148,7 @@
       "unknown": "Unknown error",
       "backupStartFailed": "Failed to start backup: {message}",
       "controlFailed": "Failed to {action} VM {vmid}: {message}",
+      "controlNotConfirmed": "The operation has not been confirmed complete. Check the guest status before trying again.",
       "saveNotesFailed": "Error saving notes. Please try again.",
       "appNotFound": "This application is no longer available. Refresh the page and try again.",
       "saveCustomCommandFailed": "Could not save the custom update command: {message}",
