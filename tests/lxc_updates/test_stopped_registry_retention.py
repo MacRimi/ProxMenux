@@ -128,6 +128,24 @@ class StoppedRegistryTests(unittest.TestCase):
         self.assertEqual(row['_os_family'], 'alpine')
         self.assert_no_guest_probe()
 
+    def test_targeted_observation_reactivates_removed_row_without_a_duplicate(self):
+        registry = managed._read_registry()
+        registry['items'][0]['removed_at'] = self.now
+        managed._write_registry(registry)
+        observation = {
+            'entry': {**self.row, '_os_family': 'debian'},
+            'result': {'available': True, 'last_check': self.now, '_count': 2},
+        }
+
+        self.assertTrue(managed.store_lxc_update_observation(210, observation))
+
+        registry = managed.get_registry()
+        rows = [row for row in registry['items'] if row['id'] == 'lxc:210']
+        self.assertEqual(len(rows), 1)
+        self.assertNotIn('removed_at', rows[0])
+        self.assertEqual(rows[0]['update_check']['_count'], 2)
+        self.assert_no_guest_probe()
+
     def test_retained_result_still_expires_at_existing_48_hour_boundary(self):
         managed.detect_and_register()
         current = managed.get_active_items()[0]['update_check']
@@ -145,11 +163,11 @@ class StoppedRegistryTests(unittest.TestCase):
 
 class InventoryContractTests(unittest.TestCase):
     def test_default_failure_contract_and_strict_detector_contract(self):
-        for result in [subprocess.CompletedProcess([], 1, '', ''), subprocess.CompletedProcess([], 0, '', '')]:
-            with patch.object(managed.subprocess, 'run', return_value=result):
-                self.assertEqual(managed._list_pve_lxcs(), [])
-                with self.assertRaises(RuntimeError):
-                    managed._list_pve_lxcs(strict=True)
+        result = subprocess.CompletedProcess([], 1, '', '')
+        with patch.object(managed.subprocess, 'run', return_value=result):
+            self.assertEqual(managed._list_pve_lxcs(), [])
+            with self.assertRaises(RuntimeError):
+                managed._list_pve_lxcs(strict=True)
 
     def test_timeout_and_malformed_rows_are_not_confirmed_removal(self):
         for failure in [subprocess.TimeoutExpired('pct', 5), FileNotFoundError(), OSError()]:
@@ -162,8 +180,12 @@ class InventoryContractTests(unittest.TestCase):
                 managed._list_pve_lxcs(strict=True)
 
     def test_confirmed_empty_inventory_is_not_a_failed_read(self):
-        with patch.object(managed.subprocess, 'run', return_value=subprocess.CompletedProcess([], 0, 'VMID Status Lock Name\n', '')):
-            self.assertEqual(managed._list_pve_lxcs(strict=True), [])
+        for stdout in ['', '\n', 'VMID Status Lock Name\n']:
+            with self.subTest(stdout=repr(stdout)), patch.object(
+                managed.subprocess, 'run',
+                return_value=subprocess.CompletedProcess([], 0, stdout, ''),
+            ):
+                self.assertEqual(managed._list_pve_lxcs(strict=True), [])
 
 
 if __name__ == '__main__':

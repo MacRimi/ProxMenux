@@ -29,6 +29,11 @@ def _path(vmid: int, run_id: str) -> Path:
     return OBSERVATION_DIR / f"{int(vmid)}-{run_id}.json"
 
 
+def _started_path(vmid: int, run_id: str) -> Path:
+    _path(vmid, run_id)
+    return OBSERVATION_DIR / f"{int(vmid)}-{run_id}.started"
+
+
 def _private_directory(*, create=True) -> None:
     if create:
         OBSERVATION_DIR.mkdir(mode=0o700, parents=True, exist_ok=True)
@@ -36,6 +41,65 @@ def _private_directory(*, create=True) -> None:
     if (not stat.S_ISDIR(info.st_mode) or info.st_uid != os.geteuid()
             or info.st_mode & 0o077):
         raise OSError("unsafe LXC observation directory")
+
+
+def mark_started(vmid: int, run_id: str) -> None:
+    """Record that this run started a stopped CT before it can change state."""
+    path = _started_path(vmid, run_id)
+    _private_directory()
+    payload = {
+        "vmid": int(vmid),
+        "run_id": run_id,
+        "started_at": datetime.datetime.now(datetime.timezone.utc).isoformat(),
+    }
+    fd, temporary = tempfile.mkstemp(prefix=".started-", dir=OBSERVATION_DIR)
+    try:
+        os.fchmod(fd, 0o600)
+        with os.fdopen(fd, "w", encoding="utf-8") as handle:
+            json.dump(payload, handle)
+        os.replace(temporary, path)
+        print(f"[ProxMenux] LXC update started: vmid={int(vmid)} run_id={run_id}", flush=True)
+    finally:
+        if os.path.exists(temporary):
+            os.unlink(temporary)
+
+
+def read_started(vmid: int, run_id: str) -> bool | None:
+    """Return True for a trusted start marker, False when absent, else None."""
+    path = _started_path(vmid, run_id)
+
+    def reject(reason: str) -> None:
+        print(f"[ProxMenux] LXC update start marker rejected: vmid={int(vmid)} "
+              f"run_id={run_id} reason={reason}", flush=True)
+        return None
+
+    try:
+        _private_directory(create=False)
+    except FileNotFoundError:
+        return False
+    except OSError as exc:
+        return reject(type(exc).__name__)
+    try:
+        fd = os.open(path, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK)
+    except FileNotFoundError:
+        return False
+    except OSError as exc:
+        return reject(type(exc).__name__)
+    try:
+        with os.fdopen(fd, "r", encoding="utf-8") as handle:
+            info = os.fstat(handle.fileno())
+            if (not stat.S_ISREG(info.st_mode) or info.st_uid != os.geteuid()
+                    or info.st_mode & 0o077 or info.st_size > MAX_BYTES):
+                return reject('unsafe-file')
+            marker = json.load(handle)
+        started = datetime.datetime.fromisoformat(marker["started_at"])
+        age = (datetime.datetime.now(datetime.timezone.utc) - started).total_seconds()
+        if (not isinstance(marker, dict) or marker.get("vmid") != int(vmid)
+                or marker.get("run_id") != run_id or not 0 <= age <= MAX_AGE):
+            return reject('identity-age-or-shape')
+        return True
+    except (OSError, ValueError, TypeError, KeyError, OverflowError) as exc:
+        return reject(type(exc).__name__)
 
 
 def capture(vmid: int, run_id: str, *, refresh_indexes: bool = False,
@@ -46,7 +110,7 @@ def capture(vmid: int, run_id: str, *, refresh_indexes: bool = False,
     now = datetime.datetime.now(datetime.timezone.utc)
     for old in OBSERVATION_DIR.iterdir():
         info = old.lstat()
-        if (re.fullmatch(r"[1-9][0-9]*-[A-Za-z0-9._:-]{1,128}\.json", old.name)
+        if (re.fullmatch(r"[1-9][0-9]*-[A-Za-z0-9._:-]{1,128}(?:\.json|\.started)", old.name)
                 and stat.S_ISREG(info.st_mode) and info.st_uid == os.geteuid()
                 and now.timestamp() - info.st_mtime > MAX_AGE):
             old.unlink()
@@ -156,7 +220,11 @@ def read(vmid: int, run_id: str) -> dict | None:
 def discard(vmid: int, run_id: str) -> None:
     try:
         _private_directory(create=False)
-        _path(vmid, run_id).unlink()
+        for path in (_path(vmid, run_id), _started_path(vmid, run_id)):
+            try:
+                path.unlink()
+            except FileNotFoundError:
+                pass
     except FileNotFoundError:
         pass
 
@@ -165,10 +233,15 @@ def main(argv=None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--vmid", required=True, type=int)
     parser.add_argument("--run-id", required=True)
+    parser.add_argument('--mark-started', action='store_true',
+                        help='Record that this run started a previously stopped CT')
     parser.add_argument('--include-apps', action='store_true',
                         help='Capture registered installed versions after an update')
     args = parser.parse_args(argv)
     try:
+        if args.mark_started:
+            mark_started(args.vmid, args.run_id)
+            return 0
         capture(args.vmid, args.run_id, include_apps=args.include_apps)
         return 0
     except Exception as exc:

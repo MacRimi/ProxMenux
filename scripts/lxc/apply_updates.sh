@@ -44,6 +44,7 @@
 #      nor explicitly-enabled verified helper) available in the CT
 #   6  post-update restart failed
 #   7  another ProxMenux update is already running for this CT
+#   8  started CT could not record its verification handoff identity
 #
 # The frontend surfaces exit code + duration in a follow-up POST to
 # /api/lxc-updates/<vmid>/applied so the notification event fires with
@@ -183,6 +184,15 @@ if [[ "$STATE" != "running" ]]; then
     exit 2
   fi
   STARTED_BY_PROXMENUX=1
+  # The finalizer must distinguish a failed/pre-start run from a run that
+  # actually started this previously stopped CT but later lacks a result.
+  if [[ -n "${RUN_ID:-}" ]]; then
+    if ! python3 /usr/local/share/proxmenux/monitor-app/usr/bin/lxc_update_observation.py \
+          --vmid "$VMID" --run-id "$RUN_ID" --mark-started; then
+      echo "ERROR: started CT verification identity could not be recorded." >&2
+      exit 8
+    fi
+  fi
   # give the CT a moment for services to come up
   sleep 3
 fi

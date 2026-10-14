@@ -1,6 +1,9 @@
+import ast
 import sys
 import subprocess
 import tempfile
+import threading
+import time
 import unittest
 from types import SimpleNamespace
 from pathlib import Path
@@ -23,6 +26,7 @@ class UpdateStrategyValidationTests(unittest.TestCase):
         self.assertTrue(ok, config)
         self.assertEqual(config["update_strategy"], "custom_override")
 
+
     def test_legacy_helper_then_custom_is_normalised_to_override(self):
         ok, config = lxc_apps.validate_config({
             "name": "Jellyfin",
@@ -40,6 +44,48 @@ class UpdateStrategyValidationTests(unittest.TestCase):
         })
         self.assertTrue(ok, config)
         self.assertEqual(config["update_strategy"], "custom_override")
+
+
+class LifecycleInventoryResilienceTests(unittest.TestCase):
+    def test_failed_targeted_inventory_refresh_does_not_abort_started_lxc_rebuild(self):
+        source = ast.parse((REPO_ROOT / 'AppImage/scripts/flask_server.py').read_text())
+        function = next(node for node in source.body if isinstance(node, ast.FunctionDef)
+                        and node.name == '_refresh_started_guest')
+        warmed = []
+        published = MagicMock()
+        lxc = SimpleNamespace(
+            invalidate_suggestion_probes=MagicMock(),
+            check_all=MagicMock(return_value={'vmid': 100, 'apps': []}),
+            _pct_exec=MagicMock(return_value=(1, '', 'not installed')),
+            ensure_oci_registration=MagicMock(),
+            get_suggestions=MagicMock(return_value={'suggestions': []}),
+        )
+        managed = SimpleNamespace(
+            refresh_lxc=MagicMock(side_effect=RuntimeError('pct list timed out')),
+        )
+        scope = {
+            'time': time,
+            '_wait_for_started_guest': lambda *_: True,
+            '_vm_cache_invalidate': MagicMock(),
+            '_vm_disk_cache': {},
+            '_warm_started_guest_handler': lambda vmid, route, _: warmed.append((vmid, route)),
+            'get_vm_config': object(), 'api_vm_backups': object(),
+            'api_vm_apps_schedule': object(), 'api_lxc_mount_points': object(),
+            '_publish_guest_modal_cache_revision': published,
+            '_vm_cache_put': MagicMock(), '_vm_app_suggestions_cache': {},
+            '_guest_lifecycle_lock': threading.RLock(),
+            '_guest_refresh_inflight': {100}, '_guest_modal_cache_revision': {},
+            '_guest_modal_cache_epoch': 0,
+        }
+        with patch.dict(sys.modules, {'lxc_apps': lxc, 'managed_installs': managed}):
+            exec(compile(ast.Module(body=[function], type_ignores=[]), 'lifecycle-refresh', 'exec'), scope)
+            scope['_refresh_started_guest'](100, 'lxc')
+
+        managed.refresh_lxc.assert_called_once_with(100)
+        lxc.check_all.assert_called_once_with(100, force=True)
+        self.assertEqual(len(warmed), 4)
+        self.assertGreaterEqual(published.call_count, 1)
+        self.assertNotIn(100, scope['_guest_refresh_inflight'])
 
 
 class HelperEvidenceTests(unittest.TestCase):

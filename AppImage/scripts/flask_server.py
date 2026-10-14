@@ -2076,7 +2076,14 @@ def _refresh_started_guest(vmid: int, vm_type: str) -> None:
 
             lxc_apps.invalidate_suggestion_probes(vmid)
 
-            managed_installs.refresh_lxc(vmid)
+            try:
+                managed_installs.refresh_lxc(vmid)
+            except Exception as exc:
+                # Package inventory is one stage of a started-guest rebuild.
+                # A slow/failed `pct list` must not skip app, cache, and UI
+                # refreshes that can still complete for this guest.
+                print(f'[ProxMenux] lifecycle refresh lxc {vmid}: '
+                      f'package inventory: {exc}', flush=True)
 
             sidecar = lxc_apps.check_all(vmid, force=True)
             sidecar = sidecar or {'vmid': vmid, 'apps': []}
@@ -14551,10 +14558,22 @@ def _finalize_lxc_update(
             import managed_installs
             import lxc_update_observation
             observation = lxc_update_observation.read(vmid, safe_run_id)
-            verified = managed_installs.store_lxc_update_observation(vmid, observation)
+            started = lxc_update_observation.read_started(vmid, safe_run_id)
+            marker_write_failed = str(reason or '').endswith('code 8')
+            # A failed start, foreign-node rejection, or pre-start cancel has
+            # no trusted start marker and must not erase the last observed
+            # package state. A rejected marker is unknown and is handled as a
+            # touched run; runner exit 8 also means a start occurred but its
+            # marker could not be recorded.
+            if observation is None and started is False and not marker_write_failed:
+                verified = True
+                untouched = True
+            else:
+                verified = managed_installs.store_lxc_update_observation(vmid, observation)
+                untouched = False
             print(f'[ProxMenux] stopped LXC verification: vmid={vmid} '
                   f'run_id={safe_run_id} handoff={observation is not None} '
-                  f'verified={verified}', flush=True)
+                  f'started={started} untouched={untouched} verified={verified}', flush=True)
             if not verified:
                 verification_errors.append('post-update OS verification unavailable')
             apps_persisted = True

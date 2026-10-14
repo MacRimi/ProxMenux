@@ -540,6 +540,10 @@ def _list_pve_lxcs(*, strict: bool = False) -> list[dict]:
             raise RuntimeError('LXC inventory could not be read')
         return []
     lines = r.stdout.splitlines()
+    # `pct list` returns successful empty stdout when the node has no CTs.
+    # That is a complete inventory, so strict callers may safely retire rows.
+    if not any(line.strip() for line in lines):
+        return []
     if strict and (not lines or not lines[0].strip().startswith('VMID') or 'Status' not in lines[0]):
         raise RuntimeError('LXC inventory is incomplete')
 
@@ -1892,7 +1896,7 @@ def store_lxc_update_observation(vmid: int, observation: Optional[dict]) -> bool
         reg = _read_registry()
         items = reg.setdefault("items", [])
         target = next((it for it in items if it.get("id") == f"lxc:{vmid}"
-                       and it.get("type") == "lxc" and not it.get("removed_at")), None)
+                       and it.get("type") == "lxc"), None)
         if target is None:
             if observation is None:
                 return False

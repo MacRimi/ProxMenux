@@ -59,9 +59,13 @@ root = pathlib.Path(os.environ['FIXTURE_DIR'])
 args = sys.argv[1:]
 with (root/'commands').open('a') as log: log.write(json.dumps(args)+'\\n')
 state = root/'state'
-if args[0] == 'list': print('VMID Status Name\\n100 '+state.read_text()+' fixture')
+if args[0] == 'list':
+    if os.environ.get('FOREIGN') == '1': print('VMID Status Name\\n200 stopped foreign')
+    else: print('VMID Status Name\\n100 '+state.read_text()+' fixture')
 elif args[0] == 'status': print('status: '+state.read_text())
-elif args[0] == 'start': state.write_text('running')
+elif args[0] == 'start':
+    if os.environ.get('START_FAIL') == '1': sys.exit(1)
+    state.write_text('running')
 elif args[0] == 'shutdown':
     if os.environ.get('SHUTDOWN_FAIL') == '1': sys.exit(1)
     state.write_text('stopped')
@@ -102,8 +106,10 @@ m._PCT_BIN = str(root/'bin/pct')
 h.OBSERVATION_DIR = root/'observations'
 apps._APPS_DIR = str(root/'apps')
 apps._PCT_BIN = str(root/'bin/pct')
-with (root/'commands').open('a') as log: log.write('CAPTURE\\n')
-if os.environ.get('CAPTURE_FAIL') == '1': raise SystemExit(1)
+marker = '--mark-started' in os.sys.argv
+with (root/'commands').open('a') as log: log.write('MARK_STARTED\\n' if marker else 'CAPTURE\\n')
+if os.environ.get('MARKER_FAIL') == '1' and marker: raise SystemExit(1)
+if os.environ.get('CAPTURE_FAIL') == '1' and not marker: raise SystemExit(1)
 m._detect_lxc_containers = lambda **_: ([{'id':'lxc:100','type':'lxc','_vmid':'100',
     '_is_oci':os.environ.get('OCI') == '1'}] if (root/'state').read_text() == 'running' else [])
 raise SystemExit(h.main())
@@ -169,11 +175,12 @@ raise SystemExit(h.main())
         self.assertIsNone(row['error'])
         self.assertEqual(row['os_family'], 'debian')
         log = self.log.read_text()
+        self.assertLess(log.index('MARK_STARTED'), log.index('CAPTURE'))
         self.assertLess(log.index('CAPTURE'), log.index('shutdown'))
         self.assertLess(log.index('apt list --upgradable'), log.index('shutdown'))
         self.assertNotIn('apt-get update', log)
         self.assertEqual(log.count('dist-upgrade'), 1)
-        self.assertFalse(list(self.observations.glob('*.json')))
+        self.assertFalse(list(self.observations.iterdir()))
         self.assertEqual(managed.get_registry()['items'][1]['update_check']['_count'], 7)
         self.assertEqual(self.fixture.commands, [], 'GET and stopped finalization run no guest probes')
 
@@ -198,6 +205,33 @@ raise SystemExit(h.main())
     def test_missing_capture_does_not_present_old_count_or_fresh_zero(self):
         self.assert_unverified('CAPTURE_FAIL')
 
+    def test_pre_start_failure_or_foreign_target_preserves_last_verified_result(self):
+        for condition in ('START_FAIL', 'FOREIGN'):
+            with self.subTest(condition=condition):
+                registry = managed.get_registry()
+                registry['items'][0]['update_check'] = {
+                    'available': True, 'last_check': '2026-10-14T00:00:00Z',
+                    '_count': 20, 'error': None,
+                }
+                managed._write_registry(registry)
+                result = self.run_manual(**{condition: '1'})
+                self.assertNotEqual(result.returncode, 0)
+                self.assertEqual(self.state.read_text(), 'stopped')
+                stored = managed.get_registry()['items'][0]['update_check']
+                self.assertEqual(stored['_count'], 20)
+                self.assertIsNone(stored['error'])
+                log = self.log.read_text()
+                self.assertNotIn('MARK_STARTED', log)
+                self.assertNotIn('CAPTURE', log)
+
+    def test_started_run_with_unwritable_marker_is_reported_as_unverified(self):
+        result = self.run_manual(MARKER_FAIL='1', CAPTURE_FAIL='1')
+        self.assertEqual(result.returncode, 8)
+        self.assertEqual(self.state.read_text(), 'stopped')
+        stored = managed.get_registry()['items'][0]['update_check']
+        self.assertTrue(stored['error'])
+        self.assertNotIn('_count', stored)
+
     def test_web_runner_without_identity_reports_unverified_instead_of_silent_skip(self):
         env = {**self.env, 'EXECUTION_MODE': 'web'}
         env.pop('RUN_ID')
@@ -210,6 +244,7 @@ raise SystemExit(h.main())
 
     def test_rejected_handoff_is_retained_with_safe_diagnostic_and_no_false_zero(self):
         self.observations.mkdir(mode=0o700)
+        handoff.mark_started(100, 'manual-fixture')
         path = self.observations / '100-manual-fixture.json'
         path.write_text(json.dumps({'private_payload': 'must-not-be-logged'}))
         path.chmod(0o600)
@@ -219,7 +254,7 @@ raise SystemExit(h.main())
                 status='success', source='manual', target='os')
         self.assertTrue(path.exists())
         self.assertIn('reason=KeyError', output.getvalue())
-        self.assertIn('handoff=False verified=False', output.getvalue())
+        self.assertIn('handoff=False started=True untouched=False verified=False', output.getvalue())
         self.assertNotIn('must-not-be-logged', output.getvalue())
         self.assertTrue(self.fixture.row()['update_check']['error'])
         self.assertNotIn('_count', managed.get_registry()['items'][0]['update_check'])
