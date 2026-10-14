@@ -44,6 +44,7 @@
 #      nor explicitly-enabled verified helper) available in the CT
 #   6  post-update restart failed
 #   7  another ProxMenux update is already running for this CT
+#   8  started CT could not record its verification handoff identity
 #
 # The frontend surfaces exit code + duration in a follow-up POST to
 # /api/lxc-updates/<vmid>/applied so the notification event fires with
@@ -142,10 +143,26 @@ fi
 #    restore their original stopped state on every exit path.
 STATE=$(pct status "$VMID" | awk '{print $2}')
 STARTED_BY_PROXMENUX=0
+OBSERVATION_ATTEMPTED=0
+capture_before_stop() {
+  if [[ "$STARTED_BY_PROXMENUX" == "1" && "$OBSERVATION_ATTEMPTED" == "0" && -z "${RUN_ID:-}" && "${EXECUTION_MODE:-}" == "web" ]]; then
+    OBSERVATION_ATTEMPTED=1
+    echo "WARNING: post-update verification has no RUN_ID; the result cannot be verified." >&2
+  fi
+  if [[ "$STARTED_BY_PROXMENUX" == "1" && "$OBSERVATION_ATTEMPTED" == "0" && -n "${RUN_ID:-}" ]]; then
+    OBSERVATION_ATTEMPTED=1
+    # Capture while pct exec works. Only the backend writes the registry.
+    if ! python3 /usr/local/share/proxmenux/monitor-app/usr/bin/lxc_update_observation.py \
+          --vmid "$VMID" --run-id "$RUN_ID" --include-apps; then
+      echo "WARNING: post-update package verification unavailable; the result will remain unverified." >&2
+    fi
+  fi
+}
 restore_original_state() {
   local rc=$?
   trap - EXIT INT TERM
   if [[ "$STARTED_BY_PROXMENUX" == "1" ]]; then
+    capture_before_stop
     echo
     echo "Restoring original state: stopping CT $VMID…"
     if ! pct shutdown "$VMID" --timeout 60; then
@@ -167,6 +184,15 @@ if [[ "$STATE" != "running" ]]; then
     exit 2
   fi
   STARTED_BY_PROXMENUX=1
+  # The finalizer must distinguish a failed/pre-start run from a run that
+  # actually started this previously stopped CT but later lacks a result.
+  if [[ -n "${RUN_ID:-}" ]]; then
+    if ! python3 /usr/local/share/proxmenux/monitor-app/usr/bin/lxc_update_observation.py \
+          --vmid "$VMID" --run-id "$RUN_ID" --mark-started; then
+      echo "ERROR: started CT verification identity could not be recorded." >&2
+      exit 8
+    fi
+  fi
   # give the CT a moment for services to come up
   sleep 3
 fi
@@ -397,6 +423,9 @@ fi
 #    OCI-style CTs whose PID 1 is a user entrypoint (a plain `apt
 #    upgrade` doesn't restart the app; a CT reboot does).
 if [[ "$RESTART" == "1" ]]; then
+  # A reboot may return before pct exec is usable again. Keep the verified
+  # package snapshot from before reboot, then restore the original state.
+  capture_before_stop
   echo "--- Rebooting CT $VMID ---"
   if ! pct reboot "$VMID"; then
     echo "ERROR: pct reboot failed." >&2

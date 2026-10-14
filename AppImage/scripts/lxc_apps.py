@@ -4503,6 +4503,112 @@ def emit_all_pending_updates() -> int:
     return count
 
 
+def _installed_observation_fingerprint(app: dict) -> str:
+    # Only version-probe configuration, never updater commands or credentials.
+    fields = ('installed_via', 'installed_regex', 'tag_regex') + _DETECTOR_FIELDS
+    return hashlib.sha256(json.dumps({k: app.get(k) for k in fields},
+                                    sort_keys=True).encode()).hexdigest()
+
+
+def capture_installed_observations(vmid) -> list[dict]:
+    """Probe registered automatic versions while a temporary CT still runs.
+
+    No shared writes, upstream requests, discovery or update commands. The
+    backend later merges this private handoff against the current sidecar.
+    Manual values and OCI/image registrations cannot be proven this way.
+    """
+    with _cache_lock:
+        registrations = copy.deepcopy((_read_sidecar(vmid) or {}).get('apps') or [])
+    observations = []
+    for app in registrations:
+        if app.get('installed_via') not in set(_VALID_METHODS) - {'manual', 'oci_image'}:
+            continue
+        try:
+            version, error = detect_installed_version(vmid, app)
+        except Exception:
+            version, error = None, True
+        verified = (isinstance(version, str) and 0 < len(version) <= 256
+                    and not re.search(r'[\x00-\x1f\x7f]', version) and not error)
+        observations.append({'id': app.get('id'),
+                             'fingerprint': _installed_observation_fingerprint(app),
+                             'checked_at': _now_iso(), 'verified': bool(verified),
+                             'installed_version': version if verified else None})
+    return observations
+
+
+def store_installed_observations(vmid, observations) -> dict:
+    """Merge trusted captured versions without executing anything in the CT."""
+    errors = []
+    if not isinstance(observations, list):
+        return {'applied': 0, 'errors': ['post-update application observation unavailable']}
+    seen = set()
+    parsed = []
+    for item in observations:
+        try:
+            app_id = item['id']
+            fingerprint = item['fingerprint']
+            version = item['installed_version']
+            checked = datetime.datetime.fromisoformat(item['checked_at'].replace('Z', '+00:00'))
+            age = time.time() - checked.timestamp()
+            valid = (isinstance(app_id, str) and 0 < len(app_id) <= 128
+                     and app_id not in seen and re.fullmatch(r'[a-zA-Z0-9._:-]+', app_id)
+                     and isinstance(fingerprint, str) and re.fullmatch(r'[a-f0-9]{64}', fingerprint)
+                     and checked.tzinfo is not None and 0 <= age <= 3600
+                     and type(item['verified']) is bool
+                     and ((item['verified'] and isinstance(version, str) and 0 < len(version) <= 256
+                           and not re.search(r'[\x00-\x1f\x7f]', version))
+                          or (not item['verified'] and version is None)))
+            if not valid:
+                raise ValueError('invalid observation')
+            seen.add(app_id)
+            parsed.append((item, checked))
+        except (KeyError, TypeError, ValueError, AttributeError, OverflowError):
+            # Validate the whole payload before its first shared write.
+            return {'applied': 0, 'errors': ['invalid post-update application observation']}
+    if not parsed:
+        return {'applied': 0, 'errors': []}
+    with _cache_lock:
+        sidecar = _read_sidecar(vmid)
+        applied = 0
+        for item, checked in parsed:
+            app = _find_app(sidecar or {}, item['id'])
+            if not app or _installed_observation_fingerprint(app) != item['fingerprint']:
+                errors.append('application configuration changed after capture')
+                continue
+            state = dict(app.get('state') or {})
+            try:
+                current = datetime.datetime.fromisoformat((state.get('checked_at') or '').replace('Z', '+00:00'))
+                if current >= checked:
+                    errors.append('newer application observation preserved')
+                    continue
+            except (TypeError, ValueError):
+                pass
+            if item['verified']:
+                state['installed_version'] = item['installed_version']
+                state['update_available'] = (compare(item['installed_version'], state['latest_version'])
+                                             if state.get('latest_version') else None)
+                # An installed-version probe does not recheck the upstream;
+                # preserve an existing upstream error rather than hiding it.
+                if state.get('error') == 'post-update installed version could not be verified':
+                    state['error'] = None
+                state.pop('last_known_installed_version', None)
+            else:
+                state['last_known_installed_version'] = (state.get('installed_version')
+                                                        or state.get('last_known_installed_version'))
+                state['installed_version'] = None
+                state['update_available'] = None
+                state['error'] = 'post-update installed version could not be verified'
+                errors.append(state['error'])
+            state['checked_at'] = item['checked_at']
+            app['state'] = state
+            applied += 1
+        if applied:
+            sidecar['updated_at'] = _now_iso()
+            if not _write_sidecar(vmid, sidecar):
+                raise OSError('post-update application persistence failed')
+    return {'applied': applied, 'errors': errors}
+
+
 def check_all(
     vmid, force: bool = False, notify: bool = True,
 ) -> Optional[dict]:
