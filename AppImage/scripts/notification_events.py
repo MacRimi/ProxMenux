@@ -1866,6 +1866,35 @@ class JournalWatcher:
             }, entity='cluster', entity_id=self._hostname)
             return
         
+        # Corosync membership change. This is what corosync really logs on
+        # the surviving nodes when a peer leaves or comes back:
+        #   [TOTEM ] A new membership (1.55) was formed. Members left: 2
+        #   [TOTEM ] A new membership (1.5a) was formed. Members joined: 2
+        # The line carries node IDs and no "node" keyword, so the generic
+        # match below never fired for a plain node loss in a quorate cluster.
+        if 'a new membership' in msg_lower and 'was formed' in msg_lower:
+            names = self._corosync_node_names()
+            local_name = socket.gethostname().split('.')[0]
+            for keyword, event_type, severity in (
+                    ('left', 'node_disconnect', 'CRITICAL'),
+                    ('joined', 'node_reconnect', 'INFO')):
+                id_match = re.search(r'\b%s:((?:\s+\d+)+)' % keyword, msg)
+                if not id_match:
+                    continue
+                for node_id in id_match.group(1).split():
+                    node_name = names.get(node_id, node_id)
+                    if node_name == local_name:
+                        continue  # our own corosync (re)starting
+                    if (event_type == 'node_reconnect'
+                            and startup_grace.is_real_system_boot()
+                            and _shared_state.is_startup_health_grace()):
+                        continue  # this host just booted: it is us joining them
+                    self._emit(event_type, severity, {
+                        'node_name': node_name,
+                        'hostname': self._hostname,
+                    }, entity='cluster', entity_id=node_name)
+            return
+
         # Node disconnect
         if (('quorum' in msg_lower and 'lost' in msg_lower) or
             ('node' in msg_lower and any(w in msg_lower for w in ['left', 'offline', 'lost']))):
@@ -1878,6 +1907,24 @@ class JournalWatcher:
                 'hostname': self._hostname,
             }, entity='cluster', entity_id=node_name)
     
+    def _corosync_node_names(self) -> Dict[str, str]:
+        """Map corosync node IDs to node names from corosync.conf."""
+        for path in ('/etc/pve/corosync.conf', '/etc/corosync/corosync.conf'):
+            try:
+                with open(path) as f:
+                    conf = f.read()
+            except OSError:
+                continue
+            names = {}
+            for block in re.findall(r'\bnode\s*\{([^}]*)\}', conf):
+                name = re.search(r'^\s*name:\s*(\S+)', block, re.M)
+                node_id = re.search(r'^\s*nodeid:\s*(\d+)', block, re.M)
+                if name and node_id:
+                    names[node_id.group(1)] = name.group(1)
+            if names:
+                return names
+        return {}
+
     def _check_system_shutdown(self, msg: str, syslog_id: str):
         """Detect full-node shutdown or reboot.
         
