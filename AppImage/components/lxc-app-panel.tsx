@@ -19,7 +19,7 @@
  * Secure Gateway.
  */
 
-import { useCallback, useEffect, useMemo, useState } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import {
   Loader2, Save, RefreshCw, Trash2, Package, ExternalLink,
   AlertTriangle, Info, PlusCircle, Pencil, ChevronDown, ChevronRight, EyeOff,
@@ -93,6 +93,7 @@ interface AppConfig {
   health_path?: string
   logo_url?: string
   helper_slug?: string
+  discovery_id?: string
   // Set when the application runs inside Docker: registered for its identity
   // and installed version, updated by the image it comes from.
   update_via?: string
@@ -121,7 +122,18 @@ interface PortDetail {
   logo_url: string
 }
 
+interface NativeDiscovery {
+  vmid: number
+  status: "not_scanned" | "complete" | "partial" | "error" | "busy"
+  stale: boolean
+  candidates: DetectedApp[]
+}
+
 interface DetectedApp {
+  discovery_id?: string
+  source?: "native_metadata"
+  installed_version?: string | null
+  evidence?: Array<{ kind: string; value: string }>
   slug: string
   name: string
   logo_url?: string | null
@@ -462,12 +474,34 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed, initialData, oci }:
   const [loading, setLoading] = useState(!seed)
   const [sidecar, setSidecar] = useState<SidecarResponse | null>(seed?.sidecar ?? null)
   const [suggestions, setSuggestions] = useState<Suggestions | null>(seed?.suggestions ?? null)
+  const [nativeDiscovery, setNativeDiscovery] = useState<NativeDiscovery | null>(null)
+  const targetRef = useRef(vmid)
+  targetRef.current = vmid
+  const targetGeneration = useRef(0)
+  const previousTarget = useRef(vmid)
+  if (previousTarget.current !== vmid) {
+    previousTarget.current = vmid
+    targetGeneration.current += 1
+  }
+  useEffect(() => {
+    const generation = targetGeneration.current
+    setNativeDiscovery(null)
+    setEditing(null)
+    setDetectionNotice(null)
+    setSearchingApplications(false)
+    setSaving(false)
+    if (managed) return
+    fetchApi<NativeDiscovery>(`/api/vms/${vmid}/apps/native-discovery`).then(result => {
+      if (targetRef.current === vmid && targetGeneration.current === generation) setNativeDiscovery(result)
+    }).catch(() => { /* cached metadata is optional; never initiate a scan */ })
+    return () => { targetGeneration.current += 1 }
+  }, [vmid, managed])
   const [adguardSetupAvailable, setAdguardSetupAvailable] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [searchingApplications, setSearchingApplications] = useState(false)
   const [detectionNotice, setDetectionNotice] = useState<{ found: boolean; text: string } | null>(null)
   // Editor state
-  const [editing, setEditing] = useState<{ appId: string | null; draft: AppConfig } | null>(null)
+  const [editing, setEditing] = useState<{ appId: string | null; draft: AppConfig; targetVmid: number } | null>(null)
   const [binaryArgsInput, setBinaryArgsInput] = useState("")
   const [commandArgvInput, setCommandArgvInput] = useState("")
   const [saving, setSaving] = useState(false)
@@ -522,6 +556,8 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed, initialData, oci }:
     // `initialData` or the shared cache, the sidecar is already
     // populated and the user shouldn't see a flash of "Loading…"
     // while we revalidate.
+    const generation = targetGeneration.current
+    const isCurrent = () => targetRef.current === vmid && targetGeneration.current === generation
     if (!sidecar) setLoading(true)
     setError(null)
     try {
@@ -533,14 +569,14 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed, initialData, oci }:
       // the "Loading applications…" flash that used to show while a
       // second, racing fetch caught up.
       const bundle = await fetchLxcApps(vmid)
-      if (bundle) {
+      if (bundle && isCurrent()) {
         setSidecar(bundle.sidecar)
         setSuggestions(bundle.suggestions)
       }
     } catch (e: any) {
-      setError(e?.message || t("vmLxc.appEditor.loadFailed"))
+      if (isCurrent()) setError(e?.message || t("vmLxc.appEditor.loadFailed"))
     } finally {
-      setLoading(false)
+      if (isCurrent()) setLoading(false)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [vmid, managed])
@@ -617,7 +653,7 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed, initialData, oci }:
     return msg
   }
 
-  const editorOpen = !!editing
+  const editorOpen = !!editing && editing.targetVmid === vmid
 
   // The picker catalog is only needed after the user opens the editor.
   useEffect(() => {
@@ -653,8 +689,8 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed, initialData, oci }:
   // (`extras[]` from the backend). Both use the same DetectedApp
   // shape so the empty state renders them uniformly.
   const detectedList: DetectedApp[] = useMemo(() => {
-    if (!suggestions) return []
-    const out: DetectedApp[] = []
+    const out: DetectedApp[] = [...(nativeDiscovery?.vmid === vmid ? nativeDiscovery.candidates : [])]
+    if (!suggestions) return out
     // A ProxMenux OCI install has no helper slug — nothing was installed by a
     // community script — so its template id identifies it instead.
     const primarySlug = suggestions.helper_slug || suggestions.oci_instance?.template_id
@@ -679,12 +715,12 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed, initialData, oci }:
       }
     }
     return out
-  }, [suggestions])
+  }, [suggestions, nativeDiscovery, vmid])
 
   // Registered slugs — used to filter the detection list down to
   // what the user hasn't already registered on this CT.
   const registeredSlugs = useMemo(
-    () => new Set(apps.map((a) => a.helper_slug).filter(Boolean) as string[]),
+    () => new Set(apps.flatMap((a) => [a.helper_slug, a.discovery_id]).filter(Boolean) as string[]),
     [apps],
   )
   // Dismissed slugs — persisted in the sidecar. Chips the user
@@ -750,14 +786,30 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed, initialData, oci }:
   }
 
   const searchInstalledApplications = async () => {
+    const generation = targetGeneration.current
+    const isCurrent = () => targetRef.current === vmid && targetGeneration.current === generation
     const before = new Set([...visibleDetected, ...visibleWorkloads].map((item) => item.slug))
     setSearchingApplications(true)
     setDetectionNotice(null)
     setError(null)
     try {
+      let native = await fetchApi<NativeDiscovery>(`/api/vms/${vmid}/apps/native-discovery`, {
+        method: "POST",
+      })
+      if (!isCurrent()) return
+      setNativeDiscovery(native)
+      if (native.status === "error" || native.status === "busy") {
+        setDetectionNotice({ found: false, text: t("vmLxc.appEditor.nativeScanFailed") })
+        return
+      }
       const result: Suggestions = await fetchApi(`/api/vms/${vmid}/apps/suggestions`, {
         method: "POST",
       })
+      if (!isCurrent()) return
+      // Recompose against the refreshed catalog without another native scan.
+      native = await fetchApi<NativeDiscovery>(`/api/vms/${vmid}/apps/native-discovery`)
+      if (!isCurrent()) return
+      setNativeDiscovery(native)
       setSuggestions(result)
       if (sidecar) setLxcAppsCached(vmid, sidecar, result)
 
@@ -765,11 +817,14 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed, initialData, oci }:
       if (result.helper_slug) detected.add(result.helper_slug)
       for (const item of result.extras || []) detected.add(item.slug)
       for (const item of result.docker_workloads || []) detected.add(item.slug)
+      for (const item of native.candidates) detected.add(item.slug)
       const visible = [...detected].filter(
         (slug) => !registeredSlugs.has(slug) && !dismissedSlugs.has(slug),
       )
       const newCount = visible.filter((slug) => !before.has(slug)).length
-      if (newCount === 1) {
+      if (native.status === "partial") {
+        setDetectionNotice({ found: visible.length > 0, text: t("vmLxc.appEditor.nativeScanPartial") })
+      } else if (newCount === 1) {
         setDetectionNotice({ found: true, text: t("vmLxc.appEditor.oneNewApplicationDetected") })
       } else if (newCount > 1) {
         setDetectionNotice({
@@ -785,9 +840,9 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed, initialData, oci }:
         })
       }
     } catch (e: any) {
-      setError(e?.message || t("vmLxc.appEditor.detectionFailed"))
+      if (isCurrent()) setError(e?.message || t("vmLxc.appEditor.detectionFailed"))
     } finally {
-      setSearchingApplications(false)
+      if (isCurrent()) setSearchingApplications(false)
     }
   }
 
@@ -804,6 +859,7 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed, initialData, oci }:
     existing?: AppEntry,
     opts?: { withTracking?: boolean, preset?: DetectedApp },
   ) => {
+    const generation = targetGeneration.current
     let seed: AppConfig
     if (existing) {
       seed = {
@@ -832,6 +888,7 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed, initialData, oci }:
         health_path: existing.health_path || "",
         logo_url: existing.logo_url || "",
         helper_slug: existing.helper_slug || "",
+        ...(existing.discovery_id ? { discovery_id: existing.discovery_id } : {}),
         // Preserved explicitly: saving replaces the whole record, so dropping
         // it here would silently un-delegate the app the first time someone
         // edits one of its ports.
@@ -862,7 +919,11 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed, initialData, oci }:
         const p = opts.preset
         seed.name = p.name
         seed.logo_url = p.logo_url || ""
-        seed.helper_slug = p.slug
+        if (p.discovery_id) {
+          seed.discovery_id = p.discovery_id
+          seed.update_method = "none"
+          seed.update_command = ""
+        } else seed.helper_slug = p.slug
         // Docker endpoints come from the real published host-port mappings
         // listed under Web links.  Do not pre-save a catalog default such as
         // 9000; the user explicitly chooses which workload links to add.
@@ -943,9 +1004,10 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed, initialData, oci }:
         setShowAdvanced(false)
       }
     }
+    if (targetRef.current !== vmid || targetGeneration.current !== generation) return
     setBinaryArgsInput((seed.binary_args || []).join(", "))
     setCommandArgvInput((seed.command_argv || []).join(", "))
-    setEditing({ appId: existing?.id || null, draft: seed })
+    setEditing({ appId: existing?.id || null, draft: seed, targetVmid: vmid })
     setDetectorTest(null)
     setError(null)
   }, [suggestions, vmid, sidecar, isOciAdguard, adguardSetupAvailable])
@@ -959,7 +1021,9 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed, initialData, oci }:
   }
 
   const save = async () => {
-    if (!editing) return
+    if (!editing || editing.targetVmid !== vmid || targetRef.current !== vmid) return
+    const generation = targetGeneration.current
+    const isCurrent = () => targetRef.current === vmid && targetGeneration.current === generation
     setSaving(true)
     setError(null)
     try {
@@ -973,6 +1037,7 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed, initialData, oci }:
         body: JSON.stringify(editing.draft),
       })
       if ((r as any).error) throw new Error((r as any).error)
+      if (!isCurrent()) return
       setSidecar(r)
       setLxcAppsCached(vmid, r, suggestions)
       setEditing(null)
@@ -980,9 +1045,9 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed, initialData, oci }:
       setCommandArgvInput("")
       onChange?.()
     } catch (e: any) {
-      setError(e?.message || t("vmLxc.appEditor.saveFailed"))
+      if (isCurrent()) setError(e?.message || t("vmLxc.appEditor.saveFailed"))
     } finally {
-      setSaving(false)
+      if (isCurrent()) setSaving(false)
     }
   }
 
@@ -2452,6 +2517,24 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed, initialData, oci }:
                 ? t("vmLxc.appEditor.versionDetected", { version: d.tracking_suggestion.detected_version || "" })
                 : t("vmLxc.appEditor.detectedInContainer")}
             </div>
+            {d.source === "native_metadata" && (
+              <div className="text-xs text-muted-foreground mt-1 break-all">
+                <div>{d.installed_version
+                  ? t("vmLxc.appEditor.versionDetected", { version: d.installed_version })
+                  : t("vmLxc.appEditor.nativeVersionUnknown")}</div>
+                {(nativeDiscovery?.stale || nativeDiscovery?.status === "partial") && (
+                  <div className="text-amber-400">{t("vmLxc.appEditor.nativeEvidenceStale")}</div>
+                )}
+                {d.evidence?.map((e, index) => <div key={index}>
+                  {t(e.kind === "tcp_listener" ? "vmLxc.appEditor.nativeEvidencePort"
+                    : e.kind === "installation_file" ? "vmLxc.appEditor.nativeEvidenceFile"
+                    : e.kind === "process_executable" ? "vmLxc.appEditor.nativeEvidenceProcess"
+                    : e.kind === "working_directory" ? "vmLxc.appEditor.nativeEvidenceDirectory"
+                    : "vmLxc.appEditor.nativeEvidenceService")}: {e.value}
+                </div>)}
+                <div>{t("vmLxc.appEditor.nativeRegisterOnly")}</div>
+              </div>
+            )}
             {d.tracking_suggestion?.detector_source === "legacy_fallback" && (
               <div className="text-[10px] text-amber-400/90 mt-0.5">
                 {t("vmLxc.appEditor.legacyDetectorUsed")}
