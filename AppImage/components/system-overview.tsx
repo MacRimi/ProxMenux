@@ -12,13 +12,26 @@ import { ProcessDetailModal } from "./process-detail-modal"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select"
 import { fetchApi } from "../lib/api-config"
 import { formatNetworkTraffic, getNetworkUnit } from "../lib/format-network"
-import { formatStorage } from "../lib/utils"
+import { formatBytes as formatByteSize, formatStorage } from "../lib/utils"
 import { getCountFormKey, useI18n, useT } from "../lib/i18n/provider"
 import { Area, AreaChart, ResponsiveContainer } from "recharts"
 
 interface TempDataPoint {
   timestamp: number
   value: number
+}
+
+interface ZramDevice {
+  name: string
+  active: boolean
+  capacity_bytes: number
+  swap_used_bytes: number
+  original_bytes: number
+  compressed_bytes: number
+  memory_used_bytes: number
+  algorithm: string | null
+  compression_ratio: number | null
+  saved_bytes: number
 }
 
 interface SystemData {
@@ -29,6 +42,7 @@ interface SystemData {
   memory_total: number
   memory_used: number
   memory_cached?: number  // preview restyle
+  zram?: { available: boolean; devices: ZramDevice[] }
   temperature: number
   temperature_sparkline?: TempDataPoint[]
   uptime: string
@@ -489,6 +503,27 @@ export function SystemOverview() {
                 </div>
               </div>
             </div>
+            {systemData.zram?.available && systemData.zram.devices.length > 0 && (
+              <div className="mt-4 border-t border-border pt-3 space-y-3">
+                {systemData.zram.devices.map((device) => (
+                  <div key={device.name} className="text-xs">
+                    <div className="font-medium mb-2">{t("overview.zram")} <span className="font-mono text-muted-foreground">{device.name}</span></div>
+                    <div className="grid grid-cols-2 gap-x-3 gap-y-1">
+                      <span className="text-muted-foreground">{t("overview.zramCapacity")}</span>
+                      <span className="text-right font-mono">{formatByteSize(device.capacity_bytes)}</span>
+                      <span className="text-muted-foreground">{t("overview.zramSwapUsed")}</span>
+                      <span className="text-right font-mono">{formatByteSize(device.swap_used_bytes)}</span>
+                      <span className="text-muted-foreground">{t("overview.zramAlgorithm")}</span>
+                      <span className="text-right font-mono">{device.algorithm ?? "—"}</span>
+                      <span className="text-muted-foreground">{t("overview.zramCompressionRatio")}</span>
+                      <span className="text-right font-mono">{device.compression_ratio === null ? "—" : `${device.compression_ratio.toFixed(2)}:1`}</span>
+                      <span className="text-muted-foreground">{t("overview.zramPhysicalMemory")}</span>
+                      <span className="text-right font-mono">{formatByteSize(device.memory_used_bytes)}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </CardContent>
         </Card>
 

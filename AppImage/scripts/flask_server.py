@@ -78,6 +78,7 @@ from smartctl_resolver import (  # noqa: E402
     smartctl_type_args,
 )
 from temperature_sensor_resolver import get_storage_temperatures  # noqa: E402
+from zram_metrics import read_zram_metrics  # noqa: E402
 from flask_script_runner import script_runner
 import threading
 from proxmox_storage_monitor import classify_storage_state, proxmox_storage_monitor
@@ -9827,6 +9828,11 @@ def api_system():
         # Get temperature sparkline (last 1h) for overview mini chart
         temp_sparkline = get_temperature_sparkline(60)
 
+        try:
+            zram = read_zram_metrics()
+        except Exception:
+            zram = {'available': False, 'devices': []}
+
         return jsonify({
             'cpu_usage': round(cpu_usage, 1),
             'cpu_user': cpu_user_pct,
@@ -9835,6 +9841,7 @@ def api_system():
             'memory_total': round(memory_total_gb, 1),
             'memory_used': round(memory_used_gb, 1),
             'memory_cached': memory_cached_gb,
+            'zram': zram,
             'temperature': temp,
             'temperature_sparkline': temp_sparkline,
             'uptime': uptime,
