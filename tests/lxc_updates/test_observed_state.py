@@ -22,6 +22,7 @@ from flask import Flask, jsonify
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "AppImage/scripts"))
 import managed_installs as managed
+import lxc_check_job
 
 SERVER = ROOT / "AppImage/scripts/flask_server.py"
 FUNCTIONS = {
@@ -50,6 +51,9 @@ class ObservedStateRoutesTests(unittest.TestCase):
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory()
         self.addCleanup(self.temp.cleanup)
+        lock_patch = patch.object(lxc_check_job, 'LOCK_DIR', Path(self.temp.name))
+        lock_patch.start()
+        self.addCleanup(lock_patch.stop)
         self.conf = Path(self.temp.name) / "100.conf"
         self.conf.write_text("onboot: 0\nnet0: name=eth0,ip=dhcp\ntags: old\n")
         self.clock = Mock(time=Mock(return_value=1000), monotonic=Mock(return_value=1000))
@@ -140,6 +144,8 @@ class ObservedStateRoutesTests(unittest.TestCase):
         response = self.client.get("/api/vms")
         self.assertEqual(response.status_code, 200, response.json)
         return response.json[0]
+
+
 
     def test_dhcp_change_after_ttl_without_lifecycle_and_api_compatibility(self):
         first = self.row()

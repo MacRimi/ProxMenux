@@ -4,6 +4,7 @@ import type React from "react"
 
 import { useState, useMemo, useEffect, useRef } from "react"
 import { fetchLxcApps, getLxcAppsCached, invalidateLxcApps, seedLxcAppsCache, setLxcAppsCached, syncLxcAppsState } from "../lib/lxc-apps-cache"
+import { getUpdateActionButtonClass } from "../lib/update-action-style"
 import { parseTags, stringifyTags, tagToColor } from "../lib/pve-tag-color"
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card"
 import { Badge } from "./ui/badge"
@@ -28,7 +29,7 @@ import { formatStorage } from "../lib/utils"
 import { formatNetworkTraffic, getNetworkUnit } from "../lib/format-network"
 import { fetchApi } from "../lib/api-config"
 import { matchesVmSearch, normalizeVmSearchValue } from "../lib/vm-search"
-import { checkLxcUpdates, isLxcUpdateStale } from "../lib/lxc-update-observation"
+import { refreshCheckLxcUpdates, getLxcOsUpdateState, isLxcUpdateStale } from "../lib/lxc-update-observation"
 import DOMPurify from "dompurify"
 import { marked } from "marked"
 import { getCountFormKey, useI18n, useT } from "@/lib/i18n/provider"
@@ -917,6 +918,7 @@ export function VirtualMachines() {
   //     (or after a 15 s safety timeout).
   const [updatesRefreshing, setUpdatesRefreshing] = useState(false)
   const [osCheckingVmid, setOsCheckingVmid] = useState<number | null>(null)
+  const osCheckRequestRef = useRef<number | null>(null)
   const [osCheckError, setOsCheckError] = useState<string | null>(null)
   const [updatesResult, setUpdatesResult] = useState<{ pendingAfter: number; appliedCount: number } | null>(null)
   const [updatesBaselineCount, setUpdatesBaselineCount] = useState<number | null>(null)
@@ -1231,6 +1233,12 @@ export function VirtualMachines() {
   useEffect(() => {
     if (!updatesRefreshing) return
     if (!selectedVM) return
+    if (!selectedVM.update_check || selectedVM.update_check.error) {
+      setUpdatesResult(null)
+      setUpdatesRefreshing(false)
+      setUpdatesBaselineCount(null)
+      return
+    }
     const currentCount = selectedVM.update_check?.count ?? 0
     if (updatesBaselineCount !== null && currentCount !== updatesBaselineCount) {
       const applied = Math.max(0, updatesBaselineCount - currentCount)
@@ -1250,7 +1258,8 @@ export function VirtualMachines() {
     const safety = setTimeout(() => {
       const currentCount = selectedVMRef.current?.update_check?.count ?? 0
       const baseline = updatesBaselineCountRef.current
-      setUpdatesResult({
+      const observation = selectedVMRef.current?.update_check
+      setUpdatesResult(!observation || observation.error ? null : {
         pendingAfter: currentCount,
         appliedCount: Math.max(0, (baseline ?? 0) - currentCount),
       })
@@ -1983,6 +1992,7 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
   const [applyRestart, setApplyRestart] = useState(false)
   const [applyStartedAt, setApplyStartedAt] = useState<number>(0)
   const [applyRunId, setApplyRunId] = useState<string>("")
+  const [applyCheckedOs, setApplyCheckedOs] = useState(false)
   const [applyTargetIds, setApplyTargetIds] = useState<string[]>([])
   const [applyTargetLabels, setApplyTargetLabels] = useState<string[]>([])
   // Extra state carried alongside applyTarget when the App branch is
@@ -2029,6 +2039,7 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
   // detected via the community-scripts pattern. All loaded once when
   // the user opens the Updates tab of a specific LXC.
   const [scheduleLoaded, setScheduleLoaded] = useState<number | null>(null)
+  const scheduleLoadRequestRef = useRef(0)
   const [scheduleEnabled, setScheduleEnabled] = useState(false)
   const [scheduleCron, setScheduleCron] = useState("0 3 * * *")
   const [schedulePreset, setSchedulePreset] = useState<string>("daily-3am")
@@ -2073,6 +2084,7 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
   // with scheduled updates: changing a one-click manual selection must never
   // rewrite the cron automation configured in Options.
   const [bulkLoaded, setBulkLoaded] = useState<number | null>(null)
+  const bulkLoadRequestRef = useRef(0)
   const [bulkConfigured, setBulkConfigured] = useState(false)
   const [bulkTargets, setBulkTargets] = useState<string[]>(["os"])
   const [bulkPersistedTargets, setBulkPersistedTargets] = useState<string[]>(["os"])
@@ -2107,9 +2119,9 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
       ? s.targets.map((value: any) => String(value))
       : ([...(legacyTarget !== "app" ? ["os"] : []), ...(legacyTarget !== "os" ? ["apps"] : [])]))
     setScheduleReleaseDelayDays(Number.isInteger(Number(s.release_delay_days)) ? Number(s.release_delay_days) : 0)
-    if (s.backup !== undefined) setApplyBackup(!!s.backup)
-    if (s.backup_storage) setApplyBackupStorage(s.backup_storage)
-    if (s.restart !== undefined) setApplyRestart(!!s.restart)
+    setApplyBackup(!!s.backup)
+    setApplyBackupStorage(typeof s.backup_storage === "string" ? s.backup_storage : "")
+    setApplyRestart(!!s.restart)
     setScheduleLastRunAt(s.last_run_at || null)
     setScheduleLastRunStatus(s.last_run_status || null)
     setScheduleLastRunReason(s.last_run_reason || null)
@@ -2122,30 +2134,46 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
   }
 
   const loadSchedule = async (vmid: number) => {
+    if (selectedVMRef.current?.vmid !== vmid) return
+    const requestId = ++scheduleLoadRequestRef.current
+    const isCurrent = () => selectedVMRef.current?.vmid === vmid
+      && scheduleLoadRequestRef.current === requestId
     setScheduleError(null)
     // Seed from ref cache so tab-switching to Updates isn't a "Loading…"
     // moment when the payload was already fetched this session.
     const cachedSched = vmModalCacheRef.current.schedule.get(vmid)
-    if (cachedSched) applySchedulePayload(cachedSched)
+    // Missing options are this guest's defaults, never the previous guest's.
+    applySchedulePayload(cachedSched || {})
     try {
       const s: any = await fetchApi(`/api/vms/${vmid}/schedule`)
-      if (s && typeof s === "object") {
-        vmModalCacheRef.current.schedule.set(vmid, s)
-        applySchedulePayload(s)
-      }
+      if (!isCurrent()) return
+      if (!s || typeof s !== "object" || Array.isArray(s))
+        throw new Error(t("vmLxc.scheduled.loadFailed"))
+      vmModalCacheRef.current.schedule.set(vmid, s)
+      applySchedulePayload(s)
     } catch (e: any) {
-      setScheduleError(e?.message || t("vmLxc.scheduled.loadFailed"))
+      if (isCurrent()) setScheduleError(e?.message || t("vmLxc.scheduled.loadFailed"))
     } finally {
-      setScheduleLoaded(vmid)
+      if (isCurrent()) setScheduleLoaded(vmid)
     }
   }
 
   const loadBulkUpdate = async (vmid: number) => {
+    if (selectedVMRef.current?.vmid !== vmid) return
+    const requestId = ++bulkLoadRequestRef.current
+    const isCurrent = () => selectedVMRef.current?.vmid === vmid
+      && bulkLoadRequestRef.current === requestId
     setBulkError(null)
     setBulkLoaded(null)
     setBulkEditMode(false)
+    setBulkConfigured(false)
+    setBulkTargets(["os"])
+    setBulkPersistedTargets(["os"])
     try {
       const config: any = await fetchApi(`/api/vms/${vmid}/bulk-update`)
+      if (!isCurrent()) return
+      if (!config || typeof config !== "object" || Array.isArray(config))
+        throw new Error(t("vmLxc.bulkUpdate.loadFailed"))
       const targets = Array.isArray(config?.targets)
         ? Array.from(new Set(config.targets.map((value: any) => String(value)))) as string[]
         : []
@@ -2155,12 +2183,13 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
       setBulkTargets(next)
       setBulkPersistedTargets(next)
     } catch (e: any) {
+      if (!isCurrent()) return
       setBulkConfigured(false)
       setBulkTargets(["os"])
       setBulkPersistedTargets(["os"])
       setBulkError(e?.message || t("vmLxc.bulkUpdate.loadFailed"))
     } finally {
-      setBulkLoaded(vmid)
+      if (isCurrent()) setBulkLoaded(vmid)
     }
   }
 
@@ -2560,8 +2589,21 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
   const openApplyTerminal = (
     vmid: number,
     target: "os" | "app" | "both",
-    opts?: { updateCommand?: string; appName?: string; runHelper?: boolean; allowHelperWithCustom?: boolean; dockerStandaloneTargets?: string[]; dockerEngine?: boolean; dockerRefresh?: boolean; targetIds?: string[]; targetLabels?: string[] },
+    opts?: { checkedOs?: boolean; updateCommand?: string; appName?: string; runHelper?: boolean; allowHelperWithCustom?: boolean; dockerStandaloneTargets?: string[]; dockerEngine?: boolean; dockerRefresh?: boolean; targetIds?: string[]; targetLabels?: string[] },
   ) => {
+    const guest = selectedVMRef.current
+    if (target === "os" || target === "both") {
+      if (osCheckingVmid !== null || osCheckRequestRef.current !== null || updatesRefreshing || (opts?.checkedOs && osCheckError)) return
+      const state = guest?.vmid === vmid ? getLxcOsUpdateState(guest.update_check) : "unknown"
+      if (state === "unknown") {
+        setOsCheckError(t("vmLxc.updates.checkBeforeUpdate"))
+        return
+      }
+      // A combined plan can still update apps when OS packages are current.
+      if (target === "os" && state === "current") return
+    }
+    // The explicit update button is the user's confirmation. The runner
+    // owns the temporary start, backup and restoration of a stopped guest.
     const fallbackTargets = target === "os"
       ? ["os"]
       : target === "both"
@@ -2584,6 +2626,7 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
     setApplyVmid(vmid)
     setApplyTarget(target)
     setApplyRunId(runId)
+    setApplyCheckedOs(opts?.checkedOs === true)
     setApplyTargetIds(opts?.targetIds?.length ? opts.targetIds : fallbackTargets)
     setApplyTargetLabels(opts?.targetLabels?.length ? opts.targetLabels : fallbackLabels)
     setApplyUpdateCommand(opts?.updateCommand || "")
@@ -2680,10 +2723,16 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
   // false "N package pending" every time a registered app has an
   // upstream bump.
   const checkOsUpdates = async (vmid: number) => {
+    if (osCheckRequestRef.current !== null || applyOpen || controlLoading) return
+    osCheckRequestRef.current = vmid
     setOsCheckingVmid(vmid)
     setOsCheckError(null)
     try {
-      await checkLxcUpdates(vmid)
+      const observation = await refreshCheckLxcUpdates<LxcUpdateCheck>(vmid)
+      await mutate((current) => Array.isArray(current)
+        ? current.map(vm => vm.vmid === vmid ? { ...vm, update_check: observation } : vm)
+        : current, { revalidate: false })
+      setSelectedVM(current => current?.vmid === vmid ? { ...current, update_check: observation } : current)
       const details = await fetchApi<VMDetails>(`/api/vms/${vmid}`)
       vmModalCacheRef.current.details.set(vmid, details)
       if (selectedVMRef.current?.vmid === vmid) setVMDetails(details)
@@ -2692,9 +2741,12 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
       if (selectedVMRef.current?.vmid === vmid) {
         setOsCheckError(error.status === 429
           ? t("vmLxc.updates.checkCooldown", { seconds: error.body?.retry_after ?? 60 })
-          : error.message || t("vmLxc.updates.osStatusUnavailable"))
+          : error.message === "checkStillRunning"
+            ? t("vmLxc.updates.checkStillRunning")
+            : t("vmLxc.updates.osStatusUnavailable"))
       }
     } finally {
+      osCheckRequestRef.current = null
       setOsCheckingVmid(null)
     }
   }
@@ -5707,7 +5759,7 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                       !selectedVM.update_check?.is_oci_lxc && (() => {
                         const uc = selectedVM.update_check
                         const osUpdateStale = isLxcUpdateStale(uc)
-                        const osUpdateStatusKnown = !!uc && !uc.error && !osUpdateStale
+                        const osUpdateStatusKnown = getLxcOsUpdateState(uc) !== "unknown"
                         const hasOsUpdates = osUpdateStatusKnown && !!uc.available
                         const dockerAppWatch = (selectedVM.app_watches || []).find((a) => a.helper_slug === "docker")
                         const dockerRegistered = !!dockerAppWatch
@@ -5863,6 +5915,9 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                           return {
                             id: `app:${app.id}`,
                             label: app.name || t("vmLxc.updates.applicationDefaultName"),
+                            methodLabel: app.update_command?.trim()
+                              ? t("vmLxc.updates.customCommandTitle")
+                              : t("vmLxc.updates.helperMethod"),
                             detail: "",
                             logoUrl: webLinkLogo || app.logo_url?.trim() || "",
                           }
@@ -5877,6 +5932,7 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                             ? [{
                                 id: "docker-engine",
                                 label: "Docker Engine",
+                                methodLabel: t("vmLxc.scheduled.dockerEngineTarget"),
                                 detail: "",
                                 logoUrl: "",
                               }]
@@ -5884,6 +5940,9 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                           ...dockerUpdateUnits.map((unit) => ({
                             id: unit.id,
                             label: unit.display_name || unit.primary_reference || unit.primary_service || unit.id,
+                            methodLabel: unit.kind === "compose"
+                              ? "Docker Compose"
+                              : t("vmLxc.bulkUpdate.dockerImageMethod"),
                             detail: (unit.dependent_services || []).length
                               ? t("vmLxc.bulkUpdate.includesDependencies", {
                                   names: (unit.dependent_services || []).join(", "),
@@ -5891,7 +5950,14 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                               : "",
                             logoUrl: unit.logo_url || "",
                           })),
-                        ]
+                        ].map((choice, _index, choices) => ({
+                          ...choice,
+                          // Keep distinct action IDs; names alone never prove
+                          // that a custom updater and an image are one action.
+                          label: choices.filter((other) =>
+                            other.label.trim().toLowerCase() === choice.label.trim().toLowerCase()
+                          ).length > 1 ? `${choice.label} — ${choice.methodLabel}` : choice.label,
+                        }))
                         const bulkChoices = [{
                           id: "os",
                           label: t("vmLxc.bulkUpdate.osTarget"),
@@ -5935,7 +6001,7 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                         // has been checked and is current, otherwise unknown.
                         const selectedBulkUpdateStates = bulkTargets.map((target) => {
                           if (target === "os") {
-                            if (!uc || uc.error) return null
+                            if (!osUpdateStatusKnown) return null
                             return hasOsUpdates
                           }
                           if (target === "docker-engine") {
@@ -5960,6 +6026,7 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                           return null
                         })
                         const bulkHasPendingUpdates = selectedBulkUpdateStates.some((state) => state === true)
+                        const bulkHasUnknownTargets = selectedBulkUpdateStates.some((state) => state === null)
                         const bulkAllTargetsUpToDate = selectedBulkUpdateStates.length > 0
                           && selectedBulkUpdateStates.every((state) => state === false)
                         const toggleBulkChoice = (id: string, checked: boolean) => {
@@ -5968,9 +6035,8 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                             ? Array.from(new Set(["os", ...current.filter((value) => value !== "os"), id]))
                             : current.filter((value) => value !== id))
                         }
-                        const pendingBtnCls = "bg-purple-600/15 hover:bg-purple-600/25 border border-purple-500/40 text-purple-300 hover:text-purple-200"
-                        const upToDateBtnCls = "bg-green-500/10 hover:bg-green-500/20 border border-green-500/30 text-green-400 hover:text-green-300"
-                        const neutralBtnCls = "border border-input bg-background text-foreground/80 hover:bg-accent hover:text-accent-foreground"
+                        const pendingBtnCls = getUpdateActionButtonClass(true, false)
+                        const upToDateBtnCls = getUpdateActionButtonClass(false, true)
                         return (
                           <>
                             <Card className="border border-border bg-card/50">
@@ -5982,12 +6048,12 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                                     <h3 className="text-sm font-semibold text-foreground">{t("vmLxc.updates.osPackagesTitle")}</h3>
                                     <Button
                                       size="sm" variant="outline" className="ml-auto"
-                                      disabled={selectedVM.status !== "running" || osCheckingVmid !== null}
-                                      title={t("vmLxc.updates.checkReadOnlyHelp")}
+                                      disabled={osCheckingVmid !== null || updatesRefreshing || controlLoading || applyOpen}
+                                      title={t("vmLxc.updates.refreshCheckHelp")}
                                       onClick={() => checkOsUpdates(selectedVM.vmid)}
                                     >
                                       <RefreshCw className={`h-4 w-4 mr-1.5 ${osCheckingVmid === selectedVM.vmid ? "animate-spin" : ""}`} />
-                                      {t("vmLxc.updates.checkNow")}
+                                      {t("vmLxc.updates.checkSystemPackages")}
                                     </Button>
                                   </div>
                                   <div className="text-xs text-muted-foreground mb-3 leading-relaxed">
@@ -5998,7 +6064,14 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                                     )}
                                   </div>
                                   {osCheckError && <p role="alert" className="text-sm text-amber-400 mb-2">{osCheckError}</p>}
-                                  {osUpdateStale && !uc?.error ? (
+                                  {osCheckingVmid === selectedVM.vmid ? (
+                                    <div role="status" className="text-sm text-muted-foreground flex items-center gap-2">
+                                      <RefreshCw className="h-4 w-4 animate-spin flex-shrink-0" />
+                                      {t("vmLxc.updates.checkInProgress")}
+                                    </div>
+                                  ) : !uc?.last_check && !uc?.error ? (
+                                    <p className="text-sm text-muted-foreground">{t("vmLxc.updates.notCheckedYet")}</p>
+                                  ) : osUpdateStale && !uc?.error ? (
                                     <p className="text-sm text-amber-400">{t("vmLxc.updates.checkStaleHelp")}</p>
                                   ) : !osUpdateStatusKnown ? (
                                     <div
@@ -6054,23 +6127,28 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                                       {t("vmLxc.updates.noOsUpdatesPending")}
                                     </div>
                                   )}
-                                  <div className="mt-3 flex justify-end">
+                                  {osUpdateStatusKnown && osCheckingVmid !== selectedVM.vmid && <div className="mt-3 flex justify-end">
+                                    {hasOsUpdates ? (
                                     <Button
                                       size="sm"
-                                      onClick={() => openApplyTerminal(selectedVM.vmid, "os")}
-                                      className={hasOsUpdates
-                                        ? pendingBtnCls
-                                        : osUpdateStatusKnown
-                                          ? upToDateBtnCls
-                                          : neutralBtnCls}
+                                      disabled={!hasOsUpdates || osCheckingVmid !== null || updatesRefreshing || controlLoading || !!osCheckError}
+                                      onClick={() => openApplyTerminal(selectedVM.vmid, "os", { checkedOs: true })}
+                                      className={getUpdateActionButtonClass(hasOsUpdates, osUpdateStatusKnown)}
                                     >
                                       {hasOsUpdates && <ArrowUpCircle className="h-4 w-4 mr-1.5" />}
                                       {!hasOsUpdates && !osUpdateStatusKnown && <RefreshCw className="h-4 w-4 mr-1.5" />}
-                                      {hasOsUpdates || !osUpdateStatusKnown
+                                      {hasOsUpdates
                                         ? t("vmLxc.updates.applyOsUpdate")
-                                        : t("vmLxc.updates.osUpToDate")}
+                                        : osUpdateStatusKnown
+                                          ? t("vmLxc.updates.osUpToDate")
+                                          : t("vmLxc.updates.checkBeforeUpdate")}
                                     </Button>
-                                  </div>
+                                    ) : (
+                                      <Button asChild size="sm" className={upToDateBtnCls}>
+                                        <span role="status">{t("vmLxc.updates.osUpToDate")}</span>
+                                      </Button>
+                                    )}
+                                  </div>}
                                 </div>
 
                                 {/* Docker has three independent lifecycles:
@@ -6200,11 +6278,7 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                                                     dockerRefresh: true,
                                                   },
                                             )}
-                                            className={`${dockerEngineHasUpdate
-                                              ? pendingBtnCls
-                                              : dockerEngineUpToDate
-                                                ? upToDateBtnCls
-                                                : neutralBtnCls} flex-shrink-0`}
+                                            className={`${getUpdateActionButtonClass(dockerEngineHasUpdate, dockerEngineUpToDate)} flex-shrink-0`}
                                           >
                                             {dockerEngineHasUpdate && <ArrowUpCircle className="h-4 w-4 mr-1.5" />}
                                             {!dockerEngineHasUpdate && !dockerEngineUpToDate && <RefreshCw className="h-4 w-4 mr-1.5" />}
@@ -6480,7 +6554,7 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                                         </div>
                                       ) : helperTracksVersion ? (
                                         <p className="text-xs text-muted-foreground leading-relaxed">
-                                          {t("vmLxc.updates.versionTrackingPending")}
+                                          {t("vmLxc.updates.versionStatusUnknown")}
                                         </p>
                                       ) : helperExists ? (
                                         <p className="text-xs text-muted-foreground leading-relaxed">
@@ -6503,7 +6577,7 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                                         // still force the helper's own
                                         // update script.
                                         const noState = !hasUpd && !upToD
-                                        const cls = hasUpd ? pendingBtnCls : upToD ? upToDateBtnCls : neutralBtnCls
+                                        const cls = getUpdateActionButtonClass(hasUpd, upToD)
                                         const label = hasUpd ? t("vmLxc.updates.applyUpdate") : upToD ? t("vmLxc.updates.upToDate") : t("vmLxc.updates.runUpdater")
                                         return (
                                           <div className="mt-3 flex justify-end">
@@ -6639,7 +6713,7 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                                                   </div>
                                                 ) : null
                                               ) : (
-                                                <div>{t("vmLxc.updates.versionTrackingPendingShort")}</div>
+                                                <div>{t("vmLxc.updates.versionStatusUnknown")}</div>
                                               )}
                                             </div>
                                           ) : tracksVersion ? (
@@ -6651,7 +6725,9 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                                                   <a className="text-blue-400 hover:underline" href={`#docker-images-${selectedVM.vmid}`}>
                                                     {t("vmLxc.updates.dockerImagesSubheading")}
                                                   </a></>
-                                                : t("vmLxc.updates.versionTrackingPendingShort")}
+                                                : aw.installed_via === "manual"
+                                                  ? t("vmLxc.updates.installedVersionUnverified")
+                                                  : t("vmLxc.updates.versionStatusUnknown")}
                                             </div>
                                           ) : hasCmd ? (
                                             <div className="text-sm text-muted-foreground">
@@ -6673,7 +6749,7 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                                                     targetLabels: [aw.name || t("vmLxc.updates.applicationDefaultName")],
                                                   },
                                                 )}
-                                                className={hasUpdate ? pendingBtnCls : upToDate ? upToDateBtnCls : neutralBtnCls}
+                                                className={getUpdateActionButtonClass(hasUpdate, upToDate)}
                                               >
                                                 {hasUpdate && <ArrowUpCircle className="h-4 w-4 mr-1.5" />}
                                                 {!hasUpdate && !upToDate && <RefreshCw className="h-4 w-4 mr-1.5" />}
@@ -6681,7 +6757,9 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                                                   ? t("vmLxc.updates.applyUpdate")
                                                   : upToDate
                                                     ? t("vmLxc.updates.upToDate")
-                                                    : t("vmLxc.updates.runUpdater")}
+                                                    : aw.update_method === "helper"
+                                                      ? t("vmLxc.updates.runUpdater")
+                                                      : t("vmLxc.updates.runCustomCommand")}
                                               </Button>
                                             </div>
                                           ) : (
@@ -6719,6 +6797,11 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                                       <p className="text-xs text-muted-foreground mt-2 leading-relaxed">
                                         {t("vmLxc.bulkUpdate.description")}
                                       </p>
+                                      {dockerRegistered && (
+                                        <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
+                                          {t("vmLxc.bulkUpdate.osDockerScope")}
+                                        </p>
+                                      )}
                                     </div>
                                     {!bulkEditMode && (
                                       <button
@@ -6868,19 +6951,20 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                                       <div className="text-sm text-muted-foreground break-words">
                                         {selectedBulkLabels.join(" · ")}
                                       </div>
+                                      {bulkHasUnknownTargets && (
+                                        <p className="text-xs text-muted-foreground leading-relaxed">
+                                          {t("vmLxc.bulkUpdate.unverifiedTargetsHelp")}
+                                        </p>
+                                      )}
                                       <div className="flex justify-end">
                                         <Button
                                           size="sm"
                                           onClick={() => applyBulkUpdate(selectedVM.vmid)}
-                                          disabled={bulkApplying || (
+                                          disabled={bulkApplying || osCheckingVmid !== null || updatesRefreshing || !osUpdateStatusKnown || bulkAllTargetsUpToDate || (
                                             bulkTargets.some((target) => target.startsWith("docker-unit:"))
                                             && (dockerInventoryRefreshing || !dockerInventoryAvailable)
                                           )}
-                                          className={bulkHasPendingUpdates
-                                            ? pendingBtnCls
-                                            : bulkAllTargetsUpToDate
-                                              ? upToDateBtnCls
-                                              : neutralBtnCls}
+                                          className={getUpdateActionButtonClass(bulkHasPendingUpdates, bulkAllTargetsUpToDate)}
                                         >
                                           {bulkApplying
                                             ? <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />
@@ -7916,7 +8000,9 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
             setApplyVmid(null)
           }}
           onComplete={handleApplyComplete}
-          scriptPath="/usr/local/share/proxmenux/scripts/lxc/apply_updates.sh"
+          scriptPath={applyCheckedOs
+            ? "/usr/local/share/proxmenux/scripts/lxc/install_checked_os_updates.sh"
+            : "/usr/local/share/proxmenux/scripts/lxc/apply_updates.sh"}
           scriptName="lxc_apply_updates"
           title={t("vmLxc.updates.terminalTitle", { vmid: applyVmid })}
           completedSuccessfullyMessage={t("vmLxc.updates.terminalCompletedSuccessfully")}

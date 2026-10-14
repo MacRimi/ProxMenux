@@ -138,6 +138,7 @@ esac
         notification = Mock()
         ns = dict(os=os, time=time, re=__import__('re'), notification_manager=notification,
                   _LXC_APPLY_UPDATES_SCRIPT=str(ROOT / 'scripts/lxc/apply_updates.sh'),
+                  _LXC_INSTALL_CHECKED_OS_SCRIPT=str(ROOT / 'scripts/lxc/install_checked_os_updates.sh'),
                   _normalise_lxc_update_run_id=lambda value, **_: value,
                   _normalise_lxc_update_targets=lambda values, _: values,
                   _normalise_lxc_update_labels=lambda values: values,
