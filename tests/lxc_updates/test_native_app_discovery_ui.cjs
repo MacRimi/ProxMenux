@@ -134,6 +134,13 @@ async function main() {
   assert.ok(text(failed.tree()).includes('nativeScanFailed'))
   assert.equal(failed.calls.filter(c => c.url.endsWith('/apps/suggestions') && c.method === 'POST').length, 0)
 
+  const editorSwitch = fixture()
+  editorSwitch.render(); await editorSwitch.settle()
+  await editorSwitch.button('searchApplications').props.onClick(); editorSwitch.render()
+  await editorSwitch.button('registerButton').props.onClick(); editorSwitch.render()
+  editorSwitch.render({vmid: 102})
+  assert.ok(!text(editorSwitch.tree()).includes('saveButton'), 'old editor must disappear in the very first render of another CT')
+
   const late = fixture()
   late.render(); await late.settle(); late.holdScan()
   const scan = late.button('searchApplications').props.onClick()

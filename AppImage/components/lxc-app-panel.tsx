@@ -1348,7 +1348,7 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed, initialData, oci }:
   }
 
   // ── Editor ─────────────────────────────────────────────────────
-  if (editing) {
+  if (editorOpen && editing) {
     const draft = editing.draft
     const method = draft.installed_via || ""
     const isPackaged = method === "dpkg" || method === "apk"
