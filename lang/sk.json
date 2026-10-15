@@ -4319,6 +4319,7 @@
   "OCI management could not be completed. Check the backend status; no additional cleanup has been authorized.": "Správu OCI aplikácií nebolo možné dokončiť. Skontrolujte stav backendu; žiadne ďalšie vyčistenie nebolo povolené.",
   "OCI manager Apps (Technology Preview)": "Správca OCI aplikácií (Technology Preview)",
   "OCI manager Apps (beta)": "Správca OCI aplikácií (beta)",
+  "OCI manager Apps is a Technology Preview: if something does not work as expected, please report it on GitHub with the application name.": "OCI manager Apps je ukážka technológie: ak niečo nefunguje podľa očakávania, nahláste to na GitHub s názvom aplikácie.",
   "OCI manager Apps is a beta: if something does not work as expected, please report it on GitHub with the application name.": "Správca OCI aplikácií je beta: ak niečo nefunguje podľa očakávania, nahláste to na GitHub spolu s názvom aplikácie.",
   "OCI metadata integrity mismatch": "Nepomer integrity metaúdajov OCI",
   "OCI metadata too large": "Metaúdaje OCI príliš veľké",

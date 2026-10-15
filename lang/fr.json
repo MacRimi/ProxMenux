@@ -4318,6 +4318,7 @@
   "OCI management": "Gestion OCI",
   "OCI management could not be completed. Check the backend status; no additional cleanup has been authorized.": "La gestion de OCI n'a pas pu être terminée. Vérifiez l'état du moteur; aucun nettoyage supplémentaire n'a été autorisé.",
   "OCI manager Apps (Technology Preview)": "OCI manager Apps (Technology Preview)",
+  "OCI manager Apps is a Technology Preview: if something does not work as expected, please report it on GitHub with the application name.": "OCI manager Apps est un aperçu technologique : si quelque chose ne fonctionne pas comme prévu, veuillez le signaler sur GitHub avec le nom de l'application.",
   "OCI metadata integrity mismatch": "Inadéquation de l'intégrité des métadonnées OCI",
   "OCI metadata too large": "Métadonnées OCI trop grandes",
   "OCI stack management": "Gestion de la pile OCI",

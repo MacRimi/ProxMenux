@@ -4318,6 +4318,7 @@
   "OCI management": "Gestão de OCI",
   "OCI management could not be completed. Check the backend status; no additional cleanup has been authorized.": "A gestão do OCI não pôde ser concluída. Verifique o estado da infra- estrutura; nenhuma limpeza adicional foi autorizada.",
   "OCI manager Apps (Technology Preview)": "OCI manager Apps (Technology Preview)",
+  "OCI manager Apps is a Technology Preview: if something does not work as expected, please report it on GitHub with the application name.": "Mensagem técnica para Proxmox e TI.Traduzindo: OCI manager Apps é uma prévia de tecnologia: se algo não funcionar conforme o esperado, informe no GitHub com o nome do aplicativo.",
   "OCI metadata integrity mismatch": "Incompatibilidade da integridade dos metadados OCI",
   "OCI metadata too large": "Metadados OCI demasiado grandes",
   "OCI stack management": "Gestão de pilhas OCI",
