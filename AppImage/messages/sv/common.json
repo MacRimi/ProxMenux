@@ -2211,6 +2211,17 @@
         "gettingStartedDescription": "Ett exempel är redo för att hjälpa dig att komma igång. Du kan justera den, exportera den för att dela med andra eller importera en uppmaning från communityn.",
         "loadExample": "Ladda exempel",
         "startFromScratch": "Börja från början"
+      },
+      "history": {
+        "title": "Aviseringshistorik",
+        "description": "De senaste 20 aviseringarna som skickats, inklusive varje körning av det dagliga sammandraget, med resultatet av var och en.",
+        "empty": "Inga meddelanden har skickats än.",
+        "loadFailed": "Aviseringshistoriken kunde inte laddas.",
+        "sent": "Skickat",
+        "notSent": "Ej skickat",
+        "severityInfo": "Info",
+        "severityWarning": "Varning",
+        "severityCritical": "Kritisk"
       }
     },
     "optimizations": {
@@ -5237,7 +5248,8 @@
     "yes": "Ja",
     "yourInput": "Din inmatning:",
     "submit": "Skicka",
-    "ok": "OK"
+    "ok": "OK",
+    "endOfInput": "Slut på inmatning"
   },
   "apps": {
     "searchPlaceholder": "Search app or CT…",

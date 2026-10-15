@@ -2211,6 +2211,17 @@
         "gettingStartedDescription": "Un prompt di esempio è pronto per aiutarti a iniziare. Puoi modificarlo, esportarlo per condividerlo con altri o importare un prompt dalla community.",
         "loadExample": "Carica esempio",
         "startFromScratch": "Inizia da zero"
+      },
+      "history": {
+        "title": "cronologia delle notifiche",
+        "description": "le ultime 20 notifiche inviate, inclusa ciascuna esecuzione del digest giornaliero, con il risultato di ciascuna.",
+        "empty": "Nessuna notifica è stata ancora inviata.",
+        "loadFailed": "non è stato possibile caricare la cronologia delle notifiche.",
+        "sent": "inviato",
+        "notSent": "non inviato",
+        "severityInfo": "Informazioni",
+        "severityWarning": "Avvertimento",
+        "severityCritical": "critico"
       }
     },
     "optimizations": {
@@ -5237,7 +5248,8 @@
     "yes": "Sì",
     "yourInput": "Input:",
     "submit": "Invia",
-    "ok": "OK"
+    "ok": "OK",
+    "endOfInput": "fine dell'input"
   },
   "apps": {
     "searchPlaceholder": "Cerca app o CT…",

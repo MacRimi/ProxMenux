@@ -2210,6 +2210,17 @@
         "gettingStartedDescription": "Na začiatok máte pripravený vzorový prompt. Môžete ho upraviť, exportovať a zdieľať alebo importovať prompt od komunity.",
         "loadExample": "Načítať príklad",
         "startFromScratch": "Začať od začiatku"
+      },
+      "history": {
+        "title": "História upozornení",
+        "description": "Posledných 20 odoslaných upozornení vrátane každého spustenia denného súhrnu s výsledkom každého z nich.",
+        "empty": "Zatiaľ neboli odoslané žiadne upozornenia.",
+        "loadFailed": "Históriu upozornení sa nepodarilo načítať.",
+        "sent": "Odoslané",
+        "notSent": "Neodoslané",
+        "severityInfo": "Info",
+        "severityWarning": "Upozornenie",
+        "severityCritical": "Kritické"
       }
     },
     "optimizations": {
@@ -5236,7 +5247,8 @@
     "yes": "Áno",
     "yourInput": "Tvoj vstup:",
     "submit": "Odoslať",
-    "ok": "OK"
+    "ok": "OK",
+    "endOfInput": "Koniec zadávania"
   },
   "apps": {
     "searchPlaceholder": "Hľadať aplikáciu, VM alebo LXC…",

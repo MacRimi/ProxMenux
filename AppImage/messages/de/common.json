@@ -2211,6 +2211,17 @@
         "gettingStartedDescription": "Eine Beispielaufforderung steht bereit, um Ihnen den Einstieg zu erleichtern. Sie können es anpassen, exportieren, um es mit anderen zu teilen, oder eine Eingabeaufforderung aus der Community importieren.",
         "loadExample": "Beispiel laden",
         "startFromScratch": "Fangen Sie bei Null an"
+      },
+      "history": {
+        "title": "Benachrichtigungsverlauf",
+        "description": "Die letzten 20 gesendeten Benachrichtigungen, einschließlich jeder Ausführung des täglichen Digests, mit dem jeweiligen Ergebnis.",
+        "empty": "Es wurden noch keine Benachrichtigungen gesendet.",
+        "loadFailed": "Der Benachrichtigungsverlauf konnte nicht geladen werden.",
+        "sent": "Gesendet",
+        "notSent": "Nicht gesendet",
+        "severityInfo": "Info",
+        "severityWarning": "Warnung",
+        "severityCritical": "Kritisch"
       }
     },
     "optimizations": {
@@ -5237,7 +5248,8 @@
     "yes": "Ja",
     "yourInput": "Ihr Beitrag:",
     "submit": "Einreichen",
-    "ok": "OK"
+    "ok": "OK",
+    "endOfInput": "Ende der Eingabe"
   },
   "apps": {
     "searchPlaceholder": "Search app or CT…",

@@ -2211,6 +2211,17 @@
         "gettingStartedDescription": "Um exemplo de prompt está pronto para ajudá-lo a começar. Você pode ajustá-lo, exportá-lo para compartilhar com outras pessoas ou importar um prompt da comunidade.",
         "loadExample": "Exemplo de carregamento",
         "startFromScratch": "Comece do zero"
+      },
+      "history": {
+        "title": "histórico de notificações",
+        "description": "As últimas 20 notificações enviadas, incluindo cada execução do resumo diário, com o resultado de cada uma.",
+        "empty": "Nenhuma notificação foi enviada ainda.",
+        "loadFailed": "O histórico de notificações não pôde ser carregado.",
+        "sent": "Enviado",
+        "notSent": "Não enviado",
+        "severityInfo": "Informações",
+        "severityWarning": "Aviso",
+        "severityCritical": "Crítico"
       }
     },
     "optimizations": {
@@ -5237,7 +5248,8 @@
     "yes": "Sim",
     "yourInput": "Sua entrada:",
     "submit": "Enviar",
-    "ok": "OK"
+    "ok": "OK",
+    "endOfInput": "Fim da entrada"
   },
   "apps": {
     "searchPlaceholder": "Search app or CT…",

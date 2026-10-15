@@ -2211,6 +2211,17 @@
         "gettingStartedDescription": "Un exemple d’invite est prêt à vous aider à démarrer. Vous pouvez l'ajuster, l'exporter pour le partager avec d'autres ou importer une invite de la communauté.",
         "loadExample": "Charger un exemple",
         "startFromScratch": "Repartir de zéro"
+      },
+      "history": {
+        "title": "Historique des notifications",
+        "description": "les 20 dernières notifications envoyées, y compris chaque exécution du résumé quotidien, avec le résultat de chacune.",
+        "empty": "aucune notification n'a encore été envoyée.",
+        "loadFailed": "L'historique des notifications n'a pas pu être chargé.",
+        "sent": "Envoyé",
+        "notSent": "Non envoyé",
+        "severityInfo": "Informations",
+        "severityWarning": "Avertissement",
+        "severityCritical": "Critique"
       }
     },
     "optimizations": {
@@ -5237,7 +5248,8 @@
     "yes": "Oui",
     "yourInput": "Votre contribution :",
     "submit": "Soumettre",
-    "ok": "OK"
+    "ok": "OK",
+    "endOfInput": "Fin de la saisie"
   },
   "apps": {
     "searchPlaceholder": "Search app or CT…",
