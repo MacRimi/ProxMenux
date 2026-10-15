@@ -190,6 +190,11 @@ class TerminalUI:
 # Width of the windows of the installer: questions, choices and notices. The
 # final summary and the page of an application, which show tables, are wider.
 MENU_WIDTH = 72
+
+
+class ReadableTags(list):
+    """Menu options whose tags the user reads, as a storage, a bridge or a
+    device node: they are shown as they are, not numbered."""
 SUMMARY_WIDTH = 78
 DETAIL_WINDOW_WIDTH = 90
 
@@ -279,6 +284,19 @@ class DialogUI:
     def choose(self, text: str, options: list[tuple[str, str]], default: str | None = None,
                title: str | None = None, show_tags: bool = True,
                size: tuple[int, int, int] | None = None, colors: bool = False) -> str | None:
+        # A word is an internal value: the menu numbers the options, as the
+        # rest of ProxMenux does, and returns the value of the chosen one.
+        values: dict[str, str] = {}
+        if not isinstance(options, ReadableTags) and any(tag and not tag.isdigit() for tag, _ in options):
+            numbered = []
+            for tag, label in options:
+                if tag:
+                    values[str(len(values) + 1)] = tag
+                    if tag == default:
+                        default = str(len(values))
+                    tag = str(len(values))
+                numbered.append((tag, label))
+            options = numbered
         if size:
             widget = ["--colors"] if colors else []
             widget += ["--default-item", default] if default else []
@@ -286,7 +304,8 @@ class DialogUI:
             for tag, label in options:
                 widget += [tag, label]
             result = self._run(widget, title)
-            return result.stderr.strip() if result.returncode == 0 else None
+            selected = result.stderr.strip() if result.returncode == 0 else None
+            return values.get(selected, selected) if values and selected else selected
         terminal = shutil.get_terminal_size((100, 30))
         tag_width = max((len(tag) for tag, _ in options), default=0) + 2 if show_tags else 0
         width = min(max(MENU_WIDTH, max((len(label) for _, label in options), default=0) + tag_width + 14,
@@ -302,7 +321,8 @@ class DialogUI:
         for tag, label in options:
             widget += [tag, label]
         result = self._run(widget, title)
-        return result.stderr.strip() if result.returncode == 0 else None
+        selected = result.stderr.strip() if result.returncode == 0 else None
+        return values.get(selected, selected) if values and selected else selected
 
     def detail_menu(self, text: str, options: list[tuple[str, str]], default: str | None = None,
                     title: str | None = None) -> str | None:

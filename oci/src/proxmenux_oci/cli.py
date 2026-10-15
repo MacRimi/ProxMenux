@@ -29,7 +29,7 @@ from .installer import (
     run_remote_install,
     run_remote_rclone_mount,
 )
-from .ui import APP_TITLE, DETAIL_WINDOW_WIDTH, UserCancelled, interactive_ui, menu_size
+from .ui import APP_TITLE, DETAIL_WINDOW_WIDTH, ReadableTags, UserCancelled, interactive_ui, menu_size
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
@@ -565,8 +565,8 @@ def interactive(catalog: Catalog) -> int:
          for number, key in category_by_index.items()]
     selection = "search"
     while True:
-        selection = ui.choose(translate("Select a category or search for applications:"), options, selection,
-                              size=MENU_SIZE)
+        selection = ui.choose(translate("Select a category or search for applications:"), ReadableTags(options),
+                              selection, size=MENU_SIZE)
         if selection is None:
             return 0
         try:

@@ -5,7 +5,7 @@ from pathlib import Path
 
 from . import host
 from .i18n import translate
-from .ui import UserCancelled
+from .ui import ReadableTags, UserCancelled
 
 
 GPU_NODE = re.compile(r'/dev/dri/(?:renderD|card)[0-9]+|/dev/kfd')
@@ -22,7 +22,7 @@ def choose_usb_device(ui, title, default=None, attached=()):
         ui.message(translate('No selectable USB device was found. Type the host node by hand.'))
         return ui.ask(manual_prompt, default or '/dev/ttyACM0')
     options.append(('manual', translate('Another node, typed by hand')))
-    selected = ui.choose(title, options, default if default in dict(options) else options[0][0])
+    selected = ui.choose(title, ReadableTags(options), default if default in dict(options) else options[0][0])
     if selected is None:
         raise UserCancelled(translate('Device configuration cancelled'))
     return ui.ask(manual_prompt, default or '/dev/ttyACM0') if selected == 'manual' else selected

@@ -18,7 +18,7 @@ from typing import Any
 from . import host
 from . import network as access
 from .i18n import source_text, translate
-from .ui import DialogUI, TerminalUI, UserCancelled
+from .ui import DialogUI, ReadableTags, TerminalUI, UserCancelled
 from .custom_mounts import ask_custom_mounts
 from .extra_devices import device_permissions
 
@@ -160,7 +160,7 @@ def ask_storage(ui, text: str, content: str, default: str, mode: str = ADVANCED_
     options = [(row["storage"], f"{row.get('type', '')}  {host.gib(row.get('avail'))} GB {translate('free')}")
                for row in rows]
     names = [name for name, _ in options]
-    selected = ui.choose(text, options, default if default in names else names[0])
+    selected = ui.choose(text, ReadableTags(options), default if default in names else names[0])
     if selected is None:
         raise UserCancelled(text)
     return selected
@@ -302,7 +302,7 @@ def ask_bridge(ui, text: str, default: str, mode: str = ADVANCED_MODE) -> str:
         return ui.ask(text, default)
     options = [(row["iface"], row.get("cidr") or (row.get("comments") or "").strip() or "-") for row in rows]
     names = [name for name, _ in options]
-    selected = ui.choose(text, options, default if default in names else names[0])
+    selected = ui.choose(text, ReadableTags(options), default if default in names else names[0])
     if selected is None:
         raise UserCancelled(text)
     return selected
