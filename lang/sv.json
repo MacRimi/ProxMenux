@@ -4318,7 +4318,7 @@
   "OCI management": "OCI management",
   "OCI management could not be completed. Check the backend status; no additional cleanup has been authorized.": "OCI-hanteringen kunde inte slutföras. Kontrollera backend status; ingen ytterligare rengöring har godkänts.",
   "OCI manager Apps (Technology Preview)": "OCI manager Apps (Technology Preview)",
-  "OCI manager Apps is a Technology Preview: if something does not work as expected, please report it on GitHub with the application name.": "OCI manager Apps är en teknikförhandsvisning: om något inte fungerar som förväntat, rapportera det på GitHub med applikationsnamnet.",
+  "OCI manager Apps is a Technology Preview: if something does not work as expected, please report it on GitHub with the application name.": "OCI manager Apps är en Technology Preview: om något inte fungerar som förväntat, rapportera det på GitHub med applikationsnamnet.",
   "OCI metadata integrity mismatch": "OCI metadata integritet mismatch",
   "OCI metadata too large": "OCI metadata för stor",
   "OCI stack management": "OCI stackhantering",
