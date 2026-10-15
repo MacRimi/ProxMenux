@@ -441,7 +441,7 @@
   "history": {
     "heading": "Historial",
     "body1": "Cada <em>intento</em> de despacho que el dispatcher realmente ejecuta se registra en la tabla SQLite <code>notification_history</code>. Cada fila guarda el timestamp (<code>sent_at</code>), canal, tipo de evento, severidad, título, cuerpo de mensaje renderizado, un flag <code>success</code> y — cuando el envío falló — el error devuelto por el proveedor en <code>error_message</code>. Los eventos agregados en ráfaga aparecen como una única fila con el tipo de evento <code>burst_*</code>. Los eventos suprimidos por la etapa de cooldown no se loguean: nunca se convierten en un intento de despacho.",
-    "body2": "La pestaña History dentro de Settings → Notifications muestra las últimas 20 entradas y tiene un único botón <em>Clear</em> que borra la tabla.",
+    "body2": "Settings → Notifications tiene una sección <em>Historial de notificaciones</em>, cerrada por defecto, con las últimas 20 entradas: el resultado de cada envío, su canal y su fecha, el error cuando falló y, en cada ejecución del resumen diario, si tenía algo que enviar. La página no ofrece borrarlo: Audit & Report lee ese mismo historial para comprobar la entrega de cada canal.",
     "body3": "Los mismos datos se exponen en <code>GET /api/notifications/history</code> con parámetros opcionales <code>limit</code>, <code>offset</code>, <code>severity</code> y <code>channel</code>, y se pueden borrar con <code>DELETE /api/notifications/history</code>."
   },
   "api": {

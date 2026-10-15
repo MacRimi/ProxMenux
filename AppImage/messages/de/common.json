@@ -1075,15 +1075,15 @@
       "logs": "Logs"
     },
     "actions": {
-      "start": "Start",
-      "shutdown": "Abschalten",
+      "start": "Starten",
+      "shutdown": "Herunterfahren",
       "reboot": "Neustart",
       "forceStop": "Stopp erzwingen",
-      "working": "Arbeiten...",
-      "startPending": "Beginnt...",
-      "shutdownPending": "Herunterfahren...",
-      "rebootPending": "Neustart...",
-      "stopPending": "Stoppen..."
+      "working": "Wird ausgeführt...",
+      "startPending": "Wird gestartet...",
+      "shutdownPending": "Wird heruntergefahren...",
+      "rebootPending": "Wird neu gestartet...",
+      "stopPending": "Wird gestoppt..."
     },
     "confirm": {
       "forceStopTitle": "Stopp erzwingen",
@@ -1133,7 +1133,7 @@
       "removeCustomCommandConfirm": "Den benutzerdefinierten Aktualisierungsbefehl für „{name}“ entfernen?",
       "removeCustomCommandFailed": "Der benutzerdefinierte Aktualisierungsbefehl konnte nicht entfernt werden: {message}",
       "hideNoticeFailed": "Dieser Hinweis konnte nicht ausgeblendet werden: {message}",
-      "controlNotConfirmed": "Der Vorgang wurde nicht als abgeschlossen bestätigt.Überprüfen Sie den Gaststatus, bevor Sie es erneut versuchen."
+      "controlNotConfirmed": "Der Abschluss des Vorgangs wurde nicht bestätigt. Prüfen Sie den Status des Gasts, bevor Sie es erneut versuchen."
     },
     "backupModal": {
       "title": "Sicherung {type} {vmid} ({name})",
@@ -1460,15 +1460,15 @@
       "checkStale": "Prüfung veraltet",
       "checkStaleHelp": "Dieses Ergebnis ist älter als 48 Stunden oder hat kein gültiges Prüfdatum. Führen Sie eine neue Prüfung durch, bevor Sie sich darauf verlassen.",
       "checkSystemPackages": "Systempakete prüfen",
-      "checkInProgress": "Überprüfung läuft",
-      "refreshCheckHelp": "Aktualisiert Paketindizes und prüft ausstehende Aktualisierungen, während der Container ausgeführt wird.Es ist nichts installiert.",
-      "notCheckedYet": "Updates wurden noch nicht überprüft.",
-      "checkStillRunning": "Die Prüfung läuft noch.Das Ergebnis wird nach Abschluss gespeichert.",
-      "checkBeforeUpdate": "Überprüfen Sie zuerst die Updates",
-      "startBeforeCheck": "Starten Sie den Container und suchen Sie nach Updates.Kein Abzeichen bedeutet nicht, dass es keine Updates gibt.",
+      "checkInProgress": "Prüfung läuft",
+      "refreshCheckHelp": "Aktualisiert die Paketindizes und prüft ausstehende Updates, während der Container läuft. Es wird nichts installiert.",
+      "notCheckedYet": "Updates wurden noch nicht geprüft.",
+      "checkStillRunning": "Die Prüfung läuft noch. Das Ergebnis wird nach Abschluss gespeichert.",
+      "checkBeforeUpdate": "Zuerst Updates prüfen",
+      "startBeforeCheck": "Starten Sie den Container und prüfen Sie dann die Updates. Ein fehlender Hinweis bedeutet nicht, dass keine Updates vorliegen.",
       "runCustomCommand": "Benutzerdefinierten Befehl ausführen",
-      "installedVersionUnverified": "Die installierte Version ist nicht bestätigt.Die Verfügbarkeit des Updates konnte nicht bestätigt werden.",
-      "versionStatusUnknown": "Die Verfügbarkeit des Updates ist nicht bestätigt.Versionsinformationen sind nicht verfügbar oder unvollständig."
+      "installedVersionUnverified": "Die installierte Version ist nicht bestätigt. Ob ein Update verfügbar ist, konnte nicht bestätigt werden.",
+      "versionStatusUnknown": "Ob ein Update verfügbar ist, ist nicht bestätigt. Versionsinformationen fehlen oder sind unvollständig."
     },
     "bulkUpdate": {
       "title": "Sammelaktualisierung",
@@ -1494,9 +1494,9 @@
       "deleteFailed": "Die Sammelaktualisierungskonfiguration konnte nicht entfernt werden.",
       "planFailed": "Die Sammelaktualisierung konnte nicht vorbereitet werden. Prüfen Sie die nicht verfügbaren Methoden.",
       "loadFailed": "Die Massenaktualisierungskonfiguration konnte nicht geladen werden.",
-      "osDockerScope": "Betriebssystemaktualisierungen enthalten auch Docker, wenn es als Systempaket installiert wird.",
-      "unverifiedTargetsHelp": "Die Verfügbarkeit von Updates für einige ausgewählte Artikel ist nicht bestätigt.Beim Starten werden die ausgewählten Update-Methoden auch ohne bestätigte neue Version ausgeführt.",
-      "dockerImageMethod": "Docker-Bild"
+      "osDockerScope": "Betriebssystem-Updates umfassen auch Docker, wenn es als Systempaket installiert ist.",
+      "unverifiedTargetsHelp": "Für einige ausgewählte Elemente ist nicht bestätigt, ob ein Update verfügbar ist. Beim Start werden die gewählten Update-Methoden auch ohne bestätigte neue Version ausgeführt.",
+      "dockerImageMethod": "Docker-Image"
     },
     "appEditor": {
       "methodOciImage": "OCI-Image (von ProxMenux installiert)",

@@ -2194,6 +2194,17 @@
         "localPveApi": "The address cannot point to the local PVE API (localhost:8006/8007).",
         "metadataIp": "The link-local metadata IP cannot be used as a Gotify endpoint."
       },
+      "history": {
+        "title": "Notification history",
+        "description": "The last 20 notifications sent, including each run of the daily digest, with the result of each one.",
+        "empty": "No notifications have been sent yet.",
+        "loadFailed": "The notification history could not be loaded.",
+        "sent": "Sent",
+        "notSent": "Not sent",
+        "severityInfo": "Info",
+        "severityWarning": "Warning",
+        "severityCritical": "Critical"
+      },
       "customPromptInfo": {
         "title": "Custom prompt mode",
         "description": "Create your own AI prompt for ProxMenux Monitor notifications",
@@ -5218,6 +5229,7 @@
     "processing": "Processing...",
     "controlSequences": "Control Sequences",
     "cancelInterrupt": "Cancel/Interrupt",
+    "endOfInput": "End of input",
     "exitNano": "Exit (nano)",
     "searchHistory": "Search history",
     "clipboard": "Clipboard",

@@ -96,20 +96,29 @@ def evaluate(suite, apply=False):
     pve = []
     ceph = []
     debian = False
+    wrong_pve = []
+    wrong_ceph = []
     for path, index, row in entries:
         if not row['Enabled'] or 'deb' not in row['Types']:
             continue
         components = set(row['Components'])
         if components & PVE_CHANNELS:
             if suite not in row['Suites']:
-                raise ValueError('PVE repository suite does not match the installed version; no repository changed.')
+                wrong_pve.append(f"{' '.join(sorted(components & PVE_CHANNELS))} in {path} (suite {' '.join(row['Suites'])})")
             pve.append((path, index, row))
         if 'main' in components and suite in row['Suites'] and not components & PVE_CHANNELS:
             debian = True
         if 'enterprise' in components and any('/ceph-' in uri for uri in row['URIs']):
             if suite not in row['Suites']:
-                raise ValueError('Enterprise Ceph repository suite does not match this PVE version; correct it in the Proxmox repository UI before switching.')
+                wrong_ceph.append(f"{path} (suite {' '.join(row['Suites'])})")
             ceph.append((path, index, row))
+    # Name the stale sources, never their URIs: those can carry credentials.
+    if wrong_pve:
+        raise ValueError(f"This host runs Proxmox VE on {suite}, but these Proxmox VE repositories are for another suite: "
+                         f"{'; '.join(wrong_pve)}. Disable or remove them in Node > Updates > Repositories and run the update again; no repository changed.")
+    if wrong_ceph:
+        raise ValueError(f"This host runs Proxmox VE on {suite}, but these Enterprise Ceph repositories are for another suite: "
+                         f"{'; '.join(wrong_ceph)}. Correct them in Node > Updates > Repositories before switching; no repository changed.")
 
     if any(set(row['Components']) & {'pve-no-subscription', 'pve-test', 'pvetest'} for _, _, row in pve):
         return 'preserve'

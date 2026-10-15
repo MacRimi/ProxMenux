@@ -1075,12 +1075,12 @@
       "logs": "Loggar"
     },
     "actions": {
-      "start": "Start",
-      "shutdown": "Stängning",
+      "start": "Starta",
+      "shutdown": "Stäng av",
       "reboot": "Starta om",
       "forceStop": "Tvinga stopp",
-      "working": "Arbetssätt...",
-      "startPending": "Börjar...",
+      "working": "Arbetar...",
+      "startPending": "Startar...",
       "shutdownPending": "Stänger av...",
       "rebootPending": "Startar om...",
       "stopPending": "Stoppar..."
@@ -1133,7 +1133,7 @@
       "removeCustomCommandConfirm": "Ta bort det anpassade uppdateringskommandot för \"{name}\"?",
       "removeCustomCommandFailed": "Kunde inte ta bort det anpassade uppdateringskommandot: {message}",
       "hideNoticeFailed": "Kunde inte dölja detta meddelande: {message}",
-      "controlNotConfirmed": "Operationen har inte bekräftats slutförd.Kontrollera gäststatusen innan du försöker igen."
+      "controlNotConfirmed": "Det har inte bekräftats att åtgärden är slutförd. Kontrollera gästens status innan du försöker igen."
     },
     "backupModal": {
       "title": "Säkerhetskopiera {type} {vmid} ({name})",
@@ -1460,15 +1460,15 @@
       "checkStale": "Föråldrad kontroll",
       "checkStaleHelp": "Detta resultat är äldre än 48 timmar eller saknar ett giltigt kontrolldatum. Kör en ny kontroll innan du litar på det.",
       "checkSystemPackages": "Kontrollera systempaket",
-      "checkInProgress": "Incheckning pågår",
-      "refreshCheckHelp": "Uppdaterar paketindex och kontrollerar väntande uppdateringar medan behållaren körs.Inget är installerat.",
+      "checkInProgress": "Kontroll pågår",
+      "refreshCheckHelp": "Uppdaterar paketindex och kontrollerar väntande uppdateringar medan behållaren körs. Inget installeras.",
       "notCheckedYet": "Uppdateringar har inte kontrollerats ännu.",
-      "checkStillRunning": "Kontrollen körs fortfarande.Resultatet kommer att sparas när det är klart.",
-      "checkBeforeUpdate": "Kontrollera uppdateringarna först",
-      "startBeforeCheck": "Starta behållaren och leta sedan efter uppdateringar.Inget märke betyder inte att det inte finns några uppdateringar.",
+      "checkStillRunning": "Kontrollen pågår fortfarande. Resultatet sparas när den är klar.",
+      "checkBeforeUpdate": "Kontrollera uppdateringar först",
+      "startBeforeCheck": "Starta behållaren och kontrollera sedan uppdateringar. Att ett märke saknas betyder inte att det inte finns uppdateringar.",
       "runCustomCommand": "Kör anpassat kommando",
-      "installedVersionUnverified": "Den installerade versionen är overifierad.Uppdateringstillgänglighet kunde inte bekräftas.",
-      "versionStatusUnknown": "Uppdateringstillgängligheten är overifierad.Versionsinformation är inte tillgänglig eller ofullständig."
+      "installedVersionUnverified": "Den installerade versionen är inte verifierad. Det gick inte att bekräfta om en uppdatering finns.",
+      "versionStatusUnknown": "Det är inte verifierat om en uppdatering finns. Versionsinformationen saknas eller är ofullständig."
     },
     "bulkUpdate": {
       "title": "Gruppuppdatering",
@@ -1494,9 +1494,9 @@
       "deleteFailed": "Det gick inte att ta bort gruppuppdateringskonfigurationen.",
       "planFailed": "Det gick inte att förbereda gruppuppdateringen. Kontrollera otillgängliga metoder.",
       "loadFailed": "Det gick inte att läsa in massuppdateringskonfigurationen.",
-      "osDockerScope": "OS-uppdateringar inkluderar även Docker när det är installerat som ett systempaket.",
-      "unverifiedTargetsHelp": "Uppdateringstillgängligheten för vissa valda objekt är overifierad.Om du startar kommer de valda uppdateringsmetoderna att köras även utan en bekräftad ny version.",
-      "dockerImageMethod": "Docker bild"
+      "osDockerScope": "OS-uppdateringar omfattar även Docker när det är installerat som systempaket.",
+      "unverifiedTargetsHelp": "För vissa valda objekt är det inte verifierat om en uppdatering finns. Vid start körs de valda uppdateringsmetoderna även utan en bekräftad ny version.",
+      "dockerImageMethod": "Docker-avbildning"
     },
     "appEditor": {
       "methodOciImage": "OCI-avbild (installerad av ProxMenux)",

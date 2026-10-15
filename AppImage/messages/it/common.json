@@ -1080,10 +1080,10 @@
       "reboot": "Riavvia",
       "forceStop": "Forza arresto",
       "working": "Operazione in corso...",
-      "startPending": "A partire...",
+      "startPending": "Avvio...",
       "shutdownPending": "Spegnimento...",
       "rebootPending": "Riavvio...",
-      "stopPending": "Fermarsi..."
+      "stopPending": "Arresto..."
     },
     "confirm": {
       "forceStopTitle": "Forza arresto",
@@ -1133,7 +1133,7 @@
       "removeCustomCommandConfirm": "Rimuovere il comando di aggiornamento personalizzato per \"{name}\"?",
       "removeCustomCommandFailed": "Impossibile rimuovere il comando di aggiornamento personalizzato: {message}",
       "hideNoticeFailed": "Impossibile nascondere questo avviso: {message}",
-      "controlNotConfirmed": "L'operazione non è stata confermata completata.Controlla lo stato dell'ospite prima di riprovare."
+      "controlNotConfirmed": "Il completamento dell'operazione non è stato confermato. Controlla lo stato del guest prima di riprovare."
     },
     "backupModal": {
       "title": "Backup {type} {vmid} ({name})",
@@ -1459,16 +1459,16 @@
       "checkCooldown": "Un controllo è già in corso o è stato richiesto di recente. Riprovare tra {seconds} secondi.",
       "checkStale": "Controllo obsoleto",
       "checkStaleHelp": "Questo risultato ha più di 48 ore o non ha una data di controllo valida. Eseguire un nuovo controllo prima di farvi affidamento.",
-      "checkSystemPackages": "controlla i pacchetti di sistema",
-      "checkInProgress": "controllo in corso",
-      "refreshCheckHelp": "aggiorna gli indici dei pacchetti e controlla gli aggiornamenti in sospeso mentre il contenitore è in esecuzione.Non è installato nulla.",
-      "notCheckedYet": "gli aggiornamenti non sono stati ancora controllati.",
-      "checkStillRunning": "Il controllo è ancora in corso.Il risultato verrà salvato al termine.",
-      "checkBeforeUpdate": "controlla prima gli aggiornamenti",
-      "startBeforeCheck": "avvia il contenitore, quindi controlla gli aggiornamenti.Nessun badge non significa che non ci sono aggiornamenti.",
-      "runCustomCommand": "esegui il comando personalizzato",
-      "installedVersionUnverified": "la versione installata non è verificata.Non è stato possibile confermare la disponibilità dell'aggiornamento.",
-      "versionStatusUnknown": "la disponibilità dell'aggiornamento non è verificata.Le informazioni sulla versione non sono disponibili o sono incomplete."
+      "checkSystemPackages": "Controlla pacchetti di sistema",
+      "checkInProgress": "Controllo in corso",
+      "refreshCheckHelp": "Aggiorna gli indici dei pacchetti e controlla gli aggiornamenti in sospeso mentre il container è in esecuzione. Non viene installato nulla.",
+      "notCheckedYet": "Gli aggiornamenti non sono ancora stati controllati.",
+      "checkStillRunning": "Il controllo è ancora in corso. Il risultato verrà salvato al termine.",
+      "checkBeforeUpdate": "Controlla prima gli aggiornamenti",
+      "startBeforeCheck": "Avvia il container, poi controlla gli aggiornamenti. L'assenza del badge non significa che non ci siano aggiornamenti.",
+      "runCustomCommand": "Esegui comando personalizzato",
+      "installedVersionUnverified": "La versione installata non è verificata. Non è stato possibile confermare la disponibilità di un aggiornamento.",
+      "versionStatusUnknown": "La disponibilità di un aggiornamento non è verificata. Le informazioni sulla versione non sono disponibili o sono incomplete."
     },
     "bulkUpdate": {
       "title": "Aggiornamento in blocco",
@@ -1494,9 +1494,9 @@
       "deleteFailed": "Impossibile rimuovere la configurazione di aggiornamento in blocco.",
       "planFailed": "Impossibile preparare l’aggiornamento in blocco. Modifica la configurazione e controlla i metodi non disponibili.",
       "loadFailed": "Impossibile caricare la configurazione dell’aggiornamento in blocco.",
-      "osDockerScope": "gli aggiornamenti del sistema operativo includono anche Docker quando è installato come pacchetto di sistema.",
-      "unverifiedTargetsHelp": "la disponibilità dell'aggiornamento per alcuni articoli selezionati non è verificata.L'avvio eseguirà i metodi di aggiornamento selezionati anche senza una nuova versione confermata.",
-      "dockerImageMethod": "immagine Docker"
+      "osDockerScope": "Gli aggiornamenti del sistema operativo includono anche Docker quando è installato come pacchetto di sistema.",
+      "unverifiedTargetsHelp": "La disponibilità di aggiornamenti per alcuni elementi selezionati non è verificata. L'avvio eseguirà i metodi di aggiornamento scelti anche senza una nuova versione confermata.",
+      "dockerImageMethod": "Immagine Docker"
     },
     "appEditor": {
       "methodOciImage": "Immagine OCI (installata da ProxMenux)",

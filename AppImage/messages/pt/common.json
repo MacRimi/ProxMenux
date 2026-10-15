@@ -1075,12 +1075,12 @@
       "logs": "Logs"
     },
     "actions": {
-      "start": "Começar",
+      "start": "Iniciar",
       "shutdown": "Desligar",
-      "reboot": "Reinício",
+      "reboot": "Reiniciar",
       "forceStop": "Forçar parada",
-      "working": "Trabalhando...",
-      "startPending": "Começando...",
+      "working": "Processando...",
+      "startPending": "Iniciando...",
       "shutdownPending": "Desligando...",
       "rebootPending": "Reiniciando...",
       "stopPending": "Parando..."
@@ -1133,7 +1133,7 @@
       "removeCustomCommandConfirm": "Remover o comando de atualização personalizado para \"{name}\"?",
       "removeCustomCommandFailed": "não foi possível remover o comando de atualização personalizado: {message}",
       "hideNoticeFailed": "Não foi possível ocultar este aviso: {message}",
-      "controlNotConfirmed": "A operação não foi confirmada como concluída.Verifique o status do convidado antes de tentar novamente."
+      "controlNotConfirmed": "A conclusão da operação não foi confirmada. Verifique o estado do convidado antes de tentar novamente."
     },
     "backupModal": {
       "title": "Backup {type} {vmid} ({name})",
@@ -1459,16 +1459,16 @@
       "checkCooldown": "Já há uma verificação em execução ou pedida recentemente. Tente novamente dentro de {seconds} segundos.",
       "checkStale": "Verificação desatualizada",
       "checkStaleHelp": "Este resultado tem mais de 48 horas ou não tem uma data de verificação válida. Execute uma nova verificação antes de confiar nele.",
-      "checkSystemPackages": "Verifique os pacotes do sistema",
-      "checkInProgress": "verificação em andamento",
-      "refreshCheckHelp": "atualiza índices de pacotes e verifica atualizações pendentes enquanto o contêiner está em execução.Nada está instalado.",
+      "checkSystemPackages": "Verificar pacotes do sistema",
+      "checkInProgress": "Verificação em andamento",
+      "refreshCheckHelp": "Atualiza os índices de pacotes e verifica as atualizações pendentes enquanto o contêiner está em execução. Nada é instalado.",
       "notCheckedYet": "As atualizações ainda não foram verificadas.",
-      "checkStillRunning": "A verificação ainda está em execução.Seu resultado será salvo quando terminar.",
-      "checkBeforeUpdate": "verifique as atualizações primeiro",
-      "startBeforeCheck": "inicie o contêiner e verifique se há atualizações.Nenhum selo não significa que não haja atualizações.",
+      "checkStillRunning": "A verificação ainda está em execução. O resultado será salvo quando terminar.",
+      "checkBeforeUpdate": "Verificar atualizações primeiro",
+      "startBeforeCheck": "Inicie o contêiner e depois verifique as atualizações. A ausência do selo não significa que não haja atualizações.",
       "runCustomCommand": "Executar comando personalizado",
-      "installedVersionUnverified": "a versão instalada não foi verificada.A disponibilidade da atualização não pôde ser confirmada.",
-      "versionStatusUnknown": "a disponibilidade da atualização não foi verificada.As informações da versão estão indisponíveis ou incompletas."
+      "installedVersionUnverified": "A versão instalada não foi verificada. Não foi possível confirmar se há uma atualização disponível.",
+      "versionStatusUnknown": "A disponibilidade de atualização não foi verificada. As informações de versão estão indisponíveis ou incompletas."
     },
     "bulkUpdate": {
       "title": "Atualização em bloco",
@@ -1494,9 +1494,9 @@
       "deleteFailed": "Não foi possível remover a configuração de atualização em bloco.",
       "planFailed": "Não foi possível preparar a atualização em bloco. Reveja os métodos indisponíveis.",
       "loadFailed": "não foi possível carregar a configuração de atualização em massa.",
-      "osDockerScope": "as atualizações do sistema operacional também incluem Docker quando instalado como um pacote de sistema.",
-      "unverifiedTargetsHelp": "a disponibilidade de atualização para alguns itens selecionados não foi verificada.A inicialização executará os métodos de atualização selecionados mesmo sem uma nova versão confirmada.",
-      "dockerImageMethod": "imagem Docker"
+      "osDockerScope": "As atualizações do sistema operacional também incluem o Docker quando ele está instalado como pacote do sistema.",
+      "unverifiedTargetsHelp": "A disponibilidade de atualização de alguns itens selecionados não foi verificada. Ao iniciar, os métodos de atualização escolhidos serão executados mesmo sem uma nova versão confirmada.",
+      "dockerImageMethod": "Imagem Docker"
     },
     "appEditor": {
       "methodOciImage": "Imagem OCI (instalada pelo ProxMenux)",

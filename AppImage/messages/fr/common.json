@@ -1075,15 +1075,15 @@
       "logs": "Logs"
     },
     "actions": {
-      "start": "Commencer",
-      "shutdown": "Fermer",
+      "start": "Démarrer",
+      "shutdown": "Éteindre",
       "reboot": "Redémarrer",
       "forceStop": "Forcer l'arrêt",
-      "working": "Fonctionnement...",
-      "startPending": "Démarrer...",
-      "shutdownPending": "Arrêter...",
+      "working": "En cours...",
+      "startPending": "Démarrage...",
+      "shutdownPending": "Extinction...",
       "rebootPending": "Redémarrage...",
-      "stopPending": "Arrêter..."
+      "stopPending": "Arrêt..."
     },
     "confirm": {
       "forceStopTitle": "Forcer l'arrêt",
@@ -1133,7 +1133,7 @@
       "removeCustomCommandConfirm": "Supprimer la commande de mise à jour personnalisée pour \"{name}\" ?",
       "removeCustomCommandFailed": "Impossible de supprimer la commande de mise à jour personnalisée : {message}",
       "hideNoticeFailed": "Impossible de masquer cet avis : {message}",
-      "controlNotConfirmed": "L'opération n'a pas été confirmée comme étant terminée.Vérifiez le statut de l'invité avant de réessayer."
+      "controlNotConfirmed": "La fin de l'opération n'a pas été confirmée. Vérifiez l'état de l'invité avant de réessayer."
     },
     "backupModal": {
       "title": "Sauvegarde {type} {vmid} ({name})",
@@ -1459,16 +1459,16 @@
       "checkCooldown": "Une vérification est déjà en cours ou a été demandée récemment. Réessayez dans {seconds} secondes.",
       "checkStale": "Vérification obsolète",
       "checkStaleHelp": "Ce résultat date de plus de 48 heures ou n’a pas de date de vérification valide. Lancez une nouvelle vérification avant de vous y fier.",
-      "checkSystemPackages": "Vérifier les packages système",
+      "checkSystemPackages": "Vérifier les paquets système",
       "checkInProgress": "Vérification en cours",
-      "refreshCheckHelp": "actualise les index des packages et vérifie les mises à jour en attente pendant l'exécution du conteneur.Rien n'est installé.",
+      "refreshCheckHelp": "Actualise les index de paquets et vérifie les mises à jour en attente pendant que le conteneur est en cours d'exécution. Rien n'est installé.",
       "notCheckedYet": "Les mises à jour n'ont pas encore été vérifiées.",
-      "checkStillRunning": "Le contrôle est toujours en cours.Son résultat sera enregistré une fois terminé.",
-      "checkBeforeUpdate": "Vérifiez d'abord les mises à jour",
-      "startBeforeCheck": "démarrez le conteneur, puis recherchez les mises à jour.L'absence de badge ne signifie pas qu'il n'y a pas de mises à jour.",
+      "checkStillRunning": "La vérification est toujours en cours. Son résultat sera enregistré à la fin.",
+      "checkBeforeUpdate": "Vérifier d'abord les mises à jour",
+      "startBeforeCheck": "Démarrez le conteneur, puis vérifiez les mises à jour. L'absence de badge ne signifie pas qu'il n'y a pas de mises à jour.",
       "runCustomCommand": "Exécuter une commande personnalisée",
-      "installedVersionUnverified": "la version installée n’est pas vérifiée.La disponibilité de la mise à jour n'a pas pu être confirmée.",
-      "versionStatusUnknown": "la disponibilité de la mise à jour n'est pas vérifiée.Les informations sur la version sont indisponibles ou incomplètes."
+      "installedVersionUnverified": "La version installée n'est pas vérifiée. La disponibilité d'une mise à jour n'a pas pu être confirmée.",
+      "versionStatusUnknown": "La disponibilité d'une mise à jour n'est pas vérifiée. Les informations de version sont indisponibles ou incomplètes."
     },
     "bulkUpdate": {
       "title": "Mise à jour groupée",
@@ -1494,9 +1494,9 @@
       "deleteFailed": "Impossible de supprimer la configuration de mise à jour groupée.",
       "planFailed": "Impossible de préparer la mise à jour groupée. Vérifiez les méthodes indisponibles.",
       "loadFailed": "Impossible de charger la configuration de la mise à jour groupée.",
-      "osDockerScope": "Les mises à jour du système d'exploitation incluent également Docker lorsqu'il est installé en tant que package système.",
-      "unverifiedTargetsHelp": "la disponibilité des mises à jour pour certains éléments sélectionnés n'est pas vérifiée.Le démarrage exécutera les méthodes de mise à jour sélectionnées même sans nouvelle version confirmée.",
-      "dockerImageMethod": "image Docker"
+      "osDockerScope": "Les mises à jour du système incluent aussi Docker lorsqu'il est installé comme paquet système.",
+      "unverifiedTargetsHelp": "La disponibilité des mises à jour n'est pas vérifiée pour certains éléments sélectionnés. Le lancement exécutera les méthodes de mise à jour choisies même sans nouvelle version confirmée.",
+      "dockerImageMethod": "Image Docker"
     },
     "appEditor": {
       "methodOciImage": "Image OCI (installée par ProxMenux)",
