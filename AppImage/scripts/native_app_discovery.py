@@ -207,6 +207,27 @@ if [ -f "$2/package.json" ]; then
   timeout -s KILL 1 head -c 8192 "$2/package.json"
 fi
 '''
+MANIFEST_FOOTPRINT_SCRIPT = r'''
+command -v head >/dev/null && command -v readlink >/dev/null || exit 1
+# Resolve only the operator-owned working directory and its declared parent.
+# A release symlink may change the concrete version directory, but it must not
+# escape the bounded custom application root supplied by the host.
+workdir=$(timeout -s KILL 1 readlink -f "$1") || exit 1
+anchor=$(timeout -s KILL 1 readlink -f "$2") || exit 1
+parent=$(timeout -s KILL 1 readlink -f "$3") || exit 1
+case "$anchor" in "$parent"/*) ;; *) printf 'OUTSIDE\n'; exit 0;; esac
+case "$workdir" in "$anchor"|"$anchor"/*) ;; *) printf 'OUTSIDE\n'; exit 0;; esac
+for relative in package.json server/package.json; do
+  candidate="$workdir/$relative"
+  [ -f "$candidate" ] && [ -r "$candidate" ] || continue
+  resolved=$(timeout -s KILL 1 readlink -f "$candidate") || exit 1
+  case "$resolved" in "$workdir"/*) ;; *) printf 'OUTSIDE\n'; exit 0;; esac
+  printf 'MANIFEST\t%s\n' "$relative"
+  timeout -s KILL 1 head -c 8192 "$resolved"
+  exit 0
+done
+printf 'MISSING\n'
+'''
 
 
 def _path(value):
@@ -243,6 +264,50 @@ def _custom(path):
     return len(parts) >= 4 and parts[1] == 'home' and bool(parts[2]) and bool(parts[3])
 
 
+def _manifest_bounds(executable, directory):
+    """Return a narrow, operator-owned boundary for a runtime manifest probe."""
+    try:
+        shared = os.path.commonpath((executable, directory))
+    except ValueError:
+        shared = ''
+    anchor = shared if _custom(shared) else directory
+    parts = anchor.split('/')
+    if anchor.startswith(('/opt/', '/srv/')):
+        parent = '/' + parts[1]
+    elif anchor.startswith('/usr/local/'):
+        parent = '/usr/local'
+    elif len(parts) >= 4 and parts[1] == 'home' and parts[2]:
+        parent = f'/home/{parts[2]}'
+    else:
+        return None
+    return anchor, parent
+
+
+def _manifest_footprint(record, run, deadline):
+    """Read one of two fixed Node manifest locations without following an escape."""
+    output = run(['pct', 'exec', str(record['vmid']), '--', 'timeout', '-s', 'KILL', '2',
+                  'sh', '-c', MANIFEST_FOOTPRINT_SCRIPT, 'discovery',
+                  record['root'], record['manifest_anchor'], record['manifest_parent']], deadline)
+    header, separator, metadata = output.partition('\n')
+    if header == 'MISSING':
+        if metadata:
+            raise ProbeError('invalid_data')
+        return None, None
+    if header == 'OUTSIDE':
+        if metadata:
+            raise ProbeError('invalid_data')
+        raise ProbeError('unsafe_manifest_root')
+    prefix = 'MANIFEST\t'
+    relative = header.removeprefix(prefix)
+    if not header.startswith(prefix) or relative not in ('package.json', 'server/package.json'):
+        raise ProbeError('invalid_data')
+    if not separator:
+        raise ProbeError('invalid_data')
+    candidate_record = dict(record)
+    candidate_record['path'] = str(Path(record['root']) / relative)
+    return candidate_record, 'FILE\n' + metadata
+
+
 def parse_records(text, kind):
     lines = text.splitlines()
     if not lines or lines[-1] not in ('END', 'LIMIT'):
@@ -266,14 +331,18 @@ def parse_records(text, kind):
                 continue
             runtime_name = Path(exe).name
             runtime = bool(_RUNTIMES.fullmatch(runtime_name))
+            manifest_bounds = None
             if runtime and not _path(script):
                 # A Node/npm wrapper may keep its entry point relative to an
-                # operator-owned working directory.  `package.json` is a bounded,
-                # declarative footprint that proves the application root without
-                # reading command arguments, environment or service secrets.
+                # operator-owned working directory.  Only two fixed manifest
+                # locations can prove that root; no argv, environment, recursive
+                # search or guest-provided path is ever used.
                 if runtime_name not in _PACKAGE_ROOT_RUNTIMES or not _custom(directory):
                     continue
                 install = str(Path(directory) / 'package.json')
+                manifest_bounds = _manifest_bounds(exe, directory)
+                if manifest_bounds is None:
+                    continue
             else:
                 install = script if runtime else exe
             if (not _path(install) or _system(Path(install).name)
@@ -291,8 +360,11 @@ def parse_records(text, kind):
             # Generic runtime without an absolute application script is ambiguous.
             if runtime and not _custom(install):
                 continue
-            records.append({'name': service, 'path': install, 'root': root,
-                            'service': source, 'manager': manager, 'executable': exe})
+            record = {'name': service, 'path': install, 'root': root,
+                      'service': source, 'manager': manager, 'executable': exe}
+            if manifest_bounds:
+                record['manifest_anchor'], record['manifest_parent'] = manifest_bounds
+            records.append(record)
         elif kind == 'P' and len(parts) == 4 and parts[0] == 'P':
             _, pid, exe, directory = parts
             if not pid.isdigit() or not _path(exe) or not _path(directory):
@@ -447,10 +519,17 @@ def scan(vmid, run=bounded_run):
             issues.append('candidate_limit')
             break
         try:
-            footprint = run(['pct', 'exec', str(vmid), '--', 'timeout', '-s', 'KILL', '2',
-                             'sh', '-c', FOOTPRINT_SCRIPT,
-                             'discovery', record['path'], record['root']], deadline)
-            item = candidate(vmid, record, footprint)
+            probe_record = dict(record)
+            probe_record['vmid'] = vmid
+            if 'manifest_anchor' in record:
+                probe_record, footprint = _manifest_footprint(probe_record, run, deadline)
+                if probe_record is None:
+                    continue
+            else:
+                footprint = run(['pct', 'exec', str(vmid), '--', 'timeout', '-s', 'KILL', '2',
+                                 'sh', '-c', FOOTPRINT_SCRIPT,
+                                 'discovery', record['path'], record['root']], deadline)
+            item = candidate(vmid, probe_record, footprint)
             items.append(item)
             if item['metadata_issue']:
                 issues.append(item['metadata_issue'])

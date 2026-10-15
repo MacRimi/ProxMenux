@@ -44,7 +44,8 @@ class DiscoveryFixtures(unittest.TestCase):
         native._locks.clear()
         self.calls = []
 
-    def runner(self, services=None, processes='END\n', footprint='FILE\n', status='status: running', ports='END\n'):
+    def runner(self, services=None, processes='END\n', footprint='FILE\n', manifest=None,
+               status='status: running', ports='END\n'):
         def run(argv, deadline):
             self.calls.append(argv)
             self.assertLessEqual(deadline - time.monotonic(), native.TOTAL_SECONDS)
@@ -59,6 +60,10 @@ class DiscoveryFixtures(unittest.TestCase):
                 return processes
             if script == native.PORT_SCRIPT:
                 return ports
+            if script == native.MANIFEST_FOOTPRINT_SCRIPT:
+                if manifest is not None:
+                    return manifest
+                return 'MANIFEST\tpackage.json\n' + footprint.removeprefix('FILE\n')
             if script == native.FOOTPRINT_SCRIPT:
                 return footprint
             self.fail('Unexpected probe')
@@ -136,7 +141,7 @@ class DiscoveryFixtures(unittest.TestCase):
                 self.assertEqual(result['candidates'], [])
                 self.assertFalse(any(native.FOOTPRINT_SCRIPT in call for call in self.calls))
 
-    def test_node_and_npm_wrappers_use_only_custom_package_roots(self):
+    def test_node_and_npm_wrappers_use_only_bounded_manifest_roots(self):
         cases = [
             ('keynest', '/usr/bin/node', '/opt/keynest'),
             ('rent-tool', '/usr/local/bin/npm', '/home/app/rent-tool'),
@@ -151,13 +156,74 @@ class DiscoveryFixtures(unittest.TestCase):
                 self.assertEqual(item['name'], name)
                 self.assertEqual(item['installation_path'], directory + '/package.json')
                 self.assertEqual(item['installed_version'], '1.2.3')
-                footprint_calls = [call for call in self.calls if native.FOOTPRINT_SCRIPT in call]
+                footprint_calls = [call for call in self.calls if native.MANIFEST_FOOTPRINT_SCRIPT in call]
                 self.assertEqual(len(footprint_calls), 1)
-                self.assertEqual(footprint_calls[0][-2:], [directory + '/package.json', directory])
+                if directory.startswith('/home/'):
+                    parent = '/home/app'
+                else:
+                    parent = '/opt'
+                self.assertEqual(footprint_calls[0][-3:], [directory, directory, parent])
 
         self.calls.clear()
         result = native.scan(101, self.runner(service(
             name='ambiguous-home-runtime', exe='/usr/bin/node', directory='/home/app')))
+        self.assertEqual(result['candidates'], [])
+        self.assertFalse(any(native.MANIFEST_FOOTPRINT_SCRIPT in call for call in self.calls))
+
+    def test_node_release_layout_uses_only_server_manifest_under_shared_root(self):
+        self.calls.clear()
+        result = native.scan(101, self.runner(
+            service(name='keynest', exe='/opt/keynest/node/bin/node', directory='/opt/keynest/current'),
+            manifest='MANIFEST\tserver/package.json\n{"version":"1.5.63"}'))
+        item, = result['candidates']
+        self.assertEqual(item['name'], 'keynest')
+        self.assertEqual(item['installation_path'], '/opt/keynest/current/server/package.json')
+        self.assertEqual(item['installed_version'], '1.5.63')
+        manifest_calls = [call for call in self.calls if native.MANIFEST_FOOTPRINT_SCRIPT in call]
+        self.assertEqual(len(manifest_calls), 1)
+        self.assertEqual(manifest_calls[0][-3:],
+                         ['/opt/keynest/current', '/opt/keynest', '/opt'])
+
+    def test_node_release_layout_rejects_manifest_outside_operator_root(self):
+        self.calls.clear()
+        result = native.scan(101, self.runner(
+            service(name='outside-root', exe='/opt/outside/node/bin/node', directory='/opt/outside/current'),
+            manifest='OUTSIDE\n'))
+        self.assertEqual(result['candidates'], [])
+        self.assertIn('unsafe_manifest_root', result['issues'])
+        self.assertFalse(any(native.FOOTPRINT_SCRIPT in call for call in self.calls))
+
+    def test_actual_manifest_probe_accepts_release_and_rejects_symlink_escape(self):
+        parent = self.root / 'opt'
+        anchor = parent / 'keynest'
+        release = anchor / 'releases' / 'v1.5.63'
+        manifest = release / 'server' / 'package.json'
+        manifest.parent.mkdir(parents=True)
+        manifest.write_text('{"version":"1.5.63"}')
+        current = anchor / 'current'
+        current.symlink_to(release)
+        output = native.bounded_run(
+            ['sh', '-c', native.MANIFEST_FOOTPRINT_SCRIPT, 'fixture',
+             str(current), str(anchor), str(parent)], time.monotonic() + 3)
+        self.assertEqual(output, 'MANIFEST\tserver/package.json\n{"version":"1.5.63"}')
+
+        outside = self.root / 'outside' / 'package.json'
+        outside.parent.mkdir()
+        outside.write_text('{"version":"not-readable"}')
+        manifest.unlink()
+        manifest.symlink_to(outside)
+        output = native.bounded_run(
+            ['sh', '-c', native.MANIFEST_FOOTPRINT_SCRIPT, 'fixture',
+             str(current), str(anchor), str(parent)], time.monotonic() + 3)
+        self.assertEqual(output, 'OUTSIDE\n')
+        self.assertNotIn('not-readable', output)
+
+    def test_node_wrapper_with_no_fixed_manifest_is_not_an_error_or_candidate(self):
+        self.calls.clear()
+        result = native.scan(101, self.runner(
+            service(name='missing-manifest', exe='/opt/missing/node/bin/node', directory='/opt/missing/current'),
+            manifest='MISSING\n'))
+        self.assertEqual(result['status'], 'complete')
         self.assertEqual(result['candidates'], [])
         self.assertFalse(any(native.FOOTPRINT_SCRIPT in call for call in self.calls))
 
