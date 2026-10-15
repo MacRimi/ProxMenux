@@ -473,5 +473,39 @@ context.selectedVMRef.current = { vmid: 100 }
       assert.ok(messages[key]?.trim())
     assert.match(messages.checkCooldown, /\{seconds\}/)
   }
+  const oldFetch = context.fetchApi
+  const oldMutate = context.mutate
+  context.controlRequestRef = { current: false }
+  context.setControlAction = () => {}
+  context.waitForVmControlTask = async () => ({ guest_status: 'running' })
+  context.setSelectedVM = update => {
+    const previous = context.selectedVM
+    const next = typeof update === 'function' ? update(previous) : update
+    assert.equal(next?.vmid, previous?.vmid, 'control preserves the selected guest')
+    context.selectedVM = next
+  }
+  context.fetchApi = async () => ({ config: { onboot: 1 } })
+  context.mutate = async () => {}
+  for (const action of ["start", "shutdown", "reboot", "stop"]) {
+    context.selectedVMRef.current = { vmid: 100 }
+    context.selectionChanged = undefined
+    await ui.control(100, action)
+    assert.equal(context.selectionChanged, undefined, "control must not close or reset the selected modal")
+    assert.equal(context.controlLoading, false)
+  }
+  for (const selection of [null, { vmid: 200 }]) {
+    context.selectedVMRef.current = { vmid: 100 }
+    context.mutate = async () => { context.selectedVMRef.current = selection }
+    details = null
+    await ui.control(100, "start")
+    assert.equal(details, null, "closing or switching guests during control must not reopen/overwrite a modal")
+  }
+  context.selectedVMRef.current = { vmid: 100 }
+  context.mutate = async () => { throw new Error("poll failed") }
+  context.alerted = null
+  await ui.control(100, "shutdown")
+  assert.equal(context.alerted, null, "failed revalidation is not failed control")
+  context.fetchApi = oldFetch
+  context.mutate = oldMutate
   console.log("PASS observed-state UI: freshness, safe actions, per-guest preferences/bulk races, EN/SK")
 })().catch(error => { console.error(error); process.exitCode = 1 })

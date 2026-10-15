@@ -36,6 +36,7 @@ class LxcVmIpInventoryTests(unittest.TestCase):
             "_get_lxc_app_watch_map": lambda: {},
             "_get_lxc_docker_inventory_map": lambda: {},
             "get_proxmox_node_name": lambda: "pve",
+            "_fast_guest_status": lambda _vmid, _vm_type: "running",
             "_get_cached_vm_list_search_notes": lambda _resources, _node: {},
             "get_cached_vm_disk": lambda _vmid: None,
             "_guest_lifecycle_lock": threading.RLock(),

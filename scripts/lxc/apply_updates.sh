@@ -124,10 +124,17 @@ extract_helper_slug_from_wrapper() {
 # One update per CT at a time, regardless of whether it came from the
 # UI or the scheduler. The descriptor remains open for this process.
 LOCK_DIR="${PROXMENUX_LOCK_DIR:-/run/lock}"
-exec 9>"${LOCK_DIR}/proxmenux-lxc-update-${VMID}.lock"
+exec 9>>"${LOCK_DIR}/proxmenux-lxc-update-${VMID}.lock"
 if ! flock -n 9; then
   echo "ERROR: another ProxMenux update is already running for CT $VMID." >&2
   exit 7
+fi
+
+if [[ -s "${LOCK_DIR}/proxmenux-lxc-update-${VMID}.lock" ]]; then
+  if ! python3 -c 'import sys; sys.path.insert(0, "/usr/local/share/proxmenux/monitor-app/usr/bin"); import lxc_check_job; lxc_check_job.check_control_task(int(sys.argv[1]))' "$VMID"; then
+    echo "ERROR: container control completion is not confirmed; nothing was changed." >&2
+    exit 7
+  fi
 fi
 
 if [[ "${REQUIRE_CHECKED_OS:-0}" == "1" ]]; then

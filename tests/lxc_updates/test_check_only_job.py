@@ -288,6 +288,45 @@ class CheckOnlyTests(unittest.TestCase):
                     self.assertTrue(stored['error'])
                     self.assertFalse(any('apt list' in ' '.join(command) for command in commands))
 
+    def test_control_route_uses_same_lock_and_preserves_qemu(self):
+        app = Flask(__name__)
+        def control_result(argv, **_):
+            path = argv[2]
+            vm_type, vmid, action = path.split('/')[3], path.split('/')[4], path.rsplit('/', 1)[1]
+            task_type = ('vz' if vm_type == 'lxc' else 'qm') + action
+            return subprocess.CompletedProcess(
+                [], 0, f'"UPID:fixture:000A:000B:000C:{task_type}:{vmid}:root@pam:"\n', '')
+        command = Mock(side_effect=control_result)
+        scope = {'app': app, 'jsonify': jsonify, 'request': request,
+                 'require_auth': lambda fn: fn,
+                 'get_cached_pvesh_cluster_resources_vm': lambda: [
+                     {'vmid': 100, 'type': 'lxc', 'node': 'fixture'},
+                     {'vmid': 200, 'type': 'qemu', 'node': 'fixture'}],
+                 'subprocess': SimpleNamespace(run=command), '_pvesh_cache': {},
+                 '_vm_cache_invalidate': Mock()}
+        node = next(n for n in ast.parse((ROOT / 'AppImage/scripts/flask_server.py').read_text()).body
+                    if isinstance(n, ast.FunctionDef) and n.name == 'api_vm_control')
+        exec(compile(ast.Module(body=[node], type_ignores=[]), 'route', 'exec'), scope)
+        client = app.test_client()
+        reservation = job.acquire(100)
+        try:
+            self.assertEqual(client.post('/api/vms/100/control', json={'action': 'stop'}).status_code, 409)
+            command.assert_not_called()
+            self.assertEqual(client.post('/api/vms/200/control', json={'action': 'reboot'}).status_code, 200)
+        finally:
+            reservation.close()
+        # The production waiter owns a long-lived reservation. Isolate its
+        # launch here so it cannot probe through another test's transport.
+        with patch.object(job.threading, 'Thread') as worker:
+            response = client.post('/api/vms/100/control', json={'action': 'start'})
+            worker.return_value.start.assert_called_once_with()
+            retained = worker.call_args.kwargs['args'][1]
+            self.addCleanup(retained.close)
+            job.cancel_control(retained)
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.json['success'])
+        self.assertEqual(response.json['task'], 'UPID:fixture:000A:000B:000C:vzstart:100:root@pam:')
+        self.assertIn('/nodes/fixture/lxc/100/status/start', command.call_args.args[0])
 
     def test_actual_routes_submit_poll_and_control_lock(self):
         app = Flask(__name__)
