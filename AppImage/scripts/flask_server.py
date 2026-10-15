@@ -15924,7 +15924,9 @@ def api_vm_control(vmid):
                 task_types = [f"{'vz' if vm_type == 'lxc' else 'qm'}{action}"]
                 if action == 'start':
                     task_types.append('hastart')
-                elif action == 'stop':
+                elif action in ('stop', 'shutdown'):
+                    # Proxmox 9 routes HA shutdown through hastop for both
+                    # LXC and QEMU guests.
                     task_types.append('hastop')
                 task_pattern = (r'UPID:[\w.-]+:[0-9A-Fa-f]+:[0-9A-Fa-f]+:'
                                 r'[0-9A-Fa-f]+:(?:' + '|'.join(task_types) +

@@ -71,6 +71,29 @@ class ControlTaskTests(unittest.TestCase):
         self.assertEqual(response.json['task'], task)
         retained.assert_called_once_with(100, task, lock)
 
+    def test_control_post_accepts_ha_shutdown_task_for_lxc_and_qemu(self):
+        lock = Mock()
+        retained = Mock()
+        module = SimpleNamespace(acquire=lambda _: lock, begin_control=Mock(),
+                                 retain_control=retained, cancel_control=Mock())
+        with patch.dict('sys.modules', {'lxc_check_job': module}):
+            for vmid in (100, 200):
+                with self.subTest(vmid=vmid):
+                    self.run.reset_mock()
+                    task = TASK.replace('vzreboot:100', f'hastop:{vmid}')
+                    self.run.return_value = self.result(task)
+                    response = self.client.post(
+                        f'/api/vms/{vmid}/control', json={'action': 'shutdown'})
+                    self.assertEqual(response.status_code, 200, response.json)
+                    self.assertTrue(response.json['success'])
+                    self.assertEqual(response.json['task'], task)
+                    self.assertEqual(self.run.call_count, 1)
+                    self.assertEqual(self.run.call_args.args[0], [
+                        'pvesh', 'create',
+                        f'/nodes/fixture/{"lxc" if vmid == 100 else "qemu"}/{vmid}/status/shutdown',
+                    ])
+        retained.assert_called_once_with(100, TASK.replace('vzreboot:100', 'hastop:100'), lock)
+
     def test_control_post_rejects_success_without_a_confirmable_task(self):
         lock = Mock()
         module = SimpleNamespace(acquire=lambda _: lock, begin_control=Mock(),
