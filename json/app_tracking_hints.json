@@ -1504,7 +1504,7 @@
     "github_source": "releases",
     "installed_via": "file",
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/gluetun.webp",
-    "repo": "qdm12/gluetun",
+    "repo": "passteque/gluetun",
     "tag_regex": "(?i)(?:v|release[-_/]?)?(\\d+(?:\\.\\d+){1,3}(?:[-+._][0-9A-Za-z.-]+)?)",
     "website": "https://github.com/qdm12/gluetun"
   },
@@ -5603,7 +5603,7 @@
     "github_source": "releases",
     "installed_via": "file",
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/wiki-js.webp",
-    "repo": "requarks/wiki",
+    "repo": "requarks/wiki-v2",
     "tag_regex": "(?i)(?:v|release[-_/]?)?(\\d+(?:\\.\\d+){1,3}(?:[-+._][0-9A-Za-z.-]+)?)",
     "website": "https://js.wiki/"
   },

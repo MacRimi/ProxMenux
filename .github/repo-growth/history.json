@@ -1,11 +1,11 @@
 {
   "version": 1,
   "repository": "MacRimi/ProxMenux",
-  "updatedAt": "2026-10-12T04:45:52.383Z",
+  "updatedAt": "2026-10-15T04:31:41.997Z",
   "backfilledAt": "2026-07-22T18:09:20.834Z",
   "totals": {
     "downloads": 0,
-    "clones": 49606
+    "clones": 51201
   },
   "assets": {},
   "traffic": {
@@ -289,6 +289,18 @@
       "2026-10-10": {
         "count": 443,
         "uniques": 305
+      },
+      "2026-10-11": {
+        "count": 511,
+        "uniques": 305
+      },
+      "2026-10-12": {
+        "count": 520,
+        "uniques": 362
+      },
+      "2026-10-13": {
+        "count": 564,
+        "uniques": 354
       }
     }
   },
@@ -3798,14 +3810,35 @@
       "stars": 3134,
       "forks": 165,
       "downloads": 0,
-      "clones": 49606
+      "clones": 50117
     },
     {
       "date": "2026-10-12",
       "stars": 3138,
       "forks": 168,
       "downloads": 0,
-      "clones": 49606
+      "clones": 50637
+    },
+    {
+      "date": "2026-10-13",
+      "stars": 3141,
+      "forks": 169,
+      "downloads": 0,
+      "clones": 51201
+    },
+    {
+      "date": "2026-10-14",
+      "stars": 3148,
+      "forks": 170,
+      "downloads": 0,
+      "clones": 51201
+    },
+    {
+      "date": "2026-10-15",
+      "stars": 3160,
+      "forks": 171,
+      "downloads": 0,
+      "clones": 51201
     }
   ]
 }
