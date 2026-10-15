@@ -6728,6 +6728,11 @@ def _get_lxc_update_status_map() -> dict:
             'managed_oci_app': it.get('_managed_oci_app'),
             'os_family': it.get('_os_family'),
         }
+        if os.path.exists(f'/run/lock/proxmenux-lxc-check-invalid-{int(vmid)}'):
+            # Read-only projection: a failed/pending explicit check must not
+            # re-expose a former positive count after a persistence failure.
+            out[str(vmid)].update(available=False, count=0, packages=[],
+                error='Latest explicit package check is running or failed; check again')
     return out
 
 
@@ -13669,17 +13674,55 @@ def api_lxc_updates_check(vmid):
                             'retry_after': retry}), 429, {'Retry-After': str(retry)}
         _lxc_update_check_attempts[vmid] = now
         _lxc_update_check_inflight.add(vmid)
+    operation_lock = None
     try:
+        import lxc_check_job
+        operation_lock = lxc_check_job.acquire(vmid)
         item = managed_installs.refresh_lxc(vmid, refresh_package_cache=False)
         if item is None:
             return jsonify({'error': 'No supported running LXC detected'}), 409
         _vm_cache_invalidate(vmid, _lxc_os_info_cache)
         return jsonify({'vmid': vmid, 'update_check': _get_lxc_update_status_map().get(str(vmid))})
+    except BlockingIOError:
+        return jsonify({'error': 'Another container operation is running'}), 409
     except Exception as exc:
         return jsonify({'error': str(exc)}), 500
     finally:
+        if operation_lock is not None:
+            operation_lock.close()
         with _lxc_update_check_lock:
             _lxc_update_check_inflight.discard(vmid)
+
+
+@app.route('/api/vms/<int:vmid>/updates/refresh-check', methods=['POST'])
+@require_auth
+def api_lxc_updates_refresh_check(vmid):
+    """Explicit index refresh/check for a running CT; never installs."""
+    import lxc_check_job
+    try:
+        result, code = lxc_check_job.start(vmid)
+        if code == 429:
+            return jsonify({'error': 'Check already running or recently requested',
+                            'retry_after': 60}), 429, {'Retry-After': '60'}
+        return jsonify(result), code
+    except BlockingIOError:
+        return jsonify({'error': 'Another container operation is running'}), 409
+    except (OSError, RuntimeError, ValueError) as exc:
+        return jsonify({'error': str(exc)}), 409
+
+
+@app.route('/api/vms/<int:vmid>/updates/refresh-check/<job_id>', methods=['GET'])
+@require_auth
+def api_lxc_updates_refresh_check_status(vmid, job_id):
+    import lxc_check_job
+    result = lxc_check_job.get(vmid, job_id)
+    if result is None:
+        return jsonify({'error': 'Check result not found; check again'}), 404
+    if result['state'] != 'running':
+        _vm_cache_invalidate(vmid, _lxc_os_info_cache)
+        _pvesh_cache['cluster_resources_vm_time'] = 0
+        result['update_check'] = _get_lxc_update_status_map().get(str(vmid))
+    return jsonify(result)
 
 
 # ─── LXC Update Detection toggle ────────────────────────────────────────────
@@ -14258,6 +14301,7 @@ def api_vm_apps_dismiss(vmid):
 # ─── LXC update finalization ────────────────────────────────────────────────
 
 _LXC_APPLY_UPDATES_SCRIPT = "/usr/local/share/proxmenux/scripts/lxc/apply_updates.sh"
+_LXC_INSTALL_CHECKED_OS_SCRIPT = "/usr/local/share/proxmenux/scripts/lxc/install_checked_os_updates.sh"
 _LXC_UPDATE_RUN_ID_RE = re.compile(r'^[A-Za-z0-9._:-]{1,128}$')
 _LXC_UPDATE_TARGET_RE = re.compile(r'^[A-Za-z0-9._:-]{1,180}$')
 from lxc_update_finalization import lock as _lxc_update_finalization_lock, runs as _lxc_update_finalizations
@@ -14711,7 +14755,9 @@ def _finalize_lxc_update(
 
 
 def _terminal_lxc_update_completed(*, script_path, params, exit_code, duration_seconds):
-    if os.path.realpath(script_path) != os.path.realpath(_LXC_APPLY_UPDATES_SCRIPT):
+    if os.path.realpath(script_path) not in {
+            os.path.realpath(_LXC_APPLY_UPDATES_SCRIPT),
+            os.path.realpath(_LXC_INSTALL_CHECKED_OS_SCRIPT)}:
         return
     run_id = _normalise_lxc_update_run_id(params.get('RUN_ID'), create=False)
     if not run_id:

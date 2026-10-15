@@ -213,9 +213,16 @@ class CommandDescriptionsTests(unittest.TestCase):
                     # Model the bot's future output in temporary catalogs, just
                     # like the other pending keys above; never rewrite locales.
                     for key in ("checkNow", "checkReadOnlyHelp", "checkCooldown",
-                                "checkStale", "checkStaleHelp"):
+                                "checkStale", "checkStaleHelp", "checkBeforeUpdate",
+                                "startBeforeCheck", "notCheckedYet",
+                                "checkStillRunning", "refreshCheckHelp",
+                                "checkInProgress", "checkSystemPackages", "runCustomCommand",
+                                "installedVersionUnverified", "versionStatusUnknown"):
                         messages["vmLxc"]["updates"].setdefault(
                             key, english["vmLxc"]["updates"][key])
+                    for key in ("osDockerScope", "dockerImageMethod", "unverifiedTargetsHelp"):
+                        messages["vmLxc"]["bulkUpdate"].setdefault(
+                            key, english["vmLxc"]["bulkUpdate"][key])
                     path.write_text(json.dumps(messages, ensure_ascii=False))
             before = {p: p.read_bytes() for p in root.glob("*/common.json")}
             argv = [str(SCRIPT), "--source", str(root / "en/common.json"),

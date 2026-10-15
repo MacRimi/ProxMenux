@@ -67,3 +67,90 @@ for (const locale of ['en', 'es', 'de', 'fr', 'it', 'pt', 'sk', 'sv']) {
   for (const key of ['dockerWorkloadsHeading', 'runsInsideDocker', 'upstreamDelegatedTitle', 'upstreamDelegatedHelp']) assert.equal(typeof messages.vmLxc.appEditor[key], 'string')
 }
 console.log('PASS Docker delegation: live cache, lifecycle invalidation, edit protection, no extra HTTP, unique image counts, eight locales')
+
+// Exercise the actual bulk-choice construction, keeping target identities
+// intact while distinguishing a custom updater from a same-named image.
+const choicesSource = source.slice(source.indexOf('const bulkAppChoices ='), source.indexOf('const bulkChoiceIds ='))
+assert(choicesSource.startsWith('const bulkAppChoices ='))
+for (const locale of ['en', 'sk']) {
+  const messages = JSON.parse(fs.readFileSync(path.join(root, `messages/${locale}/common.json`)))
+  const t = (key, values = {}) => {
+    const value = key.split('.').reduce((obj, part) => obj?.[part], messages)
+    assert.equal(typeof value, 'string', key)
+    return value.replace(/\{(\w+)\}/g, (_, name) => values[name] ?? '')
+  }
+  const registeredApps = [
+    {id: 'custom', name: 'ghstats', update_command: 'existing updater'},
+    {id: 'helper', name: 'Helper app', update_method: 'helper', helper_slug: 'helper-app'},
+    {id: 'unique', name: 'Only custom', update_command: 'another updater'},
+    {id: 'engine', name: 'Docker', helper_slug: 'docker'},
+  ].map(Object.freeze)
+  const units = [
+    {id: 'docker-unit:ghstats', kind: 'standalone', display_name: 'ghstats', dependent_services: []},
+    {id: 'docker-unit:helper', kind: 'compose', display_name: 'Helper app', dependent_services: ['database']},
+    {id: 'docker-unit:unique', kind: 'standalone', display_name: 'Only image', dependent_services: []},
+  ].map(Object.freeze)
+  const before = JSON.stringify({registeredApps, units})
+  const result = compile(choicesSource + '\nexports.choices = bulkChoices;', {
+    exports: {}, t, registeredApps, helperExists: true, uc: {helper_slug: 'helper-app'},
+    dockerWorkloadsRegistered: true, dockerRegistered: true,
+    selectedVM: {docker_inventory: {update_units: units}}, followedImageReferences: new Set(),
+  }).choices
+  assert.deepEqual(Array.from(result, x => x.id), ['os', 'app:custom', 'app:helper', 'app:unique',
+    'docker-engine', 'docker-unit:ghstats', 'docker-unit:helper', 'docker-unit:unique'])
+  assert.equal(result.find(x => x.id === 'app:custom').label, `ghstats — ${t('vmLxc.updates.customCommandTitle')}`)
+  assert.equal(result.find(x => x.id === 'docker-unit:ghstats').label, `ghstats — ${t('vmLxc.bulkUpdate.dockerImageMethod')}`)
+  assert.equal(result.find(x => x.id === 'app:helper').label, `Helper app — ${t('vmLxc.updates.helperMethod')}`)
+  assert.equal(result.find(x => x.id === 'docker-unit:helper').label, 'Helper app — Docker Compose')
+  assert.equal(result.find(x => x.id === 'app:unique').label, 'Only custom')
+  assert.equal(result.find(x => x.id === 'docker-unit:unique').label, 'Only image')
+  assert.equal(result.find(x => x.id === 'docker-unit:helper').detail,
+    t('vmLxc.bulkUpdate.includesDependencies', {names: 'database'}))
+  assert.equal(JSON.stringify({registeredApps, units}), before, 'display must never edit registrations or units')
+  assert.equal(typeof messages.vmLxc.bulkUpdate.osDockerScope, 'string')
+}
+console.log('PASS bulk display: duplicate method names, unchanged unique names/target IDs/dependencies and frozen input, EN/SK')
+
+const actionStyle = compile(fs.readFileSync(path.join(root, 'lib/update-action-style.ts'), 'utf8'), {exports: {}})
+let bulkButton
+function findBulkButton(node) {
+  if (ts.isJsxElement(node) && node.openingElement.tagName.getText(tree) === 'Button') {
+    const props = node.openingElement.attributes.properties
+    if (props.some(p => ts.isJsxAttribute(p) && p.name.text === 'onClick'
+      && p.initializer?.getText(tree).includes('applyBulkUpdate('))) bulkButton = props
+  }
+  ts.forEachChild(node, findBulkButton)
+}
+findBulkButton(tree)
+assert(bulkButton, 'actual bulk execution button exists')
+function bulkProp(name, context) {
+  const prop = bulkButton.find(p => p.name?.text === name)
+  assert(prop && ts.isJsxExpression(prop.initializer))
+  return compile('exports.value = (' + prop.initializer.expression.getText(tree) + ');', {
+    exports: {}, getUpdateActionButtonClass: actionStyle.getUpdateActionButtonClass, ...context,
+  }).value
+}
+const enabledBulk = {bulkApplying: false, osCheckingVmid: null, updatesRefreshing: false,
+  osUpdateStatusKnown: true, bulkAllTargetsUpToDate: false, bulkHasPendingUpdates: true,
+  bulkTargets: ['os', 'app:one'], dockerInventoryRefreshing: false, dockerInventoryAvailable: true}
+assert.equal(bulkProp('disabled', enabledBulk), false)
+assert.match(bulkProp('className', enabledBulk), /text-purple-300/)
+const unknownBulk = {...enabledBulk, osUpdateStatusKnown: false, bulkHasPendingUpdates: false}
+assert.equal(bulkProp('disabled', unknownBulk), true, 'consistent action color must not enable an unknown OS')
+assert.equal(bulkProp('className', unknownBulk), bulkProp('className', enabledBulk))
+const currentBulk = {...enabledBulk, bulkAllTargetsUpToDate: true, bulkHasPendingUpdates: false}
+assert.equal(bulkProp('disabled', currentBulk), true)
+assert.match(bulkProp('className', currentBulk), /text-green-400/)
+assert.equal(bulkProp('disabled', {...enabledBulk, bulkApplying: true}), true)
+assert.equal(bulkProp('disabled', {...enabledBulk, bulkTargets: ['os', 'docker-unit:one'],
+  dockerInventoryAvailable: false}), true)
+const helperLabelSource = source.slice(source.indexOf('const cls = getUpdateActionButtonClass(hasUpd'),
+  source.indexOf('const cls = getUpdateActionButtonClass(hasUpd') + 550)
+const helperLabel = helperLabelSource.slice(0, helperLabelSource.indexOf('return ('))
+const unknownHelper = compile(helperLabel + '\nexports.value = {cls, label};', {
+  exports: {}, hasUpd: false, upToD: false, t: k => k,
+  getUpdateActionButtonClass: actionStyle.getUpdateActionButtonClass,
+}).value
+assert.match(unknownHelper.cls, /text-purple-300/)
+assert.equal(unknownHelper.label, 'vmLxc.updates.runUpdater', 'unknown version must not be presented as a detected upgrade')
+console.log('PASS actual update actions: shared author colors, unknown remains unknown, bulk guards unchanged')

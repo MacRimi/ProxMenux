@@ -67,6 +67,10 @@ EOF
 cat >"$MOCK_BIN/python3" <<'EOF'
 #!/bin/bash
 cat >/dev/null
+if [[ "${1:-}" == '-c' ]]; then
+  [[ "${MOCK_CHECK_FAIL:-0}" != '1' ]]
+  exit $?
+fi
 if [[ "${2:-}" == 'protect-update-command' ]]; then
   printf '%s' "$UPDATE_COMMAND"
   exit 0
@@ -82,6 +86,7 @@ EOF
 cat >"$MOCK_BIN/vzdump" <<'EOF'
 #!/bin/bash
 echo "vzdump $*" >>"$MOCK_LOG"
+[[ "${MOCK_BACKUP_FAIL:-0}" != '1' ]]
 EOF
 chmod +x "$MOCK_BIN"/*
 
@@ -160,5 +165,19 @@ run_case stopped_restore RUN_HELPER=0 UPDATE_COMMAND='update-custom' MOCK_INITIA
 run_case locked RUN_HELPER=0 UPDATE_COMMAND='update-custom' MOCK_FLOCK_FAIL=1
 [[ $CASE_RC -eq 7 ]] || fail "locked expected 7, got $CASE_RC"
 [[ $(count CUSTOM_EXEC) -eq 0 ]] || fail "locked run executed an updater"
+
+run_case checked_missing TARGET=os REQUIRE_CHECKED_OS=1 MOCK_CHECK_FAIL=1
+[[ $CASE_RC -eq 4 ]] || fail "unchecked installation was not rejected"
+[[ $(count 'pct ') -eq 0 ]] || fail "unchecked installation probed or started a CT"
+[[ $(count OS_EXEC) -eq 0 ]] || fail "unchecked installation upgraded packages"
+
+run_case checked_backup_fail TARGET=os REQUIRE_CHECKED_OS=1 MOCK_INITIAL_STATE=stopped BACKUP=1 BACKUP_STORAGE=local MOCK_BACKUP_FAIL=1
+[[ $CASE_RC -eq 3 ]] || fail "backup failure was not reported"
+[[ $(count OS_EXEC) -eq 0 ]] || fail "backup failure upgraded packages"
+[[ $(count 'pct shutdown 101 --timeout 60') -eq 1 ]] || fail "backup failure did not restore stopped state"
+
+run_case checked_positive TARGET=os REQUIRE_CHECKED_OS=1
+[[ $CASE_RC -eq 0 ]] || fail "positive checked installation failed"
+[[ $(count OS_EXEC) -gt 0 ]] || fail "positive checked installation did not use existing OS path"
 
 echo "apply_updates.sh: all deterministic tests passed"

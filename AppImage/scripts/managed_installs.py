@@ -1796,6 +1796,22 @@ def _store_update_result(item: dict, result: dict) -> None:
             item["update_check"][extra_key] = result[extra_key]
 
 
+def _clear_lxc_check_invalid_marker(vmid: int, check_started_ns: int) -> bool:
+    """Publish a persisted newer LXC check to the installation gate.
+
+    The marker is created by the explicit refresh worker.  Its own lock also
+    protects this cleanup against a later refresh starting while a scheduled
+    or lifecycle check is still completing.
+    """
+    try:
+        import lxc_check_job
+        return lxc_check_job.clear_invalid_marker(
+            vmid, check_started_ns=check_started_ns)
+    except Exception as exc:
+        print(f'[ProxMenux] could not clear stale LXC check marker for {vmid}: {exc}')
+        return False
+
+
 def refresh_oci_app(app_id: str) -> Optional[dict]:
     """Read one OCI-managed application again and store what it reports.
 
@@ -1834,6 +1850,7 @@ def check_for_updates(force: bool = False) -> list[dict]:
         _nvidia_cache["fetched_at"] = 0
 
     updates_available: list[dict] = []
+    successful_lxc_checks: list[tuple[int, int]] = []
     with _lock:
         reg = _read_registry()
         items = reg.get("items", [])
@@ -1854,6 +1871,7 @@ def check_for_updates(force: bool = False) -> list[dict]:
             checker = _CHECKERS.get(it.get("type"))
             if not checker:
                 continue
+            check_started_ns = time.time_ns() if it.get('type') == 'lxc' else None
             try:
                 result = checker(it)
             except Exception as e:
@@ -1863,13 +1881,20 @@ def check_for_updates(force: bool = False) -> list[dict]:
                           "last_check": _now_iso(), "error": str(e)}
 
             _store_update_result(it, result)
+            if check_started_ns is not None and result.get('error') is None:
+                try:
+                    successful_lxc_checks.append((int(it.get('_vmid')), check_started_ns))
+                except (TypeError, ValueError):
+                    pass
 
             if it["update_check"]["available"]:
                 updates_available.append(it)
 
         reg["items"] = items
         reg["last_check_run"] = _now_iso()
-        _write_registry(reg)
+        if _write_registry(reg):
+            for vmid, check_started_ns in successful_lxc_checks:
+                _clear_lxc_check_invalid_marker(vmid, check_started_ns)
 
     return updates_available
 
@@ -1945,6 +1970,7 @@ def refresh_lxc(vmid: int, *, refresh_package_cache: bool = True) -> Optional[di
         else:
             _merge_detected_entry(target, entry, now)
 
+        check_started_ns = time.time_ns()
         try:
             result = (_check_lxc_updates(target) if refresh_package_cache else
                       _check_lxc_updates(target, refresh_package_cache=False))
@@ -1961,4 +1987,6 @@ def refresh_lxc(vmid: int, *, refresh_package_cache: bool = True) -> Optional[di
         reg["last_targeted_refresh"] = now
         if not _write_registry(reg):
             raise OSError("could not persist LXC update check")
+        if result.get('error') is None:
+            _clear_lxc_check_invalid_marker(target_vmid, check_started_ns)
         return dict(target)
