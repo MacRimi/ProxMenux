@@ -5015,7 +5015,9 @@
   "lxcTerminal": {
     "title": "Terminal : {name} (ID : {id})",
     "errors": {
-      "invalidVmid": "VMID invalide - refus d'exécuter PCT Enter"
+      "invalidVmid": "VMID invalide - refus d'exécuter PCT Enter",
+      "noShell": "L'image de ce conteneur n'a pas de shell, elle ne peut donc pas ouvrir de terminal.Sa sortie se trouve dans l'onglet Journaux.",
+      "enterFailed": "Le conteneur n'a pas pu être saisi."
     },
     "commands": {
       "listFiles": "Lister tous les fichiers avec des détails",

@@ -5014,7 +5014,9 @@
   "lxcTerminal": {
     "title": "Terminál: {name} (ID: {id})",
     "errors": {
-      "invalidVmid": "Neplatné VMID — pct enter sa nespustí"
+      "invalidVmid": "Neplatné VMID — pct enter sa nespustí",
+      "noShell": "Obrázok tohto kontajnera nemá shell, takže nemôže otvoriť terminál.Jeho výstup je v záložke Logs.",
+      "enterFailed": "Kontajner sa nepodarilo zadať."
     },
     "commands": {
       "listFiles": "Zobraziť podrobnosti o súboroch",

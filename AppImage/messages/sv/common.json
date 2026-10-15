@@ -5015,7 +5015,9 @@
   "lxcTerminal": {
     "title": "Terminal: {name} (ID: {id})",
     "errors": {
-      "invalidVmid": "Ogiltig VMID — vägrar att köra pct enter"
+      "invalidVmid": "Ogiltig VMID — vägrar att köra pct enter",
+      "noShell": "Den här behållarens bild har inget skal, så den kan inte öppna en terminal.Dess utdata finns på fliken Loggar.",
+      "enterFailed": "Behållaren kunde inte anges."
     },
     "commands": {
       "listFiles": "Lista alla filer med detaljer",
