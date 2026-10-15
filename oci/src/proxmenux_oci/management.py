@@ -254,27 +254,33 @@ def _interactive_management(project, ui):
     recover_automatically(project)
     offer_recovery(project, ui)
     carry_records(project, mount_stopped=False, shown=True)
-    rows = saved_inventory(project)
-    if not rows:
-        ui.message(translate('No registered OCI containers are available for selection on this host.'), translate('OCI management'))
-        return
-    # Same layout as the catalog lists; only an unusual state is shown.
-    tag_width = max(len(str(r['vmid'])) for r in rows)
-    header = f" {'CT':<{tag_width + 2}}{translate('Application')[:32]:<32} {translate('Image')}"
-    options = []
-    for r in rows:
-        line = f"{(r['title'] or r['hostname'])[:32]:<32} "
-        if r['status'] == 'installed':
-            line += r['image'][:30]
-        else:
-            line += f"\\Z1{translate(STATUS_LABELS.get(r['status'], r['status']))}\\Zn"
-        options.append((str(r['vmid']), f"{line:<72}"))
-    selection = ui.choose(header, options, size=menu_size(), colors=True,
-                          title=translate('Manage installed OCI applications'))
-    if selection is None:
-        return
-    row = next(r for r in rows if str(r['vmid']) == selection)
-    manage_instance(project, ui, row)
+    # After each operation the list is shown again. Every operation leaves
+    # the copies of the records up to date, so they are not all refreshed again.
+    first = True
+    while True:
+        rows = saved_inventory(project)
+        if not rows:
+            if first:
+                ui.message(translate('No registered OCI containers are available for selection on this host.'), translate('OCI management'))
+            return
+        first = False
+        # Same layout as the catalog lists; only an unusual state is shown.
+        tag_width = max(len(str(r['vmid'])) for r in rows)
+        header = f" {'CT':<{tag_width + 2}}{translate('Application')[:32]:<32} {translate('Image')}"
+        options = []
+        for r in rows:
+            line = f"{(r['title'] or r['hostname'])[:32]:<32} "
+            if r['status'] == 'installed':
+                line += r['image'][:30]
+            else:
+                line += f"\\Z1{translate(STATUS_LABELS.get(r['status'], r['status']))}\\Zn"
+            options.append((str(r['vmid']), f"{line:<72}"))
+        selection = ui.choose(header, options, size=menu_size(), colors=True,
+                              title=translate('Manage installed OCI applications'))
+        if selection is None:
+            return
+        row = next(r for r in rows if str(r['vmid']) == selection)
+        manage_instance(project, ui, row)
 
 
 def set_watchdog(project, vmids, enabled):
@@ -291,6 +297,8 @@ def set_watchdog(project, vmids, enabled):
             done.update(oci_watchdog.set_watchdog(instances.ROOT, vmid, enabled))
         except (OSError, ValueError, KeyError):
             return False
+    # The copy a restore on another host reads carries the watchdog as well.
+    carry_records(project, mount_stopped=False, vmids=sorted(done))
     return True
 
 
