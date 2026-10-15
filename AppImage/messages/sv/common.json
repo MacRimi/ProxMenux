@@ -1453,7 +1453,17 @@
       "checkReadOnlyHelp": "Läser aktuellt operativsystem och väntande paket från befintliga index. Ingen installation och ingen uppdatering av paketindex.",
       "checkCooldown": "En kontroll körs redan eller har nyligen begärts. Försök igen om {seconds} sekunder.",
       "checkStale": "Föråldrad kontroll",
-      "checkStaleHelp": "Detta resultat är äldre än 48 timmar eller saknar ett giltigt kontrolldatum. Kör en ny kontroll innan du litar på det."
+      "checkStaleHelp": "Detta resultat är äldre än 48 timmar eller saknar ett giltigt kontrolldatum. Kör en ny kontroll innan du litar på det.",
+      "checkSystemPackages": "Kontrollera systempaket",
+      "checkInProgress": "Incheckning pågår",
+      "refreshCheckHelp": "Uppdaterar paketindex och kontrollerar väntande uppdateringar medan behållaren körs.Inget är installerat.",
+      "notCheckedYet": "Uppdateringar har inte kontrollerats ännu.",
+      "checkStillRunning": "Kontrollen körs fortfarande.Resultatet kommer att sparas när det är klart.",
+      "checkBeforeUpdate": "Kontrollera uppdateringarna först",
+      "startBeforeCheck": "Starta behållaren och leta sedan efter uppdateringar.Inget märke betyder inte att det inte finns några uppdateringar.",
+      "runCustomCommand": "Kör anpassat kommando",
+      "installedVersionUnverified": "Den installerade versionen är overifierad.Uppdateringstillgänglighet kunde inte bekräftas.",
+      "versionStatusUnknown": "Uppdateringstillgängligheten är overifierad.Versionsinformation är inte tillgänglig eller ofullständig."
     },
     "bulkUpdate": {
       "title": "Gruppuppdatering",
@@ -1478,7 +1488,10 @@
       "saveFailed": "Det gick inte att spara gruppuppdateringskonfigurationen.",
       "deleteFailed": "Det gick inte att ta bort gruppuppdateringskonfigurationen.",
       "planFailed": "Det gick inte att förbereda gruppuppdateringen. Kontrollera otillgängliga metoder.",
-      "loadFailed": "Det gick inte att läsa in massuppdateringskonfigurationen."
+      "loadFailed": "Det gick inte att läsa in massuppdateringskonfigurationen.",
+      "osDockerScope": "OS-uppdateringar inkluderar även Docker när det är installerat som ett systempaket.",
+      "unverifiedTargetsHelp": "Uppdateringstillgängligheten för vissa valda objekt är overifierad.Om du startar kommer de valda uppdateringsmetoderna att köras även utan en bekräftad ny version.",
+      "dockerImageMethod": "Docker bild"
     },
     "appEditor": {
       "methodOciImage": "OCI-avbild (installerad av ProxMenux)",

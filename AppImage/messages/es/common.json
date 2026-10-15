@@ -1453,7 +1453,17 @@
       "checkReadOnlyHelp": "Lee el sistema operativo actual y los paquetes pendientes a partir de los índices existentes. No instala nada ni actualiza los índices de paquetes.",
       "checkCooldown": "Ya hay una comprobación en curso o se ha solicitado hace poco. Inténtalo de nuevo en {seconds} segundos.",
       "checkStale": "Comprobación caducada",
-      "checkStaleHelp": "Este resultado tiene más de 48 horas o no tiene una fecha de comprobación válida. Lanza una nueva comprobación antes de fiarte de él."
+      "checkStaleHelp": "Este resultado tiene más de 48 horas o no tiene una fecha de comprobación válida. Lanza una nueva comprobación antes de fiarte de él.",
+      "checkSystemPackages": "comprobar los paquetes del sistema",
+      "checkInProgress": "Verificación en progreso",
+      "refreshCheckHelp": "actualiza los índices de paquetes y verifica las actualizaciones pendientes mientras el contenedor se está ejecutando.No hay nada instalado.",
+      "notCheckedYet": "Las actualizaciones aún no se han verificado.",
+      "checkStillRunning": "La verificación aún se está ejecutando.Su resultado se guardará cuando finalice.",
+      "checkBeforeUpdate": "Check updates first",
+      "startBeforeCheck": "inicie el contenedor y luego busque actualizaciones.No tener insignia no significa que no haya actualizaciones.",
+      "runCustomCommand": "ejecutar comando personalizado",
+      "installedVersionUnverified": "la versión instalada no está verificada.No se pudo confirmar la disponibilidad de la actualización.",
+      "versionStatusUnknown": "La disponibilidad de la actualización no está verificada.La información de la versión no está disponible o está incompleta."
     },
     "bulkUpdate": {
       "title": "Actualización en bloque",
@@ -1478,7 +1488,10 @@
       "saveFailed": "No se pudo guardar la configuración de actualización en bloque.",
       "deleteFailed": "No se pudo eliminar la configuración de actualización en bloque.",
       "planFailed": "No se pudo preparar la actualización en bloque. Edite la configuración y revise los métodos no disponibles.",
-      "loadFailed": "no se pudo cargar la configuración de actualización masiva."
+      "loadFailed": "no se pudo cargar la configuración de actualización masiva.",
+      "osDockerScope": "las actualizaciones del sistema operativo también incluyen Docker cuando se instala como paquete del sistema.",
+      "unverifiedTargetsHelp": "la disponibilidad de actualizaciones para algunos elementos seleccionados no está verificada.Al iniciar se ejecutarán los métodos de actualización seleccionados incluso sin una nueva versión confirmada.",
+      "dockerImageMethod": "imagen Docker"
     },
     "appEditor": {
       "dockerDetectedWithWorkloads": "Docker detectado con {count} aplicaciones en contenedores",

@@ -1453,7 +1453,17 @@
       "checkReadOnlyHelp": "Lê o sistema operativo atual e os pacotes pendentes a partir dos índices existentes. Não instala nada nem atualiza os índices de pacotes.",
       "checkCooldown": "Já há uma verificação em execução ou pedida recentemente. Tente novamente dentro de {seconds} segundos.",
       "checkStale": "Verificação desatualizada",
-      "checkStaleHelp": "Este resultado tem mais de 48 horas ou não tem uma data de verificação válida. Execute uma nova verificação antes de confiar nele."
+      "checkStaleHelp": "Este resultado tem mais de 48 horas ou não tem uma data de verificação válida. Execute uma nova verificação antes de confiar nele.",
+      "checkSystemPackages": "Verifique os pacotes do sistema",
+      "checkInProgress": "verificação em andamento",
+      "refreshCheckHelp": "atualiza índices de pacotes e verifica atualizações pendentes enquanto o contêiner está em execução.Nada está instalado.",
+      "notCheckedYet": "As atualizações ainda não foram verificadas.",
+      "checkStillRunning": "A verificação ainda está em execução.Seu resultado será salvo quando terminar.",
+      "checkBeforeUpdate": "verifique as atualizações primeiro",
+      "startBeforeCheck": "inicie o contêiner e verifique se há atualizações.Nenhum selo não significa que não haja atualizações.",
+      "runCustomCommand": "Executar comando personalizado",
+      "installedVersionUnverified": "a versão instalada não foi verificada.A disponibilidade da atualização não pôde ser confirmada.",
+      "versionStatusUnknown": "a disponibilidade da atualização não foi verificada.As informações da versão estão indisponíveis ou incompletas."
     },
     "bulkUpdate": {
       "title": "Atualização em bloco",
@@ -1478,7 +1488,10 @@
       "saveFailed": "Não foi possível guardar a configuração de atualização em bloco.",
       "deleteFailed": "Não foi possível remover a configuração de atualização em bloco.",
       "planFailed": "Não foi possível preparar a atualização em bloco. Reveja os métodos indisponíveis.",
-      "loadFailed": "não foi possível carregar a configuração de atualização em massa."
+      "loadFailed": "não foi possível carregar a configuração de atualização em massa.",
+      "osDockerScope": "as atualizações do sistema operacional também incluem Docker quando instalado como um pacote de sistema.",
+      "unverifiedTargetsHelp": "a disponibilidade de atualização para alguns itens selecionados não foi verificada.A inicialização executará os métodos de atualização selecionados mesmo sem uma nova versão confirmada.",
+      "dockerImageMethod": "imagem Docker"
     },
     "appEditor": {
       "methodOciImage": "Imagem OCI (instalada pelo ProxMenux)",

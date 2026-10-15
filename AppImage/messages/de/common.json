@@ -1453,7 +1453,17 @@
       "checkReadOnlyHelp": "Liest das aktuelle Betriebssystem und die ausstehenden Pakete aus den vorhandenen Indizes. Keine Installation und keine Aktualisierung der Paketindizes.",
       "checkCooldown": "Eine Prüfung läuft bereits oder wurde kürzlich angefordert. Versuchen Sie es in {seconds} Sekunden erneut.",
       "checkStale": "Prüfung veraltet",
-      "checkStaleHelp": "Dieses Ergebnis ist älter als 48 Stunden oder hat kein gültiges Prüfdatum. Führen Sie eine neue Prüfung durch, bevor Sie sich darauf verlassen."
+      "checkStaleHelp": "Dieses Ergebnis ist älter als 48 Stunden oder hat kein gültiges Prüfdatum. Führen Sie eine neue Prüfung durch, bevor Sie sich darauf verlassen.",
+      "checkSystemPackages": "Systempakete prüfen",
+      "checkInProgress": "Überprüfung läuft",
+      "refreshCheckHelp": "Aktualisiert Paketindizes und prüft ausstehende Aktualisierungen, während der Container ausgeführt wird.Es ist nichts installiert.",
+      "notCheckedYet": "Updates wurden noch nicht überprüft.",
+      "checkStillRunning": "Die Prüfung läuft noch.Das Ergebnis wird nach Abschluss gespeichert.",
+      "checkBeforeUpdate": "Überprüfen Sie zuerst die Updates",
+      "startBeforeCheck": "Starten Sie den Container und suchen Sie nach Updates.Kein Abzeichen bedeutet nicht, dass es keine Updates gibt.",
+      "runCustomCommand": "Benutzerdefinierten Befehl ausführen",
+      "installedVersionUnverified": "Die installierte Version ist nicht bestätigt.Die Verfügbarkeit des Updates konnte nicht bestätigt werden.",
+      "versionStatusUnknown": "Die Verfügbarkeit des Updates ist nicht bestätigt.Versionsinformationen sind nicht verfügbar oder unvollständig."
     },
     "bulkUpdate": {
       "title": "Sammelaktualisierung",
@@ -1478,7 +1488,10 @@
       "saveFailed": "Die Sammelaktualisierungskonfiguration konnte nicht gespeichert werden.",
       "deleteFailed": "Die Sammelaktualisierungskonfiguration konnte nicht entfernt werden.",
       "planFailed": "Die Sammelaktualisierung konnte nicht vorbereitet werden. Prüfen Sie die nicht verfügbaren Methoden.",
-      "loadFailed": "Die Massenaktualisierungskonfiguration konnte nicht geladen werden."
+      "loadFailed": "Die Massenaktualisierungskonfiguration konnte nicht geladen werden.",
+      "osDockerScope": "Betriebssystemaktualisierungen enthalten auch Docker, wenn es als Systempaket installiert wird.",
+      "unverifiedTargetsHelp": "Die Verfügbarkeit von Updates für einige ausgewählte Artikel ist nicht bestätigt.Beim Starten werden die ausgewählten Update-Methoden auch ohne bestätigte neue Version ausgeführt.",
+      "dockerImageMethod": "Docker-Bild"
     },
     "appEditor": {
       "methodOciImage": "OCI-Image (von ProxMenux installiert)",
