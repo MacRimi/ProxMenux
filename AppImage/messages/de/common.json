@@ -1079,7 +1079,11 @@
       "shutdown": "Abschalten",
       "reboot": "Neustart",
       "forceStop": "Stopp erzwingen",
-      "working": "Arbeiten..."
+      "working": "Arbeiten...",
+      "startPending": "Beginnt...",
+      "shutdownPending": "Herunterfahren...",
+      "rebootPending": "Neustart...",
+      "stopPending": "Stoppen..."
     },
     "confirm": {
       "forceStopTitle": "Stopp erzwingen",
@@ -1128,7 +1132,8 @@
       "saveCustomCommandFailed": "Der benutzerdefinierte Aktualisierungsbefehl konnte nicht gespeichert werden: {message}",
       "removeCustomCommandConfirm": "Den benutzerdefinierten Aktualisierungsbefehl für „{name}“ entfernen?",
       "removeCustomCommandFailed": "Der benutzerdefinierte Aktualisierungsbefehl konnte nicht entfernt werden: {message}",
-      "hideNoticeFailed": "Dieser Hinweis konnte nicht ausgeblendet werden: {message}"
+      "hideNoticeFailed": "Dieser Hinweis konnte nicht ausgeblendet werden: {message}",
+      "controlNotConfirmed": "Der Vorgang wurde nicht als abgeschlossen bestätigt.Überprüfen Sie den Gaststatus, bevor Sie es erneut versuchen."
     },
     "backupModal": {
       "title": "Sicherung {type} {vmid} ({name})",

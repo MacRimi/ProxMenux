@@ -1079,7 +1079,11 @@
       "shutdown": "Fermer",
       "reboot": "Redémarrer",
       "forceStop": "Forcer l'arrêt",
-      "working": "Fonctionnement..."
+      "working": "Fonctionnement...",
+      "startPending": "Démarrer...",
+      "shutdownPending": "Arrêter...",
+      "rebootPending": "Redémarrage...",
+      "stopPending": "Arrêter..."
     },
     "confirm": {
       "forceStopTitle": "Forcer l'arrêt",
@@ -1128,7 +1132,8 @@
       "saveCustomCommandFailed": "Impossible d'enregistrer la commande de mise à jour personnalisée : {message}",
       "removeCustomCommandConfirm": "Supprimer la commande de mise à jour personnalisée pour \"{name}\" ?",
       "removeCustomCommandFailed": "Impossible de supprimer la commande de mise à jour personnalisée : {message}",
-      "hideNoticeFailed": "Impossible de masquer cet avis : {message}"
+      "hideNoticeFailed": "Impossible de masquer cet avis : {message}",
+      "controlNotConfirmed": "L'opération n'a pas été confirmée comme étant terminée.Vérifiez le statut de l'invité avant de réessayer."
     },
     "backupModal": {
       "title": "Sauvegarde {type} {vmid} ({name})",

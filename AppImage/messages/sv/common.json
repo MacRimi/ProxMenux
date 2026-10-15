@@ -1079,7 +1079,11 @@
       "shutdown": "Stängning",
       "reboot": "Starta om",
       "forceStop": "Tvinga stopp",
-      "working": "Arbetssätt..."
+      "working": "Arbetssätt...",
+      "startPending": "Börjar...",
+      "shutdownPending": "Stänger av...",
+      "rebootPending": "Startar om...",
+      "stopPending": "Stoppar..."
     },
     "confirm": {
       "forceStopTitle": "Tvinga stopp",
@@ -1128,7 +1132,8 @@
       "saveCustomCommandFailed": "Kunde inte spara det anpassade uppdateringskommandot: {message}",
       "removeCustomCommandConfirm": "Ta bort det anpassade uppdateringskommandot för \"{name}\"?",
       "removeCustomCommandFailed": "Kunde inte ta bort det anpassade uppdateringskommandot: {message}",
-      "hideNoticeFailed": "Kunde inte dölja detta meddelande: {message}"
+      "hideNoticeFailed": "Kunde inte dölja detta meddelande: {message}",
+      "controlNotConfirmed": "Operationen har inte bekräftats slutförd.Kontrollera gäststatusen innan du försöker igen."
     },
     "backupModal": {
       "title": "Säkerhetskopiera {type} {vmid} ({name})",

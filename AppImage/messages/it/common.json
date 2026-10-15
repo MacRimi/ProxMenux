@@ -1079,7 +1079,11 @@
       "shutdown": "Spegni",
       "reboot": "Riavvia",
       "forceStop": "Forza arresto",
-      "working": "Operazione in corso..."
+      "working": "Operazione in corso...",
+      "startPending": "A partire...",
+      "shutdownPending": "Spegnimento...",
+      "rebootPending": "Riavvio...",
+      "stopPending": "Fermarsi..."
     },
     "confirm": {
       "forceStopTitle": "Forza arresto",
@@ -1128,7 +1132,8 @@
       "saveCustomCommandFailed": "Impossibile salvare il comando di aggiornamento personalizzato: {message}",
       "removeCustomCommandConfirm": "Rimuovere il comando di aggiornamento personalizzato per \"{name}\"?",
       "removeCustomCommandFailed": "Impossibile rimuovere il comando di aggiornamento personalizzato: {message}",
-      "hideNoticeFailed": "Impossibile nascondere questo avviso: {message}"
+      "hideNoticeFailed": "Impossibile nascondere questo avviso: {message}",
+      "controlNotConfirmed": "L'operazione non è stata confermata completata.Controlla lo stato dell'ospite prima di riprovare."
     },
     "backupModal": {
       "title": "Backup {type} {vmid} ({name})",

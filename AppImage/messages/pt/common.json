@@ -1079,7 +1079,11 @@
       "shutdown": "Desligar",
       "reboot": "Reinício",
       "forceStop": "Forçar parada",
-      "working": "Trabalhando..."
+      "working": "Trabalhando...",
+      "startPending": "Começando...",
+      "shutdownPending": "Desligando...",
+      "rebootPending": "Reiniciando...",
+      "stopPending": "Parando..."
     },
     "confirm": {
       "forceStopTitle": "Forçar parada",
@@ -1128,7 +1132,8 @@
       "saveCustomCommandFailed": "Não foi possível salvar o comando de atualização personalizado: {message}",
       "removeCustomCommandConfirm": "Remover o comando de atualização personalizado para \"{name}\"?",
       "removeCustomCommandFailed": "não foi possível remover o comando de atualização personalizado: {message}",
-      "hideNoticeFailed": "Não foi possível ocultar este aviso: {message}"
+      "hideNoticeFailed": "Não foi possível ocultar este aviso: {message}",
+      "controlNotConfirmed": "A operação não foi confirmada como concluída.Verifique o status do convidado antes de tentar novamente."
     },
     "backupModal": {
       "title": "Backup {type} {vmid} ({name})",
