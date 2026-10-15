@@ -69,7 +69,13 @@ _SYSTEM = {
     'elasticsearch', 'opensearch', 'fail2ban', 'named', 'bind9', 'dnsmasq',
     'avahi-daemon', 'smbd', 'nmbd', 'samba', 'vsftpd', 'proftpd', 'cups', 'tor',
 }
-_RUNTIMES = re.compile(r'(?:python[0-9.]*|node(?:js)?|sh|bash|dash|env|java|ruby|perl)\Z')
+_RUNTIMES = re.compile(r'(?:python[0-9.]*|node(?:js)?|npm|pnpm|yarn|bun|sh|bash|dash|env|java|ruby|perl)\Z')
+_PACKAGE_ROOT_RUNTIMES = {'node', 'nodejs', 'npm', 'pnpm', 'yarn', 'bun'}
+_HELPER_ROLES = {
+    'backup', 'bootstrap', 'bridge', 'cleanup', 'housekeeping', 'maintenance',
+    'migrate', 'migration', 'restore', 'rotate', 'update', 'updater', 'upgrade',
+    'watchdog', 'worker',
+}
 
 
 class ProbeError(Exception):
@@ -218,8 +224,23 @@ def _system(name):
         'unattended-', 'ifup', 'ifdown', 'user@', 'btrfs-', 'lvm2-', 'lxc-')))
 
 
+def _helper(name):
+    """Reject service roles that support an application but are not one themselves."""
+    raw = name.lower().removesuffix('.service')
+    if raw.endswith('@'):
+        return True  # A systemd template is not a concrete running application.
+    return any(part in _HELPER_ROLES for part in re.split(r'[._-]+', raw) if part)
+
+
 def _custom(path):
-    return _path(path) and path.startswith(('/opt/', '/srv/', '/usr/local/'))
+    if not _path(path):
+        return False
+    if path.startswith(('/opt/', '/srv/', '/usr/local/')):
+        return True
+    # Native apps commonly keep their runtime below /home/<service-user>/<app>.
+    # Do not accept a home directory itself: a second path component is required.
+    parts = path.split('/')
+    return len(parts) >= 4 and parts[1] == 'home' and bool(parts[2]) and bool(parts[3])
 
 
 def parse_records(text, kind):
@@ -240,10 +261,21 @@ def parse_records(text, kind):
             if service in seen_services:
                 continue  # /etc overrides vendor units; no duplicate installations.
             seen_services.add(service)
-            if not _NAME.fullmatch(service) or _system(service) or not _path(exe):
+            if (not _NAME.fullmatch(service) or _system(service) or _helper(service)
+                    or not _path(exe)):
                 continue
-            runtime = bool(_RUNTIMES.fullmatch(Path(exe).name))
-            install = script if runtime else exe
+            runtime_name = Path(exe).name
+            runtime = bool(_RUNTIMES.fullmatch(runtime_name))
+            if runtime and not _path(script):
+                # A Node/npm wrapper may keep its entry point relative to an
+                # operator-owned working directory.  `package.json` is a bounded,
+                # declarative footprint that proves the application root without
+                # reading command arguments, environment or service secrets.
+                if runtime_name not in _PACKAGE_ROOT_RUNTIMES or not _custom(directory):
+                    continue
+                install = str(Path(directory) / 'package.json')
+            else:
+                install = script if runtime else exe
             if (not _path(install) or _system(Path(install).name)
                     or install.startswith(('/usr/lib/systemd/', '/lib/systemd/',
                                            '/usr/lib/udev/', '/lib/udev/', '/usr/lib/apt/'))):
@@ -399,6 +431,7 @@ def scan(vmid, run=bounded_run):
             related[0].setdefault('listening_ports', []).extend(ports)
         elif not related and (_custom(exe) and _custom(directory)
                               and not _system(Path(exe).name)
+                              and not _helper(Path(exe).name)
                               and not _RUNTIMES.fullmatch(Path(exe).name)
                               and exe.startswith(directory.rstrip('/') + '/')
                               and _NAME.fullmatch(Path(exe).name)):

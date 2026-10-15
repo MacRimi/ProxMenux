@@ -119,6 +119,55 @@ class DiscoveryFixtures(unittest.TestCase):
                 self.assertEqual(result['candidates'], [])
                 self.assertFalse(any(native.FOOTPRINT_SCRIPT in call for call in self.calls))
 
+    def test_helper_services_and_templates_have_zero_footprint_probes(self):
+        cases = [
+            ('netpulse-stable-update', '/bin/bash', '/opt/netpulse', '/opt/netpulse/stable-apply.sh'),
+            ('rent-tool-backup', '/bin/bash', '/home/app/rent-tool', '/home/app/rent-tool/scripts/backup-db.sh'),
+            ('keynest-update', '/bin/bash', '/opt/keynest', '/opt/keynest/keynest-update.sh'),
+            ('cortendesk-bootstrap-worker', '/bin/bash', '/opt/cortendesk', '/opt/cortendesk/bootstrap-worker.sh'),
+            ('cortendesk-source-worker', '/bin/bash', '/opt/cortendesk', '/opt/cortendesk/source-worker.sh'),
+            ('cortendesk-managed-password@', '/bin/bash', '/opt/cortendesk', '/opt/cortendesk/password-bridge.sh'),
+        ]
+        for name, exe, directory, script in cases:
+            with self.subTest(name=name):
+                self.calls.clear()
+                result = native.scan(101, self.runner(service(
+                    name=name, exe=exe, directory=directory, script=script)))
+                self.assertEqual(result['candidates'], [])
+                self.assertFalse(any(native.FOOTPRINT_SCRIPT in call for call in self.calls))
+
+    def test_node_and_npm_wrappers_use_only_custom_package_roots(self):
+        cases = [
+            ('keynest', '/usr/bin/node', '/opt/keynest'),
+            ('rent-tool', '/usr/local/bin/npm', '/home/app/rent-tool'),
+        ]
+        for name, exe, directory in cases:
+            with self.subTest(name=name):
+                self.calls.clear()
+                result = native.scan(101, self.runner(
+                    service(name=name, exe=exe, directory=directory),
+                    footprint='FILE\n{"version":"1.2.3"}'))
+                item, = result['candidates']
+                self.assertEqual(item['name'], name)
+                self.assertEqual(item['installation_path'], directory + '/package.json')
+                self.assertEqual(item['installed_version'], '1.2.3')
+                footprint_calls = [call for call in self.calls if native.FOOTPRINT_SCRIPT in call]
+                self.assertEqual(len(footprint_calls), 1)
+                self.assertEqual(footprint_calls[0][-2:], [directory + '/package.json', directory])
+
+        self.calls.clear()
+        result = native.scan(101, self.runner(service(
+            name='ambiguous-home-runtime', exe='/usr/bin/node', directory='/home/app')))
+        self.assertEqual(result['candidates'], [])
+        self.assertFalse(any(native.FOOTPRINT_SCRIPT in call for call in self.calls))
+
+    def test_helper_process_fallback_has_zero_footprint_probes(self):
+        self.calls.clear()
+        result = native.scan(101, self.runner(
+            services='END\n', processes='P\t123\t/opt/cortendesk/run-worker\t/opt/cortendesk\nEND\n'))
+        self.assertEqual(result['candidates'], [])
+        self.assertFalse(any(native.FOOTPRINT_SCRIPT in call for call in self.calls))
+
     def test_missing_remote_qemu_stopped_busy_oci_guards_precede_exec(self):
         scenarios = ['missing', 'stopped', 'busy', 'oci', 'invalid-oci', 'unmanaged']
         for scenario in scenarios:
