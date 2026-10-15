@@ -4066,6 +4066,7 @@
   "No Shares Found": "No se encontraron recursos compartidos",
   "No Shares to Test": "Sin recursos compartidos que probar",
   "No Storage Found": "No se encontró almacenamiento",
+  "No UPS was found on a USB port of this host. Connect it and start the installation again.": "No se encontró ningún SAI en los puertos USB de este host. Conéctelo y vuelva a iniciar la instalación.",
   "No USB drives detected. Enter the mountpoint path manually:": "No se detectaron unidades USB.Ingrese la ruta del punto de montaje manualmente:",
   "No USB drives mounted by ProxMenux yet. Mount one first to use it as a target.": "Aún no hay unidades USB montadas por ProxMenux. Monte una primero para usarla como destino.",
   "No UUP folder found.": "No se encontró ninguna carpeta UUP.",

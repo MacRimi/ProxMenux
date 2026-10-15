@@ -382,6 +382,19 @@ export function LxcTerminalModal({
                 
                 return
               }
+
+              // The host prompt came back: pct enter could not enter the
+              // container. Show why and close, so the session is never left
+              // on the host shell under the container's name.
+              const reason = afterPctEnter.split(/\r?\n/).slice(0, -1)
+                .map((line) => line.trim()).filter(Boolean).join("\r\n")
+              if (reason) term.writeln(`\x1b[31m${reason}\x1b[0m`)
+              term.writeln(`\r\n\x1b[33m${/Failed to exec/.test(reason)
+                ? t("lxcTerminal.errors.noShell")
+                : t("lxcTerminal.errors.enterFailed")}\x1b[0m`)
+              isInsideLxcRef.current = true
+              ws.close()
+              return
             }
           }
         } else {

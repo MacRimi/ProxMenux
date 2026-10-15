@@ -12,6 +12,7 @@
     "makemkv",
     "mkvtoolnix",
     "nextcloud-stack",
+    "nut-server",
     "open-webui",
     "open-webui-cuda",
     "open-webui-ollama",
@@ -22,7 +23,7 @@
     "stremio",
     "tandoor"
   ],
-  "generated_count": 21,
+  "generated_count": 22,
   "failed": [],
   "failed_count": 0
 }

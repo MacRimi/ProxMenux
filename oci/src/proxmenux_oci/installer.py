@@ -82,6 +82,19 @@ def _image_documentation(template: dict[str, Any]) -> str | None:
                  if str(ui.get(key) or "").startswith(("http://", "https://"))), None)
 
 
+def ups_device_request(item: dict[str, Any], advanced: bool) -> dict[str, Any]:
+    """The UPS proposed is the one the host sees on USB: its bus node changes
+    with the port and the order of connection. Without one, only the advanced
+    installation goes on, to type the node by hand."""
+    found = [row["path"] for row in host.usb_devices() if row["kind"] == "UPS"]
+    if found:
+        return {**item, "host_path_default": found[0]}
+    if not advanced:
+        raise UserCancelled(translate("No UPS was found on a USB port of this host. "
+                                      "Connect it and start the installation again."))
+    return item
+
+
 def external_services_notice(template: dict[str, Any]) -> str | None:
     """What an application needs already running on the network, as a database
     of its own. Said before its installation asks how to reach it, so it can be
@@ -1974,9 +1987,11 @@ def configure_acceleration(installer_profile, environment, unprivileged, ui, mod
                      if vendor_id in item.get("drm_vendor_ids", []) for node in host.gpus()[vendor]]
             if nodes and item["host_path_default"] not in nodes:
                 item = {**item, "host_path_default": nodes[0]}
+            if item.get("purpose") == "ups":
+                item = ups_device_request(item, advanced)
             if not advanced:
                 host_path = item["host_path_default"]
-            elif item.get("purpose") in ("serial", "user-selected-device"):
+            elif item.get("purpose") in ("serial", "user-selected-device", "ups"):
                 from .extra_devices import choose_usb_device
                 host_path = choose_usb_device(ui, translate(item["path_prompt"]), item["host_path_default"],
                                               {device.get("host_path") for device in devices})

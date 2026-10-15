@@ -5014,7 +5014,9 @@
   "lxcTerminal": {
     "title": "Terminal: {name} (ID: {id})",
     "errors": {
-      "invalidVmid": "Invalid VMID — refusing to execute pct enter"
+      "invalidVmid": "Invalid VMID — refusing to execute pct enter",
+      "noShell": "This container's image has no shell, so it cannot open a terminal. Its output is in the Logs tab.",
+      "enterFailed": "The container could not be entered."
     },
     "commands": {
       "listFiles": "List all files with details",
