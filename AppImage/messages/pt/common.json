@@ -2213,13 +2213,13 @@
         "startFromScratch": "Comece do zero"
       },
       "history": {
-        "title": "histórico de notificações",
+        "title": "Histórico de notificações",
         "description": "As últimas 20 notificações enviadas, incluindo cada execução do resumo diário, com o resultado de cada uma.",
         "empty": "Nenhuma notificação foi enviada ainda.",
         "loadFailed": "O histórico de notificações não pôde ser carregado.",
         "sent": "Enviado",
         "notSent": "Não enviado",
-        "severityInfo": "Informações",
+        "severityInfo": "Info",
         "severityWarning": "Aviso",
         "severityCritical": "Crítico"
       }

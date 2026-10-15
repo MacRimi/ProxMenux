@@ -2214,12 +2214,12 @@
       },
       "history": {
         "title": "Historique des notifications",
-        "description": "les 20 dernières notifications envoyées, y compris chaque exécution du résumé quotidien, avec le résultat de chacune.",
-        "empty": "aucune notification n'a encore été envoyée.",
+        "description": "Les 20 dernières notifications envoyées, y compris chaque exécution du résumé quotidien, avec le résultat de chacune.",
+        "empty": "Aucune notification n'a encore été envoyée.",
         "loadFailed": "L'historique des notifications n'a pas pu être chargé.",
         "sent": "Envoyé",
         "notSent": "Non envoyé",
-        "severityInfo": "Informations",
+        "severityInfo": "Info",
         "severityWarning": "Avertissement",
         "severityCritical": "Critique"
       }
