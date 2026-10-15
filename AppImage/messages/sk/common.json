@@ -3432,7 +3432,7 @@
       "webhookHttps": "Upozornenia Proxmoxu sa dostanú do Monitora aj so zapnutým HTTPS — doručujú sa na výhradne lokálnu adresu a už nezlyhávajú na chybe certifikátu.",
       "persistentLogs": "Skončená vlna chýb v logoch sa už nehlási ako trvalá: vzor sa musí opakovať 15 minút a jeho upozornenie sa zatvorí samo (nahlásil @Joshua1264).",
       "mountsLanAddress": "Body pripojenia na LVM-thin a inom blokovom úložisku zobrazujú svoje využitie a aplikácie s viacerými kontajnermi sa otvárajú na svojej LAN adrese.",
-      "ociManager": "OCI manager Apps (beta) — nová položka v ponuke ProxMenux inštaluje aplikácie z ich oficiálnych kontajnerových image ako natívne Proxmox LXC, bez enginu Docker. Katalóg obsahuje viac ako 360 aplikácií.",
+      "ociManager": "OCI manager Apps (Technology Preview) — nová položka v ponuke ProxMenux inštaluje aplikácie z ich oficiálnych kontajnerových image ako natívne Proxmox LXC, bez enginu Docker. Katalóg obsahuje viac ako 360 aplikácií.",
       "ociInMonitor": "OCI aplikácie v Monitore — karta Aplikácie ich rozpozná, karta Aktualizácie ich aktualizuje a upravuje rovnako ako ponuka a karta Logy naživo sleduje výstup konzoly aplikácie.",
       "ociAcceleration": "Hardvérová akcelerácia pre OCI aplikácie — inštalátor ponúka iba profily, ktoré hostiteľ dokáže spustiť: GPU NVIDIA, Intel a AMD a pre Frigate Intel NPU alebo Coral. NVIDIA Container Toolkit sa inštaluje spolu s ovládačom.",
       "ociRecovery": "OCI aplikácia cestuje so svojou zálohou — po obnovení na tomto alebo inom hostiteľovi je znova zaregistrovaná a spravovaná a v klastri sa spustí na uzle, na ktorý sa presunie.",
@@ -5015,8 +5015,8 @@
     "title": "Terminál: {name} (ID: {id})",
     "errors": {
       "invalidVmid": "Neplatné VMID — pct enter sa nespustí",
-      "noShell": "Obrázok tohto kontajnera nemá shell, takže nemôže otvoriť terminál.Jeho výstup je v záložke Logs.",
-      "enterFailed": "Kontajner sa nepodarilo zadať."
+      "noShell": "Image tohto kontajnera nemá shell, takže nemôže otvoriť terminál. Jeho výstup je na karte Logy.",
+      "enterFailed": "Do kontajnera sa nepodarilo vstúpiť."
     },
     "commands": {
       "listFiles": "Zobraziť podrobnosti o súboroch",

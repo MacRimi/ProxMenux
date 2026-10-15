@@ -3433,7 +3433,7 @@
       "webhookHttps": "Le notifiche Proxmox raggiungono il Monitor con HTTPS attivo: consegnate su un indirizzo solo locale, non falliscono più per errori di certificato.",
       "persistentLogs": "Una raffica di errori di log conclusa non è più segnalata come persistente: un pattern deve continuare a comparire per 15 minuti e l’avviso si chiude da solo (segnalato da @Joshua1264).",
       "mountsLanAddress": "I mount su LVM-thin e altri storage a blocchi mostrano l’utilizzo; le app multi-container si aprono al proprio indirizzo LAN.",
-      "ociManager": "OCI manager Apps (beta): una nuova voce nel menu di ProxMenux installa le applicazioni dalle loro immagini container ufficiali come LXC nativi di Proxmox, senza motore Docker. Il catalogo contiene oltre 360 applicazioni.",
+      "ociManager": "OCI manager Apps (Technology Preview): una nuova voce nel menu di ProxMenux installa le applicazioni dalle loro immagini container ufficiali come LXC nativi di Proxmox, senza motore Docker. Il catalogo contiene oltre 360 applicazioni.",
       "ociInMonitor": "Applicazioni OCI nel Monitor: la scheda App le riconosce, la scheda Aggiornamenti le aggiorna e le modifica come fa il menu, e una scheda Log segue in tempo reale l'output della console dell'applicazione.",
       "ociAcceleration": "Accelerazione hardware per le applicazioni OCI: l'installer offre solo i profili che l'host può eseguire: GPU NVIDIA, Intel e AMD e, per Frigate, una NPU Intel o una Coral. NVIDIA Container Toolkit viene installato con il driver.",
       "ociRecovery": "Un'applicazione OCI viaggia con il suo backup: ripristinata su questo host o su un altro, viene di nuovo registrata e gestita, e in un cluster si avvia sul nodo su cui viene spostata.",
@@ -5016,8 +5016,8 @@
     "title": "Terminale: {name} (ID: {id})",
     "errors": {
       "invalidVmid": "VMID non valido: esecuzione di pct enter rifiutata",
-      "noShell": "l'immagine di questo contenitore non ha shell, quindi non può aprire un terminale.Il suo output si trova nella scheda Log.",
-      "enterFailed": "non è stato possibile inserire il contenitore."
+      "noShell": "L'immagine di questo container non ha una shell, quindi non può aprire un terminale. Il suo output si trova nella scheda Log.",
+      "enterFailed": "Impossibile entrare nel container."
     },
     "commands": {
       "listFiles": "Elenca tutti i file con dettagli",

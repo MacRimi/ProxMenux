@@ -173,7 +173,7 @@ def _app_detail_text(catalog: Catalog, item: dict[str, Any], template: dict[str,
         lines.append(f"{label + ':':<17} {value}")
 
     row(translate("Source"), publisher(item))
-    # Only a real test is shown; OCI manager Apps is labelled beta as a whole.
+    # Only a real test is shown; OCI manager Apps is a Technology Preview as a whole.
     if is_tested(item):
         row(translate("Status"), translate("Verified"))
     row(translate("Architectures"), _display_architectures(ui))
@@ -389,7 +389,7 @@ def _print_installation_summary(result: dict[str, Any], images_removed: str | No
     if result.get("log"):
         console.msg_note(f"{translate('Installation log:')} {result['log']}")
     print()
-    console.msg_note(translate("OCI manager Apps is a beta: if something does not work as expected, "
+    console.msg_note(translate("OCI manager Apps is a Technology Preview: if something does not work as expected, "
                                "please report it on GitHub with the application name."))
 
 
@@ -612,7 +612,7 @@ def _template_summary_text(template: dict[str, Any]) -> str:
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="oci_manager_apps.sh",
-                                     description="ProxMenux OCI manager Apps (beta)")
+                                     description="ProxMenux OCI manager Apps (Technology Preview)")
     subparsers = parser.add_subparsers(dest="command")
     subparsers.add_parser("sync", help="Refresh the index from the image sources")
     list_parser = subparsers.add_parser("list", help="List applications")

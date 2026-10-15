@@ -107,7 +107,7 @@ class BacktrackUI:
             raise UserCancelled(translate('Wizard cancelled'))
 
 
-APP_TITLE = translate("OCI manager Apps (beta)")
+APP_TITLE = translate("OCI manager Apps (Technology Preview)")
 
 
 @dataclass

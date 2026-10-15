@@ -73,7 +73,7 @@ show_menu() {
             4 "$(translate "Disk Manager")" \
             5 "$(translate "Storage & Share Manager")" \
             6 "$(translate "Proxmox VE Helper Scripts")" \
-            o "$(translate "OCI manager Apps (beta)")" \
+            o "$(translate "OCI manager Apps (Technology Preview)")" \
             7 "$(translate "Network Management")" \
             8 "$(translate "Security")" \
             9 "$(translate "Utilities and Tools")" \

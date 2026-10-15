@@ -3433,7 +3433,7 @@
       "webhookHttps": "Proxmox-Benachrichtigungen erreichen den Monitor auch mit aktiviertem HTTPS — sie werden über eine nur lokale Adresse zugestellt und scheitern nicht mehr an einem Zertifikatsfehler.",
       "persistentLogs": "Eine beendete Häufung von Log-Fehlern wird nicht mehr als dauerhaft gemeldet: Ein Muster muss 15 Minuten lang weiter auftreten, und seine Warnung schließt sich von selbst (gemeldet von @Joshua1264).",
       "mountsLanAddress": "Mountpunkte auf LVM-thin und anderem Blockspeicher zeigen ihre Belegung, und Multi-Container-Anwendungen öffnen sich unter ihrer LAN-Adresse.",
-      "ociManager": "OCI manager Apps (Beta) – ein neuer Eintrag im ProxMenux-Menü installiert Anwendungen aus ihren offiziellen Container-Images als native Proxmox-LXC, ohne Docker-Engine. Der Katalog umfasst über 360 Anwendungen.",
+      "ociManager": "OCI manager Apps (Technology Preview) – ein neuer Eintrag im ProxMenux-Menü installiert Anwendungen aus ihren offiziellen Container-Images als native Proxmox-LXC, ohne Docker-Engine. Der Katalog umfasst über 360 Anwendungen.",
       "ociInMonitor": "OCI-Anwendungen im Monitor – die App-Registerkarte erkennt sie, die Updates-Registerkarte aktualisiert und ändert sie wie das Menü, und eine Logs-Registerkarte verfolgt die Konsolenausgabe der Anwendung live.",
       "ociAcceleration": "Hardwarebeschleunigung für OCI-Anwendungen – das Installationsprogramm bietet nur die Profile an, die der Host ausführen kann: NVIDIA-, Intel- und AMD-GPUs und für Frigate eine Intel-NPU oder eine Coral. Das NVIDIA Container Toolkit wird mit dem Treiber installiert.",
       "ociRecovery": "Eine OCI-Anwendung reist mit ihrem Backup – auf diesem oder einem anderen Host wiederhergestellt, wird sie erneut registriert und verwaltet, und in einem Cluster startet sie auf dem Knoten, auf den sie verschoben wird.",
@@ -5016,8 +5016,8 @@
     "title": "Terminal: {name} (ID: {id})",
     "errors": {
       "invalidVmid": "Ungültige VMID – Ausführung von pct enter wird abgelehnt",
-      "noShell": "Das Bild dieses Containers hat keine Shell und kann daher kein Terminal öffnen.Die Ausgabe erfolgt auf der Registerkarte „Protokolle“.",
-      "enterFailed": "Der Container konnte nicht eingegeben werden."
+      "noShell": "Das Image dieses Containers hat keine Shell und kann daher kein Terminal öffnen. Die Ausgabe steht auf der Registerkarte „Logs“.",
+      "enterFailed": "In den Container konnte nicht gewechselt werden."
     },
     "commands": {
       "listFiles": "Listen Sie alle Dateien mit Details auf",

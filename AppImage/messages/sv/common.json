@@ -3433,7 +3433,7 @@
       "webhookHttps": "Proxmox-aviseringar når Monitor med HTTPS aktiverat — de levereras till en adress som bara är lokal och misslyckas inte längre på grund av ett certifikatfel.",
       "persistentLogs": "En avslutad skur av loggfel rapporteras inte längre som bestående: ett mönster måste fortsätta att dyka upp i 15 minuter, och dess varning stängs av sig själv (rapporterat av @Joshua1264).",
       "mountsLanAddress": "Monteringspunkter på LVM-thin och annan blocklagring visar sin användning, och program med flera containrar öppnas på sin LAN-adress.",
-      "ociManager": "OCI manager Apps (beta) — en ny post i ProxMenux-menyn installerar applikationer från deras officiella containeravbilder som inbyggda Proxmox LXC, utan Docker-motor. Katalogen innehåller över 360 applikationer.",
+      "ociManager": "OCI manager Apps (Technology Preview) — en ny post i ProxMenux-menyn installerar applikationer från deras officiella containeravbilder som inbyggda Proxmox LXC, utan Docker-motor. Katalogen innehåller över 360 applikationer.",
       "ociInMonitor": "OCI-applikationer i Monitor — fliken App känner igen dem, fliken Uppdateringar uppdaterar och ändrar dem som menyn gör, och fliken Logs följer applikationens konsolutdata live.",
       "ociAcceleration": "Hårdvaruacceleration för OCI-applikationer — installationsprogrammet erbjuder bara de profiler som värden kan köra: NVIDIA-, Intel- och AMD-GPU:er och, för Frigate, en Intel NPU eller en Coral. NVIDIA Container Toolkit installeras med drivrutinen.",
       "ociRecovery": "En OCI-applikation reser med sin säkerhetskopia — återställd på den här värden eller på en annan registreras och hanteras den igen, och i ett kluster startar den på den nod den flyttas till.",
@@ -5016,8 +5016,8 @@
     "title": "Terminal: {name} (ID: {id})",
     "errors": {
       "invalidVmid": "Ogiltig VMID — vägrar att köra pct enter",
-      "noShell": "Den här behållarens bild har inget skal, så den kan inte öppna en terminal.Dess utdata finns på fliken Loggar.",
-      "enterFailed": "Behållaren kunde inte anges."
+      "noShell": "Den här behållarens avbildning har inget skal, så den kan inte öppna en terminal. Dess utdata finns på fliken Loggar.",
+      "enterFailed": "Det gick inte att gå in i behållaren."
     },
     "commands": {
       "listFiles": "Lista alla filer med detaljer",
