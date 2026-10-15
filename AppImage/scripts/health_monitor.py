@@ -6003,6 +6003,7 @@ class HealthMonitor:
             if status == 'stale':
                 checks[check_label] = {
                     'status': 'CRITICAL',
+                    'error_key': error_key,
                     'detail': f'{fstype} mount stale: {error or "unreachable"}',
                     'fstype': fstype,
                     'source': m.get('source', ''),
@@ -6032,6 +6033,7 @@ class HealthMonitor:
             elif status == 'readonly':
                 checks[check_label] = {
                     'status': 'WARNING',
+                    'error_key': error_key,
                     'detail': f'{fstype} mount unexpectedly read-only',
                     'fstype': fstype,
                     'source': m.get('source', ''),
