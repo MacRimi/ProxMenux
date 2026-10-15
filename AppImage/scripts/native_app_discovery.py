@@ -62,6 +62,12 @@ _SYSTEM = {
     'ip6tables', 'firewalld', 'ufw', 'resolvconf', 'wpa-supplicant', 'modemmanager',
     'console-setup', 'keyboard-setup', 'plymouth', 'halt', 'reboot', 'shutdown',
     'rc-local', 'ntpsec', 'networkd-dispatcher', 'busybox', 'atd', 'uuidd',
+    # Common packaged daemons are infrastructure, not a user-managed app.
+    'nginx', 'apache', 'apache2', 'httpd', 'lighttpd', 'haproxy', 'traefik',
+    'redis', 'redis-server', 'memcached', 'mysql', 'mysqld', 'mariadb', 'mariadbd',
+    'postgres', 'postgresql', 'mongod', 'mongodb', 'rabbitmq-server',
+    'elasticsearch', 'opensearch', 'fail2ban', 'named', 'bind9', 'dnsmasq',
+    'avahi-daemon', 'smbd', 'nmbd', 'samba', 'vsftpd', 'proftpd', 'cups', 'tor',
 }
 _RUNTIMES = re.compile(r'(?:python[0-9.]*|node(?:js)?|sh|bash|dash|env|java|ruby|perl)\Z')
 
@@ -205,9 +211,11 @@ def _path(value):
 def _system(name):
     raw = name.lower().removesuffix('.service')
     stem = raw.split('@')[0]
-    return raw.startswith('user@') or stem in _SYSTEM or stem.startswith((
+    return (raw.startswith('user@') or stem in _SYSTEM
+            or (raw.startswith('php') and raw.endswith('-fpm'))
+            or stem.startswith((
         'systemd-', 'dbus-', 'getty', 'containerd-', 'apt-', 'dpkg-', 'e2scrub',
-        'unattended-', 'ifup', 'ifdown', 'user@', 'btrfs-', 'lvm2-', 'lxc-'))
+        'unattended-', 'ifup', 'ifdown', 'user@', 'btrfs-', 'lvm2-', 'lxc-')))
 
 
 def _custom(path):
@@ -239,6 +247,13 @@ def parse_records(text, kind):
             if (not _path(install) or _system(Path(install).name)
                     or install.startswith(('/usr/lib/systemd/', '/lib/systemd/',
                                            '/usr/lib/udev/', '/lib/udev/', '/usr/lib/apt/'))):
+                continue
+            # /etc units are operator-owned.  Do not infer an application from an
+            # arbitrary packaged systemd unit: without a package-db probe it is
+            # impossible to distinguish vendor infrastructure from a user app.
+            if (manager == 'systemd'
+                    and source.startswith(('/usr/lib/systemd/system/', '/lib/systemd/system/'))
+                    and not _custom(install)):
                 continue
             root = directory if _custom(directory) else str(Path(install).parent)
             # Generic runtime without an absolute application script is ambiguous.

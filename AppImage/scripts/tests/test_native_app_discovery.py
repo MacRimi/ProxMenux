@@ -19,9 +19,9 @@ import native_app_discovery as native
 import lxc_apps
 
 
-def service(name='handmade', exe='/opt/handmade/server', directory='/opt/handmade', manager='systemd', script=''):
-    path = ('/etc/systemd/system/' + name + '.service' if manager == 'systemd'
-            else '/etc/init.d/' + name)
+def service(name='handmade', exe='/opt/handmade/server', directory='/opt/handmade', manager='systemd', script='', source=None):
+    path = source or ('/etc/systemd/system/' + name + '.service' if manager == 'systemd'
+                      else '/etc/init.d/' + name)
     return '\t'.join(['S', path, manager, exe, script, directory]) + '\nEND\n'
 
 
@@ -99,6 +99,25 @@ class DiscoveryFixtures(unittest.TestCase):
             result = native.scan(101, self.runner(service(name=name, exe=exe)))
             self.assertEqual(result['candidates'], [])
             self.assertFalse(any(native.FOOTPRINT_SCRIPT in call for call in self.calls))
+
+    def test_common_system_daemons_and_vendor_units_have_zero_footprint_probes(self):
+        cases = [
+            ('nginx', '/usr/sbin/nginx', 'openrc', None),
+            ('apache2', '/usr/sbin/apache2', 'systemd', None),
+            ('redis-server', '/usr/bin/redis-server', 'systemd', None),
+            ('mariadb', '/usr/sbin/mariadbd', 'systemd', None),
+            ('postgresql', '/usr/lib/postgresql/16/bin/postgres', 'systemd', None),
+            ('php8.3-fpm', '/usr/sbin/php-fpm8.3', 'systemd', None),
+            ('vendor-daemon', '/usr/bin/vendor-daemon', 'systemd',
+             '/usr/lib/systemd/system/vendor-daemon.service'),
+        ]
+        for name, exe, manager, source in cases:
+            with self.subTest(name=name):
+                self.calls.clear()
+                result = native.scan(101, self.runner(
+                    service(name=name, exe=exe, manager=manager, source=source)))
+                self.assertEqual(result['candidates'], [])
+                self.assertFalse(any(native.FOOTPRINT_SCRIPT in call for call in self.calls))
 
     def test_missing_remote_qemu_stopped_busy_oci_guards_precede_exec(self):
         scenarios = ['missing', 'stopped', 'busy', 'oci', 'invalid-oci', 'unmanaged']
