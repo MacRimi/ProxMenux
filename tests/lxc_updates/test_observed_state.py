@@ -365,6 +365,35 @@ class ObservedStateRoutesTests(unittest.TestCase):
         self.assertEqual(managed.get_registry()["items"][0]["_os_family"], "debian")
         self.assertEqual(self.row()["update_check"]["count"], 0)
 
+    def test_daily_successful_check_clears_an_older_failed_check_marker(self):
+        marker = Path(self.temp.name) / 'proxmenux-lxc-check-invalid-100'
+        marker.touch()
+
+        with patch.object(managed, '_refresh_lxc_pkg_cache_if_stale', return_value={}):
+            managed.check_for_updates()
+
+        self.assertFalse(marker.exists())
+        self.assertIsNone(managed.get_registry()['items'][0]['update_check']['error'])
+
+    def test_daily_check_keeps_a_marker_created_after_it_started(self):
+        marker = Path(self.temp.name) / 'proxmenux-lxc-check-invalid-100'
+        marker.touch()
+        os.utime(marker, ns=(2_000, 2_000))
+
+        with patch.object(managed.time, 'time_ns', return_value=1_000):
+            managed.check_for_updates()
+
+        self.assertTrue(marker.exists())
+
+    def test_daily_check_does_not_clear_marker_when_result_cannot_be_persisted(self):
+        marker = Path(self.temp.name) / 'proxmenux-lxc-check-invalid-100'
+        marker.touch()
+
+        with patch.object(managed, '_write_registry', return_value=False):
+            managed.check_for_updates()
+
+        self.assertTrue(marker.exists())
+
     def test_existing_global_refresh_route_keeps_its_collector_contract(self):
         with patch.object(managed, "_DETECTORS", [managed._detect_lxc_containers]), \
                 patch.object(managed, "_refresh_lxc_pkg_cache_if_stale", return_value={}) as refresh:
@@ -374,10 +403,13 @@ class ObservedStateRoutesTests(unittest.TestCase):
         self.assertEqual(managed.get_registry()["items"][0]["_os_family"], "debian")
 
     def test_existing_lifecycle_refresh_keeps_index_refresh_default(self):
+        marker = Path(self.temp.name) / 'proxmenux-lxc-check-invalid-100'
+        marker.touch()
         with patch.object(managed, "_refresh_lxc_pkg_cache_if_stale", return_value={}) as refresh:
             item = managed.refresh_lxc(100)
         refresh.assert_called_once_with("100", "debian")
         self.assertEqual(item["update_check"]["_count"], 0)
+        self.assertFalse(marker.exists())
 
     def test_other_lxc_has_independent_ip_cache_and_manual_rate_limit(self):
         conf200 = Path(self.temp.name) / "200.conf"

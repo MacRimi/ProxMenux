@@ -1,6 +1,7 @@
 """Real job, Flask routes and shared flock; guest transport is isolated."""
 import ast
 import datetime
+import os
 import subprocess
 import sys
 import tempfile
@@ -89,6 +90,26 @@ class CheckOnlyTests(unittest.TestCase):
         result, _, _ = self.run_check()
         self.assertEqual(result['state'], 'complete')
         self.assertFalse((self.folder / 'proxmenux-lxc-check-invalid-100').exists())
+
+    def test_marker_cleanup_failure_reports_failure_and_releases_the_operation_lock(self):
+        self.state = 'running'
+        with patch.object(job, 'clear_invalid_marker', return_value=False):
+            result, _, _ = self.run_check()
+        self.assertEqual(result['state'], 'failed')
+        self.assertIn('could not be published', result['error'])
+        reservation = job.acquire(100)
+        reservation.close()
+
+    def test_marker_created_after_a_check_started_is_not_cleared(self):
+        marker = self.folder / 'proxmenux-lxc-check-invalid-100'
+        marker.touch()
+        os.utime(marker, ns=(2_000, 2_000))
+
+        self.assertFalse(job.clear_invalid_marker(100, check_started_ns=1_000))
+        self.assertTrue(marker.exists())
+
+    def test_already_cleared_marker_is_a_successful_publish(self):
+        self.assertTrue(job.clear_invalid_marker(100))
 
     def test_index_read_timeout_and_persistence_errors_keep_running_guest_running(self):
         self.state = 'running'

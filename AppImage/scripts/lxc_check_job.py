@@ -38,6 +38,53 @@ def acquire(vmid):
         raise
 
 
+def _invalid_marker(vmid):
+    return LOCK_DIR / f'proxmenux-lxc-check-invalid-{int(vmid)}'
+
+
+def _acquire_invalid_marker_guard(vmid):
+    path = LOCK_DIR / f'proxmenux-lxc-check-invalid-{int(vmid)}.guard'
+    handle = os.fdopen(os.open(path, os.O_RDWR | os.O_CREAT | os.O_NOFOLLOW, 0o600), 'r+')
+    try:
+        fcntl.flock(handle, fcntl.LOCK_EX)
+        return handle
+    except BaseException:
+        handle.close()
+        raise
+
+
+def _mark_check_invalid(vmid):
+    handle = _acquire_invalid_marker_guard(vmid)
+    try:
+        _invalid_marker(vmid).touch(mode=0o600)
+    finally:
+        handle.close()
+
+
+def clear_invalid_marker(vmid, *, check_started_ns=None):
+    """Clear an obsolete failed-check marker without hiding a newer run."""
+    try:
+        handle = _acquire_invalid_marker_guard(vmid)
+    except OSError:
+        return False
+    try:
+        marker = _invalid_marker(vmid)
+        try:
+            if (check_started_ns is not None
+                    and marker.stat().st_mtime_ns > check_started_ns):
+                return False
+            marker.unlink()
+            return True
+        except FileNotFoundError:
+            # A concurrent successful check may already have published the
+            # valid state; there is no stale marker left to clear.
+            return True
+        except OSError:
+            return False
+    finally:
+        handle.close()
+
+
 def guard(vmid):
     if not managed_installs._lxc_updates_detection_enabled():
         raise RuntimeError('LXC update detection is disabled')
@@ -101,9 +148,8 @@ def checked_os(vmid):
 def run(vmid, job_id, reservation):
     error = None
     check_started = False
-    invalid = LOCK_DIR / f'proxmenux-lxc-check-invalid-{int(vmid)}'
     try:
-        invalid.touch(mode=0o600)
+        _mark_check_invalid(vmid)
         guard(vmid)
         if status(vmid) != 'running':
             raise RuntimeError('Container is stopped; start it first')
@@ -124,9 +170,7 @@ def run(vmid, job_id, reservation):
                 error += '; package result could not be persisted'
     finally:
         if not error:
-            try:
-                invalid.unlink()
-            except OSError:
+            if not clear_invalid_marker(vmid):
                 error = 'Successful check could not be published for installation'
         reservation.close()
         with _lock:
