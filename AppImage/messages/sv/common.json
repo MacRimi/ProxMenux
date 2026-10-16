@@ -4753,6 +4753,23 @@
       "thursday": "torsdag",
       "tuesday": "tisdag",
       "wednesday": "onsdag"
+    },
+    "storageRetention": {
+      "title": "Lagringens bevarandepolicy",
+      "keepAll": "Behåll alla säkerhetskopior",
+      "description": "Standardpolicy för bevarande av säkerhetskopior, sparad i Proxmox. Säkerhetskopieringsjobb med en uttrycklig policy åsidosätter denna standard.",
+      "refresh": "Uppdatera",
+      "saved": "Lagringens bevarandepolicy har sparats. Ingen gallring har körts.",
+      "choosePolicy": "Välj Behåll alla eller minst ett bevarandeantal som är större än noll.",
+      "saveFailed": "Det gick inte att spara lagringens bevarandepolicy. Uppdatera listan om konfigurationen har ändrats.",
+      "loadFailed": "Det gick inte att läsa in lagringens bevarandepolicy.",
+      "empty": "Ingen lagring för säkerhetskopior hittades.",
+      "default": "Proxmox standard",
+      "edit": "Redigera",
+      "editTitle": "Bevarande för {storage}",
+      "effect": "Gäller framtida säkerhetskopieringar som ärver denna lagringspolicy. Att spara tar inte bort befintliga säkerhetskopior. Skyddade säkerhetskopior förblir skyddade.",
+      "cancel": "Avbryt",
+      "save": "Spara bevarandepolicy"
     }
   },
   "healthStatus": {

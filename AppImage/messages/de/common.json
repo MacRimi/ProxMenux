@@ -4753,6 +4753,23 @@
       "thursday": "Donnerstag",
       "tuesday": "Dienstag",
       "wednesday": "Mittwoch"
+    },
+    "storageRetention": {
+      "title": "Aufbewahrung im Speicher",
+      "keepAll": "Alle Sicherungen behalten",
+      "description": "In Proxmox gespeicherte Standardaufbewahrung für Sicherungen. Sicherungsaufträge mit einer eigenen Richtlinie überschreiben diesen Standard.",
+      "refresh": "Aktualisieren",
+      "saved": "Aufbewahrungsrichtlinie des Speichers gespeichert. Es wurde keine Bereinigung ausgeführt.",
+      "choosePolicy": "Wählen Sie Alle behalten oder mindestens eine Aufbewahrungsanzahl größer als null.",
+      "saveFailed": "Aufbewahrungsrichtlinie des Speichers konnte nicht gespeichert werden. Aktualisieren Sie die Liste, falls die Konfiguration geändert wurde.",
+      "loadFailed": "Aufbewahrungsrichtlinie des Speichers konnte nicht geladen werden.",
+      "empty": "Keine Sicherungsspeicher gefunden.",
+      "default": "Proxmox-Standard",
+      "edit": "Bearbeiten",
+      "editTitle": "Aufbewahrung für {storage}",
+      "effect": "Gilt für zukünftige Sicherungsläufe, die diese Speicherrichtlinie übernehmen. Das Speichern löscht keine vorhandenen Sicherungen. Geschützte Sicherungen bleiben geschützt.",
+      "cancel": "Abbrechen",
+      "save": "Aufbewahrung speichern"
     }
   },
   "healthStatus": {
