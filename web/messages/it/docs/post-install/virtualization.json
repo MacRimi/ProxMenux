@@ -47,7 +47,7 @@
       "Si desidera passare un HBA direttamente a un TrueNAS/Unraid VM per ZFS su dischi nudi.",
       "Stai pianificando di usare <em>Corallo TPU</em>, una scheda di cattura, o un dongle SDR in un VM."
     ],
-    "whoOutro": "Se nessuno di questi si applica, è possibile saltare in sicurezza questa opzione. Per il passaggio a un <strong>LXC</strong> (non un VM), IOMMU è richiesto <em>not</em>.",
+    "whoOutro": "Se nessuno di questi si applica, puoi tranquillamente ignorare questa opzione. Per il passthrough a un <strong>LXC</strong> (non un VM), IOMMU <em>non</em> richiesto.",
     "doesTitle": "Cosa fa ProxMenux",
     "doesIntro": "La funzione è di boot-loader consapevole: rileva se Proxmox è su ZFS (systemd-boot) o LVM/ext4 (GRUB) e scrive al file giusto. È anche idempotent — se i parametri sono già presenti, nulla è aggiunto.",
     "headerBoot": "Tipo di avvio",

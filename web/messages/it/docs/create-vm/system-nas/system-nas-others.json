@@ -173,7 +173,7 @@
       ],
       "shellImg": "/vm/truenas/truenas-scale-shell.png",
       "webImg": "/vm/truenas/truenas-scale-web.png",
-      "shellAlt": "Interfaccia conchiglia SCALE TrueNAS",
+      "shellAlt": "TrueNAS Interfaccia shell SCALE",
       "webAlt": "Interfaccia web SCALE TrueNAS"
     },
     "truenasCore": {
@@ -182,7 +182,7 @@
       "icon": "Database",
       "officialName": "TrueNAS CORE",
       "officialUrl": "https://www.truenas.com/truenas-core/",
-      "description": "FreeBSD-based TrueNAS (l'ex FreeNAS). Mature ZFS storage con carceri e plugin, ma senza Docker / Kubernetes. Essere gradualmente fuori a favore di SCALE, ma ancora ampiamente schierato.",
+      "description": "FreeBSD basato su TrueNAS (il precedente FreeNAS). Archiviazione ZFS matura con jails e plugin, ma senza Docker/Kubernetes. In fase di eliminazione a favore di SCALE ma ancora ampiamente utilizzato.",
       "specs": [
         "Interfaccia consigliata: SATA",
         "Minimo RAM: 8 GB (16 GB+ consigliato)",
@@ -245,7 +245,7 @@
       ],
       "shellImg": "/vm/rockstor/rockstor-shell.png",
       "webImg": "/vm/rockstor/rockstor-web.png",
-      "shellAlt": "Interfaccia conchiglia Rockstor",
+      "shellAlt": "Interfaccia della shell Rockstor",
       "webAlt": "Interfaccia web Rockstor"
     },
     "zimaos": {

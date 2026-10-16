@@ -85,7 +85,7 @@
       "intro": "Sulla base della modalità corrente, lo script propone il contrario come obiettivo:",
       "items": [
         "<strong>VM → LXC:</strong> unbind da <code>vfio-pci</code>, lasciare che il driver nativo (<code>nvidia</code>, <code>amdgpu</code>, <code>i915</code>) riconosca la scheda in modo che LXC possa condividerla. Su NVIDIA, la voce per-BDF viene rimossa da <code>/etc/udev/rules.d/10-proxmenux-vfio-bind.rules</code> in modo che il modulo nvidia richieda il GPU dopo il riavvio.",
-        "<strong>LXC → VM: </strong> si lega a <code>vfio-pci</code> così la scheda è gratuita per VFIO passa attraverso un singolo VM. Su AMD / Intel questo significa blacklist del driver nativo e impostazione <code>options vfio-pci ids=…</code>. Su NVIDIA il modulo <code>nvidia</code> è <strong>not</strong> blacklist — invece una regola per-BDF udev si applica <code>driver_override=vfio-pci</code> solo alle GPU selezionate, quindi altre GPU NVIDIA sull'host mantengono il driver <code>nvidia</code>."
+        "<strong>LXC → VM:</strong> si associa a <code>vfio-pci</code> in modo che la scheda sia libera per il passthrough VFIO a un singolo VM. Su AMD/Intel ciò significa inserire nella lista nera il driver nativo e impostare <code>options vfio-pci ids=…</code>. Su NVIDIA il modulo <code>nvidia</code> è <strong>non</strong> inserito nella lista nera — invece una regola udev per BDF applica <code>driver_override=vfio-pci</code> solo alle GPU selezionate, in modo che le altre GPU NVIDIA sull'host mantengano la loro <code>nvidia</code> driver."
       ],
       "outro": "Confermare la direzione o annullare."
     },

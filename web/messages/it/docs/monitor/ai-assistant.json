@@ -223,7 +223,7 @@
     "formatIntro": "Quando viene aggiunta una punta, segue questo formato esatto:",
     "rulesIntro": "Le regole cotte nell'addon (visibile nel blocco pieghevole sotto la sezione del prompt predefinito sopra):",
     "rules": [
-      "La punta è inclusa <em>only</em> se il contesto della rivista o il database degli errori conosciuti indica chiaramente una soluzione specifica.",
+      "Il suggerimento è incluso <em>solo</em> se il contesto del journal o il database degli errori noti indica chiaramente una correzione specifica.",
       "La punta è bloccata a caratteri 100.",
       "Deve essere specifico (comando concreto o percorso) — la consulenza generica è respinta dal prompt stesso.",
       "Se un errore noto fornisce una soluzione, il LLM deve usare quella soluzione, non inventarne una nuova.",

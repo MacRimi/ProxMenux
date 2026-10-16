@@ -225,7 +225,7 @@
         "tailRich": "— gli eventi <code>vm_*</code>, <code>ct_*</code>, <code>migration_*</code> e <code>backup_*</code> si attivano a valle."
       },
       {
-        "label": "API Riferimento",
+        "label": "Riferimento API",
         "href": "/docs/monitor/api",
         "tailRich": "— gli endpoint VM e quelli di backup."
       },

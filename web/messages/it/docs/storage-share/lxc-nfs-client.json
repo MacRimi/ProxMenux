@@ -68,7 +68,7 @@
   },
   "unmount": {
     "heading": "Quota di smontaggio NFS",
-    "body": "Combina i supporti dal vivo e le voci fstab in un unico elenco, ti permette di scegliere uno, e <strong>rimuove la linea corrispondente da <code>/etc/fstab</code></strong>. Lo script fa <em>not</em> eseguire <code>umount</code> sul supporto live - invece vi dice un riavvio CT è necessario per lo smontaggio di prendere effetto.",
+    "body": "Combina i montaggi live e le voci fstab in un unico elenco, ti consente di sceglierne uno e <strong>rimuove la riga corrispondente da <code>/etc/fstab</code></strong>. Lo script <em>non</em> esegue <code>umount</code> sul montaggio live, invece ti dice che è necessario un riavvio CT affinché lo smontaggio abbia effetto.",
     "warnTitle": "Lo script rimuove le voci fstab, non i supporti dal vivo",
     "warnBody": "Questa è una scelta di progettazione deliberata: <code>umount</code> su un supporto occupato fallisce con \"dispositivo occupato\" quando qualcosa all'interno del CT lo sta ancora usando. La rimozione dell'ingresso fstab garantisce che il montaggio sparisca in modo pulito sul prossimo inizio CT. Se si desidera che il montaggio sia andato <em>now</em> e si è sicuri che nulla lo sta usando, eseguire <code>pct exec &lt;ctid&gt; -- umount /mnt/&lt;path&gt;</code> a mano dopo le finiture dello script."
   },

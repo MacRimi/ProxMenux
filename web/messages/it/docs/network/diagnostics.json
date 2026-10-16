@@ -53,7 +53,7 @@
     "heading": "Diagnostica avanzata",
     "intro": "Aggrega le statistiche di rete e gestisce una batteria di controlli comuni. Rapporti connessione attiva conta, porte di ascolto, interfacce totali e bandiere due anti-patterns esplicitamente:",
     "items": [
-      "<strong>NetworkManager in esecuzione su un host Proxmox.</strong> NetworkManager e il conflitto <code>ifupdown</code> di Proxmox — entrambi cercano di gestire le interfacce, portando a ponti che patta o rifiutano di venire. Se rilevato, lo strumento offre un prompt interattivo per arrestarlo, disabilitarlo e purificarlo (questo è la diagnostica <em>only</em> che può modificare il sistema, e solo dopo il consenso esplicito).",
+      "<strong>NetworkManager in esecuzione su un host Proxmox.</strong> NetworkManager e il conflitto <code>ifupdown</code> di Proxmox: entrambi provano a gestire le interfacce, portando a bridge che si sbattono o si rifiutano di aprirsi. Se rilevato, lo strumento offre un messaggio interattivo per arrestarlo, disabilitarlo ed eliminarlo (questa è l'<em>unica</em> diagnostica che può modificare il sistema e solo dopo il consenso esplicito).",
       "<strong>Indirizzi IP duplicati su diverse interfacce.</strong> Due interfacce che tengono lo stesso IPv4 causano connettività intermittente che è estremamente difficile da debug dall'interno del VM. Rilevato tramite <code>ip -4 addr show | sort | uniq -d</code>."
     ],
     "nmTitle": "Il prompt NetworkManager è l'unica azione di modifica qui",

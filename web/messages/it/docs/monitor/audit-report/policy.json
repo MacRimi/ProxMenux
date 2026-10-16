@@ -62,7 +62,7 @@
     },
     {
       "id": "storage",
-      "title": "Stoccaggio",
+      "title": "Archiviazione",
       "blocks": [
         {
           "p": "Un deposito irraggiungibile è segnalato come critico quando è dichiarato essenziale o serve un ospite in esecuzione, come un avvertimento quando il suo ruolo non è dichiarato, e come osservazione quando è dichiarato facoltativo."

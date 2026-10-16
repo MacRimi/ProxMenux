@@ -75,7 +75,7 @@
       },
       {
         "title": "5. Verifica",
-        "body": "Rilegge il file, elenca ciò che è stato rimosso e ricontrolla le interfacce rimanenti. Stampa il comando rollback. <strong>not</strong> riavvia automaticamente la rete di rete — rimuovere un blocco non utilizzato è sicuro da applicare sul prossimo riavvio, ed evita di toccare lo stato dal vivo.",
+        "body": "Rilegge il file, elenca ciò che è stato rimosso e ricontrolla le restanti interfacce. Stampa il comando di rollback. <strong>non</strong> riavvia automaticamente la rete: la rimozione di un blocco inutilizzato è sicura da applicare al riavvio successivo ed evita di toccare lo stato live.",
         "tone": "emerald"
       }
     ],

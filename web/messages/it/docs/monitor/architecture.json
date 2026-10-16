@@ -243,7 +243,7 @@
       "Logs: rilevamento del pattern persistente / picco / cascata nella rivista di sistema.",
       "Memoria: attività killer OOM, alta pressione sostenuta.",
       "Temperatura: CPU / sensori del telaio contro le soglie del fornitore.",
-      "Sicurezza: guasti di autenticazione, eventi di divieto, stato di carcere fail2ban."
+      "Sicurezza: errori di autenticazione, eventi di ban, stato fail2ban jail."
     ],
     "afterIntro": "Ogni risultato è normalizzato in una stabile <code>error_key</code> + categoria + gravità. Lo strato di persistenza deduplica contro la tabella <code>errors</code> esistente — gli eventi ripetuti aggiornano <code>last_seen</code> e il contatore di occorrenza senza notifiche di spamming.",
     "cycleEnd": "Il ciclo risolve anche gli errori di stallo utilizzando l'impostazione per-categoria <em>Suppression Duration</em>, pulisce gli errori per le risorse che non esistono più ( VM cancellate / dischi rimossi / storage non montati), e prunes il registro <code>events</code> più vecchio di 30 giorni. Il catalogo completo delle categorie e la visualizzazione del cruscotto che le superfici sono documentate in <link>Dashboard → Health Monitor</link>."
@@ -274,11 +274,11 @@
     "intro": "Due salvaguardie assicurano che la sicurezza funzioni allo stesso modo se il cruscotto viene colpito direttamente o tramite un proxy inverso:",
     "items": [
       "<strong>Real client di recupero IP.</strong> A <code>before_request</code> leggere il gancio <code>X-Forwarded-For</code> e <code>X-Real-IP</code> in quell'ordine, cadendo a <code>request.remote_addr</code>. L'indirizzo recuperato è quello che auth logging e tasso limitante vedere. E' sempre accesa.",
-      "<strong>Application-level Fail2Ban check (opzionale).</strong> Quando il cruscotto siede dietro un proxy, il firewall del kernel non può bloccare il vero IP dell'attaccante — la connessione viene sempre dal proxy. Per collegare questo gap, lo stesso gancio sopra interroga il <code>proxmenux</code> Fail2Ban carcere ogni 30 secondi, memorizza il set IP vietato e le richieste di cortocircuiti da tali IP con HTTP 403 all'interno di Flask."
+      "<strong>Controllo Fail2Ban a livello di applicazione (facoltativo).</strong> Quando il dashboard si trova dietro un proxy, il firewall del kernel non può bloccare il vero IP dell'aggressore: la connessione proviene sempre dal proxy. Per colmare questa lacuna, lo stesso hook sopra interroga il <code>proxmenux</code> Fail2Ban jail ogni 30 secondi, memorizza nella cache il set di IP vietati e cortocircuita le richieste da quegli IP con HTTP 403 all'interno Flask."
     ],
     "calloutTitle": "Fail2Ban non è in bundle",
-    "calloutBody": "Fail2Ban è <strong>not</strong> installato da ProxMenux Monitor stesso. Il controllo a livello di applicazione è un no-op fino a quando non si installa Fail2Ban sull'host (ad esempio tramite <link>Security → Fail2Ban</link> nel menu ProxMenux). Quando il binario <code>fail2ban-client</code> o la prigione <code>proxmenux</code> è assente, la chiamata fallisce silenziosamente e le richieste non sono cancellate — auth si applica ancora, ma nessun divieto di livello IP.",
-    "outro": "Snippets (Nginx / Caddy / Traefik) e il passeggino del carcere Fail2Ban sono in <accessLink>Access & Authentication</accessLink> e <fail2banLink>Security → Fail2Ban</fail2banLink>."
+    "calloutBody": "Fail2Ban è <strong>non</strong> installato da ProxMenux Monitor stesso. Il controllo a livello di applicazione non è operativo finché non si installa Fail2Ban sull'host (ad esempio tramite <link>Sicurezza → Fail2Ban</link> nel menu ProxMenux). Quando il binario <code>fail2ban-client</code> o il file binario <code>proxmenux</code> jail è assente, la chiamata fallisce silenziosamente e le richieste non vengono controllate: l'autenticazione viene comunque applicata, ma nessun ban a livello IP.",
+    "outro": "Gli snippet proxy inverso (Nginx / Caddy / Traefik) e la procedura dettagliata Fail2Ban jail si trovano in <accessLink>Accesso e autenticazione</accessLink> e <fail2banLink>Sicurezza → Fail2Ban</fail2banLink>."
   },
   "whereNext": {
     "heading": "Dove vicino",
@@ -289,7 +289,7 @@
         "tail": "— configurazione del primo lancio, password + TOTP 2FA, snippet inversa-proxy, prigione Fail2Ban."
       },
       {
-        "label": "API Riferimento",
+        "label": "Riferimento API",
         "href": "/docs/monitor/api",
         "tail": "— ogni punto finale, gestione dei token, best practice di sicurezza."
       },

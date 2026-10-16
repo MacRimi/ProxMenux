@@ -30,8 +30,8 @@
       "title": "Fail2Ban",
       "body": "Prevenzione attiva delle intrusioni. Orologi SSH e web UI registra e vieta IP dopo ripetuti fallimenti.",
       "bullets": [
-        "Tre carceri: SSH, Proxmox UI (8006), ProxMenux Monitor (8008)",
-        "Risolve Proxmox di default che blocca i log auth",
+        "Tre jails: SSH, Proxmox UI (8006), ProxMenux Monitor (8008)",
+        "Corregge le impostazioni predefinite di Proxmox journald che bloccano i registri di autenticazione",
         "Rilevamento automatico nftables / iptables",
         "Indurimento SSH: MaxAuthTries=3 (Consiglio di Lynis)"
       ]
@@ -53,9 +53,9 @@
   },
   "fail2banSection": {
     "heading": "Fail2Ban",
-    "body": "ProxMenux installa Fail2Ban con una configurazione sintonizzata per Proxmox specificatamente. Oltre alla normale prigione SSH, aggiunge protezione per l'interfaccia web Proxmox UI e la ProxMenux Monitor, e lavora intorno a due quirk specifici di Proxmox: un default periodico che cade eventi auth, e il problema di backend systemd che impedisce a Fail2Ban di leggere alcune fonti di giornale in modo affidabile. La pagina dei dettagli copre il flusso di installazione completo, le tre carceri, la correzione periodica, il cambiamento di indurimento SSH e la risoluzione dei problemi cheatsheet.",
+    "body": "ProxMenux installa Fail2Ban con una configurazione ottimizzata specificatamente per Proxmox. Oltre allo standard SSH jail, aggiunge protezione per il web Proxmox UI e il ProxMenux Monitor, e aggira due peculiarità specifiche di Proxmox: un'impostazione predefinita journald che elimina gli eventi di autenticazione e Problema del systemd-backend che impedisce a Fail2Ban di leggere in modo affidabile alcune fonti di riviste. La pagina dei dettagli copre il flusso di installazione completo, i tre jails, la correzione journald, la modifica di rafforzamento del SSH e il cheat sheet per la risoluzione dei problemi.",
     "optionTitle": "Fail2Ban — installazione e gestione",
-    "optionDescription": "Tre carceri preconfigurati (sshd aggressivo, Proxmox UI porta 8006, ProxMenux Monitor porta 8008 + proxy inverso), nftables/iptables auto-detected backend, correzione periodica e SSH MaxAuthTries indurimento."
+    "optionDescription": "Tre jails preconfigurati (sshd aggressivo, Proxmox UI porta 8006, ProxMenux Monitor porta 8008 + proxy inverso), backend nftables/iptables rilevato automaticamente, Correzione di journald e rafforzamento di SSH MaxAuthTries."
   },
   "lynisSection": {
     "heading": "Lynis",

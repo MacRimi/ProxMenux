@@ -12,7 +12,7 @@
   },
   "intro": {
     "title": "Ciò che è (e NON è)",
-    "body": "Questo strumento fa <strong>not</strong> registrare nulla in Proxmox (no <code>pvesm add</code> qui). Basta preparare una directory sull'host — <code>/mnt/shared</code>, per impostazione predefinita — con autorizzazioni che qualsiasi contenitore LXC può leggere e scrivere, indipendentemente dal fatto che il CT sia privilegiato o non privato. Il solito passo successivo è quello di legare-montare in ogni CT con il <mountLink>LXC Mount Manager</mountLink>."
+    "body": "Questo strumento <strong>non</strong> registra nulla in Proxmox (nessun <code>pvesm add</code> qui). Prepara semplicemente una directory sull'host — <code>/mnt/shared</code>, per impostazione predefinita — con autorizzazioni che qualsiasi contenitore LXC può leggere e scrivere, indipendentemente dal fatto che il CT sia privilegiato o non privilegiato. Il solito passaggio successivo è collegarlo al montaggio in ogni CT con <mountLink>LXC Mount Manager</mountLink>."
   },
   "why": {
     "heading": "Perché uno strumento dedicato per questo",
@@ -74,7 +74,7 @@
   },
   "next": {
     "heading": "Prossimo passo: legare-montare in contenitori",
-    "body": "Creare la directory solo lo prepara — nessun contenitore lo vede ancora. Per renderlo visibile all'interno di uno o più LXC, utilizzare il <mountLink>LXC Mount Manager</mountLink> per legare-mount <code>/mnt/&lt;name&gt;</code> nelle CT. Poiché i permessi sono già aperti, il Mount Manager <strong>not</strong> offrirà di modificarli — la directory è pronta ad usare as-is."
+    "body": "La creazione della directory la prepara solo: nessun contenitore la vede ancora. Per renderlo visibile all'interno di uno o più LXC, utilizzare <mountLink>LXC Mount Manager</mountLink> per collegare il montaggio <code>/mnt/&lt;name&gt;</code> ai CT. Poiché i permessi sono già aperti, Mount Manager <strong>non</strong> offrirà di modificarli: la directory è pronta per l'uso così com'è."
   },
   "troubleshoot": {
     "heading": "Risoluzione dei problemi",

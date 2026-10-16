@@ -1,13 +1,13 @@
 {
   "meta": {
     "title": "Fail2Ban | Documentazione ProxMenux",
-    "description": "Installare Fail2Ban con tre carceri accordati per Proxmox (SSH aggressivo, Proxmox UI 8006, ProxMenux Monitor 8008). Include la correzione periodica MaxLevelStore, servizi di log personalizzati per l'affidabilità, nftables/iptables automatici backend e indurimento SSH MaxAuthTries.",
+    "description": "Installa Fail2Ban con tre jails ottimizzati per Proxmox (SSH aggressivo, Proxmox UI 8006, ProxMenux Monitor 8008). Include la correzione journald MaxLevelStore, servizi di registro personalizzati per l'affidabilità, backend nftables/iptables rilevati automaticamente e SSH MaxAuthTries rafforzamento.",
     "ogTitle": "Fail2Ban | Documentazione ProxMenux",
-    "ogDescription": "Protezione Brute-force per SSH e Proxmox web UIs, con Proxmox-specifico correzioni di backend e riviste."
+    "ogDescription": "Protezione dalla forza bruta per SSH e interfacce utente web Proxmox, con journald specifico per Proxmox e correzioni di backend."
   },
   "header": {
     "title": "Fail2Ban",
-    "description": "Installa Fail2Ban con una configurazione specifica Proxmox: tre carceri (SSH aggressivo, UI Proxmox sul porto 8006, ProxMenux Monitor su porto 8008 + proxy inverso), una correzione di livello di log-level rivista in modo da SSH auth eventi sono in realtà memorizzati, due servizi di logger di giornale a file che lavorano intorno a un noto Fail2Ban systemd-problema backend, backend firewall auto-detected e SSH MaxAuthTries Indurimento.",
+    "description": "Installa Fail2Ban con una configurazione specifica di Proxmox: tre jails (SSH aggressivo, Proxmox UI sulla porta 8006, ProxMenux Monitor sulla porta 8008 + proxy inverso), una correzione a livello di registro journald in modo che gli eventi di autenticazione SSH vengano effettivamente archiviati, due servizi di registrazione journal-to-file che aggirano un problema noto del backend Fail2Ban systemd, backend firewall rilevato automaticamente e SSH MaxAuthTries rafforzamento.",
     "section": "Sicurezza"
   },
   "intro": {
@@ -17,7 +17,7 @@
   "firstLaunch": {
     "heading": "dialogo di primo lancio",
     "body": "Su un host senza Fail2Ban, lo script mostra una finestra di dialogo di conferma che riassume tutto quello che sta per installare e configurare. Cancellare uscite senza modifiche; confermare avvia il flusso di installazione.",
-    "imageAlt": "Fail2Ban installa la finestra di dialogo che elenca le tre carceri, correzione di giornale e indurimento di SSH"
+    "imageAlt": "Fail2Ban finestra di dialogo di conferma dell'installazione che elenca le tre correzioni jails, journald e SSH rafforzamento"
   },
   "jails": {
     "heading": "Le tre prigioni",
@@ -45,15 +45,15 @@
         "ban": "1 ora"
       }
     ],
-    "outro": "Predefinizioni globali da <code>jail.local</code>: <code>ignoreip = 127.0.0.1/8 ::1</code>, <code>ignoreself = true</code>, <code> bantime = 86400</code> (24h fallback per le carceri che non lo sovrascrivono), <code>maxretry = 2</code>, <code>findtime = 1800</code>."
+    "outro": "Impostazioni predefinite globali da <code>jail.local</code>: <code>ignoreip = 127.0.0.1/8 ::1</code>, <code>ignoreself = true</code>,<code> bantime = 86400</code> (fallback di 24 ore per jails che non lo sovrascrivono), <code>maxretry = 2</code>, <code>findtime = 1800</code>."
   },
   "journald": {
-    "heading": "Perché il diario risolvere questioni",
+    "heading": "Perché la correzione journald è importante",
     "intro": "Proxmox navi <code>/etc/systemd/journald.conf</code> con <codeNw>MaxLevelStore=warning</codeNw>. ogni messaggio di registro <em>below</em> avviso prima di memorizzarlo. SSH e PAM emettono guasti auth a livelli <em>info</em> / <em>notice</em>, così:",
     "diagram": {
       "sshLabel": "SSH / PAM",
       "sshDetail": "fallimento auth\n(info / livello di avviso)",
-      "journaldLabel": "Diario",
+      "journaldLabel": "journald",
       "journaldDetail": "MaxLevelStore=avvertimento\n→ evento silenziosamente caduto",
       "fail2banLabel": "Fail2Ban",
       "fail2banDetail": "non vede niente\n→ non vieta mai nulla",
@@ -113,7 +113,7 @@
       },
       {
         "action": "Rimuovi",
-        "what": "Stop fail2ban e i due servizi logger, purga il pacchetto apt, rimuove tutti i file di jail / filtro, cancella il drop-in diario (restaurando il default Proxmox), e ripristina l'originale SSH MaxAuthTries."
+        "what": "Arresta fail2ban e i due servizi di logger, elimina il pacchetto apt, rimuove tutti i jail / file filtro, elimina il drop-in journald (ripristinando le impostazioni predefinite di Proxmox) e ripristina il SSH originale MaxAuthTries."
       }
     ]
   },
@@ -125,9 +125,9 @@
   "troubleshoot": {
     "heading": "Risoluzione dei problemi",
     "neverBansTitle": "Fail2Ban corre ma non vieta mai nulla",
-    "neverBansBody": "Controllare i file di registro auth effettivamente ricevere voci: <code>tail -f /var/log/ssh-auth.log</code> e provare un errore-password SSH tentativo da una macchina diversa. Se il registro rimane vuoto, il servizio logger non è in esecuzione: <code>systemctl status ssh-auth-logger.service</code>. Se è attivo ma il registro è vuoto, controlla che il drop-in diario abbia avuto effetto: <code>journalctl --dump-catalog | head</code> — gli eventi a livello <em>info</em> dovrebbero essere visibili.",
-    "monitorEmptyTitle": "ProxMenux Monitor carcere non ha voci anche dopo i login falliti",
-    "monitorEmptyBody": "Il carcere di <code>[proxmenux]</code> legge <code>/var/log/proxmenux-auth.log</code>, che è scritto dall'app di Flask di ProxMenux Monitor — non da un registratore di giornale. Se non gestisci il Monitor, il file rimane vuoto e la prigione non spara mai. Ci si aspetta; la configurazione della prigione è innocua. Se si esegue il Monitor e il registro è vuoto, controllare la configurazione di registrazione Flask.",
+    "neverBansBody": "Controlla che i file di registro di autenticazione ricevano effettivamente le voci: <code>tail -f /var/log/ssh-auth.log</code> e prova un tentativo con password errata SSH da una macchina diversa. Se il registro rimane vuoto, il servizio di logger non è in esecuzione: <code>systemctl status ssh-auth-logger.service</code>. Se è attivo ma il log è vuoto, controlla che il drop-in journald abbia avuto effetto: <code>journalctl --dump-catalog | head</code>: gli eventi a livello <em>info</em> dovrebbero essere visibili.",
+    "monitorEmptyTitle": "ProxMenux Monitor jail non ha voci anche dopo accessi non riusciti",
+    "monitorEmptyBody": "Il <code>[proxmenux]</code> jail legge <code>/var/log/proxmenux-auth.log</code>, che è scritto dall'app ProxMenux Monitor Flask - non da un logger journald. Se non esegui il Monitor, il file rimane vuoto e il jail non si attiva mai. Questo è previsto; la configurazione jail è innocua. Se esegui il Monitor e il registro è vuoto, controlla la configurazione di registrazione Flask.",
     "selfBanTitle": "Mi sono proibita",
     "selfBanIntro": "Da una console / IPMI / iKVM (o da un altro IP whitelist):",
     "selfBanCode": "fail2ban-client unban '<'YOUR_IP'>'\n\n# To prevent it next time, edit /etc/fail2ban/jail.local and add your IP:\nignoreip = 127.0.0.1/8 ::1 192.168.1.0/24 203.0.113.42\n\n# Then reload\nfail2ban-client reload",

@@ -227,7 +227,7 @@
         "tail": "— la categoria di rete e le soglie di latenza-storia."
       },
       {
-        "label": "API Riferimento",
+        "label": "Riferimento API",
         "href": "/docs/monitor/api",
         "tail": "— la rete e gli endpoint di latenza."
       },

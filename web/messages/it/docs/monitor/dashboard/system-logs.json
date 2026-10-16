@@ -33,9 +33,9 @@
     ],
     "logsRowsAfter": "Ogni riga mostra timestamp, tasso di gravità, unità sorgente e il messaggio. I messaggi lunghi crollano con un \"mostra di più\". L'azione <strong>Download</strong> raggruppa il filtro corrente in un unico file <code>.txt</code> tramite <code>GET /api/logs/download</code> — utile quando si desidera condividere una fetta di giornale con qualcuno.",
     "logDetailsModalTitle": "Finestra dei dettagli del registro",
-    "logDetailsBody": "Facendo clic su qualsiasi riga si apre un modale <strong>Log Details</strong> con ogni campo strutturato testato catturato per quella singola voce — la stessa vista che si costruisce a mano eseguendo <code>journalctl --output=verbose</code> sull'host.",
+    "logDetailsBody": "Facendo clic su qualsiasi riga si apre una finestra modale <strong>Dettagli registro</strong> con ogni campo strutturato journald acquisito per quella singola voce: la stessa visualizzazione che creeresti manualmente eseguendo <code>journalctl --output=verbose</code> sull'host.",
     "logDetailsImageAlt": "Log Details modal — ingresso di una rivista ampliato con Livello, Servizio, Timestamp, Sorgente, Systemd Unità, ID processo, Hostname e il messaggio completo",
-    "logDetailsImageCaption": "Log Details modal — ogni campo strutturato distribuito porta per questa voce, con il messaggio completo non falsificato in basso. Utile per cron e registri di servizio dove la riga di comando eseguita conta.",
+    "logDetailsImageCaption": "Modale Dettagli registro: ogni campo strutturato journald contiene questa voce, con il messaggio completo non troncato in fondo. Utile per cron e log di servizio in cui la riga di comando eseguita è importante.",
     "fieldsIntro": "Campi indicati:",
     "fields": [
       "<strong>Level</strong> — distintivo di gravità colorato (INFO / ATTENZIONE / ERROR / CRITICAL).",
@@ -47,7 +47,7 @@
       "<strong>Hostname</strong> — utile quando le riviste vengono inoltrate attraverso nodi di cluster.",
       "<strong>Message</strong> — il messaggio completo non falsificato in un blocco monospaziale, pronto a copiare."
     ],
-    "maxLevelStoreTitle": "Gazzetta ufficiale MaxLevelStore",
+    "maxLevelStoreTitle": "Journald MaxLevelStore",
     "maxLevelStoreBody": "Su una nuova installazione di Proxmox, diario di default a <code>MaxLevelStore=warning</code>, che silenziosamente rilascia messaggi di livello info. Il Monitor rileva questo all'avvio e aggiunge un drop-in (<code>/etc/systemd/journald.conf.d/proxmenux-loglevel.conf</code>) alzando la soglia a <code>info</code> in modo che la scheda Logs abbia effettivamente qualcosa da mostrare in tutte le gravità.",
     "backupsTitle": "Backup",
     "backupsBody": "La cronologia delle attività Proxmox è stata filtrata per le voci relative al backup. Una riga per compito (<code>vzdump</code>, PBS trasferimenti, Garbage Collect, Verify) con lo stato (OK / ATTENZIONE / ERROR), guest coinvolti, storage sorgente, durata e UPID. Fare clic su una riga per caricare il registro delle attività completo tramite <code>GET /api/task-log/&lt;upid&gt;</code> — gli stessi dati Proxmox espone attraverso <em>Datacenter → Tasks</em>, indirizzati ai backup.",
@@ -106,7 +106,7 @@
         "tail": "— il guardiano della rivista legge la stessa fonte e trasforma le partite in notifiche."
       },
       {
-        "label": "API Riferimento",
+        "label": "Riferimento API",
         "href": "/docs/monitor/api",
         "tail": "— i log e gli endpoint di task-log con i loro parametri di query."
       },

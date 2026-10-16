@@ -116,7 +116,7 @@
         "title": "Registrazione",
         "items": [
           {
-            "tool": "Ottimizzazione periodica",
+            "tool": "Ottimizzazione di journald",
             "restores": "Riscrive /etc/systemd/journald.conf con predefinizioni della vaniglia e riavvia systemd-journald."
           },
           {
@@ -172,7 +172,7 @@
         ]
       },
       {
-        "title": "Stoccaggio",
+        "title": "Archiviazione",
         "items": [
           {
             "tool": "Dimensionamento dell'ARC ZFS",

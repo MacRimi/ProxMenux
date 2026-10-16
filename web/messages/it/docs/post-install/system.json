@@ -1,7 +1,7 @@
 {
   "meta": {
     "title": "Post-Install: Sistema | Documentazione ProxMenux",
-    "description": "Ottimizzazioni a livello di sistema nello script post-install personalizzabile ProxMenux: limiti di dimensioni riviste e logrotate, limiti di kernel e file-descriptor più elevati, ottimizzazione della memoria equilibrata, kexec per riavviamenti rapidi e recupero del kernel."
+    "description": "Ottimizzazioni a livello di sistema nello script post-installazione personalizzabile ProxMenux: journald e limiti di dimensione logrotate, limiti più elevati del kernel e dei descrittori di file, ottimizzazione della memoria bilanciata, kexec per riavvii rapidi e ripristino dal kernel panico."
   },
   "header": {
     "title": "Dopo l'installazione: sistema",
@@ -9,7 +9,7 @@
   },
   "intro": {
     "title": "Che cosa copre questa categoria",
-    "body": "Sei ottimizzazioni indipendenti a livello di sistema. Loro si accordano <strong>Diario</strong> e <strong>logrottato</strong> per fermare i log dal riempire il disco, sollevare <strong>limiti del kernel e del file-descriptor</strong> così le applicazioni con molti file aperti non colpiscono soffitti, <strong>memoria di equilibrio</strong> per un host di virtualizzazione, aggiungere <strong>Kexec</strong> per \"rivestimenti senza il BIOS\", e configurare <strong>recupero automatico</strong> nel panico del kernel. Tutti e sei sono tracciati e reversibili dal menu Disinstalla."
+    "body": "Sei ottimizzazioni indipendenti a livello di sistema. Ottimizzano <strong>journald</strong> e <strong>logrotate</strong> per impedire ai log di riempire il disco, aumentano <strong>limiti del kernel e dei descrittori di file</strong> in modo che le applicazioni con molti file aperti non raggiungano i limiti, <strong>equilibrio memoria</strong> per un host di virtualizzazione, aggiungere <strong>kexec</strong> per \"riavvii senza BIOS\" e configurare <strong>ripristino automatico</strong> in caso di kernel panico. Tutti e sei sono tracciati e reversibili dal menu Disinstalla."
   },
   "journald": {
     "heading": "Ottimizza journald",
@@ -103,7 +103,7 @@
     "heading": "Verifica",
     "intro": "Dopo aver applicato le ottimizzazioni del sistema:",
     "tipTitle": "Completamente reversibile",
-    "tipBody": "Tutte e sei le opzioni sono tracciate in <code>installed_tools.json</code>, quindi appaiono in <link>Uninstall Optimizations</link> se si desidera eseguire il backup di qualsiasi di esse. Reverts ripristina le impostazioni predefinite dei file sysctl, rilascia l'unità systemd e alias per kexec e reimposta le configurazioni Debian."
+    "tipBody": "Tutte e sei le opzioni sono tracciate in <code>installed_tools.json</code>, quindi vengono visualizzate in <link>Disinstalla ottimizzazioni</link> se desideri annullarne qualcuna. Le ripristinazioni ripristinano le impostazioni predefinite dei file sysctl, eliminano l'unità systemd e l'alias per kexec e ripristinano journald/logrotate per ripristinare le configurazioni Debian stock."
   },
   "related": {
     "heading": "Correlati",

@@ -14,7 +14,7 @@
   },
   "intro": {
     "title": "L'autenticazione è opt-in",
-    "body": "Al primo lancio il cruscotto mostra una singola finestra di dialogo — <em>\"Proteggere il vostro Dashboard?\"</em> — con due pulsanti: <strong>Yes, Impostare Password</strong> e <strong>No, Continuare senza protezione</strong>. Dire no lascia ogni endpoint API aperto su TCP 8008 — fine per una LAN di laboratorio isolata, pericolosa su qualsiasi altra cosa. L'autenticazione a due fattori (2FA) è <strong>not</strong> parte di questa scelta iniziale; è configurata successivamente da <strong>the Security tab</strong> una volta impostata una password."
+    "body": "Al primo avvio la dashboard mostra la finestra <em>«Proteggere la dashboard?»</em>, con i pulsanti <strong>Sì, imposta password</strong> e <strong>No, continua senza protezione</strong>. Scegliendo la seconda opzione, gli endpoint dell’API rimangono aperti sulla porta TCP 8008: può andare bene in una LAN di laboratorio isolata, ma è pericoloso in altri ambienti. L’autenticazione a due fattori (2FA) <strong>non</strong> fa parte di questa scelta iniziale; si configura successivamente nella <strong>scheda Sicurezza</strong>, dopo aver impostato una password."
   },
   "reaching": {
     "heading": "Raggiungere la dashboard",
@@ -338,9 +338,9 @@
     "outro": "Affinalo al solito modo: <code>tail -F /var/log/proxmenux-auth.log</code>. Il file viene ruotato da <code>logrotate</code> se viene aggiunto un config drop-in; il Monitor stesso non lo ruota."
   },
   "fail2ban": {
-    "heading": "Opzionale: Fail2Ban carcere",
+    "heading": "Facoltativo: jail di Fail2Ban",
     "calloutTitle": "Fail2Ban non è in bundle con il Monitor",
-    "calloutBody": "Fail2Ban è <strong>not</strong> installato da ProxMenux Monitor stesso. Installarlo tramite <link>Security → Fail2Ban</link> nel menu ProxMenux (o con il pacchetto Debian standard). Senza di esso, il Monitor continua a scrivere il registro di audit sopra — non solo auto-ban recidivanti.",
+    "calloutBody": "Fail2Ban è <strong>non</strong> installato da ProxMenux Monitor stesso. Installalo tramite <link>Sicurezza → Fail2Ban</link> nel menu ProxMenux (o con il pacchetto Debian standard). Senza di esso, il Monitor continua a scrivere il registro di controllo di cui sopra: semplicemente non esclude automaticamente i recidivi.",
     "intro": "Quando Fail2Ban è installato, l'integrazione ProxMenux trasporta una prigione <code>[proxmenux]</code> che:",
     "items": [
       "Legge <code>/var/log/proxmenux-auth.log</code>.",
@@ -384,7 +384,7 @@
       {
         "label": "Sicurezza → Fail2Ban",
         "href": "/docs/security/fail2ban",
-        "tail": "— come installare e configurare il carcere opzionale."
+        "tail": ": come installare e configurare il jail opzionale."
       },
       {
         "label": "Impostazioni → ProxMenux Monitor",

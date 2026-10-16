@@ -26,7 +26,7 @@
   },
   "labels": {
     "base": "Base",
-    "fileSystem": "File system",
+    "fileSystem": "Filesystem",
     "viewDetails": "Visualizza dettagli"
   },
   "supported": {
@@ -52,7 +52,7 @@
       },
       {
         "name": "TrueNAS CORE",
-        "tagline": "FreeBSD-based TrueNAS. Enterprise-grade ZFS storage con carceri e plugin.",
+        "tagline": "FreeBSD basato su TrueNAS. Archiviazione ZFS di livello aziendale con jails e plug-in.",
         "icon": "Database",
         "base": "FreeBSD",
         "fileSystem": "ZFS",

@@ -197,7 +197,7 @@
     "bullets": [
       "Scrivere stringhe in inglese — la traduzione viene gestita automaticamente dalla build.",
       "Tieni le corde concise. Evitare di incorporare variabili all'interno di frasi lunghe, dove possibile.",
-      "Do <strong>not</strong> tradurre nomi variabili, percorsi o identificatori tecnici."
+      "<strong>non</strong> tradurre nomi di variabili, percorsi o identificatori tecnici."
     ]
   },
   "variableStyle": {

@@ -121,7 +121,7 @@
       },
       {
         "action": "Visualizza log",
-        "detail": "Streams <code>/var/log/proxmenux/backup-jobs/JOB_ID-YYYYMMDD_HHMMSS.log</code> — un file di log per run. Il corridore emette anche una linea di stato compatta per distribuita sotto il servizio systemd."
+        "detail": "Streams <code>/var/log/proxmenux/backup-jobs/JOB_ID-YYYYMMDD_HHMMSS.log</code>: un file di registro per esecuzione. Il corridore emette anche una riga di stato compatta a journald sotto il servizio systemd."
       }
     ]
   },

@@ -4,7 +4,7 @@
     "description": "Come OCI manager Apps trasforma un'applicazione con il suo database e la cache in LXCs nativi coordinati: piano, rete privata, gancio di dipendenza, convalida e aggiornamenti transazionali."
   },
   "header": {
-    "title": "Applicazioni multicontainer",
+    "title": "Applicazioni con più container",
     "description": "Un'applicazione con il suo database, la cache e altri servizi diventa diversi LXC nativi coordinati, installati e aggiornati come uno.",
     "section": "App del gestore OCI"
   },

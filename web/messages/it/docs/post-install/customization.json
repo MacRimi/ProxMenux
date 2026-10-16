@@ -38,7 +38,7 @@
     "breakTitle": "Può rompersi dopo gli aggiornamenti di Proxmox",
     "breakBody": "Proxmox spedisce regolarmente aggiornamenti UI che sovrascrivono <code>proxmoxlib.js</code>. Quando succede, il banner ritorna. È possibile riapplicare questa opzione dopo ogni aggiornamento Proxmox per ripristinare il file, o semplicemente accettare il nag fino a quando non si riapplica. ProxMenux installa anche un gancio APT che auto-riparazioni sugli aggiornamenti dei pacchetti — vedere <link>Uninstall Optimizations</link> per come quel gancio è invertito.",
     "legalTitle": "Nota legale (sempre vale la pena ripetere)",
-    "legalBody": "Questa opzione nasconde solo il nag UI. Fa <strong>not</strong> ti garantisce il supporto aziendale, l'accesso al repository aziendale, o qualsiasi diritto di spedire Proxmox commercialmente senza abbonamento. Se si esegue Proxmox in un ambiente di generazione di entrate, acquistare un abbonamento — supporta il progetto e ti ottiene il canale stabile impresa."
+    "legalBody": "Questa opzione nasconde solo il UI nag. <strong>non</strong> ti garantisce supporto aziendale, accesso al repository aziendale o alcun diritto per spedire Proxmox commercialmente senza un abbonamento. Se esegui Proxmox in un ambiente che genera entrate, acquista un abbonamento: supporta il progetto e ti offre un canale aziendale stabile."
   },
   "verify": {
     "heading": "Verifica",

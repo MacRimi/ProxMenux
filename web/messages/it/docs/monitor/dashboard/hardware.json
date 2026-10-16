@@ -109,7 +109,7 @@
     "heading": "Coral TPU / Acceleratori AI",
     "subHeading": "(condizionato)",
     "intro": "Renders quando l'host ha Google Coral o altri dispositivi AI-accelerator collegati. Ogni dispositivo apre un modale con il suo tipo di connessione (M.2 / mini-PCIe / USB), larghezza del collegamento PCIe, fornitore / ID prodotto, driver del kernel (<code>apex</code> per PCIe, <code>libedgetpu</code> per USB), moduli del kernel (<code>gasket</code> + <code>apex</code>), nodi del dispositivo (<code>/dev/apex_*</code>), Edge TPU firmware di runtime.",
-    "imageAlt": "Coral Edge TPU dettaglio modal: connessione PCIe / M.2, PCIe 5.0 GT/s x1 link, fornitore 1ac1:089a, apice driver del kernel, guarnizione e moduli apex caricati, /dev/apex_0 presente, Edge TPU Runtime non installato, temperatura 53.5 °C con soglie di allarme hardware",
+    "imageAlt": "Coral Edge TPU dettaglio modale: connessione PCIe/M.2, collegamento PCIe 5.0 GT/s x1, fornitore 1ac1:089a, driver del kernel apex, Moduli gasket e apex caricati, /dev/apex_0 presente, Edge TPU Runtime non installato, temperatura 53.5 °C con soglie di avviso hardware",
     "imageCaption": "M.2 Coral con i moduli del kernel host caricati, il nodo del dispositivo e gli avvisi di temperatura del firmware esposti. La linea runtime diventa verde una volta installato il runtime Edge TPU corrispondente.",
     "pathsIntro": "Esistono due percorsi di installazione a seconda del fattore forma:",
     "pathsItems": [
@@ -234,7 +234,7 @@
         "tail": "— la categoria CPU & Temperatura che consuma gli stessi sensori."
       },
       {
-        "label": "API Riferimento",
+        "label": "Riferimento API",
         "href": "/docs/monitor/api",
         "tail": "— l'hardware e gli endpoint GPU."
       },

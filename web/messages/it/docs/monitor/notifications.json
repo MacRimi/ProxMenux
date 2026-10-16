@@ -60,7 +60,7 @@
       },
       {
         "collector": "Monitoraggio del registro di sistema",
-        "watches": "<code>journalctl --follow</code> con pattern corrispondente a SSH / web auth guasti, Fail2Ban bans (quando è installato il carcere opzionale), errori kernel I/O, OOM, eventi smartd.",
+        "watches": "<code>journalctl --follow</code> con corrispondenza del modello per SSH / errori di autenticazione web, Fail2Ban ban (quando è installato jail opzionale), errori I/O del kernel, OOM, eventi smartd.",
         "events": "<code>auth_fail</code>, <code>ip_block</code>, <code>oom_kill</code>, <code>disk_io_error</code>, <code>service_fail</code>."
       },
       {
@@ -368,7 +368,7 @@
         "events": "<code>cpu_high</code>, <code>ram_high</code>, <code>temp_high</code>, <code>load_high</code>."
       },
       {
-        "group": "Stoccaggio",
+        "group": "Archiviazione",
         "events": "<code>disk_space_low</code>, <code>disk_io_error</code>, <code>storage_unavailable</code>, <code>smart_test_complete</code>, <code>smart_test_failed</code>."
       },
       {

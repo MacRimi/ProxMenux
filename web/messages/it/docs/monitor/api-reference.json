@@ -8,7 +8,7 @@
     "twitterDescription": "Endpoint per Home Assistant, Homepage, Grafana, Prometheus, n8n e dashboard personalizzati."
   },
   "header": {
-    "title": "API Riferimento",
+    "title": "Riferimento API",
     "description": "Gli integratori di endpoint HTTP utilizzano per leggere le azioni di stato e attivare azioni sicure su sensori ProxMenux Monitor — Home Assistant, schede Homepage, cruscotti Grafana, rottami Prometheus, flussi n8n e script personalizzati. Ogni categoria, più un elenco completo delle metriche di Prometheus, con esempi di curl.",
     "section": "Monitor di ProxMenux"
   },
@@ -241,7 +241,7 @@
     "outro": "Le forme di risposta e la semantica delle categorie vivono in <link>Health Monitor</link>."
   },
   "storage": {
-    "heading": "Stoccaggio",
+    "heading": "Archiviazione",
     "rows": [
       {
         "endpoint": "/api/storage",
@@ -502,7 +502,7 @@
       {
         "endpoint": "/api/security/fail2ban/details",
         "method": "GET",
-        "use": "Fail2Ban stato carcere — solo utile quando la prigione opzionale è installato."
+        "use": "Fail2Ban jail: utile solo quando è installato il jail opzionale."
       },
       {
         "endpoint": "/api/security/fail2ban/activity",

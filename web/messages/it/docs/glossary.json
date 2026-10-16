@@ -42,7 +42,7 @@
       "aliases": [
         "Adaptive Replacement Cache"
       ],
-      "category": "Stoccaggio",
+      "category": "Archiviazione",
       "definitionRich": "La cache di lettura in memoria di ZFS. Contiene blocchi di dati recentemente e frequentemente utilizzati; scale di dimensioni con host disponibile RAM. I default sono aggressivi — Proxmox post-install consente di catturarlo.",
       "seeAlso": [
         {
@@ -93,7 +93,7 @@
     },
     {
       "term": "Ceph",
-      "category": "Stoccaggio",
+      "category": "Archiviazione",
       "definitionRich": "Sistema di archiviazione distribuito strettamente integrato con Proxmox per cluster iperconvergenti. Fornisce oggetti, blocchi e file di archiviazione supportati da OSD (Object Storage Daemons). PVE 9 richiede Ceph 19.x (Squid).",
       "seeAlso": [
         {
@@ -106,7 +106,7 @@
       "term": "CT",
       "aliases": [
         "contenitore",
-        "LXC contenitore"
+        "Container LXC"
       ],
       "category": "Proxmox",
       "definitionRich": "Breve per \"container\" — Terminologia Proxmox per un'istanza LXC. Ha un CTID numerico che mappa a <code>/etc/pve/lxc/&lt;CTID&gt;.conf</code>. Vedere anche <strong>LXC</strong>.",
@@ -251,7 +251,7 @@
       "aliases": [
         "Internet SCSI"
       ],
-      "category": "Stoccaggio",
+      "category": "Archiviazione",
       "definitionRich": "Protocollo di rete che espone lo storage di blocco su IP — un disco remoto appare come un dispositivo SCSI locale. Registrato come storage Proxmox tramite <code>pvesm add iscsi</code>.",
       "seeAlso": [
         {
@@ -273,7 +273,7 @@
       "aliases": [
         "Logical Volume Manager"
       ],
-      "category": "Stoccaggio",
+      "category": "Archiviazione",
       "definitionRich": "Lo stack di archiviazione Linux che astratti i dischi fisici in gruppi di volume (VG) di volumi logici (LV). Uso di Proxmox LVM- Bene. pools per VM dischi per impostazione predefinita. Strumenti concisi: <code>pvs</code>, <code>vgs</code>, <code>lvs</code>.",
       "seeAlso": [
         {
@@ -334,7 +334,7 @@
       "aliases": [
         "Sistema di file di rete"
       ],
-      "category": "Stoccaggio",
+      "category": "Archiviazione",
       "definitionRich": "Protocollo di condivisione di file di rete unix-native. Registrato come storage Proxmox tramite <code>pvesm add nfs</code>; utilizzabile anche come client / server LXC tramite flussi ProxMenux dedicati.",
       "seeAlso": [
         {
@@ -484,7 +484,7 @@
       "aliases": [
         "QEMU Copy-On-Write v2"
       ],
-      "category": "Stoccaggio",
+      "category": "Archiviazione",
       "definitionRich": "Predefinito formato immagine disco VM su archiviazione directory Proxmox. Supporta thin provisioning, istantanee e copy-on-write. Converti con <code>qemu-img convert -O qcow2 ...</code>."
     },
     {
@@ -524,7 +524,7 @@
     },
     {
       "term": "Samba / SMB / CIFS",
-      "category": "Stoccaggio",
+      "category": "Archiviazione",
       "definitionRich": "La famiglia dei protocolli di condivisione dei file di Microsoft. <strong>SMB</strong> è il protocollo; <strong>Samba</strong> è l'implementazione Linux open source; <strong>CIFS</strong> è un vecchio dialetto SMB. Registrato come storage Proxmox tramite <code>pvesm add cifs</code>.",
       "seeAlso": [
         {
@@ -543,7 +543,7 @@
       "aliases": [
         "Self-Monitoring, Analysis and Reporting Technology"
       ],
-      "category": "Stoccaggio",
+      "category": "Archiviazione",
       "definitionRich": "Diagnostica del disco incorporata che segnalano la salute dell'unità, conta errori e risultati di auto-test. <code>smartctl</code> (da <code>smartmontools</code>) è il CLI; per le unità NVMe, il pacchetto <code>nvme-cli</code> aggiunge comandi specifici NVMe.",
       "seeAlso": [
         {
@@ -664,7 +664,7 @@
       "aliases": [
         "Zettabyte File System"
       ],
-      "category": "Stoccaggio",
+      "category": "Archiviazione",
       "definitionRich": "Filesystem combinato e gestore di volumi noto per le snapshot, la replica di invio / ricezione, checksum end-to-end, compressione e auto-guarigione. Memoria (vedi <strong>ARC</strong>) ma estremamente robusta.",
       "seeAlso": [
         {

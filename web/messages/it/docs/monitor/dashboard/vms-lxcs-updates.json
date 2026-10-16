@@ -72,7 +72,7 @@
   },
   "actions": {
     "heading": "Azioni individuali e colori di stato",
-    "lead": "Ogni sezione rimane attivabile in modo indipendente, sia che sia configurato un aggiornamento di massa.",
+    "lead": "Ogni sezione rimane utilizzabile in modo indipendente, indipendentemente dal fatto che sia configurato o meno un aggiornamento collettivo.",
     "items": [
       "<strong>Configure</strong> apre il selettore dell'aggiornamento quando non viene selezionato alcun metodo; <strong>Edit</strong> cambia una scelta salvata. I pulsanti di informazione spiegano ogni opzione, collegano alla documentazione ufficiale e mostrano un esempio di scrittura personalizzata. La selezione di un'opzione non viene eseguita.",
       "Quando il monitoraggio della versione è disattivato ma esiste un aggiornamento, viene mostrata l'azione <strong>Run updater</strong> neutrale. ProxMenux non sostiene che un aggiornamento sia in sospeso.",

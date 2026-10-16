@@ -88,7 +88,7 @@
         "href": "/docs/utils"
       },
       {
-        "title": "Comandi di riferimento",
+        "title": "Riferimento dei comandi",
         "description": "Catalogo curato di comandi Linux e Proxmox organizzati per argomento — sistema, VM/CT (qm, pct), storage, rete, ZFS, passthrough GPU, backup, strumenti CLI di giorno per giorno.",
         "icon": "BookOpen",
         "href": "/docs/help-info"
@@ -192,7 +192,7 @@
       {
         "lead": "<strong> Cercare un comando specifico?</strong> ",
         "linkHref": "/docs/help-info",
-        "linkLabel": "Comandi di riferimento",
+        "linkLabel": "Riferimento dei comandi",
         "tail": "è un catalogo curato organizzato per argomento, con pulsanti di copia."
       },
       {

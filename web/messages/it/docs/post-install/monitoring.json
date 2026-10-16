@@ -20,7 +20,7 @@
       "Ottiene l'IP pubblico dell'host tramite <code>curl ipinfo.io/ip</code>.",
       "Approfondisce l'ISP con una query <code>whois</code> a <code>v4.whois.cymru.com</code>.",
       "Se il risultato menziona OVH, fetches <code>last-public-ovh-infra-yak.snap.mirrors.ovh.net/yak/archives/apply.sh</code> e lo reindirizza a <code>bash</code> con il manifesto del burattino RTM v2.",
-      "Se il risultato fa <em>not</em> menzionare OVH, nulla è installato. L'opzione è un no-op."
+      "Se il risultato <em>non</em> menziona OVH, non è installato nulla. L'opzione è una no-op."
     ],
     "remoteTitle": "script remoto piped to bash",
     "remoteBody": "L'installazione funziona <code>wget -qO - https://…apply.sh | bash</code>. Se lo specchio OVH viene compromesso, lo script viene eseguito come root sul tuo host. Prima di abilitare questa opzione, decidere se fidarsi della catena dello specchio di OVH più del monitoraggio che si ottiene. Per la maggior parte degli utenti home-lab o non-OVH questa opzione dovrebbe semplicemente rimanere spenta.",

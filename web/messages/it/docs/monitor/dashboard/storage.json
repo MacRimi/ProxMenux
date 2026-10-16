@@ -96,7 +96,7 @@
     "overviewItems": [
       "<strong>Identity</strong> — modello, seriale, capacità, tasso di salute (Healthy / Warning / Critical).",
       "<strong>Abbigliamento & Vita</strong> — grande anello di salvataggio (97 %, 50 %, ...) con l'attributo sorgente indicato (<em>Indicatore di usura media</em>, <em>Percentuale Usato</em>, ...), una barra di usura (consumo corrente %), una <em>Est. Vita</em> proiezione negli anni e il totale dei dati scritti. NVMe motori anche mostrare <em>Spare disponibili</em>.",
-      "<strong>Attributi SMART</strong> — sei campi principali in una griglia a 2 colonne: temperatura, ore di accensione (con durata leggibile come <em>3 anni e 116 giorni</em>), velocità di rotazione (oppure <em>SSD</em>), cicli di accensione, stato SMART, settori riallocati, settori in attesa ed errori CRC. La tabella completa degli attributi si trova nella scheda SMART."
+      "<strong>Attributi SMART</strong>: i valori principali sono mostrati su due colonne: temperatura, ore di accensione con una durata leggibile come <em>3 anni e 116 giorni</em>, velocità di rotazione oppure <em>SSD</em>, cicli di accensione, stato SMART, settori riallocati, settori in attesa ed errori CRC. La tabella completa degli attributi si trova nella scheda SMART."
     ],
     "smartTitle": "Scheda 2 — SMART",
     "smartImageAlt": "Disk drill-in modal — scheda SMART con Run SMART Pulsanti di prova (corto / esteso), risultato di ultima prova e la tabella attributo SMART completa",
@@ -239,7 +239,7 @@
         "tail": "— la categoria dei dischi e I/O e il modello di soppressione."
       },
       {
-        "label": "API Riferimento",
+        "label": "Riferimento API",
         "href": "/docs/monitor/api",
         "tail": "— l'archiviazione e gli endpoint SMART."
       },

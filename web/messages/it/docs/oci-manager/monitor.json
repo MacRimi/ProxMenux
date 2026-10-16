@@ -66,7 +66,7 @@
               {
                 "icon": "archive",
                 "title": "Immagine",
-                "body": "La data di costruzione e la digestione dell'immagine installata. L'aggiornamento è deciso qui: il digestivo installato è confrontato con quello che il registro pubblica oggi per lo stesso tag."
+                "body": "La data di creazione e digest dell'immagine installata. L'aggiornamento si decide qui: il digest installato viene confrontato con quello che il registro pubblica oggi per lo stesso tag."
               }
             ]
           }
@@ -74,7 +74,7 @@
         {
           "list": {
             "items": [
-              "Quando il registro di sistema pubblica una nuova digestione, la scheda mostra <strong>Nuova immagine</strong> con la sua data e digerire, anche se la versione di applicazione all'interno non è cambiata: una ricostruzione su una base aggiornata è un aggiornamento.",
+              "Quando il registro pubblica un nuovo digest, la scheda mostra <strong>Nuova immagine</strong> con la sua data e digest, anche se la versione dell'applicazione al suo interno non è cambiata: una ricostruzione su una base aggiornata è un aggiornamento.",
               "Quando la partita digestiva, la scheda legge <strong>Version</strong>.",
               "La scheda si collega al repository dell'immagine: il suo progetto GitHub, o la sua pagina Hub Docker per un'immagine ufficiale.",
               "Il collegamento di accesso utilizza l'indirizzo LAN del contenitore, anche per il membro principale di un'applicazione multi-container, che ha un secondo indirizzo sulla sua rete privata.",

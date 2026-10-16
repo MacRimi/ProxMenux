@@ -29,7 +29,7 @@
         "owns": "Lanciatore unificato per i Link Web e i link personalizzati registrati LXC, con categorie, ricerca, scorciatoie e segnali di aggiornamento per applicazione."
       },
       {
-        "name": "Stoccaggio",
+        "name": "Archiviazione",
         "owns": "Proxmox pools, dischi fisici, SMART dati, ZFS stato, usura e vita, storia dell'osservazione."
       },
       {

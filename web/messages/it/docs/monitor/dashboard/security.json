@@ -118,18 +118,18 @@
   "fail2ban": {
     "heading": "Fail2Ban",
     "subHeading": "(condizionato)",
-    "whatIs": "<strong>Che cosa è.</strong> Fail2Ban è un demone di intrusione-prevenzione open-source che guarda i file di registro per i tentativi di login falliti ripetuti e vieta l'IP offensivo a livello di firewall. È la risposta de-facto agli scanner a forza bruta che hanno colpito SSH e ai moduli di login web 24/7. ProxMenux lo collega a tre carceri per impostazione predefinita: SSH, Proxmox web UI login (porta 8006), e ProxMenux Monitor login (porta 8008).",
-    "notBundled": "Fail2Ban è <strong>not bundle</strong>. La scheda rileva se è installato e si adatta: quando manca offre un'installazione con un solo clic; una volta installato mostra lo stato della prigione dal vivo, gli IP vietati e consente di sintonizzare i retries / ban time per jail.",
+    "whatIs": "<strong>Che cos'è.</strong> Fail2Ban è un demone di prevenzione delle intrusioni open source che controlla i file di registro per ripetuti tentativi di accesso falliti e blocca l'IP offensivo a livello di firewall. È la risposta di fatto agli scanner a forza bruta che colpiscono SSH e i moduli di accesso al web 24/7. ProxMenux lo collega a tre jails per impostazione predefinita: SSH, il login Proxmox web UI (porta 8006) e il login ProxMenux Monitor (porta 8008).",
+    "notBundled": "Fail2Ban <strong>non è incluso</strong>. La scheda ne rileva la presenza e si adatta: se manca, propone l’installazione con un clic. Una volta installato, mostra lo stato dei jail e gli IP bloccati e permette di regolare il numero di tentativi e la durata del blocco per ciascun jail.",
     "notInstalledAlt": "Scheda Fail2Ban che mostra lo stato non installato con spiegazione di ciò che si configura: SSH, Proxmox web UI e ProxMenux Monitor protezione con backend nftables, oltre a un pulsante Install e Configure Fail2Ban",
     "notInstalledCaption": "Scheda Fail2Ban prima dell'installazione — la scatola blu prevede ciò che l'installazione configura.",
     "clickBody": "Fare clic su <em>Install e Configure Fail2Ban</em> e si ottiene una conferma elenco modale ogni modifica che lo script farà sull'host:",
-    "confirmAlt": "Installa l'elenco modale di conferma Fail2Ban SSH protezione modalità aggressivo, Proxmox porta di protezione dell'interfaccia web 8006, ProxMenux Monitor porta di protezione 8008, auto-detected nftables backend, regolazione del livello del registro diario e SSH MaxAuthTries indurimento",
-    "confirmCaption": "Installa la conferma — elenco esplicito di carceri, tweaks a livello di registro diario (così la prigione di auth può leggere SSH eventi) e un SSH- effetto collaterale indurente (<code>MaxAuthTries=3</code>).",
+    "confirmAlt": "Installa Fail2Ban conferma elenco modale SSH protezione modalità aggressiva, porta di protezione dell'interfaccia web Proxmox 8006, porta di protezione ProxMenux Monitor 8008, backend nftables rilevato automaticamente, journald regolazione del livello di registro e SSH MaxAuthTries rafforzamento",
+    "confirmCaption": "Conferma installazione: elenco esplicito di jails, modifiche al livello di registro journald (in modo che l'autenticazione jail possa leggere gli eventi SSH) e un effetto collaterale di rafforzamento del SSH (<code>MaxAuthTries=3</code>).",
     "confirmIntro": "La conferma attiva un pannello di installazione in streaming (apt + jail config + test). Stesso idraulico del installatore ProxMenux CLI.",
-    "progressAlt": "Fail2Ban Pannello di installazione che mostra registro di installazione dal vivo: installazione del pacchetto, diarizzato MaxLevelStore sintonizzato per logging auth, carceri configurati, backend dei nftables rilevati, indurimento MaxAuthTries, test di comunicazione fail2ban-client, messaggio di completamento",
+    "progressAlt": "Fail2Ban Pannello di installazione che mostra il registro dell'installazione live: installazione del pacchetto, journald MaxLevelStore ottimizzato per la registrazione di autenticazione, jails configurato, rilevato il backend nftables, MaxAuthTries rafforzamento, fail2ban-test di comunicazione client, messaggio di completamento",
     "progressCaption": "Installare in corso — ogni passo è connesso nel pannello. Collegamento chiuso in basso segna la fine della sessione di streaming.",
     "afterInstall": "Dopo l'installazione la scheda gira alla vista di stato dal vivo: le prigioni configurate, il contatore IP bandito, gli eventi di divieto recenti. Le grandi schede divisero <em>Jails & Banned IPs</em> da <em>Recent Activity</em> (le ultime N dal log Fail2Ban).",
-    "activeAlt": "Scheda Fail2Ban dopo l'installazione con lo stato Active, tre carceri configurati (proxmenux, proxmox, sshd), Contatore IP bannati, Total Bans, Provate non riuscita e righe per-jail con ripetizioni, tempo di divieto, icona di finestra e marcia",
+    "activeAlt": "Fail2Ban scheda dopo l'installazione con stato attivo, tre jails configurati (proxmenux, proxmox, sshd), contatore IP bannati, ban totali, tentativi non riusciti e righe per jail con tentativi, tempo di ban, finestra e equipaggiamento icona",
     "activeCaption": "Fail2Ban attivo — le tre prigioni predefinite (<code>proxmenux</code>, <code>proxmox</code>, <code>sshd</code>) con le loro ripetizioni / tempo di divieto / impostazioni finestra.",
     "tuneBody": "<strong>Tune regole della prigione.</strong> Fare clic sull'icona dell'ingranaggio su qualsiasi riga della prigione per regolare <em>Max Retries</em>, <em>Ban Time</em> (usare un divieto permanente se si desidera che i trasgressori siano bloccati manualmente fino a unban) e <em>Find Time</em> (laminatoio per il conteggio delle ret. I valori comuni sono documentati all'interno del modulo.",
     "configAlt": "Configurare il modulo di prigione sshd con Max Retries, Ban Time in pochi secondi con l'opzione Permanent Ban, Trova il tempo, il promemoria dei valori comuni e Salva il pulsante di configurazione",
@@ -227,14 +227,14 @@
         "tail": "— libri di cucina per l'utilizzo di gettoni API con Homepage, Home Assistant, Prometheus, n8n e Secure Gateway end-to-end."
       },
       {
-        "label": "API Riferimento",
+        "label": "Riferimento API",
         "href": "/docs/monitor/api",
         "tailRich": "— ogni punto finale <code>/api/auth</code>, <code>/api/security</code> e <code>/api/oci</code> con esempi di metodo, corpo e curl."
       },
       {
         "label": "ProxMenux → Sicurezza → Fail2Ban",
         "href": "/docs/security/fail2ban",
-        "tail": "— installare walkthrough, carceri configurati, percorso di installazione manuale."
+        "tail": ": procedura dettagliata di installazione, jails configurato, percorso di installazione manuale."
       },
       {
         "label": "ProxMenux → Sicurezza → Lynis",

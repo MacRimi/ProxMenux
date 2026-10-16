@@ -30,7 +30,7 @@
     "heading": "Ricerca e ricerca di applicazioni",
     "lead": "I suggerimenti applicativi fanno parte della cache modale per-LXC. La scansione di avvio li prepara in background in modo da aprire la scheda App può mostrare immediatamente i risultati memorizzati nella cache.",
     "items": [
-      "L'apertura della scheda App fa <strong>not</strong> avviare una nuova scansione del catalogo e non interroga ripetutamente il LXC.",
+      "L'apertura della scheda App <strong>non</strong> avvia una nuova scansione del catalogo e non interroga ripetutamente il LXC.",
       "<strong>Find Applications</strong> esegue esplicitamente un passaggio di scoperta fresco per quel LXC. Utilizzare dopo l'installazione di nuovo software mentre ProxMenux è già in esecuzione.",
       "L'elenco precedente rimane visibile mentre la scansione esplicita viene eseguita. Nuove partite vengono aggiunte quando finisce.",
       "Se non si trova una nuova partita, il risultato è indicato accanto alle azioni e l'applicazione <strong>Register </strong> rimane disponibile per l'ingresso manuale.",
@@ -92,7 +92,7 @@
     "detectorRows": [
       {
         "method": "dpkg / apk",
-        "use": "Legge la versione del pacchetto installato da Debian, Ubuntu o i metadati del pacchetto alpino."
+        "use": "Legge la versione del pacchetto installato dai metadati del pacchetto Debian, Ubuntu o Alpine."
       },
       {
         "method": "binary",

@@ -14,7 +14,7 @@
   },
   "intro": {
     "title": "Cosa significa questo menu",
-    "body": "Subito dopo l'installazione di Proxmox VE, ci sono dozzine di piccoli cambiamenti che rendono l'host più veloce e più facile da mantenere — repository gratuiti, limiti sane riviste, buffer TCP sensibili, archiviazione di registro SSD-friendly, simpatie bashrc, e altro ancora. ProxMenux li automatizza e traccia le modifiche di configurazione reversibili supportate."
+    "body": "Subito dopo l'installazione di Proxmox VE, ci sono dozzine di piccole modifiche che rendono l'host più veloce e più facile da mantenere: repository gratuiti, limiti journald ragionevoli, buffer TCP ragionevoli, archiviazione dei log compatibile con SSD, sottigliezze bashrc e altro ancora. ProxMenux li automatizza e tiene traccia delle modifiche di configurazione reversibili supportate."
   },
   "openingMenu": {
     "heading": "Apertura del menu",

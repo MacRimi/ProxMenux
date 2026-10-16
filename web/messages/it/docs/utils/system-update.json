@@ -12,7 +12,7 @@
   },
   "calloutWhat": {
     "title": "Cosa succede?",
-    "body": "Porta l'host all'ultimo livello di patch della sua versione principale attuale. <strong>not</strong> aggiornamento attraverso le versioni principali — per PVE 8 → PVE 9 vedere <link>Upgrade PVE 8 a PVE 9</link>."
+    "body": "Porta l'host all'ultimo livello di patch della versione principale corrente. <strong>non</strong> si aggiorna tra le versioni principali: per PVE 8 → PVE 9 vedere <link>Aggiornamento da PVE 8 a PVE 9</link>."
   },
   "official": {
     "heading": "Raccomandazione ufficiale Proxmox",

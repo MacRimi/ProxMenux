@@ -12,7 +12,7 @@
   },
   "intro": {
     "title": "Quando scegliere Automated",
-    "body": "Eseguire questo su un host Proxmox appena installato quando si desidera la linea di base ragionevole senza prendere decisioni. Lo script è idempotent — l'esecuzione due volte è sicuro, si riapplica solo le stesse configurazioni. Opt-in (Fastfetch, IOMMU, Ceph repo, HA, AMD fixs...) sono intenzionalmente <strong>not</strong> parte di questo percorso; sceglierli da <link>Customizable</link> se ne avete bisogno."
+    "body": "Eseguilo su un host Proxmox appena installato quando desideri una base di riferimento ragionevole senza prendere decisioni. Lo script è idempotente: eseguirlo due volte è sicuro, applica semplicemente le stesse configurazioni. Le funzionalità di attivazione (Fastfetch, IOMMU, Ceph repository, HA, correzioni AMD...) <strong>non</strong> intenzionalmente fanno parte di questo percorso; sceglili da <link>Personalizzabili</link> se ne hai bisogno."
   },
   "applies": {
     "heading": "Cosa si applica lo script",
@@ -79,18 +79,18 @@
     },
     {
       "tool": "Log2RAM (ottimizzato per SSD, automatico)",
-      "what": "Riduce l'usura SSD/NVMe spostando /var/log a un ramdisk tmpfs con sincronizzazione periodica del disco. Installato dal progetto a monte quando il disco root è SSD o NVMe. Dimensioni il ramdisk da host RAM (128M / 256M / 512M), pianifica la sincronizzazione periodica e una guardia auto-sincrona che aspira a 80% e tronca i registri caldi a 92% prima di scrivere. Regola i limiti periodici per adattarsi al ramdisk. Dettagli completi su <link>Log2RAM</link>.",
-      "category": "Stoccaggio",
+      "what": "Riduce l'usura dell'SSD/NVMe spostando /var/log su un ramdisk tmpfs con sincronizzazione periodica del disco. Installato dal progetto upstream quando il disco root è SSD o NVMe. Dimensiona il ramdisk in base all'host RAM (128M / 256M / 512M), pianifica la sincronizzazione periodica e una protezione di sincronizzazione automatica che esegue il vuoto al 80% e tronca gli hot log al 92% prima della scrittura. Regola i limiti journald per adattarli al ramdisk. Dettagli completi su <link>Log2RAM</link>.",
+      "category": "Archiviazione",
       "categorySlug": "stoccaggio"
     },
     {
       "tool": "Autotrim ZFS (solo SSD)",
       "what": "Abilita zpool autotrim=on su ogni ZFS pool i cui vdev sono tutti SSD/NVMe con supporto TRIM (checks /sys/block[dev]/queue/rotational e discard_granularity). Pools supportato da HDD vengono ignorati automaticamente. Solo pools effettivamente cambiato da ProxMenux sono registrati per disinstallare — pools si imposta autotrim su manualmente sono lasciati da soli.",
-      "category": "Stoccaggio",
+      "category": "Archiviazione",
       "categorySlug": "stoccaggio"
     },
     {
-      "tool": "Limiti di dimensione periodica",
+      "tool": "Journald limiti di dimensione",
       "what": "Forza stoccaggio persistente, tappi SystemMaxUse=64M / RuntimeMaxUse=60M, imposta la compressione, logging a livello di info (richiesto per il Monitor). Abilitato automaticamente quando Log2RAM è attivo (fa la sua regolazione).",
       "category": "Sistema",
       "categorySlug": "sistema"
@@ -109,7 +109,7 @@
     }
   ],
   "hardwareTitle": "Predefinizioni hardware-aware",
-  "hardwareBody": "Lo script legge l'hardware host prima di applicare le impostazioni. Log2RAM è installato solo su dischi radice SSD / NVMe per impostazione predefinita (si richiede se il rilevamento dice diversamente). La dimensione del ramdisk di Log2RAM è selezionata da RAM (<code>≤ 8 GB → 128M</code>, <code>≤ 16 GB → 256M</code>, <code>'>' 16 GB → 512M</code>). I limiti pubblicati sono abbinati alla dimensione del ramdisk quando Log2RAM è attivo, per evitare di riempirlo.",
+  "hardwareBody": "Lo script legge l'hardware dell'host prima di applicare le impostazioni. Log2RAM è installato solo su dischi SSD/root NVMe per impostazione predefinita (richiede se il rilevamento indica diversamente). La dimensione del disco ram Log2RAM viene scelta dal totale RAM (<code>≤ 8 GB → 128M</code>, <code>≤ 16 GB → 256M</code>, <code>'>' 16 GB → 512M</code>). I limiti del journald vengono adattati alla dimensione del ramdisk quando Log2RAM è attivo, per evitare di riempirlo.",
   "upgrade": {
     "heading": "Aggiorna gli elenchi dei pacchetti e il sistema",
     "intro": "Il primo passo del pacchetto automatizzato è l'aggiornamento Proxmox. La guida di aggiornamento di Proxmox per un host in esecuzione (nella stessa versione principale) è quella di eseguire:",

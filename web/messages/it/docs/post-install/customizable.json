@@ -29,7 +29,7 @@
     },
     {
       "name": "Sistema",
-      "description": "Sintonizzare il sottosistema di registro e i limiti del kernel per un host che trasporta molte VM e container. Copre riviste, logrotate, sysctl (memoria, limiti di file), comportamento di panico del kernel e riavviamenti veloci."
+      "description": "Ottimizzare il sottosistema di log e i limiti del kernel per un host che trasporta molte macchine virtuali e contenitori. Copre journald, logrotate, sysctl (memoria, limiti di file), comportamento di kernel panico e riavvii rapidi."
     },
     {
       "name": "Virtualizzazione",
@@ -40,7 +40,7 @@
       "description": "Indurire e sintonizzare lo stack di rete dell'host. Forces APT over IPv4, applica sysctl indurimento + TCP buffer tuning, offre Open vSwitch, TCP BBR + TCP Fast Open, e perni nomi di interfaccia persistenti di MAC."
     },
     {
-      "name": "Stoccaggio",
+      "name": "Archiviazione",
       "description": "Impostare i sottosistemi di archiviazione comuni di Proxmox: ZFS ARC sizing, ZFS auto-snapshot, ZFS autotrim per SSD/NVMe pools, e vzdump limiti di velocità per evitare di saturare il disco durante i backup."
     },
     {

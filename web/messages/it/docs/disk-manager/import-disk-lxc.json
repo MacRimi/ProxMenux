@@ -76,7 +76,7 @@
     "heading": "Considerazioni importanti",
     "items": [
       "<strong>One disco per run</strong>. Ripristina lo script per ogni disco aggiuntivo.",
-      "Do <strong>not</strong> collegare la stessa partizione a diversi contenitori che potrebbero montarlo simultaneamente — scrive contemporaneamente corrompere il filesystem.",
+      "<strong>non</strong> collegare la stessa partizione a diversi contenitori che potrebbero montarla simultaneamente: le scritture simultanee corrompono il filesystem.",
       "<strong>Old metadati</strong> (RAID / ZFS / LVM firme) deve essere cancellato manualmente prima che lo script vi permetterà di formattare, altrimenti <code>mkfs</code> rifiuta di sovrascrivere. Utilizzare lo strumento <wipeLink>Format / Wipe Physical Disk</wipeLink> per quello."
     ]
   },

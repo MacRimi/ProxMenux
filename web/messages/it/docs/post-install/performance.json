@@ -42,7 +42,7 @@
         "tailRich": "— vzdump CLI di riferimento, compresa l'opzione filetti <code>--pigz</code>."
       },
       {
-        "label": "Stoccaggio",
+        "label": "Archiviazione",
         "href": "/docs/post-install/storage",
         "tail": "— limiti di velocità di vzdump e sintonizzazione ZFS ARC."
       },
