@@ -1110,7 +1110,21 @@
       "available": "Verfügbare Backups",
       "loading": "Backups werden geladen...",
       "empty": "Keine Backups gefunden",
-      "emptyHint": "Erstellen Sie Ihr erstes Backup über die Schaltfläche oben"
+      "emptyHint": "Erstellen Sie Ihr erstes Backup über die Schaltfläche oben",
+      "refresh": "Aktualisieren",
+      "refreshFailed": "Sicherungen konnten nicht aktualisiert werden. Aktualisieren Sie erneut, um ihren aktuellen Zustand zu bestätigen.",
+      "deleteSelected": "Ausgewählte löschen ({count})",
+      "deletedCount": "{count} Sicherung(en) gelöscht.",
+      "unconfirmedCount": "Die Löschung von {count} Sicherung(en) wurde nicht bestätigt. Aktualisieren Sie die Liste und prüfen Sie die Proxmox-Aufgaben, bevor Sie es erneut versuchen.",
+      "deleteFailed": "Die Löschung konnte nicht bestätigt werden. Aktualisieren Sie die Liste und prüfen Sie die Proxmox-Aufgaben, bevor Sie es erneut versuchen.",
+      "selectHint": "Ungeschützte Sicherungen auswählen (bis zu 20 pro Durchgang)",
+      "selectBackup": "Sicherung auswählen",
+      "protected": "Geschützt",
+      "confirmTitle": "{count} Sicherung(en) löschen?",
+      "confirmDescription": "Diese Sicherungsarchive für VM/CT {vmid} werden dauerhaft gelöscht. Geschützte Sicherungen sind ausgeschlossen. Der Gast wird dadurch nicht gelöscht.",
+      "deleting": "Warten, bis Proxmox die ausgewählten Archive gelöscht hat…",
+      "cancel": "Abbrechen",
+      "confirmDelete": "Sicherungen löschen"
     },
     "updatesPanel": {
       "pendingTitle": "Ausstehende Paketaktualisierungen",
@@ -1302,7 +1316,10 @@
         "Donnerstag",
         "Freitag",
         "Samstag"
-      ]
+      ],
+      "runSkippedStatus": "Lauf übersprungen",
+      "reasonStoppedContainer": "Container ist gestoppt; das geplante Update wurde übersprungen.",
+      "reasonStoppedContainerHistorical": "Der Container wurde zum geplanten Aktualisierungszeitpunkt gestoppt."
     },
     "cronChip": {
       "detected": "Host-Cron erkannt",
@@ -2108,7 +2125,13 @@
         "inactiveFooter": "Aktivieren Sie Benachrichtigungen, um System-, Gesundheits- und Sicherheitswarnungen über die konfigurierten Kanäle zu erhalten.",
         "notificationLanguage": "Benachrichtigungssprache",
         "selectNotificationLanguage": "Benachrichtigungssprache auswählen",
-        "notificationLanguageHint": "Wird für deterministische Laufzeitbenachrichtigungen verwendet, auch wenn KI deaktiviert ist."
+        "notificationLanguageHint": "Wird für deterministische Laufzeitbenachrichtigungen verwendet, auch wenn KI deaktiviert ist.",
+        "appriseServiceHelp": "Slack und Matrix einrichten",
+        "appriseSlackSteps": "Erstellen Sie in Ihrer Slack-App einen eingehenden Webhook für den Zielkanal und fügen Sie dessen vollständige HTTPS-URL in das Feld Apprise-URL ein. Eine Umwandlung ist nicht erforderlich.",
+        "appriseSlackDocs": "Slack-URL-Formate und Einrichtung",
+        "appriseMatrixSteps": "Verwenden Sie ein Benachrichtigungskonto, das in den Raum schreiben darf. Ersetzen Sie den Beispielbenutzer, das Passwort, den Homeserver und die vollständige Raum-ID; kodieren Sie Sonderzeichen in Zugangsdaten für URLs. Das Schema matrixs verwendet HTTPS. Informationen zur Unterstützung von Tokens, SSO und verschlüsselten Räumen in Ihrer installierten Apprise-Version finden Sie in der Dokumentation.",
+        "appriseMatrixDocs": "Matrix-URL-Formate und Einrichtung",
+        "appriseServiceFinish": "Aktivieren Sie Apprise, geben Sie Ihre URL ein, wählen Sie Benachrichtigungskategorien oder einzelne Ereignisse aus, speichern Sie und verwenden Sie anschließend Test senden. Diese Beispiele ändern Ihre gespeicherte URL nicht. Dieser Apprise-Kanal hat ein Ziel; verwenden Sie die Apprise-API für mehrere Dienste gleichzeitig."
       },
       "ai": {
         "title": "KI-Verbesserung",
@@ -4753,6 +4776,24 @@
       "thursday": "Donnerstag",
       "tuesday": "Dienstag",
       "wednesday": "Mittwoch"
+    },
+    "storageRetention": {
+      "title": "Aufbewahrung im Speicher",
+      "keepAll": "Alle Sicherungen behalten",
+      "description": "In Proxmox gespeicherte Standardaufbewahrung für Sicherungen. Sicherungsaufträge mit einer eigenen Richtlinie überschreiben diesen Standard.",
+      "refresh": "Aktualisieren",
+      "saved": "Aufbewahrungsrichtlinie des Speichers gespeichert. Es wurde keine Bereinigung ausgeführt.",
+      "choosePolicy": "Wählen Sie Alle behalten oder mindestens eine Aufbewahrungsanzahl größer als null.",
+      "saveFailed": "Aufbewahrungsrichtlinie des Speichers konnte nicht gespeichert werden. Aktualisieren Sie die Liste, falls die Konfiguration geändert wurde.",
+      "loadFailed": "Aufbewahrungsrichtlinie des Speichers konnte nicht geladen werden.",
+      "empty": "Keine Sicherungsspeicher gefunden.",
+      "default": "Proxmox-Standard",
+      "edit": "Bearbeiten",
+      "editTitle": "Aufbewahrung für {storage}",
+      "effect": "Gilt für zukünftige Sicherungsläufe, die diese Speicherrichtlinie übernehmen. Das Speichern löscht keine vorhandenen Sicherungen. Geschützte Sicherungen bleiben geschützt.",
+      "cancel": "Abbrechen",
+      "save": "Aufbewahrung speichern",
+      "useDefault": "Proxmox-Standard verwenden (keine Richtlinie für diesen Speicher)"
     }
   },
   "healthStatus": {
