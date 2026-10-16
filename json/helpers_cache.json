@@ -6437,6 +6437,48 @@
     "os": "ubuntu"
   },
   {
+    "name": "EmDash",
+    "slug": "emdash",
+    "desc": "EmDash is a full-stack TypeScript CMS built on Astro and meant as a modern successor to WordPress. It brings an admin panel with a visual schema builder, a media library, menus, widgets, revisions and scheduled publishing, stores rich text as structured Portable Text, runs plugins in sandboxes with declared capabilities, imports WordPress sites and ships an MCP server for AI tools. This script creates a site from one of the Node.js templates with upstream's create-emdash, builds it against the published packages and runs it on Node.js with SQLite and local media storage.",
+    "script": "ct/emdash.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/emdash.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/emdash.sh",
+    "type": "lxc",
+    "type_id": "nm9bra8mzye2scg",
+    "categories": [
+      "scriptcat00021"
+    ],
+    "category_names": [
+      "Webservers & Proxies"
+    ],
+    "notes": [
+      "To set EmDash up for real, put it behind a reverse proxy or tunnel with a trusted certificate (Caddy, Nginx Proxy Manager, Traefik, Cloudflare Tunnel) that forwards to http://<IP>:4321, set EMDASH_SITE_URL in /opt/emdash_data/.env to that address (e.g. https://blog.example.com), then rebuild: cd /opt/emdash && set -a && . /opt/emdash_data/.env && set +a && pnpm build && systemctl restart emdash. Open https://blog.example.com/_emdash/admin and create your account; the first one becomes the administrator. Setting var_emdash_url at install time skips the rebuild.",
+      "To try EmDash without a domain, set EMDASH_SITE_URL=http://localhost:4321, rebuild as above, run ssh -L 4321:localhost:4321 root@<IP> on your computer and open http://localhost:4321/_emdash/admin. While the site URL is localhost, links and images on the public site point there too. Passkeys made there only work at localhost: when you move to a domain, stay signed in at localhost, switch EMDASH_SITE_URL and rebuild, then use Settings > General > Continue on <domain> to add a passkey for the new address.",
+      "EMDASH_SITE_URL must be exactly the address in the browser bar, because passkeys are bound to its hostname. Extra hostnames under the same domain go in EMDASH_ALLOWED_ORIGINS (comma-separated). Behind a reverse proxy, also set EMDASH_TRUSTED_PROXY_HEADERS=x-forwarded-for once only the proxy can reach port 4321: without it EmDash on Node.js cannot see client addresses and skips the per-IP rate limits on sign-in, magic-link and signup requests.",
+      "/opt/emdash is your Astro project: the template's layouts, components and astro.config.mjs are yours to change, and a rebuild (command above) applies the changes. Updates only move the emdash package to the new release and rebuild; they never replace template files, so new template designs do not reach existing sites.",
+      "The SQLite database, the uploaded media and the .env with EMDASH_ENCRYPTION_KEY live in /opt/emdash_data, outside the site; back up that folder. Without the key, plugin secrets saved in the database cannot be decrypted.",
+      "Magic-link sign-in, invitations and account recovery need an email provider plugin (e.g. emdash-smtp, see the Email Setup guide). Without one, invitation links have to be copied from the Users page.",
+      "Install and every update build the site with Astro, which peaks at about 2.3 GB of RAM; with 2 GB the build only fits by swapping. The running site needs about 160 MB."
+    ],
+    "warnings": [
+      "The admin at /_emdash/admin signs in with passkeys only; there are no passwords. Browsers offer passkeys only on HTTPS under a hostname or on localhost, never on an IP address, with or without a self-signed certificate. http://<IP>:4321 serves the public site, but the setup wizard cannot create the first account there.",
+      "Updates follow the emdash@x.y.z releases; the repository tags every plugin as well. Core database migrations run on the first request after the update. Before an update across a major version, take a backup or snapshot and read the release notes: they can require changes to your site's own code, which the update does not make."
+    ],
+    "port": 4321,
+    "website": "https://emdashcms.com/",
+    "documentation": "https://docs.emdashcms.com/",
+    "logo": "https://cdn.jsdelivr.net/gh/emdash-cms/emdash@main/docs/public/favicon.svg",
+    "updateable": true,
+    "privileged": false,
+    "has_arm": false,
+    "is_dev": true,
+    "execute_in": [
+      "lxc"
+    ],
+    "config_path": "",
+    "os": "debian"
+  },
+  {
     "name": "EMQX",
     "slug": "emqx",
     "desc": "EMQX is an open-source MQTT broker that features a high-performance, real-time message processing engine. It is designed to handle large-scale IoT deployments, providing fast and reliable message delivery for connected devices. EMQX is known for its scalability, reliability, and low latency, making it a popular choice for IoT and M2M applications. It also offers a wide range of features and plugins for enhanced security, monitoring, and management.",
