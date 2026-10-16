@@ -1,0 +1,18 @@
+#!/bin/bash
+# Launch the ProxMenux Monitor console TUI in the current terminal.
+# Root only: the TUI is read-only and runs as the root that invoked it.
+# PMX_CONSOLE_LAUNCHER overrides the AppRun path (used by tests).
+
+LAUNCHER="${PMX_CONSOLE_LAUNCHER:-/usr/local/share/proxmenux/monitor-app/AppRun}"
+
+if [ "$(id -u)" -ne 0 ]; then
+    echo "proxmenux-console must be run as root." >&2
+    exit 1
+fi
+
+if [ ! -x "$LAUNCHER" ]; then
+    echo "ProxMenux Monitor is not installed: $LAUNCHER is missing or not executable." >&2
+    exit 1
+fi
+
+exec "$LAUNCHER" --tui "$@"

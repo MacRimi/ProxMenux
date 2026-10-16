@@ -573,6 +573,10 @@ install_proxmenux_monitor() {
         return 1
     fi
 
+    if [ -f "$TEMP_DIR/scripts/console/proxmenux-console" ]; then
+        install -m 0755 "$TEMP_DIR/scripts/console/proxmenux-console" /usr/local/bin/proxmenux-console
+    fi
+
     msg_ok "ProxMenux Monitor v$appimage_version installed."
 
     if [ "$service_exists" = false ]; then
