@@ -23,7 +23,7 @@ const candidate = {
   evidence: [{kind: 'installation_file', value: '/opt/handmade/server'}], default_ports: [],
 }
 
-function fixture() {
+function fixture({nativeCandidate = candidate} = {}) {
   let cursor = 0, tree, props, effects = [], states = [], refs = [], effectStates = []
   const calls = [], cachedWrites = []
   let native = {vmid: 101, status: 'not_scanned', candidates: [], stale: false}
@@ -49,7 +49,7 @@ function fixture() {
     if (url.endsWith('/native-discovery')) {
       if (options.method === 'POST') {
         if (scanGate) await scanGate
-        native = {...native, status: scanStatus, candidates: [candidate]}
+        native = {...native, status: scanStatus, candidates: [nativeCandidate]}
       }
       return structuredClone(native)
     }
@@ -123,6 +123,16 @@ async function main() {
   assert.equal(payload.repo, '')
   assert.equal(payload.upstream_type, '')
 
+  const hestia = fixture({nativeCandidate: {
+    ...candidate, name: 'Hestia', default_ports: [8083], scheme: 'https',
+  }})
+  hestia.render(); await hestia.settle()
+  await hestia.button('searchApplications').props.onClick(); hestia.render()
+  await hestia.button('registerButton').props.onClick(); hestia.render()
+  await hestia.button('saveButton').props.onClick(); hestia.render()
+  const hestiaPayload = JSON.parse(hestia.calls.find(c => /\/apps$/.test(c.url) && c.method === 'POST').body)
+  assert.deepEqual(hestiaPayload.ports, [{port: 8083, scheme: 'https', web_path: ''}],
+    'a verified Hestia panel pre-fills only its fixed HTTPS endpoint')
   const partial = fixture()
   partial.render(); await partial.settle(); partial.setScanStatus('partial')
   await partial.button('searchApplications').props.onClick(); partial.render()

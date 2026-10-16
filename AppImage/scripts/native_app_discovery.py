@@ -460,11 +460,21 @@ def candidate(vmid, record, footprint):
                          {'kind': 'working_directory',
                           'value': record.get('process_root', record['root'])}])
     ports = sorted(set(record.get('listening_ports') or []))
+    # Hestia's control panel is a narrow, verified exception to generic port
+    # inference: its own executable serves the panel on fixed HTTPS port 8083.
+    # Keep this declaration on the exact runtime signature so an unrelated
+    # application merely listening on 8083 never receives an HTTPS guess.
+    hestia_panel = (record['name'] == 'Hestia'
+                    and record['path'] == _HESTIA_NGINX
+                    and record['root'] == _HESTIA_ROOT
+                    and _HESTIA_PANEL_PORT in ports)
     evidence.extend({'kind': 'tcp_listener', 'value': str(port)} for port in ports)
     return {'slug': identity, 'discovery_id': identity, 'source': 'native_metadata',
             'name': record['name'], 'installed_version': version, 'evidence': evidence,
-            'installation_path': record['path'], 'default_ports': [],
+            'installation_path': record['path'],
+            'default_ports': [_HESTIA_PANEL_PORT] if hestia_panel else [],
             'listening_ports': ports,
+            **({'scheme': 'https'} if hestia_panel else {}),
             'metadata_issue': metadata_issue,
             'tracking_suggestion': ({'installed_via': 'manual', 'installed_version': version,
                                      'detected_version': version, 'detector_verified': True}

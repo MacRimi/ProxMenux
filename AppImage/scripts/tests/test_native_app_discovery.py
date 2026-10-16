@@ -153,8 +153,17 @@ class DiscoveryFixtures(unittest.TestCase):
         self.assertEqual(item['name'], 'Hestia')
         self.assertEqual(item['installation_path'], hestia)
         self.assertEqual(item['listening_ports'], [8083])
+        self.assertEqual(item['default_ports'], [8083])
+        self.assertEqual(item['scheme'], 'https')
         self.assertIn({'kind': 'working_directory', 'value': '/'}, item['evidence'])
         self.assertIn('metadata_limit', result['issues'])
+
+        unrelated = native.candidate(101, {
+            'name': 'other-panel', 'path': '/opt/other-panel/server', 'root': '/opt/other-panel',
+            'process': '/opt/other-panel/server', 'listening_ports': [8083],
+        }, 'FILE\n')
+        self.assertEqual(unrelated['default_ports'], [])
+        self.assertNotIn('scheme', unrelated)
 
         self.calls.clear()
         result = native.scan(101, self.runner(
