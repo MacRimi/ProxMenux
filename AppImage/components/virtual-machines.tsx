@@ -37,6 +37,23 @@ import DOMPurify from "dompurify"
 import { marked } from "marked"
 import { getCountFormKey, useI18n, useT } from "@/lib/i18n/provider"
 
+// A schedule record predating the structured reason code still contains one
+// of these exact diagnostic messages. Recognise only those known historical
+// values so an already-recorded safe skip localizes after an upgrade, while
+// unrelated freeform diagnostics remain verbatim for troubleshooting.
+const LEGACY_STOPPED_SCHEDULE_REASONS = new Set([
+  "container is stopped; scheduled update was skipped",
+  "container was stopped before scheduled update could begin",
+])
+
+const scheduleReasonCodeFromPersisted = (reasonCode: unknown, reason: unknown): string | null => {
+  if (typeof reasonCode === "string" && reasonCode) return reasonCode
+  if (typeof reason === "string" && LEGACY_STOPPED_SCHEDULE_REASONS.has(reason.toLowerCase())) {
+    return "stopped_container"
+  }
+  return null
+}
+
 // Sent by /api/vms only for LXC rows, only when the user has enabled
 // `lxc_updates_available` notifications. The Monitor populates this
 // from managed_installs registry → frontend uses it to render the
@@ -2072,6 +2089,7 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
   const [scheduleLastRunAt, setScheduleLastRunAt] = useState<string | null>(null)
   const [scheduleLastRunStatus, setScheduleLastRunStatus] = useState<string | null>(null)
   const [scheduleLastRunReason, setScheduleLastRunReason] = useState<string | null>(null)
+  const [scheduleLastRunReasonCode, setScheduleLastRunReasonCode] = useState<string | null>(null)
   const [scheduleLastRunLog, setScheduleLastRunLog] = useState<string | null>(null)
   const [scheduleLastRunRebootRequired, setScheduleLastRunRebootRequired] = useState(false)
   const [scheduleLastRunRebootPackages, setScheduleLastRunRebootPackages] = useState<string[]>([])
@@ -2148,6 +2166,7 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
     setScheduleLastRunAt(s.last_run_at || null)
     setScheduleLastRunStatus(s.last_run_status || null)
     setScheduleLastRunReason(s.last_run_reason || null)
+    setScheduleLastRunReasonCode(scheduleReasonCodeFromPersisted(s.last_run_reason_code, s.last_run_reason))
     setScheduleLastRunLog(s.last_run_log || null)
     setScheduleLastRunRebootRequired(s.last_run_reboot_required === true)
     setScheduleLastRunRebootPackages(Array.isArray(s.last_run_reboot_packages)
@@ -2425,6 +2444,11 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
   const renderScheduleRunDetails = (indented = false) => {
     if (!scheduleLastRunAt || !selectedVM) return null
     const spacing = indented ? "pl-4" : ""
+    const scheduleLastRunReasonText = scheduleLastRunReasonCode === "stopped_container"
+      ? selectedVM.status === "stopped"
+        ? t("vmLxc.scheduled.reasonStoppedContainer")
+        : t("vmLxc.scheduled.reasonStoppedContainerHistorical")
+      : scheduleLastRunReason
     return (
       <div className={`space-y-1.5 ${spacing}`}>
         <div className="text-xs text-muted-foreground">
@@ -2438,14 +2462,14 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                   : scheduleLastRunStatus === "deferred"
                     ? t("vmLxc.scheduled.runDeferred")
                     : scheduleLastRunStatus === "skipped"
-                      ? t("vmLxc.scheduled.runSkipped")
+                      ? t("vmLxc.scheduled.runSkippedStatus")
                       : t("vmLxc.scheduled.runFailed")}
             </span></>
           )}
         </div>
-        {scheduleLastRunReason && (
+        {scheduleLastRunReasonText && (
           <div className="text-xs text-muted-foreground break-words">
-            {scheduleLastRunReason}
+            {scheduleLastRunReasonText}
           </div>
         )}
         {scheduleLastRunRebootRequired && (

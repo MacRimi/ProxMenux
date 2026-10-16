@@ -119,7 +119,8 @@ raise SystemExit(h.main())
         self.write("sleep", "#!/bin/sh\nexit 0\n")
         self.write("flock", "#!/bin/sh\nexit 0\n")
         names = {"_finalize_lxc_update", "_terminal_lxc_update_completed",
-                 "api_lxc_updates_applied", "_run_scheduled_update"}
+                 "api_lxc_updates_applied", "_run_scheduled_update",
+                 "_scheduled_runner_reported_stopped"}
         nodes = [n for n in ast.parse(observed.SERVER.read_text()).body
                  if isinstance(n, ast.FunctionDef) and n.name in names]
         self.scope = self.fixture.scope
@@ -134,6 +135,7 @@ raise SystemExit(h.main())
             "_json_list": lambda value: json.loads(value or '[]'),
             "_lxc_update_finalizations": {}, "_lxc_update_finalization_lock": threading.RLock(),
             "_LXC_UPDATE_FINALIZATION_TTL": 3600,
+            "_SCHEDULED_STOPPED_EXIT": 9,
             "_fast_guest_status": lambda *_: self.state.read_text(),
             "_lxc_update_snapshot": lambda *_: {"ct_name": "fixture"},
             "_lxc_update_target_labels": lambda *_: ["OS"],
@@ -315,6 +317,7 @@ raise SystemExit(h.main())
         self.scope['notification_manager'].emit_event.assert_called_once()
 
     def test_scheduled_path_executes_real_runner_and_real_finalization(self):
+        self.state.write_text("running")
         def run(command, **kwargs):
             kwargs['env'].update({key: value for key, value in self.env.items()
                                   if key != 'RUN_ID'})
@@ -322,7 +325,7 @@ raise SystemExit(h.main())
         self.scope['subprocess'] = SimpleNamespace(run=run, TimeoutExpired=subprocess.TimeoutExpired)
         result = self.scope['_run_scheduled_update'](100, {'targets': ['os'], 'target': 'os'})
         self.assertEqual(result['status'], 'success', result)
-        self.assertEqual(self.state.read_text(), 'stopped')
+        self.assertEqual(self.state.read_text(), 'running')
         self.assertEqual(self.fixture.row()['update_check']['count'], 0)
 
     def test_legacy_cli_without_run_id_preserves_update_and_original_state(self):

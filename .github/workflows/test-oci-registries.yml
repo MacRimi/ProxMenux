@@ -1,0 +1,34 @@
+name: Offline OCI registry tests
+
+on:
+  pull_request:
+    paths:
+      - 'oci/**'
+      - '.github/workflows/test-oci-registries.yml'
+  push:
+    branches: [main, develop]
+    paths:
+      - 'oci/**'
+      - '.github/workflows/test-oci-registries.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  registry-accounts:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Install OCI test dependencies
+        run: python3 -m pip install -r oci/requirements.txt
+      - name: Run offline registry account tests
+        env:
+          PYTHONDONTWRITEBYTECODE: '1'
+        run: python3 -m unittest discover -s oci/tests -p 'test_registry_*.py' -v
