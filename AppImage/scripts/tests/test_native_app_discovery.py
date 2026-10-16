@@ -132,6 +132,7 @@ class DiscoveryFixtures(unittest.TestCase):
             ('cortendesk-bootstrap-worker', '/bin/bash', '/opt/cortendesk', '/opt/cortendesk/bootstrap-worker.sh'),
             ('cortendesk-source-worker', '/bin/bash', '/opt/cortendesk', '/opt/cortendesk/source-worker.sh'),
             ('cortendesk-managed-password@', '/bin/bash', '/opt/cortendesk', '/opt/cortendesk/password-bridge.sh'),
+            ('miminails-watch', '/usr/local/bin/miminails-watch', '/usr/local/bin', ''),
         ]
         for name, exe, directory, script in cases:
             with self.subTest(name=name):
@@ -140,6 +141,23 @@ class DiscoveryFixtures(unittest.TestCase):
                     name=name, exe=exe, directory=directory, script=script)))
                 self.assertEqual(result['candidates'], [])
                 self.assertFalse(any(native.FOOTPRINT_SCRIPT in call for call in self.calls))
+
+    def test_hestia_panel_is_recognized_only_from_its_exact_runtime_and_port(self):
+        hestia = '/usr/local/hestia/nginx/sbin/hestia-nginx'
+        process = f'P\t391\t{hestia}\t/\nEND\n'
+        result = native.scan(101, self.runner(
+            services='END\n', processes=process, ports='L\t391\t8083\nEND\n'))
+        item, = result['candidates']
+        self.assertEqual(item['name'], 'Hestia')
+        self.assertEqual(item['installation_path'], hestia)
+        self.assertEqual(item['listening_ports'], [8083])
+        self.assertIn({'kind': 'working_directory', 'value': '/'}, item['evidence'])
+
+        self.calls.clear()
+        result = native.scan(101, self.runner(
+            services='END\n', processes=process, ports='L\t391\t8443\nEND\n'))
+        self.assertEqual(result['candidates'], [])
+        self.assertFalse(any(native.FOOTPRINT_SCRIPT in call for call in self.calls))
 
     def test_node_and_npm_wrappers_use_only_bounded_manifest_roots(self):
         cases = [

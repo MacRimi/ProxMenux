@@ -74,8 +74,11 @@ _PACKAGE_ROOT_RUNTIMES = {'node', 'nodejs', 'npm', 'pnpm', 'yarn', 'bun'}
 _HELPER_ROLES = {
     'backup', 'bootstrap', 'bridge', 'cleanup', 'housekeeping', 'maintenance',
     'migrate', 'migration', 'restore', 'rotate', 'update', 'updater', 'upgrade',
-    'watchdog', 'worker',
+    'watch', 'watchdog', 'worker',
 }
+_HESTIA_NGINX = '/usr/local/hestia/nginx/sbin/hestia-nginx'
+_HESTIA_ROOT = '/usr/local/hestia'
+_HESTIA_PANEL_PORT = 8083
 
 
 class ProbeError(Exception):
@@ -253,6 +256,17 @@ def _helper(name):
     return any(part in _HELPER_ROLES for part in re.split(r'[._-]+', raw) if part)
 
 
+def _hestia_panel_process(executable, ports):
+    """Recognize only Hestia's own bound control-panel process.
+
+    Hestia's generated init unit does not expose an ExecStart that the generic
+    service parser may treat as an application.  Its panel process and port are
+    stable, local runtime metadata, so this stays narrower than accepting
+    arbitrary vendor services or a generic web server.
+    """
+    return executable == _HESTIA_NGINX and _HESTIA_PANEL_PORT in ports
+
+
 def _custom(path):
     if not _path(path):
         return False
@@ -367,7 +381,10 @@ def parse_records(text, kind):
             records.append(record)
         elif kind == 'P' and len(parts) == 4 and parts[0] == 'P':
             _, pid, exe, directory = parts
-            if not pid.isdigit() or not _path(exe) or not _path(directory):
+            # A process rooted at / is normally too ambiguous for generic
+            # discovery, but it is valid process metadata for the exact Hestia
+            # panel signature below.  It never becomes a generic candidate.
+            if not pid.isdigit() or not _path(exe) or (directory != '/' and not _path(directory)):
                 continue
             records.append({'pid': pid, 'executable': exe, 'root': directory})
         elif kind == 'L' and len(parts) == 3 and parts[0] == 'L':
@@ -407,7 +424,8 @@ def candidate(vmid, record, footprint):
         evidence.append({'kind': record['manager'], 'value': record['service']})
     else:
         evidence.extend([{'kind': 'process_executable', 'value': record['process']},
-                         {'kind': 'working_directory', 'value': record['root']}])
+                         {'kind': 'working_directory',
+                          'value': record.get('process_root', record['root'])}])
     ports = sorted(set(record.get('listening_ports') or []))
     evidence.extend({'kind': 'tcp_listener', 'value': str(port)} for port in ports)
     return {'slug': identity, 'discovery_id': identity, 'source': 'native_metadata',
@@ -501,6 +519,10 @@ def scan(vmid, run=bounded_run):
         ports = [entry['port'] for entry in listeners if entry['pid'] == process['pid']]
         if len(related) == 1:
             related[0].setdefault('listening_ports', []).extend(ports)
+        elif not related and _hestia_panel_process(exe, ports):
+            records.append({'name': 'Hestia', 'path': exe, 'root': _HESTIA_ROOT,
+                            'process': exe, 'process_root': directory, 'executable': exe,
+                            'listening_ports': ports})
         elif not related and (_custom(exe) and _custom(directory)
                               and not _system(Path(exe).name)
                               and not _helper(Path(exe).name)
