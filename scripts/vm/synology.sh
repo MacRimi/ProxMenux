@@ -12,12 +12,12 @@
 # Description:
 # Creates and configures a Synology DSM (DiskStation Manager)
 # virtual machine on Proxmox VE. Downloads one of the supported
-# loaders (Arc, RR, TinyCore M-shell, or a custom one), imports
+# loaders (Arc, RR, Alpine M-shell, or a custom one), imports
 # it as the VM boot disk, and prepares CPU/RAM/network/storage
 # through the ProxMenux default or advanced wizard.
 #
 # Features:
-# - Supports Arc, RR, TinyCore M-shell and Custom loaders.
+# - Supports Arc, RR, Alpine M-shell and Custom loaders.
 # - Default and Advanced configuration modes.
 # - Virtual disks (SATA, up to 6) or physical disk passthrough.
 # - Imports the loader as IDE for maximum compatibility.
@@ -755,7 +755,7 @@ function select_loader() {
   LOADER_OPTION=$(whiptail --backtitle "ProxMenuX" --title "SELECT LOADER" --menu "$(translate "Choose a loader for Synology DSM:")" 15 70 4 \
     "1" "AuxXxilium Arc Loader" \
     "2" "RedPill Loader (RROrg - RR)" \
-    "3" "TinyCore RedPill Loader (PeterSuh-Q3 M-shell)" \
+    "3" "Alpine RedPill Loader (PeterSuh-Q3 M-shell)" \
     "4" "Custom Loader Image (from $IMAGES_DIR)" \
     3>&1 1>&2 2>&3)
 
@@ -780,7 +780,7 @@ function select_loader() {
       ;;
     3)
       LOADER_TYPE="tinycore"
-      LOADER_NAME="TinyCore RedPill M-shell"
+      LOADER_NAME="Alpine RedPill M-shell"
       LOADER_URL="https://github.com/PeterSuh-Q3/tinycore-redpill/"
       echo -e "${DGN}${TAB}Selected Loader: ${BGN}$LOADER_NAME${CL}"
       download_loader
@@ -836,6 +836,9 @@ function select_custom_image() {
 # Download Loader
 # ==========================================================
 function download_loader() {
+  local repo image_name asset_pattern metadata download_url archive stage
+  FILE=""
+  LOADER_FILE=""
 
   echo -e "${DGN}${TAB}Retrieving the URL for the ${BGN}$LOADER_NAME loader${CL}"
 
@@ -849,72 +852,81 @@ function download_loader() {
     fi
     msg_ok "Installed unzip successfully."
   fi
-  
-  case $LOADER_TYPE in
+
+  asset_pattern='^[^/]+[.]img[.]zip$'
+  case "$LOADER_TYPE" in
     arc)
-      curl -s https://api.github.com/repos/AuxXxilium/arc/releases/latest \
-      | grep "browser_download_url.*\.img\.zip" \
-      | cut -d '"' -f 4 \
-      | xargs wget -q --show-progress -O "$IMAGES_DIR/arc.img.zip"
-      
-      if [ -f "$IMAGES_DIR/arc.img.zip" ]; then
-        cd "$IMAGES_DIR"
-        unzip -q arc.img.zip
-        rm arc.img.zip
-        FILE="arc.img"
-        LOADER_FILE="$IMAGES_DIR/$FILE"
-        cd - > /dev/null
-      else
-        msg_error "Failed to download $LOADER_NAME loader"
-        sleep 1
-        select_loader
-      fi
+      repo="AuxXxilium/arc"
+      image_name="arc.img"
       ;;
-      
     redpill)
-      curl -s https://api.github.com/repos/RROrg/rr/releases/latest \
-      | grep "browser_download_url.*\.img\.zip" \
-      | cut -d '"' -f 4 \
-      | xargs wget -q --show-progress -O "$IMAGES_DIR/rr.img.zip"
-
-      if [ -f "$IMAGES_DIR/rr.img.zip" ]; then
-          cd "$IMAGES_DIR"
-          msg_info "Unzipping $LOADER_NAME loader. Please wait..."
-          unzip -qo rr.img.zip
-          msg_ok "Unzipped $LOADER_NAME loader successfully."
-          rm -f rr.img.zip
-          FILE="rr.img"
-          LOADER_FILE="$IMAGES_DIR/$FILE"
-          cd - > /dev/null
-      fi
-
+      repo="RROrg/rr"
+      image_name="rr.img"
       ;;
-      
     tinycore)
-      curl -s https://api.github.com/repos/PeterSuh-Q3/tinycore-redpill/releases/latest \
-      | grep "browser_download_url.*tinycore-redpill.v.*img.gz" \
-      | cut -d '"' -f 4 \
-      | xargs wget -q --show-progress -O "$IMAGES_DIR/tinycore.img.gz"
-      
-      if [ -f "$IMAGES_DIR/tinycore.img.gz" ]; then
-        cd "$IMAGES_DIR"
-
-        msg_info "Unzipping $LOADER_NAME loader. Please wait..."
-        gunzip -f tinycore.img.gz 2> /dev/null
-        msg_ok "Unzipped $LOADER_NAME loader successfully."
-        FILE="tinycore.img"
-        LOADER_FILE="$IMAGES_DIR/$FILE"
-        cd - > /dev/null
-
-      else
-        msg_error "Failed to download $LOADER_NAME loader"
-        sleep 1
-        select_loader
-        
-      fi
+      repo="PeterSuh-Q3/tinycore-redpill"
+      image_name="tinycore.img"
+      # Plain Alpine M-shell only: never fall back to 5GB, XTCRP or VMDK.
+      asset_pattern='^alpine-redpill[.]v[0-9]+([.][0-9]+)*[.]m-shell[.]img[.]gz$'
       ;;
+    *) return 1 ;;
   esac
-  
+
+  if ! metadata=$(curl -fsS --connect-timeout 10 --max-time 30 \
+      "https://api.github.com/repos/$repo/releases/latest"); then
+    msg_error "$(translate "Failed to retrieve loader release metadata.")"
+    return 1
+  fi
+  # Parse the JSON document, not its formatting. Ambiguity is an error.
+  if ! download_url=$(jq -ser --arg pattern "$asset_pattern" '
+      if length != 1 then error("Expected one release document") else .[0] end
+      | .assets
+      | if type != "array" then error("Expected release assets") else . end
+      | map(select(.name | type == "string") | select(.name | test($pattern)))
+      | if length != 1 then error("Expected one matching loader asset") else .[0] end
+      | .name as $name | .browser_download_url
+      | if type != "string" then error("Expected download URL") else . end
+      | select(test("^https://[^[:space:][:cntrl:]]+$") and endswith("/" + $name))
+    ' <<< "$metadata"); then
+    msg_error "$(translate "No unambiguous loader download found in release metadata.")"
+    return 1
+  fi
+
+  if ! stage=$(mktemp -d "$IMAGES_DIR/.synology-loader.XXXXXX"); then
+    msg_error "$(translate "Failed to prepare loader download directory.")"
+    return 1
+  fi
+  archive="$stage/loader.archive"
+  if ! wget -q --show-progress -O "$archive" "$download_url" || [[ ! -s "$archive" ]]; then
+    rm -rf "$stage"
+    msg_error "$(translate "Failed to download loader image.")"
+    return 1
+  fi
+  local extracted=false zip_members
+  if [[ "$LOADER_TYPE" == "tinycore" ]]; then
+    if gzip -dc "$archive" > "$stage/$image_name" 2>/dev/null; then
+      extracted=true
+    fi
+  elif zip_members=$(unzip -Z1 "$archive" 2>/dev/null) \
+      && [[ $(printf '%s\n' "$zip_members" | grep -Fxc "$image_name") -eq 1 ]] \
+      && unzip -p "$archive" "$image_name" > "$stage/$image_name" 2>/dev/null; then
+    extracted=true
+  fi
+  if [[ "$extracted" != true || ! -s "$stage/$image_name" ]]; then
+    rm -rf "$stage"
+    msg_error "$(translate "Failed to extract a nonempty loader image.")"
+    return 1
+  fi
+  # The staging directory shares the destination filesystem: publish only a
+  # complete image, leaving any previous image untouched on failure.
+  if ! mv -fT "$stage/$image_name" "$IMAGES_DIR/$image_name"; then
+    rm -rf "$stage"
+    msg_error "$(translate "Failed to save loader image.")"
+    return 1
+  fi
+  rm -rf "$stage"
+  FILE="$image_name"
+  LOADER_FILE="$IMAGES_DIR/$FILE"
   msg_ok "Downloaded ${CL}${BL}${FILE}${CL} to ${IMAGES_DIR}"
 }
 # =======================================================
