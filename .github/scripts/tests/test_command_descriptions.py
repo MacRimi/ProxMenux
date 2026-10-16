@@ -200,6 +200,10 @@ class CommandDescriptionsTests(unittest.TestCase):
                 if lang != "en":
                     messages = json.loads(path.read_text())
                     english = catalog("en")
+                    # Storage-retention labels await the translation bot. Seed
+                    # only those new leaves in this steady-state fixture.
+                    for key, value in english["backup"]["storageRetention"].items():
+                        messages["backup"].setdefault("storageRetention", {}).setdefault(key, value)
                     for section, key in (("encryption", "pbsHelp"),
                                          ("keyfileActions", "pveKeyDescription")):
                         messages["backup"][section].setdefault(key, english["backup"][section][key])

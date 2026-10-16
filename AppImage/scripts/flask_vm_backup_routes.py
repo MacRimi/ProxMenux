@@ -16,6 +16,9 @@ Endpoints, all under /api/vm-backup-jobs:
   DELETE /<id>             delete a job (its backups are kept)
   POST   /<id>/toggle      enable / disable
   POST   /<id>/run         run it now, as a Proxmox task on each node
+
+Storage retention is read/edited under /api/vm-backup-storages. Saving a
+policy only changes the native storage configuration; it never runs pruning.
 """
 
 import json
@@ -227,6 +230,56 @@ def options():
             key=lambda guest: guest["vmid"],
         ),
     })
+
+
+@vm_backup_bp.route("/api/vm-backup-storages", methods=["GET"])
+@require_auth
+def backup_storage_retention():
+    ok, storages = _pvesh_json(["get", "/storage"])
+    if not ok or not isinstance(storages, list):
+        return _err(storages if not ok else "Invalid storage inventory", 502)
+    return jsonify({"storages": [
+        {"id": storage["storage"], "type": storage.get("type", ""),
+         "prune_backups": _flat(storage.get("prune-backups") or ""),
+         "digest": storage.get("digest", "")}
+        for storage in storages
+        if isinstance(storage, dict) and storage.get("storage")
+        and "backup" in (storage.get("content") or "").split(",")
+    ]})
+
+
+@vm_backup_bp.route("/api/vm-backup-storages/<storage_id>", methods=["PUT"])
+@require_admin_scope
+def update_backup_storage_retention(storage_id):
+    if not STORAGE_RE.fullmatch(storage_id):
+        return _err("Invalid storage")
+    data = request.get_json(silent=True)
+    if not isinstance(data, dict):
+        return _err("A retention policy and current configuration digest are required")
+    digest, prune = data.get("digest"), data.get("prune_backups")
+    if not isinstance(digest, str) or not re.fullmatch(r"[a-fA-F0-9]{40}", digest):
+        return _err("Refresh the storage list before editing its retention")
+    if not isinstance(prune, str) or not PRUNE_RE.fullmatch(prune):
+        return _err("Invalid retention policy")
+    pairs = [part.split("=", 1) for part in prune.split(",")]
+    keys = [key for key, _ in pairs]
+    if (len(keys) != len(set(keys)) or
+            ("keep-all" in keys and (len(keys) != 1 or pairs[0][1] != "1")) or
+            not any(int(value) > 0 for _, value in pairs)):
+        return _err("Choose keep-all=1 or one or more positive retention counts")
+    # Check that this is still a backup storage, then let Proxmox check the
+    # digest under its storage lock. Other storage settings are never passed.
+    ok, storage = _pvesh_json(["get", f"/storage/{storage_id}"])
+    if not ok:
+        return _err(storage, 502)
+    if not isinstance(storage, dict) or "backup" not in (storage.get("content") or "").split(","):
+        return _err("This storage does not accept backups", 409)
+    if storage.get("digest") != digest:
+        return _err("Storage configuration changed; refresh before saving", 409)
+    ok, out = _pvesh(["set", f"/storage/{storage_id}", "--digest", digest, "--prune-backups", prune])
+    if not ok:
+        return _err(out, 409)
+    return jsonify({"success": True})
 
 
 @vm_backup_bp.route("/api/vm-backup-jobs", methods=["POST"])
