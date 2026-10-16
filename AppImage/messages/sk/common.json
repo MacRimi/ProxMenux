@@ -1288,6 +1288,9 @@
       "runFailed": "✗ zlyhalo",
       "runDeferred": "odložené z bezpečnostných dôvodov",
       "runSkipped": "nič nečaká",
+      "runSkippedStatus": "spustenie bolo preskočené",
+      "reasonStoppedContainer": "Kontajner je vypnutý; plánovaná aktualizácia sa preskočila.",
+      "reasonStoppedContainerHistorical": "Kontajner bol v čase plánovanej aktualizácie vypnutý.",
       "releaseDelaySummary": "odklad {days} deň/dní",
       "releaseDelayLabel": "Počkať po novej verzii aplikácie",
       "releaseDelayNone": "Bez čakacej doby",
@@ -2107,7 +2110,13 @@
         "inactiveFooter": "Zapnite notifikácie a dostávajte upozornenia o systéme, stave a bezpečnosti cez nastavené kanály.",
         "notificationLanguage": "Jazyk notifikácií",
         "selectNotificationLanguage": "Vyberte jazyk notifikácií",
-        "notificationLanguageHint": "Používa sa pre spoľahlivé runtime notifikácie aj vtedy, keď je AI vypnutá."
+        "notificationLanguageHint": "Používa sa pre spoľahlivé runtime notifikácie aj vtedy, keď je AI vypnutá.",
+        "appriseServiceHelp": "Nastavenie Slack a Matrix",
+        "appriseSlackSteps": "V aplikácii Slack vytvorte prichádzajúci webhook pre cieľový kanál a vložte jeho úplnú HTTPS URL do poľa URL Apprise. Nie je potrebný žiadny prevod.",
+        "appriseSlackDocs": "Formáty URL a nastavenie Slack",
+        "appriseMatrixSteps": "Použite účet pre oznámenia, ktorý môže odosielať správy do miestnosti. Nahraďte vzorového používateľa, heslo, domovský server a úplné ID miestnosti; špeciálne znaky v prihlasovacích údajoch zakódujte pre URL. Schéma matrixs používa HTTPS. Podporu tokenov, SSO a šifrovaných miestností v nainštalovanej verzii Apprise nájdete v dokumentácii.",
+        "appriseMatrixDocs": "Formáty URL a nastavenie Matrix",
+        "appriseServiceFinish": "Povoľte Apprise, zadajte svoju URL, vyberte kategórie oznámení alebo jednotlivé udalosti, uložte a potom použite Odoslať test. Tieto príklady nemenia uloženú URL. Tento kanál Apprise má jeden cieľ; pre viac služieb naraz použite API Apprise."
       },
       "ai": {
         "title": "AI vylepšenie",

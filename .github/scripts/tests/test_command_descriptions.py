@@ -80,169 +80,74 @@ class CommandDescriptionsTests(unittest.TestCase):
             self.assertEqual(catalog("sv")["terminal"]["commandDescriptions"][index],
                              FIXTURE["locales"]["sv"][index])
 
-    def test_workflow_default_catalogs_rerun_without_provider_or_writes(self):
+    def assert_completed_catalogs_are_stable(self, *, future_messages=None):
         workflow = (ROOT / ".github/workflows/build-i18n-messages.yml").read_text()
         languages = re.search(r'LANGS="\$\{LANGS:-(.*?)\}"', workflow).group(1)
         self.assertEqual(languages.split(","), list(MODULE.DEFAULT_LANGUAGES))
+        locales = ["en", *languages.split(",")]
+        shipped = {ROOT / f"AppImage/messages/{lang}/common.json": catalog(lang) for lang in locales}
+        original_bytes = {path: path.read_bytes() for path in shipped}
+
+        def strings(node, path=()):
+            # Independent traversal: every existing nonempty string, including
+            # explicit English and obsolete human keys, must survive completion.
+            if isinstance(node, str) and node:
+                yield path, node
+            elif isinstance(node, dict):
+                for key, value in node.items():
+                    yield from strings(value, (*path, key))
+            elif isinstance(node, list):
+                for index, value in enumerate(node):
+                    yield from strings(value, (*path, index))
+
         with tempfile.TemporaryDirectory() as directory:
-            root = Path(directory)
-            for lang in ["en", *languages.split(",")]:
-                path = root / lang / "common.json"
-                path.parent.mkdir()
-                shutil.copyfile(ROOT / f"AppImage/messages/{lang}/common.json", path)
-                # This steady-state fixture assumes generation already finished.
-                # Seed only intentional message additions; keep the
-                # recovered command arrays and the repo catalogs exact. Runtime
-                # missing-key fallback is covered by the JSX seam tests and by
-                # test_storage_messages.cjs and test_health_text.cjs.
-                if lang != "en":
-                    temporary = json.loads(path.read_text())
-                    for section, key in (
-                        ("archives", "emptyMessage"),
-                        ("archives", "formerJob"),
-                        ("archives", "formerJobTitle"),
-                        ("archives", "hiddenOtherNodes"),
-                        ("archives", "scopeAllNodes"),
-                        ("archives", "scopeAriaLabel"),
-                        ("archives", "scopeShowAll"),
-                        ("archives", "scopeThisNode"),
-                        ("destinations", "backupsKeptMessage"),
-                        ("destinations", "localAttachHelpMessage"),
-                    ):
-                        temporary["backup"][section].setdefault(
-                            key, catalog("en")["backup"][section][key])
-                    temporary["storage"].setdefault(
-                        "savedSmartData", catalog("en")["storage"]["savedSmartData"])
-                    report = temporary["storage"]["smartReport"]
-                    source_report = catalog("en")["storage"]["smartReport"]
-                    for key in ("passedAssessment", "noReallocatedSectorsReported",
-                                "passedMeaningTitle", "passedMeaning"):
-                        report.setdefault(key, source_report[key])
-                    for key in ("passedTitle", "passedText"):
-                        report["recommendations"].setdefault(
-                            key, source_report["recommendations"][key])
-                    # New health-popup messages deliberately use runtime English
-                    # fallback until each locale is translated. Model generator
-                    # steady state only in this disposable copy, as for thermal keys.
-                    for key in (
-                        'certificateExpired',
-                        'certificateExpiresDays',
-                        'certificateInconclusive',
-                        'cpuCheckFailed',
-                        'cpuHighSustained',
-                        'cpuSustained',
-                        'fail2banCheckUnavailable',
-                        'fail2banInactive',
-                        'failedLoginsWithinThreshold',
-                        'kernelPackagesMore',
-                        'kernelPveUpdates',
-                        'loginCheckUnavailable',
-                        'memoryCheckFailed',
-                        'memoryPressure',
-                        'noFailedLogins',
-                        'noSwapConfigured',
-                        'noTemperatureSensor',
-                        'nonRunningKernelUpdates',
-                        'pendingPackageUpdates',
-                        'pendingSecurityUpdates',
-                        'pendingSecurityUpdatesDays',
-                        'pendingSecurityUpdatesUnpatched',
-                        'pveVersionAvailable',
-                        'ramHighSustained',
-                        'ramSustained',
-                        'runningKernelUpdate',
-                        'securityCheckUnavailable',
-                        'sensorHighSamplesSpan',
-                        'swapRamPressure',
-                        'systemNotUpdatedMonths',
-                        'systemNotUpdatedYear',
-                        'temperatureElevated',
-                        'unknownDetail',
-                        'updatesAptError',
-                        'updatesAptTimeout',
-                        'updatesCheckUnavailable',
-                        'uptimeKernelAdvice',
-                        'uptimeUnavailable',
-                    ):
-                        temporary["healthStatus"]["details"].setdefault(
-                            key, catalog("en")["healthStatus"]["details"][key])
-                    # New thermal messages also await automatic translation.
-                    # Seed only these intentional additions in the temporary copy.
-                    for key in (
-                        "temperatureNoDisks", "temperatureNormal", "temperatureHighCount",
-                        "temperatureCriticalCount", "temperatureUnavailable",
-                        "temperatureIncomplete", "temperatureUnavailableCount",
-                    ):
-                        temporary["storage"].setdefault(key, catalog("en")["storage"][key])
-                    # Every shipped locale carries the temperature alert fallback
-                    # keys; the seed only guards a catalog that lacks them. The
-                    # runtime fallback is tested separately.
-                    source_fallback = catalog("en")["runtime"]["notifications"]["fallback"]
-                    fallback = temporary["runtime"]["notifications"]["fallback"]
-                    for key in ("temperatureAlertTitle", "temperatureAlertBody",
-                                "recordedReason", "recordedDetails"):
-                        fallback.setdefault(key, source_fallback[key])
-                    # Slovak remains the exact upstream catalog; model the
-                    # pending outcome-key generator additions in disposable
-                    # copies rather than modifying its curated values.
-                    if lang == 'sk':
-                        local = temporary['runtime']['notifications']
-                        source = catalog('en')['runtime']['notifications']
-                        for key, value in source['backup'].items():
-                            local.setdefault('backup', {}).setdefault(key, value)
-                        local['channels']['email']['status'].setdefault(
-                            'unconfirmed', source['channels']['email']['status']['unconfirmed'])
-                        local['channels']['email']['status'].setdefault(
-                            'completed_with_warnings', source['channels']['email']['status']['completed_with_warnings'])
-                    path.write_text(json.dumps(temporary, ensure_ascii=False))
-                # Model steady state after the bot fills these intentional new
-                # messages; keep repository locales and all other leaves intact.
-                if lang != "en":
-                    messages = json.loads(path.read_text())
-                    english = catalog("en")
-                    # Storage-retention labels await the translation bot. Seed
-                    # only those new leaves in this steady-state fixture.
-                    for key, value in english["backup"]["storageRetention"].items():
-                        messages["backup"].setdefault("storageRetention", {}).setdefault(key, value)
-                    for section, key in (("encryption", "pbsHelp"),
-                                         ("keyfileActions", "pveKeyDescription")):
-                        messages["backup"][section].setdefault(key, english["backup"][section][key])
-                    for key in ("sshUserHelpMessage", "sshKeyHelpMessage", "sshKeySetupTitle",
-                                "sshKeySetupHelp", "sshAuthorizedKeyHelp"):
-                        messages["backup"]["destinations"].setdefault(
-                            key, english["backup"]["destinations"][key])
-                    messages["backup"]["actions"].setdefault(
-                        "prepareSshKey", english["backup"]["actions"]["prepareSshKey"])
-                    # New LXC observation labels intentionally ship only EN/SK.
-                    # Model the bot's future output in temporary catalogs, just
-                    # like the other pending keys above; never rewrite locales.
-                    messages["scriptTerminal"].setdefault("endOfInput", english["scriptTerminal"]["endOfInput"])
-                    for key in ("noShell", "enterFailed"):
-                        messages["lxcTerminal"]["errors"].setdefault(key, english["lxcTerminal"]["errors"][key])
-                    # The notification history panel texts await the bot as well.
-                    for key, value in english["settings"]["notifications"]["history"].items():
-                        messages["settings"]["notifications"].setdefault("history", {}).setdefault(key, value)
-                    for key in ("checkNow", "checkReadOnlyHelp", "checkCooldown",
-                                "checkStale", "checkStaleHelp", "checkBeforeUpdate",
-                                "startBeforeCheck", "notCheckedYet",
-                                "checkStillRunning", "refreshCheckHelp",
-                                "checkInProgress", "checkSystemPackages", "runCustomCommand",
-                                "installedVersionUnverified", "versionStatusUnknown"):
-                        messages["vmLxc"]["updates"].setdefault(
-                            key, english["vmLxc"]["updates"][key])
-                    for key in ("startPending", "shutdownPending", "rebootPending", "stopPending"):
-                        messages["vmLxc"]["actions"].setdefault(
-                            key, english["vmLxc"]["actions"][key])
-                    for key in ("osDockerScope", "dockerImageMethod", "unverifiedTargetsHelp"):
-                        messages["vmLxc"]["bulkUpdate"].setdefault(
-                            key, english["vmLxc"]["bulkUpdate"][key])
-                    messages["vmLxc"]["errors"].setdefault(
-                        "controlNotConfirmed", english["vmLxc"]["errors"]["controlNotConfirmed"])
-                    path.write_text(json.dumps(messages, ensure_ascii=False))
-            before = {p: p.read_bytes() for p in root.glob("*/common.json")}
+            root = Path(directory).resolve()
+            for path in shipped:
+                destination = root / path.parent.name / "common.json"
+                destination.parent.mkdir()
+                shutil.copyfile(path, destination)
+            if future_messages is not None:
+                source = json.loads((root / "en/common.json").read_text())
+                source["futureFeatureFixture"] = future_messages
+                (root / "en/common.json").write_text(json.dumps(source))
+
             argv = [str(SCRIPT), "--source", str(root / "en/common.json"),
                     "--messages-dir", str(root), "--languages", languages, "--sleep", "0"]
             output = io.StringIO()
+            # Establish steady state with the real generator and a deterministic
+            # offline provider. Translation happens only in disposable catalogs;
+            # adding an EN-only feature never needs a hand-maintained seed list.
+            with mock.patch.object(sys, "argv", argv), \
+                    mock.patch.object(MODULE, "translate_one", side_effect=lambda text, lang, *_: f"TEST {lang} {text}") as seed, \
+                    mock.patch.object(MODULE, "write_json", wraps=MODULE.write_json) as initial_writer, \
+                    redirect_stdout(output), redirect_stderr(output):
+                self.assertEqual(MODULE.main(), 0, output.getvalue())
+            self.assertNotRegex(output.getvalue(), r"(?m)^Completed with [0-9]+ translation failures")
+            self.assertTrue(all(call.args[0].is_relative_to(root) for call in initial_writer.call_args_list))
+            for path, original in shipped.items():
+                completed = json.loads((root / path.parent.name / "common.json").read_text())
+                for keys, value in strings(original):
+                    actual = completed
+                    for key in keys:
+                        actual = actual[key]
+                    self.assertEqual(actual, value, f"{path.parent.name}: {keys}")
+                # The recovered arrays remain exact, including frozen English.
+                if path.parent.name != "en":
+                    self.assertEqual(completed["terminal"]["commandDescriptions"],
+                                     FIXTURE["locales"].get(path.parent.name,
+                                         original["terminal"]["commandDescriptions"]))
+                if future_messages is not None and path.parent.name != "en":
+                    self.assertEqual(completed["futureFeatureFixture"], {
+                        "title": f"TEST {path.parent.name} Future feature {{count}}",
+                        "items": [f"TEST {path.parent.name} First item", {"label": f"TEST {path.parent.name} Second item"}],
+                        "enabled": False, "count": 2, "empty": [],
+                    })
+            if future_messages is not None:
+                self.assertGreaterEqual(seed.call_count, 3 * len(languages.split(",")))
+            before = {p: p.read_bytes() for p in root.glob("*/common.json")}
+            output = io.StringIO()
+            # Keep the original strict assertion: once completed, any provider
+            # call or catalog write is a regression. No production locale edits.
             with mock.patch.object(sys, "argv", argv), \
                     mock.patch.object(MODULE, "translate_one", side_effect=AssertionError("provider forbidden")) as provider, \
                     mock.patch.object(MODULE, "write_json", side_effect=AssertionError("writes forbidden")) as writer, \
@@ -254,6 +159,17 @@ class CommandDescriptionsTests(unittest.TestCase):
             self.assertEqual(before, {p: p.read_bytes() for p in before})
             for lang in languages.split(","):
                 self.assertIn(f"{lang}: nothing to translate", output.getvalue())
+        self.assertEqual(original_bytes, {path: path.read_bytes() for path in shipped})
+
+    def test_workflow_default_catalogs_rerun_without_provider_or_writes(self):
+        self.assert_completed_catalogs_are_stable()
+
+    def test_new_english_feature_preserves_curated_values_and_reruns_without_writes(self):
+        self.assert_completed_catalogs_are_stable(future_messages={
+            "title": "Future feature {count}",
+            "items": ["First item", {"label": "Second item"}],
+            "enabled": False, "count": 2, "empty": [],
+        })
 
     def test_actual_consumer_lookup_null_fallback_and_explicit_english(self):
         node = require_node()

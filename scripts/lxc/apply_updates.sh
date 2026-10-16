@@ -45,6 +45,7 @@
 #   6  post-update restart failed
 #   7  another ProxMenux update is already running for this CT
 #   8  started CT could not record its verification handoff identity
+#   9  scheduled run skipped because the CT was intentionally stopped
 #
 # The frontend surfaces exit code + duration in a follow-up POST to
 # /api/lxc-updates/<vmid>/applied so the notification event fires with
@@ -163,6 +164,11 @@ fi
 # 2) CT must be running for pct exec. Auto-start stopped CTs, then
 #    restore their original stopped state on every exit path.
 STATE=$(pct status "$VMID" | awk '{print $2}')
+if [[ "$STATE" != "running" && "${EXECUTION_MODE:-}" == "scheduled" ]]; then
+  [[ -n "${SCHEDULED_STOPPED_MARKER:-}" ]] && printf '%s\n' "$SCHEDULED_STOPPED_MARKER"
+  echo "SKIPPED: CT $VMID is stopped; a scheduled update will not start it."
+  exit 9
+fi
 STARTED_BY_PROXMENUX=0
 OBSERVATION_ATTEMPTED=0
 capture_before_stop() {

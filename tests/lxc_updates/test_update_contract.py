@@ -1,4 +1,7 @@
 import ast
+import json
+import os
+import re
 import sys
 import subprocess
 import tempfile
@@ -310,6 +313,159 @@ class AppCacheWriteThroughContractTests(unittest.TestCase):
         self.assertIn("_finalize_lxc_update(", scheduler_block)
         self.assertIn("return finish('partial'", scheduler_block)
         self.assertIn("before_snapshot=before", scheduler_block)
+
+
+class ScheduledStoppedContainerTests(unittest.TestCase):
+    @staticmethod
+    def _worker(scope):
+        source = ast.parse((REPO_ROOT / "AppImage" / "scripts" / "flask_server.py").read_text())
+        node = next(item for item in source.body
+                    if isinstance(item, ast.FunctionDef) and item.name == "_run_scheduled_update")
+        exec(compile(ast.Module(body=[node], type_ignores=[]), "scheduled-update", "exec"), scope)
+        return scope["_run_scheduled_update"]
+
+    @staticmethod
+    def _stopped_marker_reader(scope):
+        source = ast.parse((REPO_ROOT / "AppImage" / "scripts" / "flask_server.py").read_text())
+        node = next(item for item in source.body
+                    if isinstance(item, ast.FunctionDef) and item.name == "_scheduled_runner_reported_stopped")
+        exec(compile(ast.Module(body=[node], type_ignores=[]), "scheduled-marker", "exec"), scope)
+        return scope["_scheduled_runner_reported_stopped"]
+
+    def test_stopped_container_skips_before_runner_or_any_guest_effect(self):
+        runner = MagicMock()
+        finalizer = MagicMock(return_value={"recorded": True})
+        append_log = MagicMock()
+        scope = {
+            "time": SimpleNamespace(monotonic=MagicMock(return_value=10.0)),
+            "uuid": SimpleNamespace(uuid4=lambda: SimpleNamespace(hex="a" * 32)),
+            "datetime": __import__("datetime").datetime,
+            "subprocess": SimpleNamespace(run=runner, STDOUT=object(), TimeoutExpired=subprocess.TimeoutExpired),
+            "_create_lxc_update_log": lambda _vmid, _run_id: ("fixture.log", "/tmp/fixture.log"),
+            "_fast_guest_status": MagicMock(return_value="stopped"),
+            "_normalise_schedule_targets": lambda _sched: ["os"],
+            "_lxc_update_snapshot": lambda _vmid: {"ct_name": "fixture"},
+            "_lxc_update_target_labels": lambda *_: ["OS"],
+            "_append_lxc_update_log": append_log,
+            "_prune_lxc_update_logs": MagicMock(),
+            "_finalize_lxc_update": finalizer,
+        }
+
+        outcome = self._worker(scope)(101, {"target": "os"})
+
+        self.assertEqual(outcome["status"], "skipped")
+        self.assertEqual(outcome["executed_targets"], [])
+        self.assertIn("container is stopped", outcome["reason"])
+        self.assertEqual(outcome["reason_code"], "stopped_container")
+        runner.assert_not_called()
+        self.assertEqual(finalizer.call_args.kwargs["status"], "skipped")
+        self.assertEqual(finalizer.call_args.kwargs["source"], "scheduled")
+
+    def test_stopped_marker_requires_the_scheduler_token_not_only_exit_code(self):
+        marker = "PROXMENUX_SCHEDULED_STOPPED:fixture"
+        reader = self._stopped_marker_reader({"_SCHEDULED_STOPPED_EXIT": 9, "os": os})
+        self.assertTrue(reader(SimpleNamespace(returncode=9, stdout=marker, stderr=""), None, marker))
+        self.assertFalse(reader(SimpleNamespace(returncode=9, stdout="", stderr=""), None, marker))
+        self.assertFalse(reader(SimpleNamespace(returncode=8, stdout=marker, stderr=""), None, marker))
+        self.assertFalse(reader(SimpleNamespace(returncode=4, stdout=marker, stderr=""), None, marker))
+        with tempfile.NamedTemporaryFile(mode="w", encoding="utf-8") as log:
+            log.write("prefix\\n" + marker + "\\n")
+            log.flush()
+            self.assertTrue(reader(SimpleNamespace(returncode=9, stdout="", stderr=""), log.name, marker))
+
+    def test_runner_race_to_stopped_is_reported_as_skipped_without_reboot_probe(self):
+        runner = MagicMock(return_value=SimpleNamespace(returncode=9, stdout="", stderr=""))
+        finalizer = MagicMock(return_value={"recorded": True})
+        reboot_probe = MagicMock()
+        stopped_marker = MagicMock(return_value=True)
+        lxc = SimpleNamespace(
+            _read_sidecar=lambda _vmid: {"apps": []},
+            partition_scheduled_release_targets=lambda targets, _apps: (set(), targets),
+        )
+        scope = {
+            "time": SimpleNamespace(monotonic=MagicMock(return_value=10.0)),
+            "uuid": SimpleNamespace(uuid4=lambda: SimpleNamespace(hex="b" * 32)),
+            "datetime": __import__("datetime").datetime,
+            "subprocess": SimpleNamespace(run=runner, STDOUT=object(), TimeoutExpired=subprocess.TimeoutExpired),
+            "os": os,
+            "json": json,
+            "_APPLY_UPDATES_SCRIPT": "/bin/true",
+            "_SCHEDULED_STOPPED_EXIT": 9,
+            "_DOCKER_ENGINE_INTEGRATED_COMMAND": "integrated-docker",
+            "_create_lxc_update_log": lambda _vmid, _run_id: (None, None),
+            "_fast_guest_status": MagicMock(return_value="running"),
+            "_normalise_schedule_targets": lambda _sched: ["os"],
+            "_lxc_update_snapshot": lambda _vmid: {"ct_name": "fixture"},
+            "_lxc_update_target_labels": lambda *_: ["OS"],
+            "_append_lxc_update_log": MagicMock(),
+            "_prune_lxc_update_logs": MagicMock(),
+            "_finalize_lxc_update": finalizer,
+            "_scheduled_helper_enabled": lambda *_: False,
+            "_compose_scheduled_update_command": lambda *_: "",
+            "_inspect_lxc_reboot_requirement": reboot_probe,
+            "_scheduled_runner_reported_stopped": stopped_marker,
+        }
+
+        with patch.dict(sys.modules, {"lxc_apps": lxc}):
+            outcome = self._worker(scope)(101, {"target": "os"})
+
+        self.assertEqual(outcome["status"], "skipped")
+        self.assertEqual(outcome["executed_targets"], [])
+        self.assertIn("before scheduled update could begin", outcome["reason"])
+        self.assertEqual(outcome["reason_code"], "stopped_container")
+        self.assertEqual(runner.call_args.args[0], ["bash", "/bin/true"])
+        self.assertEqual(runner.call_args.kwargs["env"]["EXECUTION_MODE"], "scheduled")
+        self.assertTrue(runner.call_args.kwargs["env"]["SCHEDULED_STOPPED_MARKER"].startswith(
+            "PROXMENUX_SCHEDULED_STOPPED:scheduled-"))
+        stopped_marker.assert_called_once()
+        reboot_probe.assert_not_called()
+
+        stopped_marker.reset_mock()
+        stopped_marker.return_value = False
+        runner.return_value = SimpleNamespace(returncode=8, stdout="", stderr="")
+        reboot_probe.return_value = (None, [], None)
+        outcome = self._worker(scope)(101, {"target": "os"})
+        self.assertEqual(outcome["status"], "failure")
+        self.assertIn("exited with code 8", outcome["reason"])
+        stopped_marker.assert_called_once()
+        reboot_probe.assert_called_once()
+
+    def test_oci_race_to_stopped_skips_before_the_oci_engine_runs(self):
+        runner = MagicMock(return_value=SimpleNamespace(returncode=0, stdout="", stderr=""))
+        finalizer = MagicMock(return_value={"recorded": True})
+        status = MagicMock(side_effect=["running", "stopped"])
+        scope = {
+            "time": SimpleNamespace(monotonic=MagicMock(return_value=10.0)),
+            "uuid": SimpleNamespace(uuid4=lambda: SimpleNamespace(hex="c" * 32)),
+            "datetime": __import__("datetime").datetime,
+            "subprocess": SimpleNamespace(
+                run=runner,
+                STDOUT=object(),
+                DEVNULL=object(),
+                TimeoutExpired=subprocess.TimeoutExpired,
+            ),
+            "os": os,
+            "re": re,
+            "_create_lxc_update_log": lambda _vmid, _run_id: (None, None),
+            "_fast_guest_status": status,
+            "_normalise_schedule_targets": lambda _sched: ["oci_image"],
+            "_lxc_update_snapshot": lambda _vmid: {"ct_name": "fixture"},
+            "_lxc_update_target_labels": lambda *_: ["OCI image"],
+            "_append_lxc_update_log": MagicMock(),
+            "_prune_lxc_update_logs": MagicMock(),
+            "_finalize_lxc_update": finalizer,
+        }
+
+        outcome = self._worker(scope)(101, {"targets": ["oci_image"]})
+
+        self.assertEqual(outcome["status"], "skipped")
+        self.assertEqual(outcome["target"], "oci_image")
+        self.assertEqual(outcome["executed_targets"], [])
+        self.assertEqual(outcome["reason_code"], "stopped_container")
+        self.assertIn("before scheduled update could begin", outcome["reason"])
+        self.assertEqual(status.call_count, 2)
+        runner.assert_not_called()
+        self.assertEqual(finalizer.call_args.kwargs["status"], "skipped")
 
 
 class DockerStackNotificationTests(unittest.TestCase):

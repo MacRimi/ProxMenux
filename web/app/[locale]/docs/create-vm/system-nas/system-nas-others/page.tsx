@@ -87,7 +87,7 @@ export default async function OtherNASSystemsPage({
   const importItems = o.storagePlan.importItemsRich
   const pciItems = o.storagePlan.pciItemsRich
   const endToEndItems = o.endToEnd.itemsRich
-  const systemOrder = ["truenasScale", "truenasCore", "openmediavault", "xigmanas", "rockstor", "zimaos"]
+  const systemOrder = ["truenasScale", "truenasCore", "openmediavault", "xigmanas", "rockstor", "zimaos", "fygoos"]
   const relatedItems = o.related.itemsRich
 
   const code = (chunks: React.ReactNode) => <code>{chunks}</code>

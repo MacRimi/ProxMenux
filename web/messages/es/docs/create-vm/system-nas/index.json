@@ -1,14 +1,14 @@
 {
   "meta": {
     "title": "Crear VM: System NAS | ProxMenux Documentation",
-    "description": "Crea máquinas virtuales NAS en Proxmox VE con ProxMenux. Soporta Synology DSM (loader), TrueNAS SCALE / CORE, OpenMediaVault, XigmaNAS, Rockstor y ZimaOS. Umbrel OS está disponible vía community script.",
+    "description": "Crea máquinas virtuales NAS en Proxmox VE con ProxMenux. Soporta Synology DSM (loader), TrueNAS SCALE / CORE, OpenMediaVault, XigmaNAS, Rockstor, ZimaOS y FygoOS. Umbrel OS está disponible vía community script.",
     "ogTitle": "Crear VM: System NAS | ProxMenux Documentation",
-    "ogDescription": "Crea máquinas virtuales NAS en Proxmox VE con ProxMenux. Soporta Synology DSM (loader), TrueNAS SCALE / CORE, OpenMediaVault, XigmaNAS, Rockstor y ZimaOS.",
+    "ogDescription": "Crea máquinas virtuales NAS en Proxmox VE con ProxMenux. Soporta Synology DSM (loader), TrueNAS SCALE / CORE, OpenMediaVault, XigmaNAS, Rockstor, ZimaOS y FygoOS.",
     "ogImageAlt": "Menú System NAS de ProxMenux"
   },
   "header": {
     "title": "Crear VM: System NAS",
-    "description": "ProxMenux soporta siete sistemas operativos NAS como VMs específicas, más una ruta opcional para Umbrel OS vía community script. La mayoría de sistemas comparten el mismo flujo auto-ISO; Synology DSM usa un asistente de loader especializado.",
+    "description": "ProxMenux soporta ocho sistemas operativos NAS como VMs específicas, más una ruta opcional para Umbrel OS vía community script. La mayoría de sistemas comparten el mismo flujo auto-ISO; Synology DSM usa un asistente de loader especializado.",
     "section": "Máquinas virtuales"
   },
   "intro": {
@@ -94,12 +94,21 @@
         "fileSystem": "ext4",
         "href": "/docs/create-vm/system-nas/system-nas-others#zimaos",
         "flow": "dedicated"
+      },
+      {
+        "name": "FygoOS",
+        "tagline": "Edición internacional de fnOS: un NAS basado en Debian con volúmenes de almacenamiento, apps y streaming multimedia, gestionado desde su interfaz web y las apps de Fygo.",
+        "icon": "Server",
+        "base": "Debian Linux",
+        "fileSystem": "Btrfs, ext4",
+        "href": "/docs/create-vm/system-nas/system-nas-others#fygoos",
+        "flow": "auto-iso"
       }
     ]
   },
   "umbrel": {
     "title": "Opción de la comunidad: Umbrel OS",
-    "bodyRich": "La 8ª entrada del menú NAS es <strong>Umbrel OS</strong>. Ejecuta un <umbrelLink>instalador de community-scripts</umbrelLink> mantenido fuera de ProxMenux, así que no se documenta aquí. El instalador gestiona el ciclo de vida completo y muestra sus credenciales por defecto al final."
+    "bodyRich": "La 9ª entrada del menú NAS es <strong>Umbrel OS</strong>. Ejecuta un <umbrelLink>instalador de community-scripts</umbrelLink> mantenido fuera de ProxMenux, así que no se documenta aquí. El instalador gestiona el ciclo de vida completo y muestra sus credenciales por defecto al final."
   },
   "zfsMem": {
     "title": "Regla rápida de memoria para ZFS",
@@ -116,7 +125,7 @@
       {
         "href": "/docs/create-vm/system-nas/system-nas-others",
         "label": "Otros System NAS",
-        "tail": " — TrueNAS, OpenMediaVault, Rockstor, XigmaNAS y similares."
+        "tail": " — TrueNAS, OpenMediaVault, Rockstor, XigmaNAS, FygoOS y similares."
       },
       {
         "href": "/docs/disk-manager/import-disk-vm",

@@ -82,6 +82,16 @@ remove_monitor_notification_target() {
     echo " - Notification target removed from Proxmox"
 }
 
+# The logins to private image registries go with ProxMenux. /etc/pve is shared
+# by the cluster, so the other nodes lose them too.
+remove_registry_logins() {
+    mountpoint -q /etc/pve || return 0
+    [[ -f /etc/pve/priv/proxmenux/registry-auth.json ]] || return 0
+    pmx_record_execution "Remove private registry logins" "rm -f /etc/pve/priv/proxmenux/registry-auth.json"
+    rm -f /etc/pve/priv/proxmenux/registry-auth.json /etc/pve/priv/proxmenux/.registry-auth.json.proxmenux.lock
+    rmdir /etc/pve/priv/proxmenux 2>/dev/null || true
+}
+
 uninstall_proxmenux_monitor() {
 
     # 1. Stop service if it is running
@@ -809,6 +819,7 @@ uninstall_proxmenu() {
         pmx_remove_file "$INSTALL_DIR/$MENU_SCRIPT"
         pmx_record_execution "Remove ProxMenux application directory" "rm -rf $BASE_DIR"
         rm -rf "$BASE_DIR"
+        remove_registry_logins
         
         # Remove selected dependencies
         if [ -n "$deps_to_remove" ]; then

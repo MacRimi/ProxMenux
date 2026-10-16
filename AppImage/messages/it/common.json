@@ -1302,7 +1302,10 @@
         "Giovedì",
         "Venerdì",
         "Sabato"
-      ]
+      ],
+      "runSkippedStatus": "esecuzione saltata",
+      "reasonStoppedContainer": "Il contenitore è fermo; l'aggiornamento pianificato è stato saltato.",
+      "reasonStoppedContainerHistorical": "Il contenitore era fermo all'ora dell'aggiornamento pianificato."
     },
     "cronChip": {
       "detected": "cron host rilevato",
@@ -2108,7 +2111,13 @@
         "inactiveFooter": "Abilita le notifiche per ricevere avvisi di sistema, integrità e sicurezza attraverso i canali configurati.",
         "notificationLanguage": "Lingua notifiche",
         "selectNotificationLanguage": "Seleziona lingua notifiche",
-        "notificationLanguageHint": "Usata per le notifiche runtime deterministiche anche quando l’IA è disabilitata."
+        "notificationLanguageHint": "Usata per le notifiche runtime deterministiche anche quando l’IA è disabilitata.",
+        "appriseServiceHelp": "Configurazione di Slack e Matrix",
+        "appriseSlackSteps": "Crea un webhook in ingresso nell'app Slack per il canale di destinazione, quindi incolla il suo URL HTTPS completo nel campo URL di Apprise. Non è necessaria alcuna conversione.",
+        "appriseSlackDocs": "Formati URL e configurazione di Slack",
+        "appriseMatrixSteps": "Usa un account di notifica autorizzato a pubblicare nella stanza. Sostituisci utente, password, homeserver e ID completo della stanza dell'esempio; codifica per URL i caratteri speciali nelle credenziali. Lo schema matrixs usa HTTPS. Consulta la documentazione per il supporto di token, SSO e stanze cifrate nella versione di Apprise installata.",
+        "appriseMatrixDocs": "Formati URL e configurazione di Matrix",
+        "appriseServiceFinish": "Abilita Apprise, inserisci il tuo URL, scegli le categorie di notifica o i singoli eventi, salva e poi usa Invia test. Questi esempi non modificano l'URL salvato. Questo canale Apprise ha una sola destinazione; usa l'API Apprise per più servizi contemporaneamente."
       },
       "ai": {
         "title": "Miglioramento con IA",
