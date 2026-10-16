@@ -84,6 +84,10 @@
           {
             "tool": "System Limits Increase",
             "restores": "Elimina /etc/sysctl.d/99-maxwatches.conf, 99-maxkeys.conf, 99-swap.conf, 99-fs.conf y /etc/security/limits.d/99-limits.conf. Revierte los límites PAM y DefaultLimitNOFILE de systemd, y elimina la línea ulimit -n 256000 de /root/.profile."
+          },
+          {
+            "tool": "Perfil de swap con ZRAM",
+            "restores": "Desactiva el swap de /dev/zram0, detiene dev-zram0.swap y elimina /etc/systemd/zram-generator.conf.d/90-proxmenux.conf. El paquete systemd-zram-generator solo se purga si lo instaló ProxMenux y no hay otra configuración de ZRAM. Si las páginas de ZRAM no se pueden sacar, el perfil sigue activo y no se elimina nada."
           }
         ]
       },

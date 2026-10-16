@@ -84,6 +84,10 @@
           {
             "tool": "System Limits Increase",
             "restores": "Removes /etc/sysctl.d/99-maxwatches.conf, 99-maxkeys.conf, 99-swap.conf, 99-fs.conf and /etc/security/limits.d/99-limits.conf. Reverts PAM limits and systemd DefaultLimitNOFILE, and strips the ulimit -n 256000 line from /root/.profile."
+          },
+          {
+            "tool": "ZRAM swap profile",
+            "restores": "Turns off the swap on /dev/zram0, stops dev-zram0.swap and removes /etc/systemd/zram-generator.conf.d/90-proxmenux.conf. The systemd-zram-generator package is purged only when ProxMenux installed it and no other ZRAM setup is present. If the pages in ZRAM cannot be moved out, the profile stays active and nothing is removed."
           }
         ]
       },

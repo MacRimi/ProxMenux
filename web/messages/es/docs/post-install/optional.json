@@ -153,6 +153,23 @@
     "verifyLabel": "Verificar y gestionar desde la shell:",
     "verifyCode": "# Estado del servicio y timers configurados\nsystemctl status log2ram\nsystemctl list-timers log2ram*\n\n# Uso actual de la ramdisk — /var/log ES la tmpfs\ndf -h /var/log\n\n# Forzar sincronización ahora (tmpfs → disco); NO reduce la tmpfs\nlog2ram write\n\n# Disparar el guardián de auto-sync manualmente (compacta + sincroniza si el uso es alto)\n/usr/local/bin/log2ram-check.sh\n\n# Configuración actual: SIZE, mail, path\ncat /etc/log2ram.conf\n\n# Crons específicos de ProxMenux\ncat /etc/cron.d/log2ram /etc/cron.d/log2ram-auto-sync\n\n# Actividad reciente de Log2RAM\njournalctl -u log2ram -n 50 --no-pager"
   },
+  "zram": {
+    "title": "Activar el perfil de swap con ZRAM",
+    "intro": "Crea un dispositivo de swap comprimido en la RAM, <code>/dev/zram0</code>, con <code>systemd-zram-generator</code>. Las páginas que el kernel lleva al swap se comprimen con zstd y se quedan en memoria, así que se escriben en la RAM antes de llegar al swap en disco.",
+    "doesLabel": "Qué hace:",
+    "doesItems": [
+      "Instala <code>systemd-zram-generator</code> si no está y anota si lo ha instalado ProxMenux.",
+      "Escribe <code>/etc/systemd/zram-generator.conf.d/90-proxmenux.conf</code>: un dispositivo <code>zram0</code> de una décima parte de la RAM del host, compresión zstd (<code>zstd(level=9)</code> con systemd-zram-generator 1.2.0 o posterior) y prioridad de swap 32767.",
+      "Con esa prioridad el kernel llena primero ZRAM. Un swap en disco que ya exista conserva su prioridad y recibe las páginas que ya no caben en ZRAM.",
+      "Antes de cambiar nada, busca otra configuración de ZRAM: un swap zram activo, una línea zram en <code>/etc/fstab</code>, una unidad de systemd u otro fichero del generador. Si encuentra una, la opción se detiene y la deja como está.",
+      "Arranca <code>dev-zram0.swap</code> y comprueba que el dispositivo activo coincide con el perfil. Si no coincide, se restaura el estado anterior.",
+      "Se registra en <code>installed_tools.json</code> para poder revertirlo desde Uninstall Optimizations."
+    ],
+    "howUseLabel": "Cómo se usa:",
+    "howUseBody": "La opción solo forma parte del flujo Personalizable; el flujo Automatizado no la aplica. El dispositivo se crea de nuevo en cada arranque. Mientras está activo, la tarjeta de Memoria del ProxMenux Monitor muestra su capacidad, el swap usado, el algoritmo, la relación de compresión y la memoria física que ocupa.",
+    "verifyLabel": "Verificar desde la shell:",
+    "verifyCode": "# Dispositivos de swap activos y su prioridad\nswapon --show\n\n# Dispositivo ZRAM: algoritmo, tamaño y datos comprimidos\nzramctl\n\n# Perfil escrito por ProxMenux\ncat /etc/systemd/zram-generator.conf.d/90-proxmenux.conf\n\n# Estado de la unidad de swap\nsystemctl status dev-zram0.swap"
+  },
   "autoApplication": {
     "title": "Aplicación automática",
     "body": "Estas funcionalidades opcionales solo se aplican cuando se seleccionan específicamente durante el proceso post-instalación. Cada funcionalidad puede elegirse individualmente según tus necesidades y preferencias específicas."

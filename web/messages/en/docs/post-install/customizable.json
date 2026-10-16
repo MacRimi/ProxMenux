@@ -61,7 +61,7 @@
     },
     {
       "name": "Optional",
-      "description": "Niche pieces not every host needs: AMD CPU fixes, Fastfetch banner, Figurine 3D hostname, PVE Appliance Manager index refresh, Ceph repository, High Availability services and Log2RAM to reduce SSD wear."
+      "description": "Niche pieces not every host needs: AMD CPU fixes, Fastfetch banner, Figurine 3D hostname, PVE Appliance Manager index refresh, Ceph repository, High Availability services, Log2RAM to reduce SSD wear and a ZRAM swap profile."
     }
   ],
   "mixTip": {

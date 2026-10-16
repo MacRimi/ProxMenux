@@ -67,6 +67,7 @@ export default async function OptionalSettingsPage({
       fastfetch: { doesItems: string[]; customItems: string[]; logos: Logo[] }
       figurine: { doesItems: string[] }
       log2ram: { doesItems: string[] }
+      zram: { doesItems: string[] }
     } } }
   }
   const cephItems = messages.docs.postInstall.optional.ceph.doesItems
@@ -78,6 +79,7 @@ export default async function OptionalSettingsPage({
   const fastfetchLogos = messages.docs.postInstall.optional.fastfetch.logos
   const figurineItems = messages.docs.postInstall.optional.figurine.doesItems
   const log2ramItems = messages.docs.postInstall.optional.log2ram.doesItems
+  const zramItems = messages.docs.postInstall.optional.zram.doesItems
 
   const code = (chunks: React.ReactNode) => <code>{chunks}</code>
   const strong = (chunks: React.ReactNode) => <strong>{chunks}</strong>
@@ -370,6 +372,30 @@ chmod +x "/etc/profile.d/figurine.sh"
         <strong>{t("log2ram.verifyLabel")}</strong>
       </p>
       <CopyableCode code={t.raw("log2ram.verifyCode") as string} />
+
+      <StepHeading number={8} label={t("stepLabel")} title={t("zram.title")} />
+
+      <p className="mb-4">
+        {t.rich("zram.intro", { code })}
+      </p>
+
+      <p className="mb-4">
+        <strong>{t("zram.doesLabel")}</strong>
+      </p>
+      <ul className="list-disc pl-5 mb-4">
+        {zramItems.map((_, idx) => (
+          <li key={idx}>{t.rich(`zram.doesItems.${idx}`, { code })}</li>
+        ))}
+      </ul>
+
+      <p className="mb-2">
+        <strong>{t("zram.howUseLabel")}</strong> {t("zram.howUseBody")}
+      </p>
+
+      <p className="text-lg mt-6 mb-2">
+        <strong>{t("zram.verifyLabel")}</strong>
+      </p>
+      <CopyableCode code={t.raw("zram.verifyCode") as string} />
 
       <section className="mt-12 p-4 bg-blue-100 rounded-md">
         <h2 className="text-xl font-semibold mb-2">{t("autoApplication.title")}</h2>

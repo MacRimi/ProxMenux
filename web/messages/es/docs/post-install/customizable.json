@@ -61,7 +61,7 @@
     },
     {
       "name": "Optional",
-      "description": "Opciones que no necesita todo host: ajustes de CPU AMD, banner Fastfetch, nombre 3D con Figurine, actualización del índice de PVE Appliance Manager, repositorio Ceph, servicios de alta disponibilidad y Log2RAM para reducir el desgaste del SSD."
+      "description": "Opciones que no necesita todo host: ajustes de CPU AMD, banner Fastfetch, nombre 3D con Figurine, actualización del índice de PVE Appliance Manager, repositorio Ceph, servicios de alta disponibilidad, Log2RAM para reducir el desgaste del SSD y un perfil de swap con ZRAM."
     }
   ],
   "mixTip": {
