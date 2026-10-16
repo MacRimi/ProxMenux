@@ -28,6 +28,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 8
     strategy:
+      fail-fast: false
       matrix:
         python: ['3.11', '3.13']
     steps:

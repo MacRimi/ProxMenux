@@ -7,6 +7,7 @@ child processes belong to a temporary fixture; no systemd units are installed.
 import importlib.util
 import os
 from pathlib import Path
+import pwd
 import signal
 import socket
 import stat
@@ -66,7 +67,11 @@ def main():
         raise AssertionError("Expected the host namespace to be rejected")
 
     processes = []
-    with tempfile.TemporaryDirectory(prefix="pmx-usbip-") as directory:
+    # StrictModes checks every ancestor of AuthorizedKeysFile. A private
+    # subdirectory of /tmp still fails because /tmp itself is world writable.
+    # Keep the disposable fixture below root's home without changing its SSH
+    # configuration, account settings or existing authorized_keys.
+    with tempfile.TemporaryDirectory(prefix="pmx-usbip-", dir=pwd.getpwuid(os.geteuid()).pw_dir) as directory:
         root = Path(directory)
         log = root / "transport.log"
         with log.open("w") as log_handle:
@@ -148,7 +153,7 @@ StrictModes yes
 AllowUsers root
 AllowTcpForwarding local
 AllowStreamLocalForwarding local
-LogLevel ERROR
+LogLevel VERBOSE
 """)
                 Path("/run/sshd").mkdir(exist_ok=True, mode=0o755)
                 sshd = subprocess.Popen(["/usr/sbin/sshd", "-D", "-e", "-f", str(ssh_config)],
@@ -171,7 +176,7 @@ LogLevel ERROR
                 wrong = check_ssh(remote | {"key": str(root / "wrong-client")})
                 assert wrong.returncode != 0 and "Permission denied" in wrong.stderr, wrong.stderr
                 accepted = check_ssh(remote)
-                assert accepted.returncode == 0, accepted.stderr
+                assert accepted.returncode == 0, accepted.stderr + "\n" + log.read_text()
                 manager.REMOTE_SOCKET = str(unix_path)
                 args = manager.tunnel_args(remote | {"local_port": local_port})
                 args[1:1] = extra
