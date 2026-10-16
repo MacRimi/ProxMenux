@@ -1,8 +1,9 @@
 """The VM wizard must not accept failed ISO downloads as installation media.
 
-Run its real functions against a loopback HTTP fixture and stub only external
-Proxmox/UI services. No product script is sourced, no guest operation runs,
-and no public network or real ISO storage is accessed.
+Run its function logic against a loopback HTTP fixture. Redirect the fixed
+native ISO directory only in the loaded test copy and stub Proxmox/UI services.
+No product script is sourced, no guest operation runs, and no public network
+or real ISO storage is accessed.
 """
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import os
@@ -97,10 +98,15 @@ class VmIsoDownloadTests(unittest.TestCase):
         )
         wrapper.chmod(0o755)
 
-    def run_wizard(self, route="/success.iso", windows=False, overwrite=True, url=None):
+    def run_wizard(self, route="/success.iso", windows=False, overwrite=True, url=None,
+                   caller_iso_dir=None):
         source = CREATOR.read_text()
         functions = "\n\n".join(re.findall(r"^function \w+\(\) \{\n.*?^\}", source, re.M | re.S))
         self.assertIn("function create_vm()", functions)
+        # Only relocate this external filesystem anchor. Keep all predicates,
+        # transfers and promotion logic unchanged, without a production hook.
+        self.assertIn("/var/lib/vz/template/iso", functions)
+        functions = functions.replace("/var/lib/vz/template/iso", "${FIXTURE_DIR}")
         prelude = r'''
             translate() { printf '%s' "$1"; }
             msg_ok() { printf 'OK:%s\n' "$*"; }
@@ -133,12 +139,15 @@ class VmIsoDownloadTests(unittest.TestCase):
         '''
         env = dict(os.environ, PATH=str(self.bin) + os.pathsep + os.environ["PATH"],
                    ISO_PATH=str(self.iso), ISO_URL=url if url is not None else self.http + route,
-                   ISO_VOLID="local:iso/installation media.iso", ISO_DIR=str(self.directory),
+                   ISO_VOLID="local:iso/installation media.iso",
                    OS_TYPE="2" if windows else "3",
                    QM_LOG=str(self.qm_log), WGET_LOG=str(self.wget_log),
                    DIALOG_ONCE=str(self.directory / "dialog-once"), FIXTURE_DIR=str(self.directory),
                    OVERWRITE_STATUS="0" if overwrite else "1", HTTP_FIXTURE=self.http,
                    VIRTIO_FIXTURE_URL=self.http + route)
+        env.pop("ISO_DIR", None)
+        if caller_iso_dir is not None:
+            env["ISO_DIR"] = str(caller_iso_dir)
         return subprocess.run(["bash", "--noprofile", "--norc", "-c", functions + prelude],
                               env=env, stdin=subprocess.DEVNULL, capture_output=True,
                               text=True, timeout=15)
@@ -166,14 +175,17 @@ class VmIsoDownloadTests(unittest.TestCase):
         self.assertEqual(self.iso.read_bytes(), PAYLOAD)
         self.assertIn("create ", self.qm_calls())
 
-    def test_virtio_download_uses_the_configured_iso_directory(self):
+    def test_virtio_download_keeps_native_storage_despite_caller_environment(self):
         self.iso.write_bytes(PAYLOAD)
-        result = self.run_wizard(windows=True)
+        unrelated = self.directory / "unrelated directory"
+        unrelated.mkdir()
+        result = self.run_wizard(windows=True, caller_iso_dir=unrelated)
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         driver = self.directory / "virtio-win.iso"
         self.assertTrue(driver.is_file(), result.stdout + result.stderr)
         self.assertEqual(driver.read_bytes(), PAYLOAD)
         self.assertIn("-ide3 ", self.qm_calls())
+        self.assertEqual(list(unrelated.iterdir()), [])
 
     def test_failed_virtio_fetch_is_not_selected_for_attachment(self):
         self.iso.write_bytes(PAYLOAD)

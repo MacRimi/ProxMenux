@@ -285,7 +285,7 @@ function create_vm() {
   local BOOT_ORDER=""
   local DISK_INFO=""
   local DISK_INDEX=0
-  local ISO_DIR="${ISO_DIR:-/var/lib/vz/template/iso}"
+  local ISO_DIR="/var/lib/vz/template/iso"
 
 
   if [[ -n "$ISO_PATH" && -n "$ISO_URL" ]] && [[ ! -f "$ISO_PATH" || ! -s "$ISO_PATH" ]]; then
@@ -657,7 +657,7 @@ fi
 
   
   if [[ "$OS_TYPE" == "2" ]]; then
-    local VIRTIO_DIR="$ISO_DIR"
+    local VIRTIO_DIR="/var/lib/vz/template/iso"
     local VIRTIO_SELECTED=""
     local VIRTIO_VOLID=""
     local VIRTIO_DOWNLOAD_URL="https://fedorapeople.org/groups/virt/virtio-win/direct-downloads/stable-virtio/virtio-win.iso"
