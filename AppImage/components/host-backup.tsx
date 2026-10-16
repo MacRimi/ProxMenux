@@ -1207,7 +1207,7 @@ export function HostBackup() {
                         {!j.attached && j.next_run && (
                           <span className="inline-flex items-center gap-1" title={t("backup.jobs.nextRunTitle")}>
                             <Clock className="h-3.5 w-3.5 text-green-500" />
-                            <span>{t("backup.jobs.nextRun", { time: formatNext(j.next_run) })}</span>
+                            <span>{t("backup.jobs.nextRun")}: {formatNext(j.next_run)}</span>
                           </span>
                         )}
                         {(statusBadge || lastRunWhen) && (

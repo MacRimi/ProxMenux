@@ -3,6 +3,7 @@ is translated into the same template the catalog applications use."""
 from __future__ import annotations
 
 import json
+import os
 import re
 import shlex
 import subprocess
@@ -455,12 +456,24 @@ def describe_oci_compose(template: dict[str, Any]) -> str:
 
 
 def _read_pasted(ui, title: str | None = None, limit: int = MAX_COMPOSE_BYTES, missing: str | None = None) -> str:
-    """The definition is pasted in the terminal: dialog cannot take it."""
+    """The definition is pasted in the terminal: dialog cannot take it. On a
+    terminal one Ctrl+D ends it, also at the end of a line that has text."""
     console.show_logo()
     console.msg_title(title or translate('Compose file of the application'))
-    console.msg_info2(translate('Paste it here and press Ctrl+D on an empty line.'))
+    console.msg_info2(translate('Paste it here and press Ctrl+D.'))
     print()
-    text = sys.stdin.read(limit + 1)
+    if sys.stdin.isatty():
+        data = b''
+        while len(data) <= limit:
+            chunk = os.read(sys.stdin.fileno(), 65536)
+            data += chunk
+            # The terminal hands over whole lines; a chunk without its newline
+            # is the line Ctrl+D sent before the end of the line.
+            if not chunk.endswith(b'\n'):
+                break
+        text = data.decode('utf-8', errors='replace')
+    else:
+        text = sys.stdin.read(limit + 1)
     if not text.strip():
         raise UserCancelled(missing or (translate('No docker run command was given') if title is not None
                                         else translate('No Compose file was given')))
