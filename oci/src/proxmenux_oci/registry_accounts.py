@@ -200,7 +200,7 @@ def registry_accounts_menu(ui, engine=ENGINE_ROOT, auth=None):
                            'Basic credentials are base64 encoded, not encrypted.\n'
                            'Credential helpers use their own storage.\n\n'
                            'Use an access token with permission to pull images.\n'
-                           'Configure credentials on each node that downloads images.').format(path=auth.path), title)
+                           'Every node of the cluster uses the accounts saved here.').format(path=auth.path), title)
             elif choice in {'add', 'login'}:
                 registry = row['registry'].split('/', 1)[0] if row else ui.ask(translate('Registry hostname'), 'ghcr.io')
                 try:
@@ -280,3 +280,31 @@ def open_registry_accounts(ui):
         registry_accounts_menu(ui)
     except (RegistryError, OSError, ValueError) as error:
         ui.message(clean(error, 600), translate('Registry accounts'))
+
+
+def offer_sign_in(ui, reference, title=None):
+    """When a registry refuses an image, an account for it can be added on the
+    spot; the image is then read again with it."""
+    try:
+        registry = validate_registry(registry_of(reference))
+    except RegistryError:
+        return False
+    question = translate('{registry} refused access to this image:\n{reference}\n\n'
+                         'If the image is private, sign in with an account that can pull it.\n\n'
+                         'Sign in now?').format(registry=registry, reference=clean(reference, 300))
+    if not ui.confirm(question, True, title=title):
+        return False
+    cancelled = importlib.import_module('proxmenux_oci.ui').UserCancelled
+    try:
+        require_root()
+        username = ui.ask(translate('Username'))
+        password = ui.password(translate('Password / access token (image pull permission)'))
+        ui.info(translate('Verifying registry access. Please wait...'))
+        RegistryAuth().login(registry, username, password)
+        del password
+    except cancelled:
+        return False
+    except (RegistryError, OSError, ValueError) as error:
+        ui.message(clean(error, 600), title)
+        return False
+    return True

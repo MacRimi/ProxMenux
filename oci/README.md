@@ -72,10 +72,17 @@ Select a saved account to check access to an image, download it to template
 storage, install it with the existing LXC wizard, update its credentials or
 remove them. Image references retain their tag or full `sha256` digest.
 The normal custom-image importer can also use the saved credentials, including
-Compose files whose services come from private registries.
+Compose files whose services come from private registries. When a registry
+refuses an image there, the importer offers to sign in on the spot and reads
+the image again. Updates, Modify, Recreate, the watchdog and the update check
+of the Monitor use the saved accounts too.
 
-Skopeo stores credentials in `/root/.config/containers/auth.json` by default.
-`REGISTRY_AUTH_FILE` and `XDG_CONFIG_HOME` overrides are respected. The
+ProxMenux keeps the accounts in `/etc/pve/priv/proxmenux/registry-auth.json`,
+where Proxmox keeps its own storage passwords: readable only by root and shared
+by every node of the cluster. The host backup includes it, and uninstalling
+ProxMenux removes it. A `REGISTRY_AUTH_FILE` set by the user is respected;
+without the cluster filesystem, Skopeo's default `/root/.config/containers/auth.json`
+is used. The
 credential directory must be owned by root with mode `700`, and the file with
 mode `600`. Basic credentials are base64 encoded, not encrypted. Configured
 Skopeo credential helpers use their own stores. Failed sign-in attempts leave
@@ -84,9 +91,9 @@ applications unchanged. Other Skopeo/Docker authentication files are managed
 separately and may still grant access.
 
 TLS verification remains enabled. Install a private registry CA in
-`/etc/containers/certs.d/REGISTRY[:PORT]/ca.crt` when required. Configure accounts
-on each node that pulls images; registry credentials are not written into the
-application template or copied into its LXC.
+`/etc/containers/certs.d/REGISTRY[:PORT]/ca.crt` when required, on each node
+that pulls images. Registry credentials are not written into the application
+template or copied into its LXC.
 
 Image access checks have a 30-second timeout per request; sign-in has a 45-second
 timeout. Errors identify rejected credentials, missing images, incompatible

@@ -29,12 +29,12 @@
           "table": {
             "headers": ["Option", "What it reads"],
             "rows": [
-              ["Paste its Compose file in the terminal", "The YAML is pasted in the terminal and ends with Ctrl+D on an empty line."],
+              ["Paste its Compose file in the terminal", "The YAML is pasted in the terminal and ends with Ctrl+D."],
               ["Read its Compose file from a file of this host", "A path on the node, <code>/root/docker-compose.yml</code> by default. The file must exist and be at most 256 KiB."],
               ["Download its Compose file from an address", "An <code>http://</code> or <code>https://</code> address that serves the raw YAML. At most 256 KiB are downloaded."],
               ["Paste its docker run command in the terminal", "The command published by the project. Ports, environment, volumes, devices, capabilities, user, shared memory and the other supported options are translated."],
               ["Only the image reference, with no Compose file", "A reference such as <code>ghcr.io/user/application:latest</code>. The registry is queried and the OCI metadata of the image is kept."],
-              ["Paste an oci-compose in the terminal", "The JSON is pasted in the terminal and ends with Ctrl+D on an empty line. It is not translated: it is checked and installed as it is written."],
+              ["Paste an oci-compose in the terminal", "The JSON is pasted in the terminal and ends with Ctrl+D. It is not translated: it is checked and installed as it is written."],
               ["Read an oci-compose from a file of this host", "A JSON file on the node, <code>/root/oci-compose.json</code> by default, of at most 2 MiB."],
               ["Download an oci-compose from an address", "An <code>http://</code> or <code>https://</code> address that serves the JSON file. At most 2 MiB are downloaded."]
             ]
@@ -76,7 +76,7 @@
           "steps": {
             "items": [
               { "title": "Analyse", "body": "Services, image, ports, paths, environment, devices, security and healthcheck are read." },
-              { "title": "Query the registry", "body": "The image must exist in a public registry, and its published architectures are listed." },
+              { "title": "Query the registry", "body": "The image must exist in its registry, and its published architectures are listed. A private registry is read with the account saved for it." },
               { "title": "List what is not applied", "body": "Labels, Docker networks, Swarm settings and other keys that have no effect on an LXC are listed." },
               { "title": "Block what cannot be translated", "body": "A key with no safe equivalent is shown under <strong>What cannot be translated</strong> and the installation does not continue. Nothing is dropped silently." },
               { "title": "Ask for secrets", "body": "Variables whose names read as a password, token or key become sensitive questions of the installation." }
@@ -153,13 +153,44 @@
       ]
     },
     {
+      "id": "private-registries",
+      "title": "Images in private registries",
+      "intro": "An image in a private registry, such as a private package on GitHub or a private repository on Docker Hub, is read with an account saved in ProxMenux.",
+      "blocks": [
+        {
+          "steps": {
+            "items": [
+              { "title": "The registry refuses the image", "body": "When the registry answers that the image needs an account, the review offers to sign in to that registry and reads the image again." },
+              { "title": "Sign in", "body": "A user and a password or access token that can pull the image. The registry checks them, and they are saved only if it accepts them." },
+              { "title": "Install and keep up to date", "body": "The installation downloads the image with that account, and so do updates, Modify, Recreate, the watchdog and the update check of the Monitor, on any node of the cluster." }
+            ]
+          }
+        },
+        { "p": "<strong>Registry accounts</strong>, in the main menu of OCI manager Apps, lists the saved accounts by registry and user, never their secret. From each account an image can be checked, downloaded or installed, and the account updated or removed." },
+        {
+          "list": {
+            "items": [
+              "GitHub (<code>ghcr.io</code>): the user is the GitHub account, and the password a personal access token with the <code>read:packages</code> permission.",
+              "Docker Hub (<code>docker.io</code>): the user is the Docker Hub account, and the password an access token with read permission.",
+              "Other registries, including one with its own port such as <code>registry.example.com:5000</code>: the user and password or token that registry gives."
+            ]
+          }
+        },
+        {
+          "calloutInfo": {
+            "title": "Where the accounts are kept",
+            "body": "In <code>/etc/pve/priv/proxmenux/registry-auth.json</code>, readable only by root, in the same folder where Proxmox keeps its storage passwords. <code>/etc/pve</code> is shared by every node of the cluster, so an account added on one node is used on all of them. The host backup includes it, and uninstalling ProxMenux removes it from every node."
+          }
+        }
+      ]
+    },
+    {
       "id": "limits",
       "title": "Definitions that are not installed",
       "blocks": [
         {
           "list": {
             "items": [
-              "Images in private registries: registry credentials are not requested.",
               "A Dockerfile without a published image: the image has to be built and published in an OCI registry first.",
               "A Compose file with several services: it is blocked because it describes more than one image. This option installs a single container.",
               "<code>configs</code>, external secrets or device formats that cannot be translated unambiguously.",

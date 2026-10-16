@@ -22,7 +22,7 @@ from .i18n import source_text
 from .installer import ADVANCED_MODE, DEFAULT_MODE
 from .converter import ConversionError
 from .i18n import translate
-from .registry_auth import RegistryError, validate_image
+from .registry_auth import RegistryError, refuses_access, validate_image
 from .ui import UserCancelled
 
 def _valid_image_reference(reference: str) -> bool:
@@ -523,6 +523,12 @@ def read_definition(ui) -> tuple[str, str]:
         return compose_from_docker_run(_read_pasted(ui, translate('docker run command of the application'))), \
             translate('docker run command')
     reference = ui.ask(translate('Image reference (for example ghcr.io/user/application:latest)'), '')
+    try:
+        return compose_from_image(reference), translate('image itself')
+    except ConversionError as error:
+        from .registry_accounts import offer_sign_in
+        if not (refuses_access(error) and offer_sign_in(ui, reference)):
+            raise
     return compose_from_image(reference), translate('image itself')
 
 
@@ -616,6 +622,16 @@ def registry_report(reference: str) -> tuple[bool, str]:
     architectures = sorted({item.get('platform', {}).get('architecture', '')
                             for item in manifests} - {'', 'unknown'})
     return True, f"{translate('The image is in its registry:')} {', '.join(architectures)}"
+
+
+def _registry_refused(reference: str) -> bool:
+    """Whether the registry answered that the image needs an account."""
+    try:
+        result = subprocess.run(['skopeo', 'inspect', '--raw', f'docker://{reference}'],
+                                capture_output=True, text=True, check=False, timeout=120)
+    except (OSError, subprocess.TimeoutExpired):
+        return False
+    return result.returncode != 0 and refuses_access(result.stderr)
 
 
 def describe(template: dict[str, Any]) -> str:
@@ -728,7 +744,12 @@ def explore(ui) -> None:
         template = template_from_compose(text)
     title = translate('Image that is not in the catalog')
     summary = describe(template) + (describe_oci_compose(template) if written else '')
-    available, report = registry_report(template['container_contract']['image']['reference'])
+    reference = template['container_contract']['image']['reference']
+    available, report = registry_report(reference)
+    if not available and _registry_refused(reference):
+        from .registry_accounts import offer_sign_in
+        if offer_sign_in(ui, reference, title):
+            available, report = registry_report(reference)
     summary += '\n\n' + report
     if notes:
         summary += '\n\n' + '\n'.join(notes)

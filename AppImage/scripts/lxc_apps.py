@@ -2081,8 +2081,28 @@ class _DockerNoRedirect(urllib.request.HTTPRedirectHandler):
 _docker_no_redirect_opener = urllib.request.build_opener(_DockerNoRedirect)
 
 
-def _registry_bearer_token(challenge: dict) -> tuple[Optional[str], Optional[str]]:
-    """Exchange a parsed ``WWW-Authenticate`` challenge for a pull token."""
+_REGISTRY_AUTH_FILE = "/etc/pve/priv/proxmenux/registry-auth.json"
+_DOCKER_HUB_API_HOSTS = {"docker.io", "index.docker.io", "registry-1.docker.io", "registry.hub.docker.com"}
+
+
+def _registry_saved_login(api_host: str) -> Optional[str]:
+    """The login saved in ProxMenux for a registry, as a Basic credential."""
+    try:
+        with open(_REGISTRY_AUTH_FILE, encoding="utf-8") as handle:
+            auths = (json.load(handle) or {}).get("auths") or {}
+    except (OSError, ValueError, AttributeError):
+        return None
+    host = (api_host or "").lower()
+    for key in ([host, "docker.io"] if host in _DOCKER_HUB_API_HOSTS else [host]):
+        entry = auths.get(key) if isinstance(auths, dict) else None
+        if isinstance(entry, dict) and isinstance(entry.get("auth"), str) and entry["auth"]:
+            return f"Basic {entry['auth']}"
+    return None
+
+
+def _registry_bearer_token(challenge: dict, saved_login: Optional[str] = None) -> tuple[Optional[str], Optional[str]]:
+    """Exchange a parsed ``WWW-Authenticate`` challenge for a pull token,
+    with the login saved for a private registry when there is one."""
     query = {
         key: challenge[key]
         for key in ("service", "scope") if challenge.get(key)
@@ -2090,10 +2110,10 @@ def _registry_bearer_token(challenge: dict) -> tuple[Optional[str], Optional[str
     token_url = challenge["realm"]
     if query:
         token_url += ("&" if "?" in token_url else "?") + urllib.parse.urlencode(query)
-    token_req = urllib.request.Request(
-        token_url,
-        headers={"User-Agent": "ProxMenux-Monitor", "Accept": "application/json"},
-    )
+    token_headers = {"User-Agent": "ProxMenux-Monitor", "Accept": "application/json"}
+    if saved_login:
+        token_headers["Authorization"] = saved_login
+    token_req = urllib.request.Request(token_url, headers=token_headers)
     try:
         with urllib.request.urlopen(token_req, timeout=_docker_registry_timeout()) as response:
             body = response.read(65537)
@@ -2160,13 +2180,18 @@ def _registry_request(url: str, headers: dict, method: str = "HEAD",
     if error:
         return None, None, token, error
     if status == 401:
-        challenge = _parse_bearer_challenge((response_headers or {}).get("WWW-Authenticate", ""))
-        if not challenge:
+        authenticate = (response_headers or {}).get("WWW-Authenticate", "")
+        saved_login = _registry_saved_login(urllib.parse.urlsplit(url).netloc)
+        challenge = _parse_bearer_challenge(authenticate)
+        if challenge:
+            token, token_error = _registry_bearer_token(challenge, saved_login)
+            if token_error:
+                return None, None, None, token_error
+            attempt_headers["Authorization"] = f"Bearer {token}"
+        elif saved_login and authenticate.lower().startswith("basic") and url.startswith("https://"):
+            attempt_headers["Authorization"] = saved_login
+        else:
             return None, None, token, "registry authentication required"
-        token, token_error = _registry_bearer_token(challenge)
-        if token_error:
-            return None, None, None, token_error
-        attempt_headers["Authorization"] = f"Bearer {token}"
         response_headers, body, status, location, error = _registry_open(
             url, attempt_headers, method, max_bytes,
         )

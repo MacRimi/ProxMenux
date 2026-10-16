@@ -124,7 +124,8 @@ class OciWordingTests(TestCase):
         fn = function(CUSTOM, 'explore', read_definition=lambda _: ('definition', 'source'),
             ignored_settings=lambda _: [], template_from_compose=lambda _: {
                 'container_contract': {'image': {'reference': 'example:latest'}}},
-            describe=lambda _: 'SUMMARY', registry_report=lambda _: (False, 'INSPECTION FAILED'))
+            describe=lambda _: 'SUMMARY', registry_report=lambda _: (False, 'INSPECTION FAILED'),
+            _registry_refused=lambda _: False)
         fn(ui)
         self.assertEqual(ui.message.call_args.args[0], 'SUMMARY\n\nINSPECTION FAILED\n\n' + REGISTRY_ADVICE)
         self.assertNotIn('not supported yet', ui.message.call_args.args[0])

@@ -19,6 +19,11 @@ import uuid
 
 from oci_ui import translate, msg_error, msg_ok
 
+# A registry login saved by ProxMenux lets skopeo read private images.
+REGISTRY_AUTH_FILE = '/etc/pve/priv/proxmenux/registry-auth.json'
+if not os.environ.get('REGISTRY_AUTH_FILE') and os.path.isfile(REGISTRY_AUTH_FILE):
+    os.environ['REGISTRY_AUTH_FILE'] = REGISTRY_AUTH_FILE
+
 ROOT = Path('/var/lib/proxmenux/oci-installations')
 FIELDS = ('Entrypoint', 'Cmd', 'Env', 'User', 'WorkingDir', 'StopSignal', 'Volumes', 'ExposedPorts', 'Healthcheck')
 VERSION_ENV_RE = re.compile(r'^([A-Z][A-Z0-9_]*)_VERSION$')
