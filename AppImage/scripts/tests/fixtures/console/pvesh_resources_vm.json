@@ -1,0 +1,5 @@
+[
+  {"id": "qemu/101", "type": "qemu", "vmid": 101, "name": "plex", "node": "p3-01", "status": "running", "cpu": 0.6, "maxcpu": 2, "mem": 4294967296, "maxmem": 8589934592, "tags": "media;prod"},
+  {"id": "lxc/205", "type": "lxc", "vmid": 205, "name": "nginx", "node": "p3-02", "status": "running", "cpu": 0.3, "maxcpu": 1, "mem": 858993459, "maxmem": 2147483648},
+  {"id": "qemu/103", "type": "qemu", "vmid": 103, "name": "db", "node": "p3-02", "status": "stopped", "cpu": 0, "maxcpu": 4, "mem": 0, "maxmem": 8589934592}
+]

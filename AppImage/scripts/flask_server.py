@@ -1756,7 +1756,8 @@ _AVAILABLE_UPDATES_MIN_INTERVAL = 30  # seconds between apt recounts when apt st
 
 # Cache for pvesh cluster resources (reduces repeated API calls)
 _pvesh_cache = {
-    'cluster_resources_vm': None,
+    'cluster_resources': None,
+    # Existing callers reset this timestamp to invalidate the resources cache.
     'cluster_resources_vm_time': 0,
     'cluster_resources_storage': None,
     'cluster_resources_storage_time': 0,
@@ -2756,8 +2757,8 @@ def _action_cancel(unit_name):
     return True
 
 
-def get_cached_pvesh_cluster_resources_vm():
-    """Get cluster VM resources with a per-process cache.
+def get_cached_pvesh_cluster_resources():
+    """Get all cluster resources with a per-process cache.
 
     `_PVESH_CACHE_TTL` controls cache freshness; `_pvesh_cluster_resources_lock`
     serialises in-flight calls so a thundering herd of dashboard fetches
@@ -2768,9 +2769,9 @@ def get_cached_pvesh_cluster_resources_vm():
     global _pvesh_cache
     now = time.time()
 
-    if _pvesh_cache['cluster_resources_vm'] is not None and \
+    if _pvesh_cache['cluster_resources'] is not None and \
        now - _pvesh_cache['cluster_resources_vm_time'] < _PVESH_CACHE_TTL:
-        return _pvesh_cache['cluster_resources_vm']
+        return _pvesh_cache['cluster_resources']
 
     with _pvesh_cluster_resources_lock:
         # Re-check inside the lock — another thread may have refreshed
@@ -2778,23 +2779,29 @@ def get_cached_pvesh_cluster_resources_vm():
         # pattern: only the first thread runs `pvesh`, everyone else
         # benefits from the same result without spawning duplicates.
         now = time.time()
-        if _pvesh_cache['cluster_resources_vm'] is not None and \
+        if _pvesh_cache['cluster_resources'] is not None and \
            now - _pvesh_cache['cluster_resources_vm_time'] < _PVESH_CACHE_TTL:
-            return _pvesh_cache['cluster_resources_vm']
+            return _pvesh_cache['cluster_resources']
 
         try:
             result = subprocess.run(
-                ['pvesh', 'get', '/cluster/resources', '--type', 'vm', '--output-format', 'json'],
+                ['pvesh', 'get', '/cluster/resources', '--output-format', 'json'],
                 capture_output=True, text=True, timeout=10
             )
             if result.returncode == 0:
                 data = json.loads(result.stdout)
-                _pvesh_cache['cluster_resources_vm'] = data
+                _pvesh_cache['cluster_resources'] = data
                 _pvesh_cache['cluster_resources_vm_time'] = now
                 return data
         except Exception:
             pass
-        return _pvesh_cache['cluster_resources_vm'] or []
+        return _pvesh_cache['cluster_resources'] or []
+
+
+def get_cached_pvesh_cluster_resources_vm():
+    """Get VM and container resources from the shared cluster cache."""
+    return [r for r in get_cached_pvesh_cluster_resources()
+            if r.get('type') in ('qemu', 'lxc')]
 
 
 # Sprint 14 perf pass: three backup endpoints (`/api/backups`,
