@@ -17,13 +17,15 @@ MENU = ROOT / 'oci/src/proxmenux_oci/management.py'
 CHOICE = 'Recover the previous installation'
 BEFORE = 'The operation stopped halfway. Choose "{choice}" for this container in the OCI management menu.'
 AFTER = 'The recovery did not complete. Review the log and choose "{choice}" again for this container in the OCI management menu.'
+REGISTRY_ADVICE = ('Check the image reference and registry access. If the registry is unavailable, '
+                   'try again later. For a private image, sign in from Registry accounts in the OCI menu.')
 NEW_KEYS = (
     'The Compose file describes several services:',
     'Only one service at a time can be installed this way.',
     'No docker run command was given',
     'Image selection was cancelled',
     'Could not inspect the image in its registry:',
-    'Check the image reference and registry access. If the registry is unavailable, try again later. A private registry needs credentials, which are not supported yet.',
+    REGISTRY_ADVICE,
     BEFORE, AFTER,
 )
 
@@ -117,16 +119,15 @@ class OciWordingTests(TestCase):
         self.assertEqual(report('example:latest'), (True, 'The image is in its registry: amd64'))
         self.assertEqual(run.call_count, 1)
 
-    def test_failed_registry_inspection_has_neutral_advice(self):
+    def test_failed_registry_inspection_points_to_registry_accounts(self):
         ui = SimpleNamespace(message=Mock())
         fn = function(CUSTOM, 'explore', read_definition=lambda _: ('definition', 'source'),
             ignored_settings=lambda _: [], template_from_compose=lambda _: {
                 'container_contract': {'image': {'reference': 'example:latest'}}},
             describe=lambda _: 'SUMMARY', registry_report=lambda _: (False, 'INSPECTION FAILED'))
         fn(ui)
-        self.assertEqual(ui.message.call_args.args[0], 'SUMMARY\n\nINSPECTION FAILED\n\n'
-            'Check the image reference and registry access. If the registry is unavailable, '
-            'try again later. A private registry needs credentials, which are not supported yet.')
+        self.assertEqual(ui.message.call_args.args[0], 'SUMMARY\n\nINSPECTION FAILED\n\n' + REGISTRY_ADVICE)
+        self.assertNotIn('not supported yet', ui.message.call_args.args[0])
 
     def test_recovery_hint_quotes_translated_choice_in_all_locales(self):
         # Pin the real translated management choice, not an English AST constant alone.

@@ -22,9 +22,17 @@ from .i18n import source_text
 from .installer import ADVANCED_MODE, DEFAULT_MODE
 from .converter import ConversionError
 from .i18n import translate
+from .registry_auth import RegistryError, validate_image
 from .ui import UserCancelled
 
-IMAGE_REFERENCE = re.compile(r'^[A-Za-z0-9][A-Za-z0-9._/-]*(?::[A-Za-z0-9._-]+)?(?:@sha256:[a-f0-9]{64})?$')
+def _valid_image_reference(reference: str) -> bool:
+    try:
+        validate_image(reference)
+        return True
+    except RegistryError:
+        return False
+
+
 MAX_COMPOSE_BYTES = 256 * 1024
 # An oci-compose: the file ProxMenux installs an application from. The catalog
 # keeps one for each of its applications and every installation records its own.
@@ -176,7 +184,7 @@ def template_from_compose(text: str, title: str | None = None) -> dict[str, Any]
 def compose_from_image(reference: str, title: str | None = None) -> str:
     """A Compose file written from what the image declares: its ports, its
     persistent paths and its variables."""
-    if not IMAGE_REFERENCE.fullmatch(reference):
+    if not _valid_image_reference(reference):
         raise ConversionError(f"{translate('This is not a valid image reference:')} {reference}")
     result = subprocess.run(['skopeo', 'inspect', '--config', f'docker://{reference}'],
                             capture_output=True, text=True, check=False, timeout=120)
@@ -283,7 +291,7 @@ def compose_from_docker_run(command: str, title: str | None = None) -> str:
                               f"{', '.join(sorted(set(unsupported)))}")
     if not image:
         raise ConversionError(translate('The command does not name an image'))
-    if not IMAGE_REFERENCE.fullmatch(image):
+    if not _valid_image_reference(image):
         raise ConversionError(f"{translate('This is not a valid image reference:')} {image}")
     service['image'] = image
     name = normalize_app_id(title or service.get('container_name')
@@ -402,7 +410,7 @@ def template_from_oci_compose(text: str) -> dict[str, Any]:
     reference = image.get('reference') if isinstance(image, dict) else None
     if not isinstance(reference, str) or not reference.strip():
         raise ConversionError(translate('The oci-compose is incomplete: it does not say which image to install.'))
-    if not IMAGE_REFERENCE.fullmatch(reference):
+    if not _valid_image_reference(reference):
         raise ConversionError(f"{translate('This is not a valid image reference:')} {reference}")
     faulty = translate('The oci-compose has errors:')
 
@@ -726,7 +734,7 @@ def explore(ui) -> None:
         summary += '\n\n' + '\n'.join(notes)
     if not available:
         advice = translate('Check the image reference and registry access. If the registry is unavailable, '
-                           'try again later. A private registry needs credentials, which are not supported yet.')
+                           'try again later. For a private image, sign in from Registry accounts in the OCI menu.')
         ui.message(f'{summary}\n\n{advice}', title)
         return
     if not template.get('compatibility', {}).get('automatic_install_candidate'):
