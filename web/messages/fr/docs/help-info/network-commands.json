@@ -1,0 +1,174 @@
+{
+  "meta": {
+    "title": "Commandes réseau Proxmox — ip, ping, ss, pve-firewall, iptables ProxMenux",
+    "description": "Référence de Proxmox VE commandes de réseau d'hôte: ip / ip link / ip addr, ping, traceroute, mtr, ss, ethtool, dig, nslookup, plus pve-firewall, iptables et nftables pour le filtrage. Inspection de pont, de liaison et de VLAN.",
+    "ogTitle": "Commandes réseau Proxmox — ip, ping, ss, pve-firewall, iptables",
+    "ogDescription": "Référence des commandes réseau pour Proxmox VE — inspection d'interface, tests de connectivité, surveillance, pare-feu (pare-feu, iptables, nftables) et DNS.",
+    "twitterTitle": "Commandes réseau Proxmox de ProxMenux",
+    "twitterDescription": "Commandes d'inspection, de test, de configuration et de pare-feu réseau pour Proxmox VE."
+  },
+  "header": {
+    "title": "Commandes réseau",
+    "description": "Référence sécurisée pour le réseau hôte Proxmox : info interface, tests de connectivité, configuration, surveillance du trafic et gestion des pare-feu. Combine ip / ss / nmcli / ethtool / tcpdump / pve-firewall.",
+    "section": "Aide et informations"
+  },
+  "intro": {
+    "title": "Inventaire rapide des interfaces",
+    "body": "<code>ip a</code> affiche chaque interface avec ses IP et MAC. <code>ip r</code> affiche la table de routage. Ensemble, ils répondent à la plupart des questions « cette interface est-elle configurée correctement ? » en quelques secondes."
+  },
+  "commandGroups": [
+    {
+      "title": "Information réseau",
+      "commands": [
+        {
+          "command": "ip a",
+          "description": "Afficher les interfaces réseau et les adresses IP"
+        },
+        {
+          "command": "ip r",
+          "description": "Afficher la table de routage"
+        },
+        {
+          "command": "ip -s link",
+          "description": "Afficher les statistiques de trafic par interface"
+        },
+        {
+          "command": "brctl show",
+          "description": "Afficher les ponts réseau configurés"
+        },
+        {
+          "command": "cat /etc/network/interfaces",
+          "description": "Afficher la configuration réseau brute"
+        }
+      ]
+    },
+    {
+      "title": "Essais en réseau",
+      "commands": [
+        {
+          "command": "ping <host>",
+          "description": "Vérifiez la connectivité avec un autre hôte"
+        },
+        {
+          "command": "traceroute <host>",
+          "description": "Tracer la route vers un hôte"
+        },
+        {
+          "command": "mtr <host>",
+          "description": "Combiner ping et traceroute en temps réel"
+        },
+        {
+          "command": "dig <domain>",
+          "description": "Recherche DNS pour un domaine"
+        },
+        {
+          "command": "nslookup <domain>",
+          "description": "Autre recherche DNS"
+        }
+      ]
+    },
+    {
+      "title": "Configuration réseau",
+      "commands": [
+        {
+          "command": "ifreload -a",
+          "description": "Recharger la configuration réseau (ifupdown2)"
+        },
+        {
+          "command": "ethtool <iface>",
+          "description": "Afficher les informations sur le périphérique Ethernet"
+        },
+        {
+          "command": "resolvectl status",
+          "description": "Afficher l'état de la résolution DNS"
+        },
+        {
+          "command": "nmcli device show",
+          "description": "Afficher les détails du périphérique réseau (si NetworkManager est utilisé)"
+        },
+        {
+          "command": "ip link set <iface> up",
+          "description": "Mettre en place une interface réseau"
+        },
+        {
+          "command": "ip link set <iface> down",
+          "description": "Baisser l'interface réseau"
+        }
+      ]
+    },
+    {
+      "title": "Surveillance des réseaux",
+      "commands": [
+        {
+          "command": "ss -tuln",
+          "description": "Afficher les ports d'écoute (TCP/UDP)"
+        },
+        {
+          "command": "netstat -tuln",
+          "description": "Alternative aux ports d'écoute"
+        },
+        {
+          "command": "lsof -i",
+          "description": "Liste des fichiers et connexions réseau ouverts"
+        },
+        {
+          "command": "tcpdump -i <iface>",
+          "description": "Capturer les paquets sur l'interface"
+        },
+        {
+          "command": "iftop -i <iface>",
+          "description": "Surveiller l'utilisation de la bande passante sur l'interface"
+        }
+      ]
+    },
+    {
+      "title": "Gestion du pare-feu",
+      "commands": [
+        {
+          "command": "iptables -L -n -v",
+          "description": "Afficher les règles de pare-feu actives (iptables)"
+        },
+        {
+          "command": "nft list ruleset",
+          "description": "Afficher les règles nftables"
+        },
+        {
+          "command": "pve-firewall status",
+          "description": "Vérifier l'état du pare-feu Proxmox"
+        },
+        {
+          "command": "pve-firewall compile",
+          "description": "Compiler les règles de pare-feu pour tous les nœuds"
+        },
+        {
+          "command": "pve-firewall reload",
+          "description": "Recharger les règles du pare-feu Proxmox"
+        }
+      ]
+    }
+  ],
+  "iptablesTip": {
+    "title": "iptables vs nftables",
+    "bodyRich": "Debian moderne / Proxmox utilise <strong>nftables</strong> comme moteur de pare-feu sous-jacent. La commande classique <code>iptables -L -n -v</code> fonctionne toujours comme une couche de traduction, mais la source de vérité est <code>nft list ruleset</code>. Les commandes <code>pve-firewall</code> sont l'enveloppeur de Proxmox qui émet des règles nftables à partir de la configuration du pare-feu du cluster."
+  },
+  "related": {
+    "heading": "Autres",
+    "items": [
+      {
+        "href": "/docs/network",
+        "label": "Gestion du réseau",
+        "tail": "— outils de réseau interactifs ProxMenux (analyse des ponts, noms persistants, surveillance)."
+      },
+      {
+        "href": "/docs/help-info/tools-commands",
+        "label": "Outils CLI système",
+        "tail": "— davantage d'outils de surveillance des réseaux."
+      },
+      {
+        "href": "/docs/help-info",
+        "label": "Aide et information",
+        "tail": "."
+      }
+    ]
+  }
+}

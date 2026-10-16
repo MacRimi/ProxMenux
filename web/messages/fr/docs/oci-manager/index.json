@@ -1,0 +1,213 @@
+{
+  "meta": {
+    "title": "Gestionnaire des applications du BEC ProxMenux",
+    "description": "Exécuter des images officielles de l'OCI comme natives Proxmox VE LXC conteneurs, avec des données persistantes, des dispositifs, des applications multi-conteneurs et des mises à jour transactionnelles."
+  },
+  "header": {
+    "title": "Applications du gestionnaire OCI",
+    "description": "Les images officielles du BEC fonctionnent comme natives Proxmox VE LXC conteneurs. L'image reste celle que le responsable publie; ProxMenux reproduit l'environnement Docker Compose aurait créé autour d'elle.",
+    "section": "Applications du gestionnaire OCI"
+  },
+  "sections": [
+    {
+      "id": "model",
+      "blocks": [
+        {
+          "calloutInfo": {
+            "title": "Une image OCI, un LXC natif",
+            "body": "Aucun Docker engine ne fonctionne à l'intérieur des conteneurs. Proxmox VE importe le système de fichiers de l'image et ses métadonnées OCI, et l'application devient le processus principal d'un LXC natif géré avec les mêmes outils que tout autre conteneur du noeud."
+          }
+        },
+        {
+          "flow": {
+            "nodes": [
+              {
+                "label": "Source",
+                "detail": "Image du BEC\nComposant et documentation"
+              },
+              {
+                "label": "ProxMenux",
+                "detail": "Contrat JSON\nvalidation et plan"
+              },
+              {
+                "label": "Proxmox VE",
+                "detail": "Native LXC\nvolumes et dispositifs"
+              }
+            ],
+            "caption": "L'application n'est pas reconstruite : son environnement est reproduit de manière explicite."
+          }
+        }
+      ]
+    },
+    {
+      "id": "where",
+      "title": "Où il est",
+      "intro": "OCI Manager Apps ouvre depuis l'option <strong>OCI manager Apps (Technology Preview)</strong> du menu principal ProxMenux, sur le nœud Proxmox et comme racine. Son premier écran offre :",
+      "blocks": [
+        {
+          "list": {
+            "items": [
+              "<strong>Applications de recherche</strong> — Recherche par nom dans le catalogue.",
+              "<strong>Toutes les applications</strong> — le catalogue complet, avec le nombre d'applications.",
+              "<strong>Gérer les applications OCI installées</strong> — mettre à jour, modifier, supprimer ou récupérer ce qui a été installé.",
+              "<strong>Comptes d'enregistrement</strong> — comptes utilisés pour installer et mettre à jour des images de registres privés.",
+              "<strong>Installer une image qui n'est pas dans le catalogue</strong> — traduire un fichier Composer, une commande <code>docker run</code> ou une référence d'image.",
+              "Les catégories de catalogue, chacune avec son nombre d'applications."
+            ]
+          }
+        },
+        {
+          "figure": {
+            "src": "/oci-manager/main-menu.png",
+            "alt": "Écran principal des applications OCI Manager avec recherche, toutes les applications, gestion, image personnalisée et les catégories de catalogue",
+            "caption": "Écran principal des applications du gestionnaire du BEC."
+          }
+        },
+        {
+          "p": "Sélectionner une application affiche sa description, l'image qu'elle exécute et deux modes d'installation : <strong>Installer avec les paramètres par défaut</strong>, qui ne demande que ce que chaque installation décide (stockage, où les données vont, adresse et démarrage), et <strong>Installer avec les paramètres avancés</strong>, qui ouvre chaque décision dans l'ordre : VMID et ressources, le stockage de chaque chemin, le pont et les appareils."
+        },
+        {
+          "p": "Une application qui a été testée pour de vrai montre <strong>Vérifié</strong> dans cette vue et est marquée avec ✓ dans les listes, qu'elle ait été testée dans le laboratoire ProxMenux ou par la communauté."
+        }
+      ]
+    },
+    {
+      "id": "beta",
+      "title": "Pourquoi c'est un aperçu technologique",
+      "blocks": [
+        {
+          "p": "OCI Manager Apps porte l'étiquette <strong>Technology Preview</strong> que Proxmox VE donne aux conteneurs d'application créés à partir d'images OCI, introduite dans Proxmox VE 9.1. Il se réfère à ce que fonctionne le gestionnaire d'OCI Apps, et non au moteur ProxMenux : le comportement de ces conteneurs peut encore changer entre les sorties de Proxmox VE. L'étiquette reste jusqu'à ce que Proxmox VE marque ce support comme stable."
+        },
+        {
+          "p": "Le moteur de l'OCI Manager Apps (installation, mise à jour, modification, loisirs, sauvegardes, restauration, migration et chien de garde) est testé dans le laboratoire ProxMenux. Chaque application est testée par elle-même : celles testées pour la représentation réelle <strong>Vérifiée</strong> et portent un ✓ dans les listes."
+        }
+      ]
+    },
+    {
+      "id": "translation",
+      "title": "Ce que Docker exprime et ce que le gestionnaire de l'OCI Apps transforme en",
+      "blocks": [
+        {
+          "table": {
+            "headers": [
+              "Besoins",
+              "Docker l'exprime comme",
+              "OCI manager Apps transforme en"
+            ],
+            "rows": [
+              [
+                "Lancez l'application",
+                "<code>image</code>, <code>entrypoint</code>, <code>command</code>",
+                "Les roofs de l'OCI et le processus principal du LXC"
+              ],
+              [
+                "Conserver la configuration",
+                "<code>volumes: /config</code>",
+                "un disque permanent <code>mpN</code> inclus dans la sauvegarde, ou un répertoire hôte"
+              ],
+              [
+                "Publier le service",
+                "<code>ports</code>",
+                "une adresse propre pour le LXC et l'URL d'accès du service"
+              ],
+              [
+                "Utiliser du matériel",
+                "<code>devices</code>, <code>group_add</code>",
+                "<code>devN</code> entrées avec le GID hôte effectif et un profil validé"
+              ],
+              [
+                "Connecter les dépendances",
+                "<code>networks</code>, <code>depends_on</code>",
+                "un pont privé, des adresses fixes, une commande de départ et des contrôles de santé"
+              ],
+              [
+                "Mise à jour",
+                "<code>pull</code> et recréer",
+                "un nouveau roofs avec le même contrat persistant"
+              ]
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "kept",
+      "title": "Ce qui est conservé et ce qui change",
+      "blocks": [
+        {
+          "cards": {
+            "items": [
+              {
+                "icon": "archive",
+                "title": "Conservé",
+                "body": "L'image officielle, ses chemins internes, son environnement, son processus de démarrage et sa documentation fonctionnelle."
+              },
+              {
+                "icon": "boxes",
+                "title": "Adapté",
+                "body": "L'environnement d'exécution: réseau, persistance, appareils, permissions et dépendances utilisent les primitives natifs Proxmox VE LXC."
+              },
+              {
+                "icon": "shield",
+                "title": "Non traduit",
+                "body": "Une clé Composez sans équivalent sûr est listée comme un bloqueur. Les modèles avec bloqueurs ne sont pas proposés, et les options sensibles sont confirmées pendant l'installation."
+              },
+              {
+                "icon": "refresh",
+                "title": "Enregistrement",
+                "body": "Digest d'image, ressources, chemins, réseau, appareils et abonnement de pile sont stockés dans le contrat d'instance, qui met à jour et les loisirs se reproduisent."
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "pages",
+      "title": "Pages de cette section",
+      "blocks": [
+        {
+          "next": {
+            "items": [
+              {
+                "label": "Comment une image du BEC est traduite",
+                "href": "/docs/oci-manager/architecture",
+                "tail": "de l'image et de son fichier Composer vers un LXC natif."
+              },
+              {
+                "label": "Installez une image qui n'est pas dans le catalogue",
+                "href": "/docs/oci-manager/custom-image",
+                "tail": "Composez, docker exécutez ou une image de référence."
+              },
+              {
+                "label": "Données, chemins et réseaux",
+                "href": "/docs/oci-manager/storage-network",
+                "tail": "disques de conteneur, répertoires d'hôte, montages Rclone et adresses."
+              },
+              {
+                "label": "Dispositifs et accélération",
+                "href": "/docs/oci-manager/hardware",
+                "tail": "GPU, NVIDIA, Coral, USB et autres appareils."
+              },
+              {
+                "label": "Applications multiconteneurs",
+                "href": "/docs/oci-manager/stacks",
+                "tail": "application, base de données et cache en tant que LXC coordonnés."
+              },
+              {
+                "label": "Installer, mettre à jour et modifier",
+                "href": "/docs/oci-manager/lifecycle",
+                "tail": "le contrat d'instance et ses opérations."
+              },
+              {
+                "label": "Dans ProxMenux Monitor",
+                "href": "/docs/oci-manager/monitor",
+                "tail": "versions, mises à jour, sortie console et terminal."
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

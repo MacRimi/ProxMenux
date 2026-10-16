@@ -1,0 +1,111 @@
+{
+  "meta": {
+    "title": "Politique de vérification et rapport",
+    "description": "La politique de nœud de Audit & Report : sauvegarde, démarrage automatique et objectif de récupération de chaque invité, le rôle de chaque stockage et les seuils des contrôles."
+  },
+  "header": {
+    "title": "Politique",
+    "description": "La politique déclare ce qu'aucune inspection ne peut déduire: ce que chaque invité et stockage est pour et les seuils de contrôle s'appliquent.",
+    "section": "Audit et rapports"
+  },
+  "sections": [
+    {
+      "id": "principle",
+      "blocks": [
+        {
+          "calloutInfo": {
+            "title": "Sans déclaration, le rapport décrit; avec un, il évalue",
+            "body": "Une évaluation voit ce que l'hôte fait, pas ce qu'il est pour. Un invité sans sauvegarde dont le but n'est pas déclaré est signalé comme une observation. Si sa sauvegarde est déclarée nécessaire, la même absence est signalée comme un avertissement. Rien ne doit être déclaré."
+          }
+        },
+        {
+          "figure": {
+            "src": "/monitor/audit/policy-view.png",
+            "alt": "Vue de la politique avec les invités, le stockage et les seuils du nœud",
+            "caption": "Le point de vue politique."
+          }
+        }
+      ]
+    },
+    {
+      "id": "guests",
+      "title": "Invités",
+      "intro": "Chaque VM et LXC du nœud comporte trois champs. Une valeur laissée par défaut prend la valeur générale, affichée à côté.",
+      "blocks": [
+        {
+          "table": {
+            "headers": [
+              "Champ",
+              "Valeurs",
+              "Effet sur l'évaluation"
+            ],
+            "rows": [
+              [
+                "Sauvegarde",
+                "Requis, Non requis, Non indiqué",
+                "Une sauvegarde manquante est un avertissement quand elle est requise, une observation quand elle n'est pas indiquée, et elle est laissée hors du compte quand elle n'est pas requise."
+              ],
+              [
+                "Démarrage auto",
+                "Requis, Non requis, Non indiqué",
+                "Indique si l'invité doit commencer par l'hôte."
+              ],
+              [
+                "Objectif de reprise",
+                "Heures",
+                "L'âge maximum acceptable de la dernière sauvegarde."
+              ]
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "storage",
+      "title": "Stockage",
+      "blocks": [
+        {
+          "p": "Un stockage inaccessible est déclaré critique lorsqu'il est déclaré essentiel ou sert un invité en cours d'exécution, comme avertissement lorsque son rôle n'est pas indiqué, et comme observation lorsqu'il est déclaré facultatif."
+        }
+      ],
+      "intro": "Chaque stockage du noeud est déclaré essentiel, facultatif ou non indiqué."
+    },
+    {
+      "id": "thresholds",
+      "title": "Seuils",
+      "intro": "Un seuil vide utilise la valeur expédiée, indiquée comme son détenteur.",
+      "blocks": [
+        {
+          "list": {
+            "items": [
+              "Examen de la capacité de stockage (%) et examen du remplissage des bassins minces (%).",
+              "Ratio de surprovisionnement et surengagement mémoire.",
+              "Intervalle de gommage ZFS (jours).",
+              "Retour d'âge de secours (jours) et échéancier (ratio).",
+              "Avis d'expiration du certificat (jours).",
+              "Durée de vie des disques (heures) et nouvelle fenêtre d'erreur disque (jours).",
+              "Lynis indique l'âge (jours) et l'âge index de l'emballage (jours).",
+              "Journal contre son plafond (%).",
+              "Examen de l'espace du système de fichiers (%) et examen inode du système de fichiers (%)."
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "save",
+      "title": "Comment la politique est sauvée",
+      "blocks": [
+        {
+          "p": "La déclaration est validée et enregistrée atomiquement dans <code>/usr/local/share/proxmenux/audit_policy.json</code>. Chaque sauvegarde porte une révision : si la déclaration a changé dans une autre session, le projet n'est pas sauvegardé et la vue offre de recharger la déclaration sauvegardée."
+        },
+        {
+          "calloutWarning": {
+            "title": "La politique n'est jamais inférée",
+            "body": "ProxMenux n'ajoute aucune exigence à elle seule. Un champ vide conserve la valeur expédiée ou reste non indiqué, et une déclaration partielle n'affecte que les éléments qu'il nomme."
+          }
+        }
+      ]
+    }
+  ]
+}

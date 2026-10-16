@@ -1,0 +1,208 @@
+{
+  "meta": {
+    "title": "Changements Vérification et rapport",
+    "description": "La revue de changement de Audit & Report : ce que ProxMenux a changé sur l'hôte, ce qu'il y avait avant, la différence et si elle peut être annulée."
+  },
+  "header": {
+    "title": "Modifications",
+    "description": "Le journal des opérations ProxMenux se produit sur l'hôte et, où il a été capturé, l'état avant et après chacun.",
+    "section": "Audit et rapports"
+  },
+  "sections": [
+    {
+      "id": "purpose",
+      "blocks": [
+        {
+          "calloutInfo": {
+            "title": "Du script qui a couru au changement qu'il a fait",
+            "body": "Une fonction longue ne peut changer que deux lignes. La revue conserve chaque opération concrète avec le script, la fonction et la version responsable, la ressource affectée, la différence et si elle peut être annulée."
+          }
+        },
+        {
+          "flow": {
+            "nodes": [
+              {
+                "label": "Script",
+                "detail": "fonction + version"
+              },
+              {
+                "label": "Capture",
+                "detail": "contenu avant"
+              },
+              {
+                "label": "Opération",
+                "detail": "fichier · paquet · service"
+              },
+              {
+                "label": "Journal officiel",
+                "detail": "attribution + différence"
+              }
+            ],
+            "caption": "La capture est prise lorsque l'opération tourne et est consolidée lorsque le moniteur lit le journal."
+          }
+        },
+        {
+          "figure": {
+            "src": "/monitor/audit/changes-view.png",
+            "alt": "Modification de la vue de Audit & Report avec les entrées regroupées par option et script post-installation",
+            "caption": "La vue Modifications, avec la différence d'un fichier édité par ProxMenux."
+          }
+        }
+      ]
+    },
+    {
+      "id": "types",
+      "title": "Type d'entrée",
+      "intro": "Le filtre en haut sépare les entrées par type.",
+      "blocks": [
+        {
+          "table": {
+            "headers": [
+              "Type",
+              "Ce qu'il enregistre"
+            ],
+            "rows": [
+              [
+                "Configuration",
+                "ProxMenux a écrit, modifié ou supprimé un fichier, modifié un paramètre ou modifié un service."
+              ],
+              [
+                "Installations",
+                "ProxMenux a ajouté un paquet ou un composant, et les paquets qui sont réellement apparus sont enregistrés."
+              ],
+              [
+                "Exécutions",
+                "ProxMenux a exécuté une commande; ce qu'elle a changé est jusqu'à la commande elle-même."
+              ],
+              [
+                "Appliqué",
+                "Une fonction a été appliquée avant l'existence du journal; l'état avant qu'il n'ait été capturé."
+              ]
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "groups",
+      "title": "L'organisation de la vision",
+      "blocks": [
+        {
+          "table": {
+            "headers": [
+              "Chapitre",
+              "Sommaire"
+            ],
+            "rows": [
+              [
+                "Optimisations post-installation",
+                "Groupe par l'option post-installation l'utilisateur sélectionné."
+              ],
+              [
+                "Scripts ProxMenux",
+                "GPU, Coral, réseau, stockage, sécurité, utilitaires et les autres scripts instrumentés, y compris l'installateur ProxMenux et ProxMenux Monitor."
+              ],
+              [
+                "Paquets et utilitaires installés",
+                "Logiciel ProxMenux installé sur l'hôte."
+              ]
+            ]
+          }
+        },
+        {
+          "p": "Dans chaque section, <strong>Par fonction</strong> regroupe les entrées sous la fonction qui les a faites."
+        }
+      ]
+    },
+    {
+      "id": "entry",
+      "title": "Ce que chaque entrée montre",
+      "blocks": [
+        {
+          "list": {
+            "items": [
+              "Le script, la fonction et la version responsable.",
+              "La date et la ressource touchée.",
+              "L'état connu avant et après le changement.",
+              "Les lignes ont été ajoutées et supprimées.",
+              "Les paquets qui ont été effectivement ajoutés.",
+              "La transition d'état d'un service.",
+              "<strong>Détruire ça</strong>: <em>Restaure exactement ce qui était là</em>, <em>Supprime le fichier (il n'y en avait pas auparavant)</em>, <em>Le paquet peut être désinstallé</em>, une annulation partielle, ou <em>Impossible d'être défait du journal</em>."
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "before",
+      "title": "Ce que l'état avant signifie",
+      "blocks": [
+        {
+          "p": "L'état précédent peut être capturé contenu, un fichier créé pour la première fois ou un état inconnu. Les modifications apportées avant l'existence du journal ne peuvent pas être reconstruites; exécuter la fonction capture d'abord l'état trouvé à ce moment."
+        }
+      ]
+    },
+    {
+      "id": "limits",
+      "title": "Portée de la revue",
+      "blocks": [
+        {
+          "list": {
+            "items": [
+              "Les modifications manuelles apportées par d'autres logiciels ne sont pas enregistrées.",
+              "Seules les opérations qui passent par les primitives d'audit ProxMenux sont couvertes.",
+              "L'enregistrement ne bloque jamais l'opération qu'il décrit : si l'entrée ne peut pas être écrite, l'opération continue.",
+              "Les changements successifs à une ressource sont indiqués comme l'origine connue par rapport à l'état actuel."
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "retention",
+      "title": "Preuves stockées",
+      "blocks": [
+        {
+          "table": {
+            "headers": [
+              "Élément",
+              "Comportement"
+            ],
+            "rows": [
+              [
+                "Entrées",
+                "Ils sont conservés sur l'hôte; rien n'est retiré automatiquement du journal."
+              ],
+              [
+                "Contenu capturé",
+                "Un objet capturé est conservé pendant qu'une entrée y fait référence."
+              ],
+              [
+                "Taille d'une capture",
+                "Contenu supérieur à 1 MiB n'est pas stocké entier; l'entrée enregistre que la capture a été sautée en raison de sa taille."
+              ],
+              [
+                "Lecture",
+                "Le moniteur ne charge pas les objets stockés au-dessus de 2 MiB."
+              ],
+              [
+                "Différence",
+                "Au plus des lignes 400 sont montrées, et une différence plus longue est marquée comme tronquée."
+              ],
+              [
+                "Liste",
+                "Le API retourne les entrées 200 par demande par défaut et jusqu'à 1000."
+              ]
+            ]
+          }
+        },
+        {
+          "calloutWarning": {
+            "title": "Le contenu conservé n'est pas un défaire automatique",
+            "body": "Le contenu avant un changement peut être inspecté et restauré à la main, mais la vue Modifications ne retourne pas les opérations. Une entrée d'exécution enregistre la commande sans connaître tous les effets de l'outil exécuté."
+          }
+        }
+      ]
+    }
+  ]
+}

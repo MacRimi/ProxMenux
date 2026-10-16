@@ -1,0 +1,367 @@
+{
+  "meta": {
+    "title": "ProxMenux Monitor — Tableau de bord: onglet Paramètres ProxMenux Documentation",
+    "description": "L'onglet Paramètres contrôle le langage Monitor, l'ordre de navigation, les préférences du tableau de bord, les seuils de santé et les exclusions, les notifications, l'IA et l'inventaire d'optimisation après installation."
+  },
+  "header": {
+    "title": "Tableau de bord : onglet Paramètres",
+    "description": "Surveillez la langue, l'ordre de navigation, les préférences du tableau de bord, les exclusions de surveillance, les notifications, la configuration AI et l'inventaire d'optimisation en direct ProxMenux.",
+    "section": "ProxMenux Monitor · Tableau de bord"
+  },
+  "intro": {
+    "title": "Où chaque cadre vit réellement",
+    "body": "L'onglet Paramètres est une seule surface pour plusieurs préoccupations distinctes: comment le tableau de bord rend, ce qui est surveillé par le moniteur de santé, comment les alertes sortent, et ce que ProxMenux a déjà changé sur l'hôte. Les cartes qui ont leur propre page de documentation profonde se lient au lieu de dupliquer le contenu ici — Paramètres est le point d'entrée, pas le manuel."
+  },
+  "interfaceLanguage": {
+    "heading": "Langue d'interface",
+    "intro": "Choisissez la langue utilisée par le <strong>web Monitor</strong>. Le changement est appliqué immédiatement à l'interface actuelle; il ne redémarre pas le service et ne modifie pas la langue utilisée par les menus shell ProxMenux.",
+    "items": [
+      "ProxMenux Monitor offre actuellement anglais, allemand, espagnol, français, italien, portugais, slovaque et suédois.",
+      "Lors de la première visite, le moniteur utilise la langue du navigateur lorsqu'elle est prise en charge; sinon, il revient à l'anglais.",
+      "Changer la sélection met à jour la langue de la page et synchronise d'autres onglets ouverts du même profil de navigateur.",
+      "Si une clé traduite est manquante, seul ce texte revient en anglais au lieu de rendre un porte-place cassé."
+    ],
+    "scopeTitle": "Préférence du navigateur local",
+    "scopeBody": "La sélection est stockée dans <code>localStorage</code> sous <code>proxmenux-ui-language</code>. Il est donc spécifique à ce profil de navigateur et de l'appareil, pas un réglage à l'échelle des nœuds. Chaque opérateur peut choisir une autre langue Monitor."
+  },
+  "navigationOrder": {
+    "heading": "Ordre de navigation",
+    "intro": "Utilisez cette carte pour organiser les sept emplacements de navigation de haut niveau : <strong>Overview, Apps, VMs & LXCs, Noeud, Sauvegarde, Terminal et Admin</strong>. Appuyez sur <strong>Edit</strong>, faites glisser les lignes, puis enregistrez le résultat.",
+    "items": [
+      "La souris qui traîne commence à presser. Touch utilise une courte pression longue 250 ms donc le défilement normal n'est pas confondu avec un réordre.",
+      "Les entrées groupées <strong>Node</strong> et <strong>Admin</strong> se déplacent en unités complètes; leurs pages internes conservent leur ordre canonique.",
+      "Le menu mobile suit le même ordre enregistré.",
+      "<strong>Restaurer par défaut</strong> réinitialise le projet d'ordre. Enregistrer pour rendre la réinitialisation permanente.",
+      "Un nouvel onglet de haut niveau introduit par une version future est annexé à un ordre personnalisé existant plutôt que de supprimer l'arrangement de l'utilisateur."
+    ],
+    "landingTitle": "Le premier élément devient l'onglet d'atterrissage",
+    "landingBody": "La première fente enregistrée est ce que le moniteur ouvre après le chargement. Si <strong>Node</strong> est le premier, la page d'atterrissage est Storage; si <strong>Admin</strong> est le premier, il s'agit des journaux système. La commande est stockée uniquement dans ce navigateur sous <code>proxmenux-nav-order</code>, de sorte que différents appareils peuvent utiliser différents workflows."
+  },
+  "networkUnits": {
+    "heading": "Unités réseau",
+    "imageAlt": "Carte des unités réseau avec affichage d'unité réseau défini à Bytes",
+    "imageCaption": "Choisissez entre bits par seconde et octets par seconde pour chaque tarif réseau affiché dans le tableau de bord.",
+    "body": "Choisissez comment le débit réseau est affiché à travers le tableau de bord : <strong>bits par seconde</strong> (Mbps / Gbps) ou <strong>octets par seconde</strong> (MB/s / GB/s). Les bits sont par défaut parce que c'est ce que les fournisseurs de NIC et les FAI étiquetent leurs produits; octets est ce que la plupart des outils de transfert de fichiers rapportent. Le réglage affecte chaque carte, badge et infobulle qui affiche le taux réseau — appliqué immédiatement, pas de recharge nécessaire."
+  },
+  "health": {
+    "heading": "Moniteur de santé",
+    "intro": "La carte couvre le réglage par catégorie <strong>Suppression Durée</strong> — une fois qu'une alerte est rejetée, combien de temps avant que le scanner ne soit autorisé à la réactiver. Chacune des dix catégories de moniteurs de santé (CPU, Mémoire, Stockage, Disques, Réseau, VMs, Services PVE, Logs, Mises à jour, Sécurité) a son propre menu déroulant avec ces valeurs :",
+    "items": [
+      "<strong>24 h</strong> — Par défaut pour la plupart des catégories transitoires.",
+      "<strong>72 h</strong> — pour les événements vous voulez quelques jours de silence.",
+      "<strong>168 h</strong> (1 semaine) et <strong>720 h</strong> (1 mois) — contrôles périodiques.",
+      "<strong>8760 h</strong> (1 année) — efficacement \"en toute tranquillité dans un avenir prévisible\".",
+      "<strong>-1</strong> — silence permanent jusqu'à ce que vous le réactivez manuellement.",
+      "<strong>Heures personnalisées</strong> — n'importe quel entier si vous avez besoin d'une valeur entre les deux."
+    ],
+    "imageAlt": "Paramètres → Carte de moniteur de santé avec les menus de suppression par catégorie et la section Suppressions actives",
+    "imageCaption": "Carte Health Monitor — les menus déroulants par catégorie définissent les valeurs par défaut pour les nouveaux rejets; la section Suppressions actives ci-dessous énumère chaque alerte actuellement silencieuse et vous permet de les retourner.",
+    "editTitle": "Modifier le mode",
+    "editBody": "La carte est en lecture seule par défaut. Cliquez sur <strong>Edit</strong> en haut à droite de la carte pour activer les menus déroulants et les boutons Re-activables. <strong>Save</strong> effectue chaque changement en attente (changements de durée de suppression et réactivations en file d'attente) en un seul lot; <strong>Annuler</strong> les rejette tous. Le bouton Enregistrer ne s'active que lorsqu'il y a au moins un changement en attente.",
+    "activeTitle": "Suppressions actives",
+    "activeIntro": "Sous les déclinaisons de la durée de suppression, la section Suppressions actives <strong></strong> énumère toutes les alertes qui sont actuellement réduites au silence — deux rejets limités dans le temps (24 h, 7 jours, fenêtres personnalisées) et <em>Permanent</em>. Chaque ligne montre :",
+    "activeItems": [
+      "Un badge coloré – <strong>Permanent</strong> (ambre) ou un compte à rebours tel que <strong>24h restant</strong> / <strong>7d restant</strong> (bleu).",
+      "L'identificateur d'alerte, normalisé pour la lisibilité (p. ex. <code>pve_storage_full_PBS-Cloud</code> → Stockage <em>PVE Complète: PBS-Cloud</em>.",
+      "La catégorie, la gravité et l'horodatage de l'alerte ont été rejetés.",
+      "Un bouton <strong>Re-activable</strong> (actif seulement en mode Édition) qui fait la file d'attente de l'alerte pour ne pas être reconnu sur le prochain Enregistrer."
+    ],
+    "activeReenableTitle": "Débit réactivable",
+    "activeReenableBody": "En cliquant sur <strong>Re-activable</strong> en mode Édition marque la ligne en vert et frappe son identifiant — il est en file d'attente mais pas encore appliqué. Cliquez à nouveau sur la même ligne pour <strong>Undo</strong> dans la file d'attente. Lorsque vous appuyez sur <strong>Save</strong>, chaque feu réactivable en file d'attente <code>POST /api/health/un-acknowledge</code> en parallèle et les lignes touchées disparaissent de la liste. Si l'état sous-jacent est toujours présent et que la catégorie supporte le ré-firing, l'alerte réapparaît dans la liste Active du moniteur de santé sur le prochain cycle d'analyse.",
+    "activePermanentNote": "Les rejets permanents (alertes rejetées avec <em>Permanently</em> du mode de surveillance de la santé, ou ceux dont la catégorie par défaut est définie à <code>-1</code>) <strong> ne peuvent être retournés que d'ici</strong>. Le tableau de bord modal n'expose pas pour eux un bouton d'annulation — le panneau Suppressions actives est le log d'audit unique + retour UI.",
+    "activeAutoRefreshTitle": "Actualisation automatique",
+    "activeAutoRefreshBody": "La liste se rafraîchit automatiquement lorsque vous rejetez ou désactivez une alerte du mode de surveillance de la santé (par l'intermédiaire d'un événement dans le navigateur), lorsque l'onglet du navigateur retrouve son accent et que la visibilité change. Vous n'avez pas besoin de recharger la page après avoir rejeté une alerte du tableau de bord.",
+    "calloutTitle": "La sémantique en direct dans la page du moniteur de santé",
+    "calloutBody": "Les règles d'escalade (lorsqu'un re-feu devient critique), le comportement auto-résolu pour les événements dont l'appareil sous-jacent disparaît, et la différence entre rejeté et résolu — tous documentés sous <link>Health Monitor → Rejet des alertes et la Durée de Suppression</link>. Cette carte expose simplement les menus déroulants par catégorie et le panneau Suppressions actives."
+  },
+  "thresholds": {
+    "heading": "Seuils du moniteur de santé",
+    "intro": "Lorsque la carte précédente décide <em> combien de temps pour rester silencieux après un congédiement</em>, celui-ci décide <strong>à quelle valeur une alerte tire en premier lieu</strong>. Chaque contrôle effectué par le Health Monitor est paramétré par une paire de nombres — un seuil <strong>Avertissement</strong> et un seuil <strong>Critical</strong> — et les deux sont exposés ici pour permettre à l'opérateur de s'aligner.",
+    "whatForTitle": "C'est pour quoi ?",
+    "whatForIntro": "Les valeurs par défaut qui expédient avec ProxMenux sont saines pour l'hôte Proxmox moyen, mais chaque environnement a sa propre enveloppe:",
+    "whatForItems": [
+      "Un petit homelab avec un SSD à disque unique peut vouloir page plus tôt sur la capacité (75 / 90 %) pour laisser place à des instantanés.",
+      "Un hôte datacenter avec des nœuds Ceph redondants peut être plus détendu sur les avertissements de mémoire (un jeu de travail 90 % est normal sous ZFS ARC).",
+      "Un mini-PC refroidi passivement a besoin de seuils de température plus bas qu'un serveur avec refroidissement à air forcé — même classe d'entraînement, enveloppe physique différente.",
+      "Un hôte fortement virtualisé qui pèle CPU pendant les constructions ne devrait pas pager sur chaque pic 80 %, mais doit toujours alerter sur la pression soutenue."
+    ],
+    "whatForOutro": "Modifier un seuil prend effet <strong> sur le prochain scan</strong> — le Health Monitor relise les valeurs de <code>/usr/local/share/proxmenux/health_thresholds.json</code> sur chaque cycle, aucun redémarrage de service nécessaire. Les mêmes numéros alimentent également les gammes de couleurs des widgets du tableau de bord (la ligne de température dans le mode de température du disque, les barres sur les cartes de stockage) de sorte que la classification visuelle correspond à ce qui déclenche l'alerte.",
+    "coloursTitle": "Couleurs de l'état : comment l'avertissement et le rendu critique dans le tableau de bord",
+    "coloursIntro": "Chaque seuil ci-dessous produit la même classification à trois états à travers le tableau de bord — les mêmes couleurs pour les barres de stockage, les anneaux CPU/mémoire, les puces de température et le point sur le mode disque. Lecture d'une couleur n'importe où dans les cartes Monitor à une plage définie par rapport à la paire configurée :",
+    "headerColour": "Couleur",
+    "headerRange": "Portée",
+    "headerMeaning": "Signification",
+    "colourRows": [
+      {
+        "colour": "Vert",
+        "range": "valeur < Avertissement",
+        "meaning": "Portée normale. Pas de feux d'alerte."
+      },
+      {
+        "colour": "Ambre",
+        "range": "Avertissement ≤ valeur < critique",
+        "meaning": "État d'alerte. Le Health Monitor lance un événement de gravité AVERTISSEMENT; les notifications respectent les filtres du canal et les heures tranquilles."
+      },
+      {
+        "colour": "Rouge",
+        "range": "Valeur ≥ critique",
+        "meaning": "État critique. Le Health Monitor allume un événement CRITIQUE; CRITIQUE contourne les heures tranquilles et atteint toujours le canal."
+      }
+    ],
+    "sectionsTitle": "Sections et par défaut recommandés",
+    "sectionsIntro": "Ce sont les valeurs ProxMenux avec — la base de référence recommandée. Ils sont ce que vous voyez sur un hôte frais jusqu'à ce que vous surpassiez quoi que ce soit. Les sections sont commandées de haut en bas à partir de <em>compute</em> → <em>heat</em> → <em>capacité de stockage</em> donc lecture des mouvements vers le bas du béton (charge actuelle) à l'état accumulé (espace libre).",
+    "headerSection": "Chapitre",
+    "headerWarning": "Avertissement",
+    "headerCritical": "Critique",
+    "headerGates": "Ce qu'il porte",
+    "thresholdRows": [
+      {
+        "section": "Utilisation du processeur",
+        "warning": "85 %",
+        "critical": "95 %",
+        "gates": "Alerte à charge prolongée lorsque CPU dépasse en moyenne le seuil de la fenêtre de numérisation."
+      },
+      {
+        "section": "Mémoire",
+        "warning": "85 %",
+        "critical": "95 %",
+        "gates": "Pression RAM sur l'hôte."
+      },
+      {
+        "section": "Swap (seuil critique uniquement)",
+        "warning": "—",
+        "critical": "5 %",
+        "gates": "L'échange est en fait utilisé. Le nombre est volontairement faible : un hôte sain de Proxmox devrait rarement toucher l'échange, de sorte que même 5 % est un signal significatif de pression RAM."
+      },
+      {
+        "section": "Température du processeur",
+        "warning": "80 °C",
+        "critical": "90 °C",
+        "gates": "CPU paquet / lecture de la température du cœur de <code>lm-sensors</code>."
+      },
+      {
+        "section": "Température du disque — HDD",
+        "warning": "60 °C",
+        "critical": "65 °C",
+        "gates": "Des disques tournants standard. L'enveloppe du fabricant s'élève autour de 60–65 °C, donc Critical est réglé à la limite dure."
+      },
+      {
+        "section": "Température du disque — SSD",
+        "warning": "70 °C",
+        "critical": "75 °C",
+        "gates": "2.5'' / M.2 SATA SSD — exécuter plus frais que NVMe mais plus chaud que les HDD."
+      },
+      {
+        "section": "Température du disque — NVMe",
+        "warning": "80 °C",
+        "critical": "85 °C",
+        "gates": "Les lecteurs NVMe fonctionnent plus chaud par conception; les contrôleurs se mettent en marche au-dessus de ~85 °C, donc l'avertissement prend la montée avant de grincer."
+      },
+      {
+        "section": "Température du disque — SAS",
+        "warning": "55 °C",
+        "critical": "65 °C",
+        "gates": "Les disques Enterprise SAS partagent la même limite de fabricant ~65 °C que les disques durs, mais sont normalement déployés dans un châssis à rack avec refroidissement actif. Une lecture à 55 °C signale déjà un problème de refroidissement (ventilateur défaillant, problème CVC) <em>avant</em> le lecteur lui-même est en danger — d'où un avertissement plus faible que le HDD, pas parce que SAS est moins tolérant à la chaleur."
+      },
+      {
+        "section": "Espace disque — hôte",
+        "warning": "85 %",
+        "critical": "95 %",
+        "gates": "Capacité de <code>/</code> et chaque point de montage hôte (<code>/var/lib/vz</code>, <code>/mnt/*</code>...)."
+      },
+      {
+        "section": "Espace disque — LXC roofs",
+        "warning": "85 %",
+        "critical": "95 %",
+        "gates": "Disque racine par conteneur, évalué par rapport à la taille rootfs de PVE."
+      },
+      {
+        "section": "Points de montage LXC",
+        "warning": "85 %",
+        "critical": "95 %",
+        "gates": "Capacité des points de montage à l'intérieur des CT en cours d'exécution (mp0, mp1, NFS, fixation des supports). Ne comprend pas les roots."
+      },
+      {
+        "section": "Stockage PVE",
+        "warning": "85 %",
+        "critical": "95 %",
+        "gates": "Stockages PVE de type bloc (LVM, LVM-fin, ZFS-pool, RBD/Ceph, PBS)."
+      },
+      {
+        "section": "Pool ZFS",
+        "warning": "85 %",
+        "critical": "95 %",
+        "gates": "ZFS pools au niveau de l'hôte — indépendamment de l'enregistrement PVE."
+      }
+    ],
+    "defaultsTitle": "Défauts, surcharges et réinitialisation",
+    "defaultsBody": "Le moteur expose une vue fusionnée : chaque section commence à partir des valeurs par défaut de ProxMenux (les valeurs que vous voyez lorsque l'hôte est frais) et vous ne remplacez que les boutons qui vous intéressent. La carte affiche la valeur <em>efficace</em> — la valeur de remplacement si vous en définissez une, sinon la valeur par défaut. Un bouton <strong>Reset</strong> efface chaque redéfinition et revient à des valeurs par défaut dans toutes les sections à la fois.",
+    "validationTitle": "Validation",
+    "validationBody": "L'épargne rejette des valeurs qui n'ont pas de sens (pourcentages à l'extérieur de 0–100, critique sous avertissement, températures négatives). Le frontend montre l'erreur en ligne; le backend valide à nouveau avant de persister, de sorte que le API ne peut pas être piégé dans un seuil cassé par un PUT fabriqué à la main."
+  },
+  "lxcDetection": {
+    "heading": "Détection de mise à jour LXC",
+    "imageAlt": "Carte de détection de mise à jour LXC avec un seul interrupteur — lorsqu'elle est activée, le moniteur scanne périodiquement les conteneurs Debian/Ubuntu/Alpine LXC pour les mises à jour du paquet en attente.",
+    "imageCaption": "La bascule pour l'analyse périodique <code>apt list --upgradable</code> / <code>apk list -u</code> pour chaque CT. La valeur par défaut est ON. La notification correspondante dans Notifications → Services n'apparaît que lorsque la détection est activée.",
+    "intro": "Un toggle dédié pour le scanner de mise à jour LXC, assis entre les seuils de surveillance de la santé et la carte Notifications. Quand ON, ProxMenux marche chaque CT en cours d'exécution sur l'hôte et interroge le gestionnaire de paquets dans le conteneur pour les mises à jour en attente; les résultats atterrissent dans l'onglet matériel compte et alimente la notification <code>lxc_updates_available</code>. Lorsque OFF, l'analyse s'arrête entièrement (aucun appel <code>pct exec</code>) et toutes les entrées de LXC existantes dans <code>managed_installs.json</code> sont purgées immédiatement, de sorte que le tableau de bord et le point d'arrivée <code>/api/managed-installs</code> arrêtent de signaler l'état de mise à jour LXC sans attendre le prochain cycle de 24h.",
+    "whatRunsTitle": "Ce que le scan exécute en fait",
+    "whatRunsIntro": "Pour chaque CT dans l'état <code>running</code> avec un gestionnaire de paquets pris en charge:",
+    "whatRunsItems": [
+      "<strong>Cache fraicheur gate.</strong> Si le cache de métadonnées dans le conteneur apt/apk est plus ancien que <strong>24 heures</strong>, un rafraîchissement du meilleur effort fonctionne d'abord (<code>apt-get update -qq</code> sur Debian/Ubuntu, <code>apk update</code> sur Alpine) avec un timeout 60 s. Toute défaillance (sans réseau, repo cassé, timeout) est avalée silencieusement — la liste ci-dessous court toujours contre tout cache existant, de sorte qu'un problème de repo transitoire ne peut jamais rendre la détection pire qu'auparavant.",
+      "<strong>Listing.</strong> Ensuite ProxMenux exécute <code>apt list --upgradable</code> / <code>apk list -u</code> et analyse la sortie en un nombre structuré plus un échantillon des noms de paquets supérieurs.",
+      "<strong>Per-CT dedup.</strong> Une empreinte digitale construite à partir du compte, du compte de sécurité et des top names triés est stockée de sorte qu'un ensemble stable de mises à jour en attente ne re-notifie pas quotidiennement, alors qu'un ensemble significativement différent le fait."
+    ],
+    "selfUpdateTitle": "Les CT qui se mettent à jour à l'extérieur d'Apt peuvent légitimement déclarer 0",
+    "selfUpdateBody": "La détection ne voit que ce que le gestionnaire de paquets dans le conteneur sait. Un CT dont le logiciel clé se met à jour à l'extérieur de l'apt (plex <code>plexupdate</code> cron, Docker conteneurs mis à jour via <code>docker pull</code>, Frigate mis à jour intégré, etc.) continuera de rapporter des mises à jour basses ou nulles apt même lorsque l'appareil reste actif, c'est exact, pas un bug. Le système de base apt-level sur le même CT peut encore avoir ses propres mises à jour en attente, ce que l'analyse fait surface.",
+    "refreshTitle": "Pourquoi le 24 h auto-réfrigérer",
+    "refreshBody": "L'appareil de longue durée CT se retrouve souvent avec des caches apt mois dépassés car personne n'exécute régulièrement <code>apt update</code> à l'intérieur. Sans la mise à jour, <code>apt list --upgradable</code> rapporte des mises à jour 0 à partir d'un instantané gelé et l'opérateur ne voit jamais l'arriéré. Le seuil correspond au reste du cycle de vérification — si le CT a été rafraîchi dans le dernier 24 h, ProxMenux fait confiance à ce signal et saute le rafraîchissement.",
+    "toggleTitle": "Avis conditionnel",
+    "toggleBody": "La notification <code>lxc_updates_available</code> par canal bascule dans <strong>Notifications → Services</strong> ne rend que lorsque la détection est activée. Lorsque vous tournez la détection OFF, cette ligne disparaît de la liste de catégories de chaque canal — mais sa préférence stockée est conservée dans la DB, de sorte que la détection de réactivation ramène le basculement à la valeur qu'elle avait auparavant.",
+    "purgeTitle": "Ce qui est purgé lorsque vous désactivez la détection",
+    "purgeBody": "Le fait de tourner le commutateur OFF supprime immédiatement chaque entrée <code>type=lxc</code> de <code>/usr/local/share/proxmenux/managed_installs.json</code>. Les badges de l'onglet Hardware tombent à zéro sur le prochain tableau de bord. Le retour en arrière ON repeuple le registre sur le prochain cycle de détection (ou plus tôt si vous déclenchez un rafraîchissement manuel à partir du API)."
+  },
+  "storageExclusions": {
+    "heading": "Exclusions de stockage distant",
+    "imageAlt": "Exclusions de stockage à distance Liste des cartes PBS-Cloud, PBS et PBS2 avec des jantes Santé et Alertes par rangée",
+    "imageCaption": "Par stockage <em>Santé</em> et <em>Alerts</em> toggles. Stockages avec les deux toggles hors de compter contre le Health Monitor et arrêter de générer des notifications — mais toujours rendre sur l'onglet Stockage marqué comme exclu.",
+    "intro": "Stockages gérés par Mark Proxmox (NFS / CIFS / PBS / Ceph / iSCSI / etc.) exclus de la surveillance. Deux toggles indépendants par rangement:",
+    "items": [
+      "<strong>Health</strong> — lorsqu'il est éteint, le stockage cesse de contribuer à la catégorie Stockage du moniteur de santé. Utile pour les volumes d'archives qui sont intentionnellement hors ligne la plupart du temps ou les cibles de sauvegarde distantes seulement alimentés à l'horaire.",
+      "<strong>Alerts</strong> — lorsqu'ils sont éteints, les alertes sur ce stockage ne passent plus par les canaux configurés, même si les contrôles de santé restent activés. Utile quand vous voulez la vue du tableau de bord mais pas les notifications."
+    ],
+    "outro": "Les stockages exclus sont toujours rendus sur le tab <link>Storage</link> avec un badge <em> pourpreexclus</em> afin que l'entrée ne disparaisse pas silencieusement de votre inventaire. L'état est maintenu dans la table SQLite <code>excluded_storages</code>."
+  },
+  "interfaceExclusions": {
+    "heading": "Exclusions d'interface réseau",
+    "imageAlt": "Interface réseau Exclusions carte listing vmbr0, vmbr1, vmbr2, bond0 et eno1 avec Health and Alerts toggles par interface",
+    "imageCaption": "Même forme que les Exclusions de stockage — par interface <em>Health</em> et <em>Alerts</em> toggles. Chaque ligne affiche l'interface, le badge de type (pont / lien / physique), l'IP et la vitesse du lien.",
+    "intro": "Même forme que les Exclusions de stockage mais pour les interfaces réseau. Par interface: exclure des contrôles de santé et / ou exclure des notifications. Cas d'utilisation typiques:",
+    "items": [
+      "Un pont de secours délibérément abaissé.",
+      "Une CNI qui a été physiquement enlevée, mais toujours des références dans <code>/etc/network/interfaces</code>.",
+      "Une interface VLAN sub utilisée uniquement pendant les fenêtres d'entretien.",
+      "Un pont de gestion qui est en haut, mais qui ne transporte pas de trafic — battant bruyamment sur chaque cycle."
+    ],
+    "outro": "L'état est maintenu dans la table SQLite <code>excluded_interfaces</code>. Même pourpre <em> exclu</em> badge sur le <link>onglet réseau</link> donc les interfaces exclues restent visibles."
+  },
+  "notifications": {
+    "heading": "Notifications et IA",
+    "body1": "Cette section de l'onglet Paramètres est où les notifications ProxMenux Monitor et le réécriture AI sont activés. En appuyant sur <em>Enable Notifications</em> lance le fil de fond de l'expédition, enregistre une cible Proxmox VE webhook sur l'hôte afin que les événements émis par PVE s'écoulent dans le même pipeline, et déploie le formulaire de canal afin que vous puissiez connecter Telegram, Discord, Email, Gotify et le reste. La réécriture AI se trouve à l'intérieur du même panneau qu'une section pliante avancée.",
+    "body2": "Les deux surfaces ont beaucoup de parties mobiles — canaux, toggles par événement, messages Rich, le nom de l'affichage, le pipeline d'expédition (dedup, cooldown, agrégation, heures tranquilles), l'intégration PVE webhook, les fournisseurs d'IA, les modes rapides — et vivre sur leurs propres pages dédiées plutôt que d'être répétés ici:",
+    "items": [
+      "<notifLink>Notifications</notifLink> — passage de canal (Telegram, Discord, Gotify, Email + Gmail / Microsoft app mots de passe, ntfy, Slack, Teams, générique webhook), catégories d'événements, messages riches, nom d'affichage, pipeline d'expédition, intégration PVE webhook, historique et API.",
+      "<aiLink>AI Assistant</aiLink> — fournisseurs (OpenAI, Anthropic, Gemini, Groq, OpenRouter, Ollama), sélection de modèles, modes rapides (par défaut / personnalisés), langage de sortie, niveaux de détail par canal et suggestions AI."
+    ]
+  },
+  "optimizations": {
+    "heading": "ProxMenux Optimisations",
+    "intro": "Un inventaire en direct et transparent de chaque optimisation ProxMenux post-installation actuellement active sur l'hôte. Chaque fois que vous appliquez une option post-installation à partir du côté Scripts — soit via le <autoLink>Automated post-installation</autoLink> ou via le à-la-carte <customLink>Personnalisé post-installation</customLink> — le script correspondant s'enregistre dans le <code>/usr/local/share/proxmenux/installed_tools.json</code>. Le moniteur lit ce fichier et rend cette carte afin que vous puissiez voir en un coup d'oeil ce qui a été modifié sur votre serveur.",
+    "imageAlt": "ProxMenux Carte d'optimisation avec grille d'outils installés, chaque ligne montrant un point vert, le nom de l'outil et la version. Exemples: Force IPv4 APT, Personnalisation Bashrc, Fastfetch, Protection SSD Log2ram, Optimisation des paramètres de mémoire, Mise en place d'interfaces réseau persistantes, Augmentation des limites du système, APT Language Skip, Entropy Generation haveged avec badge Legacy, Configuration Panique du noyau, Optimisation Logrotate, Optimisation du réseau, Suppression des bannières d'abonnement, VFIO IMMU Passthrough — 14 total actif",
+    "imageCaption": "La carte liste chaque optimisation active avec son nom, sa version, un point coloré et un compteur orange <em>14 actif</em> en haut à droite. Les outils dont la source est accessible sont cliquables.",
+    "dotsTitle": "Ce que signifient les points",
+    "dotsItems": [
+      "<green/> <strong>Dot vert</strong> — optimisation actuelle, enregistrée par la version active de ProxMenux. Le code source est accessible : cliquez sur la ligne pour l'ouvrir.",
+      "<amber/> <strong>Dot ambre + <em>legacy</em> badge</strong> — appliqué par une ancienne version ProxMenux dont le script a depuis été renommé ou remplacé. Toujours actif sur l'hôte ; la source s'ouvre en mode \"légacy\" (avec un accent ambre) afin de pouvoir vérifier ce qui a réellement été exécuté."
+    ],
+    "clickTitle": "Cliquez sur le code source",
+    "clickBody": "Cliquer sur un outil ouvre un modal avec la fonction bash exacte qui a appliqué le changement, plus le chemin de script dans lequel il vit (<code>auto_post_install.sh</code> pour le paquet automatisé, <code>customizable_post_install.sh</code> pour le côté à la carte). Les commentaires et les constructions shell sont syntaxiques; un bouton Copier place la source sur votre presse-papiers. C'est la surface \"montrer votre travail\" — vérifier ce que ProxMenux a fait à votre hôte avant tout changement manuel que vous faites sur le dessus.",
+    "detailAlt": "Modale de code source d'outil pour APT IPv4 Force montrant la fonction bash force_apt_ipv4 de la version customizable_post_install.sh 1.0 avec code syntaxique surligné qui configure /etc/apt/apt.conf.d/99-force-ipv4 avec Acquire ForceIPv4 true, enregistre l'outil et émet un message de configuration APT IPv4 complété par traduction",
+    "detailCaption": "Modale source pour <em>APT IPv4 Force</em> — fonction exacte <code>force_apt_ipv4()</code> de <code>customizable_post_install.sh v1.0</code>, avec mise en évidence syntaxique et copie en un clic.",
+    "whyTitle": "Pourquoi cela est important",
+    "whyBody": "ProxMenux change des choses sur votre hôte: paramètres du noyau, configuration du dépôt, bits réseau, rotation de log, GPU passant, etc. Savoir exactement ce qui est actif est essentiel avant de commencer à ajouter une personnalisation manuelle en haut — et plus encore si un administrateur différent exécute l'hôte que celui qui l'a configuré. Cette carte est l'enregistrement vérifiable de chaque optimisation actuellement en vigueur, avec le code exact qui l'a produite.",
+    "updatesTitle": "Mise à jour de la bannière disponible",
+    "updatesBody": "Lorsqu'une optimisation post-installation obtient une version plus récente sur disque que celle actuellement enregistrée sur l'hôte, la carte affiche une bannière « Mises à jour disponibles » en haut avec le compte et un bouton <strong>Apply</strong>. Cliquez sur <strong>Apply</strong> ouvre un sélecteur par optimisation (le même que celui disponible dans le menu Post-Install de <em>Appliquer les mises à jour disponibles</em> entrée). Choisir les optimisations pour soulever; ProxMenux réexécute la fonction correspondante et rafraîchit la version dans le registre. Quand tout est courant, la bannière disparaît.",
+    "updatesAlt": "Carte d'optimisation ProxMenux avec une bannière de mise à jour disponible en haut — nombre de mises à jour en attente plus un bouton Appliquer qui ouvre le sélecteur par optimisation",
+    "updatesCaption": "La bannière ne rend que lorsqu'au moins une optimisation a une version plus récente sur disque. Voir <link>Appliquer les mises à jour disponibles</link> pour le flux de mise à jour complet et l'équivalent Path-A dans le menu shell.",
+    "revertTitle": "Réversion d'une optimisation",
+    "revertBody": "La carte est en lecture seule — pour annuler une optimisation, exécutez l'option correspondante <link>Uninstall Optimisations</link> depuis le menu ProxMenux Scripts. L'étape de désinstallation supprime l'entrée de <code>installed_tools.json</code>, donc elle disparaît de cette carte lors du prochain rafraîchissement."
+  },
+  "dataCollected": {
+    "heading": "Comment les données sont collectées",
+    "headerCard": "Carte",
+    "headerEndpoint": "Point d'arrivée",
+    "headerSource": "Source",
+    "rows": [
+      {
+        "card": "Langue d'interface",
+        "endpoint": "localStorage",
+        "source": "Préférence du navigateur <code>proxmenux-ui-language</code>, initialement dérivé de la localité du navigateur quand aucun choix sauvegardé n'existe."
+      },
+      {
+        "card": "Ordre de navigation",
+        "endpoint": "localStorage",
+        "source": "Préférence du navigateur <code>proxmenux-nav-order</code>; il détermine également l'onglet d'atterrissage."
+      },
+      {
+        "card": "Unités réseau",
+        "endpoint": "/api/settings",
+        "source": "Persisté dans la table de paramètres SQLite du tableau de bord."
+      },
+      {
+        "card": "Durées des moniteurs de santé",
+        "endpoint": "/api/health/settings",
+        "source": "Durées de suppression par catégorie dans la DB Santé."
+      },
+      {
+        "card": "Exclusions de stockage / interface",
+        "endpoint": "/api/storage/exclusions, /api/network/exclusions",
+        "source": "Tables SQLite <code>excluded_storages</code> et <code>excluded_interfaces</code>."
+      },
+      {
+        "card": "Panneau Notifications & AI",
+        "endpoint": "/api/notifications/*",
+        "source": "Voir les notifications <notifLink> dédiées</notifLink> / <aiLink>AI Assistant</aiLink> pages."
+      },
+      {
+        "card": "Liste des optimisations ProxMenux",
+        "endpoint": "/api/proxmenux/installed-tools",
+        "source": "Lit <code>/usr/local/share/proxmenux/installed_tools.json</code>, écrit par <code>register_tool</code> appels dans les scripts post-installation."
+      },
+      {
+        "card": "Modalité du code source d'optimisation",
+        "endpoint": "/api/proxmenux/tool-source",
+        "source": "Extrait la fonction de bash correspondante de <code>auto_post_install.sh</code> ou <code>customizable_post_install.sh</code> sur l'hôte."
+      }
+    ]
+  },
+  "whereNext": {
+    "heading": "Où aller ensuite",
+    "items": [
+      {
+        "label": "onglet Apps",
+        "href": "/docs/monitor/dashboard/apps",
+        "tail": "— le lanceur dont la position de haut niveau peut être modifiée avec l'ordre de navigation."
+      },
+      {
+        "label": "Notifications",
+        "href": "/docs/monitor/notifications",
+        "tail": "— canaux, toggles par événement, dépassements de canaux, historique, test-end."
+      },
+      {
+        "label": "Assistant AI",
+        "href": "/docs/monitor/ai-assistant",
+        "tail": "— fournisseurs, modèles, modes rapides, langues, niveaux de détail par canal."
+      },
+      {
+        "label": "Surveillant de la santé → Rejet des alertes et la durée de la répression",
+        "href": "/docs/monitor/health-monitor#dismissing-alerts-and-the-suppression-duration",
+        "tail": "— la sémantique derrière les baisses par catégorie ci-dessus."
+      },
+      {
+        "label": "ProxMenux Scripts → Post-installation automatisée",
+        "href": "/docs/post-install/automated",
+        "tailRich": "et <customLink>Personnalisé post-installation</customLink> — les scripts réels qui s'enregistrent dans la liste d'optimisation ci-dessus."
+      },
+      {
+        "label": "Désinstaller les optimisations",
+        "href": "/docs/post-install/uninstall",
+        "tail": "— comment revenir à une optimisation enregistrée ci-dessus."
+      },
+      {
+        "label": "Indice du tableau de bord",
+        "href": "/docs/monitor/dashboard",
+        "tail": "— retour à l'aperçu de l'onglet."
+      }
+    ]
+  }
+}

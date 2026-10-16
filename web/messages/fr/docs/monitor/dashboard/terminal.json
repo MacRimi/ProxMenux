@@ -1,0 +1,174 @@
+{
+  "meta": {
+    "title": "ProxMenux Monitor — Tableau de bord: onglet terminal ProxMenux Documentation",
+    "description": "shell basé sur le navigateur de l'hôte Proxmox: jusqu'à 4 terminaux à la fois avec vue sur la grille, aides clavier mobiles (ESC, TAB, flèches, combos Ctrl), une feuille de triche des commandes intégrées alimentée par cheat.sh, protégé par JWT."
+  },
+  "header": {
+    "title": "Tableau de bord : onglet terminal",
+    "description": "Une vraie session de shell dans le navigateur, sur l'hôte Proxmox. Jusqu'à quatre terminaux à la fois, des aides clavier mobiles, une feuille de triche intégrée, le tout dans le même thème que le reste du tableau de bord.",
+    "section": "ProxMenux Monitor · Tableau de bord"
+  },
+  "intro": {
+    "title": "Un vrai PTY dans le navigateur",
+    "body": "Le terminal attribue un PTY côté serveur via <code>flask_terminal_routes</code>, le conduit sur un WebSocket à <code>xterm.js</code> dans le navigateur, et fonctionne comme <code>root</code> (l'utilisateur de l'unité systemd). Tout ce que vous pouvez faire dans <code>ssh root@&lt;host&gt;</code> fonctionne ici — y compris <code>vim</code>, <code>tmux</code>, ncurses tools et Proxmox CLI (<code>qm</code>, <code>pct</code>, <code>pvesh</code>, <code>pvecm</code>). Chaque PTY a commencé à partir de cet onglet exporte la variable d'environnement <code>PROXMENUX_TERMINAL=monitor</code>, qui est héritée de chaque processus d'enfant <code>bash</code> — y compris un lancement <code>menu</code> ultérieur — de sorte que les flux ProxMenux peuvent indiquer quand ils sont en cours d'exécution à l'intérieur du terminal de navigateur du moniteur."
+  },
+  "singleAlt": "ProxMenux Monitor onglet terminal — session de terminal unique montrant Fastfetch système résumé sur la connexion",
+  "singleCaption": "Un terminal hôte ouvert — la barre d'outils ci-dessus affiche le nombre (<em>1 / 4 terminaux</em>), <em>+ Nouveau</em>, <em>Recherche</em>, <em>Clear</em> et <em>Fermer</em>. Les aides clavier mobiles apparaissent sous le terminal sur les appareils tactiles.",
+  "target": {
+    "heading": "Cible de connexion",
+    "body1": "L'onglet Terminal ouvre un shell sur l'hôte <strong>Proxmox lui-même</strong> — la même connexion que vous pourriez obtenir sur SSH. Chaque onglet ouvre un tout nouveau terminal hôte.",
+    "body2": "Pour atteindre un conteneur <strong>LXC</strong> du navigateur, utilisez le bouton dédié <em>Console</em> sur chaque carte CT en cours d'exécution dans l'onglet <link>VMs & LXCs</link>. Il ouvre un modal qui exécute <code>pct enter &lt;vmid&gt;</code> et réutilise la même barre d'outils mobile décrite ci-dessous."
+  },
+  "menuGuard": {
+    "heading": "Garde auto-mise à jour lorsque le menu fonctionne à l'intérieur de ce terminal",
+    "body1": "ProxMenux's <code>menu</code> auto-mise à jour en place : accepter l'invite remplace son propre arbre de script et recharge. Ça marche très bien. SSH ou la console Proxmox, mais le terminal du navigateur ne peut pas survivre — la mise à jour déchire le PTY même le shell est en cours d'exécution, et le WebSocket Des gouttes en mi-vol. Pour éviter de bloquer la session, les gestionnaires internes <code>check_updates_stable</code>, <code>check_updates_beta</code> et <code>apply_release_channel</code> lire <code>PROXMENUX_TERMINAL</code> et de détecter le contexte du moniteur.",
+    "body2": "Lorsqu'ils le détectent, la boîte de dialogue classique oui / non est remplacée par une msgbox informationnelle avec l'installateur monoligne canonique — <code>bash -c \"$(wget -qLO - https://raw.githubusercontent.com/MacRimi/ProxMenux/main/install_proxmenux.sh)\"</code> pour stable, et l'URL équivalente <code>install_proxmenux_beta.sh</code> pour bêta. La mise à jour elle-même est reportée à une session SSH ou à la console hôte Proxmox; le terminal du navigateur est utilisé uniquement pour reconnaître et lire la commande."
+  },
+  "fourTerminals": {
+    "heading": "Jusqu'à quatre terminaux à la fois",
+    "intro": "L'onglet vous permet d'ouvrir jusqu'à quatre terminaux hôtes simultanément. Chacun obtient son propre PTY et son propre WebSocket — ce sont des sessions totalement indépendantes. Deux mises en page changent avec les icônes à côté du bouton \"Nouveau\" :",
+    "items": [
+      "<strong>Tabs view</strong> — un terminal visible à la fois, les autres comme des onglets nommés en haut (<em>Terminal 1</em>, <em>Terminal 2</em>...). Meilleur pour travailler sur une tâche avec le reste comme arrière-plan.",
+      "<strong>Vue générale</strong> — tous les terminaux ouverts visibles à la fois dans une grille 2×2. Utile pour regarder <code>htop</code> sur un panneau, <code>iftop</code> sur un autre, et éditer sur un tiers sans basculer vers l'avant."
+    ],
+    "outro": "La barre d'outils affiche le nombre courant (terminaux <em>1/4</em>, <em>4/4terminaux</em>). De nouveaux onglets s'ouvrent avec <strong>+ New</strong> et des onglets individuels proches du petit <code>×</code> sur l'en-tête de l'onglet. Le grand bouton rouge <strong>Fermer</strong> en haut déchire tous les terminaux en même temps."
+  },
+  "gridAlt": "Onglet terminal ProxMenux Monitor — vue réseau avec quatre terminaux hôtes fonctionnant ls, configuration réseau, iftop et le menu principal ProxMenux côte à côte",
+  "gridCaption": "Grid view (terminaux 4 / 4) — quatre PTY d'hôtes indépendants fonctionnant en parallèle: répertoire, <code>/etc/network/interfaces</code> d'un côté, <code>iftop</code> d'un autre côté, et le menu principal ProxMenux du quatrième. Passez entre la grille et les onglets avec la mise en page basculer dans la barre d'outils.",
+  "keyboard": {
+    "heading": "Aides clavier mobiles",
+    "intro": "Les claviers de téléphone et de tablette n'exposent généralement pas ESC, TAB, les touches fléchées ou les combinaisons de modificateurs. Sans eux, il est impossible de naviguer dans les menus <code>vim</code>, <code>nano</code>, <code>htop</code> ou TUI. L'onglet Terminal résout cela en rendant une rangée de boutons tactiles sous le terminal chaque fois que l'appareil est assez petit ou tactile :",
+    "headerButton": "Bouton",
+    "headerSends": "Envois",
+    "headerUse": "Utilisation typique",
+    "rows": [
+      {
+        "button": "ESC",
+        "sends": "\\x1b",
+        "use": "Quitter le mode insert en <code>vim</code>, annuler une boîte de dialogue TUI, laisser une recherche."
+      },
+      {
+        "button": "TAB",
+        "sends": "\\t",
+        "use": "Path autocompletion, navigation sur le champ dans dialogue/whiptail."
+      },
+      {
+        "button": "↑ ↓ ← →",
+        "sends": "\\x1bO[ABCD]",
+        "use": "Historique Shell, mouvement de curseur, navigation de menu."
+      },
+      {
+        "button": "↵ Entrée",
+        "sends": "\\r",
+        "use": "Confirmez. Certains claviers à l'écran échangent Entrée pour Go/Done — ce bouton est sans ambiguïté."
+      },
+      {
+        "button": "Ctrl ▾",
+        "sends": "Liste déroulante",
+        "useRich": true
+      }
+    ],
+    "ctrlIntro": "Trois séquences de contrôle :",
+    "ctrlItems": [
+      "<code>Ctrl+C</code> — annuler / interrompre la commande en cours d'exécution (<code>\\x03</code>).",
+      "<code>Ctrl+X</code> — sortie <code>nano</code> (<code>\\x18</code>).",
+      "<code>Ctrl+R</code> — recherche d'historique inversé en bash (<code>\\x12</code>)."
+    ],
+    "modalTitle": "Même barre d'outils dans le mode de console LXC",
+    "modalBody": "La console conteneur que vous lancez de <link>VMs & LXCs → Console</link> rend les mêmes helpers clavier sous le modal. Le modal aussi autotype <code>pct enter &lt;vmid&gt;</code> sur connexion, vous atterrissez donc directement à l'intérieur du conteneur."
+  },
+  "lxcAlt": "ProxMenux Monitor Modale de console LXC — Terminal: ubuntu (ID: 103) avec la même barre d'outils mobile (ESC, TAB, flèches, Entrée, Ctrl) sous le terminal",
+  "lxcCaption": "Le modale de console LXC — ouvert à partir de <em>VMs & LXCs → Console</em>. L'en-tête affiche le conteneur cible (<em>Terminal: ubuntu (ID: 103)</em>) et la même barre d'outils tactile apparaît sous le terminal.",
+  "search": {
+    "heading": "Commandes de recherche — feuille de triche intégrée",
+    "intro": "Le bouton bleu <strong>Search</strong> dans la barre d'outils ouvre un modal avec une recherche de commande floue. Tapez quelques lettres de n'importe quelle commande Linux ou Proxmox (<code>ls</code>, <code>tar</code>, <code>qm</code>, <code>pct</code>, <code>zpool</code>, <code>systemctl</code>...) et le modal liste des exemples d'utilisation avec un seul tap <em>Envoyer au terminal actif</em>. Il supprime le \"attendre, quel drapeau était cela\" aller-retour à un onglet de navigateur séparé.",
+    "modalAlt": "ProxMenux Monitor Search Commands modal — recherche floue pour les commandes Linux et Proxmox alimentées par cheat.sh, montrant plusieurs exemples d'utilisation",
+    "modalCaption": "La requête modale des commandes de recherche <code>ls</code> — chaque résultat montre la commande, sa description et une petite flèche « envoyer » qui la conduit au terminal actif. Coin inférieur droit indique la source de données (<em>Propulsé par cheat.sh</em>).",
+    "aboutLabel": "À propos de cheat.sh:",
+    "aboutBody": "est une feuille de triche unifiée sécurisée par la communauté et open-source qui regroupe de courts exemples d'utilisation pratique pour des centaines de commandes Linux, des outils sysadmin et des langages de programmation. Conçu à l'origine pour être interrogé d'un terminal avec <code>curl cheat.sh/&lt;command&gt;</code>, il est également accessible depuis n'importe quel navigateur. ProxMenux Monitor proxie les requêtes côté serveur de sorte que le modal continue de fonctionner sous la même origine que le tableau de bord.",
+    "headerSource": "Source",
+    "headerWhen": "Quand il est utilisé",
+    "headerWhat": "Ce que vous voyez",
+    "onlineLabel": "(en ligne)",
+    "onlineWhen": "Lorsque l'hôte a accès à Internet et que le proxy cheat.sh répond.",
+    "onlineWhat": "Plusieurs exemples du monde réel par commande, tapés avec leur description en haut. Le point d'état dans l'en-tête modal est <green>green</green>.",
+    "fallbackLabel": "Recul local",
+    "fallbackWhen": "Lorsque cheat.sh est inaccessible (hôte hors ligne, pare-feu restrictif, panne de cheat.sh).",
+    "fallbackWhat": "Une liste groupée de commandes communes Linux + Proxmox. Catalogue plus petit mais toujours disponible. Le point d'état est <red>red</red>.",
+    "sendingNote": "<strong>Comment l'envoi fonctionne</strong> : en cliquant sur la petite flèche \"Envoyer\" à côté d'un résultat, le texte de la commande est renvoyé à quel terminal est actuellement actif (l'onglet focalisé, ou celui que vous avez cliqué en dernier dans la vue de grille). Le modal se ferme automatiquement pour que vous puissiez frapper Entrée immédiatement."
+  },
+  "auth": {
+    "heading": "Authentification",
+    "items": [
+      "La mise à jour WebSocket porte le JWT dans l'en-tête <code>Authorization</code>. Si auth est activé et que le jeton est manquant ou expiré, la connexion est rejetée avec HTTP 401 avant qu'un PTY ne soit attribué.",
+      "Si le moniteur se trouve derrière un proxy inversé, le proxy doit faire suivre les mises à jour de WebSocket. Voir la page <link>Accès & Authentification</link> pour les extraits Nginx / Caddy / Traefik."
+    ]
+  },
+  "clipboard": {
+    "heading": "Clipboard, défilement et redimensionnement",
+    "items": [
+      "<strong>Copie / pâte</strong> — utilise le presse-papiers natif du navigateur. Sélectionnez le texte avec souris / trackpad et utilisez le raccourci OS (<code>Cmd+C</code> sur macOS, <code>Ctrl+Shift+C</code> sur Linux/Windows). Les ordinateurs de bureau Linux supportent également le clic intermédiaire.",
+      "<strong>Scrollback</strong> — roue / rouleau à deux doigts. xterm.js garde les derniers milliers de lignes en mémoire.",
+      "<strong>Resize</strong> — le terminal renégocie la taille de la fenêtre PTY lorsque vous redimensionnez le panneau du tableau de bord, de sorte que <code>htop</code> et <code>vim</code> rendent correctement.",
+      "<strong>Reconnectez-vous à l'onglet focus</strong> — si vous changez d'applications sur un téléphone ou une tablette (comportement iPad courant), le WebSocket tomberait normalement. L'onglet Terminal détecte le changement de visibilité et se reconnecte automatiquement lorsque vous revenez, avec un délai de sortie 15-seconde pour les chemins VPN lents."
+    ]
+  },
+  "disconnect": {
+    "heading": "Déconnecter les causes",
+    "intro": "Les raisons les plus courantes pour lesquelles une session se termine et ce qu'il faut faire pour chacune :",
+    "headerCause": "Cause",
+    "headerFix": "Corriger",
+    "rows": [
+      {
+        "cause": "Session JWT expiré (fenêtre 24 h).",
+        "fix": "Rafraîchir la page et vous connecter à nouveau. Le terminal n'est pas conçu pour les sessions sans surveillance, donc la durée de vie du JWT correspond à la connexion régulière du tableau de bord."
+      },
+      {
+        "cause": "Inverser le délai de désactivation du proxy.",
+        "fix": "Bump <code>proxy_read_timeout</code> sur Nginx ou l'équivalent sur Caddy / Traefik (extraits d'accès et d'authentification)."
+      },
+      {
+        "cause": "Téléphone ou tablette dorment.",
+        "fix": "Lorsque le périphérique se réveille, l'onglet se reconnecte automatiquement (15 s timeout pour les chemins VPN). Sinon, rechargez l'onglet."
+      },
+      {
+        "cause": "Le service redémarre sur l'hôte.",
+        "fix": "Tout redémarrage de <code>proxmenux-monitor.service</code> tombe chaque PTY. Ouvrez de nouveaux terminaux après le rechargement du tableau de bord."
+      }
+    ]
+  },
+  "warning": {
+    "title": "Le terminal est un shell racine sur l'hôte",
+    "body": "Le terminal hérite de l'identité de l'unité systemd (<code>root</code>) et a donc tous les privilèges sur l'hôte Proxmox. Configurer un nom d'utilisateur, un mot de passe et un 2FA dans <authLink>Accès & Authentification</authLink> avant d'exposer le tableau de bord au-delà de votre réseau local : quiconque atteint le port 8008 sans authentification atterrirait directement dans un shell racine — pas d'invites supplémentaires, pas d'identifiants SSH. Pour accéder de l'extérieur du LAN, faire passer le tableau de bord par <gatewayLink>Secure Gateway</gatewayLink> (Tailscale) ou un proxy inverse avec HTTPS, au lieu d'ouvrir le port à l'internet public."
+  },
+  "whereNext": {
+    "heading": "Où aller ensuite",
+    "items": [
+      {
+        "label": "Accès et authentification",
+        "href": "/docs/monitor/access-auth",
+        "tail": "— les extraits de proxy inverse, y compris les lignes de mise à niveau WebSocket nécessaires au terminal."
+      },
+      {
+        "label": "Architecture",
+        "href": "/docs/monitor/architecture",
+        "tail": " — les WebSocket et des transports (HTTP par flask-sock vs HTTPS / WSS via gevent)."
+      },
+      {
+        "label": "Référence API",
+        "href": "/docs/monitor/api",
+        "tail": "— les paramètres /ws/terminal et /ws/script/<sid> WebSocket aux côtés du reste du API."
+      },
+      {
+        "label": "Intégrations → Portail sécurisé",
+        "href": "/docs/monitor/integrations",
+        "tail": "— lorsque vous voulez un accès terminal de l'extérieur du LAN sans exposer le port 8008."
+      },
+      {
+        "label": "Indice du tableau de bord",
+        "href": "/docs/monitor/dashboard",
+        "tail": "— les autres onglets."
+      }
+    ]
+  }
+}

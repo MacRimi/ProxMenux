@@ -1,0 +1,38 @@
+{
+  "meta": {
+    "title": "Contributions Documentation ProxMenux",
+    "description": "Reconnaissance pour les personnes qui rendent ProxMenux possible — testeurs, évaluateurs et développeurs qui façonnent chaque version.",
+    "ogTitle": "Contributions Documentation ProxMenux",
+    "ogDescription": "Rencontrez les contributeurs derrière ProxMenux."
+  },
+  "header": {
+    "title": "Contributeurs",
+    "description": "Le projet ProxMenux se développe et prospère grâce à la contribution de ses collaborateurs. Il s'agit de la reconnaissance bien méritée de leur travail — l'essai construit avant la libération, capture les régressions, examine les PR et façonne la direction des nouvelles caractéristiques.",
+    "section": "À propos"
+  },
+  "beyond": {
+    "title": "Au-delà de cette liste",
+    "body": "Beaucoup plus de personnes contribuent via des rapports de bogues, des idées de fonctionnalités dans Discussions, bêta tests et traductions. La liste complète des contributeurs de code vit sur le graphique des contributeurs <extlink>GitHub</extlink>. La page ci-dessous met en évidence les personnes qui ont été les plus actives dans les tests et l'examen des rejets de ProxMenux."
+  },
+  "testers": {
+    "heading": "Testeurs et évaluateurs",
+    "intro": "Ils ont été parmi les premiers à contribuer au projet — tester, signaler les problèmes et suggérer des améliorations qui ont aidé ProxMenux à devenir ce qu'il est aujourd'hui.",
+    "roles": {
+      "testing": "Essai",
+      "testingReviewer": "Tester et examiner"
+    },
+    "youtube": "YouTube"
+  },
+  "contribute": {
+    "heading": "Vous voulez contribuer ?",
+    "intro": "Toute contribution est la bienvenue — code, test, conception, documentation, ou tout simplement partager vos idées:",
+    "tester": "<strong>Tester</strong> — Essayez le canal <beta>beta</beta> et rapportez ce qui fonctionne et ce qui ne fonctionne pas avant les versions stables.",
+    "developer": "<strong>Developer</strong> — Bash + Next.js (TypeScript) + un peu de Python pour la traduction vend. Les PR sont les bienvenus sur <gh>GitHub</gh>.",
+    "designer": "<strong>Designer</strong> — Améliorations de l'interface utilisateur, icônes, captures d'écran pour la documentation.",
+    "ideas": "<strong>Ideas</strong> — ouvrir un thread dans <disc>GitHub Discussions</disc> avant d'ouvrir un problème de demande de fonctionnalité."
+  },
+  "coc": {
+    "title": "Lisez d'abord le Code de conduite",
+    "body": "Avant de soumettre des questions de code ou de rapport, donnez une lecture rapide au <coclink>Code de conduite et meilleures pratiques</coclink>. Il couvre les attentes concernant la responsabilité du code, la divulgation de la sécurité et la portée des relations publiques."
+  }
+}

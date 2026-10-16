@@ -1,0 +1,93 @@
+{
+  "meta": {
+    "title": "Installation ProxMenux | ProxMenux Documentation",
+    "description": "Installation unique pour ProxMenux sur les hôtes Proxmox VE 8+. Expédie des fichiers de traduction prégénérés pour six langues (anglais, espagnol, français, allemand, italien, portugais) — la langue est choisie une fois lors de l'installation. Le canal bêta est également disponible pour un accès rapide aux nouvelles fonctionnalités.",
+    "ogTitle": "Installation ProxMenux | ProxMenux Documentation",
+    "ogDescription": "Installez ProxMenux sur Proxmox VE 8+ en une seule commande. Chaînes stables et bêta disponibles."
+  },
+  "header": {
+    "title": "Installation de ProxMenux",
+    "description": "Installateur monoligne fonctionnant sur n'importe quel hôte Proxmox VE 8+. Auto-installer les dépendances dont il a besoin, télécharger les scripts, configurer le lanceur de menu et (à la première sortie) vous invite à choisir une langue. Deux canaux d'installation : stable (par défaut) et bêta.",
+    "section": "Installation"
+  },
+  "stable": {
+    "heading": "Installer",
+    "intro": "Exécutez ceci dans le terminal de votre hôte Proxmox :",
+    "code": "bash -c \"$(wget -qLO - https://raw.githubusercontent.com/MacRimi/ProxMenux/main/install_proxmenux.sh)\""
+  },
+  "during": {
+    "heading": "Pendant l'installation",
+    "intro": "ProxMenux installe et configure automatiquement les dépendances dont il a besoin :",
+    "tablePackage": "Paquet",
+    "tablePurpose": "Objet",
+    "rows": [
+      {
+        "package": "boîte de dialogue",
+        "purpose": "Menus interactifs des terminaux"
+      },
+      {
+        "package": "curl",
+        "purpose": "Téléchargements et contrôles de connectivité"
+      },
+      {
+        "package": "jq",
+        "purpose": "Traitement JSON"
+      },
+      {
+        "package": "git",
+        "purpose": "Closonnage des dépôts et mises à jour"
+      }
+    ],
+    "outro": "L'installateur tire également l'arborescence de script dans <code>/usr/local/share/proxmenux/</code> et crée le lanceur à <code>/usr/local/bin/menu</code>. Le tableau de bord web <strong>ProxMenux Monitor</strong> est enregistré sous le nom de <code>proxmenux-monitor.service</code>.",
+    "imageAlt": "Installation ProxMenux en cours"
+  },
+  "first": {
+    "heading": "Premier lancement",
+    "intro": "Une fois installé, exécutez :",
+    "code": "menu",
+    "outro": "ProxMenux lance et vous atterrissez sur le menu principal. De là, vous pouvez exécuter tous les workflows documentés dans ce site — <postlink>Post-Install</postlink> est un bon premier arrêt sur un hôte Proxmox frais."
+  },
+  "beta": {
+    "heading": "Chaîne bêta",
+    "calloutTitle": "Qu'est-ce que le programme Beta?",
+    "calloutBody": "Vous voulez essayer les dernières fonctionnalités avant la sortie officielle et aider à façonner la version finale? Le programme Bêta ProxMenux donne un accès rapide à de nouvelles fonctionnalités — y compris les nouvelles constructions de ProxMenux Monitor — directement depuis la branche <code>develop</code>. Les constructions bêta peuvent contenir des bogues ou des fonctionnalités incomplètes. Vos commentaires aident à les corriger avant la sortie stable.",
+    "intro": "Installez la version bêta au lieu de la version stable avec :",
+    "code": "bash -c \"$(wget -qLO - https://raw.githubusercontent.com/MacRimi/ProxMenux/develop/install_proxmenux_beta.sh)\"",
+    "outro": "Beta est opt-in — vous devez exécuter explicitement l'installateur bêta. Lorsqu'une version stable est publiée, ProxMenux vous avise lors du prochain lancement de <code>menu</code> et vous propose de basculer automatiquement. Pour vous retirer plus tôt, utilisez l'option <betalink>Déactiver Beta Program</betalink> dans Paramètres."
+  },
+  "updating": {
+    "heading": "Mise à jour",
+    "body": "ProxMenux auto-mise à jour. Lorsqu'une nouvelle version est disponible, le prochain lancement <code>menu</code> offre la mise à jour; accepter remplace les fichiers utilitaires et les configurations en place. Aucun téléchargement manuel nécessaire. Les utilisateurs stables obtiennent des libérations stables; les utilisateurs bêta obtiennent des libérations bêta (et l'invite de commutation automatique ci-dessus quand une réduction stable). La forme de l'invite dépend de l'endroit où le <code>menu</code> tourne : au-dessus du SSH ou de la console Proxmox, il s'agit d'une boîte de dialogue classique oui/non, et l'acceptation applique immédiatement la mise à jour. À l'intérieur du terminal WebSocket de ProxMenux Monitor, il est remplacé par un msgbox informatif — ce terminal ne peut pas survivre à un mi-vol auto-mise à jour, de sorte que msgbox montre l'installateur monoligne canonique (<code>bash -c \"$(wget -qLO - https://raw.githubusercontent.com/MacRimi/ProxMenux/main/install_proxmenux.sh)\"</code> pour stable, ou l'URL équivalente <code>install_proxmenux_beta.sh</code> pour bêta) pour fonctionner à partir de SSH ou console."
+  },
+  "uninstall": {
+    "heading": "Désinstallation",
+    "body": "De l'intérieur ProxMenux: <strong>Paramètres → Désinstaller ProxMenux</strong>. Supprime l'arborescence des scripts, le lanceur et le service Monitor, supprime en option les dépendances sélectionnées, restaure les sauvegardes <code>/root/.bashrc</code> et <code>/etc/motd</code> prises au moment de l'installation. Étape par étape : <uninstalllink>Désinstaller ProxMenux</uninstalllink>."
+  },
+  "troubleshoot": {
+    "heading": "Dépannage",
+    "virustotalTitle": "VirusTotal affiche l'URL d'installation",
+    "virustotalBody": "A 1/95 détection par des moteurs heuristiques (par exemple <em>Chong Lua Dao</em>) est connu false positif. L'installateur utilise la norme <code>curl | bash</code> modèle et téléchargements binaires légitimes (comme <code>jq</code> de ses fonctionnaires GitHub libération), qui scanners agressifs drapeau basé sur <em>comportement</em> plutôt que le vrai code malveillant. L'installateur est 100% open source et revisible. Plus de contexte dans <issuelink>Numéro162</issuelink>.",
+    "aptTitle": "L'installation échoue avec les erreurs apt",
+    "aptBody": "Habituellement, une repo Proxmox manquante ou mal configurée. L'installateur tire les dépendances via apt; si la configuration de repo est cassée (souvent le cas sur les installateurs nu-bones Proxmox 8 qui n'ont pas encore été mis à jour), apt échoue. Exécutez d'abord manuellement <code>apt-get update</code> et corrigez toutes les erreurs, puis réexécutez l'installateur.",
+    "menuTitle": "`menu: command not found` après installation",
+    "menuBody": "Le lanceur vit à <code>/usr/local/bin/menu</code>. Vérifiez qu'il est là : <code>ls -lh /usr/local/bin/menu</code>. Si l'installation est manquante, l'installation s'est terminée tôt — réexécutez l'installateur. Si présent mais non trouvé, votre PATH n'inclut pas <code>/usr/local/bin</code> ; soit corrigez PATH ou invoquez le lanceur directement : <code>/usr/local/bin/menu</code>.",
+    "stuckTitle": "L'installation pend ou ne progresse pas",
+    "stuckBody": "Si une installation, une réinstallation ou une mise à jour est bloquée en raison d'un problème de connexion, annulez avec <strong>Ctrl + C</strong> et réexécutez l'installateur manuellement.",
+    "otherTitle": "Autres questions",
+    "otherBody": "Vérifiez les émissions <issueslink>GitHub</issueslink> pour les problèmes connus ou ouvrez-en une nouvelle avec la sortie log pertinente. Utilisateurs bêta: inclure <code>journalctl -u proxmenux-monitor -n 50</code> si lié à Monitor."
+  },
+  "next": {
+    "heading": "Suivant",
+    "postInstall": "<postlink>Post-Install Script</postlink> — tweaks et durcissement pour un hôte Proxmox frais.",
+    "introduction": "<introlink>Introduction</introlink> — le tour complet de la fonctionnalité.",
+    "monitor": "<monitorlink>ProxMenux Monitor</monitorlink> — tableau de bord web pour l'hôte (auto-installé à côté du menu)."
+  },
+  "requirements": {
+    "heading": "Exigences et bonnes pratiques",
+    "reqTitle": "Exigences",
+    "reqBody": "Proxmox VE <strong>8.x ou ultérieur</strong>. PVE 7 et plus tôt ne sont pas pris en charge. Accès Internet depuis l'hôte (le programme d'installation télécharge les scripts, les dépendances et le ProxMenux Monitor AppImage). Exécutez comme <strong>root</strong> sur l'hôte Proxmox.",
+    "inspectTitle": "Inspectez toujours les scripts que vous utilisez depuis Internet",
+    "inspectReview": "<sourcelink>Revoir la source d'installation</sourcelink> avant d'exécuter.",
+    "inspectCoc": "Tous les liens exécutables suivent le code de conduite <coclink>ProxMenux</coclink>."
+  }
+}

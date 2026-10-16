@@ -1,0 +1,122 @@
+{
+  "meta": {
+    "title": "Analyse de Config et nettoyage guidé ProxMenux Documentation",
+    "description": "Détecte les blocs d'iface dans /etc/network/interfaces que les CNI physiques de référence ne sont plus présents sur l'hôte. Signale-les et offre une suppression guidée en étape 5 avec sauvegarde obligatoire et aperçu par bloc.",
+    "ogTitle": "Analyse de Config et nettoyage guidé ProxMenux Documentation",
+    "ogDescription": "Trouver et supprimer les blocs d'interface orphelins laissés derrière par les changements matériels, avec prévisualisation complète et retour."
+  },
+  "header": {
+    "title": "Analyse de Config & nettoyage guidé",
+    "description": "Marche chaque bloc d'iface dans /etc/network/interfaces et vérifie que le NIC physique sous-jacent existe encore. Signale les blocs orphelins laissés par les changements matériels et offre une suppression guidée avec sauvegarde, prévisualisation et confirmation par bloc.",
+    "section": "Réseau"
+  },
+  "intro": {
+    "title": "Ce que ça fait",
+    "body": "Identifie les déclarations <code>iface</code> dont le support NIC n'est plus présent sur l'hôte (typique après le remplacement ou la suppression d'une carte réseau). Ensuite, offre un nettoyage guidé qui supprime <em>seulement</em> les blocs orphelins, avec une sauvegarde, un aperçu par section et une confirmation finale explicite."
+  },
+  "differs": {
+    "heading": "Comment il diffère de l'analyse de pont",
+    "headerAspect": "Aspect",
+    "headerBridge": "Analyse des ponts",
+    "headerConfig": "Analyse de la configuration",
+    "rows": [
+      {
+        "aspect": "Regarde",
+        "bridge": "Ponts (<code>vmbrX</code>) et leur ligne <code>bridge-ports</code>",
+        "config": "Chaque bloc <code>iface</code> (à l'exclusion du loopback, des ponts, des obligations)"
+      },
+      {
+        "aspect": "Détecte",
+        "bridge": "Ponts faisant référence à un port inexistant",
+        "config": "Blocs d'interface autonomes pour les NIC qui n'existent pas"
+      },
+      {
+        "aspect": "Action de réparation",
+        "bridge": "Remplace le nom du port dans <code>bridge-ports</code>",
+        "config": "Supprime tout le bloc <code>iface</code>"
+      },
+      {
+        "aspect": "Non compris",
+        "bridge": "Rien — chaque pont est analysé",
+        "config": "Les ponts (<code>vmbrX</code>) et les obligations (<code>bondX</code>) sont toujours conservés, puisqu'ils sont virtuels et \"non existants\" seraient normaux pendant le démarrage"
+      }
+    ],
+    "outro": "Dans la pratique, vous exécutez souvent les deux, dans cet ordre: <strong>analyse de confiance</strong> d'abord pour enlever les orphelins, puis <link>analyse de pont</link> pour re-pointer tout pont qui dépendait de l'interface maintenant supprimée."
+  },
+  "step1": {
+    "heading": "Étape 1: analyse (lecture seule)",
+    "intro": "Avorte immédiatement si l'hôte n'est pas sur la pile classique. Sinon, liste toutes les interfaces non loopback configurées et indique son état :",
+    "virtTitle": "Les interfaces virtuelles sont protégées",
+    "virtBody": "Les ponts (<code>vmbrX</code>) et les obligations (<code>bondX</code>) sont des constructions virtuelles. Ils peuvent légitimement ne pas exister au moment de l'inspection (par exemple, un pont sans port pour l'instant), de sorte que l'analyse ne propose jamais de les enlever — seulement les NIC physiques."
+  },
+  "step2": {
+    "heading": "Étape 2: nettoyage guidé (étapes 5)",
+    "intro": "Seulement entré si vous acceptez l'invite à la fin de l'analyse. Chaque étape nécessite une confirmation; l'annulation à n'importe quel point sort sans écrire.",
+    "steps": [
+      {
+        "title": "1. Sauvegarde de sécurité",
+        "body": "Copie <code>/etc/network/interfaces</code> vers <code>/var/backups/proxmenux/interfaces_backup_&lt;TIMESTAMP&gt;</code>. Chemin montré avant et après.",
+        "tone": "blue"
+      },
+      {
+        "title": "2. Confirmer la liste de suppression",
+        "body": "Liste exactement quels blocs d'interface physique seront supprimés. Si, entre l'analyse et le nettoyage, les CNI ont réapparu (p. ex., vous avez re-siège une carte), le flux sort avec <em>\"Aucun nettoyage nécessaire.\"</em>",
+        "tone": "blue"
+      },
+      {
+        "title": "3. Aperçu du ou des blocs exacts",
+        "body": "Ouvre une vue défilante de chaque bloc <code>iface</code> qui serait supprimé, mot à mot du fichier. C'est le moment de repérer par exemple un crochet <code>up</code> intéressant que vous voulez préserver.",
+        "tone": "blue"
+      },
+      {
+        "title": "4. Appliquer la suppression",
+        "body": "Pour chaque interface orpheline, exécute <code>sed -i \"/^iface $iface/,/^$/d\" /etc/network/interfaces</code>. Cela supprime de la ligne correspondante <code>iface</code> jusqu'à la ligne blanche suivante.",
+        "tone": "amber"
+      },
+      {
+        "title": "5. Vérification",
+        "body": "Relise le fichier, liste ce qui a été supprimé et revérifie les interfaces restantes. Imprime la commande rrollback. Est-ce que <strong>not</strong> redémarre automatiquement le réseau - supprimer un bloc inutilisé est sûr d'appliquer sur le prochain redémarrage, et évite de toucher l'état en direct.",
+        "tone": "emerald"
+      }
+    ],
+    "noRestartTitle": "Ne redémarre pas automatiquement le réseau",
+    "noRestartBody": "Contrairement à la réparation de pont, le flux de nettoyage n'offre pas de redémarrer le service. L'élimination d'un bloc d'interface inutilisé n'a aucun effet immédiat sur la configuration en cours d'exécution, de sorte qu'un redémarrage est inutile et serait un risque inutile de connectivité. Le changement prend effet sur le prochain manuel <code>systemctl restart networking</code> ou au prochain redémarrage."
+  },
+  "caveats": {
+    "heading": "Mises en garde importantes",
+    "boundaryTitle": "La limite du bloc est la première ligne vide",
+    "boundaryBody": "Le motif <code>sed</code> supprime de <code>iface &lt;name&gt;</code> jusqu'à la ligne vide suivante. Si votre <code>/etc/network/interfaces</code> n'a pas de ligne blanche séparant les blocs (rare, mais possible si édité à la main), la suppression peut également consommer le prochain bloc. C'est pourquoi <strong>step 3 est obligatoire</strong> : examinez l'aperçu avant de confirmer.",
+    "tandemTitle": "Un orphelin utilisé par un pont est détecté ici, pas dans l'analyse de pont",
+    "tandemBody": "Si <code>vmbr0</code> déclare <code>bridge-ports enp3s0</code> et <code>enp3s0</code> possède également son propre bloc <code>iface enp3s0 inet manual</code>, enlevant <code>enp3s0</code> ici laissera <code>vmbr0</code> avec une référence de mélange. Après le nettoyage, exécutez l'analyse <link>bridge</link> pour repointer ou enlever le port de pont. Les deux flux sont conçus pour être utilisés en tandem."
+  },
+  "troubleshoot": {
+    "heading": "Dépannage",
+    "notFoundTitle": "L'analyse montre mon nouveau CNI comme \"NOT FOUND\"",
+    "notFoundBody": "Le noyau voit le périphérique sous un nom différent de ce qui est dans le fichier. Exécutez <code>ip link show</code> pour obtenir le nom réel. C'est exactement le cas où <link>Noms d'interface persistants</link> empêcherait le problème de progresser.",
+    "tooMuchTitle": "Le nettoyage enlevé trop (un bloc que je voulais garder)",
+    "tooMuchBody": "Restaurer à partir de la sauvegarde imprimée dans l'étape 5:",
+    "tooMuchOutro": "Modifier le fichier à la main pour ajouter une ligne blanche claire entre les blocs avant de ré-exécuter le nettoyage, ou supprimer le bloc problématique manuellement.",
+    "bridgeBreakTitle": "Un pont s'arrête après le nettoyage",
+    "bridgeBreakBody": "Le pont dépendait d'un port dont le bloc <code>iface</code> vient d'être enlevé. Exécutez l'analyse <link>bridge</link> et la suggestion pointera le pont à une interface physique existante."
+  },
+  "related": {
+    "heading": "Autres",
+    "items": [
+      {
+        "label": "Analyse des ponts et réparation guidée",
+        "href": "/docs/network/bridge-analysis",
+        "tail": "— le suivi naturel après un nettoyage."
+      },
+      {
+        "label": "Noms d'interface persistants",
+        "href": "/docs/network/persistent-names",
+        "tail": "— empêche les blocs orphelins de s'accumuler après chaque changement matériel."
+      },
+      {
+        "label": "Sauvegarde et redémarrage des interfaces",
+        "href": "/docs/network/backup-restore",
+        "tail": "— les instantanés manuels et le navigateur de restauration."
+      }
+    ]
+  }
+}

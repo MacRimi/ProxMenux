@@ -1,0 +1,110 @@
+{
+  "meta": {
+    "title": "Sauvegarde et redémarrage des interfaces Documentation ProxMenux",
+    "description": "Capture manuelle, navigation et restauration des sauvegardes /etc/network/interfaces stockées sous /var/backups/proxmenux/. Comprend un redémarrage du service réseau avec confirmation et une vue rapide de la configuration en direct.",
+    "ogTitle": "Sauvegarde et redémarrage des interfaces Documentation ProxMenux",
+    "ogDescription": "Snapshot et restaurer la configuration réseau Proxmox; redémarrer le service de réseau avec confirmation."
+  },
+  "header": {
+    "title": "Sauvegarde et redémarrage des interfaces",
+    "description": "Quatre utilitaires qui tournent autour de /etc/network/interfaces: prennent un instantané manuel, visualisent la configuration en direct, restaurent une sauvegarde précédente avec prévisualisation optionnelle et redémarrent le service de réseautage avec un consentement explicite. Même répertoire de sauvegarde utilisé par les flux de réparation guidés.",
+    "section": "Réseau"
+  },
+  "intro": {
+    "title": "Ce que ça fait",
+    "body": "Gère le même répertoire de sauvegarde utilisé par les flux de réparation guidés (<code>/var/backups/proxmenux/</code>). Permet de prendre un instantané supplémentaire avant tout changement manuel, de parcourir toutes les sauvegardes existantes, et de revenir à l'une d'entre elles — toujours avec une nouvelle sauvegarde pré-restauration prise automatiquement comme deuxième filet de sécurité."
+  },
+  "shared": {
+    "heading": "Le répertoire de sauvegarde partagé",
+    "intro": "Chaque sauvegarde prise n'importe où dans le menu Réseau atterrit au même endroit :",
+    "outro": "Les noms de fichiers sont horodatés, triés par date et jamais écrasés. Le répertoire est créé lors de la première utilisation."
+  },
+  "show": {
+    "heading": "Afficher le fichier de configuration réseau",
+    "body": "Imprime mot à mot <code>/etc/network/interfaces</code> au terminal. En lecture seule. Utile comme un contrôle de santé avant de prendre une sauvegarde ou après une restauration — il n'y a pas diff séparé avec sauvegarde précédente, donc eyeballing le fichier live est le moyen facile de confirmer ce que vous avez."
+  },
+  "create": {
+    "heading": "Créer une sauvegarde réseau",
+    "body": "Copie le <code>/etc/network/interfaces</code> actuel dans le répertoire de sauvegarde avec un nouvel horodatage. C'est tout — pas d'analyse, pas d'invite, juste un instantané.",
+    "whenTitle": "Quand prendre une sauvegarde manuelle",
+    "whenBody": "Avant d'éditer <code>/etc/network/interfaces</code> à la main, avant d'installer un paquet qui peut toucher la pile réseau (p. ex. NetworkManager, ouvrir vSwitch), ou avant tout changement matériel. Les réparations guidées déjà instantané automatiquement — cette option est pour le <em>manuel</em> moments."
+  },
+  "restore": {
+    "heading": "Restaurer la sauvegarde réseau",
+    "intro": "Liste toutes les sauvegardes dans <code>/var/backups/proxmenux/</code> triées du plus récent au plus ancien, et marche à travers une restauration protégée:",
+    "steps": [
+      {
+        "title": "1. Choisir une sauvegarde",
+        "body": "Un menu liste chaque sauvegarde par son horodatage. S'il n'y a pas de sauvegardes, le flux sort avec un message clair.",
+        "tone": "blue"
+      },
+      {
+        "title": "2. Aperçu facultatif",
+        "body": "Offre d'ouvrir la sauvegarde sélectionnée dans une vue défilante avant de s'engager. Oui par défaut — ne le sautez pas sur un hôte distant.",
+        "tone": "blue"
+      },
+      {
+        "title": "3. Sauvegarde avant restauration",
+        "body": "Avant d'écraser <code>/etc/network/interfaces</code>, prend <strong> une autre sauvegarde </strong> de l'état actuel. La restauration d'une sauvegarde est elle-même une action destructrice, de sorte que le nouvel instantané pré-restauration vous permet de revenir si la sauvegarde choisie s'avère être la mauvaise.",
+        "tone": "amber"
+      },
+      {
+        "title": "4. Appliquer la restauration",
+        "body": "Copie la sauvegarde choisie sur <code>/etc/network/interfaces</code>. Le changement de fichier est sur disque; l'état du noyau en direct reflète toujours la configuration précédente.",
+        "tone": "amber"
+      },
+      {
+        "title": "5. Redémarrage facultatif",
+        "body": "Demande s'il faut exécuter <code>systemctl restart networking</code> maintenant. Refusez de reporter le changement au prochain redémarrage.",
+        "tone": "emerald"
+      }
+    ],
+    "autoBackupTitle": "Une restauration prend sa propre sauvegarde automatiquement",
+    "autoBackupBody": "Sélectionner <em>Restore Network Backup</em> crée toujours un nouvel instantané de la configuration <em>current</em> avant de l'écraser. Si vous retournez à la mauvaise sauvegarde, le fichier le plus récent dans <code>/var/backups/proxmenux/</code> est l'état d'où vous venez."
+  },
+  "restart": {
+    "heading": "Redémarrer le service réseau",
+    "body": "Exécute <code>systemctl restart networking</code> après une confirmation oui/non. Signale le résultat avec <code>msg_ok</code> / <code>msg_error</code>. La plupart des flux dans ce menu offrent leur propre invite de redémarrage à la fin; cette option est pour redémarrer après une modification manuelle ou après avoir diminué le redémarrage en flux plus tôt.",
+    "warnTitle": "Brève déconnexion garantie; possibilité de déconnexion permanente",
+    "warnBody": "Le redémarrage de <code>networking</code> s'effondre et réapplique chaque interface déclarée dans <code>/etc/network/interfaces</code>. Les sessions SSH hébergées sur ces interfaces tombent. Si la nouvelle configuration est invalide, le réseau ne revient jamais. N'exécuter cela que lorsque :",
+    "warnItems": [
+      "Vous avez la console / IPMI / accès iKVM prêt, <em>ou</em>",
+      "Vous êtes physiquement à côté de la machine, <em> ou</em>",
+      "Vous venez de retourner avec succès à une config connue et vous voulez l'appliquer."
+    ]
+  },
+  "manualRollback": {
+    "heading": "Retour manuel depuis une console",
+    "intro": "Si vous ne pouvez pas atteindre le menu (pas de SSH, crashing de boîte de dialogue, ...) mais pouvez atteindre une console, le retour est deux commandes :",
+    "outro": "C'est l'opération <em>same</em> que le menu effectue, simplement tapé à la main. Si <code>networking</code> ne démarre toujours pas, cochez <code>journalctl -u networking -b</code> pour connaître l'erreur de syntaxe / pilote sous-jacent."
+  },
+  "troubleshoot": {
+    "heading": "Dépannage",
+    "noneTitle": "\"Aucune sauvegarde trouvée\" dans Restore",
+    "noneBody": "Le répertoire <code>/var/backups/proxmenux/</code> n'existe pas ou ne contient aucun fichier <code>interfaces_backup_*</code>. Exécuter <em>Create Network Backup</em> au moins une fois, ou exécuter toute réparation guidée (qui en crée automatiquement une). Confirmer avec <code>ls /var/backups/proxmenux/</code>.",
+    "unreachTitle": "Redémarrer le réseautage réussit mais l'hôte est toujours inaccessible",
+    "unreachBody": "Soit la nouvelle configuration est incorrecte, soit vous avez redémarré dans une configuration qui ne lie pas votre IP de gestion. Retournez de la console (voir ci-dessus). Après un retour en arrière, utilisez l'analyse <bridgeLink>bridge</bridgeLink> et <configLink>analyse de configuration</configLink> pour comprendre ce qui ne va pas avant de réappliquer.",
+    "emptyTitle": "Restaurer l'aperçu affiche un fichier vide",
+    "emptyBody": "Le fichier de sauvegarde est vide (0 octets). Cela se produit si une copie a échoué silencieusement lors d'une précédente sortie. Choisissez une sauvegarde plus ancienne, ou réexécutez <em>Create Network Backup</em> dès maintenant si la configuration en direct est saine."
+  },
+  "related": {
+    "heading": "Autres",
+    "items": [
+      {
+        "label": "Analyse des ponts et réparation guidée",
+        "href": "/docs/network/bridge-analysis",
+        "tail": "— la raison la plus courante pour laquelle une sauvegarde se termine ici."
+      },
+      {
+        "label": "Analyse de Config & nettoyage guidé",
+        "href": "/docs/network/config-analysis",
+        "tailRich": "— écrit également à <code>/var/backups/proxmenux/</code> automatiquement."
+      },
+      {
+        "label": "Diagnostic",
+        "href": "/docs/network/diagnostics",
+        "tail": "— vérifier l'état de vie après une restauration."
+      }
+    ]
+  }
+}

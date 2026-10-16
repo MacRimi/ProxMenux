@@ -1,0 +1,142 @@
+{
+  "meta": {
+    "title": "Format / Essuyer le disque physique Documentation ProxMenux",
+    "description": "Sécuriser l'essuie-glaces et le format du disque sur Proxmox VE en utilisant ProxMenux. Quatre modes de fonctionnement, des filtres de sécurité stricts (système / monté / disques en usage bloqués) et une double confirmation incluant le typage de chemin complet.",
+    "ogTitle": "Format / Essuyer le disque physique Documentation ProxMenux",
+    "ogDescription": "Essuyer ou formater en toute sécurité un disque physique sur Proxmox. Règles de visibilité sûres, modes de fonctionnement 4, double confirmation."
+  },
+  "header": {
+    "title": "Format / Essuyer le disque physique",
+    "description": "essuyer ou formater en toute sécurité un disque physique sur l'hôte Proxmox. ProxMenux affiche uniquement des disques entièrement libres (pas d'utilisation du système, pas de référence d'invité, pas de montage) et force une double confirmation — oui/non plus tapant le chemin du disque complet — avant de détruire des données.",
+    "section": "Gestionnaire de disque · Services publics"
+  },
+  "danger": {
+    "title": "Outil destructif",
+    "body": "Chaque opération ici écrit sur le disque. Il n'y a pas d'annulation. ProxMenux applique des filtres de sécurité stricts et des confirmations, mais la responsabilité de choisir le bon disque est à vous. Lisez le chemin du disque deux fois avant de le taper."
+  },
+  "howRuns": {
+    "heading": "Comment fonctionne le script",
+    "body": "Le débit a deux phases avec un filtre de sécurité triple-porte entre les deux. La liste des disques, le mode d'exploitation et les détails du système de fichiers sont tous collectés dans Phase 1; rien n'est écrit jusqu'à ce que Phase 2 passe une nouvelle validation finale juste avant l'exécution."
+  },
+  "visibility": {
+    "heading": "Règles de visibilité",
+    "intro": "Avant même que le menu apparaisse, ProxMenux filtre la liste des disques. Seuls les candidats qui sont en sécurité sont présentés :",
+    "items": [
+      "<strong>Afficher</strong> — disques <em>not</em> utilisé par l'hôte (pool racine, swap, monté, actif ZFS/LVM/RAID) et <em>not</em> référencé par n'importe quelle configuration VM/LXC (démarrage ou arrêt).",
+      "<strong>Hidden</strong> — disques d'hôte / système.",
+      "<strong>Hidden</strong> — disques référencés par une configuration VM/LXC."
+    ],
+    "safetyTitle": "Sécurité lors de la confirmation et de l'exécution",
+    "safetyItems": [
+      "Les disques avec des métadonnées actives/stales affichent des avertissements détaillés <em>avant</em> que vous confirmez.",
+      "Les disques utilisés par un <strong>running</strong> VM sont <strong>blocés dur</strong> à la confirmation.",
+      "Les disques avec des partitions montées sont <strong>blocés dur</strong> à l'exécution (une nouvelle re-validation fonctionne juste avant que tout soit écrit).",
+      "Deux confirmations sont toujours nécessaires : <em>yes/no</em> boîte de dialogue + tapant exactement le chemin du disque complet."
+    ]
+  },
+  "modes": {
+    "heading": "Modes de fonctionnement",
+    "intro": "Après avoir choisi un disque, vous choisissez l'un des quatre modes. Ils diffèrent dans ce qu'ils détruisent et ce qu'ils laissent derrière eux:",
+    "headerMode": "Mode",
+    "headerPart": "Tableau de répartition",
+    "headerData": "Données",
+    "headerUseCase": "Cas d'utilisation",
+    "rows": [
+      {
+        "mode": "1. Essuyer tous",
+        "part": "Détruite",
+        "data": "Signatures effacées",
+        "useCase": "Commencer frais: tout sur le disque va, prêt pour une nouvelle mise en page."
+      },
+      {
+        "mode": "2. Supprimer les étiquettes FS",
+        "part": "Préservé",
+        "data": "Préservé",
+        "useCase": "Efface les signatures Stale ZFS / LVM / RAID afin que le disque cesse d'être automatiquement revendiqué, sans toucher les données."
+      },
+      {
+        "mode": "3. Zéro toutes les données",
+        "part": "Préservé",
+        "data": "Détruite (zéro)",
+        "useCase": "Sanite avant de remettre le disque, en conservant la disposition existante de la partition."
+      },
+      {
+        "mode": "4. Format complet",
+        "part": "Nouveau TPG",
+        "data": "Détruite",
+        "useCase": "Disque prêt à utiliser avec une seule nouvelle partition et un nouveau système de fichiers."
+      }
+    ],
+    "fullFormatOutro": "<strong>Format complet</strong> continue avec deux dialogues supplémentaires:",
+    "fullFormatItems": [
+      "<strong>Filesystem</strong> — <code>ext4</code>, <code>xfs</code>, <code>exfat</code> (portable) ou <code>btrfs</code>. Les outils manquants (par exemple <code>mkfs.btrfs</code>) avortent avec un message clair.",
+      "<strong>Label</strong> — étiquette optionnelle du système de fichiers pour identification."
+    ]
+  },
+  "steps": {
+    "heading": "Étape par étape",
+    "stepLabel": "Étape",
+    "list": [
+      {
+        "title": "Choisir un disque libre",
+        "body": "ProxMenux liste tous les disques qui passent les filtres de visibilité ci-dessus. Les disques avec des marqueurs -- portent des métadonnées statiques et sont affichés avec les détails afin que vous sachiez ce que vous êtes sur le point d'écraser."
+      },
+      {
+        "title": "Choisir un mode d'opération",
+        "bodyRich": "Choisissez entre <strong>Wipe all</strong>, <strong>Supprimer les étiquettes FS</strong>, <strong>Zero toutes les données</strong> ou <strong>Format complet</strong> selon le tableau ci-dessus."
+      },
+      {
+        "title": "(Format complet seulement) Choisir le système de fichiers et l'étiquette",
+        "body": "ext4 / xfs / exfat / btrfs, plus une étiquette en option."
+      },
+      {
+        "title": "Confirmer deux fois",
+        "bodyRich": "ProxMenux présente un résumé de ce qui va se passer. Vous acceptez avec une boîte de dialogue oui/non et <strong> tapez le chemin complet du disque</strong> exactement comme indiqué (par exemple <code>/dev/sdc</code>). Tout le reste avorte."
+      },
+      {
+        "title": "Revalidation et exécution",
+        "body": "Juste avant d'écrire, le script revérifie l'état du disque. Si une partition a été montée ou un VM a commencé dans l'intervalle, l'exécution est interrompue. Sinon, l'opération choisie tourne et un résumé est imprimé à la fin."
+      }
+    ]
+  },
+  "manual": {
+    "heading": "Équivalents manuels",
+    "body": "Si vous préférez exécuter les commandes équivalentes à la main :"
+  },
+  "troubleshoot": {
+    "notListedTitle": "Disque non listé dans le menu",
+    "notListedBody": "Il a été filtré pour la sécurité. Raisons courantes : il est monté (même à <code>/mnt/tmp</code>), il est un membre actif ZFS / LVM / RAID, il est référencé par une config VM ou LXC, ou c'est votre disque racine Proxmox. Exécutez <code>lsblk -f</code> et <code>cat /proc/mdstat</code> sur l'hôte pour comprendre pourquoi.",
+    "busyTitle": "\"Le disque peut être occupé\" / démontage échoué",
+    "busyBody": "Quelque chose tient toujours un fichier ouvert sur une partition de ce disque — le plus souvent un conteneur ou un shell dont cwd est à l'intérieur d'un point de montage. Identifiez-le avec <code>lsof | grep /dev/sdX</code> ou <code>fuser -vm /dev/sdX1</code>, arrêtez-le, puis lancez l'outil."
+  },
+  "related": {
+    "heading": "Autres",
+    "items": [
+      {
+        "href": "/docs/disk-manager/smart-disk-test",
+        "label": "Santé et test du disque SMART",
+        "tail": "— vérifier un disque avant / après l'essuyage pour confirmer qu'il est sain."
+      },
+      {
+        "href": "/docs/disk-manager/import-disk-vm",
+        "label": "Importer le disque vers la VM",
+        "tail": "— passer un disque fraîchement formaté à un VM."
+      },
+      {
+        "href": "/docs/storage-share/host-local-disk",
+        "label": "Ajouter le disque local comme stockage Proxmox",
+        "tail": " — enregistrer un disque essuyé comme stockage Proxmox pool."
+      },
+      {
+        "href": "/docs/help-info/storage-commands",
+        "label": "Commandes de stockage et de disques",
+        "tail": "— lsblk, blkid, partie de référence."
+      },
+      {
+        "href": "/docs/disk-manager",
+        "label": "Aperçu du gestionnaire de disque",
+        "tail": "."
+      }
+    ]
+  }
+}

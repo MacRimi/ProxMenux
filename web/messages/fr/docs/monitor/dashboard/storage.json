@@ -1,0 +1,268 @@
+{
+  "meta": {
+    "title": "ProxMenux Monitor — Tableau de bord: onglet de stockage ProxMenux Documentation",
+    "description": "L'onglet Stockage consolide quatre vues: stockages gérés par Proxmox avec leur état, ZFS pools, disques physiques internes avec SMART les données, et les lecteurs externes (USB). Chaque perceuse de disque expose SMART attributs, l'usure et la durée de vie et l'historique d'observation permanente."
+  },
+  "header": {
+    "title": "Tableau de bord : onglet de stockage",
+    "description": "État de stockage de l'hôte dans un seul écran — Proxmox pools (NFS / CIFS / LVM / ZFS / dir), ZFS pool santé, interne SATA / NVMe disques avec SMART, et les lecteurs USB externes. Cliquez sur n'importe quel disque pour ouvrir une perceuse avec le plein SMART attribut table et l'historique d'observation par disque.",
+    "section": "ProxMenux Monitor · Tableau de bord"
+  },
+  "intro": {
+    "title": "Soutenu par trois sources",
+    "body": "Les stockages Proxmox proviennent du <code>pvesm status</code>; de l'état ZFS du <code>zpool status</code>; de disques physiques du <code>lsblk</code> + <code>smartctl</code> (et du <code>nvme</code> pour les champs spécifiques au NVMe). L'onglet rafraîchit toutes les ~60 secondes; la perceuse par disque déclenche un nouveau SMART lu sur demande."
+  },
+  "thresholds": {
+    "title": "Couleurs et seuils appliqués ici",
+    "intro": "Chaque barre, puce et point sur cet onglet suit la même classification à trois états — <green/> <strong>green</strong> ci-dessous Avertissement, <amber/> <strong>amber</strong> de l'avertissement à critique, <red/> <strong>red</strong> à critique et au-dessus. Par défaut recommandé expédié avec ProxMenux:",
+    "items": [
+      "<strong>Capacité</strong> (disques hôtes, stockages PVE, ZFS pools, LXC — Avertissement 85 %, critique 95 %.",
+      "<strong>Température du disque</strong> — HDD 60/65 °C · SSD 70/75 °C · NVMe 80/85 °C · SAS 55/65 °C (avertissement / critique)."
+    ],
+    "outro": "Chaque valeur est configurable par hôte — <link>Paramètres → Seuils de surveillance de la santé</link> est la seule source de vérité et explique comment les régler."
+  },
+  "topRow": {
+    "heading": "Ligne supérieure : stockage à l'éclat",
+    "intro": "L'ouverture de l'onglet Stockage vous permet de consulter un résumé en quatre cartes de l'état de stockage de l'hôte — capacité totale, ce qui est utilisé localement, ce qui est utilisé dans les entrepôts à distance et l'inventaire du disque physique. Chaque carte est une réponse en ligne à une question commune; les cartes en dessous de la ligne sont où vous forez dans le détail.",
+    "imageAlt": "Onglet de stockage — rangée supérieure de quatre cartes statistiques: Stockage total, Local utilisé, Remote utilisé, Disques physiques",
+    "imageCaption": "Ligne supérieure de l'onglet Stockage — Capacité totale et nombre de disques, les octets utilisés se divisent en stockages locaux et à distance, et une ventilation par type des disques physiques avec leur résumé de santé.",
+    "headerCard": "Carte",
+    "headerWhat": "Ce qu'il montre",
+    "totalLabel": "Stockage total",
+    "totalWhat": "Capacité brute combinée sur chaque disque physique. La ligne de pied de page montre le nombre de disques physiques découverts.",
+    "localLabel": "Local utilisé",
+    "localWhat": "Bytes utilisés sur les stockages locaux (LVM / LVM-fin / ZFS / dir sur les propres disques de l'hôte). Affiche les octets utilisés de façon proéminente, avec une ligne de pied de page de <em>X.XX % de Y TB</em> donc vous voyez le pourcentage de remplissage en même temps.",
+    "remoteLabel": "Télécommande utilisée",
+    "remoteWhat": "La même forme que le local utilisé mais pour les stockages à distance (NFS / CIFS / PBS / Ceph / iSCSI). Compter séparément parce que les pannes à distance n'affectent pas les données locales et que vous les taillez et les surveillez habituellement différemment.",
+    "disksLabel": "Disques physiques",
+    "disksIntro": "Deux lignes de ventilation pour l'inventaire :",
+    "disksItems": [
+      "<strong>Par type</strong> — Nombres de NVMe (violet), SSD (bleu) et HDD (bleu) découverts. Les hôtes à disques mixtes obtiennent les trois; un hôte tout-NVMe affiche seulement le nombre NVMe.",
+      "<strong>Par santé</strong> — Nombres de disques <em>normal</em> (vert), <em>avertissement</em> (jaune) et <em>critique</em> (rouge). L'état de santé montre habituellement juste « X normal » ; les avertissements et critiques n'apparaissent que lorsque quelque chose s'est intensifié."
+    ]
+  },
+  "pveStorage": {
+    "heading": "Carte de stockage Proxmox",
+    "intro": "Une ligne par stockage configurée dans <code>/etc/pve/storage.cfg</code>. Chaque ligne affiche le badge type (<code>nfs</code> / <code>cifs</code> / <code>zfspool</code> / <code>lvm</code> / <code>lvmthin</code> / <code>dir</code> / <code>pbs</code>), le nom de stockage, un badge actif / erreur / non surveillé, le pourcentage d'utilisation et une barre de progression colorée:",
+    "items": [
+      "<strong>&lt; 75 %</strong> — barre de progression bleue, valeur en bleu.",
+      "<strong>75 – 90 %</strong> — barre de progression jaune, valeur en jaune (Health Monitor prévient à ce stade).",
+      "<strong>> 90 %</strong> — barre de progression rouge, valeur en rouge (le moniteur de santé augmente).",
+      "<strong>error</strong> — ligne complète décrite en rouge, utilisée lorsque le stockage est configuré mais inaccessible (serveur NFS vers le bas, CIFS creds expiré).",
+      "<strong> exclus</strong> — contour violet + l'insigne \"non surveillé\". Stockages explicitement exclus par l'utilisateur des contrôles de santé (handy pour les volumes manuels / archives qui sont intentionnellement hors ligne)."
+    ],
+    "calloutTitle": "Non compris un stockage bruyant",
+    "calloutBody": "À partir de la ligne de stockage, le menu par stockage vous permet de le marquer comme <em> exclu de la surveillance</em>. Le drapeau est stocké dans la table <code>excluded_storages</code> et respecté à la fois par la vue du tableau de bord et le cycle Health Monitor — aucune notification ne tire pour les stockages exclus, et ils ne cognent pas la pilule d'en-tête."
+  },
+  "zfs": {
+    "heading": "Carte Pools ZFS",
+    "intro": "Rendus seulement lorsque ZFS est installé et au moins un pool existe. Une ligne par pool avec un badge santé, taille / alloué / gratuit, et une icône reflétant l'état de santé:",
+    "items": [
+      "<strong>ONLINE</strong> — vert. Tout est sain.",
+      "<strong>DEGRADED</strong> — jaune. Le pool sert des données, mais au moins un appareil n'est pas disponible; la fenêtre de remplacement démarre.",
+      "<strong>FAULTED</strong> / <strong>UNAVAIL</strong> / <strong>SUSPENDED</strong> — rouge. Pool ne servant pas de données; intervention immédiate requise."
+    ],
+    "outro": "L'état ZFS et l'état SMART par disque alimentent la catégorie <em>Disques et I/O</em> du <link>Health Monitor</link>."
+  },
+  "physical": {
+    "heading": "Disques physiques et statut SMART",
+    "intro": "Disques internes (SATA / NVMe). Chaque rangée condense les champs les plus utiles en un coup d'oeil:",
+    "items": [
+      "<strong>Path de l'appareil</strong> — <code>/dev/sda</code>, <code>/dev/nvme0n1</code>.",
+      "<strong>Type badge</strong> — SATA / NVMe (et l'icône correspondante).",
+      "<strong>System badge</strong> — balise orange qui marque les disques du système d'exploitation de l'hôte est en cours d'exécution. Le tableau de bord en découle à partir des points de montage de <code>/</code> et <code>/boot</code> : tout disque physique qui les héberge reçoit la balise <em>System</em> de sorte que vous ne l'essuyez pas ou ne la réutilisez pas accidentellement. Les disques sans étiquette sont des lecteurs de données purs.",
+      "<strong>Modèle</strong> — fournisseur + chaîne de modèle de <code>smartctl -i</code>.",
+      "<strong>Capacité</strong> — formatable à lecture humaine.",
+      "<strong>Température</strong> — courant °C, coloré par le seuil de type disque (NVMe est plus chaud que SATA).",
+      "<strong>SMART statut</strong> — passé / échoué / inconnu.",
+      "<strong>Observations badge</strong> — lorsque l'historique permanent <code>disk_observations</code> a des entrées pour ce disque, un badge bleu avec le nombre apparaît (par exemple: <em>3 obs.</em>. Cliquez sur le disque pour les percer et les examiner.",
+      "<strong>Blaireau de santé</strong> — Santé / Avertissement / Critique, dérivé du contrôle SMART + observations récentes."
+    ],
+    "clickHint": "La ligne entière est cliquable et ouvre la perceuse par disque décrite ci-dessous.",
+    "warningTitle": "Ne touchez pas légèrement les disques de système",
+    "warningBody": "Les disques avec le badge orange <strong>System</strong> hébergent le système d'exploitation en cours d'exécution. Le tableau de bord couvre la balise comme un rail de protection — actions destructrices lancées à partir de <link>ProxMenux → Gestionnaire de disque → Format / Wipe</link> refuse explicitement d'agir sur eux. Si vous avez vraiment besoin de réutiliser le disque de démarrage, faites-le à partir d'un environnement de sauvetage, pas de l'intérieur Proxmox."
+  },
+  "external": {
+    "heading": "Stockage externe (USB)",
+    "body": "Une carte séparée pour les lecteurs USB, ne rend que lorsqu'au moins une est présente. Mêmes champs que les disques internes plus une étiquette orange <strong>USB</strong>. Les lecteurs USB apparaissent et disparaissent souvent (suppressions froides, tâches occasionnelles de déchargement), de sorte que le Health Monitor est prudent à leur sujet - les observations sont conservées, mais les erreurs d'E/S sur un lecteur USB déconnecté ne s'aggravent pas."
+  },
+  "drillIn": {
+    "heading": "Mode de perçage du disque",
+    "intro": "Cliquer sur n'importe quelle ligne de disque ouvre un mode à quatre tabs : <strong>Vue d'ensemble</strong> · <strong>SMART</strong> · <strong>Histoire</strong> · <strong>Schedule</strong>. L'en-tête affiche toujours le chemin de l'appareil, le modèle + capacité et le badge orange <em>System</em> le cas échéant.",
+    "overviewTitle": "Onglet 1 — Aperçu",
+    "overviewImageAlt": "Perceuse de disque en mode — Aperçu onglet avec état de santé, anneau d'usure et de vie, et attributs rapides SMART",
+    "overviewImageCaption": "Aperçu onglet — identité, badge de santé, anneau de survie avec l'usure actuelle et les données écrites, ainsi qu'un bloc rapide des attributs SMART les plus regardés.",
+    "overviewIntro": "L'onglet d'atterrissage par défaut — tout ce que vous devez répondre « est-ce que ce disque est OK ? » sans faire de test. Trois blocs :",
+    "overviewItems": [
+      "<strong>Identity</strong> — modèle, série, capacité, badge santé (santé / avertissement / critique).",
+      "<strong>Taille et durée de vie</strong> — grand anneau de survie (97 %, 50 %, ...) avec l'attribut source exprimé (<em>Indicateur d'usure des médias</em>, <em>Pourcentage utilisé</em>, ...), une barre d'usure (consommation de courant %), un <em>Est. Projection Life</em> en années et données totales écrites. Les lecteurs NVMe montrent également <em>Disponible Spare</em>.",
+      "<strong>SMART Attributs</strong> — six champs principaux sur une grille de colonnes 2: Température, Puissance en Heures (avec durée humanisée comme <em>3y 116d</em>), Taux de Rotation (ou <em>SSD</em>), Cycles de Puissance, SMART Statut, Secteurs Réaffectés, Secteurs En attente, Erreurs CRC. La table d'attribut complète vit dans l'onglet SMART."
+    ],
+    "smartTitle": "Onglet 2 — SMART",
+    "smartImageAlt": "Mode de perçage du disque — onglet SMART avec les boutons d'essai de l'exécution SMART (Short / Extended), le résultat du dernier essai et le tableau complet de l'attribut SMART",
+    "smartImageCaption": "Onglet SMART — Exécutez un test court ou prolongé, voyez le résultat du dernier test, faites défiler le tableau complet des attributs SMART et produisez le rapport complet de santé PDF.",
+    "smartIntro": "Où vivent les actions. Trois sections:",
+    "smartItems": [
+      "<strong>Run SMART Test</strong> — deux boutons. <em>Short Test (~2 min)</em> fonctionne synchronement et affiche le résultat en ligne. <em>Extended Test (background)</em> peut prendre des heures sur les gros disques, exécute le côté serveur et allume une notification quand elle se termine.",
+      "<strong>Last Test</strong> — type, badge d'état (<em>passed</em> / <em>failed</em>) et horodatage de la plus récente exécution.",
+      "<strong>SMART Attributs</strong> — la table d'attribut complète (ID / nom / valeur / pire / état avec OK / avertissement / icônes critiques). Pour SATA / SAS, la liste numérotée classique. Pour NVMe, les champs structurés de <code>nvme smart-log</code> (température, réserve disponible, pourcentage utilisé, unités de données écrites / lues, lit / écrit l'hôte, temps occupé par le contrôleur, cycles de puissance, arrêts dangereux, erreurs médias, entrées de journal d'erreurs, avertissement / temps critique de température composite)."
+    ],
+    "pdfTitle": "Afficher le rapport SMART complet (PDF)",
+    "pdfIntro": "Au bas de l'onglet SMART, le bouton <strong>View Full SMART Report</strong> génère un PDF imprimable et prêt à être archivé — le même rapport structuré que vous envoyez à un fournisseur pour un RMA.",
+    "pdfPreviewAlt": "Première page du rapport santé SMART généré PDF — Sommaire avec l'anneau PASSED + bloc d'information disque",
+    "pdfPreviewCaption": "Première page du Rapport sur la santé SMART — Sommaire avec l'anneau PASSED et le bloc complet d'information sur le disque. Le PDF complet ci-dessous a l'anneau d'usure SSD, chaque attribut SMART et l'historique de test.",
+    "pdfDownloadLabel": "Télécharger l'échantillon du rapport SMART (PDF)",
+    "pdfSectionsIntro": "Le rapport comporte cinq sections de haut niveau :",
+    "pdfSections": [
+      "<strong>Résumé</strong> — verdict grand PASSÉ / FAILED, paragraphe d'évaluation de la santé du disque en langage simple (\"votre disque est en bonne santé / montrant des signes d'usure / échec\"), et quatre statistiques rapides (rapporter horodatage, type de dernier test, résultat de test, attributs vérifiés).",
+      "<strong>Informations sur le disque</strong> — modèle, série, capacité, type (HDD / SSD / NVMe), famille, facteur de forme, interface (SATA 3.3 · 6.0 Gb/s, ...), support TRIM, température actuelle avec le seuil optimal, temps de puissance, cycles de puissance, statut SMART, plus les compteurs de titres (secteurs en attente, erreurs CRC, secteurs réaffectés).",
+      "<strong>SSD Wear & Lifetime</strong> (SSD / NVMe seulement) — anneau de maintien de la vie, attribut source, niveau d'usure actuel, données écrites, puissance-on heures.",
+      "<strong>SMART Attributs (plein)</strong> — chaque attribut les rapports du lecteur, avec ID, nom, valeur, pire, seuil, valeur brute et une pilule d'état. Les plus utiles aux utilisateurs (Secteur Réaffecté Ct, Power On Hours, Signalé non correct, UDMA CRC Error Count, Media Wearout Indicator, ...) incluent une explication en langage simple en une seule ligne sous la ligne.",
+      "<strong>Dernier résultat d'auto-test + histoire complète d'auto-test</strong> — le dernier essai (type, résultat, message d'achèvement, point d'alimentation en heures) ainsi qu'un tableau numéroté de chaque essai retenu.",
+      "<strong>Recommandations</strong> — éléments d'action basés sur le verdict: <em>Disk is Healthy / Programmer des tests périodiques / Stratégie de sauvegarde</em> pour des disques sains, en augmentant le langage avec des conseils de remplacement lorsque les attributs sont hors de portée."
+    ],
+    "pdfOutro": "Le PDF est produit côté serveur et téléchargé avec un modèle stable de nom de fichier (<code>SMART-&lt;short-id&gt;.pdf</code>) afin que plusieurs instantanés au fil du temps puissent s'asseoir côte à côte dans votre archive. Utile lorsque vous surveillez la dégradation au fil des mois ou que vous envoyez des preuves au soutien des fournisseurs.",
+    "historyTitle": "Table 3 — Historique",
+    "historyImageAlt": "Disque fore-in modal — onglet historique listing pass SMART tests avec des actions de téléchargement et de suppression",
+    "historyImageCaption": "Onglet d'historique — chaque document retenu SMART test pour ce disque. Par ligne: type, horodatage, balise \"X days ago\", dernier marqueur, téléchargement (raw <code>smartctl</code> output) et supprimer les actions.",
+    "historyIntro": "L'ensemble de tests SMART conservés pour ce disque — à la fois courts et prolongés qui ont été complétés. Chaque entrée est la sortie brute <code>smartctl</code> capturée au moment de l'exécution, plus les champs structurés que le moniteur a analysé pour le tableau de bord. Actions ponctuelles:",
+    "historyItems": [
+      "<strong>Download</strong> — enregistre la sortie brute <code>smartctl -a</code> comme un fichier texte. Identique à ce que le rapport PDF analyse, utile lorsque vous avez besoin de la ligne exacte qu'un vendeur demande.",
+      "<strong>Delete</strong> — supprime le test de l'historique. La limite de conservation définie dans l'onglet Planning (<em>Dernier 5 / 10 / 20</em>) supprime automatiquement la première plus ancienne; cette action est le dépassement manuel."
+    ],
+    "scheduleTitle": "Onglet 4 — Calendrier",
+    "scheduleImageAlt": "Perceuse de disque en mode — onglet Planning avec la bascule pour les tests automatiques SMART, la liste des calendriers configurés et le bouton Ajouter un calendrier",
+    "scheduleImageCaption": "Onglet de calendrier — type d'essai choisi, fréquence et rétention; le moniteur le file dans <code>cron</code> de sorte que les tests fonctionnent sans surveillance.",
+    "scheduleIntro": "Cron-drivé automatique SMART tests, pas de coquille nécessaire. La page comporte trois domaines :",
+    "scheduleItems": [
+      "<strong>Automatique SMART Tests toggle</strong> — Interrupteur mondial pour chaque horaire sur ce disque. Utile quand vous voulez tout interrompre pendant l'entretien sans perdre les définitions de l'horaire.",
+      "<strong>Programmes configurés</strong> — une ligne par horaire existant avec l'insigne type test (<em>short</em> / <em>long</em>), l'expression cron sous forme humaine (<em>\"Jour 1 du mois au 03:00\"</em>, <em>\"Chaque dimanche au 02:00\"</em>), les disques qu'il couvre et le réglage de rétention.",
+      "<strong>Ajouter l'horaire / modifier l'horaire</strong> — formulaire avec : Type d'essai (<em>Court ~2 min</em> / <em>Long 1-4 h</em>), Fréquence (<em>Jaiem / hebdomadaire / mensuel</em>), Jour du mois / jour de la semaine, Temps, Garder les résultats (<em>Dernier 5 / 10 / 20</em>)."
+    ],
+    "scheduleOutro": "L'horaire est matérialisé comme une entrée de cron sur l'hôte qui rappelle dans le moniteur; les résultats sont enregistrés dans la même histoire SMART montrée dans l'onglet 3, et le réglage de rétention lance automatiquement le test le plus ancien lorsqu'un nouveau fini.",
+    "tempTitle": "Historique de température modal",
+    "tempIntro": "Chaque disque qui expose un capteur de température a ses lectures échantillonnées en continu par le moniteur et persistaient dans une série temporelle locale. La valeur actuelle apparaît comme l'un des six attributs principaux SMART dans l'onglet Aperçu; en cliquant sur ce bloc, vous ouvrez un modal dédié température-histoire avec l'image complète.",
+    "tempImageAlt": "Historique de la température du disque modal — en-tête avec le chemin et le modèle du disque, un sélecteur de temps (1 Heure / 24 Heures / 7 Jours / 30 Jours), une rangée de quatre cartes statistiques (current / Min / Avg / Max), et un graphique linéaire de la température sur la plage sélectionnée, coloré par les seuils de type disque",
+    "tempImageCaption": "Détails de température — s'ouvre depuis l'onglet Aperçu sur tout disque dont le capteur retourne une lecture non nulle. La carte est colorée par rapport au seuil de type disque (HDD / SSD / NVMe / SAS).",
+    "tempShowsTitle": "Ce que montre le model",
+    "tempShowsItems": [
+      "<strong>Sélectionneur d'images</strong> avec quatre gammes : <em>1 Heure</em>, <em>24 Heures</em> (par défaut), <em>7 Jours</em>, <em>30 Jours</em>. Chacun interroge le même moteur avec un échantillonnage différent pour que le graphique reste lisible à chaque horizon.",
+      "<strong>Quatre cartes statistiques</strong> en haut du modal: <em>Current</em>, <em>Min</em>, <em>Avg</em>, <em>Max</em> pour la gamme sélectionnée. La carte <em>Current</em> est colorée par les mêmes seuils d'état que l'onglet Stockage et l'utilisation des notifications, de sorte que vous pouvez voir en un coup d'oeil si le disque est dans le territoire normal / chaud / chaud.",
+      "<strong>Line chart</strong> de la température dans le temps, avec la ligne et la zone ombragée colorée par type de disque:"
+    ],
+    "tempDiskTypes": [
+      "DDH — seuils généralement plus froids.",
+      "SSD — seuils modérés.",
+      "NVMe — seuils plus élevés (NVMe est plus chaud par conception).",
+      "SAS — mêmes valeurs par défaut que HDD."
+    ],
+    "tempConfigurable": "Tous les quatre sont configurables à partir de <em>Paramètres → Seuils de surveillance de la santé</em>.",
+    "tempWhyTitle": "Pourquoi une histoire est importante ici",
+    "tempWhyItems": [
+      "<strong>Détection de la Drift.</strong> Les disques qui se réchauffent progressivement au cours des semaines (ventilateur d'échec, accumulation de poussières, disque voisin mourant et poussant l'air chaud à travers) sont invisibles à une lecture unique de la température du courant. Les vues 7-jour et 30-jour font surface à la dérive.",
+      "<strong>Corrélation de spike.</strong> Lorsqu'une fenêtre de sauvegarde ou une reconstruction a brièvement poussé le disque au-dessus de son seuil, les plages 1-heure et 24-heure montrent si c'était un modèle unique ou récurrent.",
+      "<strong>Seuil de réglage.</strong> Avant de relever ou d'abaisser un seuil <em>Paramètres → Seuils du moniteur de santé</em>, les 30-jour graphique montre la plage d'exploitation réelle du disque de sorte que les nouvelles lignes de valeur avec ce que le matériel fait vraiment plutôt qu'une supposition."
+    ],
+    "obsTitle": "Historique de l'observation (intercalaires)",
+    "obsIntro": "Les disques modernes échouent progressivement. Un disque peut rapporter SMART <strong>PASSED</strong> et encore enregistrer des erreurs de lecture occasionnelles dans dmesg, déposer des liens SATA, ou exposer les secteurs en attente qui viennent et vont. La norme Proxmox UI vous montre le verdict actuel SMART — il ne conserve pas une histoire de ces <em>signals</em>. ProxMenux le fait, et les couvre à l'intérieur du modal disque.",
+    "obsImageAlt": "Détails du disque modal Aperçu onglet montrant un disque sain avec l'état SMART Passé, 0 réaffecté/en attente/erreurs CRC, et une section Observations énumérant un événement d'E/S enregistré Erreur avec le message brut du noyau, une traduction humaine du code d'erreur ATA, premier et dernier horodatage de l'événement et un nombre d'événements",
+    "obsImageCaption": "Un disque que <strong>SMART dit est fin</strong> peut encore avoir un historique d'observation. La carte est la couche de signal historique sous le verdict SMART.",
+    "obsWhatTitle": "Quelle observation",
+    "obsWhatIntro": "Toute capture de ProxMenux dans le log du noyau, dmesg ou SMART qui ressemble à un événement au niveau du disque — et qui, à elle seule, serait trop granulaire pour une notification — est enregistrée comme une observation de <strong></strong>. Chaque ligne montre :",
+    "obsWhatItems": [
+      "<strong>Type badge</strong> (erreur I/O, erreur SMART, erreur du système de fichiers, erreur du pool ZFS, erreur de connexion).",
+      "<strong>Message du noyau mobile</strong> tel qu'il apparaissait dans dmesg — utile pour copier-coller dans un moteur de recherche ou un ticket de support.",
+      "<strong>A humain one-liner</strong> sous le message brut pour les codes ATA connus (<code>IDNF</code> → \"Adresse secteur non trouvée — possiblement mauvais secteur ou problème de câble\", <code>UNC</code> → \"erreur de lecture incorrecte — mauvais secteur\", et le reste des codes standard).",
+      "<strong>Horaires de première et dernière occurrence</strong>, plus un nombre d'occurrences <strong></strong> dédoublé par signature d'erreur."
+    ],
+    "obsWhyTitle": "Pourquoi ProxMenux enregistre et les montre",
+    "obsWhyItems": [
+      "<strong>L'échec de disque est rarement un événement unique.</strong> Il commence habituellement par des erreurs sporadiques de bus ATA, le secteur impair UNC, ou quelques semaines d'erreurs moyennes avant que SMART retourne à <em>FAILED</em>. Sans persistance, ces alertes précoces disparaissent de dmesg sur la prochaine botte.",
+      "<strong>SMART peut mentir.</strong> Un lecteur peut afficher tous les attributs verts et être toujours sur le chemin de la sortie — la couche d'observation capture les symptômes SMART ne s'expose pas (en particulier le CICR, l'IDNF, le lien se réinitialise à des vitesses SATA inférieures).",
+      "<strong>Il sépare « est en cours maintenant » de « récemment » </strong> Le Health Monitor corrige automatiquement les erreurs transitoires dès qu'elles cessent de tirer, ce qui est excellent pour garder la liste d'alerte active propre — mais vous voulez toujours voir, quelques jours plus tard, que ce disque avait trois erreurs d'E/S cette nuit-là. Le tableau d'observation est la réponse.",
+      "<strong>Il alimente le modèle de notification à plusieurs niveaux.</strong> Les disk_io le détecteur lit le taux d'observation de ce tableau pour décider silencieux / AVERTISSEMENT / CRITIQUE (la fenêtre coulissante de 24h introduit dans 1.2.1.2). L'histoire est ce qui rend cette classification possible."
+    ],
+    "obsDedupTitle": "Comment fonctionne le déclassement et la renotification",
+    "obsDedupBody1": "Les observations sont dupliquées par leur signature <strong></strong> — une empreinte digitale stable du type d'erreur, du périphérique et des champs clés de la ligne du noyau. Le même événement répétitif bloque le <code>occurrence_count</code> sur la ligne existante plutôt que de créer un nouveau. Une signature <strong> différente</strong> sur le même disque crée une nouvelle observation et est traitée comme un nouvel événement à des fins de notification.",
+    "obsDedupBody2": "Les notifications suivent une règle anti-cascade : la première occurrence d'une combinaison donnée (disque, signature, sévérité) pages l'opérateur, et ProxMenux attend ensuite 24 heures avant de pinger à nouveau sur la même combinaison — même si le nombre continue à grimper. L'escalade de la sévérité (WARNING → CRITIQUE) brise le refroidissement de sorte que l'opérateur est dit quand les choses empirent, pas seulement quand elles se produisent.",
+    "obsDismissTitle": "Historique permanent vs erreurs actives",
+    "obsDismissBody1": "Une observation ne peut être rejetée, cachée ou retirée. Chaque observation différente d'un disque est une carte ; la même que celle vue ajoute à son nombre d'occurrences et déplace sa dernière date au lieu de créer une nouvelle carte. L'historique appartient au disque, identifié par son numéro de série: un disque branché où un autre a été commencé avec aucun, et un disque le nom du noyau conserve son propre.",
+    "obsDismissBody2": "La résolution ou le rejet du côté de l'erreur active (Health Monitor) est indépendant des observations — l'observation persiste au-delà de la résolution automatique de l'erreur active. C'est tout le point: il survit, donc un avertissement transitoire de la semaine dernière est encore visible sur la carte de disque aujourd'hui. Voir <link>Health Monitor</link> pour le côté de l'erreur active de la même image."
+  },
+  "dataCollected": {
+    "heading": "Comment les données sont collectées",
+    "headerSection": "Section de l'onglet",
+    "headerEndpoint": "Point d'arrivée",
+    "headerSource": "Source",
+    "rows": [
+      {
+        "section": "Haut des cartes sommaires",
+        "endpoint": "/api/storage/summary",
+        "source": "Agrégé de <code>lsblk</code>, <code>zpool list</code>, <code>vgs</code> / <code>lvs</code>."
+      },
+      {
+        "section": "Inventaire par disque",
+        "endpoint": "/api/storage",
+        "source": "<code>lsblk -O</code> + <code>smartctl -i</code> par appareil, avec cache d'identité de disque stable (effacé sur les événements hot-plug)."
+      },
+      {
+        "section": "Stockages Proxmox",
+        "endpoint": "/api/proxmox-storage",
+        "source": "<code>pvesh get /nodes/&lt;node&gt;/storage</code> avec l'état actif/en ligne de chacun."
+      },
+      {
+        "section": "Valeurs actuelles de SMART",
+        "endpoint": "/api/storage/smart/<disk>",
+        "source": "<code>smartctl -A &lt;dev&gt;</code> — rafraîchi sur demande, non mis en cache."
+      },
+      {
+        "section": "Historique d'auto-essai SMART",
+        "endpoint": "/api/storage/smart/<disk>/history",
+        "source": "Conservé sous <code>/var/lib/proxmenux-monitor/smart/&lt;disk&gt;/</code> sous forme d'instantanés JSON."
+      },
+      {
+        "section": "Observations permanentes",
+        "endpoint": "/api/storage/observations",
+        "source": "Table SQLite alimentée par le Health Monitor à chaque cycle (conservée à travers une solution automatique)."
+      }
+    ],
+    "outro": "Vérifier la chaîne de collecte sur l'hôte:",
+    "codeComment1": "# Tirez l'instantané actuel d'un script",
+    "codeComment2": "# Vérifiez ce que le tableau de bord voit contre la vue OS brute"
+  },
+  "whereNext": {
+    "heading": "Où aller ensuite",
+    "items": [
+      {
+        "label": "Moniteur de santé",
+        "href": "/docs/monitor/health-monitor",
+        "tail": "— la catégorie des disques et des entrées et sorties et le modèle de suppression."
+      },
+      {
+        "label": "Référence API",
+        "href": "/docs/monitor/api",
+        "tail": "— les paramètres de stockage et SMART."
+      },
+      {
+        "label": "Notifications",
+        "href": "/docs/monitor/notifications",
+        "tailRich": "— quel est le déclencheur en aval de <code>disk_io_error</code>, <code>storage_unavailable</code> et <code>smart_test_failed</code>."
+      },
+      {
+        "label": "Indice du tableau de bord",
+        "href": "/docs/monitor/dashboard",
+        "tail": "— les autres onglets."
+      },
+      {
+        "label": "ProxMenux → Gestionnaire de disques",
+        "href": "/docs/disk-manager",
+        "tail": "— le côté actions: format / essuie-glaces / tests SMART / importer des disques dans les VM et CT du TUI."
+      },
+      {
+        "label": "ProxMenux → SMART Disque santé et test",
+        "href": "/docs/disk-manager/smart-disk-test",
+        "tail": "— l'équivalent CLI de cet onglet: programmez les tests SMART, exportez les rendus JSON du tableau de bord et la référence de type de test/interprétation plus profonde."
+      }
+    ]
+  }
+}

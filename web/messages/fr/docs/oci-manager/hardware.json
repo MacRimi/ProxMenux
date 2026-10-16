@@ -1,0 +1,392 @@
+{
+  "meta": {
+    "title": "Dispositifs et accélération ProxMenux",
+    "description": "Comment le gestionnaire d'applications d'OCI transmet GPU, NVIDIA, Coral, USB, FUSE et d'autres appareils à un conteneur d'OCI comme ressources natives validées Proxmox VE."
+  },
+  "header": {
+    "title": "Dispositifs et accélération",
+    "description": "GPU, NVIDIA, Coral, USB, FUSE et les dispositifs de blocs deviennent des ressources natives validées Proxmox VE du conteneur.",
+    "section": "Applications du gestionnaire OCI"
+  },
+  "sections": [
+    {
+      "id": "principle",
+      "title": "L'appareil dont l'application a besoin, pas l'hôte entier",
+      "blocks": [
+        {
+          "p": "Un appareil demandé par le fichier Compose ou par le profil d'application devient une entrée en béton <code>devN</code> ou un montage LXC. Demander un GPU, un périphérique USB ou un Coral ne rend pas le conteneur privilégié."
+        },
+        {
+          "flow": {
+            "nodes": [
+              {
+                "label": "Inventaire des hôtes",
+                "detail": "/dev/dri/renderD128\nGID 993 · Intel"
+              },
+              {
+                "label": "ProxMenux",
+                "detail": "fournisseur et\npermissions vérifiées"
+              },
+              {
+                "label": "LXC",
+                "detail": "même dispositif\nGID efficace"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "origin",
+      "title": "D'où vient la demande de l'appareil",
+      "blocks": [
+        {
+          "table": {
+            "headers": [
+              "Source",
+              "Ce qui est lu",
+              "Ce que fait l'installateur"
+            ],
+            "rows": [
+              [
+                "Docker Compose",
+                "Demandes <code>devices</code>, <code>group_add</code>, <code>deploy.resources</code> et NVIDIA",
+                "Chaque exigence devient une demande d'appareil présentée pour examen"
+              ],
+              [
+                "Profil du catalogue",
+                "Le support GPU, Coral, OpenCL, USB ou FUSE l'application a effectivement",
+                "Seules les options validées pour cette image sont proposées"
+              ],
+              [
+                "métadonnées d'images et documentation",
+                "VA-API, Selkies, LinuxServer mods ou le NVIDIA runtime",
+                "Les variables documentées et la préparation sont ajoutées"
+              ],
+              [
+                "Sélection de l'utilisateur",
+                "CPU uniquement, Intel/AMD, OpenCL, NVIDIA ou un appareil optionnel",
+                "La sélection est stockée dans le contrat d'instance"
+              ]
+            ]
+          }
+        },
+        {
+          "calloutWarning": {
+            "title": "Les dispositifs détectés ne sont pas fixés seuls",
+            "body": "L'hôte est inventorié, mais seuls les appareils déclarés par le fichier Compose ou par un profil compatible sont proposés et joints. Un GPU, un dongle USB ou un corail présent sur l'hôte n'est pas exposé à chaque LXC."
+          }
+        }
+      ]
+    },
+    {
+      "id": "identify",
+      "title": "Comment le périphérique hôte est identifié",
+      "intro": "Avant que le LXC ne soit modifié, l'appareil est lu sur l'hôte et correspond au profil choisi.",
+      "blocks": [
+        {
+          "table": {
+            "headers": [
+              "Taper",
+              "Identité",
+              "Validation"
+            ],
+            "rows": [
+              [
+                "Intel/AMD DRM",
+                "<code>/dev/dri/renderD*</code> et <code>/sys/class/drm/NODE/device/vendor</code>",
+                "Dispositif de caractères avec fournisseur <code>0x8086</code> (Intel) ou <code>0x1002</code> (AMD)"
+              ],
+              [
+                "AMD OpenCL",
+                "Le nœud de rendu, plus <code>/dev/kfd</code> lorsque le profil en a besoin",
+                "Existence, type, fournisseur, autorisations et compatibilité déclarée"
+              ],
+              [
+                "AMD ROCm",
+                "Le nœud de rendu, <code>/dev/kfd</code> et la génération des rapports du pilote de calcul dans <code>/sys/class/kfd/kfd/topology/nodes/*/properties</code>",
+                "Une génération de l'image ROCm de l'application porte des noyaux pour, les GPU RDNA2 qu'il nomme et les plus récents, est offerte telle quelle. Les autres GPU de ces familles, telles que le Radeon 680M et le 780M, sont proposés à titre expérimental et ne sont jamais l'option proposée : ROCm ne les supporte pas officiellement, l'application les présente comme la génération de leur famille (<code>HSA_OVERRIDE_GFX_VERSION</code>) et l'installateur demande confirmation avant le téléchargement de l'image. Un ancien GPU, tel que le graphisme intégré d'un Ryzen 5000U, n'est pas offert et Immich garde la reconnaissance sur le CPU"
+              ],
+              [
+                "NVIDIA",
+                "<code>nvidia-smi</code> et <code>nvidia-container-cli</code>",
+                "GPU, UUID, PCI bus, version pilote, Toolkit, <code>/dev/nvidia*</code> nœuds, binaires et bibliothèques"
+              ],
+              [
+                "Coral PCIe/M.2",
+                "<code>/dev/apex_N</code> et son lien dans <code>/sys/dev/char/MAJOR:MINOR</code>",
+                "Nœud de caractère, majeur/mineur, propriétaire, GID et permissions"
+              ],
+              [
+                "USB et série",
+                "<code>/dev/ttyUSB*</code>, <code>/dev/ttyACM*</code> ou <code>/dev/bus/usb/BBB/DDD</code>",
+                "Nœud de caractère; pour USB aussi fournisseur, produit et série lorsque sysfs les publie"
+              ],
+              [
+                "KVM, TUN, FUSE, vidéo et SCSI générique",
+                "<code>/dev/kvm</code>, <code>/dev/net/tun</code>, <code>/dev/fuse</code>, <code>/dev/videoN</code> ou <code>/dev/sgN</code>",
+                "Chemin pris en charge, type de nœud et autorisations efficaces"
+              ],
+              [
+                "Lecteur optique",
+                "<code>/dev/srN</code>",
+                "Un dispositif de blocage"
+              ]
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "install",
+      "title": "Ce qui se passe pendant l'installation",
+      "blocks": [
+        {
+          "steps": {
+            "items": [
+              {
+                "title": "Le modèle offre ses profils",
+                "body": "Par exemple CPU seulement, Intel/AMD VA-API, AMD OpenCL, Intel OpenCL ou NVIDIA. Les options appartiennent à l'image, pas à un menu commun."
+              },
+              {
+                "title": "Un profil est choisi",
+                "body": "Il définit les nœuds de périphérique, l'environnement, les mods ou l'exécution dont l'application a besoin."
+              },
+              {
+                "title": "Un chemin est proposé",
+                "body": "Pour DRM, <code>/dev/dri/renderD128</code>, qui peut être modifié sur un hôte avec plusieurs nœuds de rendu. Pour USB ou série, le noeud béton est sélectionné."
+              },
+              {
+                "title": "Validation",
+                "body": "L'existence, le type, le fournisseur autorisé, les autorisations et le GID sont vérifiés. Une inadéquation arrête l'opération."
+              },
+              {
+                "title": "Le contrat est écrit",
+                "body": "Chemin, mode, GID, accès à l'écriture et profil sont enregistrés pour les mises à jour et les loisirs."
+              },
+              {
+                "title": "Fixation et essai",
+                "body": "<code>pct set</code> ajoute l'entrée <code>devN</code> et l'accès est ensuite vérifié à l'intérieur du LXC. Les images LinuxServer sont également vérifiées en tant qu'utilisateur <code>abc</code>."
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "config",
+      "title": "Comment il apparaît dans la configuration LXC",
+      "intro": "Valeurs indicatives : <code>dev0</code> et <code>dev1</code> sont les machines à sous libres Proxmox VE, et <code>renderD128</code>, <code>apex_0</code> et le GID dépendent du matériel du nœud.",
+      "blocks": [
+        {
+          "codeGrid": {
+            "items": [
+              {
+                "title": "Intel/AMD VA-API",
+                "code": "dev0: path=/dev/dri/renderD128,mode=0660,gid=993,deny-write=0"
+              },
+              {
+                "title": "Coral PCIe/M.2",
+                "code": "dev0: path=/dev/apex_0,mode=0660,gid=GID,deny-write=0"
+              },
+              {
+                "title": "Un périphérique USB spécifique",
+                "code": "dev0: path=/dev/bus/usb/003/004,mode=0660,gid=GID,deny-write=0"
+              },
+              {
+                "title": "AMD OpenCL",
+                "code": "dev0: path=/dev/dri/renderD128,mode=0660,gid=GID,deny-write=0\ndev1: path=/dev/kfd,mode=0660,gid=GID,deny-write=0"
+              }
+            ]
+          }
+        },
+        {
+          "p": "Le GID est lu avec <code>stat</code> sur l'hôte et écrit à l'entrée <code>devN</code>; les groupes <code>render</code> et <code>video</code> ne sont pas supposés avoir un nombre fixe. L'appareil conserve le même chemin <code>/dev</code> à l'intérieur du LXC, où les propres mécanismes de l'application le recherchent."
+        }
+      ]
+    },
+    {
+      "id": "profiles",
+      "title": "Profils qu'une image peut offrir",
+      "blocks": [
+        {
+          "table": {
+            "headers": [
+              "Profil",
+              "Traduction",
+              "Proposé quand"
+            ],
+            "rows": [
+              [
+                "Intel/AMD VA-API",
+                "Le noeud de rendu <code>/dev/dri</code>",
+                "L'application prend en charge l'accélération vidéo"
+              ],
+              [
+                "OpenCL",
+                "Noeud Render, <code>/dev/kfd</code> au besoin et le mod officiel",
+                "L'image ou le profil le documente"
+              ],
+              [
+                "NVIDIA",
+                "Dispositifs pilotes et bibliothèques de l'hôte",
+                "L'hôte a un pilote de travail et la boîte à outils conteneur NVIDIA"
+              ],
+              [
+                "Coral",
+                "<code>/dev/apex_0</code> ou le bus USB",
+                "Le profil déclare le support du corail (Frigate)"
+              ],
+              [
+                "USB, série, FUSE",
+                "Un seul appareil, un arbre validé ou une fonction LXC",
+                "Le contrat le demande"
+              ]
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "nvidia",
+      "title": "NVIDIA",
+      "blocks": [
+        {
+          "calloutWarning": {
+            "title": "Noeud requis: NVIDIA Container Toolkit",
+            "body": "Un pilote de travail sur Proxmox VE ne suffit pas à donner un NVIDIA GPU à une image OCI. OCI Manager Apps utilise <code>nvidia-container-cli</code>, de la boîte à outils conteneur NVIDIA, pour identifier les appareils et obtenir les binaires et les bibliothèques qui correspondent au pilote chargé."
+          }
+        },
+        {
+          "p": "Le <nvidiaLink>ProxMenux installateur NVIDIA</nvidiaLink> installe la boîte à outils de conteneur NVIDIA du dépôt officiel NVIDIA avec le pilote. Il vérifie ses quatre paquets, valide <code>nvidia-container-cli</code> et enregistre le résultat dans le journal de changement de <auditLink>Audit & Report</auditLink>."
+        },
+        {
+          "p": "Ces deux commandes sur l'hôte montrent si le pilote et le Toolkit sont disponibles :"
+        },
+        {
+          "shell": {
+            "code": "nvidia-smi -L\nnvidia-container-cli --version"
+          }
+        },
+        {
+          "p": "Sur un hôte où le pilote a été installé par d'autres moyens, le Toolkit est installé à partir du dépôt stable officiel:"
+        },
+        {
+          "shell": {
+            "code": "apt-get update\napt-get install -y --no-install-recommends ca-certificates curl gnupg2\n\ncurl -fsSL https://nvidia.github.io/libnvidia-container/gpgkey \\\n  | gpg --dearmor -o /usr/share/keyrings/nvidia-container-toolkit-keyring.gpg\n\ncurl -s -L https://nvidia.github.io/libnvidia-container/stable/deb/nvidia-container-toolkit.list \\\n  | sed 's#deb https://#deb [signed-by=/usr/share/keyrings/nvidia-container-toolkit-keyring.gpg] https://#g' \\\n  > /etc/apt/sources.list.d/nvidia-container-toolkit.list\n\napt-get update\napt-get install -y nvidia-container-toolkit libnvidia-container-tools"
+          }
+        },
+        {
+          "p": "L'inventaire utilisé par le gestionnaire de BEC Apps est la sortie de:"
+        },
+        {
+          "shell": {
+            "code": "nvidia-container-cli list --device all --libraries --binaries --firmwares --ipcs"
+          }
+        },
+        {
+          "calloutInfo": {
+            "title": "La configuration d'exécution Docker n'est pas impliquée",
+            "body": "Les conteneurs sont des LXC natifs et aucun démon Docker n'est utilisé, de sorte que <code>nvidia-ctk runtime configure --runtime=docker</code> ne joue aucun rôle: ProxMenux requêtes <code>nvidia-container-cli</code> directement et écrit les périphériques et montages LXC. Les commandes et les plateformes prises en charge sont maintenues dans le guide d'installation <toolkitLink>NVIDIA Container Toolkit</toolkitLink>."
+          }
+        },
+        {
+          "cards": {
+            "items": [
+              {
+                "icon": "cpu",
+                "title": "Inventaire du conducteur",
+                "body": "<code>nvidia-container-cli</code> énumère les nœuds de périphérique, les binaires, les micrologiciels et les bibliothèques du pilote installé."
+              },
+              {
+                "icon": "refresh",
+                "title": "Pas de version fixe",
+                "body": "Le modèle ne nomme pas les fichiers de bibliothèque. Le profil est généré à partir de l'hôte actuel."
+              },
+              {
+                "icon": "shield",
+                "title": "Montages en lecture seule",
+                "body": "Les bibliothèques hôtes sont montées en lecture seule au lieu d'être copiées dans le conteneur."
+              },
+              {
+                "icon": "hardDrive",
+                "title": "Changements de conducteur",
+                "body": "Après un changement de pilote, l'inventaire est généré à nouveau avant le démarrage des LXC touchés."
+              }
+            ]
+          }
+        },
+        {
+          "code": {
+            "title": "Résultat NVIDIA (simplifié)",
+            "code": "devN: path=/dev/nvidia0,...\ndevN: path=/dev/nvidiactl,...\ndevN: path=/dev/nvidia-uvm,...\nlxc.mount.entry: HOST_LIBRARY CONTAINER_LIBRARY none ro,bind,create=file 0 0"
+          }
+        },
+        {
+          "p": "Passer uniquement <code>/dev/nvidia0</code> ne suffit pas. Les composants espace utilisateur du pilote chargé sont montés en lecture seule, et <code>nvidia-smi</code> fonctionne ensuite à l'intérieur du LXC pour comparer GPU, UUID, PCI bus et version avec l'inventaire hôte."
+        }
+      ]
+    },
+    {
+      "id": "usb",
+      "title": "Coral USB, série et USB",
+      "blocks": [
+        {
+          "calloutWarning": {
+            "title": "La numérotation USB peut changer",
+            "body": "Un chemin tel que <code>/dev/bus/usb/003/004</code> peut changer lorsque le périphérique est reconnecté ou que l'hôte redémarre. Le profil enregistre le fournisseur, le produit et la série lorsqu'ils sont disponibles, mais une nouvelle adresse de bus n'est pas automatiquement rechapée."
+          }
+        },
+        {
+          "p": "Un périphérique est donné par son noeud en béton: <code>/dev/ttyUSB0</code>, <code>/dev/ttyACM0</code>, <code>/dev/apex_0</code> ou <code>/dev/bus/usb/BBB/DDD</code>. Le passage de l'ensemble de <code>/dev</code> n'est pas accepté. Le corail n'est offert qu'aux demandes dont le profil le déclare."
+        }
+      ]
+    },
+    {
+      "id": "trees",
+      "title": "Arbres de périphériques et fonctionnalités LXC",
+      "blocks": [
+        {
+          "table": {
+            "headers": [
+              "Demande",
+              "Traduction",
+              "Portée"
+            ],
+            "rows": [
+              [
+                "<code>/dev/dvb</code>, <code>/dev/snd</code> ou <code>/dev/bus/usb</code>",
+                "Chaque noeud de caractère de l'arbre obtient sa propre entrée <code>devN</code> avec le mode hôte et GID",
+                "Seulement l'arbre demandé, pas le reste de <code>/dev</code>"
+              ],
+              [
+                "<code>/dev/fuse</code>",
+                "Le nœud et, lorsque le profil en a besoin, la fonction <code>fuse=1</code>",
+                "FUSE seul ne publie pas de montages sur d'autres LXC"
+              ],
+              [
+                "<code>/dev/net/tun</code>",
+                "Une entrée <code>devN</code> sur le même chemin à l'intérieur du LXC",
+                "La configuration VPN ou réseau reste dans l'application"
+              ],
+              [
+                "<code>/dev/kvm</code>",
+                "Une entrée <code>devN</code> validée",
+                "Offert seulement lorsque le contrat le demande"
+              ]
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "security",
+      "title": "Confirmations par niveau de risque",
+      "blocks": [
+        {
+          "p": "Les dispositifs de béton, les privilèges optionnels, les privilèges requis, la relaxation AppArmor ou seccomp et l'accès à l'espace de noms PID hôte sont traités comme des cas séparés, et non sous une étiquette générique privilégiée. Chaque option avec un risque est expliquée et confirmée pendant l'installation."
+        }
+      ]
+    }
+  ]
+}

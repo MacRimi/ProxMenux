@@ -1,0 +1,101 @@
+{
+  "meta": {
+    "title": "ProxMenux Monitor — Tableau de bord ProxMenux Documentation",
+    "description": "Le tableau de bord est l'interface utilisateur principale de ProxMenux Monitor: dix onglets de contenu incluant le lanceur d'applications, plus l'en-tête global et un ordre de navigation de haut niveau configurable."
+  },
+  "header": {
+    "title": "Tableau de bord",
+    "description": "Le tableau de bord est la vue quotidienne de ProxMenux Monitor — dix onglets de contenu, y compris le lanceur d'applications, plus un en-tête global et un ordre de navigation de haut niveau configurable.",
+    "section": "Moniteur ProxMenux"
+  },
+  "oneHeader": {
+    "title": "Un en-tête, dix onglets",
+    "body": "L'en-tête (logo, nom de noeud, pillule d'état, uptime, rafraîchissement, toggle thème) reste visible partout. L'onglet actif ci-dessous change toute la zone de contenu. La couleur de la pilule d'état reflète la pire catégorie du <link>Health Monitor</link> — c'est le même point de données vu du tableau de bord."
+  },
+  "tabs": {
+    "heading": "Les dix onglets",
+    "intro": "Chaque onglet a sa propre page dédiée. Les pages sont ajoutées progressivement à mesure que la documentation est remplie; ci-dessous est la liste complète et la responsabilité de chacun.",
+    "headerTab": "onglet",
+    "headerOwns": "Ce qu'il possède",
+    "rows": [
+      {
+        "name": "Présentation du système",
+        "linksTo": "/docs/monitor/dashboard/system-overview",
+        "owns": "CPU / mémoire / widgets de température, nombre de VM et LXC actifs, graphiques historiques, stockage et résumés réseau. Onglet d'atterrissage par défaut jusqu'à ce que l'ordre de navigation soit personnalisé."
+      },
+      {
+        "name": "Applications",
+        "linksTo": "/docs/monitor/dashboard/apps",
+        "owns": "Lanceur unifié pour LXC Web Links et liens personnalisés enregistrés, avec catégories, recherche, raccourcis invités et signaux de mise à jour par application."
+      },
+      {
+        "name": "Stockage",
+        "owns": "Pools Proxmox, disques physiques, données SMART, état ZFS, usure et durée de vie, historique d'observation."
+      },
+      {
+        "name": "Réseau",
+        "owns": "Chaque interface (physique / liaison / pont / OVS), IP/MAC, graphiques RX/TX, RRD historique par interface."
+      },
+      {
+        "name": "VM et LXC",
+        "owns": "Inventaire des invités, fore-in pour config / métriques / logs, start / stop / reboot / stopdown actions."
+      },
+      {
+        "name": "Matériel",
+        "owns": "Modèle et topologie CPU, mise en page de mémoire, topologie PCIe, GPUs avec surveillance en temps réel per-slot."
+      },
+      {
+        "name": "Journaux système",
+        "owns": "Live <code>journalctl</code> avec filtres, historique des tâches Proxmox, journal de notification, paquets de journaux téléchargeables."
+      },
+      {
+        "name": "Terminal",
+        "owns": "shell de navigateur pour héberger ou à tout VM/CT, alimenté par <code>xterm.js</code> sur WebSockets."
+      },
+      {
+        "name": "Sécurité",
+        "owns": "Configuration auth, mot de passe / 2FA / API jetons, journal d'audit, panneau Fail2Ban optionnel, déploiement Secure Gateway."
+      },
+      {
+        "name": "Paramètres",
+        "owns": "Surveiller la langue, l'ordre de navigation, les canaux de notification, le fournisseur d'IA, les seuils de santé, les exclusions et l'inventaire d'optimisation après installation."
+      }
+    ]
+  },
+  "headerAnatomy": {
+    "heading": "Anatomie en-tête",
+    "items": [
+      "<strong>Logo + nom du produit</strong> sur la gauche. Le logo se transforme en une variante \"mise à jour disponible\" quand une nouvelle version de Monitor est détectée.",
+      "<strong>Identification du noeud</strong> — le nom du noeud Proxmox résolu à partir de <code>pvesh get /nodes</code>, retombant à <code>hostname</code>.",
+      "<strong>Pilule d'état de santé</strong> — En bonne santé (vert), Avertissement (jaune), Critique (rouge). Cliquez dessus pour ouvrir le model Health Monitor. Un badge supplémentaire bleu <em>info</em> apparaît lorsqu'il y a des objets rejetés encore dans leur fenêtre de suppression.",
+      "<strong>Uptime</strong> — host uptime, formatable en lecture humaine.",
+      "<strong>Fresh button</strong> — réédite tous les appels en direct API sans recharger une page complète.",
+      "<strong>Thème toggle</strong> — léger / foncé / système. Persisté dans <code>localStorage</code>."
+    ]
+  },
+  "whereNext": {
+    "heading": "Où aller ensuite",
+    "items": [
+      {
+        "label": "onglet Apps",
+        "href": "/docs/monitor/dashboard/apps",
+        "tail": " — le lanceur Web Link unifié et sa relation avec l'enregistrement LXC les demandes d'asile."
+      },
+      {
+        "label": "Onglet Aperçu du système",
+        "href": "/docs/monitor/dashboard/system-overview",
+        "tail": "— l'onglet d'atterrissage, entièrement documenté."
+      },
+      {
+        "label": "Moniteur de santé",
+        "href": "/docs/monitor/health-monitor",
+        "tail": "— le mode derrière la pilule d'en-tête, dix catégories de plongée profonde."
+      },
+      {
+        "label": "Architecture",
+        "href": "/docs/monitor/architecture",
+        "tail": "— comment le tableau de bord parle au moteur de Flask."
+      }
+    ]
+  }
+}

@@ -1,0 +1,56 @@
+{
+  "meta": {
+    "title": "Post-Installation: Surveillance ProxMenux Documentation",
+    "description": "Options de surveillance dans le script de post-installation personnalisable ProxMenux. Actuellement une seule option : installer OVH Real-Time Monitoring (RTM), qui ne s'active que si l'hôte est détecté comme serveur OVH."
+  },
+  "header": {
+    "title": "Après installation : surveillance",
+    "description": "Options de surveillance dans le script de post-installation personnalisable. Cette catégorie est petite et spécifique au fournisseur, elle installe l'agent de surveillance en temps réel OVH sur des serveurs OVH dédiés et ne fait rien ailleurs.",
+    "section": "Paramètres post-installation de Proxmox"
+  },
+  "intro": {
+    "title": "Étroite portée sur le but",
+    "body": "La surveillance post-installation est limitée à l'agent spécifique au fournisseur <strong>one</strong>. La surveillance à usage général (Prometheus, Grafana, node_exporter) est hors de portée ici parce que ceux-ci nécessitent des décisions architecturales (hôte séparé ou non, conservation de données, cibles d'alerte) qui ne correspondent pas à une étape post-installation d'un clic. ProxMenux Monitor lui-même, livré avec ProxMenux, remplit la plupart de ce rôle sans avoir besoin d'un agent externe."
+  },
+  "ovh": {
+    "heading": "Installer la surveillance en temps réel OVH (RTM)",
+    "intro": "Si votre hôte Proxmox est un serveur dédié loué à partir de <a>OVHcloud</a>, vous pouvez permettre à RTM d'exposer la télémétrie matérielle (température CPU, statut PSU, disque SMART, état contrôleur RAID, etc.) au panneau de contrôle OVH. C'est le même agent OVH utilise pour leur propre fonction \"Surveillance du serveur\".",
+    "decisionsTitle": "La décision de ProxMenux",
+    "decisionsItems": [
+      "Obtenez l'IP public de l'hôte via <code>curl ipinfo.io/ip</code>.",
+      "Examine le FAI propriétaire avec une requête <code>whois</code> sur <code>v4.whois.cymru.com</code>.",
+      "Si le résultat mentionne OVH, ramasse le <code>last-public-ovh-infra-yak.snap.mirrors.ovh.net/yak/archives/apply.sh</code> et le conduit au <code>bash</code> avec le manifeste de marionnettes RTM v2.",
+      "Si le résultat ne <em>not</em> mentionne OVH, rien n'est installé. L'option est une non-op."
+    ],
+    "remoteTitle": "Le script distant est passé à bash",
+    "remoteBody": "L'installation fonctionne avec <code>wget -qO - https://…apply.sh | bash</code>. Si le miroir OVH est compromis, le script s'exécute comme root sur votre hôte. Avant d'activer cette option, décidez si vous faites confiance à la chaîne miroir d'OVH plus que la surveillance que vous gagnez. Pour la plupart des utilisateurs home-lab ou non-OVH, cette option devrait simplement rester en dehors.",
+    "noOpTitle": "Activer uniquement si l'hôte est effectivement à OVH",
+    "noOpBody": "L'option est un non-op sur les serveurs non-OVH, donc cochez-le sur un Proxmox home-lab ne casse rien. Sur un hôte non-OVH le script imprime <em>\"Pas un serveur OVH, sauter l'installation RTM\"</em> et sortir proprement; aucun paquet n'est installé.",
+    "runsTitle": "Qu'est-ce que ProxMenux fonctionne",
+    "verifyTitle": "Vérification",
+    "verifyBody": "Sur un véritable hôte OVH, après un redémarrage, vous devriez voir le tableau de bord <a>RTM</a> dans votre gestionnaire OVH peuplé de données en direct pour l'hôte. Du côté Proxmox, le capteur RTM est un service systemd — vérifiez-le directement:",
+    "troubleTitle": "Dépannage",
+    "revertTitle": "Non réversible depuis le menu Désinstaller",
+    "revertBody": "Il n'y a pas d'entrée dédiée de désinstallation pour RTM. Sur un véritable hôte OVH, retirez manuellement les paquets avec <code>apt purge ovh-*</code> et supprimez tout manifeste de marionnettes sous <code>/etc/puppet/</code> installé par RTM. Sur un hôte non-OVH, rien n'a jamais été installé, donc il n'y a rien à revenir."
+  },
+  "related": {
+    "heading": "Autres",
+    "items": [
+      {
+        "label": "Moniteur ProxMenux",
+        "href": "/docs/settings/proxmenux-monitor",
+        "tail": "— tableau de bord web local pour l'hôte (travaille sur n'importe quel fournisseur, pas seulement OVH)."
+      },
+      {
+        "label": "Commandes système utiles",
+        "href": "/docs/help-info/system-commands",
+        "tail": "— référence de surveillance des hôtes locaux."
+      },
+      {
+        "label": "Personnalisable Post-Installation",
+        "href": "/docs/post-install/customizable",
+        "tail": "— retour au menu parent."
+      }
+    ]
+  }
+}

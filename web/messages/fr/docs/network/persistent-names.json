@@ -1,0 +1,130 @@
+{
+  "meta": {
+    "title": "Noms de l'interface persistantes Documentation ProxMenux",
+    "description": "Pin Proxmox noms d'interface (eno1, enp3s0, ...) aux adresses MAC via les fichiers systemd .link afin que les noms survivent à la réénumération PCI, les mises à jour du noyau et l'ajout / suppression d'autres NIC.",
+    "ogTitle": "Noms de l'interface persistantes Documentation ProxMenux",
+    "ogDescription": "Arrêtez les noms d'interface Proxmox de changer lorsque vous modifiez le matériel. Utilise les fichiers systemd .link saisis sur l'adresse MAC."
+  },
+  "header": {
+    "title": "Noms d'interface persistants",
+    "description": "Génére un fichier systemd .link par NIC physique qui pince le nom attribué au noyau à l'adresse MAC de la carte. Une fois appliqué (après le prochain redémarrage), les noms d'interface cessent de dériver lorsque vous ajoutez, supprimez ou déplacez des cartes PCIe.",
+    "section": "Réseau"
+  },
+  "intro": {
+    "title": "Ce que ça fait",
+    "body": "Pour chaque NIC physique sur l'hôte, écrit un petit fichier sous <code>/etc/systemd/network/10-&lt;iface&gt;.link</code> qui dit : <em>\"le périphérique avec ce MAC doit toujours être appelé ce nom\"</em>. systemd-udevd applique la règle à chaque démarrage, avant que <code>ifupdown</code> ne lise <code>/etc/network/interfaces</code>."
+  },
+  "problem": {
+    "heading": "Le problème que cela résout",
+    "intro": "Linux dérive les noms d'interface par défaut de la topologie PCI — <code>eno1</code> = à bord, <code>enp3s0</code> = la carte dans le bus PCI 3, fente 0, etc. Le schéma de nommage est déterministe <em> étant donné la même disposition matérielle</em>. Modifier la mise en page et le changement de noms :",
+    "items": [
+      "Ajoutez un GPU devant un NIC existant → le numéro de bus NIC peut changer → changement de nom.",
+      "Déplacer une carte vers une autre fente PCIe → nom change.",
+      "BIOS / UEFI mise à jour qui réénumère les appareils → noms peuvent changer.",
+      "Remplacer une carte défectueuse par le même modèle dans une autre fente → nom change."
+    ],
+    "outro": "Après un tel changement, <code>/etc/network/interfaces</code> fait toujours référence au nom <em>old</em> ; le pont ne parvient pas à monter ; l'hôte perd le réseau. La mise en place de noms persistants empêche ce scénario de se reproduire."
+  },
+  "howWorks": {
+    "heading": "Comment ça marche",
+    "arrowLabel": "par NIC",
+    "nodes": {
+      "detectLabel": "Détecter les CNI physiques",
+      "detectDetail": "ls /sys/class/net/\nfilter out vmbr / bond /\ndocker / veth / wireguard …",
+      "readLabel": "Lire chaque MAC",
+      "readDetail": "cat /sys/class/net/\n  '<'iface'>'/address",
+      "writeLabel": "Écrivez le fichier .link",
+      "writeDetail": "/etc/systemd/network/\n  10-'<'iface'>'.link"
+    },
+    "minimalIntro": "Chaque fichier généré est volontairement minimal :",
+    "minimalOutro": "Au démarrage, systemd-udevd correspond au périphérique par MAC et assigne le nom demandé <em>avant</em> tout autre composant (siupdown, nom par défaut du noyau) y parvient. Le préfixe de fichier <code>10-</code> garantit que ces règles se chargent tôt, avant le <code>99-default.link</code> par défaut."
+  },
+  "scope": {
+    "heading": "Ce qui est écrit, ce qui est ignoré",
+    "headerType": "Taper",
+    "headerBehaviour": "Comportement",
+    "headerWhy": "Pourquoi",
+    "rows": [
+      {
+        "type": "À bord / NIC PCIe",
+        "behaviour": "fichier <code>.link</code> écrit",
+        "why": "Soutenu par un vrai périphérique PCI — le cas de l'outil est pour"
+      },
+      {
+        "type": "Wi-Fi (phy80211)",
+        "behaviour": "fichier <code>.link</code> écrit",
+        "why": "A une vraie MAC et bénéficie de la stabilité des noms"
+      },
+      {
+        "type": "Ponts (vmbrX)",
+        "behaviour": "Échec",
+        "why": "Virtuel; le nom vient de <code>/etc/network/interfaces</code>"
+      },
+      {
+        "type": "Obligations (bondX)",
+        "behaviour": "Échec",
+        "why": "Virtual; le nom du lien est défini par ifupdown"
+      },
+      {
+        "type": "veth / docker0 / br-XXXX",
+        "behaviour": "Échec",
+        "why": "Créé sur demande par Docker / LXC — matériel non persistant"
+      },
+      {
+        "type": "tap / fwpr / fwln",
+        "behaviour": "Échec",
+        "why": "Créé sur demande par Proxmox par VM/CT"
+      },
+      {
+        "type": "WireGuard / Cilium / Tailscale",
+        "behaviour": "Échec",
+        "why": "Interfaces logicielles gérées par leurs propres démon"
+      }
+    ]
+  },
+  "safety": {
+    "heading": "Filet de sécurité : les fichiers .link précédents sont sauvegardés",
+    "intro": "Si <code>/etc/systemd/network/</code> contient déjà des fichiers <code>.link</code> (à partir d'une exécution précédente ou d'un autre outil), ils sont copiés dans un répertoire de sauvegarde horodaté avant que les nouveaux fichiers ne soient générés :",
+    "outro": "Pour revenir en arrière : copiez les fichiers à partir du répertoire de sauvegarde et redémarrez.",
+    "rebootTitle": "Prend effet sur le prochain redémarrage, pas immédiatement",
+    "rebootBody": "Les modifications aux fichiers <code>.link</code> ne s'appliquent qu'au démarrage, lorsque udev réénumère les appareils. L'outil rapporte <em>\"Changements s'appliquera après le redémarrage\"</em> pour cette raison. Renaming d'une interface en direct est risqué et non tenté: un <code>vmbr0</code> actif avec des membres devrait être reconfiguré atomiquement, c'est pourquoi l'opération est reportée au prochain démarrage propre."
+  },
+  "afterReboot": {
+    "heading": "Après le redémarrage",
+    "intro": "Une fois les noms épinglés, le flux de travail des futurs changements matériels est simple :",
+    "items": [
+      "Désactivez, changez de matériel (ajoutez la carte, déplacez la fente, ...), démarrez.",
+      "Chaque NIC conserve son nom précédent car son MAC correspond à un fichier <code>.link</code>.",
+      "Si un NIC est remplacé (différent MAC), il obtient un nom de noyau par défaut (<code>enp&lt;bus&gt;s&lt;slot&gt;</code>); ré-exécutez ce menu pour ajouter une entrée <code>.link</code> pour le MAC de la nouvelle carte."
+    ]
+  },
+  "troubleshoot": {
+    "heading": "Dépannage",
+    "emptyTitle": "\"Aucune interface physique trouvée\" après avoir lancé l'outil",
+    "emptyBody": "L'hôte n'a pas d'interfaces PCI/phy80211 soutenues par le noyau. Confirmer avec <code>ls -l /sys/class/net/</code> — chaque entrée doit comporter soit un lien symbolique <code>device</code> (PCI) soit une entrée <code>phy80211</code> (Wi-Fi). Si les deux sont manquants pour ce qui devrait être une vraie CNI, le conducteur n'est pas chargé.",
+    "noChangeTitle": "Après le redémarrage, les noms n'ont pas changé comme prévu",
+    "noChangeBody": "Vérifiez que le fichier est présent et bien formé : <code>cat /etc/systemd/network/10-&lt;iface&gt;.link</code>. Ensuite, vérifiez les journaux udev: <code>journalctl -u systemd-udevd -b | grep -i link</code>. Une cause commune est un paramètre de noyau Stale <code>net.ifnames=0</code> qui désactive entièrement les noms prévisibles — supprimer de <code>/etc/default/grub</code>, exécuter <code>update-grub</code>, redémarrer.",
+    "undoTitle": "Je veux annuler les noms persistants",
+    "undoBody": "Soit supprimer les fichiers <code>.link</code> (<code>rm /etc/systemd/network/10-*.link</code>) ou restaurer du répertoire de sauvegarde généré lors de l'exécution précédente. Redémarrer pour postuler."
+  },
+  "related": {
+    "heading": "Autres",
+    "items": [
+      {
+        "label": "Analyse des ponts et réparation guidée",
+        "href": "/docs/network/bridge-analysis",
+        "tailRich": " — le chemin de récupération lorsque les noms <em>ont</em> déjà déplacé."
+      },
+      {
+        "label": "Analyse de Config & nettoyage guidé",
+        "href": "/docs/network/config-analysis",
+        "tail": "— d'enlever les blocs orphelins laissés par des équipes de noms."
+      },
+      {
+        "label": "Diagnostic",
+        "href": "/docs/network/diagnostics",
+        "tailRich": "— confirmer les nouveaux noms avec <em>Afficher la table d'acheminement</em> après le redémarrage."
+      }
+    ]
+  }
+}

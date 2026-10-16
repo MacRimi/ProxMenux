@@ -1,0 +1,57 @@
+{
+  "meta": {
+    "title": "Post-Installation: Sécurité ProxMenux Documentation",
+    "description": "Options de sécurité disponibles dans le script de post-installation personnalisable ProxMenux. Actuellement une seule option : désactiver le service portmapper/rpcbind pour réduire la surface d'attaque de l'hôte."
+  },
+  "header": {
+    "title": "Post-Installation: Sécurité",
+    "section": "Paramètres post-installation de Proxmox"
+  },
+  "intro": {
+    "title": "Ce que cette catégorie couvre",
+    "body": "La sécurité post-installation est limitée au durcissement <strong>host qui est sûr d'appliquer sans surveillance</strong> — choses qui désactivent les services presque personne n'a besoin et qui peuvent être annulées à partir du menu Désinstaller. L'outil de sécurité actif (Fail2Ban pour la prévention des intrusions, Lynis pour l'audit) vit sous l'entrée dédiée <em>Security</em> dans le menu principal de ProxMenux, pas ici après l'installation."
+  },
+  "rpcbind": {
+    "heading": "Désactiver le portmapper / rpcbind",
+    "intro": "<code>rpcbind</code> (anciennement <code>portmap</code>) est un service qui cartographie les numéros de programme RPC vers les ports réseau. C'est une dépendance pour NFS et certains anciens outils basés sur RPC. Sur un hôte Proxmox typique qui n'agit pas comme un serveur NFS, <strong>nothing l'utilise</strong> — et le laisser activé maintient le port <code>111/tcp</code> à l'écoute de chaque interface.",
+    "whyTitle": "Pourquoi ça vaut la peine d'être désactivé",
+    "whyItems": [
+      "Réduit la surface d'attaque de l'hôte — un service d'écoute de moins pour s'inquiéter.",
+      "Historiquement utilisé comme vecteur de réflexion/amplification dans les attaques DDoS. Désactiver <code>rpcbind</code> supprime ce facteur d'amplification pour votre hôte.",
+      "Supprime le bruit qu'il génère dans les journaux et la sortie <code>netstat</code> / <code>ss</code>, ce qui facilite l'activité réelle."
+    ],
+    "nfsTitle": "Ne pas désactiver cela si vous utilisez NFS",
+    "nfsBody": "NFS serveur <strong>et</strong> NFS client compte sur <code>rpcbind</code> pour négocier les ports utilisés par <code>mountd</code>, <code>statd</code>, <code>lockd</code>, etc. Si votre hôte Proxmox <em>exportations</em> NFS actions à d'autres machines ou <em>montages</em> NFS actions d'un NAS, ne pas appliquer cette option. Les montures vont échouer avec <code>mount.nfs: rpc.statd is not running</code> ou similaire.",
+    "runsTitle": "Qu'est-ce que ProxMenux fonctionne",
+    "runsOutro": "Le paquet reste installé. ProxMenux enregistre l'état d'origine activé/actif de rpcbind.service et rpcbind.socket, puis désactive et arrête les deux unités afin que l'activation de la prise ne puisse pas ramener le service.",
+    "verifyTitle": "Vérification",
+    "verifyBody": "Après avoir postulé, confirmer que <code>rpcbind</code> est éteint et que rien n'écoute sur le port 111 :",
+    "reversibleTitle": "Restaurer l'état de service original",
+    "reversibleBody": "Ce changement est enregistré dans <code>installed_tools.json</code>. <link>Désinstaller Optimisations</link> restaure chaque unité rpcbind à l'état activé/désactivé/inactif capturé avant que ProxMenux ne le change; il ne suppose pas que rpcbind ait été activé sur chaque hôte."
+  },
+  "related": {
+    "heading": "Autres",
+    "items": [
+      {
+        "label": "Menu de sécurité",
+        "href": "/docs/security",
+        "tail": "— frappeurs plus lourds: Fail2Ban (prévention de l'intrusion) et Lynis (audit)."
+      },
+      {
+        "label": "Lynis",
+        "href": "/docs/security/lynis",
+        "tail": "— auditer l'hôte pour trouver des opportunités plus fortes."
+      },
+      {
+        "label": "Commandes système utiles",
+        "href": "/docs/help-info/system-commands",
+        "tail": "— état de service, journalctl, référence d'audit lynis."
+      },
+      {
+        "label": "Personnalisable Post-Installation",
+        "href": "/docs/post-install/customizable",
+        "tail": "— retour au menu parent."
+      }
+    ]
+  }
+}

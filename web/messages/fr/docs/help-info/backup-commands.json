@@ -1,0 +1,235 @@
+{
+  "meta": {
+    "title": "Commandes de sauvegarde Proxmox — vzdump, qmrestore, pct restauration ProxMenux",
+    "description": "Référence des commandes de sauvegarde et de restauration Proxmox VE : vzdump pour les conteneurs VM et LXC, qmrestore pour les conteneurs VM, pct restore pour les conteneurs, sauvegardes programmées dans /etc/pve/jobs.cfg, scripts d'hameçonnage et exclusion des chemins.",
+    "ogTitle": "Commandes de sauvegarde Proxmox — vzdump, qmrestore, pct restaurer",
+    "ogDescription": "Référence des commandes de restauration vzdump, qmrestore et pct pour sauvegarder et restaurer les conteneurs VM Proxmox et LXC.",
+    "twitterTitle": "Commandes de sauvegarde Proxmox ProxMenux",
+    "twitterDescription": "vzdump, qmrestore et pct restaurent les commandes pour sauvegarder et restaurer les VM et conteneurs Proxmox."
+  },
+  "header": {
+    "title": "Sauvegarde et restauration",
+    "description": "Référence sécurisée des commandes vzdump, qmrestore et pct restaure pour les workflows de sauvegarde Proxmox. Comprend la programmation, les options avancées comme les scripts de crochet / exclure les chemins / priorité d'E/S, et la gestion de fichiers de sauvegarde.",
+    "section": "Aide et informations"
+  },
+  "intro": {
+    "title": "Trois modes de sauvegarde",
+    "body": "<strong>snapshot</strong> utilise un snapshot en direct — l'invité reste en cours d'exécution, arrête brièvement les E/S. <strong>suspend</strong> gèle le VM pendant la sauvegarde (plus sûr que l'instantané pour les FS non-napshotware). <strong>stop</strong> ferme le VM, recule le froid, redémarre. Choisir par tolérance et capacité de stockage."
+  },
+  "commandGroups": [
+    {
+      "title": "Sauvegarde VM",
+      "commands": [
+        {
+          "command": "vzdump <vmid>",
+          "description": "Créer une sauvegarde d'un VM/CT spécifique"
+        },
+        {
+          "command": "vzdump <vmid> --storage <storage>",
+          "description": "Sauvegarde VM à stockage spécifique"
+        },
+        {
+          "command": "vzdump <vmid> --mode snapshot",
+          "description": "Créer une sauvegarde instantané (pour les VM)"
+        },
+        {
+          "command": "vzdump <vmid> --mode suspend",
+          "description": "Suspendre VM pendant la sauvegarde"
+        },
+        {
+          "command": "vzdump <vmid> --mode stop",
+          "description": "Arrêter VM pendant la sauvegarde"
+        },
+        {
+          "command": "vzdump --all",
+          "description": "Sauvegarder tous les VM et conteneurs"
+        },
+        {
+          "command": "vzdump --exclude <vmid1>,<vmid2>",
+          "description": "Sauvegarde tous sauf les VM spécifiés"
+        }
+      ]
+    },
+    {
+      "title": "Options de sauvegarde",
+      "commands": [
+        {
+          "command": "vzdump <vmid> --compress zstd",
+          "description": "Utiliser la compression zstd pour la sauvegarde"
+        },
+        {
+          "command": "vzdump <vmid> --pigz <threads>",
+          "description": "Utiliser porcz avec plusieurs fils"
+        },
+        {
+          "command": "vzdump <vmid> --notes <text>",
+          "description": "Ajouter des notes à la sauvegarde"
+        },
+        {
+          "command": "vzdump <vmid> --mailto <email>",
+          "description": "Envoyer un courriel de notification"
+        },
+        {
+          "command": "vzdump <vmid> --maxfiles <n>",
+          "description": "Conserver seulement n sauvegardes par VM"
+        },
+        {
+          "command": "vzdump <vmid> --stdexcludes 0",
+          "description": "N'excluez pas les fichiers temporaires"
+        },
+        {
+          "command": "vzdump <vmid> --quiet 1",
+          "description": "Suppression des messages de sortie"
+        }
+      ]
+    },
+    {
+      "title": "Restaurer les sauvegardes",
+      "commands": [
+        {
+          "command": "qmrestore <backup-file> <vmid>",
+          "description": "Restaurer VM depuis la sauvegarde"
+        },
+        {
+          "command": "qmrestore <backup-file> <vmid> --storage <storage>",
+          "description": "Restaurer le stockage spécifique"
+        },
+        {
+          "command": "qmrestore <backup-file> <vmid> --unique",
+          "description": "Créez un VM avec un ID unique"
+        },
+        {
+          "command": "pct restore <vmid> <backup-file>",
+          "description": "Restaurer le conteneur de la sauvegarde"
+        },
+        {
+          "command": "pct restore <vmid> <backup-file> --storage <storage>",
+          "description": "Restaurer le contenant à un stockage spécifique"
+        },
+        {
+          "command": "pct restore <vmid> <backup-file> --rootfs <storage>",
+          "description": "Restaurer vers des roofs spécifiques"
+        },
+        {
+          "command": "pct restore <vmid> <backup-file> --unprivileged 1",
+          "description": "Restaurer en tant que CT non privilégié"
+        }
+      ]
+    },
+    {
+      "title": "Gestion des sauvegardes",
+      "commands": [
+        {
+          "command": "ls -la /var/lib/vz/dump/",
+          "description": "Lister les sauvegardes dans l'emplacement par défaut"
+        },
+        {
+          "command": "find /var/lib/vz/dump/ -name \"*.vma*\"",
+          "description": "Trouver des sauvegardes VM"
+        },
+        {
+          "command": "find /var/lib/vz/dump/ -name \"*.tar*\"",
+          "description": "Trouver des sauvegardes de conteneurs"
+        },
+        {
+          "command": "pvesm list <storage>",
+          "description": "Lister les sauvegardes dans le stockage spécifique"
+        },
+        {
+          "command": "rm /var/lib/vz/dump/<backup-file>",
+          "description": "Supprimer un fichier de sauvegarde"
+        },
+        {
+          "command": "cat /etc/vzdump.conf",
+          "description": "Afficher la configuration de sauvegarde"
+        }
+      ]
+    },
+    {
+      "title": "Sauvegardes programmées",
+      "commands": [
+        {
+          "command": "cat /etc/cron.d/vzdump",
+          "description": "Afficher le calendrier de sauvegarde"
+        },
+        {
+          "command": "nano /etc/vzdump.conf",
+          "description": "Modifier la configuration de sauvegarde"
+        },
+        {
+          "command": "systemctl list-timers",
+          "description": "Liste de toutes les tâches programmées"
+        },
+        {
+          "command": "systemctl status cron",
+          "description": "Vérifier l'état du service cron"
+        },
+        {
+          "command": "grep vzdump /var/log/syslog",
+          "description": "Vérifiez les journaux de sauvegarde dans syslog"
+        },
+        {
+          "command": "tail -f /var/log/vzdump.log",
+          "description": "Surveiller la connexion de sauvegarde en temps réel"
+        }
+      ]
+    },
+    {
+      "title": "Opérations avancées",
+      "commands": [
+        {
+          "command": "qmrestore <backup> <vmid> --force",
+          "description": "Force restaurer, écraser le VM existant"
+        },
+        {
+          "command": "vzdump <vmid> --dumpdir <directory>",
+          "description": "Spécifier le répertoire de sauvegarde personnalisé"
+        },
+        {
+          "command": "vzdump <vmid> --script <script>",
+          "description": "Exécuter le script crochet pendant la sauvegarde"
+        },
+        {
+          "command": "vzdump <vmid> --exclude-path <path>",
+          "description": "Exclure les chemins spécifiques de la sauvegarde"
+        },
+        {
+          "command": "vzdump <vmid> --ionice <priority>",
+          "description": "Définir la priorité E/S pour le processus de sauvegarde"
+        },
+        {
+          "command": "vzdump <vmid> --lockwait <minutes>",
+          "description": "Attendez le verrou"
+        },
+        {
+          "command": "qm importdisk <vmid> <backup> <storage>",
+          "description": "Importer le disque depuis la sauvegarde"
+        }
+      ]
+    }
+  ],
+  "testRestores": {
+    "title": "Testez vos restaurations",
+    "bodyRich": "Une sauvegarde que vous n'avez jamais restaurée n'est pas une sauvegarde. Périodiquement choisir une sauvegarde, la restaurer dans un VMID test avec <code>qmrestore --unique</code>, démarrer le VM résultant et confirmer que le contenu est intact. Même idée pour les conteneurs via <code>pct restore</code>."
+  },
+  "related": {
+    "heading": "Autres",
+    "items": [
+      {
+        "href": "/docs/help-info/vm-ct-commands",
+        "label": "Gestion VM et CT",
+        "tail": "— commandes du cycle de vie qm et pct."
+      },
+      {
+        "href": "/docs/help-info/storage-commands",
+        "label": "Stockage et disques",
+        "tail": "— gestion du stockage pvesm."
+      },
+      {
+        "href": "/docs/help-info",
+        "label": "Aide et information",
+        "tail": "."
+      }
+    ]
+  }
+}

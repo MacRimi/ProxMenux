@@ -1,0 +1,98 @@
+{
+  "meta": {
+    "title": "Changer de langue Documentation ProxMenux",
+    "description": "Changez ProxMenux UI entre anglais, espagnol, français, allemand, italien ou portugais. Translation install only — utilise googletrans + une table de traduction pré-calquée. Le menu se recharge automatiquement avec la nouvelle langue.",
+    "ogTitle": "Changer de langue Documentation ProxMenux",
+    "ogDescription": "Choisissez le langage d'interface ProxMenux dans le menu Paramètres. Six langues sont prises en charge."
+  },
+  "header": {
+    "title": "Changer de langue",
+    "description": "Changer l'interface utilisateur ProxMenux entre six langues prises en charge. Enregistre le choix sur config.json et ré-exécute le menu avec la nouvelle langue. Seulement disponible sur le type d'installation de traduction — l'installation normale (léger) est en anglais seulement par conception.",
+    "section": "Paramètres"
+  },
+  "intro": {
+    "title": "Ce que c'est",
+    "body": "Un menu de dialogue qui liste les six langues prises en charge. Choisissez-en un, ProxMenux l'enregistre dans <code>config.json</code> comme <code>.language</code>, puis ré-execs <code>config_menu.sh</code> pour que la nouvelle langue prenne effet immédiatement."
+  },
+  "warn": {
+    "title": "Traduction seulement",
+    "body": "Cette option n'apparaît dans les paramètres que si les deux contrôles sont effectués : <code>/opt/googletrans-env/bin/activate</code> existe (Python veine avec googletrans), <em> et </em> <code>config.json</code> a un <code>.language</code> non vide. Sur la Normale (en anglais seulement) installez ni l'un ni l'autre n'est présent et le sélecteur de langue n'est pas affiché."
+  },
+  "supported": {
+    "heading": "Langues prises en charge",
+    "headerCode": "Code",
+    "headerLang": "Langue",
+    "headerNotes": "Remarques",
+    "rows": [
+      {
+        "code": "en",
+        "lang": "Anglais",
+        "notes": "Langue source — la plus précise"
+      },
+      {
+        "code": "es",
+        "lang": "Espagnol",
+        "notes": "Cached + traduit automatiquement"
+      },
+      {
+        "code": "fr",
+        "lang": "Français",
+        "notes": "Cached + traduit automatiquement"
+      },
+      {
+        "code": "de",
+        "lang": "Allemand",
+        "notes": "Cached + traduit automatiquement"
+      },
+      {
+        "code": "it",
+        "lang": "italien",
+        "notes": "Cached + traduit automatiquement"
+      },
+      {
+        "code": "pt",
+        "lang": "portugais",
+        "notes": "Cached + traduit automatiquement"
+      }
+    ]
+  },
+  "englishTip": {
+    "title": "L'anglais est le plus précis",
+    "body": "Les cordes non anglaises sont produites par une table pré-câblée de googletrans. Les chaînes Edge-case (rarement déclenchées options, ajouts récents) peuvent tomber à travers un appel googletrans en direct ou à l'original anglais. Si une traduction se sent mal, l'anglais est toujours la source de la vérité."
+  },
+  "underHood": {
+    "heading": "Comment ça marche sous le capot",
+    "items": [
+      "Le menu de dialogue liste les codes 6; vous en choisissez un.",
+      "Si <code>config.json</code> existe : <code>jq --arg lang \"$new_language\" '.language = $lang''</code> met à jour le champ en place.",
+      "Si <code>config.json</code> n'existe pas : un nouveau est créé avec le code de langue dans un objet à champ unique.",
+      "Boîte de dialogue de confirmation : <em>\"Langue changée en [code]\"</em>.",
+      "<code>exec bash config_menu.sh</code> recharge le menu Paramètres avec la nouvelle langue active."
+    ]
+  },
+  "manual": {
+    "heading": "Équivalent manuel"
+  },
+  "troubleshoot": {
+    "heading": "Dépannage",
+    "noOptionTitle": "L'option n'apparaît pas dans les paramètres",
+    "noOptionBody": "Vous êtes sur l'installation normale (en anglais seulement). Pour obtenir une prise en charge de la langue, réinstallez ProxMenux en choisissant l'option Translation install (il tire Python verv + googletrans).",
+    "stillEnglishTitle": "La langue a changé mais l'interface utilisateur affiche toujours l'anglais",
+    "stillEnglishBody": "Le menu se ré-exécute après le changement. Si vous avez ouvert un nouveau shell et lancé un point d'entrée ProxMenux différent, exécutez de nouveau <code>menu</code> pour récupérer la nouvelle langue. Confirmer : <code>jq -r '.language' /usr/local/share/proxmenux/config.json</code>."
+  },
+  "related": {
+    "heading": "Autres",
+    "items": [
+      {
+        "href": "/docs/settings/show-version-information",
+        "label": "Afficher les informations sur la version",
+        "tail": "— confirme le type d'installation et la langue courante."
+      },
+      {
+        "href": "/docs/settings",
+        "label": "Aperçu des paramètres",
+        "tail": "."
+      }
+    ]
+  }
+}

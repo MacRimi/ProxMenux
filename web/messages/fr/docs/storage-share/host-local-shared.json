@@ -1,0 +1,103 @@
+{
+  "meta": {
+    "title": "Host : Ajouter un répertoire partagé sur Host ProxMenux Documentation",
+    "description": "Créez un répertoire d'hôte prêt pour les fixations LXC, avec les permissions qui fonctionnent pour les conteneurs privilégiés et non privilégiés à la fois. Sticky bit + world-rwx + ACL pour l'héritage par défaut.",
+    "ogTitle": "Host : Ajouter un répertoire partagé sur Host ProxMenux Documentation",
+    "ogDescription": "Préparer un répertoire hôte pour les montures de liaison LXC avec des permissions compatibles avec des CT privilégiés et non privilégiés."
+  },
+  "header": {
+    "title": "Host : Ajouter un répertoire partagé sur Host",
+    "description": "Créer un répertoire hôte conçu pour être monté sur un ou plusieurs conteneurs LXC. ProxMenux applique un ensemble de permissions qui fonctionne à la fois pour les CT privilégiés et non privilégiés à la fois — pas de maux de tête UID décalés, pas de chowns par conteneur — et enregistre le répertoire afin que le gestionnaire de montage LXC puisse le récupérer plus tard.",
+    "section": "Stockage et partage · Hôte"
+  },
+  "intro": {
+    "title": "Ce que c'est (et n'est PAS)",
+    "body": "Cet outil fait <strong>not</strong> enregistrer n'importe quoi dans Proxmox (aucun <code>pvesm add</code> ici). Il prépare simplement un répertoire sur l'hôte — <code>/mnt/shared</code>, par défaut — avec les permissions que tout conteneur LXC peut lire et écrire, que le CT soit privilégié ou non. La prochaine étape habituelle consiste à le monter dans chaque CT avec le <mountLink>LXC Mount Manager</mountLink>."
+  },
+  "why": {
+    "heading": "Pourquoi un outil dédié à cette",
+    "intro": "Lorsque vous liez un répertoire hôte dans un conteneur LXC, les permissions dépendent de :",
+    "items": [
+      "Que le CT soit <strong>privilégé</strong> (UID 0 dans CT = UID 0 sur l'hôte) ou <strong>privilégé</strong> (UID 0 dans CT = UID 100000 sur l'hôte — tout est déplacé par +100000).",
+      "La propriété du répertoire hôte (un fichier appartenant à UID 1000 sur l'hôte apparaît comme « autres » du point de vue d'un CT non privilégié, car aucune carte d'utilisateur CT n'accueille UID 1000).",
+      "Indique si plusieurs CT partagent le même répertoire (différents CT peuvent avoir des plages UID différentes)."
+    ],
+    "outro": "L'astuce pragmatique ProxMenux utilise ici pour <strong>donnez à tout le monde accès</strong> au niveau du système de fichiers: world-rwx plus le bit collant, plus ACLs donc les nouveaux fichiers héritent des mêmes permissions. Tout UID cartographié peut lire et écrire; aucun alignement UID / GID n'est requis."
+  },
+  "howRuns": {
+    "heading": "Comment fonctionne le script",
+    "body": "Le script n'a pas de menu principal — il exécute une seule action, <strong>Créer répertoire partagé</strong>. Phase 1 recueille le chemin cible; Phase 2 crée le répertoire et applique les permissions."
+  },
+  "bits": {
+    "heading": "Ce que chaque bit de permission fait",
+    "intro": "Le numéro <strong>1777</strong> n'est pas arbitraire — c'est le même mode que Linux utilise pour <code>/tmp</code>. Trois propriétés combinées:",
+    "headerBit": "Bit",
+    "headerEffect": "Effet",
+    "headerWhy": "Pourquoi c'est important ici",
+    "rows": [
+      {
+        "bit": "1 (collant)",
+        "effect": "Seul le propriétaire du fichier peut supprimer / renommer un fichier.",
+        "why": "Empêche CT-A de supprimer les fichiers créés par CT-B dans le même répertoire."
+      },
+      {
+        "bit": "777 (rwx-rwx-rwx)",
+        "effect": "Tout le monde peut lire, écrire et traverser.",
+        "why": "Les UIDs CT non privilégiés (100000+) apparaissent comme des \"autres\" de l'hôte, de sorte que world-rwx leur donne accès."
+      },
+      {
+        "bit": "ACL (par défaut)",
+        "effect": "Hérité sur chaque fichier / sous-dir nouvellement créé.",
+        "why": "Les permissions s'appliquent pour toujours — le nouveau contenu maintient le profil ouvert sans ré-exécuter le script."
+      }
+    ],
+    "privTitle": "Les CT privilégiés voient la même chose, juste sans le changement",
+    "privBody": "Pour un CT privilégié, UID 0 dans le CT est UID 0 sur l'hôte, de sorte que <code>root</code> à l'intérieur du CT peut lire / écrire le répertoire hôte directement. Le <code>1777</code> est toujours bien — cela signifie simplement que les utilisateurs non root à l'intérieur du CT peuvent également utiliser le répertoire. Les mêmes autorisations couvrent les deux cas."
+  },
+  "where": {
+    "heading": "Où mettre le répertoire partagé",
+    "intro": "Le localisateur offre quatre options :",
+    "opt1Title": "1. Créer un nouveau dossier dans /mnt",
+    "opt1Body": "Le choix habituel. Le ProxMenux suggère automatiquement la première dénomination libre (<code>shared</code>, <code>shared2</code>, <code>shared3</code>, ...). Vous venez de confirmer ou de taper un nom différent.",
+    "opt2Title": "2. Saisissez le chemin personnalisé",
+    "opt2Body": "Pour les répertoires hors <code>/mnt</code>. Tout chemin absolu fonctionne (par exemple : <code>/srv/media</code>, <code>/data/family</code>). Le script applique les mêmes permissions.",
+    "opt3Title": "3. Afficher les dossiers existants dans /mnt",
+    "opt3Body": "Diagnostic en lecture seule : liste chaque répertoire sous <code>/mnt</code> avec ses permissions, son propriétaire et son espace disponible. Utile avant de créer un nouveau pour éviter les collisions de noms.",
+    "opt4Title": "4. Annuler",
+    "opt4Body": "Sorties sans rien créer. Même chose que de presser <kbd>Esc</kbd>.",
+    "tipTitle": "Où vit /mnt ?",
+    "tipBody": "Par défaut, <code>/mnt</code> se trouve sur le système de fichiers racine Proxmox. Si vous voulez le répertoire partagé sur un disque différent (un disque de données, un pool ZFS), montez ce disque sous <code>/mnt/&lt;name&gt;</code> d'abord (Disk Manager ou <diskLink>Ajouter le disque local comme stockage Proxmox</diskLink>), puis créez le répertoire partagé comme sous-dossier à l'intérieur — ou choisissez \"Entrer le chemin personnalisé\" ici et pointez sur le disque monté."
+  },
+  "manual": {
+    "heading": "Équivalent manuel",
+    "body": "Tout le flux peut être rejoué à la main:"
+  },
+  "next": {
+    "heading": "Prochaine étape : reliure-montage en conteneurs",
+    "body": "La création du répertoire ne le prépare que — aucun conteneur ne le voit encore. Pour la rendre visible à l'intérieur d'un ou de plusieurs LXC, utilisez le <mountLink>LXC Mount Manager</mountLink> pour fixer le <code>/mnt/&lt;name&gt;</code> dans les CT. Parce que les permissions sont déjà ouvertes, le gestionnaire de montage vous proposera de modifier le fichier <strong>not</strong> — le répertoire est prêt à être utilisé tel quel."
+  },
+  "troubleshoot": {
+    "heading": "Dépannage",
+    "mkdirTitle": "\"Failed to create directory\"",
+    "mkdirBody": "Habituellement un problème de système de fichiers: <code>/mnt</code> est sur un système de fichiers en lecture seule, le chemin contient un composant qui n'est pas un répertoire (par exemple, vous avez tapé <code>/etc/passwd/sub</code>), ou le disque est plein. Vérifiez avec <code>df -h /mnt</code> et <code>mount | grep /mnt</code>.",
+    "writeTitle": "Conteneur ne peut pas écrire malgré les autorisations ouvertes",
+    "writeBody": "Double-vérifier le CT utilise en fait le support de fixation (<code>pct config &lt;ctid&gt; | grep ^mp</code>). À l'intérieur du CT, exécutez <code>touch /mnt/data/test-$(date +%s)</code> — si cela échoue avec la permission refusée, le montage peut être sur un système de fichiers hôte qui n'honore pas les ACL (certaines anciennes <code>ext3</code> ou <code>vfat</code> montures). Déplacez le répertoire partagé vers un support ext4 / xfs / btrfs / zfs.",
+    "aclTitle": "ACL commande silencieusement indisponible",
+    "aclBody": "Sur une installation Proxmox minimale <code>setfacl</code> / <code>getfacl</code> ne peut pas être installé. Le script tombe gracieusement (contrôle <code>command -v setfacl</code>) et n'applique que les permissions POSIX — ce qui est souvent suffisant, mais les nouveaux fichiers n'hériteront pas automatiquement du profil permissif. Installez <code>acl</code> avec <code>apt-get install -y acl</code> et réexécutez le script dans le répertoire."
+  },
+  "related": {
+    "heading": "Autres",
+    "items": [
+      {
+        "href": "/docs/storage-share/lxc-mount-points",
+        "label": "Gestionnaire de montage LXC",
+        "tail": "— l'étape suivante naturelle: lier ce répertoire dans un ou plusieurs conteneurs."
+      },
+      {
+        "href": "/docs/storage-share/host-local-disk",
+        "label": "Ajouter le disque local comme stockage Proxmox",
+        "tailRich": "— si vous voulez le répertoire partagé sur un disque dédié, préparez le disque d'abord, montez-le sous <code>/mnt</code>, puis créez le sous-dossier partagé ici."
+      }
+    ]
+  }
+}

@@ -1,0 +1,93 @@
+{
+  "meta": {
+    "title": "ProxMenux Sauvegarde et restauration — Vue d'ensemble Proxmox VE",
+    "description": "ProxMenux Backup & Restore capture l'état complet d'un hôte Proxmox — système de fichiers, manifeste de configuration structuré et paquets/composants installés — et le reproduit sur le même hôte ou sur un autre hôte. La sauvegarde et la restauration sont autonomes : aucune dépendance externe, et les restaurations de cross-kernel sont prises en charge par un filtre sous-safe-set sensu et une hydratation agnostique du noyau.",
+    "ogTitle": "ProxMenux Sauvegarde et restauration — Aperçu",
+    "ogDescription": "Sauvegarde et restauration complète de l'hôte pour Proxmox VE avec manifeste structuré, liste de paquets et réinstallateurs de composants.",
+    "twitterTitle": "ProxMenux Sauvegarde et restauration ProxMenux",
+    "twitterDescription": "Sauvegarde et restauration complète de l'hôte pour Proxmox VE avec manifeste structuré, liste de paquets et réinstallateurs de composants."
+  },
+  "header": {
+    "title": "Sauvegarde et restauration",
+    "description": "Sauvegarde et restauration de l'hôte complet pour Proxmox VE. Capture le système de fichiers, la configuration et les composants installés dans une seule archive, et reproduit l'hôte sur la même ou une autre installation Proxmox sans dépendance externe.",
+    "section": "Sauvegarde et restauration"
+  },
+  "intro": {
+    "title": "Ce que c'est, dans un paragraphe",
+    "body": "Une sauvegarde ProxMenux capture l'état complet d'un hôte Proxmox : <strong>le système de fichiers</strong> (annuaires pertinents sous <code>/etc</code>, <code>/root</code>, <code>/var/lib/pve-cluster</code>, plus des chemins personnalisés optionnels), <strong>a manifeste structuré</strong> (JSON avec le matériel détecté, les paramètres du noyau, la disposition du réseau, l'état ZFS, les utilisateurs et les entrées de cron), et <strong>an inventaire d'application</strong> (tous les paquets marqués comme installés manuellement par APT, plus la liste des composants installés par ProxMenux avec leurs versions exactes). L'une des trois destinations prises en charge — archive locale, Proxmox Backup Server (recommandé) ou Borg — reçoit la même charge utile autonome, et n'importe laquelle d'entre elles peut hydrater l'hôte cible sans dépendre de la source accessible au moment de la restauration."
+  },
+  "video": {
+    "heading": "Visite vidéo",
+    "intro": "Vous préférez regarder Backup & Restore en action avant de le configurer ? Ce parcours couvre une démo complète de bout en bout de la fonctionnalité dans ProxMenux.",
+    "title": "ProxMenux — Sauvegarde et restauration",
+    "caption": "Vidéo externe sur YouTube. Joue en mode privé (pas de cookies avant d'appuyer sur le jeu)."
+  },
+  "whatItIsNot": {
+    "heading": "Ce que ce n'est pas",
+    "intro": "La section couvre la sauvegarde et la restauration de <strong>host-level</strong> : l'installation Proxmox elle-même, et non les charges de travail en plus.",
+    "items": [
+      "<strong>Ce n'est pas un outil de sauvegarde VM/CT.</strong> Les disques d'or et l'état RAM ne sont pas capturés par cette fonctionnalité; c'est à cela que sert <code>vzdump</code>. Les fichiers de configuration invités <strong></strong> (<code>/etc/pve/nodes/&lt;node&gt;/qemu-server/*.conf</code> et <code>lxc/*.conf</code>) <strong>are</strong> capturés, de sorte qu'après une restauration l'inventaire invité réapparaît et les disques peuvent être ré-attachés à partir d'une sauvegarde locale existante PBS/.",
+      "<strong>Il ne s'agit pas d'une opération à l'échelle du cluster.</strong> Chaque noeud se soutient. La composition des grappes est capturée dans le cadre du <code>/etc/pve</code> de sorte qu'un noeud restauré peut être re-ajouté à son cluster, mais la restauration d'un cluster complet nécessite une coordination par noeud.",
+      "<strong>Ce n'est pas une image de disque complet.Les binaires de noyau </strong>, les initramfs et la partition de démarrage ne sont pas capturés. Lors d'une restauration, ProxMenux s'appuie sur les propres artefacts de démarrage de l'hôte cible (régénérés automatiquement par <code>update-initramfs</code> et l'outil bootloader) et installe des pilotes correspondants contre le noyau de la cible en cours d'exécution."
+    ]
+  },
+  "threePillars": {
+    "heading": "Les trois piliers d'une sauvegarde",
+    "intro": "Une archive ProxMenux est structurée autour de trois charges utiles autonomes. La restauration utilise les trois ensemble pour reproduire l'hôte source sur une cible qui ne peut même pas avoir le même noyau installé.",
+    "diagramCaption": "Chaque sauvegarde expédie les mêmes trois charges utiles indépendamment de la destination. La restauration consomme les trois: rootfs pour déposer des fichiers, manifeste pour détecter les différences de dérive et de cross-kernel, et l'inventaire d'application pour réinstaller des paquets et des composants contre le propre noyau de la cible.",
+    "pillar1Label": "Système de fichiers",
+    "pillar1Detail": "Raccourcis/\n(rsync de /etc,\n/etc/systemd/network,\n/root, plus a\nsqulite3 instantané\nde /var/lib/pve-cluster,\n+ chemins optionnels)",
+    "pillar2Label": "Manifeste",
+    "pillar2Detail": "manifest.json\n(matériel, noyau\nparams, réseau,\nZFS, utilisateurs, cron,\nZFS pools, stockage)",
+    "pillar3Label": "Demandes",
+    "pillar3Detail": "paquet.manuel.list\n+ components_status.json\n(manuel APT + ProxMenux\ninstallateurs avec versions)"
+  },
+  "restoreIsUniversal": {
+    "heading": "La restauration reproduit l'hôte source, pas l'archive",
+    "body": "La restauration d'une sauvegarde ProxMenux n'extrait pas seulement le système de fichiers. Le flux de restauration lit le manifeste pour détecter la dérive entre la source et la cible (différences matérielles, noms NIC, version du noyau, identité du pool ZFS, rejoue le système de fichiers, puis déclenche le bon installateur de composants pour chaque service installé sur la source (driver NVIDIA, Coral TPU, outils AMD GPU, outils Intel GPU). Chaque installateur fonctionne contre le noyau courant du <strong>target</strong>, de sorte que l'hôte restauré ne dépend pas de la présence du noyau de la source. Lorsque le noyau de la cible est plus récent que celui de la sauvegarde, une passe <strong>hydration du noyau</strong> fusionne le réglage propre de l'utilisateur (jetons IOMMU, ID de périphérique VFIO, quirks personnalisés, clés GRUB) dans la configuration de démarrage de la cible sans copier les fichiers liés au noyau."
+  },
+  "twoInterfaces": {
+    "heading": "Deux interfaces, un moteur",
+    "intro": "Chaque étape du workflow de sauvegarde et de restauration est disponible à partir de deux points d'entrée. Les deux appellent la même bibliothèque shell, produisent des archives identiques, et lisent le même registre de travail.",
+    "cliLabel": "ProxMenux Scripts (TUI)",
+    "cliDetail": "menu → Services publics →\nSauvegarde de l'hôte / Restauration\n\nflux basé sur la boîte de dialogue,\nSSH-friendly, scriptable\npour une utilisation sans surveillance.",
+    "webLabel": "ProxMenux Monitor (interface utilisateur Web)",
+    "webDetail": "Onglet Sauvegardes dans le\nInterface Web du moniteur.\n\nRestauration en un clic, en direct\nqueue de log, intégrée avec\nles notifications et\nvisionneur delta runback."
+  },
+  "whereNext": {
+    "heading": "Où aller d'ici ?",
+    "intro": "Chaque sous-section ci-dessous couvre un aspect du déroulement du travail en profondeur. Commencez par <em>Comment ça marche</em> si le but est de comprendre ce que contient l'archive et pourquoi. Aller à <em>Destinations</em> pour configurer la cible pour la copie. Lire <em>Restoring</em> et <em>Cross-kernel restaurer</em> pour le côté récupération.",
+    "items": [
+      {
+        "label": "Comment ça marche",
+        "href": "/docs/backup-restore/how-it-works",
+        "tail": "— les trois charges utiles (rootfs, manifestes, applications) en détail, avec les collecteurs qui les produisent et le format de chaque fichier."
+      },
+      {
+        "label": "Destinations",
+        "href": "/docs/backup-restore/destinations",
+        "tail": "— comparaison de local, Proxmox Backup Server (recommandé) et Borg, et comment configurer chacun."
+      },
+      {
+        "label": "Création de sauvegardes",
+        "href": "/docs/backup-restore/creating-backups",
+        "tail": "— sauvegardes uniques, profil de chemin par défaut, ajout de chemins personnalisés, chiffrement pour PBS."
+      },
+      {
+        "label": "Emplois prévus",
+        "href": "/docs/backup-restore/scheduled-jobs",
+        "tail": "— les nouveaux emplois par rapport à un emploi existant de PVE vzdump, les formats de programmation, le mode de détail du travail."
+      },
+      {
+        "label": "Restauration",
+        "href": "/docs/backup-restore/restoring",
+        "tail": "— les trois actions sur une archive (vue, téléchargement, restauration), Complete vs. La restauration personnalisée, le régulateur post-démarrage et pourquoi les dix dernières minutes comptent."
+      },
+      {
+        "label": "Restaurer le cross-kernel",
+        "href": "/docs/backup-restore/cross-kernel",
+        "tail": "— comportement sensé lorsque le noyau cible diffère de celui de la sauvegarde, du filtre sous-ensemble sûr et des quatre phases d'hydratation."
+      }
+    ]
+  }
+}

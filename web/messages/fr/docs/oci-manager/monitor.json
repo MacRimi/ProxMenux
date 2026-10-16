@@ -1,0 +1,213 @@
+{
+  "meta": {
+    "title": "Récipients OCI en ProxMenux Monitor | ProxMenux",
+    "description": "Ce que ProxMenux Monitor montre pour un conteneur installé par OCI Manager Apps : versions d'applications et d'images, nouvelles images, sortie console et terminal Proxmox VE."
+  },
+  "header": {
+    "title": "Dans ProxMenux Monitor",
+    "description": "Un conteneur installé par OCI Manager Apps apparaît dans VMs & LXCs comme n'importe quel autre LXC. Son modale lit l'enregistrement d'installation : versions d'application et d'image, nouvelles images, sortie console et terminal.",
+    "section": "Applications du gestionnaire OCI"
+  },
+  "sections": [
+    {
+      "id": "intro",
+      "blocks": [
+        {
+          "calloutInfo": {
+            "title": "L'enregistrement est la source",
+            "body": "Le gestionnaire de l'OCI Apps sait ce qu'il a installé et d'où il vient. Le moniteur lit que l'enregistrement d'installation au lieu d'examiner le conteneur, de sorte que les données sont les mêmes que le conteneur est en cours d'exécution ou arrêté."
+          }
+        },
+        {
+          "table": {
+            "headers": [
+              "onglet",
+              "Quels changements pour un contenant OCI"
+            ],
+            "rows": [
+              [
+                "État",
+                "Un commutateur <strong>Watchdog</strong> sous Démarrer au démarrage: l'application est redémarrée quand elle s'arrête seule"
+              ],
+              [
+                "Application",
+                "L'application est identifiée à partir du dossier et les mises à jour sont suivies par l'image"
+              ],
+              [
+                "Mises à jour",
+                "L'image est mise à jour ou l'application modifiée, avec le même flux que le menu OCI"
+              ],
+              [
+                "Montures",
+                "Disques de conteneurs et répertoires hôtes, avec leur utilisation"
+              ],
+              [
+                "Journaux",
+                "Uniquement pour les conteneurs OCI : la sortie console de l'application"
+              ]
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "app",
+      "title": "Application",
+      "intro": "L'onglet <appLink>App</appLink> offre l'application installée comme détection, avec le nom, le logo, le port et le schéma de l'enregistrement. L'enregistrer ouvre l'éditeur avec la méthode <strong>OCI image (installée par ProxMenux)</strong>, qui ne nécessite aucune configuration.",
+      "blocks": [
+        {
+          "cards": {
+            "items": [
+              {
+                "icon": "boxes",
+                "title": "Demande",
+                "body": "La version de l'application à l'intérieur de l'image, lue à partir de l'image elle-même : son environnement ou son étiquette <code>org.opencontainers.image.version</code>. C'est instructif."
+              },
+              {
+                "icon": "archive",
+                "title": "Image",
+                "body": "La date de construction et le digest de l'image installée. La mise à jour est décidée ici: le digest installé est comparé à celui que le registre publie aujourd'hui pour le même tag."
+              }
+            ]
+          }
+        },
+        {
+          "list": {
+            "items": [
+              "Lorsque le registre publie un nouveau digest, la carte affiche <strong>Nouvelle image</strong> avec sa date et son digest, même si la version de l'application à l'intérieur n'a pas changé: une reconstruction sur une base mise à jour est une mise à jour.",
+              "Lorsque les digests correspondent, la carte lit <strong>Version</strong>.",
+              "La carte relie au dépôt de l'image : son projet GitHub, ou sa page centrale Docker pour une image officielle.",
+              "Le lien d'accès utilise l'adresse LAN du conteneur, également pour le membre principal d'une application multi-conteneurs, qui a une deuxième adresse sur son réseau privé.",
+              "Le bouton <strong>Données fraîches</strong> lit à nouveau l'enregistrement et le registre. Les options pour rechercher des demandes ou en enregistrer une autre ne sont pas proposées : le conteneur contient exactement l'application de son enregistrement."
+            ]
+          }
+        },
+        {
+          "figure": {
+            "src": "/oci-manager/monitor-app-tab.png",
+            "alt": "Onglet App d'un conteneur OCI avec la version de l'application, l'image et le lien du dépôt",
+            "caption": "Onglet App d'un conteneur installé par le gestionnaire d'OCI Apps."
+          }
+        },
+        {
+          "p": "La vérification s'effectue une fois par jour avec les vérifications de mise à jour du moniteur, et <strong>Données fraîches</strong> l'exécute immédiatement. Une nouvelle image est envoyée sous forme de notification via les canaux configurés dans <notificationsLink>Notifications</notificationsLink>. La mise à jour est appliquée depuis l'onglet Mises à jour."
+        }
+      ]
+    },
+    {
+      "id": "updates",
+      "title": "Mises à jour",
+      "intro": "Pour un conteneur installé par le gestionnaire de l'OCI, l'onglet Mises à jour affiche l'application avec son image installée et, lorsque le registre en publie une, la nouvelle image, dans le même format que toute autre application. Les mises à jour du paquet et de l'application d'un LXC ordinaire n'apparaissent pas.",
+      "blocks": [
+        {
+          "table": {
+            "headers": [
+              "Bouton",
+              "Ce qu'il ouvre"
+            ],
+            "rows": [
+              [
+                "Mise à jour",
+                "La mise à jour de <lifecycleLink>Manage installé OCI applications</lifecycleLink> pour ce conteneur, dans le terminal Monitor. Il peut courir s'il y a ou non une nouvelle image ; sans rien, rien n'est changé. Dans une application multi-conteneurs, il met à jour chaque membre."
+              ],
+              [
+                "Modifier",
+                "L'éditeur de l'application (ressources, réseau, chemins et GPU). Dans une application multi-conteneurs, il ajoute ou supprime les chemins et périphériques supplémentaires du conteneur d'application et, dans Immich, modifie ce qui exécute la reconnaissance."
+              ],
+              [
+                "Récupérer",
+                "Remplace Mise à jour quand une opération sur le conteneur a été interrompue, et ouvre sa récupération."
+              ],
+              [
+                "Récupération (contenant remis en état)",
+                "Montré pour un conteneur restauré à partir d'une sauvegarde qui n'a aucun contrat sur cet hôte, sous <strong>Restauré application OCI</strong>. Ouvre le <lifecycleLink>recovery</lifecycleLink> dans le terminal Monitor; Mettre à jour et modifier apparaissent une fois qu'il est enregistré."
+              ]
+            ]
+          }
+        },
+        {
+          "p": "Les modifications externes, les répertoires hôtes et les applications multiconteneurs sont traités comme dans le menu OCI. Dans une application multi-conteneurs, les boutons et les options apparaissent uniquement sur le conteneur principal; les autres membres montrent leur image, une note qu'ils sont mis à jour à partir du conteneur principal et un bouton qui l'ouvre. Lorsque le terminal se ferme, l'image, l'enregistrement et les supports sont à nouveau lus."
+        },
+        {
+          "table": {
+            "headers": [
+              "Option",
+              "Comportement"
+            ],
+            "rows": [
+              [
+                "Conserver la sauvegarde prise avant la mise à jour",
+                "Chaque mise à jour sauvegarde le conteneur pour le restaurer si la mise à jour échoue. Avec cette option que la même sauvegarde est conservée dans le stockage choisi et apparaît parmi les sauvegardes du CT; sur Proxmox Backup Server une sauvegarde est écrite avant la mise à jour."
+              ],
+              [
+                "Mises à jour programmées",
+                "L'image est mise à jour à l'heure choisie seulement lorsque le registre publie un nouveau, et en option seulement une fois qu'il est 1, 3, 7 ou 14 jours. Un contenant avec des modifications faites à l'extérieur du ProxMenux est déclassé et signalé."
+              ]
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "logs",
+      "title": "Journaux",
+      "intro": "L'onglet Logs n'apparaît que pour les conteneurs installés par l'OCI Manager Apps, entre Monts et Sauvegardes. Il montre la sortie standard et l'erreur du processus principal de l'image, la même sortie <code>docker logs</code> affiche pour un conteneur Docker.",
+      "blocks": [
+        {
+          "list": {
+            "items": [
+              "La sortie est conservée sur l'hôte dans <code>/var/log/proxmenux/oci/VMID.console.log</code> (mode 0600), dès le premier démarrage et sur les redémarrages, de sorte qu'il peut être lu avec le conteneur arrêté.",
+              "Le fichier est tourné à 10 MB, en conservant trois copies compressées (<code>/etc/logrotate.d/proxmenux-oci</code>).",
+              "Chaque début du conteneur est marqué dans la sortie. L'onglet affiche la sortie depuis le dernier départ par défaut; <strong>L'historique complet</strong> montre également les précédents.",
+              "Lorsque l'application est supprimée, sa sortie est supprimée avec elle.",
+              "Les dernières lignes 100, 500 ou 1000 sont indiquées. Pendant que le conteneur tourne, de nouvelles lignes sont suivies en direct; le défilement vers le haut pause le suivant, et <strong>Suivant</strong> le reprend.",
+              "Un filtre n'indique que les lignes qui contiennent un texte, et <strong>Download</strong> enregistre les lignes chargées.",
+              "Les codes de couleur sont supprimés et une ligne qu'une barre de progression redessine est affichée dans son état final.",
+              "L'onglet lit le fichier sur chaque ouvert; il n'est pas mis en cache."
+            ]
+          }
+        },
+        {
+          "calloutInfo": {
+            "title": "Titres de créance du premier départ",
+            "body": "Les images qui impriment un mot de passe généré sur leur premier démarrage le laissent dans cette sortie, comme le fait <code>docker logs</code>. L'installateur le lit à partir de là pour le montrer dans son résumé."
+          }
+        },
+        {
+          "figure": {
+            "src": "/oci-manager/monitor-logs-tab.png",
+            "alt": "Onglet Logs avec la sortie console d'un conteneur OCI, le sélecteur de ligne, le filtre et le bouton suivant",
+            "caption": "Sortie de console d'un conteneur OCI."
+          }
+        }
+      ]
+    },
+    {
+      "id": "terminal",
+      "title": "Console Proxmox VE",
+      "blocks": [
+        {
+          "p": "Une image OCI exécute son propre processus comme PID 1 et aucun service de connexion, de sorte que la console par défaut d'un LXC ouvrirait un terminal rien ne répond sur. Les conteneurs installés par OCI Manager Apps sont créés avec <code>cmode: shell</code> : la console Proxmox VE ouvre un shell avec <code>lxc-attach</code>, l'équivalent de <code>docker exec</code>, avec l'application en cours d'exécution intacte."
+        },
+        {
+          "list": {
+            "items": [
+              "Le shell est celui que <code>/etc/passwd</code> donne à racine dans l'image. Une image dont la racine n'a pas de shell, ou n'en envoie aucune, conserve la console par défaut.",
+              "Le shell est racine dans le conteneur, sans mot de passe. Qui peut l'ouvrir est décidé par la permission <code>VM.Console</code> de Proxmox VE.",
+              "Le terminal du moniteur entre dans le conteneur avec <code>pct enter</code>, qui fonctionne de la même manière."
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "mounts",
+      "title": "Montures",
+      "blocks": [
+        {
+          "p": "L'onglet <mountsLink>Mounts</mountsLink> énumère les disques de conteneur et les répertoires hôtes du conteneur. L'utilisation d'un disque de conteneur sur le stockage de blocs comme LVM-thin est lue à partir du système de fichiers du disque, qui est monté uniquement à l'intérieur du conteneur."
+        }
+      ]
+    }
+  ]
+}

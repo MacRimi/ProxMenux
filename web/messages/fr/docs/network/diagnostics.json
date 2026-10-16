@@ -1,0 +1,94 @@
+{
+  "meta": {
+    "title": "Diagnostics Documentation ProxMenux",
+    "description": "Trois vérifications diagnostiques en lecture seule : Afficher la table d'acheminement, Test Connectivité et diagnostics avancés. L'inspection pure — n'écrit jamais à /etc/network/interfaces et n'exécute jamais une commande de modification (une exception explicite, opt-in pour purger NetworkManager quand détecté).",
+    "ogTitle": "Diagnostics Documentation ProxMenux",
+    "ogDescription": "Diagnostic réseau en lecture seule pour l'hôte Proxmox : routage, accessibilité, statistiques avancées."
+  },
+  "header": {
+    "title": "Diagnostic",
+    "description": "Trois vérifications en lecture seule et en une prise qui inspectent l'état du réseau en direct : table de routage, test de connectivité et statistiques avancées. Aucun d'entre eux n'écrit à /etc/network/interfaces — sans danger à utiliser à tout moment, y compris au-dessus de SSH. Pour une surveillance interactive en direct, voir les outils de surveillance en direct.",
+    "section": "Réseau"
+  },
+  "intro": {
+    "title": "Ce que ça fait",
+    "body": "Rapports sur l'acheminement, l'accessibilité et les statistiques agrégées <strong> sans modifier quoi que ce soit</strong>. Utilisez-le pour confirmer que le réseau est sain ou identifier les IP dupliquées. Pour l'observation continue du trafic, voir <monitoringLink>Outils de surveillance en direct</monitoringLink>; pour l'affichage du fichier de configuration brut, voir <backupLink>Interfaces backup & retrocover</backupLink>."
+  },
+  "routing": {
+    "heading": "Afficher la table de routage",
+    "body": "Liste chaque route que le noyau utilise actuellement (<code>ip route show</code>) et souligne la passerelle par défaut. Utile pour confirmer que le trafic vers Internet passe par l'interface prévue et qu'aucune route restante n'a priorité."
+  },
+  "connectivity": {
+    "heading": "Tester la connectivité",
+    "intro": "Envoie deux sondes ICMP à trois cibles dans l'ordre et signale chacune. Ensuite, exécute un <code>nslookup google.com</code> pour vérifier la résolution DNS indépendamment de ICMP.",
+    "headerTest": "Essai",
+    "headerTarget": "Cible",
+    "headerConfirms": "Ce qu'il confirme",
+    "rows": [
+      {
+        "test": "Google DNS",
+        "target": "8.8.8.8",
+        "confirms": "Accessibilité externe grâce à une IP de diffusion bien connue"
+      },
+      {
+        "test": "Cloudflare DNS",
+        "target": "1.1.1.1",
+        "confirms": "Deuxième avis indépendant si Google bloque ICMP"
+      },
+      {
+        "test": "Passerelle",
+        "target": "(par défaut)",
+        "confirms": "Connectivité L2 / L3 au routeur local"
+      },
+      {
+        "test": "Résolution DNS",
+        "target": "google.com",
+        "confirms": "Le serveur DNS est accessible et répond"
+      }
+    ],
+    "readingTitle": "Lecture du résultat",
+    "readingBody": "Si le test de passerelle passe mais que les cibles publiques DNS échouent, vous avez une connectivité locale, mais pas d'internet – vérifiez que la passerelle est en amont. Si la résolution DNS échoue mais que les pings sur <code>8.8.8.8</code> réussissent, le problème est le résolveur, et non le réseau : cochez <code>/etc/resolv.conf</code>."
+  },
+  "advanced": {
+    "heading": "Diagnostic avancé",
+    "intro": "Agrége les statistiques à l'échelle du réseau et effectue une batterie de contrôles communs. Signale le nombre de connexions actives, les ports d'écoute, les interfaces totales et les drapeaux de deux anti-patterns explicitement:",
+    "items": [
+      "<strong>NetworkManager fonctionnant sur un hôte Proxmox.</strong> NetworkManager et le conflit <code>ifupdown</code> de Proxmox – tous deux tentent de gérer les interfaces, menant à des ponts qui se rabattent ou refusent de monter. Si l'outil est détecté, il offre une invitation interactive pour l'arrêter, le désactiver et le purger (c'est le diagnostic <em>seulement</em> qui peut modifier le système, et seulement après consentement explicite).",
+      "<strong>Dupliquer les adresses IP sur différentes interfaces.</strong> Deux interfaces tenant la même IPv4 cause une connectivité intermittente qui est extrêmement difficile à déboguer de l'intérieur du VM. Détecté par <code>ip -4 addr show | sort | uniq -d</code>."
+    ],
+    "nmTitle": "L'invite NetworkManager est la seule action de modification ici",
+    "nmBody": "Chaque autre vérification dans Advanced Diagnostics est en lecture seule. La suppression de NetworkManager est fermée derrière une boîte de dialogue oui/non et exécute <code>systemctl stop / disable</code> + <code>apt-get purge -y network-manager</code>. Si vous déclinez, rien ne change."
+  },
+  "troubleshoot": {
+    "heading": "Dépannage",
+    "gwTitle": "Test Connectivity signale que la passerelle a échoué mais que l'hôte a Internet",
+    "gwBody": "Certains routeurs ne répondent pas à ICMP à partir de leur interface interne même lorsqu'ils avancent volontiers le trafic. Tester avec <code>traceroute 8.8.8.8</code> depuis une console : si le deuxième saut est votre FAI et que le test public DNS est passé, la passerelle est bonne malgré la ping ratée.",
+    "dupTitle": "Advanced Diagnostics continue de brandir des IP dupliqués après que j'ai retiré un",
+    "dupBody": "La vérification examine l'état du noyau en direct, et non le fichier de configuration. Exécutez <code>ip -4 addr show</code> pour confirmer ; si le duplicata est toujours présent, une interface le tient toujours. Utilisez <code>ip addr del &lt;IP&gt;/&lt;mask&gt; dev &lt;iface&gt;</code> pour le supprimer de l'état en direct, puis modifiez <code>/etc/network/interfaces</code> si elle est aussi persistante."
+  },
+  "related": {
+    "heading": "Autres",
+    "items": [
+      {
+        "label": "Outils de surveillance en direct",
+        "href": "/docs/network/monitoring",
+        "tail": "— les lanceurs interactifs iftop / iptraf-ng / iperf3."
+      },
+      {
+        "label": "Analyse des ponts et réparation guidée",
+        "href": "/docs/network/bridge-analysis",
+        "tail": "— lorsqu'un vmbrX manque son port physique."
+      },
+      {
+        "label": "Analyse de Config & nettoyage guidé",
+        "href": "/docs/network/config-analysis",
+        "tail": "— lorsqu'une ancienne CNI est encore déclarée mais n'est plus présente."
+      },
+      {
+        "label": "Sauvegarde et redémarrage des interfaces",
+        "href": "/docs/network/backup-restore",
+        "tail": "— photographier la configuration avant toute modification."
+      }
+    ]
+  }
+}

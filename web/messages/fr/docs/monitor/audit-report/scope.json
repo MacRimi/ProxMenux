@@ -1,0 +1,115 @@
+{
+  "meta": {
+    "title": "Portée et garanties",
+    "description": "D'où proviennent les données de Audit & Report, ce qui est hors de son point de vue, les garanties de sa conception et où ses données sont stockées."
+  },
+  "header": {
+    "title": "Portée et garanties",
+    "description": "D'où proviennent les données d'une évaluation, ce qui reste hors de sa vue et où Audit & Report conserve ses données.",
+    "section": "Audit et rapports"
+  },
+  "sections": [
+    {
+      "id": "sees",
+      "title": "Ce qu'il observe",
+      "blocks": [
+        {
+          "list": {
+            "items": [
+              "Configuration et état du nœud local.",
+              "La configuration déclarée des VM et des LXC.",
+              "L'état du stockage comme Proxmox VE le sait.",
+              "L'historique disponible des sauvegardes et des vérifications.",
+              "Les données SMART et les événements que le moniteur a recueillis.",
+              "État des services, cluster, HA et sources locales."
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "outside",
+      "title": "Ce qui est hors de sa vue",
+      "blocks": [
+        {
+          "list": {
+            "items": [
+              "L'intérieur des invités, au-delà de ce qu'ils déclarent à Proxmox VE.",
+              "Équipement réseau à l'extérieur de l'hôte.",
+              "Dépendances éloignées que le noeud ne peut pas observer.",
+              "État physique du matériel ne s'expose pas.",
+              "Actions manuelles ou d'autres logiciels, dans la revue de changement."
+            ]
+          }
+        },
+        {
+          "calloutWarning": {
+            "title": "Une preuve manquante n'est pas une preuve d'absence",
+            "body": "Une source qui ne peut être lue donne un résultat non vérifié ou incomplet, jamais conforme. Le rapport énumère les sources qui n'étaient pas disponibles."
+          }
+        }
+      ]
+    },
+    {
+      "id": "guarantees",
+      "title": "Garanties de conception",
+      "blocks": [
+        {
+          "list": {
+            "items": [
+              "Des identifiants stables pour les vérifications.",
+              "Histoire des pistes et des découvertes.",
+              "Une politique validée, sauvée atomiquement.",
+              "Risques acceptés avec une raison visible.",
+              "Attribution des modifications au script et à la fonction.",
+              "Capturer avant et après, où il est disponible.",
+              "Un résultat explicite lorsque quelque chose ne peut être mesuré ou capturé."
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "storage",
+      "title": "Où les données sont stockées",
+      "blocks": [
+        {
+          "table": {
+            "headers": [
+              "Données",
+              "Emplacement"
+            ],
+            "rows": [
+              [
+                "Politique",
+                "<code>/usr/local/share/proxmenux/audit_policy.json</code>"
+              ],
+              [
+                "Contributions",
+                "La base de données d'audit de l'Observatoire"
+              ],
+              [
+                "Objets capturés",
+                "<code>/usr/local/share/proxmenux/changes/objects/</code>"
+              ],
+              [
+                "Entrées en attente",
+                "<code>/usr/local/share/proxmenux/changes/spool/</code>"
+              ],
+              [
+                "Revue consolidée",
+                "<code>/usr/local/share/proxmenux/changes.db</code>"
+              ]
+            ]
+          }
+        },
+        {
+          "calloutInfo": {
+            "title": "Un outil d'examen, pas une certification",
+            "body": "Audit & Rapport examine, compare et documente le nœud. Ses résultats sont lus conjointement avec l'objectif du système, la politique déclarée et les sources disponibles."
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,247 @@
+{
+  "meta": {
+    "title": "Rapports et comparaisons",
+    "description": "Les six documents d'audit et de rapport, comment ils sont imprimés ou enregistrés en format PDF, et comment les opérations sont comparées à une opération de référence."
+  },
+  "header": {
+    "title": "Rapports et comparaisons",
+    "description": "Six documents, chacun composé pour une question différente, et la comparaison de chaque course avec une course de référence.",
+    "section": "Audit et rapports"
+  },
+  "sections": [
+    {
+      "id": "intro",
+      "blocks": [
+        {
+          "calloutInfo": {
+            "title": "Six documents, pas six styles",
+            "body": "Le moteur sélectionne les vérifications et les sections avant de composer le document. Un diagnostic rapide n'est pas une vérification complète avec moins de pages, et un inventaire ne présente aucun résultat d'évaluation. Les échantillons ci-dessous utilisent des données fictives."
+          }
+        }
+      ]
+    },
+    {
+      "id": "documents",
+      "title": "Les six documents",
+      "blocks": [
+        {
+          "downloads": {
+            "items": [
+              {
+                "title": "Audit complet",
+                "body": "Documenter le nœud en fin de document technique.",
+                "href": "/monitor/audit/sample-audit-full-report.pdf",
+                "facts": [
+                  {
+                    "label": "Contrôles",
+                    "value": "Tous les chèques disponibles."
+                  },
+                  {
+                    "label": "Sommaire",
+                    "value": "Sommaire exécutif; identité et grappe; matériel; réseau et latence; stockage; invités; transmission; applications; constatations avec preuves; sources et portée."
+                  }
+                ]
+              },
+              {
+                "title": "Diagnostic rapide",
+                "body": "Montre ce qui a besoin d'attention sans l'inventaire complet.",
+                "href": "/monitor/audit/sample-audit-diagnostic-report.pdf",
+                "facts": [
+                  {
+                    "label": "Contrôles",
+                    "value": "Les mêmes vérifications que la vérification complète."
+                  },
+                  {
+                    "label": "Sommaire",
+                    "value": "Identité minimale; constatations critiques; avertissements; observations pertinentes; lectures non vérifiées et mesures prioritaires. Les diagrammes, les inventaires et les longues annexes sont exclus."
+                  }
+                ]
+              },
+              {
+                "title": "Inventaire",
+                "body": "Décrit ce qui existe sur le noeud sans l'évaluer.",
+                "href": "/monitor/audit/sample-audit-inventory-report.pdf",
+                "facts": [
+                  {
+                    "label": "Contrôles",
+                    "value": "Aucune; aucune conclusion n'est classée."
+                  },
+                  {
+                    "label": "Sommaire",
+                    "value": "Identité; cluster; CPU et mémoire; carte, BIOS et contrôleurs; réseau; stockage; VM et LXC; transmission; applications et éléments gérés par ProxMenux."
+                  }
+                ]
+              },
+              {
+                "title": "Examen de la sécurité",
+                "body": "Couvre l'exposition et les contrôles sur l'accès au nœud.",
+                "href": "/monitor/audit/sample-audit-security-report.pdf",
+                "facts": [
+                  {
+                    "label": "Contrôles",
+                    "value": "La zone de sécurité, plus les privilèges de conteneur, les mises à jour, les dépôts et la chaîne APT."
+                  },
+                  {
+                    "label": "Sommaire",
+                    "value": "Identité et regroupement; réseau et latence; accès; pare-feu; 2FA; certificats; privilèges; mises à jour; dépôts; état et âge de Lynis."
+                  }
+                ]
+              },
+              {
+                "title": "Assurance de sauvegarde",
+                "body": "Vérifier que la protection déclarée existe et que ses sauvegardes sont utilisables.",
+                "href": "/monitor/audit/sample-audit-backup-report.pdf",
+                "facts": [
+                  {
+                    "label": "Contrôles",
+                    "value": "La zone de sauvegarde, la connectivité de stockage et la livraison de notification."
+                  },
+                  {
+                    "label": "Sommaire",
+                    "value": "Couverture par client; objectif déclaré de récupération; âge et résultat; destination; maintien en poste; vérification; emplois échoués; récupération et sources incomplètes."
+                  }
+                ]
+              },
+              {
+                "title": "Capacité et usure",
+                "body": "Mesure la marge de croissance et les signes d'épuisement ou de vieillissement.",
+                "href": "/monitor/audit/sample-audit-capacity-report.pdf",
+                "facts": [
+                  {
+                    "label": "Contrôles",
+                    "value": "Les zones de stockage et de matériel, plus mémoire, échange, journal et le système de fichiers hôte."
+                  },
+                  {
+                    "label": "Sommaire",
+                    "value": "Utilisation et seuils; pools minces; surprovisionnement; mémoire; inodes; ZFS; températures; heures de puissance; erreurs SMART et durée de vie des NVMe/SSD."
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "figure": {
+            "src": "/monitor/audit/audit-report-preview.png",
+            "alt": "Première page d'un rapport d'audit complet",
+            "caption": "Chaque document partage l'identificateur de rapport, les sections numérotées, la date, le noeud, le profil et le pied de page."
+          }
+        },
+        {
+          "p": "Un document contient l'identité du nœud et la date de l'évaluation, le résultat exécutif, un résumé par secteur, la structure du matériel, du réseau et du stockage, la protection des invités, les conclusions avec leurs preuves, les sources qui n'ont pas pu être lues et la portée et la politique appliquées, dans la mesure où chaque profil les inclut."
+        }
+      ]
+    },
+    {
+      "id": "print",
+      "title": "Impression ou enregistrement en format PDF",
+      "blocks": [
+        {
+          "steps": {
+            "items": [
+              {
+                "title": "Exécuter",
+                "body": "Une évaluation s'effectue avec le profil sélectionné dans <strong>Report</strong>."
+              },
+              {
+                "title": "Révision",
+                "body": "La version finale montre ses conclusions, les sources qu'elle n'a pas pu lire et la politique qu'elle a appliquée."
+              },
+              {
+                "title": "Générer le rapport",
+                "body": "<strong>Rapport général</strong> ouvre la vue préparée comme document."
+              },
+              {
+                "title": "Imprimer",
+                "body": "<strong>Imprimer ou enregistrer sous PDF</strong> ouvre la boîte de dialogue d'impression du navigateur, où une imprimante ou <em>Enregistrer sous PDF</em> est sélectionné."
+              }
+            ]
+          }
+        },
+        {
+          "calloutTip": {
+            "title": "L'impression est un document, pas une capture d'écran",
+            "body": "La barre d'action est cachée, une table qui continue sur la page suivante répète son en-tête, bloque les pauses inutiles et chaque page conserve l'identification et la numérotation."
+          }
+        }
+      ]
+    },
+    {
+      "id": "compare",
+      "title": "Comparaison avec un parcours de référence",
+      "intro": "<strong>Utilisez comme référence</strong> marque un parcours fini comme référence. Les tirages ultérieurs sont comparés et leurs résultats sont séparés en:",
+      "blocks": [
+        {
+          "table": {
+            "headers": [
+              "Groupe",
+              "Signification"
+            ],
+            "rows": [
+              [
+                "Nouveau",
+                "Signalé maintenant et pas avant."
+              ],
+              [
+                "Aggravés",
+                "Toujours signalé, et plus grave ou atteignant plus loin qu'auparavant."
+              ],
+              [
+                "Améliorés",
+                "Toujours signalé, mais moins grave ou atteignant moins loin qu'auparavant."
+              ],
+              [
+                "Résolue",
+                "Plus de rapport, et personne ne les a acceptés."
+              ],
+              [
+                "Acceptés",
+                "N'est plus compté parce qu'un risque a été accepté, pas parce que l'hôte a changé."
+              ],
+              [
+                "Plus évalués",
+                "Présent avant et absent de cette course; rien n'a vérifié qu'ils se sont arrêtés."
+              ]
+            ]
+          }
+        },
+        {
+          "table": {
+            "headers": [
+              "Exécution de référence",
+              "Comportement"
+            ],
+            "rows": [
+              [
+                "Réglage",
+                "Tout parcours terminé peut être marqué ; aucun n'est marqué automatiquement."
+              ],
+              [
+                "Changer",
+                "Marquage d'une autre course déplace la référence sans supprimer l'historique."
+              ],
+              [
+                "Comparaison",
+                "Lorsqu'il n'y a pas deux tours sélectionnés, la comparaison utilise la référence et l'exécution sélectionnée ou la plus récente."
+              ],
+              [
+                "Garder les pistes",
+                "Les sorties les plus récentes de 30 sont conservées, et l'exécution de référence n'est jamais supprimée."
+              ],
+              [
+                "Sans référence",
+                "L'avis indique qu'aucune course de référence n'a encore été choisie, il n'y a donc rien à comparer."
+              ]
+            ]
+          }
+        },
+        {
+          "calloutWarning": {
+            "title": "Un rapport décrit un moment",
+            "body": "Une évaluation ne certifie pas une période entière. Les anciens résultats cessent de décrire l'état actuel; la vue montre l'âge de la dernière sortie et chaque source conserve le temps de collecte."
+          }
+        }
+      ]
+    }
+  ]
+}

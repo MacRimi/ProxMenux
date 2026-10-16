@@ -1,0 +1,70 @@
+{
+  "meta": {
+    "title": "Installer Kodi dans un LXC avec GPU Accélération ProxMenux Guides",
+    "description": "Exécutez Kodi dans un conteneur LXC privilégié sur Proxmox VE, exposez les périphériques d'entrée iGPU et USB hôtes et transformez le serveur Proxmox en un centre multimédia tout-en-un connecté directement à un téléviseur.",
+    "ogTitle": "Installez Kodi dans un LXC avec GPU Accélération",
+    "ogDescription": "Exécutez Kodi à l'intérieur d'un LXC privilégié sur Proxmox VE avec l'hôte iGPU et l'entrée USB passant — transformez le serveur en un centre multimédia tout-en-un."
+  },
+  "header": {
+    "title": "Installez Kodi dans un LXC et Connectez-le à un moniteur / TV avec GPU Accélération",
+    "description": "Exécutez Kodi dans un conteneur LXC privilégié sur Proxmox VE, exposez les périphériques d'entrée iGPU et USB hôtes et transformez le serveur Proxmox en un centre multimédia tout-en-un connecté directement à un téléviseur.",
+    "section": "Guides"
+  },
+  "intro": {
+    "calloutTitle": "Attention",
+    "calloutBody": "Ce guide utilise un script de communauté externe pour bootstrap le Kodi LXC. Le côté GPU de l'installation (passant l'iGPU hôte dans le conteneur) est également couvert par le flux automatisé ProxMenux : <strong>GPUs et Coral-TPU → Ajouter GPU à LXC</strong> dans le menu ProxMenux — gère le câblage <code>/dev/dri</code> + pilote installé à l'intérieur du CT. Le script ci-dessous en plus bootstraps Kodi lui-même et le démarrage automatique sur <code>tty7</code>. Utilisez-le si vous voulez un centre multimédia clé en main LXC; utilisez le flux <gpuLink>ProxMenux</gpuLink> si vous avez seulement besoin d'un accès GPU pour un CT que vous avez configuré à la main.",
+    "credit": "script original Kodi LXC créé par <authorLink>mrrudy</authorLink>.",
+    "stepsTitle": "Ce que tu vas faire",
+    "steps": [
+      "Créez un LXC privilégié en utilisant Kodi (drivé par le script).",
+      "Transférez votre clavier, souris ou contrôleur USB dans le CT.",
+      "(Facultatif) Mettre à jour Kodi à la dernière version de l'équipe-xbmc PPA."
+    ]
+  },
+  "createCt": {
+    "heading": "1. Créer le Kodi LXC",
+    "body": "Le CT doit être <strong>privilégié</strong> afin qu'il puisse accéder aux périphériques d'entrée USB (claviers, télécommandes, contrôleurs). Le script gère les drapeaux privilèges + câblage GPU + installation Kodi + démarrage automatique sur <code>tty7</code> :",
+    "code": "bash -c \"$(wget -qLO - https://raw.githubusercontent.com/mrrudy/proxmoxHelper/main/ct/kodi-v1.sh)\"",
+    "after": "Soyez patient — il faut un certain temps pour l'installer. Quand il se termine et Kodi démarre sur <code>tty7</code>, vous pouvez brancher votre moniteur ou votre téléviseur directement dans la sortie HDMI / DisplayPort de l'hôte et vous devriez voir l'interface utilisateur Kodi."
+  },
+  "addInput": {
+    "heading": "2. Ajouter un clavier, une souris ou un contrôleur USB",
+    "body": "Les périphériques d'entrée vivent sous <code>/dev/input/</code> sur l'hôte. Identifier le numéro principal:",
+    "listCode": "ls -l /dev/input",
+    "imageAlt": "Liste des périphériques d'entrée",
+    "afterList": "Prenez le premier numéro de colonne (dans l'exemple : <code>13</code>). Arrêtez le Kodi LXC, puis modifiez sa configuration (remplacez <code>'<'CTID'>'</code> avec l'ID du conteneur — par exemple, <code>102</code>):",
+    "editCode": "nano /etc/pve/lxc/'<'CTID'>'.conf",
+    "addLines": "Ajoutez (ajustez <code>13</code> à ce que vous avez vu sur l'hôte <strong>votre</strong>):",
+    "configCode": "lxc.cgroup2.devices.allow = c 13:* rwm\nlxc.mount.entry: /dev/input dev/input none bind,optional,create=dir",
+    "imageConfigAlt": "Configuration LXC",
+    "save": "Enregistrer (<code>Ctrl+X</code>) et redémarrer <strong>seulement le conteneur</strong> — pas besoin de redémarrer tout l'hôte Proxmox:",
+    "restartCode": "pct restart '<'CTID'>'",
+    "plug": "Branchez le clavier / souris / contrôleur et Kodi devrait y répondre."
+  },
+  "updateKodi": {
+    "heading": "3. (Facultatif) Mettre à jour Kodi à la dernière version",
+    "calloutTitle": "Important",
+    "calloutBody": "Le PPA team-xbmc est <strong>Ubuntu-only</strong>. Si le Kodi LXC est basé sur un modèle Debian, <code>add-apt-repository</code> ne sera pas disponible et le PPA ne fonctionnera pas. Le script mrrudy par défaut sur un modèle Ubuntu, donc cela devrait normalement s'appliquer. Pour vérifier: <code>cat /etc/os-release</code> à l'intérieur du conteneur — recherchez <code>NAME=\"Ubuntu\"</code>.",
+    "body": "À l'intérieur du contenant (<code>pct enter '<'CTID'>'</code>):",
+    "code": "sudo add-apt-repository ppa:team-xbmc/ppa\nsudo apt update\nsudo apt install kodi kodi-bin",
+    "after": "Redémarrez le conteneur quand il se terminera; sur le démarrage vous aurez le dernier Kodi."
+  },
+  "screenshots": {
+    "heading": "Captures d'écran",
+    "image1Alt": "Interface Kodi 1",
+    "image2Alt": "Interface Kodi 2"
+  },
+  "troubleshoot": {
+    "heading": "Dépannage",
+    "items": [
+      "<strong>Kodi LXC démarre mais rien sur le téléviseur:</strong> le CT n'a peut-être pas hérité de l'iGPU. Confirmer avec <code>ls /dev/dri</code> à l'intérieur du contenant (vous devriez voir <code>card0</code>, <code>renderD128</code>). Si vide, la passe passante GPU n'a pas été appliquée — lancez le script ou utilisez le menu ProxMenux <strong>Ajouter GPU au menu LXC</strong>.",
+      "<strong>Keyboard / souris non détecté après redémarrage:</strong> le numéro principal pour <code>/dev/input</code> a changé (rare, mais se produit après les mises à jour du noyau). Relancer <code>ls -l /dev/input</code> sur l'hôte et mettre à jour la ligne <code>lxc.cgroup2.devices.allow</code>.",
+      "<strong>La lecture accélérée du logiciel utilise CPU au lieu de GPU:</strong> installer ou mettre à jour les pilotes VA-API à l'intérieur du conteneur (<code>intel-media-va-driver</code> pour les plus récents Intel iGPUs, <code>i965-va-driver</code> pour les plus anciens, <code>mesa-va-drivers</code> sur AMD).",
+      "<strong><code>add-apt-repository: command not found</code>:</strong> le conteneur est Debian, pas Ubuntu. Utilisez les paquets Kodi Debian (plus anciens mais stables) ou recréez le CT à partir d'un modèle Ubuntu."
+    ]
+  },
+  "further": {
+    "heading": "Pour en savoir plus",
+    "konpatRich": "<konpatLink>Le blog de Konpat post</konpatLink> — contexte supplémentaire sur Intel iGPU passé dans LXC."
+  }
+}
