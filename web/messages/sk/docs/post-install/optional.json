@@ -119,9 +119,9 @@
     "intro": "Táto voľba nainštaluje a konfiguruje Figurine, nástroj, ktorý vytvára štýlové ASCII textové bannery pre váš terminál, zobrazujúci vaše meno hostiteľa vo vizuálne atraktívnom 3D formáte.",
     "doesLabel": "Čo robí:",
     "doesItems": [
-      "Stiahne a nainštaluje Figurine v2.0.0 z GitHub",
+      "Stiahne a nainštaluje Figurine v2.1.1 z GitHubu pre architektúru hostiteľa (AMD64, ARM64 alebo ARMv7)",
       "Vytvorí uvítaciu správu, ktorá zobrazí vaše meno hostiteľa v 3D ASCII umení pri prihlásení",
-      "Automaticky odstráni akúkoľvek predchádzajúcu inštaláciu Figurine, ak je prítomná",
+      "Aktualizuje existujúci binárny súbor Figurine až po úspešnom stiahnutí a rozbalení",
       "Nastaví uvítaciu správu pre automatické spustenie pri prihlásení"
     ],
     "practicalLabel": "Praktické použitie:",

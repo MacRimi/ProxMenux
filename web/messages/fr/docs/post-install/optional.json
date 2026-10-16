@@ -119,9 +119,9 @@
     "intro": "Cette option installe et configure Figurine, un outil qui crée des bannières texte ASCII élégantes pour votre terminal, affichant votre nom d'hôte dans un format 3D attrayant visuellement.",
     "doesLabel": "Ce qu'il fait:",
     "doesItems": [
-      "Télécharger et installer Figurine v2.0.0 de GitHub",
+      "Télécharge et installe Figurine v2.1.1 depuis GitHub pour l’architecture de l’hôte (AMD64, ARM64 ou ARMv7)",
       "Crée un message de bienvenue qui affiche votre nom d'hôte dans l'art 3D ASCII lorsque vous vous connectez",
-      "Supprime automatiquement toute installation précédente de Figurine si présente",
+      "Met à jour le binaire Figurine existant une fois le téléchargement et l’extraction terminés avec succès",
       "Configure le message de bienvenue à exécuter automatiquement à la connexion"
     ],
     "practicalLabel": "Utilisation pratique:",

@@ -119,9 +119,9 @@
     "intro": "Det här alternativet installerar och konfigurerar Figurine, ett verktyg som skapar snygga ASCII-textbanners för din terminal och visar ditt värdnamn i ett visuellt tilltalande 3D-format.",
     "doesLabel": "Vad det gör:",
     "doesItems": [
-      "Nedladdningar och installerar Figurine v2.0.0 från GitHub",
+      "Hämtar och installerar Figurine v2.1.1 från GitHub för värdens arkitektur (AMD64, ARM64 eller ARMv7)",
       "Skapa ett välkomstmeddelande som visar ditt värdnamn i 3D ASCII-konst när du loggar in",
-      "Automatiskt tar bort tidigare Figurine-installation om den finns",
+      "Uppdaterar en befintlig Figurine-binär först när hämtningen och uppackningen har slutförts utan fel",
       "Ställ in välkomstmeddelandet för att köra automatiskt vid inloggningen"
     ],
     "practicalLabel": "Praktisk användning:",
