@@ -1,65 +1,65 @@
 {
   "meta": {
-    "title": "Hur en OCI-bild översätts | ProxMenux",
-    "description": "Från bildförvaret och dess Compose-fil till en översynsbar mall, en distributionsplan och en infödd Proxmox VE LXC, utan Docker inuti."
+    "title": "Så anpassas en OCI-avbildning | ProxMenux",
+    "description": "Från avbildningens arkiv och Compose-fil till en granskningsbar mall, en distributionsplan och en LXC direkt i Proxmox VE, utan Docker i containern."
   },
   "header": {
-    "title": "Hur en OCI-bild översätts",
-    "description": "Från bildförvaret och dess Compose-fil till en översynsbar mall, en distributionsplan och en infödd LXC, utan att installera Docker inuti.",
-    "section": "Appar i OCI-hanteraren"
+    "title": "Så anpassas en OCI-avbildning",
+    "description": "Från avbildningens arkiv och Compose-fil till en granskningsbar mall, en distributionsplan och en LXC direkt i Proxmox VE, utan att installera Docker i containern.",
+    "section": "OCI manager Apps"
   },
   "sections": [
     {
       "id": "pipeline",
-      "title": "Översättningspipeline",
+      "title": "Anpassningsflödet",
       "blocks": [
         {
           "mermaid": {
             "chartCode": "flowchart LR\n A[\"{{repo}}\"] --> B[\"Compose + README\"]\n B --> C[\"{{converter}}\"]\n C --> D[\"{{template}}\"]\n D --> E{\"{{blockers}}\"}\n E -- \"{{no}}\" --> F[\"{{review}}\"]\n F --> D\n E -- \"{{yes}}\" --> G[\"{{plan}}\"]\n G --> H[\"pct create\"]\n H --> I[\"{{lxc}}\"]",
             "labels": {
-              "repo": "Avbildsregister",
+              "repo": "Avbildningens arkiv",
               "converter": "Konverterare",
-              "template": "JSON mall",
-              "blockers": "Inga blockerare?",
+              "template": "JSON-mall",
+              "blockers": "Inga hinder?",
               "no": "Nej",
               "yes": "Ja",
-              "review": "Recension / Overlay",
-              "plan": "Utplaceringsplan",
-              "lxc": "Inbyggd LXC"
+              "review": "Granskning / overlay",
+              "plan": "Distributionsplan",
+              "lxc": "LXC direkt i Proxmox VE"
             }
           }
         },
         {
-          "p": "Konverteraren läser bilden och Compose filen dess projekt publicerar och skriver en JSON mall. En mall med översatta blockerare går igenom granskning, där en curated överlägg löser dem, innan den publiceras i katalogen. Endast mallar utan blockerare erbjuds för installation."
+          "p": "Konverteraren läser avbildningen och Compose-filen som projektet publicerar och skapar en JSON-mall. Om krav ännu inte har kunnat anpassas och hindrar installationen granskas mallen innan den publiceras i katalogen. En fil med granskade anpassningar, en så kallad overlay, löser dessa hinder. Bara mallar utan kvarstående hinder erbjuds för installation."
         }
       ]
     },
     {
       "id": "template",
-      "title": "Vad mallen håller",
+      "title": "Vad mallen bevarar",
       "blocks": [
         {
           "cards": {
             "items": [
               {
                 "icon": "archive",
-                "title": "Image identitet",
-                "body": "Repository, rullande tag, arkitektur, löst smält och källrevidering."
+                "title": "Avbildningens identitet",
+                "body": "Arkiv, löpande uppdaterad tagg, arkitektur, fastställd digest och källrevision."
               },
               {
                 "icon": "braces",
-                "title": "Container kontrakt",
-                "body": "Entrypoint, Cmd, miljö, användare, arbetskatalog, stoppa signal, portar och volymer."
+                "title": "Containerkontrakt",
+                "body": "Entrypoint, Cmd, miljö, användare, arbetskatalog, stoppsignal, portar och volymer."
               },
               {
                 "icon": "layers",
-                "title": "Proxmox VE översättning",
-                "body": "Resurser, säkerhet, monteringspunkter, enheter, sysktlar, hälsokontroller och anpassningar som var och en behöver, med sin anledning."
+                "title": "Anpassning till Proxmox VE",
+                "body": "Resurser, säkerhet, monteringspunkter, enheter, sysctls, hälsokontroller och de anpassningar som behövs för var och en, med motivering."
               },
               {
                 "icon": "shield",
                 "title": "Kompatibilitet",
-                "body": "Stödda nycklar, översatta blockerare och tillståndet för varje validering."
+                "body": "Nycklar som stöds, krav som ännu inte anpassats och hindrar installationen samt status för varje validering."
               }
             ]
           }
@@ -68,35 +68,35 @@
     },
     {
       "id": "sources",
-      "title": "OCI tillhandahåller processen; Compose ger miljön",
+      "title": "OCI anger processen, Compose anger miljön",
       "blocks": [
         {
           "table": {
             "headers": [
               "Källa",
               "Exempel",
-              "Native resultat"
+              "Resultat i Proxmox VE"
             ],
             "rows": [
               [
                 "OCI-metadata",
                 "<code>Entrypoint</code>, <code>Cmd</code>, <code>User</code>",
-                "Proxmox VE importerar dem när CT skapas"
+                "Proxmox VE importerar dem när CT:n skapas"
               ],
               [
                 "Docker Compose",
                 "<code>environment</code>, <code>volumes</code>, <code>devices</code>",
-                "LXC miljöposter, <code>mpN</code> och <code>devN</code>"
+                "Miljöposter för LXC, <code>mpN</code> och <code>devN</code>"
               ],
               [
-                "ProxMenux profil",
-                "GPU, hälsokontroll, referenser",
-                "frågor och granskade anpassningar"
+                "ProxMenux-profil",
+                "GPU, hälsokontroll, inloggningsuppgifter",
+                "Frågor och granskade anpassningar"
               ],
               [
                 "Användare",
                 "VMID, lagring, nätverk",
-                "instansavtalet"
+                "Instanskontraktet"
               ]
             ]
           }
@@ -105,38 +105,38 @@
     },
     {
       "id": "install",
-      "title": "Vad händer under en installation",
+      "title": "Vad som händer under installationen",
       "blocks": [
         {
           "steps": {
             "items": [
               {
-                "title": "Lösning",
-                "body": "Registret är queried, värdarkitekturen väljs och den effektiva smältningen av rullningstaggen är fixerad."
+                "title": "Fastställ avbildningen",
+                "body": "Registret frågas, värdens arkitektur väljs och den exakta digest som den löpande uppdaterade taggen pekar på fastställs."
               },
               {
-                "title": "Ladda ner och verifiera",
-                "body": "Skopeo laddar ner bilden som ett OCI-arkiv, och varje lager kontrolleras mot sin smälta och dekomprimeras innan något skapas. En skadad nedladdning hämtas en andra gång innan installationen stannar."
+                "title": "Hämta och verifiera",
+                "body": "Skopeo hämtar avbildningen som ett OCI-arkiv. Innan något skapas kontrolleras varje lager mot sin digest och packas upp. Om hämtningen är skadad görs ett nytt försök innan installationen avbryts."
               },
               {
-                "title": "Bygga",
-                "body": "<code>pct create</code> bygger rötter från arkivet och håller den officiella processen metadata av bilden."
+                "title": "Skapa filsystemet",
+                "body": "<code>pct create</code> skapar rootfs från arkivet och bevarar avbildningens officiella processmetadata."
               },
               {
-                "title": "Anslut",
-                "body": "De deklarerade volymerna, nätverket, miljön, enheterna och säkerhetsprofilerna är bifogade."
+                "title": "Anslut resurserna",
+                "body": "Deklarerade volymer, nätverk, miljö, enheter och säkerhetsprofiler kopplas in."
               },
               {
                 "title": "Konsol",
-                "body": "Konsolutgången av behållaren hålls på värden, och Proxmox VE-konsolen öppnar ett skal när bilden skickar ett."
+                "body": "Containerns konsolutdata sparas på värden. Konsolen i Proxmox VE öppnar ett skal om avbildningen innehåller ett."
               },
               {
-                "title": "Kolla in",
-                "body": "Den första starten väntar på en adress och för att tjänsten ska svara; ett misslyckande rapporteras inte som en framgångsrik installation."
+                "title": "Kontrollera",
+                "body": "Vid första starten väntar installationen på en adress och på att tjänsten ska svara. Ett misslyckande rapporteras inte som en lyckad installation."
               },
               {
-                "title": "Registrera",
-                "body": "Den effektiva konfigurationen är skriven till det instansavtal som uppdateringar och rekreationer använder."
+                "title": "Registrera konfigurationen",
+                "body": "Den faktiska konfigurationen sparas i instanskontraktet som används vid uppdateringar och återskapande."
               }
             ]
           }
@@ -145,8 +145,8 @@
     },
     {
       "id": "example",
-      "title": "Exempel: en bild med /config och /downloads",
-      "intro": "En vanlig komponeringsdefinition och Proxmox VE-konfigurationen blir den. De vägar som ansökan förväntar sig ändras inte.",
+      "title": "Exempel: en avbildning med /config och /downloads",
+      "intro": "En vanlig Compose-definition och den Proxmox VE-konfiguration som den omvandlas till. Sökvägarna som programmet förväntar sig ändras inte.",
       "blocks": [
         {
           "codeGrid": {
@@ -156,14 +156,14 @@
                 "code": "image: lscr.io/linuxserver/example:latest\nenvironment:\n  - PUID=1000\n  - PGID=1000\nvolumes:\n  - config:/config\n  - /srv/downloads:/downloads\nports:\n  - 8080:8080"
               },
               {
-                "title": "/etc/pve/lxc/VMID.conf (excerpt)",
+                "title": "/etc/pve/lxc/VMID.conf (utdrag)",
                 "code": "entrypoint: /init\nmp0: local-lvm:vm-VMID-disk-1,mp=/config,backup=1,size=8G\nmp1: /srv/downloads,mp=/downloads\nnet0: name=eth0,bridge=vmbr0,ip=dhcp,type=veth\nlxc.environment.runtime: PUID=1000\nlxc.environment.runtime: PGID=1000"
               }
             ]
           }
         },
         {
-          "p": "<code>mp0</code> är en andra skiva som tillhör behållaren, som heter <code>vm-VMID-disk-N</code> på den valda lagringen. Det är monterat på <code>/config</code> och med <code>backup=1</code> är det en del av behållaren backup. <code>mp1</code> skapar ingen disk: den binder värdkatalogen <code>/srv/downloads</code> till <code>/downloads</code> inuti LXC. Port 8080 kartläggs inte: LXC har en egen adress och tjänsten svarar på den."
+          "p": "<code>mp0</code> är en andra disk som tillhör containern och heter <code>vm-VMID-disk-N</code> på den valda lagringen. Den monteras på <code>/config</code> och ingår i containerns säkerhetskopia med <code>backup=1</code>. <code>mp1</code> skapar ingen disk: värdens katalog <code>/srv/downloads</code> monteras på <code>/downloads</code> i LXC-containern. Port 8080 mappas inte: LXC-containern har en egen adress där tjänsten svarar."
         }
       ]
     }

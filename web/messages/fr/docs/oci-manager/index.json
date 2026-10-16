@@ -1,7 +1,7 @@
 {
   "meta": {
     "title": "OCI manager Apps | ProxMenux",
-    "description": "Exécutez les images OCI officielles en tant que conteneurs natifs Proxmox VE LXC, avec des données persistantes, des appareils, des applications multi-conteneurs et des mises à jour transactionnelles."
+    "description": "Exécutez des images OCI officielles dans des conteneurs LXC natifs de Proxmox VE, avec des données persistantes, l’accès aux périphériques, des applications à plusieurs conteneurs et des mises à jour transactionnelles."
   },
   "header": {
     "title": "OCI manager Apps",
@@ -14,7 +14,7 @@
       "blocks": [
         {
           "calloutInfo": {
-            "title": "Une image OCI, une LXC",
+            "title": "Une image OCI, un LXC natif",
             "body": "Aucun moteur Docker ne s’exécute dans les conteneurs. Proxmox VE importe le système de fichiers de l’image et ses métadonnées OCI. L’application devient le processus principal d’un LXC natif, administré avec les mêmes outils que les autres conteneurs du nœud."
           }
         },
@@ -23,107 +23,107 @@
             "nodes": [
               {
                 "label": "Source",
-                "detail": "Image OCI\nRédiger et documenter"
+                "detail": "Image OCI\nCompose et documentation"
               },
               {
                 "label": "ProxMenux",
-                "detail": "JSON contrat\nvalidation et plan"
+                "detail": "Contrat JSON\nvalidation et planification"
               },
               {
                 "label": "Proxmox VE",
-                "detail": "natif LXC\nvolumes et appareils"
+                "detail": "LXC natif\nvolumes et périphériques"
               }
             ],
-            "caption": "L'application n'est pas reconstruite : son environnement est reproduit de manière déclarative."
+            "caption": "L’application d’origine est conservée : son environnement est décrit de façon déclarative, puis reproduit."
           }
         }
       ]
     },
     {
       "id": "where",
-      "title": "Où c'est",
-      "intro": "OCI manager Apps s'ouvre à partir de l'option <strong>OCI manager Apps (Aperçu technologique)</strong> du menu principal ProxMenux, sur le nœud Proxmox et en tant que root. Son premier écran propose :",
+      "title": "Où le trouver",
+      "intro": "Sur le nœud Proxmox, en tant que root, ouvrez <strong>OCI manager Apps (Technology Preview)</strong> dans le menu principal de ProxMenux. Le premier écran propose :",
       "blocks": [
         {
           "list": {
             "items": [
-              "<strong>Rechercher des applications</strong> : recherchez par nom dans le catalogue.",
-              "<strong>Toutes les applications</strong> — le catalogue complet, avec le nombre d'applications.",
-              "<strong>Gérer les applications OCI installées</strong> : mettre à jour, modifier, supprimer ou récupérer ce qui a été installé.",
-              "<strong>Comptes de registre</strong> : les comptes utilisés pour installer et mettre à jour les images à partir de registres privés.",
-              "<strong>Installer une image qui ne figure pas dans le catalogue</strong> : traduisez un fichier Compose, une commande <code>docker run</code> ou une référence d'image.",
-              "Les catégories du catalogue, chacune avec son nombre d'applications."
+              "<strong>Rechercher des applications</strong> : rechercher par nom dans tout le catalogue.",
+              "<strong>Toutes les applications</strong> : afficher le catalogue complet et le nombre d’applications.",
+              "<strong>Gérer les applications OCI installées</strong> : mettre à jour, modifier, supprimer ou récupérer les applications déjà installées.",
+              "<strong>Comptes de registres</strong> : gérer les comptes utilisés pour installer et mettre à jour des images provenant de registres privés.",
+              "<strong>Installer une image absente du catalogue</strong> : adapter un fichier Compose, une commande <code>docker run</code> ou une référence d’image.",
+              "Les catégories du catalogue, chacune avec son nombre d’applications."
             ]
           }
         },
         {
           "figure": {
             "src": "/oci-manager/main-menu.png",
-            "alt": "Écran principal de OCI manager Apps avec recherche, toutes les applications, gestion, image personnalisée et catégories du catalogue",
-            "caption": "Écran principal de OCI manager Apps."
+            "alt": "Écran principal d’OCI manager Apps avec recherche, catalogue complet, gestion des applications, images hors catalogue et catégories.",
+            "caption": "Écran principal d’OCI manager Apps."
           }
         },
         {
-          "p": "La sélection d'une application affiche sa description, l'image qu'elle exécute et deux modes d'installation : <strong>Installer avec les paramètres par défaut</strong>, qui demande uniquement ce que décide chaque installation (stockage, où vont les données, adresse et démarrage), et <strong>Installer avec les paramètres avancés</strong>, qui ouvre chaque décision dans l'ordre : VMID et ressources, le stockage de chaque chemin, le pont et les appareils."
+          "p": "La sélection d’une application affiche sa description, l’image utilisée et deux modes d’installation. <strong>Installer avec les paramètres par défaut</strong> ne demande que les choix essentiels : stockage, emplacement des données, adresse et démarrage. <strong>Installer avec les paramètres avancés</strong> présente toutes les décisions dans l’ordre : VMID et ressources, stockage de chaque chemin, pont réseau et périphériques."
         },
         {
-          "p": "Une application qui a été testée en réalité s'affiche <strong>Vérifiée</strong> dans cette vue et est marquée d'un ✓ dans les listes, qu'elle ait été testée dans le laboratoire ProxMenux ou par la communauté."
+          "p": "Les applications effectivement testées affichent <strong>Vérifié</strong> dans cette vue et portent un ✓ dans les listes, que le test ait été effectué dans le laboratoire ProxMenux ou par la communauté."
         }
       ]
     },
     {
       "id": "beta",
-      "title": "Pourquoi s'agit-il d'un aperçu technologique",
+      "title": "Pourquoi le label Technology Preview est conservé",
       "blocks": [
         {
           "p": "OCI manager Apps conserve le label <strong>Technology Preview</strong> que Proxmox VE attribue aux conteneurs d’applications créés à partir d’images OCI, dont la prise en charge a été introduite dans Proxmox VE 9.1. Ce label concerne la technologie sur laquelle repose OCI manager Apps, et non le moteur de ProxMenux : le comportement de ces conteneurs peut encore changer entre les versions de Proxmox VE. Le label restera en place jusqu’à ce que Proxmox VE considère cette prise en charge comme stable."
         },
         {
-          "p": "Le moteur de OCI manager Apps (installation, mise à jour, modification, recréation, sauvegardes, restauration, migration et surveillance) est testé dans le laboratoire ProxMenux. Chaque application est testée individuellement : celles testées en réalité s'affichent <strong>Vérifiées</strong> et portent un ✓ dans les listes."
+          "p": "Le moteur d’OCI manager Apps est testé dans le laboratoire ProxMenux : installation, mise à jour, modification, recréation, sauvegarde, restauration, migration et watchdog. Chaque application est vérifiée séparément. Celles qui ont été effectivement testées affichent <strong>Vérifié</strong> et portent un ✓ dans les listes."
         }
       ]
     },
     {
       "id": "translation",
-      "title": "Ce que Docker exprime et en quoi OCI manager Apps le transforme",
+      "title": "Comment Docker décrit les besoins et comment OCI manager Apps les applique",
       "blocks": [
         {
           "table": {
             "headers": [
-              "Exigence",
-              "Docker l'exprime comme",
-              "OCI manager Apps le transforme en"
+              "Besoin",
+              "Expression dans Docker",
+              "Mise en œuvre par OCI manager Apps"
             ],
             "rows": [
               [
-                "Exécuter l'application",
+                "Exécuter l’application",
                 "<code>image</code>, <code>entrypoint</code>, <code>command</code>",
-                "OCI rootfs et le processus principal du LXC"
+                "Le rootfs OCI et le processus principal du LXC"
               ],
               [
                 "Conserver la configuration",
                 "<code>volumes: /config</code>",
-                "un disque persistant <code>mpN</code> inclus dans la sauvegarde, ou un répertoire hôte"
+                "Un volume persistant <code>mpN</code> inclus dans la sauvegarde, ou un répertoire de l’hôte."
               ],
               [
-                "Publier le service",
+                "Rendre le service accessible",
                 "<code>ports</code>",
-                "une adresse propre pour le LXC et l'URL d'accès au service"
+                "Une adresse propre au LXC et l’URL d’accès au service."
               ],
               [
-                "Utiliser le matériel",
+                "Utiliser du matériel",
                 "<code>devices</code>, <code>group_add</code>",
-                "<code>devN</code> entrées avec le GID d'hôte effectif et un profil validé"
+                "Des entrées <code>devN</code> avec le GID effectif de l’hôte et un profil validé."
               ],
               [
-                "Connecter les dépendances",
+                "Relier les dépendances",
                 "<code>networks</code>, <code>depends_on</code>",
-                "un pont privé, des adresses fixes, un ordre de démarrage et healthchecks"
+                "Un pont réseau privé, des adresses fixes, un ordre de démarrage et des contrôles de bon fonctionnement."
               ],
               [
-                "Mise à jour",
-                "<code>pull</code> et recréer",
-                "un nouveau rootfs avec le même contrat persistant"
+                "Mettre à jour",
+                "Télécharger avec <code>pull</code> et recréer",
+                "Un nouveau rootfs avec le même contrat de persistance."
               ]
             ]
           }
@@ -140,22 +140,22 @@
               {
                 "icon": "archive",
                 "title": "Conservé",
-                "body": "L'image officielle, ses chemins internes, son environnement, son processus de démarrage et sa documentation fonctionnelle."
+                "body": "L’image officielle, ses chemins internes, son environnement, son processus de démarrage et sa documentation d’utilisation."
               },
               {
                 "icon": "boxes",
                 "title": "Adapté",
-                "body": "L'environnement d'exécution : réseau, persistance, périphériques, autorisations et dépendances utilisent des primitives Proxmox VE LXC natives."
+                "body": "L’environnement d’exécution : le réseau, la persistance, les périphériques, les permissions et les dépendances utilisent les mécanismes LXC natifs de Proxmox VE."
               },
               {
                 "icon": "shield",
-                "title": "Non traduit",
-                "body": "Une clé Compose sans équivalent sûr est répertoriée comme bloqueur. Les modèles avec bloqueurs ne sont pas proposés et les options sensibles sont confirmées lors de l'installation."
+                "title": "Sans équivalent",
+                "body": "Une option Compose sans équivalent sûr est signalée comme un point bloquant. Les modèles comportant des points bloquants ne sont pas proposés à l’installation, et les options sensibles doivent être confirmées pendant l’assistant."
               },
               {
                 "icon": "refresh",
                 "title": "Enregistré",
-                "body": "L'image digest, les ressources, les chemins, le réseau, les appareils et l'appartenance à la pile sont stockés dans le contrat d'instance, que les mises à jour et les recréations reproduisent."
+                "body": "Le digest de l’image, les ressources, les chemins, le réseau, les périphériques et l’appartenance à une pile sont enregistrés dans le contrat de l’instance. Les mises à jour et les recréations reproduisent ce contrat."
               }
             ]
           }
@@ -170,39 +170,39 @@
           "next": {
             "items": [
               {
-                "label": "Comment une image OCI est traduite",
+                "label": "Comment une image OCI est adaptée",
                 "href": "/docs/oci-manager/architecture",
-                "tail": "de l'image et de son fichier Compose vers un LXC."
+                "tail": "De l’image et de son fichier Compose à un LXC natif."
               },
               {
-                "label": "Installer une image qui n'est pas dans le catalogue",
+                "label": "Installer une image absente du catalogue",
                 "href": "/docs/oci-manager/custom-image",
-                "tail": "Compose, docker exécution ou une référence d'image."
+                "tail": "Un fichier Compose, une commande docker run ou une référence d’image."
               },
               {
-                "label": "Données, chemins et mise en réseau",
+                "label": "Données, chemins et réseau",
                 "href": "/docs/oci-manager/storage-network",
-                "tail": "disques conteneurs, répertoires hôtes, Rclone montages et adresses."
+                "tail": "Volumes du conteneur, répertoires de l’hôte, montages rclone et adresses."
               },
               {
-                "label": "Appareils et accélération",
+                "label": "Périphériques et accélération",
                 "href": "/docs/oci-manager/hardware",
-                "tail": "GPU, NVIDIA, Coral, USB et autres appareils."
+                "tail": "GPU, NVIDIA, Coral, USB et autres périphériques."
               },
               {
                 "label": "Applications à plusieurs conteneurs",
                 "href": "/docs/oci-manager/stacks",
-                "tail": "application, base de données et cache en tant que LXC coordonnés."
+                "tail": "Application, base de données et cache dans des LXC coordonnés."
               },
               {
                 "label": "Installer, mettre à jour et modifier",
                 "href": "/docs/oci-manager/lifecycle",
-                "tail": "le contrat d'instance et ses opérations."
+                "tail": "Le contrat de l’instance et ses opérations."
               },
               {
                 "label": "Dans ProxMenux Monitor",
                 "href": "/docs/oci-manager/monitor",
-                "tail": "versions, mises à jour, sortie de la console et terminal."
+                "tail": "Versions, mises à jour, sortie console et terminal."
               }
             ]
           }

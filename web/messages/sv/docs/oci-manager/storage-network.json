@@ -1,12 +1,12 @@
 {
   "meta": {
-    "title": "Data, vägar och nätverk | ProxMenux",
-    "description": "Hur OCI Manager Apps håller data från en OCI-behållare: containerskivor, värdkataloger, Rclone-fästen, adresser och privata nätverk."
+    "title": "Data, sökvägar och nätverk | ProxMenux",
+    "description": "Så bevarar OCI manager Apps data i en OCI-container: containerdiskar, kataloger på värden, rclone-monteringar, adresser och privata nätverk."
   },
   "header": {
-    "title": "Data, vägar och nätverk",
-    "description": "Vad som lever i rötterna, vad som överlever dess ersättning, hur data delas mellan behållare och hur varje behållare får sin adress.",
-    "section": "Appar i OCI-hanteraren"
+    "title": "Data, sökvägar och nätverk",
+    "description": "Vad som finns i rootfs, vad som bevaras när det ersätts, hur data delas mellan containrar och hur varje container får sin adress.",
+    "section": "OCI manager Apps"
   },
   "sections": [
     {
@@ -14,43 +14,43 @@
       "blocks": [
         {
           "calloutInfo": {
-            "title": "Persistens beslutas innan LXC finns",
-            "body": "De volymer som publiceras av bilden och av dess Compose-fil läses innan behållaren skapas. Varje väg som måste överleva en uppdatering blir en monteringspunkt oberoende av rötterna, så rötterna håller bara vad som hör till bilden och kan ersättas."
+            "title": "Beständig lagring bestäms innan LXC-containern skapas",
+            "body": "Volymerna som deklareras av avbildningen och dess Compose-fil läses innan containern skapas. Varje sökväg som måste bevaras vid en uppdatering blir en monteringspunkt som är oberoende av rootfs. Därmed innehåller rootfs bara det som tillhör avbildningen och kan ersättas."
           }
         }
       ]
     },
     {
       "id": "questions",
-      "title": "Vad installeraren frågar",
-      "intro": "Mallen levererar de vägar som programmet behöver. Var och en placeras på en behållare disk eller på en värdkatalog, och fler vägar kan läggas till före sammanfattningen.",
+      "title": "Vad installationsguiden frågar efter",
+      "intro": "Mallen anger de sökvägar som programmet behöver. Var och en placeras på en containerdisk eller i en katalog på värden. Fler sökvägar kan läggas till före sammanfattningen.",
       "blocks": [
         {
           "steps": {
             "items": [
               {
-                "title": "Krävda vägar",
-                "body": "<code>/config</code>, <code>/data</code>, bibliotek, nedladdningar och varje volym ansökan deklareras."
+                "title": "Nödvändiga sökvägar",
+                "body": "<code>/config</code>, <code>/data</code>, bibliotek, hämtningar och alla volymer som programmet deklarerar listas."
               },
               {
                 "title": "Plats",
-                "body": "Varje väg placeras på en skiva av behållaren eller på en befintlig värdkatalog."
+                "body": "Varje sökväg placeras på en containerdisk eller i en befintlig katalog på värden."
               },
               {
                 "title": "Lagring och storlek",
-                "body": "En behållare disk skapas på en Proxmox VE lagring med den storlek som ges. Standardinstallationen använder <code>local-lvm</code>; den avancerade installationen frågar lagring av varje väg precis innan dess storlek och föreslår en av rötterna. Det verkar som <code>vm-VMID-disk-N</code> och är fäst som <code>mpN</code>."
+                "body": "En containerdisk skapas på en Proxmox VE-lagring med den angivna storleken. Standardinstallationen använder <code>local-lvm</code>. Den avancerade installationen frågar efter lagring för varje sökväg strax före storleken och föreslår lagringen för rootfs. Disken visas som <code>vm-VMID-disk-N</code> och ansluts som <code>mpN</code>."
               },
               {
-                "title": "Värd katalog",
-                "body": "En värdkatalog ges av sin väg. En katalog som inte finns skapas, ägs av användaren behållaren kartor."
+                "title": "Katalog på värden",
+                "body": "Katalogen på värden anges med sin sökväg. Om den inte finns skapas den med den värdanvändare som containeranvändaren mappas till som ägare."
               },
               {
-                "title": "Ytterligare vägar",
-                "body": "Fler par värdväg eller volym och behållarväg kan läggas till innan du installerar."
+                "title": "Ytterligare sökvägar",
+                "body": "Före installationen kan fler kopplingar läggas till mellan en sökväg eller volym på värden och en sökväg i containern."
               },
               {
                 "title": "Sammanfattning",
-                "body": "Den fullständiga kartläggningen visas innan CT skapas och lagras i sitt instansavtal."
+                "body": "Hela sökvägsmappningen visas innan CT:n skapas och sparas i instanskontraktet."
               }
             ]
           }
@@ -59,14 +59,14 @@
     },
     {
       "id": "options",
-      "title": "De två ihållande platserna",
+      "title": "De två platserna för beständig lagring",
       "blocks": [
         {
           "table": {
             "headers": [
-              "Fastighet",
+              "Egenskap",
               "Containerdisk",
-              "Värd katalog"
+              "Katalog på värden"
             ],
             "rows": [
               [
@@ -75,55 +75,55 @@
                 "<code>mpN: /mnt/oci-shared/media,mp=/data/media</code>"
               ],
               [
-                "Containersäkerhetskopiering (vzdump)",
-                "Inkluderad, med <code>backup=1</code>",
-                "Inte inkluderat"
+                "Containerns säkerhetskopia (vzdump)",
+                "Ingår med <code>backup=1</code>",
+                "Ingår inte"
               ],
               [
                 "Storlek",
-                "Fast; odlad med en storlek på monteringspunkten",
-                "Det fria utrymmet för värdfilsystemet eller dataset"
+                "Fast; kan utökas genom att ändra monteringspunktens storlek",
+                "Det lediga utrymmet i värdens filsystem eller dataset"
               ],
               [
-                "Andra behållare",
-                "monterad endast av sin egen behållare",
-                "Samma katalog kan monteras i flera behållare"
+                "Andra containrar",
+                "Monteras bara av den container som den tillhör",
+                "Samma katalog kan monteras i flera containrar"
               ],
               [
-                "Snapshots och återställa",
-                "Hanteras av Proxmox VE tillsammans med CT",
-                "Hanteras på värdlagring"
+                "Ögonblicksbilder och återställning",
+                "Hanteras av Proxmox VE tillsammans med CT:n",
+                "Hanteras på värdens lagring"
               ],
               [
-                "Ta bort programmet",
-                "Tas bort med behållaren",
-                "Kept, med dess innehåll"
+                "När programmet tas bort",
+                "Tas bort med containern",
+                "Bevaras med sitt innehåll"
               ],
               [
-                "Flytta CT till en annan nod",
-                "Flytta med CT",
-                "Samma väg måste finnas på den andra noden"
+                "När CT:n flyttas till en annan nod",
+                "Flyttas med CT:n",
+                "Samma sökväg måste finnas på den andra noden"
               ]
             ]
           }
         },
         {
-          "p": "Rötterna är reserverade för binärerna och innehållet i bilden. En uppdatering eller en rekreation ersätter den utan att röra någon form av monteringspunkt."
+          "p": "Rootfs är reserverat för binärfilerna och avbildningens innehåll. En uppdatering eller ett återskapande ersätter det utan att röra någon av de två typerna av monteringspunkt."
         }
       ]
     },
     {
       "id": "example",
-      "title": "Exempel: en behållare med båda platserna",
+      "title": "Exempel: en container med båda platserna",
       "blocks": [
         {
           "code": {
-            "title": "Jellyfin installerade som CT 151 på lokal-lvm (utdrag)",
+            "title": "Jellyfin installerat som CT 151 på local-lvm (utdrag)",
             "code": "rootfs: local-lvm:vm-151-disk-0,size=8G\n# Container disk, part of the CT backup\nmp0: local-lvm:vm-151-disk-1,mp=/config,backup=1,size=16G\n\n# Host directory, outside the CT backup\nmp1: /mnt/oci-shared/media,mp=/data/media"
           }
         },
         {
-          "p": "En uppdatering eller en rekreation ersätter endast rötterna: <code>mp0</code> håller användare, bibliotek och inställningar, och <code>mp1</code> fortsätter att visa samma media. Återställ CT backup ger tillbaka <code>/config</code>; mediekatalogen återställs, om det behövs, från backup av värdlagring."
+          "p": "En uppdatering eller ett återskapande ersätter bara rootfs: <code>mp0</code> bevarar användare, bibliotek och inställningar, och <code>mp1</code> visar fortfarande samma medier. När CT:ns säkerhetskopia återställs kommer <code>/config</code> tillbaka. Mediekatalogen återställs vid behov från säkerhetskopian av värdens lagring."
         },
         {
           "flow": {
@@ -134,67 +134,67 @@
               },
               {
                 "label": "Plats",
-                "detail": "container disk\neller värdkatalog"
+                "detail": "Containerdisk\neller katalog på värden"
               },
               {
                 "label": "LXC",
-                "detail": "alltid /config\nför ansökan"
+                "detail": "Alltid /config\nför programmet"
               }
             ],
-            "caption": "Applikationen ser vägen bilden publicerar; endast när den lagras ändringar."
+            "caption": "Programmet ser sökvägen som avbildningen anger. Bara lagringsplatsen ändras."
           }
         }
       ]
     },
     {
       "id": "shared",
-      "title": "En värdkatalog, flera behållare",
+      "title": "En katalog på värden, flera containrar",
       "blocks": [
         {
           "mermaid": {
             "chartCode": "flowchart TB\n H[\"{{host}}<br/>/mnt/oci-shared/media\"]\n H --> Q[\"qBittorrent<br/>/data\"]\n H --> J[\"Jellyfin<br/>/data\"]\n H --> R[\"Radarr / Sonarr<br/>/data\"]\n Q -. \"{{config}}\" .-> QV[(\"/config mpN\")]\n J -. \"{{config}}\" .-> JV[(\"/config mpN\")]\n R -. \"{{config}}\" .-> RV[(\"/config mpN\")]",
             "labels": {
-              "host": "Värd katalog",
-              "config": "egen konfiguration"
+              "host": "Katalog på värden",
+              "config": "Egen konfiguration"
             }
           }
         },
         {
-          "p": "Varje behållare håller sin konfiguration på sin egen disk. Biblioteket eller nedladdningarna är en värdkatalog monterad på samma inre väg i varje behållare, så en väg som en applikation skriver är samma väg som en annan läser."
+          "p": "Varje container sparar sin konfiguration på sin egen disk. Biblioteket eller hämtningarna ligger i en enda katalog på värden som monteras på samma interna sökväg i alla containrar. Därmed är sökvägen som ett program skriver till samma sökväg som ett annat läser från."
         }
       ]
     },
     {
       "id": "rclone",
-      "title": "Cloud storage via Rclone-applikationen",
-      "intro": "Rclone-applikationen av katalogen erbjuder, förutom dess installation, <strong>Enable en montering på en befintlig Rclone OCI container</strong>. Det monterar en fjärrkontroll som redan skapats och godkänts i Rclone webb-UI och publicerar den på värden, där andra behållare kan använda den som värdkatalog.",
+      "title": "Molnlagring via programmet rclone",
+      "intro": "Utöver installation erbjuder rclone-posten i katalogen <strong>Aktivera en montering i en befintlig OCI-container med rclone</strong>. En fjärrlagring som redan skapats och auktoriserats i rclones webbgränssnitt monteras och görs tillgänglig på värden. Andra containrar kan använda den som en katalog på värden.",
       "blocks": [
         {
           "steps": {
             "items": [
               {
-                "title": "Container och fjärrkontroll",
-                "body": "VMID av Rclone behållaren, exakt namn på fjärrkontrollen och, valfritt, en väg inuti den."
+                "title": "Container och fjärrlagring",
+                "body": "VMID för rclone-containern, fjärrlagringens exakta namn och, valfritt, en sökväg i den."
               },
               {
-                "title": "Mount namn och cache",
-                "body": "Namnet på fästet och VFS cacheläge: <code>off</code>, <code>minimal</code>, <code>writes</code> eller <code>full</code> (standard)."
+                "title": "Monteringens namn och cache",
+                "body": "Monteringens namn och VFS-cacheläget: <code>off</code>, <code>minimal</code>, <code>writes</code> eller <code>full</code> (standard)."
               },
               {
-                "title": "Publicerad utsikt",
-                "body": "En vanlig rot, <code>/mnt/oci-shared</code> som standard, håller en läs- / skrivvy i <code>/mnt/oci-shared/remotes/NAME</code> och en läs-bara vy i <code>/mnt/oci-shared/remotes-ro/NAME</code>."
+                "title": "Tillgängliga vyer",
+                "body": "En gemensam rot, som standard <code>/mnt/oci-shared</code>, innehåller en läs- och skrivbar vy i <code>/mnt/oci-shared/remotes/NAME</code> och en skrivskyddad vy i <code>/mnt/oci-shared/remotes-ro/NAME</code>."
               },
               {
                 "title": "Aktivering",
-                "body": "Efter en bekräftelse stoppas CT, startkommandot och en Proxmox VE hookscript är inställd, och det startas igen. Operationen väntar tills båda vyerna är monterade på värden."
+                "body": "Efter bekräftelsen stoppas CT:n, dess startkommando och ett Proxmox VE-hookscript konfigureras, och den startas igen. Åtgärden väntar tills båda vyerna är monterade på värden."
               }
             ]
           }
         },
         {
           "calloutInfo": {
-            "title": "Om berget inte kommer upp",
-            "body": "Den tidigare konfigurationen av behållaren återställs och den startas igen, så en misslyckad aktivering lämnar Rclone som den var."
+            "title": "Om monteringen inte aktiveras",
+            "body": "Containerns tidigare konfiguration återställs och containern startas igen. En misslyckad aktivering lämnar därmed rclone som det var."
           }
         }
       ]
@@ -202,20 +202,20 @@
     {
       "id": "network",
       "title": "Adresser och nätverk",
-      "intro": "En enda applikation behöver en adress. En multicontainer-applikation behöver också ett stabilt nätverk mellan medlemmarna.",
+      "intro": "Ett program med en enda container behöver en adress. Ett program med flera containrar behöver också ett stabilt nätverk mellan sina delar.",
       "blocks": [
         {
           "cards": {
             "items": [
               {
                 "icon": "network",
-                "title": "Enkel ansökan",
-                "body": "Bridge och DHCP eller en fast CIDR-adress väljs. LXC har en egen adress och sammanfattningen visar de fullständiga webbadresserna för tjänsterna."
+                "title": "Program med en container",
+                "body": "En nätverksbrygga väljs tillsammans med DHCP eller en fast adress i CIDR-format. LXC-containern har en egen adress och sammanfattningen visar tjänsternas fullständiga URL:er."
               },
               {
                 "icon": "waypoints",
-                "title": "Applikation för flera behållare",
-                "body": "En gratis subnet finns, en ihållande privat bro skapas och varje medlem (applikation, databas, cache) får en fast adress på den."
+                "title": "Program med flera containrar",
+                "body": "Ett ledigt subnät hittas och en beständig privat brygga skapas. Varje del – program, databas och cache – får en fast adress på nätverket."
               }
             ]
           }
@@ -225,35 +225,35 @@
             "nodes": [
               {
                 "label": "LAN",
-                "detail": "nåbar adress\nHuvudservice endast"
+                "detail": "Nåbar adress\nbara huvudtjänsten"
               },
               {
-                "label": "Huvud LXC",
-                "detail": "Web / API\nLAN + privat nätverk"
+                "label": "Huvud-LXC",
+                "detail": "Webb / API\nLAN + privat nätverk"
               },
               {
                 "label": "Privat nätverk",
-                "detail": "PostgreSQL Valkey · ML\nFasta adresser"
+                "detail": "PostgreSQL · Valkey · ML\nfasta adresser"
               }
             ],
-            "caption": "Beroende talar över det privata nätverket och har ingen adress på LAN."
+            "caption": "Beroenden kommunicerar över det privata nätverket och har ingen adress på LAN:et."
           }
         },
         {
-          "p": "Stackkontraktet lagrar bro, subnet, adresser och relationerna mellan tjänster. Uppdatering av ansökan återanvänder samma topologi för varje medlem. ProxMenux Monitor öppnar huvudbehållaren på sin LAN-adress, inte på sin adress på det privata nätverket."
+          "p": "Stackkontraktet sparar brygga, subnät, adresser och relationerna mellan tjänsterna. När programmet uppdateras återanvänds samma topologi för alla delar. ProxMenux Monitor öppnar huvudcontainern på dess LAN-adress, inte dess adress på det privata nätverket."
         }
       ]
     },
     {
       "id": "ownership",
-      "title": "Ägarskap",
+      "title": "Ägarskap för filer och kataloger",
       "blocks": [
         {
           "list": {
             "items": [
-              "Nya kataloger skapas med UID och GID de oprivilegierade LXC kartor.",
-              "Befintliga kataloger är inte återägda igen.",
-              "Sockets, systemfiler och känsliga vägar erbjuds inte som generiska värdkataloger."
+              "Nya kataloger skapas med de UID och GID som den oprivilegierade LXC-containern mappas till.",
+              "Ägarskapet för befintliga kataloger ändras inte rekursivt.",
+              "Socklar, systemfiler och känsliga sökvägar erbjuds inte som vanliga kataloger på värden."
             ]
           }
         }
@@ -261,40 +261,40 @@
     },
     {
       "id": "backup",
-      "title": "Vad en container backup innehåller",
+      "title": "Vad en säkerhetskopia av containern innehåller",
       "blocks": [
         {
           "table": {
             "headers": [
-              "Element",
-              "I CT vzdump",
-              "Där den hålls"
+              "Del",
+              "I CT:ns vzdump-säkerhetskopia",
+              "Var det sparas"
             ],
             "rows": [
               [
-                "OCI rootfs",
+                "OCI-rootfs",
                 "Ja",
-                "CT-backupen; den kan också byggas om från bilden och kontraktet"
+                "I CT:ns säkerhetskopia; kan också återskapas från avbildningen och kontraktet"
               ],
               [
-                "Container disk med <code>backup=1</code>",
+                "Containerdisk med <code>backup=1</code>",
                 "Ja",
-                "CT backup"
+                "CT:ns säkerhetskopia"
               ],
               [
-                "Värd katalog",
+                "Katalog på värden",
                 "Nej",
-                "backup av värdlagring"
+                "Säkerhetskopian av värdens lagring"
               ],
               [
-                "Instance Contrakt",
+                "Instanskontrakt",
                 "Nej",
                 "<code>/usr/local/share/proxmenux/oci/instances/VMID/</code> på värden"
               ],
               [
-                "Applikation för flera behållare",
-                "Varje medlem i sin egen backup",
-                "Säkerhetskopior av varje medlem, plus stackkontraktet och dess bro på värden"
+                "Program med flera containrar",
+                "Varje del i sin egen säkerhetskopia",
+                "Säkerhetskopiorna av alla delar samt stackkontraktet och dess nätverksbrygga på värden"
               ]
             ]
           }
