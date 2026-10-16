@@ -33,7 +33,7 @@
     {
       "id": "where",
       "title": "Where it is",
-      "intro": "OCI manager Apps opens from option <strong>OCI manager Apps (beta)</strong> of the ProxMenux main menu, on the Proxmox node and as root. Its first screen offers:",
+      "intro": "OCI manager Apps opens from option <strong>OCI manager Apps (Technology Preview)</strong> of the ProxMenux main menu, on the Proxmox node and as root. Its first screen offers:",
       "blocks": [
         {
           "list": {
@@ -54,11 +54,19 @@
           }
         },
         {
-          "p": "Selecting an application shows its description, the image it runs and two installation modes: <strong>Install with default settings</strong>, which asks almost nothing, and <strong>Install with advanced settings</strong>, which offers the real storage, bridge and resource selectors of the node."
+          "p": "Selecting an application shows its description, the image it runs and two installation modes: <strong>Install with default settings</strong>, which asks only what every installation decides (storage, where the data goes, address and start), and <strong>Install with advanced settings</strong>, which opens every decision in order: VMID and resources, the storage of each path, the bridge and the devices."
         },
         {
           "p": "An application that has been tested for real shows <strong>Verified</strong> in that view and is marked with ✓ in the lists, whether it was tested in the ProxMenux lab or by the community."
         }
+      ]
+    },
+    {
+      "id": "beta",
+      "title": "Why it is a Technology Preview",
+      "blocks": [
+        { "p": "OCI manager Apps carries the <strong>Technology Preview</strong> label that Proxmox VE gives to application containers created from OCI images, introduced in Proxmox VE 9.1. It refers to what OCI manager Apps runs on, not to the ProxMenux engine: the behaviour of those containers can still change between Proxmox VE releases. The label stays until Proxmox VE marks that support as stable." },
+        { "p": "The engine of OCI manager Apps (installation, update, modification, recreation, backups, restore, migration and watchdog) is tested in the ProxMenux lab. Each application is tested on its own: the ones tested for real show <strong>Verified</strong> and carry a ✓ in the lists." }
       ]
     },
     {

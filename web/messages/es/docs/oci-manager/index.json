@@ -33,7 +33,7 @@
     {
       "id": "where",
       "title": "Dónde se encuentra",
-      "intro": "OCI manager Apps se abre desde la opción <strong>OCI manager Apps (beta)</strong> del menú principal de ProxMenux, en el nodo Proxmox y como root. Su primera pantalla ofrece:",
+      "intro": "OCI manager Apps se abre desde la opción <strong>OCI manager Apps (Technology Preview)</strong> del menú principal de ProxMenux, en el nodo Proxmox y como root. Su primera pantalla ofrece:",
       "blocks": [
         {
           "list": {
@@ -54,11 +54,19 @@
           }
         },
         {
-          "p": "Al seleccionar una aplicación se muestra su descripción, la imagen que ejecuta y dos modos de instalación: <strong>Instalar con la configuración predeterminada</strong>, que apenas hace preguntas, e <strong>Instalar con la configuración avanzada</strong>, que ofrece los selectores reales de almacenamiento, bridge y recursos del nodo."
+          "p": "Al seleccionar una aplicación se muestra su descripción, la imagen que ejecuta y dos modos de instalación: <strong>Instalar con la configuración predeterminada</strong>, que pregunta solo lo que decide toda instalación (almacenamiento, dónde van los datos, dirección e inicio), e <strong>Instalar con la configuración avanzada</strong>, que abre cada decisión en orden: VMID y recursos, el almacenamiento de cada ruta, el bridge y los dispositivos."
         },
         {
           "p": "Una aplicación probada en real muestra <strong>Verificado</strong> en esa vista y aparece marcada con ✓ en las listas, tanto si se probó en el laboratorio de ProxMenux como si la probó la comunidad."
         }
+      ]
+    },
+    {
+      "id": "beta",
+      "title": "Por qué es una Technology Preview",
+      "blocks": [
+        { "p": "OCI manager Apps lleva la etiqueta <strong>Technology Preview</strong> que Proxmox VE da a los contenedores de aplicación creados a partir de imágenes OCI, introducidos en Proxmox VE 9.1. Se refiere a aquello sobre lo que funciona OCI manager Apps, no al motor de ProxMenux: el comportamiento de esos contenedores todavía puede cambiar entre versiones de Proxmox VE. La etiqueta se mantiene hasta que Proxmox VE dé ese soporte por estable." },
+        { "p": "El motor de OCI manager Apps (instalación, actualización, modificación, recreación, backups, restauración, migración y vigilancia) está probado en el laboratorio de ProxMenux. Cada aplicación se prueba por separado: las que se han probado de verdad muestran <strong>Verified</strong> y llevan una ✓ en las listas." }
       ]
     },
     {

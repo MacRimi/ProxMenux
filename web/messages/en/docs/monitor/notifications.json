@@ -441,7 +441,7 @@
   "history": {
     "heading": "History",
     "body1": "Every dispatch <em>attempt</em> the dispatcher actually performs is recorded in the <code>notification_history</code> SQLite table. Each row stores the timestamp (<code>sent_at</code>), channel, event type, severity, title, rendered message body, a <code>success</code> flag and — when the send failed — the error returned by the provider in <code>error_message</code>. Burst-aggregated events appear as a single row with the <code>burst_*</code> event type. Events suppressed by the cooldown stage are not logged: they never become a dispatch attempt.",
-    "body2": "The History tab inside Settings → Notifications shows the last 20 entries and has a single <em>Clear</em> button that wipes the table.",
+    "body2": "Settings → Notifications has a <em>Notification history</em> section, closed by default, with the last 20 entries: the result of each send, its channel and date, the error when it failed and, for each daily digest run, whether it had something to send. The page does not offer to erase it: Audit & Report reads the same history to check the delivery of each channel.",
     "body3": "The same data is exposed at <code>GET /api/notifications/history</code> with optional <code>limit</code>, <code>offset</code>, <code>severity</code> and <code>channel</code> query parameters, and can be cleared with <code>DELETE /api/notifications/history</code>."
   },
   "api": {

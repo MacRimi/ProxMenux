@@ -339,6 +339,11 @@ evaluate_host_reboot_requirement() {
                 needs_change=true
             fi
         done
+        # The state alone is not enough: its udev rule may have been removed.
+        if declare -F _proxmenux_vfio_bind_udev_rule_current >/dev/null 2>&1 \
+           && ! _proxmenux_vfio_bind_udev_rule_current; then
+            needs_change=true
+        fi
         _file_has_exact_line "softdep nvidia pre: vfio-pci" "$vfio_conf" || needs_change=true
         _file_has_exact_line "softdep nvidia_drm pre: vfio-pci" "$vfio_conf" || needs_change=true
         _file_has_exact_line "softdep nvidia_modeset pre: vfio-pci" "$vfio_conf" || needs_change=true

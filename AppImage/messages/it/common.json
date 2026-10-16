@@ -1080,10 +1080,10 @@
       "reboot": "Riavvia",
       "forceStop": "Forza arresto",
       "working": "Operazione in corso...",
-      "startPending": "A partire...",
+      "startPending": "Avvio...",
       "shutdownPending": "Spegnimento...",
       "rebootPending": "Riavvio...",
-      "stopPending": "Fermarsi..."
+      "stopPending": "Arresto..."
     },
     "confirm": {
       "forceStopTitle": "Forza arresto",
@@ -1133,7 +1133,7 @@
       "removeCustomCommandConfirm": "Rimuovere il comando di aggiornamento personalizzato per \"{name}\"?",
       "removeCustomCommandFailed": "Impossibile rimuovere il comando di aggiornamento personalizzato: {message}",
       "hideNoticeFailed": "Impossibile nascondere questo avviso: {message}",
-      "controlNotConfirmed": "L'operazione non è stata confermata completata.Controlla lo stato dell'ospite prima di riprovare."
+      "controlNotConfirmed": "Il completamento dell'operazione non è stato confermato. Controlla lo stato del guest prima di riprovare."
     },
     "backupModal": {
       "title": "Backup {type} {vmid} ({name})",
@@ -1459,16 +1459,16 @@
       "checkCooldown": "Un controllo è già in corso o è stato richiesto di recente. Riprovare tra {seconds} secondi.",
       "checkStale": "Controllo obsoleto",
       "checkStaleHelp": "Questo risultato ha più di 48 ore o non ha una data di controllo valida. Eseguire un nuovo controllo prima di farvi affidamento.",
-      "checkSystemPackages": "controlla i pacchetti di sistema",
-      "checkInProgress": "controllo in corso",
-      "refreshCheckHelp": "aggiorna gli indici dei pacchetti e controlla gli aggiornamenti in sospeso mentre il contenitore è in esecuzione.Non è installato nulla.",
-      "notCheckedYet": "gli aggiornamenti non sono stati ancora controllati.",
-      "checkStillRunning": "Il controllo è ancora in corso.Il risultato verrà salvato al termine.",
-      "checkBeforeUpdate": "controlla prima gli aggiornamenti",
-      "startBeforeCheck": "avvia il contenitore, quindi controlla gli aggiornamenti.Nessun badge non significa che non ci sono aggiornamenti.",
-      "runCustomCommand": "esegui il comando personalizzato",
-      "installedVersionUnverified": "la versione installata non è verificata.Non è stato possibile confermare la disponibilità dell'aggiornamento.",
-      "versionStatusUnknown": "la disponibilità dell'aggiornamento non è verificata.Le informazioni sulla versione non sono disponibili o sono incomplete."
+      "checkSystemPackages": "Controlla pacchetti di sistema",
+      "checkInProgress": "Controllo in corso",
+      "refreshCheckHelp": "Aggiorna gli indici dei pacchetti e controlla gli aggiornamenti in sospeso mentre il container è in esecuzione. Non viene installato nulla.",
+      "notCheckedYet": "Gli aggiornamenti non sono ancora stati controllati.",
+      "checkStillRunning": "Il controllo è ancora in corso. Il risultato verrà salvato al termine.",
+      "checkBeforeUpdate": "Controlla prima gli aggiornamenti",
+      "startBeforeCheck": "Avvia il container, poi controlla gli aggiornamenti. L'assenza del badge non significa che non ci siano aggiornamenti.",
+      "runCustomCommand": "Esegui comando personalizzato",
+      "installedVersionUnverified": "La versione installata non è verificata. Non è stato possibile confermare la disponibilità di un aggiornamento.",
+      "versionStatusUnknown": "La disponibilità di un aggiornamento non è verificata. Le informazioni sulla versione non sono disponibili o sono incomplete."
     },
     "bulkUpdate": {
       "title": "Aggiornamento in blocco",
@@ -1494,9 +1494,9 @@
       "deleteFailed": "Impossibile rimuovere la configurazione di aggiornamento in blocco.",
       "planFailed": "Impossibile preparare l’aggiornamento in blocco. Modifica la configurazione e controlla i metodi non disponibili.",
       "loadFailed": "Impossibile caricare la configurazione dell’aggiornamento in blocco.",
-      "osDockerScope": "gli aggiornamenti del sistema operativo includono anche Docker quando è installato come pacchetto di sistema.",
-      "unverifiedTargetsHelp": "la disponibilità dell'aggiornamento per alcuni articoli selezionati non è verificata.L'avvio eseguirà i metodi di aggiornamento selezionati anche senza una nuova versione confermata.",
-      "dockerImageMethod": "immagine Docker"
+      "osDockerScope": "Gli aggiornamenti del sistema operativo includono anche Docker quando è installato come pacchetto di sistema.",
+      "unverifiedTargetsHelp": "La disponibilità di aggiornamenti per alcuni elementi selezionati non è verificata. L'avvio eseguirà i metodi di aggiornamento scelti anche senza una nuova versione confermata.",
+      "dockerImageMethod": "Immagine Docker"
     },
     "appEditor": {
       "methodOciImage": "Immagine OCI (installata da ProxMenux)",
@@ -2211,6 +2211,17 @@
         "gettingStartedDescription": "Un prompt di esempio è pronto per aiutarti a iniziare. Puoi modificarlo, esportarlo per condividerlo con altri o importare un prompt dalla community.",
         "loadExample": "Carica esempio",
         "startFromScratch": "Inizia da zero"
+      },
+      "history": {
+        "title": "Cronologia delle notifiche",
+        "description": "Le ultime 20 notifiche inviate, inclusa ogni esecuzione del digest giornaliero, con il risultato di ciascuna.",
+        "empty": "Nessuna notifica è stata ancora inviata.",
+        "loadFailed": "Non è stato possibile caricare la cronologia delle notifiche.",
+        "sent": "Inviata",
+        "notSent": "Non inviata",
+        "severityInfo": "Info",
+        "severityWarning": "Avviso",
+        "severityCritical": "Critico"
       }
     },
     "optimizations": {
@@ -3422,7 +3433,7 @@
       "webhookHttps": "Le notifiche Proxmox raggiungono il Monitor con HTTPS attivo: consegnate su un indirizzo solo locale, non falliscono più per errori di certificato.",
       "persistentLogs": "Una raffica di errori di log conclusa non è più segnalata come persistente: un pattern deve continuare a comparire per 15 minuti e l’avviso si chiude da solo (segnalato da @Joshua1264).",
       "mountsLanAddress": "I mount su LVM-thin e altri storage a blocchi mostrano l’utilizzo; le app multi-container si aprono al proprio indirizzo LAN.",
-      "ociManager": "OCI manager Apps (beta): una nuova voce nel menu di ProxMenux installa le applicazioni dalle loro immagini container ufficiali come LXC nativi di Proxmox, senza motore Docker. Il catalogo contiene oltre 360 applicazioni.",
+      "ociManager": "OCI manager Apps (Technology Preview): una nuova voce nel menu di ProxMenux installa le applicazioni dalle loro immagini container ufficiali come LXC nativi di Proxmox, senza motore Docker. Il catalogo contiene oltre 360 applicazioni.",
       "ociInMonitor": "Applicazioni OCI nel Monitor: la scheda App le riconosce, la scheda Aggiornamenti le aggiorna e le modifica come fa il menu, e una scheda Log segue in tempo reale l'output della console dell'applicazione.",
       "ociAcceleration": "Accelerazione hardware per le applicazioni OCI: l'installer offre solo i profili che l'host può eseguire: GPU NVIDIA, Intel e AMD e, per Frigate, una NPU Intel o una Coral. NVIDIA Container Toolkit viene installato con il driver.",
       "ociRecovery": "Un'applicazione OCI viaggia con il suo backup: ripristinata su questo host o su un altro, viene di nuovo registrata e gestita, e in un cluster si avvia sul nodo su cui viene spostata.",
@@ -5004,7 +5015,9 @@
   "lxcTerminal": {
     "title": "Terminale: {name} (ID: {id})",
     "errors": {
-      "invalidVmid": "VMID non valido: esecuzione di pct enter rifiutata"
+      "invalidVmid": "VMID non valido: esecuzione di pct enter rifiutata",
+      "noShell": "L'immagine di questo container non ha una shell, quindi non può aprire un terminale. Il suo output si trova nella scheda Log.",
+      "enterFailed": "Impossibile entrare nel container."
     },
     "commands": {
       "listFiles": "Elenca tutti i file con dettagli",
@@ -5237,7 +5250,8 @@
     "yes": "Sì",
     "yourInput": "Input:",
     "submit": "Invia",
-    "ok": "OK"
+    "ok": "OK",
+    "endOfInput": "Fine dell'input"
   },
   "apps": {
     "searchPlaceholder": "Cerca app o CT…",

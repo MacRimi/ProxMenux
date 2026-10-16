@@ -18,7 +18,7 @@ import {
   Trash2, ChevronRight, TestTube2, Mail, Webhook,
   Copy, Server, Shield, ExternalLink, RefreshCw, Download, Upload,
   Cloud, Brain, Globe, MessageSquareText, Sparkles, Pencil, Save, RotateCcw, Lightbulb,
-  Moon, Newspaper
+  Moon, Newspaper, History, ChevronDown
 } from "lucide-react"
 
 interface ChannelConfig {
@@ -109,7 +109,8 @@ interface HistoryEntry {
   title: string
   severity: string
   sent_at: string
-  success: boolean
+  success: boolean | number
+  message?: string | null
   error_message: string | null
 }
 
@@ -331,7 +332,8 @@ export function NotificationSettings() {
   const { resolvedTheme } = useTheme()
   const [config, setConfig] = useState<NotificationConfig>(DEFAULT_CONFIG)
   const [status, setStatus] = useState<ServiceStatus | null>(null)
-  const [history, setHistory] = useState<HistoryEntry[]>([])
+  const [history, setHistory] = useState<HistoryEntry[] | null>(null)
+  const [historyError, setHistoryError] = useState(false)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
@@ -452,12 +454,12 @@ export function NotificationSettings() {
 
   const loadHistory = useCallback(async () => {
     try {
-      const data = await fetchApi<{ success: boolean; history: HistoryEntry[]; total: number }>("/api/notifications/history?limit=20")
-      if (data.success) {
-        setHistory(data.history || [])
-      }
+      const data = await fetchApi<{ history?: HistoryEntry[]; error?: string }>("/api/notifications/history?limit=20")
+      if (data.error || !Array.isArray(data.history)) throw new Error("history unavailable")
+      setHistory(data.history)
+      setHistoryError(false)
     } catch {
-      // Ignore
+      setHistoryError(true)
     }
   }, [])
 
@@ -1094,15 +1096,6 @@ export function NotificationSettings() {
     } finally {
       setTestingAI(false)
       setTimeout(() => setAiTestResult(null), 8000)
-    }
-  }
-
-  const handleClearHistory = async () => {
-    try {
-      await fetchApi("/api/notifications/history", { method: "DELETE" })
-      setHistory([])
-    } catch {
-      // Ignore
     }
   }
 
@@ -2761,6 +2754,75 @@ export function NotificationSettings() {
               )}
             </div>
 
+            {/* ── Notification history ── */}
+            <div className="space-y-3">
+              <button
+                type="button"
+                className="w-full flex items-start gap-3 py-1 text-left"
+                onClick={() => setShowHistory(open => !open)}
+                aria-expanded={showHistory}
+              >
+                <History className="h-5 w-5 text-blue-400 mt-0.5 shrink-0" />
+                <div className="flex-1 min-w-0">
+                  <span className="text-sm font-medium">{t("settings.notifications.history.title")}</span>
+                  <p className="text-xs sm:text-sm text-muted-foreground">{t("settings.notifications.history.description")}</p>
+                </div>
+                <ChevronDown className={`h-4 w-4 mt-1 shrink-0 text-muted-foreground transition-transform ${showHistory ? "rotate-180" : ""}`} />
+              </button>
+              {showHistory && (
+                historyError ? (
+                  <p className="text-xs sm:text-sm text-red-400">{t("settings.notifications.history.loadFailed")}</p>
+                ) : history === null ? (
+                  <div className="flex justify-center py-3"><Loader2 className="h-4 w-4 animate-spin text-muted-foreground" /></div>
+                ) : history.length === 0 ? (
+                  <p className="text-xs sm:text-sm text-muted-foreground">{t("settings.notifications.history.empty")}</p>
+                ) : (
+                  <div className="space-y-1.5 max-h-80 overflow-y-auto pr-1">
+                    {history.map(entry => {
+                      const sent = Boolean(entry.success)
+                      const severity = (entry.severity || "").toLowerCase()
+                      const detail = !sent ? entry.error_message : entry.event_type === "digest" ? entry.message : null
+                      return (
+                        <div key={entry.id} className="flex items-start gap-2.5 p-2.5 rounded-md bg-muted/30 border border-border/50">
+                          {sent ? (
+                            <CheckCircle2 className="h-4 w-4 text-green-500 shrink-0 mt-0.5" aria-label={t("settings.notifications.history.sent")} />
+                          ) : (
+                            <XCircle className="h-4 w-4 text-red-500 shrink-0 mt-0.5" aria-label={t("settings.notifications.history.notSent")} />
+                          )}
+                          <div className="flex-1 min-w-0">
+                            <span className="text-xs sm:text-sm font-medium block truncate">{entry.title || entry.event_type}</span>
+                            <span className="text-[11px] sm:text-xs text-muted-foreground">
+                              {entry.channel ? entry.channel.charAt(0).toUpperCase() + entry.channel.slice(1) : ""} · {new Date(entry.sent_at).toLocaleString()}
+                            </span>
+                            {detail && (
+                              <p className={`text-[11px] sm:text-xs mt-0.5 break-words ${sent ? "text-muted-foreground" : "text-red-400"}`}>{detail}</p>
+                            )}
+                          </div>
+                          {(severity === "critical" || severity === "warning" || severity === "info") && (
+                            <Badge
+                              variant="outline"
+                              className={`text-[10px] shrink-0 ${
+                                severity === "critical"
+                                  ? "border-red-500/30 text-red-400"
+                                  : severity === "warning"
+                                  ? "border-amber-500/30 text-amber-400"
+                                  : "border-blue-500/30 text-blue-400"
+                              }`}
+                            >
+                              {severity === "critical"
+                                ? t("settings.notifications.history.severityCritical")
+                                : severity === "warning"
+                                ? t("settings.notifications.history.severityWarning")
+                                : t("settings.notifications.history.severityInfo")}
+                            </Badge>
+                          )}
+                        </div>
+                      )
+                    })}
+                  </div>
+                )
+              )}
+            </div>
 
           </>
         )}

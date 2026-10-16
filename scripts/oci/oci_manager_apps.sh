@@ -1,6 +1,6 @@
 #!/bin/bash
 # ==========================================================
-# ProxMenux - OCI manager Apps (beta)
+# ProxMenux - OCI manager Apps (Technology Preview)
 # ==========================================================
 # Author      : MacRimi
 # Copyright   : (c) 2024 MacRimi
@@ -37,7 +37,7 @@ ensure_oci_dependencies() {
     [[ ${#missing[@]} -eq 0 ]] && return 0
 
     show_proxmenux_logo
-    msg_title "$(translate "OCI manager Apps (beta)")"
+    msg_title "$(translate "OCI manager Apps (Technology Preview)")"
     msg_info "$(translate "Installing required packages...")"
     apt-get update >/dev/null 2>&1
     local status
@@ -55,6 +55,31 @@ ensure_oci_dependencies() {
     fi
     stop_spinner
 }
+
+# Proxmox VE runs OCI images as LXC containers from 9.1 on.
+pve_supports_oci() {
+    local version major minor
+    version=$(pveversion 2>/dev/null | grep -oP 'pve-manager/\K[0-9]+\.[0-9]+' | head -1)
+    major=${version%%.*}
+    minor=${version#*.}
+    [[ $major =~ ^[0-9]+$ && $minor =~ ^[0-9]+$ ]] || return 1
+    (( major > 9 || (major == 9 && minor >= 1) ))
+}
+
+if ! pve_supports_oci; then
+    show_proxmenux_logo
+    msg_title "$(translate "OCI manager Apps (Technology Preview)")"
+    msg_error "$(translate "OCI containers require Proxmox VE 9.1 or later.")"
+    PVE_VERSION=$(pveversion 2>/dev/null | grep -oP 'pve-manager/\K[0-9.]+' | head -1)
+    [[ -n $PVE_VERSION ]] && msg_info2 "$(translate "Current version:") $PVE_VERSION"
+    if [[ -t 0 ]]; then
+        echo
+        msg_success "$(translate "Press Enter to return to the menu...")"
+        read -r
+        [[ $# -eq 0 ]] && exec bash "$LOCAL_SCRIPTS/menus/main_menu.sh"
+    fi
+    exit 1
+fi
 
 if [[ ! -f "$OCI_ENGINE_DIR/src/proxmenux_oci/__main__.py" ]]; then
     msg_error "$(translate "The OCI engine is not installed. Update ProxMenux and try again.")"

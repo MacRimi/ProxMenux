@@ -7,7 +7,7 @@ from pathlib import Path
 import subprocess
 from types import SimpleNamespace
 from unittest import TestCase
-from unittest.mock import Mock
+from unittest.mock import Mock, patch
 
 ROOT = Path(__file__).resolve().parents[3]
 MENU = ROOT / 'oci/src/proxmenux_oci/management.py'
@@ -47,6 +47,42 @@ class SelectionSetupWording(TestCase):
         fn(Path('/fixture'), ui)
         ui.message.assert_called_once_with(EMPTY, 'OCI management')
         ui.choose.assert_not_called()
+
+    def _menu(self, inventories, selections):
+        rows = iter(inventories)
+        ui = SimpleNamespace(message=Mock(), choose=Mock(side_effect=selections))
+        refresh = Mock(return_value={})
+        manage = Mock(return_value=True)
+        fn = extracted('_interactive_management', os=SimpleNamespace(geteuid=lambda: 0),
+            shutil=SimpleNamespace(which=lambda _: '/fake/pct'), saved_inventory=lambda _: next(rows),
+            _clean_orphans=lambda project: None,
+            recover_automatically=lambda project: None, offer_recovery=lambda project, ui: None,
+            carry_records=refresh, manage_instance=manage, menu_size=lambda: 10,
+            STATUS_LABELS={}, translate=lambda s: s)
+        fn(Path('/fixture'), ui)
+        return ui, refresh, manage
+
+    def test_the_list_comes_back_after_an_operation_without_refreshing_every_copy(self):
+        row = {'vmid': 101, 'title': 'Jellyfin', 'hostname': 'jellyfin', 'status': 'installed', 'image': 'jellyfin/jellyfin'}
+        ui, refresh, manage = self._menu([[row], [row]], ['101', None])
+        self.assertEqual(ui.choose.call_count, 2)
+        manage.assert_called_once()
+        refresh.assert_called_once_with(Path('/fixture'), mount_stopped=False, shown=True)
+
+    def test_removing_the_last_application_returns_without_a_message(self):
+        row = {'vmid': 101, 'title': 'Jellyfin', 'hostname': 'jellyfin', 'status': 'installed', 'image': 'jellyfin/jellyfin'}
+        ui, _, manage = self._menu([[row], []], ['101'])
+        manage.assert_called_once()
+        ui.message.assert_not_called()
+
+    def test_the_watchdog_refreshes_the_copy_of_the_containers_it_changed(self):
+        refresh = Mock(return_value={})
+        watchdog = SimpleNamespace(set_watchdog=Mock(side_effect=[[101, 102]]))
+        fn = extracted('set_watchdog', sys=SimpleNamespace(path=[]), carry_records=refresh,
+                       instances=SimpleNamespace(ROOT=Path('/fixture')))
+        with patch.dict('sys.modules', {'oci_watchdog': watchdog}):
+            self.assertTrue(fn(Path('/fixture'), [102], True))
+        refresh.assert_called_once_with(Path('/fixture'), mount_stopped=False, vmids=[101, 102])
 
     def test_selector_filters_missing_guest_without_erasing_saved_contract(self):
         class Entry:

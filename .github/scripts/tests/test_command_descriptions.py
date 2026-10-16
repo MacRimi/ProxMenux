@@ -212,6 +212,12 @@ class CommandDescriptionsTests(unittest.TestCase):
                     # New LXC observation labels intentionally ship only EN/SK.
                     # Model the bot's future output in temporary catalogs, just
                     # like the other pending keys above; never rewrite locales.
+                    messages["scriptTerminal"].setdefault("endOfInput", english["scriptTerminal"]["endOfInput"])
+                    for key in ("noShell", "enterFailed"):
+                        messages["lxcTerminal"]["errors"].setdefault(key, english["lxcTerminal"]["errors"][key])
+                    # The notification history panel texts await the bot as well.
+                    for key, value in english["settings"]["notifications"]["history"].items():
+                        messages["settings"]["notifications"].setdefault("history", {}).setdefault(key, value)
                     for key in ("checkNow", "checkReadOnlyHelp", "checkCooldown",
                                 "checkStale", "checkStaleHelp", "checkBeforeUpdate",
                                 "startBeforeCheck", "notCheckedYet",

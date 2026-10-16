@@ -90,8 +90,8 @@
     "cpuPercent": "CPU %",
     "loadAverage": "Ø Auslastung",
     "loadAxis": "Laden",
-    "memory": "Speicher",
-    "memoryUsage": "Speichernutzung",
+    "memory": "Arbeitsspeicher",
+    "memoryUsage": "Arbeitsspeichernutzung",
     "user": "Benutzer",
     "system": "System",
     "cores": "Kerne",
@@ -857,7 +857,7 @@
       "user": "Benutzer",
       "command": "Befehl",
       "cpuPercent": "CPU %",
-      "memory": "Speicher",
+      "memory": "Arbeitsspeicher",
       "memPercent": "Speicher %",
       "noMatches": "Keine Prozesse passen zum Filter",
       "captured": "Erfasst {time}",
@@ -892,7 +892,7 @@
         "user": "Benutzer",
         "group": "Gruppe",
         "cpu": "CPU",
-        "memory": "Speicher",
+        "memory": "Arbeitsspeicher",
         "residentRss": "Bewohner (RSS)",
         "virtualSize": "Virtuelle Größe",
         "swap": "Swap",
@@ -940,10 +940,10 @@
     "empty": "Keine virtuellen Maschinen gefunden",
     "uptime": "Betriebszeit: {uptime}",
     "cpuUsage": "CPU-Auslastung",
-    "memory": "Speicher",
-    "disk": "Laufwerk",
-    "diskUsage": "Laufwerksnutzung",
-    "diskIo": "Laufwerks-E/A",
+    "memory": "Arbeitsspeicher",
+    "disk": "Scheibe",
+    "diskUsage": "Festplattennutzung",
+    "diskIo": "Festplatten-E/A",
     "networkIo": "Netzwerk-E/A",
     "sinceBoot": "seit dem Booten",
     "loadingConfiguration": "Konfiguration wird geladen...",
@@ -1075,15 +1075,15 @@
       "logs": "Logs"
     },
     "actions": {
-      "start": "Start",
-      "shutdown": "Runterfahren",
+      "start": "Starten",
+      "shutdown": "Herunterfahren",
       "reboot": "Neustart",
       "forceStop": "Stopp erzwingen",
-      "working": "Arbeiten...",
-      "startPending": "Started...",
-      "shutdownPending": "Herunterfahren...",
-      "rebootPending": "Neustart...",
-      "stopPending": "Stoppen..."
+      "working": "Wird ausgeführt...",
+      "startPending": "Wird gestartet...",
+      "shutdownPending": "Wird heruntergefahren...",
+      "rebootPending": "Wird neu gestartet...",
+      "stopPending": "Wird gestoppt..."
     },
     "confirm": {
       "forceStopTitle": "Stopp erzwingen",
@@ -1493,9 +1493,9 @@
       "saveFailed": "Die Sammelaktualisierungskonfiguration konnte nicht gespeichert werden.",
       "deleteFailed": "Die Sammelaktualisierungskonfiguration konnte nicht entfernt werden.",
       "planFailed": "Die Sammelaktualisierung konnte nicht vorbereitet werden. Prüfen Sie die nicht verfügbaren Methoden.",
-      "loadFailed": "Die Massenaktualisierungs-Konfiguration konnte nicht geladen werden.",
-      "osDockerScope": "Betriebssystem-Aktualisierungen enthalten auch Docker, wenn es als Systempaket installiert wurde.",
-      "unverifiedTargetsHelp": "Die Verfügbarkeit von Updates für einige ausgewählte Artikel ist nicht bestätigt. Beim Starten werden die ausgewählten Update-Methoden auch ohne bestätigte neue Version ausgeführt.",
+      "loadFailed": "Die Massenaktualisierungskonfiguration konnte nicht geladen werden.",
+      "osDockerScope": "Betriebssystem-Updates umfassen auch Docker, wenn es als Systempaket installiert ist.",
+      "unverifiedTargetsHelp": "Für einige ausgewählte Elemente ist nicht bestätigt, ob ein Update verfügbar ist. Beim Start werden die gewählten Update-Methoden auch ohne bestätigte neue Version ausgeführt.",
       "dockerImageMethod": "Docker-Image"
     },
     "appEditor": {
@@ -2211,6 +2211,17 @@
         "gettingStartedDescription": "Eine Beispielaufforderung steht bereit, um Ihnen den Einstieg zu erleichtern. Sie können es anpassen, exportieren, um es mit anderen zu teilen, oder eine Eingabeaufforderung aus der Community importieren.",
         "loadExample": "Beispiel laden",
         "startFromScratch": "Fangen Sie bei Null an"
+      },
+      "history": {
+        "title": "Benachrichtigungsverlauf",
+        "description": "Die letzten 20 gesendeten Benachrichtigungen, einschließlich jeder Ausführung des täglichen Digests, mit dem jeweiligen Ergebnis.",
+        "empty": "Es wurden noch keine Benachrichtigungen gesendet.",
+        "loadFailed": "Der Benachrichtigungsverlauf konnte nicht geladen werden.",
+        "sent": "Gesendet",
+        "notSent": "Nicht gesendet",
+        "severityInfo": "Info",
+        "severityWarning": "Warnung",
+        "severityCritical": "Kritisch"
       }
     },
     "optimizations": {
@@ -3422,7 +3433,7 @@
       "webhookHttps": "Proxmox-Benachrichtigungen erreichen den Monitor auch mit aktiviertem HTTPS — sie werden über eine nur lokale Adresse zugestellt und scheitern nicht mehr an einem Zertifikatsfehler.",
       "persistentLogs": "Eine beendete Häufung von Log-Fehlern wird nicht mehr als dauerhaft gemeldet: Ein Muster muss 15 Minuten lang weiter auftreten, und seine Warnung schließt sich von selbst (gemeldet von @Joshua1264).",
       "mountsLanAddress": "Mountpunkte auf LVM-thin und anderem Blockspeicher zeigen ihre Belegung, und Multi-Container-Anwendungen öffnen sich unter ihrer LAN-Adresse.",
-      "ociManager": "OCI manager Apps (Beta) – ein neuer Eintrag im ProxMenux-Menü installiert Anwendungen aus ihren offiziellen Container-Images als native Proxmox-LXC, ohne Docker-Engine. Der Katalog umfasst über 360 Anwendungen.",
+      "ociManager": "OCI manager Apps (Technology Preview) – ein neuer Eintrag im ProxMenux-Menü installiert Anwendungen aus ihren offiziellen Container-Images als native Proxmox-LXC, ohne Docker-Engine. Der Katalog umfasst über 360 Anwendungen.",
       "ociInMonitor": "OCI-Anwendungen im Monitor – die App-Registerkarte erkennt sie, die Updates-Registerkarte aktualisiert und ändert sie wie das Menü, und eine Logs-Registerkarte verfolgt die Konsolenausgabe der Anwendung live.",
       "ociAcceleration": "Hardwarebeschleunigung für OCI-Anwendungen – das Installationsprogramm bietet nur die Profile an, die der Host ausführen kann: NVIDIA-, Intel- und AMD-GPUs und für Frigate eine Intel-NPU oder eine Coral. Das NVIDIA Container Toolkit wird mit dem Treiber installiert.",
       "ociRecovery": "Eine OCI-Anwendung reist mit ihrem Backup – auf diesem oder einem anderen Host wiederhergestellt, wird sie erneut registriert und verwaltet, und in einem Cluster startet sie auf dem Knoten, auf den sie verschoben wird.",
@@ -5004,7 +5015,9 @@
   "lxcTerminal": {
     "title": "Terminal: {name} (ID: {id})",
     "errors": {
-      "invalidVmid": "Ungültige VMID – Ausführung von pct enter wird abgelehnt"
+      "invalidVmid": "Ungültige VMID – Ausführung von pct enter wird abgelehnt",
+      "noShell": "Das Image dieses Containers hat keine Shell und kann daher kein Terminal öffnen. Die Ausgabe steht auf der Registerkarte „Logs“.",
+      "enterFailed": "In den Container konnte nicht gewechselt werden."
     },
     "commands": {
       "listFiles": "Listen Sie alle Dateien mit Details auf",
@@ -5237,7 +5250,8 @@
     "yes": "Ja",
     "yourInput": "Ihr Beitrag:",
     "submit": "Einreichen",
-    "ok": "OK"
+    "ok": "OK",
+    "endOfInput": "Ende der Eingabe"
   },
   "apps": {
     "searchPlaceholder": "Nach App or CT suchen…",
@@ -6135,7 +6149,7 @@
       "board": "Board",
       "processor": "Prozessor",
       "topology": "Sockel × Kerne / Threads",
-      "memory": "Speicher",
+      "memory": "Arbeitsspeicher",
       "cores": "Kerne",
       "threads": "Threads",
       "memoryModules": "Speichermodule",
@@ -7071,7 +7085,7 @@
           "vm_ct": "VM a CT",
           "backup": "Backup",
           "resources": "Ressourcen",
-          "storage": "Lagerung",
+          "storage": "Speicher",
           "network": "Netzwerk",
           "security": "Sicherheit",
           "cluster": "Cluster",
@@ -7120,7 +7134,7 @@
             "vm_ct": "Virtuelle Maschine / Container",
             "backup": "Backup & Snapshot",
             "resources": "Systemressourcen",
-            "storage": "Lagerung",
+            "storage": "Speicher",
             "network": "Netzwerk",
             "security": "Sicherheit",
             "cluster": "Cluster",
@@ -7137,7 +7151,7 @@
             "action": "Aktion",
             "targetNode": "Zielknoten",
             "reason": "Grund",
-            "storage": "Lagerung",
+            "storage": "Speicher",
             "status": "Status",
             "size": "Größe",
             "duration": "Dauer",
@@ -7146,7 +7160,7 @@
             "currentValue": "Aktueller Wert",
             "threshold": "Schwelle",
             "cpuCores": "CPU-Kerne",
-            "memory": "Erinnerung",
+            "memory": "Arbeitsspeicher",
             "temperature": "Temperatur",
             "mountPoint": "Mount Point",
             "usage": "Verwendung",

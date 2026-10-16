@@ -36,8 +36,8 @@
     "keywords": ""
   },
   {
-    "title": "OCI manager Apps (beta)",
-    "menu": "OCI manager Apps (beta)",
+    "title": "OCI manager Apps (Technology Preview)",
+    "menu": "OCI manager Apps (Technology Preview)",
     "script": "oci/oci_manager_apps.sh",
     "keywords": "docker container image contenedor imagen apps"
   },
