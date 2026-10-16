@@ -74,6 +74,11 @@ for (const locale of ['en', 'sk']) {
   const translated = flattenText(render(true))
   const expected = t('vmLxc.scheduled.reasonStoppedContainer')
   const skippedLabel = t('vmLxc.scheduled.runSkippedStatus')
+  const expectedHistoricalReason = locale === 'sk'
+    ? 'Kontajner bol vypnutý; plánovaná aktualizácia sa preskočila.'
+    : 'Container was stopped; scheduled update was skipped.'
+  assert.equal(expected, expectedHistoricalReason,
+    `${locale}: stopped reason must describe the historical scheduled run, not current container state`)
   assert(translated.includes(expected), `${locale}: known reason code must use the locale catalog`)
   assert(translated.includes(skippedLabel), `${locale}: skipped run must not claim that no updates are pending`)
   assert(!translated.includes(context.scheduleLastRunReason), `${locale}: raw stopped reason must not leak into UI`)

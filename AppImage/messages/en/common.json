@@ -1289,7 +1289,7 @@
       "runDeferred": "held for safety",
       "runSkipped": "nothing pending",
       "runSkippedStatus": "run skipped",
-      "reasonStoppedContainer": "Container is stopped; scheduled update was skipped.",
+      "reasonStoppedContainer": "Container was stopped; scheduled update was skipped.",
       "releaseDelaySummary": "{days}-day release hold",
       "releaseDelayLabel": "Wait after a new app release",
       "releaseDelayNone": "No waiting period",
