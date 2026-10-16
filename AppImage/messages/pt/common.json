@@ -1304,8 +1304,8 @@
         "Sábado"
       ],
       "runSkippedStatus": "execução ignorada",
-      "reasonStoppedContainer": "Container está parado;a atualização agendada foi ignorada.",
-      "reasonStoppedContainerHistorical": "o contêiner foi interrompido no horário de atualização agendado."
+      "reasonStoppedContainer": "O contêiner está parado; a atualização agendada foi ignorada.",
+      "reasonStoppedContainerHistorical": "O contêiner estava parado no horário da atualização agendada."
     },
     "cronChip": {
       "detected": "cron do host detectado",

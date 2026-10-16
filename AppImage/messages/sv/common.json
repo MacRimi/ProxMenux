@@ -1303,8 +1303,8 @@
         "fredag",
         "lördag"
       ],
-      "runSkippedStatus": "kör hoppade över",
-      "reasonStoppedContainer": "Behållaren är stoppad;schemalagd uppdatering hoppades över.",
+      "runSkippedStatus": "körning överhoppad",
+      "reasonStoppedContainer": "Behållaren är stoppad; den schemalagda uppdateringen hoppades över.",
       "reasonStoppedContainerHistorical": "Behållaren stoppades vid den schemalagda uppdateringstiden."
     },
     "cronChip": {
