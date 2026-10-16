@@ -170,18 +170,15 @@ function select_linux_iso_official() {
 
 
 function select_linux_cloudinit() {
+  # The maintained Debian and Ubuntu helpers select their own release.
   local CLOUDINIT_OPTIONS=(
-    "1" "Arch Linux   (Cloud-Init automated)   │ Helper-Scripts"
-    "2" "Debian 13    (Cloud-Init automated)   │ Helper-Scripts"
-    "3" "Debian 12    (Cloud-Init automated)   │ Helper-Scripts"
-    "4" "Ubuntu 22.04 (Cloud-Init automated)   │ Helper-Scripts"
-    "5" "Ubuntu 24.04 (Cloud-Init automated)   │ Helper-Scripts"
-    "6" "Ubuntu 24.10 (Cloud-Init automated)   │ Helper-Scripts"
-    "7" "Ubuntu 25.04 (Cloud-Init automated)   │ Helper-Scripts"
-    "8" "$(translate "Return to Main Menu")"
+    "1" "Arch Linux  (Cloud-Init automated)   │ Helper-Scripts"
+    "2" "Debian      (Cloud-Init automated)   │ Helper-Scripts"
+    "3" "Ubuntu      (Cloud-Init automated)   │ Helper-Scripts"
+    "4" "$(translate "Return to Main Menu")"
   )
 
-  local script_selection
+  local script_selection script_url script_content
   script_selection=$(dialog --backtitle "ProxMenux" --title "$(translate "Cloud-Init Automated Installers")" \
     --menu "\n$(translate "Select a pre-configured Linux VM script to execute:")" 20 78 10 \
     "${CLOUDINIT_OPTIONS[@]}" 3>&1 1>&2 2>&3)
@@ -190,33 +187,28 @@ function select_linux_cloudinit() {
 
   case "$script_selection" in
     1)
-      bash <(curl -s "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/vm/archlinux-vm.sh")
+      script_url="https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/vm/archlinux-vm.sh"
       ;;
     2)
-      bash <(curl -s "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/vm/debian-13-vm.sh")
+      script_url="https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/vm/debian-vm.sh"
       ;;
     3)
-      bash <(curl -s "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/vm/debian-vm.sh")
+      script_url="https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/vm/ubuntu-vm.sh"
       ;;
     4)
-      bash <(curl -s "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/vm/ubuntu2204-vm.sh")
-      ;;
-    5)
-      bash <(curl -s "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/vm/ubuntu2404-vm.sh")
-      ;;
-    6)
-      bash <(curl -s "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/vm/ubuntu2410-vm.sh")
-      ;;
-    7)
-      bash <(curl -s "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/vm/ubuntu2504-vm.sh")
-      echo -e
-      echo -e "after installation, checkout:\nhttps://github.com/community-scripts/ProxmoxVE/discussions/272"
-      echo -e
-      ;;  
-    8)
       return
       ;;
+    *)
+      return 1
+      ;;
   esac
+
+  # Do not execute a failed or partial download through process substitution.
+  if ! script_content=$(curl -fsSL --connect-timeout 5 --max-time 60 "$script_url") || [[ -z "${script_content//[[:space:]]/}" ]]; then
+    dialog --title "Helper Scripts" --msgbox "$(translate "Error: Failed to download the script.")" 8 70
+    return 1
+  fi
+  bash -c "$script_content" || return $?
 
   msg_success "$(translate "Press Enter to return to menu...")"
   read -r
