@@ -60,6 +60,60 @@ class WebDocsI18nTests(unittest.TestCase):
         target = {"title": "Actualizaciones", "url": "https://example.com"}
         self.assertEqual(MODULE.pending_leaves(source, target), [])
 
+    def test_rendering_metadata_is_copied_but_visible_labels_are_translated(self):
+        for key, value in (("tone", "amber"), ("variant", "source"),
+                           ("accent", "border-blue-300 bg-blue-50"),
+                           ("iconBg", "bg-blue-100 text-blue-700"),
+                           ("color", "green")):
+            with self.subTest(key=key):
+                self.assertTrue(MODULE.should_copy(value, ("steps", 0, key)))
+                self.assertFalse(MODULE.should_copy(value, ("label",)))
+                self.assertEqual(MODULE.merge_tree({key: value}, {key: "translated"}, {}), {key: value})
+        self.assertFalse(MODULE.should_copy("Translation", ("type",)))
+        self.assertFalse(MODULE.should_copy("English", ("lang",)))
+        for value in ("loader", "dedicated"):
+            self.assertTrue(MODULE.should_copy(value, ("cards", 0, "flow")))
+            self.assertFalse(MODULE.should_copy(value, ("label",)))
+
+    def test_literal_only_examples_and_api_routes_are_not_translation_gaps(self):
+        for source in ("<code>apt update</code>",
+                       "<code>net0</code> / <code>net1</code>.",
+                       "/api/task-log/&lt;upid&gt;", "/api/vms/<vmid>/config"):
+            with self.subTest(source=source):
+                self.assertTrue(MODULE.should_copy(source, ("cell",)))
+        self.assertFalse(MODULE.should_copy("Run <code>apt update</code> first.", ("body",)))
+        self.assertFalse(MODULE.should_copy("After running the command, check its output.", ("afterCode",)))
+        self.assertFalse(MODULE.should_copy("Before running the command, read this.", ("beforeCode",)))
+        self.assertTrue(MODULE.should_copy("curl http://localhost:8008/api/health", ("curlCode",)))
+
+    def test_inline_identifiers_and_encoded_delimiters_round_trip(self):
+        source = "Set RS_SKIP_PATHS, call _rs_apply_hot and keep localStorage at &lt;host&gt;."
+        protected, mapping = MODULE.protect_text(source)
+        for literal in ("RS_SKIP_PATHS", "_rs_apply_hot", "localStorage", "&lt;", "&gt;"):
+            self.assertIn(literal, mapping.values())
+            self.assertNotIn(literal, protected)
+        self.assertEqual(MODULE.restore_text(protected, mapping), source)
+
+    def test_literal_only_changes_sync_without_retranslating_human_prose(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            source = root / "messages/en/common.json"
+            target = root / "messages/de/common.json"
+            source.parent.mkdir(parents=True)
+            target.parent.mkdir(parents=True)
+            source.write_text(json.dumps({"title": "Updates", "code": "tool --version=2", "tone": "blue"}))
+            target.write_text(json.dumps({"title": "Aktualisierungen", "code": "tool --version=1", "tone": "blau"}))
+            provider = mock.Mock(side_effect=AssertionError("Existing prose must not be retranslated"))
+            self.assertEqual(self.run_generator(root, provider), 0)
+            self.assertEqual(json.loads(target.read_text()), {
+                "title": "Aktualisierungen", "code": "tool --version=2", "tone": "blue",
+            })
+            provider.assert_not_called()
+            before = target.stat().st_mtime_ns
+            self.assertEqual(self.run_generator(root, provider), 0)
+            self.assertEqual(target.stat().st_mtime_ns, before)
+            provider.assert_not_called()
+
     def test_changed_source_text_is_pending_even_with_existing_translation(self):
         source = {"title": "Updated installation guidance"}
         target = {"title": "Vorherige Installationsanleitung"}

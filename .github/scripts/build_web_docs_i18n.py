@@ -88,6 +88,10 @@ PROTECTED_PATTERNS = (
     re.compile(r"(?<![A-Za-z0-9<])/(?:[A-Za-z0-9._~:@%+=-]+/)*[A-Za-z0-9._~:@%+=-]+"),
     re.compile(r"\b[A-Za-z0-9_.-]+\.(?:json|ya?ml|toml|conf|service|socket|sh|py|tsx?|jsx?|md)\b"),
     re.compile(r"(?<![\w.@])@[A-Za-z_][A-Za-z0-9_]*"),
+    # Identifiers and encoded delimiters remain literal even outside <code>.
+    re.compile(r"(?<![A-Za-z0-9_])_?[A-Za-z][A-Za-z0-9]*(?:_[A-Za-z0-9]+)+(?![A-Za-z0-9_])"),
+    re.compile(r"\b[A-Za-z0-9]*(?:[a-z][A-Z])[A-Za-z0-9]*\b"),
+    re.compile(r"&(?:[A-Za-z]+|#[0-9]+|#x[0-9A-Fa-f]+);"),
 )
 LITERAL_TAG_RE = re.compile(
     r"<(code|kbd|pre)\b[^>]*>.*?</\1>",
@@ -109,16 +113,21 @@ ANY_TAG_RE = re.compile(r"</?[A-Za-z][^<>]*>")
 BARE_SENTINELS = False
 PLACEHOLDER_RE = re.compile(r"\{[A-Za-z_][A-Za-z0-9_.-]*\}")
 NON_TRANSLATABLE_KEYS = {
+    "accent",
     "command",
     "code",
     "href",
     "icon",
+    "iconbg",
     "id",
     "path",
     "route",
     "slug",
     "src",
     "url",
+    "color",
+    "tone",
+    "variant",
 }
 SOURCE_STATE_VERSION = 1
 
@@ -186,12 +195,23 @@ def should_copy(source: str, path: tuple[str | int, ...]) -> bool:
     if not source.strip() or not re.search(r"[A-Za-z]", source):
         return True
     last = str(path[-1]).lower() if path else ""
+    # These fields describe the surrounding snippet; they are prose, even
+    # though their names end in "Code".
+    if last in {"aftercode", "beforecode"}:
+        return False
+    if last == "flow" and source in {"loader", "dedicated"}:
+        return True
     if last in NON_TRANSLATABLE_KEYS or any(
         last.endswith(suffix)
         for suffix in ("url", "href", "path", "command", "code", "icon")
     ):
         return True
-    if re.fullmatch(r"https?://\S+", source) or re.fullmatch(r"/[A-Za-z0-9_./:@%+=-]+", source):
+    if re.fullmatch(r"https?://\S+", source) or re.fullmatch(r"/\S+", source):
+        return True
+    # Standalone literal blocks contain examples, not prose. Separators between
+    # several blocks do not make their command/configuration contents translatable.
+    without_literals = LITERAL_TAG_RE.sub("", source)
+    if without_literals != source and not re.search(r"[A-Za-z]", ANY_TAG_RE.sub("", without_literals)):
         return True
     if re.fullmatch(r"[A-Z0-9_.:/+-]{2,}", source):
         return True
@@ -200,6 +220,15 @@ def should_copy(source: str, path: tuple[str | int, ...]) -> bool:
 
 def leaf_token(path: tuple[str | int, ...]) -> str:
     return json.dumps(path, ensure_ascii=False, separators=(",", ":"))
+
+
+def literal_values_match(source: Any, target: Any) -> bool:
+    """Literal commands and rendering metadata must follow the source too."""
+    return all(
+        not should_copy(leaf.source, leaf.path)
+        or get_at_path(target, leaf.path) == leaf.source
+        for leaf in iter_leaves(source)
+    )
 
 
 def source_fingerprints(source: Any) -> dict[str, str]:
@@ -822,7 +851,10 @@ def main() -> int:
             leaves = pending_leaves(source, target, queued_tokens)
             total_strings += len(iter_leaves(source))
             missing_strings += len(leaves)
-            schema_changed = not schema_matches(source, target)
+            schema_changed = (
+                not schema_matches(source, target)
+                or not literal_values_match(source, target)
+            )
             if leaves or schema_changed:
                 pending.append(
                     (
