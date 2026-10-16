@@ -559,6 +559,7 @@ def interactive(catalog: Catalog) -> int:
         ("search", translate("Search applications")),
         ("all", f"{translate('All applications'):<35} ({len(applications):>3})"),
         ("manage", translate("Manage installed OCI applications")),
+        ("registries", translate("Registry accounts")),
         ("custom", translate("Install an image that is not in the catalog")),
         ("", ""),
     ] + [(number, f"{translate(labels[key]):<35} ({len(categories[key]):>3})")
@@ -580,6 +581,9 @@ def interactive(catalog: Catalog) -> int:
                 console.show_logo()
                 console.msg_title(translate("Manage installed OCI applications"))
                 interactive_management(PROJECT_ROOT, ui)
+            elif selection == "registries":
+                from .registry_accounts import open_registry_accounts
+                open_registry_accounts(ui)
             elif selection == "custom":
                 from .custom import explore
                 explore(ui)
