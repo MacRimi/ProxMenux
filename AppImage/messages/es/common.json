@@ -6439,6 +6439,34 @@
     },
     "readOnlyNotice": "La evaluación inspecciona la configuración y el estado del host. Puede escribir informes y logs; las comprobaciones del estado de arranque pueden montar temporalmente las particiones de sistema EFI."
   },
+  "oidc": {
+    "title": "OpenID Connect (OIDC)",
+    "description": "Inicia sesión con un proveedor de identidad externo, como Authentik, Keycloak o Pocket ID.",
+    "localRequired": "Configura y activa la autenticación con contraseña local antes de configurar OIDC.",
+    "enable": "Activar OpenID Connect",
+    "provider_name": "Nombre del proveedor",
+    "issuer": "URL del emisor (valor exacto del descubrimiento)",
+    "public_url": "URL HTTPS pública de este panel Monitor",
+    "client_id": "ID del cliente",
+    "secret": "Secreto del cliente",
+    "secretKept": "Si lo dejas vacío, se conserva el secreto guardado",
+    "authMethod": "Método de autenticación del cliente",
+    "publicClient": "Cliente público (PKCE, sin secreto)",
+    "urlHelp": "Usa la URL exacta del emisor, incluida la barra final si la tiene. La URL pública debe servir este panel y sus rutas /api por HTTPS, incluido el prefijo de ruta del proxy.",
+    "subjects": "Identificadores de administrador permitidos (sub), uno por línea",
+    "subjectHelp": "Solo estos identificadores de usuario inmutables pueden acceder a Monitor. Cada uno recibe acceso completo de administrador. Usa el valor sub emitido para este cliente, no el correo ni el nombre visible.",
+    "callback": "Registra esta URI de redirección exacta en tu proveedor de identidad:",
+    "mfaHelp": "OIDC utiliza la política de MFA del proveedor. La contraseña local y el 2FA siguen disponibles. Guardar cambios invalida las sesiones OIDC existentes.",
+    "unavailable": "Esta compilación de Monitor no incluye la librería criptográfica necesaria para OIDC.",
+    "save": "Guardar y verificar proveedor",
+    "saving": "Verificando proveedor…",
+    "saved": "Configuración OIDC guardada y descubrimiento verificado. Prueba el inicio de sesión en otro navegador antes de cerrar tu sesión local.",
+    "saveFailed": "No se pudo guardar la configuración OIDC.",
+    "login": "Continuar con {provider}",
+    "loginFailed": "El acceso OIDC ha fallado o ha caducado. Reinténtalo, revisa el identificador permitido o utiliza tus credenciales locales.",
+    "disabledSaved": "Configuración OIDC guardada. El acceso externo está desactivado.",
+    "saveDisabled": "Guardar configuración"
+  },
   "runtime": {
     "notifications": {
       "templates": {

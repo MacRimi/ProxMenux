@@ -330,7 +330,7 @@ def _maybe_rehash_password(password, current_hash):
     return None
 
 
-def generate_token(username):
+def generate_token(username, *, oidc_identity=None):
     """Generate a JWT token for the given username"""
     if not JWT_AVAILABLE:
         return None
@@ -342,6 +342,9 @@ def generate_token(username):
         'iss': JWT_ISSUER,
         'aud': JWT_AUDIENCE,
     }
+    if oidc_identity is not None:
+        payload.update(auth_method='oidc', oidc_sub=oidc_identity['sub'],
+                       oidc_revision=oidc_identity['revision'])
 
     try:
         token = jwt.encode(payload, _get_jwt_secret(), algorithm=JWT_ALGORITHM)
@@ -407,6 +410,8 @@ def verify_token_full(token):
             )
         except (jwt.MissingRequiredClaimError, jwt.InvalidAudienceError, jwt.InvalidIssuerError):
             payload = jwt.decode(token, _get_jwt_secret(), algorithms=[JWT_ALGORITHM])
+        if not _session_is_current(payload):
+            return None, None
         return payload.get('username'), payload.get('scope', 'full_admin')
     except jwt.ExpiredSignatureError:
         return None, None
@@ -448,6 +453,13 @@ def _log_auth_failure_throttled(msg):
             _AUTH_LOG_RATE['last_msg'] = msg
 
 
+def _session_is_current(payload):
+    if payload.get('auth_method') != 'oidc':
+        return True
+    from oidc_manager import is_current_session
+    return is_current_session(payload.get('oidc_sub'), payload.get('oidc_revision'))
+
+
 def verify_token(token):
     """
     Verify a JWT token
@@ -481,7 +493,7 @@ def verify_token(token):
             )
         except (jwt.MissingRequiredClaimError, jwt.InvalidAudienceError, jwt.InvalidIssuerError):
             payload = jwt.decode(token, _get_jwt_secret(), algorithms=[JWT_ALGORITHM])
-        return payload.get('username')
+        return payload.get('username') if _session_is_current(payload) else None
     except jwt.ExpiredSignatureError:
         _log_auth_failure_throttled("Token has expired")
         return None

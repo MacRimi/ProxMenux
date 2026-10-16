@@ -7230,5 +7230,33 @@
         "diagnosticsOmitted": "Righe o testo diagnostico omessi: {count}. Il report originale è conservato."
       }
     }
+  },
+  "oidc": {
+    "title": "OpenID Connect (OIDC)",
+    "description": "Accedi con un provider di identità esterno, come Authentik, Keycloak o Pocket ID.",
+    "localRequired": "Configura e abilita l'autenticazione locale tramite password prima di configurare OIDC.",
+    "enable": "Abilita OpenID Connect",
+    "provider_name": "Nome del provider",
+    "issuer": "URL dell'emittente (valore esatto dalla discovery)",
+    "public_url": "URL HTTPS pubblico di questa dashboard Monitor",
+    "client_id": "ID del client",
+    "secret": "Segreto del client",
+    "secretKept": "Il segreto salvato viene mantenuto se il campo rimane vuoto",
+    "authMethod": "Metodo di autenticazione del client",
+    "publicClient": "Client pubblico (PKCE, senza segreto)",
+    "urlHelp": "Usa l'URL esatto dell'emittente, inclusa l'eventuale barra finale. L'URL pubblico deve servire questa dashboard e le relative route /api tramite HTTPS, incluso l'eventuale prefisso di percorso del proxy.",
+    "subjects": "Identificatori soggetto degli amministratori autorizzati (sub), uno per riga",
+    "subjectHelp": "Solo questi ID utente immutabili del provider possono accedere a Monitor. Ciascuno riceve accesso amministrativo completo. Usa il claim sub emesso per questo client, non un indirizzo e-mail o un nome visualizzato.",
+    "callback": "Registra esattamente questo URI di reindirizzamento nel provider di identità:",
+    "mfaHelp": "OIDC usa la politica MFA del provider di identità. La password locale e la 2FA rimangono disponibili. Salvare le modifiche invalida le sessioni OIDC esistenti.",
+    "unavailable": "Questa versione di Monitor non include l'ambiente di esecuzione crittografico richiesto da OIDC.",
+    "save": "Salva e verifica il provider",
+    "saving": "Verifica del provider…",
+    "saved": "Impostazioni OIDC salvate. La discovery è stata verificata; prova l'accesso in un altro browser prima di terminare la sessione locale.",
+    "saveFailed": "Impossibile salvare le impostazioni OIDC.",
+    "login": "Continua con {provider}",
+    "loginFailed": "Accesso OIDC non riuscito o scaduto. Riprova, controlla il tuo identificatore soggetto autorizzato oppure usa le credenziali locali.",
+    "disabledSaved": "Impostazioni OIDC salvate. L'accesso esterno è disabilitato.",
+    "saveDisabled": "Salva impostazioni"
   }
 }

@@ -7230,5 +7230,33 @@
         "diagnosticsOmitted": "Utelämnade diagnosrader eller text: {count}. Originalrapporten bevaras."
       }
     }
+  },
+  "oidc": {
+    "title": "OpenID Connect (OIDC)",
+    "description": "Logga in med en extern identitetsleverantör, till exempel Authentik, Keycloak eller Pocket ID.",
+    "localRequired": "Konfigurera och aktivera lokal lösenordsautentisering innan du konfigurerar OIDC.",
+    "enable": "Aktivera OpenID Connect",
+    "provider_name": "Leverantörens namn",
+    "issuer": "Utfärdarens URL (exakt värde från discovery)",
+    "public_url": "Offentlig HTTPS-URL för denna Monitor-panel",
+    "client_id": "Klient-ID",
+    "secret": "Klienthemlighet",
+    "secretKept": "Den sparade hemligheten behålls om fältet lämnas tomt",
+    "authMethod": "Klientens autentiseringsmetod",
+    "publicClient": "Offentlig klient (PKCE, utan hemlighet)",
+    "urlHelp": "Använd utfärdarens exakta URL, inklusive eventuellt avslutande snedstreck. Den offentliga URL:en måste tillhandahålla denna panel och dess /api-rutter via HTTPS, inklusive eventuellt sökvägsprefix för proxyn.",
+    "subjects": "Tillåtna administratörers subjektidentifierare (sub), en per rad",
+    "subjectHelp": "Endast dessa oföränderliga användar-ID:n från leverantören får åtkomst till Monitor. Varje ID får fullständig administratörsåtkomst. Använd sub-attributet som utfärdats för denna klient, inte en e-postadress eller ett visningsnamn.",
+    "callback": "Registrera exakt denna omdirigerings-URI hos din identitetsleverantör:",
+    "mfaHelp": "OIDC använder identitetsleverantörens MFA-policy. Lokalt lösenord och 2FA är fortfarande tillgängliga. Att spara ändringar ogiltigförklarar befintliga OIDC-sessioner.",
+    "unavailable": "Denna version av Monitor innehåller inte den kryptografiska körmiljö som OIDC kräver.",
+    "save": "Spara och verifiera leverantören",
+    "saving": "Verifierar leverantören…",
+    "saved": "OIDC-inställningarna har sparats. Discovery har verifierats; testa en inloggning i en annan webbläsare innan du avslutar din lokala session.",
+    "saveFailed": "Det gick inte att spara OIDC-inställningarna.",
+    "login": "Fortsätt med {provider}",
+    "loginFailed": "OIDC-inloggningen misslyckades eller upphörde att gälla. Försök igen, kontrollera din tillåtna subjektidentifierare eller använd dina lokala inloggningsuppgifter.",
+    "disabledSaved": "OIDC-inställningarna har sparats. Extern inloggning är inaktiverad.",
+    "saveDisabled": "Spara inställningar"
   }
 }

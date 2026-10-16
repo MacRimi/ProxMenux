@@ -7229,5 +7229,33 @@
         "diagnosticsOmitted": "Ďalšie diagnostické riadky alebo text vynechaný: {count}. Pôvodná správa sa zachovala."
       }
     }
+  },
+  "oidc": {
+    "title": "OpenID Connect (OIDC)",
+    "description": "Prihláste sa cez externého poskytovateľa identity, napríklad Authentik, Keycloak alebo Pocket ID.",
+    "localRequired": "Pred nastavením OIDC nakonfigurujte a povoľte miestne overovanie heslom.",
+    "enable": "Povoliť OpenID Connect",
+    "provider_name": "Názov poskytovateľa",
+    "issuer": "URL vydavateľa (presná hodnota z discovery)",
+    "public_url": "Verejná HTTPS URL tohto panela Monitor",
+    "client_id": "ID klienta",
+    "secret": "Tajný kľúč klienta",
+    "secretKept": "Ak pole zostane prázdne, uložený tajný kľúč sa zachová",
+    "authMethod": "Metóda overenia klienta",
+    "publicClient": "Verejný klient (PKCE, bez tajného kľúča)",
+    "urlHelp": "Použite presnú URL vydavateľa vrátane prípadnej koncovej lomky. Verejná URL musí sprístupňovať tento panel a jeho cesty /api cez HTTPS vrátane prípadnej predpony cesty proxy.",
+    "subjects": "Povolené identifikátory subjektov správcov (sub), jeden na riadok",
+    "subjectHelp": "K Monitoru majú prístup iba tieto nemenné používateľské ID poskytovateľa. Každé získa úplný prístup správcu. Použite atribút sub vydaný pre tohto klienta, nie e-mailovú adresu ani zobrazované meno.",
+    "callback": "Zaregistrujte presne túto URI presmerovania u svojho poskytovateľa identity:",
+    "mfaHelp": "OIDC používa politiku MFA poskytovateľa identity. Miestne heslo a 2FA zostávajú dostupné. Uloženie zmien zneplatní existujúce relácie OIDC.",
+    "unavailable": "Táto verzia Monitora neobsahuje kryptografické prostredie potrebné pre OIDC.",
+    "save": "Uložiť a overiť poskytovateľa",
+    "saving": "Overuje sa poskytovateľ…",
+    "saved": "Nastavenia OIDC boli uložené. Discovery bolo overené; pred ukončením miestnej relácie otestujte prihlásenie v inom prehliadači.",
+    "saveFailed": "Nepodarilo sa uložiť nastavenia OIDC.",
+    "login": "Pokračovať cez {provider}",
+    "loginFailed": "Prihlásenie OIDC zlyhalo alebo vypršalo. Skúste to znova, skontrolujte svoj povolený identifikátor subjektu alebo použite miestne prihlasovacie údaje.",
+    "disabledSaved": "Nastavenia OIDC boli uložené. Externé prihlásenie je zakázané.",
+    "saveDisabled": "Uložiť nastavenia"
   }
 }

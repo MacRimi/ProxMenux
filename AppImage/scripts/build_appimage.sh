@@ -22,6 +22,7 @@ GREENLET_VERSION="3.5.5"
 ZOPE_INTERFACE_VERSION="8.6"
 ZOPE_EVENT_VERSION="6.2"
 GEVENT_WEBSOCKET_VERSION="0.10.1"
+CRYPTOGRAPHY_VERSION="50.0.2"
 
 VERSION=$(node -p "require('$APPIMAGE_ROOT/package.json').version")
 APPIMAGE_NAME="ProxMenux-${VERSION}.AppImage"
@@ -128,6 +129,8 @@ echo "📋 Copying Flask server..."
 cp "$SCRIPT_DIR/flask_server.py" "$APP_DIR/usr/bin/"
 cp "$SCRIPT_DIR/zram_metrics.py" "$APP_DIR/usr/bin/"
 cp "$SCRIPT_DIR/flask_auth_routes.py" "$APP_DIR/usr/bin/" 2>/dev/null || echo "⚠️  flask_auth_routes.py not found"
+cp "$SCRIPT_DIR/flask_oidc_routes.py" "$APP_DIR/usr/bin/"
+cp "$SCRIPT_DIR/oidc_manager.py" "$APP_DIR/usr/bin/"
 cp "$SCRIPT_DIR/auth_manager.py" "$APP_DIR/usr/bin/" 2>/dev/null || echo "⚠️  auth_manager.py not found"
 cp "$SCRIPT_DIR/jwt_middleware.py" "$APP_DIR/usr/bin/" 2>/dev/null || echo "⚠️  jwt_middleware.py not found"
 cp "$SCRIPT_DIR/health_monitor.py" "$APP_DIR/usr/bin/" 2>/dev/null || echo "⚠️  health_monitor.py not found"
@@ -341,13 +344,13 @@ echo "📦 Installing Python dependencies..."
 # the host, so the AppImage no longer needs any runtime translator.
 # Removing those pins also unblocks the h11>=0.14.0 family without the
 # conflict workaround we used to ship.
-# Note: cryptography removed due to Python version compatibility issues (PyO3 modules)
+# OIDC's native cryptography dependency is installed per host ABI below.
 pip3 install --target "$APP_DIR/usr/lib/python3/dist-packages" --upgrade --no-deps \
     flask \
     flask-cors \
     psutil \
     requests \
-    PyJWT \
+    "PyJWT==2.15.1" \
     pyotp \
     segno \
     beautifulsoup4
@@ -392,6 +395,23 @@ install_gevent_runtime() {
 
 install_gevent_runtime "3.11" "cp311"
 install_gevent_runtime "3.13" "cp313"
+
+# OIDC verifies provider signatures with PyJWT's asymmetric algorithms. Keep
+# cryptography/cffi out of the build runner's generic site-packages tree: its
+# PyO3 and C extensions must load on the host's Python, like gevent above.
+install_oidc_crypto_runtime() {
+    local python_version="$1" abi="$2"
+    python3 -m pip install \
+        --disable-pip-version-check \
+        --target "$APP_DIR/usr/lib/python3/vendor/$abi" \
+        --upgrade --only-binary=:all: \
+        --platform manylinux_2_28_x86_64 --platform manylinux2014_x86_64 \
+        --implementation cp --python-version "$python_version" --abi "$abi" --abi abi3 \
+        "cryptography==${CRYPTOGRAPHY_VERSION}"
+}
+
+install_oidc_crypto_runtime "3.11" "cp311"
+install_oidc_crypto_runtime "3.13" "cp313"
 
 echo "🔍 Verifying bundled Python ABI extensions..."
 for abi in cp311 cp313; do
