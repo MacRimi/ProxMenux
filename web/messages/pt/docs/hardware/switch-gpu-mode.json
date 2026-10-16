@@ -85,7 +85,7 @@
       "intro": "Com base no modo atual, o script propõe o oposto como alvo:",
       "items": [
         "<strong>VM → LXC:</strong> unbind de <code>vfio-pci</code>, deixe o driver nativo (<code>nvidia</code>, <code>amdgpu</code>, <code>i915</code>) recuperar o cartão para que LXCs pode compartilhá-lo. Em NVIDIA, a entrada por BDF é removida do <code>/etc/udev/rules.d/10-proxmenux-vfio-bind.rules</code> para que o módulo nvidia recupere o GPU após reiniciar.",
-        "<strong>LXC → VM:</strong> ligar a <code>vfio-pci</code> para que o cartão é livre para VFIO passagem para um único VM. No AMD / Intel isso significa listar o driver nativo e definir <code>options vfio-pci ids=…</code>. No NVIDIA, o módulo <code>nvidia</code> é <strong>not</strong> na lista negra — em vez disso, uma regra de udev per-BDF aplica <code>driver_override=vfio-pci</code> apenas às GPUs que você seleciona, então outras GPUs NVIDIA no host mantêm seu driver <code>nvidia</code>."
+        "<strong>LXC → VM:</strong> vincule-se a <code>vfio-pci</code> para que o cartão seja gratuito para passagem de VFIO para um único VM. Na AMD/Intel isso significa colocar o driver nativo na lista negra e definir <code>options vfio-pci ids=…</code>. Em NVIDIA o módulo <code>nvidia</code> <strong>não</strong> está na lista negra - em vez disso, uma regra udev por BDF aplica <code>driver_override=vfio-pci</code> apenas às GPUs que você seleciona, então outras GPUs NVIDIA no host mantêm suas Driver <code>nvidia</code>."
       ],
       "outro": "Confirme a direção ou cancele."
     },
@@ -137,7 +137,7 @@
     "smiFailTitle": "nvidia-smi falha com 'Driver/library version mismatch' após voltar para LXC",
     "smiFailBody": "Os módulos NVIDIA não recarregaram de forma limpa. <code>modprobe -r nvidia</code> e <code>modprobe nvidia</code>. Se isso falhar, reinicie — uma reinicialização completa sempre limpa o estado residual da ligação vfio.",
     "logTitle": "Instalar o registo",
-    "logBody": "Cada execução escreve para <code>/tmp/proxmenux_gpu_switch_mode.log</code> no anfitrião. Anexar ao pedir ajuda no GitHub."
+    "logBody": "Cada execução grava em <code>/tmp/proxmenux_gpu_switch_mode.log</code> no host. Anexe-o ao pedir ajuda em GitHub."
   },
   "related": {
     "heading": "Relacionado",

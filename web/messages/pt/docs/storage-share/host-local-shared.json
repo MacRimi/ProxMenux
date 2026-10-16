@@ -12,7 +12,7 @@
   },
   "intro": {
     "title": "O que é isto (e NÃO é)",
-    "body": "Esta ferramenta faz <strong>not</strong> registrar qualquer coisa no Proxmox (sem <code>pvesm add</code> aqui). Ele apenas prepara um diretório no host — <code>/mnt/shared</code>, por padrão — com permissões que qualquer recipiente LXC pode ler e escrever, independentemente de o CT ser privilegiado ou não. O passo seguinte habitual é ligá-lo em cada CT com o <mountLink>LXC Mount Manager</mountLink>."
+    "body": "Esta ferramenta <strong>não</strong> registra nada no Proxmox (nenhum <code>pvesm add</code> aqui). Ele apenas prepara um diretório no host — <code>/mnt/shared</code>, por padrão — com permissões que qualquer contêiner LXC pode ler e gravar, independentemente de o CT ser privilegiado ou não. A próxima etapa normal é montá-lo em cada CT com o <mountLink>LXC Mount Manager</mountLink>."
   },
   "why": {
     "heading": "Por que uma ferramenta dedicada para isso",
@@ -74,7 +74,7 @@
   },
   "next": {
     "heading": "Próxima etapa: ligar-montar em recipientes",
-    "body": "Criar o diretório só o prepara — nenhum contêiner o vê ainda. Para torná-lo visível dentro de um ou mais LXCs, use o <mountLink>LXC Mount Manager</mountLink> para ligar-montagem <code>/mnt/&lt;name&gt;</code> nas CTs. Como as permissões já estão abertas, o Gerenciador de Montagens irá oferecer <strong>not</strong> para alterá-las — o diretório está pronto para usar como está."
+    "body": "Criar o diretório apenas o prepara – nenhum contêiner o vê ainda. Para torná-lo visível dentro de um ou mais LXCs, use o <mountLink>LXC Mount Manager</mountLink> para vincular a montagem <code>/mnt/&lt;name&gt;</code> nos CTs. Como as permissões já estão abertas, o Mount Manager <strong>não</strong> se oferecerá para alterá-las — o diretório está pronto para ser usado como está."
   },
   "troubleshoot": {
     "heading": "Resolução de Problemas",

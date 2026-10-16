@@ -168,7 +168,7 @@
       "tagline": "Usa modelos disponíveis no seu servidor Ollama. 100% local, sem custos, privacidade total.",
       "items": [
         "Nenhuma chave API. Defina o campo <em>Ollama URL</em> para o seu servidor (padrão <code>http://localhost:11434</code> ou qualquer máquina roda sua instância Ollama).",
-        "Modelos: <strong>not filtered.</strong> O monitor lê os modelos que você puxou no lado do Ollama via <code>ollama pull &lt;model&gt;</code>. O dropdown é povoado do <code>GET /api/tags</code> no seu servidor Ollama.",
+        "Modelos: <strong>não filtrados.</strong> O Monitor lê quaisquer modelos que você extraiu no lado Ollama via <code>ollama pull &lt;model&gt;</code>. O menu suspenso é preenchido em <code>GET /api/tags</code> em seu servidor Ollama.",
         "Instale: <a>ollama.com/download</a> — é executado em Linux, macOS, Windows. Para melhores resultados, escolha um modelo que se encaixe no RAM com uma janela de contexto grande o suficiente para o diário bloqueia o expedidor injeta."
       ]
     }
@@ -223,7 +223,7 @@
     "formatIntro": "Quando uma dica é adicionada, segue este formato exato:",
     "rulesIntro": "As regras colocadas no addon (visível no bloco dobrável sob a seção de prompt padrão acima):",
     "rules": [
-      "A dica está incluída <em>only</em> se o contexto da revista ou o banco de dados de Erros Conhecidos claramente aponta para uma correção específica.",
+      "A dica será incluída <em>somente</em> se o contexto do diário ou o banco de dados de Erros Conhecidos apontar claramente para uma correção específica.",
       "A ponta está tapada em caracteres 100.",
       "Deve ser específico (comando concreto ou caminho) — o conselho genérico é rejeitado pelo próprio prompt.",
       "Se um Erro Conhecido fornece uma solução, o LLM deve usar essa solução, não inventar uma nova.",
@@ -268,7 +268,7 @@
     "emailBody": "Quando o email está em <code>detailed</code> e o corpo tem um conteúdo substancial (mais do que caracteres 50), o expedidor adiciona a mensagem original na parte inferior da reescrita da IA, separada por um divisor 40-dash e uma etiqueta <code>Original message:</code>. Isso significa que um e-mail detalhado sempre carrega tanto a versão amiga da IA quanto o modelo cru amigável à máquina — útil quando você quiser criar um alerta antigo mais tarde."
   },
   "language": {
-    "heading": "Linguagem",
+    "heading": "Idioma",
     "intro": "Doze línguas estão ligadas. O dropdown define <code>ai_language</code> na configuração e o valor é interpolado no prompt do sistema no local onde o prompt diz <em> \"traduzir alertas em '{'linguagem'}'\"</em>. A lista completa:",
     "list": "Inglês (<code>en</code>), Espanhol (<code>es</code>), Francês (<code>fr</code>), Alemão (<code>de</code>), Português (<code>pt</code>), Italiano (<code>it</code>), Russo (<code>ru</code>), Sueco (<code>sv</code>), Norueguês (<code>no</code>), Japonês (<code>ja</code>), Chinês (<code>zh</code>), Holandês (<code>nl</code>).",
     "rulesIntro": "Duas regras importantes tomadas diretamente do prompt:",
@@ -291,7 +291,7 @@
     "rows": [
       {
         "provider": "Ollama",
-        "destination": "Fica no anfitrião do Ollama. Se o Ollama correr no mesmo nó Proxmox, nada sai da rede."
+        "destination": "Permanece no host Ollama. Se o Ollama for executado no mesmo nó Proxmox, nada sairá da rede."
       },
       {
         "provider": "OpenAI",

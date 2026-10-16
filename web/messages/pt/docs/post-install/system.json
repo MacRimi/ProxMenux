@@ -1,7 +1,7 @@
 {
   "meta": {
     "title": "Post-Install: Documentação do sistema ProxMenux",
-    "description": "Otimizações de nível de sistema no script pós-instalação personalizável ProxMenux: limites de tamanho de diário e logrotate, limites maiores de kernel e arquivo-descritor, ajuste de memória equilibrado, kexec para reinicialização rápida e recuperação de pânico do kernel."
+    "description": "Otimizações em nível de sistema no ProxMenux Script pós-instalação personalizável: journald e limites de tamanho de rotação de log, limites mais altos de kernel e descritor de arquivo, ajuste de memória balanceado, kexec para reinicializações rápidas e recuperação de kernel panic."
   },
   "header": {
     "title": "Após a instalação: sistema",
@@ -12,7 +12,7 @@
     "body": "Seis optimizações independentes ao nível do sistema. Eles sintonizam <strong>journald</strong> e <strong>logrotate</strong> para parar os logs de encher o disco, levantar <strong>kernel e limites do descriptor de arquivos</strong> para que aplicações com muitos arquivos abertos não atinjam tetos, <strong>memória de equilíbrio</strong> para um host de virtualização, adicionar <strong>kexec</strong> para \"reboots sem o BIOS\", e configurar <strong>recuperação automática</strong> no pânico do kernel. Todos os seis são rastreados e reversíveis do menu Desinstalar."
   },
   "journald": {
-    "heading": "Otimizar diário",
+    "heading": "Otimizar journald",
     "intro": "Reescreve <code>/etc/systemd/journald.conf</code> com padrões sãos para que o diário systemd não possa comer lentamente sua partição raiz, em seguida, reinicia o <code>systemd-journald</code> e aspira os logs existentes.",
     "keyTitle": "Valores-chave",
     "keyItems": [
@@ -103,7 +103,7 @@
     "heading": "Verificação",
     "intro": "Após a aplicação das otimizações do sistema:",
     "tipTitle": "Totalmente reversível",
-    "tipBody": "Todas as seis opções são rastreadas em <code>installed_tools.json</code>, então eles aparecem em <link>Otimizações de desinstalação</link> se você quiser recuar algum deles. Reverte os padrões dos arquivos sysctl, solta a unidade systemd e alias para o kexec, e redefine o diário/logrotate para as configurações do Debian."
+    "tipBody": "Todas as seis opções são rastreadas em <code>installed_tools.json</code>, portanto elas aparecem em <link>Otimizações de desinstalação</link> se você quiser reverter alguma delas. Reverte, restaura os padrões dos arquivos sysctl, descarta a unidade systemd e o alias para kexec e redefine journald/logrotate para armazenar as configurações do Debian."
   },
   "related": {
     "heading": "Relacionado",

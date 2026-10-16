@@ -218,7 +218,7 @@
         "detail": "Baixa a versão gravada do driver, compila os módulos DKMS contra o kernel atual, aplica o patch ProxMenux se a fonte o tiver. Uma tarefa mais longa."
       },
       {
-        "stage": "Coral / outros componentes reinstala",
+        "stage": "Reinstalação do Coral e de outros componentes",
         "time": "3–5 min",
         "detail": "DKMS compila para Coral, apt install for intell-gpu-tools, .deb download + install for amdgpu_top."
       },

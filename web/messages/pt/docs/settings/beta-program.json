@@ -48,7 +48,7 @@
   },
   "switching": {
     "heading": "Mudando para trás e para frente",
-    "intro": "Ambas as direções passam pelo mesmo instalador — elas são <strong>not</strong> desinstalar + reinstalar fluxos. Cada direção simplesmente executa o próprio instalador do canal, que é projetado para ser idempotente e seguro para re-executar sobre uma instalação existente. Consequências práticas:",
+    "intro": "Ambas as direções passam pelo mesmo instalador — elas <strong>não</strong> são fluxos de desinstalação e reinstalação de casos especiais. Cada direção simplesmente executa o próprio instalador do canal, que é projetado para ser idempotente e seguro para ser reexecutado em uma instalação existente. Consequências práticas:",
     "items": [
       "Sua configuração existente, login ProxMenux Monitor (<code>auth.json</code>), canais de notificação, registro pós-instalação, limiares personalizados — nenhum deles é tocado. O interruptor de canal só troca a árvore de scripts e o binário AppImage.",
       "Um Monitor que estava ativo antes do interruptor permanecer ativo após; um que foi desativado permanece desativado.",

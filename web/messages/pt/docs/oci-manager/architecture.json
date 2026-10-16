@@ -128,7 +128,7 @@
               },
               {
                 "title": "Consola",
-                "body": "A saída do console do recipiente é mantida no host, e o console Proxmox VE abre uma concha quando a imagem envia um."
+                "body": "A saída do console do contêiner é mantida no host, e o console Proxmox VE abre um shell quando a imagem é enviada."
               },
               {
                 "title": "Verificar",

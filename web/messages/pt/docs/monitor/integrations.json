@@ -101,7 +101,7 @@
     "logoBrokenIntro": "Algumas instalações HA (redes firewalled, bloqueadores de conteúdo, hosts sem internet pública) não podem alcançar jsdelivr.net no tempo de renderização. A correção é uma cópia local:",
     "logoBrokenSteps": [
       "Baixar o SVG de <a>cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/proxmenux.svg</a>.",
-      "Poupe-o para <code>/config/www/icons/proxmenux.svg</code> no seu anfitrião HA.",
+      "Salve-o em <code>/config/www/icons/proxmenux.svg</code> em seu host HA.",
       "No Lovelace YAML, substitua o URL <code>image:</code> por <code>/local/icons/proxmenux.svg</code>. Salvar e recarregar — a imagem renderiza do arquivo local, sem necessidade de internet."
     ],
     "scanTipTitle": "scan_interval regra do polegar",
@@ -231,7 +231,7 @@
     "heading": "Para onde seguir",
     "items": [
       {
-        "label": "Referência API",
+        "label": "Referência da API",
         "href": "/docs/monitor/api",
         "tail": " — todos os parâmetros com método, trajectória e catálogo métrico Prometheus completo."
       },

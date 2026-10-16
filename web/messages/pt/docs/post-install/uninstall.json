@@ -116,7 +116,7 @@
         "title": "Registo",
         "items": [
           {
-            "tool": "Otimização Jornalizada",
+            "tool": "Otimização do journald",
             "restores": "Reescreve /etc/systemd/journald.conf com padrões de baunilha e reinicia o systemd-journald."
           },
           {

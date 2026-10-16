@@ -8,7 +8,7 @@
     "twitterDescription": "Endpoints para Home Assistant, Homepage, Grafana, Prometheus, n8n e painéis personalizados."
   },
   "header": {
-    "title": "Referência API",
+    "title": "Referência da API",
     "description": "Os integradores HTTP usam para ler o estado e desencadear ações seguras em ProxMenux Monitor — sensores Home Assistant, cartões de página inicial, painéis de Grafana, raspagens Prometheus, fluxos n8n e scripts personalizados. Cada categoria, além de uma lista completa de métricas de Prometeu, com exemplos cacho.",
     "section": "Monitor do ProxMenux"
   },

@@ -113,7 +113,7 @@
       "<strong>Backup é extremamente lento:</strong> confirmar <code>--vfs-cache-mode writes</code> está na linha <code>ExecStart</code>. Sem ele, cada bloco de escrita na nuvem. Verifique também sua largura de banda a montante — o vzdump está ligado por ele.",
       "<strong>Backup falha com ''Nenhum espaço deixado no dispositivo'':</strong> o diretório de cache (<code>~/.cache/rclone/</code>) preenchido antes do upload ser alcançado. Mova-o para um sistema de arquivos maior com <code>--cache-dir /var/cache/rclone</code> na unidade systemd.",
       "<strong>rclone auth token expirou (típico no Google Drive após um longo período de inatividade):</strong> SSH voltar com o túnel (<code>ssh -L localhost:53682:localhost:53682 root@ip_proxmox</code>) e executar <code>rclone config reconnect gdrive:</code> para atualizar.",
-      "<strong>Backups terra mas estão corrompidos na restauração:</strong> parar de usar o armazenamento na nuvem como o destino de backup <strong>only</strong>. Combine com PBS / vzdump local em um disco diferente para resiliência."
+      "<strong>Os backups chegam, mas são corrompidos na restauração:</strong> pare de usar o armazenamento em nuvem como o <strong>único</strong> destino de backup. Combine com PBS / vzdump local em um disco diferente para obter resiliência."
     ]
   }
 }

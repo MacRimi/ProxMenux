@@ -17,10 +17,10 @@
     "intro": "Se seu host Proxmox é um servidor dedicado alugado a partir de <a>OVHcloud</a>, você pode habilitar RTM para expor a telemetria de hardware (temperatura CPU, estado PSU, estado do controlador disco SMART, estado RAID, etc.) para o painel de controle OVH. Este é o mesmo agente que a OVH usa para o seu próprio recurso \"Server Monitoring\".",
     "decisionsTitle": "Como ProxMenux decide",
     "decisionsItems": [
-      "Obtém o IP público do anfitrião via <code>curl ipinfo.io/ip</code>.",
+      "Obtém o IP público do host via <code>curl ipinfo.io/ip</code>.",
       "Procura o ISP proprietário com uma consulta <code>whois</code> para <code>v4.whois.cymru.com</code>.",
       "Se o resultado menciona OVH, busca <code>last-public-ovh-infra-yak.snap.mirrors.ovh.net/yak/archives/apply.sh</code> e o canaliza para <code>bash</code> com o manifesto do boneco RTM v2.",
-      "Se o resultado <em>not</em> mencionar OVH, nada está instalado. A opção é um não-op."
+      "Se o resultado <em>não</em> mencionar OVH, nada está instalado. A opção é autônoma."
     ],
     "remoteTitle": "Programa remoto canalizado para bater",
     "remoteBody": "A instalação executa <code>wget -qO - https://…apply.sh | bash</code>. Se o espelho OVH estiver comprometido, o script será executado como root no seu host. Antes de ativar esta opção, decida se você confia mais na cadeia de espelhos da OVH do que no monitoramento que você ganha. Para a maioria dos usuários home-lab ou não-OVH esta opção deve simplesmente ficar fora.",

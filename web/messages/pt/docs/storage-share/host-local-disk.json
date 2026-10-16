@@ -90,7 +90,7 @@
       "Escolhe o disco.",
       "Escolha \"Usar o sistema de arquivos existente\".",
       "ID de armazenamento, local de montagem, predefinição do tipo de conteúdo.",
-      "ProxMenux faz <strong>not</strong> tocar os dados: cria o ponto de montagem, monta o disco, adiciona uma entrada UUID para <code>/etc/fstab</code>, e registra-o como um armazenamento Proxmox <code>dir</code>."
+      "ProxMenux <strong>não</strong> toca nos dados: ele cria o ponto de montagem, monta o disco, adiciona uma entrada UUID a <code>/etc/fstab</code> e a registra como um armazenamento Proxmox <code>dir</code>."
     ],
     "warnTitle": "O caminho de reutilização não lida com ZFS pools",
     "warnBody": "Se o disco já contém um pool ZFS, o caminho <em>reuse</em> aqui apenas tenta montá-lo como um sistema de arquivos regular – que falha. Para importar um pool ZFS existente use <code>zpool import &lt;name&gt;</code> na linha de comando e registre-o manualmente com <code>pvesm add zfspool</code>."

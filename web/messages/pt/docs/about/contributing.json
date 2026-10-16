@@ -197,7 +197,7 @@
     "bullets": [
       "Escreva strings em inglês — a tradução é tratada automaticamente pela compilação.",
       "Mantenha as cordas concisas. Evite incorporar variáveis dentro de frases longas, sempre que possível.",
-      "Fazer <strong>not</strong> traduzir nomes de variáveis, caminhos ou identificadores técnicos."
+      "Não <strong></strong> traduza nomes de variáveis, caminhos ou identificadores técnicos."
     ]
   },
   "variableStyle": {

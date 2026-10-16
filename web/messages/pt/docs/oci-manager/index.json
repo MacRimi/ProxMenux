@@ -1,12 +1,12 @@
 {
   "meta": {
-    "title": "Aplicativos do gerenciador de OCI ProxMenux",
-    "description": "Execute imagens OCI oficiais como containers Proxmox VE LXC, com dados persistentes, dispositivos, aplicativos multi-contentores e atualizações transacionais."
+    "title": "OCI manager Apps | ProxMenux",
+    "description": "Execute imagens OCI oficiais como contêineres Proxmox VE LXC nativos, com dados persistentes, dispositivos, aplicativos de vários contêineres e atualizações transacionais."
   },
   "header": {
-    "title": "Aplicações do gestor OCI",
-    "description": "Imagens OCI oficiais são executadas como containers Proxmox VE LXC. A imagem permanece a que seu mantenedor publica; ProxMenux reproduz o ambiente Docker Compose teria criado em torno dele.",
-    "section": "Aplicações do gestor OCI"
+    "title": "OCI manager Apps",
+    "description": "As imagens OCI oficiais são executadas como contentores LXC nativos do Proxmox VE. A imagem continua a ser a publicada pelo respetivo responsável; o ProxMenux reproduz o ambiente que o Docker Compose teria criado à sua volta.",
+    "section": "OCI manager Apps"
   },
   "sections": [
     {
@@ -14,27 +14,27 @@
       "blocks": [
         {
           "calloutInfo": {
-            "title": "Uma imagem OCI, uma LXC nativa",
-            "body": "Nenhum Docker engine é executado dentro dos recipientes. Proxmox VE importa o sistema de arquivos da imagem e seus metadados OCI, e a aplicação torna-se o principal processo de um LXC nativo, gerenciado com as mesmas ferramentas que qualquer outro recipiente do nó."
+            "title": "Uma imagem OCI, uma nativa LXC",
+            "body": "O Docker Engine não é executado dentro dos contentores. O Proxmox VE importa o sistema de ficheiros da imagem e os seus metadados OCI. A aplicação passa a ser o processo principal de um LXC nativo, gerido com as mesmas ferramentas dos restantes contentores do nó."
           }
         },
         {
           "flow": {
             "nodes": [
               {
-                "label": "Origem",
+                "label": "Fonte",
                 "detail": "Imagem OCI\nComposição e documentação"
               },
               {
                 "label": "ProxMenux",
-                "detail": "Contrato JSON\nvalidação e plano"
+                "detail": "JSON contrato\nvalidação e plano"
               },
               {
                 "label": "Proxmox VE",
-                "detail": "LXC nativo\nvolumes e dispositivos"
+                "detail": "nativo LXC\nvolumes e dispositivos"
               }
             ],
-            "caption": "A aplicação não é reconstruída: o seu ambiente é reproduzido declarativamente."
+            "caption": "A aplicação não é reconstruída: seu ambiente é reproduzido declarativamente."
           }
         }
       ]
@@ -42,68 +42,68 @@
     {
       "id": "where",
       "title": "Onde está",
-      "intro": "O OCI Manager Apps abre a partir da opção <strong>OCI Manager Apps (Technology Preview)</strong> do menu principal ProxMenux, no nó Proxmox e como raiz. Sua primeira tela oferece:",
+      "intro": "OCI manager Apps abre a partir da opção <strong>OCI manager Apps (Technology Preview)</strong> do menu principal ProxMenux, no nó Proxmox e como root. Sua primeira tela oferece:",
       "blocks": [
         {
           "list": {
             "items": [
-              "<strong>Aplicações de pesquisa</strong> — pesquisa por nome no catálogo.",
-              "<strong>Todas as aplicações</strong> — o catálogo completo, com o número de aplicações.",
-              "<strong>Gerenciar aplicativos OCI instalados</strong> — atualizar, modificar, remover ou recuperar o que foi instalado.",
+              "<strong>Pesquisar aplicativos</strong> — pesquise por nome no catálogo.",
+              "<strong>Todos os aplicativos</strong> — o catálogo completo, com o número de aplicativos.",
+              "<strong>Gerencie aplicativos OCI instalados</strong> — atualize, modifique, remova ou recupere o que foi instalado.",
               "<strong>Contas de registro</strong> — as contas usadas para instalar e atualizar imagens de registros privados.",
               "<strong>Instale uma imagem que não está no catálogo</strong> — traduza um arquivo Compose, um comando <code>docker run</code> ou uma referência de imagem.",
-              "As categorias de catálogo, cada um com o seu número de aplicações."
+              "As categorias do catálogo, cada uma com seu número de aplicações."
             ]
           }
         },
         {
           "figure": {
             "src": "/oci-manager/main-menu.png",
-            "alt": "Tela principal do gerenciador de OCI Apps com pesquisa, todos os aplicativos, gerenciamento, imagem personalizada e as categorias de catálogo",
-            "caption": "Tela principal do gerenciador de OCI Apps."
+            "alt": "Tela principal do OCI manager Apps com pesquisa, todos os aplicativos, gerenciamento, imagem personalizada e categorias do catálogo",
+            "caption": "Tela principal de OCI manager Apps."
           }
         },
         {
-          "p": "Selecionando um aplicativo mostra sua descrição, a imagem que ele executa e dois modos de instalação: <strong>Instalar com configurações padrão</strong>, que pergunta apenas o que cada instalação decide (armazenamento, onde os dados vão, endereço e início), e <strong>Instalar com configurações avançadas</strong>, que abre todas as decisões em ordem: VMID e recursos, o armazenamento de cada caminho, a ponte e os dispositivos."
+          "p": "A seleção de um aplicativo mostra sua descrição, a imagem que ele executa e dois modos de instalação: <strong>Instalar com configurações padrão</strong>, que pergunta apenas o que cada instalação decide (armazenamento, para onde vão os dados, endereço e início), e <strong>Instalar com configurações avançadas</strong>, que abre todas as decisões em ordem: VMID e recursos, o armazenamento de cada caminho, a ponte e os dispositivos."
         },
         {
-          "p": "Uma aplicação que foi testada para real mostra <strong>Verified</strong> nessa visualização e está marcada com 文 nas listas, seja no laboratório ProxMenux ou pela comunidade."
+          "p": "Um aplicativo que foi testado para uso real mostra <strong>Verificado</strong> nessa visualização e é marcado com ✓ nas listas, independentemente de ter sido testado no laboratório ProxMenux ou pela comunidade."
         }
       ]
     },
     {
       "id": "beta",
-      "title": "Por que é uma Visualização de Tecnologia",
+      "title": "Por que é uma prévia da tecnologia",
       "blocks": [
         {
-          "p": "O OCI Manager Apps carrega o <strong>Technology Preview</strong> label que o Proxmox VE dá aos recipientes de aplicativos criados a partir de imagens OCI, introduzidos em Proxmox VE 9.1. Refere-se ao que o OCI Manager Apps roda, não ao motor ProxMenux: o comportamento desses recipientes ainda pode mudar entre as versões Proxmox VE. A etiqueta permanece até que o Proxmox VE marque que suporta como estável."
+          "p": "O OCI manager Apps mantém a designação <strong>Technology Preview</strong> que o Proxmox VE atribui aos contentores de aplicações criados a partir de imagens OCI, cujo suporte foi introduzido no Proxmox VE 9.1. A designação refere-se à tecnologia em que o OCI manager Apps se baseia, não ao motor do ProxMenux: o comportamento destes contentores ainda pode mudar entre versões do Proxmox VE. Será mantida até que o Proxmox VE considere esse suporte estável."
         },
         {
-          "p": "O motor do OCI Manager Apps (instalação, atualização, modificação, recreação, backups, restauração, migração e watchdog) é testado no laboratório ProxMenux. Cada aplicativo é testado por conta própria: os testados para show real <strong>Verificado</strong> e carregam um 文 nas listas."
+          "p": "O mecanismo do OCI manager Apps (instalação, atualização, modificação, recriação, backups, restauração, migração e watchdog) é testado no laboratório ProxMenux. Cada aplicativo é testado por si só: aqueles testados para exibição real <strong>Verificados</strong> e carregam um ✓ nas listas."
         }
       ]
     },
     {
       "id": "translation",
-      "title": "O que o Docker expressa e o que o OCI manager Apps transforma em",
+      "title": "O que Docker expressa e em que OCI manager Apps o transforma",
       "blocks": [
         {
           "table": {
             "headers": [
-              "Requerimento",
-              "Docker expressa-o como",
-              "O OCI Manager Apps transforma-o em"
+              "Requisito",
+              "Docker expressa como",
+              "OCI manager Apps transforma-o em"
             ],
             "rows": [
               [
-                "Executar o aplicativo",
+                "Execute o aplicativo",
                 "<code>image</code>, <code>entrypoint</code>, <code>command</code>",
-                "Rootfs OCI e o principal processo do LXC"
+                "OCI rootfs e o processo principal do LXC"
               ],
               [
-                "Manter a configuração",
+                "Manter configuração",
                 "<code>volumes: /config</code>",
-                "um disco <code>mpN</code> persistente incluído no backup, ou um diretório de host"
+                "um disco <code>mpN</code> persistente incluído no backup ou um diretório host"
               ],
               [
                 "Publicar o serviço",
@@ -113,15 +113,15 @@
               [
                 "Usar hardware",
                 "<code>devices</code>, <code>group_add</code>",
-                "Entradas <code>devN</code> com GID de host eficaz e um perfil validado"
+                "<code>devN</code> com o GID do host efetivo e um perfil validado"
               ],
               [
                 "Conectar dependências",
                 "<code>networks</code>, <code>depends_on</code>",
-                "uma ponte privada, endereços fixos, ordem de início e verificações de saúde"
+                "uma ponte privada, endereços fixos, ordem de início e healthchecks"
               ],
               [
-                "Atualizar",
+                "Atualização",
                 "<code>pull</code> e recriar",
                 "um novo rootfs com o mesmo contrato persistente"
               ]
@@ -132,7 +132,7 @@
     },
     {
       "id": "kept",
-      "title": "O que é guardado e o que muda",
+      "title": "O que é mantido e o que muda",
       "blocks": [
         {
           "cards": {
@@ -145,17 +145,17 @@
               {
                 "icon": "boxes",
                 "title": "Adaptado",
-                "body": "O ambiente de execução: rede, persistência, dispositivos, permissões e dependências usam primitivos Proxmox VE LXC."
+                "body": "O ambiente de tempo de execução: rede, persistência, dispositivos, permissões e dependências usam primitivas nativas Proxmox VE LXC."
               },
               {
                 "icon": "shield",
                 "title": "Não traduzido",
-                "body": "Uma chave Compose sem equivalente seguro é listada como um bloqueador. Modelos com bloqueadores não são oferecidos, e opções sensíveis são confirmadas durante a instalação."
+                "body": "Uma chave Compose sem equivalente seguro é listada como um bloqueador. Modelos com bloqueadores não são oferecidos e opções confidenciais são confirmadas durante a instalação."
               },
               {
                 "icon": "refresh",
                 "title": "Gravado",
-                "body": "As imagens digerem, recursos, caminhos, rede, dispositivos e membros da pilha são armazenados no contrato de instância, que as atualizações e recriações reproduzem."
+                "body": "Imagem digest, recursos, caminhos, rede, dispositivos e membros da pilha são armazenados no contrato de instância, que as atualizações e recriações reproduzem."
               }
             ]
           }
@@ -164,7 +164,7 @@
     },
     {
       "id": "pages",
-      "title": "Páginas desta secção",
+      "title": "Páginas desta seção",
       "blocks": [
         {
           "next": {
@@ -172,17 +172,17 @@
               {
                 "label": "Como uma imagem OCI é traduzida",
                 "href": "/docs/oci-manager/architecture",
-                "tail": "da imagem e seu arquivo Compose para um LXC nativo."
+                "tail": "da imagem e seu arquivo Compose para um nativo LXC."
               },
               {
                 "label": "Instalar uma imagem que não está no catálogo",
                 "href": "/docs/oci-manager/custom-image",
-                "tail": "Compor, executar docker ou uma referência de imagem."
+                "tail": "Escrever, docker executar ou uma referência de imagem."
               },
               {
-                "label": "Dados, caminhos e redes",
+                "label": "Dados, caminhos e rede",
                 "href": "/docs/oci-manager/storage-network",
-                "tail": "discos de contentores, directórios de máquinas, montagens e endereços Rclone."
+                "tail": "discos contêineres, diretórios de host, Rclone montagens e endereços."
               },
               {
                 "label": "Dispositivos e aceleração",
@@ -190,17 +190,17 @@
                 "tail": "GPU, NVIDIA, Coral, USB e outros dispositivos."
               },
               {
-                "label": "Aplicações multicontentores",
+                "label": "Aplicações com vários contentores",
                 "href": "/docs/oci-manager/stacks",
                 "tail": "aplicativo, banco de dados e cache como LXCs coordenados."
               },
               {
                 "label": "Instalar, atualizar e modificar",
                 "href": "/docs/oci-manager/lifecycle",
-                "tail": "O contrato de instância e as suas operações."
+                "tail": "o contrato da instância e suas operações."
               },
               {
-                "label": "No ProxMenux Monitor",
+                "label": "Em ProxMenux Monitor",
                 "href": "/docs/oci-manager/monitor",
                 "tail": "versões, atualizações, saída do console e terminal."
               }

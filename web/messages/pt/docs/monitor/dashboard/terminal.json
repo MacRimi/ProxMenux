@@ -155,7 +155,7 @@
         "tail": " — o WebSocket Transportes (HTTP via flask-sock vs HTTPS / WSS via gevent)."
       },
       {
-        "label": "Referência API",
+        "label": "Referência da API",
         "href": "/docs/monitor/api",
         "tail": " — os parâmetros /ws/terminal e /ws/script/<sid> WebSocket juntamente com o resto do API."
       },

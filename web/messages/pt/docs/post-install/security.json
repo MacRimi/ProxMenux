@@ -40,7 +40,7 @@
       {
         "label": "Lynis",
         "href": "/docs/security/lynis",
-        "tail": " — fiscalizar o anfitrião para encontrar oportunidades mais enrijecidas."
+        "tail": "— audite o host para encontrar mais oportunidades de proteção."
       },
       {
         "label": "Comandos úteis do sistema",

@@ -96,7 +96,7 @@
     "overviewItems": [
       "<strong>Identidade</strong> — modelo, série, capacidade, crachá de saúde (Healthy / Warning / Critical).",
       "<strong>Wear & Lifetime</strong> — grande anel remanescente da vida (97 %, 50 %, ...) com o atributo fonte especificado (<em>Media Wearout Indicator</em>, <em>Percentagem Usada</em>, ...), uma barra de desgaste (consumo atual %), um <em>Est. Projecção Life</em> em anos e o total de dados escritos. As unidades NVMe também mostram <em>Disponível Spare</em>.",
-      "<strong>SMART Atributos</strong> — seis campos de topo numa grelha de colunas 2: Temperatura, Potência em Horas (com duração humanizada como <em>3y 116d</em>), Taxa de rotação (ou <em>SSD</em>), Ciclos de Energia, SMART Status, Setores Reallocalizados, Setores Pendentes, Erros CRC. A tabela completa de atributos vive na aba SMART."
+      "<strong>Atributos SMART</strong>: os valores principais são apresentados em duas colunas: temperatura, horas de funcionamento com uma duração legível como <em>3 anos e 116 dias</em>, velocidade de rotação ou <em>SSD</em>, ciclos de ligação, estado SMART, setores realocados, setores pendentes e erros CRC. A tabela completa dos atributos encontra-se no separador SMART."
     ],
     "smartTitle": "Página 2 — SMART",
     "smartImageAlt": "Modo de perfuração em disco – aba SMART com os botões de teste de executar SMART (curto / estendido), o resultado do último teste e a tabela completa do atributo SMART",
@@ -239,7 +239,7 @@
         "tail": " — a categoria de discos e I/O e o modelo de supressão."
       },
       {
-        "label": "Referência API",
+        "label": "Referência da API",
         "href": "/docs/monitor/api",
         "tail": " — os parâmetros de armazenagem e SMART."
       },

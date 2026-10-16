@@ -22,13 +22,13 @@
     "totalLabel": "Total de VMs e LXCs",
     "totalWhat": "Contagem total com dois emblemas — <em>X Running</em> (verde) e <em>Y parado</em> (vermelho, apenas quando > 0). O número que vês quando algo não aparece depois de uma reinicialização.",
     "cpuLabel": "CPU total",
-    "cpuWhat": "Agregar ao vivo a utilização de CPU em todos os hóspedes como uma percentagem do CPU físico do anfitrião, com uma linha de rodapé <em>\"Uso de CPU atribuído\"</em>.",
+    "cpuWhat": "Agrege a utilização CPU ao vivo em todos os convidados como uma porcentagem do CPU físico do host com uma linha de rodapé <em>\"Uso CPU alocado\"</em>.",
     "memoryLabel": "Memória total",
     "memoryIntro": "Três leituras empilhadas verticalmente:",
     "memoryItems": [
       "<strong>Utilizado actualmente</strong> — valor elevado (p. ex. <em>15.4 GB</em>) mais <em>X.X % de Y GB</em> contra o RAM total do hospedeiro. Uma barra de progresso azul rastreia a porcentagem.",
       "<strong>Running alocado</strong> + <strong>Total alocado</strong> — soma de <code>maxmem</code> entre os hóspedes que são <em>atualmente up</em> ao lado da mesma soma entre <em>every</em> hóspede incluindo parados. O primeiro importa hoje; o segundo importa quando você começa tudo de uma vez.",
-      "<strong>Dentro dos limites</strong> emblema (verde) — passa para <em>Over-committed</em> se o total alocado exceder o RAM. O excesso de comprometimento de memória saudável está bem nos anfitriões com o KSM, mas o crachá é o aviso precoce quando já não é confortável."
+      "Selo <strong>Dentro dos limites</strong> (verde) — muda para <em>Excessivamente comprometido</em> se o total alocado exceder o RAM do host. A superalocação saudável de memória é aceitável em hosts com KSM, mas o emblema é o aviso antecipado quando não é mais confortável."
     ],
     "diskLabel": "Disco total",
     "diskWhat": "Soma do espaço em disco alocado em todos os hóspedes, na unidade apropriada (GB / TB), com a linha de rodapé <em>\"Espaço em disco alocado\"</em>."
@@ -96,12 +96,12 @@
       "<strong>PVE volume</strong> — suportado por um armazenamento gerenciado por Proxmox (um subvol ZFS, uma entrada de diretório, um Ceph RBD, ...). A capacidade vem das estatísticas de armazenamento PVE para que a barra corresponda ao que o próprio Proxmox mostra.",
       "<strong>Bind from PVE storage</strong> — entrada <code>mpX</code> apontando para um caminho em um armazenamento conhecido por PVE.",
       "<strong>Bind from host</strong> — entrada <code>mpX</code> apontando para um caminho de host arbitrário (<code>/mnt/something</code>). Capacidade é o <code>df</code> desse caminho do hospedeiro.",
-      "<strong>Ad-hoc dentro do CT</strong> — monte que o <em>only</em> existe no espaço de nomes de montagem do recipiente (por exemplo, um NFS partilha que o CT monta por conta própria). A capacidade é lida via <code>pct exec &lt;vmid&gt; df</code>, que é a única maneira de vê-la — <code>/proc/&lt;pid&gt;/root</code> do host não expõe as estatísticas reais da montagem remota."
+      "<strong>Ad-hoc dentro de CT</strong> — montagem que <em>somente</em> existe no namespace de montagem do contêiner (por exemplo, um compartilhamento NFS que o CT monta sozinho). A capacidade é lida por meio de <code>pct exec &lt;vmid&gt; df</code>, que é a única maneira de vê-la - <code>/proc/&lt;pid&gt;/root</code> do host não expõe as estatísticas reais da montagem remota."
     ],
     "mountStateTitle": "Por cartão ponto e avisos",
     "mountStateItems": [
       "<green/> <strong>Green</strong> — a montagem é saudável e acessível.",
-      "<amber/> <strong>Amber</strong> — divergentes (configurados mas não montados de facto), apenas para leitura, ou <em>ligação do zombie</em> (a fonte da máquina foi removida, mas o CT ainda vê a ligação como montada — típica quando uma unidade USB foi desconectada ou um manual <code>umount</code> aconteceu no anfitrião).",
+      "<amber/> <strong>Amber</strong> — divergente (configurado, mas não montado), somente leitura ou <em>zombie bind</em> (a origem do host foi removida, mas o CT ainda vê o bind como montado — típico quando uma unidade USB foi desconectada ou um manual <code>umount</code> aconteceu no host).",
       "<red/> <strong>Red</strong> — obsoleto: a sonda de tempo de execução não conseguiu alcançar a montagem (comum com exportações NFS cujo servidor está em baixo)."
     ],
     "mountsCalloutTitle": "O que isso lhe dá sobre a UI nativa",
@@ -225,7 +225,7 @@
         "tailRich": " — o que os acontecimentos <code>vm_*</code>, <code>ct_*</code>, <code>migration_*</code> e <code>backup_*</code> provocam a jusante."
       },
       {
-        "label": "Referência API",
+        "label": "Referência da API",
         "href": "/docs/monitor/api",
         "tailRich": " — os parâmetros VM e de reserva."
       },

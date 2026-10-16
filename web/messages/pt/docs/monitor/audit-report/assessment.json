@@ -151,7 +151,7 @@
       "title": "Lynis",
       "blocks": [
         {
-          "p": "A revisão de segurança usa o relatório Lynis do anfitrião. Quando Lynis ainda não foi executado, ou seu relatório é mais antigo do que o limiar da política, uma janela oferece <strong>Run com Lynis</strong>, que leva alguns minutos a mais, ou <strong>Run sem Lynis</strong>, que usa o relatório existente."
+          "p": "A revisão de segurança usa o relatório Lynis do host. Quando o Lynis ainda não foi executado ou seu relatório é mais antigo que o limite da política, uma caixa de diálogo oferece <strong>Executar com Lynis</strong>, que leva alguns minutos a mais, ou <strong>Executar sem Lynis</strong>, que usa o relatório existente."
         },
         {
           "figure": {

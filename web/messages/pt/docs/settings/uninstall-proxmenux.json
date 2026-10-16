@@ -54,7 +54,7 @@
   },
   "othersCallout": {
     "title": "Outros componentes instalados em ProxMenux",
-    "body": "Qualquer coisa ProxMenux instalada através de outros menus — Fail2Ban, Lynis, drivers NVIDIA, ajustes pós-instalação — é <strong>not</strong> tocado por este desinstalador. Cada um tem seu próprio fluxo de desinstalação dentro de seu respectivo menu (ou você pode remover com apt diretamente). Olhe para o <em>Show Version Information</em> primeiro para ver o que está registrado."
+    "body": "Qualquer coisa ProxMenux instalada através de outros menus — Fail2Ban, Lynis, NVIDIA drivers, ajustes pós-instalação — <strong>não</strong> é tocado por este desinstalador. Cada um tem seu próprio fluxo de desinstalação dentro do respectivo menu (ou você pode remover diretamente com o apt). Veja primeiro <em>Mostrar informações da versão</em> para ver o que está registrado."
   },
   "manual": {
     "heading": "Desinstalação manual",

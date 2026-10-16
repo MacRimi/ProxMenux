@@ -75,7 +75,7 @@
     "item2Rich": "A árvore de scripts em <code>/usr/local/share/proxmenux/</code>.",
     "item3Rich": "O lançador em <code>/usr/local/bin/menu</code>.",
     "item4Rich": "Opcional: o serviço Monitor systemd em <code>proxmenux-monitor.service</code>.",
-    "p2Rich": "ProxMenux faz <em>not</em> tocar configuração do núcleo do Proxmox, a menos que você explicitamente pedir por ele através de um menu dedicado (por exemplo, o fluxo de reparo de rede edita <code>/etc/network/interfaces</code> — mas só depois de confirmar e um backup é tomado)."
+    "p2Rich": "ProxMenux <em>não</em> altera a configuração principal do Proxmox, a menos que você solicite explicitamente por meio de um menu dedicado (por exemplo, o fluxo de reparo da rede edita <code>/etc/network/interfaces</code> — mas somente depois que você confirmar e um backup for feito)."
   },
   "q9": {
     "question": "É seguro usar ProxMenux na produção?",

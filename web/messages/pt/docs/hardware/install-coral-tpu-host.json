@@ -1,7 +1,7 @@
 {
   "meta": {
     "title": "Instalar o Coral TPU no Host ProxMenux Documentação",
-    "description": "Instale drivers Google Coral TPU em um host Proxmox VE. O ProxMenux detecta automaticamente se você tem M.2 / Mini-PCIe ou o Acelerador USB (ou ambos) e executa apenas o caminho de instalação que se aplica – módulos de kernel de junta/apex via DKMS para PCIe, libedgetpu1-std para USB."
+    "description": "Instale os drivers Google Coral TPU em um host Proxmox VE. ProxMenux detecta automaticamente se você tem M.2 / Mini-PCIe ou o acelerador USB (ou ambos) e executa apenas o caminho de instalação que se aplica - gasket/apex módulos de kernel via DKMS para PCIe, Tempo de execução libedgetpu1-std para USB."
   },
   "header": {
     "title": "Instale Coral TPU no Host",
@@ -22,7 +22,7 @@
     "pcieForm": "M.2 / Mini-PCIe",
     "pcieFormSub": "(dual-edge TPU num cartão M.2)",
     "pcieDetect": "Fornecedor PCI <code>1ac1</code>",
-    "pcieInstall": "Módulo Kernel (gaxe + ápice) via DKMS",
+    "pcieInstall": "Módulo do kernel (gasket + apex) via DKMS",
     "pcieReboot": "Sim",
     "usbForm": "Acelerador USB",
     "usbFormSub": "(dongle de plástico pequeno)",
@@ -68,7 +68,7 @@
       "imageAlt": "Diálogo de pré-instalação mostrando o hardware Coral detectado (M.2/PCIe count + USB count) e a lista de passos que o instalador executará"
     },
     "pcie": {
-      "title": "Caminho PCIe – junta + módulos de kernel de ápice via DKMS",
+      "title": "Caminho PCIe — gasket + apex módulos do kernel via DKMS",
       "body": "Só é executado se o programa encontrar uma Coral PCIe / M.2. É o mais pesado dos dois caminhos porque ele está compilando um módulo do kernel para o seu kernel em execução exata.",
       "items": [
         "<strong>Cleanup.</strong> Se um anterior <code>gasket-dkms</code> instalar dpkg esquerdo em um estado quebrado (típico após uma atualização do kernel PVE 9 onde a autoinstalação DKMS falhou silenciosamente), force-purge-lo.",
@@ -85,7 +85,7 @@
         "<strong>Crie o grupo <code>apex</code> + regras udev</strong> (<code>/etc/udev/rules.d/99-coral-apex.rules</code>) para que os nós <code>/dev/apex_*</code> obtenham o grupo certo na próxima inicialização.",
         "<strong>Carregue os módulos:</strong> <code>modprobe gasket</code> + <code>modprobe apex</code>."
       ],
-      "imageAlt": "DKMS build progress + módulo de saída de carga para os módulos de kernel de junta/apex"
+      "imageAlt": "DKMS progresso de compilação + saída de carregamento do módulo para os módulos do kernel gasket/apex"
     },
     "usb": {
       "title": "Caminho USB — Edge TPU runtime from Google",
@@ -121,7 +121,7 @@
     "heading": "Reinstalar ou desinstalar",
     "intro": "Executando o instalador em um host onde Coral já está instalado (PCIe via <code>gasket-dkms</code>, USB via <code>libedgetpu1-std</code>/<code>libedgetpu1-max</code>, ou ambos) não mais cai diretamente em outra instalação fresca. Em vez disso, o ProxMenux detecta a configuração existente e mostra um menu de ação para que você possa decidir o que fazer.",
     "imageAlt": "Menu de ação Coral com duas opções — Reinstalar / atualizar drivers Coral, ou Desinstalar drivers Coral e configuração — mostrado quando o instalador detecta uma instalação anterior Coral no host",
-    "imageCaption": "O menu de ação só aparece quando pelo menos um componente Coral já está instalado (entrada de junta DKMS, pacote <code>libedgetpu1-*</code> ou nós de dispositivo <code>/dev/apex_*</code> vivos).",
+    "imageCaption": "O menu de ação só aparece quando pelo menos um componente Coral já está instalado (entrada DKMS gasket, pacote <code>libedgetpu1-*</code> ou nós de dispositivo <code>/dev/apex_*</code> ativos).",
     "reinstallHeading": "Reinstalar / atualizar",
     "reinstallBody": "Continua com o fluxo de instalação normal — útil após uma atualização do kernel se a reconstrução do DKMS não aconteceu automaticamente, ou para elevar o tempo de execução para um <code>libedgetpu1-*</code> mais recente do Google Coral apt repo. O estado anterior de DKMS é limpo primeiro, então um pacote semi-instalado de uma tentativa anterior falhada não bloqueia a nova compilação.",
     "uninstallHeading": "Desinstalar — o que é removido",
@@ -135,8 +135,8 @@
       "Limpa a entrada e o chaveiro do repositório apt Google Coral (<code>/etc/apt/sources.list.d/coral-edgetpu.list</code> + <code>coral-edgetpu-archive-keyring.gpg</code>).",
       "Pede uma reinicialização no final do <strong> apenas se o caminho PCIe foi instalado</strong> — a maneira mais limpa de lavar os módulos do kernel. Desinstalações USB só não precisam de uma."
     ],
-    "lxcWarnTitle": "Recipientes LXC com passagem de ápice",
-    "lxcWarnBody": "Desinstalar no host invalida o caminho do dispositivo mapeado em qualquer recipiente LXC configurado para a passagem do ápice. Planeje a operação durante uma janela de manutenção se Frigate / DeepStack / cargas de trabalho semelhantes dependem disso."
+    "lxcWarnTitle": "LXC contêineres com apex passagem",
+    "lxcWarnBody": "A desinstalação no host invalida o caminho do dispositivo mapeado em qualquer contêiner LXC configurado para passagem apex. Planeje a operação durante uma janela de manutenção se Frigate / DeepStack / cargas de trabalho semelhantes dependerem dela."
   },
   "updates": {
     "heading": "Atualizar notificações",
@@ -154,12 +154,12 @@
     "antiTitle": "Anti-cascada por projeto",
     "antiBody": "Uma notificação por variante, apenas quando a versão upstream realmente muda — nunca em cada varredura 24h. Se você ignorar uma atualização, ela não vai re-pingá-lo até que um lançamento mais recente chegue.",
     "rebootTitle": "A reinicialização só é necessária para o caminho PCIe",
-    "rebootBody": "A junta DKMS reconstrui novos módulos do kernel — que precisam de uma reinicialização para estar ativa. A atualização de tempo de execução USB é uma troca de biblioteca de espaço-usuário, não é necessário reiniciar."
+    "rebootBody": "A reconstrução gasket DKMS carrega novos módulos do kernel — que precisam de uma reinicialização para ficarem ativos. A atualização do tempo de execução USB é uma troca de biblioteca de espaço do usuário, sem necessidade de reinicialização."
   },
   "manual": {
     "heading": "Equivalente manual",
     "intro": "Se você quiser saber o que acontece sob o capô, ou refazer um passo individual à mão, os comandos brutos por caminho se parecem com isso.",
-    "pcieHeading": "PCIe / M.2 (gaxe + ápice via DKMS)",
+    "pcieHeading": "PCIe / M.2 (gasket + apex via DKMS)",
     "usbHeading": "USB (libedgetpu tempo de execução)"
   },
   "verification": {
@@ -174,11 +174,11 @@
     "apexMissTitle": "Falta o /dev/apex_0 após reiniciar",
     "apexMissBody": "O módulo não está carregado. Tente <code>modprobe apex</code> à mão. Se esse erro, verifique <code>dmesg | grep -iE \"apex|gasket\"</code> para a falha real — os culpados comuns são o erro de versão do kernel (DKMS foi construído para um kernel diferente daquele que você inicializou) ou uma atualização de firmware que desativou o slot PCIe em que o Coral está.",
     "lxcMissTitle": "Pode ver /dev/apex_0 mas LXC não pode",
-    "lxcMissBody": "O anfitrião está bem. O problema é a configuração de passagem — veja <lxcLink>Add Coral TPU to an LXC</lxcLink>.",
+    "lxcMissBody": "O anfitrião está bem. O problema é a configuração de passagem — consulte <lxcLink>Adicionar Coral TPU a um LXC</lxcLink>.",
     "usbUnreachTitle": "Acelerador USB detectado, mas Frigate / TFLite não pode alcançá-lo",
     "usbUnreachBody": "Verifique as regras udev enviadas com <code>libedgetpu1-std</code> entrou em vigor: <code>ls -l /dev/bus/usb/*/*</code>. O dispositivo NÃO deve ser de propriedade de root:root com modo 0600 — se for, execute <code>udevadm control --reload-rules &amp;&amp; udevadm trigger</code> no host, desligue o Coral USB, espere 3 segundos e conecte-o de volta.",
     "logTitle": "Instalar o registo",
-    "logBody": "Cada execução escreve para <code>/tmp/coral_install.log</code> no anfitrião. Se a compilação DKMS morrer, o script também adiciona as últimas linhas 50 de <code>/var/lib/dkms/gasket/1.0/build/make.log</code> a esse log — anexe-o ao pedir ajuda em GitHub."
+    "logBody": "Cada execução grava em <code>/tmp/coral_install.log</code> no host. Se a compilação DKMS morrer, o script também anexa as últimas 50 linhas de <code>/var/lib/dkms/gasket/1.0/build/make.log</code> a esse log — anexe-o ao solicitar ajuda em GitHub."
   },
   "related": {
     "heading": "Relacionado",

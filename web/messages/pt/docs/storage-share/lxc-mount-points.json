@@ -17,7 +17,7 @@
   "bigPicture": {
     "heading": "Como funciona (o quadro geral)",
     "intro": "Uma montagem vincular é exatamente o que o nome diz: Proxmox diz ao kernel \"o diretório host <code>X</code> também deve aparecer no caminho <code>Y</code> dentro deste recipiente\". Não há nenhuma cópia, nenhuma sincronização, nenhuma rede — ambos os lados veem os mesmos arquivos <em></em> ao mesmo tempo.",
-    "sourceLabel": "Anfitrião Proxmox",
+    "sourceLabel": "Host Proxmox",
     "sourceDetail": "/mnt/data\n(sua pasta)",
     "targetLabel": "Contentor LXC",
     "targetDetail": "/mnt/data\n(mostra aqui)",

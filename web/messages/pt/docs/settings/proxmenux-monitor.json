@@ -82,7 +82,7 @@
     ],
     "preservedTitle": "O que sobrevive ao reinício, o que não sobrevive",
     "preservedBody": "<strong>Wiped:</strong> nome de usuário, senha hash, 2FA segredo TOTP, códigos de backup. <strong>Preservado:</strong> <code>jwt_secret</code>, <code>api_tokens</code> metadados, <code>revoked_tokens</code> lista. Se você quiser ativamente também invalidar todos os token API existentes (toque limpo completo), excluir <code>auth.json</code> manualmente em vez de usar esta opção de menu — o próximo início do serviço regenera o segredo JWT e tudo mais do zero.",
-    "trustTitle": "Acesso físico-anfitrião é a âncora da confiança",
+    "trustTitle": "O acesso ao host físico é a âncora de confiança",
     "trustBody": "Este caminho de reset requer shell root na máquina. Qualquer um que possa executar o comando <code>menu</code> como root já controla a caixa, então dar-lhes recuperação de senha não é uma escalada de privilégio — é consistente com como todas as outras ferramentas de administração no Proxmox funcionam. O corolário: o login do Monitor não protegerá nada de alguém que você já deixou entrar no shell Proxmox.",
     "seeAlso": "Veja também <link>Monitor → Acesse &amp; Auth → Recuperar uma senha perdida</link> para o mesmo fluxo descrito do lado do painel, além do contexto mais amplo sobre como as senhas são hashed e como o segredo JWT é gerado."
   },

@@ -44,7 +44,7 @@
     "elementsIntro": "Cada nó é uma entidade do mesmo inventário utilizado pelas cartas de grupo abaixo, mas disposta como uma topologia para que as relações entre elas sejam imediatas:",
     "elements": [
       "<strong>NICs</strong> (âmbar) — todas as interfaces físicas com link up. Interfaces relatadas como para baixo são desbotadas.",
-      "<strong>Host</strong> (âmbar) — o próprio anfitrião Proxmox, sentado entre as NIC e as pontes. Desenhado como âncora fixa; não clicável.",
+      "<strong>Host</strong> (âmbar) — o próprio host Proxmox, localizado entre as NICs e as pontes. Renderizado como uma âncora fixa; não clicável.",
       "<strong>Bridges</strong> (cyan) — pontes Linux e OVS. Apenas pontes que carregam pelo menos um hóspede ativo são desenhadas; pontes não utilizadas são escondidas para manter o diagrama focado no que realmente move o tráfego.",
       "<strong>LXCs</strong> (cyan) — contentores em funcionamento ligados a uma ponte.",
       "<strong>VMs</strong> (roxo) — executando máquinas virtuais conectadas a uma ponte.",
@@ -227,7 +227,7 @@
         "tail": " — a categoria da rede e os limiares de latência-história."
       },
       {
-        "label": "Referência API",
+        "label": "Referência da API",
         "href": "/docs/monitor/api",
         "tail": " — os objectivos da rede e da latência."
       },

@@ -19,7 +19,7 @@
     "body": "Ao contrário do LXC Mount Manager — o que faz com que o CT veja algo <em>via</em> o host Proxmox — este script dá ao contêiner seu cliente <strong>own NFS </strong>: ele fala NFS sobre a rede, monta compartilha diretamente do servidor NFS, e armazena o monte no <code>/etc/fstab</code> do contêiner. A máquina Proxmox não está no caminho dos dados.",
     "diagramServerLabel": "Servidor NFS",
     "diagramServerDetail": "/export/data",
-    "diagramHostLabel": "Anfitrião Proxmox",
+    "diagramHostLabel": "Host Proxmox",
     "diagramHostDetail": "(apenas um\nponte de rede)",
     "diagramCtLabel": "LXC (com privilégios)",
     "diagramCtDetail": "/mnt/data\nmontagem.nfs dentro de CT",
@@ -68,7 +68,7 @@
   },
   "unmount": {
     "heading": "Desmontar a partilha NFS",
-    "body": "Combina as montagens ao vivo e as entradas de fstab em uma lista, permite que você escolha uma, e <strong> remove a linha correspondente de <code>/etc/fstab</code></strong>. O script faz <em>not</em> executar <code>umount</code> na montagem ao vivo — em vez disso, diz-lhe que uma reinicialização CT é necessária para que a desmontagem faça efeito.",
+    "body": "Combina as montagens ativas e as entradas do fstab em uma lista, permite escolher uma e <strong>remove a linha correspondente de <code>/etc/fstab</code></strong>. O script <em>não</em> executa <code>umount</code> na montagem ativa. Em vez disso, ele informa que uma reinicialização CT é necessária para que a desmontagem entre em vigor.",
     "warnTitle": "O programa remove os itens do fstab, não os monta ao vivo",
     "warnBody": "Esta é uma escolha de design deliberada: <code>umount</code> em uma montagem ocupada falha com \"dispositivo ocupado\" quando algo dentro do CT ainda está usando. A remoção da entrada do fstab garante que a montagem desapareça de forma limpa no próximo início do CT. Se você quiser o <em>now</em> mount ido e você tem certeza de que nada está usando-o, execute <code>pct exec &lt;ctid&gt; -- umount /mnt/&lt;path&gt;</code> à mão após o script terminar."
   },

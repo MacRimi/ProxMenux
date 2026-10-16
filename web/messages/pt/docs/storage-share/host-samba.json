@@ -6,7 +6,7 @@
     "ogDescription": "Montar um compartilhamento externo de Samba / CIFS no host Proxmox via pvesm, fstab com perms abertos (ideal para LXC binding-mounts), ou ambos."
   },
   "header": {
-    "title": "Anfitrião: montar uma partilha Samba no anfitrião",
+    "title": "Host: Monte o compartilhamento do Samba no Host",
     "description": "Montar um compartilhamento externo de Samba (SMB / CIFS) — de um NAS, uma caixa Windows, uma exportação TrueNAS SMB — no host Proxmox. Escolha um ou ambos os métodos: registre-o como armazenamento Proxmox (visível no Datacenter > Armazenamento) e/ou adicione uma montagem /etc/fstab simples em um caminho que você escolher, com uid/gid/file_mode aberto para que os LXCs não privilegiados possam vincular-montar e escrever sem quaisquer alterações dentro do recipiente.",
     "section": "Armazenamento e Compartilhamento · Máquina"
   },
@@ -38,7 +38,7 @@
         "useCase": "Backups, ISOs, modelos LXC — qualquer coisa que precise aparecer na interface de usuário Proxmox. Discos de VM ao vivo são tecnicamente suportados, mas desencorajados em CIFS (bloqueio semântico)."
       },
       {
-        "method": "<strong>Apenas fstab do anfitrião</strong>",
+        "method": "<strong>Host somente fstab</strong>",
         "mountRich": "<code>/mnt/&lt;path&gt;</code> com uid/gid/file_mode aberto",
         "ui": "Não",
         "useCaseRich": "Montando a parte em um ou mais LXCs <em>sem</em> expondo-a como um armazenamento Proxmox. As Perms abertas garantem que as CTs desprivilegiadas podem escrever através da montagem de ligação."

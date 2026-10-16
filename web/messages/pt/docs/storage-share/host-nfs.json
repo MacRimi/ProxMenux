@@ -39,7 +39,7 @@
         "useCase": "Imagens de disco VM, backups, ISOs, modelos LXC — qualquer coisa que precise aparecer na interface Proxmox."
       },
       {
-        "method": "<strong>Apenas fstab do anfitrião</strong>",
+        "method": "<strong>Host somente fstab</strong>",
         "mountRich": "<code>/mnt/&lt;path&gt;</code> (você escolhe o caminho)",
         "ui": "Não",
         "useCaseRich": "Montando a parte em um ou mais LXCs <em>sem</em> expondo-a como um armazenamento Proxmox. Mantém a interface do Datacenter limpa."
@@ -147,7 +147,7 @@
     "inactiveTitle": "O armazenamento mostra como inativo na UI Proxmox",
     "inactiveBody": "Executar <em>Teste NFS Conectividade</em> primeiro — 99 % do tempo este sinaliza o salto exato que quebra (DNS, porto, permissões de montagem). Se a conectividade é boa, mas o Proxmox ainda sinaliza inativo, verifique <code>journalctl -u pvestatd</code> no nó Proxmox; as montagens intermitentes DNS ou lentas NFS na inicialização podem deixar armazenamentos em estado inativo até que o <code>pvesm set &lt;id&gt; --disable 0</code> seja reaplicado.",
     "lxcNoWriteTitle": "A montagem fstab funciona mas o LXC não pode escrever através de uma montagem de ligação",
-    "lxcNoWriteBody": "As permissões NFS são aplicadas ao lado do servidor, não pelo host. As opções fstab (<code>uid=</code>, <code>file_mode=</code>) que funcionam para CIFS do <strong>not</strong> aplicam-se para NFS. Se o seu LXC desprivilegiado (root inside CT = UID 100000 no host, mapeado para NFS como \"outros\") não consegue escrever, o servidor NFS é ou squashing root ou tem perms restritivos. Corrigir no servidor: alterar a exportação para <code>no_root_squash</code> se você confia no host, ou definir a exportação world-writable (Sinologia, TrueNAS, OMV todos expor isso na UI). O script tenta <code>chmod 1777</code> na montagem, mas isso só tem sucesso quando o servidor o permite.",
+    "lxcNoWriteBody": "NFS são impostas no lado do servidor, não pelo host. As opções fstab (<code>uid=</code>, <code>file_mode=</code>) que funcionam para CIFS <strong>não</strong> se aplicam a NFS. Se seu LXC sem privilégios (raiz dentro de CT = UID 100000 no host, mapeado para NFS como \"outros\") não puder gravar, o servidor NFS está esmagando a raiz ou tem permissões restritivas. Correção no servidor: altere a exportação para <code>no_root_squash</code> se você confiar no host ou defina a exportação gravável mundialmente (Synology, TrueNAS, OMV expõe isso em UI). O script tenta <code>chmod 1777</code> na montagem, mas só funciona quando o servidor permite.",
     "fstabBootTitle": "A montagem do fstab não aparece após reiniciar",
     "fstabBootBody": "O script adiciona <code>nofail,_netdev</code> para que um compartilhamento faltando no boot não bloqueie a inicialização. Se a montagem nunca aparecer: confirme que a rede está acessível (<code>ping &lt;server&gt;</code>), verifique <code>journalctl -u remote-fs.target</code>, e verifique se a entrada é válida com <code>mount -fav | grep nfs</code>. <code>mount -a</code> após a inicialização monta tudo o que está faltando atualmente."
   },

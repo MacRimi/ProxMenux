@@ -277,7 +277,7 @@
       "<strong>Cheque Falha no nível de aplicação2Ban (opcional).</strong> Quando o painel fica atrás de um proxy, o firewall do kernel não pode bloquear o IP do verdadeiro atacante — a conexão sempre vem do proxy. Para preencher essa lacuna, o mesmo gancho acima consulta a cadeia <code>proxmenux</code> Fail2Ban a cada 30 segundos, caches o conjunto IP banido, e curto-circuitos pedidos desses IPs com HTTP 403 dentro de Flask."
     ],
     "calloutTitle": "Fail2Ban não é empacotado",
-    "calloutBody": "Fail2Ban é <strong>not</strong> instalado pelo próprio ProxMenux Monitor. A verificação de nível de aplicação é um no-op até que você instale Fail2Ban no host (por exemplo, via <link>Security → Fail2Ban</link> no menu ProxMenux). Quando o binário <code>fail2ban-client</code> ou a cadeia <code>proxmenux</code> estão ausentes, a chamada falha silenciosamente e os pedidos não são fechados — a autenticação ainda se aplica, mas não proíbe o nível IP.",
+    "calloutBody": "Fail2Ban <strong>não</strong> é instalado pelo próprio ProxMenux Monitor. A verificação no nível do aplicativo é autônoma até que você instale o Fail2Ban no host (por exemplo, por meio de <link>Segurança → Fail2Ban</link> no menu ProxMenux). Quando o binário <code>fail2ban-client</code> ou o <code>proxmenux</code> jail estão ausentes, a chamada falha silenciosamente e as solicitações não são bloqueadas - a autenticação ainda se aplica, mas nenhum banimento no nível de IP.",
     "outro": "Os trechos de proxy reverso (Nginx / Caddy / Traefik) e a passagem da cadeia de Fail2Ban estão em <accessLink>Acesso e autenticação</accessLink> e <fail2banLink>Segurança → Fail2Ban</fail2banLink>."
   },
   "whereNext": {
@@ -289,7 +289,7 @@
         "tail": " — configuração do primeiro lançamento, senha + TOTP 2FA, excertos de proxy reverso, cadeia Fail2Ban."
       },
       {
-        "label": "Referência API",
+        "label": "Referência da API",
         "href": "/docs/monitor/api",
         "tail": " — todos os objectivos, gestão de fichas, melhores práticas de segurança."
       },

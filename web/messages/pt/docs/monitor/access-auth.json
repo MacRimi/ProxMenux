@@ -14,7 +14,7 @@
   },
   "intro": {
     "title": "Autenticação é opt-in",
-    "body": "No primeiro lançamento, o painel mostra uma única janela — <em>\"Proteja o seu painel?\"</em> — com dois botões: <strong>Sim, Configure a senha</strong> e <strong>No, Continue Sem Proteção</strong>. Dizer que não deixa todos os terminais API abertos no TCP 8008 — ótimo para um laboratório isolado LAN, perigoso em qualquer outra coisa. Autenticação de dois fatores (2FA) é <strong>not</strong> parte desta escolha inicial; é configurado mais tarde a partir de <strong> a guia Segurança</strong> uma vez que uma senha é definida."
+    "body": "No primeiro acesso, o painel apresenta a caixa de diálogo <em>«Proteger o painel?»</em>, com os botões <strong>Sim, configurar palavra-passe</strong> e <strong>Não, continuar sem proteção</strong>. Ao escolher a segunda opção, os endpoints da API ficam abertos em TCP 8008: pode ser adequado numa LAN de laboratório isolada, mas é perigoso noutros ambientes. A autenticação de dois fatores (2FA) <strong>não</strong> faz parte desta escolha inicial; é configurada mais tarde no <strong>separador Segurança</strong>, depois de definir uma palavra-passe."
   },
   "reaching": {
     "heading": "Alcançar o painel",
@@ -317,7 +317,7 @@
   },
   "gateway": {
     "heading": "Gateway seguro (Tailscale)",
-    "intro": "Proxies reversas são a resposta clássica para \"alcançar o painel de fora\", mas eles exigem um domínio público, certificado e uma porta aberta na borda. <strong>Secure Gateway</strong> é a alternativa de porta zero enviada dentro do próprio Monitor — uma aplicação implantável pré-construída que faz girar um LXC alpino executando <a>Tailscale</a> como um roteador de sub-rede. Uma vez conectado à sua tailnet, cada dispositivo nele pode atingir o Monitor no próprio IP LAN do anfitrião — de um laptop em férias, um telefone em 5G, ou outro nó — sem expor o TCP 8008 à internet.",
+    "intro": "Os proxies reversos são a resposta clássica para \"alcançar o painel de fora\", mas exigem domínio público, certificado e uma porta aberta na borda. <strong>Secure Gateway</strong> é a alternativa de porta zero fornecida dentro do próprio Monitor — um aplicativo implantável pré-construído que gira um Alpine LXC executando <a>Tailscale</a> como um roteador de sub-rede. Uma vez conectado à sua tailnet, cada dispositivo nele pode acessar o Monitor no próprio IP da LAN do host - de um laptop em férias, um telefone em 5G ou outro nó - sem expor TCP 8008 à Internet.",
     "calloutTitle": "Por que isto é conveniente",
     "calloutBody": "O URL permanece o mesmo que na LAN — <code>http://&lt;proxmox-lan-ip&gt;:8008</code> funciona em todo o lado Tailscale Funciona. Sem certificados, não DNS, sem encaminhamento de bombordo. O próprio Monitor vê o pedido como vindo de um IP tailnet (tipicamente <code>100.x.y.z</code>), portanto, o log de autenticação e o Fail2Ban gancho ainda funciona como na LAN.",
     "deployBody": "O fluxo de implantação é uma tela — escolha o armazenamento LXC do host, cole uma chave de autenticação Tailscale (gerada em <a>login.tailscale.com/admin/settings/keys</a>), escolha quais sub-redes anunciar, clique em Deploy. O LXC leva ~30 segundos para inicializar e registra na tailnet automaticamente.",
@@ -338,9 +338,9 @@
     "outro": "Siga-o da maneira habitual: <code>tail -F /var/log/proxmenux-auth.log</code>. O arquivo é rodado pelo <code>logrotate</code> se for adicionado um drop-in de configuração; o próprio Monitor não o roda."
   },
   "fail2ban": {
-    "heading": "Fail2Ban care",
+    "heading": "Opcional: jail do Fail2Ban",
     "calloutTitle": "O Fail2Ban não está empacotado com o Monitor",
-    "calloutBody": "Fail2Ban é <strong>not</strong> instalado pelo próprio ProxMenux Monitor. Instale-o via <link>Security → Fail2Ban</link> no menu ProxMenux (ou com o pacote Debian padrão). Sem ele, o Monitor ainda escreve o registro de auditoria acima — ele simplesmente não bani automaticamente os infratores.",
+    "calloutBody": "Fail2Ban <strong>não</strong> é instalado pelo próprio ProxMenux Monitor. Instale-o via <link>Segurança → Fail2Ban</link> no menu ProxMenux (ou com o pacote Debian padrão). Sem ele, o Monitor ainda grava o registro de auditoria acima — ele apenas não bane automaticamente os infratores reincidentes.",
     "intro": "Quando o Fail2Ban é instalado, a integração ProxMenux envia uma cadeia <code>[proxmenux]</code> que:",
     "items": [
       "Lê-se <code>/var/log/proxmenux-auth.log</code>.",

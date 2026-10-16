@@ -26,7 +26,7 @@
     "heading": "A carga útil do rootfs",
     "intro": "A árvore <code>rootfs/</code> é uma árvore <strong>plain filesystem copy</strong> produzida pela <code>rsync</code> a partir do host de origem. Ele contém um perfil <strong>default com curadoria</strong> de caminhos que importam para uma restauração Proxmox, além de qualquer caminho <strong> personalizado</strong> adicionado pelo usuário ao trabalho de backup ou sessão interativa. O conjunto é deliberadamente estreito: apenas caminhos que <em>hold configuration</em> ou <em>hold afirmam que o Proxmox não pode regenerar por conta própria</em>.",
     "defaultProfileTitle": "O perfil por omissão",
-    "defaultProfileBody": "O perfil padrão é definido por <code>hb_default_profile_paths</code> em <code>lib_host_backup_common.sh</code>. Abrange oito categorias que, em conjunto, descrevem um anfitrião Proxmox trabalhando:",
+    "defaultProfileBody": "O perfil padrão é definido por <code>hb_default_profile_paths</code> em <code>lib_host_backup_common.sh</code>. Abrange oito categorias que juntas descrevem um host Proxmox funcional:",
     "categoriesTitle": "Categorias de localização",
     "categoryRows": [
       {
@@ -37,7 +37,7 @@
       {
         "category": "& Rede de identidade da máquina",
         "paths": "/etc/hostname, /etc/hosts, /etc/timezone, /etc/resolv.conf, /etc/network, /etc/systemd/network",
-        "why": "Tudo o que o anfitrião precisa para aparecer na rede com a mesma identidade. Os arquivos <code>.link</code> sob nomes <code>/etc/systemd/network</code> pin NIC para seu MAC, então reinstala e mudanças de hardware não renomeiam interfaces."
+        "why": "Tudo que o host precisa para entrar na rede com a mesma identidade. Os arquivos <code>.link</code> em <code>/etc/systemd/network</code> fixam nomes de NIC em seus MAC, portanto, reinstalações e alterações de hardware não renomeiam interfaces."
       },
       {
         "category": "& Autorização de acesso",

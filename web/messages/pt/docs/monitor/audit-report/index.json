@@ -34,7 +34,7 @@
               {
                 "icon": "fileText",
                 "title": "Política — o que se espera?",
-                "body": "Declara que os hóspedes precisam de apoio ou devem começar com o anfitrião, cujo armazenamento é essencial e os limiares dos controlos."
+                "body": "Declara quais convidados precisam de backup ou devem começar pelo host, qual armazenamento é essencial e os limites das verificações."
               }
             ]
           }
@@ -110,7 +110,7 @@
               {
                 "label": "Alterações",
                 "href": "/docs/monitor/audit-report/changes",
-                "tail": "o diário do que o ProxMenux mudou no anfitrião."
+                "tail": "o diário do que ProxMenux mudou no host."
               },
               {
                 "label": "Política",

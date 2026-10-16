@@ -38,7 +38,7 @@
     "breakTitle": "Pode quebrar após as atualizações do Proxmox",
     "breakBody": "A Proxmox envia regularmente atualizações de UI que sobrepõem o <code>proxmoxlib.js</code>. Quando isso acontece, a bandeira volta. Você pode re-aplicar esta opção após cada atualização do Proxmox para re-patch o arquivo, ou apenas aceitar o nag até que você reaplicar. ProxMenux também instala um gancho APT que re-re-patches automáticos em atualizações de pacotes — veja <link>Otimizações de desinstalação</link> para como esse gancho é invertido.",
     "legalTitle": "Nota legal (sempre vale a pena repetir)",
-    "legalBody": "Esta opção só esconde o problema da UI. Ele faz <strong>not</strong> conceder-lhe suporte à empresa, acesso ao repositório da empresa, ou quaisquer direitos de enviar Proxmox comercialmente sem uma assinatura. Se você executar o Proxmox em um ambiente gerador de receita, compre uma assinatura — ele suporta o projeto e lhe dá o canal empresarial estável."
+    "legalBody": "Esta opção oculta apenas o problema UI. Ele <strong>não</strong> concede a você suporte empresarial, acesso ao repositório corporativo ou quaisquer direitos para enviar Proxmox comercialmente sem assinatura. Se você executa o Proxmox em um ambiente gerador de receita, adquira uma assinatura — ela apoia o projeto e fornece a você um canal empresarial estável."
   },
   "verify": {
     "heading": "Verificação",

@@ -294,7 +294,7 @@
               [
                 "aplicativo multi-contêiner",
                 "Cada membro em seu próprio backup",
-                "Os backups de cada membro, além do contrato de pilha e sua ponte no anfitrião"
+                "Os backups de cada membro, além do contrato de pilha e sua ponte no host"
               ]
             ]
           }

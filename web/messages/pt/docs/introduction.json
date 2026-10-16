@@ -88,7 +88,7 @@
         "href": "/docs/utils"
       },
       {
-        "title": "Referência de Comandos",
+        "title": "Referência de comandos",
         "description": "Catálogo curado de comandos Linux e Proxmox organizados por tópico — sistema, VM/CT (qm, pct), armazenamento, rede, passagem ZFS, GPU, backup, ferramentas CLI.",
         "icon": "BookOpen",
         "href": "/docs/help-info"
@@ -97,7 +97,7 @@
   },
   "monitorSection": {
     "heading": "ProxMenux Monitor — o que se obtém",
-    "intro": "O produto do painel web. Auto-anfitrião no host Proxmox em TCP 8008. Clique em qualquer carta para saltar direto para a página dessa seção, ou leia o <link>Monitor overview</link> primeiro.",
+    "intro": "O produto de painel da web. Auto-hospedado no host Proxmox em TCP 8008. Clique em qualquer cartão para ir direto para a página dessa seção ou leia primeiro a <link>Visão geral do monitor</link>.",
     "items": [
       {
         "title": "Monitor de Saúde",
@@ -192,7 +192,7 @@
       {
         "lead": "<strong>Procurando um comando específico?</strong> ",
         "linkHref": "/docs/help-info",
-        "linkLabel": "Referência de Comandos",
+        "linkLabel": "Referência de comandos",
         "tail": " é um catálogo com curadoria organizado por tópico, com botões de cópia."
       },
       {

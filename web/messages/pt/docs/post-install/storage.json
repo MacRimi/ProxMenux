@@ -17,7 +17,7 @@
     "heading": "otimizar o tamanho do ZFS ARC",
     "intro": "O cache de substituição adaptativo <strong> (ARC)</strong> é o cache de leitura em memória do ZFS. Sem ajuste explícito, ZFS feliz agarra até metade do host RAM para si mesmo, que é excessivo em um host Proxmox que também precisa de memória para VMs e LXCs. Esta opção tampa ARC para uma fração sã de RAM total com base no tamanho da máquina.",
     "sizingTitle": "Regras de dimensionamento",
-    "headerRam": "RAM do anfitrião",
+    "headerRam": "Host RAM",
     "headerMax": "Tampa ARC",
     "rows": [
       {
@@ -44,7 +44,7 @@
     "after": "O ficheiro <code>/etc/modprobe.d/99-zfsarc.conf</code> contém uma única directiva — <code>options zfs zfs_arc_max=…</code>. Todos os outros parâmetros do módulo ZFS (<code>zfs_arc_min</code>, L2ARC prefetch/write stetter, TXG timeout) são deixados em seu padrão OpenZFS. Antes de escrever, um passo de reconciliação escaneia qualquer outro <code>*.conf</code> em <code>/etc/modprobe.d/</code> que define <code>zfs_arc_min</code> / <code>zfs_arc_max</code>, faz backup deles até <code>/usr/local/share/proxmenux/backups/zfs_arc/</code> com um manifesto, e tira as linhas conflitantes para que apenas o arquivo do ProxMenux esteja ativo. Após a escrita do arquivo, o ProxMenux executa o <code>update-initramfs -u -k all</code> e, quando aplicável, o <code>proxmox-boot-tool refresh</code>, então a tampa também pousa nos initramfs usados pelas configurações ZFS-on-root.",
     "rebootTitle": "Requer uma reinicialização para fazer efeito",
     "rebootBody": "As configurações do ARC são lidas quando o módulo do kernel <code>zfs</code> carrega. Para fazer a tampa ter efeito sobre os hospedeiros ZFS-on-root, ProxMenux regenera os initramfs com <code>update-initramfs -u -k all</code> e, quando aplicável, atualiza o carregador de inicialização com <code>proxmox-boot-tool refresh</code>. Uma reinicialização ainda é necessária para captar o novo parâmetro do módulo; a opção \"reiniciar necessário\" é definida automaticamente.",
-    "safeTitle": "Seguro em anfitriões não-ZFS",
+    "safeTitle": "Seguro em hosts não-ZFS",
     "safeBody": "A função só escreve a configuração quando <code>zpool list</code> relata pelo menos um pool de ZFS. No ext4 / LVM- only Proxmox hosts, ou em máquinas com as ferramentas ZFS instaladas, mas sem pool importado, assinalar esta opção é um no-op - nada é escrito.",
     "verifyTitle": "Verificação e retrocesso manual"
   },
@@ -110,7 +110,7 @@
       "Pools em que ZFS ela mesma relata a propriedade não suportada (raro; muito antigo pools).",
       "Pools já definidos para <code>autotrim=on</code> (no-op)."
     ],
-    "whenIntro3": "<strong>Não é relevante em anfitriões ext4-only</strong> — não há nada para ZFS para aparar. A função sai com uma mensagem amigável nesse caso.",
+    "whenIntro3": "<strong>Não relevante em hosts somente ext4</strong> — não há nada para ZFS cortar. A função termina com uma mensagem amigável nesse caso.",
     "recordedTitle": "Por que apenas os pools ProxMenux alterados são registrados",
     "recordedBody": "A função só escreve um pool para o seu arquivo de estado interno (<code>/usr/local/share/proxmenux/zfs_autotrim_pools</code>) quando ele ativamente virou esse pool de <code>off</code> para <code>on</code>. Pools que você tinha no autotrim antes de executar o script são deixados de fora da lista, então um futuro Desinstalar não desliga as configurações que você mesmo configurou — apenas as próprias alterações do ProxMenux são revertidas.",
     "manualTitle": "Equivalente manual (executado no seu servidor)",

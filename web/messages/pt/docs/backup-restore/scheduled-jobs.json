@@ -121,7 +121,7 @@
       },
       {
         "action": "Ver registo",
-        "detail": "Fluxos <code>/var/log/proxmenux/backup-jobs/JOB_ID-YYYYMMDD_HHMMSS.log</code> — um arquivo de log por execução. O corredor também emite uma linha de status compacta para diário sob o serviço systemd."
+        "detail": "Streams <code>/var/log/proxmenux/backup-jobs/JOB_ID-YYYYMMDD_HHMMSS.log</code> — um arquivo de log por execução. O executor também emite uma linha de status compacta para journald no serviço systemd."
       }
     ]
   },

@@ -53,9 +53,9 @@
   },
   "fail2banSection": {
     "heading": "Fail2Ban",
-    "body": "O ProxMenux instala o Fail2Ban com uma configuração sintonizada especificamente para o Proxmox. Além da cadeia padrão SSH, ela adiciona proteção para a interface web do Proxmox e para o ProxMenux Monitor, e funciona em torno de duas peculiaridades específicas do Proxmox: um padrão diário que deixa cair eventos de autenticação, e o problema da interface systemd que impede o Fail2Ban de ler certas fontes de periódicos de forma confiável. A página de detalhes cobre o fluxo completo de instalação, as três cadeias, o reparo diário, a mudança de endurecimento SSH e a folha de fraude de solução de problemas.",
+    "body": "ProxMenux instala Fail2Ban com uma configuração ajustada especificamente para Proxmox. Além do padrão SSH jail, ele adiciona proteção para a web Proxmox UI e ProxMenux Monitor, e contorna duas peculiaridades específicas do Proxmox: um padrão journald que elimina eventos de autenticação e o systemd problema de back-end que impede Fail2Ban de ler certas fontes de periódicos de maneira confiável. A página de detalhes cobre o fluxo completo de instalação, as três jails, a correção journald, a alteração de proteção SSH e a folha de dicas de solução de problemas.",
     "optionTitle": "Fail2Ban — instalar e gerenciar",
-    "optionDescription": "Três cadeias pré-configuradas (sshd agressiva, porta Proxmox UI 8006, porta ProxMenux Monitor 8008 + proxy reverso), infraestrutura nftables/iptables autodetectada, correção de diário e endurecimento SSH MaxAuthTries."
+    "optionDescription": "Três jails pré-configurados (sshd agressivo, porta Proxmox UI 8006, ProxMenux Monitor porta 8008 + proxy reverso), backend nftables/iptables detectado automaticamente, journald correção e SSH MaxAuthTries proteção."
   },
   "lynisSection": {
     "heading": "Lynis",

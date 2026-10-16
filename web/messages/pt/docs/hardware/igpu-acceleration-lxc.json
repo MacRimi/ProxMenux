@@ -20,7 +20,7 @@
     "headerVm": "VM",
     "rows": [
       {
-        "feature": "O anfitrião continua a usar o GPU?",
+        "feature": "O host continua usando o GPU?",
         "lxc": "Sim",
         "vm": "Não — exclusiva do VM"
       },
@@ -155,7 +155,7 @@
     "vainfoTitle": "vaidoso diz: VA-API versão 1.xx; não inicializou",
     "vainfoBody": "O tempo de execução VA-API está lá, mas nenhum driver adequado foi instalado. Na Intel, instale <code>intel-media-driver</code> (gens mais recentes) ou <code>i965-va-driver</code> (gens mais antigas). Em AMD, <code>mesa-va-drivers</code>. Repita o script se tiver dúvidas.",
     "logTitle": "Instalar o registo",
-    "logBody": "Cada execução escreve para <code>/tmp/add_gpu_lxc.log</code> no anfitrião. Inclua-o ao pedir ajuda em GitHub."
+    "logBody": "Cada execução grava em <code>/tmp/add_gpu_lxc.log</code> no host. Inclua-o ao pedir ajuda em GitHub."
   },
   "related": {
     "heading": "Relacionado",

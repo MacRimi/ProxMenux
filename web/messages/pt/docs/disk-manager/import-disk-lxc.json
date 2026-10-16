@@ -24,7 +24,7 @@
     "items": [
       "Pelo menos um recipiente LXC definido no hospedeiro.",
       "O recipiente é <strong>privileged</strong>, ou você aceita a oferta do script para convertê-lo.",
-      "Pelo menos um disco físico não em uso pelo anfitrião ou qualquer outro hóspede."
+      "Pelo menos um disco físico que não está em uso pelo host ou por qualquer outro convidado."
     ],
     "warnTitle": "Recipiente privilegiado necessário",
     "warnBody": "A passagem direta do dispositivo para um recipiente LXC só funciona se o recipiente for <strong>privileged</strong>. Se o script detecta <code>unprivileged: 1</code> na configuração que ele oferece para convertê-lo no lugar (edita <code>/etc/pve/lxc/&lt;CTID&gt;.conf</code>). Cancelar se você não pode aceitar o comércio de segurança de um recipiente privilegiado."
@@ -76,7 +76,7 @@
     "heading": "Considerações importantes",
     "items": [
       "<strong>Um disco por execução</strong>. Repita o script para cada disco adicional.",
-      "Fazer <strong>not</strong> anexar a mesma partição a vários recipientes que podem montá-lo simultaneamente — escreve simultaneamente corromper o sistema de arquivos.",
+      "Não <strong></strong> anexe a mesma partição a vários contêineres que possam montá-la simultaneamente — gravações simultâneas corrompem o sistema de arquivos.",
       "<strong>Old metadados</strong> (RAID / ZFS / LVM assinaturas) deve ser limpo manualmente antes que o script irá deixá-lo formatar, caso contrário <code>mkfs</code> se recusa a sobrescrever. Use a ferramenta <wipeLink>Format / Wipe Physical Disk</wipeLink> para isso."
     ]
   },

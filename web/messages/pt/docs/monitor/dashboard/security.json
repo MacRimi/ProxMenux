@@ -60,7 +60,7 @@
     "heading": "Gateway seguro",
     "cardAlt": "Cartão de Gateway seguro com botão Deploy Gateway seguro antes de qualquer gateway foi implantado",
     "cardCaption": "Secure Gateway card em uma nova configuração — um botão inicia o assistente.",
-    "intro": "Alcance o painel, a interface web da Proxmox e qualquer hóspede de qualquer lugar em seu <a>Tailscale</a>, sem expor qualquer porta à internet pública. O Monitor implementa um recipiente de LXC alpino no host executando <code>tailscaled</code> como um roteador de subnet; uma vez aprovado no console de administração Tailscale, seus dispositivos remotos alcançam o IP de LAN do host de qualquer lugar.",
+    "intro": "Acesse o painel, a web do Proxmox UI e qualquer convidado de qualquer lugar em sua tailnet <a>Tailscale</a>, sem expor nenhuma porta à Internet pública. O Monitor implanta um contêiner Alpine LXC no host executando <code>tailscaled</code> como um roteador de sub-rede; uma vez aprovado no console de administração Tailscale, seus dispositivos remotos alcançam o IP da LAN do host de qualquer lugar.",
     "wizardTitle": "Assistente passo a passo",
     "wizardIntro": "Antes de clicar em <em>Deploy Secure Gateway</em>, gere uma chave de autenticação em seu console de administração Tailscale — o assistente irá pedir por isso no passo 2.",
     "step0Title": "0. Gerar a tecla de autenticação Tailscale",
@@ -101,7 +101,7 @@
   },
   "pve": {
     "heading": "Proxmox VE",
-    "intro": "Proteções próprias do anfitrião — firewall, prevenção de intrusões e auditoria de segurança. Os dois últimos renderizam somente quando suas respectivas ferramentas são instaladas."
+    "intro": "As próprias proteções do host — firewall, prevenção de invasões e auditoria de segurança. Os dois últimos só são renderizados quando suas respectivas ferramentas estão instaladas."
   },
   "firewall": {
     "heading": "Proxmox Firewall",
@@ -119,14 +119,14 @@
     "heading": "Fail2Ban",
     "subHeading": "(condicional)",
     "whatIs": "<strong>O que é.</strong> Fail2Ban é um daemon de invasão de código aberto que observa arquivos de log para tentativas de login falhadas repetidas e proíbe o IP ofensivo no nível do firewall. É a resposta de fato para scanners de força bruta que atingiram SSH e formulários de login da web 24/7. ProxMenux liga-o a três cadeias por padrão: SSH, o login de interface web do Proxmox (porto 8006), e o login do ProxMenux Monitor (porto 8008).",
-    "notBundled": "O Fail2Ban é <strong> não empacotado</strong>. O cartão detecta se ele está instalado e se adapta: quando falta ele oferece uma instalação de um clique; uma vez instalado, ele mostra o status de prisão ao vivo, IPs banidos e permite que você afina repetições / tempo de proibição por cadeia.",
+    "notBundled": "O Fail2Ban <strong>não está incluído</strong>. O cartão deteta se está instalado e adapta-se: se faltar, permite instalá-lo com um clique. Depois apresenta o estado das jails e os IP bloqueados e permite ajustar o número de tentativas e a duração do bloqueio de cada jail.",
     "notInstalledAlt": "Cartão Fail2Ban mostrando o estado não instalado com explicação do que ele configuraria: SSH, Proxmox web UI e proteção ProxMenux Monitor com infraestrutura nftables, além de um botão Instalar e Configurar Fail2Ban",
     "notInstalledCaption": "Cartão Fail2Ban antes de instalar — a caixa azul visualiza o que a instalação configuraria.",
     "clickBody": "Clique em <em>Instalar e Configurar Fail2Ban</em> e você terá uma confirmação modal listando cada alteração que o script fará no host:",
-    "confirmAlt": "Instale Fail2Ban confirmação modal listando SSH proteção modo agressivo, Proxmox web interface proteção porta 8006, ProxMenux Monitor proteção porta 8008, auto-detectado nftables backend, ajuste de nível de log diário e SSH MaxAuthTries endurecimento",
-    "confirmCaption": "Instale confirmação — lista explícita de prisões, ajustes ao nível de log diário (assim a cadeia de autenticação pode ler eventos SSH) e um efeito colateral de endurecimento SSH (<code>MaxAuthTries=3</code>).",
+    "confirmAlt": "Instale Fail2Ban listagem modal de confirmação SSH modo agressivo de proteção, porta de proteção da interface da web Proxmox 8006, ProxMenux Monitor porta de proteção 8008, backend nftables detectado automaticamente, journald ajuste de nível de log e SSH MaxAuthTries proteção",
+    "confirmCaption": "Confirmação de instalação — lista explícita de jails, ajustes no nível de log journald (para que a autenticação jail possa ler eventos SSH) e um efeito colateral de endurecimento SSH (<code>MaxAuthTries=3</code>).",
     "confirmIntro": "Confirmação desencadeia um painel de instalação de streaming (apt + gail config + tests). A mesma canalização do instalador ProxMenux CLI.",
-    "progressAlt": "Painel de instalação Fail2Ban mostrando log de instalação ao vivo: instalação de pacote, MaxLevelStore afinado para registro de autenticação, cadeias configuradas, infraestrutura nftables detectada, endurecimento MaxAuthTries, teste de comunicação fail2ban-client, mensagem de conclusão",
+    "progressAlt": "Fail2Ban Painel de instalação mostrando log de instalação ao vivo: instalação do pacote, journald MaxLevelStore ajustado para registro de autenticação, jails configurado, backend nftables detectado, MaxAuthTries proteção, fail2ban-teste de comunicação do cliente, mensagem de conclusão",
     "progressCaption": "Instale em andamento — cada passo é registrado no painel. A ligação fechada na parte inferior marca o fim da sessão de transmissão.",
     "afterInstall": "Depois de instalar o cartão muda para a visualização de status ao vivo: cadeias configuradas, contador de IPs banidos, eventos recentes de ban. As abas grandes dividem <em>Jails & Banned IPs</em> de <em>Atividade recente</em> (as últimas entradas N do log Fail2Ban).",
     "activeAlt": "Cartão Fail2Ban após instalar com o status Active, três cadeias configuradas (proxmenux, proxmox, sshd), contador de IPs banidos, Total Bans, Tentativas Falhadas e linhas por prisão com repetições, tempo de banimento, janela e ícone de engrenagem",
@@ -145,7 +145,7 @@
     "whyUseful": "<strong>Por que é útil.</strong> Saber a postura de segurança do seu servidor é difícil de fazer lendo arquivos de configuração um por um. Lynis pega as coisas que são rotineiramente negligenciadas: bandeiras de endurecimento do kernel faltando, cifras SSH fracas habilitadas, diário não persistente, sudoers <code>NOPASSWD</code> em contas padrão, e muitos mais. Reexecutá-lo após a aplicação de ajustes pós-instalação ProxMenux dá-lhe um número objetivo para a melhoria.",
     "notInstalledAlt": "Lynis Security Cartão de auditoria com estado não instalado e botão Instalar Lynis, listando recursos: pontuação de endurecimento, detecção de vulnerabilidade, verificação de conformidade e fonte GitHub",
     "notInstalledCaption": "Cartão Lynis antes de instalar — a caixa azul resume o que a ferramenta faz.",
-    "notBundled": "Lynis também é <strong>not bundled</strong>. O ProxMenux instala a última versão diretamente da fonte oficial do GitHub (não o pacote Debian, que defasa várias versões menores).",
+    "notBundled": "Lynis também <strong>não está incluído</strong>. ProxMenux instala a versão mais recente diretamente da fonte oficial GitHub (não do pacote Debian, que está atrasado em várias versões secundárias).",
     "confirmAlt": "Instale o modo de confirmação Lynis listando o que Lynis faz: pontuação de endurecimento, detecção de vulnerabilidade, análise de configuração, verificação de conformidade, fonte do repositório oficial GitHub",
     "confirmCaption": "Instalar confirmação — explícita sobre a fonte GitHub.",
     "progressAlt": "Lynis Painel de streaming de instalação: instalação da ferramenta de digitalização mais recente, versão 3.1.6 confirmado, mensagem de instalação concluída",
@@ -194,7 +194,7 @@
       {
         "card": "Gateway seguro (deploy + status)",
         "endpoint": "/api/oci/*",
-        "source": "Disposições Alpina LXC + <code>tailscaled</code> via <code>pct create</code> / <code>pct exec</code>."
+        "source": "Provisões Alpine LXC + <code>tailscaled</code> via <code>pct create</code> / <code>pct exec</code>."
       },
       {
         "card": "& Regras de estado do Firewall",
@@ -227,7 +227,7 @@
         "tail": " — livros de receitas para o uso de fichas API com Homepage, Home Assistant, Prometheus, n8n e a porta segura ponta a ponta."
       },
       {
-        "label": "Referência API",
+        "label": "Referência da API",
         "href": "/docs/monitor/api",
         "tailRich": " — cada <code>/api/auth</code>, <code>/api/security</code> e <code>/api/oci</code> com exemplos de método, corpo e cacho."
       },

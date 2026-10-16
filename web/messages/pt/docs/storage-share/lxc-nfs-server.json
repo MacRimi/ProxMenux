@@ -20,7 +20,7 @@
     "diagramServerLabel": "LXC (privilegiado) — Servidor NFS",
     "diagramServerDetail": "/mnt/data\n(pasta que você expõe)\n\nraiz do 'chown': ficheiros partilhados\nchmod 2775 (SGID)\n\nServidor nfs-kernel\n+ rpcbind em execução",
     "diagramClientLabel": "Qualquer cliente na rede",
-    "diagramClientDetail": "outro CT, o anfitrião,\num VM, uma máquina física...",
+    "diagramClientDetail": "outro CT, o host,\num VM, uma máquina física…",
     "diagramArrow": "Exportação NFS"
   },
   "shared": {

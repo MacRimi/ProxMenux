@@ -19,7 +19,7 @@
     "body": "O contêiner fala CIFS através da rede e monta a partilha por conta própria. O host Proxmox é apenas a ponte de rede — ele não vê ou gerencia a montagem.",
     "diagramServerLabel": "Servidor Samba",
     "diagramServerDetail": "//srv/share",
-    "diagramHostLabel": "Anfitrião Proxmox",
+    "diagramHostLabel": "Host Proxmox",
     "diagramHostDetail": "(apenas um\nponte de rede)",
     "diagramCtLabel": "LXC (com privilégios)",
     "diagramCtDetail": "/mnt/share\nmount.cifs dentro de CT",

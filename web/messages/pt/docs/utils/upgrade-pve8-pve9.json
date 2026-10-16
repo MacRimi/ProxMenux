@@ -151,10 +151,10 @@
     "whenItems": [
       "Você personalizou <code>/etc/lvm/lvm.conf</code>, <code>/etc/ssh/sshd_config</code>, <code>/etc/default/grub</code> ou qualquer outro arquivo de configuração que seja tocado pela atualização.",
       "Você quer ver exatamente quais pacotes introduzem conflitos de configuração e decidem por arquivo.",
-      "Estás a melhorar um anfitrião de produção onde qualquer mudança escondida é inaceitável."
+      "Você está atualizando um host de produção onde qualquer alteração oculta é inaceitável."
     ],
     "promptCalloutTitle": "O que responder em cada alerta",
-    "promptCalloutBody": "A mesma tabela de respostas recomendadas que o procedimento manual utiliza aplica-se também aqui — ver <dpkglink>Respostas recomendadas para as prompts dpkg</dpkglink> secção no procedimento manual que se segue. A qualquer momento, digite <strong>D</strong> para ver o diff antes de decidir, ou <strong>Z</strong> para cair em uma concha."
+    "promptCalloutBody": "A mesma tabela de respostas recomendadas que o procedimento manual usa se aplica aqui também — veja a seção <dpkglink>Respostas recomendadas para os prompts do dpkg</dpkglink> no procedimento manual abaixo. Em qualquer prompt, digite <strong>D</strong> para ver a diferença antes de decidir, ou <strong>Z</strong> para colocar em um shell."
   },
   "manual": {
     "heading": "Procedimento de actualização manual",

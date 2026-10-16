@@ -106,7 +106,7 @@
       "term": "CT",
       "aliases": [
         "Contentor",
-        "Recipiente LXC"
+        "Contentor LXC"
       ],
       "category": "Proxmox",
       "definitionRich": "A abreviatura para \"contentor\" — terminologia Proxmox para uma instância LXC. Tem um CTID numérico que mapeia para <code>/etc/pve/lxc/&lt;CTID&gt;.conf</code>. Ver também <strong>LXC</strong>.",

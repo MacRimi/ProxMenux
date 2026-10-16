@@ -12,7 +12,7 @@
   },
   "intro": {
     "title": "O que isto faz",
-    "body": "Identifica declarações <code>iface</code> cujo suporte NIC não está mais presente no host (típico após substituir ou remover uma placa de rede). Em seguida, oferece uma limpeza guiada que remove <em>only</em> os blocos órfãos, com um backup, uma pré-visualização por seção e uma confirmação final explícita."
+    "body": "Identifica declarações <code>iface</code> cuja NIC de apoio não está mais presente no host (típico após a substituição ou remoção de uma placa de rede). Em seguida, oferece uma limpeza guiada que remove <em>apenas</em> os blocos órfãos, com um backup, uma visualização por seção e uma confirmação final explícita."
   },
   "differs": {
     "heading": "Como difere da análise da ponte",
@@ -75,7 +75,7 @@
       },
       {
         "title": "5. Verificação",
-        "body": "Reler o arquivo, listar o que foi removido e verificar novamente as interfaces restantes. Imprime o comando de retorno. O <strong>not</strong> reinicia automaticamente a rede — remover um bloco não utilizado é seguro para ser aplicado na próxima reinicialização e evita tocar no estado ao vivo.",
+        "body": "Lê novamente o arquivo, lista o que foi removido e verifica novamente as interfaces restantes. Imprime o comando de reversão. <strong>não</strong> reinicia automaticamente a rede? A remoção de um bloco não utilizado é segura para ser aplicada na próxima reinicialização e evita tocar no estado ativo.",
         "tone": "emerald"
       }
     ],

@@ -21,7 +21,7 @@
     "gpu": "<strong>Um NVIDIA GPU</strong> fisicamente instalado no host. O script detecta automaticamente; AMD e GPUs Intel não são manipulados aqui.",
     "gpuCheck": "lspci | grep -i nvidia",
     "notVm": "O GPU <strong> não está atualmente atribuído a um VM via VFIO passthrough</strong>. Se for, o script se recusará a instalar o driver de host para evitar quebrar a configuração de passagem.",
-    "internet": "Acesso à Internet no anfitrião. O instalador baixa o driver do <code>download.nvidia.com</code> e, opcionalmente, clona <code>nvidia-persistenced</code> e <code>nvidia-patch</code> do GitHub.",
+    "internet": "Acesso à Internet no host. O instalador baixa o driver de <code>download.nvidia.com</code> e, opcionalmente, clona <code>nvidia-persistenced</code> e <code>nvidia-patch</code> de GitHub.",
     "space": "Algum espaço livre em <code>/opt/nvidia</code> para o instalador <code>.run</code> mais o RAM usado durante a construção. Ao propagar para LXCs em distros não-Arch, cada recipiente precisa de pelo menos 1.5 GB livre; ProxMenux eleva temporariamente o recipiente RAM para 2 GB e restaurá-lo depois. É necessária uma reinicialização no final da instalação da máquina."
   },
   "vmWarn": {

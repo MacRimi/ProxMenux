@@ -37,7 +37,7 @@
     },
     {
       "name": "Rede",
-      "description": "Endure e afina a pilha de rede do anfitrião. Forças APT sobre IPv4, aplica endurecimento sysctl + ajuste de buffer TCP, oferece Open vSwitch, TCP BBR + TCP Fast Open, e pinos nomes de interface persistente por MAC."
+      "description": "Proteja e ajuste a pilha de rede do host. Força o APT sobre IPv4, aplica proteção sysctl + TCP ajuste de buffer, oferece Open vSwitch, TCP BBR + TCP Fast Open e fixa nomes de interface persistentes por MAC."
     },
     {
       "name": "Armazenamento",

@@ -14,7 +14,7 @@
   },
   "intro": {
     "title": "Para que serve este menu",
-    "body": "Logo após a instalação do Proxmox VE, existem dezenas de pequenas mudanças que tornam o host mais rápido e fácil de manter — repositórios gratuitos, limites de periódicos sãos, buffers sensíveis do TCP, armazenamento de log amigável a SSD, mansidões bashrc e muito mais. ProxMenux os automatiza e rastreia as alterações de configuração reversíveis suportadas."
+    "body": "Logo após a instalação do Proxmox VE, há dezenas de pequenas mudanças que tornam o host mais rápido e fácil de manter — repositórios gratuitos, limites sensatos journald, buffers sensatos TCP, armazenamento de log compatível com SSD, sutilezas do bashrc e muito mais. ProxMenux os automatiza e rastreia as alterações de configuração reversíveis suportadas."
   },
   "openingMenu": {
     "heading": "Abrir o menu",
@@ -33,7 +33,7 @@
         "Livre repos + atualização do sistema",
         "Memória, kernel, ajuste de rede",
         "Log2RAM (detectado automaticamente em SSD/NVMe)",
-        "Limites de tamanho diário + logrotate",
+        "Journald + limites de tamanho de rotação de log",
         "Nomes de interface persistentes"
       ]
     },

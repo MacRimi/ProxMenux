@@ -91,7 +91,7 @@
     "heading": "Percursos de canais",
     "intro": "Atualmente são suportados seis canais: Telegram, Discord, Gotify, Email (SMTP), Pushover e Apprise. Os cinco primeiros são integrações nativas com seus próprios campos de configuração. Apprise é um hub genérico que adiciona em torno de 80 serviços adicionais (ntfy, Matrix, Slack, Teams, Pushbullet, AWS SNS, Mattermost...) através de um único campo URL. Todos eles estão documentados passo a passo abaixo.",
     "credsTitle": "Onde vivem as credenciais",
-    "credsBody": "Tokens, chaves, URLs webhook e senhas SMTP são armazenados localmente no banco de dados SQLite do Monitor sob <code>/usr/local/share/proxmenux/</code>. Valores sensíveis são protegidos e mascarados na interface. Eles nunca deixam o anfitrião, exceto para alcançar seus respectivos serviços. Um backup desse diretório é suficiente para recuperar os canais configurados."
+    "credsBody": "Tokens, chaves, webhook URLs e senhas SMTP são armazenados localmente no banco de dados SQLite do Monitor em <code>/usr/local/share/proxmenux/</code>. Valores sensíveis são protegidos e mascarados na interface. Eles nunca saem do anfitrião, exceto para chegar aos seus respectivos serviços. Um backup desse diretório é suficiente para recuperar os canais configurados."
   },
   "telegram": {
     "heading": "Telegram",
@@ -259,7 +259,7 @@
     "intro2": "Ele vive no mesmo cartão de definição de canais como Quiet Hours (veja a figura em <link>Quiet Hours</link>), bem abaixo. Você habilita cada um de forma independente.",
     "purposeTitle": "Para que serve",
     "purposeItems": [
-      "<strong>A manhã \"tudo o que aconteceu\" recapitula.</strong> Se você verificar o anfitrião uma vez por dia com um café, um digerir em 09:00 carrega as mesmas informações que 20 pings individuais durante o dia anterior, sem que você leia bolhas 20 Telegram.",
+      "<strong>A recapitulação matinal de \"tudo o que aconteceu\".</strong> Se você verificar o host uma vez por dia com um café, um digest em 09:00 carrega as mesmas informações que 20 pings individuais durante todo o dia anterior, sem você ler 20 Telegram bolhas.",
       "<strong>Separar o ruído do sinal.</strong> Os eventos INFO respondem \"o que aconteceu\"; CRITICAL e ATENÇÃO respondem \"o que eu preciso fazer agora\". O digest maneja o primeiro; tudo o mais mantém a sua entrega ao vivo."
     ],
     "howTitle": "Como funciona",

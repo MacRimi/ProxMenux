@@ -46,7 +46,7 @@
   },
   "graphics": {
     "heading": "Placas Gráficas",
-    "intro": "Cada controlador de vídeo detectado renderiza como seu próprio cartão com fornecedor, modelo, tipo (<em>Integrado</em> / <em>PCI</em> / BMC), slot PCI (BDF), driver do kernel e lista de módulos. O cartão também expõe um inline <strong>Modo de Mudança</strong> controle que vira o GPU entre LXC partilha (motorista nativo) e VM passagem (<code>vfio-pci</code>) — ver <link>Mudar GPU Modo (VM ↔ LXC)</link> para o que acontece no anfitrião quando o pressionas.",
+    "intro": "Cada controlador de vídeo detectado é renderizado como sua própria placa com fornecedor, modelo, tipo (<em>Integrado</em> / <em>PCI</em> / BMC), slot PCI (BDF), driver de kernel e lista de módulos. A placa também expõe um controle <strong>Switch Mode</strong> inline que alterna o GPU entre compartilhamento LXC (driver nativo) e passagem VM (<code>vfio-pci</code>) — consulte <link>Switch GPU Modo (VM ↔ LXC)</link> para o que acontece no host quando você o pressiona.",
     "vfioImageAlt": "Seção de placas gráficas mostrando um GPU integrado de Matrox G200EH ligado a mgag200 (pronto para LXC) e um NVIDIA Quadro P400 ligado a vfio-pci (pronto para passagem de VM)",
     "vfioImageCaption": "Duas GPUs detectadas: o chip Matrox BMC está no driver nativo e pronto para LXC; o NVIDIA Quadro P400 está ligado ao <code>vfio-pci</code>, pronto para passagem VM.",
     "lxcImageAlt": "Seção de placas gráficas mostrando um Intel UHD Graphics iGPU no i915 e um NVIDIA Quadro P1000 no driver nvidia, ambos rotulados Prontos para recipientes LXC",
@@ -109,7 +109,7 @@
     "heading": "Aceleradores Coral TPU / AI",
     "subHeading": "(condicional)",
     "intro": "Muda quando o host tem Google Coral ou outros dispositivos de acelerador de IA ligados. Cada dispositivo abre um modal com seu tipo de conexão (M.2 / mini-PCIe / USB), largura de ligação PCIe, fornecedor / produto ID, driver de kernel (<code>apex</code> para PCIe, <code>libedgetpu</code> para USB), módulos de kernel (<code>gasket</code> + <code>apex</code>), nós de dispositivo (<code>/dev/apex_*</code>), Edge TPU estado de execução, temperatura ao vivo e os limiares de aviso de hardware de firmware.",
-    "imageAlt": "Coral Edge TPU modo de detalhe: conexão PCIe / M.2, ligação PCIe 5.0 GT/s x1 ligação, fornecedor 1ac1:089a, driver do kernel ápice, junta e módulos de ápice carregados, /dev/apex_0 presente, Edge TPU Runtime não instalado, temperatura 53.5 °C com limiares de aviso de hardware",
+    "imageAlt": "Coral Edge TPU detalhe modal: conexão PCIe / M.2, PCIe 5.0 link GT/s x1, fornecedor 1ac1:089a, driver de kernel apex, Módulos gasket e apex carregados, /dev/apex_0 presentes, Edge TPU Tempo de execução não instalado, temperatura 53.5 °C com limites de aviso de hardware",
     "imageCaption": "M.2 Coral com os módulos do kernel do host carregados, o nó do dispositivo para cima e os avisos de temperatura do firmware expostos. A linha de tempo de execução fica verde quando o tempo de execução Edge TPU correspondente é instalado.",
     "pathsIntro": "Existem dois caminhos de instalação dependendo do fator de forma:",
     "pathsItems": [
@@ -234,7 +234,7 @@
         "tail": " — a categoria CPU & Temperatura que consome os mesmos sensores."
       },
       {
-        "label": "Referência API",
+        "label": "Referência da API",
         "href": "/docs/monitor/api",
         "tail": " — os parâmetros de hardware e GPU."
       },

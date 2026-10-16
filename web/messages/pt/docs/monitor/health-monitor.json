@@ -123,7 +123,7 @@
       {
         "status": "INFO",
         "colour": "Azul",
-        "meaning": "Condição transitória ou já resolvida vale a pena notar uma vez. Também usado para categorias que têm <em>only</em> itens rejeitados esquerda.",
+        "meaning": "Condição transitória ou já resolvida que vale a pena observar uma vez. Também usado para categorias que possuem <em>apenas</em> itens descartados restantes.",
         "notification": "Opcional. Cada tipo de evento pode ser optado dentro ou fora por canal."
       },
       {
