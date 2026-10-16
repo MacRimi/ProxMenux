@@ -23,6 +23,7 @@ export function BackupStorageRetention() {
   const [editing, setEditing] = useState<StorageRetention | null>(null)
   const [fields, setFields] = useState<Record<string, string>>({})
   const [keepAll, setKeepAll] = useState(false)
+  const [useDefault, setUseDefault] = useState(false)
   const [busy, setBusy] = useState(false)
   const [message, setMessage] = useState("")
   const [saveError, setSaveError] = useState("")
@@ -30,7 +31,8 @@ export function BackupStorageRetention() {
   function edit(storage: StorageRetention) {
     const policy = parseRetention(storage.prune_backups)
     setFields(policy.fields)
-    setKeepAll(policy.keepAll || !storage.prune_backups)
+    setKeepAll(policy.keepAll)
+    setUseDefault(!storage.prune_backups)
     setSaveError("")
     setMessage("")
     setEditing(storage)
@@ -38,8 +40,8 @@ export function BackupStorageRetention() {
 
   async function save() {
     if (!editing || busy) return
-    const prune = buildRetention(fields, keepAll)
-    if (!prune) return setSaveError(t("backup.storageRetention.choosePolicy"))
+    const prune = useDefault ? "" : buildRetention(fields, keepAll)
+    if (!useDefault && !prune) return setSaveError(t("backup.storageRetention.choosePolicy"))
     setBusy(true)
     setSaveError("")
     try {
@@ -79,14 +81,18 @@ export function BackupStorageRetention() {
       <DialogContent className="bg-accent [&_input]:bg-background">
         <DialogHeader><DialogTitle>{t("backup.storageRetention.editTitle", { storage: editing?.id ?? "" })}</DialogTitle>
           <DialogDescription>{t("backup.storageRetention.effect")}</DialogDescription></DialogHeader>
-        <Label className="flex items-center gap-2"><Checkbox checked={keepAll} disabled={busy} onCheckedChange={checked => {
+        <Label className="flex items-center gap-2"><Checkbox checked={useDefault} disabled={busy} onCheckedChange={checked => {
+          setUseDefault(checked === true)
+          if (checked) { setKeepAll(false); setFields({}) }
+        }} />{t("backup.storageRetention.useDefault")}</Label>
+        <Label className="flex items-center gap-2"><Checkbox checked={keepAll} disabled={useDefault || busy} onCheckedChange={checked => {
           setKeepAll(checked === true)
           if (checked) setFields({})
         }} />{t("backup.storageRetention.keepAll")}</Label>
         <div className="grid grid-cols-2 gap-3">
           {RETENTION.map(key => <div key={key} className="space-y-1">
-            <Label htmlFor={`storage-retention-${key}`}>{t(`backup.retention.${key}`)}</Label>
-            <Input id={`storage-retention-${key}`} type="number" min={1} max={99999} step={1} disabled={keepAll || busy}
+            <Label htmlFor={`storage-retention-${key}`}>{t(`backup.retention.keep${key[0].toUpperCase()}${key.slice(1)}`)}</Label>
+            <Input id={`storage-retention-${key}`} type="number" min={1} max={99999} step={1} disabled={useDefault || keepAll || busy}
               value={fields[key] ?? ""} onChange={event => setFields(previous => ({ ...previous, [key]: event.target.value }))} />
           </div>)}
         </div>

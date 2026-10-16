@@ -130,9 +130,13 @@ class VmBackupJobsApiTests(unittest.TestCase):
         self.assertEqual(self.storage_policy("keep-all=1").status_code, 200)
         self.assertEqual(self.changes()[0][-1], "keep-all=1")
 
+    def test_an_empty_policy_returns_the_storage_to_the_proxmox_default(self):
+        self.assertEqual(self.storage_policy("").status_code, 200)
+        self.assertEqual(self.changes(), [["set", "/storage/local", "--digest", "a" * 40, "--delete", "prune-backups"]])
+
     def test_invalid_storage_retention_is_rejected_before_commands(self):
         invalid = [None, [], {}, {"digest": "a" * 40, "prune_backups": []}]
-        for prune in ("", "keep-last=-1", "keep-all=0", "keep-all=2", "keep-last=0", "keep-last=1,keep-last=2",
+        for prune in ("keep-last=3,keep-daily=0", "keep-last=-1", "keep-all=0", "keep-all=2", "keep-last=0", "keep-last=1,keep-last=2",
                       "keep-all=1,keep-last=2", "keep-last=2 --delete path", "keep-last=1\n", "keep-other=1"):
             invalid.append({"digest": "a" * 40, "prune_backups": prune})
         invalid += [{"digest": "invalid", "prune_backups": "keep-last=1"}]

@@ -259,13 +259,14 @@ def update_backup_storage_retention(storage_id):
     digest, prune = data.get("digest"), data.get("prune_backups")
     if not isinstance(digest, str) or not re.fullmatch(r"[a-fA-F0-9]{40}", digest):
         return _err("Refresh the storage list before editing its retention")
-    if not isinstance(prune, str) or not PRUNE_RE.fullmatch(prune):
+    # An empty policy removes the storage setting, so the Proxmox default applies.
+    if not isinstance(prune, str) or (prune and not PRUNE_RE.fullmatch(prune)):
         return _err("Invalid retention policy")
-    pairs = [part.split("=", 1) for part in prune.split(",")]
+    pairs = [part.split("=", 1) for part in prune.split(",")] if prune else []
     keys = [key for key, _ in pairs]
     if (len(keys) != len(set(keys)) or
             ("keep-all" in keys and (len(keys) != 1 or pairs[0][1] != "1")) or
-            not any(int(value) > 0 for _, value in pairs)):
+            any(int(value) < 1 for _, value in pairs)):
         return _err("Choose keep-all=1 or one or more positive retention counts")
     # Check that this is still a backup storage, then let Proxmox check the
     # digest under its storage lock. Other storage settings are never passed.
@@ -276,7 +277,8 @@ def update_backup_storage_retention(storage_id):
         return _err("This storage does not accept backups", 409)
     if storage.get("digest") != digest:
         return _err("Storage configuration changed; refresh before saving", 409)
-    ok, out = _pvesh(["set", f"/storage/{storage_id}", "--digest", digest, "--prune-backups", prune])
+    change = ["--prune-backups", prune] if prune else ["--delete", "prune-backups"]
+    ok, out = _pvesh(["set", f"/storage/{storage_id}", "--digest", digest, *change])
     if not ok:
         return _err(out, 409)
     return jsonify({"success": True})

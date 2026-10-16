@@ -3948,6 +3948,7 @@
   },
   "backup": {
     "storageRetention": {
+      "useDefault": "Use the Proxmox default (no policy on this storage)",
       "title": "Storage retention",
       "keepAll": "Keep all backups",
       "description": "Default backup retention stored in Proxmox. Backup jobs with an explicit policy override this default.",
