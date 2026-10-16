@@ -2,7 +2,7 @@
   "_meta": "Community translation target. Copy keys from ../en/common.json and translate the values.",
   "app": {
     "title": "ProxMenux Monitor",
-    "description": "Proxmox System Dashboard",
+    "description": "Panel del sistema Proxmox",
     "loading": "Cargando...",
     "connecting": "Conexión al ProxMenux Monitor",
     "unknown": "Desconocido",
@@ -1302,7 +1302,10 @@
         "jueves",
         "viernes",
         "sábado"
-      ]
+      ],
+      "runSkippedStatus": "ejecución omitida",
+      "reasonStoppedContainer": "El contenedor está detenido; se ha omitido la actualización programada.",
+      "reasonStoppedContainerHistorical": "El contenedor estaba detenido a la hora de la actualización programada."
     },
     "cronChip": {
       "detected": "cron del host detectado",
@@ -5300,7 +5303,7 @@
     "customLinkDeleteError": "Error al eliminar",
     "categoryLabels": {
       "arrSuite": "*Arr Suite",
-      "aiCodingDevTools": "AI / Coding & Dev-Tools",
+      "aiCodingDevTools": "IA / Programación y herramientas de desarrollo",
       "adblockDns": "Adblock & DNS",
       "authenticationSecurity": "Authentication & Security",
       "automationScheduling": "Automation & Scheduling",
@@ -5315,18 +5318,18 @@
       "financeBudgeting": "Finance & Budgeting",
       "gamingLeisure": "Gaming & Leisure",
       "hostManagement": "Host Management",
-      "iotSmartHome": "IoT & Smart Home",
+      "iotSmartHome": "IoT y hogar inteligente",
       "mediaStreaming": "Media & Streaming",
       "messagingNotifications": "Mensajería y Notificaciones",
       "miscellaneous": "Miscellaneous",
       "monitoringAnalytics": "Monitoring & Analytics",
       "nvrCameras": "NVR & Cameras",
       "networkFirewall": "Network & Firewall",
-      "operatingSystemsAppliances": "Operating Systems & Appliances",
+      "operatingSystemsAppliances": "Sistemas operativos y dispositivos virtuales",
       "productivityWorkflows": "Productivity & Workflows",
-      "remoteAccessVpn": "Remote Access & VPN",
+      "remoteAccessVpn": "Acceso remoto y VPN",
       "webserversProxies": "Webservers & Proxies",
-      "zigbeeZwaveMatter": "ZigBee, Z-Wave & Matter"
+      "zigbeeZwaveMatter": "ZigBee, Z-Wave y Matter"
     }
   },
   "audit": {

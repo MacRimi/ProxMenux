@@ -2,7 +2,7 @@
   "_meta": "Community translation target. Copy keys from ../en/common.json and translate the values.",
   "app": {
     "title": "ProxMenux Monitor",
-    "description": "Proxmox System Dashboard",
+    "description": "Proxmox-Systemübersicht",
     "loading": "Laden...",
     "connecting": "Verbindung zum ProxMenux Monitor herstellen",
     "unknown": "Unbekannt",
@@ -1302,7 +1302,10 @@
         "Donnerstag",
         "Freitag",
         "Samstag"
-      ]
+      ],
+      "runSkippedStatus": "Ausführung übersprungen",
+      "reasonStoppedContainer": "Der Container ist gestoppt; die geplante Aktualisierung wurde übersprungen.",
+      "reasonStoppedContainerHistorical": "Der Container war zum Zeitpunkt der geplanten Aktualisierung gestoppt."
     },
     "cronChip": {
       "detected": "Host-Cron erkannt",
@@ -5295,7 +5298,7 @@
     "customLinkDeleteError": "Löschen fehlgeschlagen",
     "categoryLabels": {
       "arrSuite": "*Arr Suite",
-      "aiCodingDevTools": "AI / Coding & Dev-Tools",
+      "aiCodingDevTools": "KI / Programmierung und Entwicklungswerkzeuge",
       "adblockDns": "Adblock & DNS",
       "authenticationSecurity": "Authentication & Security",
       "automationScheduling": "Automation & Scheduling",
@@ -5310,18 +5313,18 @@
       "financeBudgeting": "Finance & Budgeting",
       "gamingLeisure": "Gaming & Leisure",
       "hostManagement": "Host Management",
-      "iotSmartHome": "IoT & Smart Home",
+      "iotSmartHome": "IoT und Smart Home",
       "mediaStreaming": "Media & Streaming",
       "messagingNotifications": "Messaging & Notifications",
       "miscellaneous": "Miscellaneous",
       "monitoringAnalytics": "Monitoring & Analytics",
       "nvrCameras": "NVR & Cameras",
       "networkFirewall": "Network & Firewall",
-      "operatingSystemsAppliances": "Operating Systems & Appliances",
+      "operatingSystemsAppliances": "Betriebssysteme und virtuelle Appliances",
       "productivityWorkflows": "Productivity & Workflows",
-      "remoteAccessVpn": "Remote Access & VPN",
+      "remoteAccessVpn": "Fernzugriff und VPN",
       "webserversProxies": "Webservers & Proxies",
-      "zigbeeZwaveMatter": "ZigBee, Z-Wave & Matter"
+      "zigbeeZwaveMatter": "ZigBee, Z-Wave und Matter"
     },
     "emptyTitle": "Noch keine Apps mit einem Weblink.",
     "emptyHint": "Registrieren Sie einen Weblink für eine beliebige App (App-Tab eines CT), um ihn hier zu sehen.",
