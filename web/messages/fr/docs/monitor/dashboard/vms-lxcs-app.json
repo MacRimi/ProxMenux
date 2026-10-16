@@ -30,7 +30,7 @@
     "heading": "Découverte en cache et recherche d'applications",
     "lead": "Les suggestions d'application font partie du cache modal par LXC. Le scan de démarrage les prépare en arrière-plan afin d'ouvrir l'onglet App peut afficher les résultats en cache immédiatement.",
     "items": [
-      "L'ouverture de l'onglet App permet à <strong>not</strong> de lancer une nouvelle analyse de catalogue et ne demande pas à plusieurs reprises le LXC.",
+      "L'ouverture de l'onglet Application <strong>ne démarre pas</strong> une nouvelle analyse du catalogue et n'interroge pas de manière répétée le LXC.",
       "<strong>Find applications</strong> lance explicitement une nouvelle carte de découverte pour ce LXC. Utilisez-le après avoir installé un nouveau logiciel alors que ProxMenux fonctionne déjà.",
       "La liste précédente reste visible pendant que l'analyse explicite tourne. De nouveaux matches sont ajoutés quand il finit.",
       "Si aucune nouvelle correspondance n'est trouvée, le résultat est indiqué à côté des actions et <strong>Enregistrer l'application</strong> reste disponible pour l'entrée manuelle.",

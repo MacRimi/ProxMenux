@@ -18,7 +18,7 @@
   },
   "comparison": {
     "heading": "Comparaison des caractéristiques",
-    "intro": "Le tableau ci-dessous présente les différences concrètes entre les trois moteurs d'attaque qui se comportent dans ProxMenux aujourd'hui. Toutes les valeurs décrivent le comportement observé du moteur lui-même, et non les recommandations rédactionnelles.",
+    "intro": "Le tableau suivant répertorie les différences concrètes entre les trois backends tels qu'ils se comportent dans ProxMenux aujourd'hui. Toutes les valeurs décrivent le comportement observé du backend lui-même, et non des recommandations éditoriales.",
     "rows": [
       {
         "feature": "Format de stockage",

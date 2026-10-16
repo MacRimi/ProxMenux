@@ -12,7 +12,7 @@
   },
   "calloutWhat": {
     "title": "Ce que ça fait",
-    "body": "Apporte l'hôte au dernier niveau de patch de sa version principale actuelle. Est-ce que <strong>not</strong> mise à jour dans les versions principales — pour PVE 8 → PVE 9 voir <link>Mise à niveau PVE 8 à PVE 9</link>."
+    "body": "Amène l'hôte au dernier niveau de correctif de sa version majeure actuelle. La mise à niveau <strong>pas</strong> entre les versions majeures — pour le PVE 8 → PVE 9 voir <link>Mettre à niveau le PVE 8 vers le PVE 9</link>."
   },
   "official": {
     "heading": "La recommandation officielle de Proxmox",

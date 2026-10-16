@@ -48,7 +48,7 @@
   },
   "switching": {
     "heading": "Passage en allers et retours",
-    "intro": "Les deux directions passent par le même installateur — ils sont <strong>not</strong> cas spécial désinstaller + réinstaller les flux. Chaque direction exécute simplement le propre installateur du canal, qui est conçu pour être idempotent et sûr pour ré-exécuter sur une installation existante. Conséquences pratiques",
+    "intro": "Les deux directions passent par le même programme d'installation – il ne s'agit <strong>pas</strong> de flux de désinstallation et de réinstallation dans des cas particuliers. Chaque direction exécute simplement le propre programme d'installation du canal, qui est conçu pour être idempotent et pouvoir être réexécuté en toute sécurité sur une installation existante. Conséquences pratiques :",
     "items": [
       "Votre configuration existante, votre login ProxMenux Monitor (<code>auth.json</code>), les canaux de notification, le registre post-installation, les seuils personnalisés — aucun de ceux-ci n'est touché. Le commutateur de canal échange uniquement l'arborescence de script et le binaire AppImage.",
       "Un moniteur qui était actif avant que l'interrupteur reste actif après; un moniteur qui a été désactivé reste désactivé.",

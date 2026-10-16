@@ -12,7 +12,7 @@
   },
   "intro": {
     "title": "Ce que c'est (et n'est PAS)",
-    "body": "Cet outil fait <strong>not</strong> enregistrer n'importe quoi dans Proxmox (aucun <code>pvesm add</code> ici). Il prépare simplement un répertoire sur l'hôte — <code>/mnt/shared</code>, par défaut — avec les permissions que tout conteneur LXC peut lire et écrire, que le CT soit privilégié ou non. La prochaine étape habituelle consiste à le monter dans chaque CT avec le <mountLink>LXC Mount Manager</mountLink>."
+    "body": "Cet outil n'enregistre <strong>pas</strong> quoi que ce soit dans Proxmox (pas de <code>pvesm add</code> ici). Il prépare simplement un répertoire sur l'hôte — <code>/mnt/shared</code>, par défaut — avec des autorisations que tout conteneur LXC peut lire et écrire, que le CT soit privilégié ou non. L'étape suivante habituelle consiste à le monter en liaison dans chaque CT avec le <mountLink>LXC Mount Manager</mountLink>."
   },
   "why": {
     "heading": "Pourquoi un outil dédié à cette",
@@ -74,7 +74,7 @@
   },
   "next": {
     "heading": "Prochaine étape : reliure-montage en conteneurs",
-    "body": "La création du répertoire ne le prépare que — aucun conteneur ne le voit encore. Pour la rendre visible à l'intérieur d'un ou de plusieurs LXC, utilisez le <mountLink>LXC Mount Manager</mountLink> pour fixer le <code>/mnt/&lt;name&gt;</code> dans les CT. Parce que les permissions sont déjà ouvertes, le gestionnaire de montage vous proposera de modifier le fichier <strong>not</strong> — le répertoire est prêt à être utilisé tel quel."
+    "body": "La création du répertoire ne fait que le préparer — aucun conteneur ne le voit encore. Pour le rendre visible à l'intérieur d'un ou plusieurs LXC, utilisez le <mountLink>LXC Mount Manager</mountLink> pour lier le montage de <code>/mnt/&lt;name&gt;</code> dans les CT. Étant donné que les autorisations sont déjà ouvertes, Mount Manager <strong>ne proposera pas</strong> de les modifier : le répertoire est prêt à être utilisé tel quel."
   },
   "troubleshoot": {
     "heading": "Dépannage",

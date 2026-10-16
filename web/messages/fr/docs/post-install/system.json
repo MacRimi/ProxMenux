@@ -1,7 +1,7 @@
 {
   "meta": {
     "title": "Post-Installation: Système ProxMenux Documentation",
-    "description": "Optimisations au niveau du système dans le script ProxMenux Personnalisable post-installation : limites de taille journalisées et logrotées, limites plus élevées du noyau et des descripteurs de fichiers, réglage de mémoire équilibré, kexec pour des reboots rapides, et récupération de panique du noyau."
+    "description": "Optimisations au niveau du système dans le script de post-installation personnalisable ProxMenux : journald et limites de taille de rotation, limites plus élevées du noyau et des descripteurs de fichiers, réglage équilibré de la mémoire, kexec pour des redémarrages rapides et récupération après panique du noyau."
   },
   "header": {
     "title": "Après installation : système",

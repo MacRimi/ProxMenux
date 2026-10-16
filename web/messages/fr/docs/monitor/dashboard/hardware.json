@@ -109,8 +109,8 @@
     "heading": "Accélérateurs Coral TPU / AI",
     "subHeading": "(conditionnalité)",
     "intro": "Rendus lorsque l'hôte a Google Coral ou d'autres dispositifs d'accélération de l'IA branchés. Chaque périphérique ouvre un modal avec son type de connexion (M.2 / mini-PCIe / USB), la largeur de la liaison PCIe, l'ID du fournisseur / produit, le pilote du noyau (<code>apex</code> pour PCIe, <code>libedgetpu</code> pour USB), les modules du noyau (<code>gasket</code> + <code>apex</code>), les nœuds du périphérique (<code>/dev/apex_*</code>), l'état d'exécution du Edge TPU, la température en direct et les seuils d'avertissement du matériel du firmware.",
-    "imageAlt": "Coral Edge TPU detail modal: connexion PCIe / M.2, PCIe 5.0 GT/s x1 link, fournisseur 1ac1:089a, apex du pilote du noyau, joint d'étanchéité et modules apex chargés, /dev/apex_0 présent, Edge TPU Durée d'exécution non installée, température 53.5 °C avec seuils d'avertissement matériel",
-    "imageCaption": "M.2 Corail avec les modules du noyau hôte chargés, le nœud du périphérique et les avertissements de température du firmware exposés. La ligne d'exécution devient verte une fois que le Edge TPU d'exécution correspondant est installé.",
+    "imageAlt": "Coral Edge TPU détail modal : connexion PCIe / M.2, PCIe 5.0 lien GT/s x1, fournisseur 1ac1:089a, pilote noyau apex, gasket et apex modules chargés, /dev/apex_0 présents, Edge TPU Runtime non installé, température 53.5 °C avec seuils d'avertissement matériels",
+    "imageCaption": "M.2 Coral avec les modules du noyau hôte chargés, le nœud du périphérique activé et les avertissements de température du micrologiciel exposés. La ligne d'exécution devient verte une fois que le runtime Edge TPU correspondant est installé.",
     "pathsIntro": "Deux chemins d'installation existent selon le facteur de forme :",
     "pathsItems": [
       "<strong>M.2 / Mini-PCIe</strong> — l'hôte a besoin des modules du noyau <code>gasket</code> + <code>apex</code> construits via DKMS afin que le noeud du périphérique <code>/dev/apex_0</code> apparaisse au démarrage.",
@@ -234,7 +234,7 @@
         "tail": "— la catégorie CPU & Température qui consomme les mêmes capteurs."
       },
       {
-        "label": "Référence API",
+        "label": "Référence de l’API",
         "href": "/docs/monitor/api",
         "tail": "— le matériel et les paramètres GPU."
       },

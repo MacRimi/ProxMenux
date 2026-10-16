@@ -1,6 +1,6 @@
 {
   "meta": {
-    "title": "Ajouter le corail TPU à LXC | ProxMenux Documentation",
+    "title": "Ajouter Coral TPU à LXC | ProxMenux Documentation",
     "description": "Transférer un Google Coral TPU (USB ou M.2 / PCIe) dans un conteneur Proxmox LXC. ProxMenux écrit les entrées droit dev / cgroup / mount pour chaque variante, boots le conteneur, et installe le Edge TPU runtime à l'intérieur afin que les applications comme Frigate puissent utiliser l'accélérateur."
   },
   "header": {
@@ -18,7 +18,7 @@
   },
   "prereqs": {
     "title": "Avant de commencer",
-    "drivers": "<strong>Drivers coraux déjà installés sur l'hôte</strong>. Ce script ne les installe pas ; il ne configure que le passage au conteneur. Exécutez <hostLink>Installer le corail TPU sur l'Host</hostLink> d'abord si vous ne l'avez pas fait.",
+    "drivers": "<strong>Coral pilotes déjà installés sur l'hôte</strong>. Ce script ne les installe pas ; il configure uniquement le relais vers le conteneur. Exécutez d'abord <hostLink>Installer Coral TPU sur l'hôte</hostLink> si ce n'est pas le cas.",
     "driversCheck": "ls /dev/apex_* 2>/dev/null ; lsusb | grep -E '1a6e:089a|18d1:9302'",
     "container": "<strong>Un conteneur LXC existant</strong>, fonctionnant idéalement avec un distro <strong>Debian / Ubuntu</strong>-basé — l'installation en conteneur utilise <code>apt-get</code>. <strong>Conteneurs non Debian</strong> (Alpine, Arch, RHEL, SUSE...) sont toujours pris en charge en mode <strong>passthrough only</strong>: le script détecte la distribution et offre une invitation à sauter l'installation <code>libedgetpu</code> APT tout en écrivant la configuration passthrough de l'appareil — utile pour les conteneurs app qui regroupent l'exécution eux-mêmes (par exemple l'image Frigate Docker).",
     "downtime": "<strong>Soyez OK avec un bref temps d'arrêt</strong> du conteneur. Le script l'arrête pour appliquer des modifications de configuration, puis le démarre pour installer les pilotes à l'intérieur. Pas besoin de redémarrage."
@@ -40,11 +40,11 @@
     "heading": "Marcher dans le flux",
     "pick": {
       "title": "Choisir le conteneur LXC",
-      "body": "Une boîte de dialogue affiche chaque LXC sur l'hôte (à partir de <code>pct list</code>). Choisissez celui qui devrait avoir le corail. Exécuter ou arrêter, ça n'a pas d'importance — le script gère les deux (s'arrête brièvement d'écrire la configuration, puis démarre pour installer les pilotes)."
+      "body": "Une boîte de dialogue affiche chaque LXC sur l'hôte (à partir de <code>pct list</code>). Choisissez celui qui devrait obtenir le Coral. En cours d'exécution ou arrêté, cela n'a pas d'importance - le script gère les deux (l'arrête brièvement pour écrire la configuration, puis le redémarre pour installer les pilotes)."
     },
     "gpuHint": {
       "title": "GPU suggestion de passage (facultatif)",
-      "body": "Si l'hôte a un GPU (Intel iGPU, AMD, NVIDIA) et que le conteneur choisi n'a PAS de passthrough configuré GPU, le script affiche une boîte de dialogue unique vous suggérant d'exécuter <lxcGpuLink>Ajouter GPU à LXC</lxcGpuLink> d'abord. Le corail est le plus souvent associé au décodeur vidéo matériel (Quick Sync, VA-API, NVENC) pour des applications comme Frigate. Vous pouvez dire oui (sortie, lancer le script GPU, puis revenir) ou non (continue avec la configuration TPU seulement)."
+      "body": "Si l'hôte dispose d'un GPU (Intel iGPU, AMD, NVIDIA) et que le conteneur choisi n'a PAS de relais GPU configuré, le script affiche une boîte de dialogue unique vous suggérant d'exécuter <lxcGpuLink>Add GPU à LXC</lxcGpuLink> en premier. Coral est le plus souvent associé au décodage vidéo matériel (Quick Sync, VA-API, NVENC) pour des applications telles que Frigate. Vous pouvez dire oui (quitte, exécute le script GPU, puis revient) ou non (continue avec la configuration TPU uniquement)."
     },
     "usb": {
       "title": "Écrire la configuration LXC — Path USB",
@@ -87,7 +87,7 @@
   },
   "verification": {
     "heading": "Vérification",
-    "body": "Entrez le contenant et vérifiez que le corail est visible:"
+    "body": "Entrez dans le conteneur et vérifiez que Coral est visible :"
   },
   "troubleshoot": {
     "heading": "Dépannage",

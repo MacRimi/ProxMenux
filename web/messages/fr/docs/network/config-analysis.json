@@ -75,7 +75,7 @@
       },
       {
         "title": "5. Vérification",
-        "body": "Relise le fichier, liste ce qui a été supprimé et revérifie les interfaces restantes. Imprime la commande rrollback. Est-ce que <strong>not</strong> redémarre automatiquement le réseau - supprimer un bloc inutilisé est sûr d'appliquer sur le prochain redémarrage, et évite de toucher l'état en direct.",
+        "body": "Relit le fichier, répertorie ce qui a été supprimé et revérifie les interfaces restantes. Imprime la commande de restauration. <strong>ne redémarre pas</strong> automatiquement le réseau : la suppression d'un bloc inutilisé peut être appliquée en toute sécurité au prochain redémarrage et évite de toucher à l'état actif.",
         "tone": "emerald"
       }
     ],

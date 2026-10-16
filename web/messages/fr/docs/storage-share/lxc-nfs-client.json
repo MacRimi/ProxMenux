@@ -68,7 +68,7 @@
   },
   "unmount": {
     "heading": "Démonter la part NFS",
-    "body": "Combine les montages live et les entrées fstab en une seule liste, vous permet de choisir une, et <strong> retire la ligne correspondante de <code>/etc/fstab</code></strong>. Le script fait exécuter <em>not</em> <code>umount</code> sur le montage en direct — au lieu de cela, il vous indique un redémarrage CT est nécessaire pour que le démontage prenne effet.",
+    "body": "Combine les montages live et les entrées fstab dans une seule liste, vous permet d'en choisir une et <strong>supprime la ligne correspondante de <code>/etc/fstab</code></strong>. Le script <em>n'exécute pas</em> <code>umount</code> sur le montage en direct ; à la place, il vous indique qu'un redémarrage CT est nécessaire pour que le démontage prenne effet.",
     "warnTitle": "Le script supprime les entrées fstab, pas les montages en direct",
     "warnBody": "C'est un choix de conception délibéré : <code>umount</code> sur une monture occupée échoue avec \"appareil occupé\" quand quelque chose à l'intérieur du CT l'utilise encore. La suppression de l'entrée fstab garantit que le montage disparaît proprement lors du prochain démarrage CT. Si vous voulez que le montage soit parti <em>now</em> et vous êtes sûr que rien ne l'utilise, exécutez <code>pct exec &lt;ctid&gt; -- umount /mnt/&lt;path&gt;</code> à la main après la fin du script."
   },

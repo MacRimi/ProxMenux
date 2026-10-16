@@ -8,7 +8,7 @@
     "twitterDescription": "Points d'arrivée pour Home Assistant, Accueil, Grafana, Prometheus, n8n et tableaux de bord personnalisés."
   },
   "header": {
-    "title": "Référence API",
+    "title": "Référence de l’API",
     "description": "Les HTTP Les intégrateurs utilisent les paramètres pour lire l'état et déclencher des actions sûres sur ProxMenux Monitor — Home Assistant capteurs, cartes d'accueil, Grafana tableaux de bord, Prometheus scratches, flux n8n et scripts personnalisés. Chaque catégorie, ainsi qu'une liste complète Prometheus métriques, avec des exemples de boucles.",
     "section": "Moniteur ProxMenux"
   },

@@ -277,7 +277,7 @@
       "<strong>Le niveau d'application Fail2Ban check (facultatif).</strong> Lorsque le tableau de bord se trouve derrière un proxy, le pare-feu du noyau ne peut pas bloquer l'IP de l'attaquant réel, la connexion provient toujours du proxy. Pour combler cet écart, le même crochet au-dessus des requêtes <code>proxmenux</code> Fail2Ban prison chaque 30 secondes, cache le jeu IP interdit, et court-circuits requêtes de ces IP avec HTTP 403 à l'intérieur Flask."
     ],
     "calloutTitle": "Fail2Ban n'est pas livré",
-    "calloutBody": "Fail2Ban est <strong>not</strong> installé par ProxMenux Monitor lui-même. La vérification de niveau d'application est une non-op jusqu'à ce que vous installez Fail2Ban sur l'hôte (par exemple via <link>Sécurité → Fail2Ban</link> dans le menu ProxMenux). Lorsque le binaire <code>fail2ban-client</code> ou la prison <code>proxmenux</code> est absent, l'appel échoue silencieusement et les requêtes ne sont pas fermées — auth s'applique toujours, mais aucune interdiction de niveau IP.",
+    "calloutBody": "Fail2Ban n'est <strong>pas</strong> installé par ProxMenux Monitor lui-même. La vérification au niveau de l'application est inutile jusqu'à ce que vous installiez Fail2Ban sur l'hôte (par exemple via <link>Sécurité → Fail2Ban</link> dans le menu ProxMenux). Lorsque le binaire <code>fail2ban-client</code> ou le <code>proxmenux</code> jail est absent, l'appel échoue silencieusement et les demandes ne sont pas bloquées : l'authentification s'applique toujours, mais aucune interdiction au niveau IP.",
     "outro": "Les extraits de proxy inverse (Nginx / Caddy / Traefik) et la prison Fail2Ban sont en <accessLink>Accès & Authentification</accessLink> et <fail2banLink>Sécurité → Fail2Ban</fail2banLink>."
   },
   "whereNext": {
@@ -289,7 +289,7 @@
         "tail": "— configuration du premier lancement, mot de passe + TOTP 2FA, extraits de proxy inversé, prison Fail2Ban."
       },
       {
-        "label": "Référence API",
+        "label": "Référence de l’API",
         "href": "/docs/monitor/api",
         "tail": "— toutes les étapes, la gestion des jetons, les meilleures pratiques en matière de sécurité."
       },

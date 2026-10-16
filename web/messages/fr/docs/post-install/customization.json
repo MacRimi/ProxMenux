@@ -38,7 +38,7 @@
     "breakTitle": "Peut se casser après les mises à jour Proxmox",
     "breakBody": "Proxmox envoie régulièrement des mises à jour de l'interface utilisateur qui écrasent <code>proxmoxlib.js</code>. Quand ça arrive, la bannière revient. Vous pouvez ré-appliquer cette option après chaque mise à jour Proxmox pour re-patcher le fichier, ou simplement accepter le nag jusqu'à ce que vous réappliquez. ProxMenux installe également un crochet APT qui repatche automatiquement sur les mises à niveau du paquet — voir <link>Uninstall Optimisations</link> pour savoir comment ce crochet est inversé.",
     "legalTitle": "Note juridique (il vaut toujours la peine de répéter)",
-    "legalBody": "Cette option ne cache que l'interface utilisateur. Il ne <strong>not</strong> vous accorde le soutien d'entreprise, l'accès au dépôt d'entreprise, ou tout droit pour expédier Proxmox commercialement sans abonnement. Si vous exécutez Proxmox dans un environnement générateur de revenus, achetez un abonnement — il prend en charge le projet et vous obtient le canal d'entreprise stable."
+    "legalBody": "Cette option masque uniquement le bourrin UI. Il ne vous accorde <strong>pas</strong> de support d'entreprise, d'accès au référentiel d'entreprise ou de droits d'expédition commerciale de Proxmox sans abonnement. Si vous exécutez Proxmox dans un environnement générateur de revenus, achetez un abonnement : il prend en charge le projet et vous offre un canal d'entreprise stable."
   },
   "verify": {
     "heading": "Vérification",

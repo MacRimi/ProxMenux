@@ -56,14 +56,14 @@
       },
       {
         "name": "Sécurité",
-        "description": "Échecs d'authentification, état des jails Fail2Ban, événements de bannissement récents et intégration avec la jail <code>[proxmenux]</code> de l'hôte."
+        "description": "Échecs d’authentification, état des jails Fail2Ban, blocages récents et intégration avec la jail <code>[proxmenux]</code> de l’hôte."
       }
     ],
     "footer": "Chaque section a une page de documentation dédiée sous <link>Tableau de bord</link> dans la barre latérale."
   },
   "howItRuns": {
     "heading": "Comment ça marche",
-    "intro": "ProxMenux Monitor est distribué sous forme d'AppImage autonome. Une seule unité systemd (<code>proxmenux-monitor.service</code>) lance un processus Flask qui :",
+    "intro": "ProxMenux Monitor est distribué sous forme d’AppImage autonome. Une seule unité systemd (<code>proxmenux-monitor.service</code>) lance un processus Flask qui :",
     "bullets": [
       "Écouter sur <strong>TCP 8008</strong> sur l'hôte (HTTP).",
       "Fournit les fichiers statiques du tableau de bord Next.js sous <code>/</code> et l'API sous <code>/api/*</code>, depuis le même processus.",
@@ -74,7 +74,7 @@
   },
   "noAgent": {
     "title": "Aucun agent sur les invités",
-    "body": "Le moniteur lit tout depuis l'hôte. Les VM et les CT n'ont pas besoin d'un agent installé — les données des invités proviennent du Proxmox API et de la visibilité du noyau propre de l'hôte dans les invités en cours d'exécution."
+    "body": "Le Monitor lit toutes les données depuis l’hôte. Aucun agent n’est nécessaire dans les VM ou les CT : les données proviennent de l’API Proxmox et des informations que le noyau de l’hôte fournit sur les systèmes invités en cours d’exécution."
   },
   "access": {
     "heading": "Accès au tableau de bord",
@@ -95,8 +95,8 @@
     "androidLabel": "Android Chrome / Edge:",
     "androidBody": "menu à trois points → <em>Installer l'application</em> (ou <em>Ajouter à l'écran d'accueil</em> sur les anciennes versions).",
     "afterInstall": "Une fois installé, l'ouverture de l'icône lance le tableau de bord en mode autonome avec sa propre entrée de commutateur de tâches.",
-    "onlineOnlyTitle": "En ligne seulement",
-    "onlineOnlyBody": "La PWA peut être installée, mais elle <strong>ne fonctionne pas</strong> hors ligne : aucun service worker n'est fourni. Le lanceur se comporte comme une application native, mais l'appareil doit toujours pouvoir joindre l'hôte sur le port TCP 8008 (réseau local, VPN ou HTTPS via un proxy inverse) pour charger le tableau de bord."
+    "onlineOnlyTitle": "Connexion requise",
+    "onlineOnlyBody": "La PWA peut être installée, mais elle <strong>ne fonctionne pas</strong> hors ligne : elle ne possède pas de service worker. Le raccourci se comporte comme une application native, mais l’appareil doit toujours pouvoir joindre l’hôte sur TCP 8008, par le réseau local, un VPN ou HTTPS via un proxy inverse, pour charger le tableau de bord."
   },
   "health": {
     "heading": "Surveillance de la santé et notifications",
@@ -112,7 +112,7 @@
   },
   "api": {
     "heading": "REST API et intégrations",
-    "intro": "Tout ce que présente l'interface utilisateur est disponible en JSON via HTTP/HTTPS. Les mêmes points d'accès alimentent les widgets Homepage, les capteurs Home Assistant, les tableaux de bord Grafana (via l'exportateur Prometheus à <code>/api/prometheus</code>), les sondes Uptime Kuma et les scripts personnalisés utilisant <code>curl</code>.",
+    "intro": "Toutes les données affichées dans l’interface sont disponibles en JSON via HTTP/HTTPS. Les mêmes points d’accès alimentent les widgets Homepage, les capteurs Home Assistant, les tableaux de bord Grafana via l’exporteur Prometheus sur <code>/api/prometheus</code>, les sondes Uptime Kuma et les scripts utilisant <code>curl</code>.",
     "tokens": "Les jetons API à longue durée de vie (365 jours) sont générés à partir de <strong>Paramètres → API Tokens</strong> ou via <code>POST /api/auth/generate-api-token</code>.",
     "bearer": "Les jetons sont transmis dans <code>Authorization: Bearer …</code>. Les points d'accès publics (<code>/api/health</code>, <code>/api/auth/*</code>) fonctionnent sans jeton, ce qui permet aux sondes externes de disponibilité d'interroger l'hôte sans recevoir d'identifiants.",
     "catalog": "Le catalogue complet des points d'accès, les conseils de rotation des jetons et les bonnes pratiques de sécurité se trouvent dans la <linkApi>référence API</linkApi>. Des exemples pour Homepage, Home Assistant, Grafana et Uptime Kuma, ainsi qu'un modèle générique cURL, sont proposés dans les <linkIntegrations>intégrations</linkIntegrations>."
@@ -139,7 +139,7 @@
         "description": "— toutes les sections de l'interface utilisateur, avec une page pour chacune."
       },
       {
-        "label": "Référence API",
+        "label": "Référence de l’API",
         "description": "— chaque point d'accès, structure des requêtes et réponses, gestion des jetons."
       },
       {

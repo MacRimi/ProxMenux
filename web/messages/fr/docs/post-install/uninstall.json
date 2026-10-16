@@ -116,7 +116,7 @@
         "title": "Exploitation forestière",
         "items": [
           {
-            "tool": "Optimisation des revues",
+            "tool": "Optimisation de journald",
             "restores": "Réécrit /etc/systemd/journald.conf par défaut et redémarre systemd-journald."
           },
           {

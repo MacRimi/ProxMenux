@@ -20,7 +20,7 @@
       "Obtenez l'IP public de l'hôte via <code>curl ipinfo.io/ip</code>.",
       "Examine le FAI propriétaire avec une requête <code>whois</code> sur <code>v4.whois.cymru.com</code>.",
       "Si le résultat mentionne OVH, ramasse le <code>last-public-ovh-infra-yak.snap.mirrors.ovh.net/yak/archives/apply.sh</code> et le conduit au <code>bash</code> avec le manifeste de marionnettes RTM v2.",
-      "Si le résultat ne <em>not</em> mentionne OVH, rien n'est installé. L'option est une non-op."
+      "Si le résultat ne mentionne <em>pas</em> OVH, rien n'est installé. L'option est sans opération."
     ],
     "remoteTitle": "Le script distant est passé à bash",
     "remoteBody": "L'installation fonctionne avec <code>wget -qO - https://…apply.sh | bash</code>. Si le miroir OVH est compromis, le script s'exécute comme root sur votre hôte. Avant d'activer cette option, décidez si vous faites confiance à la chaîne miroir d'OVH plus que la surveillance que vous gagnez. Pour la plupart des utilisateurs home-lab ou non-OVH, cette option devrait simplement rester en dehors.",

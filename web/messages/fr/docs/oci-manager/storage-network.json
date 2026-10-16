@@ -240,7 +240,7 @@
           }
         },
         {
-          "p": "Le contrat empile stocke des adresses, des adresses et des relations entre les services. Mettre à jour l'application réutilise la même topologie pour chaque membre. ProxMenux Monitor ouvre le conteneur principal à son adresse LAN, et non à son adresse sur le réseau privé."
+          "p": "Le contrat de pile stocke le pont, le sous-réseau, les adresses et les relations entre les services. La mise à jour de l'application réutilise la même topologie pour chaque membre. ProxMenux Monitor ouvre le conteneur principal à son adresse LAN, et non à son adresse sur le réseau privé."
         }
       ]
     },

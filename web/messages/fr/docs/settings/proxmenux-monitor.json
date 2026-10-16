@@ -106,7 +106,7 @@
     "items": [
       {
         "href": "/docs/security/fail2ban",
-        "label": "Échec2Ban",
+        "label": "Fail2Ban",
         "tailRich": "— la prison <code>[proxmenux]</code> protège le moniteur sur TCP 8008."
       },
       {

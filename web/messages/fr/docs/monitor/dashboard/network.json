@@ -227,7 +227,7 @@
         "tail": "— la catégorie Réseau et les seuils de latence-histoire."
       },
       {
-        "label": "Référence API",
+        "label": "Référence de l’API",
         "href": "/docs/monitor/api",
         "tail": "— les critères de réseau et de latence."
       },

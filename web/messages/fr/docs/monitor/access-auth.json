@@ -14,7 +14,7 @@
   },
   "intro": {
     "title": "L'authentification est opt-in",
-    "body": "Lors du premier lancement, le tableau de bord affiche une boîte de dialogue unique — <em>\"Protégez votre tableau de bord?\"</em> — avec deux boutons: <strong>Oui, Configuration Mot de passe</strong> et <strong>Non, Continuer sans protection</strong>. En disant non, chaque point d'arrêt API s'ouvre sur le TCP 8008 — c'est bien pour un laboratoire isolé, dangereux pour tout le reste. Authentification à deux facteurs (2FA) est <strong>non</strong> partie de ce choix initial; il est configuré plus tard à partir de <strong>l'onglet Sécurité</strong> une fois qu'un mot de passe est défini."
+    "body": "Au premier lancement, le tableau de bord affiche la boîte de dialogue <em>« Protéger votre tableau de bord ? »</em>, avec les boutons <strong>Oui, définir un mot de passe</strong> et <strong>Non, continuer sans protection</strong>. La seconde option laisse les points d’accès de l’API ouverts sur TCP 8008 : cela peut convenir à un réseau local de laboratoire isolé, mais reste dangereux ailleurs. L’authentification à deux facteurs (2FA) <strong>ne fait pas</strong> partie de ce choix initial ; elle se configure ensuite dans <strong>l’onglet Sécurité</strong>, après la définition d’un mot de passe."
   },
   "reaching": {
     "heading": "Atteindre le tableau de bord",
@@ -267,7 +267,7 @@
     "lostItems": [
       "<strong>Utilisez un code de sauvegarde.</strong> À l'écran de connexion, dans le champ TOTP, tapez l'un des dix codes que vous avez enregistrés au moment de la configuration. Chacun fonctionne une fois et est ensuite consommé; les codes restants fonctionnent encore. Une fois que vous êtes dedans, régénérez 2FA à partir de Paramètres pour obtenir un nouveau dix.",
       "<strong>Restaurer l'authentificateur à partir du cloud / sauvegarde.</strong> Si votre application a une synchronisation cloud (Google, Microsoft, Authy, Apple Passwords via iCloud Keychain, Ente, 2FAS) l'installe sur un nouvel appareil, se connecte et les entrées réapparaissent. Si votre application utilise un fichier d'exportation chiffré (Aegis, Raivo, FreeOTP+), installer l'application sur le nouvel appareil et importer le fichier.",
-      "<strong>Désactiver 2FA de la coquille de l'hôte.</strong> Lorsque les options précédentes ne sont pas disponibles, modifier <code>/root/.config/proxmenux-monitor/auth.json</code> sur l'hôte Proxmox (vous avez besoin de racine SSH accès à la console), ensemble <code>totp_enabled</code> à <code>false</code>, enregistrer et redémarrer le service:"
+      "<strong>Désactivez 2FA depuis le shell de l'hôte.</strong> Lorsque les options précédentes ne sont pas disponibles, modifiez <code>/root/.config/proxmenux-monitor/auth.json</code> sur l'hôte Proxmox (vous avez besoin de root SSH ou d'un accès à la console), définissez <code>totp_enabled</code> sur <code>false</code>, enregistrez et redémarrez le service :"
     ],
     "lostShellOutro": "Vous pouvez vous connecter avec le nom d'utilisateur + mot de passe seulement, puis réactiver 2FA depuis Paramètres.",
     "disableTitle": "Désactiver 2FA",
@@ -338,9 +338,9 @@
     "outro": "Faites comme d'habitude : <code>tail -F /var/log/proxmenux-auth.log</code>. Le fichier est tourné par <code>logrotate</code> si un drop-in de configuration est ajouté; le Monitor lui-même ne le fait pas tourner."
   },
   "fail2ban": {
-    "heading": "Facultatif: Fail2Ban prison",
+    "heading": "Facultatif : jail Fail2Ban",
     "calloutTitle": "Fail2Ban n'est pas livré avec le moniteur",
-    "calloutBody": "Fail2Ban est <strong>not</strong> installé par ProxMenux Monitor lui-même. Installez-le via <link>Security → Fail2Ban</link> dans le menu ProxMenux (ou avec le paquet Debian standard). Sans cela, le contrôleur écrit toujours le registre de vérification ci-dessus — il ne s'agit tout simplement pas de récidivistes auto-interdiction.",
+    "calloutBody": "Fail2Ban n'est <strong>pas</strong> installé par ProxMenux Monitor lui-même. Installez-le via <link>Sécurité → Fail2Ban</link> dans le menu ProxMenux (ou avec le package Debian standard). Sans cela, le moniteur écrit toujours le journal d'audit ci-dessus ; il n'interdit tout simplement pas les récidivistes.",
     "intro": "Lorsque Fail2Ban est installé, l'intégration ProxMenux envoie une prison <code>[proxmenux]</code> qui :",
     "items": [
       "Lire <code>/var/log/proxmenux-auth.log</code>.",

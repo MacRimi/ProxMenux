@@ -27,7 +27,7 @@
   },
   "cards": {
     "fail2ban": {
-      "title": "Échec2Ban",
+      "title": "Fail2Ban",
       "body": "Prévention active des intrusions. Watches SSH et web UI auth logs et interdit les IP après des échecs répétés.",
       "bullets": [
         "Trois prisons : SSH, Proxmox UI (8006), ProxMenux Monitor (8008)",
@@ -52,7 +52,7 @@
     "body": "Exécutez une vérification de Lynis d'abord pour voir votre score de départ et les meilleures recommandations. Appliquez les corrections que vous voulez. Puis installez Fail2Ban — il implémente automatiquement l'une des recommandations les plus courantes de Lynis (SSH protection force brute) et ajuste <code>MaxAuthTries</code> en <code>sshd_config</code> pour satisfaire le contrôle SSH-7408. Relancez ensuite Lynis pour confirmer l'amélioration du score."
   },
   "fail2banSection": {
-    "heading": "Échec2Ban",
+    "heading": "Fail2Ban",
     "body": "ProxMenux installe Fail2Ban avec une configuration adaptée pour Proxmox spécifiquement. Au-delà de la prison standard SSH, il ajoute une protection pour l'interface utilisateur web Proxmox et le ProxMenux Monitor, et fonctionne autour de deux quirks spécifiques à Proxmox : un par défaut journald qui tombe auth événements, et le problème de backend systemd qui empêche Fail2Ban de lire certaines sources journal de manière fiable. La page de détail couvre le flux d'installation complet, les trois prisons, le correctif journald, le changement de durcissement SSH et la feuille de triche de dépannage.",
     "optionTitle": "Fail2Ban — installer et gérer",
     "optionDescription": "Trois prisons préconfigurées (sshd agressif, Proxmox interface port 8006, ProxMenux Monitor port 8008 + proxy inverse), auto-détecté nftables/iptables backend, journald fix et SSH MaxAuthTries durcissant."

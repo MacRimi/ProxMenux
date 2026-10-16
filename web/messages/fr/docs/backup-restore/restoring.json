@@ -218,7 +218,7 @@
         "detail": "Télécharger la version du pilote enregistrée, compiler les modules DKMS contre le noyau actuel, applique le correctif ProxMenux si la source l'avait. La tâche la plus longue."
       },
       {
-        "stage": "Corail / autre composant réinstalle",
+        "stage": "Réinstallation de Coral et des autres composants",
         "time": "3–5 min",
         "detail": "DKMS compile pour Coral, apt install pour intel-gpu-tools, .deb download + install pour amdgpu_top."
       },
@@ -251,7 +251,7 @@
       },
       {
         "log": "/var/log/proxmenux/component-<name>-YYYYMMDD_HHMMSS.log",
-        "detail": "Un log par installateur de composants (nvidia, corail, etc.) qui a fonctionné dans la passe post-démarrage. Utile lorsque la réinstallation d'un composant spécifique a échoué et que l'utilisateur a besoin de la sortie de l'outil."
+        "detail": "Un journal par programme d'installation de composant (nvidia, coral, etc.) exécuté lors de la passe post-démarrage. Utile lorsque la réinstallation d'un composant spécifique a échoué et que l'utilisateur a besoin de la propre sortie de l'outil."
       },
       {
         "log": "/var/log/proxmenux/restore-datapools-YYYYMMDD_HHMMSS.log",

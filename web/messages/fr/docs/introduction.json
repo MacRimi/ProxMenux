@@ -46,7 +46,7 @@
         "href": "/docs/post-install"
       },
       {
-        "title": "GPUs & Corail TPU",
+        "title": "GPU et Coral TPU",
         "description": "NVIDIA, Intel iGPU, AMD et Coral TPU passent aux conteneurs VM et LXC, avec commutation de mode entre VM et LXC.",
         "icon": "Cpu",
         "href": "/docs/hardware/nvidia-host"

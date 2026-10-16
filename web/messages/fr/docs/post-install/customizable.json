@@ -29,7 +29,7 @@
     },
     {
       "name": "Système",
-      "description": "Alignez le sous-système log et les limites du noyau pour un hôte qui transporte de nombreux VM et conteneurs. Couvertures journalisées, logrotate, sysctl (mémoire, limites de fichiers), comportement de panique du noyau et rappels rapides."
+      "description": "Ajustez les limites du sous-système de journalisation et du noyau pour un hôte qui transporte de nombreuses machines virtuelles et conteneurs. Couvre journald, logrotate, sysctl (mémoire, limites de fichiers), le comportement de panique du noyau et les redémarrages rapides."
     },
     {
       "name": "Virtualisation",

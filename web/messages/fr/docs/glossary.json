@@ -106,7 +106,7 @@
       "term": "CT",
       "aliases": [
         "Conteneur",
-        "Récipient LXC"
+        "Conteneur LXC"
       ],
       "category": "Proxmox",
       "definitionRich": "Court pour \"container\" — Terminologie Proxmox pour une instance LXC. A un CTID numérique qui se compare au <code>/etc/pve/lxc/&lt;CTID&gt;.conf</code>. Voir aussi <strong>LXC</strong>.",
@@ -162,12 +162,12 @@
       ]
     },
     {
-      "term": "Échec2Ban",
+      "term": "Fail2Ban",
       "category": "Linux",
       "definitionRich": "Service de prévention de l'intrusion qui surveille les fichiers journaux pour les défaillances d'authentification répétées et interdit les IP offens au niveau du pare-feu. ProxMenux expédie des prisons préconfigurées pour SSH, l'interface utilisateur Proxmox et le moniteur.",
       "seeAlso": [
         {
-          "label": "Échec2Ban",
+          "label": "Fail2Ban",
           "href": "/docs/security/fail2ban"
         }
       ]

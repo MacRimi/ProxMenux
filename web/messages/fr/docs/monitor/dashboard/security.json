@@ -116,15 +116,15 @@
     ]
   },
   "fail2ban": {
-    "heading": "Échec2Ban",
+    "heading": "Fail2Ban",
     "subHeading": "(conditionnalité)",
     "whatIs": "<strong>Qu'est-ce que c'est.</strong> Fail2Ban est un démon de prévention d'intrusion open-source qui surveille les fichiers journaux pour les tentatives de connexion ratées répétées et interdit l'IP contrevenant au niveau du pare-feu. C'est la réponse de facto aux scanners de force brute qui frappent SSH et les formulaires de connexion web 24/7. Par défaut, ProxMenux le branche à trois prisons : SSH, la connexion web UI Proxmox (port 8006) et la connexion ProxMenux Monitor (port 8008).",
-    "notBundled": "Fail2Ban est <strong>non groupé</strong>. La carte détecte si elle est installée et s'adapte : lorsqu'elle manque, elle offre une installation en un seul clic ; une fois installée, elle affiche le statut de prison en direct, interdit les IP et vous permet d'accorder les relevés / interdiction de temps par prison.",
+    "notBundled": "Fail2Ban <strong>n’est pas fourni</strong>. La carte détecte sa présence et s’adapte : s’il manque, elle propose de l’installer en un clic. Une fois installé, elle affiche l’état des jails et les IP bloquées, et permet de régler le nombre de tentatives et la durée de blocage pour chaque jail.",
     "notInstalledAlt": "Carte Fail2Ban montrant l'état non installé avec une explication de ce qu'il configurerait : SSH, Proxmox web UI et ProxMenux Monitor protection avec nftables backend, plus un bouton Installer et Configurer Fail2Ban",
     "notInstalledCaption": "La carte Fail2Ban avant l'installation — la boîte bleue prévisualise ce que l'installation va configurer.",
     "clickBody": "Cliquez sur <em>Installer et configurer Fail2Ban</em> et vous obtenez une confirmation modale listant chaque changement que le script fera sur l'hôte:",
-    "confirmAlt": "Installer Fail2Ban confirmation modal listing SSH mode de protection agressif, port de protection de l'interface web Proxmox 8006, ProxMenux Monitor port de protection 8008, auto-détecté nftables backend, journal de niveau de log réglage et SSH MaxAuthTries durcissement",
-    "confirmCaption": "Installer la confirmation — liste explicite des prisons, des modifications au niveau journalisé (pour que la prison d'auth puisse lire les événements SSH) et un effet secondaire de durcissement SSH (<code>MaxAuthTries=3</code>).",
+    "confirmAlt": "Installer la liste modale de confirmation Fail2Ban SSH mode agressif de protection, port de protection de l'interface Web Proxmox 8006, port de protection ProxMenux Monitor 8008, backend nftables détecté automatiquement, journald ajustement du niveau de journalisation et SSH MaxAuthTries durcissement",
+    "confirmCaption": "Confirmation de l'installation — liste explicite de jails, ajustements au niveau de journalisation de journald (afin que l'authentification jail puisse lire les événements SSH) et un effet secondaire de renforcement de SSH (<code>MaxAuthTries=3</code>).",
     "confirmIntro": "La confirmation déclenche un panneau d'installation en streaming (apt + jail config + tests). Même plomberie que l'installateur ProxMenux CLI.",
     "progressAlt": "Fail2Ban Panneau d'installation montrant l'installation live log: paquet install, journald MaxLevelStore accordé pour l'enregistrement auth, prisons configurées, nftables backend détecté, MaxAuthTries durcissement, échec2ban-client test de communication, message d'achèvement",
     "progressCaption": "Installez en cours — chaque étape est enregistrée dans le panneau. La connexion fermée en bas marque la fin de la session de streaming.",
@@ -227,7 +227,7 @@
         "tail": " — livres de cuisine pour l'utilisation API jetons avec Homepage, Home Assistant, Prometheus, n8n et la passerelle sécurisée de bout en bout."
       },
       {
-        "label": "Référence API",
+        "label": "Référence de l’API",
         "href": "/docs/monitor/api",
         "tailRich": "— tous les paramètres <code>/api/auth</code>, <code>/api/security</code> et <code>/api/oci</code> avec des exemples de méthode, de corps et de boucle."
       },

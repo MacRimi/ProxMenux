@@ -4,7 +4,7 @@
     "description": "Comment OCI manager Apps transforme une application avec sa base de données et cache en LXC natifs coordonnés: plan, réseau privé, crochet de dépendance, validation et mises à jour transactionnelles."
   },
   "header": {
-    "title": "Applications multiconteneurs",
+    "title": "Applications à plusieurs conteneurs",
     "description": "Une application avec sa base de données, cache et d'autres services devient plusieurs LXC natifs coordonnés, installés et mis à jour comme un seul.",
     "section": "Applications du gestionnaire OCI"
   },

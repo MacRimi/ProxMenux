@@ -14,7 +14,7 @@
   },
   "intro": {
     "title": "Ce menu sert à",
-    "body": "Juste après l'installation de Proxmox VE, il y a des dizaines de petits changements qui rendent l'hôte plus rapide et plus facile à entretenir — dépôts gratuits, limites journalisées saines, tampons sensibles TCP, stockage de log SSD-friendly, bashrc niceties, et plus encore. ProxMenux les automatise et suit les modifications de configuration réversibles prises en charge."
+    "body": "Juste après l'installation de Proxmox VE, il y a des dizaines de petits changements qui rendent l'hôte plus rapide et plus facile à maintenir : des référentiels gratuits, des limites journald raisonnables, des tampons TCP raisonnables, un stockage de journaux compatible SSD, des subtilités bashrc, et plus encore. ProxMenux les automatise et suit les modifications de configuration réversibles prises en charge."
   },
   "openingMenu": {
     "heading": "Ouverture du menu",
@@ -33,7 +33,7 @@
         "Repos gratuit + mise à jour du système",
         "Mémoire, noyau, réglage réseau",
         "Log2RAM (détecté automatiquement sur SSD/NVMe)",
-        "Limites de taille du journal + logrotate",
+        "Journald + limites de taille de rotation",
         "Noms d'interface persistants"
       ]
     },

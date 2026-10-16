@@ -22,7 +22,7 @@
     "heading": "Règles de visibilité",
     "intro": "Avant même que le menu apparaisse, ProxMenux filtre la liste des disques. Seuls les candidats qui sont en sécurité sont présentés :",
     "items": [
-      "<strong>Afficher</strong> — disques <em>not</em> utilisé par l'hôte (pool racine, swap, monté, actif ZFS/LVM/RAID) et <em>not</em> référencé par n'importe quelle configuration VM/LXC (démarrage ou arrêt).",
+      "<strong>Affiché</strong> : disques <em>non</em> utilisés par l'hôte (racine pool, swap, monté, actif ZFS/LVM/RAID) et <em>non</em> référencé par aucune configuration VM/LXC (en cours d'exécution ou arrêtée).",
       "<strong>Hidden</strong> — disques d'hôte / système.",
       "<strong>Hidden</strong> — disques référencés par une configuration VM/LXC."
     ],

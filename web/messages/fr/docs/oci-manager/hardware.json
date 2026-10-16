@@ -74,7 +74,7 @@
         {
           "calloutWarning": {
             "title": "Les dispositifs détectés ne sont pas fixés seuls",
-            "body": "L'hôte est inventorié, mais seuls les appareils déclarés par le fichier Compose ou par un profil compatible sont proposés et joints. Un GPU, un dongle USB ou un corail présent sur l'hôte n'est pas exposé à chaque LXC."
+            "body": "L'hôte est inventorié, mais seuls les appareils déclarés par le fichier Compose ou par un profil compatible sont proposés et attachés. Un GPU, un dongle USB ou un Coral présent sur l'hôte n'est pas exposé à tous les LXC."
           }
         }
       ]
@@ -235,7 +235,7 @@
               [
                 "Coral",
                 "<code>/dev/apex_0</code> ou le bus USB",
-                "Le profil déclare le support du corail (Frigate)"
+                "Le profil déclare la prise en charge de Coral (Frigate)"
               ],
               [
                 "USB, série, FUSE",
@@ -338,7 +338,7 @@
           }
         },
         {
-          "p": "Un périphérique est donné par son noeud en béton: <code>/dev/ttyUSB0</code>, <code>/dev/ttyACM0</code>, <code>/dev/apex_0</code> ou <code>/dev/bus/usb/BBB/DDD</code>. Le passage de l'ensemble de <code>/dev</code> n'est pas accepté. Le corail n'est offert qu'aux demandes dont le profil le déclare."
+          "p": "Un périphérique est donné par son nœud concret : <code>/dev/ttyUSB0</code>, <code>/dev/ttyACM0</code>, <code>/dev/apex_0</code> ou <code>/dev/bus/usb/BBB/DDD</code>. Passer l'intégralité de <code>/dev</code> n'est pas accepté. Coral est proposé uniquement aux applications dont le profil le déclare."
         }
       ]
     },
@@ -384,7 +384,7 @@
       "title": "Confirmations par niveau de risque",
       "blocks": [
         {
-          "p": "Les dispositifs de béton, les privilèges optionnels, les privilèges requis, la relaxation AppArmor ou seccomp et l'accès à l'espace de noms PID hôte sont traités comme des cas séparés, et non sous une étiquette générique privilégiée. Chaque option avec un risque est expliquée et confirmée pendant l'installation."
+          "p": "Les périphériques concrets, les privilèges facultatifs, les privilèges requis, la relaxation AppArmor ou seccomp et l'accès à l'espace de noms PID hôte sont traités comme des cas distincts, et non sous une seule étiquette privilégiée générique. Chaque option présentant un risque est expliquée et confirmée lors de l'installation."
         }
       ]
     }

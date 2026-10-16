@@ -101,7 +101,7 @@
     "mountStateTitle": "Point par carte et avertissements",
     "mountStateItems": [
       "<green/> <strong>Green</strong> — le montage est sain et accessible.",
-      "<amber/> <strong>Amber</strong> — divergent (configuré mais non réellement monté), en lecture seule, ou <em>zombie lid</em> (la source hôte a été enlevée mais le CT voit toujours la lid comme monté — typique lorsqu'un lecteur USB a été débranché ou qu'un <code>umount</code> manuel s'est produit sur l'hôte).",
+      "<amber/> <strong>Ambre</strong> — divergent (configuré mais pas réellement monté), en lecture seule ou <em>liaison zombie</em> (la source hôte a été supprimée mais le CT voit toujours la liaison comme montée — typique lorsqu'une clé USB a été débranchée ou un manuel <code>umount</code> s'est produit sur l'hôte).",
       "<red/> <strong>Red</strong> — stale: la sonde d'exécution n'a pas pu atteindre la monture (commune avec les exportations de NFS dont le serveur est en panne)."
     ],
     "mountsCalloutTitle": "Qu'est-ce que ça te donne sur l'indigène UI",
@@ -225,7 +225,7 @@
         "tailRich": "— ce que déclenchent les événements <code>vm_*</code>, <code>ct_*</code>, <code>migration_*</code> et <code>backup_*</code> en aval."
       },
       {
-        "label": "Référence API",
+        "label": "Référence de l’API",
         "href": "/docs/monitor/api",
         "tailRich": "— le VM et les paramètres de sauvegarde."
       },

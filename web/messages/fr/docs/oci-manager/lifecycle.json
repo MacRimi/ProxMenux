@@ -274,7 +274,7 @@
                 "Le crochet d'un conteneur non privilégié est installé à nouveau. Un conteneur privilégié obtient les fichiers de pilote de cet hôte au lieu de ceux de l'hôte il vient de"
               ],
               [
-                "Montage à rouleaux",
+                "Rclone montage",
                 "Le hookscript et les programmes qui publient le montage sont à nouveau écrits, avec les mêmes vues sur l'hôte"
               ],
               [

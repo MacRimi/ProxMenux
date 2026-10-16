@@ -96,7 +96,7 @@
     "overviewItems": [
       "<strong>Identity</strong> — modèle, série, capacité, badge santé (santé / avertissement / critique).",
       "<strong>Taille et durée de vie</strong> — grand anneau de survie (97 %, 50 %, ...) avec l'attribut source exprimé (<em>Indicateur d'usure des médias</em>, <em>Pourcentage utilisé</em>, ...), une barre d'usure (consommation de courant %), un <em>Est. Projection Life</em> en années et données totales écrites. Les lecteurs NVMe montrent également <em>Disponible Spare</em>.",
-      "<strong>SMART Attributs</strong> — six champs principaux sur une grille de colonnes 2: Température, Puissance en Heures (avec durée humanisée comme <em>3y 116d</em>), Taux de Rotation (ou <em>SSD</em>), Cycles de Puissance, SMART Statut, Secteurs Réaffectés, Secteurs En attente, Erreurs CRC. La table d'attribut complète vit dans l'onglet SMART."
+      "<strong>Attributs SMART</strong> : les principales valeurs sont affichées sur deux colonnes : température, heures de fonctionnement avec une durée lisible comme <em>3 ans et 116 jours</em>, vitesse de rotation ou <em>SSD</em>, cycles de mise sous tension, état SMART, secteurs réalloués, secteurs en attente et erreurs CRC. Le tableau complet des attributs se trouve dans l’onglet SMART."
     ],
     "smartTitle": "Onglet 2 — SMART",
     "smartImageAlt": "Mode de perçage du disque — onglet SMART avec les boutons d'essai de l'exécution SMART (Short / Extended), le résultat du dernier essai et le tableau complet de l'attribut SMART",
@@ -133,7 +133,7 @@
     "scheduleTitle": "Onglet 4 — Calendrier",
     "scheduleImageAlt": "Perceuse de disque en mode — onglet Planning avec la bascule pour les tests automatiques SMART, la liste des calendriers configurés et le bouton Ajouter un calendrier",
     "scheduleImageCaption": "Onglet de calendrier — type d'essai choisi, fréquence et rétention; le moniteur le file dans <code>cron</code> de sorte que les tests fonctionnent sans surveillance.",
-    "scheduleIntro": "Cron-drivé automatique SMART tests, pas de coquille nécessaire. La page comporte trois domaines :",
+    "scheduleIntro": "Tests SMART automatiques pilotés par Cron, aucun shell requis. La page comporte trois zones :",
     "scheduleItems": [
       "<strong>Automatique SMART Tests toggle</strong> — Interrupteur mondial pour chaque horaire sur ce disque. Utile quand vous voulez tout interrompre pendant l'entretien sans perdre les définitions de l'horaire.",
       "<strong>Programmes configurés</strong> — une ligne par horaire existant avec l'insigne type test (<em>short</em> / <em>long</em>), l'expression cron sous forme humaine (<em>\"Jour 1 du mois au 03:00\"</em>, <em>\"Chaque dimanche au 02:00\"</em>), les disques qu'il couvre et le réglage de rétention.",
@@ -172,7 +172,7 @@
     "obsWhatItems": [
       "<strong>Type badge</strong> (erreur I/O, erreur SMART, erreur du système de fichiers, erreur du pool ZFS, erreur de connexion).",
       "<strong>Message du noyau mobile</strong> tel qu'il apparaissait dans dmesg — utile pour copier-coller dans un moteur de recherche ou un ticket de support.",
-      "<strong>A humain one-liner</strong> sous le message brut pour les codes ATA connus (<code>IDNF</code> → \"Adresse secteur non trouvée — possiblement mauvais secteur ou problème de câble\", <code>UNC</code> → \"erreur de lecture incorrecte — mauvais secteur\", et le reste des codes standard).",
+      "<strong>Une ligne humaine</strong> sous le message brut pour les codes ATA connus (<code>IDNF</code> → \"Adresse de secteur introuvable — possible problème de secteur ou de câble défectueux\", <code>UNC</code> → \"Erreur de lecture non corrigible — secteur défectueux\" et le reste des codes standard).",
       "<strong>Horaires de première et dernière occurrence</strong>, plus un nombre d'occurrences <strong></strong> dédoublé par signature d'erreur."
     ],
     "obsWhyTitle": "Pourquoi ProxMenux enregistre et les montre",
@@ -239,7 +239,7 @@
         "tail": "— la catégorie des disques et des entrées et sorties et le modèle de suppression."
       },
       {
-        "label": "Référence API",
+        "label": "Référence de l’API",
         "href": "/docs/monitor/api",
         "tail": "— les paramètres de stockage et SMART."
       },

@@ -157,7 +157,7 @@
       },
       {
         "href": "/docs/security/fail2ban",
-        "label": "Échec2Ban",
+        "label": "Fail2Ban",
         "tailRich": "— met en œuvre la protection de la force brute SSH que recommande Lynis."
       },
       {

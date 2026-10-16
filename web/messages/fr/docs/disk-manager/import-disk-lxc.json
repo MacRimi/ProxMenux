@@ -76,7 +76,7 @@
     "heading": "Considérations importantes",
     "items": [
       "<strong>Un disque par run</strong>. Ré-exécuter le script pour chaque disque supplémentaire.",
-      "Do <strong>not</strong> attache la même partition à plusieurs conteneurs qui pourraient la monter simultanément — écrit simultanément corrompre le système de fichiers.",
+      "Ne <strong>ne pas</strong> attacher la même partition à plusieurs conteneurs qui pourraient la monter simultanément : les écritures simultanées corrompent le système de fichiers.",
       "<strong>Les anciennes métadonnées</strong> (signature RAID / ZFS / LVM) doivent être effacées manuellement avant que le script ne vous laisse formater, sinon <code>mkfs</code> refuse d'écraser. Utilisez l'outil <wipeLink>Format / Wipe Physical Disk</wipeLink> pour cela."
     ]
   },

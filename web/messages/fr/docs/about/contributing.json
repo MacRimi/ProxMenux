@@ -197,7 +197,7 @@
     "bullets": [
       "Écrire des chaînes en anglais — la traduction est gérée automatiquement par la construction.",
       "Gardez les cordes concises. Évitez d'intégrer des variables dans de longues phrases si possible.",
-      "Faire <strong>not</strong> traduire des noms variables, des chemins ou des identifiants techniques."
+      "Ne <strong>ne pas</strong> traduire les noms de variables, les chemins ou les identifiants techniques."
     ]
   },
   "variableStyle": {

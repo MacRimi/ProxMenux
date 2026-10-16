@@ -231,7 +231,7 @@
     "heading": "Où aller ensuite",
     "items": [
       {
-        "label": "Référence API",
+        "label": "Référence de l’API",
         "href": "/docs/monitor/api",
         "tail": " — chaque point d'arrêt avec méthode, chemin et pleine Prometheus catalogue métrique."
       },

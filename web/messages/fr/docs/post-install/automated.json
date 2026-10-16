@@ -12,7 +12,7 @@
   },
   "intro": {
     "title": "Quand choisir Automatisé",
-    "body": "Exécutez cela sur un hôte Proxmox nouvellement installé lorsque vous voulez une base raisonnable sans prendre de décisions. Le script est idémpotent — l'exécuter deux fois est sûr, il ré-applique simplement les mêmes configurations. Les fonctionnalités opt-in (Fastfetch, IOMMU, Ceph repo, HA, AMD corrections...) sont intentionnellement <strong>not</strong> partie de ce chemin ; choisissez-les à partir de <link>Personnalisé</link> si vous en avez besoin."
+    "body": "Exécutez ceci sur un hôte Proxmox fraîchement installé lorsque vous souhaitez une ligne de base raisonnable sans prendre de décision. Le script est idempotent : l'exécuter deux fois est sûr, il réapplique simplement les mêmes configurations. Les fonctionnalités d'inscription (Fastfetch, IOMMU, dépôt Ceph, HA, correctifs AMD…) ne font intentionnellement <strong>pas</strong> partie de ce chemin ; choisissez-les parmi <link>Personnalisable</link> si vous en avez besoin."
   },
   "applies": {
     "heading": "Ce que le script applique",
@@ -79,7 +79,7 @@
     },
     {
       "tool": "Log2RAM (SSD-aware, automatique)",
-      "what": "Réduit l'usure du SSD/NVMe en déplaçant le /var/log vers un disque de rams tmpfs avec synchronisation périodique du disque. Installé à partir du projet en amont lorsque le disque racine est SSD ou NVMe. Size the ramdisk by host RAM (128M / 256M / 512M), planifie la synchronisation périodique et un garde-sync automatique qui aspire à 80% et tronque les grumes chaudes à 92% avant d'écrire. Ajuste les limites journalisées pour s'adapter au disque. Tous les détails sur <link>Log2RAM</link>.",
+      "what": "Réduit l'usure du SSD/NVMe en déplaçant /var/log vers un disque virtuel tmpfs avec synchronisation périodique du disque. Installé à partir du projet en amont lorsque le disque racine est SSD ou NVMe. Taille le disque virtuel par hôte RAM (128 Mo/256 Mo/512 Mo), planifie une synchronisation périodique et une protection de synchronisation automatique qui aspire à 80% et tronque les journaux chauds à 92% avant l'écriture. Ajuste les limites de journald pour les adapter au disque virtuel. Tous les détails sur <link>Log2RAM</link>.",
       "category": "Stockage",
       "categorySlug": "stockage"
     },
@@ -90,7 +90,7 @@
       "categorySlug": "stockage"
     },
     {
-      "tool": "Limites de taille des journaux",
+      "tool": "Journald limites de taille",
       "what": "Force le stockage persistant, caps SystemMaxUse=64M / RuntimeMaxUse=60M, définit la compression, l'enregistrement d'info-niveau (obligatoire pour le moniteur). Dépassé automatiquement lorsque Log2RAM est actif (il effectue son propre réglage).",
       "category": "Système",
       "categorySlug": "système"
@@ -109,7 +109,7 @@
     }
   ],
   "hardwareTitle": "Défauts de logiciels",
-  "hardwareBody": "Le script lit le matériel hôte avant d'appliquer les paramètres. Log2RAM est uniquement installé sur les disques racine SSD / NVMe par défaut (il invite si la détection indique le contraire). La taille du disque ramique Log2RAM est sélectionnée à partir du RAM total (<code>≤ 8 GB → 128M</code>, <code>≤ 16 GB → 256M</code>, <code>'>' 16 GB → 512M</code>). Les limites journalisées sont adaptées à la taille du disque ram lorsque Log2RAM est actif, pour éviter de le remplir.",
+  "hardwareBody": "Le script lit le matériel hôte avant d'appliquer les paramètres. Log2RAM est installé uniquement sur SSD / NVMe disques racine par défaut (il vous demande si la détection indique le contraire). La taille du disque virtuel Log2RAM est sélectionnée dans le total RAM (<code>≤ 8 GB → 128M</code>, <code>≤ 16 GB → 256M</code>, <code>'>' 16 GB → 512M</code>). Le journald les limites sont adaptées à la taille du disque virtuel lorsque Log2RAM est actif, pour éviter de le remplir.",
   "upgrade": {
     "heading": "Système de mise à jour et de mise à niveau",
     "intro": "La première étape du paquet automatisé est la mise à niveau Proxmox. Le guide de mise à niveau propre à Proxmox pour un hôte en cours d'exécution (dans la même version majeure) est à exécuter:",

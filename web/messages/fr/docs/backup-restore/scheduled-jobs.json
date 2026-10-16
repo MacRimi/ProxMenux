@@ -121,7 +121,7 @@
       },
       {
         "action": "Voir le journal",
-        "detail": "Streams <code>/var/log/proxmenux/backup-jobs/JOB_ID-YYYYMMDD_HHMMSS.log</code> — un fichier journal par exécution. Le coureur émet également une ligne d'état compacte à journalisé sous le service systemd."
+        "detail": "Streams <code>/var/log/proxmenux/backup-jobs/JOB_ID-YYYYMMDD_HHMMSS.log</code> : un fichier journal par exécution. Le programme d'exécution émet également une ligne d'état compacte à journald sous le service systemd."
       }
     ]
   },

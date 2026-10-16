@@ -90,7 +90,7 @@
       "Choisissez le disque.",
       "Choisir « Utiliser le système de fichiers existant ».",
       "ID de stockage, chemin de montage, préréglage de type contenu.",
-      "ProxMenux fait <strong>not</strong> toucher les données: il crée le point de montage, monte le disque, ajoute une entrée UUID à <code>/etc/fstab</code>, et l'enregistre comme un stockage Proxmox <code>dir</code>."
+      "ProxMenux ne <strong>pas</strong> touche aux données : il crée le point de montage, monte le disque, ajoute une entrée UUID à <code>/etc/fstab</code> et l'enregistre en tant que stockage Proxmox <code>dir</code>."
     ],
     "warnTitle": "Le chemin de réutilisation ne gère pas ZFS pools",
     "warnBody": "Si le disque contient déjà un pool ZFS, le chemin <em>reuse</em> essaie ici de le monter en tant que système de fichiers régulier — qui échoue. Pour importer un pool ZFS existant, utilisez <code>zpool import &lt;name&gt;</code> sur la ligne de commande, puis enregistrez-le manuellement avec <code>pvesm add zfspool</code>."
@@ -137,7 +137,7 @@
   },
   "remove": {
     "heading": "Supprimer le stockage du disque",
-    "body": "Déregistre le stockage de Proxmox (<code>pvesm remove</code>) et propose de nettoyer l'entrée correspondante dans <code>/etc/fstab</code>. Pour les pools ZFS le script fait <strong>not</strong> détruire automatiquement le pool — c'est une étape séparée <code>zpool destroy &lt;name&gt;</code> que vous faites à la main lorsque vous êtes sûr.",
+    "body": "Désenregistre le stockage de Proxmox (<code>pvesm remove</code>) et propose de nettoyer l'entrée correspondante dans <code>/etc/fstab</code>. Pour ZFS pools, le script <strong>ne détruit pas</strong> automatiquement le pool — il s'agit d'une étape <code>zpool destroy &lt;name&gt;</code> distincte que vous effectuez manuellement lorsque vous êtes sûr.",
     "warnTitle": "Données et dépendances existantes VM",
     "warnBody": "La suppression du stockage ne touche pas le système de fichiers ou le pool — les données restent sur le disque. Mais VMs / CTs qui font référence à ce stockage par ID échouera à démarrer après la suppression. Déplacez ces disques VM vers un autre stockage (ou prenez une sauvegarde) avant de les supprimer."
   },
