@@ -1,0 +1,220 @@
+{
+  "meta": {
+    "title": "Creazione di backup — flusso di backup interattivo | ProxMenux",
+    "description": "Il flusso di backup interattivo in ProxMenux. Due punti di ingresso (menu script TUI e Monitor Web UI), tre destinazioni, due modalità profilo, un passo di staging e una finestra di dialogo di conferma. Documenta il matrix a sei opzioni, i profili predefiniti e personalizzati, e ciò che l'utente vede tra la selezione di un backup e l'atterraggio dell'archivio sulla destinazione.",
+    "ogTitle": "ProxMenux Backup — creazione di backup",
+    "ogDescription": "Il flusso di backup interattivo con tre destinazioni, due profili e una fase di staging comune.",
+    "twitterTitle": "Creazione di backup | ProxMenux",
+    "twitterDescription": "Flusso di backup interattivo con tre destinazioni e due modalità di profilo."
+  },
+  "header": {
+    "title": "Creazione di backup",
+    "description": "Il flusso di backup interattivo: scegliere una destinazione e un profilo, rivedere il sommario di conferma, guardare la terra di archivio. Due punti di ingresso condividono lo stesso backend e producono archivi identici.",
+    "section": "Backup e ripristino"
+  },
+  "intro": {
+    "title": "Due punti di ingresso, funzionalità identiche",
+    "body": "Gli script TUI e il monitor Web UI espongono <strong>esattamente la stessa funzionalità</strong>. Ogni backup — manuale o programmato — passa attraverso la stessa scelta matrix (tre destinazioni × due profili) e invoca la stessa funzione backend per cella (<code>_bk_pbs</code>, <code>_bk_borg</code> o <code>_bk_local</code>). Gli archivi prodotti da entrambi i punti di entrata sono indistinguibili. Quale da usare è una questione di preferenza: il TUI è compatibile con SSH e scriptable; il Monitor offre punti e click e vive accanto alla notifica e alla coda di log."
+  },
+  "entryPoints": {
+    "heading": "I due punti di ingresso",
+    "rows": [
+      {
+        "entry": "ProxMenux Scripts (TUI)",
+        "path": "menu → Utilities → Host Config Backup",
+        "detail": "Flusso basato sul dialogo, SSH-friendly. Il menu principale presenta le sei opzioni direttamente. Utilizza <code>backup_menu</code> in <code>backup_host.sh</code>."
+      },
+      {
+        "entry": "ProxMenux Monitor (Internet UI)",
+        "path": "Backups tab → Create backup",
+        "detail": "Flusso in stile mago. Stesse sei opzioni presentate come una forma a due passi (destinazione → profilo). Le stesse funzioni di backend sono invocate sopra il Flask API."
+      }
+    ]
+  },
+  "modes": {
+    "heading": "Manuale vs backup programmati",
+    "body": "I backup possono essere prodotti in due modi: <strong>manual</strong> (il flusso interattivo di questa pagina documenti - l'utente sceglie una destinazione e un profilo da un menu e guarda la terra di archivio) o <strong>scheduled</strong> (un lavoro non assistito che funziona su un timer in stile cron e applica la ritenzione configurata sul lavoro). Entrambe le modalità supportano le stesse tre destinazioni e gli stessi due profili, ed entrambe sono disponibili da entrambi i punti di ingresso — il menu Script TUI e la scheda Monitor Backups. I lavori programmati utilizzano le stesse funzioni backend del flusso manuale attraverso <code>run_scheduled_backup.sh</code>; gli archivi prodotti sono indistinguibili.",
+    "seeAlso": "La pagina dei lavori programmati copre il flusso completo, incluso come creare un lavoro, collegarlo a un timer PVE vzdump esistente e configurare i valori di ritenzione.",
+    "monitorAlt": "Scheda di backup ProxMenux Monitor che mostra la Nuova finestra di dialogo di backup programmata con i campi di destinazione, profilo, pianificazione e ritenzione.",
+    "monitorCaption": "Backup programmato — ProxMenux Monitor. La stessa finestra di dialogo in stile mago che crea un backup manuale trasporta i campi di pianificazione e di conservazione in basso per il percorso non assistito."
+  },
+  "matrix": {
+    "heading": "Il matrix a sei opzioni",
+    "intro": "La scelta determina sia quale backend corre e quale strategia di selezione del percorso viene applicata. Tracciare le pagine specifiche di destinazione per i dettagli di configurazione di ogni cella.",
+    "rows": [
+      {
+        "combo": "1",
+        "destination": "PBS",
+        "profile": "Predefinito",
+        "action": "Carica il profilo predefinito e gli extra persistenti su un repository PBS configurato."
+      },
+      {
+        "combo": "2",
+        "destination": "Borg",
+        "profile": "Predefinito",
+        "action": "Crea un archivio con il profilo predefinito più extra persistenti nel repository Borg selezionato."
+      },
+      {
+        "combo": "3",
+        "destination": "Locale",
+        "profile": "Predefinito",
+        "action": "Scrive un archivio <code>.tar.zst</code> con il profilo predefinito più extra persistenti al target locale configurato."
+      },
+      {
+        "combo": "4",
+        "destination": "PBS",
+        "profile": "Personale",
+        "action": "Apre il percorso picker prima del caricamento PBS; l'utente segna i percorsi e può aggiungere quelli nuovi."
+      },
+      {
+        "combo": "5",
+        "destination": "Borg",
+        "profile": "Personale",
+        "action": "Apre il raccoglitore di percorso prima che l'archivio Borg crei."
+      },
+      {
+        "combo": "6",
+        "destination": "Locale",
+        "profile": "Personale",
+        "action": "Apre il percorso picker prima di scrivere il locale <code>.tar.zst</code>."
+      }
+    ]
+  },
+  "profiles": {
+    "heading": "Default vs profilo personalizzato",
+    "defaultTitle": "Profilo predefinito",
+    "defaultBody": "Il profilo predefinito è l'elenco curato da <code>hb_default_profile_paths</code> (documentato in <em>Come funziona </em> sotto <em>Path categorie</em>) più ogni voce nel file extra persistente <code>/usr/local/share/proxmenux/backup-extra-paths.txt</code>. L'utente conferma le opzioni di destinazione e crittografia e il backup procede senza ulteriori percorsi di selezione.",
+    "customTitle": "Profilo personalizzato",
+    "customBody": "Il profilo personalizzato apre una lista di controllo che mostra ogni percorso nel profilo predefinito (non controllato) e ogni extra persistente (pre-controllato, prefisso con <code>[+]</code>). L'utente seleziona il set per questa esecuzione e può premere <em>Add percorso personalizzato</em> per aggiungere un nuovo percorso assoluto. Qualsiasi percorso aggiunto in linea è persistito a <code>backup-extra-paths.txt</code> così i backup futuri pick up automaticamente senza ri-aggiungerlo. Rimuovere un persistente extra lo sblocca per questa esecuzione, ma non elimina dal file — la cancellazione è un separato <em>Manage percorsi personalizzati</em> azione al di fuori del flusso di backup.",
+    "customPickerAlt": "Elenco di controllo del profilo personalizzato che mostra i percorsi di default-profile (non controllati) e gli extra persistenti (pre-controllati con un prefisso [+]), più pulsanti per aggiungere un nuovo percorso o confermare la selezione.",
+    "customPickerCaption": "Profilo personalizzato — il picker percorso. I percorsi di profilo predefinito non sono controllati; gli extra persistenti appaiono pre-controllati con un prefisso [+]. L'utente seleziona il set per questa esecuzione.",
+    "manageCustomAlt": "Gestisci il menu di percorsi personalizzati che mostra l'elenco di extra e opzioni persistenti per aggiungere, rimuovere o modificare.",
+    "manageCustomCaption": "Gestire percorsi personalizzati — il punto di ingresso dove vengono aggiunti o rimossi gli extra persistenti. Ogni percorso elencato qui è incluso automaticamente nei backup Default-mode senza dover aprire il raccoglitore personalizzato."
+  },
+  "commonPipeline": {
+    "heading": "Cosa funziona indipendentemente dalla destinazione",
+    "intro": "Dopo che il profilo viene risolto, ogni backend gestisce lo stesso canale di staging prima di diverging nel proprio percorso di upload. <code>hb_prepare_staging</code> assembla l'albero di archivio in <code>/tmp/proxmenux-DESTINATION-stage.XXXXXX</code> e popola ciascuno dei tre carichi di pagamento.",
+    "steps": [
+      {
+        "step": "1",
+        "name": "radiante montaggio",
+        "detail": "Corse <code>rsync -a</code> per ogni percorso selezionato <code>staging_root/rootfs/</code>. Il database PMxcfs al <code>/var/lib/pve-cluster/config.db</code> viene catturato separatamente tramite <code>sqlite3 .backup</code> produrre un'istantanea coerente senza fermare il cluster, e <code>.db-wal</code> / <code>.db-shm</code> sidecars sono esclusi dal rsyncQuando <code>sqlite3</code> non è disponibile <code>config.db.raw-fallback</code> è caduto invece, e il ripristino lo promuove sull'importazione. I subpati Volatili (storia dei bastoni, cache, cestino) sono esclusi da <code>/root/</code>. I percorsi assenti dalla fonte sono registrati in <code>metadata/missing_paths.txt</code> senza fermare il backup."
+      },
+      {
+        "step": "2",
+        "name": "Generazione manifesto",
+        "detail": "<code>build_manifest.sh</code> orchestra i sei collezionisti e scrive <code>manifest.json</code> in cima alla messa in scena. In caso di guasto del collettore, la sezione interessata torna a un default vuoto documentato; il manifesto è ancora valido."
+      },
+      {
+        "step": "3",
+        "name": "inventario del pacchetto",
+        "detail": "<code>apt-mark showmanual</code> viene catturato verbatim in <code>metadata/packages.manual.list</code>. Lo stato dei componenti è già all'interno dei rootf ripristinati (<code>components_status.json</code>) perché <code>/usr/local/share/proxmenux/</code> fa parte del profilo predefinito."
+      },
+      {
+        "step": "4",
+        "name": "Correre le informazioni",
+        "detail": "<code>metadata/run_info.env</code> registra l'identità di esecuzione di backup — hostname, timestamp, versione del kernel — utilizzata dal controllo di compatibilità del ripristino per determinare la direzione del cross-kernel."
+      },
+      {
+        "step": "5",
+        "name": "Notifica (start)",
+        "detail": "<code>hb_notify_lifecycle \"start\"</code> incendi. Se le notifiche sono configurate nel Monitor, un'interfaccia utente <em>Il backup host è iniziato</em> l'evento è emesso. Se non sono configurati i canali."
+      }
+    ]
+  },
+  "included": {
+    "heading": "Cosa entra e cosa rimane fuori",
+    "intro": "Ogni percorso nel profilo risolto (predefinito + extra persistenti + selezione personalizzata) viene copiato con <code>rsync -aAXH --numeric-ids</code>. Un elenco di esclusione condiviso si applica a ogni percorso, e due directory portano ulteriori esclusioni specifiche del percorso.",
+    "globalTitle": "Esclusioni globali (applicate ad ogni percorso)",
+    "globalItems": [
+      "<code>images/</code> — dump immagine.",
+      "<code>dump/</code> — uscite vzdump.",
+      "<code>tmp/</code> — file temporanei.",
+      "<code>*.log</code> — file di registro."
+    ],
+    "rootTitle": "<code>/root/</code> esclusioni",
+    "rootBody": "<code>/root/</code> fa parte del profilo predefinito in modo da script utente e config land nell'archivio. I subpati volatili sono calati:",
+    "rootItems": [
+      "<code>.bash_history</code>",
+      "<code>.cache/</code>",
+      "<code>tmp/</code>",
+      "<code>.local/share/Trash/</code>"
+    ],
+    "proxmenuxTitle": "<code>/usr/local/share/proxmenux/</code> esclusioni",
+    "proxmenuxBody": "Questa directory spedisce solo stato utente — <code>components_status.json</code>, preferenze, cache post-installazione. Codice che la destinazione avrà già dalla propria installazione ProxMenux è escluso quindi un ripristino non sovrascrive i binari attuali dell'obiettivo con quelli più vecchi:",
+    "proxmenuxItems": [
+      "<code>restore-pending/</code>, <code>scripts/</code>, <code>web/</code>",
+      "<code>monitor-app/</code>, <code>monitor-app.*/</code>, <code>AppImage/</code>",
+      "<code>images/</code>, <code>json/</code>",
+      "<code>utils.sh</code>, <code>helpers_cache.json</code>",
+      "<code>ProxMenux-Monitor.AppImage*</code>, <code>install_proxmenux*.sh</code>"
+    ],
+    "notInProfileTitle": "Percorsi fuori dal profilo",
+    "notInProfileBody": "Qualsiasi cosa non elencata in <code>hb_default_profile_paths</code> e non aggiunta come un extra personalizzato o persistente non fa parte del backup. Esempi notevoli:",
+    "notInProfileItems": [
+      "<strong>VM e dischi LXC</strong> — gestiti da <code>vzdump</code>, non da questa funzione. I file di configurazione degli ospiti sotto <code>/etc/pve/nodes/*/qemu-server/*.conf</code> e <code>lxc/*.conf</code> vengono catturati (vivono sotto <code>/etc/pve</code>) in modo che il ripristino riproduca l'inventario; i dischi stessi vengono riattaccati da un backup vzdump/PBS esistente.",
+      "<strong><code>/boot</code> e <code>/boot/efi</code></strong> — binari del kernel, initramfs e la partizione UEFI ESP sono rigenerati dal proprio <code>update-initramfs</code>, <code>update-grub</code> o <code>proxmox-boot-tool refresh</code> dopo il ripristino. Il bootloader non è mai copiato verbatim.",
+      "<strong>Kernel e sistemi di file system runtime di sistema</strong> — <code>/proc</code>, <code>/sys</code>, <code>/dev</code> e <code>/run</code> sono pseudo-filesystem prodotti dal kernel e udev; non sono perseverati ovunque.",
+      "I binari <strong>Package sotto <code>/usr/bin</code>, <code>/usr/lib</code>, <code>/lib</code>, <code>/sbin</code></strong> — reinstallati dall'ATP dell'obiettivo da <code>packages.manual.list</code>.",
+      "<strong><code>/var/log/</code>, <code>/var/tmp/</code>, <code>/var/cache/</code></strong> — stato runtime per host, non restaurato.",
+      "<strong><code>/home/USER</code></strong> — non nel profilo predefinito. Aggiungilo come un percorso personalizzato quando un sistema porta directory di casa degli utenti che devono sopravvivere a un ripristino."
+    ],
+    "customPathsTitle": "Come vengono gestiti i percorsi personalizzati",
+    "customPathsBody": "Un percorso personalizzato aggiunto in linea in modalità personalizzata o persistito in <code>backup-extra-paths.txt</code> passa attraverso la stessa pipeline <code>rsync</code> come percorsi di default-profile. Si applicano esclusioni globali. Se il percorso personalizzato avviene sotto <code>/root/</code> o <code>/usr/local/share/proxmenux/</code>, si applicano ancora le esclusioni specifiche del percorso. Ogni percorso archiviato — predefinito o personalizzato — viene registrato in <code>metadata/paths_archived.txt</code>. I percorsi che non esistono sulla sorgente sono registrati in <code>metadata/missing_paths.txt</code> senza interrompere il backup."
+  },
+  "archiveStructure": {
+    "heading": "Struttura dell'archivio",
+    "intro": "La directory di staging prodotta da ogni backend segue lo stesso layout indipendentemente dalla destinazione. Il tarball, PBS <code>.pxar</code> o Borg archivio memorizza questo albero verbatim.",
+    "tree": "backup-[timestamp]/\n├── manifest.json                  # structured host state (kernel_params, hardware, storage, guests, components, source_host)\n├── metadata/\n│   ├── packages.manual.list       # output of apt-mark showmanual\n│   ├── run_info.env               # hostname, timestamp, kernel version, pmxcfs method\n│   ├── paths_archived.txt         # exact list of paths that reached rootfs/\n│   └── missing_paths.txt          # paths from the profile absent on source\n└── rootfs/\n    ├── etc/                       # /etc/pve, /etc/network, /etc/systemd/network, /etc/ssh, /etc/apt, ...\n    ├── root/                      # /root without volatile subpaths\n    ├── usr/local/                 # /usr/local/bin, /usr/local/sbin, /usr/local/share/proxmenux (state only)\n    └── var/                       # /var/lib/pve-cluster (config.db via sqlite3 .backup), /var/spool/cron/crontabs"
+  },
+  "confirmation": {
+    "heading": "Riepilogo conferma",
+    "body": "Prima che il backend scriva qualcosa alla destinazione, ProxMenux mostra una finestra di dialogo sommaria con la destinazione, l'ID di backup o il nome dell'archivio, lo stato di crittografia e l'elenco dei percorsi da copiare. Cancellando qui interrompe il backup in modo pulito — la directory di staging viene rimossa dal gancio <code>trap</code> impostato sulla funzione backend e nessun dato parziale raggiunge la destinazione."
+  },
+  "writing": {
+    "heading": "Scrivere alla destinazione",
+    "intro": "Una volta che l'utente conferma, ogni backend esegue il proprio passo di scrittura. I meccanici sono coperti nelle pagine di destinazione; la superficie condivisa è il registro, il sidecar e la notifica di completamento.",
+    "rows": [
+      {
+        "topic": "File di registro",
+        "detail": "Ogni backend scrive il suo output completo a <code>/tmp/proxmenux-DESTINATION-backup-YYYYMMDD_HHMMSS.log</code> e, in caso di guasto, offre di aprirlo in una finestra di dialogo pergamenabile. Il percorso di log è stampato nel sommario di completamento solo quando il file ha contenuto."
+      },
+      {
+        "topic": "Sidecar (solo locale)",
+        "detail": "<code>hb_write_archive_sidecar</code> scende un <code>*.proxmenux.json</code> accanto all'archivio locale, quindi il Monitor lo identifica come backup host ProxMenux anche dopo mosse o rinominazioni."
+      },
+      {
+        "topic": "Notifica (completa/faccia)",
+        "detail": "<code>hb_notify_lifecycle \"complete\"</code> o <code>\"fail\"</code> incendi con durata, dimensione dell'archivio e — per guasti — l'ultima linea di errore-looking dal registro."
+      }
+    ]
+  },
+  "finishedScreens": {
+    "heading": "Che aspetto ha un backup finito",
+    "intro": "Lo stesso evento di completamento è superficieto da entrambi i punti di ingresso. Il TUI scrive un blocco sommario al terminale; la scheda Monitor's Backups mostra l'esecuzione nella lista di archivio con dimensioni, durata e tassi di stato.",
+    "scriptsAlt": "ProxMenux Scripts TUI che mostra un backup host finito — destinazione, ID di backup, percorso snapshot, dimensione dei dati, durata e stato di crittografia.",
+    "scriptsCaption": "Backup finito — ProxMenux Scripts (TUI). Il blocco di completamento stampa la destinazione, l'ID di backup, il nome dell'istantanea o dell'archivio risultante, la dimensione dei dati, la durata e lo stato di crittografia.",
+    "monitorAlt": "Scheda di backup ProxMenux Monitor che mostra una voce di backup host finita con dimensioni, durata, tasso di metodo e indicatore di crittografia.",
+    "monitorCaption": "Backup finito — scheda di backup ProxMenux Monitor. Il nuovo backup appare nell'elenco di archivio con il badge metodo di destinazione, dimensione, durata e - quando applicabile - l'indicatore di blocco di crittografia."
+  },
+  "whereNext": {
+    "heading": "Dove andare dopo",
+    "items": [
+      {
+        "label": "Destinazioni",
+        "href": "/docs/backup-restore/destinations",
+        "tail": "— dettagli di configurazione per Local, PBS e Borg."
+      },
+      {
+        "label": "Lavori programmati",
+        "href": "/docs/backup-restore/scheduled-jobs",
+        "tail": "— eseguire lo stesso backup incustodito su un programma invece di interattivamente."
+      },
+      {
+        "label": "Ripristino di",
+        "href": "/docs/backup-restore/restoring",
+        "tail": "— il flusso che consuma ciò che questa pagina produce."
+      }
+    ]
+  }
+}

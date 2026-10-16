@@ -1,0 +1,58 @@
+{
+  "meta": {
+    "title": "Repositori esterni | Documentazione ProxMenux",
+    "description": "ProxMenux si integra con repository di script esterni selezionati (community-scripts, ZimaOS) come alternative in alcune sezioni del menu. Ogni script esterno è chiaramente etichettato con la sua fonte; i rapporti di bug vanno al manutentore originale.",
+    "ogTitle": "Repositori esterni | Documentazione ProxMenux",
+    "ogDescription": "repository di script esterni integrati in ProxMenux come opzioni alternative nei menu."
+  },
+  "header": {
+    "title": "Repositori esterni",
+    "description": "ProxMenux si integra con repository di script esterni selezionati come opzioni alternative in alcune sezioni del menu. Questi script provengono da fonti di terze parti attendibili e sono chiaramente etichettati con la loro origine quando mostrato nel menu.",
+    "section": "Repositori esterni"
+  },
+  "practice": {
+    "title": "Ciò che significa in pratica",
+    "body": "Quando un'opzione di menu è supportata da uno script esterno (al di là del codice di ProxMenux), il menu dice esplicitamente dove viene e da quale repository carica. ProxMenux agisce come un lanciatore — non modifica gli script esterni. Problemi con ciò che uno script esterno appartiene al manutentore del repository, non a ProxMenux."
+  },
+  "integrated": {
+    "heading": "Attualmente integrato",
+    "usedInLabel": "Usato in:",
+    "items": [
+      {
+        "name": "community-scripts / ProxmoxVE",
+        "url": "https://community-scripts.github.io/ProxmoxVE/",
+        "description": "Successore spirituale delle sceneggiature di tteck. Grande catalogo di script one-shot per distribuire LXCs (Home Assistant, Plex, Frigate, ...), VM, addons e PVE tweaks.",
+        "usedIn": "Helper Scripts launcher, Network (NIC offloading fix per Intel e1000e)"
+      }
+    ]
+  },
+  "attribution": {
+    "heading": "Attribuzione e riconoscimento",
+    "items": [
+      "Il credito viene sempre dato agli autori originali nel menu e nella pagina di documentazione che avvolge lo script.",
+      "Viene visualizzato un link al repository sorgente — sia prima di eseguire lo script che nella pagina dei documenti corrispondenti.",
+      "Gli utenti sono incoraggiati a sostenere gli sviluppatori di questi progetti esterni (dare a ⭐, sponsor, report di bug di qualità dei file)."
+    ]
+  },
+  "report": {
+    "title": "Dove segnalare problemi con gli script esterni",
+    "body": "Se uno script di uno di questi repository esterni non funziona come previsto, <strong> lo riferisce direttamente a quel repository</strong> — non a ProxMenux. ProxMenux scarica e gestisce il verbatim dello script; non modifica la sorgente. Il manutentore originale è la persona giusta per triage e risolverlo. I problemi ProxMenux sono per problemi con il lanciatore stesso o con come ProxMenux integra lo script esterno."
+  },
+  "suggest": {
+    "heading": "Suggerimento di nuovi repository esterni",
+    "intro": "Trovato uno script o un repository che si adatta bene a un menu ProxMenux? Suggeriscilo via:",
+    "discussionTitle": "💬 Aprire una discussione",
+    "discussionBody": "Meglio per le idee — ottiene l'ingresso della comunità prima di diventare una richiesta di funzionalità.",
+    "issueTitle": "🐛 Aprire un problema",
+    "issueBody": "Per specifiche richieste di funzionalità con una chiara portata."
+  },
+  "candidate": {
+    "title": "Cosa rende un buon candidato di integrazione",
+    "items": [
+      "Open source con un manutentore attivo.",
+      "Idemponte / sicuro per eseguire più di una volta.",
+      "Non modifica silenziosamente Proxmox core config.",
+      "Valuta un problema ProxMenux non copre già (evita la duplicazione)."
+    ]
+  }
+}

@@ -1,0 +1,113 @@
+{
+  "meta": {
+    "title": "destinazione Proxmox Backup Server — repository, crittografia, ripristino | ProxMenux",
+    "description": "La destinazione PBS scrive backup host ProxMenux come backup PBS. Documenti repository auto-scoperta da /etc/pve/storage.cfg, configurazione manuale PBS, il comando .pxar upload, il modello di crittografia keyfile lato client con escrow passphrase-wrapped opzionale, e il recupero multi-source keyfile su un host fresco.",
+    "ogTitle": "ProxMenux Backup — destinazione Proxmox Backup Server",
+    "ogDescription": "Come ProxMenux scrive i backup host a Proxmox Backup Server con la crittografia del keyfile lato client e l'escrow di recupero.",
+    "twitterTitle": "Destinazione di backup PBS | ProxMenux",
+    "twitterDescription": "destinazione Proxmox Backup Server con crittografia keyfile e salvataggio passphrase escrow."
+  },
+  "header": {
+    "title": "Proxmox Backup Server",
+    "description": "La destinazione PBS carica la radice di staging come un singolo backup .pxar su un datastore Proxmox Backup Server, con la crittografia opzionale del keyfile lato client e un escrow opzionale passphrase-wrapped keyfile caricato accanto a ogni backup.",
+    "section": "Backup e ripristino"
+  },
+  "recommendedBadge": "Destinazione consigliata",
+  "aboutPbs": {
+    "heading": "Ciò che Proxmox Backup Server è",
+    "body": "Proxmox Backup Server (PBS) è il prodotto server di backup di Proxmox, sviluppato e mantenuto dallo stesso team che gli autori Proxmox VE. È un server di backup dedicato progettato per ricevere i backup da host Proxmox VE (VMs, LXCs e - via <code>proxmox-backup-client</code> - directory host arbitrari) con deduplicazione basata su blocchi, crittografia lato client e politiche di conservazione applicate lato server. ProxMenux utilizza PBS come una delle tre destinazioni per i backup host; ogni meccanismo specifico PBS descritto in questa pagina (gruppi di backup, archivi <code>.pxar</code>, <code>--backup-id</code>, crittografia keyfile) è un comportamento standard PBS."
+  },
+  "intro": {
+    "title": "Un backup per run, chunk-level dedup",
+    "body": "A PBS backup produce una singola voce di backup nel datastore, raggruppata sotto l'ID di backup <code>host/hostcfg-HOSTNAME/BACKUP-TIME</code>. Il payload è un <code>.pxar</code> archivio contenente lo stesso layout a tre blocchi descritto in <em>Come funziona</em>. PBS deduplica a livello chunk attraverso tutti i backup nel datastore, così i backup successivi dello stesso trasferimento host e memorizzare solo i pezzi che hanno cambiato. La conservazione è applicata da ProxMenux per i posti di lavoro programmati — <code>run_scheduled_backup.sh</code> piste da corsa <code>proxmox-backup-client prune</code> con <code>--keep-last</code> / <code>--keep-daily</code> / <code>--keep-weekly</code> dopo ogni esecuzione di successo utilizzando i valori configurati sul lavoro."
+  },
+  "repoSelection": {
+    "heading": "Selezione dei repository",
+    "intro": "ProxMenux scopre i repository PBS da due fonti su ogni backup. L'operatore sceglie uno da un menu unificato; la scelta determina <code>HB_PBS_REPOSITORY</code>, <code>HB_PBS_SECRET</code> e <code>HB_PBS_FINGERPRINT</code> per l'esecuzione.",
+    "sourceRows": [
+      {
+        "source": "storage.cfg di Proxmox (rilevamento automatico)",
+        "path": "/etc/pve/storage.cfg + /etc/pve/priv/storage/NAME.pw",
+        "content": "Ogni strofa <code>pbs:</code> nella configurazione di storage di Proxmox viene rilevata automaticamente. Server, datastore, nome utente e impronta digitale provengono dalla stanza. La password viene letta dalla directory delle credenziali di Proxmox. Nessun rientro necessario sul lato ProxMenux — il repository è disponibile non appena è configurato in Proxmox."
+      },
+      {
+        "source": "Configurazione manuale ProxMenux",
+        "path": "/usr/local/share/proxmenux/pbs-manual-configs.txt + pbs-pass-NAME.txt + pbs-fingerprint-NAME.txt",
+        "content": "Aggiunto da <em>Configure destinazioni di backup → PBS destinazioni → Aggiungi PBS</em>. Prompts per un nome, nome utente (<code>root@pam</code> o <code>user@pbs!token</code>), host o IP, datastore e password. I re-prompt password su input vuoto — un salvataggio vuoto altrimenti persisterebbe silenziosamente e ogni backup successivo fallirebbe con un errore di autenticazione opaco. Questo percorso viene utilizzato quando il target PBS non è registrato come storage Proxmox."
+      }
+    ],
+    "menuTitle": "Menu di selezione",
+    "menuBody": "Entrambe le fonti sono mostrate in un unico menu, ciascuna riga contrassegnata con la sua origine (<code>[proxmox]</code> o <code>[manual]</code>). Le voci di cui la password non poteva essere risolta sono contrassegnate con un avviso <code>⚠ no password</code> — selezionando uno attiva un rientro password prima dell'avvio del backup. L'impronta digitale viene passata a <code>proxmox-backup-client</code> tramite la variabile di ambiente <code>PBS_FINGERPRINT</code>; quando assente, il client chiede all'operatore di accettare il certificato del server in modo interattivo sul primo backup."
+  },
+  "backupCommand": {
+    "heading": "Il comando di backup",
+    "intro": "Il caricamento è una singola invocazione di <code>proxmox-backup-client backup</code>. ProxMenux lo esegue all'interno di un wrapper <code>env</code> quindi le credenziali non appaiono mai nell'elenco degli argomenti di processo.",
+    "cmd": "env \\\n    PBS_PASSWORD=\"$HB_PBS_SECRET\" \\\n    PBS_ENCRYPTION_PASSWORD=\"$HB_PBS_ENC_PASS\" \\\n    PBS_FINGERPRINT=\"$HB_PBS_FINGERPRINT\" \\\n    proxmox-backup-client backup \\\n        hostcfg.pxar:$staging_root \\\n        --repository USER@REALM@HOST:DATASTORE \\\n        --backup-type host \\\n        --backup-id  hostcfg-HOSTNAME \\\n        --backup-time BACKUP-EPOCH \\\n        [--keyfile /usr/local/share/proxmenux/pbs-key.conf]",
+    "backupIdTitle": "Nome ID di backup",
+    "backupIdBody": "L'ID di backup predefinito è <code>hostcfg-HOSTNAME</code>. L'operatore viene chiesto di confermarlo o modificarlo prima dell'upload; tutti i caratteri al di fuori di <code>[A-Za-z0-9_-]</code> vengono rimossi e i trattini di trailing sono tagliati. Riutilizzare lo stesso ID attraverso le piste è intenzionale — PBS tratta l'ID come un <em>group</em>, e ogni backup successivo appare come un nuovo backup all'interno di quel gruppo, condividendo dedup con le operazioni precedenti.",
+    "pxarTitle": "Perché la fonte è la radice di staging completa",
+    "pxarBody": "La sorgente <code>.pxar</code> è l'intero <code>staging_root</code> — <code>rootfs/</code>, <code>metadata/</code> e <code>manifest.json</code> insieme. Le versioni precedenti hanno superato <code>$staging_root/rootfs</code> come fonte; che ha lasciato <code>metadata/</code> fuori dall'archivio e il controllo di compatibilità del ripristino non aveva nulla da leggere, degradando a avvisi cross-host anche su ristabilimenti dello stesso host. I vecchi backup creati con la fonte rootfs-solo ripristinano ancora correttamente tramite il ramo case-<code>_rs_check_layout</code> di 3, che avvolge un albero <code>etc/var/root/usr</code> piatto di nuovo in una gerarchia <code>rootfs/</code>."
+  },
+  "encryption": {
+    "heading": "Crittografia lato cliente",
+    "glossaryHint": "Questa sezione utilizza i termini <em>keyfile</em>, <em>passphrase</em> e <em>recovery wrap</em>. Il <glosarioLink>glossary</glosarioLink> sintetizza le differenze in una frase a termine.",
+    "intro": "La crittografia del keyfile lato client PBS crittografa i blocchi sull'host sorgente prima del caricamento. Nella crittografia ProxMenux è facoltativa; quando abilitata, se caricare anche una copia passphrase-wrapped del keyfile a PBS come escrow di recupero è un'esplicita sì / nessuna scelta che l'operatore fa al momento della configurazione (e può rivisitare più tardi dal Monitor). Il keyfile stesso vive sempre in un percorso canonico sull'host — <code>/usr/local/share/proxmenux/pbs-key.conf</code> — ed è riutilizzato silenziosamente da ogni backup crittografato successivo.",
+    "keyfileTitle": "Impostazione del keyfile",
+    "keyfileBody": "Il prompt di crittografia viene eseguito al primo backup crittografato sull'host. Passo uno chiede se crittografare il backup: <em>No</em> continua senza crittografia; <em>Yes</em> si sposta al secondo passo. Il secondo passo dipende dal fatto che un keyfile sia già installato a <code>/usr/local/share/proxmenux/pbs-key.conf</code>. Se è così, il keyfile installato viene riutilizzato silenziosamente e i proventi di backup — i backup successivi non ri-chiedono mai. Se non lo è, un menu a due opzioni chiede come impostare uno. <em>Generare un nuovo keyfile</em> funziona <code>proxmox-backup-client key create --kdf none</code>. <em>Utilizza un keyfile esistente</em> auto-rileva un keyfile gestito da PVE: quando il repository PBS selezionato è registrato in Proxmox con una chiave di crittografia a <code>/etc/pve/priv/storage/&lt;NAME&gt;.enc</code>, quel file viene copiato sul percorso canonico ProxMenux silenziosamente e il flusso continua. Quando nessun keyfile gestito da PVE corrisponde al repository, un prompt di input per il percorso assoluto in cui l'operatore ha già inserito il keyfile su questo host. In entrambi i casi, il file atterra al percorso canonico con <code>chmod 600</code>.",
+    "modesTitle": "Per-host o keyfile condiviso",
+    "modesIntro": "Entrambi i modelli operativi sono supportati e non sono applicati - la scelta appartiene all'operatore basato su come la loro flotta è organizzata.",
+    "modesPerHostTitle": "File di chiave per host (predefinito)",
+    "modesPerHostBody": "Ogni host genera un proprio keyfile la prima volta che consente la crittografia PBS. L'isolamento è il massimo: compromettere il keyfile di un host non espone i backup di qualsiasi altro. Consigliato per flotte di produzione e per ambienti in cui gli host hanno diversi proprietari o confini di conformità.",
+    "modesSharedTitle": "Keyfile condiviso (importa su ogni host)",
+    "modesSharedBody": "Un master keyfile generato una volta e installato su ogni host tramite il <em>Usa un'opzione keyfile</em> esistente. La gestione è più semplice: un singolo segreto per salvaguardare, e qualsiasi host può decifrare gli archivi di qualsiasi altro (utile per il consolidamento, le esercitazioni di ripristino cross-host o la verifica centralizzata di backup). Il trade-off è che una perdita del keyfile condiviso espone ogni host contemporaneamente. Raccomandato per homelabs e per flotte dove tutti gli host hanno lo stesso proprietario e il limite di fiducia.",
+    "recoveryTitle": "Chiave di carico a PBS — l'operatore decide",
+    "recoveryBody": "Subito dopo la scelta del keyfile, ProxMenux chiede una sola domanda esplicita — <em>Caricare la chiave PBS?</em> — con due risposte. <strong>Nulla viene caricato su PBS fino a quando l'operatore risponde Sì.</strong> Il valore predefinito è <em>No, mantieni solo locale.</em>: il keyfile rimane solo sul percorso canonico locale, ProxMenux mai tocca PBS con qualsiasi artefatto di recupero, e l'operatore gestisce la copia offsite se stesso (il Monitor's <em>Scarica il keyfile</em> pulsante nel PBS riga di destinazione fornisce uno su richiesta). Scelta <em>Sì, carica</em> sollecitazioni per un passphrase di recupero — due volte, con validazione di corrispondenza — e ProxMenux avvolge il keyfile con quel passphrase usando AES-256-CBC e PBKDF2 (600 000 iterazioni, sale casuale) per produrre <code>pbs-key.recovery.enc</code>. Ogni backup crittografato successivo carica quella busta a PBS come gruppo di backup accoppiato. Né il passphrase né una copia in chiaro del keyfile lasciano mai l'host. La scelta può essere cambiata più tardi dal Monitor in qualsiasi momento — il toggle in linea di escrow in linea PBS riga di destinazione capovolge Sì/No e si applica immediatamente (Avvia caricamento, Stop uploading, o Aggiorna passphrase, corrispondente allo stato corrente).",
+    "blobUploadTitle": "Gruppo di backup abbinato su PBS",
+    "blobUploadBody1": "Quando la modalità escrow è <em>Yes, upload</em>, ProxMenux carica la busta di recupero a PBS dopo ogni backup crittografato come secondo, gruppo di backup abbinato con lo stesso nome del gruppo host ma terminando in <code>-keyrecovery</code>. I due gruppi siedono l'uno accanto all'altro nella lista datastore — uno per i backup host, uno per le buste di recupero. <strong>La busta non lascia mai l'host in plaintext</strong>: la crittografia avviene sull'host stesso con AES-256-CBC e PBKDF2 prima che i byte vadano sul filo (<code>openssl enc -aes-256-cbc -pbkdf2 -iter 600000 -salt</code>). PBS riceve solo la busta già crittografata.",
+    "envelopeSecurityTitle": "Caricare il file keyrecovery a PBS è un rischio di sicurezza?",
+    "envelopeSecurityBody": "Il file keyrecovery è crittografato in transito e a riposo. Il passphrase di recupero non lascia mai l'host: la crittografia avviene localmente prima del caricamento, e PBS vede solo il risultato già crittografato. Un amministratore PBS — o chiunque abbia accesso al datastore — può scaricare il file di keyrecovery, ma senza la passphrase di recupero non può leggere il keyfile all'interno: è un codice opaco. Ricostruire il keyfile richiede entrambi i pezzi contemporaneamente, il file keyrecovery e la passphrase, e solo l'operatore tiene entrambi.",
+    "blobUploadConstraintTitle": "Perché due gruppi invece di un singolo crittografato uno",
+    "blobUploadConstraintBody": "Un'unica invocazione <code>proxmox-backup-client backup</code> crittografa tutti i suoi archivi con lo stesso file di tasti, o nessuno affatto — non c'è in mezzo. Il backup host deve essere crittografato con il keyfile host, ma la busta di recupero non può andare avanti nello stesso upload, perché finirebbe crittografato con il keyfile stesso che contiene: su un host appena reinstallato non ci sarebbe modo di aprirlo (si avrebbe bisogno del keyfile per decifrare il keyfile). Ecco perché i due artefatti vengono caricati in modo indipendente e appaiono come due gruppi separati: il backup host viene crittografato da PBS con il keyfile, e la busta di recupero viene crittografata da ProxMenux con la passphrase prima del caricamento. Due diversi strati di crittografia che proteggono due diversi asset.",
+    "blobUploadImageAlt": "PBS UI che mostra i gruppi di backup hostcfg-HOSTNAME e hostcfg-HOSTNAME-keyrecovery adiacenti nell'elenco dei datastore.",
+    "blobUploadImageCaption": "PBS UI — i gruppi di backup accoppiati. Il gruppo principale contiene i backup host; il gruppo -keyrecovery detiene il keyfile passphrase-wrapped.",
+    "recoverTitle": "Recupero su un host fresco",
+    "recoverBody": "Quando il keyfile locale manca al percorso canonico — su un host appena reinstallato, o dopo una rimozione esplicita — il flusso di ripristino prova tre fonti in ordine e si ferma al primo che produce un keyfile utilizzabile. In primo luogo, quando il repository PBS selezionato ha un corrispondente file di tasti gestito da PVE a <code>/etc/pve/priv/storage/&lt;NAME&gt;.enc</code>, quel file viene copiato in silenzio sul percorso canonico. In secondo luogo, quando un gruppo <code>-keyrecovery</code> è disponibile su PBS, l'istantanea più recente è scaricata e l'operatore è chiesto che il passphrase di recupero decifrarlo. In terzo luogo, quando nessuno dei lavori di cui sopra o l'operatore li declina, un input richiede il percorso assoluto in cui il keyfile vive su questo host e lo copia al percorso canonico. Il Monitor espone lo stesso flusso di importazione in linea nella modalità di backup dei dettagli — un pannello ambra appare in cima al modale quando Ripristino, Scaricare o Visualizza contenuti avrebbe bisogno di un keyfile che non è installato. Quando viene installato un keyfile, ma non corrisponde a quello che ha crittografato il backup, PBS restituisce un errore <code>wrong key — manifest's key XX does not match provided key YY</code>; le stesse tre azioni visualizzano un pannello ambra strutturato con l'impronta digitale manifesta richiesta prominente, in modo che l'operatore possa identificare quale keyfile importare per aprire quel backup specifico.",
+    "monitorManagementTitle": "Gestione del keyfile dal Monitor",
+    "monitorManagementBody": "Il Monitor espone i controlli del keyfile in linea in ogni PBS riga di destinazione della pagina di configurazione di backup. La riga mostra tre azioni: <em>Scarica</em> esporta l'attuale keyfile al browser dell'operatore, <em>Caricamento</em> sostituisce il keyfile installato con uno fornito dall'operatore (il file precedente viene sovrascritto solo dopo che il nuovo si atterra con successo sul percorso canonico), e <em>Cancella</em> rimuove il keyfile dall'host. L'opzione di recupero-escrow è un singolo controllo in linea accanto a quelle azioni: una Yes/No radio per <em>Caricare la chiave PBS?</em>, un campo di passphrase quando Sì è selezionato, e un pulsante di applicazione contestuale che legge <em>Iniziare a caricare</em>, <em>Smettere di caricare</em> o <em>Passphrase di aggiornamento</em> a seconda dello stato attuale. Ogni azione passa attraverso gli stessi endpoint Flask che il guscio TUI utilizza, così l'effetto on-disk e lo stato su PBS sono identici a qualsiasi superficie l'operatore sceglie."
+  },
+  "restoreAccess": {
+    "heading": "Recuperare sul lato del ripristino",
+    "body": "Il flusso di ripristino scopre i backup host ProxMenux su PBS elencando i gruppi di backup sotto il repository configurato e filtrando tramite il modello ID di backup. La scheda Monitor's Backups rende la stessa lista. Selezione di un backup attiva <code>proxmox-backup-client restore</code> con lo stesso repository + password + impronta digitale (e <code>--keyfile</code> quando il backup è stato crittografato), estraendo il <code>.pxar</code> in una directory di staging che <code>_rs_check_layout</code> poi si alimenta alla pipeline di ripristino standard. Per il recupero manuale al di fuori di ProxMenux, lo stesso comando estrae l'archivio a qualsiasi percorso — l'albero risultante può essere ispezionato o alimentato a un ripristino manuale."
+  },
+  "references": {
+    "heading": "Referenze",
+    "intro": "Documentazione ufficiale Proxmox Backup Server per i componenti ProxMenux si basa su.",
+    "items": [
+      {
+        "label": "Documentazione Proxmox Backup Server",
+        "href": "https://pbs.proxmox.com/docs/",
+        "tail": "— punto di ingresso principale che copre l'installazione, l'amministrazione, lo stoccaggio, gli utenti e i ruoli."
+      },
+      {
+        "label": "proxmox-backup-client",
+        "href": "https://pbs.proxmox.com/docs/backup-client.html",
+        "tail": " — lo strumento di riga di comando ProxMenux invoca per ogni backup e ripristino. Copre ID di backup, tipi di backup, archivi, sintassi di repository e variabili di ambiente."
+      },
+      {
+        "label": "Crittografia lato cliente",
+        "href": "https://pbs.proxmox.com/docs/backup-client.html#encryption",
+        "tail": "— creazione di file chiave, modalità --kdf, modello di crittografia che ProxMenux si estende con un escrow passphrase."
+      },
+      {
+        "label": "Gestione dei datastore",
+        "href": "https://pbs.proxmox.com/docs/storage.html",
+        "tail": "— la creazione e la gestione dei datastores che ricevono i backup degli host, incluso il layout di chunk-store e le autorizzazioni."
+      },
+      {
+        "label": "Raccolta di prugna e rifiuti",
+        "href": "https://pbs.proxmox.com/docs/maintenance.html#pruning",
+        "tail": "— il modello di ritenzione dietro --keep-last / --keep-daily / --keep-weekly che ProxMenux si applica per lavoro programmato, più come PBS recupera i pezzi dopo prune."
+      }
+    ]
+  }
+}

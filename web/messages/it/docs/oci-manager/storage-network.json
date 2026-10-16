@@ -1,0 +1,305 @@
+{
+  "meta": {
+    "title": "Dati, percorsi e networking | ProxMenux",
+    "description": "Come OCI manager Apps mantiene i dati di un contenitore OCI: dischi container, directory host, supporti Rclone, indirizzi e reti private."
+  },
+  "header": {
+    "title": "Dati, percorsi e networking",
+    "description": "Ciò che vive nei rootfs, ciò che sopravvive alla sua sostituzione, come i dati vengono condivisi tra container e come ogni contenitore ottiene il suo indirizzo.",
+    "section": "App del gestore OCI"
+  },
+  "sections": [
+    {
+      "id": "intro",
+      "blocks": [
+        {
+          "calloutInfo": {
+            "title": "La persistenza è decisa prima che esista il LXC",
+            "body": "I volumi pubblicati dall'immagine e dal suo file Compose vengono letti prima della creazione del contenitore. Ogni percorso che deve sopravvivere ad un aggiornamento diventa un punto di montaggio indipendente dai rootf, così i rootfs detiene solo ciò che appartiene all'immagine e possono essere sostituiti."
+          }
+        }
+      ]
+    },
+    {
+      "id": "questions",
+      "title": "Cosa chiede l'installatore",
+      "intro": "Il modello fornisce i percorsi di cui l'applicazione ha bisogno. Ognuno è posizionato su un disco contenitore o su una directory host, e più percorsi possono essere aggiunti prima del riassunto.",
+      "blocks": [
+        {
+          "steps": {
+            "items": [
+              {
+                "title": "Sentieri richiesti",
+                "body": "<code>/config</code>, <code>/data</code>, librerie, download e ogni volume che l'applicazione dichiara sono elencati."
+              },
+              {
+                "title": "Percorso",
+                "body": "Ogni percorso è posto su un disco del contenitore o su una directory host esistente."
+              },
+              {
+                "title": "Stoccaggio e dimensione",
+                "body": "Un disco contenitore è creato su uno storage Proxmox VE con la dimensione data. L'installazione predefinita utilizza <code>local-lvm</code>; l'installazione avanzata chiede lo storage di ogni percorso proprio prima della sua dimensione e propone quello dei rootf. Viene visualizzato come <code>vm-VMID-disk-N</code> ed è collegato come <code>mpN</code>."
+              },
+              {
+                "title": "Directory host",
+                "body": "Una directory host è data dal suo percorso. Viene creata una directory che non esiste, di proprietà dell'utente le mappe dei container."
+              },
+              {
+                "title": "Altri percorsi",
+                "body": "Possono essere aggiunte altre coppie di percorso host o di volume e percorso contenitore prima dell'installazione."
+              },
+              {
+                "title": "Riepilogo",
+                "body": "La mappatura completa viene visualizzata prima della creazione del CT e viene memorizzata nel suo contratto di istanza."
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "options",
+      "title": "Le due posizioni persistenti",
+      "blocks": [
+        {
+          "table": {
+            "headers": [
+              "Proprietà",
+              "Disco contenitore",
+              "Directory host"
+            ],
+            "rows": [
+              [
+                "Nella configurazione",
+                "<code>mpN: STORAGE:vm-VMID-disk-N,mp=/config,backup=1,size=16G</code>",
+                "<code>mpN: /mnt/oci-shared/media,mp=/data/media</code>"
+              ],
+              [
+                "Backup contenitore (vzdump)",
+                "Incluso, con <code>backup=1</code>",
+                "Non incluso"
+              ],
+              [
+                "Dimensione",
+                "Fisso; coltivato con un ridimensionamento del punto di montaggio",
+                "Lo spazio libero del filesystem host o dataset"
+              ],
+              [
+                "Altri contenitori",
+                "Montato solo da un proprio contenitore",
+                "La stessa directory può essere montata in diversi contenitori"
+              ],
+              [
+                "Istantanee e ripristino",
+                "Gestito da Proxmox VE insieme al CT",
+                "Gestito sullo storage host"
+              ],
+              [
+                "Rimozione dell'applicazione",
+                "Cancellato con il contenitore",
+                "Tenuto, con il suo contenuto"
+              ],
+              [
+                "Spostare il CT in un altro nodo",
+                "Spostamenti con il CT",
+                "Lo stesso percorso deve esistere sull'altro nodo"
+              ]
+            ]
+          }
+        },
+        {
+          "p": "I rootf sono riservati ai binari e al contenuto dell'immagine. Un aggiornamento o una ricreazione lo sostituisce senza toccare un punto di montaggio."
+        }
+      ]
+    },
+    {
+      "id": "example",
+      "title": "Esempio: un contenitore con entrambe le posizioni",
+      "blocks": [
+        {
+          "code": {
+            "title": "Jellyfin installato come CT 151 su local-lvm (estratto)",
+            "code": "rootfs: local-lvm:vm-151-disk-0,size=8G\n# Container disk, part of the CT backup\nmp0: local-lvm:vm-151-disk-1,mp=/config,backup=1,size=16G\n\n# Host directory, outside the CT backup\nmp1: /mnt/oci-shared/media,mp=/data/media"
+          }
+        },
+        {
+          "p": "Un aggiornamento o una ricreazione sostituisce solo i rootf: <code>mp0</code> mantiene utenti, librerie e impostazioni, e <code>mp1</code> continua a mostrare gli stessi media. Ripristinare il backup CT riporta <code>/config</code>; la directory media viene ripristinata, se necessario, dal backup dello storage host."
+        },
+        {
+          "flow": {
+            "nodes": [
+              {
+                "label": "Contratto",
+                "detail": "/config"
+              },
+              {
+                "label": "Percorso",
+                "detail": "disco contenitore\no directory host"
+              },
+              {
+                "label": "LXC",
+                "detail": "sempre /config\nper l'applicazione"
+              }
+            ],
+            "caption": "L'applicazione vede il percorso che l'immagine pubblica; solo dove viene memorizzato cambia."
+          }
+        }
+      ]
+    },
+    {
+      "id": "shared",
+      "title": "Una directory host, diversi contenitori",
+      "blocks": [
+        {
+          "mermaid": {
+            "chartCode": "flowchart TB\n H[\"{{host}}<br/>/mnt/oci-shared/media\"]\n H --> Q[\"qBittorrent<br/>/data\"]\n H --> J[\"Jellyfin<br/>/data\"]\n H --> R[\"Radarr / Sonarr<br/>/data\"]\n Q -. \"{{config}}\" .-> QV[(\"/config mpN\")]\n J -. \"{{config}}\" .-> JV[(\"/config mpN\")]\n R -. \"{{config}}\" .-> RV[(\"/config mpN\")]",
+            "labels": {
+              "host": "Directory host",
+              "config": "configurazione propria"
+            }
+          }
+        },
+        {
+          "p": "Ogni contenitore mantiene la sua configurazione sul proprio disco. La libreria o i download sono una directory host montata nello stesso percorso interno in ogni contenitore, quindi un percorso che un'applicazione scrive è lo stesso percorso che un'altra legge."
+        }
+      ]
+    },
+    {
+      "id": "rclone",
+      "title": "Cloud storage attraverso l'applicazione Rclone",
+      "intro": "L'applicazione Rclone del catalogo offre, oltre alla sua installazione, <strong>Abilitare un supporto su un contenitore Rclone OCI esistente</strong>. Monta un telecomando già creato e autorizzato nell'interfaccia web Rclone e lo pubblica sull'host, dove altri contenitori possono utilizzarlo come directory host.",
+      "blocks": [
+        {
+          "steps": {
+            "items": [
+              {
+                "title": "Contenitore e telecomando",
+                "body": "Il VMID del contenitore Rclone, il nome esatto del telecomando e, facoltativamente, un percorso all'interno di esso."
+              },
+              {
+                "title": "Nome di montaggio e cache",
+                "body": "Il nome del supporto e la modalità cache VFS: <code>off</code>, <code>minimal</code>, <code>writes</code> o <code>full</code> (default)."
+              },
+              {
+                "title": "Opinioni pubblicate",
+                "body": "Una radice comune, <code>/mnt/oci-shared</code> per impostazione predefinita, contiene una vista di lettura/scrittura in <code>/mnt/oci-shared/remotes/NAME</code> e una visualizzazione di sola lettura in <code>/mnt/oci-shared/remotes-ro/NAME</code>."
+              },
+              {
+                "title": "Attivazione",
+                "body": "Dopo una conferma, il CT viene interrotto, il comando di avvio e un gancioscript Proxmox VE sono impostati, ed è ricominciato. L'operazione aspetta fino a quando entrambe le viste sono montate sull'host."
+              }
+            ]
+          }
+        },
+        {
+          "calloutInfo": {
+            "title": "Se il montaggio non arriva",
+            "body": "La configurazione precedente del contenitore viene ripristinata ed è ricominciata, quindi un'attivazione fallita lascia Rclone com'era."
+          }
+        }
+      ]
+    },
+    {
+      "id": "network",
+      "title": "Indirizzi e reti",
+      "intro": "Una singola applicazione ha bisogno di un indirizzo. Un'applicazione multi-container ha anche bisogno di una rete stabile tra i suoi membri.",
+      "blocks": [
+        {
+          "cards": {
+            "items": [
+              {
+                "icon": "network",
+                "title": "Applicazione singola",
+                "body": "Vengono scelti ponti e DHCP o un indirizzo CIDR fisso. Il LXC ha un indirizzo proprio e il sommario mostra gli URL completi dei servizi."
+              },
+              {
+                "icon": "waypoints",
+                "title": "Applicazione multi-container",
+                "body": "Si trova una subnet gratuita, viene creato un ponte privato persistente e ogni membro (applicazione, database, cache) ottiene un indirizzo fisso su di esso."
+              }
+            ]
+          }
+        },
+        {
+          "flow": {
+            "nodes": [
+              {
+                "label": "LAN",
+                "detail": "indirizzo raggiungibile\nservizio principale solo"
+              },
+              {
+                "label": "Principali LXC",
+                "detail": "web / API\nLAN + rete privata"
+              },
+              {
+                "label": "Rete privata",
+                "detail": "PostgreSQL · Valchia · ML\nindirizzi fissi"
+              }
+            ],
+            "caption": "Le dipendenze parlano sulla rete privata e non hanno indirizzo sulla LAN."
+          }
+        },
+        {
+          "p": "Il contratto stack memorizza ponte, subnet, indirizzi e le relazioni tra i servizi. Aggiornare l'applicazione riutilizza la stessa topologia per ogni membro. ProxMenux Monitor apre il contenitore principale al suo indirizzo LAN, non al suo indirizzo sulla rete privata."
+        }
+      ]
+    },
+    {
+      "id": "ownership",
+      "title": "Proprietario",
+      "blocks": [
+        {
+          "list": {
+            "items": [
+              "Nuove directory sono create con UID e GID le mappe LXC non private.",
+              "Le directory esistenti non sono ricorsive.",
+              "Prese, file di sistema e percorsi sensibili non sono offerti come directory host generiche."
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "backup",
+      "title": "Che cosa contiene un backup contenitore",
+      "blocks": [
+        {
+          "table": {
+            "headers": [
+              "Elemento",
+              "Nel CT vzdump",
+              "Dove è custodito"
+            ],
+            "rows": [
+              [
+                "OCI rootfs",
+                "Sì",
+                "Il backup CT; può anche essere ricostruito dall'immagine e dal contratto"
+              ],
+              [
+                "Disco contenitore con <code>backup=1</code>",
+                "Sì",
+                "Il backup CT"
+              ],
+              [
+                "Directory host",
+                "Nessun",
+                "Il backup della memoria host"
+              ],
+              [
+                "contratto d'appalto",
+                "Nessun",
+                "<code>/usr/local/share/proxmenux/oci/instances/VMID/</code> sull'host"
+              ],
+              [
+                "Applicazione multi-container",
+                "Ogni membro nel proprio backup",
+                "I backup di ogni membro, più il contratto stack e il suo ponte sull'host"
+              ]
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

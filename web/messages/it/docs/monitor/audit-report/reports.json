@@ -1,0 +1,247 @@
+{
+  "meta": {
+    "title": "Report e confronti | Audit & Report",
+    "description": "I sei documenti Audit & Report, come vengono stampati o salvati come PDF, e come vengono confrontati con un percorso di riferimento."
+  },
+  "header": {
+    "title": "Rapporti e confronti",
+    "description": "Sei documenti, ciascuno composto per una domanda diversa, e il confronto di ogni corsa con un run di riferimento.",
+    "section": "Audit e report"
+  },
+  "sections": [
+    {
+      "id": "intro",
+      "blocks": [
+        {
+          "calloutInfo": {
+            "title": "Sei documenti, non sei stili",
+            "body": "Il motore seleziona i controlli e le sezioni prima di comporre il documento. Una diagnosi rapida non è un controllo completo con meno pagine, e un inventario non presenta risultati di valutazione. I documenti del campione qui sotto usano i dati fittizi."
+          }
+        }
+      ]
+    },
+    {
+      "id": "documents",
+      "title": "I sei documenti",
+      "blocks": [
+        {
+          "downloads": {
+            "items": [
+              {
+                "title": "Audit completo",
+                "body": "Documenti il nodo finisce per finire come un record tecnico.",
+                "href": "/monitor/audit/sample-audit-full-report.pdf",
+                "facts": [
+                  {
+                    "label": "Controlli",
+                    "value": "Ogni assegno disponibile."
+                  },
+                  {
+                    "label": "Contenuto",
+                    "value": "Riepilogo esecutivo; identità e cluster; hardware; rete e latenza; archiviazione; ospiti; passante; applicazioni; risultati con prove; fonti e portata."
+                  }
+                ]
+              },
+              {
+                "title": "Diagnosi rapida",
+                "body": "Mostra ciò che ha bisogno di attenzione senza l'inventario completo.",
+                "href": "/monitor/audit/sample-audit-diagnostic-report.pdf",
+                "facts": [
+                  {
+                    "label": "Controlli",
+                    "value": "Gli stessi controlli dell'audit completo."
+                  },
+                  {
+                    "label": "Contenuto",
+                    "value": "IdentitÃ minima; risultati critici; avvertimenti; osservazioni pertinenti; letture non verificate e azioni prioritarie. Diagrammi, inventario e annessi lunghi sono lasciati fuori."
+                  }
+                ]
+              },
+              {
+                "title": "Inventario",
+                "body": "Descrive ciò che esiste sul nodo senza valutarlo.",
+                "href": "/monitor/audit/sample-audit-inventory-report.pdf",
+                "facts": [
+                  {
+                    "label": "Controlli",
+                    "value": "Nessuno; nessun risultato è classificato."
+                  },
+                  {
+                    "label": "Contenuto",
+                    "value": "Identità; cluster; CPU e memoria; scheda, BIOS e controller; rete; storage; VM e LXC; passthrough; applicazioni ed elementi gestiti da ProxMenux."
+                  }
+                ]
+              },
+              {
+                "title": "Verifica sicurezza",
+                "body": "Copre l'esposizione e i controlli sull'accesso al nodo.",
+                "href": "/monitor/audit/sample-audit-security-report.pdf",
+                "facts": [
+                  {
+                    "label": "Controlli",
+                    "value": "L'area di sicurezza, oltre ai privilegi dei container, agli aggiornamenti, ai repository e alla catena APT."
+                  },
+                  {
+                    "label": "Contenuto",
+                    "value": "Identità e cluster; rete e latenza; accesso; firewall; 2FA; certificati; privilegi; aggiornamenti; repository; stato e età di Lynis."
+                  }
+                ]
+              },
+              {
+                "title": "Affidabilità backup",
+                "body": "Controlla che la protezione dichiarata esista e che i suoi backup siano utilizzabili.",
+                "href": "/monitor/audit/sample-audit-backup-report.pdf",
+                "facts": [
+                  {
+                    "label": "Controlli",
+                    "value": "L'area di backup, oltre alla connettività di archiviazione e alla consegna delle notifiche."
+                  },
+                  {
+                    "label": "Contenuto",
+                    "value": "Copertura per ospite; obiettivo dichiarato di recupero; età e risultato; destinazione; conservazione; verifica; lavori falliti; recupero e fonti incomplete."
+                  }
+                ]
+              },
+              {
+                "title": "Capacità e usura",
+                "body": "Misure margine di crescita e segni di esaurimento o invecchiamento.",
+                "href": "/monitor/audit/sample-audit-capacity-report.pdf",
+                "facts": [
+                  {
+                    "label": "Controlli",
+                    "value": "Le aree di archiviazione e hardware, oltre a memoria, swap, journal e il filesystem host."
+                  },
+                  {
+                    "label": "Contenuto",
+                    "value": "Uso e soglie; sottile pools; overprovisioning; memoria; inodi; ZFS; temperature; ore di potenza; SMART errori e NVMe/SSD vita di servizio."
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "figure": {
+            "src": "/monitor/audit/audit-report-preview.png",
+            "alt": "Prima pagina di un rapporto completo di audit",
+            "caption": "Ogni documento condivide l'identificatore del rapporto, le sezioni numerate, la data, il nodo, il profilo e il piè di pagina."
+          }
+        },
+        {
+          "p": "Un documento contiene l'identità del nodo e la data della valutazione, il risultato esecutivo, un riassunto per area, la struttura dell'hardware, della rete e dello storage, la protezione degli ospiti, i risultati con le loro prove, le fonti che non potrebbero essere letti, e la portata e la politica applicata, nella misura in cui ogni profilo li include."
+        }
+      ]
+    },
+    {
+      "id": "print",
+      "title": "Stampa o salvataggio come PDF",
+      "blocks": [
+        {
+          "steps": {
+            "items": [
+              {
+                "title": "Esegui",
+                "body": "Una valutazione viene eseguita con il profilo selezionato in <strong>Report</strong>."
+              },
+              {
+                "title": "Recensione",
+                "body": "Il run finito mostra i suoi risultati, le fonti che non poteva leggere e la politica che ha applicato."
+              },
+              {
+                "title": "Genera report",
+                "body": "<strong>Generate report</strong> apre la vista preparata come documento."
+              },
+              {
+                "title": "Stampa",
+                "body": "<strong>Print o salvare come PDF</strong> apre la finestra di dialogo di stampa del browser, in cui viene selezionata una stampante o <em>Save come PDF</em>."
+              }
+            ]
+          }
+        },
+        {
+          "calloutTip": {
+            "title": "La stampa è un documento, non uno screenshot",
+            "body": "La barra d'azione è nascosta, una tabella che continua nella pagina successiva ripete la sua intestazione, blocchi evitare interruzioni inutili e ogni pagina mantiene l'identificazione e numerazione."
+          }
+        }
+      ]
+    },
+    {
+      "id": "compare",
+      "title": "Comparazione con una corsa di riferimento",
+      "intro": "<strong>Utilizzo come riferimento</strong> segna un percorso finito come riferimento. Le corse successive sono confrontate con esso e i loro risultati sono separati in:",
+      "blocks": [
+        {
+          "table": {
+            "headers": [
+              "Gruppo",
+              "Significato"
+            ],
+            "rows": [
+              [
+                "Nuovo",
+                "Segnalato ora e non prima."
+              ],
+              [
+                "Peggiorati",
+                "Ancora segnalato, e più grave o raggiungere più di prima."
+              ],
+              [
+                "Migliorati",
+                "Ancora segnalato, ma meno grave o raggiungere meno lontano di prima."
+              ],
+              [
+                "Risolto",
+                "Non ci sono più notizie, e nessuno li ha accettati."
+              ],
+              [
+                "Accettati",
+                "Non più contato perché è stato accettato un rischio, non perché l'host è cambiato."
+              ],
+              [
+                "Non più valutati",
+                "Presente prima e assente da questa corsa; nulla ha verificato che si fermassero."
+              ]
+            ]
+          }
+        },
+        {
+          "table": {
+            "headers": [
+              "Corsa di riferimento",
+              "Comportamento"
+            ],
+            "rows": [
+              [
+                "Impostarlo",
+                "Qualsiasi esecuzione terminata può essere contrassegnata; nessuna è contrassegnata automaticamente."
+              ],
+              [
+                "Cambiarlo",
+                "Segnare un'altra corsa muove il riferimento senza cancellare la storia."
+              ],
+              [
+                "Comparazione",
+                "Quando non vengono selezionate due piste, il confronto utilizza il riferimento e l'esecuzione selezionata o più recente."
+              ],
+              [
+                "Mantenere le piste",
+                "Le piste più recenti di 30 sono mantenute, e la corsa di riferimento non viene mai rimossa."
+              ],
+              [
+                "Senza un riferimento",
+                "Il punto di vista afferma che non è stato ancora scelto alcun riferimento, quindi non c'è nulla da confrontare."
+              ]
+            ]
+          }
+        },
+        {
+          "calloutWarning": {
+            "title": "Un rapporto descrive un momento",
+            "body": "Una valutazione non certifica un intero periodo. Risultati più vecchi smettere di descrivere lo stato attuale; la vista mostra l'età dell'ultima corsa e ogni fonte mantiene il tempo che è stato raccolto."
+          }
+        }
+      ]
+    }
+  ]
+}

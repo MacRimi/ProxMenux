@@ -1,0 +1,227 @@
+{
+  "meta": {
+    "title": "ZFS Comandi su Proxmox — zpool, zfs snapshot, send/receive, scrub | ProxMenux",
+    "description": "Riferimento dei comandi di gestione ZFS su Proxmox VE: zpool creare / stato / storia, lista zfs / ottenere / set, snapshot, clone, zfs inviare e ricevere, scrub, chiaro, sostituire, zpool iostat, sommario ARC.",
+    "ogTitle": "ZFS Comandi su Proxmox — zpool, zfs istantanee, inviare/ricevere, lavare",
+    "ogDescription": "Riferimento dei comandi zpool e zfs su Proxmox VE — pool, dataset, snapshot, replica, manutenzione.",
+    "twitterTitle": "ZFS Comandi su Proxmox | ProxMenux",
+    "twitterDescription": "comandi zpool e zfs per Proxmox VE: pool, dataset, snapshot, replica, manutenzione."
+  },
+  "header": {
+    "title": "Gestione ZFS",
+    "description": "Riferimento curvo per zpool e zfs comandi: pool ispezione, dataset CRUD, istantanee, clone e send/receive (incrementale e ricorsiva), scrub / Clear / sostituire per la manutenzione, oltre a statistiche I/O e sommario ARC.",
+    "section": "Aiuto e informazioni"
+  },
+  "intro": {
+    "title": "Due famiglie di comando",
+    "body": "<code>zpool *</code> gestisce i pool di archiviazione (strato fisico — dischi, vdevs, ridondanza). <code>zfs *</code> gestisce i dataset e le istantanee che vivono all'interno di tali pool (strato logico — filesystems, volumi, snapshot, proprietà)."
+  },
+  "commandGroups": [
+    {
+      "title": "Pool Informazioni",
+      "commands": [
+        {
+          "command": "zpool list",
+          "description": "Elenca tutti i pool ZFS"
+        },
+        {
+          "command": "zpool status",
+          "description": "Mostra dettagli pool stato e salute"
+        },
+        {
+          "command": "zpool status -v",
+          "description": "Mostra il verbo pool stato con errori"
+        },
+        {
+          "command": "zpool history",
+          "description": "Mostra cronologia dei comandi per tutti pools"
+        },
+        {
+          "command": "zpool history <pool>",
+          "description": "Mostra cronologia dei comandi per specifiche pool"
+        },
+        {
+          "command": "zpool get all <pool>",
+          "description": "Mostra tutte le proprietà di un pool"
+        }
+      ]
+    },
+    {
+      "title": "Gestione dei dati",
+      "commands": [
+        {
+          "command": "zfs list",
+          "description": "Elenca tutti i set di dati ZFS"
+        },
+        {
+          "command": "zfs list -r <pool>",
+          "description": "Elenca tutti i set di dati in un pool ricorsivamente"
+        },
+        {
+          "command": "zfs create <pool>/<dataset>",
+          "description": "Crea un nuovo set di dati"
+        },
+        {
+          "command": "zfs destroy <pool>/<dataset>",
+          "description": "Distruggere un set di dati"
+        },
+        {
+          "command": "zfs rename <pool>/<dataset> <pool>/<new-name>",
+          "description": "Rinominare un set di dati"
+        },
+        {
+          "command": "zfs get all <pool>/<dataset>",
+          "description": "Mostra tutte le proprietà di un set di dati"
+        },
+        {
+          "command": "zfs set compression=on <pool>/<dataset>",
+          "description": "Abilitare la compressione su un set di dati"
+        }
+      ]
+    },
+    {
+      "title": "Gestione snapshot",
+      "commands": [
+        {
+          "command": "zfs list -t snapshot",
+          "description": "Elenca tutte le snapshot"
+        },
+        {
+          "command": "zfs list -t snapshot -r <pool>",
+          "description": "Elenca tutte le istantanee in un pool"
+        },
+        {
+          "command": "zfs snapshot <pool>/<dataset>@<snapshot-name>",
+          "description": "Creare una snapshot"
+        },
+        {
+          "command": "zfs destroy <pool>/<dataset>@<snapshot-name>",
+          "description": "Eliminare un'istantanea"
+        },
+        {
+          "command": "zfs rollback <pool>/<dataset>@<snapshot-name>",
+          "description": "Rollback a una snapshot"
+        },
+        {
+          "command": "zfs hold <tag> <pool>/<dataset>@<snapshot-name>",
+          "description": "Mettere una presa su una snapshot"
+        },
+        {
+          "command": "zfs release <tag> <pool>/<dataset>@<snapshot-name>",
+          "description": "Rilasciare una presa su un'istantanea"
+        }
+      ]
+    },
+    {
+      "title": "Clone e Invia/Riceve",
+      "commands": [
+        {
+          "command": "zfs clone <pool>/<dataset>@<snapshot> <pool>/<clone-name>",
+          "description": "Creare un clone da una snapshot"
+        },
+        {
+          "command": "zfs send <pool>/<dataset>@<snapshot> > backup.zfs",
+          "description": "Invia una snapshot a un file"
+        },
+        {
+          "command": "zfs receive <pool>/<dataset> < backup.zfs",
+          "description": "Ricevi un'istantanea da un file"
+        },
+        {
+          "command": "zfs send -i <pool>/<dataset>@<snap1> <pool>/<dataset>@<snap2> > incr.zfs",
+          "description": "Invia istantanee incrementali"
+        },
+        {
+          "command": "zfs send -R <pool>/<dataset>@<snapshot> > full-recursive.zfs",
+          "description": "Invia istantanee ricorsive"
+        }
+      ]
+    },
+    {
+      "title": "Manutenzione e riparazione",
+      "commands": [
+        {
+          "command": "zpool scrub <pool>",
+          "description": "Avviare un'operazione di lavaggio su una pool"
+        },
+        {
+          "command": "zpool scrub -s <pool>",
+          "description": "Smettetela di correre"
+        },
+        {
+          "command": "zpool clear <pool>",
+          "description": "Errore chiaro conta in un pool"
+        },
+        {
+          "command": "zpool clear <pool> <device>",
+          "description": "Errori chiari su un dispositivo specifico"
+        },
+        {
+          "command": "zpool replace <pool> <old-device> <new-device>",
+          "description": "Sostituire un dispositivo fallito"
+        },
+        {
+          "command": "zpool offline <pool> <device>",
+          "description": "Prendere un dispositivo offline"
+        },
+        {
+          "command": "zpool online <pool> <device>",
+          "description": "Portare un dispositivo online"
+        }
+      ]
+    },
+    {
+      "title": "Performance e monitoraggio",
+      "commands": [
+        {
+          "command": "zpool iostat",
+          "description": "Visualizza Statistiche per I/O pools"
+        },
+        {
+          "command": "zpool iostat -v",
+          "description": "Visualizza statistiche dettagliate I/O"
+        },
+        {
+          "command": "zpool iostat 5",
+          "description": "Mostra statistiche I/O ogni 5 secondi"
+        },
+        {
+          "command": "arc_summary",
+          "description": "Mostra statistiche ARC (se installato)"
+        },
+        {
+          "command": "zfs get compressratio <pool>/<dataset>",
+          "description": "Mostra rapporto di compressione"
+        },
+        {
+          "command": "zfs get used,available,referenced <pool>/<dataset>",
+          "description": "Mostra l'uso dello spazio"
+        }
+      ]
+    }
+  ],
+  "bestPractices": {
+    "title": "Migliori pratiche operative",
+    "bodyRich": "Corri! <code>zpool scrub</code> settimanale o mensile per rilevare la corruzione silenziosa. Tenere almeno 10-15% del pool spazio libero — ZFS prestazioni degrada bruscamente sopra 80% pieno. Sostituire sempre i dispositivi falliti con <code>zpool replace</code> (in-place) piuttosto che staccare + aggiungere (che perde la ridondanza temporaneamente)."
+  },
+  "related": {
+    "heading": "Correlati",
+    "items": [
+      {
+        "href": "/docs/help-info/storage-commands",
+        "label": "Archiviazione e dischi",
+        "tail": "— comandi generici block-device e LVM."
+      },
+      {
+        "href": "/docs/help-info/backup-commands",
+        "label": "Backup e ripristino",
+        "tail": " — vzdump, qmrestore."
+      },
+      {
+        "href": "/docs/help-info",
+        "label": "Panoramica degli aiuti e delle informazioni",
+        "tail": "."
+      }
+    ]
+  }
+}

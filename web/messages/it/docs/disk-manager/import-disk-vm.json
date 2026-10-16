@@ -1,0 +1,113 @@
+{
+  "meta": {
+    "title": "Importa disco da VM | ProxMenux Documentazione",
+    "description": "Collegare un disco fisico a un Proxmox VM esistente con ProxMenux. Rilevamento sicuro del disco (esclude il sistema, montato, in-uso, ZFS/RAID/LVM), persistenti percorsi /dev/disk/by-id e interfacce SATA / SCSI / VirtIO / IDE.",
+    "ogTitle": "Importa disco da VM | ProxMenux Documentazione",
+    "ogDescription": "Collegare un disco fisico a un Proxmox VM esistente. Utilizza percorsi /dev/disk/by-id persistenti e supporta SATA / SCSI / VirtIO / IDE."
+  },
+  "header": {
+    "title": "Importa disco nella VM",
+    "description": "Collegare un disco fisico che esiste già sull'host Proxmox ad una macchina virtuale esistente. ProxMenux rileva dischi liberi, consente di scegliere il target VM, il tipo di bus (SATA / SCSI / VirtIO / IDE) e allega tutto utilizzando percorsi /dev/disk/by-id persistenti in modo che la mappatura sopravviva ai riavvimenti e alle modifiche dell'ordine del dispositivo.",
+    "section": "Gestione del disco · VM"
+  },
+  "intro": {
+    "title": "Cosa succede?",
+    "body": "Questo è un passante a disco grezzo: il sistema operativo ospite vede l'unità come un dispositivo di blocco reale (con i suoi dati SMART e la geometria nativa). Il disco è collegato tramite il suo percorso <code>/dev/disk/by-id/…</code> — non <code>/dev/sdX</code> — quindi l'assegnazione non si rompe se i controller del disco enumerano i dispositivi in un ordine diverso sul boot successivo."
+  },
+  "howRuns": {
+    "heading": "Come funziona lo script",
+    "body": "Il flusso ha due fasi con una chiara separazione tra \"raccoltare informazioni e decisioni\" e \"attaccare effettivamente i dischi al VM\". Fino alla conferma finale, la configurazione VM è intatta.",
+    "summary": "ProxMenux filtra tutto ciò che non può passare in modo sicuro: il disco radice, i dischi montati sull'host, i membri di un attivo ZFS/LVM/ RAID pool e dischi già citati da qualsiasi VM/LXC config. Disco con <em>Stallo.</em> metadati (vecchi ZFS / RAID / LVM le firme che non sono più in uso) sono mostrate con un'etichetta ⚠ ma non sono bloccate."
+  },
+  "prereqs": {
+    "heading": "Prerequisiti",
+    "items": [
+      "Almeno un VM definito sull'host (lo script invia direttamente a <code>qm list</code>).",
+      "Il <strong>target VM è alimentato fuori</strong>. Se è in esecuzione lo script si interrompe con un messaggio — il disco live hot-add è fuori dal campo di applicazione di questo flusso.",
+      "Almeno un disco fisico sull'host che non è in uso dall'host o da qualsiasi altro ospite."
+    ]
+  },
+  "steps": {
+    "heading": "Passo dopo passo",
+    "stepLabel": "Passaggio",
+    "list": [
+      {
+        "title": "Scegli il target VM",
+        "bodyRich": "ProxMenux elenca ogni VM sull'host (tramite <code>qm list</code>). Scegli quello che riceverà il disco. Se il VM sta eseguendo lo script aborti e ti chiede di spegnerlo prima."
+      },
+      {
+        "title": "Scegliere il disco fisico (s) da collegare",
+        "img": "/disk/disk-selection.png",
+        "caption": "dischi gratuiti rilevati sull'host (con etichette ⚠ per metadati stanti)",
+        "body": "Lo script esegue la scansione di ogni disco host e mostra solo quelli che sono sicuri da attaccare. La lista di controllo consente di selezionare uno o più in una volta. I dischi con vecchie firme ZFS / LVM / RAID appaiono ancora, etichettate con ⚠ in modo da sapere che hanno bisogno di una tergicristallo prima che l'ospite possa formattarli."
+      },
+      {
+        "title": "Scegli l'interfaccia dell'autobus",
+        "img": "/disk/disk-assigment.png",
+        "caption": "Selezione dell'interfaccia bus",
+        "intro": "Scegliere come l'ospite dovrebbe vedere il disco:",
+        "items": [
+          "<strong>SCSI</strong> — default moderno per Linux e Windows con driver VirtIO-SCSI installati.",
+          "<strong>SATA</strong> — ampia compatibilità, funziona fuori dalla scatola praticamente ogni ospite.",
+          "<strong>VirtIO</strong> — dispositivo di blocco paravirtualizzato, più veloce ma richiede driver ospiti.",
+          "<strong>IDE</strong> — per ospiti legacy che non hanno nessuno dei driver di cui sopra."
+        ]
+      },
+      {
+        "title": "Attaccare e verificare",
+        "bodyRich": "ProxMenux collega ogni disco selezionato con il suo migliore percorso <code>/dev/disk/by-id/</code>, salta gli indici di slot che sono già in uso nella configurazione VM (<code>scsi0</code>, <code>sata0</code>, ...) e rilegge la configurazione per confermare l'assegnazione. Alla fine viene stampato un riassunto."
+      }
+    ]
+  },
+  "manual": {
+    "heading": "Equivalente manuale",
+    "body": "Lo script è un wrapper intorno a <code>qm set</code>. Il comando esatto per un singolo disco sembra questo:",
+    "migrationTitle": "La migrazione dal vivo non è possibile",
+    "migrationBody": "A VM con un disco passante è <strong>legato all'host che espone quel disco</strong>. La migrazione dal vivo a un altro nodo Proxmox fallirà perché il nodo di destinazione non vede lo stesso <code>/dev/disk/by-id/…</code> Percorso. Utilizzare la replica o il backup / ripristinare invece, o scegliere dischi virtuali su archiviazione condivisa se avete bisogno di mobilità.",
+    "shareTitle": "Non condividere un disco fisico tra VM",
+    "shareBody": "Attaccare lo stesso disco fisico a due VM allo stesso tempo corromperà i dati sulla prossima scrittura. ProxMenux rileva questa situazione e lo blocca, ma se si bypassa lo script (diretto <code>qm set</code>), assicurarsi che solo un ospite monta mai il disco."
+  },
+  "troubleshoot": {
+    "heading": "Risoluzione dei problemi",
+    "noDisksTitle": "\"Nessun disco disponibile per questo VM\"",
+    "noDisksIntro": "Lo script ha trovato dei dischi, ma ogni candidato è stato filtrato. Motivi comuni:",
+    "noDisksItems": [
+      "Ogni disco rimanente è già citato nella configurazione di destinazione VM.",
+      "Ogni disco rimanente è montato sull'host o fa parte di un ZFS attivo / LVM / RAID.",
+      "L'host ha installato solo il disco root."
+    ],
+    "noDisksOutro": "Eseguire <code>lsblk -f</code> sull'host per rivedere lo stato di ogni disco.",
+    "noVisibleTitle": "VM non vede il disco dopo il boot",
+    "noVisibleBody": "Se hai scelto <strong>SCSI</strong> o <strong>VirtIO</strong>, l'ospite ha bisogno del driver corrispondente. Su Linux che è kernel-native; su Windows è necessario l'ISO VirtIO e un'installazione driver (vedere la pagina <winLink>Create VM: System Windows</winLink>). Passare a SATA nella scheda hardware di VM è una soluzione rapida per confermare che il disco è fisicamente attaccato."
+  },
+  "related": {
+    "heading": "Correlati",
+    "items": [
+      {
+        "href": "/docs/disk-manager/import-disk-image-vm",
+        "label": "Importa immagine disco nella VM",
+        "tail": "— stesso flusso ma per file di immagine (qcow2 / vmdk / raw / img)."
+      },
+      {
+        "href": "/docs/disk-manager/import-disk-lxc",
+        "label": "Importa disco su LXC",
+        "tail": "— flusso equivalente per contenitori LXC."
+      },
+      {
+        "href": "/docs/disk-manager/add-controller-nvme-vm",
+        "label": "Aggiungi controller o NVMe a VM",
+        "tail": "— quando è necessario PCIe completo / NVMe passante piuttosto che attaccare disco."
+      },
+      {
+        "href": "/docs/help-info/storage-commands",
+        "label": "Comandi di archiviazione e dischi",
+        "tail": "— qm importdisk e relativo riferimento shell."
+      },
+      {
+        "href": "/docs/disk-manager",
+        "label": "Panoramica di Disk Manager",
+        "tail": "."
+      }
+    ]
+  }
+}

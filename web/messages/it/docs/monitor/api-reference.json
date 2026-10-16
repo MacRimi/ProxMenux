@@ -1,0 +1,760 @@
+{
+  "meta": {
+    "title": "Proxmox Monitor API — Guida all'integrazione | ProxMenux",
+    "description": "endpoint HTTP esposti da ProxMenux Monitor per integrazioni: Home Assistant, Homepage, Grafana, Prometheus, n8n e dashboard personalizzati. Esportazione di dati di sola lettura più le operazioni di scrittura sicure necessarie da automazioni — controllo VM, trigger di backup, invio di notifica, avviso di riconoscimento.",
+    "ogTitle": "Proxmox Monitor API — Integrazione Riferimento",
+    "ogDescription": "Endpoint esposti da ProxMenux Monitor per Home Assistant, Homepage, Grafana, Prometheus, n8n e dashboard personalizzati.",
+    "twitterTitle": "Monitor Proxmox API | ProxMenux",
+    "twitterDescription": "Endpoint per Home Assistant, Homepage, Grafana, Prometheus, n8n e dashboard personalizzati."
+  },
+  "header": {
+    "title": "API Riferimento",
+    "description": "Gli integratori di endpoint HTTP utilizzano per leggere le azioni di stato e attivare azioni sicure su sensori ProxMenux Monitor — Home Assistant, schede Homepage, cruscotti Grafana, rottami Prometheus, flussi n8n e script personalizzati. Ogni categoria, più un elenco completo delle metriche di Prometheus, con esempi di curl.",
+    "section": "Monitor di ProxMenux"
+  },
+  "intro": {
+    "title": "Che cosa questa pagina è",
+    "body": "Questa pagina elenca i endpoint che ci aspettiamo che le integrazioni esterne utilizzino — l'esportazione di dati in sola lettura in ogni parte del Monitor, più il piccolo insieme di operazioni di scrittura che le automazioni hanno legittimamente bisogno (trigger un backup, inviare una notifica personalizzata, riconoscere un avviso). L'intero API viene eseguito dallo stesso processo Flask che serve il cruscotto UI su TCP <strong>8008</strong>; l'indirizzo del vincolo e TLS sono configurati in <link>Access & Authentication</link>."
+  },
+  "headerEndpoint": "Fine",
+  "headerMethod": "Metodo",
+  "headerUse": "Usa",
+  "auth": {
+    "heading": "Autenticazione",
+    "intro": "Ogni punto finale contrassegnato \"autentico\" si aspetta un token JWT portatore nell'intestazione della richiesta:",
+    "tokensIntro": "Due modi per ottenere il token:",
+    "items": [
+      "Token <strong>API (consigliato per le integrazioni).</strong> Token di lunga durata coniati da <strong>Settings → Sicurezza → API Tokens</strong> nel cruscotto. Ogni token è chiamato, può essere revocato individualmente, ed è quello che si dovrebbe consegnare a Home Assistant / Homepage / Grafana / n8n.",
+      "<strong>Login flow (JWT di breve durata).</strong> <code>POST /api/auth/login</code> con un nome utente, una password e un token TOTP se 2FA è abilitato. Il JWT restituito è di breve durata e aggiornato automaticamente dal cruscotto; utile per gli script ad-hoc che autenticano come utente umano."
+    ],
+    "flowLink": "Il flusso auth, la password policy, la configurazione 2FA, il log di audit e la configurazione TLS sono tutti in diretta in <link>Access & Authentication</link>.",
+    "rows": [
+      {
+        "endpoint": "/api/auth/login",
+        "method": "POST",
+        "use": "Corpo: <code>'{'\"username\",\"password\",\"totp_token?\"'}'</code>. Restituisce un JWT di breve durata."
+      },
+      {
+        "endpoint": "/api/auth/api-tokens",
+        "method": "GET",
+        "use": "Elenca i token API (solo metadati — nomi, prefissi, date; mai il segreto reale)."
+      },
+      {
+        "endpoint": "/api/auth/api-tokens",
+        "method": "POST",
+        "use": "Mint un nuovo token API di lunga durata. Corpo: <code>'{'\"name\":\"'<'label'>'\"'}'</code>. Il valore token viene restituito una volta e non può essere recuperato di nuovo."
+      },
+      {
+        "endpoint": "/api/auth/api-tokens/<id>",
+        "method": "DELETE",
+        "use": "Revocare un token specifico API dal suo ID."
+      }
+    ]
+  },
+  "conventions": {
+    "heading": "Convenzioni",
+    "items": [
+      "Tutte le richieste e le risposte sono JSON a meno che non sia specificato esplicitamente (il download di registro è testo normale, <code>/api/prometheus</code> è testo/stampa nel formato OpenMetrics, il registro delle attività è testo normale).",
+      "Gli endpoint mutanti di successo ritornano <code>'{'\"success\": true, ...'}'</code>. Le risposte di errore usano uno stato non-2xx HTTP con <code>'{'\"success\": false, \"error\": \"'<'reason'>'\"'}'</code>.",
+      "Elenco endpoint accettano filtri opzionali <code>limit</code>, <code>offset</code>, <code>since</code> e specifici per categoria tramite stringa di query.",
+      "I campi temporali vengono restituiti come secondi epoca Unix o ISO-8601 con fuso orario esplicito, mai come stringhe locali."
+    ]
+  },
+  "system": {
+    "heading": "Sistema e hardware",
+    "rows": [
+      {
+        "endpoint": "/api/system",
+        "method": "GET",
+        "use": "CPU, memoria, swap, uptime, carico — snapshot corrente."
+      },
+      {
+        "endpoint": "/api/info",
+        "method": "GET",
+        "use": "Informazioni sull'host statico: hostname, kernel, versione PVE, modello CPU, distro."
+      },
+      {
+        "endpoint": "/api/system-info",
+        "method": "GET",
+        "use": "snapshot di sistema estesa utilizzata dall'intestazione del cruscotto (misurazioni overall + tempo di avvio)."
+      },
+      {
+        "endpoint": "/api/hardware",
+        "method": "GET",
+        "use": "inventario hardware dettagliato — dispositivi PCI, GPU, mappa dei sensori."
+      },
+      {
+        "endpoint": "/api/hardware/live",
+        "method": "GET",
+        "use": "Valori dal vivo per i sensori che cambiano dal secondo al secondo."
+      },
+      {
+        "endpoint": "/api/temperature/history",
+        "method": "GET",
+        "use": "Serie di tempo di temperature CPU / pacchetto."
+      },
+      {
+        "endpoint": "/api/gpu/<slot>/realtime",
+        "method": "GET",
+        "use": "NVIDIA / Intel / AMD GPU metriche dal vivo tramite slot PCI."
+      }
+    ]
+  },
+  "actions": {
+    "heading": "Azioni di sistema",
+    "intro": "Gli endpoint Fire-and-forget che attivano le stesse operazioni che l'operatore avrebbe eseguito dal Monitor UI o dal menu shell — progettato per Home Assistant, Homepage, Ansible, dashboard personalizzati e qualsiasi altra automazione che deve raggiungere l'host su HTTP. Ogni percorso mutante richiede un token con portata <code>full_admin</code>; i token <code>read_only</code> in sola lettura possono ancora sondare gli endpoint <code>.../status</code> senza innescare nulla. Ogni azione restituisce 202 con un'istantanea di stato; sondare il corrispondente <code>.../status</code> per osservare i progressi.",
+    "shapeTitle": "Forma di risposta comune",
+    "shapeIntro": "Tutti gli endpoint di azione restituiscono lo stesso oggetto JSON — una forma da analizzare da qualsiasi client:",
+    "shapeCode": "{\n  \"unit\": \"proxmenux-action-pve-update.service\",\n  \"state\": \"idle | running | success | failed | cancelled\",\n  \"started_at\": \"Sat 2026-08-01 11:01:32 CEST\",\n  \"finished_at\": null,\n  \"exit_code\": null,\n  \"result\": null\n}",
+    "concurrencyTitle": "Concorrenza e cancellazione",
+    "concurrencyBody": "Un secondo POST mentre una corsa è in volo restituisce 409 con lo stato corrente in esecuzione. Cancellare un in-flight run con un DELETE all'URL di base dell'azione; lo stato si sposta a <code>cancelled</code> e i timestamp sono conservati in modo che il chiamante possa ancora vedere quando è stato attivato e fermato. L'ultimo stato terminale (successo / mancato / annullato) viene ricordato fino a quando il prossimo run lo sostituisce.",
+    "rows": [
+      {
+        "endpoint": "/api/system/power/reboot",
+        "method": "POST",
+        "use": "Riavviare l'host Proxmox. Fire-and-forget — la connessione HTTP scende quando systemd inizia la sequenza di chiusura."
+      },
+      {
+        "endpoint": "/api/system/power/reboot/status",
+        "method": "GET",
+        "use": "Stato dell'ultima / azione di riavvio corrente."
+      },
+      {
+        "endpoint": "/api/system/power/shutdown",
+        "method": "POST",
+        "use": "Spegni l'host Proxmox. Utile come effetto collegato a un segnale di arresto UPS."
+      },
+      {
+        "endpoint": "/api/system/power/shutdown/status",
+        "method": "GET",
+        "use": "Stato dell'ultima / azione di arresto corrente."
+      },
+      {
+        "endpoint": "/api/system/pve-update/run",
+        "method": "POST",
+        "use": "Trigger il flusso di aggiornamento PVE sicuro (lo stesso pulsante Aggiornamento ora del monitor di salute e il menu shell run — delegati a update-pve-safe.sh)."
+      },
+      {
+        "endpoint": "/api/system/pve-update/status",
+        "method": "GET",
+        "use": "Stato dell'ultimo / corrente aggiornamento PVE run."
+      },
+      {
+        "endpoint": "/api/system/pve-update",
+        "method": "DELETE",
+        "use": "Cancellare un aggiornamento PVE in corso (SIGTERM allo script in esecuzione)."
+      },
+      {
+        "endpoint": "/api/proxmenux/self-update/run",
+        "method": "POST",
+        "use": "Aggiornare ProxMenux da solo perforando l'installatore stabile canonico. Esegue nella sua unità systemd in modo che l'aggiornamento si completa attraverso il proxmenux-monitor riavviare l'installatore esegue."
+      },
+      {
+        "endpoint": "/api/proxmenux/self-update/status",
+        "method": "GET",
+        "use": "Stato dell'ultima / corrente ProxMenux auto-aggiornamento corsa."
+      },
+      {
+        "endpoint": "/api/vms/<vmid>/control",
+        "method": "POST",
+        "use": "Avviare / arrestare / riavviare / riavviare un contenitore VM o LXC (le stesse operazioni che espone la modalità VM e LXC del Monitor). Il corpo trasporta <code>action</code>: <code>start</code>, <code>stop</code>, <code>shutdown</code> o <code>reboot</code>. Synchronous — restituisce il risultato direttamente senza polling necessario."
+      },
+      {
+        "endpoint": "/api/vms/<vmid>/backup",
+        "method": "POST",
+        "use": "Creare un backup vzdump di un VM o LXC. Campi del corpo, tutti facoltativi a meno che i valori predefiniti non corrispondano al layout di archiviazione: <code>storage</code> (un deposito PVE), <code>mode</code> (<code>snapshot</code>, <code>suspend</code> o <code>stop</code>), <code>compress</code> (<code>zstd</code>, <code>lzo</code>, <code>gz</code> o <code>none</code>), <code>protected</code> (<code>true</code> o <code>false</code>), <code>notes</code>, <code>notification</code> (<code>auto</code>, <code>always</code>, <code>failure</code> o <code>never</code>) e <code>pbs_change_detection</code> (<code>default</code>, <code>legacy</code> o <code>data</code>). Restituisce l'attività PVE UPID."
+      },
+      {
+        "endpoint": "/api/vms/<vmid>/backups",
+        "method": "GET",
+        "use": "Elenca i backup precedenti per un VM o LXC su tutti gli storage raggiungibili."
+      }
+    ],
+    "syncVsAsyncTitle": "Due sapori di azione",
+    "syncVsAsyncBody": "Le azioni a livello di sistema (alimentazione host, aggiornamento PVE, autoaggiornamento di ProxMenux) possono richiedere minuti — vengono eseguite nella loro unità systemd transitoria ed espongono un endpoint <code>.../status</code> più un <code>DELETE</code> per annullare. Le azioni VM / LXC (start, stop, shutdown, reboot, backup) sono veloci e utilizzano lo stile fire-and-return dell'interfaccia utente del Monitor già espone: il POST restituisce il risultato direttamente. Entrambi i gusti condividono lo stesso modello di autenticazione (JWT o token API di lunga durata).",
+    "curlTitle": "curl example",
+    "curlBody": "Avviare un aggiornamento e un sondaggio PVE per il completamento — l'esatta stessa sequenza di un'automazione Home Assistant o una cartella di gioco Ansible funzionerebbe:",
+    "curlCode": "TOKEN=<your full_admin token>\n\ncurl -sSf -X POST \\\n  -H \"Authorization: Bearer $TOKEN\" \\\n  https://<host>:8008/api/system/pve-update/run\n\nwhile true; do\n  state=$(curl -sSf -H \"Authorization: Bearer $TOKEN\" \\\n    https://<host>:8008/api/system/pve-update/status | jq -r .state)\n  [ \"$state\" != \"running\" ] && break\n  sleep 30\ndone\necho \"final state: $state\"",
+    "haTitle": "Snippet di integrazione Home Assistant",
+    "haBody": "Un sensore <code>rest</code> sonda lo stato e un <code>rest_command</code> attiva l'aggiornamento. Collegare entrambi a un pulsante di dashboard e a qualsiasi automazione che ti piace:",
+    "haCode": "# configuration.yaml\nsensor:\n  - platform: rest\n    resource: https://pve.local:8008/api/system/pve-update/status\n    name: pve_update_state\n    value_template: \"{{ value_json.state }}\"\n    scan_interval: 60\n    headers:\n      Authorization: \"Bearer !secret proxmenux_token\"\n\nrest_command:\n  pve_update:\n    url: https://pve.local:8008/api/system/pve-update/run\n    method: POST\n    headers:\n      Authorization: \"Bearer !secret proxmenux_token\"\n\n  # Start VM 100 (works for LXC too — same endpoint)\n  vm_100_start:\n    url: https://pve.local:8008/api/vms/100/control\n    method: POST\n    content_type: 'application/json'\n    payload: '{\"action\": \"start\"}'\n    headers:\n      Authorization: \"Bearer !secret proxmenux_token\"\n\n  # Backup VM 100 to the 'pbs-main' storage\n  vm_100_backup:\n    url: https://pve.local:8008/api/vms/100/backup\n    method: POST\n    content_type: 'application/json'\n    payload: '{\"storage\": \"pbs-main\", \"mode\": \"snapshot\", \"compress\": \"zstd\"}'\n    headers:\n      Authorization: \"Bearer !secret proxmenux_token\""
+  },
+  "health": {
+    "heading": "Monitoraggio integrità",
+    "rows": [
+      {
+        "endpoint": "/api/health",
+        "method": "GET",
+        "use": "Piccola sonda sanitaria — restituisce JSON con <code>status</code>, <code>timestamp</code>, <code>version</code>. Adatto per i controlli di parole chiave Uptime Kuma; il ricevitore deve inviare l'intestazione del portatore."
+      },
+      {
+        "endpoint": "/api/health/status",
+        "method": "GET",
+        "use": "verdetto generale della salute — singola gravità + stringa di sintesi."
+      },
+      {
+        "endpoint": "/api/health/details",
+        "method": "GET",
+        "use": "Tutte le dieci categorie con status per-categoria e il carico utile strutturato che ha prodotto ciascuna."
+      },
+      {
+        "endpoint": "/api/health/full",
+        "method": "GET",
+        "use": "snapshot completa — categorie + errori attivi + elenco respinto + impostazioni di soppressione personalizzate. Backs the modal in one round-trip; utilizza una cache di sfondo 6-min per una risposta immediata."
+      },
+      {
+        "endpoint": "/api/health/active-errors",
+        "method": "GET",
+        "use": "Lista attiva, filtrabile da <code>?category=&lt;name&gt;</code>."
+      },
+      {
+        "endpoint": "/api/health/dismissed",
+        "method": "GET",
+        "use": "Dismesso elenco con restanti ore di soppressione."
+      },
+      {
+        "endpoint": "/api/health/settings",
+        "method": "GET",
+        "use": "Per-categoria Suppression Valori di durata attualmente configurati."
+      },
+      {
+        "endpoint": "/api/health/remote-storages",
+        "method": "GET",
+        "use": "Inventory of Proxmox-defined remote storages, con stato online."
+      },
+      {
+        "endpoint": "/api/health/interfaces",
+        "method": "GET",
+        "use": "Inventario di interfacce di rete con tipo (ponte / legame / fisico), IP e velocità di collegamento."
+      },
+      {
+        "endpoint": "/api/health/acknowledge",
+        "method": "POST",
+        "use": "Corpo: <code>'{'\"error_key\":\"smart_sdh\"'}'</code>. Dismettere un avviso con la durata di soppressione configurata della categoria."
+      },
+      {
+        "endpoint": "/api/health/cleanup-orphans",
+        "method": "POST",
+        "use": "Pulizia manuale di errori il cui dispositivo sottostante o VM è andato. Idemponte."
+      }
+    ],
+    "outro": "Le forme di risposta e la semantica delle categorie vivono in <link>Health Monitor</link>."
+  },
+  "storage": {
+    "heading": "Stoccaggio",
+    "rows": [
+      {
+        "endpoint": "/api/storage",
+        "method": "GET",
+        "use": "Tutti i dischi visibili all'host (blocca dispositivi, ZFS pools, LVM)."
+      },
+      {
+        "endpoint": "/api/storage/summary",
+        "method": "GET",
+        "use": "Riepilogo compatto utilizzato da schede di dashboard."
+      },
+      {
+        "endpoint": "/api/proxmox-storage",
+        "method": "GET",
+        "use": "Stoccaggi definiti Proxmox da <code>/etc/pve/storage.cfg</code> con stato online e spazio libero."
+      },
+      {
+        "endpoint": "/api/storage/observations",
+        "method": "GET",
+        "use": "Storia dell'osservazione del disco permanente — SMART avvertimenti, errori I/O, ZFS pool eventi, tenuti attraverso l'errore auto-risolves."
+      },
+      {
+        "endpoint": "/api/storage/smart/<disk>",
+        "method": "GET",
+        "use": "Attributi attuali SMART per un disco."
+      },
+      {
+        "endpoint": "/api/storage/smart/<disk>/latest",
+        "method": "GET",
+        "use": "Più recente SMART auto-test per il disco."
+      },
+      {
+        "endpoint": "/api/storage/smart/<disk>/history",
+        "method": "GET",
+        "use": "Elenco dei rapporti SMART memorizzati per il disco."
+      },
+      {
+        "endpoint": "/api/storage/smart/<disk>/history/<file>",
+        "method": "GET",
+        "use": "Leggere un report SMART memorizzato specifico."
+      },
+      {
+        "endpoint": "/api/storage/smart/<disk>/test",
+        "method": "POST",
+        "use": "Trigger a SMART auto-test. Corpo: <code>'{'\"type\":\"short\"|\"long\"'}'</code>."
+      },
+      {
+        "endpoint": "/api/storage/smart/schedules",
+        "method": "GET",
+        "use": "Elenca i test SMART attualmente programmati."
+      },
+      {
+        "endpoint": "/api/storage/smart/tools",
+        "method": "GET",
+        "use": "Scopri se sono installati <code>smartctl</code> e gli amici."
+      }
+    ]
+  },
+  "network": {
+    "heading": "Rete",
+    "rows": [
+      {
+        "endpoint": "/api/network",
+        "method": "GET",
+        "use": "Tutte le interfacce con lo stato del collegamento e gli indirizzi."
+      },
+      {
+        "endpoint": "/api/network/summary",
+        "method": "GET",
+        "use": "Vista compatta utilizzata dal cruscotto."
+      },
+      {
+        "endpoint": "/api/network/<iface>/metrics",
+        "method": "GET",
+        "use": "Per-interfaccia RX / TX, contatori di errore, serie di tempo RRD."
+      },
+      {
+        "endpoint": "/api/network/latency/current",
+        "method": "GET",
+        "use": "Ultima sonda di latenza gateway."
+      },
+      {
+        "endpoint": "/api/network/latency/history",
+        "method": "GET",
+        "use": "Serie temporale di latenza gateway."
+      }
+    ]
+  },
+  "vms": {
+    "heading": "VM e container",
+    "rows": [
+      {
+        "endpoint": "/api/vms",
+        "method": "GET",
+        "use": "Elenco di tutte le VM e CT con stato, vmid, nome."
+      },
+      {
+        "endpoint": "/api/vms/<vmid>",
+        "method": "GET",
+        "use": "Dettaglio completo per un ospite (configura, rete, dischi)."
+      },
+      {
+        "endpoint": "/api/vms/<vmid>/metrics",
+        "method": "GET",
+        "use": "Serie di tempo CPU / memoria / disco I/O per un ospite (RRD)."
+      },
+      {
+        "endpoint": "/api/vms/<vmid>/logs",
+        "method": "GET",
+        "use": "I registri delle mansioni recenti sono stati indirizzati a quell'ospite."
+      },
+      {
+        "endpoint": "/api/vms/<vmid>/backups",
+        "method": "GET",
+        "use": "Elenca i backup attualmente detenuti per questo ospite."
+      },
+      {
+        "endpoint": "/api/vms/<vmid>/control",
+        "method": "POST",
+        "use": "Corpo: <code>'{'\"action\":\"start|stop|reboot|shutdown\"'}'</code>. Alimentare un ospite."
+      },
+      {
+        "endpoint": "/api/vms/<vmid>/backup",
+        "method": "POST",
+        "use": "Trigger <code>vzdump</code> per quell'ospite. Il corpo sceglie lo storage e la modalità (<code>snapshot</code> / <code>suspend</code> / <code>stop</code>)."
+      },
+      {
+        "endpoint": "/api/vms/<vmid>/config",
+        "method": "PUT",
+        "use": "Aggiornare la descrizione (note) campo di un VM / CT. Altre chiavi di configurazione non sono modificabili da questo endpoint."
+      },
+      {
+        "endpoint": "/api/node/metrics",
+        "method": "GET",
+        "use": "metriche di livello nodo aggregato (RRD)."
+      }
+    ]
+  },
+  "backups": {
+    "heading": "Backup",
+    "rows": [
+      {
+        "endpoint": "/api/backups",
+        "method": "GET",
+        "use": "Elenco di backup su tutto il cluster."
+      },
+      {
+        "endpoint": "/api/backup-storages",
+        "method": "GET",
+        "use": "Stoccaggi contrassegnati come obiettivi di backup, con spazio libero."
+      }
+    ]
+  },
+  "logs": {
+    "heading": "Log, attività, eventi",
+    "rows": [
+      {
+        "endpoint": "/api/logs",
+        "method": "GET",
+        "use": "Le voci del diario filtrate. Query: <code>?level=&service=&limit=</code>."
+      },
+      {
+        "endpoint": "/api/logs/download",
+        "method": "GET",
+        "use": "La discarica di testo della gamma filtrata."
+      },
+      {
+        "endpoint": "/api/events",
+        "method": "GET",
+        "use": "Flusso di eventi interno — lo stesso che alimenta le notifiche."
+      },
+      {
+        "endpoint": "/api/task-log/<upid>",
+        "method": "GET",
+        "use": "log completo di testo normale per un'attività Proxmox di UPID."
+      }
+    ]
+  },
+  "notifications": {
+    "heading": "Notifiche e IA",
+    "intro": "La pipeline dispacciamento, il passaggio dei canali e l'installazione di rewriter AI live in <notifLink>Notifications</notifLink> e <aiLink>AI Assistant</aiLink>.",
+    "rows": [
+      {
+        "endpoint": "/api/notifications",
+        "method": "GET",
+        "use": "Notifiche recenti emerse nel cruscotto."
+      },
+      {
+        "endpoint": "/api/notifications/download",
+        "method": "GET",
+        "use": "Esporta le notifiche come testo."
+      },
+      {
+        "endpoint": "/api/notifications/status",
+        "method": "GET",
+        "use": "Stato di Dispatcher — se il filetto di sfondo è in esecuzione, profondità di coda, ultimo invio."
+      },
+      {
+        "endpoint": "/api/notifications/settings",
+        "method": "GET",
+        "use": "Leggi la configurazione di notifica completa (canali, per-event toggles, AI rewriter, Nome display)."
+      },
+      {
+        "endpoint": "/api/notifications/history",
+        "method": "GET",
+        "use": "Discorso di storia. Query: <code>?limit=&offset=&severity=&channel=</code>."
+      },
+      {
+        "endpoint": "/api/notifications/history",
+        "method": "DELETE",
+        "use": "Pulisci il tavolo della storia della spedizione."
+      },
+      {
+        "endpoint": "/api/notifications/test",
+        "method": "POST",
+        "use": "Invia una notifica di prova a un canale. Corpo: <code>'{'\"channel\":\"telegram\"'}'</code>."
+      },
+      {
+        "endpoint": "/api/notifications/send",
+        "method": "POST",
+        "use": "Emettere un evento personalizzato. Corpo: <code>'{'\"event_type\":\"custom\",\"severity\":\"WARNING\",\"title\":\"...\",\"body\":\"...\",\"data\":'{''}''}'</code>."
+      },
+      {
+        "endpoint": "/api/notifications/test-ai",
+        "method": "POST",
+        "use": "Testare la connessione del fornitore di AI. Corpo: <code>'{'\"provider\",\"api_key\",\"model\",\"ollama_url?\"'}'</code>."
+      },
+      {
+        "endpoint": "/api/notifications/provider-models",
+        "method": "POST",
+        "use": "Elenca i modelli disponibili per il fornitore AI selezionato."
+      },
+      {
+        "endpoint": "/api/notifications/proxmox/setup-webhook",
+        "method": "POST",
+        "use": "Registrare il Monitor come obiettivo webhook in <code>/etc/pve/notifications.cfg</code>."
+      },
+      {
+        "endpoint": "/api/notifications/proxmox/cleanup-webhook",
+        "method": "POST",
+        "use": "Rimuovere l'obiettivo Monitor dalla configurazione di notifica di PVE."
+      },
+      {
+        "endpoint": "/api/notifications/proxmox/read-cfg",
+        "method": "GET",
+        "use": "Leggi l'attuale <code>notifications.cfg</code> di PVE come la vede PVE."
+      }
+    ]
+  },
+  "security": {
+    "heading": "Sicurezza (leggi)",
+    "rows": [
+      {
+        "endpoint": "/api/security/firewall/status",
+        "method": "GET",
+        "use": "Stato firewall PVE e regole attive."
+      },
+      {
+        "endpoint": "/api/security/fail2ban/details",
+        "method": "GET",
+        "use": "Fail2Ban stato carcere — solo utile quando la prigione opzionale è installato."
+      },
+      {
+        "endpoint": "/api/security/fail2ban/activity",
+        "method": "GET",
+        "use": "Recenti eventi Fail2Ban (bans, unbans, prigione inizia)."
+      },
+      {
+        "endpoint": "/api/security/lynis/status",
+        "method": "GET",
+        "use": "Lynis stato dell'ultima corsa (se installato, ultimo timestamp di scansione)."
+      },
+      {
+        "endpoint": "/api/security/lynis/report",
+        "method": "GET",
+        "use": "Ultimo rapporto di revisione Lynis (avviso, suggerimenti, indice di indurimento)."
+      },
+      {
+        "endpoint": "/api/security/tools",
+        "method": "GET",
+        "use": "Rileva quali strumenti di sicurezza opzionali (Fail2Ban, Lynis) sono installati."
+      }
+    ]
+  },
+  "proxmenuxIntegration": {
+    "heading": "Integrazione ProxMenux",
+    "rows": [
+      {
+        "endpoint": "/api/proxmenux/update-status",
+        "method": "GET",
+        "use": "Se ProxMenux Monitor ha un aggiornamento disponibile, attuale e versione più recente."
+      },
+      {
+        "endpoint": "/api/proxmenux/installed-tools",
+        "method": "GET",
+        "use": "Elenco di ogni ottimizzazione post-installazione ProxMenux attualmente registrata sull'host (da <code>/usr/local/share/proxmenux/installed_tools.json</code>)."
+      },
+      {
+        "endpoint": "/api/proxmenux/tool-source/<key>",
+        "method": "GET",
+        "use": "Codice sorgente di una specifica funzione post-installazione — il bash esatto che è stato applicato."
+      }
+    ]
+  },
+  "prometheus": {
+    "heading": "metriche di Prometheus",
+    "intro": "ProxMenux Monitor espone un endpoint Prometheus-format a <code>GET /api/prometheus</code> (autentico) che ritorna il testo di formato OpenMetrics. Ogni metrica è etichettata con <code>node=\"&lt;hostname&gt;\"</code> e porta un timestamp esplicito in modo da ingerire in modo pulito in Prometheus, VictoriaMetrics, Mimir o qualsiasi TSDB compatibile.",
+    "exportedTitle": "metriche esportate",
+    "headerGroup": "Gruppo",
+    "headerMetric": "Metrica",
+    "headerDesc": "Descrizione",
+    "groups": [
+      {
+        "group": "Sistema",
+        "metrics": [
+          {
+            "metric": "proxmox_cpu_usage",
+            "desc": "CPU percentuale di utilizzo (gauge)."
+          },
+          {
+            "metric": "proxmox_memory_total_bytes",
+            "desc": "Memoria fisica totale in byte."
+          },
+          {
+            "metric": "proxmox_memory_used_bytes",
+            "desc": "Memoria usata in byte."
+          },
+          {
+            "metric": "proxmox_memory_usage_percent",
+            "desc": "Percentuale di utilizzo della memoria."
+          },
+          {
+            "metric": "proxmox_load_average",
+            "desc": "Media del carico di sistema. Etichetta <code>period=\"1m\" | \"5m\" | \"15m\"</code>."
+          }
+        ]
+      },
+      {
+        "group": "Tempo di attività",
+        "metrics": [
+          {
+            "metric": "proxmox_uptime_seconds",
+            "desc": "Secondo dall'ultimo avvio."
+          }
+        ]
+      },
+      {
+        "group": "Hardware",
+        "metrics": [
+          {
+            "metric": "proxmox_cpu_temperature_celsius",
+            "desc": "Temperatura del pacchetto CPU."
+          },
+          {
+            "metric": "proxmox_disk_temperature_celsius",
+            "desc": "Temperatura di pericolo. Etichetta <code>device</code>."
+          },
+          {
+            "metric": "proxmox_fan_speed_rpm",
+            "desc": "Velocità del ventilatore. Etichetta <code>fan</code>."
+          }
+        ]
+      },
+      {
+        "group": "Spazio disco",
+        "metrics": [
+          {
+            "metric": "proxmox_disk_total_bytes",
+            "desc": "Totale spazio su disco per montaggio. Etichetta <code>mountpoint</code>."
+          },
+          {
+            "metric": "proxmox_disk_used_bytes",
+            "desc": "Usato spazio su disco per montaggio."
+          },
+          {
+            "metric": "proxmox_disk_usage_percent",
+            "desc": "Percentuale di utilizzo del disco per montaggio."
+          }
+        ]
+      },
+      {
+        "group": "Rete",
+        "metrics": [
+          {
+            "metric": "proxmox_network_bytes_sent_total",
+            "desc": "Totale byte inviate (conte)."
+          },
+          {
+            "metric": "proxmox_network_bytes_received_total",
+            "desc": "Totale byte ricevute (contro)."
+          },
+          {
+            "metric": "proxmox_interface_bytes_sent_total",
+            "desc": "Per-interface bytes inviato. Etichetta <code>interface</code>."
+          },
+          {
+            "metric": "proxmox_interface_bytes_received_total",
+            "desc": "Per-interface bytes ricevuto."
+          }
+        ]
+      },
+      {
+        "group": "VMs / CTs",
+        "metrics": [
+          {
+            "metric": "proxmox_vms_total",
+            "desc": "Numero totale di VM e LXC."
+          },
+          {
+            "metric": "proxmox_vms_running",
+            "desc": "Numero di ospiti in esecuzione."
+          },
+          {
+            "metric": "proxmox_vms_stopped",
+            "desc": "Numero di ospiti fermati."
+          },
+          {
+            "metric": "proxmox_vm_status",
+            "desc": "Per-VM/CT stato (1 = in esecuzione, 0 = fermato). Etichette <code>vmid</code>, <code>name</code>, <code>type</code>."
+          },
+          {
+            "metric": "proxmox_vm_cpu_usage",
+            "desc": "Per-VM/CT CPU utilizzo. Stesse etichette."
+          },
+          {
+            "metric": "proxmox_vm_memory_used_bytes / _max_bytes",
+            "desc": "Per-VM/CT memoria utilizzata e configurata massima."
+          }
+        ]
+      },
+      {
+        "group": "GPU",
+        "metrics": [
+          {
+            "metric": "proxmox_gpu_temperature_celsius",
+            "desc": "Temperatura GPU. Etichette <code>slot</code>, <code>vendor</code>."
+          },
+          {
+            "metric": "proxmox_gpu_utilization_percent",
+            "desc": "GPU percentuale di utilizzo."
+          },
+          {
+            "metric": "proxmox_gpu_memory_total_bytes",
+            "desc": "GPU memoria totale."
+          },
+          {
+            "metric": "proxmox_gpu_power_draw_watts",
+            "desc": "Potenza GPU disegnare in watt."
+          },
+          {
+            "metric": "proxmox_gpu_clock_speed_mhz",
+            "desc": "Velocità del core clock GPU."
+          },
+          {
+            "metric": "proxmox_gpu_memory_clock_mhz",
+            "desc": "GPU velocità orologio di memoria."
+          }
+        ]
+      },
+      {
+        "group": "UPS",
+        "metrics": [
+          {
+            "metric": "proxmox_ups_battery_charge_percent",
+            "desc": "Percentuale di carica della batteria."
+          },
+          {
+            "metric": "proxmox_ups_load_percent",
+            "desc": "Carico corrente sull'UPS."
+          },
+          {
+            "metric": "proxmox_ups_runtime_seconds",
+            "desc": "Tempo di esecuzione stimato sulla batteria."
+          },
+          {
+            "metric": "proxmox_ups_input_voltage_volts",
+            "desc": "Tensione di ingresso."
+          }
+        ]
+      }
+    ],
+    "scrapeTitle": "Configurazione di raccolta Prometheus",
+    "scrapeIntro": "L'endpoint richiede l'autenticazione. Passare il token API come intestazione del portatore nella configurazione Prometheus scrape:",
+    "perHostTitle": "Raschietto per ospite",
+    "perHostBody": "Ogni istanza ProxMenux Monitor esporta metriche per l'host su cui funziona. In un cluster, punta Prometheus ad ogni nodo — l'etichetta <code>node</code> su ogni serie consente di distinguerli in query Grafana (<code>proxmox_vms_running'{'node=\"pve01\"'}'</code>)."
+  },
+  "puttingItTogether": {
+    "heading": "Metterlo insieme",
+    "body": "Per le ricette end-to-end che collegano questi endpoint in sensori Home Assistant, schede Homepage, cruscotti Grafana, flussi n8n e altri strumenti, vedere la pagina dedicata <link>Integrations</link> - cammina attraverso la configurazione tipica per ogni piattaforma con configurazione copy-paste. Questa pagina rimane concentrata sul catalogo stesso."
+  },
+  "whereNext": {
+    "heading": "Dove vicino",
+    "items": [
+      {
+        "label": "Accesso e autenticazione",
+        "href": "/docs/monitor/access-auth",
+        "tail": "— coniare i gettoni, il registro di audit, la prigione facoltativa Fail2Ban, la configurazione TLS."
+      },
+      {
+        "label": "Notifiche",
+        "href": "/docs/monitor/notifications",
+        "tailRich": "— che ogni tipo di evento trasporta in <code>data</code> quando si chiama <code>/api/notifications/send</code>."
+      },
+      {
+        "label": "Assistente AI",
+        "href": "/docs/monitor/ai-assistant",
+        "tailRich": "— come <code>/api/notifications/test-ai</code> e <code>/api/notifications/provider-models</code> sono cablati."
+      },
+      {
+        "label": "Monitoraggio integrità",
+        "href": "/docs/monitor/health-monitor",
+        "tailRich": "— la forma di risposta di <code>/api/health/*</code> e la semantica delle dieci categorie."
+      }
+    ]
+  }
+}

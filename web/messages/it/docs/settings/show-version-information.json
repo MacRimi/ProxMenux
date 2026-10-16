@@ -1,0 +1,81 @@
+{
+  "meta": {
+    "title": "Mostra informazioni sulla versione | Documentazione ProxMenux",
+    "description": "ProxMenux autodiagnostica: numero di versione, tipo di installazione (Traduzione / Normal), componenti installati da config.json, percorsi file, stato ambiente virtuale e lingua corrente.",
+    "ogTitle": "Mostra informazioni sulla versione | Documentazione ProxMenux",
+    "ogDescription": "dump diagnostico della versione ProxMenux, il tipo di installazione, i componenti, i file e la lingua."
+  },
+  "header": {
+    "title": "Mostra informazioni sulla versione",
+    "description": "Diagnostica di sola lettura. Reads version.txt, config.json e alcuni ben noti percorsi di file, quindi rende una casella di testo pergamenabile con versione, tipo di installazione, componenti installati, presenza di file, stato ambiente virtuale e lingua corrente.",
+    "section": "Impostazioni"
+  },
+  "intro": {
+    "title": "Che cosa è questo",
+    "body": "Un autodiagnostico. Utile quando si segnala un problema (incolla il contenuto di dialogo nel bug report) o per confermare un'installazione completata in modo pulito. Non modifica niente."
+  },
+  "reports": {
+    "heading": "Che cosa riferisce",
+    "headerSection": "Sezione",
+    "headerSource": "Fonte",
+    "headerContent": "Contenuto",
+    "rows": [
+      {
+        "section": "Versione attuale",
+        "source": "version.txt",
+        "contentRich": "Numero di versione singola; <code>Unknown</code> se manca il file"
+      },
+      {
+        "section": "Tipo di installazione",
+        "source": "VV + config.json controlli",
+        "content": "Traduzione (multi-lingua) o Normale (solo inglese)"
+      },
+      {
+        "section": "Componenti installati",
+        "source": "config.json",
+        "content": "stato per-componente (✓ installato / creato / aggiornato, avanzamento mancante)"
+      },
+      {
+        "section": "File ProxMenux",
+        "source": "controllo filesystem",
+        "contentRich": "<code>menu</code>, <code>utils.sh</code>, <code>config.json</code>, <code>version.txt</code> presenza + percorsi"
+      },
+      {
+        "section": "Ambiente virtuale",
+        "source": "/opt/googletrans-env",
+        "content": "Installazione di traduzione solo — presenza venv + pip"
+      },
+      {
+        "section": "Lingua attuale",
+        "source": "config.json",
+        "contentRich": "Traduzione: codice di lingua da <code>.language</code>; Normale: <code>English (Fixed)</code>"
+      }
+    ]
+  },
+  "sampleHeading": "Uscita del campione",
+  "manualHeading": "Equivalenti manuali",
+  "troubleshoot": {
+    "heading": "Risoluzione dei problemi",
+    "unknownTitle": "La versione mostra \"Unknown\"",
+    "unknownBody": "<code>/usr/local/share/proxmenux/version.txt</code> è mancante o illeggibile. Il più spesso causato da un'installazione parziale. Reinstallare dalla sorgente ufficiale ProxMenux.",
+    "noConfigTitle": "Nessuna informazione di installazione disponibile",
+    "noConfigBody": "Manca <code>config.json</code>. Lo script non può enumerare componenti senza di esso. Reinstallare per rigenerarsi.",
+    "wrongStatusTitle": "Un componente mostra che sono sicuro di aver installato",
+    "wrongStatusBody": "Mezzi di trasporto <code>config.json</code> non traccia quel componente come installato — potrebbe essere uno script che non si registra ancora, o un'installazione manuale che ha bypassato ProxMenux. La finestra di dialogo riflette cosa <code>config.json</code> Dice, non quello che e' sul disco."
+  },
+  "related": {
+    "heading": "Correlati",
+    "items": [
+      {
+        "href": "/docs/settings/uninstall-proxmenux",
+        "label": "Disinstalla ProxMenux",
+        "tail": "— rimuovere tutti questi file."
+      },
+      {
+        "href": "/docs/settings",
+        "label": "Panoramica delle impostazioni",
+        "tail": "."
+      }
+    ]
+  }
+}

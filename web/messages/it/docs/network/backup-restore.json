@@ -1,0 +1,110 @@
+{
+  "meta": {
+    "title": "Interfacce Backup & Restart | Documentazione ProxMenux",
+    "description": "snapshot manuale, Sfoglia e ripristina i backup /etc/network/interfaces memorizzati sotto /var/backups/proxmenux/. Include un servizio di rete riavviare con conferma e una rapida visualizzazione della configurazione dal vivo.",
+    "ogTitle": "Interfacce Backup & Restart | Documentazione ProxMenux",
+    "ogDescription": "Attiva e ripristina la configurazione della rete Proxmox; riavvia il servizio di rete con conferma."
+  },
+  "header": {
+    "title": "Interfacce di backup e riavvio",
+    "description": "Quattro utility che ruotano intorno a /etc/network/interfaces: scattano un'istantanea manuale, visualizzano la configurazione live, ripristinano un backup precedente con un'anteprima facoltativa e riavviano il servizio di rete con esplicito consenso. Stessa directory di backup utilizzata dai flussi di riparazione guidati.",
+    "section": "Rete"
+  },
+  "intro": {
+    "title": "Cosa succede?",
+    "body": "Gestisce la stessa directory di backup utilizzata dai flussi di riparazione guidati (<code>/var/backups/proxmenux/</code>). Consente di scattare un'istantanea aggiuntiva prima di qualsiasi cambiamento manuale, sfogliare tutti i backup esistenti e tornare a uno qualsiasi di essi — sempre con un backup pre-restore fresco preso automaticamente come una seconda rete di sicurezza."
+  },
+  "shared": {
+    "heading": "La directory di backup condivisa",
+    "intro": "Ogni backup preso ovunque nel menu di rete atterra nello stesso posto:",
+    "outro": "I nomi dei file sono timestamp, ordinati per data e mai sovrascritti. La directory viene creata in primo utilizzo."
+  },
+  "show": {
+    "heading": "Mostra file di configurazione di rete",
+    "body": "Stampa <code>/etc/network/interfaces</code> verbatim al terminale. Solo per leggere. Utile come un controllo di sanità prima di prendere un backup o dopo un ripristino — non c'è un separato \"diff con il backup precedente\", quindi eyeballing il file live è il modo più semplice per confermare quello che hai."
+  },
+  "create": {
+    "heading": "Crea backup di rete",
+    "body": "Copia l'attuale <code>/etc/network/interfaces</code> nella directory di backup con un timestamp fresco. Questo è tutto — nessuna analisi, nessun prompt, solo un'istantanea.",
+    "whenTitle": "Quando prendere un backup manuale",
+    "whenBody": "Prima di modificare <code>/etc/network/interfaces</code> a mano, prima di installare un pacchetto che può toccare lo stack di rete (ad es. NetworkManager, Open vSwitch), o prima di qualsiasi cambiamento hardware. Le riparazioni guidate già snapshot automaticamente — questa opzione è per i momenti <em>manual</em>."
+  },
+  "restore": {
+    "heading": "Ripristina backup di rete",
+    "intro": "Elenca ogni backup in <code>/var/backups/proxmenux/</code> ordinati da più nuovo a più vecchio, e cammina attraverso un ripristino custodito:",
+    "steps": [
+      {
+        "title": "1. Scegli un backup",
+        "body": "Un menu elenca ogni backup dal suo timestamp. Se non esistono backup, il flusso esce con un messaggio chiaro.",
+        "tone": "blue"
+      },
+      {
+        "title": "2. Anteprima opzionale",
+        "body": "Offerte per aprire il backup selezionato in una visualizzazione scorretta prima di impegnarsi. Sì per impostazione predefinita — non saltare su un host remoto.",
+        "tone": "blue"
+      },
+      {
+        "title": "3. Backup di ripristino",
+        "body": "Prima di sovrascrivere <code>/etc/network/interfaces</code>, prende il backup <strong>another</strong> dello stato corrente. Ripristinare un backup è di per sé un'azione distruttiva, quindi la nuova snapshot pre-restore ti permette di tornare se il backup scelto risulta essere quello sbagliato.",
+        "tone": "amber"
+      },
+      {
+        "title": "4. Applicare il ripristino",
+        "body": "Copia il backup scelto su <code>/etc/network/interfaces</code>. La modifica del file è su disco; lo stato del kernel live riflette ancora la configurazione precedente.",
+        "tone": "amber"
+      },
+      {
+        "title": "5. Riavvio opzionale",
+        "body": "Chiede se eseguire <code>systemctl restart networking</code> ora. Decidere di differire il cambiamento al prossimo riavvio.",
+        "tone": "emerald"
+      }
+    ],
+    "autoBackupTitle": "Un ripristino prende automaticamente il proprio backup",
+    "autoBackupBody": "Selezionare <em>Restore Network Backup</em> crea sempre una nuova snapshot della configurazione <em>current</em> prima di sovrascrivere. Se si ripristina il backup sbagliato, il file più recente in <code>/var/backups/proxmenux/</code> è lo stato da cui è venuto."
+  },
+  "restart": {
+    "heading": "Riavvia servizio di rete",
+    "body": "Esegue <code>systemctl restart networking</code> dopo una conferma sì/no. Segnala il risultato con <code>msg_ok</code> / <code>msg_error</code>. La maggior parte dei flussi in questo menu offrono il proprio prompt di riavvio alla fine; questa opzione è per il riavvio dopo una modifica manuale o dopo la diminuzione del riavvio del flusso in precedenza.",
+    "warnTitle": "Breve disconnessione garantita; possibile disconnessione permanente",
+    "warnBody": "Riavviare le lacrime di <code>networking</code> e riapplica ogni interfaccia dichiarata in <code>/etc/network/interfaces</code>. sessioni SSH ospitate su quelle interfacce drop. Se la nuova configurazione non è valida, la rete non torna mai più. Esegui questo solo quando:",
+    "warnItems": [
+      "Hai la console / IPMI / iKVM di accesso pronto, <em>or</em>",
+      "Siete fisicamente vicino alla macchina, <em>or</em>",
+      "Hai appena ripiegato con successo in una configurazione nota e vuoi applicarla."
+    ]
+  },
+  "manualRollback": {
+    "heading": "Rigiro manuale da una console",
+    "intro": "Se non si può raggiungere il menu (no SSH, finestra di dialogo crash, ...) ma può raggiungere una console, rollback è due comandi:",
+    "outro": "Questo è il funzionamento <em>same</em> che il menu esegue, appena digitato a mano. Se <code>networking</code> non riesce ancora ad avviare, controllare <code>journalctl -u networking -b</code> per l'errore sintassi/ driver sottostante."
+  },
+  "troubleshoot": {
+    "heading": "Risoluzione dei problemi",
+    "noneTitle": "\"Nessun backup trovato\" in Ripristino",
+    "noneBody": "La directory <code>/var/backups/proxmenux/</code> non esiste o non contiene file <code>interfaces_backup_*</code>. Eseguire <em>Create Network Backup</em> almeno una volta, o eseguire qualsiasi riparazione guidata (che crea automaticamente uno). Confermare con <code>ls /var/backups/proxmenux/</code>.",
+    "unreachTitle": "Riavviare la rete riesce, ma l'host è ancora irraggiungibile",
+    "unreachBody": "O la nuova configurazione è sbagliata, o si riavvia in una configurazione che non lega il vostro IP di gestione. Ripiegare dalla console (vedi sopra). Dopo il rollback, utilizzare l'analisi <bridgeLink>bridge</bridgeLink> e l'analisi <configLink>config </configLink> per capire cosa era sbagliato prima di riapplicare.",
+    "emptyTitle": "L'anteprima del ripristino mostra un file vuoto",
+    "emptyBody": "Il file di backup è vuoto (0 byte). Questo accade se una copia non è riuscita silenziosamente durante un'esecuzione precedente. Scegliere un backup più vecchio, o eseguire nuovamente <em>Create Network Backup</em> in questo momento se la configurazione live è sana."
+  },
+  "related": {
+    "heading": "Correlati",
+    "items": [
+      {
+        "label": "Analisi ponte e riparazione guidata",
+        "href": "/docs/network/bridge-analysis",
+        "tail": "— il motivo più comune per cui un backup finisce qui."
+      },
+      {
+        "label": "Analisi dei conflitti e pulizia guidata",
+        "href": "/docs/network/config-analysis",
+        "tailRich": "— scrive anche a <code>/var/backups/proxmenux/</code> automaticamente."
+      },
+      {
+        "label": "Diagnostica",
+        "href": "/docs/network/diagnostics",
+        "tail": "— verificare lo stato vivo dopo un ripristino."
+      }
+    ]
+  }
+}

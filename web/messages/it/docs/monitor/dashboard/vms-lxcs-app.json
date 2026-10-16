@@ -1,0 +1,245 @@
+{
+  "meta": {
+    "title": "Scheda App LXC: scoperta, collegamenti e tracciamento versione | ProxMenux",
+    "description": "Scoprire e registrare le applicazioni LXC, creare collegamenti web e seguire in modo facoltativo le versioni installate e disponibili."
+  },
+  "header": {
+    "title": "Scheda App LXC: scoperta, collegamenti e tracciamento versione",
+    "description": "Dare ad ogni applicazione LXC un'identità persistente, l'accesso al web e le prove della versione facoltativa senza accoppiare la registrazione agli aggiornamenti."
+  },
+  "intro": {
+    "p1": "La scheda <strong>App</strong> registra quali applicazioni appartengono a un LXC. Una registrazione può contenere solo un nome e un collegamento web, o anche includere un rilevatore di conversione installato e una sorgente a monte.",
+    "p2": "La procedura che modifica il software è configurata separatamente sul <link>Scheda degli aggiornamenti</link>. Salvare un'app non esegue mai un programma di installazione o un aggiornamento.",
+    "callout": "Registrazione, monitoraggio delle versioni e aggiornamento sono tre capacità indipendenti. Chiunque può essere utilizzato senza richiedere gli altri due.",
+    "dashboardTitle": "Dalla registrazione al lanciatore Apps",
+    "dashboard": "Ogni Web Link salvato qui è anche presentato come una scheda nella scheda top-level <appsLink>Apps tab</appsLink>. Questa pagina LXC rimane la fonte della verità per il nome dell'applicazione, il logo, i collegamenti e il tracciamento della versione."
+  },
+  "overview": {
+    "heading": "Che un record di applicazione può fornire",
+    "lead": "Un singolo record salvato può includere:",
+    "items": [
+      "Un nome di visualizzazione e un logo a tema.",
+      "Uno o più link web cliccabili costruiti dall'indirizzo LXC, schema e porta salvata.",
+      "Un rilevatore opzionale per la versione attualmente installata all'interno del LXC.",
+      "Una sorgente opzionale GitHub, HTTP JSON o Docker Hub per l'ultima versione disponibile.",
+      "Notifiche di rilascio per applicazione e preferenze di inclusione del contatore di aggiornamento.",
+      "Una sezione corrispondente sulla scheda Aggiornamenti, anche quando il monitoraggio della versione è disabilitato."
+    ]
+  },
+  "discovery": {
+    "heading": "Ricerca e ricerca di applicazioni",
+    "lead": "I suggerimenti applicativi fanno parte della cache modale per-LXC. La scansione di avvio li prepara in background in modo da aprire la scheda App può mostrare immediatamente i risultati memorizzati nella cache.",
+    "items": [
+      "L'apertura della scheda App fa <strong>not</strong> avviare una nuova scansione del catalogo e non interroga ripetutamente il LXC.",
+      "<strong>Find Applications</strong> esegue esplicitamente un passaggio di scoperta fresco per quel LXC. Utilizzare dopo l'installazione di nuovo software mentre ProxMenux è già in esecuzione.",
+      "L'elenco precedente rimane visibile mentre la scansione esplicita viene eseguita. Nuove partite vengono aggiunte quando finisce.",
+      "Se non si trova una nuova partita, il risultato è indicato accanto alle azioni e l'applicazione <strong>Register </strong> rimane disponibile per l'ingresso manuale.",
+      "Salvare, rimuovere o ripristinare un'app aggiorna immediatamente la stessa cache. Avviare o ripristinare un LXC rinfresca solo l'ospite attraverso il suo evento ciclo di vita esistente."
+    ],
+    "callout": "Un suggerimento non è una registrazione. Resta in sola lettura fino a quando non viene premuto il tasto <strong>Register</strong> e il modulo viene salvato."
+  },
+  "registration": {
+    "heading": "Registrazione di un'applicazione",
+    "lead": "Un suggerimento rilevato e un record manuale usano lo stesso editor:",
+    "steps": [
+      "Premere il tasto <strong>Register</strong> su suggerimento o l'applicazione <strong>Register </strong> per scegliere dal catalogo o inserire un nome personalizzato.",
+      "Rivedere il nome e il logo proposti dal catalogo.",
+      "Aggiungi i link web richiesti. Le porte di ascolto rilevate vengono offerte come scorciatoie, ma nessuna viene salvata automaticamente.",
+      "Lasciare <strong>Track versione a monte</strong> disabilitato per un record di sola connessione, o abilitarlo e rivedere il rilevatore di conversione installato e sorgente a monte.",
+      "Utilizzare il rilevatore <strong>Test </strong> quando il monitoraggio è abilitato, quindi salvare il record.",
+      "Premere <strong>Done</strong> dopo la modifica. Le schede App e Updates riutilizzano il record cache aggiornato."
+    ]
+  },
+  "catalog": {
+    "heading": "Registrazione assistita da catalogo",
+    "lead": "Il catalogo fornisce i default, ma il record salvato rimane modificabile.",
+    "items": [
+      "Risultati di ricerca possono preriempire il nome canonico, il logo e i porti web comuni.",
+      "I rivelatori di versione noti si basano su veri nomi dei pacchetti, binari, file, distribuzioni Python, etichette o comandi OCI piuttosto che su un'ipotesi universale <code>/root/.app</code>.",
+      "Gli override di runtime verificati hanno la precedenza quando un'installazione utilizza un percorso che differisce dai metadati dell'installatore.",
+      "I marcatori Proxmox VE Helper-Scripts come <code>/root/.slug</code> rimangono un segnale di compatibilità per le nuove installazioni di helper, non l'unico rilevatore.",
+      "Ogni valore proposto può essere modificato prima di salvare per coprire installatori ufficiali e installazioni manuali."
+    ]
+  },
+  "docker": {
+    "heading": "Come vengono rappresentati i Docker LXC",
+    "lead": "Per un LXC la cui piattaforma primaria è Docker, <strong>Docker</strong> è l'applicazione registrata a livello LXC.",
+    "items": [
+      "Un carico di lavoro containerizzato come Portainer, Frigate o Vaultwarden non è suggerito come un'applicazione indipendente LXC nativo.",
+      "I servizi di esecuzione Docker con porte TCP pubblicate sono offerti all'interno dell'editor Docker come link web facoltativi.",
+      "Ogni link suggerito mostra il servizio, porto host e porta container. Solo i collegamenti che forniscono un'interfaccia web devono essere salvati.",
+      "Il logo globale Docker viene utilizzato quando un link non ha un logo specifico. Un logo per-link lo sovrascrive quando uno è configurato.",
+      "Dopo che Docker è registrato, Docker Engine e gli aggiornamenti delle immagini vengono visualizzati insieme nella sua sezione sulla scheda Aggiornamenti."
+    ],
+    "callout": "Questa struttura previene un carico di lavoro Docker dall'aspetto di un software installato direttamente nel LXC preservando i collegamenti rapidi alle sue interfacce."
+  },
+  "webLinks": {
+    "heading": "Link web e loghi",
+    "lead": "I link web funzionano con o senza tracciamento della versione.",
+    "items": [
+      "Ogni link memorizza uno schema, la porta, la descrizione facoltativa e l'URL del logo opzionale.",
+      "L'URL visualizzato utilizza l'indirizzo corrente già rilevato per il LXC; l'indirizzo non viene duplicato in ogni record di app.",
+      "Un link senza il proprio logo rientra nel logo dell'app.",
+      "Diversi collegamenti possono rappresentare un'interfaccia di amministrazione, API, UI secondario o un altro endpoint della stessa app.",
+      "Viene visualizzata anche un'app di collegamento salvata su Aggiornamenti, dove un aggiornamento personalizzato può essere configurato in seguito."
+    ]
+  },
+  "tracking": {
+    "heading": "Tracciamento versione opzionale",
+    "lead": "Il monitoraggio combina un rilevatore di conversione installato con una sorgente a monte opzionale. I due lati sono controllati indipendentemente.",
+    "colMethod": "Metodo di conversione installato",
+    "colUse": "Usa",
+    "detectorRows": [
+      {
+        "method": "dpkg / apk",
+        "use": "Legge la versione del pacchetto installato da Debian, Ubuntu o i metadati del pacchetto alpino."
+      },
+      {
+        "method": "binary",
+        "use": "Esegue un percorso binario assoluto o un nome di comando con argomenti di versione."
+      },
+      {
+        "method": "file + regex",
+        "use": "Legge un file reale ed estrae la versione con un gruppo di cattura."
+      },
+      {
+        "method": "docker label / docker exec",
+        "use": "Legge un'etichetta di versione OCI o esegue un comando di versione all'interno di un contenitore Docker."
+      },
+      {
+        "method": "python distribution",
+        "use": "Utilizza importlib.metadata attraverso l'interprete Python selezionato."
+      },
+      {
+        "method": "command",
+        "use": "Esegue un comando avanzato in stile argv senza una shell ed estrae la versione dalla sua uscita."
+      },
+      {
+        "method": "manual",
+        "use": "Conserva una versione inserita manualmente; deve essere modificata dopo l'aggiornamento dell'app."
+      },
+      {
+        "method": "OCI image",
+        "use": "Per contenitori installati da OCI manager Apps. Legge le versioni di applicazione e immagine dal record di installazione e confronta il digestivo installato con quello che il registro pubblica; non ha bisogno di configurazione."
+      }
+    ],
+    "sourcesHeading": "Fonti di conversione disponibili",
+    "sources": [
+      "<strong>GitHub repository</strong>: ultima release o tag da un repository pubblico <code>owner/name</code>.",
+      "<strong>HTTP JSON</strong>: un endpoint pubblico più un percorso punteggiato come <code>data.version</code> o <code>releases[0].tag_name</code>.",
+      "<strong>Docker Hub</strong>: tag versioned filtrati da un'espressione regolare. Un'anteprima live mostra tag di corrispondenza reali prima che il record venga salvato.",
+      "Tag in movimento come <code>latest</code>, <code>stable</code> o <code>lts</code> non contengono una versione. Tracciare quelle immagini da digerire dagli aggiornamenti delle immagini Docker invece."
+    ],
+    "regexHeading": "Scrivere l'espressione di cattura",
+    "regexLead": "Un rivelatore espressione regolare deve restituire la versione nel suo gruppo di cattura <strong>first </strong>.",
+    "regexRules": [
+      "Abbina il testo emesso dalla sorgente binaria, file, comando o tag selezionata; non indovinare un percorso generico.",
+      "Fuggire punti letterali come <code>\\.</code> in modo che non possono corrispondere caratteri arbitrari.",
+      "Consentire un <code>v</code> leader solo quando la fonte può includerlo.",
+      "Includere suffissi come prerelease o revisioni distro solo quando sono significativi per il confronto.",
+      "Utilizzare il rilevatore <strong>Test </strong> prima di salvare e verificare che la versione installata visualizzata corrisponda al LXC."
+    ],
+    "regexExampleLead": "cattura semantica comune:",
+    "regexExample": "v?(\\d+\\.\\d+\\.\\d+)",
+    "regexCallout": "Una partita di regex di successo non è la prova che il percorso del rivelatore è corretto. Il percorso o il pacchetto devono esistere anche nella reale installazione in fase di registrazione."
+  },
+  "updater": {
+    "heading": "Il monitoraggio delle versioni e l'aggiornamento sono indipendenti",
+    "lead": "La scheda <link>Updates tab</link> crea una sezione app non appena viene salvato qualsiasi record di applicazione.",
+    "items": [
+      "Un record di collegamento mostra che il tracciamento della versione non è configurato, ma può ancora ricevere un comando di aggiornamento personalizzato.",
+      "Un'applicazione con monitoraggio ma senza un metodo eseguibile mostra un messaggio neutro che chiede un comando personalizzato.",
+      "Un'applicazione con un wrapper Proxmox VE Helper-Scripts verificato può utilizzare l'aggiornamento integrato anche quando la registrazione è iniziata da un link web.",
+      "L'aggiunta o la modifica di un aggiornamento non modifica il rivelatore o la sorgente a monte memorizzata nella scheda App."
+    ]
+  },
+  "states": {
+    "heading": "La versione afferma sulla scheda App",
+    "colState": "Stato",
+    "colDisplay": "Visualizza",
+    "colMeaning": "Significato",
+    "rows": [
+      {
+        "state": "Aggiornamento disponibile",
+        "display": "Versione disponibile in viola con un'icona a tendina",
+        "meaning": "Le versioni installate e a monte differiscono."
+      },
+      {
+        "state": "Attuale",
+        "display": "Installato e le ultime versioni senza l'avviso viola",
+        "meaning": "L'ultimo controllo ha trovato nessuna nuova versione a monte."
+      },
+      {
+        "state": "Monitoraggio in attesa",
+        "display": "Controllo o stato in sospeso",
+        "meaning": "Il record è configurato ma non ha ancora completato entrambi i controlli."
+      },
+      {
+        "state": "Monitoraggio dei disabili",
+        "display": "Solo link web; nessun blocco di confronto versione",
+        "meaning": "Il record rimane valido e può ancora avere un aggiornamento."
+      },
+      {
+        "state": "Controllare l'errore",
+        "display": "Spiegazione ambra all'interno della scheda",
+        "meaning": "Lo stato salvato precedente rimane visibile mentre viene segnalato il rivelatore o l'errore a monte."
+      }
+    ]
+  },
+  "management": {
+    "heading": "Gestione delle applicazioni salvate e suggerite",
+    "lead": "Le azioni in fondo alla scheda hanno ruoli distinti:",
+    "items": [
+      "<strong>Find apps</strong> aggiorna la scoperta per questo solo LXC.",
+      "<strong>Register un'altra applicazione</strong> apre il catalogo e l'editor manuale senza riscattare il LXC.",
+      "<strong>Edit</strong> rivela per-card Rimuovi, Controlla, notifica e Modifica azioni campi.",
+      "<strong>Hide</strong> rimuove un suggerimento indesiderato. I rilevamenti nascosti possono essere ripristinati dal browser di registrazione.",
+      "<strong>Check</strong> aggiorna le prove della versione dell'app salvata selezionata; non cerca nuove applicazioni."
+    ]
+  },
+  "troubleshooting": {
+    "heading": "Situazioni comuni",
+    "colProblem": "Situazione",
+    "colResolution": "Risoluzione",
+    "rows": [
+      {
+        "problem": "Il software è stato installato dopo l'avvio di ProxMenux",
+        "resolution": "Premere Trova applicazioni. La scansione esplicita aggiorna i suggerimenti in cache per quel LXC."
+      },
+      {
+        "problem": "Nessuna applicazione è stata rilevata",
+        "resolution": "Registralo manualmente. Un nome e un link web sono sufficienti; il tracciamento può essere aggiunto in seguito."
+      },
+      {
+        "problem": "Il rivelatore suggerito restituisce la versione sbagliata",
+        "resolution": "Aprire i campi Modifica, selezionare il pacchetto reale, il percorso binario o file e testare il rivelatore prima di salvare."
+      },
+      {
+        "problem": "Un carico di lavoro Docker non è offerto come app LXC",
+        "resolution": "Registrare Docker e aggiungere l'interfaccia pubblicata del carico di lavoro come collegamento web Docker. Gli aggiornamenti delle immagini rimangono nella sezione Docker."
+      },
+      {
+        "problem": "Un'app salvata non ha nessun pulsante di aggiornamento",
+        "resolution": "Aprire la scheda Aggiornamenti e configurare il suo metodo di aggiornamento. Il tracciamento della versione da solo non definisce come viene installato un aggiornamento."
+      }
+    ]
+  },
+  "figures": {
+    "catalog": {
+      "alt": "Catalogo di registrazione di applicazione con risultati di ricerca, loghi, porti e campi rivelatori",
+      "caption": "Catalogo metadati accelera la registrazione mentre ogni valore proposto rimane modificabile."
+    },
+    "webLinks": {
+      "alt": "Scheda di applicazione LXC salvata contenente un link web cliccabile",
+      "caption": "Un record di collegamento è valido: il tracciamento della versione può rimanere disabilitato e un aggiornamento può essere aggiunto indipendentemente."
+    },
+    "tracking": {
+      "alt": "Rilevatore di conversione installato opzionale e campi sorgenti a monte",
+      "caption": "Il rilevamento di conversione installato e la sorgente a monte sono configurati e testati separatamente."
+    },
+    "card": {
+      "alt": "Scheda di applicazione salvata con versioni installate e disponibili più un link web",
+      "caption": "La scheda combina identità, prove di versione e accesso web senza eseguire azioni di aggiornamento da questa scheda."
+    }
+  }
+}

@@ -1,0 +1,106 @@
+{
+  "meta": {
+    "title": "Proxmox VE Post-Install Script — Automatizzato e Personalizzabile | ProxMenux",
+    "description": "Panoramica degli script ProxMenux Post-Install per Proxmox VE. Eseguire lo script automatizzato per i default sane con zero prompt, lo script personalizzabile per scegliere esattamente quello che si desidera attraverso le categorie 10, o ripristinare le modifiche reversibili supportate con Uninstall Optimizations.",
+    "ogTitle": "Proxmox VE Post-Install Script — Automatizzato e Personalizzabile",
+    "ogDescription": "Applicare comuni ottimizzazioni Proxmox VE post-install attraverso le categorie 10 — automatizzate o à la carte, con opzioni reversibili.",
+    "twitterTitle": "Script dopo l'installazione di Proxmox VE | ProxMenux",
+    "twitterDescription": "Ottimizzazione post-installazione automatizzata e personalizzabile per Proxmox VE — con opzioni reversibili."
+  },
+  "header": {
+    "title": "Script dopo l'installazione",
+    "description": "Configurare un host Proxmox VE fresco con le ottimizzazioni post-installazione di ProxMenux. Applicare la linea di base automaticamente, scegliere singole opzioni, aggiornare le funzioni installate o ripristinare le modifiche reversibili supportate. Gli aggiornamenti dei pacchetti non sono presentati come reversibili.",
+    "section": "Impostazioni post-installazione Proxmox"
+  },
+  "intro": {
+    "title": "Cosa significa questo menu",
+    "body": "Subito dopo l'installazione di Proxmox VE, ci sono dozzine di piccoli cambiamenti che rendono l'host più veloce e più facile da mantenere — repository gratuiti, limiti sane riviste, buffer TCP sensibili, archiviazione di registro SSD-friendly, simpatie bashrc, e altro ancora. ProxMenux li automatizza e traccia le modifiche di configurazione reversibili supportate."
+  },
+  "openingMenu": {
+    "heading": "Apertura del menu",
+    "body": "Dal menu principale di ProxMenux, selezionare <strong>Impostazioni post-installazione Proxmox</strong>. Vedrai questo:",
+    "imageAlt": "menu Script di post-installazione — Automated, Personalizzabile, il condizionale Applicare Aggiornamenti disponibili (solo quando gli aggiornamenti sono in sospeso), e Disinstallare, seguito dalla sezione Script comunitari"
+  },
+  "threeWays": {
+    "heading": "Quattro modi per applicare le ottimizzazioni",
+    "body": "Le quattro voci ProxMenux condividono lo stesso codice sottostante e lo stesso registro di strumenti installati - ti danno solo diversi livelli di controllo. L'ingresso <em>Apply Disponibile Updates</em> mostra solo quando almeno un'ottimizzazione installata ha una versione più recente sul disco rispetto a quella registrata; su un host appena applicato rimane nascosto."
+  },
+  "routes": [
+    {
+      "title": "Automatizzato",
+      "description": "Una serie curata di 14 ottimizzazioni sicure e sempre utili applicate in sequenza con zero prompt. Buon default per la maggior parte degli utenti.",
+      "bullets": [
+        "Free repos + aggiornamento del sistema",
+        "Memoria, kernel, rete tuning",
+        "Log2RAM (autodeterminato su SSD/NVMe)",
+        "Limiti di dimensione Journald + logrotate",
+        "Nomi di interfaccia persistenti"
+      ]
+    },
+    {
+      "title": "Personalizzabile",
+      "description": "~35 ottimizzazioni individuali attraverso le categorie 10. Scegli esattamente chi applicare. Stesso motore di Automated, ma con pieno controllo.",
+      "bullets": [
+        "Lista di controllo UI per categoria",
+        "Include tutto ciò che fa Automated, oltre agli elementi opt-in (IOMMU, Fastfetch, Figurine, Ceph, HA, AMD fixs...)",
+        "Correre quante volte come si desidera - i cambiamenti sono idempotent"
+      ]
+    },
+    {
+      "title": "Applica aggiornamenti disponibili",
+      "description": "Quando un'ottimizzazione post-installazione (Log2Ram, Impostazioni di memoria, Logrotate...) ottiene una versione più recente sul disco rispetto a quello che è registrato sull'host, questa voce supera solo quelli che si sono spostati. Ricorre la funzione corrispondente e rinfresca il registro — non tocca altro.",
+      "bullets": [
+        "Optimizzazione (solo ciò che è cambiato)",
+        "Stesso raccoglitore disponibile dal cruscotto Monitor",
+        "Singola notifica raggruppata quando nuovi aggiornamenti terra"
+      ]
+    },
+    {
+      "title": "Disinstalla ottimizzazioni",
+      "description": "Le modifiche reversibili supportate sono tracciate in un registro JSON e abbinate a una funzione di restauro. Le azioni senza un rollback sicuro, come un aggiornamento completo del pacchetto, sono intenzionalmente escluse.",
+      "bullets": [
+        "Rileva automaticamente le ottimizzazioni precedentemente applicate",
+        "Reversal prende il percorso giusto per ogni elemento — ripristina da un backup .bak dove uno è stato fatto, cancella il snippet sysctl.d dove nulla ha bisogno di backup, o reinstalla il pacchetto vaniglia con --force-confnew (ad esempio banner di abbonamento)",
+        "Riavviare il prompt se necessario (VFIO, nomi persistenti, ecc.)"
+      ]
+    }
+  ],
+  "whichTitle": "Quale dovrebbe scegliere?",
+  "whichBody": "Se si tratta di una nuova installazione Proxmox e si desidera la linea di base ragionevole senza decisioni: <autoLink><strong>Automated</strong></autoLink>. Se sai già quali tweak vuoi (o che sicuramente non vuoi): <customLink><strong>Customizable</strong></customLink>. Se qualcosa che hai già applicato ha una versione più recente sul disco e si desidera sollevare solo che: <updatesLink><strong>Apply Aggiornamenti disponibili</strong></updatesLink>. Se hai applicato qualcosa in precedenza e vuoi eseguire il backup in modo pulito: <uninstallLink><strong>Uninstall Optimizations</strong></uninstallLink>. È possibile mescolarli — applicare Automated prima, quindi aprire Personalizzabile per aggiungere opt-in come Fastfetch o IOMMU, e ripristinare qualsiasi singolo elemento in seguito.",
+  "mixing": {
+    "heading": "Miscelare con altri script post-installazione",
+    "stackTitle": "Non impilare più script post-installazione",
+    "stackBody": "Eseguire diversi script post-install sullo stesso host può causare file di configurazione duplicati, voci di sysctl in conflitto, o peggio — rete rotta dopo il riavvio. Se hai già applicato il <strong>Helper-Scripts Post Install</strong>, alcune ottimizzazioni ProxMenux possono sovrapporsi a ciò che è già configurato. Stick a uno strumento post-installazione per host.",
+    "xshokTitle": "xshok-proxmox: deprecato",
+    "xshokBody": "Le versioni precedenti di ProxMenux hanno fatto riferimento a <a>xshok-proxmox</a> come strumento di post-installazione. Questo progetto è ora deprecato e non è più offerto da ProxMenux. Se un precedente run di xshok-proxmox sinistra marcatori sull'host, ProxMenux ancora li rileva e vi avverte — ma non è qualcosa che si dovrebbe installare accanto a ProxMenux oggi."
+  },
+  "community": {
+    "heading": "Scrittori comunitari",
+    "body": "Il menu espone anche due script di terze parti del progetto <a>community-scripts</a>: <em>Proxmox VE Post Install</em> e <em>Proxmox VE Microcode</em>. Questi sono wrapper che <code>wget | bash</code> gli script originali degli autori. Non sono mantenuti da ProxMenux. Vedere i repository esterni <link></link> per dettagli e considerazioni di fiducia prima di eseguirli."
+  },
+  "related": {
+    "heading": "Correlati",
+    "items": [
+      {
+        "label": "Aggiornamento sistema Proxmox",
+        "href": "/docs/utils/system-update",
+        "tail": "— mantiene l'host aggiornato una volta che è stato post-installato."
+      },
+      {
+        "label": "Sicurezza",
+        "href": "/docs/security",
+        "tail": "— Fail2Ban + Lynis in cima all'indurimento post-installazione."
+      },
+      {
+        "label": "Mostra informazioni sulla versione",
+        "href": "/docs/settings/show-version-information",
+        "tail": "— vedere quali componenti post-installazione vengono tracciati come installati."
+      },
+      {
+        "label": "Comandi aggiornamenti e pacchetti",
+        "href": "/docs/help-info/update-commands",
+        "tail": "— riferimento per apt / pveupgrade."
+      }
+    ]
+  }
+}

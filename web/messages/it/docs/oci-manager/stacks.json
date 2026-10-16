@@ -1,0 +1,404 @@
+{
+  "meta": {
+    "title": "Applicazioni multicontainer | ProxMenux",
+    "description": "Come OCI manager Apps trasforma un'applicazione con il suo database e la cache in LXCs nativi coordinati: piano, rete privata, gancio di dipendenza, convalida e aggiornamenti transazionali."
+  },
+  "header": {
+    "title": "Applicazioni multicontainer",
+    "description": "Un'applicazione con il suo database, la cache e altri servizi diventa diversi LXC nativi coordinati, installati e aggiornati come uno.",
+    "section": "App del gestore OCI"
+  },
+  "sections": [
+    {
+      "id": "intro",
+      "blocks": [
+        {
+          "calloutInfo": {
+            "title": "Un'applicazione per l'utente, diversi LXC per Proxmox VE",
+            "body": "Una definizione multi-container è una voce del catalogo. L'installatore crea un LXC nativo per servizio e mantiene esplicite le proprie dipendenze. Immich, Nextcloud, Paperless-ngx e Tandoor sono installati in questo modo."
+          }
+        },
+        {
+          "mermaid": {
+            "chartCode": "flowchart LR\n C[\"Docker Compose\"] --> O[\"{{plan}}\"]\n O --> A[\"{{app}}<br/>{{appNet}}\"]\n O --> D[\"{{db}}<br/>{{private}}\"]\n O --> R[\"{{cache}}<br/>{{private}}\"]\n V1[(\"config\")] --> A\n V2[(\"database\")] --> D\n V3[(\"cache\")] --> R\n D --> A\n R --> A",
+            "labels": {
+              "plan": "Piano di stack",
+              "app": "Applicazione LXC",
+              "appNet": "LAN + privato",
+              "db": "PostgreSQL LXC",
+              "cache": "Valkey LXC",
+              "private": "privato"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "plan",
+      "title": "1. Il piano, prima che esista un contenitore",
+      "blocks": [
+        {
+          "p": "Nessun LXC viene creato mentre la definizione Compose viene interpretata. Un piano completo arriva prima, con ogni membro, immagine, VMID, rete, percorso, segreto, ordine e controllo sanitario. Se il piano non è coerente, l'installazione non inizia."
+        },
+        {
+          "table": {
+            "headers": [
+              "Elemento di piano",
+              "Contenuto",
+              "Controllato prima di creare qualcosa"
+            ],
+            "rows": [
+              [
+                "Membri",
+                "Applicazione principale, database, cache, machine learning e altre dipendenze",
+                "VMID unici, ruoli noti e esattamente un membro principale"
+              ],
+              [
+                "Immagini",
+                "Riferimento rotante, architettura e digerimento risolto di ogni servizio",
+                "Tutto esiste, supporta l'architettura e passa il controllo dell'integrità OCI"
+              ],
+              [
+                "Rete",
+                "Ponte privato, subnet, indirizzo fisso per servizio e accesso LAN per il membro principale",
+                "Nessuna collisione con ponti o sottorete esistenti e nessun indirizzo ripetuto"
+              ],
+              [
+                "Persistenza",
+                "Disco contenitore, directory host, proprietari e backup",
+                "Nessun percorso sovrapposto, deposito disponibile e permessi dichiarati"
+              ],
+              [
+                "Segreti",
+                "password del database, chiavi dell'applicazione e credenziali iniziali",
+                "Generata una volta e data solo ai membri che li utilizzano"
+              ],
+              [
+                "Ciclo di vita",
+                "Ordine di inizio, ordine di arresto e un controllo sanitario per membro",
+                "L'applicazione principale inizia l'ultima e si ferma prima"
+              ]
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "create",
+      "title": "2. Creazione, membro per membro",
+      "blocks": [
+        {
+          "steps": {
+            "items": [
+              {
+                "title": "Prenota ogni VMID",
+                "body": "L'inventario Proxmox VE e il registro delle istanze sono controllati. Un CT esistente non è adottato e un contratto che appartiene ancora ad un'altra istanza non viene riutilizzato."
+              },
+              {
+                "title": "Preparare ogni immagine",
+                "body": "Tutte le immagini vengono risolte, scaricate e verificate prima che venga creato il primo contenitore."
+              },
+              {
+                "title": "Creare ogni rootfs",
+                "body": "I metadati OCI ufficiali sono importati, e l'identità di istanza ProxMenux e il ruolo membro sono aggiunti."
+              },
+              {
+                "title": "Rete privata",
+                "body": "Viene creato un ponte e una subnet e ogni membro riceve il suo indirizzo fisso; solo il membro principale riceve anche l'interfaccia LAN."
+              },
+              {
+                "title": "Persistenza",
+                "body": "Ogni database e configurazione ottiene il proprio disco contenitore; solo i dati destinati ad essere condivisi utilizzano directory host."
+              },
+              {
+                "title": "Ambiente",
+                "body": "Vengono scritti endpoint interni, segreti condivisi e variabili di servizio. L'applicazione raggiunge le sue dipendenze nei loro indirizzi privati riservati."
+              },
+              {
+                "title": "Registrazione",
+                "body": "Ogni membro registra la sua configurazione nativa, le modifiche rootfs che gli aggiornamenti devono riprodurre e la sua relazione con lo stack."
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "checks",
+      "title": "3. Avviare e controllare ogni contenitore",
+      "intro": "Un LXC creato non significa un servizio pronto. Le dipendenze iniziano in ordine e ognuno passa un controllo specifico al suo servizio.",
+      "blocks": [
+        {
+          "table": {
+            "headers": [
+              "Servizio",
+              "Controllo",
+              "Cosa mostra"
+            ],
+            "rows": [
+              [
+                "PostgreSQL",
+                "<code>pg_isready</code> nel CT con l'host previsto, l'utente e il database",
+                "Il server accetta le connessioni per il database configurato"
+              ],
+              [
+                "Redis / Valkey",
+                "<code>redis-cli</code> o <code>valkey-cli</code> <code>PING</code> contro il suo indirizzo privato",
+                "Il broker ascolta e risponde"
+              ],
+              [
+                "Machine learning Immich",
+                "HTTP <code>GET /ping</code>, oltre a un controllo del runtime GPU selezionato",
+                "Le risposte al servizio e l'accelerazione richiesta non sono tornate a CPU"
+              ],
+              [
+                "Nextcloud",
+                "<code>GET /status.php</code> con <code>installed=true</code>, <code>maintenance=false</code> e <code>needsDbUpgrade=false</code>",
+                "Inizializzazione terminata senza migrazione in sospeso"
+              ],
+              [
+                "Paperless-ngx / Tandoor",
+                "HTTP sull'indirizzo LAN e vera porta del servizio",
+                "Il frontend e le sue dipendenze servono l'applicazione"
+              ],
+              [
+                "Applicazione principale",
+                "Il punto finale del suo modello, ad esempio <code>/api/server/ping</code> in Immich",
+                "L'intero stack funziona attraverso l'applicazione che utilizza le dipendenze"
+              ]
+            ]
+          }
+        },
+        {
+          "calloutWarning": {
+            "title": "correre non è sano",
+            "body": "Lo stato in esecuzione dice solo che esiste il processo LXC. Se il servizio offre un controllo migliore, viene utilizzato un controllo exec o HTTP con un timeout. Se un membro si ferma o non riesce a controllare, lo stack non viene dichiarato installato."
+          }
+        }
+      ]
+    },
+    {
+      "id": "hook",
+      "title": "4. Il gancio di dipendenza",
+      "blocks": [
+        {
+          "p": "Il gancio è impostato solo sul contenitore principale di uno stack dipendente. Proxmox VE mantiene lo script come snippet e lo gestisce come <code>hookscript</code> di quel CT. La ricetta dello stack non è scritta nello script: vive in un contratto privato separato."
+        },
+        {
+          "codeGrid": {
+            "items": [
+              {
+                "title": "Configurazione principale CT",
+                "code": "hookscript: local:snippets/proxmenux-stack-dependencies.sh"
+              },
+              {
+                "title": "Contratto privato (esempio)",
+                "code": "/etc/pve/priv/proxmenux-stack-VMID.json\n{\n  \"schema\": 1,\n  \"stack\": \"immich\",\n  \"dependencies\": [\n    {\"vmid\": 107, \"label\": \"PostgreSQL\", \"healthcheck\": {...}},\n    {\"vmid\": 108, \"label\": \"Valkey\", \"healthcheck\": {...}},\n    {\"vmid\": 106, \"label\": \"Machine Learning\", \"healthcheck\": {...}}\n  ]\n}"
+              }
+            ]
+          }
+        },
+        {
+          "snippet": {
+            "summary": "Fonte completa di proxmenux-stack-dependencies.sh",
+            "pathCode": "local:snippets/proxmenux-stack-dependencies.sh",
+            "snippetCode": "stackDependencyHook"
+          }
+        },
+        {
+          "p": "Lo script è lo stesso per ogni stack. VMID, nomi, tipi di controllo e timeout provengono dal contratto privato <code>/etc/pve/priv/proxmenux-stack-VMID.json</code> di ogni stack."
+        },
+        {
+          "steps": {
+            "items": [
+              {
+                "title": "Proxmox VE chiama pre-start",
+                "body": "Prima dell'avvio principale di CT, il gancio viene eseguito con il VMID e la fase del ciclo di vita."
+              },
+              {
+                "title": "Una serratura per stack",
+                "body": "<code>flock</code> su <code>/run/lock/proxmenux-stack-VMID.lock</code> previene due sequenze di avvio contemporaneamente."
+              },
+              {
+                "title": "Il contratto viene letto e convalidato",
+                "body": "Uno schema noto, dipendenze numeriche, etichette, un exec, http o controllo in esecuzione e un timeout positivo sono necessari."
+              },
+              {
+                "title": "Dipendenze in ordine",
+                "body": "Ogni CT deve esistere; una fermata è iniziata e una già in esecuzione non è riavviata."
+              },
+              {
+                "title": "Attendere la salute",
+                "body": "Il controllo viene eseguito ogni due secondi, e il CT è confermato anche di essere ancora in esecuzione."
+              },
+              {
+                "title": "Il principale CT inizia",
+                "body": "Quando ogni dipendenza è pronta, pre-start termina e Proxmox VE avvia l'applicazione."
+              }
+            ]
+          }
+        },
+        {
+          "calloutInfo": {
+            "title": "Il gancio non ferma le dipendenze",
+            "body": "Le fasi post-start, pre-stop e post-stop non fanno nulla. Stoccando le principali foglie CT PostgreSQL, Redis, Valkey o machine learning in esecuzione. Il gancio ordina l'inizio; non trasforma diversi LXC in un unico processo."
+          }
+        },
+        {
+          "table": {
+            "headers": [
+              "Tipo",
+              "Esempio",
+              "Più tardi inizia"
+            ],
+            "rows": [
+              [
+                "stack dipendente",
+                "Immich, Nextcloud, applicazione con PostgreSQL",
+                "Il gancio della principale CT inizia le dipendenze e li attende"
+              ],
+              [
+                "Suite di applicazione",
+                "Suite Arr",
+                "Nessun membro principale: ogni LXC segue il proprio <code>onboot</code>"
+              ],
+              [
+                "Applicazione singola",
+                "Jellyfin",
+                "Proxmox VE avvia direttamente LXC"
+              ]
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "stack-checks",
+      "title": "5. Controlla sullo stack nel suo complesso",
+      "blocks": [
+        {
+          "list": {
+            "items": [
+              "Ogni VMID esiste, è unico e mantiene l'identità di istanza prevista.",
+              "Ogni contratto appartiene allo stesso stack, mantiene il suo ruolo e la sua configurazione nativa registrata.",
+              "Il membro principale è ultimo in <code>start_order</code> e prima in <code>stop_order</code>.",
+              "Nessun membro, volume o adattamento rootfs manca.",
+              "Il gancio punta al cecchino ufficiale, il suo contenuto è invariato e il suo contratto corrisponde alla ricetta stack.",
+              "Le immagini e i digestivi osservati corrispondono agli archivi OCI preparati.",
+              "Dispositivi, profili GPU, supporti, segreti e endpoint corrispondono ancora ai contratti.",
+              "Dopo ogni passaggio di dipendenza, il punto finale dell'applicazione principale controlla l'integrazione tra i membri."
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "manage",
+      "title": "Gestione di uno stack installato",
+      "intro": "In <strong>Manage installato applicazioni OCI</strong>, qualsiasi membro conduce all'intero stack. Il menu di uno stack offre <strong>Aggiornare ogni contenitore dell'applicazione</strong>, <strong>Modificare percorsi e dispositivi aggiuntivi</strong>, <strong>Ricreare ogni contenitore con la sua configurazione salvata</strong> e <strong>Rimuovi: eliminare l'applicazione e i suoi contenitori</strong>. Ricostruisce ogni contenitore dall'immagine con cui è stato installato, dal suo digestivo salvato e senza cercare uno nuovo, con gli stessi passaggi di un aggiornamento; è offerto per le pile che possono essere aggiornate.",
+      "blocks": [
+        {
+          "steps": {
+            "items": [
+              {
+                "title": "Qualsiasi membro",
+                "body": "Il contratto dei membri nomina il VMID principale e l'elenco completo dei membri."
+              },
+              {
+                "title": "Lo stack è riproducibile",
+                "body": "Identità, contratti, gancio, adattamenti e una ripetizione coordinata per quella ricetta sono convalidati."
+              },
+              {
+                "title": "Immagini prima",
+                "body": "L'applicazione non viene fermata fino a quando ogni digerito è stato risolto, scaricato e verificato."
+              },
+              {
+                "title": "Arresta i componenti e crea un backup dell'insieme",
+                "body": "I backup nativi verificati sono presi con lo stack fermato, quindi l'applicazione e i database appartengono allo stesso momento."
+              },
+              {
+                "title": "Aggiornare e controllare ogni membro",
+                "body": "Adattamento, rete, supporti, segreti e dispositivi vengono applicati di nuovo prima del controllo sanitario di ogni membro."
+              },
+              {
+                "title": "Pubblica o recupera tutto",
+                "body": "I nuovi contratti sono pubblicati solo quando ogni membro passa. Se uno fallisce, ogni membro viene ripristinato."
+              }
+            ]
+          }
+        },
+        {
+          "table": {
+            "headers": [
+              "Modifica",
+              "Quali cambiamenti",
+              "Ciò che è tenuto"
+            ],
+            "rows": [
+              [
+                "Strade e dispositivi extra",
+                "Vengono aggiunti o rimossi dal contenitore di applicazione, che riavvia. Nulla è ricostruito",
+                "I dati dell'applicazione, il suo database e gli altri contenitori"
+              ],
+              [
+                "Che cosa esegue il riconoscimento (Immich)",
+                "Il contenitore di apprendimento automatico prende l'immagine e i dispositivi del CPU o di un GPU dell'host. L'intera applicazione viene interrotta e aggiornata, come in un aggiornamento",
+                "La cache del modello, la libreria e il database. Se qualcosa fallisce, i contenitori precedenti e la scelta precedente vengono ripristinati"
+              ]
+            ]
+          }
+        },
+        {
+          "calloutWarning": {
+            "title": "Una pila senza un replay coordinato non è aggiornata",
+            "body": "Se la preparazione di uno stack non può essere riprodotta, l'aggiornamento viene rifiutato prima che lo stack venga interrotto. L'applicazione continua a funzionare come è."
+          }
+        }
+      ]
+    },
+    {
+      "id": "failure",
+      "title": "6. Quando qualcosa fallisce",
+      "blocks": [
+        {
+          "p": "Durante un'installazione, un errore si ferma e rimuove i contenitori incompleti che l'operazione ha creato, e il ponte privato se l'operazione l'ha creata. Una pila non viene pubblicata come valida fino al termine dell'intera sequenza."
+        },
+        {
+          "p": "Un aggiornamento è transazionale: tutte le immagini sono preparate prima, poi lo stack si ferma, ogni membro viene eseguito il backup e il backup verificato, e solo allora è sostituito ogni rootfs. I membri iniziano uno per uno con il loro controllo sanitario; se uno fallisce, ogni membro viene ripristinato dalla stessa serie di backup, quindi il database e l'applicazione non appartengono mai a momenti diversi."
+        },
+        {
+          "mermaid": {
+            "chartCode": "flowchart LR\n P[\"{{prepare}}\"] --> S[\"{{stop}}\"]\n S --> B[\"{{backup}}\"]\n B --> R[\"{{replace}}\"]\n R --> H{\"{{healthy}}\"}\n H -- \"{{yes}}\" --> C[\"{{commit}}\"]\n H -- \"{{no}}\" --> X[\"{{rollback}}\"]",
+            "labels": {
+              "prepare": "Preparare ogni immagine",
+              "stop": "Stop, primo membro principale",
+              "backup": "Backup verificato di ogni CT",
+              "replace": "Sostituisci i rootf",
+              "healthy": "Tutto sano?",
+              "yes": "Sì",
+              "no": "Nessun",
+              "commit": "Contratti di pubblicazione",
+              "rollback": "Ripristinare ogni membro"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "not-assumed",
+      "title": "Che cosa uno stack non include",
+      "blocks": [
+        {
+          "list": {
+            "items": [
+              "Una suite installata in un unico flusso, come la suite Arr, non è uno stack dipendente: i suoi contenitori non hanno ordine di partenza tra di loro.",
+              "La rete privata non sostituisce l'autenticazione, TLS o la configurazione di ogni applicazione.",
+              "Il backup di un LXC non contiene il ponte, il gancio o i contratti del resto dello stack.",
+              "Prowlarr, Sonarr o Radarr non ricevono indici, profili o fornitori da ProxMenux."
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

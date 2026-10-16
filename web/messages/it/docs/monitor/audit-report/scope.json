@@ -1,0 +1,115 @@
+{
+  "meta": {
+    "title": "Volume e garanzie | Audit & Report",
+    "description": "Se i dati di Audit & Report provengono da ciò che è al di fuori della sua visione, le garanzie del suo design e dove i suoi dati sono memorizzati."
+  },
+  "header": {
+    "title": "Ambito e garanzie",
+    "description": "Dove provengono i dati di una valutazione, cosa rimane al di fuori della sua vista e dove Audit & Report conserva i suoi dati.",
+    "section": "Audit e report"
+  },
+  "sections": [
+    {
+      "id": "sees",
+      "title": "Cosa osserva",
+      "blocks": [
+        {
+          "list": {
+            "items": [
+              "La configurazione e lo stato del nodo locale.",
+              "La configurazione dichiarata delle VM e dei LXC.",
+              "Lo stato dello stoccaggio come Proxmox VE lo conosce.",
+              "La cronologia disponibile dei backup e delle verifiche.",
+              "Dati SMART e gli eventi che il Monitor ha raccolto.",
+              "Lo stato dei servizi, cluster, HA e fonti locali."
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "outside",
+      "title": "Che cosa è fuori dalla sua vista",
+      "blocks": [
+        {
+          "list": {
+            "items": [
+              "L'interno degli ospiti, oltre quello che dichiarano a Proxmox VE.",
+              "Apparecchiature di rete al di fuori dell'host.",
+              "Dipendenze remote il nodo non può osservare.",
+              "Stato fisico l'hardware non espone.",
+              "Azioni manuali o azioni di altri software, nella rivista di cambiamento."
+            ]
+          }
+        },
+        {
+          "calloutWarning": {
+            "title": "Le prove mancanti non sono prove di assenza",
+            "body": "Una fonte che non può essere letta dà un risultato non verificato o incompleto, mai conformante. Il rapporto elenca le fonti che non erano disponibili."
+          }
+        }
+      ]
+    },
+    {
+      "id": "guarantees",
+      "title": "Garanzie del design",
+      "blocks": [
+        {
+          "list": {
+            "items": [
+              "Identificatori stabili per i controlli.",
+              "Storia delle piste e dei risultati.",
+              "Una politica validata, salvata atomicamente.",
+              "Rischi accettati con un motivo, visibile.",
+              "Attribuzione di modifiche allo script e alla funzione.",
+              "Cattura prima e dopo, dove è disponibile.",
+              "Un risultato esplicito quando qualcosa non può essere misurato o catturato."
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "storage",
+      "title": "Dove vengono memorizzati i dati",
+      "blocks": [
+        {
+          "table": {
+            "headers": [
+              "Dati",
+              "Percorso"
+            ],
+            "rows": [
+              [
+                "Politica",
+                "<code>/usr/local/share/proxmenux/audit_policy.json</code>"
+              ],
+              [
+                "Valutazione",
+                "Il database di audit del Monitor"
+              ],
+              [
+                "Oggetti catturati",
+                "<code>/usr/local/share/proxmenux/changes/objects/</code>"
+              ],
+              [
+                "Spese di prestito",
+                "<code>/usr/local/share/proxmenux/changes/spool/</code>"
+              ],
+              [
+                "Rivista consolidata",
+                "<code>/usr/local/share/proxmenux/changes.db</code>"
+              ]
+            ]
+          }
+        },
+        {
+          "calloutInfo": {
+            "title": "Uno strumento da rivedere, non una certificazione",
+            "body": "Audit & Report valuta, confronta e documenta il nodo. I suoi risultati sono letti insieme allo scopo del sistema, alla politica dichiarata e alle fonti disponibili."
+          }
+        }
+      ]
+    }
+  ]
+}

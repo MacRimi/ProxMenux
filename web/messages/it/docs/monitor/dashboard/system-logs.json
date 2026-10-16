@@ -1,0 +1,120 @@
+{
+  "meta": {
+    "title": "ProxMenux Monitor — Dashboard: scheda Log di sistema | Documentazione ProxMenux",
+    "description": "La scheda System Logs consolida tre sorgenti in una schermata: live journalctl con filtri e download, cronologia delle attività Proxmox (UPID), e registro di notifica — tutti ricercabili, filtrabili per gravità / intervallo di tempo e scaricabili come pacchetti di testo."
+  },
+  "header": {
+    "title": "Dashboard: scheda Log di sistema",
+    "description": "Tre sub-tabs sotto un unico tetto: la rivista di sistema (journalctl con filtri), la cronologia delle attività Proxmox e il registro delle notifiche. Tutti e tre sono ricercabili, filtrabili e scaricabili come pacchetti di testo.",
+    "section": "ProxMenux Monitor · Dashboard"
+  },
+  "readOnly": {
+    "title": "sola lettura per design",
+    "body": "Niente su questa scheda modifica i file di registro. I filtri vivono nell'URL / stato, i download sono pacchetti lato server. Il cruscotto non cancella mai le voci di registro — per la pulizia utilizzare il proprio <code>journalctl --vacuum-time=&lt;N&gt;</code> o <code>logrotate</code> dell'host."
+  },
+  "topRow": {
+    "heading": "Top Row: quattro contatori",
+    "items": [
+      "<strong>Total Registration</strong> — numero di record di registro all'interno della finestra del filtro attivo.",
+      "<strong>Errors</strong> — conteggio della gravità ≤ 3 (<code>err</code> / <code>crit</code> / <code>alert</code> / <code>emerg</code>).",
+      "<strong>Warnings</strong> — conteggio della gravità 4 (<code>warning</code>).",
+      "<strong>Backups</strong> — conteggio delle voci di attività vzdump / PBS nella stessa finestra."
+    ]
+  },
+  "subtabs": {
+    "heading": "Tre sub-tabs",
+    "logsTitle": "Log",
+    "logsIntro": "Il diario di sistema, servito da <code>journalctl</code> sul backend. Filtri disponibili nella barra degli strumenti:",
+    "logsFilters": [
+      "<strong>Severity</strong> — emerg / alert / crit / err / warning / note / info / debug, o qualsiasi combinazione.",
+      "<strong>Time range</strong> — ultima 5 min / 15 min / 1 h / 6 h / 24 h / 7 d / personalizzato.",
+      "<strong>Free-text search</strong> — sottostringa o regex (<code>journalctl --grep</code>).",
+      "<strong>Unit filter</strong> — restringere una specifica unità systemd (<code>pveproxy.service</code>, <code>nginx.service</code>, ...)."
+    ],
+    "logsRowsAfter": "Ogni riga mostra timestamp, tasso di gravità, unità sorgente e il messaggio. I messaggi lunghi crollano con un \"mostra di più\". L'azione <strong>Download</strong> raggruppa il filtro corrente in un unico file <code>.txt</code> tramite <code>GET /api/logs/download</code> — utile quando si desidera condividere una fetta di giornale con qualcuno.",
+    "logDetailsModalTitle": "Finestra dei dettagli del registro",
+    "logDetailsBody": "Facendo clic su qualsiasi riga si apre un modale <strong>Log Details</strong> con ogni campo strutturato testato catturato per quella singola voce — la stessa vista che si costruisce a mano eseguendo <code>journalctl --output=verbose</code> sull'host.",
+    "logDetailsImageAlt": "Log Details modal — ingresso di una rivista ampliato con Livello, Servizio, Timestamp, Sorgente, Systemd Unità, ID processo, Hostname e il messaggio completo",
+    "logDetailsImageCaption": "Log Details modal — ogni campo strutturato distribuito porta per questa voce, con il messaggio completo non falsificato in basso. Utile per cron e registri di servizio dove la riga di comando eseguita conta.",
+    "fieldsIntro": "Campi indicati:",
+    "fields": [
+      "<strong>Level</strong> — distintivo di gravità colorato (INFO / ATTENZIONE / ERROR / CRITICAL).",
+      "<strong>Service</strong> — nome corto dell'unità / processo che ha emesso l'ingresso.",
+      "<strong>Timestamp</strong> — data e ora completi della linea di registro.",
+      "<strong>Source</strong> — origine dell'entrata (giornale, kernel, audit, ...).",
+      "<strong>Systemd Unit</strong> — l'unità effettiva <code>.service</code> / <code>.timer</code> / <code>.socket</code> se l'ingresso è associato a uno.",
+      "<strong>Process ID</strong> — PID del processo di emissione.",
+      "<strong>Hostname</strong> — utile quando le riviste vengono inoltrate attraverso nodi di cluster.",
+      "<strong>Message</strong> — il messaggio completo non falsificato in un blocco monospaziale, pronto a copiare."
+    ],
+    "maxLevelStoreTitle": "Gazzetta ufficiale MaxLevelStore",
+    "maxLevelStoreBody": "Su una nuova installazione di Proxmox, diario di default a <code>MaxLevelStore=warning</code>, che silenziosamente rilascia messaggi di livello info. Il Monitor rileva questo all'avvio e aggiunge un drop-in (<code>/etc/systemd/journald.conf.d/proxmenux-loglevel.conf</code>) alzando la soglia a <code>info</code> in modo che la scheda Logs abbia effettivamente qualcosa da mostrare in tutte le gravità.",
+    "backupsTitle": "Backup",
+    "backupsBody": "La cronologia delle attività Proxmox è stata filtrata per le voci relative al backup. Una riga per compito (<code>vzdump</code>, PBS trasferimenti, Garbage Collect, Verify) con lo stato (OK / ATTENZIONE / ERROR), guest coinvolti, storage sorgente, durata e UPID. Fare clic su una riga per caricare il registro delle attività completo tramite <code>GET /api/task-log/&lt;upid&gt;</code> — gli stessi dati Proxmox espone attraverso <em>Datacenter → Tasks</em>, indirizzati ai backup.",
+    "notificationsTitle": "Notifiche",
+    "notificationsBody1": "Ogni notifica inviata dal Monitor — Telegram, Discord, Email, Gotify, ntfy, Slack, Teams, webhook. Ogni riga: timestamp, canale, tipo di evento, gravità, il titolo reso, il corpo reso, e (se l'intelligenza artificiale è abilitata) una toggle per visualizzare la riscrittura AI accanto all'originale.",
+    "notificationsBody2": "Utilizzare questa scheda per verificare che un canale stia effettivamente fornendo e confrontare ciò che la riscrittura AI prodotto vs la linea di base del modello. La configurazione del canale vive nella pagina profonda <link>Notifications</link>."
+  },
+  "dataCollected": {
+    "heading": "Come vengono raccolti i dati",
+    "headerSubtab": "Sottoscheda",
+    "headerEndpoint": "Fine",
+    "headerSource": "Fonte",
+    "rows": [
+      {
+        "subtab": "Registri (filtro in tempo reale)",
+        "endpoint": "/api/logs",
+        "source": "<code>journalctl --output json --since &lt;range&gt;</code> con gravità / unità / filtri di ricerca applicati lato server."
+      },
+      {
+        "subtab": "Scarica",
+        "endpoint": "/api/logs/download",
+        "source": "Stessa domanda, restituito come testo normale per grep / meno."
+      },
+      {
+        "subtab": "Backup",
+        "endpoint": "/api/backups",
+        "source": "Storia delle attività PVE filtrata da <code>vzdump</code>, trasferimenti PBS, Garbage Collect, Verify."
+      },
+      {
+        "subtab": "Esercizio di attività di backup",
+        "endpoint": "/api/task-log/&lt;upid&gt;",
+        "source": "Il registro delle attività completo del testo di Plain leggere da <code>/var/log/pve/tasks/&lt;index&gt;/&lt;upid&gt;</code>."
+      },
+      {
+        "subtab": "Notifiche storia",
+        "endpoint": "/api/notifications/history",
+        "source": "Tavolo SQLite <code>notification_history</code> alimentato dal loop di spedizione."
+      }
+    ],
+    "apiIntro": "Sia il filtro live che i download sono raggiungibili anche tramite il API:",
+    "codeComment1": "# Ultima ora di errori e peggio, con una parola chiave",
+    "codeComment2": "# Scarica la rivista completa delle ultime ore 6 come testo semplice",
+    "codeComment3": "# Guarda l'output completo di un compito specifico di UPID"
+  },
+  "whereNext": {
+    "heading": "Dove vicino",
+    "items": [
+      {
+        "label": "Monitoraggio integrità",
+        "href": "/docs/monitor/health-monitor",
+        "tail": "— la categoria Log di sistema che orologi per modelli persistenti / spunto / cascata."
+      },
+      {
+        "label": "Notifiche",
+        "href": "/docs/monitor/notifications",
+        "tail": "— il guardiano della rivista legge la stessa fonte e trasforma le partite in notifiche."
+      },
+      {
+        "label": "API Riferimento",
+        "href": "/docs/monitor/api",
+        "tail": "— i log e gli endpoint di task-log con i loro parametri di query."
+      },
+      {
+        "label": "Indice Dashboard",
+        "href": "/docs/monitor/dashboard",
+        "tail": "— le altre schede."
+      }
+    ]
+  }
+}

@@ -1,0 +1,106 @@
+{
+  "meta": {
+    "title": "Personalizzabile Post-Install Script | Documentazione ProxMenux",
+    "description": "Cherry-pick esattamente quali ottimizzazioni applicare a un host Proxmox VE con ProxMenux. Categorie 10, ~35 singoli strumenti, lista di controllo UI. Include tutto ciò che lo script automatizzato fa, oltre alle funzionalità di opt-in (IOMMU, Fastfetch, Figurine, Ceph, HA, AMD fixs...).",
+    "ogTitle": "Personalizzabile Post-Install Script | Documentazione ProxMenux",
+    "ogDescription": "Categorie 10, ~35 ottimizzazioni individuali. Scegli esattamente quello che vuoi su un host Proxmox VE. I cambiamenti reversibili sono rintracciati."
+  },
+  "header": {
+    "title": "Personalizzabile Post-Install Script",
+    "description": "Cherry-pick esattamente quali ottimizzazioni applicare a un host Proxmox VE. ProxMenux gruppi ~35 singoli strumenti in categorie 10, ciascuno con la propria finestra di dialogo lista di controllo. Stesso motore di Automated, ma con pieno controllo su ciò che viene applicato.",
+    "section": "Post-Install · Personalizzabile"
+  },
+  "intro": {
+    "title": "Quando scegliere Personalizzabile",
+    "body": "Scegliere questo percorso quando si sa già quali modifiche si desidera sull'host — o che sicuramente non si desidera. Lo script presenta una lista di controllo per categoria in modo da poter pre-selezionare, deselezionare o mix-and-match ottimizzazioni. Gli articoli possono essere applicati nuovamente in seguito, e le modifiche di configurazione reversibili sono tracciate per <link>Uninstall Optimizations</link>. Gli aggiornamenti dei pacchetti non sono presentati come reversibili."
+  },
+  "compare": {
+    "heading": "Come si confronta con Automated",
+    "body": "Personalizzabile è un superset del <link>Scritto automatizzato</link>. Esso copre lo stesso 14 ottimizzazioni di base più una lunga lista di opt-in che Automated intenzionalmente salta - cose che sono utili solo su hardware specifico (fisse AMD), hosting specifico (OVH RTM), o carichi di lavoro specifici (IOMMU/VFIO, Ceph repo, Alta disponibilità, Fastfetch, Figurine, ZFS ARC tuning, pigz, ZFS auto-snapshot, vzdump limiti di velocità, Aperto vSwitch, TCP BBR...)."
+  },
+  "categoriesSection": {
+    "heading": "Le categorie 10",
+    "body": "I gruppi di script personalizzabili ottimizzano le categorie 10. Ogni categoria ha la propria finestra di dialogo della lista di controllo e la sua pagina di documentazione — aprire una delle schede qui sotto per la razionalità di per-option, le fasi di default e di verifica."
+  },
+  "categories": [
+    {
+      "name": "Impostazioni di base",
+      "description": "Pulire le fonti APT, eseguire l'aggiornamento ufficiale Proxmox e impostare timezone, locale e utilità comuni. La linea di base ogni altro gruppo siede sopra."
+    },
+    {
+      "name": "Sistema",
+      "description": "Sintonizzare il sottosistema di registro e i limiti del kernel per un host che trasporta molte VM e container. Copre riviste, logrotate, sysctl (memoria, limiti di file), comportamento di panico del kernel e riavviamenti veloci."
+    },
+    {
+      "name": "Virtualizzazione",
+      "description": "Preparare l'host per la virtualizzazione avanzata. Auto-installa l'agente ospite su modelli e consente IOMMU/VFIO per il passaggio PCI di GPU, controller e TPU."
+    },
+    {
+      "name": "Rete",
+      "description": "Indurire e sintonizzare lo stack di rete dell'host. Forces APT over IPv4, applica sysctl indurimento + TCP buffer tuning, offre Open vSwitch, TCP BBR + TCP Fast Open, e perni nomi di interfaccia persistenti di MAC."
+    },
+    {
+      "name": "Stoccaggio",
+      "description": "Impostare i sottosistemi di archiviazione comuni di Proxmox: ZFS ARC sizing, ZFS auto-snapshot, ZFS autotrim per SSD/NVMe pools, e vzdump limiti di velocità per evitare di saturare il disco durante i backup."
+    },
+    {
+      "name": "Sicurezza",
+      "description": "Ridurre la superficie di attacco esposta per impostazione predefinita. Disattiva i servizi RPC (portmapper/rpcbind) che Proxmox non ha bisogno, ma lascia l'ascolto."
+    },
+    {
+      "name": "Personalizzazione",
+      "description": "Modificare l'esperienza visiva e shell dell'ospite: colori e alias in bashrc, banner MOTD e rimozione dell'avviso di abbonamento nell'interfaccia utente web."
+    },
+    {
+      "name": "Monitoraggio",
+      "description": "Integra l'host con OVH Real-Time Monitoring. Viene visualizzato solo quando ProxMenux rileva un server OVH."
+    },
+    {
+      "name": "Prestazioni",
+      "description": "Accelerare le operazioni di compressione (backup, trasferimenti) sostituendo gzip con la sua controparte parallela pigz."
+    },
+    {
+      "name": "Opzionale",
+      "description": "Pezzi Niche non ogni host ha bisogno: AMD CPU correzioni, Fastfetch banner, Figurine 3D hostname, PVE Appliance Manager indice aggiornamento, Ceph repository, Servizi di alta disponibilità, Log2RAM per ridurre l'usura SSD e un profilo di swap ZRAM."
+    }
+  ],
+  "mixTip": {
+    "title": "Mix Automatizzato e personalizzabile",
+    "body": "Un modello comune: eseguire <strong>Automated</strong> prima di bloccare nella linea di base sensibile, quindi aprire <strong>Customizable</strong> e selezionare solo gli strumenti di opt-in a cui tieni (ad esempio, IOMMU su un host che farà il passaggio GPU). Le modifiche sono tracciate in modo indipendente; il menu Disinstalla mostra tutto ciò che hai applicato indipendentemente dal percorso aggiunto."
+  },
+  "related": {
+    "heading": "Correlati",
+    "items": [
+      {
+        "label": "Post-Install automatizzato",
+        "href": "/docs/post-install/automated",
+        "tail": "— sanzioni di default applicate con zero prompt."
+      },
+      {
+        "label": "Disinstalla ottimizzazioni",
+        "href": "/docs/post-install/uninstall",
+        "tail": "— indietro qualsiasi selezione in modo pulito."
+      },
+      {
+        "label": "Impostazioni di base",
+        "href": "/docs/post-install/basic-settings",
+        "tail": "— repos, tempo, lingua, utilità."
+      },
+      {
+        "label": "Virtualizzazione",
+        "href": "/docs/post-install/virtualization",
+        "tail": "— IOMMU + VFIO per il passaggio."
+      },
+      {
+        "label": "Sicurezza",
+        "href": "/docs/post-install/security",
+        "tailRich": "· <storageLink>Storage</storageLink> · <networkLink>Network</networkLink> · <customLink>Customization</customLink> — altre categorie."
+      },
+      {
+        "label": "Panoramica post-install",
+        "href": "/docs/post-install",
+        "tail": "."
+      }
+    ]
+  }
+}

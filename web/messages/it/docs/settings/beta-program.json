@@ -1,0 +1,113 @@
+{
+  "meta": {
+    "title": "Cambia canale di uscita | Documentazione ProxMenux",
+    "description": "Interruttore ProxMenux tra i canali Stable (main) e Beta (develop) in una finestra di dialogo. Bidirezionale, idempotent, gestisce l'installatore ufficiale per il canale scelto e normalizza il servizio Monitor.",
+    "ogTitle": "Cambia canale di uscita | Documentazione ProxMenux",
+    "ogDescription": "Un'opzione Impostazioni per passare tra i canali Stable e Beta - nessun programma di installazione a mano."
+  },
+  "header": {
+    "title": "Cambia canale di rilascio",
+    "description": "Un'opzione Impostazioni unificata per passare ProxMenux tra i canali Stable (fermello principale) e Beta (sviluppa ramo). Il precedente \"Deactivate Beta Program\" è stato sostituito da una finestra di dialogo bidirezionale che offre sempre entrambe le direzioni e gestisce l'installatore ufficiale per ogni canale scelto.",
+    "section": "Impostazioni"
+  },
+  "intro": {
+    "title": "Che cosa è cambiato",
+    "body": "Le versioni precedenti di ProxMenux hanno esposto due flussi separati — “Deactivate Beta Program” (solo visibile quando beta era attiva) e una riesecuzione manuale del beta installer per rientrare. Essi sono uniti in un unico ingresso <strong>Change Release Channel</strong> che è sempre presente, mostra il canale corrente e consente di capovolgere tra Stable e Beta in entrambe le direzioni."
+  },
+  "why": {
+    "heading": "Perché questa opzione esiste",
+    "intro": "ProxMenux navi da due rami git:",
+    "items": [
+      "<strong>Stable</strong> — il ramo <code>main</code>. Ciò che il README indica, ciò che la maggior parte degli operatori desidera, con una cadenza di rilascio più lenta e solo cambiamenti che sono già stati attraverso la convalida beta.",
+      "<strong>Beta</strong> — il ramo <code>develop</code>. Caratteristiche più recenti e Monitor costruisce; porta il tag il prossimo rilascio stabile eredita. Alcune cose potrebbero non funzionare perfettamente - questo è l'accordo per cui ti iscrivi e il modo in cui le nuove funzionalità vengono testate prima di spedire."
+    ],
+    "outro": "Hopping tra i canali utilizzati per richiedere la memoria dell'URL dell'installatore giusto, copiarlo dal README, e la modifica di <code>config.json</code> a mano se qualcosa è uscito dalla sincronizzazione. L'opzione unificata fa tutto il flusso come un'unica azione guidata."
+  },
+  "dialog": {
+    "heading": "La finestra di dialogo",
+    "intro": "Dal menu principale, <strong>Impostazioni → Cambia Canale di uscita</strong>. Viene visualizzato un menu a due righe:",
+    "options": [
+      "<code>stable</code> — Stabile (fermello principale)",
+      "<code>beta</code> — Beta (diramazione di sviluppo)"
+    ],
+    "behaviour": "Il canale corrente è pre-selezionato e mostrato nella parte superiore del menu. Scegliere lo stesso canale restituisce un amichevole “Questo canale di rilascio è già attivo” messaggio — la finestra di dialogo è completamente idempotent. Scegliere un canale diverso apre una conferma con il testo specifico del canale:",
+    "directions": [
+      "<strong>Stable → Beta:</strong> avverte che le costruzioni beta possono contenere bug o funzioni incomplete.",
+      "<strong>Beta → Stabile:</strong> avverte che i controlli di aggiornamento beta si fermeranno e l'installatore stabile reinstallerà i componenti del canale stabile."
+    ]
+  },
+  "confirm": {
+    "heading": "Cosa succede quando confermi",
+    "items": [
+      "<strong>Scarica l'installatore ufficiale</strong> per il canale di destinazione:<ul><li>Stable: <code>install_proxmenux.sh</code> da <code>main</code></li><li>Beta: <code>install_proxmenux_beta.sh</code> da <code>develop</code></li></ul>Il download è verificato per la fase successiva.",
+      "<strong>Runs l'installatore</strong> end-to-end. L'installatore è lo stesso che README pubblica — nessun percorso personalizzato, nessuna scorciatoia. Ciò significa rilevamento dei componenti esistenti, backup dei file, installazioni di dipendenza, conservazione della lingua, ecc. tutti si comportano in modo identico a una nuova installazione del canale di destinazione.",
+      "Quando si passa a <strong>Stable</strong>, il menu potunes qualsiasi beta metadati a sinistra da <code>config.json</code>: <code>beta_program</code>, <code>beta_version</code>, <code>install_branch</code>, <code>update_available.beta*</code> vengono eliminati, e <code>proxmenux_monitor.status = beta_updated</code> è normalizzato a <code>updated</code>. Il file <code>beta_version.txt</code> e qualsiasi installatore beta scaricato vengono rimossi.",
+      "Quando si passa a Stable, il file di unità Monitor systemd viene riscritto anche dal modello Stable (lascia il suffisso “Beta” dalla descrizione dell'unità, punti <code>ExecStart</code> indietro al runtime dir) in modo che un <code>systemctl status</code> fresco rifletta il canale che si sta accendendo.",
+      "Ricarica il menu di configurazione. La prossima visita a <em>Show Version Information</em> mostrerà il nuovo canale."
+    ]
+  },
+  "switching": {
+    "heading": "Passare avanti e indietro",
+    "intro": "Entrambe le direzioni passano attraverso lo stesso installatore — sono <strong>not</strong> flussi di disinstallazione speciali + reinstallazione. Ogni direzione gestisce semplicemente il proprio installatore del canale, che è progettato per essere idempotent e sicuro per rieseguire su un'installazione esistente. Conseguenze pratiche:",
+    "items": [
+      "La configurazione esistente, ProxMenux Monitor login (<code>auth.json</code>), canali di notifica, registro post-installazione, soglie personalizzate — nessuno di questi sono toccati. L'interruttore di canale scambia solo l'albero di script e il binario AppImage.",
+      "Un Monitor attivo prima che l'interruttore rimanga attivo dopo; uno che è stato disattivato rimane disattivato.",
+      "I token ProxMenux Monitor <code>auth.json</code>, API e il segreto JWT sono conservati attraverso i cambiamenti dei canali. Le sessioni non vengono registrate.",
+      "È possibile capovolgere i canali più volte che ti piace — la finestra di dialogo lo accetterà ogni volta e eseguire il programma di installazione. Non è necessario riavviare Proxmox.",
+      "L'installatore del commutatore del canale sostituisce il proprio albero di script di ProxMenux, quindi non può essere eseguito all'interno del terminale del browser del Monitor (che PTY sarebbe stato abbattuto a metà aggiornamento e lasciare la finestra di dialogo bloccata). Se si avvia l'opzione da lì, la conferma viene sostituita da un msgbox informativo che mostra l'installatore a una linea canonica per il canale di destinazione; eseguire tale comando da una sessione SSH o dalla console host Proxmox."
+    ]
+  },
+  "feedback": {
+    "heading": "Rapporti tra le questioni della beta",
+    "intro": "Se qualcosa si comporta inaspettatamente mentre sei sul canale Beta, aprire un problema con un contesto sufficiente è quello che chiude il divario a un rilascio stabile. Il rapporto più utile comprende:",
+    "items": [
+      "Quello che hai fatto e quello che ti aspettavi.",
+      "Eventuali messaggi di errore visualizzati sullo schermo.",
+      "I relativi registri Monitor:"
+    ],
+    "logsCommand": "journalctl -u proxmenux-monitor -n 50 --no-pager",
+    "versionLine": "L'attuale versione ProxMenux (impostazioni → <link>Show Version Information</link>).",
+    "issueLine": "Aprire un <ghlink>GitHub Issue</ghlink> con queste informazioni e arriviamo alla correzione più veloce."
+  },
+  "manual": {
+    "heading": "Equivalente manuale",
+    "intro": "Se preferisci la shell o stai scrivendo l'interruttore del canale, la finestra di dialogo è solo un avvolgitore sottile intorno a questi comandi:"
+  },
+  "unifiedCallout": {
+    "title": "Perché entrambe le direzioni sono ora un'opzione",
+    "body": "Il precedente “Deactivate Beta Program” esisteva solo se l’ospite si fosse mai unito alla beta. Gli operatori che desiderano <em>join</em> hanno dovuto trovare l'URL dell'installatore beta altrove; gli operatori che desiderano <em>leave</em> hanno a volte dovuto pulire manualmente i metadati <code>beta_*</code> per essere sicuri. L'opzione unified <strong>Change Release Channel</strong> si presenta sempre, rende il canale corrente esplicita, e tratta entrambe le direzioni dello stesso tipo di operazione — eseguibile, ripetibile, idempotent."
+  },
+  "troubleshoot": {
+    "heading": "Risoluzione dei problemi",
+    "downloadTitle": "“Impossibile scaricare l’installatore”",
+    "downloadBody": "HTTPS in uscita a <code>raw.githubusercontent.com</code> fallito. Controllare la connettività e DNS dall'host:",
+    "downloadCmd": "curl -fsSL -o /tmp/test https://raw.githubusercontent.com/MacRimi/ProxMenux/main/install_proxmenux.sh && head -1 /tmp/test",
+    "downloadOutro": "Se questo non funziona al di fuori di ProxMenux, è un problema di rete / proxy sull'host.",
+    "errorsTitle": "“Installer finito con errori”",
+    "errorsBody": "L'installatore ha superato un codice di uscita non zero. Il canale precedente e tutti i componenti già installati sono lasciati come prima dell'interruttore. Ripristina l'azione; se continua a fallire, eseguire l'installatore manualmente da una shell (vedere l'equivalente manuale sopra) - che ti dà l'output completo invece del sommario di dialogo.",
+    "configTitle": "“Impossibile aggiornare il file di configurazione” dopo il passaggio a stabile",
+    "configBody": "La pulizia post-installazione dei metadati beta non è riuscita — di solito perché <code>config.json</code> ha un errore di sintassi da una modifica manuale. Convalidalo:",
+    "configCmd": "jq . /usr/local/share/proxmenux/config.json",
+    "configOutro": "Fissare o ripristinare il file e eseguire l'opzione."
+  },
+  "related": {
+    "heading": "Correlati",
+    "items": [
+      {
+        "href": "/docs/settings/show-version-information",
+        "label": "Mostra informazioni sulla versione",
+        "tail": "— confermare quale canale è attivo ora."
+      },
+      {
+        "href": "/docs/settings/proxmenux-monitor",
+        "label": "Monitor di ProxMenux",
+        "tail": "— il servizio Monitor che viene ricostruito come parte dell'interruttore."
+      },
+      {
+        "href": "/docs/settings",
+        "label": "Panoramica delle impostazioni",
+        "tail": "."
+      }
+    ]
+  }
+}

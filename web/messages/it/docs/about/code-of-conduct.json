@@ -1,0 +1,12 @@
+{
+  "meta": {
+    "title": "Codice di condotta | Documentazione ProxMenux",
+    "description": "ProxMenux Codice di condotta e best practice per i contributori, i tester e gli utenti.",
+    "ogTitle": "Codice di condotta | Documentazione ProxMenux",
+    "ogDescription": "Aspetti circa la responsabilità del codice, la divulgazione della sicurezza e la portata PR per il progetto ProxMenux."
+  },
+  "errors": {
+    "notFound": "Errore: file CODE_OF_CONDUCT.md non trovato.",
+    "loadFailed": "Errore: Incapace di caricare il contenuto del Codice di condotta."
+  }
+}

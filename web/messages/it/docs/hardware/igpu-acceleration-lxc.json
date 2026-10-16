@@ -1,0 +1,185 @@
+{
+  "meta": {
+    "title": "Aggiungi GPU a LXC | Documentazione ProxMenux",
+    "description": "Condividere un Intel, AMD o NVIDIA GPU con un contenitore LXC per transcodifica accelerata dall'hardware (Plex / Jellyfin / Frigate), carichi di lavoro OpenCL / CUDA e accelerazione video Mesa. ProxMenux gestisce i nodi del dispositivo, l'allineamento GID e il driver specifico distro installato all'interno del contenitore."
+  },
+  "header": {
+    "title": "Aggiungi GPU a LXC",
+    "description": "Condividere una o più GPU con un contenitore Proxmox LXC. L'host continua a utilizzare il GPU normalmente — il contenitore appena ottiene l'accesso tramite nodi del dispositivo. Funziona con Intel iGPUs (Quick Sync / VA-API), schede AMD (Mesa / ROCm), e NVIDIA (CUDA / NVENC).",
+    "section": "Hardware: GPU e Coral-TPU"
+  },
+  "intro": {
+    "title": "Cosa succede?",
+    "body": "Aggiunge le voci <code>dev&lt;N&gt;</code> alla configurazione LXC (<code>/etc/pve/lxc/&lt;ctid&gt;.conf</code>) in modo che il contenitore veda <code>/dev/dri/*</code>, <code>/dev/kfd</code> o <code>/dev/nvidia*</code> — qualunque sia la vostra GPU. Poi si avvia il contenitore, rileva la distro all'interno e installa i driver userspace corrispondenti (Mesa, intel-media-driver, NVIDIA runtime...) così applicazioni come Plex, Jellyfin o Frigate effettivamente utilizzare il GPU per la transcodifica. I GID (<code>video</code>, <code>render</code>) sono allineati tra host e container per cui le autorizzazioni corrispondono."
+  },
+  "compare": {
+    "heading": "LXC condivisione vs passthrough VM",
+    "intro": "I contenitori LXC condividono il kernel host, così possono <em>share</em> l'host GPU senza sostituirlo. Questa è una grande differenza dalle VM: con <vmLink>VM passthrough</vmLink> il GPU è esclusivo di un VM e l'host non può usarlo. Con LXC, più contenitori più l'host può tutti colpire lo stesso GPU contemporaneamente.",
+    "headerFeature": "Caratteristica",
+    "headerLxc": "LXC (questa pagina)",
+    "headerVm": "VM",
+    "rows": [
+      {
+        "feature": "Host continua a usare il GPU?",
+        "lxc": "Sì",
+        "vm": "No — esclusiva della VM"
+      },
+      {
+        "feature": "Contenitori multipli che condividono un GPU?",
+        "lxc": "Sì",
+        "vm": "Nessun"
+      },
+      {
+        "feature": "Richiede IOMMU / VFIO sull'host?",
+        "lxc": "Nessun",
+        "vm": "Sì"
+      },
+      {
+        "feature": "Riavvio richiesto?",
+        "lxc": "Di solito no (solo riavviare il CT)",
+        "vm": "Sì, sempre"
+      },
+      {
+        "feature": "Supporta l'esecuzione di un sistema operativo?",
+        "lxc": "Solo Linux (LXC è Linux-solo)",
+        "vm": "Windows, macOS, qualsiasi Linux"
+      }
+    ]
+  },
+  "prereqs": {
+    "title": "Prima di iniziare",
+    "gpu": "<strong>A GPU sull'host</strong> — Intel iGPU, AMD dGPU o APU, o una scheda NVIDIA. Lo script rileva automaticamente tutti e tre via <code>lspci</code>.",
+    "gpuCheck": "lspci | grep -iE 'VGA|3D|Display'",
+    "vfio": "<strong>Il GPU non è legato a vfio-pci.</strong> Se il GPU è attualmente assegnato a un VM tramite passthrough, è invisibile al driver del kernel host e il LXC non può utilizzarlo. Lo script rileva e offre di eseguire <switchLink>Switch GPU Mode</switchLink> per voi.",
+    "nvidia": "<strong>Per NVIDIA solo:</strong> il driver host NVIDIA deve essere già installato — ProxMenux ha bisogno di abbinare le librerie userspace del contenitore alla versione host. Se non l'hai ancora fatto, esegui prima i driver <nvidiaLink>Install NVIDIA su Host</nvidiaLink>.",
+    "nvidiaCheck": "nvidia-smi",
+    "container": "<strong>Un contenitore LXC esistente.</strong> Lo script opera su un contenitore che hai già creato - non crea uno. Il contenitore dovrebbe idealmente essere <strong>privileged</strong> (lavori non privati ma ha bisogno di mappatura UID/GID che lo script non configura)."
+  },
+  "unpriv": {
+    "title": "Lavora su contenitori privilegiati e non privati",
+    "body": "Lo script scrive le voci <code>dev&lt;N&gt;</code> alla configurazione LXC e, su contenitori non privati, allinea i GID <code>video</code> e <code>render</code> tra host e container in modo che i nodi del dispositivo GPU siano raggiungibili dall'interno senza dover eseguire a mano <code>lxc.idmap</code>."
+  },
+  "running": {
+    "heading": "Eseguire l'installatore",
+    "body": "Aprire ProxMenux sull'host, andare a <strong>Hardware: GPU e Coral-TPU → Aggiungi GPU a LXC</strong>.",
+    "imageAlt": "Menu entry per 'Add GPU a LXC' interno Hardware: GPU e Coral-TPU"
+  },
+  "howRuns": {
+    "heading": "Come funziona lo script",
+    "body": "Due fasi: tutte le decisioni in anticipo, poi tutti i cambiamenti in uno andare. Niente sul tuo contenitore viene toccato fino a quando non confermi."
+  },
+  "walkthrough": {
+    "heading": "Camminare attraverso il flusso",
+    "detect": {
+      "title": "Rilevamento GPU host",
+      "body": "Lo script scansiona <code>lspci</code> per i controller VGA / 3D / Display corrispondenti a Intel, AMD o NVIDIA. Per NVIDIA verifica anche il modulo del kernel <code>nvidia</code> è caricato e funziona <code>nvidia-smi</code> — la versione del driver host che segnala verrà utilizzata per selezionare l'installatore <code>.run</code> giusto per il contenitore.",
+      "tipTitle": "NVIDIA non pronto?",
+      "tipBody": "Se viene rilevato NVIDIA ma il modulo non viene caricato, lo script non offre il percorso NVIDIA. Eseguire i driver <nvidiaLink>Install NVIDIA sul primo Host</nvidiaLink> (e riavviare), quindi tornare indietro."
+    },
+    "pickCt": {
+      "title": "Scegli un contenitore LXC",
+      "body": "Vedrai una lista di ogni LXC sull'host con il suo ID e il suo nome. Scegli quello che dovrebbe ottenere il GPU. Il contenitore può essere in esecuzione o fermato — lo script gestisce entrambi (ferma brevemente durante la configurazione, lo riavvia, e lo lascia nel suo stato originale alla fine).",
+      "imageAlt": "Elenco di dialogo contenitori LXC esistenti tra cui scegliere"
+    },
+    "selectGpu": {
+      "title": "Selezionare il GPU(s) da aggiungere",
+      "body": "Se più di un GPU è presente, si ottiene una lista di controllo. È possibile aggiungere più allo stesso contenitore (ad esempio un Intel iGPU per Quick Sync + un AMD dGPU per ROCm). Se viene rilevato solo un GPU, viene automaticamente selezionato.",
+      "imageAlt": "Elenco di controllo che mostra le GPU rilevate (Intel / AMD / NVIDIA) con il venditore e l'indirizzo PCI"
+    },
+    "preflight": {
+      "title": "Controlli pre volo",
+      "imageAlt": "L'offerta di dialogo per l'esecuzione di Switch GPU Mode quando il GPU selezionato è ancora legato a vfio-pci per il passaggio VM",
+      "intro": "Tre controlli, uno dei quali può bloccare o reindirizzare:",
+      "items": [
+        "<strong>SR-IOV.</strong> Se il GPU selezionato è una funzione virtuale (VF) o una funzione fisica con VF attivi, LXC passante non si applica — il dispositivo è gestito dal driver SR-IOV. Bloccato.",
+        "<strong>Bound to vfio-pci.</strong> Se il GPU è attualmente tenuto da VFIO per il passaggio VM, il kernel host non può creare i nodi <code>/dev/dri/*</code> o <code>/dev/nvidia*</code> per esso. Lo script offre l'esecuzione di <switchLink>Switch GPU Mode</switchLink> che annulla il legame VFIO; probabilmente avrai bisogno di un riavvio prima di riavviare Add GPU a LXC.",
+        "<strong>Already configurato.</strong> Se il contenitore ha già ogni nodo dev per il GPU selezionato, lo script lo dice ed esce in modo pulito. Se è parzialmente configurato, continua con solo i pezzi mancanti."
+      ]
+    },
+    "applyConfig": {
+      "title": "Applicare le modifiche di configurazione LXC",
+      "body1": "Lo script ferma il contenitore, modifica <code>/etc/pve/lxc/&lt;ctid&gt;.conf</code> e aggiunge le voci <code>dev&lt;N&gt;</code> con i GID giusti per le GPU selezionate. Utilizzando le voci <code>dev:</code> (sotto le vecchie linee <code>lxc.mount.entry</code>) è il moderno modo Proxmox — le autorizzazioni di gruppo sono impostate al tempo di configurazione parse invece che al tempo di montaggio.",
+      "body2": "Esempio dopo Intel + NVIDIA sullo stesso contenitore:"
+    },
+    "installDrivers": {
+      "title": "Avviare il contenitore e installare i driver all'interno",
+      "body": "Una volta che la configurazione è scritta, lo script inizia il contenitore, aspetta fino a ~30 secondi per <code>pct exec</code> per rispondere, e quindi rileva il distro del contenitore da <code>/etc/os-release</code>. In base a ciò, installa i pacchetti userspace giusti.",
+      "headerDistro": "Distribuzione",
+      "headerInt": "Intel / AMD",
+      "headerNvidia": "NVIDIA",
+      "rows": [
+        {
+          "distro": "Alpine",
+          "intel": "apk add mesa-va-gallium intel-media-driver libva-utils",
+          "nvidia": "apk add nvidia-utils"
+        },
+        {
+          "distro": "Arch / Manjaro",
+          "intel": "pacman -Sy intel-media-driver mesa libva-utils",
+          "nvidia": "pacman -Sy nvidia-utils"
+        }
+      ],
+      "debianDistro": "Debian / Ubuntu / altri",
+      "debianIntel": "apt-get install va-driver-all intel-opencl-icd vainfo",
+      "debianNvidia": "Estrarre host <code>.run</code> → <code>pct push</code> → eseguire con <code>--no-kernel-modules --no-dkms</code>",
+      "whyTitle": "Perché la danza NVIDIA .run su Debian",
+      "whyBody": "Debian / Ubuntu non spediscono pacchetti NVIDIA con una versione abbastanza granulare per abbinare il driver host byte-for-byte. Le libs userspace all'interno del contenitore <strong> devono corrispondere alla versione del modulo del kernel</strong> caricata sull'host, o <code>nvidia-smi</code> non riesce con un errore di versione. ProxMenux risolve questo problema utilizzando lo stesso installatore <code>.run</code> che è stato utilizzato per l'host — estratto, tarred, spinto nel contenitore con <code>pct push</code>, ed eseguito con <code>--no-kernel-modules --no-dkms</code> così solo lo spazio utente è toccato."
+    },
+    "alignGids": {
+      "title": "Allineare GID e ripristinare lo stato",
+      "body1": "I file del dispositivo sull'host sono di proprietà del gruppo <code>video</code> (GID 44) o <code>render</code> (GID 104). Il distro del contenitore può spedire diversi numeri GID per quei gruppi, che renderebbero i nodi GPU irraggiungibili dall'interno. Lo script riscrive <code>/etc/group</code> nel contenitore in modo che <code>video:44</code> e <code>render:104</code> corrispondono esattamente.",
+      "body2": "Infine, ripristina il contenitore al suo stato originale — se Ã ̈ stato fermato quando hai iniziato, viene fermato di nuovo. Se stava correndo, rimane in funzione."
+    }
+  },
+  "vendors": {
+    "heading": "Note specifiche del venditore",
+    "intelHeading": "Intel iGPU",
+    "intelBody": "Il percorso più comune — grande per Plex / Jellyfin / Frigate transcodifica hardware tramite <em>Quick Sync</em>. Il contenitore ottiene <code>/dev/dri/card0</code> (legacy) e <code>/dev/dri/renderD128</code> (nodo moderno di render-only — quali applicazioni effettivamente utilizzano). Nessun cambiamento sul lato host necessario; il driver <code>i915</code> sull'host ha già creato i nodi.",
+    "amdHeading": "AMD",
+    "amdBody": "Stessi nodi DRI di Intel per la grafica / VA-API. Se <code>/dev/kfd</code> esiste sull'host (supporto del kernel di elaborazione AMD / ROCm), lo script lo aggiunge anche in modo che i contenitori possano fare carichi di lavoro OpenCL / ROCm. I driver Mesa VA coprono il lato decodifica video.",
+    "nvidiaHeading": "NVIDIA",
+    "nvidiaBody": "Aggiunge ogni nodo <code>/dev/nvidia*</code> che l'host espone. Il pezzo critico è <strong>driver-version matching</strong>: la versione del modulo host e la versione del contenitore userspace lib devono essere identici, altrimenti <code>nvidia-smi</code> all'interno del contenitore non riesce. ProxMenux cattura la versione host al momento del rilevamento e utilizza lo stesso file <code>.run</code> per installare lo userspace del contenitore. Per i contenitori Debian la memoria del contenitore di installazione urti a 2 GB temporaneamente (l'installatore ha bisogno di ~1.5 GB gratuito per estrarre) e lo ripristina in seguito.",
+    "updateTitle": "Dopo aver aggiornato il driver NVIDIA host, eseguire nuovamente questo script",
+    "updateBody": "Quando si aggiorna il driver NVIDIA sull'host, le libre userspace del contenitore rimangono sulla vecchia versione e <code>nvidia-smi</code> all'interno delle interruzioni del contenitore. L'installatore host ProxMenux <nvidiaLink>NVIDIA di </nvidiaLink> rileva i container con passthrough NVIDIA e offre di aggiornarli automaticamente, ma se hai saltato quel prompt, esegui Add GPU a LXC di nuovo sullo stesso contenitore e aggiornerà lo userspace."
+  },
+  "verification": {
+    "heading": "Verifica",
+    "body": "Dopo la fine dello script, accedere al contenitore e controllare il GPU è visibile:"
+  },
+  "troubleshoot": {
+    "heading": "Risoluzione dei problemi",
+    "mismatchTitle": "nvidia-smi: Failed to initialize NVML: Driver/library version mismatch",
+    "mismatchBody": "Contenitore versione userspace versione ζ modulo host. Eseguire Aggiungi GPU a LXC di nuovo su quel contenitore — lo script estrae l'attuale host <code>.run</code> e reinstalla l'accoppiamento dello spazio utente.",
+    "denyTitle": "Permesso negato su /dev/dri/renderD128 all'interno del contenitore",
+    "denyBody": "Di solito uno di: (1) contenitore non è privato senza mappatura UID/GID per ospitare gruppo <code>render</code>; (2) l'utente all'interno del contenitore non è nel gruppo <code>render</code>. Fix: aggiungere l'utente a <code>render</code> all'interno del contenitore (<code>usermod -aG render &lt;user&gt;</code>), o passare alla modalità privilegiata se il carico di lavoro è affidabile.",
+    "vainfoTitle": "vainfo dice: VA-API versione 1.xx; non inizializzare",
+    "vainfoBody": "Il runtime VA-API è presente ma non è stato installato alcun driver adatto. Su Intel, installare <code>intel-media-driver</code> (gens più recenti) o <code>i965-va-driver</code> (gens maggiore). Su AMD, <code>mesa-va-drivers</code>. Ri-correre lo script se in dubbio.",
+    "logTitle": "Installa il log",
+    "logBody": "Ogni corsa scrive a <code>/tmp/add_gpu_lxc.log</code> sull'host. Includilo quando chiedi aiuto su GitHub."
+  },
+  "related": {
+    "heading": "Correlati",
+    "items": [
+      {
+        "label": "Installare driver NVIDIA (Host)",
+        "href": "/docs/hardware/nvidia-host",
+        "tail": "— prerequisito richiesto per GPU NVIDIA prima di passare a un contenitore."
+      },
+      {
+        "label": "Aggiungi GPU a VM (Passthrough)",
+        "href": "/docs/hardware/gpu-vm-passthrough",
+        "tail": "— modello alternativo quando è necessario il GPU dedicato ad un singolo VM."
+      },
+      {
+        "label": "Interruttore modalità GPU (VM ↔ LXC)",
+        "href": "/docs/hardware/switch-gpu-mode",
+        "tail": "— attivare lo stesso GPU tra la condivisione LXC e il passaggio VM."
+      },
+      {
+        "label": "Comandi di passaggio GPU",
+        "href": "/docs/help-info/gpu-commands",
+        "tail": "— rapido riferimento per i relativi comandi shell."
+      }
+    ]
+  }
+}

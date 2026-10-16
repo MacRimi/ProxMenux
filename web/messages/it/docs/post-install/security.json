@@ -1,0 +1,57 @@
+{
+  "meta": {
+    "title": "Post-Install: Sicurezza | Documentazione ProxMenux",
+    "description": "Opzioni di sicurezza disponibili nello script ProxMenux Personalizzabile post-installazione. Attualmente un'unica opzione: disabilitare il servizio portmapper/rpcbind per ridurre la superficie di attacco dell'host."
+  },
+  "header": {
+    "title": "Post-Install: Sicurezza",
+    "section": "Impostazioni post-installazione Proxmox"
+  },
+  "intro": {
+    "title": "Che cosa copre questa categoria",
+    "body": "La sicurezza post-installazione è limitata a <strong>indurimento dell'ospite che è sicuro applicare incustodito</strong> — cose che disabilitano i servizi quasi nessuno ha bisogno e che possono essere annullati dal menu Disinstalla. Attivo strumento di sicurezza (Fail2Ban per la prevenzione delle intrusioni, Lynis per l'auditing) vive sotto il dedicato <em>Sicurezza</em> ingresso su ProxMenux's menu principale, non qui in post-installazione."
+  },
+  "rpcbind": {
+    "heading": "Disattivare il portmapper / rpcbind",
+    "intro": "<code>rpcbind</code> (ex <code>portmap</code>) è un servizio che mappa i numeri di programma RPC alle porte di rete. È una dipendenza per NFS e alcuni strumenti basati su RPC legacy. Su un tipico host Proxmox che non agisce come un server NFS, <strong>nothing lo usa </strong> - e lasciandolo abilitato mantiene la porta <code>111/tcp</code> ascoltando su ogni interfaccia.",
+    "whyTitle": "Perché vale la pena disabling",
+    "whyItems": [
+      "Riduce la superficie di attacco ospite — un servizio di ascolto in meno di preoccuparsi.",
+      "Storicamente abusato come vettore di riflessione/amplificazione in attacchi DDoS. Disabilitare <code>rpcbind</code> rimuove quel fattore di amplificazione per il vostro host.",
+      "Rimuove il rumore che genera nei registri e nell'uscita <code>netstat</code> / <code>ss</code>, facilitando l'attività reale."
+    ],
+    "nfsTitle": "Non disabilitarlo se si utilizza NFS",
+    "nfsBody": "Il client NFS server <strong> e </strong> NFS si affida a <code>rpcbind</code> per negoziare le porte utilizzate da <code>mountd</code>, <code>statd</code>, <code>lockd</code>, ecc. Se il vostro host Proxmox o <em>exports</em> NFS condivide ad altre macchine o <em>mounts</em> NFS azioni da un NAS, non applicare questa opzione. I supporti falliranno con <code>mount.nfs: rpc.statd is not running</code> o simili.",
+    "runsTitle": "Cosa funziona ProxMenux",
+    "runsOutro": "Il pacchetto rimane installato. ProxMenux registra lo stato originale abilitato/attivo sia di rpcbind.service che di rpcbind.socket, quindi disabilita e arresta entrambe le unità in modo da l'attivazione dell'orbita non può portare il servizio indietro.",
+    "verifyTitle": "Verifica",
+    "verifyBody": "Dopo l'applicazione, confermare <code>rpcbind</code> è spento e nulla sta ascoltando sulla porta 111:",
+    "reversibleTitle": "Ripristinare lo stato di servizio originale",
+    "reversibleBody": "Questa modifica è registrata in <code>installed_tools.json</code>. <link>Uninstall Optimizations</link> ripristina ogni unità rpcbind allo stato attivato/disabilitato e attivo/inattivo catturato prima che ProxMenux lo cambiasse; non presume che rpcbind sia stato abilitato su ogni host."
+  },
+  "related": {
+    "heading": "Correlati",
+    "items": [
+      {
+        "label": "Menu di sicurezza",
+        "href": "/docs/security",
+        "tail": "— hitter più pesanti: Fail2Ban (prevenzione dell'intrusione) e Lynis (audit)."
+      },
+      {
+        "label": "Lynis",
+        "href": "/docs/security/lynis",
+        "tail": "— controllare l'ospite per trovare maggiori opportunità di indurimento."
+      },
+      {
+        "label": "Comandi di sistema utili",
+        "href": "/docs/help-info/system-commands",
+        "tail": "— stato di servizio, journalctl, riferimento di audit lynis."
+      },
+      {
+        "label": "Personalizzabile Post-Install",
+        "href": "/docs/post-install/customizable",
+        "tail": "— di nuovo al menu principale."
+      }
+    ]
+  }
+}

@@ -1,0 +1,38 @@
+{
+  "meta": {
+    "title": "Contributori | Documentazione ProxMenux",
+    "description": "Riconoscimento per le persone che rendono ProxMenux possibile — tester, recensori e sviluppatori che modellano ogni rilascio.",
+    "ogTitle": "Contributori | Documentazione ProxMenux",
+    "ogDescription": "Incontra i contributori dietro ProxMenux."
+  },
+  "header": {
+    "title": "Contributori",
+    "description": "Il progetto ProxMenux cresce e prospera grazie al contributo dei suoi collaboratori. Questo è il ben meritato riconoscimento del loro lavoro — prova costruisce prima del rilascio, cattura regressioni, revisione PR e modellare la direzione di nuove caratteristiche.",
+    "section": "Informazioni"
+  },
+  "beyond": {
+    "title": "Oltre questa lista",
+    "body": "Molte altre persone contribuiscono tramite segnalazioni di bug, idee di funzionalità in Discussioni, test beta e traduzioni. L'elenco completo dei contributori del codice vive sul grafico <extlink>GitHub dei contributori di </extlink>. La pagina qui sotto evidenzia le persone che sono state maggiormente coinvolte nella sperimentazione e nella revisione delle versioni ProxMenux."
+  },
+  "testers": {
+    "heading": "Tester e recensori",
+    "intro": "Questi sono stati tra i primi a contribuire al progetto — test, segnalazione di problemi e suggerendo miglioramenti che hanno aiutato ProxMenux a crescere in quello che è oggi.",
+    "roles": {
+      "testing": "Test",
+      "testingReviewer": "Test e revisore"
+    },
+    "youtube": "YouTube"
+  },
+  "contribute": {
+    "heading": "Vuoi contribuire?",
+    "intro": "Qualsiasi contributo è benvenuto — codice, test, progettazione, documentazione, o semplicemente condividere le vostre idee:",
+    "tester": "<strong>Tester</strong> — prova il canale <beta>beta</beta> e segnala ciò che funziona e ciò che non funziona prima delle versioni stabili.",
+    "developer": "<strong>Developer</strong> — Bash + Next.js (TypeScript) + un po 'di Python per il venv di traduzione. PR benvenuti su <gh>GitHub</gh>.",
+    "designer": "<strong>Designer</strong> — Miglioramenti dell'interfaccia utente, icone, screenshot per la documentazione.",
+    "ideas": "<strong>Ideas</strong> — aprire un thread in <disc>GitHub Discussioni</disc> prima di aprire un problema di richiesta di funzionalità."
+  },
+  "coc": {
+    "title": "Leggi il Codice di comportamento prima",
+    "body": "Prima di inviare problemi di codice o di segnalazione, dare il <coclink>Code of Conduct & Best Practices</coclink> una rapida lettura. Esso copre le aspettative circa la responsabilità del codice, la divulgazione della sicurezza e la portata PR."
+  }
+}

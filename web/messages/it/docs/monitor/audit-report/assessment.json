@@ -1,0 +1,218 @@
+{
+  "meta": {
+    "title": "Valutazione e inventario | Audit & Report",
+    "description": "Valutazione Audit & Report: report profili, come i risultati sono classificati, rischi accettati, fonti illeggibili, Lynis e l'inventario del nodo."
+  },
+  "header": {
+    "title": "Valutazione e inventario",
+    "description": "La valutazione ispeziona il nodo, mantiene i suoi risultati e risponde a diverse domande a seconda del profilo del report.",
+    "section": "Audit e report"
+  },
+  "sections": [
+    {
+      "id": "read-only",
+      "blocks": [
+        {
+          "calloutInfo": {
+            "title": "Ispezioni di valutazione; non modifica la configurazione",
+            "body": "Legge la configurazione e lo stato dell'ospite. Scrive i suoi risultati, rapporti e registri, e i controlli di avvio possono montare partizioni di sistema EFI per un momento. La configurazione che valuta non è modificata."
+          }
+        },
+        {
+          "p": "<strong>Run assessment</strong> inizia una corsa con il profilo selezionato in <strong>Report</strong>. La vista mostra la data dell'ultima corsa e quanto tempo fa era."
+        }
+      ]
+    },
+    {
+      "id": "profiles",
+      "title": "Profili report",
+      "intro": "Ogni profilo risponde a una domanda diversa. I controlli e le sezioni vengono selezionati prima che il documento sia composto.",
+      "blocks": [
+        {
+          "table": {
+            "headers": [
+              "Profilo",
+              "Che cosa copre"
+            ],
+            "rows": [
+              [
+                "Audit completo",
+                "Ogni controllo e tutta la struttura disponibile."
+              ],
+              [
+                "Diagnosi rapida",
+                "Ogni controllo; il risultato si apre con i risultati critici, gli avvisi e le letture che non potrebbero essere verificate."
+              ],
+              [
+                "Inventario",
+                "Una descrizione del nodo, senza assegni e senza classificazione."
+              ],
+              [
+                "Verifica sicurezza",
+                "Esposizione, accesso, privilegi, certificati, aggiornamenti, repository e Lynis."
+              ],
+              [
+                "Affidabilità backup",
+                "Copertura, età, risultati, verifica, ritenzione e recupero dei backup."
+              ],
+              [
+                "Capacità e usura",
+                "Margine di crescita, memoria, uso dello spazio e la durata dei dischi."
+              ]
+            ]
+          }
+        },
+        {
+          "p": "Il contenuto di ogni documento è descritto in <reportsLink>Reports e confronti</reportsLink>."
+        }
+      ]
+    },
+    {
+      "id": "results",
+      "title": "Come vengono classificati i risultati",
+      "blocks": [
+        {
+          "table": {
+            "headers": [
+              "Classificazione",
+              "Significato"
+            ],
+            "rows": [
+              [
+                "Critico",
+                "Una condizione fallita che ha priorità."
+              ],
+              [
+                "Avvertenza",
+                "Una condizione che ha bisogno di una revisione, date le prove o la politica."
+              ],
+              [
+                "Osservazione",
+                "Informazioni sul nodo che non viene segnalato come un fallimento."
+              ],
+              [
+                "Non verificato",
+                "La fonte di controllo non poteva essere letto. Non significa che il problema sia assente."
+              ],
+              [
+                "Conforme",
+                "La condizione soddisfa il criterio applicato."
+              ],
+              [
+                "Non applicabile",
+                "Non si applica nulla nell'ambito del controllo."
+              ],
+              [
+                "Rischio accettato",
+                "Il ritrovamento esiste e una decisione su di esso è stata registrata."
+              ],
+              [
+                "Escluso dalla politica",
+                "La politica dichiara che l'elemento è lasciato fuori dal conteggio."
+              ]
+            ]
+          }
+        },
+        {
+          "p": "I risultati possono essere filtrati per area: Sistema, Stoccaggio, Rete, Sicurezza, Backup, Ospiti e Hardware. Ogni ricerca conserva le sue prove, con la fonte da cui è stato letto."
+        }
+      ]
+    },
+    {
+      "id": "unverified",
+      "title": "Quando una fonte non può essere letta",
+      "blocks": [
+        {
+          "table": {
+            "headers": [
+              "Caso",
+              "Comportamento"
+            ],
+            "rows": [
+              [
+                "Non verificato",
+                "Il controllo mantiene la sua identità, afferma nella sua prova che la fonte ha fallito e non trasforma i dati mancanti in un risultato conformante."
+              ],
+              [
+                "Evidenze incomplete",
+                "Il rapporto nomina la fonte e il tempo di raccolta, quindi un vero problema può essere detto a parte una lettura insufficiente."
+              ],
+              [
+                "Una nuova corsa",
+                "Una volta corretto l'accesso, il pacchetto o il servizio, lo stesso profilo viene eseguito di nuovo e il confronto mostra se il risultato potrebbe essere verificato."
+              ]
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "lynis",
+      "title": "Lynis",
+      "blocks": [
+        {
+          "p": "La revisione di sicurezza utilizza il rapporto Lynis dell'host. Quando Lynis non è stato ancora eseguito, o il suo rapporto è più vecchio della soglia della politica, una finestra di dialogo offre <strong>Run con Lynis</strong>, che richiede pochi minuti di più, o <strong>Run senza Lynis</strong>, che utilizza il rapporto esistente."
+        },
+        {
+          "figure": {
+            "src": "/monitor/audit/lynis-dialog.png",
+            "alt": "Dialogo che offre di eseguire la valutazione con o senza Lynis",
+            "caption": "Il dialogo Lynis prima di una recensione di sicurezza."
+          }
+        }
+      ]
+    },
+    {
+      "id": "accept",
+      "title": "Accettare un rischio",
+      "blocks": [
+        {
+          "p": "<strong>Accept risk</strong> registra una decisione su un risultato. Il motivo è richiesto e viene memorizzato con l'autore e la data."
+        },
+        {
+          "table": {
+            "headers": [
+              "Campo",
+              "Opzioni"
+            ],
+            "rows": [
+              [
+                "Motivo",
+                "Testo gratuito, richiesto."
+              ],
+              [
+                "Scadenza",
+                "90 giorni, 180 giorni, 1 anno o non scade. Quando il periodo termina il risultato diventa nuovamente attivo."
+              ],
+              [
+                "Promemoria revisione",
+                "Un promemoria che riporta la decisione all'attenzione mentre rimane in vigore."
+              ]
+            ]
+          }
+        },
+        {
+          "p": "Un risultato accettato rimane visibile con la sua decisione, e <strong>Ritorno ad attivo</strong> lo revoca. Un rischio accettato non è una correzione: il confronto lo riferisce come accettato, non come risolto."
+        }
+      ]
+    },
+    {
+      "id": "inventory",
+      "title": "Inventario",
+      "blocks": [
+        {
+          "list": {
+            "items": [
+              "Identity, versione Proxmox VE, kernel, abbonamento e cluster.",
+              "CPU, memoria, scheda, BIOS, controller e IOMMU.",
+              "Disco, SMART, ore di alimentazione e eventi registrati.",
+              "Adattatori, legami, ponti, latenza e connessioni.",
+              "Stoccaggio, ospiti con i loro dischi e interfacce, e backup.",
+              "PCI passthrough e il software ProxMenux gestisce."
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

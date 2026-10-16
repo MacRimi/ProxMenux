@@ -1,0 +1,400 @@
+{
+  "meta": {
+    "title": "Creare VM: Sinologia DSM | Documentazione ProxMenux",
+    "description": "Creare una macchina virtuale Synology DSM su Proxmox VE. ProxMenux scarica il caricatore di vostra scelta (Arc, RR, TinyCore M-shell o uno personalizzato), lo importa come disco di avvio di VM e prepara CPU, RAM e lo storage attraverso la procedura guidata predefinita o avanzata.",
+    "ogTitle": "Creare VM: Sinologia DSM | Documentazione ProxMenux",
+    "ogDescription": "Creare una macchina virtuale Synology DSM su Proxmox VE con ProxMenux."
+  },
+  "header": {
+    "title": "Creare VM: Synology DSM",
+    "description": "Creare una macchina virtuale Synology DSM su Proxmox VE. ProxMenux scarica il caricatore di vostra scelta (Arc, RR, TinyCore M-shell o uno personalizzato), lo importa come disco di avvio di VM e prepara CPU, RAM e lo storage attraverso la procedura guidata predefinita o avanzata.",
+    "section": "Macchine virtuali · NAS"
+  },
+  "loaderLabels": {
+    "arc": "Arc Loader",
+    "rr": "RR Loader",
+    "tinycore": "TinyCore Loader"
+  },
+  "whatThisDoes": {
+    "title": "Cosa succede?",
+    "bodyRich": "ProxMenux automatizza il lato VM di un'installazione Synology DSM: scarica uno dei caricatori supportati, lo importa in un nuovo VM come disco di avvio IDE, e applica il CPU / RAM / rete / storage scelto. Il resto — costruendo il caricatore, scegliendo il modello DSM, installando DSM — avviene <strong> all'interno del VM</strong>, guidato dall'interfaccia web o terminale del caricatore. Questi passaggi sono gestiti dalla comunità e cambiano spesso, quindi questa pagina ti dà una base di lavoro."
+  },
+  "supportedLoaders": {
+    "heading": "Caricatori supportati",
+    "intro": "Lo script ti permette di scegliere tra quattro fonti di caricabatterie:",
+    "loaders": [
+      {
+        "name": "AuxXxilium Arc",
+        "url": "https://github.com/AuxXxilium/arc"
+      },
+      {
+        "name": "RedPill RR",
+        "url": "https://github.com/RROrg/rr"
+      },
+      {
+        "name": "TinyCore RedPill M-shell",
+        "url": "https://github.com/PeterSuh-Q3/tinycore-redpill"
+      }
+    ],
+    "customRich": "<strong>Custom Loader</strong> — far cadere la propria immagine di caricatrice in <code>/var/lib/vz/template/iso</code> e lo script lo raccoglierà."
+  },
+  "config": {
+    "heading": "Configurazione predefinita vs Avanzata",
+    "intro": "Quando si esegue lo script si chiede se utilizzare il profilo ProxMenux predefinito VM o aprire la procedura guidata avanzata. I valori di default sono sintonizzati per DSM e lavorano per la maggior parte delle installazioni.",
+    "defaultHeading": "Configurazione predefinita",
+    "headerParam": "Parametro",
+    "headerValue": "Valore predefinito",
+    "defaultRowsRich": [
+      {
+        "param": "Tipo di macchina",
+        "valueRich": "<code>q35</code>"
+      },
+      {
+        "param": "BIOS",
+        "valueRich": "OVMF (UEFI)"
+      },
+      {
+        "param": "CPU tipo",
+        "valueRich": "Host"
+      },
+      {
+        "param": "Core",
+        "valueRich": "2"
+      },
+      {
+        "param": "RAM",
+        "valueRich": "4096 MB"
+      },
+      {
+        "param": "Ponte",
+        "valueRich": "<code>vmbr0</code>"
+      },
+      {
+        "param": "Indirizzo MAC",
+        "valueRich": "Autogenerata"
+      },
+      {
+        "param": "Iniziare il completamento",
+        "valueRich": "Nessun"
+      }
+    ],
+    "advancedHeading": "Configurazione avanzata",
+    "advancedIntro": "Il mago avanzato espone ogni manopola. È possibile modificare liberamente qualsiasi di questi:",
+    "headerOptions": "Opzioni",
+    "advancedRowsRich": [
+      {
+        "param": "Tipo di macchina",
+        "optionsRich": "<code>q35</code> o <code>i440fx</code>"
+      },
+      {
+        "param": "BIOS",
+        "optionsRich": "OVMF (UEFI) o SeaBIOS (Legacy)"
+      },
+      {
+        "param": "CPU tipo",
+        "optionsRich": "Host o KVM64"
+      },
+      {
+        "param": "Core",
+        "optionsRich": "Numero di core CPU"
+      },
+      {
+        "param": "RAM",
+        "optionsRich": "Memoria assegnata al VM"
+      },
+      {
+        "param": "Ponte",
+        "optionsRich": "Bridge di rete"
+      },
+      {
+        "param": "Indirizzo MAC",
+        "optionsRich": "MAC personalizzato"
+      },
+      {
+        "param": "VLAN",
+        "optionsRich": "Tag VLAN (opzionale)"
+      },
+      {
+        "param": "MTU",
+        "optionsRich": "MTU misura"
+      }
+    ]
+  },
+  "storagePlan": {
+    "heading": "Piano di stoccaggio",
+    "introRich": "Dopo il passaggio CPU / RAM, ProxMenux apre il menu <strong>Storage Plan</strong>, dove è possibile <strong>combine</strong> dischi virtuali, dischi importati e dispositivi passanti PCI nello stesso VM, aggiungendo elementi uno alla volta e terminando quando si è fatto.",
+    "virtualHeading": "a. Aggiungere disco virtuale",
+    "virtualItemsRich": [
+      "Elenca i volumi di archiviazione Proxmox disponibili sull'host.",
+      "Scegli lo storage di destinazione e la dimensione in GB.",
+      "Il disco è collegato al VM come SATA (<code>sata0</code>, <code>sata1</code>, ... fino a 6)."
+    ],
+    "importHeading": "b. Aggiungere disco di importazione",
+    "importItemsRich": [
+      "Rileva i dischi fisici che sono sicuri da importare (sistema e dischi protetti sono nascosti).",
+      "Seleziona uno o più dischi tramite una lista di controllo.",
+      "I dischi importati sono collegati come SATA tramite <code>qm set</code>."
+    ],
+    "pciHeading": "C. Aggiungi controller o NVMe (passthrough PCI)",
+    "pciItemsRich": [
+      "Rileva i dispositivi SATA/SAS HBA e NVMe sull'host e consente di passare un controller <em>entire</em> nel VM. IOMMU deve essere abilitato; lo script offre per abilitarlo e riavviare se necessario.",
+      "Un passo di conferma avverte il rischio a livello del controller (l'intera carta, compreso ogni disco su di esso, lascia l'host).",
+      "I dispositivi PCI selezionati sono collegati tramite <code>qm set hostpciN: …</code>."
+    ],
+    "resetCalloutTitle": "Ripristino e finitura",
+    "resetCalloutBodyRich": "Il menu offre anche <strong>r</strong> (riimpostare la selezione attuale e ricominciare da capo) e <strong>d</strong> (finire e continuare). Non si può finire con un piano vuoto — Synology ha bisogno di almeno un disco per installare DSM su."
+  },
+  "gpu": {
+    "heading": "Passaggio opzionale GPU",
+    "bodyRich": "Dopo il piano di archiviazione, se lo script rileva un GPU compatibile sull'host chiede se si desidera passare a questo VM. Vedere <link>Add GPU a un VM (Passthrough)</link> per il modo in cui l'assistente funziona — un riavvio host può essere richiesto."
+  },
+  "loaderInstall": {
+    "heading": "Installazione Loader",
+    "intro1Rich": "<strong>Arc</strong>, <strong>RR</strong> e <strong>TinyCore M-shell</strong> vengono scaricati ed estratti automaticamente dai loro repository GitHub a monte. Se il download non riesce lo script si interrompe con un messaggio chiaro.",
+    "intro2Rich": "Per l'opzione <strong>Custom Loader</strong> lo script scansiona <code>/var/lib/vz/template/iso</code>. Se si trova più di un candidato si viene invitati a scegliere quello che si desidera.",
+    "uploadIntro": "È possibile caricare caricatori personalizzati dallo storage locale Proxmox:",
+    "imageAlt": "Aggiungi caricabatterie personalizzato",
+    "imageCaption": "Aggiungi caricabatterie personalizzato"
+  },
+  "vmCreation": {
+    "heading": "Creazione VM — che cosa esegue lo script",
+    "introRich": "Una volta confermato il caricatore, ProxMenux esegue l'equivalente di questi comandi <code>qm</code>:",
+    "itemsRich": [
+      "<code>qm create</code> — crea il VM con il CPU, RAM, BIOS e il tipo di macchina.",
+      "<code>qm importdisk</code> — importa il caricatore come disco <strong>IDE</strong> (massima compatibilità).",
+      "<code>qm set sataN: …</code> — collega dischi virtuali e dischi importati dal piano di archiviazione, più l'interfaccia di rete.",
+      "<code>qm set hostpciN: …</code> — collega tutti i dispositivi Controller / NVMe selezionati per il passaggio PCI.",
+      "<code>qm set --boot</code> — imposta il caricatore come primo dispositivo di avvio."
+    ]
+  },
+  "stepByStep": {
+    "heading": "Configurazione del caricatore passo-passo",
+    "intro": "Tutti i caricatori seguono lo stesso modello di alto livello — avviare il VM, scegliere un modello, scegliere una versione DSM, scegliere componenti aggiuntivi, costruire, avviare — ma gli schermi e i menu differiscono. La guida qui sotto passa attraverso i sei passi condivisi con screenshot per ogni caricatore. Le opzioni esatte possono cambiare con nuove release di loader.",
+    "warnCalloutTitle": "Gli accumulatori non sono mantenuti da ProxMenux",
+    "warnCalloutBody": "Arc, RR e TinyCore sono progetti comuni con la loro cadenza di rilascio. Se un passo sembra diverso dagli screenshot qui sotto, il caricatore è probabilmente aggiornato — controlla la documentazione del caricatore (link in fondo a questa pagina)."
+  },
+  "stepBadge": "Passaggio",
+  "step1": {
+    "title": "Avviare il VM e accedere al menu principale",
+    "intro": "Una volta VM è creato, iniziare. Il primo boot ti porta all'interfaccia di configurazione del caricatore dove scegli e costruisci il modello DSM che desideri. Dopo che il caricatore è stato costruito, gli stivali successivi saltano questo passaggio a meno che non si forza una riconfigurazione dal monitor di avvio del caricatore. Tutti e tre i caricatori supportano sia un terminale UI che un web UI.",
+    "arc": {
+      "webRich": "<strong>Web interface.</strong> Apri un browser e vai all'IP mostrato nella console VM (nel nostro esempio: <code>http://192.168.0.32</code>).",
+      "webAlt": "Interfaccia web Arc loader",
+      "webCaption": "Interfaccia web Arc loader",
+      "termRich": "<strong>Interfaccia terminale.</strong> Usalo direttamente dall'uscita della console VM.",
+      "termAlt": "Interfaccia terminale Arc loader",
+      "termCaption": "Interfaccia terminale Arc loader"
+    },
+    "rr": {
+      "webRich": "<strong>Web interface.</strong> Apri un browser e vai all'IP mostrato nella console VM seguita dalla porta <strong>7681</strong> (esempio: <code>http://192.168.0.33:7681</code>).",
+      "webAlt": "Interfaccia web del caricatore RR",
+      "webCaption": "Interfaccia web del caricatore RR",
+      "termRich": "<strong>Interfaccia terminale.</strong> Nel VM tipo console <code>menu.sh</code> per aprirlo.",
+      "termAlt": "Interfaccia terminale caricatore RR",
+      "termCaption": "Interfaccia terminale caricatore RR"
+    },
+    "tinycore": {
+      "webRich": "<strong>Web interface.</strong> Apri un browser e vai all'IP mostrato nella console VM seguita dalla porta <strong>7681</strong> (esempio: <code>http://192.168.0.35:7681</code>).",
+      "webAlt": "Interfaccia web del caricatore TinyCore",
+      "webCaption": "Interfaccia web del caricatore TinyCore",
+      "termRich": "<strong>Interfaccia terminale.</strong> Usalo dalla console VM. Tenere d'occhio — ad un certo punto può richiedere di premere una chiave per continuare o cambiare la lingua.",
+      "termAlt": "Interfaccia terminale di carico TinyCore",
+      "termCaption": "Interfaccia terminale di carico TinyCore"
+    }
+  },
+  "step2": {
+    "title": "Seleziona modello",
+    "introRich": "Scegli il modello Synology DSM che vuoi installare. A seconda del caricatore potrebbe essere necessario espandere le opzioni per visualizzare l'elenco completo. Negli screenshot qui sotto utilizziamo il modello <strong>SA6400</strong> come esempio.",
+    "arc": {
+      "alt": "Selezione modello Arc",
+      "caption": "Selezione modello Arc"
+    },
+    "rr": {
+      "alt": "Selezione modello RR",
+      "caption": "Selezione modello RR"
+    },
+    "tinycore": {
+      "alt": "Selezione modello TinyCore",
+      "caption": "Selezione modello TinyCore"
+    }
+  },
+  "step3": {
+    "title": "Selezionare la versione DSM",
+    "intro": "Dopo aver scelto il modello, scegliere la versione DSM da installare.",
+    "arc": [
+      {
+        "alt": "Versione ad arco — passo 1",
+        "caption": "Selezione della versione Arc — passo 1"
+      },
+      {
+        "alt": "Versione ad arco — passo 2",
+        "caption": "Selezione della versione Arc — passo 2"
+      }
+    ],
+    "rr": [
+      {
+        "alt": "Versione RR — passo 1",
+        "caption": "Selezione della versione RR — passo 1"
+      },
+      {
+        "alt": "Versione RR — passo 2",
+        "caption": "Selezione della versione RR — passo 2"
+      },
+      {
+        "alt": "Versione RR — passo 3",
+        "caption": "Selezione della versione RR — passo 3"
+      }
+    ],
+    "tinycore": [
+      {
+        "alt": "Versione TinyCore — step 1",
+        "caption": "Selezione della versione TinyCore — step 1"
+      },
+      {
+        "alt": "Versione TinyCore — step 2",
+        "caption": "Selezione della versione TinyCore — step 2"
+      }
+    ]
+  },
+  "step4": {
+    "title": "Selezionare addons",
+    "intro": "Questo passaggio consente di aggiungere funzionalità extra o configurazione personalizzata al caricatore.",
+    "arc": {
+      "autoRich": "<strong>Arc</strong> offre una modalità automatica (consigliata) e una modalità manuale. In modalità automatica il caricatore applica predefinizioni ragionevoli e riavvia da solo quando fatto.",
+      "autoAlt": "Configurazione auto Arc",
+      "autoCaption": "Configurazione auto Arc",
+      "manualRich": "Se si sceglie manuale, si passa attraverso le opzioni uno per uno:",
+      "manualAlt": "Configurazione manuale Arc",
+      "manualCaption": "Configurazione manuale Arc",
+      "snMacAlt": "Arc SN/MAC",
+      "snMacCaption": "Configurazione Arc SN / MAC",
+      "portmapAlt": "Arc SATA portmap",
+      "portmapCaption": "Arc SATA portmap (usare l'opzione consigliata)",
+      "addonsAlt": "Addizioni ad arco",
+      "addonsCaption": "Selezione degli addons Arc"
+    },
+    "rr": [
+      {
+        "alt": "RR addon - passo 1",
+        "caption": "RR addon - passo 1"
+      },
+      {
+        "alt": "RR addon - passo 2",
+        "caption": "RR addon — passo 2: premere per aggiungere un addon"
+      },
+      {
+        "alt": "RR addon - passo 3",
+        "caption": "RR addon — passo 3: fare clic sull'addon che si desidera. Ripetere i due screenshot precedenti per aggiungere di più."
+      }
+    ],
+    "tinycore": [
+      {
+        "alt": "Configurazione TinyCore SN",
+        "caption": "Configurazione TinyCore SN"
+      },
+      {
+        "alt": "TinyCore opzione casuale",
+        "caption": "TinyCore opzione casuale (consigliato)"
+      },
+      {
+        "alt": "Configurazione MAC TinyCore",
+        "caption": "Configurazione MAC TinyCore"
+      },
+      {
+        "alt": "TinyCore VM MAC",
+        "caption": "TinyCore — scegli il MAC di VM o uno casuale"
+      }
+    ]
+  },
+  "step5": {
+    "title": "Costruisci il caricatore",
+    "introRich": "Con il modello, la versione DSM e gli addons scelti, scegliere <strong>Build il Loader</strong>. Questo può richiedere alcuni minuti a seconda del caricatore e delle opzioni selezionate.",
+    "arc": {
+      "alt": "Caricabatterie Arc",
+      "caption": "Arc — pala gommata"
+    },
+    "rr": {
+      "alt": "Caricabatterie RR",
+      "caption": "RR — pala gommata"
+    },
+    "tinycore": {
+      "alt": "Carico di costruzione TinyCore",
+      "caption": "TinyCore — Carico di costruzione"
+    }
+  },
+  "step6": {
+    "title": "Avviare il caricatore",
+    "intro": "Una volta costruito il caricatore, il VM si riavvia con la configurazione creata e inizia l'installazione DSM.",
+    "arc": {
+      "alt": "Caricabatterie Arc",
+      "caption": "Arc — caricatore di avvio"
+    },
+    "rr": {
+      "alt": "Caricatore di avvio RR",
+      "caption": "RR — caricatore di avvio"
+    },
+    "tinycore": {
+      "alt": "Carico di avvio TinyCore",
+      "caption": "TinyCore — carico di avvio"
+    }
+  },
+  "dsmInstall": {
+    "heading": "Avviare l'installazione DSM",
+    "intro": "Una volta avviato il caricatore, è possibile scoprire il DSM VM aprendo:",
+    "afterCode": "Segui i passaggi sullo schermo per completare l'installazione di DSM.",
+    "setupAlt": "Configurazione DSM",
+    "setupCaption": "Schermo di configurazione DSM",
+    "patience": "Sii paziente — il processo può richiedere diversi minuti. Aggiornamenti di progresso automaticamente e un conto alla rovescia appare come l'installazione si avvicina al completamento.",
+    "finishAlt": "Installazione completa",
+    "finishCaption": "Installazione completa"
+  },
+  "tips": {
+    "heading": "Consigli",
+    "recentTitle": "Utilizzare i modelli DSM recenti",
+    "recentBody": "Alcuni modelli DSM più vecchi hanno difficoltà a riconoscere i dischi o la scheda di rete. Preferire modelli recenti (ad es. SA6400) per un'esperienza di primo avvio più liscia.",
+    "updateTitle": "Aggiornare il caricatore",
+    "updateBody": "Alcuni caricatori offrono la possibilità di aggiornarsi direttamente dal loro menu di configurazione — non è necessario distruggere e ricreare il VM.",
+    "warnTitle": "ProxMenux non supporta i caricatori",
+    "warnBody": "ProxMenux automatizza il lato VM. Problemi di carico (modello non trovato, add-on non installato, DSM rifiutando di avviare) sono fuori campo qui — utilizzare il tracker e la documentazione di ogni caricatore.",
+    "docsHeading": "Documentazione Loader",
+    "docLinks": [
+      {
+        "label": "Documentazione dell'arco",
+        "url": "https://github.com/AuxXxilium/arc"
+      },
+      {
+        "label": "Documentazione RR",
+        "url": "https://github.com/RROrg/rr"
+      },
+      {
+        "label": "Documentazione TinyCore",
+        "url": "https://github.com/PeterSuh-Q3/tinycore-redpill"
+      }
+    ]
+  },
+  "related": {
+    "heading": "Correlati",
+    "itemsRich": [
+      {
+        "href": "/docs/create-vm/system-nas",
+        "label": "Panoramica del NAS di sistema",
+        "tail": "— confronto di Synology vs TrueNAS / OMV / Rockstor / XigmaNAS."
+      },
+      {
+        "href": "/docs/create-vm/system-nas/system-nas-others",
+        "label": "Altri NAS di sistema",
+        "tail": "— distribuzioni NAS non sintetiche."
+      },
+      {
+        "href": "/docs/disk-manager/import-disk-vm",
+        "label": "Importa disco nella VM",
+        "tail": "— passare dischi reali alla Synology VM (ricomposta per le prestazioni di archiviazione)."
+      },
+      {
+        "href": "/docs/create-vm",
+        "label": "Crea una panoramica di VM",
+        "tail": "."
+      }
+    ]
+  }
+}

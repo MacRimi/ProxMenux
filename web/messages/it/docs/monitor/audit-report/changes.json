@@ -1,0 +1,208 @@
+{
+  "meta": {
+    "title": "Modifiche | Audit & Report",
+    "description": "La rivista di cambiamento di Audit & Report: ciò che ProxMenux ha cambiato sull'host, cosa c'era prima, la differenza e se può essere annullata."
+  },
+  "header": {
+    "title": "Modifiche",
+    "description": "Il diario delle operazioni ProxMenux si esibisce sull'host e, dove è stato catturato, lo stato prima e dopo ciascuno.",
+    "section": "Audit e report"
+  },
+  "sections": [
+    {
+      "id": "purpose",
+      "blocks": [
+        {
+          "calloutInfo": {
+            "title": "Dalla sceneggiatura che correva al cambiamento fatto",
+            "body": "Una lunga funzione può cambiare solo due linee. La rivista mantiene ogni operazione concreta con lo script, la funzione e la versione responsabile, la risorsa interessata, la differenza e se può essere annullata."
+          }
+        },
+        {
+          "flow": {
+            "nodes": [
+              {
+                "label": "Script",
+                "detail": "funzione + versione"
+              },
+              {
+                "label": "Capacità",
+                "detail": "contenuto prima"
+              },
+              {
+                "label": "Operazione",
+                "detail": "file · pacchetto · servizio"
+              },
+              {
+                "label": "Gazzetta ufficiale",
+                "detail": "attribuzione + differenza"
+              }
+            ],
+            "caption": "La cattura viene presa quando l'operazione viene eseguita e si consolida quando il Monitor legge la rivista."
+          }
+        },
+        {
+          "figure": {
+            "src": "/monitor/audit/changes-view.png",
+            "alt": "Modifica la visualizzazione di Audit & Report con le voci raggruppate per opzione post-installazione e script",
+            "caption": "La vista Cambia, con la differenza di un file modificato da ProxMenux."
+          }
+        }
+      ]
+    },
+    {
+      "id": "types",
+      "title": "Tipi di entrata",
+      "intro": "Il filtro in alto separa le voci per genere.",
+      "blocks": [
+        {
+          "table": {
+            "headers": [
+              "Tipo",
+              "Cosa registra"
+            ],
+            "rows": [
+              [
+                "Configurazione",
+                "ProxMenux ha scritto, modificato o rimosso un file, ha cambiato un'impostazione o modificato un servizio."
+              ],
+              [
+                "Installazioni",
+                "ProxMenux ha aggiunto un pacchetto o un componente, e i pacchetti che sono effettivamente apparsi sono registrati."
+              ],
+              [
+                "Esecuzioni",
+                "ProxMenux ha eseguito un comando; ciò che è cambiato è fino al comando stesso."
+              ],
+              [
+                "Applicato",
+                "Una funzione è stata applicata prima che il giornale esistesse; lo stato prima che non fosse catturato."
+              ]
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "groups",
+      "title": "Come si organizza il panorama",
+      "blocks": [
+        {
+          "table": {
+            "headers": [
+              "Sezione",
+              "Contenuto"
+            ],
+            "rows": [
+              [
+                "Ottimizzazioni post-installazione",
+                "Gruppo dell'opzione post-installazione selezionata dall'utente."
+              ],
+              [
+                "Script ProxMenux",
+                "GPU, Coral, network, storage, security, utility e altri script strumentali, tra cui l'installatore ProxMenux e ProxMenux Monitor."
+              ],
+              [
+                "Pacchetti e utilità installati",
+                "Software ProxMenux installato sull'host."
+              ]
+            ]
+          }
+        },
+        {
+          "p": "All'interno di ogni sezione, <strong>Per funzione</strong> raggruppa le voci sotto la funzione che li ha fatti."
+        }
+      ]
+    },
+    {
+      "id": "entry",
+      "title": "Che ogni voce mostra",
+      "blocks": [
+        {
+          "list": {
+            "items": [
+              "Lo script, la funzione e la versione responsabile.",
+              "La data e la risorsa interessata.",
+              "Lo stato conosciuto prima e dopo il cambiamento.",
+              "Le linee aggiunte e rimosse.",
+              "I pacchetti che sono stati effettivamente aggiunti.",
+              "La transizione statale di un servizio.",
+              "<strong>Undo questo</strong>: <em>Ripristinare esattamente ciò che era lì</em>, <em>Elimina il file (non c'era prima)</em>, <em>Il pacchetto può essere disinstallato</em>, un disordine parziale, o <em>Non può essere annullato dal diario</em>."
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "before",
+      "title": "Che cosa lo stato prima significa",
+      "blocks": [
+        {
+          "p": "Lo stato prima può essere catturato il contenuto, un file creato per la prima volta o uno stato sconosciuto. Le modifiche effettuate prima dell'esistenza della rivista non possono essere ricostruite; l'esecuzione della funzione cattura di nuovo prima lo stato trovato in quel momento."
+        }
+      ]
+    },
+    {
+      "id": "limits",
+      "title": "Ambito della rivista",
+      "blocks": [
+        {
+          "list": {
+            "items": [
+              "Le modifiche manuali e le modifiche apportate da altri software non sono registrate.",
+              "Solo le operazioni che attraversano i primitivi di audit ProxMenux sono coperte.",
+              "La registrazione non blocca mai l'operazione che descrive: se l'entrata non può essere scritta, l'operazione continua.",
+              "I cambiamenti di successo a una risorsa sono indicati come l'origine nota contro lo stato attuale."
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "retention",
+      "title": "Prove memorizzate",
+      "blocks": [
+        {
+          "table": {
+            "headers": [
+              "Elemento",
+              "Comportamento"
+            ],
+            "rows": [
+              [
+                "Voci",
+                "Essi sono tenuti sull'host; nulla viene rimosso dalla rivista automaticamente."
+              ],
+              [
+                "Contenuto catturato",
+                "Un oggetto catturato viene mantenuto mentre una voce si riferisce ad esso."
+              ],
+              [
+                "Dimensione di una cattura",
+                "I contenuti sopra 1 MiB non sono memorizzati in tutto; la voce riporta che la cattura è stata ignorata a causa della sua dimensione."
+              ],
+              [
+                "Lettura",
+                "Il Monitor non carica oggetti memorizzati sopra 2 MiB."
+              ],
+              [
+                "Differenza",
+                "Nella maggior parte delle linee 400 sono mostrate, e una differenza più lunga è contrassegnata come troncata."
+              ],
+              [
+                "Elenco",
+                "Il API restituisce le voci 200 a richiesta per impostazione predefinita e fino a 1000."
+              ]
+            ]
+          }
+        },
+        {
+          "calloutWarning": {
+            "title": "Il contenuto corretto non è un'opzione automatica",
+            "body": "Il contenuto prima di una modifica può essere ispezionato e ripristinato a mano, ma la vista Cambia non reindirizza le operazioni. Una voce di esecuzione registra il comando senza conoscere ogni effetto dello strumento eseguito."
+          }
+        }
+      ]
+    }
+  ]
+}

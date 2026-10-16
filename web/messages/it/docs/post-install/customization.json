@@ -1,0 +1,74 @@
+{
+  "meta": {
+    "title": "Post-Install: Personalizzazione | Documentazione ProxMenux",
+    "description": "Opzioni di personalizzazione nello script post-install personalizzabile ProxMenux: un prompt bash colorato con alias utili, un banner ProxMenux nel MOTD, e l'opzione per rimuovere il nag di abbonamento Proxmox dall'interfaccia web."
+  },
+  "header": {
+    "title": "Dopo l'installazione: personalizzazione",
+    "description": "Tweak cosmetici e di qualità per l'host Proxmox. Essi rendono il guscio più bello da usare e nascondere il nag sottoscrizione nel web UI. Bashrc, MOTD e il banner sottoscrizione sono tracciati e reversibili dal menu Disinstalla.",
+    "section": "Impostazioni post-installazione Proxmox"
+  },
+  "intro": {
+    "title": "Che cosa copre questa categoria",
+    "body": "Tre piccole opzioni indipendenti: un prompt bash color <strong> + aliases</strong> per la shell root, un banner <strong>MOTD a una linea </strong> visibile sul login SSH e la rimozione del <strong>\"Nessun abbonamento valido\" popup</strong> che Proxmox mostra su ogni accesso al web UI."
+  },
+  "bashrc": {
+    "heading": "Personalizza bashrc",
+    "intro": "Inietti un blocco curato in <code>/root/.bashrc</code> con un prompt colorato, cronologia timestamp, standard <code>ls</code> / <code>grep</code> alias, e un <code>source</code> per il completamento del bash. Rende il lavoro su SSH notevolmente più piacevole e rende evidente quale host sei su quando hai molte schede aperte.",
+    "writesTitle": "Ciò che ProxMenux aggiunge a .bashrc",
+    "writesOutro": "Il blocco è delimitato dai marcatori <code>PMX_CORE_BASHRC</code>. Eseguire nuovamente lo script sostituisce il blocco precedente invece di duplicarlo. L'originale <code>.bashrc</code> è supportato una volta a <code>/root/.bashrc.bak</code>, e una linea <code>source /root/.bashrc</code> è aggiunta a <code>/root/.bash_profile</code> così il prompt si applica anche sulle shell di login (ad esempio dopo <code>su -</code>).",
+    "rootTitle": "Riguarda solo la radice",
+    "rootBody": "La personalizzazione mira alla shell del conto root. Altri utenti che crei sull'host mantengono i propri default. Se si amministra Proxmox esclusivamente sul web UI e non utilizzare mai il guscio, questa opzione è pura estetica e si può saltare."
+  },
+  "motd": {
+    "heading": "Imposta un banner MOTD personalizzato",
+    "intro": "Prepends <em>\"Questo sistema è ottimizzato da: ProxMenux\"</em> a <code>/etc/motd</code>, il messaggio mostrato dopo un successo SSH login (sopra il prompt dei shell, prima che vengano eseguiti qualsiasi script <code>update-motd</code>). Harmless e puramente informativo — utile come una rapida conferma visiva che ProxMenux è stato applicato su questo host.",
+    "writesTitle": "Cosa scrive ProxMenux",
+    "writesOutro": "In primo luogo, ProxMenux registra se <code>/etc/motd</code> esistesse e memorizza il suo contenuto originale sotto <code>/usr/local/share/proxmenux</code>. L'operazione è idempotent: se la linea del marcatore è già presente, nulla viene aggiunto. Le installazioni più vecchie con un <code>/etc/motd.bak</code> esistente vengono migrate allo stesso stato reversibile."
+  },
+  "banner": {
+    "heading": "Rimuovi il banner di abbonamento",
+    "intro": "Rimuove il <em>\"Non hai un abbonamento valido per questo server\"</em> modal che si apre ogni volta che qualcuno accede all'interfaccia web Proxmox senza un abbonamento enterprise. La patch è versione-aware: diverse versioni principali di Proxmox hanno diversi fasci UI, quindi ProxMenux invia allo script giusto.",
+    "versionTitle": "Traduzione:",
+    "versionItems": [
+      "<strong>PVE 9.x</strong> → esegue <code>remove-banner-pve-v3.sh</code> (coppia sia il desktop <code>proxmoxlib.js</code> che il nuovo UI mobile basato su Yew).",
+      "<strong>PVE 8.x</strong> → esegue <code>remove-banner-pve8.sh</code> (solo su disco)."
+    ],
+    "versionOutro": "Prima di patch, ProxMenux supporta i file JS/template originali a <code>/usr/local/share/proxmenux/backups/</code> con un timestamp. Il flusso di Disinstalla utilizza quei backup per ripristinare i file originali, e torna a reinstallare i pacchetti Proxmox UI se il backup manca o viene danneggiato.",
+    "breakTitle": "Può rompersi dopo gli aggiornamenti di Proxmox",
+    "breakBody": "Proxmox spedisce regolarmente aggiornamenti UI che sovrascrivono <code>proxmoxlib.js</code>. Quando succede, il banner ritorna. È possibile riapplicare questa opzione dopo ogni aggiornamento Proxmox per ripristinare il file, o semplicemente accettare il nag fino a quando non si riapplica. ProxMenux installa anche un gancio APT che auto-riparazioni sugli aggiornamenti dei pacchetti — vedere <link>Uninstall Optimizations</link> per come quel gancio è invertito.",
+    "legalTitle": "Nota legale (sempre vale la pena ripetere)",
+    "legalBody": "Questa opzione nasconde solo il nag UI. Fa <strong>not</strong> ti garantisce il supporto aziendale, l'accesso al repository aziendale, o qualsiasi diritto di spedire Proxmox commercialmente senza abbonamento. Se si esegue Proxmox in un ambiente di generazione di entrate, acquistare un abbonamento — supporta il progetto e ti ottiene il canale stabile impresa."
+  },
+  "verify": {
+    "heading": "Verifica",
+    "intro": "Dopo aver applicato tutti e tre:",
+    "reversibleTitle": "Tutti e tre i cambiamenti di personalizzazione sono tracciati",
+    "reversibleBody": "<link>Uninstall Optimizations</link> ripristina <code>/root/.bashrc</code>, restituisce MOTD al suo contenuto pre-ProxMenux esatto (o rimuove il file se non esisteva in precedenza), e ripristina i file UI patchati dal backup o reinstalla i pacchetti Proxmox interessati quando necessario."
+  },
+  "related": {
+    "heading": "Correlati",
+    "items": [
+      {
+        "label": "Opzionale",
+        "href": "/docs/post-install/optional",
+        "tail": "— Fastfetch e Figurine (altre personalizzazione visiva)."
+      },
+      {
+        "label": "Mostra informazioni sulla versione",
+        "href": "/docs/settings/show-version-information",
+        "tail": "— conferma che le personalizzazione sono tracciate come installato."
+      },
+      {
+        "label": "Disinstalla ottimizzazioni",
+        "href": "/docs/post-install/uninstall",
+        "tail": "— revertere bashrc, motd, abbonamento nag."
+      },
+      {
+        "label": "Personalizzabile Post-Install",
+        "href": "/docs/post-install/customizable",
+        "tail": "— di nuovo al menu principale."
+      }
+    ]
+  }
+}

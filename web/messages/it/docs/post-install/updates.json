@@ -1,0 +1,112 @@
+{
+  "meta": {
+    "title": "Applicare aggiornamenti disponibili — Ottimizzazione post-installazione | Documentazione ProxMenux",
+    "description": "Come ProxMenux rileva quando un'ottimizzazione post-install (Log2Ram, Impostazioni di memoria, Limiti di sistema, Logrotate, tuning di rete...) è stata aggiornata a monte e come applicare la nuova versione — dal menu Post-Install o dal cruscotto Monitor."
+  },
+  "header": {
+    "title": "Applica aggiornamenti disponibili",
+    "description": "Quando un'ottimizzazione post-installazione (Log2Ram, Impostazioni di memoria, Limiti di sistema, Logrotate...) ottiene una versione più recente sul disco rispetto a quella attualmente registrata sull'host, ProxMenux lo supera come aggiornamento disponibile. È possibile applicarlo dal menu Post-Install (Sceneggiatura laterale) o dal cruscotto Monitor — entrambi i percorsi eseguire la stessa funzione post-installazione e aggiornare il registro di sistema.",
+    "section": "Impostazioni post-installazione Proxmox"
+  },
+  "intro": {
+    "title": "Che cosa è questo",
+    "body": "Le ottimizzazioni post-installazione di ProxMenux sono versionete. Ogni script nel repository porta un numero di versione (ad es. <code>Log2ram SSD Protection v1.2</code>), e l'host mantiene un registro di cui le ottimizzazioni sono attive e a quale versione in <code>/usr/local/share/proxmenux/installed_tools.json</code>. Quando un nuovo rilascio di ProxMenux spedisce una versione aggiornata di qualsiasi ottimizzazione, ProxMenux rileva l'errore e offre di riapplicare solo quella — senza re-in esecuzione l'intero post-installazione."
+  },
+  "why": {
+    "heading": "Perché questo esiste",
+    "body": "Ottimizzazione post-installa occasionalmente ottenere miglioramenti — una migliore sintonizzazione sysctl, un limite più rigoroso Logrotate, una nuova dimensione Log2RAM euristica, una correzione per un caso bordo segnalato da un tester. Senza un percorso di aggiornamento l'operatore aveva solo due opzioni: ri-run manualmente lo script post-install (che riapplica <em>every</em> ottimizzazione) o saltare completamente il miglioramento. Applicare Aggiornamenti disponibili è il terreno centrale: una per-ottimizzazione, opt-in re-run che solleva solo le versioni che effettivamente spostato."
+  },
+  "detection": {
+    "heading": "Come vengono rilevati gli aggiornamenti",
+    "steps": [
+      {
+        "title": "Versione script su disco",
+        "body": "Ogni funzione post-installazione dichiara la sua versione all'interno dello script (<code>scripts/post_install/auto_post_install.sh</code> e <code>scripts/post_install/customizable_post_install.sh</code>). Uno scanner estrae queste versioni dalla fonte sul disco."
+      },
+      {
+        "title": "Versione del registro sull'host",
+        "body": "Quando l'operatore ha applicato ogni ottimizzazione, la corrispondente chiamata <code>register_tool</code> ha scritto la versione attiva in <code>/usr/local/share/proxmenux/installed_tools.json</code>. Questo file è la fonte della verità per \"che cosa è attivo su questo host in questo momento\"."
+      },
+      {
+        "title": "Monitor confronta entrambi i lati",
+        "body": "All'avvio e ogni 24h, il Monitor confronta le versioni del disco contro le versioni del registro. Qualsiasi errore produce una voce in <code>/usr/local/share/proxmenux/updates_available.json</code>. Questo file guida sia l'entrata del menu Post-Install che la scheda del cruscotto Monitor."
+      },
+      {
+        "title": "Una notifica per nuova versione",
+        "body": "Quando almeno un'ottimizzazione ha un aggiornamento in sospeso, il Monitor emette una singola notifica raggruppata — ad esempio <em>\"4 aggiornamento di ottimizzazione ProxMenux disponibile\"</em> — con una linea per strumento nello stesso formato <code>name (vX → vY)</code> utilizzato per gli aggiornamenti del pacchetto Proxmox. La notifica è anti-cascade in modo da non ripetere giorno dopo giorno per lo stesso set; solo una nuova versione (o uno strumento fresco che entra nella lista) re-triggers esso."
+      }
+    ]
+  },
+  "pathA": {
+    "heading": "Percorso A — Dal menu Post-Install",
+    "intro": "Dal menu principale di ProxMenux, aprire <strong>Impostazioni post-installazione Proxmox</strong>. Quando ci sono aggiornamenti in sospeso, un nuovo ingresso <strong>Apply aggiornamenti disponibili (N)</strong> appare proprio sopra <em>Ottimazioni di installazione</em>. Il numero riflette quante ottimizzazioni hanno una nuova versione su disco rispetto a quello che l'host attualmente ha registrato. Quando tutto è aggiornato la voce semplicemente non appare, quindi il menu rimane pulito.",
+    "menuAlt": "Post-Install Scripts menu che mostra il condizionale 'Applica gli aggiornamenti disponibili (N)' voce posizionata appena sopra 'Uninstall ottimizzazioni', con il badge di conteggio che indica quante ottimizzazioni hanno una versione più recente sul disco",
+    "menuCaption": "L'ingresso <em>Apply disponibile (N)</em> rende solo quando almeno un'ottimizzazione ha un aggiornamento in sospeso — si nasconde quando l'host è corrente.",
+    "checklistBody": "Selezionando la voce si apre una lista di controllo con ogni aggiornamento in attesa, ogni riga formattata come <code>name (vX → vY)</code>. Tutte le righe sono pre-controllate per impostazione predefinita; deselezionare qualsiasi non si desidera applicare questo round.",
+    "checklistAlt": "Applicare la finestra di dialogo Aggiornamenti disponibili con una riga per ottimizzazione in attesa, ciascuna etichettata con il nome di ottimizzazione e la transizione della versione (corrente → disponibile). Tutte le righe pre-controllate.",
+    "checklistCaption": "Per-optimizzazione opt-in: scegliere esattamente quali versioni per sollevare. Lo stesso motore che alimenta Automated e Customizable post-install funziona in background per riapplicare ogni funzione e aggiornare la sua versione del Registro di sistema."
+  },
+  "pathB": {
+    "heading": "Percorso B — Dal cruscotto Monitor",
+    "intro": "Gli stessi aggiornamenti appaiono nel Monitor sotto <link>Settings → ProxMenux Ottimizzazione</link>. Quando vengono rilevati gli aggiornamenti in sospeso, la scheda mostra un banner \"Aggiornamenti disponibili\" con il conteggio e un'azione <strong>Apply</strong> che apre lo stesso raccoglitore per-ottimizzazione.",
+    "imageAlt": "ProxMenux Scheda di ottimizzazione sul cruscotto Monitor con un banner Aggiornamenti disponibili in alto che mostra il conteggio degli aggiornamenti in sospeso e un pulsante Applica che apre il raccoglitore per-ottimizzazione",
+    "imageCaption": "La scheda Ottimizzazione nel Monitor — quando almeno una ottimizzazione ha una versione più recente sul disco, il banner si superfici senza richiedere l'accesso alla shell."
+  },
+  "applying": {
+    "heading": "Cosa succede quando si applica",
+    "steps": [
+      {
+        "title": "Ripristina la funzione post-installazione",
+        "body": "La funzione di ottimizzazione selezionata viene rieseguita contro l'host. Poiché ogni funzione post-installazione è <strong>idempotent</strong>, la re-running non duplica la configurazione — sovrascrive la versione precedente con quella nuova (file sysctl, drop-ins, unità di servizio, ecc.)."
+      },
+      {
+        "title": "Aggiorna il registro",
+        "body": "La chiamata <code>register_tool</code> all'interno della funzione scrive la nuova versione in <code>installed_tools.json</code>. La successiva scansione non vede più un errore e la voce di aggiornamento scompare sia dal menu che dalla scheda Monitor."
+      },
+      {
+        "title": "Nessun riavvio a meno che la funzione non lo dica",
+        "body": "La maggior parte degli aggiornamenti hanno effetto immediatamente. Gli aggiornamenti che toccano i moduli del kernel, i nomi di interfaccia persistenti, o VFIO mostrano lo stesso prompt di riavvio di una nuova installazione."
+      },
+      {
+        "title": "Aggiornamento del Registro inviato al Monitor",
+        "body": "Una volta terminato il lotto, il menu POST a <code>http://127.0.0.1:8008/api/updates/post-install/scan</code> per ricostruire <code>/usr/local/share/proxmenux/updates_available.json</code>. Questo è ciò che rende la scheda di ottimizzazione del monitor e la voce del menu shell scomparire immediatamente dopo l'aggiornamento, senza aspettare la successiva scansione programmata."
+      }
+    ],
+    "jqTitle": "jq is required",
+    "jqBody": "Il percorso Una lista di controllo si basa su <code>jq</code> per analizzare le date in sospeso JSON. Se manca <code>jq</code>, il flusso esce silenziosamente - si vede l'ingresso del menu con un conteggio ma nulla succederebbe dopo aver scelto le righe. Su qualsiasi moderno Proxmox installare <code>jq</code> è presente; se in dubbio eseguire <code>apt install -y jq</code>."
+  },
+  "differs": {
+    "heading": "Come differisce dagli altri percorsi",
+    "headerPath": "Path",
+    "headerScope": "Ambito",
+    "headerWhen": "Quando ha senso",
+    "rows": [
+      {
+        "pathLabel": "Automatizzato",
+        "pathHref": "/docs/post-install/automated",
+        "scope": "Riapplica l'ottimizzazione <em>every</em> nel bundle.",
+        "when": "Ospite fresco, o ri-baseline completo di un nodo completamente gestito."
+      },
+      {
+        "pathLabel": "Personalizzabile",
+        "pathHref": "/docs/post-install/customizable",
+        "scope": "Scegli dal catalogo completo.",
+        "when": "Cherry-pick che le ottimizzazioni sono attive sull'host."
+      },
+      {
+        "pathLabel": "Applica aggiornamenti disponibili",
+        "pathHref": null,
+        "scope": "Solo le ottimizzazioni la cui versione ha urtato su disco.",
+        "when": "Mantenere le ottimizzazioni già installate corrente senza toccare il resto."
+      },
+      {
+        "pathLabel": "Disinstalla ottimizzazioni",
+        "pathHref": "/docs/post-install/uninstall",
+        "scope": "Invertire l'ottimizzazione e rimuovere la sua voce di registro.",
+        "when": "Rimboccare un cambiamento specifico."
+      }
+    ]
+  },
+  "notifTitle": "Cancello di notifica",
+  "notifBody": "La notifica che annuncia gli aggiornamenti in sospeso è l'aggiornamento di ottimizzazione <em>ProxMenux disponibile evento </em>. È abilitato per impostazione predefinita su ogni canale, può essere disattivato per canale da <link>Impostazioni → Notifiche</link>, ed è anti-cascade — spara una volta per set distinto di aggiornamenti in sospeso, non su ogni 24h di scansione."
+}

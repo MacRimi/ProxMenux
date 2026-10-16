@@ -1,0 +1,101 @@
+{
+  "meta": {
+    "title": "ProxMenux Monitor — Dashboard | Documentazione ProxMenux",
+    "description": "Il cruscotto è l'interfaccia utente principale di ProxMenux Monitor: dieci schede di contenuti tra cui il lanciatore Apps, più l'intestazione globale e un ordine di navigazione di alto livello configurabile."
+  },
+  "header": {
+    "title": "Dashboard",
+    "description": "Il cruscotto è la visione quotidiana di ProxMenux Monitor — dieci schede di contenuti, tra cui il lanciatore Apps, più un intestazione globale e un ordine di navigazione di alto livello configurabile.",
+    "section": "Monitor di ProxMenux"
+  },
+  "oneHeader": {
+    "title": "Un intestazione, dieci schede",
+    "body": "L'intestazione (logo, nome nodo, pillola di stato, uptime, aggiornamento, toggle a tema) rimane visibile ovunque. La scheda attiva qui sotto cambia l'intera area dei contenuti. Il colore della pillola di stato rispecchia la categoria peggiore della <link>Health Monitor</link> — è lo stesso punto di dati visto dal cruscotto."
+  },
+  "tabs": {
+    "heading": "Le dieci schede",
+    "intro": "Ogni scheda ha una propria pagina dedicata. Le pagine sono aggiunte in modo incrementale come la documentazione è riempita in; di seguito è l'elenco completo e ciò che ciascuno è responsabile.",
+    "headerTab": "Scheda",
+    "headerOwns": "Cosa possiede",
+    "rows": [
+      {
+        "name": "Panoramica sistema",
+        "linksTo": "/docs/monitor/dashboard/system-overview",
+        "owns": "CPU / widget di memoria / temperatura, conteggio attivo VM & LXC, grafici metrici storici, sommari di archiviazione e rete. Scheda di atterraggio predefinita fino a quando l'ordine di navigazione è personalizzato."
+      },
+      {
+        "name": "Applicazioni",
+        "linksTo": "/docs/monitor/dashboard/apps",
+        "owns": "Lanciatore unificato per i Link Web e i link personalizzati registrati LXC, con categorie, ricerca, scorciatoie e segnali di aggiornamento per applicazione."
+      },
+      {
+        "name": "Stoccaggio",
+        "owns": "Proxmox pools, dischi fisici, SMART dati, ZFS stato, usura e vita, storia dell'osservazione."
+      },
+      {
+        "name": "Rete",
+        "owns": "Ogni interfaccia (fisico / legame / ponte / OVS), IP/MAC, RX / TX grafici, RRD storico per interfaccia."
+      },
+      {
+        "name": "VM e LXC",
+        "owns": "Inventario degli ospiti, foratura per configurazione / metriche / logs, avviare / arrestare / riavviare / chiudere azioni."
+      },
+      {
+        "name": "Hardware",
+        "owns": "Modello e topologia CPU, layout di memoria, topologia PCIe, GPU con monitoraggio in tempo reale per-slot."
+      },
+      {
+        "name": "Log di sistema",
+        "owns": "Live <code>journalctl</code> con filtri, cronologia delle attività Proxmox, registro delle notifiche, pacchetti di log scaricabili."
+      },
+      {
+        "name": "Terminale",
+        "owns": "shell del browser per ospitare o per qualsiasi VM/CT, alimentato da <code>xterm.js</code> su WebSockets."
+      },
+      {
+        "name": "Sicurezza",
+        "owns": "Impostazione dell'auth, password / Token 2FA / API, log di audit, pannello Fail2Ban opzionale, distribuzione Secure Gateway."
+      },
+      {
+        "name": "Impostazioni",
+        "owns": "Monitorare lingua, ordine di navigazione, canali di notifica, fornitore di AI, soglie di salute, esclusioni e inventario di ottimizzazione post-installazione."
+      }
+    ]
+  },
+  "headerAnatomy": {
+    "heading": "Anatomia di testa",
+    "items": [
+      "<strong>Logo + nome del prodotto</strong> a sinistra. Il logo si trasforma in una variante \"aggiornamento disponibile\" quando viene rilevata una nuova versione Monitor.",
+      "<strong>Node identity</strong> — il nome del nodo Proxmox risolto da <code>pvesh get /nodes</code>, rientrante in <code>hostname</code>.",
+      "<strong>Health status pill</strong> — Healthy (green), Warning (giallo), Critical (rosso). Fare clic su di esso per aprire il Health Monitor modale. Un distintivo <em>info</em> extra blu appare quando ci sono oggetti respinti ancora all'interno della loro finestra di soppressione.",
+      "<strong>Uptime</strong> — Host uptime, formattato umano-leggibile.",
+      "<strong>Refresh button</strong> — ristampa tutte le chiamate API dal vivo senza ricaricare la pagina completa.",
+      "<strong>Theme toggle</strong> — luce / scuro / sistema. Persi in <code>localStorage</code>."
+    ]
+  },
+  "whereNext": {
+    "heading": "Dove vicino",
+    "items": [
+      {
+        "label": "Scheda Apps",
+        "href": "/docs/monitor/dashboard/apps",
+        "tail": "— il lanciatore Web Link unificato e il suo rapporto con le applicazioni registrate LXC."
+      },
+      {
+        "label": "Scheda Panoramica del sistema",
+        "href": "/docs/monitor/dashboard/system-overview",
+        "tail": "— la scheda di atterraggio, completamente documentata."
+      },
+      {
+        "label": "Monitoraggio integrità",
+        "href": "/docs/monitor/health-monitor",
+        "tail": "— il modale dietro la pillola di stato dell'intestazione, dieci categorie in profondità."
+      },
+      {
+        "label": "Architettura",
+        "href": "/docs/monitor/architecture",
+        "tail": "— come il cruscotto parla al backend Flask."
+      }
+    ]
+  }
+}
