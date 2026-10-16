@@ -5923,6 +5923,34 @@ try:
 except Exception:
     pass
 
+# Console TUI snapshot publisher: one daemon thread that writes the
+# cluster snapshot while a console client holds its lease.
+# Optional by design — the Monitor must start even if the module fails.
+def _console_run_pvesh():
+    result = subprocess.run(['pvesh', 'get', '/cluster/status', '--output-format', 'json'],
+                            capture_output=True, text=True, timeout=10)
+    if result.returncode != 0:
+        raise OSError(f"pvesh exited with {result.returncode}")
+    return json.loads(result.stdout)
+
+
+def _console_read_language():
+    try:
+        with open('/usr/local/share/proxmenux/config.json', encoding='utf-8') as stream:
+            return json.load(stream).get('language')
+    except Exception:
+        return None
+
+
+try:
+    import console_snapshot
+    console_snapshot.ensure_publisher(
+        get_proxmox_node_name, get_cached_pvesh_cluster_resources,
+        _console_run_pvesh, _console_read_language,
+        get_pve_version=get_proxmox_version, version=None)
+except Exception:
+    pass
+
 
 # ─── Per-NIC live rate (moving window) ──────────────────────────
 # Keep the last ~30s of byte counters and derive the rate from the
