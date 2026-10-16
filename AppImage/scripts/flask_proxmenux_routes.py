@@ -26,6 +26,7 @@ TOOL_METADATA = {
     'system_limits':        {'name': 'System Limits Increase',                'function': 'increase_system_limits',       'version': '1.1'},
     # entropy removed — modern kernels 5.6+ have built-in entropy generation, haveged no longer needed
     'memory_settings':      {'name': 'Memory Settings Optimization',          'function': 'optimize_memory_settings',     'version': '1.1'},
+    'zram_swap':            {'name': 'ZRAM Swap Profile',                      'function': 'configure_zram_swap',         'version': '1.0'},
     'kernel_panic':         {'name': 'Kernel Panic Configuration',            'function': 'configure_kernel_panic',       'version': '1.0'},
     'apt_ipv4':             {'name': 'APT IPv4 Force',                        'function': 'force_apt_ipv4',               'version': '1.0'},
     'kexec':                {'name': 'kexec for quick reboots',               'function': 'enable_kexec',                 'version': '1.0'},

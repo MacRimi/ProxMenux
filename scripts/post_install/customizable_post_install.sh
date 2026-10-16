@@ -63,6 +63,9 @@ fi
 if [[ -f "$LOCAL_SCRIPTS/global/pmx_journal.sh" ]]; then
     source "$LOCAL_SCRIPTS/global/pmx_journal.sh"
 fi
+if [[ -f "$LOCAL_SCRIPTS/post_install/zram_profile_helpers.sh" ]]; then
+    source "$LOCAL_SCRIPTS/post_install/zram_profile_helpers.sh"
+fi
 # ==========================================================
 
 
@@ -2448,8 +2451,182 @@ EOF
 }
 
 
+configure_zram_swap() {
+    local FUNC_VERSION="1.0"
+    # description: Enable an opt-in ZRAM swap profile sized to one tenth of RAM.
+    pmx_journal_context "configure_zram_swap" "$FUNC_VERSION"
 
+    local config=/etc/systemd/zram-generator.conf.d/90-proxmenux.conf
+    local marker="$BASE_DIR/zram-swap.state"
+    local package_added=false package_owned=false owned=false previous_active=false state_mutated=false
+    local previous_config="" previous_marker="" desired="" conflicts="" fstab_conflicts="" systemd_conflicts="" version="" algorithm=""
+    local supports_params=false failure="" old_umask allowed_zram=""
 
+    if ! declare -f zram_render_generator_config >/dev/null ||
+       ! declare -f zram_list_foreign_active_zram_swap >/dev/null ||
+       ! declare -f zram_list_foreign_fstab_zram_swap >/dev/null ||
+       ! declare -f zram_list_foreign_systemd_zram_units >/dev/null ||
+       ! declare -f zram_foreign_generator_config >/dev/null ||
+       ! declare -f zram_profile_verify_active >/dev/null; then
+        msg_error "$(translate "ZRAM profile helpers are missing")"
+        return 1
+    fi
+    if [[ ! -r /proc/swaps || ! -r /etc/fstab ]]; then
+        msg_error "$(translate "Cannot inspect current swap configuration")"
+        return 1
+    fi
+
+    # Validate ownership before allowing the existing /dev/zram0 device.
+    if [[ -e "$marker" ]]; then
+        if [[ ! -f "$config" || -L "$config" || -L "$marker" ]] ||
+           ! grep -qx '# ProxMenux ZRAM profile' "$config" ||
+           ! grep -Eq '^installed_by_proxmenux=(true|false)$' "$marker"; then
+            msg_error "$(translate "ZRAM ownership state is incomplete; inspect it before retrying")"
+            return 1
+        fi
+        owned=true
+        previous_config="$(cat "$config")"
+        previous_marker="$(cat "$marker")"
+        grep -qx 'installed_by_proxmenux=true' "$marker" && package_owned=true
+        allowed_zram=/dev/zram0
+    fi
+
+    if ! conflicts="$(zram_list_foreign_active_zram_swap /proc/swaps "$allowed_zram")" ||
+       ! fstab_conflicts="$(zram_list_foreign_fstab_zram_swap /etc/fstab)" ||
+       ! systemd_conflicts="$(zram_list_foreign_systemd_zram_units)"; then
+        msg_error "$(translate "Cannot inspect existing ZRAM configurations")"
+        return 1
+    fi
+    if [[ -n "$fstab_conflicts" ]]; then
+        [[ -n "$conflicts" ]] && conflicts+=$'\n'
+        conflicts+="$fstab_conflicts"
+    fi
+    if [[ -n "$systemd_conflicts" ]]; then
+        [[ -n "$conflicts" ]] && conflicts+=$'\n'
+        conflicts+="$systemd_conflicts"
+    fi
+    if [[ -n "$conflicts" ]]; then
+        msg_error "$(translate "Another ZRAM swap setup exists; refusing to replace it:") $conflicts"
+        return 1
+    fi
+    if ! conflicts="$(zram_foreign_generator_config "$config")"; then
+        msg_error "$(translate "Cannot inspect existing ZRAM generator configuration")"
+        return 1
+    fi
+    if [[ -n "$conflicts" ]]; then
+        msg_error "$(translate "Another ZRAM generator configuration exists; refusing to overwrite it:") $conflicts"
+        return 1
+    fi
+    if [[ "$owned" == false && ( -e "$config" || -L "$config" ) ]]; then
+        msg_error "$(translate "Existing zram0 configuration is not owned by ProxMenux")"
+        return 1
+    fi
+
+    if awk 'NR > 1 && $1 == "/dev/zram0" { found=1 } END { exit !found }' /proc/swaps; then
+        previous_active=true
+    fi
+    if ! dpkg-query -W -f='${Status}' systemd-zram-generator 2>/dev/null | grep -q 'install ok installed'; then
+        if ! pmx_install_pkg systemd-zram-generator; then
+            if [[ "$owned" == false ]] &&
+               dpkg-query -W -f='${Status}' systemd-zram-generator 2>/dev/null | grep -q 'install ok installed' &&
+               [[ -z "$(zram_foreign_generator_config "$config")" ]]; then
+                if DEBIAN_FRONTEND=noninteractive apt-get purge -y systemd-zram-generator >/dev/null 2>&1; then
+                    pmx_record_uninstall "systemd-zram-generator" "$FUNC_VERSION"
+                fi
+            fi
+            msg_error "$(translate "Could not install systemd-zram-generator")"
+            return 1
+        fi
+        package_added=true
+        package_owned=true
+    fi
+    version="$(dpkg-query -W -f='${Version}' systemd-zram-generator 2>/dev/null)"
+    if [[ -z "$version" ]]; then
+        failure="Cannot determine installed systemd-zram-generator version"
+    else
+        if dpkg --compare-versions "$version" ge '1.2.0'; then
+            supports_params=true
+        fi
+        desired="$(zram_render_generator_config "$supports_params")"
+        algorithm=zstd
+    fi
+    if [[ -z "$failure" && "$owned" == true && "$previous_config" == "$desired" && "$previous_active" == true ]]; then
+        if zram_profile_verify_active "$algorithm"; then
+            register_tool "zram_swap" true "$FUNC_VERSION"
+            msg_success "$(translate "ZRAM profile is already active")"
+            return 0
+        fi
+        failure="Existing ZRAM profile is active but does not match its configuration"
+    fi
+    if [[ -z "$failure" && "$previous_active" == true ]]; then
+        if ! swapoff /dev/zram0; then
+            msg_error "$(translate "Could not release ZRAM pages; existing profile remains active")"
+            return 1
+        fi
+        state_mutated=true
+        if ! systemctl stop dev-zram0.swap >/dev/null 2>&1; then
+            failure="Could not stop existing dev-zram0.swap"
+        fi
+    fi
+    if [[ -z "$failure" ]]; then
+        state_mutated=true
+        if ! install -d -m 755 "$(dirname "$config")"; then
+            failure="Could not create ZRAM generator directory"
+        elif ! printf '%s\n' "$desired" | pmx_write_file "$config"; then
+            failure="Could not write ZRAM generator configuration"
+        fi
+    fi
+    if [[ -z "$failure" ]]; then
+        old_umask="$(umask)"
+        umask 077
+        if ! printf 'installed_by_proxmenux=%s\n' "$package_owned" | pmx_write_file "$marker"; then
+            failure="Could not write ZRAM package ownership state"
+        fi
+        umask "$old_umask"
+        [[ -f "$marker" ]] && chmod 600 "$marker"
+    fi
+    if [[ -z "$failure" ]]; then
+        if ! systemctl daemon-reload || ! systemctl start dev-zram0.swap; then
+            failure="Could not activate dev-zram0.swap"
+        elif ! zram_profile_verify_active "$algorithm"; then
+            failure="Active ZRAM algorithm, capacity or swap sources did not match the profile"
+        fi
+    fi
+    if [[ -z "$failure" ]]; then
+        register_tool "zram_swap" true "$FUNC_VERSION"
+        msg_success "$(translate "ZRAM swap profile enabled")"
+        return 0
+    fi
+
+    msg_error "$(translate "ZRAM profile activation failed; details:") $failure"
+    if [[ "$state_mutated" == true ]] && awk 'NR > 1 && $1 == "/dev/zram0" { found=1 } END { exit !found }' /proc/swaps; then
+        if ! swapoff /dev/zram0; then
+            # Keep the drop-in and marker so a later uninstall can retry safely.
+            register_tool "zram_swap" true "$FUNC_VERSION"
+            msg_error "$(translate "ZRAM still holds pages; configuration was preserved")"
+            return 1
+        fi
+    fi
+    if [[ "$state_mutated" == true ]]; then
+        systemctl stop dev-zram0.swap >/dev/null 2>&1 || true
+        if [[ "$owned" == true ]]; then
+            printf '%s\n' "$previous_config" | pmx_write_file "$config"
+            printf '%s\n' "$previous_marker" | pmx_write_file "$marker"
+            chmod 600 "$marker"
+        else
+            pmx_remove_file "$config"
+            pmx_remove_file "$marker"
+        fi
+        systemctl daemon-reload >/dev/null 2>&1 || true
+        [[ "$previous_active" == true ]] && systemctl start dev-zram0.swap >/dev/null 2>&1
+    fi
+    if [[ "$package_added" == true && "$owned" == false && ! -e "$config" && ! -e "$marker" && -z "$(zram_foreign_generator_config "$config")" ]]; then
+        if DEBIAN_FRONTEND=noninteractive apt-get purge -y systemd-zram-generator >/dev/null 2>&1; then
+            pmx_record_uninstall "systemd-zram-generator" "$FUNC_VERSION"
+        fi
+    fi
+    return 1
+}
 
 # ==========================================================
 
@@ -3674,6 +3851,7 @@ custom_post_description_label() {
     "Enable High Availability services") translate "Enable High Availability services" ;;
     "Install Figurine") translate "Install Figurine" ;;
     "Install and configure Log2RAM") translate "Install and configure Log2RAM" ;;
+    "Enable ZRAM swap profile") translate "Enable ZRAM swap profile" ;;
     *) echo "$1" ;;
   esac
 }
@@ -3769,6 +3947,7 @@ main_menu() {
     "System|Increase various system limits|LIMITS"
     # Entropy (haveged) removed — modern kernels 5.6+ have built-in entropy generation
     "System|Optimize Memory|MEMORYFIXES"
+    "Optional|Enable ZRAM swap profile|ZRAM_SWAP"
     "System|Enable fast reboots|KEXEC"
     "System|Enable restart on kernel panic|KERNELPANIC"
     "Optional|Apply AMD CPU fixes|AMDFIXES"
@@ -3912,6 +4091,7 @@ done
         LIMITS) increase_system_limits ;;
         # ENTROPY removed — modern kernels 5.6+ have built-in entropy
         MEMORYFIXES) optimize_memory_settings ;;
+        ZRAM_SWAP) configure_zram_swap ;;
         KEXEC) enable_kexec ;;
         KERNELPANIC) configure_kernel_panic ;;
         AMDFIXES) apply_amd_fixes ;;

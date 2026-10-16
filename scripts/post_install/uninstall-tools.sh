@@ -37,6 +37,9 @@ fi
 if [[ -f "$LOCAL_SCRIPTS/global/pmx_journal.sh" ]]; then
     source "$LOCAL_SCRIPTS/global/pmx_journal.sh"
 fi
+if [[ -f "$LOCAL_SCRIPTS/post_install/zram_profile_helpers.sh" ]]; then
+    source "$LOCAL_SCRIPTS/post_install/zram_profile_helpers.sh"
+fi
 
 load_language
 initialize_cache
@@ -51,6 +54,83 @@ register_tool() {
     local state="$2"
     ensure_tools_json
     jq --arg t "$tool" --argjson v "$state" '.[$t]=$v' "$TOOLS_JSON" > "$TOOLS_JSON.tmp" && mv "$TOOLS_JSON.tmp" "$TOOLS_JSON"
+}
+
+################################################################
+
+uninstall_zram_swap() {
+    local FUNC_VERSION="1.0"
+    pmx_journal_context "uninstall_zram_swap" "$FUNC_VERSION"
+    local config=/etc/systemd/zram-generator.conf.d/90-proxmenux.conf
+    local marker="$BASE_DIR/zram-swap.state"
+    local package_owned=false foreign="" other_active="" fstab_zram="" systemd_zram="" inspection_failed=false old_active=false
+    local old_config="" old_marker=""
+
+    if ! declare -f zram_foreign_generator_config >/dev/null ||
+       ! declare -f zram_list_foreign_active_zram_swap >/dev/null ||
+       ! declare -f zram_list_foreign_fstab_zram_swap >/dev/null ||
+       ! declare -f zram_list_foreign_systemd_zram_units >/dev/null; then
+        msg_error "$(translate "ZRAM profile helpers are missing")"
+        return 1
+    fi
+    if [[ ! -f "$config" || ! -f "$marker" || -L "$config" || -L "$marker" ]] ||
+       ! grep -qx '# ProxMenux ZRAM profile' "$config" ||
+       ! grep -Eq '^installed_by_proxmenux=(true|false)$' "$marker"; then
+        msg_error "$(translate "ZRAM ownership state is incomplete; no files were removed")"
+        return 1
+    fi
+    old_config="$(cat "$config")"
+    old_marker="$(cat "$marker")"
+    [[ "$old_marker" == installed_by_proxmenux=true ]] && package_owned=true
+
+    if awk 'NR > 1 && $1 == "/dev/zram0" { found=1 } END { exit !found }' /proc/swaps; then
+        old_active=true
+        if ! swapoff /dev/zram0; then
+            msg_error "$(translate "ZRAM still holds pages; profile remains active")"
+            return 1
+        fi
+    fi
+    if systemctl is-active --quiet dev-zram0.swap && ! systemctl stop dev-zram0.swap; then
+        if [[ "$old_active" == true ]]; then
+            systemctl start dev-zram0.swap >/dev/null 2>&1 || true
+        fi
+        msg_error "$(translate "Could not stop ZRAM swap; profile configuration remains")"
+        return 1
+    fi
+    if ! pmx_remove_file "$config" || ! pmx_remove_file "$marker" || ! systemctl daemon-reload; then
+        printf '%s\n' "$old_config" | pmx_write_file "$config"
+        printf '%s\n' "$old_marker" | pmx_write_file "$marker"
+        chmod 600 "$marker"
+        systemctl daemon-reload >/dev/null 2>&1 || true
+        if [[ "$old_active" == true ]] && ! systemctl start dev-zram0.swap >/dev/null 2>&1; then
+            msg_error "$(translate "Could not remove ZRAM profile; configuration was restored but swap could not be restarted")"
+        else
+            msg_error "$(translate "Could not remove ZRAM profile; configuration was restored")"
+        fi
+        return 1
+    fi
+    rmdir "$(dirname "$config")" 2>/dev/null || true
+
+    if [[ "$package_owned" == true ]]; then
+        if ! foreign="$(zram_foreign_generator_config "$config")" ||
+           ! other_active="$(zram_list_foreign_active_zram_swap /proc/swaps /dev/zram0)" ||
+           ! fstab_zram="$(zram_list_foreign_fstab_zram_swap /etc/fstab)" ||
+           ! systemd_zram="$(zram_list_foreign_systemd_zram_units)"; then
+            inspection_failed=true
+        fi
+        if [[ "$inspection_failed" == false && -z "$foreign" && -z "$other_active" && -z "$fstab_zram" && -z "$systemd_zram" ]]; then
+            if DEBIAN_FRONTEND=noninteractive apt-get purge -y systemd-zram-generator >/dev/null 2>&1; then
+                pmx_record_uninstall "systemd-zram-generator" "$FUNC_VERSION"
+            else
+                msg_warn "$(translate "ZRAM profile removed, but package purge failed")"
+            fi
+        else
+            msg_warn "$(translate "Another ZRAM configuration exists or could not be inspected; systemd-zram-generator was retained")"
+        fi
+    fi
+    register_tool "zram_swap" false
+    msg_success "$(translate "ZRAM swap profile removed")"
+    return 0
 }
 
 ################################################################
@@ -1270,6 +1350,7 @@ show_uninstall_menu() {
             system_limits) desc="System Limits Increase";;
             entropy) desc="Entropy Generation (haveged)";;
             memory_settings) desc="Memory Settings Optimization";;
+            zram_swap) desc="ZRAM swap profile";;
             kernel_panic) desc="Kernel Panic Configuration";;
             apt_ipv4) desc="APT IPv4 Force";;
             kexec) desc="kexec for quick reboots";;
@@ -1315,18 +1396,30 @@ show_uninstall_menu() {
     fi
     
     # Execute uninstallations
+    local failed=0
     for tool in $selected_tools; do
         tool=$(echo "$tool" | tr -d '"')
         if declare -f "uninstall_$tool" > /dev/null 2>&1; then
             clear
             show_proxmenux_logo
-            "uninstall_$tool"
+            # Preserve legacy return handling for existing uninstallers.
+            # Only ZRAM uses a failure status to signal that its active swap
+            # profile could not be safely removed.
+            if [[ "$tool" == "zram_swap" ]]; then
+                uninstall_zram_swap || failed=1
+            else
+                "uninstall_$tool" || true
+            fi
         else
             msg_warn "$(translate "No uninstaller found for:") $tool"
         fi
     done
     
-    msg_success "$(translate "Selected optimizations have been uninstalled.")"
+    if [[ "$failed" -eq 0 ]]; then
+        msg_success "$(translate "Selected optimizations have been uninstalled.")"
+    else
+        msg_error "$(translate "Some optimizations could not be uninstalled; their configuration was preserved.")"
+    fi
     msg_warn "$(translate "A system reboot is recommended to ensure all changes take effect.")"
     echo -e
     msg_success "$(translate "Press Enter to continue...")"
