@@ -1110,7 +1110,21 @@
       "available": "Backup disponibili",
       "loading": "Caricamento backup...",
       "empty": "Nessun backup trovato",
-      "emptyHint": "Crea il primo backup con il pulsante in alto"
+      "emptyHint": "Crea il primo backup con il pulsante in alto",
+      "refresh": "Aggiorna",
+      "refreshFailed": "Impossibile aggiornare i backup. Aggiorna di nuovo per confermarne lo stato attuale.",
+      "deleteSelected": "Elimina selezionati ({count})",
+      "deletedCount": "{count} backup eliminati.",
+      "unconfirmedCount": "L'eliminazione di {count} backup non è stata confermata. Aggiorna l'elenco e controlla le attività di Proxmox prima di riprovare.",
+      "deleteFailed": "Impossibile confermare l'eliminazione. Aggiorna l'elenco e controlla le attività di Proxmox prima di riprovare.",
+      "selectHint": "Seleziona i backup non protetti (fino a 20 per gruppo)",
+      "selectBackup": "Seleziona backup",
+      "protected": "Protetto",
+      "confirmTitle": "Eliminare {count} backup?",
+      "confirmDescription": "Questi archivi di backup della VM/CT {vmid} verranno eliminati definitivamente. I backup protetti sono esclusi. Questo non elimina l'ospite.",
+      "deleting": "In attesa che Proxmox termini l'eliminazione degli archivi selezionati…",
+      "cancel": "Annulla",
+      "confirmDelete": "Elimina backup"
     },
     "updatesPanel": {
       "pendingTitle": "Aggiornamenti pacchetti in sospeso",

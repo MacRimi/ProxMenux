@@ -1131,7 +1131,21 @@
       "available": "Dostupné zálohy",
       "loading": "Načítavam zálohy...",
       "empty": "Nenašli sa žiadne zálohy",
-      "emptyHint": "Prvú zálohu vytvoríte tlačidlom vyššie"
+      "emptyHint": "Prvú zálohu vytvoríte tlačidlom vyššie",
+      "refresh": "Obnoviť",
+      "refreshFailed": "Nepodarilo sa obnoviť zálohy. Obnovte ich znova, aby ste potvrdili ich aktuálny stav.",
+      "deleteSelected": "Odstrániť vybrané ({count})",
+      "deletedCount": "Odstránené zálohy: {count}.",
+      "unconfirmedCount": "Odstránenie záloh ({count}) nebolo potvrdené. Pred ďalším pokusom obnovte zoznam a skontrolujte úlohy v Proxmoxe.",
+      "deleteFailed": "Odstránenie sa nepodarilo potvrdiť. Pred ďalším pokusom obnovte zoznam a skontrolujte úlohy v Proxmoxe.",
+      "selectHint": "Vyberte nechránené zálohy (najviac 20 v jednej dávke)",
+      "selectBackup": "Vybrať zálohu",
+      "protected": "Chránená",
+      "confirmTitle": "Odstrániť zálohy ({count})?",
+      "confirmDescription": "Tieto archívy záloh pre VM/CT {vmid} budú natrvalo odstránené. Chránené zálohy sú vylúčené. Hosť sa tým neodstráni.",
+      "deleting": "Čaká sa, kým Proxmox dokončí odstránenie vybraných archívov…",
+      "cancel": "Zrušiť",
+      "confirmDelete": "Odstrániť zálohy"
     },
     "updatesPanel": {
       "pendingTitle": "Čakajúce aktualizácie balíkov",
