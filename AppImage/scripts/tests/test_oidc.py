@@ -1,10 +1,14 @@
 """OIDC protocol/Flask integration tests using real RSA/EC signatures, no external IdP."""
 
+import ast
 import base64
 import hashlib
 import json
+import os
 from pathlib import Path
+import re
 import stat
+import subprocess
 import sys
 import tempfile
 import time
@@ -23,6 +27,53 @@ import requests
 import auth_manager
 import oidc_manager as oidc
 from flask_oidc_routes import oidc_bp
+
+
+class AppImagePackagingTests(unittest.TestCase):
+    def test_oidc_imports_load_from_the_packaged_modules(self):
+        def local_imports(module):
+            tree = ast.parse((SCRIPTS / f"{module}.py").read_text())
+            names = set()
+            for statement in tree.body:
+                if isinstance(statement, ast.Import):
+                    names.update(alias.name for alias in statement.names)
+                elif isinstance(statement, ast.ImportFrom) and statement.module:
+                    names.add(statement.module)
+            return {name for name in names if (SCRIPTS / f"{name}.py").is_file()}
+
+        self.assertIn("flask_oidc_routes", local_imports("flask_server"))
+        pending, modules = {"flask_oidc_routes"}, set()
+        while pending:
+            module = pending.pop()
+            modules.add(module)
+            pending.update(local_imports(module) - modules)
+        self.assertTrue({"oidc_manager", "auth_manager", "jwt_middleware"} <= modules)
+        builder = (SCRIPTS / "build_appimage.sh").read_text()
+        commands = []
+        for module in sorted(modules):
+            command = re.search(
+                r'^cp "\$SCRIPT_DIR/' + re.escape(module) + r'\.py" "\$APP_DIR/usr/bin/".*$',
+                builder, re.M)
+            self.assertIsNotNone(command, f"AppImage does not ship imported module {module}")
+            commands.append(command.group(0))
+            if module in {"flask_oidc_routes", "oidc_manager"}:
+                self.assertNotIn("||", command.group(0), f"Required OIDC module {module} must fail the build if missing")
+
+        # Execute the shipped copy commands, then import in a fresh interpreter
+        # outside the source tree so development paths cannot hide missing files.
+        with tempfile.TemporaryDirectory() as directory:
+            packaged = Path(directory) / "usr/bin"
+            packaged.mkdir(parents=True)
+            environment = {**os.environ, "SCRIPT_DIR": str(SCRIPTS), "APP_DIR": directory}
+            subprocess.run(["bash", "-e", "-c", "\n".join(commands)], env=environment, check=True)
+            subprocess.run([sys.executable, "-B", "-c", """
+import importlib, pathlib, sys
+packaged = pathlib.Path(sys.argv[1]).resolve()
+sys.path.insert(0, str(packaged))
+for name in sys.argv[2:]:
+    module = importlib.import_module(name)
+    assert pathlib.Path(module.__file__).resolve() == packaged / (name + '.py'), name
+""", str(packaged), *sorted(modules)], cwd=directory, check=True)
 
 
 class OIDCTests(unittest.TestCase):
