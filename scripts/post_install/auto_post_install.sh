@@ -57,6 +57,11 @@ fi
 load_language
 initialize_cache
 
+if [[ -f "$LOCAL_SCRIPTS/global/platform-functions.sh" ]]; then
+    source "$LOCAL_SCRIPTS/global/platform-functions.sh"
+    pmx_require_pve || exit 1
+fi
+
 # Global variables
 OS_CODENAME="$(grep "VERSION_CODENAME=" /etc/os-release | cut -d"=" -f 2 | xargs)"
 RAM_SIZE_GB=$(awk '/^MemTotal:/{print int($2/1024/1024)}' /proc/meminfo)

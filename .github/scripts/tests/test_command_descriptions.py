@@ -199,6 +199,9 @@ class CommandDescriptionsTests(unittest.TestCase):
                 # messages; keep repository locales and all other leaves intact.
                 if lang != "en":
                     messages = json.loads(path.read_text())
+                    # PBS is a new section; model the bot's future output only
+                    # in disposable catalogs, preserving the shipped locales.
+                    messages.setdefault("pbs", catalog("en")["pbs"])
                     english = catalog("en")
                     for section, key in (("encryption", "pbsHelp"),
                                          ("keyfileActions", "pveKeyDescription")):

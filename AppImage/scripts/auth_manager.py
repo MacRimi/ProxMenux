@@ -1115,6 +1115,9 @@ def _detect_proxmox_certificate_paths():
         return PROXMOX_CUSTOM_CERT_PATH, PROXMOX_CUSTOM_KEY_PATH
     if os.path.isfile(PROXMOX_CERT_PATH) and os.path.isfile(PROXMOX_KEY_PATH):
         return PROXMOX_CERT_PATH, PROXMOX_KEY_PATH
+    pbs_cert, pbs_key = "/etc/proxmox-backup/proxy.pem", "/etc/proxmox-backup/proxy.key"
+    if os.path.isfile(pbs_cert) and os.path.isfile(pbs_key):
+        return pbs_cert, pbs_key
     return "", ""
 
 

@@ -90,6 +90,8 @@ from flask_terminal_routes import (  # noqa: E402
 from flask_health_routes import health_bp  # noqa: E402
 from flask_auth_routes import auth_bp  # noqa: E402
 from flask_proxmenux_routes import proxmenux_bp  # noqa: E402
+from flask_pbs_routes import pbs_bp  # noqa: E402
+from pbs_manager import get_platform, is_pbs_host  # noqa: E402
 from flask_security_routes import security_bp  # noqa: E402
 from flask_notification_routes import notification_bp  # noqa: E402
 from flask_oci_routes import oci_bp  # noqa: E402
@@ -193,6 +195,7 @@ post_install_versions.scan_at_startup()
 app.register_blueprint(auth_bp)
 app.register_blueprint(health_bp)
 app.register_blueprint(proxmenux_bp)
+app.register_blueprint(pbs_bp)
 app.register_blueprint(security_bp)
 app.register_blueprint(notification_bp)
 app.register_blueprint(oci_bp)
@@ -3474,6 +3477,8 @@ def get_coral_info():
 def get_proxmox_version():
     """Get Proxmox version if available. Cached for 6 hours."""
     global _system_info_cache
+    if is_pbs_host():
+        return get_platform().get('version')
     
     now = time.time()
     if _system_info_cache['proxmox_version'] is not None and \
@@ -9863,6 +9868,7 @@ def api_system():
             'cpu_cores': cpu_cores,
             'cpu_threads': cpu_threads,
             'proxmox_version': proxmox_version,
+            'platform': get_platform(),
             'kernel_version': kernel_version,
             'available_updates': available_updates
         })

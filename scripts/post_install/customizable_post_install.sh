@@ -51,6 +51,11 @@ fi
 load_language
 initialize_cache
 
+if [[ -f "$LOCAL_SCRIPTS/global/platform-functions.sh" ]]; then
+    source "$LOCAL_SCRIPTS/global/platform-functions.sh"
+    pmx_require_pve || exit 1
+fi
+
 # Load shared global functions
 if [[ -f "$LOCAL_SCRIPTS/global/common-functions.sh" ]]; then
     source "$LOCAL_SCRIPTS/global/common-functions.sh"

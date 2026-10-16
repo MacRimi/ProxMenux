@@ -2,12 +2,21 @@
 # Shared repository policy for package-install and safe-update flows.
 # Proxmox's own repository API parses .list/.sources and edits individual
 # entries. No shell rewriting of operator-maintained APT files.
+source "$(dirname "${BASH_SOURCE[0]}")/platform-functions.sh"
 repository_policy() {
     python3 "$(dirname "${BASH_SOURCE[0]}")/repository_policy.py" "$@"
 }
 
 ensure_repositories() {
     local version suite decision refresh_status
+    if pmx_is_pbs; then
+        if [[ "$(pmx_platform_field supported)" != true ]]; then
+            msg_error "$(translate 'This operation supports PBS 3 on Debian 12 and PBS 4 on Debian 13.')"
+            return 1
+        fi
+        msg_info "$(translate 'PBS: using the configured APT repositories without changing sources.')"
+        return 0
+    fi
     version=$(pveversion 2>/dev/null | grep -oP 'pve-manager/\K[0-9]+' | head -1)
     case "$version" in
         8) suite=bookworm ;;
