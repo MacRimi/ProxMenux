@@ -1,0 +1,136 @@
+{
+  "meta": {
+    "title": "Prüfung und Bericht | ProxMenux Monitor",
+    "description": "Bewerten Sie einen Proxmox VE-Knoten, notieren Sie, was ProxMenux geändert hat, und erklären Sie, was von seinen Gästen und dem Speicher erwartet wird, mit druckbaren Berichten."
+  },
+  "header": {
+    "title": "Prüfung und Bericht",
+    "description": "Eine Bewertung des Knotens, das Journal dessen, was ProxMenux daran geändert hat und die Erklärung dessen, was von ihm erwartet wird, mit Dokumenten, die gedruckt oder als PDF gespeichert werden können.",
+    "section": "ProxMenux-Monitor"
+  },
+  "sections": [
+    {
+      "id": "views",
+      "blocks": [
+        {
+          "calloutInfo": {
+            "title": "Drei Ansichten, drei Fragen",
+            "body": "Audit & Report hält die Fakten des Knotens, die Interventionen von ProxMenux und die Erwartungen, die für ihn erklärt wurden, auseinander. Eine Konfiguration, die die Bewertung nicht gegen einen erklärten Zweck stellen kann, wird beschrieben und nicht als Fehler gemeldet."
+          }
+        },
+        {
+          "cards": {
+            "items": [
+              {
+                "icon": "shield",
+                "title": "Bewertung - wie ist der Knoten?",
+                "body": "Führt die Überprüfungen des gewählten Profils aus, erstellt das Inventar und klassifiziert, was Aufmerksamkeit benötigt, mit dem Nachweis jedes Ergebnisses."
+              },
+              {
+                "icon": "refresh",
+                "title": "Änderungen - was hat ProxMenux getan?",
+                "body": "Listet die Dateien, Pakete, Dienste und Befehle auf, die das instrumentierte ProxMenux scripts geändert hat, mit dem, was vorher da war, als es erfasst wurde."
+              },
+              {
+                "icon": "fileText",
+                "title": "Politik – was wird erwartet?",
+                "body": "Erklärt, welche Gäste ein Backup benötigen oder mit dem Gastgeber beginnen müssen, welche Speicherung unerlässlich ist und die Schwellenwerte der Prüfungen."
+              }
+            ]
+          }
+        },
+        {
+          "flow": {
+            "nodes": [
+              {
+                "label": "Bewertung",
+                "detail": "Fakten"
+              },
+              {
+                "label": "Richtlinie",
+                "detail": "Kontext"
+              },
+              {
+                "label": "Änderungen",
+                "detail": "Interventionen"
+              }
+            ],
+            "caption": "Die Bewertung liefert die Fakten, die Politik gibt ihnen Kontext und die Zeitschrift zeichnet auf, was ProxMenux getan hat."
+          }
+        },
+        {
+          "figure": {
+            "src": "/monitor/audit/assessment-view.png",
+            "alt": "Audit & Report in ProxMenux Monitor mit den Einschätzungen, Änderungen und Richtlinienansichten",
+            "caption": "Audit & Report, mit der Ansicht Assessment geöffnet."
+          }
+        }
+      ]
+    },
+    {
+      "id": "boundaries",
+      "title": "Drei verschiedene Funktionen",
+      "blocks": [
+        {
+          "table": {
+            "headers": [
+              "Funktion",
+              "Was es tut"
+            ],
+            "rows": [
+              [
+                "<healthLink>Zustandsüberwachung</healthLink>",
+                "Beobachtet Metriken und Ereignisse kontinuierlich und kann Benachrichtigungen auslösen."
+              ],
+              [
+                "Prüfung und Bericht",
+                "Führt eine Bewertung aus, wenn sie angefordert wird, dokumentiert den Knoten und vergleicht Läufe miteinander."
+              ],
+              [
+                "Change Journal",
+                "Registriert die Operationen, die ProxMenux durch seine Auditprimitiven durchführt."
+              ]
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "pages",
+      "title": "Seiten dieses Abschnitts",
+      "blocks": [
+        {
+          "next": {
+            "items": [
+              {
+                "label": "Bewertung und Bestandsaufnahme",
+                "href": "/docs/monitor/audit-report/assessment",
+                "tail": "Profile, Ergebnisse, akzeptierte Risiken und Bestandsaufnahme."
+              },
+              {
+                "label": "Änderungen",
+                "href": "/docs/monitor/audit-report/changes",
+                "tail": "das Journal, was ProxMenux auf dem Host geändert hat."
+              },
+              {
+                "label": "Richtlinie",
+                "href": "/docs/monitor/audit-report/policy",
+                "tail": "Gäste, Lagerung und Schwellenwerte."
+              },
+              {
+                "label": "Berichte und Vergleiche",
+                "href": "/docs/monitor/audit-report/reports",
+                "tail": "die sechs Dokumente und den Referenzlauf."
+              },
+              {
+                "label": "Anwendungsbereich und Garantien",
+                "href": "/docs/monitor/audit-report/scope",
+                "tail": "Quellen, Grenzen und gespeicherte Daten."
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

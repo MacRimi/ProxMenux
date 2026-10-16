@@ -1,0 +1,230 @@
+{
+  "meta": {
+    "title": "Glossar - Backup & Restore | ProxMenux",
+    "description": "Glossar der Begriffe und Definitionen für die ProxMenux Backup & Restore Stack: Verschlüsselung, Keyfile, Passphrase, Recovery Envelope, PBS, Brocken, Wurzelstöcke, Manifest, Läufer und Kreuzkernhydratation.",
+    "ogTitle": "Backup & Restore Glossar | ProxMenux",
+    "ogDescription": "Klare Definitionen für das Vokabular, das in der ProxMenux-Backup- und Wiederherstellungsdokumentation verwendet wird.",
+    "twitterTitle": "Backup & Restore Glossar | ProxMenux",
+    "twitterDescription": "Passphrase, Keyfile, Recovery-Umschlag, Rootfs, Manifest, PBS, Brocken — alle an einer Stelle definiert."
+  },
+  "header": {
+    "title": "Glossar",
+    "description": "Begriffe, die in der Backup- und Wiederherstellungsdokumentation mit ihrer Definition verwendet werden.",
+    "section": "Sicherung und Wiederherstellung"
+  },
+  "intro": {
+    "body": "Begriffe werden nach Theme gruppiert. Jeder Eintrag gibt den Begriff und eine kurze Definition."
+  },
+  "groups": [
+    {
+      "title": "Verschlüsselung und Key Recovery",
+      "intro": "Vokabular für den PBS-Verschlüsselungsblock. Es beinhaltet zwei verschiedene Geheimnisse: eine binäre Schlüsseldatei und eine geschriebene Passphrase.",
+      "entries": [
+        {
+          "id": "passphrase-recuperacion",
+          "term": "Wiederherstellungspassphrase",
+          "def": "Textkennwort, das der Benutzer auswählt, um den <a href=\"#sobre-recuperacion\">recovery-Umschlag </a> zu schützen. Es wird zweimal mit einer Übereinstimmungsprüfung aufgefordert und wird nur verwendet, um den Umschlag zu verschlüsseln und zu entschlüsseln, wenn die Schlüsseldatei jemals wiederhergestellt werden muss. <strong>Es ist nicht die Passphrase, die die Schlüsseldatei selbst entsperrt</strong> und wird niemals an PBS gesendet. Während eines normalen Backups verlässt es niemals den Host."
+        },
+        {
+          "id": "clave-cifrado",
+          "term": "Keyfile (Verschlüsselungsschlüssel)",
+          "def": "Binäre Datei, die Proxmox Backup Server verwendet, um die <a href=\"#chunk\">chunks</a> jedes Backups vor dem Hochladen zu verschlüsseln. Ohne diese Datei kann kein verschlüsseltes Backup gelesen werden. ProxMenux speichert es bei <code>/usr/local/share/proxmenux/pbs-key.conf</code> mit dem Modus <code>600</code>. Dies ist das Asset, das geschützt werden muss; der <a href=\"#sobre-recuperacion\">recovery-Umschlag</a> existiert genau so, dass diese Datei gerettet werden kann, wenn sie verloren geht."
+        },
+        {
+          "id": "contrasena-keyfile",
+          "term": "Keyfile Passphrase (KDF Passphrase)",
+          "def": "Optionale Passphrase, die die Keyfile selbst tragen kann, im Unterschied zur <a href=\"#passphrase-recuperacion\">Recovery Passphrase</a>. Es existiert nur, wenn die Keyfile mit <code>--kdf scrypt</code> erstellt wurde (normalerweise eine importierte Keyfile). Ohne sie kann die Keyfile nicht für die Verwendung entsperrt werden. ProxMenux behält es in verschlüsselter Form auf dem Host, so dass geplante Backups ohne interaktive Eingabeaufforderung ausgeführt werden können."
+        },
+        {
+          "id": "sobre-recuperacion",
+          "term": "Verwertungsumfang",
+          "def": "Das <a href=\"#clave-cifrado\">keyfile</a> ist in eine zusätzliche Schicht eingewickelt: Es ist mit der <a href=\"#passphrase-recuperacion\">recovery-Passphrase</a> unter Verwendung von <a href=\"#aes-256-cbc\">AES-256-CBC</a> und <a href=\"#pbkdf2\">PBKDF2</a> verschlüsselt, bevor es den Host verlässt. Es wird auf PBS als <code>-keyrecovery</code>-Gruppe hochgeladen. Ohne die Passphrase ist der Umschlag undurchsichtig: Wenn Sie ihn von PBS herunterladen, wird die Schlüsseldatei nicht angezeigt."
+        },
+        {
+          "id": "cifrado-cliente",
+          "term": "Clientseitige Verschlüsselung",
+          "def": "Verschlüsselungsmodell, bei dem Daten auf dem Quellhost verschlüsselt werden, bevor sie hochgeladen werden. PBS empfängt und speichert immer nur Geheimtext; nicht einmal ein PBS-Administrator mit Datenspeicherzugriff kann ihn ohne die Schlüsseldatei lesen. ProxMenux baut auf diesem Modell auf und fügt den <a href=\"#sobre-recuperacion\">recovery-Umschlag</a> hinzu."
+        },
+        {
+          "id": "kdf-none",
+          "term": "--kdf keine",
+          "def": "Option auf <code>proxmox-backup-client key create</code>, die eine Schlüsseldatei ohne angehängte Passphrase erzeugt. Die Keyfile kann direkt ohne Aufforderung verwendet werden, was für geplante Aufträge, die unbeaufsichtigt ausgeführt werden, unerlässlich ist. Dies ist, was ProxMenux standardmäßig verwendet, wenn eine neue Keyfile erzeugt wird."
+        },
+        {
+          "id": "kdf-scrypt",
+          "term": "--kdf scrypt",
+          "def": "Option auf <code>proxmox-backup-client key create</code>, die eine Schlüsseldatei erzeugt, die durch eine <a href=\"#contrasena-keyfile\">keyfile-Passphrase</a> geschützt ist. Jede Verwendung der Keyfile erfordert das Entsperren mit dieser Passphrase. ProxMenux akzeptiert diese Art von Keyfile beim Import und speichert die Passphrase verschlüsselt, so dass geplante Backups immer noch unbeaufsichtigt ausgeführt werden können."
+        },
+        {
+          "id": "aes-256-cbc",
+          "term": "AES-256-CBC",
+          "def": "Standardsymmetrische Chiffre. ProxMenux verwendet es (über <code>openssl enc -aes-256-cbc</code>), um die <a href=\"#clave-cifrado\">keyfile</a> mit der <a href=\"#passphrase-recuperacion\">recovery-Passphrase</a> zu wickeln und die <a href=\"#sobre-recuperacion\">envelope</a> zu produzieren."
+        },
+        {
+          "id": "pbkdf2",
+          "term": "PBKDF2",
+          "def": "Kryptografische Funktion, die eine vom Menschen typisierte Passphrase in einen für die Verschlüsselung geeigneten binären Schlüssel verwandelt. Es verlangsamt Brute-Force-Versuche, indem es viele Iterationen anwendet. ProxMenux verwendet es mit 600 000 Iterationen und einem Zufallssalz bei der Verschlüsselung des Recovery-Umschlags."
+        }
+      ]
+    },
+    {
+      "title": "Backup-Struktur",
+      "intro": "Begriffe, die beschreiben, was sich in einem Backup befindet, unabhängig vom Zielort.",
+      "entries": [
+        {
+          "id": "rootfs",
+          "term": "rootfs/root filesystem",
+          "def": "Eine flache Kopie des Quell-Host-Dateisystems, produziert von <code>rsync</code> über das <a href=\"#perfil-defecto\">default-Profil</a> plus alle <a href=\"#rutas-personalizadas\">custom Paths</a>. Es ist kein Whole-Disk-Image: Nur Pfade, die die Konfiguration oder den Zustand Proxmox enthalten, können sich nicht selbst regenerieren."
+        },
+        {
+          "id": "manifiesto",
+          "term": "Manifest (manifest.json)",
+          "def": "Strukturiertes JSON-Dokument zur Beschreibung des Quell-Hosts zum Backup-Zeitpunkt: Hardware, Storage, Kernel, ProxMenux-installierte Komponenten und Inventar von VMs und LXCs. Es wird von sechs unabhängigen Sammlern produziert. Der Wiederherstellungsfluss verwendet ihn, um Quelle und Ziel zu vergleichen."
+        },
+        {
+          "id": "staging",
+          "term": "Stagingverzeichnis",
+          "def": "Temporäres Verzeichnis, in dem ProxMenux die drei Blöcke (Roots, Metadaten und Manifest) zusammenstellt, bevor sie verpackt und zum Zielort hochgeladen werden. Es wird automatisch entfernt, wenn das Backup beendet ist, auch bei Abbruch."
+        },
+        {
+          "id": "perfil-defecto",
+          "term": "Standardprofil",
+          "def": "Kuratierte Reihe von Pfaden, die ProxMenux standardmäßig in jedem Backup kopiert. Umfasst PVE-Konfiguration, Netzwerk, SSH, Kernel, apt, ProxMenux Tools und mehr. Es ist im Code definiert und auf der <em>How it works</em> page dokumentiert."
+        },
+        {
+          "id": "rutas-personalizadas",
+          "term": "Benutzerdefinierte Pfade",
+          "def": "Zusätzliche Pfade, die der Benutzer zusätzlich zum <a href=\"#perfil-defecto\">default-Profil</a> hinzufügt. Entweder persistent (gespeichert in <code>backup-extra-paths.txt</code>) oder per Run (im Custom-Modus ausgewählt)."
+        }
+      ]
+    },
+    {
+      "title": "Bestimmungsort und Lagerung",
+      "intro": "Begriffe, die an den Ort gebunden sind, an dem das Backup landet - PBS-Server, lokales Archiv oder Borg-Repository - und wie PBS die Daten organisiert.",
+      "entries": [
+        {
+          "id": "repositorio-pbs",
+          "term": "PBS-Repository",
+          "def": "Kombination von Proxmox Backup Server + <a href=\"#datastore\">datastore</a> + Benutzer, der das Backup erhält. Identifiziert durch den String <code>user@realm@host:datastore</code>. Ein einzelner PBS-Server kann mehrere Repositories hosten."
+        },
+        {
+          "id": "datastore",
+          "term": "Datenspeicher",
+          "def": "Betonspeicher in einem PBS-Server, wo Backups und ihre Stücke leben. Jeder Datenspeicher befindet sich auf einem Dateisystem des PBS-Servers und verfügt über eigene Berechtigungen und Richtlinien."
+        },
+        {
+          "id": "chunk",
+          "term": "Chunk/Chunk-Deduplizierung",
+          "def": "PBS teilt jedes Backup in Blöcke variabler Größe auf, identifiziert jedes Stück durch seinen Hash und speichert jedes Stück nur einmal, auch wenn es in vielen verschiedenen Backups erscheint. Dies bedeutet, dass aufeinanderfolgende Backups desselben Hosts - oder über ähnliche Hosts - sehr wenig zusätzlichen Speicherplatz benötigen."
+        },
+        {
+          "id": "fingerprint",
+          "term": "Fingerabdruck",
+          "def": "Kryptografischer Fingerabdruck des PBS-Servers TLS Zertifikat. Der Client kann überprüfen, ob er mit dem vorgesehenen Server spricht, ohne sich auf eine öffentliche Zertifizierungsstelle zu verlassen. ProxMenux leitet sie über die Umgebungsvariable <code>PBS_FINGERPRINT</code> an <code>proxmox-backup-client</code> weiter."
+        },
+        {
+          "id": "grupo-copia",
+          "term": "Backup-Gruppe",
+          "def": "Logischer Container innerhalb von PBS, unter dem sich aufeinanderfolgende Backups desselben Assets ansammeln. Jedes neue Backup teilt die Deduplizierung mit früheren in derselben Gruppe. ProxMenux verwendet zwei Gruppen pro Host, wenn die Verschlüsselung aktiviert ist: eine für das Host-Backup und eine mit einem <code>-keyrecovery</code>-Suffix für den <a href=\"#sobre-recuperacion\">recovery-Umschlag</a>."
+        },
+        {
+          "id": "backup-id",
+          "term": "Backup-ID",
+          "def": "Name der <a href=\"#grupo-copia\">backup-Gruppe</a>. ProxMenux ist standardmäßig <code>hostcfg-HOSTNAME</code> und lässt den Benutzer es vor dem Hochladen bearbeiten; nicht unterstützte Zeichen werden automatisch entfernt."
+        },
+        {
+          "id": "pxar",
+          "term": ".pxar",
+          "def": "PBS-natives Archivformat für Verzeichnisse. Es verhält sich wie ein für die Chunk-Deduplizierung optimierter Teer: Anstatt eine undurchsichtige Datei zu speichern, zerlegt PBS seinen Inhalt in wiederverwendbare Chunks."
+        }
+      ]
+    },
+    {
+      "title": "Ausführung und Terminplanung",
+      "intro": "Begriffe, die vom ProxMenux-Planed-Jobs-System verwendet werden.",
+      "entries": [
+        {
+          "id": "runner",
+          "term": "Ausführungsprozess",
+          "def": "Das <code>run_scheduled_backup.sh</code>-Script, das ein geplantes Backup ausführt. Es liest die Job-Konfiguration, startet das passende Backend (Local, PBS oder Borg), wendet eine Erfolgsbindung an und sendet die konfigurierten Benachrichtigungen."
+        },
+        {
+          "id": "trabajo-programado",
+          "term": "Geplante Tätigkeit",
+          "def": "Beharrliche Konfiguration eines wiederkehrenden Backups. Behält Ziel, Anmeldeinformationen, Verschlüsselung, Zeitplan und Aufbewahrung. Lebt bei <code>/var/lib/proxmenux/backup-jobs/&lt;id&gt;.env</code>."
+        },
+        {
+          "id": "modo-adjunto",
+          "term": "Anhängemodus",
+          "def": "Geplanter Job ohne eigenen Zeitplan; er wird automatisch ausgelöst, wenn eine bestehende PVE <code>vzdump</code>-Task ausgeführt wird. Es erbt den Zeitplan und die Aufbewahrung von dieser übergeordneten Aufgabe. Unterstützt nur für lokale und PBS-Ziele."
+        },
+        {
+          "id": "timer-systemd",
+          "term": "Systemd Timer",
+          "def": "Standard-systemd-Mechanismus, der einen Befehl in einem Kalender auslöst. ProxMenux erstellt einen Timer pro <em>independent</em> geplanten Job; <a href=\"#modo-adjunto\">attach-mode</a> Jobs verwenden keinen Timer, sie laufen über den PVE-Skript-Hook."
+        },
+        {
+          "id": "retencion",
+          "term": "Aufbewahrung (zuletzt behalten, täglich aufbewahren ...)",
+          "def": "Richtlinie, die entscheidet, welche älteren Backups aufbewahrt und welche beschnitten werden sollen. Definiert pro Auftrag mit Parametern wie <code>keep-last</code>, <code>keep-daily</code>, <code>keep-weekly</code>, <code>keep-monthly</code>. Wird vom Läufer nach jedem erfolgreichen Backup angewendet."
+        }
+      ]
+    },
+    {
+      "title": "Wiederherstellen",
+      "intro": "Terme aus dem Wiederherstellungsfluss.",
+      "entries": [
+        {
+          "id": "restauracion-universal",
+          "term": "Universale Wiederherstellung",
+          "def": "Der ProxMenux-Wiederherstellungsfluss extrahiert nicht nur das Dateisystem: Er liest das Manifest, um Unterschiede zwischen Quelle und Ziel zu erkennen, reproduziert die Systemkonfiguration und führt die Installateure für die ProxMenux-verwalteten Komponenten erneut aus. Ziel ist es, den Quellhost zu reproduzieren, nicht nur das Archiv."
+        },
+        {
+          "id": "hidratacion",
+          "term": "Hydratation (Kreuzkern)",
+          "def": "Stellen Sie den Pass wieder her, der die eigene Konfiguration des Benutzers von der Quelle zusammenführt (IOMMU-Token, VFIO-Geräte-IDs, benutzerdefinierte Macken, GRUB-Schlüssel) auf der frischen Boot-Konfiguration des Ziels, ohne die Kernel-gebundenen Dateien der Quelle wörtlich zu kopieren. Läuft, wenn der Zielkernel neuer ist als das Backup."
+        },
+        {
+          "id": "cross-kernel",
+          "term": "Kernübergreifende Wiederherstellung",
+          "def": "Stellen Sie dort wieder her, wo sich der Kernel des Ziels von dem der Quelle unterscheidet (normalerweise ist es neuer). Erfordert den <a href=\"#hidratacion\">hydration</a>-Pass, um zu vermeiden, dass Dateien mit dem Kernel des Ziels mitgezogen werden."
+        },
+        {
+          "id": "instalador-postboot",
+          "term": "Installateur nach dem Booten",
+          "def": "Komponenten, die nach dem ersten Booten des wiederhergestellten Hosts neu installiert wurden (NVIDIA-Treiber, Coral TPU-Treiber, AMD GPU-Tools, Intel GPU-Tools). Jeder Installer läuft gegen den Kernel des Ziels, so dass der wiederhergestellte Host nicht davon abhängt, ob der Kernel der Quelle vorhanden ist."
+        },
+        {
+          "id": "compatibility-check",
+          "term": "Kompatibilitätsprüfung",
+          "def": "Vergleich zwischen dem Quellenmanifest und dem Zustand des Ziels, den ProxMenux zu Beginn der Wiederherstellung durchführt. Es entscheidet, welche Teile wortwörtlich kopiert werden, welche Hydratation benötigen und welche von einem Installateur neu erstellt werden."
+        },
+        {
+          "id": "equipo-recien-instalado",
+          "term": "Frische Installation",
+          "def": "Host nur von Grund auf neu installiert, ohne lokale <a href=\"#clave-cifrado\">keyfile</a>. Um ein verschlüsseltes Backup wiederherzustellen, muss zunächst die Schlüsseldatei aus der <a href=\"#sobre-recuperacion\">envelope</a>, die auf PBS gespeichert ist, mit der <a href=\"#passphrase-recuperacion\">recovery-Passphrase</a> wiederhergestellt werden."
+        }
+      ]
+    }
+  ],
+  "whereNext": {
+    "heading": "Wo als nächstes",
+    "items": [
+      {
+        "label": "Wie es funktioniert",
+        "href": "/docs/backup-restore/how-it-works",
+        "tail": "- wo das Rootfs-, Manifest- und Anwendungsinventar in ein Backup passt."
+      },
+      {
+        "label": "Proxmox-Backup-Server-Ziel",
+        "href": "/docs/backup-restore/destinations/pbs",
+        "tail": "- wobei clientseitige Verschlüsselung, Keyfile, Recovery-Passphrase und Envelope ausführlich dokumentiert sind."
+      },
+      {
+        "label": "Wiederherstellung",
+        "href": "/docs/backup-restore/restoring",
+        "tail": "— den Wiederherstellungsfluss und die manifeste Nutzung."
+      }
+    ]
+  }
+}

@@ -1,0 +1,535 @@
+{
+  "meta": {
+    "title": "Proxmox-Benachrichtigungen — Telegram, Discord, Email, Gotify, Pushover, Apprise | ProxMenux Monitor",
+    "description": "Senden Sie Proxmox VE-Benachrichtigungen an Telegram, Discord, E-Mail, Gotify, Pushover und ~80 zusätzliche Dienste über Apprise. ProxMenux Monitor verwandelt Ereignisse aus dem Health Monitor, dem Journal Watcher und dem Proxmox VE webhook in reichhaltige Nachrichten mit Deduplizierung, Cooldown, Burst-Aggregation, einer optionalen KI-Umschreibung und einer vollständigen Historie.",
+    "ogTitle": "Proxmox-Meldungen — Telegram, Discord, E-Mail Gotify, Pushover, Apprise",
+    "ogDescription": "Senden Sie Proxmox VE-Benachrichtigungen an Telegram, Discord, E-Mail, Gotify, Pushover und ~80 zusätzliche Dienste über Apprise - mit Deduplizierung, Cooldown, Burst-Aggregation und einer optionalen KI-Umschreibung.",
+    "twitterTitle": "Proxmox Benachrichtigungen | ProxMenux Monitor",
+    "twitterDescription": "Senden Sie Proxmox VE-Benachrichtigungen an Telegram, Discord, E-Mail, Gotify, Pushover und ~80 zusätzliche Dienste über Apprise."
+  },
+  "header": {
+    "title": "Benachrichtigungen",
+    "description": "Die Fan-Out-Engine, die Ereignisse von jedem Sammler im Monitor nimmt und an Telegram, Discord, Email, Gotify, Pushover und ~80 zusätzliche Dienste über Apprise liefert - mit Deduplizierung, Cooldown, Burst-Aggregation, per-Event und per-Channel-Schaltern, einem optionalen AI-Rewriter und einer abfragbaren Historie.",
+    "section": "ProxMenux-Monitor"
+  },
+  "intro": {
+    "title": "Woher die Nachrichten kommen",
+    "body": "Benachrichtigungen sind kein separater Scanner. Sie sind die Ausgangsseite jedes Sammlers, der bereits im Monitor läuft - der <link>Health Monitor</link>, der Journal-Watcher, der Proxmox-Task-Watcher, der PVE webhook-Hook, der Polling-Sammler und die von ProxMenux scripts emittierten In-Prozess-Ereignisse. Jedes Ereignis läuft durch die gleiche Versandpipeline, bevor es ein Telefon oder einen Posteingang erreicht."
+  },
+  "howItWorks": {
+    "heading": "Wie es funktioniert",
+    "intro": "Jede Benachrichtigung folgt dem gleichen Pfad durch den Monitor-Prozess. Ereignisse werden von einer Handvoll unabhängiger Sammler produziert, in eine strukturierte Nutzlast normalisiert, durch eine Versandpipeline geleitet, die entscheidet, ob und in welcher Form gesendet werden soll, optional von einem LLM umgeschrieben und schließlich auf die Kanäle aufgefächert, die der Benutzer konfiguriert hat.",
+    "arrowLabel": "Ereignis",
+    "caption": "Hoher Fluss. Jeder tatsächliche Versandversuch – erfolgreich, aggregiert oder fehlgeschlagen – wird zur retrospektiven Inspektion in der SQLite-History-Tabelle aufgezeichnet. Von der Cooldown-Stufe unterdrückte Ereignisse werden nicht protokolliert.",
+    "nodes": {
+      "sourcesLabel": "Quellen",
+      "sourcesDetail": "Gesundheitsmonitor\nTagebuchbeobachter\nAufgabenbeobachter\nPVE webhook Haken\nPollensammler\nIn-Prozess-Emittenten",
+      "dispatchLabel": "Versandleitung",
+      "dispatchDetail": "Per Event Toggle\nFingerprint Dedup\nAbklingzeit\nBurst-Aggregation",
+      "aiLabel": "KI-Überarbeitung (optional)",
+      "aiDetail": "OpenAI / anthropisch\nGemini/Groq\nOpenRouter / Ollama\n(Off by Default)",
+      "channelsLabel": "Kanäle",
+      "channelsDetail": "Telegram\nDiscord\nE-Mail (SMTP)\nGotify\nPushover\nApprise (~80 Dienste)"
+    }
+  },
+  "enabling": {
+    "heading": "Ermöglichen des Panels",
+    "intro": "Bei einer Neuinstallation zeigt die Benachrichtigungskarte auf der Registerkarte Einstellungen ein <em>Disabled</em> Badge und eine einzelne <em>Enable Benachrichtigungen</em> Taste. Nichts wird verschickt und keine PVE-Konfiguration wird berührt, bis Sie sie drücken.",
+    "disabledAlt": "Benachrichtigungskarte bei einer Neuinstallation mit deaktiviertem Abzeichen und einer einzelnen Schaltfläche Benachrichtigungen aktivieren",
+    "disabledCaption": "Der erste Zustand - ein Klick zum Aktivieren.",
+    "stepsIntro": "Das Drücken des Knopfes macht drei Dinge in der Reihenfolge:",
+    "steps": [
+      "Dreht das Panel in seinen Zustand <em>Active</em> und entfaltet das Kanalformular unten.",
+      "Registriert ein Proxmox VE webhook-Ziel in <code>/etc/pve/notifications.cfg</code>, das auf <code>POST http://127.0.0.1:8008/api/notifications/webhook</code> zeigt. Von diesem Moment an fließt alles, was Proxmox VE von selbst emittiert (HA, Replikation, vzdump von der GUI) in die gleiche Pipeline wie die eigenen Ereignisse des Monitors. Siehe <pvelink>PVE webhook integration</pvelink> unten für die vollständige Mechanik.",
+      "Startet den dispatch background thread. Der Thread durchsucht die Ereigniswarteschlange und führt jedes Ereignis durch die oben dargestellte Pipeline."
+    ],
+    "activeAlt": "Benachrichtigungskarte nach Aktivierung — Aktives Badge, Kanalregisterkarten, Feld Anzeigename und erweiterter zusammenklappbarer AI Enhancement-Abschnitt",
+    "activeCaption": "Aktiver Zustand — Kanalregisterkarten oben (Telegram / Gotify / Discord / Email / Pushover / Apprise), das Feld Display Name, die Kategorieliste pro Kanal und der Abschnitt <em>Advanced: AI Enhancement</em>."
+  },
+  "sources": {
+    "heading": "Ereignisquellen",
+    "intro": "Sechs unabhängige Sammler füttern die Benachrichtigungsmaschine. Sie laufen als Hintergrund-Threads innerhalb des Monitor-Prozesses und senden jedes Mal, wenn etwas passiert, einen strukturierten <code>NotificationEvent</code> aus.",
+    "headerCollector": "Sammler",
+    "headerWatches": "Uhren",
+    "headerEvents": "Typische Ereignisse",
+    "rows": [
+      {
+        "collector": "Gesundheitsmonitor",
+        "watches": "Zehn Kategorien, alle 5 Minuten",
+        "events": "<code>new_error</code>, <code>error_resolved</code>, <code>error_escalated</code>, <code>health_degraded</code>, <code>health_persistent</code>."
+      },
+      {
+        "collector": "Journal-Überwachung",
+        "watches": "<code>journalctl --follow</code> mit Muster-Matching für SSH / Web-Auth-Ausfälle, Fail2Ban-Verbots (wenn das optionale Gefängnis installiert ist), Kernel-I / O-Fehler, OOM, Smartd-Events.",
+        "events": "<code>auth_fail</code>, <code>ip_block</code>, <code>oom_kill</code>, <code>disk_io_error</code>, <code>service_fail</code>."
+      },
+      {
+        "collector": "Aufgabenüberwachung",
+        "watches": "Umfragen <code>/var/log/pve/tasks/index</code> für neue Task-UPIDs und folgt ihren Protokollen per Datei.",
+        "events": "<code>backup_start</code>, <code>backup_complete</code>, <code>backup_warning</code>, <code>backup_fail</code>, <code>migration_*</code>, <code>snapshot_complete</code>."
+      },
+      {
+        "collector": "Proxmox webhook Haken",
+        "watches": "Hört auf <code>POST /api/notifications/webhook</code>. Proxmox VE 8.1+ sendet hier seine eigenen Benachrichtigungen, sobald die Integration eingerichtet ist (siehe <pvelink>unter </pvelink>).",
+        "events": "Alles, was PVE aussendet - einschließlich Ereignisse, die der Monitor sonst verpassen würde (HA, Replikation, vzdump von der GUI)."
+      },
+      {
+        "collector": "Pollensammler",
+        "watches": "Periodische Vergleiche (Cluster-Knoten online, Zertifikatsablauf, GPU Passthrough-Zustand, PVE / ProxMenux Update-Verfügbarkeit).",
+        "events": "<code>node_disconnect</code>, <code>node_reconnect</code>, <code>pve_update</code>, <code>proxmenux_update</code>, <code>gpu_mode_switch</code>, <code>pci_passthrough_conflict</code>."
+      },
+      {
+        "collector": "In-Prozess-Emittenten",
+        "watches": "Direktanrufe von ProxMenux scripts und vom Monitor selbst (<code>notification_manager.emit_event(...)</code>).",
+        "events": "<code>system_startup</code>, <code>system_shutdown</code>, <code>system_reboot</code>, <code>ai_model_migrated</code>, benutzerdefinierte Testereignisse."
+      }
+    ],
+    "after1": "Jedes Ereignis trägt eine stabile <code>event_type</code> (der Katalog ist unten), eine <code>severity</code> (<code>INFO</code>, <code>WARNING</code>, <code>CRITICAL</code>), eine <code>category</code> (für Emoji-Anreicherung und Pro-Gruppen-Filter verwendet) und eine <code>data</code> Nutzlast mit allem, was die Vorlage benötigt (<code>vmid</code>, <code>device</code>, <code>source_ip</code>, <code>reason</code>...).",
+    "after2": "Jede <code>event_type</code> hat eine passende Vorlage in <code>notification_templates.py</code>, die das strukturierte Ereignis in einen Klartext-Körper verwandelt, bevor etwas anderes passiert. Dieser Templated Body ist das, was durch die Versandpipeline reist und was die optionale KI-Schicht umschreibt, wenn sie aktiviert ist. Sehen Sie sich die <ailink>AI Assistant-Seite </ailink> an, wie die Umschreibschicht mit diesem Template-Körper interagiert."
+  },
+  "channels": {
+    "heading": "Kanaldurchführungen",
+    "intro": "Derzeit werden sechs Kanäle unterstützt: Telegram, Discord, Gotify, Email (SMTP), Pushover und Apprise. Die ersten fünf sind native Integrationen mit eigenen Konfigurationsfeldern. Apprise ist ein allgemeiner Hub, der 80 zusätzliche Dienste (ntfy, Matrix, Slack, Teams, Pushbullet, AWS SNS, Mattermost ...) über ein einziges URL-Feld hinzufügt. Sie sind alle Schritt für Schritt unten dokumentiert.",
+    "credsTitle": "Wo Zeugnisse leben",
+    "credsBody": "Token, Schlüssel, webhook URLs und SMTP Passwörter werden lokal in der SQLite Datenbank des Monitors unter <code>/usr/local/share/proxmenux/</code> gespeichert. Sensible Werte werden im Interface geschützt und maskiert. Sie verlassen den Gastgeber nie, außer um ihre jeweiligen Dienste zu erreichen. Ein Backup dieses Verzeichnisses reicht aus, um die konfigurierten Kanäle wiederherzustellen."
+  },
+  "telegram": {
+    "heading": "Telegram",
+    "intro": "Es sind zwei Informationen erforderlich: ein <strong>Bot Token</strong> (einer pro Bot, wiederverwendbar über Chats) und ein <strong>Chat ID</strong> (wo der Bot posten sollte - Ihr privater Chat, eine Gruppe oder ein Thema innerhalb einer Supergruppe). Die in-app-anleitung unten enthält den vollständigen schritt für schritt; der rest dieses abschnitts wiederholt ihn als text plus die beiden formen, die die chat-id annehmen kann.",
+    "guideAlt": "Telegram Bot Setup Guide modal mit vier nummerierten Abschnitten: Erstellen Sie einen Bot mit BotFather, Holen Sie sich den Bot-Token, Holen Sie sich Ihre Chat-ID und Für Gruppen oder Kanäle",
+    "guideCaption": "Der <em>+ Setup Guide </em> Link innerhalb der Telegram Registerkarte öffnet diesen Modal - die vier nummerierten Schritte gehen in etwa zwei Minuten von keinem Bot zu einem Arbeitskanal.",
+    "step1Title": "1 · Erstellen Sie einen Bot mit BotFather",
+    "step1Items": [
+      "Öffnen Sie Telegram und starten Sie einen Chat mit <a>@BotFather</a> (derjenige mit dem blauen Verifizierungshaken - Kopien sind üblich).",
+      "<code>/newbot</code> senden.",
+      "Wählen Sie einen Anzeigenamen (z.B.) <em>ProxMenux Lab</em>. Es kann später geändert werden.",
+      "Wählen Sie einen Benutzernamen, der in <code>bot</code> endet (z.B.) <em>proxmenux_lab_bot</em>). Es muss in Telegram eindeutig sein.",
+      "BotFather antwortet mit einem Token der Form <code>123456789:ABCdef…</code> – das ist der Bot Token. Behandle es als Passwort."
+    ],
+    "step2Title": "2 · Erhalten Sie die Chat-ID",
+    "step2Intro": "Die chat-id identifiziert <em>wo</em> die bot-posts. Es nimmt eine von zwei Formen an, abhängig vom Ziel.",
+    "privateLabel": "Privater Chat (Sie erhalten die Benachrichtigungen auf Ihrem eigenen Konto):",
+    "privateItems": [
+      "Starten Sie einen Chat mit Ihrem neuen Bot und senden Sie eine beliebige Nachricht (z.B.) <code>/start</code>).",
+      "Öffnen Sie einen Chat mit <a1>@userinfobot</a1> (oder <a2>@myidbot</a2>) und senden Sie <code>/start</code>. Es antwortet mit ihrer numerischen benutzer-id - das ist die chat-id. Es ist eine positive Zahl."
+    ],
+    "privateAlt": "Telegram-Kanalformular gefüllt mit Bot Token (maskiert), positiver Chat-ID für einen privaten Chat und einem leeren optionalen Themen-ID-Feld",
+    "privateCaption": "Privater chat mit dem bot - chat id ist eine positive zahl (ihre persönliche benutzer-id).",
+    "groupLabel": "Gruppe oder Supergruppe mit Themen:",
+    "groupItems": [
+      "Fügen sie den bot als mitglied zur gruppe hinzu (und machen sie es admin, wenn die gruppe es zum posten benötigt).",
+      "Senden Sie eine Nachricht in der Gruppe.",
+      "Öffnen Sie <code>https://api.telegram.org/bot&lt;YOUR_TOKEN&gt;/getUpdates</code> in einem Browser. Suchen Sie nach <code>chat.id</code> in der JSON-Antwort - für Gruppen ist es eine negative Zahl, für Supergruppen beginnt es mit <code>-100</code>.",
+      "Für Supergruppen mit <em>Topics</em> aktiviert, beachten Sie auch die <code>message_thread_id</code> des Themas, das Sie anvisieren möchten – das geht in das optionale <em>Topic ID</em> Feld."
+    ],
+    "groupAlt": "Telegram Kanalformular mit Bot Token (maskiert), negativer Chat-ID vorangestellt mit -100, die eine Supergruppe anzeigt, und Topic ID 3, die in ein bestimmtes Thema geliefert wird",
+    "groupCaption": "Die Chat ID beginnt mit <code>-100…</code> und die optionale <em>Topic ID</em> zielt auf einen bestimmten Thread ab.",
+    "step3Title": "3 · Speichern und Testen",
+    "step3Body": "Fügen Sie die Bot-Token- und Chat-ID in die Telegram-Registerkarte ein, speichern Sie und drücken Sie <em>Send Test</em> am unteren Rand des Panels. Eine Testnachricht sollte innerhalb einer Sekunde eintreffen; wenn nicht, zeichnet der Abschnitt History den Fehler mit dem genauen Grund auf (ungültiges Token, Bot nicht in der Gruppe, vom Benutzer blockiert usw.)."
+  },
+  "discord": {
+    "heading": "Discord",
+    "intro": "Discord-Kanäle akzeptieren eingehende Nachrichten über einen <em>Webhook URL</em>, der an einen einzelnen Kanal gebunden ist. Der Monitor benötigt diese URL und nichts anderes.",
+    "items": [
+      "Öffnen Sie in Discord den Server, auf dem Benachrichtigungen landen sollen, und gehen Sie zu <em>Server Einstellungen → Integrationen → Webhooks</em>.",
+      "Klicken Sie auf <em>New Webhook</em>. Geben Sie ihm einen Namen (z.B.) <em>ProxMenux</em> und wählen Sie den Kanal, auf den es gepostet werden soll. Ein Avatar ist optional.",
+      "Klicken Sie auf <em>Copy Webhook URL</em> – es sieht aus wie <code>https://discord.com/api/webhooks/&lt;id&gt;/&lt;token&gt;</code>.",
+      "Fügen Sie es in das Webhook URL-Feld des Discord-Tabs im Benachrichtigungsfeld ein und speichern Sie es."
+    ],
+    "imageAlt": "Discord Kanalformular mit Webhook URL Feld beginnend mit https://discord.com/api/webhooks/",
+    "imageCaption": "Discord — Fügen Sie die Webhook-URL aus <em>Server-Einstellungen → Integrationen → Webhooks</em> ein."
+  },
+  "gotify": {
+    "heading": "Gotify",
+    "intro": "Gotify ist ein selbst gehosteter Push-Server. Sie benötigen die Basis-URL und ein <em>Application Token</em>, das aus der Gotify-Admin-Benutzeroberfläche generiert wurde.",
+    "items": [
+      "Wenn Sie noch keine Gotify-Instanz haben, installieren Sie eine — siehe <a>official install guide</a>.",
+      "Öffnen Sie die Gotify Web-Benutzeroberfläche, melden Sie sich als Administrator an, gehen Sie zu <em>Apps</em> → <em>Create Application</em>. Geben Sie ihm einen Namen (z.B.) <em>ProxMenux</em>). Gotify generiert ein Token – kopieren Sie es.",
+      "Setzen Sie im Gotify-Tab des Benachrichtigungsfelds <em>Server URL</em> auf die Basis-URL Ihrer Instanz (z.B.) <code>https://gotify.example.com</code>) und fügen Sie den App-Token ein.",
+      "Speichern und drücken Sie <em>Send Test</em>."
+    ],
+    "imageAlt": "Gotify-Kanalformular mit Server-URL-Feld auf https://gotify.example.com und ein App-Token-Feld mit Platzhalter A_valid_gotify_token",
+    "imageCaption": "Gotify - Server-URL Ihrer selbst gehosteten Instanz sowie das App-Token von der Gotify-Admin-Benutzeroberfläche."
+  },
+  "email": {
+    "heading": "E-Mail (SMTP)",
+    "intro": "E-Mail ist der flexibelste Kanal - und der mit den meisten Feldern. Sie benötigen einen SMTP-Server, einen Port, einen TLS-Modus, optional einen Benutzernamen und ein Passwort, eine Absenderadresse und mindestens einen Empfänger.",
+    "imageAlt": "E-Mail-Kanal-Formular mit SMTP Host, Port, TLS Mode Dropdown, Benutzername, Passwort, Von der Adresse, Zu den Adressen, die durch Komma getrennt sind, und Betreff Präfixfelder",
+    "imageCaption": "E-Mail — SMTP-Host / Port / TLS-Modus, optionaler Benutzername + Passwort, Absenderadresse, Komma-getrennte Empfänger und ein Betreffpräfix, um Benachrichtigungen einfach zu filtern Posteingangsseite.",
+    "appNote": "Wenn Sie ein persönliches Gmail- oder Microsoft 365-Konto verwenden, kann das Passwortfeld nicht Ihr normales Kontopasswort sein – beide Anbieter benötigen ein <strong>app-Passwort</strong>, das speziell für Drittanbieter-Clients generiert wurde. Die beiden Flüsse sind unten.",
+    "gmailTitle": "Gmail App Passwort",
+    "gmailIntro": "Gmail-App-Passwörter erfordern, dass <strong>2-Schritt-Verifizierung</strong> auf dem Google-Konto aktiv ist. Wenn dies nicht der Fall ist, existiert die <em>App-Passwörter</em>-Seite nicht.",
+    "gmailItems": [
+      "Öffnen Sie <a>myaccount.google.com/security</a> und aktivieren Sie <em>2-Schritt-Verifizierung</em>, wenn es nicht bereits eingeschaltet ist.",
+      "Gehen Sie zu <a>myaccount.google.com/apppasswords</a>.",
+      "Geben Sie einen Namen ein (z.B.) <em>ProxMenux</em> und klicken Sie auf <em>Create</em>. Google zeigt ein 16-Zeichen-Passwort an - kopieren Sie es.",
+      "Füllen Sie die Registerkarte E-Mail mit: <em>Host</em> <code>smtp.gmail.com</code>, <em>Port</em> <code>587</code>, <em>TLS Mode</em> <code>STARTTLS</code>, <em>Username</em> Ihre Gmail-Adresse, <em>Password</em> das 16-Zeichen-App-Passwort."
+    ],
+    "outlookTitle": "Microsoft / Outlook App Passwort",
+    "outlookIntro": "Microsoft benötigt nun <strong>zweistufige Verifizierung</strong> auf dem persönlichen Konto, bevor ein App-Passwort erstellt werden kann. Enterprise-Mandanten, bei denen der Administrator die SMTP-Basisauth deaktiviert hat, benötigen einen anderen Pfad (OAuth2), der derzeit nicht vom Monitor unterstützt wird - zeigen Sie diese auf ein SMTP-Relay, das Sie stattdessen steuern.",
+    "outlookItems": [
+      "Öffnen Sie <a>account.microsoft.com/security</a> und ermöglichen Sie eine zweistufige Verifizierung.",
+      "Öffnen Sie <em>Erweiterte Sicherheitsoptionen</em>, scrollen Sie zu <em>App Passwörter</em> und klicken Sie auf <em>Erstellen Sie ein neues App-Passwort</em>.",
+      "Microsoft zeigt ein langes zufälliges Passwort - kopieren Sie es.",
+      "Füllen Sie die Registerkarte E-Mail mit: <em>Host</em> <code>smtp-mail.outlook.com</code>, <em>Port</em> <code>587</code>, <em>TLS Mode</em> <code>STARTTLS</code>, <em>Username</em> Ihre Outlook / Microsoft 365-Adresse, <em>Password</em> das generierte App-Passwort."
+    ],
+    "relayTitle": "Selbst gehostetes SMTP-Relay",
+    "relayBody": "Wenn Sie Ihr eigenes SMTP-Relay (Postfix, msmtp usw.) im LAN ausführen, richten Sie den Monitor darauf und überspringen den App-Passwort-Tanz vollständig. Das Relais verarbeitet auth stromaufwärts und der Monitor sendet Klartext in einem vertrauenswürdigen Netzwerk."
+  },
+  "pushover": {
+    "heading": "Pushover",
+    "intro": "Pushover ist ein mobiler Push-Service mit offiziellen Apps für iOS, Android und Desktop-Browser. Der dedizierte ProxMenux-Kanal spricht direkt mit dem <a>Pushover API</a>, so dass keine Apprise-URL erforderlich ist.",
+    "stepsTitle": "Einrichtung",
+    "steps": [
+      "Erstellen Sie ein <a>Pushover-Konto</a>, installieren Sie die offizielle App auf den Geräten, die Benachrichtigungen erhalten und sich anmelden sollen.",
+      "Kopieren Sie den <em>User Key</em>, der auf Ihrem Pushover-Dashboard angezeigt wird. Ein Gruppenschlüssel kann stattdessen verwendet werden, wenn mehrere Personen oder Geräte die gleiche Warnung erhalten müssen.",
+      "Offen <a>Erstellen einer Anwendung/API Kennung</a>Erstellen Sie eine Anwendung namens <em>ProxMenux</em> und kopiert seine 30-Charakter API Token.",
+      "Fügen Sie in <em>Settings → Benachrichtigungen → Pushover</em> den Benutzer- oder Gruppenschlüssel und das API-Token der Anwendung ein. Das Gerät und die Tonfelder sind optional.",
+      "Speichern Sie die Einstellungen und drücken Sie <em>Send test</em>. Die Pushover App sollte die Nachricht sofort erhalten."
+    ],
+    "priorityTitle": "Prioritäre Zuordnung",
+    "priorityBody": "Normale ProxMenux Nachrichten verwenden Pushover Priorität 0. Wenn <strong>High-Priorität für kritische Warnungen</strong> aktiviert ist, verwenden CRITICAL-Ereignisse die Priorität 1, damit sie sich abheben und die ruhigen Pushover-Stunden des Benutzers umgehen. ProxMenux verwendet keine Notfallpriorität 2, was wiederholte Benachrichtigungen und einen Rückruf der Bestätigung erfordern würde.",
+    "secretTitle": "Schützen Sie beide Werte",
+    "secretBody": "Der Benutzer- oder Gruppenschlüssel und das API-Token der Anwendung autorisieren beide die Nachrichtenzustellung. ProxMenux speichert sie als geschützte Benachrichtigungsgeheimnisse und maskiert sie in der Benutzeroberfläche; veröffentlichen Sie weder Wert in Screenshots noch unterstützen Sie Protokolle."
+  },
+  "apprise": {
+    "heading": "Apprise (generischer Hub für ~ 80-Dienste)",
+    "intro": "Apprise ist eine Open-Source-Benachrichtigungsbibliothek, die das Protokoll von around spricht 80 verschiedene Dienste über ein einziges URL-Format. Wenn Sie es als einen weiteren Kanal im Monitor hinzufügen, können Sie Benachrichtigungen an Dienste senden, die keine dedizierte Registerkarte haben — ntfy, Matrix, Slack, Microsoft Teams, Mattermost, Pushbullet, AWS SNS, Pushsafer, Rocket.Chat, Signal API und viele andere - ohne ProxMenux Jede Integration muss separat implementiert werden. Pushover kann auch durch erreicht werden Apprise, obwohl seine dedizierte Registerkarte für eine einzelne einfacher ist Pushover Bestimmungsort.",
+    "listIntro": "Die vollständige Liste der unterstützten Dienste und das genaue URL-Format für jeden einzelnen finden Sie in der offiziellen Apprise-Dokumentation:",
+    "listItems": [
+      "<a>Apprise Servicedokumentation</a> — voller Index der unterstützten Dienste.",
+      "<a>URL basics</a> — wie Apprise-URLs strukturiert sind."
+    ],
+    "stepsTitle": "Stufen",
+    "steps": [
+      "Wählen Sie den Zieldienst im <a>Apprise wiki</a> und kopieren Sie die URL-Vorlage dafür. Jede Serviceseite zeigt das genaue zu verwendende Schema (<code>ntfy://</code>, <code>matrix://</code>, <code>pover://</code>, <code>slack://</code>...) sowie alle erforderlichen Token, Kanäle oder Hostnamen.",
+      "Füllen Sie die Platzhalter mit Ihren eigenen Anmeldeinformationen aus. Zum Beispiel sieht ein ntfy.sh-Thema aus wie <code>ntfy://ntfy.sh/my-topic</code>; eine Pushover-URL sieht aus wie <code>pover://user@token</code>; eine Matrix-URL sieht aus wie <code>matrix://user:pass@host:port/#room</code>.",
+      "Fügen Sie die endgültige URL in das Feld <em>Apprise URL</em> im Apprise-Tab des Benachrichtigungsfelds ein und speichern Sie es.",
+      "Drücken Sie <em>Send Test</em>, um zu überprüfen, ob die URL erreichbar ist und die Anmeldeinformationen akzeptiert werden."
+    ],
+    "deliveredTitle": "Was geliefert wird",
+    "deliveredBody": "Apprise erhält die gleiche Nutzlast wie die anderen Kanäle - Titel, Körper und Schweregrad (Info / Erfolg / Warnung / Misserfolg). Der Schweregrad wird dem zugeordnet, was der Zieldienst ausstellt (Icon, Priorität, Farbe). Rich-Message-Formatierung und die AI-Rewrite-Ebene laufen alle, bevor die URL aufgerufen wird, genau wie bei Telegram oder E-Mail.",
+    "fanoutTitle": "Eine URL pro Apprise Kanal",
+    "fanoutBody": "Der Monitor zeigt einen einzelnen URL-Slot pro Apprise-Kanal. Wenn Sie mehrere Apprise-Dienste gleichzeitig nutzen müssen (z.B.) ntfy.sh plus einen Matrix-Raum), ist der sauberste Ansatz, einen kleinen <a>Apprise API Server</a> mit einer getaggten Konfiguration zu hosten und den Monitor auf seinen Endpunkt zu richten - der Server sendet dann zu jeder URL hinter diesem Tag."
+  },
+  "rich": {
+    "heading": "Rich Messages, Kategorien und Pro-Channel-Filter",
+    "intro": "Unterhalb des Kanalformulars zeigt jeder Kanal die gleichen drei Steuerelemente: einen <em>Rich-Messages</em> oben umschalten (im Screenshot mit dem Pfeil markiert), elf zusammenklappbare <em>Benachrichtigungskategorien</em> mit Umschaltern pro Ereignis und eine <em>Send Test</em> Taste unten.",
+    "imageAlt": "Benachrichtigungskategorien-Panel mit Rich-Nachrichten-Master-Schalter oben hervorgehoben, zusammenklappbare Abschnitte für VM/CT, Backups, Ressourcen, Speicher, Netzwerk, Sicherheit, Cluster, Dienste, Gesundheitsmonitor, Updates jeweils mit Umschalt- und Ereignisanzahl und eine Send-Test-Schaltfläche",
+    "imageCaption": "Oberer Pfeil — die pro-Kanal <em>Rich Nachrichten</em> umschalten. Unten - die elf zusammenklappbaren Kategorien mit Umschaltern pro Ereignis. <em>Send Test</em> befindet sich am unteren Rand des Kanals.",
+    "richTitle": "Reichhaltige Botschaften",
+    "richIntro": "Mit <em>Rich-Nachrichten</em> wird jedem Ereignis-Header eine Kategorie-Emoji vorangestellt und der Körper wird mit der nativen Formatierung des Kanals gerendert (Telegram HTML, Discord mit Schweregradfarbe). Wenn es ausgeschaltet ist, sendet der Monitor eine Klartextversion mit den gleichen Informationen abzüglich der visuellen Hinweise. Gleicher Inhalt, unterschiedliche Darstellung:",
+    "plainHeader": "Plain - Rich Messages ausgeschaltet",
+    "richHeader": "Rich - Rich Nachrichten auf",
+    "richOutro": "Der Umschalter ist pro Kanal: Lassen Sie E-Mail einfach für die Lesbarkeit von Posteingangsregeln, während Telegram und Discord die reiche Version darstellen. Kanäle, die keine Inline-Formatierung unterstützen (Klartext-E-Mail, Gotify), ignorieren die Formatierung und greifen auf Text zurück.",
+    "togglesTitle": "Per-Event Kategorien",
+    "togglesIntro": "Rund siebzig Ereignistypen sind in elf UI-Kategorien unterteilt. Jedes Ereignis hat einen Master-Toggle und einen Pro-Kanal-Override - zwei Schichten, die entscheiden, ob ein bestimmtes Ereignis einen bestimmten Kanal erreicht:",
+    "togglesItems": [
+      "<strong>Per-event master toggle.</strong> Wenn <code>vm_start</code> überall ausgeschaltet ist, sieht kein Kanal jemals einen <code>vm_start</code>. Toggles bleiben als <code>event_toggles[event_type] = true | false</code> bestehen.",
+      "<strong>Per-channel overrides.</strong> Ein Ereignistyp kann auch für einen bestimmten Kanal stummgeschaltet werden (<em>\"send <code>backup_complete</code> to Discord but not to Telegram\"</em>). Diese leben in <code>channel_overrides[channel_name][event_type]</code> und gelten nur, wenn das Ereignis den Master-Schalter bestanden hat."
+    ],
+    "togglesOutro": "Jeder Kategorie-Header im Screenshot zeigt auch die Anzahl der Ereignisse <em>, die derzeit aktiviert sind</em> / <em>total</em> für diese Gruppe, und einen Kategorie-Level-Schalter, der jedes Ereignis darin mit einem Klick ein- oder ausschaltet - die Verknüpfung zum Stummschalten einer ganzen Gruppe (z. B. alle <code>info</code>-Backups, alle updatebezogenen Ereignisse), ohne den Abschnitt zu erweitern."
+  },
+  "quiet": {
+    "heading": "Ruhige Stunden",
+    "intro": "Quiet Hours ist ein Zeitfenster pro Kanal, in dem der Dispatcher nur <strong>CRITICAL</strong>-Ereignisse durchlässt. Alles andere - INFO, WARNUNG, Aktionsereignisse - wird zurückgehalten, auf der Festplatte fortgesetzt und als eine einzige gruppierte Zusammenfassung geliefert, sobald sich das Fenster schließt. Der Kanal bekommt immer noch die dringenden Dinge in Echtzeit; Das Rauschen wartet, bis Sie es wahrscheinlich wollen.",
+    "imageAlt": "Kanaleinstellungen, die beide Knöpfe nebeneinander zeigen: Ruhige Stundenkarte mit Umschalten, Start 22:00 und Ende 07:00 plus eine Live-Vorschau des nächsten Übergangs und direkt darunter die Daily Digest Card mit eigenem Umschalten, eine Lieferzeitauswahl, die auf 09:00 eingestellt ist und der Hinweis, dass KRITIKAL und WARNUNG nie verzögert werden",
+    "imageCaption": "Beide knöpfe leben nebeneinander in der einstellungskarte jedes kanals - quiet hours oben, daily digest darunter. Unabhängig pro Kanal.",
+    "purposeTitle": "Wofür es ist",
+    "purposeItems": [
+      "<strong>Wake me not at 03:00 for a update notice.</strong> Backups, App-Updates, Post-Installations-Optimierungen und andere INFO-Level-Events hören auf, Ihr Telefon nachts zu pingen.",
+      "<strong>Aber immer noch wecken mich für ein Feuer.</strong> Festplattenausfälle, OOM tötet, Host-Abschaltungen, fail2ban Verbote - alles, was als kritisch eingestuft - umgehen Sie das Fenster und kommen sofort an.",
+      "<strong>Verpassen Sie auch nichts.</strong> Die während des Fensters unterdrückten Ereignisse werden nicht stillgelegt - sie sitzen in einem SQLite-Puffer, bis Sie wieder auf der Uhr sind."
+    ],
+    "howTitle": "Wie es funktioniert",
+    "howItems": [
+      "<strong>Per-channel toggle.</strong> Jeder Kanal hat seine eigene Quiet Hours-Konfiguration – Telegram kann still sein 22:00–07:00, während E-Mails alles 24/7 erhalten.",
+      "<strong>Start und Endzeit</strong> in Ihrer lokalen Zeitzone, halboffenes Intervall (Start inklusive, Ende exklusiv). Das Fenster kann Mitternacht überqueren (z.B. 22:00–07:00 bedeutet heute Abend bis morgen früh.",
+      "<strong>Live preview line</strong> direkt unter den Eingängen zeigt an, ob das Fenster gerade aktiv ist und wann der nächste Übergang stattfindet. Erspart das Öffnen einer Uhr.",
+      "<strong>Während des Fensters:</strong> feuern KRITISCHE Ereignisse immer noch durch die normale Versandpipeline. INFO- und WARNING-Ereignisse werden an einen persistenten Puffer weitergeleitet (<code>quiet_pending</code>-Tabelle in der SQLite DB des Monitors).",
+      "<strong>Wenn sich das Fenster schließt:</strong> wird eine einzige gruppierte Benachrichtigung mit allem, was sich angesammelt hat, gesendet - eine Zeile pro gepuffertem Ereignis in chronologischer Reihenfolge. Der Puffer wird erst gelöscht, nachdem der Kanal die Lieferung bestätigt hat, so dass ein vorübergehender Telegram / SMTP-Ausfall den Nachtkontext nicht verliert.",
+      "<strong>Across startet neu.</strong> Wenn der Monitor mitten im Fenster neu gestartet wird, ist der Puffer auf der Festplatte intakt. Wenn der Neustart kurz nach dem Schließen des Fensters erfolgt, erkennt der nächste Versandzyklus die ausstehenden Zeilen und spült sie mit einer einzigen \"Wiederherstellung\" -Zusammenfassung - es gehen keine Benachrichtigungen für ein Deployment oder einen Neustart verloren."
+    ],
+    "criticalTitle": "Was zählt als kritisch",
+    "criticalBody": "Der Schweregrad wird bei der Ereigniserstellung festgelegt, nicht zum Versandzeitpunkt. Festplattenausfälle, OOM-Kills, Cluster-Split-Gehirn, Host-Abschaltungen und die \"harte\" Ebene der Festplatten-I / O-Fehler werden von Design aus als kritisch ausgeliefert. Alles andere (Backups OK, Updates verfügbar, INFO-Logs, Rate-Limit-Hits) ist standardmäßig INFO oder WARNING und daher leise. Sie können die Standardschwere eines bestimmten Ereignisses im <link>Event-Katalog </link> weiter unten auf dieser Seite überprüfen."
+  },
+  "digest": {
+    "heading": "Tägliche Zusammenfassung der INFO-Ereignisse",
+    "intro1": "Der Daily Digest ist der entgegengesetzte Knopf: eine <strong>opt-in</strong>-Einstellung, die besagt: \"Senden Sie mir nicht jede erfolgreiche Backup- oder Update-Benachrichtigung, wie es passiert - sammeln Sie sie und senden Sie mir eine Zusammenfassung pro Tag bei 09: 00 (oder was auch immer ich wähle)\". Gleiches Ziel wie Quiet Hours (weniger Lärm), aber ein anderer Mechanismus (zeitbasierte Zusammenfassung anstelle eines täglichen Fensters).",
+    "intro2": "Es befindet sich in der gleichen Kanaleinstellungskarte wie Quiet Hours (siehe Abbildung unter <link>Quiet Hours</link>), direkt darunter. Sie ermöglichen jeden unabhängig.",
+    "purposeTitle": "Wofür es ist",
+    "purposeItems": [
+      "<strong>Der Morgen \"alles, was passiert ist\" recap.</strong> Wenn Sie einmal am Tag mit einem Kaffee nach dem Wirt suchen, enthält eine Verdauung bei 09:00 die gleichen Informationen wie 20 einzelne Pings während des Vortags, ohne dass Sie 20 Telegram Blasen lesen.",
+      "<strong>Separates Rauschen von signal.</strong> INFO-Ereignisse antworten \"was passiert ist\"; CRITICAL und WARNING antworten \"was muss ich jetzt tun?\" Der Digest behandelt den ersten; alles andere behält seine Live-Lieferung."
+    ],
+    "howTitle": "Wie es funktioniert",
+    "howItems": [
+      "<strong>Per-channel opt-in.</strong> Standardmäßig ausgeschaltet – Telegram stapelt Ihre Benachrichtigungen nicht stillschweigend. Sie aktivieren es auf den Kanälen, auf denen Sie einen Digest wünschen, so dass andere live ausgeliefert werden.",
+      "<strong>Lieferungszeit</strong> in Ihrer lokalen Zeitzone. Standardmäßig 09: 00, aber Sie können jederzeit auswählen; der Dispatcher feuert den Digest innerhalb von ~ 60 s dieser Minute.",
+      "<strong>Was geht in den Digest:</strong> jedes Ereignis, das der Kanal live erhalten hätte, dessen Schweregrad <strong>INFO</strong>. Beispiele: <em>vzdump vollständig</em>, <em>Tailscale Update verfügbar</em>, <em>ProxMenux Optimierungsaktualisierung verfügbar</em>, <em>APT-Sicherheitsupdates noch ausstehen</em>, <em>Trefferquote</em>.",
+      "<strong>Was ist nie verzögert:</strong>",
+      "<strong>Persistence.</strong> Ausstehende Ereignisse befinden sich in einer SQLite-Tabelle (<code>digest_pending</code>) bis zur konfigurierten Stunde. Der Monitor kann frei neu starten, ohne zu verlieren, was der Digest schließlich enthalten wird.",
+      "<strong>Leere Tage sind still.</strong> Wenn nichts INFO-Level passiert ist, wird kein Digest gesendet - der Kanal bleibt ruhig, anstatt eine Nachricht \"keine Ereignisse zu melden\" zu erhalten."
+    ],
+    "neverDelayedSub": [
+      "<strong>CRITICAL</strong>-Ereignisse gehen immer sofort durch.",
+      "<strong>WARNING</strong>-Ereignisse gehen immer sofort durch.",
+      "Live-Action-Ereignisse (VM / CT Start / Stop / Shutdown / Neustart, vm_fail / ct_fail, Backup Start / Fail, Replikationsstart / Fail, Host Shutdown / Reboot) umgehen den Digest sogar bei INFO-Schweregrad - Sie haben sich angemeldet, um diese live zu sehen, der Digest würde dieses Opt-in besiegen."
+    ],
+    "comboTitle": "Kombinieren von ruhigen Stunden und täglichem Digest",
+    "comboBody": "Beide arbeiten zusammen. Ein Kanal kann <em>both</em> aktiv haben - Ruhige Stunden von 22:00 bis 07:00 plus einen täglichen Digest bei 09:00. INFO-Ereignisse während des ruhigen Fensters gehen zum ruhigen Puffer und gelangen zu 07: 00 als Zusammenfassung zum Schließen des Fensters; INFO-Ereignisse während des Tages gehen zum Digest-Puffer und gelangen am nächsten Morgen zu 09: 00. Kritisch und Warnung durchschneiden immer beides. Wählen Sie Ruhige Stunden, wenn das Ziel ein <em>-Fenster der Stille</em>, der Daily Digest ist, wenn das Ziel eine <em>-Zeitzusammenfassung</em> ist; viele Setups wollen beides."
+  },
+  "displayName": {
+    "heading": "Anzeigename",
+    "intro": "Jede Benachrichtigung trägt einen <em>Display Name</em> - das Label, das den Host identifiziert, der die Warnung erstellt hat. Es ist der Wert, den Sie am unteren Rand des obigen Beispiels für Rich-Messages (<code>🏠 home-lab</code>) und im Präfix des E-Mail-Betreffs sehen.",
+    "imageAlt": "Name-Feld mit dem Wert amd als Beispiel angezeigt, Label Name in Benachrichtigungen angezeigt - Bearbeiten, um anzupassen oder leer lassen, um den System-Hostnamen zu verwenden",
+    "imageCaption": "Das Feld Name anzeigen - Lassen Sie es leer, um den Systemhostnamen zu verwenden, oder überschreiben Sie alles, was Sie möchten.",
+    "outro": "Wenn das Feld leer ist, greift der Monitor auf den Systemhostnamen zurück. Der Override ist vor allem nützlich, wenn Sie mehrere ProxMenux-Hosts ausführen, die an denselben Telegram-Chat oder Posteingang senden - ein freundlicheres Label (<em>home-lab</em>, <em>office-pve</em>) ist einfacher zu lesen als <code>pve01.lan</code> oder <code>pmx-prod-01</code>."
+  },
+  "dispatch": {
+    "heading": "Versandleitung",
+    "intro": "Zwischen einem ausgelösten Ereignis und einer Nachricht, die den Host verlässt, laufen drei Phasen in dieser Reihenfolge ab:",
+    "headerStage": "Phase",
+    "headerWhat": "Was es tut",
+    "headerTunable": "Abstimmbar?",
+    "rows": [
+      {
+        "stage": "1. Fingerprint Dedup",
+        "what": "Jedes Ereignis wird in einen Fingerabdruck gehasht (<code>event_type + key fields from data</code>). Identische Fingerabdrücke innerhalb eines kurzen Fensters gelten als Duplikate des ersten.",
+        "tunable": "Nein — interne Dispatcherlogik."
+      },
+      {
+        "stage": "2. Abklingzeit",
+        "what": "Nachdem ein Fingerabdruck gesendet wurde, wird derselbe Fingerabdruck für die Abklingdauer pro Schweregrad unterdrückt. Gespeichert in der <code>notification_last_sent</code> SQLite-Tabelle, so dass sie Neustarts überlebt. Standardeinstellungen: <code>CRITICAL</code> 60 s, <code>WARNING</code> 300 s, <code>INFO</code> 900 s, sowie eine Übersteuerung pro Kategorie (z. B.) <code>resources</code> 900 s, <code>updates</code> 86 400 s.",
+        "tunable": "Nein — standardmäßig in den Dispatcher gebacken."
+      },
+      {
+        "stage": "3. Burst-Aggregation",
+        "what": "Wenn N-Ereignisse in einem kurzen Fenster ankommen (z. B. eine Brute-Force-Flut von SSH), werden sie zu einer einzigen <code>burst_*</code>-Nachricht mit einer Zählung und einer Stichprobe zusammengefasst.",
+        "tunable": "Nein — Fenster und Schwellenwert sind pro Ereignistyp fest codiert."
+      }
+    ],
+    "calloutTitle": "Dispatch findet in einem Hintergrund-Thread statt",
+    "calloutBody": "Die Dispatchschleife läuft in einem eigenen Thread. Die HTTP-Anforderung, die ein Ereignis aussendet, kehrt zurück, sobald das Ereignis in der Warteschlange steht – sie wartet nicht auf Telegram, SMTP oder webhook RTT. Jedes Sendeergebnis wird zur retrospektiven Überprüfung in der Historientabelle erfasst."
+  },
+  "aiRewrite": {
+    "heading": "Optionales AI-Rewrite",
+    "body1": "Jedes Ereignis kann durch ein LLM geleitet werden, das seinen Körper in einfacher Sprache und (optional) in der Sprache des Zielbenutzers vor dem Fan-Out umschreibt. Der AI-Rewriter ist standardmäßig ausgeschaltet. Wenn es aktiviert ist, läuft es im Dispatch-Thread; Wenn der Provider-Aufruf fehlschlägt oder ausfällt, wird stattdessen der ursprüngliche Templated-Body verwendet.",
+    "body2": "Sechs Anbieter werden unterstützt (OpenAI, Anthropic, Google Gemini, Groq, OpenRouter und lokales Ollama), mit Pro-Channel-Detaillevel (<code>brief</code>, <code>standard</code>, <code>detailed</code>), Ausgabesprache, Prompt-Modus (<code>default</code> oder <code>custom</code>) und einer optionalen benutzerdefinierten Prompt. Vollständige Konfigurations-Begehung, Aufnahmen und Eingabeaufforderungen auf der <link>AI Assistant</link>-Seite.",
+    "privacyTitle": "Datenschutzerklärung",
+    "privacyBody": "AI rewrite sendet den Ereigniskörper - der Hostnamen, IP-Adressen, Benutzernamen, Fehlermeldungen und Zeitschriftenzeilen enthalten kann - an den konfigurierten Anbieter. Ollama hält alles on-host; die anderen fünf Anbieter übermitteln Daten an ihre jeweiligen Endpunkte. Deaktivieren Sie den Rewriter oder verwenden Sie Ollama, wenn der Host in einer Umgebung läuft, in der Ereignisinhalte das Netzwerk nicht verlassen können."
+  },
+  "pveWebhook": {
+    "heading": "PVE webhook Integration",
+    "intro1": "Proxmox VE 8.1+ verfügt über ein eigenes Benachrichtigungssystem mit eingebauten <em>endpoints</em> (Sendmail, gotify, SMTP, webhook). Wenn Sie Benachrichtigungen auf dem Monitor aktivieren, registriert er sich als einer dieser Endpunkte - ein <code>webhook</code>-Ziel, das auf den eigenen API des Monitors zeigt. Von diesem Moment an fließt alles, was Proxmox selbst aussendet (HA-Zäune, Replikation, vzdump von der GUI, Zertifikatsverlängerung usw.) durch die gleiche Versandpipeline wie die eigenen Ereignisse des Monitors.",
+    "intro2": "Das Ziel ist von der Proxmox GUI unter <em>Datacenter → Benachrichtigungen → Benachrichtigungsziele</em> sichtbar:",
+    "imageAlt": "Proxmox VE Webhook-Dialog bearbeiten, der das automatisch erstellte proxmenux-webhook-Ziel mit der Methode POST, URL http://127.0.0.1:8008/api/notifications/webhook und einer JSON-Körpervorlage mit Escape-Titel, Escape-Nachricht, Escape-Schweregrad, Escape-Zeitstempel und json-Feldern zeigt",
+    "imageCaption": "Das PVE-seitige webhook-Ziel, wie Proxmox es sieht (die GUI befindet sich im konfigurierten Gebietsschema des Hosts - Spanisch in diesem Beispiel). Gleiche Felder gelten in jeder Sprache.",
+    "registeredIntro": "Was registriert wird:",
+    "registeredItems": [
+      "<strong>Method & URL.</strong> <code>POST http://127.0.0.1:8008/api/notifications/webhook</code>. Nur Loopback - PVE spricht mit dem Monitor-Prozess, der auf demselben Host ausgeführt wird.",
+      "<strong>Body template.</strong> Ein JSON-Körper mit den nativen Handlebars-Helfern von PVE - gespeichert base64-kodiert in der Konfigurationsdatei von PVE, aber es erweitert sich auf:",
+      "<strong>Matcher.</strong> Ein Begleiter <code>matcher: proxmenux-matcher</code> Block mit <code>mode all</code>, so dass jede PVE-Benachrichtigung das Ziel erreicht.",
+      "<strong>Companion priv block.</strong> Ein leerer <code>webhook: proxmenux-webhook</code>-Eintrag wird an <code>/etc/pve/priv/notifications.cfg</code> angehängt. PVE weigert sich, einen webhook-Endpunkt ohne einen passenden privaten Block zu instanziieren, auch wenn keine Geheimnisse benötigt werden - also schreibt der Monitor dort einen Header-Only-Stub. Auf der PVE-Seite sind keine Token, Header oder HMAC konfiguriert."
+    ],
+    "securityTitle": "Wie der Empfänger gesichert ist",
+    "securityIntro": "Der webhook-Empfänger bei <code>POST /api/notifications/webhook</code> verwendet verschiedene Sicherheitsschichten, je nachdem, woher die Anforderung stammt:",
+    "securityItems": [
+      "<strong>Loopback (<code>127.0.0.1</code> / <code>::1</code>).</strong> Rate-Limit nur. Der Endpunkt vertraut der Loopback-Schnittstelle - nur Prozesse, die auf dem Host ausgeführt werden, können ihn erreichen, und PVE selbst kann keine benutzerdefinierten Auth-Header in den von ihm erzeugten Körper senden. Dies ist der Pfad, den jede PVE-emittierte Benachrichtigung zurücklegt.",
+      "<strong>Remote callers.</strong> Fünf Schichten stapeln sich auf die Ratenbegrenzung: ein gemeinsames Geheimnis im <code>X-Webhook-Secret</code>-Header, ein Frische-Zeitstempel in <code>X-ProxMenux-Timestamp</code> (abgelehnt, wenn es mehr als das konfigurierte Fenster driftet), ein Replay-Cache-Lookup und eine optionale IP-Erlaubnisliste. Das freigegebene Geheimnis befindet sich in der SQLite-Einstellungstabelle des Monitors - nicht in <code>/etc/pve/priv/notifications.cfg</code> - und wird beim ersten Setup generiert. Dieser Pfad existiert für benutzerdefinierte Integrationen, die von außerhalb des Hosts gepostet werden; das PVE-konfigurierte Ziel übt ihn niemals aus."
+    ],
+    "practiceTitle": "In der Praxis",
+    "practiceBody": "Das PVE-Setup schreibt das Ziel als <code>http://127.0.0.1:8008</code>, so dass PVE-emittierte Benachrichtigungen immer den Loopback-Pfad mit Rate-Limit-Sicherheit durchlaufen. Der Fernanrufpfad mit dem gemeinsamen Geheimnis ist Opt-in für benutzerdefinierte Integrationen: Richten Sie einen externen Dienst auf <code>https://&lt;monitor-host&gt;:&lt;port&gt;/api/notifications/webhook</code> und liefern Sie den <code>X-Webhook-Secret</code>-Header, um ihn zu verwenden.",
+    "actionsIntro": "Der Monitor verwaltet dieses Ziel durch drei Aktionen auf der Registerkarte Einstellungen:",
+    "actionsItems": [
+      "<strong>Setup</strong> – läuft automatisch, wenn Sie Benachrichtigungen aktivieren. Erstellt den Eintrag in <code>/etc/pve/notifications.cfg</code>. Die Datei wird nur geschrieben, wenn sich ihr Inhalt ändern muss, und eine Kopie der vorherigen wird in <code>/usr/local/share/proxmenux/backups/pve-notifications/</code> (die drei neuesten) aufbewahrt. Nichts wird geschrieben, während <code>/etc/pve</code> nicht montiert ist: Ein Monitor, der während eines Neustarts von <code>pve-cluster</code> startet, registriert den Eintrag, sobald er zurück ist.",
+      "<strong>Cleanup</strong> — entfernt den Eintrag. Das vorherige Backup der Datei wird beibehalten.",
+      "<strong>Read config</strong> — zeigt die aktuellen Ziele und Matcher, wie PVE sie sieht. Auf diese Weise bestätigen Sie, dass der Eintrag des Monitors ausgelöst wird, wenn PVE mehrere Benachrichtigungsrouten konfiguriert hat."
+    ],
+    "clusterTitle": "Clusterknoten",
+    "clusterBody": "<code>/etc/pve/</code> wird über Clustermitglieder repliziert, so dass das webhook-Ziel auf jedem Knoten sichtbar ist. Jeder Knoten postet jedoch zu seinem <em>own</em> <code>127.0.0.1:8008</code> – was bedeutet, dass der Monitor, der auf diesem Knoten läuft, die Ereignisse empfängt, die PVE lokal generiert hat. Führen Sie den Monitor auf jedem Knoten aus, den Sie im Benachrichtigungsverlauf sehen möchten."
+  },
+  "catalogue": {
+    "heading": "Veranstaltungskatalog",
+    "intro": "Rund siebzig Ereignistypen sind in elf UI-Kategorien unterteilt. Das Benachrichtigungsfeld macht einen zusammenklappbaren Abschnitt pro Gruppe mit einem Umschalter für jedes Ereignis darin. Jedes Ereignis ist standardmäßig aktiviert, sofern nicht ausdrücklich anders gekennzeichnet.",
+    "headerGroup": "Gruppe",
+    "headerEvents": "Veranstaltungen",
+    "rows": [
+      {
+        "group": "VM / CT",
+        "events": "<code>vm_start</code>, <code>vm_start_warning</code>, <code>vm_stop</code>, <code>vm_shutdown</code>, <code>vm_fail</code>, <code>vm_restart</code>, plus die <code>ct_*</code> Äquivalente, <code>migration_start</code>, <code>migration_complete</code>, <code>migration_warning</code>, <code>migration_fail</code>, <code>replication_complete</code>, <code>replication_fail</code>."
+      },
+      {
+        "group": "Sicherungen",
+        "events": "<code>backup_start</code>, <code>backup_complete</code>, <code>backup_warning</code>, <code>backup_fail</code>, <code>snapshot_complete</code>, <code>snapshot_fail</code>."
+      },
+      {
+        "group": "Ressourcen",
+        "events": "<code>cpu_high</code>, <code>ram_high</code>, <code>temp_high</code>, <code>load_high</code>."
+      },
+      {
+        "group": "Lagerung",
+        "events": "<code>disk_space_low</code>, <code>disk_io_error</code>, <code>storage_unavailable</code>, <code>smart_test_complete</code>, <code>smart_test_failed</code>."
+      },
+      {
+        "group": "Netzwerk",
+        "events": "<code>network_down</code>, <code>network_latency</code>."
+      },
+      {
+        "group": "Sicherheit",
+        "events": "<code>auth_fail</code>, <code>ip_block</code>, <code>firewall_issue</code>, <code>user_permission_change</code>."
+      },
+      {
+        "group": "Cluster",
+        "events": "<code>split_brain</code>, <code>node_disconnect</code>, <code>node_reconnect</code>."
+      },
+      {
+        "group": "Dienstleistungen",
+        "events": "<code>system_startup</code>, <code>system_shutdown</code>, <code>system_reboot</code>, <code>system_problem</code>, <code>service_fail</code>, <code>oom_kill</code>, <code>system_mail</code>."
+      },
+      {
+        "group": "Gesundheitsmonitor",
+        "events": "<code>new_error</code>, <code>error_resolved</code>, <code>error_escalated</code>, <code>health_degraded</code>, <code>health_persistent</code>, <code>health_issue_new</code>, <code>health_issue_resolved</code>."
+      },
+      {
+        "group": "Aktualisierungen",
+        "events": "<code>update_summary</code>, <code>update_available</code>, <code>pve_update</code>, <code>update_complete</code>, <code>proxmenux_update</code>."
+      },
+      {
+        "group": "Hardware / GPU",
+        "events": "<code>gpu_mode_switch</code>, <code>gpu_passthrough_blocked</code>, <code>pci_passthrough_conflict</code>, <code>ai_model_migrated</code>."
+      }
+    ],
+    "burstNote": "Eine Handvoll <code>burst_*</code>-Aggregationstypen (<code>burst_auth_fail</code>, <code>burst_ip_block</code>, <code>burst_disk_io</code> usw.) gibt es nur im Dispatcher — sie ersetzen einzelne Ereignisse durch eine einzige Zusammenfassungsnachricht und werden nicht als Umschaltungen in der Benutzeroberfläche angezeigt. Sie erben den Ein/Aus-Zustand ihres übergeordneten Ereignistyps.",
+    "backupResults": {
+      "heading": "Backup Ergebnisse",
+      "intro": "Eine Benachrichtigung über einen Proxmox Backup-Job gibt an, wie der Job beendet wurde. Das Ergebnis wird aus dem Bericht gelesen, den Proxmox sendet, und setzt den Titel, das Symbol, das mit <em>Rich-Nachrichten</em> angezeigt wird, und die Statuszeile der E-Mail.",
+      "headerIcon": "Icon",
+      "headerResult": "Ergebnis",
+      "headerWhen": "Wann",
+      "rows": [
+        {
+          "icon": "💾✅",
+          "result": "Backup vollständig",
+          "when": "Jeder Gast der Arbeit beendet und der Bericht trägt keine Warnungen."
+        },
+        {
+          "icon": "💾⚠️",
+          "result": "Backup mit Warnungen abgeschlossen",
+          "when": "Jeder Gast beendet und der Bericht trägt mindestens eine Warnlinie."
+        },
+        {
+          "icon": "💾❌",
+          "result": "Backup-Fehler gemeldet",
+          "when": "Ein Gast scheiterte oder der Job endete mit einem Fehler."
+        },
+        {
+          "icon": "💾❔",
+          "result": "Backup-Ergebnis nicht bestätigt",
+          "when": "Der Bericht ist unvollständig oder gibt kein Ergebnis für jeden Gast an."
+        }
+      ],
+      "items": [
+        "<strong>Der Titel benennt, worum es bei dem Job ging.</strong> Es trägt den Speicher und für einen Job mit einem einzelnen Gast seinen Typ, Namen und ID. Ein gescheiterter Job benennt den Gast, der gescheitert ist.",
+        "<strong>Das Gremium listet jeden Gast</strong> mit seinem eigenen Ergebnis, Größe, Dauer und Archiv auf, gefolgt von einer Zeile mit der Gesamtzahl des Auftrags.",
+        "<strong>Warnungen und Fehler werden einmal aufgelistet.</strong> Wiederholte Zeilen werden ein einziges Mal mit der Hauptursache zuerst angezeigt; Nach acht Zeilen wird der Rest in einer Schlusszeile gezählt und bleibt im Proxmox-Taskprotokoll.",
+        "<strong>A-Auftrag, der vor seinem ersten Gast</strong> fehlschlägt, zeigt die Ursache, die Proxmox angegeben hat, zum Beispiel einen Speicher, der nicht existiert.",
+        "<strong>Summaries keep the result.</strong> Ein Backup, das in der Quiet Hours-Zusammenfassung oder im Daily Digest aufgeführt ist, trägt das Symbol seines eigenen Ergebnisses."
+      ]
+    }
+  },
+  "history": {
+    "heading": "Verlauf",
+    "body1": "Jeder Versand <em>attempt</em>, den der Dispatcher tatsächlich ausführt, wird in der <code>notification_history</code>-SQLite-Tabelle aufgezeichnet. Jede Zeile speichert den Zeitstempel (<code>sent_at</code>), den Kanal, den Ereignistyp, den Schweregrad, den Titel, den gerenderten Nachrichtentext, ein <code>success</code>-Flag und - wenn der Versand fehlgeschlagen ist - den Fehler, den der Anbieter in <code>error_message</code> zurückgegeben hat. Burst-aggregierte Ereignisse werden als einzelne Zeile mit dem Ereignistyp <code>burst_*</code> angezeigt. Ereignisse, die von der Cooldown-Phase unterdrückt werden, werden nicht protokolliert: Sie werden nie zu einem Versandversuch.",
+    "body2": "Einstellungen → Notifications hat einen <em>Notification-Historie</em>-Abschnitt, der standardmäßig geschlossen ist, mit den letzten 20-Einträgen: das Ergebnis jedes Sendens, seinen Kanal und sein Datum, den Fehler, als er fehlgeschlagen ist, und für jeden täglichen Digest-Lauf, ob er etwas zu senden hatte. Die Seite bietet nicht an, sie zu löschen: Audit & Report liest den gleichen Verlauf, um die Lieferung jedes Kanals zu überprüfen.",
+    "body3": "Die gleichen Daten werden bei <code>GET /api/notifications/history</code> mit optionalen <code>limit</code>, <code>offset</code>, <code>severity</code> und <code>channel</code> Abfrageparametern ausgesetzt und können mit <code>DELETE /api/notifications/history</code> gelöscht werden."
+  },
+  "api": {
+    "heading": "API-Endpunkte",
+    "headerEndpoint": "Endpunkt",
+    "headerMethod": "Methode",
+    "headerUse": "Verwenden",
+    "rows": [
+      {
+        "endpoint": "/api/notifications/settings",
+        "method": "GET / POST",
+        "use": "Lesen oder schreiben Sie die vollständige Konfiguration (Kanäle, Per-Event-Toggles, AI-Rewriter, Display Name)."
+      },
+      {
+        "endpoint": "/api/notifications/test",
+        "method": "POST",
+        "use": "Sende eine Testbenachrichtigung an einen Kanal: <code>'{'\"channel\":\"telegram\"'}'</code>."
+      },
+      {
+        "endpoint": "/api/notifications/test-ai",
+        "method": "POST",
+        "use": "Rendern und schreiben Sie ein Beispielereignis um, ohne es zu versenden."
+      },
+      {
+        "endpoint": "/api/notifications/provider-models",
+        "method": "POST",
+        "use": "Listen Sie verfügbare Modelle für den ausgewählten AI-Anbieter auf."
+      },
+      {
+        "endpoint": "/api/notifications/send",
+        "method": "POST",
+        "use": "Emittieren Sie ein Ereignis von außen (benutzerdefinierte Integrationen)."
+      },
+      {
+        "endpoint": "/api/notifications/history",
+        "method": "GET / DELETE",
+        "use": "Lesen Sie Geschichte mit Filtern; löschen Sie es."
+      },
+      {
+        "endpoint": "/api/notifications/webhook",
+        "method": "POST",
+        "use": "Erhaltet eigene Benachrichtigungen von Proxmox VE. Loopback-Anrufer sind nur ratenbegrenzt; Remote-Anrufer müssen zusätzlich den <code>X-Webhook-Secret</code>-Header, die <code>X-ProxMenux-Timestamp</code>-Neuheitsprüfung, den Replay-Cache und die optionale IP-Erlaubnisliste bestehen."
+      },
+      {
+        "endpoint": "/api/notifications/proxmox/setup-webhook",
+        "method": "POST",
+        "use": "Registrieren Sie den Monitor als Ziel in <code>/etc/pve/notifications.cfg</code>."
+      },
+      {
+        "endpoint": "/api/notifications/proxmox/cleanup-webhook",
+        "method": "POST",
+        "use": "Entfernen Sie das Monitor-Ziel aus der Benachrichtigungskonfiguration von PVE."
+      },
+      {
+        "endpoint": "/api/notifications/proxmox/read-cfg",
+        "method": "GET",
+        "use": "Zeigen Sie die aktuelle PVE-Benachrichtigungskonfiguration so an, wie PVE sie sieht."
+      }
+    ]
+  },
+  "whereNext": {
+    "heading": "Wohin als nächstes",
+    "items": [
+      {
+        "label": "KI-Assistent",
+        "href": "/docs/monitor/ai-assistant",
+        "tail": "— Anbieter, Modelle, Aufforderungsmodi, Sprachen, Detailebenen pro Kanal."
+      },
+      {
+        "label": "Gesundheitsmonitor",
+        "href": "/docs/monitor/health-monitor",
+        "tail": "— der größte einzelne Produzent von Ereignissen mit eigenen Unterdrückungsdauern pro Kategorie."
+      },
+      {
+        "label": "Architektur",
+        "href": "/docs/monitor/architecture",
+        "tailRich": "- wobei die SQLite-Tabellen (<code>notification_last_sent</code>, <code>notification_history</code>) und der Dispatch-Thread in den breiteren Monitor-Prozess passen."
+      },
+      {
+        "label": "Zugriff und Authentifizierung",
+        "href": "/docs/monitor/access-auth",
+        "tailRich": "— wie API-Token für Skripte geprägt werden, die <code>/api/notifications/send</code> aufrufen."
+      },
+      {
+        "label": "Dashboard System Logs",
+        "href": "/docs/monitor/dashboard/system-logs",
+        "tail": "- die Live-Ansicht des gleichen Journals, das den Journal Watcher füttert."
+      }
+    ]
+  }
+}

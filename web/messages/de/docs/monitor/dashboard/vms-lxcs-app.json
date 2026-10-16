@@ -1,0 +1,245 @@
+{
+  "meta": {
+    "title": "LXC App-Tab: Discovery, Links und Versionsverfolgung | ProxMenux",
+    "description": "Entdecken und registrieren Sie LXC-Anwendungen, erstellen Sie Weblinks und verfolgen Sie optional installierte und verfügbare Versionen."
+  },
+  "header": {
+    "title": "LXC App-Tab: Discovery, Links und Versions-Tracking",
+    "description": "Geben Sie jeder LXC-Anwendung eine dauerhafte Identität, einen Webzugang und einen optionalen Versionsnachweis, ohne die Registrierung an Updates zu koppeln."
+  },
+  "intro": {
+    "p1": "Die Registerkarte <strong>App</strong> zeichnet auf, welche Anwendungen zu einer LXC gehören. Eine Registrierung kann nur einen Namen und einen Weblink enthalten oder auch einen Detektor für installierte Versionen und eine Upstream-Quelle enthalten.",
+    "p2": "Die Prozedur, die die Software ändert, wird separat auf dem <link>Updates tab</link> konfiguriert. Beim Speichern einer App wird niemals ein Installer oder Updater ausgeführt.",
+    "callout": "Registrierung, Versionsverfolgung und Aktualisierung sind drei unabhängige Funktionen. Jeder kann verwendet werden, ohne die anderen beiden zu benötigen.",
+    "dashboardTitle": "Von der Registrierung bis zum Apps Launcher",
+    "dashboard": "Jeder hier gespeicherte Weblink wird auch als Karte im Top-Level <appsLink>Apps tab</appsLink> dargestellt. Diese LXC-Seite bleibt die Quelle der Wahrheit für den Namen, das Logo, die Links und die Versionsverfolgung der Anwendung."
+  },
+  "overview": {
+    "heading": "Was ein Application Record bieten kann",
+    "lead": "Ein einzelner gespeicherter Datensatz kann Folgendes umfassen:",
+    "items": [
+      "Ein Anzeigename und ein themenbewusstes Logo.",
+      "Ein oder mehrere anklickbare Weblinks, die aus der LXC-Adresse, dem Schema und dem gespeicherten Port erstellt wurden.",
+      "Ein optionaler Detektor für die derzeit im LXC installierte Version.",
+      "Eine optionale GitHub, HTTP JSON oder Docker Hub-Quelle für die neueste verfügbare Version.",
+      "Pro-Anwendung Release-Benachrichtigungen und Update-Counter-Einbeziehungspräferenzen.",
+      "Ein entsprechender Abschnitt auf der Registerkarte Updates, auch wenn die Versionsverfolgung deaktiviert ist."
+    ]
+  },
+  "discovery": {
+    "heading": "Cached Discovery und Find Anwendungen",
+    "lead": "Anwendungsvorschläge sind Teil des per-LXC modalen Cache. Der Start-Scan bereitet sie im Hintergrund vor, so dass das Öffnen des App-Tabs zwischengespeicherte Ergebnisse sofort anzeigen kann.",
+    "items": [
+      "Beim Öffnen der Registerkarte App startet <strong>not</strong> einen neuen Katalogscan und fragt den LXC nicht wiederholt ab.",
+      "<strong>Find applications</strong> führt explizit einen neuen Discovery Pass für diesen LXC aus. Verwenden Sie es nach der Installation neuer Software, während ProxMenux bereits läuft.",
+      "Die vorherige Liste bleibt sichtbar, während der explizite Scan ausgeführt wird. Neue Übereinstimmungen werden hinzugefügt, wenn sie beendet sind.",
+      "Wenn keine neue Übereinstimmung gefunden wird, wird das Ergebnis neben den Aktionen angegeben und die <strong>Register-Anwendung</strong> bleibt für die manuelle Eingabe verfügbar.",
+      "Das Speichern, Entfernen oder Wiederherstellen einer App aktualisiert den gleichen Cache sofort. Das Starten oder Wiederherstellen eines LXC aktualisiert nur diesen Gast durch sein bestehendes Lebenszyklusereignis."
+    ],
+    "callout": "Ein Vorschlag ist keine Registrierung. Es bleibt schreibgeschützt, bis <strong>Register</strong> gedrückt und das Formular gespeichert wird."
+  },
+  "registration": {
+    "heading": "Registrierung eines Antrags",
+    "lead": "Ein erkannter Vorschlag und eine manuelle Aufzeichnung verwenden denselben Editor:",
+    "steps": [
+      "Drücken Sie <strong>Register</strong> auf einen Vorschlag oder <strong>Register-Anwendung</strong>, um aus dem Katalog auszuwählen oder einen benutzerdefinierten Namen einzugeben.",
+      "Überprüfen Sie den Namen und das Logo, die im Katalog vorgeschlagen werden.",
+      "Fügen Sie die erforderlichen Weblinks hinzu. Detected Listening Ports werden als Abkürzungen angeboten, aber keiner wird automatisch gespeichert.",
+      "Lassen Sie <strong>Track-Upstream-Version</strong> für einen Link-Only-Datensatz deaktiviert oder aktivieren Sie ihn und überprüfen Sie den Detektor für die installierte Version und die Upstream-Quelle.",
+      "Verwenden Sie <strong>Test-Detektor</strong>, wenn das Tracking aktiviert ist, und speichern Sie dann den Datensatz.",
+      "Drücken Sie <strong>Done</strong> nach der Bearbeitung. Die Registerkarten App und Updates verwenden den aktualisierten zwischengespeicherten Datensatz wieder."
+    ]
+  },
+  "catalog": {
+    "heading": "Kataloggestützte Registrierung",
+    "lead": "Der Katalog liefert Standardwerte, aber der gespeicherte Datensatz bleibt editierbar.",
+    "items": [
+      "Suchergebnisse können den kanonischen Namen, das Logo und die gemeinsamen Web-Ports vorfüllen.",
+      "Bekannte Versionsdetektoren basieren auf echten Paketnamen, Binärdateien, Dateien, Python-Distributionen, OCI-Beschriftungen oder Befehlen und nicht auf einer universellen <code>/root/.app</code>-Annahme.",
+      "Verifizierte Laufzeitüberschreibungen haben Vorrang, wenn eine Installation einen Pfad verwendet, der sich von den Metadaten des Installationsprogramms unterscheidet.",
+      "Proxmox VE Helper-Scripts-Marker wie <code>/root/.slug</code> bleiben ein Kompatibilitätssignal für neuere Helferinstallationen, nicht der einzige Detektor.",
+      "Jeder vorgeschlagene Wert kann vor dem Speichern bearbeitet werden, um offizielle Installateure und manuelle Installationen abzudecken."
+    ]
+  },
+  "docker": {
+    "heading": "Wie Docker LXCs dargestellt sind",
+    "lead": "Für einen LXC, dessen primäre Plattform Docker ist, ist <strong>Docker</strong> die auf LXC registrierte Anwendung.",
+    "items": [
+      "Eine containerisierte Arbeitslast wie Portainer, Frigate oder Vaultwarden wird nicht als unabhängige native LXC-Anwendung vorgeschlagen.",
+      "Docker-Dienste mit veröffentlichten TCP-Ports werden im Docker-Editor als optionale Weblinks angeboten.",
+      "Jeder vorgeschlagene Link zeigt den Service, Host-Port und Container-Port an. Nur Links, die ein Webinterface bereitstellen, sollten gespeichert werden.",
+      "Das globale Docker-Logo wird verwendet, wenn ein Link kein bestimmtes Logo hat. Ein Per-Link-Logo überschreibt es, wenn eines konfiguriert ist.",
+      "Nachdem Docker registriert wurde, werden Docker Engine und Bildaktualisierungen zusammen im Abschnitt auf der Registerkarte Updates angezeigt."
+    ],
+    "callout": "Diese Struktur verhindert, dass ein Docker-Workload wie eine direkt im LXC installierte Software aussieht, während gleichzeitig schnelle Verbindungen zu seinen Schnittstellen erhalten bleiben."
+  },
+  "webLinks": {
+    "heading": "Weblinks und Logos",
+    "lead": "Weblinks funktionieren mit oder ohne Versionsverfolgung.",
+    "items": [
+      "Jeder Link speichert ein Schema, einen Port, eine optionale Beschreibung und eine optionale Logo-URL.",
+      "Die angezeigte URL verwendet die aktuelle Adresse, die bereits für den LXC erkannt wurde; die Adresse wird nicht in jedem App-Record dupliziert.",
+      "Ein Link ohne eigenes Logo fällt auf das App-Level-Logo zurück.",
+      "Mehrere Links können eine Admin-Schnittstelle, API, eine sekundäre Benutzeroberfläche oder einen anderen Endpunkt derselben App darstellen.",
+      "Eine nur gespeicherte Link-App wird auch in Updates angezeigt, wo ein benutzerdefinierter Updater später konfiguriert werden kann."
+    ]
+  },
+  "tracking": {
+    "heading": "Optionale Versionsverfolgung",
+    "lead": "Tracking kombiniert einen Detektor mit installierter Version mit einer optionalen Upstream-Quelle. Beide Seiten werden unabhängig voneinander überprüft.",
+    "colMethod": "Installierte Versionsmethode",
+    "colUse": "Verwenden",
+    "detectorRows": [
+      {
+        "method": "dpkg / apk",
+        "use": "Lies die installierte Paketversion aus Debian, Ubuntu oder Alpine Paket-Metadaten."
+      },
+      {
+        "method": "binary",
+        "use": "Führt einen absoluten binären Pfad oder einen Befehlsnamen mit Versionsargumenten aus."
+      },
+      {
+        "method": "file + regex",
+        "use": "Lies eine echte Datei und extrahiert die Version mit einer Capture-Gruppe."
+      },
+      {
+        "method": "docker label / docker exec",
+        "use": "Lesen Sie ein OCI-Versionslabel oder führen Sie einen Versionsbefehl in einem Docker-Container aus."
+      },
+      {
+        "method": "python distribution",
+        "use": "Verwendet importlib.metadata über den ausgewählten Python-Interpreter."
+      },
+      {
+        "method": "command",
+        "use": "Führt einen erweiterten argv-stil-befehl ohne shell aus und extrahiert die version aus seiner ausgabe."
+      },
+      {
+        "method": "manual",
+        "use": "Speichert eine manuell eingegebene Version; sie muss nach dem Upgrade der App geändert werden."
+      },
+      {
+        "method": "OCI image",
+        "use": "Für Container, die von OCI Manager Apps installiert wurden. Lies die Anwendungs- und Bildversionen aus dem Installationsprotokoll und vergleiche den installierten Digest mit dem, den die Registry veröffentlicht; es braucht keine Konfiguration."
+      }
+    ],
+    "sourcesHeading": "Quellen für die verfügbare Version",
+    "sources": [
+      "<strong>GitHub-Repository</strong>: neueste Version oder Tag aus einem öffentlichen <code>owner/name</code>-Repository.",
+      "<strong>HTTP JSON</strong>: ein öffentlicher Endpunkt plus ein gepunkteter Pfad wie <code>data.version</code> oder <code>releases[0].tag_name</code>.",
+      "<strong>Docker Hub</strong>: versionierte Tags, die durch einen regulären Ausdruck gefiltert werden. Eine Live-Vorschau zeigt echte übereinstimmende Tags, bevor der Datensatz gespeichert wird.",
+      "Tags wie <code>latest</code>, <code>stable</code> oder <code>lts</code> enthalten keine Version. Verfolgen Sie diese Bilder, indem Sie stattdessen aus Docker-Bildaktualisierungen verdauen."
+    ],
+    "regexHeading": "Schreiben des Capture-Ausdrucks",
+    "regexLead": "Ein regulärer Detektorausdruck muss die Version in seiner <strong>first capture group</strong> zurückgeben.",
+    "regexRules": [
+      "Passen Sie den Text an, der von der ausgewählten Binär-, Datei-, Befehls- oder Tag-Quelle ausgegeben wird; raten Sie keinen generischen Pfad.",
+      "Entfliehen Sie wörtlichen Punkten als <code>\\.</code>, so dass sie nicht mit beliebigen Zeichen übereinstimmen können.",
+      "Lassen Sie einen führenden <code>v</code> nur zu, wenn die Quelle ihn enthalten kann.",
+      "Fügen Sie Suffixe wie Pre-Release oder Distro-Revisionen nur dann hinzu, wenn sie für den Vergleich aussagekräftig sind.",
+      "Verwenden Sie <strong>Test Detektor</strong> vor dem Speichern und überprüfen Sie, ob die angezeigte installierte Version mit der LXC übereinstimmt."
+    ],
+    "regexExampleLead": "Gemeinsame semantische Versionserfassung:",
+    "regexExample": "v?(\\d+\\.\\d+\\.\\d+)",
+    "regexCallout": "Ein erfolgreiches Regex-Match ist kein Beweis dafür, dass der Detektorpfad korrekt ist. Der Pfad oder das Paket muss auch in der registrierten realen Anlage vorhanden sein."
+  },
+  "updater": {
+    "heading": "Versionsverfolgung und -aktualisierung sind unabhängig",
+    "lead": "Der tab<link>Updates tab</link> erstellt einen App-Bereich, sobald ein Anwendungsdatensatz gespeichert ist.",
+    "items": [
+      "Ein Link-only-Record zeigt an, dass die Versionsverfolgung nicht konfiguriert ist, aber dennoch einen benutzerdefinierten Update-Befehl erhalten kann.",
+      "Eine App mit Tracking, aber ohne ausführbare Methode zeigt eine neutrale Nachricht an, in der ein benutzerdefinierter Befehl angefordert wird.",
+      "Eine App mit einem verifizierten Proxmox VE Helper-Scripts-Wrapper kann diesen integrierten Updater auch dann verwenden, wenn die Registrierung über einen Weblink begann.",
+      "Durch Hinzufügen oder Bearbeiten eines Updaters wird der Detektor oder die Upstream-Quelle, die auf der Registerkarte App gespeichert ist, nicht geändert."
+    ]
+  },
+  "states": {
+    "heading": "Versionsangaben auf der App-Karte",
+    "colState": "Staat",
+    "colDisplay": "Anzeige",
+    "colMeaning": "Bedeutung",
+    "rows": [
+      {
+        "state": "Update verfügbar",
+        "display": "Verfügbare Version in lila mit einem nach oben gerichteten Symbol",
+        "meaning": "Die installierten und Upstream-Versionen unterscheiden sich."
+      },
+      {
+        "state": "Aktuell",
+        "display": "Installierte und neueste Versionen ohne den lila Alarm",
+        "meaning": "Der letzte Check fand keine neuere Upstream-Version."
+      },
+      {
+        "state": "Anhängiges Tracking",
+        "display": "Überprüfung oder anhängiger Staat",
+        "meaning": "Der Datensatz ist konfiguriert, hat aber noch nicht beide Prüfungen abgeschlossen."
+      },
+      {
+        "state": "Tracking deaktiviert",
+        "display": "Nur Weblinks; kein Versionsvergleichsblock",
+        "meaning": "Der Datensatz bleibt gültig und kann immer noch einen Updater haben."
+      },
+      {
+        "state": "Prüffehler",
+        "display": "Bernstein Erklärung im Inneren der Karte",
+        "meaning": "Der zuvor gespeicherte Zustand bleibt sichtbar, während der Detektor oder Upstream-Fehler gemeldet wird."
+      }
+    ]
+  },
+  "management": {
+    "heading": "Verwalten von gespeicherten und vorgeschlagenen Apps",
+    "lead": "Die Aktionen am unteren Rand des Tabs haben unterschiedliche Rollen:",
+    "items": [
+      "<strong>Find applications</strong> aktualisiert die Entdeckung nur für diesen LXC.",
+      "<strong>Registrieren Sie eine andere Anwendung</strong> öffnet den Katalog und den manuellen Editor, ohne den LXC neu zu scannen.",
+      "<strong>Edit</strong> zeigt Aktionen pro Karte Entfernen, Überprüfen, Benachrichtigen und Bearbeiten von Feldern.",
+      "<strong>Hide</strong> entfernt einen unerwünschten Vorschlag. Versteckte Erkennungen können aus dem Registrierungsbrowser wiederhergestellt werden.",
+      "<strong>Check</strong> aktualisiert den Versionsnachweis der ausgewählten gespeicherten App; es wird nicht nach neuen Apps gesucht."
+    ]
+  },
+  "troubleshooting": {
+    "heading": "Gemeinsame Situationen",
+    "colProblem": "Lage",
+    "colResolution": "Auflösung",
+    "rows": [
+      {
+        "problem": "Software wurde installiert, nachdem ProxMenux gestartet wurde",
+        "resolution": "Press Find Anwendungen. Der explizite Scan aktualisiert zwischengespeicherte Vorschläge für diesen LXC."
+      },
+      {
+        "problem": "Keine Anwendung festgestellt",
+        "resolution": "Registrieren Sie es manuell. Ein Name und ein Weblink sind ausreichend; Tracking kann später hinzugefügt werden."
+      },
+      {
+        "problem": "Der vorgeschlagene Detektor gibt die falsche Version zurück",
+        "resolution": "Öffnen Sie Felder bearbeiten, wählen Sie den realen Paket-, Binär- oder Dateipfad aus und testen Sie den Detektor vor dem Speichern."
+      },
+      {
+        "problem": "Ein Docker Workload wird nicht als LXC App angeboten",
+        "resolution": "Registrieren Sie Docker und fügen Sie die veröffentlichte Benutzeroberfläche des Workloads als Docker-Weblink hinzu. Image-Updates bleiben im Docker Abschnitt."
+      },
+      {
+        "problem": "Eine gespeicherte App hat keinen Update-Button",
+        "resolution": "Öffnen Sie die Registerkarte Updates und konfigurieren Sie die Aktualisierungsmethode. Versions-Tracking allein definiert nicht, wie ein Update installiert wird."
+      }
+    ]
+  },
+  "figures": {
+    "catalog": {
+      "alt": "Anwendungsregistrierungskatalog mit Suchergebnissen, Logos, Ports und Detektorfeldern",
+      "caption": "Katalog-Metadaten beschleunigen die Registrierung, während jeder vorgeschlagene Wert editierbar bleibt."
+    },
+    "webLinks": {
+      "alt": "Gespeicherte LXC-Anwendungskarte mit einem anklickbaren Weblink",
+      "caption": "Ein Link-Only-Record ist gültig: Das Versions-Tracking kann deaktiviert bleiben und ein Updater kann unabhängig hinzugefügt werden."
+    },
+    "tracking": {
+      "alt": "Optional installierter Versionsdetektor und vorgelagerte Quellfelder",
+      "caption": "Die Installationsversionserkennung und die Upstream-Quelle werden separat konfiguriert und getestet."
+    },
+    "card": {
+      "alt": "Gespeicherte Anwendungskarte mit installierten und verfügbaren Versionen sowie einem Weblink",
+      "caption": "Die Karte kombiniert Identität, Versionsnachweis und Webzugriff, ohne Update-Aktionen von diesem Tab aus auszuführen."
+    }
+  }
+}

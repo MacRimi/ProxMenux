@@ -1,0 +1,206 @@
+{
+  "meta": {
+    "title": "ProxMenux — Menügesteuertes Tool für Proxmox VE Management | Open Source",
+    "description": "Open-Source, menügesteuertes Tool für Proxmox VE Management. ProxMenux besteht aus zwei Teilen, die sich ein Projekt teilen: eine CLI/TUI für Post-Installations-Tweaks, VM und LXC Erstellung, GPU und Coral TPU Passthrough-, Festplatten-, Speicher- und Netzwerk-Workflows; und ein selbst gehostetes Web-Dashboard mit proaktiver Gesundheitsüberwachung, Benachrichtigungen an Telegram / Discord / E-Mail, AI Umschreiben und ein REST API.",
+    "ogTitle": "ProxMenux — Menügesteuertes Tool für Proxmox VE Management",
+    "ogDescription": "Open-Source CLI/TUI plus ein Web-Dashboard für Proxmox VE. Post-Installation, VMs, GPUs, Festplatten, Netzwerk, Speicher, Sicherheit - und ein separater Monitor mit Gesundheitschecks, Benachrichtigungen, AI-Rewrite und REST API.",
+    "twitterTitle": "ProxMenux — Menügesteuertes Tool für Proxmox VE Management",
+    "twitterDescription": "Open Source CLI/TUI + Web-Dashboard für Proxmox VE. Health Monitor, Benachrichtigungen, AI rewrite, REST API."
+  },
+  "header": {
+    "title": "Einleitung",
+    "description": "ProxMenux ist ein Open-Source-Tool für Proxmox VE. Zwei Teile teilen sich das gleiche Projekt: ein CLI/TUI, der den gängigsten Host, VM, Container-, Speicher-, Netzwerk- und Sicherheits-Workflows umfasst; und ein selbst gehostetes Web-Dashboard mit proaktiver Gesundheitsüberwachung, Benachrichtigungen, einem AI-Rewrite-Hook und einem REST API.",
+    "section": "Einleitung"
+  },
+  "hero": {
+    "tagline": "<strong>Ein Menü, jeder Workflow.</strong> Alles, was normalerweise eine Registerkarte für das Wiki, zwei Forum-Threads und eine kopierte Befehlssequenz öffnet, wird als nummerierte Option angezeigt, die Sie in Sekunden ausführen können.",
+    "audience": "Gebaut für <em>first-time</em> Proxmox-Benutzer (sichere, eigenverantwortliche Standardeinstellungen) und <em>experienced</em> Administratoren (weniger Tastenanschläge für Aufgaben, die sie hundertmal ausgeführt haben). Kostenlose und Open Source unter einer aktiven Community auf <github>GitHub</github>."
+  },
+  "twoProducts": {
+    "heading": "Zwei Produkte, ein Projekt",
+    "intro": "ProxMenux Schiffe als zwei unabhängige Stücke, die den gleichen Quellbaum teilen. Der Installer stellt beides bereit - sie leben Seite an Seite auf dem Host und sind nicht voneinander abhängig:",
+    "scripts": {
+      "title": "ProxMenux Scripts",
+      "body": "Das Original CLI/TUI, das Sie mit <code>menu</code> starten. Neun Funktionsbereiche, die Post-Installationsoptimierungen, VM und LXC Erstellung, GPU und Coral TPU Durchgang, Festplatten, Speicher, Netzwerk, Sicherheit, Dienstprogramme sowie eine kuratierte Befehlsreferenz umfassen. Läuft in jedem Terminal — lokal, SSH oder Web."
+    },
+    "monitor": {
+      "title": "ProxMenux-Monitor",
+      "body": "Selbst gehostetes Web-Dashboard (AppImage). Echtzeit-Host-Metriken, ein proaktiver Gesundheitsmonitor, Benachrichtigungen, ein optionaler AI-Rewrite-Hook (sechs Anbieter), ein integriertes Web-Terminal und ein REST API. Aktivieren aus dem Skriptmenü (Einstellungen → ProxMenux Monitor)."
+    },
+    "calloutTitle": "Worauf ProxMenux reagiert",
+    "calloutIntro": "Drei Schichten, die alle aus dem gleichen Projekt erreichbar sind:",
+    "layers": [
+      "<strong>Der Proxmox Host</strong> — Repos, Pakete, Netzwerk, ZFS, CephKernel, Beobachtbarkeit.",
+      "<strong>Virtuelle Maschinen (VMs)</strong> — Schöpfung, GPU Passthrough, OVA / OVF Import / Export, Disk Passthrough.",
+      "<strong>LXC Container</strong> — Erstellung, Mount Points, GPU / TPU Passthrough, NFS / Samba Clients und Server."
+    ]
+  },
+  "scriptsSection": {
+    "heading": "ProxMenux Scripts - was Sie bekommen",
+    "intro": "Neun Funktionsbereiche mit jeweils eigenem Menü innerhalb von <code>menu</code> und einer Detailseite in der Dokumentation. Klicken Sie auf eine beliebige Karte, um direkt zur Übersicht dieses Abschnitts zu springen.",
+    "items": [
+      {
+        "title": "Nach der Installation",
+        "description": "Optimierungen für ein neu installiertes Proxmox-Setup: Repos, Kernel, Zeitsynchronisation, Basissicherheit, Performance, mit reversiblen Optionen.",
+        "icon": "Server",
+        "href": "/docs/post-install"
+      },
+      {
+        "title": "GPUs und Coral TPU",
+        "description": "NVIDIA, Intel iGPU, AMD und Coral TPU führen zu VMs und LXC-Containern, wobei zwischen VM und LXC umgeschaltet wird.",
+        "icon": "Cpu",
+        "href": "/docs/hardware/nvidia-host"
+      },
+      {
+        "title": "VM erstellen",
+        "description": "Wizards für NAS-Systeme, Windows und Linux - mit sinnvollen Standardeinstellungen für Hardware, Speicher und Netzwerk.",
+        "icon": "Server",
+        "href": "/docs/create-vm"
+      },
+      {
+        "title": "Festplattenmanager",
+        "description": "Importieren Sie physische Festplatten in VMs und LXC, Format und Wischen, SMART-Tests, qcow2 / vmdk / vdi Bildimport - aus einem Menü.",
+        "icon": "HardDrive",
+        "href": "/docs/disk-manager"
+      },
+      {
+        "title": "Speicher und Freigaben",
+        "description": "Registrieren Sie NFS, Samba (CIFS), iSCSI und lokalen Speicher in Proxmox; teilen Sie Ordner zwischen Host- und LXC-Containern über Bindehalterungen oder Netzwerkprotokolle.",
+        "icon": "Boxes",
+        "href": "/docs/storage-share"
+      },
+      {
+        "title": "Netzwerk",
+        "description": "Read-only-Diagnose, Analyse-dann-Vorschlag Workflows und geführte Reparaturen für /etc/network/interfaces. Mandatory Backups vor jeder Änderung.",
+        "icon": "Network",
+        "href": "/docs/network"
+      },
+      {
+        "title": "Sicherheit",
+        "description": "Fail2Ban (Intrusion Prevention für SSH und die Web-Benutzeroberflächen) und Lynis (Hardening Audit) - installieren und verwalten Sie mit sinnvollen Standardeinstellungen.",
+        "icon": "Shield",
+        "href": "/docs/security"
+      },
+      {
+        "title": "Dienstprogramme",
+        "description": "Erstellen Sie Windows ISOs aus UUP Dump, installieren Sie CLI-Tools, führen Sie ein sicheres Systemupdate aus, führen Sie ein PVE 8 → 9 Upgrade durch, exportieren und importieren Sie OVA / OVF-VMs.",
+        "icon": "Wrench",
+        "href": "/docs/utils"
+      },
+      {
+        "title": "Befehlsnummer",
+        "description": "Kuratierter Katalog von Linux- und Proxmox-Befehlen, geordnet nach Thema — System, VM/CT (qm, pct), Storage, Network, ZFS, GPU Passthrough, Backup, tägliche CLI-Tools.",
+        "icon": "BookOpen",
+        "href": "/docs/help-info"
+      }
+    ]
+  },
+  "monitorSection": {
+    "heading": "ProxMenux Monitor - was Sie bekommen",
+    "intro": "Das Web Dashboard Produkt. Selbst gehostet auf dem Proxmox-Host auf TCP 8008. Klicken Sie auf eine beliebige Karte, um direkt zur Seite dieses Abschnitts zu springen, oder lesen Sie zuerst die <link>Monitor-Übersicht</link>.",
+    "items": [
+      {
+        "title": "Gesundheitsmonitor",
+        "description": "Zehn Kategorien scannten alle 5 Minuten (CPU, Speicher, Festplatten/SMART, Netzwerk, VMs, Dienste, Protokolle, Updates, Sicherheit) mit Schweregrad und Unterdrückung pro Kategorie.",
+        "icon": "Activity",
+        "href": "/docs/monitor/health-monitor"
+      },
+      {
+        "title": "Benachrichtigungen",
+        "description": "Telegram, Discord, Email, Gotify, Pushover und Apprise (mehrkanalig) — mit Deduplizierung, Cooldown, Burstaggregation, ruhigen Stunden und einer vollständigen Historie.",
+        "icon": "Bell",
+        "href": "/docs/monitor/notifications"
+      },
+      {
+        "title": "KI-Assistent",
+        "description": "Optionales Umschreiben von Benachrichtigungen in einfacher Sprache. Sechs Anbieter: OpenAI, Anthropic Claude, Google Gemini, Groq, OpenRouter, lokales Ollama. 12 Sprachen.",
+        "icon": "Sparkles",
+        "href": "/docs/monitor/ai-assistant"
+      },
+      {
+        "title": "Webterminal",
+        "description": "Browserbasierte interaktive Shell auf dem Proxmox-Host sowie ein separates ProxMenux Scripts-Terminal, das das Menü über die Web-Benutzeroberfläche ausführt.",
+        "icon": "Terminal",
+        "href": "/docs/monitor/dashboard/terminal"
+      },
+      {
+        "title": "REST API",
+        "description": "HTTP-Endpunkte für System, Gesundheit, Speicher / SMART, Netzwerk, VMs, Benachrichtigungen und Sicherheit - nützlich für Homepage, Home Assistant, Prometheus oder benutzerdefinierte Skripte.",
+        "icon": "Code2",
+        "href": "/docs/monitor/api"
+      },
+      {
+        "title": "Integrationen",
+        "description": "Eingeborene Proxmox VE webhook, Prometheus Kratzer, Uptime Kuma Sonde, Homepage / Home Assistant / Glance Widgets, n8n / Zapier fließt, Tailscale Secure Gateway.",
+        "icon": "Plug",
+        "href": "/docs/monitor/integrations"
+      }
+    ]
+  },
+  "installPaths": {
+    "heading": "Trassen installieren",
+    "intro": "Der Installer stellt Scripts und Monitor auf einmal bereit. Scripts hat zwei Varianten - Übersetzung oder Leichtigkeit - und der Monitor wird als eigenständiges AppImage installiert, das Sie später aus dem Menü aktivieren:",
+    "headerPath": "Install path",
+    "headerBundles": "Was es bündelt",
+    "headerWhen": "Wenn Sie es auswählen würden",
+    "rows": [
+      {
+        "pathRich": "<strong>Skripte: Übersetzung</strong>",
+        "bundles": "CLI/TUI + Python venv + googletrans (Englisch, Spanisch, Französisch, Deutsch, Italienisch, Portugiesisch)",
+        "when": "Mehrsprachige Menüs, nicht englischsprachige Sprecher"
+      },
+      {
+        "pathRich": "<strong>Scripts: Normal (leicht)</strong>",
+        "bundles": "CLI/TUI nur Englisch, kleinerer Footprint, kein Python venv",
+        "when": "Die meisten Benutzer - Proxmox-Dokumente sind sowieso Englisch"
+      },
+      {
+        "pathRich": "<strong>Monitor</strong>",
+        "bundles": "Eigenständiger AppImage auf TCP 8008. Unabhängige Installation – kann über das Skriptmenü aktiviert werden oder AppImage direkt ausführen.",
+        "when": "Wenn ein Web-Dashboard für den Host nützlich ist - Telefon, Tablet, Browser-Tab"
+      }
+    ],
+    "outro": "Detaillierte Installationsbefehle und Voraussetzungen finden Sie auf der <link>Installationsseite</link>."
+  },
+  "warnSource": {
+    "title": "Überprüfen Sie immer, welche Skripte Sie aus dem Internet ausführen",
+    "body": "ProxMenux ist Open Source und jedes Skript kann auf GitHub überprüft werden. Bevor Sie den Installationsbefehl ausführen, schauen Sie sich die Quelle an. Machen Sie dasselbe mit jedem anderen Automatisierungstool.",
+    "sourceLabel": "ProxMenux Quelle ansehen",
+    "cocLabel": "Verhaltenskodex"
+  },
+  "next": {
+    "heading": "Wohin Sie als nächstes gehen",
+    "items": [
+      {
+        "lead": "<strong>Neu zu ProxMenux?</strong>",
+        "linkHref": "/docs/installation",
+        "linkLabel": "Installieren Sie es in einem Befehl",
+        "tailRich": "und laufen <code>menu</code>."
+      },
+      {
+        "lead": "<strong>Gerade installiert Proxmox?</strong> Starten Sie mit dem",
+        "linkHref": "/docs/post-install",
+        "linkLabel": "Skript nach der Installation",
+        "tail": "."
+      },
+      {
+        "lead": "<strong>Will ein Web-Dashboard?</strong>",
+        "linkHref": "/docs/monitor",
+        "linkLabel": "ProxMenux-Monitor",
+        "tail": "deckt ab, was es zeigt, wie es gebaut wird und wie man es sichert."
+      },
+      {
+        "lead": "<strong>Auf der Suche nach einem bestimmten Befehl?</strong>",
+        "linkHref": "/docs/help-info",
+        "linkLabel": "Befehlsnummer",
+        "tail": "ist ein kuratierter Katalog, der nach Themen geordnet ist, mit Kopierschaltflächen."
+      },
+      {
+        "lead": "<strong>Wollen Sie längere Anleitungen?</strong> Die",
+        "linkHref": "/guides",
+        "linkLabel": "Führungsabschnitt",
+        "tail": "umfasst Coral TPU, NVIDIA passthrough, Kodi LXC und mehr."
+      }
+    ]
+  }
+}

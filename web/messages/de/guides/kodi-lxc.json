@@ -1,0 +1,70 @@
+{
+  "meta": {
+    "title": "Installieren Sie Kodi in einem LXC mit GPU Acceleration | ProxMenux Guides",
+    "description": "Führen Sie Kodi in einem privilegierten LXC-Container auf Proxmox VE aus, setzen Sie die Host-iGPU- und USB-Eingangsgeräte frei und verwandeln Sie den Proxmox-Server in ein All-in-One-Mediacenter, das direkt mit einem Fernseher verbunden ist.",
+    "ogTitle": "Installieren Sie Kodi in einem LXC mit GPU Acceleration",
+    "ogDescription": "Führen Sie Kodi in einem privilegierten LXC auf Proxmox VE mit Host iGPU und USB-Eingangsdurchgang aus - verwandeln Sie den Server in ein All-in-One-Mediacenter."
+  },
+  "header": {
+    "title": "Installieren Sie Kodi in einem LXC und verbinden Sie es mit einem Monitor / Fernseher mit GPU Beschleunigung",
+    "description": "Führen Sie Kodi in einem privilegierten LXC-Container auf Proxmox VE aus, setzen Sie die Host-iGPU- und USB-Eingangsgeräte frei und verwandeln Sie den Proxmox-Server in ein All-in-One-Mediacenter, das direkt mit einem Fernseher verbunden ist.",
+    "section": "Leitfäden"
+  },
+  "intro": {
+    "calloutTitle": "Hinweis",
+    "calloutBody": "Dieses Handbuch verwendet ein externes Community-Skript, um das Kodi LXC zu booten. Die GPU-Seite des Setups (Übergabe des Hosts iGPU in den Container) wird auch durch den automatisierten ProxMenux-Fluss abgedeckt: <strong>GPUs und Coral-TPU → GPU zu LXC</strong> im ProxMenux-Menü hinzufügen – übernimmt die <code>/dev/dri</code>-Verdrahtung + Treiberinstallation im CT. Das Skript unten bootstraps zusätzlich Kodi selbst und den Autostart auf <code>tty7</code>. Verwenden Sie es, wenn Sie ein schlüsselfertiges Medienzentrum LXC wünschen; Verwenden Sie das <gpuLink>ProxMenux flow</gpuLink>, wenn Sie nur GPU-Zugang für ein CT benötigen, das Sie von Hand eingerichtet haben.",
+    "credit": "Original Kodi LXC Skript erstellt von <authorLink>mrrudy</authorLink>.",
+    "stepsTitle": "Was du tun wirst",
+    "steps": [
+      "Erstellen Sie einen privilegierten LXC mit Kodi (Script-gesteuert).",
+      "Verdrahten Sie Ihre USB-Tastatur, Maus oder Ihren Controller mit dem CT.",
+      "(Optional) Aktualisieren Sie Kodi auf die neueste Version des team-xbmc PPA."
+    ]
+  },
+  "createCt": {
+    "heading": "1. Erstellen Sie den Kodi LXC",
+    "body": "Der CT muss <strong>privileged</strong> sein, damit er auf USB-Eingangsgeräte (Tastaturen, Fernbedienungen, Controller) zugreifen kann. Das Skript verarbeitet Privilege Flags + GPU Verdrahtung + Kodi Installation + Autostart auf <code>tty7</code>:",
+    "code": "bash -c \"$(wget -qLO - https://raw.githubusercontent.com/mrrudy/proxmoxHelper/main/ct/kodi-v1.sh)\"",
+    "after": "Seien Sie geduldig - es dauert eine Weile, um zu installieren. Wenn es fertig ist und Kodi auf <code>tty7</code> startet, können Sie Ihren Monitor oder Fernseher direkt an den HDMI / DisplayPort-Ausgang des Hosts anschließen und Sie sollten die Kodi-Benutzeroberfläche sehen."
+  },
+  "addInput": {
+    "heading": "2. Hinzufügen einer Tastatur, Maus oder USB-Controller",
+    "body": "Eingabegeräte leben unter <code>/dev/input/</code> auf dem Host. Nennen Sie die Hauptnummer:",
+    "listCode": "ls -l /dev/input",
+    "imageAlt": "Liste der Eingabegeräte",
+    "afterList": "Nehmen Sie die erste Spaltennummer (im Beispiel: <code>13</code>). Stoppen Sie die Kodi LXC und bearbeiten Sie dann ihre Konfiguration (ersetzen Sie <code>'<'CTID'>'</code> durch die Container-ID - zum Beispiel <code>102</code>):",
+    "editCode": "nano /etc/pve/lxc/'<'CTID'>'.conf",
+    "addLines": "Hinzufügen (passen Sie <code>13</code> an das an, was Sie auf dem <strong>your</strong>-Host gesehen haben):",
+    "configCode": "lxc.cgroup2.devices.allow = c 13:* rwm\nlxc.mount.entry: /dev/input dev/input none bind,optional,create=dir",
+    "imageConfigAlt": "LXC Konfiguration",
+    "save": "Speichern (<code>Ctrl+X</code>) und starten Sie <strong>nur den Container</strong> – Sie müssen nicht den gesamten Proxmox-Host neu starten:",
+    "restartCode": "pct restart '<'CTID'>'",
+    "plug": "Stecken Sie die Tastatur / Maus / Controller und Kodi sollte darauf reagieren."
+  },
+  "updateKodi": {
+    "heading": "3. (Optional) Update Kodi auf die neueste Version",
+    "calloutTitle": "Wichtig",
+    "calloutBody": "Das team-xbmc PPA ist <strong>Ubuntu-only</strong>. Wenn das Kodi LXC auf einer Debian-Vorlage basiert, ist <code>add-apt-repository</code> nicht verfügbar und das PPA funktioniert nicht. Das mrrudy-Script ist standardmäßig in einer Ubuntu-Vorlage, daher sollte dies normalerweise gelten. Um zu überprüfen: <code>cat /etc/os-release</code> im Container - suchen Sie nach <code>NAME=\"Ubuntu\"</code>.",
+    "body": "Innerhalb des Containers (<code>pct enter '<'CTID'>'</code>):",
+    "code": "sudo add-apt-repository ppa:team-xbmc/ppa\nsudo apt update\nsudo apt install kodi kodi-bin",
+    "after": "Starten Sie den Container neu, wenn er fertig ist; Beim Booten haben Sie das neueste Kodi."
+  },
+  "screenshots": {
+    "heading": "Bildschirmfotos",
+    "image1Alt": "Kodi-Schnittstelle 1",
+    "image2Alt": "Kodi-Schnittstelle 2"
+  },
+  "troubleshoot": {
+    "heading": "Fehlerbehebung",
+    "items": [
+      "<strong>Kodi LXC startet, aber nichts auf dem Fernseher: </strong> der CT hat die iGPU möglicherweise nicht geerbt. Bestätigen Sie mit <code>ls /dev/dri</code> im Container (Sie sollten <code>card0</code>, <code>renderD128</code> sehen). Wenn leer, wurde der GPU Passthrough nicht angewendet – führen Sie das Skript erneut aus oder verwenden Sie das ProxMenux <strong>Add GPU to LXC</strong> Menü.",
+      "<strong>Keyboard / Maus nach Neustart nicht erkannt: </strong> die Hauptzahl für <code>/dev/input</code> geändert (selten, aber nach Kernel-Updates passiert). Führen Sie <code>ls -l /dev/input</code> erneut auf dem Host aus und aktualisieren Sie die <code>lxc.cgroup2.devices.allow</code>-Linie.",
+      "<strong>Hardware-beschleunigte Wiedergabe verwendet CPU anstelle von GPU: </strong> installiert oder aktualisiert VA-API-Treiber im Container (<code>intel-media-va-driver</code> für neuere Intel iGPUs, <code>i965-va-driver</code> für ältere, <code>mesa-va-drivers</code> auf AMD).",
+      "<strong><code>add-apt-repository: command not found</code>: </strong> der Container ist Debian, nicht Ubuntu. Verwenden Sie entweder die Debian Kodi-Pakete (älter, aber stabil) oder erstellen Sie das CT aus einer Ubuntu-Vorlage."
+    ]
+  },
+  "further": {
+    "heading": "Weiterlesen",
+    "konpatRich": "<konpatLink>Konpats Blogpost</konpatLink> — zusätzlicher Kontext auf Intel iGPU Passthrough in LXC."
+  }
+}

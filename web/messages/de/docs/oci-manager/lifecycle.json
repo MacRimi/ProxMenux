@@ -1,0 +1,499 @@
+{
+  "meta": {
+    "title": "Installieren, Aktualisieren und Ändern | ProxMenux",
+    "description": "Der Instanzvertrag eines OCI-Containers und die Operationen, die ihn verwenden: Aktualisieren, Ändern, Entfernen, Wiederherstellen eines unterbrochenen Vorgangs und Wiederherstellen nach einer Wiederherstellung auf diesem oder einem anderen Host."
+  },
+  "header": {
+    "title": "Installation, Aktualisierung und Änderung",
+    "description": "Jede Instanz behält einen reproduzierbaren Vertrag, so dass ihre Rootfs ersetzt werden können, ohne die Konfiguration oder persistente Daten zu verlieren.",
+    "section": "Apps des OCI-Managers"
+  },
+  "sections": [
+    {
+      "id": "contract",
+      "title": "Der Instanzvertrag",
+      "blocks": [
+        {
+          "p": "Nach einer Installation wird die effektive Konfiguration in <code>/usr/local/share/proxmenux/oci/instances/VMID/oci-compose.json</code> gespeichert. Es ist keine Kopie der ursprünglichen Compose-Datei: Es ist der reproduzierbare Vertrag des LXC, der auf diesem Host existiert."
+        },
+        {
+          "code": {
+            "code": "instances/\n└── 105/\n    └── oci-compose.json\n        ├── image and resolved digest\n        ├── resources and network\n        ├── environment (secrets protected)\n        ├── container disks and host directories\n        ├── hardware profile and devices\n        ├── console log and terminal mode\n        └── stack membership and lifecycle"
+          }
+        },
+        {
+          "p": "Eine Kopie des Vertrages reist innerhalb des Containers, in <code>/.proxmenux/oci-record.json</code>, lesbar nur durch root des Containers, so dass ein Backup des Containers immer den Vertrag trägt, den es in diesem Moment hatte. Eine zweite Kopie wird in <code>/etc/pve/priv/proxmenux/oci</code> aufbewahrt, die jeder Knoten eines Clusters teilt und nur root des Hosts liest. Beides wird nach jeder Installation, Aktualisierung und Änderung geschrieben."
+        }
+      ]
+    },
+    {
+      "id": "manage",
+      "title": "Verwalten installierter OCI-Anwendungen",
+      "intro": "Diese Option des Hauptbildschirms listet die registrierten Instanzen mit ihrer Anwendung und ihrem Bild auf. Jeder wird vor jeder Aktion gegen seinen Vertrag geprüft; ein CT, der nicht mehr mit seinem Datensatz übereinstimmt, wird weder geändert noch gelöscht. Das gleiche Update und der gleiche Editor werden auf der Registerkarte Updates von <monitorLink>ProxMenux Monitor</monitorLink> angeboten.",
+      "blocks": [
+        {
+          "table": {
+            "headers": [
+              "Option",
+              "Was sich ändert",
+              "Was gehalten wird"
+            ],
+            "rows": [
+              [
+                "Aktualisieren Sie das Bild mit der gespeicherten Konfiguration",
+                "Die Rootfs werden durch das Bild ersetzt, das der gespeicherte Kanal heute veröffentlicht",
+                "Vertrag, Containerplatten, Hostverzeichnisse, Netzwerk und Geräte"
+              ],
+              [
+                "Ändern: Ressourcen, Netzwerk, Pfade und GPU bearbeiten",
+                "Der Editor beginnt mit dem aktuellen Vertrag; der CT wird mit den Änderungen umgebaut",
+                "Die Daten von Container-Disks und Host-Verzeichnissen"
+              ],
+              [
+                "Watchdog: Neustart der Anwendung, wenn sie abstürzt",
+                "Ob die Anwendung erneut gestartet wird, wenn sie von selbst aufhört. Nichts wird wieder aufgebaut",
+                "Die gesamte Installation; nur die Wahl ist im Vertrag gespeichert"
+              ],
+              [
+                "Entfernen: Löschen Sie die Anwendung und ihre Container",
+                "Der LXC oder jedes Mitglied eines Stacks und seine Verträge werden gelöscht",
+                "Host-Verzeichnisse mit ihren Inhalten"
+              ]
+            ]
+          }
+        },
+        {
+          "p": "Für eine Multicontainer-Anwendung bietet das Menü <strong>Update jeden Container der Anwendung</strong>, <strong>Modify zusätzliche Pfade und Geräte</strong>, <strong>Erstellen Sie jeden Container mit seiner gespeicherten Konfiguration</strong>, dem Watchdog und dem Entfernen. Modify fügt oder entfernt die zusätzlichen Pfade und Geräte des Anwendungscontainers, ohne etwas neu zu erstellen, und ändert in Immich, was die Erkennung ausführt. Recreate rekonstruiert jeden Container aus dem Bild, mit dem er installiert wurde, ohne nach einem neueren zu suchen."
+        },
+        {
+          "figure": {
+            "src": "/oci-manager/manage-menu.png",
+            "alt": "Liste der installierten OCI-Anwendungen und der Optionen zum Aktualisieren, Ändern und Entfernen",
+            "caption": "Verwalten Sie installierte OCI-Anwendungen."
+          }
+        }
+      ]
+    },
+    {
+      "id": "update",
+      "title": "Transaktionsaktualisierung",
+      "blocks": [
+        {
+          "mermaid": {
+            "chartCode": "sequenceDiagram\n participant U as {{user}}\n participant P as ProxMenux\n participant R as {{registry}}\n participant X as Proxmox VE\n U->>P: {{update}}\n P->>R: {{resolve}}\n R-->>P: digest\n P->>P: {{verify}}\n P->>X: {{backup}}\n P->>X: {{import}}\n P->>X: {{reapply}}\n X-->>P: healthcheck\n alt {{healthy}}\n  P-->>U: {{commit}}\n else {{failure}}\n  P->>X: Rollback\n  P-->>U: {{restored}}\n end",
+            "labels": {
+              "user": "Benutzer",
+              "registry": "OCI-Register",
+              "update": "Aktualisierungsinstanz",
+              "resolve": "Lösen Sie das Tag",
+              "verify": "Verifizieren von Archiv und Preflight",
+              "backup": "Stoppen und sichern Sie den CT",
+              "import": "Importieren Sie die neuen Rootfs",
+              "reapply": "Den Vertrag erneut anwenden",
+              "healthy": "in Ordnung",
+              "failure": "Ausfall",
+              "commit": "Vertrag mit dem neuen Digest veröffentlicht",
+              "restored": "Frühere Instanz wiederhergestellt"
+            }
+          }
+        },
+        {
+          "list": {
+            "items": [
+              "Wenn die Registry weiterhin den installierten Digest bedient, wird nichts heruntergeladen und die Instanz nicht berührt.",
+              "Das neue Bild wird Schicht für Schicht verifiziert, bevor der CT stoppt. Ein Download, der beschädigt ankommt, wird ein zweites Mal abgerufen; ein bereits zwischengespeichertes Bild, das den Check nicht besteht, wird erneut heruntergeladen.",
+              "Einstellungen, die nach der Installation in Proxmox VE geändert wurden (Speicher, Swap, Kerne, CPU-Limit, CPU-Priorität, Beginn mit dem Knoten), werden beibehalten und in den neuen Vertrag übernommen.",
+              "Die LAN-Schnittstelle, die die Arr-Suite und Multi-Container-Anwendungen hinzufügen (<code>net1</code>) und die Startreihenfolge (<code>startup</code>) werden an den neuen Container zurückgegeben.",
+              "Jeder andere Unterschied zwischen dem CT und seinem Vertrag stoppt das Update, bevor der CT gestoppt wird."
+            ]
+          }
+        },
+        {
+          "flow": {
+            "nodes": [
+              {
+                "label": "Vorher",
+                "detail": "Wurzelmuscheln A\n/config mp0\n/media Hostverzeichnis"
+              },
+              {
+                "label": "Aktualisierung",
+                "detail": "Nur ersetzt\nWurzelwurzeln"
+              },
+              {
+                "label": "Nach",
+                "detail": "Wurzelwurzeln B\n/config mp0\n/media Hostverzeichnis"
+              }
+            ]
+          }
+        },
+        {
+          "p": "Bevor etwas gestoppt wird, überprüft der Vorgang, ob das Backup passt: die Daten, die auf den gesicherten Volumes verwendet werden, plus eine Marge. Es wird neben dem Datensatz der Anwendung auf der Systemdiskette des Hosts geschrieben. Wenn es dort nicht passt, fragt das Menü nach einem anderen Speicher des Hosts, der Backups akzeptiert: Das Backup wird dort gemacht, es wird gelöscht, wenn der Vorgang endet, und die Auswahl wird für diese Anwendung gespeichert, geplante Updates enthalten. Ohne Speicherplatz wird der Vorgang abgelehnt und die Anwendung bleibt so, wie sie war. Das neue Bild wird auf die gleiche Weise überprüft, bevor es heruntergeladen wird."
+        }
+      ]
+    },
+    {
+      "id": "recovery",
+      "title": "Wiederherstellung eines unterbrochenen Vorgangs",
+      "intro": "Ein Update und eine Änderung verwenden eine persistente Transaktion. Wenn der Prozess, das Terminal oder der Knoten nach dem Stoppen des CT unterbrochen wird, wird die Operation nicht als abgeschlossen angesehen.",
+      "blocks": [
+        {
+          "steps": {
+            "items": [
+              {
+                "title": "Ausstehender Marker",
+                "body": "Wenn installierte OCI-Anwendungen verwaltet geöffnet werden, zeigt der gespeicherte Zustand an, dass der Ersatz nie veröffentlicht wurde."
+              },
+              {
+                "title": "Sichtstatus",
+                "body": "Zeigt die Phase an, die erreicht wurde, ohne Container oder Daten zu ändern."
+              },
+              {
+                "title": "Wiederherstellen der vorherigen Installation",
+                "body": "Wiederherstellt das verifizierte native Backup, das vor dem Ersatz und dem vorherigen Vertrag übernommen wurde."
+              },
+              {
+                "title": "Stapel als Einheit",
+                "body": "Für eine Multi-Container-Anwendung wird jedes Mitglied aus dem gleichen Transaktionspunkt wiederhergestellt, nicht nur das ausgewählte."
+              }
+            ]
+          }
+        },
+        {
+          "calloutWarning": {
+            "title": "Host-Verzeichnisse liegen außerhalb des Rollbacks",
+            "body": "Das Backup deckt die Rootfs und die Containerscheiben ab, die es enthält. Ein Hostverzeichnis wird nicht zurückgesetzt, da andere LXCs seine Daten verwenden können."
+          }
+        }
+      ]
+    },
+    {
+      "id": "watchdog",
+      "title": "Watchdog: Neustart einer Anwendung, die stoppt",
+      "intro": "Proxmox hat keine Neustartrichtlinie: Wenn der Prozess eines Anwendungscontainers endet, bleibt der Container gestoppt. Mit dem Watchdog wird eine Anwendung, die von selbst aufhört, erneut gestartet. Es tut für eine OCI-Anwendung, was <code>restart: unless-stopped</code> in einer Compose-Datei tut.",
+      "blocks": [
+        {
+          "table": {
+            "headers": [
+              "Was passiert",
+              "Mit dem Watchdog auf"
+            ],
+            "rows": [
+              [
+                "Die Anwendung stürzt ab oder ihr Prozess endet",
+                "Der Container wird innerhalb von Sekunden wieder gestartet"
+              ],
+              [
+                "Es wird von Proxmox, vom Monitor oder mit <code>pct</code> gestoppt oder heruntergefahren",
+                "Es bleibt stehen, bis jemand es beginnt"
+              ],
+              [
+                "Ein Backup, eine Migration oder eine ProxMenux-Operation arbeitet daran",
+                "Nichts wird getan, bis das endet"
+              ],
+              [
+                "Es wurde bereits gestoppt, als der Host begann",
+                "Es bleibt gestoppt; <strong>Start mit Proxmox</strong> entscheidet, dass"
+              ],
+              [
+                "Es stoppt direkt nach dem Start",
+                "Eine Anwendung, die innerhalb von Sekunden nach dem Start wieder stoppt oder nicht startet, wird fünfmal versucht und wartet 30 Sekunden, 1, 2 und 5 Minuten zwischen ihnen. Dann wird es gestoppt und eine Benachrichtigung gesendet"
+              ]
+            ]
+          }
+        },
+        {
+          "p": "Der Installateur fragt es in beiden Installationsmodi und schlägt vor, was das Rezept der Anwendung erklärt. Es wird später von <strong>Manage installierte OCI-Anwendungen</strong> oder mit dem <strong>Watchdog</strong> Schalter des Containers in <monitorLink>ProxMenux Monitor</monitorLink>, und es gilt für jeden Container einer Multi-Container-Anwendung. Ein Dienst des Hosts, <code>proxmenux-oci-watchdog.service</code>, überwacht jede Anwendung, die danach gefragt hat; seine Installation ist auf der Registerkarte Änderungen von Audit & Report aufgeführt."
+        },
+        {
+          "calloutInfo": {
+            "title": "Was der Gastgeber nicht sagen kann",
+            "body": "Der Exit-Code der Anwendung erreicht den Host nicht, so dass ein sauberer Exit und ein Crash gleich aussehen und beide neu gestartet werden, wie <code>always</code> und <code>unless-stopped</code> in Docker. Ein Stop, der außerhalb von Proxmox mit <code>lxc-stop</code> oder <code>systemctl</code> angefordert wird, lässt keine Stop-Aufgabe übrig und wird als eigener Stop genommen."
+          }
+        }
+      ]
+    },
+    {
+      "id": "restore",
+      "title": "Backup, Wiederherstellung und ein weiterer Host",
+      "intro": "Ein Backup mit vzdump oder Proxmox Backup Server enthält den Container, seine Festplatten und die Kopie seines Vertrags. Was die Installation auf dem Host hält, ist nicht Teil davon. <strong> Installierte OCI-Anwendungen </strong> erkennt die wiederhergestellten Container auf einem Host, der keinen Vertrag für sie hat, einer neuen Proxmox-Installation oder einem anderen Host und bietet an, sie erneut zu registrieren.",
+      "blocks": [
+        {
+          "steps": {
+            "items": [
+              {
+                "title": "Wiederherstellen der Container in Proxmox",
+                "body": "Vom Backup-Speicher, mit der Original-ID oder mit einer beliebigen kostenlosen. Eine Multicontainer-Anwendung benötigt jeden ihrer Container."
+              },
+              {
+                "title": "Open Verwalten installierter OCI-Anwendungen",
+                "body": "Die restaurierten Container werden aufgelistet und die Erholung wird angeboten. Die Schaltfläche <strong>Recover</strong> der Registerkarte Updates von <monitorLink>ProxMenux Monitor</monitorLink> öffnet die gleiche Wiederherstellung."
+              },
+              {
+                "title": "Überprüfen Sie vor dem Wechsel",
+                "body": "Die Wiederherstellung überprüft, ob der Host alles hat, was jede Anwendung benötigt. Eine Anwendung, die nicht als Ganzes wiederhergestellt werden kann, bleibt so, wie sie gefunden wurde, mit dem Grund."
+              },
+              {
+                "title": "Registrieren und starten",
+                "body": "Der Vertrag wird auf diesem Host registriert und was die Installation darauf aufbewahrt, wird erneut geschrieben. Das Starten der Anwendungen ist eine separate Frage, die mit Nein beantwortet wird, wenn die ursprünglichen Container noch auf einem anderen Host ausgeführt werden."
+              }
+            ]
+          }
+        },
+        {
+          "figure": {
+            "src": "/oci-manager/restore-offer.png",
+            "alt": "Dialog, der die wiederhergestellten Container auflistet und anbietet, sie wiederherzustellen",
+            "caption": "Die Wiederherstellung wird angeboten, wenn installierte OCI-Anwendungen verwaltet werden."
+          }
+        },
+        {
+          "table": {
+            "headers": [
+              "Was der Gastgeber behalten hat",
+              "Nach der Rückforderung"
+            ],
+            "rows": [
+              [
+                "Vertrag",
+                "Registriert von der Kopie, die der Container trägt, überprüft gegen die Konfiguration Proxmox wiederhergestellt"
+              ],
+              [
+                "Privates Netzwerk einer Multicontainer-Anwendung",
+                "Erstellt wieder mit der gleichen Brücke und Subnetz; die festen Adressen der Container ändern sich nicht"
+              ],
+              [
+                "Starten einer Multi-Container-Anwendung",
+                "Das Abhängigkeits-Hookscript und sein Vertrag werden wieder installiert; Snippets sind auf dem <code>local</code>-Speicher aktiviert, wenn kein Speicher sie akzeptiert"
+              ],
+              [
+                "Netzwerk sysctls und Host-Monitor-Datei",
+                "Nochmals geschrieben in <code>/etc/pve/proxmenux</code>"
+              ],
+              [
+                "NVIDIA Laufzeit",
+                "Der Haken eines unprivilegierten Containers wird wieder eingebaut. Ein privilegierter Container erhält die Treiberdateien dieses Hosts anstelle derjenigen des Hosts, von dem er stammt"
+              ],
+              [
+                "Klonhalterung",
+                "Das Hookscript und die Programme, die das Mount veröffentlichen, werden erneut geschrieben, mit den gleichen Ansichten auf dem Host"
+              ],
+              [
+                "Host-Firewallregel eines Host-Monitors",
+                "Wieder gefragt, für seinen Web-Port und das Subnetz der Brücke auf diesem Host"
+              ],
+              [
+                "<code>lost+found</code> jeder wiederhergestellten Festplatte",
+                "Entfernt, wenn leer; eine Wiederherstellung erstellt sie und einige Anwendungen können nicht damit in ihren Daten beginnen"
+              ],
+              [
+                "Disks auf einem anderen Speicher wiederhergestellt",
+                "Der Vertrag wird auf den Speicher aktualisiert, auf dem sie sich jetzt befinden"
+              ]
+            ]
+          }
+        },
+        {
+          "p": "Ein Container, der mit einer anderen ID wiederhergestellt wurde, behält seine Anwendung. Der Vertrag, sein Konsolenprotokoll, seine Netzwerk-Sysctls, das Hookscript eines Rclone-Halters und die Startreihenfolge einer Multi-Container-Anwendung werden mit den IDs registriert, die die Container auf diesem Host haben."
+        },
+        {
+          "table": {
+            "headers": [
+              "Was eine Erholung stoppt",
+              "Was zu tun ist"
+            ],
+            "rows": [
+              [
+                "Ein Container einer Multicontainer-Anwendung fehlt",
+                "Stellen Sie es auch wieder her; Die Anwendung wird als Ganzes wiederhergestellt"
+              ],
+              [
+                "Das private Subnetz wird bereits auf diesem Host verwendet",
+                "Die Wiederherstellung wird abgebrochen und nichts wird geändert: Die Adressen der Container sind fixiert und werden nicht in ein anderes Subnetz verschoben"
+              ],
+              [
+                "Ein Hostverzeichnis existiert nicht",
+                "Mounten oder erstellen Sie es mit seinen Daten; ein Backup des Containers enthält keine Hostverzeichnisse"
+              ],
+              [
+                "Ein Gerät existiert nicht auf diesem Host",
+                "Verbinden Sie es oder entfernen Sie es aus dem Container in Proxmox"
+              ],
+              [
+                "Eine Anwendung mit NVIDIA auf einem Host ohne Treiber",
+                "Installieren Sie den NVIDIA-Treiber und das Container Toolkit"
+              ],
+              [
+                "Das Backup wurde erstellt, bevor die Kopie des Vertrages existierte",
+                "Der Container bleibt als gewöhnlicher LXC und wird nicht wieder angeboten"
+              ]
+            ]
+          }
+        },
+        {
+          "calloutInfo": {
+            "title": "Ein Container, der zurückkommt",
+            "body": "Ein Container, der von einem älteren Backup wiederhergestellt, zu einem Snapshot zurückgerollt oder von einem anderen Knoten zurückgegeben wurde, trägt den Vertrag des Zustands, in dem er sich befindet. Wenn es für eine Operation ausgewählt wird und sein Vertrag von dem dieses Hosts abweicht, startet die Operation nicht und der Container wird zur Wiederherstellung angeboten."
+          }
+        },
+        {
+          "figure": {
+            "src": "/oci-manager/restore-result.png",
+            "alt": "Ergebnis der Wiederherstellung mit dem privaten Netzwerk, dem Startauftrag und den registrierten Containern",
+            "caption": "Das Ergebnis einer Erholung, Schritt für Schritt."
+          }
+        }
+      ]
+    },
+    {
+      "id": "remove",
+      "title": "Entfernen einer OCI-Anwendung",
+      "blocks": [
+        {
+          "p": "Vor der Bestätigung wird eine Zusammenfassung aus der realen Konfiguration erstellt: die entfernten Container, die mit ihnen gelöschten Daten, das freigegebene private Netzwerk und die gespeicherten Hostverzeichnisse. Die Bestätigung ist standardmäßig <strong>No</strong>, da die Daten der gelöschten Festplatten nachträglich nicht wiederhergestellt werden können."
+        },
+        {
+          "table": {
+            "headers": [
+              "Ressource",
+              "Bei der Entnahme",
+              "Grund"
+            ],
+            "rows": [
+              [
+                "Wurzelstöcke und Behälterscheiben",
+                "Gelöscht",
+                "Sie gehören nur zum Container"
+              ],
+              [
+                "Hostverzeichnis",
+                "Gepflegt, mit seinem Inhalt",
+                "Andere Anwendungen können es verwenden"
+              ],
+              [
+                "Host-Dateien des Containers",
+                "Gelöscht",
+                "Sein Konsolenprotokoll, Netzwerk-Sysctls, Rclone Mount Hookscript und seine Registrierung in der App-Registerkarte von ProxMenux Monitor dienen keinem anderen Container"
+              ],
+              [
+                "Dateien mehrere Installationen teilen",
+                "Gelöscht mit der letzten Installation, die sie verwendet",
+                "Die Host-Monitor-Datei und das Dependency-Hookscript von Multi-Container-Anwendungen"
+              ],
+              [
+                "Vertrag",
+                "Nach erfolgreicher Entfernung gelöscht",
+                "Kein CT ist mehr damit verbunden"
+              ],
+              [
+                "Private Brücke eines Stapels",
+                "Mit dem Stack freigegeben",
+                "Es gibt keine mitglieder mehr, um sich zu verbinden."
+              ],
+              [
+                "Netzwerk geteilt durch die Arr Suite",
+                "Veröffentlicht mit der letzten Anwendung der Suite",
+                "Jede Anwendung der Suite ist unabhängig und wird von selbst entfernt"
+              ],
+              [
+                "Ein einzelnes Mitglied eines Stapels",
+                "Nicht von selbst entfernt",
+                "Die gesamte Anwendung wird entfernt, so dass kein Stapel unvollständig bleibt"
+              ],
+              [
+                "Ein Container auf einem anderen Knoten des Clusters",
+                "Nicht entfernt",
+                "Seine Datensatz- und Hostdateien befinden sich auf dem Knoten, auf dem es installiert wurde: Es wird dort entfernt, nachdem es zurück migriert wurde."
+              ]
+            ]
+          }
+        },
+        {
+          "figure": {
+            "src": "/oci-manager/remove-summary.png",
+            "alt": "Zusammenfassung zum Entfernen mit den betroffenen Containern, Daten und Hostverzeichnissen",
+            "caption": "Die Entfernungszusammenfassung, aufgebaut aus der realen Konfiguration."
+          }
+        }
+      ]
+    },
+    {
+      "id": "archives",
+      "title": "Heruntergeladene Bilder und Host Space",
+      "blocks": [
+        {
+          "p": "Das OCI-Archiv wird zum Erstellen der Rootfs verwendet; das laufende CT liest es nicht. Nach einer Installation oder einem Update werden die heruntergeladenen Archive dieser Operation mit ihrer Größe aufgelistet und ihre Löschung wird angeboten. Das Löschen gibt den Raum frei, ohne den Container oder seine Daten zu beeinträchtigen."
+        },
+        {
+          "calloutInfo": {
+            "title": "Updates benötigen das Archiv nicht",
+            "body": "Ohne Archiv löst ein Update den gespeicherten Kanal auf und lädt den neuen Digest herunter. Mit ihm wird ein Archiv nur dann wiederverwendet, wenn seine Referenz und Integrität mit dem übereinstimmen, was angefordert wird."
+          }
+        }
+      ]
+    },
+    {
+      "id": "registry",
+      "title": "Registrierung und Bereinigung",
+      "blocks": [
+        {
+          "p": "Wenn <strong>Manage installierte OCI-Anwendungen</strong> geöffnet wird, wird zuerst das entfernt, was von Containern übrig ist, die auf keinem Knoten des Clusters vorhanden sind: der gespeicherte Datensatz eines Containers, der von der Proxmox-Schnittstelle gelöscht wurde, was als Historie beibehalten wird, und der Host archiviert eine zurückgelassene Entfernung. Ein Datensatz mit einer halben Operation wird beibehalten, da dessen Backup möglicherweise noch benötigt wird. Volumes und Hostverzeichnisse werden niemals durch Inferenz gelöscht."
+        }
+      ]
+    },
+    {
+      "id": "cluster",
+      "title": "In einem Cluster: Migration und hohe Verfügbarkeit",
+      "intro": "Ein OCI-Container ist ein gewöhnlicher Proxmox LXC: Er kann wie jeder andere von HA migriert oder verwaltet werden, innerhalb der gleichen Grenzen. Was es starten muss, wird dort gehalten, wo jeder Knoten des Clusters es findet.",
+      "blocks": [
+        {
+          "table": {
+            "headers": [
+              "Teil",
+              "Auf einem anderen Knoten des Clusters"
+            ],
+            "rows": [
+              [
+                "Konsolenlogbuch",
+                "Der Container erstellt <code>/var/log/proxmenux/oci</code>, bevor er startet, auf welchem Knoten er ausgeführt wird. Jeder Knoten führt das Protokoll der Starts, die er ausgeführt hat."
+              ],
+              [
+                "Netzwerk sysctls und Host-Monitor",
+                "Behielt in <code>/etc/pve/proxmenux</code>, die jeder Knoten des Clusters teilt, so dass ein migrierter Container sie findet."
+              ],
+              [
+                "Behälterscheiben",
+                "Proxmox bewegt sie mit dem Container. HA benötigt sie für Shared Storage."
+              ],
+              [
+                "Host-Verzeichnisse und Geräte",
+                "Die gleichen Regeln wie bei jedem LXC: Ein Host-Verzeichnis muss auf dem Zielknoten vorhanden sein und als gemeinsam genutzt markiert werden, und ein GPU, Coral oder NPU muss dort vorhanden sein."
+              ],
+              [
+                "ProxMenux-Datensatz",
+                "Der Vertrag bleibt auf dem Knoten, auf dem die Anwendung installiert wurde, und jeder Knoten liest die in <code>/etc/pve/priv/proxmenux/oci</code> gespeicherte Kopie. Eine Single-Container-Anwendung, die migriert, wird auf dem Knoten registriert, an dem sie ankommt, wenn <strong>Die installierten OCI-Anwendungen </strong> geöffnet oder eine Operation für sie gestartet wird. Eine Multi-Container-Anwendung wird dort zur Wiederherstellung angeboten, da ihr privates Netzwerk auf diesem Knoten erstellt werden muss."
+              ]
+            ]
+          }
+        },
+        {
+          "calloutWarning": {
+            "title": "Nicht für hohe Verfügbarkeit",
+            "body": "Eine Multicontainer-Anwendung erreicht ihre Mitglieder über eine private Brücke des Knotens, auf dem sie installiert wurde, so dass ihre Mitglieder auf diesem Knoten bleiben. Ein Hostmonitor, z. B. Glances im Hostmodus oder Netdata, überwacht den Knoten, auf dem er ausgeführt wird; das Bewegen würde einen anderen Knoten überwachen."
+          }
+        },
+        {
+          "p": "Ein Backup, das außerhalb des Clusters wiederhergestellt wird, erhält die Dateien von <code>/etc/pve/proxmenux</code>, die der Container verwendet, wenn die Anwendung wiederhergestellt wird."
+        }
+      ]
+    },
+    {
+      "id": "channel",
+      "title": "Ein Rolling Tag ist kein unbeaufsichtigtes Update",
+      "blocks": [
+        {
+          "p": "Der Katalog installiert das Rolling-Tag, das sein Maintainer veröffentlicht, aber der effektive Digest wird nur durch ein explizites Update mit Preflight und Rollback gelöst, aufgezeichnet und geändert. <monitorLink>ProxMenux Monitor</monitorLink> vergleicht den installierten Digest mit dem, den die Registry veröffentlicht und anzeigt und benachrichtigt, wenn ein neues Bild verfügbar ist."
+        }
+      ]
+    }
+  ]
+}

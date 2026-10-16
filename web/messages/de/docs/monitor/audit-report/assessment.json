@@ -1,0 +1,218 @@
+{
+  "meta": {
+    "title": "Bewertung und Inventar | Audit & Report",
+    "description": "Das Audit & Report Assessment: Berichtsprofile, wie die Ergebnisse klassifiziert werden, akzeptierte Risiken, unlesbare Quellen, Lynis und das Inventar des Knotens."
+  },
+  "header": {
+    "title": "Bewertung und Bestandsaufnahme",
+    "description": "Die Bewertung überprüft den Knoten, behält seine Ergebnisse und beantwortet je nach Berichtsprofil verschiedene Fragen.",
+    "section": "Prüfung und Bericht"
+  },
+  "sections": [
+    {
+      "id": "read-only",
+      "blocks": [
+        {
+          "calloutInfo": {
+            "title": "Ein Assessment inspiziert; es ändert nicht die Konfiguration",
+            "body": "Es liest die Konfiguration und den Zustand des Hosts. Es schreibt seine Ergebnisse, Berichte und Protokolle, und die Boot-Checks können EFI-Systempartitionen für einen Moment montieren. Die von ihm bewertete Konfiguration wird nicht geändert."
+          }
+        },
+        {
+          "p": "<strong>Run assessment</strong> startet einen Lauf mit dem in <strong>Report</strong> ausgewählten Profil. Die Ansicht zeigt das Datum des letzten Laufs und wie lange es her ist."
+        }
+      ]
+    },
+    {
+      "id": "profiles",
+      "title": "Berichtsprofile",
+      "intro": "Jedes Profil beantwortet eine andere Frage. Die Prüfungen und Abschnitte werden ausgewählt, bevor das Dokument erstellt wird.",
+      "blocks": [
+        {
+          "table": {
+            "headers": [
+              "Profil",
+              "Was es abdeckt"
+            ],
+            "rows": [
+              [
+                "Vollständiges Audit",
+                "Jeder Check und alle verfügbaren Strukturen."
+              ],
+              [
+                "Schnelldiagnose",
+                "Jede Überprüfung; das Ergebnis beginnt mit den kritischen Ergebnissen, den Warnungen und den Messwerten, die nicht verifiziert werden konnten."
+              ],
+              [
+                "Inventar",
+                "Eine Beschreibung des Knotens, ohne Überprüfungen und ohne Klassifizierung."
+              ],
+              [
+                "Sicherheitsüberprüfung",
+                "Exposition, Zugriff, Privilegien, Zertifikate, Updates, Repositories und Lynis."
+              ],
+              [
+                "Sicherungssicherung",
+                "Abdeckung, Alter, Ergebnisse, Verifizierung, Aufbewahrung und Wiederherstellung der Backups."
+              ],
+              [
+                "Kapazität und Verschleiß",
+                "Wachstumsmarge, Speicher, Platzverbrauch und Lebensdauer der Festplatten."
+              ]
+            ]
+          }
+        },
+        {
+          "p": "Der Inhalt jedes Dokuments wird in <reportsLink>Reports and comparisons</reportsLink> beschrieben."
+        }
+      ]
+    },
+    {
+      "id": "results",
+      "title": "Wie die Ergebnisse klassifiziert werden",
+      "blocks": [
+        {
+          "table": {
+            "headers": [
+              "Einstufung",
+              "Bedeutung"
+            ],
+            "rows": [
+              [
+                "Kritisch",
+                "Ein gescheiterter Zustand, der Priorität hat."
+              ],
+              [
+                "Warnung",
+                "Eine Bedingung, die angesichts der Beweise oder der Politik einer Überprüfung bedarf."
+              ],
+              [
+                "Beobachtung",
+                "Informationen über den Knoten, der nicht als Fehler gemeldet wird."
+              ],
+              [
+                "Nicht verifiziert",
+                "Die Quelle, die der Scheck benötigt, konnte nicht gelesen werden. Es bedeutet nicht, dass das Problem fehlt."
+              ],
+              [
+                "Konform",
+                "Die Bedingung erfüllt das angewandte Kriterium."
+              ],
+              [
+                "Nicht zutreffend",
+                "Es gilt nichts im Rahmen der Prüfung."
+              ],
+              [
+                "Akzeptiertes Risiko",
+                "Der Befund existiert und eine Entscheidung darüber wurde aufgezeichnet."
+              ],
+              [
+                "Per Richtlinie ausgenommen",
+                "Die Politik erklärt, dass das Element aus der Zählung ausgelassen wird."
+              ]
+            ]
+          }
+        },
+        {
+          "p": "Die Ergebnisse können nach Bereichen gefiltert werden: System, Storage, Network, Security, Backup, Guests und Hardware. Jeder Befund behält seine Beweise mit der Quelle, aus der er gelesen wurde."
+        }
+      ]
+    },
+    {
+      "id": "unverified",
+      "title": "Wenn eine Quelle nicht gelesen werden kann",
+      "blocks": [
+        {
+          "table": {
+            "headers": [
+              "Fall",
+              "Verhalten"
+            ],
+            "rows": [
+              [
+                "Nicht verifiziert",
+                "Der Check behält seine Identität, gibt in seinen Beweisen an, welche Quelle fehlgeschlagen ist und macht fehlende Daten nicht zu einem konformen Ergebnis."
+              ],
+              [
+                "Unvollständige Nachweise",
+                "Der Bericht benennt die Quelle und den Zeitpunkt der Sammlung, so dass ein echtes Problem abgesehen von einer unzureichenden Lektüre erzählt werden kann."
+              ],
+              [
+                "Ein neuer Run",
+                "Sobald der Zugriff, das Paket oder der Dienst korrigiert wurde, läuft das gleiche Profil erneut und der Vergleich zeigt, ob das Ergebnis verifiziert werden konnte."
+              ]
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "lynis",
+      "title": "Lynis",
+      "blocks": [
+        {
+          "p": "Die Sicherheitsüberprüfung verwendet den Lynis-Bericht des Hosts. Wenn Lynis noch nicht ausgeführt wurde oder sein Bericht älter als der Schwellenwert der Richtlinie ist, bietet ein Dialog <strong>Run mit Lynis</strong>, was einige Minuten länger dauert, oder <strong>Run ohne Lynis</strong>, das den vorhandenen Bericht verwendet."
+        },
+        {
+          "figure": {
+            "src": "/monitor/audit/lynis-dialog.png",
+            "alt": "Dialog, der anbietet, das Assessment mit oder ohne Lynis durchzuführen",
+            "caption": "Der Lynis-Dialog vor einer Sicherheitsüberprüfung."
+          }
+        }
+      ]
+    },
+    {
+      "id": "accept",
+      "title": "Annahme eines Risikos",
+      "blocks": [
+        {
+          "p": "<strong>Accept risk</strong> zeichnet eine Entscheidung über einen Befund auf. Der Grund ist erforderlich und wird mit dem Autor und dem Datum gespeichert."
+        },
+        {
+          "table": {
+            "headers": [
+              "Feld",
+              "Optionen"
+            ],
+            "rows": [
+              [
+                "Grund",
+                "Freitext, erforderlich."
+              ],
+              [
+                "Gilt nicht mehr nach",
+                "90 Tage, 180 Tage, 1 Jahr oder läuft nicht ab. Wenn der Zeitraum endet, wird der Befund wieder aktiv."
+              ],
+              [
+                "An Überprüfung erinnern",
+                "Eine Erinnerung, die die Entscheidung wieder auf sich aufmerksam macht, während sie in Kraft bleibt."
+              ]
+            ]
+          }
+        },
+        {
+          "p": "Ein akzeptierter Befund bleibt mit seiner Entscheidung sichtbar, und <strong>Return to active</strong> widerruft ihn. Ein akzeptiertes Risiko ist keine Korrektur: Der Vergleich meldet es als akzeptiert, nicht als gelöst."
+        }
+      ]
+    },
+    {
+      "id": "inventory",
+      "title": "Inventar",
+      "blocks": [
+        {
+          "list": {
+            "items": [
+              "Identität, Proxmox VE-Version, Kernel, Subscription und Cluster.",
+              "CPU, Speicher, Board, BIOS, Controller und IOMMU.",
+              "Festplatten, SMART, Power-On-Stunden und aufgezeichnete Ereignisse.",
+              "Adapter, Bonds, Brücken, Latenz und Verbindungen.",
+              "Speicher, Gäste mit ihren Festplatten und Schnittstellen und Backups.",
+              "PCI Passthrough und die Software ProxMenux verwaltet."
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,158 @@
+{
+  "meta": {
+    "title": "Proxmox VE Systembefehle — Pveversion, Betriebszeit, journalctl, systemctl | ProxMenux",
+    "description": "Referenz der wesentlichen Proxmox VE- und Linux-Systembefehle: pveversion, pveperf, uptime, journalctl, systemctl, lscpu, lsblk, df, free, last, who. Alle Read-only und sicher auf jedem Host laufen.",
+    "ogTitle": "Proxmox VE Systembefehle — Pveversion, Betriebszeit, journalctl, systemctl",
+    "ogDescription": "Verweis auf wesentliche Proxmox VE- und Linux-Systembefehle — Version, Betriebszeit, Dienste, Protokolle, Benutzerinformationen, Hardwaresonden. Alle Read-only.",
+    "twitterTitle": "Proxmox VE Systembefehle | ProxMenux",
+    "twitterDescription": "Wesentliche Systeminspektionsbefehle für Proxmox VE — Version, Status, Dienste, Protokolle, Benutzerinformationen."
+  },
+  "header": {
+    "title": "Nützliche Systembefehle",
+    "description": "Read-only-Befehle zum Betrachten des Proxmox-Hosts: Version, Kernel, Uptime, Speicher, Web-Benutzeroberflächenstatus, aktuelle Protokollzeilen, wer angemeldet ist, und ein paar Audit- / Zusammenfassungstools. Keiner von ihnen verändert das System.",
+    "section": "Hilfe und Informationen"
+  },
+  "intro": {
+    "title": "Was das ist",
+    "body": "Die gleiche nummerierte Liste ProxMenux wird angezeigt, wenn Sie <em>Useful System Commands</em> auswählen. Verwenden Sie die Schaltfläche Kopieren, um einen beliebigen Befehl zu erfassen, oder schauen Sie nach, um sich das genaue Flag zu merken."
+  },
+  "commandGroups": [
+    {
+      "title": "Systeminformationen",
+      "commands": [
+        {
+          "command": "pveversion",
+          "description": "Proxmox-Version anzeigen"
+        },
+        {
+          "command": "pveversion -v",
+          "description": "Detaillierte Informationen zur Proxmox-Version"
+        },
+        {
+          "command": "hostnamectl",
+          "description": "System-Hostname und Kernel-Informationen"
+        },
+        {
+          "command": "uname -a",
+          "description": "Kernel- und Architekturinformationen"
+        },
+        {
+          "command": "cat /etc/os-release",
+          "description": "Details zur Betriebssystemversion"
+        }
+      ]
+    },
+    {
+      "title": "Systemstatus",
+      "commands": [
+        {
+          "command": "uptime",
+          "description": "Systemverfügbarkeit"
+        },
+        {
+          "command": "uptime -p",
+          "description": "Hübsches Uptime-Format"
+        },
+        {
+          "command": "free -h",
+          "description": "RAM- und Swap-Nutzung"
+        },
+        {
+          "command": "who -b",
+          "description": "Letzte Systemstartzeit"
+        },
+        {
+          "command": "last -x | grep shutdown",
+          "description": "Frühere Abschaltungen"
+        }
+      ]
+    },
+    {
+      "title": "Dienstverwaltung",
+      "commands": [
+        {
+          "command": "systemctl status pveproxy",
+          "description": "Überprüfen Sie den Status der Proxmox-Web-Benutzeroberfläche"
+        },
+        {
+          "command": "systemctl restart pveproxy",
+          "description": "Starten Sie den Web-UI-Proxy neu"
+        },
+        {
+          "command": "journalctl -xe",
+          "description": "Systemfehler und Protokolle"
+        },
+        {
+          "command": "dmesg -T | tail -n 50",
+          "description": "Letzte 50 Kernel-Protokollzeilen"
+        }
+      ]
+    },
+    {
+      "title": "Benutzerinformationen",
+      "commands": [
+        {
+          "command": "whoami",
+          "description": "Aktueller Benutzer"
+        },
+        {
+          "command": "id",
+          "description": "Aktuelle Benutzer-UID, GID und Gruppen"
+        },
+        {
+          "command": "who",
+          "description": "Angemeldete Benutzer"
+        },
+        {
+          "command": "w",
+          "description": "Benutzeraktivität und Betriebszeit"
+        },
+        {
+          "command": "uptime && w",
+          "description": "Betriebszeit und wer angemeldet ist"
+        },
+        {
+          "command": "cut -d: -f1,3,4 /etc/passwd",
+          "description": "Alle Benutzer mit UID und GID"
+        },
+        {
+          "command": "getent passwd | column -t -s :",
+          "description": "Lesbare Benutzertabelle (UID, Shell usw.)"
+        }
+      ]
+    },
+    {
+      "title": "Werkzeuge für Prüfungen und Zusammenfassungen",
+      "commands": [
+        {
+          "command": "lynis audit system",
+          "description": "Führen Sie ein vollständiges Systemsicherheitsaudit durch"
+        },
+        {
+          "command": "fastfetch",
+          "description": "Systemzusammenfassung im ASCII-Format anzeigen"
+        }
+      ]
+    }
+  ],
+  "related": {
+    "heading": "Verwandte Themen",
+    "items": [
+      {
+        "href": "/docs/help-info/update-commands",
+        "label": "Updates und Pakete",
+        "tail": "apt und pve Upgrade-Befehle."
+      },
+      {
+        "href": "/docs/help-info/tools-commands",
+        "label": "System-CLI-Tools",
+        "tail": "- htop, btop, ncdu und freunde."
+      },
+      {
+        "href": "/docs/help-info",
+        "label": "Hilfe und Info Überblick",
+        "tail": "."
+      }
+    ]
+  }
+}

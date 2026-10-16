@@ -1,0 +1,213 @@
+{
+  "meta": {
+    "title": "OCI Manager Apps | ProxMenux",
+    "description": "Führen Sie offizielle OCI-Images als native Proxmox VE LXC-Container mit persistenten Daten, Geräten, Multicontainer-Anwendungen und Transaktionsupdates aus."
+  },
+  "header": {
+    "title": "Apps des OCI-Managers",
+    "description": "Offizielle OCI-Bilder laufen als native Proxmox VE LXC-Container. Das Bild bleibt das, was sein Maintainer veröffentlicht; ProxMenux reproduziert die Umgebung, die Docker Compose um es herum geschaffen hätte.",
+    "section": "Apps des OCI-Managers"
+  },
+  "sections": [
+    {
+      "id": "model",
+      "blocks": [
+        {
+          "calloutInfo": {
+            "title": "Ein OCI-Bild, ein natives LXC",
+            "body": "In den Containern läuft kein Docker engine. Proxmox VE importiert das Dateisystem des Bildes und seine OCI-Metadaten, und die Anwendung wird zum Hauptprozess eines nativen LXC, der mit den gleichen Tools wie jeder andere Container des Knotens verwaltet wird."
+          }
+        },
+        {
+          "flow": {
+            "nodes": [
+              {
+                "label": "Quelle",
+                "detail": "OCI-Bild\nZusammenstellung und Dokumentation"
+              },
+              {
+                "label": "ProxMenux",
+                "detail": "JSON-Vertrag\nValidierung und Plan"
+              },
+              {
+                "label": "Proxmox VE",
+                "detail": "native LXC\nVolumen und Geräte"
+              }
+            ],
+            "caption": "Die Anwendung wird nicht neu aufgebaut: Ihre Umgebung wird deklarativ reproduziert."
+          }
+        }
+      ]
+    },
+    {
+      "id": "where",
+      "title": "Wo es ist",
+      "intro": "OCI-Manager-Apps werden über die Option <strong>OCI-Manager-Apps (Technology Preview)</strong> des ProxMenux-Hauptmenüs auf dem Proxmox-Knoten und als root geöffnet. Der erste Bildschirm bietet:",
+      "blocks": [
+        {
+          "list": {
+            "items": [
+              "<strong>Search applications</strong> — Suche nach Namen im gesamten Katalog.",
+              "<strong>All applications</strong> — der vollständige Katalog mit der Anzahl der Anwendungen.",
+              "<strong>Verwalte installierte OCI-Anwendungen</strong> — aktualisieren, ändern, entfernen oder wiederherstellen, was installiert wurde.",
+              "<strong>Registry accounts</strong> — die Konten, die zum Installieren und Aktualisieren von Bildern aus privaten Registern verwendet werden.",
+              "<strong>Installieren Sie ein Bild, das sich nicht im Katalog</strong> befindet – übersetzen Sie eine Compose-Datei, einen <code>docker run</code>-Befehl oder eine Bildreferenz.",
+              "Die Katalogkategorien, jede mit ihrer Anzahl von Anwendungen."
+            ]
+          }
+        },
+        {
+          "figure": {
+            "src": "/oci-manager/main-menu.png",
+            "alt": "Hauptbildschirm von OCI Manager Apps mit Suche, allen Anwendungen, Verwaltung, benutzerdefiniertem Bild und den Katalogkategorien",
+            "caption": "Hauptbildschirm von OCI Manager Apps."
+          }
+        },
+        {
+          "p": "Die Auswahl einer Anwendung zeigt ihre Beschreibung, das von ihr ausgeführte Bild und zwei Installationsmodi: <strong>Install mit Standardeinstellungen</strong>, die nur fragt, was jede Installation entscheidet (Speicherung, wohin die Daten gehen, Adresse und Start), und <strong>Install mit erweiterten Einstellungen</strong>, die jede Entscheidung in der Reihenfolge öffnet: VMID und Ressourcen, die Speicherung jedes Pfades, die Brücke und die Geräte."
+        },
+        {
+          "p": "Eine Anwendung, die auf real getestet wurde, zeigt <strong>Verified</strong> in dieser Ansicht und ist in den Listen mit ✓ gekennzeichnet, unabhängig davon, ob sie im ProxMenux-Labor oder von der Community getestet wurde."
+        }
+      ]
+    },
+    {
+      "id": "beta",
+      "title": "Warum es sich um eine Technologievorschau handelt",
+      "blocks": [
+        {
+          "p": "OCI-Manager-Apps tragen das <strong>Technology Preview</strong>-Label, das Proxmox VE Anwendungscontainern gibt, die aus OCI-Bildern erstellt wurden und in Proxmox VE 9.1 eingeführt wurden. Es bezieht sich auf das, auf dem OCI-Manager Apps läuft, nicht auf die ProxMenux-Engine: Das Verhalten dieser Container kann sich zwischen Proxmox VE-Releases noch ändern. Das Label bleibt, bis Proxmox VE diese Unterstützung als stabil markiert."
+        },
+        {
+          "p": "Die Engine der OCI-Manager-Apps (Installation, Update, Modifikation, Erholung, Backups, Wiederherstellung, Migration und Watchdog) wird im ProxMenux-Labor getestet. Jede Anwendung wird für sich selbst getestet: diejenigen, die für die reale Show <strong>Verified</strong> getestet wurden und eine ✓ in den Listen tragen."
+        }
+      ]
+    },
+    {
+      "id": "translation",
+      "title": "Was Docker ausdrückt und was OCI Manager Apps daraus macht",
+      "blocks": [
+        {
+          "table": {
+            "headers": [
+              "Anforderungen",
+              "Docker drückt es aus als",
+              "OCI-Manager Apps verwandelt es in"
+            ],
+            "rows": [
+              [
+                "Ausführen der Anwendung",
+                "<code>image</code>, <code>entrypoint</code>, <code>command</code>",
+                "OCI Rootfs und der Hauptprozess des LXC"
+              ],
+              [
+                "Konfiguration beibehalten",
+                "<code>volumes: /config</code>",
+                "eine persistente <code>mpN</code>-Festplatte, die im Backup enthalten ist, oder ein Hostverzeichnis"
+              ],
+              [
+                "Veröffentlichen Sie den Service",
+                "<code>ports</code>",
+                "eine eigene Adresse für den LXC und die Zugriffs-URL des Dienstes"
+              ],
+              [
+                "Hardware verwenden",
+                "<code>devices</code>, <code>group_add</code>",
+                "<code>devN</code>-Einträge mit der effektiven Host-GID und einem validierten Profil"
+              ],
+              [
+                "Abhängigkeiten verbinden",
+                "<code>networks</code>, <code>depends_on</code>",
+                "eine private Brücke, feste Adressen, Startauftrag und Gesundheitschecks"
+              ],
+              [
+                "Aktualisierung",
+                "<code>pull</code> und neu erstellen",
+                "neue Rootfs mit dem gleichen persistenten Vertrag"
+              ]
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "kept",
+      "title": "Was gehalten wird und was sich ändert",
+      "blocks": [
+        {
+          "cards": {
+            "items": [
+              {
+                "icon": "archive",
+                "title": "Beibehalten",
+                "body": "Das offizielle Bild, seine internen Wege, seine Umgebung, sein Startprozess und seine funktionale Dokumentation."
+              },
+              {
+                "icon": "boxes",
+                "title": "Angepasst",
+                "body": "Die Laufzeitumgebung: Netzwerk, Persistenz, Geräte, Berechtigungen und Abhängigkeiten verwenden native Proxmox VE LXC-Primitive."
+              },
+              {
+                "icon": "shield",
+                "title": "Nicht übersetzt",
+                "body": "Ein Compose-Schlüssel ohne sicheres Äquivalent wird als Blocker aufgeführt. Vorlagen mit Blockern werden nicht angeboten und sensible Optionen werden während der Installation bestätigt."
+              },
+              {
+                "icon": "refresh",
+                "title": "Aufgezeichnet",
+                "body": "Image Digest, Ressourcen, Pfade, Netzwerk, Geräte und Stack-Mitgliedschaft werden im Instanzvertrag gespeichert, der Updates und Reproduktionen reproduziert."
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "pages",
+      "title": "Seiten dieses Abschnitts",
+      "blocks": [
+        {
+          "next": {
+            "items": [
+              {
+                "label": "Wie ein OCI-Bild übersetzt wird",
+                "href": "/docs/oci-manager/architecture",
+                "tail": "vom Bild und seiner Compose-Datei zu einem nativen LXC."
+              },
+              {
+                "label": "Installieren Sie ein Bild, das sich nicht im Katalog befindet",
+                "href": "/docs/oci-manager/custom-image",
+                "tail": "Compose, docker run oder eine Bildreferenz."
+              },
+              {
+                "label": "Daten, Pfade und Vernetzung",
+                "href": "/docs/oci-manager/storage-network",
+                "tail": "Container-Disks, Host-Verzeichnisse, Rclone-Halterungen und Adressen."
+              },
+              {
+                "label": "Einrichtungen und Beschleunigung",
+                "href": "/docs/oci-manager/hardware",
+                "tail": "GPU, NVIDIA, Coral, USB und andere Geräte."
+              },
+              {
+                "label": "Mehrbehälteranwendungen",
+                "href": "/docs/oci-manager/stacks",
+                "tail": "Anwendung, Datenbank und Cache als koordinierte LXCs."
+              },
+              {
+                "label": "Installation, Aktualisierung und Änderung",
+                "href": "/docs/oci-manager/lifecycle",
+                "tail": "den Instanzvertrag und seine Tätigkeiten."
+              },
+              {
+                "label": "In ProxMenux Monitor",
+                "href": "/docs/oci-manager/monitor",
+                "tail": "Versionen, Updates, Konsolenausgabe und Terminal."
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

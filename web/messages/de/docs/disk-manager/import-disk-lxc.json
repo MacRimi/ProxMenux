@@ -1,0 +1,115 @@
+{
+  "meta": {
+    "title": "Datenträger zu LXC importieren | ProxMenux Dokumentation",
+    "description": "Befestigen Sie eine physische Festplatte an einen vorhandenen LXC-Container auf Proxmox VE mit ProxMenux. Behandelt Dateisystemerkennung / -formatierung, Einhängepunkt, unprivilegierte → privilegierte Konvertierung und persistente Gerätepfade.",
+    "ogTitle": "Datenträger zu LXC importieren | ProxMenux Dokumentation",
+    "ogDescription": "Befestigen Sie eine physische Festplatte an einen vorhandenen LXC-Container. Behandelt Dateisystem, Mount Point und unprivilegierte → privilegierte Konvertierung."
+  },
+  "header": {
+    "title": "Datenträger in LXC importieren",
+    "description": "Fügen Sie eine physische Festplatte an einen vorhandenen LXC-Container auf dem Proxmox-Host an. ProxMenux erkennt freie Festplatten, formatiert sie optional mit einem unterstützten Dateisystem und verkabelt die Partition mit persistenten Gerätepfaden an einen Einhängepunkt im Container.",
+    "section": "Disk Manager LXC"
+  },
+  "intro": {
+    "title": "VM-Durchgang gegen LXC-Durchgang",
+    "body": "LXC Passthrough ist <strong>nicht ein rohes Blockgerät</strong>. Der Container erhält einen <em>mount-Point</em> – also ein Verzeichnis, das von einer Partition unterstützt wird, die Sie auf dem Host auswählen. Im Gegensatz zu einem VM ist der Gastkernel der Hostkernel, so dass das Dateisystem (ext4 / xfs / btrfs) von Proxmox selbst gelesen und verwaltet und dann dem Container ausgesetzt wird."
+  },
+  "howRuns": {
+    "heading": "Wie das Skript läuft",
+    "body": "Der Fluss hat zwei Phasen mit klarer Trennung zwischen \"Sammeln von Informationen und Entscheidungen\" und \"tatsächliches Ändern der Containerkonfiguration\". Bis zur endgültigen Bestätigung wird nichts in den CT eingebaut.",
+    "summary": "ProxMenux filtert die Root-Diskette, montierte Festplatten und Festplatten heraus, auf die bereits von einer VM/LXC-Konfiguration verwiesen wird. Festplatten mit aktiver ZFS/LVM/RAID-Mitgliedschaft sind ausgeblendet; veraltete Signaturen zeigen ein ⚠-Label, so dass Sie sie vor der Formatierung löschen können."
+  },
+  "prereqs": {
+    "heading": "Voraussetzungen",
+    "items": [
+      "Mindestens ein LXC-Container, der auf dem Host definiert ist.",
+      "Der Container ist <strong>privileged</strong>, oder Sie akzeptieren das Angebot des Skripts, es zu konvertieren.",
+      "Mindestens eine physische Festplatte, die vom Host oder einem anderen Gast nicht verwendet wird."
+    ],
+    "warnTitle": "Privilegierter Container erforderlich",
+    "warnBody": "Der direkte Gerätedurchgang zu einem LXC-Container funktioniert nur, wenn der Container <strong>privileged</strong> ist. Wenn das Skript <code>unprivileged: 1</code> in der Konfiguration erkennt, bietet es an, es an Ort und Stelle zu konvertieren (bearbeitet <code>/etc/pve/lxc/&lt;CTID&gt;.conf</code>). Abbrechen, wenn Sie den Sicherheitshandel eines privilegierten Containers nicht akzeptieren können."
+  },
+  "steps": {
+    "heading": "Schritt für Schritt",
+    "stepLabel": "Schritt",
+    "list": [
+      {
+        "title": "Wählen Sie den Zielcontainer",
+        "img": "/disk/select-container.png",
+        "caption": "Auswahlmenü für Container",
+        "bodyRich": "ProxMenux listet jeden LXC-Container auf dem Host auf (<code>pct list</code>). Wählen Sie diejenige, die die Festplatte erhalten wird. Wenn der Container nicht privilegiert ist, wird Ihnen angeboten, ihn jetzt umzuwandeln."
+      },
+      {
+        "title": "Wählen Sie die physische Festplatte",
+        "img": "/disk/disk-selection-ct.png",
+        "caption": "Freie Festplatten auf dem Host erkannt (mit ⚠ Labels für veraltete Metadaten)",
+        "bodyRich": "Es werden nur sichere Kandidaten gezeigt. Im Gegensatz zum VM-Flow wird in diesem Skript die <strong>one-Diskette pro run</strong> angehängt - führen Sie sie erneut für jede zusätzliche Festplatte aus, die Sie hinzufügen möchten."
+      },
+      {
+        "title": "Format oder Wiederverwendung",
+        "intro": "Das Skript überprüft die Festplatte:",
+        "items": [
+          "Wenn es bereits ein unterstütztes Dateisystem (ext4 / xfs / btrfs) trägt, können Sie es so wiederverwenden, wie es ist (bestehende Dateien bleiben erhalten).",
+          "Wenn es kein unterstütztes Dateisystem hat, wird Ihnen angeboten, es zu formatieren. Wählen Sie ext4 / xfs / btrfs."
+        ]
+      },
+      {
+        "title": "Wählen Sie den Mount Point",
+        "bodyRich": "Geben Sie den Pfad ein, in dem der Container die Scheibe sehen soll, z.B. <code>/mnt/data</code> oder <code>/mnt/disk_passthrough</code>. Dies ist der Pfad <em>inside</em> der Container; der Host sieht bereits die Partition unter <code>/dev/disk/by-id/…</code>."
+      },
+      {
+        "title": "Anbringen und Verifizieren",
+        "img": "/disk/assignment-ct.png",
+        "caption": "Zuordnung zu CT",
+        "bodyRich": "ProxMenux fügt einen frischen <code>mpN:</code>-Eintrag an die Container-Konfiguration an, überspringt bereits verwendete Indizes und liest die Konfiguration erneut, um sie zu bestätigen. Wenn der Container läuft, wird das Mount live exec'd; andernfalls wird es beim nächsten Start wirksam.",
+        "extraImg": "/disk/result-point.png",
+        "extraAlt": "Mount Point erfolgreich erstellt",
+        "extraCaption": "Erstellter und verifizierter Montagepunkt"
+      }
+    ]
+  },
+  "manual": {
+    "heading": "Manuelles Äquivalent",
+    "body": "Das Skript wickelt <code>pct set</code> ab. Ein direkter Aufruf für eine einzelne Festplatte sieht so aus:"
+  },
+  "important": {
+    "heading": "Wichtige Überlegungen",
+    "items": [
+      "<strong>Eine Festplatte pro run</strong>. Führen Sie das Skript für jede zusätzliche Festplatte erneut aus.",
+      "Befestigen <strong>not</strong> die gleiche Partition an mehrere Container, die sie möglicherweise gleichzeitig montieren - gleichzeitige Schreibvorgänge beschädigen das Dateisystem.",
+      "<strong>Alte Metadaten</strong> (RAID / ZFS / LVM-Signaturen) müssen manuell gelöscht werden, bevor Sie das Skript formatieren lassen, andernfalls weigert sich <code>mkfs</code> zu überschreiben. Verwenden Sie dafür das <wipeLink>Format / Wipe Physical Disk</wipeLink> Tool."
+    ]
+  },
+  "troubleshoot": {
+    "heading": "Fehlerbehebung",
+    "unprivTitle": "\"Kann nicht mit einem unprivilegierten Container fortfahren\"",
+    "unprivBody": "Sie haben das Conversion-Angebot abgelehnt. Entweder wiederholen und akzeptieren Sie die Konvertierung oder konvertieren Sie den Container manuell, indem Sie <code>/etc/pve/lxc/&lt;CTID&gt;.conf</code> bearbeiten und <code>unprivileged: 1</code> durch <code>unprivileged: 0</code> ersetzen. Sie können den Container auch als privilegiert umbauen, wenn Sie es vorziehen, nicht an Ort und Stelle zu konvertieren.",
+    "permsTitle": "Berechtigungen im Container sind falsch",
+    "permsBody": "Mounts vom Host in einen privilegierten Container landen als <code>root:root</code>. Wenn der Dienst innerhalb des CT als anderer Benutzer läuft (z.B. <code>www-data</code> für Nextcloud), <code>chown</code>/<code>chmod</code> innerhalb des Containers, um seine UID/GID nach dem ersten Mount anzupassen."
+  },
+  "related": {
+    "heading": "Verwandte Themen",
+    "items": [
+      {
+        "href": "/docs/disk-manager/import-disk-vm",
+        "label": "Datenträger in VM importieren",
+        "tail": "— gleichwertiger Fluss für VMs."
+      },
+      {
+        "href": "/docs/storage-share/lxc-mount-points",
+        "label": "LXC Mount Points (Host ↔) CT)",
+        "tail": "- Hostverzeichnisse mit einem CT teilen, anstatt eine ganze Festplatte anzuhängen."
+      },
+      {
+        "href": "/docs/help-info/vm-ct-commands",
+        "label": "VM und CT Verwaltungsbefehle",
+        "tail": "- pct config / push / pull Referenz."
+      },
+      {
+        "href": "/docs/disk-manager",
+        "label": "Übersicht Disk Manager",
+        "tail": "."
+      }
+    ]
+  }
+}

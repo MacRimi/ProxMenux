@@ -1,0 +1,174 @@
+{
+  "meta": {
+    "title": "Host: NFS-Share auf Host | ProxMenux Dokumentation",
+    "description": "Montieren Sie einen externen NFS-Export auf dem Proxmox-Host - entweder als Proxmox-Speicher (pvesm add nfs), als einfaches Host-Fstab-Halter (NICHT sichtbar in Datacenter > Storage) oder beides. Die fstab-Methode ist ideal, um die Aktie in LXC-Container zu binden, ohne sie als Proxmox-Speicher freizulegen.",
+    "ogTitle": "Host: NFS-Share auf Host | ProxMenux Dokumentation",
+    "ogDescription": "Montieren Sie einen externen NFS-Export auf dem Proxmox-Host über pvesm, fstab oder beides. fstab-Pfad ist ideal für LXC-Bind-Mounts."
+  },
+  "header": {
+    "title": "Host: Mount NFS-Share auf Host",
+    "description": "Montieren Sie einen externen NFS-Export (von einem NAS, einem anderen Server, einer Homelab-Aktie ...) auf dem Proxmox-Host. Wählen Sie eine oder beide Methoden aus: Registrieren Sie sie als Proxmox-Speicher (sichtbar in Datacenter > Storage) und/oder fügen Sie ein einfaches /etc/fstab-Halter an einem von Ihnen gewählten Pfad hinzu (nützlich für das Binden der Freigabe in LXC-Container, ohne sie als Proxmox-Speicher freizulegen).",
+    "section": "Speicher und Freigaben · Host"
+  },
+  "intro": {
+    "title": "Was das macht",
+    "body": "ProxMenux bietet zwei Mount-Methoden für jeden NFS-Export an: <strong>(1) Proxmox-Speicher</strong> über <code>pvesm add nfs</code> - der Anteil wird in Datacenter > Storage angezeigt und Proxmox verwaltet das Mount bei <code>/mnt/pve/&lt;id&gt;</code>; <strong>(2) Host-Fstab-Mount</strong> auf einem Weg, den Sie auswählen - persistent über <code>/etc/fstab</code>, NICHT sichtbar als Proxmox-Speicher, ideal für Bindemontage an LXC-Container (Proxmox UI bleibt sauber). Sie können eine methode, die andere oder beides ausführen."
+  },
+  "opening": {
+    "heading": "Öffnen des Tools",
+    "body": "von ProxMenuxHauptmenü, geöffnet <strong>Lagerung &amp; Share Manager für Mount NFS Share auf dem Host</strong>. Du wirst das sehen sub-Menü mit vier Optionen:",
+    "imageAlt": "NFS Host-Manager-Menü — Mount / View / Remove / Test Connectivity"
+  },
+  "howRuns": {
+    "heading": "Wie das Skript läuft",
+    "body": "Der Fluss hat zwei Phasen mit klarer Trennung zwischen \"Entdecken, Validieren und Auswählen\" und \"Eigentlich Montage / Schreiben Config\". Nachdem Sie einen Export ausgewählt haben, wählen Sie die Mount-Methode(n) über eine Checkliste aus; der Rest der Dialoge fragt nur nach Parametern für die von Ihnen ausgewählten Methoden. Bis zur endgültigen Bestätigung werden weder <code>/etc/pve/storage.cfg</code> noch <code>/etc/fstab</code> berührt."
+  },
+  "modes": {
+    "heading": "Mount method picker (zwei optionen, markieren sie eine oder beide).",
+    "intro": "Nach Auswahl und Validierung des Exports zeigt ProxMenux eine Checkliste mit den beiden Mount-Methoden an. Sie können entweder oder beide markieren. Wenn Sie auf OK drücken, ohne etwas zu markieren, erscheint der Dialog erneut, bis Sie mindestens eine Option auswählen oder auf Abbrechen drücken, um den Fluss zu verlassen.",
+    "imageAlt": "Mount Method Checkliste mit pvesm und fstab Optionen",
+    "headerMethod": "Methode",
+    "headerMount": "Montageweg",
+    "headerUi": "Sichtbar in Datacenter > Storage",
+    "headerUseCase": "Typischer Anwendungsfall",
+    "rows": [
+      {
+        "method": "<strong>Als Proxmox-Speicher ()pvesm)</strong>",
+        "mountRich": "<code>/mnt/pve/&lt;storage-id&gt;</code> (verwaltet von Proxmox)",
+        "ui": "Ja",
+        "useCase": "VM Disk-Images, Backups, ISOs, LXC-Vorlagen - alles, was in der Proxmox-Benutzeroberfläche angezeigt werden muss."
+      },
+      {
+        "method": "<strong>Nur Host-fstab</strong>",
+        "mountRich": "<code>/mnt/&lt;path&gt;</code> (Sie wählen den Weg)",
+        "ui": "Nein",
+        "useCaseRich": "Bind-Mounting der Aktie in einen oder mehrere LXCs <em>ohne</em>, die sie als Proxmox-Speicher ausstellt. Halten Sie die Datacenter-Benutzeroberfläche sauber."
+      },
+      {
+        "method": "<strong>Beide</strong>",
+        "mount": "Beide Pfade oben (zwei unabhängige NFS-Verbindungen zum Server)",
+        "ui": "Ja",
+        "useCase": "Sie wollen UI-Integration UND einen stabilen hostseitigen Pfad mit offenen Berechtigungen für LXC-Bind-Mounts. Der Server sieht zwei Verbindungen vom Host."
+      }
+    ],
+    "bothTitle": "\"Beide\" erstellt zwei unabhängige NFS-Halterungen",
+    "bothBody": "Die Markierung beider Optionen führt jede Methode unabhängig voneinander aus - pvesm mounts bei <code>/mnt/pve/&lt;id&gt;</code>, fstab mounts bei <code>/mnt/&lt;path&gt;</code>. Der Server sieht zwei TCP-Verbindungen vom Proxmox-Host. Dies ist beabsichtigt: Sie können den pvesm-Speicher sauber halten (Standard-Proxmox-Optionen), während Sie ein separates Host-seitiges Mount mit offenen Berechtigungen für LXC-Bind-Mounts haben."
+  },
+  "pvesmBranch": {
+    "heading": "Methode A — als Proxmox-Speicherung (pvesm)",
+    "intro": "Wenn <em>As Proxmox storage</em> markiert ist, führt ProxMenux den ursprünglichen pvesm-Flow aus:",
+    "items": [
+      "<strong>Storage ID</strong> – was Proxmox diesen Speicher nennen wird. Standardmäßig ist <code>nfs-&lt;server-ip-with-dashes&gt;</code>. Es werden nur Buchstaben, Ziffern, <code>-</code> und <code>_</code> akzeptiert.",
+      "<strong>Inhaltstypen</strong> — Proxmox verknüpft Inhaltskategorien mit Speichervolumen; wählen Sie aus, was dieser NFS enthalten darf:"
+    ],
+    "headerType": "Inhaltsart",
+    "headerAllows": "Was es erlaubt",
+    "rows": [
+      {
+        "type": "import",
+        "allowsRich": "Datenträgerbildimporte (standardmäßig ausgewählt). Benötigt für <em>Import Disk Image zu VM</em>."
+      },
+      {
+        "type": "backup",
+        "allowsRich": "VM und CT Backup-Dateien (<code>vzdump</code>)."
+      },
+      {
+        "type": "iso",
+        "allows": "ISO-Abbildungen für die Installation."
+      },
+      {
+        "type": "vztmpl",
+        "allows": "LXC Meldebögen."
+      },
+      {
+        "type": "images",
+        "allows": "VM-Disk-Images (dadurch wird der NFS in einen VM-Disk-Store verwandelt)."
+      },
+      {
+        "type": "rootdir",
+        "allows": "LXC Root-Dateisysteme (selten für NFS – lesen Sie den unten stehenden Hinweis)."
+      },
+      {
+        "type": "snippets",
+        "allows": "Hook-Scripts und Cloud-Init-Snippets."
+      }
+    ],
+    "warnTitle": "Bilder und rootdir auf NFS",
+    "warnBody": "Durch das Markieren von <code>images</code> auf einem NFS-Speicher können Proxmox dort VM-Disks live platzieren. Es funktioniert, aber NFS Latenz und seine Sperrsemantik machen dies merklich langsamer als der lokale Speicher (und ein Netzwerkausfall pausiert jeden VM, der von diesem Speicher unterstützt wird). Das Markieren von <code>rootdir</code> bedeutet, dass Sie LXC-Root-Dateisysteme über NFS hosten, was in der Vergangenheit Probleme mit unprivilegierten Containern (Overlay / chown-Interaktionen) hat. Bevorzugen Sie die Aufbewahrung von <code>images</code> / <code>rootdir</code> auf lokalem oder iSCSI-Speicher und die Verwendung von NFS für <code>backup</code> / <code>iso</code> / <code>vztmpl</code>.",
+    "result": "Das Ergebnis ist <code>pvesm add nfs &lt;id&gt; --server &lt;srv&gt; --export &lt;path&gt; --content &lt;csv&gt;</code> und Proxmox Auto-Mounts bei <code>/mnt/pve/&lt;id&gt;</code>."
+  },
+  "fstabBranch": {
+    "heading": "Methode B — nur Host-Fstab-Halterung",
+    "intro": "Wenn <em>As host fstab mount only</em> markiert ist, fragt ProxMenux nach einem host mount path und persistenten Optionen, dann mountet und schreibt den Eintrag in <code>/etc/fstab</code>:",
+    "items": [
+      "<strong>Host mount path</strong> — standardmäßig <code>/mnt/&lt;export-basename&gt;</code>. Es muss ein absoluter Weg sein. Wenn dort bereits etwas montiert ist oder ein Fstab-Eintrag für den gleichen Pfad existiert, warnt Sie ProxMenux und bietet an, ihn zu ersetzen.",
+      "<strong>Mount options</strong> — wählen Sie <em>Read/Write</em> (Standard mit <code>rw,hard,nofail,_netdev,rsize=131072,wsize=131072,timeo=600,retrans=2</code>), <em>Read-only</em> oder <em>Custom</em> (geben Sie Ihre eigene Optionszeichenfolge ein)."
+    ],
+    "appliesIntro": "Sobald Sie bestätigen, das Skript:",
+    "applies": [
+      "<code>mkdir -p</code> der Mount Path.",
+      "<code>mount -t nfs -o &lt;opts&gt; &lt;srv&gt;:&lt;export&gt; &lt;path&gt;</code>.",
+      "Schreibt einen einzeiligen Eintrag in <code>/etc/fstab</code>: <code>&lt;srv&gt;:&lt;export&gt; &lt;path&gt; nfs &lt;opts&gt; 0 0</code>.",
+      "Führt <code>systemctl daemon-reload</code> aus, so dass systemd den neuen Fstab-Eintrag abholt.",
+      "Versuche <code>chmod 1777</code> + <code>setfacl o::rwx</code> auf dem Mount Point (stille Best-Effort – nur erfolgreich, wenn der NFS-Server dies zulässt; viele NAS-Exporte bedienen bereits weltweit beschreibbare Pfade)."
+    ],
+    "lxcTitle": "Verwendung des fstab-Halters von einem LXC",
+    "lxcBody": "Das Skript druckt am Ende den exakten Befehl <code>pct set</code> aus, um den Pfad in einen Container zu binden, z.B. <code>pct set &lt;ctid&gt; -mp0 /mnt/&lt;path&gt;,mp=/mnt/&lt;ct-path&gt;,shared=1,backup=0</code>. Oder verwenden Sie den <mountLink>LXC Mount Manager</mountLink>, der das Fstab-Mount automatisch erkennt. <strong>Es werden keine Änderungen innerhalb des Containers</strong> vorgenommen – für unprivilegierte LXCs zum Lesen/Schreiben der NFS-Daten stützt sich das Skript auf serverseitige, weltweit beschreibbare Exportsemantik (typisch für Synology, TrueNAS, OMV-Standards). Wenn Ihr NFS-Server Root quetscht oder Perms einschränkt, lesen Sie Fehlerbehebung.",
+    "noUiTitle": "Das fstab-Halter ist KEIN Proxmox-Speicher",
+    "noUiBody": "Die Host-Fstab-Halterung ist für die Proxmox-Web-Benutzeroberfläche unsichtbar - vom Design her. Es erscheint nicht in <em>Datacenter > Storage</em>, Sie können es nicht im VM / CT Creator auswählen, und Proxmox Backup-Jobs können es nicht anvisieren. Es ist ein reiner Host-Dateisystem-Pfad. Wenn Sie auch eine UI-Integration wünschen, markieren Sie die <em>both</em>-Methoden im Picker."
+  },
+  "manual": {
+    "heading": "Manuelles Äquivalent",
+    "pvesmIntro": "Methode A (pvesm) bildet ab:",
+    "fstabIntro": "Methode B (Fstab) bildet ab:"
+  },
+  "view": {
+    "heading": "Ansicht konfigurierter NFS-Speicher",
+    "body": "Listen Sie jeden NFS-Eintrag in Proxmox (<code>pvesm status | awk ''$2 == \"nfs\"''</code>) mit Server, Export, Inhaltstypen, Mount-Pfad und Live-Status auf. <strong>Hinweis: </strong> Diese Ansicht zeigt nur pvesm-registrierte Speicher - fstab-only-Halterungen sind hier nicht aufgeführt. Überprüfen Sie diejenigen mit <code>findmnt -t nfs</code> oder <code>grep nfs /etc/fstab</code>."
+  },
+  "remove": {
+    "heading": "NFS-Speicher entfernen",
+    "body": "Führt <code>pvesm remove &lt;storage-id&gt;</code> nach einer Bestätigung aus, die den Server / Export / Inhalt anzeigt. Nur die Registrierung auf Proxmox-Seite wird entfernt — <strong>der entfernte NFS-Server selbst wird nie berührt</strong>, es werden keine Dateien gelöscht. Um ein fstab-only-Halter zu entfernen, bearbeiten Sie <code>/etc/fstab</code> von Hand und führen Sie <code>umount &lt;path&gt;</code> aus.",
+    "warnTitle": "Abhängigkeiten zuerst sichern",
+    "warnBody": "Wenn VMs, CTs oder Backup-Jobs immer noch auf diesen Speicher verweisen (nach ID), zeigt das Entfernen auf einen verschwundenen Speicher. Proxmox wird den Fehler markieren, aber nicht bereinigen. Verschieben oder löschen Sie diese Referenzen zuerst und entfernen Sie dann den Speicher."
+  },
+  "test": {
+    "heading": "NFS-Verbindung testen",
+    "body": "Führt einen Diagnosepass über jeden in Proxmox registrierten NFS-Speicher aus: Prüft, ob <code>showmount</code> verfügbar ist, ob <code>rpcbind</code> ausgeführt wird, pingt jeden Server, prüft den Port 2049, ruft <code>showmount -e</code> auf und meldet schließlich die eigene Ansicht von Proxmox (<code>pvesm status</code>). Gute erste Station, wenn ein Speicher als <em>inactive</em> in der Proxmox-Benutzeroberfläche angezeigt wird."
+  },
+  "troubleshoot": {
+    "heading": "Fehlerbehebung",
+    "noServersTitle": "\"Keine NFS-Server im Netzwerk gefunden\"",
+    "noServersBody": "Auto-discover verwendet <code>nmap -p 2049 --open &lt;subnet&gt;/24</code>. Der Server reagiert möglicherweise nicht, wenn: er befindet sich in einem anderen VLAN / Subnetz, seine Firewall blockiert nmap Sonden (viele tun dies) oder der Port 2049 wird absichtlich auf dieser Schnittstelle geschlossen. Verwenden Sie stattdessen die Option <em>Manual</em> mit der IP oder dem Hostnamen des Servers.",
+    "portTitle": "\"NFS port (2049) is not accessible\"",
+    "portBody": "Ping war erfolgreich, aber <code>nc -z -w 3 &lt;server&gt; 2049</code> scheiterte. Überprüfen Sie, ob der NFS-Dienst auf dem Server ausgeführt wird (<code>systemctl status nfs-server</code> auf Linux, Systemsteuerung → Dateidienste auf Synology, NFS-Plugin auf OMV / TrueNAS) und ob die Firewall 2049 vom Proxmox-Host ermöglicht.",
+    "showmountTitle": "\"Failed to connect\" von showmount",
+    "showmountBody": "Der Server lehnte die Exportlistenabfrage ab. Häufige Ursachen: Der Server erzwingt strenge Client-ACLs (Ihre Proxmox-IP steht nicht auf der erlaubten Liste), <code>rpcbind</code> läuft nicht auf dem Server oder der Server stellt nur NFSv4 mit <code>showmount</code> aus. Der Exportpfad kann weiterhin manuell hinzugefügt werden, wenn Sie ihn kennen.",
+    "inactiveTitle": "Storage zeigt als inaktiv in der Proxmox UI",
+    "inactiveBody": "<em>Test NFS Connectivity</em> zuerst ausführen — 99 % der Zeit kennzeichnet genau den Hopfen, der bricht (DNS, Port, Mount-Berechtigungen). Wenn die Konnektivität in Ordnung ist, Proxmox jedoch weiterhin inaktiv markiert, überprüfen Sie <code>journalctl -u pvestatd</code> auf dem Proxmox-Knoten; intermittierende DNS- oder langsame NFS-Halterungen beim Booten können Speicher in einem inaktiven Zustand lassen, bis <code>pvesm set &lt;id&gt; --disable 0</code> erneut angewendet wird.",
+    "lxcNoWriteTitle": "fstab mount funktioniert, aber unprivilegierte LXC kann nicht durch ein bind-mount schreiben",
+    "lxcNoWriteBody": "NFS-Berechtigungen werden serverseitig erzwungen, nicht vom Host. Die fstab-Optionen (<code>uid=</code>, <code>file_mode=</code>), die für CIFS do <strong>not</strong> funktionieren, gelten für NFS. Wenn Ihr unprivilegierter LXC (root in CT = UID 100000 auf dem Host, abgebildet auf NFS als \"andere\") nicht schreiben kann, quetscht der NFS-Server entweder root oder hat restriktive Dauerwellen. Fix auf dem Server: Ändern Sie den Export in <code>no_root_squash</code>, wenn Sie dem Host vertrauen, oder legen Sie den Export weltweit beschreibbar fest (Synology, TrueNAS, OMV legen dies alle in der Benutzeroberfläche offen). Das Skript versucht <code>chmod 1777</code> auf dem Mount, aber das gelingt nur, wenn der Server es erlaubt.",
+    "fstabBootTitle": "fstab Mount wird nach dem Neustart nicht angezeigt",
+    "fstabBootBody": "Das Skript fügt <code>nofail,_netdev</code> hinzu, so dass ein fehlender Anteil beim Booten den Start nicht blockiert. Wenn das mount nie auftaucht: bestätigen, dass das netzwerk erreichbar ist (<code>ping &lt;server&gt;</code>), überprüfen sie <code>journalctl -u remote-fs.target</code> und überprüfen sie, ob der eintrag mit <code>mount -fav | grep nfs</code> gültig ist. <code>mount -a</code> nach dem Booten montiert alles, was derzeit fehlt."
+  },
+  "related": {
+    "heading": "Verwandte Themen",
+    "items": [
+      {
+        "href": "/docs/storage-share/host-samba",
+        "label": "Samba / CIFS als Proxmox-Speicher",
+        "tail": "— gleiches Flussmuster (Methode A pvesm + Methode B fstab) für SMB/CIFS-Aktien."
+      },
+      {
+        "href": "/docs/storage-share/lxc-mount-points",
+        "label": "LXC-Mount-Verwaltung",
+        "tailRich": "— bind-mount den fstab-only Pfad <code>/mnt/&lt;path&gt;</code> in einen oder mehrere Container."
+      },
+      {
+        "href": "/docs/storage-share/lxc-nfs-client",
+        "label": "NFS-Client in LXC",
+        "tail": "— Alternative: NFS direkt aus einem privilegierten Container montieren (überspringt den Host)."
+      }
+    ]
+  }
+}

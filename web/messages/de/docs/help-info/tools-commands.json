@@ -1,0 +1,276 @@
+{
+  "meta": {
+    "title": "Linux CLI Werkzeuge für Proxmox — htop, iftop, journalctl, rsync, tmux | ProxMenux",
+    "description": "Tag-zu-Tag Linux CLI-Tools für Proxmox VE-Administration: Monitoring (htop, atop, looks, iotop), Netzwerk (iftop, nmap, mtr, ss), Datei & Text (find, grep, journalctl), Performance (iostat, perf, strace), Sicherheit (fail2ban, lynis, lsof) und Remote-Admin (ssh, rsync, tmux).",
+    "ogTitle": "Linux CLI Werkzeuge für Proxmox — htop, iftop, journalctl, rsync, tmux",
+    "ogDescription": "CLI-Tools für die Proxmox VE-Verwaltung, gruppiert nach Zweck: Überwachung, Netzwerk, Datei/Text, Leistung, Sicherheit und Remote-Admin.",
+    "twitterTitle": "Linux CLI Tools für Proxmox | ProxMenux",
+    "twitterDescription": "CLI-Tools für den täglichen Fahrer für die Proxmox VE-Verwaltung nach Zweck gruppiert."
+  },
+  "header": {
+    "title": "System-CLI-Tools",
+    "description": "CLI-Tools für den täglichen Treiber für die Proxmox-Hostverwaltung, nach Zweck gruppiert: Überwachung, Netzwerk, Datei & Text, Leistungsanalyse, Sicherheit, Remote-Admin und Systemkonfiguration.",
+    "section": "Hilfe und Informationen"
+  },
+  "intro": {
+    "title": "Die meisten werden von Post-Install installiert",
+    "body": "Wenn Sie das ProxMenux Post-Install-Script mit den Standardauswahlen ausgeführt haben, sind die meisten dieser Tools bereits installiert. Für alles, was fehlt, bietet ProxMenux <utilsLink>System Utilities Installer</utilsLink> sie als vordefinierte Gruppen an (Basic, Dev, Netzwerk, Analyse, ...)."
+  },
+  "commandGroups": [
+    {
+      "title": "Systemüberwachung",
+      "commands": [
+        {
+          "command": "htop",
+          "description": "Interaktive Prozessanzeige mit CPU/Speichernutzung"
+        },
+        {
+          "command": "top",
+          "description": "Linux-Prozesse in Echtzeit anzeigen"
+        },
+        {
+          "command": "atop",
+          "description": "Fortschrittlicher System- und Prozessmonitor"
+        },
+        {
+          "command": "glances",
+          "description": "Systemüberwachungstool mit Webinterface"
+        },
+        {
+          "command": "nmon",
+          "description": "Leistungsüberwachungsinstrument"
+        },
+        {
+          "command": "iotop",
+          "description": "I/O-Nutzung von Monitordisketten durch Prozesse"
+        },
+        {
+          "command": "vmstat 1",
+          "description": "Virtuelle Speicherstatistiken jede Sekunde melden"
+        }
+      ]
+    },
+    {
+      "title": "Netzwerk-Tools",
+      "commands": [
+        {
+          "command": "iftop",
+          "description": "Anzeige der Bandbreitennutzung auf einer Schnittstelle"
+        },
+        {
+          "command": "nmap <host>",
+          "description": "Netzwerkexploration und Sicherheitsscanning"
+        },
+        {
+          "command": "tcpdump -i <interface>",
+          "description": "Dump-Netzwerkverkehr"
+        },
+        {
+          "command": "netstat -tuln",
+          "description": "Display-Netzwerkverbindungen"
+        },
+        {
+          "command": "ss -tuln",
+          "description": "Ein weiteres Dienstprogramm zur Untersuchung von Sockets"
+        },
+        {
+          "command": "mtr <host>",
+          "description": "Netzwerkdiagnose-Tool kombiniert Ping und Traceroute"
+        },
+        {
+          "command": "iperf3 -s",
+          "description": "Führen Sie iperf-Server für Bandbreitentests aus"
+        }
+      ]
+    },
+    {
+      "title": "Datei- und Texttools",
+      "commands": [
+        {
+          "command": "find / -name <filename>",
+          "description": "Dateien nach Namen finden"
+        },
+        {
+          "command": "grep -r 'pattern' /path",
+          "description": "Suche nach Mustern in Dateien"
+        },
+        {
+          "command": "sed -i 's/old/new/g' file",
+          "description": "Text in Dateien ersetzen"
+        },
+        {
+          "command": "awk '{print $1}' file",
+          "description": "Textverarbeitungswerkzeug"
+        },
+        {
+          "command": "tail -f /var/log/syslog",
+          "description": "Log-Datei in Echtzeit verfolgen"
+        },
+        {
+          "command": "less /var/log/messages",
+          "description": "Datei ansehen mit Paginierung"
+        },
+        {
+          "command": "journalctl -f",
+          "description": "Folgen Sie systemd Journal Logs"
+        }
+      ]
+    },
+    {
+      "title": "Leistungsanalyse",
+      "commands": [
+        {
+          "command": "iostat -x 1",
+          "description": "Bericht CPU und I/O-Statistiken"
+        },
+        {
+          "command": "mpstat -P ALL 1",
+          "description": "Bericht CPU Auslastung"
+        },
+        {
+          "command": "perf top",
+          "description": "Systemprofilierungstool"
+        },
+        {
+          "command": "strace <command>",
+          "description": "Rufe und Signale von Spursystemen"
+        },
+        {
+          "command": "lsof",
+          "description": "Offene Dateien auflisten"
+        },
+        {
+          "command": "pstree",
+          "description": "Anzeigeprozessbaum"
+        },
+        {
+          "command": "slabtop",
+          "description": "Anzeige von Kernel-Slab-Cache-Informationen"
+        }
+      ]
+    },
+    {
+      "title": "Sicherheits-Tools",
+      "commands": [
+        {
+          "command": "fail2ban-client status",
+          "description": "Fail2Ban-Status anzeigen"
+        },
+        {
+          "command": "chage -l <username>",
+          "description": "Passwortverfallsinformationen anzeigen"
+        },
+        {
+          "command": "lastlog",
+          "description": "Letztes Login aller Benutzer anzeigen"
+        },
+        {
+          "command": "last",
+          "description": "Liste der zuletzt angemeldeten Benutzer"
+        },
+        {
+          "command": "w",
+          "description": "Zeigen Sie, wer angemeldet ist und was sie tun"
+        },
+        {
+          "command": "lynis audit system",
+          "description": "Sicherheitsaudit-Tool"
+        },
+        {
+          "command": "openssl s_client -connect host:port",
+          "description": "SSL/TLS-Verbindungen testen"
+        }
+      ]
+    },
+    {
+      "title": "Fernverwaltung",
+      "commands": [
+        {
+          "command": "ssh <user>@<host>",
+          "description": "Sichere Schalenverbindung"
+        },
+        {
+          "command": "scp <file> <user>@<host>:<path>",
+          "description": "Sichere Kopierdateien"
+        },
+        {
+          "command": "rsync -avz <src> <dest>",
+          "description": "Dateien/Ordner synchronisieren"
+        },
+        {
+          "command": "screen",
+          "description": "Terminal-Multiplexer"
+        },
+        {
+          "command": "tmux",
+          "description": "Alternative Terminal-Multiplexer"
+        },
+        {
+          "command": "ssh-keygen -t rsa -b 4096",
+          "description": "SSH-Schlüsselpaar erzeugen"
+        },
+        {
+          "command": "ssh-copy-id <user>@<host>",
+          "description": "Kopieren des SSH-Schlüssels zum Server"
+        }
+      ]
+    },
+    {
+      "title": "Systemkonfiguration",
+      "commands": [
+        {
+          "command": "systemctl status <service>",
+          "description": "Prüfstatus"
+        },
+        {
+          "command": "journalctl -u <service>",
+          "description": "Anzeigedienstprotokolle"
+        },
+        {
+          "command": "timedatectl",
+          "description": "Uhrzeit und Datum des Kontrollsystems"
+        },
+        {
+          "command": "hostnamectl",
+          "description": "Hostname des Steuersystems"
+        },
+        {
+          "command": "localectl",
+          "description": "Steuersystem lokal und Tastatur"
+        },
+        {
+          "command": "update-alternatives --config <name>",
+          "description": "Systemalternativen konfigurieren"
+        },
+        {
+          "command": "dpkg-reconfigure <package>",
+          "description": "Rekonfigurieren eines installierten Pakets"
+        }
+      ]
+    }
+  ],
+  "tmuxTip": {
+    "title": "Verwenden Sie tmux / screen für lang laufende Befehle",
+    "bodyRich": "Alles, was länger als eine Kaffeepause dauert - ein Backup, ein langes Upgrade, ein großer rsync - sollte in <code>tmux</code> oder <code>screen</code> laufen. SSH-Disconnects töten die Sitzung nicht und Sie können sie von überall mit <code>tmux attach</code> erneut anbringen."
+  },
+  "related": {
+    "heading": "Verwandte Themen",
+    "items": [
+      {
+        "href": "/docs/utils/system-utils",
+        "label": "Installationsprogramm für Systemdienstprogramme",
+        "tail": "Installieren Sie eines dieser Tools, die fehlen."
+      },
+      {
+        "href": "/docs/help-info/system-commands",
+        "label": "Nützliche Systembefehle",
+        "tail": "Proxmox-spezifische Inspektionsbefehle."
+      },
+      {
+        "href": "/docs/help-info",
+        "label": "Hilfe und Info Überblick",
+        "tail": "."
+      }
+    ]
+  }
+}

@@ -1,0 +1,74 @@
+{
+  "meta": {
+    "title": "Post-Install: Customization | ProxMenux Dokumentation",
+    "description": "Anpassungsoptionen im ProxMenux Anpassbares Post-Installationsskript: eine farbige Bash-Eingabeaufforderung mit nützlichen Aliase, ein ProxMenux-Banner in der MOTD und die Option zum Entfernen des Proxmox-Abonnement-Nag von der Weboberfläche."
+  },
+  "header": {
+    "title": "Nach der Installation: Anpassung",
+    "description": "Kosmetik und Lebensqualität Tweaks für den Proxmox Host. Sie machen die Shell schöner zu verwenden und verstecken die Abonnement-Nag in der Web-Benutzeroberfläche. Bashrc, MOTD und das Abonnement-Banner werden aus dem Uninstall-Menü verfolgt und reversibel.",
+    "section": "Einstellungen nach der Installation von Proxmox"
+  },
+  "intro": {
+    "title": "Was diese Kategorie abdeckt",
+    "body": "Drei kleine, unabhängige Optionen: eine <strong>farbige Bash-Eingabeaufforderung + aliases</strong> für die Root-Shell, ein einzeiliges <strong>MOTD-Banner</strong> sichtbar auf SSH Login und Entfernen des <strong>\"Kein gültiges Abonnement\" Popup</strong>, das Proxmox bei jedem Login in der Web-Benutzeroberfläche anzeigt."
+  },
+  "bashrc": {
+    "heading": "bashrc anpassen",
+    "intro": "Injiziert einen kuratierten Block in <code>/root/.bashrc</code> mit einer farbigen Eingabeaufforderung, Zeitstempel-Historie, Standard-<code>ls</code>/<code>grep</code>-Aliasen und einem <code>source</code> für die Bash-Vervollständigung. Macht das Arbeiten über SSH spürbar angenehmer und macht deutlich, auf welchem Host Sie sich befinden, wenn Sie viele Tabs geöffnet haben.",
+    "writesTitle": "Was ProxMenux zu .bashrc hinzufügt",
+    "writesOutro": "Der Block wird durch die <code>PMX_CORE_BASHRC</code>-Marker begrenzt. Das Ausführen des Skripts ersetzt den vorherigen Block, anstatt ihn zu duplizieren. Die ursprüngliche <code>.bashrc</code> wird einmal auf <code>/root/.bashrc.bak</code> gesichert, und eine <code>source /root/.bashrc</code>-Zeile wird an <code>/root/.bash_profile</code> angehängt, so dass die Aufforderung auch für Login-Shells gilt (z. B. nach <code>su -</code>).",
+    "rootTitle": "Gilt nur für root",
+    "rootBody": "Die Anpassung zielt auf die Shell des Root-Kontos ab. Andere Benutzer, die Sie auf dem Host erstellen, behalten ihre eigenen Standardeinstellungen. Wenn Sie Proxmox ausschließlich über die Web-Benutzeroberfläche verwalten und niemals die Shell verwenden, ist diese Option reine Ästhetik und Sie können sie überspringen."
+  },
+  "motd": {
+    "heading": "Richten Sie ein benutzerdefiniertes MOTD-Banner ein",
+    "intro": "Prepends <em>\"Dieses System wird optimiert durch: ProxMenux\"</em> bis <code>/etc/motd</code>, die Nachricht, die nach einem erfolgreichen SSH-Login angezeigt wird (über der Shell-Eingabeaufforderung, bevor irgendwelche <code>update-motd</code>-Skripte ausgeführt werden). Harmlos und rein informativ - nützlich als schnelle visuelle Bestätigung, dass ProxMenux auf diesem Host angewendet wurde.",
+    "writesTitle": "Was ProxMenux schreibt",
+    "writesOutro": "Bei der ersten Anwendung erfasst ProxMenux, ob <code>/etc/motd</code> existierte und speichert seinen ursprünglichen Inhalt unter <code>/usr/local/share/proxmenux</code>. Die Operation ist idempotent: Wenn die Markierungslinie bereits vorhanden ist, wird nichts hinzugefügt. Ältere Anlagen mit einem vorhandenen <code>/etc/motd.bak</code> werden in den gleichen reversiblen Zustand migriert."
+  },
+  "banner": {
+    "heading": "Abonnementbanner entfernen",
+    "intro": "Entfernt das <em>\"Sie haben kein gültiges Abonnement für diesen Server\"</em>-Modal, das jedes Mal erscheint, wenn sich jemand ohne Unternehmensabonnement in die Proxmox-Weboberfläche einloggt. Der Patch ist versionenbewusst: Verschiedene Proxmox-Hauptversionen haben unterschiedliche UI-Bundles, so dass ProxMenux zum richtigen Skript versendet wird.",
+    "versionTitle": "Versionssicherer Versand",
+    "versionItems": [
+      "<strong>PVE 9.x</strong> führt <code>remove-banner-pve-v3.sh</code> aus (patcht sowohl die Desktop-<code>proxmoxlib.js</code> als auch die neue Yew-basierte mobile Benutzeroberfläche).",
+      "<strong>PVE 8.x</strong> führt <code>remove-banner-pve8.sh</code> aus (nur auf dem Desktop)."
+    ],
+    "versionOutro": "Vor dem Patchen sichert ProxMenux die ursprünglichen JS/Template-Dateien mit einem Zeitstempel auf <code>/usr/local/share/proxmenux/backups/</code>. Der Deinstallationsfluss verwendet diese Backups, um die Originaldateien wiederherzustellen, und greift auf die Neuinstallation der Proxmox-Benutzeroberflächenpakete zurück, wenn das Backup fehlt oder beschädigt ist.",
+    "breakTitle": "Kann nach Proxmox Updates brechen",
+    "breakBody": "Proxmox liefert regelmäßig UI-Updates, die <code>proxmoxlib.js</code> überschreiben. Wenn das passiert, kommt das Banner zurück. Sie können diese Option nach jedem Proxmox-Update erneut anwenden, um die Datei erneut zu patchen, oder einfach das Nag akzeptieren, bis Sie es erneut anwenden. ProxMenux installiert auch einen APT-Hook, der bei Paket-Upgrades automatisch neu gepatcht wird - siehe <link>Optimierungen</link> deinstallieren, wie dieser Hook umgekehrt wird.",
+    "legalTitle": "Rechtliche Anmerkung (immer wiederholenswert)",
+    "legalBody": "Diese Option verbirgt nur das UI Nag. <strong>not</strong> gewährt Ihnen Unternehmenssupport, Zugriff auf das Unternehmensrepository oder alle Rechte, Proxmox kommerziell ohne Abonnement zu versenden. Wenn Sie Proxmox in einer umsatzgenerierenden Umgebung betreiben, kaufen Sie ein Abonnement – es unterstützt das Projekt und bringt Ihnen den stabilen Unternehmenskanal."
+  },
+  "verify": {
+    "heading": "Verifizierung",
+    "intro": "Nach Anwendung aller drei:",
+    "reversibleTitle": "Alle drei Anpassungsänderungen werden verfolgt",
+    "reversibleBody": "<link>Optimierungen deinstallieren</link> stellt <code>/root/.bashrc</code> wieder her, gibt MOTD zu seinem genauen Pre-ProxMenux-Inhalt zurück (oder entfernt die Datei, wenn sie vorher nicht existierte) und stellt die gepatchten UI-Dateien aus dem Backup wieder her oder installiert die betroffenen Proxmox-Pakete bei Bedarf neu."
+  },
+  "related": {
+    "heading": "Verwandte Themen",
+    "items": [
+      {
+        "label": "Fakultativ",
+        "href": "/docs/post-install/optional",
+        "tail": "Fastfetch und Figurine (andere visuelle Anpassungen)."
+      },
+      {
+        "label": "Versionsinformationen anzeigen",
+        "href": "/docs/settings/show-version-information",
+        "tail": "— bestätigt, dass die Anpassungen wie installiert verfolgt werden."
+      },
+      {
+        "label": "Optimierungen deinstallieren",
+        "href": "/docs/post-install/uninstall",
+        "tail": "— revert bashrc, motd, abonnement nag."
+      },
+      {
+        "label": "Anpassbar nach der Installation",
+        "href": "/docs/post-install/customizable",
+        "tail": "Zurück zum übergeordneten Menü."
+      }
+    ]
+  }
+}

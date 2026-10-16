@@ -1,0 +1,152 @@
+{
+  "meta": {
+    "title": "Geplante Aufträge — Timer, Attachment-Modus, Retention | ProxMenux",
+    "description": "Geplante ProxMenux Host-Backup-Jobs. Zwei Erstellungsmodi (eigener systemd-Timer oder Attachment zu einem vorhandenen PVE vzdump-Job), Retentionswerte, die pro Job über proxmox-backup-client/borg/local prune angewendet werden, Storage-Layout unter /var/lib/proxmenux/backup-jobs und das Runner-Script, das Archive erzeugt, die mit dem interaktiven Fluss identisch sind.",
+    "ogTitle": "ProxMenux Backup — geplante Aufträge",
+    "ogDescription": "Unbeaufsichtigte geplante Host-Backups mit Attachment-Modus, Retention und den gleichen drei Zielen wie der interaktive Fluss.",
+    "twitterTitle": "Geplante Jobs | ProxMenux",
+    "twitterDescription": "Unbeaufsichtigte geplante Host-Backup-Jobs mit Attach-Modus und Retention."
+  },
+  "header": {
+    "title": "Geplante Arbeitsplätze",
+    "description": "Unbeaufsichtigte Host-Backup-Jobs. Zwei Erstellungsmodelle: ein neuer unabhängiger Job mit einem eigenen Zeitplan oder ein Job, der an eine bestehende PVE vzdump-Aufgabe angehängt ist, die den Zeitplan und die Aufbewahrung dieser Aufgabe erbt. Beide produzieren Archive, die mit dem interaktiven Fluss identisch sind.",
+    "section": "Sicherung und Wiederherstellung"
+  },
+  "intro": {
+    "title": "Die beiden planmäßigen Job-Modelle",
+    "body": "Ein geplanter Job kann nach einem von zwei Modellen erstellt werden:",
+    "modelsList": [
+      "<strong>Neuer unabhängiger job</strong> — ProxMenux definiert den Jobplan selbst mit einem eigenen systemd-Timer, unabhängig von anderen Aufgaben auf dem Host. Kompatibel mit allen drei Destinationen: Local, PBS und Borg.",
+      "<strong>An eine bestehende PVE vzdump-Task anhängen</strong> – der Job hat keinen eigenen Zeitplan; er wird automatisch ausgeführt, wenn die übergeordnete PVE vzdump-Task, die bereits die VMs und LXCs auf diesem Host sichert, ausgelöst wird. Erbt den Zeitplan und die Beibehaltung von der übergeordneten Aufgabe. Kompatibel mit Local und PBS (Borg wird nicht unterstützt, da PVE keinen nativen Scheduler für Borg hat)."
+    ]
+  },
+  "attachBadge": {
+    "title": "Attach-Modus — empfohlen, wenn bereits eine PVE vzdump-Task existiert",
+    "body": "Wenn eine PVE vzdump-Backup-Task bereits für die VMs und LXCs auf diesem Knoten konfiguriert ist, garantiert das Anfügen des Host-Backups an diese Aufgabe, dass die Host-Konfiguration im <strong> gleichen Fenster </strong> als Gäste erfasst wird. Bei der Wiederherstellung stammen die Gastkonfigurationen aus dem Host-Backup (sie leben unter <code>/etc/pve</code>), und die Gastdisketten stammen aus dem vzdump-Backup - beide Sets sind konsistent miteinander, so dass eine vollständige Knotenwiederherstellung den Host reproduzieren und jeden Gast ohne Versionsdrift erneut anbringen kann."
+  },
+  "frequencyBadge": {
+    "title": "Empfohlene Häufigkeit",
+    "body": "Um die Kompatibilität zwischen einem Host-Backup und seiner zukünftigen Wiederherstellung zu maximieren, führen Sie häufig Host-Backups aus. Je näher das Backup dem aktuellen Zustand des Hosts ist, desto weniger Konfigurations-, Paket- und Komponentendrift muss die Wiederherstellung in Einklang bringen."
+  },
+  "modes": {
+    "heading": "Die beiden Modi",
+    "rows": [
+      {
+        "mode": "Neuer geplanter Auftrag",
+        "backends": "Lokal, PBS, Borg",
+        "schedule": "Eigener <code>OnCalendar</code>-Ausdruck (systemd-Kalendersyntax — z. B.) <code>daily</code>, <code>Mon..Fri 03:00</code>).",
+        "retention": "Ausgestellt separat: <code>keep-last</code>, <code>keep-hourly</code>, <code>keep-daily</code>, <code>keep-weekly</code>, <code>keep-monthly</code>, <code>keep-yearly</code>. Wird vom Läufer nach jedem erfolgreichen Backup angewendet."
+      },
+      {
+        "mode": "Anhängen an einen PVE vzdump Job",
+        "backends": "Lokal, PBS (Borg hat keinen PVE-seitigen Scheduler)",
+        "schedule": "Vererbt vom Eltern-PVE-Job. Auf der ProxMenux-Seite ist kein systemd-Timer installiert.",
+        "retention": "Vererbt von der <code>prune-backups</code>-Konfiguration des Elternunternehmens (eins zu eins zu den <code>KEEP_*</code>-Variablen des Läufers über <code>hb_pve_prune_to_keep_env</code> zugeordnet)."
+      }
+    ]
+  },
+  "attachDetail": {
+    "heading": "Wie Attach Mode funktioniert",
+    "intro": "PVE schreibt <code>vzdump</code>-Aufgaben an <code>/etc/pve/jobs.cfg</code> – eine Strophe pro Aufgabe, die jeweils auf einen Speicher zeigt, in dem die VM und LXC landen. Der Attach-Modus erfordert, dass der Speicher ein Backend ist, das ProxMenux versteht (Local oder PBS); wenn die Aufgabe ausgelöst wird, läuft ProxMenux neben ihr.",
+    "steps": [
+      {
+        "step": "1",
+        "detail": "Während der Erstellung von Arbeitsplätzen listet ProxMenux kompatible übergeordnete PVE-Aufgaben über <code>hb_pve_list_vzdump_jobs_for_backend</code> auf. Der Benutzer wählt einen aus."
+      },
+      {
+        "step": "2",
+        "detail": "Der <code>.env</code> des Jobs wird mit <code>PVE_PARENT_JOB</code>, <code>PVE_STORAGE</code> und den geerbten <code>KEEP_*</code>-Werten geschrieben; es wird kein systemd-Timer erstellt."
+      },
+      {
+        "step": "3",
+        "detail": "<code>hb_install_vzdump_hook</code> registriert einen Skript-Hook in <code>/etc/vzdump.conf</code>. Wenn PVE eine vzdump-Aufgabe ausführt, wird das Hook-Skript ausgelöst; wenn der <code>$STOREID</code>, der an ihn übergeben wurde, mit dem <code>PVE_STORAGE</code> eines angehängten Jobs übereinstimmt, wird der Läufer für diesen Job aufgerufen."
+      },
+      {
+        "step": "4",
+        "detail": "Das Archiv landet im selben Speicher, den die vzdump-Dumps gerade geschrieben haben: <code>path/dump/</code> für Local oder das PBS-Repository, das auf dem PVE-Speichereintrag konfiguriert ist."
+      }
+    ],
+    "outroBody": "Der Attach-Modus hat eine operative Implikation: Das Deaktivieren oder Löschen der übergeordneten PVE-Task deaktiviert auch das Host-Backup - es gibt keinen eigenen Timer, auf den man zurückgreifen kann. Der Jobeintrag bleibt auf der Festplatte, so dass er später wieder angebracht werden kann."
+  },
+  "storageLayout": {
+    "heading": "Dateien, die einen Job ausmachen",
+    "intro": "Jeder geplante Job wird vollständig durch drei oder vier Dateien auf der Festplatte beschrieben. Das Lesen gibt die vollständige Konfiguration des Jobs, ohne sich auf die Benutzeroberfläche zu verlassen.",
+    "rows": [
+      {
+        "path": "/var/lib/proxmenux/backup-jobs/JOB_ID.env",
+        "content": "Backend, Backup-ID oder Ziel, Zeitplan (Neuer Modus) oder PVE-Elternteil (Attach-Modus), aktiviertes Flag, Retention <code>KEEP_*</code>-Werte, Anmeldeinformationen."
+      },
+      {
+        "path": "/var/lib/proxmenux/backup-jobs/JOB_ID.paths",
+        "content": "Ein absoluter Pfad pro Zeile - die eingefrorene Auswahl wurde zum Zeitpunkt der Joberstellung aus dem Profil aufgelöst. Das Bearbeiten der Datei führt den Job mit der neuen Auswahl beim nächsten Timer-Feuer erneut aus."
+      },
+      {
+        "path": "/etc/systemd/system/proxmenux-backup-JOB_ID.timer + .service",
+        "content": "Nur neuer Modus. Der Dienst ruft <code>run_scheduled_backup.sh JOB_ID</code> auf. Der Timer plant es mit <code>Persistent=true</code> (verpasste Feuer laufen beim nächsten Boot) und einem kleinen <code>RandomizedDelaySec=120</code>, um die Last zu verteilen, wenn mehrere Jobs den gleichen OnCalendar-Ausdruck teilen."
+      },
+      {
+        "path": "/etc/vzdump.conf script-hook",
+        "content": "Nur Modus anbringen. Einmal von <code>hb_install_vzdump_hook</code> installiert; passt den <code>PVE_STORAGE</code> jedes angehängten Jobs mit dem <code>$STOREID</code> PVE-Übergang zum Hook-Skript ab."
+      }
+    ]
+  },
+  "runner": {
+    "heading": "Was ein Job macht, wenn er feuert",
+    "intro": "Jeder Job - ob New-Model oder Attachment - führt die gleiche dreistufige Sequenz aus:",
+    "steps": [
+      "<strong>Prepare the backup.</strong> Leset die Job-Konfiguration (Ziel, Profil, Pfade) und stellt den Archivbaum genau so zusammen, wie es der interaktive Fluss tut. Das Ergebnis ist das gleiche Archiv, das ein manuelles Backup mit diesen Einstellungen erzeugen würde.",
+      "<strong>Write to the destination.</strong> Hochlädt oder schreibt das Archiv in das konfigurierte Ziel – eine lokale <code>.tar.zst</code>-Datei, ein PBS-Backup oder ein Borg-Archiv – mit genau den gleichen Tools und Anmeldeinformationen, die ein manuelles Backup für dasselbe Ziel verwenden würde.",
+      "<strong>Apply retention.</strong> Entfernt alte Backups vom Zielort, wobei die Anzahl der <code>keep-last</code> / <code>keep-daily</code> / <code>keep-weekly</code> für den Auftrag konfiguriert bleibt. Das Beschneiden wird vom Zielort selbst durchgeführt: PBS wendet seine eigene Aufbewahrung an, Borg führt <code>borg prune</code> aus und löscht für Local ProxMenux die Dateien, die außerhalb des <code>keep-last</code>-Fensters liegen."
+    ]
+  },
+  "management": {
+    "heading": "Verwaltung von Arbeitsplätzen",
+    "intro": "Das Scheduler-Menü (Scripts TUI) und die Registerkarte Monitor Backups zeigen die gleichen Aktionen bei jedem Job.",
+    "rows": [
+      {
+        "action": "Jetzt laufen",
+        "detail": "Ruft den Läufer sofort auf und umgeht den Timer / vzdump-Hook. Nützlich, um eine Jobkonfiguration zu überprüfen, ohne auf das nächste geplante Feuer zu warten."
+      },
+      {
+        "action": "Aktivieren/Deaktivieren",
+        "detail": "Neuer Modus: <code>systemctl enable/disable --now</code> der Timer. Attach-Modus: Dreht das <code>ENABLED</code>-Flag im Job Env um — das Hook-Skript ehrt es beim nächsten PVE-Feuer."
+      },
+      {
+        "action": "Bearbeiten",
+        "detail": "Öffnet Ziel, Zeitplan, Profil und Aufbewahrungsaufforderungen neu und schreibt die Jobdateien neu. Bewahrt die Job ID auf."
+      },
+      {
+        "action": "Löschen",
+        "detail": "Entfernt die Job env, Pfaddatei, systemd Timer + Service (Neuer Modus) und deaktiviert die Hakenbindung (Attach-Modus). Berührt keine Archive bereits am Zielort."
+      },
+      {
+        "action": "Protokoll anzeigen",
+        "detail": "Streams <code>/var/log/proxmenux/backup-jobs/JOB_ID-YYYYMMDD_HHMMSS.log</code> — eine Protokolldatei pro Lauf. Der Läufer sendet auch eine kompakte Statuszeile aus, die unter dem systemd-Dienst veröffentlicht wird."
+      }
+    ]
+  },
+  "notifications": {
+    "heading": "Benachrichtigungen",
+    "body": "Jeder geplante Lauf feuert die gleichen <code>hb_notify_lifecycle</code>-Ereignisse ab wie der interaktive Fluss (<code>start</code>, <code>complete</code>, <code>fail</code>). Wenn Benachrichtigungskanäle im Monitor konfiguriert sind, tauchen unbeaufsichtigte Jobs auf die gleiche Weise wie manuelle Backups auf - ein Benutzer muss das Protokoll nicht überprüfen, um zu wissen, ob ein Job erfolgreich war."
+  },
+  "whereNext": {
+    "heading": "Wohin Sie als nächstes gehen",
+    "items": [
+      {
+        "label": "Backups erstellen",
+        "href": "/docs/backup-restore/creating-backups",
+        "tail": "- der interaktive Fluss, der das Backend mit dem Scheduler teilt."
+      },
+      {
+        "label": "Reiseziele",
+        "href": "/docs/backup-restore/destinations",
+        "tail": "Per-Backend-Konfiguration, die sowohl vom interaktiven Flow als auch vom Scheduler verwendet wird."
+      },
+      {
+        "label": "Wiederherstellung",
+        "href": "/docs/backup-restore/restoring",
+        "tail": "- der Fluss, der verbraucht, was Arbeitsplätze produzieren."
+      }
+    ]
+  }
+}

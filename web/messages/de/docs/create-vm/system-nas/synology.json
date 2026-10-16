@@ -1,0 +1,400 @@
+{
+  "meta": {
+    "title": "VM erstellen: Synology DSM | ProxMenux Dokumentation",
+    "description": "Erstellen Sie eine Synology DSM virtuelle Maschine auf Proxmox VE. ProxMenux lädt den Loader Ihrer Wahl (Arc, RR, TinyCore M-shell oder eine benutzerdefinierte), importiert ihn als Startdiskette des VM und bereitet CPU, RAM und Speicher über den Standard- oder erweiterten Assistenten vor.",
+    "ogTitle": "VM erstellen: Synology DSM | ProxMenux Dokumentation",
+    "ogDescription": "Erstellen Sie eine Synology DSM virtuelle Maschine auf Proxmox VE mit ProxMenux."
+  },
+  "header": {
+    "title": "VM erstellen: Synology DSM",
+    "description": "Erstellen Sie eine Synology DSM virtuelle Maschine auf Proxmox VE. ProxMenux lädt den Loader Ihrer Wahl (Arc, RR, TinyCore M-shell oder eine benutzerdefinierte), importiert ihn als Startdiskette des VM und bereitet CPU, RAM und Speicher über den Standard- oder erweiterten Assistenten vor.",
+    "section": "Virtuelle Maschinen · NAS"
+  },
+  "loaderLabels": {
+    "arc": "Arc Loader",
+    "rr": "RR Loader",
+    "tinycore": "TinyCore Loader"
+  },
+  "whatThisDoes": {
+    "title": "Was das macht",
+    "bodyRich": "ProxMenux automatisiert die VM-Seite einer Synology DSM-Installation: Es lädt einen der unterstützten Loader herunter, importiert ihn in eine neue VM als IDE-Bootdiskette und verwendet den CPU / RAM / Netzwerk / Speicher, den Sie auswählen. Der Rest - der Bau des Loaders, die Auswahl des DSM-Modells, die Installation von DSM - geschieht <strong> innerhalb des VM</strong>, angetrieben von der eigenen Web- oder Terminalschnittstelle des Loaders. Diese schritte werden von der community gepflegt und ändern sich oft, so dass diese seite ihnen eine arbeitsbasis bietet."
+  },
+  "supportedLoaders": {
+    "heading": "Unterstützte Lader",
+    "intro": "Mit dem Skript können Sie zwischen vier Loader-Quellen wählen:",
+    "loaders": [
+      {
+        "name": "AuxXxilium Arc",
+        "url": "https://github.com/AuxXxilium/arc"
+      },
+      {
+        "name": "RedPill RR",
+        "url": "https://github.com/RROrg/rr"
+      },
+      {
+        "name": "TinyCore RedPill M-shell",
+        "url": "https://github.com/PeterSuh-Q3/tinycore-redpill"
+      }
+    ],
+    "customRich": "<strong>Custom Loader</strong> – legen Sie Ihr eigenes Loader-Image in <code>/var/lib/vz/template/iso</code> und das Skript wird es abholen."
+  },
+  "config": {
+    "heading": "Default vs. Advanced Konfiguration",
+    "intro": "Wenn Sie das Skript ausführen, wird gefragt, ob Sie das ProxMenux-Standardprofil VM verwenden oder den erweiterten Assistenten öffnen möchten. Standardwerte sind auf DSM abgestimmt und funktionieren für die meisten Installationen.",
+    "defaultHeading": "Standardkonfiguration",
+    "headerParam": "Parameter",
+    "headerValue": "Standardwert",
+    "defaultRowsRich": [
+      {
+        "param": "Maschinentyp",
+        "valueRich": "<code>q35</code>"
+      },
+      {
+        "param": "BIOS",
+        "valueRich": "OVMF (UEFI)"
+      },
+      {
+        "param": "CPU",
+        "valueRich": "Gastgeber"
+      },
+      {
+        "param": "Kerne",
+        "valueRich": "2"
+      },
+      {
+        "param": "RAM",
+        "valueRich": "4096 MB"
+      },
+      {
+        "param": "Brücke",
+        "valueRich": "<code>vmbr0</code>"
+      },
+      {
+        "param": "MAC-Adresse",
+        "valueRich": "Autogeneriert"
+      },
+      {
+        "param": "Beginn der Fertigstellung",
+        "valueRich": "Nein"
+      }
+    ],
+    "advancedHeading": "Erweiterte Konfiguration",
+    "advancedIntro": "Der fortgeschrittene Zauberer zeigt jeden Knopf. Sie können alle diese frei ändern:",
+    "headerOptions": "Optionen",
+    "advancedRowsRich": [
+      {
+        "param": "Maschinentyp",
+        "optionsRich": "<code>q35</code> oder <code>i440fx</code>"
+      },
+      {
+        "param": "BIOS",
+        "optionsRich": "OVMF (UEFI) oder SeaBIOS (Legacy)"
+      },
+      {
+        "param": "CPU",
+        "optionsRich": "Host oder KVM64"
+      },
+      {
+        "param": "Kerne",
+        "optionsRich": "Anzahl CPU-Kerne"
+      },
+      {
+        "param": "RAM",
+        "optionsRich": "Speicher zugewiesen VM"
+      },
+      {
+        "param": "Brücke",
+        "optionsRich": "Netzbrücke"
+      },
+      {
+        "param": "MAC-Adresse",
+        "optionsRich": "Eigene MAC-Adresse"
+      },
+      {
+        "param": "VLAN",
+        "optionsRich": "VLAN-Tag (fakultativ)"
+      },
+      {
+        "param": "MTU",
+        "optionsRich": "MTU-Größe"
+      }
+    ]
+  },
+  "storagePlan": {
+    "heading": "Speicherplan",
+    "introRich": "Nach dem Schritt CPU / RAM öffnet ProxMenux das <strong>Storage Plan</strong> Menü, in dem Sie <strong></strong> virtuelle Festplatten, importierte Festplatten und PCI-Durchgangsgeräte im selben VM kombinieren können, indem Sie Elemente einzeln hinzufügen und beenden, wenn Sie fertig sind.",
+    "virtualHeading": "a. Virtuelle Festplatte hinzufügen",
+    "virtualItemsRich": [
+      "Listen Sie die auf dem Host verfügbaren Proxmox-Speichervolumen auf.",
+      "Sie wählen den Zielspeicher und die Größe in GB aus.",
+      "Die Festplatte ist mit dem VM als SATA verbunden (<code>sata0</code>, <code>sata1</code>, ... bis 6)."
+    ],
+    "importHeading": "b. Importdiskette hinzufügen",
+    "importItemsRich": [
+      "Erkennt physische Festplatten, die sicher importiert werden können (System und geschützte Festplatten sind verborgen).",
+      "Sie wählen eine oder mehrere Festplatten über eine Checkliste aus.",
+      "Importierte Festplatten werden als SATA über <code>qm set</code> angehängt."
+    ],
+    "pciHeading": "c. Add Controller oder NVMe (PCI-Passthrough)",
+    "pciItemsRich": [
+      "Erkennt SATA/SAS HBAs und NVMe Geräte auf dem Host und lässt Sie einen <em>entire Controller </em> in den VM übergeben. IOMMU muss aktiviert sein; das Skript bietet es an und startet bei Bedarf neu.",
+      "Ein Bestätigungsschritt warnt vor einem kontrollerweiten Risiko (die gesamte Karte, einschließlich jeder Festplatte, verlässt den Host).",
+      "Die ausgewählten PCI-Geräte werden über <code>qm set hostpciN: …</code> angeschlossen."
+    ],
+    "resetCalloutTitle": "Reset und Finish",
+    "resetCalloutBodyRich": "Das Menü bietet auch <strong>r</strong> (die aktuelle Auswahl zurücksetzen und neu starten) und <strong>d</strong> (Finish und Continue). Sie können nicht mit einem leeren Plan abschließen - Synology benötigt mindestens eine Festplatte, auf der Sie DSM installieren können."
+  },
+  "gpu": {
+    "heading": "Optionaler GPU-Durchgang",
+    "bodyRich": "Nach dem Speicherplan, wenn das Skript eine kompatible GPU Auf dem Host fragt es, ob Sie es an diesen weitergeben möchten VM. Siehe <link>Addition GPU bis a VM (Durchgang)</link> Für die Funktionsweise des Assistenten ist möglicherweise ein Host-Reboot erforderlich."
+  },
+  "loaderInstall": {
+    "heading": "Einbau von Lasten",
+    "intro1Rich": "<strong>Arc</strong>, <strong>RR</strong> und <strong>TinyCore M-shell</strong> werden automatisch aus ihren vorgelagerten GitHub-Repositories heruntergeladen und extrahiert. Wenn der Download fehlschlägt, bricht das Skript mit einer klaren Nachricht ab.",
+    "intro2Rich": "Für die Option <strong>Custom Loader</strong> scannt das Skript <code>/var/lib/vz/template/iso</code>. Wenn mehr als ein Kandidat gefunden wird, werden Sie aufgefordert, den gewünschten auszuwählen.",
+    "uploadIntro": "Sie können benutzerdefinierte Loader aus dem lokalen Proxmox-Speicher hochladen:",
+    "imageAlt": "Custom Loader hinzufügen",
+    "imageCaption": "Custom Loader hinzufügen"
+  },
+  "vmCreation": {
+    "heading": "VM Creation – was das Skript ausführt",
+    "introRich": "Sobald Sie den Loader bestätigt haben, führt ProxMenux das Äquivalent dieser <code>qm</code>-Befehle aus:",
+    "itemsRich": [
+      "<code>qm create</code> — erstellt den VM mit dem ausgewählten CPU, RAM, BIOS und Maschinentyp.",
+      "<code>qm importdisk</code> — importiert den Loader als <strong>IDE</strong> Festplatte (maximale Kompatibilität).",
+      "<code>qm set sataN: …</code> — verbindet virtuelle Festplatten und importierte Festplatten aus dem Speicherplan sowie die Netzwerkschnittstelle.",
+      "<code>qm set hostpciN: …</code> — Befestigt alle Controller / NVMe-Geräte, die für den PCI-Durchlauf ausgewählt wurden.",
+      "<code>qm set --boot</code> — stellt den Loader als erstes Boot-Gerät ein."
+    ]
+  },
+  "stepByStep": {
+    "heading": "Schritt-für-Schritt-Laderkonfiguration",
+    "intro": "Alle Loader folgen dem gleichen High-Level-Muster - starten Sie den VM, wählen Sie ein Modell, wählen Sie eine DSM-Version, wählen Sie Add-Ons, Build, Boot - aber die Bildschirme und Menüs unterscheiden sich. Die folgende Anleitung führt durch die sechs gemeinsamen Schritte mit Screenshots für jeden Loader. Genaue Optionen können sich mit neuen Loader-Releases ändern.",
+    "warnCalloutTitle": "Ladegeräte werden nicht von ProxMenux gewartet",
+    "warnCalloutBody": "Arc, RR und TinyCore sind Community-Projekte mit eigener Release-Kadenz. Wenn ein Schritt anders aussieht als die Screenshots unten, hat der Loader wahrscheinlich aktualisiert - überprüfen Sie die eigene Dokumentation des Loaders (Links unten auf dieser Seite)."
+  },
+  "stepBadge": "Schritt",
+  "step1": {
+    "title": "Starten Sie den VM und greifen Sie auf das Hauptmenü zu",
+    "intro": "Sobald der VM erstellt wurde, starten Sie ihn. Der erste Boot führt Sie zur Konfigurationsschnittstelle des Loaders, wo Sie das gewünschte DSM-Modell auswählen und erstellen. Nachdem der Loader erstellt wurde, überspringen nachfolgende Boots diesen Schritt, es sei denn, Sie erzwingen eine Rekonfiguration vom eigenen Bootmonitor des Loaders. Alle drei Loader unterstützen sowohl eine Terminal-UI als auch eine Web-UI.",
+    "arc": {
+      "webRich": "<strong>Web-Schnittstelle.</strong> Öffnen Sie einen Browser und gehen Sie zu der in der VM-Konsole gezeigten IP (in unserem Beispiel: <code>http://192.168.0.32</code>).",
+      "webAlt": "Lichtbogenlader-Webschnittstelle",
+      "webCaption": "Lichtbogenlader-Webschnittstelle",
+      "termRich": "<strong>Terminal interface.</strong> Verwenden Sie es direkt vom VM-Konsolenausgang.",
+      "termAlt": "Arcloader-Anschlussschnittstelle",
+      "termCaption": "Arcloader-Anschlussschnittstelle"
+    },
+    "rr": {
+      "webRich": "<strong>Web-Schnittstelle.</strong> Öffnen Sie einen Browser und gehen Sie zu der IP, die in der VM-Konsole angezeigt wird, gefolgt von Port <strong>7681</strong> (Beispiel: <code>http://192.168.0.33:7681</code>).",
+      "webAlt": "RR Loader Web Interface",
+      "webCaption": "RR Loader Web Interface",
+      "termRich": "<strong>Terminal interface.</strong> In der VM-Konsole Typ <code>menu.sh</code>, um es zu öffnen.",
+      "termAlt": "RR-Ladeanschlussschnittstelle",
+      "termCaption": "RR-Ladeanschlussschnittstelle"
+    },
+    "tinycore": {
+      "webRich": "<strong>Web-Schnittstelle.</strong> Öffnen Sie einen Browser und gehen Sie zu der IP, die in der VM-Konsole angezeigt wird, gefolgt von Port <strong>7681</strong> (Beispiel: <code>http://192.168.0.35:7681</code>).",
+      "webAlt": "TinyCore Loader-Web-Schnittstelle",
+      "webCaption": "TinyCore Loader-Web-Schnittstelle",
+      "termRich": "<strong>Terminal interface.</strong> Verwenden Sie es von der VM-Konsole. Behalten Sie es im Auge - irgendwann kann es Sie auffordern, eine Taste zu drücken, um fortzufahren oder die Sprache zu ändern.",
+      "termAlt": "TinyCore Ladeanschlussschnittstelle",
+      "termCaption": "TinyCore Ladeanschlussschnittstelle"
+    }
+  },
+  "step2": {
+    "title": "Modell auswählen",
+    "introRich": "Wählen Sie das Synology DSM-Modell aus, das Sie installieren möchten. Abhängig vom Loader müssen Sie möglicherweise die Optionen erweitern, um die vollständige Liste zu sehen. In den folgenden Screenshots verwenden wir das Modell <strong>SA6400</strong> als Beispiel.",
+    "arc": {
+      "alt": "Bogenmodellauswahl",
+      "caption": "Bogenmodellauswahl"
+    },
+    "rr": {
+      "alt": "Auswahl des RR-Modells",
+      "caption": "Auswahl des RR-Modells"
+    },
+    "tinycore": {
+      "alt": "TinyCore Modellauswahl",
+      "caption": "TinyCore Modellauswahl"
+    }
+  },
+  "step3": {
+    "title": "Wählen Sie DSM-Version",
+    "intro": "Nachdem Sie das Modell ausgewählt haben, wählen Sie die zu installierende DSM-Version aus.",
+    "arc": [
+      {
+        "alt": "Bogenversion — Schritt 1",
+        "caption": "Auswahl der Arc-Version — Schritt 1"
+      },
+      {
+        "alt": "Bogenversion — Schritt 2",
+        "caption": "Auswahl der Arc-Version — Schritt 2"
+      }
+    ],
+    "rr": [
+      {
+        "alt": "RR-Version — Schritt 1",
+        "caption": "Auswahl der RR-Version — Schritt 1"
+      },
+      {
+        "alt": "RR-Version — Schritt 2",
+        "caption": "Auswahl der RR-Version — Schritt 2"
+      },
+      {
+        "alt": "RR-Version — Schritt 3",
+        "caption": "Auswahl der RR-Version — Schritt 3"
+      }
+    ],
+    "tinycore": [
+      {
+        "alt": "Version TinyCore — Schritt 1",
+        "caption": "TinyCore-Versionsauswahl — Schritt 1"
+      },
+      {
+        "alt": "Version TinyCore — Schritt 2",
+        "caption": "TinyCore-Versionsauswahl — Schritt 2"
+      }
+    ]
+  },
+  "step4": {
+    "title": "Addons auswählen",
+    "intro": "Mit diesem Schritt können Sie dem Loader zusätzliche Funktionen oder benutzerdefinierte Konfiguration hinzufügen.",
+    "arc": {
+      "autoRich": "<strong>Arc</strong> bietet einen automatischen Modus (empfohlen) und einen manuellen Modus. Im automatischen Modus wendet der Loader sinnvolle Standardwerte an und startet selbstständig neu, wenn er fertig ist.",
+      "autoAlt": "Arc Auto Konfiguration",
+      "autoCaption": "Arc Auto Konfiguration",
+      "manualRich": "Wenn Sie manuell auswählen, gehen Sie eine nach der anderen durch die Optionen:",
+      "manualAlt": "manuelle Bogenkonfiguration",
+      "manualCaption": "manuelle Bogenkonfiguration",
+      "snMacAlt": "Arc SN/MAC",
+      "snMacCaption": "Arc SN / MAC-Konfiguration",
+      "portmapAlt": "Arc SATA portmap",
+      "portmapCaption": "Arc SATA Portmap (verwenden Sie die empfohlene Option)",
+      "addonsAlt": "Arc-Addons",
+      "addonsCaption": "Arc Addons Auswahl"
+    },
+    "rr": [
+      {
+        "alt": "RR-Addon — Schritt 1",
+        "caption": "RR-Addon — Schritt 1"
+      },
+      {
+        "alt": "RR-Addon — Schritt 2",
+        "caption": "RR-Addon — Schritt 2: Drücken Sie, um ein Addon hinzuzufügen"
+      },
+      {
+        "alt": "RR-Addon — Schritt 3",
+        "caption": "RR-Addon - Schritt 3: Klicken Sie auf das gewünschte Addon. Wiederholen Sie die beiden vorherigen Screenshots, um mehr hinzuzufügen."
+      }
+    ],
+    "tinycore": [
+      {
+        "alt": "TinyCore SN-Konfiguration",
+        "caption": "TinyCore SN-Konfiguration"
+      },
+      {
+        "alt": "TinyCore Zufallsoption",
+        "caption": "TinyCore Zufallsoption (empfohlen)"
+      },
+      {
+        "alt": "TinyCore MAC Konfiguration",
+        "caption": "TinyCore MAC Konfiguration"
+      },
+      {
+        "alt": "TinyCore VM MAC",
+        "caption": "TinyCore — Wählen Sie den MAC des VM oder einen zufälligen"
+      }
+    ]
+  },
+  "step5": {
+    "title": "Bauen Sie den Loader",
+    "introRich": "Wenn das Modell, die DSM-Version und die Addons ausgewählt sind, wählen Sie <strong>Build the Loader</strong>. Dies kann je nach Loader und den ausgewählten Optionen einige Minuten dauern.",
+    "arc": {
+      "alt": "Lichtbogenlader",
+      "caption": "Bogen — Baulader"
+    },
+    "rr": {
+      "alt": "RR-Lader",
+      "caption": "RR — Baulader"
+    },
+    "tinycore": {
+      "alt": "TinyCore Baulader",
+      "caption": "TinyCore — Baulader"
+    }
+  },
+  "step6": {
+    "title": "Booten Sie den Loader",
+    "intro": "Sobald der Loader erstellt ist, startet der VM mit der von Ihnen erstellten Konfiguration neu und die DSM-Installation beginnt.",
+    "arc": {
+      "alt": "Bogenbootlader",
+      "caption": "Bogen — Bootlader"
+    },
+    "rr": {
+      "alt": "RR-Bootlader",
+      "caption": "RR — Bootlader"
+    },
+    "tinycore": {
+      "alt": "TinyCore Bootloader",
+      "caption": "TinyCore — Bootloader"
+    }
+  },
+  "dsmInstall": {
+    "heading": "Starten der DSM-Installation",
+    "intro": "Sobald der Loader gestartet ist, können Sie Ihren DSM VM durch Öffnen entdecken:",
+    "afterCode": "Folgen Sie den Anweisungen auf dem Bildschirm, um die DSM-Installation abzuschließen.",
+    "setupAlt": "DSM-Einrichtung",
+    "setupCaption": "DSM-Einrichtungsbildschirm",
+    "patience": "Seien Sie geduldig - der Prozess kann mehrere Minuten dauern. Fortschritt wird automatisch aktualisiert und ein Countdown wird angezeigt, wenn sich die Installation dem Abschluss nähert.",
+    "finishAlt": "Installation vollständig",
+    "finishCaption": "Installation vollständig"
+  },
+  "tips": {
+    "heading": "Tipps",
+    "recentTitle": "Verwenden Sie aktuelle DSM-Modelle",
+    "recentBody": "Einige ältere DSM-Modelle haben Schwierigkeiten, Festplatten oder die Netzwerkkarte zu erkennen. Bevorzugt aktuelle Modelle (z.B. SA6400) für ein reibungsloseres First-Boot-Erlebnis.",
+    "updateTitle": "Aktualisieren des Loaders",
+    "updateBody": "Einige Loader bieten die Möglichkeit, sich direkt aus ihrem Konfigurationsmenü zu aktualisieren - Sie müssen den VM nicht zerstören und neu erstellen.",
+    "warnTitle": "ProxMenux unterstützt die Loader nicht",
+    "warnBody": "ProxMenux automatisiert die VM-Seite. Loader-Probleme (Modell nicht gefunden, Add-on nicht installiert, DSM weigert sich zu booten) sind hier außerhalb des Umfangs - verwenden Sie den eigenen Issue-Tracker und die Dokumentation jedes Loaders.",
+    "docsHeading": "Ladedokumentation",
+    "docLinks": [
+      {
+        "label": "Bogendokumentation",
+        "url": "https://github.com/AuxXxilium/arc"
+      },
+      {
+        "label": "RR-Dokumentation",
+        "url": "https://github.com/RROrg/rr"
+      },
+      {
+        "label": "TinyCore Dokumentation",
+        "url": "https://github.com/PeterSuh-Q3/tinycore-redpill"
+      }
+    ]
+  },
+  "related": {
+    "heading": "Verwandte Themen",
+    "itemsRich": [
+      {
+        "href": "/docs/create-vm/system-nas",
+        "label": "Übersicht über System NAS",
+        "tail": "— Vergleich von Synology vs TrueNAS / OMV / Rockstor / XigmaNAS."
+      },
+      {
+        "href": "/docs/create-vm/system-nas/system-nas-others",
+        "label": "Sonstige System-NAS",
+        "tail": "Nicht-Synologie-NAS-Verteilungen."
+      },
+      {
+        "href": "/docs/disk-manager/import-disk-vm",
+        "label": "Datenträger in VM importieren",
+        "tail": "- Reale Festplatten an Synology VM übergeben (empfohlen für die Speicherleistung)."
+      },
+      {
+        "href": "/docs/create-vm",
+        "label": "VM Übersicht erstellen",
+        "tail": "."
+      }
+    ]
+  }
+}

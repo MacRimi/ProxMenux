@@ -1,0 +1,132 @@
+{
+  "meta": {
+    "title": "Brückenanalyse & geführte Reparatur | ProxMenux Dokumentation",
+    "description": "Erkennt vmbrX-Bridges mit fehlenden oder ungültigen physischen Ports (typisch nach PCI-Reenumeration), meldet diese mit vorgeschlagenen Shell-Befehlen und bietet eine 5-schrittgesteuerte Reparatur mit obligatorischem Backup.",
+    "ogTitle": "Brückenanalyse & geführte Reparatur | ProxMenux Dokumentation",
+    "ogDescription": "Audit und Reparatur von Proxmox Bridge Ports nach Hardware-Änderungen mit geführtem Rollback-sicherem Fluss."
+  },
+  "header": {
+    "title": "Brückenanalyse und geführte Reparatur",
+    "description": "Audits jeder vmbrX-Brücke, die in /etc/network/interfaces deklariert ist, überprüft, ob ihre physischen Ports tatsächlich vorhanden sind, und bietet eine schrittweise Reparatur, wenn sie dies nicht tun. Die Analyse ist schreibgeschützt; die Reparatur ist gated, previewed und gesichert.",
+    "section": "Netzwerk"
+  },
+  "intro": {
+    "title": "Was das macht",
+    "body": "Lies jede Brücke in <code>/etc/network/interfaces</code>, schaue auf ihre <code>bridge-ports</code>-Linie und prüfe, ob jeder deklarierte Port (z.B. <code>enp3s0</code> existiert tatsächlich auf dem Host. Wenn ein Port fehlt, schlägt einen Ersatz vor und - mit ausdrücklicher Zustimmung - wendet die Änderung mit einem <strong>backup an, preview, apply, check</strong> flow."
+  },
+  "when": {
+    "heading": "Wenn Sie das brauchen",
+    "intro": "Linux weist vorhersehbare Schnittstellennamen aus PCI-Topologie und Slot-Reihenfolge zu. Mehrere Ereignisse mischen sie und lassen <code>/etc/network/interfaces</code> auf Namen verweisen, die nicht mehr existieren:",
+    "items": [
+      "Hinzufügen oder Entfernen einer PCIe-Karte (ein NIC, ein GPU, ein HBA, ein NVMe-Träger).",
+      "Verschieben einer vorhandenen Karte in einen anderen PCIe-Slot.",
+      "BIOS / UEFI Updates, die PCI-Geräte erneut aufzählen.",
+      "Migration der Boot-Disk auf andere Hardware."
+    ],
+    "outro": "Nach dem nächsten Booten versucht die Bridge, sich an einen Port anzuschließen, der nicht mehr existiert, nicht mehr auftaucht und der Host sein Netzwerk verliert. <link>Persistente Benutzeroberflächennamen</link> verhindern, dass dies erneut geschieht - aber wenn Sie bereits ausgesperrt sind, ist diese Seite der Wiederherstellungspfad."
+  },
+  "bigPicture": {
+    "heading": "Das große Bild",
+    "diagram1": {
+      "arrowLabel": "Stufe 1",
+      "nodes": {
+        "sourceLabel": "/etc/network/interfaces",
+        "sourceDetail": "auto vmbr0\niface vmbr0 inet statisch\nBridge-Ports enp3s0",
+        "bridgeLabel": "Analysieren (read-only)",
+        "bridgeDetail": "ip link show enp3s0\n→ does not exist",
+        "targetLabel": "Bericht + Vorschlag",
+        "targetDetail": "❌ enp3s0: NICHT GEFUNDEN\nErsetzen mit: eno1\n(noch keine Änderungen)"
+      }
+    },
+    "diagram2": {
+      "arrowLabel": "Bewerben mit Backup",
+      "nodes": {
+        "sourceLabel": "Geführte Reparatur",
+        "sourceDetail": "1. Backup\n2. Anzeigestrom\n3. Vorschauänderungen\n4. Beantragen\n5. Überprüfung",
+        "targetLabel": "/etc/network/interfaces (new)",
+        "targetDetail": "auto vmbr0\niface vmbr0 inet statisch\nBrückenhäfen eno1"
+      }
+    }
+  },
+  "step1": {
+    "heading": "Schritt 1: Analyse (read-only)",
+    "intro": "<strong>Analyze Bridge Configuration</strong> bricht sofort ab, wenn sich der Host nicht auf dem klassischen Debian/Proxmox-Stack befindet. Ansonsten geht es jede Brücke und berichtet:",
+    "items": [
+      "Brückenname, aktueller Status (UP / DOWN), zugewiesene IP.",
+      "Jeder deklarierte Port und ob er derzeit existiert (<code>ip link show &lt;port&gt;</code>).",
+      "Für jeden ungültigen Port: ein vorgeschlagener Ersatz (die erste verfügbare physische Schnittstelle) sowie der genaue Befehl <code>sed</code>, um ihn manuell anzuwenden.",
+      "Brücken ohne <code>bridge-ports</code> und verwaiste <code>auto</code>-Einträge (kein passender <code>iface</code>-Block)."
+    ],
+    "readonlyTitle": "Read-only Garantie",
+    "readonlyBody": "Bis zu diesem Punkt hat das Skript keinen einzigen Änderungsbefehl ausgeführt. Sie können die Analyse offen lassen, die vorgeschlagenen <code>sed</code>-Befehle kopieren und sie manuell anwenden, wenn Sie möchten - oder die nächste Aufforderung akzeptieren, um in die geführte Reparatur einzusteigen."
+  },
+  "step2": {
+    "heading": "Schritt 2: geführte Reparatur (5 Schritte)",
+    "intro": "Nur eingegeben, wenn Sie die Eingabeaufforderung am Ende der Analyse akzeptieren. Jeder Schritt zeigt, was passieren wird und bittet um Bestätigung, bevor Sie fortfahren.",
+    "steps": [
+      {
+        "title": "1. Sicherheitssicherung",
+        "body": "Kopiert <code>/etc/network/interfaces</code> in <code>/var/backups/proxmenux/interfaces_backup_&lt;TIMESTAMP&gt;</code>. Der genaue Sicherungspfad wird vor der Kopie und danach mit dem Rollback-Befehl angezeigt.",
+        "tone": "blue"
+      },
+      {
+        "title": "2. Überprüfung der aktuellen Konfiguration",
+        "body": "Öffnet das Live <code>/etc/network/interfaces</code> in einem scrollbaren Dialog, so dass Sie genau sehen können, was geändert werden soll.",
+        "tone": "blue"
+      },
+      {
+        "title": "3. Vorschau vorgeschlagene Änderungen",
+        "body": "Listen genau auf, welche Brücken berührt werden und welche Port-Substitutionen stattfinden werden. Wenn die Analyse entscheidet, dass nichts wirklich repariert werden muss (Rennbedingung: der Port kam zurück), verlässt der Fluss sauber mit <em>\"Keine Änderungen erforderlich.\"</em>",
+        "tone": "blue"
+      },
+      {
+        "title": "4. Änderungen anwenden",
+        "body": "Für jede betroffene Brücke läuft <code>sed -i \"/iface $bridge/,/bridge-ports/ s/bridge-ports.*/bridge-ports $new_ports/\"</code> gegen <code>/etc/network/interfaces</code>. Wenn für eine Brücke kein gültiger Ersatz verfügbar war, wird die Substitution übersprungen und in Schritt 5 gemeldet.",
+        "tone": "amber"
+      },
+      {
+        "title": "5. Überprüfung",
+        "body": "Lies die Datei erneut und bestätigt, dass der neue Port jeder Brücke jetzt existiert. Druckt den Rollback-Befehl (<code>cp &lt;backup&gt; /etc/network/interfaces</code>). Schließlich bietet eine <strong>Restart-Netzwerk</strong>-Eingabeaufforderung - akzeptieren Sie nur, wenn Sie ein Konsolen-Fallback haben.",
+        "tone": "emerald"
+      }
+    ],
+    "restartTitle": "Restart Networking ≠ ein kostenloses Undo",
+    "restartBody": "Die Reparatur wird auf die Festplatte geschrieben, unabhängig davon, ob Sie den Dienst neu starten. <code>systemctl restart networking</code> wendet die Änderung <em>now</em> an, die Ihre SSH-Sitzung ablegen kann, wenn der neue Port falsch ist. Wenn Sie den Neustart ablehnen, wird die Änderung immer noch beim nächsten Neustart wirksam - bestätigen Sie zuerst die neue Konfiguration oder rollen Sie vom gedruckten Befehl zurück."
+  },
+  "edits": {
+    "heading": "Was wird bearbeitet (genau)",
+    "body": "Nur die <code>bridge-ports</code>-Linie jeder betroffenen Brücke. Andere Direktiven (<code>address</code>, <code>netmask</code>, <code>gateway</code>, <code>bridge-stp</code>, ...) bleiben unberührt. Das Skript erstellt niemals neue <code>iface</code>-Blöcke und entfernt niemals vorhandene in diesem Fluss - das ist die Aufgabe der <link>Config-Analyse &amp; cleanup</link>."
+  },
+  "troubleshoot": {
+    "heading": "Fehlerbehebung",
+    "unsupportedTitle": "Analyse abbricht mit \"Unsupported Network Stack\"",
+    "unsupportedBody": "Der Host läuft netplan, systemd-networkd oder NetworkManager. Das Tool unterstützt nur <code>/etc/network/interfaces</code>. Schalten Sie den Host zuerst auf den klassischen Stack oder bearbeiten Sie die Konfiguration mit dem nativen Tooling des Managers (z.B. <code>netplan apply</code>).",
+    "noSuggestTitle": "Kein Vorschlag wird für einen ungültigen Port gedruckt",
+    "noSuggestBody": "Der Host hat null freie physische Schnittstellen (alles befindet sich entweder bereits in einer anderen Brücke oder existiert nicht). Die Analyse greift auf <code>bridge-ports none</code> zurück, so dass die Brücke zumindest ohne Port auftauchen kann. Fügen Sie eine NIC hinzu oder migrieren Sie Ports zwischen Brücken manuell, bevor Sie erneut ausführen.",
+    "stillDownTitle": "Die Reparatur ist abgeschlossen, aber die Brücke ist noch DOWN",
+    "stillDownBody": "<code>sed</code> aktualisierte die Datei, aber <code>systemctl restart networking</code> wurde abgelehnt. Führen Sie es manuell aus, sobald die neue Konfiguration verifiziert wurde, oder starten Sie es neu. Wenn der Neustart akzeptiert wurde und die Brücke immer noch DOWN ist, führen Sie <code>ip link show</code> aus, um zu bestätigen, dass der neue Port vorhanden ist, und überprüfen Sie <code>journalctl -u networking</code> auf den tatsächlichen Fehler (Kabel unplugged, Link nicht ausgehandelt, Port bereits Mitglied einer anderen Brücke).",
+    "lostSshTitle": "Ich habe den SSH-Zugang direkt nach dem Neustart des Netzwerks verloren",
+    "lostSshIntro": "Verwenden Sie Konsole / IPMI / iKVM, um den Host zu erreichen. Wiederherstellen des Backups:",
+    "lostSshOutro": "Führen Sie dann die Analyse erneut von der Konsole aus aus, um herauszufinden, warum der Vorschlag nicht funktioniert hat (normalerweise: Der Ersatzanschluss ist nicht wirklich angeschlossen)."
+  },
+  "related": {
+    "heading": "Verwandte Themen",
+    "items": [
+      {
+        "label": "Persistente Schnittstellennamen",
+        "href": "/docs/network/persistent-names",
+        "tail": "- Pin-Namen zu MAC-Adressen, so dass dieses Szenario nicht mehr passiert."
+      },
+      {
+        "label": "Config Analyse & Guided Cleanup",
+        "href": "/docs/network/config-analysis",
+        "tailRich": "— für verwaiste <code>iface</code>-Blöcke (die andere Hälfte des gleichen Problems)."
+      },
+      {
+        "label": "Schnittstellen Backup & Neustart",
+        "href": "/docs/network/backup-restore",
+        "tail": "- manuelle Snapshots und der Wiederherstellungsbrowser."
+      }
+    ]
+  }
+}

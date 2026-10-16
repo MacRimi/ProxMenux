@@ -1,0 +1,203 @@
+{
+  "meta": {
+    "title": "LXC Updates: OS, Apps und Docker | ProxMenux",
+    "description": "Konfigurieren und Ausführen von Betriebssystem-, Anwendungs-, Docker Engine- und Docker-Image-Updates aus einem LXC-Container."
+  },
+  "header": {
+    "title": "LXC Updates: OS, Apps und Docker",
+    "description": "Überprüfen Sie jedes Update-Ziel an einem Ort, führen Sie es unabhängig aus oder kombinieren Sie ausgewählte Ziele in einer kontrollierten Massenaktion."
+  },
+  "intro": {
+    "p1": "Die Registerkarte <strong>Updates</strong> trennt die Versionserkennung von der Aktion, die ein Update installiert. Registrierung und optionales Versions-Tracking live auf der <link>App tab</link>; ausführbare Update-Methoden live hier.",
+    "p2": "Eine gespeicherte Anwendung wird in Updates angezeigt, auch wenn sie nur einen Weblink enthält. Die Versionsverfolgung ist optional und ein Updater kann unabhängig konfiguriert werden.",
+    "callout": "Durch die Registrierung einer Anwendung wird kein Updater ausgewählt. Wenn ein passender Helper-Scripts-Updater erkannt wird, wählen und speichern Sie <strong>Helper-Scripts</strong> oder <strong>Custom Befehl</strong>. Die Erkennung ist keine Kompatibilitätsgarantie. Die Auswahl gehört jeder Anwendung, auch wenn sich mehrere Apps einen LXC teilen."
+  },
+  "overview": {
+    "heading": "Was der Tab enthält",
+    "lead": "Jedes verfügbare Ziel hat seinen eigenen Abschnitt und seine eigene Aktion:",
+    "items": [
+      "<strong>OS Packages</strong> für Debian, Ubuntu und Alpine Container.",
+      "Ein Abschnitt für jede <strong> registrierte Anwendung</strong>, einschließlich Link-only-Records.",
+      "Ein <strong>Docker</strong>-Abschnitt, wenn Docker registriert ist, wobei Docker Engine und getaggte Bilder gruppiert sind.",
+      "Ein konfigurierbarer Abschnitt <strong>Bulk update</strong>, gefolgt von Backup-, Neustart- und Planungsoptionen."
+    ]
+  },
+  "mechanisms": {
+    "heading": "Wie eine Aktualisierungsmethode ausgewählt wird",
+    "lead": "Der integrierte Proxmox VE Helper-Scripts-Pfad folgt dem offiziellen <helper>update-Apps-Mechanismus</helper>. Andere Installationstypen verwenden das passende Paket, Docker oder den benutzerdefinierten Pfad.",
+    "officialReference": "Offizielle Referenz: Die <helper>Proxmox VE Helper-Scripts-Update-Apps-Dokumentation</helper> umfasst interaktive und unbeaufsichtigte Modi, Backups, Trockenläufe, temporäre Build-Ressourcen, Protokolle und Exit-Codes.",
+    "colSource": "Quelle",
+    "colAction": "Gezeigte Aktion",
+    "colNotes": "Was läuft",
+    "rows": [
+      {
+        "source": "APT- oder APK-Pakete",
+        "action": "OS Updates anwenden",
+        "notes": "Aktualisiert die Containerpakete. Registrierte Apps, die als dpkg- oder apk-Pakete installiert sind, fallen unter denselben Pass."
+      },
+      {
+        "source": "Proxmox VE Helper-Scripts",
+        "action": "Update anwenden",
+        "notes": "Nachdem Helper-Scripts explizit ausgewählt wurde, wird das offizielle Anwendungsskript ausgeführt, das durch den validierten /usr/bin/update-Wrapper identifiziert wurde. Eine Marker- oder Katalogübereinstimmung allein ermöglicht niemals die Ausführung."
+      },
+      {
+        "source": "Eigener Befehl",
+        "action": "Führen Sie den Updater aus",
+        "notes": "Führt den gespeicherten Befehl im LXC aus und ersetzt jeden integrierten App-Updater für diesen Datensatz."
+      },
+      {
+        "source": "Docker Engine",
+        "action": "Docker Engine aktualisieren",
+        "notes": "Updates installierten nur Docker-Pakete und deren erforderliche Abhängigkeiten. Andere OS-Pakete und Container werden nicht geändert."
+      },
+      {
+        "source": "Docker-Image",
+        "action": "Image aktualisieren",
+        "notes": "Zieht das ausgewählte Bild und erstellt die Compose-Servicegruppe oder den geschützten eigenständigen Container neu."
+      }
+    ],
+    "callout": "Ein benutzerdefinierter Befehl <strong>ersetzt </strong> Helper-Scripts für diese Anwendung. Manuelle, Bulk- und Planläufe respektieren alle die gespeicherte Auswahl. Vorhandene benutzerdefinierte Befehle und Vermächtnisse, die explizit gespeichert wurden, werden beibehalten; neu registrierte Anwendungen werden niemals durch einen alten Zeitplan aktiviert."
+  },
+  "docker": {
+    "heading": "Docker Engine und Docker Bilder",
+    "lead": "Nachdem Docker auf der Registerkarte App registriert wurde, erscheinen Motor und Bildbestand im selben <strong>Docker</strong> Abschnitt.",
+    "items": [
+      "Die Docker Engine-Versionsverfolgung ist vom OS-Paketzähler getrennt und verfügt über einen eigenen Update-Button.",
+      "Verschlagwortete lokale Bilder werden mit ihrem Register durch unveränderlichen Digest verglichen. <strong>Check now</strong> aktualisiert dieses Inventar, ohne Bilder zu ziehen oder Container neu zu starten.",
+      "Compose-Dienste werden von ihrem deklarierten Projekt aktualisiert. Bilder, die zur gleichen Servicegruppe gehören, werden zusammen bearbeitet, damit das Projekt nicht wiederholt neu erstellt wird.",
+      "Ein eigenständiger Container wird aus seiner aktuellen Konfiguration neu erstellt. Der geschützte Fluss behält Rollback-Daten und stellt den vorherigen Container wieder her, wenn das Spiel fehlschlägt.",
+      "Jedes Bild kann separat in manuellen, massenhaften und geplanten Updates ausgewählt werden, mit Ausnahme deklarierter Compose-Abhängigkeiten, die dem übergeordneten Service folgen müssen."
+    ],
+    "callout": "Container, die innerhalb von Docker laufen, werden nicht als unabhängige LXC-Anwendungen angezeigt. Ihre veröffentlichten Webports können als Links unter der Docker-Registrierung gespeichert werden, während Bildaktualisierungen im Docker-Bereich verbleiben."
+  },
+  "actions": {
+    "heading": "Individuelle Aktionen und Statusfarben",
+    "lead": "Jeder Abschnitt bleibt unabhängig voneinander umsetzbar, unabhängig davon, ob ein Bulk-Update konfiguriert ist oder nicht.",
+    "items": [
+      "<strong>Configure</strong> öffnet den Updater-Selektor, wenn keine Methode ausgewählt ist; <strong>Edit</strong> ändert eine gespeicherte Auswahl. Die Informationsschaltflächen erklären jede Option, verlinken auf die offizielle Dokumentation und zeigen ein benutzerdefiniertes Skriptbeispiel an. Die Auswahl einer Option führt sie nicht aus.",
+      "Wenn die Versionsverfolgung deaktiviert ist, aber ein Updater vorhanden ist, wird die neutrale Aktion <strong>Run updater</strong> angezeigt. ProxMenux behauptet nicht, dass ein Update anhängig ist.",
+      "Konfigurieren Sie ohne einen verfügbaren Helper-Scripts-Updater einen benutzerdefinierten Befehl. Das Deaktivieren einer Methode wählt nicht stillschweigend eine andere aus; bestehende Plan-/Zeitplanauswahlen bleiben gespeichert und nicht verfügbare Ziele werden gemeldet.",
+      "Die Aktion <strong>Update image</strong> gilt nur für die ausgewählte Docker-Einheit; sie aktualisiert weder Docker Engine noch nicht verwandte Bilder."
+    ],
+    "statusColState": "Bekannter Staat",
+    "statusColAppearance": "Aussehen",
+    "statusColMeaning": "Bedeutung",
+    "statusRows": [
+      {
+        "state": "Verifiziertes Update verfügbar",
+        "appearance": "Lila Text, nach oben gerichtetes Symbol und lila Aktion",
+        "meaning": "Installierte und verfügbare Versionen oder Image Digests unterscheiden sich."
+      },
+      {
+        "state": "Geprüfter Strom",
+        "appearance": "Green Check und Green Aktualisierte Aktion",
+        "meaning": "Die letzte abgeschlossene Überprüfung bestätigt, dass das Ziel aktuell ist."
+      },
+      {
+        "state": "Version unbekannt",
+        "appearance": "Neutraler Text und neutrale Handlung",
+        "meaning": "Ein Updater kann ausgeführt werden, aber es gibt keinen Versionsnachweis, um ihn als anhängig oder aktuell zu kennzeichnen."
+      }
+    ]
+  },
+  "custom": {
+    "heading": "Benutzerdefinierte Aktualisierungsbefehle",
+    "lead": "Verwenden Sie einen benutzerdefinierten Befehl, wenn die Installation keinen verifizierten integrierten Updater hat oder wenn die normale Prozedur ersetzt werden muss.",
+    "items": [
+      "Öffnen Sie <strong>Configure</strong>, wenn das Feld leer ist, oder <strong>Edit</strong>, wenn bereits eine Methode vorhanden ist.",
+      "Bei einer integrierten App oder Docker Engine zeigt der Editor den aktuell verwendeten Befehl an. Das Speichern verschiedener Inhalte macht es zum expliziten Override für diesen Datensatz.",
+      "Testen Sie zuerst die komplette Prozedur im LXC Terminal. Es muss nicht interaktiv sein, das korrekte Arbeitsverzeichnis verwenden und beim Ausfall einen Nicht-Null-Ausgangsstatus zurückgeben.",
+      "<code>pct exec</code> nicht einschließen; ProxMenux betritt bereits den Container und führt den Befehl als root aus."
+    ],
+    "exampleLead": "Beispiel eines vollständigen Containerverfahrens:",
+    "example": "cd /opt/my-app && ./update.sh",
+    "callout": "Ein Versionsbefehl wie <code>myapp --version</code> liest nur eine Version; es ist kein Updater. Befehle laufen mit administrativen Privilegien, so dass gespeicherte Inhalte mit der gleichen Sorgfalt wie ein Root-Shell-Befehl überprüft werden müssen."
+  },
+  "bulk": {
+    "heading": "Sammelaktualisierung",
+    "lead": "Das Bulk-Update erstellt eine wiederverwendbare Aktion für eine genaue Reihe von Zielen im LXC. Es wird nach der einzelnen App und Docker Abschnitte und vor <strong>Options</strong> platziert.",
+    "items": [
+      "OS-Pakete sind obligatorisch. Mindestens eine zusätzliche App, Docker Engine oder Docker Bildeinheit muss ausgewählt werden.",
+      "Anwendungen und Docker Einheiten werden individuell ausgewählt. Ein Compose-Elternteil zeigt die Abhängigkeiten an, die mit ihm aktualisiert werden.",
+      "Nicht verfügbare oder entfernte Ziele werden als veraltet markiert und müssen entfernt werden, bevor die Konfiguration gespeichert werden kann.",
+      "Die Schaltfläche <strong>Apply updates</strong> ist lila, wenn ein ausgewähltes Ziel ein verifiziertes Update hat, grün, wenn alle ausgewählten Ziele aktuell verifiziert sind, und neutral, wenn das Ergebnis unbekannt ist.",
+      "Durch das Entfernen der Bulk-Konfiguration werden keine einzelnen Aktualisierungsmethoden oder Einstellungen für geplante Aktualisierungen entfernt."
+    ],
+    "callout": "Bulk Update ersetzt nicht die einzelnen Buttons. Es ist eine optionale Abkürzung für eine Auswahl, die zusammen laufen sollte."
+  },
+  "options": {
+    "heading": "Backup- und Neustartoptionen",
+    "lead": "Die gleichen Optionen gelten für manuelle, Massen- und geplante Durchläufe:",
+    "items": [
+      "<strong>Snapshot erstellt vor der Anwendung von</strong> ein vzdump-Backup auf dem ausgewählten Speicher. Wenn das erforderliche Backup fehlschlägt, startet das Update nicht.",
+      "<strong>Restart nach Anwendung </strong> startet den LXC erst nach erfolgreichem Lauf neu.",
+      "Die Auswahlen werden pro LXC gespeichert und bleiben unabhängig von der Zielliste."
+    ]
+  },
+  "scheduled": {
+    "heading": "Geplante Updates",
+    "lead": "Geplante Updates verwenden die gleichen ausführbaren Ziele und Sicherheitsoptionen wie manuelle Aktionen.",
+    "items": [
+      "Wählen Sie einen voreingestellten oder cron-Ausdruck und wählen Sie dann genaue Ziele aus: Betriebssystempakete, einzelne Apps, Docker Engine, eigenständige Docker-Einheiten oder Compose-Dienstgruppen.",
+      "Ein Release Hold gilt nur für ausgewählte Anwendungen mit Versionstracking. Apps ohne Tracking führen ihren Updater immer dann aus, wenn ihr Zeitplan fällig ist.",
+      "Der Last-Run-Zustand unterscheidet Erfolg, teilweise Fertigstellung, Misserfolg, Sicherheitshalt und einen Lauf mit nichts anstehendem. Nach dem ersten geplanten Lauf öffnet <strong>Updates → Geplante Updates → View log</strong> die vollständige Ausgabe, die vom Updater und allen von ihm aufgerufenen Kinderskripten erfasst wurde.",
+      "Nach jedem Durchlauf überprüft ProxMenux den standardmäßigen Debian-Reboot-erforderlichen Marker. Wenn ein Neustart erforderlich ist, wird dies auf der Registerkarte Updates und der Abschlussbenachrichtigung angezeigt; die Warnung wird gelöscht, wenn der LXC gestartet oder neu gestartet wird.",
+      "Auf dem Proxmox-Host werden terminierte Protokolle in <code>/usr/local/share/proxmenux/logs/lxc-updates/</code> unter dem Namen <code>&lt;VMID&gt;-scheduled-&lt;run-id&gt;.log</code> gespeichert. Die letzten zehn Protokolle werden pro LXC beibehalten und ältere Dateien werden automatisch entfernt.",
+      "Diese beibehaltene Historie gilt für geplante Updates. Ein manuelles Update zeigt seine Ausgabe live im Monitor-Ausführungsfenster an und erstellt kein geplantes Protokoll in diesem Verzeichnis.",
+      "Externe Host-Zeitpläne, die von Proxmox VE Helper-Scripts erkannt wurden, werden separat angezeigt, so dass eine überlappende Automatisierung sichtbar ist."
+    ],
+    "callout": "Führen Sie jede ausgewählte Methode manuell aus, bevor Sie einen Zeitplan aktivieren. Geplante Befehle können keine Eingabeaufforderungen beantworten."
+  },
+  "completion": {
+    "heading": "Was passiert nach einem Update",
+    "lead": "Das Update gilt nicht als abgeschlossen, wenn der Terminalbefehl lediglich beendet wird.",
+    "items": [
+      "Derselbe Lauf zeichnet sein Endergebnis auf und aktualisiert den OS-Paketzustand, die registrierten App-Versionen und das Docker-Inventar.",
+      "Geplante Durchläufe behalten ihre Terminalausgabe bei und melden, ob ein Neustart noch erforderlich ist, um die Anwendung von Paketänderungen abzuschließen.",
+      "Der LXC-Cache wird durch den verifizierten Post-Update-Zustand ersetzt, so dass Badges und Buttons das vorherige Ergebnis nicht beibehalten.",
+      "Wenn ein angehaltener oder wiederhergestellter LXC startet, aktualisiert das vorhandene Lebenszyklusereignis diesen LXC erneut. Docker-Inventar wartet, bis der Daemon fertig ist, anstatt ein leeres Startergebnis als endgültig zwischenzuspeichern.",
+      "Aktivierte Benachrichtigungen werden vom finalisierten Durchlauf ausgegeben, einschließlich Teilfehlern und gruppierten Docker-Bildergebnissen."
+    ]
+  },
+  "troubleshooting": {
+    "heading": "Gemeinsame Situationen",
+    "colProblem": "Lage",
+    "colResolution": "Auflösung",
+    "rows": [
+      {
+        "problem": "Es wurde keine Aktualisierungsmethode identifiziert",
+        "resolution": "Öffnen Sie die Konfiguration, fügen Sie die offizielle nicht-interaktive Prozedur hinzu und testen Sie sie manuell, bevor Sie sie planen."
+      },
+      {
+        "problem": "Eine Proxmox VE Helper-Scripts-Identität wird angezeigt, aber es gibt keine Aktion",
+        "resolution": "Der LXC hat Legacy-Identifikationsdaten, aber keinen verifizierten /usr/bin/update-Wrapper. Fügen Sie eine benutzerdefinierte Methode erst hinzu, nachdem Sie das korrekte Verfahren bestätigt haben."
+      },
+      {
+        "problem": "Docker-Bilder sind nach dem Start oder der Wiederherstellung vorübergehend leer",
+        "resolution": "Warten Sie, bis Docker fertig ist, oder drücken Sie jetzt Überprüfen. Das Inventar wiederholt den Start und behandelt ein vorübergehendes leeres Ergebnis nicht als endgültig."
+      },
+      {
+        "problem": "Ein gespeichertes Bulk-Ziel ist nicht mehr verfügbar",
+        "resolution": "Bearbeiten Sie die Bulk-Konfiguration, entfernen Sie das veraltete Ziel und wählen Sie den aktuellen Ersatz aus, wenn eines vorhanden ist."
+      },
+      {
+        "problem": "Ein benutzerdefinierter Befehl scheitert",
+        "resolution": "Führen Sie es im LXC-Terminal aus und überprüfen Sie dessen Pfad, Abhängigkeiten, nicht-interaktive Flags und Exit-Code."
+      },
+      {
+        "problem": "Ein geplantes Update sagt, dass ein Neustart erforderlich ist",
+        "resolution": "Open View Protokoll, um den abgeschlossenen Lauf zu überprüfen, und starten Sie dann das LXC neu. ProxMenux löscht die Warnung vom bestehenden Lebenszyklusereignis, nachdem der Container erneut gestartet wurde."
+      }
+    ]
+  },
+  "figures": {
+    "osPending": {
+      "alt": "Abschnitt Betriebssystempakete mit ausstehenden und Sicherheitsupdates",
+      "caption": "Der Betriebssystembereich hält Paketaktualisierungen unabhängig von Anwendungs- und Docker-Aktionen."
+    },
+    "options": {
+      "alt": "LXC Update-Optionen mit Pre-Update-Backup und Post-Update-Neustart",
+      "caption": "Backup- und Neustarteinstellungen gelten für manuelle, Massen- und geplante Ausführung."
+    }
+  }
+}

@@ -1,0 +1,282 @@
+{
+  "meta": {
+    "title": "Wiederherstellen eines Backups – vollständige und benutzerdefinierte Abläufe | ProxMenux",
+    "description": "Der komplette Wiederherstellungsworkflow. Dokumentiert die drei Aktionen, die für jedes Backup verfügbar sind (Ansicht, Download, Wiederherstellung), die Kompatibilitätsprüfung und ihre Ergebnisse, die vollständigen und benutzerdefinierten Wiederherstellungsmodi, die Pfadklassifizierung, die entscheidet, was live gilt und was auf den nächsten Start wartet, den On-Boot-Dispatcher und den Post-Boot-Komponentenneuinstallationspass.",
+    "ogTitle": "ProxMenux Backup — Wiederherstellung",
+    "ogDescription": "Vollständige und benutzerdefinierte Wiederherstellungsflüsse mit Kompatibilitätsprüfung, Pfadklassifizierung, On-Boot-Dispatcher und Post-Boot-Neuinstallation.",
+    "twitterTitle": "Wiederherstellen eines Backups | ProxMenux",
+    "twitterDescription": "Wie ein ProxMenux-Host-Backup wieder in einen funktionierenden Proxmox-Host umgewandelt wird."
+  },
+  "header": {
+    "title": "Wiederherstellen eines Backups",
+    "description": "Der vollständige Wiederherstellungsworkflow: vom Auswählen eines Archivs bis zum Arbeitshost. Dokumentiert die Kompatibilitätsprüfung, die beiden Wiederherstellungsmodi, den On-Boot-Dispatcher, den Post-Boot-Reinstallationspass und die Mechanismen, die Cross-Host- und Cross-Kernel-Wiederherstellungen vorhersehbar machen.",
+    "section": "Sicherung und Wiederherstellung"
+  },
+  "intro": {
+    "title": "Die Wiederherstellung reproduziert die Quelle, nicht nur die Dateien",
+    "body": "Das Wiederherstellen eines ProxMenux-Backups ist keine Extraktion. Dateien sind nur der erste Schritt: Nachdem das Dateisystem vorhanden ist, liest die Wiederherstellung das Manifest, um Unterschiede zwischen Quelle und Ziel zu erkennen, filtert Pfade, die den Boot des Ziels unterbrechen würden, hydratisiert benutzerautorisiertes Tuning, das nicht wörtlich kopiert werden kann, und installiert nach dem obligatorischen Neustart jede Komponente, die die Quelle hatte (NVIDIA Treiber, Coral TPU, GPU Werkzeuge) gegen den eigenen Kernel des Ziels. Was der Benutzer aus dem Menü auswählt, ist ein einzelnes Archiv; Was tatsächlich passiert, beinhaltet die Kompatibilitätsprüfung, die Pfadklassifizierung, den On-Boot-Dispatcher und den Post-Boot-Pass, die zusammenarbeiten, um einen Host zu erzeugen, der sich wie die Quelle verhält."
+  },
+  "threeActions": {
+    "heading": "Drei Aktionen auf einem Backup",
+    "intro": "Durch Auswählen eines Backups aus der Liste wird ein Menü mit drei Aktionen geöffnet.",
+    "actionRows": [
+      {
+        "action": "Ansicht",
+        "detail": "Öffnet eine schreibgeschützte Ansicht des Archivs: manifest.json-Inhalte (Quellhostname, PVE-Version, Kernel, Hardware, installierte Komponenten), die Liste der Pfade innerhalb von <code>rootfs/</code> und eine Kennung dessen, was sich auf dem aktuellen Host ändern würde, wenn das Backup angewendet würde."
+      },
+      {
+        "action": "Herunterladen",
+        "detail": "Exportiert das Archiv als tragbare <code>.tar.zst</code>-Datei (tar komprimiert mit zstd). Es kann auf jedem Linux-System mit <code>tar --zstd -xf FILE.tar.zst</code> extrahiert werden, oder auf macOS / Windows mit jedem Tool, das zstd unterstützt (7-Zip, PeaZip, Keka ...). Der extrahierte Baum enthält <code>manifest.json</code>, <code>metadata/</code> und <code>rootfs/</code> - genau das gleiche Layout, das die Wiederherstellung verbraucht. Nützlich für die Offline-Inspektion oder für die Wiederherstellung auf einem Host ohne Zugriff auf das ursprüngliche Ziel (PBS, Borg)."
+      },
+      {
+        "action": "Wiederherstellen",
+        "detail": "Der Schreibpfad. Extrahiert das Archiv in ein Staging-Verzeichnis, führt die Kompatibilitätsprüfung aus und präsentiert den Moduswähler (Full oder Custom)."
+      }
+    ]
+  },
+  "compatibilityCheck": {
+    "heading": "Die Vereinbarkeitsprüfung",
+    "intro": "Bevor eine Datei geschrieben wird, vergleicht <code>hb_compat_check</code> den im Manifest beschriebenen Zustand mit dem Zielhost. Der Check läuft schreibgeschützt und erzeugt vier unabhängige Ausgänge, die den Rest der Wiederherstellung steuern.",
+    "outputRows": [
+      {
+        "output": "Fahrtrichtungskennzeichen",
+        "detail": "<code>HB_COMPAT_KERNEL_DIRECTION</code> — eines von <code>same</code>, <code>bk_newer</code> oder <code>bk_older</code>. Vergleicht die Hauptkernelversion des Backups mit der des Ziels. Steuert den Cross-Kernel-Safe-Subset-Filter (feuert nur auf <code>bk_older</code>) und den Hydratationspass, der auf der Cross-Kernel-Seite dokumentiert ist."
+      },
+      {
+        "output": "Liste der Skip Paths",
+        "detail": "<code>RS_SKIP_PATHS</code> - jeder Pfad, den die Wiederherstellung NICHT anwenden darf. Bevölkert durch zwei Mechanismen: Hardware-Drift (fehlende NIC, fehlende Speicher-ID, ausländischer ZFS-Pool) und - wenn die Richtung <code>bk_older</code> ist - die kernübergreifende Liste der unsicheren Pfade."
+      },
+      {
+        "output": "NIC-Remapplan",
+        "detail": "Wenn ein NIC auf dem Ziel den gleichen MAC wie auf der Quelle, aber einen anderen Namen hat (typischerweise nach einem Motherboard-Swap), registriert die Kompatibilitätsprüfung einen Umbenennungsplan (<code>HB_NIC_REMAP</code>), der <code>/etc/network/interfaces</code> während der Wiederherstellung umschreibt."
+      },
+      {
+        "output": "Rollback-Plan",
+        "detail": "Berechnet von <code>compute_rollback_plan.sh</code>. Listen VMs, LXCs und Komponenten auf dem Ziel, aber nicht im Backup. Der Benutzer entscheidet sich während des Bestätigungsdialogs, um diese als Teil der Wiederherstellung entfernen zu lassen, so dass das Ziel am Ende genau mit dem Backup übereinstimmt."
+      }
+    ],
+    "reportBody": "Der Check sendet auch einen strukturierten Bericht (<code>HB_COMPAT_RESULTS</code>) aus, der als PASS / INFO / WARN / FAIL kategorisiert ist. WARN- und FAIL-Einträge tauchen im Pre-Restore-Bereich auf; die Wiederherstellung weigert sich, nur dann fortzufahren, wenn ein FAIL vorhanden ist, den der Benutzer nicht durch Klicken auf Weiter beheben kann."
+  },
+  "twoModes": {
+    "heading": "Vollständige Wiederherstellung vs Custom Wiederherstellung",
+    "intro": "Sobald die Kompatibilitätsprüfung abgeschlossen ist, wird das Menü Wiederherstellungsmodus angezeigt. Die Auswahl bestimmt, dass <em>what</em> angewendet wird, nicht <em>how</em> – beide Modi teilen sich die gleiche zugrunde liegende Pipeline.",
+    "modeRows": [
+      {
+        "mode": "Vollständige Wiederherstellung",
+        "detail": "Wendet jeden Pfad im Archiv an, der die Drift- und Kreuzkernfilter überlebt. Führt auch die Paketinstallation und den automatischen Komponentenneuinstallationspass aus. Dies ist der Standard und die empfohlene Wahl - das Ziel ist es, die Quelle zu reproduzieren, nicht Stücke auszuwählen."
+      },
+      {
+        "mode": "Benutzerdefinierte Wiederherstellung",
+        "detail": "Öffnet eine Checkliste, die jeden Pfad zeigt, den das Archiv führt. Der Benutzer tickt eine Teilmenge. Durch den Kreuzkernfilter blockierte Pfade erscheinen ausgegraut und können nicht ausgewählt werden. Paketinstallation und automatische Neuinstallation von Komponenten werden standardmäßig im benutzerdefinierten Modus übersprungen - der Benutzer signalisiert, dass er eine teilweise Anwendung und keine vollständige Reproduktion wünscht."
+      }
+    ]
+  },
+  "pathClassification": {
+    "heading": "Wie Pfade klassifiziert werden",
+    "intro": "Jeder für die Wiederherstellung ausgewählte Pfad wird von <code>hb_classify_path</code> in eine von drei Kategorien eingestuft. Die Kategorie bestimmt, wann der Pfad auf das System angewendet wird und warum.",
+    "rows": [
+      {
+        "class": "heiß",
+        "detail": "Pfade angewendet <strong>immediately</strong> auf das laufende System. Der Dienst, der sie verbraucht, nimmt die Änderung selbst oder beim nächsten Neuladen auf - kein Neustart erforderlich. Dies ist der Hauptteil eines Backups: <code>/etc/ssh</code>, <code>/etc/apt</code>, <code>/etc/cron.*</code>, <code>/root</code>, <code>/usr/local/bin</code>, allgemeine Servicekonfigurationsdateien usw."
+      },
+      {
+        "class": "Reboot",
+        "detail": "Pfade angewendet <strong>immediately </strong> als auch, aber deren tatsächliche Wirkung tritt nur auf dem <strong>next boot</strong>: der Kernel liest nur <code>/etc/default/grub</code>, wenn der Bootloader startet, <code>/etc/fstab</code>, wenn Dateisysteme beim Booten montiert werden, <code>/etc/modules</code>, wenn Module geladen werden, etc. Die Datei ist in dem Moment vorhanden, in dem sie angewendet wird, aber das System muss neu starten, um sie zu verbrauchen. Beispiele: <code>/etc/default/grub</code>, <code>/etc/kernel</code>, <code>/etc/modules</code>, <code>/etc/fstab</code>, <code>/etc/zfs</code>, <code>/etc/initramfs-tools</code>."
+      },
+      {
+        "class": "gefährlich",
+        "detail": "Pfade, die <strong>NOT auf dem laufenden System</strong> angewendet werden - ein Live-Schreiben könnte den Zustand verfälschen oder die aktive Verbindung abbrechen. Diese werden im ausstehenden Set inszeniert und vom Post-Boot-Dispatcher nach dem Neustart geschrieben, wenn der Cluster aktiviert ist, das System jedoch noch nicht vollständig in Gebrauch ist. Beispiele: <code>/etc/pve</code> (pmxcfs ist eine Live-FUSE-Halterung; direkt in sie schreiben umgeht sie), <code>/var/lib/pve-cluster</code> (Live-Clusterdaten), <code>/etc/network</code> (könnte die Schnittstelle, an die der Benutzer über SSH angeschlossen ist, neu konfigurieren und die Sitzung ablegen)."
+      }
+    ]
+  },
+  "fullFlow": {
+    "heading": "Der vollständige Wiederherstellungsworkflow",
+    "intro": "Die komplette Pipeline von der Archivauswahl bis zu einem funktionierenden wiederhergestellten Host. Jede Stufe füttert die nächste; der von früheren Stufen geschriebene Zustand wird von späteren verbraucht.",
+    "diagram": "┌─────────────────────────────────────────────────────────────────┐\n│  Archive → staging_root/                                        │\n│    manifest.json   metadata/   rootfs/                          │\n└──────────────────────────────┬──────────────────────────────────┘\n                               │\n                               ▼\n   ┌─────────────────────────────────────────────────────────┐\n   │  1. hb_compat_check                                     │\n   │     · hardware drift → RS_SKIP_PATHS                    │\n   │     · kernel direction → same / bk_newer / bk_older     │\n   │     · NIC remap plan                                    │\n   │     · hydration plan (bk_older only)                    │\n   │     · rollback plan                                     │\n   └──────────────────────────────┬──────────────────────────┘\n                                  │\n                                  ▼\n   ┌─────────────────────────────────────────────────────────┐\n   │  2. Confirmation dialog                                 │\n   │     Shows: hot count, pending count, drift, hydration,  │\n   │     NIC remap, cross-kernel note, reinstalls preview    │\n   └──────────────────────────────┬──────────────────────────┘\n                                  │ (accepted)\n                                  ▼\n   ┌─────────────────────────────────────────────────────────┐\n   │  3. Apply hot paths → LIVE                              │\n   │     _rs_apply rsyncs each hot path                      │\n   │     from staging_root/rootfs to /                       │\n   │     (skips paths in RS_SKIP_PATHS)                      │\n   └──────────────────────────────┬──────────────────────────┘\n                                  │\n                                  ▼\n   ┌─────────────────────────────────────────────────────────┐\n   │  4. _rs_prepare_pending_restore                         │\n   │     /var/lib/proxmenux/pending-restore/                 │\n   │       ├── apply-on-boot.list                            │\n   │       ├── plan.env                                      │\n   │       ├── rs-skip-paths.txt                             │\n   │       └── rootfs/ (deferred paths)                      │\n   │     Enable proxmenux-restore-onboot.service             │\n   └──────────────────────────────┬──────────────────────────┘\n                                  │\n                                  ▼\n   ┌─────────────────────────────────────────────────────────┐\n   │  4b. _rs_import_data_pools                              │\n   │      Imports non-root ZFS pools whose disks are all     │\n   │      present; retries with -f on foreign hostid;        │\n   │      skips with a warning when disks are missing.       │\n   │      Log: /var/log/proxmenux/restore-datapools-*.log    │\n   └──────────────────────────────┬──────────────────────────┘\n                                  │\n                                  ▼\n   ┌─────────────────────────────────────────────────────────┐\n   │  5. _rs_run_complete_extras                             │\n   │     packages.manual.list                                │\n   │       → cascade-safe filter                             │\n   │       → apt-get install                                 │\n   └──────────────────────────────┬──────────────────────────┘\n                                  │\n                                  ▼\n   ┌─────────────────────────────────────────────────────────┐\n   │  6. REBOOT                                              │\n   └──────────────────────────────┬──────────────────────────┘\n                                  │\n                                  ▼\n   ┌─────────────────────────────────────────────────────────┐\n   │  7. apply_pending_restore.sh (on early boot)            │\n   │     Reads plan.env                                      │\n   │     Applies apply-on-boot.list (filtered)               │\n   │     Installs the postboot systemd unit                  │\n   └──────────────────────────────┬──────────────────────────┘\n                                  │\n                                  ▼\n   ┌─────────────────────────────────────────────────────────┐\n   │  8. apply_cluster_postboot.sh (~10 minutes)             │\n   │     Runs after pve-cluster is up                        │\n   │     · Applies /etc/pve entries to pmxcfs                │\n   │     · update-initramfs -u -k all                        │\n   │     · update-grub / proxmox-boot-tool refresh           │\n   │     · component --auto-reinstall (nvidia, coral, ...)   │\n   │     · Boot sanity check                                 │\n   │     · Notification: \"Host restore finished\"             │\n   └─────────────────────────────────────────────────────────┘"
+  },
+  "pendingMachinery": {
+    "heading": "Pending-Restore-Maschinen",
+    "intro": "Pfade, die als <code>reboot</code> oder <code>dangerous</code> klassifiziert sind, und Hydratationsschreiben, werden für den nächsten Boot inszeniert, anstatt live angewendet zu werden. Dies geschieht durch einen kleinen, in sich geschlossenen Satz von Dateien unter <code>/var/lib/proxmenux/pending-restore/</code>:",
+    "rows": [
+      {
+        "file": "apply-on-boot.list",
+        "content": "Ein relativer Pfad pro Linie — der genaue Satz von Pfaden <code>apply_pending_restore.sh</code> wird von den inszenierten Rootfs gelten. Das Lesen dieser Datei sagt dem Benutzer genau, was sich beim nächsten Booten ändern wird."
+      },
+      {
+        "file": "plan.env",
+        "content": "Umgebungsvariablen, die über das On-Boot-Skript bezogen werden: Wiederherstellungs-ID, Kompatibilitätskennzeichen (<code>HB_COMPAT_CROSS_VERSION</code>, <code>HB_COMPAT_KERNEL_DIRECTION</code>, <code>HB_HYDRATION_APPLIED</code>), Rollback-Opt-in-Flag, Clusteroptionen."
+      },
+      {
+        "file": "rs-skip-paths.txt",
+        "content": "Die endgültige <code>RS_SKIP_PATHS</code>-Liste blieb bestehen, so dass <code>apply_pending_restore.sh</code> nach dem Neustart die gleichen Ausschlüsse anwendet, die während des interaktiven Schritts berechnet wurden. Verhindert, dass driftbeeinflusste oder kernübergreifend unsichere Pfade beim Booten wiederhergestellt werden."
+      },
+      {
+        "file": "rootfs/",
+        "content": "Die inszenierten Dateien selbst - die genauen Bytes, die festgelegt werden. Behielt auf dem gleichen Dateisystem wie <code>/</code>, so dass der On-Boot rsync schnell ist und nicht davon abhängt, dass externer Speicher beim Booten noch erreichbar ist."
+      }
+    ],
+    "unitBody": "Die <code>proxmenux-restore-onboot.service</code> systemd-Einheit ist am Ende des interaktiven Schritts aktiviert. Es ist ein One-Shot-Service, der beim nächsten Booten früh feuert, <code>apply_pending_restore.sh</code> anruft und sich dann selbst deaktiviert. Das Gerät wird von <code>ConditionPathExists=/var/lib/proxmenux/pending-restore/state</code> angesteuert, so dass es bei jedem Booten ohne anstehende Wiederherstellung ein No-Op ist."
+  },
+  "postbootDispatcher": {
+    "heading": "Der Postboot-Dispatcher — apply_cluster_postboot.sh",
+    "intro": "Wo der interaktive Schritt endet und wo die eigentliche Host-Reproduktion stattfindet. <code>apply_cluster_postboot.sh</code> wird als zweites One-Shot-systemd-Gerät (<code>proxmenux-apply-cluster-postboot.service</code>) installiert, dessen <code>After=</code>/<code>Wants=</code>-Ziele sicherstellen, dass es nur nach dem Ausführen von Pve-Cluster und Netzwerk-Online ausgeführt wird. Hier landen die host-visiblen Wiederherstellungsaktionen.",
+    "tasks": [
+      {
+        "task": "Anwendung von /etc/pve",
+        "detail": "<code>/etc/pve</code> ist ein Live-Pmxcfs FUSE-Mount - es kann nicht beim frühen Booten geschrieben werden. Der Dispatcher kopiert Dateien von den ausstehenden Rootfs in das Live-<code>/etc/pve</code>, sobald das Cluster-Dateisystem aktiviert ist, eine Datei nach der anderen, ohne den pve-Cluster neu zu starten. Das erfasste <code>/var/lib/pve-cluster/config.db</code> aus dem Backup (oder das geförderte <code>config.db.raw-fallback</code>) wird mit dem <code>systemctl stop pve-cluster</code> → Atomdateikopie → <code>systemctl start pve-cluster</code> Muster materialisiert, so dass pmxcfs den wiederhergestellten Zustand auf dem Weg zurück nach oben erneut liest."
+      },
+      {
+        "task": "Rebuild Initramfs und Bootloader",
+        "detail": "Führt <code>update-initramfs -u -k all</code> über jeden installierten Kernel aus, dann entweder <code>update-grub</code> (GRUB-Installationen) oder <code>proxmox-boot-tool refresh</code> (systemd-Boot / ZFS-Installationen). Überspringt, wenn der interaktive Schritt feststellte, dass sich nichts an den Pfaden geändert hat, die sich auf diese Werkzeuge auswirken."
+      },
+      {
+        "task": "Auto-Reinstallation der Komponente",
+        "detail": "Lies die wiederhergestellte <code>components_status.json</code> und iteriert die registrierten Installateure (nvidia_driver, coral_driver, amdgpu_top, intel_gpu_tools). Jeder Installer läuft im <code>--auto-reinstall</code>-Modus, liest seine zuvor aufgezeichnete Version aus der Statusdatei und stellt den aktuellen Kernel des Ziels neu auf. Der interaktive Fluss tut dies nicht - das Neuinstallieren von Treibern gegen einen Kernel, der noch nicht gestartet wurde, ist bedeutungslos."
+      },
+      {
+        "task": "Bootsanitätsprüfung",
+        "detail": "Bevor Sie die Abschlussbenachrichtigung starten, überprüfen Sie, ob <code>proxmox-boot-tool status</code> ein konfiguriertes ESP anzeigt, jedes <code>/boot/vmlinuz-*</code> ein passendes <code>/lib/modules/&lt;ver&gt;</code>-Verzeichnis hat und <code>/vmlinuz</code> auflöst. Jede inkonsistenz wird in der benachrichtigung aufgetaucht, anstatt versteckt zu werden."
+      },
+      {
+        "task": "Abschlussmeldung",
+        "detail": "Sendet das <code>Host restore finished</code>-Event über <code>hb_notify_lifecycle</code>. Enthält die Gesamtdauer, die Anzahl der angewandten Pfade, gegebenenfalls Warnungen vor der Sanitätsprüfung und einen Link zum Protokoll bei <code>/var/log/proxmenux/proxmenux-cluster-postboot-*.log</code>. Wenn Benachrichtigungen nicht konfiguriert sind, ist das Ereignis still – das Protokoll zeichnet immer noch alles auf."
+      }
+    ]
+  },
+  "liveProgress": {
+    "heading": "Live-Fortschritt auf der Registerkarte Backups des Monitors",
+    "body": "Nach dem Neustart wird auf der Registerkarte Backups von ProxMenux Monitor eine Live-Post-Restore-Karte angezeigt, die den Status von <code>apply_cluster_postboot.service</code> während der Ausführung widerspiegelt. Die Karte wird von <code>/var/lib/proxmenux/restore-state.json</code> gesteuert, die der Dispatcher bei jedem Meilenstein aktualisiert (Cluster-Konfiguration anwenden, Initramfs neu erstellen, Bootloader aktualisieren, pro Komponente neu installieren, Boot-Sanity-Check, finalisieren).",
+    "fields": [
+      {
+        "name": "Statusabzeichen",
+        "detail": "<em>Restore in progress</em>, <em>Restore complete</em> oder <em>Restore fehlgeschlagen</em>. Die Karte befragt die Statusdatei alle 2 Sekunden während des Laufens und alle 30 Sekunden nach dem Ende."
+      },
+      {
+        "name": "Fortschrittsbalken + Schrittzähler",
+        "detail": "Zeigt <code>N/M steps</code> mit dem Label des aktuellen Schritts an. Während die Wiederherstellung ausgeführt wird, wird eine <em>geschätzte Zeit</em> aus abgeschlossenen Schritten und verstrichener Zeit abgeleitet."
+      },
+      {
+        "name": "Komponentenliste",
+        "detail": "Eine Zeile pro Treiber wird neu installiert (NVIDIA, Intel GPU tools, AMD tools, Coral TPU) mit <code>installing</code> / <code>ok</code> / <code>failed</code> plus einem Link zum Pro-Komponenten-Log bei <code>/var/log/proxmenux/component-*.log</code>."
+      },
+      {
+        "name": "Import von Datenpools",
+        "detail": "Der <code>data_pools_import</code>-Block zeigt fünf farbcodierte Zeilen — <em>Imported</em>, <em>Forced</em> (importiert mit <code>-f</code> nach einem fremden Hostid), <em>Skipped partial</em> (Pools mit nur einigen Festplatten vorhanden), <em>Skipped missing</em> (keine Festplatten vorhanden) und <em>Failed</em>. Der Zustand wird in <code>/var/lib/proxmenux/restore-state.json</code> beibehalten, und das Rohprotokoll pro Lauf lebt bei <code>/var/log/proxmenux/restore-datapools-&lt;timestamp&gt;.log</code>."
+      },
+      {
+        "name": "Warnungen zur Boot-Sicherheit",
+        "detail": "Der Dispatcher prüft auf fehlende <code>/lib/modules/&lt;kernel&gt;</code>, fehlende ESP-Konfiguration und baumelnde <code>/vmlinuz</code>-Symlinks. Jede Warnung taucht hier als farbiges Banner auf."
+      },
+      {
+        "name": "Rollback-Delta",
+        "detail": "Listen Sie VMs, LXCs und Komponenten auf, die auf dem Ziel vorhanden sind, aber nicht im wiederhergestellten Backup waren - die gleichen Einträge tauchten im destruktiven Rollback-Dialog vor der Wiederherstellung auf. Jede Zeile trägt den manuellen Bereinigungsbefehl."
+      },
+      {
+        "name": "Log-Schwanz",
+        "detail": "Die letzten 600-Zeilen von <code>proxmenux-cluster-postboot-&lt;ts&gt;.log</code>, mit einem <em>Issues only</em> Filter, der nur Zeilen hält, die mit <code>error</code>, <code>warning</code>, <code>failed</code>, <code>✗</code> oder <code>traceback</code> übereinstimmen."
+      }
+    ],
+    "dismissBody": "Sobald die Wiederherstellung <em>complete</em> oder <em>failed</em> ist, bricht eine Abweisungstaste die Karte zusammen. Die Statusdatei bleibt erhalten und die Schaltfläche History öffnet sie erneut sowie jede vorherige Wiederherstellung (die letzten 20-Läufe werden unter <code>/var/lib/proxmenux/restore-history/</code> archiviert).",
+    "imageAlt": "ProxMenux Monitor's Post-Restore progress Details modal wurde während einer laufenden Wiederherstellung geöffnet und zeigt das blaue Restore in progress Badge, den aktuellen Schritt (Rebuilding initramfs), die geschätzte verbleibende Zeit, eine teilweise gefüllte Fortschrittsleiste und den Live-Schwanz des Postboot-Protokolls.",
+    "imageCaption": "Die Details modal, während der Post-Boot-Dispatcher noch läuft - Abzeichen, aktueller Schritt, verbleibende Zeit und Live-Log-Tail.",
+    "detailsImageAlt": "Die gleichen Details modal, nachdem die Wiederherstellung abgeschlossen ist, mit dem grünen Wiederherstellungsabzeichen, der Gesamtlaufdauer (0m53s), einem vollständig gefüllten 6 / 6-Fortschrittsbalken, dem leeren Rollback-Delta und dem archivierten Postboot-Protokoll.",
+    "detailsImageCaption": "Das gleiche Modal, wenn der Lauf beendet ist - Abzeichen, Gesamtdauer, gefüllter Fortschrittsbalken und das archivierte Postboot-Protokoll."
+  },
+  "postbootExample": {
+    "heading": "Wie der Post-Boot auf der Konsole aussieht",
+    "body": "Auf der physischen Konsole des Hosts endet ein erfolgreicher Dispatcher-Lauf mit einer <code>[ OK ] Finished proxmenux-apply-cluster-postboot.service</code>-Linie. Wenn diese Linie erscheint - normalerweise neben den <code>OK</code>s für <code>multi-user.target</code> und <code>graphical.target</code> - ist die Wiederherstellung vollständig abgeschlossen: Komponenten neu installiert, Artefakte regeneriert, Cluster versöhnt.",
+    "imageAlt": "Die physische Konsole von Proxmox zeigt '[OK ] Finished proxmenux-apply-cluster-postboot.service - ProxMenux Apply Cluster Configs (Post-Boot).' gefolgt vom OK für multi-user.target und graphical.target, mit der Host-Anmeldeaufforderung oben.",
+    "imageCaption": "Physische Konsole nach einem erfolgreichen Post-Boot. Die 'Finished proxmenux-apply-cluster-postboot.service'-Zeile ist das Signal, dass der Wiederherstellungsfluss vollständig abgeschlossen ist - das gleiche Ereignis, das die 'Host-Wiederherstellung abgeschlossen'-Benachrichtigung im Monitor auftaucht."
+  },
+  "tenMinutes": {
+    "heading": "Warum die letzten zehn Minuten wichtig sind",
+    "intro": "Der Neustart selbst dauert Sekunden, aber der Post-Boot-Dispatcher verbringt etwa zehn Minuten damit, die Wiederherstellung abzuschließen. Während dieses Fensters ist der Host erreichbar und die Anmeldung funktioniert, aber einige Dienste (hauptsächlich GPU-fahrerabhängige) sind noch nicht verfügbar. Zeitaufschlüsselung für einen typischen Proxmox-Host mit NVIDIA + Coral installiert:",
+    "rows": [
+      {
+        "stage": "Boot + pve-Cluster bereit",
+        "time": "~30 s",
+        "detail": "Standard Proxmox Boot. SSH, Web-UI und Login sind am Ende dieser Phase verfügbar."
+      },
+      {
+        "stage": "/etc/pve auf pmxcfs anwenden",
+        "time": "~10 s",
+        "detail": "Schnell – kleine Konfigurationsdateien, die nacheinander in das Live-Cluster-Dateisystem kopiert wurden."
+      },
+      {
+        "stage": "Initramfs über Kernel hinweg neu aufbauen",
+        "time": "3–5 min",
+        "detail": "<code>update-initramfs -u -k all</code> stellt pro installiertem Kernel ein Initramfs-Image wieder her. Masse des Wartens."
+      },
+      {
+        "stage": "Neuaufbau der Bootloader-Konfiguration",
+        "time": "10–30 s",
+        "detail": "<code>update-grub</code> oder <code>proxmox-boot-tool refresh</code>. Schnell sogar auf ZFS."
+      },
+      {
+        "stage": "NVIDIA-Treiber neu installieren (falls zutreffend)",
+        "time": "5–10 min",
+        "detail": "Laden Sie die aufgezeichnete Treiberversion herunter, kompilieren Sie die DKMS-Module mit dem aktuellen Kernel und wenden Sie den ProxMenux-Patch an, wenn die Quelle ihn hatte. Längste Einzelaufgabe."
+      },
+      {
+        "stage": "Coral / andere Komponenten Neuinstallationen",
+        "time": "3–5 min",
+        "detail": "DKMS kompiliert für Coral, apt install für intel-gpu-Tools, .deb download + install für amdgpu_top."
+      },
+      {
+        "stage": "Sanitätskontrolle + Meldung",
+        "time": "~2 s",
+        "detail": "Billig. Der Benutzer erfährt, dass der Lauf abgeschlossen ist, sobald die Benachrichtigung ausgelöst wird."
+      }
+    ],
+    "outroBody": "Das Fenster ist wichtig, da sich der Benutzer während dieser Zeit anmelden und fehlende Tools sehen kann (<code>nvidia-smi</code> nicht gefunden, <code>coral</code> nicht erkannt). Dies wird erwartet - die Neuinstallation läuft immer noch im Hintergrund. Die Abschlussbenachrichtigung signalisiert, wenn alles fertig ist."
+  },
+  "destructiveRollback": {
+    "heading": "Der optionale destruktive Rollback",
+    "body": "Eine Wiederherstellung ist standardmäßig additiv: Wenn das Ziel VMs, LXCs oder Komponenten hat, die sich nicht im Backup befinden, überleben sie. Dies bewahrt die Arbeit, kann aber veraltete Hostpci-Einträge, verwaiste Komponenten oder VMs hinterlassen, die der Benutzer nicht mehr möchte. Wenn eine Drift zwischen Ziel und Backup erkannt wird, bietet der Bestätigungsdialog ein zweites Ja/Nein: <em>Destruktive Rollback ausführen?</em>. Wenn Sie es akzeptieren, wird <code>_rs_execute_rollback</code> ausgelöst, wodurch die VMs, LXCs und Komponenten gelöscht werden, die auf dem Ziel, aber nicht im Backup vorhanden sind. Das Rollback läuft VOR dem Neustart, so dass die anstehende Wiederherstellungsmaschinerie einen sauberen Zustand sieht. Dies ist Opt-in - der Standard ist Nein, und der Benutzer sieht genau, was nach Namen (VMID und CTID) entfernt würde, bevor er entscheidet."
+  },
+  "logs": {
+    "heading": "Wo die Stämme leben",
+    "rows": [
+      {
+        "log": "/var/log/proxmenux/restore-YYYYMMDD_HHMMSS.log",
+        "detail": "Geschrieben durch den interaktiven Schritt. Enthält: Kompatibilitätsergebnisse, Driftfilter, Hydratationsplan, heiße Ausgabe anwenden, ausstehende Ausgabe vorbereiten, Paketinstallation."
+      },
+      {
+        "log": "/var/log/proxmenux/apply-pending-YYYYMMDD_HHMMSS.log",
+        "detail": "Geschrieben von <code>apply_pending_restore.sh</code> auf Early Boot. Enthält: sourced plan.env, apply-on-boot iteration, skip-paths filtering."
+      },
+      {
+        "log": "/var/log/proxmenux/proxmenux-cluster-postboot-YYYYMMDD_HHMMSS.log",
+        "detail": "Geschrieben von <code>apply_cluster_postboot.sh</code>. Enthält: pve-cluster apply, Initramfs und Bootloader-Ausgabe, Ausgabe pro Komponente Installateur, Sanity-Check, Benachrichtigung Nutzlast."
+      },
+      {
+        "log": "/var/log/proxmenux/component-<name>-YYYYMMDD_HHMMSS.log",
+        "detail": "Ein Protokoll pro Komponenteninstallateur (nvidia, Korallen usw.), das im Post-Boot-Pass lief. Nützlich, wenn die Neuinstallation einer bestimmten Komponente fehlgeschlagen ist und der Benutzer die eigene Ausgabe des Tools benötigt."
+      },
+      {
+        "log": "/var/log/proxmenux/restore-datapools-YYYYMMDD_HHMMSS.log",
+        "detail": "Geschrieben von <code>_rs_import_data_pools</code>. Enthält: Aufzählung von Nicht-Root-Pools aus dem Manifest, Pro-Pool-Ergebnis (sauber importiert, mit <code>-f</code> für ausländische Hostids importiert, aufgrund fehlender Festplatten übersprungen oder fehlgeschlagen) und die Rohausgabe jedes <code>zpool import</code>-Aufrufs."
+      }
+    ]
+  },
+  "whereNext": {
+    "heading": "Wohin Sie als nächstes gehen",
+    "items": [
+      {
+        "label": "Kernübergreifende Wiederherstellung",
+        "href": "/docs/backup-restore/cross-kernel",
+        "tail": "- der richtungsbewusste Safe-Subset-Filter und der Hydratationspass, der aufgerufen wird, wenn sich der Zielkernel vom Backup unterscheidet."
+      },
+      {
+        "label": "Wie es funktioniert",
+        "href": "/docs/backup-restore/how-it-works",
+        "tail": "- das Archivlayout, Manifest und Anwendungsinventar, das die Wiederherstellung verbraucht."
+      },
+      {
+        "label": "Geplante Arbeitsplätze",
+        "href": "/docs/backup-restore/scheduled-jobs",
+        "tail": "— der unbeaufsichtigte Fluss, der die Archive produziert, die diese Seite verbraucht."
+      }
+    ]
+  }
+}

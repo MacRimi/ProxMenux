@@ -1,0 +1,133 @@
+{
+  "meta": {
+    "title": "Post-Install: System | ProxMenux Dokumentation",
+    "description": "System-Level-Optimierungen im ProxMenux Customizable Post-Installations-Skript: Größenbegrenzungen für Zeitschriften und Logrotate, höhere Kernel- und Datei-Deskriptor-Grenzen, ausgewogenes Memory-Tuning, Kexec für schnelle Neustarts und Kernel-Panikwiederherstellung."
+  },
+  "header": {
+    "title": "Nach der Installation: System",
+    "section": "Einstellungen nach der Installation von Proxmox"
+  },
+  "intro": {
+    "title": "Was diese Kategorie abdeckt",
+    "body": "Sechs unabhängige Optimierungen auf Systemebene. Sie stimmen <strong>journald</strong> und <strong>logrotate</strong> ab, um zu verhindern, dass Protokolle die Festplatte füllen, erhöhen <strong>kernel und Dateideskriptorlimits</strong>, so dass Anwendungen mit vielen offenen Dateien keine Decken erreichen, <strong>balance memory</strong> für einen Virtualisierungshost, fügen <strong>kexec</strong> für \"Neustarts ohne BIOS\" hinzu und konfigurieren <strong> automatische Wiederherstellung</strong> bei Kernel-Panik. Alle sechs sind verfolgt und reversibel aus dem Menü Deinstallieren."
+  },
+  "journald": {
+    "heading": "Journal optimieren",
+    "intro": "Schreibt <code>/etc/systemd/journald.conf</code> mit Standardeinstellungen neu, so dass das systemd-Journal Ihre Root-Partition nicht langsam auffressen kann, dann <code>systemd-journald</code> neu startet und vorhandene Protokolle saugt.",
+    "keyTitle": "Schlüsselwerte",
+    "keyItems": [
+      "<code>Storage=persistent</code> — Protokolle auf der Festplatte über Neustarts halten.",
+      "<code>SystemMaxUse=64M</code> / <code>RuntimeMaxUse=60M</code> - Hard Caps für die Verwendung von Zeitschriftenplatten / Speichern.",
+      "<code>Compress=yes</code>, <code>Seal=no</code> — Komprimierung von Baumstämmen, sicheres Versiegeln nach vorne überspringen (speichert CPU).",
+      "<code>MaxLevelStore=info</code> — Daten speichern und höher (erforderlich für ProxMenux Monitor Log Viewer und für Fail2Ban SSH/Proxmox Auth Fehler aus dem Journal zu erkennen).",
+      "Tariflimits: <code>1000 events / 30 s</code> zur Verhinderung von Holzüberflutungen.",
+      "<code>ForwardToSyslog=no</code>, <code>ForwardToWall=no</code> - Duplizieren Sie keine Nachrichten in syslog oder senden Sie sie an Konsolen."
+    ],
+    "tipTitle": "Warum MaxLevelStore=info wichtig ist",
+    "tipBody": "Die Verwendung einer strengeren Ebene wie <code>warning</code> führt dazu, dass der Protokoll-Viewer von ProxMenux Monitor in allen Datumsbereichen nahezu identische Einträge anzeigt (weil die meisten Aktivitäten auf Info-Ebene stattfinden), und verhindert, dass Fail2Ban fehlgeschlagene Logins sieht. Wenn Sie weniger Protokollvolumen wünschen, verlassen Sie sich auf die <code>SystemMaxUse</code>-Kappe und <code>RateLimitBurst</code>, anstatt den gespeicherten Pegel zu senken."
+  },
+  "logrotate": {
+    "heading": "Logrotate optimieren",
+    "intro": "Umschreibt <code>/etc/logrotate.conf</code> mit einer strengeren Richtlinie, die für einen Host geeignet ist, der auch Teil eines SSD-geschützten Log2RAM-Setups ist: tägliche Rotation, 7-Tagesspeicherung, 10-MB-Größenauslösers, Komprimierung und <code>copytruncate</code>, so dass aktive Dienste weiterschreiben, ohne ihre Protokolldateien erneut zu öffnen. Original <code>logrotate.conf</code> wird bei der ersten Anwendung auf <code>.bak</code> gesichert.",
+    "tipTitle": "Für Log2RAM geeignet",
+    "tipBody": "Der <code>size 10M</code>-Trigger bedeutet, dass die Protokolle täglich auf der Größe <em> oder </em> rotieren, je nachdem, was zuerst eintritt. In Kombination mit dem RAM-backed <code>/var/log</code> von Log2RAM hält dies das Arbeitsset klein, so dass die Festplatte billig bleibt."
+  },
+  "limits": {
+    "heading": "Verschiedene Systemgrenzen erhöhen",
+    "intro": "Eine Reihe von Kernel, systemd und PAM begrenzt diesen Standard auf Werte, die für einen Host mit vielen VMs, Containern und Netzwerkdiensten zu niedrig sind.",
+    "headerFile": "Datei",
+    "headerSets": "Was es setzt",
+    "rows": [
+      {
+        "file": "/etc/sysctl.d/99-maxwatches.conf",
+        "sets": "<code>fs.inotify.max_user_watches / max_user_instances / max_queued_events = 1048576</code>"
+      },
+      {
+        "file": "/etc/sysctl.d/99-maxkeys.conf",
+        "sets": "<code>kernel.keys.maxkeys / root_maxkeys = 1000000</code>"
+      },
+      {
+        "file": "/etc/sysctl.d/99-swap.conf",
+        "sets": "<code>vm.swappiness = 10</code>, <code>vm.vfs_cache_pressure = 100</code>"
+      },
+      {
+        "file": "/etc/sysctl.d/99-fs.conf",
+        "sets": "<code>fs.nr_open / file-max = 2097152</code>, <code>fs.aio-max-nr = 1048576</code>"
+      },
+      {
+        "file": "/etc/security/limits.d/99-limits.conf",
+        "sets": "<code>nofile</code> und <code>nproc</code> bis 1,048,576 (unbegrenzt für root)"
+      },
+      {
+        "file": "/etc/systemd/system.conf + user.conf",
+        "sets": "<code>DefaultLimitNOFILE=1048576</code> für systemd-Dienste"
+      },
+      {
+        "file": "/etc/pam.d/common-session + runuser-l",
+        "sets": "<code>session required pam_limits.so</code>, also gelten die oben genannten für Login-Shells"
+      },
+      {
+        "file": "/root/.profile",
+        "sets": "<code>ulimit -n 1048576</code> für die Wurzelschale"
+      }
+    ],
+    "tipTitle": "Warum inotify Angelegenheiten",
+    "tipBody": "Anwendungen wie Docker, Syncthing, Node.js-Beobachter, der Bibliotheksscanner von Plex und viele mehr trafen <code>max_user_watches</code> schnell. Default auf Debian ist 8192 - ein einzelnes laufendes Plex kann es ausschöpfen. 1M ist großzügig und kostet ~ 1 KB RAM pro Uhr, was vernachlässigbar ist."
+  },
+  "memory": {
+    "heading": "Optimieren der Speichereinstellungen",
+    "intro": "Schreibt ein ausgewogenes sysctl-Profil in <code>/etc/sysctl.d/99-memory.conf</code>. Entwickelt für einen Hypervisor-Host - bevorzugt es, VM-Arbeitssets in RAM zu halten und Seiten proaktiv freizugeben, damit Zuweisungsbursts nicht zum Stillstand kommen.",
+    "warnTitle": "swappiness=10 auf speicherdichten Hosts",
+    "warnBody": "Auf einem Host mit 16 GB RAM, auf dem viele VMs ausgeführt werden, kann die Senkung der Swappiness den Kernel zu OOM-Kill-Prozessen anstelle von Swaping bringen. Wenn Sie routinemäßig OOM-Ereignisse sehen, erhöhen Sie die Swappiness nach dem Ausführen des Skripts in <code>/etc/sysctl.d/99-memory.conf</code> auf 30–60."
+  },
+  "kexec": {
+    "heading": "Schnelle Neustarts ermöglichen (kexec)",
+    "intro": "Installiert <code>kexec-tools</code> und verkabelt es, so dass Sie den Host direkt in einen neuen Kernel <em> neu starten können, ohne die BIOS/UEFI-Firmware </em> zu durchlaufen. Auf großen Servern, auf denen POST 45 bis 90 Sekunden benötigt, verwandelt sich ein Neustart von einer Kaffeepause in einige Sekunden Ausfallzeit.",
+    "installsTitle": "Was ProxMenux installiert",
+    "installsItems": [
+      "Paket <code>kexec-tools</code> (debconf pre-beantwortet mit <code>kexec-tools/load_kexec boolean false</code> also apt nicht prompt und die automatische Ladung beim Herunterfahren bleibt ausgeschaltet).",
+      "Systemd-Einheit <code>/etc/systemd/system/kexec-pve.service</code> lädt den Proxmox-Kernel und initrd beim Booten in den Speicher, wobei die aktuelle cmdline wiederverwendet wird.",
+      "Ein Aliasname in <code>/root/.bash_profile</code>: <code>reboot-quick</code> → <code>systemctl kexec</code>."
+    ],
+    "usageIntro": "Nutzung nach dem nächsten Reboot (oder manuell <code>systemctl start kexec-pve</code>):",
+    "warnTitle": "Wann man Kexec nicht benutzt",
+    "warnBody": "kexec überspringt Firmware-Level Init. Wenn Sie sich auf BIOS/UEFI verlassen, um den Hardwarezustand zurückzusetzen - beispielsweise einen GPU, der Passthrough durchführt, der nur bei voller POST sauber zurückgesetzt wird, oder eine lästige HBA-Firmware - können Kexec-Neustarts diese Geräte in einem halbinitialisierten Zustand belassen. Verwenden Sie einen normalen <code>reboot</code> nach Kernel-Upgrades oder wenn Sie BIOS/UEFI Änderungen benötigen, um wirksam zu werden. <code>reboot-quick</code> ist für alltägliche Neustarts gedacht."
+  },
+  "panic": {
+    "heading": "Neustart bei Kernel-Panic aktivieren",
+    "intro": "Macht den Kernel <strong>auto-reboot</strong>, anstatt für immer auf einem Panikbildschirm zu sitzen. Kritisch auf Headless / Remote-Proxmox-Hosts, bei denen ein aufgehängter Kernel bedeutet, dass alle Ihre VMs ausgefallen sind, bis Sie die Box mit Strom versorgen können.",
+    "tipTitle": "Verbinden Sie dies mit Remote-Konsolenzugriff",
+    "tipBody": "Auto-Reboot ist ein Wiederherstellungsmechanismus, kein Debug-Tool. Wenn Sie wollen, <em>Untersuchung</em> Eine panik, anstatt nur wieder zu kommen, verwenden. <link>Die Kexec-Option</link> oben mit der Kernel-Kdump-Unterstützung (nicht konfiguriert von) ProxMenux) oder nehmen Sie eine serielle Konsole auf einem anderen Host auf, bevor Sie den automatischen Neustart aktivieren."
+  },
+  "verify": {
+    "heading": "Verifizierung",
+    "intro": "Nach Anwendung der Systemoptimierungen:",
+    "tipTitle": "Vollständig reversibel",
+    "tipBody": "Alle sechs Optionen werden in <code>installed_tools.json</code> verfolgt, so dass sie in <link>Deinstallationsoptimierungen</link> angezeigt werden, wenn Sie eine davon sichern möchten. Reverts stellt die Standardeinstellungen der sysctl-Dateien wieder her, lässt die systemd-Einheit und den Alias für kexec fallen und setzt journald/logrotate auf Debian-Konfigurationen zurück."
+  },
+  "related": {
+    "heading": "Verwandte Themen",
+    "items": [
+      {
+        "label": "Nützliche Systembefehle",
+        "href": "/docs/help-info/system-commands",
+        "tail": "— die Änderungen überprüfen (free -h, journalctl, ulimit -a)."
+      },
+      {
+        "label": "Leistung",
+        "href": "/docs/post-install/performance",
+        "tail": "— zusätzliches System-Level-Tuning (Pigz)."
+      },
+      {
+        "label": "Optimierungen deinstallieren",
+        "href": "/docs/post-install/uninstall",
+        "tail": "Eine dieser Änderungen rückgängig zu machen."
+      },
+      {
+        "label": "Anpassbar nach der Installation",
+        "href": "/docs/post-install/customizable",
+        "tail": "Zurück zum übergeordneten Menü."
+      }
+    ]
+  }
+}

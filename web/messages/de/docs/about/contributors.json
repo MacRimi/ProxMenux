@@ -1,0 +1,38 @@
+{
+  "meta": {
+    "title": "Mitwirkende | ProxMenux Dokumentation",
+    "description": "Anerkennung für die Menschen, die ProxMenux ermöglichen - Tester, Rezensenten und Entwickler, die jedes Release gestalten.",
+    "ogTitle": "Mitwirkende | ProxMenux Dokumentation",
+    "ogDescription": "Treffen Sie die Mitwirkenden hinter ProxMenux."
+  },
+  "header": {
+    "title": "Beitragende",
+    "description": "Das ProxMenux-Projekt wächst und gedeiht dank des Beitrags seiner Mitarbeiter. Dies ist die wohlverdiente Anerkennung ihrer Arbeit - das Testen von Builds vor der Veröffentlichung, das Auffangen von Regressionen, das Überprüfen von PRs und die Gestaltung der Richtung neuer Funktionen.",
+    "section": "Über"
+  },
+  "beyond": {
+    "title": "Jenseits dieser Liste",
+    "body": "Viele weitere Menschen tragen über Bug-Reports, Feature-Ideen in Diskussionen, Beta-Tests und Übersetzungen bei. Die vollständige Liste der Code-Mitwirkenden lebt auf dem <extlink>GitHub-Mitwirkenden graph</extlink>. Auf der folgenden Seite werden die Personen hervorgehoben, die am aktivsten am Testen und Überprüfen von ProxMenux-Releases beteiligt waren."
+  },
+  "testers": {
+    "heading": "Tester & Reviewer",
+    "intro": "Diese waren unter den ersten, die zu dem Projekt beigetragen haben - Tests, Berichte über Probleme und Vorschläge für Verbesserungen, die ProxMenux geholfen haben, zu dem zu werden, was es heute ist.",
+    "roles": {
+      "testing": "Testen",
+      "testingReviewer": "Testing & Reviewer"
+    },
+    "youtube": "YouTube"
+  },
+  "contribute": {
+    "heading": "Möchten Sie dazu beitragen?",
+    "intro": "Jeder Beitrag ist willkommen - Code, Testen, Design, Dokumentation oder einfach nur das Teilen Ihrer Ideen:",
+    "tester": "<strong>Tester</strong> — versuchen Sie den <beta>beta-Kanal</beta> und berichten Sie, was funktioniert und was nicht, bevor stabile Releases.",
+    "developer": "<strong>Developer</strong> — Bash + Next.js (TypeScript) + ein bisschen Python für die Übersetzung venv. PRs willkommen auf <gh>GitHub</gh>.",
+    "designer": "<strong>Designer</strong> — Verbesserungen der Benutzeroberfläche, Icons, Screenshots zur Dokumentation.",
+    "ideas": "<strong>Ideas</strong> — Öffnen Sie einen Thread in <disc>GitHub Discussions</disc>, bevor Sie ein Feature Request Problem öffnen."
+  },
+  "coc": {
+    "title": "Lesen Sie zuerst den Verhaltenskodex",
+    "body": "Bevor Sie Code- oder Berichtsprobleme einreichen, lesen Sie den <coclink>Code of Conduct & Best Practices</coclink> schnell. Es deckt Erwartungen in Bezug auf Code-Verantwortung, Sicherheitsoffenlegung und PR-Bereich ab."
+  }
+}

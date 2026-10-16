@@ -1,0 +1,247 @@
+{
+  "meta": {
+    "title": "Berichte und Vergleiche | Audit & Report",
+    "description": "Die sechs Audit & Report Dokumente, wie sie gedruckt oder als PDF gespeichert werden und wie Läufe mit einem Referenzlauf verglichen werden."
+  },
+  "header": {
+    "title": "Berichte und Vergleiche",
+    "description": "Sechs Dokumente, die jeweils für eine andere Frage verfasst wurden, und der Vergleich jedes Laufs mit einem Referenzlauf.",
+    "section": "Prüfung und Bericht"
+  },
+  "sections": [
+    {
+      "id": "intro",
+      "blocks": [
+        {
+          "calloutInfo": {
+            "title": "Sechs Dokumente, nicht sechs Stile",
+            "body": "Die Engine wählt Prüfungen und Abschnitte aus, bevor sie das Dokument erstellt. Eine schnelle Diagnose ist kein vollständiges Audit mit weniger Seiten, und ein Inventar zeigt keine Bewertungsergebnisse. Die folgenden Beispieldokumente verwenden fiktive Daten."
+          }
+        }
+      ]
+    },
+    {
+      "id": "documents",
+      "title": "Die sechs Dokumente",
+      "blocks": [
+        {
+          "downloads": {
+            "items": [
+              {
+                "title": "Vollständiges Audit",
+                "body": "Dokumentiert den Knoten Ende an Ende als technische Aufzeichnung.",
+                "href": "/monitor/audit/sample-audit-full-report.pdf",
+                "facts": [
+                  {
+                    "label": "Kontrollen",
+                    "value": "Jede verfügbare Überprüfung."
+                  },
+                  {
+                    "label": "Inhalt",
+                    "value": "Executive Summary; Identität und Cluster; Hardware; Netzwerk und Latenz; Speicherung; Gäste; Passthrough; Anwendungen; Erkenntnisse mit Beweisen; Quellen und Umfang."
+                  }
+                ]
+              },
+              {
+                "title": "Schnelldiagnose",
+                "body": "Zeigt, was Aufmerksamkeit braucht, ohne das komplette Inventar.",
+                "href": "/monitor/audit/sample-audit-diagnostic-report.pdf",
+                "facts": [
+                  {
+                    "label": "Kontrollen",
+                    "value": "Die gleichen Prüfungen wie das vollständige Audit."
+                  },
+                  {
+                    "label": "Inhalt",
+                    "value": "Minimale Identität; kritische Befunde; Warnungen; relevante Beobachtungen; nicht verifizierte Messwerte und prioritäre Maßnahmen. Diagramme, Inventar und lange Anhänge werden ausgelassen."
+                  }
+                ]
+              },
+              {
+                "title": "Inventar",
+                "body": "Beschreibt, was auf dem Knoten existiert, ohne es zu bewerten.",
+                "href": "/monitor/audit/sample-audit-inventory-report.pdf",
+                "facts": [
+                  {
+                    "label": "Kontrollen",
+                    "value": "Keine; kein Befund ist klassifiziert."
+                  },
+                  {
+                    "label": "Inhalt",
+                    "value": "Identität; Cluster; CPU und Speicher; Board, BIOS und Controller; Netzwerk; Storage; VMs und LXCs; Passthrough; Anwendungen und Elemente, die von ProxMenux verwaltet werden."
+                  }
+                ]
+              },
+              {
+                "title": "Sicherheitsüberprüfung",
+                "body": "Umfasst die Exposition und die Kontrollen über den Zugang zum Knoten.",
+                "href": "/monitor/audit/sample-audit-security-report.pdf",
+                "facts": [
+                  {
+                    "label": "Kontrollen",
+                    "value": "Der Sicherheitsbereich sowie Containerprivilegien, Updates, Repositories und die APT-Kette."
+                  },
+                  {
+                    "label": "Inhalt",
+                    "value": "Identität und Cluster; Netzwerk und Latenz; Zugriff; Firewall; 2FA; Zertifikate; Privilegien; Updates; Repositories; Zustand und Alter von Lynis."
+                  }
+                ]
+              },
+              {
+                "title": "Sicherungssicherung",
+                "body": "Prüft, ob der deklarierte Schutz vorhanden ist und ob seine Backups verwendbar sind.",
+                "href": "/monitor/audit/sample-audit-backup-report.pdf",
+                "facts": [
+                  {
+                    "label": "Kontrollen",
+                    "value": "Der Backup-Bereich plus Storage-Konnektivität und Benachrichtigungszustellung."
+                  },
+                  {
+                    "label": "Inhalt",
+                    "value": "Abdeckung pro Gast; erklärtes Wiederherstellungsziel; Alter und Ergebnis; Ziel; Aufbewahrung; Überprüfung; gescheiterte Jobs; Wiederherstellung und unvollständige Quellen."
+                  }
+                ]
+              },
+              {
+                "title": "Kapazität und Verschleiß",
+                "body": "Messt Wachstumsspanne und Anzeichen von Erschöpfung oder Alterung.",
+                "href": "/monitor/audit/sample-audit-capacity-report.pdf",
+                "facts": [
+                  {
+                    "label": "Kontrollen",
+                    "value": "Die Speicher- und Hardwarebereiche sowie Speicher, Swap, Journal und das Host-Dateisystem."
+                  },
+                  {
+                    "label": "Inhalt",
+                    "value": "Nutzung und Schwellenwerte; dünne Pools; Überversorgung; Speicher; Inodes; ZFS; Temperaturen; Einschaltzeiten; SMART-Fehler und NVMe/SSD-Lebensdauer."
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "figure": {
+            "src": "/monitor/audit/audit-report-preview.png",
+            "alt": "Erste Seite eines vollständigen Auditberichts",
+            "caption": "Jedes Dokument teilt die Berichtskennung, die nummerierten Abschnitte, das Datum, den Knoten, das Profil und die Fußzeile."
+          }
+        },
+        {
+          "p": "Ein Dokument enthält die Identität des Knotens und das Datum der Bewertung, das Exekutivergebnis, eine Zusammenfassung nach Bereich, die Struktur der Hardware, des Netzwerks und der Speicherung, den Schutz der Gäste, die Ergebnisse mit ihren Beweisen, die Quellen, die nicht gelesen werden konnten, und den Umfang und die angewandte Politik, in der Maßnahme jedes Profil enthält sie."
+        }
+      ]
+    },
+    {
+      "id": "print",
+      "title": "Drucken oder Speichern als PDF",
+      "blocks": [
+        {
+          "steps": {
+            "items": [
+              {
+                "title": "Starten",
+                "body": "Eine Bewertung läuft mit dem in <strong>Report</strong> ausgewählten Profil."
+              },
+              {
+                "title": "Überprüfung",
+                "body": "Der fertige Lauf zeigt seine Ergebnisse, die Quellen, die er nicht lesen konnte, und die Politik, die er anwendete."
+              },
+              {
+                "title": "Bericht erzeugen",
+                "body": "<strong>Generate report</strong> öffnet die als Dokument vorbereitete Ansicht."
+              },
+              {
+                "title": "Druck",
+                "body": "<strong>Print or save as PDF</strong> öffnet den Druckdialog des Browsers, in dem ein Drucker oder <em>Save as PDF</em> ausgewählt ist."
+              }
+            ]
+          }
+        },
+        {
+          "calloutTip": {
+            "title": "Der Ausdruck ist ein Dokument, kein Screenshot",
+            "body": "Die Aktionsleiste ist ausgeblendet, eine Tabelle, die auf der nächsten Seite fortgesetzt wird, wiederholt ihre Kopfzeile, Blöcke vermeiden unnötige Pausen und jede Seite behält die Identifikation und Nummerierung."
+          }
+        }
+      ]
+    },
+    {
+      "id": "compare",
+      "title": "Vergleich mit einem Referenzlauf",
+      "intro": "<strong>Use as reference</strong> markiert einen fertigen Lauf als Referenz. Spätere Läufe werden damit verglichen und ihre Ergebnisse werden getrennt in:",
+      "blocks": [
+        {
+          "table": {
+            "headers": [
+              "Gruppe",
+              "Bedeutung"
+            ],
+            "rows": [
+              [
+                "Neu",
+                "Jetzt berichtet und nicht vorher."
+              ],
+              [
+                "Verschlechtert",
+                "Immer noch berichtet und ernster oder weiter als zuvor."
+              ],
+              [
+                "Verbessert",
+                "Immer noch berichtet, aber weniger ernst oder weniger weit als zuvor."
+              ],
+              [
+                "gelöst",
+                "Nicht mehr gemeldet, und niemand akzeptierte sie."
+              ],
+              [
+                "Akzeptiert",
+                "Nicht mehr gezählt, weil ein Risiko akzeptiert wurde, nicht weil der Gastgeber gewechselt hat."
+              ],
+              [
+                "Nicht mehr bewertet",
+                "Vor und abwesend von diesem Lauf; nichts bestätigt, dass sie gestoppt."
+              ]
+            ]
+          }
+        },
+        {
+          "table": {
+            "headers": [
+              "Bezugslauf",
+              "Verhalten"
+            ],
+            "rows": [
+              [
+                "Setzen Sie es",
+                "Jeder fertige Lauf kann markiert werden; keiner wird automatisch markiert."
+              ],
+              [
+                "Es ändern",
+                "Das Markieren eines anderen Laufs verschiebt die Referenz, ohne die Historie zu löschen."
+              ],
+              [
+                "Vergleichen",
+                "Wenn keine zwei Durchläufe ausgewählt sind, verwendet der Vergleich die Referenz und den ausgewählten oder letzten Durchlauf."
+              ],
+              [
+                "Durchfahrten",
+                "Die letzten 30-Läufe werden beibehalten, und der Referenzlauf wird nie entfernt."
+              ],
+              [
+                "Ohne Referenz",
+                "Die Ansicht besagt, dass noch kein Referenzlauf gewählt wurde, so dass es nichts zu vergleichen gibt."
+              ]
+            ]
+          }
+        },
+        {
+          "calloutWarning": {
+            "title": "Ein Bericht beschreibt einen Moment",
+            "body": "Eine Bewertung bescheinigt nicht einen ganzen Zeitraum. Ältere ergebnisse hören auf, den aktuellen zustand zu beschreiben; die ansicht zeigt das alter des letzten laufs und jede quelle behält die zeit, die sie gesammelt wurde."
+          }
+        }
+      ]
+    }
+  ]
+}

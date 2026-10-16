@@ -1,0 +1,172 @@
+{
+  "meta": {
+    "title": "Automatisiertes Post-Install-Script | ProxMenux Dokumentation",
+    "description": "Das ProxMenux Automatisierte Post-Installation-Script wendet einen kuratierten Satz von 14 sicheren, hardwarebewussten Optimierungen auf einen frischen Proxmox VE-Host mit null Eingabeaufforderungen an. Reversible Konfigurationsänderungen werden zur späteren Wiederherstellung registriert.",
+    "ogTitle": "Automatisiertes Post-Install-Script | ProxMenux Dokumentation",
+    "ogDescription": "14 kuratierte Optimierungen, die auf einen frischen Proxmox VE-Host mit null Eingabeaufforderungen angewendet wurden. Hardware-bewusst, mit reversiblen Konfigurationsänderungen verfolgt."
+  },
+  "header": {
+    "title": "Automatisiertes Post-Install-Skript",
+    "description": "Ein Klick, keine Eingabeaufforderungen - ProxMenux wendet einen kuratierten Satz 14-sicherer Optimierungen an, von denen fast jeder Proxmox-Host profitiert. Reversible Konfigurationsänderungen werden für Deinstallationsoptimierungen registriert; Paketupgrades werden nicht als reversibel beschrieben.",
+    "section": "Post-Installation · Automatisiert"
+  },
+  "intro": {
+    "title": "Wann automatisiert ausgewählt werden soll",
+    "body": "Führen Sie dies auf einem frisch installierten Proxmox-Host aus, wenn Sie die vernünftige Baseline wünschen, ohne Entscheidungen zu treffen. Das Skript ist idempotent - es zweimal auszuführen ist sicher, es wird nur die gleichen Konfigurationen erneut angewendet. Opt-in-Funktionen (Fastfetch, IOMMU, Ceph repo, HA, AMD fixes...) sind absichtlich <strong>not</strong> Teil dieses Pfades; wählen Sie sie aus <link>Customizable</link>, wenn Sie sie benötigen."
+  },
+  "applies": {
+    "heading": "Was das Skript anwendet",
+    "intro": "Die Optimierungen werden in genau dieser Reihenfolge angewendet. Die Spalte <em>Category</em> verlinkt auf die detaillierte Dokumentation jeder Änderung in der anpassbaren Referenz.",
+    "headerNum": "#",
+    "headerTool": "Werkzeug",
+    "headerWhat": "Was es tut",
+    "headerCategory": "Kategorie"
+  },
+  "optimizations": [
+    {
+      "tool": "APT-Repositorys + vollständiges Upgrade",
+      "what": "Deaktiviert das Unternehmen pve-enterprise.sources und ceph.sources, schreibt eine saubere No-Subscription-Quelle für den Debian-Codenamen des Hosts und führt dann apt update && apt full-upgrade -y aus (der offizielle Upgrade-Befehl von Proxmox).",
+      "category": "Grundeinstellungen",
+      "categorySlug": "Grundeinstellungen"
+    },
+    {
+      "tool": "Subskriptionsbanner entfernen",
+      "what": "Patchet die Web-Benutzeroberfläche, um das Banner \"Kein gültiges Abonnement\" zu verbergen. Bittet um Bestätigung vor der Anwendung; reversibel von Deinstallieren Optimierungen.",
+      "category": "Anpassung",
+      "categorySlug": "Anpassung"
+    },
+    {
+      "tool": "IPv4 erzwingen",
+      "what": "Schreibt /etc/apt/apt.conf.d/99-force-ipv4 so apt verwendet nur IPv4 - umgeht flockige IPv6-Spiegel-Setups.",
+      "category": "Netzwerk",
+      "categorySlug": "Netz"
+    },
+    {
+      "tool": "Sprachpakete überspringen",
+      "what": "Schreibt /etc/apt/apt.conf.d/99-disable-translations, um das Herunterladen von Locale-spezifischen Paketen zu stoppen. Schnellere, leichtere Updates.",
+      "category": "Grundeinstellungen",
+      "categorySlug": "Grundeinstellungen"
+    },
+    {
+      "tool": "Erhöhung der Systemgrenzen",
+      "what": "Raises inotify Uhren, nofile/nproc Grenzen, Kernel Keyring Grenzen und fs.file-max über sysctl.d, limits.d, pam und systemd — hoch genug für Container-schwere Hosts.",
+      "category": "System",
+      "categorySlug": "System"
+    },
+    {
+      "tool": "Memory Tuning",
+      "what": "Setzt vm.swappiness=10, ausgewogene Schmutzverhältnisse, vm.max_map_count=262144 und Verdichtungsproaktivität, wenn unterstützt. Die Memory-Overcommit-Richtlinie des Kernels wird beim Proxmox-Standard belassen.",
+      "category": "System",
+      "categorySlug": "System"
+    },
+    {
+      "tool": "Kernpanikverhalten",
+      "what": "Konfiguriert den Host so, dass er 10 Sekunden nach einer Panik / oops / Hardlockup neu startet, anstatt auf unbestimmte Zeit einzufrieren.",
+      "category": "System",
+      "categorySlug": "System"
+    },
+    {
+      "tool": "Network Stack Tuning",
+      "what": "TCP Buffer Sizing, IPv4-Härtung (redirects off, rp_filter=2, martian log off), lokaler Portbereich 1024-65535, TCP MTU-Probing, RFC 1337, plus ein Helfer bei /usr/local/sbin/proxmenux-fwbr-tune, der mit einer oneshot systemd-Einheit und einer udev-Regel verdrahtet ist, so dass rp_filter=0 / log_martians=0 jedes Mal wieder auf fwbr*/fwln*/fwpr*/tap*-Schnittstellen angewendet werden, wenn Proxmox sie bei VM Start / Stop, Neustart oder Live-Migration neu erstellt.",
+      "category": "Netzwerk",
+      "categorySlug": "Netz"
+    },
+    {
+      "tool": "Bashrc-Anpassung (root)",
+      "what": "Farbige PS1, gebräuchliche Aliase (l/la/ll/ls/grep), Zeitstempel-Historie und Bash-Completion-Sourcing, alles in einem PMX_CORE_BASHRC eingezäunten Block, so dass es leicht zu entfernen ist.",
+      "category": "Anpassung",
+      "categorySlug": "Anpassung"
+    },
+    {
+      "tool": "Log2RAM (SSD-bewusst, auto)",
+      "what": "Reduziert den SSD/NVMe-Verschleiß, indem /var/log auf eine tmpfs-ramdisk mit periodischer Plattensynchronisierung verschoben wird. Installiert aus dem Upstream-Projekt, wenn die Stammplatte SSD oder NVMe ist. Grössert die Ramdisk von Host RAM (128M / 256M / 512M), plant die periodische Synchronisierung und einen Auto-Sync-Schutz, der bei 80% saugt und Hot Logs bei 92% abschneidet, bevor er schreibt. Passt die journald-Limits an, um in die Ramdisk zu passen. Alle Details zu <link>Log2RAM</link>.",
+      "category": "Lagerung",
+      "categorySlug": "Lagerung"
+    },
+    {
+      "tool": "ZFS Autotrim (nur SSD)",
+      "what": "Aktiviert zpool autotrim=on in jedem ZFS-Pool, dessen vdevs alle SSD/NVMe mit TRIM-Unterstützung sind (überprüft /sys/block/[dev]/queue/rotational und discard_granularity). Pools, die von HDDs unterstützt werden, werden automatisch übersprungen. Nur Pools, die tatsächlich von ProxMenux geändert wurden, werden zur Deinstallation aufgezeichnet - Pools, die Sie manuell autotrimieren, werden in Ruhe gelassen.",
+      "category": "Lagerung",
+      "categorySlug": "Lagerung"
+    },
+    {
+      "tool": "Größenbegrenzungen",
+      "what": "Erzwingt persistenten Speicher, Caps SystemMaxUse=64M / RuntimeMaxUse=60M, setzt Kompression, Protokollierung auf Infoebene (für den Monitor erforderlich). Automatisch überspringt, wenn Log2RAM aktiv ist (es nimmt seine eigene Anpassung vor).",
+      "category": "System",
+      "categorySlug": "System"
+    },
+    {
+      "tool": "Logrotate Tuning",
+      "what": "Tägliche Rotation mit Größenkappe 10M, 7-Rotationen, Kompression und Copytruncate - Log2RAM-freundlich.",
+      "category": "System",
+      "categorySlug": "System"
+    },
+    {
+      "tool": "Persistente Schnittstellennamen",
+      "what": "Schreibt einen <code>/etc/systemd/network/10-proxmenux-&lt;iface&gt;.link</code> pro physischem NIC (jeder beginnt mit einem 'Managed by ProxMenux'-Header), der den MAC an den aktuellen Namen anheftet, so dass <code>eth0</code> / <code>enp…</code> Namen über Neustarts und neue NIC-Ergänzungen stabil bleiben.",
+      "category": "Netzwerk",
+      "categorySlug": "Netz"
+    }
+  ],
+  "hardwareTitle": "Hardware-bewusste Ausfälle",
+  "hardwareBody": "Das Skript liest die Host-Hardware vor dem Anwenden von Einstellungen. Log2RAM ist standardmäßig nur auf SSD / NVMe Root-Festplatten installiert (es wird aufgefordert, wenn die Erkennung etwas anderes sagt). Die Ramdisk-Größe von Log2RAM wird aus der Gesamt-RAM (<code>≤ 8 GB → 128M</code>, <code>≤ 16 GB → 256M</code>, <code>'>' 16 GB → 512M</code>) ausgewählt. Die Journald-Limits werden an die Ramdisk-Größe angepasst, wenn Log2RAM aktiv ist, um ein Ausfüllen zu vermeiden.",
+  "upgrade": {
+    "heading": "System aktualisieren und aktualisieren",
+    "intro": "Der erste Schritt des automatisierten Bundles ist das Proxmox-Upgrade. Die eigene Upgrade-Anleitung von Proxmox für einen laufenden Host (innerhalb der gleichen Hauptversion) soll ausgeführt werden:",
+    "after": "Diese einzelne Zeile ist der offizielle Befehl für jede aktuelle Proxmox-Version. Das automatisierte Skript läuft <strong>exactly</strong> und wickelt es mit der Repo-Hygiene und Post-Upgrade-Bereinigung ab, die auch der offizielle Upgrade-Guide empfiehlt - die gleichen Schritte wie das eigenständige <link>Proxmox System Update</link> Dienstprogramm:",
+    "items": [
+      "Deaktiviert das Unternehmen <code>pve-enterprise.sources</code> / <code>ceph.sources</code>, entfernt Legacy-Repo-Dateien und schreibt eine saubere No-Abonnement-Quelle für den Codenamen des Hosts.",
+      "Läuft das Upgrade nicht interaktiv mit <code>DEBIAN_FRONTEND=noninteractive</code> und <code>--force-confdef --force-confold</code> aus - Konfigurationsdateien, die Sie angepasst haben, bleiben Ihre, wenn Sie sie auch im Upstream geändert haben.",
+      "Installiert wichtige Proxmox-Pakete, wenn sie fehlen (<code>zfsutils-linux</code>, <code>proxmox-backup-restore-image</code>, <code>chrony</code>).",
+      "LVM Metadaten-Sanitätsprüfung, <code>apt-get autoremove -y</code> + <code>apt-get autoclean -y</code> und eine Neustartaufforderung nur, wenn der Kernel tatsächlich geändert wurde."
+    ],
+    "sameTitle": "Gleicher Updater, zwei Einstiegspunkte",
+    "sameBody": "Das automatisierte Paket und das eigenständige <link>Proxmox System Update</link>-Dienstprogramm teilen sich die gleichen zugrunde liegenden Skripte (<code>update-pve8.sh</code> / <code>update-pve9_2.sh</code>). Verwenden Sie das Dienstprogramm selbst, wenn Sie nur den Host aktualisieren möchten, ohne den Rest der Optimierungen anzuwenden."
+  },
+  "endResult": {
+    "heading": "Erwartetes Endergebnis",
+    "body": "Wenn das Skript beendet ist, sehen Sie eine Erfolgsmeldung mit der Pro-Schritt-Ausgabe und einer Neustartaufforderung (einige Kerneleinstellungen erfordern einen Neustart, um wirksam zu werden). Das Abnehmen des Neustarts ist sicher; die Einstellungen gelten beim nächsten Booten.",
+    "imageAlt": "Automatisiertes Post-Installationsskript — Endausgang des Terminals mit jeder Optimierung, die erfolgreich angewendet wurde"
+  },
+  "notDoes": {
+    "heading": "Was dieses Skript nicht tut",
+    "items": [
+      "Zeitzonen-Autoerkennung (im Upstream kommentiert; Verwenden Sie Customizable, wenn Sie möchten).",
+      "Portmapper/rpcbind deaktivieren (siehe <secLink>Security</secLink>).",
+      "Aktivieren Sie IOMMU / VFIO (siehe <virtLink>Virtualization</virtLink>).",
+      "Installieren Sie Fastfetch / Figurine / Ceph repo / HA / AMD CPU Fixes (siehe <optLink>Optional</optLink>).",
+      "Installieren Sie pigz oder wenden Sie ZFS ARC-Tuning an (siehe <perfLink>Performance</perfLink> / <storLink>Storage</storLink>)."
+    ]
+  },
+  "xshokTitle": "xshok-proxmox-Erkennung",
+  "xshokBody": "Wenn der Host zuvor das <code>xshok-proxmox</code>-Skript ausgeführt hat, erkennt ProxMenux die Markierungsdatei und warnt Sie, bevor Sie fortfahren. Einige Tweaks können sich überschneiden. Das Begleitskript ist veraltet - wenn Sie sich entscheiden, trotzdem fortzufahren, überprüfen Sie <link>die Übersicht</link> für den Kontext.",
+  "revert": {
+    "heading": "Rücklauf",
+    "body": "Jedes Tool in der obigen Tabelle registriert sich in <code>/usr/local/share/proxmenux/installed_tools.json</code>. Öffnen Sie <link>Open Sie </link>, um einzelne Elemente zum Zurücksetzen auszuwählen. Backups von modifizierten Konfigurationsdateien werden neben den Originalen mit einem <code>.bak</code>-Suffix platziert."
+  },
+  "related": {
+    "heading": "Verwandte Themen",
+    "items": [
+      {
+        "label": "Anpassbar nach der Installation",
+        "href": "/docs/post-install/customizable",
+        "tail": "Wählen Sie genau das, was Sie aus dem gleichen Katalog wollen."
+      },
+      {
+        "label": "Optimierungen deinstallieren",
+        "href": "/docs/post-install/uninstall",
+        "tail": "Revert jede Teilmenge von dem, was hier angewendet wurde."
+      },
+      {
+        "label": "Nützliche Systembefehle",
+        "href": "/docs/help-info/system-commands",
+        "tail": "- Überprüfen Sie die Änderungen (Uptime, kostenlos, journalctl usw.)."
+      },
+      {
+        "label": "Übersicht Post-Install",
+        "href": "/docs/post-install",
+        "tail": "."
+      }
+    ]
+  }
+}

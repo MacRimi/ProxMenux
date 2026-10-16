@@ -1,0 +1,57 @@
+{
+  "meta": {
+    "title": "Post-Install: Sicherheit | ProxMenux Dokumentation",
+    "description": "Sicherheitsoptionen verfügbar im ProxMenux Customizable Post-Installationsskript. Derzeit eine einzige Option: Deaktivieren Sie den Portmapper/rpcbind-Dienst, um die Angriffsfläche des Hosts zu reduzieren."
+  },
+  "header": {
+    "title": "Post-Install: Sicherheit",
+    "section": "Einstellungen nach der Installation von Proxmox"
+  },
+  "intro": {
+    "title": "Was diese Kategorie abdeckt",
+    "body": "Die Sicherheit nach der Installation beschränkt sich auf die <strong>host-Härtung, die unbeaufsichtigt </strong> angewendet werden kann - Dinge, die Dienste deaktivieren, die fast niemand benötigt und die aus dem Menü Deinstallieren rückgängig gemacht werden können. Aktive Sicherheits-Tools (Fail2Ban für Intrusion Prevention, Lynis für Auditing) leben unter dem <em>Security</em>-Eintrag im Hauptmenü von ProxMenux, nicht hier in der Post-Installation."
+  },
+  "rpcbind": {
+    "heading": "Portmapper/rpcbind deaktivieren",
+    "intro": "<code>rpcbind</code> (früher <code>portmap</code>) ist ein Dienst, der RPC-Programmnummern zu Netzwerk-Ports abbildet. Es ist eine Abhängigkeit von NFS und einigen älteren RPC-basierten Tools. Auf einem typischen Proxmox-Host, der nicht als NFS-Server fungiert, verwendet <strong>nothing it</strong> - und wenn es aktiviert bleibt, hört Port <code>111/tcp</code> auf jeder Schnittstelle.",
+    "whyTitle": "Warum es sich lohnt zu deaktivieren",
+    "whyItems": [
+      "Reduziert die Angriffsfläche des Hosts – ein Hördienst weniger, um den man sich Sorgen machen muss.",
+      "Historisch missbraucht als Reflexions- / Verstärkungsvektor in DDoS-Angriffen. Durch das Deaktivieren von <code>rpcbind</code> wird dieser Verstärkungsfaktor für Ihren Host entfernt.",
+      "Entfernt das Rauschen, das es in Protokollen und <code>netstat</code> / <code>ss</code> erzeugt, wodurch echte Aktivitäten leichter zu erkennen sind."
+    ],
+    "nfsTitle": "Deaktivieren Sie dies nicht, wenn Sie NFS verwenden",
+    "nfsBody": "NFS Server <strong> und </strong> NFS Client verlassen sich auf <code>rpcbind</code>, um die von <code>mountd</code>, <code>statd</code>, <code>lockd</code> usw. verwendeten Ports auszuhandeln. Wenn Ihr Proxmox entweder <em>exports</em> NFS-Aktien an andere Maschinen oder <em>mounts</em> NFS-Aktien von einem NAS hostet, wenden Sie diese Option nicht an. Mounts werden mit <code>mount.nfs: rpc.statd is not running</code> oder ähnlich fehlschlagen.",
+    "runsTitle": "Was ProxMenux läuft",
+    "runsOutro": "Das Paket bleibt installiert. ProxMenux zeichnet den ursprünglichen aktivierten/aktiven Zustand von rpcbind.service und rpcbind.socket auf und deaktiviert und stoppt dann beide Einheiten, so dass die Socket-Aktivierung den Dienst nicht zurückbringen kann.",
+    "verifyTitle": "Verifizierung",
+    "verifyBody": "Bestätigen Sie nach der Anwendung, dass <code>rpcbind</code> deaktiviert ist und nichts auf Port 111 zuhört:",
+    "reversibleTitle": "Wiederherstellen des ursprünglichen Service-Status",
+    "reversibleBody": "Diese Änderung wird in <code>installed_tools.json</code> registriert. <link>Deinstallation Optimizations</link> stellt jede rpcbind-Einheit in den aktivierten/deaktivierten und aktiven/inaktiven Zustand wieder her, der vor der Änderung von ProxMenux erfasst wurde; es wird nicht angenommen, dass rpcbind auf jedem Host aktiviert wurde."
+  },
+  "related": {
+    "heading": "Verwandte Themen",
+    "items": [
+      {
+        "label": "Sicherheitsmenü",
+        "href": "/docs/security",
+        "tail": "— schwerere Hitter: Fail2Ban (Intrusion Prevention) und Lynis (Audit)."
+      },
+      {
+        "label": "Lynis",
+        "href": "/docs/security/lynis",
+        "tail": "Auditieren Sie den Gastgeber, um mehr Verhärtungsmöglichkeiten zu finden."
+      },
+      {
+        "label": "Nützliche Systembefehle",
+        "href": "/docs/help-info/system-commands",
+        "tail": "— Servicestatus, journalctl, lynis audit reference."
+      },
+      {
+        "label": "Anpassbar nach der Installation",
+        "href": "/docs/post-install/customizable",
+        "tail": "Zurück zum übergeordneten Menü."
+      }
+    ]
+  }
+}

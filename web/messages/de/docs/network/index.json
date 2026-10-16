@@ -1,0 +1,107 @@
+{
+  "meta": {
+    "title": "Proxmox Network Management — Brücken, Anleihen, Diagnose, Reparatur | ProxMenux",
+    "description": "Read-only-Diagnose, Analyse-dann-Vorschlag-Workflows und geführte Reparaturen für den Debian / Proxmox-Netzwerkstack (/etc/network/interfaces). Inspizieren Sie Brücken und Bonds, führen Sie Live-Monitoring-Tools aus, persistenten Schnittstellennamen, sichern und starten Sie das Netzwerk sicher neu – mit obligatorischen Backups und Schritt-für-Schritt-Vorschau.",
+    "ogTitle": "Proxmox Network Management — Brücken, Anleihen, Diagnose, Reparatur",
+    "ogDescription": "Diagnose, Analyse und geführte Reparaturen für den Proxmox-Netzwerkstack mit obligatorischen Backups und Schritt-für-Schritt-Vorschau.",
+    "twitterTitle": "Proxmox Netzwerkmanagement | ProxMenux",
+    "twitterDescription": "Brücken, Bonds, Diagnosen und geführte Reparaturen für den Proxmox-Netzwerkstack mit obligatorischen Backups."
+  },
+  "header": {
+    "title": "Netzwerkmanagement",
+    "description": "Read-Only-Diagnose, Analyse-dann-Suggest-Berichte und geführte Reparaturen für den klassischen Debian / Proxmox-Netzwerkstack. Jeder destruktive Fluss nimmt zuerst ein Backup und zeigt die genauen Änderungen an, bevor er sie anwendet.",
+    "section": "Netzwerk"
+  },
+  "intro": {
+    "title": "Wofür dieses Menü ist",
+    "body": "Überprüfen, diagnostizieren und (bei Bedarf) reparieren Sie die Proxmox-Hostnetzwerkkonfiguration, ohne den Fernzugriff zu verlieren. Die Tools basieren auf einem Prinzip: <strong> zuerst lesen, vorschlagen, dann nur mit ausdrücklicher Zustimmung und einem Sicherheits-Backup</strong> anwenden. Es gibt keinen \"Autofix Everything\"-Button."
+  },
+  "openingMenu": {
+    "heading": "Öffnen des Menüs",
+    "intro": "Wählen Sie im Hauptmenü von ProxMenux <strong>Network</strong>. Sie werden sehen:",
+    "imageAlt": "Menü Netzwerkmanagement mit Diagnose, Überwachung, Analyse, Reparatur, persistenten Namen und Backup-Optionen"
+  },
+  "safety": {
+    "heading": "Das Sicherheitsmodell",
+    "body": "Das Bearbeiten der Netzwerkkonfiguration auf einem entfernten Proxmox-Host ist eine der einfachsten Möglichkeiten, sich auszusperren. ProxMenux behandelt jede Aktion entsprechend. Die Werkzeuge fallen in drei Verhaltensstufen - wählen Sie die Karte, die Ihrer Absicht entspricht:"
+  },
+  "tiers": {
+    "readOnly": {
+      "title": "Schreibgeschützt",
+      "body": "Reine Inspektion. Kann das System unter keinen Umständen ändern.",
+      "items": [
+        "Routingtabelle, Konnektivitätstests, fortgeschrittene Statistiken",
+        "Live Traffic Monitoring (iftop, iptraf-ng)",
+        "Bandbreitentest (iperf3)"
+      ]
+    },
+    "analyze": {
+      "title": "Analysieren, dann vorschlagen",
+      "body": "Erkennt Probleme, druckt einen Bericht mit vorgeschlagenen Shell-Befehlen und stoppt. Sie entscheiden, ob Sie anschließend in die geführte Reparatur eintreten möchten.",
+      "items": [
+        "Brückenkonfigurationsanalyse",
+        "Netzwerkkonfigurationsanalyse"
+      ]
+    },
+    "apply": {
+      "title": "Bewerben mit Backup",
+      "body": "Ändert das System. Immer nimmt eine Zeitstempel-Backup der betroffenen Datei zuerst und zeigt eine Vorschau vor dem Schreiben.",
+      "items": [
+        "Persistente Schnittstellennamen (.link-Dateien)",
+        "Manuelles Backup, Wiederherstellung und Neustart des Dienstes"
+      ]
+    }
+  },
+  "classicTitle": "Nur klassischer Stack",
+  "classicBody": "Jede Analyse- und Reparaturfunktion überprüft den aktiven Netzwerkmanager, bevor er etwas berührt. Wenn der Host <strong>netplan</strong>, <strong>systemd-networkd</strong> oder <strong>NetworkManager</strong> ausführt, bricht das Tool sofort mit einer klaren Nachricht ab – das Menü unterstützt nur den klassischen Debian/Proxmox-Stack bei <code>/etc/network/interfaces</code>. Dies ist beabsichtigt: Das Bearbeiten einer netplan-Datei mit Regeln, die für <code>ifupdown</code> geschrieben wurden, würde die Konfiguration stillschweigend beschädigen.",
+  "backups": {
+    "heading": "Wohin Backups gehen",
+    "intro": "Jede geführte Reparatur, Wiederherstellung oder manuelle Sicherung schreibt eine zeitgestempelte Kopie von <code>/etc/network/interfaces</code> auf <code>/var/backups/proxmenux/</code>:",
+    "rollbackIntro": "So rollen Sie manuell von einer Konsole zurück:"
+  },
+  "readOnlySection": {
+    "heading": "Nur lesbare Inspektion",
+    "body": "Der Ausgangspunkt, an dem sich etwas anfühlt. Reine Inspektion - schreibt niemals an <code>/etc/network/interfaces</code> und führt niemals einen modifizierenden Befehl aus (mit einer expliziten Opt-in-Ausnahme für das Spülen von NetworkManager, wenn erkannt). Sichere Verwendung über SSH jederzeit.",
+    "options": [
+      {
+        "title": "Diagnose",
+        "description": "Drei One-Shot-Read-Only-Checks: Routing-Tabelle anzeigen, Konnektivität testen und erweiterte Diagnose. Reine Inspektion - schreibt niemals in das System."
+      },
+      {
+        "title": "Live Monitoring Tools",
+        "description": "Drei interaktive Launcher: iftop (Echtzeitbandbreite pro Hostpaar), iptraf-ng (Multi-Mode-Traffic-Monitor) und iperf3 (Bandbreitentest, Server / Client-Modus)."
+      }
+    ]
+  },
+  "analyzeSection": {
+    "heading": "Analysieren, dann vorschlagen",
+    "body": "Wird verwendet, wenn eine Inspektion (oder ein echter Ausfall) auf ein Konfigurationsproblem hinweist. Jedes Tool führt den relevanten Teil von <code>/etc/network/interfaces</code> durch, druckt einen detaillierten Bericht mit dem genauen Shell-Befehl, der jeden Befund beheben würde, und <strong>stops</strong>. Wenn Sie die optionale geführte Reparatur danach akzeptieren, wird jede Änderung gesichert und vorab angezeigt, bevor sie geschrieben wird.",
+    "options": [
+      {
+        "title": "Brückenanalyse und geführte Reparatur",
+        "description": "Erkennt vmbrX-Bridges mit fehlenden oder ungültigen Ports (typisch nach PCI-Reenumeration). Zeigt zuerst einen Bericht an; nur Reparaturen, wenn Sie den 5-Schritt-geführten Fluss akzeptieren."
+      },
+      {
+        "title": "Config Analyse & Guided Cleanup",
+        "description": "Findet in /etc/network/interfaces deklarierte physische Schnittstellen, die nicht mehr existieren (Waisenkonfigurationen, die durch Hardwareänderungen zurückgelassen wurden). Meldet sie und bietet eine geführte Entfernung an."
+      }
+    ]
+  },
+  "applySection": {
+    "heading": "Bewerben mit Backup",
+    "body": "Tools, die nach Design auf die Festplatte schreiben. Jeder nimmt vor dem Schreiben eine zeitlich markierte Sicherung der betroffenen Datei vor, und die destruktiven Optionen (Wiederherstellung, Neustart) erfordern eine explizite Ja / Nein-Bestätigung. <em>Persistente Schnittstellennamen</em> werden beim nächsten Neustart wirksam, nicht sofort, so dass es sicher ist, sogar auf einem entfernten Host zu planen.",
+    "options": [
+      {
+        "title": "Persistente Schnittstellennamen",
+        "description": "Pins Interface-Namen (eno1, enp3s0, ...) zu MAC-Adressen über systemd .link Dateien. Namen überleben PCI-Slot-Änderungen, Kernel-Upgrades und Hinzufügen / Entfernen anderer NICs."
+      },
+      {
+        "title": "Schnittstellen Backup & Neustart",
+        "description": "Manueller Snapshot von /etc/network/interfaces, Durchsuchen und Wiederherstellen früherer Backups, Anzeigen der Live-Konfiguration und Neustart des Netzwerkdienstes bei Bedarf."
+      }
+    ]
+  },
+  "consoleTitle": "Konsolenzugang bereit",
+  "consoleSubTitle": "Vor jeder Reparatur auf einem entfernten Host",
+  "consoleBody": "Wenn Sie über SSH verbunden sind und nur einen Pfad zum Host haben, sollten Sie vor der Anwendung von Netzwerkänderungen einen Fallback durchführen: physische / IPMI / iKVM-Konsole oder eine andere Maschine im selben LAN. Die geführten Reparaturen sind sicher und bieten immer einen Rollback-Befehl, aber eine falsch konfigurierte Brücke oder ein abgesetzter Link können Sie immer noch aussperren, bis Sie die Konsole erreichen können."
+}

@@ -1,0 +1,113 @@
+{
+  "meta": {
+    "title": "Datenträger zu VM importieren | ProxMenux Dokumentation",
+    "description": "Befestigen Sie eine physische Festplatte an eine vorhandene Proxmox VM mit ProxMenux. Sichere Festplattenerkennung (ausgenommen System, montiert, in Gebrauch, ZFS/RAID/LVM), persistente /dev/disk/by-id-Pfade und SATA / SCSI / VirtIO / IDE-Schnittstellen.",
+    "ogTitle": "Datenträger zu VM importieren | ProxMenux Dokumentation",
+    "ogDescription": "Befestigen Sie eine physische Festplatte an eine vorhandene Proxmox VM. Verwendet persistente /dev/disk/by-id-Pfade und unterstützt SATA / SCSI / VirtIO / IDE."
+  },
+  "header": {
+    "title": "Datenträger in VM importieren",
+    "description": "Fügen Sie eine physische Festplatte, die bereits auf dem Proxmox-Host vorhanden ist, an eine vorhandene virtuelle Maschine an. ProxMenux erkennt freie Festplatten, lässt Sie das Ziel VM, den Bustyp (SATA / SCSI / VirtIO / IDE) auswählen und verbindet alles mit persistenten /dev/disk/by-id-Pfaden, so dass das Mapping Neustarts und Änderungen der Gerätebestellung übersteht.",
+    "section": "Disk Manager VM"
+  },
+  "intro": {
+    "title": "Was das macht",
+    "body": "Hierbei handelt es sich um einen Rohdatendurchlauf: Das Gastbetriebssystem sieht das Laufwerk als echtes Blockgerät (mit seinen SMART-Daten und nativer Geometrie). Die Festplatte wird über ihren <code>/dev/disk/by-id/…</code>-Pfad angehängt - nicht <code>/dev/sdX</code> -, so dass die Zuweisung nicht unterbrochen wird, wenn Festplattencontroller Geräte in einer anderen Reihenfolge beim nächsten Booten aufzählen."
+  },
+  "howRuns": {
+    "heading": "Wie das Skript läuft",
+    "body": "Der Fluss hat zwei Phasen mit klarer Trennung zwischen \"Sammeln von Informationen und Entscheidungen\" und \"tatsächliches Anbringen von Festplatten am VM\". Bis zur endgültigen Bestätigung bleibt die VM-Konfiguration unberührt.",
+    "summary": "ProxMenux filtert alles heraus, was nicht sicher passieren kann: die Root-Diskette, auf dem Host montierte Festplatten, Mitglieder eines aktiven ZFS/LVM/RAID-Pools und Festplatten, auf die bereits von einer VM/LXC-Konfiguration verwiesen wird. Datenträger mit <em>stale</em> Metadaten (alte ZFS / RAID / LVM-Signaturen, die nicht mehr verwendet werden) werden mit einem ⚠-Label angezeigt, aber nicht blockiert."
+  },
+  "prereqs": {
+    "heading": "Voraussetzungen",
+    "items": [
+      "Mindestens ein VM, der auf dem Host definiert ist (das Skript wird direkt an <code>qm list</code> gesendet).",
+      "Das <strong>target VM wird von </strong> angetrieben. Wenn das Skript ausgeführt wird, bricht es mit einer Nachricht ab - Live-Disk-Hot-Add befindet sich außerhalb des Rahmens dieses Flusses.",
+      "Mindestens eine physische Festplatte auf dem Host, die nicht vom Host oder einem anderen Gast verwendet wird."
+    ]
+  },
+  "steps": {
+    "heading": "Schritt für Schritt",
+    "stepLabel": "Schritt",
+    "list": [
+      {
+        "title": "Wählen Sie das Ziel VM",
+        "bodyRich": "ProxMenux listet jeden VM auf dem Host auf (via <code>qm list</code>). Wählen Sie diejenige, die die Festplatte erhalten wird. Wenn der VM ausgeführt wird, bricht das Skript ab und fordert Sie auf, es zuerst herunterzufahren."
+      },
+      {
+        "title": "Wählen Sie die physische Festplatte(n) zum Anbringen",
+        "img": "/disk/disk-selection.png",
+        "caption": "Freie Festplatten auf dem Host erkannt (mit ⚠ Labels für veraltete Metadaten)",
+        "body": "Das Skript scannt jede Host-Disk und zeigt nur diejenigen an, die sicher angehängt werden können. Mit der Checkliste können Sie eine oder mehrere auf einmal auswählen. Disks mit alten ZFS / LVM / RAID-Signaturen werden immer noch angezeigt, gekennzeichnet mit ⚠, so dass Sie wissen, dass sie ein Wischen benötigen, bevor der Gast sie formatieren kann."
+      },
+      {
+        "title": "Wählen Sie die Bus-Schnittstelle",
+        "img": "/disk/disk-assigment.png",
+        "caption": "Auswahl der Busschnittstellen",
+        "intro": "Wählen Sie aus, wie der Gast die Festplatte sehen soll:",
+        "items": [
+          "<strong>SCSI</strong> – moderner Standard für Linux und Windows mit installierten VirtIO-SCSI-Treibern.",
+          "<strong>SATA</strong> — breite Kompatibilität, funktioniert out of the box auf praktisch jedem Gast.",
+          "<strong>VirtIO</strong> — paravirtualisiertes Blockgerät, am schnellsten, erfordert aber Gastfahrer.",
+          "<strong>IDE</strong> — für ältere Gäste, denen einer der oben genannten Fahrer fehlt."
+        ]
+      },
+      {
+        "title": "Anbringen und Verifizieren",
+        "bodyRich": "ProxMenux verbindet jede ausgewählte Festplatte mit dem besten <code>/dev/disk/by-id/</code>-Pfad, überspringt Slot-Indizes, die bereits in der VM-Konfiguration verwendet werden (<code>scsi0</code>, <code>sata0</code>, ...) und liest die Konfiguration erneut, um die Zuordnung zu bestätigen. Am Ende wird eine Zusammenfassung gedruckt."
+      }
+    ]
+  },
+  "manual": {
+    "heading": "Manuelles Äquivalent",
+    "body": "Das Skript ist ein Wrapper um <code>qm set</code>. Der genaue Befehl für eine einzelne Festplatte sieht so aus:",
+    "migrationTitle": "Live Migration ist nicht möglich",
+    "migrationBody": "Eine VM mit einer Durchgangsdiskette ist <strong> an den Host gebunden, der diese disk</strong> freilegt. Die Live-Migration zu einem anderen Proxmox-Knoten schlägt fehl, da der Zielknoten nicht den gleichen <code>/dev/disk/by-id/…</code>-Pfad sieht. Verwenden Sie stattdessen Replikation oder Backup / Wiederherstellung oder wählen Sie virtuelle Festplatten im freigegebenen Speicher aus, wenn Sie Mobilität benötigen.",
+    "shareTitle": "Teilen Sie keine physische Festplatte zwischen VMs",
+    "shareBody": "Wenn Sie dieselbe physische Festplatte gleichzeitig an zwei VMs anbringen, werden die Daten beim nächsten Schreiben beschädigt. ProxMenux erkennt diese Situation und blockiert sie, aber wenn Sie das Skript umgehen (direktes <code>qm set</code>), stellen Sie sicher, dass nur ein Gast jemals die Festplatte mountet."
+  },
+  "troubleshoot": {
+    "heading": "Fehlerbehebung",
+    "noDisksTitle": "\"Für diesen VM sind keine Festplatten verfügbar\"",
+    "noDisksIntro": "Das Skript fand Festplatten, aber jeder Kandidat wurde herausgefiltert. Häufige Gründe:",
+    "noDisksItems": [
+      "Jede verbleibende Festplatte wird bereits in der Konfiguration des Ziels VM referenziert.",
+      "Jede verbleibende Festplatte wird auf dem Host montiert oder ist Teil eines aktiven ZFS / LVM / RAID.",
+      "Der Host hat nur die Root Disk installiert."
+    ],
+    "noDisksOutro": "Führen Sie <code>lsblk -f</code> auf dem Host aus, um den Status jeder Festplatte zu überprüfen.",
+    "noVisibleTitle": "VM sieht die Festplatte nach dem Booten nicht",
+    "noVisibleBody": "Wenn Sie sich für <strong>SCSI</strong> oder <strong>VirtIO</strong> entschieden haben, benötigt der Gast den passenden Treiber. Unter Linux ist das kernelnativ; unter Windows benötigen Sie die VirtIO ISO und eine Treiberinstallation (siehe <winLink>Create VM: System Windows</winLink> Seite). Der Wechsel zu SATA auf der Hardware-Registerkarte des VM ist ein schneller Workaround, um zu bestätigen, dass die Festplatte physisch angebracht ist."
+  },
+  "related": {
+    "heading": "Verwandte Themen",
+    "items": [
+      {
+        "href": "/docs/disk-manager/import-disk-image-vm",
+        "label": "Disk-Image in VM importieren",
+        "tail": "- gleichen Fluss, aber für Bilddateien (qcow2 / vmdk / raw / img)."
+      },
+      {
+        "href": "/docs/disk-manager/import-disk-lxc",
+        "label": "Datenträger in LXC importieren",
+        "tail": "— gleichwertiger Durchfluss für LXC-Container."
+      },
+      {
+        "href": "/docs/disk-manager/add-controller-nvme-vm",
+        "label": "Controller oder NVMe zu VM hinzufügen",
+        "tail": "- wenn Sie einen vollständigen PCIe / NVMe-Durchgang anstelle eines Festplattenanschlusses benötigen."
+      },
+      {
+        "href": "/docs/help-info/storage-commands",
+        "label": "Speicher- und Festplattenbefehle",
+        "tail": "qm importdisk und zugehörige Shell-Referenz."
+      },
+      {
+        "href": "/docs/disk-manager",
+        "label": "Übersicht Disk Manager",
+        "tail": "."
+      }
+    ]
+  }
+}

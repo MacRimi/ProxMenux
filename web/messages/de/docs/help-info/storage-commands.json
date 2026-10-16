@@ -1,0 +1,232 @@
+{
+  "meta": {
+    "title": "Proxmox Storage und Disk Commands — lsblk, LVM, pvesm, qm importdisk | ProxMenux",
+    "description": "Referenz der Speicher- und Festplattenbefehle auf Proxmox VE: lsblk, blkid, parted, lvdisplay, vgdisplay, pvs, mount, df, du, ncdu, pvesm status, qm importdisk und qemu-img convert for VM Plattenoperationen.",
+    "ogTitle": "Proxmox Storage und Disk Commands — lsblk, LVM, pvesm, qm importdisk",
+    "ogDescription": "Referenz von Speicher- und Festplattenbefehlen auf Proxmox VE — Festplatteninspektion, LVM, Halterungen, Proxmox Storage Management, VM Festplattenimport und Bildkonvertierung.",
+    "twitterTitle": "Proxmox Speicherbefehle | ProxMenux",
+    "twitterDescription": "Festplatteninspektion, Mount-Info, LVM-Verwaltung, Proxmox-Speicher und VM-Festplattenimport- / -konvertierungsbefehle."
+  },
+  "header": {
+    "title": "Storage und Disks",
+    "description": "Kuratierte Referenz für die Speicherinspektion auf Proxmox-Hosts: Blockgeräte, Partitionen, Mounts, LVM-Volumes, Proxmox-Speicherkonfiguration und einige VM-Festplattenoperationen (importdisk, qemu-img convert).",
+    "section": "Hilfe und Informationen"
+  },
+  "intro": {
+    "title": "Quick Disk Inventory",
+    "body": "<code>lsblk</code> ist der schnellste Weg, um alle Blockgeräte und ihre Partitionen in einer Baumansicht zu sehen. Für persistente Identifikatoren (die zwischen Boots und Hardwareänderungen überleben) verwenden Sie <code>ls -lh /dev/disk/by-id/</code>."
+  },
+  "commandGroups": [
+    {
+      "title": "Laufwerksinformationen",
+      "commands": [
+        {
+          "command": "lsblk",
+          "description": "Blockgeräte und Partitionen auflisten"
+        },
+        {
+          "command": "fdisk -l",
+          "description": "Listen Sie Festplatten mit detaillierten Informationen auf"
+        },
+        {
+          "command": "blkid",
+          "description": "UUID und Dateisystemtyp von Blockgeräten anzeigen"
+        },
+        {
+          "command": "ls -lh /dev/disk/by-id/",
+          "description": "Listen Sie persistente Festplattenkennungen auf"
+        },
+        {
+          "command": "parted -l",
+          "description": "Detailliertes Partitionslayout mit GPT-Informationen"
+        }
+      ]
+    },
+    {
+      "title": "Speichernutzung",
+      "commands": [
+        {
+          "command": "df -h",
+          "description": "Festplattennutzung nach Einhängepunkt anzeigen"
+        },
+        {
+          "command": "du -sh /path",
+          "description": "Größe eines Verzeichnisses anzeigen"
+        },
+        {
+          "command": "mount | grep ^/dev",
+          "description": "Gemountete Speichergeräte anzeigen"
+        },
+        {
+          "command": "cat /proc/mounts",
+          "description": "Zeigt alle aktiven Mounts vom Kernel an"
+        }
+      ]
+    },
+    {
+      "title": "LVM-Verwaltung",
+      "commands": [
+        {
+          "command": "pvdisplay",
+          "description": "Physische Volumes (LVM) anzeigen"
+        },
+        {
+          "command": "vgdisplay",
+          "description": "Volumengruppen anzeigen (LVM)"
+        },
+        {
+          "command": "lvdisplay",
+          "description": "Logische Volumes (LVM) anzeigen"
+        },
+        {
+          "command": "pvs",
+          "description": "Übersichtliche Ausgabe physischer Datenträger"
+        },
+        {
+          "command": "vgs",
+          "description": "Übersichtliche Ausgabe von Volumengruppen"
+        },
+        {
+          "command": "lvs",
+          "description": "Übersichtliche Ausgabe logischer Volumes"
+        }
+      ]
+    },
+    {
+      "title": "Proxmox-Speicher",
+      "commands": [
+        {
+          "command": "cat /etc/pve/storage.cfg",
+          "description": "Proxmox-Speicherkonfiguration anzeigen"
+        },
+        {
+          "command": "pvesm status",
+          "description": "Status aller Speicherpools anzeigen"
+        },
+        {
+          "command": "pvesm list",
+          "description": "Liste aller verfügbaren Speicher"
+        },
+        {
+          "command": "pvesm list <storage>",
+          "description": "Listen Sie den Inhalt eines bestimmten Speichers auf"
+        },
+        {
+          "command": "pvesm scan <storage>",
+          "description": "Durchsuchen Sie den Speicher nach neuen Inhalten"
+        }
+      ]
+    },
+    {
+      "title": "Plattenaktionen",
+      "commands": [
+        {
+          "command": "qm importdisk <vmid> <image_path> <storage>",
+          "description": "Befestigen des Disk-Images an VM"
+        },
+        {
+          "command": "qm set <vmid> -<bus><index> <disk_path>",
+          "description": "Weisen Sie die physische Festplatte VM zu (Durchgangsmodus)"
+        },
+        {
+          "command": "qemu-img convert -O <format> <input> <output>",
+          "description": "Konvertieren Sie das Disk-Image-Format"
+        }
+      ]
+    },
+    {
+      "title": "SMART Disk Gesundheit",
+      "commands": [
+        {
+          "command": "smartctl --scan",
+          "description": "Liste SMART-fähige Geräte auf dem Host"
+        },
+        {
+          "command": "smartctl -i /dev/<disk>",
+          "description": "Basisgeräteinformationen (Modell, Firmware, seriell)"
+        },
+        {
+          "command": "smartctl -H /dev/<disk>",
+          "description": "Schneller Gesundheitscheck — insgesamt PASSED / FAILED"
+        },
+        {
+          "command": "smartctl -A /dev/<disk>",
+          "description": "Nur SMART-Attribute (Rohwerte, Schwellenwerte)"
+        },
+        {
+          "command": "smartctl -a /dev/<disk>",
+          "description": "Vollständige SMART-Informationen — Informationen + Attribute + Selbsttestprotokoll"
+        },
+        {
+          "command": "smartctl -t short /dev/<disk>",
+          "description": "Starten Sie einen kurzen Selbsttest (~2 Minuten, läuft im Hintergrund)"
+        },
+        {
+          "command": "smartctl -t long /dev/<disk>",
+          "description": "Starten Sie einen langen Selbsttest (Stunden, läuft im Hintergrund)"
+        },
+        {
+          "command": "smartctl -l selftest /dev/<disk>",
+          "description": "Selbsttestprotokoll anzeigen (Ergebnisse vergangener Tests)"
+        },
+        {
+          "command": "smartctl -X /dev/<disk>",
+          "description": "Abbruch des laufenden Selbsttests"
+        }
+      ]
+    },
+    {
+      "title": "NVMe Disk Gesundheit",
+      "commands": [
+        {
+          "command": "nvme list",
+          "description": "Liste NVMe-Geräte, die für den Kernel sichtbar sind"
+        },
+        {
+          "command": "nvme smart-log /dev/<nvme>",
+          "description": "NVMe-spezifisches SMART-Log (Temperatur, Verschleiß, Fehler)"
+        },
+        {
+          "command": "nvme id-ctrl /dev/<nvme>",
+          "description": "Controller-Info (Modell, Firmware, Fähigkeiten)"
+        },
+        {
+          "command": "nvme error-log /dev/<nvme>",
+          "description": "Letzte NVMe-Fehlerprotokolleinträge"
+        }
+      ]
+    }
+  ],
+  "lvmTip": {
+    "title": "LVM kurze vs lange Befehle",
+    "bodyRich": "Beide Formen existieren für Kompatibilität. <code>pvs</code> / <code>vgs</code> / <code>lvs</code> geben eine saubere Single-Line-per-Volume-Tabelle; <code>pvdisplay</code> / <code>vgdisplay</code> / <code>lvdisplay</code> geben eine ausführliche Multi-Line-Dump pro Volumen. Für den täglichen Gebrauch bevorzugen Sie die kurzen Versionen."
+  },
+  "smartInfo": {
+    "title": "SMART für Spinnscheiben vs NVMe",
+    "bodyRich": "<strong>Spinning / SATA / SAS Festplatten</strong> verwenden die <code>smartctl</code>-Familie von <code>smartmontools</code> (standardmäßig auf Proxmox installiert). Geben Sie das Gerät als <code>/dev/sda</code>, <code>/dev/sdb</code> usw. weiter. <strong>NVMe Festplatten</strong> haben ihr eigenes natives Protokoll - <code>smartctl</code> arbeitet gegen sie (gibt die meisten Daten durch), aber das <code>nvme</code>-Tool von <code>nvme-cli</code> meldet mehr NVMe-spezifische Felder (Verschleißleveling, Medienfehler, Namespace-Info). Installieren Sie mit <code>apt install nvme-cli</code>, falls nicht vorhanden."
+  },
+  "selfTestWarn": {
+    "title": "Selbsttests laufen im Hintergrund",
+    "bodyRich": "<code>smartctl -t short</code> und <code>-t long</code> kehren sofort zurück - die Festplatte führt den Test selbstständig aus. Überprüfen Sie den Fortschritt mit <code>smartctl -a /dev/&lt;disk&gt;</code> (suchen Sie nach der Zeile \"Selbsttestroutine in Arbeit\") oder warten Sie auf den Abschluss und lesen Sie <code>smartctl -l selftest /dev/&lt;disk&gt;</code>. Kurze Tests dauern ~ 2 min; lange Tests können Stunden bei großen Spinnern dauern. Die Festplatte bleibt während des Tests verwendbar, aber die E / A-Leistung sinkt."
+  },
+  "related": {
+    "heading": "Verwandte Themen",
+    "items": [
+      {
+        "href": "/docs/help-info/zfs-commands",
+        "label": "ZFS-Verwaltung",
+        "tail": "- zpool / zfs-Befehle für ZFS-gestützten Speicher."
+      },
+      {
+        "href": "/docs/disk-manager",
+        "label": "Festplattenmanager",
+        "tail": "— interaktive ProxMenux-Flows für Datenträgerdurchlauf, Import, Formatierung, SMART."
+      },
+      {
+        "href": "/docs/help-info",
+        "label": "Hilfe und Info Überblick",
+        "tail": "."
+      }
+    ]
+  }
+}

@@ -1,0 +1,146 @@
+{
+  "meta": {
+    "title": "SMART Disk Health & Test | ProxMenux Dokumentation",
+    "description": "Führen Sie SMART-Gesundheitsprüfungen und Festplattentests auf Proxmox VE mit ProxMenux aus. Unterstützt SATA / SAS (smartmontools) und NVMe (nvme-cli). Kurze und lange Selbsttests, JSON Export für ProxMenux Monitor Integration.",
+    "ogTitle": "SMART Disk Health & Test | ProxMenux Dokumentation",
+    "ogDescription": "SMART Gesundheitschecks und Selbsttests für SATA / SAS und NVMe Laufwerke auf Proxmox. JSON Export für den Monitor."
+  },
+  "header": {
+    "title": "SMART-Festplattenstatus und -test",
+    "description": "Lesen Sie SMART-Daten und lösen Sie Selbsttests auf den physischen Festplatten aus, die an den Proxmox-Host angeschlossen sind. ProxMenux installiert automatisch Smartmontools für SATA / SAS und nvme-cli für NVMe, führt die Aktion innerhalb der Laufwerk-Firmware aus (lange Tests überleben Terminalschluss) und exportiert JSON-Ergebnisse für den ProxMenux Monitor.",
+    "section": "Disk Manager · Dienstprogramme"
+  },
+  "intro": {
+    "title": "Wofür das ist",
+    "body": "SMART (Self-Monitoring, Analysis and Reporting Technology) ermöglicht es dem Laufwerk selbst, seinen Zustand zu melden und Selbsttests durchzuführen. Dieses Tool stellt diese Daten frei, ohne dass Sie sich die richtige <code>smartctl</code>/<code>nvme</code>-Aufrufung merken müssen, und behält die Ausgabe als JSON, so dass der Monitor Trends im Laufe der Zeit zeichnen kann."
+  },
+  "howRuns": {
+    "heading": "Wie das Skript läuft",
+    "body": "Alle Aktionen hier sind zerstörungsfrei - SMART liest die Laufwerk-Firmware-Zähler, und Selbsttests werden innerhalb des Laufwerks selbst in die Warteschlange gestellt. Es ist keine Phasentrennung erforderlich. Der Ablauf ist: Abhängigkeitsprüfung → Festplattenauswahl → Aktionsauswahl → Werkzeugaufruf (smartctl oder nvme-cli abhängig vom Festplattenbus) → gedruckte Ausgabe plus JSON Export für den Monitor."
+  },
+  "deps": {
+    "heading": "Abhängigkeiten",
+    "body": "Das Tool installiert automatisch, was es beim ersten Durchlauf benötigt. SATA / SAS-Laufwerke verlassen sich auf <code>smartmontools</code>; NVMe-Laufwerke verlassen sich auf <code>nvme-cli</code>. Beide:"
+  },
+  "actions": {
+    "heading": "Verfügbare Maßnahmen",
+    "headerAction": "Aktion",
+    "headerWhat": "Was es liest / läuft",
+    "headerDur": "Dauer",
+    "rows": [
+      {
+        "action": "Schneller Gesundheitszustand",
+        "whatRich": "Insgesamt PASSED/FAILED + Schlüsselattribute.<br /><code>smartctl -H</code> + <code>-A</code> (SATA/SAS) oder <code>nvme smart-log</code> (NVMe).",
+        "dur": "Sofort"
+      },
+      {
+        "action": "Vollständiger Bericht",
+        "whatRich": "Vollständige SMART-Daten, scrollbar. <code>smartctl -x</code> für SATA/SAS oder <code>nvme smart-log</code> + <code>id-ctrl</code> für NVMe.",
+        "dur": "Sofort"
+      },
+      {
+        "action": "Kurztest",
+        "what": "Grundlegende Oberfläche und elektrische Überprüfung, in der Warteschlange innerhalb der Firmware des Laufwerks.",
+        "dur": "~2 Minuten"
+      },
+      {
+        "action": "Lange Prüfung",
+        "what": "Vollständiger Scan der gesamten Oberfläche. Läuft auf der Laufwerk-Hardware - bleibt bestehen, auch wenn Sie das Terminal schließen.",
+        "dur": "Stunden (Scheibengröße abhängig)"
+      },
+      {
+        "action": "Fortschritt der Prüfung",
+        "what": "Status des aktiven oder letzten Selbsttests.",
+        "dur": "Sofort"
+      }
+    ],
+    "tipTitle": "Lange Tests überleben Terminal schließen",
+    "tipBody": "Ein langer Test steht in der Warteschlange <em> im Laufwerk</em> - er hängt nicht davon ab, dass der ProxMenux-Prozess am Leben bleibt. Sie können das Terminal schließen, den Proxmox-Host neu starten (der Test wird dort fortgesetzt, wo er auf einigen Laufwerken aufgehört hat) oder einfach später zurückkommen und den Testfortschritt <strong>Check </strong> verwenden, um das Ergebnis zu sehen."
+  },
+  "json": {
+    "heading": "JSON Export für den Monitor",
+    "intro": "Jeder Durchlauf schreibt eine JSON-Datei mit Zeitstempel in <code>/usr/local/share/proxmenux/smart/&lt;disk&gt;/</code>. Die Struktur ist:",
+    "outro": "Der ProxMenux Monitor nimmt diese auf, um Gesundheitstrends pro Festplatte darzustellen; alte Dateien werden automatisch ausgedreht, sobald die Aufbewahrungsgrenze erreicht ist."
+  },
+  "steps": {
+    "heading": "Schritt für Schritt",
+    "stepLabel": "Schritt",
+    "list": [
+      {
+        "title": "Wählen Sie eine Scheibe",
+        "body": "ProxMenux listet jede physische Festplatte auf dem Host mit ihrem Modell und ihrer Größe auf. Im Gegensatz zum Format-Tool wird diese Liste nicht durch die Sicherheit gefiltert - das Lesen von SMART ist eine zerstörungsfreie Operation.",
+        "img": "/disk/smart/disk-selection.png",
+        "alt": "SMART Plattenauswahlmenü",
+        "caption": "SMART Plattenauswahlmenü"
+      },
+      {
+        "title": "Wählen Sie eine Aktion",
+        "body": "Wählen Sie zwischen Quick Health Status, Full Report, Short Test, Long Test oder Check Progress. Das Menü bleibt nach jeder Aktion geöffnet, so dass Sie mehrere Abfragen gegen dieselbe Festplatte verketten können.",
+        "img": "/disk/smart/action-menu.png",
+        "alt": "SMART Aktionsmenü",
+        "caption": "SMART Aktionsmenü (5 Aktionen + Abbruch)"
+      },
+      {
+        "title": "(Nur langer Test) Hintergrundausführung bestätigen",
+        "body": "ProxMenux warnt, dass der Test nach dem Schließen des Terminals weiterläuft und zeigt, wo das Ergebnis von JSON landen wird. Akzeptieren Sie, es zu warten.",
+        "img": "/disk/smart/long-test-warning.png",
+        "alt": "Dialog über lange Testbestätigung",
+        "caption": "Lange Testbestätigung – läuft im Hintergrund, Ergebnis wird in JSON gespeichert"
+      },
+      {
+        "title": "Prüfergebnisse",
+        "bodyRich": "Status und Bericht werden an das Terminal ausgedruckt und an JSON geschrieben. Für lange Tests kehren Sie später zurück und führen Sie <strong>Check test progress</strong> auf der gleichen Festplatte aus, um das Ergebnis zu sehen.",
+        "img": "/disk/smart/quick-status.png",
+        "alt": "Schnelle Ausgabe des Gesundheitszustands",
+        "caption": "Schnelle Ausgabe des Gesundheitszustands (SATA — smartctl -H + -A)"
+      }
+    ]
+  },
+  "manual": {
+    "heading": "Manuelle Äquivalente",
+    "nvmeWarnTitle": "NVMe Selbsttests sind Laufwerk-Firmware abhängig",
+    "nvmeWarnBody": "Nicht jedes NVMe-Laufwerk unterstützt den kurzen / langen Selbsttestbefehl. Wenn ein Laufwerk den Test ablehnt, sind das SMART-Protokoll und die ID-Controllerdaten (<code>nvme smart-log</code> + <code>id-ctrl</code>) immer noch das zuverlässigste Gesundheitssignal."
+  },
+  "troubleshoot": {
+    "heading": "Fehlerbehebung",
+    "noSmartTitle": "\"Konnte SMART-Daten aus /dev/sdX nicht lesen\"",
+    "noSmartBody": "Die Festplatte befindet sich wahrscheinlich hinter einem RAID / SAS-Controller, der SMART nicht durchläuft. Versuchen Sie mit Megaraid-basierten Karten <code>smartctl -d megaraid,N /dev/sdX</code>. Für HBAs im IT-Modus funktioniert der direkte Aufruf.",
+    "longTitle": "Langer Test nie abgeschlossen",
+    "longBody": "Der Test wird auf der Firmware des Laufwerks in die Warteschlange gestellt und pausiert, wenn die Festplatte stark belastet ist. Das Ausführen über Nacht auf einem Leerlaufsystem funktioniert normalerweise. Sie können auch <code>smartctl -c</code> überprüfen, um den verbleibenden Prozentsatz zu sehen; Wenn es an einem festen LBA feststeckt, versagt die Festplatte in diesem Sektor."
+  },
+  "related": {
+    "heading": "Verwandte Themen",
+    "items": [
+      {
+        "href": "/docs/disk-manager/format-disk",
+        "label": "Physischen Datenträger formatieren / löschen",
+        "tail": "Wiederverwendung einer Festplatte, nachdem bestätigt wurde, dass sie gesund ist."
+      },
+      {
+        "href": "/docs/help-info/storage-commands",
+        "label": "Speicher- und Festplattenbefehle → SMART Disk Health",
+        "tail": "Referenz smartctl/nvme."
+      },
+      {
+        "href": "/docs/help-info/zfs-commands",
+        "label": "ZFS Verwaltungsbefehle",
+        "tail": "— zpool scrub für das Speicherschichtäquivalent von SMART-Tests."
+      },
+      {
+        "href": "/docs/monitor/dashboard/storage",
+        "label": "ProxMenux Monitor — Speicherregister",
+        "tail": "- Festplatten-Bohrgerät, das den hier exportierten JSON verbraucht (vollständige SMART-Tabelle, Geschichte, PDF-Bericht)."
+      },
+      {
+        "href": "/docs/monitor/dashboard/hardware",
+        "label": "ProxMenux Monitor — Register Hardware",
+        "tail": "Speicherzusammenfassung mit Modell, Kapazität und ausgehandelter Verbindungsgeschwindigkeit (aktuell vs. maximal auf NVMe)."
+      },
+      {
+        "href": "/docs/disk-manager",
+        "label": "Übersicht Disk Manager",
+        "tail": "."
+      }
+    ]
+  }
+}

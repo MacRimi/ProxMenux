@@ -1,0 +1,101 @@
+{
+  "meta": {
+    "title": "ProxMenux Monitor — Dashboard | ProxMenux Dokumentation",
+    "description": "Das Dashboard ist die Haupt-Benutzeroberfläche von ProxMenux Monitor: zehn Inhaltsregisterkarten einschließlich des Apps-Launchers sowie des globalen Headers und einer konfigurierbaren Navigationsreihenfolge auf oberster Ebene."
+  },
+  "header": {
+    "title": "Dashboard",
+    "description": "Das Dashboard ist die alltägliche Ansicht von ProxMenux Monitor - zehn Inhaltsregisterkarten, einschließlich des Apps-Launchers, sowie ein globaler Header und eine konfigurierbare Navigationsreihenfolge auf oberster Ebene.",
+    "section": "ProxMenux-Monitor"
+  },
+  "oneHeader": {
+    "title": "Ein Header, zehn Tabs",
+    "body": "Der Header (Logo, Nodename, Statuspille, Uptime, Refresh, Theme Toggle) bleibt überall sichtbar. Der aktive Tab darunter verändert den gesamten Inhaltsbereich. Die Status-Pille Farbe spiegelt die schlechteste Kategorie des <link>Health Monitor</link> - es ist der gleiche Datenpunkt aus dem Dashboard gesehen."
+  },
+  "tabs": {
+    "heading": "Die zehn Tabs",
+    "intro": "Jeder Tab hat eine eigene eigene Seite. Seiten werden schrittweise hinzugefügt, wenn die Dokumentation ausgefüllt wird; unten ist die vollständige Liste und wofür jeder verantwortlich ist.",
+    "headerTab": "Tab.",
+    "headerOwns": "Was es besitzt",
+    "rows": [
+      {
+        "name": "Systemübersicht",
+        "linksTo": "/docs/monitor/dashboard/system-overview",
+        "owns": "CPU / Speicher / Temperatur-Widgets, aktive VM & LXC Anzahl, historische Metriken Charts, Speicher und Netzwerk-Zusammenfassungen. Standardlanderegisterkarte, bis die Navigationsreihenfolge angepasst ist."
+      },
+      {
+        "name": "Apps",
+        "linksTo": "/docs/monitor/dashboard/apps",
+        "owns": "Einheitlicher Launcher für registrierte LXC-Weblinks und benutzerdefinierte Links mit Kategorien, Suche, Gastkürzeln und Updatesignalen pro Anwendung."
+      },
+      {
+        "name": "Lagerung",
+        "owns": "Proxmox-Pools, physische Festplatten, SMART-Daten, ZFS-Zustand, Verschleiß & Lebensdauer, Beobachtungshistorie."
+      },
+      {
+        "name": "Netzwerk",
+        "owns": "Jede Schnittstelle (physisch / Bond / Bridge / OVS), IP / MAC, RX / TX Graphen, historische RRD pro Schnittstelle."
+      },
+      {
+        "name": "VMs und LXCs",
+        "owns": "Inventar der Gäste, Drill-in für Konfiguration / Metriken / Protokolle, Start / Stop / Neustart / Shutdown-Aktionen."
+      },
+      {
+        "name": "Hardware",
+        "owns": "CPU-Modell und Topologie, Speicherlayout, PCIe-Topologie, GPUs mit Echtzeitüberwachung pro Slot."
+      },
+      {
+        "name": "Systemprotokolle",
+        "owns": "Live <code>journalctl</code> mit Filtern, Proxmox Task History, Benachrichtigungsprotokoll, herunterladbare Log-Bundles."
+      },
+      {
+        "name": "Terminal",
+        "owns": "Browser-Shell zum Hosten oder für VM/CT, unterstützt von <code>xterm.js</code> über WebSockets."
+      },
+      {
+        "name": "Sicherheit",
+        "owns": "Auth-Setup, Passwort / 2FA / API-Token, Audit-Log, optionales Fail2Ban-Panel, Secure Gateway-Bereitstellung."
+      },
+      {
+        "name": "Einstellungen",
+        "owns": "Überwachen Sie Sprache, Navigationsreihenfolge, Benachrichtigungskanäle, KI-Anbieter, Gesundheitsschwellenwerte, Ausschlüsse und Nachinstallationsoptimierungsinventar."
+      }
+    ]
+  },
+  "headerAnatomy": {
+    "heading": "Kopfanatomie",
+    "items": [
+      "<strong>Logo + Produktname</strong> auf der linken Seite. Das Logo wird zu einer \"update available\"-Variante, wenn eine neuere Monitor-Version erkannt wird.",
+      "<strong>Node identity</strong> — der Proxmox-Knotenname, der von <code>pvesh get /nodes</code> aufgelöst wurde und auf <code>hostname</code> zurückfällt.",
+      "<strong>Gesundheitsstatus pill</strong> — Gesund (grün), Warnung (gelb), kritisch (rot). Klicken Sie darauf, um den Health Monitor modal zu öffnen. Ein extra blaues <em>info</em>-Abzeichen erscheint, wenn sich abgewiesene Elemente noch in ihrem Unterdrückungsfenster befinden.",
+      "<strong>Uptime</strong> — Host-Uptime, vom Menschen lesbar formatiert.",
+      "<strong>Refresh button</strong> – veröffentlicht alle API-Live-Aufrufe erneut, ohne dass eine ganze Seite neu geladen wird.",
+      "<strong>Theme toggle</strong> — hell / dunkel / System. Beharrlich in <code>localStorage</code>."
+    ]
+  },
+  "whereNext": {
+    "heading": "Wohin als nächstes",
+    "items": [
+      {
+        "label": "Apps Tab",
+        "href": "/docs/monitor/dashboard/apps",
+        "tail": "— der einheitliche Web Link Launcher und seine Beziehung zu registrierten LXC Anwendungen."
+      },
+      {
+        "label": "Registerkarte Systemübersicht",
+        "href": "/docs/monitor/dashboard/system-overview",
+        "tail": "— die Landekarte, vollständig dokumentiert."
+      },
+      {
+        "label": "Gesundheitsmonitor",
+        "href": "/docs/monitor/health-monitor",
+        "tail": "— das Modal hinter der Header-Status-Pille, zehn Kategorien Deep-Dive."
+      },
+      {
+        "label": "Architektur",
+        "href": "/docs/monitor/architecture",
+        "tail": "— wie das Dashboard mit dem Flask-Backend spricht."
+      }
+    ]
+  }
+}

@@ -1,0 +1,234 @@
+{
+  "meta": {
+    "title": "Borg-Zielort — Repository-Typen, SSH auth, Verschlüsselung | ProxMenux",
+    "description": "Das Borg-Ziel schreibt ProxMenux-Host-Backups in ein Borg-Repository - lokal, auf einer montierten externen Festplatte oder auf einem Remote-Server, auf den über SSH zugegriffen wird. Deckt die borg binäre Auflösungskette, die vier SSH Schlüsselstrategien, Repokey-Verschlüsselung, gespeicherte Zielkonfiguration und Per-Scheduled-Job-Retention.",
+    "ogTitle": "ProxMenux Backup — Zielort Borg",
+    "ogDescription": "Wie ProxMenux Host-Backups in Borg-Repositories schreibt, mit SSH Auth-Strategien und Repokey-Verschlüsselung.",
+    "twitterTitle": "Borg Backup Ziel | ProxMenux",
+    "twitterDescription": "Lokale, USB- und SSH-gestützte Borg-Repositories für Host-Backups."
+  },
+  "header": {
+    "title": "Borg",
+    "description": "Das Borg-Ziel schreibt Host-Backups in ein Borg-Repository. Es werden drei Repository-Typen unterstützt: lokaler Dateisystempfad, externe Festplatte oder Remote-Server über SSH. Chunk-Level-Deduplizierung über alle Archive im Repository und optionale Repokey-Verschlüsselung.",
+    "section": "Sicherung und Wiederherstellung"
+  },
+  "aboutBorg": {
+    "heading": "Was Borg ist",
+    "body": "Borg (auch BorgBackup geschrieben) ist ein Open-Source-Deduplizierungs-Backup-Tool, das von der Borg Backup-Community verwaltet wird. Es speichert jedes Archiv als eine Reihe von Blöcken variabler Länge in einem Repository; Blöcke werden über Archive hinweg geteilt, so dass das erneute Sichern unveränderter Daten nahezu Null Speicherkosten verursacht. Borg ist nicht an Proxmox gebunden - es ist ein universelles Backup-Tool, das in vielen Umgebungen verwendet wird. ProxMenux verwendet es als eines der drei Ziele für Host-Backups; jeder auf dieser Seite beschriebene Borg-spezifische Mechanismus (Repository-Typen, borg-serve über SSH, Repokey-Verschlüsselung, prune) ist Standard-Borg-Verhalten."
+  },
+  "intro": {
+    "title": "Chunk-basierte Deduplizierung mit lokalen oder SSH-servierten Repositorys",
+    "body": "Ein Borg-Repository speichert Brocken, die in jedem enthaltenen Archiv geteilt werden, so dass das erneute Sichern einer unveränderten Datei nichts Neues überträgt und speichert. ProxMenux ruft <code>borg create</code> zum Backup-Zeitpunkt und <code>borg extract</code> zum Wiederherstellungszeitpunkt gegen ein Repository auf. Das Repository kann auf demselben Dateisystem wie die Quelle, auf einer montierten externen Festplatte oder auf einem Remote-Host, auf den über SSH zugegriffen wird, leben."
+  },
+  "binarySourcing": {
+    "heading": "Die borg binary",
+    "intro": "Borg ist keine Basisabhängigkeit des ProxMenux-Installationsprogramms. Wenn ein Backup ausgeführt wird, löst <code>hb_ensure_borg</code> die Binärdatei in der Reihenfolge aus vier Quellen auf und gibt die erste zurück, die funktioniert:",
+    "rows": [
+      {
+        "priority": "1",
+        "source": "Systemweites <code>borg</code>",
+        "detail": "Wenn der Host bereits <code>borg</code> über APT installiert hat (<code>which borg</code> löst auf), wird diese Binärdatei verwendet."
+      },
+      {
+        "priority": "2",
+        "source": "State-Dir-Cache",
+        "detail": "<code>/usr/local/share/proxmenux/borg</code> – von einem vorherigen GitHub-Download auf diesem Host ferngehalten."
+      },
+      {
+        "priority": "3",
+        "source": "AppImage-Bundle",
+        "detail": "<code>/usr/local/share/proxmenux/monitor-app/usr/bin/borg</code> — der AppImage bündelt einen signierten borg-linux64. Dies ist der offline-sichere Pfad: Ein Host ohne Internet hat immer noch einen funktionierenden <code>borg</code>."
+      },
+      {
+        "priority": "4",
+        "source": "GitHub Download",
+        "detail": "<code>wget</code> gegen die angepinnte <code>borg-linux64</code>-URL unter <code>github.com/borgbackup/borg/releases/</code>, verifiziert gegen eine Konstante SHA-256 in <code>lib_host_backup_common.sh</code> (<code>HB_BORG_LINUX64_SHA256</code>). Bei Checksummenfehlanpassung wird die Binärdatei verworfen und das Backup abbricht. Die heruntergeladene Datei wird im State Dir zwischengespeichert, so dass nachfolgende Backups den Pfad 2 verwenden."
+      }
+    ]
+  },
+  "repoTypes": {
+    "heading": "Datenspeichertypen",
+    "intro": "Der Repository-Typ wird ausgewählt, wenn ein Ziel hinzugefügt wird. Jeder Typ löst sich in einer anderen Repository-URL auf, die Borg versteht.",
+    "rows": [
+      {
+        "type": "remote",
+        "url": "ssh://USER@HOST/RPATH",
+        "detail": "Repository lebt auf einem Remote-Server, auf dem <code>borg serve</code> ausgeführt wird. Erfordert eine SSH-Verbindung zu diesem Server."
+      },
+      {
+        "type": "usb",
+        "url": "/mnt/MOUNTPOINT/borgbackup",
+        "detail": "Repository lebt auf einer montierten externen Festplatte (normalerweise USB). Die Halterung wird über <code>hb_prompt_mounted_path</code> aufgelöst, das USB-Partitionen nach Bedarf erkennt, einhängt oder formatiert."
+      },
+      {
+        "type": "local",
+        "url": "/backup/borgbackup (any absolute path)",
+        "detail": "Repository lebt in einem lokalen Verzeichnis. Bedeutsam nur, wenn sich das Zielverzeichnis auf einer separaten physischen Festplatte befindet – ein Repository auf derselben Festplatte wie die Quelle schützt vor Operatorfehlern, aber nicht vor Festplattenausfällen."
+      }
+    ]
+  },
+  "serverSetup": {
+    "heading": "Vorbereitung des Borg-Servers (Serverseite)",
+    "intro": "Der <code>remote</code>-Repository-Typ erwartet einen funktionierenden Borg-Server, der über SSH zugänglich ist. ProxMenux bootstrap nicht den Server selbst – es autorisiert nur einen Schlüssel gegen ein bestehendes Konto auf ihm. Dieser Abschnitt dokumentiert, was der Server benötigt, bevor ProxMenux eine Verbindung herstellen kann.",
+    "hostChoicesTitle": "Wo der Server leben kann",
+    "hostChoicesBody": "Jeder Linux-Host mit SSH-Zugang ist qualifiziert. Gemeinsame Setups:",
+    "hostChoicesItems": [
+      "Eine dedizierte NAS- oder Backup-Box (Debian, Ubuntu, TrueNAS SCALE mit einer Shell).",
+      "Ein LXC Container in einem Proxmox Knoten. Kleiner Footprint, isoliert vom Host, der die Backups ausführt.",
+      "Ein anderer Proxmox-Host im selben LAN oder ein VM, der über SSH erreichbar ist."
+    ],
+    "lxcWarningTitle": "LXC als Borg-Server",
+    "lxcWarningBody": "Wenn der Borg-Server in einem LXC läuft, muss der Container über ein Benutzerkonto mit einem Passwort verfügen.",
+    "requirementsTitle": "Anforderungen an den Server",
+    "requirementsRows": [
+      {
+        "requirement": "borg binary at <code>/usr/bin/borg</code>",
+        "detail": "Die <code>command=\"/usr/bin/borg serve ...\"</code>-Zeile ProxMenux schreibt diesen Pfad in <code>authorized_keys</code>-Hardcodes. Die Installation über APT (<code>apt install borgbackup</code>) bringt es dorthin. Eine eigenständige Binärdatei muss mit <code>/usr/bin/borg</code> verknüpft sein."
+      },
+      {
+        "requirement": "Ein dediziertes Benutzerkonto (normalerweise <code>borg</code>)",
+        "detail": "Besitzt das Repository-Verzeichnis und empfängt eingehende SSH-Verbindungen. Benötigt keinen sudo- oder shell-zugriff - die authorized_keys-linie deaktiviert interaktive shells sowieso."
+      },
+      {
+        "requirement": "Ein beschreibbares Repository Verzeichnis",
+        "detail": "Der vom Betreiber angegebene Pfad ProxMenux (z. B. <code>/backup/borgbackup</code>) muss auf dem Server vorhanden sein und im Besitz des borg-Benutzers sein."
+      },
+      {
+        "requirement": "SSH Daemon akzeptiert den Borg-Benutzer",
+        "detail": "<code>PubkeyAuthentication yes</code> (Standard). Die Passwort-Authentifizierung wird nur für den One-Shot <em>generate-auto</em>-Flow benötigt – nachdem der Schlüssel installiert wurde, kann der Server das Passwort auth vollständig deaktivieren."
+      }
+    ],
+    "minimalSetupTitle": "Minimale Server-Einrichtung",
+    "minimalSetupBody": "Auf einem Debian- oder Ubuntu-Borg-Server besteht eine Arbeitsbasislinie aus vier Befehlen als root:",
+    "minimalSetupCmd": "apt install borgbackup\nuseradd -m -d /home/borg -s /bin/bash borg\nmkdir -p /backup/borgbackup\nchown borg:borg /backup/borgbackup",
+    "minimalSetupNote": "Danach kann sich der ProxMenux-Modus <code>generate-auto</code> mit dem Passwort des Benutzers verbinden, seinen eigenen SSH-Schlüssel installieren und jedes nachfolgende Backup verwendet diesen Schlüssel. Es ist keine weitere serverseitige Konfiguration erforderlich – der Schlüssel beschränkt sich auf <code>borg serve</code> auf diesem Pfad."
+  },
+  "sshAuth": {
+    "heading": "SSH-Authentifizierung (Clientseite)",
+    "intro": "Remote-Borg-Repositories sind über SSH zugänglich. Die Verbindung läuft vom ProxMenux-Host zu einem Benutzerkonto auf dem Borg-Server, auf dem <code>borg serve</code> ausgeführt wird. Dieser Benutzer heißt normalerweise <code>borg</code>, NICHT der Admin / Root-Benutzer des Servers - die Befehlszeile borg-serve sperrt die Verbindung zu diesem spezifischen Repository-Pfad (siehe die wichtigsten Strategien unten).",
+    "strategiesTitle": "Die vier Schlüsselstrategien",
+    "strategiesIntro": "Wenn ein Remote-Ziel hinzugefügt wird, fordert ProxMenux den SSH-Benutzer, den Host und den Remote-Pfad auf und fragt dann, wie man sich authentifiziert. Vier Modi:",
+    "strategyRows": [
+      {
+        "mode": "generator-auto",
+        "label": "Empfohlen",
+        "detail": "ProxMenux generiert ein neues ed25519-Schlüsselpaar bei <code>~/.ssh/borg_proxmenux_HOST_ed25519</code>, verwendet dann <code>sshpass</code>, um sich mit dem Admin-Passwort einmal beim Server anzumelden und den öffentlichen Schlüssel an <code>~borg/.ssh/authorized_keys</code> anzuhängen. Das admin-passwort wird nur für diesen einen aufruf verwendet - es wird nie gespeichert."
+      },
+      {
+        "mode": "Erzeugungshandbuch",
+        "label": "Kein Admin-Passwort auf diesem Host",
+        "detail": "ProxMenux generiert das Keypair wie oben, zeigt aber die vollständige <code>authorized_keys</code>-Zeile an, die der Betreiber manuell in den Server einfügen kann. Das Admin-Passwort verlässt niemals den ProxMenux-Host, weil es nie angefordert wird."
+      },
+      {
+        "mode": "generator-pct",
+        "label": "Borg Server ist ein PVE LXC",
+        "detail": "Der Borg-Server läuft innerhalb eines LXC auf einem PVE-Knoten. ProxMenux autorisiert den Schlüssel über <code>pct exec</code> vom PVE-Host - root auf dem PVE-Host schreibt in den <code>~borg/.ssh/authorized_keys</code> des LXC, ohne dass SSH selbst in den LXC benötigt wird."
+      },
+      {
+        "mode": "vorhanden",
+        "label": "Verwenden Sie einen vorhandenen Schlüssel",
+        "detail": "ProxMenux scannt <code>/root/.ssh/</code> und <code>$HOME/.ssh/</code> nach Parseable ed25519/RSA Private Keys und listet diese auf. Der Bediener wählt einen oder durchsucht manuell einen nicht standardmäßigen Pfad."
+      },
+      {
+        "mode": "nicht",
+        "label": "Standard SSH-Konfiguration",
+        "detail": "Kein benutzerdefinierter Schlüssel - Borg stützt sich auf die standardmäßige SSH-Konfiguration des Hosts (normalerweise <code>~/.ssh/id_rsa</code> oder ein SSH-Agent)."
+      }
+    ],
+    "restrictTitle": "Die authorized_keys Linie",
+    "restrictBody": "Für jeden generierten Schlüssel schreibt die <code>authorized_keys</code>-Zeile ProxMenux auf den Server sperrt den Schlüssel für einen einzelnen borg-serve-Aufruf gegen den konfigurierten Repository-Pfad:",
+    "restrictLine": "command=\"/usr/bin/borg serve --restrict-to-path RPATH\", einschränken PUBKEY",
+    "restrictNote": "Der <code>command=</code> zwingt jede SSH-Sitzung mit diesem Schlüssel, nur den Befehl borg-serve auszuführen; <code>restrict</code> deaktiviert die Portweiterleitung, die Agentenweiterleitung, die X11-Weiterleitung und die PTY-Zuweisung. Der Schlüssel kann nicht verwendet werden, um eine interaktive Shell auf dem Server zu öffnen oder auf einen anderen Repository-Pfad zuzugreifen, selbst wenn das Konto über breitere Privilegien verfügt."
+  },
+  "savedTargets": {
+    "heading": "Gespeicherte Ziele",
+    "intro": "Ein gespeichertes Ziel setzt die Repository-Konfiguration unter einem freundlichen Namen fort, sodass die Details nicht erneut eingegeben werden müssen. Speicherlayout im ProxMenux-Zustandsverzeichnis:",
+    "rows": [
+      {
+        "file": "borg-targets.txt",
+        "content": "Eine Linie pro Ziel: <code>NAME|REPO|SSH_KEY_PATH|ENCRYPT_MODE</code>. Lesen Sie von <code>hb_collect_borg_configs</code>, um das Zielauswahlmenü zu füllen."
+      },
+      {
+        "file": "borg-pass-NAME.txt",
+        "content": "Passphrase für das oben genannte Ziel NAMEd (<code>chmod 600</code>). Nur vorhanden, wenn der Betreiber die Repokey-Verschlüsselung gewählt hat."
+      }
+    ],
+    "outro": "Das Speichern ist optional - der Betreiber kann die Speicheraufforderung für ein One-Shot-Backup ablehnen, das keine Anmeldeinformationen auf dem Host hinterlässt."
+  },
+  "encryption": {
+    "heading": "Verschlüsselung",
+    "body": "Repositories werden mit einem Verschlüsselungsmodus über <code>hb_borg_init_if_needed</code> initialisiert: das moderne <code>borg repo-create -e MODE</code>, wenn verfügbar, oder das alte <code>borg init --encryption=MODE</code>. ProxMenux zeigt zwei Modi: <code>repokey</code> (Standard) und <code>none</code>. Im <code>repokey</code>-Modus speichert Borg den Verschlüsselungsschlüssel im Repository selbst; der Zugriff erfordert eine Passphrase, die ProxMenux zweimal mit Übereinstimmungsvalidierung anfordert und bei <code>borg-pass-NAME.txt</code> speichert. Ein obligatorischer Bestätigungsdialog wird angezeigt, nachdem die Passphrase gespeichert wurde: Die Passphrase ist die einzige Möglichkeit, auf die verschlüsselten Archive zuzugreifen, und wenn sie verloren geht, ist jedes Archiv im Repository nicht wiederherstellbar."
+  },
+  "runtimeEnv": {
+    "heading": "Laufzeitumgebung",
+    "intro": "ProxMenux exportiert die folgenden Umgebungsvariablen, bevor <code>borg</code> aufgerufen wird. Sie konfigurieren die Verbindung und entsperren das Repository, ohne Geheimnisse in die Kommandozeile einzubetten.",
+    "rows": [
+      {
+        "var": "BORG_RSH",
+        "value": "ssh -i SSH_KEY_PATH -o StrictHostKeyChecking=accept-new",
+        "purpose": "Der Remote-Shell-Befehl, den Borg für SSH-versorgte Repositorys verwendet. Legen Sie nur fest, wenn ein benutzerdefinierter Schlüssel ausgewählt wurde; andernfalls wird dies deaktiviert, so dass Borg die standardmäßige SSH-Konfiguration verwendet."
+      },
+      {
+        "var": "BORG_PASSPHRASE",
+        "value": "(Passphrase von borg-pass-NAME.txt)",
+        "purpose": "Entsperrt den Repokey. Setzen Sie nur, wenn das Ziel <code>repokey</code>-Verschlüsselung verwendet. Erscheint nie in der Prozessargumentenliste."
+      },
+      {
+        "var": "BORG_ENCRYPT_MODE",
+        "value": "Repokey | Keine",
+        "purpose": "Wird von <code>hb_borg_init_if_needed</code> bei der Initialisierung eines noch nicht vorhandenen Repositorys verwendet. Ignoriert von <code>borg create</code> auf bestehenden Repositories."
+      },
+      {
+        "var": "BORG_RELOCATED_REPO_ACCESS_IS_OK",
+        "value": "ja",
+        "purpose": "Unterdrückt die interaktive Eingabeaufforderung, die Borg aufruft, wenn die Repository-URL von der URL abweicht, von der sie ursprünglich erreicht wurde (üblich nach einem Rename für einen Mount-Point oder SSH-Host, der über eine neue Adresse erreichbar ist)."
+      },
+      {
+        "var": "BORG_UNKNOWN_UNENCRYPTED_REPO_ACCESS_IS_OK",
+        "value": "ja",
+        "purpose": "Unterdrückt die interaktive Eingabeaufforderung, die Borg beim ersten Zugriff auf ein unverschlüsseltes Repository von einem neuen Client aus erstellt."
+      }
+    ]
+  },
+  "archiveFormat": {
+    "heading": "Bezeichnung und Aufbewahrung des Archivs",
+    "intro": "Jedes Backup erstellt ein neues Archiv im Repository.",
+    "namePattern": "hostcfg-HOSTNAME-YYYYMMDD_HHMMSS",
+    "retentionBody": "Für geplante Aufträge führt <code>run_scheduled_backup.sh</code> <code>borg prune</code> nach jedem erfolgreichen Backup mit den für den Auftrag konfigurierten Retentionswerten (<code>--keep-last</code>, <code>--keep-daily</code>, <code>--keep-weekly</code>) gegen das Repository aus. Interaktive Backups beschneiden nicht."
+  },
+  "restoreAccess": {
+    "heading": "Abruf auf der Wiederherstellungsseite",
+    "body": "Der Restaurierungsfluss listet Archive mit <code>borg list REPO</code> und extrahiert den Auserwählten mit <code>borg extract REPO::ARCHIVE-NAME</code> In einem Staging-Verzeichnis, das <code>_rs_check_layout</code> Einspeisungen in die Standard-Wiederherstellungspipeline. Für den manuellen Abruf außerhalb ProxMenux die gleichen Befehle funktionieren; der extrahierte Baum ist das Standard-Drei-Nutzlast-Layout, das in <em>Wie es funktioniert</em>."
+  },
+  "references": {
+    "heading": "Referenzen",
+    "intro": "Die offizielle Borg-Dokumentation für die Komponenten ProxMenux stützt sich auf.",
+    "items": [
+      {
+        "label": "Borg-Dokumentation",
+        "href": "https://borgbackup.readthedocs.io/",
+        "tail": "— Haupteinstiegspunkt für Konzepte, Bereitstellung, Schnellstart und jeden Befehl."
+      },
+      {
+        "label": "borg create",
+        "href": "https://borgbackup.readthedocs.io/en/stable/usage/create.html",
+        "tail": "— Der Befehl ProxMenux wird bei jedem Backup mit allen unterstützten Flags aufgerufen."
+      },
+      {
+        "label": "Datenspeicherverschlüsselung",
+        "href": "https://borgbackup.readthedocs.io/en/stable/usage/init.html#encryption-mode",
+        "tail": "- die Verschlüsselungsmodi, die Borg unterstützt, einschließlich Repokey, den ProxMenux standardmäßig verwendet."
+      },
+      {
+        "label": "borg serve and SSH deployment",
+        "href": "https://borgbackup.readthedocs.io/en/stable/deployment/central-backup-server.html",
+        "tail": " - wie man einen zentralen Borg-Server einrichtet, auf den über SSH zugegriffen wird, einschließlich des borg-serve-Befehls und des restrict-to-path-Flags ProxMenux schreibt in authorized_keys."
+      },
+      {
+        "label": "borg prune",
+        "href": "https://borgbackup.readthedocs.io/en/stable/usage/prune.html",
+        "tail": "— das Retentionsmodell hinter --keep-last / --keep-daily / --keep-weekly, das ProxMenux pro geplantem Auftrag anwendet."
+      }
+    ]
+  }
+}

@@ -1,0 +1,87 @@
+{
+  "meta": {
+    "title": "Proxmox Befehle Referenz - qm, pct, vzdump, zpool, pveversion | ProxMenux",
+    "description": "Kuratierte Referenz der wesentlichen Proxmox VE- und Linux-Befehle, geordnet nach Themen: Systeminspektion, VM und LXC Management (qm / pct), Speicher und Festplatten, Netzwerk, Updates, GPU Passthrough, ZFS, Backup und Wiederherstellung sowie tägliche CLI-Tools.",
+    "ogTitle": "Proxmox-Befehlsreferenz — qm, pct, vzdump, zpool",
+    "ogDescription": "Kuratierte Referenz der nützlichsten Proxmox VE- und Linux-Befehle, gruppiert nach Thema — System, VM/CT, Speicher, Netzwerk, Updates, GPU Passthrough, ZFS, Backup und CLI Tools.",
+    "twitterTitle": "Proxmox Befehle Referenz | ProxMenux",
+    "twitterDescription": "Kuratierte Referenz der nützlichsten Proxmox VE- und Linux-Befehle, nach Themen gruppiert."
+  },
+  "header": {
+    "title": "Hilfe und Informationen",
+    "description": "Kuratiertes Kompendium nützlicher Linux- und Proxmox VE-Befehle, geordnet nach Themen. Neun Kategorien - deckt alles ab, von einer schnellen Pveversionsprüfung bis hin zu einem mehrzeiligen zfs-Senden / -Empfangen - das neben den GPU-Abschnitten von ProxMenux als One-Stop-Referenz leben soll.",
+    "section": "Hilfe und Informationen"
+  },
+  "intro": {
+    "title": "Was das ist",
+    "body": "Ein Referenzkatalog der Befehle, die Sie tatsächlich auf einem Proxmox-Host verwenden, nach Themen gruppiert. In ProxMenux können Sie eine Nummer auswählen, um einen Befehl direkt auszuführen, oder Ihre eigene an der Eingabeaufforderung einfügen; Auf dieser Website ist jede Kategorie eine Copy-Paste-Tabelle."
+  },
+  "opening": {
+    "heading": "Öffnen des Menüs",
+    "body": "Im Hauptmenü von ProxMenux drücken Sie <kbd>h</kbd>. Sie werden sehen:",
+    "imageAlt": "Hilfe- und Infomenü mit 9-Befehlskategorien"
+  },
+  "categories": {
+    "heading": "Die neun Kategorien",
+    "options": [
+      {
+        "icon": "Terminal",
+        "href": "/docs/help-info/system-commands",
+        "title": "Nützliche Systembefehle",
+        "description": "pveversion, uptime, kostenlos, journalctl, hostnamectl, current-user info, lynis audit, fastfetch."
+      },
+      {
+        "icon": "Cpu",
+        "href": "/docs/help-info/vm-ct-commands",
+        "title": "VM und CT Management",
+        "description": "qm list / config / start / stop / migrate, pct list / config / enter, snapshots, cloning."
+      },
+      {
+        "icon": "HardDrive",
+        "href": "/docs/help-info/storage-commands",
+        "title": "Storage und Disks",
+        "description": "lsblk, blkid, smartctl, Mount-Info, pvesm Status, LVM Befehle."
+      },
+      {
+        "icon": "Network",
+        "href": "/docs/help-info/network-commands",
+        "title": "Netzwerkbefehle",
+        "description": "ip / ss / nmcli, bridge inspection, ping / traceroute, DNS lookups, fail2ban-client."
+      },
+      {
+        "icon": "Package",
+        "href": "/docs/help-info/update-commands",
+        "title": "Updates und Pakete",
+        "description": "apt update / dist-upgrade, apt-cache policy, dpkg queries, repo file checks."
+      },
+      {
+        "icon": "Cpu",
+        "href": "/docs/help-info/gpu-commands",
+        "title": "GPU-Passthrough",
+        "description": "lspci / dmesg checks, IOMMU enablement verification, vfio-pci binding, GPU usage from the host."
+      },
+      {
+        "icon": "Database",
+        "href": "/docs/help-info/zfs-commands",
+        "title": "ZFS-Verwaltung",
+        "description": "zpool / zfs Befehle für Status, Datasets, Snapshots, Send/Receive, ARC Tuning, Trimmen."
+      },
+      {
+        "icon": "Archive",
+        "href": "/docs/help-info/backup-commands",
+        "title": "Backup und Restore",
+        "description": "vzdump, qmrestore / pct restore, Proxmox Backup Server Helfer, Snapshot-Operationen."
+      },
+      {
+        "icon": "Wrench",
+        "href": "/docs/help-info/tools-commands",
+        "title": "System-CLI-Tools",
+        "description": "tmux, screen, htop / btop, ncdu, jq, dig, lsof, watch — Admin-Tools für tägliche Fahrer."
+      }
+    ]
+  },
+  "tip": {
+    "title": "Durchsuchbar aus der globalen Suche",
+    "body": "Jeder Befehl auf diesen Seiten wird durch die Dokumentationssuche indiziert. Wenn Sie sich an ein Flag oder Fragment erinnern, aber nicht, auf welcher Seite es sich befindet, klicken Sie auf die Suchleiste oben - Sie landen direkt auf dem richtigen Eintrag."
+  }
+}

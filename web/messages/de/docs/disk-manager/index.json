@@ -1,0 +1,135 @@
+{
+  "meta": {
+    "title": "Proxmox Disk Manager — Befestigen Sie Datenträger an VMs / LXC, SMART Tests, Abwischen | ProxMenux",
+    "description": "Verwalten Sie physische Festplatten auf einem Proxmox VE-Host mit ProxMenux: Übergeben Sie Festplatten an VMs oder LXC-Container (qm set scsi/sata/virtio, pct mp), importieren Sie qcow2 / vmdk / vdi-Disk-Images, durchlaufen Sie ganze HBAs oder NVMe-Controller, wischen Sie Festplatten sicher ab und führen Sie SMART-Selbsttests aus.",
+    "ogTitle": "Proxmox Disk Manager — Befestigen von Datenträgern an VMs / LXC, SMART Tests, Wipe",
+    "ogDescription": "Befestigen Sie Festplatten an VMs / LXC, importieren Sie Festplattenbilder, PCI-Durchgang für Controller, sicheres Wischen und SMART-Tests auf Proxmox VE.",
+    "twitterTitle": "Proxmox Disk Manager ProxMenux",
+    "twitterDescription": "Befestigen Sie Festplatten an VMs / LXC, importieren Sie Bilder, PCI-Durchlauf, sicheres Wischen und SMART-Tests."
+  },
+  "header": {
+    "title": "Festplattenmanager",
+    "description": "Das Disk Manager-Menü gruppiert die ProxMenux-Tools für die Handhabung physischer Festplatten auf einem Proxmox-Host: Befestigen Sie Festplatten an VMs und LXC-Containern, importieren Sie Festplattenabbilder, durchlaufen Sie einen ganzen Controller oder ein NVMe-Gerät, wischen Sie Festplatten sicher und führen Sie SMART-Gesundheitstests aus.",
+    "section": "Festplattenmanager"
+  },
+  "intro": {
+    "title": "Wofür dieses Menü ist",
+    "body": "Jede Option funktioniert hier auf <strong>physischen Festplatten, die bereits für den Proxmox-Host </strong> sichtbar sind. Das Menü ist in drei Gruppen unterteilt: <strong>VM</strong> (Festplatten anhängen oder Bilder in eine virtuelle Maschine importieren), <strong>LXC</strong> (Festplatten an einen Container anhängen) und <strong>Utilities</strong> (sicheres Format, SMART-Gesundheit). Sicherheitskontrollen gelten überall: Systemplatten und bereits verwendete Platten werden ausgeblendet oder blockiert."
+  },
+  "opening": {
+    "heading": "Öffnen des Menüs",
+    "body": "Wählen Sie im Hauptmenü von ProxMenux <strong>Disk Manager</strong>. Sie werden sehen:",
+    "imageAlt": "Disk Manager Menü mit VM, LXC und Utilities Blöcken"
+  },
+  "groups": {
+    "heading": "Drei Werkzeuggruppen",
+    "intro": "Das Disk Manager-Menü ist in drei Gruppen unterteilt: <strong>VM</strong>, <strong>LXC</strong> und <strong>Utilities</strong>. Klicken Sie auf eine Karte, um direkt zu den Werkzeugen in dieser Gruppe zu springen.",
+    "vmTitle": "VM",
+    "vmBody": "Tools, die auf vorhandenen virtuellen Maschinen arbeiten. Der VM muss ausgeschaltet werden; ProxMenux validiert dies, bevor er die Konfiguration berührt.",
+    "vmItems": [
+      "Datenträger in VM importieren",
+      "Disk-Image in VM importieren",
+      "Controller oder NVMe zu VM hinzufügen"
+    ],
+    "lxcTitle": "LXC",
+    "lxcBody": "Tools, die auf vorhandenen Containern funktionieren. Direct Device Passthrough benötigt einen privilegierten Container; das Skript bietet an, es bei Bedarf zu konvertieren.",
+    "lxcItems": [
+      "Datenträger in LXC importieren"
+    ],
+    "utilitiesTitle": "Dienstprogramme",
+    "utilitiesBody": "Hostseitige Tools, die auf den Festplatten selbst arbeiten, unabhängig von VM oder Containern.",
+    "utilitiesItems": [
+      "Physischen Datenträger formatieren / löschen",
+      "SMART-Festplattenstatus und -test"
+    ]
+  },
+  "vm": {
+    "heading": "VM",
+    "intro": "Tools, die auf vorhandenen virtuellen Maschinen arbeiten. Der VM muss ausgeschaltet werden; ProxMenux validiert dies, bevor er die Konfiguration berührt.",
+    "options": [
+      {
+        "icon": "HardDrive",
+        "href": "/docs/disk-manager/import-disk-vm",
+        "title": "Datenträger in VM importieren",
+        "description": "Befestigen Sie eine nicht zugewiesene physische Festplatte an eine vorhandene VM. Unterstützt SATA / SCSI / VirtIO / IDE, verwendet persistente /dev/disk/by-id-Pfade."
+      },
+      {
+        "icon": "FileDown",
+        "href": "/docs/disk-manager/import-disk-image-vm",
+        "title": "Disk-Image in VM importieren",
+        "description": "Importieren Sie Disk-Image-Dateien (.img / .qcow2 / .vmdk / .raw) in einen vorhandenen VM. Zweiphasige Strömung, qm importdisk unter der Haube."
+      },
+      {
+        "icon": "Cpu",
+        "href": "/docs/disk-manager/add-controller-nvme-vm",
+        "title": "Controller oder NVMe zu VM hinzufügen",
+        "description": "PCI-Durchgang eines ganzen SATA / SAS HBA- oder NVMe-Geräts zu einem VM. Behandelt IOMMU Enablement und Konflikterkennung."
+      }
+    ]
+  },
+  "lxc": {
+    "heading": "LXC",
+    "intro": "Tools, die auf vorhandenen LXC-Containern funktionieren. Direct Device Passthrough erfordert einen privilegierten Container; das Skript bietet an, den Container bei Bedarf zu konvertieren.",
+    "options": [
+      {
+        "icon": "Boxes",
+        "href": "/docs/disk-manager/import-disk-lxc",
+        "title": "Datenträger in LXC importieren",
+        "description": "Befestigen Sie eine nicht zugewiesene physische Festplatte an einem vorhandenen LXC-Container als Montagepunkt. Behandelt Dateisystemerkennung / Format und privilegierte Konvertierung."
+      }
+    ]
+  },
+  "utilities": {
+    "heading": "Dienstprogramme",
+    "intro": "Hostseitige Tools, die auf den Festplatten selbst arbeiten, unabhängig von VM oder Containern.",
+    "options": [
+      {
+        "icon": "Eraser",
+        "href": "/docs/disk-manager/format-disk",
+        "title": "Physische Festplatte formatieren/löschen (sicher)",
+        "description": "Sicheres Festplattenwischen mit strengen Sicherheitskontrollen: Es werden nur vollständig freie Festplatten angezeigt und es ist immer eine doppelte Bestätigung erforderlich."
+      },
+      {
+        "icon": "Activity",
+        "href": "/docs/disk-manager/smart-disk-test",
+        "title": "SMART-Festplattenstatus und -test",
+        "description": "Führen Sie SMART Gesundheitschecks und kurze / lange Selbsttests auf SATA-, SAS- und NVMe-Laufwerken durch. Exportiert JSON für den Monitor."
+      }
+    ]
+  },
+  "safety": {
+    "title": "Sicherheitsregeln, die von jeder Option geteilt werden",
+    "intro": "ProxMenux filtert alles heraus, was dem Host schaden könnte:",
+    "items": [
+      "Das <strong>system disk</strong> (Rootpool, Swap, aktive ZFS / LVM / RAID-Mitglieder) ist immer versteckt.",
+      "Festplatten <strong>mounted</strong> überall auf dem Host werden bei der Ausführung ausgeblendet oder blockiert.",
+      "Datenträger <strong>, auf die mit einem laufenden VM oder LXC</strong> verwiesen wird, können nicht neu zugewiesen oder gelöscht werden.",
+      "Operationen, die den Host-Status ändern können (IOMMU enable, Wipe) erfordern eine explizite Bestätigung."
+    ]
+  },
+  "related": {
+    "heading": "Verwandte Themen",
+    "items": [
+      {
+        "href": "/docs/storage-share",
+        "label": "Speicher- und Freigabemanager",
+        "tail": "- registrieren Sie den Speicher in Proxmox selbst (NFS / Samba / iSCSI / local) und teilen Sie Ordner zwischen Host und CTs."
+      },
+      {
+        "href": "/docs/help-info/storage-commands",
+        "label": "Speicher- und Festplattenbefehle",
+        "tail": "— Blockgeräte, LVM, pvesm, SMART Referenz."
+      },
+      {
+        "href": "/docs/help-info/zfs-commands",
+        "label": "ZFS Verwaltungsbefehle",
+        "tail": "— für ZFS-Pools und Datensätze."
+      },
+      {
+        "href": "/docs/hardware/gpu-vm-passthrough",
+        "label": "GPU zu VM hinzufügen (Passthrough)",
+        "tail": "- die gleichen IOMMU / VFIO-Konzepte für GPUs."
+      }
+    ]
+  }
+}

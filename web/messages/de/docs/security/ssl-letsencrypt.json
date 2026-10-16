@@ -1,0 +1,169 @@
+{
+  "meta": {
+    "title": "HTTPS für ProxMenux Monitor — Proxmox-Hostzertifikat oder benutzerdefinierte Pfade | ProxMenux",
+    "description": "Servieren Sie das ProxMenux Monitor über HTTPS entweder mit dem Proxmox-Host-Zertifikat (automatisch erkannt, einschließlich des Let's Encrypt-Zertifikats, das über die Registerkarte Proxmox ACME hochgeladen wurde) oder einem benutzerdefinierten Zertifikat auf einem beliebigen Pfad auf der Festplatte.",
+    "ogTitle": "HTTPS für ProxMenux Monitor — Proxmox-Host oder benutzerdefiniertes Zertifikat",
+    "ogDescription": "Aktivieren Sie HTTPS am Port 8008 mit dem Proxmox-Hostzertifikat oder einem benutzerdefinierten .pem / .key-Paar."
+  },
+  "header": {
+    "title": "HTTPS für ProxMenux Monitor",
+    "description": "Schalten Sie HTTPS für den Monitor ein (Port 8008), indem Sie entweder das Proxmox-Hostzertifikat verwenden, das der Monitor automatisch erkennt, oder ein benutzerdefiniertes Zertifikat, das sich überall auf der Festplatte befindet. Die Proxmox-Option wählt das von ACME hochgeladene Zertifikat transparent aus, so dass ein Let's Encrypt-Zertifikat, das von der Proxmox-Benutzeroberfläche verwaltet wird, ohne einen zusätzlichen Erneuerungsauftrag wiederverwendet wird.",
+    "section": "Sicherheit"
+  },
+  "intro": {
+    "title": "Was diese Seite abdeckt",
+    "body": "So wechseln Sie den Monitor im Settings → Security Panel von HTTP auf HTTPS, worauf jede Zertifikatsquelle tatsächlich auf der Festplatte zeigt, wie sich die Proxmox-Option verhält, wenn der Host ein Let's Encrypt-Zertifikat hat, und wie Sie benutzerdefinierte Pfade festlegen, wenn Sie Zertifikate außerhalb von Proxmox verwalten."
+  },
+  "wheresetting": {
+    "heading": "Wo das Setting lebt",
+    "body": "Öffnen Sie den Monitor und gehen Sie zu <strong>Settings → Security → HTTPS / SSL</strong>. Das Panel zeigt den aktuellen Zustand (HTTP oder HTTPS) und listet auf einem Host ohne HTTPS die Zertifikatsquellen auf, die der Monitor erkennen konnte.",
+    "imageAlt": "Einstellungen → Sicherheit → HTTPS / SSL-Panel im Monitor mit dem HTTPS-Aus-Zustand, dem automatisch erkannten Proxmox-Zertifikat (Subjekt, Aussteller, Ablauf) und der Option Use Custom Certificate",
+    "caption": "Einstellungen → Sicherheit → HTTPS / SSL Panel vor der Aktivierung. Der Monitor greift das Zertifikat Proxmox selbst auf und bietet es als One-Click-Quelle an."
+  },
+  "twoways": {
+    "heading": "Zwei Möglichkeiten, HTTPS zu aktivieren",
+    "proxmox": {
+      "title": "Das Proxmox-Zertifikat verwenden",
+      "summary": "Ein Klick. Der Monitor verwendet das Zertifikat Proxmox VE selbst wieder, das am Port 8006 dient.",
+      "items": [
+        "Autodetektierte — kein Pfad zum Typ",
+        "Wählt das ACME-uploaded Zertifikat, falls vorhanden, fällt zurück auf den selbstsignierten Standard",
+        "Erneuerung geschieht durch Proxmox; der Monitor folgt automatisch beim nächsten Start"
+      ]
+    },
+    "custom": {
+      "title": "Benutzerdefiniertes Zertifikat verwenden",
+      "summaryRich": "Richten Sie den Monitor auf ein <code>.pem</code> / <code>.key</code>-Paar überall auf der Festplatte.",
+      "items": [
+        "Nur absolute Pfade (der Monitor-Prozess muss beide lesen können)",
+        "Nützlich, wenn Zertifikate von <code>certbot</code>, <code>acme.sh</code> oder einer Wildcard stammen",
+        "Sie besitzen die Erneuerung - starten Sie den Monitor-Dienst neu, nachdem sich die Datei geändert hat"
+      ]
+    }
+  },
+  "proxmoxCert": {
+    "heading": "Proxmox-Zertifikat - was es tatsächlich zeigt",
+    "intro": "Proxmox VE führt zwei Zertifikatspaare in <code>/etc/pve/local/</code>:",
+    "table": {
+      "headers": {
+        "file": "Datei",
+        "origin": "Ursprung",
+        "when": "Wenn der Monitor es verwendet"
+      },
+      "rows": [
+        {
+          "fileRich": "<code>pveproxy-ssl.pem</code><br /><code>pveproxy-ssl.key</code>",
+          "originRich": "Benutzerdefiniertes Zertifikat, das über die Proxmox-Benutzeroberfläche hochgeladen wird - einschließlich des Let's Encrypt-Zertifikats, das unter <em>Datacenter → Node → Certificates → ACME</em> ausgestellt wurde.",
+          "when": "Bevorzugt, wenn beide Dateien existieren. Der Monitor folgt dem Zertifikat, das Proxmox selbst serviert."
+        },
+        {
+          "fileRich": "<code>pve-ssl.pem</code><br /><code>pve-ssl.key</code>",
+          "originRich": "Selbstsigniertes Zertifikat, das zum Zeitpunkt der Installation vom Proxmox PKI generiert wurde.",
+          "whenRich": "Fallback, wenn kein <code>pveproxy-ssl.pem</code> vorhanden ist."
+        }
+      ]
+    },
+    "callout": {
+      "title": "Gleiche Priorität wie Proxmox selbst",
+      "bodyRich": "<code>pveproxy</code> verwendet die gleiche Auswahlregel, so dass die Auswahl der Proxmox-Option im Monitor immer dem Zertifikat dient, das die Proxmox-Web-Benutzeroberfläche bereits an Port 8006 serviert. Kein Kopieren, keine separate Erneuerungspipeline."
+    }
+  },
+  "letsencrypt": {
+    "heading": "Erhalten eines Let's Encrypt Zertifikats über Proxmox ACME",
+    "intro": "Proxmox VE liefert seinen eigenen ACME-Client. Ein Klick auf <em>\"Order Certificate Now\"</em> schreibt das Ergebnis in <code>/etc/pve/local/pveproxy-ssl.pem</code>, was genau das ist, was der Monitor liest. Das fünfstufige Rezept unten ist die gleiche Prozedur wie der <extlink1>offizielle Proxmox Guide</extlink1> - destilliert auf die Befehle, die Sie tatsächlich ausführen müssen.",
+    "prereqs": {
+      "title": "Voraussetzungen",
+      "items": [
+        "Der Knoten hat einen echten DNS-Namen (nicht nur eine IP), der darauf zeigt.",
+        "<strong>Either</strong> Port 80 erreichbar aus dem öffentlichen Internet (HTTP-01 Challenge, einfachste), <strong>or</strong> ein DNS Anbieter mit API Anmeldeinformationen (DNS-01 Challenge – funktioniert hinter NAT, unterstützt Platzhalter).",
+        "Eine E-Mail-Adresse für das ACME-Konto."
+      ]
+    },
+    "step1": {
+      "heading": "Schritt 1 — Registrieren Sie das ACME-Konto",
+      "introRich": "Ersetzen Sie die E-Mail durch Ihre. Der Kontoname <code>default</code> ist nur ein Label - Sie können eine beliebige Zeichenfolge verwenden.",
+      "code": "pvenode acme account register default you@example.com",
+      "afterRich": "Proxmox fordert Sie auf, die Nutzungsbedingungen von Let's Encrypt zu akzeptieren. Danach wird das Konto unter <code>/etc/pve/priv/acme/</code> fortgesetzt und die Registerkarte ACME in der GUI zeigt es an."
+    },
+    "step2": {
+      "heading": "Schritt 2 - Wählen Sie einen Herausforderungstyp",
+      "http01Rich": "<strong>HTTP-01</strong> ist das einfachste: es ist eingebaut, kein zusätzliches Plugin. Let's Encrypt verbindet sich mit <code>http://&lt;your-host&gt;/.well-known/acme-challenge/...</code> an Port 80, so dass Port 80 vom öffentlichen Internet zu Ihrem Knoten geöffnet sein muss - normalerweise ein Port vorwärts auf Ihrem Router.",
+      "dns01Rich": "<strong>DNS-01</strong> funktioniert ohne Port 80 (gut für Homelabs hinter CG-NAT) und ist die einzige Option für Wildcard-Zertifikate. Sie fügen ein DNS-Plugin einmal mit dem API-Token Ihres Providers hinzu. Cloudflare Beispiel:",
+      "code": "pvenode acme plugin add dns cf \\\n  --api cloudflare \\\n  --data CF_Token=YOUR_CLOUDFLARE_API_TOKEN",
+      "outroRich": "Für andere Anbieter (Gandi, OVH, AWS Route 53 usw.) überprüfen Sie <code>pvenode acme plugin add dns --help</code> — Proxmox liefert <extlink2>all acme.sh DNS Plugins</extlink2>."
+    },
+    "step3": {
+      "heading": "Schritt 3 - Binden Sie die Domain an Ihren Knoten",
+      "http01Rich": "Für HTTP-01 (verwendet das eingebaute <code>standalone</code>-Plugin):",
+      "code1": "pvenode config set --acme domains=host.example.com,account=default",
+      "dns01": "Für DNS-01 mit dem Cloudflare-Plugin aus Schritt 2:",
+      "code2": "pvenode config set --acmedomain0 domain=host.example.com,plugin=cf\npvenode config set --acme account=default",
+      "wildcardRich": "Wildcard? Fügen Sie <code>domain=*.example.com</code> auf einem separaten <code>--acmedomainN</code>-Eintrag hinzu. Wildcards erfordern DNS-01."
+    },
+    "step4": {
+      "heading": "Schritt 4 — Bestellen Sie das Zertifikat",
+      "code": "pvenode acme cert order",
+      "afterRich": "Der erste Lauf dauert normalerweise 30–60 Sekunden, während sich die Herausforderung ausbreitet. Beim Erfolg schreibt Proxmox <code>/etc/pve/local/pveproxy-ssl.pem</code> + <code>.key</code>, startet <code>pveproxy</code> neu und ein Erneuerungs-Cron wird automatisch geplant (Let's Encrypt Zertifikate sind gültig 90 Tage; Proxmox erneuert bei 60)."
+    },
+    "step5": {
+      "heading": "Schritt 5 — Überprüfung des Emittenten",
+      "code": "openssl x509 -in /etc/pve/local/pveproxy-ssl.pem -noout -issuer",
+      "afterRich": "Sollte einen Emittenten ab <code>O = Let's Encrypt</code> drucken. Wenn stattdessen <code>CN = Proxmox Virtual Environment</code> gelesen wird, ist die Bestellung fehlgeschlagen und die Datei ist immer noch das selbstsignierte PVE-Zertifikat - führen Sie <code>pvenode acme cert order --debug 1</code> erneut aus, um zu sehen, warum."
+    },
+    "gui": {
+      "title": "Bevorzugen Sie die GUI? Gleiche fünf Schritte",
+      "bodyRich": "<em>Datacenter → ACME</em> registriert das Konto, <em>Datacenter → ACME → Plugins</em> fügt das DNS-Plugin hinzu, <em>Node → Zertifikate → ACME</em> bindet die Domain und <em>Order-Zertifikate Now</em> führt Schritt 4 aus. Die oben genannten CLI-Befehle sind für das Skripting und für Headless / CLI-only-Setups nützlich."
+    }
+  },
+  "switchToHttps": {
+    "heading": "Schalten Sie den Monitor auf HTTPS",
+    "bodyRich": "Sobald <code>/etc/pve/local/pveproxy-ssl.pem</code> von Let's Encrypt signiert ist, ist die Monitorseite ein Klick: Öffnen Sie <strong>Settings → Sicherheit → HTTPS / SSL</strong>, bestätigen Sie, dass der im erkannten Zertifikatsfeld angezeigte Aussteller <em>Let's Encrypt</em> (und nicht die lokale Proxmox CA) liest, und klicken Sie auf <strong>Proxmox Certificate</strong> verwenden. Der Monitordienst wird neu gestartet und der nächste Browser wird HTTPS auf Port 8008 geladen - keine Zertifikatswarnung, da die Kette öffentlich vertrauenswürdig ist. Spätere Proxmox ACME-Erneuerungen werden während der nächsten neuen TLS-Verbindung validiert und ausgewählt; es gibt keinen wiederkehrenden Zertifikatsabfragedienst oder Neustart des Erneuerungsdienstes. <strong>Update-Zertifikat</strong> bleibt in Security als explizite Diagnose- und Wiederherstellungsaktion verfügbar."
+  },
+  "custom": {
+    "heading": "Zollbescheinigung — wann sie zu verwenden ist",
+    "intro": "Klicken Sie auf <strong>Use Custom Certificate</strong>, um zwei absolute Pfade einzugeben:",
+    "items": [
+      "<strong>Certificate</strong> — vollständige Kette in PEM (<code>.pem</code> oder <code>.crt</code>).",
+      "<strong>Private key</strong> — Matching Key in PEM (<code>.key</code>)."
+    ],
+    "outro": "Beide Dateien werden vom Monitor-Prozess beim Start gelesen. Stellen Sie sicher, dass sie für den Benutzer lesbar bleiben, die systemd-Einheit läuft als (root by default). Gemeinsame Standorte, wenn ACME außerhalb von Proxmox verwaltet wird:",
+    "code": "# certbot\n/etc/letsencrypt/live/<your-host>/fullchain.pem\n/etc/letsencrypt/live/<your-host>/privkey.pem\n\n# acme.sh\n~/.acme.sh/<your-host>_ecc/fullchain.cer\n~/.acme.sh/<your-host>_ecc/<your-host>.key",
+    "symlinkCallout": {
+      "title": "Symlink-Ziele vs. Dateien",
+      "bodyRich": "<code>certbot</code> speichert die eigentlichen Dateien in <code>/etc/letsencrypt/archive/</code> und der <code>live/</code>-Pfad ist ein Symlink. Richten Sie den Monitor auf den <code>live/</code>-Symlink, nicht auf die <code>archive/</code>-Datei - so schreibt jeder Erneuerungszyklus einfach das Symlink-Ziel um und der Monitor nimmt das neue Zertifikat beim nächsten Servicestart entgegen."
+    }
+  },
+  "afterHttps": {
+    "heading": "Nach Aktivierung von HTTPS",
+    "bodyRich": "Das Speichern der Änderung schreibt <code>/etc/proxmenux/ssl_config.json</code> und löst einen Neustart der <code>proxmenux-monitor</code> systemd Einheit aus. Die Browser-Registerkarte verliert ihre aktuelle Verbindung - laden Sie sie auf <code>https://&lt;host&gt;:8008/</code> neu. Die erste Ladung mit einem Let's Encrypt-Zertifikat sollte keine Warnung zeigen; mit dem selbstsignierten Proxmox-Zertifikat benötigt der Browser eine Ausnahme, die gleiche wie für Port 8006.",
+    "reverse": {
+      "heading": "Reverse Proxies und Webhooks",
+      "bodyRich": "Wenn der Monitor zu HTTPS wechselt, schalten auch die für Benachrichtigungen registrierten Proxmox VE-webhook-URLs automatisch von <code>http://</code> zu <code>https://</code> um. Bestehende webhook-Einträge werden beim nächsten Speichern oder erneuten Erkennen einer Benachrichtigungsregel neu geschrieben, so dass keine manuelle Bearbeitung der Proxmox-Benachrichtigungskonfiguration erforderlich ist."
+    }
+  },
+  "trustCa": {
+    "heading": "Vertrauen Sie der Proxmox selbstsignierten CA",
+    "intro1Rich": "Wenn Sie das standardmäßig von Proxmox generierte Zertifikat (kein ACME) beibehalten möchten, können Sie die Browserwarnung stoppen, indem Sie die Root-CA des Clusters in das Betriebssystem oder den Browser-Trust-Store importieren. Der Monitor erkennt weiterhin automatisch den gleichen <code>/etc/pve/local/pveproxy-ssl.pem</code>; Das einzige, was sich ändert, ist, dass das Gerät, das das Dashboard betrachtet, jetzt den Emittenten erkennt.",
+    "intro2Rich": "Die CA-Datei lebt bei <code>/etc/pve/pve-root-ca.pem</code> auf jedem Knoten. In einem Cluster befindet sich der Pfad auf dem gemeinsamen <code>pmxcfs</code>-Dateisystem, so dass alle Knoten die gleiche Wurzel teilen und ein einziger Import das gesamte Rechenzentrum abdeckt. Kopieren Sie es auf Ihre Maschine:",
+    "code": "scp root@<your-host>:/etc/pve/pve-root-ca.pem ./pve-root-ca.pem",
+    "thenImport": "Importieren Sie es dann auf der Kundenseite:",
+    "items": [
+      "<strong>Linux (systemweit):</strong> <code>sudo cp pve-root-ca.pem /usr/local/share/ca-certificates/pve-root-ca.crt</code>, gefolgt von <code>sudo update-ca-certificates</code>. Browser, die den Systemspeicher verwenden (Chromium, Edge), nehmen ihn nach dem Neustart ab; Firefox verwendet einen eigenen Store und benötigt den manuellen Import unten.",
+      "<strong>macOS:</strong> doppelklicken Sie auf die <code>.pem</code>-Datei, Keychain Access öffnet → fügen Sie sie dem <em>System</em> Schlüsselbund hinzu → setzen <em>Trust → Immer Trust</em>.",
+      "<strong>Windows:</strong> mit der rechten Maustaste auf die Datei → <em>Zertifikat</em> installieren → in <em>Trusted Root Certification Authorities</em> platzieren.",
+      "<strong>Firefox (any OS):</strong> <em>Einstellungen → Datenschutz &amp; Sicherheit → Zertifikate → Zertifikate anzeigen → Behörden → Import</em>, kreuzen <em>Vertrauen Sie dieser CA, um Websites zu identifizieren</em>."
+    ],
+    "standalone": {
+      "title": "Standalone Knoten außerhalb eines Clusters",
+      "bodyRich": "Jeder nicht geclusterte Proxmox-Host hat seinen eigenen <code>pve-root-ca.pem</code>. Wenn Sie mehrere eigenständige Hosts verwalten, wiederholen Sie die Kopie / den Import für jeden oder verbinden Sie sie zu einem Cluster, so dass sie sich eine einzelne Wurzel teilen."
+    }
+  },
+  "disable": {
+    "heading": "Deaktivierung von HTTPS",
+    "bodyRich": "Klicken Sie auf <strong>Deaktivieren Sie HTTPS</strong> im selben Bereich. Der Monitor-Dienst wird auf HTTP neu gestartet - nützlich, wenn eine benutzerdefinierte Zertifikatsdatei unlesbar wird und der Dienst nicht mehr angezeigt wird. Es gibt keinen separaten Deinstallationsschritt; die Zertifikatsdateien selbst werden nicht berührt.",
+    "stateCallout": {
+      "title": "Wo der Staat lebt",
+      "bodyRich": "<code>/etc/proxmenux/ssl_config.json</code> speichert die aktiven Zertifikatpfade und die Quelle (<code>none</code>, <code>proxmox</code>, <code>custom</code>). Das Löschen der Datei entspricht dem Deaktivieren von HTTPS - beim nächsten Start fällt der Monitor auf HTTP zurück."
+    }
+  }
+}

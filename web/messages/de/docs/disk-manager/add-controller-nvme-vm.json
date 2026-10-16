@@ -1,0 +1,128 @@
+{
+  "meta": {
+    "title": "Hinzufügen von Controller oder NVMe zu VM | ProxMenux Dokumentation",
+    "description": "PCI-Durchgang eines Speichercontrollers (SATA / SAS HBA) oder NVMe-Geräts zu einem Proxmox VM mit ProxMenux. Behandelt IOMMU-Aktivierung, Konflikterkennung und QM-Set --hostpci-Verkabelung.",
+    "ogTitle": "Hinzufügen von Controller oder NVMe zu VM | ProxMenux Dokumentation",
+    "ogDescription": "Übergeben Sie ein ganzes SATA / SAS HBA oder NVMe Gerät in ein Proxmox VM. ProxMenux übernimmt IOMMU, Konflikterkennung und Hostpci-Verkabelung."
+  },
+  "header": {
+    "title": "Controller oder NVMe zu VM hinzufügen",
+    "description": "Führen Sie ein ganzes SATA / SAS Host Bus Adapter (HBA) oder NVMe Gerät in ein Proxmox VM über PCI Passthrough. ProxMenux prüft und aktiviert – mit Ihrer Einwilligung – IOMMU, zählt die passthrough-fähigen Geräte auf, filtert Konflikte heraus und verkabelt die Zuordnung mit dem qm-Satz --hostpci.",
+    "section": "Disk Manager VM"
+  },
+  "intro": {
+    "title": "Was dies tut (und nicht tut)",
+    "body": "Dies ist <strong>device-level passthrough</strong>: Die PCIe-Karte verlässt die Ansicht des Host-Kernels und ist an <code>vfio-pci</code> gebunden. Der VM sieht den Controller selbst - nicht die einzelnen Festplatten dahinter - und lädt seinen eigenen Treiber für genau dieses Modell. Jede Festplatte, die an diesen Controller angeschlossen ist, folgt ihm automatisch mit nativen SMART-Daten, vollständigen Firmware-Funktionen und keiner Proxmox-Schicht dazwischen."
+  },
+  "howRuns": {
+    "heading": "Wie das Skript läuft",
+    "body": "Der Fluss hat zwei Phasen mit klarer Trennung zwischen \"Sammeln von Informationen, Überprüfen von IOMMU und Auflisten von Kandidaten\" und \"Tatsächliches Anbringen des PCI-Geräts\". Bis zur endgültigen Bestätigung wird nichts an die VM-Konfiguration geschrieben."
+  },
+  "iommu": {
+    "heading": "IOMMU-Gruppen - warum die gesamte Karte auf einmal geht",
+    "body": "PCI-Durchgang erfolgt pro <strong>IOMMU-Gruppe</strong>, die die kleinste Einheit ist, die die IOMMU des CPU isolieren kann. Alles in einer Gruppe bewegt sich zusammen. Wenn Ihr SATA-Controller seine IOMMU-Gruppe mit dem USB-Controller teilt, nimmt die Weitergabe der SATA-Karte an einen VM auch die USB-Anschlüsse mit – oft unerwünscht.",
+    "outro": "ProxMenux zeigt die IOMMU-Gruppe neben jedem Gerät und warnt Sie, wenn eine Gruppe mehr als nur den gewünschten Controller trägt. Sie können weiterhin fortfahren, wenn die zusätzlichen Geräte in der Gruppe akzeptabel sind (z. B. alle Festplattencontroller) oder zurückgehen, wenn dies nicht der Fall ist."
+  },
+  "prereqs": {
+    "heading": "Voraussetzungen",
+    "items": [
+      "<strong>CPU und Motherboard-Unterstützung</strong> VT-d (Intel) oder AMD-Vi, und es ist in der Firmware (BIOS/UEFI) aktiviert. ProxMenux kann die Kernelseite für Sie aktivieren, aber es kann den Firmware-Switch nicht umdrehen.",
+      "Das Ziel VM ist <strong>powered off</strong> vor dem Anbringen von PCI-Geräten.",
+      "Der Controller/NVMe <strong> ist nicht derjenige, der das Proxmox Root-Dateisystem</strong> hält. Das Skript verbirgt alles, was vom Host verwendet wird.",
+      "Guest OS hat Treiber für das Controller-Modell. Linux deckt praktisch jeden HBA ab; Windows benötigt den Herstellertreiber, der <em> vor </em> installiert hat, den Sie mit dem angeschlossenen Controller booten."
+    ],
+    "warnTitle": "Live Migration ist nicht möglich",
+    "warnBody": "Ein VM mit PCI-Durchgang ist an den Knoten gebunden, der die Karte physisch hält. Live-Migration über Knoten wird fehlschlagen. Planen Sie Backups / Replikation entsprechend."
+  },
+  "steps": {
+    "heading": "Schritt für Schritt",
+    "stepLabel": "Schritt",
+    "list": [
+      {
+        "title": "Wählen Sie das Ziel VM",
+        "bodyRich": "ProxMenux liest <code>qm list</code> und zeigt jeden VM an. Wählen Sie diejenige, die den Controller erhalten wird.",
+        "img": "/disk/nvme-passthrough/vm-selection.png",
+        "alt": "VM Auswahldialog",
+        "caption": "VM Auswahldialog"
+      },
+      {
+        "title": "IOMMU-Prüfung",
+        "bodyRich": "Wenn IOMMU auf der Kernel-Cmdline nicht aktiviert ist, bietet ProxMenux an, sie zu aktivieren. Es bearbeitet <code>/etc/kernel/cmdline</code> (für systemd-Boot) oder <code>/etc/default/grub</code> (für GRUB) und fügt den richtigen Parameter für Ihren CPU hinzu:",
+        "items": [
+          "<code>intel_iommu=on</code> für Intel CPUs.",
+          "<code>amd_iommu=on</code> für AMD CPUs."
+        ],
+        "outro": "Nach dieser Änderung ist ein Neustart erforderlich. Das Skript fordert Sie auf, jetzt oder später neu zu starten; der Durchlauf kann nicht fortgesetzt werden, bis die neue Kernel-Cmdline aktiv ist.",
+        "img": "/disk/nvme-passthrough/iommu-warning.png",
+        "alt": "IOMMU Erforderlicher Dialog",
+        "caption": "IOMMU Erforderlich — Angebot zum Aktivieren und Neustarten"
+      },
+      {
+        "title": "Geräteaufzählung",
+        "body": "ProxMenux listet jeden Speichercontroller (SATA / SAS HBA) und jedes NVMe-Gerät auf dem PCI-Bus auf. Für jedes Gerät zeigt es:",
+        "items": [
+          "PCI-Adresse (<code>00:17.0</code>, <code>01:00.0</code>, ...).",
+          "Vendor / Gerätebeschreibung.",
+          "IOMMU-Gruppe - und eine ⚠ Warnung, wenn die Gruppe mit anderen, nicht verwandten Geräten geteilt wird.",
+          "Die Festplatten befinden sich derzeit hinter dem Controller (damit Sie wissen, was auf den VM folgt)."
+        ],
+        "img": "/disk/nvme-passthrough/device-list.png",
+        "alt": "Controller / NVMe Geräteaufzählung",
+        "caption": "Controller / NVMe Geräteaufzählung mit IOMMU Gruppeninfo"
+      },
+      {
+        "title": "Konflikterkennung",
+        "bodyRich": "Das Skript blockiert Geräte, die eindeutig unsicher sind: bereits einem anderen VM zugewiesen (über <code>hostpci</code> in dieser VM-Konfiguration), im Einsatz durch den Host (Root Disk Controller) oder in einer IOMMU-Gruppe, deren andere Mitglieder das Skript nicht sicher identifizieren kann. Förderfähige Geräte stehen zur Auswahl.",
+        "img": "/disk/nvme-passthrough/conflict-warning.png",
+        "alt": "Konflikterkennungswarnung",
+        "caption": "Konflikterkennung — Gerät aus Gründen blockiert"
+      },
+      {
+        "title": "Beifügen und Abschließen",
+        "bodyRich": "Für jedes ausgewählte Gerät führt ProxMenux <code>qm set &lt;VMID&gt; --hostpciN &lt;pci-addr&gt;,pcie=1</code> aus und wählt den nächsten kostenlosen <code>hostpci</code>-Slot. Wenn IOMMU während dieser Sitzung aktiviert wurde, werden Sie daran erinnert, vor dem Starten des VM neu zu starten.",
+        "img": "/disk/nvme-passthrough/assignment.png",
+        "alt": "Zusammenfassung der Zuweisung",
+        "caption": "Zuordnungszusammenfassung — hostpciN-Slots und PCI-Adressen beigefügt"
+      }
+    ]
+  },
+  "manual": {
+    "heading": "Manuelles Äquivalent"
+  },
+  "troubleshoot": {
+    "heading": "Fehlerbehebung",
+    "noGroupsTitle": "IOMMU aktiviert, aber keine Gruppen unter /sys/kernel/iommu_groups/",
+    "noGroupsBody": "Ein Neustart ist erforderlich, damit die Kernel-Cmdline wirksam wird. Wenn die Gruppen nach dem Neustart immer noch fehlen, ist VT-d / AMD-Vi wahrscheinlich in der Firmware deaktiviert - überprüfen Sie das BIOS / UEFI-Setup.",
+    "busyTitle": "VM startet nicht mit \"hostpciN: Device busy\"",
+    "busyBody": "Ein anderer Prozess hält immer noch das PCI-Gerät. Die häufigsten Ursachen: ein früherer VM, der abgestürzt ist, ohne ihn freizugeben, oder der Host-Kernel hat ihn beim letzten Booten zurückgewonnen. Führen Sie <code>lspci -nnk -s &lt;addr&gt;</code> aus, um zu sehen, welcher Treiber gebunden ist; es sollte <code>vfio-pci</code> sein. Ein Full Host Reboot löscht dies normalerweise.",
+    "noDisksTitle": "Gast sieht den Controller, aber nicht die Festplatten",
+    "noDisksBody": "Dem Controller-Modell fehlt ein In-Gast-Treiber. Linux trifft dies fast nie; Windows installiert den Herstellertreiber (z.B.) LSI / Broadcom für ältere SAS HBAs), während die Karte abgetrennt wird, und starten Sie dann mit der angehängten Karte neu.",
+    "sharedTitle": "Shared IOMMU Group exportiert auch ein nicht verwandtes Gerät",
+    "sharedBody": "Optionen: (a) Verschieben Sie die Karte in einen anderen PCIe-Slot, um ihre Gruppe zu ändern, (b) Aktivieren Sie <em>ACS, um </em> im Kernel zu überschreiben, um Gruppen aufzuteilen (Sicherheitsabwägung - Recherche vor der Anwendung) oder (c) Wählen Sie eine andere Karte in einer saubereren Gruppe."
+  },
+  "related": {
+    "heading": "Verwandte Themen",
+    "items": [
+      {
+        "href": "/docs/disk-manager/import-disk-vm",
+        "label": "Datenträger in VM importieren",
+        "tail": "Alternatives Modell: Befestigen Sie eine physische Festplatte über Proxmox ohne vollständigen PCIe-Durchgang."
+      },
+      {
+        "href": "/docs/hardware/gpu-vm-passthrough",
+        "label": "GPU zu VM hinzufügen (Passthrough)",
+        "tail": "- gleiche IOMMU / VFIO-Konzepte, die auf einen GPU angewendet wurden."
+      },
+      {
+        "href": "/docs/help-info/gpu-commands",
+        "label": "GPU Durchgangsbefehle",
+        "tail": "IOMMU-Verifizierungsbefehle gelten auch für den Controller / NVMe-Durchgang."
+      },
+      {
+        "href": "/docs/disk-manager",
+        "label": "Übersicht Disk Manager",
+        "tail": "."
+      }
+    ]
+  }
+}

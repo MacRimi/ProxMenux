@@ -1,0 +1,93 @@
+{
+  "meta": {
+    "title": "ProxMenux Backup & Restore — Übersicht | Vollständiges Host-Backup und Wiederherstellung für Proxmox VE",
+    "description": "ProxMenux Backup & Restore erfasst den vollständigen Zustand eines Proxmox-Hosts – Dateisystem, strukturiertes Konfigurationsmanifest und installierte Pakete/Komponenten – und reproduziert ihn auf demselben oder einem anderen Host. Das Backup und die Wiederherstellung sind in sich geschlossen: keine externen Abhängigkeiten, und kernübergreifende Wiederherstellungen werden durch einen richtungsbewussten Safe-Subset-Filter und eine Kernel-agnostische Hydratation unterstützt.",
+    "ogTitle": "ProxMenux Backup & Restore – Übersicht",
+    "ogDescription": "Vollständiges Host-Backup und Wiederherstellung für Proxmox VE mit strukturiertem Manifest, Paketliste und Komponenten-Reinstallierern.",
+    "twitterTitle": "ProxMenux-Sicherung und Wiederherstellung | ProxMenux",
+    "twitterDescription": "Vollständiges Host-Backup und Wiederherstellung für Proxmox VE mit strukturiertem Manifest, Paketliste und Komponenten-Reinstallierern."
+  },
+  "header": {
+    "title": "Sicherung und Wiederherstellung",
+    "description": "Full-Host-Backup und Wiederherstellung für Proxmox VE. Erfasst Dateisystem, Konfiguration und installierte Komponenten in einem einzigen Archiv und reproduziert den Host auf derselben oder einer anderen Proxmox-Installation ohne externe Abhängigkeiten.",
+    "section": "Sicherung und Wiederherstellung"
+  },
+  "intro": {
+    "title": "Was es ist, in einem Absatz",
+    "body": "Ein ProxMenux-Backup erfasst den vollständigen Zustand eines Proxmox-Hosts: <strong>das Dateisystem</strong> (relevante Verzeichnisse unter <code>/etc</code>, <code>/root</code>, <code>/var/lib/pve-cluster</code> sowie optionale benutzerdefinierte Pfade), <strong>a strukturiertes Manifest</strong> (JSON mit der erkannten Hardware, Kernelparametern, Netzwerklayout, ZFS-Zustand, Benutzer und Cron-Einträge) und <strong>ein Anwendungsinventar</strong> (alle Pakete, die als manuell von APT installiert markiert sind, sowie die Liste der von ProxMenux installierten Komponenten mit ihren genauen Versionen). Jeder der drei unterstützten Ziele – lokales Archiv, Proxmox Backup Server (empfohlen) oder Borg – erhält die gleiche in sich geschlossene Nutzlast, und jeder von ihnen kann den Zielhost hydratisieren, ohne dass die Quelle zum Zeitpunkt der Wiederherstellung erreichbar ist."
+  },
+  "video": {
+    "heading": "Video Walkthrough",
+    "intro": "Bevor Sie Backup & Restore in Aktion ansehen, bevor Sie es konfigurieren? Diese Komplettlösung umfasst eine vollständige End-to-End-Demo der Funktion in ProxMenux.",
+    "title": "ProxMenux — Backup und Wiederherstellung",
+    "caption": "Externes Video auf YouTube. Spielt im datenschutzverstärkten modus (keine cookies, bis sie play drücken)."
+  },
+  "whatItIsNot": {
+    "heading": "Was es nicht ist",
+    "intro": "Der Abschnitt behandelt <strong>host-level</strong> Backup und Wiederherstellung: die Proxmox-Installation selbst, nicht die darauf laufenden Workloads.",
+    "items": [
+      "<strong>Es ist kein VM/CT-Backup-Tool.</strong> Guest-Festplatten und RAM-Zustand werden von dieser Funktion nicht erfasst; dafür dient <code>vzdump</code>. Die Gast-<strong>-Konfigurationsdateien</strong> (<code>/etc/pve/nodes/&lt;node&gt;/qemu-server/*.conf</code> und <code>lxc/*.conf</code>) <strong>are</strong> erfasst, so dass nach einer Wiederherstellung das Gastinventar wieder erscheint und Festplatten von einem vorhandenen PBS/lokalen Backup neu angehängt werden können.",
+      "<strong>Es ist keine clusterweite Operation.</strong> Jeder Knoten sichert sich selbst. Die Clustermitgliedschaft wird als Teil von <code>/etc/pve</code> erfasst, so dass ein wiederhergestellter Knoten wieder zu seinem Cluster hinzugefügt werden kann, aber die Wiederherstellung eines vollständigen Clusters erfordert eine Koordination pro Knoten.",
+      "<strong>Es ist kein Full Disk Image.</strong> Kernel-Binärdateien, die Initramfs und die Boot-Partition werden nicht erfasst. Bei einer Wiederherstellung stützt sich ProxMenux auf die eigenen Boot-Artefakte des Zielhosts (die automatisch von <code>update-initramfs</code> und dem Bootloader-Tool regeneriert werden) und installiert passende Treiber gegen den laufenden Kernel des Ziels."
+    ]
+  },
+  "threePillars": {
+    "heading": "Die drei Säulen eines Backups",
+    "intro": "Ein ProxMenux-Archiv ist um drei in sich geschlossene Nutzlasten strukturiert. Die Wiederherstellung verwendet alle drei zusammen, um den Quellhost auf einem Ziel zu reproduzieren, auf dem möglicherweise nicht einmal derselbe Kernel installiert ist.",
+    "diagramCaption": "Jedes Backup liefert die gleichen drei Nutzlasten unabhängig vom Ziel. Die Wiederherstellung verbraucht alle drei: Rootfs zum Legen von Dateien, Manifest zum Erkennen von Drift- und Cross-Kernel-Unterschieden und Anwendungsinventar zum erneuten Installieren von Paketen und Komponenten gegen den eigenen Kernel des Ziels.",
+    "pillar1Label": "Dateisystem",
+    "pillar1Detail": "Wurzelwurzeln/\n(rsync von /etc,\n/etc/systemd/network,\n/root, plus a\nsqlite3 Snapshot\n/var/lib/pve-cluster,\n+ optionale Trassen",
+    "pillar2Label": "Manifest",
+    "pillar2Detail": "manifest.json\n(Hardware, Kernel)\nParams, Netz,\nZFS, Anwender, Cron,\nZFS-Pools, Speicher",
+    "pillar3Label": "Anwendungen",
+    "pillar3Detail": "packages.manual.list\n+ components_status.json\n(APT-Handbuch + ProxMenux)\nInstallateure mit Versionen"
+  },
+  "restoreIsUniversal": {
+    "heading": "Die Wiederherstellung reproduziert den Quell-Host, nicht das Archiv",
+    "body": "Restaurierung a ProxMenux Backup extrahiert nicht nur das Dateisystem. Der Wiederherstellungsfluss liest das Manifest, um eine Drift zwischen der Quelle und dem Ziel zu erkennen (Hardwareunterschiede, NIC-Umbenennungen, Kernel-Version), ZFS Pool-Identität), wiederholt das Dateisystem und löst dann für jeden Dienst, der auf der Quelle installiert wurde, das richtige Komponenten-Installationsprogramm aus (NVIDIA Fahrer, Coral TPU, AMD GPU Werkzeuge, Intel GPU Werkzeuge. Jeder Installateur läuft gegen die <strong>aktueller Kernel von target</strong>, so dass der wiederhergestellte Host nicht davon abhängt, dass der Kernel der Quelle vorhanden ist. Wenn der Kernel des Ziels neuer ist als der des Backups, ist ein Kernel-Agnostikum <strong>Hydratation</strong> pass führt das eigene Tuning des Benutzers zusammen (IOMMU-Token, VFIO-Geräte-IDs, benutzerdefinierte Macken), GRUB Schlüssel) in die Neustartkonfiguration des Ziels, ohne Kernel-gebundene Dateien wortwörtlich zu kopieren."
+  },
+  "twoInterfaces": {
+    "heading": "Zwei Schnittstellen, ein Backend",
+    "intro": "Jeder Schritt des Backup- und Wiederherstellungsworkflows ist über zwei Einstiegspunkte verfügbar. Beide rufen die gleiche Shell-Bibliothek auf, produzieren identische Archive und lesen die gleiche Job-Registrierung.",
+    "cliLabel": "ProxMenux Scripts (TUI)",
+    "cliDetail": "Menü → Dienstprogramme →\nHost Backup / Wiederherstellung\n\nDialogbasierter Flow,\nSSH-freundlich, skriptfähig\nfür unbeaufsichtigte Nutzung.",
+    "webLabel": "ProxMenux Monitor (Weboberfläche)",
+    "webDetail": "Backups im Tab\nWeb-Interface des Monitors.\n\nOne-Click-Wiederherstellung, Live\nlog tail, integriert mit\nMeldungen und die\nRollback Delta Viewer."
+  },
+  "whereNext": {
+    "heading": "Wohin von hier zu gehen",
+    "intro": "Jeder Unterabschnitt unten behandelt einen Aspekt des Workflows in der Tiefe. Beginnen Sie mit <em>Wie es funktioniert</em>, wenn das Ziel ist zu verstehen, was das Archiv enthält und warum. Springen Sie zu <em>Destinations</em>, um das Ziel für die Kopie zu konfigurieren. Lesen Sie <em>Restoring</em> und <em>Cross-kernel restore</em> für die Wiederherstellungsseite.",
+    "items": [
+      {
+        "label": "Wie es funktioniert",
+        "href": "/docs/backup-restore/how-it-works",
+        "tail": "— die drei Nutzlasten (Roots, Manifest, Anwendungen) im Detail, mit den Sammlern, die sie produzieren, und dem Format jeder Datei."
+      },
+      {
+        "label": "Reiseziele",
+        "href": "/docs/backup-restore/destinations",
+        "tail": "Vergleich von lokal, Proxmox Backup Server (empfohlen) und Borg, und wie man jeden konfiguriert."
+      },
+      {
+        "label": "Backups erstellen",
+        "href": "/docs/backup-restore/creating-backups",
+        "tail": "- einmalige Backups, das Standardpfadprofil, Hinzufügen benutzerdefinierter Pfade, Verschlüsselung für PBS."
+      },
+      {
+        "label": "Geplante Arbeitsplätze",
+        "href": "/docs/backup-restore/scheduled-jobs",
+        "tail": "- neue Jobs vs. Anhängen an einen bestehenden PVE vzdump-Job, Planungsformate, das Jobdetailmodal."
+      },
+      {
+        "label": "Wiederherstellung",
+        "href": "/docs/backup-restore/restoring",
+        "tail": "— die drei Aktionen in einem Archiv (Ansicht, Download, Wiederherstellung), Complete vs. Benutzerdefinierte Wiederherstellung, der Post-Boot-Dispatcher und warum die letzten zehn Minuten wichtig sind."
+      },
+      {
+        "label": "Kernübergreifende Wiederherstellung",
+        "href": "/docs/backup-restore/cross-kernel",
+        "tail": "richtungsbewusstes Verhalten, wenn sich der Zielkernel von dem Backup, dem Safe-Subset-Filter und den vier Hydratationsphasen unterscheidet."
+      }
+    ]
+  }
+}

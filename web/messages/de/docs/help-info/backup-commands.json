@@ -1,0 +1,235 @@
+{
+  "meta": {
+    "title": "Proxmox-Sicherungsbefehle — vzdump, qmrestore, pct restore | ProxMenux",
+    "description": "Referenz von Proxmox VE-Backup- und Wiederherstellungsbefehlen: vzdump für VMs und LXC-Container, qmrestore für VMs, pct-Restore für Container, geplante Backups in /etc/pve/jobs.cfg, Hook-Skripts und Ausschlusspfade.",
+    "ogTitle": "Proxmox-Sicherungsbefehle — vzdump, qmrestore, pct restore",
+    "ogDescription": "Referenz der Befehle vzdump, qmrestore und pct restore zum Sichern und Wiederherstellen von Proxmox VMs und LXC Containern.",
+    "twitterTitle": "Proxmox Backup Befehle | ProxMenux",
+    "twitterDescription": "vzdump, qmrestore und pct restore Befehle zum Sichern und Wiederherstellen von Proxmox VMs und Containern."
+  },
+  "header": {
+    "title": "Backup und Restore",
+    "description": "Kuratierte Referenz der Befehle vzdump, qmrestore und pct restore für Proxmox Backup-Workflows. Enthält Planung, erweiterte Optionen wie Hook-Skripte / Ausschlusspfade / I / O-Priorität und Backup-Dateiverwaltung.",
+    "section": "Hilfe und Informationen"
+  },
+  "intro": {
+    "title": "Drei Backup-Modi",
+    "body": "<strong>snapshot</strong> verwendet einen Live-Snapshot - Gast bleibt am Laufen, pausiert kurz I / O. <strong>suspend</strong> friert den VM während des Backups ein (sicherer als Snapshot für nicht-snapshot-bewusste FS). <strong>stop</strong> schaltet den VM herunter, sichert kalt und startet neu. Wählen Sie nach Gästetoleranz und Speicherfähigkeit."
+  },
+  "commandGroups": [
+    {
+      "title": "VM-Sicherung",
+      "commands": [
+        {
+          "command": "vzdump <vmid>",
+          "description": "Erstellen Sie ein Backup eines bestimmten VM/CT"
+        },
+        {
+          "command": "vzdump <vmid> --storage <storage>",
+          "description": "Backup VM für bestimmten Speicher"
+        },
+        {
+          "command": "vzdump <vmid> --mode snapshot",
+          "description": "Snapshot-Backup erstellen (für VMs)"
+        },
+        {
+          "command": "vzdump <vmid> --mode suspend",
+          "description": "VM während des Backups aussetzen"
+        },
+        {
+          "command": "vzdump <vmid> --mode stop",
+          "description": "VM während des Backups stoppen"
+        },
+        {
+          "command": "vzdump --all",
+          "description": "Backup aller VMs und Container"
+        },
+        {
+          "command": "vzdump --exclude <vmid1>,<vmid2>",
+          "description": "Backup aller außer spezifizierten VMs"
+        }
+      ]
+    },
+    {
+      "title": "Backup-Optionen",
+      "commands": [
+        {
+          "command": "vzdump <vmid> --compress zstd",
+          "description": "Verwenden Sie zstd Kompression für Backup"
+        },
+        {
+          "command": "vzdump <vmid> --pigz <threads>",
+          "description": "Verwenden Sie pigz mit mehreren Threads"
+        },
+        {
+          "command": "vzdump <vmid> --notes <text>",
+          "description": "Notizen zum Backup hinzufügen"
+        },
+        {
+          "command": "vzdump <vmid> --mailto <email>",
+          "description": "Senden Sie Benachrichtigung E-Mail"
+        },
+        {
+          "command": "vzdump <vmid> --maxfiles <n>",
+          "description": "Halten Sie nur n Backups pro VM"
+        },
+        {
+          "command": "vzdump <vmid> --stdexcludes 0",
+          "description": "Keine temporären Dateien ausschließen"
+        },
+        {
+          "command": "vzdump <vmid> --quiet 1",
+          "description": "Ausgabemeldungen unterdrücken"
+        }
+      ]
+    },
+    {
+      "title": "Backups wiederherstellen",
+      "commands": [
+        {
+          "command": "qmrestore <backup-file> <vmid>",
+          "description": "VM aus dem Backup wiederherstellen"
+        },
+        {
+          "command": "qmrestore <backup-file> <vmid> --storage <storage>",
+          "description": "Wiederherstellen zu einem bestimmten Speicher"
+        },
+        {
+          "command": "qmrestore <backup-file> <vmid> --unique",
+          "description": "Erstellen Sie einen VM mit eindeutiger ID"
+        },
+        {
+          "command": "pct restore <vmid> <backup-file>",
+          "description": "Container aus dem Backup wiederherstellen"
+        },
+        {
+          "command": "pct restore <vmid> <backup-file> --storage <storage>",
+          "description": "Container für einen bestimmten Speicher wiederherstellen"
+        },
+        {
+          "command": "pct restore <vmid> <backup-file> --rootfs <storage>",
+          "description": "Wiederherstellen zu bestimmten Rootfs"
+        },
+        {
+          "command": "pct restore <vmid> <backup-file> --unprivileged 1",
+          "description": "Wiederherstellen als unprivilegierte CT"
+        }
+      ]
+    },
+    {
+      "title": "Sicherungsverwaltung",
+      "commands": [
+        {
+          "command": "ls -la /var/lib/vz/dump/",
+          "description": "Backups am Standardstandort auflisten"
+        },
+        {
+          "command": "find /var/lib/vz/dump/ -name \"*.vma*\"",
+          "description": "VM Backups finden"
+        },
+        {
+          "command": "find /var/lib/vz/dump/ -name \"*.tar*\"",
+          "description": "Container-Backups finden"
+        },
+        {
+          "command": "pvesm list <storage>",
+          "description": "Backups im spezifischen Speicher auflisten"
+        },
+        {
+          "command": "rm /var/lib/vz/dump/<backup-file>",
+          "description": "Löschen einer Backup-Datei"
+        },
+        {
+          "command": "cat /etc/vzdump.conf",
+          "description": "Backup Konfiguration anzeigen"
+        }
+      ]
+    },
+    {
+      "title": "Geplante Backups",
+      "commands": [
+        {
+          "command": "cat /etc/cron.d/vzdump",
+          "description": "Backup-Zeitplan anzeigen"
+        },
+        {
+          "command": "nano /etc/vzdump.conf",
+          "description": "Backup-Konfiguration bearbeiten"
+        },
+        {
+          "command": "systemctl list-timers",
+          "description": "Liste aller geplanten Aufgaben"
+        },
+        {
+          "command": "systemctl status cron",
+          "description": "Status des Kronendienstes überprüfen"
+        },
+        {
+          "command": "grep vzdump /var/log/syslog",
+          "description": "Backup-Logs in syslog überprüfen"
+        },
+        {
+          "command": "tail -f /var/log/vzdump.log",
+          "description": "Backup-Log in Echtzeit überwachen"
+        }
+      ]
+    },
+    {
+      "title": "Fortgeschrittene Operationen",
+      "commands": [
+        {
+          "command": "qmrestore <backup> <vmid> --force",
+          "description": "Kraftwiederherstellung, Überschreiben bestehender VM"
+        },
+        {
+          "command": "vzdump <vmid> --dumpdir <directory>",
+          "description": "Benutzerdefiniertes Backup-Verzeichnis angeben"
+        },
+        {
+          "command": "vzdump <vmid> --script <script>",
+          "description": "Hook-Script während des Backups ausführen"
+        },
+        {
+          "command": "vzdump <vmid> --exclude-path <path>",
+          "description": "Bestimmte Pfade aus dem Backup ausschließen"
+        },
+        {
+          "command": "vzdump <vmid> --ionice <priority>",
+          "description": "I/O-Priorität für Backup-Prozess festlegen"
+        },
+        {
+          "command": "vzdump <vmid> --lockwait <minutes>",
+          "description": "Warten auf Sperre"
+        },
+        {
+          "command": "qm importdisk <vmid> <backup> <storage>",
+          "description": "Disk aus dem Backup importieren"
+        }
+      ]
+    }
+  ],
+  "testRestores": {
+    "title": "Testen Sie Ihre Restaurationen",
+    "bodyRich": "Ein Backup, das Sie nie wiederhergestellt haben, ist kein Backup. Wählen Sie regelmäßig ein Backup aus, stellen Sie es mit <code>qmrestore --unique</code> auf einen Test-VMID wieder her, booten Sie das resultierende VM und bestätigen Sie, dass der Inhalt intakt ist. Gleiche Idee für Container über <code>pct restore</code>."
+  },
+  "related": {
+    "heading": "Verwandte Themen",
+    "items": [
+      {
+        "href": "/docs/help-info/vm-ct-commands",
+        "label": "VM und CT Management",
+        "tail": "qm und pct Lifecycle Befehle."
+      },
+      {
+        "href": "/docs/help-info/storage-commands",
+        "label": "Storage und Disks",
+        "tail": "- pvesm Storage Management."
+      },
+      {
+        "href": "/docs/help-info",
+        "label": "Hilfe und Info Überblick",
+        "tail": "."
+      }
+    ]
+  }
+}

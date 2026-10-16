@@ -1,0 +1,271 @@
+{
+  "meta": {
+    "title": "Deinstallationsoptimierungen | ProxMenux Dokumentation",
+    "description": "Wiederherstellung reversibler Konfigurationsänderungen nach der Installation durch ProxMenux. Registrierte Tools verwenden dedizierte Deinstallationsgeräte, die den bereits vorhandenen Host-Status nach Möglichkeit beibehalten."
+  },
+  "header": {
+    "title": "Optimierungen deinstallieren",
+    "description": "Stellen Sie reversible Änderungen wieder her, die durch die automatisierten oder anpassbaren Skripte nach der Installation vorgenommen wurden. ProxMenux registriert jede unterstützte Optimierung mit ihrer dedizierten Wiederherstellungsfunktion; Paket-Upgrades sind absichtlich ausgeschlossen.",
+    "section": "Einstellungen nach der Installation von Proxmox"
+  },
+  "intro": {
+    "title": "Warum es das gibt",
+    "body": "Jeder unterstützte reversible Tweak ist <strong>tracked</strong> in <code>/usr/local/share/proxmenux/installed_tools.json</code>. Diese Registry steuert den Deinstallationsfluss: Sie listet die aktiven Optimierungen auf und sendet die passende Wiederherstellungsfunktion. Aktionen ohne sicheres Rollback, wie ein Full Package Upgrade, werden nicht hinzugefügt."
+  },
+  "openMenu": {
+    "heading": "Wie man es öffnet",
+    "body": "Aus ProxMenux Hauptmenü, <strong>Settings post-install Proxmox → Deinstallieren Optimierungen</strong>. Sie sehen eine Checkliste von <em>aktuell angewendet</em> Optimierungen - Elemente, die Sie nicht angewendet haben, werden nicht angezeigt.",
+    "imageAlt": "Deinstallieren Sie die Checkliste Optimierungen, die Elemente zeigt, die derzeit auf dem Host angewendet werden, mit Kontrollkästchen, um auszuwählen, welche zurückgesetzt werden sollen"
+  },
+  "howWorks": {
+    "heading": "Wie die Umkehrung funktioniert",
+    "steps": [
+      {
+        "title": "Registrierung und automatische Erkennung",
+        "body1": "Beim ersten Durchlauf geht ProxMenux den Host auf der Suche nach Fingerabdruckdateien (z.B.) <code>/etc/sysctl.d/99-memory.conf</code>, <code>/etc/apt/apt.conf.d/99-force-ipv4</code>, <code>haveged</code>-Paket installiert, Log2RAM-Dienst aktiv... Alles, was gefunden wurde, wird der Registry als reversibel hinzugefügt, auch wenn es von einer älteren ProxMenux-Version angewendet wurde, die vor der Registry existiert.",
+        "body2": "Diese Migration läuft nur einmal. Danach aktualisiert jedes Anwenden / Zurücksetzen die Registrierung direkt."
+      },
+      {
+        "title": "Wählen Sie, was Sie zurückgeben",
+        "body1": "Die Checkliste zeigt pro Artikel ein menschenlesbares Label (z.B. <em>Speichereinstellungen Optimierung</em>, <em>IOMMU/VFIO PCI-Durchgang</em>, <em>Log2RAM (SSD-Schutz)</em>). Klicken Sie auf die, die Sie umkehren möchten. Nichts, was Sie nicht ankreuzen, wird berührt."
+      },
+      {
+        "title": "Umkehrläufe",
+        "body1": "Für jedes ausgewählte Element ruft ProxMenux seine passende Deinstallationsfunktion auf. Die meisten Umkehrungen folgen einem von drei Mustern:",
+        "items": [
+          "<strong>Backup-basierte </strong> — Wiederherstellung eines <code>.bak</code>, das zum Zeitpunkt der Anwendung erfasst wurde (bashrc, logrotate.conf, journald.conf, GRUB/kernel cmdline).",
+          "<strong>Delete-the-config</strong> — ProxMenux <code>/etc/sysctl.d/99-*.conf</code>, <code>/etc/apt/apt.conf.d/99-*</code> oder systemd Einheit entfernen, dann neu laden.",
+          "<strong>Package reinstall</strong> — Für UI-Änderungen wie das Abonnement-Banner installieren Sie die Upstream-Pakete mit <code>--force-confnew</code>, um die ausgelieferte Konfiguration wiederherzustellen."
+        ],
+        "body2": "Jede Umkehrung protokolliert ihren Fortschritt. Elemente, die einen Neustart erfordern (VFIO, persistente Schnittstellennamen), setzen ein Flag, das die Neustartaufforderung am Ende auslöst."
+      },
+      {
+        "title": "Reboot prompt am Ende",
+        "body1": "Nachdem die Umkehrung beendet ist, zeigt das Menü eine Neustartaufforderung an. Elemente, die Kernelparameter, Kernelmodule oder Netzwerknamen (VFIO, persistente Schnittstellennamen) geändert haben, benötigen den Neustart, um wirksam zu werden; andere Elemente nicht, und die Eingabeaufforderung ist ein Sicherheitsstandard und keine Per-Item-Überprüfung."
+      }
+    ]
+  },
+  "reversible": {
+    "heading": "Was reversibel ist",
+    "intro": "Registrierte reversible Optimierungen und deren passende Deinstallateure werden hier nach Bereichen gruppiert:",
+    "groups": [
+      {
+        "title": "Datenspeicher und APT",
+        "items": [
+          {
+            "tool": "Abonnementbanner entfernen",
+            "restores": "Zunächst wird versucht, die UI-Dateien aus ProxMenux-eigenen Backups wiederherzustellen (/usr/local/share/proxmenux/backups/proxmoxlib.js.backup.* und, wenn die mobile UI gepatcht wird, index.html.tpl.backup.*). Nur wenn ein Backup fehlt oder beschädigt ist, greift man auf die Neuinstallation von pve-manager, proxmox-widget-toolkit, libjs-extjs und libpve-http-server-perl mit force-confnew zurück. Löscht auch zwischengespeicherte .js / .gz-Kopien."
+          },
+          {
+            "tool": "APT-Sprachdateien überspringen",
+            "restores": "Entfernt /etc/apt/apt.conf.d/99-disable-translations. APT wird Sprachpakete erneut herunterladen."
+          },
+          {
+            "tool": "IPv4 für APT erzwingen",
+            "restores": "Entfernen von /etc/apt/apt.conf.d/99-force-ipv4."
+          },
+          {
+            "tool": "Systemversorgung",
+            "restores": "Bereinigt nur die ausgewählten Versorgungspakete, die ProxMenux als neu installiert aufgezeichnet hat. Pakete, die bereits vor der Aktion vorhanden sind, werden dieser Liste nie hinzugefügt und bleiben unberührt."
+          }
+        ]
+      },
+      {
+        "title": "Kernel, Speicher und Systemgrenzen",
+        "items": [
+          {
+            "tool": "Speichereinstellungen",
+            "restores": "Entfernt /etc/sysctl.d/99-memory.conf und lädt sysctl neu."
+          },
+          {
+            "tool": "Kernel Panic Konfiguration",
+            "restores": "Entfernen von /etc/sysctl.d/99-kernelpanic.conf."
+          },
+          {
+            "tool": "Systemgrenzen erhöhen",
+            "restores": "Entfernt /etc/sysctl.d/99-maxwatches.conf, 99-maxkeys.conf, 99-swap.conf, 99-fs.conf und /etc/security/limits.d/99-limits.conf. Reverts PAM-Limits und systemd DefaultLimitNOFILE und entfernt die Linie ulimit -n 256000 von /root/.profile."
+          },
+          {
+            "tool": "ZRAM-Swapprofil",
+            "restores": "Deaktiviert den Swap auf /dev/zram0, stoppt dev-zram0.swap und entfernt /etc/systemd/zram-generator.conf.d/90-proxmenux.conf. Das systemd-zram-generator-Paket wird nur gelöscht, wenn ProxMenux es installiert hat und kein anderes ZRAM-Setup vorhanden ist. Wenn die Seiten in ZRAM nicht verschoben werden können, bleibt das Profil aktiv und es wird nichts entfernt."
+          }
+        ]
+      },
+      {
+        "title": "Vernetzung",
+        "items": [
+          {
+            "tool": "Netzwerkoptimierungen",
+            "restores": "Entfernt /etc/sysctl.d/99-network.conf, 97-proxmenux-fwbr.conf und 98-proxmenux-rpf.conf zusammen mit der proxmenux-fwbr-tune.service-Einheit, dem /usr/local/sbin/proxmenux-fwbr-tune-Helfer und der /etc/udev/rules.d/99-zz-proxmenux-fwbr-tune.rules-Udev-Regel. Außerdem entfernt man die Quellzeile /etc/network/interfaces.d/* von /etc/network/interfaces. Reloads sysctl, systemd und dem udev-Regelnsatz."
+          },
+          {
+            "tool": "Open vSwitch",
+            "restores": "Läuft apt purge auf openvswitch-switch und openvswitch-common. Migrieren Sie alle OVS-Bridges zurück zu Linux-Bridges, bevor Sie diese Deinstallation ausführen - sonst verlieren die VMs auf diesen Bridges beim nächsten Booten die Vernetzung."
+          },
+          {
+            "tool": "TCP BBR + TCP Schnell geöffnet",
+            "restores": "Entfernt /etc/sysctl.d/99-tcp-bbr.conf und 99-tcp-fastopen.conf und lädt sysctl neu, so dass der Kernel zur kubischen Staukontrolle und zu tcp_fastopen=1 zurückkehrt."
+          },
+          {
+            "tool": "Persistente Schnittstellennamen",
+            "restores": "Entfernt nur die 10-proxmenux-*.link-Dateien mit dem ProxMenux-Header aus /etc/systemd/network/. Jede .link-Datei, die von einem anderen Paket bereitgestellt oder vom Benutzer geschrieben wurde, bleibt an Ort und Stelle. Schnittstellennamen kehren beim nächsten Neustart zum Standardverhalten von systemd zurück."
+          }
+        ]
+      },
+      {
+        "title": "Protokollierung",
+        "items": [
+          {
+            "tool": "Journald Optimierung",
+            "restores": "Schreibt /etc/systemd/journald.conf mit Vanille-Standards um und startet systemd-journald neu."
+          },
+          {
+            "tool": "Logrotatoptimierung",
+            "restores": "Wiederherstellt /etc/logrotate.conf aus der vor der Änderung erfassten .bak-Datei."
+          },
+          {
+            "tool": "Log2RAM",
+            "restores": "Stoppt und deaktiviert den Service und Timer. Purges Cron Jobs, systemd Einheiten, Binärdateien, Konfigurationsdateien und das /var/log.hdd-Verzeichnis. Deinstalliert auch das apt-Paket, wenn es auf diese Weise installiert wurde."
+          },
+          {
+            "tool": "Automatisches ZFS-TRIM",
+            "restores": "Lesen Sie /usr/local/share/proxmenux/zfs_autotrim_pools (die Liste der Pools ProxMenux hat sich tatsächlich geändert) und führt zpool set autotrim=off auf jedem aus. Pools, die Sie manuell autotrim eingestellt haben, bevor ProxMenux ausgeführt wurde, werden nicht berührt."
+          }
+        ]
+      },
+      {
+        "title": "Schale und Aussehen",
+        "items": [
+          {
+            "tool": "Bashrc anpassen",
+            "restores": "Wiederherstellt /root/.bashrc aus dem .bak-Backup. Wenn kein Backup vorhanden ist, wird der PMX_CORE_BASHRC-Block durch Markierungen entfernt."
+          },
+          {
+            "tool": "Eigenes MOTD-Banner",
+            "restores": "Stellen Sie den genauen ursprünglichen /etc/motd-Inhalt, der unter /usr/local/share/proxmenux gespeichert ist, wieder her, entfernen Sie die Datei, wenn sie vorher nicht vorhanden war, oder entfernen Sie den alten Marker sicher, wenn Sie eine ältere Installation migrieren."
+          },
+          {
+            "tool": "Fastfetch",
+            "restores": "Entfernt das Binärverzeichnis, den Update-Motd-Hook und den eingezäunten BEGIN FASTFETCH / END FASTFETCH-Block von /root/.bashrc, ~ /.profile, /etc/profile und /etc/profile.d/fastfetch.sh. Säubert das apt-Paket, wenn installiert."
+          },
+          {
+            "tool": "Figurine",
+            "restores": "Entfernt den Binär-, profile.d-Eintrag und den Alias-Block in bashrc/profile."
+          }
+        ]
+      },
+      {
+        "title": "Hardware & Virtualisierung",
+        "items": [
+          {
+            "tool": "IOMMU / VFIO",
+            "restores": "Entfernt vfio Module aus /etc/modules, die Nouveau / Radeon / nvidia Blacklist Einträge und intel_iommu=on / amd_iommu=on / iommu=pt / pcie_acs_override Parameter aus /etc/kernel/cmdline (ZFS) oder GRUB. Baut Initramfs wieder auf."
+          },
+          {
+            "tool": "AMD CPU Fixes (Ryzen/EPYC)",
+            "restores": "Entfernt idle=nomwait aus Kernel cmdline (ZFS) oder GRUB und die ignore_msrs / report_ignored_msrs Optionen aus /etc/modprobe.d/kvm.conf."
+          },
+          {
+            "tool": "QEMU Guest Agent (Vorlagen)",
+            "restores": "Lesen Sie /usr/local/share/proxmenux/guest_agent.pkg (aufgezeichnet zum Zeitpunkt der Installation) und passen Sie das Paket, das installiert wurde (qemu-Gast-Agent für Standard-Hosts, Spice-vdagent, wenn der Spice-Modus verwendet wird)."
+          }
+        ]
+      },
+      {
+        "title": "Lagerung",
+        "items": [
+          {
+            "tool": "ZFS-ARC-Größe anpassen",
+            "restores": "Entfernt /etc/modprobe.d/99-zfsarc.conf, stellt alle in Konflikt stehenden externen *.conf wieder her, die in /usr/local/share/proxmenux/backups/zfs_arc/ inszeniert wurden, stellt initramfs wieder her und führt proxmox-boot-tool-Refresh auf systemd-Boot-Hosts aus."
+          },
+          {
+            "tool": "Automatische ZFS-Snapshots",
+            "restores": "Entfernt die Cron-Einträge, die das Skript geschrieben hat, und bietet an, zfs-auto-snapshot zu bereinigen. Bestehende Snapshot-Datensätze in den Pools bleiben intakt - entfernen Sie sie separat, wenn Sie sie weghaben möchten."
+          },
+          {
+            "tool": "vzdump-Geschwindigkeitsbegrenzung",
+            "restores": "Restores /etc/vzdump.conf aus der .bak die Installation erstellt, bringt bwlimit und Ionice auf ihre Pre-ProxMenux Werte zurück."
+          }
+        ]
+      },
+      {
+        "title": "Dienstleistungen & Extras",
+        "items": [
+          {
+            "tool": "Zeitsynchronisation",
+            "restores": "Setzt die Zeitzone zurück auf UTC (safe default) über timedatectl."
+          },
+          {
+            "tool": "Entropieerzeugung (Haven)",
+            "restores": "Stoppt, deaktiviert und bereinigt das Paket."
+          },
+          {
+            "tool": "kexec (schnelle Neustarts)",
+            "restores": "Deaktiviert kexec-pve.service, entfernt die Unit-Datei und den Reboot-Quick-Alias aus /root/.bash_profile, bereinigt kexec-tools."
+          },
+          {
+            "tool": "RPC / rpcbind deaktiviert",
+            "restores": "Wiederherstellt rpcbind.service und rpcbind.socket unabhängig von den aktivierten/deaktivierten und aktiven/inaktiven Zuständen, die aufgezeichnet wurden, bevor ProxMenux sie geändert hat."
+          },
+          {
+            "tool": "pigz (paralleles gzip)",
+            "restores": "Kopiert den echten gzip von gzip.distrib zurück, entfernt die dpkg-Umleitung und /bin/pigzwrapper, kommentiert die pigz-Linie in /etc/vzdump.conf und löscht pigz, sobald gzip verifiziert ist."
+          },
+          {
+            "tool": "Dienste mit hoher Verfügbarkeit",
+            "restores": "Stoppt und deaktiviert pve-ha-lrm, pve-ha-crm und corosync. Bestehende HA-Gruppen und Ressourcendefinitionen werden nicht gelöscht – entfernen Sie sie aus der Web-Benutzeroberfläche, wenn Sie sie nicht mehr benötigen."
+          },
+          {
+            "tool": "Ceph-Repository",
+            "restores": "Bereinigt die mit dieser Option installierten Ceph-Pakete, entfernt die deb822 /etc/apt/sources.list.d/ceph.sources auf PVE 9 (oder die alte Ceph-Liste auf PVE 8) und aktualisiert den APT-Cache."
+          },
+          {
+            "tool": "OVH RTM (Überwachung)",
+            "restores": "apt purges any ovh-* packages the RTM installer added and deletes the puppet manifests it dropped under /etc/puppet/. On non-OVH hosts nothing was ever installed, so nothing is removed."
+          }
+        ]
+      }
+    ]
+  },
+  "edge": {
+    "heading": "Randkoffer und Vorbehalte",
+    "packageTitle": "Paket neu installieren Touches live Proxmox Pakete",
+    "packageBody": "Rücklauf <strong>Subscription Banner Removal</strong> Neuinstallationen <code>pve-manager</code>, <code>proxmox-widget-toolkit</code>, <code>libjs-extjs</code> und <code>libpve-http-server-perl</code> mit <code>--force-confnew</code>. Dies ist im Allgemeinen sicher, berührt aber die laufende Web-Benutzeroberfläche - aktualisieren Sie Ihren Browser danach und erwarten Sie ein paar Sekunden Wiederverbindung. Führen Sie dies nicht mitten in einer Migration oder Klonoperation aus.",
+    "rebootTitle": "Persistente Namen und VFIO benötigen einen Neustart",
+    "rebootBody": "Das Entfernen der ProxMenux-Dateien <code>10-proxmenux-*.link</code> (<em>Persistent Interface Names</em>) und das Zurücksetzen von <em>IOMMU/VFIO</em> haben keine Auswirkungen auf das laufende System – sie sind erst nach einem Neustart von Bedeutung. ProxMenux setzt das Reboot-Flag automatisch für diese.",
+    "perItemTitle": "Sie können eine Sache rückgängig machen und den Rest behalten",
+    "perItemBody": "Der Deinstaller arbeitet per Item. Wenn Sie nur Log2RAM entfernen möchten, aber die Netzwerk-Tuning- und Bashrc-Änderungen beibehalten möchten, kreuzen Sie nur <em>Log2RAM</em> an. Nichts anderes wird berührt und die Registry wird entsprechend aktualisiert."
+  },
+  "inspect": {
+    "heading": "Kontrolle des Registers manuell",
+    "intro": "Wenn Sie sehen möchten, was verfolgt wird, ohne das Menü zu öffnen:",
+    "outro": "Jeder <code>\"tool\": true</code>-Eintrag entspricht etwas ProxMenux angewendet und kann umgekehrt werden. Das manuelle Entfernen eines Eintrags wird nicht empfohlen - verwenden Sie immer das Menü, das auch die Umkehrfunktion ausführt, anstatt nur die Änderung zu vergessen.",
+    "reinstallTitle": "Neuinstallieren nach Deinstallieren",
+    "reinstallBody": "Das Zurücksetzen einer Optimierung hindert Sie nicht daran, sie später erneut anzuwenden. Öffnen Sie <link>das Post-Install-Menü</link> erneut und führen Sie entweder Automated oder Customizable aus - die Registry verfolgt den neuen Status."
+  },
+  "related": {
+    "heading": "Verwandte Themen",
+    "items": [
+      {
+        "label": "Automatisiertes Post-Install",
+        "href": "/docs/post-install/automated",
+        "tail": "— erneute Anwendung der Basislinie für Sane-Defaults."
+      },
+      {
+        "label": "Anpassbar nach der Installation",
+        "href": "/docs/post-install/customizable",
+        "tail": "Wählen Sie eine andere Untergruppe."
+      },
+      {
+        "label": "Deinstallieren Sie ProxMenux",
+        "href": "/docs/settings/uninstall-proxmenux",
+        "tail": "- andere Operation: entfernt ProxMenux selbst, nicht seine angewandten Optimierungen."
+      },
+      {
+        "label": "Übersicht Post-Install",
+        "href": "/docs/post-install",
+        "tail": "."
+      }
+    ]
+  }
+}

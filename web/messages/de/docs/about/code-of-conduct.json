@@ -1,0 +1,12 @@
+{
+  "meta": {
+    "title": "Verhaltenskodex | ProxMenux Dokumentation",
+    "description": "ProxMenux Verhaltenskodex und Best Practices für Mitwirkende, Tester und Nutzer.",
+    "ogTitle": "Verhaltenskodex | ProxMenux Dokumentation",
+    "ogDescription": "Erwartungen in Bezug auf Codeverantwortung, Sicherheitsoffenlegung und PR-Umfang für das ProxMenux-Projekt."
+  },
+  "errors": {
+    "notFound": "Fehler: CODE_OF_CONDUCT.md Datei nicht gefunden.",
+    "loadFailed": "Fehler: Der Inhalt des Verhaltenskodex kann nicht geladen werden."
+  }
+}

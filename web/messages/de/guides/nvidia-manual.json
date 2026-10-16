@@ -1,0 +1,165 @@
+{
+  "meta": {
+    "title": "NVIDIA Treiber auf Proxmox VE 9 installieren (manuelles Verfahren) | ProxMenux Guides",
+    "description": "Manuelle Installation und Konfiguration von NVIDIA-Treibern auf einem Proxmox VE-9-Host sowie die LXC-Verkabelung, die erforderlich ist, um den GPU einem oder mehreren Containern auszusetzen. Deckt die Treiberinstallation, den Persistenzdienst, den optionalen NVENC-Patch und das Setup pro Container ab.",
+    "ogTitle": "NVIDIA-Treiber auf Proxmox VE 9 installieren (manuelles Verfahren)",
+    "ogDescription": "Manuelle NVIDIA-Treiberinstallation auf PVE 9 — Hosttreiber, Persistenzdienst, optionaler NVENC-Patch und LXC-Verkabelung pro Container."
+  },
+  "header": {
+    "title": "NVIDIA Grafikkartentreiber auf Proxmox VE 9 installieren (manuelles Verfahren)",
+    "description": "Manuelle Installation und Konfiguration von NVIDIA-Treibern auf einem Proxmox VE-9-Host sowie die LXC-Verkabelung, die erforderlich ist, um den GPU einem oder mehreren Containern auszusetzen. Deckt die Treiberinstallation, den Persistenzdienst, den optionalen NVENC-Patch und das Setup pro Container ab.",
+    "section": "Leitfäden"
+  },
+  "intro": {
+    "calloutTitle": "Notiz",
+    "calloutBody": "Dies ist das manuelle Verfahren, das als Referenz erhalten bleibt. Für die meisten Benutzer ist der empfohlene Pfad der automatisierte ProxMenux-Flow: <strong>Install NVIDIA Drivers (Host)</strong> im <em>GPUs und Coral-TPU</em> Menü und <strong>Add GPU to LXC</strong> (oder <strong>Add GPU to VM</strong>) für die Pro-Gast-Verkabelung. Der automatisierte Ablauf erledigt die gleichen Schritte, die hier dokumentiert sind (mit zusätzlichen Sicherheitsüberprüfungen: Kernel-Header-Kompatibilität, IOMMU-Validierung, VFIO-Konfliktlösung). Diese Seite ist für Betreiber gedacht, die jeden Befehl verstehen möchten oder vom Standardfluss abweichen müssen.",
+    "targetNote": "Gezielt auf <strong>Proxmox VE 9</strong> (Debian Trixie). PVE 7 (Bullseye) und PVE 8 (Bookworm) sind nicht mehr abgedeckt.",
+    "stepsTitle": "Was du tun wirst",
+    "steps": [
+      "Bereiten Sie den Proxmox VE 9-Host vor (Blacklist Nouveau, Repos, Voraussetzungen).",
+      "Installieren Sie den NVIDIA Treiber auf dem Host.",
+      "Installieren Sie den NVIDIA Persistenzdienst.",
+      "(Optional) Wenden Sie das Keylase-Patch an, um das NVENC-Concurrent-Session-Limit für Verbraucher-GPUs aufzuheben.",
+      "Verdrahten Sie den GPU in einen oder mehrere LXC-Container und installieren Sie den passenden Treiber in jedem."
+    ]
+  },
+  "prepareHost": {
+    "heading": "1. Bereiten Sie den Host vor (PVE 9)",
+    "blacklistHeading": "1.1 nouveau sperren",
+    "blacklistBody": "Überprüfen Sie, ob der Open-Source-<code>nouveau</code>-Treiber bereits auf der schwarzen Liste steht:",
+    "blacklistCheckCode": "cat /etc/modprobe.d/blacklist.conf",
+    "blacklistAdd": "Wenn <code>blacklist nouveau</code> nicht angezeigt wird, fügen Sie es hinzu und starten Sie neu:",
+    "blacklistAddCode": "echo \"blacklist nouveau\" '>>' /etc/modprobe.d/blacklist.conf\nreboot",
+    "blacklistImageAlt": "Blacklist-Prüfung",
+    "reposHeading": "1.2 Verify Repositories (PVE 9 / Trixie)",
+    "reposBody": "Wenn Sie das ProxMenux-Post-Install-Script (oder ein anderes Proxmox-Post-Install-Tooling) ausgeführt haben, sind die Repositories bereits vorhanden - überspringen Sie diesen Schritt.",
+    "reposOtherwise": "Ansonsten auf einer Vanille PVE 9 Installation ohne Enterprise-Abonnement:",
+    "reposEditCode": "nano /etc/apt/sources.list.d/proxmox.sources",
+    "reposPveBody": "Stellen Sie sicher, dass es die No-Abonnement-Quelle für Trixie enthält:",
+    "reposPveCode": "Types: deb\nURIs: http://download.proxmox.com/debian/pve\nSuites: trixie\nComponents: pve-no-subscription\nSigned-By: /usr/share/keyrings/proxmox-archive-keyring.gpg",
+    "reposDebianBody": "Und die Debian-Quellen bei <code>/etc/apt/sources.list.d/debian.sources</code>:",
+    "reposDebianCode": "Types: deb\nURIs: http://deb.debian.org/debian/\nSuites: trixie trixie-updates\nComponents: main contrib non-free non-free-firmware\nSigned-By: /usr/share/keyrings/debian-archive-keyring.gpg\n\nTypes: deb\nURIs: http://security.debian.org/debian-security/\nSuites: trixie-security\nComponents: main contrib non-free non-free-firmware\nSigned-By: /usr/share/keyrings/debian-archive-keyring.gpg",
+    "updateHeading": "1.3 Aktualisieren Sie das System und installieren Sie die Voraussetzungen",
+    "updateCode": "apt update && apt dist-upgrade -y",
+    "buildToolsBody": "Installieren Sie die Build-Tools und Kernel-Header, die zum Kompilieren des Kernel-Moduls NVIDIA erforderlich sind:",
+    "buildToolsCode": "apt-get install -y git\napt-get install -qqy pve-headers-$(uname -r) gcc make"
+  },
+  "installDriver": {
+    "heading": "2. Installieren Sie den NVIDIA-Treiber auf dem Host",
+    "pickHeading": "2.1 Wählen Sie eine Treiberversion",
+    "pickBody": "Überprüfen Sie den neuesten stabilen Fahrer:",
+    "pickUrlCode": "https://download.nvidia.com/XFree86/Linux-x86_64/latest.txt",
+    "nvencCallout": "Wenn Sie den NVENC-Patch anwenden möchten (Schritt 4), überprüfen Sie zuerst, ob der Patch die von Ihnen gewählte Treiberversion unterstützt: <patchLink>github.com/keylase/nvidia-patch</patchLink>",
+    "nvencCalloutTitle": "Hinweis",
+    "pickReplace": "Ersetzen Sie <code>latest.txt</code> in der URL durch die Versionsnummer, um die Installationsdatei zu finden, die in <code>.run</code> endet. Die vollständige Fahrerliste ist ab:",
+    "pickListCode": "https://download.nvidia.com/XFree86/Linux-x86_64/",
+    "pickImageAlt": "NVIDIA Treiber herunterladen",
+    "pickVersionNote": "Ersetzen Sie <code>'<'VERSION'>'</code> durch die aktuelle Version (z. B. <code>580.95.05</code>).",
+    "downloadHeading": "2.2 Download und Ausführen des Installationsprogramms",
+    "downloadCode": "mkdir -p /opt/nvidia\ncd /opt/nvidia\nwget https://download.nvidia.com/XFree86/Linux-x86_64/'<'VERSION'>'/NVIDIA-Linux-x86_64-'<'VERSION'>'.run\nchmod +x NVIDIA-Linux-x86_64-'<'VERSION'>'.run",
+    "firstPassBody": "Erster Durchgang - dies deaktiviert <code>nouveau</code> und bereitet das System vor:",
+    "firstPassCode": "./NVIDIA-Linux-x86_64-'<'VERSION'>'.run --no-questions --ui=none --disable-nouveau\nreboot",
+    "secondPassBody": "Nachdem der Host zurückgekommen ist, führen Sie das Installationsprogramm erneut aus, um das Kernelmodul zu kompilieren und zu installieren:",
+    "secondPassCode": "/opt/nvidia/NVIDIA-Linux-x86_64-'<'VERSION'>'.run --no-questions --ui=none",
+    "modulesHeading": "2.3 NVIDIA-Module beim Booten laden",
+    "modulesBody": "Bearbeiten der Module-Load-Konfiguration:",
+    "modulesEditCode": "nano /etc/modules-load.d/modules.conf",
+    "modulesAddBody": "Fügen Sie die Module VFIO und NVIDIA hinzu:",
+    "modulesAddCode": "vfio\nvfio_iommu_type1\nvfio_pci\nvfio_virqfd\nnvidia\nnvidia_uvm",
+    "modulesSaveBody": "Speichern (<code>Ctrl+X</code>) und Wiederherstellen von Initramfs:",
+    "modulesSaveCode": "update-initramfs -u -k all",
+    "udevHeading": "2.4 Udev-Regeln erstellen",
+    "udevBody": "So dass <code>/dev/nvidia*</code> Geräteknoten erstellt werden, wenn die Module laden:",
+    "udevEditCode": "nano /etc/udev/rules.d/70-nvidia.rules",
+    "udevRulesCode": "# /etc/udev/rules.d/70-nvidia.rules\n# Create /dev/nvidia0, /dev/nvidia1 ... and /dev/nvidiactl when nvidia module is loaded\nKERNEL==\"nvidia\", RUN+=\"/bin/bash -c ''/usr/bin/nvidia-smi -L''\"\n\n# Create the CUDA node when nvidia_uvm CUDA module is loaded\nKERNEL==\"nvidia_uvm\", RUN+=\"/bin/bash -c ''/usr/bin/nvidia-modprobe -c0 -u''\"",
+    "udevSaveBody": "Speichern (<code>Ctrl+X</code>)."
+  },
+  "persistence": {
+    "heading": "3. NVIDIA Fahrer-Persistenzdienst",
+    "body": "Der Persistenz-Daemon hält den GPU zwischen den Anwendungen initialisiert, was den Latenz-Hit und den gelegentlichen Zustandsverlust vermeidet, der auftritt, wenn das Kernelmodul wiederholt geladen und entladen wird:",
+    "installCode": "cd /opt/nvidia\ngit clone https://github.com/NVIDIA/nvidia-persistenced.git\ncd nvidia-persistenced/init\n./install.sh\nreboot",
+    "verifyBody": "Stellen Sie sicher, dass der Fahrer geladen ist und der Dienst nach dem Neustart ausgeführt wird:",
+    "verifySmiCode": "nvidia-smi",
+    "smiImageAlt": "NVIDIA SMI Ausgang",
+    "verifyServiceCode": "systemctl status nvidia-persistenced",
+    "serviceImageAlt": "NVIDIA Persistenzdienststatus"
+  },
+  "nvenc": {
+    "heading": "4. (Optional) Heben Sie die NVENC Concurrent-Session Limit",
+    "body": "Verbraucher-NVIDIA-GPUs werden mit einer fest codierten Grenze für die Anzahl der gleichzeitigen NVENC-Codierungssitzungen ausgeliefert (normalerweise 3, 5 oder 8 je nach Generation). Der Keylase Patch entfernt diese Einschränkung. Nützlich beim Ausführen von Plex / Jellyfin / Frigate Transcoding Workloads.",
+    "code": "cd /opt/nvidia\ngit clone https://github.com/keylase/nvidia-patch.git\ncd nvidia-patch\n./patch.sh",
+    "imageAlt": "NVIDIA Patch-Anwendung",
+    "after": "Der Patch muss nach jedem Treiberupdate erneut angewendet werden. Das Keylase-Repo enthält auch <code>patch-fbc.sh</code> für das FBC-Limit (Frame Buffer Capture), wenn Sie es benötigen."
+  },
+  "lxcSetup": {
+    "heading": "5. Konfigurieren Sie einen LXC-Container für die Verwendung des GPU",
+    "identifyHeading": "5.1 Gerätenummern angeben",
+    "identifyBody": "Auf dem Gastgeber:",
+    "identifyCode": "ls -l /dev/nv*",
+    "identifyImageAlt": "NVIDIA Geräteliste",
+    "identifyNote": "Beachten Sie die wichtigsten Zahlen - sie variieren zwischen den Systemen. Typische Werte:",
+    "tableHeaders": {
+      "device": "Gerät",
+      "major": "Typischer Hauptbestandteil"
+    },
+    "tableRows": [
+      {
+        "device": "<code>/dev/nvidia0</code>, <code>/dev/nvidiactl</code>",
+        "major": "195"
+      },
+      {
+        "device": "<code>/dev/nvidia-uvm</code>, <code>/dev/nvidia-uvm-tools</code>",
+        "major": "509 (variiert)"
+      },
+      {
+        "device": "<code>/dev/dri/*</code>",
+        "major": "226"
+      },
+      {
+        "device": "<code>/dev/nvidia-modeset</code>",
+        "major": "195 (Aktien mit nvidia)"
+      }
+    ],
+    "editHeading": "5.2 Bearbeiten der LXC-Konfiguration",
+    "editBody": "Stoppen Sie den Container zuerst, wenn er läuft. Öffnen Sie die Config-Datei (ersetzen Sie <code>'<'CTID'>'</code> durch die Container-ID):",
+    "editCode": "nano /etc/pve/lxc/'<'CTID'>'.conf",
+    "editConfigBody": "Kommentieren Sie alle bereits vorhandenen <code>lxc.cgroup2.devices.allow</code>- oder <code>/dev/dri</code>-Zeilen, die miteinander in Konflikt stehen, und fügen Sie dann die NVIDIA-Verdrahtung an (passen Sie die Hauptzahlen an, die <code>ls -l /dev/nv*</code> auf dem <strong>your</strong>-Host angezeigt haben):",
+    "editConfigCode": "lxc.cgroup2.devices.allow: c 195:* rwm\nlxc.cgroup2.devices.allow: c 509:* rwm\nlxc.cgroup2.devices.allow: c 10:* rwm\nlxc.cgroup2.devices.allow: c 238:* rwm\nlxc.mount.entry: /dev/nvidia0 dev/nvidia0 none bind,optional,create=file\nlxc.mount.entry: /dev/nvidiactl dev/nvidiactl none bind,optional,create=file\nlxc.mount.entry: /dev/nvidia-uvm dev/nvidia-uvm none bind,optional,create=file\nlxc.mount.entry: /dev/nvidia-modeset dev/nvidia-modeset none bind,optional,create=file\nlxc.mount.entry: /dev/nvidia-uvm-tools dev/nvidia-uvm-tools none bind,optional,create=file\nlxc.mount.entry: /dev/nvram dev/nvram none bind,optional,create=file",
+    "editConfigImageAlt": "LXC Konfiguration",
+    "editSave": "Speichern (<code>Ctrl+X</code>) und starten Sie den Container.",
+    "installCtHeading": "5.3 Installieren Sie den Treiber im Container",
+    "installCtCalloutTitle": "Wichtig",
+    "installCtCalloutBody": "Dieser Teil läuft <strong>inside</strong> den Container, nicht auf dem Host.",
+    "installCtBody": "Das Kernelmodul wird bereits vom Host geladen - der Container benötigt nur die Benutzerlandbibliotheken, die mit der gleichen Treiberversion übereinstimmen:",
+    "installCtCode": "mkdir -p /opt/nvidia\ncd /opt/nvidia\nwget https://download.nvidia.com/XFree86/Linux-x86_64/'<'VERSION'>'/NVIDIA-Linux-x86_64-'<'VERSION'>'.run\nchmod +x NVIDIA-Linux-x86_64-'<'VERSION'>'.run\n./NVIDIA-Linux-x86_64-'<'VERSION'>'.run --no-kernel-module",
+    "installCtAfter": "Akzeptieren Sie die Standardeinstellungen bei jeder Aufforderung.",
+    "installCtImageAlt": "NVIDIA Treiberinstallation",
+    "verifyCtHeading": "5.4 Verifizieren im Container",
+    "verifyCtSmiCode": "nvidia-smi",
+    "verifyCtSmiImageAlt": "NVIDIA SMI in LXC",
+    "verifyCtLsCode": "ls -l /dev/nv*",
+    "verifyCtLsImageAlt": "NVIDIA Geräte in LXC",
+    "verifyCtAfter": "Sie sollten die GPU-Liste sehen und die Geräteknoten in das Container-Dateisystem einfügen.",
+    "workloadHeading": "5.5 Bestätigen Sie, dass eine echte Workload den GPU aufnimmt",
+    "workloadBody": "Transcodieren Sie für Plex / Jellyfin ein Video und überprüfen Sie das Dashboard / die Protokolle - die hardwarebeschleunigte Transcodierung ist jetzt aktiv.",
+    "workloadImage1Alt": "Plex mit NVIDIA GPU",
+    "workloadImage2Alt": "Plex mit NVIDIA GPU - aktive Sitzung",
+    "repeatNote": "Um den GPU in einen anderen Container zu verdrahten, wiederholen Sie den <strong>-Abschnitt 5</strong> für jede weitere CTID. Die Fahrerinstallation im Container muss nur einmal pro Container erfolgen."
+  },
+  "docker": {
+    "heading": "6. (Optional) NVIDIA Docker in einem LXC",
+    "body": "Wenn der Container Docker ausführt und Sie möchten, dass Container im Container den GPU verwenden, installieren Sie <code>nvidia-docker2</code>. Aus dem Inneren des LXC:",
+    "code": "wget https://raw.githubusercontent.com/MacRimi/manuales/main/NVIDIA/nvidia-docker.sh\nchmod +x nvidia-docker.sh\n./nvidia-docker.sh",
+    "after": "Das Skript übernimmt die Repository-Einrichtung, Paketinstallation und Docker Daemon-Konfiguration in einem Rutsch."
+  },
+  "troubleshoot": {
+    "heading": "Fehlerbehebung",
+    "items": [
+      "<strong><code>nvidia-smi</code> auf dem Host zeigt die GPU, aber im Container Fehler mit \"Keine Geräte gefunden\": </strong> die Treiberversionen nicht übereinstimmen. Laden Sie denselben <code>'<'VERSION'>'</code> erneut im Container herunter und führen Sie ihn mit <code>--no-kernel-module</code> aus.",
+      "<strong>Driver-Compiler schlägt auf dem Host mit \"Keine vorkompilierte Kernel-Schnittstelle wurde gefunden\" fehl: </strong>-Kernel-Header fehlen oder sind nicht synchronisiert. Führen Sie <code>apt-get install pve-headers-$(uname -r)</code> erneut aus und bestätigen Sie, dass <code>uname -r</code> mit dem laufenden Kernel übereinstimmt.",
+      "<strong>NVENC-Sitzungen wurden nach dem Anwenden des Patches noch gedeckelt: </strong> wurde der Patch durch ein Treiberupdate überschrieben. Führen Sie <code>./patch.sh</code> von <code>/opt/nvidia/nvidia-patch</code> erneut aus.",
+      "<strong>GPU hört nach einigen Stunden im Leerlauf auf zu reagieren: </strong> Persistenz-Daemon läuft nicht. Überprüfen Sie mit <code>systemctl status nvidia-persistenced</code> und starten / aktivieren Sie es.",
+      "<strong>Container startet, aber <code>ls /dev/nv*</code> zeigt nichts: </strong> die wichtigsten Zahlen in der LXC-Konfiguration stimmen nicht mit denen des Hosts überein. Führen Sie <code>ls -l /dev/nv*</code> auf dem Host erneut aus und passen Sie die <code>lxc.cgroup2.devices.allow</code>-Zeilen entsprechend an."
+    ]
+  }
+}

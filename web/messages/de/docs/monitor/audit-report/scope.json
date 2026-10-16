@@ -1,0 +1,115 @@
+{
+  "meta": {
+    "title": "Anwendungsbereich und Garantien | Audit & Report",
+    "description": "Woher kommen die Daten von Audit & Report, was ist außerhalb ihrer Sicht, die Garantien ihrer Gestaltung und wo ihre Daten gespeichert werden."
+  },
+  "header": {
+    "title": "Anwendungsbereich und Garantien",
+    "description": "Woher die Daten einer Bewertung kommen, was bleibt außerhalb ihrer Sicht und wo Audit & Report ihre Daten speichert.",
+    "section": "Prüfung und Bericht"
+  },
+  "sections": [
+    {
+      "id": "sees",
+      "title": "Was er beobachtet",
+      "blocks": [
+        {
+          "list": {
+            "items": [
+              "Konfiguration und Zustand des lokalen Knotens.",
+              "Die deklarierte Konfiguration der VMs und LXCs.",
+              "Der Zustand der Speicherung als Proxmox VE kennt ihn.",
+              "Die verfügbare Historie von Backups und Verifizierungen.",
+              "SMART-Daten und die Ereignisse, die der Monitor gesammelt hat.",
+              "Der Zustand der Dienste, Cluster, HA und lokale Quellen."
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "outside",
+      "title": "Was außerhalb seiner Sicht ist",
+      "blocks": [
+        {
+          "list": {
+            "items": [
+              "Das Innere der Gäste, über das hinaus, was sie Proxmox VE erklären.",
+              "Netzwerkausrüstung außerhalb des Hosts.",
+              "Fernabhängigkeiten, die der Knoten nicht beobachten kann.",
+              "Physischer Zustand, den die Hardware nicht ausstellt.",
+              "Manuelle Aktionen oder Aktionen anderer Software, im Change Journal."
+            ]
+          }
+        },
+        {
+          "calloutWarning": {
+            "title": "Fehlende Beweise sind keine Beweise für Abwesenheit",
+            "body": "Eine Quelle, die nicht gelesen werden kann, liefert ein nicht verifiziertes oder unvollständiges Ergebnis, niemals ein konformes. Der Bericht listet die Quellen auf, die nicht verfügbar waren."
+          }
+        }
+      ]
+    },
+    {
+      "id": "guarantees",
+      "title": "Garantien für das Design",
+      "blocks": [
+        {
+          "list": {
+            "items": [
+              "Stabile Kennzeichen für die Kontrollen.",
+              "Geschichte der Läufe und Erkenntnisse.",
+              "Eine validierte Politik, atomar gespeichert.",
+              "Akzeptierte Risiken mit einem Grund, sichtbar.",
+              "Zuweisung von Änderungen an Skript und Funktion.",
+              "Erfassen Sie vor und nach, wo es verfügbar ist.",
+              "Ein explizites Ergebnis, wenn etwas nicht gemessen oder erfasst werden kann."
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "storage",
+      "title": "Wo die Daten gespeichert werden",
+      "blocks": [
+        {
+          "table": {
+            "headers": [
+              "Daten",
+              "Ort"
+            ],
+            "rows": [
+              [
+                "Richtlinie",
+                "<code>/usr/local/share/proxmenux/audit_policy.json</code>"
+              ],
+              [
+                "Bewertungen",
+                "Die Prüfdatenbank des Monitors"
+              ],
+              [
+                "Gefangene Objekte",
+                "<code>/usr/local/share/proxmenux/changes/objects/</code>"
+              ],
+              [
+                "Ausstehende Einträge",
+                "<code>/usr/local/share/proxmenux/changes/spool/</code>"
+              ],
+              [
+                "Konsolidierte Zeitschrift",
+                "<code>/usr/local/share/proxmenux/changes.db</code>"
+              ]
+            ]
+          }
+        },
+        {
+          "calloutInfo": {
+            "title": "Ein Tool zur Überprüfung, keine Zertifizierung",
+            "body": "Audit & Report überprüft, vergleicht und dokumentiert den Knoten. Seine Ergebnisse werden zusammen mit dem Zweck des Systems, der erklärten Politik und den verfügbaren Quellen gelesen."
+          }
+        }
+      ]
+    }
+  ]
+}

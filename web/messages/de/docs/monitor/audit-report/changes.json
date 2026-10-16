@@ -1,0 +1,208 @@
+{
+  "meta": {
+    "title": "Änderungen | Audit & Report",
+    "description": "Das Change Journal von Audit & Report: Was ProxMenux auf dem Host geändert hat, was vorher da war, der Unterschied und ob es rückgängig gemacht werden kann."
+  },
+  "header": {
+    "title": "Änderungen",
+    "description": "Das Journal der Operationen ProxMenux führt auf dem Host und, wo es erfasst wurde, den Zustand vor und nach jedem.",
+    "section": "Prüfung und Bericht"
+  },
+  "sections": [
+    {
+      "id": "purpose",
+      "blocks": [
+        {
+          "calloutInfo": {
+            "title": "Von dem Skript, das lief, um die Änderung, die es gemacht",
+            "body": "Eine lange Funktion kann nur zwei Zeilen ändern. Das Journal hält jede konkrete Operation mit dem Skript, Funktion und Version verantwortlich, die Ressource betroffen, den Unterschied und ob es rückgängig gemacht werden kann."
+          }
+        },
+        {
+          "flow": {
+            "nodes": [
+              {
+                "label": "Skript",
+                "detail": "Funktion + Version"
+              },
+              {
+                "label": "Einfangen",
+                "detail": "Inhalt vor"
+              },
+              {
+                "label": "Betrieb",
+                "detail": "Datei · Paket · Service"
+              },
+              {
+                "label": "Journal",
+                "detail": "Attribution + Differenz"
+              }
+            ],
+            "caption": "Die Erfassung erfolgt, wenn die Operation ausgeführt wird, und wird konsolidiert, wenn der Monitor das Journal liest."
+          }
+        },
+        {
+          "figure": {
+            "src": "/monitor/audit/changes-view.png",
+            "alt": "Ändert die Ansicht von Audit & Report mit den Einträgen, gruppiert nach Option und Skript nach der Installation",
+            "caption": "Die Ansicht Änderungen mit dem Unterschied einer von ProxMenux bearbeiteten Datei."
+          }
+        }
+      ]
+    },
+    {
+      "id": "types",
+      "title": "Art der Einreise",
+      "intro": "Der Filter oben trennt die Einträge nach Art.",
+      "blocks": [
+        {
+          "table": {
+            "headers": [
+              "Art",
+              "Was es aufzeichnet"
+            ],
+            "rows": [
+              [
+                "Konfiguration",
+                "ProxMenux hat eine Datei geschrieben, bearbeitet oder entfernt, eine Einstellung geändert oder einen Dienst geändert."
+              ],
+              [
+                "Installationen",
+                "ProxMenux hat ein Paket oder eine Komponente hinzugefügt, und die tatsächlich erschienenen Pakete werden aufgezeichnet."
+              ],
+              [
+                "Ausführungen",
+                "ProxMenux hat einen Befehl ausgeführt; was er geändert hat, liegt beim Befehl selbst."
+              ],
+              [
+                "Angewandt",
+                "Eine Funktion wurde angewendet, bevor das Journal existierte; der Zustand, bevor es nicht erfasst wurde."
+              ]
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "groups",
+      "title": "Wie die Ansicht organisiert ist",
+      "blocks": [
+        {
+          "table": {
+            "headers": [
+              "Abschnitt",
+              "Inhalt"
+            ],
+            "rows": [
+              [
+                "Post-Install-Optimierungen",
+                "Gruppiert nach der Option nach der Installation, die der Benutzer ausgewählt hat."
+              ],
+              [
+                "ProxMenux-Skripte",
+                "GPU, Coral, Network, Storage, Security, Utilities und die anderen instrumentierten Skripte, einschließlich ProxMenux Installer und ProxMenux Monitor."
+              ],
+              [
+                "Installierte Pakete und Werkzeuge",
+                "Software ProxMenux auf dem Host installiert."
+              ]
+            ]
+          }
+        },
+        {
+          "p": "In jedem Abschnitt gruppiert <strong>By function</strong> die Einträge unter der Funktion, die sie erstellt hat."
+        }
+      ]
+    },
+    {
+      "id": "entry",
+      "title": "Was jeder Eintrag zeigt",
+      "blocks": [
+        {
+          "list": {
+            "items": [
+              "Das Skript, Funktion und Version verantwortlich.",
+              "Datum und betroffene Ressource.",
+              "Der bekannte Zustand vor und nach der Änderung.",
+              "Die Zeilen hinzugefügt und entfernt.",
+              "Die Pakete, die tatsächlich hinzugefügt wurden.",
+              "Zustandsübergang eines Dienstes.",
+              "<strong>Undoing this</strong>: <em>Wiederherstellt genau das, was es war</em>, <em>Löscht die Datei (es gab keine vorher)</em>, <em>Das Paket kann deinstalliert</em>, ein teilweises Rückgängigmachen, oder <em>Kann nicht aus der Zeitschrift</em> rückgängig gemacht werden."
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "before",
+      "title": "Was der Staat vorher bedeutet",
+      "blocks": [
+        {
+          "p": "Der Zustand vorher kann erfasst werden Inhalt, eine Datei zum ersten Mal erstellt oder ein unbekannter Zustand. Änderungen, die vorgenommen wurden, bevor das Journal existierte, können nicht rekonstruiert werden; das Ausführen der Funktion erfasst zuerst den Zustand, der in diesem Moment gefunden wurde."
+        }
+      ]
+    },
+    {
+      "id": "limits",
+      "title": "Anwendungsbereich der Zeitschrift",
+      "blocks": [
+        {
+          "list": {
+            "items": [
+              "Manuelle Änderungen und Änderungen durch andere Software werden nicht aufgezeichnet.",
+              "Nur Operationen, die die ProxMenux-Auditprimitiven durchlaufen, werden abgedeckt.",
+              "Recording blockiert niemals die Operation, die es beschreibt: Wenn der Eintrag nicht geschrieben werden kann, geht die Operation weiter.",
+              "Aufeinanderfolgende Änderungen an einer Ressource werden als bekannter Ursprung gegen den aktuellen Zustand angezeigt."
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "retention",
+      "title": "Gespeicherte Nachweise",
+      "blocks": [
+        {
+          "table": {
+            "headers": [
+              "Element",
+              "Verhalten"
+            ],
+            "rows": [
+              [
+                "Einträge",
+                "Sie werden auf dem Host aufbewahrt; nichts wird automatisch aus dem Journal entfernt."
+              ],
+              [
+                "Gefangener Inhalt",
+                "Ein erfasstes Objekt wird beibehalten, während sich ein Eintrag darauf bezieht."
+              ],
+              [
+                "Größe eines Fangs",
+                "Inhalt über 1 MiB wird nicht als Ganzes gespeichert; der Eintrag zeichnet auf, dass die Aufnahme wegen seiner Größe übersprungen wurde."
+              ],
+              [
+                "Lesung",
+                "Der Monitor lädt keine gespeicherten Objekte über 2 MiB."
+              ],
+              [
+                "Unterschied",
+                "Höchstens 400 Linien werden gezeigt, und eine längere Differenz wird als abgeschnitten markiert."
+              ],
+              [
+                "Liste",
+                "Der API gibt standardmäßig 200-Einträge pro Anforderung und bis zu 1000 zurück."
+              ]
+            ]
+          }
+        },
+        {
+          "calloutWarning": {
+            "title": "Kept Content ist keine automatische Rückgängigmachung",
+            "body": "Der Inhalt vor einer Änderung kann von Hand inspiziert und wiederhergestellt werden, aber die Ansicht Änderungen stellt keine Vorgänge zurück. Ein Ausführungseintrag zeichnet den Befehl auf, ohne jeden Effekt des von ihm ausgeführten Tools zu kennen."
+          }
+        }
+      ]
+    }
+  ]
+}

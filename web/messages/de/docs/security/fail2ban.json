@@ -1,0 +1,152 @@
+{
+  "meta": {
+    "title": "Fail2Ban | ProxMenux Dokumentation",
+    "description": "Installieren Sie Fail2Ban mit drei auf Proxmox abgestimmten Gefängnissen (SSH aggressiv, Proxmox UI 8006, ProxMenux Monitor 8008). Beinhaltet das journald MaxLevelStore-Fix, benutzerdefinierte Protokolldienste für Zuverlässigkeit, automatisch erkanntes nftables/iptables Backend und SSH MaxAuthTries-Härtung.",
+    "ogTitle": "Fail2Ban | ProxMenux Dokumentation",
+    "ogDescription": "Brute-Force-Schutz für SSH und Proxmox Web UIs, mit Proxmox-spezifischen Journald- und Backend-Fixes."
+  },
+  "header": {
+    "title": "Fail2Ban",
+    "description": "Installiert Fail2Ban mit einer Proxmox-spezifischen Konfiguration: drei Jails (SSH aggressiv, Proxmox UI am Port 8006, ProxMenux Monitor am Port 8008 + Reverse-Proxy), eine protokollierte Log-Level-Fixierung, so dass SSH Auth-Ereignisse tatsächlich gespeichert werden, zwei Journal-to-file-Logger-Dienste, die ein bekanntes Fail2Ban systemd-Backend-Problem umgehen, automatisch erkanntes Firewall-Backend und SSH MaxAuthTries-Härtung.",
+    "section": "Sicherheit"
+  },
+  "intro": {
+    "title": "Was das macht",
+    "body": "Installiert Fail2Ban aus den Debian-Repos und schreibt eine komplette Proxmox-Konfiguration, die drei Angriffsflächen (SSH, Proxmox UI, ProxMenux Monitor) aus der Box schützt. Erkennt eine bestehende Installation und bietet ein Verwaltungsmenü (Neuinstallation / Entfernen), anstatt das Installationsprogramm erneut auszuführen."
+  },
+  "firstLaunch": {
+    "heading": "Erststart-Dialog",
+    "body": "Auf einem Host ohne Fail2Ban zeigt das Skript einen Bestätigungsdialog, der alles zusammenfasst, was installiert und konfiguriert werden soll. Stornieren Sie Ausgänge ohne Änderungen; Bestätigen Sie, dass der Installationsfluss gestartet wird.",
+    "imageAlt": "Fail2Ban Installationsbestätigungsdialog mit den drei Gefängnissen, Journald Fix und SSH-Härtung"
+  },
+  "jails": {
+    "heading": "Die drei Gefängnisse",
+    "headerJail": "Jail",
+    "headerProtects": "Schützt",
+    "headerRetries": "Retries/Fenster",
+    "headerBan": "Sperrzeit",
+    "rows": [
+      {
+        "jail": "[sshd]",
+        "protects": "SSH (aggressiver Modus — umfasst ddos, Modus, normal)",
+        "retries": "2 / 60 min",
+        "ban": "9 Stunden"
+      },
+      {
+        "jail": "[proxmox]",
+        "protects": "Proxmox web UI (Port 8006)",
+        "retries": "3 / 10 min",
+        "ban": "1 Stunde"
+      },
+      {
+        "jail": "[proxmenux]",
+        "protects": "ProxMenux Monitor (Port 8008 + http/https Reverse Proxy)",
+        "retries": "3 / 10 min",
+        "ban": "1 Stunde"
+      }
+    ],
+    "outro": "Globale Standardeinstellungen von <code>jail.local</code>: <code>ignoreip = 127.0.0.1/8 ::1</code>, <code>ignoreself = true</code>, <code> bantime = 86400</code> (24h Fallback für Gefängnisse, die es nicht außer Kraft setzen), <code>maxretry = 2</code>, <code>findtime = 1800</code>."
+  },
+  "journald": {
+    "heading": "Warum das Journald Fix wichtig ist",
+    "intro": "Proxmox liefert <code>/etc/systemd/journald.conf</code> mit <codeNw>MaxLevelStore=Warning</codeNw>. journald lässt jede Protokollnachricht <em>unter </em> Warnung fallen, bevor es gespeichert wird. SSH und PAM emittieren Auth-Ausfälle bei <em>info</em> / <em>notice</em> Ebenen, also:",
+    "diagram": {
+      "sshLabel": "SSH / PAM",
+      "sshDetail": "Authentischer Ausfall\n(Info/Notice Level)",
+      "journaldLabel": "gebogen",
+      "journaldDetail": "MaxLevelStore = Warnung\nEvent still fallen gelassen",
+      "fail2banLabel": "Fail2Ban",
+      "fail2banDetail": "Nichts sehen\nNiemals etwas verbieten",
+      "arrowLabel": "Standard Proxmox"
+    },
+    "afterDiagram": "Der Installateur erkennt dies und schreibt ein Drop-in bei <codeXs>/etc/systemd/journald.conf.d/proxmenux-loglevel.conf</codeXs> und erhöht sowohl <code>MaxLevelStore</code> als auch <code>MaxLevelSyslog</code> auf <code>info</code>:",
+    "code": "[Journal]\nMaxLevelStore=info\nMaxLevelSyslog=info",
+    "outro": "Dann startet <code>systemd-journald</code> neu. Das Drop-In wird bei der Deinstallation entfernt, wodurch der ursprüngliche Proxmox-Standard wiederhergestellt wird."
+  },
+  "loggers": {
+    "heading": "Warum zwei Custom Logger Services",
+    "intro1": "Fail2Ban kann direkt aus dem systemd-Journal (<code>backend = systemd</code>) lesen, aber auf Proxmox hat dieses Backend Zuverlässigkeitsprobleme mit <code>pvedaemon</code>-Arbeiterprozessen (Auth-Ereignisse erscheinen im Journal, aber Fail2Ban nimmt sie nicht immer auf) und intermittierend mit <code>sshd</code>.",
+    "intro2": "Der Workaround: ProxMenux erstellt zwei winzige systemd-Dienste, die <code>journalctl -f</code> die relevanten Einheiten und jede Zeile an eine Datei anhängen. Fail2Ban liest diese Dateien dann mit dem soliden <code>backend = auto</code> (Dateimodus):",
+    "headerService": "Dienst",
+    "headerSource": "Quelleneinheit",
+    "headerOutput": "Ausgabedatei",
+    "rows": [
+      {
+        "service": "proxmox-auth-logger.service",
+        "source": "pvedaemon.service",
+        "output": "/var/log/proxmox-auth.log"
+      },
+      {
+        "service": "ssh-auth-logger.service",
+        "source": "ssh.service",
+        "output": "/var/log/ssh-auth.log"
+      }
+    ],
+    "outro": "Beide Dienste werden als <code>PartOf=fail2ban.service</code> deklariert, so dass sie mit Fail2Ban neu starten und damit aufhören. Modus 640 im Besitz von <code>root:adm</code> in den Protokolldateien. Das dritte Protokoll, das vom <code>[proxmenux]</code>-Gefängnis (<code>/var/log/proxmenux-auth.log</code>) verwendet wird, wird direkt von der ProxMenux Monitor Flask-App geschrieben - es wird kein Logger-Service benötigt."
+  },
+  "backend": {
+    "heading": "Firewall-Backend-Autoerkennung",
+    "intro": "Der Installer prüft den Host: Wenn <code>nft list ruleset</code> funktioniert, wählt er <code>nftables</code> als Sperraktion. Ansonsten fällt es auf <code>iptables-multiport</code> / <code>iptables-allports</code> zurück. Die Auswahl ist in <code>jail.local</code> geschrieben:",
+    "code": "# nftables host\nbanaction = nftables\nbanaction_allports = nftables[type=allports]\n\n# iptables host (fallback)\nbanaction = iptables-multiport\nbanaction_allports = iptables-allports"
+  },
+  "hardening": {
+    "heading": "SSH-Härtung: MaxAuthTries",
+    "intro": "Lynis-Kontrolle <strong>SSH-7408</strong> empfiehlt <code>MaxAuthTries 3</code> in <code>sshd_config</code>. Mit dem <code>maxretry = 2</code> von Fail2Ban auf dem SSH-Gefängnis erreicht ein bösartiger Client sowieso nie drei Versuche - aber die explizite Einstellung erfüllt das Audit und fügt Verteidigung in die Tiefe (z. B. wenn Fail2Ban zur Wartung gestoppt wird).",
+    "installerIntro": "Der Installateur",
+    "items": [
+      "Lesen Sie den aktuellen <code>MaxAuthTries</code>-Wert (oder standardmäßig 6, falls nicht vorhanden).",
+      "Speichert es in <code>/usr/local/share/proxmenux/sshd_maxauthtries_backup</code>.",
+      "Bearbeitet <code>sshd_config</code> an Ort und Stelle – ersetzt bestehende Zeile, kommentierte Zeile oder Anhänge.",
+      "Reloads <code>sshd</code> (Reload, nicht Neustart, um bestehende Sitzungen am Leben zu erhalten)."
+    ],
+    "outro": "Bei der Deinstallation wird der gespeicherte Originalwert wiederhergestellt und <code>sshd</code> erneut geladen."
+  },
+  "manage": {
+    "heading": "Verwalten einer vorhandenen Installation",
+    "intro": "Wenn Fail2Ban beim Öffnen des Menüs bereits installiert ist, erkennt das Skript es und zeigt ein Verwaltungsmenü an, anstatt das Installationsprogramm erneut auszuführen:",
+    "headerAction": "Aktion",
+    "headerWhat": "Was es tut",
+    "rows": [
+      {
+        "action": "Neuinstallieren",
+        "what": "Führt den vollständigen Installer erneut aus - schreibt alle Gefängnisse mit den aktuellen ProxMenux-Standards neu. Verwenden Sie dies, nachdem ein ProxMenux-Update die empfohlenen Werte überschritten hat."
+      },
+      {
+        "action": "Entfernen",
+        "what": "Stoppt fail2ban und die beiden Logger-Dienste, bereinigt das apt-Paket, entfernt alle Jail-/Filterdateien, löscht das protokollierte Drop-in (Wiederherstellung des Proxmox-Standards) und stellt das ursprüngliche SSH MaxAuthTries wieder her."
+      }
+    ]
+  },
+  "verify": {
+    "heading": "Überprüfen Sie, ob es funktioniert",
+    "intro": "Nach der Installation nützliche Befehle vom Host:",
+    "code": "# Service status and version\nsystemctl status fail2ban\nfail2ban-client --version\n\n# All active jails\nfail2ban-client status\n\n# Detail on one jail\nfail2ban-client status sshd\nfail2ban-client status proxmox\nfail2ban-client status proxmenux\n\n# Currently banned IPs in a jail\nfail2ban-client status sshd | grep \"Banned IP\"\n\n# Manually unban an IP (use this if you ban yourself)\nfail2ban-client unban 192.0.2.10\n\n# Tail the auth logs Fail2Ban watches\ntail -f /var/log/ssh-auth.log\ntail -f /var/log/proxmox-auth.log\ntail -f /var/log/fail2ban.log"
+  },
+  "troubleshoot": {
+    "heading": "Fehlerbehebung",
+    "neverBansTitle": "Fail2Ban läuft, verbietet aber niemals etwas",
+    "neverBansBody": "Überprüfen Sie, ob die Auth-Logdateien tatsächlich Einträge erhalten: <code>tail -f /var/log/ssh-auth.log</code> und versuchen Sie einen SSH-Versuch mit falschem Passwort von einem anderen Computer. Wenn das Protokoll leer bleibt, läuft der Loggerdienst nicht: <code>systemctl status ssh-auth-logger.service</code>. Wenn es aktiv ist, aber das Protokoll leer ist, überprüfen Sie, ob das protokollierte Drop-in in Kraft getreten ist: <code>journalctl --dump-catalog | head</code> — Ereignisse auf <em>info</em> Ebene sollten sichtbar sein.",
+    "monitorEmptyTitle": "ProxMenux Monitor Gefängnis hat keine Einträge auch nach fehlgeschlagenen Logins",
+    "monitorEmptyBody": "Das <code>[proxmenux]</code>-Gefängnis liest <code>/var/log/proxmenux-auth.log</code>, das von der ProxMenux Monitor Flask-App geschrieben wird - nicht von einem Tagebuchlogger. Wenn Sie den Monitor nicht ausführen, bleibt die Datei leer und das Gefängnis feuert nie. Das wird erwartet; die Gefängnis-Konfiguration ist harmlos. Wenn Sie den Monitor ausführen und das Protokoll leer ist, überprüfen Sie die Flask-Logging-Konfiguration.",
+    "selfBanTitle": "Ich habe mich verboten",
+    "selfBanIntro": "Von einer Konsole / IPMI / iKVM (oder einer anderen Whitelist-IP):",
+    "selfBanCode": "fail2ban-client unban '<'YOUR_IP'>'\n\n# To prevent it next time, edit /etc/fail2ban/jail.local and add your IP:\nignoreip = 127.0.0.1/8 ::1 192.168.1.0/24 203.0.113.42\n\n# Then reload\nfail2ban-client reload",
+    "aptFailTitle": "apt-get fails: ''Unable to locate package fail2ban''",
+    "aptFailBody": "Dem Host fehlen die Debian-Repos (üblich bei Barebones, die Proxmox installiert). Der Installateur erkennt dies und schreibt <code>/etc/apt/sources.list.d/debian.sources</code> mit dem richtigen Codenamen (<code>bookworm</code> / <code>trixie</code>), bevor er es erneut versucht. Wenn es immer noch fehlschlägt, überprüfen Sie <code>/etc/os-release</code> für <code>VERSION_CODENAME</code> und bestätigen Sie, dass die Repo-URL erreichbar ist.",
+    "lockoutTitle": "SSH sperrt mich nach der Installation aus",
+    "lockoutBody": "Das Installationsprogramm setzt <code>MaxAuthTries=3</code>. Wenn Ihr Passwort-Manager / Agent mehrere Schlüssel wiederholt, können Sie diese bei einem einzigen Verbindungsversuch überschreiten. Begrenzen Sie die angebotenen Schlüssel: <code>ssh -o IdentitiesOnly=yes -i ~/.ssh/specific_key user@host</code>. Oder erhöhen Sie <code>MaxAuthTries</code> vorübergehend in <code>sshd_config</code>, während Sie debuggen."
+  },
+  "files": {
+    "heading": "Dateien geschrieben",
+    "code": "/etc/fail2ban/jail.local                              # global defaults + [sshd]\n/etc/fail2ban/jail.d/proxmox.conf                     # [proxmox]\n/etc/fail2ban/jail.d/proxmenux.conf                   # [proxmenux]\n/etc/fail2ban/filter.d/proxmox.conf                   # auth-failure regex for pvedaemon\n/etc/fail2ban/filter.d/proxmenux.conf                 # auth-failure regex for Monitor\n/etc/systemd/system/proxmox-auth-logger.service       # journal → file (pvedaemon)\n/etc/systemd/system/ssh-auth-logger.service           # journal → file (sshd)\n/etc/systemd/journald.conf.d/proxmenux-loglevel.conf  # MaxLevelStore=info\n/etc/ssh/sshd_config                                  # MaxAuthTries=3 (in-place edit)\n/var/log/proxmox-auth.log                             # written by logger service\n/var/log/ssh-auth.log                                 # written by logger service\n/var/log/proxmenux-auth.log                           # written by Monitor Flask app\n/usr/local/share/proxmenux/sshd_maxauthtries_backup   # for restore on uninstall"
+  },
+  "related": {
+    "heading": "Verwandte Themen",
+    "monitorLabel": "ProxMenux Monitor - Sicherheits-Tab",
+    "monitorTail": "- die gleiche Installation, die über das Dashboard erreichbar ist, plus Live-Gefängnisstatus, verbotene IPs und Abstimmung per Jail Retry / Ban-Time aus dem Browser.",
+    "lynisLabel": "Lynis",
+    "lynisTail": "Führen Sie vor/nachher ein Sicherheitsaudit durch, um zu bestätigen, dass die SSH-7408-Kontrolle erfüllt ist.",
+    "securityLabel": "Sicherheitsübersicht",
+    "securityTail": "Zurück zur Abschnittsübersicht."
+  }
+}

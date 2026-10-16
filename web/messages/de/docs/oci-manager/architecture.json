@@ -1,0 +1,171 @@
+{
+  "meta": {
+    "title": "Wie ein OCI-Bild übersetzt wird | ProxMenux",
+    "description": "Vom Image-Repository und seiner Compose-Datei bis zu einer überprüfbaren Vorlage, einem Bereitstellungsplan und einem nativen Proxmox VE LXC, ohne Docker im Inneren."
+  },
+  "header": {
+    "title": "Wie ein OCI-Bild übersetzt wird",
+    "description": "Vom Image-Repository und seiner Compose-Datei bis zu einer überprüfbaren Vorlage, einem Bereitstellungsplan und einem nativen LXC, ohne Docker darin zu installieren.",
+    "section": "Apps des OCI-Managers"
+  },
+  "sections": [
+    {
+      "id": "pipeline",
+      "title": "Die Translation Pipeline",
+      "blocks": [
+        {
+          "mermaid": {
+            "chartCode": "flowchart LR\n A[\"{{repo}}\"] --> B[\"Compose + README\"]\n B --> C[\"{{converter}}\"]\n C --> D[\"{{template}}\"]\n D --> E{\"{{blockers}}\"}\n E -- \"{{no}}\" --> F[\"{{review}}\"]\n F --> D\n E -- \"{{yes}}\" --> G[\"{{plan}}\"]\n G --> H[\"pct create\"]\n H --> I[\"{{lxc}}\"]",
+            "labels": {
+              "repo": "Bild-Repository",
+              "converter": "Konverter",
+              "template": "Meldebogen JSON",
+              "blockers": "Keine Blocker?",
+              "no": "Nein",
+              "yes": "Ja",
+              "review": "Review/Overlay",
+              "plan": "Bereitstellungsplan",
+              "lxc": "Natives LXC"
+            }
+          }
+        },
+        {
+          "p": "Der Konverter liest das Bild und die Compose-Datei, die sein Projekt veröffentlicht und schreibt eine JSON-Vorlage. Eine Vorlage mit nicht übersetzten Blockern wird überprüft, wobei ein kuratiertes Overlay sie auflöst, bevor es im Katalog veröffentlicht wird. Nur Templates ohne Blocker werden zur Installation angeboten."
+        }
+      ]
+    },
+    {
+      "id": "template",
+      "title": "Was das Template hält",
+      "blocks": [
+        {
+          "cards": {
+            "items": [
+              {
+                "icon": "archive",
+                "title": "Bildidentität",
+                "body": "Repository, Rolling Tag, Architektur, Resolved Digest und Source Revision."
+              },
+              {
+                "icon": "braces",
+                "title": "Containervertrag",
+                "body": "Entrypoint, Cmd, Environment, User, Working Directory, Stop Signal, Ports und Volumes."
+              },
+              {
+                "icon": "layers",
+                "title": "Proxmox VE Übersetzung",
+                "body": "Ressourcen, Sicherheit, Mount Points, Geräte, Sysctls, Gesundheitschecks und die Anpassungen, die jeder braucht, mit ihrem Grund."
+              },
+              {
+                "icon": "shield",
+                "title": "Vereinbarkeit",
+                "body": "Unterstützte Schlüssel, nicht übersetzte Blocker und der Status jeder Validierung."
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "sources",
+      "title": "OCI liefert den Prozess; Compose liefert die Umwelt",
+      "blocks": [
+        {
+          "table": {
+            "headers": [
+              "Quelle",
+              "Beispiel",
+              "Natives Ergebnis"
+            ],
+            "rows": [
+              [
+                "OCI-Metadaten",
+                "<code>Entrypoint</code>, <code>Cmd</code>, <code>User</code>",
+                "Proxmox VE importiert sie, wenn der CT erstellt wird"
+              ],
+              [
+                "Docker Compose",
+                "<code>environment</code>, <code>volumes</code>, <code>devices</code>",
+                "LXC Umgebungseinträge, <code>mpN</code> und <code>devN</code>"
+              ],
+              [
+                "ProxMenux-Profil",
+                "GPU, Gesundheitscheck, Zugangsdaten",
+                "Fragen und überarbeitete Anpassungen"
+              ],
+              [
+                "Benutzer",
+                "VMID, Speicher, Netzwerk",
+                "Der Instanzvertrag"
+              ]
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "install",
+      "title": "Was passiert während einer Installation",
+      "blocks": [
+        {
+          "steps": {
+            "items": [
+              {
+                "title": "Auflösung",
+                "body": "Die Registry wird abgefragt, die Host-Architektur ausgewählt und der effektive Digest des Rolling-Tags festgelegt."
+              },
+              {
+                "title": "Download und Verifizierung",
+                "body": "Skopeo lädt das Bild als OCI-Archiv herunter, und jede Schicht wird gegen ihren Digest überprüft und dekomprimiert, bevor etwas erstellt wird. Ein beschädigter Download wird ein zweites Mal abgerufen, bevor die Installation stoppt."
+              },
+              {
+                "title": "Bau",
+                "body": "<code>pct create</code> erstellt die Rootfs aus dem Archiv und behält die offiziellen Prozessmetadaten des Bildes."
+              },
+              {
+                "title": "Anschluss",
+                "body": "Die deklarierten Volumes, Netzwerk, Umgebung, Geräte und Sicherheitsprofile sind beigefügt."
+              },
+              {
+                "title": "Konsole",
+                "body": "Die Konsolenausgabe des Containers wird auf dem Host gehalten, und die Proxmox VE-Konsole öffnet eine Shell, wenn das Image eine ausliefert."
+              },
+              {
+                "title": "Überprüfung",
+                "body": "Der erste Start wartet auf eine Adresse und auf die Antwort des Dienstes; ein Fehler wird nicht als erfolgreiche Installation gemeldet."
+              },
+              {
+                "title": "Registrieren",
+                "body": "Die effektive Konfiguration wird in den Instanzvertrag geschrieben, den Updates und Recreations verwenden."
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "example",
+      "title": "Beispiel: ein Bild mit /config und /downloads",
+      "intro": "Eine gemeinsame Compose-Definition und die Proxmox VE-Konfiguration wird es. Die Pfade, die die Anwendung erwartet, ändern sich nicht.",
+      "blocks": [
+        {
+          "codeGrid": {
+            "items": [
+              {
+                "title": "Docker Compose",
+                "code": "image: lscr.io/linuxserver/example:latest\nenvironment:\n  - PUID=1000\n  - PGID=1000\nvolumes:\n  - config:/config\n  - /srv/downloads:/downloads\nports:\n  - 8080:8080"
+              },
+              {
+                "title": "/etc/pve/lxc/VMID.conf (excerpt)",
+                "code": "entrypoint: /init\nmp0: local-lvm:vm-VMID-disk-1,mp=/config,backup=1,size=8G\nmp1: /srv/downloads,mp=/downloads\nnet0: name=eth0,bridge=vmbr0,ip=dhcp,type=veth\nlxc.environment.runtime: PUID=1000\nlxc.environment.runtime: PGID=1000"
+              }
+            ]
+          }
+        },
+        {
+          "p": "<code>mp0</code> ist eine zweite Festplatte, die zum Container gehört und auf dem ausgewählten Speicher <code>vm-VMID-disk-N</code> heißt. Es wird bei <code>/config</code> montiert und ist mit <code>backup=1</code> Teil des Container-Backups. <code>mp1</code> erstellt keine Festplatte: Es bindet das Hostverzeichnis <code>/srv/downloads</code> an <code>/downloads</code> innerhalb des LXC. Port 8080 ist nicht abgebildet: Der LXC hat eine eigene Adresse und der Dienst antwortet darauf."
+        }
+      ]
+    }
+  ]
+}

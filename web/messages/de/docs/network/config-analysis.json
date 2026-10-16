@@ -1,0 +1,122 @@
+{
+  "meta": {
+    "title": "Config Analysis & Guided Cleanup | ProxMenux Dokumentation",
+    "description": "Erkennt iface-Blöcke in /etc/network/interfaces, die auf physische NICs verweisen, die nicht mehr auf dem Host vorhanden sind. Meldet sie und bietet eine 5-schrittgesteuerte Entfernung mit obligatorischem Backup und einer Blockvorschau.",
+    "ogTitle": "Config Analysis & Guided Cleanup | ProxMenux Dokumentation",
+    "ogDescription": "Finden und entfernen Sie verwaiste Schnittstellenblöcke, die durch Hardwareänderungen zurückgelassen wurden, mit vollständiger Vorschau und Rollback."
+  },
+  "header": {
+    "title": "Config Analyse & Guided Cleanup",
+    "description": "Geht jeden iface-Block in /etc/network/interfaces und überprüft, ob der zugrunde liegende physische NIC noch existiert. Meldet verwaiste Blöcke, die durch Hardwareänderungen zurückgelassen wurden, und bietet eine geführte Entfernung mit Backup, Vorschau und Blockbestätigung.",
+    "section": "Netzwerk"
+  },
+  "intro": {
+    "title": "Was das macht",
+    "body": "Identifiziert <code>iface</code>-Deklarationen, deren Backing NIC nicht mehr auf dem Host vorhanden ist (typischerweise nach dem Ersetzen oder Entfernen einer Netzwerkkarte). Dann bietet eine geführte Bereinigung, die <em>only </em> die Waisenblöcke entfernt, mit einem Backup, einer Vorschau pro Abschnitt und einer expliziten endgültigen Bestätigung."
+  },
+  "differs": {
+    "heading": "Wie es sich von der Brückenanalyse unterscheidet",
+    "headerAspect": "Aspekt",
+    "headerBridge": "Brückenanalyse",
+    "headerConfig": "Konfigurationsanalyse",
+    "rows": [
+      {
+        "aspect": "Blicke auf",
+        "bridge": "Brücken (<code>vmbrX</code>) und ihre <code>bridge-ports</code>-Linie",
+        "config": "Jeder <code>iface</code>-Block (ausgenommen Loopback, Bridges, Bonds)"
+      },
+      {
+        "aspect": "Detektoren",
+        "bridge": "Brücken, die auf einen nicht vorhandenen Port verweisen",
+        "config": "Standalone-Schnittstellenblöcke für NICs, die nicht existieren"
+      },
+      {
+        "aspect": "Reparaturmaßnahmen",
+        "bridge": "Ersetzt den Portnamen in <code>bridge-ports</code>",
+        "config": "Entfernen Sie den gesamten <code>iface</code>-Block"
+      },
+      {
+        "aspect": "Ausgenommen sind",
+        "bridge": "Nichts – jede Brücke wird analysiert",
+        "config": "Brücken (<code>vmbrX</code>) und Anleihen (<code>bondX</code>) werden immer beibehalten, da sie virtuell sind und \"nicht vorhanden\" beim Booten normal wären"
+      }
+    ],
+    "outro": "In der Praxis führen Sie oft beides in dieser Reihenfolge aus: <strong>config analysis</strong> zuerst, um Waisen zu entfernen, dann <link>bridge analysis</link>, um jede Brücke, die auf der jetzt entfernten Schnittstelle beruht, neu zu richten."
+  },
+  "step1": {
+    "heading": "Schritt 1: Analyse (read-only)",
+    "intro": "Abbricht sofort, wenn der Host nicht auf dem klassischen Stapel ist. Andernfalls listet jede konfigurierte Nicht-Loopback-Schnittstelle auf und meldet ihren Status:",
+    "virtTitle": "Virtuelle Schnittstellen sind geschützt",
+    "virtBody": "Brücken (<code>vmbrX</code>) und Anleihen (<code>bondX</code>) sind virtuelle Konstrukte. Sie können legitimerweise zum Zeitpunkt der Inspektion nicht existieren (z. B. eine Brücke ohne Ports noch), so dass die Analyse niemals vorschlägt, sie zu entfernen - nur physische NICs."
+  },
+  "step2": {
+    "heading": "Schritt 2: geführte Bereinigung (5 Schritte)",
+    "intro": "Nur eingegeben, wenn Sie die Eingabeaufforderung am Ende der Analyse akzeptieren. Jeder Schritt erfordert eine Bestätigung; Stornierung an jedem Punkt Exits ohne Schreiben.",
+    "steps": [
+      {
+        "title": "1. Sicherheitssicherung",
+        "body": "Kopiert <code>/etc/network/interfaces</code> in <code>/var/backups/proxmenux/interfaces_backup_&lt;TIMESTAMP&gt;</code>. Weg vor und nach.",
+        "tone": "blue"
+      },
+      {
+        "title": "2. Bestätigen Sie die Entfernungsliste",
+        "body": "Listen Sie genau auf, welche physischen Schnittstellenblöcke entfernt werden. Wenn zwischen Analyse und Bereinigung die NICs wieder auftauchten (z. B. Sie haben eine Karte erneut gesetzt), verlässt der Fluss <em>\"Keine Bereinigung erforderlich.\"</em>",
+        "tone": "blue"
+      },
+      {
+        "title": "3. Vorschau der genauen Block(s)",
+        "body": "Öffnet eine scrollbare Ansicht jedes <code>iface</code>-Blocks, der wörtlich aus der Datei gelöscht wird. Dies ist der Moment, um z.B. einen interessanten <code>up</code>-Hook zu entdecken, den Sie behalten möchten.",
+        "tone": "blue"
+      },
+      {
+        "title": "4. Antragsentfernung",
+        "body": "Für jede verwaiste Schnittstelle läuft <code>sed -i \"/^iface $iface/,/^$/d\" /etc/network/interfaces</code>. Das löscht von der passenden <code>iface</code>-Zeile bis zur nächsten leeren Zeile.",
+        "tone": "amber"
+      },
+      {
+        "title": "5. Überprüfung",
+        "body": "Lesen Sie die Datei erneut, listen Sie auf, was entfernt wurde, und überprüfen Sie die verbleibenden Schnittstellen erneut. Druckt den Rollback-Befehl. Startet <strong>not</strong> das Netzwerk automatisch neu – das Entfernen eines unbenutzten Blocks kann beim nächsten Neustart sicher angewendet werden und vermeidet das Berühren des Live-Status.",
+        "tone": "emerald"
+      }
+    ],
+    "noRestartTitle": "Startet das Netzwerk nicht automatisch neu",
+    "noRestartBody": "Im Gegensatz zur Brückenreparatur bietet der Bereinigungsfluss keinen Neustart des Dienstes. Das Entfernen eines unbenutzten Schnittstellenblocks hat keine unmittelbaren Auswirkungen auf die laufende Konfiguration, so dass ein Neustart unnötig ist und ein unnötiges Verbindungsrisiko darstellt. Die Änderung wird beim nächsten manuellen <code>systemctl restart networking</code> oder beim nächsten Neustart wirksam."
+  },
+  "caveats": {
+    "heading": "Wichtige Vorbehalte",
+    "boundaryTitle": "Die Blockgrenze ist die erste leere Linie",
+    "boundaryBody": "Das <code>sed</code>-Muster löscht von <code>iface &lt;name&gt;</code> bis zur nächsten leeren Zeile. Wenn Ihr <code>/etc/network/interfaces</code> keine leeren Linientrennblöcke hat (selten, aber möglich, wenn es von Hand bearbeitet wird), kann die Löschung auch den nächsten Block verbrauchen. Aus diesem Grund ist <strong>step 3 obligatorisch</strong>: Überprüfen Sie die Vorschau, bevor Sie bestätigen.",
+    "tandemTitle": "Ein Waisen-Iface, das von einer Brücke verwendet wird, wird hier erkannt, nicht in der Brückenanalyse",
+    "tandemBody": "Wenn <code>vmbr0</code> <code>bridge-ports enp3s0</code> deklariert und <code>enp3s0</code> auch einen eigenen <code>iface enp3s0 inet manual</code>-Block hat, wird das Entfernen von <code>enp3s0</code> hier <code>vmbr0</code> mit einer baumelnden Referenz verlassen. Führen Sie nach der Bereinigung <link>bridge analysis</link> aus, um den Bridge-Port neu zu bestimmen oder zu entfernen. Die beiden Ströme sind so konzipiert, dass sie im Tandem verwendet werden können."
+  },
+  "troubleshoot": {
+    "heading": "Fehlerbehebung",
+    "notFoundTitle": "Die Analyse zeigt mein neues NIC als \"NICHT GEFUNDEN\"",
+    "notFoundBody": "Der Kernel sieht das Gerät unter einem anderen Namen als in der Datei. Führen Sie <code>ip link show</code> aus, um den tatsächlichen Namen zu erhalten. Dies ist genau der Fall, wenn <link>Persistente Schnittstellennamen</link> das Problem verhindern würden.",
+    "tooMuchTitle": "Die Bereinigung wurde zu viel entfernt (ein Block, den ich behalten wollte)",
+    "tooMuchBody": "Wiederherstellen aus dem in Schritt 5 gedruckten Backup:",
+    "tooMuchOutro": "Bearbeiten Sie die Datei von Hand, um eine klare leere Linie zwischen den Blöcken hinzuzufügen, bevor Sie die Bereinigung erneut ausführen, oder entfernen Sie den problematischen Block manuell.",
+    "bridgeBreakTitle": "Eine Brücke funktioniert nach dem Aufräumen nicht mehr",
+    "bridgeBreakBody": "Die Brücke war auf einen Port angewiesen, dessen <code>iface</code>-Block gerade entfernt wurde. Führen Sie <link>bridge analysis</link> aus und der Vorschlag zeigt die Brücke auf eine vorhandene physische Schnittstelle."
+  },
+  "related": {
+    "heading": "Verwandte Themen",
+    "items": [
+      {
+        "label": "Brückenanalyse und geführte Reparatur",
+        "href": "/docs/network/bridge-analysis",
+        "tail": "- das natürliche Follow-up nach einer Reinigung."
+      },
+      {
+        "label": "Persistente Schnittstellennamen",
+        "href": "/docs/network/persistent-names",
+        "tail": "Stoppt, dass sich verwaiste Blöcke nach jedem Hardwarewechsel ansammeln."
+      },
+      {
+        "label": "Schnittstellen Backup & Neustart",
+        "href": "/docs/network/backup-restore",
+        "tail": "- manuelle Snapshots und der Wiederherstellungsbrowser."
+      }
+    ]
+  }
+}

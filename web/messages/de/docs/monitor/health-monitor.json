@@ -1,0 +1,372 @@
+{
+  "meta": {
+    "title": "Proxmox Health Monitor — CPU, Speicher, SMART, ZFS, Protokolle | ProxMenux",
+    "description": "Proaktive Proxmox VE-Gesundheitsüberwachung: zehn Kategorien, die alle fünf Minuten gescannt werden (CPU & Temperatur, Speicher & Swap, Speicher, Festplatten/SMART, Netzwerk, VMs, Dienste, Protokolle, Updates, Sicherheit), vier Schweregrade, Dauer der Unterdrückung pro Kategorie, automatische Bereinigung gelöster Fehler, eine permanente Festplattenbeobachtungshistorie und der Pfad von einem Rohereignis zu einer Telegram, Discord, Gotify oder E-Mail-Benachrichtigung.",
+    "ogTitle": "Proxmox Health Monitor — CPU, Speicher, SMART, ZFS, Protokolle",
+    "ogDescription": "Proaktive Proxmox VE-Gesundheitsüberwachung in zehn Kategorien mit Schweregraden, Unterdrückungsdauern und ereignisgesteuerten Benachrichtigungen.",
+    "twitterTitle": "Proxmox Gesundheitsmonitor | ProxMenux",
+    "twitterDescription": "Proaktive Proxmox VE Gesundheitsüberwachung in zehn Kategorien mit Schweregraden und Benachrichtigungen."
+  },
+  "header": {
+    "title": "Gesundheitsmonitor",
+    "description": "Die kontinuierliche Selbstüberprüfung, die zehn Kategorien von Wirtszuständen in einem Fünf-Minuten-Zyklus scannt, Vitalzeichen kontinuierlich zwischen Zyklen abtastet, Ergebnisse in einen strukturierten Ereignisstrom dedupliziert und das Dashboard, die Benachrichtigungsmaschine und den optionalen KI-Rewriter aus einer Quelle der Wahrheit speist.",
+    "section": "ProxMenux-Monitor"
+  },
+  "intro": {
+    "title": "Ein Scanner, drei Verbraucher",
+    "body": "Ein Hintergrund-Thread führt den gesamten Gesundheitszyklus alle 5 Minuten aus, hält jedes Finden in SQLite unter einem stabilen <code>error_key</code> fort und lässt <strong>(1)</strong> das Dashboard den aktuellen Zustand rendern, <strong>(2)</strong> das Benachrichtigungsmodul, das neue Ereignisse in den konfigurierten Kanälen auslöst, und <strong>(3)</strong> den optionalen AI-Assistenten Benachrichtigungen in einfacher Sprache neu schreiben. Sie konfigurieren den Scanner einmal; alles Downstream bleibt synchron."
+  },
+  "howItWorks": {
+    "heading": "Wie es funktioniert",
+    "intro": "Der Health Monitor läuft auf zwei parallelen Spuren innerhalb des Monitor-Prozesses. Ein leichter <strong>vital-Zeichen-Sampler </strong> liest CPU, Gedächtnis und Temperatur alle paar Sekunden, so dass anhaltende Schwellenwertbedingungen schnell erkannt werden; Parallel dazu läuft der <strong>full-Gesundheitszyklus </strong> alle fünf Minuten und trainiert jede Kategorie von Ende zu Ende. Beide Spuren konvergieren zu den gleichen SQLite-Tabellen - und von dort aus lesen drei Verbraucher den Zustand unabhängig voneinander.",
+    "scannerTitle": "Von der Probe zum gespeicherten Befund",
+    "scannerCaption": "Der Scanner. Vitalzeichen werden schnell abgetastet, so dass der Druck des anhaltenden CPU / des anhaltenden Gedächtnisses vor dem nächsten 5-min-Zyklus erkannt werden kann. Der vollständige Zyklus liest diese Puffer und führt die schwereren Prüfungen aus (SMART, ZFS Poolzustand, Journal-Scanning, Service-Gesundheit usw.), bevor die strukturierten Ergebnisse in SQLite geschrieben werden.",
+    "scannerArrowLabel": "Schritt",
+    "scannerNodes": {
+      "samplerLabel": "Probennehmer für Lebenszeichen",
+      "samplerDetail": "CPU Nutzung 30 s\nSpeicher 30 s\nTemperatur 15 s\n→ Geschichtspuffer",
+      "cycleLabel": "Vollständiger Gesundheitszyklus",
+      "cycleDetail": "Jede 5 min\nAblesepuffer\n+ lebende Sonden\n(SMART, ZFS,\nDienstleistungen, Zeitschriften...",
+      "checksLabel": "Prüfungen nach Kategorien",
+      "checksDetail": "Zehn Kategorien\n(CPU, Speicher)\nSpeicher, Platten,\nNetz, VMs,\nDienstleistungen, Protokolle,\nUpdates, Sicherheit",
+      "sqliteLabel": "SQLite",
+      "sqliteDetail": "Fehlertabelle\n(aktiv +)\nentlassen\n+ disk_observations\n(dauerhaft)\nPer-Disk History"
+    },
+    "notifTitle": "Vom gespeicherten Finding zum User",
+    "notifCaption": "Der Meldepfad. Die gleiche Fehlertabelle steuert auch die Dashboard-Ansicht (Active / Dismissed-Listen live gerendert) und wird von der Bereinigungsroutine am Ende jedes Zyklus verbraucht, um veraltete Einträge automatisch aufzulösen - beide laufen aus den gleichen Daten, ohne den Dispatcher zu durchlaufen.",
+    "notifArrowLabel": "Ereignis",
+    "notifNodes": {
+      "errorsLabel": "Fehlertabelle",
+      "errorsDetail": "Aktiv +\nAbgeschlossene Zeilen\nKeyed by\nerror_key",
+      "dispatcherLabel": "Benachrichtigungsversender",
+      "dispatcherDetail": "Neu + eskaliert\nEreignisse stehen an\nDurch Toggles\n+ Abklingzeit",
+      "templatesLabel": "Vorlagen + AI rewrite",
+      "templatesDetail": "Per Event\nVorlage\n→ optionale KI\nKlarsprache\nRewrite",
+      "channelsLabel": "Kanäle",
+      "channelsDetail": "Telegram\nDiscord\nGotify\nE-Mail (SMTP)"
+    }
+  },
+  "categories": {
+    "heading": "Die zehn Kategorien",
+    "imageAlt": "Health Monitor-Ansicht zeigt die zehn Kategorien mit ihrem aktuellen Status ()CPU, Speicher, Speicher, Festplatten, Netzwerk, VMs, Dienste, Protokolle, Updates, Sicherheit",
+    "imageCaption": "Health Monitor Ansicht - die zehn Kategorien mit ihrem aktuellen Status. Kategorien auf einem gesunden Host zeigen alle OK; Warnungen und kritische Ereignisse erscheinen inline mit den Zeilen, die sie erzeugt haben.",
+    "intro": "Jeder Zyklus übt zehn unabhängige Prüfer aus. Jeder erzeugt einen von vier Status (<strong>OK</strong>, <strong>INFO</strong>, <strong>WARNING</strong>, <strong>CRITICAL</strong>) sowie eine strukturierte Nutzlast - Gerätenamen, Beispielprotokollzeilen, genaue Schwellenwerte -, die im Dashboard angezeigt wird und zur Benachrichtigungsstelle weitergeleitet wird.",
+    "headerCategory": "Kategorie",
+    "headerChecks": "Sub-Kontrollen",
+    "headerEvents": "Typische Ereignisse",
+    "rows": [
+      {
+        "category": "CPU & Temperatur",
+        "checks": "CPU Nutzung mit Hysterese, Sensortemperatur",
+        "events": "Hohe Dauerlast; CPU Temperatur, die die Warnung des Herstellers / kritische Schwellenwerte überschreitet."
+      },
+      {
+        "category": "Arbeitsspeicher & Swap",
+        "checks": "RAM Nutzung, Swap Nutzung",
+        "events": "Anhaltender Gedächtnisdruck; OOM-Killer-Aktivität; Swap-Erschöpfung."
+      },
+      {
+        "category": "Lagerung",
+        "checks": "Proxmox-Speicher, Root-Dateisystem",
+        "events": "Offline-Speicher (NFS-Server nicht erreichbar, CIFS abgelaufene Creds); Root-Mount > 90 %; LVM dünner Pool nähert sich der Füllung."
+      },
+      {
+        "category": "Platten und SMART",
+        "checks": "SMART, dmesg I/O-Fehler, ZFS Pools, LVM, Dateisystemfehler",
+        "events": "SMART-Gesundheit fehlgeschlagen; neu zugewiesene / ausstehende Sektoren; ATA-I / O-Fehler; ZFS-Pool DEGRADED / FAULTED; ext4-Read-only-Remount."
+      },
+      {
+        "category": "Netzwerk",
+        "checks": "Konnektivität, Verbindungszustand, Gateway-Latenz",
+        "events": "Brücken- oder Bond-Down; Gateway nicht erreichbar; persistente Latenzspitzen."
+      },
+      {
+        "category": "VMs und Container",
+        "checks": "QMP Kommunikation, VM Startup, Container Startup",
+        "events": "Fehlgeschlagener VM-Boot; CT-Abschaltungsfehler; QMP-Sockel-Timeout; fehlende Konfiguration / Festplatte nach einem Klon."
+      },
+      {
+        "category": "PVE-Dienste",
+        "checks": "<code>pveproxy</code>, <code>pvedaemon</code>, <code>pvestatd</code>, <code>pve-cluster</code>, Cluster-Modus",
+        "events": "Service abgestürzt; Cluster Quorum verloren; <code>pmxcfs</code> stecken geblieben."
+      },
+      {
+        "category": "Systemprotokolle",
+        "checks": "Persistente Fehler, Fehlerspitzen, Fehlerkaskaden, kritische Kernelmeldungen",
+        "events": "Wiederholte identische Fehler; plötzliches Warnsignal (Kaskadenmuster); <code>BUG:</code> / <code>OOPS:</code> / <code>oom-killer</code> in dmesg."
+      },
+      {
+        "category": "Systemaktualisierungen",
+        "checks": "Ausstehende Updates, Sicherheitsupdates, Kernel / PVE-Version, Systemalter",
+        "events": "Sicherheitsupdates verfügbar; Kernel mehrere kleinere Versionen hinter sich gepinnt; Host-Uptime > 90 Tage. Wenn Updates ausstehen, zeigt der Overview-Header eine <em>Update Now</em>-Taste an, die den vollständigen ProxMenux-Update-Flow inline ausführt; beim Schließen wird der Gesundheitsendpunkt mit <code>?refresh=1</code> erneut getroffen, so dass die Anzahl der Abzeichen den neuen Zustand widerspiegelt, ohne auf den nächsten 5-min-Zyklus zu warten."
+      },
+      {
+        "category": "Sicherheit & Zertifikate",
+        "checks": "Anmeldeversuche, auslaufende Zertifikate, optionaler Gefängnisstatus Fail2Ban",
+        "events": "Wiederholte SSH / Web-Auth-Ausfälle; PVE-Zertifikat < 30 Tage nach Ablauf; Fail2Ban aktive Verbote."
+      }
+    ]
+  },
+  "severity": {
+    "heading": "Schweregradmodell",
+    "headerStatus": "Status",
+    "headerColour": "Farbe",
+    "headerMeaning": "Bedeutung",
+    "headerNotification": "Benachrichtigung",
+    "rows": [
+      {
+        "status": "OK",
+        "colour": "Grün",
+        "meaning": "Gesund. Keine Befunde in dieser Kategorie.",
+        "notification": "Schweigen."
+      },
+      {
+        "status": "INFO",
+        "colour": "Blau",
+        "meaning": "Transiente oder bereits gelöste Zustand erwähnenswert einmal. Wird auch für Kategorien verwendet, in denen <em>only</em> abgewiesene Artikel verbleiben.",
+        "notification": "Fakultativ. Jeder Ereignistyp kann pro Kanal ein- oder ausgeschaltet werden."
+      },
+      {
+        "status": "WARNING",
+        "colour": "Gelb",
+        "meaning": "Aufmerksamkeit ist erforderlich, aber der Host ist immer noch funktionsfähig. Ursache ist nicht trivial - lesen Sie die Details.",
+        "notification": "Gesendet, wenn der per-event-schalter für den kanal eingeschaltet ist."
+      },
+      {
+        "status": "CRITICAL",
+        "colour": "rot",
+        "meaning": "Funktionalität gebrochen oder Datenverlust möglich. Erforderliche Maßnahmen.",
+        "notification": "Gesendet, wenn der per-event-schalter für den kanal eingeschaltet ist. CPU Temperatur CRITICAL wird als Sicherheitsalarm behandelt, der erneut feuert, auch wenn er zuvor abgelehnt wurde."
+      }
+    ],
+    "infoNote": "Eine Kategorie, die <strong>OK</strong> ist, aber Ereignisse noch in ihrem Unterdrückungsfenster abgewiesen hat, wird als <strong>INFO</strong> dargestellt - um Sie daran zu erinnern, dass etwas zum Schweigen gebracht wird, anstatt dass nichts jemals falsch war.",
+    "unknownTitle": "Unbekannt, wenn ein Check nicht abgeschlossen werden kann",
+    "unknownBody": "Eine Prüfung, bei der es nicht gelingt, ein Urteil für drei Zyklen hintereinander zu erstellen (eine Sonde, die ausfällt, ein Sensor, der verschwunden ist, ein Werkzeug, das mit einem Fehler aussteigt), wird intern als <code>UNKNOWN</code> aufgezeichnet. Das Dashboard taucht als gelber Status auf - die Gesamtansicht kappt <code>UNKNOWN</code> bei <strong>WARNING</strong>, so dass es niemals einen gesunden Host für CRITICAL alleine eskaliert."
+  },
+  "dashboardView": {
+    "heading": "Die Armaturenbrettansicht",
+    "intro": "Der Gesundheitsmonitor befindet sich auf der Registerkarte <strong>Overview</strong>. Die Header-Status-Pille (Healthy / Warning / Critical) öffnet ein Modal, das die Ergebnisse in zwei Listen aufteilt:",
+    "items": [
+      "<strong>Active</strong> - jede Kategorie mit einem ungelösten Befund. Jede Zeile wird erweitert, um die einzelnen Prüfungen anzuzeigen, die den Status, die rohe <code>reason</code>-Zeichenfolge, das betreffende Gerät oder die VM-ID und (für Kategorien, die auf eine Registerkarte verlinken) einen Klick in Storage / Network / VMs / Logs / Hardware zur Untersuchung ergeben haben.",
+      "<strong>Dismissed</strong> - Elemente, die zuvor vom Benutzer bestätigt wurden und sich noch in ihrem Unterdrückungsfenster befinden. Jede Zeile zeigt an, wie viel von der Unterdrückung verbleibt und die konfigurierte Dauer. Wenn das Fenster abläuft, verschwindet das Element aus dieser Liste; wenn die zugrunde liegende Bedingung noch vorhanden ist und die Kategorie das erneute Zünden unterstützt, erscheint es erneut in <em>Active</em>."
+    ],
+    "pillTitle": "Die Pille spiegelt die schlechteste Kategorie",
+    "pillBody": "Die Dashboard-Header-Farbe ist die höchste Strenge in den zehn Kategorien: jede KRITISCHE → rot, sonst jede WARNUNG → gelb, sonst jede INFO → blau, sonst grün. Die gleiche Logik steuert den Favicon-Punkt und das PWA-Abzeichen.",
+    "updateNowTitle": "Schaltfläche Jetzt Aktualisieren im Overview-Header",
+    "updateNowBody1": "Wenn die Kategorie <em>System Updates</em> ein oder mehrere ausstehende Updates meldet, stellt der Übersichts-Header eine <strong>Update Now</strong> Taste neben der Gesundheitspille dar. Die Schaltfläche öffnet einen Modal, der den gleichen hostseitigen Ablauf wie <em>ProxMenux → Einstellungen nach der Installation Proxmox → Proxmox System Update</em> ausführt: Repo-Hygiene, <code>apt full-upgrade</code> über den sicheren Worker <code>update-pve-safe.sh</code>, automatisches DKMS-Wiederaufbauen von ProxMenux-verwalteten Treibern, wenn ein neuer Kernel landet, Autoremove / Autoclean und eine Neustartaufforderung, wenn der Kernel geändert wird. Fortschrittslinien fließen im Modal, während der Arbeiter sie druckt.",
+    "updateNowBody2": "Wenn der Lauf beendet ist, ruft das Schließen des Modals <code>GET /api/health/details?refresh=1</code> auf, was den Gesundheitsendpunkt-Cache vor dem Servieren ungültig macht. Die Reihe der ausstehenden Updates und die Schwere der Pille werden vor Ort aus dem neuen Paketzustand neu berechnet, so dass das Abzeichen verschwindet, ohne auf den nächsten Fünf-Minuten-Zyklus zu warten. Wenn der Host bereits auf dem neuesten Stand ist, ist der Button ausgeblendet - kein visuelles Rauschen auf einem gesunden System."
+  },
+  "dismiss": {
+    "heading": "Abweisung von Warnungen und Unterdrückungsdauer",
+    "intro": "Einige Ereignisse sind von Natur aus laut - ein <em>System-Update: Ausstehende Updates </em> bleiben true, bis Sie den Host patchen, und Sie möchten keine Benachrichtigung alle fünf Minuten für eine Woche. Die Schaltfläche <em>Update Now</em> im Übersichts-Header ist die direkte Verknüpfung, um diesen speziellen Fall zu lösen; Für alles andere oder wenn das Patchen verschoben wird, bietet der Health Monitor auch zwei gekoppelte Silencing-Mechanismen:",
+    "step1": "<strong>Per-event Dismiss action</strong> im Modal. Der Dismiss-Button öffnet eine kleine Dropdown mit drei Optionen - <strong>24 Stunden</strong>, <strong>7 Tage</strong> oder <strong>Permanently</strong> - mit denen Sie auswählen können, wie lange diese spezielle Warnung unabhängig vom Standard der Kategorie stumm bleibt. Wählen Sie einen Aufruf <code>POST /api/health/acknowledge</code> mit dem <code>error_key</code> und dem gewählten <code>suppression_hours</code> (<code>-1</code> für permanent). Das Ereignis wird mit einem Zeitstempel <code>acknowledged_at</code> in die Liste der Abgewiesenen verschoben.",
+    "dropdownImageAlt": "Dismiss dropdown auf einem Health Monitor Warnung — 24 Stunden, 7 Tage oder dauerhaft",
+    "dropdownImageCaption": "Per-Event Dismiss Dropdown. Das gewählte Fenster gilt für diese einzelne Warnung; wenn kein Ereignisfenster ausgewählt ist, wird der Standard der Kategorie verwendet. Permanente Entlassungen werden mit einem markanten <em>Permanent</em>-Abzeichen in der Abgewiesenen Liste markiert und niemals erneut abgefeuert.",
+    "step2": "Einstellung <strong>Je Kategorie Unterdrückungsdauer</strong>. Von der Einstellung → Gesundheitsmonitor-Karte (oder <code>POST /api/health/settings</code>) hat jede der zehn Kategorien ein eigenes Standardfenster, wenn eine Entlassung ohne eine Option pro Ereignis ausgelöst wird:",
+    "imageAlt": "Per-Category Suppression Duration Settings Karte in Einstellungen → Gesundheitsmonitor",
+    "imageCaption": "Suppression Duration Card — eine Dropdown pro Kategorie. Wählen Sie ein längeres Fenster für laute Ereignisse (z. B. ausstehende Updates) und kürzer für solche, die Sie schnell neu bewerten möchten. Aktive Unterdrückungen sind unten aufgeführt (siehe unten).",
+    "outro": "Während ein Ereignis unterdrückt wird, läuft der Scanner weiterhin und aktualisiert den <code>last_seen</code>-Zeitstempel der Zeile, aber es wird keine neue Benachrichtigung gesendet und das Dashboard bleibt ruhig. Wenn das Fenster abläuft, bewertet der nächste Zyklus die Bedingung neu und feuert entweder frisch oder, wenn die Bedingung von selbst gelöscht wurde, löscht die Zeile aus den Listen.",
+    "activeSuppressionsTitle": "Überprüfung und Rücknahme von Entlassungen — das Panel „Aktive Unterdrückungen",
+    "activeSuppressionsBody": "Jede derzeit zum Schweigen gebrachte Warnung (zeitbegrenzt und dauerhaft) ist unter <strong>Settings → Health Monitor → Active Suppressions</strong> aufgeführt. Jede Zeile zeigt den Warnbezeichner, die Kategorie, den Schweregrad an, wann sie abgewiesen wurde und wie viel Zeit noch übrig ist, sowie eine <strong>Re-aktivierte </strong>-Taste, die die Bestätigung löscht, damit die Warnung beim nächsten Scan erneut ausgelöst werden kann. Permanente Entlassungen können nur von hier aus rückgängig gemacht werden; zeitlich begrenzte können auch zwangsbelebt werden, ohne auf den Countdown zu warten. Die Re-enable-Aktion wird durch den Health Monitor <em>Edit</em>-Modus oben auf dieser Karte ausgelöst - umschalten Bearbeiten, klicken Sie auf Re-enable in jeder Zeile, die Sie wiederbeleben möchten (gewartete Zeilen zeigen einen grünen Rahmen und einen Durchschlag an), und klicken Sie dann auf Speichern, um zu begehen. Storniert die Warteschlange.",
+    "autoTitle": "Auto-Unterdrückung, wenn Sie die Dauer ändern",
+    "autoBody": "Die Einstellung der Unterdrückungsdauer einer Kategorie auf etwas anderes als die Standard-24 h hat einen zweiten Effekt, der über benutzerinitiierte Entlassungen hinausgeht: <strong>zukünftige Ergebnisse in dieser Kategorie treten in die Tabelle ein, die bereits mit dieser Dauer anerkannt wurde</strong>. Dies ist von Design - wenn Sie dem Monitor gesagt haben, dass Sie plattenbezogene Ereignisse für eine Woche zum Schweigen bringen möchten, ehren brandneue Festplattenergebnisse diese Absicht, ohne dass Sie jeden von Hand entlassen müssen. Sie erscheinen direkt in der Abgewiesenen Liste mit der konfigurierten verbleibenden Zeit. Die bei 24 h verbleibenden Kategorien sind nicht betroffen und verhalten sich klassisch (neue Erkenntnisse landen in Active, bis Sie handeln).",
+    "tempTitle": "CPU Temperatur CRITICAL ist die Sicherheitsüberschreibung",
+    "tempBody": "Ein spezifischer Befund umgeht die Unterdrückung vollständig: <strong>CPU Temperatur CRITICAL</strong>. Wenn der Sensor den kritischen Schwellenwert überschreitet, wird der Alarm unabhängig von einer vorherigen Entlassung erneut ausgelöst - ein gekochter CPU ist ein gekochter CPU. Dies ist der einzige eingebaute Override des Entlassungsmodells.",
+    "nonDismissableTitle": "Feststellungen, die nicht zurückgewiesen werden können",
+    "nonDismissableBody": "Eine Handvoll Befunde werden absichtlich als nicht abweisbar gekennzeichnet - sie signalisieren einen Zustand, in dem das Stillsetzen der Warnung Daten, Hardware oder Konnektivität kosten könnte. Der Dismiss-Button ist für diese Zeilen ausgeblendet; die Warnung wird nur gelöscht, wenn sich die zugrunde liegende Bedingung erholt und die automatische Auflösungsbereinigung sie aufnimmt. Andere Ergebnisse (transiente E / A-Ereignisse auf einer gesunden Festplatte, wiederhergestellte Zustände) sind ebenfalls als nicht abweisbar gekennzeichnet, aber aus dem gegenteiligen Grund: Es gibt nichts zum Schweigen zu bringen, da die Zeile bereits informationell und selbstfrei ist.",
+    "headerFinding": "Feststellung",
+    "headerWhy": "Warum es nicht abgelehnt werden kann",
+    "rows": [
+      {
+        "finding": "CPU Temperaturwarnung/kritisch",
+        "why": "Hardware-Risiko — anhaltende Übertemperatur Schäden Silizium. Das Schweigen würde ein Kochen CPU unbemerkt laufen lassen."
+      },
+      {
+        "finding": "Dateisystem raumkritisch (root mount)",
+        "why": "Datenverlustrisiko - eine vollständige Wurzel verhindert Schreiben und beschädigt den Zustand. Die Warnung muss sichtbar bleiben, bis Sie Platz freigeben."
+      },
+      {
+        "finding": "ZFS pool DEGRADED / FAULTED",
+        "why": "Datenintegritätsrisiko - Poolausfall bedroht jeden Datensatz. Schweigen, während der Pool ungesund ist, ist nie die richtige Antwort."
+      },
+      {
+        "finding": "Festplatten-I/O-Fehler mit SMART FAILED",
+        "why": "Fahrfehler bestätigt durch SMART Maskierung verbirgt echte Hardware sterben. Die Warnung bleibt bestehen, bis das Gerät ersetzt (oder vom Host entfernt) wird."
+      },
+      {
+        "finding": "Netzschnittstelle DOWN",
+        "why": "Konnektivitätsverlust - Brücken, Bindungen und physische Schnittstellen mit aktivem Datenverkehr müssen sichtbar bleiben. Sie zum Schweigen zu bringen, würde einen Remote-Management-Ausfall maskieren."
+      },
+      {
+        "finding": "I/O-Ereignisse auf gesunden Festplatten (INFO)",
+        "why": "Transiente ATA / dmesg-Ereignisse auf einer Festplatte, deren SMART OK sagt - markierte INFO und Selbstfreigabe. Nichts zu verwerfen, weil der nächste Zyklus sie bereits entfernt."
+      }
+    ],
+    "principle": "Alles andere kann abgetan werden. Das Prinzip ist: Warnungen, die auf \"echten Schaden im Gange\" hinweisen oder die sich bereits selbst aufgelöst haben, werden vom Abweisungspfad ferngehalten; Warnungen über anhaltende Zustände, die Sie möglicherweise später bestätigen und erneut überprüfen möchten (hohe CPU-Nutzung, ausstehende Updates, Zertifikat kurz vor dem Ablauf, Protokollwarnungen, VM-Startschluckauf usw.) setzen den Abweisungsbutton frei."
+  },
+  "autoresolve": {
+    "heading": "Autoauflösung und Reinigung",
+    "intro": "Viele Warnungen sollten sich selbst löschen, wenn der Zustand verschwindet - ein VM, der nicht gestartet wurde und jetzt läuft, eine Festplatte, die sich nicht mehr im System befindet, eine Temperatur, die wieder normal wurde. Eine Bereinigungsroutine läuft am Ende jedes Fünf-Minuten-Zyklus und wendet diese Regeln an:",
+    "headerTrigger": "Trigger",
+    "headerAction": "Aktion",
+    "rows": [
+      {
+        "trigger": "CPU Nutzung zurück in den normalen Bereich nach einer CPU-bezogene Warnung.",
+        "action": "Markiert gelöst. Streichen aus der aktiven Liste."
+      },
+      {
+        "trigger": "Speicherdruck wieder unterhalb der Warnschwelle nach einer OOM / Memory Warnung.",
+        "action": "Markiert gelöst."
+      },
+      {
+        "trigger": "VM / CT, auf den der Fehler verweist, existiert nicht mehr (<code>qm status</code> / <code>pct status</code> ungleich Null).",
+        "action": "Aufgelöst als entfernte Ressource markiert."
+      },
+      {
+        "trigger": "Disk, auf den der Fehler verwiesen wird, ist in <code>/dev/</code> nicht mehr vorhanden.",
+        "action": "Markiert aufgelöst als entferntes Gerät. Die permanente Beobachtungsgeschichte bleibt erhalten (siehe nächster Abschnitt)."
+      },
+      {
+        "trigger": "Befunde aus der Zeitschrift (<code>logs</code> Kategorie, SMART-Einträge, ATA / I / O-Fehler), wenn ihr Unterdrückungsfenster abläuft.",
+        "action": "Sauber entfernt. Jeder Scan überprüft neue Journaleinträge von diesem Punkt an; die gleiche historische Linie im Journal wird nicht erneut ausgegeben."
+      },
+      {
+        "trigger": "Fehler behoben, die älter als sieben Tage sind.",
+        "action": "Aus der Datenbank gelöscht, um die Tabelle klein zu halten. Die Benachrichtigungshistorie ist unabhängig und wird länger aufbewahrt."
+      }
+    ],
+    "permanentTitle": "Permanente Unterdrückung ist nicht dasselbe wie gelöst",
+    "permanentBody": "Wenn Sie die Unterdrückungsdauer einer Kategorie auf <code>-1</code> (<em>permanent</em>) festlegen, werden zukünftige Benachrichtigungen für Elemente, die Sie in dieser Kategorie ablehnen, zum Schweigen gebracht - die Überprüfung der automatischen Auflösung oben wird jedoch nicht übersprungen. Wenn die zugrunde liegende Bedingung verschwindet (Ressource gelöscht, Schwellenwert nicht mehr überschritten), wird der Artikel immer noch automatisch bereinigt."
+  },
+  "observations": {
+    "heading": "Datenträgerbeobachtungen — Dauergeschichte",
+    "intro": "Disk Events sind etwas Besonderes. Eine SMART-Warnung auf <code>/dev/sdh</code> bei 02: 14 AM ist etwas, an das Sie sich erinnern möchten, auch nachdem der I / O-Sturm nachgelassen und der Fehler automatisch behoben wurde - die Festplatte hat jetzt eine Erfolgsbilanz. Zu diesem Zweck führt der Health Monitor eine separate <strong>permanent</strong>-Tabelle: <code>disk_observations</code>.",
+    "headerProperty": "Eigentum",
+    "headerErrors": "Tabelle <code>errors</code> (Aktiv)",
+    "headerObs": "Tabelle <code>disk_observations</code>",
+    "rows": [
+      {
+        "property": "Zweck",
+        "errors": "Steuert die <em>current</em> Gesundheitsansicht + Benachrichtigungssende.",
+        "obs": "Permanenter Per-Disk Audit Trail."
+      },
+      {
+        "property": "Autoauflösung",
+        "errors": "Ja — Zeilen werden gelöscht, wenn die Bedingung verschwindet.",
+        "obs": "Nein - Einträge bleiben für immer bestehen, es sei denn, der Benutzer weist sie ausdrücklich ab."
+      },
+      {
+        "property": "Dedupschlüssel",
+        "errors": "<code>error_key</code> (z.B. <code>smart_sdh</code>).",
+        "obs": "<code>(disk_registry_id, error_type, error_signature)</code> mit stabilen Signaturen, die von flüchtigen Daten befreit sind."
+      },
+      {
+        "property": "Wo gezeigt",
+        "errors": "Gesundheitsmonitor modal (Aktive / Abgewiesene Listen).",
+        "obs": "Datenträgerdetailkarte auf der Registerkarte <strong>Storage</strong> mit einem \"X obs.\"-Abzeichen pro Festplatte."
+      },
+      {
+        "property": "Was es aufzeichnet",
+        "errors": "Was auch immer derzeit scheitert.",
+        "obs": "SMART-Warnungen (Sektorprobleme / Temperatur / CRC / fehlgeschlagene Selbsttests), I/O-Fehler (ATA / NVMe/dm), Dateisystemfehler, ZFS-Poolereignisse."
+      }
+    ],
+    "outro": "Praktische Konsequenz: Eine Warnung kann aus dem Dashboard gelöscht werden, während der gleiche Vorfall noch in der Geschichte der Festplatte aufgezeichnet wird. Wenn Sie unter Storage auf eine Festplatte klicken, zeigt die Karte die Anzahl der ausstehenden Beobachtungen und eine Liste mit Zeitstempeln, Schweregrad und der ursprünglichen Rohnachricht an - nützlich, wenn Sie entscheiden, ob ein Laufwerk ersetzt werden muss.",
+    "renameTitle": "Geräteübergreifende Renames werden automatisch zusammengeführt",
+    "renameBody": "Festplatten erscheinen manchmal unter transienten Namen (<code>ata8</code>, <code>nvme0n1p3</code>), bevor sie einen stabilen Blockgerätenamen erhalten. Die Beobachtungsschicht konsolidiert die Einträge nach Seriennummern, wenn sie bekannt ist: Wenn ein Ereignis zuerst als <code>ata8</code> aufgezeichnet wurde und dieselbe Festplatte später als <code>sdh</code> identifiziert wird, werden die historischen Beobachtungen im nächsten Zyklus wieder an <code>sdh</code> angehängt, so dass der Verlauf nicht fragmentiert wird."
+  },
+  "notification": {
+    "heading": "Von einer Feststellung zu einer Anmeldung",
+    "intro": "Jeder aktive Fehler ist auch ein Kandidat für die Benachrichtigungsmaschine. Der Fluss:",
+    "items": [
+      "Der Scanner zeichnet den Befund mit Kategorie + Schweregrad + strukturierten Details auf.",
+      "Wenn der Ereignistyp <strong>enabled</strong> in den globalen Benachrichtigungseinstellungen ist und der Kanal diese Kategorie nicht stummgeschaltet hat, wird ein Ereignis in die Warteschlange gestellt.",
+      "Die Template Engine stellt ein (Titel, Körper) Paar aus den strukturierten Details dar. Wenn der AI-Rewriter aktiviert ist, wird das gleiche Paar auch durch den konfigurierten Anbieter für eine Klartextversion geleitet.",
+      "Die Kanalimplementierung versendet es: Telegram Nachricht, Discord Einbettung, Gotify Push oder E-Mail. Das Versandergebnis wird in <code>notification_history</code> gespeichert.",
+      "Wenn eine Entlassung später eintrifft, tritt das Unterdrückungsfenster ein und weitere erneute Feuer des gleichen <code>error_key</code> bleiben an der Warteschlange, bis sich das Fenster schließt."
+    ],
+    "outro": "KanalkonfigurationTelegram Bot-Token, webhook URLs, AI-Provider-Schlüssel, Per-Event-Toggles, Channel-Overrides sind in <notifLink>Meldungen</notifLink> und <aiLink>KI-Assistent</aiLink>."
+  },
+  "rest": {
+    "heading": "REST-Endpunkte",
+    "intro": "Alles, was der modal macht, ist vom API aufrufbar - praktisch für skripte, benutzerdefinierte dashboards oder ihre eigene chat-bot-integration. Jeder Anruf benötigt ein API-Token; Anrufe, die etwas ändern - eine Warnung ausschalten, die Unterdrückungseinstellungen speichern, Waisen aufräumen - erfordern einen mit full_admin-Bereich, und ein read_only-Token erhält 403.",
+    "headerEndpoint": "Endpunkt",
+    "headerMethod": "Methode",
+    "headerUse": "Verwenden",
+    "rows": [
+      {
+        "endpoint": "/api/health",
+        "method": "GET",
+        "use": "Kleine Gesundheitssonde — gibt JSON mit <code>status</code>, <code>timestamp</code> und <code>version</code> zurück. Geeignet für uptime kuma-schlüsselwortprüfungen; der empfänger muss den bearer-header senden."
+      },
+      {
+        "endpoint": "/api/health/status",
+        "method": "GET",
+        "use": "Gesamtgesundheitsurteil — Einzelschweregrad + zusammenfassende Zeichenfolge. authentifiziert."
+      },
+      {
+        "endpoint": "/api/health/details",
+        "method": "GET",
+        "use": "Alle zehn Kategorien mit ihren Status pro Kategorie und der strukturierten Nutzlast, die jede produziert hat."
+      },
+      {
+        "endpoint": "/api/health/full",
+        "method": "GET",
+        "use": "Vollständige Momentaufnahme - Kategorien + aktive Fehler + abgetane Liste + benutzerdefinierte Unterdrückungseinstellungen. Sichert das Modal in einer Runde und verwendet einen 6-min Hintergrund-Cache für sofortige Reaktion."
+      },
+      {
+        "endpoint": "/api/health/active-errors",
+        "method": "GET",
+        "use": "Nur die aktive Liste. Filterbar durch <code>?category=&lt;name&gt;</code>."
+      },
+      {
+        "endpoint": "/api/health/dismissed",
+        "method": "GET",
+        "use": "Nur die entlassene Liste, mit verbleibenden Unterdrückungsstunden."
+      },
+      {
+        "endpoint": "/api/health/acknowledge",
+        "method": "POST",
+        "use": "Körper: <code>'{'\"error_key\":\"smart_sdh\"'}'</code>. Deaktivieren Sie eine Warnung mit dem konfigurierten Fenster der Kategorie."
+      },
+      {
+        "endpoint": "/api/health/settings",
+        "method": "GET / POST",
+        "use": "Lesen oder schreiben Sie die Werte für die Unterdrückungsdauer pro Kategorie."
+      },
+      {
+        "endpoint": "/api/health/cleanup-orphans",
+        "method": "POST",
+        "use": "Manuelle Bereinigung von Fehlern, deren zugrunde liegendes Gerät / VM verschwunden ist. Idempotent."
+      }
+    ],
+    "codeComment1": "# Snapshot die aktuelle Gesundheit für ein Skript",
+    "codeComment2": "# Verwerfen Sie einen bestimmten Fehler",
+    "codeComment3": "# Setzen Sie die Unterdrückung der Festplatten-Kategorie auf eine Woche"
+  },
+  "whereNext": {
+    "heading": "Wohin als nächstes",
+    "items": [
+      {
+        "label": "Dashboard",
+        "href": "/docs/monitor/dashboard",
+        "tail": "— wo der Health Monitor Modal von der Benutzeroberfläche aus geöffnet wird."
+      },
+      {
+        "label": "Benachrichtigungen",
+        "href": "/docs/monitor/notifications",
+        "tail": "— Channels, Per-Event-Toggles, der AI-Rewrite-Hook, Geschichte."
+      },
+      {
+        "label": "KI-Assistent",
+        "href": "/docs/monitor/ai-assistant",
+        "tail": "— Provider-Konfiguration (OpenAI / Anthropic / Gemini / Groq / Ollama / OpenRouter), Prompt-Modus, pro-Kanal-Detailebene, Sprache."
+      },
+      {
+        "label": "Architektur",
+        "href": "/docs/monitor/architecture",
+        "tailRich": "— das SQLite-Schema (<code>errors</code>, <code>disk_observations</code>, <code>events</code>) und die Hintergrund-Thread-Kadenz."
+      }
+    ]
+  }
+}

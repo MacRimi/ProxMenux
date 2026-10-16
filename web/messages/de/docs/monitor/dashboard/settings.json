@@ -1,0 +1,367 @@
+{
+  "meta": {
+    "title": "ProxMenux Monitor — Dashboard: Tab Einstellungen | ProxMenux Dokumentation",
+    "description": "Die Registerkarte Einstellungen steuert die Monitor-Sprache, Navigationsreihenfolge, Dashboard-Präferenzen, Gesundheitsschwellen und Ausschlüsse, Benachrichtigungen, AI und das Nachinstallationsoptimierungsinventar."
+  },
+  "header": {
+    "title": "Dashboard: Tab Einstellungen",
+    "description": "Überwachen Sie Sprache, Navigationsreihenfolge, Dashboardeinstellungen, Überwachungsausschlüsse, Benachrichtigungen, AI-Konfiguration und das ProxMenux-Optimierungsinventar.",
+    "section": "ProxMenux Monitor · Übersicht"
+  },
+  "intro": {
+    "title": "Wo jede Einstellung tatsächlich lebt",
+    "body": "Die Registerkarte Einstellungen ist eine einzige Oberfläche für mehrere verschiedene Anliegen: wie das Dashboard darstellt, was vom Gesundheitsmonitor beobachtet wird, wie Warnungen ausgehen und was ProxMenux bereits auf dem Host geändert hat. Karten, die ihre eigene tiefe Dokumentationsseite haben, verlinken hier, anstatt Inhalte zu duplizieren - Einstellungen sind der Einstiegspunkt, nicht das Handbuch."
+  },
+  "interfaceLanguage": {
+    "heading": "Schnittstellensprache",
+    "intro": "Wählen Sie die Sprache, die vom <strong>web Monitor</strong> verwendet wird. Die Änderung wird sofort auf die aktuelle Benutzeroberfläche angewendet; sie startet den Dienst nicht neu und ändert nicht die Sprache der ProxMenux-Shellmenüs.",
+    "items": [
+      "ProxMenux Monitor bietet derzeit Englisch, Deutsch, Spanisch, Französisch, Italienisch, Portugiesisch, Slowakisch und Schwedisch an.",
+      "Beim ersten Besuch verwendet der Monitor die Browsersprache, wenn er unterstützt wird; ansonsten fällt er auf Englisch zurück.",
+      "Das Ändern der Auswahl aktualisiert die Seitensprache und synchronisiert andere offene Tabs aus dem gleichen Browserprofil.",
+      "Wenn ein übersetzter Schlüssel fehlt, fällt nur dieser Text auf Englisch zurück, anstatt einen defekten Platzhalter zu rendern."
+    ],
+    "scopeTitle": "Browser-lokale Präferenz",
+    "scopeBody": "Die Auswahl wird in <code>localStorage</code> unter <code>proxmenux-ui-language</code> gespeichert. Es ist daher spezifisch für dieses Browserprofil und -gerät, keine knotenweite Einstellung. Jeder Bediener kann eine andere Monitorsprache wählen."
+  },
+  "navigationOrder": {
+    "heading": "Navigationsreihenfolge",
+    "intro": "Verwenden Sie diese Karte, um die sieben Top-Level-Navigationsplätze zu arrangieren: <strong>Overview, Apps, VMs & LXCs, Node, Backup, Terminal und Admin</strong>. Drücken Sie <strong>Edit</strong>, ziehen Sie die Zeilen und speichern Sie dann das Ergebnis.",
+    "items": [
+      "Das Ziehen der Maus beginnt mit der Presse. Touch verwendet eine kurze 250 ms Langpresse, so dass normales Scrollen nicht mit einer Nachbestellung verwechselt wird.",
+      "Die gruppierten <strong>Node</strong> und <strong>Admin</strong> Einträge bewegen sich als vollständige Einheiten; ihre internen Seiten behalten ihre kanonische Reihenfolge.",
+      "Das mobile Menü folgt der gleichen gespeicherten Reihenfolge.",
+      "<strong>Restore default</strong> setzt den Auftragsentwurf zurück. Speichern Sie, um das Reset dauerhaft zu machen.",
+      "Ein neuer Top-Level-Tab, der durch eine zukünftige Version eingeführt wird, wird an eine bestehende benutzerdefinierte Bestellung angehängt, anstatt die Anordnung des Benutzers zu löschen."
+    ],
+    "landingTitle": "Das erste Element wird zum Landing Tab",
+    "landingBody": "Der erste gespeicherte Slot ist das, was der Monitor nach dem Laden öffnet. Wenn <strong>Node</strong> zuerst ist, ist die Zielseite Storage; wenn <strong>Admin</strong> zuerst ist, ist es Systemprotokolle. Die Bestellung wird nur in diesem Browser unter <code>proxmenux-nav-order</code> gespeichert, so dass verschiedene Geräte unterschiedliche Workflows verwenden können."
+  },
+  "networkUnits": {
+    "heading": "Netzwerkeinheiten",
+    "imageAlt": "Network Units-Karte mit Dropdown auf Bytes eingestellt",
+    "imageCaption": "Wählen Sie zwischen Bits pro Sekunde und Bytes pro Sekunde für jede im Dashboard angezeigte Netzwerkrate.",
+    "body": "Wählen Sie aus, wie der Netzwerkdurchsatz über das Dashboard angezeigt wird: <strong>Bits pro Sekunde</strong> (Mbps / Gbps) oder <strong>Bytes pro Sekunde</strong> (MB/s/GB/s). Bits ist der standard, weil es das ist, was nic-anbieter und isps ihre produkte mit kennzeichnen; bytes ist das, was die meisten dateiübertragungstools berichten. Die Einstellung wirkt sich auf jedes Diagramm, Badge und Tooltip aus, das die Netzwerkrate anzeigt - sofort angewendet, kein Nachladen erforderlich."
+  },
+  "health": {
+    "heading": "Gesundheitsmonitor",
+    "intro": "Die Karte Oberflächen der pro-Kategorie <strong>Unterdrückungsdauer</strong> Einstellung — sobald ein Alarm abgewiesen wurde, wie lange, bevor der Scanner ihn erneut abfeuern darf. Jede der zehn Health Monitor Kategorien ()CPU, Memory, Storage, Disks, Network, VMs, PVE Services, Logs, Updates, Security hat eine eigene Dropdown mit diesen Werten:",
+    "items": [
+      "<strong>24 h</strong> — Standard für die meisten transienten Kategorien.",
+      "<strong>72 h</strong> - für Veranstaltungen, für die Sie ein paar Tage Stille wünschen.",
+      "<strong>168 h</strong> (1 Woche) und <strong>720 h</strong> (1 Monat) — regelmäßige Kontrollen.",
+      "<strong>8760 h</strong> (1 Jahr) - effektiv \"ruhig für die absehbare Zukunft\".",
+      "<strong>-1</strong> — permanente Stille, bis Sie es manuell wieder aktivieren.",
+      "<strong>Custom hours</strong> — jede ganze Zahl, wenn Sie einen Zwischenwert benötigen."
+    ],
+    "imageAlt": "Einstellungen → Health Monitor-Karte mit den Dropdowns zur Unterdrückung pro Kategorie und dem Abschnitt Aktive Unterdrückungen",
+    "imageCaption": "Health Monitor-Karte - die Dropdowns pro Kategorie setzen Standardwerte für neue Entlassungen; Der Abschnitt Aktive Unterdrückungen unten listet jede Warnung auf, die derzeit zum Schweigen gebracht wird, und lässt Sie sie rückgängig machen.",
+    "editTitle": "Bearbeitungsmodus",
+    "editBody": "Die Karte ist standardmäßig schreibgeschützt. Klicken Sie oben rechts auf der Karte auf <strong>Edit</strong>, um die Dropdowns und die Re-enable-Buttons zu aktivieren. <strong>Save</strong> verpflichtet alle ausstehenden Änderungen (Unterdrückungsdaueränderungen und Warteschlangen-Wiederaktivierungen) in einem einzigen Batch; <strong>Cancel</strong> verwirft sie alle. Die Schaltfläche Speichern wird nur aktiviert, wenn mindestens eine anstehende Änderung vorliegt.",
+    "activeTitle": "Aktive Unterdrückung",
+    "activeIntro": "Unterhalb der Dropdowns zur Unterdrückung und Dauer listet der Abschnitt <strong>Active Suppressions</strong> alle Warnungen auf, die derzeit stummgeschaltet sind - sowohl zeitlich begrenzte Entlassungen (24 h, 7 Tage, benutzerdefinierte Fenster) als auch <em>Permanent</em>. Jede Zeile zeigt:",
+    "activeItems": [
+      "Ein farbiges Abzeichen — <strong>Permanent</strong> (Bernstein) oder ein Countdown wie <strong>24h restliche</strong> / <strong>7d restliche</strong> (blau).",
+      "Der Warnhinweis, normiert auf Lesbarkeit (z.B. <code>pve_storage_full_PBS-Cloud</code> → <em>PVE Storage Full: PBS-Cloud</em>.",
+      "Kategorie, Schweregrad und Zeitstempel der Warnung wurden abgewiesen.",
+      "Eine <strong>Re-enable</strong>-Taste (aktiv nur im Edit-Modus), die die Warnung beim nächsten Speichern nicht bestätigt."
+    ],
+    "activeReenableTitle": "Reenable Flow",
+    "activeReenableBody": "Durch Klicken auf <strong>Re-enable</strong> im Edit-Modus wird die Zeile grün markiert und ihr Identifikator angezeigt – sie steht in der Warteschlange, wird aber noch nicht angewendet. Klicken Sie erneut auf die gleiche Zeile zu <strong>Undo</strong> die Warteschlange. Wenn Sie <strong>Save</strong> drücken, aktiviert jede Warteschlange <code>POST /api/health/un-acknowledge</code> parallel und die betroffenen Zeilen verschwinden aus der Liste. Wenn die zugrunde liegende Bedingung noch vorhanden ist und die Kategorie das erneute Zünden unterstützt, erscheint die Warnung im nächsten Scan-Zyklus erneut in der aktiven Liste des Gesundheitsmonitors.",
+    "activePermanentNote": "Permanente Entlassungen (Alerts entlassen mit <em>Permanently</em> aus dem Health Monitor Modal oder solche, deren Kategorie standardmäßig auf <code>-1</code> eingestellt ist) <strong> können nur von hier</strong> zurückgesetzt werden. Das Dashboard-Modal stellt keine Un-Dismiss-Taste für sie frei - das Active Suppressions-Panel ist das Single Audit Log + Revert UI.",
+    "activeAutoRefreshTitle": "Automatische Aktualisierung",
+    "activeAutoRefreshBody": "Die Liste wird automatisch aktualisiert, wenn Sie eine Warnung aus dem Health Monitor-Modal (über ein In-Browser-Ereignis) ablehnen oder deaktivieren, wenn die Browser-Registerkarte den Fokus wiedererlangt und sich die Sichtbarkeit ändert. Sie müssen die Seite nicht erneut laden, nachdem Sie eine Warnung aus dem Dashboard gelöscht haben.",
+    "calloutTitle": "Vollständige Semantik live auf der Health Monitor Seite",
+    "calloutBody": "Die Eskalationsregeln (wenn ein Re-Fire kritisch wird), das Auto-Resolve-Verhalten für Ereignisse, deren zugrunde liegendes Gerät verschwindet, und der Unterschied zwischen abgewiesen und aufgelöst - alles dokumentiert unter <link>Health Monitor → Dismissing Alerts und der Suppression Duration</link>. Diese Karte zeigt nur die Dropdowns pro Kategorie und das aktive Unterdrückungsfeld."
+  },
+  "thresholds": {
+    "heading": "Schwellenwerte für den Health-Monitor",
+    "intro": "Wo die vorherige Karte entscheidet <em>Wie lange nach einer Entlassung </em> ruhig zu bleiben, entscheidet diese <strong> bei welchem Wert ein Alarm ausgelöst wird</strong>. Jede Überprüfung, die der Health Monitor durchführt, wird durch ein Zahlenpaar parametriert - einen <strong>Warning</strong>-Schwellenwert und einen <strong>Critical</strong>-Schwellenwert - und beide sind hier für den Bediener sichtbar.",
+    "whatForTitle": "Wofür es ist",
+    "whatForIntro": "Defaults, die mit ProxMenux ausgeliefert werden, sind für den durchschnittlichen Proxmox-Host gesund, aber jede Umgebung hat ihren eigenen Umschlag:",
+    "whatForItems": [
+      "Ein kleines Homelab mit einer Single-Disk-SSD möchte möglicherweise früher über die Kapazität (75 / 90) schreiben, um Platz für Snapshots zu lassen.",
+      "Ein Rechenzentrumshost mit redundanten Ceph-Knoten kann bei Speicherwarnungen entspannter sein (ein 90 % Arbeitssatz ist unter ZFS ARC normal).",
+      "Ein passiv gekühlter Mini-PC benötigt niedrigere Temperaturschwellen als ein Server mit Umluftkühlung – gleiche Antriebsklasse, andere physische Hüllen.",
+      "Ein stark virtualisierter Host, der CPU während Builds anheftet, sollte nicht auf jeder 80 % Spitze eine Seite haben, muss aber dennoch auf anhaltenden Druck aufmerksam machen."
+    ],
+    "whatForOutro": "Das Bearbeiten eines Schwellenwerts tritt in Kraft <strong>Beim nächsten Scan</strong> — der Health Monitor liest die Werte von <code>/usr/local/share/proxmenux/health_thresholds.json</code> In jedem Zyklus ist kein Service-Neustart erforderlich. Die gleichen Zahlen speisen auch die Farbbereiche der Dashboard-Widgets (die Temperaturlinie im Scheibentemperaturmodal, die Balken auf den Speicherkarten), so dass die visuelle Klassifizierung mit dem übereinstimmt, was die Warnung auslöst.",
+    "coloursTitle": "Statusfarben: Wie Warning und Critical im Dashboard rendern",
+    "coloursIntro": "Jeder darunter liegende Schwellenwert erzeugt die gleiche Drei-Zustand-Klassifizierung im Dashboard - gleiche Farben für Speicherleisten, CPU / Speicherringe, Temperaturchips und den Punkt auf dem Festplattenmodal. Das Lesen einer Farbe an einer beliebigen Stelle im Monitor bildet einen bestimmten Bereich relativ zum konfigurierten Paar ab:",
+    "headerColour": "Farbe",
+    "headerRange": "Reichweite",
+    "headerMeaning": "Bedeutung",
+    "colourRows": [
+      {
+        "colour": "Grün",
+        "range": "Wert < Warnung",
+        "meaning": "Normaler Betriebsbereich. Keine Alarmfeuer."
+      },
+      {
+        "colour": "Bernstein",
+        "range": "Warnung ≤ Wert < Kritisch",
+        "meaning": "Warnzustand. Der Health Monitor feuert ein WARNUNGSschwereereignis ab; Benachrichtigungen respektieren die Kanalfilter und die stillen Stunden."
+      },
+      {
+        "colour": "rot",
+        "range": "Wert ≥ kritisch",
+        "meaning": "Kritischer Zustand. Der Health Monitor feuert ein CRITICAL-Ereignis ab; CRITICAL umgeht Quiet Hours und erreicht immer den Kanal."
+      }
+    ],
+    "sectionsTitle": "Abschnitte und empfohlene Standardwerte",
+    "sectionsIntro": "Dies sind die Werte ProxMenux Schiffe mit — die empfohlene Baseline. Sie sind das, was Sie auf einem frischen Gastgeber sehen, bis Sie etwas außer Kraft setzen. Die Abschnitte werden von oben nach unten aus <em>compute</em> → <em>heat</em> → <em>Speicherkapazität</em> bestellt, so dass sich das Ablesen von Beton (Stromlast) in den akkumulierten Zustand (freier Speicherplatz) bewegt.",
+    "headerSection": "Abschnitt",
+    "headerWarning": "Warnung",
+    "headerCritical": "Kritisch",
+    "headerGates": "Was es Tore",
+    "thresholdRows": [
+      {
+        "section": "CPU-Auslastung",
+        "warning": "85 %",
+        "critical": "95 %",
+        "gates": "Warnhinweis auf Dauerbelastung, wenn CPU-Mittelwerte über dem Schwellenwert für das Scanfenster liegen."
+      },
+      {
+        "section": "Arbeitsspeicher",
+        "warning": "85 %",
+        "critical": "95 %",
+        "gates": "RAM Druck auf den Host."
+      },
+      {
+        "section": "Swap (nur kritischer Schwellenwert)",
+        "warning": "—",
+        "critical": "5 %",
+        "gates": "Swap wird tatsächlich verwendet. Die Zahl ist absichtlich gering: Ein gesunder Proxmox-Host sollte selten einen Swap berühren, so dass sogar 5 % ein aussagekräftiges Signal für den RAM-Druck ist."
+      },
+      {
+        "section": "CPU-Temperatur",
+        "warning": "80 °C",
+        "critical": "90 °C",
+        "gates": "CPU Paket / Kerntemperaturmessung von <code>lm-sensors</code>."
+      },
+      {
+        "section": "Festplattentemperatur — HDD",
+        "warning": "60 °C",
+        "critical": "65 °C",
+        "gates": "Standard-Spinnantriebe. Der Herstellerumschlag liegt bei 60–65 °C, so dass Critical direkt am harten Limit liegt."
+      },
+      {
+        "section": "Datenträgertemperatur — SSD",
+        "warning": "70 °C",
+        "critical": "75 °C",
+        "gates": "2.5 / M.2 SATA SSDs - laufen kühler als NVMe, aber wärmer als HDDs."
+      },
+      {
+        "section": "Plattentemperatur — NVMe",
+        "warning": "80 °C",
+        "critical": "85 °C",
+        "gates": "NVMe-Laufwerke laufen vom Design her heißer; Controller drosseln selbst über ~ 85 °C, so dass Warning den Anstieg fängt, bevor die Drosselung einsetzt."
+      },
+      {
+        "section": "Scheibentemperatur — SAS",
+        "warning": "55 °C",
+        "critical": "65 °C",
+        "gates": "Enterprise SAS-Laufwerke haben die gleiche Herstellergrenze von ~ 65 °C wie HDDs, werden jedoch normalerweise in Rack-Chassis mit aktiver Kühlung eingesetzt. Ein Messwert bei 55 °C signalisiert bereits ein Kühlproblem (ausgefallener Ventilator, HVAC-Problem) <em>vor </em> ist das Laufwerk selbst gefährdet - daher eine geringere Warnung als HDD, nicht weil SAS weniger hitzetolerant ist."
+      },
+      {
+        "section": "Datenträgerplatz — Host",
+        "warning": "85 %",
+        "critical": "95 %",
+        "gates": "Kapazität von <code>/</code> und jedem Host-Mountpoint (<code>/var/lib/vz</code>, <code>/mnt/*</code>...)."
+      },
+      {
+        "section": "Plattenraum — LXC Rootfs",
+        "warning": "85 %",
+        "critical": "95 %",
+        "gates": "Root-Laufwerk pro Container, bewertet anhand der Rootfs-Größe von PVE."
+      },
+      {
+        "section": "LXC-Montagepunkte",
+        "warning": "85 %",
+        "critical": "95 %",
+        "gates": "Kapazität der Haltepunkte innerhalb laufender CTs (mp0, mp1, NFS, bind mounts). Ausgenommen Rooter."
+      },
+      {
+        "section": "PVE-Speicher",
+        "warning": "85 %",
+        "critical": "95 %",
+        "gates": "Blockartige PVE-Speicher (LVM, LVM-thin, ZFS-pool, RBD/Ceph, PBS)."
+      },
+      {
+        "section": "ZFS-Pool",
+        "warning": "85 %",
+        "critical": "95 %",
+        "gates": "ZFS-Pools auf Host-Ebene — unabhängig von der PVE-Registrierung."
+      }
+    ],
+    "defaultsTitle": "Defaults, Overrides und Reset",
+    "defaultsBody": "Das Backend zeigt eine zusammengefügte Ansicht: Jeder Abschnitt beginnt mit den ProxMenux-Standards (die Werte, die Sie sehen, wenn der Host frisch ist) und Sie überschreiben nur die Knöpfe, die Ihnen wichtig sind. Die Karte zeigt den <em>effective</em>-Wert an – den Override, wenn Sie einen setzen, ansonsten den Standard. Eine <strong>Reset</strong>-Taste wischt jeden Override und kehrt in allen Abschnitten auf einmal zu den Standardeinstellungen zurück.",
+    "validationTitle": "Validierung",
+    "validationBody": "Das Speichern lehnt Werte ab, die keinen Sinn ergeben (Prozentsätze außerhalb von 0–100, kritisch unter Warnung, negative Temperaturen). Das Frontend zeigt den Inline-Fehler an; das Backend validiert erneut, bevor es fortbesteht, so dass der API nicht durch einen handgefertigten PUT in einen gebrochenen Schwellenwert getäuscht werden kann."
+  },
+  "lxcDetection": {
+    "heading": "LXC-Update-Erkennung",
+    "imageAlt": "LXC Update Detection-Karte mit einem einzigen Schalter - wenn aktiviert, scannt der Monitor regelmäßig laufende Debian/Ubuntu/Alpine LXC-Container auf ausstehende Paketaktualisierungen.",
+    "imageCaption": "Der Umschalter für den periodischen <code>apt list --upgradable</code> / <code>apk list -u</code>-Scan über jeden laufenden CT. Default ist ON. Die entsprechende Benachrichtigung wird in Benachrichtigungen → Dienste nur angezeigt, wenn die Erkennung aktiviert ist.",
+    "intro": "Ein spezieller Schalter für den LXC-Update-Scan, der zwischen den Health Monitor-Schwellenwerten und der Benachrichtigungskarte sitzt. Wenn eingeschaltet, ProxMenux geht jeden laufenden CT auf dem Host und fragt den In-Container-Paketmanager für ausstehende Updates; Ergebnisse landen in der Hardware-Registerkarte Badge zählt und füttern die <code>lxc_updates_available</code> Benachrichtigung. Wenn der Scan vollständig gestoppt wird (keine <code>pct exec</code>-Aufrufe) und alle vorhandenen LXC-Einträge in <code>managed_installs.json</code> werden sofort gelöscht, so dass das Dashboard und der <code>/api/managed-installs</code>-Endpunkt den LXC-Update-Status nicht mehr melden, ohne auf den nächsten 24-Stunden-Zyklus zu warten.",
+    "whatRunsTitle": "Was der Scan eigentlich ausführt",
+    "whatRunsIntro": "Für jeden CT im <code>running</code>-Zustand mit einem unterstützten Paketmanager:",
+    "whatRunsItems": [
+      "<strong>Cache Freshness Gate.</strong> Wenn der In-Container-Metadaten-Cache älter als <strong>24 Stunden</strong> ist, läuft eine Best-Effort-Aktualisierung zuerst (<code>apt-get update -qq</code> auf Debian/Ubuntu, <code>apk update</code> auf Alpine) mit einem 60-Timeout. Jeder Fehler (kein Netzwerk, defektes Repo, Timeout) wird stillschweigend verschluckt - die Liste unten läuft immer noch gegen den vorhandenen Cache, so dass ein vorübergehendes Repo-Problem die Erkennung nie schlimmer machen kann als zuvor.",
+      "<strong>Listing.</strong> Dann führt ProxMenux <code>apt list --upgradable</code> / <code>apk list -u</code> aus und analysiert die Ausgabe in eine strukturierte Anzahl plus eine Stichprobe der oberen Paketnamen.",
+      "<strong>Per-CT dedup.</strong> Ein Fingerabdruck, der aus Zählung, Sicherheitszählung und den sortierten Top-Namen erstellt wurde, wird so gespeichert, dass ein stabiler Satz ausstehender Updates nicht täglich erneut benachrichtigt wird, während ein sinnvoll anderer Satz dies tut."
+    ],
+    "selfUpdateTitle": "CTs, die sich außerhalb von apt selbst aktualisieren, können 0 rechtmäßig melden",
+    "selfUpdateBody": "Detection sieht nur, was der In-Container-Paketmanager weiß. Ein CT, dessen Schlüsselsoftware sich selbst außerhalb von apt aktualisiert (Plex's <code>plexupdate</code> cron, Docker Container, die über <code>docker pull</code> aktualisiert werden, Frigate's eingebauter Updater usw.) wird weiterhin niedrige oder null passende Updates melden, selbst wenn die Appliance aktiv aktuell bleibt - das ist korrekt, kein Fehler. Das apt-level-basissystem auf dem gleichen CT hat möglicherweise noch eigene ausstehende updates, die der scan auftaucht.",
+    "refreshTitle": "Warum die 24 h auto-refresh",
+    "refreshBody": "Lang laufende Geräte-CTs enden häufig mit apt Caches, die Monate veraltet sind, weil niemand routinemäßig <code>apt update</code> in ihnen ausführt. Ohne die Aktualisierung meldet <code>apt list --upgradable</code> 0-Updates von einem eingefrorenen Snapshot und der Betreiber sieht nie den Backlog. Der Schwellenwert entspricht dem Rest des Prüfzyklus - wenn der CT innerhalb der letzten 24 h aktualisiert wurde, vertraut ProxMenux diesem Signal und überspringt die Aktualisierung.",
+    "toggleTitle": "Bedingter Benachrichtigungsschalter",
+    "toggleBody": "Die <code>lxc_updates_available</code> pro Kanal Benachrichtigungsschaltung in <strong>Notifications → Services</strong> rendert nur, während die Erkennung aktiviert ist. Wenn Sie die Erkennung ausschalten, verschwindet diese Zeile aus der Kategorieliste jedes Kanals - aber ihre gespeicherte Präferenz bleibt in der DB erhalten, so dass die erneute Aktivierung der Erkennung den Umstieg auf den Wert zurückbringt, den sie zuvor hatte.",
+    "purgeTitle": "Was wird gelöscht, wenn Sie die Erkennung deaktivieren",
+    "purgeBody": "Durch Ausschalten des Schalters wird sofort jeder <code>type=lxc</code>-Eintrag aus <code>/usr/local/share/proxmenux/managed_installs.json</code> entfernt. Die Hardware-Tab-Badges fallen beim nächsten Dashboard-Refresh auf Null. Wenn Sie es wieder einschalten, wird die Registrierung im nächsten Erkennungszyklus erneut gefüllt (oder früher, wenn Sie eine manuelle Aktualisierung vom API auslösen)."
+  },
+  "storageExclusions": {
+    "heading": "Ausschlüsse von Remote-Speicher",
+    "imageAlt": "Remote Storage Exclusions-Karte mit PBS-Cloud-, PBS- und PBS2-Speichern mit Health and Alerts-Schaltern pro Zeile",
+    "imageCaption": "Per-Lager <em>Health</em> und <em>Alerts</em> umschalten. Speicher mit beiden Umschaltern hören auf, gegen den Gesundheitsmonitor zu zählen, und hören auf, Benachrichtigungen zu erzeugen - werden aber immer noch auf der Speicherkarte als ausgeschlossen angezeigt.",
+    "intro": "Markieren Sie von Proxmox verwaltete Speicher (NFS / CIFS / PBS / Ceph / iSCSI / usw.) als von der Überwachung ausgeschlossen. Zwei unabhängige Toggles pro Speicher:",
+    "items": [
+      "<strong>Health</strong> — Wenn der Speicher ausgeschaltet ist, wird der Beitrag zur Speicherkategorie des Gesundheitsmonitors eingestellt. Nützlich für Archiv-Volumes, die die meiste Zeit absichtlich offline sind oder Remote-Backup-Ziele, die nur pünktlich eingeschaltet werden.",
+      "<strong>Alerts</strong> - Wenn Sie ausgeschaltet sind, werden Benachrichtigungen über diesen Speicher nicht mehr über konfigurierte Kanäle gesendet, auch wenn die Gesundheitskontrollen weiterhin aktiviert sind. Nützlich, wenn Sie die Dashboard-Ansicht, aber nicht die Benachrichtigungen möchten."
+    ],
+    "outro": "Ausgeschlossene Speicher werden immer noch auf dem <link>Storage tab</link> mit einem lila <em>exclusuded</em> Abzeichen dargestellt, so dass der Eintrag nicht stillschweigend aus Ihrem Inventar verschwindet. Der Status wird in der <code>excluded_storages</code>-SQLite-Tabelle fortgesetzt."
+  },
+  "interfaceExclusions": {
+    "heading": "Ausschlüsse von Netzwerkschnittstellen",
+    "imageAlt": "Network Interface Exclusions-Karte mit vmbr0, vmbr1, vmbr2, bond0 und eno1 mit Health and Alerts-Schaltern pro Interface",
+    "imageCaption": "Gleiche Form wie Storage Exclusions — per-Schnittstelle <em>Health</em> und <em>Alerts</em> umschalten. Jede Zeile zeigt die Schnittstelle, das Typabzeichen (Bridge / Bond / Physical), die IP und die Verbindungsgeschwindigkeit an.",
+    "intro": "Gleiche Form wie Storage Exclusions, aber für Netzwerkschnittstellen. Pro Schnittstelle: Ausschließen von Gesundheitskontrollen und / oder Ausschluss von Benachrichtigungen. Typische Anwendungsfälle:",
+    "items": [
+      "Eine absichtlich heruntergekommene Ersatzbrücke.",
+      "Ein NIC, der physisch entfernt wurde, aber immer noch Referenzen in <code>/etc/network/interfaces</code> enthält.",
+      "Eine VLAN sub-Schnittstelle, die nur während Wartungsfenstern verwendet wird.",
+      "Eine Management-Brücke, die oben ist, aber nicht den Verkehr trägt - in jedem Zyklus laut flatternd."
+    ],
+    "outro": "Der Status wird in der <code>excluded_interfaces</code> SQLite-Tabelle fortgesetzt. Das gleiche lila <em>exkludierte </em>-Badge auf dem <link>Network tab</link>, so dass ausgeschlossene Schnittstellen sichtbar bleiben."
+  },
+  "notifications": {
+    "heading": "Benachrichtigungen und KI",
+    "body1": "In diesem Abschnitt der Registerkarte Einstellungen sind ProxMenux Monitor-Benachrichtigungen und der AI-Rewriter aktiviert. Durch Drücken von <em>Enable Notifications</em> wird der Versandhintergrundthread gestartet, ein Proxmox VE webhook-Ziel auf dem Host registriert, so dass PVE-emittierte Ereignisse in dieselbe Pipeline fließen, und das Kanalformular entfaltet, so dass Sie Telegram, Discord, E-Mail, Gotify und den Rest verbinden können. Der AI-Rewriter befindet sich im selben Panel wie ein zusammenklappbarer erweiterter Abschnitt.",
+    "body2": "Beide Oberflächen haben viele bewegliche Teile - Kanäle, Umschalter pro Ereignis, Rich-Nachrichten, den Display-Namen, die Versand-Pipeline (Dedup, Cooldown, Aggregation, ruhige Stunden), die PVE webhook-Integration, KI-Anbieter, Sofortmodi - und live auf ihren eigenen dedizierten Seiten, anstatt hier wiederholt zu werden:",
+    "items": [
+      "<notifLink>Meldungen</notifLink> — Kanaldurchführungen (Telegram, Discord, Gotify, E-Mail + Gmail / Microsoft App Passwörter, ntfy, Slack, Teams, Generikum webhook), Kategorien pro Ereignis, Rich-Nachrichten, Display Name, Versandpipeline, PVE webhook Integration, Geschichte und API.",
+      "<aiLink>AI Assistant</aiLink> — Anbieter (OpenAI, Anthropic, Gemini, Groq, OpenRouter, Ollama), Modellauswahl, Prompt-Modi (Standard / benutzerdefiniert), Ausgabesprache, Detailebenen pro Kanal und KI-Vorschläge."
+    ]
+  },
+  "optimizations": {
+    "heading": "ProxMenux-Optimierungen",
+    "intro": "Ein Live-, transparentes Inventar jeder ProxMenux-Post-Installationsoptimierung, die derzeit auf dem Host aktiv ist. Jedes Mal, wenn Sie eine Post-Installationsoption von der Seite der Skripte anwenden – entweder über den <autoLink>Automatisiert post-install</autoLink> oder über den à-la-carte <customLink>Customizable post-install</customLink> – registriert sich das entsprechende Skript in <code>/usr/local/share/proxmenux/installed_tools.json</code>. Der Monitor liest diese Datei und rendert diese Karte, so dass Sie auf einen Blick sehen können, was auf Ihrem Server geändert wurde.",
+    "imageAlt": "ProxMenux Optimierungskarte mit Raster der installierten Werkzeuge, jede Zeile zeigt einen grünen Punkt, Werkzeugname und Version. Beispiele hierfür sind APT IPv4 Force, Bashrc Customization, Fastfetch, Log2ram SSD Protection, Memory Settings Optimization, Setting persistent network interfaces, System Limits Increase, APT Language Skip, Entropy Generation haveged with Legacy Badge, Kernel Panic Configuration, Logrotate Optimization, Network Optimizations, Subscription Banner Removal, VFIO IOMMU Passthrough – 14 Aktive Gesamtsumme",
+    "imageCaption": "Die Karte listet jede aktive Optimierung mit ihrem Namen, ihrer Version, einem farbigen Punkt und einem orangefarbenen <em>14 active</em> Zähler oben rechts auf. Werkzeuge, deren Quelle erreichbar ist, sind anklickbar.",
+    "dotsTitle": "Was die Dots bedeuten",
+    "dotsItems": [
+      "<green/> <strong>Green dot</strong> — aktuelle Optimierung, registriert durch die aktive Version von ProxMenux. Quellcode ist erreichbar: Klicken Sie auf die Zeile, um ihn zu öffnen.",
+      "<amber/> <strong>Amber dot + <em>legacy</em> badge</strong> — angewendet von einer älteren ProxMenux-Version, deren Skript seitdem umbenannt oder ersetzt wurde. Immer noch aktiv auf dem Host; Die Quelle wird im \"Legacy\" -Modus (mit einem Bernsteinakzent) geöffnet, so dass Sie überprüfen können, was tatsächlich ausgeführt wurde."
+    ],
+    "clickTitle": "Click-through zum Quellcode",
+    "clickBody": "Durch Klicken auf ein Tool wird ein Modal mit der genauen Bash-Funktion geöffnet, die die Änderung angewendet hat, sowie der Skriptdateipfad, in dem es lebt (<code>auto_post_install.sh</code> für das automatisierte Paket, <code>customizable_post_install.sh</code> für die à-la-carte-Seite). Kommentare und Shell-Konstrukte sind Syntax-highlighted; ein Copy-Button legt die Quelle auf Ihrer Zwischenablage. Dies ist die Oberfläche \"zeigen Sie Ihre Arbeit\" - überprüfen Sie, was ProxMenux mit Ihrem Host gemacht hat, bevor Sie manuelle Änderungen vornehmen.",
+    "detailAlt": "Tool-Quellcode modal für APT IPv4 Force zeigt die bash-Funktion force_apt_ipv4 von customizable_post_install.sh Version 1.0 mit Syntax-highlighted Code, der /etc/apt/apt.conf.d/99-force-ipv4 mit Acquire ForceIPv4 true konfiguriert, registriert das Tool und sendet eine übersetzen APT IPv4 Konfiguration abgeschlossen Nachricht",
+    "detailCaption": "Quellmodal für <em>APT IPv4 Force</em> — exakte <code>force_apt_ipv4()</code>-Funktion von <code>customizable_post_install.sh v1.0</code>, mit Syntax-Hervorhebung und einer Kopie mit einem Klick.",
+    "whyTitle": "Warum das wichtig ist",
+    "whyBody": "ProxMenux ändert Dinge auf Ihrem Host: Kernel-Parameter, Repository-Konfiguration, Netzwerk-Bits, Log-Rotation, GPU Passthrough, etc. Genau zu wissen, was aktiv ist, ist wichtig, bevor Sie mit der manuellen Anpassung beginnen - und noch mehr, wenn ein anderer Administrator den Host ausführt als der, der ihn eingerichtet hat. Diese Karte ist die prüfbare Aufzeichnung jeder Optimierung, die derzeit in Kraft ist, mit dem genauen Code, der sie produziert hat.",
+    "updatesTitle": "Updates verfügbar Banner",
+    "updatesBody": "Wenn eine Optimierung nach der Installation eine neuere Version auf der Festplatte erhält als die, die derzeit auf dem Host registriert ist, zeigt die Karte oben ein Banner \"Aktualisierungen verfügbar\" mit der Anzahl und einer <strong>Apply</strong>-Taste an. Ein Klick auf <strong>Apply</strong> öffnet einen Per-Optimierungs-Picker (derselbe ist im <em>Apply-Updates</em> des Menüs Post-Install verfügbar). Wählen Sie aus, welche Optimierungen angehoben werden sollen; ProxMenux führt die entsprechende Funktion erneut aus und aktualisiert die Version in der Registry. Wenn alles aktuell ist, verschwindet das Banner.",
+    "updatesAlt": "ProxMenux Optimierungskarte mit einem verfügbaren Updates-Banner oben – Anzahl der ausstehenden Updates plus eine Apply-Taste, die den Per-Optimierungs-Picker öffnet",
+    "updatesCaption": "Das Banner wird nur dann dargestellt, wenn mindestens eine Optimierung eine neuere Version auf der Festplatte hat. Siehe <link>Apply Available Updates</link> für den vollständigen Update-Flow und das Path-A-Äquivalent im Shell-Menü.",
+    "revertTitle": "Zurücksetzen einer Optimierung",
+    "revertBody": "Die Karte ist schreibgeschützt - um eine Optimierung rückgängig zu machen, führen Sie die entsprechende Option <link>Deinstallation</link> aus dem ProxMenux Scripts Menü aus. Der Deinstallationsschritt entfernt den Eintrag von <code>installed_tools.json</code>, so dass er bei der nächsten Aktualisierung von dieser Karte verschwindet."
+  },
+  "dataCollected": {
+    "heading": "Wie die Daten gesammelt werden",
+    "headerCard": "Karte",
+    "headerEndpoint": "Endpunkt",
+    "headerSource": "Quelle",
+    "rows": [
+      {
+        "card": "Schnittstellensprache",
+        "endpoint": "localStorage",
+        "source": "Browser-Präferenz <code>proxmenux-ui-language</code>, die ursprünglich vom Browser-Lokal abgeleitet wurde, wenn keine gespeicherte Option vorhanden ist."
+      },
+      {
+        "card": "Navigationsreihenfolge",
+        "endpoint": "localStorage",
+        "source": "Browserpräferenz <code>proxmenux-nav-order</code>; es bestimmt auch die Landing-Tab."
+      },
+      {
+        "card": "Netzwerkeinheiten",
+        "endpoint": "/api/settings",
+        "source": "Beharrt in der SQLite-Einstellungstabelle des Dashboards."
+      },
+      {
+        "card": "Dauer des Gesundheitsmonitors",
+        "endpoint": "/api/health/settings",
+        "source": "Dauer der Unterdrückung pro Kategorie in der Health DB."
+      },
+      {
+        "card": "Speicher-/Schnittstellenausschlüsse",
+        "endpoint": "/api/storage/exclusions, /api/network/exclusions",
+        "source": "SQLite Tabellen <code>excluded_storages</code> und <code>excluded_interfaces</code>."
+      },
+      {
+        "card": "Benachrichtigungen & AI Panel",
+        "endpoint": "/api/notifications/*",
+        "source": "Siehe die <notifLink>Notifications</notifLink> / <aiLink>AI Assistant</aiLink> Seiten."
+      },
+      {
+        "card": "ProxMenux Optimierungsliste",
+        "endpoint": "/api/proxmenux/installed-tools",
+        "source": "Lesen Sie <code>/usr/local/share/proxmenux/installed_tools.json</code>, geschrieben von <code>register_tool</code>-Aufrufen innerhalb der Nachinstallationsskripte."
+      },
+      {
+        "card": "Optimierung Source-Code Modal",
+        "endpoint": "/api/proxmenux/tool-source",
+        "source": "Extrahiert die passende Bash-Funktion aus <code>auto_post_install.sh</code> oder <code>customizable_post_install.sh</code> auf dem Host."
+      }
+    ]
+  },
+  "whereNext": {
+    "heading": "Wohin als nächstes",
+    "items": [
+      {
+        "label": "Apps Tab",
+        "href": "/docs/monitor/dashboard/apps",
+        "tail": "— der Träger, dessen Position auf oberster Ebene mit der Navigationsreihenfolge geändert werden kann."
+      },
+      {
+        "label": "Benachrichtigungen",
+        "href": "/docs/monitor/notifications",
+        "tail": " — Channels, Per-Event-Toggles, Channel Overrides, History, Test-Send."
+      },
+      {
+        "label": "KI-Assistent",
+        "href": "/docs/monitor/ai-assistant",
+        "tail": "— Anbieter, Modelle, Aufforderungsmodi, Sprachen, Detailebenen pro Kanal."
+      },
+      {
+        "label": "Gesundheitsmonitor → Warnungen abweisen und die Unterdrückungsdauer",
+        "href": "/docs/monitor/health-monitor#dismissing-alerts-and-the-suppression-duration",
+        "tail": "— die Semantik hinter den Dropdowns der einzelnen Kategorien oben."
+      },
+      {
+        "label": "ProxMenux Scripts → Automatisiert nach der Installation",
+        "href": "/docs/post-install/automated",
+        "tailRich": "und <customLink>Customizable post-install</customLink> — die eigentlichen Skripte, die sich in der Optimierungsliste oben registrieren."
+      },
+      {
+        "label": "Optimierungen deinstallieren",
+        "href": "/docs/post-install/uninstall",
+        "tail": "- wie man eine oben registrierte Optimierung zurücksetzt."
+      },
+      {
+        "label": "Dashboard-Index",
+        "href": "/docs/monitor/dashboard",
+        "tail": "Zurück zur Tab-Übersicht."
+      }
+    ]
+  }
+}

@@ -1,0 +1,111 @@
+{
+  "meta": {
+    "title": "Politik | Audit & Report",
+    "description": "Die Node Policy von Audit & Report: Backup, Autostart und Recovery-Ziel jedes Gastes, die Rolle jedes Speichers und die Schwellenwerte der Prüfungen."
+  },
+  "header": {
+    "title": "Richtlinie",
+    "description": "Die Richtlinie erklärt, was keine Inspektion ableiten kann: wofür jeder Gast und jede Lagerung ist und welche Schwellenwerte die Kontrollen gelten.",
+    "section": "Prüfung und Bericht"
+  },
+  "sections": [
+    {
+      "id": "principle",
+      "blocks": [
+        {
+          "calloutInfo": {
+            "title": "Ohne Erklärung beschreibt der Bericht; mit einem bewertet er",
+            "body": "Eine Bewertung sieht, was der Gastgeber tut, nicht wofür er ist. Ein Gast ohne Backup, dessen Zweck nicht erklärt wird, wird als Beobachtung gemeldet. Wenn seine Sicherung für erforderlich erklärt wird, wird die gleiche Abwesenheit als Warnung gemeldet. Es muss nichts deklariert werden."
+          }
+        },
+        {
+          "figure": {
+            "src": "/monitor/audit/policy-view.png",
+            "alt": "Politikansicht mit den Gästen, dem Speicher und den Schwellenwerten des Knotens",
+            "caption": "Die Politikansicht."
+          }
+        }
+      ]
+    },
+    {
+      "id": "guests",
+      "title": "Gäste",
+      "intro": "Jede VM und LXC des Knotens hat drei Felder. Ein als Standard verlassener Wert nimmt den allgemeinen Wert, der daneben angezeigt wird.",
+      "blocks": [
+        {
+          "table": {
+            "headers": [
+              "Feld",
+              "Werte",
+              "Auswirkungen auf die Bewertung"
+            ],
+            "rows": [
+              [
+                "Sicherung",
+                "Erforderlich, Nicht erforderlich, Nicht angegeben",
+                "Ein fehlendes Backup ist eine Warnung, wenn es erforderlich ist, eine Beobachtung, wenn es nicht angegeben ist, und es wird aus der Zählung ausgelassen, wenn es nicht erforderlich ist."
+              ],
+              [
+                "Autostart",
+                "Erforderlich, Nicht erforderlich, Nicht angegeben",
+                "Ob der Gast mit dem Gastgeber beginnen muss."
+              ],
+              [
+                "Wiederherstellungsziel",
+                "Std",
+                "Das maximal akzeptable Alter des letzten Backups."
+              ]
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "storage",
+      "title": "Lagerung",
+      "blocks": [
+        {
+          "p": "Ein nicht erreichbarer Speicher wird als kritisch gemeldet, wenn er für wesentlich erklärt wird oder einem laufenden Gast dient, als Warnung, wenn seine Rolle nicht angegeben wird, und als Beobachtung, wenn er für optional erklärt wird."
+        }
+      ],
+      "intro": "Jeder Speicher des Knotens wird als wesentlich, optional oder nicht angegeben deklariert."
+    },
+    {
+      "id": "thresholds",
+      "title": "Schwellenwerte",
+      "intro": "Ein leerer Schwellenwert verwendet den versendeten Wert, der als Platzhalter angezeigt wird.",
+      "blocks": [
+        {
+          "list": {
+            "items": [
+              "Überprüfung der Speicherkapazität (%) und Überprüfung der Dünnpoolfüllung (%).",
+              "Thin Overprovisioning Ratio und Memory Overcommit Ratio",
+              "ZFS Scrub Intervall (Tage).",
+              "Backup Alter Fallback (Tage) und Zeitplan Gnade (Verhältnis).",
+              "Verfallsmeldung (Tage).",
+              "Festplattendienstdauer (Stunden) und letztes Festplattenfehlerfenster (Tage).",
+              "Lynis meldet Alter (Tage) und Paketindex Alter (Tage).",
+              "Journal gegen seine Kappe (%).",
+              "Filesystem Space Review (%) und Filesystem Inode Review (%)."
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "save",
+      "title": "Wie die Politik gerettet wird",
+      "blocks": [
+        {
+          "p": "Die Erklärung wird validiert und atomar in <code>/usr/local/share/proxmenux/audit_policy.json</code> gespeichert. Jedes Speichern trägt eine Revision: Wenn sich die Erklärung in einer anderen Sitzung geändert hat, wird der Entwurf nicht gespeichert und die Ansicht bietet an, die gespeicherte Erklärung neu zu laden."
+        },
+        {
+          "calloutWarning": {
+            "title": "Die Politik wird nie geschlossen",
+            "body": "ProxMenux fügt keine eigene Anforderung hinzu. Ein leeres Feld behält den versendeten Wert oder bleibt nicht angegeben, und eine Teildeklaration betrifft nur die Elemente, die es benennt."
+          }
+        }
+      ]
+    }
+  ]
+}
