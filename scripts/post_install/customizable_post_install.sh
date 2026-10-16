@@ -3039,15 +3039,27 @@ register_tool "fastfetch" true "$FUNC_VERSION"
 
 
 configure_figurine() {
-    local FUNC_VERSION="1.1"
+    local FUNC_VERSION="1.2"
     pmx_journal_context "configure_figurine" "$FUNC_VERSION"
     # description: Install Figurine (ASCII-art hostname banner) and wire it into the SSH login flow.
     msg_info2 "$(translate "Installing and configuring Figurine...")"
     # `FIGURINE_VERSION` env var allows pinning to a specific release;
     # default tracks the last tested upstream tag. Audit Tier 6 —
     # recursos remotos sin pinning de versión.
-    local version="${FIGURINE_VERSION:-2.0.0}"
-    local file="figurine_linux_amd64_v${version}.tar.gz"
+    local version="${FIGURINE_VERSION:-2.1.1}"
+    # Prefer the Debian userspace ABI; the upstream 32-bit ARM build requires ARMv7.
+    local arch
+    arch="$(dpkg --print-architecture 2>/dev/null || uname -m)"
+    case "$arch" in
+        amd64|x86_64) arch="amd64" ;;
+        arm64|aarch64) arch="arm64" ;;
+        armhf|armv7l|armv8l) arch="arm" ;;
+        *)
+            msg_error "$(translate "Unsupported architecture for Figurine:") $arch"
+            return 1
+            ;;
+    esac
+    local file="figurine_linux_${arch}_v${version}.tar.gz"
     local url="https://github.com/arsham/figurine/releases/download/v${version}/${file}"
     local temp_dir; temp_dir=$(mktemp -d)
     local install_dir="/usr/local/bin"

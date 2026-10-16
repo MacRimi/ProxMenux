@@ -7079,6 +7079,7 @@
   "Unsupported OCI-LXC AppArmor profile:": "Profilo OCI-LXC AppArmor non supportato:",
   "Unsupported OCI-LXC seccomp profile:": "Profilo seccomp OCI-LXC non supportato:",
   "Unsupported Terminal": "Terminale non supportato",
+  "Unsupported architecture for Figurine:": "Architettura non supportata da Figurine:",
   "Unsupported architecture:": "Architettura non supportata:",
   "Unsupported backup compression": "Compressione backup non supportata",
   "Unsupported credential pattern:": "Schema credenziali non supportato:",

@@ -660,7 +660,7 @@
         "controllerBusyTime": "Minutos totales que el controlador pasó procesando comandos de E/S. Los valores altos indican una carga de trabajo pesada y sostenida.",
         "errorLogEntries": "Número de entradas en el registro de información de errores. A menudo incluye artefactos benignos de autoevaluación; verifique con Errores de Medios.",
         "warningTempTime": "Total de minutos transcurridos por encima del umbral de temperatura de advertencia. Provoca una limitación del rendimiento. El cero es ideal.",
-        "criticalTempTime": "Minutos totales pasados ​​por encima del umbral de temperatura crítica. La unidad puede apagarse para evitar daños. Siempre debe ser cero.",
+        "criticalTempTime": "Minutos totales pasados por encima del umbral de temperatura crítica. La unidad puede apagarse para evitar daños. Siempre debe ser cero.",
         "warningCompositeTemperatureTime": "Minutos totales que la temperatura compuesta superó el umbral de advertencia.",
         "criticalCompositeTemperatureTime": "Minutos totales la temperatura compuesta superó el umbral crítico. Debe ser cero.",
         "thermalManagementT1TransCount": "Número de veces que la unidad entró en aceleración térmica ligera (T1). Indica problemas de enfriamiento.",
@@ -1163,7 +1163,21 @@
       "available": "Backups disponibles",
       "loading": "Cargando backups...",
       "empty": "No se encontraron backups",
-      "emptyHint": "Crea tu primer backup con el botón de arriba"
+      "emptyHint": "Crea tu primer backup con el botón de arriba",
+      "refresh": "Actualizar",
+      "refreshFailed": "No se pudieron actualizar los backups. Vuelve a actualizar para confirmar su estado actual.",
+      "deleteSelected": "Eliminar los seleccionados ({count})",
+      "deletedCount": "{count} backup(s) eliminado(s).",
+      "unconfirmedCount": "No se ha confirmado la eliminación de {count} backup(s). Actualiza la lista y comprueba las tareas de Proxmox antes de volver a intentarlo.",
+      "deleteFailed": "No se pudo confirmar la eliminación. Actualiza la lista y comprueba las tareas de Proxmox antes de volver a intentarlo.",
+      "selectHint": "Selecciona backups sin protección (hasta 20 por lote)",
+      "selectBackup": "Seleccionar backup",
+      "protected": "Protegido",
+      "confirmTitle": "¿Eliminar {count} backup(s)?",
+      "confirmDescription": "Los archivos de backup de la VM/CT {vmid} se eliminarán de forma permanente. Los backups protegidos quedan fuera. La VM o el contenedor no se eliminan.",
+      "deleting": "Esperando a que Proxmox termine de eliminar los archivos seleccionados…",
+      "cancel": "Cancelar",
+      "confirmDelete": "Eliminar backups"
     },
     "updatesPanel": {
       "pendingTitle": "Actualizaciones de paquetes pendientes",
@@ -1357,8 +1371,8 @@
         "sábado"
       ],
       "runSkippedStatus": "ejecución omitida",
-      "reasonStoppedContainer": "el contenedor está detenido;Se omitió la actualización programada.",
-      "reasonStoppedContainerHistorical": "el contenedor se detuvo a la hora de actualización programada."
+      "reasonStoppedContainer": "El contenedor está parado; se ha omitido la actualización programada.",
+      "reasonStoppedContainerHistorical": "El contenedor estaba parado a la hora de la actualización programada."
     },
     "cronChip": {
       "detected": "cron del host detectado",
@@ -2164,7 +2178,13 @@
         "inactiveFooter": "Habilite notificaciones para recibir alertas del sistema, de salud y de seguridad a través de los canales configurados.",
         "notificationLanguage": "Idioma de notificación",
         "selectNotificationLanguage": "Seleccione el idioma de notificación",
-        "notificationLanguageHint": "Se utiliza para notificaciones deterministas en tiempo de ejecución incluso cuando la IA está deshabilitada."
+        "notificationLanguageHint": "Se utiliza para notificaciones deterministas en tiempo de ejecución incluso cuando la IA está deshabilitada.",
+        "appriseServiceHelp": "Configuración de Slack y Matrix",
+        "appriseSlackSteps": "Crea un webhook entrante en tu aplicación de Slack para el canal de destino y pega su URL HTTPS completa en URL de Apprise. No hace falta convertirla.",
+        "appriseSlackDocs": "Formatos de URL y configuración de Slack",
+        "appriseMatrixSteps": "Utiliza una cuenta de notificaciones que pueda publicar en la sala. Sustituye el usuario, la contraseña, el servidor de origen y el ID completo de la sala del ejemplo; codifica para URL los caracteres especiales de las credenciales. El esquema matrixs utiliza HTTPS. Consulta en la documentación la compatibilidad con tokens, SSO y salas cifradas de tu versión de Apprise.",
+        "appriseMatrixDocs": "Formatos de URL y configuración de Matrix",
+        "appriseServiceFinish": "Activa Apprise, introduce tu URL, elige las categorías de notificación o los eventos individuales, guarda y utiliza Enviar prueba. Estos ejemplos no cambian tu URL guardada. Este canal de Apprise tiene un único destino; utiliza la API de Apprise para varios servicios a la vez."
       },
       "ai": {
         "title": "mejora de la IA",
@@ -3619,8 +3639,8 @@
       "short": {
         "hour": "Pasada 1 hora",
         "day": "Pasadas 24h",
-        "week": "Pasados ​​los 7 días",
-        "month": "Pasados ​​los 30 días",
+        "week": "Pasados los 7 días",
+        "month": "Pasados los 30 días",
         "year": "Último 1 año"
       },
       "last": {
@@ -4809,6 +4829,24 @@
       "thursday": "Jueves",
       "tuesday": "Martes",
       "wednesday": "Miércoles"
+    },
+    "storageRetention": {
+      "useDefault": "Usar el valor por defecto de Proxmox (sin política en este almacenamiento)",
+      "title": "Retención del almacenamiento",
+      "keepAll": "Conservar todos los backups",
+      "description": "Retención por defecto de los backups, guardada en Proxmox. Las tareas de backup con su propia política tienen prioridad sobre ella.",
+      "refresh": "Actualizar",
+      "saved": "Retención guardada. No se ha purgado ningún backup.",
+      "choosePolicy": "Elige Conservar todos o al menos un número de retención mayor que cero.",
+      "saveFailed": "No se pudo guardar la retención del almacenamiento. Actualiza la lista si ha cambiado la configuración.",
+      "loadFailed": "No se pudo cargar la retención del almacenamiento.",
+      "empty": "No hay almacenamientos de backups.",
+      "default": "Valor por defecto de Proxmox",
+      "edit": "Editar",
+      "editTitle": "Retención de {storage}",
+      "effect": "Se aplica a los próximos backups que hereden la política de este almacenamiento. Guardar no elimina los backups existentes, y los protegidos siguen protegidos.",
+      "cancel": "Cancelar",
+      "save": "Guardar retención"
     }
   },
   "healthStatus": {

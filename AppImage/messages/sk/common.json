@@ -1131,7 +1131,21 @@
       "available": "Dostupné zálohy",
       "loading": "Načítavam zálohy...",
       "empty": "Nenašli sa žiadne zálohy",
-      "emptyHint": "Prvú zálohu vytvoríte tlačidlom vyššie"
+      "emptyHint": "Prvú zálohu vytvoríte tlačidlom vyššie",
+      "refresh": "Obnoviť",
+      "refreshFailed": "Nepodarilo sa obnoviť zálohy. Obnovte ich znova, aby ste potvrdili ich aktuálny stav.",
+      "deleteSelected": "Odstrániť vybrané ({count})",
+      "deletedCount": "Odstránené zálohy: {count}.",
+      "unconfirmedCount": "Odstránenie záloh ({count}) nebolo potvrdené. Pred ďalším pokusom obnovte zoznam a skontrolujte úlohy v Proxmoxe.",
+      "deleteFailed": "Odstránenie sa nepodarilo potvrdiť. Pred ďalším pokusom obnovte zoznam a skontrolujte úlohy v Proxmoxe.",
+      "selectHint": "Vyberte nechránené zálohy (najviac 20 v jednej dávke)",
+      "selectBackup": "Vybrať zálohu",
+      "protected": "Chránená",
+      "confirmTitle": "Odstrániť zálohy ({count})?",
+      "confirmDescription": "Tieto archívy záloh pre VM/CT {vmid} budú natrvalo odstránené. Chránené zálohy sú vylúčené. Hosť sa tým neodstráni.",
+      "deleting": "Čaká sa, kým Proxmox dokončí odstránenie vybraných archívov…",
+      "cancel": "Zrušiť",
+      "confirmDelete": "Odstrániť zálohy"
     },
     "updatesPanel": {
       "pendingTitle": "Čakajúce aktualizácie balíkov",
@@ -2110,7 +2124,13 @@
         "inactiveFooter": "Zapnite notifikácie a dostávajte upozornenia o systéme, stave a bezpečnosti cez nastavené kanály.",
         "notificationLanguage": "Jazyk notifikácií",
         "selectNotificationLanguage": "Vyberte jazyk notifikácií",
-        "notificationLanguageHint": "Používa sa pre spoľahlivé runtime notifikácie aj vtedy, keď je AI vypnutá."
+        "notificationLanguageHint": "Používa sa pre spoľahlivé runtime notifikácie aj vtedy, keď je AI vypnutá.",
+        "appriseServiceHelp": "Nastavenie Slack a Matrix",
+        "appriseSlackSteps": "V aplikácii Slack vytvorte prichádzajúci webhook pre cieľový kanál a vložte jeho úplnú HTTPS URL do poľa URL Apprise. Nie je potrebný žiadny prevod.",
+        "appriseSlackDocs": "Formáty URL a nastavenie Slack",
+        "appriseMatrixSteps": "Použite účet pre oznámenia, ktorý môže odosielať správy do miestnosti. Nahraďte vzorového používateľa, heslo, domovský server a úplné ID miestnosti; špeciálne znaky v prihlasovacích údajoch zakódujte pre URL. Schéma matrixs používa HTTPS. Podporu tokenov, SSO a šifrovaných miestností v nainštalovanej verzii Apprise nájdete v dokumentácii.",
+        "appriseMatrixDocs": "Formáty URL a nastavenie Matrix",
+        "appriseServiceFinish": "Povoľte Apprise, zadajte svoju URL, vyberte kategórie oznámení alebo jednotlivé udalosti, uložte a potom použite Odoslať test. Tieto príklady nemenia uloženú URL. Tento kanál Apprise má jeden cieľ; pre viac služieb naraz použite API Apprise."
       },
       "ai": {
         "title": "AI vylepšenie",
@@ -4755,6 +4775,24 @@
       "thursday": "štvrtok",
       "tuesday": "utorok",
       "wednesday": "streda"
+    },
+    "storageRetention": {
+      "title": "Uchovávanie záloh úložiska",
+      "keepAll": "Ponechať všetky zálohy",
+      "description": "Predvolená politika uchovávania záloh uložená v Proxmoxe. Zálohovacie úlohy s vlastnou politikou majú pred týmto predvoleným nastavením prednosť.",
+      "refresh": "Obnoviť",
+      "saved": "Politika uchovávania záloh úložiska bola uložená. Prerezávanie sa nevykonalo.",
+      "choosePolicy": "Vyberte Ponechať všetky alebo aspoň jeden počet uchovávaných záloh väčší ako nula.",
+      "saveFailed": "Nepodarilo sa uložiť politiku uchovávania záloh úložiska. Ak sa konfigurácia zmenila, obnovte zoznam.",
+      "loadFailed": "Nepodarilo sa načítať politiku uchovávania záloh úložiska.",
+      "empty": "Nenašli sa žiadne úložiská záloh.",
+      "default": "Predvolené nastavenie Proxmoxu",
+      "edit": "Upraviť",
+      "editTitle": "Uchovávanie záloh pre {storage}",
+      "effect": "Platí pre budúce zálohovania, ktoré preberajú túto politiku úložiska. Uložením sa existujúce zálohy neodstránia. Chránené zálohy zostanú chránené.",
+      "cancel": "Zrušiť",
+      "save": "Uložiť uchovávanie záloh",
+      "useDefault": "Použite predvolené nastavenie Proxmox (žiadne pravidlá pre toto úložisko)"
     }
   },
   "healthStatus": {
