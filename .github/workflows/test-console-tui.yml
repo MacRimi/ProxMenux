@@ -13,6 +13,7 @@ on:
       - 'AppImage/scripts/tests/test_console_snapshot.py'
       - 'AppImage/scripts/tests/test_console_render.py'
       - 'AppImage/scripts/tests/test_cluster_resources_cache.py'
+      - 'AppImage/scripts/tests/test_console_monitor_hook.py'
       - 'AppImage/scripts/tests/test_cluster_guest_storage_ownership.py'
       - 'AppImage/scripts/tests/test_lxc_vm_ip_inventory.py'
       - 'AppImage/scripts/tests/fixtures/console/**'
@@ -28,6 +29,7 @@ on:
       - 'AppImage/scripts/tests/test_console_snapshot.py'
       - 'AppImage/scripts/tests/test_console_render.py'
       - 'AppImage/scripts/tests/test_cluster_resources_cache.py'
+      - 'AppImage/scripts/tests/test_console_monitor_hook.py'
       - 'AppImage/scripts/tests/test_cluster_guest_storage_ownership.py'
       - 'AppImage/scripts/tests/test_lxc_vm_ip_inventory.py'
       - 'AppImage/scripts/tests/fixtures/console/**'
@@ -61,6 +63,8 @@ jobs:
         run: python -I -B -m unittest discover -s AppImage/scripts/tests -p test_console_render.py -v
       - name: Test cluster resources cache
         run: python -I -B -m unittest discover -s AppImage/scripts/tests -p test_cluster_resources_cache.py -v
+      - name: Test the Monitor hook that starts the console publisher
+        run: python -I -B -m unittest discover -s AppImage/scripts/tests -p test_console_monitor_hook.py -v
       - name: Test console installer
         run: python -I -B -m unittest discover -s tests -p test_console_installer.py -v
       - name: Test cluster guest storage ownership guard
