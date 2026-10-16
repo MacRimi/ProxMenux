@@ -4188,13 +4188,16 @@ def get_system_disks():
         pass
     
     try:
-        # 4. Check LVM physical volumes. `--devices` (added when a disk
-        # is parked) keeps pvs from scanning — and waking — standby HDDs.
+        # 4. Check LVM physical volumes. `--devices` keeps pvs off the disks
+        # that are excluded, idle or asleep.
         dev_args = _lvm_device_args()
         result = subprocess.run(
             ['pvs', *dev_args, '--noheadings', '-o', 'pv_name,vg_name'],
             capture_output=True, text=True, timeout=5
         ) if dev_args is not None else None
+        if result is not None:
+            from lvm_device_scope import settle_scan_reads
+            settle_scan_reads()
         if result is not None and result.returncode == 0:
             for line in result.stdout.strip().split('\n'):
                 if line.strip():

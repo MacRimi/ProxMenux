@@ -2286,6 +2286,8 @@ class HealthMonitor:
                 text=True,
                 timeout=3
             )
+            from lvm_device_scope import settle_scan_reads
+            settle_scan_reads()
             
             if result.returncode != 0:
                 return {'status': 'WARNING', 'reason': 'lvs command failed'}
@@ -2310,6 +2312,7 @@ class HealthMonitor:
                     text=True,
                     timeout=3
                 )
+                settle_scan_reads()
                 if vg_result.returncode == 0 and vg_result.stdout.strip():
                     return {'status': 'WARNING', 'reason': 'No active LVM volumes detected'}
                 else:
