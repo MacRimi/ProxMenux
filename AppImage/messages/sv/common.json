@@ -2108,7 +2108,13 @@
         "inactiveFooter": "Aktivera aviseringar för att ta emot system-, hälso- och säkerhetsvarningar via de konfigurerade kanalerna.",
         "notificationLanguage": "Aviseringsspråk",
         "selectNotificationLanguage": "Välj språk för meddelanden",
-        "notificationLanguageHint": "Används för deterministiska körtidsmeddelanden även när AI är inaktiverat."
+        "notificationLanguageHint": "Används för deterministiska körtidsmeddelanden även när AI är inaktiverat.",
+        "appriseServiceHelp": "Konfiguration av Slack och Matrix",
+        "appriseSlackSteps": "Skapa en inkommande webhook i din Slack-app för målkanalen och klistra sedan in dess fullständiga HTTPS-URL i fältet Apprise-URL. Ingen omvandling behövs.",
+        "appriseSlackDocs": "URL-format och konfiguration för Slack",
+        "appriseMatrixSteps": "Använd ett aviseringskonto som får skicka meddelanden till rummet. Ersätt exemplets användare, lösenord, hemserver och fullständiga rums-ID; URL-koda specialtecken i inloggningsuppgifterna. Schemat matrixs använder HTTPS. Se dokumentationen för stöd för token, SSO och krypterade rum i din installerade Apprise-version.",
+        "appriseMatrixDocs": "URL-format och konfiguration för Matrix",
+        "appriseServiceFinish": "Aktivera Apprise, ange din URL, välj aviseringskategorier eller enskilda händelser, spara och använd sedan Skicka test. Dessa exempel ändrar inte din sparade URL. Denna Apprise-kanal har ett mål; använd Apprise-API för flera tjänster samtidigt."
       },
       "ai": {
         "title": "AI-förbättring",

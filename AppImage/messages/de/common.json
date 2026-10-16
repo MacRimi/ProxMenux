@@ -2108,7 +2108,13 @@
         "inactiveFooter": "Aktivieren Sie Benachrichtigungen, um System-, Gesundheits- und Sicherheitswarnungen über die konfigurierten Kanäle zu erhalten.",
         "notificationLanguage": "Benachrichtigungssprache",
         "selectNotificationLanguage": "Benachrichtigungssprache auswählen",
-        "notificationLanguageHint": "Wird für deterministische Laufzeitbenachrichtigungen verwendet, auch wenn KI deaktiviert ist."
+        "notificationLanguageHint": "Wird für deterministische Laufzeitbenachrichtigungen verwendet, auch wenn KI deaktiviert ist.",
+        "appriseServiceHelp": "Slack und Matrix einrichten",
+        "appriseSlackSteps": "Erstellen Sie in Ihrer Slack-App einen eingehenden Webhook für den Zielkanal und fügen Sie dessen vollständige HTTPS-URL in das Feld Apprise-URL ein. Eine Umwandlung ist nicht erforderlich.",
+        "appriseSlackDocs": "Slack-URL-Formate und Einrichtung",
+        "appriseMatrixSteps": "Verwenden Sie ein Benachrichtigungskonto, das in den Raum schreiben darf. Ersetzen Sie den Beispielbenutzer, das Passwort, den Homeserver und die vollständige Raum-ID; kodieren Sie Sonderzeichen in Zugangsdaten für URLs. Das Schema matrixs verwendet HTTPS. Informationen zur Unterstützung von Tokens, SSO und verschlüsselten Räumen in Ihrer installierten Apprise-Version finden Sie in der Dokumentation.",
+        "appriseMatrixDocs": "Matrix-URL-Formate und Einrichtung",
+        "appriseServiceFinish": "Aktivieren Sie Apprise, geben Sie Ihre URL ein, wählen Sie Benachrichtigungskategorien oder einzelne Ereignisse aus, speichern Sie und verwenden Sie anschließend Test senden. Diese Beispiele ändern Ihre gespeicherte URL nicht. Dieser Apprise-Kanal hat ein Ziel; verwenden Sie die Apprise-API für mehrere Dienste gleichzeitig."
       },
       "ai": {
         "title": "KI-Verbesserung",

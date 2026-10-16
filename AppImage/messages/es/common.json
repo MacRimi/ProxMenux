@@ -2108,7 +2108,13 @@
         "inactiveFooter": "Habilite notificaciones para recibir alertas del sistema, de salud y de seguridad a través de los canales configurados.",
         "notificationLanguage": "Idioma de notificación",
         "selectNotificationLanguage": "Seleccione el idioma de notificación",
-        "notificationLanguageHint": "Se utiliza para notificaciones deterministas en tiempo de ejecución incluso cuando la IA está deshabilitada."
+        "notificationLanguageHint": "Se utiliza para notificaciones deterministas en tiempo de ejecución incluso cuando la IA está deshabilitada.",
+        "appriseServiceHelp": "Configuración de Slack y Matrix",
+        "appriseSlackSteps": "Crea un webhook entrante en tu aplicación de Slack para el canal de destino y pega su URL HTTPS completa en URL de Apprise. No hace falta convertirla.",
+        "appriseSlackDocs": "Formatos de URL y configuración de Slack",
+        "appriseMatrixSteps": "Utiliza una cuenta de notificaciones que pueda publicar en la sala. Sustituye el usuario, la contraseña, el servidor de origen y el ID completo de la sala del ejemplo; codifica para URL los caracteres especiales de las credenciales. El esquema matrixs utiliza HTTPS. Consulta en la documentación la compatibilidad con tokens, SSO y salas cifradas de tu versión de Apprise.",
+        "appriseMatrixDocs": "Formatos de URL y configuración de Matrix",
+        "appriseServiceFinish": "Activa Apprise, introduce tu URL, elige las categorías de notificación o los eventos individuales, guarda y utiliza Enviar prueba. Estos ejemplos no cambian tu URL guardada. Este canal de Apprise tiene un único destino; utiliza la API de Apprise para varios servicios a la vez."
       },
       "ai": {
         "title": "mejora de la IA",
