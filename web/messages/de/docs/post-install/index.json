@@ -33,7 +33,7 @@
         "Kostenlose Repos + Systemupgrade",
         "Speicher, Kernel, Netzwerk-Tuning",
         "Log2RAM (automatisch auf SSD/NVMe erkannt)",
-        "Größenbegrenzungen für Journale + Logrotate",
+        "Journald + Logrotate-Größenbeschränkungen",
         "Persistente Schnittstellennamen"
       ]
     },

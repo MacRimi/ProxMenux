@@ -22,7 +22,7 @@
     "heading": "Sichtbarkeitsregeln",
     "intro": "Bevor das Menü überhaupt erscheint, filtert ProxMenux die Festplattenliste. Es werden nur Kandidaten gezeigt, die nachweislich sicher sind:",
     "items": [
-      "<strong>Shown</strong> — Festplatten <em>not</em>, die vom Host verwendet werden (Rootpool, Swap, Mounted, aktive ZFS/LVM/RAID) und <em>not</em>, auf die von jeder VM/LXC-Konfiguration verwiesen wird (laufend oder gestoppt).",
+      "<strong>Angezeigt</strong> – Festplatten, die <em>nicht</em> vom Host verwendet werden (Root pool, Swap, gemountet, aktiv ZFS/LVM/RAID) und <em>nicht</em>, auf die von irgendjemandem verwiesen wird VM/LXC-Konfiguration (läuft oder gestoppt).",
       "<strong>Hidden</strong> — Host/System-Festplatten.",
       "<strong>Hidden</strong> — Festplatten, auf die durch eine VM/LXC-Konfiguration verwiesen wird."
     ],

@@ -1,7 +1,7 @@
 {
   "meta": {
     "title": "Installation von ProxMenux | ProxMenux Dokumentation",
-    "description": "One-line Installer für ProxMenux auf Proxmox VE 8+ Hosts. Schiffe vorgenerierte Übersetzungsdateien für sechs Sprachen (Englisch, Spanisch, Französisch, Deutsch, Italienisch, Portugiesisch) — die Sprache wird einmal während der Installation ausgewählt. Beta-Kanal auch für den frühen Zugriff auf neue Funktionen.",
+    "description": "Einzeiliges Installationsprogramm für ProxMenux auf Proxmox VE 8+ Hosts. Liefert vorgenerierte Übersetzungsdateien für sechs Sprachen (Englisch, Spanisch, Französisch, Deutsch, Italienisch, Portugiesisch) – die Sprache wird einmal während der Installation ausgewählt. Für den frühen Zugriff auf neue Funktionen ist auch ein Beta-Kanal verfügbar.",
     "ogTitle": "Installation von ProxMenux | ProxMenux Dokumentation",
     "ogDescription": "Installieren Sie ProxMenux auf Proxmox VE 8+ in einem Befehl. Stabile und Beta-Kanäle verfügbar."
   },

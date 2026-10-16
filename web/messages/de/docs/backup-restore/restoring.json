@@ -218,7 +218,7 @@
         "detail": "Laden Sie die aufgezeichnete Treiberversion herunter, kompilieren Sie die DKMS-Module mit dem aktuellen Kernel und wenden Sie den ProxMenux-Patch an, wenn die Quelle ihn hatte. Längste Einzelaufgabe."
       },
       {
-        "stage": "Coral / andere Komponenten Neuinstallationen",
+        "stage": "Neuinstallation von Coral und anderen Komponenten",
         "time": "3–5 min",
         "detail": "DKMS kompiliert für Coral, apt install für intel-gpu-Tools, .deb download + install für amdgpu_top."
       },
@@ -251,7 +251,7 @@
       },
       {
         "log": "/var/log/proxmenux/component-<name>-YYYYMMDD_HHMMSS.log",
-        "detail": "Ein Protokoll pro Komponenteninstallateur (nvidia, Korallen usw.), das im Post-Boot-Pass lief. Nützlich, wenn die Neuinstallation einer bestimmten Komponente fehlgeschlagen ist und der Benutzer die eigene Ausgabe des Tools benötigt."
+        "detail": "Ein Protokoll pro Komponenteninstallationsprogramm (nvidia, coral usw.), das im Post-Boot-Durchlauf ausgeführt wurde. Nützlich, wenn die Neuinstallation einer bestimmten Komponente fehlgeschlagen ist und der Benutzer die eigene Ausgabe des Tools benötigt."
       },
       {
         "log": "/var/log/proxmenux/restore-datapools-YYYYMMDD_HHMMSS.log",

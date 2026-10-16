@@ -12,7 +12,7 @@
   },
   "intro": {
     "title": "Was das ist (und nicht ist)",
-    "body": "Dieses Tool registriert <strong>not</strong> alles in Proxmox (hier kein <code>pvesm add</code>). Es erstellt nur ein Verzeichnis auf dem Host - <code>/mnt/shared</code>, standardmäßig - mit Berechtigungen, die jeder LXC-Container lesen und schreiben kann, unabhängig davon, ob der CT privilegiert oder unprivilegiert ist. Der übliche nächste Schritt besteht darin, es in jeden CT mit dem <mountLink>LXC Mount Manager </mountLink> zu binden."
+    "body": "Dieses Tool registriert <strong>nicht</strong> irgendetwas in Proxmox (kein <code>pvesm add</code> hier). Es bereitet lediglich ein Verzeichnis auf dem Host vor – standardmäßig <code>/mnt/shared</code> – mit Berechtigungen, die jeder LXC-Container lesen und schreiben kann, unabhängig davon, ob der CT privilegiert oder nicht privilegiert ist. Der übliche nächste Schritt besteht darin, es mit dem <mountLink>LXC-Mount-Manager</mountLink> in jedes CT einzubinden."
   },
   "why": {
     "heading": "Warum ein dediziertes Tool dafür",
@@ -74,7 +74,7 @@
   },
   "next": {
     "heading": "Nächster Schritt: Bind-Mount in Container",
-    "body": "Das Erstellen des Verzeichnisses bereitet es nur vor - kein Container sieht es noch. Um es in einem oder mehreren LXCs sichtbar zu machen, verwenden Sie den <mountLink>LXC Mount Manager</mountLink>, um <code>/mnt/&lt;name&gt;</code> in die CTs zu binden. Da die Berechtigungen bereits geöffnet sind, bietet der Mount Manager <strong>not</strong> an, sie zu ändern - das Verzeichnis ist bereit, es zu verwenden."
+    "body": "Durch das Erstellen des Verzeichnisses wird es nur vorbereitet – noch wird es von keinem Container gesehen. Um es in einem oder mehreren LXCs sichtbar zu machen, verwenden Sie den Mount-Manager <mountLink>LXC</mountLink>, um <code>/mnt/&lt;name&gt;</code> in die CTs einzubinden. Da die Berechtigungen bereits geöffnet sind, bietet der Mount-Manager <strong>nicht</strong> an, sie zu ändern – das Verzeichnis kann unverändert verwendet werden."
   },
   "troubleshoot": {
     "heading": "Fehlerbehebung",

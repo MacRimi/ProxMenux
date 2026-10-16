@@ -8,7 +8,7 @@
     "twitterDescription": "Endpunkte für Home Assistant, Homepage, Grafana, Prometheus, n8n und Custom Dashboards."
   },
   "header": {
-    "title": "API Referenznummer",
+    "title": "API-Referenz",
     "description": "Die HTTP-Endpunktintegratoren verwenden, um den Zustand zu lesen und sichere Aktionen auf ProxMenux Monitor - Home Assistant-Sensoren, Homepage-Karten, Grafana-Dashboards, Prometheus-Scrapes, n8n-Flows und benutzerdefinierten Skripten auszulösen. Jede Kategorie sowie eine vollständige Liste der Prometheus-Metriken mit Curl-Beispielen.",
     "section": "ProxMenux-Monitor"
   },
@@ -241,7 +241,7 @@
     "outro": "Antwortformen und die Semantik der Kategorien leben in <link>Health Monitor</link>."
   },
   "storage": {
-    "heading": "Lagerung",
+    "heading": "Speicher",
     "rows": [
       {
         "endpoint": "/api/storage",
@@ -502,12 +502,12 @@
       {
         "endpoint": "/api/security/fail2ban/details",
         "method": "GET",
-        "use": "Fail2Ban Gefängnisstatus – nur nützlich, wenn das optionale Gefängnis installiert ist."
+        "use": "Fail2Ban jail Status – nur nützlich, wenn das optionale jail installiert ist."
       },
       {
         "endpoint": "/api/security/fail2ban/activity",
         "method": "GET",
-        "use": "Aktuelle Fail2Ban-Ereignisse (Verbote, Unbans, Gefängnisstarts)."
+        "use": "Neueste Fail2Ban Ereignisse (Verbote, Entbannungen, jail Starts)."
       },
       {
         "endpoint": "/api/security/lynis/status",
@@ -738,7 +738,7 @@
       {
         "label": "Zugriff und Authentifizierung",
         "href": "/docs/monitor/access-auth",
-        "tail": "— Münzmarken, das Auditprotokoll, das optionale Fail2Ban-Gefängnis, TLS-Konfiguration."
+        "tail": "– Minting-Tokens, das Audit-Protokoll, die optionale Fail2Ban jail, TLS Konfiguration."
       },
       {
         "label": "Benachrichtigungen",

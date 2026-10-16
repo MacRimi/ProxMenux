@@ -53,7 +53,7 @@
     "heading": "Erweiterte Diagnose",
     "intro": "Aggregiert netzwerkweite Statistiken und führt eine Reihe von gemeinsamen Problemprüfungen durch. Die aktive Verbindung zählt, Abhörports, Gesamtschnittstellen und kennzeichnet explizit zwei Anti-Muster:",
     "items": [
-      "<strong>NetworkManager, der auf einem Proxmox-Host läuft.</strong> NetworkManager und der <code>ifupdown</code>-Konflikt von Proxmox versuchen beide, Schnittstellen zu verwalten, was zu Brücken führt, die auftauchen oder sich weigern. Wenn das Tool erkannt wird, bietet es eine interaktive Aufforderung, es zu stoppen, zu deaktivieren und zu bereinigen (dies ist die <em>only</em>-Diagnose, die das System ändern kann, und nur nach ausdrücklicher Zustimmung).",
+      "<strong>NetworkManager läuft auf einem Proxmox-Host.</strong> NetworkManager und der <code>ifupdown</code>-Konflikt von Proxmox – beide versuchen, Schnittstellen zu verwalten, was dazu führt, dass Brücken flattern oder sich nicht öffnen lassen. Wenn es erkannt wird, bietet das Tool eine interaktive Aufforderung zum Stoppen, Deaktivieren und Löschen (dies ist die <em>einzige</em> Diagnose, die das System ändern kann, und nur nach ausdrücklicher Zustimmung).",
       "<strong>Duplicate IP-Adressen auf verschiedenen Schnittstellen.</strong> Zwei Schnittstellen mit dem gleichen IPv4 verursachen intermittierende Konnektivität, die im VM extrem schwer zu debuggen ist. Entdeckt über <code>ip -4 addr show | sort | uniq -d</code>."
     ],
     "nmTitle": "Die NetworkManager-Eingabeaufforderung ist hier die einzige Änderungsaktion",

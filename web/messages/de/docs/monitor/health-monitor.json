@@ -66,7 +66,7 @@
         "events": "Anhaltender Gedächtnisdruck; OOM-Killer-Aktivität; Swap-Erschöpfung."
       },
       {
-        "category": "Lagerung",
+        "category": "Speicher",
         "checks": "Proxmox-Speicher, Root-Dateisystem",
         "events": "Offline-Speicher (NFS-Server nicht erreichbar, CIFS abgelaufene Creds); Root-Mount > 90 %; LVM dünner Pool nähert sich der Füllung."
       },
@@ -102,7 +102,7 @@
       },
       {
         "category": "Sicherheit & Zertifikate",
-        "checks": "Anmeldeversuche, auslaufende Zertifikate, optionaler Gefängnisstatus Fail2Ban",
+        "checks": "Anmeldeversuche, Zertifikate laufen ab, optionaler Fail2Ban jail Status",
         "events": "Wiederholte SSH / Web-Auth-Ausfälle; PVE-Zertifikat < 30 Tage nach Ablauf; Fail2Ban aktive Verbote."
       }
     ]
@@ -123,7 +123,7 @@
       {
         "status": "INFO",
         "colour": "Blau",
-        "meaning": "Transiente oder bereits gelöste Zustand erwähnenswert einmal. Wird auch für Kategorien verwendet, in denen <em>only</em> abgewiesene Artikel verbleiben.",
+        "meaning": "Vorübergehender oder bereits behobener Zustand, der es wert ist, einmal notiert zu werden. Wird auch für Kategorien verwendet, die <em>nur noch</em> verworfene Elemente übrig haben.",
         "notification": "Fakultativ. Jeder Ereignistyp kann pro Kanal ein- oder ausgeschaltet werden."
       },
       {

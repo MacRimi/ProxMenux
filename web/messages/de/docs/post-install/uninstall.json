@@ -116,7 +116,7 @@
         "title": "Protokollierung",
         "items": [
           {
-            "tool": "Journald Optimierung",
+            "tool": "journald-Optimierung",
             "restores": "Schreibt /etc/systemd/journald.conf mit Vanille-Standards um und startet systemd-journald neu."
           },
           {
@@ -172,7 +172,7 @@
         ]
       },
       {
-        "title": "Lagerung",
+        "title": "Speicher",
         "items": [
           {
             "tool": "ZFS-ARC-Größe anpassen",

@@ -33,9 +33,9 @@
     ],
     "logsRowsAfter": "Jede Zeile zeigt Zeitstempel, Schweregradabzeichen, Quelleinheit und die Nachricht. Lange Nachrichten brechen mit einem \"mehr anzeigen\"-Schalter zusammen. Die Aktion <strong>Download</strong> bündelt den aktuellen Filter über <code>GET /api/logs/download</code> in einer einzigen <code>.txt</code>-Datei – nützlich, wenn Sie ein Stück Journal mit jemandem teilen möchten.",
     "logDetailsModalTitle": "Logangabe Modal",
-    "logDetailsBody": "Wenn Sie auf eine beliebige Zeile klicken, wird ein <strong>Log Details</strong> Modal mit jedem strukturierten Feld, das für diesen einzelnen Eintrag erfasst wurde, geöffnet - die gleiche Ansicht, die Sie von Hand mit <code>journalctl --output=verbose</code> auf dem Host erstellen würden.",
+    "logDetailsBody": "Durch Klicken auf eine beliebige Zeile wird ein modales <strong>Protokolldetails</strong>-Fenster geöffnet, in dem jedes strukturierte Feld journald für diesen einzelnen Eintrag erfasst wird – dieselbe Ansicht, die Sie manuell erstellen würden, indem Sie <code>journalctl --output=verbose</code> auf dem Host ausführen.",
     "logDetailsImageAlt": "Log Details modal — Einzeljournaleintrag erweitert um Level, Service, Timestamp, Source Systemd Einheit, Prozess-ID, Hostname und die vollständige Nachricht",
-    "logDetailsImageCaption": "Log-Details modal - jedes strukturierte Feld trägt für diesen Eintrag die vollständige untruncated Nachricht unten. Nützlich für cron- und service-protokolle, bei denen die ausgeführte befehlszeile wichtig ist.",
+    "logDetailsImageCaption": "Protokolldetails modal – jedes strukturierte Feld journald enthält diesen Eintrag, mit der vollständigen, ungekürzten Nachricht unten. Nützlich für Cron- und Serviceprotokolle, bei denen die ausgeführte Befehlszeile wichtig ist.",
     "fieldsIntro": "Gezeigte Felder:",
     "fields": [
       "<strong>Level</strong> — farbiges Schweregradabzeichen (INFO / WARNUNG / ERROR / KRITIKAL).",
@@ -47,7 +47,7 @@
       "<strong>Hostname</strong> — nützlich, wenn Zeitschriften über Clusterknoten weitergeleitet werden.",
       "<strong>Message</strong> — die vollständige untruncated Nachricht in einem Monospace-Block, bereit zum Kopieren."
     ],
-    "maxLevelStoreTitle": "Tagebuch MaxLevelStore",
+    "maxLevelStoreTitle": "Journald MaxLevelStore",
     "maxLevelStoreBody": "Bei einer neuen Proxmox-Installation wird standardmäßig <code>MaxLevelStore=warning</code> gespeichert, wodurch Nachrichten auf Informationsebene stillschweigend gelöscht werden. Der Monitor erkennt dies beim Start und fügt einen Drop-in (<code>/etc/systemd/journald.conf.d/proxmenux-loglevel.conf</code>) hinzu, der den Schwellenwert auf <code>info</code> erhöht, so dass die Registerkarte Logs tatsächlich etwas über alle Schweregrade hinweg anzeigen kann.",
     "backupsTitle": "Sicherungen",
     "backupsBody": "Proxmox-Taskhistorie gefiltert auf Backup-bezogene Einträge. Eine Zeile pro Aufgabe (<code>vzdump</code>, PBS-Transfers, Garbage Collect, Verify) mit dem Status (OK / WARNINGS / ERROR), beteiligter Gast, Quellspeicher, Dauer und UPID. Klicken Sie auf eine Zeile, um das vollständige Aufgabenprotokoll über <code>GET /api/task-log/&lt;upid&gt;</code> zu laden - die gleichen Daten, die Proxmox über <em>Datacenter → Tasks</em>, die auf Backups beschränkt sind, freigibt.",
@@ -106,7 +106,7 @@
         "tail": "Der Journal Watcher liest die gleiche Quelle und verwandelt Matches in Benachrichtigungen."
       },
       {
-        "label": "API Referenznummer",
+        "label": "API-Referenz",
         "href": "/docs/monitor/api",
         "tail": "— die Logs und Task-Log-Endpunkte mit ihren Abfrageparametern."
       },

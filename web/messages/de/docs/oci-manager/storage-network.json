@@ -37,7 +37,7 @@
                 "body": "Jeder Pfad wird auf einer Festplatte des Containers oder auf einem vorhandenen Host-Verzeichnis platziert."
               },
               {
-                "title": "Lagerung und Größe",
+                "title": "Speicher und Größe",
                 "body": "Eine Containerdiskette wird auf einem Proxmox VE-Speicher mit der angegebenen Größe erstellt. Die Standardinstallation verwendet <code>local-lvm</code>; die erweiterte Installation fragt die Speicherung jedes Pfades direkt vor seiner Größe und schlägt den einen der Rootfs vor. Es erscheint als <code>vm-VMID-disk-N</code> und wird als <code>mpN</code> angehängt."
               },
               {
@@ -65,7 +65,7 @@
           "table": {
             "headers": [
               "Eigentum",
-              "Behälterscheibe",
+              "Containerdatenträger",
               "Hostverzeichnis"
             ],
             "rows": [
@@ -85,7 +85,7 @@
                 "Der freie Raum des Host-Dateisystems oder Datensatzes"
               ],
               [
-                "Andere Behälter",
+                "Andere Container",
                 "Nur mit eigenem Container montiert",
                 "Das gleiche Verzeichnis kann in mehreren Containern montiert werden"
               ],
@@ -96,7 +96,7 @@
               ],
               [
                 "Entfernen des Antrags",
-                "Mit dem Behälter löschen",
+                "Mit dem Container gelöscht",
                 "Gepflegt, mit seinem Inhalt"
               ],
               [
@@ -134,7 +134,7 @@
               },
               {
                 "label": "Ort",
-                "detail": "Behälterscheibe\noder Hostverzeichnis"
+                "detail": "Containerdatenträger\noder Hostverzeichnis"
               },
               {
                 "label": "LXC",

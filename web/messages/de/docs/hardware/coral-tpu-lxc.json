@@ -83,11 +83,11 @@
     "body": "Wenn Sie genau sehen möchten, was in die LXC-Konfiguration geht, oder es von Hand anwenden:",
     "usbHeading": "USB Coral",
     "pcieHeading": "M.2 / PCIe Coral",
-    "runtimeHeading": "Innerhalb des Containers — Korallenlaufzeit"
+    "runtimeHeading": "Im Container – Coral Laufzeit"
   },
   "verification": {
     "heading": "Verifizierung",
-    "body": "Betreten Sie den Container und überprüfen Sie, ob die Korallen sichtbar sind:"
+    "body": "Betreten Sie den Container und prüfen Sie, ob Coral sichtbar ist:"
   },
   "troubleshoot": {
     "heading": "Fehlerbehebung",

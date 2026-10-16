@@ -1,8 +1,8 @@
 {
   "meta": {
-    "title": "Proxmox VE Leitfäden — Korallen TPU, NVIDIAKodi LXC, Samba, Cloud Backup | ProxMenux",
+    "title": "Proxmox VE Anleitungen – Coral TPU, NVIDIA, Kodi LXC, Samba, Cloud Backup | ProxMenux",
     "description": "Handgeschriebene Tutorials für Proxmox VE: Installieren Sie Kodi in einem LXC mit GPU-Beschleunigung, NVIDIA-Treiber-Setup auf PVE 9, USB-Laufwerk über Samba in einem Container, vzdump-Backups in einer persönlichen Cloud (Google Drive, Mega, Dropbox, OneDrive). Plus kuratierte Community-Ressourcen, Glossar und Kommandoreferenz.",
-    "ogTitle": "Proxmox VE Leitfäden — Korallen TPU, NVIDIAKodi LXC, Samba, Cloud Backup",
+    "ogTitle": "Proxmox VE Anleitungen – Coral TPU, NVIDIA, Kodi LXC, Samba, Cloud Backup",
     "ogDescription": "Handgeschriebene Proxmox VE Tutorials: GPU Passthrough, Kodi LXC Media Center, Samba über USB, Cloud-Backup mit rclone und kuratierte Community-Ressourcen.",
     "twitterTitle": "Proxmox-VE-Anleitungen | ProxMenux",
     "twitterDescription": "Handgeschriebene Tutorials für Proxmox VE - GPU, Kodi LXC, Samba, Cloud-Backup und mehr.",

@@ -16,7 +16,7 @@
   },
   "opening": {
     "heading": "Öffnen des Tools",
-    "body": "von ProxMenuxHauptmenü, geöffnet <strong>Lagerung &amp; Share Manager für Mount NFS Share auf dem Host</strong>. Du wirst das sehen sub-Menü mit vier Optionen:",
+    "body": "Öffnen Sie im Hauptmenü von ProxMenux <strong>Speicher &amp; Freigabe-Manager → NFS Freigabe auf Host bereitstellen</strong>. Sie sehen dieses sub-Menü mit vier Optionen:",
     "imageAlt": "NFS Host-Manager-Menü — Mount / View / Remove / Test Connectivity"
   },
   "howRuns": {
@@ -147,7 +147,7 @@
     "inactiveTitle": "Storage zeigt als inaktiv in der Proxmox UI",
     "inactiveBody": "<em>Test NFS Connectivity</em> zuerst ausführen — 99 % der Zeit kennzeichnet genau den Hopfen, der bricht (DNS, Port, Mount-Berechtigungen). Wenn die Konnektivität in Ordnung ist, Proxmox jedoch weiterhin inaktiv markiert, überprüfen Sie <code>journalctl -u pvestatd</code> auf dem Proxmox-Knoten; intermittierende DNS- oder langsame NFS-Halterungen beim Booten können Speicher in einem inaktiven Zustand lassen, bis <code>pvesm set &lt;id&gt; --disable 0</code> erneut angewendet wird.",
     "lxcNoWriteTitle": "fstab mount funktioniert, aber unprivilegierte LXC kann nicht durch ein bind-mount schreiben",
-    "lxcNoWriteBody": "NFS-Berechtigungen werden serverseitig erzwungen, nicht vom Host. Die fstab-Optionen (<code>uid=</code>, <code>file_mode=</code>), die für CIFS do <strong>not</strong> funktionieren, gelten für NFS. Wenn Ihr unprivilegierter LXC (root in CT = UID 100000 auf dem Host, abgebildet auf NFS als \"andere\") nicht schreiben kann, quetscht der NFS-Server entweder root oder hat restriktive Dauerwellen. Fix auf dem Server: Ändern Sie den Export in <code>no_root_squash</code>, wenn Sie dem Host vertrauen, oder legen Sie den Export weltweit beschreibbar fest (Synology, TrueNAS, OMV legen dies alle in der Benutzeroberfläche offen). Das Skript versucht <code>chmod 1777</code> auf dem Mount, aber das gelingt nur, wenn der Server es erlaubt.",
+    "lxcNoWriteBody": "NFS-Berechtigungen werden serverseitig und nicht vom Host erzwungen. Die fstab-Optionen (<code>uid=</code>, <code>file_mode=</code>), die für CIFS funktionieren, gelten <strong>nicht</strong> für NFS. Wenn Ihr unprivilegierter LXC (Root innerhalb von CT = UID 100000 auf dem Host, zugeordnet zu NFS als „andere“) nicht schreiben kann, unterdrückt der NFS-Server entweder den Root oder verfügt über restriktive Berechtigungen. Fix auf dem Server: Ändern Sie den Export in <code>no_root_squash</code>, wenn Sie dem Host vertrauen, oder stellen Sie den Export auf weltweit beschreibbar ein (Synology, TrueNAS, OMV machen dies alle im UI verfügbar). Das Skript versucht <code>chmod 1777</code> auf dem Mount, aber das gelingt nur, wenn der Server dies zulässt.",
     "fstabBootTitle": "fstab Mount wird nach dem Neustart nicht angezeigt",
     "fstabBootBody": "Das Skript fügt <code>nofail,_netdev</code> hinzu, so dass ein fehlender Anteil beim Booten den Start nicht blockiert. Wenn das mount nie auftaucht: bestätigen, dass das netzwerk erreichbar ist (<code>ping &lt;server&gt;</code>), überprüfen sie <code>journalctl -u remote-fs.target</code> und überprüfen sie, ob der eintrag mit <code>mount -fav | grep nfs</code> gültig ist. <code>mount -a</code> nach dem Booten montiert alles, was derzeit fehlt."
   },

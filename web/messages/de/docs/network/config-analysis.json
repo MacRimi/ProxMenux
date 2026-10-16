@@ -12,7 +12,7 @@
   },
   "intro": {
     "title": "Was das macht",
-    "body": "Identifiziert <code>iface</code>-Deklarationen, deren Backing NIC nicht mehr auf dem Host vorhanden ist (typischerweise nach dem Ersetzen oder Entfernen einer Netzwerkkarte). Dann bietet eine geführte Bereinigung, die <em>only </em> die Waisenblöcke entfernt, mit einem Backup, einer Vorschau pro Abschnitt und einer expliziten endgültigen Bestätigung."
+    "body": "Identifiziert <code>iface</code>-Deklarationen, deren unterstützende NIC nicht mehr auf dem Host vorhanden ist (typisch nach dem Ersetzen oder Entfernen einer Netzwerkkarte). Anschließend wird eine geführte Bereinigung angeboten, bei der <em>nur</em> die verwaisten Blöcke entfernt werden, mit einer Sicherung, einer Vorschau pro Abschnitt und einer expliziten endgültigen Bestätigung."
   },
   "differs": {
     "heading": "Wie es sich von der Brückenanalyse unterscheidet",
@@ -75,7 +75,7 @@
       },
       {
         "title": "5. Überprüfung",
-        "body": "Lesen Sie die Datei erneut, listen Sie auf, was entfernt wurde, und überprüfen Sie die verbleibenden Schnittstellen erneut. Druckt den Rollback-Befehl. Startet <strong>not</strong> das Netzwerk automatisch neu – das Entfernen eines unbenutzten Blocks kann beim nächsten Neustart sicher angewendet werden und vermeidet das Berühren des Live-Status.",
+        "body": "Liest die Datei erneut, listet auf, was entfernt wurde, und überprüft die verbleibenden Schnittstellen erneut. Gibt den Rollback-Befehl aus. Führt <strong>nicht</strong> einen automatischen Neustart des Netzwerks durch. Das Entfernen eines nicht verwendeten Blocks kann sicher beim nächsten Neustart angewendet werden und vermeidet eine Beeinträchtigung des Live-Status.",
         "tone": "emerald"
       }
     ],

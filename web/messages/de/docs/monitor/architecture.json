@@ -19,7 +19,7 @@
   "requestFlow": {
     "heading": "Anforderungsfluss",
     "intro": "Vom Browser zum Kernel folgt jede Dashboard-Ansicht dem gleichen Pfad:",
-    "diagramCaption": "Jede Anfrage wird von JWT authentifiziert (wenn auth aktiviert ist), an einen Blueprint gesendet und mit Daten beantwortet, die bei Bedarf vom Host-Tooling gesammelt werden. Wenn Fail2Ban installiert ist und das proxmenux-Gefängnis aktiv ist, überprüft die Middleware die Anfrage auch mit der verbotenen IP-Liste des Gefängnisses. Der optionale Reverse-Proxy ist für Flask transparent - er leitet X-Forwarded-*-Header weiter und die App stellt die echte Client-IP von ihnen wieder her. Der Zustand, der eine Anforderung überleben muss, lebt in SQLite.",
+    "diagramCaption": "Jede Anfrage wird von JWT authentifiziert (wenn die Authentifizierung aktiviert ist), an einen blueprint gesendet und mit Daten beantwortet, die bei Bedarf von Host-Tools erfasst werden. Wenn Fail2Ban installiert ist und proxmenux jail aktiv ist, prüft die Middleware die Anfrage auch anhand der Liste der gesperrten IPs von jail. Der optionale Reverse-Proxy ist für Flask transparent – ​​er leitet X-Forwarded-*-Header weiter und die App stellt daraus die echte Client-IP wieder her. Der Status, der eine Anfrage überdauern muss, befindet sich in SQLite.",
     "diagramArrowLabel": "HTTP / WS",
     "nodes": {
       "clientLabel": "Kunde",
@@ -44,7 +44,7 @@
       {
         "thread": "_health_collector_loop",
         "cadence": "5 min",
-        "job": "Läuft den vollständigen Health-Monitor-Zyklus (10-Kategorien) aus, beharrt auf aktiven Fehlern, Entlassungen und Festplattenbeobachtungen und speist neue Ereignisse in die Benachrichtigungsmaschine ein."
+        "job": "Führt den gesamten Health Monitor-Zyklus aus (10 Kategorien), speichert aktive Fehler, Entlassungen und Festplattenbeobachtungen und speist neue Ereignisse in die Benachrichtigungs-Engine ein."
       },
       {
         "thread": "_vital_signs_sampler",
@@ -95,7 +95,7 @@
           "/api/logs",
           "/api/prometheus"
         ],
-        "owns": "Endpunkte der Kerndaten + statisches Dashboard + optionale Überprüfung auf Fail2Ban-App-Ebene (aktiv nur, wenn Fail2Ban auf dem Host mit dem <code>proxmenux</code>-Gefängnis installiert ist)."
+        "owns": "Kerndatenendpunkte + statische Dashboard-Bereitstellung + optionale Fail2Ban Prüfung auf App-Ebene (nur aktiv, wenn Fail2Ban auf dem Host mit dem <code>proxmenux</code> jail installiert ist)."
       },
       {
         "blueprint": "flask_auth_routes.py",
@@ -130,7 +130,7 @@
         "prefix": [
           "/api/security/*"
         ],
-        "owns": "Authentifizierungsfehler und, wenn Fail2Ban installiert ist, Gefängnisstatus, Sperrereignisse und manuelles Unban."
+        "owns": "Authentifizierungsfehler und, wenn Fail2Ban installiert ist, jail Status, Sperrereignisse und manuelles Aufheben der Sperre."
       },
       {
         "blueprint": "flask_proxmenux_routes.py",
@@ -224,7 +224,7 @@
       {
         "path": "/var/log/proxmenux-auth.log",
         "owner": "root:root",
-        "contents": "Klartext-Auth-Ereignisprotokoll. Immer geschrieben. Wenn Fail2Ban mit dem <code>[proxmenux]</code>-Gefängnis installiert ist, liest das Gefängnis diese Datei, um Brute-Force-Versuche zu verbieten; wenn nicht, akkumuliert die Datei einfach die Protokolleinträge."
+        "contents": "Nur-Text-Authentifizierungsereignisprotokoll. Immer geschrieben. Wenn Fail2Ban mit dem <code>[proxmenux]</code> jail installiert ist, liest der jail diese Datei, um Brute-Force-Versuche zu verhindern; Wenn nicht, sammelt die Datei einfach die Protokolleinträge."
       }
     ],
     "backupTitle": "Sichern Sie auth.json vor der Neuinstallation",
@@ -243,7 +243,7 @@
       "Logs: persistent / spike / Kaskadenmustererkennung im Systemjournal.",
       "Gedächtnis: OOM-Killeraktivität, anhaltender Hochdruck.",
       "Temperatur: CPU / Chassis-Sensoren gegen Herstellerschwellen.",
-      "Sicherheit: Authentifizierungsfehler, Sperrereignisse, fail2ban Gefängnisstatus."
+      "Sicherheit: Authentifizierungsfehler, Sperrereignisse, fail2ban jail Status."
     ],
     "afterIntro": "Jeder Befund wird zu einem stabilen <code>error_key</code> + Kategorie + Schweregrad normalisiert. Die Persistenzschicht dedupliziert mit der vorhandenen <code>errors</code>-Tabelle – wiederholte Ereignisse aktualisieren <code>last_seen</code> und den Ereigniszähler ohne Spamming-Benachrichtigungen.",
     "cycleEnd": "Der Zyklus löst auch automatisch veraltete Fehler mit der Einstellung <em>Suppression Duration</em>, bereinigt Fehler für nicht mehr vorhandene Ressourcen (gelöschte VMs / entfernte Festplatten / nicht montierte Speicher) und beschneidet das <code>events</code>-Protokoll, das älter als 30 Tage ist. Der vollständige Katalog der Kategorien und die Dashboard-Ansicht, die sie aufdeckt, ist in <link>Dashboard → Gesundheitsmonitor</link> dokumentiert."
@@ -274,11 +274,11 @@
     "intro": "Zwei Sicherheitsvorkehrungen stellen sicher, dass die Sicherheit auf die gleiche Weise funktioniert, unabhängig davon, ob das Dashboard direkt oder über einen Reverse-Proxy getroffen wird:",
     "items": [
       "<strong>Real client IP recovery.</strong> Ein <code>before_request</code>-Hook liest <code>X-Forwarded-For</code> und <code>X-Real-IP</code> in dieser Reihenfolge und fällt auf <code>request.remote_addr</code> zurück. Die wiederhergestellte Adresse ist das, was Auth Logging und Rate Limiting sehen. Das geht immer.",
-      "<strong>Application-level Fail2Ban check (optional).</strong> Wenn sich das Dashboard hinter einem Proxy befindet, kann die Kernel-Firewall die echte Angreifer-IP nicht blockieren – die Verbindung kommt immer vom Proxy. Um diese Lücke zu schließen, fragt derselbe Haken das <code>proxmenux</code> Fail2Ban-Gefängnis alle 30 Sekunden ab, speichert das verbotene IP-Set und schließt Anfragen von diesen IPs mit HTTP 403 innerhalb von Flask kurz."
+      "<strong>Fail2Ban-Prüfung auf Anwendungsebene (optional).</strong> Wenn sich das Dashboard hinter einem Proxy befindet, kann die Kernel-Firewall die echte Angreifer-IP nicht blockieren – die Verbindung kommt immer vom Proxy. Um diese Lücke zu schließen, fragt der gleiche Hook oben das <code>proxmenux</code> Fail2Ban jail alle 30 Sekunden ab, speichert den gesperrten IP-Satz zwischen und schließt Anfragen von diesen IPs mit HTTP 403 kurz Flask."
     ],
     "calloutTitle": "Fail2Ban ist nicht gebündelt",
-    "calloutBody": "Fail2Ban ist <strong>not</strong>, installiert von ProxMenux Monitor selbst. Die Prüfung auf Anwendungsebene ist ein No-Op, bis Sie Fail2Ban auf dem Host installieren (z. B. über <link>Security → Fail2Ban</link> im ProxMenux-Menü). Wenn das <code>fail2ban-client</code>-Binär- oder das <code>proxmenux</code>-Gefängnis abwesend ist, schlägt der Anruf stillschweigend fehl und Anfragen werden nicht gegatet - auth gilt weiterhin, aber kein Verbot auf IP-Ebene.",
-    "outro": "Reverse-Proxy-Schnipsel (Nginx / Caddy / Traefik) und der Fail2Ban-Gefängnis-Walkthrough befinden sich in <accessLink>Access & Authentication</accessLink> und <fail2banLink>Security → Fail2Ban</fail2banLink>."
+    "calloutBody": "Fail2Ban wird <strong>nicht</strong> von ProxMenux Monitor selbst installiert. Die Prüfung auf Anwendungsebene ist erst möglich, wenn Sie Fail2Ban auf dem Host installieren (z. B. über <link>Sicherheit → Fail2Ban</link> im Menü ProxMenux. Wenn die <code>fail2ban-client</code>-Binärdatei oder das <code>proxmenux</code> jail fehlt, schlägt der Aufruf stillschweigend fehl und Anforderungen werden nicht blockiert – die Authentifizierung gilt weiterhin, aber keine Sperrung auf IP-Ebene.",
+    "outro": "Reverse-Proxy-Snippets (Nginx / Caddy / Traefik) und die Fail2Ban jail Komplettlösung finden Sie unter <accessLink>Zugriff und Authentifizierung</accessLink> und <fail2banLink>Sicherheit → Fail2Ban</fail2banLink>."
   },
   "whereNext": {
     "heading": "Wohin als nächstes",
@@ -286,10 +286,10 @@
       {
         "label": "Zugriff und Authentifizierung",
         "href": "/docs/monitor/access-auth",
-        "tail": "— Erststart-Setup, Passwort + TOTP 2FA, Reverse-Proxy-Snippets, Fail2Ban-Gefängnis."
+        "tail": "– Einrichtung beim ersten Start, Passwort + TOTP 2FA, Reverse-Proxy-Snippets, Fail2Ban jail."
       },
       {
-        "label": "API Referenznummer",
+        "label": "API-Referenz",
         "href": "/docs/monitor/api",
         "tail": "Jeder Endpunkt, Token Management, Best Practices für Sicherheit."
       },

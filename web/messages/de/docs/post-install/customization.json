@@ -38,7 +38,7 @@
     "breakTitle": "Kann nach Proxmox Updates brechen",
     "breakBody": "Proxmox liefert regelmäßig UI-Updates, die <code>proxmoxlib.js</code> überschreiben. Wenn das passiert, kommt das Banner zurück. Sie können diese Option nach jedem Proxmox-Update erneut anwenden, um die Datei erneut zu patchen, oder einfach das Nag akzeptieren, bis Sie es erneut anwenden. ProxMenux installiert auch einen APT-Hook, der bei Paket-Upgrades automatisch neu gepatcht wird - siehe <link>Optimierungen</link> deinstallieren, wie dieser Hook umgekehrt wird.",
     "legalTitle": "Rechtliche Anmerkung (immer wiederholenswert)",
-    "legalBody": "Diese Option verbirgt nur das UI Nag. <strong>not</strong> gewährt Ihnen Unternehmenssupport, Zugriff auf das Unternehmensrepository oder alle Rechte, Proxmox kommerziell ohne Abonnement zu versenden. Wenn Sie Proxmox in einer umsatzgenerierenden Umgebung betreiben, kaufen Sie ein Abonnement – es unterstützt das Projekt und bringt Ihnen den stabilen Unternehmenskanal."
+    "legalBody": "Diese Option verbirgt nur den Fehler UI. Es gewährt Ihnen <strong>keinen</strong> Unternehmenssupport, Zugriff auf das Unternehmens-Repository oder Rechte, Proxmox kommerziell ohne Abonnement zu versenden. Wenn Sie Proxmox in einer umsatzgenerierenden Umgebung betreiben, kaufen Sie ein Abonnement – es unterstützt das Projekt und verschafft Ihnen den stabilen Unternehmenskanal."
   },
   "verify": {
     "heading": "Verifizierung",

@@ -4,7 +4,7 @@
     "description": "Wie OCI-Manager Apps eine Anwendung mit Datenbank und Cache in koordinierte native LXCs umwandelt: Plan, privates Netzwerk, Abhängigkeitshaken, Validierung und Transaktionsaktualisierungen."
   },
   "header": {
-    "title": "Mehrbehälteranwendungen",
+    "title": "Anwendungen mit mehreren Containern",
     "description": "Eine Anwendung mit Datenbank, Cache und anderen Diensten wird zu mehreren koordinierten nativen LXCs, die als eine installiert und aktualisiert werden.",
     "section": "Apps des OCI-Managers"
   },
@@ -182,7 +182,7 @@
       "title": "4. Der Dependence Hook",
       "blocks": [
         {
-          "p": "Der Haken wird nur auf den Hauptbehälter eines abhängigen Stapels gesetzt. Proxmox VE behält das Skript als Snippet und führt es als <code>hookscript</code> dieses CT aus. Das Stack-Rezept ist nicht im Skript geschrieben: Es lebt in einem separaten privaten Vertrag."
+          "p": "Der Haken wird nur auf den Hauptcontainer eines abhängigen Stapels gesetzt. Proxmox VE behält das Skript als Snippet und führt es als <code>hookscript</code> dieses CT aus. Das Stack-Rezept ist nicht im Skript geschrieben: Es befindet sich in einem separaten privaten Vertrag."
         },
         {
           "codeGrid": {
@@ -337,7 +337,7 @@
             "rows": [
               [
                 "Extra Pfade und Geräte",
-                "Sie werden dem Anwendungsbehälter hinzugefügt oder entfernt, der neu gestartet wird. Nichts wird wieder aufgebaut",
+                "Sie werden dem Anwendungscontainer hinzugefügt oder daraus entfernt, der neu gestartet wird. Es wird nichts neu erstellt",
                 "Die Daten der Anwendung, ihrer Datenbank und der anderen Container"
               ],
               [

@@ -55,7 +55,7 @@
       },
       {
         "param": "CPU",
-        "valueRich": "Gastgeber"
+        "valueRich": "Host"
       },
       {
         "param": "Kerne",

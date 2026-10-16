@@ -40,7 +40,7 @@
       {
         "label": "Lynis",
         "href": "/docs/security/lynis",
-        "tail": "Auditieren Sie den Gastgeber, um mehr Verhärtungsmöglichkeiten zu finden."
+        "tail": "– Überprüfen Sie den Host, um weitere Möglichkeiten zur Härtung zu finden."
       },
       {
         "label": "Nützliche Systembefehle",

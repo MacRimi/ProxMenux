@@ -47,7 +47,7 @@
       },
       {
         "param": "CPU-Typ",
-        "value": "Gastgeber"
+        "value": "Host"
       },
       {
         "param": "Anzahl der Kerne",

@@ -99,7 +99,7 @@
       ]
     },
     {
-      "title": "Bestimmungsort und Lagerung",
+      "title": "Ziele und Speicher",
       "intro": "Begriffe, die an den Ort gebunden sind, an dem das Backup landet - PBS-Server, lokales Archiv oder Borg-Repository - und wie PBS die Daten organisiert.",
       "entries": [
         {

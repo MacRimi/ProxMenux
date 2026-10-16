@@ -206,7 +206,7 @@
         },
         {
           "calloutInfo": {
-            "title": "Was der Gastgeber nicht sagen kann",
+            "title": "Was der Host nicht sagen kann",
             "body": "Der Exit-Code der Anwendung erreicht den Host nicht, so dass ein sauberer Exit und ein Crash gleich aussehen und beide neu gestartet werden, wie <code>always</code> und <code>unless-stopped</code> in Docker. Ein Stop, der außerhalb von Proxmox mit <code>lxc-stop</code> oder <code>systemctl</code> angefordert wird, lässt keine Stop-Aufgabe übrig und wird als eigener Stop genommen."
           }
         }
@@ -249,7 +249,7 @@
         {
           "table": {
             "headers": [
-              "Was der Gastgeber behalten hat",
+              "Was der Host behalten hat",
               "Nach der Rückforderung"
             ],
             "rows": [
@@ -274,7 +274,7 @@
                 "Der Haken eines unprivilegierten Containers wird wieder eingebaut. Ein privilegierter Container erhält die Treiberdateien dieses Hosts anstelle derjenigen des Hosts, von dem er stammt"
               ],
               [
-                "Klonhalterung",
+                "Rclone mount",
                 "Das Hookscript und die Programme, die das Mount veröffentlichen, werden erneut geschrieben, mit den gleichen Ansichten auf dem Host"
               ],
               [
@@ -360,7 +360,7 @@
             ],
             "rows": [
               [
-                "Wurzelstöcke und Behälterscheiben",
+                "rootfs und Container-Festplatten",
                 "Gelöscht",
                 "Sie gehören nur zum Container"
               ],
@@ -461,7 +461,7 @@
                 "Behielt in <code>/etc/pve/proxmenux</code>, die jeder Knoten des Clusters teilt, so dass ein migrierter Container sie findet."
               ],
               [
-                "Behälterscheiben",
+                "Containerfestplatten",
                 "Proxmox bewegt sie mit dem Container. HA benötigt sie für Shared Storage."
               ],
               [

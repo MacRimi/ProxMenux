@@ -96,7 +96,7 @@
       "<strong>PVE volume</strong> — unterstützt durch einen von Proxmox verwalteten Speicher (ein ZFS-Subvol, ein Verzeichniseintrag, ein Ceph RBD, ...). Die Kapazität kommt von den PVE-Speicherstatistiken, so dass die Bar mit dem übereinstimmt, was Proxmox selbst zeigt.",
       "<strong>Bind aus PVE storage</strong> — <code>mpX</code>-Eintrag, der auf einen Pfad auf einem PVE-bekannten Speicher zeigt.",
       "<strong>Bind von host</strong> — <code>mpX</code>-Eintrag, der auf einen beliebigen Hostpfad zeigt (<code>/mnt/something</code>). Kapazität ist die <code>df</code> dieses Host-Pfades.",
-      "<strong>Ad-hoc innerhalb von CT</strong> — mount, dass <em>only</em> im mount-Namespace des Containers vorhanden ist (z. B. eine NFS-Freigabe, die der CT eigenständig montiert). Die Kapazität wird über <code>pct exec &lt;vmid&gt; df</code> gelesen, was die einzige Möglichkeit ist, sie zu sehen - <code>/proc/&lt;pid&gt;/root</code> vom Host zeigt nicht die realen Statistiken des Remote-Halters."
+      "<strong>Ad-hoc in CT</strong> – Mount, der <em>nur</em> im Mount-Namespace des Containers existiert (z. B. eine NFS-Freigabe, die der CT selbstständig mountet). Die Kapazität wird über <code>pct exec &lt;vmid&gt; df</code> gelesen, was die einzige Möglichkeit ist, sie anzuzeigen – <code>/proc/&lt;pid&gt;/root</code> vom Host stellt die tatsächlichen Statistiken des Remote-Mounts nicht offen."
     ],
     "mountStateTitle": "Pro-Karte Zustand Punkt und Warnungen",
     "mountStateItems": [
@@ -134,7 +134,7 @@
     "lifecycleIntro": "Darunter vier Lifecycle-Tasten in einem 2x2-Raster. Jeder feuert <code>POST /api/vms/&lt;vmid&gt;/control</code> mit dem passenden <code>action</code>; der aktivierte Zustand hängt davon ab, ob der Gast gerade läuft:",
     "headerButton": "Schaltfläche",
     "headerEnabled": "Aktiviert, wenn",
-    "headerAction": "An den Gastgeber gesendete Aktion",
+    "headerAction": "Aktion an Host gesendet",
     "lifecycleRows": [
       {
         "button": "Beginn",
@@ -225,7 +225,7 @@
         "tailRich": "— was die <code>vm_*</code>, <code>ct_*</code>, <code>migration_*</code> und <code>backup_*</code> Ereignisse nachgeschaltet auslösen."
       },
       {
-        "label": "API Referenznummer",
+        "label": "API-Referenz",
         "href": "/docs/monitor/api",
         "tailRich": "VM und Backup-Endpunkte."
       },

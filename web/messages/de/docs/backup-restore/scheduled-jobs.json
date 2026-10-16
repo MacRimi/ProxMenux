@@ -121,7 +121,7 @@
       },
       {
         "action": "Protokoll anzeigen",
-        "detail": "Streams <code>/var/log/proxmenux/backup-jobs/JOB_ID-YYYYMMDD_HHMMSS.log</code> — eine Protokolldatei pro Lauf. Der Läufer sendet auch eine kompakte Statuszeile aus, die unter dem systemd-Dienst veröffentlicht wird."
+        "detail": "Streams <code>/var/log/proxmenux/backup-jobs/JOB_ID-YYYYMMDD_HHMMSS.log</code> – eine Protokolldatei pro Lauf. Der Runner gibt außerdem eine kompakte Statuszeile an journald unter dem Dienst systemd aus."
       }
     ]
   },

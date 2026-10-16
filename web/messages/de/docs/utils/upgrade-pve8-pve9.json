@@ -63,7 +63,7 @@
   },
   "webTerminal": {
     "heading": "Warum das Web-Terminal blockiert ist",
-    "body": "Alle drei Upgrade-Modi erkennen <code>termproxy</code> / <code>vncshell</code> in der übergeordneten Prozesskette und verweigern die Ausführung. Grund: Das Proxmox-Webterminal wird von <code>pveproxy</code> bedient, einem der Dienste, der Mid-Flow aktualisiert wird. Sobald <code>pveproxy</code> neu gestartet wird, stirbt Ihre Terminalsitzung - und auch das Upgrade-Skript, das darin ausgeführt wurde. Der Gastgeber ist halb aktualisiert, keine gute Möglichkeit, wieder aufzunehmen.",
+    "body": "Alle drei Upgrade-Modi erkennen <code>termproxy</code> / <code>vncshell</code> in der übergeordneten Prozesskette und verweigern die Ausführung. Grund: Das Proxmox-Webterminal wird von <code>pveproxy</code> bedient, einem der Dienste, die mitten im Prozess aktualisiert werden. Sobald <code>pveproxy</code> neu startet, wird Ihre Terminalsitzung beendet – und damit auch das darin ausgeführte Upgrade-Skript. Der Host ist nur noch zur Hälfte aktualisiert, eine Fortsetzung ist nicht möglich.",
     "warningTitle": "Verwenden Sie SSH oder physische / IPMI / iKVM Konsole",
     "warningBody": "SSH ist die häufigste Wahl. Öffnen Sie es in <code>tmux</code> oder <code>screen</code>, damit das Upgrade einen kurzen Netzwerk-Blip übersteht. Das allererste, was das Skript tut, ist die tmux / Bildschirm-Erinnerung zu drucken, wenn es erkennt, dass Sie sich in einer einfachen SSH-Shell befinden."
   },
@@ -297,7 +297,7 @@
       {
         "href": "https://www.debian.org/releases/trixie/releasenotes",
         "title": "Debian Trixie Release Notes",
-        "desc": "PVE 9 Schiffe auf Debian Trixie. Lesen Sie die Upstream-Release-Notizen für die zugrunde liegenden OS-Änderungen, die sich auch auf Ihren Host auswirken."
+        "desc": "PVE 9 wird auf Debian Trixie ausgeliefert. Lesen Sie die Upstream-Versionshinweise zu den zugrunde liegenden Betriebssystemänderungen, die sich auch auf Ihren Host auswirken."
       },
       {
         "href": "https://forum.proxmox.com/forums/proxmox-ve-installation-and-configuration.16/",

@@ -109,7 +109,7 @@
     "heading": "Coral TPU / AI-Beschleuniger",
     "subHeading": "(bedingte)",
     "intro": "Rendert, wenn der Host Google Coral oder andere AI-Beschleuniger verkabelt hat. Jedes Gerät öffnet einen Modal mit seinem Verbindungstyp (M.2 / Mini-PCIe / USB), PCIe Linkbreite, Hersteller- / Produkt-ID, Kerneltreiber (<code>apex</code> für PCIe, <code>libedgetpu</code> für USB), Kernelmodule (<code>gasket</code> + <code>apex</code>), Geräteknoten (<code>/dev/apex_*</code>), Edge TPU Laufzeitstatus, Live-Temperatur und die Firmware-Hardware-Warnschwellen.",
-    "imageAlt": "Korallenholz Edge TPU Detailmodal: PCIe/M.2 Anschluss, PCIe 5.0 GT/s x1-Link, Vendor 1ac1:089a, Kerneltreiber Apex, Dichtung und Apex-Module geladen, /dev/apex_0 vorhanden, Edge TPU Laufzeit nicht installiert, Temperatur 53.5 °C mit Hardware-Warnschwellen",
+    "imageAlt": "Coral Edge TPU Detail modal: PCIe / M.2 Verbindung, PCIe 5.0 GT/s x1 Link, Anbieter 1ac1:089a, Kernel-Treiber apex, gasket und apex Module geladen, /dev/apex_0 vorhanden, Edge TPU Runtime nicht installiert, Temperatur 53.5 °C mit Hardware-Warnschwellenwerten",
     "imageCaption": "M.2 Coral mit den geladenen Host-Kernel-Modulen, dem Geräteknoten und den freigegebenen Firmware-Temperaturwarnungen. Die Laufzeitlinie wird grün, sobald die passende Edge TPU-Laufzeit installiert ist.",
     "pathsIntro": "Je nach Formfaktor gibt es zwei Installationspfade:",
     "pathsItems": [
@@ -138,7 +138,7 @@
   },
   "usb": {
     "heading": "USB-Geräte",
-    "intro": "Jedes USB-Gerät, das der Host aufzählt, mit Hersteller / Produkt-Strings, USB-Version, die <code>bus:device</code> Anschrift, die <code>vendor:product</code> ID-Paar und Kernel-Treiber. Der Renderer klassifiziert auch gemeinsame Rollen - <em>Mitteilungen</em> (Z-Wave / Zigbee-Stäbchen), <em>UPS</em>, Lagerung, HID - so können Sie auf einen Blick erkennen, welcher Ihrer Sticks welcher ist, ohne auf IDs zu verweisen.",
+    "intro": "Jedes USB-Gerät, das der Host auflistet, mit Hersteller-/Produktzeichenfolgen, USB-Version, der <code>bus:device</code>-Adresse, dem <code>vendor:product</code>-ID-Paar und dem Kernel-Treiber. Der Renderer klassifiziert auch allgemeine Rollen – <em>Kommunikation</em> (Z-Wave-/Zigbee-Sticks), <em>USV</em>, Speicher, HID – sodass Sie auf einen Blick erkennen können, welcher Ihrer Sticks welcher ist, ohne Querverweise auf IDs.",
     "imageAlt": "USB-Gerätekarte mit drei Geräten: einem Aeotec Z-Wave Z-Stick, einem ConBee II Zigbee-Koordinator und einem Ellipse ECO USV mit jeweils USB-Version, Adresse, Vendor:product ID und gebundenem Treiber",
     "imageCaption": "Drei USB-Geräte - zwei Heimautomationsradios auf <code>usbfs</code> und ein USV auf <code>usbfs</code> (NUT spricht mit ihm über libusb)."
   },
@@ -234,7 +234,7 @@
         "tail": "— die CPU & Temperature Kategorie, die die gleichen Sensoren verbraucht."
       },
       {
-        "label": "API Referenznummer",
+        "label": "API-Referenz",
         "href": "/docs/monitor/api",
         "tail": "Hardware und GPU-Endpunkte."
       },

@@ -29,7 +29,7 @@
         "owns": "Einheitlicher Launcher für registrierte LXC-Weblinks und benutzerdefinierte Links mit Kategorien, Suche, Gastkürzeln und Updatesignalen pro Anwendung."
       },
       {
-        "name": "Lagerung",
+        "name": "Speicher",
         "owns": "Proxmox-Pools, physische Festplatten, SMART-Daten, ZFS-Zustand, Verschleiß & Lebensdauer, Beobachtungshistorie."
       },
       {

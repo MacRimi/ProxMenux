@@ -90,7 +90,7 @@
       "Wählen Sie die Diskette.",
       "Wählen Sie \"Vorhandenes Dateisystem verwenden\".",
       "Storage ID, Mount Path, Content-Typ Preset.",
-      "ProxMenux berührt <strong>not</strong> die Daten: Es erstellt den Einhängepunkt, führt die Festplatte ein, fügt einen UUID-Eintrag zu <code>/etc/fstab</code> hinzu und registriert ihn als Proxmox <code>dir</code>-Speicher."
+      "ProxMenux berührt die Daten <strong>nicht</strong>: Es erstellt den Mount-Punkt, mountet die Festplatte, fügt einen UUID-Eintrag zu <code>/etc/fstab</code> hinzu und registriert ihn als Proxmox-<code>dir</code>-Speicher."
     ],
     "warnTitle": "Wiederverwendungspfad behandelt keine ZFS-Pools",
     "warnBody": "Wenn die Festplatte bereits einen ZFS-Pool enthält, versucht der <em>reuse</em>-Pfad hier nur, ihn als reguläres Dateisystem zu montieren - was fehlschlägt. Um einen vorhandenen ZFS-Pool zu importieren, verwenden Sie <code>zpool import &lt;name&gt;</code> auf der Kommandozeile und registrieren Sie ihn dann manuell bei <code>pvesm add zfspool</code>."
@@ -137,7 +137,7 @@
   },
   "remove": {
     "heading": "Disk Storage entfernen",
-    "body": "Löscht den Speicher von Proxmox (<code>pvesm remove</code>) und bietet an, den passenden Eintrag in <code>/etc/fstab</code> zu bereinigen. Für ZFS-Pools zerstört das Skript <strong>not</strong> automatisch den Pool - das ist ein separater <code>zpool destroy &lt;name&gt;</code>-Schritt, den Sie von Hand ausführen, wenn Sie sicher sind.",
+    "body": "Hebt die Registrierung des Speichers bei Proxmox auf (<code>pvesm remove</code>) und bietet an, den passenden Eintrag in <code>/etc/fstab</code> zu bereinigen. Für ZFS pools zerstört das Skript <strong>nicht</strong> automatisch das pool – das ist ein separater <code>zpool destroy &lt;name&gt;</code>-Schritt, den Sie manuell ausführen, wenn Sie sicher sind.",
     "warnTitle": "Daten und bestehende VM Abhängigkeiten",
     "warnBody": "Das Entfernen des Speichers berührt nicht das Dateisystem oder den Pool - die Daten bleiben auf der Festplatte. Aber VMs / CTs, die diesen Speicher nach ID referenzieren, können nach dem Entfernen nicht starten. Verschieben Sie diese VM-Festplatten in einen anderen Speicher (oder nehmen Sie ein Backup), bevor Sie sie entfernen."
   },

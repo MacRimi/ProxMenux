@@ -30,7 +30,7 @@
       "title": "Fail2Ban",
       "body": "Aktive Intrusion Prevention. Uhren SSH und Web-UI auth protokolliert und verbietet IPs nach wiederholten Fehlern.",
       "bullets": [
-        "Drei Gefängnisse: SSH, Proxmox UI (8006), ProxMenux Monitor (8008)",
+        "Drei jails: SSH, Proxmox UI (8006), ProxMenux Monitor (8008)",
         "Behebt Proxmox Journald Defaults, die Auth Logs blockieren",
         "Auto-Erkennt nftables / iptables",
         "SSH-Härtung: MaxAuthTries=3 (Empfehlung von Lynis)"
@@ -53,7 +53,7 @@
   },
   "fail2banSection": {
     "heading": "Fail2Ban",
-    "body": "ProxMenux installiert Fail2Ban mit einer speziell auf Proxmox abgestimmten Konfiguration. Neben dem Standard-SSH-Gefängnis bietet es Schutz für die Proxmox-Web-Benutzeroberfläche und die ProxMenux Monitor und arbeitet um zwei Proxmox-spezifische Macken herum: einen Journald-Standard, der Auth-Ereignisse abgibt, und das systemd-Backend-Problem, das verhindert, dass Fail2Ban bestimmte Journalquellen zuverlässig liest. Die Detailseite deckt den vollständigen Installationsfluss, die drei Gefängnisse, den Journald Fix, die SSH-Härtungsänderung und die Fehlerbehebung ab.",
+    "body": "ProxMenux installiert Fail2Ban mit einer speziell für Proxmox optimierten Konfiguration. Über den Standard SSH jail hinaus bietet es Schutz für das Proxmox-Web UI und das ProxMenux Monitor und umgeht zwei Proxmox-spezifische Macken: eine journald-Standardeinstellung, die Authentifizierungsereignisse verwirft, und die systemd-Backend-Problem, das verhindert, dass Fail2Ban bestimmte Journalquellen zuverlässig liest. Die Detailseite behandelt den vollständigen Installationsablauf, die drei jails, den journald-Fix, die SSH-Härtungsänderung und den Fehlerbehebungs-Cheatsheet.",
     "optionTitle": "Fail2Ban — installieren und verwalten",
     "optionDescription": "Drei vorkonfigurierte Jails (sshd aggressiv, Proxmox UI-Port 8006, ProxMenux Monitor Port 8008 + Reverse Proxy), automatisch erkanntes nftables/iptables Backend, Journald Fix und SSH MaxAuthTries Härten."
   },

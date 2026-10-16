@@ -29,7 +29,7 @@
     },
     {
       "name": "System",
-      "description": "Tune das Protokoll-Subsystem und die Kernel-Grenzen für einen Host, der viele VMs und Container trägt. Covers journaled, logrotate, sysctl (Speicher, Dateilimits), Kernel-Panikverhalten und schnelle Neustarts."
+      "description": "Optimieren Sie das Protokollsubsystem und die Kernel-Grenzwerte für einen Host, der viele VMs und Container enthält. Behandelt journald, Logrotate, Sysctl (Speicher, Dateibeschränkungen), Kernel-Panic-Verhalten und schnelle Neustarts."
     },
     {
       "name": "Virtualisierung",
@@ -40,7 +40,7 @@
       "description": "Härten und stimmen Sie den Netzwerkstapel des Hosts ab. Erzwingt APT über IPv4, wendet sysctl-Härtung + TCP-Puffer-Tuning an, bietet Open vSwitch, TCP BBR + TCP Fast Open und pins persistente Schnittstellennamen nach MAC."
     },
     {
-      "name": "Lagerung",
+      "name": "Speicher",
       "description": "Richten Sie die gängigen Speicher-Subsysteme von Proxmox ein: ZFS ARC Sizing, ZFS auto-snapshot, ZFS autotrim für SSD/NVMe Pools und vzdump Geschwindigkeitsbegrenzungen, um eine Sättigung der Festplatte bei Backups zu vermeiden."
     },
     {

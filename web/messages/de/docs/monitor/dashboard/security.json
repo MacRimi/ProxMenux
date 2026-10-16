@@ -118,22 +118,22 @@
   "fail2ban": {
     "heading": "Fail2Ban",
     "subHeading": "(bedingte)",
-    "whatIs": "<strong>Was es ist.</strong> Fail2Ban ist ein Open-Source-Intrusion-Prevention-Daemon, der Protokolldateien für wiederholte fehlgeschlagene Anmeldeversuche beobachtet und die beanstandete IP auf Firewall-Ebene verbietet. Es ist die De-facto-Antwort auf Brute-Force-Scanner, die SSH und Web-Login-Formulare 24/7 getroffen haben. ProxMenux leitet es standardmäßig an drei Gefängnisse: SSH, das Proxmox Web UI Login (Port 8006) und das ProxMenux Monitor Login (Port 8008).",
-    "notBundled": "Fail2Ban ist <strong>not bundled</strong>. Die Karte erkennt, ob sie installiert ist und passt sich an: Wenn sie fehlt, bietet sie eine 1-Klick-Installation; einmal installiert, zeigt sie den Live-Gefängnisstatus, verbotene IPs und ermöglicht es Ihnen, Wiederholungen / Sperrzeiten pro Gefängnis einzustellen.",
+    "whatIs": "<strong>Was es ist.</strong> Fail2Ban ist ein Open-Source-Intrusion-Prevention-Daemon, der Protokolldateien auf wiederholte fehlgeschlagene Anmeldeversuche überwacht und die verletzende IP auf Firewall-Ebene sperrt. Es ist die faktische Antwort auf Brute-Force-Scanner, die SSH und Web-Anmeldeformulare 24/7 angreifen. ProxMenux verbindet es standardmäßig mit drei jails: SSH, dem Proxmox-Web-Login UI (Port 8006) und dem Login ProxMenux Monitor (Port). 8008).",
+    "notBundled": "Fail2Ban ist <strong>nicht im Lieferumfang enthalten</strong>. Die Karte passt sich daran an, ob es installiert ist: Fehlt es, lässt es sich mit einem Klick installieren. Danach zeigt sie den aktuellen Jail-Status und gesperrte IP-Adressen und ermöglicht es, die Anzahl der Versuche sowie die Sperrdauer pro Jail anzupassen.",
     "notInstalledAlt": "Fail2Ban-Karte, die den Status Nicht installiert zeigt und erklärt, was sie konfigurieren würde: SSH, Proxmox web UI und ProxMenux Monitor Schutz mit nftables Backend sowie eine Schaltfläche Fail2Ban installieren und konfigurieren",
     "notInstalledCaption": "Fail2Ban-Karte vor der Installation - die blaue Box zeigt an, was die Installation konfigurieren würde.",
     "clickBody": "Klicken Sie auf <em>Installieren und Konfigurieren von Fail2Ban</em> und Sie erhalten eine Bestätigungsmodalliste für jede Änderung, die das Skript am Host vornimmt:",
     "confirmAlt": "Installieren Sie Fail2Ban Bestätigungsmodallisting SSH Schutz aggressiver Modus, Proxmox Web Interface Schutz Port 8006, ProxMenux Monitor Schutz Port 8008, automatisch erkannt nftables Backend, Journald Log Level Adjustment und SSH MaxAuthTries Härten",
-    "confirmCaption": "Installieren Sie die Bestätigung - eine explizite Liste der Gefängnisse, Änderungen an der Protokollebene (damit das Authengefängnis SSH-Ereignisse lesen kann) und eine SSH-Härtungsnebenwirkung (<code>MaxAuthTries=3</code>).",
+    "confirmCaption": "Installationsbestätigung – explizite Liste von jails, optimiert die Protokollebene journald (damit die Authentifizierung jail SSH-Ereignisse lesen kann) und einen SSH-härtenden Nebeneffekt (<code>MaxAuthTries=3</code>).",
     "confirmIntro": "Die Bestätigung löst ein Streaming-Installationsfeld aus (apt + jail config + tests). Die gleiche Installation wie die ProxMenux CLI.",
-    "progressAlt": "Fail2Ban Installationspanel mit Live-Installationsprotokoll: Paketinstallation, Journald MaxLevelStore für Auth-Logging, konfigurierte Gefängnisse, Nftables-Backend erkannt, MaxAuthTries-Härtung, fail2ban-Client-Kommunikationstest, Abschlussnachricht",
+    "progressAlt": "Fail2Ban Installationsfenster mit Live-Installationsprotokoll: Paketinstallation, journald MaxLevelStore für Authentifizierungsprotokollierung optimiert, jails konfiguriert, nftables-Backend erkannt, MaxAuthTries Härtung, fail2ban-Client-Kommunikationstest, Abschlussmeldung",
     "progressCaption": "Installieren Sie in Arbeit - jeder Schritt wird im Panel protokolliert. Die unten geschlossene verbindung markiert das ende der streaming-sitzung.",
-    "afterInstall": "Nach der installation wird die karte in die live-statusansicht gedreht: gefängnisse konfiguriert, verbotene ips-zähler, kürzliche verbotsereignisse. Die großen Registerkarten teilen <em>Jails & Banned IPs</em> von <em>Recent Activity</em> (die letzten N-Einträge aus dem Fail2Ban-Log).",
-    "activeAlt": "Fail2Ban-Karte nach der Installation mit Aktivstatus, drei konfigurierten Gefängnissen (proxmenux, proxmox, sshd), Banned IPs Zähler, Total Bans, Failed Attempts und pro-Gefängnisreihen mit Wiederholungen, Sperrzeit, Fenster und Getriebesymbol",
-    "activeCaption": "Fail2Ban aktiv – die drei Standard-Gefängnisse (<code>proxmenux</code>, <code>proxmox</code>, <code>sshd</code>) mit ihren Wiederholungen / Sperrzeit / Fenstereinstellungen.",
-    "tuneBody": "<strong>Tune jail rules.</strong> Klicken Sie auf das Getriebesymbol in einer beliebigen Gefängniszeile, um <em>Max Retries</em>, <em>Ban Time</em> (verwenden Sie ein permanentes Verbot, wenn Sie wollen, dass Täter blockiert werden, bis Sie manuell entbannen) und <em>Find Time</em> (das rollende Fenster zum Zählen von Wiederholungen). Gemeinsame Werte sind innerhalb des Formulars dokumentiert.",
-    "configAlt": "Konfigurieren Sie das SSHD-Gefängnisformular mit Max Retries, Bannen Sie die Zeit in Sekunden mit der Option Permanent Ban, Suchen Sie die Zeit, Erinnerung an gemeinsame Werte und Speichern Sie die Konfiguration",
-    "configCaption": "Bearbeiten des sshd-Gefängnisses - Wählen Sie ein strengeres <em>Max Retries</em> für SSH, wenn Sie sich nur aus Ihrem eigenen Subnetz anmelden, oder verlängern Sie <em>Ban Time</em> für das öffentliche Dashboard.",
+    "afterInstall": "Nach der Installation wechselt die Karte zur Live-Statusansicht: jails konfiguriert, Zähler für gesperrte IPs, aktuelle Sperrereignisse. Die großen Registerkarten trennen <em>Jails und gesperrte IPs</em> von <em>Letzte Aktivitäten</em> (die letzten N Einträge aus dem Fail2Ban-Protokoll).",
+    "activeAlt": "Fail2Ban-Karte nach der Installation mit Aktivstatus, drei jails konfiguriert (proxmenux, proxmox, sshd), Zähler für gesperrte IPs, Gesamtsperren, fehlgeschlagene Versuche und pro-jail-Zeilen mit Wiederholungsversuchen, Sperrzeit, Fenster und Zahnradsymbol",
+    "activeCaption": "Fail2Ban aktiv – die drei Standard-jails (<code>proxmenux</code>, <code>proxmox</code>, <code>sshd</code>) mit ihren Wiederholungsversuchen/Sperrzeit/Fenstereinstellungen.",
+    "tuneBody": "<strong>jail-Regeln optimieren.</strong> Klicken Sie auf das Zahnradsymbol in einer beliebigen jail-Zeile, um <em>Max. Wiederholungsversuche</em> und <em>Sperrzeit</em> anzupassen (verwenden Sie bei Bedarf eine dauerhafte Sperre). Täter werden blockiert, bis Sie die Sperre manuell aufheben) und <em>Find Time</em> (das fortlaufende Fenster zum Zählen von Wiederholungsversuchen). Gemeinsame Werte werden im Formular dokumentiert.",
+    "configAlt": "Konfigurieren Sie das sshd-Formular jail mit „Max. Wiederholungen“, „Sperrzeit in Sekunden“ mit der Option „Dauerhaftes Sperren“, „Zeit suchen“, „Erinnerung an allgemeine Werte“ und „Konfiguration speichern“-Schaltfläche.",
+    "configCaption": "Bearbeiten des SSHD jail – wählen Sie eine strengere <em>Max Retries</em> für SSH, wenn Sie sich immer nur von Ihrem eigenen Subnetz aus anmelden, oder verlängern Sie die <em>Sperrzeit</em> für den öffentlichen Zugriff Dashboard.",
     "outro": "Das vollständige <em>Was es installiert / wie es konfiguriert / wie man </em> Walkthrough deinstalliert - einschließlich des manuellen Installationspfads, des Nebeneffekts SSH MaxAuthTries und der Beziehung zum <code>proxmenux-auth.log</code>-Journal - ist in <link>ProxMenux → Sicherheit → Fail2Ban</link>.",
     "calloutTitle": "Ohne Fail2Ban ist Brute-Force-Schutz die beste Anstrengung",
     "calloutBody": "ProxMenux Monitor verfügt über einen eigenen <em>-Anwendungslevel</em> Ban-Hook in der Flask Request-Pipeline – der jedoch nur wirksam wird, wenn Fail2Ban installiert ist und in die Bans-Tabelle schreibt. Ohne Fail2Ban protokolliert der Monitor fehlgeschlagene Anmeldungen bei <code>proxmenux-auth.log</code> für die zukünftige Inspektion, blockiert jedoch nicht aktiv IPs."
@@ -145,7 +145,7 @@
     "whyUseful": "<strong>Warum es nützlich ist.</strong> Die Sicherheitslage Ihres Servers zu kennen, ist schwierig, indem Sie Konfigurationsdateien einzeln lesen. Lynis fängt die Dinge ein, die routinemäßig übersehen werden: Kernel-Härtungs-Flags fehlen, schwache SSH-Chiffren aktiviert, Journal nicht persistent, Sudoer <code>NOPASSWD</code> auf Standardkonten und viele mehr. Wenn Sie es nach der Anwendung von ProxMenux nach der Installation erneut ausführen, erhalten Sie eine objektive Zahl für die Verbesserung.",
     "notInstalledAlt": "Lynis Security Audit-Karte mit nicht installiertem Status und installierter Lynis-Taste, Auflistungsfunktionen: Hardening Scoring, Schwachstellenerkennung, Compliance-Prüfung und GitHub-Quelle",
     "notInstalledCaption": "Lynis-Karte vor der Installation - die blaue Box fasst zusammen, was das Tool tut.",
-    "notBundled": "Lynis ist auch <strong>not bundled</strong>. ProxMenux installiert die neueste Version direkt aus der offiziellen GitHub-Quelle (nicht das Debian-Paket, das mehreren kleineren Versionen hinterherhinkt).",
+    "notBundled": "Lynis ist auch <strong>nicht gebündelt</strong>. ProxMenux installiert die neueste Version direkt von der offiziellen GitHub-Quelle (nicht das Debian-Paket, das mehreren Nebenversionen hinterherhinkt).",
     "confirmAlt": "Installieren Sie Lynis Bestätigungsmodale Auflistung, was Lynis tut: Hardening Scoring, Schwachstellenerkennung, Konfigurationsanalyse, Compliance-Prüfung, Quelle aus dem offiziellen GitHub-Repository",
     "confirmCaption": "Installieren Sie die Bestätigung - explizit über die GitHub Quelle.",
     "progressAlt": "Lynis Installation Streaming Panel: Installation des neuesten Scan-Tools, Version 3.1.6 bestätigt, Installation abgeschlossen Nachricht",
@@ -159,7 +159,7 @@
     "resultsAlt": "Lynis Security Audit-Karte mit Ergebnissen: Hardening Index 71 mit Lynis 66 PVE 71 Aufschlüsselung, 3 Warnungen, 40 Vorschläge, Security Hardening Score Fortschrittsleiste Proxmox 71 von 100 im Guten Bereich, Audit-Berichtsliste mit PDF-Download und Run Security Audit Button",
     "resultsCaption": "Prüfergebnisse — Härteindex <strong>71/100 (Gut)</strong> bei einem Probelauf. Die Karte zeigt auch den \"Lynis-Roh-Score\" (66) gegenüber dem Proxmox-adjustierten Score (71), der 11 Punkte für die Ergebnisse der Lynis-Testkorpus-Flags hinzufügt, aber das Verhalten auf Proxmox VE erwartet.",
     "scoreTitle": "Lynis-Rohwert und an Proxmox angepasster Wert",
-    "scoreIntro": "Lynis Schiffe Regeln für allgemeine Zwecke Debian abgestimmt. Proxmox unterscheidet sich rechtmäßig von einigen von ihnen (Dienste, die aus Clustergründen als Root ausgeführt werden, benutzerdefiniertes <code>journald</code>-Tuning usw.). Die Karte zeigt beide Zahlen, so dass Sie können:",
+    "scoreIntro": "Lynis liefert Regeln aus, die für Allzweck-Debian optimiert sind. Proxmox weicht berechtigterweise von einigen davon ab (Dienste, die aus Clustergründen als Root ausgeführt werden, benutzerdefinierte <code>journald</code>-Optimierung usw.). Auf der Karte werden beide Nummern angezeigt, sodass Sie Folgendes tun können:",
     "scoreItems": [
       "Verfolgen Sie Ihren <em>Lynis raw score</em> auf die gleiche Weise wie externe Auditoren.",
       "Verfolgen Sie den <em>Proxmox-adjusted</em>-Score - eine fairere Baseline, wenn Sie Knoten innerhalb desselben Clusters vergleichen."
@@ -227,14 +227,14 @@
         "tail": "- Kochbücher für die Verwendung von API-Token mit Homepage, Home Assistant, Prometheus, n8n und dem Secure Gateway Ende-zu-Ende."
       },
       {
-        "label": "API Referenznummer",
+        "label": "API-Referenz",
         "href": "/docs/monitor/api",
         "tailRich": "— jeden <code>/api/auth</code>-, <code>/api/security</code>- und <code>/api/oci</code>-Endpunkt mit Beispielen für Methode, Körper und Locken."
       },
       {
         "label": "ProxMenux → Sicherheit → Fail2Ban",
         "href": "/docs/security/fail2ban",
-        "tail": "— Walkthrough installieren, Gefängnisse konfigurieren, manuellen Installationspfad."
+        "tail": "– Komplettlösung zur Installation, jails konfiguriert, manueller Installationspfad."
       },
       {
         "label": "ProxMenux → Sicherheit Lynis",

@@ -231,7 +231,7 @@
     "heading": "Wohin als nächstes",
     "items": [
       {
-        "label": "API Referenznummer",
+        "label": "API-Referenz",
         "href": "/docs/monitor/api",
         "tail": "Jeder Endpunkt mit Methode, Pfad und dem vollständigen Prometheus-Katalog."
       },

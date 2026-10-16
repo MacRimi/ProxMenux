@@ -5,7 +5,7 @@
   },
   "header": {
     "title": "Richtlinie",
-    "description": "Die Richtlinie erklärt, was keine Inspektion ableiten kann: wofür jeder Gast und jede Lagerung ist und welche Schwellenwerte die Kontrollen gelten.",
+    "description": "Die Richtlinie legt fest, was keine Inspektion ableiten kann: wozu jeder Gast und Speicher dient und welche Schwellenwerte die Prüfungen anwenden.",
     "section": "Prüfung und Bericht"
   },
   "sections": [
@@ -15,7 +15,7 @@
         {
           "calloutInfo": {
             "title": "Ohne Erklärung beschreibt der Bericht; mit einem bewertet er",
-            "body": "Eine Bewertung sieht, was der Gastgeber tut, nicht wofür er ist. Ein Gast ohne Backup, dessen Zweck nicht erklärt wird, wird als Beobachtung gemeldet. Wenn seine Sicherung für erforderlich erklärt wird, wird die gleiche Abwesenheit als Warnung gemeldet. Es muss nichts deklariert werden."
+            "body": "Eine Bewertung sieht, was der Host tut, nicht, wozu er dient. Ein Gast ohne Backup, dessen Verwendungszweck nicht angegeben ist, wird als Beobachtung gemeldet. Wenn dessen Sicherung als erforderlich erklärt wird, wird die gleiche Abwesenheit als Warnung gemeldet. Es muss nichts deklariert werden."
           }
         },
         {
@@ -48,7 +48,7 @@
               [
                 "Autostart",
                 "Erforderlich, Nicht erforderlich, Nicht angegeben",
-                "Ob der Gast mit dem Gastgeber beginnen muss."
+                "Gibt an, ob der Gast beim Host beginnen muss."
               ],
               [
                 "Wiederherstellungsziel",
@@ -62,7 +62,7 @@
     },
     {
       "id": "storage",
-      "title": "Lagerung",
+      "title": "Speicher",
       "blocks": [
         {
           "p": "Ein nicht erreichbarer Speicher wird als kritisch gemeldet, wenn er für wesentlich erklärt wird oder einem laufenden Gast dient, als Warnung, wenn seine Rolle nicht angegeben wird, und als Beobachtung, wenn er für optional erklärt wird."

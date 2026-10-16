@@ -119,7 +119,7 @@
                 "Ersetzt Update, wenn eine Operation auf dem Container unterbrochen wurde, und öffnet seine Wiederherstellung."
               ],
               [
-                "Rückgewinnung (restaurierter Behälter)",
+                "Wiederherstellen (wiederhergestellter Container)",
                 "Gezeigt für einen Container, der aus einem Backup wiederhergestellt wurde, das keinen Vertrag auf diesem Host hat, unter <strong>Restored OCI application</strong>. Öffnet das <lifecycleLink>recovery</lifecycleLink> im Monitor-Terminal; Update und Modify erscheinen, sobald es registriert ist."
               ]
             ]
@@ -192,7 +192,7 @@
         {
           "list": {
             "items": [
-              "Die Shell ist diejenige, die <code>/etc/passwd</code> zur Wurzel im Bild gibt. Ein Image, dessen root keine Shell hat oder keine Schiffe liefert, behält die Standardkonsole.",
+              "Die Shell ist diejenige, die <code>/etc/passwd</code> dem Root im Bild gibt. Ein Image, dessen Root keine Shell hat oder keine ausliefert, behält die Standardkonsole.",
               "Die Shell ist root im Container, ohne Passwort. Wer es öffnen kann, wird durch die <code>VM.Console</code>-Berechtigung von Proxmox VE entschieden.",
               "Das Terminal des Monitors betritt den Container mit <code>pct enter</code>, was auf die gleiche Weise funktioniert."
             ]

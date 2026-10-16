@@ -4,7 +4,7 @@
     "description": "Speicheroptimierungen im ProxMenux anpassbaren Post-Installationsskript: ZFS ARC-Dimensionierung basierend auf Host RAM, zfs-Auto-Snapshot für periodische Snapshots und vzdump Backup-Geschwindigkeitsbegrenzungen Entfernung."
   },
   "header": {
-    "title": "Post-Install: Lagerung",
+    "title": "Post-Installation: Speicher",
     "section": "Einstellungen nach der Installation von Proxmox"
   },
   "intro": {
@@ -83,7 +83,7 @@
       }
     ],
     "conservativeTitle": "Konservative Keep Counts",
-    "conservativeBody": "ProxMenux Schiffe mit konservativer Retention (nur 4 häufig + 1 jedes längeren Intervalls), so dass ZFS Snapshot-Speicher nicht balloniert. Wenn Sie eine längere Aufbewahrung wünschen, bearbeiten Sie die Nummern in <code>/etc/cron.d/zfs-auto-snapshot</code>, <code>/etc/cron.hourly/zfs-auto-snapshot</code> usw., nachdem das Skript ausgeführt wurde.",
+    "conservativeBody": "ProxMenux wird mit konservativer Aufbewahrung ausgeliefert (nur 4 häufig + 1 jedes längeren Intervalls), sodass der ZFS snapshot-Speicher nicht überlastet wird. Wenn Sie eine längere Aufbewahrung wünschen, bearbeiten Sie die Zahlen in <code>/etc/cron.d/zfs-auto-snapshot</code>, <code>/etc/cron.hourly/zfs-auto-snapshot</code> usw., nachdem das Skript ausgeführt wird.",
     "onlyZfsTitle": "Nur nützlich für ZFS Pools",
     "onlyZfsBody": "Die Installation des Pakets auf einem Ext4-Host ist harmlos, aber sinnlos - es gibt keine ZFS-Datensätze, die es zum Schnappschuss verwenden kann. Überspringen Sie diese Option, wenn Sie ZFS nicht verwenden.",
     "verifyTitle": "Verifizierung und manuelles Rollback"

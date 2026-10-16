@@ -68,7 +68,7 @@
   },
   "unmount": {
     "heading": "Unmount NFS Anteil",
-    "body": "Kombiniert die Live-Mounts und die Fstab-Einträge in einer Liste, können Sie eine auswählen, und <strong> entfernt die entsprechende Zeile aus <code>/etc/fstab</code></strong>. Das Skript führt <em>not</em> <code>umount</code> auf dem Live-Halter aus - stattdessen wird Ihnen ein CT-Neustart angezeigt, damit das Unmount wirksam wird.",
+    "body": "Kombiniert die Live-Mounts und die fstab-Einträge in einer Liste, lässt Sie einen auswählen und <strong>entfernt die entsprechende Zeile aus <code>/etc/fstab</code></strong>. Das Skript führt <em>nicht</em> <code>umount</code> auf dem Live-Mount aus – stattdessen teilt es Ihnen mit, dass ein CT Neustart erforderlich ist, damit das Unmounten wirksam wird.",
     "warnTitle": "Das Skript entfernt fstab-Einträge, nicht Live-Mounts",
     "warnBody": "Dies ist eine bewusste Designentscheidung: <code>umount</code> auf einer Besetzt-Halterung schlägt mit \"Gerät beschäftigt\" fehl, wenn etwas im CT es noch verwendet. Das Entfernen des Fstab-Eingangs garantiert, dass die Halterung beim nächsten CT-Start sauber verschwindet. Wenn Sie möchten, dass die Halterung <em>now</em> verschwunden ist und Sie sicher sind, dass sie nicht verwendet wird, führen Sie <code>pct exec &lt;ctid&gt; -- umount /mnt/&lt;path&gt;</code> nach Beendigung des Skripts von Hand aus."
   },

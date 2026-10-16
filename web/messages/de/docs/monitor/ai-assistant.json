@@ -210,7 +210,7 @@
       "<strong>Rich Nachrichten Emoji Regeln sind nicht auto-injected.</strong> Wenn Sie Emojis wollen, sagen Sie der Aufforderung, sie zu verwenden. Wenn sie einfachen text wollen, sagen sie es nicht. Der Umschalter gattert nur die gebündelten Blöcke der Standardaufforderung, nicht Ihre benutzerdefinierte Zeichenfolge."
     ],
     "starterTitle": "Startaufforderung",
-    "starterIntro": "Die <em>Custom Prompt</em> textarea-Schiffe mit einem minimalen Beispiel, das Sie anpassen können:",
+    "starterIntro": "Der Textbereich <em>Benutzerdefinierte Eingabeaufforderung</em> wird mit einem minimalen Beispiel ausgeliefert, das Sie anpassen können:",
     "showStarterSummary": "Benutzerdefinierten Beispielprompt anzeigen",
     "shareTitle": "Aufforderungen mit der Community teilen",
     "shareIntro": "Die Schaltfläche <em>Export</em> schreibt Ihre aktuelle benutzerdefinierte Eingabeaufforderung in eine Datei (<code>.txt</code> / <code>.md</code>), die Sie als Backup oder Hand an eine andere Person speichern können. <em>Import</em> zieht einen zurück. Der dritte Button neben ihnen verlinkt zu einer öffentlichen Community-Galerie auf GitHub:",
@@ -223,7 +223,7 @@
     "formatIntro": "Wenn ein Tipp hinzugefügt wird, folgt er genau diesem Format:",
     "rulesIntro": "Die Regeln im Addon (sichtbar im zusammenklappbaren Block unter der Standard-Eingabeaufforderung oben):",
     "rules": [
-      "Der Tipp ist <em>only</em> enthalten, wenn der Journalkontext oder die Datenbank Bekannte Fehler eindeutig auf einen bestimmten Fix hinweist.",
+      "Der Tipp ist <em>nur</em> enthalten, wenn der Journalkontext oder die Datenbank mit bekannten Fehlern eindeutig auf einen bestimmten Fix hinweist.",
       "Die Spitze ist auf 100 Zeichen begrenzt.",
       "Es muss spezifisch sein (konkretes Kommando oder Pfad) - generische Ratschläge werden von der Aufforderung selbst abgelehnt.",
       "Wenn ein bekannter Fehler eine Lösung bietet, muss der LLM diese Lösung verwenden und keine neue erfinden.",
@@ -291,7 +291,7 @@
     "rows": [
       {
         "provider": "Ollama",
-        "destination": "Bleibt auf dem Ollama Gastgeber. Wenn Ollama auf demselben Proxmox-Knoten läuft, verlässt nichts das Netzwerk."
+        "destination": "Bleibt auf dem Ollama-Host. Wenn Ollama auf demselben Proxmox-Knoten läuft, verlässt überhaupt nichts das Netzwerk."
       },
       {
         "provider": "OpenAI",

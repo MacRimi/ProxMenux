@@ -227,7 +227,7 @@
         "tail": "— die Netzwerkkategorie und die Latenz-Historie-Schwellenwerte."
       },
       {
-        "label": "API Referenznummer",
+        "label": "API-Referenz",
         "href": "/docs/monitor/api",
         "tail": "- die Netzwerk- und Latenz-Endpunkte."
       },

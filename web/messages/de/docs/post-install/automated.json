@@ -12,7 +12,7 @@
   },
   "intro": {
     "title": "Wann automatisiert ausgewählt werden soll",
-    "body": "Führen Sie dies auf einem frisch installierten Proxmox-Host aus, wenn Sie die vernünftige Baseline wünschen, ohne Entscheidungen zu treffen. Das Skript ist idempotent - es zweimal auszuführen ist sicher, es wird nur die gleichen Konfigurationen erneut angewendet. Opt-in-Funktionen (Fastfetch, IOMMU, Ceph repo, HA, AMD fixes...) sind absichtlich <strong>not</strong> Teil dieses Pfades; wählen Sie sie aus <link>Customizable</link>, wenn Sie sie benötigen."
+    "body": "Führen Sie dies auf einem frisch installierten Proxmox-Host aus, wenn Sie eine sinnvolle Basislinie wünschen, ohne Entscheidungen treffen zu müssen. Das Skript ist idempotent – ​​es ist sicher, es zweimal auszuführen, es wendet lediglich dieselben Konfigurationen erneut an. Opt-in-Funktionen (Fastfetch, IOMMU, Ceph Repo, HA, AMD-Fixes…) sind absichtlich <strong>nicht</strong> Teil dieses Pfades; Wählen Sie sie bei Bedarf unter <link>Anpassbar</link> aus."
   },
   "applies": {
     "heading": "Was das Skript anwendet",
@@ -80,17 +80,17 @@
     {
       "tool": "Log2RAM (SSD-bewusst, auto)",
       "what": "Reduziert den SSD/NVMe-Verschleiß, indem /var/log auf eine tmpfs-ramdisk mit periodischer Plattensynchronisierung verschoben wird. Installiert aus dem Upstream-Projekt, wenn die Stammplatte SSD oder NVMe ist. Grössert die Ramdisk von Host RAM (128M / 256M / 512M), plant die periodische Synchronisierung und einen Auto-Sync-Schutz, der bei 80% saugt und Hot Logs bei 92% abschneidet, bevor er schreibt. Passt die journald-Limits an, um in die Ramdisk zu passen. Alle Details zu <link>Log2RAM</link>.",
-      "category": "Lagerung",
-      "categorySlug": "Lagerung"
+      "category": "Speicher",
+      "categorySlug": "Speicher"
     },
     {
       "tool": "ZFS Autotrim (nur SSD)",
       "what": "Aktiviert zpool autotrim=on in jedem ZFS-Pool, dessen vdevs alle SSD/NVMe mit TRIM-Unterstützung sind (überprüft /sys/block/[dev]/queue/rotational und discard_granularity). Pools, die von HDDs unterstützt werden, werden automatisch übersprungen. Nur Pools, die tatsächlich von ProxMenux geändert wurden, werden zur Deinstallation aufgezeichnet - Pools, die Sie manuell autotrimieren, werden in Ruhe gelassen.",
-      "category": "Lagerung",
-      "categorySlug": "Lagerung"
+      "category": "Speicher",
+      "categorySlug": "Speicher"
     },
     {
-      "tool": "Größenbegrenzungen",
+      "tool": "Journald Größenbeschränkungen",
       "what": "Erzwingt persistenten Speicher, Caps SystemMaxUse=64M / RuntimeMaxUse=60M, setzt Kompression, Protokollierung auf Infoebene (für den Monitor erforderlich). Automatisch überspringt, wenn Log2RAM aktiv ist (es nimmt seine eigene Anpassung vor).",
       "category": "System",
       "categorySlug": "System"

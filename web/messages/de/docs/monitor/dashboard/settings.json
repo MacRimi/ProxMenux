@@ -109,7 +109,7 @@
       }
     ],
     "sectionsTitle": "Abschnitte und empfohlene Standardwerte",
-    "sectionsIntro": "Dies sind die Werte ProxMenux Schiffe mit — die empfohlene Baseline. Sie sind das, was Sie auf einem frischen Gastgeber sehen, bis Sie etwas außer Kraft setzen. Die Abschnitte werden von oben nach unten aus <em>compute</em> → <em>heat</em> → <em>Speicherkapazität</em> bestellt, so dass sich das Ablesen von Beton (Stromlast) in den akkumulierten Zustand (freier Speicherplatz) bewegt.",
+    "sectionsIntro": "Dies sind die Werte, mit denen ProxMenux ausgeliefert wird – die empfohlene Basislinie. Sie sind das, was Sie auf einem neuen Host sehen, bis Sie etwas überschreiben. Die Abschnitte werden von oben nach unten nach <em>Berechnung</em> → <em>Wärme</em> → <em>Speicherkapazität</em> sortiert, sodass die Ablesung vom Beton (aktuelle Last) zum akkumulierten Zustand (freier Speicherplatz) erfolgt.",
     "headerSection": "Abschnitt",
     "headerWarning": "Warnung",
     "headerCritical": "Kritisch",
@@ -295,7 +295,7 @@
       {
         "card": "Netzwerkeinheiten",
         "endpoint": "/api/settings",
-        "source": "Beharrt in der SQLite-Einstellungstabelle des Dashboards."
+        "source": "Besteht weiterhin in der Einstellungstabelle SQLite des Dashboards."
       },
       {
         "card": "Dauer des Gesundheitsmonitors",

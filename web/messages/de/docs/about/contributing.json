@@ -78,7 +78,7 @@
       {
         "phaseRich": "<strong>Phase 1 — Auswahl</strong>",
         "purposeRich": "Sammeln Sie jede Benutzerentscheidung. Führen Sie alle erforderlichen Vorbereitungsarbeiten durch (Sonden, Scans, Überprüfungen).",
-        "screenRich": "<code>dialog</code>-Überlagerungen. Wenn eine Sonde zwischen zwei Menüs länger als ein oder zwei Sekunden dauert, zeigen Sie einen <code>msg_info</code>-Spinner an, damit der Benutzer weiß, dass das Skript nicht eingefroren ist, und rufen Sie <code>stop_spinner</code> direkt vor dem nächsten Dialog auf."
+        "screenRich": "<code>dialog</code>-Overlays. Wenn eine Suche zwischen zwei Menüs länger als ein oder zwei Sekunden dauert, zeigen Sie einen <code>msg_info</code>-Spinner an, damit der Benutzer weiß, dass das Skript nicht eingefroren ist, und rufen Sie dann <code>stop_spinner</code> direkt vor dem nächsten Dialog auf."
       },
       {
         "phaseRich": "<strong>Phase 2 — Ausführung</strong>",
@@ -115,7 +115,7 @@
       {
         "toolRich": "<strong><code>whiptail</code></strong>",
         "whenRich": "<strong>Nur in Phase 2, nur wenn unvermeidlich.</strong> Der typische Fall ist eine Neustartaufforderung am Ende der Ausführung. Greifen Sie nicht zu <code>whiptail</code>, um \"Weiter?\" mitten in der Ausführung zu fragen - diese Entscheidung hätte in Phase 1 getroffen werden sollen.",
-        "effectRich": "Leichtergewichtige Überlagerung, die <em>nicht </em> löscht den Terminalkontext. Die kumulierte <code>msg_ok</code>/<code>msg_info</code>-Historie von Phase 2 bleibt hinter dem Dialogfeld sichtbar. Deshalb ist es die richtige Wahl, wenn der Fortschritt bereits auf dem Bildschirm ist."
+        "effectRich": "Leichteres Overlay, das den Terminalkontext <em>nicht</em> löscht. Der akkumulierte <code>msg_ok</code> / <code>msg_info</code>-Verlauf der Phase 2 bleibt hinter dem Dialogfeld sichtbar. Deshalb ist es die richtige Wahl, wenn der Fortschritt bereits auf dem Bildschirm zu sehen ist."
       }
     ],
     "calloutTitle": "Warum Split wichtig ist",
@@ -197,7 +197,7 @@
     "bullets": [
       "Schreibe Strings in Englisch – die Übersetzung wird automatisch vom Build bearbeitet.",
       "Halten Sie Strings kurz. Vermeiden Sie das Einbetten von Variablen in lange Sätze, wenn möglich.",
-      "Übersetzen <strong>not</strong> Variablennamen, Pfade oder technische Identifikatoren."
+      "Variablennamen, Pfade oder technische Bezeichner <strong>nicht</strong>übersetzen."
     ]
   },
   "variableStyle": {

@@ -54,7 +54,7 @@
   },
   "othersCallout": {
     "title": "Andere ProxMenux-installierte Komponenten bleiben",
-    "body": "Alles, was ProxMenux über andere Menüs installiert wurde - Fail2Ban, Lynis, NVIDIA-Treiber, Nachinstallations-Tweaks - ist <strong>not</strong>, das von diesem Deinstallationsprogramm berührt wird. Jeder hat seinen eigenen Deinstallationsfluss in seinem jeweiligen Menü (oder Sie können mit apt direkt entfernen). Schauen Sie sich zuerst <em>Show Version Information</em> an, um zu sehen, was registriert ist."
+    "body": "Alles, was ProxMenux über andere Menüs installiert wird – Fail2Ban, Lynis, NVIDIA Treiber, Anpassungen nach der Installation – wird von diesem Deinstallationsprogramm <strong>nicht</strong> berührt. Jedes hat seinen eigenen Deinstallationsablauf in seinem jeweiligen Menü (oder Sie können es direkt mit apt entfernen). Sehen Sie sich zunächst <em>Versionsinformationen anzeigen</em> an, um zu sehen, was registriert ist."
   },
   "manual": {
     "heading": "Manuelle Deinstallation",

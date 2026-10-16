@@ -42,11 +42,11 @@
       "aliases": [
         "Adaptive Replacement Cache"
       ],
-      "category": "Lagerung",
+      "category": "Speicher",
       "definitionRich": "ZFSs In-Memory-Lese-Cache. Hält kürzlich und häufig verwendete Datenblöcke; Größenskalen mit verfügbarem Host RAM. Defaults sind aggressiv - Proxmox Post-Installation können Sie es Cap.",
       "seeAlso": [
         {
-          "label": "Post-Install: Lagerung",
+          "label": "Post-Installation: Speicher",
           "href": "/docs/post-install/storage"
         },
         {
@@ -93,7 +93,7 @@
     },
     {
       "term": "Ceph",
-      "category": "Lagerung",
+      "category": "Speicher",
       "definitionRich": "Distributed Storage System ist eng mit Proxmox für hyperkonvergente Cluster integriert. Bietet Objekt-, Block- und Dateispeicherung, die von OSDs (Object Storage Daemons) unterstützt wird. PVE 9 erfordert Ceph 19.x (Squid).",
       "seeAlso": [
         {
@@ -106,7 +106,7 @@
       "term": "CT",
       "aliases": [
         "Container",
-        "LXC-Behälter"
+        "LXC-Container"
       ],
       "category": "Proxmox",
       "definitionRich": "Abkürzung für \"container\" — Proxmox Terminologie für eine LXC Instanz. Hat eine numerische CTID, die <code>/etc/pve/lxc/&lt;CTID&gt;.conf</code> abbildet. Siehe auch <strong>LXC</strong>.",
@@ -164,7 +164,7 @@
     {
       "term": "Fail2Ban",
       "category": "Linux",
-      "definitionRich": "Intrusion Prevention Service, der Protokolldateien auf wiederholte Authentifizierungsfehler überwacht und die beanstandeten IPs auf der Firewall-Ebene sperrt. ProxMenux liefert vorkonfigurierte Gefängnisse für SSH, die Proxmox UI und den Monitor.",
+      "definitionRich": "Intrusion Prevention-Dienst, der Protokolldateien auf wiederholte Authentifizierungsfehler überwacht und die betreffenden IPs auf der Firewall-Ebene sperrt. ProxMenux wird mit vorkonfiguriertem jails für SSH, dem Proxmox UI und dem Monitor geliefert.",
       "seeAlso": [
         {
           "label": "Fail2Ban",
@@ -251,7 +251,7 @@
       "aliases": [
         "Internet SCSI"
       ],
-      "category": "Lagerung",
+      "category": "Speicher",
       "definitionRich": "Netzwerkprotokoll, das Blockspeicher über IP freigibt - eine Remote-Festplatte erscheint als lokales SCSI-Gerät. Registriert als Proxmox-Speicher über <code>pvesm add iscsi</code>.",
       "seeAlso": [
         {
@@ -273,7 +273,7 @@
       "aliases": [
         "Logical Volume Manager"
       ],
-      "category": "Lagerung",
+      "category": "Speicher",
       "definitionRich": "Linux Storage Stack, der physische Festplatten in Volumengruppen (VG) von logischen Volumes (LV) abstrahiert. Proxmox verwendet standardmäßig LVM-dünne Pools für VM-Festplatten. Kurze Werkzeuge: <code>pvs</code>, <code>vgs</code>, <code>lvs</code>.",
       "seeAlso": [
         {
@@ -334,7 +334,7 @@
       "aliases": [
         "Netzwerkdateisystem"
       ],
-      "category": "Lagerung",
+      "category": "Speicher",
       "definitionRich": "Unix-natives Netzwerk-Dateifreigabeprotokoll. Registriert als Proxmox-Speicher über <code>pvesm add nfs</code>; auch als LXC-Client / Server über dedizierte ProxMenux-Flows nutzbar.",
       "seeAlso": [
         {
@@ -484,7 +484,7 @@
       "aliases": [
         "QEMU Copy-On-Write v2"
       ],
-      "category": "Lagerung",
+      "category": "Speicher",
       "definitionRich": "Standard-VM-Disk-Image-Format im Proxmox-Verzeichnisspeicher. Unterstützt Thin Provisioning, Snapshots und Copy-on-Write. Konvertieren mit <code>qemu-img convert -O qcow2 ...</code>."
     },
     {
@@ -524,7 +524,7 @@
     },
     {
       "term": "Samba / SMB / CIFS",
-      "category": "Lagerung",
+      "category": "Speicher",
       "definitionRich": "Microsoft File-Sharing-Protokoll-Familie. <strong>SMB</strong> ist das Protokoll; <strong>Samba</strong> ist die Open-Source-Linux-Implementierung; <strong>CIFS</strong> ist ein älterer SMB Dialekt. Registriert als Proxmox-Speicher über <code>pvesm add cifs</code>.",
       "seeAlso": [
         {
@@ -543,7 +543,7 @@
       "aliases": [
         "Self-Monitoring, Analysis and Reporting Technology"
       ],
-      "category": "Lagerung",
+      "category": "Speicher",
       "definitionRich": "Integrierte Festplattendiagnosen, die den Zustand des Laufwerks, Fehlerzahlen und Selbsttestergebnisse melden. <code>smartctl</code> (von <code>smartmontools</code>) ist der CLI; für NVMe-Laufwerke fügt das <code>nvme-cli</code>-Paket NVMe-spezifische Befehle hinzu.",
       "seeAlso": [
         {
@@ -594,7 +594,7 @@
         "UID-Schaltung"
       ],
       "category": "Linux",
-      "definitionRich": "In <strong>unprivilegiert</strong> LXC Container, UIDs und GIDs werden durch <code>+100000</code> auf den Gastgeber. Container UID 0 = Host UID 100000Container UID 1000 = Host UID 101000, usw. Beeinflusst den Dateibesitz auf Bind-Mounts.",
+      "definitionRich": "In <strong>unprivilegierten</strong> LXC-Containern werden UIDs und GIDs auf dem Host um <code>+100000</code> verschoben. Container-UID 0 = Host-UID 100000, Container-UID 1000 = Host-UID 101000 usw. Beeinflusst den Dateibesitz auf bind mounts.",
       "seeAlso": [
         {
           "label": "LXC Befestigungspunkte",
@@ -664,7 +664,7 @@
       "aliases": [
         "Zettabyte File System"
       ],
-      "category": "Lagerung",
+      "category": "Speicher",
       "definitionRich": "Kombinierter Dateisystem- und Volumenmanager, bekannt für Snapshots, Senden / Empfangen von Replikation, End-to-End-Prüfsummen, Kompression und Selbstheilung. Memory-hungry (siehe <strong>ARC</strong>), aber extrem robust.",
       "seeAlso": [
         {

@@ -16,7 +16,7 @@
   },
   "why": {
     "heading": "Warum diese Option existiert",
-    "intro": "ProxMenux Schiffe aus zwei Git-Zweigen:",
+    "intro": "ProxMenux wird aus zwei Git-Zweigen geliefert:",
     "items": [
       "<strong>Stable</strong> — Zweigstelle <code>main</code>. Worauf die README hinweist, was die meisten Betreiber wollen, mit einer langsameren Release-Kadenz und nur Änderungen, die bereits durch die Beta-Validierung erfolgt sind.",
       "<strong>Beta</strong> — Zweigstelle <code>develop</code>. Neuere Funktionen und Monitor-Builds; trägt das Tag, das die nächste stabile Version erben wird. Einige Dinge funktionieren möglicherweise nicht perfekt - das ist der Deal, für den Sie sich anmelden, und die Art und Weise, wie neue Funktionen getestet werden, bevor sie ausgeliefert werden."
@@ -48,7 +48,7 @@
   },
   "switching": {
     "heading": "Hin- und Herschalten",
-    "intro": "Beide Richtungen gehen durch den gleichen Installer - es handelt sich um <strong>not</strong>-Special-Cased-Deinstallations- und Neuinstallationsflüsse. Jede Richtung führt einfach den eigenen Installer des Kanals aus, der so konzipiert ist, dass er idempotent und sicher über eine bestehende Installation ausgeführt werden kann. Praktische Konsequenzen:",
+    "intro": "Beide Richtungen durchlaufen das gleiche Installationsprogramm – es handelt sich <strong>nicht</strong> um Deinstallations- und Neuinstallationsabläufe in Sonderfällen. Jede Richtung führt einfach das eigene Installationsprogramm des Kanals aus, das idempotent und sicher für die erneute Ausführung einer vorhandenen Installation konzipiert ist. Praktische Konsequenzen:",
     "items": [
       "Ihre vorhandene Konfiguration, ProxMenux Monitor-Login (<code>auth.json</code>), Benachrichtigungskanäle, Registrierung nach der Installation, benutzerdefinierte Schwellenwerte - keine davon wird berührt. Der Channel Switch tauscht nur den Skriptbaum und den binären AppImage aus.",
       "Ein Monitor, der vor dem Switch aktiv war, bleibt danach aktiv; einer, der deaktiviert wurde, bleibt deaktiviert.",

@@ -94,7 +94,7 @@
   "lxcSetup": {
     "heading": "5. Konfigurieren Sie einen LXC-Container für die Verwendung des GPU",
     "identifyHeading": "5.1 Gerätenummern angeben",
-    "identifyBody": "Auf dem Gastgeber:",
+    "identifyBody": "Auf dem Host:",
     "identifyCode": "ls -l /dev/nv*",
     "identifyImageAlt": "NVIDIA Geräteliste",
     "identifyNote": "Beachten Sie die wichtigsten Zahlen - sie variieren zwischen den Systemen. Typische Werte:",

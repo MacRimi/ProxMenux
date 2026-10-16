@@ -10,7 +10,7 @@
   },
   "intro": {
     "title": "Was diese Kategorie abdeckt",
-    "body": "Die einzige Performance-Option hier verkabelt den Gzip des Systems zu einer parallelen Implementierung. Sonstige leistungsbezogene Optimierungen (Memory Tuning, I/O Scheduling), ZFS ARC-Größe, Kernel-Limits) leben unter ihren eigenen Kategorien (<em>System</em>, <em>Lagerung</em>) weil sie verschiedene Subsysteme betreffen."
+    "body": "Die einzige Leistungsoption hier ist die Neuverdrahtung des gzip-Systems in eine parallele Implementierung. Andere leistungsbezogene Optimierungen (Speicheroptimierung, E/A-Planung, ZFS ARC-Größe, Kernel-Grenzwerte) sind in eigenen Kategorien (<em>System</em>, <em>Speicher</em>) aufgeführt, da sie sich auf verschiedene Subsysteme auswirken."
   },
   "pigz": {
     "heading": "Verwenden Sie pigz für eine schnellere GZIP-Komprimierung",
@@ -42,7 +42,7 @@
         "tailRich": "vzdump CLI Referenz, einschließlich <code>--pigz</code> Threads Option."
       },
       {
-        "label": "Lagerung",
+        "label": "Speicher",
         "href": "/docs/post-install/storage",
         "tail": "vzdump Geschwindigkeitsbegrenzungen und ZFS ARC Tuning."
       },

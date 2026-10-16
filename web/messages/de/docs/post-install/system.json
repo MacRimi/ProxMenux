@@ -1,7 +1,7 @@
 {
   "meta": {
     "title": "Post-Install: System | ProxMenux Dokumentation",
-    "description": "System-Level-Optimierungen im ProxMenux Customizable Post-Installations-Skript: Größenbegrenzungen für Zeitschriften und Logrotate, höhere Kernel- und Datei-Deskriptor-Grenzen, ausgewogenes Memory-Tuning, Kexec für schnelle Neustarts und Kernel-Panikwiederherstellung."
+    "description": "Optimierungen auf Systemebene im ProxMenux Anpassbares Post-Install-Skript: journald und Logrotate-Größenbeschränkungen, höhere Kernel- und Dateideskriptorgrenzen, ausgewogene Speicheroptimierung, Kexec für schnelle Neustarts und Kernel-Panik-Wiederherstellung."
   },
   "header": {
     "title": "Nach der Installation: System",
@@ -12,7 +12,7 @@
     "body": "Sechs unabhängige Optimierungen auf Systemebene. Sie stimmen <strong>journald</strong> und <strong>logrotate</strong> ab, um zu verhindern, dass Protokolle die Festplatte füllen, erhöhen <strong>kernel und Dateideskriptorlimits</strong>, so dass Anwendungen mit vielen offenen Dateien keine Decken erreichen, <strong>balance memory</strong> für einen Virtualisierungshost, fügen <strong>kexec</strong> für \"Neustarts ohne BIOS\" hinzu und konfigurieren <strong> automatische Wiederherstellung</strong> bei Kernel-Panik. Alle sechs sind verfolgt und reversibel aus dem Menü Deinstallieren."
   },
   "journald": {
-    "heading": "Journal optimieren",
+    "heading": "journald optimieren",
     "intro": "Schreibt <code>/etc/systemd/journald.conf</code> mit Standardeinstellungen neu, so dass das systemd-Journal Ihre Root-Partition nicht langsam auffressen kann, dann <code>systemd-journald</code> neu startet und vorhandene Protokolle saugt.",
     "keyTitle": "Schlüsselwerte",
     "keyItems": [

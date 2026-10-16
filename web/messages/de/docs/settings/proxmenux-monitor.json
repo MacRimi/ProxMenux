@@ -107,7 +107,7 @@
       {
         "href": "/docs/security/fail2ban",
         "label": "Fail2Ban",
-        "tailRich": "Das Gefängnis <code>[proxmenux]</code> schützt den Monitor auf TCP 8008."
+        "tailRich": "– der <code>[proxmenux]</code> jail schützt den Monitor auf TCP 8008."
       },
       {
         "href": "/docs/settings",

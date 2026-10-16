@@ -34,7 +34,7 @@
               {
                 "icon": "fileText",
                 "title": "Politik – was wird erwartet?",
-                "body": "Erklärt, welche Gäste ein Backup benötigen oder mit dem Gastgeber beginnen müssen, welche Speicherung unerlässlich ist und die Schwellenwerte der Prüfungen."
+                "body": "Deklariert, welche Gäste ein Backup benötigen oder mit dem Host starten müssen, welcher Speicher unbedingt erforderlich ist und die Schwellenwerte der Prüfungen."
               }
             ]
           }
@@ -115,7 +115,7 @@
               {
                 "label": "Richtlinie",
                 "href": "/docs/monitor/audit-report/policy",
-                "tail": "Gäste, Lagerung und Schwellenwerte."
+                "tail": "Gäste, Speicher und Schwellenwerte."
               },
               {
                 "label": "Berichte und Vergleiche",

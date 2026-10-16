@@ -60,7 +60,7 @@
       },
       {
         "collector": "Journal-Überwachung",
-        "watches": "<code>journalctl --follow</code> mit Muster-Matching für SSH / Web-Auth-Ausfälle, Fail2Ban-Verbots (wenn das optionale Gefängnis installiert ist), Kernel-I / O-Fehler, OOM, Smartd-Events.",
+        "watches": "<code>journalctl --follow</code> mit Mustervergleich für SSH / Web-Authentifizierungsfehler, Fail2Ban-Verbote (wenn das optionale jail installiert ist), Kernel-E/A-Fehler, OOM, Smartd-Ereignisse.",
         "events": "<code>auth_fail</code>, <code>ip_block</code>, <code>oom_kill</code>, <code>disk_io_error</code>, <code>service_fail</code>."
       },
       {
@@ -91,7 +91,7 @@
     "heading": "Kanaldurchführungen",
     "intro": "Derzeit werden sechs Kanäle unterstützt: Telegram, Discord, Gotify, Email (SMTP), Pushover und Apprise. Die ersten fünf sind native Integrationen mit eigenen Konfigurationsfeldern. Apprise ist ein allgemeiner Hub, der 80 zusätzliche Dienste (ntfy, Matrix, Slack, Teams, Pushbullet, AWS SNS, Mattermost ...) über ein einziges URL-Feld hinzufügt. Sie sind alle Schritt für Schritt unten dokumentiert.",
     "credsTitle": "Wo Zeugnisse leben",
-    "credsBody": "Token, Schlüssel, webhook URLs und SMTP Passwörter werden lokal in der SQLite Datenbank des Monitors unter <code>/usr/local/share/proxmenux/</code> gespeichert. Sensible Werte werden im Interface geschützt und maskiert. Sie verlassen den Gastgeber nie, außer um ihre jeweiligen Dienste zu erreichen. Ein Backup dieses Verzeichnisses reicht aus, um die konfigurierten Kanäle wiederherzustellen."
+    "credsBody": "Tokens, Schlüssel, webhook-URLs und SMTP-Passwörter werden lokal in der SQLite-Datenbank des Monitors unter <code>/usr/local/share/proxmenux/</code> gespeichert. Sensible Werte werden in der Schnittstelle geschützt und maskiert. Sie verlassen den Gastgeber nie, außer um ihre jeweiligen Dienste zu erreichen. Eine Sicherung dieses Verzeichnisses reicht aus, um die konfigurierten Kanäle wiederherzustellen."
   },
   "telegram": {
     "heading": "Telegram",
@@ -190,7 +190,7 @@
     "priorityTitle": "Prioritäre Zuordnung",
     "priorityBody": "Normale ProxMenux Nachrichten verwenden Pushover Priorität 0. Wenn <strong>High-Priorität für kritische Warnungen</strong> aktiviert ist, verwenden CRITICAL-Ereignisse die Priorität 1, damit sie sich abheben und die ruhigen Pushover-Stunden des Benutzers umgehen. ProxMenux verwendet keine Notfallpriorität 2, was wiederholte Benachrichtigungen und einen Rückruf der Bestätigung erfordern würde.",
     "secretTitle": "Schützen Sie beide Werte",
-    "secretBody": "Der Benutzer- oder Gruppenschlüssel und das API-Token der Anwendung autorisieren beide die Nachrichtenzustellung. ProxMenux speichert sie als geschützte Benachrichtigungsgeheimnisse und maskiert sie in der Benutzeroberfläche; veröffentlichen Sie weder Wert in Screenshots noch unterstützen Sie Protokolle."
+    "secretBody": "Der Benutzer- oder Gruppenschlüssel und das Anwendungstoken API autorisieren beide die Nachrichtenzustellung. ProxMenux speichert sie als geschützte Benachrichtigungsgeheimnisse und maskiert sie in der Schnittstelle; Veröffentlichen Sie keinen Wert in Screenshots oder Support-Protokollen."
   },
   "apprise": {
     "heading": "Apprise (generischer Hub für ~ 80-Dienste)",
@@ -226,7 +226,7 @@
     "togglesIntro": "Rund siebzig Ereignistypen sind in elf UI-Kategorien unterteilt. Jedes Ereignis hat einen Master-Toggle und einen Pro-Kanal-Override - zwei Schichten, die entscheiden, ob ein bestimmtes Ereignis einen bestimmten Kanal erreicht:",
     "togglesItems": [
       "<strong>Per-event master toggle.</strong> Wenn <code>vm_start</code> überall ausgeschaltet ist, sieht kein Kanal jemals einen <code>vm_start</code>. Toggles bleiben als <code>event_toggles[event_type] = true | false</code> bestehen.",
-      "<strong>Per-channel overrides.</strong> Ein Ereignistyp kann auch für einen bestimmten Kanal stummgeschaltet werden (<em>\"send <code>backup_complete</code> to Discord but not to Telegram\"</em>). Diese leben in <code>channel_overrides[channel_name][event_type]</code> und gelten nur, wenn das Ereignis den Master-Schalter bestanden hat."
+      "<strong>Überschreibungen pro Kanal.</strong> Ein Ereignistyp kann auch für einen bestimmten Kanal stummgeschaltet werden (<em>\"sende <code>backup_complete</code> an Discord, aber nicht an Telegram\"</em>). Diese befinden sich in <code>channel_overrides[channel_name][event_type]</code> und gelten nur, wenn das Ereignis den Master-Umschalter bestanden hat."
     ],
     "togglesOutro": "Jeder Kategorie-Header im Screenshot zeigt auch die Anzahl der Ereignisse <em>, die derzeit aktiviert sind</em> / <em>total</em> für diese Gruppe, und einen Kategorie-Level-Schalter, der jedes Ereignis darin mit einem Klick ein- oder ausschaltet - die Verknüpfung zum Stummschalten einer ganzen Gruppe (z. B. alle <code>info</code>-Backups, alle updatebezogenen Ereignisse), ohne den Abschnitt zu erweitern."
   },
@@ -368,7 +368,7 @@
         "events": "<code>cpu_high</code>, <code>ram_high</code>, <code>temp_high</code>, <code>load_high</code>."
       },
       {
-        "group": "Lagerung",
+        "group": "Speicher",
         "events": "<code>disk_space_low</code>, <code>disk_io_error</code>, <code>storage_unavailable</code>, <code>smart_test_complete</code>, <code>smart_test_failed</code>."
       },
       {

@@ -30,7 +30,7 @@
     "heading": "Cached Discovery und Find Anwendungen",
     "lead": "Anwendungsvorschläge sind Teil des per-LXC modalen Cache. Der Start-Scan bereitet sie im Hintergrund vor, so dass das Öffnen des App-Tabs zwischengespeicherte Ergebnisse sofort anzeigen kann.",
     "items": [
-      "Beim Öffnen der Registerkarte App startet <strong>not</strong> einen neuen Katalogscan und fragt den LXC nicht wiederholt ab.",
+      "Durch das Öffnen der Registerkarte „App“ wird <strong>kein</strong> ein neuer Katalogscan gestartet und der LXC wird nicht wiederholt abgefragt.",
       "<strong>Find applications</strong> führt explizit einen neuen Discovery Pass für diesen LXC aus. Verwenden Sie es nach der Installation neuer Software, während ProxMenux bereits läuft.",
       "Die vorherige Liste bleibt sichtbar, während der explizite Scan ausgeführt wird. Neue Übereinstimmungen werden hinzugefügt, wenn sie beendet sind.",
       "Wenn keine neue Übereinstimmung gefunden wird, wird das Ergebnis neben den Aktionen angegeben und die <strong>Register-Anwendung</strong> bleibt für die manuelle Eingabe verfügbar.",

@@ -76,7 +76,7 @@
     "heading": "Wichtige Überlegungen",
     "items": [
       "<strong>Eine Festplatte pro run</strong>. Führen Sie das Skript für jede zusätzliche Festplatte erneut aus.",
-      "Befestigen <strong>not</strong> die gleiche Partition an mehrere Container, die sie möglicherweise gleichzeitig montieren - gleichzeitige Schreibvorgänge beschädigen das Dateisystem.",
+      "Hängen Sie <strong>nicht</strong> dieselbe Partition an mehrere Container an, die sie gleichzeitig bereitstellen könnten – gleichzeitige Schreibvorgänge beschädigen das Dateisystem.",
       "<strong>Alte Metadaten</strong> (RAID / ZFS / LVM-Signaturen) müssen manuell gelöscht werden, bevor Sie das Skript formatieren lassen, andernfalls weigert sich <code>mkfs</code> zu überschreiben. Verwenden Sie dafür das <wipeLink>Format / Wipe Physical Disk</wipeLink> Tool."
     ]
   },

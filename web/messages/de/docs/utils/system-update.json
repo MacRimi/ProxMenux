@@ -12,7 +12,7 @@
   },
   "calloutWhat": {
     "title": "Was das macht",
-    "body": "Bringt den Host auf das neueste Patch-Level seiner aktuellen Hauptversion. Aktualisiert <strong>not</strong> in allen Hauptversionen — für PVE 8 → PVE 9 siehe <link>Upgrade PVE 8 auf PVE 9</link>."
+    "body": "Bringt den Host auf die neueste Patch-Ebene seiner aktuellen Hauptversion. Führt <strong>kein</strong> Upgrade über Hauptversionen hinweg durch – für PVE 8 → PVE 9 siehe <link>PVE 8 auf PVE aktualisieren 9</link>."
   },
   "official": {
     "heading": "Die offizielle Proxmox Empfehlung",

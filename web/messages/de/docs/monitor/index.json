@@ -1,150 +1,150 @@
 {
   "meta": {
-    "title": "ProxMenux Monitor — Selbst gehostetes Web-Dashboard für Proxmox VE | ProxMenux",
-    "description": "ProxMenux Monitor ist ein selbst gehostetes Web-Dashboard für Proxmox VE: Echtzeit-Host-Metriken, Speicher und SMART-Daten, Netzwerk, VMs und Container, Hardware, Protokolle, ein integriertes Web-Terminal, ein proaktiver Gesundheitsmonitor, Benachrichtigungen an Telegram / Discord / E-Mail, ein optionaler AI-Assistent, ein REST API und Integrationen mit Tools wie Homepage und Home Assistant.",
-    "ogTitle": "ProxMenux Monitor — Selbst gehostetes Web-Dashboard für Proxmox VE",
-    "ogDescription": "Echtzeit-Proxmox VE-Dashboard: Host-Metriken, Speicher SMART, Netzwerk, VMs und Container, Hardware, Protokolle, Web-Terminal, Gesundheitsmonitor, Benachrichtigungen, AI-Assistent, REST API.",
+    "title": "ProxMenux Monitor – Selbstgehostetes Web-Dashboard für Proxmox VE | ProxMenux",
+    "description": "ProxMenux Monitor ist ein selbst gehostetes Web-Dashboard für Proxmox VE: Echtzeit-Hostmetriken, Speicher und SMART Daten, Netzwerk, VMs und Container, Hardware, Protokolle, ein integriertes Web-Terminal, ein proaktiver Health Monitor, Benachrichtigungen an Telegram / Discord / E-Mail, ein optionaler KI-Assistent, ein REST API und Integrationen mit Tools wie Homepage und Home Assistant.",
+    "ogTitle": "ProxMenux Monitor – Selbstgehostetes Web-Dashboard für Proxmox VE",
+    "ogDescription": "Echtzeit-Dashboard Proxmox VE: Hostmetriken, Speicher SMART, Netzwerk, VMs und Container, Hardware, Protokolle, Webterminal, Gesundheitsmonitor, Benachrichtigungen, KI-Assistent, REST API.",
     "twitterTitle": "ProxMenux Monitor | ProxMenux",
-    "twitterDescription": "Selbst gehostetes Proxmox VE-Dashboard mit Health Monitor, Benachrichtigungen, AI-Assistent und REST API."
+    "twitterDescription": "Selbst gehostetes Proxmox VE Dashboard mit Health Monitor, Benachrichtigungen, KI-Assistent und REST API."
   },
   "header": {
-    "title": "ProxMenux-Monitor",
-    "description": "Ein selbst gehostetes Web-Dashboard für Proxmox VE wird als AppImage ausgeliefert. Es läuft auf dem Host als ein einziger systemd-Dienst, hört auf TCP 8008 und bedient sowohl den API als auch die Benutzeroberfläche aus einem Prozess.",
-    "section": "ProxMenux-Monitor"
+    "title": "ProxMenux Monitor",
+    "description": "Ein selbst gehostetes Web-Dashboard für Proxmox VE, das als AppImage geliefert wird. Es läuft auf dem Host als einzelner systemd-Dienst, lauscht auf TCP 8008 und bedient sowohl den API als auch den UI von einem Prozess aus.",
+    "section": "ProxMenux Monitor"
   },
   "atGlance": {
     "title": "Auf einen Blick",
-    "body": "Single AppImage auf dem Proxmox-Host → Flask-Backend (Port 8008), das Live-Daten über <code>psutil</code>, <code>pvesh</code>, <code>smartctl</code>, <code>journalctl</code> → Next.js sammelt, die vom gleichen Prozess bedient werden. Optionale Auth (Passwort + 2FA), optionaler KI-Assistent, optionale Benachrichtigungen, REST API für Integrationen."
+    "body": "Einzelner AppImage auf dem Proxmox-Host → Flask Backend (Port 8008), der Live-Daten über <code>psutil</code>, <code>pvesh</code>, <code>smartctl</code>, <code>journalctl</code> sammelt → Next.js-Dashboard, das vom selben Prozess bereitgestellt wird. Optionale Authentifizierung (Passwort + 2FA), optionaler KI-Assistent, optionale Benachrichtigungen, REST API für Integrationen."
   },
   "hero": {
-    "alt": "ProxMenux Monitor Dashboard — Systemübersichtsbildschirm mit CPU, Speicher, Temperatur und Uptime-Widgets",
-    "caption": "Default Landing Screen - Host-Level-Metriken und Gesundheitszustand auf einen Blick."
+    "alt": "ProxMenux Monitor Dashboard – Systemübersichtsbildschirm mit CPU, Speicher-, Temperatur- und Betriebszeit-Widgets",
+    "caption": "Standard-Startbildschirm – Metriken und Gesundheitszustand auf Hostebene auf einen Blick."
   },
   "coverage": {
     "heading": "Was das Dashboard abdeckt",
-    "intro": "Acht erstklassige Abschnitte, die jeweils von ihren eigenen API-Endpunkten unterstützt werden:",
+    "intro": "Acht erstklassige Abschnitte, jeder unterstützt durch seine eigenen API Endpunkte:",
     "tableSection": "Abschnitt",
-    "tableWhat": "Was es zeigt",
+    "tableWhat": "Was angezeigt wird",
     "sections": [
       {
         "name": "Gesundheitsmonitor",
-        "description": "Aktive und abgewiesene Warnungen über CPU, Speicher, Speicher, Festplatten, Netzwerk, Dienste, Protokolle, VMs, Updates und Sicherheit. Steuert die Benachrichtigungsmaschine an."
+        "description": "Aktive und verworfene Warnungen für CPU, Arbeitsspeicher, Speicher, Festplatten, Netzwerk, Dienste, Protokolle, VMs, Updates und Sicherheit. Steuert die Benachrichtigungs-Engine."
       },
       {
-        "name": "Lagerung",
-        "description": "Proxmox-Speicherpools, physische Festplatten (SATA / NVMe / USB), SMART-Attribute, ZFS-Poolstatus, Verschleiß & Lebensdauer, I / O-Aktivität."
+        "name": "Speicher",
+        "description": "Proxmox-Speicher pools, physische Festplatten (SATA / NVMe / USB), SMART Attribute, ZFS pool Status, Verschleiß und Lebensdauer, I/O-Aktivität."
       },
       {
         "name": "Netzwerk",
-        "description": "Alle Schnittstellen (physisch, Bonds, Bridges, OVS), IP/MAC/State, Echtzeit-RX/TX-Graphen, historische RRD-Daten pro Schnittstelle."
+        "description": "Alle Schnittstellen (physisch, Bonds, Bridges, OVS), IP/MAC/Status, Echtzeit-RX/TX-Diagramme, historische RRD-Daten pro Schnittstelle."
       },
       {
         "name": "VMs und Container",
-        "description": "Bestandsaufnahme aller VMs und LXCs mit Status, Ressourcen und Betriebszeit. Drill-in zeigt Konfiguration, historische Metriken, vollständige Gastprotokolle und Start-/Stop-/Reboot-/Shutdown-Aktionen."
+        "description": "Inventar aller VMs und LXCs mit Status, Ressourcen und Betriebszeit. Drill-in zeigt Konfiguration, historische Metriken, vollständige Gastprotokolle und Start-/Stopp-/Neustart-/Herunterfahraktionen."
       },
       {
         "name": "Hardware",
-        "description": "CPU Modell und Topologie, Speicherlayout, PCIe-Geräte, GPU-Liste mit Treiber und Echtzeitüberwachung per Slot (NVIDIA / Intel iGPU)."
+        "description": "CPU Modell und Topologie, Speicherlayout, PCIe-Geräte, GPU Liste mit Treiber und Echtzeitüberwachung pro Steckplatz (NVIDIA / Intel iGPU)."
       },
       {
         "name": "Protokolle und Ereignisse",
-        "description": "Live <code>journalctl</code> mit Strenge / Zeitbereich / Keyword-Filtern, Proxmox Task History, Benachrichtigungsprotokoll, herunterladbare Protokollpakete."
+        "description": "Live <code>journalctl</code> mit Schweregrad-/Zeitbereichs-/Schlüsselwortfiltern, Proxmox-Aufgabenverlauf, Benachrichtigungsprotokoll, herunterladbaren Protokollpaketen."
       },
       {
         "name": "Terminal",
-        "description": "Browser-Shell für den Host oder für VM/CT, angetrieben von <code>xterm.js</code> über WebSockets. Authentifiziert und auditiert wie der Rest des API."
+        "description": "Browser-Shell zum Host oder zu einem beliebigen VM/CT, unterstützt von <code>xterm.js</code> über WebSockets. Authentifiziert und geprüft wie der Rest von API."
       },
       {
         "name": "Sicherheit",
-        "description": "Authentifizierungsfehler, Gefängnisstatus Fail2Ban, kürzliche Sperrereignisse, Integration in das <code>[proxmenux]</code>-Gefängnis des Hosts."
+        "description": "Fehlgeschlagene Anmeldungen, Status der Fail2Ban-Jails, kürzlich gesperrte IP-Adressen und Integration mit dem Jail <code>[proxmenux]</code> des Hosts."
       }
     ],
-    "footer": "Jeder Abschnitt hat eine eigene Dokumentationsseite unter <link>Dashboard</link> in der Seitenleiste."
+    "footer": "Jeder Abschnitt verfügt über eine eigene Dokumentationsseite unter <link>Dashboard</link> in der Seitenleiste."
   },
   "howItRuns": {
     "heading": "Wie es läuft",
-    "intro": "ProxMenux Monitor Schiffe als eigenständige AppImage. Eine einzelne systemd-Einheit (<code>proxmenux-monitor.service</code>) startet einen Flask-Prozess, der:",
+    "intro": "ProxMenux Monitor wird als eigenständige AppImage bereitgestellt. Eine einzelne systemd-Unit (<code>proxmenux-monitor.service</code>) startet einen Flask-Prozess, der:",
     "bullets": [
-      "Hört <strong>TCP 8008</strong> auf dem Host (HTTP).",
-      "Serviert das Next.js-Dashboard als statische Assets unter <code>/</code> und das API unter <code>/api/*</code> aus dem gleichen Prozess.",
-      "Zieht Live-Daten mit Standard-Host-Tools: <code>psutil</code>, <code>pvesh</code>, <code>smartctl</code>, <code>journalctl</code>, <code>zpool</code>, <code>ip</code>, <code>nvidia-smi</code> usw.",
-      "Beharrt auf seinem eigenen Zustand in einer lokalen SQLite-Datenbank (<code>/usr/local/share/proxmenux/health_monitor.db</code>): abgewiesene Warnungen, Festplattenbeobachtungen, Benachrichtigungskonfiguration, AI-Konfiguration. Der Authentifizierungsstatus lebt separat in <code>/root/.config/proxmenux-monitor/auth.json</code>."
+      "Hört auf <strong>TCP 8008</strong> auf dem Host (HTTP).",
+      "Bietet das Next.js-Dashboard als statische Assets unter <code>/</code> und das API unter <code>/api/*</code> aus demselben Prozess.",
+      "Zieht Live-Daten mit Standard-Host-Tools ab: <code>psutil</code>, <code>pvesh</code>, <code>smartctl</code>, <code>journalctl</code>, <code>zpool</code>, <code>ip</code>, <code>nvidia-smi</code> usw.",
+      "Behält seinen eigenen Status in einer lokalen SQLite-Datenbank bei (<code>/usr/local/share/proxmenux/health_monitor.db</code>): verworfene Warnungen, Festplattenbeobachtungen, Benachrichtigungskonfiguration, AI-Konfiguration. Der Authentifizierungsstatus befindet sich separat in <code>/root/.config/proxmenux-monitor/auth.json</code>."
     ],
-    "footer": "Der vollständige Anforderungsfluss, das Dateilayout und die systemd-Integration sind in <link>Architecture</link> beschrieben."
+    "footer": "Der vollständige Anfrageablauf, das Dateilayout und die systemd-Integration werden in <link>Architektur</link> beschrieben."
   },
   "noAgent": {
-    "title": "Kein Agent auf den Gästen",
-    "body": "Der Monitor liest alles vom Host. VMs und CTs benötigen keinen installierten Agenten – die Gastdaten stammen aus dem Proxmox API und aus der Sichtbarkeit des Hosts auf Kernelebene in die laufenden Gäste."
+    "title": "Kein Agent für die Gäste",
+    "body": "Der Monitor liest alle Daten auf dem Host aus. Auf VMs und CTs muss kein Agent installiert werden: Die Gastdaten stammen aus der Proxmox-API und aus den Informationen, die der Kernel des Hosts über die laufenden Gastsysteme bereitstellt."
   },
   "access": {
     "heading": "Zugriff auf das Dashboard",
     "intro": "Zwei Zugriffsmuster werden unterstützt und die Anwendung erkennt, welches verwendet wird:",
-    "codeComment1": "# 1 Direkter Zugriff auf den Host",
-    "codeComment2": "# 2 Via reverse proxy (Nginx / Caddy / Traefik)",
-    "afterCode": "Bei Verwendung eines Reverse-Proxys berücksichtigt Monitor <code>X-Forwarded-For</code>, <code>X-Forwarded-Proto</code> und <code>X-Forwarded-Host</code>, damit URLs und CORS ohne manuelle Konfiguration richtig funktionieren.",
-    "footer": "First-Launch-Setup, Passwort + TOTP 2FA und Reverse-Proxy-Snippets sind in <link>Access & Authentication</link> abgedeckt."
+    "codeComment1": "# 1) Direkter Zugriff auf dem Host",
+    "codeComment2": "# 2) Über Reverse Proxy (Nginx / Caddy / Traefik)",
+    "afterCode": "Wenn der Monitor über einen Reverse-Proxy verfügt, berücksichtigt er <code>X-Forwarded-For</code>, <code>X-Forwarded-Proto</code> und <code>X-Forwarded-Host</code>, sodass sich URLs und CORS ohne manuelle Konfiguration korrekt verhalten.",
+    "footer": "Einrichtung beim ersten Start, Passwort + TOTP 2FA und Reverse-Proxy-Snippets werden unter <link>Zugriff und Authentifizierung</link> behandelt."
   },
   "mobile": {
-    "heading": "Mobile Nutzung und Homescreen-Installation",
-    "intro": "Das Dashboard ist responsive und wird als Progressive Web App ausgeliefert. Das verpackte <code>public/manifest.json</code> deklariert <code>display: standalone</code> mit einem App-Namen, einem Symbol und einer Theme-Farbe, so dass das Hinzufügen der URL zum Startbildschirm einen echten eigenständigen Launcher erzeugt - keine Browser-Adressleiste, benutzerdefiniertes Splash, dunkles Theme, das auf das Dashboard abgestimmt ist.",
-    "phoneAlt": "ProxMenux Monitor läuft auf einem Telefon — Haupt-Dashboard-Ansicht",
-    "phoneCaption": "Haupt-Dashboard auf einem Telefon - das Layout fließt für kleine Viewports zurück.",
-    "addHeading": "Hinzufügen zum Home Screen",
+    "heading": "Mobile Nutzung und Installation auf dem Startbildschirm",
+    "intro": "Das Dashboard reagiert und wird als Progressive Web App ausgeliefert. Das Paket <code>public/manifest.json</code> deklariert <code>display: standalone</code> mit einem App-Namen, einem Symbol und einer Designfarbe, sodass durch Hinzufügen der URL zum Startbildschirm ein echter eigenständiger Launcher entsteht – keine Browser-Adressleiste, benutzerdefinierter Splash, dunkles Design, das an das Dashboard angepasst ist.",
+    "phoneAlt": "ProxMenux Monitor läuft auf einem Telefon – Haupt-Dashboard-Ansicht",
+    "phoneCaption": "Haupt-Dashboard auf einem Telefon – das Layout wird für kleine Ansichtsfenster neu gestaltet.",
+    "addHeading": "Zum Startbildschirm hinzufügen",
     "iosLabel": "iOS Safari:",
-    "iosBody": "Share Button → <em>Add to Home Screen</em>. Das Symbol stammt von <code>/apple-touch-icon.png</code>, das im AppImage ausgeliefert wird.",
+    "iosBody": "Teilen-Schaltfläche → <em>Zum Startbildschirm hinzufügen</em>. Das Symbol stammt von <code>/apple-touch-icon.png</code>, das im AppImage ausgeliefert wird.",
     "androidLabel": "Android Chrome / Edge:",
-    "androidBody": "Drei-Punkt-Menü → <em>Install app</em> (oder <em>Add to Home screen</em> auf älteren Versionen).",
-    "afterInstall": "Einmal installiert, startet das Öffnen des Symbols das Dashboard im Standalone-Modus mit einem eigenen Task Switcher-Eintrag.",
-    "onlineOnlyTitle": "Nur online",
-    "onlineOnlyBody": "Die PWA ist installierbar, aber es ist <strong>not</strong> offline-fähig – es gibt keinen Service-Mitarbeiter. Der Launcher verhält sich wie eine native App, aber das Gerät muss immer noch den Host auf TCP 8008 (LAN, VPN oder HTTPS) erreichen, damit das Dashboard geladen werden kann."
+    "androidBody": "Menü mit drei Punkten → <em>App installieren</em> (oder <em>Zum Startbildschirm hinzufügen</em> bei älteren Versionen).",
+    "afterInstall": "Nach der Installation wird durch Öffnen des Symbols das Dashboard im Standalone-Modus mit einem eigenen Task-Switcher-Eintrag gestartet.",
+    "onlineOnlyTitle": "Nur online nutzbar",
+    "onlineOnlyBody": "Die PWA lässt sich installieren, ist aber <strong>nicht</strong> offlinefähig: Es gibt keinen Service Worker. Die Verknüpfung verhält sich wie eine native App. Zum Laden des Dashboards muss das Gerät den Host jedoch weiterhin über TCP 8008 erreichen können, etwa über LAN, VPN oder HTTPS mit einem Reverse-Proxy."
   },
   "health": {
-    "heading": "Der Health Monitor und Benachrichtigungen",
-    "alt": "Gesundheitsmonitor-Bildschirm mit den verfolgten 10-Kategorien (CPU, Speicher, Festplatten, Netzwerk, Dienste, Protokolle, VMs, Updates, Sicherheit) mit aktuellem Status",
-    "caption": "Health Monitor-Ansicht - die 10-Kategorien mit ihrem aktuellen Status verfolgt. Aktive und abgewiesene Warnungen werden hier angezeigt, wenn das System eine auslöst.",
-    "body1": "Innerhalb des Dashboards läuft der <strong>Health Monitor</strong> kontinuierlich im Hintergrund und erzeugt einen strukturierten Strom von Ereignissen: hohe CPU-Temperatur, SMART-Warnungen, ZFS-Pooldegradation, OOM-Tötungen, VM/CT-Ausfälle, Sicherheitsvorfälle und so weiter. Jedes Ereignis hat eine Kategorie, eine Schwere (INFO / WARNUNG / CRITICAL) und eine stabile <code>error_key</code>, so dass Duplikate zusammenbrechen, anstatt den Bildschirm zu überfluten.",
-    "feedsIntro": "Ereignisse füttern drei Dinge gleichzeitig:",
-    "feedsHealth": "Die <strong>Health Monitor Ansicht</strong> im Dashboard (aktive + entlassene Listen).",
-    "feedsChannels": "<strong>notification Engine</strong> — Telegram, Discord, Email, Gotify, Pushover und Apprise (mehrkanalig). Jeder Kanal ist unabhängig konfiguriert und einzelne Eventkategorien können stummgeschaltet werden.",
-    "feedsAI": "Der optionale <strong>AI-Assistent </strong> - wenn aktiviert, erklärt der konfigurierte Provider (OpenAI, Anthropic, Gemini, Groq, Ollama oder OpenRouter) eingehende Ereignisse in einfacher Sprache und schlägt, wenn in den KI-Einstellungen aktiviert, die nächsten Schritte vor.",
+    "heading": "Der Gesundheitsmonitor und Benachrichtigungen",
+    "alt": "Health Monitor-Bildschirm mit den verfolgten 10-Kategorien (CPU, Arbeitsspeicher, Speicher, Festplatten, Netzwerk, Dienste, Protokolle, VMs, Updates, Sicherheit) mit aktuellem Status",
+    "caption": "Health Monitor-Ansicht – die verfolgten 10-Kategorien mit ihrem aktuellen Status. Aktive und verworfene Warnungen werden hier angezeigt, wenn das System welche auslöst.",
+    "body1": "Im Dashboard läuft der <strong>Health Monitor</strong> kontinuierlich im Hintergrund und erzeugt einen strukturierten Ereignisstrom: hohe CPU-Temperatur, Festplatten-SMART-Warnungen, ZFS pool-Verschlechterung, OOM-Kills, VM/CT Fehler, Sicherheitsvorfälle usw. Jedes Ereignis hat eine Kategorie, einen Schweregrad (INFO/WARNUNG/KRITISCH) und einen stabilen <code>error_key</code>, sodass Duplikate zusammenfallen, anstatt den Bildschirm zu überfluten.",
+    "feedsIntro": "Ereignisse versorgen drei Dinge gleichzeitig:",
+    "feedsHealth": "Die <strong>Health Monitor-Ansicht</strong> im Dashboard (aktive + verworfene Listen).",
+    "feedsChannels": "Die <strong>Benachrichtigungs-Engine</strong> – Telegram, Discord, E-Mail, Gotify, Pushover und Apprise (Mehrkanal). Jeder Kanal wird unabhängig konfiguriert und die Kategorien pro Ereignis können stummgeschaltet werden.",
+    "feedsAI": "Der optionale <strong>KI-Assistent</strong> – wenn aktiviert, erklärt der konfigurierte Anbieter (OpenAI, Anthropic, Gemini, Groq, Ollama oder OpenRouter eingehende Ereignisse im Klartext und schlägt, sofern in den KI-Einstellungen aktiviert, die nächsten Schritte vor.",
     "suppressionTitle": "Unterdrückung statt Mute-All",
-    "suppressionBody": "Jede Kategorie hat ihre eigene <em>Suppression Duration</em>: Sobald Sie eine Warnung ablehnen, wird die gleiche Warnung für dieses Fenster stummgeschaltet (Standard 24 Stunden, konfigurierbar pro Kategorie bis dauerhaft). Echte Eskalationen - z.B. CPU-Temperatur, die den kritischen Schwellenwert überschreitet - immer neu auslösen, unabhängig von der Unterdrückung."
+    "suppressionBody": "Jede Kategorie hat ihre eigene <em>Unterdrückungsdauer</em>: Sobald Sie eine Warnung verwerfen, wird dieselbe Warnung für dieses Fenster stummgeschaltet (Standard 24 Stunden, konfigurierbar pro Kategorie bis hin zu dauerhaft). Echte Eskalationen – z.B. CPU Temperatur überschreitet den kritischen Schwellenwert – immer erneut auslösen, unabhängig von der Unterdrückung."
   },
   "api": {
     "heading": "REST API und Integrationen",
-    "intro": "Alles ist UI Shows sind verfügbar als JSON über HTTP/HTTPS. Die gleichen Endpunkte Power Homepage Widgets, Home Assistant Sensoren, Grafana Dashboards (über die Prometheus Ausführer bei <code>/api/prometheus</code>), Uptime Kuma Sonden und jedes benutzerdefinierte Skript, das spricht <code>curl</code>.",
-    "tokens": "Langlebige API-Token (365 Tage) werden aus <strong>Settings → API Access Tokens</strong> oder über <code>POST /api/auth/generate-api-token</code> generiert.",
-    "bearer": "Tokens reisen als <code>Authorization: Bearer …</code>. Öffentliche Endpunkte (<code>/api/health</code>, <code>/api/auth/*</code>) funktionieren ohne Token, so dass externe Uptime-Sonden den Host treffen können, ohne Anmeldeinformationen zu verteilen.",
-    "catalog": "Der vollständige Endpunktkatalog, die Token-Rotationsführung und die Best Practices für Sicherheit sind live in <linkApi>API Reference</linkApi>; fertige Beispiele für Homepage, Home Assistant, Grafana, Uptime Kuma und ein generisches cURL-Muster sind in <linkIntegrations>Integrationen</linkIntegrations>."
+    "intro": "Alle in der Oberfläche angezeigten Daten sind über HTTP/HTTPS als JSON verfügbar. Dieselben Endpunkte versorgen Homepage-Widgets, Home-Assistant-Sensoren, Grafana-Dashboards über den Prometheus-Exporter unter <code>/api/prometheus</code>, Prüfungen von Uptime Kuma und eigene Skripte mit <code>curl</code>.",
+    "tokens": "Langlebige API-Tokens (365 Tage) werden aus <strong>Einstellungen → API Zugriffstokens</strong> oder über <code>POST /api/auth/generate-api-token</code> generiert.",
+    "bearer": "Token reisen als <code>Authorization: Bearer …</code>. Öffentliche Endpunkte (<code>/api/health</code>, <code>/api/auth/*</code>) funktionieren ohne Token, sodass externe Verfügbarkeitstests den Host erreichen können, ohne Anmeldeinformationen auszugeben.",
+    "catalog": "Der vollständige Endpunktkatalog, Anleitungen zur Token-Rotation und Best Practices für die Sicherheit finden Sie in der <linkApi>API-Referenz</linkApi>; Vorgefertigte Beispiele für Homepage, Home Assistant, Grafana, Uptime Kuma und ein generisches cURL-Muster finden Sie in <linkIntegrations>Integrationen</linkIntegrations>."
   },
   "serviceControl": {
-    "heading": "Servicekontrolle",
-    "intro": "Tag für Tag wird der Monitor genau wie jeder andere systemd-Dienst verwaltet. Es ist auch als zwei Einträge innerhalb der ProxMenux TUI unter <em>Settings</em> ausgesetzt:",
-    "codeComment": "# Manuelle Kontrolle",
-    "footer": "Siehe <link>Settings → ProxMenux Monitor</link> für den In-Menü-Schalt- und Statusüberprüfungsfluss."
+    "heading": "Dienststeuerung",
+    "intro": "Tag für Tag wird der Monitor genauso verwaltet wie jeder andere systemd-Dienst. Es wird auch als zwei Einträge in der TUI ProxMenux unter <em>Einstellungen</em>:",
+    "codeComment": "# Manuelle Steuerung",
+    "footer": "Siehe <link>Einstellungen → ProxMenux Monitor</link> für die Umschaltung im Menü und den Statusüberprüfungsablauf."
   },
   "nextSteps": {
-    "heading": "Wohin als nächstes",
+    "heading": "Wo geht es weiter?",
     "items": [
       {
         "label": "Architektur",
-        "description": "Flask-Backend, systemd-Einheit, SQLite-Schema, KI-Anbieter, Benachrichtigungskanäle."
+        "description": "– Flask Backend, systemd Einheit, SQLite Schema, KI-Anbieter, Benachrichtigungskanäle."
       },
       {
         "label": "Zugriff und Authentifizierung",
-        "description": "Erster Start, Passwort-Setup, TOTP 2FA, Reverse-Proxy-Konfiguration, Integration Fail2Ban."
+        "description": "– erster Start, Passwort-Einrichtung, TOTP 2FA, Reverse-Proxy-Konfiguration, Fail2Ban-Integration."
       },
       {
         "label": "Dashboard",
-        "description": "— jeder Abschnitt der Benutzeroberfläche, jeweils eine Seite."
+        "description": "– jeder Abschnitt des UI, jeweils eine Seite."
       },
       {
-        "label": "API Referenznummer",
-        "description": "Jeder Endpunkt, Anfrage / Antwortform und Token-Management."
+        "label": "API-Referenz",
+        "description": "– alle Endpunkte, Anforderungs-/Antwortformen und Token-Verwaltung."
       },
       {
         "label": "Integrationen",
-        "description": "— Homepage, Home Assistant, Grafana / Prometheus, Uptime Kuma, generisches cURL-Muster."
+        "description": "– Homepage, Home Assistant, Grafana / Prometheus, Uptime Kuma, generisches cURL Muster."
       }
     ]
   }

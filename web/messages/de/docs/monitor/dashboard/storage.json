@@ -96,7 +96,7 @@
     "overviewItems": [
       "<strong>Identity</strong> — Modell, serielle, Kapazität, Gesundheitsabzeichen (gesund / Warnung / kritisch).",
       "<strong>Abnutzung & Lebensdauer</strong> — großer lebensverbleibender Ring ()97 %, 50 %, ...), wobei das Attribut Quelle ausgeschrieben ist (<em>Media Wearout Indikator</em>, <em>Verwendeter Prozentsatz</em>, ...), einer Verschleißstange (Stromverbrauch %), <em>Est. Leben</em> Projektion in Jahren und die Gesamtdaten geschrieben. NVMe Antriebe zeigen auch <em>Verfügbare Reserve</em>.",
-      "<strong>SMART Attributes</strong> — sechs Überschriftenfelder auf einem 2-Spaltenraster: Temperature, Power On Hours (mit humanisierter Dauer wie <em>3y 116d</em>), Rotation Rate (oder <em>SSD</em>), Power Cycles, SMART Status, Neu zugewiesene Sektoren, Pending Sectors, CRC Errors. Die vollständige Attributtabelle befindet sich im SMART-Tab."
+      "<strong>SMART-Attribute</strong>: Die wichtigsten Werte erscheinen in einem Raster mit zwei Spalten: Temperatur, Betriebsstunden mit lesbarer Dauer wie <em>3 Jahre und 116 Tage</em>, Drehzahl oder <em>SSD</em>, Einschaltzyklen, SMART-Status, neu zugewiesene Sektoren, ausstehende Sektoren und CRC-Fehler. Die vollständige Attributtabelle befindet sich auf der Registerkarte SMART."
     ],
     "smartTitle": "Tab. 2 — SMART",
     "smartImageAlt": "Disk-Bohr-in-Modal — SMART-Registerkarte mit SMART-Testtasten ausführen (Short / Extended), letztes Testergebnis und vollständige SMART-Attributtabelle",
@@ -239,7 +239,7 @@
         "tail": "— die Festplatten-und-I/O-Kategorie und das Unterdrückungsmodell."
       },
       {
-        "label": "API Referenznummer",
+        "label": "API-Referenz",
         "href": "/docs/monitor/api",
         "tail": "— die Speicher- und SMART-Endpunkte."
       },

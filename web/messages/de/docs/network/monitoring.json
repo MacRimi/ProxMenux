@@ -110,7 +110,7 @@
   "troubleshoot": {
     "heading": "Fehlerbehebung",
     "hangTitle": "Installieren Sie hängt für immer auf den ersten Start",
-    "hangBody": "Der Gastgeber hat kein Internet oder die apt Repos sind unerreichbar. Stornieren Sie mit <kbd>Ctrl</kbd>+<kbd>C</kbd>, führen Sie <code>apt-get update</code> manuell aus, um den tatsächlichen Fehler zu sehen (DNS, Repo-Signatur, Proxy ...), und kehren Sie dann zum Menü zurück.",
+    "hangBody": "Der Host hat kein Internet oder die Apt-Repos sind nicht erreichbar. Brechen Sie mit <kbd>Ctrl</kbd>+<kbd>C</kbd> ab, führen Sie <code>apt-get update</code> manuell aus, um den tatsächlichen Fehler anzuzeigen (DNS, Repo-Signatur, Proxy …), und kehren Sie dann zum Menü zurück.",
     "refusedTitle": "iperf3 client: \"unable to connect to server: Connection refused\"",
     "refusedBody": "Entweder läuft der Server nicht oder seine Firewall blockiert TCP 5201. Bestätigen Sie auf dem Server: <code>ss -tlnp | grep 5201</code> - sollte iperf3 hören zeigen. Wenn das Zuhören aber der Client immer noch fehlschlägt, überprüfen Sie den Firewall-Pfad zwischen den beiden Hosts.",
     "slowTitle": "iperf3 reports way less than the expected link speed",

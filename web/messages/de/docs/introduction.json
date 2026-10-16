@@ -18,7 +18,7 @@
   },
   "twoProducts": {
     "heading": "Zwei Produkte, ein Projekt",
-    "intro": "ProxMenux Schiffe als zwei unabhängige Stücke, die den gleichen Quellbaum teilen. Der Installer stellt beides bereit - sie leben Seite an Seite auf dem Host und sind nicht voneinander abhängig:",
+    "intro": "ProxMenux wird als zwei unabhängige Teile mit demselben Quellbaum geliefert. Das Installationsprogramm stellt beide bereit – sie leben Seite an Seite auf dem Host und sind nicht voneinander abhängig:",
     "scripts": {
       "title": "ProxMenux Scripts",
       "body": "Das Original CLI/TUI, das Sie mit <code>menu</code> starten. Neun Funktionsbereiche, die Post-Installationsoptimierungen, VM und LXC Erstellung, GPU und Coral TPU Durchgang, Festplatten, Speicher, Netzwerk, Sicherheit, Dienstprogramme sowie eine kuratierte Befehlsreferenz umfassen. Läuft in jedem Terminal — lokal, SSH oder Web."
@@ -88,7 +88,7 @@
         "href": "/docs/utils"
       },
       {
-        "title": "Befehlsnummer",
+        "title": "Befehlsreferenz",
         "description": "Kuratierter Katalog von Linux- und Proxmox-Befehlen, geordnet nach Thema — System, VM/CT (qm, pct), Storage, Network, ZFS, GPU Passthrough, Backup, tägliche CLI-Tools.",
         "icon": "BookOpen",
         "href": "/docs/help-info"
@@ -192,7 +192,7 @@
       {
         "lead": "<strong>Auf der Suche nach einem bestimmten Befehl?</strong>",
         "linkHref": "/docs/help-info",
-        "linkLabel": "Befehlsnummer",
+        "linkLabel": "Befehlsreferenz",
         "tail": "ist ein kuratierter Katalog, der nach Themen geordnet ist, mit Kopierschaltflächen."
       },
       {

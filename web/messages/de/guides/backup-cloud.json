@@ -44,15 +44,15 @@
     "heading": "2. Installieren und Konfigurieren von Rclone",
     "body": "<rcloneLink>rclone</rcloneLink> ist das Tool, das mit Cloud-Speicheranbietern spricht. Installieren Sie es aus Debian-Repositories:",
     "installCode": "apt-get update\napt-get install -y rclone",
-    "newerCalloutTitle": "Wenn Sie einen neueren Klon benötigen",
-    "newerCalloutBody": "Wenn Sie einen neueren Klon als das, was Debian Schiffe benötigen, verwenden Sie den offiziellen Installer:",
+    "newerCalloutTitle": "Wenn Sie ein neueres rclone benötigen",
+    "newerCalloutBody": "Wenn Sie einen neueren RClone als das von Debian gelieferte benötigen, verwenden Sie das offizielle Installationsprogramm:",
     "newerCode": "curl https://rclone.org/install.sh | bash",
     "tunnelHeading": "2.1 Browserbasierte Authentifizierung über SSH-Tunnel",
     "tunnelBody": "Der Auth-Flow von rclone öffnet einen lokalen Webbrowser. Da der Proxmox-Host keinen Desktop hat, <remoteSetupLink>Das Remote-Setup-Verfahren von rclone</remoteSetupLink> Routen Sie den Auth Callback durch eine SSH Tunnel zurück zum Browser Ihres Laptops.",
     "tunnelFrom": "Von Ihrem <strong>laptop</strong> (ersetzen Sie <code>ip_proxmox</code> durch die Proxmox IP):",
     "tunnelCode": "ssh -L localhost:53682:localhost:53682 root@ip_proxmox",
-    "tunnelAfter": "Diese SSH-Sitzung leitet den Port 53682 vom Proxmox-Host an den Localhost Ihres Laptops weiter. Halten Sie es während der Rklon-Konfiguration unten offen.",
-    "runHeading": "2.2 Laufrklon-Konfiguration",
+    "tunnelAfter": "Diese SSH-Sitzung leitet Port 53682 vom Proxmox-Host an den lokalen Host Ihres Laptops weiter. Lassen Sie es während der folgenden rclone-Konfiguration geöffnet.",
+    "runHeading": "2.2 Führen Sie die Konfiguration rclone aus",
     "runBody": "In der SSH-Sitzung, die Sie gerade geöffnet haben, laufen Sie:",
     "runCode": "rclone config",
     "runAfter": "Folgen Sie den Anweisungen, um eine neue Fernbedienung hinzuzufügen. Die genauen Antworten hängen von Ihrem Provider ab - siehe <providerDocsLink>rclone Provider docs</providerDocsLink> für Google Drive, Mega, Dropbox, OneDrive usw. Der entscheidende Schritt ist die Auth-Frage:",
@@ -113,7 +113,7 @@
       "<strong>Backup ist extrem langsam: </strong> bestätigt <code>--vfs-cache-mode writes</code> ist auf der <code>ExecStart</code> Linie. Ohne sie blockiert jedes Schreiben in der Cloud. Überprüfen Sie auch Ihre Upstream-Bandbreite - vzdump ist daran gebunden.",
       "<strong>Backup schlägt fehl mit \"Kein Speicherplatz auf dem Gerät\": </strong> das Cache-Verzeichnis (<code>~/.cache/rclone/</code>) gefüllt, bevor der Upload aufgeholt. Verschieben Sie es in ein größeres Dateisystem mit <code>--cache-dir /var/cache/rclone</code> in der systemd-Einheit.",
       "<strong>rclone auth-Token abgelaufen (typisch auf Google Drive nach einer langen Leerlaufphase): </strong> SSH zurück in den Tunnel (<code>ssh -L localhost:53682:localhost:53682 root@ip_proxmox</code>) und laufen <code>rclone config reconnect gdrive:</code> zum Aktualisieren.",
-      "<strong>Backups landen, sind aber bei der Wiederherstellung beschädigt: </strong> verwenden keinen Cloud-Speicher mehr als <strong>only</strong> Backup-Ziel. Kombinieren Sie mit lokalen PBS / vzdump auf einer anderen Festplatte für Resilienz."
+      "<strong>Backups landen, sind aber bei der Wiederherstellung beschädigt:</strong> verwenden Sie den Cloud-Speicher nicht mehr als <strong>einziges</strong> Backup-Ziel. Kombinieren Sie es mit lokalem PBS / vzdump auf einer anderen Festplatte, um die Ausfallsicherheit zu gewährleisten."
     ]
   }
 }
